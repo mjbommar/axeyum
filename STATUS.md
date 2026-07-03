@@ -240,6 +240,24 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite Romberg extrapolation resource landed.**
+  `finite-romberg-extrapolation-v0` now gives the real-analysis, calculus,
+  polynomial, and numerical-analysis lanes a compact exact
+  Romberg/Richardson extrapolation example: it replays one-panel and two-panel
+  composite trapezoid values for `x^2` and `x^4` on `[0,1]`, computes
+  `(4*T(h/2)-T(h))/3`, records exact quadratic error cancellation and a
+  quartic residual, and rejects the malformed extrapolated-value claim `1/4`
+  versus exact `1/3` through a source-linked QF_LRA/Farkas row. The focused
+  learner page, rational-real algebra page, calculus theorem-boundary page,
+  analysis/numerical query guide, integration and exact-vs-floating bridge
+  rows, validator, resource smoke queries, generated dashboards, and
+  `math_resource_lra_routes` regression keep this fixed exact extrapolation
+  replay separate from general Richardson/Romberg convergence, asymptotic
+  error expansions, adaptive quadrature, floating-point quadrature
+  correctness, and numerical stability. The public summary now reports 122
+  concept rows, 154 packs, 1002 expected checks, 380 checked rows, 505
+  replay-only rows, 117 Lean-horizon rows, and 154 promoted solver-reuse
+  packs.
 - **Finite cubic spline interpolation resource landed.**
   `finite-cubic-spline-interpolation-v0` now gives the real-analysis,
   calculus, and numerical-analysis lanes a compact natural cubic spline
@@ -254,9 +272,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `math_resource_lra_routes` regression keep this fixed exact spline replay
   separate from general spline existence/uniqueness, convergence, error,
   shape-preservation, knot-selection, and floating-point spline-evaluation
-  theory. The public summary now reports 122 concept rows, 153 packs, 996
-  expected checks, 379 checked rows, 501 replay-only rows, 116 Lean-horizon
-  rows, and 153 promoted solver-reuse packs.
+  theory. The public summary now reports 122 concept rows, 154 packs, 1002
+  expected checks, 380 checked rows, 505 replay-only rows, 117 Lean-horizon
+  rows, and 154 promoted solver-reuse packs.
 - **Finite cubic Hermite interpolation resource landed.**
   `finite-cubic-hermite-interpolation-v0` now gives the real-analysis,
   calculus, and numerical-analysis lanes a compact endpoint value/slope

@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "id": "finite-romberg-extrapolation-v0",
+  "title": "Finite Romberg Extrapolation Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_numerical_analysis",
+    "field_real_analysis",
+    "curriculum_calculus",
+    "curriculum_polynomials",
+    "curriculum_reals",
+    "curriculum_rationals",
+    "bridge_integration_horizon",
+    "bridge_exact_vs_floating_arithmetic",
+    "bridge_bounded_family_asymptotic_boundary"
+  ],
+  "field_ids": [
+    "numerical_analysis",
+    "real_analysis"
+  ],
+  "curriculum_nodes": [
+    "calculus",
+    "polynomials",
+    "reals",
+    "rationals"
+  ],
+  "axeyum_fragments": [
+    "finite weighted sums",
+    "finite quadrature replay",
+    "composite trapezoid replay",
+    "Romberg extrapolation replay",
+    "Richardson extrapolation replay",
+    "polynomial integration",
+    "LRA (exact rationals)",
+    "QF_LRA",
+    "Farkas",
+    "finite replay",
+    "Lean horizon",
+    "numerical-honesty metadata"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-romberg-extrapolation-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite Romberg bad extrapolated value QF_LRA/Farkas regression seed",
+    "pressure": "Exact rational Romberg replay for f(x)=x^2 on [0,1] computes romberg_value = 1/3 from one-panel and two-panel trapezoid values, while a malformed row claims romberg_value = 1/4, isolating a compact scalar equality conflict for the Farkas route.",
+    "evidence": [
+      "qf-lra-bad-romberg-value"
+    ],
+    "next_step": "Promote additional extrapolation rows only when they add distinct composite quadrature, error-cancellation, adaptive, floating-point, or theorem-reconstruction pressure; keep general Romberg/Richardson convergence and error theory in future Lean or numerical-honesty lanes."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/03-destinations/calculus.md",
+    "docs/curriculum/02-structures/polynomials.md",
+    "docs/curriculum/01-number-systems/reals.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/romberg-extrapolation-end-to-end.md",
+    "artifacts/examples/math/finite-romberg-extrapolation-v0/smt2/bad-romberg-value-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+  ],
+  "expected_results": [
+    "romberg-quadratic-exact-witness",
+    "romberg-quadratic-error-cancellation-witness",
+    "romberg-quartic-error-witness",
+    "bad-romberg-value-rejected",
+    "qf-lra-bad-romberg-value",
+    "general-romberg-extrapolation-theory-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode the fixed polynomial, interval, composite trapezoid nodes, sample values, trapezoid values, Romberg formula, extrapolated value, and exact polynomial integral as deterministic rational replay obligations.",
+    "Route the false Romberg extrapolated value through checked QF_LRA/Farkas evidence after replay computes the exact value.",
+    "Expose the pack through integration-horizon, exact-vs-floating, calculus, real-analysis, numerical-analysis, and learner query surfaces.",
+    "Keep general Romberg/Richardson convergence, error expansions, adaptive quadrature behavior, floating-point quadrature correctness, and numerical-stability claims marked as future Lean or numerical-honesty work until formal routes exist."
+  ]
+}

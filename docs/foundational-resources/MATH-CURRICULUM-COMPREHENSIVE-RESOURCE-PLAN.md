@@ -53,15 +53,15 @@ As of 2026-07-03, the public resource query reports:
 
 - 122 concept rows: 23 curriculum nodes, 18 math fields, 76 bridge concepts, and
   5 example families.
-- 153 non-template math packs.
-- 996 expected checks: 506 `sat`, 374 `unsat`, and 116 `not-run`.
-- 379 checked proof/evidence rows.
-- 501 replay-only rows.
-- 116 Lean-horizon rows.
-- 153 promoted solver-reuse packs.
+- 154 non-template math packs.
+- 1002 expected checks: 509 `sat`, 376 `unsat`, and 117 `not-run`.
+- 380 checked proof/evidence rows.
+- 505 replay-only rows.
+- 117 Lean-horizon rows.
+- 154 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 153 focused learner-linked packs, with no path-only, index-only, or missing
+- 154 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 The seed phase is over. The next phase is not "add examples everywhere." The
@@ -199,14 +199,14 @@ real use.
 | `number_theory` | gcd, CRT, residues, bounded Diophantine rows | QF_LIA, QF_BV | grouped arithmetic-certificate cookbook examples |
 | `linear_algebra` | matrices, vector spaces, modules, tensors, spectral, Jordan-chain, and singular-value rows | QF_LRA/Farkas, replay, QF_UF/Alethe | matrix-corpus boundary and source-linked regressions |
 | `abstract_algebra` | finite groups/rings/fields, homomorphisms, ideals, modules, tensors | QF_UF/Alethe, QF_BV, replay | orbit/stabilizer, Burnside, quotient/module rows only when reused |
-| `real_analysis` | rational analysis, metric continuity, compactness shadows, Simpson-rule quadrature, divided-difference and barycentric interpolation, optimization shadows | QF_LRA/Farkas, QF_NRA/RCF, Lean horizon | delta-epsilon/metric-ball, integration, interpolation, quadrature, and convergence-boundary paths |
+| `real_analysis` | rational analysis, metric continuity, compactness shadows, Simpson-rule quadrature, Romberg extrapolation, divided-difference and barycentric interpolation, optimization shadows | QF_LRA/Farkas, QF_NRA/RCF, Lean horizon | delta-epsilon/metric-ball, integration, quadrature/extrapolation, interpolation, and convergence-boundary paths |
 | `complex_analysis` | real-pair algebra, transforms, polynomial roots | LRA/NRA real-pair replay, Lean horizon | analytic-horizon rows, not analytic overclaims |
 | `topology` | finite topologies, continuity, specialization, homology/cohomology shadows | Bool/CNF, QF_UF, QF_LIA, QF_BV, replay | quotient/cohomology-ring/invariance boundaries |
 | `measure_theory` | finite measures, integration, product measures, random variables | QF_LRA/Farkas, replay, Lean horizon | countable-measure and convergence horizons without benchmark claims |
 | `probability_theory` | PMFs, kernels, Markov chains, martingales, hitting times, concentration | QF_LRA/Farkas, QF_LIA, replay | exact discrete distribution variants plus limit-theorem horizons |
 | `statistics` | descriptive statistics, exact tests, regression, contingency tables | QF_LIA, QF_LRA, replay | exact finite inference plus numerical/statistical-honesty metadata |
 | `optimization_and_convexity` | LP/Farkas, convexity, KKT, SDP, descent, line search, projections, proximal steps | QF_LRA/Farkas, QF_NRA, Lean horizon | duality/working-set/strong-Wolfe variants only when distinct |
-| `numerical_analysis` | residuals, Simpson-rule quadrature, divided-difference and barycentric interpolation, explicit and implicit Euler steps, Adams-Bashforth and BDF2 multistep rows, interval/error recurrence, singular-value and Jordan-chain shadows, finite algorithms | QF_LRA/Farkas, replay, Lean horizon | pivoting/stability, interpolation/quadrature metadata, and exact-vs-floating examples |
+| `numerical_analysis` | residuals, Simpson-rule quadrature, Romberg extrapolation, divided-difference and barycentric interpolation, explicit and implicit Euler steps, Adams-Bashforth and BDF2 multistep rows, interval/error recurrence, singular-value and Jordan-chain shadows, finite algorithms | QF_LRA/Farkas, replay, Lean horizon | pivoting/stability, interpolation/quadrature/extrapolation metadata, and exact-vs-floating examples |
 | `differential_equations_and_dynamical_systems` | recurrences, explicit Euler traces, implicit Backward Euler and Crank-Nicolson traces, Adams-Bashforth and BDF2 multistep traces, invariants, finite hitting times | QF_LRA/Farkas, replay, Lean horizon | transition/invariant/implicit-solve variants with explicit continuous-theory boundary |
 | `geometry` | coordinate, incidence, affine, rigid, circle, inversion, cyclic geometry | QF_LRA/Farkas, replay, QF_NRA horizon | nontrivial circle-line or polynomial-geometry rows with checked artifacts |
 | `functional_analysis_and_operator_theory` | finite operators, inner products, projections, Jordan/nilpotent shadows, Chebyshev slices | QF_LRA/Farkas, replay, Lean horizon | finite approximation/alternation rows plus Banach/Hilbert horizons |
@@ -459,7 +459,7 @@ Prefer one row, page, route upgrade, or query surface per commit.
 1. Keep this comprehensive plan linked from the foundational-resource index,
    mdBook summary, buildout plan, and live status.
 2. Landed: [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md) records that
-   the current 153 non-template packs are all focused-lesson linked, with no
+   the current 154 non-template packs are all focused-lesson linked, with no
    path-only, index-only, or missing learner buckets, and defines the future
    combined-page-only policy.
 3. Landed: [Proof Route Family Selection](PROOF-ROUTE-FAMILY-SELECTION.md)

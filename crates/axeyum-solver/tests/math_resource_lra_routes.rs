@@ -82,6 +82,9 @@ const CALCULUS_RIEMANN_FALSE_INTEGRAL: &str = include_str!(
 const FINITE_SIMPSON_RULE_BAD_VALUE: &str = include_str!(
     "../../../artifacts/examples/math/finite-simpson-rule-v0/smt2/bad-simpson-value-farkas-conflict.smt2"
 );
+const FINITE_ROMBERG_EXTRAPOLATION_BAD_VALUE: &str = include_str!(
+    "../../../artifacts/examples/math/finite-romberg-extrapolation-v0/smt2/bad-romberg-value-farkas-conflict.smt2"
+);
 const FINITE_DIVIDED_DIFFERENCES_BAD_INTERPOLATION_VALUE: &str = include_str!(
     "../../../artifacts/examples/math/finite-divided-differences-v0/smt2/bad-interpolation-value-farkas-conflict.smt2"
 );
@@ -925,6 +928,14 @@ fn finite_simpson_rule_bad_value_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "finite-simpson-rule-v0 bad-simpson-value SMT-LIB artifact",
         FINITE_SIMPSON_RULE_BAD_VALUE,
+    );
+}
+
+#[test]
+fn finite_romberg_extrapolation_bad_value_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-romberg-extrapolation-v0 bad-romberg-value SMT-LIB artifact",
+        FINITE_ROMBERG_EXTRAPOLATION_BAD_VALUE,
     );
 }
 

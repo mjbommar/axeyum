@@ -64,15 +64,15 @@ The current committed data boundary reports:
 - 18 math-field concept rows.
 - 76 bridge-concept rows.
 - 5 example-family rows.
-- 153 non-template math example packs.
-- 996 expected checks.
-- 379 checked proof/evidence rows.
-- 501 replay-only rows.
-- 116 Lean-horizon rows.
-- 153 promoted solver-reuse packs.
+- 154 non-template math example packs.
+- 1002 expected checks.
+- 380 checked proof/evidence rows.
+- 505 replay-only rows.
+- 117 Lean-horizon rows.
+- 154 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 153 focused learner-linked packs, with no path-only, index-only, or missing
+- 154 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 This is broad enough that the next work is not "create a few examples." The
@@ -695,6 +695,7 @@ Current packs:
 - `calculus-algebraic-shadow-v0`
 - `calculus-riemann-sum-v0`
 - `finite-simpson-rule-v0`
+- `finite-romberg-extrapolation-v0`
 - `finite-divided-differences-v0`
 - `finite-barycentric-interpolation-v0`
 - `finite-difference-derivatives-v0`
@@ -741,9 +742,10 @@ Build next:
   `finite-projected-gradient-v0`'s bad projection and bad projected-decrease
   rows tied to their source QF_LRA/Farkas artifacts; keep
   `finite-divided-differences-v0`, `finite-barycentric-interpolation-v0`,
-  `finite-difference-derivatives-v0`, `finite-taylor-polynomials-v0`, and
-  `finite-cubic-hermite-interpolation-v0`, and
-  `finite-cubic-spline-interpolation-v0` bad interpolation/stencil/Taylor/Hermite/spline
+  `finite-difference-derivatives-v0`, `finite-taylor-polynomials-v0`,
+  `finite-cubic-hermite-interpolation-v0`,
+  `finite-cubic-spline-interpolation-v0`, and
+  `finite-romberg-extrapolation-v0` bad interpolation/stencil/Taylor/Hermite/spline/Romberg
   source rows replay-only with separate checked `qf-lra-*` proof rows tied to
   their source QF_LRA/Farkas artifacts; keep
   `finite-proximal-gradient-v0`'s bad proximal
@@ -995,6 +997,7 @@ Current packs:
 - `finite-operator-v0`
 - `finite-root-finding-v0`
 - `finite-simpson-rule-v0`
+- `finite-romberg-extrapolation-v0`
 - `finite-divided-differences-v0`
 - `finite-barycentric-interpolation-v0`
 - `finite-difference-derivatives-v0`
@@ -2714,6 +2717,16 @@ Pick one item per commit unless the change is purely navigational.
      claiming general spline existence, uniqueness, error estimates,
      convergence, knot-selection, shape preservation, or floating-point
      spline-evaluation accuracy.
+200. Landed: add `finite-romberg-extrapolation-v0` as an exact finite
+     Romberg/Richardson extrapolation resource. The pack computes one-step
+     extrapolated values from one-panel and two-panel trapezoid rows for
+     `x^2` and `x^4` on `[0,1]`, records exact quadratic error cancellation
+     and the quartic residual `1/120`, then promotes the malformed
+     extrapolated-value claim `1/4` through a source-linked QF_LRA/Farkas
+     regression against exact `1/3` without claiming general
+     Romberg/Richardson convergence, asymptotic error expansions, adaptive
+     quadrature behavior, floating-point quadrature correctness, or numerical
+     stability.
 
 ## Validation Checklist
 

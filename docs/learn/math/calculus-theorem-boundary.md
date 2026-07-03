@@ -8,6 +8,7 @@ Primary packs:
 - [calculus-algebraic-shadow-v0](../../../artifacts/examples/math/calculus-algebraic-shadow-v0/)
 - [calculus-riemann-sum-v0](../../../artifacts/examples/math/calculus-riemann-sum-v0/)
 - [finite-simpson-rule-v0](../../../artifacts/examples/math/finite-simpson-rule-v0/)
+- [finite-romberg-extrapolation-v0](../../../artifacts/examples/math/finite-romberg-extrapolation-v0/)
 - [finite-divided-differences-v0](../../../artifacts/examples/math/finite-divided-differences-v0/)
 - [finite-barycentric-interpolation-v0](../../../artifacts/examples/math/finite-barycentric-interpolation-v0/)
 - [finite-difference-derivatives-v0](../../../artifacts/examples/math/finite-difference-derivatives-v0/)
@@ -20,6 +21,7 @@ Companion lessons and maps:
 
 - [End To End: Finite Calculus Shadows](calculus-shadows-end-to-end.md)
 - [End To End: Finite Simpson Rule](simpson-rule-end-to-end.md)
+- [End To End: Finite Romberg Extrapolation](romberg-extrapolation-end-to-end.md)
 - [End To End: Finite Divided Differences](divided-differences-end-to-end.md)
 - [End To End: Finite Barycentric Interpolation](barycentric-interpolation-end-to-end.md)
 - [End To End: Finite Difference Derivatives](finite-difference-derivatives-end-to-end.md)
@@ -208,6 +210,12 @@ regression seeds, but they do not prove analytic calculus theorems.
 | `finite-simpson-rule-v0` | `bad-simpson-value-rejected` | `unsat` | replay-only | Exact replay rejects the malformed value `7/2` after computing `4`. |
 | `finite-simpson-rule-v0` | `qf-lra-bad-simpson-value` | `unsat` | checked | A QF_LRA/Farkas row checks the scalar contradiction `simpson_value = 4` and `simpson_value = 7/2`. |
 | `finite-simpson-rule-v0` | `general-simpson-rule-theory-lean-horizon` | `not-run` | lean-horizon | Degree-of-exactness, composite/adaptive quadrature convergence, error terms, and floating-point quadrature remain theorem/numerical-honesty work. |
+| `finite-romberg-extrapolation-v0` | `romberg-quadratic-exact-witness` | `sat` | replay-only | The listed one-step Romberg value for `x^2` on `[0,1]` evaluates to `1/3`, matching the exact integral. |
+| `finite-romberg-extrapolation-v0` | `romberg-quadratic-error-cancellation-witness` | `sat` | replay-only | The fixed quadratic row records coarse error `1/6`, fine error `1/24`, error ratio `4`, and zero Romberg residual. |
+| `finite-romberg-extrapolation-v0` | `romberg-quartic-error-witness` | `sat` | replay-only | The fixed quartic row evaluates to `5/24` and records exact residual `1/120` against integral `1/5`. |
+| `finite-romberg-extrapolation-v0` | `bad-romberg-value-rejected` | `unsat` | replay-only | Exact replay rejects the malformed value `1/4` after computing `1/3`. |
+| `finite-romberg-extrapolation-v0` | `qf-lra-bad-romberg-value` | `unsat` | checked | A QF_LRA/Farkas row checks the scalar contradiction `romberg_value = 1/3` and `romberg_value = 1/4`. |
+| `finite-romberg-extrapolation-v0` | `general-romberg-extrapolation-theory-lean-horizon` | `not-run` | lean-horizon | Romberg/Richardson convergence, error expansions, adaptive quadrature, and floating-point evaluation remain theorem/numerical-honesty work. |
 | `finite-divided-differences-v0` | `quadratic-divided-difference-table` | `sat` | replay-only | The listed Newton table for `1+x^2` at nodes `0,1,2` is replayed exactly. |
 | `finite-divided-differences-v0` | `quadratic-newton-evaluation-witness` | `sat` | replay-only | The Newton form from the quadratic table evaluates to `10` at `x=3`. |
 | `finite-divided-differences-v0` | `cubic-divided-difference-table` | `sat` | replay-only | The listed Newton table for `x^3` at nodes `0,1,2,3` is replayed exactly. |
@@ -358,6 +366,11 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 
 python3 scripts/query-foundational-resources.py checks \
+  --pack finite-romberg-extrapolation-v0 \
+  --proof-status lean-horizon \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
   --pack finite-divided-differences-v0 \
   --proof-status lean-horizon \
   --require-any
@@ -405,6 +418,12 @@ python3 scripts/query-foundational-resources.py checks \
 
 python3 scripts/query-foundational-resources.py checks \
   --pack finite-simpson-rule-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-romberg-extrapolation-v0 \
   --route Farkas \
   --proof-status checked \
   --require-any
@@ -468,6 +487,13 @@ python3 scripts/query-foundational-resources.py checks \
   --route Farkas \
   --proof-status checked \
   --text simpson \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-romberg-extrapolation-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --text romberg \
   --require-any
 
 python3 scripts/query-foundational-resources.py checks \
@@ -547,6 +573,7 @@ From the repository root:
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/calculus-algebraic-shadow-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/calculus-riemann-sum-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simpson-rule-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-romberg-extrapolation-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-divided-differences-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-barycentric-interpolation-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-difference-derivatives-v0
@@ -558,6 +585,7 @@ python3 scripts/query-foundational-resources.py horizon-frontier --text calculus
 python3 scripts/query-foundational-resources.py checks --pack calculus-algebraic-shadow-v0 --proof-status lean-horizon --require-any
 python3 scripts/query-foundational-resources.py checks --pack calculus-riemann-sum-v0 --proof-status lean-horizon --require-any
 python3 scripts/query-foundational-resources.py checks --pack finite-simpson-rule-v0 --proof-status lean-horizon --require-any
+python3 scripts/query-foundational-resources.py checks --pack finite-romberg-extrapolation-v0 --proof-status lean-horizon --require-any
 python3 scripts/query-foundational-resources.py checks --pack finite-divided-differences-v0 --proof-status lean-horizon --require-any
 python3 scripts/query-foundational-resources.py checks --pack finite-barycentric-interpolation-v0 --proof-status lean-horizon --require-any
 python3 scripts/query-foundational-resources.py checks --pack finite-difference-derivatives-v0 --proof-status lean-horizon --require-any
@@ -568,6 +596,7 @@ python3 scripts/query-foundational-resources.py checks --pack multivariable-calc
 python3 scripts/query-foundational-resources.py checks --pack calculus-algebraic-shadow-v0 --route Farkas --proof-status checked --require-any
 python3 scripts/query-foundational-resources.py checks --pack calculus-riemann-sum-v0 --route Farkas --proof-status checked --require-any
 python3 scripts/query-foundational-resources.py checks --pack finite-simpson-rule-v0 --route Farkas --proof-status checked --require-any
+python3 scripts/query-foundational-resources.py checks --pack finite-romberg-extrapolation-v0 --route Farkas --proof-status checked --require-any
 python3 scripts/query-foundational-resources.py checks --pack finite-divided-differences-v0 --route Farkas --proof-status checked --require-any
 python3 scripts/query-foundational-resources.py checks --pack finite-barycentric-interpolation-v0 --route Farkas --proof-status checked --require-any
 python3 scripts/query-foundational-resources.py checks --pack finite-difference-derivatives-v0 --route Farkas --proof-status checked --require-any

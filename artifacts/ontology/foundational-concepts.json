@@ -868,6 +868,18 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-interval-arithmetic-shadow-v0",
           "notes": "Exact rational interval arithmetic shadow with checked bad product-upper-bound evidence."
+        },
+        {
+          "id": "finite-simpson-rule-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-simpson-rule-v0",
+          "notes": "Finite rational Simpson-rule quadrature replay with checked bad-value Farkas row."
+        },
+        {
+          "id": "finite-romberg-extrapolation-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-romberg-extrapolation-v0",
+          "notes": "Finite rational Romberg/Richardson extrapolation replay with checked bad-value Farkas row."
         }
       ],
       "proof_routes": [
@@ -1496,6 +1508,18 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-cubic-spline-interpolation-v0",
           "notes": "Finite natural cubic spline assembly replay, C1/C2 knot-continuity checks, natural-boundary checks, and checked bad-value rejection."
+        },
+        {
+          "id": "finite-simpson-rule-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-simpson-rule-v0",
+          "notes": "Finite Simpson-rule polynomial quadrature replay and checked bad quadrature-value rejection."
+        },
+        {
+          "id": "finite-romberg-extrapolation-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-romberg-extrapolation-v0",
+          "notes": "Finite polynomial-integral Romberg extrapolation replay and checked bad extrapolated-value rejection."
         }
       ],
       "proof_routes": [
@@ -2147,6 +2171,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-simpson-rule-v0",
           "notes": "Finite rational Simpson-rule panels, exact quadrature replay, checked bad-value Farkas row, and quadrature-theory Lean horizon."
+        },
+        {
+          "id": "finite-romberg-extrapolation-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-romberg-extrapolation-v0",
+          "notes": "Finite rational Romberg/Richardson extrapolation replay from composite trapezoid values with checked bad-value Farkas row."
         },
         {
           "id": "finite-difference-derivatives-v0",
@@ -3368,6 +3398,12 @@
           "notes": "Finite natural cubic spline rows replay exact piecewise-polynomial assembly, knot smoothness, and natural-boundary arithmetic while floating-point spline evaluation remains horizon work."
         },
         {
+          "id": "finite-romberg-extrapolation-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-romberg-extrapolation-v0",
+          "notes": "Finite Romberg/Richardson extrapolation rows replay exact composite trapezoid and polynomial-integral arithmetic while floating-point quadrature remains horizon work."
+        },
+        {
           "id": "exact-statistical-tests-v0",
           "status": "validated",
           "path": "artifacts/examples/math/exact-statistical-tests-v0",
@@ -3405,6 +3441,7 @@
             "docs/learn/math/taylor-polynomials-end-to-end.md",
             "docs/learn/math/hermite-interpolation-end-to-end.md",
             "docs/learn/math/spline-interpolation-end-to-end.md",
+            "docs/learn/math/romberg-extrapolation-end-to-end.md",
             "docs/learn/math/exact-statistical-tests-end-to-end.md",
             "docs/foundational-resources/MATH-FIELDS.md"
           ],
@@ -6343,7 +6380,7 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "validated",
-      "summary": "An integration-horizon row separates exact finite sums, simple function integrals, Riemann-sum shadows, and Simpson-rule quadrature panels from theorem-level integrability, convergence, error-bound, and fundamental-theorem claims.",
+      "summary": "An integration-horizon row separates exact finite sums, simple function integrals, Riemann-sum shadows, Simpson-rule quadrature panels, and Romberg extrapolation rows from theorem-level integrability, convergence, error-bound, and fundamental-theorem claims.",
       "prerequisites": [
         "bridge_finite_product_integration",
         "bridge_derivative_identity_shadow",
@@ -6359,6 +6396,7 @@
         "finite weighted sums",
         "Riemann-sum shadows",
         "finite Simpson quadrature",
+        "finite Romberg extrapolation",
         "simple-function integrals",
         "QF_LRA",
         "Lean horizon"
@@ -6375,6 +6413,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-simpson-rule-v0",
           "notes": "Fixed single-panel Simpson quadrature replay and checked bad quadrature-value row."
+        },
+        {
+          "id": "finite-romberg-extrapolation-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-romberg-extrapolation-v0",
+          "notes": "Fixed composite-trapezoid Romberg extrapolation replay and checked bad extrapolated-value row."
         },
         {
           "id": "finite-integration-v0",
@@ -6407,11 +6451,12 @@
             "docs/proof-cookbook/recipes/lean-horizon-template.md",
             "docs/learn/math/calculus-shadows-end-to-end.md",
             "docs/learn/math/simpson-rule-end-to-end.md",
+            "docs/learn/math/romberg-extrapolation-end-to-end.md",
             "docs/learn/math/finite-integration-end-to-end.md",
             "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
           ],
-          "notes": "Finite sums and simple-function integrals are replayed exactly; finite Simpson panels also replay nodes, weights, sample values, and quadrature values. Bad finite values can carry Farkas evidence. General integrability, quadrature convergence/error theorems, and FTC remain Lean-horizon dependencies."
+          "notes": "Finite sums and simple-function integrals are replayed exactly; finite Simpson panels replay nodes, weights, sample values, and quadrature values; finite Romberg rows replay composite trapezoid values and the extrapolation formula. Bad finite values can carry Farkas evidence. General integrability, quadrature convergence/error theorems, extrapolation theory, and FTC remain Lean-horizon dependencies."
         }
       ],
       "source_refs": [
@@ -6420,6 +6465,7 @@
         "docs/proof-cookbook/recipes/lean-horizon-template.md",
         "docs/learn/math/calculus-shadows-end-to-end.md",
         "docs/learn/math/simpson-rule-end-to-end.md",
+        "docs/learn/math/romberg-extrapolation-end-to-end.md",
         "docs/learn/math/finite-integration-end-to-end.md",
         "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
         "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
@@ -6428,13 +6474,14 @@
       "open_gaps": [
         "Finite Riemann sums, Simpson panels, and simple-function integrals do not prove Riemann/Lebesgue integrability or convergence theorems.",
         "Single-panel Simpson replay does not prove composite/adaptive quadrature convergence, error terms, degree-of-exactness theorems, or floating-point quadrature correctness.",
+        "Finite Romberg replay does not prove Richardson extrapolation theory, asymptotic error expansions, adaptive quadrature convergence, or floating-point quadrature correctness.",
         "FTC, dominated convergence, Fubini/Tonelli, and almost-everywhere integration remain Lean horizons."
       ],
       "graduation": {
         "status": "validated",
         "criteria": [
-          "Rows state the finite partition, quadrature nodes/weights/sample values, atom table, function values, and exact sum domain.",
-          "The validator recomputes each finite integral, Riemann-sum, or Simpson-rule quadrature value exactly.",
+          "Rows state the finite partition, quadrature nodes/weights/sample values, Romberg source trapezoid values, atom table, function values, and exact sum domain.",
+          "The validator recomputes each finite integral, Riemann-sum, Simpson-rule quadrature value, or Romberg extrapolated value exactly.",
           "The theorem-level integration claim is explicitly marked Lean-horizon."
         ]
       }
@@ -13802,7 +13849,7 @@
           "id": "numerical-linear-algebra-v0",
           "status": "validated",
           "path": "artifacts/examples/math/numerical-linear-algebra-v0",
-          "notes": "Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, interval bounds, inner-product projections, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, GMRES residual-minimization, Lanczos/tridiagonalization, residual, rounding, and perturbation-bound shadows, divided-difference and barycentric interpolation, finite-difference derivative stencils, finite Taylor polynomial replay, finite cubic Hermite interpolation replay, finite cubic spline assembly replay, fixed-step error recurrences, Simpson-rule quadrature, Euler, Runge-Kutta midpoint, Heun, backward Euler, Crank-Nicolson implicit, Adams-Bashforth explicit multistep, and BDF2 implicit multistep time-stepping shadows, Jacobian/Hessian replay, finite root-finding, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."
+          "notes": "Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, interval bounds, inner-product projections, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, GMRES residual-minimization, Lanczos/tridiagonalization, residual, rounding, and perturbation-bound shadows, divided-difference and barycentric interpolation, finite-difference derivative stencils, finite Taylor polynomial replay, finite cubic Hermite interpolation replay, finite cubic spline assembly replay, fixed-step error recurrences, Simpson-rule quadrature, Romberg extrapolation, Euler, Runge-Kutta midpoint, Heun, backward Euler, Crank-Nicolson implicit, Adams-Bashforth explicit multistep, and BDF2 implicit multistep time-stepping shadows, Jacobian/Hessian replay, finite root-finding, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."
         },
         {
           "id": "bounded-dynamics-v0",
@@ -14061,6 +14108,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-recurrence-prefix-v0",
           "notes": "Finite Recurrence Prefix Checks"
+        },
+        {
+          "id": "finite-romberg-extrapolation-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-romberg-extrapolation-v0",
+          "notes": "Finite Romberg Extrapolation Checks"
         },
         {
           "id": "finite-root-finding-v0",
@@ -14650,7 +14703,7 @@
           "id": "real-analysis-rational-v0",
           "status": "validated",
           "path": "artifacts/examples/math/real-analysis-rational-v0",
-          "notes": "Rational interval/ball checks, bounded epsilon-delta samples, algebraic factorization, divided-difference and barycentric interpolation, finite-difference derivative stencils, finite Taylor polynomial replay, finite cubic Hermite interpolation replay, finite cubic spline assembly replay, fixed-decimal rounding shadows, Riemann-sum and Simpson-rule quadrature shadows, multivariable-calculus, Newton-step, Runge-Kutta midpoint, Heun-method, backward Euler, Crank-Nicolson, Adams-Bashforth, and BDF2 shadows, and proof horizons."
+          "notes": "Rational interval/ball checks, bounded epsilon-delta samples, algebraic factorization, divided-difference and barycentric interpolation, finite-difference derivative stencils, finite Taylor polynomial replay, finite cubic Hermite interpolation replay, finite cubic spline assembly replay, fixed-decimal rounding shadows, Riemann-sum, Simpson-rule, and Romberg quadrature shadows, multivariable-calculus, Newton-step, Runge-Kutta midpoint, Heun-method, backward Euler, Crank-Nicolson, Adams-Bashforth, and BDF2 shadows, and proof horizons."
         },
         {
           "id": "affine-geometry-v0",
@@ -14909,6 +14962,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-recurrence-prefix-v0",
           "notes": "Finite Recurrence Prefix Checks"
+        },
+        {
+          "id": "finite-romberg-extrapolation-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-romberg-extrapolation-v0",
+          "notes": "Finite Romberg Extrapolation Checks"
         },
         {
           "id": "finite-root-finding-v0",

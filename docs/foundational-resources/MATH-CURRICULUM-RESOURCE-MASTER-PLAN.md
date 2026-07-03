@@ -54,12 +54,12 @@ As of 2026-07-03, the committed resource query reports:
 - 18 math-field concept rows.
 - 76 bridge-concept rows.
 - 5 example-family rows.
-- 153 non-template math packs.
-- 996 expected checks.
-- 379 checked proof/evidence rows.
-- 501 replay-only rows.
-- 116 Lean-horizon rows.
-- 153 promoted solver-reuse packs.
+- 154 non-template math packs.
+- 1002 expected checks.
+- 380 checked proof/evidence rows.
+- 505 replay-only rows.
+- 117 Lean-horizon rows.
+- 154 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
 
@@ -112,7 +112,7 @@ route-specific corrupted-evidence command and current tamper gaps.
 
 ### Wave A: Preserve The Contract
 
-Goal: make the current 153 packs a stable, queryable data product.
+Goal: make the current 154 packs a stable, queryable data product.
 
 Work:
 
@@ -333,14 +333,14 @@ Next useful increments:
 | `number_theory` | gcd, modular arithmetic, residues, finite fields, bounded Diophantine rows | recurring divisibility/CRT/residue obstructions and fixed-width contrasts | QF_LIA/Diophantine, QF_BV | bounded search and theorem claims are visibly separated |
 | `linear_algebra` | rational matrices, finite vector/dual/module/tensor, spectral/Jordan/singular-value, invariant, optimization/numerical rows | matrix-computation index plus matrix-corpus boundary by LU/rank/nullity/projection/residual/eigen/Jordan/singular-value/characteristic/random-moment; LU/nullspace/Jordan/singular-bound Farkas rows and finite vector/module/dual Alethe closure-additivity rows now have source-linked checked evidence | QF_LRA/Farkas, finite replay, QF_UF/Alethe | solver regressions cite source pack and pack cites regression before benchmark claims |
 | `abstract_algebra` | finite groups, rings, fields, monoids, actions, homomorphisms, ideals, modules, tensors | narrower rows only for reused concepts: orbit/stabilizer, Burnside, units/idempotents, representation horizons | QF_UF/Alethe, QF_BV, finite replay, Lean horizon | table replay remains distinct from structure-theorem proof |
-| `real_analysis` | rational intervals, metric continuity, sequences, compactness/connectedness, Riemann-sum and Simpson-rule integration shadows, divided-difference and barycentric interpolation, root-finding, optimization shadows | bounded-vs-theorem bridge rows, theorem-horizon map for completeness, integration, interpolation, quadrature, and convergence | QF_LRA/Farkas, QF_NRA/RCF shadows, Lean horizon | every lesson states finite/bounded shadow vs theorem |
+| `real_analysis` | rational intervals, metric continuity, sequences, compactness/connectedness, Riemann-sum and Simpson-rule integration shadows, divided-difference and barycentric interpolation, root-finding, optimization shadows | bounded-vs-theorem bridge rows, theorem-horizon map for completeness, integration, quadrature/extrapolation, interpolation, and convergence | QF_LRA/Farkas, QF_NRA/RCF shadows, Lean horizon | every lesson states finite/bounded shadow vs theorem |
 | `complex_analysis` | real-pair algebra and transforms | polynomial-root, conjugation/norm, Mobius rows only if distinct; analytic horizon rows | real-pair LRA/NRA, finite replay, Lean horizon | no algebraic row is described as analytic coverage |
 | `topology` | finite topologies, compactness, connectedness, continuous maps, specialization orders, homology, torsion homology, cohomology, cup products | landed finite topology-operator/homeomorphism, finite specialization-order, finite boundary-operator, finite chain-complex/homology, finite torsion-homology, finite cohomology, and finite cup-product replay bridges; add only distinct quotient, universal-coefficient, cohomology-ring quotienting, or theorem-invariance pressure | Bool/CNF, QF_UF/Alethe, QF_LIA, QF_BV, finite replay, Lean horizon | dashboards distinguish finite set-family, specialization preorder, homeomorphism replay, boundary replay, chain/cochain replay, Smith/torsion replay, finite cohomology, and finite cup-product operations from topology theorems |
 | `measure_theory` | finite measure, monotonicity, product measure, integration, random variables, conditioning, martingales | only distinct table/convergence vocabulary; keep countable/Lebesgue material horizon | QF_LRA/Farkas, finite replay, Lean horizon | finite universe and sigma-algebra are explicit |
 | `probability_theory` | finite PMFs, kernels, Markov chains, martingales, hitting times, concentration | exact discrete distributions, independence/conditioning variants, limit-theorem horizons | QF_LRA/Farkas, QF_LIA, finite replay | probability rows can be audited as exact rational tables |
 | `statistics` | descriptive stats, exact tests, regression, finite count tables | exact finite inference examples and numerical-honesty metadata | QF_LIA, QF_LRA/Farkas, replay | inference claims distinguish exact finite tests from statistical modeling |
 | `optimization_and_convexity` | LP, convexity, least squares, root finding, KKT, active-set QP, SDP, gradient/line-search/projected/proximal rows | duality, working-set pivots, strong-Wolfe, group-lasso/active-set proximal variants, stochastic/convergence horizons | QF_LRA/Farkas, QF_NRA, Lean horizon | finite KKT/duality/algorithm rows do not claim general sufficiency/convergence |
-| `numerical_analysis` | residuals, Simpson-rule quadrature, divided-difference and barycentric interpolation, explicit and implicit Euler/Crank-Nicolson steps, Adams-Bashforth and BDF2 multistep rows, root-finding, finite optimization iterations, operator, singular-value, and Jordan-chain bounds | landed finite dynamics/Euler bridge plus exact condition-number, singular-value, Jordan-chain, interpolation, and quadrature shadows; add only distinct implicit-solve, multistep-history, interpolation, quadrature, pivoting/stability, or reproducible numerical metadata pressure | QF_LRA/Farkas, replay, Lean horizon | exact replay is separate from floating-point experiment claims |
+| `numerical_analysis` | residuals, Simpson-rule quadrature, Romberg extrapolation, divided-difference and barycentric interpolation, explicit and implicit Euler/Crank-Nicolson steps, Adams-Bashforth and BDF2 multistep rows, root-finding, finite optimization iterations, operator, singular-value, and Jordan-chain bounds | landed finite dynamics/Euler bridge plus exact condition-number, singular-value, Jordan-chain, interpolation, quadrature, and extrapolation shadows; add only distinct implicit-solve, multistep-history, interpolation, quadrature, extrapolation, pivoting/stability, or reproducible numerical metadata pressure | QF_LRA/Farkas, replay, Lean horizon | exact replay is separate from floating-point experiment claims |
 | `differential_equations_and_dynamical_systems` | bounded recurrences, explicit Euler traces, implicit Backward Euler and Crank-Nicolson traces, Adams-Bashforth and BDF2 multistep traces, finite invariants, stochastic kernels/hitting times | landed finite dynamics/Euler bridge plus stochastic-kernel bridge; add transition/invariant/implicit-solve variants only when they add distinct finite pressure | QF_LRA/Farkas, finite replay, Lean horizon | continuous existence/uniqueness, stability, stiffness, and PDE claims stay horizon |
 | `geometry` | coordinate, incidence, rigid, affine, oriented area, circle, inversion, cyclic quadrilaterals | landed finite circle/inversion/cyclic replay bridge; add only distinct nontrivial circle-line correspondence, higher-degree polynomial geometry, or theorem-reconstruction pressure beyond the current area-scaling, circle-line, square angle-dot, and Ptolemy rows | QF_LRA/Farkas, finite replay, QF_NRA horizon | synthetic/global geometry claims stay Lean horizon |
 | `functional_analysis_and_operator_theory` | finite operators, inner products, projections, singular-value and Jordan/nilpotent shadows, Chebyshev slices, finite duals | norm variants, finite approximation/alternation, operator-spectrum/SVD/Jordan rows only when they add distinct proof pressure | QF_LRA/Farkas, finite replay, Lean horizon | Banach/Hilbert, SVD theorem, Jordan normal form, and infinite-dimensional claims are not finite checks |

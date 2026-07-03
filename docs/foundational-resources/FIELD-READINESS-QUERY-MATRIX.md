@@ -24,8 +24,8 @@ committed data contract:
 The smoke coverage lives in
 [`scripts/check-foundational-resources.sh`](../../scripts/check-foundational-resources.sh).
 At the time this matrix was updated, the public summary reports 122 concept
-rows, 153 non-template packs, 996 expected checks, 379 checked rows, 501
-replay-only rows, 116 Lean-horizon rows, and 153 promoted solver-reuse packs.
+rows, 154 non-template packs, 1002 expected checks, 380 checked rows, 505
+replay-only rows, 117 Lean-horizon rows, and 154 promoted solver-reuse packs.
 
 ## Query Pattern
 

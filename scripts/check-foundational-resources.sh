@@ -298,6 +298,12 @@ python3 scripts/query-foundational-resources.py checks --pack finite-hitting-tim
 python3 scripts/query-foundational-resources.py checks --pack calculus-algebraic-shadow-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack calculus-riemann-sum-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-simpson-rule-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-romberg-extrapolation-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-romberg-extrapolation-v0 --route Farkas --proof-status checked --text qf-lra-bad-romberg-value --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_integration_horizon --pack finite-romberg-extrapolation-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_exact_vs_floating_arithmetic --pack finite-romberg-extrapolation-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-romberg-extrapolation-v0 --proof-status replay-only --text rejected --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-romberg-extrapolation-v0 --proof-status lean-horizon --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-divided-differences-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-divided-differences-v0 --route Farkas --proof-status checked --text qf-lra-bad-interpolation-value --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_polynomial_coefficient_factor_replay --pack finite-divided-differences-v0 --route Farkas --proof-status checked --require-any >/dev/null
@@ -613,11 +619,17 @@ python3 scripts/query-foundational-resources.py checks --pack finite-simpson-rul
 python3 scripts/query-foundational-resources.py checks --pack finite-simpson-rule-v0 --route Farkas --proof-status checked --text qf-lra-bad-simpson-value --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_integration_horizon --pack finite-simpson-rule-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-simpson-rule-v0 --proof-status replay-only --text rejected --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-romberg-extrapolation-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-romberg-extrapolation-v0 --route Farkas --proof-status checked --text qf-lra-bad-romberg-value --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_integration_horizon --pack finite-romberg-extrapolation-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_exact_vs_floating_arithmetic --pack finite-romberg-extrapolation-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-romberg-extrapolation-v0 --proof-status replay-only --text rejected --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack multivariable-calculus-rational-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py horizon-frontier --text calculus --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack calculus-algebraic-shadow-v0 --proof-status lean-horizon --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack calculus-riemann-sum-v0 --proof-status lean-horizon --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-simpson-rule-v0 --proof-status lean-horizon --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-romberg-extrapolation-v0 --proof-status lean-horizon --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack multivariable-calculus-rational-v0 --proof-status lean-horizon --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-root-finding-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-root-finding-v0 --route Farkas --proof-status checked --text qf-lra-bad-newton-step --require-any >/dev/null

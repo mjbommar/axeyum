@@ -219,6 +219,14 @@ CURRICULUM_MAP = {
                 "finite-interval-arithmetic-shadow-v0",
                 "Exact rational interval arithmetic shadow with checked bad product-upper-bound evidence.",
             ),
+            (
+                "finite-simpson-rule-v0",
+                "Finite rational Simpson-rule quadrature replay with checked bad-value Farkas row.",
+            ),
+            (
+                "finite-romberg-extrapolation-v0",
+                "Finite rational Romberg/Richardson extrapolation replay with checked bad-value Farkas row.",
+            ),
         ],
     },
     "complex": {
@@ -380,6 +388,14 @@ CURRICULUM_MAP = {
             (
                 "finite-cubic-spline-interpolation-v0",
                 "Finite natural cubic spline assembly replay, C1/C2 knot-continuity checks, natural-boundary checks, and checked bad-value rejection.",
+            ),
+            (
+                "finite-simpson-rule-v0",
+                "Finite Simpson-rule polynomial quadrature replay and checked bad quadrature-value rejection.",
+            ),
+            (
+                "finite-romberg-extrapolation-v0",
+                "Finite polynomial-integral Romberg extrapolation replay and checked bad extrapolated-value rejection.",
             ),
         ],
     },
@@ -632,6 +648,10 @@ CURRICULUM_MAP = {
                 "Finite rational Simpson-rule panels, exact quadrature replay, checked bad-value Farkas row, and quadrature-theory Lean horizon.",
             ),
             (
+                "finite-romberg-extrapolation-v0",
+                "Finite rational Romberg/Richardson extrapolation replay from composite trapezoid values with checked bad-value Farkas row.",
+            ),
+            (
                 "finite-difference-derivatives-v0",
                 "Finite rational forward, central, and second-difference derivative stencils with checked bad-value Farkas row.",
             ),
@@ -699,7 +719,7 @@ FIELD_PACKS = {
     "number_theory": ("modular-arithmetic-v0", "Congruences, CRT, residues, finite fields, finite ideals in modular rings, and bounded Diophantine examples."),
     "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, covariance/Gram replay, orthogonal transforms, rank, inverse, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, GMRES residual-minimization, Lanczos/tridiagonalization, and Jordan-chain shadows, Jacobians, Hessians, Newton-step Hessian solves, projections, and infeasibility."),
     "abstract_algebra": ("finite-fields-v0", "Finite groups, permutation groups, monoids, group actions, rings, fields, ideals, modules, dual spaces, tensor products, homomorphism tables, polynomial factorization slices, Jordan-chain polynomial/module shadows, and Cayley-table validation."),
-    "real_analysis": ("real-analysis-rational-v0", "Rational interval/ball checks, bounded epsilon-delta samples, algebraic factorization, divided-difference and barycentric interpolation, finite-difference derivative stencils, finite Taylor polynomial replay, finite cubic Hermite interpolation replay, finite cubic spline assembly replay, fixed-decimal rounding shadows, Riemann-sum and Simpson-rule quadrature shadows, multivariable-calculus, Newton-step, Runge-Kutta midpoint, Heun-method, backward Euler, Crank-Nicolson, Adams-Bashforth, and BDF2 shadows, and proof horizons."),
+    "real_analysis": ("real-analysis-rational-v0", "Rational interval/ball checks, bounded epsilon-delta samples, algebraic factorization, divided-difference and barycentric interpolation, finite-difference derivative stencils, finite Taylor polynomial replay, finite cubic Hermite interpolation replay, finite cubic spline assembly replay, fixed-decimal rounding shadows, Riemann-sum, Simpson-rule, and Romberg quadrature shadows, multivariable-calculus, Newton-step, Runge-Kutta midpoint, Heun-method, backward Euler, Crank-Nicolson, Adams-Bashforth, and BDF2 shadows, and proof horizons."),
     "complex_analysis": ("complex-algebraic-v0", "Complex arithmetic, real-pair transforms, finite Cauchy-Riemann derivative shadows, and polynomial factorization shadows as real/rational algebra before analytic proof horizons."),
     "topology": ("finite-topology-v0", "Finite topologies, metric balls, closure/interior, continuous maps, and finite simplicial-homology checks."),
     "measure_theory": ("finite-measure-v0", "Finite sigma-algebras, finite measures, monotonicity/subadditivity, random variables, conditional expectations, finite kernels, martingales, hitting times, concentration checks, product tables, and exact probability foundations."),
@@ -723,7 +743,7 @@ FIELD_PACKS = {
         ("finite-projected-gradient-v0", "Finite projected-gradient interval replay with checked bad-projection rejection."),
         ("finite-proximal-gradient-v0", "Finite proximal-gradient L1 soft-threshold/composite-decrease replay with checked bad proximal-gradient rows."),
     ],
-    "numerical_analysis": ("numerical-linear-algebra-v0", "Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, interval bounds, inner-product projections, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, GMRES residual-minimization, Lanczos/tridiagonalization, residual, rounding, and perturbation-bound shadows, divided-difference and barycentric interpolation, finite-difference derivative stencils, finite Taylor polynomial replay, finite cubic Hermite interpolation replay, finite cubic spline assembly replay, fixed-step error recurrences, Simpson-rule quadrature, Euler, Runge-Kutta midpoint, Heun, backward Euler, Crank-Nicolson implicit, Adams-Bashforth explicit multistep, and BDF2 implicit multistep time-stepping shadows, Jacobian/Hessian replay, finite root-finding, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."),
+    "numerical_analysis": ("numerical-linear-algebra-v0", "Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, interval bounds, inner-product projections, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, GMRES residual-minimization, Lanczos/tridiagonalization, residual, rounding, and perturbation-bound shadows, divided-difference and barycentric interpolation, finite-difference derivative stencils, finite Taylor polynomial replay, finite cubic Hermite interpolation replay, finite cubic spline assembly replay, fixed-step error recurrences, Simpson-rule quadrature, Romberg extrapolation, Euler, Runge-Kutta midpoint, Heun, backward Euler, Crank-Nicolson implicit, Adams-Bashforth explicit multistep, and BDF2 implicit multistep time-stepping shadows, Jacobian/Hessian replay, finite root-finding, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."),
     "differential_equations_and_dynamical_systems": ("bounded-dynamics-v0", "Recurrence systems, discretized dynamics, threshold reachability, invariant checks, Euler, Runge-Kutta midpoint, Heun, backward Euler, Crank-Nicolson, Adams-Bashforth, and BDF2 finite time-stepping, Markov transitions, and finite hitting times."),
     "geometry": [
         (
@@ -1723,6 +1743,10 @@ BRIDGE_CONCEPTS = [
                 "Finite natural cubic spline rows replay exact piecewise-polynomial assembly, knot smoothness, and natural-boundary arithmetic while floating-point spline evaluation remains horizon work.",
             ),
             (
+                "finite-romberg-extrapolation-v0",
+                "Finite Romberg/Richardson extrapolation rows replay exact composite trapezoid and polynomial-integral arithmetic while floating-point quadrature remains horizon work.",
+            ),
+            (
                 "exact-statistical-tests-v0",
                 "Finite exact-test p-value rows represented as rational sums rather than floating-point statistical approximations.",
             ),
@@ -1758,6 +1782,7 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/taylor-polynomials-end-to-end.md",
                     "docs/learn/math/hermite-interpolation-end-to-end.md",
                     "docs/learn/math/spline-interpolation-end-to-end.md",
+                    "docs/learn/math/romberg-extrapolation-end-to-end.md",
                     "docs/learn/math/exact-statistical-tests-end-to-end.md",
                     "docs/foundational-resources/MATH-FIELDS.md",
                 ],
@@ -4441,9 +4466,10 @@ BRIDGE_CONCEPTS = [
         "resource_status": "validated",
         "summary": (
             "An integration-horizon row separates exact finite sums, simple "
-            "function integrals, Riemann-sum shadows, and Simpson-rule "
-            "quadrature panels from theorem-level integrability, convergence, "
-            "error-bound, and fundamental-theorem claims."
+            "function integrals, Riemann-sum shadows, Simpson-rule "
+            "quadrature panels, and Romberg extrapolation rows from "
+            "theorem-level integrability, convergence, error-bound, and "
+            "fundamental-theorem claims."
         ),
         "prerequisites": [
             "bridge_finite_product_integration",
@@ -4460,6 +4486,7 @@ BRIDGE_CONCEPTS = [
             "finite weighted sums",
             "Riemann-sum shadows",
             "finite Simpson quadrature",
+            "finite Romberg extrapolation",
             "simple-function integrals",
             "QF_LRA",
             "Lean horizon",
@@ -4472,6 +4499,10 @@ BRIDGE_CONCEPTS = [
             (
                 "finite-simpson-rule-v0",
                 "Fixed single-panel Simpson quadrature replay and checked bad quadrature-value row.",
+            ),
+            (
+                "finite-romberg-extrapolation-v0",
+                "Fixed composite-trapezoid Romberg extrapolation replay and checked bad extrapolated-value row.",
             ),
             (
                 "finite-integration-v0",
@@ -4498,16 +4529,19 @@ BRIDGE_CONCEPTS = [
                     "docs/proof-cookbook/recipes/lean-horizon-template.md",
                     "docs/learn/math/calculus-shadows-end-to-end.md",
                     "docs/learn/math/simpson-rule-end-to-end.md",
+                    "docs/learn/math/romberg-extrapolation-end-to-end.md",
                     "docs/learn/math/finite-integration-end-to-end.md",
                     "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
                     "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
                 ],
                 "notes": (
                     "Finite sums and simple-function integrals are replayed "
-                    "exactly; finite Simpson panels also replay nodes, "
-                    "weights, sample values, and quadrature values. Bad finite "
-                    "values can carry Farkas evidence. General integrability, "
-                    "quadrature convergence/error theorems, and FTC remain "
+                    "exactly; finite Simpson panels replay nodes, weights, "
+                    "sample values, and quadrature values; finite Romberg rows "
+                    "replay composite trapezoid values and the extrapolation "
+                    "formula. Bad finite values can carry Farkas evidence. "
+                    "General integrability, quadrature convergence/error "
+                    "theorems, extrapolation theory, and FTC remain "
                     "Lean-horizon dependencies."
                 ),
             }
@@ -4518,6 +4552,7 @@ BRIDGE_CONCEPTS = [
             "docs/proof-cookbook/recipes/lean-horizon-template.md",
             "docs/learn/math/calculus-shadows-end-to-end.md",
             "docs/learn/math/simpson-rule-end-to-end.md",
+            "docs/learn/math/romberg-extrapolation-end-to-end.md",
             "docs/learn/math/finite-integration-end-to-end.md",
             "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
@@ -4526,13 +4561,14 @@ BRIDGE_CONCEPTS = [
         "open_gaps": [
             "Finite Riemann sums, Simpson panels, and simple-function integrals do not prove Riemann/Lebesgue integrability or convergence theorems.",
             "Single-panel Simpson replay does not prove composite/adaptive quadrature convergence, error terms, degree-of-exactness theorems, or floating-point quadrature correctness.",
+            "Finite Romberg replay does not prove Richardson extrapolation theory, asymptotic error expansions, adaptive quadrature convergence, or floating-point quadrature correctness.",
             "FTC, dominated convergence, Fubini/Tonelli, and almost-everywhere integration remain Lean horizons.",
         ],
         "graduation": {
             "status": "validated",
             "criteria": [
-                "Rows state the finite partition, quadrature nodes/weights/sample values, atom table, function values, and exact sum domain.",
-                "The validator recomputes each finite integral, Riemann-sum, or Simpson-rule quadrature value exactly.",
+                "Rows state the finite partition, quadrature nodes/weights/sample values, Romberg source trapezoid values, atom table, function values, and exact sum domain.",
+                "The validator recomputes each finite integral, Riemann-sum, Simpson-rule quadrature value, or Romberg extrapolated value exactly.",
                 "The theorem-level integration claim is explicitly marked Lean-horizon.",
             ],
         },

@@ -1,0 +1,5 @@
+(set-logic QF_LRA)
+(declare-const romberg_value Real)
+(assert (= romberg_value (/ 1 3)))
+(assert (= romberg_value (/ 1 4)))
+(check-sat)

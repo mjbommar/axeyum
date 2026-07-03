@@ -25,6 +25,7 @@ Example packs:
 - [finite-taylor-polynomials-v0](../../../artifacts/examples/math/finite-taylor-polynomials-v0/)
 - [finite-cubic-hermite-interpolation-v0](../../../artifacts/examples/math/finite-cubic-hermite-interpolation-v0/)
 - [finite-cubic-spline-interpolation-v0](../../../artifacts/examples/math/finite-cubic-spline-interpolation-v0/)
+- [finite-romberg-extrapolation-v0](../../../artifacts/examples/math/finite-romberg-extrapolation-v0/)
 - [generating-functions-v0](../../../artifacts/examples/math/generating-functions-v0/)
 - [finite-recurrence-prefix-v0](../../../artifacts/examples/math/finite-recurrence-prefix-v0/)
 - [finite-root-finding-v0](../../../artifacts/examples/math/finite-root-finding-v0/)
@@ -73,7 +74,7 @@ factorization/division/GCD/square-free replay, finite divided-difference
 interpolation replay, finite barycentric interpolation replay, finite
 difference derivative stencil replay, finite Taylor polynomial replay,
 finite cubic Hermite endpoint-slope interpolation replay, finite natural
-cubic spline assembly replay, finite generating-function
+cubic spline assembly replay, finite Romberg extrapolation replay, finite generating-function
 coefficient extraction and Cauchy-product replay, finite recurrence-prefix and
 companion-matrix replay, finite bisection/Newton root-finding replay, finite
 multivariable Newton-step Hessian-solve replay, finite
@@ -331,6 +332,28 @@ evidence. Spline existence, uniqueness, error estimates, convergence,
 boundary-condition theory, shape preservation, and floating-point spline
 evaluation remain theorem or numerical-honesty work; see
 [End To End: Finite Cubic Spline Interpolation](spline-interpolation-end-to-end.md).
+
+For finite Romberg extrapolation, encode the source trapezoid rows and the
+extrapolation formula:
+
+```text
+f(x) = x^2 on [0,1]
+T(h)   = 1/2
+T(h/2) = 3/8
+R      = (4*T(h/2) - T(h)) / 3 = 1/3
+integral_0^1 x^2 dx = 1/3
+```
+
+The `finite-romberg-extrapolation-v0` validator recomputes the coarse and
+fine composite trapezoid values, the Romberg numerator and denominator, the
+extrapolated value, exact polynomial integrals, and finite error rows. It also
+checks a quartic row where the extrapolated value `5/24` has residual `1/120`
+against exact integral `1/5`. The malformed claim `romberg_value = 1/4` is
+rejected after exact replay computes `1/3`, then the scalar equality conflict
+is checked through QF_LRA/Farkas evidence. Romberg convergence, Richardson
+extrapolation theory, error expansions, adaptive quadrature, and floating-point
+quadrature correctness remain theorem or numerical-honesty work; see
+[End To End: Finite Romberg Extrapolation](romberg-extrapolation-end-to-end.md).
 
 For a finite generating-function check, encode coefficient lists and replay
 convolution:
@@ -754,6 +777,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_cubic_hermite_interpolation_bad_value_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-cubic-spline-interpolation-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_cubic_spline_interpolation_bad_value_artifact_emits_checked_farkas
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-romberg-extrapolation-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_romberg_extrapolation_bad_value_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/generating-functions-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-recurrence-prefix-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_recurrence_prefix_bad_value_artifact_emits_checked_farkas

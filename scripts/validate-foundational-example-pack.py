@@ -11302,6 +11302,127 @@ def validate_simpson_panel(context: str, values: dict[str, Any]) -> dict[str, An
     }
 
 
+def validate_romberg_trace(context: str, values: dict[str, Any]) -> dict[str, Any]:
+    method = values.get("method")
+    require_string(f"{context}.method", method)
+    if method != "romberg_richardson_extrapolation":
+        fail(f"{context}.method must be romberg_richardson_extrapolation")
+    polynomial = require_polynomial(f"{context}.polynomial", values.get("polynomial"))
+    left, right = require_interval_endpoints(f"{context}.interval", values)
+    coarse_nodes = require_fraction_vector(f"{context}.coarse_nodes", values.get("coarse_nodes"))
+    fine_nodes = require_fraction_vector(f"{context}.fine_nodes", values.get("fine_nodes"))
+    coarse_sample_values = require_fraction_vector(
+        f"{context}.coarse_sample_values",
+        values.get("coarse_sample_values"),
+    )
+    fine_sample_values = require_fraction_vector(
+        f"{context}.fine_sample_values",
+        values.get("fine_sample_values"),
+    )
+    coarse_step = require_fraction(f"{context}.coarse_step", values.get("coarse_step"))
+    fine_step = require_fraction(f"{context}.fine_step", values.get("fine_step"))
+    coarse_trapezoid_value = require_fraction(
+        f"{context}.coarse_trapezoid_value",
+        values.get("coarse_trapezoid_value"),
+    )
+    fine_trapezoid_value = require_fraction(
+        f"{context}.fine_trapezoid_value",
+        values.get("fine_trapezoid_value"),
+    )
+    richardson_factor = require_fraction(
+        f"{context}.richardson_factor",
+        values.get("richardson_factor"),
+    )
+    romberg_numerator = require_fraction(
+        f"{context}.romberg_numerator",
+        values.get("romberg_numerator"),
+    )
+    romberg_denominator = require_fraction(
+        f"{context}.romberg_denominator",
+        values.get("romberg_denominator"),
+    )
+    romberg_value = require_fraction(f"{context}.romberg_value", values.get("romberg_value"))
+    exact_integral = require_fraction(f"{context}.exact_integral", values.get("exact_integral"))
+    romberg_error = require_fraction(f"{context}.romberg_error", values.get("romberg_error"))
+    coarse_error = require_fraction(f"{context}.coarse_error", values.get("coarse_error"))
+    fine_error = require_fraction(f"{context}.fine_error", values.get("fine_error"))
+
+    if right <= left:
+        fail(f"{context}.interval must have a < b")
+    if coarse_nodes[0] != left or coarse_nodes[-1] != right:
+        fail(f"{context}.coarse_nodes must start at a and end at b")
+    if fine_nodes[0] != left or fine_nodes[-1] != right:
+        fail(f"{context}.fine_nodes must start at a and end at b")
+    if len(coarse_nodes) < 2:
+        fail(f"{context}.coarse_nodes must contain at least two nodes")
+    if len(fine_nodes) != 2 * len(coarse_nodes) - 1:
+        fail(f"{context}.fine_nodes must halve each coarse panel")
+    if any(coarse_nodes[index] >= coarse_nodes[index + 1] for index in range(len(coarse_nodes) - 1)):
+        fail(f"{context}.coarse_nodes must be strictly increasing")
+    if any(fine_nodes[index] >= fine_nodes[index + 1] for index in range(len(fine_nodes) - 1)):
+        fail(f"{context}.fine_nodes must be strictly increasing")
+
+    expected_coarse_step = (right - left) / (len(coarse_nodes) - 1)
+    expected_fine_step = (right - left) / (len(fine_nodes) - 1)
+    if coarse_step != expected_coarse_step:
+        fail(f"{context}.coarse_step is incorrect")
+    if fine_step != expected_fine_step:
+        fail(f"{context}.fine_step is incorrect")
+    if fine_step * 2 != coarse_step:
+        fail(f"{context}.fine_step must halve coarse_step")
+
+    if coarse_sample_values != [polynomial_eval(polynomial, node) for node in coarse_nodes]:
+        fail(f"{context}.coarse_sample_values do not match the polynomial")
+    if fine_sample_values != [polynomial_eval(polynomial, node) for node in fine_nodes]:
+        fail(f"{context}.fine_sample_values do not match the polynomial")
+    if coarse_trapezoid_value != riemann_trapezoid_sum(polynomial, coarse_nodes):
+        fail(f"{context}.coarse_trapezoid_value is incorrect")
+    if fine_trapezoid_value != riemann_trapezoid_sum(polynomial, fine_nodes):
+        fail(f"{context}.fine_trapezoid_value is incorrect")
+    if richardson_factor != Fraction(4):
+        fail(f"{context}.richardson_factor must be 4 for one h -> h/2 trapezoid extrapolation")
+    expected_numerator = richardson_factor * fine_trapezoid_value - coarse_trapezoid_value
+    if romberg_numerator != expected_numerator:
+        fail(f"{context}.romberg_numerator is incorrect")
+    if romberg_denominator != richardson_factor - 1:
+        fail(f"{context}.romberg_denominator must be richardson_factor - 1")
+    if romberg_value != romberg_numerator / romberg_denominator:
+        fail(f"{context}.romberg_value is incorrect")
+    if exact_integral != polynomial_integral(polynomial, left, right):
+        fail(f"{context}.exact_integral is incorrect")
+    if romberg_error != romberg_value - exact_integral:
+        fail(f"{context}.romberg_error is incorrect")
+    if coarse_error != coarse_trapezoid_value - exact_integral:
+        fail(f"{context}.coarse_error is incorrect")
+    if fine_error != fine_trapezoid_value - exact_integral:
+        fail(f"{context}.fine_error is incorrect")
+
+    if "error_ratio" in values:
+        error_ratio = require_fraction(f"{context}.error_ratio", values.get("error_ratio"))
+        if fine_error == 0:
+            fail(f"{context}.error_ratio cannot be checked with zero fine_error")
+        if error_ratio != coarse_error / fine_error:
+            fail(f"{context}.error_ratio is incorrect")
+    else:
+        error_ratio = None
+
+    return {
+        "polynomial": polynomial,
+        "left": left,
+        "right": right,
+        "coarse_nodes": coarse_nodes,
+        "fine_nodes": fine_nodes,
+        "coarse_trapezoid_value": coarse_trapezoid_value,
+        "fine_trapezoid_value": fine_trapezoid_value,
+        "romberg_value": romberg_value,
+        "exact_integral": exact_integral,
+        "romberg_error": romberg_error,
+        "coarse_error": coarse_error,
+        "fine_error": fine_error,
+        "error_ratio": error_ratio,
+    }
+
+
 def require_fraction_vector_table(context: str, value: Any) -> list[list[Fraction]]:
     if not isinstance(value, list) or not value:
         fail(f"{context} must be a non-empty list")
@@ -12150,6 +12271,136 @@ def validate_finite_simpson_rule(expected: dict[str, Any]) -> None:
     horizon_data = horizon.get("data", {})
     require_string("Simpson horizon target_theorem_shape", horizon_data.get("target_theorem_shape"))
     require_string("Simpson horizon future_checker", horizon_data.get("future_checker"))
+
+
+def validate_finite_romberg_extrapolation(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    quadratic = checks["romberg-quadratic-exact-witness"]
+    if quadratic["expected_result"] != "sat":
+        fail("romberg-quadratic-exact-witness must expect sat")
+    if quadratic.get("proof_status") != "replay-only":
+        fail("romberg-quadratic-exact-witness must be replay-only")
+    if quadratic.get("validation") != "exact_rational_romberg_extrapolation_replay":
+        fail("romberg-quadratic-exact-witness validation is incorrect")
+    quadratic_values = single_witness_values(quadratic, witnesses)
+    quadratic_replay = validate_romberg_trace("quadratic Romberg row", quadratic_values)
+    if quadratic_replay["romberg_value"] != Fraction(1, 3):
+        fail("romberg-quadratic-exact-witness must compute value 1/3")
+    if quadratic_replay["romberg_value"] != quadratic_replay["exact_integral"]:
+        fail("romberg-quadratic-exact-witness should be exact for this quadratic row")
+
+    cancellation = checks["romberg-quadratic-error-cancellation-witness"]
+    if cancellation["expected_result"] != "sat":
+        fail("romberg-quadratic-error-cancellation-witness must expect sat")
+    if cancellation.get("proof_status") != "replay-only":
+        fail("romberg-quadratic-error-cancellation-witness must be replay-only")
+    if cancellation.get("validation") != "exact_rational_romberg_error_cancellation_replay":
+        fail("romberg-quadratic-error-cancellation-witness validation is incorrect")
+    cancellation_values = single_witness_values(cancellation, witnesses)
+    cancellation_replay = validate_romberg_trace("quadratic Romberg cancellation row", cancellation_values)
+    if cancellation_replay["coarse_error"] != Fraction(1, 6):
+        fail("romberg-quadratic-error-cancellation-witness must have coarse_error 1/6")
+    if cancellation_replay["fine_error"] != Fraction(1, 24):
+        fail("romberg-quadratic-error-cancellation-witness must have fine_error 1/24")
+    if cancellation_replay["error_ratio"] != Fraction(4):
+        fail("romberg-quadratic-error-cancellation-witness must have error_ratio 4")
+    if cancellation_replay["romberg_error"] != Fraction(0):
+        fail("romberg-quadratic-error-cancellation-witness must cancel the finite error")
+
+    quartic = checks["romberg-quartic-error-witness"]
+    if quartic["expected_result"] != "sat":
+        fail("romberg-quartic-error-witness must expect sat")
+    if quartic.get("proof_status") != "replay-only":
+        fail("romberg-quartic-error-witness must be replay-only")
+    if quartic.get("validation") != "exact_rational_romberg_extrapolation_replay":
+        fail("romberg-quartic-error-witness validation is incorrect")
+    quartic_values = single_witness_values(quartic, witnesses)
+    quartic_replay = validate_romberg_trace("quartic Romberg row", quartic_values)
+    if quartic_replay["romberg_value"] != Fraction(5, 24):
+        fail("romberg-quartic-error-witness must compute value 5/24")
+    if quartic_replay["exact_integral"] != Fraction(1, 5):
+        fail("romberg-quartic-error-witness must compute exact integral 1/5")
+    if quartic_replay["romberg_error"] != Fraction(1, 120):
+        fail("romberg-quartic-error-witness must compute residual 1/120")
+
+    bad = checks["bad-romberg-value-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-romberg-value-rejected must expect unsat")
+    if bad.get("proof_status") != "replay-only":
+        fail("bad-romberg-value-rejected must be replay-only")
+    if bad.get("validation") != "exact_rational_bad_romberg_value_replay":
+        fail("bad-romberg-value-rejected validation is incorrect")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "quadratic-romberg-extrapolation":
+        fail("bad-romberg-value-rejected must cite the quadratic Romberg witness")
+    computed = require_fraction("bad Romberg computed_romberg_value", data.get("computed_romberg_value"))
+    claimed = require_fraction("bad Romberg claimed_romberg_value", data.get("claimed_romberg_value"))
+    gap = require_fraction("bad Romberg romberg_value_gap", data.get("romberg_value_gap"))
+    if computed != quadratic_replay["romberg_value"]:
+        fail("bad-romberg-value-rejected computed value must match the quadratic replay")
+    if computed == claimed:
+        fail("bad-romberg-value-rejected malformed claim must disagree with replay")
+    if computed - claimed != gap:
+        fail("bad-romberg-value-rejected romberg_value_gap is incorrect")
+    if gap <= 0:
+        fail("bad-romberg-value-rejected romberg_value_gap must be positive")
+    if "separate qf-lra-bad-romberg-value" not in bad.get("notes", ""):
+        fail("bad-romberg-value-rejected notes must name the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-romberg-value"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-romberg-value must expect unsat")
+    if qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-romberg-value must be checked")
+    if qf_bad.get("validation") != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-romberg-value must use exact_rational_farkas_evidence")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_witness") != "quadratic-romberg-extrapolation":
+        fail("qf-lra-bad-romberg-value must cite the quadratic Romberg witness")
+    if qf_data.get("source_replay_row") != "bad-romberg-value-rejected":
+        fail("qf-lra-bad-romberg-value must cite the replay row")
+    qf_computed = require_fraction(
+        "qf Romberg computed_romberg_value",
+        qf_data.get("computed_romberg_value"),
+    )
+    qf_claimed = require_fraction(
+        "qf Romberg claimed_romberg_value",
+        qf_data.get("claimed_romberg_value"),
+    )
+    if qf_computed != computed or qf_claimed != claimed:
+        fail("qf-lra-bad-romberg-value data must match the replay row")
+    conflict = qf_data.get("farkas_conflict")
+    require_string("qf Romberg farkas_conflict", conflict)
+    if conflict != "romberg_value = 1/3 and romberg_value = 1/4":
+        fail("qf-lra-bad-romberg-value must document the Farkas conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf Romberg smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-romberg-extrapolation-v0/smt2/"
+        "bad-romberg-value-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-lra-bad-romberg-value smt2_artifact must name the checked source artifact")
+    check_source("qf Romberg smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf Romberg farkas_regression", regression)
+    if "finite_romberg_extrapolation_bad_value_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-romberg-value must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf Romberg certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-romberg-value certificate must document checked Farkas evidence")
+
+    horizon = checks["general-romberg-extrapolation-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-romberg-extrapolation-theory-lean-horizon must be not-run")
+    if horizon.get("proof_status") != "lean-horizon":
+        fail("general-romberg-extrapolation-theory-lean-horizon must remain lean-horizon")
+    horizon_data = horizon.get("data", {})
+    require_string("Romberg horizon target_theorem_shape", horizon_data.get("target_theorem_shape"))
+    require_string("Romberg horizon future_checker", horizon_data.get("future_checker"))
 
 
 def validate_finite_divided_differences(expected: dict[str, Any]) -> None:
@@ -35651,6 +35902,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_calculus_riemann_sum(expected)
     if metadata["id"] == "finite-simpson-rule-v0":
         validate_finite_simpson_rule(expected)
+    if metadata["id"] == "finite-romberg-extrapolation-v0":
+        validate_finite_romberg_extrapolation(expected)
     if metadata["id"] == "finite-divided-differences-v0":
         validate_finite_divided_differences(expected)
     if metadata["id"] == "finite-barycentric-interpolation-v0":
