@@ -134,14 +134,43 @@ LLVM loop reflector in `llvm_reflection.rs`).
 equivalence proof is milliseconds-scale at these widths — cheap enough to run
 per-commit as ordinary tests.
 
+## Round T (2026-07-03): panic-freedom, a real module, don't-care UB paths
+
+- **T1+T2 (`29cdb05b`):** debug-profile MIR's own safety checks reflect —
+  `*WithOverflow` tuple rvalues (sign-selected `bv_uaddo`/`saddo`/…), field
+  projections, and the `assert` terminator whose panic edge becomes a Bool
+  **panic-condition term** (`reflect_mir_into_checked -> (value, panic)`).
+  On top (`checked_reflection.rs`): `inc_guarded` **proved panic-free for all
+  u32** + its total value spec; unguarded `inc` refuted with the witness —
+  exactly `u32::MAX` — **replayed against the real compiled Rust** via
+  `catch_unwind` (panics at the witness, not at witness−1): the fuzzing loop
+  (search → crash → repro) discharged symbolically in milliseconds; and
+  `panic ∨ (debug-MIR == release-LLVM)` proved — cross-profile
+  translation-validation.
+- **T3 (`999f4703`):** the checksum **micro-module** (`checksum_module.rs`):
+  `sum16` (one's-complement fold) + `cksum_pair = !sum16` from paired MIR/LLVM
+  fixtures. Proved for all `(u16,u16)`: per-function MIR == LLVM, the MIR
+  inliner's composition (`cksum_pair == ¬sum16`, both platforms), and the
+  protocol receiver property `sum16 + cksum_pair == 0xffff` — the network-stack
+  verification shape, on reflected compiled code.
+- **T4 (`49cbdfe5`):** LLVM `unreachable` = don't-care (Option-valued executor;
+  joins drop `None` branches). `lut3` (total MIR match vs enum-invariant LLVM
+  with an unreachable default): equal **under the range hypothesis** `x < 3`,
+  refuted without it — UB semantics modeled, not ignored.
+
+**Measured (debug, single run, 2026-07-03):** `checked_reflection` 4 proofs in
+< 0.01 s; `checksum_module` 4 tests (6 all-input proofs + 2000-pair oracle) in
+0.08 s; `cross_ir_equivalence` 16 tests in ~3 s (fuzz-dominated). The whole
+`axeyum-verify` crate: 32 test binaries green.
+
 ### Next (follow-ups, not blocking)
 
-- MIR `assert`/overflow-checked arithmetic terminators (debug-profile MIR) —
-  reflect the check itself and prove it unreachable (connects to `#[verify]`).
+- MIR bounds-check `assert`s (`index out of bounds`) — same terminator, array
+  rvalues needed; connects the panic-condition machinery to buffer safety.
 - LLVM `getelementptr`+`load` inside the CFG executor (currently only in the
-  dedicated buffer reflectors); `unreachable` targets as don't-care arms.
-- Wider fixture harvesting: capture paired MIR/LLVM for a small real module
-  (e.g. a checksum) and prove the whole module end-to-end.
+  dedicated straight-line buffer reflectors).
+- Function **calls** in MIR fixtures (currently the MIR inliner's output is the
+  composition story); a call-aware reflector would prove the inliner itself.
 - Promotion out of test-module DRY into a real crate is still ADR-gated.
 
 **Honest scope:** the shared module is source-level DRY across integration tests
