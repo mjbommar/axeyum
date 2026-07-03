@@ -3,6 +3,16 @@ name: CI
 on:
   push:
     branches: [main]
+    # Docs-only pushes (the curriculum/resource lane lands one every few
+    # minutes) skip the heavy build matrix — they cannot change build or test
+    # outcomes, and each full 8-job run otherwise saturates the runner pool
+    # for hours. The docs themselves are validated by docs-ci.yml on every
+    # push. A commit touching BOTH code and docs still runs everything.
+    paths-ignore:
+      - 'docs/**'
+      - 'artifacts/**'
+      - 'bench-results/**'
+      - '*.md'
   pull_request:
 
 # Pushes land every few minutes across two agent lanes and a run takes ~20
