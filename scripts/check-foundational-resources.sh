@@ -308,6 +308,11 @@ python3 scripts/query-foundational-resources.py checks --pack finite-barycentric
 python3 scripts/query-foundational-resources.py checks --concept bridge_polynomial_coefficient_factor_replay --pack finite-barycentric-interpolation-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-barycentric-interpolation-v0 --proof-status replay-only --text rejected --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-barycentric-interpolation-v0 --proof-status lean-horizon --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-difference-derivatives-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-difference-derivatives-v0 --route Farkas --proof-status checked --text qf-lra-bad-finite-difference-value --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_derivative_identity_shadow --pack finite-difference-derivatives-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-difference-derivatives-v0 --proof-status replay-only --text rejected --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-difference-derivatives-v0 --proof-status lean-horizon --require-any >/dev/null
 python3 scripts/query-foundational-resources.py horizon-frontier --text calculus --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field topology --route boolean --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field topology --route Diophantine --require-any >/dev/null

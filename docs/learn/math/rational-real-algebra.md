@@ -21,6 +21,7 @@ Example packs:
 - [polynomial-factorization-rational-v0](../../../artifacts/examples/math/polynomial-factorization-rational-v0/)
 - [finite-divided-differences-v0](../../../artifacts/examples/math/finite-divided-differences-v0/)
 - [finite-barycentric-interpolation-v0](../../../artifacts/examples/math/finite-barycentric-interpolation-v0/)
+- [finite-difference-derivatives-v0](../../../artifacts/examples/math/finite-difference-derivatives-v0/)
 - [generating-functions-v0](../../../artifacts/examples/math/generating-functions-v0/)
 - [finite-recurrence-prefix-v0](../../../artifacts/examples/math/finite-recurrence-prefix-v0/)
 - [finite-root-finding-v0](../../../artifacts/examples/math/finite-root-finding-v0/)
@@ -66,7 +67,8 @@ arithmetic shadows, bounded epsilon-delta samples, fixed-decimal rounding
 shadows, ordered-field real witnesses, small nonlinear polynomial constraints,
 fixed-degree polynomial identities and roots, rational polynomial
 factorization/division/GCD/square-free replay, finite divided-difference
-interpolation replay, finite generating-function
+interpolation replay, finite barycentric interpolation replay, finite
+difference derivative stencil replay, finite generating-function
 coefficient extraction and Cauchy-product replay, finite recurrence-prefix and
 companion-matrix replay, finite bisection/Newton root-finding replay, finite
 multivariable Newton-step Hessian-solve replay, finite
@@ -235,6 +237,25 @@ equivalence, error estimates, conditioning, Runge phenomena, splines, and
 floating-point interpolation correctness remain theorem or numerical-honesty
 work; see
 [End To End: Finite Barycentric Interpolation](barycentric-interpolation-end-to-end.md).
+
+For finite-difference derivative stencils, encode a polynomial, point, step,
+offsets, weights, scale, and exact derivative value:
+
+```text
+f(x) = 1 + 2*x + x^2
+x = 1
+h = 1/2
+(f(x+h) - f(x-h)) / (2h) = 4
+```
+
+The `finite-difference-derivatives-v0` validator recomputes stencil points,
+sample values, weighted terms, scale, finite-difference value, and the symbolic
+derivative value. It rejects the malformed claim
+`finite_difference_value = 5` after exact replay computes `4`, then checks the
+scalar equality conflict through QF_LRA/Farkas evidence. Truncation-error,
+convergence-order, stability, boundary-stencil, PDE-discretization, and
+floating-point derivative claims remain theorem or numerical-honesty work; see
+[End To End: Finite Difference Derivatives](finite-difference-derivatives-end-to-end.md).
 
 For a finite generating-function check, encode coefficient lists and replay
 convolution:
@@ -650,6 +671,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_divided_differences_bad_interpolation_value_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-barycentric-interpolation-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_barycentric_interpolation_bad_value_artifact_emits_checked_farkas
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-difference-derivatives-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_difference_derivatives_bad_value_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/generating-functions-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-recurrence-prefix-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_recurrence_prefix_bad_value_artifact_emits_checked_farkas

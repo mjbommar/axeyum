@@ -10,6 +10,7 @@ Primary packs:
 - [finite-simpson-rule-v0](../../../artifacts/examples/math/finite-simpson-rule-v0/)
 - [finite-divided-differences-v0](../../../artifacts/examples/math/finite-divided-differences-v0/)
 - [finite-barycentric-interpolation-v0](../../../artifacts/examples/math/finite-barycentric-interpolation-v0/)
+- [finite-difference-derivatives-v0](../../../artifacts/examples/math/finite-difference-derivatives-v0/)
 - [multivariable-calculus-rational-v0](../../../artifacts/examples/math/multivariable-calculus-rational-v0/)
 
 Companion lessons and maps:
@@ -18,6 +19,7 @@ Companion lessons and maps:
 - [End To End: Finite Simpson Rule](simpson-rule-end-to-end.md)
 - [End To End: Finite Divided Differences](divided-differences-end-to-end.md)
 - [End To End: Finite Barycentric Interpolation](barycentric-interpolation-end-to-end.md)
+- [End To End: Finite Difference Derivatives](finite-difference-derivatives-end-to-end.md)
 - [End To End: Rational Multivariable Calculus](multivariable-calculus-end-to-end.md)
 - [Rational And Real Algebra](rational-real-algebra.md)
 - [Analysis And Topology Proof Horizons](analysis-topology-proof-horizons.md)
@@ -96,6 +98,17 @@ interpolated value  = 10
 It repeats the replay for `x^3` at nodes `0,1,2,3` and isolates the bad claim
 `interpolated_value = 9` as a checked QF_LRA/Farkas scalar conflict.
 
+The finite-difference derivative pack fixes exact stencil rows. For
+`f(x)=1+2x+x^2`, `x=1`, and `h=1/2`, it recomputes:
+
+```text
+central first difference  = (f(3/2) - f(1/2)) / 1 = 4
+central second difference = (f(1/2) - 2f(1) + f(3/2)) / (1/2)^2 = 2
+```
+
+It also checks a forward first-difference row for `1+3x` and isolates the bad
+claim `finite_difference_value = 5` as a checked QF_LRA/Farkas scalar conflict.
+
 The multivariable pack fixes bivariate polynomial and matrix data:
 
 ```text
@@ -154,6 +167,12 @@ regression seeds, but they do not prove analytic calculus theorems.
 | `finite-barycentric-interpolation-v0` | `bad-barycentric-value-rejected` | `unsat` | replay-only | Exact replay rejects the malformed value `5` after computing `4`. |
 | `finite-barycentric-interpolation-v0` | `qf-lra-bad-barycentric-value` | `unsat` | checked | A QF_LRA/Farkas row checks the scalar contradiction `barycentric_value = 4` and `barycentric_value = 5`. |
 | `finite-barycentric-interpolation-v0` | `general-barycentric-interpolation-theory-lean-horizon` | `not-run` | lean-horizon | Barycentric/Lagrange/Newton equivalence, error, conditioning, Runge, spline, and floating-point interpolation theory remain theorem/numerical-honesty work. |
+| `finite-difference-derivatives-v0` | `forward-difference-affine-exact-witness` | `sat` | replay-only | The listed forward first-difference stencil for `1+3*x` is replayed exactly. |
+| `finite-difference-derivatives-v0` | `central-difference-quadratic-exact-witness` | `sat` | replay-only | The listed central first-difference stencil for `1+2*x+x^2` evaluates to `4`. |
+| `finite-difference-derivatives-v0` | `second-central-difference-quadratic-exact-witness` | `sat` | replay-only | The listed central second-difference stencil for the same quadratic evaluates to `2`. |
+| `finite-difference-derivatives-v0` | `bad-finite-difference-value-rejected` | `unsat` | replay-only | Exact replay rejects the malformed value `5` after computing `4`. |
+| `finite-difference-derivatives-v0` | `qf-lra-bad-finite-difference-value` | `unsat` | checked | A QF_LRA/Farkas row checks the scalar contradiction `finite_difference_value = 4` and `finite_difference_value = 5`. |
+| `finite-difference-derivatives-v0` | `general-finite-difference-theory-lean-horizon` | `not-run` | lean-horizon | Truncation error, convergence order, stability, boundary stencils, PDE schemes, and floating-point finite-difference behavior remain theorem/numerical-honesty work. |
 | `multivariable-calculus-rational-v0` | `gradient-at-point-replay` | `sat` | replay-only | The fixed bivariate gradient and value are recomputed. |
 | `multivariable-calculus-rational-v0` | `directional-derivative-dot-product` | `sat` | checked | The fixed directional derivative is checked as a gradient dot product. |
 | `multivariable-calculus-rational-v0` | `jacobian-chain-rule-replay` | `sat` | checked | A fixed polynomial-map Jacobian chain-rule matrix product is replayed. |
@@ -171,6 +190,11 @@ resource: it recomputes weights, quotient terms, node-hit behavior, and one
 bad scalar value. It does not claim general interpolation theory or numerical
 stability.
 
+The finite-difference derivative pack is likewise a finite exact-rational
+resource: it recomputes stencil samples and symbolic derivative values. It
+does not claim Taylor-error, convergence-order, stability, PDE, boundary, or
+floating-point finite-difference theory.
+
 ## What Is Not Proved Yet
 
 The current calculus resources do not prove:
@@ -186,6 +210,10 @@ The current calculus resources do not prove:
   barycentric/Lagrange/Newton equivalence, interpolation error estimates,
   node-choice conditioning, Runge phenomena, spline theory, or floating-point
   interpolation correctness;
+- general finite-difference stencil exactness classes, Taylor truncation-error
+  bounds, convergence order, stability, boundary-condition handling, PDE
+  discretization correctness, automatic-differentiation implementation
+  behavior, or floating-point derivative accuracy;
 - the fundamental theorem of calculus;
 - uniform convergence, dominated convergence, or interchange of limits;
 - Fréchet differentiability over normed vector spaces;
@@ -234,6 +262,11 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 
 python3 scripts/query-foundational-resources.py checks \
+  --pack finite-difference-derivatives-v0 \
+  --proof-status lean-horizon \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
   --pack multivariable-calculus-rational-v0 \
   --proof-status lean-horizon \
   --require-any
@@ -262,6 +295,12 @@ python3 scripts/query-foundational-resources.py checks \
 
 python3 scripts/query-foundational-resources.py checks \
   --pack finite-divided-differences-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-difference-derivatives-v0 \
   --route Farkas \
   --proof-status checked \
   --require-any
@@ -302,6 +341,13 @@ python3 scripts/query-foundational-resources.py checks \
   --route Farkas \
   --proof-status checked \
   --text interpolation \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-difference-derivatives-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --text finite-difference \
   --require-any
 
 python3 scripts/query-foundational-resources.py checks \
@@ -348,6 +394,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/ca
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simpson-rule-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-divided-differences-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-barycentric-interpolation-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-difference-derivatives-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/multivariable-calculus-rational-v0
 python3 scripts/query-foundational-resources.py horizon-frontier --text calculus --require-any
 python3 scripts/query-foundational-resources.py checks --pack calculus-algebraic-shadow-v0 --proof-status lean-horizon --require-any
@@ -355,12 +402,14 @@ python3 scripts/query-foundational-resources.py checks --pack calculus-riemann-s
 python3 scripts/query-foundational-resources.py checks --pack finite-simpson-rule-v0 --proof-status lean-horizon --require-any
 python3 scripts/query-foundational-resources.py checks --pack finite-divided-differences-v0 --proof-status lean-horizon --require-any
 python3 scripts/query-foundational-resources.py checks --pack finite-barycentric-interpolation-v0 --proof-status lean-horizon --require-any
+python3 scripts/query-foundational-resources.py checks --pack finite-difference-derivatives-v0 --proof-status lean-horizon --require-any
 python3 scripts/query-foundational-resources.py checks --pack multivariable-calculus-rational-v0 --proof-status lean-horizon --require-any
 python3 scripts/query-foundational-resources.py checks --pack calculus-algebraic-shadow-v0 --route Farkas --proof-status checked --require-any
 python3 scripts/query-foundational-resources.py checks --pack calculus-riemann-sum-v0 --route Farkas --proof-status checked --require-any
 python3 scripts/query-foundational-resources.py checks --pack finite-simpson-rule-v0 --route Farkas --proof-status checked --require-any
 python3 scripts/query-foundational-resources.py checks --pack finite-divided-differences-v0 --route Farkas --proof-status checked --require-any
 python3 scripts/query-foundational-resources.py checks --pack finite-barycentric-interpolation-v0 --route Farkas --proof-status checked --require-any
+python3 scripts/query-foundational-resources.py checks --pack finite-difference-derivatives-v0 --route Farkas --proof-status checked --require-any
 python3 scripts/query-foundational-resources.py checks --pack multivariable-calculus-rational-v0 --route Farkas --proof-status checked --require-any
 ```
 

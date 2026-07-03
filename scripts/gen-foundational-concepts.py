@@ -365,6 +365,10 @@ CURRICULUM_MAP = {
                 "finite-barycentric-interpolation-v0",
                 "Finite barycentric weights, node-hit replay, exact interpolation-value replay, and checked bad-value rejection.",
             ),
+            (
+                "finite-difference-derivatives-v0",
+                "Finite forward and central difference derivative stencils, exact polynomial derivative replay, and checked bad-value rejection.",
+            ),
         ],
     },
     "sequences-and-limits": {
@@ -616,6 +620,10 @@ CURRICULUM_MAP = {
                 "Finite rational Simpson-rule panels, exact quadrature replay, checked bad-value Farkas row, and quadrature-theory Lean horizon.",
             ),
             (
+                "finite-difference-derivatives-v0",
+                "Finite rational forward, central, and second-difference derivative stencils with checked bad-value Farkas row.",
+            ),
+            (
                 "multivariable-calculus-rational-v0",
                 "Exact rational gradient, directional derivative, Jacobian chain-rule, and Hessian-minor replay.",
             ),
@@ -667,7 +675,7 @@ FIELD_PACKS = {
     "number_theory": ("modular-arithmetic-v0", "Congruences, CRT, residues, finite fields, finite ideals in modular rings, and bounded Diophantine examples."),
     "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, covariance/Gram replay, orthogonal transforms, rank, inverse, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, GMRES residual-minimization, Lanczos/tridiagonalization, and Jordan-chain shadows, Jacobians, Hessians, Newton-step Hessian solves, projections, and infeasibility."),
     "abstract_algebra": ("finite-fields-v0", "Finite groups, permutation groups, monoids, group actions, rings, fields, ideals, modules, dual spaces, tensor products, homomorphism tables, polynomial factorization slices, Jordan-chain polynomial/module shadows, and Cayley-table validation."),
-    "real_analysis": ("real-analysis-rational-v0", "Rational interval/ball checks, bounded epsilon-delta samples, algebraic factorization, divided-difference and barycentric interpolation, fixed-decimal rounding shadows, Riemann-sum and Simpson-rule quadrature shadows, multivariable-calculus, Newton-step, Runge-Kutta midpoint, Heun-method, backward Euler, Crank-Nicolson, Adams-Bashforth, and BDF2 shadows, and proof horizons."),
+    "real_analysis": ("real-analysis-rational-v0", "Rational interval/ball checks, bounded epsilon-delta samples, algebraic factorization, divided-difference and barycentric interpolation, finite-difference derivative stencils, fixed-decimal rounding shadows, Riemann-sum and Simpson-rule quadrature shadows, multivariable-calculus, Newton-step, Runge-Kutta midpoint, Heun-method, backward Euler, Crank-Nicolson, Adams-Bashforth, and BDF2 shadows, and proof horizons."),
     "complex_analysis": ("complex-algebraic-v0", "Complex arithmetic, real-pair transforms, finite Cauchy-Riemann derivative shadows, and polynomial factorization shadows as real/rational algebra before analytic proof horizons."),
     "topology": ("finite-topology-v0", "Finite topologies, metric balls, closure/interior, continuous maps, and finite simplicial-homology checks."),
     "measure_theory": ("finite-measure-v0", "Finite sigma-algebras, finite measures, monotonicity/subadditivity, random variables, conditional expectations, finite kernels, martingales, hitting times, concentration checks, product tables, and exact probability foundations."),
@@ -691,7 +699,7 @@ FIELD_PACKS = {
         ("finite-projected-gradient-v0", "Finite projected-gradient interval replay with checked bad-projection rejection."),
         ("finite-proximal-gradient-v0", "Finite proximal-gradient L1 soft-threshold/composite-decrease replay with checked bad proximal-gradient rows."),
     ],
-    "numerical_analysis": ("numerical-linear-algebra-v0", "Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, interval bounds, inner-product projections, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, GMRES residual-minimization, Lanczos/tridiagonalization, residual, rounding, and perturbation-bound shadows, divided-difference and barycentric interpolation, fixed-step error recurrences, Simpson-rule quadrature, Euler, Runge-Kutta midpoint, Heun, backward Euler, Crank-Nicolson implicit, Adams-Bashforth explicit multistep, and BDF2 implicit multistep time-stepping shadows, Jacobian/Hessian replay, finite root-finding, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."),
+    "numerical_analysis": ("numerical-linear-algebra-v0", "Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, interval bounds, inner-product projections, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, GMRES residual-minimization, Lanczos/tridiagonalization, residual, rounding, and perturbation-bound shadows, divided-difference and barycentric interpolation, finite-difference derivative stencils, fixed-step error recurrences, Simpson-rule quadrature, Euler, Runge-Kutta midpoint, Heun, backward Euler, Crank-Nicolson implicit, Adams-Bashforth explicit multistep, and BDF2 implicit multistep time-stepping shadows, Jacobian/Hessian replay, finite root-finding, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."),
     "differential_equations_and_dynamical_systems": ("bounded-dynamics-v0", "Recurrence systems, discretized dynamics, threshold reachability, invariant checks, Euler, Runge-Kutta midpoint, Heun, backward Euler, Crank-Nicolson, Adams-Bashforth, and BDF2 finite time-stepping, Markov transitions, and finite hitting times."),
     "geometry": [
         (
@@ -3021,9 +3029,9 @@ BRIDGE_CONCEPTS = [
         "summary": (
             "Polynomial replay rows fix a coefficient domain, degree bound, "
             "coefficient tuple, evaluation point, divisor, factor witness, or "
-            "coefficient window, and now finite divided-difference and "
-            "barycentric interpolation tables, weights, node hits, and "
-            "values. Axeyum can replay the finite "
+            "coefficient window, and now finite divided-difference, "
+            "barycentric interpolation, and finite-difference derivative "
+            "tables, weights, node hits, stencils, and values. Axeyum can replay the finite "
             "arithmetic and check malformed coefficient, root, discriminant, "
             "product, interpolation-value, or step claims through finite replay, QF_LIA/Diophantine, or "
             "QF_LRA/Farkas evidence; general polynomial theory stays in the "
@@ -3052,6 +3060,7 @@ BRIDGE_CONCEPTS = [
             "finite coefficient extraction",
             "Newton divided differences",
             "barycentric interpolation",
+            "finite difference derivative stencils",
             "QF_LIA / Diophantine",
             "QF_LRA / Farkas",
             "NRA / RCF shadow",
@@ -3082,6 +3091,10 @@ BRIDGE_CONCEPTS = [
             (
                 "finite-barycentric-interpolation-v0",
                 "Exact barycentric weights, regular and node-hit interpolation replay, and checked bad barycentric-value row.",
+            ),
+            (
+                "finite-difference-derivatives-v0",
+                "Exact forward and central difference derivative stencils for fixed polynomial rows with checked bad finite-difference-value evidence.",
             ),
             (
                 "calculus-algebraic-shadow-v0",
@@ -4198,9 +4211,10 @@ BRIDGE_CONCEPTS = [
         "summary": (
             "A derivative-identity shadow differentiates a fixed polynomial or "
             "rational expression symbolically, evaluates exact rational sample "
-            "points, reuses gradient/Hessian data for finite Newton steps, "
+            "points, replays finite-difference derivative stencils, "
+            "reuses gradient/Hessian data for finite Newton steps, "
             "replays fixed complex real-pair partial derivatives, and isolates "
-            "bad derivative, gradient, or Newton-coordinate claims as small "
+            "bad derivative, finite-difference, gradient, or Newton-coordinate claims as small "
             "linear contradictions when possible."
         ),
         "prerequisites": [
@@ -4218,6 +4232,7 @@ BRIDGE_CONCEPTS = [
         "decidability": "bounded",
         "axeyum_fragments": [
             "symbolic polynomial differentiation",
+            "finite difference derivative stencil replay",
             "exact rational evaluation",
             "complex real-pair partial derivative replay",
             "QF_LRA",
@@ -4228,6 +4243,10 @@ BRIDGE_CONCEPTS = [
             (
                 "calculus-algebraic-shadow-v0",
                 "One-variable polynomial derivative replay and checked false-derivative row.",
+            ),
+            (
+                "finite-difference-derivatives-v0",
+                "Forward, central, and second-difference derivative stencil replay with checked bad finite-difference-value evidence.",
             ),
             (
                 "multivariable-calculus-rational-v0",
@@ -4261,6 +4280,7 @@ BRIDGE_CONCEPTS = [
                     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
                     "docs/proof-cookbook/recipes/lean-horizon-template.md",
                     "docs/learn/math/calculus-shadows-end-to-end.md",
+                    "docs/learn/math/finite-difference-derivatives-end-to-end.md",
                     "docs/learn/math/multivariable-calculus-end-to-end.md",
                     "docs/learn/math/finite-root-finding-end-to-end.md",
                     "docs/learn/math/newton-step-end-to-end.md",
@@ -4269,8 +4289,9 @@ BRIDGE_CONCEPTS = [
                 ],
                 "notes": (
                     "The validator recomputes the derivative formula and exact "
-                    "sample values, including gradient/Hessian data for the "
-                    "finite Newton-step pack. Bad finite derivative, gradient, "
+                    "sample values, including finite-difference stencils and "
+                    "gradient/Hessian data for the finite Newton-step pack. "
+                    "Bad finite derivative, finite-difference, gradient, "
                     "complex derivative-coordinate, or Newton-coordinate claims "
                     "use checked Farkas evidence; differentiability theorems "
                     "remain Lean horizons."
@@ -4282,24 +4303,26 @@ BRIDGE_CONCEPTS = [
             "docs/proof-cookbook/recipes/qf-lra-farkas.md",
             "docs/proof-cookbook/recipes/lean-horizon-template.md",
             "docs/learn/math/calculus-shadows-end-to-end.md",
+            "docs/learn/math/finite-difference-derivatives-end-to-end.md",
             "docs/learn/math/multivariable-calculus-end-to-end.md",
             "docs/learn/math/finite-root-finding-end-to-end.md",
             "docs/learn/math/newton-step-end-to-end.md",
             "docs/learn/math/cauchy-riemann-shadow-end-to-end.md",
+            "artifacts/examples/math/finite-difference-derivatives-v0/smt2/bad-finite-difference-value-farkas-conflict.smt2",
             "artifacts/examples/math/finite-cauchy-riemann-shadow-v0/smt2/bad-derivative-real-part-farkas-conflict.smt2",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
         ],
         "open_gaps": [
-            "Finite derivative replay does not prove differentiability from limits, product/chain rules in general, MVT, or FTC.",
+            "Finite derivative and finite-difference replay does not prove differentiability from limits, product/chain rules in general, Taylor-error bounds, convergence order, stability, MVT, or FTC.",
             "Finite Cauchy-Riemann equality replay does not prove holomorphicity or the general Cauchy-Riemann theorem.",
             "Non-polynomial derivative rules and analytic theorem reconstruction remain Lean horizons.",
         ],
         "graduation": {
             "status": "validated",
             "criteria": [
-                "Rows state the source expression, derivative expression, sample point, and exact value.",
-                "The validator recomputes symbolic derivative samples exactly.",
+                "Rows state the source expression, derivative expression or stencil, sample point, and exact value.",
+                "The validator recomputes symbolic derivative samples and finite-difference stencil values exactly.",
                 "General calculus theorems stay linked as Lean-horizon rows.",
             ],
         },

@@ -88,6 +88,9 @@ const FINITE_DIVIDED_DIFFERENCES_BAD_INTERPOLATION_VALUE: &str = include_str!(
 const FINITE_BARYCENTRIC_INTERPOLATION_BAD_VALUE: &str = include_str!(
     "../../../artifacts/examples/math/finite-barycentric-interpolation-v0/smt2/bad-barycentric-value-farkas-conflict.smt2"
 );
+const FINITE_DIFFERENCE_DERIVATIVES_BAD_VALUE: &str = include_str!(
+    "../../../artifacts/examples/math/finite-difference-derivatives-v0/smt2/bad-finite-difference-value-farkas-conflict.smt2"
+);
 const CALCULUS_ALGEBRAIC_FALSE_DERIVATIVE: &str = include_str!(
     "../../../artifacts/examples/math/calculus-algebraic-shadow-v0/smt2/false-derivative-farkas-conflict.smt2"
 );
@@ -929,6 +932,14 @@ fn finite_barycentric_interpolation_bad_value_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "finite-barycentric-interpolation-v0 bad-barycentric-value SMT-LIB artifact",
         FINITE_BARYCENTRIC_INTERPOLATION_BAD_VALUE,
+    );
+}
+
+#[test]
+fn finite_difference_derivatives_bad_value_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-difference-derivatives-v0 bad-finite-difference-value SMT-LIB artifact",
+        FINITE_DIFFERENCE_DERIVATIVES_BAD_VALUE,
     );
 }
 

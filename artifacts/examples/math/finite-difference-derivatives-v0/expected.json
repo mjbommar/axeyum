@@ -1,0 +1,142 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-difference-derivatives-v0",
+  "witnesses": [
+    {
+      "id": "forward-affine-first-derivative",
+      "description": "Forward first-difference replay for f(x)=1+3x at x=2 and h=1/2.",
+      "values": {
+        "method": "finite_difference_derivative",
+        "polynomial": ["1", "3"],
+        "point": "2",
+        "step": "1/2",
+        "derivative_order": 1,
+        "stencil": "forward_first",
+        "stencil_offsets": ["0", "1"],
+        "stencil_weights": ["-1", "1"],
+        "scale": "2",
+        "stencil_points": ["2", "5/2"],
+        "sample_values": ["7", "17/2"],
+        "weighted_terms": ["-7", "17/2"],
+        "weighted_sum": "3/2",
+        "finite_difference_value": "3",
+        "exact_derivative_value": "3"
+      }
+    },
+    {
+      "id": "central-quadratic-first-derivative",
+      "description": "Central first-difference replay for f(x)=1+2x+x^2 at x=1 and h=1/2.",
+      "values": {
+        "method": "finite_difference_derivative",
+        "polynomial": ["1", "2", "1"],
+        "point": "1",
+        "step": "1/2",
+        "derivative_order": 1,
+        "stencil": "central_first",
+        "stencil_offsets": ["-1", "1"],
+        "stencil_weights": ["-1", "1"],
+        "scale": "1",
+        "stencil_points": ["1/2", "3/2"],
+        "sample_values": ["9/4", "25/4"],
+        "weighted_terms": ["-9/4", "25/4"],
+        "weighted_sum": "4",
+        "finite_difference_value": "4",
+        "exact_derivative_value": "4"
+      }
+    },
+    {
+      "id": "central-quadratic-second-derivative",
+      "description": "Central second-difference replay for f(x)=1+2x+x^2 at x=1 and h=1/2.",
+      "values": {
+        "method": "finite_difference_derivative",
+        "polynomial": ["1", "2", "1"],
+        "point": "1",
+        "step": "1/2",
+        "derivative_order": 2,
+        "stencil": "central_second",
+        "stencil_offsets": ["-1", "0", "1"],
+        "stencil_weights": ["1", "-2", "1"],
+        "scale": "4",
+        "stencil_points": ["1/2", "1", "3/2"],
+        "sample_values": ["9/4", "4", "25/4"],
+        "weighted_terms": ["9/4", "-8", "25/4"],
+        "weighted_sum": "1/2",
+        "finite_difference_value": "2",
+        "exact_derivative_value": "2"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "forward-difference-affine-exact-witness",
+      "claim": "The listed forward first-difference stencil for f(x)=1+3x at x=2 is exact.",
+      "expected_result": "sat",
+      "validation": "exact_rational_finite_difference_derivative_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["forward-affine-first-derivative"],
+      "notes": "The validator recomputes stencil points, sample values, weighted terms, scale, finite-difference value, and the exact symbolic derivative value."
+    },
+    {
+      "id": "central-difference-quadratic-exact-witness",
+      "claim": "The listed central first-difference stencil for f(x)=1+2x+x^2 at x=1 is exact.",
+      "expected_result": "sat",
+      "validation": "exact_rational_finite_difference_derivative_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["central-quadratic-first-derivative"],
+      "notes": "This row checks a symmetric finite-difference stencil without claiming a general error theorem."
+    },
+    {
+      "id": "second-central-difference-quadratic-exact-witness",
+      "claim": "The listed central second-difference stencil for f(x)=1+2x+x^2 at x=1 is exact.",
+      "expected_result": "sat",
+      "validation": "exact_rational_finite_difference_derivative_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["central-quadratic-second-derivative"],
+      "notes": "The validator checks a second-derivative stencil as a separate replay obligation."
+    },
+    {
+      "id": "bad-finite-difference-value-rejected",
+      "claim": "For the central quadratic first-difference row, the finite-difference value is 5.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_bad_finite_difference_value_replay",
+      "proof_status": "replay-only",
+      "data": {
+        "source_witness": "central-quadratic-first-derivative",
+        "computed_finite_difference_value": "4",
+        "claimed_finite_difference_value": "5",
+        "finite_difference_value_gap": "1"
+      },
+      "notes": "Exact replay computes the finite-difference value as 4, so the claimed value 5 is rejected; the separate qf-lra-bad-finite-difference-value row owns the checked Farkas evidence."
+    },
+    {
+      "id": "qf-lra-bad-finite-difference-value",
+      "claim": "The fixed malformed finite-difference-value claim is linearly inconsistent.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_farkas_evidence",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "central-quadratic-first-derivative",
+        "source_replay_row": "bad-finite-difference-value-rejected",
+        "computed_finite_difference_value": "4",
+        "claimed_finite_difference_value": "5",
+        "farkas_conflict": "finite_difference_value = 4 and finite_difference_value = 5",
+        "smt2_artifact": "artifacts/examples/math/finite-difference-derivatives-v0/smt2/bad-finite-difference-value-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_difference_derivatives_bad_value_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes the central finite-difference value as 4, while the malformed row claims 5; the source QF_LRA artifact isolates that scalar contradiction for Farkas checking."
+    },
+    {
+      "id": "general-finite-difference-theory-lean-horizon",
+      "claim": "General finite-difference truncation error, convergence order, stability, boundary-condition, PDE-discretization, and floating-point accuracy claims require future theorem or numerical-honesty resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_boundary",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "For finite-difference derivative formulas, prove stencil exactness classes, Taylor-error terms, convergence order, boundary stencils, stability conditions, PDE discretization soundness, and implementation-specific numerical assumptions separately from fixed rational replay rows.",
+        "future_checker": "Lean theorem statements for polynomial/Taylor finite-difference theory plus separate numerical-honesty or QF_FP artifacts for floating-point finite-difference implementations."
+      },
+      "notes": "The finite exact rows are checked resources for three rational stencil evaluations, not theorem evidence for arbitrary functions, grid refinements, boundary conditions, PDE schemes, or floating-point implementations."
+    }
+  ]
+}

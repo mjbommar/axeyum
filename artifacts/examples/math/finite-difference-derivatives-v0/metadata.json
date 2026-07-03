@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "id": "finite-difference-derivatives-v0",
+  "title": "Finite Difference Derivative Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_numerical_analysis",
+    "field_real_analysis",
+    "curriculum_polynomials",
+    "curriculum_calculus",
+    "curriculum_rationals",
+    "curriculum_reals",
+    "bridge_derivative_identity_shadow",
+    "bridge_polynomial_coefficient_factor_replay",
+    "bridge_exact_vs_floating_arithmetic",
+    "bridge_bounded_family_asymptotic_boundary"
+  ],
+  "field_ids": [
+    "numerical_analysis",
+    "real_analysis"
+  ],
+  "curriculum_nodes": [
+    "polynomials",
+    "calculus",
+    "rationals",
+    "reals"
+  ],
+  "axeyum_fragments": [
+    "finite difference derivative stencils",
+    "polynomial evaluation",
+    "symbolic polynomial differentiation",
+    "LRA (exact rationals)",
+    "QF_LRA",
+    "Farkas",
+    "finite replay",
+    "Lean horizon",
+    "numerical-honesty metadata"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-difference-derivatives-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite difference derivative bad value QF_LRA/Farkas regression seed",
+    "pressure": "Exact rational central-difference replay for f(x)=1+2x+x^2 at x=1 with h=1/2 computes finite_difference_value = 4, while a malformed row claims finite_difference_value = 5, isolating a compact scalar equality conflict for the Farkas route.",
+    "evidence": [
+      "qf-lra-bad-finite-difference-value"
+    ],
+    "next_step": "Promote additional finite-difference rows only when they add distinct stencil-order, boundary-condition, PDE-discretization, floating-point, or theorem-reconstruction pressure; keep truncation-error, convergence, and stability claims in future Lean or numerical-honesty lanes."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/02-structures/polynomials.md",
+    "docs/curriculum/03-destinations/calculus.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/curriculum/01-number-systems/reals.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/finite-difference-derivatives-end-to-end.md",
+    "artifacts/examples/math/finite-difference-derivatives-v0/smt2/bad-finite-difference-value-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+  ],
+  "expected_results": [
+    "forward-difference-affine-exact-witness",
+    "central-difference-quadratic-exact-witness",
+    "second-central-difference-quadratic-exact-witness",
+    "bad-finite-difference-value-rejected",
+    "qf-lra-bad-finite-difference-value",
+    "general-finite-difference-theory-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode the fixed polynomial, point, step, stencil offsets, stencil weights, sample values, weighted terms, scale, finite-difference value, and exact derivative value as deterministic rational replay obligations.",
+    "Route the false finite-difference value through checked QF_LRA/Farkas evidence after replay computes the exact value.",
+    "Expose the pack through derivative, polynomial, calculus, real-analysis, numerical-analysis, and learner query surfaces.",
+    "Keep truncation error, convergence order, stability, boundary-condition handling, PDE-discretization correctness, automatic-differentiation behavior, floating-point derivative accuracy, and general finite-difference theory marked as future Lean or numerical-honesty work until formal routes exist."
+  ]
+}

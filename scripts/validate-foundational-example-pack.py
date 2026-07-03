@@ -11525,6 +11525,102 @@ def validate_barycentric_trace(context: str, values: dict[str, Any]) -> dict[str
     }
 
 
+def nth_polynomial_derivative(polynomial: list[Fraction], order: int) -> list[Fraction]:
+    derivative = polynomial
+    for _ in range(order):
+        derivative = polynomial_derivative(derivative)
+    return derivative
+
+
+def validate_finite_difference_trace(context: str, values: dict[str, Any]) -> dict[str, Any]:
+    method = values.get("method")
+    require_string(f"{context}.method", method)
+    if method != "finite_difference_derivative":
+        fail(f"{context}.method must be finite_difference_derivative")
+    polynomial = require_polynomial(f"{context}.polynomial", values.get("polynomial"))
+    point = require_fraction(f"{context}.point", values.get("point"))
+    step = require_fraction(f"{context}.step", values.get("step"))
+    if step == 0:
+        fail(f"{context}.step must be nonzero")
+    derivative_order = require_int(f"{context}.derivative_order", values.get("derivative_order"))
+    if derivative_order <= 0:
+        fail(f"{context}.derivative_order must be positive")
+    stencil = values.get("stencil")
+    require_string(f"{context}.stencil", stencil)
+    offsets = require_fraction_vector(
+        f"{context}.stencil_offsets",
+        values.get("stencil_offsets"),
+    )
+    weights = require_fraction_vector(
+        f"{context}.stencil_weights",
+        values.get("stencil_weights"),
+    )
+    if len(offsets) != len(weights):
+        fail(f"{context}.stencil_offsets length must match stencil_weights")
+    sample_points = require_fraction_vector(
+        f"{context}.stencil_points",
+        values.get("stencil_points"),
+    )
+    if len(sample_points) != len(offsets):
+        fail(f"{context}.stencil_points length must match stencil_offsets")
+    expected_points = [point + offset * step for offset in offsets]
+    if sample_points != expected_points:
+        fail(f"{context}.stencil_points are incorrect")
+    sample_values = require_fraction_vector(
+        f"{context}.sample_values",
+        values.get("sample_values"),
+    )
+    if len(sample_values) != len(sample_points):
+        fail(f"{context}.sample_values length must match stencil_points")
+    expected_samples = [polynomial_eval(polynomial, sample_point) for sample_point in sample_points]
+    if sample_values != expected_samples:
+        fail(f"{context}.sample_values do not match the polynomial")
+    weighted_terms = require_fraction_vector(
+        f"{context}.weighted_terms",
+        values.get("weighted_terms"),
+    )
+    if len(weighted_terms) != len(weights):
+        fail(f"{context}.weighted_terms length must match stencil_weights")
+    expected_terms = [weight * sample for weight, sample in zip(weights, sample_values)]
+    if weighted_terms != expected_terms:
+        fail(f"{context}.weighted_terms are incorrect")
+    weighted_sum = require_fraction(f"{context}.weighted_sum", values.get("weighted_sum"))
+    if weighted_sum != sum(weighted_terms):
+        fail(f"{context}.weighted_sum is incorrect")
+    scale = require_fraction(f"{context}.scale", values.get("scale"))
+    finite_difference_value = require_fraction(
+        f"{context}.finite_difference_value",
+        values.get("finite_difference_value"),
+    )
+    if finite_difference_value != scale * weighted_sum:
+        fail(f"{context}.finite_difference_value is incorrect")
+    derivative_polynomial = nth_polynomial_derivative(polynomial, derivative_order)
+    exact_derivative_value = require_fraction(
+        f"{context}.exact_derivative_value",
+        values.get("exact_derivative_value"),
+    )
+    if exact_derivative_value != polynomial_eval(derivative_polynomial, point):
+        fail(f"{context}.exact_derivative_value is incorrect")
+    if finite_difference_value != exact_derivative_value:
+        fail(f"{context}.finite_difference_value must match the exact derivative value")
+    return {
+        "polynomial": polynomial,
+        "point": point,
+        "step": step,
+        "derivative_order": derivative_order,
+        "stencil": stencil,
+        "offsets": offsets,
+        "weights": weights,
+        "sample_points": sample_points,
+        "sample_values": sample_values,
+        "weighted_terms": weighted_terms,
+        "weighted_sum": weighted_sum,
+        "scale": scale,
+        "finite_difference_value": finite_difference_value,
+        "exact_derivative_value": exact_derivative_value,
+    }
+
+
 def validate_calculus_riemann_sum(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -12007,6 +12103,139 @@ def validate_finite_barycentric_interpolation(expected: dict[str, Any]) -> None:
     horizon_data = horizon.get("data", {})
     require_string("barycentric horizon target_theorem_shape", horizon_data.get("target_theorem_shape"))
     require_string("barycentric horizon future_checker", horizon_data.get("future_checker"))
+
+
+def validate_finite_difference_derivatives(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    forward = checks["forward-difference-affine-exact-witness"]
+    if forward["expected_result"] != "sat":
+        fail("forward-difference-affine-exact-witness must expect sat")
+    if forward.get("proof_status") != "replay-only":
+        fail("forward-difference-affine-exact-witness must be replay-only")
+    if forward.get("validation") != "exact_rational_finite_difference_derivative_replay":
+        fail("forward-difference-affine-exact-witness validation is incorrect")
+    forward_replay = validate_finite_difference_trace(
+        "forward finite-difference row",
+        single_witness_values(forward, witnesses),
+    )
+    if forward_replay["finite_difference_value"] != Fraction(3):
+        fail("forward-difference-affine-exact-witness must compute value 3")
+
+    central = checks["central-difference-quadratic-exact-witness"]
+    if central["expected_result"] != "sat":
+        fail("central-difference-quadratic-exact-witness must expect sat")
+    if central.get("proof_status") != "replay-only":
+        fail("central-difference-quadratic-exact-witness must be replay-only")
+    if central.get("validation") != "exact_rational_finite_difference_derivative_replay":
+        fail("central-difference-quadratic-exact-witness validation is incorrect")
+    central_replay = validate_finite_difference_trace(
+        "central finite-difference row",
+        single_witness_values(central, witnesses),
+    )
+    if central_replay["finite_difference_value"] != Fraction(4):
+        fail("central-difference-quadratic-exact-witness must compute value 4")
+
+    second = checks["second-central-difference-quadratic-exact-witness"]
+    if second["expected_result"] != "sat":
+        fail("second-central-difference-quadratic-exact-witness must expect sat")
+    if second.get("proof_status") != "replay-only":
+        fail("second-central-difference-quadratic-exact-witness must be replay-only")
+    if second.get("validation") != "exact_rational_finite_difference_derivative_replay":
+        fail("second-central-difference-quadratic-exact-witness validation is incorrect")
+    second_replay = validate_finite_difference_trace(
+        "second central finite-difference row",
+        single_witness_values(second, witnesses),
+    )
+    if second_replay["finite_difference_value"] != Fraction(2):
+        fail("second-central-difference-quadratic-exact-witness must compute value 2")
+
+    bad = checks["bad-finite-difference-value-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-finite-difference-value-rejected must expect unsat")
+    if bad.get("proof_status") != "replay-only":
+        fail("bad-finite-difference-value-rejected must be replay-only")
+    if bad.get("validation") != "exact_rational_bad_finite_difference_value_replay":
+        fail("bad-finite-difference-value-rejected validation is incorrect")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "central-quadratic-first-derivative":
+        fail("bad-finite-difference-value-rejected must cite the central first-derivative row")
+    computed = require_fraction(
+        "bad finite difference computed_finite_difference_value",
+        data.get("computed_finite_difference_value"),
+    )
+    claimed = require_fraction(
+        "bad finite difference claimed_finite_difference_value",
+        data.get("claimed_finite_difference_value"),
+    )
+    gap = require_fraction(
+        "bad finite difference finite_difference_value_gap",
+        data.get("finite_difference_value_gap"),
+    )
+    if computed != central_replay["finite_difference_value"]:
+        fail("bad-finite-difference-value-rejected computed value must match central replay")
+    if computed == claimed:
+        fail("bad-finite-difference-value-rejected malformed claim must disagree with replay")
+    if abs(computed - claimed) != gap:
+        fail("bad-finite-difference-value-rejected finite_difference_value_gap is incorrect")
+    if gap <= 0:
+        fail("bad-finite-difference-value-rejected finite_difference_value_gap must be positive")
+    if "separate qf-lra-bad-finite-difference-value" not in bad.get("notes", ""):
+        fail("bad-finite-difference-value-rejected notes must name the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-finite-difference-value"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-finite-difference-value must expect unsat")
+    if qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-finite-difference-value must be checked")
+    if qf_bad.get("validation") != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-finite-difference-value must use exact_rational_farkas_evidence")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_witness") != "central-quadratic-first-derivative":
+        fail("qf-lra-bad-finite-difference-value must cite the central first-derivative row")
+    if qf_data.get("source_replay_row") != "bad-finite-difference-value-rejected":
+        fail("qf-lra-bad-finite-difference-value must cite the replay row")
+    qf_computed = require_fraction(
+        "qf finite difference computed_finite_difference_value",
+        qf_data.get("computed_finite_difference_value"),
+    )
+    qf_claimed = require_fraction(
+        "qf finite difference claimed_finite_difference_value",
+        qf_data.get("claimed_finite_difference_value"),
+    )
+    if qf_computed != computed or qf_claimed != claimed:
+        fail("qf-lra-bad-finite-difference-value data must match the replay row")
+    conflict = qf_data.get("farkas_conflict")
+    require_string("qf finite difference farkas_conflict", conflict)
+    if conflict != "finite_difference_value = 4 and finite_difference_value = 5":
+        fail("qf-lra-bad-finite-difference-value must document the Farkas conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf finite difference smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-difference-derivatives-v0/smt2/"
+        "bad-finite-difference-value-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-lra-bad-finite-difference-value smt2_artifact must name the checked source artifact")
+    check_source("qf finite difference smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf finite difference farkas_regression", regression)
+    if "finite_difference_derivatives_bad_value_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-finite-difference-value must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf finite difference certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-finite-difference-value certificate must document checked Farkas evidence")
+
+    horizon = checks["general-finite-difference-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-finite-difference-theory-lean-horizon must be not-run")
+    if horizon.get("proof_status") != "lean-horizon":
+        fail("general-finite-difference-theory-lean-horizon must remain lean-horizon")
+    horizon_data = horizon.get("data", {})
+    require_string("finite difference horizon target_theorem_shape", horizon_data.get("target_theorem_shape"))
+    require_string("finite difference horizon future_checker", horizon_data.get("future_checker"))
 
 
 def validate_linear_algebra_rational(expected: dict[str, Any]) -> None:
@@ -34732,6 +34961,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_divided_differences(expected)
     if metadata["id"] == "finite-barycentric-interpolation-v0":
         validate_finite_barycentric_interpolation(expected)
+    if metadata["id"] == "finite-difference-derivatives-v0":
+        validate_finite_difference_derivatives(expected)
     if metadata["id"] == "complex-algebraic-v0":
         validate_complex_algebraic(expected)
     if metadata["id"] == "complex-plane-transforms-v0":

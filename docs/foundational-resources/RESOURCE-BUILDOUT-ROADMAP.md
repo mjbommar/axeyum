@@ -64,15 +64,15 @@ The current committed data boundary reports:
 - 18 math-field concept rows.
 - 76 bridge-concept rows.
 - 5 example-family rows.
-- 149 non-template math example packs.
-- 972 expected checks.
-- 375 checked proof/evidence rows.
-- 485 replay-only rows.
-- 112 Lean-horizon rows.
-- 149 promoted solver-reuse packs.
+- 150 non-template math example packs.
+- 978 expected checks.
+- 376 checked proof/evidence rows.
+- 489 replay-only rows.
+- 113 Lean-horizon rows.
+- 150 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 149 focused learner-linked packs, with no path-only, index-only, or missing
+- 150 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 This is broad enough that the next work is not "create a few examples." The
@@ -697,6 +697,7 @@ Current packs:
 - `finite-simpson-rule-v0`
 - `finite-divided-differences-v0`
 - `finite-barycentric-interpolation-v0`
+- `finite-difference-derivatives-v0`
 - `multivariable-calculus-rational-v0`
 - `finite-compactness-v0`
 - `finite-connectedness-v0`
@@ -736,9 +737,10 @@ Build next:
   bad curvature rows tied to their source QF_LRA/Farkas artifacts; keep
   `finite-projected-gradient-v0`'s bad projection and bad projected-decrease
   rows tied to their source QF_LRA/Farkas artifacts; keep
-  `finite-divided-differences-v0` and `finite-barycentric-interpolation-v0`
-  bad interpolation-value source rows replay-only with separate checked
-  `qf-lra-*` proof rows tied to their source QF_LRA/Farkas artifacts; keep
+  `finite-divided-differences-v0`, `finite-barycentric-interpolation-v0`, and
+  `finite-difference-derivatives-v0` bad interpolation/stencil source rows
+  replay-only with separate checked `qf-lra-*` proof rows tied to their source
+  QF_LRA/Farkas artifacts; keep
   `finite-proximal-gradient-v0`'s bad proximal
   point, bad composite-decrease, and bad box-proximal-point rows tied to their source QF_LRA/Farkas artifacts; keep
   `finite-chebyshev-systems-v0`'s explicit duplicate-node,
@@ -990,6 +992,7 @@ Current packs:
 - `finite-simpson-rule-v0`
 - `finite-divided-differences-v0`
 - `finite-barycentric-interpolation-v0`
+- `finite-difference-derivatives-v0`
 
 Build next:
 
@@ -2666,6 +2669,15 @@ Pick one item per commit unless the change is purely navigational.
      barycentric/Lagrange/Newton equivalence, interpolation uniqueness, error
      estimates, node-choice conditioning, Runge phenomena, spline theory,
      floating-point interpolation correctness, or numerical stability.
+196. Landed: add `finite-difference-derivatives-v0` as an exact finite
+     difference derivative resource. The pack computes forward first,
+     central first, and central second derivative stencil rows for fixed
+     polynomials, then promotes the malformed finite-difference-value claim
+     `5` through a source-linked QF_LRA/Farkas regression against exact `4`
+     without claiming general finite-difference exactness classes,
+     truncation-error bounds, convergence order, stability, boundary
+     conditions, PDE-discretization correctness, automatic-differentiation
+     behavior, or floating-point derivative accuracy.
 
 ## Validation Checklist
 

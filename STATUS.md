@@ -240,6 +240,22 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite difference derivative resource landed.**
+  `finite-difference-derivatives-v0` now gives the real-analysis and
+  numerical-analysis lanes a compact exact finite-difference derivative
+  example: it checks a forward first-difference row for `1+3*x`, a central
+  first-difference row for `1+2*x+x^2`, and a central second-difference row
+  for the same quadratic. It rejects the malformed finite-difference claim `5`
+  versus exact `4` through a source-linked QF_LRA/Farkas row. The focused
+  learner page, rational-real algebra page, calculus theorem-boundary page,
+  analysis/numerical query guide, derivative and polynomial bridge rows,
+  validator, resource smoke queries, generated dashboards, and
+  `math_resource_lra_routes` regression keep this fixed exact stencil replay
+  separate from Taylor-error, convergence-order, stability,
+  boundary-condition, PDE-discretization, automatic-differentiation, and
+  floating-point finite-difference theory. The public summary now reports 122
+  concept rows, 150 packs, 978 expected checks, 376 checked rows, 489
+  replay-only rows, 113 Lean-horizon rows, and 150 promoted solver-reuse packs.
 - **Finite barycentric interpolation resource landed.**
   `finite-barycentric-interpolation-v0` now gives the real-analysis and
   numerical-analysis lanes a compact exact barycentric interpolation example:
