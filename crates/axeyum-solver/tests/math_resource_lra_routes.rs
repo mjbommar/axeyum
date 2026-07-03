@@ -67,6 +67,9 @@ const LEAST_SQUARES_BAD_RSS_IMPROVEMENT: &str = include_str!(
 const LEAST_SQUARES_BAD_COEFFICIENTS: &str = include_str!(
     "../../../artifacts/examples/math/least-squares-regression-v0/smt2/bad-coefficients-farkas-conflict.smt2"
 );
+const FINITE_RIDGE_REGRESSION_BAD_BETA0: &str = include_str!(
+    "../../../artifacts/examples/math/finite-ridge-regression-v0/smt2/bad-ridge-beta0-farkas-conflict.smt2"
+);
 const EXACT_STATS_BAD_FISHER_LEFT_TAIL: &str = include_str!(
     "../../../artifacts/examples/math/exact-statistical-tests-v0/smt2/bad-fisher-left-tail-farkas-conflict.smt2"
 );
@@ -1811,6 +1814,14 @@ fn least_squares_bad_rss_improvement_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "least-squares-regression-v0 bad-rss-improvement SMT-LIB artifact",
         LEAST_SQUARES_BAD_RSS_IMPROVEMENT,
+    );
+}
+
+#[test]
+fn finite_ridge_regression_bad_beta0_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-ridge-regression-v0 qf-lra-bad-ridge-beta0 SMT-LIB artifact",
+        FINITE_RIDGE_REGRESSION_BAD_BETA0,
     );
 }
 

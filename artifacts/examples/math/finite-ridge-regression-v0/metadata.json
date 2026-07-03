@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "id": "finite-ridge-regression-v0",
+  "title": "Finite Ridge Regression Checks",
+  "domain": "statistics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_statistics",
+    "field_linear_algebra",
+    "field_optimization_and_convexity",
+    "field_numerical_analysis",
+    "curriculum_rationals",
+    "curriculum_linear_algebra",
+    "curriculum_reals",
+    "bridge_residual_bound",
+    "bridge_inner_product_projection",
+    "bridge_exact_vs_floating_arithmetic"
+  ],
+  "field_ids": [
+    "statistics",
+    "linear_algebra",
+    "optimization_and_convexity",
+    "numerical_analysis"
+  ],
+  "curriculum_nodes": [
+    "rationals",
+    "linear-algebra",
+    "reals"
+  ],
+  "axeyum_fragments": [
+    "finite matrix replay",
+    "exact rational regression",
+    "regularized normal equations",
+    "LRA (exact rationals)",
+    "QF_LRA",
+    "Farkas",
+    "finite replay",
+    "Lean horizon",
+    "numerical-honesty metadata"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-ridge-regression-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite ridge-regression bad coefficient QF_LRA/Farkas regression seed",
+    "pressure": "Exact rational ridge replay computes beta0 = 4/5 for lambda = 1, while a malformed row claims beta0 = 1, isolating a compact regularized-normal-equation conflict for the Farkas route.",
+    "evidence": [
+      "qf-lra-bad-ridge-beta0"
+    ],
+    "next_step": "Promote additional ridge or regularized least-squares rows only when they add distinct penalty, rank-deficiency, cross-validation, constrained-regression, or numerical-honesty pressure; keep general statistical inference and floating-point solver claims in theorem or numerical-honesty lanes."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/curriculum/01-number-systems/reals.md",
+    "docs/curriculum/03-destinations/linear-algebra.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/ridge-regression-end-to-end.md",
+    "artifacts/examples/math/finite-ridge-regression-v0/smt2/bad-ridge-beta0-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+  ],
+  "expected_results": [
+    "ridge-normal-equations-witness",
+    "ridge-shrinkage-witness",
+    "ridge-objective-comparison-witness",
+    "bad-ridge-beta0-rejected",
+    "qf-lra-bad-ridge-beta0",
+    "general-ridge-regression-theory-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode the fixed rational design matrix, response vector, lambda value, regularized normal matrix, ridge coefficients, fitted values, residuals, RSS, penalty, and objective as deterministic exact-rational replay obligations.",
+    "Route the false ridge coefficient claim through a source-linked QF_LRA artifact and checked Farkas evidence after exact replay computes the conflicting coefficient.",
+    "Expose the pack through statistics, matrix computation, optimization, residual-bound, exact-vs-floating, and learner-query surfaces.",
+    "Keep estimator theory, regularization paths, model selection, cross-validation, rank-deficient generality, and floating-point solver behavior marked Lean or numerical-honesty horizon."
+  ]
+}

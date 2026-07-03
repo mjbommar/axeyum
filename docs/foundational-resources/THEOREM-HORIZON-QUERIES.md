@@ -238,6 +238,20 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
+Ridge-regression optimality, regularization-path, model-selection, and
+statistical-guarantee horizons:
+
+```sh
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text ridge \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-ridge-regression-v0 \
+  --proof-status lean-horizon \
+  --require-any
+```
+
 Calculus differentiability, integration, FTC, multivariable, and manifold
 horizons:
 

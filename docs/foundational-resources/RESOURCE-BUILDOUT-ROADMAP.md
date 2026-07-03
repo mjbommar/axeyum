@@ -64,12 +64,12 @@ The current committed data boundary reports:
 - 18 math-field concept rows.
 - 76 bridge-concept rows.
 - 5 example-family rows.
-- 157 non-template math example packs.
-- 1020 expected checks.
-- 383 checked proof/evidence rows.
-- 517 replay-only rows.
-- 120 Lean-horizon rows.
-- 157 promoted solver-reuse packs.
+- 158 non-template math example packs.
+- 1026 expected checks.
+- 384 checked proof/evidence rows.
+- 521 replay-only rows.
+- 121 Lean-horizon rows.
+- 158 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
 - 156 focused learner-linked packs, with no path-only, index-only, or missing
@@ -606,6 +606,7 @@ Current packs:
 - `matrix-invariants-v0`
 - `random-matrix-finite-v0`
 - `least-squares-regression-v0`
+- `finite-ridge-regression-v0`
 - `multivariable-calculus-rational-v0`
 
 Build next:
@@ -613,7 +614,7 @@ Build next:
 - The first generated bridge rows now cover LU/nullspace replay with checked
   bad product-entry and bad nullspace-component evidence, rank/nullity replay, residual bounds, eigenpair
   witnesses, characteristic-polynomial replay with checked bad trace evidence,
-  and finite random-matrix moments.
+  finite random-matrix moments, and regularized regression replay.
 - Add narrower concept rows for matrix multiplication, kernel/image, dual basis,
   transpose, tensor bilinear map, Gram matrix, projection, and finite-field
   linear algebra when one row can serve multiple packs.
@@ -904,6 +905,7 @@ Current packs:
 
 - `descriptive-statistics-v0`
 - `least-squares-regression-v0`
+- `finite-ridge-regression-v0`
 - `exact-statistical-tests-v0`
 - `finite-concentration-v0`
 - `finite-probability-v0`
@@ -912,8 +914,9 @@ Current packs:
 Build next:
 
 - Add concept rows for finite sample statistic, variance identity,
-  contingency table, exact binomial tail, Fisher table, least-squares normal
-  equations, residual orthogonality, finite sampling, and numerical-honesty
+  contingency table, exact binomial tail, Fisher table, ordinary and ridge
+  regression normal equations, residual/penalty arithmetic, finite sampling,
+  and numerical-honesty
   status.
 - Promote bad count/table rows through QF_LIA and bad rational coefficient or
   residual rows through QF_LRA/Farkas, including exact Fisher p-value
@@ -933,6 +936,7 @@ Current packs:
 - `linear-optimization-v0`
 - `convexity-rational-v0`
 - `least-squares-regression-v0`
+- `finite-ridge-regression-v0`
 - `multivariable-calculus-rational-v0`
 - `numerical-linear-algebra-v0`
 - `finite-root-finding-v0`
@@ -968,15 +972,17 @@ Build next:
   minimizer, bad sufficient-decrease, and bad curvature evidence. Finite projected
   gradient now adds interval projection after a trial step. Finite proximal
   gradient now adds L1 soft-threshold and box-plus-L1 constrained replay after
-  a trial step. Convexity rational rows now include checked bad midpoint and
-  affine-threshold evidence. Add narrower
+  a trial step. Finite ridge regression now adds exact regularized
+  normal-equation replay, residual/penalty objective arithmetic, coefficient
+  shrinkage, and checked bad coefficient evidence. Convexity rational rows now
+  include checked bad midpoint and affine-threshold evidence. Add narrower
   rows only when multiple packs need distinct duality, working-set pivots,
   higher-dimensional SDP, strong-Wolfe/nonconvex
   line-search, group-lasso proximal, affine-threshold variants beyond the
   current row, or stochastic convergence vocabulary.
 - Promote small infeasible LP/convexity/root-finding/separation/KKT/active-set
-  QP/SDP/descent, line-search, Wolfe-line-search, projected-gradient, and
-  proximal-gradient rows through QF_LRA/Farkas.
+  QP/SDP/descent, line-search, Wolfe-line-search, projected-gradient,
+  proximal-gradient, and regularized-regression rows through QF_LRA/Farkas.
 - Keep general convex analysis, SDP strong duality, KKT sufficiency, and algorithm convergence
   as Lean-horizon until proof support exists.
 
@@ -1004,11 +1010,12 @@ Current packs:
 - `finite-taylor-polynomials-v0`
 - `finite-cubic-hermite-interpolation-v0`
 - `finite-cubic-spline-interpolation-v0`
+- `finite-ridge-regression-v0`
 
 Build next:
 
 - Add concept rows for residual bound, solution box, iterative one-step
-  contraction, Euler step, fixed-step error, interval bound, root-finding
+  contraction, regularized normal-equation replay, Euler step, fixed-step error, interval bound, root-finding
   iteration, interpolation replay, stability horizon, and floating-point honesty.
 - Use exact rational shadows where possible; treat floating-point rows as
   reproducibility checks with explicit tolerance/seed metadata.
@@ -2744,6 +2751,16 @@ Pick one item per commit unless the change is purely navigational.
      exact `1` without claiming fixed-point existence, general Steffensen
      convergence, nonlinear-map theory, denominator-safety theorems,
      floating-point implementation correctness, or numerical stability.
+203. Landed: add `finite-ridge-regression-v0` as an exact finite ridge
+     regression resource. The pack computes the `lambda = 1` regularized
+     normal equations for one rational three-row sample, checks coefficients,
+     residuals, RSS, coefficient penalty, regularized objective, shrinkage,
+     and objective improvement against ordinary least squares, then promotes
+     the malformed coefficient claim `beta0 = 1` through a source-linked
+     QF_LRA/Farkas regression against exact `4/5` without claiming general
+     ridge optimality, regularization paths, cross-validation, model
+     selection, statistical guarantees, floating-point linear algebra, or
+     numerical stability.
 
 ## Validation Checklist
 

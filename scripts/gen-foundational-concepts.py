@@ -163,6 +163,10 @@ CURRICULUM_MAP = {
                 "finite-steffensen-method-v0",
                 "Exact rational fixed-point acceleration replay with checked bad accelerated-value evidence.",
             ),
+            (
+                "finite-ridge-regression-v0",
+                "Exact rational ridge-regression replay with checked bad regularized-coefficient evidence.",
+            ),
         ],
     },
     "reals": {
@@ -186,6 +190,10 @@ CURRICULUM_MAP = {
             (
                 "finite-steffensen-method-v0",
                 "Finite Steffensen fixed-point acceleration replay with a checked bad-value proof row and convergence-theory horizon.",
+            ),
+            (
+                "finite-ridge-regression-v0",
+                "Finite regularized least-squares replay with a checked bad coefficient proof row and statistical/numerical-theory horizon.",
             ),
             (
                 "finite-newton-step-v0",
@@ -596,6 +604,10 @@ CURRICULUM_MAP = {
                 "Exact one-step GMRES residual-minimization replay, residual orthogonality, residual-norm decrease, and checked bad alpha evidence.",
             ),
             (
+                "finite-ridge-regression-v0",
+                "Exact regularized normal-equation replay, residual/penalty objective checks, and checked bad coefficient evidence.",
+            ),
+            (
                 "finite-lanczos-iteration-v0",
                 "Exact two-step Lanczos replay for a symmetric matrix, orthonormal Krylov basis, tridiagonal relation, and checked bad off-diagonal-coefficient evidence.",
             ),
@@ -757,14 +769,14 @@ FIELD_PACKS = {
     "discrete_math": ("counting-v0", "Finite counting, finite permutations, finite transformation monoids, group-action orbits, order/lattice, and combinatorial witness checks."),
     "graph_theory": ("graph-coloring-v0", "SAT colorings, non-colorability, reachability, search cost counters, matching, cuts, finite flow/cut certificates, finite shortest-path certificates, finite DAG/topological-order certificates, and d-separation."),
     "number_theory": ("modular-arithmetic-v0", "Congruences, CRT, residues, finite fields, finite ideals in modular rings, and bounded Diophantine examples."),
-    "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, covariance/Gram replay, orthogonal transforms, rank, inverse, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, GMRES residual-minimization, Lanczos/tridiagonalization, and Jordan-chain shadows, Jacobians, Hessians, Newton-step Hessian solves, projections, and infeasibility."),
+    "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, covariance/Gram replay, orthogonal transforms, rank, inverse, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, GMRES residual-minimization, Lanczos/tridiagonalization, regularized normal-equation replay, and Jordan-chain shadows, Jacobians, Hessians, Newton-step Hessian solves, projections, and infeasibility."),
     "abstract_algebra": ("finite-fields-v0", "Finite groups, permutation groups, monoids, group actions, rings, fields, ideals, modules, dual spaces, tensor products, homomorphism tables, polynomial factorization slices, Jordan-chain polynomial/module shadows, and Cayley-table validation."),
     "real_analysis": ("real-analysis-rational-v0", "Rational interval/ball checks, bounded epsilon-delta samples, algebraic factorization, sequence and fixed-point acceleration, divided-difference and barycentric interpolation, finite-difference derivative stencils, finite Taylor polynomial replay, finite cubic Hermite interpolation replay, finite cubic spline assembly replay, finite secant/root-finding replay, fixed-decimal rounding shadows, Riemann-sum, Simpson-rule, and Romberg quadrature shadows, multivariable-calculus, Newton-step, Runge-Kutta midpoint, Heun-method, backward Euler, Crank-Nicolson, Adams-Bashforth, and BDF2 shadows, and proof horizons."),
     "complex_analysis": ("complex-algebraic-v0", "Complex arithmetic, real-pair transforms, finite Cauchy-Riemann derivative shadows, and polynomial factorization shadows as real/rational algebra before analytic proof horizons."),
     "topology": ("finite-topology-v0", "Finite topologies, metric balls, closure/interior, continuous maps, and finite simplicial-homology checks."),
     "measure_theory": ("finite-measure-v0", "Finite sigma-algebras, finite measures, monotonicity/subadditivity, random variables, conditional expectations, finite kernels, martingales, hitting times, concentration checks, product tables, and exact probability foundations."),
     "probability_theory": ("finite-probability-v0", "Finite mass tables, random variables, conditional expectation, kernels, martingales, hitting times, concentration/tail bounds, finite covariance tables, conditioning, independence, Bayes rule, product measures, and exact discrete distributions."),
-    "statistics": ("descriptive-statistics-v0", "Mean/variance/covariance identities, Schur conditional-variance shadows, random variables, conditional expectation, finite kernel, hitting-time, martingale, and concentration checks, contingency tables, exact tests, and Simpson witnesses."),
+    "statistics": ("descriptive-statistics-v0", "Mean/variance/covariance identities, Schur conditional-variance shadows, random variables, conditional expectation, finite kernel, hitting-time, martingale, and concentration checks, contingency tables, exact tests, ordinary and ridge regression, and Simpson witnesses."),
     "optimization_and_convexity": [
         ("linear-optimization-v0", "LP feasibility, threshold cliffs, and Farkas-style certificates."),
         ("convexity-rational-v0", "Finite midpoint convexity, second differences, affine threshold monotonicity, and checked bad midpoint-convexity plus affine-threshold rejection."),
@@ -783,7 +795,7 @@ FIELD_PACKS = {
         ("finite-projected-gradient-v0", "Finite projected-gradient interval replay with checked bad-projection rejection."),
         ("finite-proximal-gradient-v0", "Finite proximal-gradient L1 soft-threshold/composite-decrease replay with checked bad proximal-gradient rows."),
     ],
-    "numerical_analysis": ("numerical-linear-algebra-v0", "Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, interval bounds, inner-product projections, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, GMRES residual-minimization, Lanczos/tridiagonalization, residual, rounding, and perturbation-bound shadows, sequence and fixed-point acceleration, divided-difference and barycentric interpolation, finite-difference derivative stencils, finite Taylor polynomial replay, finite cubic Hermite interpolation replay, finite cubic spline assembly replay, fixed-step error recurrences, Simpson-rule quadrature, Romberg extrapolation, Euler, Runge-Kutta midpoint, Heun, backward Euler, Crank-Nicolson implicit, Adams-Bashforth explicit multistep, and BDF2 implicit multistep time-stepping shadows, Jacobian/Hessian replay, finite root-finding/secant replay, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."),
+    "numerical_analysis": ("numerical-linear-algebra-v0", "Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, interval bounds, inner-product projections, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, GMRES residual-minimization, Lanczos/tridiagonalization, residual, regularized normal-equation, rounding, and perturbation-bound shadows, sequence and fixed-point acceleration, divided-difference and barycentric interpolation, finite-difference derivative stencils, finite Taylor polynomial replay, finite cubic Hermite interpolation replay, finite cubic spline assembly replay, fixed-step error recurrences, Simpson-rule quadrature, Romberg extrapolation, Euler, Runge-Kutta midpoint, Heun, backward Euler, Crank-Nicolson implicit, Adams-Bashforth explicit multistep, and BDF2 implicit multistep time-stepping shadows, Jacobian/Hessian replay, finite root-finding/secant replay, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."),
     "differential_equations_and_dynamical_systems": ("bounded-dynamics-v0", "Recurrence systems, discretized dynamics, threshold reachability, invariant checks, Euler, Runge-Kutta midpoint, Heun, backward Euler, Crank-Nicolson, Adams-Bashforth, and BDF2 finite time-stepping, Markov transitions, and finite hitting times."),
     "geometry": [
         (
@@ -1594,6 +1606,10 @@ BRIDGE_CONCEPTS = [
                 "finite-covariance-matrix-v0",
                 "Malformed covariance-entry row checked through exact rational Farkas evidence after finite sample replay.",
             ),
+            (
+                "finite-ridge-regression-v0",
+                "Malformed ridge coefficient row checked through exact rational Farkas evidence after regularized normal-equation replay.",
+            ),
         ],
         "proof_routes": [
             {
@@ -1767,6 +1783,10 @@ BRIDGE_CONCEPTS = [
                 "Normal-equation, residual, and bad RSS-improvement rows checked as exact rational linear algebra, not floating-point regression.",
             ),
             (
+                "finite-ridge-regression-v0",
+                "Regularized normal-equation, residual, penalty, and bad coefficient rows checked as exact rational linear algebra, not floating-point ridge regression.",
+            ),
+            (
                 "finite-root-finding-v0",
                 "One-step bisection/Newton rows replayed exactly while convergence and floating-point stability remain horizon claims.",
             ),
@@ -1815,6 +1835,7 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/numerical-linear-algebra-end-to-end.md",
                     "docs/learn/math/rounding-shadow-end-to-end.md",
                     "docs/learn/math/interval-arithmetic-shadow-end-to-end.md",
+                    "docs/learn/math/ridge-regression-end-to-end.md",
                     "docs/learn/math/lu-decomposition-end-to-end.md",
                     "docs/learn/math/pivoted-lu-decomposition-end-to-end.md",
                     "docs/learn/math/ldlt-decomposition-end-to-end.md",
@@ -1939,6 +1960,10 @@ BRIDGE_CONCEPTS = [
                 "Normal-equation, bad-coefficient, and bad RSS-improvement rows that reduce fixed least-squares claims to exact linear constraints.",
             ),
             (
+                "finite-ridge-regression-v0",
+                "Regularized normal-equation and bad coefficient rows that reduce fixed ridge-regression claims to exact linear constraints.",
+            ),
+            (
                 "numerical-linear-algebra-v0",
                 "Residual-bound and solution-box rows that reuse exact linear feasibility vocabulary.",
             ),
@@ -2056,6 +2081,10 @@ BRIDGE_CONCEPTS = [
                 "Normal-equation, residual-orthogonality, RSS-improvement, and regression coefficient rows over exact rationals.",
             ),
             (
+                "finite-ridge-regression-v0",
+                "Regularized normal-equation, coefficient-shrinkage, objective-comparison, and bad coefficient rows over exact rationals.",
+            ),
+            (
                 "finite-separation-v0",
                 "Finite convex-hull, supporting-face, and hyperplane-separation rows over exact rationals.",
             ),
@@ -2119,6 +2148,7 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/newton-step-end-to-end.md",
                     "docs/learn/math/conjugate-gradient-end-to-end.md",
                     "docs/learn/math/descriptive-statistics-regression-end-to-end.md",
+                    "docs/learn/math/ridge-regression-end-to-end.md",
                     "docs/learn/math/linear-algebra-and-optimization.md",
                     "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
                     "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
@@ -2143,6 +2173,7 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/newton-step-end-to-end.md",
             "docs/learn/math/conjugate-gradient-end-to-end.md",
             "docs/learn/math/descriptive-statistics-regression-end-to-end.md",
+            "docs/learn/math/ridge-regression-end-to-end.md",
             "docs/learn/math/linear-algebra-and-optimization.md",
             "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
@@ -6257,6 +6288,10 @@ BRIDGE_CONCEPTS = [
                 "Normal-equation, residual-orthogonality, bad RSS-improvement, and bad coefficient rows.",
             ),
             (
+                "finite-ridge-regression-v0",
+                "Regularized normal-equation, residual/penalty objective, shrinkage, and bad coefficient rows.",
+            ),
+            (
                 "inner-product-spaces-rational-v0",
                 "Projection, Gram matrix, and Cauchy-Schwarz rows over exact rational vectors.",
             ),
@@ -6317,6 +6352,7 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/gmres-residual-shadow-end-to-end.md",
                     "docs/learn/math/lanczos-iteration-end-to-end.md",
                     "docs/learn/math/schur-complement-end-to-end.md",
+                    "docs/learn/math/ridge-regression-end-to-end.md",
                     "docs/learn/math/linear-algebra-and-optimization.md",
                     "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
                 ],
@@ -8745,6 +8781,10 @@ BRIDGE_CONCEPTS = [
             (
                 "least-squares-regression-v0",
                 "Normal-equation and finite regression rows that use projection-style exact linear replay.",
+            ),
+            (
+                "finite-ridge-regression-v0",
+                "Regularized normal-equation rows that compare projection-style residuals with coefficient-penalty arithmetic.",
             ),
             (
                 "finite-covariance-matrix-v0",

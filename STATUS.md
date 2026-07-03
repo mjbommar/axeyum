@@ -240,6 +240,27 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite ridge regression resource landed.**
+  `finite-ridge-regression-v0` now gives the statistics, linear-algebra,
+  optimization/convexity, numerical-analysis, rational, and real-analysis
+  lanes a compact exact regularized-regression example: it replays the fixed
+  design matrix `[[1,0],[1,1],[1,2]]`, response `[1,2,4]`, `lambda = 1`,
+  regularized normal matrix `X^T X + I`, ridge coefficients
+  `[4/5, 19/15]`, fitted values, residuals, RSS, coefficient penalty,
+  regularized objective, coefficient shrinkage, and objective comparison
+  against ordinary least squares; rejects the malformed regularized
+  coefficient claim `beta0 = 1` versus exact `4/5`; and routes that linear
+  conflict through a source-linked QF_LRA/Farkas row. The focused learner
+  page, statistics/matrix/optimization/analysis query guides, residual-bound,
+  inner-product/projection, exact-vs-floating, and convexity bridge rows,
+  validator, resource smoke queries, generated dashboards, and
+  `math_resource_lra_routes` regression keep this fixed exact ridge replay
+  separate from general ridge optimality, regularization paths, model
+  selection, cross-validation, statistical guarantees, rank-deficient
+  generality, floating-point linear algebra, and numerical stability. The
+  public summary now reports 122 concept rows, 158 packs, 1026 expected
+  checks, 384 checked rows, 521 replay-only rows, 121 Lean-horizon rows, and
+  158 promoted solver-reuse packs.
 - **Finite Steffensen method resource landed.**
   `finite-steffensen-method-v0` now gives the real-analysis,
   sequences-and-limits, rational, and numerical-analysis lanes a compact exact
@@ -255,8 +276,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   fixed exact Steffensen replay separate from fixed-point existence, general
   convergence acceleration, denominator-safety, nonlinear-map theory,
   floating-point implementation correctness, and numerical stability. The
-  public summary now reports 122 concept rows, 157 packs, 1020 expected checks,
-  383 checked rows, 517 replay-only rows, 120 Lean-horizon rows, and 157
+  public summary now reports 122 concept rows, 158 packs, 1026 expected checks,
+  384 checked rows, 521 replay-only rows, 121 Lean-horizon rows, and 158
   promoted solver-reuse packs.
 - **Finite Aitken acceleration resource landed.**
   `finite-aitken-acceleration-v0` now gives the real-analysis,

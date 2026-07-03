@@ -1,0 +1,120 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-ridge-regression-v0",
+  "witnesses": [
+    {
+      "id": "lambda-one-ridge-fit",
+      "description": "A three-point rational ridge regression transcript with lambda = 1.",
+      "values": {
+        "design_matrix": [["1", "0"], ["1", "1"], ["1", "2"]],
+        "response": ["1", "2", "4"],
+        "lambda": "1",
+        "coefficients": ["4/5", "19/15"],
+        "xtx": [["3", "3"], ["3", "5"]],
+        "xty": ["7", "10"],
+        "regularized_matrix": [["4", "3"], ["3", "6"]],
+        "fitted": ["4/5", "31/15", "10/3"],
+        "residuals": ["1/5", "-1/15", "2/3"],
+        "rss": "22/45",
+        "penalty": "101/45",
+        "objective": "41/15"
+      }
+    },
+    {
+      "id": "ols-ridge-objective-comparison",
+      "description": "The ordinary least-squares coefficients are compared under the same ridge objective.",
+      "values": {
+        "design_matrix": [["1", "0"], ["1", "1"], ["1", "2"]],
+        "response": ["1", "2", "4"],
+        "lambda": "1",
+        "ols_coefficients": ["5/6", "3/2"],
+        "ols_fitted": ["5/6", "7/3", "23/6"],
+        "ols_residuals": ["1/6", "-1/3", "1/6"],
+        "ols_rss": "1/6",
+        "ols_penalty": "53/18",
+        "ols_ridge_objective": "28/9",
+        "ridge_coefficients": ["4/5", "19/15"],
+        "ridge_penalty": "101/45",
+        "ridge_objective": "41/15",
+        "coefficient_norm_decrease": "7/10",
+        "objective_improvement": "17/45"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "ridge-normal-equations-witness",
+      "claim": "The listed lambda = 1 ridge coefficients satisfy the regularized normal equations.",
+      "expected_result": "sat",
+      "validation": "exact_rational_ridge_normal_equation_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["lambda-one-ridge-fit"],
+      "notes": "The validator recomputes X^T X, X^T y, X^T X + lambda I, fitted values, residuals, RSS, penalty, objective, and the regularized normal equations exactly."
+    },
+    {
+      "id": "ridge-shrinkage-witness",
+      "claim": "The fixed ridge coefficients have smaller squared norm than the ordinary least-squares coefficients for the same sample.",
+      "expected_result": "sat",
+      "validation": "exact_rational_ridge_shrinkage_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["lambda-one-ridge-fit", "ols-ridge-objective-comparison"],
+      "notes": "The validator recomputes both coefficient squared norms exactly; this is one fixed shrinkage witness, not a theorem about every dataset or penalty."
+    },
+    {
+      "id": "ridge-objective-comparison-witness",
+      "claim": "The ridge coefficients improve the lambda = 1 regularized objective relative to the unregularized least-squares coefficients.",
+      "expected_result": "sat",
+      "validation": "exact_rational_ridge_objective_comparison_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["lambda-one-ridge-fit", "ols-ridge-objective-comparison"],
+      "notes": "The validator recomputes the ordinary least-squares RSS, penalty, ridge objective, and the exact objective improvement 17/45."
+    },
+    {
+      "id": "bad-ridge-beta0-rejected",
+      "claim": "The first ridge coefficient is beta0 = 1.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_bad_ridge_beta0_replay",
+      "proof_status": "replay-only",
+      "data": {
+        "source_witness": "lambda-one-ridge-fit",
+        "computed_beta0": "4/5",
+        "claimed_beta0": "1"
+      },
+      "notes": "Exact replay computes beta0 = 4/5, so the claimed value 1 is rejected; the separate qf-lra-bad-ridge-beta0 row owns the checked Farkas evidence."
+    },
+    {
+      "id": "qf-lra-bad-ridge-beta0",
+      "claim": "The fixed malformed ridge coefficient claim is linearly inconsistent with the regularized normal equations.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_farkas_evidence",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "lambda-one-ridge-fit",
+        "source_replay_row": "bad-ridge-beta0-rejected",
+        "computed_beta0": "4/5",
+        "claimed_beta0": "1",
+        "regularized_normal_equations": [
+          "4*beta0 + 3*beta1 = 7",
+          "3*beta0 + 6*beta1 = 10"
+        ],
+        "farkas_conflict": "regularized normal equations plus beta0 = 1",
+        "smt2_artifact": "artifacts/examples/math/finite-ridge-regression-v0/smt2/bad-ridge-beta0-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_ridge_regression_bad_beta0_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay solves the lambda = 1 regularized normal equations as beta0 = 4/5 and beta1 = 19/15, while the malformed row claims beta0 = 1; the source QF_LRA artifact isolates that coefficient contradiction for Farkas checking."
+    },
+    {
+      "id": "general-ridge-regression-theory-lean-horizon",
+      "claim": "General ridge-regression optimality, bias/variance tradeoff theorems, regularization paths, model selection, cross-validation, rank-deficient cases, and floating-point solvers require future theorem or numerical-honesty resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_boundary",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "For finite-dimensional design matrices and lambda > 0, prove ridge-regression existence, uniqueness, optimality, shrinkage properties under explicit hypotheses, and statistical guarantees only under stated probabilistic assumptions.",
+        "future_checker": "Lean theorem statements for exact ridge optimality plus separate numerical-honesty or QF_FP artifacts for floating-point linear algebra implementations."
+      },
+      "notes": "The finite exact row is a checked resource for one rational lambda = 1 transcript, not a theorem about arbitrary design matrices, statistical inference, regularization paths, cross-validation, or floating-point ridge solvers."
+    }
+  ]
+}

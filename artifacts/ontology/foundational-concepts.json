@@ -729,6 +729,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-steffensen-method-v0",
           "notes": "Exact rational fixed-point acceleration replay with checked bad accelerated-value evidence."
+        },
+        {
+          "id": "finite-ridge-regression-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-ridge-regression-v0",
+          "notes": "Exact rational ridge-regression replay with checked bad regularized-coefficient evidence."
         }
       ],
       "proof_routes": [
@@ -820,6 +826,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-steffensen-method-v0",
           "notes": "Finite Steffensen fixed-point acceleration replay with a checked bad-value proof row and convergence-theory horizon."
+        },
+        {
+          "id": "finite-ridge-regression-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-ridge-regression-v0",
+          "notes": "Finite regularized least-squares replay with a checked bad coefficient proof row and statistical/numerical-theory horizon."
         },
         {
           "id": "finite-newton-step-v0",
@@ -2040,6 +2052,12 @@
           "notes": "Exact one-step GMRES residual-minimization replay, residual orthogonality, residual-norm decrease, and checked bad alpha evidence."
         },
         {
+          "id": "finite-ridge-regression-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-ridge-regression-v0",
+          "notes": "Exact regularized normal-equation replay, residual/penalty objective checks, and checked bad coefficient evidence."
+        },
+        {
           "id": "finite-lanczos-iteration-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-lanczos-iteration-v0",
@@ -3220,6 +3238,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-covariance-matrix-v0",
           "notes": "Malformed covariance-entry row checked through exact rational Farkas evidence after finite sample replay."
+        },
+        {
+          "id": "finite-ridge-regression-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-ridge-regression-v0",
+          "notes": "Malformed ridge coefficient row checked through exact rational Farkas evidence after regularized normal-equation replay."
         }
       ],
       "proof_routes": [
@@ -3434,6 +3458,12 @@
           "notes": "Normal-equation, residual, and bad RSS-improvement rows checked as exact rational linear algebra, not floating-point regression."
         },
         {
+          "id": "finite-ridge-regression-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-ridge-regression-v0",
+          "notes": "Regularized normal-equation, residual, penalty, and bad coefficient rows checked as exact rational linear algebra, not floating-point ridge regression."
+        },
+        {
           "id": "finite-root-finding-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-root-finding-v0",
@@ -3500,6 +3530,7 @@
             "docs/learn/math/numerical-linear-algebra-end-to-end.md",
             "docs/learn/math/rounding-shadow-end-to-end.md",
             "docs/learn/math/interval-arithmetic-shadow-end-to-end.md",
+            "docs/learn/math/ridge-regression-end-to-end.md",
             "docs/learn/math/lu-decomposition-end-to-end.md",
             "docs/learn/math/pivoted-lu-decomposition-end-to-end.md",
             "docs/learn/math/ldlt-decomposition-end-to-end.md",
@@ -3631,6 +3662,12 @@
           "notes": "Normal-equation, bad-coefficient, and bad RSS-improvement rows that reduce fixed least-squares claims to exact linear constraints."
         },
         {
+          "id": "finite-ridge-regression-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-ridge-regression-v0",
+          "notes": "Regularized normal-equation and bad coefficient rows that reduce fixed ridge-regression claims to exact linear constraints."
+        },
+        {
           "id": "numerical-linear-algebra-v0",
           "status": "validated",
           "path": "artifacts/examples/math/numerical-linear-algebra-v0",
@@ -3751,6 +3788,12 @@
           "notes": "Normal-equation, residual-orthogonality, RSS-improvement, and regression coefficient rows over exact rationals."
         },
         {
+          "id": "finite-ridge-regression-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-ridge-regression-v0",
+          "notes": "Regularized normal-equation, coefficient-shrinkage, objective-comparison, and bad coefficient rows over exact rationals."
+        },
+        {
           "id": "finite-separation-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-separation-v0",
@@ -3838,6 +3881,7 @@
             "docs/learn/math/newton-step-end-to-end.md",
             "docs/learn/math/conjugate-gradient-end-to-end.md",
             "docs/learn/math/descriptive-statistics-regression-end-to-end.md",
+            "docs/learn/math/ridge-regression-end-to-end.md",
             "docs/learn/math/linear-algebra-and-optimization.md",
             "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
@@ -3854,6 +3898,7 @@
         "docs/learn/math/newton-step-end-to-end.md",
         "docs/learn/math/conjugate-gradient-end-to-end.md",
         "docs/learn/math/descriptive-statistics-regression-end-to-end.md",
+        "docs/learn/math/ridge-regression-end-to-end.md",
         "docs/learn/math/linear-algebra-and-optimization.md",
         "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
         "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
@@ -8260,6 +8305,12 @@
           "notes": "Normal-equation, residual-orthogonality, bad RSS-improvement, and bad coefficient rows."
         },
         {
+          "id": "finite-ridge-regression-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-ridge-regression-v0",
+          "notes": "Regularized normal-equation, residual/penalty objective, shrinkage, and bad coefficient rows."
+        },
+        {
           "id": "inner-product-spaces-rational-v0",
           "status": "validated",
           "path": "artifacts/examples/math/inner-product-spaces-rational-v0",
@@ -8340,6 +8391,7 @@
             "docs/learn/math/gmres-residual-shadow-end-to-end.md",
             "docs/learn/math/lanczos-iteration-end-to-end.md",
             "docs/learn/math/schur-complement-end-to-end.md",
+            "docs/learn/math/ridge-regression-end-to-end.md",
             "docs/learn/math/linear-algebra-and-optimization.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
           ],
@@ -10974,6 +11026,12 @@
           "notes": "Normal-equation and finite regression rows that use projection-style exact linear replay."
         },
         {
+          "id": "finite-ridge-regression-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-ridge-regression-v0",
+          "notes": "Regularized normal-equation rows that compare projection-style residuals with coefficient-penalty arithmetic."
+        },
+        {
           "id": "finite-covariance-matrix-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-covariance-matrix-v0",
@@ -13152,7 +13210,7 @@
           "id": "linear-algebra-rational-v0",
           "status": "validated",
           "path": "artifacts/examples/math/linear-algebra-rational-v0",
-          "notes": "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, covariance/Gram replay, orthogonal transforms, rank, inverse, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, GMRES residual-minimization, Lanczos/tridiagonalization, and Jordan-chain shadows, Jacobians, Hessians, Newton-step Hessian solves, projections, and infeasibility."
+          "notes": "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, covariance/Gram replay, orthogonal transforms, rank, inverse, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, GMRES residual-minimization, Lanczos/tridiagonalization, regularized normal-equation replay, and Jordan-chain shadows, Jacobians, Hessians, Newton-step Hessian solves, projections, and infeasibility."
         },
         {
           "id": "affine-geometry-v0",
@@ -13417,6 +13475,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-recurrence-prefix-v0",
           "notes": "Finite Recurrence Prefix Checks"
+        },
+        {
+          "id": "finite-ridge-regression-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-ridge-regression-v0",
+          "notes": "Finite Ridge Regression Checks"
         },
         {
           "id": "finite-schur-complement-v0",
@@ -13987,7 +14051,7 @@
           "id": "numerical-linear-algebra-v0",
           "status": "validated",
           "path": "artifacts/examples/math/numerical-linear-algebra-v0",
-          "notes": "Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, interval bounds, inner-product projections, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, GMRES residual-minimization, Lanczos/tridiagonalization, residual, rounding, and perturbation-bound shadows, sequence and fixed-point acceleration, divided-difference and barycentric interpolation, finite-difference derivative stencils, finite Taylor polynomial replay, finite cubic Hermite interpolation replay, finite cubic spline assembly replay, fixed-step error recurrences, Simpson-rule quadrature, Romberg extrapolation, Euler, Runge-Kutta midpoint, Heun, backward Euler, Crank-Nicolson implicit, Adams-Bashforth explicit multistep, and BDF2 implicit multistep time-stepping shadows, Jacobian/Hessian replay, finite root-finding/secant replay, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."
+          "notes": "Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, interval bounds, inner-product projections, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, GMRES residual-minimization, Lanczos/tridiagonalization, residual, regularized normal-equation, rounding, and perturbation-bound shadows, sequence and fixed-point acceleration, divided-difference and barycentric interpolation, finite-difference derivative stencils, finite Taylor polynomial replay, finite cubic Hermite interpolation replay, finite cubic spline assembly replay, fixed-step error recurrences, Simpson-rule quadrature, Romberg extrapolation, Euler, Runge-Kutta midpoint, Heun, backward Euler, Crank-Nicolson implicit, Adams-Bashforth explicit multistep, and BDF2 implicit multistep time-stepping shadows, Jacobian/Hessian replay, finite root-finding/secant replay, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."
         },
         {
           "id": "bounded-dynamics-v0",
@@ -14252,6 +14316,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-recurrence-prefix-v0",
           "notes": "Finite Recurrence Prefix Checks"
+        },
+        {
+          "id": "finite-ridge-regression-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-ridge-regression-v0",
+          "notes": "Finite Ridge Regression Checks"
         },
         {
           "id": "finite-romberg-extrapolation-v0",
@@ -14584,6 +14654,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-qr-decomposition-v0",
           "notes": "Finite QR Decomposition Checks"
+        },
+        {
+          "id": "finite-ridge-regression-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-ridge-regression-v0",
+          "notes": "Finite Ridge Regression Checks"
         },
         {
           "id": "finite-root-finding-v0",
@@ -15618,7 +15694,7 @@
           "id": "descriptive-statistics-v0",
           "status": "validated",
           "path": "artifacts/examples/math/descriptive-statistics-v0",
-          "notes": "Mean/variance/covariance identities, Schur conditional-variance shadows, random variables, conditional expectation, finite kernel, hitting-time, martingale, and concentration checks, contingency tables, exact tests, and Simpson witnesses."
+          "notes": "Mean/variance/covariance identities, Schur conditional-variance shadows, random variables, conditional expectation, finite kernel, hitting-time, martingale, and concentration checks, contingency tables, exact tests, ordinary and ridge regression, and Simpson witnesses."
         },
         {
           "id": "exact-statistical-tests-v0",
@@ -15685,6 +15761,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-random-variables-v0",
           "notes": "Finite Random Variable Checks"
+        },
+        {
+          "id": "finite-ridge-regression-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-ridge-regression-v0",
+          "notes": "Finite Ridge Regression Checks"
         },
         {
           "id": "finite-schur-complement-v0",

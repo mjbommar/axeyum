@@ -77,12 +77,12 @@ schemas, examples, and validation workflows.
 - [MATRIX-COMPUTATION-QUERIES.md](MATRIX-COMPUTATION-QUERIES.md) gives
   copyable concept-plus-route queries for checked LU rows, residuals,
   Schur complements, rank/nullity, eigenpairs, Jordan chains, random matrices,
-  tensor/module rows, operators, and Chebyshev systems.
+  tensor/module rows, ridge regression, operators, and Chebyshev systems.
 - [PROBABILITY-STATISTICS-QUERIES.md](PROBABILITY-STATISTICS-QUERIES.md) gives
   copyable concept-plus-route queries for finite probability tables, measure
   additivity, product/integration, pushforwards, stochastic kernels, tail
   counts, exact tests, finite covariance matrices, Schur conditional-variance
-  shadows, and finite random-matrix moments.
+  shadows, ordinary and ridge regression, and finite random-matrix moments.
 - [MEASURE-THEORY-QUERIES.md](MEASURE-THEORY-QUERIES.md) gives copyable
   concept-plus-route queries for finite measure additivity, product/integration,
   pushforwards, conditional expectation, martingales, kernels, hitting times,
@@ -100,15 +100,16 @@ schemas, examples, and validation workflows.
 - [OPTIMIZATION-CONVEXITY-QUERIES.md](OPTIMIZATION-CONVEXITY-QUERIES.md) gives
   copyable concept-plus-route queries for LP objectives, convexity shadows,
   KKT/QP/SDP rows, first-order method steps, projections, residuals, and
-  Schur-complement shadows, and exact-vs-floating boundary rows.
+  Schur-complement shadows, ridge regression, and exact-vs-floating boundary
+  rows.
 - [FUNCTIONAL-OPERATOR-QUERIES.md](FUNCTIONAL-OPERATOR-QUERIES.md) gives
   copyable concept-plus-route queries for finite operators, Chebyshev rows,
   inner-product/projection rows, spectral, Jordan-chain, and singular-value
   rows, and dual/tensor equality rows.
 - [ANALYSIS-NUMERICAL-QUERIES.md](ANALYSIS-NUMERICAL-QUERIES.md) gives
   copyable concept-plus-route queries for bounded real-analysis rows,
-  numerical-method rows, residuals, Schur complements, dynamics/Euler rows, and
-  complex real-pair rows.
+  numerical-method rows, residuals, regularized normal equations, Schur
+  complements, dynamics/Euler rows, and complex real-pair rows.
 - [DYNAMICS-QUERIES.md](DYNAMICS-QUERIES.md) gives copyable
   concept-plus-route queries for finite recurrences, transition/invariant
   rows, Euler rows, stochastic kernels, Markov chains, and hitting times.

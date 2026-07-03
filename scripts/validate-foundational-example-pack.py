@@ -33926,6 +33926,228 @@ def validate_least_squares_regression(expected: dict[str, Any]) -> None:
     require_string("general regression future_checker", data.get("future_checker"))
 
 
+def regularized_normal_matrix(xtx: list[list[Fraction]], penalty: Fraction) -> list[list[Fraction]]:
+    require_square_matrix("regularized normal matrix", xtx)
+    return [
+        [
+            value + (penalty if row_index == column_index else 0)
+            for column_index, value in enumerate(row)
+        ]
+        for row_index, row in enumerate(xtx)
+    ]
+
+
+def validate_ridge_replay(context: str, values: dict[str, Any]) -> dict[str, Any]:
+    design = require_fraction_matrix(f"{context} design_matrix", values.get("design_matrix"))
+    response = require_fraction_vector(f"{context} response", values.get("response"))
+    lambda_value = require_fraction(f"{context} lambda", values.get("lambda"))
+    coefficients = require_fraction_vector(f"{context} coefficients", values.get("coefficients"))
+    xtx = require_fraction_matrix(f"{context} xtx", values.get("xtx"))
+    xty = require_fraction_vector(f"{context} xty", values.get("xty"))
+    regularized_matrix = require_fraction_matrix(
+        f"{context} regularized_matrix",
+        values.get("regularized_matrix"),
+    )
+    fitted = require_fraction_vector(f"{context} fitted", values.get("fitted"))
+    residuals = require_fraction_vector(f"{context} residuals", values.get("residuals"))
+    rss = require_fraction(f"{context} rss", values.get("rss"))
+    penalty = require_fraction(f"{context} penalty", values.get("penalty"))
+    objective = require_fraction(f"{context} objective", values.get("objective"))
+
+    if lambda_value <= 0:
+        fail(f"{context} lambda must be positive")
+    if len(design) != len(response):
+        fail(f"{context} design height must match response length")
+    require_mat_vec_shape(context, design, coefficients)
+    x_transpose = matrix_transpose(design)
+    if mat_mul(x_transpose, design) != xtx:
+        fail(f"{context} X^T X is incorrect")
+    if mat_vec(x_transpose, response) != xty:
+        fail(f"{context} X^T y is incorrect")
+    if regularized_normal_matrix(xtx, lambda_value) != regularized_matrix:
+        fail(f"{context} regularized matrix is not X^T X + lambda I")
+    if mat_vec(design, coefficients) != fitted:
+        fail(f"{context} fitted values do not equal X beta")
+    if vector_sub(response, fitted) != residuals:
+        fail(f"{context} residuals must equal y - X beta")
+    if residual_sum_squares(residuals) != rss:
+        fail(f"{context} residual sum of squares is incorrect")
+    if dot_product(coefficients, coefficients) != penalty:
+        fail(f"{context} coefficient penalty is incorrect")
+    if rss + lambda_value * penalty != objective:
+        fail(f"{context} regularized objective is incorrect")
+    if mat_vec(regularized_matrix, coefficients) != xty:
+        fail(f"{context} coefficients do not satisfy regularized normal equations")
+    return {
+        "design": design,
+        "response": response,
+        "lambda": lambda_value,
+        "coefficients": coefficients,
+        "xtx": xtx,
+        "xty": xty,
+        "regularized_matrix": regularized_matrix,
+        "fitted": fitted,
+        "residuals": residuals,
+        "rss": rss,
+        "penalty": penalty,
+        "objective": objective,
+    }
+
+
+def validate_finite_ridge_regression(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    normal = checks["ridge-normal-equations-witness"]
+    if normal["expected_result"] != "sat":
+        fail("ridge-normal-equations-witness must expect sat")
+    if normal.get("proof_status") != "replay-only":
+        fail("ridge-normal-equations-witness must be replay-only")
+    ridge_replay = validate_ridge_replay("ridge fit", single_witness_values(normal, witnesses))
+
+    shrinkage = checks["ridge-shrinkage-witness"]
+    if shrinkage["expected_result"] != "sat":
+        fail("ridge-shrinkage-witness must expect sat")
+    if shrinkage.get("proof_status") != "replay-only":
+        fail("ridge-shrinkage-witness must be replay-only")
+    if shrinkage.get("witnesses") != ["lambda-one-ridge-fit", "ols-ridge-objective-comparison"]:
+        fail("ridge-shrinkage-witness must cite the ridge fit and OLS comparison witnesses")
+    comparison_values = witnesses["ols-ridge-objective-comparison"]["values"]
+    design = require_fraction_matrix("ridge comparison design_matrix", comparison_values.get("design_matrix"))
+    response = require_fraction_vector("ridge comparison response", comparison_values.get("response"))
+    lambda_value = require_fraction("ridge comparison lambda", comparison_values.get("lambda"))
+    ols_coefficients = require_fraction_vector(
+        "ridge comparison ols_coefficients",
+        comparison_values.get("ols_coefficients"),
+    )
+    ols_fitted = require_fraction_vector("ridge comparison ols_fitted", comparison_values.get("ols_fitted"))
+    ols_residuals = require_fraction_vector(
+        "ridge comparison ols_residuals",
+        comparison_values.get("ols_residuals"),
+    )
+    ols_rss = require_fraction("ridge comparison ols_rss", comparison_values.get("ols_rss"))
+    ols_penalty = require_fraction("ridge comparison ols_penalty", comparison_values.get("ols_penalty"))
+    ols_objective = require_fraction(
+        "ridge comparison ols_ridge_objective",
+        comparison_values.get("ols_ridge_objective"),
+    )
+    ridge_coefficients = require_fraction_vector(
+        "ridge comparison ridge_coefficients",
+        comparison_values.get("ridge_coefficients"),
+    )
+    ridge_penalty = require_fraction("ridge comparison ridge_penalty", comparison_values.get("ridge_penalty"))
+    ridge_objective = require_fraction("ridge comparison ridge_objective", comparison_values.get("ridge_objective"))
+    norm_decrease = require_fraction(
+        "ridge comparison coefficient_norm_decrease",
+        comparison_values.get("coefficient_norm_decrease"),
+    )
+    objective_improvement = require_fraction(
+        "ridge comparison objective_improvement",
+        comparison_values.get("objective_improvement"),
+    )
+
+    if design != ridge_replay["design"] or response != ridge_replay["response"]:
+        fail("ridge comparison must reuse the ridge witness design and response")
+    if lambda_value != ridge_replay["lambda"]:
+        fail("ridge comparison lambda must match the ridge witness")
+    require_mat_vec_shape("ridge comparison OLS", design, ols_coefficients)
+    if mat_vec(design, ols_coefficients) != ols_fitted:
+        fail("ridge comparison OLS fitted values are incorrect")
+    if vector_sub(response, ols_fitted) != ols_residuals:
+        fail("ridge comparison OLS residuals are incorrect")
+    if residual_sum_squares(ols_residuals) != ols_rss:
+        fail("ridge comparison OLS RSS is incorrect")
+    if dot_product(ols_coefficients, ols_coefficients) != ols_penalty:
+        fail("ridge comparison OLS penalty is incorrect")
+    if ols_rss + lambda_value * ols_penalty != ols_objective:
+        fail("ridge comparison OLS ridge objective is incorrect")
+    if ridge_coefficients != ridge_replay["coefficients"]:
+        fail("ridge comparison coefficients must match the ridge witness")
+    if ridge_penalty != ridge_replay["penalty"] or ridge_objective != ridge_replay["objective"]:
+        fail("ridge comparison ridge penalty/objective must match the ridge witness")
+    if ols_penalty - ridge_penalty != norm_decrease:
+        fail("ridge-shrinkage-witness coefficient norm decrease is incorrect")
+    if norm_decrease <= 0:
+        fail("ridge-shrinkage-witness must show strict coefficient shrinkage")
+
+    objective = checks["ridge-objective-comparison-witness"]
+    if objective["expected_result"] != "sat":
+        fail("ridge-objective-comparison-witness must expect sat")
+    if objective.get("proof_status") != "replay-only":
+        fail("ridge-objective-comparison-witness must be replay-only")
+    if objective.get("witnesses") != ["lambda-one-ridge-fit", "ols-ridge-objective-comparison"]:
+        fail("ridge-objective-comparison-witness must cite the ridge fit and OLS comparison witnesses")
+    if ols_objective - ridge_objective != objective_improvement:
+        fail("ridge-objective-comparison-witness objective improvement is incorrect")
+    if objective_improvement <= 0:
+        fail("ridge-objective-comparison-witness must show a strict objective improvement")
+
+    bad = checks["bad-ridge-beta0-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-ridge-beta0-rejected must expect unsat")
+    if bad.get("proof_status") != "replay-only":
+        fail("bad-ridge-beta0-rejected must be replay-only")
+    if bad["validation"] != "exact_rational_bad_ridge_beta0_replay":
+        fail("bad-ridge-beta0-rejected validation is incorrect")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "lambda-one-ridge-fit":
+        fail("bad-ridge-beta0-rejected must cite lambda-one-ridge-fit")
+    computed_beta0 = require_fraction("bad ridge computed_beta0", data.get("computed_beta0"))
+    claimed_beta0 = require_fraction("bad ridge claimed_beta0", data.get("claimed_beta0"))
+    if ridge_replay["coefficients"][0] != computed_beta0:
+        fail("bad-ridge-beta0-rejected computed beta0 does not match replay")
+    if claimed_beta0 == computed_beta0:
+        fail("bad-ridge-beta0-rejected must document a false beta0 claim")
+    if "separate qf-lra-bad-ridge-beta0" not in bad.get("notes", ""):
+        fail("bad-ridge-beta0-rejected notes must name the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-ridge-beta0"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-ridge-beta0 must expect unsat")
+    if qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-ridge-beta0 must be checked")
+    if qf_bad["validation"] != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-ridge-beta0 must use exact_rational_farkas_evidence")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_witness") != "lambda-one-ridge-fit":
+        fail("qf-lra-bad-ridge-beta0 must cite lambda-one-ridge-fit")
+    if qf_data.get("source_replay_row") != "bad-ridge-beta0-rejected":
+        fail("qf-lra-bad-ridge-beta0 must cite the replay row")
+    qf_computed = require_fraction("qf ridge computed_beta0", qf_data.get("computed_beta0"))
+    qf_claimed = require_fraction("qf ridge claimed_beta0", qf_data.get("claimed_beta0"))
+    if qf_computed != computed_beta0 or qf_claimed != claimed_beta0:
+        fail("qf-lra-bad-ridge-beta0 data must match the replay row")
+    equations = require_string_list("qf ridge regularized_normal_equations", qf_data.get("regularized_normal_equations"))
+    if equations != ["4*beta0 + 3*beta1 = 7", "3*beta0 + 6*beta1 = 10"]:
+        fail("qf-lra-bad-ridge-beta0 must document both regularized normal equations")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf ridge smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-ridge-regression-v0/smt2/"
+        "bad-ridge-beta0-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-lra-bad-ridge-beta0 smt2_artifact must name the checked source artifact")
+    check_source("qf ridge smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf ridge farkas_regression", regression)
+    if "finite_ridge_regression_bad_beta0_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-ridge-beta0 must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf ridge certificate", certificate)
+    if "UnsatFarkas" not in certificate:
+        fail("qf-lra-bad-ridge-beta0 certificate must document Farkas evidence")
+
+    horizon = checks["general-ridge-regression-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-ridge-regression-theory-lean-horizon must be not-run")
+    if horizon.get("proof_status") != "lean-horizon":
+        fail("general-ridge-regression-theory-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("general ridge target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("general ridge future_checker", data.get("future_checker"))
+
+
 def require_tail_kind(context: str, value: Any) -> str:
     require_string(context, value)
     if value not in {"equal", "less_equal", "greater_equal"}:
@@ -36516,6 +36738,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_exact_statistical_tests(expected)
     if metadata["id"] == "least-squares-regression-v0":
         validate_least_squares_regression(expected)
+    if metadata["id"] == "finite-ridge-regression-v0":
+        validate_finite_ridge_regression(expected)
     if metadata["id"] == "finite-cardinality-v0":
         validate_finite_cardinality(expected)
     if metadata["id"] == "cardinality-principles-v0":

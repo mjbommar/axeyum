@@ -20,7 +20,7 @@ objective/slack/gap replay, gradient-descent steps, Armijo/Wolfe line-search
 rows, projected-gradient interval/decrease replay, proximal-gradient
 soft-threshold and composite-decrease plus box-plus-L1 replay, Schur-complement
 positive-definite shadows, least-squares
-rows, residual bounds, and projection witnesses. General duality, KKT
+and ridge-regression rows, residual bounds, and projection witnesses. General duality, KKT
 sufficiency, SDP strong duality, method
 convergence, stability, and floating-point performance claims remain in the
 proof-horizon or numerical-honesty lanes.
@@ -62,9 +62,9 @@ needs concrete checked rows to display.
 | Convexity, separation, KKT, QP, SDP, conjugate-gradient, and finite first-order method shadows | `bridge_rational_convexity_shadow` | `Farkas` | `checks --concept bridge_rational_convexity_shadow --route Farkas --proof-status checked` |
 | Affine-threshold convexity display row | pack `convexity-rational-v0`, text `threshold` | `Farkas` | `checks --pack convexity-rational-v0 --route Farkas --proof-status checked --text threshold` |
 | Convex-analysis theorem boundary | pack `convexity-rational-v0` or text `convex-analysis` | `Lean horizon` | `horizon-frontier --pack convexity-rational-v0`; `horizon-frontier --text convex-analysis` |
-| Inner-product projection and least-squares optimality rows | `bridge_inner_product_projection` | `Farkas` | `checks --concept bridge_inner_product_projection --route Farkas --proof-status checked` |
-| Residual bounds and regression/numerical optimization rows | `bridge_residual_bound` | `Farkas` | `checks --concept bridge_residual_bound --route Farkas --proof-status checked` |
-| Exact arithmetic and numerical-honesty rows | `bridge_exact_vs_floating_arithmetic` | `Farkas` | `checks --concept bridge_exact_vs_floating_arithmetic --route Farkas --proof-status checked` |
+| Inner-product projection, least-squares, and ridge optimality rows | `bridge_inner_product_projection`; pack `finite-ridge-regression-v0` | `Farkas` | `checks --concept bridge_inner_product_projection --route Farkas --proof-status checked`; `checks --pack finite-ridge-regression-v0 --route Farkas --proof-status checked` |
+| Residual bounds and regression/numerical optimization rows | `bridge_residual_bound`; pack `finite-ridge-regression-v0` | `Farkas` | `checks --concept bridge_residual_bound --route Farkas --proof-status checked`; `checks --pack finite-ridge-regression-v0 --route Farkas --proof-status checked` |
+| Exact arithmetic, regularized regression, and numerical-honesty rows | `bridge_exact_vs_floating_arithmetic`; pack `finite-ridge-regression-v0` | `Farkas` | `checks --concept bridge_exact_vs_floating_arithmetic --route Farkas --proof-status checked`; `checks --pack finite-ridge-regression-v0 --route Farkas --proof-status checked`; `horizon-frontier --text ridge` |
 | KKT stationarity and complementarity display rows | pack `finite-kkt-v0` | `Farkas` | `checks --pack finite-kkt-v0 --route Farkas --proof-status checked` |
 | Active-set QP display row | pack `finite-active-set-qp-v0` | `Farkas` | `checks --pack finite-active-set-qp-v0 --route Farkas --proof-status checked` |
 | Inactive active-set slack row | pack `finite-active-set-qp-v0`, text `inactive` | `Farkas` | `checks --pack finite-active-set-qp-v0 --route Farkas --proof-status checked --text inactive` |
@@ -172,6 +172,12 @@ python3 scripts/query-foundational-resources.py checks \
   --route Farkas \
   --proof-status checked \
   --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-ridge-regression-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
 ```
 
 Display checked residual-bound rows:
@@ -179,6 +185,13 @@ Display checked residual-bound rows:
 ```sh
 python3 scripts/query-foundational-resources.py checks \
   --concept bridge_residual_bound \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --concept bridge_residual_bound \
+  --pack finite-ridge-regression-v0 \
   --route Farkas \
   --proof-status checked \
   --require-any
@@ -207,6 +220,10 @@ python3 scripts/query-foundational-resources.py checks \
   --concept bridge_exact_vs_floating_arithmetic \
   --route Farkas \
   --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text ridge \
   --require-any
 ```
 
@@ -373,6 +390,8 @@ They do not prove:
 - root-finding convergence, error-bound, or numerical-stability theorems;
 - gradient descent, line-search, Wolfe, projected-gradient, or
   proximal-gradient convergence;
+- general ridge-regression optimality, regularization paths, model-selection,
+  cross-validation, or statistical guarantees;
 - floating-point stability, conditioning, performance, or benchmark parity;
 - theorem-level convex analysis or infinite-dimensional optimization claims.
 
