@@ -32,6 +32,7 @@ use axeyum_ir::{
 use axeyum_rewrite::replace_subterms;
 
 use crate::backend::{CheckResult, SolverBackend, SolverConfig};
+use crate::cdclt::{CdclT, Lit as CdcltLit, Outcome};
 use crate::model::Model;
 use crate::sat_bv_backend::SatBvBackend;
 
@@ -491,6 +492,119 @@ pub fn solve_qf_uf_online(arena: &mut TermArena, assertions: &[TermId]) -> Check
         None => CheckResult::Unknown(unknown(
             "online e-graph model did not replay (base-sort semantics outside congruence)",
         )),
+    }
+}
+
+/// Decides the `QF_UF`(-equality) fragment via the **generic online CDCL(T)**
+/// driver [`crate::cdclt::CdclT`] with [`EufTheory`] as the first theory (Track 1,
+/// P1.5 slice a). This is the reusable-driver counterpart to [`solve_qf_uf_online`]
+/// (whose search is EUF-hardwired and embedded): the skeleton is identical (the same
+/// Tseitin [`Encoder`] and one backtrackable [`EufTheory`]), but the search itself is
+/// the theory-agnostic [`CdclT`] that any `T: TheorySolver` plugs into — so the same
+/// loop will drive the arithmetic / combined theories as they land.
+///
+/// Verdict discipline matches the rest of the e-graph path:
+/// - `unsat` is a sound refutation. It carries **no new trust surface** over the
+///   offline route: the driver's theory conflict/reason clauses come from the *same*
+///   [`EGraph::explain`] machinery (independently re-checked by [`check_congruence`]
+///   on the offline path) that [`check_qf_uf`] already relies on, and 1-UIP
+///   resolution over that mixed clause database is standard, model-independent
+///   inference. Tests additionally gate every online `unsat` against the offline
+///   [`check_qf_uf`] on the same query.
+/// - `sat` is **not** trusted from the search: a candidate model is built from the
+///   e-graph classes ([`EufTheory::model`]), skeleton-only Bool symbols are injected
+///   from the solver trail, and the model is **replayed** against the original
+///   assertions — a non-replay yields [`CheckResult::Unknown`], never a wrong `sat`.
+/// - Deadline-bounded (`config.timeout`), returning [`CheckResult::Unknown`] under a
+///   deterministic resource bound rather than running unbounded.
+///
+/// Returns [`CheckResult::Unknown`] when there are no equality atoms or the Boolean
+/// skeleton has structure the encoder does not cover (the same conservative give-ups
+/// as [`solve_qf_uf_online`]). Not wired into default dispatch this slice.
+#[must_use]
+pub fn check_qf_uf_online_cdclt(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+) -> CheckResult {
+    // Distinct equality atoms — the theory's atom indices and the first
+    // `atom_terms.len()` skeleton variables.
+    let mut atom_terms: Vec<TermId> = Vec::new();
+    let mut seen = HashSet::new();
+    for &a in assertions {
+        collect_eq_atoms(arena, a, &mut atom_terms, &mut seen);
+    }
+    if atom_terms.is_empty() {
+        return CheckResult::Unknown(unknown("no equality atoms for the online CDCL(T) path"));
+    }
+
+    let mut enc = Encoder::new(&atom_terms);
+    let mut clauses: Vec<Vec<Lit>> = Vec::new();
+    for &assertion in assertions {
+        let Some(top) = enc.encode(arena, assertion, &mut clauses) else {
+            return CheckResult::Unknown(unknown(
+                "boolean skeleton outside the online CDCL(T) encoder",
+            ));
+        };
+        clauses.push(vec![Lit {
+            var: top,
+            positive: true,
+        }]);
+    }
+
+    // The driver has its own literal type; the two are structurally identical.
+    let driver_clauses: Vec<Vec<CdcltLit>> = clauses
+        .iter()
+        .map(|clause| {
+            clause
+                .iter()
+                .map(|l| CdcltLit {
+                    var: l.var,
+                    positive: l.positive,
+                })
+                .collect()
+        })
+        .collect();
+
+    let eq_count = atom_terms.len();
+    let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
+    let mut theory = EufTheory::new(arena, &atom_terms);
+    let mut solver = CdclT::new(enc.var_count, eq_count, driver_clauses, deadline);
+    match solver.solve(&mut theory) {
+        Outcome::Unsat => CheckResult::Unsat,
+        Outcome::Unknown => {
+            CheckResult::Unknown(unknown("timeout in the online CDCL(T) QF_UF driver"))
+        }
+        Outcome::Sat => {
+            let Some(mut model) = theory.model(arena) else {
+                return CheckResult::Unknown(unknown(
+                    "online CDCL(T) e-graph model did not replay (base-sort semantics outside congruence)",
+                ));
+            };
+            // Inject each skeleton-only Bool symbol (never an equality-atom side, so
+            // absent from the e-graph model) from the solver trail. Additive and
+            // replay-gated below, so it cannot manufacture a wrong `sat`. Sorted by
+            // `TermId` for determinism (`term_var` is a `HashMap`).
+            let mut term_vars: Vec<(TermId, usize)> =
+                enc.term_var.iter().map(|(&t, &v)| (t, v)).collect();
+            term_vars.sort_by_key(|(term, _)| *term);
+            for (term, var) in term_vars {
+                if let TermNode::Symbol(sym) = arena.node(term)
+                    && arena.sort_of(term) == Sort::Bool
+                    && model.get(*sym).is_none()
+                    && let Some(value) = solver.value(var)
+                {
+                    model.set(*sym, Value::Bool(value));
+                }
+            }
+            if replays(arena, assertions, &model) {
+                CheckResult::Sat(model)
+            } else {
+                CheckResult::Unknown(unknown(
+                    "online CDCL(T) e-graph model did not replay (base-sort semantics outside congruence)",
+                ))
+            }
+        }
     }
 }
 

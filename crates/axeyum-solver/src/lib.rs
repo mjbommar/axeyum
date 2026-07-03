@@ -44,6 +44,7 @@ mod bv_interpolant;
 mod bv_uf_local;
 pub mod capabilities;
 mod cardinality;
+mod cdclt;
 mod certify;
 mod combined;
 mod combined_theory;
@@ -250,8 +251,8 @@ pub use euf::{
 pub use euf_alethe::prove_qf_uf_unsat_alethe;
 pub use euf_egraph::{
     EufConflict, EufTheory, TheoryLit, TheoryProp, TheorySolver, check_qf_uf,
-    check_qf_uf_with_config, prove_unsat_by_congruence, prove_unsat_lazy, prove_unsat_qf_uf_online,
-    solve_qf_uf_online,
+    check_qf_uf_online_cdclt, check_qf_uf_with_config, prove_unsat_by_congruence, prove_unsat_lazy,
+    prove_unsat_qf_uf_online, solve_qf_uf_online,
 };
 pub use euf_interpolant::{
     QfUfInterpolantCertificate, qf_uf_interpolant, qf_uf_interpolant_certified,
