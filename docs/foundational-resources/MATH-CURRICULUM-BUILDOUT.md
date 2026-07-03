@@ -1522,9 +1522,9 @@ Exit criteria:
   QF_LRA/Farkas infeasibility, Boolean CNF/LRAT refutations, integer/count
   Diophantine obstructions, and fixed-width QF_BV/DRAT rows.
 - At least 12 validated example packs.
-  Status: 146 non-template math example packs validate.
+  Status: 147 non-template math example packs validate.
 - At least 6 packs with checked proof/evidence routes.
-  Status: 146 non-template packs have at least one `checked` expected-result row.
+  Status: 147 non-template packs have at least one `checked` expected-result row.
 - At least one downstream consumer can read the data without repository-internal
   knowledge.
   Status: `scripts/consume-foundational-resources.py` reads the committed atlas
@@ -2248,11 +2248,13 @@ product-rule and tangent checks, finite Riemann sums, antiderivative endpoint
 replay, checked false derivative/integral rejection, and the differentiability,
 integrability, and fundamental-theorem Lean horizons.
 `calculus-theorem-boundary.md` now gives `calculus-algebraic-shadow-v0`,
-`calculus-riemann-sum-v0`, and `multivariable-calculus-rational-v0` a focused
-finite/general calculus trust map. It keeps exact derivative coefficients,
-fixed product-rule identity replay, tangent and critical-point replay, finite
-Riemann sums, antiderivative endpoint replay, gradient/Jacobian/Hessian replay,
-and checked QF_LRA/Farkas bad-row evidence separate from differentiability,
+`calculus-riemann-sum-v0`, `finite-simpson-rule-v0`, and
+`multivariable-calculus-rational-v0` a focused finite/general calculus trust
+map. It keeps exact derivative coefficients, fixed product-rule identity
+replay, tangent and critical-point replay, finite Riemann sums, finite
+Simpson-rule quadrature, antiderivative endpoint replay,
+gradient/Jacobian/Hessian replay, and checked QF_LRA/Farkas bad-row evidence
+separate from differentiability,
 MVT, integrability, FTC, inverse/implicit-function, change-of-variables, and
 manifold-calculus theorem coverage.
 The next proof/certificate layer is now organized in
@@ -3595,6 +3597,15 @@ claim `1/3` against exact `5/12`. General BDF2 order, convergence,
 zero-stability, nonlinear endpoint solves, variable-step correctness,
 floating-point time-stepping, and PDE theory stay in future Lean/theorem or
 numerical-honesty lanes.
+The real-analysis/numerical-analysis layer now adds
+`finite-simpson-rule-v0` as the 147th non-template math pack. Exact rational
+replay checks single-panel Simpson-rule nodes, weights, sample values,
+weighted sums, Simpson values, and exact polynomial integrals for `x^3` and
+`1+x^2` on `[0,2]`, while a source-linked QF_LRA/Farkas artifact rejects the
+malformed cubic quadrature claim `7/2` against exact `4`. General
+Simpson-rule exactness, composite/adaptive quadrature convergence, error
+bounds, floating-point quadrature correctness, and numerical stability stay
+in future Lean/theorem or numerical-honesty lanes.
 Continue by adding the next curriculum-adjacent pack from the field ledger
 or by replacing finite enumeration routes with emitted, checked proof objects
 where appropriate.

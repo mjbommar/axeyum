@@ -17,7 +17,7 @@ interval arithmetic, bounded
 epsilon-delta shadows, bounded sequence tails, algebraic derivative and
 integral replay, Newton/root-finding steps, finite recurrence, Euler,
 Runge-Kutta midpoint, Heun, backward Euler, Crank-Nicolson,
-Adams-Bashforth, and BDF2 rows,
+Adams-Bashforth, BDF2, and Simpson-rule quadrature rows,
 residual/solution-box/Jacobi rows, exact condition-number, Schur-complement,
 singular-value shadows, fixed-decimal rounding shadows,
 exact-vs-floating boundary rows, complex numbers as real-pair algebra, and one
@@ -33,7 +33,8 @@ complex-plane transform, finite Cauchy-Riemann shadow, fixed root, and
 rational-polynomial factorization resources, read
 [Complex Analysis Theorem Boundary](../learn/math/complex-analysis-theorem-boundary.md).
 For the focused calculus boundary over finite derivative, finite Riemann-sum,
-gradient, Jacobian, Hessian, and malformed-row shadows, read
+finite Simpson-rule quadrature, gradient, Jacobian, Hessian, and malformed-row
+shadows, read
 [Calculus Theorem Boundary](../learn/math/calculus-theorem-boundary.md).
 For the focused convex-analysis boundary over finite midpoint, grid,
 threshold, and malformed-row shadows, read
@@ -86,7 +87,7 @@ needs concrete checked rows to display.
 | Sequence tails, Cauchy shadows, and squeeze side conditions | `bridge_sequence_tail_shadow`; `bridge_cauchy_tail_shadow`; `bridge_squeeze_shadow` | `Farkas`; finite replay | `concepts --field real_analysis --text "Sequence Tail"`; `concepts --field real_analysis --text "Cauchy Tail"`; `concepts --field real_analysis --text "Squeeze Shadow"` |
 | Derivative identities and integration horizons | `bridge_derivative_identity_shadow`; `bridge_integration_horizon` | `Farkas`; Lean horizon | `concepts --field real_analysis --text "Derivative Identity"`; `concepts --field real_analysis --text "Integration Horizon"` |
 | Metric balls and bounded epsilon-delta rows | `bridge_metric_ball`; `bridge_bounded_epsilon_delta_shadow` | `Farkas` | `checks --concept bridge_bounded_epsilon_delta_shadow --route Farkas --proof-status checked` |
-| Algebraic derivative, Riemann-sum, and multivariable calculus shadows | packs `calculus-algebraic-shadow-v0`, `calculus-riemann-sum-v0`, `multivariable-calculus-rational-v0` | `Farkas`; Lean horizon | `checks --pack calculus-algebraic-shadow-v0 --route Farkas --proof-status checked`; `checks --pack calculus-riemann-sum-v0 --route Farkas --proof-status checked`; `horizon-frontier --text calculus` |
+| Algebraic derivative, Riemann-sum, Simpson-rule, and multivariable calculus shadows | packs `calculus-algebraic-shadow-v0`, `calculus-riemann-sum-v0`, `finite-simpson-rule-v0`, `multivariable-calculus-rational-v0` | `Farkas`; Lean horizon | `checks --pack calculus-algebraic-shadow-v0 --route Farkas --proof-status checked`; `checks --pack calculus-riemann-sum-v0 --route Farkas --proof-status checked`; `checks --pack finite-simpson-rule-v0 --route Farkas --proof-status checked`; `horizon-frontier --text calculus` |
 | Exact finite convexity and convex-analysis horizons | pack `convexity-rational-v0`; concept `bridge_rational_convexity_shadow` | `Farkas`; Lean horizon | `checks --pack convexity-rational-v0 --route Farkas --proof-status checked`; `horizon-frontier --text convex-analysis` |
 | Polynomial coefficients, factors, roots, and coefficient windows | `bridge_polynomial_coefficient_factor_replay` | `Diophantine`; `Farkas` | `checks --concept bridge_polynomial_coefficient_factor_replay --route Diophantine --proof-status checked`; `checks --concept bridge_polynomial_coefficient_factor_replay --route Farkas --proof-status checked` |
 | Root-finding and Newton-step rows | pack `finite-root-finding-v0`; concept `bridge_exact_vs_floating_arithmetic` | `Farkas` | `checks --pack finite-root-finding-v0 --route Farkas --proof-status checked` |
@@ -204,6 +205,19 @@ python3 scripts/query-foundational-resources.py checks \
 
 python3 scripts/query-foundational-resources.py checks \
   --pack calculus-riemann-sum-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-simpson-rule-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --concept bridge_integration_horizon \
+  --pack finite-simpson-rule-v0 \
   --route Farkas \
   --proof-status checked \
   --require-any

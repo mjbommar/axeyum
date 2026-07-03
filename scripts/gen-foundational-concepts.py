@@ -604,6 +604,10 @@ CURRICULUM_MAP = {
                 "Finite rational Riemann sums, midpoint/trapezoid replay, antiderivative endpoints, and FTC Lean horizon.",
             ),
             (
+                "finite-simpson-rule-v0",
+                "Finite rational Simpson-rule panels, exact quadrature replay, checked bad-value Farkas row, and quadrature-theory Lean horizon.",
+            ),
+            (
                 "multivariable-calculus-rational-v0",
                 "Exact rational gradient, directional derivative, Jacobian chain-rule, and Hessian-minor replay.",
             ),
@@ -655,7 +659,7 @@ FIELD_PACKS = {
     "number_theory": ("modular-arithmetic-v0", "Congruences, CRT, residues, finite fields, finite ideals in modular rings, and bounded Diophantine examples."),
     "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, covariance/Gram replay, orthogonal transforms, rank, inverse, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, GMRES residual-minimization, Lanczos/tridiagonalization, and Jordan-chain shadows, Jacobians, Hessians, Newton-step Hessian solves, projections, and infeasibility."),
     "abstract_algebra": ("finite-fields-v0", "Finite groups, permutation groups, monoids, group actions, rings, fields, ideals, modules, dual spaces, tensor products, homomorphism tables, polynomial factorization slices, Jordan-chain polynomial/module shadows, and Cayley-table validation."),
-    "real_analysis": ("real-analysis-rational-v0", "Rational interval/ball checks, bounded epsilon-delta samples, algebraic factorization, fixed-decimal rounding shadows, multivariable-calculus, Newton-step, Runge-Kutta midpoint, Heun-method, backward Euler, Crank-Nicolson, Adams-Bashforth, and BDF2 shadows, and proof horizons."),
+    "real_analysis": ("real-analysis-rational-v0", "Rational interval/ball checks, bounded epsilon-delta samples, algebraic factorization, fixed-decimal rounding shadows, Riemann-sum and Simpson-rule quadrature shadows, multivariable-calculus, Newton-step, Runge-Kutta midpoint, Heun-method, backward Euler, Crank-Nicolson, Adams-Bashforth, and BDF2 shadows, and proof horizons."),
     "complex_analysis": ("complex-algebraic-v0", "Complex arithmetic, real-pair transforms, finite Cauchy-Riemann derivative shadows, and polynomial factorization shadows as real/rational algebra before analytic proof horizons."),
     "topology": ("finite-topology-v0", "Finite topologies, metric balls, closure/interior, continuous maps, and finite simplicial-homology checks."),
     "measure_theory": ("finite-measure-v0", "Finite sigma-algebras, finite measures, monotonicity/subadditivity, random variables, conditional expectations, finite kernels, martingales, hitting times, concentration checks, product tables, and exact probability foundations."),
@@ -679,7 +683,7 @@ FIELD_PACKS = {
         ("finite-projected-gradient-v0", "Finite projected-gradient interval replay with checked bad-projection rejection."),
         ("finite-proximal-gradient-v0", "Finite proximal-gradient L1 soft-threshold/composite-decrease replay with checked bad proximal-gradient rows."),
     ],
-    "numerical_analysis": ("numerical-linear-algebra-v0", "Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, interval bounds, inner-product projections, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, GMRES residual-minimization, Lanczos/tridiagonalization, residual, rounding, and perturbation-bound shadows, fixed-step error recurrences, Euler, Runge-Kutta midpoint, Heun, backward Euler, Crank-Nicolson implicit, Adams-Bashforth explicit multistep, and BDF2 implicit multistep time-stepping shadows, Jacobian/Hessian replay, finite root-finding, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."),
+    "numerical_analysis": ("numerical-linear-algebra-v0", "Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, interval bounds, inner-product projections, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, GMRES residual-minimization, Lanczos/tridiagonalization, residual, rounding, and perturbation-bound shadows, fixed-step error recurrences, Simpson-rule quadrature, Euler, Runge-Kutta midpoint, Heun, backward Euler, Crank-Nicolson implicit, Adams-Bashforth explicit multistep, and BDF2 implicit multistep time-stepping shadows, Jacobian/Hessian replay, finite root-finding, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."),
     "differential_equations_and_dynamical_systems": ("bounded-dynamics-v0", "Recurrence systems, discretized dynamics, threshold reachability, invariant checks, Euler, Runge-Kutta midpoint, Heun, backward Euler, Crank-Nicolson, Adams-Bashforth, and BDF2 finite time-stepping, Markov transitions, and finite hitting times."),
     "geometry": [
         (
@@ -4280,8 +4284,9 @@ BRIDGE_CONCEPTS = [
         "resource_status": "validated",
         "summary": (
             "An integration-horizon row separates exact finite sums, simple "
-            "function integrals, and Riemann-sum shadows from theorem-level "
-            "integrability, convergence, and fundamental-theorem claims."
+            "function integrals, Riemann-sum shadows, and Simpson-rule "
+            "quadrature panels from theorem-level integrability, convergence, "
+            "error-bound, and fundamental-theorem claims."
         ),
         "prerequisites": [
             "bridge_finite_product_integration",
@@ -4297,6 +4302,7 @@ BRIDGE_CONCEPTS = [
         "axeyum_fragments": [
             "finite weighted sums",
             "Riemann-sum shadows",
+            "finite Simpson quadrature",
             "simple-function integrals",
             "QF_LRA",
             "Lean horizon",
@@ -4305,6 +4311,10 @@ BRIDGE_CONCEPTS = [
             (
                 "calculus-riemann-sum-v0",
                 "Fixed partition Riemann-sum replay and checked false-integral row.",
+            ),
+            (
+                "finite-simpson-rule-v0",
+                "Fixed single-panel Simpson quadrature replay and checked bad quadrature-value row.",
             ),
             (
                 "finite-integration-v0",
@@ -4330,15 +4340,18 @@ BRIDGE_CONCEPTS = [
                     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
                     "docs/proof-cookbook/recipes/lean-horizon-template.md",
                     "docs/learn/math/calculus-shadows-end-to-end.md",
+                    "docs/learn/math/simpson-rule-end-to-end.md",
                     "docs/learn/math/finite-integration-end-to-end.md",
                     "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
                     "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
                 ],
                 "notes": (
                     "Finite sums and simple-function integrals are replayed "
-                    "exactly and bad finite values can carry Farkas evidence. "
-                    "General integrability, convergence theorems, and FTC "
-                    "remain Lean-horizon dependencies."
+                    "exactly; finite Simpson panels also replay nodes, "
+                    "weights, sample values, and quadrature values. Bad finite "
+                    "values can carry Farkas evidence. General integrability, "
+                    "quadrature convergence/error theorems, and FTC remain "
+                    "Lean-horizon dependencies."
                 ),
             }
         ],
@@ -4347,20 +4360,22 @@ BRIDGE_CONCEPTS = [
             "docs/proof-cookbook/recipes/qf-lra-farkas.md",
             "docs/proof-cookbook/recipes/lean-horizon-template.md",
             "docs/learn/math/calculus-shadows-end-to-end.md",
+            "docs/learn/math/simpson-rule-end-to-end.md",
             "docs/learn/math/finite-integration-end-to-end.md",
             "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
         ],
         "open_gaps": [
-            "Finite Riemann sums and simple-function integrals do not prove Riemann/Lebesgue integrability or convergence theorems.",
+            "Finite Riemann sums, Simpson panels, and simple-function integrals do not prove Riemann/Lebesgue integrability or convergence theorems.",
+            "Single-panel Simpson replay does not prove composite/adaptive quadrature convergence, error terms, degree-of-exactness theorems, or floating-point quadrature correctness.",
             "FTC, dominated convergence, Fubini/Tonelli, and almost-everywhere integration remain Lean horizons.",
         ],
         "graduation": {
             "status": "validated",
             "criteria": [
-                "Rows state the finite partition, atom table, function values, and exact sum domain.",
-                "The validator recomputes each finite integral or Riemann-sum value exactly.",
+                "Rows state the finite partition, quadrature nodes/weights/sample values, atom table, function values, and exact sum domain.",
+                "The validator recomputes each finite integral, Riemann-sum, or Simpson-rule quadrature value exactly.",
                 "The theorem-level integration claim is explicitly marked Lean-horizon.",
             ],
         },

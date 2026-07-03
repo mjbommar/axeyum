@@ -11254,6 +11254,54 @@ def riemann_trapezoid_sum(polynomial: list[Fraction], partition: list[Fraction])
     )
 
 
+def validate_simpson_panel(context: str, values: dict[str, Any]) -> dict[str, Any]:
+    method = values.get("method")
+    require_string(f"{context}.method", method)
+    if method != "single_panel_simpson_rule":
+        fail(f"{context}.method must be single_panel_simpson_rule")
+    polynomial = require_polynomial(f"{context}.polynomial", values.get("polynomial"))
+    left, right = require_interval_endpoints(f"{context}.interval", values)
+    nodes = require_fraction_vector(f"{context}.nodes", values.get("nodes"))
+    weights = require_fraction_vector(f"{context}.weights", values.get("weights"))
+    sample_values = require_fraction_vector(f"{context}.sample_values", values.get("sample_values"))
+    scale = require_fraction(f"{context}.scale", values.get("scale"))
+    weighted_sum = require_fraction(f"{context}.weighted_sum", values.get("weighted_sum"))
+    simpson_value = require_fraction(f"{context}.simpson_value", values.get("simpson_value"))
+    exact_integral = require_fraction(f"{context}.exact_integral", values.get("exact_integral"))
+    midpoint = (left + right) / 2
+    if right <= left:
+        fail(f"{context}.interval must have a < b")
+    if nodes != [left, midpoint, right]:
+        fail(f"{context}.nodes must be [a, (a+b)/2, b]")
+    if weights != [Fraction(1), Fraction(4), Fraction(1)]:
+        fail(f"{context}.weights must be [1, 4, 1]")
+    expected_values = [polynomial_eval(polynomial, node) for node in nodes]
+    if sample_values != expected_values:
+        fail(f"{context}.sample_values do not match the polynomial")
+    expected_scale = (right - left) / 6
+    if scale != expected_scale:
+        fail(f"{context}.scale must be (b-a)/6")
+    expected_weighted_sum = sum(weight * value for weight, value in zip(weights, sample_values))
+    if weighted_sum != expected_weighted_sum:
+        fail(f"{context}.weighted_sum is incorrect")
+    if simpson_value != scale * weighted_sum:
+        fail(f"{context}.simpson_value is incorrect")
+    if exact_integral != polynomial_integral(polynomial, left, right):
+        fail(f"{context}.exact_integral is incorrect")
+    return {
+        "polynomial": polynomial,
+        "left": left,
+        "right": right,
+        "nodes": nodes,
+        "weights": weights,
+        "sample_values": sample_values,
+        "scale": scale,
+        "weighted_sum": weighted_sum,
+        "simpson_value": simpson_value,
+        "exact_integral": exact_integral,
+    }
+
+
 def validate_calculus_riemann_sum(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -11367,6 +11415,114 @@ def validate_calculus_riemann_sum(expected: dict[str, Any]) -> None:
     data = horizon.get("data", {})
     require_string("fundamental theorem target_theorem_shape", data.get("target_theorem_shape"))
     require_string("fundamental theorem future_checker", data.get("future_checker"))
+
+
+def validate_finite_simpson_rule(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    cubic = checks["simpson-cubic-exact-witness"]
+    if cubic["expected_result"] != "sat":
+        fail("simpson-cubic-exact-witness must expect sat")
+    if cubic.get("proof_status") != "replay-only":
+        fail("simpson-cubic-exact-witness must be replay-only")
+    if cubic.get("validation") != "exact_rational_simpson_rule_replay":
+        fail("simpson-cubic-exact-witness validation is incorrect")
+    cubic_values = single_witness_values(cubic, witnesses)
+    cubic_replay = validate_simpson_panel("cubic Simpson panel", cubic_values)
+    if cubic_replay["simpson_value"] != cubic_replay["exact_integral"]:
+        fail("simpson-cubic-exact-witness should be exact for this cubic row")
+    if cubic_replay["simpson_value"] != Fraction(4):
+        fail("simpson-cubic-exact-witness must compute value 4")
+
+    quadratic = checks["simpson-quadratic-exact-witness"]
+    if quadratic["expected_result"] != "sat":
+        fail("simpson-quadratic-exact-witness must expect sat")
+    if quadratic.get("proof_status") != "replay-only":
+        fail("simpson-quadratic-exact-witness must be replay-only")
+    if quadratic.get("validation") != "exact_rational_simpson_rule_replay":
+        fail("simpson-quadratic-exact-witness validation is incorrect")
+    quadratic_values = single_witness_values(quadratic, witnesses)
+    quadratic_replay = validate_simpson_panel("quadratic Simpson panel", quadratic_values)
+    if quadratic_replay["simpson_value"] != quadratic_replay["exact_integral"]:
+        fail("simpson-quadratic-exact-witness should be exact for this quadratic row")
+
+    bad = checks["bad-simpson-value-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-simpson-value-rejected must expect unsat")
+    if bad.get("proof_status") != "replay-only":
+        fail("bad-simpson-value-rejected must be replay-only")
+    if bad.get("validation") != "exact_rational_bad_simpson_value_replay":
+        fail("bad-simpson-value-rejected validation is incorrect")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "cubic-single-panel-simpson":
+        fail("bad-simpson-value-rejected must cite the cubic Simpson witness")
+    computed = require_fraction("bad Simpson computed_simpson_value", data.get("computed_simpson_value"))
+    claimed = require_fraction("bad Simpson claimed_simpson_value", data.get("claimed_simpson_value"))
+    gap = require_fraction("bad Simpson simpson_value_gap", data.get("simpson_value_gap"))
+    if computed != cubic_replay["simpson_value"]:
+        fail("bad-simpson-value-rejected computed value must match the cubic replay")
+    if computed == claimed:
+        fail("bad-simpson-value-rejected malformed claim must disagree with replay")
+    if computed - claimed != gap:
+        fail("bad-simpson-value-rejected simpson_value_gap is incorrect")
+    if gap <= 0:
+        fail("bad-simpson-value-rejected simpson_value_gap must be positive")
+    if "separate qf-lra-bad-simpson-value" not in bad.get("notes", ""):
+        fail("bad-simpson-value-rejected notes must name the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-simpson-value"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-simpson-value must expect unsat")
+    if qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-simpson-value must be checked")
+    if qf_bad.get("validation") != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-simpson-value must use exact_rational_farkas_evidence")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_witness") != "cubic-single-panel-simpson":
+        fail("qf-lra-bad-simpson-value must cite the cubic Simpson witness")
+    if qf_data.get("source_replay_row") != "bad-simpson-value-rejected":
+        fail("qf-lra-bad-simpson-value must cite the replay row")
+    qf_computed = require_fraction(
+        "qf Simpson computed_simpson_value",
+        qf_data.get("computed_simpson_value"),
+    )
+    qf_claimed = require_fraction(
+        "qf Simpson claimed_simpson_value",
+        qf_data.get("claimed_simpson_value"),
+    )
+    if qf_computed != computed or qf_claimed != claimed:
+        fail("qf-lra-bad-simpson-value data must match the replay row")
+    conflict = qf_data.get("farkas_conflict")
+    require_string("qf Simpson farkas_conflict", conflict)
+    if conflict != "simpson_value = 4 and simpson_value = 7/2":
+        fail("qf-lra-bad-simpson-value must document the Farkas conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf Simpson smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-simpson-rule-v0/smt2/"
+        "bad-simpson-value-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-lra-bad-simpson-value smt2_artifact must name the checked source artifact")
+    check_source("qf Simpson smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf Simpson farkas_regression", regression)
+    if "finite_simpson_rule_bad_value_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-simpson-value must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf Simpson certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-simpson-value certificate must document checked Farkas evidence")
+
+    horizon = checks["general-simpson-rule-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-simpson-rule-theory-lean-horizon must be not-run")
+    if horizon.get("proof_status") != "lean-horizon":
+        fail("general-simpson-rule-theory-lean-horizon must remain lean-horizon")
+    horizon_data = horizon.get("data", {})
+    require_string("Simpson horizon target_theorem_shape", horizon_data.get("target_theorem_shape"))
+    require_string("Simpson horizon future_checker", horizon_data.get("future_checker"))
 
 
 def validate_linear_algebra_rational(expected: dict[str, Any]) -> None:
@@ -34086,6 +34242,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_calculus_algebraic_shadow(expected)
     if metadata["id"] == "calculus-riemann-sum-v0":
         validate_calculus_riemann_sum(expected)
+    if metadata["id"] == "finite-simpson-rule-v0":
+        validate_finite_simpson_rule(expected)
     if metadata["id"] == "complex-algebraic-v0":
         validate_complex_algebraic(expected)
     if metadata["id"] == "complex-plane-transforms-v0":

@@ -64,15 +64,15 @@ The current committed data boundary reports:
 - 18 math-field concept rows.
 - 76 bridge-concept rows.
 - 5 example-family rows.
-- 146 non-template math example packs.
-- 955 expected checks.
-- 372 checked proof/evidence rows.
-- 474 replay-only rows.
-- 109 Lean-horizon rows.
-- 146 promoted solver-reuse packs.
+- 147 non-template math example packs.
+- 960 expected checks.
+- 373 checked proof/evidence rows.
+- 477 replay-only rows.
+- 110 Lean-horizon rows.
+- 147 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 146 focused learner-linked packs, with no path-only, index-only, or missing
+- 147 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 This is broad enough that the next work is not "create a few examples." The
@@ -2630,6 +2630,15 @@ Pick one item per commit unless the change is purely navigational.
      BDF2 order, convergence, zero-stability, variable-step correctness,
      floating-point stability, nonlinear endpoint-solve correctness, or PDE
      theory.
+193. Landed: add `finite-simpson-rule-v0` as an exact finite quadrature
+     resource. The pack computes single-panel Simpson-rule values for `x^3`
+     and `1+x^2` on `[0,2]`, records nodes `[0,1,2]`, weights `[1,4,1]`,
+     sample values, weighted sums, Simpson values `4` and `14/3`, and exact
+     polynomial integrals, then promotes the malformed cubic quadrature claim
+     `7/2` through a source-linked QF_LRA/Farkas regression against exact `4`
+     without claiming general Simpson-rule exactness, composite/adaptive
+     quadrature convergence, error bounds, floating-point quadrature
+     correctness, or numerical stability.
 
 ## Validation Checklist
 

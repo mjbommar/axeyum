@@ -1,0 +1,104 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-simpson-rule-v0",
+  "witnesses": [
+    {
+      "id": "cubic-single-panel-simpson",
+      "description": "Single-panel Simpson replay for f(x)=x^3 on [0,2].",
+      "values": {
+        "method": "single_panel_simpson_rule",
+        "polynomial": ["0", "0", "0", "1"],
+        "a": "0",
+        "b": "2",
+        "nodes": ["0", "1", "2"],
+        "weights": ["1", "4", "1"],
+        "sample_values": ["0", "1", "8"],
+        "scale": "1/3",
+        "weighted_sum": "12",
+        "simpson_value": "4",
+        "exact_integral": "4"
+      }
+    },
+    {
+      "id": "quadratic-single-panel-simpson",
+      "description": "Single-panel Simpson replay for f(x)=1+x^2 on [0,2].",
+      "values": {
+        "method": "single_panel_simpson_rule",
+        "polynomial": ["1", "0", "1"],
+        "a": "0",
+        "b": "2",
+        "nodes": ["0", "1", "2"],
+        "weights": ["1", "4", "1"],
+        "sample_values": ["1", "2", "5"],
+        "scale": "1/3",
+        "weighted_sum": "14",
+        "simpson_value": "14/3",
+        "exact_integral": "14/3"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "simpson-cubic-exact-witness",
+      "claim": "The listed single-panel Simpson rule value for f(x)=x^3 on [0,2] equals the exact polynomial integral.",
+      "expected_result": "sat",
+      "validation": "exact_rational_simpson_rule_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["cubic-single-panel-simpson"],
+      "notes": "The validator recomputes Simpson nodes, weights, sample values, weighted sum, quadrature value, and exact polynomial integral over rationals."
+    },
+    {
+      "id": "simpson-quadratic-exact-witness",
+      "claim": "The listed single-panel Simpson rule value for f(x)=1+x^2 on [0,2] equals the exact polynomial integral.",
+      "expected_result": "sat",
+      "validation": "exact_rational_simpson_rule_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["quadratic-single-panel-simpson"],
+      "notes": "The validator checks a second finite polynomial row without claiming the general Simpson exactness theorem."
+    },
+    {
+      "id": "bad-simpson-value-rejected",
+      "claim": "For f(x)=x^3 on [0,2], the single-panel Simpson rule value is 7/2.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_bad_simpson_value_replay",
+      "proof_status": "replay-only",
+      "data": {
+        "source_witness": "cubic-single-panel-simpson",
+        "computed_simpson_value": "4",
+        "claimed_simpson_value": "7/2",
+        "simpson_value_gap": "1/2"
+      },
+      "notes": "Exact replay computes the Simpson value as 4, so the claimed value 7/2 is rejected; the separate qf-lra-bad-simpson-value row owns the checked Farkas evidence."
+    },
+    {
+      "id": "qf-lra-bad-simpson-value",
+      "claim": "The fixed malformed Simpson-rule value claim is linearly inconsistent.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_farkas_evidence",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "cubic-single-panel-simpson",
+        "source_replay_row": "bad-simpson-value-rejected",
+        "computed_simpson_value": "4",
+        "claimed_simpson_value": "7/2",
+        "farkas_conflict": "simpson_value = 4 and simpson_value = 7/2",
+        "smt2_artifact": "artifacts/examples/math/finite-simpson-rule-v0/smt2/bad-simpson-value-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_simpson_rule_bad_value_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes the single-panel Simpson value as 4, while the malformed row claims 7/2; the source QF_LRA artifact isolates that scalar contradiction for Farkas checking."
+    },
+    {
+      "id": "general-simpson-rule-theory-lean-horizon",
+      "claim": "General Simpson-rule exactness, composite/adaptive quadrature convergence, error bounds, and floating-point quadrature correctness require future theorem or numerical-honesty resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_boundary",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "For Simpson and Newton-Cotes quadrature, prove degree-of-exactness, composite-rule convergence, error terms, and method-specific hypotheses separately from finite replay rows.",
+        "future_checker": "Lean theorem statements for exact quadrature theory plus separate numerical-honesty or QF_FP artifacts for floating-point and adaptive implementations."
+      },
+      "notes": "The finite exact row is a checked resource for two rational Simpson panels, not a theorem about arbitrary functions, adaptive quadrature, floating-point implementations, or numerical stability."
+    }
+  ]
+}

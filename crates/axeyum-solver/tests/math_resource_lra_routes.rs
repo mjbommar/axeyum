@@ -79,6 +79,9 @@ const EXACT_STATS_BAD_MULTINOMIAL_PVALUE: &str = include_str!(
 const CALCULUS_RIEMANN_FALSE_INTEGRAL: &str = include_str!(
     "../../../artifacts/examples/math/calculus-riemann-sum-v0/smt2/false-integral-farkas-conflict.smt2"
 );
+const FINITE_SIMPSON_RULE_BAD_VALUE: &str = include_str!(
+    "../../../artifacts/examples/math/finite-simpson-rule-v0/smt2/bad-simpson-value-farkas-conflict.smt2"
+);
 const CALCULUS_ALGEBRAIC_FALSE_DERIVATIVE: &str = include_str!(
     "../../../artifacts/examples/math/calculus-algebraic-shadow-v0/smt2/false-derivative-farkas-conflict.smt2"
 );
@@ -896,6 +899,14 @@ fn calculus_riemann_sum_false_integral_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "calculus-riemann-sum-v0 false-integral SMT-LIB artifact",
         CALCULUS_RIEMANN_FALSE_INTEGRAL,
+    );
+}
+
+#[test]
+fn finite_simpson_rule_bad_value_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-simpson-rule-v0 bad-simpson-value SMT-LIB artifact",
+        FINITE_SIMPSON_RULE_BAD_VALUE,
     );
 }
 

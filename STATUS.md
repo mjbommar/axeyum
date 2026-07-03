@@ -240,6 +240,22 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite Simpson-rule resource landed.**
+  `finite-simpson-rule-v0` now gives the real-analysis and numerical-analysis
+  lanes a compact exact quadrature example: it checks single-panel
+  Simpson-rule nodes `[0, 1, 2]`, weights `[1, 4, 1]`, sample values,
+  weighted sums, Simpson values `4` and `14/3`, and exact polynomial
+  integrals for `x^3` and `1+x^2` on `[0,2]`. It then rejects the malformed
+  cubic quadrature claim `7/2` versus exact `4` through a source-linked
+  QF_LRA/Farkas row. The focused learner page, calculus theorem-boundary page,
+  analysis/numerical query guide, integration-horizon bridge, validator,
+  resource smoke queries, and `math_resource_lra_routes` regression keep this
+  fixed exact Simpson replay separate from general Simpson-rule exactness,
+  composite/adaptive quadrature convergence, error bounds, floating-point
+  quadrature correctness, and numerical stability. The public summary now
+  reports 122 concept rows, 147 packs, 960 expected checks, 373 checked rows,
+  477 replay-only rows, 110 Lean-horizon rows, and 147 promoted solver-reuse
+  packs.
 - **Finite BDF2 method resource landed.**
   `finite-bdf2-method-v0` now gives the differential-equations,
   numerical-analysis, and real-analysis lanes a compact exact implicit
@@ -254,10 +270,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   validator, resource smoke queries, and `math_resource_lra_routes` regression
   keep this fixed exact implicit multistep replay separate from general BDF2
   order, convergence, zero-stability, nonlinear endpoint-solve correctness,
-  variable-step correctness, floating-point time-stepping, and PDE theory. The
-  public summary now reports 122 concept rows, 146 packs, 955 expected checks,
-  372 checked rows, 474 replay-only rows, 109 Lean-horizon rows, and 146
-  promoted solver-reuse packs.
+  variable-step correctness, floating-point time-stepping, and PDE theory.
+  After that increment, the public summary reported 122 concept rows, 146
+  packs, 955 expected checks, 372 checked rows, 474 replay-only rows, 109
+  Lean-horizon rows, and 146 promoted solver-reuse packs.
 - **Finite Adams-Bashforth method resource landed.**
   `finite-adams-bashforth-method-v0` now gives the differential-equations,
   numerical-analysis, and real-analysis lanes a compact exact explicit

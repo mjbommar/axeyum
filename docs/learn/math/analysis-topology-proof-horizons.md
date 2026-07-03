@@ -45,6 +45,7 @@ Example packs:
 - [finite-simplicial-cup-products-v0](../../../artifacts/examples/math/finite-simplicial-cup-products-v0/)
 - [calculus-algebraic-shadow-v0](../../../artifacts/examples/math/calculus-algebraic-shadow-v0/)
 - [calculus-riemann-sum-v0](../../../artifacts/examples/math/calculus-riemann-sum-v0/)
+- [finite-simpson-rule-v0](../../../artifacts/examples/math/finite-simpson-rule-v0/)
 - [multivariable-calculus-rational-v0](../../../artifacts/examples/math/multivariable-calculus-rational-v0/)
 - [finite-topology-v0](../../../artifacts/examples/math/finite-topology-v0/)
 - [finite-specialization-order-v0](../../../artifacts/examples/math/finite-specialization-order-v0/)
@@ -464,6 +465,22 @@ integral claim. The upgraded false-integral row routes the final exact-linear
 conflict `integral_value = 1/2` and `integral_value = 3/4` through a rechecked
 `UnsatFarkas` certificate.
 
+For a finite Simpson-rule quadrature shadow, encode the single panel exactly:
+
+```text
+f(x) = x^3, interval = [0,2]
+nodes = 0, 1, 2
+weights = 1, 4, 1
+Simpson value = 4
+```
+
+The `finite-simpson-rule-v0` validator recomputes nodes, weights, sample
+values, the weighted sum, and the exact polynomial integral. A malformed
+`Simpson value = 7/2` row is split into replay-only rejection plus a separate
+checked `qf-lra-bad-simpson-value` Farkas certificate. General Simpson
+exactness, composite/adaptive quadrature convergence, and error bounds remain
+Lean or numerical-honesty horizons.
+
 For a multivariable calculus shadow, encode a bivariate polynomial map and
 exact rational derivative data:
 
@@ -602,6 +619,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/ca
 cargo test -p axeyum-solver --test math_resource_lra_routes calculus_algebraic_false_derivative_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/calculus-riemann-sum-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes calculus_riemann_sum_false_integral_artifact_emits_checked_farkas
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simpson-rule-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_simpson_rule_bad_value_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/multivariable-calculus-rational-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes multivariable_calculus_bad_gradient_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-topology-v0

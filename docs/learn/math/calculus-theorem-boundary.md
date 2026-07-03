@@ -7,11 +7,13 @@ Primary packs:
 
 - [calculus-algebraic-shadow-v0](../../../artifacts/examples/math/calculus-algebraic-shadow-v0/)
 - [calculus-riemann-sum-v0](../../../artifacts/examples/math/calculus-riemann-sum-v0/)
+- [finite-simpson-rule-v0](../../../artifacts/examples/math/finite-simpson-rule-v0/)
 - [multivariable-calculus-rational-v0](../../../artifacts/examples/math/multivariable-calculus-rational-v0/)
 
 Companion lessons and maps:
 
 - [End To End: Finite Calculus Shadows](calculus-shadows-end-to-end.md)
+- [End To End: Finite Simpson Rule](simpson-rule-end-to-end.md)
 - [End To End: Rational Multivariable Calculus](multivariable-calculus-end-to-end.md)
 - [Rational And Real Algebra](rational-real-algebra.md)
 - [Analysis And Topology Proof Horizons](analysis-topology-proof-horizons.md)
@@ -61,6 +63,21 @@ It also checks midpoint exactness for one affine function, an antiderivative
 endpoint row for `2*x`, and lower/upper sums for `x^2` on a two-cell
 partition.
 
+The finite Simpson-rule pack fixes exact single-panel quadrature data. For
+`f(x)=x^3` on `[0,2]`, it recomputes:
+
+```text
+nodes          = 0, 1, 2
+weights        = 1, 4, 1
+sample values  = 0, 1, 8
+weighted sum   = 12
+Simpson value  = 4
+exact integral = 4
+```
+
+It repeats the replay for `1+x^2` on the same interval and isolates the bad
+claim `Simpson value = 7/2` as a checked QF_LRA/Farkas scalar conflict.
+
 The multivariable pack fixes bivariate polynomial and matrix data:
 
 ```text
@@ -102,6 +119,11 @@ regression seeds, but they do not prove analytic calculus theorems.
 | `calculus-riemann-sum-v0` | `monotone-quadratic-lower-upper-bounds` | `sat` | checked | Lower and upper sums for a fixed monotone quadratic partition are recomputed. |
 | `calculus-riemann-sum-v0` | `false-integral-claim-rejected` | `unsat` | checked | A QF_LRA/Farkas row rejects `integral_value = 3/4` after replay computes `1/2`. |
 | `calculus-riemann-sum-v0` | `fundamental-theorem-lean-horizon` | `not-run` | lean-horizon | Riemann integrability, tagged-partition convergence, and FTC remain theorem work. |
+| `finite-simpson-rule-v0` | `simpson-cubic-exact-witness` | `sat` | replay-only | The listed single-panel Simpson value for `x^3` on `[0,2]` is replayed exactly. |
+| `finite-simpson-rule-v0` | `simpson-quadratic-exact-witness` | `sat` | replay-only | A second single-panel Simpson value for `1+x^2` on `[0,2]` is replayed exactly. |
+| `finite-simpson-rule-v0` | `bad-simpson-value-rejected` | `unsat` | replay-only | Exact replay rejects the malformed value `7/2` after computing `4`. |
+| `finite-simpson-rule-v0` | `qf-lra-bad-simpson-value` | `unsat` | checked | A QF_LRA/Farkas row checks the scalar contradiction `simpson_value = 4` and `simpson_value = 7/2`. |
+| `finite-simpson-rule-v0` | `general-simpson-rule-theory-lean-horizon` | `not-run` | lean-horizon | Degree-of-exactness, composite/adaptive quadrature convergence, error terms, and floating-point quadrature remain theorem/numerical-honesty work. |
 | `multivariable-calculus-rational-v0` | `gradient-at-point-replay` | `sat` | replay-only | The fixed bivariate gradient and value are recomputed. |
 | `multivariable-calculus-rational-v0` | `directional-derivative-dot-product` | `sat` | checked | The fixed directional derivative is checked as a gradient dot product. |
 | `multivariable-calculus-rational-v0` | `jacobian-chain-rule-replay` | `sat` | checked | A fixed polynomial-map Jacobian chain-rule matrix product is replayed. |
@@ -123,6 +145,8 @@ The current calculus resources do not prove:
 - power/product/chain rules as general analytic theorems;
 - general Riemann or Lebesgue integrability;
 - convergence of arbitrary tagged partitions, refinements, or mesh limits;
+- general Simpson or Newton-Cotes exactness, composite/adaptive quadrature
+  convergence, or quadrature error bounds;
 - the fundamental theorem of calculus;
 - uniform convergence, dominated convergence, or interchange of limits;
 - Fréchet differentiability over normed vector spaces;
@@ -161,6 +185,11 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 
 python3 scripts/query-foundational-resources.py checks \
+  --pack finite-simpson-rule-v0 \
+  --proof-status lean-horizon \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
   --pack multivariable-calculus-rational-v0 \
   --proof-status lean-horizon \
   --require-any
@@ -177,6 +206,12 @@ python3 scripts/query-foundational-resources.py checks \
 
 python3 scripts/query-foundational-resources.py checks \
   --pack calculus-riemann-sum-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-simpson-rule-v0 \
   --route Farkas \
   --proof-status checked \
   --require-any
@@ -203,6 +238,13 @@ python3 scripts/query-foundational-resources.py checks \
   --route Farkas \
   --proof-status checked \
   --text integral \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-simpson-rule-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --text simpson \
   --require-any
 
 python3 scripts/query-foundational-resources.py checks \
@@ -246,13 +288,16 @@ From the repository root:
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/calculus-algebraic-shadow-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/calculus-riemann-sum-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simpson-rule-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/multivariable-calculus-rational-v0
 python3 scripts/query-foundational-resources.py horizon-frontier --text calculus --require-any
 python3 scripts/query-foundational-resources.py checks --pack calculus-algebraic-shadow-v0 --proof-status lean-horizon --require-any
 python3 scripts/query-foundational-resources.py checks --pack calculus-riemann-sum-v0 --proof-status lean-horizon --require-any
+python3 scripts/query-foundational-resources.py checks --pack finite-simpson-rule-v0 --proof-status lean-horizon --require-any
 python3 scripts/query-foundational-resources.py checks --pack multivariable-calculus-rational-v0 --proof-status lean-horizon --require-any
 python3 scripts/query-foundational-resources.py checks --pack calculus-algebraic-shadow-v0 --route Farkas --proof-status checked --require-any
 python3 scripts/query-foundational-resources.py checks --pack calculus-riemann-sum-v0 --route Farkas --proof-status checked --require-any
+python3 scripts/query-foundational-resources.py checks --pack finite-simpson-rule-v0 --route Farkas --proof-status checked --require-any
 python3 scripts/query-foundational-resources.py checks --pack multivariable-calculus-rational-v0 --route Farkas --proof-status checked --require-any
 ```
 

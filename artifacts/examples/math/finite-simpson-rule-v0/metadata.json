@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "id": "finite-simpson-rule-v0",
+  "title": "Finite Simpson Rule Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_real_analysis",
+    "field_numerical_analysis",
+    "curriculum_calculus",
+    "curriculum_polynomials",
+    "curriculum_reals",
+    "curriculum_rationals",
+    "bridge_integration_horizon",
+    "bridge_bounded_family_asymptotic_boundary"
+  ],
+  "field_ids": [
+    "real_analysis",
+    "numerical_analysis"
+  ],
+  "curriculum_nodes": [
+    "calculus",
+    "polynomials",
+    "reals",
+    "rationals"
+  ],
+  "axeyum_fragments": [
+    "finite weighted sums",
+    "finite quadrature replay",
+    "polynomial integration",
+    "LRA (exact rationals)",
+    "QF_LRA",
+    "Farkas",
+    "finite replay",
+    "Lean horizon",
+    "numerical-honesty metadata"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simpson-rule-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite Simpson-rule bad quadrature value QF_LRA/Farkas regression seed",
+    "pressure": "Exact rational single-panel Simpson replay for f(x)=x^3 on [0,2] computes quadrature_value = 4, while a malformed row claims quadrature_value = 7/2, isolating a compact scalar equality conflict for the Farkas route.",
+    "evidence": [
+      "qf-lra-bad-simpson-value"
+    ],
+    "next_step": "Promote additional quadrature rows only when they add distinct composite-rule, error-term, adaptive, floating-point, or theorem-reconstruction pressure; keep general quadrature convergence and error bounds in future Lean or numerical-honesty lanes."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/03-destinations/calculus.md",
+    "docs/curriculum/02-structures/polynomials.md",
+    "docs/curriculum/01-number-systems/reals.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/simpson-rule-end-to-end.md",
+    "artifacts/examples/math/finite-simpson-rule-v0/smt2/bad-simpson-value-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+  ],
+  "expected_results": [
+    "simpson-cubic-exact-witness",
+    "simpson-quadratic-exact-witness",
+    "bad-simpson-value-rejected",
+    "qf-lra-bad-simpson-value",
+    "general-simpson-rule-theory-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode the fixed polynomial, interval, Simpson nodes, weights, sample values, weighted sum, quadrature value, and exact polynomial integral as deterministic rational replay obligations.",
+    "Route the false Simpson quadrature value through checked QF_LRA/Farkas evidence after replay computes the exact value.",
+    "Expose the pack through integration-horizon, calculus, real-analysis, numerical-analysis, and learner query surfaces.",
+    "Keep general Simpson-rule exactness theorems, composite/adaptive quadrature convergence, error bounds, floating-point quadrature correctness, and numerical-stability claims marked as future Lean or numerical-honesty work until formal routes exist."
+  ]
+}
