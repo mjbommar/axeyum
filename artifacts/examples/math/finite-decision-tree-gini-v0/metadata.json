@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "id": "finite-decision-tree-gini-v0",
+  "title": "Finite Decision Tree Gini",
+  "domain": "statistics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_statistics",
+    "field_probability_theory",
+    "field_discrete_math",
+    "curriculum_counting",
+    "curriculum_rationals",
+    "bridge_probability_mass_table",
+    "bridge_finite_decision_tree_gini_shadow",
+    "bridge_exact_vs_floating_arithmetic",
+    "bridge_qf_lra_farkas_anatomy"
+  ],
+  "field_ids": [
+    "statistics",
+    "probability_theory",
+    "discrete_math"
+  ],
+  "curriculum_nodes": [
+    "counting",
+    "rationals"
+  ],
+  "axeyum_fragments": [
+    "finite classifier table replay",
+    "finite decision-tree split replay",
+    "finite Gini impurity replay",
+    "exact rational arithmetic",
+    "LRA (exact rationals)",
+    "QF_LRA",
+    "Farkas",
+    "finite replay",
+    "Lean horizon",
+    "numerical-honesty metadata"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-decision-tree-gini-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite decision-tree bad weighted-Gini QF_LRA/Farkas regression seed",
+    "pressure": "Exact finite decision-tree replay computes color-split weighted Gini impurity 3/8 from eight classified rows, while a malformed row claims 1/2, isolating a compact scalar Farkas conflict.",
+    "evidence": [
+      "qf-lra-bad-weighted-gini"
+    ],
+    "next_step": "Promote additional decision-tree rows only when they add distinct threshold, tie-breaking, pruning, entropy/log-loss, multiclass, missing-value, or numerical-honesty pressure; keep generalization and greedy-optimality claims in theorem or statistical-inference lanes."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/curriculum/02-structures/counting.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/decision-tree-gini-end-to-end.md",
+    "artifacts/examples/math/finite-decision-tree-gini-v0/smt2/bad-weighted-gini-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+  ],
+  "expected_results": [
+    "decision-tree-table-witness",
+    "root-gini-witness",
+    "split-gini-witness",
+    "best-split-witness",
+    "bad-weighted-gini-rejected",
+    "qf-lra-bad-weighted-gini",
+    "general-decision-tree-theory-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode the fixed finite classifier table, binary feature values, class totals, root Gini impurity, candidate split impurities, and selected best split as deterministic exact-rational replay obligations.",
+    "Route the false weighted-Gini claim through a source-linked QF_LRA artifact and checked Farkas evidence after exact replay computes the conflicting split equation.",
+    "Expose the pack through statistics, probability, discrete/counting, decision-tree, exact-vs-floating, and learner-query surfaces.",
+    "Keep greedy-tree optimality, pruning, threshold policy, entropy/log-loss splitting, statistical generalization, confidence intervals, continuous feature thresholds, and floating-point tree-training behavior marked theorem, statistical-inference, or numerical-honesty horizon."
+  ]
+}

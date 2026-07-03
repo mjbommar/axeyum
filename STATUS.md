@@ -240,6 +240,25 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite decision-tree Gini split resource landed.**
+  `finite-decision-tree-gini-v0` now gives the statistics, probability, and
+  discrete/counting lanes a compact exact training-table example: it replays
+  eight classified rows, two binary feature domains, class totals, root Gini
+  impurity `1/2`, the `color` split weighted impurity `3/8`, the `shape` split
+  weighted impurity `1/2`, and the best-split comparison; rejects the malformed
+  weighted-Gini claim `1/2`; and routes that scalar conflict through a
+  source-linked QF_LRA/Farkas row. The focused learner page,
+  probability/statistics query guide, probability-mass-table,
+  finite decision-tree Gini, exact-vs-floating, and QF_LRA/Farkas bridge rows,
+  validator, resource smoke queries, generated dashboards, and
+  `math_resource_lra_routes` regression keep this fixed finite split replay
+  separate from greedy-tree optimality, pruning, threshold policy,
+  entropy/information-gain variants, statistical generalization, continuous
+  feature thresholds, and floating-point tree-training behavior. The public
+  summary now reports 131 concept rows, 167 packs, 1089 expected checks, 393
+  checked rows, 566 replay-only rows, 130 Lean-horizon rows, and 167 promoted
+  solver-reuse packs.
+
 - **Finite calibration/Brier probabilistic-classifier resource landed.**
   `finite-calibration-brier-v0` now gives the statistics and probability lanes
   a compact exact probabilistic-classifier example: it replays six rational
@@ -254,9 +273,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   replay separate from binning-policy optimality, model calibration,
   proper-scoring-rule theorems, confidence intervals, continuous
   score-distribution theory, statistical generalization, and floating-point
-  classifier behavior. The public summary now reports 130 concept rows, 166
-  packs, 1082 expected checks, 392 checked rows, 561 replay-only rows, 129
-  Lean-horizon rows, and 166 promoted solver-reuse packs.
+  classifier behavior. At that landing, the public summary reported 130
+  concept rows, 166 packs, 1082 expected checks, 392 checked rows, 561
+  replay-only rows, 129 Lean-horizon rows, and 166 promoted solver-reuse packs.
 
 - **Finite precision-recall classifier-ranking resource landed.**
   `finite-precision-recall-v0` now gives the statistics and probability lanes a

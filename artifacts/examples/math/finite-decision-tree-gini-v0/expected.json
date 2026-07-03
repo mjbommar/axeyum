@@ -1,0 +1,288 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-decision-tree-gini-v0",
+  "witnesses": [
+    {
+      "id": "eight-row-binary-decision-tree-sample",
+      "description": "An eight-row binary-classification table with two binary features, exact Gini impurity replay, and fixed split selection.",
+      "values": {
+        "classes": [
+          "positive",
+          "negative"
+        ],
+        "positive_class": "positive",
+        "negative_class": "negative",
+        "features": [
+          {
+            "id": "color",
+            "values": [
+              "red",
+              "blue"
+            ]
+          },
+          {
+            "id": "shape",
+            "values": [
+              "square",
+              "circle"
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "id": "r1",
+            "feature_values": {
+              "color": "red",
+              "shape": "square"
+            },
+            "class": "positive"
+          },
+          {
+            "id": "r2",
+            "feature_values": {
+              "color": "red",
+              "shape": "square"
+            },
+            "class": "positive"
+          },
+          {
+            "id": "r3",
+            "feature_values": {
+              "color": "red",
+              "shape": "circle"
+            },
+            "class": "positive"
+          },
+          {
+            "id": "r4",
+            "feature_values": {
+              "color": "red",
+              "shape": "circle"
+            },
+            "class": "negative"
+          },
+          {
+            "id": "r5",
+            "feature_values": {
+              "color": "blue",
+              "shape": "square"
+            },
+            "class": "negative"
+          },
+          {
+            "id": "r6",
+            "feature_values": {
+              "color": "blue",
+              "shape": "square"
+            },
+            "class": "negative"
+          },
+          {
+            "id": "r7",
+            "feature_values": {
+              "color": "blue",
+              "shape": "circle"
+            },
+            "class": "negative"
+          },
+          {
+            "id": "r8",
+            "feature_values": {
+              "color": "blue",
+              "shape": "circle"
+            },
+            "class": "positive"
+          }
+        ],
+        "class_counts": {
+          "positive_count": "4",
+          "negative_count": "4",
+          "total": "8"
+        },
+        "root_gini": {
+          "positive_count": "4",
+          "negative_count": "4",
+          "total": "8",
+          "impurity": "1/2"
+        },
+        "candidate_splits": [
+          {
+            "feature": "color",
+            "child_nodes": [
+              {
+                "value": "red",
+                "example_ids": [
+                  "r1",
+                  "r2",
+                  "r3",
+                  "r4"
+                ],
+                "positive_count": "3",
+                "negative_count": "1",
+                "count": "4",
+                "gini_impurity": "3/8",
+                "weighted_impurity": "3/16"
+              },
+              {
+                "value": "blue",
+                "example_ids": [
+                  "r5",
+                  "r6",
+                  "r7",
+                  "r8"
+                ],
+                "positive_count": "1",
+                "negative_count": "3",
+                "count": "4",
+                "gini_impurity": "3/8",
+                "weighted_impurity": "3/16"
+              }
+            ],
+            "weighted_impurity": "3/8",
+            "impurity_gain": "1/8"
+          },
+          {
+            "feature": "shape",
+            "child_nodes": [
+              {
+                "value": "square",
+                "example_ids": [
+                  "r1",
+                  "r2",
+                  "r5",
+                  "r6"
+                ],
+                "positive_count": "2",
+                "negative_count": "2",
+                "count": "4",
+                "gini_impurity": "1/2",
+                "weighted_impurity": "1/4"
+              },
+              {
+                "value": "circle",
+                "example_ids": [
+                  "r3",
+                  "r4",
+                  "r7",
+                  "r8"
+                ],
+                "positive_count": "2",
+                "negative_count": "2",
+                "count": "4",
+                "gini_impurity": "1/2",
+                "weighted_impurity": "1/4"
+              }
+            ],
+            "weighted_impurity": "1/2",
+            "impurity_gain": "0"
+          }
+        ],
+        "best_split": {
+          "feature": "color",
+          "weighted_impurity": "3/8",
+          "impurity_gain": "1/8",
+          "strict_better_than": [
+            "shape"
+          ]
+        }
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "decision-tree-table-witness",
+      "claim": "The listed eight-row binary-classification table has two binary features and four positive and four negative rows.",
+      "expected_result": "sat",
+      "validation": "exact_rational_decision_tree_table_replay",
+      "proof_status": "replay-only",
+      "witnesses": [
+        "eight-row-binary-decision-tree-sample"
+      ],
+      "notes": "The validator checks the committed feature values, class labels, feature domains, and class totals exactly."
+    },
+    {
+      "id": "root-gini-witness",
+      "claim": "The root node has Gini impurity 1/2.",
+      "expected_result": "sat",
+      "validation": "exact_rational_root_gini_replay",
+      "proof_status": "replay-only",
+      "witnesses": [
+        "eight-row-binary-decision-tree-sample"
+      ],
+      "notes": "The validator recomputes root Gini impurity from the committed positive and negative counts."
+    },
+    {
+      "id": "split-gini-witness",
+      "claim": "The color split has weighted Gini impurity 3/8 and gain 1/8, while the shape split has weighted impurity 1/2 and gain 0.",
+      "expected_result": "sat",
+      "validation": "exact_rational_split_gini_replay",
+      "proof_status": "replay-only",
+      "witnesses": [
+        "eight-row-binary-decision-tree-sample"
+      ],
+      "notes": "The validator partitions the committed rows by each candidate feature and recomputes every child impurity and weighted sum exactly."
+    },
+    {
+      "id": "best-split-witness",
+      "claim": "Among the committed candidate splits, color is strictly better than shape because 3/8 < 1/2.",
+      "expected_result": "sat",
+      "validation": "exact_rational_decision_tree_best_split_replay",
+      "proof_status": "replay-only",
+      "witnesses": [
+        "eight-row-binary-decision-tree-sample"
+      ],
+      "notes": "The validator compares the candidate weighted impurities over exact rationals."
+    },
+    {
+      "id": "bad-weighted-gini-rejected",
+      "claim": "The color split has weighted Gini impurity 1/2.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_bad_weighted_gini_replay",
+      "proof_status": "replay-only",
+      "data": {
+        "source_witness": "eight-row-binary-decision-tree-sample",
+        "metric": "weighted_gini_impurity",
+        "feature": "color",
+        "computed_weighted_impurity": "3/8",
+        "claimed_weighted_impurity": "1/2"
+      },
+      "notes": "Exact replay computes the color split weighted Gini impurity as 3/8, so the claimed value 1/2 is rejected; the separate qf-lra-bad-weighted-gini row owns the checked Farkas evidence."
+    },
+    {
+      "id": "qf-lra-bad-weighted-gini",
+      "claim": "The fixed malformed weighted-Gini claim is linearly inconsistent with the replayed split-impurity equation.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_farkas_evidence",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "eight-row-binary-decision-tree-sample",
+        "source_replay_row": "bad-weighted-gini-rejected",
+        "metric": "weighted_gini_impurity",
+        "feature": "color",
+        "computed_weighted_impurity": "3/8",
+        "claimed_weighted_impurity": "1/2",
+        "weighted_gini_equations": [
+          "8*gini_color = 3",
+          "2*gini_color = 1"
+        ],
+        "farkas_conflict": "replayed weighted-Gini equation plus gini_color = 1/2",
+        "smt2_artifact": "artifacts/examples/math/finite-decision-tree-gini-v0/smt2/bad-weighted-gini-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_decision_tree_gini_bad_weighted_gini_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes 8*gini_color = 3 from the finite split table, while the malformed row claims 2*gini_color = 1; the source QF_LRA artifact isolates that scalar contradiction for Farkas checking."
+    },
+    {
+      "id": "general-decision-tree-theory-lean-horizon",
+      "claim": "Decision-tree learning theory, greedy split optimality, pruning, tie-breaking policy, entropy or information-gain variants, continuous thresholds, missing-value policy, generalization, and floating-point training behavior require future theorem, statistical-inference, or numerical-honesty resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_boundary",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "For finite or measurable training distributions under stated feature, loss, split-policy, depth, pruning, and sampling assumptions, prove decision-tree optimality, consistency, or generalization claims only with explicit theorem hypotheses.",
+        "future_checker": "Lean theorem statements for decision-tree split policies and statistical-learning guarantees plus separate numerical-honesty artifacts for floating-point tree-training implementations."
+      },
+      "notes": "The finite exact row checks one committed table, two fixed candidate splits, and a Gini impurity calculation; it does not prove greedy-tree optimality, pruning correctness, statistical generalization, entropy/information-gain behavior, continuous-threshold search, or floating-point implementation behavior."
+    }
+  ]
+}

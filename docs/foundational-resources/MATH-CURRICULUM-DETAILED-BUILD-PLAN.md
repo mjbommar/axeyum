@@ -60,17 +60,17 @@ The committed resource query currently reports:
 
 - 23 curriculum-node concept rows.
 - 18 field rows.
-- 84 bridge-concept rows.
+- 85 bridge-concept rows.
 - 5 example-family rows.
-- 166 non-template math packs.
-- 1082 expected checks.
-- 392 checked proof/evidence rows.
-- 561 replay-only rows.
-- 129 Lean-horizon rows.
-- 166 promoted solver-reuse packs.
+- 167 non-template math packs.
+- 1089 expected checks.
+- 393 checked proof/evidence rows.
+- 566 replay-only rows.
+- 130 Lean-horizon rows.
+- 167 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 166 focused learner-linked packs, with no path-only, index-only, or missing
+- 167 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 The next phase is therefore a depth phase, not a seed phase. New packs are
@@ -112,7 +112,7 @@ good R2/R3 lesson while still not being a theorem.
 
 ## Build Waves
 
-### Wave 1: Stabilize The Current 166 Packs
+### Wave 1: Stabilize The Current 167 Packs
 
 Goal: every current non-template pack has a deliberate R5 disposition:
 `promoted`, `non-benchmark-horizon`, or a clear reason to remain unclassified.
@@ -158,7 +158,7 @@ Exit criteria:
 - No lesson implies a finite bounded check proves an unbounded theorem.
 
 Current audit: [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md) records that
-all 166 current non-template packs satisfy the focused-lesson side of this
+all 167 current non-template packs satisfy the focused-lesson side of this
 gate. Keep this true as new packs land.
 
 ### Wave 3: Proof-Route Depth

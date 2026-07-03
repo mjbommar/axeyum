@@ -199,6 +199,10 @@ CURRICULUM_MAP = {
                 "finite-calibration-brier-v0",
                 "Exact rational probabilistic-classifier calibration/Brier replay with checked bad Brier-score evidence.",
             ),
+            (
+                "finite-decision-tree-gini-v0",
+                "Exact rational decision-tree Gini split replay with checked bad weighted-impurity evidence.",
+            ),
         ],
     },
     "reals": {
@@ -537,6 +541,10 @@ CURRICULUM_MAP = {
                 "finite-calibration-brier-v0",
                 "Finite probability-forecast count replay feeding exact rational calibration and Brier-score checks.",
             ),
+            (
+                "finite-decision-tree-gini-v0",
+                "Finite feature/class count replay feeding exact rational decision-tree Gini split checks.",
+            ),
         ],
     },
     "number-theory": {
@@ -842,7 +850,7 @@ CURRICULUM_MAP = {
 FIELD_PACKS = {
     "logic_and_proof": ("proof-methods-refutation-v0", "Negation-as-query, finite CNF checks, finite order counterexamples, and proof-object lessons."),
     "set_theory_and_foundations": ("finite-sets-v0", "Finite set, relation, function, monoid/function-composition, permutation-group, group-action, order, lattice, and cardinality checks."),
-    "discrete_math": ("counting-v0", "Finite counting, finite permutations, finite transformation monoids, group-action orbits, order/lattice, and combinatorial witness checks."),
+    "discrete_math": ("counting-v0", "Finite counting, finite permutations, finite transformation monoids, group-action orbits, order/lattice, decision-tree feature/class partitions, and combinatorial witness checks."),
     "graph_theory": ("graph-coloring-v0", "SAT colorings, non-colorability, reachability, search cost counters, matching, cuts, finite flow/cut certificates, finite shortest-path certificates, finite DAG/topological-order certificates, and d-separation."),
     "number_theory": ("modular-arithmetic-v0", "Congruences, CRT, residues, finite fields, finite ideals in modular rings, and bounded Diophantine examples."),
     "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, covariance/Gram, PCA, k-means centroid/objective, and linear-discriminant replay, orthogonal transforms, rank, inverse, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, GMRES residual-minimization, Lanczos/tridiagonalization, regularized normal-equation replay, and Jordan-chain shadows, Jacobians, Hessians, Newton-step Hessian solves, projections, and infeasibility."),
@@ -851,8 +859,8 @@ FIELD_PACKS = {
     "complex_analysis": ("complex-algebraic-v0", "Complex arithmetic, real-pair transforms, finite Cauchy-Riemann derivative shadows, and polynomial factorization shadows as real/rational algebra before analytic proof horizons."),
     "topology": ("finite-topology-v0", "Finite topologies, metric balls, closure/interior, continuous maps, and finite simplicial-homology checks."),
     "measure_theory": ("finite-measure-v0", "Finite sigma-algebras, finite measures, monotonicity/subadditivity, random variables, conditional expectations, finite kernels, martingales, hitting times, concentration checks, product tables, and exact probability foundations."),
-    "probability_theory": ("finite-probability-v0", "Finite mass tables, random variables, conditional expectation, kernels, martingales, hitting times, concentration/tail bounds, finite covariance tables, conditioning, independence, Bayes rule, Naive Bayes classifier posterior replay, confusion-matrix classifier metrics, finite ROC/AUC ranking metrics, finite precision-recall ranking metrics, finite calibration/Brier scoring rows, product measures, and exact discrete distributions."),
-    "statistics": ("descriptive-statistics-v0", "Mean/variance/covariance/PCA and finite clustering identities, Schur conditional-variance shadows, random variables, conditional expectation, finite kernel, hitting-time, martingale, and concentration checks, contingency tables, exact tests, ordinary and ridge regression, finite linear-discriminant/classification replay, finite Naive Bayes classifier replay, finite confusion-matrix classifier metrics, finite ROC/AUC ranking metrics, finite precision-recall ranking metrics, finite calibration/Brier scoring rows, and Simpson witnesses."),
+    "probability_theory": ("finite-probability-v0", "Finite mass tables, random variables, conditional expectation, kernels, martingales, hitting times, concentration/tail bounds, finite covariance tables, conditioning, independence, Bayes rule, Naive Bayes classifier posterior replay, confusion-matrix classifier metrics, finite ROC/AUC ranking metrics, finite precision-recall ranking metrics, finite calibration/Brier scoring rows, finite decision-tree Gini split rows, product measures, and exact discrete distributions."),
+    "statistics": ("descriptive-statistics-v0", "Mean/variance/covariance/PCA and finite clustering identities, Schur conditional-variance shadows, random variables, conditional expectation, finite kernel, hitting-time, martingale, and concentration checks, contingency tables, exact tests, ordinary and ridge regression, finite linear-discriminant/classification replay, finite Naive Bayes classifier replay, finite confusion-matrix classifier metrics, finite ROC/AUC ranking metrics, finite precision-recall ranking metrics, finite calibration/Brier scoring rows, finite decision-tree Gini split rows, and Simpson witnesses."),
     "optimization_and_convexity": [
         ("linear-optimization-v0", "LP feasibility, threshold cliffs, and Farkas-style certificates."),
         ("convexity-rational-v0", "Finite midpoint convexity, second differences, affine threshold monotonicity, and checked bad midpoint-convexity plus affine-threshold rejection."),
@@ -1655,6 +1663,7 @@ BRIDGE_CONCEPTS = [
             "bridge_finite_roc_auc_shadow",
             "bridge_finite_precision_recall_shadow",
             "bridge_finite_calibration_brier_shadow",
+            "bridge_finite_decision_tree_gini_shadow",
             "bridge_eigenpair",
         ],
         "decidability": "decidable",
@@ -1697,6 +1706,10 @@ BRIDGE_CONCEPTS = [
             (
                 "finite-calibration-brier-v0",
                 "Malformed classifier Brier-score row checked through exact rational Farkas evidence after finite calibration/Brier replay.",
+            ),
+            (
+                "finite-decision-tree-gini-v0",
+                "Malformed decision-tree weighted-Gini row checked through exact rational Farkas evidence after finite split-count replay.",
             ),
             (
                 "numerical-linear-algebra-v0",
@@ -1756,6 +1769,7 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/classifier-metrics-end-to-end.md",
             "docs/learn/math/roc-auc-end-to-end.md",
             "docs/learn/math/precision-recall-end-to-end.md",
+            "docs/learn/math/decision-tree-gini-end-to-end.md",
             "docs/learn/math/linear-algebra-and-optimization.md",
             "docs/foundational-resources/PROOF-UPGRADE-FRONTIER.md",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
@@ -1807,6 +1821,8 @@ BRIDGE_CONCEPTS = [
             "bridge_finite_classifier_metrics_shadow",
             "bridge_finite_roc_auc_shadow",
             "bridge_finite_precision_recall_shadow",
+            "bridge_finite_calibration_brier_shadow",
+            "bridge_finite_decision_tree_gini_shadow",
             "field_numerical_analysis",
             "field_statistics",
         ],
@@ -1945,6 +1961,10 @@ BRIDGE_CONCEPTS = [
                 "Probability forecasts, fixed calibration bins, expected calibration error, Brier score, and bad-Brier rows checked as exact rational replay, not floating-point calibration or statistical generalization evidence.",
             ),
             (
+                "finite-decision-tree-gini-v0",
+                "Decision-tree class counts, Gini impurities, split gains, and bad weighted-Gini rows checked as exact rational replay, not floating-point tree-training or statistical generalization evidence.",
+            ),
+            (
                 "finite-root-finding-v0",
                 "One-step bisection/Newton rows replayed exactly while convergence and floating-point stability remain horizon claims.",
             ),
@@ -2021,6 +2041,7 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/roc-auc-end-to-end.md",
                     "docs/learn/math/precision-recall-end-to-end.md",
                     "docs/learn/math/calibration-brier-end-to-end.md",
+                    "docs/learn/math/decision-tree-gini-end-to-end.md",
                     "docs/learn/math/principal-components-end-to-end.md",
                     "docs/learn/math/k-means-clustering-end-to-end.md",
                     "docs/foundational-resources/MATH-FIELDS.md",
@@ -2066,9 +2087,11 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/roc-auc-end-to-end.md",
             "docs/learn/math/precision-recall-end-to-end.md",
             "docs/learn/math/calibration-brier-end-to-end.md",
+            "docs/learn/math/decision-tree-gini-end-to-end.md",
             "artifacts/examples/math/finite-rounding-shadow-v0/smt2/bad-rounded-delta-farkas-conflict.smt2",
             "artifacts/examples/math/finite-interval-arithmetic-shadow-v0/smt2/bad-product-upper-farkas-conflict.smt2",
             "artifacts/examples/math/finite-calibration-brier-v0/smt2/bad-brier-score-farkas-conflict.smt2",
+            "artifacts/examples/math/finite-decision-tree-gini-v0/smt2/bad-weighted-gini-farkas-conflict.smt2",
             "docs/foundational-resources/MATH-CURRICULUM-RESOURCE-MASTER-PLAN.md",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
         ],
@@ -3259,6 +3282,112 @@ BRIDGE_CONCEPTS = [
                 "The validator recomputes all finite calibration and Brier-score quantities from committed source data.",
                 "Malformed finite Brier-score claims link to source SMT-LIB artifacts and checked QF_LRA/Farkas regressions after replay.",
                 "Learner and query docs keep finite exact calibration/Brier replay separate from binning-policy, model-calibration, interval, statistical, scoring-rule, multiclass, and floating-point claims.",
+            ],
+        },
+    },
+    {
+        "id": "bridge_finite_decision_tree_gini_shadow",
+        "title": "Finite Decision Tree Gini Shadow",
+        "field_ids": [
+            "statistics",
+            "probability_theory",
+            "discrete_math",
+        ],
+        "resource_status": "validated",
+        "summary": (
+            "Finite decision-tree Gini rows replay a fixed classified "
+            "feature table, exact class-count partitions, root impurity, "
+            "candidate split impurities, split-gain comparison, and "
+            "source-linked bad weighted-Gini Farkas evidence while keeping "
+            "greedy-tree optimality, pruning, threshold policy, statistical "
+            "generalization, entropy/log-loss variants, and floating-point "
+            "training behavior separate."
+        ),
+        "prerequisites": [
+            "curriculum_counting",
+            "curriculum_rationals",
+            "bridge_probability_mass_table",
+            "bridge_exact_vs_floating_arithmetic",
+            "bridge_qf_lra_farkas_anatomy",
+        ],
+        "unlocks": [
+            "field_statistics",
+            "field_probability_theory",
+            "field_discrete_math",
+            "bridge_lean_horizon",
+        ],
+        "decidability": "bounded",
+        "axeyum_fragments": [
+            "finite classifier table replay",
+            "finite decision-tree split replay",
+            "finite Gini impurity replay",
+            "exact rational arithmetic",
+            "QF_LRA",
+            "Farkas certificate",
+            "finite replay",
+            "Lean horizon",
+            "numerical-honesty metadata",
+        ],
+        "example_packs": [
+            (
+                "finite-decision-tree-gini-v0",
+                "Exact eight-row feature/class table with root Gini, two candidate split scores, best-split replay, bad weighted-Gini replay, and checked QF_LRA/Farkas row.",
+            ),
+            (
+                "finite-confusion-matrix-v0",
+                "Exact actual/predicted classifier metric replay that supplies the evaluation-metric contrast.",
+            ),
+            (
+                "finite-naive-bayes-classifier-v0",
+                "Finite classifier posterior replay that supplies a probabilistic-model contrast.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "finite decision-tree Gini replay plus QF_LRA/Farkas",
+                "status": "checked",
+                "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_lra_routes",
+                "lean_status": "partial",
+                "sources": [
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+                    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+                    "docs/learn/math/decision-tree-gini-end-to-end.md",
+                    "artifacts/examples/math/finite-decision-tree-gini-v0/smt2/bad-weighted-gini-farkas-conflict.smt2",
+                    "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+                ],
+                "notes": (
+                    "The finite checker recomputes the committed feature "
+                    "partitions, class counts, Gini impurities, split gains, "
+                    "and best split. Only the final malformed weighted-Gini "
+                    "row is promoted to checked Farkas evidence."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/foundational-resources/MATH-FIELDS.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+            "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+            "docs/proof-cookbook/recipes/lean-horizon-template.md",
+            "docs/learn/math/decision-tree-gini-end-to-end.md",
+            "docs/learn/math/probability-and-statistics.md",
+            "artifacts/examples/math/finite-decision-tree-gini-v0/smt2/bad-weighted-gini-farkas-conflict.smt2",
+            "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+        ],
+        "open_gaps": [
+            "Finite Gini replay over two committed candidate features does not prove greedy-tree optimality, pruning correctness, threshold-search policy, missing-value policy, statistical consistency, confidence intervals, or classifier generalization.",
+            "Entropy or information-gain variants require separate exact-log or theorem resources before they can be treated as checked claims.",
+            "Floating-point decision-tree training needs numerical-honesty or QF_FP resources before it can be presented as checked implementation behavior.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Rows state the finite training table, feature domains, class totals, root impurity, child impurities, weighted split impurities, split gains, and best-split comparison.",
+                "The validator recomputes all finite Gini quantities from committed source data.",
+                "Malformed finite weighted-Gini claims link to source SMT-LIB artifacts and checked QF_LRA/Farkas regressions after replay.",
+                "Learner and query docs keep finite exact decision-tree split replay separate from greedy-optimality, pruning, threshold-policy, entropy/log-loss, statistical, continuous-feature, and floating-point claims.",
             ],
         },
     },
@@ -8022,6 +8151,7 @@ BRIDGE_CONCEPTS = [
             "bridge_finite_naive_bayes_shadow",
             "bridge_finite_classifier_metrics_shadow",
             "bridge_finite_roc_auc_shadow",
+            "bridge_finite_decision_tree_gini_shadow",
         ],
         "decidability": "bounded",
         "axeyum_fragments": [
@@ -8055,6 +8185,10 @@ BRIDGE_CONCEPTS = [
             (
                 "finite-calibration-brier-v0",
                 "Finite probability-forecast table, calibration bins, ECE, Brier score, and checked bad-Brier-score evidence.",
+            ),
+            (
+                "finite-decision-tree-gini-v0",
+                "Finite feature/class count partitions, Gini impurity replay, split selection, and checked bad weighted-Gini evidence.",
             ),
             (
                 "finite-measure-v0",

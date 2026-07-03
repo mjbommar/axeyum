@@ -239,6 +239,15 @@ python3 scripts/query-foundational-resources.py checks --concept bridge_finite_c
 python3 scripts/query-foundational-resources.py checks --concept bridge_probability_mass_table --pack finite-calibration-brier-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_exact_vs_floating_arithmetic --pack finite-calibration-brier-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py horizon-frontier --text calibration --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field statistics --text "decision tree" --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-decision-tree-gini-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-decision-tree-gini-v0 --route Farkas --proof-status checked --text qf-lra-bad-weighted-gini --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-decision-tree-gini-v0 --proof-status replay-only --text Gini --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-decision-tree-gini-v0 --proof-status lean-horizon --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_finite_decision_tree_gini_shadow --pack finite-decision-tree-gini-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_probability_mass_table --pack finite-decision-tree-gini-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_exact_vs_floating_arithmetic --pack finite-decision-tree-gini-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py horizon-frontier --text decision-tree --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-ridge-regression-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-ridge-regression-v0 --route Farkas --proof-status checked --text qf-lra-bad-ridge-beta0 --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-ridge-regression-v0 --proof-status replay-only --text rejected --require-any >/dev/null

@@ -35958,6 +35958,418 @@ def validate_finite_calibration_brier(expected: dict[str, Any]) -> None:
         fail("general-calibration-brier-theory-lean-horizon must be searchable")
 
 
+def validate_finite_decision_tree_gini(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    def require_key_fraction_map(context: str, value: Any, keys: list[str]) -> dict[str, Fraction]:
+        if not isinstance(value, dict):
+            fail(f"{context} must be an object")
+        key_set = set(keys)
+        if set(value) != key_set:
+            missing = sorted(key_set - set(value))
+            extra = sorted(set(value) - key_set)
+            fail(f"{context} must cover exactly {keys}; missing={missing} extra={extra}")
+        return {key: require_fraction(f"{context}.{key}", value[key]) for key in keys}
+
+    def require_count_map(context: str, value: Any, keys: list[str]) -> dict[str, Fraction]:
+        counts = require_key_fraction_map(context, value, keys)
+        for key, count in counts.items():
+            if count.denominator != 1 or count < 0:
+                fail(f"{context}.{key} must be a nonnegative integer count")
+        return counts
+
+    def gini_impurity(positive: Fraction, negative: Fraction) -> Fraction:
+        total = positive + negative
+        if total <= 0:
+            fail("decision-tree Gini nodes must be nonempty")
+        return Fraction(2) * positive * negative / (total * total)
+
+    def require_sat_replay(check_id: str, validation: str) -> None:
+        check = checks[check_id]
+        if check["expected_result"] != "sat":
+            fail(f"{check_id} must expect sat")
+        if check.get("proof_status") != "replay-only":
+            fail(f"{check_id} must be replay-only")
+        if check["validation"] != validation:
+            fail(f"{check_id} validation is incorrect")
+        values_again = single_witness_values(check, witnesses)
+        if values_again != values:
+            fail(f"{check_id} must cite the shared decision-tree witness")
+
+    table_check = checks["decision-tree-table-witness"]
+    if table_check["expected_result"] != "sat":
+        fail("decision-tree-table-witness must expect sat")
+    if table_check.get("proof_status") != "replay-only":
+        fail("decision-tree-table-witness must be replay-only")
+    if table_check["validation"] != "exact_rational_decision_tree_table_replay":
+        fail("decision-tree-table-witness validation is incorrect")
+    values = single_witness_values(table_check, witnesses)
+
+    classes = require_string_list("decision-tree classes", values.get("classes"))
+    positive_class = values.get("positive_class")
+    negative_class = values.get("negative_class")
+    require_string("decision-tree positive_class", positive_class)
+    require_string("decision-tree negative_class", negative_class)
+    if positive_class == negative_class:
+        fail("decision-tree positive_class and negative_class must differ")
+    if set(classes) != {positive_class, negative_class}:
+        fail("decision-tree classes must contain exactly positive_class and negative_class")
+
+    raw_features = values.get("features")
+    if not isinstance(raw_features, list) or not raw_features:
+        fail("decision-tree features must be a non-empty list")
+    feature_domains: dict[str, list[str]] = {}
+    feature_order: list[str] = []
+    for index, feature in enumerate(raw_features):
+        if not isinstance(feature, dict):
+            fail(f"decision-tree features[{index}] must be an object")
+        feature_id = feature.get("id")
+        require_string(f"decision-tree features[{index}].id", feature_id)
+        domain = require_string_list(
+            f"decision-tree features[{index}].values",
+            feature.get("values"),
+        )
+        if feature_id in feature_domains:
+            fail(f"decision-tree features repeats id {feature_id!r}")
+        if len(set(domain)) != len(domain):
+            fail(f"decision-tree feature {feature_id!r} repeats a value")
+        feature_domains[feature_id] = domain
+        feature_order.append(feature_id)
+    if feature_order != ["color", "shape"]:
+        fail("decision-tree pack must preserve the color, shape candidate order")
+
+    raw_examples = values.get("examples")
+    if not isinstance(raw_examples, list) or not raw_examples:
+        fail("decision-tree examples must be a non-empty list")
+    seen_rows: set[str] = set()
+    examples: list[dict[str, Any]] = []
+    for index, row in enumerate(raw_examples):
+        if not isinstance(row, dict):
+            fail(f"decision-tree examples[{index}] must be an object")
+        row_id = row.get("id")
+        row_class = row.get("class")
+        require_string(f"decision-tree examples[{index}].id", row_id)
+        require_string(f"decision-tree examples[{index}].class", row_class)
+        if row_id in seen_rows:
+            fail(f"decision-tree examples repeats id {row_id!r}")
+        if row_class not in classes:
+            fail(f"decision-tree examples[{index}].class is unknown")
+        raw_feature_values = row.get("feature_values")
+        if not isinstance(raw_feature_values, dict):
+            fail(f"decision-tree examples[{index}].feature_values must be an object")
+        if set(raw_feature_values) != set(feature_order):
+            fail(f"decision-tree examples[{index}].feature_values must cover every feature")
+        feature_values: dict[str, str] = {}
+        for feature_id in feature_order:
+            value = raw_feature_values.get(feature_id)
+            require_string(
+                f"decision-tree examples[{index}].feature_values.{feature_id}",
+                value,
+            )
+            if value not in feature_domains[feature_id]:
+                fail(f"decision-tree examples[{index}] has unknown {feature_id} value")
+            feature_values[feature_id] = value
+        seen_rows.add(row_id)
+        examples.append({"id": row_id, "class": row_class, "feature_values": feature_values})
+
+    require_sat_replay("root-gini-witness", "exact_rational_root_gini_replay")
+    require_sat_replay("split-gini-witness", "exact_rational_split_gini_replay")
+    require_sat_replay(
+        "best-split-witness",
+        "exact_rational_decision_tree_best_split_replay",
+    )
+
+    class_count_keys = ["positive_count", "negative_count", "total"]
+    class_counts = require_count_map(
+        "decision-tree class_counts",
+        values.get("class_counts"),
+        class_count_keys,
+    )
+    computed_class_counts = {
+        "positive_count": Fraction(sum(1 for row in examples if row["class"] == positive_class)),
+        "negative_count": Fraction(sum(1 for row in examples if row["class"] == negative_class)),
+        "total": Fraction(len(examples)),
+    }
+    if class_counts != computed_class_counts:
+        fail("decision-tree-table-witness class_counts are incorrect")
+    if class_counts["positive_count"] <= 0 or class_counts["negative_count"] <= 0:
+        fail("decision-tree table must include both classes")
+    total = class_counts["total"]
+
+    root = require_key_fraction_map(
+        "decision-tree root_gini counts",
+        values.get("root_gini"),
+        ["positive_count", "negative_count", "total", "impurity"],
+    )
+    for key in ["positive_count", "negative_count", "total"]:
+        if root[key].denominator != 1 or root[key] < 0:
+            fail(f"decision-tree root_gini.{key} must be a nonnegative integer count")
+    if (
+        root["positive_count"],
+        root["negative_count"],
+        root["total"],
+        root["impurity"],
+    ) != (
+        class_counts["positive_count"],
+        class_counts["negative_count"],
+        total,
+        gini_impurity(class_counts["positive_count"], class_counts["negative_count"]),
+    ):
+        fail("root-gini-witness root_gini data is incorrect")
+    root_impurity = root["impurity"]
+
+    raw_splits = values.get("candidate_splits")
+    if not isinstance(raw_splits, list) or not raw_splits:
+        fail("decision-tree candidate_splits must be a non-empty list")
+    if [split.get("feature") for split in raw_splits if isinstance(split, dict)] != feature_order:
+        fail("decision-tree candidate_splits must preserve feature order")
+
+    split_scores: dict[str, dict[str, Fraction]] = {}
+    for split_index, split in enumerate(raw_splits):
+        if not isinstance(split, dict):
+            fail(f"decision-tree candidate_splits[{split_index}] must be an object")
+        feature_id = split.get("feature")
+        require_string(f"decision-tree candidate_splits[{split_index}].feature", feature_id)
+        if feature_id not in feature_domains:
+            fail(f"decision-tree split feature {feature_id!r} is unknown")
+        raw_children = split.get("child_nodes")
+        if not isinstance(raw_children, list):
+            fail(f"decision-tree split {feature_id} child_nodes must be a list")
+        if [
+            child.get("value") for child in raw_children if isinstance(child, dict)
+        ] != feature_domains[feature_id]:
+            fail(f"decision-tree split {feature_id} child_nodes must preserve feature domain order")
+
+        child_weighted_terms: list[Fraction] = []
+        for child_index, child in enumerate(raw_children):
+            if not isinstance(child, dict):
+                fail(f"decision-tree split {feature_id} child_nodes[{child_index}] must be an object")
+            value = child.get("value")
+            require_string(
+                f"decision-tree split {feature_id} child_nodes[{child_index}].value",
+                value,
+            )
+            expected_ids = [
+                row["id"] for row in examples if row["feature_values"][feature_id] == value
+            ]
+            example_ids = require_string_list(
+                f"decision-tree split {feature_id} child_nodes[{child_index}].example_ids",
+                child.get("example_ids"),
+            )
+            if example_ids != expected_ids:
+                fail(f"decision-tree split {feature_id}.{value} example_ids are incorrect")
+            child_examples = [
+                row for row in examples if row["feature_values"][feature_id] == value
+            ]
+            child_positive = Fraction(
+                sum(1 for row in child_examples if row["class"] == positive_class)
+            )
+            child_negative = Fraction(
+                sum(1 for row in child_examples if row["class"] == negative_class)
+            )
+            child_count = child_positive + child_negative
+            positive_count = require_fraction(
+                f"decision-tree split {feature_id}.{value}.positive_count",
+                child.get("positive_count"),
+            )
+            negative_count = require_fraction(
+                f"decision-tree split {feature_id}.{value}.negative_count",
+                child.get("negative_count"),
+            )
+            count = require_fraction(
+                f"decision-tree split {feature_id}.{value}.count",
+                child.get("count"),
+            )
+            impurity = require_fraction(
+                f"decision-tree split {feature_id}.{value}.gini_impurity",
+                child.get("gini_impurity"),
+            )
+            weighted_term = require_fraction(
+                f"decision-tree split {feature_id}.{value}.weighted_impurity",
+                child.get("weighted_impurity"),
+            )
+            computed_impurity = gini_impurity(child_positive, child_negative)
+            computed_weighted = (child_count / total) * computed_impurity
+            if (
+                positive_count,
+                negative_count,
+                count,
+                impurity,
+                weighted_term,
+            ) != (
+                child_positive,
+                child_negative,
+                child_count,
+                computed_impurity,
+                computed_weighted,
+            ):
+                fail(f"decision-tree split {feature_id}.{value} summary is incorrect")
+            child_weighted_terms.append(weighted_term)
+
+        weighted_impurity = require_fraction(
+            f"decision-tree split {feature_id}.weighted_impurity",
+            split.get("weighted_impurity"),
+        )
+        impurity_gain = require_fraction(
+            f"decision-tree split {feature_id}.impurity_gain",
+            split.get("impurity_gain"),
+        )
+        computed_weighted_impurity = sum(child_weighted_terms, Fraction(0))
+        computed_gain = root_impurity - computed_weighted_impurity
+        if (weighted_impurity, impurity_gain) != (
+            computed_weighted_impurity,
+            computed_gain,
+        ):
+            fail(f"decision-tree split {feature_id} weighted impurity or gain is incorrect")
+        split_scores[feature_id] = {
+            "weighted_impurity": weighted_impurity,
+            "impurity_gain": impurity_gain,
+        }
+
+    best = values.get("best_split")
+    if not isinstance(best, dict):
+        fail("decision-tree best_split must be an object")
+    best_feature = best.get("feature")
+    require_string("decision-tree best_split.feature", best_feature)
+    best_weighted = require_fraction(
+        "decision-tree best_split.weighted_impurity",
+        best.get("weighted_impurity"),
+    )
+    best_gain = require_fraction(
+        "decision-tree best_split.impurity_gain",
+        best.get("impurity_gain"),
+    )
+    strict_better_than = require_string_list(
+        "decision-tree best_split.strict_better_than",
+        best.get("strict_better_than"),
+    )
+    computed_best_feature = min(
+        split_scores,
+        key=lambda feature_id: split_scores[feature_id]["weighted_impurity"],
+    )
+    computed_strict_better = [
+        feature_id
+        for feature_id in feature_order
+        if feature_id != computed_best_feature
+        and split_scores[computed_best_feature]["weighted_impurity"]
+        < split_scores[feature_id]["weighted_impurity"]
+    ]
+    if (
+        best_feature,
+        best_weighted,
+        best_gain,
+        strict_better_than,
+    ) != (
+        computed_best_feature,
+        split_scores[computed_best_feature]["weighted_impurity"],
+        split_scores[computed_best_feature]["impurity_gain"],
+        computed_strict_better,
+    ):
+        fail("best-split-witness best_split data is incorrect")
+
+    bad = checks["bad-weighted-gini-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-weighted-gini-rejected must expect unsat")
+    if bad.get("proof_status") != "replay-only":
+        fail("bad-weighted-gini-rejected must be replay-only")
+    if bad["validation"] != "exact_rational_bad_weighted_gini_replay":
+        fail("bad-weighted-gini-rejected validation is incorrect")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "eight-row-binary-decision-tree-sample":
+        fail("bad-weighted-gini-rejected must cite the source witness")
+    if data.get("metric") != "weighted_gini_impurity":
+        fail("bad-weighted-gini-rejected must document weighted_gini_impurity")
+    if data.get("feature") != "color":
+        fail("bad-weighted-gini-rejected must document the color feature")
+    bad_computed = require_fraction(
+        "bad decision-tree computed_weighted_impurity",
+        data.get("computed_weighted_impurity"),
+    )
+    bad_claimed = require_fraction(
+        "bad decision-tree claimed_weighted_impurity",
+        data.get("claimed_weighted_impurity"),
+    )
+    if bad_computed != split_scores["color"]["weighted_impurity"]:
+        fail("bad-weighted-gini-rejected computed value must match replay")
+    if bad_claimed == bad_computed:
+        fail("bad-weighted-gini-rejected must document a false weighted-Gini claim")
+    if "separate qf-lra-bad-weighted-gini" not in bad.get("notes", ""):
+        fail("bad-weighted-gini-rejected notes must name the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-weighted-gini"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-weighted-gini must expect unsat")
+    if qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-weighted-gini must be checked")
+    if qf_bad["validation"] != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-weighted-gini must use exact_rational_farkas_evidence")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_witness") != "eight-row-binary-decision-tree-sample":
+        fail("qf-lra-bad-weighted-gini must cite the source witness")
+    if qf_data.get("source_replay_row") != "bad-weighted-gini-rejected":
+        fail("qf-lra-bad-weighted-gini must cite the replay row")
+    if qf_data.get("metric") != "weighted_gini_impurity":
+        fail("qf-lra-bad-weighted-gini must document weighted_gini_impurity")
+    if qf_data.get("feature") != "color":
+        fail("qf-lra-bad-weighted-gini must document the color feature")
+    qf_computed = require_fraction(
+        "qf decision-tree computed_weighted_impurity",
+        qf_data.get("computed_weighted_impurity"),
+    )
+    qf_claimed = require_fraction(
+        "qf decision-tree claimed_weighted_impurity",
+        qf_data.get("claimed_weighted_impurity"),
+    )
+    if (qf_computed, qf_claimed) != (bad_computed, bad_claimed):
+        fail("qf-lra-bad-weighted-gini data must match the replay row")
+    equations = require_string_list(
+        "qf decision-tree weighted_gini_equations",
+        qf_data.get("weighted_gini_equations"),
+    )
+    if equations != ["8*gini_color = 3", "2*gini_color = 1"]:
+        fail("qf-lra-bad-weighted-gini must document the linear conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf decision-tree smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-decision-tree-gini-v0/smt2/"
+        "bad-weighted-gini-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-lra-bad-weighted-gini smt2_artifact must name the checked source artifact")
+    check_source("qf decision-tree smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf decision-tree farkas_regression", regression)
+    if "finite_decision_tree_gini_bad_weighted_gini_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-weighted-gini must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf decision-tree certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-weighted-gini certificate must document checked Farkas evidence")
+
+    horizon = checks["general-decision-tree-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-decision-tree-theory-lean-horizon must be not-run")
+    if horizon.get("proof_status") != "lean-horizon":
+        fail("general-decision-tree-theory-lean-horizon must remain lean-horizon")
+    horizon_data = horizon.get("data", {})
+    require_string(
+        "decision-tree horizon target_theorem_shape",
+        horizon_data.get("target_theorem_shape"),
+    )
+    require_string("decision-tree horizon future_checker", horizon_data.get("future_checker"))
+    horizon_text = " ".join(
+        [
+            horizon.get("claim", ""),
+            horizon_data.get("target_theorem_shape", ""),
+            horizon_data.get("future_checker", ""),
+            horizon.get("notes", ""),
+        ]
+    ).lower()
+    if "decision" not in horizon_text or "tree" not in horizon_text or "gini" not in horizon_text:
+        fail("general-decision-tree-theory-lean-horizon must be searchable")
+
+
 def validate_descriptive_statistics(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -39178,6 +39590,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_precision_recall(expected)
     if metadata["id"] == "finite-calibration-brier-v0":
         validate_finite_calibration_brier(expected)
+    if metadata["id"] == "finite-decision-tree-gini-v0":
+        validate_finite_decision_tree_gini(expected)
     if metadata["id"] == "finite-cardinality-v0":
         validate_finite_cardinality(expected)
     if metadata["id"] == "cardinality-principles-v0":
