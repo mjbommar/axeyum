@@ -5,9 +5,10 @@
     "cnf_clause_budget": 5000000,
     "cnf_inprocessing": false,
     "cnf_variable_budget": 2000000,
+    "cnf_vivify": false,
     "compare_backend": "z3 4.13.3.0",
     "compare_z3": true,
-    "config_hash": "df6ab77f9b444a7e",
+    "config_hash": "d9df8aeb12be066a",
     "corpus": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen",
     "corpus_hash": "021a6a885828fd6e",
     "corpus_source": "SMT-LIB 2024 non-incremental QF_BV, Zenodo 11061097",
@@ -21,6 +22,7 @@
     "jobs": 2,
     "limit": null,
     "logic": "QF_BV",
+    "native_cdcl": false,
     "node_budget": 200000,
     "preprocess": false,
     "query_plan": {
@@ -49,7 +51,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 22012,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 1914,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/Composition/compose.p2._bit8_na6_nr3_paired.smt2",
@@ -113,7 +115,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 192193,
-      "detail": "EncodingBudget: CNF has 5524916 clauses, budget 5000000",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 15630,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/Composition/compose.p3._bit8_na6_nr3_paired.smt2",
@@ -177,7 +179,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 14842,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 1341,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/Composition/compose.s2._bit8_na6_nr3_paired.smt2",
@@ -241,7 +243,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 19739,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 1772,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/Composition/compose.s2._bit8_na6_nr4_paired.smt2",
@@ -305,7 +307,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 64690,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 5388,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/Composition/compose.s3._bit8_na6_nr3_paired.smt2",
@@ -369,7 +371,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 86093,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 7142,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/Composition/compose.s3._bit8_na6_nr4_paired.smt2",
@@ -433,7 +435,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 255865,
-      "detail": "NodeBudget: query has 255865 DAG nodes, budget 200000",
+      "detail": "NodeBudget: query has 244573 DAG nodes, budget 200000",
       "distinct_symbols": 20919,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/Composition/compose.s4._bit8_na6_nr3_paired.smt2",
@@ -497,7 +499,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 340646,
-      "detail": "NodeBudget: query has 340646 DAG nodes, budget 200000",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 27776,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/Composition/compose.s4._bit8_na6_nr4_paired.smt2",
@@ -571,7 +573,7 @@
         "backend_stats": {
           "max memory": 43.53,
           "memory": 34.21,
-          "num allocs": 549022.0,
+          "num allocs": 547375.0,
           "rlimit count": 45105.0,
           "sat backjumps": 23.0,
           "sat conflicts": 23.0,
@@ -584,15 +586,15 @@
           "sat propagations nary": 3861.0,
           "solve-eqs-elim-vars": 49.0,
           "solve-eqs-steps": 544.0,
-          "time": 0.031
+          "time": 0.008
         },
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
         "model_lift_ms": 0,
         "outcome": "sat",
-        "solve_ms": 31,
-        "translate_ms": 34
+        "solve_ms": 8,
+        "translate_ms": 0
       },
       "outcome": "sat",
       "query_plan": {
@@ -657,7 +659,7 @@
         "backend_stats": {
           "max memory": 46.92,
           "memory": 35.09,
-          "num allocs": 51611808.0,
+          "num allocs": 51588967.0,
           "rlimit count": 7649021.0,
           "sat backjumps": 35644.0,
           "sat conflicts": 35644.0,
@@ -680,14 +682,14 @@
           "sat subsumed": 3807.0,
           "solve-eqs-elim-vars": 153.0,
           "solve-eqs-steps": 1686.0,
-          "time": 1.076
+          "time": 1.067
         },
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
         "model_lift_ms": 0,
         "outcome": "sat",
-        "solve_ms": 1076,
+        "solve_ms": 1067,
         "translate_ms": 1
       },
       "outcome": "sat",
@@ -743,7 +745,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 8453,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 823,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/MobileDevice/mobiledevice_bit8_na6_nr3_paired.smt2",
@@ -817,7 +819,7 @@
         "backend_stats": {
           "max memory": 95.67,
           "memory": 48.9,
-          "num allocs": 1009402541.0,
+          "num allocs": 1010152501.0,
           "rlimit count": 4364241.0,
           "sat backjumps": 5721.0,
           "sat conflicts": 5721.0,
@@ -839,14 +841,14 @@
           "sat subsumed": 24343.0,
           "solve-eqs-elim-vars": 447.0,
           "solve-eqs-steps": 8572.0,
-          "time": 0.666
+          "time": 0.625
         },
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
         "model_lift_ms": 0,
         "outcome": "sat",
-        "solve_ms": 666,
+        "solve_ms": 625,
         "translate_ms": 4
       },
       "outcome": "sat",
@@ -902,7 +904,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 24876,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 2105,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x16.1._bit8_na6_nr3_paired.smt2",
@@ -966,7 +968,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 24876,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 2105,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x16.10._bit8_na6_nr3_paired.smt2",
@@ -1030,7 +1032,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 24876,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 2105,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x16.2._bit8_na6_nr3_paired.smt2",
@@ -1094,7 +1096,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 20174,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 1723,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x16.3._bit8_na6_nr3_paired.smt2",
@@ -1158,7 +1160,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 15472,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 1341,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x16.4._bit8_na6_nr3_paired.smt2",
@@ -1222,7 +1224,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 20174,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 1723,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x16.5._bit8_na6_nr3_paired.smt2",
@@ -1286,7 +1288,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 24876,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 2105,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x16.6._bit8_na6_nr3_paired.smt2",
@@ -1350,7 +1352,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 20174,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 1723,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x16.7._bit8_na6_nr3_paired.smt2",
@@ -1414,7 +1416,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 20174,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 1723,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x16.8._bit8_na6_nr3_paired.smt2",
@@ -1478,7 +1480,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 20174,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 1723,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x16.9._bit8_na6_nr3_paired.smt2",
@@ -1542,7 +1544,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 11258,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 1035,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x8.1._bit8_na6_nr3_paired.smt2",
@@ -1606,7 +1608,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 11258,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 1035,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x8.10._bit8_na6_nr3_paired.smt2",
@@ -1670,7 +1672,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 13888,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 1249,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x8.2._bit8_na6_nr3_paired.smt2",
@@ -1734,7 +1736,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 8628,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 821,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x8.3._bit8_na6_nr3_paired.smt2",
@@ -1798,7 +1800,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 5998,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 607,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x8.4._bit8_na6_nr3_paired.smt2",
@@ -1862,7 +1864,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 11258,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 1035,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x8.5._bit8_na6_nr3_paired.smt2",
@@ -1926,7 +1928,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 8628,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 821,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x8.6._bit8_na6_nr3_paired.smt2",
@@ -1990,7 +1992,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 5998,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 607,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x8.7._bit8_na6_nr3_paired.smt2",
@@ -2054,7 +2056,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 11258,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 1035,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x8.8._bit8_na6_nr3_paired.smt2",
@@ -2118,7 +2120,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 11258,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 1035,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x8.9._bit8_na6_nr3_paired.smt2",
@@ -2182,7 +2184,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 71757,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 5801,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x16.1._bit8_na6_nr3_paired.smt2",
@@ -2246,7 +2248,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 73966,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 5971,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x16.10._bit8_na6_nr3_paired.smt2",
@@ -2310,7 +2312,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 65120,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 5253,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x16.2._bit8_na6_nr3_paired.smt2",
@@ -2374,7 +2376,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 82812,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 6689,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x16.3._bit8_na6_nr3_paired.smt2",
@@ -2438,7 +2440,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 38582,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 3099,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x16.4._bit8_na6_nr3_paired.smt2",
@@ -2502,7 +2504,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 82812,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 6689,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x16.5._bit8_na6_nr3_paired.smt2",
@@ -2566,7 +2568,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 47428,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 3817,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x16.6._bit8_na6_nr3_paired.smt2",
@@ -2630,7 +2632,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 38582,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 3099,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x16.7._bit8_na6_nr3_paired.smt2",
@@ -2694,7 +2696,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 82812,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 6689,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x16.8._bit8_na6_nr3_paired.smt2",
@@ -2758,7 +2760,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 82812,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 6689,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x16.9._bit8_na6_nr3_paired.smt2",
@@ -2822,7 +2824,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 32378,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 2720,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x8.1._bit8_na6_nr3_paired.smt2",
@@ -2886,7 +2888,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 29578,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 2487,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x8.10._bit8_na6_nr3_paired.smt2",
@@ -2950,7 +2952,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 29578,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 2487,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x8.2._bit8_na6_nr3_paired.smt2",
@@ -3014,7 +3016,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 38982,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 3251,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x8.3._bit8_na6_nr3_paired.smt2",
@@ -3078,7 +3080,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 20174,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 1723,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x8.4._bit8_na6_nr3_paired.smt2",
@@ -3142,7 +3144,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 29578,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 2487,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x8.5._bit8_na6_nr3_paired.smt2",
@@ -3206,7 +3208,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 24876,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 2105,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x8.6._bit8_na6_nr3_paired.smt2",
@@ -3270,7 +3272,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 20174,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 1723,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x8.7._bit8_na6_nr3_paired.smt2",
@@ -3334,7 +3336,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 29578,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 2487,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x8.8._bit8_na6_nr3_paired.smt2",
@@ -3398,7 +3400,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 29578,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 2487,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x8.9._bit8_na6_nr3_paired.smt2",
@@ -3462,7 +3464,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 59279,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 4806,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.1._bit16_na6_nr3_paired.smt2",
@@ -3526,7 +3528,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 183601,
-      "detail": "EncodingBudget: estimated 5747403 CNF clauses before lowering exceeds budget 5000000 (oversized encoding refused gracefully)",
+      "detail": "EncodingBudget: estimated 5538024 CNF clauses before lowering exceeds budget 5000000 (oversized encoding refused gracefully)",
       "distinct_symbols": 14482,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.1._bit16_na6_nr4_paired.smt2",
@@ -3590,7 +3592,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 195705,
-      "detail": "EncodingBudget: CNF has 5226149 clauses, budget 5000000",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 16506,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.1._bit8_na6_nr4_pairedtwobranch.smt2",
@@ -3654,7 +3656,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 100504,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 8125,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.10._bit16_na6_nr3_paired.smt2",
@@ -3718,7 +3720,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 261073,
-      "detail": "NodeBudget: query has 261073 DAG nodes, budget 200000",
+      "detail": "Timeout: preprocessing timeout before reduced dispatch",
       "distinct_symbols": 20716,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.10._bit16_na6_nr4_paired.smt2",
@@ -3782,7 +3784,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 278505,
-      "detail": "NodeBudget: query has 278505 DAG nodes, budget 200000",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 23628,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.10._bit8_na6_nr4_pairedtwobranch.smt2",
@@ -3846,7 +3848,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 52895,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 4279,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.2._bit16_na6_nr3_paired.smt2",
@@ -3910,7 +3912,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 186600,
-      "detail": "EncodingBudget: estimated 5838570 CNF clauses before lowering exceeds budget 5000000 (oversized encoding refused gracefully)",
+      "detail": "EncodingBudget: estimated 5625738 CNF clauses before lowering exceeds budget 5000000 (oversized encoding refused gracefully)",
       "distinct_symbols": 14708,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.2._bit16_na6_nr4_paired.smt2",
@@ -3974,7 +3976,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 198896,
-      "detail": "EncodingBudget: CNF has 5309956 clauses, budget 5000000",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 16764,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.2._bit8_na6_nr4_pairedtwobranch.smt2",
@@ -4038,7 +4040,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 43141,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 3496,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.3._bit16_na6_nr3_paired.smt2",
@@ -4102,7 +4104,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 140027,
-      "detail": "EncodingBudget: CNF has 2166824 variables, budget 2000000",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 10946,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.3._bit16_na6_nr4_paired.smt2",
@@ -4166,7 +4168,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 149107,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 12466,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.3._bit8_na6_nr4_pairedtwobranch.smt2",
@@ -4230,7 +4232,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 80344,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 6498,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.4._bit16_na6_nr3_paired.smt2",
@@ -4294,7 +4296,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 212079,
-      "detail": "NodeBudget: query has 212079 DAG nodes, budget 200000",
+      "detail": "NodeBudget: query has 200654 DAG nodes, budget 200000",
       "distinct_symbols": 16758,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.4._bit16_na6_nr4_paired.smt2",
@@ -4358,7 +4360,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 226127,
-      "detail": "NodeBudget: query has 226127 DAG nodes, budget 200000",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 19106,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.4._bit8_na6_nr4_pairedtwobranch.smt2",
@@ -4422,7 +4424,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 80344,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 6498,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.5._bit16_na6_nr3_paired.smt2",
@@ -4486,7 +4488,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 234556,
-      "detail": "NodeBudget: query has 234556 DAG nodes, budget 200000",
+      "detail": "Timeout: preprocessing timeout before reduced dispatch",
       "distinct_symbols": 18582,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.5._bit16_na6_nr4_paired.smt2",
@@ -4550,7 +4552,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 250164,
-      "detail": "NodeBudget: query has 250164 DAG nodes, budget 200000",
+      "detail": "Timeout: preprocessing timeout before reduced dispatch",
       "distinct_symbols": 21190,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.5._bit8_na6_nr4_pairedtwobranch.smt2",
@@ -4614,7 +4616,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 44567,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 3603,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.6._bit16_na6_nr3_paired.smt2",
@@ -4678,7 +4680,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 142336,
-      "detail": "EncodingBudget: CNF has 2201632 variables, budget 2000000",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 11116,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.6._bit16_na6_nr4_paired.smt2",
@@ -4742,7 +4744,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 151560,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 12660,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.6._bit8_na6_nr4_pairedtwobranch.smt2",
@@ -4806,7 +4808,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 82812,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 6689,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.7._bit16_na6_nr3_paired.smt2",
@@ -4870,7 +4872,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 261073,
-      "detail": "NodeBudget: query has 261073 DAG nodes, budget 200000",
+      "detail": "Timeout: preprocessing timeout before reduced dispatch",
       "distinct_symbols": 20716,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.7._bit16_na6_nr4_paired.smt2",
@@ -4934,7 +4936,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 278505,
-      "detail": "NodeBudget: query has 278505 DAG nodes, budget 200000",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 23628,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.7._bit8_na6_nr4_pairedtwobranch.smt2",
@@ -4998,7 +5000,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 36239,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 2927,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.8._bit16_na6_nr3_paired.smt2",
@@ -5062,7 +5064,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 142336,
-      "detail": "EncodingBudget: CNF has 2201632 variables, budget 2000000",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 11116,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.8._bit16_na6_nr4_paired.smt2",
@@ -5126,7 +5128,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 151560,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 12660,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.8._bit8_na6_nr4_pairedtwobranch.smt2",
@@ -5190,7 +5192,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 56274,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 4535,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.9._bit16_na6_nr3_paired.smt2",
@@ -5254,7 +5256,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 146963,
-      "detail": "EncodingBudget: CNF has 2271296 variables, budget 2000000",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 11456,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.9._bit16_na6_nr4_paired.smt2",
@@ -5318,7 +5320,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 156475,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 13048,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.9._bit8_na6_nr4_pairedtwobranch.smt2",
@@ -5382,7 +5384,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 78470,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 6378,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.1._bit16_na6_nr4_paired.smt2",
@@ -5446,7 +5448,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 59279,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 4806,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.1._bit8_na6_nr3_paired.smt2",
@@ -5510,7 +5512,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 133281,
-      "detail": "EncodingBudget: CNF has 2103362 variables, budget 2000000",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 10796,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.10._bit16_na6_nr4_paired.smt2",
@@ -5574,7 +5576,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 100504,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 8125,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.10._bit8_na6_nr3_paired.smt2",
@@ -5638,7 +5640,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 69936,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 5676,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.2._bit16_na6_nr4_paired.smt2",
@@ -5702,7 +5704,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 52895,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 4279,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.2._bit8_na6_nr3_paired.smt2",
@@ -5766,7 +5768,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 56976,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 4634,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.3._bit16_na6_nr4_paired.smt2",
@@ -5830,7 +5832,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 43141,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 3496,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.3._bit8_na6_nr3_paired.smt2",
@@ -5894,7 +5896,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 106463,
-      "detail": "EncodingBudget: CNF has 6252188 clauses, budget 5000000",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 8630,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.4._bit16_na6_nr4_paired.smt2",
@@ -5958,7 +5960,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 80344,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 6498,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.4._bit8_na6_nr3_paired.smt2",
@@ -6022,7 +6024,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 106463,
-      "detail": "EncodingBudget: CNF has 6252188 clauses, budget 5000000",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 8630,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.5._bit16_na6_nr4_paired.smt2",
@@ -6086,7 +6088,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 80344,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 6498,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.5._bit8_na6_nr3_paired.smt2",
@@ -6150,7 +6152,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 58844,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 4776,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.6._bit16_na6_nr4_paired.smt2",
@@ -6214,7 +6216,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 44567,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 3603,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.6._bit8_na6_nr3_paired.smt2",
@@ -6278,7 +6280,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 109717,
-      "detail": "EncodingBudget: CNF has 6441885 clauses, budget 5000000",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 8884,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.7._bit16_na6_nr4_paired.smt2",
@@ -6342,7 +6344,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 82812,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 6689,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.7._bit8_na6_nr3_paired.smt2",
@@ -6406,7 +6408,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 47752,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 3876,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.8._bit16_na6_nr4_paired.smt2",
@@ -6470,7 +6472,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 36239,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 2927,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.8._bit8_na6_nr3_paired.smt2",
@@ -6534,7 +6536,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 74371,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 6016,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.9._bit16_na6_nr4_paired.smt2",
@@ -6598,7 +6600,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 56274,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 4535,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.9._bit8_na6_nr3_paired.smt2",
@@ -6662,7 +6664,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 77158,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 3992,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/TCP/tcp_full_bit16_na13_nr4_paired.smt2",
@@ -6726,7 +6728,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 35505,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 2999,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/TCP/tcp_full_bit8_na6_nr3_paired.smt2",
@@ -6790,7 +6792,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 47206,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 3976,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/TCP/tcp_full_bit8_na6_nr4_paired.smt2",
@@ -6854,7 +6856,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 59908,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 4906,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/TCP/tcp_full_split4_bit8_na6_nr4_paired.smt2",
@@ -6918,7 +6920,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 11670,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 1079,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/TCP/tcp_open_bit8_na6_nr3_paired.smt2",
@@ -6982,7 +6984,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 15511,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 1426,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/TCP/tcp_open_bit8_na6_nr4_paired.smt2",
@@ -7046,7 +7048,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 26246,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 2276,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/VideoConf/videoconf_full_bit16_na13_nr4_paired.smt2",
@@ -7110,7 +7112,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 19765,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 1719,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/VideoConf/videoconf_full_bit8_na6_nr3_paired.smt2",
@@ -7174,7 +7176,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 26246,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 2276,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/VideoConf/videoconf_full_bit8_na6_nr4_paired.smt2",
@@ -7238,7 +7240,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 13283,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 1207,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/VideoConf/videoconf_simple_bit8_na6_nr3_paired.smt2",
@@ -7302,7 +7304,7 @@
         "lazy_rounds": 1.0
       },
       "dag_nodes": 33389,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
       "distinct_symbols": 2786,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/VideoConf/videoconf_split4_full_bit16_na13_nr4_paired.smt2",
@@ -7361,6 +7363,11 @@
   ],
   "summary": {
     "agree": 3,
+    "blocker_buckets": {
+      "unknown:EncodingBudget": 2,
+      "unknown:NodeBudget": 2,
+      "unknown:Timeout": 106
+    },
     "disagree": 0,
     "errors": 0,
     "files": 113,

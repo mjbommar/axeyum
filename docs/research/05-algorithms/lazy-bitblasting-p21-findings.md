@@ -387,6 +387,42 @@ clear (kissat-class) makes reduction the higher-ROI near-term work. The pulse to
 track: **Timeout→decided**, primarily via reduction, with the core gap measured
 against kissat as the north star.
 
+## First committed lazy-vs-eager PAR-2 head-to-head, re-run at one HEAD (2026-07-03)
+
+The north-star "measured performance" number for public QF_BV is now a
+committed, same-HEAD head-to-head: the eager 1 s compare config plus the fair
+eager/lazy pairs at both standing tiers were all re-run fresh on the same code
+and committed together (`bench-results/baselines/
+qf-bv-20221214-p4dfa-sat-bv-z3-compare-1s-n1000.json` and
+`qf-bv-p4dfa-fair-{sat-bv,lazy-bv}-vs-z3-{3s-n200k-cnf5M,20s-n300k-cnf8M}.json`),
+Z3 oracle, `--jobs 2`, 113 files. Summary lines:
+
+| run | decided | unknown breakdown | DISAGREE | replay fail | PAR-2 (s) |
+|---|---|---|---|---|---|
+| eager 1 s n1000 (compare) | 1 sat | NodeBudget 112 | 0 | 0 | 1.982 |
+| eager fair 3 s (n200k, cnf 2M/5M) | 3 sat | T 87 / EB 13 / NB 10 | 0 | 0 | 5.855 |
+| lazy fair 3 s (same budgets) | 3 sat | T 106 / EB 2 / NB 2 | 0 | 0 | 5.841 |
+| eager fair 20 s (n300k, cnf 3M/8M) | 4 sat | T 98 / EB 10 / NB 1 | 0 | 0 | 38.643 |
+| lazy fair 20 s (same budgets) | **7 sat** | T 99 / EB 6 / NB 1 | 0 | 0 | **37.522** |
+
+On paper lazy-bv now *weakly dominates* eager (never fewer decided, lower PAR-2
+at both tiers, DISAGREE=0, 0 replay failures) — **but the attribution is the
+measured point, and it is not CEGAR.** `lazy_ops_total = 0` on all 113 files at
+both tiers (re-confirmed): every instance takes the `ops.is_empty()`
+fall-through in `solve_lazy_bv_abstraction`, which calls the full `solve()`
+front door — i.e. the default word-level preprocessing pipeline that has landed
+since the 2026-06-18 rows — while the bench `sat-bv` backend still runs the raw
+eager `SatBvBackend` with no reduction. The three 20 s lazy-only wins
+(`compose.s2._…nr3/nr4_paired`, `string1x8.6._…paired`; all oracle-agreed sat,
+replay-checked) are instances the raw blast times out on but the preprocessed
+pipeline decides — exactly the `--preprocess` mechanism (its 20 s row also
+decides 7 with EncodingBudget 6). **The lazy backend's measured edge on this
+slice is 100 % the solve-path reduction it inherits, 0 % the abstraction.**
+Any default-on decision for `SolverConfig::lazy_bv` (needs its own ADR) should
+instead credit and route the reduction pipeline; the CEGAR machinery remains
+reserved for arithmetic-heavy corpora. Z3 still decides all 113 in ≤ 1 s each —
+parity on this slice remains open, owned by reduction depth.
+
 ## Bottom line
 
 Lazy arithmetic-CEGAR bit-blasting is now wired end-to-end (opt-in dispatch

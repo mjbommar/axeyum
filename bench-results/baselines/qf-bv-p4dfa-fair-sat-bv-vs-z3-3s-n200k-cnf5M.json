@@ -5,9 +5,10 @@
     "cnf_clause_budget": 5000000,
     "cnf_inprocessing": false,
     "cnf_variable_budget": 2000000,
+    "cnf_vivify": false,
     "compare_backend": "z3 4.13.3.0",
     "compare_z3": true,
-    "config_hash": "4653e59996b8f8c7",
+    "config_hash": "bb29c18d6e3c53cf",
     "corpus": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen",
     "corpus_hash": "021a6a885828fd6e",
     "corpus_source": "SMT-LIB 2024 non-incremental QF_BV, Zenodo 11061097",
@@ -21,6 +22,7 @@
     "jobs": 2,
     "limit": null,
     "logic": "QF_BV",
+    "native_cdcl": false,
     "node_budget": 200000,
     "preprocess": false,
     "query_plan": {
@@ -46,13 +48,13 @@
       "backend_stats": {
         "aig_inputs": 9180.0,
         "aig_nodes": 421718.0,
-        "bit_blast_ms": 712.462216,
+        "bit_blast_ms": 109.697144,
         "cnf_clauses": 627737.0,
-        "cnf_encode_ms": 1140.368437,
+        "cnf_encode_ms": 220.312971,
         "cnf_variables": 170070.0
       },
       "dag_nodes": 22012,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 1914,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/Composition/compose.p2._bit8_na6_nr3_paired.smt2",
@@ -104,8 +106,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 1098,
-      "translate_ms": 1852,
+      "solve_ms": 2682,
+      "translate_ms": 330,
       "tree_nodes": 147984
     },
     {
@@ -113,9 +115,9 @@
       "backend_stats": {
         "aig_inputs": 77832.0,
         "aig_nodes": 3716375.0,
-        "bit_blast_ms": 7563.014858,
+        "bit_blast_ms": 981.377508,
         "cnf_clauses": 5524916.0,
-        "cnf_encode_ms": 11417.428251000001,
+        "cnf_encode_ms": 2068.027829,
         "cnf_variables": 1493178.0
       },
       "dag_nodes": 192193,
@@ -172,7 +174,7 @@
         "rule_counts": {}
       },
       "solve_ms": 0,
-      "translate_ms": 18980,
+      "translate_ms": 3049,
       "tree_nodes": 1330530
     },
     {
@@ -180,13 +182,13 @@
       "backend_stats": {
         "aig_inputs": 6297.0,
         "aig_nodes": 283166.0,
-        "bit_blast_ms": 461.83903399999997,
+        "bit_blast_ms": 65.274264,
         "cnf_clauses": 421772.0,
-        "cnf_encode_ms": 684.051668,
+        "cnf_encode_ms": 112.516252,
         "cnf_variables": 114423.0
       },
       "dag_nodes": 14842,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 1341,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/Composition/compose.s2._bit8_na6_nr3_paired.smt2",
@@ -238,8 +240,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 1820,
-      "translate_ms": 1145,
+      "solve_ms": 2831,
+      "translate_ms": 177,
       "tree_nodes": 98664
     },
     {
@@ -247,13 +249,13 @@
       "backend_stats": {
         "aig_inputs": 8310.0,
         "aig_nodes": 377041.0,
-        "bit_blast_ms": 614.765854,
+        "bit_blast_ms": 83.370369,
         "cnf_clauses": 562771.0,
-        "cnf_encode_ms": 962.524526,
+        "cnf_encode_ms": 153.36269,
         "cnf_variables": 152726.0
       },
       "dag_nodes": 19739,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 1772,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/Composition/compose.s2._bit8_na6_nr4_paired.smt2",
@@ -305,8 +307,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 1378,
-      "translate_ms": 1577,
+      "solve_ms": 2772,
+      "translate_ms": 236,
       "tree_nodes": 131503
     },
     {
@@ -314,13 +316,13 @@
       "backend_stats": {
         "aig_inputs": 26514.0,
         "aig_nodes": 1249160.0,
-        "bit_blast_ms": 2286.2790959999998,
+        "bit_blast_ms": 296.151993,
         "cnf_clauses": 1859369.0,
-        "cnf_encode_ms": 3423.0143860000003,
+        "cnf_encode_ms": 558.938822,
         "cnf_variables": 502980.0
       },
       "dag_nodes": 64690,
-      "detail": "Timeout: pure-Rust BV backend timeout before SAT solve",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 5388,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/Composition/compose.s3._bit8_na6_nr3_paired.smt2",
@@ -372,8 +374,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 0,
-      "translate_ms": 5709,
+      "solve_ms": 2177,
+      "translate_ms": 855,
       "tree_nodes": 443148
     },
     {
@@ -381,13 +383,13 @@
       "backend_stats": {
         "aig_inputs": 35142.0,
         "aig_nodes": 1663747.0,
-        "bit_blast_ms": 3041.977975,
+        "bit_blast_ms": 405.353113,
         "cnf_clauses": 2481352.0,
-        "cnf_encode_ms": 4535.343287,
+        "cnf_encode_ms": 755.1084179999999,
         "cnf_variables": 671630.0
       },
       "dag_nodes": 86093,
-      "detail": "Timeout: pure-Rust BV backend timeout before SAT solve",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 7142,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/Composition/compose.s3._bit8_na6_nr4_paired.smt2",
@@ -439,8 +441,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 0,
-      "translate_ms": 7577,
+      "solve_ms": 1899,
+      "translate_ms": 1160,
       "tree_nodes": 590710
     },
     {
@@ -568,9 +570,9 @@
       "backend_stats": {
         "aig_inputs": 310.0,
         "aig_nodes": 6155.0,
-        "bit_blast_ms": 6.409769,
+        "bit_blast_ms": 1.099989,
         "cnf_clauses": 8016.0,
-        "cnf_encode_ms": 10.371374,
+        "cnf_encode_ms": 1.7462790000000001,
         "cnf_variables": 2064.0
       },
       "dag_nodes": 437,
@@ -578,13 +580,13 @@
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/Composition/simple_bit8_na1_nr1_twocond.smt2",
       "max_depth": 11,
-      "model_lift_ms": 1,
+      "model_lift_ms": 0,
       "oracle": {
         "backend_kind": "z3",
         "backend_stats": {
           "max memory": 43.53,
           "memory": 34.21,
-          "num allocs": 547625.0,
+          "num allocs": 549454.0,
           "rlimit count": 45105.0,
           "sat backjumps": 23.0,
           "sat conflicts": 23.0,
@@ -605,7 +607,7 @@
         "model_lift_ms": 0,
         "outcome": "sat",
         "solve_ms": 8,
-        "translate_ms": 1
+        "translate_ms": 0
       },
       "outcome": "sat",
       "query_plan": {
@@ -648,8 +650,8 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 7,
-      "translate_ms": 16,
+      "solve_ms": 0,
+      "translate_ms": 2,
       "tree_nodes": 1831
     },
     {
@@ -657,9 +659,9 @@
       "backend_stats": {
         "aig_inputs": 773.0,
         "aig_nodes": 19291.0,
-        "bit_blast_ms": 21.769538,
+        "bit_blast_ms": 3.5333069999999998,
         "cnf_clauses": 24857.0,
-        "cnf_encode_ms": 36.156592,
+        "cnf_encode_ms": 5.530649,
         "cnf_variables": 6115.0
       },
       "dag_nodes": 1296,
@@ -667,13 +669,13 @@
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/MobileDevice/mobiledevice_bit8_na1_nr1_twocond.smt2",
       "max_depth": 11,
-      "model_lift_ms": 5,
+      "model_lift_ms": 0,
       "oracle": {
         "backend_kind": "z3",
         "backend_stats": {
           "max memory": 46.92,
           "memory": 35.09,
-          "num allocs": 51528382.0,
+          "num allocs": 51564182.0,
           "rlimit count": 7649021.0,
           "sat backjumps": 35644.0,
           "sat conflicts": 35644.0,
@@ -696,15 +698,15 @@
           "sat subsumed": 3807.0,
           "solve-eqs-elim-vars": 153.0,
           "solve-eqs-steps": 1686.0,
-          "time": 1.052
+          "time": 1.069
         },
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
         "model_lift_ms": 0,
         "outcome": "sat",
-        "solve_ms": 1052,
-        "translate_ms": 2
+        "solve_ms": 1069,
+        "translate_ms": 1
       },
       "outcome": "sat",
       "query_plan": {
@@ -747,8 +749,8 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 489,
-      "translate_ms": 57,
+      "solve_ms": 76,
+      "translate_ms": 9,
       "tree_nodes": 6010
     },
     {
@@ -756,13 +758,13 @@
       "backend_stats": {
         "aig_inputs": 3707.0,
         "aig_nodes": 159509.0,
-        "bit_blast_ms": 258.778366,
+        "bit_blast_ms": 34.51857,
         "cnf_clauses": 237671.0,
-        "cnf_encode_ms": 546.058324,
+        "cnf_encode_ms": 61.163205,
         "cnf_variables": 64657.0
       },
       "dag_nodes": 8453,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 823,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/MobileDevice/mobiledevice_bit8_na6_nr3_paired.smt2",
@@ -814,8 +816,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 2176,
-      "translate_ms": 804,
+      "solve_ms": 2907,
+      "translate_ms": 95,
       "tree_nodes": 54906
     },
     {
@@ -823,24 +825,55 @@
       "backend_stats": {
         "aig_inputs": 2077.0,
         "aig_nodes": 94015.0,
-        "bit_blast_ms": 154.573352,
+        "bit_blast_ms": 19.502625,
         "cnf_clauses": 140015.0,
-        "cnf_encode_ms": 224.983001,
+        "cnf_encode_ms": 33.348885,
         "cnf_variables": 37323.0
       },
       "dag_nodes": 5616,
-      "detail": "Timeout: rustsat-batsat timeout",
       "distinct_symbols": 572,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/MobileDevice/mobiledevice_bit8_na6_nr3_twocond.smt2",
       "max_depth": 11,
-      "model_lift_ms": 0,
+      "model_lift_ms": 3,
       "oracle": {
         "backend_kind": "z3",
+        "backend_stats": {
+          "max memory": 95.67,
+          "memory": 48.9,
+          "num allocs": 1009964311.0,
+          "rlimit count": 4364241.0,
+          "sat backjumps": 5721.0,
+          "sat conflicts": 5721.0,
+          "sat decisions": 15575.0,
+          "sat del clause": 114134.0,
+          "sat elim bool vars res": 19878.0,
+          "sat elim literals": 1282.0,
+          "sat minimized lits": 21445.0,
+          "sat mk clause 2ary": 48425.0,
+          "sat mk clause 3ary": 42666.0,
+          "sat mk clause nary": 204798.0,
+          "sat mk var": 43056.0,
+          "sat propagations 2ary": 663308.0,
+          "sat propagations nary": 2610367.0,
+          "sat restarts": 401.0,
+          "sat scc elim vars": 229.0,
+          "sat subs resolution": 1282.0,
+          "sat subs resolution dyn": 2385.0,
+          "sat subsumed": 24343.0,
+          "solve-eqs-elim-vars": 447.0,
+          "solve-eqs-steps": 8572.0,
+          "time": 0.659
+        },
+        "decision_agrees": true,
+        "decision_compared": true,
         "enabled": true,
-        "skipped": "primary-outcome-unknown"
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 659,
+        "translate_ms": 4
       },
-      "outcome": "unknown",
+      "outcome": "sat",
       "query_plan": {
         "cache_key": {
           "assertions": 530,
@@ -878,11 +911,11 @@
         "output_distinct_symbols": 572,
         "output_max_depth": 11,
         "output_tree_nodes": 30504,
-        "rewritten_outcome": "unknown",
+        "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 2607,
-      "translate_ms": 379,
+      "solve_ms": 1436,
+      "translate_ms": 52,
       "tree_nodes": 30504
     },
     {
@@ -890,13 +923,13 @@
       "backend_stats": {
         "aig_inputs": 10197.0,
         "aig_nodes": 474056.0,
-        "bit_blast_ms": 794.017805,
+        "bit_blast_ms": 109.52467200000001,
         "cnf_clauses": 704438.0,
-        "cnf_encode_ms": 1189.162836,
+        "cnf_encode_ms": 195.689571,
         "cnf_variables": 190707.0
       },
       "dag_nodes": 24876,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 2105,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x16.1._bit8_na6_nr3_paired.smt2",
@@ -948,8 +981,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 962,
-      "translate_ms": 1983,
+      "solve_ms": 2706,
+      "translate_ms": 305,
       "tree_nodes": 165084
     },
     {
@@ -957,13 +990,13 @@
       "backend_stats": {
         "aig_inputs": 10197.0,
         "aig_nodes": 474056.0,
-        "bit_blast_ms": 831.540349,
+        "bit_blast_ms": 110.717139,
         "cnf_clauses": 704438.0,
-        "cnf_encode_ms": 1230.530875,
+        "cnf_encode_ms": 198.363047,
         "cnf_variables": 190707.0
       },
       "dag_nodes": 24876,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 2105,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x16.10._bit8_na6_nr3_paired.smt2",
@@ -1015,8 +1048,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 881,
-      "translate_ms": 2062,
+      "solve_ms": 2703,
+      "translate_ms": 309,
       "tree_nodes": 165084
     },
     {
@@ -1024,13 +1057,13 @@
       "backend_stats": {
         "aig_inputs": 10197.0,
         "aig_nodes": 474056.0,
-        "bit_blast_ms": 787.7504749999999,
+        "bit_blast_ms": 112.339683,
         "cnf_clauses": 704438.0,
-        "cnf_encode_ms": 1190.329717,
+        "cnf_encode_ms": 188.13449300000002,
         "cnf_variables": 190707.0
       },
       "dag_nodes": 24876,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 2105,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x16.2._bit8_na6_nr3_paired.smt2",
@@ -1082,8 +1115,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 963,
-      "translate_ms": 1978,
+      "solve_ms": 2713,
+      "translate_ms": 300,
       "tree_nodes": 165084
     },
     {
@@ -1091,13 +1124,13 @@
       "backend_stats": {
         "aig_inputs": 8289.0,
         "aig_nodes": 382808.0,
-        "bit_blast_ms": 621.376815,
+        "bit_blast_ms": 89.27172999999999,
         "cnf_clauses": 568694.0,
-        "cnf_encode_ms": 948.574178,
+        "cnf_encode_ms": 161.949706,
         "cnf_variables": 154023.0
       },
       "dag_nodes": 20174,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 1723,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x16.3._bit8_na6_nr3_paired.smt2",
@@ -1149,8 +1182,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 1383,
-      "translate_ms": 1569,
+      "solve_ms": 2760,
+      "translate_ms": 251,
       "tree_nodes": 132288
     },
     {
@@ -1158,13 +1191,13 @@
       "backend_stats": {
         "aig_inputs": 6381.0,
         "aig_nodes": 291560.0,
-        "bit_blast_ms": 469.022287,
+        "bit_blast_ms": 66.165637,
         "cnf_clauses": 432950.0,
-        "cnf_encode_ms": 703.719934,
+        "cnf_encode_ms": 113.28285000000001,
         "cnf_variables": 117339.0
       },
       "dag_nodes": 15472,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 1341,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x16.4._bit8_na6_nr3_paired.smt2",
@@ -1216,8 +1249,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 1790,
-      "translate_ms": 1172,
+      "solve_ms": 2829,
+      "translate_ms": 179,
       "tree_nodes": 99492
     },
     {
@@ -1225,13 +1258,13 @@
       "backend_stats": {
         "aig_inputs": 8289.0,
         "aig_nodes": 382808.0,
-        "bit_blast_ms": 636.10318,
+        "bit_blast_ms": 89.26324500000001,
         "cnf_clauses": 568694.0,
-        "cnf_encode_ms": 947.829831,
+        "cnf_encode_ms": 162.344316,
         "cnf_variables": 154023.0
       },
       "dag_nodes": 20174,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 1723,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x16.5._bit8_na6_nr3_paired.smt2",
@@ -1283,8 +1316,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 1371,
-      "translate_ms": 1583,
+      "solve_ms": 2762,
+      "translate_ms": 251,
       "tree_nodes": 132288
     },
     {
@@ -1292,13 +1325,13 @@
       "backend_stats": {
         "aig_inputs": 10197.0,
         "aig_nodes": 474056.0,
-        "bit_blast_ms": 788.1224930000001,
+        "bit_blast_ms": 108.80021300000001,
         "cnf_clauses": 704438.0,
-        "cnf_encode_ms": 1204.154799,
+        "cnf_encode_ms": 194.830585,
         "cnf_variables": 190707.0
       },
       "dag_nodes": 24876,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 2105,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x16.6._bit8_na6_nr3_paired.smt2",
@@ -1350,8 +1383,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 954,
-      "translate_ms": 1992,
+      "solve_ms": 2707,
+      "translate_ms": 303,
       "tree_nodes": 165084
     },
     {
@@ -1359,13 +1392,13 @@
       "backend_stats": {
         "aig_inputs": 8289.0,
         "aig_nodes": 382808.0,
-        "bit_blast_ms": 626.402347,
+        "bit_blast_ms": 87.739741,
         "cnf_clauses": 568694.0,
-        "cnf_encode_ms": 949.612158,
+        "cnf_encode_ms": 147.56457600000002,
         "cnf_variables": 154023.0
       },
       "dag_nodes": 20174,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 1723,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x16.7._bit8_na6_nr3_paired.smt2",
@@ -1417,8 +1450,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 1378,
-      "translate_ms": 1576,
+      "solve_ms": 2774,
+      "translate_ms": 235,
       "tree_nodes": 132288
     },
     {
@@ -1426,13 +1459,13 @@
       "backend_stats": {
         "aig_inputs": 8289.0,
         "aig_nodes": 382808.0,
-        "bit_blast_ms": 648.109015,
+        "bit_blast_ms": 86.94093699999999,
         "cnf_clauses": 568694.0,
-        "cnf_encode_ms": 981.25515,
+        "cnf_encode_ms": 148.644256,
         "cnf_variables": 154023.0
       },
       "dag_nodes": 20174,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 1723,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x16.8._bit8_na6_nr3_paired.smt2",
@@ -1484,8 +1517,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 1324,
-      "translate_ms": 1629,
+      "solve_ms": 2775,
+      "translate_ms": 235,
       "tree_nodes": 132288
     },
     {
@@ -1493,13 +1526,13 @@
       "backend_stats": {
         "aig_inputs": 8289.0,
         "aig_nodes": 382808.0,
-        "bit_blast_ms": 645.397304,
+        "bit_blast_ms": 86.567352,
         "cnf_clauses": 568694.0,
-        "cnf_encode_ms": 992.4759819999999,
+        "cnf_encode_ms": 150.60500800000003,
         "cnf_variables": 154023.0
       },
       "dag_nodes": 20174,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 1723,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x16.9._bit8_na6_nr3_paired.smt2",
@@ -1551,8 +1584,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 1314,
-      "translate_ms": 1637,
+      "solve_ms": 2774,
+      "translate_ms": 237,
       "tree_nodes": 132288
     },
     {
@@ -1560,13 +1593,13 @@
       "backend_stats": {
         "aig_inputs": 4801.0,
         "aig_nodes": 212964.0,
-        "bit_blast_ms": 343.547245,
+        "bit_blast_ms": 48.140191,
         "cnf_clauses": 316938.0,
-        "cnf_encode_ms": 520.905278,
+        "cnf_encode_ms": 85.18579799999999,
         "cnf_variables": 86055.0
       },
       "dag_nodes": 11258,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 1035,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x8.1._bit8_na6_nr3_paired.smt2",
@@ -1618,8 +1651,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 2132,
-      "translate_ms": 864,
+      "solve_ms": 2871,
+      "translate_ms": 133,
       "tree_nodes": 73336
     },
     {
@@ -1627,13 +1660,13 @@
       "backend_stats": {
         "aig_inputs": 4801.0,
         "aig_nodes": 212964.0,
-        "bit_blast_ms": 326.818885,
+        "bit_blast_ms": 46.109027,
         "cnf_clauses": 316938.0,
-        "cnf_encode_ms": 518.693657,
+        "cnf_encode_ms": 77.903536,
         "cnf_variables": 86055.0
       },
       "dag_nodes": 11258,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 1035,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x8.10._bit8_na6_nr3_paired.smt2",
@@ -1685,8 +1718,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 2131,
-      "translate_ms": 845,
+      "solve_ms": 2882,
+      "translate_ms": 124,
       "tree_nodes": 73336
     },
     {
@@ -1694,13 +1727,13 @@
       "backend_stats": {
         "aig_inputs": 5869.0,
         "aig_nodes": 263964.0,
-        "bit_blast_ms": 424.95726499999995,
+        "bit_blast_ms": 57.435928,
         "cnf_clauses": 392842.0,
-        "cnf_encode_ms": 634.982929,
+        "cnf_encode_ms": 104.654836,
         "cnf_variables": 106571.0
       },
       "dag_nodes": 13888,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 1249,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x8.2._bit8_na6_nr3_paired.smt2",
@@ -1752,8 +1785,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 1910,
-      "translate_ms": 1059,
+      "solve_ms": 2845,
+      "translate_ms": 162,
       "tree_nodes": 91556
     },
     {
@@ -1761,13 +1794,13 @@
       "backend_stats": {
         "aig_inputs": 3733.0,
         "aig_nodes": 161964.0,
-        "bit_blast_ms": 267.453322,
+        "bit_blast_ms": 34.226362,
         "cnf_clauses": 241034.0,
-        "cnf_encode_ms": 418.89810300000005,
+        "cnf_encode_ms": 59.625049,
         "cnf_variables": 65539.0
       },
       "dag_nodes": 8628,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 821,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x8.3._bit8_na6_nr3_paired.smt2",
@@ -1819,8 +1852,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 2295,
-      "translate_ms": 686,
+      "solve_ms": 2910,
+      "translate_ms": 93,
       "tree_nodes": 55116
     },
     {
@@ -1828,13 +1861,13 @@
       "backend_stats": {
         "aig_inputs": 2665.0,
         "aig_nodes": 110964.0,
-        "bit_blast_ms": 166.022788,
+        "bit_blast_ms": 22.883847999999997,
         "cnf_clauses": 165130.0,
-        "cnf_encode_ms": 256.314129,
+        "cnf_encode_ms": 38.629079,
         "cnf_variables": 45023.0
       },
       "dag_nodes": 5998,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 607,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x8.4._bit8_na6_nr3_paired.smt2",
@@ -1886,8 +1919,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 2565,
-      "translate_ms": 422,
+      "solve_ms": 2942,
+      "translate_ms": 61,
       "tree_nodes": 36896
     },
     {
@@ -1895,13 +1928,13 @@
       "backend_stats": {
         "aig_inputs": 4801.0,
         "aig_nodes": 212964.0,
-        "bit_blast_ms": 337.29987,
+        "bit_blast_ms": 47.132868,
         "cnf_clauses": 316938.0,
-        "cnf_encode_ms": 512.536819,
+        "cnf_encode_ms": 85.24593399999999,
         "cnf_variables": 86055.0
       },
       "dag_nodes": 11258,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 1035,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x8.5._bit8_na6_nr3_paired.smt2",
@@ -1953,8 +1986,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 2125,
-      "translate_ms": 849,
+      "solve_ms": 2872,
+      "translate_ms": 132,
       "tree_nodes": 73336
     },
     {
@@ -1962,13 +1995,13 @@
       "backend_stats": {
         "aig_inputs": 3733.0,
         "aig_nodes": 161964.0,
-        "bit_blast_ms": 248.257498,
+        "bit_blast_ms": 36.506156,
         "cnf_clauses": 241034.0,
-        "cnf_encode_ms": 381.41276200000004,
+        "cnf_encode_ms": 57.18558,
         "cnf_variables": 65539.0
       },
       "dag_nodes": 8628,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 821,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x8.6._bit8_na6_nr3_paired.smt2",
@@ -2020,8 +2053,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 2351,
-      "translate_ms": 629,
+      "solve_ms": 2910,
+      "translate_ms": 93,
       "tree_nodes": 55116
     },
     {
@@ -2029,13 +2062,13 @@
       "backend_stats": {
         "aig_inputs": 2665.0,
         "aig_nodes": 110964.0,
-        "bit_blast_ms": 162.64343,
+        "bit_blast_ms": 23.952061999999998,
         "cnf_clauses": 165130.0,
-        "cnf_encode_ms": 262.351844,
+        "cnf_encode_ms": 40.812597,
         "cnf_variables": 45023.0
       },
       "dag_nodes": 5998,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 607,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x8.7._bit8_na6_nr3_paired.smt2",
@@ -2087,8 +2120,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 2562,
-      "translate_ms": 424,
+      "solve_ms": 2938,
+      "translate_ms": 64,
       "tree_nodes": 36896
     },
     {
@@ -2096,13 +2129,13 @@
       "backend_stats": {
         "aig_inputs": 4801.0,
         "aig_nodes": 212964.0,
-        "bit_blast_ms": 344.331727,
+        "bit_blast_ms": 47.703692,
         "cnf_clauses": 316938.0,
-        "cnf_encode_ms": 504.200128,
+        "cnf_encode_ms": 88.89158499999999,
         "cnf_variables": 86055.0
       },
       "dag_nodes": 11258,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 1035,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x8.8._bit8_na6_nr3_paired.smt2",
@@ -2154,8 +2187,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 2127,
-      "translate_ms": 848,
+      "solve_ms": 2874,
+      "translate_ms": 136,
       "tree_nodes": 73336
     },
     {
@@ -2163,13 +2196,13 @@
       "backend_stats": {
         "aig_inputs": 4801.0,
         "aig_nodes": 212964.0,
-        "bit_blast_ms": 343.742544,
+        "bit_blast_ms": 46.606984999999995,
         "cnf_clauses": 316938.0,
-        "cnf_encode_ms": 510.888559,
+        "cnf_encode_ms": 81.283309,
         "cnf_variables": 86055.0
       },
       "dag_nodes": 11258,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 1035,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x8.9._bit8_na6_nr3_paired.smt2",
@@ -2221,8 +2254,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 2119,
-      "translate_ms": 854,
+      "solve_ms": 2878,
+      "translate_ms": 127,
       "tree_nodes": 73336
     },
     {
@@ -2230,13 +2263,13 @@
       "backend_stats": {
         "aig_inputs": 28761.0,
         "aig_nodes": 1373465.0,
-        "bit_blast_ms": 2483.376772,
+        "bit_blast_ms": 343.007643,
         "cnf_clauses": 2038205.0,
-        "cnf_encode_ms": 3996.579834,
+        "cnf_encode_ms": 618.838286,
         "cnf_variables": 550839.0
       },
       "dag_nodes": 71757,
-      "detail": "Timeout: pure-Rust BV backend timeout before SAT solve",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 5801,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x16.1._bit8_na6_nr3_paired.smt2",
@@ -2288,8 +2321,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 0,
-      "translate_ms": 6479,
+      "solve_ms": 2072,
+      "translate_ms": 961,
       "tree_nodes": 484362
     },
     {
@@ -2297,13 +2330,13 @@
       "backend_stats": {
         "aig_inputs": 29617.0,
         "aig_nodes": 1415424.0,
-        "bit_blast_ms": 2624.4260480000003,
+        "bit_blast_ms": 351.369341,
         "cnf_clauses": 2100238.0,
-        "cnf_encode_ms": 4106.493299000001,
+        "cnf_encode_ms": 687.4529150000001,
         "cnf_variables": 567575.0
       },
       "dag_nodes": 73966,
-      "detail": "Timeout: pure-Rust BV backend timeout before SAT solve",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 5971,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x16.10._bit8_na6_nr3_paired.smt2",
@@ -2355,8 +2388,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 0,
-      "translate_ms": 6730,
+      "solve_ms": 2000,
+      "translate_ms": 1038,
       "tree_nodes": 499136
     },
     {
@@ -2364,13 +2397,13 @@
       "backend_stats": {
         "aig_inputs": 26029.0,
         "aig_nodes": 1243680.0,
-        "bit_blast_ms": 2365.221349,
+        "bit_blast_ms": 304.960394,
         "cnf_clauses": 1844814.0,
-        "cnf_encode_ms": 4212.783784,
+        "cnf_encode_ms": 557.049229,
         "cnf_variables": 498555.0
       },
       "dag_nodes": 65120,
-      "detail": "Timeout: pure-Rust BV backend timeout before SAT solve",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 5253,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x16.2._bit8_na6_nr3_paired.smt2",
@@ -2422,8 +2455,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 0,
-      "translate_ms": 6578,
+      "solve_ms": 2165,
+      "translate_ms": 862,
       "tree_nodes": 437188
     },
     {
@@ -2431,13 +2464,13 @@
       "backend_stats": {
         "aig_inputs": 33205.0,
         "aig_nodes": 1587168.0,
-        "bit_blast_ms": 3149.29668,
+        "bit_blast_ms": 407.98766400000005,
         "cnf_clauses": 2355662.0,
-        "cnf_encode_ms": 4512.89448,
+        "cnf_encode_ms": 760.483822,
         "cnf_variables": 636595.0
       },
       "dag_nodes": 82812,
-      "detail": "Timeout: pure-Rust BV backend timeout before SAT solve",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 6689,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x16.3._bit8_na6_nr3_paired.smt2",
@@ -2489,8 +2522,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 0,
-      "translate_ms": 7662,
+      "solve_ms": 1871,
+      "translate_ms": 1168,
       "tree_nodes": 561084
     },
     {
@@ -2498,13 +2531,13 @@
       "backend_stats": {
         "aig_inputs": 15265.0,
         "aig_nodes": 728448.0,
-        "bit_blast_ms": 1297.465823,
+        "bit_blast_ms": 177.666929,
         "cnf_clauses": 1078542.0,
-        "cnf_encode_ms": 1969.79112,
+        "cnf_encode_ms": 321.96487099999996,
         "cnf_variables": 291495.0
       },
       "dag_nodes": 38582,
-      "detail": "Timeout: pure-Rust BV backend timeout before SAT solve",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 3099,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x16.4._bit8_na6_nr3_paired.smt2",
@@ -2556,8 +2589,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 0,
-      "translate_ms": 3267,
+      "solve_ms": 2517,
+      "translate_ms": 499,
       "tree_nodes": 251344
     },
     {
@@ -2565,13 +2598,13 @@
       "backend_stats": {
         "aig_inputs": 33205.0,
         "aig_nodes": 1587168.0,
-        "bit_blast_ms": 3008.033315,
+        "bit_blast_ms": 393.07439100000005,
         "cnf_clauses": 2355662.0,
-        "cnf_encode_ms": 4665.08728,
+        "cnf_encode_ms": 747.713188,
         "cnf_variables": 636595.0
       },
       "dag_nodes": 82812,
-      "detail": "Timeout: pure-Rust BV backend timeout before SAT solve",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 6689,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x16.5._bit8_na6_nr3_paired.smt2",
@@ -2623,8 +2656,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 0,
-      "translate_ms": 7673,
+      "solve_ms": 1895,
+      "translate_ms": 1140,
       "tree_nodes": 561084
     },
     {
@@ -2632,13 +2665,13 @@
       "backend_stats": {
         "aig_inputs": 18853.0,
         "aig_nodes": 900192.0,
-        "bit_blast_ms": 1627.4117669999998,
+        "bit_blast_ms": 217.32211600000002,
         "cnf_clauses": 1333966.0,
-        "cnf_encode_ms": 2527.2383729999997,
+        "cnf_encode_ms": 390.465113,
         "cnf_variables": 360515.0
       },
       "dag_nodes": 47428,
-      "detail": "Timeout: pure-Rust BV backend timeout before SAT solve",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 3817,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x16.6._bit8_na6_nr3_paired.smt2",
@@ -2690,8 +2723,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 0,
-      "translate_ms": 4154,
+      "solve_ms": 2416,
+      "translate_ms": 607,
       "tree_nodes": 313292
     },
     {
@@ -2699,13 +2732,13 @@
       "backend_stats": {
         "aig_inputs": 15265.0,
         "aig_nodes": 728448.0,
-        "bit_blast_ms": 1337.366048,
+        "bit_blast_ms": 173.915603,
         "cnf_clauses": 1078542.0,
-        "cnf_encode_ms": 2009.1136170000002,
+        "cnf_encode_ms": 305.302906,
         "cnf_variables": 291495.0
       },
       "dag_nodes": 38582,
-      "detail": "Timeout: pure-Rust BV backend timeout before SAT solve",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 3099,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x16.7._bit8_na6_nr3_paired.smt2",
@@ -2757,8 +2790,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 0,
-      "translate_ms": 3346,
+      "solve_ms": 2538,
+      "translate_ms": 479,
       "tree_nodes": 251344
     },
     {
@@ -2766,13 +2799,13 @@
       "backend_stats": {
         "aig_inputs": 33205.0,
         "aig_nodes": 1587168.0,
-        "bit_blast_ms": 3051.8592710000003,
+        "bit_blast_ms": 415.606402,
         "cnf_clauses": 2355662.0,
-        "cnf_encode_ms": 4711.4095640000005,
+        "cnf_encode_ms": 762.280234,
         "cnf_variables": 636595.0
       },
       "dag_nodes": 82812,
-      "detail": "Timeout: pure-Rust BV backend timeout before SAT solve",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 6689,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x16.8._bit8_na6_nr3_paired.smt2",
@@ -2824,8 +2857,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 0,
-      "translate_ms": 7763,
+      "solve_ms": 1873,
+      "translate_ms": 1177,
       "tree_nodes": 561084
     },
     {
@@ -2833,13 +2866,13 @@
       "backend_stats": {
         "aig_inputs": 33205.0,
         "aig_nodes": 1587168.0,
-        "bit_blast_ms": 3050.084433,
+        "bit_blast_ms": 399.948196,
         "cnf_clauses": 2355662.0,
-        "cnf_encode_ms": 4671.7053049999995,
+        "cnf_encode_ms": 765.6712289999999,
         "cnf_variables": 636595.0
       },
       "dag_nodes": 82812,
-      "detail": "Timeout: pure-Rust BV backend timeout before SAT solve",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 6689,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x16.9._bit8_na6_nr3_paired.smt2",
@@ -2891,8 +2924,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 0,
-      "translate_ms": 7721,
+      "solve_ms": 1902,
+      "translate_ms": 1165,
       "tree_nodes": 561084
     },
     {
@@ -2900,13 +2933,13 @@
       "backend_stats": {
         "aig_inputs": 13262.0,
         "aig_nodes": 620120.0,
-        "bit_blast_ms": 1086.83195,
+        "bit_blast_ms": 143.444706,
         "cnf_clauses": 921901.0,
-        "cnf_encode_ms": 1700.497237,
+        "cnf_encode_ms": 257.932178,
         "cnf_variables": 249488.0
       },
       "dag_nodes": 32378,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 2720,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x8.1._bit8_na6_nr3_paired.smt2",
@@ -2958,8 +2991,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 757,
-      "translate_ms": 2787,
+      "solve_ms": 2615,
+      "translate_ms": 401,
       "tree_nodes": 217820
     },
     {
@@ -2967,13 +3000,13 @@
       "backend_stats": {
         "aig_inputs": 12105.0,
         "aig_nodes": 565304.0,
-        "bit_blast_ms": 991.859488,
+        "bit_blast_ms": 132.38392299999998,
         "cnf_clauses": 840182.0,
-        "cnf_encode_ms": 1549.34376,
+        "cnf_encode_ms": 232.875273,
         "cnf_variables": 227391.0
       },
       "dag_nodes": 29578,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 2487,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x8.10._bit8_na6_nr3_paired.smt2",
@@ -3025,8 +3058,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 691,
-      "translate_ms": 2541,
+      "solve_ms": 2649,
+      "translate_ms": 365,
       "tree_nodes": 197880
     },
     {
@@ -3034,13 +3067,13 @@
       "backend_stats": {
         "aig_inputs": 12105.0,
         "aig_nodes": 565304.0,
-        "bit_blast_ms": 995.796626,
+        "bit_blast_ms": 133.817941,
         "cnf_clauses": 840182.0,
-        "cnf_encode_ms": 1531.994279,
+        "cnf_encode_ms": 236.86739,
         "cnf_variables": 227391.0
       },
       "dag_nodes": 29578,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 2487,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x8.2._bit8_na6_nr3_paired.smt2",
@@ -3092,8 +3125,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 682,
-      "translate_ms": 2527,
+      "solve_ms": 2643,
+      "translate_ms": 370,
       "tree_nodes": 197880
     },
     {
@@ -3101,13 +3134,13 @@
       "backend_stats": {
         "aig_inputs": 15921.0,
         "aig_nodes": 747800.0,
-        "bit_blast_ms": 1339.1173780000001,
+        "bit_blast_ms": 177.061116,
         "cnf_clauses": 1111670.0,
-        "cnf_encode_ms": 2104.605892,
+        "cnf_encode_ms": 303.40056,
         "cnf_variables": 300759.0
       },
       "dag_nodes": 38982,
-      "detail": "Timeout: pure-Rust BV backend timeout before SAT solve",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 3251,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x8.3._bit8_na6_nr3_paired.smt2",
@@ -3159,8 +3192,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 0,
-      "translate_ms": 3443,
+      "solve_ms": 2540,
+      "translate_ms": 480,
       "tree_nodes": 263472
     },
     {
@@ -3168,13 +3201,13 @@
       "backend_stats": {
         "aig_inputs": 8289.0,
         "aig_nodes": 382808.0,
-        "bit_blast_ms": 659.603441,
+        "bit_blast_ms": 90.386494,
         "cnf_clauses": 568694.0,
-        "cnf_encode_ms": 1032.481731,
+        "cnf_encode_ms": 156.72288,
         "cnf_variables": 154023.0
       },
       "dag_nodes": 20174,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 1723,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x8.4._bit8_na6_nr3_paired.smt2",
@@ -3226,8 +3259,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 1263,
-      "translate_ms": 1692,
+      "solve_ms": 2764,
+      "translate_ms": 247,
       "tree_nodes": 132288
     },
     {
@@ -3235,13 +3268,13 @@
       "backend_stats": {
         "aig_inputs": 12105.0,
         "aig_nodes": 565304.0,
-        "bit_blast_ms": 999.902144,
+        "bit_blast_ms": 135.375022,
         "cnf_clauses": 840182.0,
-        "cnf_encode_ms": 1537.042021,
+        "cnf_encode_ms": 235.176648,
         "cnf_variables": 227391.0
       },
       "dag_nodes": 29578,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 2487,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x8.5._bit8_na6_nr3_paired.smt2",
@@ -3293,8 +3326,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 691,
-      "translate_ms": 2536,
+      "solve_ms": 2644,
+      "translate_ms": 370,
       "tree_nodes": 197880
     },
     {
@@ -3302,13 +3335,13 @@
       "backend_stats": {
         "aig_inputs": 10197.0,
         "aig_nodes": 474056.0,
-        "bit_blast_ms": 843.721965,
+        "bit_blast_ms": 109.648058,
         "cnf_clauses": 704438.0,
-        "cnf_encode_ms": 1281.6659559999998,
+        "cnf_encode_ms": 193.394236,
         "cnf_variables": 190707.0
       },
       "dag_nodes": 24876,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 2105,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x8.6._bit8_na6_nr3_paired.smt2",
@@ -3360,8 +3393,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 816,
-      "translate_ms": 2125,
+      "solve_ms": 2712,
+      "translate_ms": 303,
       "tree_nodes": 165084
     },
     {
@@ -3369,13 +3402,13 @@
       "backend_stats": {
         "aig_inputs": 8289.0,
         "aig_nodes": 382808.0,
-        "bit_blast_ms": 650.668563,
+        "bit_blast_ms": 89.006963,
         "cnf_clauses": 568694.0,
-        "cnf_encode_ms": 1034.913596,
+        "cnf_encode_ms": 157.429183,
         "cnf_variables": 154023.0
       },
       "dag_nodes": 20174,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 1723,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x8.7._bit8_na6_nr3_paired.smt2",
@@ -3427,8 +3460,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 1272,
-      "translate_ms": 1685,
+      "solve_ms": 2764,
+      "translate_ms": 246,
       "tree_nodes": 132288
     },
     {
@@ -3436,13 +3469,13 @@
       "backend_stats": {
         "aig_inputs": 12105.0,
         "aig_nodes": 565304.0,
-        "bit_blast_ms": 994.120338,
+        "bit_blast_ms": 133.168177,
         "cnf_clauses": 840182.0,
-        "cnf_encode_ms": 1567.6182600000002,
+        "cnf_encode_ms": 239.854614,
         "cnf_variables": 227391.0
       },
       "dag_nodes": 29578,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 2487,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x8.8._bit8_na6_nr3_paired.smt2",
@@ -3494,8 +3527,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 695,
-      "translate_ms": 2561,
+      "solve_ms": 2642,
+      "translate_ms": 373,
       "tree_nodes": 197880
     },
     {
@@ -3503,13 +3536,13 @@
       "backend_stats": {
         "aig_inputs": 12105.0,
         "aig_nodes": 565304.0,
-        "bit_blast_ms": 994.371713,
+        "bit_blast_ms": 134.92704999999998,
         "cnf_clauses": 840182.0,
-        "cnf_encode_ms": 1552.490736,
+        "cnf_encode_ms": 240.017232,
         "cnf_variables": 227391.0
       },
       "dag_nodes": 29578,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 2487,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x8.9._bit8_na6_nr3_paired.smt2",
@@ -3561,8 +3594,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 688,
-      "translate_ms": 2546,
+      "solve_ms": 2637,
+      "translate_ms": 374,
       "tree_nodes": 197880
     },
     {
@@ -3570,13 +3603,13 @@
       "backend_stats": {
         "aig_inputs": 23776.0,
         "aig_nodes": 1132989.0,
-        "bit_blast_ms": 2102.4179790000003,
+        "bit_blast_ms": 278.847203,
         "cnf_clauses": 1681254.0,
-        "cnf_encode_ms": 3254.935181,
+        "cnf_encode_ms": 500.173764,
         "cnf_variables": 454434.0
       },
       "dag_nodes": 59279,
-      "detail": "Timeout: pure-Rust BV backend timeout before SAT solve",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 4806,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.1._bit16_na6_nr3_paired.smt2",
@@ -3628,8 +3661,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 0,
-      "translate_ms": 5357,
+      "solve_ms": 2245,
+      "translate_ms": 779,
       "tree_nodes": 398350
     },
     {
@@ -3697,9 +3730,9 @@
       "backend_stats": {
         "aig_inputs": 74228.0,
         "aig_nodes": 3528739.0,
-        "bit_blast_ms": 7258.046015999999,
+        "bit_blast_ms": 948.204033,
         "cnf_clauses": 5226149.0,
-        "cnf_encode_ms": 11163.863912,
+        "cnf_encode_ms": 1843.876896,
         "cnf_variables": 1411684.0
       },
       "dag_nodes": 195705,
@@ -3756,7 +3789,7 @@
         "rule_counts": {}
       },
       "solve_ms": 0,
-      "translate_ms": 18421,
+      "translate_ms": 2792,
       "tree_nodes": 1274485
     },
     {
@@ -3764,13 +3797,13 @@
       "backend_stats": {
         "aig_inputs": 40381.0,
         "aig_nodes": 1930656.0,
-        "bit_blast_ms": 3698.0008980000002,
+        "bit_blast_ms": 485.166558,
         "cnf_clauses": 2866510.0,
-        "cnf_encode_ms": 5756.342007,
+        "cnf_encode_ms": 913.27527,
         "cnf_variables": 774635.0
       },
       "dag_nodes": 100504,
-      "detail": "Timeout: pure-Rust BV backend timeout before SAT solve",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 8125,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.10._bit16_na6_nr3_paired.smt2",
@@ -3822,8 +3855,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 0,
-      "translate_ms": 9454,
+      "solve_ms": 1647,
+      "translate_ms": 1398,
       "tree_nodes": 684980
     },
     {
@@ -3951,13 +3984,13 @@
       "backend_stats": {
         "aig_inputs": 21149.0,
         "aig_nodes": 1008173.0,
-        "bit_blast_ms": 1816.20279,
+        "bit_blast_ms": 248.440358,
         "cnf_clauses": 1495277.0,
-        "cnf_encode_ms": 2878.317871,
+        "cnf_encode_ms": 540.36579,
         "cnf_variables": 404155.0
       },
       "dag_nodes": 52895,
-      "detail": "Timeout: pure-Rust BV backend timeout before SAT solve",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 4279,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.2._bit16_na6_nr3_paired.smt2",
@@ -4009,8 +4042,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 0,
-      "translate_ms": 4694,
+      "solve_ms": 2232,
+      "translate_ms": 788,
       "tree_nodes": 352986
     },
     {
@@ -4078,9 +4111,9 @@
       "backend_stats": {
         "aig_inputs": 75396.0,
         "aig_nodes": 3585612.0,
-        "bit_blast_ms": 7075.309841,
+        "bit_blast_ms": 952.813,
         "cnf_clauses": 5309956.0,
-        "cnf_encode_ms": 10991.536702,
+        "cnf_encode_ms": 2197.500798,
         "cnf_variables": 1434284.0
       },
       "dag_nodes": 198896,
@@ -4137,7 +4170,7 @@
         "rule_counts": {}
       },
       "solve_ms": 0,
-      "translate_ms": 18066,
+      "translate_ms": 3150,
       "tree_nodes": 1294903
     },
     {
@@ -4145,13 +4178,13 @@
       "backend_stats": {
         "aig_inputs": 17230.0,
         "aig_nodes": 819687.0,
-        "bit_blast_ms": 1475.01705,
+        "bit_blast_ms": 200.771736,
         "cnf_clauses": 1215286.0,
-        "cnf_encode_ms": 2207.57613,
+        "cnf_encode_ms": 351.990739,
         "cnf_variables": 328520.0
       },
       "dag_nodes": 43141,
-      "detail": "Timeout: pure-Rust BV backend timeout before SAT solve",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 3496,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.3._bit16_na6_nr3_paired.smt2",
@@ -4203,8 +4236,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 0,
-      "translate_ms": 3682,
+      "solve_ms": 2467,
+      "translate_ms": 552,
       "tree_nodes": 285386
     },
     {
@@ -4212,9 +4245,9 @@
       "backend_stats": {
         "aig_inputs": 104336.0,
         "aig_nodes": 5379053.0,
-        "bit_blast_ms": 10114.309931,
+        "bit_blast_ms": 1339.865436,
         "cnf_clauses": 8085773.0,
-        "cnf_encode_ms": 16848.539192,
+        "cnf_encode_ms": 2992.824981,
         "cnf_variables": 2166824.0
       },
       "dag_nodes": 140027,
@@ -4271,7 +4304,7 @@
         "rule_counts": {}
       },
       "solve_ms": 0,
-      "translate_ms": 26962,
+      "translate_ms": 4332,
       "tree_nodes": 930127
     },
     {
@@ -4279,13 +4312,13 @@
       "backend_stats": {
         "aig_inputs": 56048.0,
         "aig_nodes": 2676285.0,
-        "bit_blast_ms": 5125.542304,
+        "bit_blast_ms": 705.390348,
         "cnf_clauses": 3959173.0,
-        "cnf_encode_ms": 7712.75027,
+        "cnf_encode_ms": 1365.179972,
         "cnf_variables": 1069168.0
       },
       "dag_nodes": 149107,
-      "detail": "Timeout: pure-Rust BV backend timeout before SAT solve",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 12466,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.3._bit8_na6_nr4_pairedtwobranch.smt2",
@@ -4337,8 +4370,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 0,
-      "translate_ms": 12838,
+      "solve_ms": 983,
+      "translate_ms": 2070,
       "tree_nodes": 958855
     },
     {
@@ -4346,13 +4379,13 @@
       "backend_stats": {
         "aig_inputs": 32244.0,
         "aig_nodes": 1540178.0,
-        "bit_blast_ms": 2820.739842,
+        "bit_blast_ms": 375.520535,
         "cnf_clauses": 2286149.0,
-        "cnf_encode_ms": 4373.714172,
+        "cnf_encode_ms": 694.476345,
         "cnf_variables": 617838.0
       },
       "dag_nodes": 80344,
-      "detail": "Timeout: pure-Rust BV backend timeout before SAT solve",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 6498,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.4._bit16_na6_nr3_paired.smt2",
@@ -4404,8 +4437,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 0,
-      "translate_ms": 7194,
+      "solve_ms": 1969,
+      "translate_ms": 1069,
       "tree_nodes": 544488
     },
     {
@@ -4533,13 +4566,13 @@
       "backend_stats": {
         "aig_inputs": 32244.0,
         "aig_nodes": 1540178.0,
-        "bit_blast_ms": 2800.7601050000003,
+        "bit_blast_ms": 375.907972,
         "cnf_clauses": 2286149.0,
-        "cnf_encode_ms": 4368.487029,
+        "cnf_encode_ms": 711.366299,
         "cnf_variables": 617838.0
       },
       "dag_nodes": 80344,
-      "detail": "Timeout: pure-Rust BV backend timeout before SAT solve",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 6498,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.5._bit16_na6_nr3_paired.smt2",
@@ -4591,8 +4624,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 0,
-      "translate_ms": 7169,
+      "solve_ms": 1948,
+      "translate_ms": 1087,
       "tree_nodes": 544488
     },
     {
@@ -4720,13 +4753,13 @@
       "backend_stats": {
         "aig_inputs": 17771.0,
         "aig_nodes": 846491.0,
-        "bit_blast_ms": 1476.750469,
+        "bit_blast_ms": 204.217413,
         "cnf_clauses": 1254813.0,
-        "cnf_encode_ms": 2233.668269,
+        "cnf_encode_ms": 362.609601,
         "cnf_variables": 339177.0
       },
       "dag_nodes": 44567,
-      "detail": "Timeout: pure-Rust BV backend timeout before SAT solve",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 3603,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.6._bit16_na6_nr3_paired.smt2",
@@ -4778,8 +4811,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 0,
-      "translate_ms": 3710,
+      "solve_ms": 2455,
+      "translate_ms": 566,
       "tree_nodes": 294682
     },
     {
@@ -4787,9 +4820,9 @@
       "backend_stats": {
         "aig_inputs": 105976.0,
         "aig_nodes": 5466248.0,
-        "bit_blast_ms": 10378.428016000002,
+        "bit_blast_ms": 1411.370773,
         "cnf_clauses": 8215884.0,
-        "cnf_encode_ms": 17996.046022000002,
+        "cnf_encode_ms": 2849.3803199999998,
         "cnf_variables": 2201632.0
       },
       "dag_nodes": 142336,
@@ -4846,7 +4879,7 @@
         "rule_counts": {}
       },
       "solve_ms": 0,
-      "translate_ms": 28374,
+      "translate_ms": 4260,
       "tree_nodes": 945079
     },
     {
@@ -4854,13 +4887,13 @@
       "backend_stats": {
         "aig_inputs": 56928.0,
         "aig_nodes": 2719656.0,
-        "bit_blast_ms": 5497.516769,
+        "bit_blast_ms": 725.306674,
         "cnf_clauses": 4022916.0,
-        "cnf_encode_ms": 8116.573321000001,
+        "cnf_encode_ms": 1362.956837,
         "cnf_variables": 1086344.0
       },
       "dag_nodes": 151560,
-      "detail": "Timeout: pure-Rust BV backend timeout before SAT solve",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 12660,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.6._bit8_na6_nr4_pairedtwobranch.smt2",
@@ -4912,8 +4945,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 0,
-      "translate_ms": 13614,
+      "solve_ms": 986,
+      "translate_ms": 2088,
       "tree_nodes": 974263
     },
     {
@@ -4921,13 +4954,13 @@
       "backend_stats": {
         "aig_inputs": 33205.0,
         "aig_nodes": 1587168.0,
-        "bit_blast_ms": 3021.130572,
+        "bit_blast_ms": 387.08584099999996,
         "cnf_clauses": 2355662.0,
-        "cnf_encode_ms": 4633.949072,
+        "cnf_encode_ms": 736.58029,
         "cnf_variables": 636595.0
       },
       "dag_nodes": 82812,
-      "detail": "Timeout: pure-Rust BV backend timeout before SAT solve",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 6689,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.7._bit16_na6_nr3_paired.smt2",
@@ -4979,8 +5012,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 0,
-      "translate_ms": 7655,
+      "solve_ms": 1913,
+      "translate_ms": 1123,
       "tree_nodes": 561084
     },
     {
@@ -5108,13 +5141,13 @@
       "backend_stats": {
         "aig_inputs": 14393.0,
         "aig_nodes": 684809.0,
-        "bit_blast_ms": 1262.079599,
+        "bit_blast_ms": 166.911136,
         "cnf_clauses": 1014349.0,
-        "cnf_encode_ms": 1894.798406,
+        "cnf_encode_ms": 284.347892,
         "cnf_variables": 274199.0
       },
       "dag_nodes": 36239,
-      "detail": "Timeout: pure-Rust BV backend timeout before SAT solve",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 2927,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.8._bit16_na6_nr3_paired.smt2",
@@ -5166,8 +5199,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 0,
-      "translate_ms": 3156,
+      "solve_ms": 2566,
+      "translate_ms": 451,
       "tree_nodes": 236378
     },
     {
@@ -5175,9 +5208,9 @@
       "backend_stats": {
         "aig_inputs": 105976.0,
         "aig_nodes": 5466248.0,
-        "bit_blast_ms": 10617.731769,
+        "bit_blast_ms": 1360.190085,
         "cnf_clauses": 8215884.0,
-        "cnf_encode_ms": 17252.851317,
+        "cnf_encode_ms": 2752.7909839999998,
         "cnf_variables": 2201632.0
       },
       "dag_nodes": 142336,
@@ -5234,7 +5267,7 @@
         "rule_counts": {}
       },
       "solve_ms": 0,
-      "translate_ms": 27870,
+      "translate_ms": 4112,
       "tree_nodes": 945079
     },
     {
@@ -5242,13 +5275,13 @@
       "backend_stats": {
         "aig_inputs": 56928.0,
         "aig_nodes": 2719656.0,
-        "bit_blast_ms": 5442.067801,
+        "bit_blast_ms": 711.810233,
         "cnf_clauses": 4022916.0,
-        "cnf_encode_ms": 8409.487636,
+        "cnf_encode_ms": 1332.897778,
         "cnf_variables": 1086344.0
       },
       "dag_nodes": 151560,
-      "detail": "Timeout: pure-Rust BV backend timeout before SAT solve",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 12660,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.8._bit8_na6_nr4_pairedtwobranch.smt2",
@@ -5300,8 +5333,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 0,
-      "translate_ms": 13851,
+      "solve_ms": 1008,
+      "translate_ms": 2044,
       "tree_nodes": 974263
     },
     {
@@ -5309,13 +5342,13 @@
       "backend_stats": {
         "aig_inputs": 22441.0,
         "aig_nodes": 1071936.0,
-        "bit_blast_ms": 1969.6458519999999,
+        "bit_blast_ms": 261.273364,
         "cnf_clauses": 1589390.0,
-        "cnf_encode_ms": 3060.897149,
+        "cnf_encode_ms": 468.54281399999996,
         "cnf_variables": 429535.0
       },
       "dag_nodes": 56274,
-      "detail": "Timeout: pure-Rust BV backend timeout before SAT solve",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 4535,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.9._bit16_na6_nr3_paired.smt2",
@@ -5367,8 +5400,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 0,
-      "translate_ms": 5030,
+      "solve_ms": 2295,
+      "translate_ms": 729,
       "tree_nodes": 375240
     },
     {
@@ -5376,9 +5409,9 @@
       "backend_stats": {
         "aig_inputs": 109256.0,
         "aig_nodes": 5640827.0,
-        "bit_blast_ms": 11089.357038,
+        "bit_blast_ms": 1401.263639,
         "cnf_clauses": 8476301.0,
-        "cnf_encode_ms": 17970.709438,
+        "cnf_encode_ms": 2851.242531,
         "cnf_variables": 2271296.0
       },
       "dag_nodes": 146963,
@@ -5435,7 +5468,7 @@
         "rule_counts": {}
       },
       "solve_ms": 0,
-      "translate_ms": 29060,
+      "translate_ms": 4252,
       "tree_nodes": 975001
     },
     {
@@ -5443,13 +5476,13 @@
       "backend_stats": {
         "aig_inputs": 58688.0,
         "aig_nodes": 2806491.0,
-        "bit_blast_ms": 5596.942723,
+        "bit_blast_ms": 717.461353,
         "cnf_clauses": 4150501.0,
-        "cnf_encode_ms": 8625.86216,
+        "cnf_encode_ms": 1402.576462,
         "cnf_variables": 1120720.0
       },
       "dag_nodes": 156475,
-      "detail": "Timeout: pure-Rust BV backend timeout before SAT solve",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 13048,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.9._bit8_na6_nr4_pairedtwobranch.smt2",
@@ -5501,8 +5534,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 0,
-      "translate_ms": 14222,
+      "solve_ms": 931,
+      "translate_ms": 2120,
       "tree_nodes": 1005097
     },
     {
@@ -5510,13 +5543,13 @@
       "backend_stats": {
         "aig_inputs": 60198.0,
         "aig_nodes": 3044480.0,
-        "bit_blast_ms": 5651.348107000001,
+        "bit_blast_ms": 715.5403970000001,
         "cnf_clauses": 4595357.0,
-        "cnf_encode_ms": 9288.410893,
+        "cnf_encode_ms": 1429.401357,
         "cnf_variables": 1232718.0
       },
       "dag_nodes": 78470,
-      "detail": "Timeout: pure-Rust BV backend timeout before SAT solve",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 6378,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.1._bit16_na6_nr4_paired.smt2",
@@ -5568,8 +5601,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 0,
-      "translate_ms": 14939,
+      "solve_ms": 953,
+      "translate_ms": 2144,
       "tree_nodes": 530130
     },
     {
@@ -5577,13 +5610,13 @@
       "backend_stats": {
         "aig_inputs": 23776.0,
         "aig_nodes": 1132989.0,
-        "bit_blast_ms": 2102.756938,
+        "bit_blast_ms": 271.820878,
         "cnf_clauses": 1681254.0,
-        "cnf_encode_ms": 3230.590237,
+        "cnf_encode_ms": 474.75063,
         "cnf_variables": 454434.0
       },
       "dag_nodes": 59279,
-      "detail": "Timeout: pure-Rust BV backend timeout before SAT solve",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 4806,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.1._bit8_na6_nr3_paired.smt2",
@@ -5635,8 +5668,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 0,
-      "translate_ms": 5333,
+      "solve_ms": 2283,
+      "translate_ms": 746,
       "tree_nodes": 398350
     },
     {
@@ -5644,9 +5677,9 @@
       "backend_stats": {
         "aig_inputs": 102506.0,
         "aig_nodes": 5193323.0,
-        "bit_blast_ms": 10010.766125,
+        "bit_blast_ms": 1262.325586,
         "cnf_clauses": 7842589.0,
-        "cnf_encode_ms": 16748.303060000002,
+        "cnf_encode_ms": 2558.320642,
         "cnf_variables": 2103362.0
       },
       "dag_nodes": 133281,
@@ -5703,7 +5736,7 @@
         "rule_counts": {}
       },
       "solve_ms": 0,
-      "translate_ms": 26759,
+      "translate_ms": 3820,
       "tree_nodes": 912059
     },
     {
@@ -5711,13 +5744,13 @@
       "backend_stats": {
         "aig_inputs": 40381.0,
         "aig_nodes": 1930656.0,
-        "bit_blast_ms": 3701.686334,
+        "bit_blast_ms": 475.044872,
         "cnf_clauses": 2866510.0,
-        "cnf_encode_ms": 5864.674403,
+        "cnf_encode_ms": 897.702381,
         "cnf_variables": 774635.0
       },
       "dag_nodes": 100504,
-      "detail": "Timeout: pure-Rust BV backend timeout before SAT solve",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 8125,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.10._bit8_na6_nr3_paired.smt2",
@@ -5769,8 +5802,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 0,
-      "translate_ms": 9566,
+      "solve_ms": 1673,
+      "translate_ms": 1372,
       "tree_nodes": 684980
     },
     {
@@ -5778,13 +5811,13 @@
       "backend_stats": {
         "aig_inputs": 53496.0,
         "aig_nodes": 2707256.0,
-        "bit_blast_ms": 5015.663809000001,
+        "bit_blast_ms": 645.856778,
         "cnf_clauses": 4084572.0,
-        "cnf_encode_ms": 8203.077514,
+        "cnf_encode_ms": 1271.5239119999999,
         "cnf_variables": 1095712.0
       },
       "dag_nodes": 69936,
-      "detail": "Timeout: pure-Rust BV backend timeout before SAT solve",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 5676,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.2._bit16_na6_nr4_paired.smt2",
@@ -5836,8 +5869,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 0,
-      "translate_ms": 13218,
+      "solve_ms": 1167,
+      "translate_ms": 1917,
       "tree_nodes": 469591
     },
     {
@@ -5845,13 +5878,13 @@
       "backend_stats": {
         "aig_inputs": 21149.0,
         "aig_nodes": 1008173.0,
-        "bit_blast_ms": 1839.3122449999998,
+        "bit_blast_ms": 247.200551,
         "cnf_clauses": 1495277.0,
-        "cnf_encode_ms": 2859.134794,
+        "cnf_encode_ms": 433.736043,
         "cnf_variables": 404155.0
       },
       "dag_nodes": 52895,
-      "detail": "Timeout: pure-Rust BV backend timeout before SAT solve",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 4279,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.2._bit8_na6_nr3_paired.smt2",
@@ -5903,8 +5936,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 0,
-      "translate_ms": 4698,
+      "solve_ms": 2345,
+      "translate_ms": 680,
       "tree_nodes": 352986
     },
     {
@@ -5912,13 +5945,13 @@
       "backend_stats": {
         "aig_inputs": 43514.0,
         "aig_nodes": 2199674.0,
-        "bit_blast_ms": 4043.2240269999998,
+        "bit_blast_ms": 523.4025829999999,
         "cnf_clauses": 3317725.0,
-        "cnf_encode_ms": 6498.3868219999995,
+        "cnf_encode_ms": 1065.995941,
         "cnf_variables": 890114.0
       },
       "dag_nodes": 56976,
-      "detail": "Timeout: pure-Rust BV backend timeout before SAT solve",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 4634,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.3._bit16_na6_nr4_paired.smt2",
@@ -5970,8 +6003,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 0,
-      "translate_ms": 10541,
+      "solve_ms": 1492,
+      "translate_ms": 1589,
       "tree_nodes": 379532
     },
     {
@@ -5979,13 +6012,13 @@
       "backend_stats": {
         "aig_inputs": 17230.0,
         "aig_nodes": 819687.0,
-        "bit_blast_ms": 1522.209513,
+        "bit_blast_ms": 199.6336,
         "cnf_clauses": 1215286.0,
-        "cnf_encode_ms": 2319.972714,
+        "cnf_encode_ms": 364.655372,
         "cnf_variables": 328520.0
       },
       "dag_nodes": 43141,
-      "detail": "Timeout: pure-Rust BV backend timeout before SAT solve",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 3496,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.3._bit8_na6_nr3_paired.smt2",
@@ -6037,8 +6070,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 0,
-      "translate_ms": 3842,
+      "solve_ms": 2458,
+      "translate_ms": 564,
       "tree_nodes": 285386
     },
     {
@@ -6046,9 +6079,9 @@
       "backend_stats": {
         "aig_inputs": 81770.0,
         "aig_nodes": 4141109.0,
-        "bit_blast_ms": 7947.124214,
+        "bit_blast_ms": 1018.530405,
         "cnf_clauses": 6252188.0,
-        "cnf_encode_ms": 12869.033824,
+        "cnf_encode_ms": 2087.953207,
         "cnf_variables": 1676930.0
       },
       "dag_nodes": 106463,
@@ -6105,7 +6138,7 @@
         "rule_counts": {}
       },
       "solve_ms": 0,
-      "translate_ms": 20816,
+      "translate_ms": 3106,
       "tree_nodes": 724828
     },
     {
@@ -6113,13 +6146,13 @@
       "backend_stats": {
         "aig_inputs": 32244.0,
         "aig_nodes": 1540178.0,
-        "bit_blast_ms": 2920.067387,
+        "bit_blast_ms": 382.928595,
         "cnf_clauses": 2286149.0,
-        "cnf_encode_ms": 4565.571114,
+        "cnf_encode_ms": 759.4034290000001,
         "cnf_variables": 617838.0
       },
       "dag_nodes": 80344,
-      "detail": "Timeout: pure-Rust BV backend timeout before SAT solve",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 6498,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.4._bit8_na6_nr3_paired.smt2",
@@ -6171,8 +6204,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 0,
-      "translate_ms": 7485,
+      "solve_ms": 1911,
+      "translate_ms": 1142,
       "tree_nodes": 544488
     },
     {
@@ -6180,9 +6213,9 @@
       "backend_stats": {
         "aig_inputs": 81770.0,
         "aig_nodes": 4141109.0,
-        "bit_blast_ms": 7901.825739,
+        "bit_blast_ms": 1016.2855529999999,
         "cnf_clauses": 6252188.0,
-        "cnf_encode_ms": 12877.508157999999,
+        "cnf_encode_ms": 2073.6299489999997,
         "cnf_variables": 1676930.0
       },
       "dag_nodes": 106463,
@@ -6239,7 +6272,7 @@
         "rule_counts": {}
       },
       "solve_ms": 0,
-      "translate_ms": 20779,
+      "translate_ms": 3089,
       "tree_nodes": 724828
     },
     {
@@ -6247,13 +6280,13 @@
       "backend_stats": {
         "aig_inputs": 32244.0,
         "aig_nodes": 1540178.0,
-        "bit_blast_ms": 2943.4414650000003,
+        "bit_blast_ms": 382.623181,
         "cnf_clauses": 2286149.0,
-        "cnf_encode_ms": 4536.311908,
+        "cnf_encode_ms": 735.107386,
         "cnf_variables": 617838.0
       },
       "dag_nodes": 80344,
-      "detail": "Timeout: pure-Rust BV backend timeout before SAT solve",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 6498,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.5._bit8_na6_nr3_paired.smt2",
@@ -6305,8 +6338,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 0,
-      "translate_ms": 7479,
+      "solve_ms": 1920,
+      "translate_ms": 1117,
       "tree_nodes": 544488
     },
     {
@@ -6314,13 +6347,13 @@
       "backend_stats": {
         "aig_inputs": 44886.0,
         "aig_nodes": 2271286.0,
-        "bit_blast_ms": 4136.639228,
+        "bit_blast_ms": 544.809812,
         "cnf_clauses": 3425244.0,
-        "cnf_encode_ms": 6870.463205,
+        "cnf_encode_ms": 1102.404805,
         "cnf_variables": 918910.0
       },
       "dag_nodes": 58844,
-      "detail": "Timeout: pure-Rust BV backend timeout before SAT solve",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 4776,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.6._bit16_na6_nr4_paired.smt2",
@@ -6372,8 +6405,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 0,
-      "translate_ms": 11007,
+      "solve_ms": 1436,
+      "translate_ms": 1647,
       "tree_nodes": 391863
     },
     {
@@ -6381,13 +6414,13 @@
       "backend_stats": {
         "aig_inputs": 17771.0,
         "aig_nodes": 846491.0,
-        "bit_blast_ms": 1574.644275,
+        "bit_blast_ms": 206.97927299999998,
         "cnf_clauses": 1254813.0,
-        "cnf_encode_ms": 2382.022731,
+        "cnf_encode_ms": 365.53823600000004,
         "cnf_variables": 339177.0
       },
       "dag_nodes": 44567,
-      "detail": "Timeout: pure-Rust BV backend timeout before SAT solve",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 3603,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.6._bit8_na6_nr3_paired.smt2",
@@ -6439,8 +6472,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 0,
-      "translate_ms": 3956,
+      "solve_ms": 2449,
+      "translate_ms": 572,
       "tree_nodes": 294682
     },
     {
@@ -6448,9 +6481,9 @@
       "backend_stats": {
         "aig_inputs": 84214.0,
         "aig_nodes": 4267115.0,
-        "bit_blast_ms": 8188.492363,
+        "bit_blast_ms": 1078.668374,
         "cnf_clauses": 6441885.0,
-        "cnf_encode_ms": 13191.693899,
+        "cnf_encode_ms": 2199.863139,
         "cnf_variables": 1727758.0
       },
       "dag_nodes": 109717,
@@ -6507,7 +6540,7 @@
         "rule_counts": {}
       },
       "solve_ms": 0,
-      "translate_ms": 21380,
+      "translate_ms": 3278,
       "tree_nodes": 746887
     },
     {
@@ -6515,13 +6548,13 @@
       "backend_stats": {
         "aig_inputs": 33205.0,
         "aig_nodes": 1587168.0,
-        "bit_blast_ms": 3066.566268,
+        "bit_blast_ms": 399.721255,
         "cnf_clauses": 2355662.0,
-        "cnf_encode_ms": 4694.579804,
+        "cnf_encode_ms": 761.368688,
         "cnf_variables": 636595.0
       },
       "dag_nodes": 82812,
-      "detail": "Timeout: pure-Rust BV backend timeout before SAT solve",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 6689,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.7._bit8_na6_nr3_paired.smt2",
@@ -6573,8 +6606,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 0,
-      "translate_ms": 7761,
+      "solve_ms": 1874,
+      "translate_ms": 1161,
       "tree_nodes": 561084
     },
     {
@@ -6582,13 +6615,13 @@
       "backend_stats": {
         "aig_inputs": 36276.0,
         "aig_nodes": 1835316.0,
-        "bit_blast_ms": 3304.241094,
+        "bit_blast_ms": 428.842831,
         "cnf_clauses": 2765916.0,
-        "cnf_encode_ms": 5415.237923000001,
+        "cnf_encode_ms": 869.205768,
         "cnf_variables": 742108.0
       },
       "dag_nodes": 47752,
-      "detail": "Timeout: pure-Rust BV backend timeout before SAT solve",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 3876,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.8._bit16_na6_nr4_paired.smt2",
@@ -6640,8 +6673,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 0,
-      "translate_ms": 8719,
+      "solve_ms": 1768,
+      "translate_ms": 1298,
       "tree_nodes": 314135
     },
     {
@@ -6649,13 +6682,13 @@
       "backend_stats": {
         "aig_inputs": 14393.0,
         "aig_nodes": 684809.0,
-        "bit_blast_ms": 1257.3771339999998,
+        "bit_blast_ms": 166.556354,
         "cnf_clauses": 1014349.0,
-        "cnf_encode_ms": 1902.888606,
+        "cnf_encode_ms": 298.546488,
         "cnf_variables": 274199.0
       },
       "dag_nodes": 36239,
-      "detail": "Timeout: pure-Rust BV backend timeout before SAT solve",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 2927,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.8._bit8_na6_nr3_paired.smt2",
@@ -6707,8 +6740,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 0,
-      "translate_ms": 3160,
+      "solve_ms": 2549,
+      "translate_ms": 465,
       "tree_nodes": 236378
     },
     {
@@ -6716,13 +6749,13 @@
       "backend_stats": {
         "aig_inputs": 56776.0,
         "aig_nodes": 2877803.0,
-        "bit_blast_ms": 5353.409648999999,
+        "bit_blast_ms": 676.758334,
         "cnf_clauses": 4340829.0,
-        "cnf_encode_ms": 8714.287765,
+        "cnf_encode_ms": 1402.070623,
         "cnf_variables": 1164352.0
       },
       "dag_nodes": 74371,
-      "detail": "Timeout: pure-Rust BV backend timeout before SAT solve",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 6016,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.9._bit16_na6_nr4_paired.smt2",
@@ -6774,8 +6807,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 0,
-      "translate_ms": 14067,
+      "solve_ms": 1017,
+      "translate_ms": 2078,
       "tree_nodes": 499129
     },
     {
@@ -6783,13 +6816,13 @@
       "backend_stats": {
         "aig_inputs": 22441.0,
         "aig_nodes": 1071936.0,
-        "bit_blast_ms": 2035.880917,
+        "bit_blast_ms": 254.25723900000003,
         "cnf_clauses": 1589390.0,
-        "cnf_encode_ms": 3068.063856,
+        "cnf_encode_ms": 468.54781499999996,
         "cnf_variables": 429535.0
       },
       "dag_nodes": 56274,
-      "detail": "Timeout: pure-Rust BV backend timeout before SAT solve",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 4535,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.9._bit8_na6_nr3_paired.smt2",
@@ -6841,8 +6874,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 0,
-      "translate_ms": 5103,
+      "solve_ms": 2305,
+      "translate_ms": 722,
       "tree_nodes": 375240
     },
     {
@@ -6850,13 +6883,13 @@
       "backend_stats": {
         "aig_inputs": 36962.0,
         "aig_nodes": 2474524.0,
-        "bit_blast_ms": 4851.768615,
+        "bit_blast_ms": 625.942364,
         "cnf_clauses": 3797614.0,
-        "cnf_encode_ms": 7475.478884,
+        "cnf_encode_ms": 1178.527471,
         "cnf_variables": 1019306.0
       },
       "dag_nodes": 77158,
-      "detail": "Timeout: pure-Rust BV backend timeout before SAT solve",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 3992,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/TCP/tcp_full_bit16_na13_nr4_paired.smt2",
@@ -6908,8 +6941,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 0,
-      "translate_ms": 12327,
+      "solve_ms": 1271,
+      "translate_ms": 1804,
       "tree_nodes": 587383
     },
     {
@@ -6917,13 +6950,13 @@
       "backend_stats": {
         "aig_inputs": 14619.0,
         "aig_nodes": 682673.0,
-        "bit_blast_ms": 1249.113177,
+        "bit_blast_ms": 164.10063599999998,
         "cnf_clauses": 1015727.0,
-        "cnf_encode_ms": 1893.226801,
+        "cnf_encode_ms": 284.282875,
         "cnf_variables": 274905.0
       },
       "dag_nodes": 35505,
-      "detail": "Timeout: pure-Rust BV backend timeout before SAT solve",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 2999,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/TCP/tcp_full_bit8_na6_nr3_paired.smt2",
@@ -6975,8 +7008,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 0,
-      "translate_ms": 3142,
+      "solve_ms": 2571,
+      "translate_ms": 448,
       "tree_nodes": 241086
     },
     {
@@ -6984,13 +7017,13 @@
       "backend_stats": {
         "aig_inputs": 19362.0,
         "aig_nodes": 908756.0,
-        "bit_blast_ms": 1640.0388480000001,
+        "bit_blast_ms": 215.76997,
         "cnf_clauses": 1354982.0,
-        "cnf_encode_ms": 2551.629324,
+        "cnf_encode_ms": 389.228375,
         "cnf_variables": 366938.0
       },
       "dag_nodes": 47206,
-      "detail": "Timeout: pure-Rust BV backend timeout before SAT solve",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 3976,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/TCP/tcp_full_bit8_na6_nr4_paired.smt2",
@@ -7042,8 +7075,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 0,
-      "translate_ms": 4191,
+      "solve_ms": 2418,
+      "translate_ms": 604,
       "tree_nodes": 321271
     },
     {
@@ -7051,13 +7084,13 @@
       "backend_stats": {
         "aig_inputs": 24030.0,
         "aig_nodes": 1150802.0,
-        "bit_blast_ms": 2103.288905,
+        "bit_blast_ms": 279.220974,
         "cnf_clauses": 1717371.0,
-        "cnf_encode_ms": 3298.415956,
+        "cnf_encode_ms": 508.55424999999997,
         "cnf_variables": 464088.0
       },
       "dag_nodes": 59908,
-      "detail": "Timeout: pure-Rust BV backend timeout before SAT solve",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 4906,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/TCP/tcp_full_split4_bit8_na6_nr4_paired.smt2",
@@ -7109,8 +7142,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 0,
-      "translate_ms": 5401,
+      "solve_ms": 2240,
+      "translate_ms": 787,
       "tree_nodes": 414976
     },
     {
@@ -7118,13 +7151,13 @@
       "backend_stats": {
         "aig_inputs": 4999.0,
         "aig_nodes": 221598.0,
-        "bit_blast_ms": 361.943324,
+        "bit_blast_ms": 48.738954,
         "cnf_clauses": 330002.0,
-        "cnf_encode_ms": 571.009019,
+        "cnf_encode_ms": 87.496532,
         "cnf_variables": 89605.0
       },
       "dag_nodes": 11670,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 1079,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/TCP/tcp_open_bit8_na6_nr3_paired.smt2",
@@ -7176,8 +7209,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 2041,
-      "translate_ms": 932,
+      "solve_ms": 2870,
+      "translate_ms": 136,
       "tree_nodes": 76836
     },
     {
@@ -7185,13 +7218,13 @@
       "backend_stats": {
         "aig_inputs": 6592.0,
         "aig_nodes": 294961.0,
-        "bit_blast_ms": 498.718694,
+        "bit_blast_ms": 67.221623,
         "cnf_clauses": 440217.0,
-        "cnf_encode_ms": 766.468537,
+        "cnf_encode_ms": 119.864354,
         "cnf_variables": 119568.0
       },
       "dag_nodes": 15511,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 1426,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/TCP/tcp_open_bit8_na6_nr4_paired.smt2",
@@ -7243,8 +7276,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 1700,
-      "translate_ms": 1265,
+      "solve_ms": 2820,
+      "translate_ms": 187,
       "tree_nodes": 102391
     },
     {
@@ -7252,13 +7285,13 @@
       "backend_stats": {
         "aig_inputs": 10872.0,
         "aig_nodes": 502006.0,
-        "bit_blast_ms": 877.459772,
+        "bit_blast_ms": 115.289191,
         "cnf_clauses": 748582.0,
-        "cnf_encode_ms": 1370.3398849999999,
+        "cnf_encode_ms": 200.639723,
         "cnf_variables": 202928.0
       },
       "dag_nodes": 26246,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 2276,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/VideoConf/videoconf_full_bit16_na13_nr4_paired.smt2",
@@ -7310,8 +7343,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 690,
-      "translate_ms": 2247,
+      "solve_ms": 2695,
+      "translate_ms": 315,
       "tree_nodes": 175531
     },
     {
@@ -7319,13 +7352,13 @@
       "backend_stats": {
         "aig_inputs": 8229.0,
         "aig_nodes": 377363.0,
-        "bit_blast_ms": 646.045867,
+        "bit_blast_ms": 84.519772,
         "cnf_clauses": 561407.0,
-        "cnf_encode_ms": 1005.983583,
+        "cnf_encode_ms": 149.043534,
         "cnf_variables": 152115.0
       },
       "dag_nodes": 19765,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 1719,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/VideoConf/videoconf_full_bit8_na6_nr3_paired.smt2",
@@ -7377,8 +7410,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 1302,
-      "translate_ms": 1652,
+      "solve_ms": 2776,
+      "translate_ms": 233,
       "tree_nodes": 131766
     },
     {
@@ -7386,13 +7419,13 @@
       "backend_stats": {
         "aig_inputs": 10872.0,
         "aig_nodes": 502006.0,
-        "bit_blast_ms": 896.454939,
+        "bit_blast_ms": 116.746437,
         "cnf_clauses": 748582.0,
-        "cnf_encode_ms": 1342.0062699999999,
+        "cnf_encode_ms": 190.96290199999999,
         "cnf_variables": 202928.0
       },
       "dag_nodes": 26246,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 2276,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/VideoConf/videoconf_full_bit8_na6_nr4_paired.smt2",
@@ -7444,8 +7477,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 701,
-      "translate_ms": 2238,
+      "solve_ms": 2704,
+      "translate_ms": 307,
       "tree_nodes": 175531
     },
     {
@@ -7453,13 +7486,13 @@
       "backend_stats": {
         "aig_inputs": 5645.0,
         "aig_nodes": 252689.0,
-        "bit_blast_ms": 424.60202400000003,
+        "bit_blast_ms": 57.117011000000005,
         "cnf_clauses": 376217.0,
-        "cnf_encode_ms": 646.509223,
+        "cnf_encode_ms": 104.557424,
         "cnf_variables": 102091.0
       },
       "dag_nodes": 13283,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 1207,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/VideoConf/videoconf_simple_bit8_na6_nr3_paired.smt2",
@@ -7511,8 +7544,8 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 1899,
-      "translate_ms": 1071,
+      "solve_ms": 2847,
+      "translate_ms": 161,
       "tree_nodes": 87810
     },
     {
@@ -7520,13 +7553,13 @@
       "backend_stats": {
         "aig_inputs": 13440.0,
         "aig_nodes": 637363.0,
-        "bit_blast_ms": 1139.014555,
+        "bit_blast_ms": 146.571045,
         "cnf_clauses": 951355.0,
-        "cnf_encode_ms": 1730.8879450000002,
+        "cnf_encode_ms": 272.11413899999997,
         "cnf_variables": 257210.0
       },
       "dag_nodes": 33389,
-      "detail": "Timeout: rustsat-batsat timeout",
+      "detail": "Timeout: pure-Rust BV backend timeout after SAT search",
       "distinct_symbols": 2786,
       "expected": "unknown",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/VideoConf/videoconf_split4_full_bit16_na13_nr4_paired.smt2",
@@ -7578,40 +7611,45 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 778,
-      "translate_ms": 2869,
+      "solve_ms": 2599,
+      "translate_ms": 418,
       "tree_nodes": 228001
     }
   ],
   "summary": {
-    "agree": 2,
+    "agree": 3,
+    "blocker_buckets": {
+      "unknown:EncodingBudget": 13,
+      "unknown:NodeBudget": 10,
+      "unknown:Timeout": 87
+    },
     "disagree": 0,
     "errors": 0,
     "files": 113,
     "layer_attribution": {
-      "bit_blast_s": 0.028179307,
-      "bit_blast_share": 0.04866737303908926,
-      "cnf_encode_s": 0.046527966000000004,
-      "cnf_encode_share": 0.08035662048296865,
-      "instances": 2,
-      "model_lift_s": 0.006904548999999999,
-      "model_lift_share": 0.0119245750738182,
+      "bit_blast_s": 0.024135920999999998,
+      "bit_blast_share": 0.015246588919261145,
+      "cnf_encode_s": 0.040625813000000004,
+      "cnf_encode_share": 0.025663204247386103,
+      "instances": 3,
+      "model_lift_s": 0.003919854,
+      "model_lift_share": 0.0024761600173252756,
       "sat_dominates": true,
       "sat_dominates_threshold": 0.5,
-      "solve_s": 0.49740663,
-      "solve_share": 0.8590514314041239,
-      "total_pipeline_s": 0.579018452
+      "solve_s": 1.5143558460000002,
+      "solve_share": 0.9566140468160275,
+      "total_pipeline_s": 1.5830374340000002
     },
     "model_replay_failures": 0,
     "oracle": {
-      "agree": 2,
+      "agree": 3,
       "backend": "z3 4.13.3.0",
-      "compared": 2,
+      "compared": 3,
       "disagree": 0,
       "enabled": true,
-      "skipped": 111
+      "skipped": 110
     },
-    "par2_mean_s": 5.898929366831858,
+    "par2_mean_s": 5.854717145433629,
     "query_plan": {
       "original_dag_nodes": 8706521,
       "original_tree_nodes": 58335915,
@@ -7632,8 +7670,8 @@
       "output_tree_nodes": 0,
       "sat_unsat_conflicts": 0
     },
-    "sat": 2,
-    "unknown": 111,
+    "sat": 3,
+    "unknown": 110,
     "unsat": 0,
     "unsupported": 0
   },

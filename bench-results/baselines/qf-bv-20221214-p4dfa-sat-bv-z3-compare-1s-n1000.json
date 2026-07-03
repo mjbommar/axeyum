@@ -2,9 +2,13 @@
   "config": {
     "backend": "axeyum-sat-bv rustsat-batsat",
     "backend_kind": "sat-bv",
+    "cnf_clause_budget": null,
+    "cnf_inprocessing": false,
+    "cnf_variable_budget": null,
+    "cnf_vivify": false,
     "compare_backend": "z3 4.13.3.0",
     "compare_z3": true,
-    "config_hash": "de49a48fe0141b11",
+    "config_hash": "0eed07f578c4b73e",
     "corpus": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen",
     "corpus_hash": "021a6a885828fd6e",
     "corpus_source": "SMT-LIB 2024 non-incremental QF_BV archive, Zenodo record 11061097, file QF_BV.tar.zst",
@@ -15,9 +19,20 @@
       "parallelism": 16
     },
     "harness": "axeyum-bench 0.1.0",
+    "jobs": 1,
     "limit": null,
     "logic": "QF_BV",
+    "native_cdcl": false,
     "node_budget": 1000,
+    "preprocess": false,
+    "query_plan": {
+      "mode": "full",
+      "refine_adaptive_batch": false,
+      "refine_batch": 1,
+      "refine_rounds": 16,
+      "refine_select": "first",
+      "sat_replay_failure_policy": "soundness-alarm"
+    },
     "rewrite": {
       "enabled_rule_ids": [],
       "mode": "off",
@@ -58,19 +73,19 @@
           "digest": "b596a3afc677a89b",
           "tree_nodes": 147984
         },
-        "slice_probe": {
-          "dropped_terms": 1799,
-          "planned_terms": 83,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1882,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 83,
+            "assertions": 1882,
             "assumptions": 0,
-            "dag_nodes": 1056,
-            "digest": "e607503c54ba999b",
-            "tree_nodes": 7053
+            "dag_nodes": 22012,
+            "digest": "b596a3afc677a89b",
+            "tree_nodes": 147984
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -118,19 +133,19 @@
           "digest": "91832a9e196743b9",
           "tree_nodes": 1330530
         },
-        "slice_probe": {
-          "dropped_terms": 15722,
-          "planned_terms": 731,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 16453,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 731,
+            "assertions": 16453,
             "assumptions": 0,
-            "dag_nodes": 8976,
-            "digest": "d185862d4d163d55",
-            "tree_nodes": 63429
+            "dag_nodes": 192193,
+            "digest": "91832a9e196743b9",
+            "tree_nodes": 1330530
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -178,19 +193,19 @@
           "digest": "f39b9c1aeccc888f",
           "tree_nodes": 98664
         },
-        "slice_probe": {
-          "dropped_terms": 1211,
-          "planned_terms": 56,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1267,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 56,
+            "assertions": 1267,
             "assumptions": 0,
-            "dag_nodes": 720,
-            "digest": "7fbd64a61d72b5d0",
-            "tree_nodes": 4704
+            "dag_nodes": 14842,
+            "digest": "f39b9c1aeccc888f",
+            "tree_nodes": 98664
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -238,19 +253,19 @@
           "digest": "450ac8d28050b2eb",
           "tree_nodes": 131503
         },
-        "slice_probe": {
-          "dropped_terms": 1610,
-          "planned_terms": 56,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1666,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 56,
+            "assertions": 1666,
             "assumptions": 0,
-            "dag_nodes": 720,
-            "digest": "7fbd64a61d72b5d0",
-            "tree_nodes": 4704
+            "dag_nodes": 19739,
+            "digest": "450ac8d28050b2eb",
+            "tree_nodes": 131503
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -298,19 +313,19 @@
           "digest": "62fc74ca6857b9aa",
           "tree_nodes": 443148
         },
-        "slice_probe": {
-          "dropped_terms": 5201,
-          "planned_terms": 245,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 5446,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 245,
+            "assertions": 5446,
             "assumptions": 0,
-            "dag_nodes": 3072,
-            "digest": "b35a3dc418c8e89e",
-            "tree_nodes": 21147
+            "dag_nodes": 64690,
+            "digest": "62fc74ca6857b9aa",
+            "tree_nodes": 443148
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -358,19 +373,19 @@
           "digest": "5871f2f80efac86e",
           "tree_nodes": 590710
         },
-        "slice_probe": {
-          "dropped_terms": 6923,
-          "planned_terms": 245,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 7168,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 245,
+            "assertions": 7168,
             "assumptions": 0,
-            "dag_nodes": 3072,
-            "digest": "b35a3dc418c8e89e",
-            "tree_nodes": 21147
+            "dag_nodes": 86093,
+            "digest": "5871f2f80efac86e",
+            "tree_nodes": 590710
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -418,19 +433,19 @@
           "digest": "c802d773fdeda09f",
           "tree_nodes": 1771566
         },
-        "slice_probe": {
-          "dropped_terms": 20540,
-          "planned_terms": 974,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 21514,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 974,
+            "assertions": 21514,
             "assumptions": 0,
-            "dag_nodes": 12048,
-            "digest": "d5ba9a33b5e9668b",
-            "tree_nodes": 84570
+            "dag_nodes": 255865,
+            "digest": "c802d773fdeda09f",
+            "tree_nodes": 1771566
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -478,19 +493,19 @@
           "digest": "23dd09fc88841161",
           "tree_nodes": 2361631
         },
-        "slice_probe": {
-          "dropped_terms": 27365,
-          "planned_terms": 974,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 28339,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 974,
+            "assertions": 28339,
             "assumptions": 0,
-            "dag_nodes": 12048,
-            "digest": "d5ba9a33b5e9668b",
-            "tree_nodes": 84570
+            "dag_nodes": 340646,
+            "digest": "23dd09fc88841161",
+            "tree_nodes": 2361631
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -518,24 +533,24 @@
       "assertions": 71,
       "backend_stats": {
         "aig_inputs": 310.0,
-        "aig_nodes": 6761.0,
-        "bit_blast_ms": 7.095531,
-        "cnf_clauses": 19421.0,
-        "cnf_encode_ms": 2.2482349999999998,
-        "cnf_variables": 6760.0
+        "aig_nodes": 6155.0,
+        "bit_blast_ms": 1.041238,
+        "cnf_clauses": 8016.0,
+        "cnf_encode_ms": 1.6506509999999999,
+        "cnf_variables": 2064.0
       },
       "dag_nodes": 437,
       "distinct_symbols": 79,
       "expected": "sat",
       "file": "corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/Composition/simple_bit8_na1_nr1_twocond.smt2",
       "max_depth": 11,
-      "model_lift_ms": 2,
+      "model_lift_ms": 0,
       "oracle": {
         "backend_kind": "z3",
         "backend_stats": {
           "max memory": 43.53,
           "memory": 34.21,
-          "num allocs": 549073.0,
+          "num allocs": 547998.0,
           "rlimit count": 45105.0,
           "sat backjumps": 23.0,
           "sat conflicts": 23.0,
@@ -555,8 +570,8 @@
         "enabled": true,
         "model_lift_ms": 0,
         "outcome": "sat",
-        "solve_ms": 7,
-        "translate_ms": 1
+        "solve_ms": 8,
+        "translate_ms": 0
       },
       "outcome": "sat",
       "query_plan": {
@@ -567,19 +582,19 @@
           "digest": "492bd878392569e6",
           "tree_nodes": 1831
         },
-        "slice_probe": {
-          "dropped_terms": 60,
-          "planned_terms": 11,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 71,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 11,
+            "assertions": 71,
             "assumptions": 0,
-            "dag_nodes": 137,
-            "digest": "bddc7ba29c1dd66a",
-            "tree_nodes": 681
+            "dag_nodes": 437,
+            "digest": "492bd878392569e6",
+            "tree_nodes": 1831
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -599,8 +614,8 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 32,
-      "translate_ms": 9,
+      "solve_ms": 0,
+      "translate_ms": 2,
       "tree_nodes": 1831
     },
     {
@@ -627,19 +642,19 @@
           "digest": "34191b3c284298d8",
           "tree_nodes": 6010
         },
-        "slice_probe": {
-          "dropped_terms": 172,
-          "planned_terms": 32,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 204,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 32,
+            "assertions": 204,
             "assumptions": 0,
-            "dag_nodes": 405,
-            "digest": "8508a74e046210ca",
-            "tree_nodes": 2256
+            "dag_nodes": 1296,
+            "digest": "34191b3c284298d8",
+            "tree_nodes": 6010
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -687,19 +702,19 @@
           "digest": "a55c89ffa4c9a368",
           "tree_nodes": 54906
         },
-        "slice_probe": {
-          "dropped_terms": 702,
-          "planned_terms": 32,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 734,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 32,
+            "assertions": 734,
             "assumptions": 0,
-            "dag_nodes": 416,
-            "digest": "104dddcdc59b110d",
-            "tree_nodes": 2616
+            "dag_nodes": 8453,
+            "digest": "a55c89ffa4c9a368",
+            "tree_nodes": 54906
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -747,19 +762,19 @@
           "digest": "2a3bcc7defe5e55d",
           "tree_nodes": 30504
         },
-        "slice_probe": {
-          "dropped_terms": 498,
-          "planned_terms": 32,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 530,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 32,
+            "assertions": 530,
             "assumptions": 0,
-            "dag_nodes": 405,
-            "digest": "8508a74e046210ca",
-            "tree_nodes": 2256
+            "dag_nodes": 5616,
+            "digest": "2a3bcc7defe5e55d",
+            "tree_nodes": 30504
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -807,19 +822,19 @@
           "digest": "0964aa592fb364fc",
           "tree_nodes": 165084
         },
-        "slice_probe": {
-          "dropped_terms": 2105,
-          "planned_terms": 92,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 2197,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 92,
+            "assertions": 2197,
             "assumptions": 0,
-            "dag_nodes": 1184,
-            "digest": "3edaa79ae3e2cdbf",
-            "tree_nodes": 7836
+            "dag_nodes": 24876,
+            "digest": "0964aa592fb364fc",
+            "tree_nodes": 165084
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -867,19 +882,19 @@
           "digest": "869223df8988cb91",
           "tree_nodes": 165084
         },
-        "slice_probe": {
-          "dropped_terms": 2105,
-          "planned_terms": 92,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 2197,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 92,
+            "assertions": 2197,
             "assumptions": 0,
-            "dag_nodes": 1184,
-            "digest": "d035d1396ec99368",
-            "tree_nodes": 7836
+            "dag_nodes": 24876,
+            "digest": "869223df8988cb91",
+            "tree_nodes": 165084
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -927,19 +942,19 @@
           "digest": "5406fd12062496aa",
           "tree_nodes": 165084
         },
-        "slice_probe": {
-          "dropped_terms": 2105,
-          "planned_terms": 92,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 2197,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 92,
+            "assertions": 2197,
             "assumptions": 0,
-            "dag_nodes": 1184,
-            "digest": "8f1893817f473502",
-            "tree_nodes": 7836
+            "dag_nodes": 24876,
+            "digest": "5406fd12062496aa",
+            "tree_nodes": 165084
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -987,19 +1002,19 @@
           "digest": "e45a12e638364a3d",
           "tree_nodes": 132288
         },
-        "slice_probe": {
-          "dropped_terms": 1727,
-          "planned_terms": 74,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1801,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 74,
+            "assertions": 1801,
             "assumptions": 0,
-            "dag_nodes": 964,
-            "digest": "8abc675415ab1701",
-            "tree_nodes": 6270
+            "dag_nodes": 20174,
+            "digest": "e45a12e638364a3d",
+            "tree_nodes": 132288
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -1047,19 +1062,19 @@
           "digest": "b07f1627d4905c64",
           "tree_nodes": 99492
         },
-        "slice_probe": {
-          "dropped_terms": 1349,
-          "planned_terms": 56,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1405,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 56,
+            "assertions": 1405,
             "assumptions": 0,
-            "dag_nodes": 744,
-            "digest": "8dd443e7ebd189b4",
-            "tree_nodes": 4704
+            "dag_nodes": 15472,
+            "digest": "b07f1627d4905c64",
+            "tree_nodes": 99492
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -1107,19 +1122,19 @@
           "digest": "ef1d538a3c43d1d2",
           "tree_nodes": 132288
         },
-        "slice_probe": {
-          "dropped_terms": 1727,
-          "planned_terms": 74,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1801,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 74,
+            "assertions": 1801,
             "assumptions": 0,
-            "dag_nodes": 964,
-            "digest": "b34f54524e00954f",
-            "tree_nodes": 6270
+            "dag_nodes": 20174,
+            "digest": "ef1d538a3c43d1d2",
+            "tree_nodes": 132288
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -1167,19 +1182,19 @@
           "digest": "9fc76fe03fbbec2a",
           "tree_nodes": 165084
         },
-        "slice_probe": {
-          "dropped_terms": 2105,
-          "planned_terms": 92,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 2197,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 92,
+            "assertions": 2197,
             "assumptions": 0,
-            "dag_nodes": 1184,
-            "digest": "0b50e51b6b25e4f0",
-            "tree_nodes": 7836
+            "dag_nodes": 24876,
+            "digest": "9fc76fe03fbbec2a",
+            "tree_nodes": 165084
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -1227,19 +1242,19 @@
           "digest": "7ce4ec7118671d15",
           "tree_nodes": 132288
         },
-        "slice_probe": {
-          "dropped_terms": 1727,
-          "planned_terms": 74,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1801,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 74,
+            "assertions": 1801,
             "assumptions": 0,
-            "dag_nodes": 964,
-            "digest": "ce03784b1ee3b401",
-            "tree_nodes": 6270
+            "dag_nodes": 20174,
+            "digest": "7ce4ec7118671d15",
+            "tree_nodes": 132288
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -1287,19 +1302,19 @@
           "digest": "e7eee61d9566c010",
           "tree_nodes": 132288
         },
-        "slice_probe": {
-          "dropped_terms": 1727,
-          "planned_terms": 74,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1801,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 74,
+            "assertions": 1801,
             "assumptions": 0,
-            "dag_nodes": 964,
-            "digest": "f82860c72bd2f557",
-            "tree_nodes": 6270
+            "dag_nodes": 20174,
+            "digest": "e7eee61d9566c010",
+            "tree_nodes": 132288
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -1347,19 +1362,19 @@
           "digest": "3a722607aa834ef2",
           "tree_nodes": 132288
         },
-        "slice_probe": {
-          "dropped_terms": 1727,
-          "planned_terms": 74,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1801,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 74,
+            "assertions": 1801,
             "assumptions": 0,
-            "dag_nodes": 964,
-            "digest": "5d10ff858b9b7a77",
-            "tree_nodes": 6270
+            "dag_nodes": 20174,
+            "digest": "3a722607aa834ef2",
+            "tree_nodes": 132288
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -1407,19 +1422,19 @@
           "digest": "f976ce598139c511",
           "tree_nodes": 73336
         },
-        "slice_probe": {
-          "dropped_terms": 947,
-          "planned_terms": 42,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 989,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 42,
+            "assertions": 989,
             "assumptions": 0,
-            "dag_nodes": 548,
-            "digest": "64b381eb019d7850",
-            "tree_nodes": 3486
+            "dag_nodes": 11258,
+            "digest": "f976ce598139c511",
+            "tree_nodes": 73336
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -1467,19 +1482,19 @@
           "digest": "fc3f3698f8dd1644",
           "tree_nodes": 73336
         },
-        "slice_probe": {
-          "dropped_terms": 947,
-          "planned_terms": 42,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 989,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 42,
+            "assertions": 989,
             "assumptions": 0,
-            "dag_nodes": 548,
-            "digest": "a6a06834c084dc7d",
-            "tree_nodes": 3486
+            "dag_nodes": 11258,
+            "digest": "fc3f3698f8dd1644",
+            "tree_nodes": 73336
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -1527,19 +1542,19 @@
           "digest": "a6581cfde4e4242d",
           "tree_nodes": 91556
         },
-        "slice_probe": {
-          "dropped_terms": 1157,
-          "planned_terms": 52,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1209,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 52,
+            "assertions": 1209,
             "assumptions": 0,
-            "dag_nodes": 672,
-            "digest": "f86cc57ad2605743",
-            "tree_nodes": 4356
+            "dag_nodes": 13888,
+            "digest": "a6581cfde4e4242d",
+            "tree_nodes": 91556
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -1587,19 +1602,19 @@
           "digest": "44222eb96ad192cc",
           "tree_nodes": 55116
         },
-        "slice_probe": {
-          "dropped_terms": 737,
-          "planned_terms": 32,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 769,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 32,
+            "assertions": 769,
             "assumptions": 0,
-            "dag_nodes": 424,
-            "digest": "6818ea53f8db4ae9",
-            "tree_nodes": 2616
+            "dag_nodes": 8628,
+            "digest": "44222eb96ad192cc",
+            "tree_nodes": 55116
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -1647,19 +1662,19 @@
           "digest": "499e3ed00913c6e8",
           "tree_nodes": 36896
         },
-        "slice_probe": {
-          "dropped_terms": 527,
-          "planned_terms": 22,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 549,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 22,
+            "assertions": 549,
             "assumptions": 0,
-            "dag_nodes": 300,
-            "digest": "f502a280031981ca",
-            "tree_nodes": 1746
+            "dag_nodes": 5998,
+            "digest": "499e3ed00913c6e8",
+            "tree_nodes": 36896
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -1707,19 +1722,19 @@
           "digest": "2e6a258d1b318705",
           "tree_nodes": 73336
         },
-        "slice_probe": {
-          "dropped_terms": 947,
-          "planned_terms": 42,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 989,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 42,
+            "assertions": 989,
             "assumptions": 0,
-            "dag_nodes": 548,
-            "digest": "abd54bc5cdf7d4fd",
-            "tree_nodes": 3486
+            "dag_nodes": 11258,
+            "digest": "2e6a258d1b318705",
+            "tree_nodes": 73336
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -1767,19 +1782,19 @@
           "digest": "ae6a38b4e8813a66",
           "tree_nodes": 55116
         },
-        "slice_probe": {
-          "dropped_terms": 737,
-          "planned_terms": 32,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 769,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 32,
+            "assertions": 769,
             "assumptions": 0,
-            "dag_nodes": 424,
-            "digest": "b18e6b0ef9e8dd8b",
-            "tree_nodes": 2616
+            "dag_nodes": 8628,
+            "digest": "ae6a38b4e8813a66",
+            "tree_nodes": 55116
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -1827,19 +1842,19 @@
           "digest": "a1336417698cfd72",
           "tree_nodes": 36896
         },
-        "slice_probe": {
-          "dropped_terms": 527,
-          "planned_terms": 22,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 549,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 22,
+            "assertions": 549,
             "assumptions": 0,
-            "dag_nodes": 300,
-            "digest": "85edc44c17894926",
-            "tree_nodes": 1746
+            "dag_nodes": 5998,
+            "digest": "a1336417698cfd72",
+            "tree_nodes": 36896
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -1887,19 +1902,19 @@
           "digest": "49cb79e3b5f4a256",
           "tree_nodes": 73336
         },
-        "slice_probe": {
-          "dropped_terms": 947,
-          "planned_terms": 42,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 989,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 42,
+            "assertions": 989,
             "assumptions": 0,
-            "dag_nodes": 548,
-            "digest": "6c8942a72b5ec6c5",
-            "tree_nodes": 3486
+            "dag_nodes": 11258,
+            "digest": "49cb79e3b5f4a256",
+            "tree_nodes": 73336
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -1947,19 +1962,19 @@
           "digest": "240b29e39d841560",
           "tree_nodes": 73336
         },
-        "slice_probe": {
-          "dropped_terms": 947,
-          "planned_terms": 42,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 989,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 42,
+            "assertions": 989,
             "assumptions": 0,
-            "dag_nodes": 548,
-            "digest": "1c5376b394fc364b",
-            "tree_nodes": 3486
+            "dag_nodes": 11258,
+            "digest": "240b29e39d841560",
+            "tree_nodes": 73336
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -2007,19 +2022,19 @@
           "digest": "50ff2d4a1037f2d6",
           "tree_nodes": 484362
         },
-        "slice_probe": {
-          "dropped_terms": 6134,
-          "planned_terms": 266,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 6400,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 266,
+            "assertions": 6400,
             "assumptions": 0,
-            "dag_nodes": 3344,
-            "digest": "78feee557b6cdaef",
-            "tree_nodes": 22974
+            "dag_nodes": 71757,
+            "digest": "50ff2d4a1037f2d6",
+            "tree_nodes": 484362
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -2067,19 +2082,19 @@
           "digest": "0881ed71dc8f6907",
           "tree_nodes": 499136
         },
-        "slice_probe": {
-          "dropped_terms": 6335,
-          "planned_terms": 274,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 6609,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 274,
+            "assertions": 6609,
             "assumptions": 0,
-            "dag_nodes": 3444,
-            "digest": "a3b6fc624dc27bf0",
-            "tree_nodes": 23670
+            "dag_nodes": 73966,
+            "digest": "0881ed71dc8f6907",
+            "tree_nodes": 499136
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -2127,19 +2142,19 @@
           "digest": "0ea7c9254e196e0d",
           "tree_nodes": 437188
         },
-        "slice_probe": {
-          "dropped_terms": 5621,
-          "planned_terms": 240,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 5861,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 240,
+            "assertions": 5861,
             "assumptions": 0,
-            "dag_nodes": 3032,
-            "digest": "3028a3b47b546a2c",
-            "tree_nodes": 20712
+            "dag_nodes": 65120,
+            "digest": "0ea7c9254e196e0d",
+            "tree_nodes": 437188
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -2187,19 +2202,19 @@
           "digest": "8ba3f6d446cc0e73",
           "tree_nodes": 561084
         },
-        "slice_probe": {
-          "dropped_terms": 7049,
-          "planned_terms": 308,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 7357,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 308,
+            "assertions": 7357,
             "assumptions": 0,
-            "dag_nodes": 3856,
-            "digest": "9fabf1e6653e2cc7",
-            "tree_nodes": 26628
+            "dag_nodes": 82812,
+            "digest": "8ba3f6d446cc0e73",
+            "tree_nodes": 561084
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -2247,19 +2262,19 @@
           "digest": "767ad586fe4167ab",
           "tree_nodes": 251344
         },
-        "slice_probe": {
-          "dropped_terms": 3479,
-          "planned_terms": 138,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 3617,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 138,
+            "assertions": 3617,
             "assumptions": 0,
-            "dag_nodes": 1796,
-            "digest": "14fe47f507a93c62",
-            "tree_nodes": 11838
+            "dag_nodes": 38582,
+            "digest": "767ad586fe4167ab",
+            "tree_nodes": 251344
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -2307,19 +2322,19 @@
           "digest": "1df4806595ef5d46",
           "tree_nodes": 561084
         },
-        "slice_probe": {
-          "dropped_terms": 7049,
-          "planned_terms": 308,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 7357,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 308,
+            "assertions": 7357,
             "assumptions": 0,
-            "dag_nodes": 3856,
-            "digest": "91a39383d1b467cc",
-            "tree_nodes": 26628
+            "dag_nodes": 82812,
+            "digest": "1df4806595ef5d46",
+            "tree_nodes": 561084
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -2367,19 +2382,19 @@
           "digest": "c970ba3f27f0484a",
           "tree_nodes": 313292
         },
-        "slice_probe": {
-          "dropped_terms": 4193,
-          "planned_terms": 172,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 4365,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 172,
+            "assertions": 4365,
             "assumptions": 0,
-            "dag_nodes": 2208,
-            "digest": "aab900ba4bda04d9",
-            "tree_nodes": 14796
+            "dag_nodes": 47428,
+            "digest": "c970ba3f27f0484a",
+            "tree_nodes": 313292
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -2427,19 +2442,19 @@
           "digest": "3e55a7b24352f754",
           "tree_nodes": 251344
         },
-        "slice_probe": {
-          "dropped_terms": 3479,
-          "planned_terms": 138,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 3617,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 138,
+            "assertions": 3617,
             "assumptions": 0,
-            "dag_nodes": 1796,
-            "digest": "d8362cc946157df2",
-            "tree_nodes": 11838
+            "dag_nodes": 38582,
+            "digest": "3e55a7b24352f754",
+            "tree_nodes": 251344
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -2487,19 +2502,19 @@
           "digest": "50b311dc117203d4",
           "tree_nodes": 561084
         },
-        "slice_probe": {
-          "dropped_terms": 7049,
-          "planned_terms": 308,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 7357,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 308,
+            "assertions": 7357,
             "assumptions": 0,
-            "dag_nodes": 3856,
-            "digest": "84c9be03fe907d28",
-            "tree_nodes": 26628
+            "dag_nodes": 82812,
+            "digest": "50b311dc117203d4",
+            "tree_nodes": 561084
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -2547,19 +2562,19 @@
           "digest": "33ea744b42bbcf96",
           "tree_nodes": 561084
         },
-        "slice_probe": {
-          "dropped_terms": 7049,
-          "planned_terms": 308,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 7357,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 308,
+            "assertions": 7357,
             "assumptions": 0,
-            "dag_nodes": 3856,
-            "digest": "c5856e39899121cb",
-            "tree_nodes": 26628
+            "dag_nodes": 82812,
+            "digest": "33ea744b42bbcf96",
+            "tree_nodes": 561084
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -2607,19 +2622,19 @@
           "digest": "4f5e05b949b23ad4",
           "tree_nodes": 217820
         },
-        "slice_probe": {
-          "dropped_terms": 2697,
-          "planned_terms": 121,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 2818,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 121,
+            "assertions": 2818,
             "assumptions": 0,
-            "dag_nodes": 1536,
-            "digest": "5bc72f856953b0c7",
-            "tree_nodes": 10359
+            "dag_nodes": 32378,
+            "digest": "4f5e05b949b23ad4",
+            "tree_nodes": 217820
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -2667,19 +2682,19 @@
           "digest": "c994d0d3959a12e7",
           "tree_nodes": 197880
         },
-        "slice_probe": {
-          "dropped_terms": 2483,
-          "planned_terms": 110,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 2593,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 110,
+            "assertions": 2593,
             "assumptions": 0,
-            "dag_nodes": 1404,
-            "digest": "936654512fa555af",
-            "tree_nodes": 9402
+            "dag_nodes": 29578,
+            "digest": "c994d0d3959a12e7",
+            "tree_nodes": 197880
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -2727,19 +2742,19 @@
           "digest": "aff4946ac1bac424",
           "tree_nodes": 197880
         },
-        "slice_probe": {
-          "dropped_terms": 2483,
-          "planned_terms": 110,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 2593,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 110,
+            "assertions": 2593,
             "assumptions": 0,
-            "dag_nodes": 1404,
-            "digest": "97c8bcfaba407cd3",
-            "tree_nodes": 9402
+            "dag_nodes": 29578,
+            "digest": "aff4946ac1bac424",
+            "tree_nodes": 197880
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -2787,19 +2802,19 @@
           "digest": "4554947a81195423",
           "tree_nodes": 263472
         },
-        "slice_probe": {
-          "dropped_terms": 3239,
-          "planned_terms": 146,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 3385,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 146,
+            "assertions": 3385,
             "assumptions": 0,
-            "dag_nodes": 1844,
-            "digest": "34c3fc055d206797",
-            "tree_nodes": 12534
+            "dag_nodes": 38982,
+            "digest": "4554947a81195423",
+            "tree_nodes": 263472
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -2847,19 +2862,19 @@
           "digest": "c63c611ef73ab7b6",
           "tree_nodes": 132288
         },
-        "slice_probe": {
-          "dropped_terms": 1727,
-          "planned_terms": 74,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1801,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 74,
+            "assertions": 1801,
             "assumptions": 0,
-            "dag_nodes": 964,
-            "digest": "d86da3887a0a8c4e",
-            "tree_nodes": 6270
+            "dag_nodes": 20174,
+            "digest": "c63c611ef73ab7b6",
+            "tree_nodes": 132288
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -2907,19 +2922,19 @@
           "digest": "ef9fd25df88594db",
           "tree_nodes": 197880
         },
-        "slice_probe": {
-          "dropped_terms": 2483,
-          "planned_terms": 110,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 2593,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 110,
+            "assertions": 2593,
             "assumptions": 0,
-            "dag_nodes": 1404,
-            "digest": "885fc96f1a8638b3",
-            "tree_nodes": 9402
+            "dag_nodes": 29578,
+            "digest": "ef9fd25df88594db",
+            "tree_nodes": 197880
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -2967,19 +2982,19 @@
           "digest": "6f59738447f4f041",
           "tree_nodes": 165084
         },
-        "slice_probe": {
-          "dropped_terms": 2105,
-          "planned_terms": 92,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 2197,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 92,
+            "assertions": 2197,
             "assumptions": 0,
-            "dag_nodes": 1184,
-            "digest": "fc00e334118974fd",
-            "tree_nodes": 7836
+            "dag_nodes": 24876,
+            "digest": "6f59738447f4f041",
+            "tree_nodes": 165084
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -3027,19 +3042,19 @@
           "digest": "be835eaf963b587b",
           "tree_nodes": 132288
         },
-        "slice_probe": {
-          "dropped_terms": 1727,
-          "planned_terms": 74,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1801,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 74,
+            "assertions": 1801,
             "assumptions": 0,
-            "dag_nodes": 964,
-            "digest": "e29cc4d347a7298d",
-            "tree_nodes": 6270
+            "dag_nodes": 20174,
+            "digest": "be835eaf963b587b",
+            "tree_nodes": 132288
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -3087,19 +3102,19 @@
           "digest": "f34e90c6ff421e14",
           "tree_nodes": 197880
         },
-        "slice_probe": {
-          "dropped_terms": 2483,
-          "planned_terms": 110,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 2593,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 110,
+            "assertions": 2593,
             "assumptions": 0,
-            "dag_nodes": 1404,
-            "digest": "1bdc5133ff8ff778",
-            "tree_nodes": 9402
+            "dag_nodes": 29578,
+            "digest": "f34e90c6ff421e14",
+            "tree_nodes": 197880
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -3147,19 +3162,19 @@
           "digest": "206090ce2028fe9d",
           "tree_nodes": 197880
         },
-        "slice_probe": {
-          "dropped_terms": 2483,
-          "planned_terms": 110,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 2593,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 110,
+            "assertions": 2593,
             "assumptions": 0,
-            "dag_nodes": 1404,
-            "digest": "6c1b6720faf04e6c",
-            "tree_nodes": 9402
+            "dag_nodes": 29578,
+            "digest": "206090ce2028fe9d",
+            "tree_nodes": 197880
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -3207,19 +3222,19 @@
           "digest": "c26d25803c538d5e",
           "tree_nodes": 398350
         },
-        "slice_probe": {
-          "dropped_terms": 5084,
-          "planned_terms": 219,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 5303,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 219,
+            "assertions": 5303,
             "assumptions": 0,
-            "dag_nodes": 2768,
-            "digest": "97e7045c0b04cf2b",
-            "tree_nodes": 18885
+            "dag_nodes": 59279,
+            "digest": "c26d25803c538d5e",
+            "tree_nodes": 398350
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -3267,19 +3282,19 @@
           "digest": "7b5b57f310503f3c",
           "tree_nodes": 1236181
         },
-        "slice_probe": {
-          "dropped_terms": 16148,
-          "planned_terms": 506,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 16654,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 506,
+            "assertions": 16654,
             "assumptions": 0,
-            "dag_nodes": 6344,
-            "digest": "4319ec950ddd7101",
-            "tree_nodes": 43854
+            "dag_nodes": 183601,
+            "digest": "7b5b57f310503f3c",
+            "tree_nodes": 1236181
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -3327,19 +3342,19 @@
           "digest": "2824e0b444344ddc",
           "tree_nodes": 1274485
         },
-        "slice_probe": {
-          "dropped_terms": 18164,
-          "planned_terms": 506,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 18670,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 506,
+            "assertions": 18670,
             "assumptions": 0,
-            "dag_nodes": 6344,
-            "digest": "d1c378add1ef394e",
-            "tree_nodes": 43854
+            "dag_nodes": 195705,
+            "digest": "2824e0b444344ddc",
+            "tree_nodes": 1274485
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -3387,19 +3402,19 @@
           "digest": "4f0fbe0f9537f9f5",
           "tree_nodes": 684980
         },
-        "slice_probe": {
-          "dropped_terms": 8477,
-          "planned_terms": 376,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 8853,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 376,
+            "assertions": 8853,
             "assumptions": 0,
-            "dag_nodes": 4680,
-            "digest": "a8e6150465f43778",
-            "tree_nodes": 32544
+            "dag_nodes": 100504,
+            "digest": "4f0fbe0f9537f9f5",
+            "tree_nodes": 684980
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -3447,19 +3462,19 @@
           "digest": "9562de4efba740b2",
           "tree_nodes": 1776571
         },
-        "slice_probe": {
-          "dropped_terms": 22556,
-          "planned_terms": 728,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 23284,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 728,
+            "assertions": 23284,
             "assumptions": 0,
-            "dag_nodes": 9032,
-            "digest": "ef3643107dd97a2a",
-            "tree_nodes": 63168
+            "dag_nodes": 261073,
+            "digest": "9562de4efba740b2",
+            "tree_nodes": 1776571
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -3507,19 +3522,19 @@
           "digest": "29c4b9309d366177",
           "tree_nodes": 1831747
         },
-        "slice_probe": {
-          "dropped_terms": 25460,
-          "planned_terms": 728,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 26188,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 728,
+            "assertions": 26188,
             "assumptions": 0,
-            "dag_nodes": 9032,
-            "digest": "aab549e9b0e9e7a2",
-            "tree_nodes": 63168
+            "dag_nodes": 278505,
+            "digest": "29c4b9309d366177",
+            "tree_nodes": 1831747
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -3567,19 +3582,19 @@
           "digest": "2b538516a6fb84c5",
           "tree_nodes": 352986
         },
-        "slice_probe": {
-          "dropped_terms": 4590,
-          "planned_terms": 194,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 4784,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 194,
+            "assertions": 4784,
             "assumptions": 0,
-            "dag_nodes": 2468,
-            "digest": "cd7a78bce523cf77",
-            "tree_nodes": 16710
+            "dag_nodes": 52895,
+            "digest": "2b538516a6fb84c5",
+            "tree_nodes": 352986
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -3627,19 +3642,19 @@
           "digest": "82ab82396aa1e328",
           "tree_nodes": 1255991
         },
-        "slice_probe": {
-          "dropped_terms": 16435,
-          "planned_terms": 514,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 16949,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 514,
+            "assertions": 16949,
             "assumptions": 0,
-            "dag_nodes": 6444,
-            "digest": "b4c50acf8264d474",
-            "tree_nodes": 44550
+            "dag_nodes": 186600,
+            "digest": "82ab82396aa1e328",
+            "tree_nodes": 1255991
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -3687,19 +3702,19 @@
           "digest": "d95a99d80fe321d4",
           "tree_nodes": 1294903
         },
-        "slice_probe": {
-          "dropped_terms": 18483,
-          "planned_terms": 514,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 18997,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 514,
+            "assertions": 18997,
             "assumptions": 0,
-            "dag_nodes": 6444,
-            "digest": "e5ea2ca0576cebc0",
-            "tree_nodes": 44550
+            "dag_nodes": 198896,
+            "digest": "d95a99d80fe321d4",
+            "tree_nodes": 1294903
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -3747,19 +3762,19 @@
           "digest": "7d66d013ead1af5f",
           "tree_nodes": 285386
         },
-        "slice_probe": {
-          "dropped_terms": 3782,
-          "planned_terms": 157,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 3939,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 157,
+            "assertions": 3939,
             "assumptions": 0,
-            "dag_nodes": 2016,
-            "digest": "cdb8cb5e374cab92",
-            "tree_nodes": 13491
+            "dag_nodes": 43141,
+            "digest": "7d66d013ead1af5f",
+            "tree_nodes": 285386
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -3807,19 +3822,19 @@
           "digest": "38d8f66b58e2cf83",
           "tree_nodes": 930127
         },
-        "slice_probe": {
-          "dropped_terms": 12620,
-          "planned_terms": 380,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 13000,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 380,
+            "assertions": 13000,
             "assumptions": 0,
-            "dag_nodes": 4824,
-            "digest": "0f10136fe1b4f738",
-            "tree_nodes": 32892
+            "dag_nodes": 140027,
+            "digest": "38d8f66b58e2cf83",
+            "tree_nodes": 930127
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -3867,19 +3882,19 @@
           "digest": "6c84ad7a1bab257e",
           "tree_nodes": 958855
         },
-        "slice_probe": {
-          "dropped_terms": 14132,
-          "planned_terms": 380,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 14512,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 380,
+            "assertions": 14512,
             "assumptions": 0,
-            "dag_nodes": 4824,
-            "digest": "6f81a1e4abcf335b",
-            "tree_nodes": 32892
+            "dag_nodes": 149107,
+            "digest": "6c84ad7a1bab257e",
+            "tree_nodes": 958855
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -3927,19 +3942,19 @@
           "digest": "3106c6ca44b28479",
           "tree_nodes": 544488
         },
-        "slice_probe": {
-          "dropped_terms": 6827,
-          "planned_terms": 299,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 7126,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 299,
+            "assertions": 7126,
             "assumptions": 0,
-            "dag_nodes": 3744,
-            "digest": "58a37b3e5c6bd64b",
-            "tree_nodes": 25845
+            "dag_nodes": 80344,
+            "digest": "3106c6ca44b28479",
+            "tree_nodes": 544488
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -3987,19 +4002,19 @@
           "digest": "1cc381c872291c79",
           "tree_nodes": 1433692
         },
-        "slice_probe": {
-          "dropped_terms": 18543,
-          "planned_terms": 587,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 19130,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 587,
+            "assertions": 19130,
             "assumptions": 0,
-            "dag_nodes": 7328,
-            "digest": "de5823db2a6f1fa5",
-            "tree_nodes": 50901
+            "dag_nodes": 212079,
+            "digest": "1cc381c872291c79",
+            "tree_nodes": 1433692
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -4047,19 +4062,19 @@
           "digest": "ee0e1663336ac572",
           "tree_nodes": 1478152
         },
-        "slice_probe": {
-          "dropped_terms": 20883,
-          "planned_terms": 587,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 21470,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 587,
+            "assertions": 21470,
             "assumptions": 0,
-            "dag_nodes": 7328,
-            "digest": "cd2de1a3181deef3",
-            "tree_nodes": 50901
+            "dag_nodes": 226127,
+            "digest": "ee0e1663336ac572",
+            "tree_nodes": 1478152
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -4107,19 +4122,19 @@
           "digest": "3c29f4fc26d44bec",
           "tree_nodes": 544488
         },
-        "slice_probe": {
-          "dropped_terms": 6827,
-          "planned_terms": 299,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 7126,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 299,
+            "assertions": 7126,
             "assumptions": 0,
-            "dag_nodes": 3744,
-            "digest": "33efcfb55086a556",
-            "tree_nodes": 25845
+            "dag_nodes": 80344,
+            "digest": "3c29f4fc26d44bec",
+            "tree_nodes": 544488
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -4167,19 +4182,19 @@
           "digest": "b703cbdc2f57de5d",
           "tree_nodes": 1591577
         },
-        "slice_probe": {
-          "dropped_terms": 20363,
-          "planned_terms": 652,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 21015,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 652,
+            "assertions": 21015,
             "assumptions": 0,
-            "dag_nodes": 8112,
-            "digest": "b94a803b0fd06041",
-            "tree_nodes": 56556
+            "dag_nodes": 234556,
+            "digest": "b703cbdc2f57de5d",
+            "tree_nodes": 1591577
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -4227,19 +4242,19 @@
           "digest": "93ed2316571b094f",
           "tree_nodes": 1640977
         },
-        "slice_probe": {
-          "dropped_terms": 22963,
-          "planned_terms": 652,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 23615,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 652,
+            "assertions": 23615,
             "assumptions": 0,
-            "dag_nodes": 8112,
-            "digest": "3999dfa7f4973e5e",
-            "tree_nodes": 56556
+            "dag_nodes": 250164,
+            "digest": "93ed2316571b094f",
+            "tree_nodes": 1640977
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -4287,19 +4302,19 @@
           "digest": "d3a0e53eab521a36",
           "tree_nodes": 294682
         },
-        "slice_probe": {
-          "dropped_terms": 3918,
-          "planned_terms": 162,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 4080,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 162,
+            "assertions": 4080,
             "assumptions": 0,
-            "dag_nodes": 2080,
-            "digest": "aebcb4f1c69ad9ac",
-            "tree_nodes": 13926
+            "dag_nodes": 44567,
+            "digest": "d3a0e53eab521a36",
+            "tree_nodes": 294682
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -4347,19 +4362,19 @@
           "digest": "8bdeb174a4687d0a",
           "tree_nodes": 945079
         },
-        "slice_probe": {
-          "dropped_terms": 12851,
-          "planned_terms": 386,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 13237,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 386,
+            "assertions": 13237,
             "assumptions": 0,
-            "dag_nodes": 4900,
-            "digest": "ae43094c2454e217",
-            "tree_nodes": 33414
+            "dag_nodes": 142336,
+            "digest": "8bdeb174a4687d0a",
+            "tree_nodes": 945079
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -4407,19 +4422,19 @@
           "digest": "b37475c5615867c1",
           "tree_nodes": 974263
         },
-        "slice_probe": {
-          "dropped_terms": 14387,
-          "planned_terms": 386,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 14773,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 386,
+            "assertions": 14773,
             "assumptions": 0,
-            "dag_nodes": 4900,
-            "digest": "eee76a31d83d58c4",
-            "tree_nodes": 33414
+            "dag_nodes": 151560,
+            "digest": "b37475c5615867c1",
+            "tree_nodes": 974263
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -4467,19 +4482,19 @@
           "digest": "a5c0c8460895af64",
           "tree_nodes": 561084
         },
-        "slice_probe": {
-          "dropped_terms": 7049,
-          "planned_terms": 308,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 7357,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 308,
+            "assertions": 7357,
             "assumptions": 0,
-            "dag_nodes": 3856,
-            "digest": "bb9d5fe9b5afd28b",
-            "tree_nodes": 26628
+            "dag_nodes": 82812,
+            "digest": "a5c0c8460895af64",
+            "tree_nodes": 561084
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -4527,19 +4542,19 @@
           "digest": "93d519df7396556e",
           "tree_nodes": 1776571
         },
-        "slice_probe": {
-          "dropped_terms": 22556,
-          "planned_terms": 728,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 23284,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 728,
+            "assertions": 23284,
             "assumptions": 0,
-            "dag_nodes": 9032,
-            "digest": "d404f57a8d4eb8c5",
-            "tree_nodes": 63168
+            "dag_nodes": 261073,
+            "digest": "93d519df7396556e",
+            "tree_nodes": 1776571
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -4587,19 +4602,19 @@
           "digest": "8d50446f51bfb72f",
           "tree_nodes": 1831747
         },
-        "slice_probe": {
-          "dropped_terms": 25460,
-          "planned_terms": 728,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 26188,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 728,
+            "assertions": 26188,
             "assumptions": 0,
-            "dag_nodes": 9032,
-            "digest": "c036ab72c5494a7b",
-            "tree_nodes": 63168
+            "dag_nodes": 278505,
+            "digest": "8d50446f51bfb72f",
+            "tree_nodes": 1831747
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -4647,19 +4662,19 @@
           "digest": "2c17836b9127fe3c",
           "tree_nodes": 236378
         },
-        "slice_probe": {
-          "dropped_terms": 3246,
-          "planned_terms": 130,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 3376,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 130,
+            "assertions": 3376,
             "assumptions": 0,
-            "dag_nodes": 1692,
-            "digest": "25ca4d8d57da4597",
-            "tree_nodes": 11142
+            "dag_nodes": 36239,
+            "digest": "2c17836b9127fe3c",
+            "tree_nodes": 236378
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -4707,19 +4722,19 @@
           "digest": "311083c21271c142",
           "tree_nodes": 945079
         },
-        "slice_probe": {
-          "dropped_terms": 12851,
-          "planned_terms": 386,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 13237,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 386,
+            "assertions": 13237,
             "assumptions": 0,
-            "dag_nodes": 4900,
-            "digest": "db8d6a65dfce5ff3",
-            "tree_nodes": 33414
+            "dag_nodes": 142336,
+            "digest": "311083c21271c142",
+            "tree_nodes": 945079
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -4767,19 +4782,19 @@
           "digest": "5b4ffa5a3a4871b5",
           "tree_nodes": 974263
         },
-        "slice_probe": {
-          "dropped_terms": 14387,
-          "planned_terms": 386,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 14773,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 386,
+            "assertions": 14773,
             "assumptions": 0,
-            "dag_nodes": 4900,
-            "digest": "b95cf5970cf5dc05",
-            "tree_nodes": 33414
+            "dag_nodes": 151560,
+            "digest": "5b4ffa5a3a4871b5",
+            "tree_nodes": 974263
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -4827,19 +4842,19 @@
           "digest": "3357eb1107746d01",
           "tree_nodes": 375240
         },
-        "slice_probe": {
-          "dropped_terms": 4907,
-          "planned_terms": 206,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 5113,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 206,
+            "assertions": 5113,
             "assumptions": 0,
-            "dag_nodes": 2620,
-            "digest": "5e8b0f93bb453a7b",
-            "tree_nodes": 17754
+            "dag_nodes": 56274,
+            "digest": "3357eb1107746d01",
+            "tree_nodes": 375240
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -4887,19 +4902,19 @@
           "digest": "1271e8e41deaaf93",
           "tree_nodes": 975001
         },
-        "slice_probe": {
-          "dropped_terms": 13316,
-          "planned_terms": 398,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 13714,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 398,
+            "assertions": 13714,
             "assumptions": 0,
-            "dag_nodes": 5052,
-            "digest": "d4785d7f8081194f",
-            "tree_nodes": 34458
+            "dag_nodes": 146963,
+            "digest": "1271e8e41deaaf93",
+            "tree_nodes": 975001
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -4947,19 +4962,19 @@
           "digest": "f6ce8d629fa487a1",
           "tree_nodes": 1005097
         },
-        "slice_probe": {
-          "dropped_terms": 14900,
-          "planned_terms": 398,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 15298,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 398,
+            "assertions": 15298,
             "assumptions": 0,
-            "dag_nodes": 5052,
-            "digest": "c477103d8d9af196",
-            "tree_nodes": 34458
+            "dag_nodes": 156475,
+            "digest": "f6ce8d629fa487a1",
+            "tree_nodes": 1005097
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -5007,19 +5022,19 @@
           "digest": "f68ef83a4b3e4361",
           "tree_nodes": 530130
         },
-        "slice_probe": {
-          "dropped_terms": 6624,
-          "planned_terms": 219,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 6843,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 219,
+            "assertions": 6843,
             "assumptions": 0,
-            "dag_nodes": 2768,
-            "digest": "c4436d29483c73be",
-            "tree_nodes": 18885
+            "dag_nodes": 78470,
+            "digest": "f68ef83a4b3e4361",
+            "tree_nodes": 530130
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -5067,19 +5082,19 @@
           "digest": "637a8d418b09905e",
           "tree_nodes": 398350
         },
-        "slice_probe": {
-          "dropped_terms": 5084,
-          "planned_terms": 219,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 5303,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 219,
+            "assertions": 5303,
             "assumptions": 0,
-            "dag_nodes": 2768,
-            "digest": "97e7045c0b04cf2b",
-            "tree_nodes": 18885
+            "dag_nodes": 59279,
+            "digest": "637a8d418b09905e",
+            "tree_nodes": 398350
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -5127,19 +5142,19 @@
           "digest": "1cdec7a313939c82",
           "tree_nodes": 912059
         },
-        "slice_probe": {
-          "dropped_terms": 11116,
-          "planned_terms": 376,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 11492,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 376,
+            "assertions": 11492,
             "assumptions": 0,
-            "dag_nodes": 4680,
-            "digest": "ea59d777255a2886",
-            "tree_nodes": 32544
+            "dag_nodes": 133281,
+            "digest": "1cdec7a313939c82",
+            "tree_nodes": 912059
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -5187,19 +5202,19 @@
           "digest": "d79bd9dde30385cc",
           "tree_nodes": 684980
         },
-        "slice_probe": {
-          "dropped_terms": 8477,
-          "planned_terms": 376,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 8853,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 376,
+            "assertions": 8853,
             "assumptions": 0,
-            "dag_nodes": 4680,
-            "digest": "a8e6150465f43778",
-            "tree_nodes": 32544
+            "dag_nodes": 100504,
+            "digest": "d79bd9dde30385cc",
+            "tree_nodes": 684980
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -5247,19 +5262,19 @@
           "digest": "ce4c670f40130f30",
           "tree_nodes": 469591
         },
-        "slice_probe": {
-          "dropped_terms": 5955,
-          "planned_terms": 194,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 6149,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 194,
+            "assertions": 6149,
             "assumptions": 0,
-            "dag_nodes": 2468,
-            "digest": "f10b99f383c2bd58",
-            "tree_nodes": 16710
+            "dag_nodes": 69936,
+            "digest": "ce4c670f40130f30",
+            "tree_nodes": 469591
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -5307,19 +5322,19 @@
           "digest": "1a2b9dd56c736732",
           "tree_nodes": 352986
         },
-        "slice_probe": {
-          "dropped_terms": 4590,
-          "planned_terms": 194,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 4784,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 194,
+            "assertions": 4784,
             "assumptions": 0,
-            "dag_nodes": 2468,
-            "digest": "cd7a78bce523cf77",
-            "tree_nodes": 16710
+            "dag_nodes": 52895,
+            "digest": "1a2b9dd56c736732",
+            "tree_nodes": 352986
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -5367,19 +5382,19 @@
           "digest": "08797e7d36a2daca",
           "tree_nodes": 379532
         },
-        "slice_probe": {
-          "dropped_terms": 4888,
-          "planned_terms": 157,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 5045,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 157,
+            "assertions": 5045,
             "assumptions": 0,
-            "dag_nodes": 2016,
-            "digest": "48935c0728ac96f4",
-            "tree_nodes": 13491
+            "dag_nodes": 56976,
+            "digest": "08797e7d36a2daca",
+            "tree_nodes": 379532
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -5427,19 +5442,19 @@
           "digest": "5306f08275bc3830",
           "tree_nodes": 285386
         },
-        "slice_probe": {
-          "dropped_terms": 3782,
-          "planned_terms": 157,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 3939,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 157,
+            "assertions": 3939,
             "assumptions": 0,
-            "dag_nodes": 2016,
-            "digest": "cdb8cb5e374cab92",
-            "tree_nodes": 13491
+            "dag_nodes": 43141,
+            "digest": "5306f08275bc3830",
+            "tree_nodes": 285386
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -5487,19 +5502,19 @@
           "digest": "0ab22e295aec1796",
           "tree_nodes": 724828
         },
-        "slice_probe": {
-          "dropped_terms": 8927,
-          "planned_terms": 299,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 9226,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 299,
+            "assertions": 9226,
             "assumptions": 0,
-            "dag_nodes": 3744,
-            "digest": "31f42289144da0fd",
-            "tree_nodes": 25845
+            "dag_nodes": 106463,
+            "digest": "0ab22e295aec1796",
+            "tree_nodes": 724828
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -5547,19 +5562,19 @@
           "digest": "77f83b8429f8874f",
           "tree_nodes": 544488
         },
-        "slice_probe": {
-          "dropped_terms": 6827,
-          "planned_terms": 299,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 7126,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 299,
+            "assertions": 7126,
             "assumptions": 0,
-            "dag_nodes": 3744,
-            "digest": "58a37b3e5c6bd64b",
-            "tree_nodes": 25845
+            "dag_nodes": 80344,
+            "digest": "77f83b8429f8874f",
+            "tree_nodes": 544488
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -5607,19 +5622,19 @@
           "digest": "28be443d8353558b",
           "tree_nodes": 724828
         },
-        "slice_probe": {
-          "dropped_terms": 8927,
-          "planned_terms": 299,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 9226,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 299,
+            "assertions": 9226,
             "assumptions": 0,
-            "dag_nodes": 3744,
-            "digest": "b32f76a16ff17000",
-            "tree_nodes": 25845
+            "dag_nodes": 106463,
+            "digest": "28be443d8353558b",
+            "tree_nodes": 724828
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -5667,19 +5682,19 @@
           "digest": "09dbb3f382c464d4",
           "tree_nodes": 544488
         },
-        "slice_probe": {
-          "dropped_terms": 6827,
-          "planned_terms": 299,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 7126,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 299,
+            "assertions": 7126,
             "assumptions": 0,
-            "dag_nodes": 3744,
-            "digest": "33efcfb55086a556",
-            "tree_nodes": 25845
+            "dag_nodes": 80344,
+            "digest": "09dbb3f382c464d4",
+            "tree_nodes": 544488
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -5727,19 +5742,19 @@
           "digest": "594193758f303ec9",
           "tree_nodes": 391863
         },
-        "slice_probe": {
-          "dropped_terms": 5059,
-          "planned_terms": 162,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 5221,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 162,
+            "assertions": 5221,
             "assumptions": 0,
-            "dag_nodes": 2080,
-            "digest": "770ab5f1faca2f35",
-            "tree_nodes": 13926
+            "dag_nodes": 58844,
+            "digest": "594193758f303ec9",
+            "tree_nodes": 391863
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -5787,19 +5802,19 @@
           "digest": "8cd85ae0841a5175",
           "tree_nodes": 294682
         },
-        "slice_probe": {
-          "dropped_terms": 3918,
-          "planned_terms": 162,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 4080,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 162,
+            "assertions": 4080,
             "assumptions": 0,
-            "dag_nodes": 2080,
-            "digest": "aebcb4f1c69ad9ac",
-            "tree_nodes": 13926
+            "dag_nodes": 44567,
+            "digest": "8cd85ae0841a5175",
+            "tree_nodes": 294682
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -5847,19 +5862,19 @@
           "digest": "e6880f57fd0c258b",
           "tree_nodes": 746887
         },
-        "slice_probe": {
-          "dropped_terms": 9212,
-          "planned_terms": 308,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 9520,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 308,
+            "assertions": 9520,
             "assumptions": 0,
-            "dag_nodes": 3856,
-            "digest": "0a93ee1e02f1850b",
-            "tree_nodes": 26628
+            "dag_nodes": 109717,
+            "digest": "e6880f57fd0c258b",
+            "tree_nodes": 746887
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -5907,19 +5922,19 @@
           "digest": "b0f63fff85513165",
           "tree_nodes": 561084
         },
-        "slice_probe": {
-          "dropped_terms": 7049,
-          "planned_terms": 308,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 7357,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 308,
+            "assertions": 7357,
             "assumptions": 0,
-            "dag_nodes": 3856,
-            "digest": "bb9d5fe9b5afd28b",
-            "tree_nodes": 26628
+            "dag_nodes": 82812,
+            "digest": "b0f63fff85513165",
+            "tree_nodes": 561084
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -5967,19 +5982,19 @@
           "digest": "fa875facd67feac8",
           "tree_nodes": 314135
         },
-        "slice_probe": {
-          "dropped_terms": 4163,
-          "planned_terms": 130,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 4293,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 130,
+            "assertions": 4293,
             "assumptions": 0,
-            "dag_nodes": 1692,
-            "digest": "981747c34279567e",
-            "tree_nodes": 11142
+            "dag_nodes": 47752,
+            "digest": "fa875facd67feac8",
+            "tree_nodes": 314135
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -6027,19 +6042,19 @@
           "digest": "472d453dd54832c2",
           "tree_nodes": 236378
         },
-        "slice_probe": {
-          "dropped_terms": 3246,
-          "planned_terms": 130,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 3376,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 130,
+            "assertions": 3376,
             "assumptions": 0,
-            "dag_nodes": 1692,
-            "digest": "25ca4d8d57da4597",
-            "tree_nodes": 11142
+            "dag_nodes": 36239,
+            "digest": "472d453dd54832c2",
+            "tree_nodes": 236378
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -6087,19 +6102,19 @@
           "digest": "97f388bf43bf73b0",
           "tree_nodes": 499129
         },
-        "slice_probe": {
-          "dropped_terms": 6356,
-          "planned_terms": 206,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 6562,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 206,
+            "assertions": 6562,
             "assumptions": 0,
-            "dag_nodes": 2620,
-            "digest": "2bb9bb7a8c745946",
-            "tree_nodes": 17754
+            "dag_nodes": 74371,
+            "digest": "97f388bf43bf73b0",
+            "tree_nodes": 499129
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -6147,19 +6162,19 @@
           "digest": "19dc17b0c8d0d364",
           "tree_nodes": 375240
         },
-        "slice_probe": {
-          "dropped_terms": 4907,
-          "planned_terms": 206,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 5113,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 206,
+            "assertions": 5113,
             "assumptions": 0,
-            "dag_nodes": 2620,
-            "digest": "5e8b0f93bb453a7b",
-            "tree_nodes": 17754
+            "dag_nodes": 56274,
+            "digest": "19dc17b0c8d0d364",
+            "tree_nodes": 375240
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -6207,19 +6222,19 @@
           "digest": "d339967a25d2c015",
           "tree_nodes": 587383
         },
-        "slice_probe": {
-          "dropped_terms": 3845,
-          "planned_terms": 134,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 3979,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 134,
+            "assertions": 3979,
             "assumptions": 0,
-            "dag_nodes": 1688,
-            "digest": "db82e754872c8190",
-            "tree_nodes": 11490
+            "dag_nodes": 77158,
+            "digest": "d339967a25d2c015",
+            "tree_nodes": 587383
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -6267,19 +6282,19 @@
           "digest": "7324efa399ab8be6",
           "tree_nodes": 241086
         },
-        "slice_probe": {
-          "dropped_terms": 2900,
-          "planned_terms": 134,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 3034,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 134,
+            "assertions": 3034,
             "assumptions": 0,
-            "dag_nodes": 1688,
-            "digest": "a5831da702f091b2",
-            "tree_nodes": 11490
+            "dag_nodes": 35505,
+            "digest": "7324efa399ab8be6",
+            "tree_nodes": 241086
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -6327,19 +6342,19 @@
           "digest": "82defd9a092d0065",
           "tree_nodes": 321271
         },
-        "slice_probe": {
-          "dropped_terms": 3845,
-          "planned_terms": 134,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 3979,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 134,
+            "assertions": 3979,
             "assumptions": 0,
-            "dag_nodes": 1688,
-            "digest": "a5831da702f091b2",
-            "tree_nodes": 11490
+            "dag_nodes": 47206,
+            "digest": "82defd9a092d0065",
+            "tree_nodes": 321271
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -6387,19 +6402,19 @@
           "digest": "fb701a8fed392bac",
           "tree_nodes": 414976
         },
-        "slice_probe": {
-          "dropped_terms": 4802,
-          "planned_terms": 167,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 4969,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 167,
+            "assertions": 4969,
             "assumptions": 0,
-            "dag_nodes": 2096,
-            "digest": "40f50ce32165d614",
-            "tree_nodes": 14361
+            "dag_nodes": 59908,
+            "digest": "fb701a8fed392bac",
+            "tree_nodes": 414976
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -6447,19 +6462,19 @@
           "digest": "a79a5250c9d5a6a4",
           "tree_nodes": 76836
         },
-        "slice_probe": {
-          "dropped_terms": 965,
-          "planned_terms": 44,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1009,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 44,
+            "assertions": 1009,
             "assumptions": 0,
-            "dag_nodes": 568,
-            "digest": "6f7c0511ef5c0307",
-            "tree_nodes": 3660
+            "dag_nodes": 11670,
+            "digest": "a79a5250c9d5a6a4",
+            "tree_nodes": 76836
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -6507,19 +6522,19 @@
           "digest": "0b3afb85e9dbd227",
           "tree_nodes": 102391
         },
-        "slice_probe": {
-          "dropped_terms": 1280,
-          "planned_terms": 44,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1324,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 44,
+            "assertions": 1324,
             "assumptions": 0,
-            "dag_nodes": 568,
-            "digest": "6f7c0511ef5c0307",
-            "tree_nodes": 3660
+            "dag_nodes": 15511,
+            "digest": "0b3afb85e9dbd227",
+            "tree_nodes": 102391
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -6567,19 +6582,19 @@
           "digest": "fce73faa89aea098",
           "tree_nodes": 175531
         },
-        "slice_probe": {
-          "dropped_terms": 2165,
-          "planned_terms": 74,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 2239,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 74,
+            "assertions": 2239,
             "assumptions": 0,
-            "dag_nodes": 948,
-            "digest": "60c71925156f1014",
-            "tree_nodes": 6270
+            "dag_nodes": 26246,
+            "digest": "fce73faa89aea098",
+            "tree_nodes": 175531
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -6627,19 +6642,19 @@
           "digest": "57de69b0c1101f40",
           "tree_nodes": 131766
         },
-        "slice_probe": {
-          "dropped_terms": 1640,
-          "planned_terms": 74,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1714,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 74,
+            "assertions": 1714,
             "assumptions": 0,
-            "dag_nodes": 948,
-            "digest": "60c71925156f1014",
-            "tree_nodes": 6270
+            "dag_nodes": 19765,
+            "digest": "57de69b0c1101f40",
+            "tree_nodes": 131766
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -6687,19 +6702,19 @@
           "digest": "b250d51e1beea171",
           "tree_nodes": 175531
         },
-        "slice_probe": {
-          "dropped_terms": 2165,
-          "planned_terms": 74,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 2239,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 74,
+            "assertions": 2239,
             "assumptions": 0,
-            "dag_nodes": 948,
-            "digest": "60c71925156f1014",
-            "tree_nodes": 6270
+            "dag_nodes": 26246,
+            "digest": "b250d51e1beea171",
+            "tree_nodes": 175531
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -6747,19 +6762,19 @@
           "digest": "092b4420ce333f96",
           "tree_nodes": 87810
         },
-        "slice_probe": {
-          "dropped_terms": 1098,
-          "planned_terms": 50,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1148,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 50,
+            "assertions": 1148,
             "assumptions": 0,
-            "dag_nodes": 644,
-            "digest": "203378186dac45a4",
-            "tree_nodes": 4182
+            "dag_nodes": 13283,
+            "digest": "092b4420ce333f96",
+            "tree_nodes": 87810
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -6807,19 +6822,19 @@
           "digest": "061961f57ae84293",
           "tree_nodes": 228001
         },
-        "slice_probe": {
-          "dropped_terms": 2702,
-          "planned_terms": 92,
-          "sliced": true,
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 2794,
+          "sliced": false,
           "solver_cache_key": {
-            "assertions": 92,
+            "assertions": 2794,
             "assumptions": 0,
-            "dag_nodes": 1176,
-            "digest": "f0975c6d3919f099",
-            "tree_nodes": 7836
+            "dag_nodes": 33389,
+            "digest": "061961f57ae84293",
+            "tree_nodes": 228001
           },
-          "strategy": "first-assertion-support",
-          "target_support_symbols": 1
+          "strategy": "full",
+          "target_support_symbols": 0
         }
       },
       "rewrite": {
@@ -6846,9 +6861,26 @@
   ],
   "summary": {
     "agree": 1,
+    "blocker_buckets": {
+      "unknown:NodeBudget": 112
+    },
     "disagree": 0,
     "errors": 0,
     "files": 113,
+    "layer_attribution": {
+      "bit_blast_s": 0.001041238,
+      "bit_blast_share": 0.28294987578595077,
+      "cnf_encode_s": 0.001650651,
+      "cnf_encode_share": 0.44855402455150056,
+      "instances": 1,
+      "model_lift_s": 0.000173065,
+      "model_lift_share": 0.0470293249505834,
+      "sat_dominates": false,
+      "sat_dominates_threshold": 0.5,
+      "solve_s": 0.000814984,
+      "solve_share": 0.22146677471196524,
+      "total_pipeline_s": 0.0036799380000000002
+    },
     "model_replay_failures": 0,
     "oracle": {
       "agree": 1,
@@ -6858,14 +6890,14 @@
       "enabled": true,
       "skipped": 112
     },
-    "par2_mean_s": 1.9826934608053097,
+    "par2_mean_s": 1.982333450778761,
     "query_plan": {
       "original_dag_nodes": 8706521,
       "original_tree_nodes": 58335915,
-      "slice_changed_instances": 113,
-      "slice_dag_nodes": 336691,
-      "slice_dropped_terms": 755480,
-      "slice_tree_nodes": 2307699
+      "slice_changed_instances": 0,
+      "slice_dag_nodes": 8706521,
+      "slice_dropped_terms": 0,
+      "slice_tree_nodes": 58335915
     },
     "rewrite": {
       "applications": 0,
@@ -6895,5 +6927,5 @@
     },
     "unsupported": []
   },
-  "version": 5
+  "version": 14
 }

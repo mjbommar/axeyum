@@ -134,6 +134,40 @@ arithmetic landings; the model-assembly parity fix (`bff67679`) is verdict-
 relevant only for skeleton-Bool SAT witnesses (none among the movers) but
 repaired a wrong-default `false` witness value in the same builders.
 
+### Public QF_BV (p4dfa 113): first committed lazy-vs-eager PAR-2 head-to-head (2026-07-03)
+
+The north-star "measured performance" axis for public QF_BV now has a committed
+PAR-2 head-to-head between the eager `sat-bv` backend and the lazy CEGAR
+bit-blaster (`--backend lazy-bv`, ADR-0019), all five runs re-executed fresh at
+one HEAD on the SMT-LIB `20221214-p4dfa-XiaoqiChen` slice (113 files, Z3
+oracle, `--jobs 2`). These runs are not in the division table above (the
+generator ingests only `*solver-vs-z3*` check_auto baselines); the committed
+baselines are `qf-bv-20221214-p4dfa-sat-bv-z3-compare-1s-n1000.json` and
+`qf-bv-p4dfa-fair-{sat-bv,lazy-bv}-vs-z3-{3s-n200k-cnf5M,20s-n300k-cnf8M}.json`.
+
+| tier (budgets) | backend | decided | unknown breakdown | DISAGREE | replay fail | PAR-2 (s) |
+|---|---|---|---|---|---|---|
+| 1 s, node 1k (compare config) | eager sat-bv | 1 sat | NodeBudget 112 | 0 | 0 | 1.982 |
+| 3 s, node 200k, cnf 2M/5M | eager sat-bv | 3 sat | T 87 / EB 13 / NB 10 | 0 | 0 | 5.855 |
+| 3 s, node 200k, cnf 2M/5M | **lazy-bv** | **3 sat** | T 106 / EB 2 / NB 2 | 0 | 0 | **5.841** |
+| 20 s, node 300k, cnf 3M/8M | eager sat-bv | 4 sat | T 98 / EB 10 / NB 1 | 0 | 0 | 38.643 |
+| 20 s, node 300k, cnf 3M/8M | **lazy-bv** | **7 sat** | T 99 / EB 6 / NB 1 | 0 | 0 | **37.522** |
+
+**Verdict: lazy-bv weakly dominates eager on this slice (3 = 3 decided at 3 s,
+7 > 4 at 20 s; PAR-2 lower at both tiers; DISAGREE = 0, 0 replay failures) —
+but the win is NOT the CEGAR abstraction.** Per-instance telemetry shows
+`lazy_ops_total = 0` on all 113 files at both tiers: every instance falls
+through `ops.is_empty()` to the full `solve()` front door, whose default
+word-level preprocessing shrinks the encodings (EncodingBudget 13→2 at 3 s,
+10→6 at 20 s; the 20 s decided set matches the committed `--preprocess` row's 7
+exactly), while the bench `sat-bv` backend runs the raw eager blast with no
+reduction. Attribution and next steps are recorded in
+[the P2.1 findings note](../docs/research/05-algorithms/lazy-bitblasting-p21-findings.md);
+the opt-in `SolverConfig::lazy_bv` dispatch (`10a412e`,
+`tests/lazy_bv_dispatch.rs`) already exists, and default-on needs its own ADR.
+Z3 decides all 113 in ≤ 1 s each — parity on this slice remains open, owned by
+reduction depth.
+
 ## Progress frontiers (lever depth)
 
 Each frontier tracks how deep a single capability lever reaches: a family is scaled by a knob `N` and the **frontier** is the largest `N` axeyum still decides within budget. **Baseline** is the previously recorded frontier — the gap (frontier − baseline) is the gradual improvement this front exists to show.
