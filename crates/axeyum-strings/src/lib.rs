@@ -83,10 +83,12 @@
 #![forbid(unsafe_code)]
 #![allow(clippy::missing_errors_doc)] // documented per-item where a `Result` is returned
 
+pub mod arrange;
 pub mod classes;
 pub mod infer;
 pub mod normal_form;
 
+pub use arrange::{SearchBudget, SearchOutcome, UnknownReason, solve_word_equations};
 pub use classes::{Classes, Declined, FlatForm, NormalForm, NormalForms, Unreconciled};
 pub use infer::{Conflict, ConflictReason, Fact, Inference, Inferences, Rule, infer};
 pub use normal_form::{concat_components, normalize};
