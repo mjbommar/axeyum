@@ -11,13 +11,17 @@
 //!   set, wrong position, matching constants), must be rejected. The re-checker
 //!   trusts nothing in the record: each corruption breaks re-derivation.
 
+#![allow(clippy::many_single_char_names, clippy::similar_names)]
+
 mod common;
 
 use std::collections::BTreeSet;
 
 use axeyum_ir::{TermArena, TermId};
-use axeyum_strings::{Conflict, check_conflict, infer};
-use common::{cat, ch, seq_var, unit};
+use axeyum_strings::{
+    Conflict, Fact, Rule, check_conflict, check_cycle_constant_conflict, check_fact, infer,
+};
+use common::{cat, ch, empty, seq_var, unit};
 
 /// `"a"` and `"b"` as length-1 constant sequence terms.
 fn ab(arena: &mut TermArena) -> (TermId, TermId) {
@@ -219,5 +223,165 @@ fn rejects_swapped_members_to_unrelated_terms() {
     assert!(
         !check_conflict(&mut arena, &eqs, &corrupt),
         "an unrelated member is not in the class the premises build; reject"
+    );
+}
+
+// ----- check_fact: acceptance (slice 2) --------------------------------------
+
+/// `"a"` as a length-1 constant sequence.
+fn a_unit(arena: &mut TermArena) -> TermId {
+    let e = ch(arena, u128::from(b'a'));
+    unit(arena, e)
+}
+
+/// The first derived fact of `rule` in `infer(eqs)`, or `None`.
+fn fact_of(arena: &mut TermArena, eqs: &[(TermId, TermId)], rule: Rule) -> Option<Fact> {
+    infer(arena, eqs).facts().find(|f| f.rule == rule).cloned()
+}
+
+#[test]
+fn accepts_cycle_epsilon_variable_target() {
+    // x = y ++ x forces y ≈ ε (|x| = |y| + |x|). The derived CycleEpsilon fact must
+    // re-check from its cited premise alone.
+    let mut arena = TermArena::new();
+    let x = seq_var(&mut arena, "x");
+    let y = seq_var(&mut arena, "y");
+    let rhs = cat(&mut arena, y, x);
+    let eqs = [(x, rhs)];
+    let fact = fact_of(&mut arena, &eqs, Rule::CycleEpsilon).expect("cycle forces y ≈ ε");
+    assert!(
+        check_fact(&mut arena, &eqs, &fact),
+        "the self-loop ε fact y ≈ ε must re-check"
+    );
+    // It is a variable ε fact, NOT the nonempty-constant contradiction shape.
+    assert!(!check_cycle_constant_conflict(&mut arena, &eqs, &fact));
+}
+
+#[test]
+fn accepts_endpoint_emp_fact() {
+    // x = "a" ++ z and x = "a"  ⇒  z ≈ ε (the exhausted-prefix tail). A CONSTANT
+    // prefix, so this is an endpoint-emp alignment, not a containment cycle.
+    let mut arena = TermArena::new();
+    let x = seq_var(&mut arena, "x");
+    let z = seq_var(&mut arena, "z");
+    let a = a_unit(&mut arena);
+    let az = cat(&mut arena, a, z);
+    let eqs = [(x, az), (x, a)];
+    let fact = fact_of(&mut arena, &eqs, Rule::InferEndpointEmp).expect("endpoint-emp z ≈ ε");
+    assert!(
+        check_fact(&mut arena, &eqs, &fact),
+        "the endpoint-emp fact z ≈ ε must re-check"
+    );
+}
+
+#[test]
+fn accepts_endpoint_eq_fact() {
+    // x = "a" ++ z and x = "a" ++ w  ⇒  z ≈ w (single remainder each side).
+    let mut arena = TermArena::new();
+    let x = seq_var(&mut arena, "x");
+    let z = seq_var(&mut arena, "z");
+    let w = seq_var(&mut arena, "w");
+    let a = a_unit(&mut arena);
+    let az = cat(&mut arena, a, z);
+    let aw = cat(&mut arena, a, w);
+    let eqs = [(x, az), (x, aw)];
+    let fact = fact_of(&mut arena, &eqs, Rule::InferEndpointEq).expect("endpoint-eq z ≈ w");
+    assert!(
+        check_fact(&mut arena, &eqs, &fact),
+        "the endpoint-eq fact z ≈ w must re-check"
+    );
+}
+
+#[test]
+fn certifies_self_loop_nonempty_constant_as_conflict() {
+    // x = "a" ++ x is unsat; infer emits a CycleEpsilon fact "a" ≈ ε whose honest
+    // re-check FAILS as an ε fact (it is false) but certifies as a CONFLICT.
+    let mut arena = TermArena::new();
+    let x = seq_var(&mut arena, "x");
+    let a = a_unit(&mut arena);
+    let rhs = cat(&mut arena, a, x);
+    let eqs = [(x, rhs)];
+    let fact = fact_of(&mut arena, &eqs, Rule::CycleEpsilon).expect("cycle forces \"a\" ≈ ε");
+    assert!(
+        !check_fact(&mut arena, &eqs, &fact),
+        "\"a\" ≈ ε is not a valid ε fact — check_fact must decline it"
+    );
+    assert!(
+        check_cycle_constant_conflict(&mut arena, &eqs, &fact),
+        "the self-loop forcing a nonempty constant to ε is a certified contradiction"
+    );
+}
+
+// ----- check_fact: rejection (slice 2) ---------------------------------------
+
+#[test]
+fn rejects_cycle_epsilon_fact_with_empty_premises() {
+    let mut arena = TermArena::new();
+    let x = seq_var(&mut arena, "x");
+    let y = seq_var(&mut arena, "y");
+    let rhs = cat(&mut arena, y, x);
+    let eqs = [(x, rhs)];
+    let mut fact = fact_of(&mut arena, &eqs, Rule::CycleEpsilon).expect("cycle fact");
+    fact.premises = BTreeSet::new(); // no premise ⇒ no witnessing endpoint
+    assert!(
+        !check_fact(&mut arena, &eqs, &fact),
+        "an empty premise set cannot re-derive the cycle ε fact"
+    );
+}
+
+#[test]
+fn rejects_cycle_epsilon_fact_with_out_of_range_premise() {
+    let mut arena = TermArena::new();
+    let x = seq_var(&mut arena, "x");
+    let y = seq_var(&mut arena, "y");
+    let rhs = cat(&mut arena, y, x);
+    let eqs = [(x, rhs)];
+    let mut fact = fact_of(&mut arena, &eqs, Rule::CycleEpsilon).expect("cycle fact");
+    fact.premises = BTreeSet::from([99]);
+    assert!(!check_fact(&mut arena, &eqs, &fact));
+}
+
+#[test]
+fn rejects_cycle_epsilon_fact_with_wrong_target() {
+    // Corrupt y ≈ ε into z ≈ ε where z is unrelated to the cycle: not re-derivable.
+    let mut arena = TermArena::new();
+    let x = seq_var(&mut arena, "x");
+    let y = seq_var(&mut arena, "y");
+    let z = seq_var(&mut arena, "z_unrelated");
+    let rhs = cat(&mut arena, y, x);
+    let eqs = [(x, rhs)];
+    let fact = fact_of(&mut arena, &eqs, Rule::CycleEpsilon).expect("cycle fact");
+    let eps = empty(&mut arena);
+    let corrupt = Fact {
+        rule: Rule::CycleEpsilon,
+        equality: if z <= eps { (z, eps) } else { (eps, z) },
+        premises: fact.premises.clone(),
+    };
+    assert!(
+        !check_fact(&mut arena, &eqs, &corrupt),
+        "an unrelated ε target is not forced by the cited cycle premise"
+    );
+}
+
+#[test]
+fn rejects_endpoint_eq_fact_pointed_at_unrelated_terms() {
+    let mut arena = TermArena::new();
+    let x = seq_var(&mut arena, "x");
+    let z = seq_var(&mut arena, "z");
+    let w = seq_var(&mut arena, "w");
+    let u = seq_var(&mut arena, "u_unrelated");
+    let a = a_unit(&mut arena);
+    let az = cat(&mut arena, a, z);
+    let aw = cat(&mut arena, a, w);
+    let eqs = [(x, az), (x, aw)];
+    let fact = fact_of(&mut arena, &eqs, Rule::InferEndpointEq).expect("endpoint-eq fact");
+    let corrupt = Fact {
+        rule: Rule::InferEndpointEq,
+        equality: if z <= u { (z, u) } else { (u, z) }, // z ≈ u_unrelated, not z ≈ w
+        premises: fact.premises.clone(),
+    };
+    assert!(
+        !check_fact(&mut arena, &eqs, &corrupt),
+        "the aligned remainders are z and w, not an unrelated u"
     );
 }

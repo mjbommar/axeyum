@@ -844,6 +844,48 @@ mod run {
         }
     }
 
+    /// Normal-path word-route upgrade (T-B.7 slice 2) — harness parity with the
+    /// `solve_smtlib` front door's second-chance word route. After the bounded
+    /// gate leaves a string script `unknown` (the bounded path declined or the
+    /// ADR-0052 gate downgraded a bound-dependent verdict), consult the word route:
+    /// it may decide `unsat` through the independently re-checked derivation
+    /// (ADR-0053 T-B.7) or `sat` through the in-crate `Seq`-level replay. Runs
+    /// **before** the oracle comparison so the upgraded verdict flows into it.
+    ///
+    /// A word-route `sat` model is a `Seq`-level witness already checked in-crate;
+    /// it is NOT replayed against the packed bit-vector view, so `model_replay_failure`
+    /// is kept `false` (a packed replay would spuriously fail on the empty/gated view).
+    fn apply_word_route_upgrade(
+        script: &mut Script,
+        config: &SolverConfig,
+        record: &mut SolveRecord,
+    ) {
+        if record.outcome != "unknown" || script.word_problem.is_none() {
+            return;
+        }
+        match axeyum_solver::word_route_verdict(script, config) {
+            Some(CheckResult::Sat(_)) => {
+                record.outcome = "sat";
+                record.detail = Some(
+                    "word-equation route (T-B.7): decided sat; model replayed \
+                     in-crate at the Seq level"
+                        .to_owned(),
+                );
+                record.model_replay_failure = false;
+            }
+            Some(CheckResult::Unsat) => {
+                record.outcome = "unsat";
+                record.detail = Some(
+                    "word-equation route (T-B.7): decided unsat via an independently \
+                     re-checked derivation"
+                        .to_owned(),
+                );
+                record.model_replay_failure = false;
+            }
+            _ => {}
+        }
+    }
+
     /// Decides a **word-first-fallback** script (T-B.4d) — harness parity with
     /// the `solve_smtlib` front door. The flat assertion view is empty (the
     /// bounded ADR-0029 encoder declined at parse), so the sat-only,
@@ -986,6 +1028,10 @@ mod run {
             gate_bounded_string_record(&mut script, &original_assertions, &config, {
                 &mut original.solve
             });
+            // Same word-route second chance as the primary solve, so the
+            // rewrite-decision comparison never flags a word-route upgrade as a
+            // rewrite-induced verdict change.
+            apply_word_route_upgrade(&mut script, &config, &mut original.solve);
             Some(original)
         } else {
             None
@@ -1010,6 +1056,12 @@ mod run {
         gate_bounded_string_record(&mut script, &gated_assertions, &config, {
             &mut primary_solve.solve
         });
+        // Word-route second chance (T-B.7 slice 2): if the gate (or the bounded
+        // path) left this string script `unknown`, let the independently
+        // re-checked word route decide it — the same second chance the front door
+        // grants. Runs BEFORE the oracle comparison so the upgraded verdict is what
+        // `compare_with_oracle` cross-checks.
+        apply_word_route_upgrade(&mut script, &config, &mut primary_solve.solve);
         if let Some(original) = &original_solve {
             compare_rewrite_decision(&original.solve, &primary_solve.solve, summary);
         }

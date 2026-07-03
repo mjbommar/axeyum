@@ -103,7 +103,9 @@ pub mod normal_form;
 pub mod refute;
 
 pub use arrange::{SearchBudget, SearchOutcome, UnknownReason, solve_word_equations};
-pub use check_derivation::{check_conflict, check_equality};
+pub use check_derivation::{
+    check_conflict, check_cycle_constant_conflict, check_equality, check_fact,
+};
 pub use classes::{Classes, Declined, FlatForm, NormalForm, NormalForms, Unreconciled};
 pub use infer::{Conflict, ConflictReason, Fact, Inference, Inferences, Rule, infer};
 pub use normal_form::{concat_components, normalize};

@@ -372,7 +372,7 @@ pub use smtlib::{
     optimize_smtlib, optimize_smtlib_lexicographic, solve_smtlib, solve_smtlib_get_assertions,
     solve_smtlib_get_assignment, solve_smtlib_get_info, solve_smtlib_get_model,
     solve_smtlib_get_option, solve_smtlib_get_proof, solve_smtlib_get_value,
-    solve_smtlib_incremental, solve_smtlib_unsat_core,
+    solve_smtlib_incremental, solve_smtlib_unsat_core, word_route_verdict,
 };
 pub use solver::{InterpolantOutcome, Solver};
 pub use strategy::{Strategy, recommended_portfolio, solve_with_portfolio, solve_with_strategy};

@@ -195,6 +195,38 @@ pub fn decide_word_only_script(
     decide_word_only(script, config)
 }
 
+/// Consults the word-equation route on an already-`unknown` [`Script`], returning
+/// `Some(Sat/Unsat)` **only** when the route decides — and `None` otherwise.
+///
+/// This is the normal-path mirror of the word-first fallback ([`decide_word_only_script`]):
+/// the bounded ADR-0029 encoder parsed the script fine, but the current verdict is
+/// `unknown` (the bounded path declined or the ADR-0052 [`StringGate`] downgraded a
+/// bound-dependent verdict). A harness that reached `unknown` can call this to give
+/// the word route the same second chance the `solve_smtlib` front door grants it,
+/// without re-running the whole front door.
+///
+/// The soundness anchors are unchanged from [`apply_word_route`]: an `unsat` is only
+/// ever produced through the ADR-0053 T-B.7 independently re-checked derivation, and
+/// a `sat` model has already replayed against every equality/disequality through the
+/// ground evaluator inside `axeyum-strings`. Callers must **not** replay a word-route
+/// `sat` model against a packed bit-vector view — the model is a `Seq`-level witness,
+/// already checked at that level.
+///
+/// Returns `None` (no decision) when the script carries no
+/// [`WordProblem`](axeyum_smtlib::WordProblem) side channel or the route declines.
+#[must_use]
+pub fn word_route_verdict(script: &mut Script, config: &SolverConfig) -> Option<CheckResult> {
+    script.word_problem.as_ref()?;
+    let seed = CheckResult::Unknown(UnknownReason {
+        kind: UnknownKind::Incomplete,
+        detail: String::new(),
+    });
+    match apply_word_route(script, config, seed) {
+        result @ (CheckResult::Sat(_) | CheckResult::Unsat) => Some(result),
+        CheckResult::Unknown(_) => None,
+    }
+}
+
 /// The result of deciding an SMT-LIB script, with the script's own declarations.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]

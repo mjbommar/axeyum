@@ -34,22 +34,54 @@
 //! recorded positions / constants are cross-checked against the independent walk
 //! (catching a corrupted record) but are never *trusted*.
 //!
-//! # What this slice certifies — and what stays `unknown`
+//! # What `check_conflict` certifies — and what stays `unknown`
 //!
 //! Only conflicts whose two members are connected by the cited premises through a
 //! **direct** equality chain (no intervening derived fact) and whose contradiction
 //! is a **constant clash at an equal-length-aligned position** are certified.
 //! Loops (`x ≈ a ++ x`), parity/length arguments (`x ≈ x ++ x ∧ x ≠ ε`), and
-//! conflicts that only arise *after* an inference step (e.g. a cycle-ε fact that
-//! sets up the alignment) are conservatively **rejected** — they stay `unknown`
-//! until a later slice adds an independent `check_fact` for the derived-equality
-//! premises.
+//! conflicts that only arise *after* an inference step are certified by the
+//! **slice-2** additions below rather than `check_conflict`.
+//!
+//! # Slice 2 — checked inference-dependent derivations
+//!
+//! [`check_fact`] independently re-verifies a T-B.3 [`Fact`] (a *derived*
+//! equality) from its cited premises alone, with the same independence discipline
+//! as [`check_conflict`] (its own [`MiniUf`] and its own aligned walkers; no
+//! reasoning code is shared with [`infer`](crate::infer)). It certifies four
+//! shapes, each by a self-evident length/offset argument:
+//!
+//! * **cycle-ε** ([`Rule::CycleEpsilon`]): `target ≈ ε` when a self-loop endpoint
+//!   `w` re-normalizes to a component vector containing a continuation component
+//!   `c_p ≈ w` and an off-cycle occurrence of `target`. Then `|w| = Σ|cᵢ|` and
+//!   `|c_p| = |w|` force every off-cycle length to `0`, so `target ≈ ε`. A `target`
+//!   that is a **nonempty constant** is *not* an ε fact — it is a contradiction,
+//!   certified separately by [`check_cycle_constant_conflict`];
+//! * **endpoint-emp** ([`Rule::InferEndpointEmp`]): `target ≈ ε` when two
+//!   provably-equal members align on an equal-length prefix that **exhausts** the
+//!   shorter, forcing the longer's tail (which contains `target`) to `ε`;
+//! * **endpoint-eq** ([`Rule::InferEndpointEq`]): `c ≈ d` when an equal-length
+//!   prefix leaves exactly one component on each side — equal-length suffixes of
+//!   equal sequences are equal;
+//! * **unify** ([`Rule::InferUnify`]): `c ≈ d` at an equal-length aligned interior
+//!   position of two equal members.
+//!
+//! [`check_cycle_constant_conflict`] certifies **`unsat`** for the
+//! `x ≈ "a" ++ x` family: the same self-loop length argument that would force an
+//! off-cycle component to `ε`, applied to a component that is a nonempty constant
+//! (length ≥ 1), is a contradiction (`0 = Σ ≥ 1`). Multi-node containment cycles
+//! (`x ≈ y ++ "a"`, `y ≈ x ++ "b"`) have no single self-loop endpoint witness and
+//! are conservatively **declined**.
+//!
+//! A shape that is not one of the above — or whose cited premises do not
+//! independently re-derive it — is simply **not certified** (`false`), a safe
+//! decline to `unknown`.
 
 use std::collections::{BTreeMap, BTreeSet};
 
 use axeyum_ir::{Assignment, Op, TermArena, TermId, TermNode, Value, eval};
 
-use crate::infer::Conflict;
+use crate::infer::{Conflict, Fact, Rule};
 use crate::normal_form::{concat_components, normalize};
 
 /// Re-verifies a T-B.3 [`Conflict`] from the cited premises alone.
@@ -142,6 +174,301 @@ pub fn check_equality(
         uf.union(x, y);
     }
     uf.find(a) == uf.find(b)
+}
+
+// ----- fact re-checking (slice 2) --------------------------------------------
+
+/// Re-verifies a T-B.3 [`Fact`] — a *derived* equality — from its cited premises
+/// alone, sharing no reasoning code with [`infer`](crate::infer).
+///
+/// Returns `true` only when the fact's equality can be independently re-derived
+/// from the equalities named by `fact.premises` by the self-evident length/offset
+/// argument for its [`Rule`] (see the module docs). Any shape it cannot re-derive
+/// — an out-of-range premise, a rule it does not cover, a multi-node cycle, a
+/// cited-premise set insufficient to entail the equality — yields `false`, a safe
+/// decline. A `false` never asserts the fact is wrong, only that this checker
+/// declines to certify it.
+#[must_use]
+pub fn check_fact(arena: &mut TermArena, equalities: &[(TermId, TermId)], fact: &Fact) -> bool {
+    if fact.premises.iter().any(|&p| p >= equalities.len()) {
+        return false;
+    }
+    match fact.rule {
+        Rule::CycleEpsilon => check_cycle_epsilon_fact(arena, equalities, fact),
+        Rule::InferEndpointEmp => check_endpoint_emp_fact(arena, equalities, fact),
+        Rule::InferEndpointEq => check_endpoint_eq_fact(arena, equalities, fact),
+        Rule::InferUnify => check_unify_fact(arena, equalities, fact),
+    }
+}
+
+/// Certifies **`unsat`** for a self-loop that forces a nonempty constant to `ε`
+/// (the `x ≈ "a" ++ x` family), from a T-B.3 [`Rule::CycleEpsilon`] `fact` whose
+/// `target` is a nonempty constant.
+///
+/// The cited premises exhibit a self-loop endpoint `w` whose re-normalized
+/// component vector contains a continuation `c_p ≈ w` and an off-cycle occurrence
+/// of the constant `target`. The length identity `Σ_{i≠p}|cᵢ| = 0` then clashes
+/// with `|target| ≥ 1`, so the premises are jointly unsatisfiable. Returns `false`
+/// (declines) unless the fact is a `CycleEpsilon` fact with a nonempty-constant
+/// target and the self-loop witness re-derives from the cited premises.
+#[must_use]
+pub fn check_cycle_constant_conflict(
+    arena: &mut TermArena,
+    equalities: &[(TermId, TermId)],
+    fact: &Fact,
+) -> bool {
+    if fact.rule != Rule::CycleEpsilon || fact.premises.iter().any(|&p| p >= equalities.len()) {
+        return false;
+    }
+    let Some(target) = epsilon_fact_target(arena, fact.equality) else {
+        return false;
+    };
+    // The contradiction shape: an off-cycle component with a known length ≥ 1.
+    match known_len(arena, target) {
+        Some(l) if l >= 1 => {}
+        _ => return false,
+    }
+    let uf = mini_uf(equalities, &fact.premises);
+    cycle_self_loop_witness(arena, equalities, &fact.premises, &uf, target)
+}
+
+/// `CycleEpsilon` fact `target ≈ ε`: certified when a self-loop endpoint witness
+/// forces the (variable / possibly-empty) `target` off-cycle component to `ε`. A
+/// nonempty-constant target is declined here (it is a contradiction, not an ε
+/// fact — see [`check_cycle_constant_conflict`]).
+fn check_cycle_epsilon_fact(
+    arena: &mut TermArena,
+    equalities: &[(TermId, TermId)],
+    fact: &Fact,
+) -> bool {
+    let Some(target) = epsilon_fact_target(arena, fact.equality) else {
+        return false;
+    };
+    // A target with a known length ≥ 1 cannot be ε: decline (the contradiction is
+    // certified by `check_cycle_constant_conflict`, not as a forward ε fact).
+    if matches!(known_len(arena, target), Some(l) if l >= 1) {
+        return false;
+    }
+    let uf = mini_uf(equalities, &fact.premises);
+    cycle_self_loop_witness(arena, equalities, &fact.premises, &uf, target)
+}
+
+/// The shared self-loop length witness: some endpoint `w` of a cited equality
+/// re-normalizes to a component vector `[c₀…c_{k-1}]` (`k ≥ 2`) containing a
+/// continuation index `p` with `c_p ≈ w` (so `|c_p| = |w| = Σ|cᵢ|`, forcing every
+/// off-cycle `|cᵢ| = 0`) and a **distinct** off-cycle occurrence `c_t ≈ target`.
+/// Independent of [`infer`](crate::infer)'s cycle detector.
+fn cycle_self_loop_witness(
+    arena: &mut TermArena,
+    equalities: &[(TermId, TermId)],
+    premises: &BTreeSet<usize>,
+    uf: &MiniUf,
+    target: TermId,
+) -> bool {
+    for w in endpoints_of(equalities, premises) {
+        let comps = normalized_components(arena, w);
+        if comps.len() < 2 {
+            continue;
+        }
+        // The continuation: a component equal (under the cited premises) to the
+        // whole endpoint `w`.
+        let Some(p) = comps.iter().position(|&c| uf.find(c) == uf.find(w)) else {
+            continue;
+        };
+        // A distinct off-cycle occurrence of `target`.
+        let hits_target = comps
+            .iter()
+            .enumerate()
+            .any(|(t, &c)| t != p && (c == target || uf.find(c) == uf.find(target)));
+        if hits_target {
+            return true;
+        }
+    }
+    false
+}
+
+/// `InferEndpointEmp` fact `target ≈ ε`: certified when two provably-equal members
+/// align on an equal-length prefix that exhausts the shorter, forcing the longer's
+/// remaining tail (which contains `target`) to `ε`.
+fn check_endpoint_emp_fact(
+    arena: &mut TermArena,
+    equalities: &[(TermId, TermId)],
+    fact: &Fact,
+) -> bool {
+    let Some(target) = epsilon_fact_target(arena, fact.equality) else {
+        return false;
+    };
+    if matches!(known_len(arena, target), Some(l) if l >= 1) {
+        return false;
+    }
+    let uf = mini_uf(equalities, &fact.premises);
+    let eps = endpoints_of(equalities, &fact.premises);
+    for &l in &eps {
+        for &r in &eps {
+            if l == r || uf.find(l) != uf.find(r) {
+                continue;
+            }
+            let na = normalized_components(arena, l);
+            let nb = normalized_components(arena, r);
+            let i = consume_equal_prefix(arena, &uf, &na, &nb);
+            // `r` fully consumed, `l` has a non-empty tail whose length is forced 0.
+            if i == nb.len()
+                && i < na.len()
+                && na[i..]
+                    .iter()
+                    .any(|&c| c == target || uf.find(c) == uf.find(target))
+            {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+/// `InferEndpointEq` fact `c ≈ d`: certified when an equal-length prefix leaves
+/// exactly one component on each side simultaneously — equal-length suffixes of
+/// equal sequences are equal.
+fn check_endpoint_eq_fact(
+    arena: &mut TermArena,
+    equalities: &[(TermId, TermId)],
+    fact: &Fact,
+) -> bool {
+    let (c, d) = fact.equality;
+    let uf = mini_uf(equalities, &fact.premises);
+    let eps = endpoints_of(equalities, &fact.premises);
+    for &l in &eps {
+        for &r in &eps {
+            if l == r || uf.find(l) != uf.find(r) {
+                continue;
+            }
+            let na = normalized_components(arena, l);
+            let nb = normalized_components(arena, r);
+            if na.is_empty() || nb.is_empty() {
+                continue;
+            }
+            let i = consume_equal_prefix(arena, &uf, &na, &nb);
+            if i == na.len() - 1 && i == nb.len() - 1 && matches_pair(&uf, na[i], nb[i], c, d) {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+/// `InferUnify` fact `c ≈ d`: certified at an equal-length aligned position of two
+/// equal members (equal length + equal starting offset ⇒ the two blocks are equal).
+fn check_unify_fact(arena: &mut TermArena, equalities: &[(TermId, TermId)], fact: &Fact) -> bool {
+    let (c, d) = fact.equality;
+    let uf = mini_uf(equalities, &fact.premises);
+    let eps = endpoints_of(equalities, &fact.premises);
+    for &l in &eps {
+        for &r in &eps {
+            if l == r || uf.find(l) != uf.find(r) {
+                continue;
+            }
+            let na = normalized_components(arena, l);
+            let nb = normalized_components(arena, r);
+            let mut i = 0;
+            while i < na.len() && i < nb.len() {
+                // Prefix stays offset-aligned only across equal-length cells.
+                if !pair_equal_length(arena, &uf, na[i], nb[i]) {
+                    break;
+                }
+                if matches_pair(&uf, na[i], nb[i], c, d) {
+                    return true;
+                }
+                i += 1;
+            }
+        }
+    }
+    false
+}
+
+// ----- fact-checking helpers (own copies — no `infer` reasoning code) ----------
+
+/// A [`MiniUf`] over exactly the cited premise equalities.
+fn mini_uf(equalities: &[(TermId, TermId)], premises: &BTreeSet<usize>) -> MiniUf {
+    let mut uf = MiniUf::default();
+    for &p in premises {
+        if let Some(&(a, b)) = equalities.get(p) {
+            uf.union(a, b);
+        }
+    }
+    uf
+}
+
+/// The distinct endpoint terms (both sides) of the cited premise equalities,
+/// sorted — the candidate `w` / `L` / `R` terms for the witnesses.
+fn endpoints_of(equalities: &[(TermId, TermId)], premises: &BTreeSet<usize>) -> Vec<TermId> {
+    let mut s: BTreeSet<TermId> = BTreeSet::new();
+    for &p in premises {
+        if let Some(&(a, b)) = equalities.get(p) {
+            s.insert(a);
+            s.insert(b);
+        }
+    }
+    s.into_iter().collect()
+}
+
+/// The [`normalize`]d, ε-dropped component vector of `t` — the same representation
+/// primitive [`check_conflict`] uses.
+fn normalized_components(arena: &mut TermArena, t: TermId) -> Vec<TermId> {
+    let n = normalize(arena, t);
+    concat_components(arena, n)
+}
+
+/// The non-ε side of a `(a, b)` equality when exactly one side is the empty
+/// sequence, i.e. the `target` of an `target ≈ ε` fact; `None` otherwise.
+fn epsilon_fact_target(arena: &TermArena, equality: (TermId, TermId)) -> Option<TermId> {
+    let (a, b) = equality;
+    match (is_epsilon_term(arena, a), is_epsilon_term(arena, b)) {
+        (true, false) => Some(b),
+        (false, true) => Some(a),
+        _ => None,
+    }
+}
+
+/// Whether `t` is (syntactically or by value) the empty sequence.
+fn is_epsilon_term(arena: &TermArena, t: TermId) -> bool {
+    matches!(
+        arena.node(t),
+        TermNode::App {
+            op: Op::SeqEmpty(_),
+            ..
+        }
+    ) || matches!(seq_value(arena, t), Some(v) if v.is_empty())
+}
+
+/// Whether `a` and `b` are provably **equal length** under the cited premises:
+/// identical handle, one class (equal sequences), or two structurally-known equal
+/// lengths.
+fn pair_equal_length(arena: &TermArena, uf: &MiniUf, a: TermId, b: TermId) -> bool {
+    if a == b || uf.find(a) == uf.find(b) {
+        return true;
+    }
+    match (known_len(arena, a), known_len(arena, b)) {
+        (Some(la), Some(lb)) => la == lb,
+        _ => false,
+    }
+}
+
+/// Consumes the longest **one-to-one, provably-equal-length** prefix of two
+/// component vectors, returning the number of cells consumed on each side. Each
+/// consumed pair contributes equal length, so the total consumed length stays
+/// equal on both sides — the invariant every fact witness relies on.
+fn consume_equal_prefix(arena: &TermArena, uf: &MiniUf, a: &[TermId], b: &[TermId]) -> usize {
+    let mut i = 0;
+    while i < a.len() && i < b.len() && pair_equal_length(arena, uf, a[i], b[i]) {
+        i += 1;
+    }
+    i
+}
+
+/// Whether the unordered pair `{x, y}` matches the unordered pair `{c, d}` up to
+/// provable equality under the cited premises (identical handle or one class).
+fn matches_pair(uf: &MiniUf, x: TermId, y: TermId, c: TermId, d: TermId) -> bool {
+    let eq = |p: TermId, q: TermId| p == q || uf.find(p) == uf.find(q);
+    (eq(x, c) && eq(y, d)) || (eq(x, d) && eq(y, c))
 }
 
 // ----- independent aligned walk ----------------------------------------------
