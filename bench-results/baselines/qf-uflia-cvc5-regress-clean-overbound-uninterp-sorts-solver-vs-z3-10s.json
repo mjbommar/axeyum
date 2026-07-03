@@ -1,247 +1,247 @@
 {
-  "config": {
-    "backend": "axeyum-solver solve",
-    "backend_kind": "solver",
-    "cnf_clause_budget": null,
-    "cnf_inprocessing": false,
-    "cnf_variable_budget": null,
-    "cnf_vivify": false,
-    "compare_backend": "z3 4.13.3.0",
-    "compare_z3": true,
-    "config_hash": "c32a56843b8fa724",
-    "corpus": "corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound",
-    "corpus_hash": "971480354e2f585f",
-    "corpus_source": null,
-    "hardware": {
-      "arch": "x86_64",
-      "hostname": null,
-      "os": "linux",
-      "parallelism": 16
-    },
-    "harness": "axeyum-bench 0.1.0",
-    "jobs": 4,
-    "limit": null,
-    "logic": "None",
-    "native_cdcl": false,
-    "node_budget": null,
-    "preprocess": false,
-    "query_plan": {
-      "mode": "full",
-      "refine_adaptive_batch": false,
-      "refine_batch": 1,
-      "refine_rounds": 16,
-      "refine_select": "first",
-      "sat_replay_failure_policy": "soundness-alarm"
-    },
-    "rewrite": {
-      "enabled_rule_ids": [],
-      "mode": "off",
-      "rule_set": null
-    },
-    "seed": "none",
-    "selected_families": null,
-    "timeout_ms": 10000
+ "config": {
+  "backend": "axeyum-solver solve",
+  "backend_kind": "solver",
+  "cnf_clause_budget": null,
+  "cnf_inprocessing": false,
+  "cnf_variable_budget": null,
+  "cnf_vivify": false,
+  "compare_backend": "z3 4.13.3.0",
+  "compare_z3": true,
+  "config_hash": "c32a56843b8fa724",
+  "corpus": "corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound",
+  "corpus_hash": "971480354e2f585f",
+  "corpus_source": null,
+  "hardware": {
+   "arch": "x86_64",
+   "hostname": null,
+   "os": "linux",
+   "parallelism": 16
   },
-  "instances": [
-    {
-      "assertions": 1248,
-      "backend_stats": {
-        "solve_ms": 2291.174803
-      },
-      "dag_nodes": 4024,
-      "distinct_symbols": 13,
-      "expected": "unsat",
-      "file": "corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2",
-      "max_depth": 43,
-      "model_lift_ms": 0,
-      "oracle": {
-        "backend_kind": "z3-binary",
-        "backend_stats": {},
-        "decision_agrees": true,
-        "decision_compared": true,
-        "enabled": true,
-        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, floating point, or sequences yet",
-        "model_lift_ms": 0,
-        "outcome": "unsat",
-        "solve_ms": 0,
-        "translate_ms": 0,
-        "z3_binary": {
-          "raw": "unsat",
-          "solve_ms": 37,
-          "verdict": "unsat"
-        }
-      },
-      "outcome": "unsat",
-      "query_plan": {
-        "cache_key": {
-          "assertions": 1248,
-          "assumptions": 0,
-          "dag_nodes": 4024,
-          "digest": "2dd81094315b6558",
-          "tree_nodes": 82285
-        },
-        "submitted": {
-          "dropped_terms": 0,
-          "planned_terms": 1248,
-          "sliced": false,
-          "solver_cache_key": {
-            "assertions": 1248,
-            "assumptions": 0,
-            "dag_nodes": 4024,
-            "digest": "2dd81094315b6558",
-            "tree_nodes": 82285
-          },
-          "strategy": "full",
-          "target_support_symbols": 0
-        }
-      },
-      "rewrite": {
-        "applications": 0,
-        "changed": false,
-        "decision_changed": null,
-        "input_dag_nodes": 4024,
-        "input_tree_nodes": 82285,
-        "mode": "off",
-        "original_detail": null,
-        "original_outcome": null,
-        "output_assertions": 1248,
-        "output_dag_nodes": 4024,
-        "output_distinct_symbols": 13,
-        "output_max_depth": 43,
-        "output_tree_nodes": 82285,
-        "rewritten_outcome": "unsat",
-        "rule_counts": {}
-      },
-      "solve_ms": 2291,
-      "translate_ms": 0,
-      "tree_nodes": 82285
-    },
-    {
-      "assertions": 1248,
-      "backend_stats": {
-        "solve_ms": 2296.850671
-      },
-      "dag_nodes": 4024,
-      "distinct_symbols": 13,
-      "expected": "unsat",
-      "file": "corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress3__error0.smt2",
-      "max_depth": 43,
-      "model_lift_ms": 0,
-      "oracle": {
-        "backend_kind": "z3-binary",
-        "backend_stats": {},
-        "decision_agrees": true,
-        "decision_compared": true,
-        "enabled": true,
-        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, floating point, or sequences yet",
-        "model_lift_ms": 0,
-        "outcome": "unsat",
-        "solve_ms": 0,
-        "translate_ms": 0,
-        "z3_binary": {
-          "raw": "unsat",
-          "solve_ms": 37,
-          "verdict": "unsat"
-        }
-      },
-      "outcome": "unsat",
-      "query_plan": {
-        "cache_key": {
-          "assertions": 1248,
-          "assumptions": 0,
-          "dag_nodes": 4024,
-          "digest": "2dd81094315b6558",
-          "tree_nodes": 82285
-        },
-        "submitted": {
-          "dropped_terms": 0,
-          "planned_terms": 1248,
-          "sliced": false,
-          "solver_cache_key": {
-            "assertions": 1248,
-            "assumptions": 0,
-            "dag_nodes": 4024,
-            "digest": "2dd81094315b6558",
-            "tree_nodes": 82285
-          },
-          "strategy": "full",
-          "target_support_symbols": 0
-        }
-      },
-      "rewrite": {
-        "applications": 0,
-        "changed": false,
-        "decision_changed": null,
-        "input_dag_nodes": 4024,
-        "input_tree_nodes": 82285,
-        "mode": "off",
-        "original_detail": null,
-        "original_outcome": null,
-        "output_assertions": 1248,
-        "output_dag_nodes": 4024,
-        "output_distinct_symbols": 13,
-        "output_max_depth": 43,
-        "output_tree_nodes": 82285,
-        "rewritten_outcome": "unsat",
-        "rule_counts": {}
-      },
-      "solve_ms": 2296,
-      "translate_ms": 0,
-      "tree_nodes": 82285
+  "harness": "axeyum-bench 0.1.0",
+  "jobs": 4,
+  "limit": null,
+  "logic": "QF_UFLIA",
+  "native_cdcl": false,
+  "node_budget": null,
+  "preprocess": false,
+  "query_plan": {
+   "mode": "full",
+   "refine_adaptive_batch": false,
+   "refine_batch": 1,
+   "refine_rounds": 16,
+   "refine_select": "first",
+   "sat_replay_failure_policy": "soundness-alarm"
+  },
+  "rewrite": {
+   "enabled_rule_ids": [],
+   "mode": "off",
+   "rule_set": null
+  },
+  "seed": "none",
+  "selected_families": null,
+  "timeout_ms": 10000
+ },
+ "instances": [
+  {
+   "assertions": 1248,
+   "backend_stats": {
+    "solve_ms": 2291.174803
+   },
+   "dag_nodes": 4024,
+   "distinct_symbols": 13,
+   "expected": "unsat",
+   "file": "corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2",
+   "max_depth": 43,
+   "model_lift_ms": 0,
+   "oracle": {
+    "backend_kind": "z3-binary",
+    "backend_stats": {},
+    "decision_agrees": true,
+    "decision_compared": true,
+    "enabled": true,
+    "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, floating point, or sequences yet",
+    "model_lift_ms": 0,
+    "outcome": "unsat",
+    "solve_ms": 0,
+    "translate_ms": 0,
+    "z3_binary": {
+     "raw": "unsat",
+     "solve_ms": 37,
+     "verdict": "unsat"
     }
-  ],
-  "summary": {
-    "agree": 2,
-    "blocker_buckets": {},
-    "disagree": 0,
-    "errors": 0,
-    "files": 2,
-    "layer_attribution": null,
-    "model_replay_failures": 0,
-    "oracle": {
-      "agree": 2,
-      "backend": "z3 4.13.3.0",
-      "compared": 2,
-      "disagree": 0,
-      "enabled": true,
-      "skipped": 0
+   },
+   "outcome": "unsat",
+   "query_plan": {
+    "cache_key": {
+     "assertions": 1248,
+     "assumptions": 0,
+     "dag_nodes": 4024,
+     "digest": "2dd81094315b6558",
+     "tree_nodes": 82285
     },
-    "par2_mean_s": 2.294012737,
-    "query_plan": {
-      "original_dag_nodes": 8048,
-      "original_tree_nodes": 164570,
-      "slice_changed_instances": 0,
-      "slice_dag_nodes": 8048,
-      "slice_dropped_terms": 0,
-      "slice_tree_nodes": 164570
-    },
-    "rewrite": {
-      "applications": 0,
-      "changed_instances": 0,
-      "decision_changes": 0,
-      "decision_matches": 0,
-      "input_dag_nodes": 0,
-      "input_tree_nodes": 0,
-      "mode": "off",
-      "output_dag_nodes": 0,
-      "output_tree_nodes": 0,
-      "sat_unsat_conflicts": 0
-    },
-    "sat": 0,
-    "unknown": 0,
-    "unsat": 2,
-    "unsupported": 0
+    "submitted": {
+     "dropped_terms": 0,
+     "planned_terms": 1248,
+     "sliced": false,
+     "solver_cache_key": {
+      "assertions": 1248,
+      "assumptions": 0,
+      "dag_nodes": 4024,
+      "digest": "2dd81094315b6558",
+      "tree_nodes": 82285
+     },
+     "strategy": "full",
+     "target_support_symbols": 0
+    }
+   },
+   "rewrite": {
+    "applications": 0,
+    "changed": false,
+    "decision_changed": null,
+    "input_dag_nodes": 4024,
+    "input_tree_nodes": 82285,
+    "mode": "off",
+    "original_detail": null,
+    "original_outcome": null,
+    "output_assertions": 1248,
+    "output_dag_nodes": 4024,
+    "output_distinct_symbols": 13,
+    "output_max_depth": 43,
+    "output_tree_nodes": 82285,
+    "rewritten_outcome": "unsat",
+    "rule_counts": {}
+   },
+   "solve_ms": 2291,
+   "translate_ms": 0,
+   "tree_nodes": 82285
   },
-  "triage": {
-    "errors": [],
-    "rewrite_decision_changes": [],
-    "soundness": {
-      "model_replay_failures": 0,
-      "oracle_disagreements": 0,
-      "rewrite_sat_unsat_conflicts": 0,
-      "status_disagreements": 0
+  {
+   "assertions": 1248,
+   "backend_stats": {
+    "solve_ms": 2296.850671
+   },
+   "dag_nodes": 4024,
+   "distinct_symbols": 13,
+   "expected": "unsat",
+   "file": "corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress3__error0.smt2",
+   "max_depth": 43,
+   "model_lift_ms": 0,
+   "oracle": {
+    "backend_kind": "z3-binary",
+    "backend_stats": {},
+    "decision_agrees": true,
+    "decision_compared": true,
+    "enabled": true,
+    "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, floating point, or sequences yet",
+    "model_lift_ms": 0,
+    "outcome": "unsat",
+    "solve_ms": 0,
+    "translate_ms": 0,
+    "z3_binary": {
+     "raw": "unsat",
+     "solve_ms": 37,
+     "verdict": "unsat"
+    }
+   },
+   "outcome": "unsat",
+   "query_plan": {
+    "cache_key": {
+     "assertions": 1248,
+     "assumptions": 0,
+     "dag_nodes": 4024,
+     "digest": "2dd81094315b6558",
+     "tree_nodes": 82285
     },
-    "unsupported": []
+    "submitted": {
+     "dropped_terms": 0,
+     "planned_terms": 1248,
+     "sliced": false,
+     "solver_cache_key": {
+      "assertions": 1248,
+      "assumptions": 0,
+      "dag_nodes": 4024,
+      "digest": "2dd81094315b6558",
+      "tree_nodes": 82285
+     },
+     "strategy": "full",
+     "target_support_symbols": 0
+    }
+   },
+   "rewrite": {
+    "applications": 0,
+    "changed": false,
+    "decision_changed": null,
+    "input_dag_nodes": 4024,
+    "input_tree_nodes": 82285,
+    "mode": "off",
+    "original_detail": null,
+    "original_outcome": null,
+    "output_assertions": 1248,
+    "output_dag_nodes": 4024,
+    "output_distinct_symbols": 13,
+    "output_max_depth": 43,
+    "output_tree_nodes": 82285,
+    "rewritten_outcome": "unsat",
+    "rule_counts": {}
+   },
+   "solve_ms": 2296,
+   "translate_ms": 0,
+   "tree_nodes": 82285
+  }
+ ],
+ "summary": {
+  "agree": 2,
+  "blocker_buckets": {},
+  "disagree": 0,
+  "errors": 0,
+  "files": 2,
+  "layer_attribution": null,
+  "model_replay_failures": 0,
+  "oracle": {
+   "agree": 2,
+   "backend": "z3 4.13.3.0",
+   "compared": 2,
+   "disagree": 0,
+   "enabled": true,
+   "skipped": 0
   },
-  "version": 14
+  "par2_mean_s": 2.294012737,
+  "query_plan": {
+   "original_dag_nodes": 8048,
+   "original_tree_nodes": 164570,
+   "slice_changed_instances": 0,
+   "slice_dag_nodes": 8048,
+   "slice_dropped_terms": 0,
+   "slice_tree_nodes": 164570
+  },
+  "rewrite": {
+   "applications": 0,
+   "changed_instances": 0,
+   "decision_changes": 0,
+   "decision_matches": 0,
+   "input_dag_nodes": 0,
+   "input_tree_nodes": 0,
+   "mode": "off",
+   "output_dag_nodes": 0,
+   "output_tree_nodes": 0,
+   "sat_unsat_conflicts": 0
+  },
+  "sat": 0,
+  "unknown": 0,
+  "unsat": 2,
+  "unsupported": 0
+ },
+ "triage": {
+  "errors": [],
+  "rewrite_decision_changes": [],
+  "soundness": {
+   "model_replay_failures": 0,
+   "oracle_disagreements": 0,
+   "rewrite_sat_unsat_conflicts": 0,
+   "status_disagreements": 0
+  },
+  "unsupported": []
+ },
+ "version": 14
 }

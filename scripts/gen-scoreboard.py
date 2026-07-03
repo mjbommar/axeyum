@@ -217,6 +217,29 @@ def fmt_par2(par2):
     return f"{par2:.3f}"
 
 
+NOTES_BEGIN = "<!-- NOTES:BEGIN (hand-written attribution notes — preserved by the generator) -->"
+NOTES_END = "<!-- NOTES:END -->"
+
+
+def preserved_notes():
+    """The hand-written dated attribution sections of the existing scoreboard.
+
+    Everything between the NOTES markers survives regeneration verbatim — the
+    measured tables are generated, but the *story* of each row move (what
+    landed, honest attribution, wrong-verdict repairs) is written by hand and
+    must not be deleted by a regen (it happened twice on 2026-07-03).
+    """
+    try:
+        with open(OUT_PATH) as fh:
+            text = fh.read()
+    except FileNotFoundError:
+        return []
+    if NOTES_BEGIN in text and NOTES_END in text:
+        block = text.split(NOTES_BEGIN, 1)[1].split(NOTES_END, 1)[0]
+        return [NOTES_BEGIN, block.strip("\n"), NOTES_END, ""]
+    return [NOTES_BEGIN, NOTES_END, ""]
+
+
 def build_markdown(div_rows, synth_rows, frontier_rows):
     all_div = div_rows + synth_rows
     # Sort divisions: by logic name, then by descending decide%, then slice.
@@ -338,6 +361,9 @@ def build_markdown(div_rows, synth_rows, frontier_rows):
         f"{total_compared} oracle-compared, **{total_disagree} disagreements.**"
     )
     lines.append("")
+
+    # Hand-written attribution notes (preserved verbatim across regens).
+    lines.extend(preserved_notes())
 
     # Frontier table.
     lines.append("## Progress frontiers (lever depth)")
