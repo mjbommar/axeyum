@@ -53,15 +53,15 @@ As of 2026-07-03, the public resource query reports:
 
 - 122 concept rows: 23 curriculum nodes, 18 math fields, 76 bridge concepts, and
   5 example families.
-- 142 non-template math packs.
-- 935 expected checks: 478 `sat`, 352 `unsat`, and 105 `not-run`.
-- 368 checked proof/evidence rows.
-- 462 replay-only rows.
-- 105 Lean-horizon rows.
-- 142 promoted solver-reuse packs.
+- 143 non-template math packs.
+- 940 expected checks: 480 `sat`, 354 `unsat`, and 106 `not-run`.
+- 369 checked proof/evidence rows.
+- 465 replay-only rows.
+- 106 Lean-horizon rows.
+- 143 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 142 focused learner-linked packs, with no path-only, index-only, or missing
+- 143 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 The seed phase is over. The next phase is not "add examples everywhere." The
@@ -206,8 +206,8 @@ real use.
 | `probability_theory` | PMFs, kernels, Markov chains, martingales, hitting times, concentration | QF_LRA/Farkas, QF_LIA, replay | exact discrete distribution variants plus limit-theorem horizons |
 | `statistics` | descriptive statistics, exact tests, regression, contingency tables | QF_LIA, QF_LRA, replay | exact finite inference plus numerical/statistical-honesty metadata |
 | `optimization_and_convexity` | LP/Farkas, convexity, KKT, SDP, descent, line search, projections, proximal steps | QF_LRA/Farkas, QF_NRA, Lean horizon | duality/working-set/strong-Wolfe variants only when distinct |
-| `numerical_analysis` | residuals, Euler steps, interval/error recurrence, singular-value and Jordan-chain shadows, finite algorithms | QF_LRA/Farkas, replay, Lean horizon | pivoting/stability metadata and exact-vs-floating examples |
-| `differential_equations_and_dynamical_systems` | recurrences, Euler traces, invariants, finite hitting times | QF_LRA/Farkas, replay, Lean horizon | transition/invariant variants with explicit continuous-theory boundary |
+| `numerical_analysis` | residuals, explicit and implicit Euler steps, interval/error recurrence, singular-value and Jordan-chain shadows, finite algorithms | QF_LRA/Farkas, replay, Lean horizon | pivoting/stability metadata and exact-vs-floating examples |
+| `differential_equations_and_dynamical_systems` | recurrences, explicit Euler traces, implicit Backward Euler traces, invariants, finite hitting times | QF_LRA/Farkas, replay, Lean horizon | transition/invariant/implicit-solve variants with explicit continuous-theory boundary |
 | `geometry` | coordinate, incidence, affine, rigid, circle, inversion, cyclic geometry | QF_LRA/Farkas, replay, QF_NRA horizon | nontrivial circle-line or polynomial-geometry rows with checked artifacts |
 | `functional_analysis_and_operator_theory` | finite operators, inner products, projections, Jordan/nilpotent shadows, Chebyshev slices | QF_LRA/Farkas, replay, Lean horizon | finite approximation/alternation rows plus Banach/Hilbert horizons |
 
@@ -459,7 +459,7 @@ Prefer one row, page, route upgrade, or query surface per commit.
 1. Keep this comprehensive plan linked from the foundational-resource index,
    mdBook summary, buildout plan, and live status.
 2. Landed: [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md) records that
-   the current 142 non-template packs are all focused-lesson linked, with no
+   the current 143 non-template packs are all focused-lesson linked, with no
    path-only, index-only, or missing learner buckets, and defines the future
    combined-page-only policy.
 3. Landed: [Proof Route Family Selection](PROOF-ROUTE-FAMILY-SELECTION.md)

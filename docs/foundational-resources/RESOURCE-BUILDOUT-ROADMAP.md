@@ -64,15 +64,15 @@ The current committed data boundary reports:
 - 18 math-field concept rows.
 - 76 bridge-concept rows.
 - 5 example-family rows.
-- 142 non-template math example packs.
-- 935 expected checks.
-- 368 checked proof/evidence rows.
-- 462 replay-only rows.
-- 105 Lean-horizon rows.
-- 142 promoted solver-reuse packs.
+- 143 non-template math example packs.
+- 940 expected checks.
+- 369 checked proof/evidence rows.
+- 465 replay-only rows.
+- 106 Lean-horizon rows.
+- 143 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 142 focused learner-linked packs, with no path-only, index-only, or missing
+- 143 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 This is broad enough that the next work is not "create a few examples." The
@@ -2592,6 +2592,15 @@ Pick one item per commit unless the change is purely navigational.
      QF_LRA/Farkas regression against exact `1/4` without claiming general
      RK2 order theory, consistency, convergence, stability regions, stiffness,
      or adaptive-step correctness.
+189. Landed: add `finite-backward-euler-method-v0` as an exact finite
+     implicit backward Euler time-stepping resource. The pack computes
+     `y' = -y` from `y(0)=1` with `h=1/2`, records endpoint derivatives,
+     zero implicit residuals, geometric decay ratio `2/3`, and exact states
+     `[1, 2/3, 4/9, 8/27]`, then promotes the malformed first-step claim
+     `1/2` through a source-linked QF_LRA/Farkas regression against exact
+     `2/3` without claiming general backward Euler convergence, A-stability,
+     stiffness behavior, nonlinear endpoint-solve correctness, adaptive-step
+     correctness, floating-point stability, or PDE theory.
 
 ## Validation Checklist
 

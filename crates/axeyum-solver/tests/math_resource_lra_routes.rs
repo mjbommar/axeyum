@@ -385,6 +385,9 @@ const FINITE_RUNGE_KUTTA_MIDPOINT_BAD_STEP: &str = include_str!(
 const FINITE_HEUN_BAD_STEP: &str = include_str!(
     "../../../artifacts/examples/math/finite-heun-method-v0/smt2/bad-heun-step-farkas-conflict.smt2"
 );
+const FINITE_BACKWARD_EULER_BAD_STEP: &str = include_str!(
+    "../../../artifacts/examples/math/finite-backward-euler-method-v0/smt2/bad-backward-euler-step-farkas-conflict.smt2"
+);
 const NUMERICAL_LINEAR_ALGEBRA_BAD_JACOBI_ERROR_BOUND: &str = include_str!(
     "../../../artifacts/examples/math/numerical-linear-algebra-v0/smt2/bad-jacobi-error-bound-farkas-conflict.smt2"
 );
@@ -1834,6 +1837,14 @@ fn finite_heun_bad_step_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "finite-heun-method-v0 bad-heun-step SMT-LIB artifact",
         FINITE_HEUN_BAD_STEP,
+    );
+}
+
+#[test]
+fn finite_backward_euler_bad_step_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-backward-euler-method-v0 bad-backward-euler-step SMT-LIB artifact",
+        FINITE_BACKWARD_EULER_BAD_STEP,
     );
 }
 

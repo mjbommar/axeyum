@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-backward-euler-method-v0",
+  "witnesses": [
+    {
+      "id": "linear-decay-backward-euler-trace",
+      "description": "Exact rational backward Euler replay for y' = -y, y(0) = 1, h = 1/2.",
+      "values": {
+        "ode": "y_prime_equals_minus_y",
+        "method": "implicit_backward_euler",
+        "step": "1/2",
+        "times": ["0", "1/2", "1", "3/2"],
+        "states": ["1", "2/3", "4/9", "8/27"],
+        "endpoint_times": ["1/2", "1", "3/2"],
+        "endpoint_derivatives": ["-2/3", "-4/9", "-8/27"],
+        "implicit_residuals": ["0", "0", "0"],
+        "decay_ratio": "2/3",
+        "lower_bound": "0",
+        "upper_bound": "1"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "backward-euler-implicit-solve-witness",
+      "claim": "The listed endpoint derivatives and states solve the backward Euler equations for y' = -y with h = 1/2.",
+      "expected_result": "sat",
+      "validation": "exact_rational_backward_euler_implicit_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["linear-decay-backward-euler-trace"],
+      "notes": "The validator recomputes y_{n+1} = y_n + h*f(t_{n+1}, y_{n+1}) and checks each implicit residual is zero."
+    },
+    {
+      "id": "backward-euler-geometric-decay-witness",
+      "claim": "The finite backward Euler trace is positive, monotone decreasing, and follows the listed ratio 2/3.",
+      "expected_result": "sat",
+      "validation": "exact_rational_backward_euler_decay_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["linear-decay-backward-euler-trace"],
+      "notes": "The validator checks the listed lower/upper bounds and the exact finite ratio; this is a finite trace property, not a stability theorem."
+    },
+    {
+      "id": "bad-backward-euler-step-rejected",
+      "claim": "For y' = -y, h = 1/2, t = 0, and y = 1, the first backward Euler step gives 1/2.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_bad_backward_euler_step_replay",
+      "proof_status": "replay-only",
+      "data": {
+        "source_witness": "linear-decay-backward-euler-trace",
+        "step_index": 0,
+        "time": "0",
+        "state": "1",
+        "step": "1/2",
+        "endpoint_time": "1/2",
+        "endpoint_derivative": "-2/3",
+        "computed_next_state": "2/3",
+        "claimed_next_state": "1/2",
+        "next_state_gap": "1/6"
+      },
+      "notes": "Exact replay computes the first backward Euler next state as 2/3, so the claimed value 1/2 is rejected; the separate qf-lra-bad-backward-euler-step row owns the checked Farkas evidence."
+    },
+    {
+      "id": "qf-lra-bad-backward-euler-step",
+      "claim": "The fixed malformed backward Euler next-state claim is linearly inconsistent.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_farkas_evidence",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "linear-decay-backward-euler-trace",
+        "source_replay_row": "bad-backward-euler-step-rejected",
+        "computed_next_state": "2/3",
+        "claimed_next_state": "1/2",
+        "farkas_conflict": "backward_euler_next_state = 2/3 and backward_euler_next_state = 1/2",
+        "smt2_artifact": "artifacts/examples/math/finite-backward-euler-method-v0/smt2/bad-backward-euler-step-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_backward_euler_bad_step_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes the first backward Euler next state as 2/3, while the malformed row claims 1/2; the source QF_LRA artifact isolates that scalar contradiction for Farkas checking."
+    },
+    {
+      "id": "general-backward-euler-theory-lean-horizon",
+      "claim": "General backward Euler convergence, A-stability, stiffness behavior, nonlinear solve correctness, adaptive step-size control, and floating-point time-stepping correctness require future theorem or numerical-honesty resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_boundary",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "For backward Euler and implicit one-step methods, prove consistency, convergence, stability, endpoint-solve correctness, and method-specific hypotheses separately from finite replay rows.",
+        "future_checker": "Lean theorem statements for exact backward Euler theory plus separate numerical-honesty or QF_FP artifacts for floating-point and nonlinear-solver implementations."
+      },
+      "notes": "The finite exact row is a checked resource for one rational backward Euler trace, not a theorem about arbitrary ODEs, stiff systems, implicit nonlinear solves, adaptive solvers, or floating-point implementations."
+    }
+  ]
+}

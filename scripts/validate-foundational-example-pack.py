@@ -32241,6 +32241,69 @@ def validate_heun_trace(context: str, values: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def validate_backward_euler_trace(context: str, values: dict[str, Any]) -> dict[str, Any]:
+    ode = require_euler_ode(f"{context}.ode", values.get("ode"))
+    method = values.get("method")
+    require_string(f"{context}.method", method)
+    if method != "implicit_backward_euler":
+        fail(f"{context}.method must be implicit_backward_euler")
+    step = require_fraction(f"{context}.step", values.get("step"))
+    times = require_fraction_vector(f"{context}.times", values.get("times"))
+    states = require_fraction_vector(f"{context}.states", values.get("states"))
+    endpoint_times = require_fraction_vector(
+        f"{context}.endpoint_times",
+        values.get("endpoint_times"),
+    )
+    endpoint_derivatives = require_fraction_vector(
+        f"{context}.endpoint_derivatives",
+        values.get("endpoint_derivatives"),
+    )
+    implicit_residuals = require_fraction_vector(
+        f"{context}.implicit_residuals",
+        values.get("implicit_residuals"),
+    )
+    if step <= 0:
+        fail(f"{context}.step must be positive")
+    if len(times) != len(states):
+        fail(f"{context}.times and states must have the same length")
+    transition_count = len(states) - 1
+    if transition_count <= 0:
+        fail(f"{context} must contain at least one transition")
+    for name, entries in [
+        ("endpoint_times", endpoint_times),
+        ("endpoint_derivatives", endpoint_derivatives),
+        ("implicit_residuals", implicit_residuals),
+    ]:
+        if len(entries) != transition_count:
+            fail(f"{context}.{name} must have one entry per transition")
+    for index in range(transition_count):
+        if times[index + 1] != times[index] + step:
+            fail(f"{context}.times transition {index}->{index + 1} does not match step")
+        if endpoint_times[index] != times[index + 1]:
+            fail(f"{context}.endpoint_times[{index}] is incorrect")
+        expected_derivative = euler_derivative(ode, endpoint_times[index], states[index + 1])
+        if endpoint_derivatives[index] != expected_derivative:
+            fail(f"{context}.endpoint_derivatives[{index}] is incorrect")
+        expected_next = states[index] + step * endpoint_derivatives[index]
+        if states[index + 1] != expected_next:
+            fail(f"{context}.states transition {index}->{index + 1} is not a backward Euler step")
+        residual = states[index] + step * endpoint_derivatives[index] - states[index + 1]
+        if implicit_residuals[index] != residual:
+            fail(f"{context}.implicit_residuals[{index}] is incorrect")
+        if implicit_residuals[index] != 0:
+            fail(f"{context}.implicit_residuals[{index}] must be zero")
+    return {
+        "ode": ode,
+        "method": method,
+        "step": step,
+        "times": times,
+        "states": states,
+        "endpoint_times": endpoint_times,
+        "endpoint_derivatives": endpoint_derivatives,
+        "implicit_residuals": implicit_residuals,
+    }
+
+
 def validate_finite_euler_method(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -32874,6 +32937,158 @@ def validate_finite_heun_method(expected: dict[str, Any]) -> None:
     require_string("Heun horizon future_checker", horizon_data.get("future_checker"))
 
 
+def validate_finite_backward_euler_method(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    solve = checks["backward-euler-implicit-solve-witness"]
+    if solve["expected_result"] != "sat":
+        fail("backward-euler-implicit-solve-witness must expect sat")
+    if solve.get("proof_status") != "replay-only":
+        fail("backward-euler-implicit-solve-witness must be replay-only")
+    values = single_witness_values(solve, witnesses)
+    replay = validate_backward_euler_trace("Backward Euler trace", values)
+    if replay["ode"] != "y_prime_equals_minus_y":
+        fail("finite backward Euler replay must use y' = -y")
+    if replay["step"] != Fraction(1, 2):
+        fail("finite backward Euler replay must use h = 1/2")
+
+    decay = checks["backward-euler-geometric-decay-witness"]
+    if decay["expected_result"] != "sat":
+        fail("backward-euler-geometric-decay-witness must expect sat")
+    if decay.get("proof_status") != "replay-only":
+        fail("backward-euler-geometric-decay-witness must be replay-only")
+    if single_witness_values(decay, witnesses) != values:
+        fail("backward-euler-geometric-decay-witness must cite the Backward Euler witness")
+    decay_ratio = require_fraction("Backward Euler decay_ratio", values.get("decay_ratio"))
+    lower_bound = require_fraction("Backward Euler lower_bound", values.get("lower_bound"))
+    upper_bound = require_fraction("Backward Euler upper_bound", values.get("upper_bound"))
+    if decay_ratio != Fraction(2, 3):
+        fail("Backward Euler decay_ratio must be 2/3")
+    for index, state in enumerate(replay["states"]):
+        if state <= 0:
+            fail(f"Backward Euler state {index} must be positive")
+        if not (lower_bound <= state <= upper_bound):
+            fail(f"Backward Euler state {index} is outside the listed bounds")
+    for index in range(len(replay["states"]) - 1):
+        if replay["states"][index + 1] != decay_ratio * replay["states"][index]:
+            fail(f"Backward Euler state {index + 1} does not match decay_ratio")
+        if replay["states"][index + 1] >= replay["states"][index]:
+            fail("Backward Euler trace must be strictly decreasing")
+
+    bad = checks["bad-backward-euler-step-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-backward-euler-step-rejected must expect unsat")
+    if bad.get("proof_status") != "replay-only":
+        fail("bad-backward-euler-step-rejected must be replay-only")
+    if bad.get("validation") != "exact_rational_bad_backward_euler_step_replay":
+        fail("bad-backward-euler-step-rejected validation is incorrect")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "linear-decay-backward-euler-trace":
+        fail("bad-backward-euler-step-rejected must cite the Backward Euler witness")
+    step_index = require_int("bad Backward Euler step_index", data.get("step_index"))
+    if step_index < 0 or step_index >= len(replay["states"]) - 1:
+        fail("bad-backward-euler-step-rejected step_index out of range")
+    time = require_fraction("bad Backward Euler time", data.get("time"))
+    state = require_fraction("bad Backward Euler state", data.get("state"))
+    step = require_fraction("bad Backward Euler step", data.get("step"))
+    endpoint_time = require_fraction("bad Backward Euler endpoint_time", data.get("endpoint_time"))
+    endpoint_derivative = require_fraction(
+        "bad Backward Euler endpoint_derivative",
+        data.get("endpoint_derivative"),
+    )
+    computed_next_state = require_fraction(
+        "bad Backward Euler computed_next_state",
+        data.get("computed_next_state"),
+    )
+    claimed_next_state = require_fraction(
+        "bad Backward Euler claimed_next_state",
+        data.get("claimed_next_state"),
+    )
+    next_state_gap = require_fraction(
+        "bad Backward Euler next_state_gap",
+        data.get("next_state_gap"),
+    )
+    if replay["times"][step_index] != time:
+        fail("bad-backward-euler-step-rejected time does not match source witness")
+    if replay["states"][step_index] != state:
+        fail("bad-backward-euler-step-rejected state does not match source witness")
+    if replay["step"] != step:
+        fail("bad-backward-euler-step-rejected step does not match source witness")
+    if replay["endpoint_times"][step_index] != endpoint_time:
+        fail("bad-backward-euler-step-rejected endpoint_time does not match source witness")
+    if replay["endpoint_derivatives"][step_index] != endpoint_derivative:
+        fail("bad-backward-euler-step-rejected endpoint_derivative does not match source witness")
+    if replay["states"][step_index + 1] != computed_next_state:
+        fail("bad-backward-euler-step-rejected computed_next_state does not match source witness")
+    if state + step * endpoint_derivative != computed_next_state:
+        fail("bad-backward-euler-step-rejected next-state arithmetic is incorrect")
+    if computed_next_state == claimed_next_state:
+        fail("bad-backward-euler-step-rejected malformed next state must disagree with replay")
+    if computed_next_state - claimed_next_state != next_state_gap:
+        fail("bad-backward-euler-step-rejected next_state_gap is incorrect")
+    if next_state_gap <= 0:
+        fail("bad-backward-euler-step-rejected next_state_gap must be positive")
+    if "separate qf-lra-bad-backward-euler-step" not in bad.get("notes", ""):
+        fail("bad-backward-euler-step-rejected notes must name the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-backward-euler-step"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-backward-euler-step must expect unsat")
+    if qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-backward-euler-step must be checked")
+    if qf_bad.get("validation") != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-backward-euler-step must use exact_rational_farkas_evidence")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_witness") != "linear-decay-backward-euler-trace":
+        fail("qf-lra-bad-backward-euler-step must cite the Backward Euler witness")
+    if qf_data.get("source_replay_row") != "bad-backward-euler-step-rejected":
+        fail("qf-lra-bad-backward-euler-step must cite the replay row")
+    qf_computed = require_fraction(
+        "qf Backward Euler computed_next_state",
+        qf_data.get("computed_next_state"),
+    )
+    qf_claimed = require_fraction(
+        "qf Backward Euler claimed_next_state",
+        qf_data.get("claimed_next_state"),
+    )
+    if qf_computed != computed_next_state or qf_claimed != claimed_next_state:
+        fail("qf-lra-bad-backward-euler-step data must match the replay row")
+    conflict = qf_data.get("farkas_conflict")
+    require_string("qf Backward Euler farkas_conflict", conflict)
+    expected_conflict = (
+        "backward_euler_next_state = 2/3 and backward_euler_next_state = 1/2"
+    )
+    if conflict != expected_conflict:
+        fail("qf-lra-bad-backward-euler-step must document the Farkas conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf Backward Euler smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-backward-euler-method-v0/smt2/"
+        "bad-backward-euler-step-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-lra-bad-backward-euler-step smt2_artifact must name the checked source artifact")
+    check_source("qf Backward Euler smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf Backward Euler farkas_regression", regression)
+    if "finite_backward_euler_bad_step_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-backward-euler-step must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf Backward Euler certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-backward-euler-step certificate must document checked Farkas evidence")
+
+    horizon = checks["general-backward-euler-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-backward-euler-theory-lean-horizon must be not-run")
+    if horizon.get("proof_status") != "lean-horizon":
+        fail("general-backward-euler-theory-lean-horizon must remain lean-horizon")
+    horizon_data = horizon.get("data", {})
+    require_string("Backward Euler horizon target_theorem_shape", horizon_data.get("target_theorem_shape"))
+    require_string("Backward Euler horizon future_checker", horizon_data.get("future_checker"))
+
+
 def validate_bounded_dynamics(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -33233,6 +33448,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_runge_kutta_midpoint(expected)
     if metadata["id"] == "finite-heun-method-v0":
         validate_finite_heun_method(expected)
+    if metadata["id"] == "finite-backward-euler-method-v0":
+        validate_finite_backward_euler_method(expected)
     if metadata["id"] == "finite-gaussian-elimination-v0":
         validate_finite_gaussian_elimination(expected)
     if metadata["id"] == "finite-lu-decomposition-v0":

@@ -1522,9 +1522,9 @@ Exit criteria:
   QF_LRA/Farkas infeasibility, Boolean CNF/LRAT refutations, integer/count
   Diophantine obstructions, and fixed-width QF_BV/DRAT rows.
 - At least 12 validated example packs.
-  Status: 142 non-template math example packs validate.
+  Status: 143 non-template math example packs validate.
 - At least 6 packs with checked proof/evidence routes.
-  Status: 142 non-template packs have at least one `checked` expected-result row.
+  Status: 143 non-template packs have at least one `checked` expected-result row.
 - At least one downstream consumer can read the data without repository-internal
   knowledge.
   Status: `scripts/consume-foundational-resources.py` reads the committed atlas
@@ -3556,6 +3556,15 @@ QF_LRA/Farkas artifact rejects the malformed first-step claim `1/2` against
 exact `1/4`. General RK2 order theory, consistency, convergence, stability
 regions, stiffness, and adaptive-step control stay in future Lean/theorem or
 numerical-honesty lanes.
+The differential-equations/numerical-analysis/real-analysis layer now adds
+`finite-backward-euler-method-v0` as the 143rd non-template math pack. Exact
+rational replay checks `y' = -y`, `y(0)=1`, `h=1/2`, endpoint derivatives
+`[-2/3, -4/9, -8/27]`, zero implicit residuals, geometric decay ratio `2/3`,
+and states `[1, 2/3, 4/9, 8/27]`, while a source-linked QF_LRA/Farkas artifact
+rejects the malformed first-step claim `1/2` against exact `2/3`. General
+backward Euler convergence, A-stability, stiffness behavior, nonlinear
+endpoint solves, adaptive-step control, floating-point time-stepping, and PDE
+theory stay in future Lean/theorem or numerical-honesty lanes.
 Continue by adding the next curriculum-adjacent pack from the field ledger
 or by replacing finite enumeration routes with emitted, checked proof objects
 where appropriate.
