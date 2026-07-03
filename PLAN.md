@@ -157,13 +157,13 @@ proof upgrades, solver feedback, and consumer boundaries is
 [`docs/foundational-resources/CURRICULUM-RESOURCE-EXECUTION-PLAN.md`](docs/foundational-resources/CURRICULUM-RESOURCE-EXECUTION-PLAN.md).
 The commit-sized curriculum/resource work matrix is
 [`docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md`](docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md).
-The current execution ledger for stabilizing the 148 current math packs,
+The current execution ledger for stabilizing the 149 current math packs,
 resolving unclassified solver-reuse rows, completing learner paths, and
 deepening proof routes field by field is
 [`docs/foundational-resources/MATH-CURRICULUM-DETAILED-BUILD-PLAN.md`](docs/foundational-resources/MATH-CURRICULUM-DETAILED-BUILD-PLAN.md).
 The current learner-spine audit over all non-template math packs is
 [`docs/foundational-resources/LEARNER-COVERAGE-AUDIT.md`](docs/foundational-resources/LEARNER-COVERAGE-AUDIT.md);
-it records all 148 current non-template packs as focused-lesson linked, with no
+it records all 149 current non-template packs as focused-lesson linked, with no
 path-only, index-only, or missing learner buckets.
 The detailed operating roadmap for building the math-curriculum resource system
 across ontology rows, example packs, learner pages, proof routes, solver reuse,
@@ -374,13 +374,13 @@ The learner-facing rules/law trust-boundary page is
 it walks from human-authored source rules through formal models, replayed
 witnesses, checked obligations, and explicit legal/theorem horizons.
 Current resource-buildout status (2026-07-03): the public JSON layer reports
-122 concept rows, 148 non-template packs, 966 expected checks (491 `sat`,
-364 `unsat`, 111 `not-run`), 374 checked rows, 481 replay-only rows, 111
-Lean-horizon rows, and 148 promoted solver-reuse packs. The rules/law JSON
+122 concept rows, 149 non-template packs, 972 expected checks (494 `sat`,
+366 `unsat`, 112 `not-run`), 375 checked rows, 485 replay-only rows, 112
+Lean-horizon rows, and 149 promoted solver-reuse packs. The rules/law JSON
 layer now reports 7 packs, 1,037
 bounded sample rows, 1,942 generated query rows, 27 checked obligations, and
 9 replayed witness rows. The learner
-coverage audit records all 148 non-template packs as focused-lesson linked,
+coverage audit records all 149 non-template packs as focused-lesson linked,
 with no path-only, index-only, or missing learner buckets. The first QF_UF/Alethe
 proof upgrade wave now includes equivalence classes, relations/functions, finite
 groups, function composition, finite algebra homomorphisms, finite monoids, and
@@ -775,7 +775,7 @@ curriculum-pressure dashboards now expose conservative R0-R6 gate/next-gate
 columns and overlapping fragment-pressure buckets, making R4-to-R5 solver-reuse
 candidates and Bool/CNF, QF_BV, QF_LIA, QF_LRA, QF_UF, finite-replay, and
 Lean-horizon demand visible without hand-maintained scans.
-The generated solver-reuse disposition audit now reports 148 promoted math
+The generated solver-reuse disposition audit now reports 149 promoted math
 packs, 0 non-benchmark-horizon packs, and 0 unclassified rows, so future
 unclassified packs and deliberate non-benchmark rows surface in a
 freshness-checked queue.
@@ -1117,8 +1117,9 @@ for the overlapping-set false-additivity count conflict. The five active resourc
 now each have a route-specific tamper/rejection regression: Boolean CNF/LRAT,
 QF_BV DRAT, QF_LRA/Farkas, QF_LIA/Diophantine, and QF_UF/Alethe all mutate an
 emitted resource certificate and require the independent checker to reject it;
-the foundational resource dashboards now report **148 promoted solver-reuse
+the foundational resource dashboards now report **149 promoted solver-reuse
 packs**, **0 non-benchmark-horizon packs**, and **0 unclassified packs** after
+the latest finite barycentric interpolation bad value QF_LRA/Farkas promotion,
 the latest finite divided-differences bad interpolation-value QF_LRA/Farkas
 promotion,
 the latest finite Simpson-rule bad quadrature-value QF_LRA/Farkas promotion,

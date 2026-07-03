@@ -128,19 +128,56 @@ fn compare_pred(op: &str, signed: bool) -> Option<&'static str> {
 fn exec_stmt(arena: &mut TermArena, env: &mut HashMap<u32, Operand>, stmt: &str) {
     let (dst, rhs) = stmt.split_once(" = ").expect("statement `_N = ..`");
     let dst_n: u32 = dst.trim_start_matches('_').parse().expect("dst local");
+    // `copy _1 as u32 (IntToInt)` — widen by the SOURCE sign, narrow by extract.
+    if let Some((src_tok, rest)) = rhs.split_once(" as ") {
+        let ty = rest.split_whitespace().next().expect("cast target type");
+        let (dst_w, dst_signed) = ty_info(ty);
+        let (a, w, signed) = operand(arena, env, src_tok.trim());
+        let term = match dst_w.cmp(&w) {
+            std::cmp::Ordering::Greater if signed => arena.sign_ext(dst_w - w, a).unwrap(),
+            std::cmp::Ordering::Greater => arena.zero_ext(dst_w - w, a).unwrap(),
+            std::cmp::Ordering::Less => arena.extract(dst_w - 1, 0, a).unwrap(),
+            std::cmp::Ordering::Equal => a,
+        };
+        env.insert(dst_n, (term, dst_w, dst_signed));
+        return;
+    }
     let result = match rhs.split_once('(') {
-        // `BitAnd(copy _1, const 255_u32)` / `Gt(copy _1, const 100_u32)`
+        // `BitAnd(copy _1, const 255_u32)` / `Gt(..)` / unary `Not(..)` / `Neg(..)`
         Some((op, args)) if op.chars().all(char::is_alphanumeric) && !op.is_empty() => {
             let inner = args.strip_suffix(')').unwrap_or(args);
-            let (lhs, rhs_op) = inner.split_once(", ").expect("two operands");
-            let (a, w, signed) = operand(arena, env, lhs.trim());
-            let (b, _, _) = operand(arena, env, rhs_op.trim());
-            if let Some(pred) = compare_pred(op, signed) {
-                (compare(arena, pred, a, b), 1, false)
-            } else if op == "Shr" && signed {
-                (binop(arena, "ashr", a, b), w, signed)
+            if let Some((lhs, rhs_op)) = inner.split_once(", ") {
+                let (a, w, signed) = operand(arena, env, lhs.trim());
+                let (mut b, b_w, _) = operand(arena, env, rhs_op.trim());
+                if let Some(pred) = compare_pred(op, signed) {
+                    (compare(arena, pred, a, b), 1, false)
+                } else {
+                    // Rust shift amounts are independently typed (`x << 1` is an
+                    // `i32` literal) — adjust to the shiftee's width for the BV op.
+                    if matches!(op, "Shl" | "Shr") && b_w != w {
+                        b = if b_w > w {
+                            arena.extract(w - 1, 0, b).unwrap()
+                        } else {
+                            arena.zero_ext(w - b_w, b).unwrap()
+                        };
+                    }
+                    if op == "Shr" && signed {
+                        (binop(arena, "ashr", a, b), w, signed)
+                    } else {
+                        (binop(arena, op, a, b), w, signed)
+                    }
+                }
             } else {
-                (binop(arena, op, a, b), w, signed)
+                // UnaryOp: `Not(copy _1)` (logical on bool, bitwise on ints),
+                // `Neg(copy _1)` (two's-complement negation).
+                let (a, w, signed) = operand(arena, env, inner.trim());
+                let t = match (op, w) {
+                    ("Not", 1) => arena.not(a).unwrap(),
+                    ("Not", _) => arena.bv_not(a).unwrap(),
+                    ("Neg", _) => arena.bv_neg(a).unwrap(),
+                    _ => panic!("unsupported unary MIR op `{op}`"),
+                };
+                (t, w, signed)
             }
         }
         // A bare `Use`: `copy _1` / `move _2` / `const K_TY`.

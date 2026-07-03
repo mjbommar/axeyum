@@ -384,6 +384,79 @@ fn differential_fuzz_mir_vs_llvm_reflections() {
     }
 }
 
+// ---- `ext(x: u8) -> u32 = (x as u32) << 1` : Cast + independently-typed shift ----
+// MIR keeps the `as` cast (`IntToInt`) and a shift whose amount is an `i32`
+// literal (Rust's default); LLVM emits `zext` + a same-width `shl`.
+
+const EXT_MIR: &str = r"
+fn ext(_1: u8) -> u32 {
+    debug x => _1;
+    let mut _0: u32;
+    let mut _2: u32;
+
+    bb0: {
+        _2 = copy _1 as u32 (IntToInt);
+        _0 = Shl(move _2, const 1_i32);
+        return;
+    }
+}
+";
+
+const EXT_LL: &str = r"
+define noundef range(i32 0, 511) i32 @ext(i8 noundef %x) unnamed_addr {
+start:
+  %_2 = zext i8 %x to i32
+  %_0 = shl nuw nsw i32 %_2, 1
+  ret i32 %_0
+}
+";
+
+// ---- `notx(x) = !x` : MIR `UnaryOp(Not)` ~ LLVM `xor %x, -1` ---------------------
+// LLVM has no bitwise-not instruction; it canonicalizes to xor with all-ones,
+// printed as a NEGATIVE constant — exercising signed-const parsing.
+
+const NOTX_MIR: &str = r"
+fn notx(_1: u32) -> u32 {
+    debug x => _1;
+    let mut _0: u32;
+
+    bb0: {
+        _0 = Not(copy _1);
+        return;
+    }
+}
+";
+
+const NOTX_LL: &str = r"
+define noundef i32 @notx(i32 noundef %x) unnamed_addr {
+start:
+  %_0 = xor i32 %x, -1
+  ret i32 %_0
+}
+";
+
+// ---- `negate(x: i32) = -x` (wrapping) : MIR `UnaryOp(Neg)` ~ LLVM `sub 0, %x` ----
+
+const NEG_MIR: &str = r"
+fn negate(_1: i32) -> i32 {
+    debug x => _1;
+    let mut _0: i32;
+
+    bb0: {
+        _0 = Neg(copy _1);
+        return;
+    }
+}
+";
+
+const NEG_LL: &str = r"
+define noundef i32 @negate(i32 noundef %x) unnamed_addr {
+start:
+  %_0 = sub i32 0, %x
+  ret i32 %_0
+}
+";
+
 // ---- `umin(a, b) = if a < b { a } else { b }` : TWO parameters -------------------
 // MIR keeps the Lt-diamond; `-O` LLVM recognizes the idiom and emits the
 // `@llvm.umin` intrinsic. Proving them equal exercises multi-parameter
@@ -426,6 +499,38 @@ start:
   ret i32 %r
 }
 ";
+
+/// `ext`: MIR `as`-cast (`IntToInt`) + an `i32`-typed shift amount == LLVM
+/// `zext`+`shl`, for all u8 — casts and Rust's independently-typed shift
+/// literals land correctly in the one BV algebra.
+#[test]
+fn ext_cast_mir_equals_llvm() {
+    assert_equivalent(8, EXT_MIR, EXT_LL, &[0, 1, 0x7f, 0x80, 0xff]);
+}
+
+/// `notx`: MIR `UnaryOp(Not)` == LLVM's canonical `xor %x, -1`, for all u32 —
+/// bitwise-not across two spellings, incl. LLVM's signed-printed constant.
+#[test]
+fn notx_mir_equals_llvm() {
+    assert_equivalent(
+        32,
+        NOTX_MIR,
+        NOTX_LL,
+        &[0, 1, 0xffff_ffff, 0xdead_beef, 0x8000_0000],
+    );
+}
+
+/// `negate`: MIR `UnaryOp(Neg)` == LLVM `sub 0, %x`, for all i32 (wrapping
+/// two's-complement negation, including `i32::MIN`).
+#[test]
+fn negate_mir_equals_llvm() {
+    assert_equivalent(
+        32,
+        NEG_MIR,
+        NEG_LL,
+        &[0, 1, 0x7fff_ffff, 0x8000_0000, u128::from(u32::MAX)],
+    );
+}
 
 /// `umin`, two parameters: MIR `Lt`-diamond over (_1, _2) == LLVM's recognized
 /// `@llvm.umin` intrinsic, for all (u32, u32) — multi-parameter reflection on

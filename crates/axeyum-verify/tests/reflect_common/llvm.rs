@@ -48,9 +48,14 @@ pub fn resolve(
     } else if width == 1 {
         arena.bool_const(tok == "1" || tok == "true")
     } else {
-        arena
-            .bv_const(width, tok.parse::<u128>().expect("integer constant"))
-            .unwrap()
+        // LLVM prints negative constants signed (`xor i32 %x, -1`); wrap them to
+        // two's complement at the operand width.
+        let value = tok.parse::<u128>().unwrap_or_else(|_| {
+            let v: i128 = tok.parse().expect("integer constant");
+            assert!(v < 0 && width < 128, "unparseable constant `{tok}`");
+            (v + (1i128 << width)).cast_unsigned()
+        });
+        arena.bv_const(width, value).unwrap()
     }
 }
 

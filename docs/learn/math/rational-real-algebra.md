@@ -20,6 +20,7 @@ Example packs:
 - [polynomial-identities-v0](../../../artifacts/examples/math/polynomial-identities-v0/)
 - [polynomial-factorization-rational-v0](../../../artifacts/examples/math/polynomial-factorization-rational-v0/)
 - [finite-divided-differences-v0](../../../artifacts/examples/math/finite-divided-differences-v0/)
+- [finite-barycentric-interpolation-v0](../../../artifacts/examples/math/finite-barycentric-interpolation-v0/)
 - [generating-functions-v0](../../../artifacts/examples/math/generating-functions-v0/)
 - [finite-recurrence-prefix-v0](../../../artifacts/examples/math/finite-recurrence-prefix-v0/)
 - [finite-root-finding-v0](../../../artifacts/examples/math/finite-root-finding-v0/)
@@ -213,6 +214,27 @@ evidence. General interpolation uniqueness, error estimates, node conditioning,
 spline theory, and floating-point interpolation stay in the Lean or
 numerical-honesty horizon; see
 [End To End: Finite Divided Differences](divided-differences-end-to-end.md).
+
+For finite barycentric interpolation, encode the same interpolation problem as
+weights, regular quotient rows, and node-hit rows instead of a Newton table:
+
+```text
+f(x) = x^2
+nodes = 0, 1, 3
+barycentric weights = 1/3, -1/2, 1/6
+value at x = 2 is 4
+node hit at x = 1 returns 1
+```
+
+The `finite-barycentric-interpolation-v0` validator recomputes the weights,
+denominator terms, numerator terms, sums, node-hit value, and final
+interpolation value. It rejects the malformed claim `barycentric_value = 5`
+after exact replay computes `4`, then checks the scalar equality conflict
+through QF_LRA/Farkas evidence. General barycentric/Lagrange/Newton
+equivalence, error estimates, conditioning, Runge phenomena, splines, and
+floating-point interpolation correctness remain theorem or numerical-honesty
+work; see
+[End To End: Finite Barycentric Interpolation](barycentric-interpolation-end-to-end.md).
 
 For a finite generating-function check, encode coefficient lists and replay
 convolution:
@@ -626,6 +648,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/po
 cargo test -p axeyum-solver --test math_resource_lra_routes polynomial_factorization_irreducible_quadratic_discriminant_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-divided-differences-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_divided_differences_bad_interpolation_value_artifact_emits_checked_farkas
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-barycentric-interpolation-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_barycentric_interpolation_bad_value_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/generating-functions-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-recurrence-prefix-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_recurrence_prefix_bad_value_artifact_emits_checked_farkas

@@ -240,6 +240,22 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite barycentric interpolation resource landed.**
+  `finite-barycentric-interpolation-v0` now gives the real-analysis and
+  numerical-analysis lanes a compact exact barycentric interpolation example:
+  it checks barycentric weights, regular numerator/denominator terms,
+  interpolation values for `1+2*x` and `x^2`, and an explicit node-hit row. It
+  then rejects the malformed barycentric claim `5` versus exact `4` through a
+  source-linked QF_LRA/Farkas row. The focused learner page, rational-real
+  algebra page, calculus theorem-boundary page, analysis/numerical query guide,
+  polynomial replay bridge, validator, resource smoke queries, and
+  `math_resource_lra_routes` regression keep this fixed exact interpolation
+  replay separate from barycentric/Lagrange/Newton equivalence, interpolation
+  uniqueness, error estimates, node-choice conditioning, Runge phenomena,
+  spline theory, floating-point interpolation correctness, and numerical
+  stability. The public summary now reports 122 concept rows, 149 packs, 972
+  expected checks, 375 checked rows, 485 replay-only rows, 112 Lean-horizon
+  rows, and 149 promoted solver-reuse packs.
 - **Finite divided-differences resource landed.**
   `finite-divided-differences-v0` now gives the real-analysis and
   numerical-analysis lanes a compact exact Newton interpolation example: it
@@ -253,7 +269,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   exact interpolation replay separate from general interpolation uniqueness,
   divided-difference identities, error estimates, node-choice conditioning,
   spline theory, floating-point interpolation correctness, and numerical
-  stability. The public summary now reports 122 concept rows, 148 packs, 966
+  stability. At landing, the public summary reported 122 concept rows, 148 packs, 966
   expected checks, 374 checked rows, 481 replay-only rows, 111 Lean-horizon
   rows, and 148 promoted solver-reuse packs.
 - **Finite Simpson-rule resource landed.**

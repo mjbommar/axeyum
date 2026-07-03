@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "id": "finite-barycentric-interpolation-v0",
+  "title": "Finite Barycentric Interpolation Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_numerical_analysis",
+    "field_real_analysis",
+    "curriculum_polynomials",
+    "curriculum_calculus",
+    "curriculum_rationals",
+    "curriculum_reals",
+    "bridge_polynomial_coefficient_factor_replay",
+    "bridge_bounded_family_asymptotic_boundary"
+  ],
+  "field_ids": [
+    "numerical_analysis",
+    "real_analysis"
+  ],
+  "curriculum_nodes": [
+    "polynomials",
+    "calculus",
+    "rationals",
+    "reals"
+  ],
+  "axeyum_fragments": [
+    "finite barycentric interpolation",
+    "barycentric weight replay",
+    "node-hit interpolation replay",
+    "polynomial evaluation",
+    "LRA (exact rationals)",
+    "QF_LRA",
+    "Farkas",
+    "finite replay",
+    "Lean horizon",
+    "numerical-honesty metadata"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-barycentric-interpolation-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite barycentric interpolation bad value QF_LRA/Farkas regression seed",
+    "pressure": "Exact rational barycentric interpolation replay for f(x)=x^2 at nodes 0,1,3 computes barycentric_value = 4 at x=2, while a malformed row claims barycentric_value = 5, isolating a compact scalar equality conflict for the Farkas route.",
+    "evidence": [
+      "qf-lra-bad-barycentric-value"
+    ],
+    "next_step": "Promote additional interpolation rows only when they add distinct stability, node-ordering, barycentric-update, spline, floating-point, or theorem-reconstruction pressure; keep general interpolation error and conditioning theory in future Lean or numerical-honesty lanes."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/02-structures/polynomials.md",
+    "docs/curriculum/03-destinations/calculus.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/curriculum/01-number-systems/reals.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/barycentric-interpolation-end-to-end.md",
+    "artifacts/examples/math/finite-barycentric-interpolation-v0/smt2/bad-barycentric-value-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+  ],
+  "expected_results": [
+    "linear-barycentric-evaluation-witness",
+    "quadratic-barycentric-evaluation-witness",
+    "node-hit-barycentric-witness",
+    "bad-barycentric-value-rejected",
+    "qf-lra-bad-barycentric-value",
+    "general-barycentric-interpolation-theory-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode the fixed polynomial, nodes, sample values, barycentric weights, numerator terms, denominator terms, node-hit data, and interpolation value as deterministic rational replay obligations.",
+    "Route the false barycentric interpolation value through checked QF_LRA/Farkas evidence after replay computes the exact value.",
+    "Expose the pack through polynomial, calculus, real-analysis, numerical-analysis, and learner query surfaces.",
+    "Keep general interpolation uniqueness, barycentric/Lagrange/Newton equivalence, error estimates, conditioning, Runge phenomena, spline theory, floating-point interpolation correctness, and numerical-stability claims marked as future Lean or numerical-honesty work until formal routes exist."
+  ]
+}

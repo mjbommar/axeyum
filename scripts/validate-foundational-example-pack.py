@@ -11408,6 +11408,123 @@ def validate_divided_difference_trace(context: str, values: dict[str, Any]) -> d
     }
 
 
+def barycentric_weights(nodes: list[Fraction]) -> list[Fraction]:
+    weights: list[Fraction] = []
+    for index, node in enumerate(nodes):
+        denominator = Fraction(1)
+        for other_index, other_node in enumerate(nodes):
+            if index == other_index:
+                continue
+            difference = node - other_node
+            if difference == 0:
+                fail("barycentric interpolation requires distinct nodes")
+            denominator *= difference
+        weights.append(Fraction(1, denominator))
+    return weights
+
+
+def validate_barycentric_trace(context: str, values: dict[str, Any]) -> dict[str, Any]:
+    method = values.get("method")
+    require_string(f"{context}.method", method)
+    if method != "barycentric_interpolation":
+        fail(f"{context}.method must be barycentric_interpolation")
+    polynomial = require_polynomial(f"{context}.polynomial", values.get("polynomial"))
+    nodes = require_fraction_vector(f"{context}.nodes", values.get("nodes"))
+    if len(nodes) < 2:
+        fail(f"{context}.nodes must contain at least two nodes")
+    for previous, current in zip(nodes, nodes[1:]):
+        if not previous < current:
+            fail(f"{context}.nodes must be strictly increasing")
+    if len(normalize_polynomial(polynomial)) > len(nodes):
+        fail(f"{context}.polynomial degree must be less than the number of nodes")
+    sample_values = require_fraction_vector(f"{context}.sample_values", values.get("sample_values"))
+    if len(sample_values) != len(nodes):
+        fail(f"{context}.sample_values length must match nodes")
+    expected_samples = [polynomial_eval(polynomial, node) for node in nodes]
+    if sample_values != expected_samples:
+        fail(f"{context}.sample_values do not match the polynomial")
+    weights = require_fraction_vector(
+        f"{context}.barycentric_weights",
+        values.get("barycentric_weights"),
+    )
+    expected_weights = barycentric_weights(nodes)
+    if weights != expected_weights:
+        fail(f"{context}.barycentric_weights are incorrect")
+    point = require_fraction(f"{context}.evaluation_point", values.get("evaluation_point"))
+    mode = values.get("evaluation_mode")
+    require_string(f"{context}.evaluation_mode", mode)
+    polynomial_value = require_fraction(f"{context}.polynomial_value", values.get("polynomial_value"))
+    if polynomial_value != polynomial_eval(polynomial, point):
+        fail(f"{context}.polynomial_value is incorrect")
+    interpolated_value = require_fraction(
+        f"{context}.interpolated_value",
+        values.get("interpolated_value"),
+    )
+
+    if mode == "regular":
+        if point in nodes:
+            fail(f"{context}.evaluation_point must not be a node in regular mode")
+        denominator_terms = require_fraction_vector(
+            f"{context}.denominator_terms",
+            values.get("denominator_terms"),
+        )
+        numerator_terms = require_fraction_vector(
+            f"{context}.numerator_terms",
+            values.get("numerator_terms"),
+        )
+        if len(denominator_terms) != len(nodes):
+            fail(f"{context}.denominator_terms length must match nodes")
+        if len(numerator_terms) != len(nodes):
+            fail(f"{context}.numerator_terms length must match nodes")
+        expected_denominator_terms = [
+            weight / (point - node) for weight, node in zip(weights, nodes)
+        ]
+        expected_numerator_terms = [
+            weight * sample / (point - node)
+            for weight, sample, node in zip(weights, sample_values, nodes)
+        ]
+        if denominator_terms != expected_denominator_terms:
+            fail(f"{context}.denominator_terms are incorrect")
+        if numerator_terms != expected_numerator_terms:
+            fail(f"{context}.numerator_terms are incorrect")
+        denominator_sum = require_fraction(
+            f"{context}.denominator_sum",
+            values.get("denominator_sum"),
+        )
+        numerator_sum = require_fraction(f"{context}.numerator_sum", values.get("numerator_sum"))
+        if denominator_sum != sum(denominator_terms):
+            fail(f"{context}.denominator_sum is incorrect")
+        if numerator_sum != sum(numerator_terms):
+            fail(f"{context}.numerator_sum is incorrect")
+        if denominator_sum == 0:
+            fail(f"{context}.denominator_sum must be nonzero")
+        if interpolated_value != numerator_sum / denominator_sum:
+            fail(f"{context}.interpolated_value is incorrect")
+    elif mode == "node_hit":
+        node_hit_index = require_int(f"{context}.node_hit_index", values.get("node_hit_index"))
+        if not 0 <= node_hit_index < len(nodes):
+            fail(f"{context}.node_hit_index out of range")
+        if point != nodes[node_hit_index]:
+            fail(f"{context}.evaluation_point must equal the node-hit node")
+        if interpolated_value != sample_values[node_hit_index]:
+            fail(f"{context}.interpolated_value must equal the node-hit sample value")
+    else:
+        fail(f"{context}.evaluation_mode must be regular or node_hit")
+
+    if interpolated_value != polynomial_value:
+        fail(f"{context}.interpolated_value must match the polynomial value")
+    return {
+        "polynomial": polynomial,
+        "nodes": nodes,
+        "sample_values": sample_values,
+        "weights": weights,
+        "evaluation_point": point,
+        "mode": mode,
+        "interpolated_value": interpolated_value,
+        "polynomial_value": polynomial_value,
+    }
+
+
 def validate_calculus_riemann_sum(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -11754,6 +11871,142 @@ def validate_finite_divided_differences(expected: dict[str, Any]) -> None:
     horizon_data = horizon.get("data", {})
     require_string("interpolation horizon target_theorem_shape", horizon_data.get("target_theorem_shape"))
     require_string("interpolation horizon future_checker", horizon_data.get("future_checker"))
+
+
+def validate_finite_barycentric_interpolation(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    linear = checks["linear-barycentric-evaluation-witness"]
+    if linear["expected_result"] != "sat":
+        fail("linear-barycentric-evaluation-witness must expect sat")
+    if linear.get("proof_status") != "replay-only":
+        fail("linear-barycentric-evaluation-witness must be replay-only")
+    if linear.get("validation") != "exact_rational_barycentric_interpolation_replay":
+        fail("linear-barycentric-evaluation-witness validation is incorrect")
+    linear_replay = validate_barycentric_trace(
+        "linear barycentric row",
+        single_witness_values(linear, witnesses),
+    )
+    if linear_replay["mode"] != "regular":
+        fail("linear-barycentric-evaluation-witness must use regular evaluation")
+    if linear_replay["interpolated_value"] != Fraction(3):
+        fail("linear-barycentric-evaluation-witness must compute value 3")
+
+    quadratic = checks["quadratic-barycentric-evaluation-witness"]
+    if quadratic["expected_result"] != "sat":
+        fail("quadratic-barycentric-evaluation-witness must expect sat")
+    if quadratic.get("proof_status") != "replay-only":
+        fail("quadratic-barycentric-evaluation-witness must be replay-only")
+    if quadratic.get("validation") != "exact_rational_barycentric_interpolation_replay":
+        fail("quadratic-barycentric-evaluation-witness validation is incorrect")
+    quadratic_replay = validate_barycentric_trace(
+        "quadratic barycentric row",
+        single_witness_values(quadratic, witnesses),
+    )
+    if quadratic_replay["mode"] != "regular":
+        fail("quadratic-barycentric-evaluation-witness must use regular evaluation")
+    if quadratic_replay["interpolated_value"] != Fraction(4):
+        fail("quadratic-barycentric-evaluation-witness must compute value 4")
+
+    node_hit = checks["node-hit-barycentric-witness"]
+    if node_hit["expected_result"] != "sat":
+        fail("node-hit-barycentric-witness must expect sat")
+    if node_hit.get("proof_status") != "replay-only":
+        fail("node-hit-barycentric-witness must be replay-only")
+    if node_hit.get("validation") != "exact_rational_barycentric_node_hit_replay":
+        fail("node-hit-barycentric-witness validation is incorrect")
+    node_hit_replay = validate_barycentric_trace(
+        "quadratic barycentric node-hit row",
+        single_witness_values(node_hit, witnesses),
+    )
+    if node_hit_replay["mode"] != "node_hit":
+        fail("node-hit-barycentric-witness must use node_hit mode")
+    if node_hit_replay["interpolated_value"] != Fraction(1):
+        fail("node-hit-barycentric-witness must compute value 1")
+
+    bad = checks["bad-barycentric-value-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-barycentric-value-rejected must expect unsat")
+    if bad.get("proof_status") != "replay-only":
+        fail("bad-barycentric-value-rejected must be replay-only")
+    if bad.get("validation") != "exact_rational_bad_barycentric_value_replay":
+        fail("bad-barycentric-value-rejected validation is incorrect")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "quadratic-barycentric-row":
+        fail("bad-barycentric-value-rejected must cite the quadratic barycentric row")
+    computed = require_fraction(
+        "bad barycentric computed_barycentric_value",
+        data.get("computed_barycentric_value"),
+    )
+    claimed = require_fraction(
+        "bad barycentric claimed_barycentric_value",
+        data.get("claimed_barycentric_value"),
+    )
+    gap = require_fraction("bad barycentric barycentric_value_gap", data.get("barycentric_value_gap"))
+    if computed != quadratic_replay["interpolated_value"]:
+        fail("bad-barycentric-value-rejected computed value must match the quadratic replay")
+    if computed == claimed:
+        fail("bad-barycentric-value-rejected malformed claim must disagree with replay")
+    if abs(computed - claimed) != gap:
+        fail("bad-barycentric-value-rejected barycentric_value_gap is incorrect")
+    if gap <= 0:
+        fail("bad-barycentric-value-rejected barycentric_value_gap must be positive")
+    if "separate qf-lra-bad-barycentric-value" not in bad.get("notes", ""):
+        fail("bad-barycentric-value-rejected notes must name the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-barycentric-value"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-barycentric-value must expect unsat")
+    if qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-barycentric-value must be checked")
+    if qf_bad.get("validation") != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-barycentric-value must use exact_rational_farkas_evidence")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_witness") != "quadratic-barycentric-row":
+        fail("qf-lra-bad-barycentric-value must cite the quadratic barycentric row")
+    if qf_data.get("source_replay_row") != "bad-barycentric-value-rejected":
+        fail("qf-lra-bad-barycentric-value must cite the replay row")
+    qf_computed = require_fraction(
+        "qf barycentric computed_barycentric_value",
+        qf_data.get("computed_barycentric_value"),
+    )
+    qf_claimed = require_fraction(
+        "qf barycentric claimed_barycentric_value",
+        qf_data.get("claimed_barycentric_value"),
+    )
+    if qf_computed != computed or qf_claimed != claimed:
+        fail("qf-lra-bad-barycentric-value data must match the replay row")
+    conflict = qf_data.get("farkas_conflict")
+    require_string("qf barycentric farkas_conflict", conflict)
+    if conflict != "barycentric_value = 4 and barycentric_value = 5":
+        fail("qf-lra-bad-barycentric-value must document the Farkas conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf barycentric smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-barycentric-interpolation-v0/smt2/"
+        "bad-barycentric-value-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-lra-bad-barycentric-value smt2_artifact must name the checked source artifact")
+    check_source("qf barycentric smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf barycentric farkas_regression", regression)
+    if "finite_barycentric_interpolation_bad_value_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-barycentric-value must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf barycentric certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-barycentric-value certificate must document checked Farkas evidence")
+
+    horizon = checks["general-barycentric-interpolation-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-barycentric-interpolation-theory-lean-horizon must be not-run")
+    if horizon.get("proof_status") != "lean-horizon":
+        fail("general-barycentric-interpolation-theory-lean-horizon must remain lean-horizon")
+    horizon_data = horizon.get("data", {})
+    require_string("barycentric horizon target_theorem_shape", horizon_data.get("target_theorem_shape"))
+    require_string("barycentric horizon future_checker", horizon_data.get("future_checker"))
 
 
 def validate_linear_algebra_rational(expected: dict[str, Any]) -> None:
@@ -34477,6 +34730,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_simpson_rule(expected)
     if metadata["id"] == "finite-divided-differences-v0":
         validate_finite_divided_differences(expected)
+    if metadata["id"] == "finite-barycentric-interpolation-v0":
+        validate_finite_barycentric_interpolation(expected)
     if metadata["id"] == "complex-algebraic-v0":
         validate_complex_algebraic(expected)
     if metadata["id"] == "complex-plane-transforms-v0":

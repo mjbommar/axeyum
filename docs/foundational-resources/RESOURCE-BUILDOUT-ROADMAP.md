@@ -64,15 +64,15 @@ The current committed data boundary reports:
 - 18 math-field concept rows.
 - 76 bridge-concept rows.
 - 5 example-family rows.
-- 148 non-template math example packs.
-- 966 expected checks.
-- 374 checked proof/evidence rows.
-- 481 replay-only rows.
-- 111 Lean-horizon rows.
-- 148 promoted solver-reuse packs.
+- 149 non-template math example packs.
+- 972 expected checks.
+- 375 checked proof/evidence rows.
+- 485 replay-only rows.
+- 112 Lean-horizon rows.
+- 149 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 148 focused learner-linked packs, with no path-only, index-only, or missing
+- 149 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 This is broad enough that the next work is not "create a few examples." The
@@ -694,6 +694,9 @@ Current packs:
 - `metric-continuity-v0`
 - `calculus-algebraic-shadow-v0`
 - `calculus-riemann-sum-v0`
+- `finite-simpson-rule-v0`
+- `finite-divided-differences-v0`
+- `finite-barycentric-interpolation-v0`
 - `multivariable-calculus-rational-v0`
 - `finite-compactness-v0`
 - `finite-connectedness-v0`
@@ -733,6 +736,9 @@ Build next:
   bad curvature rows tied to their source QF_LRA/Farkas artifacts; keep
   `finite-projected-gradient-v0`'s bad projection and bad projected-decrease
   rows tied to their source QF_LRA/Farkas artifacts; keep
+  `finite-divided-differences-v0` and `finite-barycentric-interpolation-v0`
+  bad interpolation-value source rows replay-only with separate checked
+  `qf-lra-*` proof rows tied to their source QF_LRA/Farkas artifacts; keep
   `finite-proximal-gradient-v0`'s bad proximal
   point, bad composite-decrease, and bad box-proximal-point rows tied to their source QF_LRA/Farkas artifacts; keep
   `finite-chebyshev-systems-v0`'s explicit duplicate-node,
@@ -981,12 +987,15 @@ Current packs:
 - `spectral-linear-algebra-v0`
 - `finite-operator-v0`
 - `finite-root-finding-v0`
+- `finite-simpson-rule-v0`
+- `finite-divided-differences-v0`
+- `finite-barycentric-interpolation-v0`
 
 Build next:
 
 - Add concept rows for residual bound, solution box, iterative one-step
   contraction, Euler step, fixed-step error, interval bound, root-finding
-  iteration, stability horizon, and floating-point honesty.
+  iteration, interpolation replay, stability horizon, and floating-point honesty.
 - Use exact rational shadows where possible; treat floating-point rows as
   reproducibility checks with explicit tolerance/seed metadata.
 - Promote false residual/error/iterate rows through QF_LRA/Farkas when they are
@@ -2648,6 +2657,15 @@ Pick one item per commit unless the change is purely navigational.
      interpolation uniqueness, divided-difference identities, error estimates,
      node-choice conditioning, spline theory, floating-point interpolation
      correctness, or numerical stability.
+195. Landed: add `finite-barycentric-interpolation-v0` as an exact finite
+     barycentric interpolation resource. The pack computes barycentric weights,
+     regular numerator/denominator terms, interpolation values for `1+2*x` and
+     `x^2`, and the explicit node-hit case for `x=1`, then promotes the
+     malformed barycentric-value claim `5` through a source-linked
+     QF_LRA/Farkas regression against exact `4` without claiming general
+     barycentric/Lagrange/Newton equivalence, interpolation uniqueness, error
+     estimates, node-choice conditioning, Runge phenomena, spline theory,
+     floating-point interpolation correctness, or numerical stability.
 
 ## Validation Checklist
 

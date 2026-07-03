@@ -361,6 +361,10 @@ CURRICULUM_MAP = {
                 "finite-divided-differences-v0",
                 "Finite Newton divided-difference tables, exact interpolation-value replay, and checked bad-value rejection.",
             ),
+            (
+                "finite-barycentric-interpolation-v0",
+                "Finite barycentric weights, node-hit replay, exact interpolation-value replay, and checked bad-value rejection.",
+            ),
         ],
     },
     "sequences-and-limits": {
@@ -663,7 +667,7 @@ FIELD_PACKS = {
     "number_theory": ("modular-arithmetic-v0", "Congruences, CRT, residues, finite fields, finite ideals in modular rings, and bounded Diophantine examples."),
     "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, covariance/Gram replay, orthogonal transforms, rank, inverse, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, GMRES residual-minimization, Lanczos/tridiagonalization, and Jordan-chain shadows, Jacobians, Hessians, Newton-step Hessian solves, projections, and infeasibility."),
     "abstract_algebra": ("finite-fields-v0", "Finite groups, permutation groups, monoids, group actions, rings, fields, ideals, modules, dual spaces, tensor products, homomorphism tables, polynomial factorization slices, Jordan-chain polynomial/module shadows, and Cayley-table validation."),
-    "real_analysis": ("real-analysis-rational-v0", "Rational interval/ball checks, bounded epsilon-delta samples, algebraic factorization, divided-difference interpolation, fixed-decimal rounding shadows, Riemann-sum and Simpson-rule quadrature shadows, multivariable-calculus, Newton-step, Runge-Kutta midpoint, Heun-method, backward Euler, Crank-Nicolson, Adams-Bashforth, and BDF2 shadows, and proof horizons."),
+    "real_analysis": ("real-analysis-rational-v0", "Rational interval/ball checks, bounded epsilon-delta samples, algebraic factorization, divided-difference and barycentric interpolation, fixed-decimal rounding shadows, Riemann-sum and Simpson-rule quadrature shadows, multivariable-calculus, Newton-step, Runge-Kutta midpoint, Heun-method, backward Euler, Crank-Nicolson, Adams-Bashforth, and BDF2 shadows, and proof horizons."),
     "complex_analysis": ("complex-algebraic-v0", "Complex arithmetic, real-pair transforms, finite Cauchy-Riemann derivative shadows, and polynomial factorization shadows as real/rational algebra before analytic proof horizons."),
     "topology": ("finite-topology-v0", "Finite topologies, metric balls, closure/interior, continuous maps, and finite simplicial-homology checks."),
     "measure_theory": ("finite-measure-v0", "Finite sigma-algebras, finite measures, monotonicity/subadditivity, random variables, conditional expectations, finite kernels, martingales, hitting times, concentration checks, product tables, and exact probability foundations."),
@@ -687,7 +691,7 @@ FIELD_PACKS = {
         ("finite-projected-gradient-v0", "Finite projected-gradient interval replay with checked bad-projection rejection."),
         ("finite-proximal-gradient-v0", "Finite proximal-gradient L1 soft-threshold/composite-decrease replay with checked bad proximal-gradient rows."),
     ],
-    "numerical_analysis": ("numerical-linear-algebra-v0", "Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, interval bounds, inner-product projections, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, GMRES residual-minimization, Lanczos/tridiagonalization, residual, rounding, and perturbation-bound shadows, divided-difference interpolation, fixed-step error recurrences, Simpson-rule quadrature, Euler, Runge-Kutta midpoint, Heun, backward Euler, Crank-Nicolson implicit, Adams-Bashforth explicit multistep, and BDF2 implicit multistep time-stepping shadows, Jacobian/Hessian replay, finite root-finding, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."),
+    "numerical_analysis": ("numerical-linear-algebra-v0", "Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, interval bounds, inner-product projections, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, GMRES residual-minimization, Lanczos/tridiagonalization, residual, rounding, and perturbation-bound shadows, divided-difference and barycentric interpolation, fixed-step error recurrences, Simpson-rule quadrature, Euler, Runge-Kutta midpoint, Heun, backward Euler, Crank-Nicolson implicit, Adams-Bashforth explicit multistep, and BDF2 implicit multistep time-stepping shadows, Jacobian/Hessian replay, finite root-finding, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."),
     "differential_equations_and_dynamical_systems": ("bounded-dynamics-v0", "Recurrence systems, discretized dynamics, threshold reachability, invariant checks, Euler, Runge-Kutta midpoint, Heun, backward Euler, Crank-Nicolson, Adams-Bashforth, and BDF2 finite time-stepping, Markov transitions, and finite hitting times."),
     "geometry": [
         (
@@ -3017,8 +3021,9 @@ BRIDGE_CONCEPTS = [
         "summary": (
             "Polynomial replay rows fix a coefficient domain, degree bound, "
             "coefficient tuple, evaluation point, divisor, factor witness, or "
-            "coefficient window, and now finite divided-difference tables and "
-            "Newton interpolation values. Axeyum can replay the finite "
+            "coefficient window, and now finite divided-difference and "
+            "barycentric interpolation tables, weights, node hits, and "
+            "values. Axeyum can replay the finite "
             "arithmetic and check malformed coefficient, root, discriminant, "
             "product, interpolation-value, or step claims through finite replay, QF_LIA/Diophantine, or "
             "QF_LRA/Farkas evidence; general polynomial theory stays in the "
@@ -3046,6 +3051,7 @@ BRIDGE_CONCEPTS = [
             "factor witness replay",
             "finite coefficient extraction",
             "Newton divided differences",
+            "barycentric interpolation",
             "QF_LIA / Diophantine",
             "QF_LRA / Farkas",
             "NRA / RCF shadow",
@@ -3072,6 +3078,10 @@ BRIDGE_CONCEPTS = [
             (
                 "finite-divided-differences-v0",
                 "Exact Newton divided-difference tables, interpolation-value replay, and checked bad interpolation-value row.",
+            ),
+            (
+                "finite-barycentric-interpolation-v0",
+                "Exact barycentric weights, regular and node-hit interpolation replay, and checked bad barycentric-value row.",
             ),
             (
                 "calculus-algebraic-shadow-v0",
@@ -3110,6 +3120,7 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/generating-functions-end-to-end.md",
                     "docs/learn/math/finite-root-finding-end-to-end.md",
                     "docs/learn/math/divided-differences-end-to-end.md",
+                    "docs/learn/math/barycentric-interpolation-end-to-end.md",
                     "docs/learn/math/calculus-shadows-end-to-end.md",
                     "docs/learn/math/cauchy-riemann-shadow-end-to-end.md",
                     "crates/axeyum-solver/tests/math_resource_lia_routes.rs",
@@ -3118,8 +3129,9 @@ BRIDGE_CONCEPTS = [
                 "notes": (
                     "Positive rows recompute coefficients, products, "
                     "remainders, GCD/factor witnesses, roots, finite "
-                    "coefficient windows, divided-difference tables, or "
-                    "Newton interpolation values. Negative rows graduate only "
+                    "coefficient windows, divided-difference tables, "
+                    "Newton interpolation values, or barycentric "
+                    "weights/node-hit values. Negative rows graduate only "
                     "when the source artifact is checked by the integer "
                     "Diophantine or exact-rational Farkas route."
                 ),
@@ -3135,6 +3147,7 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/generating-functions-end-to-end.md",
             "docs/learn/math/finite-root-finding-end-to-end.md",
             "docs/learn/math/divided-differences-end-to-end.md",
+            "docs/learn/math/barycentric-interpolation-end-to-end.md",
             "docs/learn/math/calculus-shadows-end-to-end.md",
             "docs/learn/math/cauchy-riemann-shadow-end-to-end.md",
             "artifacts/examples/math/finite-cauchy-riemann-shadow-v0/smt2/bad-derivative-real-part-farkas-conflict.smt2",
@@ -3148,14 +3161,14 @@ BRIDGE_CONCEPTS = [
         "open_gaps": [
             "Fixed-degree replay does not prove unique factorization, algebraic closure, arbitrary polynomial GCD correctness, or root-distribution theorems.",
             "Generating-function rows are finite coefficient windows; convergence and formal power-series theorem families remain Lean-horizon resources.",
-            "Divided-difference rows are finite Newton-table replays; interpolation uniqueness, error estimates, node-choice conditioning, splines, and floating-point interpolation stay Lean or numerical-honesty horizons.",
+            "Divided-difference and barycentric rows are finite table/weight/value replays; interpolation uniqueness, equivalence, error estimates, node-choice conditioning, Runge phenomena, splines, and floating-point interpolation stay Lean or numerical-honesty horizons.",
             "Geometry and calculus rows reuse polynomial arithmetic only for fixed rational obligations, not global analytic or synthetic geometry theorems.",
         ],
         "graduation": {
             "status": "validated",
             "criteria": [
-                "Rows state coefficient domain, degree bound, coefficient tuple, evaluation point, divisor, factor witness, coefficient window, divided-difference table, or Newton coefficients.",
-                "Validators recompute evaluation, product, remainder, GCD/factor witness, derivative, coefficient extraction, divided-difference rows, or Newton interpolation values before trusting a solver result.",
+                "Rows state coefficient domain, degree bound, coefficient tuple, evaluation point, divisor, factor witness, coefficient window, divided-difference table, Newton coefficients, barycentric weights, or node-hit data.",
+                "Validators recompute evaluation, product, remainder, GCD/factor witness, derivative, coefficient extraction, divided-difference rows, Newton interpolation values, barycentric weights, terms, node hits, and interpolation values before trusting a solver result.",
                 "Malformed polynomial rows link source SMT-LIB artifacts and checked Diophantine or Farkas route regressions before solver reuse is claimed.",
                 "General polynomial, analytic, and algebraic-closure claims stay linked to Lean-horizon or RCF/NRA resources.",
             ],
