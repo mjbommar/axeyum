@@ -105,12 +105,43 @@ Both executors share the acyclic-only scope: a depth cap turns a cyclic CFG into
 a loud panic — loops remain the `TransitionSystem` path (already exercised by the
 LLVM loop reflector in `llvm_reflection.rs`).
 
+## Round S (2026-07-02): the follow-ups, closed
+
+- **S1 (`b623a21a`):** multi-parameter reflection on both sides
+  (`reflect_mir_into` binds `params[i]` → `_{i+1}` with all signature types
+  parsed sign-aware; `llvm::reflect_into` zips the define-line decls). Proof:
+  two-param `umin(a,b)` — MIR `Lt`-diamond == LLVM's recognized `@llvm.umin`
+  intrinsic, all `(u32,u32)`, corners checked against `u128::min`.
+- **S2 (`a015f946`):** MIR `as`-casts (`IntToInt`: widen by *source* sign,
+  narrow by extract), `UnaryOp` `Not`/`Neg`, and width-adjusted shift amounts
+  (Rust types `x << 1`'s literal as `i32`); LLVM signed-printed constants
+  (`xor %x, -1`). Proofs: `ext` (cast+shift == `zext`+`shl`), `notx`
+  (`Not` == `xor -1`), `negate` (`Neg` == `sub 0,%x`, incl. `i32::MIN`).
+- **S3 (`d3759969`):** the **wrong-transform corpus**
+  (`cross_ir_refutation.rs`): five classic miscompile shapes — off-by-one
+  strength reduction, `lshr`-for-`ashr`, flipped select arms, dropped mask,
+  sign-confused compare — all `Disproved`, and each countermodel
+  **replay-checked** (both terms evaluated at the model's input must differ).
+  The prover is discriminating, not vacuously accepting.
+- **S4 (`70f2dce2`):** LLVM `switch` (multi-line terminator, signed-printed
+  values, phi-correct per-case edges). Proofs: MIR `switchInt` == LLVM
+  `switch`+phi (both dispatchers), and LLVM O0 switch == O2 selects.
+
+**Measured (debug build, single run, 2026-07-02):** `cross_ir_equivalence` —
+15 proofs+fuzz in **3.0 s** (incl. the 60k-eval differential fuzz);
+`cross_ir_refutation` — 5 refutations+replays in **< 0.01 s**; the whole
+`axeyum-verify` crate sweeps green in under a minute. Each individual
+equivalence proof is milliseconds-scale at these widths — cheap enough to run
+per-commit as ordinary tests.
+
 ### Next (follow-ups, not blocking)
 
-- Multi-parameter cross-IR equivalence (thread all params, not just `_1`/one reg).
-- MIR `UnaryOp` (`Not`/`Neg`) and `Cast` rvalues; LLVM `switch` instruction.
-- A *wrong-transform* corpus: hand-broken optimization pairs the prover must
-  refute (grow the negative-control set the way the scenario packs do).
+- MIR `assert`/overflow-checked arithmetic terminators (debug-profile MIR) —
+  reflect the check itself and prove it unreachable (connects to `#[verify]`).
+- LLVM `getelementptr`+`load` inside the CFG executor (currently only in the
+  dedicated buffer reflectors); `unreachable` targets as don't-care arms.
+- Wider fixture harvesting: capture paired MIR/LLVM for a small real module
+  (e.g. a checksum) and prove the whole module end-to-end.
 - Promotion out of test-module DRY into a real crate is still ADR-gated.
 
 **Honest scope:** the shared module is source-level DRY across integration tests
