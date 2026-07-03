@@ -134,7 +134,7 @@ pub struct Script {
     /// Set (to the original bounded-parse error's `Display`) when the script was
     /// parsed through the **word-first fallback** (T-B.4d): the bounded ADR-0029
     /// string encoder declined this script wholesale (a literal over
-    /// [`STRING_MAX_LEN`], a `str.++` result over [`STRING_BOUND_CAP`], or another
+    /// `STRING_MAX_LEN`, a `str.++` result over `STRING_BOUND_CAP`, or another
     /// bounded-encoder capacity/unsupported limit), but the script *is* a pure
     /// word-equation problem, so only the unbounded [`Script::word_problem`] side
     /// channel is populated — [`Script::assertions`]/[`Script::commands`] are empty
@@ -195,8 +195,8 @@ pub fn parse_script(input: &str) -> Result<Script, SmtError> {
     match parse_script_bounded(input) {
         Ok(script) => Ok(script),
         // Word-first parse fallback (T-B.4d). The bounded ADR-0029 string encoder
-        // declined the script *wholesale* — a string literal over [`STRING_MAX_LEN`],
-        // a `str.++` result over [`STRING_BOUND_CAP`], a sequence element over the
+        // declined the script *wholesale* — a string literal over `STRING_MAX_LEN`,
+        // a `str.++` result over `STRING_BOUND_CAP`, a sequence element over the
         // packed-sort ceiling, or another bounded-encoder capacity/unsupported limit
         // (all surfaced as [`SmtError::Unsupported`], or an [`SmtError::Ir`] width
         // error from packing). These caps are an artifact of the *bounded* encoding,
@@ -222,7 +222,7 @@ pub fn parse_script(input: &str) -> Result<Script, SmtError> {
 }
 
 /// The bounded ADR-0029 parse: the full slice parser (string literals ≤
-/// [`STRING_MAX_LEN`], concats ≤ [`STRING_BOUND_CAP`], packed-BV string model).
+/// `STRING_MAX_LEN`, concats ≤ `STRING_BOUND_CAP`, packed-BV string model).
 /// A capacity/unsupported decline here is what triggers the word-first fallback in
 /// [`parse_script`].
 fn parse_script_bounded(input: &str) -> Result<Script, SmtError> {
@@ -3835,11 +3835,11 @@ fn combine_match(
 // exactly like the API `BoundedString::concat` — so the join never silently
 // overflows the operand bound. The result string is again self-describing, so
 // `str.len` / `=` / `str.at` / `str.contains` / prefix / suffix all decide over
-// it. When the summed bound exceeds [`STRING_BOUND_CAP`] the concat is a clean
+// it. When the summed bound exceeds `STRING_BOUND_CAP` the concat is a clean
 // `Unsupported` (Unknown to the consumer) — never a wrong verdict.
 
 /// Maximum bounded string length in bytes for a **declared symbol or a literal**.
-/// Concatenation may grow a *result* up to [`STRING_BOUND_CAP`].
+/// Concatenation may grow a *result* up to `STRING_BOUND_CAP`.
 const STRING_MAX_LEN: u32 = 8;
 /// Hard cap on any packed string's `max_len` (the 128-bit content ceiling), so
 /// `len_width(16) + 8·16 = 5 + 128 = 133` bits stays a representable BV width.
@@ -4650,7 +4650,7 @@ fn string_indexof(
 /// is **declined** cleanly (`Unsupported` → `unknown`), never a wrong/truncated
 /// string: a sound symbolic `replace_all` needs a moving-cursor splice whose round
 /// count is bounded only when `len(a)` is concrete and whose growing result must
-/// stay under [`STRING_BOUND_CAP`] — left as a tightly-scoped follow-up. An
+/// stay under `STRING_BOUND_CAP` — left as a tightly-scoped follow-up. An
 /// over-bound ground result (more than `STRING_MAX_LEN` bytes) declines at pack
 /// time rather than truncate.
 fn string_replace_all(
@@ -4862,7 +4862,7 @@ fn string_from_code(arena: &mut TermArena, i: TermId) -> Result<TermId, SmtError
 /// 10-byte packed sort therefore makes [`string_from_int`] *faithful for every
 /// `i` the solver can assign*: any `i ≥ 10^10` is already outside the int-blast
 /// range (replay returns `Unknown`), so the bounded encoding never claims a wrong
-/// string. Kept ≤ [`STRING_BOUND_CAP`] so the packed width is representable.
+/// string. Kept ≤ `STRING_BOUND_CAP` so the packed width is representable.
 const FROM_INT_MAX_DIGITS: u32 = 10;
 
 /// `str.to_int s` (SMT-LIB `UnicodeStrings` total function): the decimal value of
@@ -5100,7 +5100,7 @@ fn string_const_bytes(arena: &TermArena, arg: TermId) -> Option<Vec<u8>> {
 
 /// `str.++` of two **packed-string** operands (constant or variable). Produces a
 /// result in the wider sort `max_len(x) + max_len(y)` (capped at
-/// [`STRING_BOUND_CAP`]), exactly like the API `BoundedString::concat`: the
+/// `STRING_BOUND_CAP`), exactly like the API `BoundedString::concat`: the
 /// result length is `len(x) + len(y)`, and the result content is
 /// `content(x) | (content(y) << (len(x)·8))` with `x`'s padding masked off. So
 /// the join never overflows the operand bound, and the result is a self-describing
@@ -5899,7 +5899,7 @@ pub(crate) const SEQ_INT_WIDTH: u32 = 16;
 const SEQ_TOTAL_BITS_CAP: u32 = 128;
 
 /// Soft cap on a packed sequence's `max_len` (in elements), for tractability —
-/// the analogue of [`STRING_MAX_LEN`]. The realized bound is the smaller of this
+/// the analogue of `STRING_MAX_LEN`. The realized bound is the smaller of this
 /// and whatever [`SEQ_TOTAL_BITS_CAP`] allows for the element width.
 const SEQ_LEN_SOFT_CAP: u32 = 8;
 

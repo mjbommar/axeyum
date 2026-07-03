@@ -39,9 +39,9 @@ const WORD_ROUTE_MAX_NODES: u64 = 200_000;
 /// The word-equation second-chance route (ADR-0053, T-B.4b).
 ///
 /// Runs **strictly after** the ADR-0029 bounded pre-check and the ADR-0052
-/// [`StringGate`], and only when the current verdict is `unknown` (the bounded
+/// `StringGate`, and only when the current verdict is `unknown` (the bounded
 /// path declined or the gate downgraded) *and* the parser accumulated a
-/// [`WordProblem`](axeyum_smtlib::WordProblem) side channel.
+/// `WordProblem` side channel.
 ///
 /// The route can now move the verdict in **both** directions, each behind a
 /// distinct soundness anchor:
@@ -145,7 +145,7 @@ fn word_route_budget(config: &SolverConfig) -> SearchBudget {
 /// [`Script::word_only_fallback`] is set and the flat assertion view is **empty**.
 /// The empty view must never be handed to [`crate::solve`] — that would answer a
 /// vacuous `sat` unrelated to the word problem. Instead the sat-only, replay-
-/// checked [`apply_word_route`] is the sole decider, seeded from a synthetic
+/// checked `apply_word_route` is the sole decider, seeded from a synthetic
 /// `unknown`. On a word-route decline the **original** bounded parse error is
 /// reproduced as [`SolverError::Parse`], so a script that was `unsupported` before
 /// this fallback existed never silently becomes a bare `unknown`/`sat`.
@@ -203,12 +203,12 @@ pub fn decide_word_only_script(
 ///
 /// This is the normal-path mirror of the word-first fallback ([`decide_word_only_script`]):
 /// the bounded ADR-0029 encoder parsed the script fine, but the current verdict is
-/// `unknown` (the bounded path declined or the ADR-0052 [`StringGate`] downgraded a
+/// `unknown` (the bounded path declined or the ADR-0052 `StringGate` downgraded a
 /// bound-dependent verdict). A harness that reached `unknown` can call this to give
 /// the word route the same second chance the `solve_smtlib` front door grants it,
 /// without re-running the whole front door.
 ///
-/// The soundness anchors are unchanged from [`apply_word_route`]: an `unsat` is only
+/// The soundness anchors are unchanged from `apply_word_route`: an `unsat` is only
 /// ever produced through the ADR-0053 T-B.7 independently re-checked derivation, and
 /// a `sat` model has already replayed against every equality/disequality through the
 /// ground evaluator inside `axeyum-strings`. Callers must **not** replay a word-route
@@ -216,7 +216,7 @@ pub fn decide_word_only_script(
 /// already checked at that level.
 ///
 /// Returns `None` (no decision) when the script carries no
-/// [`WordProblem`](axeyum_smtlib::WordProblem) side channel or the route declines.
+/// `WordProblem` side channel or the route declines.
 #[must_use]
 pub fn word_route_verdict(script: &mut Script, config: &SolverConfig) -> Option<CheckResult> {
     script.word_problem.as_ref()?;
@@ -231,7 +231,7 @@ pub fn word_route_verdict(script: &mut Script, config: &SolverConfig) -> Option<
 }
 
 /// The **online CDCL(T) string route** (P1.5b) as a front-door second-chance stage,
-/// run *strictly after* the flat word route ([`apply_word_route`]) declines.
+/// run *strictly after* the flat word route (`apply_word_route`) declines.
 ///
 /// Where the flat word route is all-or-nothing over a top-level conjunction, this
 /// decides the **Boolean-structured** word problems (`or`/negated shapes) the parser

@@ -496,11 +496,11 @@ pub fn solve_qf_uf_online(arena: &mut TermArena, assertions: &[TermId]) -> Check
 }
 
 /// Decides the `QF_UF`(-equality) fragment via the **generic online CDCL(T)**
-/// driver [`crate::cdclt::CdclT`] with [`EufTheory`] as the first theory (Track 1,
+/// driver `crate::cdclt::CdclT` with [`EufTheory`] as the first theory (Track 1,
 /// P1.5 slice a). This is the reusable-driver counterpart to [`solve_qf_uf_online`]
 /// (whose search is EUF-hardwired and embedded): the skeleton is identical (the same
-/// Tseitin [`Encoder`] and one backtrackable [`EufTheory`]), but the search itself is
-/// the theory-agnostic [`CdclT`] that any `T: TheorySolver` plugs into — so the same
+/// Tseitin `Encoder` and one backtrackable [`EufTheory`]), but the search itself is
+/// the theory-agnostic `CdclT` that any `T: TheorySolver` plugs into — so the same
 /// loop will drive the arithmetic / combined theories as they land.
 ///
 /// Verdict discipline matches the rest of the e-graph path:
@@ -1084,7 +1084,7 @@ fn build_blocking_clause(
 /// A CNF literal in the online DPLL(T) skeleton: a variable index and its polarity.
 ///
 /// `pub(crate)` so the sibling online CDCL(T) entry points (EUF here, strings in
-/// [`crate::string_theory`]) can reuse the shared [`Encoder`] and translate its
+/// [`crate::string_theory`]) can reuse the shared `Encoder` and translate its
 /// clauses into the driver's own literal type.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct Lit {

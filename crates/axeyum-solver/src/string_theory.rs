@@ -1,8 +1,8 @@
 //! The word-level string theory driven **online** by the generic CDCL(T) loop
 //! (Track 1, P1.5 slice b).
 //!
-//! [`StringTheory`] plugs the ADR-0053 unbounded word core ([`axeyum_strings`])
-//! into the reusable [`CdclT`](crate::cdclt::CdclT) driver as a
+//! `StringTheory` plugs the ADR-0053 unbounded word core ([`axeyum_strings`])
+//! into the reusable `CdclT`(crate::cdclt::CdclT) driver as a
 //! [`TheorySolver`]. Where the existing word-equation *side channel*
 //! ([`crate::smtlib::word_route_verdict`]) is all-or-nothing over a **top-level
 //! conjunction** of equalities/disequalities, the CDCL(T) route handles arbitrary
@@ -177,7 +177,7 @@ impl<'a> StringTheory<'a> {
     /// falsified. Including `trigger` is what keeps the driver's 1-UIP analysis
     /// well-formed: the word refuter is **incomplete and non-monotone**, so the
     /// conflict it reports on this assertion need not cite the atom just asserted;
-    /// yet [`CdclT`]'s conflict analysis requires the conflict clause to carry at
+    /// yet `CdclT`'s conflict analysis requires the conflict clause to carry at
     /// least one **current-decision-level** literal (the reason it fired now). The
     /// trigger was assigned in this very `assert`, so it is exactly that literal.
     /// (Without it, a core of only lower-level literals underflows the analysis's
@@ -336,12 +336,12 @@ fn collect_seq_symbols(arena: &TermArena, terms: &[TermId]) -> Vec<SymbolId> {
 
 /// Decides the quantifier-free string fragment (`QF_S`: `Seq`/`String` equality
 /// and disequality under arbitrary Boolean structure) via the generic online
-/// CDCL(T) driver [`CdclT`] with [`StringTheory`] as the theory (Track 1, P1.5
+/// CDCL(T) driver `CdclT` with `StringTheory` as the theory (Track 1, P1.5
 /// slice b).
 ///
 /// This is the disjunction-aware counterpart to the top-level-conjunction word
 /// side channel ([`crate::smtlib::word_route_verdict`]): the Boolean skeleton over
-/// the string equality atoms is searched by [`CdclT`], and each
+/// the string equality atoms is searched by `CdclT`, and each
 /// theory-inconsistent branch is refuted behind a re-checked derivation, so
 /// `or`/`ite`/negated word problems are decided here.
 ///
@@ -353,7 +353,7 @@ fn collect_seq_symbols(arena: &TermArena, terms: &[TermId]) -> Vec<SymbolId> {
 ///
 /// Returns [`CheckResult::Unknown`] up front when there are no `Seq` equality
 /// atoms, when a **non-`Seq`** equality atom is present (out of the `QF_S` scope),
-/// or when the Boolean skeleton has structure the shared [`Encoder`] does not
+/// or when the Boolean skeleton has structure the shared `Encoder` does not
 /// cover. **Not** wired into default dispatch this slice (opt-in).
 #[must_use]
 pub fn check_qf_s_online_cdclt(
