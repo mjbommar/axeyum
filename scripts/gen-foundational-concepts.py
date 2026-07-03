@@ -151,6 +151,10 @@ CURRICULUM_MAP = {
                 "finite-rounding-shadow-v0",
                 "Exact rational addition, fixed three-decimal rounding replay, rounded-away increment, and checked bad exact-vs-rounded equality evidence.",
             ),
+            (
+                "finite-interval-arithmetic-shadow-v0",
+                "Exact closed rational interval sum/product replay, second-order product-width shadow, and checked bad product-upper-bound evidence.",
+            ),
         ],
     },
     "reals": {
@@ -210,6 +214,10 @@ CURRICULUM_MAP = {
             (
                 "finite-rounding-shadow-v0",
                 "Exact rational fixed-decimal rounding shadow with checked bad exact-vs-rounded equality evidence.",
+            ),
+            (
+                "finite-interval-arithmetic-shadow-v0",
+                "Exact rational interval arithmetic shadow with checked bad product-upper-bound evidence.",
             ),
         ],
     },
@@ -1569,6 +1577,10 @@ BRIDGE_CONCEPTS = [
                 "Fixed three-decimal rounding transcript checked as exact rational grid arithmetic, not IEEE floating-point semantics.",
             ),
             (
+                "finite-interval-arithmetic-shadow-v0",
+                "Closed rational interval arithmetic checked as exact endpoint replay, not floating-point outward-rounding evidence.",
+            ),
+            (
                 "finite-lu-decomposition-v0",
                 "LU factorization, determinant pivot-product, and triangular-solve rows checked as exact rational matrix arithmetic, not pivoting or floating-point stability evidence.",
             ),
@@ -1656,6 +1668,7 @@ BRIDGE_CONCEPTS = [
                     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
                     "docs/learn/math/numerical-linear-algebra-end-to-end.md",
                     "docs/learn/math/rounding-shadow-end-to-end.md",
+                    "docs/learn/math/interval-arithmetic-shadow-end-to-end.md",
                     "docs/learn/math/lu-decomposition-end-to-end.md",
                     "docs/learn/math/pivoted-lu-decomposition-end-to-end.md",
                     "docs/learn/math/ldlt-decomposition-end-to-end.md",
@@ -1688,6 +1701,7 @@ BRIDGE_CONCEPTS = [
             "docs/proof-cookbook/recipes/qf-lra-farkas.md",
             "docs/learn/math/numerical-linear-algebra-end-to-end.md",
             "docs/learn/math/rounding-shadow-end-to-end.md",
+            "docs/learn/math/interval-arithmetic-shadow-end-to-end.md",
             "docs/learn/math/lu-decomposition-end-to-end.md",
             "docs/learn/math/pivoted-lu-decomposition-end-to-end.md",
             "docs/learn/math/ldlt-decomposition-end-to-end.md",
@@ -1707,11 +1721,12 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/descriptive-statistics-regression-end-to-end.md",
             "docs/learn/math/exact-statistical-tests-end-to-end.md",
             "artifacts/examples/math/finite-rounding-shadow-v0/smt2/bad-rounded-delta-farkas-conflict.smt2",
+            "artifacts/examples/math/finite-interval-arithmetic-shadow-v0/smt2/bad-product-upper-farkas-conflict.smt2",
             "docs/foundational-resources/MATH-CURRICULUM-RESOURCE-MASTER-PLAN.md",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
         ],
         "open_gaps": [
-            "Exact rational replay and fixed-decimal rounding shadows do not prove IEEE floating-point roundoff, conditioning, singular-value perturbation, spectral perturbation, eigensolver convergence, Schur/QR iteration convergence, polar iteration convergence/stability, LU/LDLT pivot selection/stability, Gram-Schmidt/Givens/Householder/QR stability, Krylov/preconditioner stability, Lanczos breakdown behavior, loss of orthogonality, or convergence guarantees.",
+            "Exact rational replay, fixed-decimal rounding shadows, and rational interval shadows do not prove IEEE floating-point roundoff, outward-rounded interval arithmetic, conditioning, singular-value perturbation, spectral perturbation, eigensolver convergence, Schur/QR iteration convergence, polar iteration convergence/stability, LU/LDLT pivot selection/stability, Gram-Schmidt/Givens/Householder/QR stability, Krylov/preconditioner stability, Lanczos breakdown behavior, loss of orthogonality, or convergence guarantees.",
             "QF_FP and numerical experiment metadata need their own trust boundary before floating-point resources can graduate.",
             "Learner pages must label exact rational shadows when a topic is normally taught numerically.",
         ],
@@ -3782,6 +3797,10 @@ BRIDGE_CONCEPTS = [
                 "finite-root-finding-v0",
                 "Bisection interval replay with separate checked width-conflict rows over exact rational endpoints.",
             ),
+            (
+                "finite-interval-arithmetic-shadow-v0",
+                "Closed rational interval sum/product replay with a checked bad product-upper-bound row.",
+            ),
         ],
         "proof_routes": [
             {
@@ -3795,6 +3814,7 @@ BRIDGE_CONCEPTS = [
                     "docs/proof-cookbook/recipes/lean-horizon-template.md",
                     "docs/learn/math/real-analysis-rational-end-to-end.md",
                     "docs/learn/math/finite-root-finding-end-to-end.md",
+                    "docs/learn/math/interval-arithmetic-shadow-end-to-end.md",
                     "docs/learn/math/metric-ball-epsilon-delta-index.md",
                     "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
                 ],
@@ -3812,7 +3832,9 @@ BRIDGE_CONCEPTS = [
             "docs/proof-cookbook/recipes/lean-horizon-template.md",
             "docs/learn/math/real-analysis-rational-end-to-end.md",
             "docs/learn/math/finite-root-finding-end-to-end.md",
+            "docs/learn/math/interval-arithmetic-shadow-end-to-end.md",
             "docs/learn/math/metric-ball-epsilon-delta-index.md",
+            "artifacts/examples/math/finite-interval-arithmetic-shadow-v0/smt2/bad-product-upper-farkas-conflict.smt2",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
         ],

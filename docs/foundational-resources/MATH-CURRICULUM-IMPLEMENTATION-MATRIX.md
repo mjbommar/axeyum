@@ -1066,7 +1066,16 @@ Build sequence:
     fixed rational rounding shadow separate from IEEE floating-point semantics,
     rounding-mode theory, accumulation-error bounds, and numerical-stability
     theorems.
-108. Revisit crate/repo boundaries only after three real consumers or repeated
+108. Landed: add the finite interval-arithmetic-shadow resource.
+    `finite-interval-arithmetic-shadow-v0` now records one exact rational closed
+    interval transcript: `X = Y = [1, 10001/10000]`, endpoint-wise interval
+    sum/product replay, interval widths, and the second-order product-width
+    term. It includes a checked QF_LRA/Farkas artifact for the malformed shortcut
+    claim `product_upper <= 5001/5000`. The rational-interval and
+    exact-vs-floating bridges keep this fixed rational interval shadow separate
+    from general interval analysis, dependency management, floating-point
+    outward rounding, QF_FP semantics, and numerical-stability theorems.
+109. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands

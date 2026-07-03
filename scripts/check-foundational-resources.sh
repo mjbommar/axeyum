@@ -519,6 +519,8 @@ python3 scripts/query-foundational-resources.py concepts --field real_analysis -
 python3 scripts/query-foundational-resources.py concepts --field real_analysis --text metric --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field real_analysis --text gradient --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field real_analysis --text "Rational Interval" --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-interval-arithmetic-shadow-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_rational_interval_replay --pack finite-interval-arithmetic-shadow-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field real_analysis --text "Sequence Tail" --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field real_analysis --text "Cauchy Tail" --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field real_analysis --text "Squeeze Shadow" --require-any >/dev/null
@@ -553,6 +555,8 @@ python3 scripts/query-foundational-resources.py checks --pack finite-newton-step
 python3 scripts/query-foundational-resources.py checks --pack finite-rounding-shadow-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-rounding-shadow-v0 --proof-status replay-only --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-rounding-shadow-v0 --proof-status lean-horizon --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-interval-arithmetic-shadow-v0 --proof-status replay-only --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-interval-arithmetic-shadow-v0 --proof-status lean-horizon --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-condition-number-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-condition-number-v0 --proof-status replay-only --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-condition-number-v0 --proof-status lean-horizon --require-any >/dev/null
@@ -612,6 +616,7 @@ python3 scripts/query-foundational-resources.py checks --concept bridge_residual
 python3 scripts/query-foundational-resources.py checks --concept bridge_residual_bound --pack finite-lanczos-iteration-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_exact_vs_floating_arithmetic --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_exact_vs_floating_arithmetic --pack finite-rounding-shadow-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_exact_vs_floating_arithmetic --pack finite-interval-arithmetic-shadow-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-kkt-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py horizon-frontier --text KKT --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-kkt-v0 --proof-status lean-horizon --require-any >/dev/null

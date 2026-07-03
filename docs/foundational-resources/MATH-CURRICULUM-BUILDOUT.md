@@ -1522,9 +1522,9 @@ Exit criteria:
   QF_LRA/Farkas infeasibility, Boolean CNF/LRAT refutations, integer/count
   Diophantine obstructions, and fixed-width QF_BV/DRAT rows.
 - At least 12 validated example packs.
-  Status: 137 non-template math example packs validate.
+  Status: 138 non-template math example packs validate.
 - At least 6 packs with checked proof/evidence routes.
-  Status: 137 non-template packs have at least one `checked` expected-result row.
+  Status: 138 non-template packs have at least one `checked` expected-result row.
 - At least one downstream consumer can read the data without repository-internal
   knowledge.
   Status: `scripts/consume-foundational-resources.py` reads the committed atlas
@@ -3508,6 +3508,16 @@ rejects the malformed equality claim `exact_delta = rounded_delta` against
 the exact rounded value `0`. IEEE floating-point semantics, rounding-mode
 theory, accumulation-error bounds, and numerical-stability claims stay in
 future QF_FP, bit-vector, Lean-horizon, or numerical-honesty lanes.
+The real-analysis/numerical-analysis layer now adds
+`finite-interval-arithmetic-shadow-v0` as the 138th non-template math pack.
+Exact rational replay checks `X = Y = [1, 10001/10000]`, endpoint-wise sum and
+positive product intervals, interval widths, and the second-order product-width
+term, while a source-linked QF_LRA/Farkas artifact rejects the malformed product
+upper-bound shortcut `product_upper <= 5001/5000` against exact
+`product_upper = 100020001/100000000`. General interval-analysis soundness,
+dependency management, floating-point outward rounding, QF_FP semantics, and
+numerical-stability claims stay in future theorem, QF_FP, bit-vector, or
+numerical-honesty lanes.
 Continue by adding the next curriculum-adjacent pack from the field ledger
 or by replacing finite enumeration routes with emitted, checked proof objects
 where appropriate.

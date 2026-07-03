@@ -12934,6 +12934,193 @@ def validate_finite_rounding_shadow(expected: dict[str, Any]) -> None:
     require_string("rounding horizon future_checker", horizon_data.get("future_checker"))
 
 
+def validate_finite_interval_arithmetic_shadow(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    shape = checks["interval-shape-witness"]
+    if shape["expected_result"] != "sat":
+        fail("interval-shape-witness must expect sat")
+    if shape.get("proof_status") != "replay-only":
+        fail("interval-shape-witness must be replay-only")
+    values = single_witness_values(shape, witnesses)
+    x_lower, x_upper, x_closed = require_fraction_interval(
+        "interval arithmetic x_interval",
+        values.get("x_interval"),
+    )
+    y_lower, y_upper, y_closed = require_fraction_interval(
+        "interval arithmetic y_interval",
+        values.get("y_interval"),
+    )
+    sum_lower, sum_upper, sum_closed = require_fraction_interval(
+        "interval arithmetic sum_interval",
+        values.get("sum_interval"),
+    )
+    product_lower, product_upper, product_closed = require_fraction_interval(
+        "interval arithmetic product_interval",
+        values.get("product_interval"),
+    )
+    if not (x_closed and y_closed and sum_closed and product_closed):
+        fail("interval-shape-witness expects closed intervals")
+    if x_lower < 0 or y_lower < 0:
+        fail("interval-shape-witness expects nonnegative input intervals")
+    x_width = require_fraction("interval arithmetic x_width", values.get("x_width"))
+    y_width = require_fraction("interval arithmetic y_width", values.get("y_width"))
+    sum_width = require_fraction("interval arithmetic sum_width", values.get("sum_width"))
+    product_width = require_fraction(
+        "interval arithmetic product_width",
+        values.get("product_width"),
+    )
+    if x_upper - x_lower != x_width:
+        fail("interval-shape-witness x_width is incorrect")
+    if y_upper - y_lower != y_width:
+        fail("interval-shape-witness y_width is incorrect")
+    if sum_upper - sum_lower != sum_width:
+        fail("interval-shape-witness sum_width is incorrect")
+    if product_upper - product_lower != product_width:
+        fail("interval-shape-witness product_width is incorrect")
+    for label, width in (
+        ("x_width", x_width),
+        ("y_width", y_width),
+        ("sum_width", sum_width),
+        ("product_width", product_width),
+    ):
+        if width <= 0:
+            fail(f"interval-shape-witness {label} must be positive")
+
+    interval_sum = checks["interval-sum-witness"]
+    if interval_sum["expected_result"] != "sat":
+        fail("interval-sum-witness must expect sat")
+    if interval_sum.get("proof_status") != "replay-only":
+        fail("interval-sum-witness must be replay-only")
+    if single_witness_values(interval_sum, witnesses) != values:
+        fail("interval-sum-witness must cite the interval witness")
+    if x_lower + y_lower != sum_lower:
+        fail("interval-sum-witness lower endpoint is incorrect")
+    if x_upper + y_upper != sum_upper:
+        fail("interval-sum-witness upper endpoint is incorrect")
+
+    product = checks["interval-product-witness"]
+    if product["expected_result"] != "sat":
+        fail("interval-product-witness must expect sat")
+    if product.get("proof_status") != "replay-only":
+        fail("interval-product-witness must be replay-only")
+    if single_witness_values(product, witnesses) != values:
+        fail("interval-product-witness must cite the interval witness")
+    if x_lower * y_lower != product_lower:
+        fail("interval-product-witness lower endpoint is incorrect")
+    if x_upper * y_upper != product_upper:
+        fail("interval-product-witness upper endpoint is incorrect")
+
+    width = checks["interval-width-witness"]
+    if width["expected_result"] != "sat":
+        fail("interval-width-witness must expect sat")
+    if width.get("proof_status") != "replay-only":
+        fail("interval-width-witness must be replay-only")
+    if single_witness_values(width, witnesses) != values:
+        fail("interval-width-witness must cite the interval witness")
+    linearized_upper = require_fraction(
+        "interval arithmetic linearized_product_upper",
+        values.get("linearized_product_upper"),
+    )
+    second_order = require_fraction(
+        "interval arithmetic second_order_term",
+        values.get("second_order_term"),
+    )
+    product_upper_excess = require_fraction(
+        "interval arithmetic product_upper_excess",
+        values.get("product_upper_excess"),
+    )
+    expected_linearized_upper = product_lower + (x_lower * y_width) + (y_lower * x_width)
+    if linearized_upper != expected_linearized_upper:
+        fail("interval-width-witness linearized_product_upper is incorrect")
+    if x_width * y_width != second_order:
+        fail("interval-width-witness second_order_term is incorrect")
+    if product_upper - linearized_upper != product_upper_excess:
+        fail("interval-width-witness product_upper_excess is incorrect")
+    if product_upper_excess != second_order:
+        fail("interval-width-witness product upper excess must equal width(X)*width(Y)")
+
+    bad = checks["bad-product-upper-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-product-upper-rejected must expect unsat")
+    if bad.get("proof_status") != "replay-only":
+        fail("bad-product-upper-rejected must be replay-only")
+    if bad["validation"] != "exact_rational_bad_interval_product_upper_replay":
+        fail("bad-product-upper-rejected validation is incorrect")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "positive-interval-product-shadow":
+        fail("bad-product-upper-rejected must cite the interval witness")
+    computed_upper = require_fraction(
+        "bad interval computed_product_upper",
+        data.get("computed_product_upper"),
+    )
+    claimed_upper = require_fraction(
+        "bad interval claimed_product_upper_bound",
+        data.get("claimed_product_upper_bound"),
+    )
+    if computed_upper != product_upper:
+        fail("bad-product-upper-rejected computed product upper does not match replay")
+    if computed_upper <= claimed_upper:
+        fail("bad-product-upper-rejected claimed upper bound unexpectedly holds")
+    if "separate qf-lra-bad-interval-product-upper" not in bad.get("notes", ""):
+        fail("bad-product-upper-rejected notes must name the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-interval-product-upper"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-interval-product-upper must expect unsat")
+    if qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-interval-product-upper must be checked")
+    if qf_bad["validation"] != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-interval-product-upper must use exact_rational_farkas_evidence")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_witness") != "positive-interval-product-shadow":
+        fail("qf-lra-bad-interval-product-upper must cite the source witness")
+    if qf_data.get("source_replay_row") != "bad-product-upper-rejected":
+        fail("qf-lra-bad-interval-product-upper must cite the replay row")
+    qf_computed = require_fraction(
+        "qf interval computed_product_upper",
+        qf_data.get("computed_product_upper"),
+    )
+    qf_claimed = require_fraction(
+        "qf interval claimed_product_upper_bound",
+        qf_data.get("claimed_product_upper_bound"),
+    )
+    if qf_computed != computed_upper or qf_claimed != claimed_upper:
+        fail("qf-lra-bad-interval-product-upper data must match the replay row")
+    expected_conflict = (
+        "product_upper = 100020001/100000000 and product_upper <= 5001/5000"
+    )
+    if qf_data.get("farkas_conflict") != expected_conflict:
+        fail("qf-lra-bad-interval-product-upper must document the Farkas conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf interval smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-interval-arithmetic-shadow-v0/smt2/"
+        "bad-product-upper-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-lra-bad-interval-product-upper smt2_artifact must name the checked source artifact")
+    check_source("qf interval smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf interval farkas_regression", regression)
+    if "finite_interval_arithmetic_bad_product_upper_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-interval-product-upper must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf interval certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-interval-product-upper certificate must document checked Farkas evidence")
+
+    horizon = checks["general-interval-arithmetic-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-interval-arithmetic-lean-horizon must be not-run")
+    if horizon.get("proof_status") != "lean-horizon":
+        fail("general-interval-arithmetic-lean-horizon must remain lean-horizon")
+    horizon_data = horizon.get("data", {})
+    require_string("interval horizon target_theorem_shape", horizon_data.get("target_theorem_shape"))
+    require_string("interval horizon future_checker", horizon_data.get("future_checker"))
+
+
 def validate_finite_schur_complement(expected: dict[str, Any]) -> None:
     def det_small(context: str, matrix: list[list[Fraction]]) -> Fraction:
         require_square_matrix(context, matrix)
@@ -32276,6 +32463,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_condition_number(expected)
     if metadata["id"] == "finite-rounding-shadow-v0":
         validate_finite_rounding_shadow(expected)
+    if metadata["id"] == "finite-interval-arithmetic-shadow-v0":
+        validate_finite_interval_arithmetic_shadow(expected)
     if metadata["id"] == "finite-schur-complement-v0":
         validate_finite_schur_complement(expected)
     if metadata["id"] == "finite-singular-value-shadow-v0":

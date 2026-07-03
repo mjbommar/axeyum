@@ -19,7 +19,7 @@ check, then name the replay, certificate, or theorem-horizon boundary.
 
 ## Current Result
 
-Audit date: 2026-07-02.
+Audit date: 2026-07-03.
 
 Evidence:
 
@@ -30,20 +30,20 @@ python3 scripts/query-foundational-resources.py summary
 Current summary:
 
 - 122 concept rows.
-- 137 non-template math packs.
-- 901 expected checks.
-- 363 checked proof/evidence rows.
-- 438 replay-only rows.
-- 100 Lean-horizon rows.
-- 137 promoted solver-reuse packs.
+- 138 non-template math packs.
+- 908 expected checks.
+- 364 checked proof/evidence rows.
+- 443 replay-only rows.
+- 101 Lean-horizon rows.
+- 138 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 
 The generated learner dashboard reports:
 
 ```text
-math example packs: 137
+math example packs: 138
 Learner Status Totals:
-- focused: 137
+- focused: 138
 ```
 
 `focused` means the pack is explicitly mentioned by at least one
@@ -58,7 +58,7 @@ coverage as follows:
 
 | Status | Meaning | Current Count |
 |---|---|---:|
-| `focused` | At least one non-README `docs/learn/math/*-end-to-end.md` page mentions the pack id or pack path. | 137 |
+| `focused` | At least one non-README `docs/learn/math/*-end-to-end.md` page mentions the pack id or pack path. | 138 |
 | `path-only` | Only a non-end-to-end learner page mentions the pack. | 0 |
 | `index-only` | Only `docs/learn/math/README.md` mentions the pack. | 0 |
 | `missing` | No learner page mentions the pack id or pack path. | 0 |

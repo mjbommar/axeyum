@@ -14,6 +14,7 @@ Example packs:
 
 - [rationals-lra-v0](../../../artifacts/examples/math/rationals-lra-v0/)
 - [finite-rounding-shadow-v0](../../../artifacts/examples/math/finite-rounding-shadow-v0/)
+- [finite-interval-arithmetic-shadow-v0](../../../artifacts/examples/math/finite-interval-arithmetic-shadow-v0/)
 - [real-analysis-rational-v0](../../../artifacts/examples/math/real-analysis-rational-v0/)
 - [reals-rcf-shadow-v0](../../../artifacts/examples/math/reals-rcf-shadow-v0/)
 - [polynomial-identities-v0](../../../artifacts/examples/math/polynomial-identities-v0/)
@@ -58,8 +59,9 @@ Companion map:
 
 The real-algebra path is currently exact rational arithmetic plus algebraic
 shadows of real reasoning. It checks density witnesses, additive inverses,
-fixed order facts, rational interval/ball inclusions, bounded epsilon-delta
-samples, fixed-decimal rounding shadows, ordered-field real witnesses, small nonlinear polynomial constraints,
+fixed order facts, rational interval/ball inclusions, finite interval
+arithmetic shadows, bounded epsilon-delta samples, fixed-decimal rounding
+shadows, ordered-field real witnesses, small nonlinear polynomial constraints,
 fixed-degree polynomial identities and roots, rational polynomial
 factorization/division/GCD/square-free replay, finite generating-function
 coefficient extraction and Cauchy-product replay, finite recurrence-prefix and
@@ -139,6 +141,18 @@ round3(x + y) - round3(x) = 0
 The `finite-rounding-shadow-v0` validator checks the exact rational addition,
 the fixed three-decimal grid residuals, and the bad equality claim
 `exact_delta = rounded_delta` through checked QF_LRA/Farkas evidence.
+
+For a finite interval-arithmetic shadow, encode:
+
+```text
+X = Y = [1, 10001/10000]
+X * Y = [1, 100020001/100000000]
+```
+
+The `finite-interval-arithmetic-shadow-v0` validator checks closed interval
+shape, interval sum/product endpoints, width arithmetic, and the checked
+QF_LRA/Farkas contradiction for the bad product upper-bound claim
+`product_upper <= 5001/5000`.
 
 For a small real-algebra shadow, encode a nonlinear witness or a one-variable
 quadratic obstruction:

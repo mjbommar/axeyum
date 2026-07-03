@@ -64,15 +64,15 @@ The current committed data boundary reports:
 - 18 math-field concept rows.
 - 76 bridge-concept rows.
 - 5 example-family rows.
-- 137 non-template math example packs.
-- 901 expected checks.
-- 363 checked proof/evidence rows.
-- 438 replay-only rows.
-- 100 Lean-horizon rows.
-- 137 promoted solver-reuse packs.
+- 138 non-template math example packs.
+- 908 expected checks.
+- 364 checked proof/evidence rows.
+- 443 replay-only rows.
+- 101 Lean-horizon rows.
+- 138 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 137 focused learner-linked packs, with no path-only, index-only, or missing
+- 138 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 This is broad enough that the next work is not "create a few examples." The
@@ -2553,6 +2553,14 @@ Pick one item per commit unless the change is purely navigational.
      QF_LRA/Farkas regression without claiming IEEE floating-point semantics,
      rounding-mode theory, accumulation-error bounds, or numerical-stability
      theorems.
+184. Landed: add `finite-interval-arithmetic-shadow-v0` as an exact finite
+     rational interval-arithmetic resource. The pack computes one closed
+     positive interval product around one, replays endpoint-wise sum/product
+     intervals and the second-order product-width term, then promotes the
+     malformed shortcut claim `product_upper <= 5001/5000` through a
+     source-linked QF_LRA/Farkas regression without claiming general interval
+     analysis, dependency management, floating-point outward rounding, QF_FP
+     semantics, or numerical-stability theorems.
 
 ## Validation Checklist
 

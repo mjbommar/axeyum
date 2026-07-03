@@ -240,6 +240,22 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite interval-arithmetic shadow resource landed.**
+  `finite-interval-arithmetic-shadow-v0` now gives the real-analysis and
+  numerical-analysis lanes a compact exact rational interval-arithmetic example:
+  it checks `X = Y = [1, 10001/10000]`, endpoint-wise interval sum/product,
+  interval widths, and the second-order product-width excess
+  `width(X) * width(Y) = 1/100000000`. It then rejects the malformed upper-bound
+  shortcut `product_upper <= 5001/5000` against exact
+  `product_upper = 100020001/100000000` through a source-linked QF_LRA/Farkas
+  row. The focused learner page, rational/real and analysis/numerical query
+  guides, rational-interval and exact-vs-floating bridges, validator, and
+  `math_resource_lra_routes` regression keep exact rational interval replay
+  separate from general interval-analysis soundness, dependency handling,
+  outward-rounded floating-point endpoints, QF_FP semantics, and numerical
+  stability theorems. The public summary now reports 122 concept rows, 138 packs,
+  908 expected checks, 364 checked rows, 443 replay-only rows, 101 Lean-horizon
+  rows, and 138 promoted solver-reuse packs.
 - **Finite rounding-shadow resource landed.**
   `finite-rounding-shadow-v0` now gives the real-analysis and
   numerical-analysis lanes a compact exact-vs-rounded arithmetic example: it

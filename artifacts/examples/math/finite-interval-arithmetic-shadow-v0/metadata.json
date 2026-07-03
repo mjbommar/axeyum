@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "id": "finite-interval-arithmetic-shadow-v0",
+  "title": "Finite Interval Arithmetic Shadow Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "curriculum_rationals",
+    "curriculum_reals",
+    "field_real_analysis",
+    "field_numerical_analysis",
+    "bridge_rational_interval_replay",
+    "bridge_exact_vs_floating_arithmetic"
+  ],
+  "field_ids": [
+    "real_analysis",
+    "numerical_analysis"
+  ],
+  "curriculum_nodes": [
+    "rationals",
+    "reals"
+  ],
+  "axeyum_fragments": [
+    "finite numerical replay",
+    "exact rational arithmetic",
+    "interval containment",
+    "LRA (exact rationals)",
+    "QF_LRA",
+    "Farkas",
+    "Lean horizon",
+    "numerical-honesty metadata"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-interval-arithmetic-shadow-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite interval-arithmetic bad product upper-bound QF_LRA/Farkas regression seed",
+    "pressure": "Exact rational interval replay computes product_upper = 100020001/100000000 while a malformed first-order shortcut claims product_upper <= 5001/5000, isolating a compact scalar bound conflict for the Farkas route.",
+    "evidence": [
+      "qf-lra-bad-interval-product-upper"
+    ],
+    "next_step": "Promote additional interval-arithmetic rows only when they add distinct dependency, outward-rounding, mixed-sign, nonlinear-expression, QF_FP, bit-vector, or numerical-honesty pressure; keep general interval-analysis soundness and floating-point interval packages in future theorem or QF_FP lanes."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/curriculum/01-number-systems/reals.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/interval-arithmetic-shadow-end-to-end.md",
+    "artifacts/examples/math/finite-interval-arithmetic-shadow-v0/smt2/bad-product-upper-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+  ],
+  "expected_results": [
+    "interval-shape-witness",
+    "interval-sum-witness",
+    "interval-product-witness",
+    "interval-width-witness",
+    "bad-product-upper-rejected",
+    "qf-lra-bad-interval-product-upper",
+    "general-interval-arithmetic-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode the fixed rational input intervals, exact sum interval, exact positive product interval, width arithmetic, and product-upper excess as deterministic exact-rational replay obligations.",
+    "Route the false product upper-bound claim through checked QF_LRA/Farkas evidence after replay computes the exact product endpoint.",
+    "Expose the pack through rational-interval, exact-vs-floating, real-analysis, and numerical-analysis learner and consumer query surfaces.",
+    "Keep arbitrary expression interval analysis, dependency handling, outward rounding, hardware floating-point endpoints, and stability guarantees marked as future Lean, QF_FP, bit-vector, or numerical-honesty work until formal routes exist."
+  ]
+}

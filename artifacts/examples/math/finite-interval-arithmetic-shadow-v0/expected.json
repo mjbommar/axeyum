@@ -1,0 +1,120 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-interval-arithmetic-shadow-v0",
+  "witnesses": [
+    {
+      "id": "positive-interval-product-shadow",
+      "description": "Exact closed rational interval sum and product around one, including the second-order product-width term.",
+      "values": {
+        "x_interval": {
+          "lower": "1",
+          "upper": "10001/10000",
+          "closed": true
+        },
+        "y_interval": {
+          "lower": "1",
+          "upper": "10001/10000",
+          "closed": true
+        },
+        "sum_interval": {
+          "lower": "2",
+          "upper": "10001/5000",
+          "closed": true
+        },
+        "product_interval": {
+          "lower": "1",
+          "upper": "100020001/100000000",
+          "closed": true
+        },
+        "x_width": "1/10000",
+        "y_width": "1/10000",
+        "sum_width": "1/5000",
+        "product_width": "20001/100000000",
+        "linearized_product_upper": "5001/5000",
+        "second_order_term": "1/100000000",
+        "product_upper_excess": "1/100000000"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "interval-shape-witness",
+      "claim": "The listed input, sum, and product intervals are closed rational intervals with the listed widths.",
+      "expected_result": "sat",
+      "validation": "exact_rational_interval_shape_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["positive-interval-product-shadow"],
+      "notes": "The validator checks endpoint order, closedness, positivity, and width arithmetic."
+    },
+    {
+      "id": "interval-sum-witness",
+      "claim": "The sum interval is the exact endpoint-wise sum of the two input intervals.",
+      "expected_result": "sat",
+      "validation": "exact_rational_interval_sum_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["positive-interval-product-shadow"],
+      "notes": "The validator recomputes lower(X)+lower(Y) and upper(X)+upper(Y)."
+    },
+    {
+      "id": "interval-product-witness",
+      "claim": "Because both inputs are nonnegative, the product interval is the exact endpoint product.",
+      "expected_result": "sat",
+      "validation": "exact_rational_positive_interval_product_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["positive-interval-product-shadow"],
+      "notes": "The validator recomputes lower(X)*lower(Y) and upper(X)*upper(Y)."
+    },
+    {
+      "id": "interval-width-witness",
+      "claim": "The product upper bound exceeds the linearized shortcut by the second-order width product.",
+      "expected_result": "sat",
+      "validation": "exact_rational_interval_width_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["positive-interval-product-shadow"],
+      "notes": "The validator recomputes interval widths, width(X)*width(Y), and product_upper - linearized_product_upper."
+    },
+    {
+      "id": "bad-product-upper-rejected",
+      "claim": "The product interval upper endpoint is at most 5001/5000.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_bad_interval_product_upper_replay",
+      "proof_status": "replay-only",
+      "data": {
+        "source_witness": "positive-interval-product-shadow",
+        "computed_product_upper": "100020001/100000000",
+        "claimed_product_upper_bound": "5001/5000"
+      },
+      "notes": "Exact interval replay computes product_upper = 100020001/100000000, so the shortcut upper bound 5001/5000 is rejected; the separate qf-lra-bad-interval-product-upper row owns the checked Farkas evidence."
+    },
+    {
+      "id": "qf-lra-bad-interval-product-upper",
+      "claim": "The malformed interval product upper-bound claim is linearly inconsistent.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_farkas_evidence",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "positive-interval-product-shadow",
+        "source_replay_row": "bad-product-upper-rejected",
+        "computed_product_upper": "100020001/100000000",
+        "claimed_product_upper_bound": "5001/5000",
+        "farkas_conflict": "product_upper = 100020001/100000000 and product_upper <= 5001/5000",
+        "smt2_artifact": "artifacts/examples/math/finite-interval-arithmetic-shadow-v0/smt2/bad-product-upper-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_interval_arithmetic_bad_product_upper_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "The source QF_LRA artifact isolates the scalar upper-bound conflict after exact interval replay computes the product endpoint."
+    },
+    {
+      "id": "general-interval-arithmetic-lean-horizon",
+      "claim": "General interval arithmetic, dependency management, outward rounding for floating-point endpoints, and interval-analysis soundness theorems require future proof or numerical-honesty resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_boundary",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "For arbitrary rational or floating-point intervals and an expression language, prove sound interval enclosures under explicit rounding and dependency assumptions.",
+        "future_checker": "Lean theorem statements for exact interval arithmetic plus QF_FP or bit-vector routes for concrete floating-point outward rounding."
+      },
+      "notes": "The finite exact row is a checked resource for one rational interval product, not a theorem about interval packages or hardware floating point."
+    }
+  ]
+}
