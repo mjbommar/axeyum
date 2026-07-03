@@ -35190,6 +35190,411 @@ def validate_finite_roc_auc(expected: dict[str, Any]) -> None:
         fail("general-roc-auc-theory-lean-horizon must be searchable by 'roc auc'")
 
 
+def validate_finite_precision_recall(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    def require_fraction_list(context: str, value: Any) -> list[Fraction]:
+        if not isinstance(value, list) or not value:
+            fail(f"{context} must be a non-empty list")
+        return [
+            require_fraction(f"{context}[{index}]", item)
+            for index, item in enumerate(value)
+        ]
+
+    def require_key_fraction_map(context: str, value: Any, keys: list[str]) -> dict[str, Fraction]:
+        if not isinstance(value, dict):
+            fail(f"{context} must be an object")
+        key_set = set(keys)
+        if set(value) != key_set:
+            missing = sorted(key_set - set(value))
+            extra = sorted(set(value) - key_set)
+            fail(f"{context} must cover exactly {keys}; missing={missing} extra={extra}")
+        return {
+            key: require_fraction(f"{context}.{key}", value[key])
+            for key in keys
+        }
+
+    def require_count_map(context: str, value: Any, keys: list[str]) -> dict[str, Fraction]:
+        counts = require_key_fraction_map(context, value, keys)
+        for key, count in counts.items():
+            if count.denominator != 1 or count < 0:
+                fail(f"{context}.{key} must be a nonnegative integer count")
+        return counts
+
+    def require_sat_replay(check_id: str, validation: str) -> None:
+        check = checks[check_id]
+        if check["expected_result"] != "sat":
+            fail(f"{check_id} must expect sat")
+        if check.get("proof_status") != "replay-only":
+            fail(f"{check_id} must be replay-only")
+        if check["validation"] != validation:
+            fail(f"{check_id} validation is incorrect")
+        values_again = single_witness_values(check, witnesses)
+        if values_again != values:
+            fail(f"{check_id} must cite the shared precision-recall witness")
+
+    order_check = checks["score-order-witness"]
+    if order_check["expected_result"] != "sat":
+        fail("score-order-witness must expect sat")
+    if order_check.get("proof_status") != "replay-only":
+        fail("score-order-witness must be replay-only")
+    if order_check["validation"] != "exact_rational_pr_score_order_replay":
+        fail("score-order-witness validation is incorrect")
+    values = single_witness_values(order_check, witnesses)
+
+    classes = require_string_list("precision recall classes", values.get("classes"))
+    positive_class = values.get("positive_class")
+    negative_class = values.get("negative_class")
+    require_string("precision recall positive_class", positive_class)
+    require_string("precision recall negative_class", negative_class)
+    if positive_class == negative_class:
+        fail("precision recall positive_class and negative_class must differ")
+    if set(classes) != {positive_class, negative_class}:
+        fail("precision recall classes must contain exactly positive_class and negative_class")
+
+    raw_examples = values.get("examples")
+    if not isinstance(raw_examples, list) or not raw_examples:
+        fail("precision recall examples must be a non-empty list")
+    seen_rows: set[str] = set()
+    examples: list[dict[str, Any]] = []
+    for index, row in enumerate(raw_examples):
+        if not isinstance(row, dict):
+            fail(f"precision recall examples[{index}] must be an object")
+        row_id = row.get("id")
+        row_class = row.get("class")
+        score = require_fraction(f"precision recall examples[{index}].score", row.get("score"))
+        require_string(f"precision recall examples[{index}].id", row_id)
+        require_string(f"precision recall examples[{index}].class", row_class)
+        if row_id in seen_rows:
+            fail(f"precision recall examples repeats id {row_id!r}")
+        if row_class not in classes:
+            fail(f"precision recall examples[{index}].class is unknown")
+        seen_rows.add(row_id)
+        examples.append({"id": row_id, "class": row_class, "score": score})
+
+    scores = [row["score"] for row in examples]
+    if len(set(scores)) != len(scores):
+        fail("finite-precision-recall-v0 is intentionally tie-free; scores must be distinct")
+    sorted_ids = require_string_list(
+        "precision recall sorted_example_ids",
+        values.get("sorted_example_ids"),
+    )
+    computed_sorted_ids = [
+        row["id"]
+        for row in sorted(examples, key=lambda row: row["score"], reverse=True)
+    ]
+    if sorted_ids != computed_sorted_ids:
+        fail("score-order-witness sorted_example_ids are incorrect")
+
+    class_count_keys = ["positive_count", "negative_count", "total"]
+    class_counts = require_count_map(
+        "precision recall class_counts",
+        values.get("class_counts"),
+        class_count_keys,
+    )
+    computed_class_counts = {
+        "positive_count": Fraction(sum(1 for row in examples if row["class"] == positive_class)),
+        "negative_count": Fraction(sum(1 for row in examples if row["class"] == negative_class)),
+        "total": Fraction(len(examples)),
+    }
+    if class_counts != computed_class_counts:
+        fail("score-order-witness class_counts are incorrect")
+    positive_count = class_counts["positive_count"]
+    negative_count = class_counts["negative_count"]
+    if positive_count <= 0 or negative_count <= 0:
+        fail("precision recall requires at least one positive and one negative row")
+    if positive_count + negative_count != class_counts["total"]:
+        fail("precision recall class counts must sum to total")
+
+    threshold = values.get("threshold")
+    if not isinstance(threshold, dict):
+        fail("precision recall threshold must be an object")
+    threshold_value = require_fraction("precision recall threshold.value", threshold.get("value"))
+    if threshold.get("rule") != "score >= threshold predicts positive":
+        fail("precision recall threshold.rule must document the fixed threshold rule")
+    threshold_count_keys = [
+        "true_positive",
+        "false_positive",
+        "false_negative",
+        "predicted_positive_count",
+    ]
+    threshold_counts = require_count_map(
+        "precision recall threshold.counts",
+        threshold.get("counts"),
+        threshold_count_keys,
+    )
+    computed_threshold_counts = {
+        "true_positive": Fraction(
+            sum(
+                1
+                for row in examples
+                if row["class"] == positive_class and row["score"] >= threshold_value
+            )
+        ),
+        "false_positive": Fraction(
+            sum(
+                1
+                for row in examples
+                if row["class"] == negative_class and row["score"] >= threshold_value
+            )
+        ),
+        "false_negative": Fraction(
+            sum(
+                1
+                for row in examples
+                if row["class"] == positive_class and row["score"] < threshold_value
+            )
+        ),
+        "predicted_positive_count": Fraction(sum(1 for row in examples if row["score"] >= threshold_value)),
+    }
+    if threshold_counts != computed_threshold_counts:
+        fail("precision-recall-threshold-witness threshold counts are incorrect")
+
+    tp = threshold_counts["true_positive"]
+    fp = threshold_counts["false_positive"]
+    fn = threshold_counts["false_negative"]
+    if tp + fn != positive_count:
+        fail("precision recall threshold positive rows are inconsistent")
+    if tp + fp != threshold_counts["predicted_positive_count"]:
+        fail("precision recall threshold predicted-positive count is inconsistent")
+    if tp + fp <= 0:
+        fail("precision recall threshold precision denominator must be positive")
+
+    threshold_rate_keys = ["precision", "recall", "f1_score"]
+    threshold_rates = require_key_fraction_map(
+        "precision recall threshold.rates",
+        threshold.get("rates"),
+        threshold_rate_keys,
+    )
+    computed_precision = tp / (tp + fp)
+    computed_recall = tp / (tp + fn)
+    computed_f1 = (2 * computed_precision * computed_recall) / (computed_precision + computed_recall)
+    computed_threshold_rates = {
+        "precision": computed_precision,
+        "recall": computed_recall,
+        "f1_score": computed_f1,
+    }
+    if threshold_rates != computed_threshold_rates:
+        fail("precision-recall-threshold-witness threshold rates are incorrect")
+
+    require_sat_replay(
+        "precision-recall-threshold-witness",
+        "exact_rational_precision_recall_threshold_replay",
+    )
+    require_sat_replay(
+        "precision-recall-curve-witness",
+        "exact_rational_precision_recall_curve_replay",
+    )
+    require_sat_replay("average-precision-witness", "exact_rational_average_precision_replay")
+
+    start_convention = values.get("start_precision_convention")
+    require_string("precision recall start_precision_convention", start_convention)
+    if "recall 0" not in start_convention:
+        fail("precision recall start_precision_convention must document the recall-0 convention")
+
+    examples_by_id = {row["id"]: row for row in examples}
+    raw_pr_points = values.get("precision_recall_points")
+    if not isinstance(raw_pr_points, list) or not raw_pr_points:
+        fail("precision recall precision_recall_points must be a non-empty list")
+    pr_points: list[tuple[str, Fraction, Fraction, Fraction, Fraction]] = []
+    for index, point in enumerate(raw_pr_points):
+        if not isinstance(point, dict):
+            fail(f"precision recall precision_recall_points[{index}] must be an object")
+        after = point.get("after")
+        require_string(f"precision recall precision_recall_points[{index}].after", after)
+        pr_points.append(
+            (
+                after,
+                require_fraction(
+                    f"precision recall precision_recall_points[{index}].true_positive",
+                    point.get("true_positive"),
+                ),
+                require_fraction(
+                    f"precision recall precision_recall_points[{index}].false_positive",
+                    point.get("false_positive"),
+                ),
+                require_fraction(
+                    f"precision recall precision_recall_points[{index}].recall",
+                    point.get("recall"),
+                ),
+                require_fraction(
+                    f"precision recall precision_recall_points[{index}].precision",
+                    point.get("precision"),
+                ),
+            )
+        )
+
+    cumulative_tp = Fraction(0)
+    cumulative_fp = Fraction(0)
+    computed_pr_points = [("start", Fraction(0), Fraction(0), Fraction(0), Fraction(1))]
+    positive_hit_precisions: list[Fraction] = []
+    for row_id in sorted_ids:
+        row = examples_by_id[row_id]
+        if row["class"] == positive_class:
+            cumulative_tp += 1
+        else:
+            cumulative_fp += 1
+        denominator = cumulative_tp + cumulative_fp
+        precision = cumulative_tp / denominator
+        recall = cumulative_tp / positive_count
+        computed_pr_points.append((row_id, cumulative_tp, cumulative_fp, recall, precision))
+        if row["class"] == positive_class:
+            positive_hit_precisions.append(precision)
+    if pr_points != computed_pr_points:
+        fail("precision-recall-curve-witness precision_recall_points are incorrect")
+
+    ap_data = values.get("average_precision")
+    if not isinstance(ap_data, dict):
+        fail("precision recall average_precision must be an object")
+    positive_hit_count = require_fraction(
+        "precision recall average_precision.positive_hit_count",
+        ap_data.get("positive_hit_count"),
+    )
+    if positive_hit_count != Fraction(len(positive_hit_precisions)):
+        fail("average-precision-witness positive_hit_count is incorrect")
+    ap_hit_precisions = require_fraction_list(
+        "precision recall average_precision.positive_hit_precisions",
+        ap_data.get("positive_hit_precisions"),
+    )
+    if ap_hit_precisions != positive_hit_precisions:
+        fail("average-precision-witness positive_hit_precisions are incorrect")
+    sum_hit_precisions = require_fraction(
+        "precision recall average_precision.sum_positive_hit_precisions",
+        ap_data.get("sum_positive_hit_precisions"),
+    )
+    if sum_hit_precisions != sum(positive_hit_precisions, Fraction(0)):
+        fail("average-precision-witness sum_positive_hit_precisions is incorrect")
+    average_precision = require_fraction(
+        "precision recall average_precision.average_precision",
+        ap_data.get("average_precision"),
+    )
+    if average_precision != sum_hit_precisions / positive_count:
+        fail("average-precision-witness average_precision is incorrect")
+
+    bad = checks["bad-average-precision-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-average-precision-rejected must expect unsat")
+    if bad.get("proof_status") != "replay-only":
+        fail("bad-average-precision-rejected must be replay-only")
+    if bad["validation"] != "exact_rational_bad_average_precision_replay":
+        fail("bad-average-precision-rejected validation is incorrect")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "six-score-binary-classifier-sample":
+        fail("bad-average-precision-rejected must cite six-score-binary-classifier-sample")
+    if data.get("metric") != "average_precision":
+        fail("bad-average-precision-rejected must document the average_precision metric")
+    bad_hit_count = require_fraction(
+        "bad precision recall positive_hit_count",
+        data.get("positive_hit_count"),
+    )
+    bad_hit_precisions = require_fraction_list(
+        "bad precision recall positive_hit_precisions",
+        data.get("positive_hit_precisions"),
+    )
+    bad_computed = require_fraction(
+        "bad precision recall computed_average_precision",
+        data.get("computed_average_precision"),
+    )
+    bad_claimed = require_fraction(
+        "bad precision recall claimed_average_precision",
+        data.get("claimed_average_precision"),
+    )
+    if (bad_hit_count, bad_hit_precisions, bad_computed) != (
+        positive_hit_count,
+        positive_hit_precisions,
+        average_precision,
+    ):
+        fail("bad-average-precision-rejected data must match replay")
+    if bad_claimed == bad_computed:
+        fail("bad-average-precision-rejected must document a false average-precision claim")
+    if "separate qf-lra-bad-average-precision" not in bad.get("notes", ""):
+        fail("bad-average-precision-rejected notes must name the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-average-precision"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-average-precision must expect unsat")
+    if qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-average-precision must be checked")
+    if qf_bad["validation"] != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-average-precision must use exact_rational_farkas_evidence")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_witness") != "six-score-binary-classifier-sample":
+        fail("qf-lra-bad-average-precision must cite the source witness")
+    if qf_data.get("source_replay_row") != "bad-average-precision-rejected":
+        fail("qf-lra-bad-average-precision must cite the replay row")
+    if qf_data.get("metric") != "average_precision":
+        fail("qf-lra-bad-average-precision must document the average_precision metric")
+    qf_hit_count = require_fraction(
+        "qf precision recall positive_hit_count",
+        qf_data.get("positive_hit_count"),
+    )
+    qf_hit_precisions = require_fraction_list(
+        "qf precision recall positive_hit_precisions",
+        qf_data.get("positive_hit_precisions"),
+    )
+    qf_computed = require_fraction(
+        "qf precision recall computed_average_precision",
+        qf_data.get("computed_average_precision"),
+    )
+    qf_claimed = require_fraction(
+        "qf precision recall claimed_average_precision",
+        qf_data.get("claimed_average_precision"),
+    )
+    if (qf_hit_count, qf_hit_precisions, qf_computed, qf_claimed) != (
+        bad_hit_count,
+        bad_hit_precisions,
+        bad_computed,
+        bad_claimed,
+    ):
+        fail("qf-lra-bad-average-precision data must match the replay row")
+    equations = require_string_list(
+        "qf precision recall average_precision_equations",
+        qf_data.get("average_precision_equations"),
+    )
+    if equations != ["45*ap = 34", "4*ap = 3"]:
+        fail("qf-lra-bad-average-precision must document the linear conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf precision recall smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-precision-recall-v0/smt2/"
+        "bad-average-precision-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-lra-bad-average-precision smt2_artifact must name the checked source artifact")
+    check_source("qf precision recall smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf precision recall farkas_regression", regression)
+    if "finite_precision_recall_bad_average_precision_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-average-precision must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf precision recall certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-average-precision certificate must document checked Farkas evidence")
+
+    horizon = checks["general-precision-recall-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-precision-recall-theory-lean-horizon must be not-run")
+    if horizon.get("proof_status") != "lean-horizon":
+        fail("general-precision-recall-theory-lean-horizon must remain lean-horizon")
+    horizon_data = horizon.get("data", {})
+    require_string(
+        "precision recall horizon target_theorem_shape",
+        horizon_data.get("target_theorem_shape"),
+    )
+    require_string("precision recall horizon future_checker", horizon_data.get("future_checker"))
+    horizon_text = " ".join(
+        [
+            horizon.get("claim", ""),
+            horizon_data.get("target_theorem_shape", ""),
+            horizon_data.get("future_checker", ""),
+            horizon.get("notes", ""),
+        ]
+    ).lower()
+    if "precision recall" not in horizon_text:
+        fail("general-precision-recall-theory-lean-horizon must be searchable by 'precision recall'")
+
+
 def validate_descriptive_statistics(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -38406,6 +38811,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_confusion_matrix(expected)
     if metadata["id"] == "finite-roc-auc-v0":
         validate_finite_roc_auc(expected)
+    if metadata["id"] == "finite-precision-recall-v0":
+        validate_finite_precision_recall(expected)
     if metadata["id"] == "finite-cardinality-v0":
         validate_finite_cardinality(expected)
     if metadata["id"] == "cardinality-principles-v0":

@@ -1,0 +1,247 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-precision-recall-v0",
+  "witnesses": [
+    {
+      "id": "six-score-binary-classifier-sample",
+      "description": "A six-row binary classifier score table with exact precision-recall and average-precision replay.",
+      "values": {
+        "classes": [
+          "positive",
+          "negative"
+        ],
+        "positive_class": "positive",
+        "negative_class": "negative",
+        "examples": [
+          {
+            "id": "p_high",
+            "class": "positive",
+            "score": "9/10"
+          },
+          {
+            "id": "n_high",
+            "class": "negative",
+            "score": "4/5"
+          },
+          {
+            "id": "p_mid",
+            "class": "positive",
+            "score": "7/10"
+          },
+          {
+            "id": "n_mid",
+            "class": "negative",
+            "score": "3/5"
+          },
+          {
+            "id": "p_low",
+            "class": "positive",
+            "score": "2/5"
+          },
+          {
+            "id": "n_low",
+            "class": "negative",
+            "score": "1/5"
+          }
+        ],
+        "sorted_example_ids": [
+          "p_high",
+          "n_high",
+          "p_mid",
+          "n_mid",
+          "p_low",
+          "n_low"
+        ],
+        "class_counts": {
+          "positive_count": "3",
+          "negative_count": "3",
+          "total": "6"
+        },
+        "threshold": {
+          "value": "7/10",
+          "rule": "score >= threshold predicts positive",
+          "counts": {
+            "true_positive": "2",
+            "false_positive": "1",
+            "false_negative": "1",
+            "predicted_positive_count": "3"
+          },
+          "rates": {
+            "precision": "2/3",
+            "recall": "2/3",
+            "f1_score": "2/3"
+          }
+        },
+        "start_precision_convention": "precision is recorded as 1 at recall 0 before any predicted-positive row",
+        "precision_recall_points": [
+          {
+            "after": "start",
+            "true_positive": "0",
+            "false_positive": "0",
+            "recall": "0",
+            "precision": "1"
+          },
+          {
+            "after": "p_high",
+            "true_positive": "1",
+            "false_positive": "0",
+            "recall": "1/3",
+            "precision": "1"
+          },
+          {
+            "after": "n_high",
+            "true_positive": "1",
+            "false_positive": "1",
+            "recall": "1/3",
+            "precision": "1/2"
+          },
+          {
+            "after": "p_mid",
+            "true_positive": "2",
+            "false_positive": "1",
+            "recall": "2/3",
+            "precision": "2/3"
+          },
+          {
+            "after": "n_mid",
+            "true_positive": "2",
+            "false_positive": "2",
+            "recall": "2/3",
+            "precision": "1/2"
+          },
+          {
+            "after": "p_low",
+            "true_positive": "3",
+            "false_positive": "2",
+            "recall": "1",
+            "precision": "3/5"
+          },
+          {
+            "after": "n_low",
+            "true_positive": "3",
+            "false_positive": "3",
+            "recall": "1",
+            "precision": "1/2"
+          }
+        ],
+        "average_precision": {
+          "positive_hit_count": "3",
+          "positive_hit_precisions": [
+            "1",
+            "2/3",
+            "3/5"
+          ],
+          "sum_positive_hit_precisions": "34/15",
+          "average_precision": "34/45"
+        }
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "score-order-witness",
+      "claim": "The listed six-row classifier score table has descending order p_high, n_high, p_mid, n_mid, p_low, n_low and three positive plus three negative rows.",
+      "expected_result": "sat",
+      "validation": "exact_rational_pr_score_order_replay",
+      "proof_status": "replay-only",
+      "witnesses": [
+        "six-score-binary-classifier-sample"
+      ],
+      "notes": "The validator sorts the committed exact rational scores and recounts class totals."
+    },
+    {
+      "id": "precision-recall-threshold-witness",
+      "claim": "At threshold score >= 7/10, the table has TP=2, FP=1, FN=1, precision=2/3, recall=2/3, and F1=2/3.",
+      "expected_result": "sat",
+      "validation": "exact_rational_precision_recall_threshold_replay",
+      "proof_status": "replay-only",
+      "witnesses": [
+        "six-score-binary-classifier-sample"
+      ],
+      "notes": "The validator applies the fixed threshold rule and recomputes precision, recall, and F1 from the resulting counts."
+    },
+    {
+      "id": "precision-recall-curve-witness",
+      "claim": "Scanning the descending score order gives the stated finite precision-recall curve.",
+      "expected_result": "sat",
+      "validation": "exact_rational_precision_recall_curve_replay",
+      "proof_status": "replay-only",
+      "witnesses": [
+        "six-score-binary-classifier-sample"
+      ],
+      "notes": "The validator advances true positives on positive rows and false positives on negative rows using exact class totals."
+    },
+    {
+      "id": "average-precision-witness",
+      "claim": "The table has average precision 34/45 from positive-hit precisions 1, 2/3, and 3/5.",
+      "expected_result": "sat",
+      "validation": "exact_rational_average_precision_replay",
+      "proof_status": "replay-only",
+      "witnesses": [
+        "six-score-binary-classifier-sample"
+      ],
+      "notes": "The validator recomputes average precision as the mean of precision at each positive hit."
+    },
+    {
+      "id": "bad-average-precision-rejected",
+      "claim": "The same table has average precision 3/4.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_bad_average_precision_replay",
+      "proof_status": "replay-only",
+      "data": {
+        "source_witness": "six-score-binary-classifier-sample",
+        "metric": "average_precision",
+        "positive_hit_count": "3",
+        "positive_hit_precisions": [
+          "1",
+          "2/3",
+          "3/5"
+        ],
+        "computed_average_precision": "34/45",
+        "claimed_average_precision": "3/4"
+      },
+      "notes": "Exact replay computes average precision as 34/45, so the claimed value 3/4 is rejected; the separate qf-lra-bad-average-precision row owns the checked Farkas evidence."
+    },
+    {
+      "id": "qf-lra-bad-average-precision",
+      "claim": "The fixed malformed average-precision claim is linearly inconsistent with the replayed average-precision equation.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_farkas_evidence",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "six-score-binary-classifier-sample",
+        "source_replay_row": "bad-average-precision-rejected",
+        "metric": "average_precision",
+        "positive_hit_count": "3",
+        "positive_hit_precisions": [
+          "1",
+          "2/3",
+          "3/5"
+        ],
+        "computed_average_precision": "34/45",
+        "claimed_average_precision": "3/4",
+        "average_precision_equations": [
+          "45*ap = 34",
+          "4*ap = 3"
+        ],
+        "farkas_conflict": "replayed average-precision equation plus ap = 3/4",
+        "smt2_artifact": "artifacts/examples/math/finite-precision-recall-v0/smt2/bad-average-precision-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_precision_recall_bad_average_precision_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes 45*ap = 34 from positive-hit precisions, while the malformed row claims 4*ap = 3; the source QF_LRA artifact isolates that scalar contradiction for Farkas checking."
+    },
+    {
+      "id": "general-precision-recall-theory-lean-horizon",
+      "claim": "Precision recall threshold policy, tie conventions, calibration, confidence intervals, sampling guarantees, continuous score distributions, and floating-point behavior require future theorem, statistical-inference, or numerical-honesty resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_boundary",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "For finite or measurable scored-classifier problems under stated tie, sampling, loss, interpolation, and threshold-policy assumptions, prove precision recall, average precision, calibration, or interval claims only with explicit theorem hypotheses.",
+        "future_checker": "Lean theorem statements for precision recall and classifier-evaluation theory plus separate statistical-inference and numerical-honesty artifacts for empirical intervals, tie policies, threshold selection, continuous score distributions, and floating-point metric implementations."
+      },
+      "notes": "The finite exact row checks one committed tie-free score table and exact average-precision definitions, not a theorem about unseen data, threshold choice, statistical uncertainty, calibration, or floating-point classifier behavior."
+    }
+  ]
+}

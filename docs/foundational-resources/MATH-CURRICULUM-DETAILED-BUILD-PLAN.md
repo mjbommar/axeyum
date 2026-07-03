@@ -60,17 +60,17 @@ The committed resource query currently reports:
 
 - 23 curriculum-node concept rows.
 - 18 field rows.
-- 82 bridge-concept rows.
+- 83 bridge-concept rows.
 - 5 example-family rows.
-- 164 non-template math packs.
-- 1068 expected checks.
-- 390 checked proof/evidence rows.
-- 551 replay-only rows.
-- 127 Lean-horizon rows.
-- 164 promoted solver-reuse packs.
+- 165 non-template math packs.
+- 1075 expected checks.
+- 391 checked proof/evidence rows.
+- 556 replay-only rows.
+- 128 Lean-horizon rows.
+- 165 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 164 focused learner-linked packs, with no path-only, index-only, or missing
+- 165 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 The next phase is therefore a depth phase, not a seed phase. New packs are
@@ -112,7 +112,7 @@ good R2/R3 lesson while still not being a theorem.
 
 ## Build Waves
 
-### Wave 1: Stabilize The Current 164 Packs
+### Wave 1: Stabilize The Current 165 Packs
 
 Goal: every current non-template pack has a deliberate R5 disposition:
 `promoted`, `non-benchmark-horizon`, or a clear reason to remain unclassified.
@@ -158,7 +158,7 @@ Exit criteria:
 - No lesson implies a finite bounded check proves an unbounded theorem.
 
 Current audit: [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md) records that
-all 164 current non-template packs satisfy the focused-lesson side of this
+all 165 current non-template packs satisfy the focused-lesson side of this
 gate. Keep this true as new packs land.
 
 ### Wave 3: Proof-Route Depth
@@ -2847,6 +2847,17 @@ Pick one row per commit unless the change is purely navigational.
      separate from threshold policy, calibration, confidence intervals, general
      tie conventions, continuous score-distribution theory, statistical
      generalization, and floating-point classifier-metric behavior.
+323. Landed: add `finite-precision-recall-v0` as an exact finite
+     classifier-ranking resource. The pack replays the same fixed six-row
+     rational score table, descending score order, class totals, the
+     `score >= 7/10` threshold precision/recall/F1 point, the
+     precision-recall curve, and average precision `34/45`, then adds
+     `qf-lra-bad-average-precision` as the source-linked Farkas row for the
+     false average-precision claim `3/4` versus exact `34/45`. The learner and
+     query pages keep this finite tie-free precision-recall shadow separate
+     from threshold policy, calibration, confidence intervals, general
+     tie/interpolation conventions, continuous score-distribution theory,
+     statistical generalization, and floating-point classifier-metric behavior.
 
 ## Validation Checklist
 

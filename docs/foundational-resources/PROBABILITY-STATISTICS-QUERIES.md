@@ -23,14 +23,16 @@ finite Schur conditional-variance shadows, ordinary and ridge regression, and
 finite PCA, finite k-means clustering, finite linear-discriminant/classification
 replay, finite Naive Bayes classifier posterior replay, finite
 confusion-matrix classifier metrics, finite ROC/AUC score-ranking rows, and
-finite random-matrix moments. Continuous distributions, sampling
+finite precision-recall score-ranking rows, and finite random-matrix moments.
+Continuous distributions, sampling
 guarantees, asymptotic inference, MCMC/VI, stochastic-process limits,
 random-matrix limit laws, clustering consistency, Lloyd convergence, global
 clustering optimality, regularization-path theory, conditional-independence
 validity, classifier calibration/generalization, general ROC/AUC theory,
-confidence intervals, threshold policy, continuous score distributions, and
-floating-point statistical-library behavior remain in proof-horizon or
-numerical-honesty lanes.
+general precision-recall theory, confidence intervals, threshold policy,
+tie/interpolation conventions beyond committed finite rows, continuous score
+distributions, and floating-point statistical-library behavior remain in
+proof-horizon or numerical-honesty lanes.
 
 ## Query Shape
 
@@ -91,6 +93,7 @@ needs concrete checked rows to display.
 | Finite Naive Bayes classifier posterior rows | `bridge_finite_naive_bayes_shadow`; pack `finite-naive-bayes-classifier-v0` | `Farkas` | `checks --concept bridge_finite_naive_bayes_shadow --route Farkas --proof-status checked`; `checks --pack finite-naive-bayes-classifier-v0 --proof-status replay-only`; `horizon-frontier --text "naive bayes"` |
 | Finite classifier metric and confusion-matrix rows | `bridge_finite_classifier_metrics_shadow`; pack `finite-confusion-matrix-v0` | `Farkas` | `checks --concept bridge_finite_classifier_metrics_shadow --route Farkas --proof-status checked`; `checks --pack finite-confusion-matrix-v0 --proof-status replay-only`; `horizon-frontier --text "classifier metrics"` |
 | Finite ROC/AUC ranking and threshold rows | `bridge_finite_roc_auc_shadow`; pack `finite-roc-auc-v0` | `Farkas` | `checks --concept bridge_finite_roc_auc_shadow --route Farkas --proof-status checked`; `checks --pack finite-roc-auc-v0 --proof-status replay-only`; `horizon-frontier --text "roc auc"` |
+| Finite precision-recall ranking and average-precision rows | `bridge_finite_precision_recall_shadow`; pack `finite-precision-recall-v0` | `Farkas` | `checks --concept bridge_finite_precision_recall_shadow --route Farkas --proof-status checked`; `checks --pack finite-precision-recall-v0 --proof-status replay-only`; `horizon-frontier --text "precision recall"` |
 | Random-matrix finite moments, covariance matrices, PCA shadows, Schur conditional-variance shadows, and expected-rank rows | `bridge_random_matrix_finite_moment`; `bridge_schur_complement`; `bridge_finite_pca_shadow` | `Farkas` | `checks --concept bridge_random_matrix_finite_moment --route Farkas --proof-status checked`; `checks --concept bridge_schur_complement --route Farkas --proof-status checked`; `checks --concept bridge_finite_pca_shadow --route Farkas --proof-status checked`; `checks --pack finite-covariance-matrix-v0 --route Farkas --proof-status checked`; `checks --pack finite-principal-components-v0 --route Farkas --proof-status checked`; `checks --pack finite-schur-complement-v0 --route Farkas --proof-status checked` |
 
 ## Copyable Examples
@@ -185,6 +188,25 @@ python3 scripts/query-foundational-resources.py checks \
 
 python3 scripts/query-foundational-resources.py horizon-frontier \
   --text "roc auc" \
+  --require-any
+```
+
+Display finite precision-recall rows, then the checked malformed average
+precision row and theorem boundary:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-precision-recall-v0 \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --concept bridge_finite_precision_recall_shadow \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text "precision recall" \
   --require-any
 ```
 
@@ -474,8 +496,9 @@ They do not prove:
   regularization paths, model selection, or cross-validation;
 - Fisher LDA optimality, Gaussian classifier assumptions, Bayes risk,
   multiclass LDA, classifier generalization, classifier calibration, general
-  ROC/AUC theory, confidence intervals, threshold selection, tie-policy
-  conventions, continuous score distributions, or floating-point classifiers;
+  ROC/AUC theory, general precision-recall theory, confidence intervals,
+  threshold selection, tie/interpolation conventions, continuous score
+  distributions, or floating-point classifiers;
 - random-matrix asymptotics, universality, or concentration theorems;
 - floating-point statistical-library behavior;
 - benchmark performance, PAR-2, or Z3/cvc5 parity.

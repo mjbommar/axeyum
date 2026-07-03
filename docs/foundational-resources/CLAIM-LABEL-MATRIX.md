@@ -15,12 +15,12 @@ Use this with:
 The current public summary is:
 
 ```text
-concept_rows=128
-non_template_packs=164
-checks=1068
-expected_results=not-run:127,sat:545,unsat:396
-proof_statuses=checked:390,lean-horizon:127,replay-only:551
-solver_reuse=promoted:164
+concept_rows=129
+non_template_packs=165
+checks=1075
+expected_results=not-run:128,sat:549,unsat:398
+proof_statuses=checked:391,lean-horizon:128,replay-only:556
+solver_reuse=promoted:165
 ```
 
 ## Row Labels

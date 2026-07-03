@@ -240,6 +240,24 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite precision-recall classifier-ranking resource landed.**
+  `finite-precision-recall-v0` now gives the statistics and probability lanes a
+  compact exact ranking-metric example: it replays six rational classifier
+  scores, descending score order, class totals, the `score >= 7/10` threshold
+  precision/recall/F1 point, the precision-recall curve, and average precision
+  `34/45`; rejects the malformed average-precision claim `3/4`; and routes
+  that scalar conflict through a source-linked QF_LRA/Farkas row. The focused
+  learner page, probability/statistics query guide, probability-mass-table,
+  exact-vs-floating, finite classifier-metrics, finite ROC/AUC, finite
+  precision-recall, and QF_LRA/Farkas bridge rows, validator, resource smoke
+  queries, generated dashboards, and `math_resource_lra_routes` regression
+  keep this fixed tie-free finite replay separate from threshold policy,
+  calibration, confidence intervals, interpolation/tie conventions,
+  continuous score-distribution theory, statistical generalization, and
+  floating-point classifier-metric behavior. The public summary now reports
+  129 concept rows, 165 packs, 1075 expected checks, 391 checked rows, 556
+  replay-only rows, 128 Lean-horizon rows, and 165 promoted solver-reuse packs.
+
 - **Finite ROC/AUC classifier-ranking resource landed.**
   `finite-roc-auc-v0` now gives the statistics and probability lanes a compact
   exact score-ranking example: it replays six rational classifier scores, the
@@ -254,9 +272,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   fixed tie-free finite replay separate from threshold policy, calibration,
   confidence intervals, general tie conventions, continuous score-distribution
   theory, statistical generalization, and floating-point classifier-metric
-  behavior. The public summary now reports 128 concept rows, 164 packs, 1068
-  expected checks, 390 checked rows, 551 replay-only rows, 127 Lean-horizon
-  rows, and 164 promoted solver-reuse packs.
+  behavior. At that landing, the public summary reported 128 concept rows, 164
+  packs, 1068 expected checks, 390 checked rows, 551 replay-only rows, 127
+  Lean-horizon rows, and 164 promoted solver-reuse packs.
 
 - **Finite confusion-matrix classifier-metrics resource landed.**
   `finite-confusion-matrix-v0` now gives the statistics and probability lanes
