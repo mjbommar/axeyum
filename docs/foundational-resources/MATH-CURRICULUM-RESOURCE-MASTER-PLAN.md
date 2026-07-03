@@ -48,18 +48,18 @@ does not miss major university or research branches.
 
 ## Current Baseline
 
-As of 2026-07-02, the committed resource query reports:
+As of 2026-07-03, the committed resource query reports:
 
 - 23 curriculum-node concept rows.
 - 18 math-field concept rows.
 - 76 bridge-concept rows.
 - 5 example-family rows.
-- 121 non-template math packs.
-- 777 expected checks.
-- 347 checked proof/evidence rows.
-- 346 replay-only rows.
-- 84 Lean-horizon rows.
-- 121 promoted solver-reuse packs.
+- 139 non-template math packs.
+- 915 expected checks.
+- 365 checked proof/evidence rows.
+- 448 replay-only rows.
+- 102 Lean-horizon rows.
+- 139 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
 

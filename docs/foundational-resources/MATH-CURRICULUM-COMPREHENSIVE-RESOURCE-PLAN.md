@@ -49,19 +49,19 @@ with prose, fix the JSON, metadata, generator, or prose source.
 
 ## Current Baseline
 
-As of 2026-07-02, the public resource query reports:
+As of 2026-07-03, the public resource query reports:
 
 - 122 concept rows: 23 curriculum nodes, 18 math fields, 76 bridge concepts, and
   5 example families.
-- 121 non-template math packs.
-- 777 expected checks: 383 `sat`, 310 `unsat`, and 84 `not-run`.
-- 347 checked proof/evidence rows.
-- 346 replay-only rows.
-- 84 Lean-horizon rows.
-- 121 promoted solver-reuse packs.
+- 139 non-template math packs.
+- 915 expected checks: 467 `sat`, 346 `unsat`, and 102 `not-run`.
+- 365 checked proof/evidence rows.
+- 448 replay-only rows.
+- 102 Lean-horizon rows.
+- 139 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 121 focused learner-linked packs, with no path-only, index-only, or missing
+- 139 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 The seed phase is over. The next phase is not "add examples everywhere." The
@@ -459,7 +459,7 @@ Prefer one row, page, route upgrade, or query surface per commit.
 1. Keep this comprehensive plan linked from the foundational-resource index,
    mdBook summary, buildout plan, and live status.
 2. Landed: [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md) records that
-   the current 121 non-template packs are all focused-lesson linked, with no
+   the current 139 non-template packs are all focused-lesson linked, with no
    path-only, index-only, or missing learner buckets, and defines the future
    combined-page-only policy.
 3. Landed: [Proof Route Family Selection](PROOF-ROUTE-FAMILY-SELECTION.md)

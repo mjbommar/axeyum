@@ -1,13 +1,14 @@
 # Complex Analysis Theorem Boundary
 
-This page separates Axeyum's exact finite complex-number, complex-plane, and
-rational-polynomial resources from general complex-analysis and global
-factorization theorems.
+This page separates Axeyum's exact finite complex-number, complex-plane,
+Cauchy-Riemann-shadow, and rational-polynomial resources from general
+complex-analysis and global factorization theorems.
 
 Primary packs:
 
 - [complex-algebraic-v0](../../../artifacts/examples/math/complex-algebraic-v0/)
 - [complex-plane-transforms-v0](../../../artifacts/examples/math/complex-plane-transforms-v0/)
+- [finite-cauchy-riemann-shadow-v0](../../../artifacts/examples/math/finite-cauchy-riemann-shadow-v0/)
 - [polynomial-identities-v0](../../../artifacts/examples/math/polynomial-identities-v0/)
 - [polynomial-factorization-rational-v0](../../../artifacts/examples/math/polynomial-factorization-rational-v0/)
 
@@ -15,6 +16,7 @@ Companion lessons and maps:
 
 - [End To End: Complex Algebraic Replay](complex-algebraic-end-to-end.md)
 - [End To End: Complex Plane Transforms](complex-plane-transforms-end-to-end.md)
+- [End To End: Finite Cauchy-Riemann Shadow](cauchy-riemann-shadow-end-to-end.md)
 - [End To End: Polynomial Identities](polynomial-identities-end-to-end.md)
 - [End To End: Rational Polynomial Factorization](polynomial-factorization-end-to-end.md)
 - [Number Systems And Arithmetic](number-systems-and-arithmetic.md)
@@ -33,16 +35,18 @@ addition/product    -> rational pair replay
 conjugate/norm      -> rational pair replay
 polynomial root     -> fixed coefficient evaluation
 Mobius transform    -> one rational complex division replay
+Cauchy-Riemann row  -> one polynomial, one point, exact partial replay
 factorization rows  -> fixed rational coefficient arithmetic
 ```
 
 Those rows are intentionally small. They can check a displayed complex
 arithmetic witness, reject a malformed coordinate/norm claim, replay one
-quadratic root, check a rational transform at one input, or check a fixed
-rational polynomial factorization. They do not prove holomorphicity, Cauchy's
-theorem, residue calculus, analytic continuation, conformal-map theorems, the
-fundamental theorem of algebra, algebraic closure, or arbitrary-degree
-factorization theory.
+quadratic root, check a rational transform at one input, replay one
+`f(z)=z^2` Cauchy-Riemann partial-derivative shadow, or check a fixed rational
+polynomial factorization. They do not prove holomorphicity, the general
+Cauchy-Riemann theorem, Cauchy's theorem, residue calculus, analytic
+continuation, conformal-map theorems, the fundamental theorem of algebra,
+algebraic closure, or arbitrary-degree factorization theory.
 
 ## Claim And Evidence Rows
 
@@ -59,6 +63,13 @@ factorization theory.
 | `bad-conjugation-product-imaginary-rejected` | `unsat` | checked QF_LRA/Farkas | A false fixed imaginary-coordinate claim is rejected. |
 | `bad-unit-square-real-part-rejected` | `unsat` | checked QF_LRA/Farkas | A false unit-complex square claim is rejected by the counterexample `i`. |
 | `general-complex-analysis-lean-horizon` | `not-run` | Lean horizon | General complex-analysis theorem claims remain future proof work. |
+| `complex-square-real-pair-witness` | `sat` | replay-only finite arithmetic | The listed `f(z)=z^2` real-pair value is recomputed exactly. |
+| `partial-derivative-witness` | `sat` | replay-only finite arithmetic | The component-polynomial partials are differentiated and evaluated exactly. |
+| `cauchy-riemann-equality-witness` | `sat` | replay-only finite arithmetic | The fixed equalities `u_x=v_y` and `u_y=-v_x` are checked at one point. |
+| `complex-derivative-witness` | `sat` | replay-only finite arithmetic | The derivative `f'(1+2i)=2+4i` is replayed for this polynomial. |
+| `bad-derivative-real-part-rejected` | `unsat` | replay-only finite arithmetic | A false derivative real-coordinate claim is rejected after replay. |
+| `qf-lra-bad-derivative-real-part` | `unsat` | checked QF_LRA/Farkas | The final scalar conflict `derivative_real = 2` versus `3` is checked. |
+| `general-cauchy-riemann-lean-horizon` | `not-run` | Lean horizon | General Cauchy-Riemann and holomorphicity theorem claims remain future proof work. |
 | `binomial-square-identity` | `sat` | replay-only coefficient arithmetic | One polynomial coefficient identity is checked. |
 | `factor-theorem-root-witness` | `sat` | replay-only coefficient arithmetic | A root and displayed linear factorization are replayed. |
 | `false-rational-root-rejected` | `unsat` | checked QF_LIA/Diophantine | The false rational-root claim for `x^2 + 1` is rejected. |
@@ -82,7 +93,8 @@ theorem horizon       -> holomorphic, global algebraic, and arbitrary-field theo
 
 The current packs do not prove:
 
-- Cauchy-Riemann theorem schemas or holomorphicity of arbitrary functions;
+- Cauchy-Riemann theorem schemas or holomorphicity of arbitrary functions
+  beyond the single finite polynomial shadow above;
 - Cauchy's theorem, the residue theorem, contour integration, Morera,
   Liouville, maximum modulus, or open mapping theorems;
 - analytic continuation, branch-cut theory, conformal equivalence, or global
@@ -105,6 +117,7 @@ Validate the finite packs:
 python3 scripts/validate-foundational-example-pack.py \
   artifacts/examples/math/complex-algebraic-v0 \
   artifacts/examples/math/complex-plane-transforms-v0 \
+  artifacts/examples/math/finite-cauchy-riemann-shadow-v0 \
   artifacts/examples/math/polynomial-identities-v0 \
   artifacts/examples/math/polynomial-factorization-rational-v0
 ```
@@ -120,6 +133,12 @@ python3 scripts/query-foundational-resources.py checks \
 
 python3 scripts/query-foundational-resources.py checks \
   --pack complex-plane-transforms-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-cauchy-riemann-shadow-v0 \
   --route Farkas \
   --proof-status checked \
   --require-any
@@ -155,6 +174,10 @@ python3 scripts/query-foundational-resources.py horizon-frontier \
   --require-any
 
 python3 scripts/query-foundational-resources.py horizon-frontier \
+  --pack finite-cauchy-riemann-shadow-v0 \
+  --require-any
+
+python3 scripts/query-foundational-resources.py horizon-frontier \
   --pack polynomial-factorization-rational-v0 \
   --require-any
 
@@ -170,6 +193,11 @@ Find the bridge concepts:
 python3 scripts/query-foundational-resources.py concepts \
   --field complex_analysis \
   --text real-pair \
+  --require-any
+
+python3 scripts/query-foundational-resources.py concepts \
+  --field complex_analysis \
+  --text Cauchy \
   --require-any
 
 python3 scripts/query-foundational-resources.py concepts \
@@ -203,18 +231,20 @@ future complex-analysis and algebra proof resources.
 From the repository root:
 
 ```sh
-python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/complex-algebraic-v0 artifacts/examples/math/complex-plane-transforms-v0 artifacts/examples/math/polynomial-identities-v0 artifacts/examples/math/polynomial-factorization-rational-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/complex-algebraic-v0 artifacts/examples/math/complex-plane-transforms-v0 artifacts/examples/math/finite-cauchy-riemann-shadow-v0 artifacts/examples/math/polynomial-identities-v0 artifacts/examples/math/polynomial-factorization-rational-v0
 python3 scripts/query-foundational-resources.py checks --pack complex-algebraic-v0 --route Farkas --proof-status checked --require-any
 python3 scripts/query-foundational-resources.py checks --pack complex-plane-transforms-v0 --route Farkas --proof-status checked --require-any
+python3 scripts/query-foundational-resources.py checks --pack finite-cauchy-riemann-shadow-v0 --route Farkas --proof-status checked --require-any
 python3 scripts/query-foundational-resources.py checks --pack polynomial-identities-v0 --route Diophantine --proof-status checked --require-any
 python3 scripts/query-foundational-resources.py checks --pack polynomial-factorization-rational-v0 --route Farkas --proof-status checked --require-any
 python3 scripts/query-foundational-resources.py horizon-frontier --pack complex-plane-transforms-v0 --require-any
+python3 scripts/query-foundational-resources.py horizon-frontier --pack finite-cauchy-riemann-shadow-v0 --require-any
 python3 scripts/query-foundational-resources.py horizon-frontier --pack polynomial-factorization-rational-v0 --require-any
 python3 scripts/query-foundational-resources.py horizon-frontier --field complex_analysis --shadow-state checked-finite-shadow --require-any
 ```
 
 Expected resource boundary: exact complex real-pair arithmetic, fixed
-transforms, displayed roots, coefficient arithmetic, and fixed factorization
-rows validate; checked Farkas and Diophantine contradictions stay scoped
-evidence; analytic and global factorization theorems remain explicit
-Lean/theorem horizons.
+transforms, finite Cauchy-Riemann shadows, displayed roots, coefficient
+arithmetic, and fixed factorization rows validate; checked Farkas and
+Diophantine contradictions stay scoped evidence; analytic and global
+factorization theorems remain explicit Lean/theorem horizons.

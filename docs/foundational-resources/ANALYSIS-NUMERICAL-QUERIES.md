@@ -18,16 +18,17 @@ epsilon-delta shadows, bounded sequence tails, algebraic derivative and
 integral replay, Newton/root-finding steps, finite recurrence and Euler rows,
 residual/solution-box/Jacobi rows, exact condition-number, Schur-complement,
 singular-value shadows, fixed-decimal rounding shadows,
-exact-vs-floating boundary rows, and complex
-numbers as real-pair algebra. Polynomial rows are fixed coefficient, factor,
-root, discriminant, derivative, and coefficient-window checks, not general
-analytic theory. Completeness, IVT/MVT/FTC, uniform convergence, analytic
-continuation, holomorphicity, contour integration, general factorization,
-algebraic closure, numerical stability, and floating-point error guarantees
-remain in the proof-horizon or numerical-honesty lanes.
+exact-vs-floating boundary rows, complex numbers as real-pair algebra, and one
+finite Cauchy-Riemann partial-derivative shadow. Polynomial rows are fixed
+coefficient, factor, root, discriminant, derivative, component-partial, and
+coefficient-window checks, not general analytic theory. Completeness,
+IVT/MVT/FTC, uniform convergence, analytic continuation, holomorphicity,
+contour integration, general factorization, algebraic closure, numerical
+stability, and floating-point error guarantees remain in the proof-horizon or
+numerical-honesty lanes.
 For the focused learner-facing boundary over exact complex real-pair,
-complex-plane transform, fixed root, and rational-polynomial factorization
-resources, read
+complex-plane transform, finite Cauchy-Riemann shadow, fixed root, and
+rational-polynomial factorization resources, read
 [Complex Analysis Theorem Boundary](../learn/math/complex-analysis-theorem-boundary.md).
 For the focused calculus boundary over finite derivative, finite Riemann-sum,
 gradient, Jacobian, Hessian, and malformed-row shadows, read
@@ -90,7 +91,7 @@ needs concrete checked rows to display.
 | Finite dynamics, recurrence, and Euler replay | `bridge_finite_dynamics_euler_replay` | `Farkas` | `checks --concept bridge_finite_dynamics_euler_replay --route Farkas --proof-status checked` |
 | Residuals, solution boxes, Jacobi steps, condition numbers, Schur complements, real Schur decomposition, polar decomposition, QR iteration and shifted-QR steps, singular values, and exact matrix factorizations | `bridge_residual_bound`; `bridge_lu_replay`; `bridge_schur_complement`; pack `finite-singular-value-shadow-v0`; pack `finite-real-schur-decomposition-v0`; pack `finite-polar-decomposition-v0`; pack `finite-qr-iteration-step-v0`; pack `finite-shifted-qr-step-v0` | `Farkas` | `checks --concept bridge_residual_bound --route Farkas --proof-status checked`; `checks --concept bridge_schur_complement --route Farkas --proof-status checked`; `checks --pack numerical-linear-algebra-v0 --route Farkas --proof-status checked`; `checks --pack finite-condition-number-v0 --route Farkas --proof-status checked`; `checks --pack finite-schur-complement-v0 --route Farkas --proof-status checked`; `checks --pack finite-real-schur-decomposition-v0 --route Farkas --proof-status checked`; `checks --pack finite-polar-decomposition-v0 --route Farkas --proof-status checked`; `checks --pack finite-qr-iteration-step-v0 --route Farkas --proof-status checked`; `checks --pack finite-shifted-qr-step-v0 --route Farkas --proof-status checked`; `checks --pack finite-singular-value-shadow-v0 --route Farkas --proof-status checked`; `checks --pack numerical-linear-algebra-v0 --route Farkas --proof-status checked --text solution`; `checks --pack finite-lu-decomposition-v0 --route Farkas --proof-status checked`; `checks --pack finite-pivoted-lu-decomposition-v0 --route Farkas --proof-status checked`; `checks --pack finite-ldlt-decomposition-v0 --route Farkas --proof-status checked`; `checks --pack finite-cholesky-decomposition-v0 --route Farkas --proof-status checked` |
 | Operator/Chebyshev, spectral, orthogonal-diagonalization, real-Schur, polar, QR-step, shifted-QR, and singular-value numerical rows | `bridge_finite_operator_chebyshev`; `bridge_eigenpair` | `Farkas` | `checks --concept bridge_finite_operator_chebyshev --route Farkas --proof-status checked`; `checks --concept bridge_eigenpair --route Farkas --proof-status checked`; `checks --pack finite-orthogonal-diagonalization-v0 --route Farkas --proof-status checked`; `checks --pack finite-real-schur-decomposition-v0 --route Farkas --proof-status checked`; `checks --pack finite-polar-decomposition-v0 --route Farkas --proof-status checked`; `checks --pack finite-qr-iteration-step-v0 --route Farkas --proof-status checked`; `checks --pack finite-shifted-qr-step-v0 --route Farkas --proof-status checked`; `checks --pack finite-singular-value-shadow-v0 --route Farkas --proof-status checked` |
-| Complex numbers and plane transforms as real-pair algebra | `bridge_complex_real_pair_transform` | `Farkas` | `checks --concept bridge_complex_real_pair_transform --route Farkas --proof-status checked` |
+| Complex numbers, plane transforms, and Cauchy-Riemann shadows as real-pair algebra | `bridge_complex_real_pair_transform`; pack `finite-cauchy-riemann-shadow-v0` | `Farkas` | `checks --concept bridge_complex_real_pair_transform --route Farkas --proof-status checked`; `checks --pack finite-cauchy-riemann-shadow-v0 --route Farkas --proof-status checked` |
 | Exact-vs-floating boundary rows | `bridge_exact_vs_floating_arithmetic`; packs `finite-rounding-shadow-v0`, `finite-interval-arithmetic-shadow-v0` | `Farkas` | `checks --concept bridge_exact_vs_floating_arithmetic --route Farkas --proof-status checked`; `checks --pack finite-rounding-shadow-v0 --route Farkas --proof-status checked`; `checks --pack finite-interval-arithmetic-shadow-v0 --route Farkas --proof-status checked` |
 
 ## Copyable Examples
@@ -127,6 +128,12 @@ python3 scripts/query-foundational-resources.py concepts \
 python3 scripts/query-foundational-resources.py concepts \
   --field real_analysis \
   --text "Derivative Identity" \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-cauchy-riemann-shadow-v0 \
+  --route Farkas \
+  --proof-status checked \
   --require-any
 
 python3 scripts/query-foundational-resources.py concepts \

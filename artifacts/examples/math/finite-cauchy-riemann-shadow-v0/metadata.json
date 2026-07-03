@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "id": "finite-cauchy-riemann-shadow-v0",
+  "title": "Finite Cauchy-Riemann Shadow Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "curriculum_complex",
+    "curriculum_reals",
+    "curriculum_calculus",
+    "curriculum_polynomials",
+    "field_complex_analysis",
+    "field_real_analysis",
+    "bridge_complex_real_pair_transform",
+    "bridge_derivative_identity_shadow",
+    "bridge_polynomial_coefficient_factor_replay"
+  ],
+  "field_ids": [
+    "complex_analysis",
+    "real_analysis"
+  ],
+  "curriculum_nodes": [
+    "complex",
+    "reals",
+    "calculus",
+    "polynomials"
+  ],
+  "axeyum_fragments": [
+    "finite complex real-pair replay",
+    "exact rational arithmetic",
+    "bivariate polynomial differentiation",
+    "QF_LRA",
+    "Farkas",
+    "finite replay",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-cauchy-riemann-shadow-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite Cauchy-Riemann bad derivative real-part QF_LRA/Farkas regression seed",
+    "pressure": "Exact real-pair replay for f(z)=z^2 at z=1+2i computes f'(z)=2+4i, while a malformed derivative-real claim asserts 3, isolating a compact scalar equality conflict for the Farkas route.",
+    "evidence": [
+      "qf-lra-bad-derivative-real-part"
+    ],
+    "next_step": "Promote additional complex-analysis rows only when they add distinct real-pair, polynomial-partial, denominator, branch, contour, or theorem-horizon pressure; keep general holomorphicity and Cauchy-Riemann theorem schemas in future Lean lanes."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/01-number-systems/complex.md",
+    "docs/curriculum/01-number-systems/reals.md",
+    "docs/curriculum/03-destinations/calculus.md",
+    "docs/curriculum/02-structures/polynomials.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/cauchy-riemann-shadow-end-to-end.md",
+    "artifacts/examples/math/finite-cauchy-riemann-shadow-v0/smt2/bad-derivative-real-part-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+  ],
+  "expected_results": [
+    "complex-square-real-pair-witness",
+    "partial-derivative-witness",
+    "cauchy-riemann-equality-witness",
+    "complex-derivative-witness",
+    "bad-derivative-real-part-rejected",
+    "qf-lra-bad-derivative-real-part",
+    "general-cauchy-riemann-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode the fixed complex input, real-pair square, component polynomials, exact partial derivatives, Cauchy-Riemann equalities, and complex derivative as deterministic rational replay obligations.",
+    "Route the false derivative real-part claim through checked QF_LRA/Farkas evidence after replay computes the exact derivative component.",
+    "Expose the pack through complex-analysis, real-analysis, derivative-shadow, polynomial-replay, and complex-real-pair learner and consumer query surfaces.",
+    "Keep general holomorphicity, differentiability-from-limits, Cauchy-Riemann equivalence theorems, Cauchy's theorem, residues, and analytic continuation marked as Lean-horizon work until formal proof routes exist."
+  ]
+}

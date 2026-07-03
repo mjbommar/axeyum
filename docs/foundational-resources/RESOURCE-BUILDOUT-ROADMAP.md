@@ -64,15 +64,15 @@ The current committed data boundary reports:
 - 18 math-field concept rows.
 - 76 bridge-concept rows.
 - 5 example-family rows.
-- 138 non-template math example packs.
-- 908 expected checks.
-- 364 checked proof/evidence rows.
-- 443 replay-only rows.
-- 101 Lean-horizon rows.
-- 138 promoted solver-reuse packs.
+- 139 non-template math example packs.
+- 915 expected checks.
+- 365 checked proof/evidence rows.
+- 448 replay-only rows.
+- 102 Lean-horizon rows.
+- 139 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 138 focused learner-linked packs, with no path-only, index-only, or missing
+- 139 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 This is broad enough that the next work is not "create a few examples." The
@@ -2561,6 +2561,14 @@ Pick one item per commit unless the change is purely navigational.
      source-linked QF_LRA/Farkas regression without claiming general interval
      analysis, dependency management, floating-point outward rounding, QF_FP
      semantics, or numerical-stability theorems.
+185. Landed: add `finite-cauchy-riemann-shadow-v0` as an exact finite
+     Cauchy-Riemann derivative-shadow resource. The pack computes one
+     `f(z)=z^2` real-pair value, bivariate component partials, fixed
+     Cauchy-Riemann equalities, and `f'(1+2i)=2+4i`, then promotes the
+     malformed derivative real-part claim through a source-linked
+     QF_LRA/Farkas regression without claiming holomorphicity, the general
+     Cauchy-Riemann theorem, contour integration, residues, or analytic
+     continuation.
 
 ## Validation Checklist
 

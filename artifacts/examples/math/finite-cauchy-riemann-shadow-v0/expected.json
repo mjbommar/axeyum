@@ -1,0 +1,113 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-cauchy-riemann-shadow-v0",
+  "witnesses": [
+    {
+      "id": "z-square-cauchy-riemann",
+      "description": "The polynomial f(z)=z^2 at z=1+2i, represented as u(x,y)=x^2-y^2 and v(x,y)=2xy.",
+      "values": {
+        "z": ["1", "2"],
+        "point": ["1", "2"],
+        "u_polynomial": [
+          {"coeff": "1", "x_power": 2, "y_power": 0},
+          {"coeff": "-1", "x_power": 0, "y_power": 2}
+        ],
+        "v_polynomial": [
+          {"coeff": "2", "x_power": 1, "y_power": 1}
+        ],
+        "f_value": ["-3", "4"],
+        "u_value": "-3",
+        "v_value": "4",
+        "partials": {
+          "u_x": "2",
+          "u_y": "-4",
+          "v_x": "4",
+          "v_y": "2"
+        },
+        "complex_derivative": ["2", "4"]
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "complex-square-real-pair-witness",
+      "claim": "For z = 1 + 2i, the real-pair expansion of z^2 is -3 + 4i.",
+      "expected_result": "sat",
+      "validation": "exact_complex_square_real_pair_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["z-square-cauchy-riemann"],
+      "notes": "The validator recomputes z*z and the component polynomial values exactly."
+    },
+    {
+      "id": "partial-derivative-witness",
+      "claim": "The listed partial derivatives of u=x^2-y^2 and v=2xy at (1,2) are exact.",
+      "expected_result": "sat",
+      "validation": "exact_bivariate_partial_derivative_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["z-square-cauchy-riemann"],
+      "notes": "The validator differentiates the two bivariate polynomials symbolically and evaluates the partials at the point."
+    },
+    {
+      "id": "cauchy-riemann-equality-witness",
+      "claim": "At (1,2), the fixed polynomial satisfies u_x=v_y and u_y=-v_x.",
+      "expected_result": "sat",
+      "validation": "finite_cauchy_riemann_equality_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["z-square-cauchy-riemann"],
+      "notes": "This is a finite equality check for one polynomial at one point, not the general Cauchy-Riemann theorem."
+    },
+    {
+      "id": "complex-derivative-witness",
+      "claim": "For the fixed polynomial f(z)=z^2 at z=1+2i, the complex derivative is 2+4i.",
+      "expected_result": "sat",
+      "validation": "exact_complex_polynomial_derivative_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["z-square-cauchy-riemann"],
+      "notes": "The validator recomputes 2z and checks that it matches u_x + i v_x."
+    },
+    {
+      "id": "bad-derivative-real-part-rejected",
+      "claim": "For f(z)=z^2 at z=1+2i, the real part of f'(z) is 3.",
+      "expected_result": "unsat",
+      "validation": "exact_complex_bad_derivative_real_part_replay",
+      "proof_status": "replay-only",
+      "data": {
+        "source_witness": "z-square-cauchy-riemann",
+        "computed_derivative": ["2", "4"],
+        "computed_derivative_real": "2",
+        "claimed_derivative_real": "3"
+      },
+      "notes": "Exact replay computes f'(1+2i)=2+4i, so the malformed real-part claim is rejected; the separate qf-lra-bad-derivative-real-part row owns the checked Farkas evidence."
+    },
+    {
+      "id": "qf-lra-bad-derivative-real-part",
+      "claim": "The malformed derivative real-part claim is linearly inconsistent.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_farkas_evidence",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "z-square-cauchy-riemann",
+        "source_replay_row": "bad-derivative-real-part-rejected",
+        "computed_derivative_real": "2",
+        "claimed_derivative_real": "3",
+        "farkas_conflict": "derivative_real = 2 and derivative_real = 3",
+        "smt2_artifact": "artifacts/examples/math/finite-cauchy-riemann-shadow-v0/smt2/bad-derivative-real-part-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_cauchy_riemann_bad_derivative_real_part_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "The source QF_LRA artifact isolates the scalar real-part conflict after exact complex and derivative replay computes the derivative component."
+    },
+    {
+      "id": "general-cauchy-riemann-lean-horizon",
+      "claim": "General Cauchy-Riemann theorem schemas and holomorphicity claims require future Lean resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_boundary",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "For complex functions on open domains, relate complex differentiability, real differentiability, the Cauchy-Riemann equations, holomorphicity, and analytic consequences under explicit hypotheses.",
+        "future_checker": "Lean theorem statements and no-sorry proof artifacts for complex differentiability and holomorphicity."
+      },
+      "notes": "The finite exact row is a checked resource for one polynomial at one rational point, not a theorem about arbitrary complex functions."
+    }
+  ]
+}

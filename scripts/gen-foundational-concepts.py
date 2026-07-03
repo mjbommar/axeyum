@@ -226,6 +226,16 @@ CURRICULUM_MAP = {
         "pack": "complex-algebraic-v0",
         "slice": "Complex arithmetic as real-pair algebraic constraints.",
         "proof": "Real-pair algebra replay; analytic complex analysis requires Lean.",
+        "extra_packs": [
+            (
+                "complex-plane-transforms-v0",
+                "Unit-root cycles, conjugation-product replay, rational Mobius transform, and checked bad coordinate rows.",
+            ),
+            (
+                "finite-cauchy-riemann-shadow-v0",
+                "One polynomial Cauchy-Riemann shadow with real-pair partial derivative replay and checked bad derivative-coordinate evidence.",
+            ),
+        ],
     },
     "divisibility-and-euclid": {
         "field_ids": ["number_theory"],
@@ -642,7 +652,7 @@ FIELD_PACKS = {
     "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, covariance/Gram replay, orthogonal transforms, rank, inverse, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, Lanczos/tridiagonalization, and Jordan-chain shadows, Jacobians, Hessians, Newton-step Hessian solves, projections, and infeasibility."),
     "abstract_algebra": ("finite-fields-v0", "Finite groups, permutation groups, monoids, group actions, rings, fields, ideals, modules, dual spaces, tensor products, homomorphism tables, polynomial factorization slices, Jordan-chain polynomial/module shadows, and Cayley-table validation."),
     "real_analysis": ("real-analysis-rational-v0", "Rational interval/ball checks, bounded epsilon-delta samples, algebraic factorization, fixed-decimal rounding shadows, multivariable-calculus and Newton-step shadows, and proof horizons."),
-    "complex_analysis": ("complex-algebraic-v0", "Complex arithmetic and polynomial factorization shadows as real/rational algebra before analytic proof horizons."),
+    "complex_analysis": ("complex-algebraic-v0", "Complex arithmetic, real-pair transforms, finite Cauchy-Riemann derivative shadows, and polynomial factorization shadows as real/rational algebra before analytic proof horizons."),
     "topology": ("finite-topology-v0", "Finite topologies, metric balls, closure/interior, continuous maps, and finite simplicial-homology checks."),
     "measure_theory": ("finite-measure-v0", "Finite sigma-algebras, finite measures, monotonicity/subadditivity, random variables, conditional expectations, finite kernels, martingales, hitting times, concentration checks, product tables, and exact probability foundations."),
     "probability_theory": ("finite-probability-v0", "Finite mass tables, random variables, conditional expectation, kernels, martingales, hitting times, concentration/tail bounds, finite covariance tables, conditioning, independence, Bayes rule, product measures, and exact discrete distributions."),
@@ -3050,6 +3060,10 @@ BRIDGE_CONCEPTS = [
                 "Fixed polynomial derivative replay and checked false-derivative row.",
             ),
             (
+                "finite-cauchy-riemann-shadow-v0",
+                "Fixed complex polynomial component replay with exact partial derivatives and checked bad derivative-coordinate evidence.",
+            ),
+            (
                 "finite-circle-geometry-v0",
                 "Circle-line and distance-product rows that consume fixed polynomial/rational coordinate equations.",
             ),
@@ -3078,6 +3092,7 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/generating-functions-end-to-end.md",
                     "docs/learn/math/finite-root-finding-end-to-end.md",
                     "docs/learn/math/calculus-shadows-end-to-end.md",
+                    "docs/learn/math/cauchy-riemann-shadow-end-to-end.md",
                     "crates/axeyum-solver/tests/math_resource_lia_routes.rs",
                     "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
                 ],
@@ -3100,6 +3115,8 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/generating-functions-end-to-end.md",
             "docs/learn/math/finite-root-finding-end-to-end.md",
             "docs/learn/math/calculus-shadows-end-to-end.md",
+            "docs/learn/math/cauchy-riemann-shadow-end-to-end.md",
+            "artifacts/examples/math/finite-cauchy-riemann-shadow-v0/smt2/bad-derivative-real-part-farkas-conflict.smt2",
             "docs/learn/math/finite-circle-geometry-end-to-end.md",
             "docs/learn/math/finite-inversion-geometry-end-to-end.md",
             "docs/learn/math/finite-cyclic-geometry-end-to-end.md",
@@ -4111,29 +4128,33 @@ BRIDGE_CONCEPTS = [
     {
         "id": "bridge_derivative_identity_shadow",
         "title": "Derivative Identity Shadow",
-        "field_ids": ["real_analysis", "numerical_analysis"],
+        "field_ids": ["real_analysis", "numerical_analysis", "complex_analysis"],
         "resource_status": "validated",
         "summary": (
             "A derivative-identity shadow differentiates a fixed polynomial or "
             "rational expression symbolically, evaluates exact rational sample "
-            "points, reuses gradient/Hessian data for finite Newton steps, and "
-            "isolates bad derivative, gradient, or Newton-coordinate claims as "
-            "small linear contradictions when possible."
+            "points, reuses gradient/Hessian data for finite Newton steps, "
+            "replays fixed complex real-pair partial derivatives, and isolates "
+            "bad derivative, gradient, or Newton-coordinate claims as small "
+            "linear contradictions when possible."
         ),
         "prerequisites": [
             "bridge_rational_interval_replay",
             "bridge_squeeze_shadow",
             "curriculum_polynomials",
+            "curriculum_complex",
         ],
         "unlocks": [
             "bridge_integration_horizon",
             "bridge_rational_convexity_shadow",
+            "bridge_complex_real_pair_transform",
             "field_numerical_analysis",
         ],
         "decidability": "bounded",
         "axeyum_fragments": [
             "symbolic polynomial differentiation",
             "exact rational evaluation",
+            "complex real-pair partial derivative replay",
             "QF_LRA",
             "Farkas certificate",
             "Lean horizon",
@@ -4159,6 +4180,10 @@ BRIDGE_CONCEPTS = [
                 "finite-newton-step-v0",
                 "Multivariable Newton-step rows that reuse exact gradient and Hessian evaluation.",
             ),
+            (
+                "finite-cauchy-riemann-shadow-v0",
+                "One complex polynomial partial-derivative replay with fixed Cauchy-Riemann equalities and checked bad derivative-coordinate evidence.",
+            ),
         ],
         "proof_routes": [
             {
@@ -4174,13 +4199,14 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/multivariable-calculus-end-to-end.md",
                     "docs/learn/math/finite-root-finding-end-to-end.md",
                     "docs/learn/math/newton-step-end-to-end.md",
+                    "docs/learn/math/cauchy-riemann-shadow-end-to-end.md",
                     "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
                 ],
                 "notes": (
                     "The validator recomputes the derivative formula and exact "
                     "sample values, including gradient/Hessian data for the "
                     "finite Newton-step pack. Bad finite derivative, gradient, "
-                    "or Newton-coordinate claims "
+                    "complex derivative-coordinate, or Newton-coordinate claims "
                     "use checked Farkas evidence; differentiability theorems "
                     "remain Lean horizons."
                 ),
@@ -4194,11 +4220,14 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/multivariable-calculus-end-to-end.md",
             "docs/learn/math/finite-root-finding-end-to-end.md",
             "docs/learn/math/newton-step-end-to-end.md",
+            "docs/learn/math/cauchy-riemann-shadow-end-to-end.md",
+            "artifacts/examples/math/finite-cauchy-riemann-shadow-v0/smt2/bad-derivative-real-part-farkas-conflict.smt2",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
         ],
         "open_gaps": [
             "Finite derivative replay does not prove differentiability from limits, product/chain rules in general, MVT, or FTC.",
+            "Finite Cauchy-Riemann equality replay does not prove holomorphicity or the general Cauchy-Riemann theorem.",
             "Non-polynomial derivative rules and analytic theorem reconstruction remain Lean horizons.",
         ],
         "graduation": {
@@ -8167,10 +8196,10 @@ BRIDGE_CONCEPTS = [
         "field_ids": ["complex_analysis", "real_analysis", "linear_algebra", "abstract_algebra"],
         "resource_status": "validated",
         "summary": (
-            "Complex arithmetic, conjugation, norm, root-cycle, and small "
-            "rational-transform claims are represented as exact real-pair "
-            "calculations, with analytic complex analysis kept as an explicit "
-            "Lean horizon."
+            "Complex arithmetic, conjugation, norm, root-cycle, small "
+            "rational-transform, and finite Cauchy-Riemann derivative-shadow "
+            "claims are represented as exact real-pair calculations, with "
+            "analytic complex analysis kept as an explicit Lean horizon."
         ),
         "prerequisites": [
             "curriculum_complex",
@@ -8202,6 +8231,10 @@ BRIDGE_CONCEPTS = [
                 "Unit-root cycle, conjugation product, Mobius-transform witness, bad conjugation-product imaginary-part, and bad unit-square real-part rows.",
             ),
             (
+                "finite-cauchy-riemann-shadow-v0",
+                "Fixed f(z)=z^2 real-pair value, partial derivatives, Cauchy-Riemann equalities, derivative witness, and checked bad derivative real-part row.",
+            ),
+            (
                 "polynomial-factorization-rational-v0",
                 "Fixed polynomial factorization and discriminant rows that supply the algebraic boundary vocabulary.",
             ),
@@ -8218,12 +8251,14 @@ BRIDGE_CONCEPTS = [
                     "docs/proof-cookbook/recipes/lean-horizon-template.md",
                     "docs/learn/math/complex-algebraic-end-to-end.md",
                     "docs/learn/math/complex-plane-transforms-end-to-end.md",
+                    "docs/learn/math/cauchy-riemann-shadow-end-to-end.md",
                     "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
                 ],
                 "notes": (
                     "The packs replay exact real and imaginary components from "
-                    "the source complex expression, then check only the final "
-                    "small rational contradiction through Farkas evidence."
+                    "the source complex expression or partial-derivative "
+                    "shadow, then check only the final small rational "
+                    "contradiction through Farkas evidence."
                 ),
             }
         ],
@@ -8235,10 +8270,12 @@ BRIDGE_CONCEPTS = [
             "docs/proof-cookbook/recipes/lean-horizon-template.md",
             "docs/learn/math/complex-algebraic-end-to-end.md",
             "docs/learn/math/complex-plane-transforms-end-to-end.md",
+            "docs/learn/math/cauchy-riemann-shadow-end-to-end.md",
+            "artifacts/examples/math/finite-cauchy-riemann-shadow-v0/smt2/bad-derivative-real-part-farkas-conflict.smt2",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
         ],
         "open_gaps": [
-            "Real-pair algebra replay does not prove holomorphicity, contour integration, residues, analytic continuation, or algebraic closure.",
+            "Real-pair algebra and finite Cauchy-Riemann equality replay do not prove holomorphicity, contour integration, residues, analytic continuation, or algebraic closure.",
             "NRA-shaped complex identities remain bounded shadows unless they reduce to a checked exact-rational route.",
             "Analytic complex-analysis theorem statements remain Lean-horizon until no-sorry Lean artifacts exist.",
         ],

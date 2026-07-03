@@ -21095,6 +21095,179 @@ def validate_complex_plane_transforms(expected: dict[str, Any]) -> None:
     require_string("general complex analysis future_checker", data.get("future_checker"))
 
 
+def validate_finite_cauchy_riemann_shadow(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    square = checks["complex-square-real-pair-witness"]
+    if square["expected_result"] != "sat":
+        fail("complex-square-real-pair-witness must expect sat")
+    if square.get("proof_status") != "replay-only":
+        fail("complex-square-real-pair-witness must be replay-only")
+    values = single_witness_values(square, witnesses)
+    z_value = require_complex_pair("Cauchy-Riemann z", values.get("z"))
+    point = require_bivariate_point("Cauchy-Riemann point", values.get("point"))
+    if z_value != point:
+        fail("Cauchy-Riemann real-pair point must match z")
+    u_polynomial = require_bivariate_polynomial(
+        "Cauchy-Riemann u_polynomial",
+        values.get("u_polynomial"),
+    )
+    v_polynomial = require_bivariate_polynomial(
+        "Cauchy-Riemann v_polynomial",
+        values.get("v_polynomial"),
+    )
+    f_value = require_complex_pair("Cauchy-Riemann f_value", values.get("f_value"))
+    u_value = require_fraction("Cauchy-Riemann u_value", values.get("u_value"))
+    v_value = require_fraction("Cauchy-Riemann v_value", values.get("v_value"))
+    if complex_mul(z_value, z_value) != f_value:
+        fail("complex-square-real-pair-witness f_value does not match z*z")
+    if bivariate_eval(u_polynomial, point) != u_value:
+        fail("complex-square-real-pair-witness u_value does not match u polynomial")
+    if bivariate_eval(v_polynomial, point) != v_value:
+        fail("complex-square-real-pair-witness v_value does not match v polynomial")
+    if f_value != (u_value, v_value):
+        fail("complex-square-real-pair-witness f_value must match component values")
+
+    partials_raw = values.get("partials")
+    if not isinstance(partials_raw, dict):
+        fail("Cauchy-Riemann partials must be an object")
+    require_keys("Cauchy-Riemann partials", partials_raw, {"u_x", "u_y", "v_x", "v_y"})
+    partials = {
+        name: require_fraction(f"Cauchy-Riemann partials.{name}", partials_raw.get(name))
+        for name in ["u_x", "u_y", "v_x", "v_y"]
+    }
+    computed_partials = {
+        "u_x": bivariate_eval(bivariate_partial(u_polynomial, "x"), point),
+        "u_y": bivariate_eval(bivariate_partial(u_polynomial, "y"), point),
+        "v_x": bivariate_eval(bivariate_partial(v_polynomial, "x"), point),
+        "v_y": bivariate_eval(bivariate_partial(v_polynomial, "y"), point),
+    }
+
+    partial_check = checks["partial-derivative-witness"]
+    if partial_check["expected_result"] != "sat":
+        fail("partial-derivative-witness must expect sat")
+    if partial_check.get("proof_status") != "replay-only":
+        fail("partial-derivative-witness must be replay-only")
+    partial_values = single_witness_values(partial_check, witnesses)
+    if partial_values is not values:
+        fail("partial-derivative-witness must use the Cauchy-Riemann witness")
+    if partials != computed_partials:
+        fail("partial-derivative-witness partials do not match symbolic derivatives")
+
+    cr_check = checks["cauchy-riemann-equality-witness"]
+    if cr_check["expected_result"] != "sat":
+        fail("cauchy-riemann-equality-witness must expect sat")
+    if cr_check.get("proof_status") != "replay-only":
+        fail("cauchy-riemann-equality-witness must be replay-only")
+    if partials["u_x"] != partials["v_y"]:
+        fail("cauchy-riemann-equality-witness requires u_x = v_y")
+    if partials["u_y"] != -partials["v_x"]:
+        fail("cauchy-riemann-equality-witness requires u_y = -v_x")
+
+    derivative_check = checks["complex-derivative-witness"]
+    if derivative_check["expected_result"] != "sat":
+        fail("complex-derivative-witness must expect sat")
+    if derivative_check.get("proof_status") != "replay-only":
+        fail("complex-derivative-witness must be replay-only")
+    derivative = require_complex_pair(
+        "Cauchy-Riemann complex_derivative",
+        values.get("complex_derivative"),
+    )
+    if derivative != (2 * z_value[0], 2 * z_value[1]):
+        fail("complex-derivative-witness derivative must equal 2z")
+    if derivative != (partials["u_x"], partials["v_x"]):
+        fail("complex-derivative-witness derivative must match u_x + i v_x")
+
+    bad = checks["bad-derivative-real-part-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-derivative-real-part-rejected must expect unsat")
+    if bad.get("proof_status") != "replay-only":
+        fail("bad-derivative-real-part-rejected must be replay-only")
+    if bad["validation"] != "exact_complex_bad_derivative_real_part_replay":
+        fail("bad-derivative-real-part-rejected validation is incorrect")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "z-square-cauchy-riemann":
+        fail("bad-derivative-real-part-rejected must cite the source witness")
+    computed_derivative = require_complex_pair(
+        "bad Cauchy-Riemann computed_derivative",
+        data.get("computed_derivative"),
+    )
+    computed_real = require_fraction(
+        "bad Cauchy-Riemann computed_derivative_real",
+        data.get("computed_derivative_real"),
+    )
+    claimed_real = require_fraction(
+        "bad Cauchy-Riemann claimed_derivative_real",
+        data.get("claimed_derivative_real"),
+    )
+    if computed_derivative != derivative:
+        fail("bad-derivative-real-part-rejected computed derivative does not match replay")
+    if computed_real != derivative[0]:
+        fail("bad-derivative-real-part-rejected computed real part is incorrect")
+    if computed_real == claimed_real:
+        fail("bad-derivative-real-part-rejected must document a false real-part claim")
+    if "separate qf-lra-bad-derivative-real-part" not in bad.get("notes", ""):
+        fail("bad-derivative-real-part-rejected notes must name the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-derivative-real-part"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-derivative-real-part must expect unsat")
+    if qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-derivative-real-part must be checked")
+    if qf_bad["validation"] != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-derivative-real-part must use exact_rational_farkas_evidence")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_witness") != "z-square-cauchy-riemann":
+        fail("qf-lra-bad-derivative-real-part must cite the source witness")
+    if qf_data.get("source_replay_row") != "bad-derivative-real-part-rejected":
+        fail("qf-lra-bad-derivative-real-part must cite the replay row")
+    qf_computed = require_fraction(
+        "qf Cauchy-Riemann computed_derivative_real",
+        qf_data.get("computed_derivative_real"),
+    )
+    qf_claimed = require_fraction(
+        "qf Cauchy-Riemann claimed_derivative_real",
+        qf_data.get("claimed_derivative_real"),
+    )
+    if qf_computed != computed_real or qf_claimed != claimed_real:
+        fail("qf-lra-bad-derivative-real-part data must match the replay row")
+    if qf_data.get("farkas_conflict") != "derivative_real = 2 and derivative_real = 3":
+        fail("qf-lra-bad-derivative-real-part must document the Farkas conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf Cauchy-Riemann smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-cauchy-riemann-shadow-v0/smt2/"
+        "bad-derivative-real-part-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-lra-bad-derivative-real-part smt2_artifact must name the checked source artifact")
+    check_source("qf Cauchy-Riemann smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf Cauchy-Riemann farkas_regression", regression)
+    if "finite_cauchy_riemann_bad_derivative_real_part_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-derivative-real-part must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf Cauchy-Riemann certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-derivative-real-part certificate must document checked Farkas evidence")
+
+    horizon = checks["general-cauchy-riemann-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-cauchy-riemann-lean-horizon must be not-run")
+    if horizon.get("proof_status") != "lean-horizon":
+        fail("general-cauchy-riemann-lean-horizon must remain lean-horizon")
+    horizon_data = horizon.get("data", {})
+    require_string(
+        "Cauchy-Riemann horizon target_theorem_shape",
+        horizon_data.get("target_theorem_shape"),
+    )
+    require_string(
+        "Cauchy-Riemann horizon future_checker",
+        horizon_data.get("future_checker"),
+    )
+
+
 def require_linear_variables(context: str, value: Any) -> list[str]:
     return require_string_list(context, value)
 
@@ -32337,6 +32510,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_complex_algebraic(expected)
     if metadata["id"] == "complex-plane-transforms-v0":
         validate_complex_plane_transforms(expected)
+    if metadata["id"] == "finite-cauchy-riemann-shadow-v0":
+        validate_finite_cauchy_riemann_shadow(expected)
     if metadata["id"] == "convexity-rational-v0":
         validate_convexity_rational(expected)
     if metadata["id"] == "counting-v0":

@@ -240,6 +240,21 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite Cauchy-Riemann shadow resource landed.**
+  `finite-cauchy-riemann-shadow-v0` now gives the complex-analysis and
+  real-analysis lanes a compact exact polynomial partial-derivative example:
+  it checks `f(z)=z^2` at `z=1+2i`, the real-pair value `-3+4i`, component
+  polynomials `u=x^2-y^2` and `v=2xy`, partials `u_x=2`, `u_y=-4`, `v_x=4`,
+  `v_y=2`, the fixed equalities `u_x=v_y` and `u_y=-v_x`, and the derivative
+  `f'(1+2i)=2+4i`. It then rejects the malformed claim
+  `real(f'(1+2i)) = 3` through a source-linked QF_LRA/Farkas row. The focused
+  learner page, complex-analysis theorem boundary, analysis/numerical query
+  guide, complex real-pair and derivative-shadow bridges, validator, resource
+  smoke queries, and `math_resource_lra_routes` regression keep this finite
+  replay separate from general holomorphicity and Cauchy-Riemann theorem
+  schemas. The public summary now reports 122 concept rows, 139 packs, 915
+  expected checks, 365 checked rows, 448 replay-only rows, 102 Lean-horizon
+  rows, and 139 promoted solver-reuse packs.
 - **Finite interval-arithmetic shadow resource landed.**
   `finite-interval-arithmetic-shadow-v0` now gives the real-analysis and
   numerical-analysis lanes a compact exact rational interval-arithmetic example:
@@ -253,9 +268,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `math_resource_lra_routes` regression keep exact rational interval replay
   separate from general interval-analysis soundness, dependency handling,
   outward-rounded floating-point endpoints, QF_FP semantics, and numerical
-  stability theorems. The public summary now reports 122 concept rows, 138 packs,
-  908 expected checks, 364 checked rows, 443 replay-only rows, 101 Lean-horizon
-  rows, and 138 promoted solver-reuse packs.
+  stability theorems. The public summary after that increment reported 122
+  concept rows, 138 packs, 908 expected checks, 364 checked rows, 443
+  replay-only rows, 101 Lean-horizon rows, and 138 promoted solver-reuse packs.
 - **Finite rounding-shadow resource landed.**
   `finite-rounding-shadow-v0` now gives the real-analysis and
   numerical-analysis lanes a compact exact-vs-rounded arithmetic example: it

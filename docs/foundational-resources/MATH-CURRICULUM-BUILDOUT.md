@@ -1522,9 +1522,9 @@ Exit criteria:
   QF_LRA/Farkas infeasibility, Boolean CNF/LRAT refutations, integer/count
   Diophantine obstructions, and fixed-width QF_BV/DRAT rows.
 - At least 12 validated example packs.
-  Status: 138 non-template math example packs validate.
+  Status: 139 non-template math example packs validate.
 - At least 6 packs with checked proof/evidence routes.
-  Status: 138 non-template packs have at least one `checked` expected-result row.
+  Status: 139 non-template packs have at least one `checked` expected-result row.
 - At least one downstream consumer can read the data without repository-internal
   knowledge.
   Status: `scripts/consume-foundational-resources.py` reads the committed atlas
@@ -3518,6 +3518,16 @@ upper-bound shortcut `product_upper <= 5001/5000` against exact
 dependency management, floating-point outward rounding, QF_FP semantics, and
 numerical-stability claims stay in future theorem, QF_FP, bit-vector, or
 numerical-honesty lanes.
+The complex-analysis/real-analysis layer now adds
+`finite-cauchy-riemann-shadow-v0` as the 139th non-template math pack. Exact
+rational replay checks `f(z)=z^2` at `z=1+2i`, real-pair square `-3+4i`,
+component polynomials `u=x^2-y^2` and `v=2xy`, partial derivatives
+`u_x=2`, `u_y=-4`, `v_x=4`, `v_y=2`, the fixed Cauchy-Riemann equalities,
+and `f'(1+2i)=2+4i`, while a source-linked QF_LRA/Farkas artifact rejects the
+malformed derivative-coordinate claim `real(f'(1+2i)) = 3`. General
+holomorphicity, Cauchy-Riemann theorem schemas, contour integration, residues,
+analytic continuation, and conformal-map theorems stay in future Lean/theorem
+lanes.
 Continue by adding the next curriculum-adjacent pack from the field ledger
 or by replacing finite enumeration routes with emitted, checked proof objects
 where appropriate.

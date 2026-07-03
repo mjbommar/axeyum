@@ -103,6 +103,9 @@ const COMPLEX_PLANE_BAD_UNIT_SQUARE_REAL_PART: &str = include_str!(
 const COMPLEX_PLANE_BAD_CONJUGATION_PRODUCT_IMAGINARY: &str = include_str!(
     "../../../artifacts/examples/math/complex-plane-transforms-v0/smt2/bad-conjugation-product-imaginary-farkas-conflict.smt2"
 );
+const FINITE_CAUCHY_RIEMANN_BAD_DERIVATIVE_REAL_PART: &str = include_str!(
+    "../../../artifacts/examples/math/finite-cauchy-riemann-shadow-v0/smt2/bad-derivative-real-part-farkas-conflict.smt2"
+);
 const SEQUENCE_LIMIT_BOUNDED_CAUCHY: &str = include_str!(
     "../../../artifacts/examples/math/sequence-limit-shadow-v0/smt2/bounded-cauchy-tail-farkas-conflict.smt2"
 );
@@ -928,6 +931,14 @@ fn complex_algebraic_bad_product_real_part_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "complex-algebraic-v0 bad-product-real-part SMT-LIB artifact",
         COMPLEX_ALGEBRAIC_BAD_PRODUCT_REAL_PART,
+    );
+}
+
+#[test]
+fn finite_cauchy_riemann_bad_derivative_real_part_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-cauchy-riemann-shadow-v0 bad-derivative-real-part SMT-LIB artifact",
+        FINITE_CAUCHY_RIEMANN_BAD_DERIVATIVE_REAL_PART,
     );
 }
 

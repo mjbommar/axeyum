@@ -1075,7 +1075,17 @@ Build sequence:
     exact-vs-floating bridges keep this fixed rational interval shadow separate
     from general interval analysis, dependency management, floating-point
     outward rounding, QF_FP semantics, and numerical-stability theorems.
-109. Revisit crate/repo boundaries only after three real consumers or repeated
+109. Landed: add the finite Cauchy-Riemann-shadow resource.
+    `finite-cauchy-riemann-shadow-v0` now records one exact complex polynomial
+    transcript: `f(z)=z^2` at `z=1+2i`, real-pair square `-3+4i`, component
+    polynomials `u=x^2-y^2` and `v=2xy`, fixed partial derivatives,
+    Cauchy-Riemann equalities, and derivative `2+4i`. It includes a checked
+    QF_LRA/Farkas artifact for the malformed claim
+    `real(f'(1+2i)) = 3`. The complex real-pair and derivative-shadow bridges
+    keep this fixed polynomial shadow separate from general holomorphicity,
+    Cauchy-Riemann theorem schemas, residues, contour integration, and analytic
+    continuation.
+110. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands
