@@ -34828,6 +34828,368 @@ def validate_finite_confusion_matrix(expected: dict[str, Any]) -> None:
     require_string("classifier metrics horizon future_checker", horizon_data.get("future_checker"))
 
 
+def validate_finite_roc_auc(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    def require_key_fraction_map(context: str, value: Any, keys: list[str]) -> dict[str, Fraction]:
+        if not isinstance(value, dict):
+            fail(f"{context} must be an object")
+        key_set = set(keys)
+        if set(value) != key_set:
+            missing = sorted(key_set - set(value))
+            extra = sorted(set(value) - key_set)
+            fail(f"{context} must cover exactly {keys}; missing={missing} extra={extra}")
+        return {
+            key: require_fraction(f"{context}.{key}", value[key])
+            for key in keys
+        }
+
+    def require_count_map(context: str, value: Any, keys: list[str]) -> dict[str, Fraction]:
+        counts = require_key_fraction_map(context, value, keys)
+        for key, count in counts.items():
+            if count.denominator != 1 or count < 0:
+                fail(f"{context}.{key} must be a nonnegative integer count")
+        return counts
+
+    def require_sat_replay(check_id: str, validation: str) -> None:
+        check = checks[check_id]
+        if check["expected_result"] != "sat":
+            fail(f"{check_id} must expect sat")
+        if check.get("proof_status") != "replay-only":
+            fail(f"{check_id} must be replay-only")
+        if check["validation"] != validation:
+            fail(f"{check_id} validation is incorrect")
+        values_again = single_witness_values(check, witnesses)
+        if values_again != values:
+            fail(f"{check_id} must cite the shared ROC/AUC witness")
+
+    order_check = checks["score-order-witness"]
+    if order_check["expected_result"] != "sat":
+        fail("score-order-witness must expect sat")
+    if order_check.get("proof_status") != "replay-only":
+        fail("score-order-witness must be replay-only")
+    if order_check["validation"] != "exact_rational_score_order_replay":
+        fail("score-order-witness validation is incorrect")
+    values = single_witness_values(order_check, witnesses)
+
+    classes = require_string_list("ROC AUC classes", values.get("classes"))
+    positive_class = values.get("positive_class")
+    negative_class = values.get("negative_class")
+    require_string("ROC AUC positive_class", positive_class)
+    require_string("ROC AUC negative_class", negative_class)
+    if positive_class == negative_class:
+        fail("ROC AUC positive_class and negative_class must differ")
+    if set(classes) != {positive_class, negative_class}:
+        fail("ROC AUC classes must contain exactly positive_class and negative_class")
+
+    raw_examples = values.get("examples")
+    if not isinstance(raw_examples, list) or not raw_examples:
+        fail("ROC AUC examples must be a non-empty list")
+    seen_rows: set[str] = set()
+    examples: list[dict[str, Any]] = []
+    for index, row in enumerate(raw_examples):
+        if not isinstance(row, dict):
+            fail(f"ROC AUC examples[{index}] must be an object")
+        row_id = row.get("id")
+        row_class = row.get("class")
+        score = require_fraction(f"ROC AUC examples[{index}].score", row.get("score"))
+        require_string(f"ROC AUC examples[{index}].id", row_id)
+        require_string(f"ROC AUC examples[{index}].class", row_class)
+        if row_id in seen_rows:
+            fail(f"ROC AUC examples repeats id {row_id!r}")
+        if row_class not in classes:
+            fail(f"ROC AUC examples[{index}].class is unknown")
+        seen_rows.add(row_id)
+        examples.append({"id": row_id, "class": row_class, "score": score})
+
+    scores = [row["score"] for row in examples]
+    if len(set(scores)) != len(scores):
+        fail("finite-roc-auc-v0 is intentionally tie-free; scores must be distinct")
+    sorted_ids = require_string_list("ROC AUC sorted_example_ids", values.get("sorted_example_ids"))
+    computed_sorted_ids = [
+        row["id"]
+        for row in sorted(examples, key=lambda row: row["score"], reverse=True)
+    ]
+    if sorted_ids != computed_sorted_ids:
+        fail("score-order-witness sorted_example_ids are incorrect")
+
+    class_count_keys = ["positive_count", "negative_count", "total"]
+    class_counts = require_count_map("ROC AUC class_counts", values.get("class_counts"), class_count_keys)
+    computed_class_counts = {
+        "positive_count": Fraction(sum(1 for row in examples if row["class"] == positive_class)),
+        "negative_count": Fraction(sum(1 for row in examples if row["class"] == negative_class)),
+        "total": Fraction(len(examples)),
+    }
+    if class_counts != computed_class_counts:
+        fail("score-order-witness class_counts are incorrect")
+    positive_count = class_counts["positive_count"]
+    negative_count = class_counts["negative_count"]
+    if positive_count <= 0 or negative_count <= 0:
+        fail("ROC AUC requires at least one positive and one negative row")
+    if positive_count + negative_count != class_counts["total"]:
+        fail("ROC AUC class counts must sum to total")
+
+    threshold = values.get("threshold")
+    if not isinstance(threshold, dict):
+        fail("ROC AUC threshold must be an object")
+    threshold_value = require_fraction("ROC AUC threshold.value", threshold.get("value"))
+    if threshold.get("rule") != "score >= threshold predicts positive":
+        fail("ROC AUC threshold.rule must document the fixed threshold rule")
+    threshold_count_keys = [
+        "true_positive",
+        "false_positive",
+        "true_negative",
+        "false_negative",
+        "predicted_positive_count",
+        "predicted_negative_count",
+    ]
+    threshold_counts = require_count_map(
+        "ROC AUC threshold.counts",
+        threshold.get("counts"),
+        threshold_count_keys,
+    )
+    computed_threshold_counts = {
+        "true_positive": Fraction(
+            sum(
+                1
+                for row in examples
+                if row["class"] == positive_class and row["score"] >= threshold_value
+            )
+        ),
+        "false_positive": Fraction(
+            sum(
+                1
+                for row in examples
+                if row["class"] == negative_class and row["score"] >= threshold_value
+            )
+        ),
+        "true_negative": Fraction(
+            sum(
+                1
+                for row in examples
+                if row["class"] == negative_class and row["score"] < threshold_value
+            )
+        ),
+        "false_negative": Fraction(
+            sum(
+                1
+                for row in examples
+                if row["class"] == positive_class and row["score"] < threshold_value
+            )
+        ),
+        "predicted_positive_count": Fraction(sum(1 for row in examples if row["score"] >= threshold_value)),
+        "predicted_negative_count": Fraction(sum(1 for row in examples if row["score"] < threshold_value)),
+    }
+    if threshold_counts != computed_threshold_counts:
+        fail("threshold-operating-point-witness threshold counts are incorrect")
+
+    tp = threshold_counts["true_positive"]
+    fp = threshold_counts["false_positive"]
+    tn = threshold_counts["true_negative"]
+    fn = threshold_counts["false_negative"]
+    if tp + fn != positive_count:
+        fail("ROC AUC threshold positive rows are inconsistent")
+    if fp + tn != negative_count:
+        fail("ROC AUC threshold negative rows are inconsistent")
+    if tp + fp != threshold_counts["predicted_positive_count"]:
+        fail("ROC AUC threshold predicted-positive count is inconsistent")
+    if tn + fn != threshold_counts["predicted_negative_count"]:
+        fail("ROC AUC threshold predicted-negative count is inconsistent")
+
+    threshold_rate_keys = [
+        "true_positive_rate",
+        "recall",
+        "sensitivity",
+        "false_positive_rate",
+        "precision",
+        "specificity",
+    ]
+    threshold_rates = require_key_fraction_map(
+        "ROC AUC threshold.rates",
+        threshold.get("rates"),
+        threshold_rate_keys,
+    )
+    if tp + fp <= 0:
+        fail("ROC AUC threshold precision denominator must be positive")
+    computed_threshold_rates = {
+        "true_positive_rate": tp / (tp + fn),
+        "recall": tp / (tp + fn),
+        "sensitivity": tp / (tp + fn),
+        "false_positive_rate": fp / (fp + tn),
+        "precision": tp / (tp + fp),
+        "specificity": tn / (tn + fp),
+    }
+    if threshold_rates != computed_threshold_rates:
+        fail("threshold-operating-point-witness threshold rates are incorrect")
+
+    require_sat_replay(
+        "threshold-operating-point-witness",
+        "exact_rational_threshold_operating_point_replay",
+    )
+    require_sat_replay("roc-staircase-witness", "exact_rational_roc_staircase_replay")
+    require_sat_replay("auc-pairwise-witness", "exact_rational_auc_pairwise_replay")
+
+    examples_by_id = {row["id"]: row for row in examples}
+    raw_roc_points = values.get("roc_points")
+    if not isinstance(raw_roc_points, list) or not raw_roc_points:
+        fail("ROC AUC roc_points must be a non-empty list")
+    roc_points: list[tuple[str, Fraction, Fraction]] = []
+    for index, point in enumerate(raw_roc_points):
+        if not isinstance(point, dict):
+            fail(f"ROC AUC roc_points[{index}] must be an object")
+        after = point.get("after")
+        require_string(f"ROC AUC roc_points[{index}].after", after)
+        roc_points.append(
+            (
+                after,
+                require_fraction(f"ROC AUC roc_points[{index}].fpr", point.get("fpr")),
+                require_fraction(f"ROC AUC roc_points[{index}].tpr", point.get("tpr")),
+            )
+        )
+
+    cumulative_tp = Fraction(0)
+    cumulative_fp = Fraction(0)
+    computed_roc_points = [("start", Fraction(0), Fraction(0))]
+    for row_id in sorted_ids:
+        row = examples_by_id[row_id]
+        if row["class"] == positive_class:
+            cumulative_tp += 1
+        else:
+            cumulative_fp += 1
+        computed_roc_points.append((row_id, cumulative_fp / negative_count, cumulative_tp / positive_count))
+    if roc_points != computed_roc_points:
+        fail("roc-staircase-witness roc_points are incorrect")
+
+    trapezoid_area = Fraction(0)
+    for previous, current in zip(computed_roc_points, computed_roc_points[1:]):
+        _previous_id, previous_fpr, previous_tpr = previous
+        _current_id, current_fpr, current_tpr = current
+        trapezoid_area += (current_fpr - previous_fpr) * (current_tpr + previous_tpr) / 2
+
+    positives = [row for row in examples if row["class"] == positive_class]
+    negatives = [row for row in examples if row["class"] == negative_class]
+    positive_wins = Fraction(0)
+    ties = Fraction(0)
+    for positive in positives:
+        for negative in negatives:
+            if positive["score"] > negative["score"]:
+                positive_wins += 1
+            elif positive["score"] == negative["score"]:
+                ties += 1
+    pairs = Fraction(len(positives) * len(negatives))
+    pairwise_auc = (positive_wins + ties / 2) / pairs
+
+    auc_keys = [
+        "positive_negative_pairs",
+        "positive_wins",
+        "ties",
+        "pairwise_auc",
+        "trapezoid_area",
+    ]
+    auc_values = require_key_fraction_map("ROC AUC auc", values.get("auc"), auc_keys)
+    if auc_values["positive_negative_pairs"] != pairs:
+        fail("auc-pairwise-witness positive_negative_pairs is incorrect")
+    if auc_values["positive_wins"] != positive_wins:
+        fail("auc-pairwise-witness positive_wins is incorrect")
+    if auc_values["ties"] != ties:
+        fail("auc-pairwise-witness ties is incorrect")
+    if auc_values["pairwise_auc"] != pairwise_auc:
+        fail("auc-pairwise-witness pairwise_auc is incorrect")
+    if auc_values["trapezoid_area"] != trapezoid_area:
+        fail("auc-pairwise-witness trapezoid_area is incorrect")
+    if pairwise_auc != trapezoid_area:
+        fail("auc-pairwise-witness pairwise AUC must match trapezoid area")
+
+    bad = checks["bad-auc-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-auc-rejected must expect unsat")
+    if bad.get("proof_status") != "replay-only":
+        fail("bad-auc-rejected must be replay-only")
+    if bad["validation"] != "exact_rational_bad_auc_replay":
+        fail("bad-auc-rejected validation is incorrect")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "six-score-binary-classifier-sample":
+        fail("bad-auc-rejected must cite six-score-binary-classifier-sample")
+    if data.get("metric") != "auc":
+        fail("bad-auc-rejected must document the AUC metric")
+    bad_pairs = require_fraction("bad ROC AUC positive_negative_pairs", data.get("positive_negative_pairs"))
+    bad_wins = require_fraction("bad ROC AUC positive_wins", data.get("positive_wins"))
+    bad_ties = require_fraction("bad ROC AUC ties", data.get("ties"))
+    computed_auc = require_fraction("bad ROC AUC computed_auc", data.get("computed_auc"))
+    claimed_auc = require_fraction("bad ROC AUC claimed_auc", data.get("claimed_auc"))
+    if (bad_pairs, bad_wins, bad_ties, computed_auc) != (pairs, positive_wins, ties, pairwise_auc):
+        fail("bad-auc-rejected data must match replay")
+    if claimed_auc == computed_auc:
+        fail("bad-auc-rejected must document a false AUC claim")
+    if "separate qf-lra-bad-auc" not in bad.get("notes", ""):
+        fail("bad-auc-rejected notes must name the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-auc"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-auc must expect unsat")
+    if qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-auc must be checked")
+    if qf_bad["validation"] != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-auc must use exact_rational_farkas_evidence")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_witness") != "six-score-binary-classifier-sample":
+        fail("qf-lra-bad-auc must cite the source witness")
+    if qf_data.get("source_replay_row") != "bad-auc-rejected":
+        fail("qf-lra-bad-auc must cite the replay row")
+    if qf_data.get("metric") != "auc":
+        fail("qf-lra-bad-auc must document the AUC metric")
+    qf_pairs = require_fraction("qf ROC AUC positive_negative_pairs", qf_data.get("positive_negative_pairs"))
+    qf_wins = require_fraction("qf ROC AUC positive_wins", qf_data.get("positive_wins"))
+    qf_ties = require_fraction("qf ROC AUC ties", qf_data.get("ties"))
+    qf_computed = require_fraction("qf ROC AUC computed_auc", qf_data.get("computed_auc"))
+    qf_claimed = require_fraction("qf ROC AUC claimed_auc", qf_data.get("claimed_auc"))
+    if (qf_pairs, qf_wins, qf_ties, qf_computed, qf_claimed) != (
+        bad_pairs,
+        bad_wins,
+        bad_ties,
+        computed_auc,
+        claimed_auc,
+    ):
+        fail("qf-lra-bad-auc data must match the replay row")
+    equations = require_string_list("qf ROC AUC auc_equations", qf_data.get("auc_equations"))
+    if equations != ["3*auc = 2", "4*auc = 3"]:
+        fail("qf-lra-bad-auc must document the linear conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf ROC AUC smt2_artifact", smt2_artifact)
+    expected_smt2 = "artifacts/examples/math/finite-roc-auc-v0/smt2/bad-auc-farkas-conflict.smt2"
+    if smt2_artifact != expected_smt2:
+        fail("qf-lra-bad-auc smt2_artifact must name the checked source artifact")
+    check_source("qf ROC AUC smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf ROC AUC farkas_regression", regression)
+    if "finite_roc_auc_bad_auc_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-auc must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf ROC AUC certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-auc certificate must document checked Farkas evidence")
+
+    horizon = checks["general-roc-auc-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-roc-auc-theory-lean-horizon must be not-run")
+    if horizon.get("proof_status") != "lean-horizon":
+        fail("general-roc-auc-theory-lean-horizon must remain lean-horizon")
+    horizon_data = horizon.get("data", {})
+    require_string("ROC AUC horizon target_theorem_shape", horizon_data.get("target_theorem_shape"))
+    require_string("ROC AUC horizon future_checker", horizon_data.get("future_checker"))
+    horizon_text = " ".join(
+        [
+            horizon.get("claim", ""),
+            horizon_data.get("target_theorem_shape", ""),
+            horizon_data.get("future_checker", ""),
+            horizon.get("notes", ""),
+        ]
+    ).lower()
+    if "roc auc" not in horizon_text:
+        fail("general-roc-auc-theory-lean-horizon must be searchable by 'roc auc'")
+
+
 def validate_descriptive_statistics(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -38042,6 +38404,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_naive_bayes_classifier(expected)
     if metadata["id"] == "finite-confusion-matrix-v0":
         validate_finite_confusion_matrix(expected)
+    if metadata["id"] == "finite-roc-auc-v0":
+        validate_finite_roc_auc(expected)
     if metadata["id"] == "finite-cardinality-v0":
         validate_finite_cardinality(expected)
     if metadata["id"] == "cardinality-principles-v0":

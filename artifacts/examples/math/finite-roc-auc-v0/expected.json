@@ -1,0 +1,228 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-roc-auc-v0",
+  "witnesses": [
+    {
+      "id": "six-score-binary-classifier-sample",
+      "description": "A six-row binary classifier score table with exact ROC/AUC replay.",
+      "values": {
+        "classes": [
+          "positive",
+          "negative"
+        ],
+        "positive_class": "positive",
+        "negative_class": "negative",
+        "examples": [
+          {
+            "id": "p_high",
+            "class": "positive",
+            "score": "9/10"
+          },
+          {
+            "id": "n_high",
+            "class": "negative",
+            "score": "4/5"
+          },
+          {
+            "id": "p_mid",
+            "class": "positive",
+            "score": "7/10"
+          },
+          {
+            "id": "n_mid",
+            "class": "negative",
+            "score": "3/5"
+          },
+          {
+            "id": "p_low",
+            "class": "positive",
+            "score": "2/5"
+          },
+          {
+            "id": "n_low",
+            "class": "negative",
+            "score": "1/5"
+          }
+        ],
+        "sorted_example_ids": [
+          "p_high",
+          "n_high",
+          "p_mid",
+          "n_mid",
+          "p_low",
+          "n_low"
+        ],
+        "class_counts": {
+          "positive_count": "3",
+          "negative_count": "3",
+          "total": "6"
+        },
+        "threshold": {
+          "value": "7/10",
+          "rule": "score >= threshold predicts positive",
+          "counts": {
+            "true_positive": "2",
+            "false_positive": "1",
+            "true_negative": "2",
+            "false_negative": "1",
+            "predicted_positive_count": "3",
+            "predicted_negative_count": "3"
+          },
+          "rates": {
+            "true_positive_rate": "2/3",
+            "recall": "2/3",
+            "sensitivity": "2/3",
+            "false_positive_rate": "1/3",
+            "precision": "2/3",
+            "specificity": "2/3"
+          }
+        },
+        "roc_points": [
+          {
+            "after": "start",
+            "fpr": "0",
+            "tpr": "0"
+          },
+          {
+            "after": "p_high",
+            "fpr": "0",
+            "tpr": "1/3"
+          },
+          {
+            "after": "n_high",
+            "fpr": "1/3",
+            "tpr": "1/3"
+          },
+          {
+            "after": "p_mid",
+            "fpr": "1/3",
+            "tpr": "2/3"
+          },
+          {
+            "after": "n_mid",
+            "fpr": "2/3",
+            "tpr": "2/3"
+          },
+          {
+            "after": "p_low",
+            "fpr": "2/3",
+            "tpr": "1"
+          },
+          {
+            "after": "n_low",
+            "fpr": "1",
+            "tpr": "1"
+          }
+        ],
+        "auc": {
+          "positive_negative_pairs": "9",
+          "positive_wins": "6",
+          "ties": "0",
+          "pairwise_auc": "2/3",
+          "trapezoid_area": "2/3"
+        }
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "score-order-witness",
+      "claim": "The listed six-row classifier score table has descending order p_high, n_high, p_mid, n_mid, p_low, n_low and three positive plus three negative rows.",
+      "expected_result": "sat",
+      "validation": "exact_rational_score_order_replay",
+      "proof_status": "replay-only",
+      "witnesses": [
+        "six-score-binary-classifier-sample"
+      ],
+      "notes": "The validator sorts the committed exact rational scores and recounts class totals."
+    },
+    {
+      "id": "threshold-operating-point-witness",
+      "claim": "At threshold score >= 7/10, the table has TP=2, FP=1, TN=2, FN=1, TPR=2/3, FPR=1/3, precision=2/3, and specificity=2/3.",
+      "expected_result": "sat",
+      "validation": "exact_rational_threshold_operating_point_replay",
+      "proof_status": "replay-only",
+      "witnesses": [
+        "six-score-binary-classifier-sample"
+      ],
+      "notes": "The validator applies the fixed threshold rule and recomputes the operating-point rates from the resulting counts."
+    },
+    {
+      "id": "roc-staircase-witness",
+      "claim": "Scanning the descending score order gives the stated finite ROC staircase from (0,0) to (1,1).",
+      "expected_result": "sat",
+      "validation": "exact_rational_roc_staircase_replay",
+      "proof_status": "replay-only",
+      "witnesses": [
+        "six-score-binary-classifier-sample"
+      ],
+      "notes": "The validator advances TPR on positive rows and FPR on negative rows using exact class totals."
+    },
+    {
+      "id": "auc-pairwise-witness",
+      "claim": "The table has pairwise AUC 2/3 from six positive-score wins over nine positive-negative pairs, matching trapezoid area 2/3.",
+      "expected_result": "sat",
+      "validation": "exact_rational_auc_pairwise_replay",
+      "proof_status": "replay-only",
+      "witnesses": [
+        "six-score-binary-classifier-sample"
+      ],
+      "notes": "The validator recomputes both pairwise AUC and trapezoid area under the finite ROC staircase."
+    },
+    {
+      "id": "bad-auc-rejected",
+      "claim": "The same table has AUC 3/4.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_bad_auc_replay",
+      "proof_status": "replay-only",
+      "data": {
+        "source_witness": "six-score-binary-classifier-sample",
+        "metric": "auc",
+        "positive_negative_pairs": "9",
+        "positive_wins": "6",
+        "ties": "0",
+        "computed_auc": "2/3",
+        "claimed_auc": "3/4"
+      },
+      "notes": "Exact replay computes AUC as 2/3, so the claimed value 3/4 is rejected; the separate qf-lra-bad-auc row owns the checked Farkas evidence."
+    },
+    {
+      "id": "qf-lra-bad-auc",
+      "claim": "The fixed malformed AUC claim is linearly inconsistent with the replayed AUC equation.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_farkas_evidence",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "six-score-binary-classifier-sample",
+        "source_replay_row": "bad-auc-rejected",
+        "metric": "auc",
+        "positive_negative_pairs": "9",
+        "positive_wins": "6",
+        "ties": "0",
+        "computed_auc": "2/3",
+        "claimed_auc": "3/4",
+        "auc_equations": [
+          "3*auc = 2",
+          "4*auc = 3"
+        ],
+        "farkas_conflict": "replayed AUC equation plus auc = 3/4",
+        "smt2_artifact": "artifacts/examples/math/finite-roc-auc-v0/smt2/bad-auc-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_roc_auc_bad_auc_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes 3*auc = 2 from six wins over nine pairs, while the malformed row claims 4*auc = 3; the source QF_LRA artifact isolates that scalar contradiction for Farkas checking."
+    },
+    {
+      "id": "general-roc-auc-theory-lean-horizon",
+      "claim": "ROC AUC threshold policy, tie conventions, calibration, confidence intervals, sampling guarantees, continuous score distributions, and floating-point behavior require future theorem, statistical-inference, or numerical-honesty resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_boundary",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "For finite or measurable scored-classifier problems under stated tie, sampling, loss, and threshold-policy assumptions, prove ROC AUC, ranking, calibration, or interval claims only with explicit theorem hypotheses.",
+        "future_checker": "Lean theorem statements for ROC AUC and classifier-evaluation theory plus separate statistical-inference and numerical-honesty artifacts for empirical intervals, tie policies, threshold selection, continuous score distributions, and floating-point metric implementations."
+      },
+      "notes": "The finite exact row checks one committed tie-free score table and exact AUC definitions, not a theorem about unseen data, threshold choice, statistical uncertainty, calibration, or floating-point classifier behavior."
+    }
+  ]
+}

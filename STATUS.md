@@ -240,6 +240,24 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite ROC/AUC classifier-ranking resource landed.**
+  `finite-roc-auc-v0` now gives the statistics and probability lanes a compact
+  exact score-ranking example: it replays six rational classifier scores, the
+  descending score order, class totals, the `score >= 7/10` threshold operating
+  point, TPR/FPR/precision/specificity rates, the ROC staircase, pairwise AUC,
+  and trapezoid area; rejects the malformed AUC claim `3/4` versus exact `2/3`;
+  and routes that scalar conflict through a source-linked QF_LRA/Farkas row.
+  The focused learner page, probability/statistics query guide,
+  probability-mass-table, exact-vs-floating, finite classifier-metrics, finite
+  ROC/AUC, and QF_LRA/Farkas bridge rows, validator, resource smoke queries,
+  generated dashboards, and `math_resource_lra_routes` regression keep this
+  fixed tie-free finite replay separate from threshold policy, calibration,
+  confidence intervals, general tie conventions, continuous score-distribution
+  theory, statistical generalization, and floating-point classifier-metric
+  behavior. The public summary now reports 128 concept rows, 164 packs, 1068
+  expected checks, 390 checked rows, 551 replay-only rows, 127 Lean-horizon
+  rows, and 164 promoted solver-reuse packs.
+
 - **Finite confusion-matrix classifier-metrics resource landed.**
   `finite-confusion-matrix-v0` now gives the statistics and probability lanes
   a compact exact classifier-evaluation example: it replays eight
@@ -254,7 +272,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `math_resource_lra_routes` regression keep this fixed finite replay separate
   from calibration, threshold selection, ROC/AUC, confidence intervals,
   statistical generalization, multiclass conventions, and floating-point
-  classifier-metric behavior. The public summary now reports 127 concept rows,
+  classifier-metric behavior. At that landing, the public summary reported 127 concept rows,
   163 packs, 1061 expected checks, 389 checked rows, 546 replay-only rows, 126
   Lean-horizon rows, and 163 promoted solver-reuse packs.
 

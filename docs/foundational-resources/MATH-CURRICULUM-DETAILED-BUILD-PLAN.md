@@ -60,17 +60,17 @@ The committed resource query currently reports:
 
 - 23 curriculum-node concept rows.
 - 18 field rows.
-- 81 bridge-concept rows.
+- 82 bridge-concept rows.
 - 5 example-family rows.
-- 163 non-template math packs.
-- 1061 expected checks.
-- 389 checked proof/evidence rows.
-- 546 replay-only rows.
-- 126 Lean-horizon rows.
-- 163 promoted solver-reuse packs.
+- 164 non-template math packs.
+- 1068 expected checks.
+- 390 checked proof/evidence rows.
+- 551 replay-only rows.
+- 127 Lean-horizon rows.
+- 164 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 163 focused learner-linked packs, with no path-only, index-only, or missing
+- 164 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 The next phase is therefore a depth phase, not a seed phase. New packs are
@@ -112,7 +112,7 @@ good R2/R3 lesson while still not being a theorem.
 
 ## Build Waves
 
-### Wave 1: Stabilize The Current 108 Packs
+### Wave 1: Stabilize The Current 164 Packs
 
 Goal: every current non-template pack has a deliberate R5 disposition:
 `promoted`, `non-benchmark-horizon`, or a clear reason to remain unclassified.
@@ -158,7 +158,7 @@ Exit criteria:
 - No lesson implies a finite bounded check proves an unbounded theorem.
 
 Current audit: [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md) records that
-all 163 current non-template packs satisfy the focused-lesson side of this
+all 164 current non-template packs satisfy the focused-lesson side of this
 gate. Keep this true as new packs land.
 
 ### Wave 3: Proof-Route Depth
@@ -257,8 +257,8 @@ Exit criteria:
 | `complex_analysis` | real-pair algebra and transformations | complex algebra now has checked bad product-coordinate and bad norm-squared rows; add only distinct real-pair arithmetic, polynomial-root, or algebraic-identity pressure | real-pair LRA/NRA, finite replay, Lean horizon |
 | `topology` | finite topologies, quotient topologies, compactness, connectedness, continuous maps, specialization orders, homology, torsion homology, cohomology, cup products | maintain landed topology-shadow, finite topology-operator/homeomorphism with checked continuous-map preimage membership, finite quotient-topology with checked representative/open conflicts, finite specialization-order, finite boundary-operator, finite chain-complex/homology, finite torsion-homology, finite cohomology, and finite cup-product bridge rows; add only distinct cohomology-ring quotienting or theorem-invariance pressure | Bool/CNF, QF_UF/Alethe, QF_LIA, QF_BV, Lean horizon |
 | `measure_theory` | finite measures, monotonicity/subadditivity, product measure, integration, random variables | finite measure/additivity, monotonicity/subadditivity, and finite product/integration bridge rows landed; monotonicity now checks both subset and union-subadditivity conflicts, and product-measure checks both product atom and marginal conflicts; promote only distinct convergence-horizon, countable-measure, or new measure-table pressure next | QF_LRA/Farkas, finite replay, Lean horizon |
-| `probability_theory` | finite probability, kernels, Markov chains, martingales, hitting times, concentration, finite Naive Bayes replay, finite classifier metrics | standalone finite probability mass-table, finite Naive Bayes, and finite classifier-metrics lessons landed; keep table/classifier rows exact and route bad rows through LRA/LIA | QF_LRA/Farkas, QF_LIA, finite replay |
-| `statistics` | descriptive stats, exact tests, ordinary and ridge regression, finite count tables, finite classifier shadows, finite classifier metrics | distinguish exact finite tests, exact rational regression/classifier replay, confusion-matrix metrics, PCA/LDA/k-means shadows, and numerical/statistical inference | QF_LIA, QF_LRA/Farkas, replay |
+| `probability_theory` | finite probability, kernels, Markov chains, martingales, hitting times, concentration, finite Naive Bayes replay, finite classifier metrics, finite ROC/AUC replay | standalone finite probability mass-table, finite Naive Bayes, finite classifier-metrics, and finite ROC/AUC lessons landed; keep table/classifier rows exact and route bad rows through LRA/LIA | QF_LRA/Farkas, QF_LIA, finite replay |
+| `statistics` | descriptive stats, exact tests, ordinary and ridge regression, finite count tables, finite classifier shadows, finite classifier metrics, finite ROC/AUC replay | distinguish exact finite tests, exact rational regression/classifier replay, confusion-matrix metrics, ROC/AUC score-ranking rows, PCA/LDA/k-means shadows, and numerical/statistical inference | QF_LIA, QF_LRA/Farkas, replay |
 | `optimization_and_convexity` | LP/Farkas, convexity, least squares, ridge regression, Hessians, root-finding steps, separation rows, KKT rows, active-set QP rows, SDP rows, gradient-descent rows, line-search rows, Wolfe line-search rows, projected-gradient rows, proximal-gradient rows | LP objective/Farkas, rational convexity/gradient bridge rows with checked bad midpoint and affine-threshold evidence, finite root-finding step and bisection-width replay, ordinary and regularized least-squares objective replay, finite hyperplane-separation replay, finite KKT replay with checked bad stationarity and complementarity evidence, finite active-set QP face/slack replay with checked bad free-gradient, bad inactive-slack, and bad degenerate-multiplier rows, finite degenerate active-bound replay, finite SDP primal/dual replay with checked bad objective, bad duality-gap, and bad slack-entry rows, finite gradient-descent replay with checked bad decrease, bad step-coordinate, and bad descent-bound rows, finite Armijo line-search replay with checked bad Armijo, bad descent-direction, and bad accepted-candidate rows, finite Wolfe line-search replay with checked bad minimizer, bad sufficient-decrease, and bad curvature rows, finite projected-gradient interval/decrease replay with checked bad projection and bad projected-decrease rows, finite proximal soft-threshold/composite-decrease replay, and finite box-plus-L1 proximal replay landed with checked bad proximal-point, bad composite-decrease, and bad box-proximal-point rows; add only distinct duality, working-set pivots, higher-dimensional SDP, strong-Wolfe/nonconvex line-search, group-lasso, active-set proximal, or stochastic/convergence pressure next | QF_LRA/Farkas, QF_NRA shadows |
 | `numerical_analysis` | residuals, regularized normal equations, Simpson-rule quadrature, Romberg extrapolation, divided-difference and barycentric interpolation, Euler steps, implicit time-stepping, Adams-Bashforth and BDF2 multistep replay, exact error recurrences, matrix algorithms, root-finding, active-set QP, gradient-descent, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient iterations | maintain landed finite dynamics/Euler bridge and keep numerical-honesty rows distinct from promoted exact residual/error certificates; finite recurrence-prefix, finite Simpson, finite Romberg extrapolation, finite divided differences, finite barycentric interpolation, finite ridge regression, finite Euler, finite Backward Euler, finite Crank-Nicolson, finite Adams-Bashforth, finite BDF2, and bounded dynamics now keep malformed source claims as replay-only rows with separate checked `qf-lra-*` Farkas proof rows; finite line-search and finite Wolfe now check descent-direction, accepted-candidate, exact-minimizer, sufficient-decrease, and curvature arithmetic conflicts, and finite proximal-gradient now checks false composite-decrease arithmetic | QF_LRA/Farkas, replay, Lean horizon |
 | `differential_equations_and_dynamical_systems` | bounded recurrences, explicit Euler traces, implicit Backward Euler traces, implicit Crank-Nicolson traces, Adams-Bashforth derivative-history traces, and BDF2 implicit-history traces | maintain landed finite dynamics/Euler and bounded-family/asymptotic-boundary bridges; finite Euler, finite Backward Euler, finite Crank-Nicolson, finite Adams-Bashforth, and finite BDF2 now separate replay-only bad finite-error/fixed-step rows from explicit `qf-lra-*` Farkas proof rows; bounded dynamics now also separates replay-only bad transition-step, bad threshold-step, and bad invariant-bound rows from explicit `qf-lra-*` Farkas proof rows; add only distinct transition, reachability, invariant, stochastic, finite-error, implicit-solve, multistep-history, or theorem-boundary pressure | QF_LRA/Farkas, replay, Lean horizon |
@@ -2837,6 +2837,16 @@ Pick one row per commit unless the change is purely navigational.
      threshold selection, ROC/AUC, confidence intervals, statistical
      generalization, multiclass averaging conventions, and floating-point
      classifier-metric behavior.
+322. Landed: add `finite-roc-auc-v0` as an exact finite classifier-ranking
+     resource. The pack replays a fixed six-row rational score table,
+     descending score order, class totals, the `score >= 7/10` threshold
+     operating point, TPR/FPR/precision/specificity rates, the ROC staircase,
+     pairwise AUC, and trapezoid area, then adds `qf-lra-bad-auc` as the
+     source-linked Farkas row for the false AUC claim `3/4` versus exact `2/3`.
+     The learner and query pages keep this finite tie-free ROC/AUC shadow
+     separate from threshold policy, calibration, confidence intervals, general
+     tie conventions, continuous score-distribution theory, statistical
+     generalization, and floating-point classifier-metric behavior.
 
 ## Validation Checklist
 

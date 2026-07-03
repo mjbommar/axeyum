@@ -344,6 +344,10 @@ counts, TP/FP/TN/FN, accuracy, precision, recall, specificity, negative
 predictive value, false-positive/false-negative rates, balanced accuracy, F1,
 and Jaccard, then emits checked `UnsatFarkas` evidence for a malformed
 precision claim.
+For finite ROC/AUC classification, it recomputes exact score order, threshold
+operating-point counts and rates, the ROC staircase, pairwise AUC, and
+trapezoid area, then emits checked `UnsatFarkas` evidence for a malformed AUC
+claim.
 For DAG examples, the validator enumerates simple skeleton paths and applies
 the collider/non-collider conditioning rules. For random matrices, it
 recomputes weighted trace, determinant, Gram, and rank claims from exact
@@ -374,6 +378,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/de
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-covariance-matrix-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-naive-bayes-classifier-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-confusion-matrix-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-roc-auc-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/least-squares-regression-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/exact-statistical-tests-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-measure-v0
@@ -405,6 +410,8 @@ For exact finite Naive Bayes classifier replay, read
 [End To End: Finite Naive Bayes Classifier](naive-bayes-classifier-end-to-end.md).
 For exact finite classifier-metric replay, read
 [End To End: Finite Classifier Metrics](classifier-metrics-end-to-end.md).
+For exact finite ROC/AUC score-ranking replay, read
+[End To End: Finite ROC AUC](roc-auc-end-to-end.md).
 For finite matrix-valued probability tables, read
 [End To End: Finite Random Matrices](random-matrix-finite-end-to-end.md).
 For the cross-pack finite random-matrix query map, read
@@ -431,8 +438,8 @@ the validator recomputes exact atom-table sums and finite path conditions.
 Malformed probability normalization, Bayes-posterior rows, measure-complement
 rows, conditional expectation tables, stochastic rows, expected hitting-time
 equations, tail bounds, regression coefficients, covariance entries, classifier
-posteriors, and
-random-matrix moment/rank rows graduate through
+posteriors, classifier metric rows, ROC/AUC rows, and random-matrix moment/rank
+rows graduate through
 [QF_LRA / Farkas Evidence](../../proof-cookbook/recipes/qf-lra-farkas.md).
 Discrete count contradictions such as contingency totals and exact tail counts
 use
@@ -454,7 +461,8 @@ general Markov kernels, recurrence/transience classifications,
 infinite-horizon hitting probabilities, general martingale convergence,
 optional stopping, Doob inequalities, MCMC, HMC, variational inference,
 asymptotic statistical tests, covariance-estimator consistency, PCA theorem
-claims, calibration, causal identification, do-calculus, and floating-point
-diagnostics are not proof claims. They need either
+claims, calibration, ROC/AUC threshold policy, confidence intervals,
+continuous score distributions, causal identification, do-calculus, and
+floating-point diagnostics are not proof claims. They need either
 Lean-backed probability/measure formalization or explicit reproducibility
 metadata with seeds and tolerances.

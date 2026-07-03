@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "id": "finite-roc-auc-v0",
+  "title": "Finite ROC AUC Classifier Ranking",
+  "domain": "statistics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_statistics",
+    "field_probability_theory",
+    "curriculum_counting",
+    "curriculum_rationals",
+    "bridge_probability_mass_table",
+    "bridge_finite_classifier_metrics_shadow",
+    "bridge_finite_roc_auc_shadow",
+    "bridge_exact_vs_floating_arithmetic",
+    "bridge_qf_lra_farkas_anatomy"
+  ],
+  "field_ids": [
+    "statistics",
+    "probability_theory"
+  ],
+  "curriculum_nodes": [
+    "counting",
+    "rationals"
+  ],
+  "axeyum_fragments": [
+    "finite ROC/AUC replay",
+    "finite classifier ranking",
+    "exact rational arithmetic",
+    "LRA (exact rationals)",
+    "QF_LRA",
+    "Farkas",
+    "finite replay",
+    "Lean horizon",
+    "numerical-honesty metadata"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-roc-auc-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite ROC/AUC bad AUC QF_LRA/Farkas regression seed",
+    "pressure": "Exact finite classifier-ranking replay computes AUC 2/3 from six wins over nine positive-negative pairs, while a malformed row claims 3/4, isolating a compact scalar Farkas conflict.",
+    "evidence": [
+      "qf-lra-bad-auc"
+    ],
+    "next_step": "Promote additional ROC/AUC rows only when they add distinct tie-convention, multiclass averaging, threshold-policy, calibration, confidence-interval, or numerical-honesty pressure; keep statistical generalization and floating-point classifier claims in theorem or numerical-honesty lanes."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/curriculum/02-structures/counting.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/roc-auc-end-to-end.md",
+    "artifacts/examples/math/finite-roc-auc-v0/smt2/bad-auc-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+  ],
+  "expected_results": [
+    "score-order-witness",
+    "threshold-operating-point-witness",
+    "roc-staircase-witness",
+    "auc-pairwise-witness",
+    "bad-auc-rejected",
+    "qf-lra-bad-auc",
+    "general-roc-auc-theory-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode the fixed finite scored rows, class counts, threshold operating point, ROC staircase, and exact rational AUC as deterministic replay obligations.",
+    "Route the false AUC claim through a source-linked QF_LRA artifact and checked Farkas evidence after exact replay computes the conflicting AUC equation.",
+    "Expose the pack through probability, statistics, finite classifier, ROC/AUC, exact-vs-floating, and learner-query surfaces.",
+    "Keep threshold policy, calibration, confidence intervals, general tie conventions, continuous score-distribution theory, statistical generalization, and floating-point classifier behavior marked theorem or numerical-honesty horizon."
+  ]
+}

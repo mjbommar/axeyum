@@ -187,6 +187,10 @@ CURRICULUM_MAP = {
                 "finite-confusion-matrix-v0",
                 "Exact rational confusion-matrix classifier metrics with checked bad precision evidence.",
             ),
+            (
+                "finite-roc-auc-v0",
+                "Exact rational ROC/AUC ranking replay with checked bad AUC evidence.",
+            ),
         ],
     },
     "reals": {
@@ -513,6 +517,10 @@ CURRICULUM_MAP = {
                 "finite-confusion-matrix-v0",
                 "Finite actual/predicted classifier count replay feeding exact rational confusion-matrix metrics.",
             ),
+            (
+                "finite-roc-auc-v0",
+                "Finite score-ranking count replay feeding exact rational ROC/AUC checks.",
+            ),
         ],
     },
     "number-theory": {
@@ -827,8 +835,8 @@ FIELD_PACKS = {
     "complex_analysis": ("complex-algebraic-v0", "Complex arithmetic, real-pair transforms, finite Cauchy-Riemann derivative shadows, and polynomial factorization shadows as real/rational algebra before analytic proof horizons."),
     "topology": ("finite-topology-v0", "Finite topologies, metric balls, closure/interior, continuous maps, and finite simplicial-homology checks."),
     "measure_theory": ("finite-measure-v0", "Finite sigma-algebras, finite measures, monotonicity/subadditivity, random variables, conditional expectations, finite kernels, martingales, hitting times, concentration checks, product tables, and exact probability foundations."),
-    "probability_theory": ("finite-probability-v0", "Finite mass tables, random variables, conditional expectation, kernels, martingales, hitting times, concentration/tail bounds, finite covariance tables, conditioning, independence, Bayes rule, Naive Bayes classifier posterior replay, confusion-matrix classifier metrics, product measures, and exact discrete distributions."),
-    "statistics": ("descriptive-statistics-v0", "Mean/variance/covariance/PCA and finite clustering identities, Schur conditional-variance shadows, random variables, conditional expectation, finite kernel, hitting-time, martingale, and concentration checks, contingency tables, exact tests, ordinary and ridge regression, finite linear-discriminant/classification replay, finite Naive Bayes classifier replay, finite confusion-matrix classifier metrics, and Simpson witnesses."),
+    "probability_theory": ("finite-probability-v0", "Finite mass tables, random variables, conditional expectation, kernels, martingales, hitting times, concentration/tail bounds, finite covariance tables, conditioning, independence, Bayes rule, Naive Bayes classifier posterior replay, confusion-matrix classifier metrics, finite ROC/AUC ranking metrics, product measures, and exact discrete distributions."),
+    "statistics": ("descriptive-statistics-v0", "Mean/variance/covariance/PCA and finite clustering identities, Schur conditional-variance shadows, random variables, conditional expectation, finite kernel, hitting-time, martingale, and concentration checks, contingency tables, exact tests, ordinary and ridge regression, finite linear-discriminant/classification replay, finite Naive Bayes classifier replay, finite confusion-matrix classifier metrics, finite ROC/AUC ranking metrics, and Simpson witnesses."),
     "optimization_and_convexity": [
         ("linear-optimization-v0", "LP feasibility, threshold cliffs, and Farkas-style certificates."),
         ("convexity-rational-v0", "Finite midpoint convexity, second differences, affine threshold monotonicity, and checked bad midpoint-convexity plus affine-threshold rejection."),
@@ -1628,6 +1636,7 @@ BRIDGE_CONCEPTS = [
             "bridge_probability_mass_table",
             "bridge_finite_naive_bayes_shadow",
             "bridge_finite_classifier_metrics_shadow",
+            "bridge_finite_roc_auc_shadow",
             "bridge_eigenpair",
         ],
         "decidability": "decidable",
@@ -1658,6 +1667,10 @@ BRIDGE_CONCEPTS = [
             (
                 "finite-confusion-matrix-v0",
                 "Malformed classifier precision row checked through exact rational Farkas evidence after finite confusion-count replay.",
+            ),
+            (
+                "finite-roc-auc-v0",
+                "Malformed classifier AUC row checked through exact rational Farkas evidence after finite ROC/AUC replay.",
             ),
             (
                 "numerical-linear-algebra-v0",
@@ -1715,6 +1728,7 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/principal-components-end-to-end.md",
             "docs/learn/math/k-means-clustering-end-to-end.md",
             "docs/learn/math/classifier-metrics-end-to-end.md",
+            "docs/learn/math/roc-auc-end-to-end.md",
             "docs/learn/math/linear-algebra-and-optimization.md",
             "docs/foundational-resources/PROOF-UPGRADE-FRONTIER.md",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
@@ -1764,6 +1778,7 @@ BRIDGE_CONCEPTS = [
             "bridge_random_matrix_finite_moment",
             "bridge_finite_naive_bayes_shadow",
             "bridge_finite_classifier_metrics_shadow",
+            "bridge_finite_roc_auc_shadow",
             "field_numerical_analysis",
             "field_statistics",
         ],
@@ -1890,6 +1905,10 @@ BRIDGE_CONCEPTS = [
                 "Confusion counts, exact classifier metrics, and bad-precision rows checked as exact rational replay, not floating-point metric or statistical generalization evidence.",
             ),
             (
+                "finite-roc-auc-v0",
+                "Score order, threshold operating point, ROC staircase, and bad-AUC rows checked as exact rational replay, not floating-point metric or statistical generalization evidence.",
+            ),
+            (
                 "finite-root-finding-v0",
                 "One-step bisection/Newton rows replayed exactly while convergence and floating-point stability remain horizon claims.",
             ),
@@ -1963,6 +1982,7 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/spline-interpolation-end-to-end.md",
                     "docs/learn/math/romberg-extrapolation-end-to-end.md",
                     "docs/learn/math/exact-statistical-tests-end-to-end.md",
+                    "docs/learn/math/roc-auc-end-to-end.md",
                     "docs/learn/math/principal-components-end-to-end.md",
                     "docs/learn/math/k-means-clustering-end-to-end.md",
                     "docs/foundational-resources/MATH-FIELDS.md",
@@ -2005,6 +2025,7 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/k-means-clustering-end-to-end.md",
             "docs/learn/math/linear-discriminant-end-to-end.md",
             "docs/learn/math/exact-statistical-tests-end-to-end.md",
+            "docs/learn/math/roc-auc-end-to-end.md",
             "artifacts/examples/math/finite-rounding-shadow-v0/smt2/bad-rounded-delta-farkas-conflict.smt2",
             "artifacts/examples/math/finite-interval-arithmetic-shadow-v0/smt2/bad-product-upper-farkas-conflict.smt2",
             "docs/foundational-resources/MATH-CURRICULUM-RESOURCE-MASTER-PLAN.md",
@@ -2753,9 +2774,10 @@ BRIDGE_CONCEPTS = [
             "Finite classifier-metric rows replay exact actual/predicted "
             "tables, TP/FP/TN/FN counts, accuracy, precision/recall, "
             "specificity, balanced accuracy, F1, Jaccard, and source-linked "
-            "bad-precision Farkas evidence while keeping calibration, "
-            "generalization, threshold theory, ROC/AUC, confidence intervals, "
-            "and floating-point metric behavior separate."
+            "bad-precision Farkas evidence. A sibling finite ROC/AUC row "
+            "covers one tie-free exact score table while keeping calibration, "
+            "generalization, threshold theory, confidence intervals, general "
+            "tie conventions, and floating-point metric behavior separate."
         ),
         "prerequisites": [
             "curriculum_counting",
@@ -2767,6 +2789,7 @@ BRIDGE_CONCEPTS = [
         "unlocks": [
             "field_statistics",
             "field_probability_theory",
+            "bridge_finite_roc_auc_shadow",
             "bridge_lean_horizon",
         ],
         "decidability": "bounded",
@@ -2784,6 +2807,10 @@ BRIDGE_CONCEPTS = [
             (
                 "finite-confusion-matrix-v0",
                 "Exact eight-row actual/predicted table with confusion counts, classifier metrics, bad-precision replay, and checked QF_LRA/Farkas row.",
+            ),
+            (
+                "finite-roc-auc-v0",
+                "Exact six-row score-ranking table with threshold operating point, ROC staircase, pairwise AUC, bad-AUC replay, and checked QF_LRA/Farkas row.",
             ),
             (
                 "finite-naive-bayes-classifier-v0",
@@ -2805,7 +2832,9 @@ BRIDGE_CONCEPTS = [
                     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
                     "docs/proof-cookbook/recipes/lean-horizon-template.md",
                     "docs/learn/math/classifier-metrics-end-to-end.md",
+                    "docs/learn/math/roc-auc-end-to-end.md",
                     "artifacts/examples/math/finite-confusion-matrix-v0/smt2/bad-precision-farkas-conflict.smt2",
+                    "artifacts/examples/math/finite-roc-auc-v0/smt2/bad-auc-farkas-conflict.smt2",
                     "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
                 ],
                 "notes": (
@@ -2824,13 +2853,15 @@ BRIDGE_CONCEPTS = [
             "docs/proof-cookbook/recipes/qf-lra-farkas.md",
             "docs/proof-cookbook/recipes/lean-horizon-template.md",
             "docs/learn/math/classifier-metrics-end-to-end.md",
+            "docs/learn/math/roc-auc-end-to-end.md",
             "artifacts/examples/math/finite-confusion-matrix-v0/smt2/bad-precision-farkas-conflict.smt2",
+            "artifacts/examples/math/finite-roc-auc-v0/smt2/bad-auc-farkas-conflict.smt2",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
         ],
         "open_gaps": [
-            "Finite confusion-matrix replay does not prove risk bounds, calibration, threshold optimality, ROC/AUC behavior, confidence intervals, sampling guarantees, or classifier generalization.",
+            "Finite confusion-matrix and tie-free ROC/AUC replay do not prove risk bounds, calibration, threshold optimality, confidence intervals, sampling guarantees, general tie conventions, continuous score-distribution behavior, or classifier generalization.",
             "Floating-point classifier metrics need numerical-honesty or QF_FP resources before they can be presented as checked numerical claims.",
-            "Multiclass averaging conventions, ranking metrics, imbalanced-data policy choices, and statistical-inference theory remain Lean/theorem-horizon work.",
+            "Multiclass averaging conventions, ranking metrics beyond the committed finite row, imbalanced-data policy choices, and statistical-inference theory remain Lean/theorem-horizon work.",
         ],
         "graduation": {
             "status": "validated",
@@ -2838,7 +2869,111 @@ BRIDGE_CONCEPTS = [
                 "Rows state the finite actual/predicted table, confusion counts, class totals, exact rational metrics, and decision-relevant denominators.",
                 "The validator recomputes all finite classifier metrics from committed source data.",
                 "Malformed finite metric claims link to source SMT-LIB artifacts and checked QF_LRA/Farkas regressions after replay.",
-                "Learner and query docs keep finite exact metric replay separate from calibration, threshold, ranking, confidence-interval, statistical, multiclass, and floating-point claims.",
+                "Learner and query docs keep finite exact metric and tie-free ROC/AUC replay separate from calibration, threshold-policy, confidence-interval, statistical, multiclass, tie-convention, and floating-point claims.",
+            ],
+        },
+    },
+    {
+        "id": "bridge_finite_roc_auc_shadow",
+        "title": "Finite ROC AUC Shadow",
+        "field_ids": [
+            "statistics",
+            "probability_theory",
+        ],
+        "resource_status": "validated",
+        "summary": (
+            "Finite ROC/AUC rows replay a tie-free scored-classifier table, "
+            "exact score order, threshold operating point, ROC staircase, "
+            "pairwise AUC, trapezoid AUC, and source-linked bad-AUC Farkas "
+            "evidence while keeping threshold policy, calibration, confidence "
+            "intervals, statistical generalization, tie conventions, "
+            "continuous score distributions, and floating-point behavior "
+            "separate."
+        ),
+        "prerequisites": [
+            "curriculum_counting",
+            "curriculum_rationals",
+            "bridge_finite_classifier_metrics_shadow",
+            "bridge_probability_mass_table",
+            "bridge_exact_vs_floating_arithmetic",
+            "bridge_qf_lra_farkas_anatomy",
+        ],
+        "unlocks": [
+            "field_statistics",
+            "field_probability_theory",
+            "bridge_lean_horizon",
+        ],
+        "decidability": "bounded",
+        "axeyum_fragments": [
+            "finite ROC/AUC replay",
+            "finite classifier ranking",
+            "exact rational arithmetic",
+            "QF_LRA",
+            "Farkas certificate",
+            "finite replay",
+            "Lean horizon",
+            "numerical-honesty metadata",
+        ],
+        "example_packs": [
+            (
+                "finite-roc-auc-v0",
+                "Exact six-row score-ranking table with threshold operating point, ROC staircase, pairwise AUC, bad-AUC replay, and checked QF_LRA/Farkas row.",
+            ),
+            (
+                "finite-confusion-matrix-v0",
+                "Exact actual/predicted classifier metric replay that supplies the confusion-matrix contrast.",
+            ),
+            (
+                "finite-naive-bayes-classifier-v0",
+                "Finite classifier posterior replay that supplies a probabilistic classifier contrast.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "finite ROC/AUC replay plus QF_LRA/Farkas",
+                "status": "checked",
+                "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_lra_routes",
+                "lean_status": "partial",
+                "sources": [
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+                    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+                    "docs/learn/math/roc-auc-end-to-end.md",
+                    "artifacts/examples/math/finite-roc-auc-v0/smt2/bad-auc-farkas-conflict.smt2",
+                    "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+                ],
+                "notes": (
+                    "The finite checker recomputes the committed score order, "
+                    "threshold counts, ROC staircase, and exact AUC. Only the "
+                    "final malformed AUC row is promoted to checked Farkas "
+                    "evidence."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/foundational-resources/MATH-FIELDS.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+            "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+            "docs/proof-cookbook/recipes/lean-horizon-template.md",
+            "docs/learn/math/roc-auc-end-to-end.md",
+            "docs/learn/math/classifier-metrics-end-to-end.md",
+            "artifacts/examples/math/finite-roc-auc-v0/smt2/bad-auc-farkas-conflict.smt2",
+            "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+        ],
+        "open_gaps": [
+            "Finite tie-free ROC/AUC replay does not prove threshold optimality, calibration, risk bounds, confidence intervals, sampling guarantees, continuous score-distribution theory, or classifier generalization.",
+            "General tie conventions, multiclass averaging conventions, precision-recall curves, and imbalanced-data policy choices remain separate theorem or policy resources.",
+            "Floating-point classifier scores and metric implementations need numerical-honesty or QF_FP resources before they can be presented as checked numerical claims.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Rows state the finite scored table, class totals, score order, threshold rule, ROC points, and exact rational AUC.",
+                "The validator recomputes all finite ROC/AUC quantities from committed source data.",
+                "Malformed finite AUC claims link to source SMT-LIB artifacts and checked QF_LRA/Farkas regressions after replay.",
+                "Learner and query docs keep finite exact ROC/AUC replay separate from threshold-policy, calibration, interval, statistical, tie-convention, and floating-point claims.",
             ],
         },
     },
@@ -7601,6 +7736,7 @@ BRIDGE_CONCEPTS = [
             "bridge_finite_product_integration",
             "bridge_finite_naive_bayes_shadow",
             "bridge_finite_classifier_metrics_shadow",
+            "bridge_finite_roc_auc_shadow",
         ],
         "decidability": "bounded",
         "axeyum_fragments": [
@@ -7622,6 +7758,10 @@ BRIDGE_CONCEPTS = [
             (
                 "finite-confusion-matrix-v0",
                 "Finite actual/predicted count table, exact classifier metrics, and checked bad-precision evidence.",
+            ),
+            (
+                "finite-roc-auc-v0",
+                "Finite score-ranking table, threshold operating point, ROC staircase, and checked bad-AUC evidence.",
             ),
             (
                 "finite-measure-v0",
@@ -7651,6 +7791,7 @@ BRIDGE_CONCEPTS = [
                     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
                     "docs/learn/math/finite-probability-end-to-end.md",
                     "docs/learn/math/finite-topology-measure-end-to-end.md",
+                    "docs/learn/math/roc-auc-end-to-end.md",
                     "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
                     "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
                 ],
@@ -7668,6 +7809,7 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/finite-probability-end-to-end.md",
             "docs/learn/math/finite-topology-measure-end-to-end.md",
             "docs/learn/math/probability-and-statistics.md",
+            "docs/learn/math/roc-auc-end-to-end.md",
             "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
