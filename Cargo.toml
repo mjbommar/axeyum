@@ -17,6 +17,7 @@ members = [
     "crates/axeyum-scenarios",
     "crates/axeyum-smtlib",
     "crates/axeyum-solver",
+    "crates/axeyum-strings",
     "crates/axeyum-verify",
     "crates/axeyum-verify-macros",
 ]
@@ -40,6 +41,7 @@ axeyum-fp = { path = "crates/axeyum-fp", version = "0.1.0" }
 axeyum-ir = { path = "crates/axeyum-ir", version = "0.1.0" }
 axeyum-query = { path = "crates/axeyum-query", version = "0.1.0" }
 axeyum-scenarios = { path = "crates/axeyum-scenarios", version = "0.1.0" }
+axeyum-strings = { path = "crates/axeyum-strings", version = "0.1.0" }
 rustsat = { version = "0.7.5", default-features = false }
 rustsat-batsat = { version = "0.7.5" }
 proptest = { version = "1", default-features = false, features = ["std"] }
