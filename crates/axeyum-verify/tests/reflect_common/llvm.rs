@@ -226,6 +226,65 @@ fn split_cfg_blocks(ll: &str) -> Vec<(String, Vec<String>)> {
     blocks
 }
 
+/// Lower a `switch iW %x, label %default [ iW K, label %case ... ]` terminator:
+/// parse the arm list (advancing `i` past the closing `]`), execute every
+/// target on a clone of the environment, and fold the arms right-to-left into
+/// a nested `ite` chain over `%x = K` tests with the default as the base.
+#[expect(clippy::too_many_arguments, reason = "test-scaffold CFG walker state")]
+fn exec_switch(
+    arena: &mut TermArena,
+    blocks: &[(String, Vec<String>)],
+    env: &HashMap<String, (TermId, u32)>,
+    rest: &str,
+    lines: &[String],
+    i: &mut usize,
+    label: &str,
+    depth: usize,
+) -> (TermId, u32) {
+    let mut toks = rest.split_whitespace();
+    let w = width_of(toks.next().expect("switch type"));
+    let scrut_tok = toks.next().expect("switch scrutinee").trim_end_matches(',');
+    let scrut = resolve(arena, env, scrut_tok, w);
+    let default = rest
+        .split("label %")
+        .nth(1)
+        .expect("switch default")
+        .split_whitespace()
+        .next()
+        .expect("default label");
+    let mut arms: Vec<(u128, &str)> = Vec::new();
+    while *i < lines.len() && lines[*i] != "]" {
+        let arm = &lines[*i];
+        *i += 1;
+        // `i8 1, label %case1` (values printed signed)
+        let val_tok = arm
+            .split_whitespace()
+            .nth(1)
+            .expect("switch arm value")
+            .trim_end_matches(',');
+        let v: i128 = val_tok.parse().expect("switch arm integer");
+        let value = if v < 0 {
+            (v + (1i128 << w)).cast_unsigned()
+        } else {
+            v.cast_unsigned()
+        };
+        let target = arm
+            .split("label %")
+            .nth(1)
+            .expect("switch arm target")
+            .trim();
+        arms.push((value, target));
+    }
+    let mut acc = exec_cfg_block(arena, blocks, env.clone(), default, label, depth + 1);
+    for (val, target) in arms.iter().rev() {
+        let then = exec_cfg_block(arena, blocks, env.clone(), target, label, depth + 1);
+        let v = arena.bv_const(w, *val).unwrap();
+        let cond = arena.eq(scrut, v).unwrap();
+        acc = (arena.ite(cond, then.0, acc.0).unwrap(), then.1);
+    }
+    acc
+}
+
 /// Symbolically execute from block `label` (entered from `pred`) to `ret`.
 /// `br i1` forks on a clone of the environment and joins as `ite`; `phi` picks
 /// the incoming value whose edge label matches `pred`. The depth cap turns a
@@ -252,48 +311,7 @@ fn exec_cfg_block(
         i += 1;
         // switch iW %x, label %default [ \n iW K, label %case \n ... ]
         if let Some(rest) = line.strip_prefix("switch ") {
-            let mut toks = rest.split_whitespace();
-            let w = width_of(toks.next().expect("switch type"));
-            let scrut_tok = toks.next().expect("switch scrutinee").trim_end_matches(',');
-            let scrut = resolve(arena, &env, scrut_tok, w);
-            let default = rest
-                .split("label %")
-                .nth(1)
-                .expect("switch default")
-                .split_whitespace()
-                .next()
-                .expect("default label");
-            let mut arms: Vec<(u128, &str)> = Vec::new();
-            while i < lines.len() && lines[i] != "]" {
-                let arm = &lines[i];
-                i += 1;
-                // `i8 1, label %case1` (values printed signed)
-                let val_tok = arm
-                    .split_whitespace()
-                    .nth(1)
-                    .expect("switch arm value")
-                    .trim_end_matches(',');
-                let v: i128 = val_tok.parse().expect("switch arm integer");
-                let value = if v < 0 {
-                    (v + (1i128 << w)).cast_unsigned()
-                } else {
-                    v.cast_unsigned()
-                };
-                let target = arm
-                    .split("label %")
-                    .nth(1)
-                    .expect("switch arm target")
-                    .trim();
-                arms.push((value, target));
-            }
-            let mut acc = exec_cfg_block(arena, blocks, env.clone(), default, label, depth + 1);
-            for (val, target) in arms.iter().rev() {
-                let then = exec_cfg_block(arena, blocks, env.clone(), target, label, depth + 1);
-                let v = arena.bv_const(w, *val).unwrap();
-                let cond = arena.eq(scrut, v).unwrap();
-                acc = (arena.ite(cond, then.0, acc.0).unwrap(), then.1);
-            }
-            return acc;
+            return exec_switch(arena, blocks, &env, rest, lines, &mut i, label, depth);
         }
         if let Some(rest) = line.strip_prefix("ret ") {
             let toks: Vec<&str> = rest.split_whitespace().collect();
