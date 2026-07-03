@@ -368,8 +368,8 @@ pub use sat_bv_backend::SatBvBackend;
 pub use set_cardinality::{SetCardinalityRefutationCertificate, set_cardinality_refutation};
 pub use skolem_alethe::{SkolemCert, SkolemRecord, prove_skolem_unsat_alethe};
 pub use smtlib::{
-    SmtLibModel, SmtLibOutcome, confirm_bounded_string_verdict, optimize_smtlib,
-    optimize_smtlib_lexicographic, solve_smtlib, solve_smtlib_get_assertions,
+    SmtLibModel, SmtLibOutcome, confirm_bounded_string_verdict, decide_word_only_script,
+    optimize_smtlib, optimize_smtlib_lexicographic, solve_smtlib, solve_smtlib_get_assertions,
     solve_smtlib_get_assignment, solve_smtlib_get_info, solve_smtlib_get_model,
     solve_smtlib_get_option, solve_smtlib_get_proof, solve_smtlib_get_value,
     solve_smtlib_incremental, solve_smtlib_unsat_core,

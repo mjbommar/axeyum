@@ -145,6 +145,26 @@ fn decide_word_only(
     }
 }
 
+/// Harness-parity surface (T-B.4d): decides a **word-first-fallback**
+/// [`Script`] exactly as the `solve_smtlib` front door does — the sat-only,
+/// replay-checked word route is the sole decider (the flat assertion view is
+/// empty and must never be solved), and a decline reproduces the original
+/// bounded parse error as [`SolverError::Parse`]. Exposed for `axeyum-bench`,
+/// which otherwise classifies these scripts `unsupported` without ever
+/// consulting the solver.
+///
+/// # Errors
+///
+/// Returns [`SolverError::Parse`] carrying the original bounded parse error
+/// whenever the word route declines — the caller sees exactly what it would
+/// have seen before the fallback existed.
+pub fn decide_word_only_script(
+    script: &mut Script,
+    config: &SolverConfig,
+) -> Result<CheckResult, SolverError> {
+    decide_word_only(script, config)
+}
+
 /// The result of deciding an SMT-LIB script, with the script's own declarations.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]

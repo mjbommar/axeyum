@@ -844,6 +844,92 @@ mod run {
         }
     }
 
+    /// Decides a **word-first-fallback** script (T-B.4d) — harness parity with
+    /// the `solve_smtlib` front door. The flat assertion view is empty (the
+    /// bounded ADR-0029 encoder declined at parse), so the sat-only,
+    /// replay-checked word-equation route is the sole decider. On `sat` the
+    /// model has already replayed against every equality/disequality through
+    /// the ground evaluator inside `axeyum-strings` (the trust anchor); the
+    /// oracle cross-check is verdict-only via the **Z3 binary** on the original
+    /// file (the in-repo library oracle would compare the vacuous empty view).
+    /// On a word-route decline the instance keeps the exact `unsupported`
+    /// classification (and original bounded parse error) it had before the
+    /// fallback existed — never a silently reshaped bucket.
+    fn run_word_only(
+        file: &Path,
+        name: &str,
+        script: &mut Script,
+        timeout: Duration,
+        args: &Args,
+        summary: &mut Summary,
+    ) -> JsonValue {
+        let config = solver_config(args, timeout);
+        let start = Instant::now();
+        let decided = axeyum_solver::decide_word_only_script(script, &config);
+        let solve = start.elapsed();
+        if let Ok(CheckResult::Sat(_)) = decided {
+            summary.sat += 1;
+            summary.par2_seconds += solve.as_secs_f64();
+            let oracle = if args.compare_z3 {
+                if let Some(result) = run_z3_binary(file, config.timeout) {
+                    let compared = result.verdict.is_some();
+                    let agrees = result.verdict == Some("sat");
+                    if compared {
+                        summary.oracle_compared += 1;
+                        if agrees {
+                            summary.oracle_agree += 1;
+                        } else {
+                            summary.oracle_disagree += 1;
+                        }
+                    } else {
+                        summary.oracle_skipped += 1;
+                    }
+                    json!({
+                        "enabled": true,
+                        "backend_kind": "z3-binary",
+                        "outcome": result.verdict,
+                        "decision_compared": compared,
+                        "decision_agrees": if compared {
+                            JsonValue::Bool(agrees)
+                        } else {
+                            JsonValue::Null
+                        },
+                        "z3_binary": {
+                            "verdict": result.verdict,
+                            "raw": result.raw,
+                            "solve_ms": result.elapsed_ms,
+                        },
+                    })
+                } else {
+                    summary.oracle_skipped += 1;
+                    json!({ "enabled": true, "skipped": "z3-binary-unavailable" })
+                }
+            } else {
+                JsonValue::Null
+            };
+            return json!({
+                "file": name,
+                "outcome": "sat",
+                "detail": "word-first fallback (T-B.4d): decided by the word-equation \
+                           route; model replayed in-crate at the Seq level",
+                "word_only": true,
+                "solve_ms": duration_ms(solve),
+                "oracle": oracle,
+            });
+        }
+        // Decline: the front door reproduces the original bounded parse
+        // error; the harness keeps the pre-fallback `unsupported` bucket.
+        summary.unsupported += 1;
+        json!({
+            "file": name,
+            "outcome": "unsupported",
+            "detail": script.word_only_fallback.clone().unwrap_or_default(),
+            "word_only": true,
+            "word_route_declined": true,
+            "solve_ms": duration_ms(solve),
+        })
+    }
+
     /// Runs one instance and returns its JSON record.
     #[allow(clippy::too_many_lines)]
     fn run_one(
@@ -859,6 +945,14 @@ mod run {
             Ok(script) => script,
             Err(record) => return record,
         };
+        // T-B.4d harness parity with the `solve_smtlib` front door: a word-only
+        // fallback script has an EMPTY flat assertion view (the bounded encoder
+        // declined at parse) — handing it to the backend would answer a vacuous
+        // `sat`. The word route is its only decider; a decline restores the exact
+        // pre-fallback `unsupported` classification.
+        if script.word_only_fallback.is_some() && script.word_problem.is_some() {
+            return run_word_only(file, &name, &mut script, timeout, args, summary);
+        }
         let input_shape = TermStats::compute(&script.arena, &script.assertions);
         let mut rewrite = apply_rewrite(&mut script, args.rewrite);
         // Word-level preprocessing (P1.2): shrink the post-rewrite assertions and
@@ -1072,6 +1166,13 @@ mod run {
     ///    token — i.e. constraints the slice could not represent were dropped, and
     ///    solving "no constraints" is a vacuous `sat`.
     fn under_parsed_reason(script: &Script, text: &str) -> Option<String> {
+        // T-B.4d word-first fallback: the flat view is empty because the bounded
+        // encoder declined at parse, but the word-problem side channel carries
+        // the constraints FAITHFULLY — `run_one` decides it via the word route
+        // (never the vacuous flat view), so it is not under-parsed.
+        if script.word_only_fallback.is_some() && script.word_problem.is_some() {
+            return None;
+        }
         if script.commands.iter().any(|cmd| {
             matches!(cmd, ScriptCommand::CheckSatAssuming(assumptions) if !assumptions.is_empty())
         }) {

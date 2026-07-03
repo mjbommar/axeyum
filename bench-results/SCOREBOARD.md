@@ -15,7 +15,7 @@ A single-glance, honest view of where the pure-Rust axeyum solver stands against
 ## Headline
 
 - **35 division baselines** measured vs z3 4.13.3, spanning **24 logic fragments** (BV, LIA, QF_ABV, QF_ALIA, QF_AUFBV, QF_AUFLIA, QF_AX, QF_BV, QF_BVFP, QF_DT, QF_FF, QF_FP, QF_LIA, QF_LRA, QF_NIA, QF_NRA, QF_S, QF_SEQ, QF_SLIA, QF_UF, QF_UFBV, QF_UFFF, QF_UFLIA, UF).
-- **DISAGREE = 0 across all baselines** — zero wrong verdicts over 612 oracle-compared instances (992 files total, 665 decided).
+- **DISAGREE = 0 across all baselines** — zero wrong verdicts over 617 oracle-compared instances (992 files total, 670 decided).
 - Decide-rate ranges **0%–100%** across divisions — that spread *is* the capability frontier; DISAGREE = 0 is the soundness floor that holds everywhere.
 
 ## Divisions vs Z3
@@ -45,7 +45,7 @@ Sorted by logic, then by descending decide-rate. Every committed `*solver-vs-z3*
 | QF_NIA | `qf-nia-curated-iand` | 3 | 1 | 33% | 2 | 0 | 0 | 0 | :status | 13.333 |
 | QF_NRA | `qf-nra-synthetic-graduated` | 33 | 30 | 91% | 3 | 0 | 30 | 0 | z3-binary | 5.455 |
 | QF_NRA | `qf-nra-cvc5-regress-clean` | 38 | 21 | 55% | 16 | 1 | 21 | 0 | z3-binary | 8.660 |
-| QF_S | `qf-s-cvc5-regress-clean` | 134 | 52 | 39% | 20 | 62 | 49 | 0 | z3-library+binary | 5.564 |
+| QF_S | `qf-s-cvc5-regress-clean` | 134 | 57 | 43% | 20 | 57 | 54 | 0 | z3-library+binary | 5.208 |
 | QF_SEQ | `qf-seq-cvc5-regress-clean` | 33 | 26 | 79% | 6 | 1 | 15 | 0 | z3-library+binary | 3.752 |
 | QF_SLIA | `qf-slia-cvc5-regress-clean` | 50 | 12 | 24% | 9 | 29 | 11 | 0 | z3-library+binary | 8.584 |
 | QF_UF | `qf-uf-cvc5-regress-clean-overbound-uninterp-sorts` | 6 | 4 | 67% | 2 | 0 | 4 | 0 | z3-binary | 7.489 |
@@ -60,7 +60,7 @@ Sorted by logic, then by descending decide-rate. Every committed `*solver-vs-z3*
 | QF_UFLIA | `qf-uflia-cvc5-regress-clean-overbound-uninterp-sorts` | 2 | 2 | 100% | 0 | 0 | 2 | 0 | z3-binary | 2.294 |
 | UF | `uf-cvc5-regress-clean-quantified` | 5 | 0 | 0% | 0 | 5 | 0 | 0 | :status | 0.000 |
 
-**Totals:** 992 files, 665 decided, 612 oracle-compared, **0 disagreements.**
+**Totals:** 992 files, 670 decided, 617 oracle-compared, **0 disagreements.**
 
 ### QF_NRA row re-measured 2026-07-02 (free-division `/0` witnesses + prior landings)
 
@@ -95,6 +95,17 @@ unknowns count as double-timeout). The 9-hour scoreboard hang met en route was
 an exponential (per-path) DAG walk in the new blast's skeleton scan — fixed
 (`f403991b`) with a regression test; the three divisions now measure in ~10
 minutes total.
+
+**2026-07-03 — the Phase B word route + word-first parse fallback moved QF_S
+52→57 decided** (ADR-0053, T-B.4a/b/d + the harness-parity wiring): five
+declared-`sat` instances the bounded encoder rejected at parse (long literals /
+wide concats, incl. the quadratic word equation `r0_QF_SLIA_issue6520`) now
+decide via the sat-only, ground-evaluator-replayed word-equation search; each
+new `sat` is verdict-compared against the Z3 binary (all five agree,
+DISAGREE=0). QF_SEQ (26/33) and QF_SLIA (12/50) are unchanged — their
+`unsupported` remainder is `str.len`-linked / extended-function / unsat-shaped:
+the next levers are the len↔search link, Phase C/D reductions, and T-B.7 unsat
+derivations.
 
 ### String residual recoveries re-measured 2026-07-02 (ADR-0052 follow-up)
 
