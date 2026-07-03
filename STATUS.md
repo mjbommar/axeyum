@@ -7083,6 +7083,28 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   the **nia_unsat frontier regression** (below), the **uflra fuzz deadline
   hole** (`3b5bbcf0`), the workspace-clippy red (`10e29199`), and the z3-sys
   403 CI layer (`424c761c`).
+  **Update (same session): T-B.3 + T-B.4a + T-B.4b LANDED — the word route is
+  LIVE.** T-B.3 (`dcef8ee2`): cycle ε-inference + INFER_UNIFY/ENDPOINT rules +
+  premise-tracked Conflicts (6000-iter soundness + 1400 adversarial-conflict
+  brute-force property tests). T-B.4a (`3e3b4ba0`): the F-Split/Len-Split
+  arrangement search; `SearchOutcome` has NO unsat variant (wrong-unsat
+  unrepresentable); every `Sat` replay-verified in-crate; 1310/1310 decided on
+  the satisfiable property generator. T-B.4b (`31bb02b8`): parser dual-build
+  side channel (`Script::word_problem`, all-or-nothing over pure word
+  equations/diseqs) + `apply_word_route` second-chance stage strictly after
+  the ADR-0052 gate; bridge-never-unsat regression family committed;
+  **word-equation differential fuzz vs Z3: 600 scripts, 331 jointly decided,
+  DISAGREE=0, 83 axeyum-sat — axeyum decides unbounded string instances for
+  the first time.** T-B.2's constant≈concat spurious-cycle defect (found by
+  T-B.4a) fixed (`8338f32d`). **Honest post-routing re-measure of the three
+  committed string divisions: NO CHANGE** (QF_S 52/134, QF_SEQ 26/33, QF_SLIA
+  12/50, DISAGREE=0) — the undecided remainder is extended-function /
+  `str.len`-linked / unsat shapes the dual-build correctly declines and the
+  bridge cannot yet refute. The measured routing signal points at
+  positive-polarity extended-function→word-equation reductions (Phase D
+  pulled early: `contains`/`prefixof`/`suffixof` are equisatisfiable concat
+  forms with fresh tails), the len↔search link, and T-B.7 unsat derivations
+  as the next decide-rate levers (baselines untouched — timing noise only).
 - **Session 2026-07-01 (cont.) — Strings keystone (P2.7) INITIATED: ADR + Phase-A slice A.1a landed.**
   Strings are the largest decide-rate gap by count (~117) and were unrepresentable
   (no string/sequence sort in the IR — only the length-≤16 bounded BV encoder).
