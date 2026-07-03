@@ -74,14 +74,44 @@ algebra:
 - **Q4 (this note):** gates green (cross-IR 3/3, llvm 20/20, mir 5/5, clippy
   clean); status + plan recorded here.
 
+## Round R (2026-07-02): CFG on both sides — the executors
+
+The follow-ups landed, and further:
+
+- **R1 (`1468170e`):** `mir_reflection.rs` migrated onto `reflect_common::mir` —
+  one MIR reflector in the tree.
+- **R2 (`baa27854`):** `reflect_common::mir` generalized into a **symbolic
+  executor over acyclic MIR CFG** — statements in any block, computed `switchInt`
+  scrutinees (incl. bool: arm `0` = the false edge), `goto` joins via recursion
+  into `ite`, Storage noise skipped, and **sign-aware lowering** from the
+  signature (`Shr` on `i32` → `ashr`; MIR `Gt`/`Lt`/… land on the *same* shared
+  `compare` map as LLVM `icmp`, sign-selected). The lookup-table and
+  straight-line special cases are subsumed and deleted. New proofs: `sel`
+  (branch-preserving MIR diamond == LLVM if-converted `select` — **validates
+  if-conversion**) and `sar` (signed `Shr` == `ashr`).
+- **R3 (`639612ff`):** the LLVM side gets the mirror executor — `br label`
+  follows the edge, `br i1` forks a cloned SSA env and joins as `ite`, `phi`
+  resolves by the predecessor label threaded through the recursion; `lower_fn`
+  dispatches (CFG when the body branches, the fast single-block path otherwise).
+  New proofs: `sel` MIR diamond == LLVM `br`+`phi` diamond (CFG walked by *both*
+  executors), and LLVM O0 `br`+`phi` == LLVM O2 `select` — translation-validation
+  *within* LLVM (the Alive2 use-case shape) on our stack.
+- **R4:** `differential_fuzz_mir_vs_llvm_reflections` — 10 000 deterministic
+  pseudo-random inputs per fixture pair, bit-for-bit agreement required between
+  the two reflections (the DISAGREE=0 discipline applied to the front ends
+  themselves, independent of the prover).
+
+Both executors share the acyclic-only scope: a depth cap turns a cyclic CFG into
+a loud panic — loops remain the `TransitionSystem` path (already exercised by the
+LLVM loop reflector in `llvm_reflection.rs`).
+
 ### Next (follow-ups, not blocking)
 
-- Migrate `mir_reflection.rs`'s own `reflect_mir` onto `reflect_common::mir` so the
-  MIR side has a single reflector too (it currently keeps its switchInt-only
-  version; the shared one is a superset).
-- Grow the cross-IR corpus: multi-statement arithmetic (`add`/`mul`/shifts),
-  signed `Shr`→`ashr`, and a `select`/`ite`-bearing function whose MIR keeps the
-  branch (not if-converted) — exercising MIR CFG, not just `bb0`.
+- Multi-parameter cross-IR equivalence (thread all params, not just `_1`/one reg).
+- MIR `UnaryOp` (`Not`/`Neg`) and `Cast` rvalues; LLVM `switch` instruction.
+- A *wrong-transform* corpus: hand-broken optimization pairs the prover must
+  refute (grow the negative-control set the way the scenario packs do).
+- Promotion out of test-module DRY into a real crate is still ADR-gated.
 
 **Honest scope:** the shared module is source-level DRY across integration tests
 (each test crate compiles its own copy — fine; it is not a public API). Promoting

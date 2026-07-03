@@ -329,6 +329,61 @@ fn lut_mir_equals_llvm() {
     assert_equivalent(8, LUT_MIR, LUT_LL, &(0u128..=255).collect::<Vec<_>>());
 }
 
+/// Deterministic differential fuzz over EVERY paired fixture: reflect both sides,
+/// evaluate at pseudo-random inputs, and require bit-for-bit agreement. This is
+/// the concrete-execution oracle (independent of the symbolic proofs above) —
+/// the DISAGREE=0 discipline applied to the two front ends themselves.
+#[test]
+fn differential_fuzz_mir_vs_llvm_reflections() {
+    let pairs: &[(&str, &str, &str, u32)] = &[
+        ("masked", MASKED_MIR, MASKED_LL, 32),
+        ("sel/select", SEL_MIR, SEL_LL, 32),
+        ("sel/br+phi", SEL_MIR, SEL_BR_LL, 32),
+        ("sar", SAR_MIR, SAR_LL, 32),
+        ("scale", SCALE_MIR, SCALE_LL, 32),
+        ("lut", LUT_MIR, LUT_LL, 8),
+    ];
+    let mut state = 0x5DEE_CE66_D1CE_5EEDu64;
+    let mut lcg = move || {
+        state = state
+            .wrapping_mul(6_364_136_223_846_793_005)
+            .wrapping_add(1);
+        u128::from(state >> 32)
+    };
+    for (name, mir, ll, width) in pairs {
+        let mut arena = TermArena::new();
+        let x_sym = arena.declare("x", Sort::BitVec(*width)).unwrap();
+        let x = arena.var(x_sym);
+        let from_mir = reflect_mir_unary(&mut arena, x, mir);
+        let from_llvm = reflect_unary_into(&mut arena, x, ll);
+        let mask = if *width == 128 {
+            u128::MAX
+        } else {
+            (1u128 << width) - 1
+        };
+        for _ in 0..10_000 {
+            let v = lcg() & mask;
+            let mut asg = Assignment::new();
+            asg.set(
+                x_sym,
+                Value::Bv {
+                    width: *width,
+                    value: v,
+                },
+            );
+            let m = match eval(&arena, from_mir, &asg).unwrap() {
+                Value::Bv { value, .. } => value,
+                other => panic!("mir eval not BV: {other:?}"),
+            };
+            let l = match eval(&arena, from_llvm, &asg).unwrap() {
+                Value::Bv { value, .. } => value,
+                other => panic!("llvm eval not BV: {other:?}"),
+            };
+            assert_eq!(m, l, "{name}: mir/llvm reflections disagree at x={v}");
+        }
+    }
+}
+
 /// A negative control: `masked` MIR must **not** be equivalent to `lut` LLVM — the
 /// equivalence prover is discriminating, not vacuously accepting. (Widths differ,
 /// so compare each against a deliberately-wrong same-width partner instead.)
