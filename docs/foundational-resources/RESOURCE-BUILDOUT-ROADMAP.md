@@ -64,15 +64,15 @@ The current committed data boundary reports:
 - 18 math-field concept rows.
 - 76 bridge-concept rows.
 - 5 example-family rows.
-- 147 non-template math example packs.
-- 960 expected checks.
-- 373 checked proof/evidence rows.
-- 477 replay-only rows.
-- 110 Lean-horizon rows.
-- 147 promoted solver-reuse packs.
+- 148 non-template math example packs.
+- 966 expected checks.
+- 374 checked proof/evidence rows.
+- 481 replay-only rows.
+- 111 Lean-horizon rows.
+- 148 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 147 focused learner-linked packs, with no path-only, index-only, or missing
+- 148 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 This is broad enough that the next work is not "create a few examples." The
@@ -2638,6 +2638,15 @@ Pick one item per commit unless the change is purely navigational.
      `7/2` through a source-linked QF_LRA/Farkas regression against exact `4`
      without claiming general Simpson-rule exactness, composite/adaptive
      quadrature convergence, error bounds, floating-point quadrature
+     correctness, or numerical stability.
+194. Landed: add `finite-divided-differences-v0` as an exact finite Newton
+     interpolation resource. The pack computes divided-difference tables,
+     Newton coefficients, basis products, terms, and interpolation values for
+     `1+x^2` at nodes `0,1,2` and `x^3` at nodes `0,1,2,3`, then promotes the
+     malformed interpolation-value claim `9` through a source-linked
+     QF_LRA/Farkas regression against exact `10` without claiming general
+     interpolation uniqueness, divided-difference identities, error estimates,
+     node-choice conditioning, spline theory, floating-point interpolation
      correctness, or numerical stability.
 
 ## Validation Checklist

@@ -8,12 +8,14 @@ Primary packs:
 - [calculus-algebraic-shadow-v0](../../../artifacts/examples/math/calculus-algebraic-shadow-v0/)
 - [calculus-riemann-sum-v0](../../../artifacts/examples/math/calculus-riemann-sum-v0/)
 - [finite-simpson-rule-v0](../../../artifacts/examples/math/finite-simpson-rule-v0/)
+- [finite-divided-differences-v0](../../../artifacts/examples/math/finite-divided-differences-v0/)
 - [multivariable-calculus-rational-v0](../../../artifacts/examples/math/multivariable-calculus-rational-v0/)
 
 Companion lessons and maps:
 
 - [End To End: Finite Calculus Shadows](calculus-shadows-end-to-end.md)
 - [End To End: Finite Simpson Rule](simpson-rule-end-to-end.md)
+- [End To End: Finite Divided Differences](divided-differences-end-to-end.md)
 - [End To End: Rational Multivariable Calculus](multivariable-calculus-end-to-end.md)
 - [Rational And Real Algebra](rational-real-algebra.md)
 - [Analysis And Topology Proof Horizons](analysis-topology-proof-horizons.md)
@@ -78,6 +80,20 @@ exact integral = 4
 It repeats the replay for `1+x^2` on the same interval and isolates the bad
 claim `Simpson value = 7/2` as a checked QF_LRA/Farkas scalar conflict.
 
+The finite divided-difference pack fixes exact Newton interpolation data. For
+`f(x)=1+x^2` at nodes `0,1,2`, it recomputes:
+
+```text
+sample values       = 1, 2, 5
+divided differences = [1,2,5], [1,3], [1]
+Newton coefficients = 1, 1, 1
+basis at x=3        = 1, 3, 6
+interpolated value  = 10
+```
+
+It repeats the replay for `x^3` at nodes `0,1,2,3` and isolates the bad claim
+`interpolated_value = 9` as a checked QF_LRA/Farkas scalar conflict.
+
 The multivariable pack fixes bivariate polynomial and matrix data:
 
 ```text
@@ -124,6 +140,12 @@ regression seeds, but they do not prove analytic calculus theorems.
 | `finite-simpson-rule-v0` | `bad-simpson-value-rejected` | `unsat` | replay-only | Exact replay rejects the malformed value `7/2` after computing `4`. |
 | `finite-simpson-rule-v0` | `qf-lra-bad-simpson-value` | `unsat` | checked | A QF_LRA/Farkas row checks the scalar contradiction `simpson_value = 4` and `simpson_value = 7/2`. |
 | `finite-simpson-rule-v0` | `general-simpson-rule-theory-lean-horizon` | `not-run` | lean-horizon | Degree-of-exactness, composite/adaptive quadrature convergence, error terms, and floating-point quadrature remain theorem/numerical-honesty work. |
+| `finite-divided-differences-v0` | `quadratic-divided-difference-table` | `sat` | replay-only | The listed Newton table for `1+x^2` at nodes `0,1,2` is replayed exactly. |
+| `finite-divided-differences-v0` | `quadratic-newton-evaluation-witness` | `sat` | replay-only | The Newton form from the quadratic table evaluates to `10` at `x=3`. |
+| `finite-divided-differences-v0` | `cubic-divided-difference-table` | `sat` | replay-only | The listed Newton table for `x^3` at nodes `0,1,2,3` is replayed exactly. |
+| `finite-divided-differences-v0` | `bad-interpolation-value-rejected` | `unsat` | replay-only | Exact replay rejects the malformed value `9` after computing `10`. |
+| `finite-divided-differences-v0` | `qf-lra-bad-interpolation-value` | `unsat` | checked | A QF_LRA/Farkas row checks the scalar contradiction `interpolated_value = 10` and `interpolated_value = 9`. |
+| `finite-divided-differences-v0` | `general-interpolation-theory-lean-horizon` | `not-run` | lean-horizon | Interpolation uniqueness, error estimates, conditioning, splines, and floating-point interpolation remain theorem/numerical-honesty work. |
 | `multivariable-calculus-rational-v0` | `gradient-at-point-replay` | `sat` | replay-only | The fixed bivariate gradient and value are recomputed. |
 | `multivariable-calculus-rational-v0` | `directional-derivative-dot-product` | `sat` | checked | The fixed directional derivative is checked as a gradient dot product. |
 | `multivariable-calculus-rational-v0` | `jacobian-chain-rule-replay` | `sat` | checked | A fixed polynomial-map Jacobian chain-rule matrix product is replayed. |
@@ -147,6 +169,9 @@ The current calculus resources do not prove:
 - convergence of arbitrary tagged partitions, refinements, or mesh limits;
 - general Simpson or Newton-Cotes exactness, composite/adaptive quadrature
   convergence, or quadrature error bounds;
+- general polynomial interpolation uniqueness, divided-difference identities,
+  interpolation error estimates, node-choice conditioning, spline theory, or
+  floating-point interpolation correctness;
 - the fundamental theorem of calculus;
 - uniform convergence, dominated convergence, or interchange of limits;
 - Fréchet differentiability over normed vector spaces;
@@ -190,6 +215,11 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 
 python3 scripts/query-foundational-resources.py checks \
+  --pack finite-divided-differences-v0 \
+  --proof-status lean-horizon \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
   --pack multivariable-calculus-rational-v0 \
   --proof-status lean-horizon \
   --require-any
@@ -212,6 +242,12 @@ python3 scripts/query-foundational-resources.py checks \
 
 python3 scripts/query-foundational-resources.py checks \
   --pack finite-simpson-rule-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-divided-differences-v0 \
   --route Farkas \
   --proof-status checked \
   --require-any
@@ -245,6 +281,13 @@ python3 scripts/query-foundational-resources.py checks \
   --route Farkas \
   --proof-status checked \
   --text simpson \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-divided-differences-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --text interpolation \
   --require-any
 
 python3 scripts/query-foundational-resources.py checks \
@@ -289,15 +332,18 @@ From the repository root:
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/calculus-algebraic-shadow-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/calculus-riemann-sum-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simpson-rule-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-divided-differences-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/multivariable-calculus-rational-v0
 python3 scripts/query-foundational-resources.py horizon-frontier --text calculus --require-any
 python3 scripts/query-foundational-resources.py checks --pack calculus-algebraic-shadow-v0 --proof-status lean-horizon --require-any
 python3 scripts/query-foundational-resources.py checks --pack calculus-riemann-sum-v0 --proof-status lean-horizon --require-any
 python3 scripts/query-foundational-resources.py checks --pack finite-simpson-rule-v0 --proof-status lean-horizon --require-any
+python3 scripts/query-foundational-resources.py checks --pack finite-divided-differences-v0 --proof-status lean-horizon --require-any
 python3 scripts/query-foundational-resources.py checks --pack multivariable-calculus-rational-v0 --proof-status lean-horizon --require-any
 python3 scripts/query-foundational-resources.py checks --pack calculus-algebraic-shadow-v0 --route Farkas --proof-status checked --require-any
 python3 scripts/query-foundational-resources.py checks --pack calculus-riemann-sum-v0 --route Farkas --proof-status checked --require-any
 python3 scripts/query-foundational-resources.py checks --pack finite-simpson-rule-v0 --route Farkas --proof-status checked --require-any
+python3 scripts/query-foundational-resources.py checks --pack finite-divided-differences-v0 --route Farkas --proof-status checked --require-any
 python3 scripts/query-foundational-resources.py checks --pack multivariable-calculus-rational-v0 --route Farkas --proof-status checked --require-any
 ```
 

@@ -11302,6 +11302,112 @@ def validate_simpson_panel(context: str, values: dict[str, Any]) -> dict[str, An
     }
 
 
+def require_fraction_vector_table(context: str, value: Any) -> list[list[Fraction]]:
+    if not isinstance(value, list) or not value:
+        fail(f"{context} must be a non-empty list")
+    return [
+        require_fraction_vector(f"{context}[{index}]", row)
+        for index, row in enumerate(value)
+    ]
+
+
+def divided_difference_rows(nodes: list[Fraction], sample_values: list[Fraction]) -> list[list[Fraction]]:
+    rows = [sample_values]
+    for order in range(1, len(nodes)):
+        previous = rows[-1]
+        current: list[Fraction] = []
+        for index in range(len(previous) - 1):
+            denominator = nodes[index + order] - nodes[index]
+            if denominator == 0:
+                fail("divided differences require distinct nodes")
+            current.append((previous[index + 1] - previous[index]) / denominator)
+        rows.append(current)
+    return rows
+
+
+def newton_basis_values(nodes: list[Fraction], point: Fraction) -> list[Fraction]:
+    basis = [Fraction(1)]
+    product_value = Fraction(1)
+    for node in nodes[:-1]:
+        product_value *= point - node
+        basis.append(product_value)
+    return basis
+
+
+def validate_divided_difference_trace(context: str, values: dict[str, Any]) -> dict[str, Any]:
+    method = values.get("method")
+    require_string(f"{context}.method", method)
+    if method != "newton_divided_differences":
+        fail(f"{context}.method must be newton_divided_differences")
+    polynomial = require_polynomial(f"{context}.polynomial", values.get("polynomial"))
+    nodes = require_fraction_vector(f"{context}.nodes", values.get("nodes"))
+    if len(nodes) < 2:
+        fail(f"{context}.nodes must contain at least two nodes")
+    for previous, current in zip(nodes, nodes[1:]):
+        if not previous < current:
+            fail(f"{context}.nodes must be strictly increasing")
+    if len(normalize_polynomial(polynomial)) > len(nodes):
+        fail(f"{context}.polynomial degree must be less than the number of nodes")
+    sample_values = require_fraction_vector(f"{context}.sample_values", values.get("sample_values"))
+    if len(sample_values) != len(nodes):
+        fail(f"{context}.sample_values length must match nodes")
+    expected_samples = [polynomial_eval(polynomial, node) for node in nodes]
+    if sample_values != expected_samples:
+        fail(f"{context}.sample_values do not match the polynomial")
+    table = require_fraction_vector_table(
+        f"{context}.divided_difference_table",
+        values.get("divided_difference_table"),
+    )
+    if len(table) != len(nodes):
+        fail(f"{context}.divided_difference_table must have one row per divided-difference order")
+    for order, row in enumerate(table):
+        expected_length = len(nodes) - order
+        if len(row) != expected_length:
+            fail(f"{context}.divided_difference_table[{order}] must have length {expected_length}")
+    expected_table = divided_difference_rows(nodes, sample_values)
+    if table != expected_table:
+        fail(f"{context}.divided_difference_table is incorrect")
+    coefficients = require_fraction_vector(
+        f"{context}.newton_coefficients",
+        values.get("newton_coefficients"),
+    )
+    expected_coefficients = [row[0] for row in expected_table]
+    if coefficients != expected_coefficients:
+        fail(f"{context}.newton_coefficients must be the first entry of each divided-difference row")
+    point = require_fraction(f"{context}.evaluation_point", values.get("evaluation_point"))
+    basis = require_fraction_vector(f"{context}.newton_basis_values", values.get("newton_basis_values"))
+    expected_basis = newton_basis_values(nodes, point)
+    if basis != expected_basis:
+        fail(f"{context}.newton_basis_values are incorrect")
+    terms = require_fraction_vector(f"{context}.newton_terms", values.get("newton_terms"))
+    expected_terms = [coefficient * basis_value for coefficient, basis_value in zip(coefficients, basis)]
+    if terms != expected_terms:
+        fail(f"{context}.newton_terms are incorrect")
+    interpolated_value = require_fraction(
+        f"{context}.interpolated_value",
+        values.get("interpolated_value"),
+    )
+    if interpolated_value != sum(terms):
+        fail(f"{context}.interpolated_value is incorrect")
+    polynomial_value = require_fraction(f"{context}.polynomial_value", values.get("polynomial_value"))
+    if polynomial_value != polynomial_eval(polynomial, point):
+        fail(f"{context}.polynomial_value is incorrect")
+    if interpolated_value != polynomial_value:
+        fail(f"{context}.interpolated_value must match the polynomial value")
+    return {
+        "polynomial": polynomial,
+        "nodes": nodes,
+        "sample_values": sample_values,
+        "table": table,
+        "coefficients": coefficients,
+        "evaluation_point": point,
+        "basis": basis,
+        "terms": terms,
+        "interpolated_value": interpolated_value,
+        "polynomial_value": polynomial_value,
+    }
+
+
 def validate_calculus_riemann_sum(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -11523,6 +11629,131 @@ def validate_finite_simpson_rule(expected: dict[str, Any]) -> None:
     horizon_data = horizon.get("data", {})
     require_string("Simpson horizon target_theorem_shape", horizon_data.get("target_theorem_shape"))
     require_string("Simpson horizon future_checker", horizon_data.get("future_checker"))
+
+
+def validate_finite_divided_differences(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    quadratic = checks["quadratic-divided-difference-table"]
+    if quadratic["expected_result"] != "sat":
+        fail("quadratic-divided-difference-table must expect sat")
+    if quadratic.get("proof_status") != "replay-only":
+        fail("quadratic-divided-difference-table must be replay-only")
+    if quadratic.get("validation") != "exact_rational_divided_difference_replay":
+        fail("quadratic-divided-difference-table validation is incorrect")
+    quadratic_values = single_witness_values(quadratic, witnesses)
+    quadratic_replay = validate_divided_difference_trace(
+        "quadratic divided-difference table",
+        quadratic_values,
+    )
+    if quadratic_replay["interpolated_value"] != Fraction(10):
+        fail("quadratic-divided-difference-table must compute value 10 at x=3")
+
+    evaluation = checks["quadratic-newton-evaluation-witness"]
+    if evaluation["expected_result"] != "sat":
+        fail("quadratic-newton-evaluation-witness must expect sat")
+    if evaluation.get("proof_status") != "replay-only":
+        fail("quadratic-newton-evaluation-witness must be replay-only")
+    if evaluation.get("validation") != "exact_rational_newton_interpolation_replay":
+        fail("quadratic-newton-evaluation-witness validation is incorrect")
+    if single_witness_values(evaluation, witnesses) != quadratic_values:
+        fail("quadratic-newton-evaluation-witness must cite the quadratic table")
+
+    cubic = checks["cubic-divided-difference-table"]
+    if cubic["expected_result"] != "sat":
+        fail("cubic-divided-difference-table must expect sat")
+    if cubic.get("proof_status") != "replay-only":
+        fail("cubic-divided-difference-table must be replay-only")
+    if cubic.get("validation") != "exact_rational_divided_difference_replay":
+        fail("cubic-divided-difference-table validation is incorrect")
+    cubic_values = single_witness_values(cubic, witnesses)
+    cubic_replay = validate_divided_difference_trace("cubic divided-difference table", cubic_values)
+    if cubic_replay["interpolated_value"] != Fraction(64):
+        fail("cubic-divided-difference-table must compute value 64 at x=4")
+
+    bad = checks["bad-interpolation-value-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-interpolation-value-rejected must expect unsat")
+    if bad.get("proof_status") != "replay-only":
+        fail("bad-interpolation-value-rejected must be replay-only")
+    if bad.get("validation") != "exact_rational_bad_interpolation_value_replay":
+        fail("bad-interpolation-value-rejected validation is incorrect")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "quadratic-newton-table":
+        fail("bad-interpolation-value-rejected must cite the quadratic table")
+    computed = require_fraction(
+        "bad interpolation computed_interpolated_value",
+        data.get("computed_interpolated_value"),
+    )
+    claimed = require_fraction(
+        "bad interpolation claimed_interpolated_value",
+        data.get("claimed_interpolated_value"),
+    )
+    gap = require_fraction("bad interpolation interpolation_value_gap", data.get("interpolation_value_gap"))
+    if computed != quadratic_replay["interpolated_value"]:
+        fail("bad-interpolation-value-rejected computed value must match the quadratic replay")
+    if computed == claimed:
+        fail("bad-interpolation-value-rejected malformed claim must disagree with replay")
+    if computed - claimed != gap:
+        fail("bad-interpolation-value-rejected interpolation_value_gap is incorrect")
+    if gap <= 0:
+        fail("bad-interpolation-value-rejected interpolation_value_gap must be positive")
+    if "separate qf-lra-bad-interpolation-value" not in bad.get("notes", ""):
+        fail("bad-interpolation-value-rejected notes must name the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-interpolation-value"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-interpolation-value must expect unsat")
+    if qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-interpolation-value must be checked")
+    if qf_bad.get("validation") != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-interpolation-value must use exact_rational_farkas_evidence")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_witness") != "quadratic-newton-table":
+        fail("qf-lra-bad-interpolation-value must cite the quadratic table")
+    if qf_data.get("source_replay_row") != "bad-interpolation-value-rejected":
+        fail("qf-lra-bad-interpolation-value must cite the replay row")
+    qf_computed = require_fraction(
+        "qf interpolation computed_interpolated_value",
+        qf_data.get("computed_interpolated_value"),
+    )
+    qf_claimed = require_fraction(
+        "qf interpolation claimed_interpolated_value",
+        qf_data.get("claimed_interpolated_value"),
+    )
+    if qf_computed != computed or qf_claimed != claimed:
+        fail("qf-lra-bad-interpolation-value data must match the replay row")
+    conflict = qf_data.get("farkas_conflict")
+    require_string("qf interpolation farkas_conflict", conflict)
+    if conflict != "interpolated_value = 10 and interpolated_value = 9":
+        fail("qf-lra-bad-interpolation-value must document the Farkas conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf interpolation smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-divided-differences-v0/smt2/"
+        "bad-interpolation-value-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-lra-bad-interpolation-value smt2_artifact must name the checked source artifact")
+    check_source("qf interpolation smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf interpolation farkas_regression", regression)
+    if "finite_divided_differences_bad_interpolation_value_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-interpolation-value must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf interpolation certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-interpolation-value certificate must document checked Farkas evidence")
+
+    horizon = checks["general-interpolation-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-interpolation-theory-lean-horizon must be not-run")
+    if horizon.get("proof_status") != "lean-horizon":
+        fail("general-interpolation-theory-lean-horizon must remain lean-horizon")
+    horizon_data = horizon.get("data", {})
+    require_string("interpolation horizon target_theorem_shape", horizon_data.get("target_theorem_shape"))
+    require_string("interpolation horizon future_checker", horizon_data.get("future_checker"))
 
 
 def validate_linear_algebra_rational(expected: dict[str, Any]) -> None:
@@ -34244,6 +34475,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_calculus_riemann_sum(expected)
     if metadata["id"] == "finite-simpson-rule-v0":
         validate_finite_simpson_rule(expected)
+    if metadata["id"] == "finite-divided-differences-v0":
+        validate_finite_divided_differences(expected)
     if metadata["id"] == "complex-algebraic-v0":
         validate_complex_algebraic(expected)
     if metadata["id"] == "complex-plane-transforms-v0":

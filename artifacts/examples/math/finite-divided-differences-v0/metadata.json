@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "id": "finite-divided-differences-v0",
+  "title": "Finite Divided Difference Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_numerical_analysis",
+    "field_real_analysis",
+    "curriculum_polynomials",
+    "curriculum_calculus",
+    "curriculum_rationals",
+    "curriculum_reals",
+    "bridge_polynomial_coefficient_factor_replay",
+    "bridge_bounded_family_asymptotic_boundary"
+  ],
+  "field_ids": [
+    "numerical_analysis",
+    "real_analysis"
+  ],
+  "curriculum_nodes": [
+    "polynomials",
+    "calculus",
+    "rationals",
+    "reals"
+  ],
+  "axeyum_fragments": [
+    "finite divided differences",
+    "Newton interpolation replay",
+    "polynomial evaluation",
+    "LRA (exact rationals)",
+    "QF_LRA",
+    "Farkas",
+    "finite replay",
+    "Lean horizon",
+    "numerical-honesty metadata"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-divided-differences-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite Newton divided-difference bad interpolation value QF_LRA/Farkas regression seed",
+    "pressure": "Exact rational Newton divided-difference replay for f(x)=1+x^2 at nodes 0,1,2 computes interpolated_value = 10 at x=3, while a malformed row claims interpolated_value = 9, isolating a compact scalar equality conflict for the Farkas route.",
+    "evidence": [
+      "qf-lra-bad-interpolation-value"
+    ],
+    "next_step": "Promote additional interpolation rows only when they add distinct node-ordering, barycentric, spline, conditioning, floating-point, or theorem-reconstruction pressure; keep general interpolation error and convergence theory in future Lean or numerical-honesty lanes."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/02-structures/polynomials.md",
+    "docs/curriculum/03-destinations/calculus.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/curriculum/01-number-systems/reals.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/divided-differences-end-to-end.md",
+    "artifacts/examples/math/finite-divided-differences-v0/smt2/bad-interpolation-value-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+  ],
+  "expected_results": [
+    "quadratic-divided-difference-table",
+    "quadratic-newton-evaluation-witness",
+    "cubic-divided-difference-table",
+    "bad-interpolation-value-rejected",
+    "qf-lra-bad-interpolation-value",
+    "general-interpolation-theory-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode the fixed polynomial, nodes, sample values, divided-difference table, Newton coefficients, basis products, terms, and interpolation value as deterministic rational replay obligations.",
+    "Route the false interpolation value through checked QF_LRA/Farkas evidence after replay computes the exact value.",
+    "Expose the pack through polynomial, calculus, real-analysis, numerical-analysis, and learner query surfaces.",
+    "Keep general interpolation uniqueness, error estimates, node-choice conditioning, spline theory, floating-point interpolation correctness, and numerical-stability claims marked as future Lean or numerical-honesty work until formal routes exist."
+  ]
+}

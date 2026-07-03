@@ -1,0 +1,122 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-divided-differences-v0",
+  "witnesses": [
+    {
+      "id": "quadratic-newton-table",
+      "description": "Newton divided-difference replay for f(x)=1+x^2 at nodes 0, 1, 2.",
+      "values": {
+        "method": "newton_divided_differences",
+        "polynomial": ["1", "0", "1"],
+        "nodes": ["0", "1", "2"],
+        "sample_values": ["1", "2", "5"],
+        "divided_difference_table": [
+          ["1", "2", "5"],
+          ["1", "3"],
+          ["1"]
+        ],
+        "newton_coefficients": ["1", "1", "1"],
+        "evaluation_point": "3",
+        "newton_basis_values": ["1", "3", "6"],
+        "newton_terms": ["1", "3", "6"],
+        "interpolated_value": "10",
+        "polynomial_value": "10"
+      }
+    },
+    {
+      "id": "cubic-newton-table",
+      "description": "Newton divided-difference replay for f(x)=x^3 at nodes 0, 1, 2, 3.",
+      "values": {
+        "method": "newton_divided_differences",
+        "polynomial": ["0", "0", "0", "1"],
+        "nodes": ["0", "1", "2", "3"],
+        "sample_values": ["0", "1", "8", "27"],
+        "divided_difference_table": [
+          ["0", "1", "8", "27"],
+          ["1", "7", "19"],
+          ["3", "6"],
+          ["1"]
+        ],
+        "newton_coefficients": ["0", "1", "3", "1"],
+        "evaluation_point": "4",
+        "newton_basis_values": ["1", "4", "12", "24"],
+        "newton_terms": ["0", "4", "36", "24"],
+        "interpolated_value": "64",
+        "polynomial_value": "64"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "quadratic-divided-difference-table",
+      "claim": "The listed divided-difference table for f(x)=1+x^2 at nodes 0, 1, 2 is exact.",
+      "expected_result": "sat",
+      "validation": "exact_rational_divided_difference_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["quadratic-newton-table"],
+      "notes": "The validator recomputes all divided-difference rows, Newton coefficients, basis products, terms, and the exact polynomial value over rationals."
+    },
+    {
+      "id": "quadratic-newton-evaluation-witness",
+      "claim": "The Newton form from the quadratic table evaluates to 10 at x=3.",
+      "expected_result": "sat",
+      "validation": "exact_rational_newton_interpolation_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["quadratic-newton-table"],
+      "notes": "The interpolation row is a finite exact replay for one node set and evaluation point, not a general interpolation theorem."
+    },
+    {
+      "id": "cubic-divided-difference-table",
+      "claim": "The listed divided-difference table for f(x)=x^3 at nodes 0, 1, 2, 3 is exact.",
+      "expected_result": "sat",
+      "validation": "exact_rational_divided_difference_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["cubic-newton-table"],
+      "notes": "The validator checks a second finite table with a nonzero third divided difference."
+    },
+    {
+      "id": "bad-interpolation-value-rejected",
+      "claim": "For the quadratic Newton table, the interpolated value at x=3 is 9.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_bad_interpolation_value_replay",
+      "proof_status": "replay-only",
+      "data": {
+        "source_witness": "quadratic-newton-table",
+        "computed_interpolated_value": "10",
+        "claimed_interpolated_value": "9",
+        "interpolation_value_gap": "1"
+      },
+      "notes": "Exact replay computes the interpolated value as 10, so the claimed value 9 is rejected; the separate qf-lra-bad-interpolation-value row owns the checked Farkas evidence."
+    },
+    {
+      "id": "qf-lra-bad-interpolation-value",
+      "claim": "The fixed malformed interpolation-value claim is linearly inconsistent.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_farkas_evidence",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "quadratic-newton-table",
+        "source_replay_row": "bad-interpolation-value-rejected",
+        "computed_interpolated_value": "10",
+        "claimed_interpolated_value": "9",
+        "farkas_conflict": "interpolated_value = 10 and interpolated_value = 9",
+        "smt2_artifact": "artifacts/examples/math/finite-divided-differences-v0/smt2/bad-interpolation-value-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_divided_differences_bad_interpolation_value_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes the Newton-form value as 10, while the malformed row claims 9; the source QF_LRA artifact isolates that scalar contradiction for Farkas checking."
+    },
+    {
+      "id": "general-interpolation-theory-lean-horizon",
+      "claim": "General polynomial interpolation uniqueness, divided-difference identities, interpolation error estimates, conditioning, and floating-point interpolation correctness require future theorem or numerical-honesty resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_boundary",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "For Newton, Lagrange, barycentric, and spline interpolation, prove uniqueness, basis equivalence, error terms, node hypotheses, conditioning statements, and method-specific numerical assumptions separately from finite replay rows.",
+        "future_checker": "Lean theorem statements for polynomial interpolation theory plus separate numerical-honesty or QF_FP artifacts for floating-point interpolation implementations."
+      },
+      "notes": "The finite exact row is a checked resource for two rational divided-difference tables, not a theorem about arbitrary node sets, interpolation error, splines, conditioning, or floating-point implementations."
+    }
+  ]
+}

@@ -19,6 +19,7 @@ Example packs:
 - [reals-rcf-shadow-v0](../../../artifacts/examples/math/reals-rcf-shadow-v0/)
 - [polynomial-identities-v0](../../../artifacts/examples/math/polynomial-identities-v0/)
 - [polynomial-factorization-rational-v0](../../../artifacts/examples/math/polynomial-factorization-rational-v0/)
+- [finite-divided-differences-v0](../../../artifacts/examples/math/finite-divided-differences-v0/)
 - [generating-functions-v0](../../../artifacts/examples/math/generating-functions-v0/)
 - [finite-recurrence-prefix-v0](../../../artifacts/examples/math/finite-recurrence-prefix-v0/)
 - [finite-root-finding-v0](../../../artifacts/examples/math/finite-root-finding-v0/)
@@ -63,7 +64,8 @@ fixed order facts, rational interval/ball inclusions, finite interval
 arithmetic shadows, bounded epsilon-delta samples, fixed-decimal rounding
 shadows, ordered-field real witnesses, small nonlinear polynomial constraints,
 fixed-degree polynomial identities and roots, rational polynomial
-factorization/division/GCD/square-free replay, finite generating-function
+factorization/division/GCD/square-free replay, finite divided-difference
+interpolation replay, finite generating-function
 coefficient extraction and Cauchy-product replay, finite recurrence-prefix and
 companion-matrix replay, finite bisection/Newton root-finding replay, finite
 multivariable Newton-step Hessian-solve replay, finite
@@ -190,8 +192,30 @@ gcd(x^3 - x, x^2 - 1) = x^2 - 1
 
 It also rejects rational linear factors for `x^2 + 1` by recomputing the
 negative discriminant, then checks the final nonnegative-discriminant conflict
-through QF_LRA/Farkas evidence. For a finite generating-function check, encode
-coefficient lists and replay convolution:
+through QF_LRA/Farkas evidence.
+
+For finite divided-difference interpolation, encode the polynomial, nodes,
+sample values, Newton table, and evaluation point:
+
+```text
+f(x) = 1 + x^2
+nodes = 0, 1, 2
+sample values = 1, 2, 5
+Newton coefficients = 1, 1, 1
+value at x = 3 is 10
+```
+
+The `finite-divided-differences-v0` validator recomputes every
+divided-difference row, Newton basis value, term, and interpolation value. It
+rejects the malformed claim `interpolated_value = 9` after exact replay
+computes `10`, then checks the scalar equality conflict through QF_LRA/Farkas
+evidence. General interpolation uniqueness, error estimates, node conditioning,
+spline theory, and floating-point interpolation stay in the Lean or
+numerical-honesty horizon; see
+[End To End: Finite Divided Differences](divided-differences-end-to-end.md).
+
+For a finite generating-function check, encode coefficient lists and replay
+convolution:
 
 ```text
 (1 + 2*x + x^2)(1 + x + x^2)
@@ -600,6 +624,8 @@ cargo test -p axeyum-solver --test math_resource_lra_routes reals_rcf_shadow_neg
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/polynomial-identities-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/polynomial-factorization-rational-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes polynomial_factorization_irreducible_quadratic_discriminant_artifact_emits_checked_farkas
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-divided-differences-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_divided_differences_bad_interpolation_value_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/generating-functions-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-recurrence-prefix-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_recurrence_prefix_bad_value_artifact_emits_checked_farkas
@@ -665,6 +691,8 @@ polynomial replay, and a checked false-root Diophantine row, read
 [End To End: Polynomial Identities](polynomial-identities-end-to-end.md). For
 factorization, division, and GCD replay, read
 [End To End: Rational Polynomial Factorization](polynomial-factorization-end-to-end.md).
+For finite Newton divided-difference replay, read
+[End To End: Finite Divided Differences](divided-differences-end-to-end.md).
 For the focused boundary between exact complex real-pair and polynomial
 replay versus holomorphic, analytic-continuation, algebraic-closure, and
 arbitrary factorization theorem claims, read
