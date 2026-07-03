@@ -191,6 +191,127 @@ pub fn lower_body(
     (result.expect("a `ret`"), result_width)
 }
 
+// ---- CFG execution: `br` / `phi` over labeled blocks ----------------------------
+
+/// Split a `define`'s body into `(label, lines)` blocks (comments stripped). The
+/// entry block is whatever precedes the first label — usually empty, since rustc
+/// and clang label the entry (`start:` / a numeric label).
+fn split_cfg_blocks(ll: &str) -> Vec<(String, Vec<String>)> {
+    let mut blocks: Vec<(String, Vec<String>)> = vec![(String::new(), Vec::new())];
+    let mut in_body = false;
+    for raw in ll.lines() {
+        let line = raw.split(';').next().unwrap_or("").trim();
+        if line.starts_with("define") {
+            in_body = true;
+            continue;
+        }
+        if !in_body || line.is_empty() {
+            continue;
+        }
+        if line == "}" {
+            break;
+        }
+        if let Some(lab) = line.strip_suffix(':') {
+            blocks.push((lab.to_string(), Vec::new()));
+        } else {
+            blocks.last_mut().unwrap().1.push(line.to_string());
+        }
+    }
+    blocks.retain(|(_, lines)| !lines.is_empty());
+    blocks
+}
+
+/// Symbolically execute from block `label` (entered from `pred`) to `ret`.
+/// `br i1` forks on a clone of the environment and joins as `ite`; `phi` picks
+/// the incoming value whose edge label matches `pred`. The depth cap turns a
+/// cyclic CFG into a loud panic (loops are the `TransitionSystem` path).
+fn exec_cfg_block(
+    arena: &mut TermArena,
+    blocks: &[(String, Vec<String>)],
+    mut env: HashMap<String, (TermId, u32)>,
+    label: &str,
+    pred: &str,
+    depth: usize,
+) -> (TermId, u32) {
+    assert!(
+        depth < 64,
+        "cyclic or too-deep LLVM CFG (loops are the TransitionSystem path)"
+    );
+    let (_, lines) = blocks
+        .iter()
+        .find(|(l, _)| l == label)
+        .unwrap_or_else(|| panic!("undefined block %{label}"));
+    for line in lines {
+        if let Some(rest) = line.strip_prefix("ret ") {
+            let toks: Vec<&str> = rest.split_whitespace().collect();
+            let w = width_of(toks[0]);
+            return (resolve(arena, &env, toks[1], w), w);
+        }
+        if let Some(rest) = line.strip_prefix("br ") {
+            if let Some(target) = rest.strip_prefix("label %") {
+                return exec_cfg_block(arena, blocks, env, target.trim(), label, depth + 1);
+            }
+            // br i1 %c, label %t, label %f
+            let cond_tok = rest
+                .strip_prefix("i1 ")
+                .expect("conditional br")
+                .split(',')
+                .next()
+                .expect("br condition")
+                .trim();
+            let cond = resolve(arena, &env, cond_tok, 1);
+            let mut targets = rest
+                .split("label %")
+                .skip(1)
+                .map(|s| s.trim().trim_end_matches(','));
+            let t = targets.next().expect("br true target");
+            let f = targets.next().expect("br false target");
+            let then = exec_cfg_block(arena, blocks, env.clone(), t, label, depth + 1);
+            let els = exec_cfg_block(arena, blocks, env, f, label, depth + 1);
+            return (arena.ite(cond, then.0, els.0).unwrap(), then.1);
+        }
+        let (dst_tok, rhs) = line.split_once(" = ").expect("instruction `%d = ..`");
+        let dst = dst_tok.trim_start_matches('%').to_string();
+        let entry = if let Some(rest) = rhs.strip_prefix("phi ") {
+            // phi iW [ %v, %pred1 ], [ %v2, %pred2 ]  — pick the edge we came in on.
+            let w = width_of(rest.split_whitespace().next().expect("phi type"));
+            let mut picked = None;
+            for group in rest.split('[').skip(1) {
+                let inner = group.split(']').next().expect("phi incoming");
+                let (val, lab) = inner.split_once(',').expect("phi `val, label`");
+                if lab.trim().trim_start_matches('%') == pred {
+                    picked = Some(resolve(arena, &env, val.trim(), w));
+                }
+            }
+            (
+                picked.unwrap_or_else(|| panic!("phi has no incoming edge from %{pred}")),
+                w,
+            )
+        } else {
+            lower_rhs(arena, &env, rhs)
+        };
+        env.insert(dst, entry);
+    }
+    panic!("block %{label} fell through without a terminator");
+}
+
+/// Lower a function body — dispatching to the CFG executor when the body
+/// branches (`br`), and the fast single-block path otherwise.
+pub fn lower_fn(
+    arena: &mut TermArena,
+    env: &mut HashMap<String, (TermId, u32)>,
+    ll: &str,
+) -> (TermId, u32) {
+    let has_cfg = ll.lines().any(|l| l.trim().starts_with("br "));
+    if has_cfg {
+        let blocks = split_cfg_blocks(ll);
+        let entry = blocks.first().expect("a nonempty body").0.clone();
+        exec_cfg_block(arena, &blocks, env.clone(), &entry, "", 0)
+    } else {
+        lower_body(arena, env, ll)
+    }
+}
+
 pub fn reflect_ll(ll: &str) -> Reflected {
     let mut arena = TermArena::new();
     let mut env: HashMap<String, (TermId, u32)> = HashMap::new();
@@ -205,7 +326,7 @@ pub fn reflect_ll(ll: &str) -> Reflected {
         env.insert(name.clone(), (arena.var(sym), width));
         params.push((name, sym, width));
     }
-    let (result, _w) = lower_body(&mut arena, &mut env, ll);
+    let (result, _w) = lower_fn(&mut arena, &mut env, ll);
     Reflected {
         arena,
         params,
@@ -222,5 +343,5 @@ pub fn reflect_unary_into(arena: &mut TermArena, x: TermId, ll: &str) -> TermId 
     assert_eq!(decls.len(), 1, "reflect_unary_into expects one parameter");
     let mut env: HashMap<String, (TermId, u32)> = HashMap::new();
     env.insert(decls[0].0.clone(), (x, decls[0].1));
-    lower_body(arena, &mut env, ll).0
+    lower_fn(arena, &mut env, ll).0
 }

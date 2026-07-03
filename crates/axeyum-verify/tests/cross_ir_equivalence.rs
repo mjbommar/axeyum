@@ -85,6 +85,29 @@ start:
 }
 ";
 
+/// The **unoptimized** (`-O0`-shape) LLVM form of `sel`: a real `br i1` diamond
+/// with a `phi` join — the same CFG shape as the MIR. Reflecting this exercises
+/// the LLVM-side CFG executor (branch fork + phi resolved by incoming edge).
+const SEL_BR_LL: &str = r"
+define i32 @sel(i32 %x) unnamed_addr {
+start:
+  %c = icmp ugt i32 %x, 100
+  br i1 %c, label %then, label %else
+
+then:                                             ; preds = %start
+  %a = and i32 %x, 255
+  br label %join
+
+else:                                             ; preds = %start
+  %b = or i32 %x, 1
+  br label %join
+
+join:                                             ; preds = %else, %then
+  %r = phi i32 [ %a, %then ], [ %b, %else ]
+  ret i32 %r
+}
+";
+
 // ---- `sar(x: i32) = x >> 4` : signed MIR `Shr` ~ LLVM `ashr` ---------------------
 // Sign-aware lowering: MIR's `Shr` is arithmetic on a signed local; the shared
 // reflector must pick `ashr` (not `lshr`) from the `i32` signature.
@@ -238,6 +261,38 @@ fn sel_mir_diamond_equals_llvm_select() {
             0xdead_beef,
             u128::from(u32::MAX),
         ],
+    );
+}
+
+/// `sel`, CFG on **both** sides: the branch-preserving MIR diamond == the
+/// unoptimized LLVM `br`+`phi` diamond, for all u32. Both symbolic executors
+/// walk a real CFG and land in one term algebra.
+#[test]
+fn sel_mir_diamond_equals_llvm_br_phi() {
+    assert_equivalent(
+        32,
+        SEL_MIR,
+        SEL_BR_LL,
+        &[0, 100, 101, 0xdead_beef, u128::from(u32::MAX)],
+    );
+}
+
+/// LLVM O0 vs O2, one platform: the `br`+`phi` diamond == the if-converted
+/// `select` form, for all u32 — the solver validates LLVM's own optimization
+/// pipeline (translation-validation *within* LLVM, à la Alive2, on our stack).
+#[test]
+fn sel_llvm_br_phi_equals_llvm_select() {
+    let mut arena = TermArena::new();
+    let x_sym = arena.declare("x", Sort::BitVec(32)).unwrap();
+    let x = arena.var(x_sym);
+    let o0 = reflect_unary_into(&mut arena, x, SEL_BR_LL);
+    let o2 = reflect_unary_into(&mut arena, x, SEL_LL);
+    let eq = arena.eq(o0, o2).unwrap();
+    let outcome =
+        prove(&mut arena, &[], eq, &SolverConfig::default()).expect("solver should not hard-error");
+    assert!(
+        matches!(outcome, ProofOutcome::Proved(_)),
+        "O0 br+phi and O2 select forms of sel must be provably equal, got {outcome:?}"
     );
 }
 
