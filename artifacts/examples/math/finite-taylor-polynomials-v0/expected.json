@@ -1,0 +1,137 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-taylor-polynomials-v0",
+  "witnesses": [
+    {
+      "id": "quadratic-taylor-at-one",
+      "description": "Exact degree-2 Taylor replay for f(x)=1+2x+x^2 at center 1 and x=3/2.",
+      "values": {
+        "method": "taylor_polynomial",
+        "polynomial": ["1", "2", "1"],
+        "center": "1",
+        "degree": 2,
+        "derivative_values": ["4", "4", "2"],
+        "factorials": ["1", "1", "2"],
+        "taylor_coefficients": ["4", "4", "1"],
+        "evaluation_point": "3/2",
+        "basis_values": ["1", "1/2", "1/4"],
+        "taylor_terms": ["4", "2", "1/4"],
+        "taylor_value": "25/4",
+        "polynomial_value": "25/4",
+        "match_mode": "exact"
+      }
+    },
+    {
+      "id": "cubic-taylor-at-zero",
+      "description": "Exact degree-3 Taylor replay for f(x)=1+x+x^2+x^3 at center 0 and x=2.",
+      "values": {
+        "method": "taylor_polynomial",
+        "polynomial": ["1", "1", "1", "1"],
+        "center": "0",
+        "degree": 3,
+        "derivative_values": ["1", "1", "2", "6"],
+        "factorials": ["1", "1", "2", "6"],
+        "taylor_coefficients": ["1", "1", "1", "1"],
+        "evaluation_point": "2",
+        "basis_values": ["1", "2", "4", "8"],
+        "taylor_terms": ["1", "2", "4", "8"],
+        "taylor_value": "15",
+        "polynomial_value": "15",
+        "match_mode": "exact"
+      }
+    },
+    {
+      "id": "truncated-linearization",
+      "description": "Degree-1 Taylor linearization replay for f(x)=1+2x+x^2 at center 1 and x=3/2, with the exact rational remainder kept explicit.",
+      "values": {
+        "method": "taylor_polynomial",
+        "polynomial": ["1", "2", "1"],
+        "center": "1",
+        "degree": 1,
+        "derivative_values": ["4", "4"],
+        "factorials": ["1", "1"],
+        "taylor_coefficients": ["4", "4"],
+        "evaluation_point": "3/2",
+        "basis_values": ["1", "1/2"],
+        "taylor_terms": ["4", "2"],
+        "taylor_value": "6",
+        "polynomial_value": "25/4",
+        "remainder": "1/4",
+        "match_mode": "truncated"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "quadratic-taylor-at-one-witness",
+      "claim": "The listed degree-2 Taylor polynomial for f(x)=1+2x+x^2 at center 1 evaluates to the original polynomial value at x=3/2.",
+      "expected_result": "sat",
+      "validation": "exact_rational_taylor_polynomial_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["quadratic-taylor-at-one"],
+      "notes": "The validator recomputes symbolic derivative values, factorials, Taylor coefficients, basis powers, terms, Taylor value, and polynomial value."
+    },
+    {
+      "id": "cubic-taylor-at-zero-witness",
+      "claim": "The listed degree-3 Taylor polynomial for f(x)=1+x+x^2+x^3 at center 0 evaluates to the original polynomial value at x=2.",
+      "expected_result": "sat",
+      "validation": "exact_rational_taylor_polynomial_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["cubic-taylor-at-zero"],
+      "notes": "This row checks a second exact polynomial Taylor replay without claiming a general Taylor theorem."
+    },
+    {
+      "id": "truncated-linearization-witness",
+      "claim": "The listed degree-1 Taylor linearization for f(x)=1+2x+x^2 at center 1 evaluates to 6 at x=3/2 and leaves exact remainder 1/4.",
+      "expected_result": "sat",
+      "validation": "exact_rational_taylor_truncation_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["truncated-linearization"],
+      "notes": "The truncated row deliberately does not claim equality with the full polynomial value; the exact rational remainder is replayed."
+    },
+    {
+      "id": "bad-taylor-value-rejected",
+      "claim": "For the exact quadratic Taylor row, the Taylor value is 6.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_bad_taylor_value_replay",
+      "proof_status": "replay-only",
+      "data": {
+        "source_witness": "quadratic-taylor-at-one",
+        "computed_taylor_value": "25/4",
+        "claimed_taylor_value": "6",
+        "taylor_value_gap": "1/4"
+      },
+      "notes": "Exact replay computes the quadratic Taylor value as 25/4, so the claimed value 6 is rejected; the separate qf-lra-bad-taylor-value row owns the checked Farkas evidence."
+    },
+    {
+      "id": "qf-lra-bad-taylor-value",
+      "claim": "The fixed malformed Taylor-value claim is linearly inconsistent.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_farkas_evidence",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "quadratic-taylor-at-one",
+        "source_replay_row": "bad-taylor-value-rejected",
+        "computed_taylor_value": "25/4",
+        "claimed_taylor_value": "6",
+        "farkas_conflict": "taylor_value = 25/4 and taylor_value = 6",
+        "smt2_artifact": "artifacts/examples/math/finite-taylor-polynomials-v0/smt2/bad-taylor-value-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_taylor_polynomials_bad_value_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes the degree-2 Taylor value as 25/4, while the malformed row claims 6; the source QF_LRA artifact isolates that scalar contradiction for Farkas checking."
+    },
+    {
+      "id": "general-taylor-theory-lean-horizon",
+      "claim": "General Taylor theorem, remainder bounds, analytic convergence, radius-of-convergence, smoothness-hypothesis, multivariable Taylor, and floating-point Taylor-evaluation claims require future theorem or numerical-honesty resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_boundary",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "For Taylor polynomials, prove Taylor theorem hypotheses, Lagrange/integral/remainder bounds, analytic convergence, radius of convergence, smoothness conditions, multivariable Taylor forms, and approximation error claims separately from fixed rational replay rows.",
+        "future_checker": "Lean theorem statements for Taylor theorem and polynomial/analytic approximation plus separate numerical-honesty or QF_FP artifacts for floating-point Taylor implementations."
+      },
+      "notes": "The finite exact rows are checked resources for three rational Taylor evaluations, not theorem evidence for arbitrary smooth functions, convergence radii, remainder estimates, multivariable expansions, or floating-point implementations."
+    }
+  ]
+}

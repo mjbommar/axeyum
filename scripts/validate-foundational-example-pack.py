@@ -11621,6 +11621,97 @@ def validate_finite_difference_trace(context: str, values: dict[str, Any]) -> di
     }
 
 
+def validate_taylor_polynomial_trace(context: str, values: dict[str, Any]) -> dict[str, Any]:
+    method = values.get("method")
+    require_string(f"{context}.method", method)
+    if method != "taylor_polynomial":
+        fail(f"{context}.method must be taylor_polynomial")
+    polynomial = require_polynomial(f"{context}.polynomial", values.get("polynomial"))
+    center = require_fraction(f"{context}.center", values.get("center"))
+    degree = require_int(f"{context}.degree", values.get("degree"))
+    if degree < 0:
+        fail(f"{context}.degree must be nonnegative")
+    evaluation_point = require_fraction(
+        f"{context}.evaluation_point",
+        values.get("evaluation_point"),
+    )
+    derivative_values = require_fraction_vector(
+        f"{context}.derivative_values",
+        values.get("derivative_values"),
+    )
+    factorials = require_fraction_vector(f"{context}.factorials", values.get("factorials"))
+    taylor_coefficients = require_fraction_vector(
+        f"{context}.taylor_coefficients",
+        values.get("taylor_coefficients"),
+    )
+    basis_values = require_fraction_vector(f"{context}.basis_values", values.get("basis_values"))
+    taylor_terms = require_fraction_vector(f"{context}.taylor_terms", values.get("taylor_terms"))
+    expected_length = degree + 1
+    for name, vector in [
+        ("derivative_values", derivative_values),
+        ("factorials", factorials),
+        ("taylor_coefficients", taylor_coefficients),
+        ("basis_values", basis_values),
+        ("taylor_terms", taylor_terms),
+    ]:
+        if len(vector) != expected_length:
+            fail(f"{context}.{name} length must be degree + 1")
+    for order in range(expected_length):
+        derivative_polynomial = nth_polynomial_derivative(polynomial, order)
+        expected_derivative = polynomial_eval(derivative_polynomial, center)
+        if derivative_values[order] != expected_derivative:
+            fail(f"{context}.derivative_values[{order}] is incorrect")
+        expected_factorial = Fraction(factorial(order))
+        if factorials[order] != expected_factorial:
+            fail(f"{context}.factorials[{order}] is incorrect")
+        expected_coefficient = expected_derivative / expected_factorial
+        if taylor_coefficients[order] != expected_coefficient:
+            fail(f"{context}.taylor_coefficients[{order}] is incorrect")
+        expected_basis = (evaluation_point - center) ** order
+        if basis_values[order] != expected_basis:
+            fail(f"{context}.basis_values[{order}] is incorrect")
+        expected_term = expected_coefficient * expected_basis
+        if taylor_terms[order] != expected_term:
+            fail(f"{context}.taylor_terms[{order}] is incorrect")
+
+    taylor_value = require_fraction(f"{context}.taylor_value", values.get("taylor_value"))
+    if taylor_value != sum(taylor_terms):
+        fail(f"{context}.taylor_value is incorrect")
+    polynomial_value = require_fraction(
+        f"{context}.polynomial_value",
+        values.get("polynomial_value"),
+    )
+    if polynomial_value != polynomial_eval(polynomial, evaluation_point):
+        fail(f"{context}.polynomial_value is incorrect")
+    match_mode = values.get("match_mode")
+    require_string(f"{context}.match_mode", match_mode)
+    if match_mode == "exact":
+        if taylor_value != polynomial_value:
+            fail(f"{context}.taylor_value must equal polynomial_value in exact mode")
+    elif match_mode == "truncated":
+        remainder = require_fraction(f"{context}.remainder", values.get("remainder"))
+        if polynomial_value - taylor_value != remainder:
+            fail(f"{context}.remainder is incorrect")
+        if remainder == 0:
+            fail(f"{context}.remainder must be nonzero for the fixed truncated row")
+    else:
+        fail(f"{context}.match_mode must be exact or truncated")
+    return {
+        "polynomial": polynomial,
+        "center": center,
+        "degree": degree,
+        "evaluation_point": evaluation_point,
+        "derivative_values": derivative_values,
+        "factorials": factorials,
+        "taylor_coefficients": taylor_coefficients,
+        "basis_values": basis_values,
+        "taylor_terms": taylor_terms,
+        "taylor_value": taylor_value,
+        "polynomial_value": polynomial_value,
+        "match_mode": match_mode,
+    }
+
+
 def validate_calculus_riemann_sum(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -12236,6 +12327,138 @@ def validate_finite_difference_derivatives(expected: dict[str, Any]) -> None:
     horizon_data = horizon.get("data", {})
     require_string("finite difference horizon target_theorem_shape", horizon_data.get("target_theorem_shape"))
     require_string("finite difference horizon future_checker", horizon_data.get("future_checker"))
+
+
+def validate_finite_taylor_polynomials(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    quadratic = checks["quadratic-taylor-at-one-witness"]
+    if quadratic["expected_result"] != "sat":
+        fail("quadratic-taylor-at-one-witness must expect sat")
+    if quadratic.get("proof_status") != "replay-only":
+        fail("quadratic-taylor-at-one-witness must be replay-only")
+    if quadratic.get("validation") != "exact_rational_taylor_polynomial_replay":
+        fail("quadratic-taylor-at-one-witness validation is incorrect")
+    quadratic_replay = validate_taylor_polynomial_trace(
+        "quadratic Taylor row",
+        single_witness_values(quadratic, witnesses),
+    )
+    if quadratic_replay["match_mode"] != "exact":
+        fail("quadratic-taylor-at-one-witness must use exact mode")
+    if quadratic_replay["taylor_value"] != Fraction(25, 4):
+        fail("quadratic-taylor-at-one-witness must compute value 25/4")
+
+    cubic = checks["cubic-taylor-at-zero-witness"]
+    if cubic["expected_result"] != "sat":
+        fail("cubic-taylor-at-zero-witness must expect sat")
+    if cubic.get("proof_status") != "replay-only":
+        fail("cubic-taylor-at-zero-witness must be replay-only")
+    if cubic.get("validation") != "exact_rational_taylor_polynomial_replay":
+        fail("cubic-taylor-at-zero-witness validation is incorrect")
+    cubic_replay = validate_taylor_polynomial_trace(
+        "cubic Taylor row",
+        single_witness_values(cubic, witnesses),
+    )
+    if cubic_replay["match_mode"] != "exact":
+        fail("cubic-taylor-at-zero-witness must use exact mode")
+    if cubic_replay["taylor_value"] != Fraction(15):
+        fail("cubic-taylor-at-zero-witness must compute value 15")
+
+    truncated = checks["truncated-linearization-witness"]
+    if truncated["expected_result"] != "sat":
+        fail("truncated-linearization-witness must expect sat")
+    if truncated.get("proof_status") != "replay-only":
+        fail("truncated-linearization-witness must be replay-only")
+    if truncated.get("validation") != "exact_rational_taylor_truncation_replay":
+        fail("truncated-linearization-witness validation is incorrect")
+    truncated_replay = validate_taylor_polynomial_trace(
+        "truncated Taylor row",
+        single_witness_values(truncated, witnesses),
+    )
+    if truncated_replay["match_mode"] != "truncated":
+        fail("truncated-linearization-witness must use truncated mode")
+    if truncated_replay["taylor_value"] != Fraction(6):
+        fail("truncated-linearization-witness must compute value 6")
+    if truncated_replay["polynomial_value"] != Fraction(25, 4):
+        fail("truncated-linearization-witness polynomial value must be 25/4")
+
+    bad = checks["bad-taylor-value-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-taylor-value-rejected must expect unsat")
+    if bad.get("proof_status") != "replay-only":
+        fail("bad-taylor-value-rejected must be replay-only")
+    if bad.get("validation") != "exact_rational_bad_taylor_value_replay":
+        fail("bad-taylor-value-rejected validation is incorrect")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "quadratic-taylor-at-one":
+        fail("bad-taylor-value-rejected must cite the quadratic Taylor witness")
+    computed = require_fraction("bad Taylor computed_taylor_value", data.get("computed_taylor_value"))
+    claimed = require_fraction("bad Taylor claimed_taylor_value", data.get("claimed_taylor_value"))
+    gap = require_fraction("bad Taylor taylor_value_gap", data.get("taylor_value_gap"))
+    if computed != quadratic_replay["taylor_value"]:
+        fail("bad-taylor-value-rejected computed value must match quadratic replay")
+    if computed == claimed:
+        fail("bad-taylor-value-rejected malformed claim must disagree with replay")
+    if abs(computed - claimed) != gap:
+        fail("bad-taylor-value-rejected taylor_value_gap is incorrect")
+    if gap <= 0:
+        fail("bad-taylor-value-rejected taylor_value_gap must be positive")
+    if "separate qf-lra-bad-taylor-value" not in bad.get("notes", ""):
+        fail("bad-taylor-value-rejected notes must name the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-taylor-value"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-taylor-value must expect unsat")
+    if qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-taylor-value must be checked")
+    if qf_bad.get("validation") != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-taylor-value must use exact_rational_farkas_evidence")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_witness") != "quadratic-taylor-at-one":
+        fail("qf-lra-bad-taylor-value must cite the quadratic Taylor witness")
+    if qf_data.get("source_replay_row") != "bad-taylor-value-rejected":
+        fail("qf-lra-bad-taylor-value must cite the replay row")
+    qf_computed = require_fraction(
+        "qf Taylor computed_taylor_value",
+        qf_data.get("computed_taylor_value"),
+    )
+    qf_claimed = require_fraction(
+        "qf Taylor claimed_taylor_value",
+        qf_data.get("claimed_taylor_value"),
+    )
+    if qf_computed != computed or qf_claimed != claimed:
+        fail("qf-lra-bad-taylor-value data must match the replay row")
+    conflict = qf_data.get("farkas_conflict")
+    require_string("qf Taylor farkas_conflict", conflict)
+    if conflict != "taylor_value = 25/4 and taylor_value = 6":
+        fail("qf-lra-bad-taylor-value must document the Farkas conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf Taylor smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-taylor-polynomials-v0/smt2/"
+        "bad-taylor-value-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-lra-bad-taylor-value smt2_artifact must name the checked source artifact")
+    check_source("qf Taylor smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf Taylor farkas_regression", regression)
+    if "finite_taylor_polynomials_bad_value_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-taylor-value must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf Taylor certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-taylor-value certificate must document checked Farkas evidence")
+
+    horizon = checks["general-taylor-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-taylor-theory-lean-horizon must be not-run")
+    if horizon.get("proof_status") != "lean-horizon":
+        fail("general-taylor-theory-lean-horizon must remain lean-horizon")
+    horizon_data = horizon.get("data", {})
+    require_string("Taylor horizon target_theorem_shape", horizon_data.get("target_theorem_shape"))
+    require_string("Taylor horizon future_checker", horizon_data.get("future_checker"))
 
 
 def validate_linear_algebra_rational(expected: dict[str, Any]) -> None:
@@ -34963,6 +35186,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_barycentric_interpolation(expected)
     if metadata["id"] == "finite-difference-derivatives-v0":
         validate_finite_difference_derivatives(expected)
+    if metadata["id"] == "finite-taylor-polynomials-v0":
+        validate_finite_taylor_polynomials(expected)
     if metadata["id"] == "complex-algebraic-v0":
         validate_complex_algebraic(expected)
     if metadata["id"] == "complex-plane-transforms-v0":

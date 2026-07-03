@@ -64,15 +64,15 @@ The current committed data boundary reports:
 - 18 math-field concept rows.
 - 76 bridge-concept rows.
 - 5 example-family rows.
-- 150 non-template math example packs.
-- 978 expected checks.
-- 376 checked proof/evidence rows.
-- 489 replay-only rows.
-- 113 Lean-horizon rows.
-- 150 promoted solver-reuse packs.
+- 151 non-template math example packs.
+- 984 expected checks.
+- 377 checked proof/evidence rows.
+- 493 replay-only rows.
+- 114 Lean-horizon rows.
+- 151 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 150 focused learner-linked packs, with no path-only, index-only, or missing
+- 151 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 This is broad enough that the next work is not "create a few examples." The
@@ -698,6 +698,7 @@ Current packs:
 - `finite-divided-differences-v0`
 - `finite-barycentric-interpolation-v0`
 - `finite-difference-derivatives-v0`
+- `finite-taylor-polynomials-v0`
 - `multivariable-calculus-rational-v0`
 - `finite-compactness-v0`
 - `finite-connectedness-v0`
@@ -737,10 +738,10 @@ Build next:
   bad curvature rows tied to their source QF_LRA/Farkas artifacts; keep
   `finite-projected-gradient-v0`'s bad projection and bad projected-decrease
   rows tied to their source QF_LRA/Farkas artifacts; keep
-  `finite-divided-differences-v0`, `finite-barycentric-interpolation-v0`, and
-  `finite-difference-derivatives-v0` bad interpolation/stencil source rows
-  replay-only with separate checked `qf-lra-*` proof rows tied to their source
-  QF_LRA/Farkas artifacts; keep
+  `finite-divided-differences-v0`, `finite-barycentric-interpolation-v0`,
+  `finite-difference-derivatives-v0`, and `finite-taylor-polynomials-v0` bad
+  interpolation/stencil/Taylor source rows replay-only with separate checked
+  `qf-lra-*` proof rows tied to their source QF_LRA/Farkas artifacts; keep
   `finite-proximal-gradient-v0`'s bad proximal
   point, bad composite-decrease, and bad box-proximal-point rows tied to their source QF_LRA/Farkas artifacts; keep
   `finite-chebyshev-systems-v0`'s explicit duplicate-node,
@@ -993,6 +994,7 @@ Current packs:
 - `finite-divided-differences-v0`
 - `finite-barycentric-interpolation-v0`
 - `finite-difference-derivatives-v0`
+- `finite-taylor-polynomials-v0`
 
 Build next:
 
@@ -2678,6 +2680,15 @@ Pick one item per commit unless the change is purely navigational.
      truncation-error bounds, convergence order, stability, boundary
      conditions, PDE-discretization correctness, automatic-differentiation
      behavior, or floating-point derivative accuracy.
+197. Landed: add `finite-taylor-polynomials-v0` as an exact finite Taylor
+     polynomial resource. The pack computes derivative values, factorials,
+     Taylor coefficients, basis powers, exact Taylor/polynomial values, and a
+     truncated linearization remainder for fixed polynomial rows, then promotes
+     the malformed Taylor-value claim `6` through a source-linked
+     QF_LRA/Farkas regression against exact `25/4` without claiming Taylor
+     theorem hypotheses, remainder formulas, analytic convergence,
+     radius-of-convergence, multivariable Taylor theory, or floating-point
+     Taylor-evaluation accuracy.
 
 ## Validation Checklist
 

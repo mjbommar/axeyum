@@ -62,15 +62,15 @@ The committed resource query currently reports:
 - 18 field rows.
 - 76 bridge-concept rows.
 - 5 example-family rows.
-- 150 non-template math packs.
-- 978 expected checks.
-- 376 checked proof/evidence rows.
-- 489 replay-only rows.
-- 113 Lean-horizon rows.
-- 150 promoted solver-reuse packs.
+- 151 non-template math packs.
+- 984 expected checks.
+- 377 checked proof/evidence rows.
+- 493 replay-only rows.
+- 114 Lean-horizon rows.
+- 151 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 150 focused learner-linked packs, with no path-only, index-only, or missing
+- 151 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 The next phase is therefore a depth phase, not a seed phase. New packs are
@@ -158,7 +158,7 @@ Exit criteria:
 - No lesson implies a finite bounded check proves an unbounded theorem.
 
 Current audit: [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md) records that
-all 150 current non-template packs satisfy the focused-lesson side of this
+all 151 current non-template packs satisfy the focused-lesson side of this
 gate. Keep this true as new packs land.
 
 ### Wave 3: Proof-Route Depth
@@ -2699,6 +2699,16 @@ Pick one row per commit unless the change is purely navigational.
      Taylor-error, convergence-order, stability, boundary-condition,
      PDE-discretization, automatic-differentiation, and floating-point
      finite-difference theory.
+309. Landed: add `finite-taylor-polynomials-v0` as an exact finite Taylor
+     polynomial resource. The pack replays symbolic derivative values,
+     factorials, Taylor coefficients, basis powers, exact polynomial values,
+     and one degree-1 truncation with exact remainder `1/4`, then adds
+     `qf-lra-bad-taylor-value` as the source-linked Farkas row for the false
+     Taylor-value claim `6` versus exact `25/4`. The learner and query pages
+     keep this finite exact Taylor shadow separate from Taylor theorem
+     hypotheses, remainder formulas, analytic convergence, radius of
+     convergence, multivariable Taylor theory, and floating-point Taylor
+     evaluation.
 
 ## Validation Checklist
 

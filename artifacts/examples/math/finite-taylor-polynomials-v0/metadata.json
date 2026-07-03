@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "id": "finite-taylor-polynomials-v0",
+  "title": "Finite Taylor Polynomial Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_numerical_analysis",
+    "field_real_analysis",
+    "curriculum_polynomials",
+    "curriculum_calculus",
+    "curriculum_rationals",
+    "curriculum_reals",
+    "bridge_derivative_identity_shadow",
+    "bridge_polynomial_coefficient_factor_replay",
+    "bridge_exact_vs_floating_arithmetic",
+    "bridge_bounded_family_asymptotic_boundary"
+  ],
+  "field_ids": [
+    "numerical_analysis",
+    "real_analysis"
+  ],
+  "curriculum_nodes": [
+    "polynomials",
+    "calculus",
+    "rationals",
+    "reals"
+  ],
+  "axeyum_fragments": [
+    "finite Taylor polynomial replay",
+    "symbolic polynomial differentiation",
+    "polynomial evaluation",
+    "LRA (exact rationals)",
+    "QF_LRA",
+    "Farkas",
+    "finite replay",
+    "Lean horizon",
+    "numerical-honesty metadata"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-taylor-polynomials-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite Taylor polynomial bad value QF_LRA/Farkas regression seed",
+    "pressure": "Exact rational Taylor replay for f(x)=1+2x+x^2 at center 1 and x=3/2 computes taylor_value = 25/4, while a malformed row claims taylor_value = 6, isolating a compact scalar equality conflict for the Farkas route.",
+    "evidence": [
+      "qf-lra-bad-taylor-value"
+    ],
+    "next_step": "Promote additional Taylor rows only when they add distinct truncation, multivariable, analytic-convergence, floating-point, or theorem-reconstruction pressure; keep Taylor theorem, remainder bounds, and convergence claims in future Lean or numerical-honesty lanes."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/02-structures/polynomials.md",
+    "docs/curriculum/03-destinations/calculus.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/curriculum/01-number-systems/reals.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/taylor-polynomials-end-to-end.md",
+    "artifacts/examples/math/finite-taylor-polynomials-v0/smt2/bad-taylor-value-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+  ],
+  "expected_results": [
+    "quadratic-taylor-at-one-witness",
+    "cubic-taylor-at-zero-witness",
+    "truncated-linearization-witness",
+    "bad-taylor-value-rejected",
+    "qf-lra-bad-taylor-value",
+    "general-taylor-theory-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode the fixed polynomial, center, degree, derivative values, factorials, Taylor coefficients, basis values, terms, Taylor value, polynomial value, and optional truncated remainder as deterministic rational replay obligations.",
+    "Route the false Taylor value through checked QF_LRA/Farkas evidence after replay computes the exact value.",
+    "Expose the pack through derivative, polynomial, calculus, real-analysis, numerical-analysis, and learner query surfaces.",
+    "Keep Taylor theorem, remainder estimates, analytic convergence, radius-of-convergence, smoothness hypotheses, multivariable Taylor, floating-point Taylor evaluation, and general approximation theory marked as future Lean or numerical-honesty work until formal routes exist."
+  ]
+}

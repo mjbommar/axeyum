@@ -22,6 +22,7 @@ Example packs:
 - [finite-divided-differences-v0](../../../artifacts/examples/math/finite-divided-differences-v0/)
 - [finite-barycentric-interpolation-v0](../../../artifacts/examples/math/finite-barycentric-interpolation-v0/)
 - [finite-difference-derivatives-v0](../../../artifacts/examples/math/finite-difference-derivatives-v0/)
+- [finite-taylor-polynomials-v0](../../../artifacts/examples/math/finite-taylor-polynomials-v0/)
 - [generating-functions-v0](../../../artifacts/examples/math/generating-functions-v0/)
 - [finite-recurrence-prefix-v0](../../../artifacts/examples/math/finite-recurrence-prefix-v0/)
 - [finite-root-finding-v0](../../../artifacts/examples/math/finite-root-finding-v0/)
@@ -68,7 +69,8 @@ shadows, ordered-field real witnesses, small nonlinear polynomial constraints,
 fixed-degree polynomial identities and roots, rational polynomial
 factorization/division/GCD/square-free replay, finite divided-difference
 interpolation replay, finite barycentric interpolation replay, finite
-difference derivative stencil replay, finite generating-function
+difference derivative stencil replay, finite Taylor polynomial replay,
+finite generating-function
 coefficient extraction and Cauchy-product replay, finite recurrence-prefix and
 companion-matrix replay, finite bisection/Newton root-finding replay, finite
 multivariable Newton-step Hessian-solve replay, finite
@@ -256,6 +258,28 @@ scalar equality conflict through QF_LRA/Farkas evidence. Truncation-error,
 convergence-order, stability, boundary-stencil, PDE-discretization, and
 floating-point derivative claims remain theorem or numerical-honesty work; see
 [End To End: Finite Difference Derivatives](finite-difference-derivatives-end-to-end.md).
+
+For finite Taylor polynomials, encode the polynomial, center, degree,
+derivative values, factorials, Taylor coefficients, basis powers, and
+evaluation point:
+
+```text
+f(x) = 1 + 2*x + x^2
+a = 1
+x = 3/2
+Taylor_2(x) = 4 + 4*(1/2) + 1*(1/4) = 25/4
+Taylor_1(x) = 4 + 4*(1/2) = 6, remainder = 1/4
+```
+
+The `finite-taylor-polynomials-v0` validator recomputes symbolic derivative
+values, factorials, Taylor coefficients, basis powers, terms, the Taylor
+value, the polynomial value, and the explicit truncated remainder. It rejects
+the malformed exact claim `taylor_value = 6` after exact replay computes
+`25/4`, then checks the scalar equality conflict through QF_LRA/Farkas
+evidence. Taylor theorem, remainder bounds, analytic convergence,
+radius-of-convergence, smoothness hypotheses, multivariable Taylor, and
+floating-point Taylor evaluation remain theorem or numerical-honesty work; see
+[End To End: Finite Taylor Polynomials](taylor-polynomials-end-to-end.md).
 
 For a finite generating-function check, encode coefficient lists and replay
 convolution:

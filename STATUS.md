@@ -240,6 +240,22 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite Taylor polynomial resource landed.**
+  `finite-taylor-polynomials-v0` now gives the real-analysis, calculus, and
+  numerical-analysis lanes a compact exact Taylor-polynomial example: it
+  replays symbolic derivative values, factorials, Taylor coefficients, basis
+  powers, exact polynomial values for quadratic and cubic rows, and one
+  degree-1 truncation with exact remainder `1/4`. It rejects the malformed
+  exact Taylor claim `6` versus exact `25/4` through a source-linked
+  QF_LRA/Farkas row. The focused learner page, rational-real algebra page,
+  calculus theorem-boundary page, analysis/numerical query guide, derivative
+  and polynomial bridge rows, validator, resource smoke queries, generated
+  dashboards, and `math_resource_lra_routes` regression keep this fixed exact
+  Taylor replay separate from Taylor theorem, remainder-bound, analytic
+  convergence, radius-of-convergence, smoothness, multivariable Taylor, and
+  floating-point Taylor-evaluation theory. The public summary now reports 122
+  concept rows, 151 packs, 984 expected checks, 377 checked rows, 493
+  replay-only rows, 114 Lean-horizon rows, and 151 promoted solver-reuse packs.
 - **Finite difference derivative resource landed.**
   `finite-difference-derivatives-v0` now gives the real-analysis and
   numerical-analysis lanes a compact exact finite-difference derivative
@@ -253,9 +269,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `math_resource_lra_routes` regression keep this fixed exact stencil replay
   separate from Taylor-error, convergence-order, stability,
   boundary-condition, PDE-discretization, automatic-differentiation, and
-  floating-point finite-difference theory. The public summary now reports 122
-  concept rows, 150 packs, 978 expected checks, 376 checked rows, 489
-  replay-only rows, 113 Lean-horizon rows, and 150 promoted solver-reuse packs.
+  floating-point finite-difference theory. The current public summary is
+  recorded in the latest process-lane bullet above.
 - **Finite barycentric interpolation resource landed.**
   `finite-barycentric-interpolation-v0` now gives the real-analysis and
   numerical-analysis lanes a compact exact barycentric interpolation example:

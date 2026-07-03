@@ -11,6 +11,7 @@ Primary packs:
 - [finite-divided-differences-v0](../../../artifacts/examples/math/finite-divided-differences-v0/)
 - [finite-barycentric-interpolation-v0](../../../artifacts/examples/math/finite-barycentric-interpolation-v0/)
 - [finite-difference-derivatives-v0](../../../artifacts/examples/math/finite-difference-derivatives-v0/)
+- [finite-taylor-polynomials-v0](../../../artifacts/examples/math/finite-taylor-polynomials-v0/)
 - [multivariable-calculus-rational-v0](../../../artifacts/examples/math/multivariable-calculus-rational-v0/)
 
 Companion lessons and maps:
@@ -20,6 +21,7 @@ Companion lessons and maps:
 - [End To End: Finite Divided Differences](divided-differences-end-to-end.md)
 - [End To End: Finite Barycentric Interpolation](barycentric-interpolation-end-to-end.md)
 - [End To End: Finite Difference Derivatives](finite-difference-derivatives-end-to-end.md)
+- [End To End: Finite Taylor Polynomials](taylor-polynomials-end-to-end.md)
 - [End To End: Rational Multivariable Calculus](multivariable-calculus-end-to-end.md)
 - [Rational And Real Algebra](rational-real-algebra.md)
 - [Analysis And Topology Proof Horizons](analysis-topology-proof-horizons.md)
@@ -109,6 +111,22 @@ central second difference = (f(1/2) - 2f(1) + f(3/2)) / (1/2)^2 = 2
 It also checks a forward first-difference row for `1+3x` and isolates the bad
 claim `finite_difference_value = 5` as a checked QF_LRA/Farkas scalar conflict.
 
+The finite Taylor-polynomial pack fixes exact derivative, factorial,
+coefficient, basis, and value rows. For `f(x)=1+2x+x^2`, center `1`, and
+`x=3/2`, it recomputes:
+
+```text
+f(1), f'(1), f''(1) = 4, 4, 2
+Taylor coefficients = 4, 4, 1
+basis powers        = 1, 1/2, 1/4
+Taylor value        = 25/4
+polynomial value    = 25/4
+```
+
+It also checks `1+x+x^2+x^3` at center `0`, records a degree-1 truncation with
+exact remainder `1/4`, and isolates the bad exact claim
+`taylor_value = 6` as a checked QF_LRA/Farkas scalar conflict.
+
 The multivariable pack fixes bivariate polynomial and matrix data:
 
 ```text
@@ -173,6 +191,12 @@ regression seeds, but they do not prove analytic calculus theorems.
 | `finite-difference-derivatives-v0` | `bad-finite-difference-value-rejected` | `unsat` | replay-only | Exact replay rejects the malformed value `5` after computing `4`. |
 | `finite-difference-derivatives-v0` | `qf-lra-bad-finite-difference-value` | `unsat` | checked | A QF_LRA/Farkas row checks the scalar contradiction `finite_difference_value = 4` and `finite_difference_value = 5`. |
 | `finite-difference-derivatives-v0` | `general-finite-difference-theory-lean-horizon` | `not-run` | lean-horizon | Truncation error, convergence order, stability, boundary stencils, PDE schemes, and floating-point finite-difference behavior remain theorem/numerical-honesty work. |
+| `finite-taylor-polynomials-v0` | `quadratic-taylor-at-one-witness` | `sat` | replay-only | The listed degree-2 Taylor row for `1+2*x+x^2` at center `1` evaluates to `25/4`. |
+| `finite-taylor-polynomials-v0` | `cubic-taylor-at-zero-witness` | `sat` | replay-only | The listed degree-3 Taylor row for `1+x+x^2+x^3` at center `0` evaluates to `15`. |
+| `finite-taylor-polynomials-v0` | `truncated-linearization-witness` | `sat` | replay-only | A degree-1 Taylor linearization evaluates to `6` and records exact remainder `1/4`. |
+| `finite-taylor-polynomials-v0` | `bad-taylor-value-rejected` | `unsat` | replay-only | Exact replay rejects the malformed exact value `6` after computing `25/4`. |
+| `finite-taylor-polynomials-v0` | `qf-lra-bad-taylor-value` | `unsat` | checked | A QF_LRA/Farkas row checks the scalar contradiction `taylor_value = 25/4` and `taylor_value = 6`. |
+| `finite-taylor-polynomials-v0` | `general-taylor-theory-lean-horizon` | `not-run` | lean-horizon | Taylor theorem, remainder bounds, analytic convergence, smoothness hypotheses, multivariable Taylor, and floating-point Taylor evaluation remain theorem/numerical-honesty work. |
 | `multivariable-calculus-rational-v0` | `gradient-at-point-replay` | `sat` | replay-only | The fixed bivariate gradient and value are recomputed. |
 | `multivariable-calculus-rational-v0` | `directional-derivative-dot-product` | `sat` | checked | The fixed directional derivative is checked as a gradient dot product. |
 | `multivariable-calculus-rational-v0` | `jacobian-chain-rule-replay` | `sat` | checked | A fixed polynomial-map Jacobian chain-rule matrix product is replayed. |
@@ -195,6 +219,12 @@ resource: it recomputes stencil samples and symbolic derivative values. It
 does not claim Taylor-error, convergence-order, stability, PDE, boundary, or
 floating-point finite-difference theory.
 
+The finite Taylor-polynomial pack is also finite exact-rational replay: it
+recomputes derivative samples, factorials, coefficients, basis powers, values,
+and one explicit truncated remainder. It does not claim Taylor theorem,
+remainder-bound, convergence, smoothness, multivariable, or floating-point
+Taylor theory.
+
 ## What Is Not Proved Yet
 
 The current calculus resources do not prove:
@@ -214,6 +244,10 @@ The current calculus resources do not prove:
   bounds, convergence order, stability, boundary-condition handling, PDE
   discretization correctness, automatic-differentiation implementation
   behavior, or floating-point derivative accuracy;
+- Taylor theorem hypotheses, Lagrange/integral/Peano/asymptotic remainder
+  formulas, analytic convergence, radius-of-convergence, approximation
+  error bounds, multivariable Taylor theorem variants, or floating-point
+  Taylor-series evaluation accuracy;
 - the fundamental theorem of calculus;
 - uniform convergence, dominated convergence, or interchange of limits;
 - Fréchet differentiability over normed vector spaces;
@@ -267,6 +301,11 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 
 python3 scripts/query-foundational-resources.py checks \
+  --pack finite-taylor-polynomials-v0 \
+  --proof-status lean-horizon \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
   --pack multivariable-calculus-rational-v0 \
   --proof-status lean-horizon \
   --require-any
@@ -301,6 +340,12 @@ python3 scripts/query-foundational-resources.py checks \
 
 python3 scripts/query-foundational-resources.py checks \
   --pack finite-difference-derivatives-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-taylor-polynomials-v0 \
   --route Farkas \
   --proof-status checked \
   --require-any
@@ -351,6 +396,13 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 
 python3 scripts/query-foundational-resources.py checks \
+  --pack finite-taylor-polynomials-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --text Taylor \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
   --pack multivariable-calculus-rational-v0 \
   --route Farkas \
   --proof-status checked \
@@ -395,6 +447,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-divided-differences-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-barycentric-interpolation-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-difference-derivatives-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-taylor-polynomials-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/multivariable-calculus-rational-v0
 python3 scripts/query-foundational-resources.py horizon-frontier --text calculus --require-any
 python3 scripts/query-foundational-resources.py checks --pack calculus-algebraic-shadow-v0 --proof-status lean-horizon --require-any
@@ -403,6 +456,7 @@ python3 scripts/query-foundational-resources.py checks --pack finite-simpson-rul
 python3 scripts/query-foundational-resources.py checks --pack finite-divided-differences-v0 --proof-status lean-horizon --require-any
 python3 scripts/query-foundational-resources.py checks --pack finite-barycentric-interpolation-v0 --proof-status lean-horizon --require-any
 python3 scripts/query-foundational-resources.py checks --pack finite-difference-derivatives-v0 --proof-status lean-horizon --require-any
+python3 scripts/query-foundational-resources.py checks --pack finite-taylor-polynomials-v0 --proof-status lean-horizon --require-any
 python3 scripts/query-foundational-resources.py checks --pack multivariable-calculus-rational-v0 --proof-status lean-horizon --require-any
 python3 scripts/query-foundational-resources.py checks --pack calculus-algebraic-shadow-v0 --route Farkas --proof-status checked --require-any
 python3 scripts/query-foundational-resources.py checks --pack calculus-riemann-sum-v0 --route Farkas --proof-status checked --require-any
@@ -410,6 +464,7 @@ python3 scripts/query-foundational-resources.py checks --pack finite-simpson-rul
 python3 scripts/query-foundational-resources.py checks --pack finite-divided-differences-v0 --route Farkas --proof-status checked --require-any
 python3 scripts/query-foundational-resources.py checks --pack finite-barycentric-interpolation-v0 --route Farkas --proof-status checked --require-any
 python3 scripts/query-foundational-resources.py checks --pack finite-difference-derivatives-v0 --route Farkas --proof-status checked --require-any
+python3 scripts/query-foundational-resources.py checks --pack finite-taylor-polynomials-v0 --route Farkas --proof-status checked --require-any
 python3 scripts/query-foundational-resources.py checks --pack multivariable-calculus-rational-v0 --route Farkas --proof-status checked --require-any
 ```
 
