@@ -16175,6 +16175,38 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-03 (afternoon) — the P1.5 keystone opens, UF×NRA lands, Phase C
+  engine core lands, and the 4th review is applied.**
+  - (`a3460101`) **P1.5 slice (a): the generic online CDCL(T) driver** —
+    `CdclT<T: TheorySolver>` with 1-UIP learning over the MIXED implication
+    graph (Boolean + theory reason clauses from e-graph `explain` cores),
+    lockstep theory push/pop, deadline in the search loop. EufTheory wired
+    first, opt-in entry (`check_qf_uf_online_cdclt`), default dispatch
+    unchanged. Parity: 2500-instance online-vs-offline house fuzz, 2500
+    agree, 0 DISAGREE; the z3-gated QF_UF fuzz (3000) unchanged; no
+    TheorySolver trait changes. Next: slice (b) — the StringTheory adapter
+    (the integration payoff the census demands).
+  - (`881c76f6`) **UF×NRA combination made explicit (P1.6 slice)** — the
+    eager-Ackermann→NRA composition existed *accidentally*, four declining
+    routes deep; now an intentional, telemetry-recorded route with replay-
+    gated sat, threaded deadline, and a documented boundary. NEW 700-case
+    `qf_ufnra` differential fuzz DISAGREE=0; both shared-path guards
+    (nra/nia fuzzes) DISAGREE=0; issue5836-2 decided; the linear QF_UFLRA
+    path provably untouched.
+  - (`0acf3535`) **Phase C engine core (T-C.1/2, ADR-0054)** — interval-set
+    code-point predicates + transition-regex Brzozowski derivatives with
+    native `R{n,m}` (no pre-unrolling: `R{100,200}` closure = 202 states,
+    linear) + the independent reference matcher. Trust anchor: the
+    fundamental derivative theorem property-tested over 20,000 engine-vs-
+    matcher cases, zero disagreements.
+  - (`686087cd`, `6b17e70c`, `3c13df63`) **4th periodic review applied +
+    the census** — scoreboard counts made rot-proof (links, not copies;
+    machine totals 674/992), multi-agent git hygiene promoted from private
+    memory to CLAUDE.md + the contributor guide, the CI docs-filter leak
+    actually fixed (`scripts/**`/`justfile`), ADR-0054 proposed, and the
+    review's sequencing recorded: P1.5 integration outranks Phase-C
+    broadening; word-unsat hardening (cvc5 second oracle, mutation testing,
+    normalize fuzz, Alethe emitter) queued before any parity language.
 - **2026-07-03 — 🟢 FIRST GREEN CI RUN IN 200+ RUNS** (`10e29199`, all 8 jobs).
   Main had been red for 198+ consecutive runs; the repair was an onion peeled
   over two days, each layer only visible after the previous one:
