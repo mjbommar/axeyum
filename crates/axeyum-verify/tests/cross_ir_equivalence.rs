@@ -384,6 +384,96 @@ fn lut_llvm_switch_equals_llvm_selects() {
     );
 }
 
+// ---- `lut3` with an `unreachable` default: hypothesis-conditioned equivalence ----
+
+/// MIR of `match x { 0=>5, 1=>7, 2=>9, _=>0 }` — a TOTAL function.
+const LUT3_MIR: &str = r"
+fn lut3(_1: u8) -> u8 {
+    bb0: {
+        switchInt(copy _1) -> [0: bb4, 1: bb3, 2: bb2, otherwise: bb1];
+    }
+    bb1: {
+        _0 = const 0_u8;
+        goto -> bb5;
+    }
+    bb2: {
+        _0 = const 9_u8;
+        goto -> bb5;
+    }
+    bb3: {
+        _0 = const 7_u8;
+        goto -> bb5;
+    }
+    bb4: {
+        _0 = const 5_u8;
+        goto -> bb5;
+    }
+    bb5: {
+        return;
+    }
+}
+";
+
+/// LLVM where the compiler KNOWS `x <= 2` (an enum-like invariant): the default
+/// is `unreachable`. The reflector treats that path as don't-care — assuming
+/// the UB edge is never taken.
+const LUT3_UNREACH_LL: &str = r"
+define i8 @lut3(i8 %x) unnamed_addr {
+start:
+  switch i8 %x, label %unreach [
+    i8 0, label %r5
+    i8 1, label %r7
+    i8 2, label %r9
+  ]
+
+unreach:
+  unreachable
+
+r5:                                               ; preds = %start
+  br label %join
+
+r7:                                               ; preds = %start
+  br label %join
+
+r9:                                               ; preds = %start
+  br label %join
+
+join:                                             ; preds = %r9, %r7, %r5
+  %r = phi i8 [ 5, %r5 ], [ 7, %r7 ], [ 9, %r9 ]
+  ret i8 %r
+}
+";
+
+/// With the compiler's invariant supplied as a HYPOTHESIS (`x < 3`), the total
+/// MIR and the unreachable-default LLVM are provably equal; without it they are
+/// refuted (at any x ≥ 3 the MIR returns 0, the don't-care LLVM does not) —
+/// both directions showing the `unreachable` semantics is modeled, not ignored.
+#[test]
+fn lut3_equivalence_holds_exactly_under_the_range_hypothesis() {
+    let mut arena = TermArena::new();
+    let x_sym = arena.declare("x", Sort::BitVec(8)).unwrap();
+    let x = arena.var(x_sym);
+    let from_mir = reflect_mir_unary(&mut arena, x, LUT3_MIR);
+    let from_llvm = reflect_unary_into(&mut arena, x, LUT3_UNREACH_LL);
+    let eq = arena.eq(from_mir, from_llvm).unwrap();
+
+    let three = arena.bv_const(8, 3).unwrap();
+    let hyp = arena.bv_ult(x, three).unwrap();
+    let under_hyp = prove(&mut arena, &[hyp], eq, &SolverConfig::default())
+        .expect("solver should not hard-error");
+    assert!(
+        matches!(under_hyp, ProofOutcome::Proved(_)),
+        "under x<3 the two must be equal, got {under_hyp:?}"
+    );
+
+    let unconditional =
+        prove(&mut arena, &[], eq, &SolverConfig::default()).expect("solver should not hard-error");
+    assert!(
+        matches!(unconditional, ProofOutcome::Disproved(_)),
+        "without the range hypothesis equality must be refuted, got {unconditional:?}"
+    );
+}
+
 /// Deterministic differential fuzz over EVERY paired fixture: reflect both sides,
 /// evaluate at pseudo-random inputs, and require bit-for-bit agreement. This is
 /// the concrete-execution oracle (independent of the symbolic proofs above) —

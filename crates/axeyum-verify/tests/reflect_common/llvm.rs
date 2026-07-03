@@ -230,6 +230,8 @@ fn split_cfg_blocks(ll: &str) -> Vec<(String, Vec<String>)> {
 /// parse the arm list (advancing `i` past the closing `]`), execute every
 /// target on a clone of the environment, and fold the arms right-to-left into
 /// a nested `ite` chain over `%x = K` tests with the default as the base.
+/// `None` (an `unreachable` target) is a don't-care: that branch is dropped
+/// from the join — the verifier assumes the UB path is never taken.
 #[expect(clippy::too_many_arguments, reason = "test-scaffold CFG walker state")]
 fn exec_switch(
     arena: &mut TermArena,
@@ -240,7 +242,7 @@ fn exec_switch(
     i: &mut usize,
     label: &str,
     depth: usize,
-) -> (TermId, u32) {
+) -> Option<(TermId, u32)> {
     let mut toks = rest.split_whitespace();
     let w = width_of(toks.next().expect("switch type"));
     let scrut_tok = toks.next().expect("switch scrutinee").trim_end_matches(',');
@@ -278,17 +280,25 @@ fn exec_switch(
     let mut acc = exec_cfg_block(arena, blocks, env.clone(), default, label, depth + 1);
     for (val, target) in arms.iter().rev() {
         let then = exec_cfg_block(arena, blocks, env.clone(), target, label, depth + 1);
-        let v = arena.bv_const(w, *val).unwrap();
-        let cond = arena.eq(scrut, v).unwrap();
-        acc = (arena.ite(cond, then.0, acc.0).unwrap(), then.1);
+        acc = match (then, acc) {
+            (Some(taken), Some(base)) => {
+                let arm_val = arena.bv_const(w, *val).unwrap();
+                let cond = arena.eq(scrut, arm_val).unwrap();
+                Some((arena.ite(cond, taken.0, base.0).unwrap(), taken.1))
+            }
+            (Some(taken), None) => Some(taken),
+            (None, base) => base,
+        };
     }
     acc
 }
 
 /// Symbolically execute from block `label` (entered from `pred`) to `ret`.
 /// `br i1` forks on a clone of the environment and joins as `ite`; `phi` picks
-/// the incoming value whose edge label matches `pred`. The depth cap turns a
-/// cyclic CFG into a loud panic (loops are the `TransitionSystem` path).
+/// the incoming value whose edge label matches `pred`; `unreachable` yields
+/// `None` (a don't-care the joins drop — assuming UB paths are never taken).
+/// The depth cap turns a cyclic CFG into a loud panic (loops are the
+/// `TransitionSystem` path).
 fn exec_cfg_block(
     arena: &mut TermArena,
     blocks: &[(String, Vec<String>)],
@@ -296,7 +306,7 @@ fn exec_cfg_block(
     label: &str,
     pred: &str,
     depth: usize,
-) -> (TermId, u32) {
+) -> Option<(TermId, u32)> {
     assert!(
         depth < 64,
         "cyclic or too-deep LLVM CFG (loops are the TransitionSystem path)"
@@ -309,6 +319,9 @@ fn exec_cfg_block(
     while i < lines.len() {
         let line = &lines[i];
         i += 1;
+        if line == "unreachable" {
+            return None;
+        }
         // switch iW %x, label %default [ \n iW K, label %case \n ... ]
         if let Some(rest) = line.strip_prefix("switch ") {
             return exec_switch(arena, blocks, &env, rest, lines, &mut i, label, depth);
@@ -316,7 +329,7 @@ fn exec_cfg_block(
         if let Some(rest) = line.strip_prefix("ret ") {
             let toks: Vec<&str> = rest.split_whitespace().collect();
             let w = width_of(toks[0]);
-            return (resolve(arena, &env, toks[1], w), w);
+            return Some((resolve(arena, &env, toks[1], w), w));
         }
         if let Some(rest) = line.strip_prefix("br ") {
             if let Some(target) = rest.strip_prefix("label %") {
@@ -335,11 +348,15 @@ fn exec_cfg_block(
                 .split("label %")
                 .skip(1)
                 .map(|s| s.trim().trim_end_matches(','));
-            let t = targets.next().expect("br true target");
-            let f = targets.next().expect("br false target");
-            let then = exec_cfg_block(arena, blocks, env.clone(), t, label, depth + 1);
-            let els = exec_cfg_block(arena, blocks, env, f, label, depth + 1);
-            return (arena.ite(cond, then.0, els.0).unwrap(), then.1);
+            let t_lab = targets.next().expect("br true target");
+            let f_lab = targets.next().expect("br false target");
+            let then = exec_cfg_block(arena, blocks, env.clone(), t_lab, label, depth + 1);
+            let els = exec_cfg_block(arena, blocks, env, f_lab, label, depth + 1);
+            return match (then, els) {
+                (Some(tv), Some(ev)) => Some((arena.ite(cond, tv.0, ev.0).unwrap(), tv.1)),
+                (Some(tv), None) => Some(tv),
+                (None, ev) => ev,
+            };
         }
         let (dst_tok, rhs) = line.split_once(" = ").expect("instruction `%d = ..`");
         let dst = dst_tok.trim_start_matches('%').to_string();
@@ -373,11 +390,15 @@ pub fn lower_fn(
     env: &mut HashMap<String, (TermId, u32)>,
     ll: &str,
 ) -> (TermId, u32) {
-    let has_cfg = ll.lines().any(|l| l.trim().starts_with("br "));
+    let has_cfg = ll
+        .lines()
+        .map(str::trim)
+        .any(|l| l.starts_with("br ") || l.starts_with("switch ") || l == "unreachable");
     if has_cfg {
         let blocks = split_cfg_blocks(ll);
         let entry = blocks.first().expect("a nonempty body").0.clone();
         exec_cfg_block(arena, &blocks, env.clone(), &entry, "", 0)
+            .expect("the function entry must be reachable")
     } else {
         lower_body(arena, env, ll)
     }
