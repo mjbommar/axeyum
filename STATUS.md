@@ -16029,6 +16029,24 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-03 — 🟢 FIRST GREEN CI RUN IN 200+ RUNS** (`10e29199`, all 8 jobs).
+  Main had been red for 198+ consecutive runs; the repair was an onion peeled
+  over two days, each layer only visible after the previous one:
+  MSRV 1.88/let-chains, rustdoc intra-doc links, rustfmt drift, cargo-deny
+  wildcard paths, ~100 clippy sites plus the final `axeyum-verify`
+  `too_many_lines` (red since `70f2dce2`; local scoped clippy never caught
+  it — the lesson is the workspace `-D warnings` gate, not scoped runs),
+  the evidence-suite exponential DAG walks + budget flakes, the z3-sys
+  prebuilt-download 403 (now authenticated via `READ_ONLY_GITHUB_TOKEN`) +
+  the missing `/usr/bin/z3`, runner disk exhaustion, hardware-relative
+  frontier ratchets + the budget-excused cap, QF_AX `build_model` hash-order
+  nondeterminism (a 12% verdict flake → 0/200), route-trace telemetry
+  invariants, the uflra fuzz deadline hole, and runner-pool saturation
+  (queue-and-complete concurrency + a docs-only CI split + cancelling 11
+  doomed runs). The test job runs ~4.5h because the z3 differential fuzzes
+  execute at full iteration counts on shared runners — acceptable for now;
+  a CI-scaled iteration count is the queued follow-up if it becomes the
+  bottleneck.
 - **2026-07-03 (early)** — **The nia_unsat frontier regression (40→23) found,
   bisected, and fixed; the uflra fuzz-hang class closed; Phase B started; two
   more CI onion layers.**
