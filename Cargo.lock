@@ -181,6 +181,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "axeyum-strings"
+version = "0.1.0"
+dependencies = [
+ "axeyum-ir",
+]
+
+[[package]]
 name = "axeyum-verify"
 version = "0.1.0"
 dependencies = [
