@@ -240,6 +240,25 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite Crank-Nicolson method resource landed.**
+  `finite-crank-nicolson-method-v0` now gives the differential-equations,
+  numerical-analysis, and real-analysis lanes a compact exact implicit
+  trapezoid time-stepping example: it checks `y' = -y`, `y(0)=1`, step size
+  `h=1/2`, times `[0, 1/2, 1, 3/2]`, states
+  `[1, 3/5, 9/25, 27/125]`, start derivatives `[-1, -3/5, -9/25]`,
+  endpoint derivatives `[-3/5, -9/25, -27/125]`, averaged derivatives
+  `[-4/5, -12/25, -36/125]`, zero implicit residuals, decay ratio `3/5`,
+  and bounds `0 <= state <= 1`. It then rejects the malformed first-step
+  claim `1/2` versus exact `3/5` through a source-linked QF_LRA/Farkas row.
+  The focused learner page, dynamics and analysis/numerical query guides,
+  finite dynamics/time-stepping bridge, validator, resource smoke queries, and
+  `math_resource_lra_routes` regression keep this fixed exact implicit
+  trapezoid replay separate from general Crank-Nicolson order, convergence,
+  A-stability, stiffness behavior, nonlinear solve correctness,
+  adaptive-step control, floating-point time-stepping, and PDE theory. The
+  public summary now reports 122 concept rows, 144 packs, 945 expected checks,
+  370 checked rows, 468 replay-only rows, 107 Lean-horizon rows, and
+  144 promoted solver-reuse packs.
 - **Finite Backward Euler method resource landed.**
   `finite-backward-euler-method-v0` now gives the differential-equations,
   numerical-analysis, and real-analysis lanes a compact exact implicit
@@ -254,7 +273,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   regression keep this fixed exact implicit-step replay separate from general
   backward Euler convergence, A-stability, stiffness behavior, nonlinear
   solve correctness, adaptive-step control, floating-point time-stepping, and
-  PDE theory. The public summary now reports 122 concept rows, 143 packs,
+  PDE theory. After that increment the public summary reported 122 concept rows, 143 packs,
   940 expected checks, 369 checked rows, 465 replay-only rows,
   106 Lean-horizon rows, and 143 promoted solver-reuse packs.
 - **Finite Heun method resource landed.**

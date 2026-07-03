@@ -103,8 +103,8 @@ Every new or upgraded resource should answer these questions before it lands:
 | `probability_theory` | counting, rationals, measure | probability tables, kernels, Markov chains, hitting times, concentration | QF_LRA, QF_LIA counts, replay |
 | `statistics` | probability, linear algebra | exact tests, regression, finite sampling tables, Schur conditional-variance shadows, numerical-honesty rows | QF_LRA, QF_LIA, replay |
 | `optimization_and_convexity` | rationals, reals, linear algebra | landed LP objective/Farkas, rational convexity/gradient bridge rows with checked bad midpoint and affine-threshold evidence, finite root-finding step and bisection-width replay, finite hyperplane-separation replay, finite KKT replay with checked stationarity/complementarity evidence, finite active-set QP face/slack replay with checked inactive-slack evidence, finite degenerate active-bound replay, finite SDP replay, exact Gaussian-elimination, QR/Cholesky factorization replay, Schur-complement positive-definite replay, finite gradient-descent replay with checked descent-bound evidence, finite Armijo line-search rejected-step, descent-direction, and accepted-candidate replay, finite Wolfe line-search replay, finite projected-gradient interval/decrease replay, finite proximal-gradient soft-threshold/composite-decrease replay, and finite box-plus-L1 proximal replay; add narrower duality, working-set pivots, higher-dimensional SDP, least-squares/covariance/Hessian factorization families, group-lasso/active-set proximal, strong-Wolfe/nonconvex line-search, or stochastic/convergence rows only when reused | QF_LRA/Farkas, NRA shadows |
-| `numerical_analysis` | linear algebra, calculus | maintain landed finite dynamics/Euler bridge alongside residual bounds, interval boxes, exact condition-number/perturbation shadows, Gaussian-elimination transcripts, Schur-complement block shadows, singular-value/SVD norm shadows, exact Jordan-chain shadows, exact error recurrences, root-finding, explicit and implicit time-stepping replay, LU/QR/Cholesky factorization replay, active-set QP, gradient-descent, Armijo/Wolfe line-search descent-direction and accepted-candidate arithmetic, projected-gradient, and proximal-gradient composite-decrease iterations | QF_LRA, replay, numerical-honesty metadata |
-| `differential_equations_and_dynamical_systems` | calculus, linear algebra | maintain landed finite dynamics/Euler bridge for bounded recurrences, Euler traces, implicit backward Euler traces, invariant checks, threshold reachability, replay-only bad dynamics rows, separate checked QF_LRA proof rows, and finite error tables | QF_LRA, BV/LIA counters, Lean horizon |
+| `numerical_analysis` | linear algebra, calculus | maintain landed finite dynamics/Euler bridge alongside residual bounds, interval boxes, exact condition-number/perturbation shadows, Gaussian-elimination transcripts, Schur-complement block shadows, singular-value/SVD norm shadows, exact Jordan-chain shadows, exact error recurrences, root-finding, explicit and implicit time-stepping replay including backward Euler and Crank-Nicolson, LU/QR/Cholesky factorization replay, active-set QP, gradient-descent, Armijo/Wolfe line-search descent-direction and accepted-candidate arithmetic, projected-gradient, and proximal-gradient composite-decrease iterations | QF_LRA, replay, numerical-honesty metadata |
+| `differential_equations_and_dynamical_systems` | calculus, linear algebra | maintain landed finite dynamics/Euler bridge for bounded recurrences, Euler traces, implicit backward Euler and Crank-Nicolson traces, invariant checks, threshold reachability, replay-only bad dynamics rows, separate checked QF_LRA proof rows, and finite error tables | QF_LRA, BV/LIA counters, Lean horizon |
 | `geometry` | reals, polynomials, linear algebra | landed coordinate/incidence/rigid/affine/oriented replay plus finite circle/inversion/cyclic replay bridge rows; add only distinct nontrivial circle-line correspondence, higher-degree polynomial-geometry, or theorem-reconstruction pressure beyond the current affine collinearity-determinant, area-scaling, circle-line, square angle-dot, and Ptolemy rows when reused | QF_LRA/NRA, replay |
 | `functional_analysis_and_operator_theory` | linear algebra, real analysis | finite operators, inner products, exact condition-number, singular-value, and Jordan/nilpotent shadows, Chebyshev-system slices | QF_LRA, finite replay, Lean horizon |
 
@@ -1123,7 +1123,18 @@ Build sequence:
     exact row separate from general backward Euler convergence, A-stability,
     stiffness, nonlinear solves, adaptive-step methods, floating-point
     implementations, and PDE time-integration theorems.
-114. Revisit crate/repo boundaries only after three real consumers or repeated
+114. Landed: add the finite Crank-Nicolson method resource.
+    `finite-crank-nicolson-method-v0` now records one exact implicit trapezoid
+    transcript for `y' = -y`, `y(0)=1`, and `h=1/2`, including start
+    derivatives, endpoint derivatives, averaged slopes, zero implicit
+    residuals, geometric decay ratio `3/5`, and states
+    `[1, 3/5, 9/25, 27/125]`. It includes a checked QF_LRA/Farkas artifact for
+    the malformed first-step claim `1/2` against exact `3/5`. The finite
+    dynamics/time-stepping bridge keeps this fixed exact row separate from
+    general Crank-Nicolson order, convergence, A-stability, stiffness,
+    nonlinear solves, adaptive-step methods, floating-point implementations,
+    and PDE time-integration theorems.
+115. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands

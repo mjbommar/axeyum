@@ -388,6 +388,9 @@ const FINITE_HEUN_BAD_STEP: &str = include_str!(
 const FINITE_BACKWARD_EULER_BAD_STEP: &str = include_str!(
     "../../../artifacts/examples/math/finite-backward-euler-method-v0/smt2/bad-backward-euler-step-farkas-conflict.smt2"
 );
+const FINITE_CRANK_NICOLSON_BAD_STEP: &str = include_str!(
+    "../../../artifacts/examples/math/finite-crank-nicolson-method-v0/smt2/bad-crank-nicolson-step-farkas-conflict.smt2"
+);
 const NUMERICAL_LINEAR_ALGEBRA_BAD_JACOBI_ERROR_BOUND: &str = include_str!(
     "../../../artifacts/examples/math/numerical-linear-algebra-v0/smt2/bad-jacobi-error-bound-farkas-conflict.smt2"
 );
@@ -1845,6 +1848,14 @@ fn finite_backward_euler_bad_step_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "finite-backward-euler-method-v0 bad-backward-euler-step SMT-LIB artifact",
         FINITE_BACKWARD_EULER_BAD_STEP,
+    );
+}
+
+#[test]
+fn finite_crank_nicolson_bad_step_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-crank-nicolson-method-v0 bad-crank-nicolson-step SMT-LIB artifact",
+        FINITE_CRANK_NICOLSON_BAD_STEP,
     );
 }
 

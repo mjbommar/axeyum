@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "id": "finite-crank-nicolson-method-v0",
+  "title": "Finite Crank-Nicolson Method Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_differential_equations_and_dynamical_systems",
+    "field_numerical_analysis",
+    "field_real_analysis",
+    "curriculum_calculus",
+    "curriculum_sequences_and_limits",
+    "curriculum_reals",
+    "bridge_finite_dynamics_euler_replay",
+    "bridge_bounded_family_asymptotic_boundary"
+  ],
+  "field_ids": [
+    "differential_equations_and_dynamical_systems",
+    "numerical_analysis",
+    "real_analysis"
+  ],
+  "curriculum_nodes": [
+    "calculus",
+    "sequences-and-limits",
+    "reals"
+  ],
+  "axeyum_fragments": [
+    "finite transition systems",
+    "exact rational Crank-Nicolson replay",
+    "finite numerical replay",
+    "LRA (exact rationals)",
+    "QF_LRA",
+    "Farkas",
+    "finite replay",
+    "Lean horizon",
+    "numerical-honesty metadata"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-crank-nicolson-method-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite Crank-Nicolson bad implicit-trapezoid step QF_LRA/Farkas regression seed",
+    "pressure": "Exact rational Crank-Nicolson replay for y' = -y with h = 1/2 computes first next_state = 3/5, while a malformed row claims next_state = 1/2, isolating a compact scalar equality conflict for the Farkas route.",
+    "evidence": [
+      "qf-lra-bad-crank-nicolson-step"
+    ],
+    "next_step": "Promote additional implicit time-stepping rows only when they add distinct nonlinear stage solve, fixed-point iteration, stiffness, floating-point, or convergence-theorem pressure; keep general Crank-Nicolson stability and order theory in future Lean or numerical-honesty lanes."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/03-destinations/calculus.md",
+    "docs/curriculum/02-structures/sequences-and-limits.md",
+    "docs/curriculum/01-number-systems/reals.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/crank-nicolson-method-end-to-end.md",
+    "artifacts/examples/math/finite-crank-nicolson-method-v0/smt2/bad-crank-nicolson-step-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+  ],
+  "expected_results": [
+    "crank-nicolson-implicit-trapezoid-witness",
+    "crank-nicolson-geometric-decay-witness",
+    "bad-crank-nicolson-step-rejected",
+    "qf-lra-bad-crank-nicolson-step",
+    "general-crank-nicolson-theory-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode the fixed ODE, step size, start/end derivatives, averaged slopes, implicit residuals, state updates, and monotone rational trace as deterministic rational replay obligations.",
+    "Route the false first Crank-Nicolson step through checked QF_LRA/Farkas evidence after replay computes the exact implicit trapezoid next state.",
+    "Expose the pack through finite dynamics/time-stepping, numerical-analysis, real-analysis, and learner query surfaces.",
+    "Keep general Crank-Nicolson order, convergence, A-stability, stiffness behavior, nonlinear solves, adaptive methods, and floating-point time-stepping correctness marked as future Lean or numerical-honesty work until formal routes exist."
+  ]
+}

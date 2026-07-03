@@ -164,3 +164,5 @@ For explicit time-stepping slices, read
 [End To End: Finite Euler Method](finite-euler-method-end-to-end.md),
 [End To End: Finite Runge-Kutta Midpoint](runge-kutta-midpoint-end-to-end.md),
 and [End To End: Finite Heun Method](heun-method-end-to-end.md).
+For the implicit trapezoid slice, read
+[End To End: Finite Crank-Nicolson Method](crank-nicolson-method-end-to-end.md).

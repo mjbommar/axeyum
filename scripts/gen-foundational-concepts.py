@@ -655,7 +655,7 @@ FIELD_PACKS = {
     "number_theory": ("modular-arithmetic-v0", "Congruences, CRT, residues, finite fields, finite ideals in modular rings, and bounded Diophantine examples."),
     "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, covariance/Gram replay, orthogonal transforms, rank, inverse, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, GMRES residual-minimization, Lanczos/tridiagonalization, and Jordan-chain shadows, Jacobians, Hessians, Newton-step Hessian solves, projections, and infeasibility."),
     "abstract_algebra": ("finite-fields-v0", "Finite groups, permutation groups, monoids, group actions, rings, fields, ideals, modules, dual spaces, tensor products, homomorphism tables, polynomial factorization slices, Jordan-chain polynomial/module shadows, and Cayley-table validation."),
-    "real_analysis": ("real-analysis-rational-v0", "Rational interval/ball checks, bounded epsilon-delta samples, algebraic factorization, fixed-decimal rounding shadows, multivariable-calculus, Newton-step, Runge-Kutta midpoint, Heun-method, and backward Euler shadows, and proof horizons."),
+    "real_analysis": ("real-analysis-rational-v0", "Rational interval/ball checks, bounded epsilon-delta samples, algebraic factorization, fixed-decimal rounding shadows, multivariable-calculus, Newton-step, Runge-Kutta midpoint, Heun-method, backward Euler, and Crank-Nicolson shadows, and proof horizons."),
     "complex_analysis": ("complex-algebraic-v0", "Complex arithmetic, real-pair transforms, finite Cauchy-Riemann derivative shadows, and polynomial factorization shadows as real/rational algebra before analytic proof horizons."),
     "topology": ("finite-topology-v0", "Finite topologies, metric balls, closure/interior, continuous maps, and finite simplicial-homology checks."),
     "measure_theory": ("finite-measure-v0", "Finite sigma-algebras, finite measures, monotonicity/subadditivity, random variables, conditional expectations, finite kernels, martingales, hitting times, concentration checks, product tables, and exact probability foundations."),
@@ -679,8 +679,8 @@ FIELD_PACKS = {
         ("finite-projected-gradient-v0", "Finite projected-gradient interval replay with checked bad-projection rejection."),
         ("finite-proximal-gradient-v0", "Finite proximal-gradient L1 soft-threshold/composite-decrease replay with checked bad proximal-gradient rows."),
     ],
-    "numerical_analysis": ("numerical-linear-algebra-v0", "Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, interval bounds, inner-product projections, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, GMRES residual-minimization, Lanczos/tridiagonalization, residual, rounding, and perturbation-bound shadows, fixed-step error recurrences, Euler, Runge-Kutta midpoint, Heun, and backward Euler implicit time-stepping shadows, Jacobian/Hessian replay, finite root-finding, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."),
-    "differential_equations_and_dynamical_systems": ("bounded-dynamics-v0", "Recurrence systems, discretized dynamics, threshold reachability, invariant checks, Euler, Runge-Kutta midpoint, Heun, and backward Euler finite time-stepping, Markov transitions, and finite hitting times."),
+    "numerical_analysis": ("numerical-linear-algebra-v0", "Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, interval bounds, inner-product projections, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, GMRES residual-minimization, Lanczos/tridiagonalization, residual, rounding, and perturbation-bound shadows, fixed-step error recurrences, Euler, Runge-Kutta midpoint, Heun, backward Euler, and Crank-Nicolson implicit time-stepping shadows, Jacobian/Hessian replay, finite root-finding, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."),
+    "differential_equations_and_dynamical_systems": ("bounded-dynamics-v0", "Recurrence systems, discretized dynamics, threshold reachability, invariant checks, Euler, Runge-Kutta midpoint, Heun, backward Euler, and Crank-Nicolson finite time-stepping, Markov transitions, and finite hitting times."),
     "geometry": [
         (
             "coordinate-geometry-v0",
@@ -3365,6 +3365,10 @@ BRIDGE_CONCEPTS = [
             (
                 "finite-backward-euler-method-v0",
                 "Fixed-step implicit backward Euler solves for y' = -y, geometric decay trace, and checked bad first-step row.",
+            ),
+            (
+                "finite-crank-nicolson-method-v0",
+                "Fixed-step implicit trapezoid Crank-Nicolson solves for y' = -y, geometric decay trace, and checked bad first-step row.",
             ),
             (
                 "counting-v0",
@@ -6747,12 +6751,12 @@ BRIDGE_CONCEPTS = [
             "Finite dynamics rows state an initial state, transition rule, "
             "horizon, trace, invariant, threshold, Euler step, Runge-Kutta "
             "midpoint stages, Heun predictor stages, backward Euler implicit "
-            "solves, or finite error "
+            "solves, Crank-Nicolson averaged slopes, or finite error "
             "table over exact rational data. The trusted object is replay of "
             "the listed finite transition data or a checked QF_LRA/Farkas "
             "certificate for a malformed fixed trace, invariant, recurrence "
             "value, Euler update, Runge-Kutta midpoint update, Heun update, "
-            "or backward Euler update."
+            "backward Euler update, or Crank-Nicolson update."
         ),
         "prerequisites": [
             "bridge_finite_model_replay",
@@ -6778,6 +6782,7 @@ BRIDGE_CONCEPTS = [
             "Runge-Kutta midpoint replay",
             "Heun method replay",
             "backward Euler replay",
+            "Crank-Nicolson replay",
             "finite matrices",
             "QF_LRA",
             "Farkas certificate",
@@ -6808,6 +6813,10 @@ BRIDGE_CONCEPTS = [
                 "finite-backward-euler-method-v0",
                 "Exact implicit backward Euler endpoint solves, geometric decay trace for y' = -y, and checked bad first-step row.",
             ),
+            (
+                "finite-crank-nicolson-method-v0",
+                "Exact implicit trapezoid Crank-Nicolson averaged slopes, geometric decay trace for y' = -y, and checked bad first-step row.",
+            ),
         ],
         "proof_routes": [
             {
@@ -6824,6 +6833,7 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/runge-kutta-midpoint-end-to-end.md",
                     "docs/learn/math/heun-method-end-to-end.md",
                     "docs/learn/math/backward-euler-method-end-to-end.md",
+                    "docs/learn/math/crank-nicolson-method-end-to-end.md",
                     "docs/learn/math/finite-dynamics-euler-end-to-end.md",
                     "docs/learn/math/analysis-dynamics-end-to-end.md",
                     "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
@@ -6831,8 +6841,8 @@ BRIDGE_CONCEPTS = [
                 "notes": (
                     "Positive rows recompute each finite transition, matrix "
                     "state update, invariant, threshold, Euler step, or "
-                    "Runge-Kutta midpoint, Heun stage, or backward Euler "
-                    "implicit solve exactly. "
+                    "Runge-Kutta midpoint, Heun stage, backward Euler "
+                    "implicit solve, or Crank-Nicolson averaged slope exactly. "
                     "Negative rows graduate only when the source SMT-LIB or "
                     "route regression yields rechecked Farkas evidence."
                 ),
@@ -6847,6 +6857,7 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/runge-kutta-midpoint-end-to-end.md",
             "docs/learn/math/heun-method-end-to-end.md",
             "docs/learn/math/backward-euler-method-end-to-end.md",
+            "docs/learn/math/crank-nicolson-method-end-to-end.md",
             "docs/learn/math/finite-dynamics-euler-end-to-end.md",
             "docs/learn/math/analysis-dynamics-end-to-end.md",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
@@ -6855,13 +6866,13 @@ BRIDGE_CONCEPTS = [
         "open_gaps": [
             "Finite dynamics replay does not prove continuous-time existence, uniqueness, stability, chaos, stiffness behavior, PDE theory, or convergence-rate theorems.",
             "A bounded invariant row proves only the listed horizon unless a separate induction or Lean proof route is supplied.",
-            "Euler, Runge-Kutta midpoint, Heun, and backward Euler rows are exact rational numerical shadows; floating-point implementations, adaptive methods, stiffness behavior, nonlinear solves, and asymptotic error theory stay in numerical-honesty or Lean-horizon lanes.",
+            "Euler, Runge-Kutta midpoint, Heun, backward Euler, and Crank-Nicolson rows are exact rational numerical shadows; floating-point implementations, adaptive methods, stiffness behavior, nonlinear solves, and asymptotic error theory stay in numerical-honesty or Lean-horizon lanes.",
         ],
         "graduation": {
             "status": "validated",
             "criteria": [
                 "Rows state the transition rule, horizon, initial condition, trace, invariant/threshold, and exact rational data.",
-                "The validator recomputes each finite transition, matrix state, Euler update, Runge-Kutta midpoint or Heun stage/update, backward Euler implicit solve/update, and finite error value.",
+                "The validator recomputes each finite transition, matrix state, Euler update, Runge-Kutta midpoint or Heun stage/update, backward Euler implicit solve/update, Crank-Nicolson averaged-slope update, and finite error value.",
                 "Malformed finite dynamics rows link source artifacts or route regressions before claiming checked Farkas evidence.",
             ],
         },

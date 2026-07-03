@@ -64,15 +64,15 @@ The current committed data boundary reports:
 - 18 math-field concept rows.
 - 76 bridge-concept rows.
 - 5 example-family rows.
-- 143 non-template math example packs.
-- 940 expected checks.
-- 369 checked proof/evidence rows.
-- 465 replay-only rows.
-- 106 Lean-horizon rows.
-- 143 promoted solver-reuse packs.
+- 144 non-template math example packs.
+- 945 expected checks.
+- 370 checked proof/evidence rows.
+- 468 replay-only rows.
+- 107 Lean-horizon rows.
+- 144 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 143 focused learner-linked packs, with no path-only, index-only, or missing
+- 144 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 This is broad enough that the next work is not "create a few examples." The
@@ -2601,6 +2601,16 @@ Pick one item per commit unless the change is purely navigational.
      `2/3` without claiming general backward Euler convergence, A-stability,
      stiffness behavior, nonlinear endpoint-solve correctness, adaptive-step
      correctness, floating-point stability, or PDE theory.
+190. Landed: add `finite-crank-nicolson-method-v0` as an exact finite
+     implicit trapezoid time-stepping resource. The pack computes `y' = -y`
+     from `y(0)=1` with `h=1/2`, records start derivatives, endpoint
+     derivatives, averaged slopes, zero implicit residuals, geometric decay
+     ratio `3/5`, and exact states `[1, 3/5, 9/25, 27/125]`, then promotes the
+     malformed first-step claim `1/2` through a source-linked QF_LRA/Farkas
+     regression against exact `3/5` without claiming general Crank-Nicolson
+     order, convergence, A-stability, stiffness behavior, nonlinear
+     endpoint-solve correctness, adaptive-step correctness, floating-point
+     stability, or PDE theory.
 
 ## Validation Checklist
 

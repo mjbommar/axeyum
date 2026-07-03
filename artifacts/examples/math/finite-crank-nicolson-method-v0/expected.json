@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-crank-nicolson-method-v0",
+  "witnesses": [
+    {
+      "id": "linear-decay-crank-nicolson-trace",
+      "description": "Exact rational Crank-Nicolson replay for y' = -y, y(0) = 1, h = 1/2.",
+      "values": {
+        "ode": "y_prime_equals_minus_y",
+        "method": "implicit_trapezoid_crank_nicolson",
+        "step": "1/2",
+        "times": ["0", "1/2", "1", "3/2"],
+        "states": ["1", "3/5", "9/25", "27/125"],
+        "start_derivatives": ["-1", "-3/5", "-9/25"],
+        "endpoint_times": ["1/2", "1", "3/2"],
+        "endpoint_derivatives": ["-3/5", "-9/25", "-27/125"],
+        "averaged_derivatives": ["-4/5", "-12/25", "-36/125"],
+        "implicit_residuals": ["0", "0", "0"],
+        "decay_ratio": "3/5",
+        "lower_bound": "0",
+        "upper_bound": "1"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "crank-nicolson-implicit-trapezoid-witness",
+      "claim": "The listed start derivatives, endpoint derivatives, averaged slopes, and states solve the Crank-Nicolson equations for y' = -y with h = 1/2.",
+      "expected_result": "sat",
+      "validation": "exact_rational_crank_nicolson_implicit_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["linear-decay-crank-nicolson-trace"],
+      "notes": "The validator recomputes y_{n+1} = y_n + h*(f(t_n,y_n)+f(t_{n+1},y_{n+1}))/2 and checks each implicit residual is zero."
+    },
+    {
+      "id": "crank-nicolson-geometric-decay-witness",
+      "claim": "The finite Crank-Nicolson trace is positive, monotone decreasing, and follows the listed ratio 3/5.",
+      "expected_result": "sat",
+      "validation": "exact_rational_crank_nicolson_decay_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["linear-decay-crank-nicolson-trace"],
+      "notes": "The validator checks the listed lower/upper bounds and the exact finite ratio; this is a finite trace property, not a stability theorem."
+    },
+    {
+      "id": "bad-crank-nicolson-step-rejected",
+      "claim": "For y' = -y, h = 1/2, t = 0, and y = 1, the first Crank-Nicolson step gives 1/2.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_bad_crank_nicolson_step_replay",
+      "proof_status": "replay-only",
+      "data": {
+        "source_witness": "linear-decay-crank-nicolson-trace",
+        "step_index": 0,
+        "time": "0",
+        "state": "1",
+        "step": "1/2",
+        "start_derivative": "-1",
+        "endpoint_time": "1/2",
+        "endpoint_derivative": "-3/5",
+        "averaged_derivative": "-4/5",
+        "computed_next_state": "3/5",
+        "claimed_next_state": "1/2",
+        "next_state_gap": "1/10"
+      },
+      "notes": "Exact replay computes the first Crank-Nicolson next state as 3/5, so the claimed value 1/2 is rejected; the separate qf-lra-bad-crank-nicolson-step row owns the checked Farkas evidence."
+    },
+    {
+      "id": "qf-lra-bad-crank-nicolson-step",
+      "claim": "The fixed malformed Crank-Nicolson next-state claim is linearly inconsistent.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_farkas_evidence",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "linear-decay-crank-nicolson-trace",
+        "source_replay_row": "bad-crank-nicolson-step-rejected",
+        "computed_next_state": "3/5",
+        "claimed_next_state": "1/2",
+        "farkas_conflict": "crank_nicolson_next_state = 3/5 and crank_nicolson_next_state = 1/2",
+        "smt2_artifact": "artifacts/examples/math/finite-crank-nicolson-method-v0/smt2/bad-crank-nicolson-step-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_crank_nicolson_bad_step_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes the first Crank-Nicolson next state as 3/5, while the malformed row claims 1/2; the source QF_LRA artifact isolates that scalar contradiction for Farkas checking."
+    },
+    {
+      "id": "general-crank-nicolson-theory-lean-horizon",
+      "claim": "General Crank-Nicolson consistency, second-order convergence, A-stability, stiffness behavior, nonlinear solve correctness, adaptive step-size control, and floating-point time-stepping correctness require future theorem or numerical-honesty resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_boundary",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "For Crank-Nicolson and implicit trapezoid methods, prove order, convergence, stability, endpoint-stage solve correctness, and method-specific hypotheses separately from finite replay rows.",
+        "future_checker": "Lean theorem statements for exact Crank-Nicolson theory plus separate numerical-honesty or QF_FP artifacts for floating-point and nonlinear-solver implementations."
+      },
+      "notes": "The finite exact row is a checked resource for one rational Crank-Nicolson trace, not a theorem about arbitrary ODEs, stiff systems, implicit nonlinear solves, adaptive solvers, or floating-point implementations."
+    }
+  ]
+}

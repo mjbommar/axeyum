@@ -16,7 +16,7 @@ The current surface is finite and exact-rational: metric balls, rational
 interval arithmetic, bounded
 epsilon-delta shadows, bounded sequence tails, algebraic derivative and
 integral replay, Newton/root-finding steps, finite recurrence, Euler,
-Runge-Kutta midpoint, Heun, and backward Euler rows,
+Runge-Kutta midpoint, Heun, backward Euler, and Crank-Nicolson rows,
 residual/solution-box/Jacobi rows, exact condition-number, Schur-complement,
 singular-value shadows, fixed-decimal rounding shadows,
 exact-vs-floating boundary rows, complex numbers as real-pair algebra, and one
@@ -89,7 +89,7 @@ needs concrete checked rows to display.
 | Exact finite convexity and convex-analysis horizons | pack `convexity-rational-v0`; concept `bridge_rational_convexity_shadow` | `Farkas`; Lean horizon | `checks --pack convexity-rational-v0 --route Farkas --proof-status checked`; `horizon-frontier --text convex-analysis` |
 | Polynomial coefficients, factors, roots, and coefficient windows | `bridge_polynomial_coefficient_factor_replay` | `Diophantine`; `Farkas` | `checks --concept bridge_polynomial_coefficient_factor_replay --route Diophantine --proof-status checked`; `checks --concept bridge_polynomial_coefficient_factor_replay --route Farkas --proof-status checked` |
 | Root-finding and Newton-step rows | pack `finite-root-finding-v0`; concept `bridge_exact_vs_floating_arithmetic` | `Farkas` | `checks --pack finite-root-finding-v0 --route Farkas --proof-status checked` |
-| Finite dynamics, recurrence, Euler, Runge-Kutta midpoint, Heun, and Backward Euler replay | `bridge_finite_dynamics_euler_replay` | `Farkas` | `checks --concept bridge_finite_dynamics_euler_replay --route Farkas --proof-status checked`; `checks --pack finite-runge-kutta-midpoint-v0 --route Farkas --proof-status checked`; `checks --pack finite-heun-method-v0 --route Farkas --proof-status checked`; `checks --pack finite-backward-euler-method-v0 --route Farkas --proof-status checked` |
+| Finite dynamics, recurrence, Euler, Runge-Kutta midpoint, Heun, Backward Euler, and Crank-Nicolson replay | `bridge_finite_dynamics_euler_replay` | `Farkas` | `checks --concept bridge_finite_dynamics_euler_replay --route Farkas --proof-status checked`; `checks --pack finite-runge-kutta-midpoint-v0 --route Farkas --proof-status checked`; `checks --pack finite-heun-method-v0 --route Farkas --proof-status checked`; `checks --pack finite-backward-euler-method-v0 --route Farkas --proof-status checked`; `checks --pack finite-crank-nicolson-method-v0 --route Farkas --proof-status checked` |
 | Residuals, solution boxes, Jacobi steps, condition numbers, GMRES residual minimization, Schur complements, real Schur decomposition, polar decomposition, QR iteration and shifted-QR steps, singular values, and exact matrix factorizations | `bridge_residual_bound`; `bridge_lu_replay`; `bridge_schur_complement`; pack `finite-gmres-residual-shadow-v0`; pack `finite-singular-value-shadow-v0`; pack `finite-real-schur-decomposition-v0`; pack `finite-polar-decomposition-v0`; pack `finite-qr-iteration-step-v0`; pack `finite-shifted-qr-step-v0` | `Farkas` | `checks --concept bridge_residual_bound --route Farkas --proof-status checked`; `checks --concept bridge_schur_complement --route Farkas --proof-status checked`; `checks --pack numerical-linear-algebra-v0 --route Farkas --proof-status checked`; `checks --pack finite-condition-number-v0 --route Farkas --proof-status checked`; `checks --pack finite-gmres-residual-shadow-v0 --route Farkas --proof-status checked`; `checks --pack finite-schur-complement-v0 --route Farkas --proof-status checked`; `checks --pack finite-real-schur-decomposition-v0 --route Farkas --proof-status checked`; `checks --pack finite-polar-decomposition-v0 --route Farkas --proof-status checked`; `checks --pack finite-qr-iteration-step-v0 --route Farkas --proof-status checked`; `checks --pack finite-shifted-qr-step-v0 --route Farkas --proof-status checked`; `checks --pack finite-singular-value-shadow-v0 --route Farkas --proof-status checked`; `checks --pack numerical-linear-algebra-v0 --route Farkas --proof-status checked --text solution`; `checks --pack finite-lu-decomposition-v0 --route Farkas --proof-status checked`; `checks --pack finite-pivoted-lu-decomposition-v0 --route Farkas --proof-status checked`; `checks --pack finite-ldlt-decomposition-v0 --route Farkas --proof-status checked`; `checks --pack finite-cholesky-decomposition-v0 --route Farkas --proof-status checked` |
 | Operator/Chebyshev, spectral, orthogonal-diagonalization, GMRES, real-Schur, polar, QR-step, shifted-QR, and singular-value numerical rows | `bridge_finite_operator_chebyshev`; `bridge_eigenpair` | `Farkas` | `checks --concept bridge_finite_operator_chebyshev --route Farkas --proof-status checked`; `checks --concept bridge_eigenpair --route Farkas --proof-status checked`; `checks --pack finite-gmres-residual-shadow-v0 --route Farkas --proof-status checked`; `checks --pack finite-orthogonal-diagonalization-v0 --route Farkas --proof-status checked`; `checks --pack finite-real-schur-decomposition-v0 --route Farkas --proof-status checked`; `checks --pack finite-polar-decomposition-v0 --route Farkas --proof-status checked`; `checks --pack finite-qr-iteration-step-v0 --route Farkas --proof-status checked`; `checks --pack finite-shifted-qr-step-v0 --route Farkas --proof-status checked`; `checks --pack finite-singular-value-shadow-v0 --route Farkas --proof-status checked` |
 | Complex numbers, plane transforms, and Cauchy-Riemann shadows as real-pair algebra | `bridge_complex_real_pair_transform`; pack `finite-cauchy-riemann-shadow-v0` | `Farkas` | `checks --concept bridge_complex_real_pair_transform --route Farkas --proof-status checked`; `checks --pack finite-cauchy-riemann-shadow-v0 --route Farkas --proof-status checked` |
@@ -471,6 +471,12 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 
 python3 scripts/query-foundational-resources.py checks \
+  --pack finite-crank-nicolson-method-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
   --pack complex-algebraic-v0 \
   --route Farkas \
   --proof-status checked \
@@ -484,7 +490,7 @@ complex rows, not theorem coverage. They can support a catalog, learner page,
 route-specific regression search, or sibling resource that wants examples by
 finite analytic object family.
 
-For the finite Euler and RK2 time-stepping boundary, read
+For the finite ODE time-stepping boundary, read
 [Euler Method Theorem Boundary](../learn/math/euler-method-theorem-boundary.md)
 before displaying ODE convergence, stability, stiffness, PDE, or
 floating-point method claims next to exact rational finite-step rows.
