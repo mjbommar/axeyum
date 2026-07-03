@@ -25,7 +25,7 @@ relentlessly. Scored against [the north-star definition of done](docs/plan/00-no
 |---|---|---|
 | **Soundness (never a wrong verdict)** | **Strong / holding** | `DISAGREE = 0` across all 35 division baselines, 611 oracle-compared instances ([SCOREBOARD](bench-results/SCOREBOARD.md)). Two real wrong-safes in the consumer apps were found by new differential fuzzes and fixed. |
 | **Feature coverage (breadth)** | **Partial** | Columns exist for ~24 fragments (BV/ABV/UF/LRA/LIA/NRA/NIA/FP/DT/strings/seq/FF/…), but many are shallow. |
-| **Completeness / decide-rate** | **Partial — the central gap** | **663 / 992 decided (~67%)**, decide-rate **0%–100%** across divisions; only **19/35 rows are decide-strong (≥80%)**. Z3/cvc5 decide far more on most fragments and cover more divisions than the 35 measured. |
+| **Completeness / decide-rate** | **Partial — the central gap** | **665 / 992 decided (~67%)** per the generated [SCOREBOARD](bench-results/SCOREBOARD.md) (authoritative — do not hand-copy totals into prose elsewhere), decide-rate **0%–100%** across divisions; only **19/35 rows are decide-strong (≥80%)**. Z3/cvc5 decide far more on most fragments and cover more divisions than the 35 measured. |
 | **Measured performance (PAR-2 head-to-head)** | **Weak / largely unmeasured** | The north star says *no parity claim without this number*. Only narrow slices measured (public QF_BV: reduction moved 2→7/113; not competitive at scale). |
 | **Lean parity (every unsat carries a kernel-checkable proof)** | **Early / narrow** | ~15/35 rows have a Lean route worth auditing; the trusted-reduction ledger is **not yet zero**. The Lean *tactic backend* (P3.7) is unbuilt. |
 | **Pareto-dominance on selected fragments** | **Growing — the real, defensible claim** | **23 fragments** carry a committed, audited `dominant%` ([DOMINANCE](bench-results/DOMINANCE.md)). This — not wholesale replacement — is what the strategy actually targets. |
@@ -70,22 +70,40 @@ increment at a time and record each one.
    move the core decide-rate; its job is to surface real gaps (it has filed
    U6/U7/U8) and ship user-facing, certifying value, not to claim parity.
 
-**Immediate next focus (2026-07-02, updated after the landing wave): both theory
-frontiers are in execution and delivering.** Strings (P2.7) and nonlinear
-arithmetic (P2.5) remain the largest decide-rate gaps, each decomposed under
+**Immediate next focus (2026-07-03): strings Phase B is IN EXECUTION; the two
+parity-blocking axes get owners.** Strings (P2.7) and nonlinear arithmetic
+(P2.5) remain the largest decide-rate gaps, each decomposed under
 [`docs/plan/track-2-theories/P2.7-strings/`](docs/plan/track-2-theories/P2.7-strings/)
 and [`docs/plan/track-2-theories/P2.5-nra/`](docs/plan/track-2-theories/P2.5-nra/).
-Landed 2026-07-01/02: **P2.7 Phase A essentially complete** (A.1a/b sort+ops;
+Landed 2026-07-01/02: **P2.7 Phase A complete** (A.1a/b sort+ops;
 **A.2 = ADR-0052**: the `bv2nat`-linear blast + the parser-built unbounded
 length abstraction + the bounded-string `unsat` gate at every front door — the
 Gap-10 `str.len`-unsat marker decides, and a **measured pre-existing
 wrong-unsat class vs Z3 was repaired**); **P1.9 FM→simplex keystone complete**;
 **NRA coprime-split CAD projection** plus **first-class `/0` division
 witnesses** (`124e18aa`): the committed curated baseline now shows **QF_NRA
-21/38 decided** (was 9/38), DISAGREE=0. Next levers: strings Phase B (word-level solver; the gate's `unknown`s
-are its routing signal) + recovering the 21 gate-downgraded declared-unsat
-instances via richer length facts/width widening; NRA free-division `/0`
-witnesses and threshold-1 monotonicity.
+21/38 decided** (was 9/38), DISAGREE=0.
+Landed 2026-07-03: **P2.7 Phase B started under ADR-0053** — the
+`axeyum-strings` crate (depends only on `axeyum-ir`, pure Rust, WASM-clean)
+with **T-B.1** (normalization invariant, `c5590668`) and **T-B.2** (flat/normal
+forms + explanation tracking, `bfc32805`) property-tested against the ground
+evaluator; T-B.3 (cycle ε-inference + normal-form inference rules) in flight.
+**ROI caveat recorded honestly:** in ADR-0053 bridge mode the word solver
+returns only replay-checked `sat` — word-level `unsat` stays declined until
+T-B.7 derivations are checkable — so Phase B's near-term decide-rate gain is
+unbounded-*sat* only, it recovers none of the 21 gate-downgraded unsats yet,
+and full integration waits on the P1.5 CDCL(T) loop (which is why P1.5 is the
+next keystone to close after the current slices). **Sequencing note:** the
+frontier doc's "string DP last" guidance was consciously overridden — the
+2026-06-29 re-measure showed the cheap string-bound lever had no verifiable
+headroom (QF_S already at z3 parity on accessible data), so the word-level DP
+became the only remaining route to the ~117-instance string gap.
+**The two starved north-star axes now have queued tasks:** (1) a committed
+PAR-2 head-to-head slice (wire the built-but-unwired lazy CEGAR bit-blaster
+into default solve/bench and measure public QF_BV) — the north star says *no
+parity claim without this number*; (2) frontier-baseline pre-merge gating + a
+budget-excused-cap audit (the nia_unsat 40→23 regression shipped and had to be
+bisected post-hoc; the ratchet must move to the merge gate).
 
 **Grounding correction (important).** Reading the code + ADRs showed the NRA
 engine is *far more built* than the first plan draft assumed: the bignum algebraic
@@ -157,13 +175,13 @@ proof upgrades, solver feedback, and consumer boundaries is
 [`docs/foundational-resources/CURRICULUM-RESOURCE-EXECUTION-PLAN.md`](docs/foundational-resources/CURRICULUM-RESOURCE-EXECUTION-PLAN.md).
 The commit-sized curriculum/resource work matrix is
 [`docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md`](docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md).
-The current execution ledger for stabilizing the 159 current math packs,
+The current execution ledger for stabilizing the 161 current math packs,
 resolving unclassified solver-reuse rows, completing learner paths, and
 deepening proof routes field by field is
 [`docs/foundational-resources/MATH-CURRICULUM-DETAILED-BUILD-PLAN.md`](docs/foundational-resources/MATH-CURRICULUM-DETAILED-BUILD-PLAN.md).
 The current learner-spine audit over all non-template math packs is
 [`docs/foundational-resources/LEARNER-COVERAGE-AUDIT.md`](docs/foundational-resources/LEARNER-COVERAGE-AUDIT.md);
-it records all 160 current non-template packs as focused-lesson linked, with no
+it records all 161 current non-template packs as focused-lesson linked, with no
 path-only, index-only, or missing learner buckets.
 The detailed operating roadmap for building the math-curriculum resource system
 across ontology rows, example packs, learner pages, proof routes, solver reuse,
@@ -375,13 +393,15 @@ The learner-facing rules/law trust-boundary page is
 it walks from human-authored source rules through formal models, replayed
 witnesses, checked obligations, and explicit legal/theorem horizons.
 Current resource-buildout status (2026-07-03): the public JSON layer reports
-124 concept rows, 160 non-template packs, 1040 expected checks (529 `sat`,
-388 `unsat`, 123 `not-run`), 386 checked rows, 531 replay-only rows, 123
-Lean-horizon rows, and 160 promoted solver-reuse packs. The rules/law JSON
+125 concept rows, 161 non-template packs, 1047 expected checks (533 `sat`,
+390 `unsat`, 124 `not-run`), 387 checked rows, 536 replay-only rows, 124
+Lean-horizon rows, and 161 promoted solver-reuse packs. The latest math pack
+adds finite k-means clustering with exact centroid/WCSS replay, a checked
+bad-centroid QF_LRA/Farkas row, and explicit clustering-theory horizons. The rules/law JSON
 layer now reports 7 packs, 1,037
 bounded sample rows, 1,942 generated query rows, 27 checked obligations, and
 9 replayed witness rows. The learner
-coverage audit records all 160 non-template packs as focused-lesson linked,
+coverage audit records all 161 non-template packs as focused-lesson linked,
 with no path-only, index-only, or missing learner buckets. The first QF_UF/Alethe
 proof upgrade wave now includes equivalence classes, relations/functions, finite
 groups, function composition, finite algebra homomorphisms, finite monoids, and
@@ -1118,7 +1138,7 @@ for the overlapping-set false-additivity count conflict. The five active resourc
 now each have a route-specific tamper/rejection regression: Boolean CNF/LRAT,
 QF_BV DRAT, QF_LRA/Farkas, QF_LIA/Diophantine, and QF_UF/Alethe all mutate an
 emitted resource certificate and require the independent checker to reject it;
-the foundational resource dashboards now report **160 promoted solver-reuse
+the foundational resource dashboards now report **161 promoted solver-reuse
 packs**, **0 non-benchmark-horizon packs**, and **0 unclassified packs** after
 the latest finite PCA bad-eigenvalue QF_LRA/Farkas promotion,
 the latest finite linear-discriminant bad-direction QF_LRA/Farkas promotion,
