@@ -1,7 +1,7 @@
 //! Independent re-checker for T-B.3 [`Conflict`] records (slice T-B.7) — the
 //! trusted small check that gates word-level `unsat`.
 //!
-//! The T-B.3 [`infer`](crate::infer) fixpoint is the *untrusted search*: it walks
+//! The T-B.3 [`infer`](crate::infer()) fixpoint is the *untrusted search*: it walks
 //! the class substrate and may emit a [`Conflict`] claiming a premise subset is
 //! jointly unsatisfiable. Per ADR-0053 word-level `unsat` may only ship "through a
 //! re-checkable derivation". [`check_conflict`] is that check: it re-verifies a
@@ -12,12 +12,12 @@
 //!
 //! # Independence — why this is a real check, not a rubber stamp
 //!
-//! This module shares **no reasoning code** with [`infer`](crate::infer): it does
+//! This module shares **no reasoning code** with [`infer`](crate::infer()): it does
 //! not call its alignment walker, its cycle detector, or its class machinery. It
 //! re-derives the contradiction with its own minimal tools:
 //!
 //! 1. **premise-index bounds** — every cited index must address a real equality;
-//! 2. **its own union-find** ([`MiniUf`]) over *only the cited premises*, to
+//! 2. **its own union-find** (`MiniUf`) over *only the cited premises*, to
 //!    confirm `member_a ≈ member_b` is entailed by them (a wrong or insufficient
 //!    premise set fails here);
 //! 3. **T-B.1 [`normalize`]** (the denotation-preserving rewrite, a shared
@@ -47,8 +47,8 @@
 //!
 //! [`check_fact`] independently re-verifies a T-B.3 [`Fact`] (a *derived*
 //! equality) from its cited premises alone, with the same independence discipline
-//! as [`check_conflict`] (its own [`MiniUf`] and its own aligned walkers; no
-//! reasoning code is shared with [`infer`](crate::infer)). It certifies four
+//! as [`check_conflict`] (its own `MiniUf` and its own aligned walkers; no
+//! reasoning code is shared with [`infer`](crate::infer())). It certifies four
 //! shapes, each by a self-evident length/offset argument:
 //!
 //! * **cycle-ε** ([`Rule::CycleEpsilon`]): `target ≈ ε` when a self-loop endpoint
@@ -179,7 +179,7 @@ pub fn check_equality(
 // ----- fact re-checking (slice 2) --------------------------------------------
 
 /// Re-verifies a T-B.3 [`Fact`] — a *derived* equality — from its cited premises
-/// alone, sharing no reasoning code with [`infer`](crate::infer).
+/// alone, sharing no reasoning code with [`infer`](crate::infer()).
 ///
 /// Returns `true` only when the fact's equality can be independently re-derived
 /// from the equalities named by `fact.premises` by the self-evident length/offset
@@ -257,7 +257,7 @@ fn check_cycle_epsilon_fact(
 /// re-normalizes to a component vector `[c₀…c_{k-1}]` (`k ≥ 2`) containing a
 /// continuation index `p` with `c_p ≈ w` (so `|c_p| = |w| = Σ|cᵢ|`, forcing every
 /// off-cycle `|cᵢ| = 0`) and a **distinct** off-cycle occurrence `c_t ≈ target`.
-/// Independent of [`infer`](crate::infer)'s cycle detector.
+/// Independent of [`infer`](crate::infer())'s cycle detector.
 fn cycle_self_loop_witness(
     arena: &mut TermArena,
     equalities: &[(TermId, TermId)],
@@ -386,7 +386,7 @@ fn check_unify_fact(arena: &mut TermArena, equalities: &[(TermId, TermId)], fact
 
 // ----- fact-checking helpers (own copies — no `infer` reasoning code) ----------
 
-/// A [`MiniUf`] over exactly the cited premise equalities.
+/// A `MiniUf` over exactly the cited premise equalities.
 fn mini_uf(equalities: &[(TermId, TermId)], premises: &BTreeSet<usize>) -> MiniUf {
     let mut uf = MiniUf::default();
     for &p in premises {

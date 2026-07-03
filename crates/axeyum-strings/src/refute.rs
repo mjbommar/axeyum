@@ -2,11 +2,11 @@
 //! `unsat`, and only ever behind an independently re-checked derivation.
 //!
 //! [`refute_word_equations`] is the ADR-0053 `unsat` arm: it runs the T-B.3
-//! [`infer`](crate::infer) fixpoint (the untrusted search) over the asserted
+//! [`infer`](crate::infer()) fixpoint (the untrusted search) over the asserted
 //! equalities and ships [`RefuteOutcome::Unsat`] only through an **independent
 //! re-check from ORIGINAL premises**. Everything the fixpoint reports — a
-//! [`Conflict`](crate::Conflict) record and every derived
-//! [`Fact`](crate::Fact) — is a hint, never trusted.
+//! [`Conflict`] record and every derived
+//! [`Fact`] — is a hint, never trusted.
 //!
 //! # The re-checked arms (slice 2)
 //!
@@ -17,7 +17,7 @@
 //! - **direct conflict** — a T-B.3 constant clash [`check_conflict`] re-derives
 //!   from a direct equality chain (slice 1);
 //! - **chained conflict** — a clash that only closes *through* a derived equality:
-//!   every derived [`Fact`](crate::Fact) is first re-verified by
+//!   every derived [`Fact`] is first re-verified by
 //!   [`check_fact`] from the ORIGINAL premises, then those certified facts join
 //!   the premise union-find and [`check_conflict`] re-verifies the clash;
 //! - **self-loop constant contradiction** — `x ≈ "a" ++ x` and friends: a cycle
@@ -43,7 +43,7 @@
 //!
 //! # Budget
 //!
-//! The [`SearchBudget`](crate::SearchBudget) deadline is honored at entry (the
+//! The [`SearchBudget`] deadline is honored at entry (the
 //! deadline-hole bug class is designed out); the fixpoint is itself hard-bounded
 //! ([`MAX_ROUNDS`](crate::infer::MAX_ROUNDS)) and a hit budget is reported as
 //! `unknown`, never `unsat`.

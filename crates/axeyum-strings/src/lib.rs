@@ -86,7 +86,7 @@
 //! ever fires behind an **independent re-check**. It runs the T-B.3 fixpoint (the
 //! untrusted search) and, on a reported [`Conflict`], returns `unsat` only when
 //! [`check_conflict`] re-derives that conflict from its cited premises alone —
-//! sharing no reasoning code with [`infer`], trusting the record only as a hint,
+//! sharing no reasoning code with [`infer()`], trusting the record only as a hint,
 //! and declining anything it cannot re-derive from first principles (loops,
 //! parity/length arguments, inference-dependent conflicts). This mirrors how the
 //! pure-Rust SAT path waited for DRAT: a wrong `unsat` is impossible because every
@@ -101,6 +101,7 @@ pub mod classes;
 pub mod infer;
 pub mod normal_form;
 pub mod refute;
+pub mod regex;
 
 pub use arrange::{SearchBudget, SearchOutcome, UnknownReason, solve_word_equations};
 pub use check_derivation::{
