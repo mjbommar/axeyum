@@ -880,7 +880,7 @@ fn euf_model_code(value: &Value) -> Option<u128> {
 
 /// Whether `model` satisfies every original assertion (the soundness gate for a
 /// constructed `sat` model).
-fn replays(arena: &TermArena, assertions: &[TermId], model: &Model) -> bool {
+pub(crate) fn replays(arena: &TermArena, assertions: &[TermId], model: &Model) -> bool {
     let assignment = model.to_assignment();
     assertions
         .iter()
@@ -896,7 +896,7 @@ fn unknown(detail: &str) -> crate::backend::UnknownReason {
 }
 
 /// Collects distinct equality subterms of `term`.
-fn collect_eq_atoms(
+pub(crate) fn collect_eq_atoms(
     arena: &TermArena,
     term: TermId,
     out: &mut Vec<TermId>,
@@ -1082,10 +1082,14 @@ fn build_blocking_clause(
 }
 
 /// A CNF literal in the online DPLL(T) skeleton: a variable index and its polarity.
+///
+/// `pub(crate)` so the sibling online CDCL(T) entry points (EUF here, strings in
+/// [`crate::string_theory`]) can reuse the shared [`Encoder`] and translate its
+/// clauses into the driver's own literal type.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct Lit {
-    var: usize,
-    positive: bool,
+pub(crate) struct Lit {
+    pub(crate) var: usize,
+    pub(crate) positive: bool,
 }
 
 impl Lit {
@@ -1101,15 +1105,15 @@ impl Lit {
 /// `atom_index` variables are reserved for the equality atoms (numbered to match
 /// [`EufTheory`]); Boolean-sorted leaves reuse those slots or take fresh indices,
 /// and connective gates allocate fresh auxiliary variables.
-struct Encoder {
+pub(crate) struct Encoder {
     /// Variable index per already-encoded term (atoms and gates), so structurally
     /// shared subterms share a variable.
-    term_var: HashMap<TermId, usize>,
-    var_count: usize,
+    pub(crate) term_var: HashMap<TermId, usize>,
+    pub(crate) var_count: usize,
 }
 
 impl Encoder {
-    fn new(atom_terms: &[TermId]) -> Self {
+    pub(crate) fn new(atom_terms: &[TermId]) -> Self {
         let mut term_var = HashMap::new();
         for (i, &t) in atom_terms.iter().enumerate() {
             term_var.insert(t, i);
@@ -1130,7 +1134,7 @@ impl Encoder {
     /// Encodes the Boolean term `t` into `clauses`, returning the variable whose
     /// truth equals `t`, or `None` if `t` has Boolean-position structure outside the
     /// supported connectives (the caller then soundly gives up).
-    fn encode(
+    pub(crate) fn encode(
         &mut self,
         arena: &TermArena,
         t: TermId,

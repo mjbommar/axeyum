@@ -129,6 +129,7 @@ mod skolem_alethe;
 mod smtlib;
 mod solver;
 mod strategy;
+mod string_theory;
 /// Bounded-length string theory by bit-vector lowering (no IR sort): `str.len`,
 /// `str.=`, `str.at`, literals over byte strings of length `0..=max_len`.
 pub mod strings;
@@ -377,6 +378,7 @@ pub use smtlib::{
 };
 pub use solver::{InterpolantOutcome, Solver};
 pub use strategy::{Strategy, recommended_portfolio, solve_with_portfolio, solve_with_strategy};
+pub use string_theory::check_qf_s_online_cdclt;
 pub use symexec::{
     Branch, CfgCheckedOutcome, CfgCheckedReached, CfgConcreteMismatch, CfgExploreConfig,
     CfgExploreOutcome, CfgReached, CfgStep, PathStatus, SymbolicExecutor, SymbolicMemory,
