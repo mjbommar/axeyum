@@ -238,6 +238,109 @@ fn two_class_cycle_is_declined() {
     );
 }
 
+// ----- constant ≈ concat is not a containment cycle --------------------------
+
+#[test]
+fn constant_equal_concat_epsilon_tail_is_not_a_cycle() {
+    // x = "ab",  x = "ab" ++ z,  z = w,  w = ε.
+    // "ab" = "ab" ++ z forces z = ε, so the class normalizes to the single
+    // constant block "ab". The old containment builder mis-declined this as a
+    // Cycle: the literal "ab" *inside* the concat resolves to the class
+    // representative because the class also has a standalone constant member
+    // "ab" — a false self-edge. It must now decide and produce a normal form.
+    let mut arena = TermArena::new();
+    let (xs, x) = svar(&mut arena, "x");
+    // z, w are declared *before* the ε term, so the class {z, w, ε} has a
+    // variable representative (its flat form does not collapse to ε at build).
+    let (_zs, z) = svar(&mut arena, "z");
+    let (_ws, w) = svar(&mut arena, "w");
+    let eps = empty(&mut arena);
+    let ca = ch(&mut arena, b'a'.into());
+    let cb = ch(&mut arena, b'b'.into());
+    let ua = unit(&mut arena, ca);
+    let ub = unit(&mut arena, cb);
+    let ab1 = cat(&mut arena, ua, ub);
+    let ab2 = cat(&mut arena, ua, ub); // structurally identical → same interned block
+    let abz = cat(&mut arena, ab2, z);
+
+    let eqs = [(x, ab1), (x, abz), (z, w), (w, eps)];
+    let classes = Classes::new(&eqs);
+    let forms = classes
+        .normal_forms(&mut arena)
+        .expect("constant ≈ concat with an ε tail must NOT decline as a cycle");
+
+    let nf = forms.get(classes.representative(x)).expect("nf of [x]");
+    assert_eq!(
+        nf.components.len(),
+        1,
+        "the class normalizes to the single constant block"
+    );
+    assert_eq!(
+        eval(&arena, nf.components[0], &Assignment::new()).expect("closed const"),
+        seqval(b"ab"),
+        "the class value is the constant \"ab\""
+    );
+
+    // The normal form denotes the class under a witnessing assignment.
+    let mut asg = Assignment::new();
+    asg.set(xs, seqval(b"ab"));
+    let via_nf = eval_nf(&mut arena, nf, &asg);
+    assert_eq!(via_nf, seqval(b"ab"));
+}
+
+#[test]
+fn constant_equal_concat_free_tail_declines_unreconciled_not_cycle() {
+    // x = "ab",  x = "ab" ++ z  with z free. "ab" = "ab" ++ z needs z = ε, which
+    // only arrangement splitting (T-B.4) infers — so T-B.2 declines by SHAPE,
+    // *not* as a spurious containment cycle.
+    let mut arena = TermArena::new();
+    let (_xs, x) = svar(&mut arena, "x");
+    let (_zs, z) = svar(&mut arena, "z");
+    let ca = ch(&mut arena, b'a'.into());
+    let cb = ch(&mut arena, b'b'.into());
+    let ua = unit(&mut arena, ca);
+    let ub = unit(&mut arena, cb);
+    let ab1 = cat(&mut arena, ua, ub);
+    let ab2 = cat(&mut arena, ua, ub);
+    let abz = cat(&mut arena, ab2, z);
+
+    let eqs = [(x, ab1), (x, abz)];
+    let classes = Classes::new(&eqs);
+    match classes.normal_forms(&mut arena) {
+        Err(Declined::Unreconciled {
+            kind: Unreconciled::ShapeMismatch,
+            ..
+        }) => {}
+        other => panic!("expected Unreconciled::ShapeMismatch (not a Cycle), got {other:?}"),
+    }
+}
+
+#[test]
+fn genuine_recursion_still_cycles_even_with_a_constant_member() {
+    // x = y ++ x (a real loop) together with x = "ab". The constant member must
+    // NOT suppress the genuine self-loop: this stays Declined::Cycle. Guards the
+    // fix against over-reaching (only *constant* self-references are dropped).
+    let mut arena = TermArena::new();
+    let (_xs, x) = svar(&mut arena, "x");
+    let (_ys, y) = svar(&mut arena, "y");
+    let ca = ch(&mut arena, b'a'.into());
+    let cb = ch(&mut arena, b'b'.into());
+    let ua = unit(&mut arena, ca);
+    let ub = unit(&mut arena, cb);
+    let ab1 = cat(&mut arena, ua, ub);
+    let yx = cat(&mut arena, y, x);
+
+    let eqs = [(x, yx), (x, ab1)];
+    let classes = Classes::new(&eqs);
+    assert!(
+        matches!(
+            classes.normal_forms(&mut arena),
+            Err(Declined::Cycle { .. })
+        ),
+        "a genuine x = y ++ x loop stays a cycle even alongside a constant member"
+    );
+}
+
 // ----- unreconcilable constant clash -----------------------------------------
 
 #[test]

@@ -98,15 +98,24 @@ pub struct Classes {
 }
 
 /// The **flat form** of a sequence term: its [`normalize`]d component vector
-/// with each component replaced by its class representative, ε components
-/// dropped, and adjacent constant blocks re-fused.
+/// with each *non-constant* component replaced by its class representative, ε
+/// components dropped, and adjacent constant blocks re-fused.
 ///
-/// Each component carries the premise indices that justify replacing the
-/// original component by the representative shown here.
+/// A component that is itself a **constant** (evaluates closed) is a terminal:
+/// it is already canonical and is kept **verbatim** rather than replaced by a
+/// (possibly variable) class representative. Substituting a standalone constant
+/// class member's term by its variable representative would make the constant
+/// masquerade as a self-reference in the containment graph — the `constant ≈
+/// concat` false cycle — and would also hide an equal-length constant clash.
+/// (This mirrors `infer::build_member_form`'s raw-atom philosophy.)
+///
+/// Each non-constant component carries the premise indices that justify
+/// replacing the original component by the representative shown here; a kept
+/// constant carries no premises (it is verbatim from the term).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FlatForm {
-    /// The flat component vector (class representatives, no ε, no two adjacent
-    /// constants).
+    /// The flat component vector (class representatives for variables, constants
+    /// kept verbatim, no ε, no two adjacent constants).
     pub components: Vec<TermId>,
     /// Per-component premise dependencies, aligned with `components`.
     pub component_premises: Vec<BTreeSet<usize>>,
@@ -302,9 +311,20 @@ impl Classes {
         let norm = normalize(arena, term);
         let raw = concat_components(arena, norm);
 
-        // Substitute each component by its representative, dropping ε reps.
+        // Replace each *non-constant* component by its representative, dropping
+        // ε reps. A constant component is a terminal: keep it verbatim (with no
+        // premises) so it is never confused with the class it happens to be a
+        // member of — this is what stops a standalone constant member from
+        // forging a self-edge in the containment graph.
         let mut subbed: Vec<(TermId, BTreeSet<usize>)> = Vec::new();
         for c in raw {
+            if is_constant(arena, c) {
+                if is_epsilon(arena, c) {
+                    continue;
+                }
+                subbed.push((c, BTreeSet::new()));
+                continue;
+            }
             let r = self.representative(c);
             if is_epsilon(arena, r) {
                 continue;
@@ -374,6 +394,17 @@ impl Classes {
                     continue;
                 }
                 for &c in &ff.components {
+                    if is_constant(arena, c) {
+                        // A constant flat-form component is a terminal — a leaf of
+                        // the containment DAG. It expands no class and creates no
+                        // edge. In particular a constant that equals a standalone
+                        // constant member of *this* class (whose representative is
+                        // `rc`) must not be read as a self-loop: that is the
+                        // `constant ≈ concat` false cycle. Genuine recursion
+                        // (`x ≈ y ++ x`) is a *variable* self-component and still
+                        // takes the self-edge branch below.
+                        continue;
+                    }
                     let d = self.representative(c);
                     ext_members.entry(d).or_default().insert(c);
                     if !visited.contains(&d) {
@@ -457,6 +488,18 @@ impl Classes {
             let mut component_premises = Vec::new();
             let mut premises = base_link.clone();
             for (c, cprem) in ff.components.iter().zip(&ff.component_premises) {
+                if is_constant(arena, *c) {
+                    // A terminal constant component contributes itself: it has no
+                    // sub-class normal form to splice (and is not a key in
+                    // `computed`). Its premises are the member link plus the
+                    // component's own (empty for a verbatim constant).
+                    let mut here = base_link.clone();
+                    here.extend(cprem.iter().copied());
+                    premises.extend(here.iter().copied());
+                    components.push(*c);
+                    component_premises.push(here);
+                    continue;
+                }
                 // `c` is a class representative; splice in its normal form.
                 let sub = computed
                     .get(c)
