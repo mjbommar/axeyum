@@ -11712,6 +11712,100 @@ def validate_taylor_polynomial_trace(context: str, values: dict[str, Any]) -> di
     }
 
 
+def validate_cubic_hermite_trace(context: str, values: dict[str, Any]) -> dict[str, Any]:
+    method = values.get("method")
+    require_string(f"{context}.method", method)
+    if method != "cubic_hermite_interpolation":
+        fail(f"{context}.method must be cubic_hermite_interpolation")
+    polynomial = require_polynomial(f"{context}.polynomial", values.get("polynomial"))
+    left = require_fraction(f"{context}.left", values.get("left"))
+    right = require_fraction(f"{context}.right", values.get("right"))
+    if left == right:
+        fail(f"{context}.left and right must be distinct")
+    interval_length = require_fraction(
+        f"{context}.interval_length",
+        values.get("interval_length"),
+    )
+    if interval_length != right - left:
+        fail(f"{context}.interval_length is incorrect")
+    value_left = require_fraction(f"{context}.value_left", values.get("value_left"))
+    value_right = require_fraction(f"{context}.value_right", values.get("value_right"))
+    slope_left = require_fraction(f"{context}.slope_left", values.get("slope_left"))
+    slope_right = require_fraction(f"{context}.slope_right", values.get("slope_right"))
+    evaluation_point = require_fraction(
+        f"{context}.evaluation_point",
+        values.get("evaluation_point"),
+    )
+    normalized_parameter = require_fraction(
+        f"{context}.normalized_parameter",
+        values.get("normalized_parameter"),
+    )
+    if normalized_parameter != (evaluation_point - left) / interval_length:
+        fail(f"{context}.normalized_parameter is incorrect")
+    basis_values = require_fraction_vector(f"{context}.basis_values", values.get("basis_values"))
+    if len(basis_values) != 4:
+        fail(f"{context}.basis_values must contain h00, h10, h01, h11")
+    t = normalized_parameter
+    expected_basis = [
+        2 * t**3 - 3 * t**2 + 1,
+        t**3 - 2 * t**2 + t,
+        -2 * t**3 + 3 * t**2,
+        t**3 - t**2,
+    ]
+    if basis_values != expected_basis:
+        fail(f"{context}.basis_values are incorrect")
+    hermite_terms = require_fraction_vector(
+        f"{context}.hermite_terms",
+        values.get("hermite_terms"),
+    )
+    if len(hermite_terms) != 4:
+        fail(f"{context}.hermite_terms must contain four terms")
+    expected_terms = [
+        value_left * basis_values[0],
+        interval_length * slope_left * basis_values[1],
+        value_right * basis_values[2],
+        interval_length * slope_right * basis_values[3],
+    ]
+    if hermite_terms != expected_terms:
+        fail(f"{context}.hermite_terms are incorrect")
+    hermite_value = require_fraction(f"{context}.hermite_value", values.get("hermite_value"))
+    if hermite_value != sum(hermite_terms):
+        fail(f"{context}.hermite_value is incorrect")
+    polynomial_value = require_fraction(
+        f"{context}.polynomial_value",
+        values.get("polynomial_value"),
+    )
+    if polynomial_value != polynomial_eval(polynomial, evaluation_point):
+        fail(f"{context}.polynomial_value is incorrect")
+    derivative_polynomial = polynomial_derivative(polynomial)
+    if polynomial_eval(polynomial, left) != value_left:
+        fail(f"{context}.polynomial does not match value_left")
+    if polynomial_eval(polynomial, right) != value_right:
+        fail(f"{context}.polynomial does not match value_right")
+    if polynomial_eval(derivative_polynomial, left) != slope_left:
+        fail(f"{context}.polynomial derivative does not match slope_left")
+    if polynomial_eval(derivative_polynomial, right) != slope_right:
+        fail(f"{context}.polynomial derivative does not match slope_right")
+    if hermite_value != polynomial_value:
+        fail(f"{context}.hermite_value must match polynomial_value")
+    return {
+        "polynomial": polynomial,
+        "left": left,
+        "right": right,
+        "interval_length": interval_length,
+        "value_left": value_left,
+        "value_right": value_right,
+        "slope_left": slope_left,
+        "slope_right": slope_right,
+        "evaluation_point": evaluation_point,
+        "normalized_parameter": normalized_parameter,
+        "basis_values": basis_values,
+        "hermite_terms": hermite_terms,
+        "hermite_value": hermite_value,
+        "polynomial_value": polynomial_value,
+    }
+
+
 def validate_calculus_riemann_sum(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -12459,6 +12553,132 @@ def validate_finite_taylor_polynomials(expected: dict[str, Any]) -> None:
     horizon_data = horizon.get("data", {})
     require_string("Taylor horizon target_theorem_shape", horizon_data.get("target_theorem_shape"))
     require_string("Taylor horizon future_checker", horizon_data.get("future_checker"))
+
+
+def validate_finite_cubic_hermite_interpolation(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    smoothstep = checks["smoothstep-hermite-witness"]
+    if smoothstep["expected_result"] != "sat":
+        fail("smoothstep-hermite-witness must expect sat")
+    if smoothstep.get("proof_status") != "replay-only":
+        fail("smoothstep-hermite-witness must be replay-only")
+    if smoothstep.get("validation") != "exact_rational_cubic_hermite_replay":
+        fail("smoothstep-hermite-witness validation is incorrect")
+    smoothstep_replay = validate_cubic_hermite_trace(
+        "smoothstep Hermite row",
+        single_witness_values(smoothstep, witnesses),
+    )
+    if smoothstep_replay["hermite_value"] != Fraction(1, 2):
+        fail("smoothstep-hermite-witness must compute value 1/2")
+
+    quadratic = checks["quadratic-unit-interval-hermite-witness"]
+    if quadratic["expected_result"] != "sat":
+        fail("quadratic-unit-interval-hermite-witness must expect sat")
+    if quadratic.get("proof_status") != "replay-only":
+        fail("quadratic-unit-interval-hermite-witness must be replay-only")
+    if quadratic.get("validation") != "exact_rational_cubic_hermite_replay":
+        fail("quadratic-unit-interval-hermite-witness validation is incorrect")
+    quadratic_replay = validate_cubic_hermite_trace(
+        "quadratic unit-interval Hermite row",
+        single_witness_values(quadratic, witnesses),
+    )
+    if quadratic_replay["hermite_value"] != Fraction(7, 4):
+        fail("quadratic-unit-interval-hermite-witness must compute value 7/4")
+
+    nonunit = checks["quadratic-nonunit-interval-hermite-witness"]
+    if nonunit["expected_result"] != "sat":
+        fail("quadratic-nonunit-interval-hermite-witness must expect sat")
+    if nonunit.get("proof_status") != "replay-only":
+        fail("quadratic-nonunit-interval-hermite-witness must be replay-only")
+    if nonunit.get("validation") != "exact_rational_cubic_hermite_replay":
+        fail("quadratic-nonunit-interval-hermite-witness validation is incorrect")
+    nonunit_replay = validate_cubic_hermite_trace(
+        "quadratic nonunit-interval Hermite row",
+        single_witness_values(nonunit, witnesses),
+    )
+    if nonunit_replay["interval_length"] != Fraction(2):
+        fail("quadratic-nonunit-interval-hermite-witness must use interval length 2")
+    if nonunit_replay["hermite_value"] != Fraction(4):
+        fail("quadratic-nonunit-interval-hermite-witness must compute value 4")
+
+    bad = checks["bad-hermite-value-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-hermite-value-rejected must expect unsat")
+    if bad.get("proof_status") != "replay-only":
+        fail("bad-hermite-value-rejected must be replay-only")
+    if bad.get("validation") != "exact_rational_bad_hermite_value_replay":
+        fail("bad-hermite-value-rejected validation is incorrect")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "quadratic-unit-interval-hermite":
+        fail("bad-hermite-value-rejected must cite the quadratic unit-interval row")
+    computed = require_fraction("bad Hermite computed_hermite_value", data.get("computed_hermite_value"))
+    claimed = require_fraction("bad Hermite claimed_hermite_value", data.get("claimed_hermite_value"))
+    gap = require_fraction("bad Hermite hermite_value_gap", data.get("hermite_value_gap"))
+    if computed != quadratic_replay["hermite_value"]:
+        fail("bad-hermite-value-rejected computed value must match quadratic replay")
+    if computed == claimed:
+        fail("bad-hermite-value-rejected malformed claim must disagree with replay")
+    if abs(computed - claimed) != gap:
+        fail("bad-hermite-value-rejected hermite_value_gap is incorrect")
+    if gap <= 0:
+        fail("bad-hermite-value-rejected hermite_value_gap must be positive")
+    if "separate qf-lra-bad-hermite-value" not in bad.get("notes", ""):
+        fail("bad-hermite-value-rejected notes must name the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-hermite-value"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-hermite-value must expect unsat")
+    if qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-hermite-value must be checked")
+    if qf_bad.get("validation") != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-hermite-value must use exact_rational_farkas_evidence")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_witness") != "quadratic-unit-interval-hermite":
+        fail("qf-lra-bad-hermite-value must cite the quadratic unit-interval row")
+    if qf_data.get("source_replay_row") != "bad-hermite-value-rejected":
+        fail("qf-lra-bad-hermite-value must cite the replay row")
+    qf_computed = require_fraction(
+        "qf Hermite computed_hermite_value",
+        qf_data.get("computed_hermite_value"),
+    )
+    qf_claimed = require_fraction(
+        "qf Hermite claimed_hermite_value",
+        qf_data.get("claimed_hermite_value"),
+    )
+    if qf_computed != computed or qf_claimed != claimed:
+        fail("qf-lra-bad-hermite-value data must match the replay row")
+    conflict = qf_data.get("farkas_conflict")
+    require_string("qf Hermite farkas_conflict", conflict)
+    if conflict != "hermite_value = 7/4 and hermite_value = 2":
+        fail("qf-lra-bad-hermite-value must document the Farkas conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf Hermite smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-cubic-hermite-interpolation-v0/smt2/"
+        "bad-hermite-value-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-lra-bad-hermite-value smt2_artifact must name the checked source artifact")
+    check_source("qf Hermite smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf Hermite farkas_regression", regression)
+    if "finite_cubic_hermite_interpolation_bad_value_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-hermite-value must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf Hermite certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-hermite-value certificate must document checked Farkas evidence")
+
+    horizon = checks["general-hermite-interpolation-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-hermite-interpolation-theory-lean-horizon must be not-run")
+    if horizon.get("proof_status") != "lean-horizon":
+        fail("general-hermite-interpolation-theory-lean-horizon must remain lean-horizon")
+    horizon_data = horizon.get("data", {})
+    require_string("Hermite horizon target_theorem_shape", horizon_data.get("target_theorem_shape"))
+    require_string("Hermite horizon future_checker", horizon_data.get("future_checker"))
 
 
 def validate_linear_algebra_rational(expected: dict[str, Any]) -> None:
@@ -35188,6 +35408,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_difference_derivatives(expected)
     if metadata["id"] == "finite-taylor-polynomials-v0":
         validate_finite_taylor_polynomials(expected)
+    if metadata["id"] == "finite-cubic-hermite-interpolation-v0":
+        validate_finite_cubic_hermite_interpolation(expected)
     if metadata["id"] == "complex-algebraic-v0":
         validate_complex_algebraic(expected)
     if metadata["id"] == "complex-plane-transforms-v0":

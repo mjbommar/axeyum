@@ -374,7 +374,7 @@ Pick one item per commit unless the change is purely navigational.
 
 1. Refresh stale planning counts and link this sequence from the resource
    indexes.
-2. Audit learner coverage for the current 114 packs and record any remaining
+2. Audit learner coverage for the current 152 packs and record any remaining
    combined-page-only rows.
 3. Landed: add the finite quotient-topology pack and bridge as the next
    distinct topology/set-theory gap, with quotient-map fibers, quotient-open

@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "id": "finite-cubic-hermite-interpolation-v0",
+  "title": "Finite Cubic Hermite Interpolation Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_numerical_analysis",
+    "field_real_analysis",
+    "curriculum_polynomials",
+    "curriculum_calculus",
+    "curriculum_rationals",
+    "curriculum_reals",
+    "bridge_derivative_identity_shadow",
+    "bridge_polynomial_coefficient_factor_replay",
+    "bridge_exact_vs_floating_arithmetic",
+    "bridge_bounded_family_asymptotic_boundary"
+  ],
+  "field_ids": [
+    "numerical_analysis",
+    "real_analysis"
+  ],
+  "curriculum_nodes": [
+    "polynomials",
+    "calculus",
+    "rationals",
+    "reals"
+  ],
+  "axeyum_fragments": [
+    "cubic Hermite interpolation replay",
+    "endpoint derivative constraints",
+    "symbolic polynomial differentiation",
+    "polynomial evaluation",
+    "LRA (exact rationals)",
+    "QF_LRA",
+    "Farkas",
+    "finite replay",
+    "Lean horizon",
+    "numerical-honesty metadata"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-cubic-hermite-interpolation-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite cubic Hermite interpolation bad value QF_LRA/Farkas regression seed",
+    "pressure": "Exact rational cubic Hermite replay for p(x)=1+x+x^2 on [0,1] at x=1/2 computes hermite_value = 7/4, while a malformed row claims hermite_value = 2, isolating a compact scalar equality conflict for the Farkas route.",
+    "evidence": [
+      "qf-lra-bad-hermite-value"
+    ],
+    "next_step": "Promote additional Hermite rows only when they add distinct interval scaling, spline, monotonicity, shape-preservation, floating-point, or theorem-reconstruction pressure; keep Hermite interpolation theory and spline convergence claims in future Lean or numerical-honesty lanes."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/02-structures/polynomials.md",
+    "docs/curriculum/03-destinations/calculus.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/curriculum/01-number-systems/reals.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/hermite-interpolation-end-to-end.md",
+    "artifacts/examples/math/finite-cubic-hermite-interpolation-v0/smt2/bad-hermite-value-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+  ],
+  "expected_results": [
+    "smoothstep-hermite-witness",
+    "quadratic-unit-interval-hermite-witness",
+    "quadratic-nonunit-interval-hermite-witness",
+    "bad-hermite-value-rejected",
+    "qf-lra-bad-hermite-value",
+    "general-hermite-interpolation-theory-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode the fixed polynomial, interval, endpoint values, endpoint slopes, normalized parameter, Hermite basis values, scaled derivative terms, Hermite value, and polynomial value as deterministic rational replay obligations.",
+    "Route the false Hermite value through checked QF_LRA/Farkas evidence after replay computes the exact value.",
+    "Expose the pack through derivative, polynomial, calculus, real-analysis, numerical-analysis, and learner query surfaces.",
+    "Keep Hermite interpolation uniqueness, divided-difference equivalence, error estimates, spline theory, shape preservation, monotonicity guarantees, floating-point evaluation, and general approximation theory marked as future Lean or numerical-honesty work until formal routes exist."
+  ]
+}

@@ -18,7 +18,7 @@ epsilon-delta shadows, bounded sequence tails, algebraic derivative and
 integral replay, Newton/root-finding steps, finite recurrence, Euler,
 Runge-Kutta midpoint, Heun, backward Euler, Crank-Nicolson,
 Adams-Bashforth, BDF2, Simpson-rule quadrature, finite-difference derivative
-stencils, finite Taylor polynomial rows, and divided-difference interpolation rows,
+stencils, finite Taylor polynomial rows, cubic Hermite interpolation rows, and divided-difference interpolation rows,
 residual/solution-box/Jacobi rows, exact condition-number, Schur-complement,
 singular-value shadows, fixed-decimal rounding shadows,
 exact-vs-floating boundary rows, complex numbers as real-pair algebra, and one
@@ -88,9 +88,9 @@ needs concrete checked rows to display.
 | Sequence tails, Cauchy shadows, and squeeze side conditions | `bridge_sequence_tail_shadow`; `bridge_cauchy_tail_shadow`; `bridge_squeeze_shadow` | `Farkas`; finite replay | `concepts --field real_analysis --text "Sequence Tail"`; `concepts --field real_analysis --text "Cauchy Tail"`; `concepts --field real_analysis --text "Squeeze Shadow"` |
 | Derivative identities and integration horizons | `bridge_derivative_identity_shadow`; `bridge_integration_horizon` | `Farkas`; Lean horizon | `concepts --field real_analysis --text "Derivative Identity"`; `concepts --field real_analysis --text "Integration Horizon"` |
 | Metric balls and bounded epsilon-delta rows | `bridge_metric_ball`; `bridge_bounded_epsilon_delta_shadow` | `Farkas` | `checks --concept bridge_bounded_epsilon_delta_shadow --route Farkas --proof-status checked` |
-| Algebraic derivative, finite-difference, Taylor-polynomial, Riemann-sum, Simpson-rule, and multivariable calculus shadows | packs `calculus-algebraic-shadow-v0`, `finite-difference-derivatives-v0`, `finite-taylor-polynomials-v0`, `calculus-riemann-sum-v0`, `finite-simpson-rule-v0`, `multivariable-calculus-rational-v0` | `Farkas`; Lean horizon | `checks --pack calculus-algebraic-shadow-v0 --route Farkas --proof-status checked`; `checks --pack finite-difference-derivatives-v0 --route Farkas --proof-status checked`; `checks --pack finite-taylor-polynomials-v0 --route Farkas --proof-status checked`; `checks --pack calculus-riemann-sum-v0 --route Farkas --proof-status checked`; `checks --pack finite-simpson-rule-v0 --route Farkas --proof-status checked`; `horizon-frontier --text calculus` |
+| Algebraic derivative, finite-difference, Taylor-polynomial, Hermite interpolation, Riemann-sum, Simpson-rule, and multivariable calculus shadows | packs `calculus-algebraic-shadow-v0`, `finite-difference-derivatives-v0`, `finite-taylor-polynomials-v0`, `finite-cubic-hermite-interpolation-v0`, `calculus-riemann-sum-v0`, `finite-simpson-rule-v0`, `multivariable-calculus-rational-v0` | `Farkas`; Lean horizon | `checks --pack calculus-algebraic-shadow-v0 --route Farkas --proof-status checked`; `checks --pack finite-difference-derivatives-v0 --route Farkas --proof-status checked`; `checks --pack finite-taylor-polynomials-v0 --route Farkas --proof-status checked`; `checks --pack finite-cubic-hermite-interpolation-v0 --route Farkas --proof-status checked`; `checks --pack calculus-riemann-sum-v0 --route Farkas --proof-status checked`; `checks --pack finite-simpson-rule-v0 --route Farkas --proof-status checked`; `horizon-frontier --text calculus` |
 | Exact finite convexity and convex-analysis horizons | pack `convexity-rational-v0`; concept `bridge_rational_convexity_shadow` | `Farkas`; Lean horizon | `checks --pack convexity-rational-v0 --route Farkas --proof-status checked`; `horizon-frontier --text convex-analysis` |
-| Polynomial coefficients, factors, roots, coefficient windows, divided-difference interpolation, barycentric interpolation, and Taylor-polynomial replay | `bridge_polynomial_coefficient_factor_replay`; packs `finite-divided-differences-v0`, `finite-barycentric-interpolation-v0`, `finite-taylor-polynomials-v0` | `Diophantine`; `Farkas` | `checks --concept bridge_polynomial_coefficient_factor_replay --route Diophantine --proof-status checked`; `checks --concept bridge_polynomial_coefficient_factor_replay --route Farkas --proof-status checked`; `checks --pack finite-divided-differences-v0 --route Farkas --proof-status checked`; `checks --pack finite-barycentric-interpolation-v0 --route Farkas --proof-status checked`; `checks --pack finite-taylor-polynomials-v0 --route Farkas --proof-status checked` |
+| Polynomial coefficients, factors, roots, coefficient windows, divided-difference interpolation, barycentric interpolation, Taylor-polynomial replay, and Hermite interpolation | `bridge_polynomial_coefficient_factor_replay`; packs `finite-divided-differences-v0`, `finite-barycentric-interpolation-v0`, `finite-taylor-polynomials-v0`, `finite-cubic-hermite-interpolation-v0` | `Diophantine`; `Farkas` | `checks --concept bridge_polynomial_coefficient_factor_replay --route Diophantine --proof-status checked`; `checks --concept bridge_polynomial_coefficient_factor_replay --route Farkas --proof-status checked`; `checks --pack finite-divided-differences-v0 --route Farkas --proof-status checked`; `checks --pack finite-barycentric-interpolation-v0 --route Farkas --proof-status checked`; `checks --pack finite-taylor-polynomials-v0 --route Farkas --proof-status checked`; `checks --pack finite-cubic-hermite-interpolation-v0 --route Farkas --proof-status checked` |
 | Root-finding and Newton-step rows | pack `finite-root-finding-v0`; concept `bridge_exact_vs_floating_arithmetic` | `Farkas` | `checks --pack finite-root-finding-v0 --route Farkas --proof-status checked` |
 | Finite dynamics, recurrence, Euler, Runge-Kutta midpoint, Heun, Backward Euler, Crank-Nicolson, Adams-Bashforth, and BDF2 replay | `bridge_finite_dynamics_euler_replay` | `Farkas` | `checks --concept bridge_finite_dynamics_euler_replay --route Farkas --proof-status checked`; `checks --pack finite-runge-kutta-midpoint-v0 --route Farkas --proof-status checked`; `checks --pack finite-heun-method-v0 --route Farkas --proof-status checked`; `checks --pack finite-backward-euler-method-v0 --route Farkas --proof-status checked`; `checks --pack finite-crank-nicolson-method-v0 --route Farkas --proof-status checked`; `checks --pack finite-adams-bashforth-method-v0 --route Farkas --proof-status checked`; `checks --pack finite-bdf2-method-v0 --route Farkas --proof-status checked` |
 | Residuals, solution boxes, Jacobi steps, condition numbers, GMRES residual minimization, Schur complements, real Schur decomposition, polar decomposition, QR iteration and shifted-QR steps, singular values, and exact matrix factorizations | `bridge_residual_bound`; `bridge_lu_replay`; `bridge_schur_complement`; pack `finite-gmres-residual-shadow-v0`; pack `finite-singular-value-shadow-v0`; pack `finite-real-schur-decomposition-v0`; pack `finite-polar-decomposition-v0`; pack `finite-qr-iteration-step-v0`; pack `finite-shifted-qr-step-v0` | `Farkas` | `checks --concept bridge_residual_bound --route Farkas --proof-status checked`; `checks --concept bridge_schur_complement --route Farkas --proof-status checked`; `checks --pack numerical-linear-algebra-v0 --route Farkas --proof-status checked`; `checks --pack finite-condition-number-v0 --route Farkas --proof-status checked`; `checks --pack finite-gmres-residual-shadow-v0 --route Farkas --proof-status checked`; `checks --pack finite-schur-complement-v0 --route Farkas --proof-status checked`; `checks --pack finite-real-schur-decomposition-v0 --route Farkas --proof-status checked`; `checks --pack finite-polar-decomposition-v0 --route Farkas --proof-status checked`; `checks --pack finite-qr-iteration-step-v0 --route Farkas --proof-status checked`; `checks --pack finite-shifted-qr-step-v0 --route Farkas --proof-status checked`; `checks --pack finite-singular-value-shadow-v0 --route Farkas --proof-status checked`; `checks --pack numerical-linear-algebra-v0 --route Farkas --proof-status checked --text solution`; `checks --pack finite-lu-decomposition-v0 --route Farkas --proof-status checked`; `checks --pack finite-pivoted-lu-decomposition-v0 --route Farkas --proof-status checked`; `checks --pack finite-ldlt-decomposition-v0 --route Farkas --proof-status checked`; `checks --pack finite-cholesky-decomposition-v0 --route Farkas --proof-status checked` |
@@ -257,6 +257,27 @@ python3 scripts/query-foundational-resources.py checks \
 python3 scripts/query-foundational-resources.py checks \
   --concept bridge_polynomial_coefficient_factor_replay \
   --pack finite-taylor-polynomials-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-cubic-hermite-interpolation-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --text qf-lra-bad-hermite-value \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --concept bridge_derivative_identity_shadow \
+  --pack finite-cubic-hermite-interpolation-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --concept bridge_polynomial_coefficient_factor_replay \
+  --pack finite-cubic-hermite-interpolation-v0 \
   --route Farkas \
   --proof-status checked \
   --require-any

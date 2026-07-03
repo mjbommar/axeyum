@@ -240,6 +240,24 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite cubic Hermite interpolation resource landed.**
+  `finite-cubic-hermite-interpolation-v0` now gives the real-analysis,
+  calculus, and numerical-analysis lanes a compact endpoint value/slope
+  interpolation example: it replays Hermite basis values, interval-length
+  scaling, endpoint value constraints, endpoint slope constraints, and exact
+  polynomial values for a smoothstep row, a unit-interval quadratic row, and a
+  nonunit interval quadratic row. It rejects the malformed Hermite claim `2`
+  versus exact `7/4` through a source-linked QF_LRA/Farkas row. The focused
+  learner page, rational-real algebra page, calculus theorem-boundary page,
+  analysis/numerical query guide, derivative and polynomial bridge rows,
+  validator, resource smoke queries, generated dashboards, and
+  `math_resource_lra_routes` regression keep this fixed exact Hermite replay
+  separate from Hermite interpolation uniqueness, divided-difference
+  equivalence, error formulas, spline assembly, monotonicity,
+  shape-preservation, and floating-point Hermite-evaluation theory. The public
+  summary now reports 122 concept rows, 152 packs, 990 expected checks, 378
+  checked rows, 497 replay-only rows, 115 Lean-horizon rows, and 152 promoted
+  solver-reuse packs.
 - **Finite Taylor polynomial resource landed.**
   `finite-taylor-polynomials-v0` now gives the real-analysis, calculus, and
   numerical-analysis lanes a compact exact Taylor-polynomial example: it
@@ -253,9 +271,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   dashboards, and `math_resource_lra_routes` regression keep this fixed exact
   Taylor replay separate from Taylor theorem, remainder-bound, analytic
   convergence, radius-of-convergence, smoothness, multivariable Taylor, and
-  floating-point Taylor-evaluation theory. The public summary now reports 122
-  concept rows, 151 packs, 984 expected checks, 377 checked rows, 493
-  replay-only rows, 114 Lean-horizon rows, and 151 promoted solver-reuse packs.
+  floating-point Taylor-evaluation theory. The current public summary is
+  recorded in the latest process-lane bullet above.
 - **Finite difference derivative resource landed.**
   `finite-difference-derivatives-v0` now gives the real-analysis and
   numerical-analysis lanes a compact exact finite-difference derivative

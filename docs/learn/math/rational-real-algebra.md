@@ -23,6 +23,7 @@ Example packs:
 - [finite-barycentric-interpolation-v0](../../../artifacts/examples/math/finite-barycentric-interpolation-v0/)
 - [finite-difference-derivatives-v0](../../../artifacts/examples/math/finite-difference-derivatives-v0/)
 - [finite-taylor-polynomials-v0](../../../artifacts/examples/math/finite-taylor-polynomials-v0/)
+- [finite-cubic-hermite-interpolation-v0](../../../artifacts/examples/math/finite-cubic-hermite-interpolation-v0/)
 - [generating-functions-v0](../../../artifacts/examples/math/generating-functions-v0/)
 - [finite-recurrence-prefix-v0](../../../artifacts/examples/math/finite-recurrence-prefix-v0/)
 - [finite-root-finding-v0](../../../artifacts/examples/math/finite-root-finding-v0/)
@@ -70,7 +71,7 @@ fixed-degree polynomial identities and roots, rational polynomial
 factorization/division/GCD/square-free replay, finite divided-difference
 interpolation replay, finite barycentric interpolation replay, finite
 difference derivative stencil replay, finite Taylor polynomial replay,
-finite generating-function
+finite cubic Hermite endpoint-slope interpolation replay, finite generating-function
 coefficient extraction and Cauchy-product replay, finite recurrence-prefix and
 companion-matrix replay, finite bisection/Newton root-finding replay, finite
 multivariable Newton-step Hessian-solve replay, finite
@@ -280,6 +281,30 @@ evidence. Taylor theorem, remainder bounds, analytic convergence,
 radius-of-convergence, smoothness hypotheses, multivariable Taylor, and
 floating-point Taylor evaluation remain theorem or numerical-honesty work; see
 [End To End: Finite Taylor Polynomials](taylor-polynomials-end-to-end.md).
+
+For finite cubic Hermite interpolation, encode endpoint values, endpoint
+slopes, interval length, normalized parameter, and basis values:
+
+```text
+p(x) = 1 + x + x^2
+[a,b] = [0,1]
+p(0) = 1, p'(0) = 1
+p(1) = 3, p'(1) = 3
+t = 1/2
+Hermite value = 1*(1/2) + 1*1*(1/8) + 3*(1/2) + 1*3*(-1/8) = 7/4
+```
+
+The `finite-cubic-hermite-interpolation-v0` validator recomputes the interval
+length, normalized parameter, four Hermite basis values, scaled derivative
+terms, endpoint value/slope constraints, Hermite value, and polynomial value.
+It also checks a nonunit interval row for `x^2` on `[1,3]`, where derivative
+terms are scaled by interval length `2`. The malformed claim
+`hermite_value = 2` is rejected after exact replay computes `7/4`, then the
+scalar equality conflict is checked through QF_LRA/Farkas evidence. Hermite
+interpolation uniqueness, divided-difference equivalence, error estimates,
+spline assembly, monotonicity/shape preservation, and floating-point Hermite
+evaluation remain theorem or numerical-honesty work; see
+[End To End: Finite Cubic Hermite Interpolation](hermite-interpolation-end-to-end.md).
 
 For a finite generating-function check, encode coefficient lists and replay
 convolution:

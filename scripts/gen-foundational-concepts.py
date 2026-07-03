@@ -373,6 +373,10 @@ CURRICULUM_MAP = {
                 "finite-taylor-polynomials-v0",
                 "Finite Taylor polynomial coefficients, exact polynomial-value replay, truncated remainder replay, and checked bad-value rejection.",
             ),
+            (
+                "finite-cubic-hermite-interpolation-v0",
+                "Finite cubic Hermite endpoint value/slope interpolation replay, interval-scaling checks, and checked bad-value rejection.",
+            ),
         ],
     },
     "sequences-and-limits": {
@@ -632,6 +636,10 @@ CURRICULUM_MAP = {
                 "Finite rational Taylor polynomial replay, truncated linearization remainder replay, checked bad-value Farkas row, and Taylor-theory Lean horizon.",
             ),
             (
+                "finite-cubic-hermite-interpolation-v0",
+                "Finite rational cubic Hermite interpolation replay from endpoint values and slopes with checked bad-value Farkas row.",
+            ),
+            (
                 "multivariable-calculus-rational-v0",
                 "Exact rational gradient, directional derivative, Jacobian chain-rule, and Hessian-minor replay.",
             ),
@@ -683,7 +691,7 @@ FIELD_PACKS = {
     "number_theory": ("modular-arithmetic-v0", "Congruences, CRT, residues, finite fields, finite ideals in modular rings, and bounded Diophantine examples."),
     "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, covariance/Gram replay, orthogonal transforms, rank, inverse, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, GMRES residual-minimization, Lanczos/tridiagonalization, and Jordan-chain shadows, Jacobians, Hessians, Newton-step Hessian solves, projections, and infeasibility."),
     "abstract_algebra": ("finite-fields-v0", "Finite groups, permutation groups, monoids, group actions, rings, fields, ideals, modules, dual spaces, tensor products, homomorphism tables, polynomial factorization slices, Jordan-chain polynomial/module shadows, and Cayley-table validation."),
-    "real_analysis": ("real-analysis-rational-v0", "Rational interval/ball checks, bounded epsilon-delta samples, algebraic factorization, divided-difference and barycentric interpolation, finite-difference derivative stencils, finite Taylor polynomial replay, fixed-decimal rounding shadows, Riemann-sum and Simpson-rule quadrature shadows, multivariable-calculus, Newton-step, Runge-Kutta midpoint, Heun-method, backward Euler, Crank-Nicolson, Adams-Bashforth, and BDF2 shadows, and proof horizons."),
+    "real_analysis": ("real-analysis-rational-v0", "Rational interval/ball checks, bounded epsilon-delta samples, algebraic factorization, divided-difference and barycentric interpolation, finite-difference derivative stencils, finite Taylor polynomial replay, finite cubic Hermite interpolation replay, fixed-decimal rounding shadows, Riemann-sum and Simpson-rule quadrature shadows, multivariable-calculus, Newton-step, Runge-Kutta midpoint, Heun-method, backward Euler, Crank-Nicolson, Adams-Bashforth, and BDF2 shadows, and proof horizons."),
     "complex_analysis": ("complex-algebraic-v0", "Complex arithmetic, real-pair transforms, finite Cauchy-Riemann derivative shadows, and polynomial factorization shadows as real/rational algebra before analytic proof horizons."),
     "topology": ("finite-topology-v0", "Finite topologies, metric balls, closure/interior, continuous maps, and finite simplicial-homology checks."),
     "measure_theory": ("finite-measure-v0", "Finite sigma-algebras, finite measures, monotonicity/subadditivity, random variables, conditional expectations, finite kernels, martingales, hitting times, concentration checks, product tables, and exact probability foundations."),
@@ -707,7 +715,7 @@ FIELD_PACKS = {
         ("finite-projected-gradient-v0", "Finite projected-gradient interval replay with checked bad-projection rejection."),
         ("finite-proximal-gradient-v0", "Finite proximal-gradient L1 soft-threshold/composite-decrease replay with checked bad proximal-gradient rows."),
     ],
-    "numerical_analysis": ("numerical-linear-algebra-v0", "Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, interval bounds, inner-product projections, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, GMRES residual-minimization, Lanczos/tridiagonalization, residual, rounding, and perturbation-bound shadows, divided-difference and barycentric interpolation, finite-difference derivative stencils, finite Taylor polynomial replay, fixed-step error recurrences, Simpson-rule quadrature, Euler, Runge-Kutta midpoint, Heun, backward Euler, Crank-Nicolson implicit, Adams-Bashforth explicit multistep, and BDF2 implicit multistep time-stepping shadows, Jacobian/Hessian replay, finite root-finding, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."),
+    "numerical_analysis": ("numerical-linear-algebra-v0", "Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, interval bounds, inner-product projections, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, GMRES residual-minimization, Lanczos/tridiagonalization, residual, rounding, and perturbation-bound shadows, divided-difference and barycentric interpolation, finite-difference derivative stencils, finite Taylor polynomial replay, finite cubic Hermite interpolation replay, fixed-step error recurrences, Simpson-rule quadrature, Euler, Runge-Kutta midpoint, Heun, backward Euler, Crank-Nicolson implicit, Adams-Bashforth explicit multistep, and BDF2 implicit multistep time-stepping shadows, Jacobian/Hessian replay, finite root-finding, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."),
     "differential_equations_and_dynamical_systems": ("bounded-dynamics-v0", "Recurrence systems, discretized dynamics, threshold reachability, invariant checks, Euler, Runge-Kutta midpoint, Heun, backward Euler, Crank-Nicolson, Adams-Bashforth, and BDF2 finite time-stepping, Markov transitions, and finite hitting times."),
     "geometry": [
         (
@@ -1699,6 +1707,10 @@ BRIDGE_CONCEPTS = [
                 "Finite Taylor polynomial rows replay exact rational derivative, factorial, and value arithmetic while floating-point Taylor evaluation remains horizon work.",
             ),
             (
+                "finite-cubic-hermite-interpolation-v0",
+                "Finite Hermite interpolation rows replay exact endpoint value/slope and interval-scaling arithmetic while floating-point spline/interpolation evaluation remains horizon work.",
+            ),
+            (
                 "exact-statistical-tests-v0",
                 "Finite exact-test p-value rows represented as rational sums rather than floating-point statistical approximations.",
             ),
@@ -1732,6 +1744,7 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/givens-rotation-end-to-end.md",
                     "docs/learn/math/householder-reflection-end-to-end.md",
                     "docs/learn/math/taylor-polynomials-end-to-end.md",
+                    "docs/learn/math/hermite-interpolation-end-to-end.md",
                     "docs/learn/math/exact-statistical-tests-end-to-end.md",
                     "docs/foundational-resources/MATH-FIELDS.md",
                 ],
@@ -1766,6 +1779,7 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/givens-rotation-end-to-end.md",
             "docs/learn/math/householder-reflection-end-to-end.md",
             "docs/learn/math/taylor-polynomials-end-to-end.md",
+            "docs/learn/math/hermite-interpolation-end-to-end.md",
             "docs/learn/math/descriptive-statistics-regression-end-to-end.md",
             "docs/learn/math/exact-statistical-tests-end-to-end.md",
             "artifacts/examples/math/finite-rounding-shadow-v0/smt2/bad-rounded-delta-farkas-conflict.smt2",
@@ -3044,11 +3058,12 @@ BRIDGE_CONCEPTS = [
             "Polynomial replay rows fix a coefficient domain, degree bound, "
             "coefficient tuple, evaluation point, divisor, factor witness, or "
             "coefficient window, and now finite divided-difference, "
-            "barycentric interpolation, finite-difference derivative, and "
-            "finite Taylor polynomial tables, weights, node hits, stencils, "
+            "barycentric interpolation, finite-difference derivative, "
+            "finite Taylor polynomial, and cubic Hermite interpolation "
+            "tables, weights, node hits, stencils, endpoint values/slopes, "
             "coefficients, and values. Axeyum can replay the finite "
             "arithmetic and check malformed coefficient, root, discriminant, "
-            "product, interpolation-value, Taylor-value, or step claims "
+            "product, interpolation-value, Taylor-value, Hermite-value, or step claims "
             "through finite replay, QF_LIA/Diophantine, or QF_LRA/Farkas "
             "evidence; general polynomial theory stays in the "
             "Lean or algebraic-reasoning horizon."
@@ -3078,6 +3093,7 @@ BRIDGE_CONCEPTS = [
             "barycentric interpolation",
             "finite difference derivative stencils",
             "finite Taylor polynomial replay",
+            "cubic Hermite interpolation replay",
             "QF_LIA / Diophantine",
             "QF_LRA / Farkas",
             "NRA / RCF shadow",
@@ -3116,6 +3132,10 @@ BRIDGE_CONCEPTS = [
             (
                 "finite-taylor-polynomials-v0",
                 "Exact Taylor coefficients, polynomial-value replay, truncated linearization remainder replay, and checked bad Taylor-value evidence.",
+            ),
+            (
+                "finite-cubic-hermite-interpolation-v0",
+                "Exact endpoint value/slope cubic Hermite replay, interval-scaling checks, and checked bad Hermite-value evidence.",
             ),
             (
                 "calculus-algebraic-shadow-v0",
@@ -3166,7 +3186,8 @@ BRIDGE_CONCEPTS = [
                     "coefficient windows, divided-difference tables, "
                     "Newton interpolation values, or barycentric "
                     "weights/node-hit values, finite-difference stencils, "
-                    "or Taylor coefficients and values. Negative rows graduate only "
+                    "Taylor coefficients and values, or Hermite endpoint "
+                    "value/slope rows. Negative rows graduate only "
                     "when the source artifact is checked by the integer "
                     "Diophantine or exact-rational Farkas route."
                 ),
@@ -3184,10 +3205,12 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/divided-differences-end-to-end.md",
             "docs/learn/math/barycentric-interpolation-end-to-end.md",
             "docs/learn/math/taylor-polynomials-end-to-end.md",
+            "docs/learn/math/hermite-interpolation-end-to-end.md",
             "docs/learn/math/calculus-shadows-end-to-end.md",
             "docs/learn/math/cauchy-riemann-shadow-end-to-end.md",
             "artifacts/examples/math/finite-cauchy-riemann-shadow-v0/smt2/bad-derivative-real-part-farkas-conflict.smt2",
             "artifacts/examples/math/finite-taylor-polynomials-v0/smt2/bad-taylor-value-farkas-conflict.smt2",
+            "artifacts/examples/math/finite-cubic-hermite-interpolation-v0/smt2/bad-hermite-value-farkas-conflict.smt2",
             "docs/learn/math/finite-circle-geometry-end-to-end.md",
             "docs/learn/math/finite-inversion-geometry-end-to-end.md",
             "docs/learn/math/finite-cyclic-geometry-end-to-end.md",
@@ -3198,14 +3221,14 @@ BRIDGE_CONCEPTS = [
         "open_gaps": [
             "Fixed-degree replay does not prove unique factorization, algebraic closure, arbitrary polynomial GCD correctness, or root-distribution theorems.",
             "Generating-function rows are finite coefficient windows; convergence and formal power-series theorem families remain Lean-horizon resources.",
-            "Divided-difference, barycentric, finite-difference, and Taylor rows are finite table/weight/stencil/coefficient/value replays; interpolation uniqueness, equivalence, error estimates, node-choice conditioning, Runge phenomena, splines, Taylor theorem, remainder bounds, convergence, and floating-point interpolation or Taylor evaluation stay Lean or numerical-honesty horizons.",
+            "Divided-difference, barycentric, finite-difference, Taylor, and Hermite rows are finite table/weight/stencil/coefficient/endpoint/value replays; interpolation uniqueness, equivalence, error estimates, node-choice conditioning, Runge phenomena, splines, Hermite interpolation theory, Taylor theorem, remainder bounds, convergence, and floating-point interpolation or Taylor evaluation stay Lean or numerical-honesty horizons.",
             "Geometry and calculus rows reuse polynomial arithmetic only for fixed rational obligations, not global analytic or synthetic geometry theorems.",
         ],
         "graduation": {
             "status": "validated",
             "criteria": [
-                "Rows state coefficient domain, degree bound, coefficient tuple, evaluation point, divisor, factor witness, coefficient window, divided-difference table, Newton coefficients, barycentric weights, node-hit data, or Taylor coefficient data.",
-                "Validators recompute evaluation, product, remainder, GCD/factor witness, derivative, coefficient extraction, divided-difference rows, Newton interpolation values, barycentric weights, terms, node hits, interpolation values, Taylor coefficients, Taylor values, and Taylor remainders before trusting a solver result.",
+                "Rows state coefficient domain, degree bound, coefficient tuple, evaluation point, divisor, factor witness, coefficient window, divided-difference table, Newton coefficients, barycentric weights, node-hit data, Taylor coefficient data, or Hermite endpoint value/slope data.",
+                "Validators recompute evaluation, product, remainder, GCD/factor witness, derivative, coefficient extraction, divided-difference rows, Newton interpolation values, barycentric weights, terms, node hits, interpolation values, Taylor coefficients, Taylor values, Taylor remainders, Hermite basis values, and Hermite values before trusting a solver result.",
                 "Malformed polynomial rows link source SMT-LIB artifacts and checked Diophantine or Farkas route regressions before solver reuse is claimed.",
                 "General polynomial, analytic, and algebraic-closure claims stay linked to Lean-horizon or RCF/NRA resources.",
             ],
@@ -4238,9 +4261,11 @@ BRIDGE_CONCEPTS = [
             "points, replays finite-difference derivative stencils, "
             "builds finite Taylor coefficients and exact/truncated Taylor "
             "values from derivative samples, "
+            "checks cubic Hermite interpolation rows from endpoint values "
+            "and derivative constraints, "
             "reuses gradient/Hessian data for finite Newton steps, "
             "replays fixed complex real-pair partial derivatives, and isolates "
-            "bad derivative, finite-difference, Taylor, gradient, or "
+            "bad derivative, finite-difference, Taylor, Hermite, gradient, or "
             "Newton-coordinate claims as small linear contradictions when "
             "possible."
         ),
@@ -4261,6 +4286,7 @@ BRIDGE_CONCEPTS = [
             "symbolic polynomial differentiation",
             "finite difference derivative stencil replay",
             "finite Taylor polynomial replay",
+            "cubic Hermite endpoint slope replay",
             "exact rational evaluation",
             "complex real-pair partial derivative replay",
             "QF_LRA",
@@ -4279,6 +4305,10 @@ BRIDGE_CONCEPTS = [
             (
                 "finite-taylor-polynomials-v0",
                 "Taylor coefficient, exact polynomial-value, and truncated-remainder replay with checked bad Taylor-value evidence.",
+            ),
+            (
+                "finite-cubic-hermite-interpolation-v0",
+                "Endpoint value/slope Hermite interpolation replay with checked bad Hermite-value evidence.",
             ),
             (
                 "multivariable-calculus-rational-v0",
@@ -4314,6 +4344,7 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/calculus-shadows-end-to-end.md",
                     "docs/learn/math/finite-difference-derivatives-end-to-end.md",
                     "docs/learn/math/taylor-polynomials-end-to-end.md",
+                    "docs/learn/math/hermite-interpolation-end-to-end.md",
                     "docs/learn/math/multivariable-calculus-end-to-end.md",
                     "docs/learn/math/finite-root-finding-end-to-end.md",
                     "docs/learn/math/newton-step-end-to-end.md",
@@ -4323,9 +4354,10 @@ BRIDGE_CONCEPTS = [
                 "notes": (
                     "The validator recomputes the derivative formula and exact "
                     "sample values, including finite-difference stencils and "
-                    "Taylor polynomial rows, plus gradient/Hessian data for "
+                    "Taylor polynomial rows, cubic Hermite endpoint slope rows, "
+                    "plus gradient/Hessian data for "
                     "the finite Newton-step pack. Bad finite derivative, "
-                    "finite-difference, Taylor, gradient, "
+                    "finite-difference, Taylor, Hermite, gradient, "
                     "complex derivative-coordinate, or Newton-coordinate claims "
                     "use checked Farkas evidence; differentiability theorems "
                     "remain Lean horizons."
@@ -4339,18 +4371,20 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/calculus-shadows-end-to-end.md",
             "docs/learn/math/finite-difference-derivatives-end-to-end.md",
             "docs/learn/math/taylor-polynomials-end-to-end.md",
+            "docs/learn/math/hermite-interpolation-end-to-end.md",
             "docs/learn/math/multivariable-calculus-end-to-end.md",
             "docs/learn/math/finite-root-finding-end-to-end.md",
             "docs/learn/math/newton-step-end-to-end.md",
             "docs/learn/math/cauchy-riemann-shadow-end-to-end.md",
             "artifacts/examples/math/finite-difference-derivatives-v0/smt2/bad-finite-difference-value-farkas-conflict.smt2",
             "artifacts/examples/math/finite-taylor-polynomials-v0/smt2/bad-taylor-value-farkas-conflict.smt2",
+            "artifacts/examples/math/finite-cubic-hermite-interpolation-v0/smt2/bad-hermite-value-farkas-conflict.smt2",
             "artifacts/examples/math/finite-cauchy-riemann-shadow-v0/smt2/bad-derivative-real-part-farkas-conflict.smt2",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
         ],
         "open_gaps": [
-            "Finite derivative, finite-difference, and finite Taylor replay does not prove differentiability from limits, product/chain rules in general, Taylor theorem, Taylor-error bounds, convergence order, stability, MVT, or FTC.",
+            "Finite derivative, finite-difference, finite Taylor, and finite Hermite replay does not prove differentiability from limits, product/chain rules in general, Taylor theorem, Hermite interpolation theory, Taylor-error bounds, convergence order, stability, MVT, or FTC.",
             "Finite Cauchy-Riemann equality replay does not prove holomorphicity or the general Cauchy-Riemann theorem.",
             "Non-polynomial derivative rules and analytic theorem reconstruction remain Lean horizons.",
         ],
@@ -4358,7 +4392,7 @@ BRIDGE_CONCEPTS = [
             "status": "validated",
             "criteria": [
                 "Rows state the source expression, derivative expression or stencil, sample point, and exact value.",
-                "The validator recomputes symbolic derivative samples, finite-difference stencil values, Taylor coefficients, Taylor values, and Taylor remainders exactly.",
+                "The validator recomputes symbolic derivative samples, finite-difference stencil values, Taylor coefficients, Taylor values, Taylor remainders, Hermite basis values, endpoint slope constraints, and Hermite values exactly.",
                 "General calculus theorems stay linked as Lean-horizon rows.",
             ],
         },
