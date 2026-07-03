@@ -199,6 +199,15 @@ python3 scripts/query-foundational-resources.py checks --concept bridge_finite_n
 python3 scripts/query-foundational-resources.py checks --concept bridge_probability_mass_table --pack finite-naive-bayes-classifier-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_exact_vs_floating_arithmetic --pack finite-naive-bayes-classifier-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py horizon-frontier --text "naive bayes" --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field statistics --text "classifier metrics" --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-confusion-matrix-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-confusion-matrix-v0 --route Farkas --proof-status checked --text qf-lra-bad-precision --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-confusion-matrix-v0 --proof-status replay-only --text precision --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-confusion-matrix-v0 --proof-status lean-horizon --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_finite_classifier_metrics_shadow --pack finite-confusion-matrix-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_probability_mass_table --pack finite-confusion-matrix-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_exact_vs_floating_arithmetic --pack finite-confusion-matrix-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py horizon-frontier --text "classifier metrics" --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-ridge-regression-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-ridge-regression-v0 --route Farkas --proof-status checked --text qf-lra-bad-ridge-beta0 --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-ridge-regression-v0 --proof-status replay-only --text rejected --require-any >/dev/null

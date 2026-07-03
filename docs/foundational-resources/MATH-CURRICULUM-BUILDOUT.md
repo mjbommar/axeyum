@@ -1511,7 +1511,8 @@ Exit criteria:
   finite random-matrix moments, finite measure additivity, finite probability
   mass tables, finite pushforward distributions, finite stochastic kernels,
   finite conditional expectations, finite product-measure/integration replay,
-  finite tail/count obstructions, homomorphism preservation, kernel/image
+  finite tail/count obstructions, finite classifier metrics,
+  homomorphism preservation, kernel/image
   replay, quotient maps, ideal closure, module actions, tensor bilinearity,
   finite group actions, totality conventions,
   coordinate/incidence/rigid/oriented geometry replay, finite
@@ -1522,9 +1523,9 @@ Exit criteria:
   QF_LRA/Farkas infeasibility, Boolean CNF/LRAT refutations, integer/count
   Diophantine obstructions, and fixed-width QF_BV/DRAT rows.
 - At least 12 validated example packs.
-  Status: 162 non-template math example packs validate.
+  Status: 163 non-template math example packs validate.
 - At least 6 packs with checked proof/evidence routes.
-  Status: 162 non-template packs have at least one `checked` expected-result row.
+  Status: 163 non-template packs have at least one `checked` expected-result row.
 - At least one downstream consumer can read the data without repository-internal
   knowledge.
   Status: `scripts/consume-foundational-resources.py` reads the committed atlas
@@ -3743,6 +3744,36 @@ PCA/SVD optimality, best-rank approximation, estimator consistency,
 randomized algorithms, perturbation theory, floating-point PCA
 implementations, and statistical generalization stay in future Lean/theorem
 or numerical-honesty lanes.
+The statistics/linear-algebra/optimization/numerical-analysis layer now adds
+`finite-k-means-clustering-v0` as the 161st non-template math pack. Exact
+rational replay checks a fixed four-point sample, two-cluster assignment,
+centroids, residuals, squared distances, within-cluster sum of squares, global
+centroid, total scatter, and between-cluster scatter. A source-linked
+QF_LRA/Farkas artifact rejects the malformed centroid-coordinate claim `-1/2`
+against exact `-1`. Lloyd convergence, global optimality, clustering
+consistency, randomized initialization, floating-point k-means behavior, and
+statistical generalization stay in future Lean/theorem or numerical-honesty
+lanes.
+The statistics/probability layer now adds
+`finite-naive-bayes-classifier-v0` as the 162nd non-template math pack. Exact
+rational replay checks a six-row binary-feature training table, class counts,
+class priors, Laplace-smoothed likelihoods, class scores, posterior
+probabilities, margins, and the positive decision. A source-linked
+QF_LRA/Farkas artifact rejects the malformed posterior claim `2/3` against
+exact `9/13`. Conditional-independence validity, Bayes optimality,
+calibration, statistical consistency, model selection, multiclass generality,
+floating-point classifier behavior, and generalization stay in future
+Lean/theorem or numerical-honesty lanes.
+The statistics/probability layer now adds `finite-confusion-matrix-v0` as the
+163rd non-template math pack. Exact rational replay checks an eight-row
+actual/predicted table, TP/FP/TN/FN counts, class totals, accuracy,
+precision, recall/sensitivity, specificity, negative predictive value,
+false-positive/false-negative rates, balanced accuracy, F1, and Jaccard. A
+source-linked QF_LRA/Farkas artifact rejects the malformed precision claim
+`3/4` against exact `2/3`. Calibration, threshold selection, ROC/AUC,
+confidence intervals, sampling guarantees, multiclass averaging conventions,
+floating-point classifier-metric behavior, and statistical generalization stay
+in future Lean/theorem or numerical-honesty lanes.
 Continue by adding the next curriculum-adjacent pack from the field ledger
 or by replacing finite enumeration routes with emitted, checked proof objects
 where appropriate.

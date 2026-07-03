@@ -183,6 +183,10 @@ CURRICULUM_MAP = {
                 "finite-naive-bayes-classifier-v0",
                 "Exact rational Naive Bayes posterior replay with checked bad posterior evidence.",
             ),
+            (
+                "finite-confusion-matrix-v0",
+                "Exact rational confusion-matrix classifier metrics with checked bad precision evidence.",
+            ),
         ],
     },
     "reals": {
@@ -505,6 +509,10 @@ CURRICULUM_MAP = {
                 "finite-naive-bayes-classifier-v0",
                 "Finite class/feature count replay feeding exact rational Naive Bayes posterior checks.",
             ),
+            (
+                "finite-confusion-matrix-v0",
+                "Finite actual/predicted classifier count replay feeding exact rational confusion-matrix metrics.",
+            ),
         ],
     },
     "number-theory": {
@@ -819,8 +827,8 @@ FIELD_PACKS = {
     "complex_analysis": ("complex-algebraic-v0", "Complex arithmetic, real-pair transforms, finite Cauchy-Riemann derivative shadows, and polynomial factorization shadows as real/rational algebra before analytic proof horizons."),
     "topology": ("finite-topology-v0", "Finite topologies, metric balls, closure/interior, continuous maps, and finite simplicial-homology checks."),
     "measure_theory": ("finite-measure-v0", "Finite sigma-algebras, finite measures, monotonicity/subadditivity, random variables, conditional expectations, finite kernels, martingales, hitting times, concentration checks, product tables, and exact probability foundations."),
-    "probability_theory": ("finite-probability-v0", "Finite mass tables, random variables, conditional expectation, kernels, martingales, hitting times, concentration/tail bounds, finite covariance tables, conditioning, independence, Bayes rule, Naive Bayes classifier posterior replay, product measures, and exact discrete distributions."),
-    "statistics": ("descriptive-statistics-v0", "Mean/variance/covariance/PCA and finite clustering identities, Schur conditional-variance shadows, random variables, conditional expectation, finite kernel, hitting-time, martingale, and concentration checks, contingency tables, exact tests, ordinary and ridge regression, finite linear-discriminant/classification replay, finite Naive Bayes classifier replay, and Simpson witnesses."),
+    "probability_theory": ("finite-probability-v0", "Finite mass tables, random variables, conditional expectation, kernels, martingales, hitting times, concentration/tail bounds, finite covariance tables, conditioning, independence, Bayes rule, Naive Bayes classifier posterior replay, confusion-matrix classifier metrics, product measures, and exact discrete distributions."),
+    "statistics": ("descriptive-statistics-v0", "Mean/variance/covariance/PCA and finite clustering identities, Schur conditional-variance shadows, random variables, conditional expectation, finite kernel, hitting-time, martingale, and concentration checks, contingency tables, exact tests, ordinary and ridge regression, finite linear-discriminant/classification replay, finite Naive Bayes classifier replay, finite confusion-matrix classifier metrics, and Simpson witnesses."),
     "optimization_and_convexity": [
         ("linear-optimization-v0", "LP feasibility, threshold cliffs, and Farkas-style certificates."),
         ("convexity-rational-v0", "Finite midpoint convexity, second differences, affine threshold monotonicity, and checked bad midpoint-convexity plus affine-threshold rejection."),
@@ -1619,6 +1627,7 @@ BRIDGE_CONCEPTS = [
             "bridge_residual_bound",
             "bridge_probability_mass_table",
             "bridge_finite_naive_bayes_shadow",
+            "bridge_finite_classifier_metrics_shadow",
             "bridge_eigenpair",
         ],
         "decidability": "decidable",
@@ -1645,6 +1654,10 @@ BRIDGE_CONCEPTS = [
             (
                 "finite-naive-bayes-classifier-v0",
                 "Malformed classifier posterior row checked through exact rational Farkas evidence after finite probability/count replay.",
+            ),
+            (
+                "finite-confusion-matrix-v0",
+                "Malformed classifier precision row checked through exact rational Farkas evidence after finite confusion-count replay.",
             ),
             (
                 "numerical-linear-algebra-v0",
@@ -1701,6 +1714,7 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/linear-discriminant-end-to-end.md",
             "docs/learn/math/principal-components-end-to-end.md",
             "docs/learn/math/k-means-clustering-end-to-end.md",
+            "docs/learn/math/classifier-metrics-end-to-end.md",
             "docs/learn/math/linear-algebra-and-optimization.md",
             "docs/foundational-resources/PROOF-UPGRADE-FRONTIER.md",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
@@ -1749,6 +1763,7 @@ BRIDGE_CONCEPTS = [
             "bridge_lu_replay",
             "bridge_random_matrix_finite_moment",
             "bridge_finite_naive_bayes_shadow",
+            "bridge_finite_classifier_metrics_shadow",
             "field_numerical_analysis",
             "field_statistics",
         ],
@@ -1869,6 +1884,10 @@ BRIDGE_CONCEPTS = [
             (
                 "finite-naive-bayes-classifier-v0",
                 "Class counts, smoothed likelihoods, posterior normalization, and bad-posterior rows checked as exact rational replay, not floating-point classifier or statistical generalization evidence.",
+            ),
+            (
+                "finite-confusion-matrix-v0",
+                "Confusion counts, exact classifier metrics, and bad-precision rows checked as exact rational replay, not floating-point metric or statistical generalization evidence.",
             ),
             (
                 "finite-root-finding-v0",
@@ -2719,6 +2738,107 @@ BRIDGE_CONCEPTS = [
                 "The validator recomputes all finite Naive Bayes quantities from committed source data.",
                 "Malformed finite posterior claims link to source SMT-LIB artifacts and checked QF_LRA/Farkas regressions after replay.",
                 "Learner and query docs keep finite exact classifier replay separate from independence-model validity, calibration, statistical, multiclass, and floating-point claims.",
+            ],
+        },
+    },
+    {
+        "id": "bridge_finite_classifier_metrics_shadow",
+        "title": "Finite Classifier Metrics Shadow",
+        "field_ids": [
+            "statistics",
+            "probability_theory",
+        ],
+        "resource_status": "validated",
+        "summary": (
+            "Finite classifier-metric rows replay exact actual/predicted "
+            "tables, TP/FP/TN/FN counts, accuracy, precision/recall, "
+            "specificity, balanced accuracy, F1, Jaccard, and source-linked "
+            "bad-precision Farkas evidence while keeping calibration, "
+            "generalization, threshold theory, ROC/AUC, confidence intervals, "
+            "and floating-point metric behavior separate."
+        ),
+        "prerequisites": [
+            "curriculum_counting",
+            "curriculum_rationals",
+            "bridge_probability_mass_table",
+            "bridge_exact_vs_floating_arithmetic",
+            "bridge_qf_lra_farkas_anatomy",
+        ],
+        "unlocks": [
+            "field_statistics",
+            "field_probability_theory",
+            "bridge_lean_horizon",
+        ],
+        "decidability": "bounded",
+        "axeyum_fragments": [
+            "finite classifier metrics",
+            "finite confusion matrix replay",
+            "exact rational arithmetic",
+            "QF_LRA",
+            "Farkas certificate",
+            "finite replay",
+            "Lean horizon",
+            "numerical-honesty metadata",
+        ],
+        "example_packs": [
+            (
+                "finite-confusion-matrix-v0",
+                "Exact eight-row actual/predicted table with confusion counts, classifier metrics, bad-precision replay, and checked QF_LRA/Farkas row.",
+            ),
+            (
+                "finite-naive-bayes-classifier-v0",
+                "Finite classifier posterior replay that supplies a probabilistic classifier contrast.",
+            ),
+            (
+                "finite-linear-discriminant-v0",
+                "Finite classification replay that supplies a linear-discriminant classifier contrast.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "finite classifier-metrics replay plus QF_LRA/Farkas",
+                "status": "checked",
+                "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_lra_routes",
+                "lean_status": "partial",
+                "sources": [
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+                    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+                    "docs/learn/math/classifier-metrics-end-to-end.md",
+                    "artifacts/examples/math/finite-confusion-matrix-v0/smt2/bad-precision-farkas-conflict.smt2",
+                    "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+                ],
+                "notes": (
+                    "The finite checker recomputes the committed confusion "
+                    "counts and exact rational metrics. Only the final "
+                    "malformed precision row is promoted to checked Farkas "
+                    "evidence."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/foundational-resources/MATH-FIELDS.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+            "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+            "docs/proof-cookbook/recipes/lean-horizon-template.md",
+            "docs/learn/math/classifier-metrics-end-to-end.md",
+            "artifacts/examples/math/finite-confusion-matrix-v0/smt2/bad-precision-farkas-conflict.smt2",
+            "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+        ],
+        "open_gaps": [
+            "Finite confusion-matrix replay does not prove risk bounds, calibration, threshold optimality, ROC/AUC behavior, confidence intervals, sampling guarantees, or classifier generalization.",
+            "Floating-point classifier metrics need numerical-honesty or QF_FP resources before they can be presented as checked numerical claims.",
+            "Multiclass averaging conventions, ranking metrics, imbalanced-data policy choices, and statistical-inference theory remain Lean/theorem-horizon work.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Rows state the finite actual/predicted table, confusion counts, class totals, exact rational metrics, and decision-relevant denominators.",
+                "The validator recomputes all finite classifier metrics from committed source data.",
+                "Malformed finite metric claims link to source SMT-LIB artifacts and checked QF_LRA/Farkas regressions after replay.",
+                "Learner and query docs keep finite exact metric replay separate from calibration, threshold, ranking, confidence-interval, statistical, multiclass, and floating-point claims.",
             ],
         },
     },
@@ -7480,6 +7600,7 @@ BRIDGE_CONCEPTS = [
             "bridge_conditional_expectation",
             "bridge_finite_product_integration",
             "bridge_finite_naive_bayes_shadow",
+            "bridge_finite_classifier_metrics_shadow",
         ],
         "decidability": "bounded",
         "axeyum_fragments": [
@@ -7497,6 +7618,10 @@ BRIDGE_CONCEPTS = [
             (
                 "finite-naive-bayes-classifier-v0",
                 "Finite class/feature count table, Laplace-smoothed likelihoods, posterior classification replay, and checked bad-posterior evidence.",
+            ),
+            (
+                "finite-confusion-matrix-v0",
+                "Finite actual/predicted count table, exact classifier metrics, and checked bad-precision evidence.",
             ),
             (
                 "finite-measure-v0",

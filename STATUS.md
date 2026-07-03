@@ -240,6 +240,24 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite confusion-matrix classifier-metrics resource landed.**
+  `finite-confusion-matrix-v0` now gives the statistics and probability lanes
+  a compact exact classifier-evaluation example: it replays eight
+  actual/predicted rows, TP/FP/TN/FN counts, class totals, accuracy,
+  precision, recall/sensitivity, specificity, negative predictive value,
+  false-positive/false-negative rates, balanced accuracy, F1, and Jaccard;
+  rejects the malformed precision claim `3/4` versus exact `2/3`; and routes
+  that scalar conflict through a source-linked QF_LRA/Farkas row. The focused
+  learner page, probability/statistics query guide, probability-mass-table,
+  exact-vs-floating, finite classifier-metrics, and QF_LRA/Farkas bridge rows,
+  validator, resource smoke queries, generated dashboards, and
+  `math_resource_lra_routes` regression keep this fixed finite replay separate
+  from calibration, threshold selection, ROC/AUC, confidence intervals,
+  statistical generalization, multiclass conventions, and floating-point
+  classifier-metric behavior. The public summary now reports 127 concept rows,
+  163 packs, 1061 expected checks, 389 checked rows, 546 replay-only rows, 126
+  Lean-horizon rows, and 163 promoted solver-reuse packs.
+
 - **Finite Naive Bayes classifier resource landed.**
   `finite-naive-bayes-classifier-v0` now gives the statistics and probability
   lanes a compact exact classifier example: it replays a six-row binary-feature
@@ -253,7 +271,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `math_resource_lra_routes` regression keep this fixed finite replay separate
   from conditional-independence validity, Bayes optimality, calibration,
   statistical consistency, model selection, multiclass generality, and
-  floating-point classifier behavior. The public summary now reports 126
+  floating-point classifier behavior. At that landing, the public summary reported 126
   concept rows, 162 packs, 1054 expected checks, 388 checked rows, 541
   replay-only rows, 125 Lean-horizon rows, and 162 promoted solver-reuse packs.
 

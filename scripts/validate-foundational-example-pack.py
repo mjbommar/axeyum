@@ -34542,6 +34542,292 @@ def validate_finite_naive_bayes_classifier(expected: dict[str, Any]) -> None:
     require_string("naive Bayes horizon future_checker", horizon_data.get("future_checker"))
 
 
+def validate_finite_confusion_matrix(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    def require_key_fraction_map(context: str, value: Any, keys: list[str]) -> dict[str, Fraction]:
+        if not isinstance(value, dict):
+            fail(f"{context} must be an object")
+        key_set = set(keys)
+        if set(value) != key_set:
+            missing = sorted(key_set - set(value))
+            extra = sorted(set(value) - key_set)
+            fail(f"{context} must cover exactly {keys}; missing={missing} extra={extra}")
+        return {
+            key: require_fraction(f"{context}.{key}", value[key])
+            for key in keys
+        }
+
+    def require_count_map(context: str, value: Any, keys: list[str]) -> dict[str, Fraction]:
+        counts = require_key_fraction_map(context, value, keys)
+        for key, count in counts.items():
+            if count.denominator != 1 or count < 0:
+                fail(f"{context}.{key} must be a nonnegative integer count")
+        return counts
+
+    def require_sat_replay(check_id: str, validation: str) -> None:
+        check = checks[check_id]
+        if check["expected_result"] != "sat":
+            fail(f"{check_id} must expect sat")
+        if check.get("proof_status") != "replay-only":
+            fail(f"{check_id} must be replay-only")
+        if check["validation"] != validation:
+            fail(f"{check_id} validation is incorrect")
+        values_again = single_witness_values(check, witnesses)
+        if values_again != values:
+            fail(f"{check_id} must cite the shared confusion-matrix witness")
+
+    count_check = checks["confusion-count-witness"]
+    if count_check["expected_result"] != "sat":
+        fail("confusion-count-witness must expect sat")
+    if count_check.get("proof_status") != "replay-only":
+        fail("confusion-count-witness must be replay-only")
+    if count_check["validation"] != "exact_rational_confusion_matrix_count_replay":
+        fail("confusion-count-witness validation is incorrect")
+    values = single_witness_values(count_check, witnesses)
+    classes = require_string_list("confusion matrix classes", values.get("classes"))
+    positive_class = values.get("positive_class")
+    negative_class = values.get("negative_class")
+    require_string("confusion matrix positive_class", positive_class)
+    require_string("confusion matrix negative_class", negative_class)
+    if positive_class == negative_class:
+        fail("confusion matrix positive_class and negative_class must differ")
+    if set(classes) != {positive_class, negative_class}:
+        fail("confusion matrix classes must contain exactly positive_class and negative_class")
+
+    raw_examples = values.get("examples")
+    if not isinstance(raw_examples, list) or not raw_examples:
+        fail("confusion matrix examples must be a non-empty list")
+    seen_rows: set[str] = set()
+    examples: list[tuple[str, str]] = []
+    for index, row in enumerate(raw_examples):
+        if not isinstance(row, dict):
+            fail(f"confusion matrix examples[{index}] must be an object")
+        row_id = row.get("id")
+        require_string(f"confusion matrix examples[{index}].id", row_id)
+        if row_id in seen_rows:
+            fail(f"confusion matrix examples repeats id {row_id!r}")
+        seen_rows.add(row_id)
+        actual = row.get("actual")
+        predicted = row.get("predicted")
+        require_string(f"confusion matrix examples[{index}].actual", actual)
+        require_string(f"confusion matrix examples[{index}].predicted", predicted)
+        if actual not in classes:
+            fail(f"confusion matrix examples[{index}].actual is unknown")
+        if predicted not in classes:
+            fail(f"confusion matrix examples[{index}].predicted is unknown")
+        examples.append((actual, predicted))
+
+    count_keys = [
+        "true_positive",
+        "false_positive",
+        "true_negative",
+        "false_negative",
+        "positive_count",
+        "negative_count",
+        "predicted_positive_count",
+        "predicted_negative_count",
+        "total",
+    ]
+    counts = require_count_map("confusion matrix confusion_counts", values.get("confusion_counts"), count_keys)
+    computed_counts = {
+        "true_positive": Fraction(
+            sum(1 for actual, predicted in examples if actual == positive_class and predicted == positive_class)
+        ),
+        "false_positive": Fraction(
+            sum(1 for actual, predicted in examples if actual == negative_class and predicted == positive_class)
+        ),
+        "true_negative": Fraction(
+            sum(1 for actual, predicted in examples if actual == negative_class and predicted == negative_class)
+        ),
+        "false_negative": Fraction(
+            sum(1 for actual, predicted in examples if actual == positive_class and predicted == negative_class)
+        ),
+        "positive_count": Fraction(sum(1 for actual, _predicted in examples if actual == positive_class)),
+        "negative_count": Fraction(sum(1 for actual, _predicted in examples if actual == negative_class)),
+        "predicted_positive_count": Fraction(
+            sum(1 for _actual, predicted in examples if predicted == positive_class)
+        ),
+        "predicted_negative_count": Fraction(
+            sum(1 for _actual, predicted in examples if predicted == negative_class)
+        ),
+        "total": Fraction(len(examples)),
+    }
+    if computed_counts != counts:
+        fail("confusion-count-witness confusion_counts are incorrect")
+
+    tp = counts["true_positive"]
+    fp = counts["false_positive"]
+    tn = counts["true_negative"]
+    fn = counts["false_negative"]
+    total = counts["total"]
+    if total <= 0:
+        fail("confusion matrix total must be positive")
+    if tp + fp != counts["predicted_positive_count"]:
+        fail("confusion-count-witness predicted positive count is inconsistent")
+    if tn + fn != counts["predicted_negative_count"]:
+        fail("confusion-count-witness predicted negative count is inconsistent")
+    if tp + fn != counts["positive_count"]:
+        fail("confusion-count-witness positive count is inconsistent")
+    if tn + fp != counts["negative_count"]:
+        fail("confusion-count-witness negative count is inconsistent")
+    if counts["positive_count"] + counts["negative_count"] != total:
+        fail("confusion-count-witness actual class counts must sum to total")
+    if counts["predicted_positive_count"] + counts["predicted_negative_count"] != total:
+        fail("confusion-count-witness predicted class counts must sum to total")
+
+    metric_keys = [
+        "accuracy",
+        "precision",
+        "recall",
+        "sensitivity",
+        "specificity",
+        "negative_predictive_value",
+        "false_positive_rate",
+        "false_negative_rate",
+        "balanced_accuracy",
+        "f1_score",
+        "jaccard_index",
+    ]
+    metrics = require_key_fraction_map("confusion matrix metrics", values.get("metrics"), metric_keys)
+    denominators = {
+        "precision": tp + fp,
+        "recall": tp + fn,
+        "sensitivity": tp + fn,
+        "specificity": tn + fp,
+        "negative_predictive_value": tn + fn,
+        "false_positive_rate": fp + tn,
+        "false_negative_rate": fn + tp,
+        "f1_score": 2 * tp + fp + fn,
+        "jaccard_index": tp + fp + fn,
+    }
+    for key, denominator in denominators.items():
+        if denominator <= 0:
+            fail(f"confusion matrix {key} denominator must be positive")
+    computed_metrics = {
+        "accuracy": (tp + tn) / total,
+        "precision": tp / (tp + fp),
+        "recall": tp / (tp + fn),
+        "sensitivity": tp / (tp + fn),
+        "specificity": tn / (tn + fp),
+        "negative_predictive_value": tn / (tn + fn),
+        "false_positive_rate": fp / (fp + tn),
+        "false_negative_rate": fn / (fn + tp),
+        "balanced_accuracy": ((tp / (tp + fn)) + (tn / (tn + fp))) / 2,
+        "f1_score": (2 * tp) / (2 * tp + fp + fn),
+        "jaccard_index": tp / (tp + fp + fn),
+    }
+    if computed_metrics != metrics:
+        fail("confusion matrix metrics are incorrect")
+
+    require_sat_replay("accuracy-witness", "exact_rational_confusion_matrix_accuracy_replay")
+    require_sat_replay("precision-recall-witness", "exact_rational_confusion_matrix_rate_replay")
+    require_sat_replay(
+        "f1-balanced-accuracy-witness",
+        "exact_rational_confusion_matrix_composite_metric_replay",
+    )
+
+    bad = checks["bad-precision-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-precision-rejected must expect unsat")
+    if bad.get("proof_status") != "replay-only":
+        fail("bad-precision-rejected must be replay-only")
+    if bad["validation"] != "exact_rational_bad_confusion_matrix_precision_replay":
+        fail("bad-precision-rejected validation is incorrect")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "eight-row-binary-classifier-sample":
+        fail("bad-precision-rejected must cite eight-row-binary-classifier-sample")
+    if data.get("metric") != "precision":
+        fail("bad-precision-rejected must document the precision metric")
+    bad_tp = require_fraction("bad confusion matrix true_positive", data.get("true_positive"))
+    predicted_positive = require_fraction(
+        "bad confusion matrix predicted_positive_count",
+        data.get("predicted_positive_count"),
+    )
+    computed_precision = require_fraction(
+        "bad confusion matrix computed_precision",
+        data.get("computed_precision"),
+    )
+    claimed_precision = require_fraction(
+        "bad confusion matrix claimed_precision",
+        data.get("claimed_precision"),
+    )
+    if bad_tp != tp:
+        fail("bad-precision-rejected true_positive must match replay")
+    if predicted_positive != counts["predicted_positive_count"]:
+        fail("bad-precision-rejected predicted_positive_count must match replay")
+    if bad_tp / predicted_positive != computed_precision:
+        fail("bad-precision-rejected computed_precision is incorrect")
+    if computed_precision != metrics["precision"]:
+        fail("bad-precision-rejected computed_precision must match metric replay")
+    if claimed_precision == computed_precision:
+        fail("bad-precision-rejected must document a false precision claim")
+    if "separate qf-lra-bad-precision" not in bad.get("notes", ""):
+        fail("bad-precision-rejected notes must name the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-precision"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-precision must expect unsat")
+    if qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-precision must be checked")
+    if qf_bad["validation"] != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-precision must use exact_rational_farkas_evidence")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_witness") != "eight-row-binary-classifier-sample":
+        fail("qf-lra-bad-precision must cite the source witness")
+    if qf_data.get("source_replay_row") != "bad-precision-rejected":
+        fail("qf-lra-bad-precision must cite the replay row")
+    if qf_data.get("metric") != "precision":
+        fail("qf-lra-bad-precision must document the precision metric")
+    qf_tp = require_fraction("qf confusion matrix true_positive", qf_data.get("true_positive"))
+    qf_predicted_positive = require_fraction(
+        "qf confusion matrix predicted_positive_count",
+        qf_data.get("predicted_positive_count"),
+    )
+    qf_computed = require_fraction("qf confusion matrix computed_precision", qf_data.get("computed_precision"))
+    qf_claimed = require_fraction("qf confusion matrix claimed_precision", qf_data.get("claimed_precision"))
+    if (qf_tp, qf_predicted_positive, qf_computed, qf_claimed) != (
+        bad_tp,
+        predicted_positive,
+        computed_precision,
+        claimed_precision,
+    ):
+        fail("qf-lra-bad-precision data must match the replay row")
+    equations = require_string_list(
+        "qf confusion matrix precision_equations",
+        qf_data.get("precision_equations"),
+    )
+    if equations != ["3*precision = 2", "4*precision = 3"]:
+        fail("qf-lra-bad-precision must document the linear conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf confusion matrix smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-confusion-matrix-v0/smt2/"
+        "bad-precision-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-lra-bad-precision smt2_artifact must name the checked source artifact")
+    check_source("qf confusion matrix smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf confusion matrix farkas_regression", regression)
+    if "finite_confusion_matrix_bad_precision_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-precision must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf confusion matrix certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-precision certificate must document checked Farkas evidence")
+
+    horizon = checks["general-classifier-metrics-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-classifier-metrics-theory-lean-horizon must be not-run")
+    if horizon.get("proof_status") != "lean-horizon":
+        fail("general-classifier-metrics-theory-lean-horizon must remain lean-horizon")
+    horizon_data = horizon.get("data", {})
+    require_string("classifier metrics horizon target_theorem_shape", horizon_data.get("target_theorem_shape"))
+    require_string("classifier metrics horizon future_checker", horizon_data.get("future_checker"))
+
+
 def validate_descriptive_statistics(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -37754,6 +38040,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_k_means_clustering(expected)
     if metadata["id"] == "finite-naive-bayes-classifier-v0":
         validate_finite_naive_bayes_classifier(expected)
+    if metadata["id"] == "finite-confusion-matrix-v0":
+        validate_finite_confusion_matrix(expected)
     if metadata["id"] == "finite-cardinality-v0":
         validate_finite_cardinality(expected)
     if metadata["id"] == "cardinality-principles-v0":

@@ -1,0 +1,183 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-confusion-matrix-v0",
+  "witnesses": [
+    {
+      "id": "eight-row-binary-classifier-sample",
+      "description": "An eight-row binary classifier result table with exact confusion-count and metric replay.",
+      "values": {
+        "classes": [
+          "positive",
+          "negative"
+        ],
+        "positive_class": "positive",
+        "negative_class": "negative",
+        "examples": [
+          {
+            "id": "e0",
+            "actual": "positive",
+            "predicted": "positive"
+          },
+          {
+            "id": "e1",
+            "actual": "positive",
+            "predicted": "positive"
+          },
+          {
+            "id": "e2",
+            "actual": "positive",
+            "predicted": "negative"
+          },
+          {
+            "id": "e3",
+            "actual": "positive",
+            "predicted": "negative"
+          },
+          {
+            "id": "e4",
+            "actual": "negative",
+            "predicted": "negative"
+          },
+          {
+            "id": "e5",
+            "actual": "negative",
+            "predicted": "negative"
+          },
+          {
+            "id": "e6",
+            "actual": "negative",
+            "predicted": "negative"
+          },
+          {
+            "id": "e7",
+            "actual": "negative",
+            "predicted": "positive"
+          }
+        ],
+        "confusion_counts": {
+          "true_positive": "2",
+          "false_positive": "1",
+          "true_negative": "3",
+          "false_negative": "2",
+          "positive_count": "4",
+          "negative_count": "4",
+          "predicted_positive_count": "3",
+          "predicted_negative_count": "5",
+          "total": "8"
+        },
+        "metrics": {
+          "accuracy": "5/8",
+          "precision": "2/3",
+          "recall": "1/2",
+          "sensitivity": "1/2",
+          "specificity": "3/4",
+          "negative_predictive_value": "3/5",
+          "false_positive_rate": "1/4",
+          "false_negative_rate": "1/2",
+          "balanced_accuracy": "5/8",
+          "f1_score": "4/7",
+          "jaccard_index": "2/5"
+        }
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "confusion-count-witness",
+      "claim": "The listed eight-row classifier table has TP=2, FP=1, TN=3, FN=2, and the stated class totals.",
+      "expected_result": "sat",
+      "validation": "exact_rational_confusion_matrix_count_replay",
+      "proof_status": "replay-only",
+      "witnesses": [
+        "eight-row-binary-classifier-sample"
+      ],
+      "notes": "The validator counts actual/predicted positive and negative rows exactly."
+    },
+    {
+      "id": "accuracy-witness",
+      "claim": "The table has exact accuracy 5/8.",
+      "expected_result": "sat",
+      "validation": "exact_rational_confusion_matrix_accuracy_replay",
+      "proof_status": "replay-only",
+      "witnesses": [
+        "eight-row-binary-classifier-sample"
+      ],
+      "notes": "The validator recomputes accuracy as (TP + TN) / total."
+    },
+    {
+      "id": "precision-recall-witness",
+      "claim": "The table has precision 2/3, recall 1/2, specificity 3/4, NPV 3/5, FPR 1/4, and FNR 1/2.",
+      "expected_result": "sat",
+      "validation": "exact_rational_confusion_matrix_rate_replay",
+      "proof_status": "replay-only",
+      "witnesses": [
+        "eight-row-binary-classifier-sample"
+      ],
+      "notes": "The validator recomputes the denominator for each rate from the confusion counts."
+    },
+    {
+      "id": "f1-balanced-accuracy-witness",
+      "claim": "The table has balanced accuracy 5/8, F1 score 4/7, and Jaccard index 2/5.",
+      "expected_result": "sat",
+      "validation": "exact_rational_confusion_matrix_composite_metric_replay",
+      "proof_status": "replay-only",
+      "witnesses": [
+        "eight-row-binary-classifier-sample"
+      ],
+      "notes": "The validator recomputes composite metrics from precision/recall and the base confusion counts."
+    },
+    {
+      "id": "bad-precision-rejected",
+      "claim": "The same table has precision 3/4.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_bad_confusion_matrix_precision_replay",
+      "proof_status": "replay-only",
+      "data": {
+        "source_witness": "eight-row-binary-classifier-sample",
+        "metric": "precision",
+        "true_positive": "2",
+        "predicted_positive_count": "3",
+        "computed_precision": "2/3",
+        "claimed_precision": "3/4"
+      },
+      "notes": "Exact replay computes precision as 2/3, so the claimed value 3/4 is rejected; the separate qf-lra-bad-precision row owns the checked Farkas evidence."
+    },
+    {
+      "id": "qf-lra-bad-precision",
+      "claim": "The fixed malformed precision claim is linearly inconsistent with the replayed precision equation.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_farkas_evidence",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "eight-row-binary-classifier-sample",
+        "source_replay_row": "bad-precision-rejected",
+        "metric": "precision",
+        "true_positive": "2",
+        "predicted_positive_count": "3",
+        "computed_precision": "2/3",
+        "claimed_precision": "3/4",
+        "precision_equations": [
+          "3*precision = 2",
+          "4*precision = 3"
+        ],
+        "farkas_conflict": "replayed precision equation plus precision = 3/4",
+        "smt2_artifact": "artifacts/examples/math/finite-confusion-matrix-v0/smt2/bad-precision-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_confusion_matrix_bad_precision_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes 3*precision = 2 from TP=2 and predicted positives=3, while the malformed row claims 4*precision = 3; the source QF_LRA artifact isolates that scalar contradiction for Farkas checking."
+    },
+    {
+      "id": "general-classifier-metrics-theory-lean-horizon",
+      "claim": "Classifier metrics calibration, threshold selection, ROC/AUC, confidence intervals, sampling guarantees, and classifier generalization require future theorem, statistical-inference, or numerical-honesty resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_boundary",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "For finite or measurable prediction problems under stated sampling and loss assumptions, prove classifier metrics, risk, calibration, threshold, ranking, or confidence-interval claims only with explicit theorem hypotheses.",
+        "future_checker": "Lean theorem statements for classifier metrics and classifier-evaluation theory plus separate statistical-inference and numerical-honesty artifacts for empirical intervals, ROC/AUC, and floating-point metric implementations."
+      },
+      "notes": "The finite exact row checks one committed result table and exact metric definitions, not a theorem about unseen data, threshold choice, ranking quality, statistical uncertainty, or floating-point classifier behavior."
+    }
+  ]
+}

@@ -339,6 +339,11 @@ For finite Naive Bayes classification, it recomputes exact class counts,
 binary feature counts, Laplace-smoothed likelihoods, class scores, normalized
 posterior probabilities, and the finite decision, then emits checked
 `UnsatFarkas` evidence for a malformed posterior claim.
+For finite classifier metrics, it recomputes exact actual/predicted row
+counts, TP/FP/TN/FN, accuracy, precision, recall, specificity, negative
+predictive value, false-positive/false-negative rates, balanced accuracy, F1,
+and Jaccard, then emits checked `UnsatFarkas` evidence for a malformed
+precision claim.
 For DAG examples, the validator enumerates simple skeleton paths and applies
 the collider/non-collider conditioning rules. For random matrices, it
 recomputes weighted trace, determinant, Gram, and rank claims from exact
@@ -368,6 +373,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/descriptive-statistics-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-covariance-matrix-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-naive-bayes-classifier-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-confusion-matrix-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/least-squares-regression-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/exact-statistical-tests-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-measure-v0
@@ -397,6 +403,8 @@ For exact finite covariance replay, read
 [End To End: Finite Covariance Matrix](covariance-matrix-end-to-end.md).
 For exact finite Naive Bayes classifier replay, read
 [End To End: Finite Naive Bayes Classifier](naive-bayes-classifier-end-to-end.md).
+For exact finite classifier-metric replay, read
+[End To End: Finite Classifier Metrics](classifier-metrics-end-to-end.md).
 For finite matrix-valued probability tables, read
 [End To End: Finite Random Matrices](random-matrix-finite-end-to-end.md).
 For the cross-pack finite random-matrix query map, read

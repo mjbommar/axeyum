@@ -62,14 +62,14 @@ The current committed data boundary reports:
 
 - 23 curriculum-node concept rows.
 - 18 math-field concept rows.
-- 80 bridge-concept rows.
+- 81 bridge-concept rows.
 - 5 example-family rows.
-- 162 non-template math example packs.
-- 1054 expected checks.
-- 388 checked proof/evidence rows.
-- 541 replay-only rows.
-- 125 Lean-horizon rows.
-- 162 promoted solver-reuse packs.
+- 163 non-template math example packs.
+- 1061 expected checks.
+- 389 checked proof/evidence rows.
+- 546 replay-only rows.
+- 126 Lean-horizon rows.
+- 163 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
 - 162 focused learner-linked packs, with no path-only, index-only, or missing
