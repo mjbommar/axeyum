@@ -1691,6 +1691,179 @@ fn dispatch_uf_arith_online(
     }
 }
 
+/// Whether any assertion contains a **genuinely nonlinear real** subterm: a
+/// `RealMul` (or `RealDiv`) whose *two* operands are both non-constant — e.g.
+/// `x·x`, `f(x)·f(x)`, `x·y`, `f(x)·x`. A `2·x` (one constant operand) is linear
+/// and returns `false`, so the linear `QF_UFLRA` combination keeps every query it
+/// already decides; only the truly nonlinear shapes are routed to [`dispatch_uf_nra`].
+/// Over-approximates safely (any product of two non-constants counts, even if it
+/// cancels): a `false` positive only routes an already-linear-decidable query
+/// through the NRA decider, which decides it too; it never changes a verdict.
+fn has_nonlinear_real(arena: &TermArena, assertions: &[TermId]) -> bool {
+    let is_const = |t: TermId| matches!(arena.node(t), TermNode::RealConst(_));
+    let mut seen: BTreeSet<TermId> = BTreeSet::new();
+    let mut stack = assertions.to_vec();
+    while let Some(term) = stack.pop() {
+        if !seen.insert(term) {
+            continue;
+        }
+        if let TermNode::App { op, args } = arena.node(term) {
+            if matches!(op, Op::RealMul | Op::RealDiv)
+                && args.len() == 2
+                && !is_const(args[0])
+                && !is_const(args[1])
+            {
+                return true;
+            }
+            stack.extend(args.iter().copied());
+        }
+    }
+    false
+}
+
+/// The dedicated **UF × NRA** decide route (P1.6 slice): the conservative, sound
+/// composition of eager Ackermann congruence reduction with the NRA decider for
+/// mixed uninterpreted-function + nonlinear-real queries — the `issue5836-2` /
+/// `issue5396` shape family the pure-real routes below decline on any `Op::Apply`.
+///
+/// **Scope (feature-gate).** Fires only for `has_real ∧ has_function ∧
+/// nonlinear-real`, with `¬has_int ∧ ¬has_array ∧ ¬has_datatype ∧
+/// ¬has_uninterpreted_sort` — i.e. `Real → Real` uninterpreted functions over
+/// nonlinear real arithmetic, no other theory mixed in. Every out-of-scope query
+/// (linear `QF_UFLRA`, arrays, integers, datatypes, uninterpreted carrier sorts)
+/// returns `None` and falls through to the existing routes unchanged, so the
+/// load-bearing linear UF+arithmetic combination and its `uf_arith_dispatch_differential`
+/// budget balance are untouched.
+///
+/// **Mechanism.** Eager Ackermann (`eliminate_functions`, the same machinery the
+/// `QF_UFLIA`/`QF_UFLRA` path uses) rewrites every application to a fresh result
+/// variable and asserts the congruence constraints `(⋀ argsᵢ = argsⱼ) ⇒ resultᵢ =
+/// resultⱼ` up front; the function-free, nonlinear-real residual is fed straight
+/// to [`crate::nra::check_with_nra`].
+///
+/// **Soundness.**
+/// - `unsat` transfers by **reduction validity**: eager Ackermann elimination is
+///   equisatisfiable, so an `unsat` residual witnesses `unsat` of the original.
+/// - `sat` is accepted **only after** the projected model replays against the
+///   ORIGINAL assertions through the ground evaluator (the trust anchor, inside
+///   [`crate::euf::project_replay_build`]); a non-replaying candidate declines to
+///   `Unknown`, never a wrong `sat`.
+///
+/// **Boundedness / deadline.** The eager `O(k²)` construction is refused above the
+/// shared [`crate::euf::MAX_ACKERMANN_CONGRUENCE_PAIRS`] admission bound (→ `None`,
+/// so the downstream lazy/CEGAR over-bound route in `dispatch_uf_fast_paths` still
+/// runs). `check_with_nra` honors `config.timeout` internally; the remaining
+/// deadline is threaded end-to-end and an expiry anywhere yields `Unknown`, never a
+/// hang or a wrong verdict.
+///
+/// **Boundary (what stays out of this slice).** No online interface-equality DFS —
+/// the UF interface here is discharged eagerly, up front; the online model-based
+/// combination is a later slice. Multi-variable nonlinear beyond the NRA
+/// cross-product admission bound, and nested arithmetic applications whose model
+/// projection cannot be reconstructed, stay `Unknown` (a sound decline).
+fn dispatch_uf_nra(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+    features: &Features,
+    rec: &mut Recorder<'_>,
+) -> Result<Option<CheckResult>, SolverError> {
+    // Scope gate: Real→Real UF over nonlinear real arithmetic, no other theory.
+    if !features.has_real
+        || !features.has_function
+        || features.has_int
+        || features.has_array
+        || features.has_datatype
+        || features.has_uninterpreted_sort
+    {
+        return Ok(None);
+    }
+    // Linear QF_UFLRA is left to the existing (online + eager) combination.
+    if !has_nonlinear_real(arena, assertions) {
+        return Ok(None);
+    }
+
+    let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
+    if past_deadline(deadline) {
+        with_recorder(rec, |t| {
+            t.record_declined(
+                "uf-nra",
+                DeclineReason::from_unknown(&timeout_reason(
+                    "uf-nra: past deadline before eager \
+                     Ackermann reduction",
+                )),
+            );
+        });
+        return Ok(Some(CheckResult::Unknown(timeout_reason(
+            "uf-nra: past deadline before eager Ackermann reduction",
+        ))));
+    }
+
+    // Deterministic admission bound (graceful, no O(k²) blowup): refuse the eager
+    // construction above the shared bound and fall through so the downstream
+    // lazy/CEGAR over-bound route in `dispatch_uf_fast_paths` gets its chance.
+    if crate::euf::ackermann_congruence_pairs(arena, assertions)
+        > crate::euf::MAX_ACKERMANN_CONGRUENCE_PAIRS
+    {
+        return Ok(None);
+    }
+
+    // Eager Ackermann reduction (reuse the shared machinery). An out-of-fragment
+    // construct declines to `None` (fall through) rather than erroring — `unknown`
+    // is never an error and the downstream routes may still decide it.
+    let Ok(elimination) = axeyum_rewrite::eliminate_functions(arena, assertions) else {
+        return Ok(None);
+    };
+    let eliminated = elimination.assertions().to_vec();
+
+    if past_deadline(deadline) {
+        with_recorder(rec, |t| {
+            t.record_declined(
+                "uf-nra",
+                DeclineReason::from_unknown(&timeout_reason(
+                    "uf-nra: deadline after eager Ackermann reduction",
+                )),
+            );
+        });
+        return Ok(Some(CheckResult::Unknown(timeout_reason(
+            "uf-nra: deadline after eager Ackermann reduction",
+        ))));
+    }
+
+    // Feed the function-free nonlinear-real residual to the NRA decider under the
+    // remaining deadline.
+    let nra_config = config_with_remaining_deadline(config, deadline);
+    let result = crate::nra::check_with_nra(arena, &eliminated, &nra_config)?;
+    match result {
+        CheckResult::Unsat => {
+            // Reduction validity: eager Ackermann is equisatisfiable.
+            with_recorder(rec, |t| t.record_decided("uf-nra", Verdict::Unsat));
+            Ok(Some(CheckResult::Unsat))
+        }
+        CheckResult::Sat(model) => {
+            // `sat` only after the projected model replays against the ORIGINAL
+            // assertions (the trust anchor); a non-replaying candidate declines.
+            let assignment = model.to_assignment();
+            let replayed =
+                crate::euf::project_replay_build(arena, &elimination, assertions, &assignment);
+            with_recorder(rec, |t| match &replayed {
+                CheckResult::Sat(_) => t.record_decided("uf-nra", Verdict::Sat),
+                CheckResult::Unsat => t.record_decided("uf-nra", Verdict::Unsat),
+                CheckResult::Unknown(reason) => {
+                    t.record_declined("uf-nra", DeclineReason::from_unknown(reason));
+                }
+            });
+            Ok(Some(replayed))
+        }
+        CheckResult::Unknown(reason) => {
+            with_recorder(rec, |t| {
+                t.record_declined("uf-nra", DeclineReason::from_unknown(&reason));
+            });
+            Ok(Some(CheckResult::Unknown(reason)))
+        }
+    }
+}
+
 /// The theory dispatcher (coercions already relaxed away by [`check_auto`]).
 /// `rec` records each route attempt + outcome at the existing decide/decline
 /// sites; it is a side effect only, never a branch condition (verdict invariance).
@@ -1777,6 +1950,19 @@ fn check_auto_dispatch(
         }
     }
     if features.has_real {
+        // **UF × NRA** (P1.6 slice): a mixed uninterpreted-function + nonlinear-real
+        // query (`f(x)·f(x) = 2`, `x = y ∧ f(x) = x·x ∧ f(y) > y·y + 1`, …) is
+        // decided by the dedicated composition — eager Ackermann reduction of the UF
+        // applications feeding the NRA decider — *before* the pure-real routes below
+        // (which decline on any `Op::Apply`). Strictly additive and self-contained:
+        // it returns `Some(decided/unknown)` only for the tightly-scoped nonlinear-UF
+        // shape (leaving the linear QF_UFLRA online/eager combination and every
+        // non-UF real route byte-identical), and `None` — falling through unchanged —
+        // for everything else (linear UF, over the eager admission bound, or an
+        // out-of-fragment elimination).
+        if let Some(result) = dispatch_uf_nra(arena, assertions, config, &features, rec)? {
+            return Ok(result);
+        }
         // Conjunction of single-variable nonlinear-real polynomial constraints
         // over one shared variable (`⋀ᵢ pᵢ(x) ⋈ᵢ 0`): an exact, bounded NRA
         // decision with **irrational witnesses** (ADR-0038). The linear-

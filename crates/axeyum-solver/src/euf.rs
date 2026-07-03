@@ -321,7 +321,7 @@ pub fn check_with_function_elimination<B: SolverBackend>(
 /// projection, a non-`true` replay, or any indeterminate evaluation declines to a
 /// sound [`CheckResult::Unknown`] — never an emitted (possibly wrong) `Sat`, and
 /// never an error (`unknown` is a first-class result, not a failure).
-fn project_replay_build(
+pub(crate) fn project_replay_build(
     arena: &TermArena,
     elimination: &axeyum_rewrite::FunctionElimination,
     assertions: &[TermId],
