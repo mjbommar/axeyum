@@ -24,6 +24,7 @@ Example packs:
 - [finite-difference-derivatives-v0](../../../artifacts/examples/math/finite-difference-derivatives-v0/)
 - [finite-taylor-polynomials-v0](../../../artifacts/examples/math/finite-taylor-polynomials-v0/)
 - [finite-cubic-hermite-interpolation-v0](../../../artifacts/examples/math/finite-cubic-hermite-interpolation-v0/)
+- [finite-cubic-spline-interpolation-v0](../../../artifacts/examples/math/finite-cubic-spline-interpolation-v0/)
 - [generating-functions-v0](../../../artifacts/examples/math/generating-functions-v0/)
 - [finite-recurrence-prefix-v0](../../../artifacts/examples/math/finite-recurrence-prefix-v0/)
 - [finite-root-finding-v0](../../../artifacts/examples/math/finite-root-finding-v0/)
@@ -71,7 +72,8 @@ fixed-degree polynomial identities and roots, rational polynomial
 factorization/division/GCD/square-free replay, finite divided-difference
 interpolation replay, finite barycentric interpolation replay, finite
 difference derivative stencil replay, finite Taylor polynomial replay,
-finite cubic Hermite endpoint-slope interpolation replay, finite generating-function
+finite cubic Hermite endpoint-slope interpolation replay, finite natural
+cubic spline assembly replay, finite generating-function
 coefficient extraction and Cauchy-product replay, finite recurrence-prefix and
 companion-matrix replay, finite bisection/Newton root-finding replay, finite
 multivariable Newton-step Hessian-solve replay, finite
@@ -305,6 +307,30 @@ interpolation uniqueness, divided-difference equivalence, error estimates,
 spline assembly, monotonicity/shape preservation, and floating-point Hermite
 evaluation remain theorem or numerical-honesty work; see
 [End To End: Finite Cubic Hermite Interpolation](hermite-interpolation-end-to-end.md).
+
+For finite natural cubic spline interpolation, encode fixed knots, sample
+values, piece polynomials, and derivative continuity at the interior knot:
+
+```text
+knots = 0, 1, 2
+values = 0, 1, 0
+S0(x) = 3/2*x - 1/2*x^3
+S1(x) = -1 + 9/2*x - 3*x^2 + 1/2*x^3
+S0(1/2) = 11/16
+S1(3/2) = 11/16
+S0'(1) = S1'(1) = 0
+S0''(1) = S1''(1) = -3
+```
+
+The `finite-cubic-spline-interpolation-v0` validator recomputes each piece's
+endpoint values, first derivatives, second derivatives, natural endpoint
+constraints, interior knot smoothness, and exact midpoint values. The
+malformed claim `spline_value = 3/4` is rejected after exact replay computes
+`11/16`, then the scalar equality conflict is checked through QF_LRA/Farkas
+evidence. Spline existence, uniqueness, error estimates, convergence,
+boundary-condition theory, shape preservation, and floating-point spline
+evaluation remain theorem or numerical-honesty work; see
+[End To End: Finite Cubic Spline Interpolation](spline-interpolation-end-to-end.md).
 
 For a finite generating-function check, encode coefficient lists and replay
 convolution:
@@ -722,6 +748,12 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_barycentric_interpolation_bad_value_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-difference-derivatives-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_difference_derivatives_bad_value_artifact_emits_checked_farkas
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-taylor-polynomials-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_taylor_polynomials_bad_value_artifact_emits_checked_farkas
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-cubic-hermite-interpolation-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_cubic_hermite_interpolation_bad_value_artifact_emits_checked_farkas
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-cubic-spline-interpolation-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_cubic_spline_interpolation_bad_value_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/generating-functions-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-recurrence-prefix-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_recurrence_prefix_bad_value_artifact_emits_checked_farkas

@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "id": "finite-cubic-spline-interpolation-v0",
+  "title": "Finite Cubic Spline Interpolation Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_numerical_analysis",
+    "field_real_analysis",
+    "curriculum_polynomials",
+    "curriculum_calculus",
+    "curriculum_rationals",
+    "curriculum_reals",
+    "bridge_derivative_identity_shadow",
+    "bridge_polynomial_coefficient_factor_replay",
+    "bridge_exact_vs_floating_arithmetic",
+    "bridge_bounded_family_asymptotic_boundary"
+  ],
+  "field_ids": [
+    "numerical_analysis",
+    "real_analysis"
+  ],
+  "curriculum_nodes": [
+    "polynomials",
+    "calculus",
+    "rationals",
+    "reals"
+  ],
+  "axeyum_fragments": [
+    "natural cubic spline replay",
+    "piecewise polynomial replay",
+    "C1/C2 knot continuity",
+    "natural boundary conditions",
+    "symbolic polynomial differentiation",
+    "polynomial evaluation",
+    "LRA (exact rationals)",
+    "QF_LRA",
+    "Farkas",
+    "finite replay",
+    "Lean horizon",
+    "numerical-honesty metadata"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-cubic-spline-interpolation-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite cubic spline interpolation bad value QF_LRA/Farkas regression seed",
+    "pressure": "Exact rational natural cubic spline replay for knots 0,1,2 with values 0,1,0 computes spline_value = 11/16 at x=1/2, while a malformed row claims spline_value = 3/4, isolating a compact scalar equality conflict for the Farkas route.",
+    "evidence": [
+      "qf-lra-bad-spline-value"
+    ],
+    "next_step": "Promote additional spline rows only when they add distinct nonuniform-knot, boundary-condition, continuity, shape-preservation, floating-point, or theorem-reconstruction pressure; keep general spline existence, uniqueness, error estimates, and convergence claims in future Lean or numerical-honesty lanes."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/02-structures/polynomials.md",
+    "docs/curriculum/03-destinations/calculus.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/curriculum/01-number-systems/reals.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/spline-interpolation-end-to-end.md",
+    "artifacts/examples/math/finite-cubic-spline-interpolation-v0/smt2/bad-spline-value-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+  ],
+  "expected_results": [
+    "natural-spline-left-midpoint-witness",
+    "natural-spline-right-midpoint-witness",
+    "natural-spline-knot-smoothness-witness",
+    "bad-spline-value-rejected",
+    "qf-lra-bad-spline-value",
+    "general-spline-interpolation-theory-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode the fixed knots, sample values, second derivatives, piece polynomials, knot values, first derivatives, second derivatives, and midpoint values as deterministic rational replay obligations.",
+    "Route the false spline value through checked QF_LRA/Farkas evidence after replay computes the exact value.",
+    "Expose the pack through derivative, polynomial, calculus, real-analysis, numerical-analysis, and learner query surfaces.",
+    "Keep spline existence, uniqueness, error estimates, shape preservation, monotonicity guarantees, convergence, floating-point evaluation, and general approximation theory marked as future Lean or numerical-honesty work until formal routes exist."
+  ]
+}

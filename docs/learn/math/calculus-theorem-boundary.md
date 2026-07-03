@@ -13,6 +13,7 @@ Primary packs:
 - [finite-difference-derivatives-v0](../../../artifacts/examples/math/finite-difference-derivatives-v0/)
 - [finite-taylor-polynomials-v0](../../../artifacts/examples/math/finite-taylor-polynomials-v0/)
 - [finite-cubic-hermite-interpolation-v0](../../../artifacts/examples/math/finite-cubic-hermite-interpolation-v0/)
+- [finite-cubic-spline-interpolation-v0](../../../artifacts/examples/math/finite-cubic-spline-interpolation-v0/)
 - [multivariable-calculus-rational-v0](../../../artifacts/examples/math/multivariable-calculus-rational-v0/)
 
 Companion lessons and maps:
@@ -24,6 +25,7 @@ Companion lessons and maps:
 - [End To End: Finite Difference Derivatives](finite-difference-derivatives-end-to-end.md)
 - [End To End: Finite Taylor Polynomials](taylor-polynomials-end-to-end.md)
 - [End To End: Finite Cubic Hermite Interpolation](hermite-interpolation-end-to-end.md)
+- [End To End: Finite Cubic Spline Interpolation](spline-interpolation-end-to-end.md)
 - [End To End: Rational Multivariable Calculus](multivariable-calculus-end-to-end.md)
 - [Rational And Real Algebra](rational-real-algebra.md)
 - [Analysis And Topology Proof Horizons](analysis-topology-proof-horizons.md)
@@ -144,6 +146,22 @@ row for `x^2` on `[1,3]` where derivative terms are scaled by interval length
 `2`, and isolates the bad exact claim `hermite_value = 2` as a checked
 QF_LRA/Farkas scalar conflict.
 
+The finite natural cubic spline pack fixes a two-piece exact spline assembly.
+For knots `0,1,2`, values `0,1,0`, and `x=1/2`, it recomputes:
+
+```text
+S0(x) = 3/2*x - 1/2*x^3
+S1(x) = -1 + 9/2*x - 3*x^2 + 1/2*x^3
+S0(1/2) = 11/16
+S1(3/2) = 11/16
+S0'(1) = S1'(1) = 0
+S0''(1) = S1''(1) = -3
+S0''(0) = S1''(2) = 0
+```
+
+It isolates the bad exact claim `spline_value = 3/4` as a checked
+QF_LRA/Farkas scalar conflict after replay computes `11/16`.
+
 The multivariable pack fixes bivariate polynomial and matrix data:
 
 ```text
@@ -220,6 +238,12 @@ regression seeds, but they do not prove analytic calculus theorems.
 | `finite-cubic-hermite-interpolation-v0` | `bad-hermite-value-rejected` | `unsat` | replay-only | Exact replay rejects the malformed exact value `2` after computing `7/4`. |
 | `finite-cubic-hermite-interpolation-v0` | `qf-lra-bad-hermite-value` | `unsat` | checked | A QF_LRA/Farkas row checks the scalar contradiction `hermite_value = 7/4` and `hermite_value = 2`. |
 | `finite-cubic-hermite-interpolation-v0` | `general-hermite-interpolation-theory-lean-horizon` | `not-run` | lean-horizon | Hermite interpolation uniqueness, error estimates, spline theory, shape preservation, monotonicity, and floating-point evaluation remain theorem/numerical-honesty work. |
+| `finite-cubic-spline-interpolation-v0` | `natural-spline-left-midpoint-witness` | `sat` | replay-only | The left natural-spline piece evaluates to `11/16` at `x=1/2`. |
+| `finite-cubic-spline-interpolation-v0` | `natural-spline-right-midpoint-witness` | `sat` | replay-only | The right natural-spline piece evaluates to `11/16` at `x=3/2`. |
+| `finite-cubic-spline-interpolation-v0` | `natural-spline-knot-smoothness-witness` | `sat` | replay-only | The fixed spline pieces match value, first derivative, and second derivative at the interior knot and satisfy natural endpoint second-derivative constraints. |
+| `finite-cubic-spline-interpolation-v0` | `bad-spline-value-rejected` | `unsat` | replay-only | Exact replay rejects the malformed exact value `3/4` after computing `11/16`. |
+| `finite-cubic-spline-interpolation-v0` | `qf-lra-bad-spline-value` | `unsat` | checked | A QF_LRA/Farkas row checks the scalar contradiction `spline_value = 11/16` and `spline_value = 3/4`. |
+| `finite-cubic-spline-interpolation-v0` | `general-spline-interpolation-theory-lean-horizon` | `not-run` | lean-horizon | Spline existence, uniqueness, boundary-condition theory, error estimates, convergence, shape preservation, and floating-point evaluation remain theorem/numerical-honesty work. |
 | `multivariable-calculus-rational-v0` | `gradient-at-point-replay` | `sat` | replay-only | The fixed bivariate gradient and value are recomputed. |
 | `multivariable-calculus-rational-v0` | `directional-derivative-dot-product` | `sat` | checked | The fixed directional derivative is checked as a gradient dot product. |
 | `multivariable-calculus-rational-v0` | `jacobian-chain-rule-replay` | `sat` | checked | A fixed polynomial-map Jacobian chain-rule matrix product is replayed. |
@@ -254,6 +278,13 @@ values, interval-scaled derivative terms, and one bad scalar value. It does
 not claim Hermite interpolation uniqueness, spline theory, error bounds,
 shape preservation, monotonicity, or floating-point Hermite evaluation.
 
+The finite cubic spline interpolation pack is finite exact-rational replay:
+it recomputes two piece polynomials, endpoint values, first derivatives,
+second derivatives, interior knot smoothness, natural endpoint constraints,
+and one bad scalar value. It does not claim spline existence, uniqueness,
+boundary-condition theory, error bounds, convergence, shape preservation, or
+floating-point spline evaluation.
+
 ## What Is Not Proved Yet
 
 The current calculus resources do not prove:
@@ -281,6 +312,9 @@ The current calculus resources do not prove:
   error formulas, spline assembly and smoothness theorems, monotonicity or
   shape-preservation guarantees, or floating-point Hermite evaluation
   accuracy;
+- cubic spline existence and uniqueness, arbitrary boundary-condition theory,
+  spline-space smoothness theorems, spline error estimates, convergence, or
+  floating-point spline evaluation accuracy;
 - the fundamental theorem of calculus;
 - uniform convergence, dominated convergence, or interchange of limits;
 - Fréchet differentiability over normed vector spaces;
@@ -344,6 +378,11 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 
 python3 scripts/query-foundational-resources.py checks \
+  --pack finite-cubic-spline-interpolation-v0 \
+  --proof-status lean-horizon \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
   --pack multivariable-calculus-rational-v0 \
   --proof-status lean-horizon \
   --require-any
@@ -390,6 +429,12 @@ python3 scripts/query-foundational-resources.py checks \
 
 python3 scripts/query-foundational-resources.py checks \
   --pack finite-cubic-hermite-interpolation-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-cubic-spline-interpolation-v0 \
   --route Farkas \
   --proof-status checked \
   --require-any
@@ -454,6 +499,13 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 
 python3 scripts/query-foundational-resources.py checks \
+  --pack finite-cubic-spline-interpolation-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --text spline \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
   --pack multivariable-calculus-rational-v0 \
   --route Farkas \
   --proof-status checked \
@@ -500,6 +552,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-difference-derivatives-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-taylor-polynomials-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-cubic-hermite-interpolation-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-cubic-spline-interpolation-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/multivariable-calculus-rational-v0
 python3 scripts/query-foundational-resources.py horizon-frontier --text calculus --require-any
 python3 scripts/query-foundational-resources.py checks --pack calculus-algebraic-shadow-v0 --proof-status lean-horizon --require-any
@@ -510,6 +563,7 @@ python3 scripts/query-foundational-resources.py checks --pack finite-barycentric
 python3 scripts/query-foundational-resources.py checks --pack finite-difference-derivatives-v0 --proof-status lean-horizon --require-any
 python3 scripts/query-foundational-resources.py checks --pack finite-taylor-polynomials-v0 --proof-status lean-horizon --require-any
 python3 scripts/query-foundational-resources.py checks --pack finite-cubic-hermite-interpolation-v0 --proof-status lean-horizon --require-any
+python3 scripts/query-foundational-resources.py checks --pack finite-cubic-spline-interpolation-v0 --proof-status lean-horizon --require-any
 python3 scripts/query-foundational-resources.py checks --pack multivariable-calculus-rational-v0 --proof-status lean-horizon --require-any
 python3 scripts/query-foundational-resources.py checks --pack calculus-algebraic-shadow-v0 --route Farkas --proof-status checked --require-any
 python3 scripts/query-foundational-resources.py checks --pack calculus-riemann-sum-v0 --route Farkas --proof-status checked --require-any
@@ -519,6 +573,7 @@ python3 scripts/query-foundational-resources.py checks --pack finite-barycentric
 python3 scripts/query-foundational-resources.py checks --pack finite-difference-derivatives-v0 --route Farkas --proof-status checked --require-any
 python3 scripts/query-foundational-resources.py checks --pack finite-taylor-polynomials-v0 --route Farkas --proof-status checked --require-any
 python3 scripts/query-foundational-resources.py checks --pack finite-cubic-hermite-interpolation-v0 --route Farkas --proof-status checked --require-any
+python3 scripts/query-foundational-resources.py checks --pack finite-cubic-spline-interpolation-v0 --route Farkas --proof-status checked --require-any
 python3 scripts/query-foundational-resources.py checks --pack multivariable-calculus-rational-v0 --route Farkas --proof-status checked --require-any
 ```
 

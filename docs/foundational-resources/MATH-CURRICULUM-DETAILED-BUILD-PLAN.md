@@ -62,15 +62,15 @@ The committed resource query currently reports:
 - 18 field rows.
 - 76 bridge-concept rows.
 - 5 example-family rows.
-- 152 non-template math packs.
-- 990 expected checks.
-- 378 checked proof/evidence rows.
-- 497 replay-only rows.
-- 115 Lean-horizon rows.
-- 152 promoted solver-reuse packs.
+- 153 non-template math packs.
+- 996 expected checks.
+- 379 checked proof/evidence rows.
+- 501 replay-only rows.
+- 116 Lean-horizon rows.
+- 153 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 152 focused learner-linked packs, with no path-only, index-only, or missing
+- 153 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 The next phase is therefore a depth phase, not a seed phase. New packs are
@@ -158,7 +158,7 @@ Exit criteria:
 - No lesson implies a finite bounded check proves an unbounded theorem.
 
 Current audit: [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md) records that
-all 152 current non-template packs satisfy the focused-lesson side of this
+all 153 current non-template packs satisfy the focused-lesson side of this
 gate. Keep this true as new packs land.
 
 ### Wave 3: Proof-Route Depth
@@ -2719,6 +2719,16 @@ Pick one row per commit unless the change is purely navigational.
      shadow separate from Hermite interpolation uniqueness, divided-difference
      equivalence, error estimates, spline assembly, monotonicity,
      shape-preservation, and floating-point Hermite evaluation.
+311. Landed: add `finite-cubic-spline-interpolation-v0` as an exact finite
+     natural cubic spline interpolation resource. The pack replays two cubic
+     pieces through knots `0, 1, 2`, sample values `0, 1, 0`, C1/C2 continuity
+     at the interior knot, natural endpoint second derivatives, and midpoint
+     values `11/16`, then adds `qf-lra-bad-spline-value` as the source-linked
+     Farkas row for the false spline-value claim `3/4` versus exact `11/16`.
+     The learner and query pages keep this finite exact spline shadow
+     separate from spline existence, uniqueness, error estimates, convergence
+     and stability, knot-selection, shape-preservation, and floating-point
+     spline evaluation.
 
 ## Validation Checklist
 

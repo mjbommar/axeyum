@@ -64,15 +64,15 @@ The current committed data boundary reports:
 - 18 math-field concept rows.
 - 76 bridge-concept rows.
 - 5 example-family rows.
-- 152 non-template math example packs.
-- 990 expected checks.
-- 378 checked proof/evidence rows.
-- 497 replay-only rows.
-- 115 Lean-horizon rows.
-- 152 promoted solver-reuse packs.
+- 153 non-template math example packs.
+- 996 expected checks.
+- 379 checked proof/evidence rows.
+- 501 replay-only rows.
+- 116 Lean-horizon rows.
+- 153 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 152 focused learner-linked packs, with no path-only, index-only, or missing
+- 153 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 This is broad enough that the next work is not "create a few examples." The
@@ -700,6 +700,7 @@ Current packs:
 - `finite-difference-derivatives-v0`
 - `finite-taylor-polynomials-v0`
 - `finite-cubic-hermite-interpolation-v0`
+- `finite-cubic-spline-interpolation-v0`
 - `multivariable-calculus-rational-v0`
 - `finite-compactness-v0`
 - `finite-connectedness-v0`
@@ -741,7 +742,8 @@ Build next:
   rows tied to their source QF_LRA/Farkas artifacts; keep
   `finite-divided-differences-v0`, `finite-barycentric-interpolation-v0`,
   `finite-difference-derivatives-v0`, `finite-taylor-polynomials-v0`, and
-  `finite-cubic-hermite-interpolation-v0` bad interpolation/stencil/Taylor/Hermite
+  `finite-cubic-hermite-interpolation-v0`, and
+  `finite-cubic-spline-interpolation-v0` bad interpolation/stencil/Taylor/Hermite/spline
   source rows replay-only with separate checked `qf-lra-*` proof rows tied to
   their source QF_LRA/Farkas artifacts; keep
   `finite-proximal-gradient-v0`'s bad proximal
@@ -998,6 +1000,7 @@ Current packs:
 - `finite-difference-derivatives-v0`
 - `finite-taylor-polynomials-v0`
 - `finite-cubic-hermite-interpolation-v0`
+- `finite-cubic-spline-interpolation-v0`
 
 Build next:
 
@@ -2702,6 +2705,15 @@ Pick one item per commit unless the change is purely navigational.
      claiming Hermite interpolation uniqueness, divided-difference
      equivalence, spline assembly, monotonicity, shape preservation, error
      estimates, or floating-point Hermite-evaluation accuracy.
+199. Landed: add `finite-cubic-spline-interpolation-v0` as an exact finite
+     natural cubic spline interpolation resource. The pack computes two cubic
+     pieces through knots `0, 1, 2`, sample values `0, 1, 0`, C1/C2 interior
+     continuity, natural endpoint second derivatives, and midpoint values
+     `11/16`, then promotes the malformed spline-value claim `3/4` through a
+     source-linked QF_LRA/Farkas regression against exact `11/16` without
+     claiming general spline existence, uniqueness, error estimates,
+     convergence, knot-selection, shape preservation, or floating-point
+     spline-evaluation accuracy.
 
 ## Validation Checklist
 

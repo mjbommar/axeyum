@@ -1,0 +1,166 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-cubic-spline-interpolation-v0",
+  "witnesses": [
+    {
+      "id": "natural-spline-left-midpoint",
+      "description": "Exact natural cubic spline replay for knots 0,1,2 with values 0,1,0, evaluated on the left interval at x=1/2.",
+      "values": {
+        "method": "natural_cubic_spline",
+        "knots": ["0", "1", "2"],
+        "sample_values": ["0", "1", "0"],
+        "second_derivatives": ["0", "-3", "0"],
+        "pieces": [
+          ["0", "3/2", "0", "-1/2"],
+          ["-1", "9/2", "-3", "1/2"]
+        ],
+        "piece_values_at_knots": [
+          ["0", "1"],
+          ["1", "0"]
+        ],
+        "first_derivatives_at_knots": [
+          ["3/2", "0"],
+          ["0", "-3/2"]
+        ],
+        "second_derivatives_at_knots": [
+          ["0", "-3"],
+          ["-3", "0"]
+        ],
+        "evaluation_piece": 0,
+        "evaluation_point": "1/2",
+        "spline_value": "11/16"
+      }
+    },
+    {
+      "id": "natural-spline-right-midpoint",
+      "description": "Exact natural cubic spline replay on the right interval at x=3/2.",
+      "values": {
+        "method": "natural_cubic_spline",
+        "knots": ["0", "1", "2"],
+        "sample_values": ["0", "1", "0"],
+        "second_derivatives": ["0", "-3", "0"],
+        "pieces": [
+          ["0", "3/2", "0", "-1/2"],
+          ["-1", "9/2", "-3", "1/2"]
+        ],
+        "piece_values_at_knots": [
+          ["0", "1"],
+          ["1", "0"]
+        ],
+        "first_derivatives_at_knots": [
+          ["3/2", "0"],
+          ["0", "-3/2"]
+        ],
+        "second_derivatives_at_knots": [
+          ["0", "-3"],
+          ["-3", "0"]
+        ],
+        "evaluation_piece": 1,
+        "evaluation_point": "3/2",
+        "spline_value": "11/16"
+      }
+    },
+    {
+      "id": "natural-spline-knot-smoothness",
+      "description": "Exact replay of value, first-derivative, second-derivative, and natural-boundary constraints for the same spline.",
+      "values": {
+        "method": "natural_cubic_spline",
+        "knots": ["0", "1", "2"],
+        "sample_values": ["0", "1", "0"],
+        "second_derivatives": ["0", "-3", "0"],
+        "pieces": [
+          ["0", "3/2", "0", "-1/2"],
+          ["-1", "9/2", "-3", "1/2"]
+        ],
+        "piece_values_at_knots": [
+          ["0", "1"],
+          ["1", "0"]
+        ],
+        "first_derivatives_at_knots": [
+          ["3/2", "0"],
+          ["0", "-3/2"]
+        ],
+        "second_derivatives_at_knots": [
+          ["0", "-3"],
+          ["-3", "0"]
+        ],
+        "evaluation_piece": 0,
+        "evaluation_point": "1",
+        "spline_value": "1"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "natural-spline-left-midpoint-witness",
+      "claim": "The listed natural cubic spline evaluates to 11/16 at x=1/2 on the left interval.",
+      "expected_result": "sat",
+      "validation": "exact_rational_natural_cubic_spline_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["natural-spline-left-midpoint"],
+      "notes": "The validator recomputes piece endpoint values, derivative values, interior smoothness, natural endpoint constraints, and the exact spline value."
+    },
+    {
+      "id": "natural-spline-right-midpoint-witness",
+      "claim": "The listed natural cubic spline evaluates to 11/16 at x=3/2 on the right interval.",
+      "expected_result": "sat",
+      "validation": "exact_rational_natural_cubic_spline_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["natural-spline-right-midpoint"],
+      "notes": "The symmetric right-interval row checks that the second piece satisfies the same exact assembly constraints."
+    },
+    {
+      "id": "natural-spline-knot-smoothness-witness",
+      "claim": "The listed natural cubic spline is value-, first-derivative-, and second-derivative-continuous at the interior knot, with natural endpoint second derivatives.",
+      "expected_result": "sat",
+      "validation": "exact_rational_natural_cubic_spline_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["natural-spline-knot-smoothness"],
+      "notes": "This row checks the finite spline assembly constraints without claiming general spline existence or uniqueness."
+    },
+    {
+      "id": "bad-spline-value-rejected",
+      "claim": "For the left-midpoint natural spline row, the spline value is 3/4.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_bad_spline_value_replay",
+      "proof_status": "replay-only",
+      "data": {
+        "source_witness": "natural-spline-left-midpoint",
+        "computed_spline_value": "11/16",
+        "claimed_spline_value": "3/4",
+        "spline_value_gap": "1/16"
+      },
+      "notes": "Exact replay computes the spline value as 11/16, so the claimed value 3/4 is rejected; the separate qf-lra-bad-spline-value row owns the checked Farkas evidence."
+    },
+    {
+      "id": "qf-lra-bad-spline-value",
+      "claim": "The fixed malformed spline-value claim is linearly inconsistent.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_farkas_evidence",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "natural-spline-left-midpoint",
+        "source_replay_row": "bad-spline-value-rejected",
+        "computed_spline_value": "11/16",
+        "claimed_spline_value": "3/4",
+        "farkas_conflict": "spline_value = 11/16 and spline_value = 3/4",
+        "smt2_artifact": "artifacts/examples/math/finite-cubic-spline-interpolation-v0/smt2/bad-spline-value-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_cubic_spline_interpolation_bad_value_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes the spline value as 11/16, while the malformed row claims 3/4; the source QF_LRA artifact isolates that scalar contradiction for Farkas checking."
+    },
+    {
+      "id": "general-spline-interpolation-theory-lean-horizon",
+      "claim": "General cubic spline existence, uniqueness, boundary-condition theory, error estimates, convergence, shape preservation, and floating-point spline evaluation require future theorem or numerical-honesty resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_boundary",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "For cubic spline interpolation, prove existence and uniqueness for valid knot data and boundary conditions, smoothness, error formulas, convergence, shape-preservation hypotheses, and approximation claims separately from fixed rational replay rows.",
+        "future_checker": "Lean theorem statements for spline spaces and interpolation theory plus separate numerical-honesty or QF_FP artifacts for floating-point spline implementations."
+      },
+      "notes": "The finite exact rows are checked resources for one rational natural-spline assembly, not theorem evidence for arbitrary knots, boundary conditions, spline spaces, error bounds, convergence, or floating-point implementations."
+    }
+  ]
+}

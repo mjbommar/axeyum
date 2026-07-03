@@ -11806,6 +11806,129 @@ def validate_cubic_hermite_trace(context: str, values: dict[str, Any]) -> dict[s
     }
 
 
+def validate_natural_cubic_spline_trace(context: str, values: dict[str, Any]) -> dict[str, Any]:
+    method = values.get("method")
+    require_string(f"{context}.method", method)
+    if method != "natural_cubic_spline":
+        fail(f"{context}.method must be natural_cubic_spline")
+    knots = require_fraction_vector(f"{context}.knots", values.get("knots"))
+    sample_values = require_fraction_vector(f"{context}.sample_values", values.get("sample_values"))
+    second_derivatives = require_fraction_vector(
+        f"{context}.second_derivatives",
+        values.get("second_derivatives"),
+    )
+    if len(knots) < 3:
+        fail(f"{context}.knots must contain at least three knots")
+    if len(sample_values) != len(knots):
+        fail(f"{context}.sample_values must match knots")
+    if len(second_derivatives) != len(knots):
+        fail(f"{context}.second_derivatives must match knots")
+    for left, right in zip(knots, knots[1:]):
+        if left >= right:
+            fail(f"{context}.knots must be strictly increasing")
+    pieces = require_polynomial_list(f"{context}.pieces", values.get("pieces"))
+    if len(pieces) != len(knots) - 1:
+        fail(f"{context}.pieces must contain one polynomial per interval")
+    for index, piece in enumerate(pieces):
+        if polynomial_degree(piece) > 3:
+            fail(f"{context}.pieces[{index}] must be at most cubic")
+
+    piece_values = require_fraction_matrix(
+        f"{context}.piece_values_at_knots",
+        values.get("piece_values_at_knots"),
+    )
+    first_values = require_fraction_matrix(
+        f"{context}.first_derivatives_at_knots",
+        values.get("first_derivatives_at_knots"),
+    )
+    second_values = require_fraction_matrix(
+        f"{context}.second_derivatives_at_knots",
+        values.get("second_derivatives_at_knots"),
+    )
+    for name, matrix in [
+        ("piece_values_at_knots", piece_values),
+        ("first_derivatives_at_knots", first_values),
+        ("second_derivatives_at_knots", second_values),
+    ]:
+        if len(matrix) != len(pieces):
+            fail(f"{context}.{name} must have one row per piece")
+        for row_index, row in enumerate(matrix):
+            if len(row) != 2:
+                fail(f"{context}.{name}[{row_index}] must contain left and right values")
+
+    for index, piece in enumerate(pieces):
+        left = knots[index]
+        right = knots[index + 1]
+        first = polynomial_derivative(piece)
+        second = polynomial_derivative(first)
+        expected_piece_values = [
+            polynomial_eval(piece, left),
+            polynomial_eval(piece, right),
+        ]
+        expected_first_values = [
+            polynomial_eval(first, left),
+            polynomial_eval(first, right),
+        ]
+        expected_second_values = [
+            polynomial_eval(second, left),
+            polynomial_eval(second, right),
+        ]
+        if piece_values[index] != expected_piece_values:
+            fail(f"{context}.piece_values_at_knots[{index}] is incorrect")
+        if first_values[index] != expected_first_values:
+            fail(f"{context}.first_derivatives_at_knots[{index}] is incorrect")
+        if second_values[index] != expected_second_values:
+            fail(f"{context}.second_derivatives_at_knots[{index}] is incorrect")
+        if piece_values[index][0] != sample_values[index]:
+            fail(f"{context}.pieces[{index}] does not match the left sample")
+        if piece_values[index][1] != sample_values[index + 1]:
+            fail(f"{context}.pieces[{index}] does not match the right sample")
+        if second_values[index][0] != second_derivatives[index]:
+            fail(f"{context}.pieces[{index}] does not match the left second derivative")
+        if second_values[index][1] != second_derivatives[index + 1]:
+            fail(f"{context}.pieces[{index}] does not match the right second derivative")
+
+    if second_derivatives[0] != 0 or second_derivatives[-1] != 0:
+        fail(f"{context}.second_derivatives must document natural endpoint constraints")
+    for interior in range(1, len(knots) - 1):
+        left_piece = interior - 1
+        right_piece = interior
+        if piece_values[left_piece][1] != piece_values[right_piece][0]:
+            fail(f"{context}.pieces are not value-continuous at interior knot {interior}")
+        if first_values[left_piece][1] != first_values[right_piece][0]:
+            fail(f"{context}.pieces are not C1-continuous at interior knot {interior}")
+        if second_values[left_piece][1] != second_values[right_piece][0]:
+            fail(f"{context}.pieces are not C2-continuous at interior knot {interior}")
+
+    evaluation_piece = require_nonnegative_int(
+        f"{context}.evaluation_piece",
+        values.get("evaluation_piece"),
+    )
+    if evaluation_piece >= len(pieces):
+        fail(f"{context}.evaluation_piece is out of range")
+    evaluation_point = require_fraction(
+        f"{context}.evaluation_point",
+        values.get("evaluation_point"),
+    )
+    if not knots[evaluation_piece] <= evaluation_point <= knots[evaluation_piece + 1]:
+        fail(f"{context}.evaluation_point is outside the selected interval")
+    spline_value = require_fraction(f"{context}.spline_value", values.get("spline_value"))
+    if spline_value != polynomial_eval(pieces[evaluation_piece], evaluation_point):
+        fail(f"{context}.spline_value is incorrect")
+    return {
+        "knots": knots,
+        "sample_values": sample_values,
+        "second_derivatives": second_derivatives,
+        "pieces": pieces,
+        "piece_values_at_knots": piece_values,
+        "first_derivatives_at_knots": first_values,
+        "second_derivatives_at_knots": second_values,
+        "evaluation_piece": evaluation_piece,
+        "evaluation_point": evaluation_point,
+        "spline_value": spline_value,
+    }
+
+
 def validate_calculus_riemann_sum(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -12679,6 +12802,134 @@ def validate_finite_cubic_hermite_interpolation(expected: dict[str, Any]) -> Non
     horizon_data = horizon.get("data", {})
     require_string("Hermite horizon target_theorem_shape", horizon_data.get("target_theorem_shape"))
     require_string("Hermite horizon future_checker", horizon_data.get("future_checker"))
+
+
+def validate_finite_cubic_spline_interpolation(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    left = checks["natural-spline-left-midpoint-witness"]
+    if left["expected_result"] != "sat":
+        fail("natural-spline-left-midpoint-witness must expect sat")
+    if left.get("proof_status") != "replay-only":
+        fail("natural-spline-left-midpoint-witness must be replay-only")
+    if left.get("validation") != "exact_rational_natural_cubic_spline_replay":
+        fail("natural-spline-left-midpoint-witness validation is incorrect")
+    left_replay = validate_natural_cubic_spline_trace(
+        "natural spline left midpoint row",
+        single_witness_values(left, witnesses),
+    )
+    if left_replay["spline_value"] != Fraction(11, 16):
+        fail("natural-spline-left-midpoint-witness must compute value 11/16")
+
+    right = checks["natural-spline-right-midpoint-witness"]
+    if right["expected_result"] != "sat":
+        fail("natural-spline-right-midpoint-witness must expect sat")
+    if right.get("proof_status") != "replay-only":
+        fail("natural-spline-right-midpoint-witness must be replay-only")
+    if right.get("validation") != "exact_rational_natural_cubic_spline_replay":
+        fail("natural-spline-right-midpoint-witness validation is incorrect")
+    right_replay = validate_natural_cubic_spline_trace(
+        "natural spline right midpoint row",
+        single_witness_values(right, witnesses),
+    )
+    if right_replay["evaluation_piece"] != 1:
+        fail("natural-spline-right-midpoint-witness must use the right interval")
+    if right_replay["spline_value"] != Fraction(11, 16):
+        fail("natural-spline-right-midpoint-witness must compute value 11/16")
+
+    smoothness = checks["natural-spline-knot-smoothness-witness"]
+    if smoothness["expected_result"] != "sat":
+        fail("natural-spline-knot-smoothness-witness must expect sat")
+    if smoothness.get("proof_status") != "replay-only":
+        fail("natural-spline-knot-smoothness-witness must be replay-only")
+    if smoothness.get("validation") != "exact_rational_natural_cubic_spline_replay":
+        fail("natural-spline-knot-smoothness-witness validation is incorrect")
+    smoothness_replay = validate_natural_cubic_spline_trace(
+        "natural spline smoothness row",
+        single_witness_values(smoothness, witnesses),
+    )
+    if smoothness_replay["first_derivatives_at_knots"][0][1] != smoothness_replay["first_derivatives_at_knots"][1][0]:
+        fail("natural-spline-knot-smoothness-witness must match first derivatives at the knot")
+    if smoothness_replay["second_derivatives_at_knots"][0][1] != smoothness_replay["second_derivatives_at_knots"][1][0]:
+        fail("natural-spline-knot-smoothness-witness must match second derivatives at the knot")
+
+    bad = checks["bad-spline-value-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-spline-value-rejected must expect unsat")
+    if bad.get("proof_status") != "replay-only":
+        fail("bad-spline-value-rejected must be replay-only")
+    if bad.get("validation") != "exact_rational_bad_spline_value_replay":
+        fail("bad-spline-value-rejected validation is incorrect")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "natural-spline-left-midpoint":
+        fail("bad-spline-value-rejected must cite the left midpoint row")
+    computed = require_fraction("bad spline computed_spline_value", data.get("computed_spline_value"))
+    claimed = require_fraction("bad spline claimed_spline_value", data.get("claimed_spline_value"))
+    gap = require_fraction("bad spline spline_value_gap", data.get("spline_value_gap"))
+    if computed != left_replay["spline_value"]:
+        fail("bad-spline-value-rejected computed value must match left replay")
+    if computed == claimed:
+        fail("bad-spline-value-rejected malformed claim must disagree with replay")
+    if abs(computed - claimed) != gap:
+        fail("bad-spline-value-rejected spline_value_gap is incorrect")
+    if gap <= 0:
+        fail("bad-spline-value-rejected spline_value_gap must be positive")
+    if "separate qf-lra-bad-spline-value" not in bad.get("notes", ""):
+        fail("bad-spline-value-rejected notes must name the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-spline-value"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-spline-value must expect unsat")
+    if qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-spline-value must be checked")
+    if qf_bad.get("validation") != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-spline-value must use exact_rational_farkas_evidence")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_witness") != "natural-spline-left-midpoint":
+        fail("qf-lra-bad-spline-value must cite the left midpoint row")
+    if qf_data.get("source_replay_row") != "bad-spline-value-rejected":
+        fail("qf-lra-bad-spline-value must cite the replay row")
+    qf_computed = require_fraction(
+        "qf spline computed_spline_value",
+        qf_data.get("computed_spline_value"),
+    )
+    qf_claimed = require_fraction(
+        "qf spline claimed_spline_value",
+        qf_data.get("claimed_spline_value"),
+    )
+    if qf_computed != computed or qf_claimed != claimed:
+        fail("qf-lra-bad-spline-value data must match the replay row")
+    conflict = qf_data.get("farkas_conflict")
+    require_string("qf spline farkas_conflict", conflict)
+    if conflict != "spline_value = 11/16 and spline_value = 3/4":
+        fail("qf-lra-bad-spline-value must document the Farkas conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf spline smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-cubic-spline-interpolation-v0/smt2/"
+        "bad-spline-value-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-lra-bad-spline-value smt2_artifact must name the checked source artifact")
+    check_source("qf spline smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf spline farkas_regression", regression)
+    if "finite_cubic_spline_interpolation_bad_value_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-spline-value must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf spline certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-spline-value certificate must document checked Farkas evidence")
+
+    horizon = checks["general-spline-interpolation-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-spline-interpolation-theory-lean-horizon must be not-run")
+    if horizon.get("proof_status") != "lean-horizon":
+        fail("general-spline-interpolation-theory-lean-horizon must remain lean-horizon")
+    horizon_data = horizon.get("data", {})
+    require_string("spline horizon target_theorem_shape", horizon_data.get("target_theorem_shape"))
+    require_string("spline horizon future_checker", horizon_data.get("future_checker"))
 
 
 def validate_linear_algebra_rational(expected: dict[str, Any]) -> None:
@@ -35410,6 +35661,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_taylor_polynomials(expected)
     if metadata["id"] == "finite-cubic-hermite-interpolation-v0":
         validate_finite_cubic_hermite_interpolation(expected)
+    if metadata["id"] == "finite-cubic-spline-interpolation-v0":
+        validate_finite_cubic_spline_interpolation(expected)
     if metadata["id"] == "complex-algebraic-v0":
         validate_complex_algebraic(expected)
     if metadata["id"] == "complex-plane-transforms-v0":

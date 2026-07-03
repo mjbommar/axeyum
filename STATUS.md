@@ -240,6 +240,23 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite cubic spline interpolation resource landed.**
+  `finite-cubic-spline-interpolation-v0` now gives the real-analysis,
+  calculus, and numerical-analysis lanes a compact natural cubic spline
+  assembly example: it replays two cubic pieces through knots `0, 1, 2`,
+  sample values `0, 1, 0`, natural endpoint second derivatives, C1/C2
+  continuity at the interior knot, and exact midpoint values `11/16` on both
+  subintervals. It rejects the malformed spline value `3/4` versus exact
+  `11/16` through a source-linked QF_LRA/Farkas row. The focused learner page,
+  rational-real algebra page, calculus theorem-boundary page,
+  analysis/numerical query guide, derivative and polynomial bridge rows,
+  validator, resource smoke queries, generated dashboards, and
+  `math_resource_lra_routes` regression keep this fixed exact spline replay
+  separate from general spline existence/uniqueness, convergence, error,
+  shape-preservation, knot-selection, and floating-point spline-evaluation
+  theory. The public summary now reports 122 concept rows, 153 packs, 996
+  expected checks, 379 checked rows, 501 replay-only rows, 116 Lean-horizon
+  rows, and 153 promoted solver-reuse packs.
 - **Finite cubic Hermite interpolation resource landed.**
   `finite-cubic-hermite-interpolation-v0` now gives the real-analysis,
   calculus, and numerical-analysis lanes a compact endpoint value/slope
@@ -254,10 +271,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `math_resource_lra_routes` regression keep this fixed exact Hermite replay
   separate from Hermite interpolation uniqueness, divided-difference
   equivalence, error formulas, spline assembly, monotonicity,
-  shape-preservation, and floating-point Hermite-evaluation theory. The public
-  summary now reports 122 concept rows, 152 packs, 990 expected checks, 378
-  checked rows, 497 replay-only rows, 115 Lean-horizon rows, and 152 promoted
-  solver-reuse packs.
+  shape-preservation, and floating-point Hermite-evaluation theory. The current
+  public summary is recorded in the latest process-lane bullet above.
 - **Finite Taylor polynomial resource landed.**
   `finite-taylor-polynomials-v0` now gives the real-analysis, calculus, and
   numerical-analysis lanes a compact exact Taylor-polynomial example: it

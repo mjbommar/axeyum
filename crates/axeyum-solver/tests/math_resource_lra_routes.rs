@@ -97,6 +97,9 @@ const FINITE_TAYLOR_POLYNOMIALS_BAD_VALUE: &str = include_str!(
 const FINITE_CUBIC_HERMITE_INTERPOLATION_BAD_VALUE: &str = include_str!(
     "../../../artifacts/examples/math/finite-cubic-hermite-interpolation-v0/smt2/bad-hermite-value-farkas-conflict.smt2"
 );
+const FINITE_CUBIC_SPLINE_INTERPOLATION_BAD_VALUE: &str = include_str!(
+    "../../../artifacts/examples/math/finite-cubic-spline-interpolation-v0/smt2/bad-spline-value-farkas-conflict.smt2"
+);
 const CALCULUS_ALGEBRAIC_FALSE_DERIVATIVE: &str = include_str!(
     "../../../artifacts/examples/math/calculus-algebraic-shadow-v0/smt2/false-derivative-farkas-conflict.smt2"
 );
@@ -962,6 +965,14 @@ fn finite_cubic_hermite_interpolation_bad_value_artifact_emits_checked_farkas() 
     assert_resource_farkas(
         "finite-cubic-hermite-interpolation-v0 bad-hermite-value SMT-LIB artifact",
         FINITE_CUBIC_HERMITE_INTERPOLATION_BAD_VALUE,
+    );
+}
+
+#[test]
+fn finite_cubic_spline_interpolation_bad_value_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-cubic-spline-interpolation-v0 bad-spline-value SMT-LIB artifact",
+        FINITE_CUBIC_SPLINE_INTERPOLATION_BAD_VALUE,
     );
 }
 
