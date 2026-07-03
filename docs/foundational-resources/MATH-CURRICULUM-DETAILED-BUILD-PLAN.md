@@ -62,15 +62,15 @@ The committed resource query currently reports:
 - 18 field rows.
 - 76 bridge-concept rows.
 - 5 example-family rows.
-- 140 non-template math packs.
-- 923 expected checks.
-- 366 checked proof/evidence rows.
-- 454 replay-only rows.
-- 103 Lean-horizon rows.
-- 140 promoted solver-reuse packs.
+- 141 non-template math packs.
+- 929 expected checks.
+- 367 checked proof/evidence rows.
+- 458 replay-only rows.
+- 104 Lean-horizon rows.
+- 141 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 140 focused learner-linked packs, with no path-only, index-only, or missing
+- 141 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 The next phase is therefore a depth phase, not a seed phase. New packs are
@@ -158,7 +158,7 @@ Exit criteria:
 - No lesson implies a finite bounded check proves an unbounded theorem.
 
 Current audit: [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md) records that
-all 140 current non-template packs satisfy the focused-lesson side of this
+all 141 current non-template packs satisfy the focused-lesson side of this
 gate. Keep this true as new packs land.
 
 ### Wave 3: Proof-Route Depth
@@ -2600,6 +2600,16 @@ Pick one row per commit unless the change is purely navigational.
      shadow separate from general GMRES least-squares theory, restarts,
      preconditioners, breakdown, nonnormal convergence, and floating-point
      Krylov stability.
+299. Landed: add `finite-runge-kutta-midpoint-v0` as an exact finite
+     RK2 midpoint time-stepping resource. The pack replays `y' = 2t`,
+     `y(0)=0`, `h=1/2`, midpoint stages at times `1/4`, `3/4`, and `5/4`,
+     states `[0, 1/4, 1, 9/4]`, exact solution `[0, 1/4, 1, 9/4]`, and zero
+     absolute error, then adds `qf-lra-bad-rk-midpoint-step` as the
+     source-linked Farkas row for the false first-step claim `1/2` versus
+     exact `1/4`. The learner and query pages keep this finite exact
+     time-stepping shadow separate from general Runge-Kutta order theory,
+     consistency, convergence, stability regions, stiffness, and adaptive-step
+     control.
 
 ## Validation Checklist
 

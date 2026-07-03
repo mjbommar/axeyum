@@ -1,13 +1,16 @@
 # End To End: Finite Dynamics And Euler Replay
 
-This lesson follows two exact finite dynamics resources from recurrence data to
+This lesson follows exact finite dynamics resources from recurrence data to
 checked transition replay. It uses
 [bounded-dynamics-v0](../../../artifacts/examples/math/bounded-dynamics-v0/) and
-[finite-euler-method-v0](../../../artifacts/examples/math/finite-euler-method-v0/).
+[finite-euler-method-v0](../../../artifacts/examples/math/finite-euler-method-v0/),
+and [finite-runge-kutta-midpoint-v0](../../../artifacts/examples/math/finite-runge-kutta-midpoint-v0/).
 For the bounded recurrence and invariant slice alone, read
 [End To End: Bounded Recurrence Dynamics](bounded-dynamics-end-to-end.md).
 For the explicit Euler and finite error-table slice alone, read
 [End To End: Finite Euler Method](finite-euler-method-end-to-end.md).
+For the explicit midpoint Runge-Kutta slice alone, read
+[End To End: Finite Runge-Kutta Midpoint](runge-kutta-midpoint-end-to-end.md).
 
 Concept rows:
 
@@ -43,6 +46,12 @@ Concept rows:
 | `nonnegative-monotone-invariant` | `sat` | replay-only |
 | `bad-euler-step-rejected` | `unsat` | replay-only |
 | `qf-lra-bad-euler-step` | `unsat` | checked |
+| `midpoint-stage-witness` | `sat` | replay-only |
+| `midpoint-trace-exact-solution-witness` | `sat` | replay-only |
+| `zero-error-table-witness` | `sat` | replay-only |
+| `bad-rk-midpoint-step-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-rk-midpoint-step` | `unsat` | checked |
+| `general-runge-kutta-theory-lean-horizon` | `not-run` | lean-horizon |
 | `general-ode-theory-lean-horizon` | `not-run` | lean-horizon |
 
 These rows are finite transition-system checks over exact rationals. They do
@@ -50,8 +59,8 @@ not claim continuous-time existence, uniqueness, stability, convergence rates,
 stiffness behavior, chaos, or PDE theory.
 The shared `bridge_finite_dynamics_euler_replay` row is the atlas vocabulary
 for this pattern across recurrence prefixes, bounded dynamics, finite
-invariants, threshold reachability, explicit Euler steps, and finite error
-tables.
+invariants, threshold reachability, explicit Euler steps, Runge-Kutta midpoint
+stages, and finite error tables.
 
 ## Replay A Bounded Recurrence
 
@@ -246,6 +255,31 @@ so the row is rejected. This is the most important teaching shape in the pack:
 the same arithmetic that accepts a good step rejects a plausible but false
 numerical update.
 
+## Encode RK2 Midpoint As A Transition System
+
+The Runge-Kutta midpoint pack treats a two-stage numerical method as another
+rational transition relation:
+
+```text
+k1 = f(t_n, y_n)
+t_mid = t_n + h/2
+y_mid = y_n + (h/2)*k1
+k2 = f(t_mid, y_mid)
+y_(n+1) = y_n + h*k2
+```
+
+For `y' = 2t`, `y(0)=0`, and `h=1/2`, the finite midpoint trace is:
+
+```text
+states = 0, 1/4, 1, 9/4
+exact  = 0, 1/4, 1, 9/4
+errors = 0, 0, 0, 0
+```
+
+The bad midpoint row claims the first next state is `1/2`; exact replay
+computes `1/4`, and the separate `qf-lra-bad-rk-midpoint-step` row isolates
+that contradiction through checked Farkas evidence.
+
 ## Name The Lean Horizon
 
 The finite rows are useful because they isolate a trustworthy kernel of the
@@ -256,6 +290,7 @@ recurrence trace
 bounded invariant
 threshold reachability
 Euler transition replay
+Runge-Kutta midpoint stage replay
 finite error table
 bad-step refutation
 ```

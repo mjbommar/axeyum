@@ -240,6 +240,23 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite Runge-Kutta midpoint resource landed.**
+  `finite-runge-kutta-midpoint-v0` now gives the differential-equations,
+  numerical-analysis, and real-analysis lanes a compact exact RK2 midpoint
+  example: it checks `y' = 2t`, `y(0)=0`, step size `h=1/2`, times
+  `[0, 1/2, 1, 3/2]`, states `[0, 1/4, 1, 9/4]`, stage derivatives
+  `[0, 1, 2]`, midpoint times `[1/4, 3/4, 5/4]`, midpoint states
+  `[0, 1/2, 3/2]`, midpoint derivatives `[1/2, 3/2, 5/2]`, exact solution
+  `[0, 1/4, 1, 9/4]`, and zero absolute error. It then rejects the malformed
+  first-step claim `1/2` versus exact `1/4` through a source-linked
+  QF_LRA/Farkas row. The focused learner page, dynamics and analysis/numerical
+  query guides, finite dynamics/time-stepping bridge, validator, resource smoke
+  queries, and `math_resource_lra_routes` regression keep this fixed exact
+  time-stepping replay separate from general Runge-Kutta order theory,
+  consistency, convergence, stability-region, stiffness, and adaptive-step
+  theorems. The public summary now reports 122 concept rows, 141 packs, 929
+  expected checks, 367 checked rows, 458 replay-only rows, 104 Lean-horizon
+  rows, and 141 promoted solver-reuse packs.
 - **Finite GMRES residual-shadow resource landed.**
   `finite-gmres-residual-shadow-v0` now gives the linear-algebra,
   numerical-analysis, functional-operator, and optimization lanes a compact
@@ -255,9 +272,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   resource smoke queries, and `math_resource_lra_routes` regression keep this
   finite exact replay separate from general GMRES convergence, restart,
   preconditioner, breakdown, nonnormal, and floating-point stability schemas.
-  The public summary now reports 122 concept rows, 140 packs, 923 expected
-  checks, 366 checked rows, 454 replay-only rows, 103 Lean-horizon rows, and
-  140 promoted solver-reuse packs.
+  After that increment the public summary reported 122 concept rows, 140 packs,
+  923 expected checks, 366 checked rows, 454 replay-only rows,
+  103 Lean-horizon rows, and 140 promoted solver-reuse packs.
 - **Finite Cauchy-Riemann shadow resource landed.**
   `finite-cauchy-riemann-shadow-v0` now gives the complex-analysis and
   real-analysis lanes a compact exact polynomial partial-derivative example:

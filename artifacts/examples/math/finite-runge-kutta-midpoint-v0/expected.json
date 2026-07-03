@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-runge-kutta-midpoint-v0",
+  "witnesses": [
+    {
+      "id": "quadratic-forcing-midpoint-trace",
+      "description": "Exact rational RK2 midpoint replay for y' = 2t, y(0) = 0, h = 1/2.",
+      "values": {
+        "ode": "y_prime_equals_2t",
+        "method": "explicit_midpoint_rk2",
+        "step": "1/2",
+        "times": ["0", "1/2", "1", "3/2"],
+        "states": ["0", "1/4", "1", "9/4"],
+        "stage1_derivatives": ["0", "1", "2"],
+        "midpoint_times": ["1/4", "3/4", "5/4"],
+        "midpoint_states": ["0", "1/2", "3/2"],
+        "midpoint_derivatives": ["1/2", "3/2", "5/2"],
+        "exact_solution": ["0", "1/4", "1", "9/4"],
+        "absolute_errors": ["0", "0", "0", "0"],
+        "max_error": "0"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "midpoint-stage-witness",
+      "claim": "The listed midpoint stage times, states, and derivatives are correct for y' = 2t with h = 1/2.",
+      "expected_result": "sat",
+      "validation": "exact_rational_rk_midpoint_stage_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["quadratic-forcing-midpoint-trace"],
+      "notes": "The validator recomputes k1, midpoint time, midpoint state, and k2 for every listed step."
+    },
+    {
+      "id": "midpoint-trace-exact-solution-witness",
+      "claim": "The RK2 midpoint trace lands on the exact solution y = t^2 at the listed grid points.",
+      "expected_result": "sat",
+      "validation": "exact_rational_rk_midpoint_trace_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["quadratic-forcing-midpoint-trace"],
+      "notes": "The validator recomputes y_{n+1} = y_n + h*k2 and compares every listed state with t^2."
+    },
+    {
+      "id": "zero-error-table-witness",
+      "claim": "The finite error table is identically zero on this grid.",
+      "expected_result": "sat",
+      "validation": "exact_rational_rk_midpoint_error_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["quadratic-forcing-midpoint-trace"],
+      "notes": "The validator recomputes absolute errors and max_error exactly; this is a finite table, not a convergence theorem."
+    },
+    {
+      "id": "bad-rk-midpoint-step-rejected",
+      "claim": "For y' = 2t, h = 1/2, t = 0, and y = 0, the first RK2 midpoint step gives 1/2.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_bad_rk_midpoint_step_replay",
+      "proof_status": "replay-only",
+      "data": {
+        "source_witness": "quadratic-forcing-midpoint-trace",
+        "step_index": 0,
+        "time": "0",
+        "state": "0",
+        "step": "1/2",
+        "stage1_derivative": "0",
+        "midpoint_time": "1/4",
+        "midpoint_state": "0",
+        "midpoint_derivative": "1/2",
+        "computed_next_state": "1/4",
+        "claimed_next_state": "1/2",
+        "next_state_gap": "1/4"
+      },
+      "notes": "Exact replay computes the first RK midpoint next state as 1/4, so the claimed value 1/2 is rejected; the separate qf-lra-bad-rk-midpoint-step row owns the checked Farkas evidence."
+    },
+    {
+      "id": "qf-lra-bad-rk-midpoint-step",
+      "claim": "The fixed malformed RK midpoint next-state claim is linearly inconsistent.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_farkas_evidence",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "quadratic-forcing-midpoint-trace",
+        "source_replay_row": "bad-rk-midpoint-step-rejected",
+        "computed_next_state": "1/4",
+        "claimed_next_state": "1/2",
+        "farkas_conflict": "rk_next_state = 1/4 and rk_next_state = 1/2",
+        "smt2_artifact": "artifacts/examples/math/finite-runge-kutta-midpoint-v0/smt2/bad-rk-midpoint-step-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_runge_kutta_midpoint_bad_step_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes the first RK midpoint next state as 1/4, while the malformed row claims 1/2; the source QF_LRA artifact isolates that scalar contradiction for Farkas checking."
+    },
+    {
+      "id": "general-runge-kutta-theory-lean-horizon",
+      "claim": "General Runge-Kutta order conditions, convergence, stability regions, stiffness behavior, adaptive step-size control, and floating-point time-stepping correctness require future theorem or numerical-honesty resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_boundary",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "For explicit Runge-Kutta methods, prove order conditions, local/global error bounds, stability properties, and method-specific convergence hypotheses separately from finite replay rows.",
+        "future_checker": "Lean theorem statements for exact Runge-Kutta theory plus separate numerical-honesty or QF_FP artifacts for floating-point implementations."
+      },
+      "notes": "The finite exact row is a checked resource for one rational RK2 midpoint trace, not a theorem about arbitrary ODEs, adaptive solvers, stiff systems, or floating-point implementations."
+    }
+  ]
+}

@@ -64,15 +64,15 @@ The current committed data boundary reports:
 - 18 math-field concept rows.
 - 76 bridge-concept rows.
 - 5 example-family rows.
-- 140 non-template math example packs.
-- 923 expected checks.
-- 366 checked proof/evidence rows.
-- 454 replay-only rows.
-- 103 Lean-horizon rows.
-- 140 promoted solver-reuse packs.
+- 141 non-template math example packs.
+- 929 expected checks.
+- 367 checked proof/evidence rows.
+- 458 replay-only rows.
+- 104 Lean-horizon rows.
+- 141 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 140 focused learner-linked packs, with no path-only, index-only, or missing
+- 141 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 This is broad enough that the next work is not "create a few examples." The
@@ -2577,6 +2577,13 @@ Pick one item per commit unless the change is purely navigational.
      without claiming general GMRES convergence, restart policy correctness,
      preconditioner correctness, breakdown behavior, nonnormal theory, or
      floating-point Krylov stability.
+187. Landed: add `finite-runge-kutta-midpoint-v0` as an exact finite RK2
+     midpoint time-stepping resource. The pack computes `y' = 2t` from
+     `y(0)=0` with `h=1/2`, records the midpoint stages, exact solution values,
+     and zero error table, then promotes the malformed first-step claim `1/2`
+     through a source-linked QF_LRA/Farkas regression against exact `1/4`
+     without claiming general Runge-Kutta order theory, consistency,
+     convergence, stability regions, stiffness, or adaptive-step correctness.
 
 ## Validation Checklist
 

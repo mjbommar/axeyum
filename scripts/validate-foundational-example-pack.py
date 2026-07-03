@@ -32089,6 +32089,78 @@ def validate_euler_trace(context: str, values: dict[str, Any]) -> dict[str, Any]
     }
 
 
+def validate_rk_midpoint_trace(context: str, values: dict[str, Any]) -> dict[str, Any]:
+    ode = require_euler_ode(f"{context}.ode", values.get("ode"))
+    method = values.get("method")
+    require_string(f"{context}.method", method)
+    if method != "explicit_midpoint_rk2":
+        fail(f"{context}.method must be explicit_midpoint_rk2")
+    step = require_fraction(f"{context}.step", values.get("step"))
+    times = require_fraction_vector(f"{context}.times", values.get("times"))
+    states = require_fraction_vector(f"{context}.states", values.get("states"))
+    stage1_derivatives = require_fraction_vector(
+        f"{context}.stage1_derivatives",
+        values.get("stage1_derivatives"),
+    )
+    midpoint_times = require_fraction_vector(
+        f"{context}.midpoint_times",
+        values.get("midpoint_times"),
+    )
+    midpoint_states = require_fraction_vector(
+        f"{context}.midpoint_states",
+        values.get("midpoint_states"),
+    )
+    midpoint_derivatives = require_fraction_vector(
+        f"{context}.midpoint_derivatives",
+        values.get("midpoint_derivatives"),
+    )
+    if step <= 0:
+        fail(f"{context}.step must be positive")
+    if len(times) != len(states):
+        fail(f"{context}.times and states must have the same length")
+    transition_count = len(states) - 1
+    if transition_count <= 0:
+        fail(f"{context} must contain at least one transition")
+    for name, entries in [
+        ("stage1_derivatives", stage1_derivatives),
+        ("midpoint_times", midpoint_times),
+        ("midpoint_states", midpoint_states),
+        ("midpoint_derivatives", midpoint_derivatives),
+    ]:
+        if len(entries) != transition_count:
+            fail(f"{context}.{name} must have one entry per transition")
+    half_step = step / 2
+    for index in range(transition_count):
+        if times[index + 1] != times[index] + step:
+            fail(f"{context}.times transition {index}->{index + 1} does not match step")
+        expected_k1 = euler_derivative(ode, times[index], states[index])
+        if stage1_derivatives[index] != expected_k1:
+            fail(f"{context}.stage1_derivatives[{index}] is incorrect")
+        expected_mid_time = times[index] + half_step
+        if midpoint_times[index] != expected_mid_time:
+            fail(f"{context}.midpoint_times[{index}] is incorrect")
+        expected_mid_state = states[index] + half_step * stage1_derivatives[index]
+        if midpoint_states[index] != expected_mid_state:
+            fail(f"{context}.midpoint_states[{index}] is incorrect")
+        expected_k2 = euler_derivative(ode, midpoint_times[index], midpoint_states[index])
+        if midpoint_derivatives[index] != expected_k2:
+            fail(f"{context}.midpoint_derivatives[{index}] is incorrect")
+        expected_next = states[index] + step * midpoint_derivatives[index]
+        if states[index + 1] != expected_next:
+            fail(f"{context}.states transition {index}->{index + 1} is not an RK midpoint step")
+    return {
+        "ode": ode,
+        "method": method,
+        "step": step,
+        "times": times,
+        "states": states,
+        "stage1_derivatives": stage1_derivatives,
+        "midpoint_times": midpoint_times,
+        "midpoint_states": midpoint_states,
+        "midpoint_derivatives": midpoint_derivatives,
+    }
+
+
 def validate_finite_euler_method(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -32405,6 +32477,171 @@ def validate_finite_euler_method(expected: dict[str, Any]) -> None:
     data = horizon.get("data", {})
     require_string("general ODE target_theorem_shape", data.get("target_theorem_shape"))
     require_string("general ODE future_checker", data.get("future_checker"))
+
+
+def validate_finite_runge_kutta_midpoint(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    stage = checks["midpoint-stage-witness"]
+    if stage["expected_result"] != "sat":
+        fail("midpoint-stage-witness must expect sat")
+    if stage.get("proof_status") != "replay-only":
+        fail("midpoint-stage-witness must be replay-only")
+    values = single_witness_values(stage, witnesses)
+    replay = validate_rk_midpoint_trace("RK midpoint trace", values)
+    if replay["ode"] != "y_prime_equals_2t":
+        fail("finite RK midpoint replay must use y' = 2t")
+    if replay["step"] != Fraction(1, 2):
+        fail("finite RK midpoint replay must use h = 1/2")
+
+    trace = checks["midpoint-trace-exact-solution-witness"]
+    if trace["expected_result"] != "sat":
+        fail("midpoint-trace-exact-solution-witness must expect sat")
+    if trace.get("proof_status") != "replay-only":
+        fail("midpoint-trace-exact-solution-witness must be replay-only")
+    if single_witness_values(trace, witnesses) != values:
+        fail("midpoint-trace-exact-solution-witness must cite the RK midpoint witness")
+    exact_solution = require_fraction_vector("RK midpoint exact_solution", values.get("exact_solution"))
+    if len(exact_solution) != len(replay["states"]):
+        fail("RK midpoint exact_solution must match state length")
+    for index, time in enumerate(replay["times"]):
+        if exact_solution[index] != time * time:
+            fail(f"RK midpoint exact_solution[{index}] is incorrect")
+        if replay["states"][index] != exact_solution[index]:
+            fail(f"midpoint-trace-exact-solution-witness state {index} does not match t^2")
+
+    errors = checks["zero-error-table-witness"]
+    if errors["expected_result"] != "sat":
+        fail("zero-error-table-witness must expect sat")
+    if errors.get("proof_status") != "replay-only":
+        fail("zero-error-table-witness must be replay-only")
+    if single_witness_values(errors, witnesses) != values:
+        fail("zero-error-table-witness must cite the RK midpoint witness")
+    absolute_errors = require_fraction_vector("RK midpoint absolute_errors", values.get("absolute_errors"))
+    max_error = require_fraction("RK midpoint max_error", values.get("max_error"))
+    if len(absolute_errors) != len(replay["states"]):
+        fail("RK midpoint absolute_errors must match state length")
+    for index, state in enumerate(replay["states"]):
+        if absolute_errors[index] != abs(exact_solution[index] - state):
+            fail(f"RK midpoint absolute_errors[{index}] is incorrect")
+    if max(absolute_errors) != max_error:
+        fail("RK midpoint max_error is incorrect")
+    if max_error != 0:
+        fail("zero-error-table-witness expects max_error = 0")
+
+    bad = checks["bad-rk-midpoint-step-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-rk-midpoint-step-rejected must expect unsat")
+    if bad.get("proof_status") != "replay-only":
+        fail("bad-rk-midpoint-step-rejected must be replay-only")
+    if bad.get("validation") != "exact_rational_bad_rk_midpoint_step_replay":
+        fail("bad-rk-midpoint-step-rejected validation is incorrect")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "quadratic-forcing-midpoint-trace":
+        fail("bad-rk-midpoint-step-rejected must cite the RK midpoint witness")
+    step_index = require_int("bad RK midpoint step_index", data.get("step_index"))
+    if step_index < 0 or step_index >= len(replay["states"]) - 1:
+        fail("bad-rk-midpoint-step-rejected step_index out of range")
+    time = require_fraction("bad RK midpoint time", data.get("time"))
+    state = require_fraction("bad RK midpoint state", data.get("state"))
+    step = require_fraction("bad RK midpoint step", data.get("step"))
+    stage1_derivative = require_fraction(
+        "bad RK midpoint stage1_derivative",
+        data.get("stage1_derivative"),
+    )
+    midpoint_time = require_fraction("bad RK midpoint midpoint_time", data.get("midpoint_time"))
+    midpoint_state = require_fraction("bad RK midpoint midpoint_state", data.get("midpoint_state"))
+    midpoint_derivative = require_fraction(
+        "bad RK midpoint midpoint_derivative",
+        data.get("midpoint_derivative"),
+    )
+    computed_next_state = require_fraction(
+        "bad RK midpoint computed_next_state",
+        data.get("computed_next_state"),
+    )
+    claimed_next_state = require_fraction(
+        "bad RK midpoint claimed_next_state",
+        data.get("claimed_next_state"),
+    )
+    next_state_gap = require_fraction("bad RK midpoint next_state_gap", data.get("next_state_gap"))
+    if replay["times"][step_index] != time:
+        fail("bad-rk-midpoint-step-rejected time does not match source witness")
+    if replay["states"][step_index] != state:
+        fail("bad-rk-midpoint-step-rejected state does not match source witness")
+    if replay["step"] != step:
+        fail("bad-rk-midpoint-step-rejected step does not match source witness")
+    if replay["stage1_derivatives"][step_index] != stage1_derivative:
+        fail("bad-rk-midpoint-step-rejected stage1_derivative does not match source witness")
+    if replay["midpoint_times"][step_index] != midpoint_time:
+        fail("bad-rk-midpoint-step-rejected midpoint_time does not match source witness")
+    if replay["midpoint_states"][step_index] != midpoint_state:
+        fail("bad-rk-midpoint-step-rejected midpoint_state does not match source witness")
+    if replay["midpoint_derivatives"][step_index] != midpoint_derivative:
+        fail("bad-rk-midpoint-step-rejected midpoint_derivative does not match source witness")
+    if replay["states"][step_index + 1] != computed_next_state:
+        fail("bad-rk-midpoint-step-rejected computed_next_state does not match source witness")
+    if state + step * midpoint_derivative != computed_next_state:
+        fail("bad-rk-midpoint-step-rejected next-state arithmetic is incorrect")
+    if computed_next_state == claimed_next_state:
+        fail("bad-rk-midpoint-step-rejected malformed next state must disagree with replay")
+    if claimed_next_state - computed_next_state != next_state_gap:
+        fail("bad-rk-midpoint-step-rejected next_state_gap is incorrect")
+    if next_state_gap <= 0:
+        fail("bad-rk-midpoint-step-rejected next_state_gap must be positive")
+    if "separate qf-lra-bad-rk-midpoint-step" not in bad.get("notes", ""):
+        fail("bad-rk-midpoint-step-rejected notes must name the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-rk-midpoint-step"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-rk-midpoint-step must expect unsat")
+    if qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-rk-midpoint-step must be checked")
+    if qf_bad.get("validation") != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-rk-midpoint-step must use exact_rational_farkas_evidence")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_witness") != "quadratic-forcing-midpoint-trace":
+        fail("qf-lra-bad-rk-midpoint-step must cite the RK midpoint witness")
+    if qf_data.get("source_replay_row") != "bad-rk-midpoint-step-rejected":
+        fail("qf-lra-bad-rk-midpoint-step must cite the replay row")
+    qf_computed = require_fraction(
+        "qf RK midpoint computed_next_state",
+        qf_data.get("computed_next_state"),
+    )
+    qf_claimed = require_fraction(
+        "qf RK midpoint claimed_next_state",
+        qf_data.get("claimed_next_state"),
+    )
+    if qf_computed != computed_next_state or qf_claimed != claimed_next_state:
+        fail("qf-lra-bad-rk-midpoint-step data must match the replay row")
+    if qf_data.get("farkas_conflict") != "rk_next_state = 1/4 and rk_next_state = 1/2":
+        fail("qf-lra-bad-rk-midpoint-step must document the Farkas conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf RK midpoint smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-runge-kutta-midpoint-v0/smt2/"
+        "bad-rk-midpoint-step-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-lra-bad-rk-midpoint-step smt2_artifact must name the checked source artifact")
+    check_source("qf RK midpoint smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf RK midpoint farkas_regression", regression)
+    if "finite_runge_kutta_midpoint_bad_step_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-rk-midpoint-step must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf RK midpoint certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-rk-midpoint-step certificate must document checked Farkas evidence")
+
+    horizon = checks["general-runge-kutta-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-runge-kutta-theory-lean-horizon must be not-run")
+    if horizon.get("proof_status") != "lean-horizon":
+        fail("general-runge-kutta-theory-lean-horizon must remain lean-horizon")
+    horizon_data = horizon.get("data", {})
+    require_string("Runge-Kutta horizon target_theorem_shape", horizon_data.get("target_theorem_shape"))
+    require_string("Runge-Kutta horizon future_checker", horizon_data.get("future_checker"))
 
 
 def validate_bounded_dynamics(expected: dict[str, Any]) -> None:
@@ -32762,6 +32999,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_dual_spaces(expected)
     if metadata["id"] == "finite-euler-method-v0":
         validate_finite_euler_method(expected)
+    if metadata["id"] == "finite-runge-kutta-midpoint-v0":
+        validate_finite_runge_kutta_midpoint(expected)
     if metadata["id"] == "finite-gaussian-elimination-v0":
         validate_finite_gaussian_elimination(expected)
     if metadata["id"] == "finite-lu-decomposition-v0":

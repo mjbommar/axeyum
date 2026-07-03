@@ -1096,7 +1096,15 @@ Build sequence:
     fixed exact row separate from general GMRES convergence, restart,
     preconditioner, breakdown, nonnormal, and floating-point stability
     theorems.
-111. Revisit crate/repo boundaries only after three real consumers or repeated
+111. Landed: add the finite Runge-Kutta midpoint resource.
+    `finite-runge-kutta-midpoint-v0` now records one exact RK2 midpoint
+    transcript for `y' = 2t`, `y(0)=0`, and `h=1/2`, including midpoint
+    stages, exact states `[0, 1/4, 1, 9/4]`, and zero error. It includes a
+    checked QF_LRA/Farkas artifact for the malformed first-step claim `1/2`
+    against exact `1/4`. The finite dynamics/time-stepping bridge keeps this
+    fixed exact row separate from general Runge-Kutta order, convergence,
+    stability, stiffness, and adaptive-step theorems.
+112. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands

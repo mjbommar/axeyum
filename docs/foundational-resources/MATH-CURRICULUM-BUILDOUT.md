@@ -1522,9 +1522,9 @@ Exit criteria:
   QF_LRA/Farkas infeasibility, Boolean CNF/LRAT refutations, integer/count
   Diophantine obstructions, and fixed-width QF_BV/DRAT rows.
 - At least 12 validated example packs.
-  Status: 140 non-template math example packs validate.
+  Status: 141 non-template math example packs validate.
 - At least 6 packs with checked proof/evidence routes.
-  Status: 140 non-template packs have at least one `checked` expected-result row.
+  Status: 141 non-template packs have at least one `checked` expected-result row.
 - At least one downstream consumer can read the data without repository-internal
   knowledge.
   Status: `scripts/consume-foundational-resources.py` reads the committed atlas
@@ -3539,6 +3539,14 @@ QF_LRA/Farkas artifact rejects the malformed one-step coefficient claim
 preconditioner correctness, breakdown behavior, nonnormal convergence, and
 floating-point Krylov stability stay in future Lean/theorem or
 numerical-honesty lanes.
+The differential-equations/numerical-analysis/real-analysis layer now adds
+`finite-runge-kutta-midpoint-v0` as the 141st non-template math pack. Exact
+rational replay checks `y' = 2t`, `y(0)=0`, `h=1/2`, midpoint stages,
+states `[0, 1/4, 1, 9/4]`, the exact solution at those times, and a zero
+absolute-error table, while a source-linked QF_LRA/Farkas artifact rejects the
+malformed first-step claim `1/2` against exact `1/4`. General Runge-Kutta
+order theory, consistency, convergence, stability regions, stiffness, and
+adaptive-step control stay in future Lean/theorem or numerical-honesty lanes.
 Continue by adding the next curriculum-adjacent pack from the field ledger
 or by replacing finite enumeration routes with emitted, checked proof objects
 where appropriate.
