@@ -7241,10 +7241,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   negative checker tests (corrupted derivations rejected); ≥1000-case
   property tests both directions; the word fuzz now gates BOTH directions:
   600 scripts, 316 jointly decided, **96 sat + 220 unsat, DISAGREE=0**
-  (independently re-run before push). Committed string corpora unchanged —
-  their unsat remainder is inference-dependent; the next T-B.7 slice is
-  `check_fact` for cycle-ε/length derivations + the bench-side word hook on
-  the non-fallback path. Also same-session: **word-route harness parity
+  (independently re-run before push).
+  **T-B.7 slice 2 LANDED (`b74e23aa`): checked inference-dependent
+  derivations + the bench word hook.** `check_fact` independently
+  re-verifies T-B.3 Facts (cycle-ε, ENDPOINT_EMP/EQ, UNIFY) from original
+  premises; chained refutation certifies `x≈"a"++x` self-loop families,
+  augmented clashes (`x≈y++x ∧ y≈"a"`), and endpoint-eq chains; multi-node
+  mutual loops honestly decline. Fuzz now **96 sat + 305 unsat (+85),
+  DISAGREE=0, independently re-run**; frontier 8/8 green. Bench mirrors the
+  front door on the normal path (`word_route_verdict` upgrade before the
+  oracle record). **Honest re-measure: zero corpus movement** — every
+  remaining gate-downgraded unknown carries regex/`str.leq`/`str.code`/
+  `seq.update`, so no WordProblem side channel is built; the measured lever
+  is side-channel operator coverage (str.leq/str.code reducible now; regex
+  is Phase C), not more refutation shapes. Also same-session: **word-route harness parity
   moved QF_S 52→57** (`f5d3e1ec`, five long-literal sat instances incl. the
   quadratic issue6520, each z3-binary-verified) and the **first committed
   lazy-vs-eager PAR-2 head-to-head** landed (`582ecba8`: lazy weakly
