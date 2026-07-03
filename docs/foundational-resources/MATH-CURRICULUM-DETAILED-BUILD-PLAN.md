@@ -62,15 +62,15 @@ The committed resource query currently reports:
 - 18 field rows.
 - 76 bridge-concept rows.
 - 5 example-family rows.
-- 136 non-template math packs.
-- 895 expected checks.
-- 362 checked proof/evidence rows.
-- 434 replay-only rows.
-- 99 Lean-horizon rows.
-- 136 promoted solver-reuse packs.
+- 137 non-template math packs.
+- 901 expected checks.
+- 363 checked proof/evidence rows.
+- 438 replay-only rows.
+- 100 Lean-horizon rows.
+- 137 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 136 focused learner-linked packs, with no path-only, index-only, or missing
+- 137 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 The next phase is therefore a depth phase, not a seed phase. New packs are
@@ -158,7 +158,7 @@ Exit criteria:
 - No lesson implies a finite bounded check proves an unbounded theorem.
 
 Current audit: [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md) records that
-all 136 current non-template packs satisfy the focused-lesson side of this
+all 137 current non-template packs satisfy the focused-lesson side of this
 gate. Keep this true as new packs land.
 
 ### Wave 3: Proof-Route Depth
@@ -2560,6 +2560,16 @@ Pick one row per commit unless the change is purely navigational.
      shifted-QR replay separate from shift-selection theory, deflation,
      QR convergence, Schur theorem reconstruction, loss-of-orthogonality
      analysis, and floating-point eigensolver stability.
+295. Landed: add `finite-rounding-shadow-v0` as an exact finite
+     exact-vs-rounded arithmetic resource. The pack replays `x = 1`,
+     `y = 1/10000`, `exact_delta = (x + y) - x = 1/10000`, fixed
+     three-decimal scale `1000`, nearest-grid residuals, and
+     `round3(x + y) - round3(x) = 0`, then adds
+     `qf-lra-bad-rounded-equals-exact` as the source-linked Farkas row for the
+     false equality claim `exact_delta = rounded_delta`. The learner and query
+     pages keep exact rational rounding replay separate from IEEE
+     floating-point semantics, rounding-mode theory, accumulation-error
+     bounds, and numerical-stability theorems.
 
 ## Validation Checklist
 

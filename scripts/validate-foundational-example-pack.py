@@ -12717,6 +12717,223 @@ def validate_finite_condition_number(expected: dict[str, Any]) -> None:
     require_string("condition horizon future_checker", horizon_data.get("future_checker"))
 
 
+def validate_finite_rounding_shadow(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    exact = checks["exact-increment-replay"]
+    if exact["expected_result"] != "sat":
+        fail("exact-increment-replay must expect sat")
+    if exact.get("proof_status") != "replay-only":
+        fail("exact-increment-replay must be replay-only")
+    values = single_witness_values(exact, witnesses)
+    x_value = require_fraction("rounding x", values.get("x"))
+    y_value = require_fraction("rounding y", values.get("y"))
+    exact_sum = require_fraction("rounding exact_sum", values.get("exact_sum"))
+    exact_delta = require_fraction("rounding exact_delta", values.get("exact_delta"))
+    if x_value + y_value != exact_sum:
+        fail("exact-increment-replay exact_sum is not x + y")
+    if exact_sum - x_value != exact_delta:
+        fail("exact-increment-replay exact_delta is not exact_sum - x")
+    if exact_delta <= 0:
+        fail("exact-increment-replay expects a positive small increment")
+
+    rounding = checks["rounding-grid-replay"]
+    if rounding["expected_result"] != "sat":
+        fail("rounding-grid-replay must expect sat")
+    if rounding.get("proof_status") != "replay-only":
+        fail("rounding-grid-replay must be replay-only")
+    if single_witness_values(rounding, witnesses) != values:
+        fail("rounding-grid-replay must cite the rounding witness")
+    decimal_places = require_nonnegative_int(
+        "rounding decimal_places",
+        values.get("decimal_places"),
+    )
+    scale = require_fraction("rounding scale", values.get("scale"))
+    half_unit = require_fraction("rounding half_unit", values.get("half_unit"))
+    if scale.denominator != 1 or scale != 10**decimal_places:
+        fail("rounding-grid-replay scale must be 10^decimal_places")
+    if half_unit != Fraction(1, 2):
+        fail("rounding-grid-replay half_unit must be 1/2")
+
+    scaled_x = require_fraction("rounding scaled_x", values.get("scaled_x"))
+    scaled_y = require_fraction("rounding scaled_y", values.get("scaled_y"))
+    scaled_sum = require_fraction("rounding scaled_sum", values.get("scaled_sum"))
+    if x_value * scale != scaled_x:
+        fail("rounding-grid-replay scaled_x is incorrect")
+    if y_value * scale != scaled_y:
+        fail("rounding-grid-replay scaled_y is incorrect")
+    if exact_sum * scale != scaled_sum:
+        fail("rounding-grid-replay scaled_sum is incorrect")
+
+    rounded_x_units = require_fraction(
+        "rounding rounded_x_units",
+        values.get("rounded_x_units"),
+    )
+    rounded_y_units = require_fraction(
+        "rounding rounded_y_units",
+        values.get("rounded_y_units"),
+    )
+    rounded_sum_units = require_fraction(
+        "rounding rounded_sum_units",
+        values.get("rounded_sum_units"),
+    )
+    for label, rounded_units in (
+        ("rounded_x_units", rounded_x_units),
+        ("rounded_y_units", rounded_y_units),
+        ("rounded_sum_units", rounded_sum_units),
+    ):
+        if rounded_units.denominator != 1:
+            fail(f"rounding-grid-replay {label} must be an integer grid unit")
+
+    x_residual = require_fraction(
+        "rounding x_rounding_residual",
+        values.get("x_rounding_residual"),
+    )
+    y_residual = require_fraction(
+        "rounding y_rounding_residual",
+        values.get("y_rounding_residual"),
+    )
+    sum_residual = require_fraction(
+        "rounding sum_rounding_residual",
+        values.get("sum_rounding_residual"),
+    )
+    if scaled_x - rounded_x_units != x_residual:
+        fail("rounding-grid-replay x residual is incorrect")
+    if scaled_y - rounded_y_units != y_residual:
+        fail("rounding-grid-replay y residual is incorrect")
+    if scaled_sum - rounded_sum_units != sum_residual:
+        fail("rounding-grid-replay sum residual is incorrect")
+    for label, residual in (
+        ("x", x_residual),
+        ("y", y_residual),
+        ("sum", sum_residual),
+    ):
+        if residual < -half_unit or residual >= half_unit:
+            fail(f"rounding-grid-replay {label} residual is outside the nearest-grid cell")
+
+    rounded_x = require_fraction("rounding rounded_x", values.get("rounded_x"))
+    rounded_y = require_fraction("rounding rounded_y", values.get("rounded_y"))
+    rounded_sum = require_fraction("rounding rounded_sum", values.get("rounded_sum"))
+    if rounded_x_units / scale != rounded_x:
+        fail("rounding-grid-replay rounded_x is not rounded_x_units / scale")
+    if rounded_y_units / scale != rounded_y:
+        fail("rounding-grid-replay rounded_y is not rounded_y_units / scale")
+    if rounded_sum_units / scale != rounded_sum:
+        fail("rounding-grid-replay rounded_sum is not rounded_sum_units / scale")
+
+    loss = checks["rounded-increment-loss-replay"]
+    if loss["expected_result"] != "sat":
+        fail("rounded-increment-loss-replay must expect sat")
+    if loss.get("proof_status") != "replay-only":
+        fail("rounded-increment-loss-replay must be replay-only")
+    if single_witness_values(loss, witnesses) != values:
+        fail("rounded-increment-loss-replay must cite the rounding witness")
+    rounded_delta_after_sum = require_fraction(
+        "rounding rounded_delta_after_sum",
+        values.get("rounded_delta_after_sum"),
+    )
+    rounded_delta_by_operands = require_fraction(
+        "rounding rounded_delta_by_operands",
+        values.get("rounded_delta_by_operands"),
+    )
+    exact_minus_rounded_delta = require_fraction(
+        "rounding exact_minus_rounded_delta",
+        values.get("exact_minus_rounded_delta"),
+    )
+    if rounded_sum - rounded_x != rounded_delta_after_sum:
+        fail("rounded-increment-loss-replay rounded_delta_after_sum is incorrect")
+    if rounded_x + rounded_y - rounded_x != rounded_delta_by_operands:
+        fail("rounded-increment-loss-replay rounded_delta_by_operands is incorrect")
+    if exact_delta - rounded_delta_after_sum != exact_minus_rounded_delta:
+        fail("rounded-increment-loss-replay exact_minus_rounded_delta is incorrect")
+    if exact_delta == rounded_delta_after_sum:
+        fail("rounded-increment-loss-replay must demonstrate a lost rounded increment")
+
+    bad = checks["bad-rounded-equals-exact-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-rounded-equals-exact-rejected must expect unsat")
+    if bad.get("proof_status") != "replay-only":
+        fail("bad-rounded-equals-exact-rejected must be replay-only")
+    if bad["validation"] != "exact_rational_bad_rounded_delta_replay":
+        fail("bad-rounded-equals-exact-rejected validation is incorrect")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "three-decimal-rounded-increment-shadow":
+        fail("bad-rounded-equals-exact-rejected must cite the rounding witness")
+    computed_exact = require_fraction(
+        "bad rounding computed_exact_delta",
+        data.get("computed_exact_delta"),
+    )
+    computed_rounded = require_fraction(
+        "bad rounding computed_rounded_delta",
+        data.get("computed_rounded_delta"),
+    )
+    if computed_exact != exact_delta:
+        fail("bad-rounded-equals-exact-rejected exact delta does not match replay")
+    if computed_rounded != rounded_delta_after_sum:
+        fail("bad-rounded-equals-exact-rejected rounded delta does not match replay")
+    if computed_exact == computed_rounded:
+        fail("bad-rounded-equals-exact-rejected must document a false equality claim")
+    if data.get("claimed_relation") != "rounded_delta_after_sum = exact_delta":
+        fail("bad-rounded-equals-exact-rejected claimed_relation is incorrect")
+    if "separate qf-lra-bad-rounded-equals-exact" not in bad.get("notes", ""):
+        fail("bad-rounded-equals-exact-rejected notes must name the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-rounded-equals-exact"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-rounded-equals-exact must expect unsat")
+    if qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-rounded-equals-exact must be checked")
+    if qf_bad["validation"] != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-rounded-equals-exact must use exact_rational_farkas_evidence")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_witness") != "three-decimal-rounded-increment-shadow":
+        fail("qf-lra-bad-rounded-equals-exact must cite the source witness")
+    if qf_data.get("source_replay_row") != "bad-rounded-equals-exact-rejected":
+        fail("qf-lra-bad-rounded-equals-exact must cite the replay row")
+    qf_exact = require_fraction(
+        "qf rounding computed_exact_delta",
+        qf_data.get("computed_exact_delta"),
+    )
+    qf_rounded = require_fraction(
+        "qf rounding computed_rounded_delta",
+        qf_data.get("computed_rounded_delta"),
+    )
+    if qf_exact != computed_exact or qf_rounded != computed_rounded:
+        fail("qf-lra-bad-rounded-equals-exact data must match the replay row")
+    expected_conflict = (
+        "exact_delta = 1/10000, rounded_delta = 0, and exact_delta = rounded_delta"
+    )
+    if qf_data.get("farkas_conflict") != expected_conflict:
+        fail("qf-lra-bad-rounded-equals-exact must document the Farkas conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf rounding smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-rounding-shadow-v0/smt2/"
+        "bad-rounded-delta-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-lra-bad-rounded-equals-exact smt2_artifact must name the checked source artifact")
+    check_source("qf rounding smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf rounding farkas_regression", regression)
+    if "finite_rounding_shadow_bad_rounded_delta_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-rounded-equals-exact must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf rounding certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-rounded-equals-exact certificate must document checked Farkas evidence")
+
+    horizon = checks["general-floating-roundoff-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-floating-roundoff-lean-horizon must be not-run")
+    if horizon.get("proof_status") != "lean-horizon":
+        fail("general-floating-roundoff-lean-horizon must remain lean-horizon")
+    horizon_data = horizon.get("data", {})
+    require_string("rounding horizon target_theorem_shape", horizon_data.get("target_theorem_shape"))
+    require_string("rounding horizon future_checker", horizon_data.get("future_checker"))
+
+
 def validate_finite_schur_complement(expected: dict[str, Any]) -> None:
     def det_small(context: str, matrix: list[list[Fraction]]) -> Fraction:
         require_square_matrix(context, matrix)
@@ -32057,6 +32274,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_newton_step(expected)
     if metadata["id"] == "finite-condition-number-v0":
         validate_finite_condition_number(expected)
+    if metadata["id"] == "finite-rounding-shadow-v0":
+        validate_finite_rounding_shadow(expected)
     if metadata["id"] == "finite-schur-complement-v0":
         validate_finite_schur_complement(expected)
     if metadata["id"] == "finite-singular-value-shadow-v0":

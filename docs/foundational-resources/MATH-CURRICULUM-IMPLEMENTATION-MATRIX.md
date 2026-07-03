@@ -1055,7 +1055,18 @@ Build sequence:
     exact finite shifted-QR replay separate from shift-selection theory,
     deflation, QR convergence, Schur theorem reconstruction,
     loss-of-orthogonality analysis, and floating-point eigensolver stability.
-107. Revisit crate/repo boundaries only after three real consumers or repeated
+107. Landed: add the finite rounding-shadow resource.
+    `finite-rounding-shadow-v0` now records one exact rational
+    exact-vs-rounded transcript: `x = 1`, `y = 1/10000`,
+    `exact_delta = (x + y) - x = 1/10000`, fixed three-decimal scale
+    `1000`, `round3(x + y) - round3(x) = 0`, nearest-grid residual replay,
+    and the exact difference between the rational and rounded increments. It
+    includes a checked QF_LRA/Farkas artifact for the malformed equality claim
+    `exact_delta = rounded_delta`. The exact-vs-floating bridge keeps this
+    fixed rational rounding shadow separate from IEEE floating-point semantics,
+    rounding-mode theory, accumulation-error bounds, and numerical-stability
+    theorems.
+108. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands

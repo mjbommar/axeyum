@@ -1522,9 +1522,9 @@ Exit criteria:
   QF_LRA/Farkas infeasibility, Boolean CNF/LRAT refutations, integer/count
   Diophantine obstructions, and fixed-width QF_BV/DRAT rows.
 - At least 12 validated example packs.
-  Status: 136 non-template math example packs validate.
+  Status: 137 non-template math example packs validate.
 - At least 6 packs with checked proof/evidence routes.
-  Status: 136 non-template packs have at least one `checked` expected-result row.
+  Status: 137 non-template packs have at least one `checked` expected-result row.
 - At least one downstream consumer can read the data without repository-internal
   knowledge.
   Status: `scripts/consume-foundational-resources.py` reads the committed atlas
@@ -3498,6 +3498,16 @@ QF_LRA/Farkas artifact rejects the malformed superdiagonal claim
 `T[0,1] = 3` against the exact value `2`. General real/complex Schur theorem,
 eigenvalue ordering, QR-iteration convergence, perturbation bounds, and
 floating-point stability claims stay in theorem or numerical-honesty lanes.
+The real-analysis/numerical-analysis layer now adds
+`finite-rounding-shadow-v0` as the 137th non-template math pack. Exact
+rational replay checks `x = 1`, `y = 1/10000`,
+`exact_delta = (x + y) - x = 1/10000`, fixed three-decimal scale `1000`,
+nearest-grid residuals for `x`, `y`, and `x + y`, and
+`round3(x + y) - round3(x) = 0`, while a source-linked QF_LRA/Farkas artifact
+rejects the malformed equality claim `exact_delta = rounded_delta` against
+the exact rounded value `0`. IEEE floating-point semantics, rounding-mode
+theory, accumulation-error bounds, and numerical-stability claims stay in
+future QF_FP, bit-vector, Lean-horizon, or numerical-honesty lanes.
 Continue by adding the next curriculum-adjacent pack from the field ledger
 or by replacing finite enumeration routes with emitted, checked proof objects
 where appropriate.

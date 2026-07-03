@@ -223,6 +223,9 @@ const FINITE_NEWTON_STEP_BAD_COORDINATE: &str = include_str!(
 const FINITE_CONDITION_NUMBER_BAD_CONDITION: &str = include_str!(
     "../../../artifacts/examples/math/finite-condition-number-v0/smt2/bad-condition-number-farkas-conflict.smt2"
 );
+const FINITE_ROUNDING_SHADOW_BAD_ROUNDED_DELTA: &str = include_str!(
+    "../../../artifacts/examples/math/finite-rounding-shadow-v0/smt2/bad-rounded-delta-farkas-conflict.smt2"
+);
 const FINITE_SCHUR_COMPLEMENT_BAD_VALUE: &str = include_str!(
     "../../../artifacts/examples/math/finite-schur-complement-v0/smt2/bad-schur-complement-farkas-conflict.smt2"
 );
@@ -1218,6 +1221,14 @@ fn finite_condition_number_bad_condition_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "finite-condition-number-v0 bad-condition-number SMT-LIB artifact",
         FINITE_CONDITION_NUMBER_BAD_CONDITION,
+    );
+}
+
+#[test]
+fn finite_rounding_shadow_bad_rounded_delta_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-rounding-shadow-v0 bad-rounded-delta SMT-LIB artifact",
+        FINITE_ROUNDING_SHADOW_BAD_ROUNDED_DELTA,
     );
 }
 

@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "id": "finite-rounding-shadow-v0",
+  "title": "Finite Rounding Shadow Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "curriculum_rationals",
+    "curriculum_reals",
+    "field_real_analysis",
+    "field_numerical_analysis",
+    "bridge_exact_vs_floating_arithmetic"
+  ],
+  "field_ids": [
+    "real_analysis",
+    "numerical_analysis"
+  ],
+  "curriculum_nodes": [
+    "rationals",
+    "reals"
+  ],
+  "axeyum_fragments": [
+    "finite numerical replay",
+    "exact rational arithmetic",
+    "LRA (exact rationals)",
+    "QF_LRA",
+    "Farkas",
+    "Lean horizon",
+    "numerical-honesty metadata"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-rounding-shadow-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite exact-vs-rounded arithmetic bad equality QF_LRA/Farkas regression seed",
+    "pressure": "Exact rational replay computes exact_delta = 1/10000 while a fixed three-decimal rounding grid computes rounded_delta_after_sum = 0, isolating a compact scalar equality conflict for the Farkas route.",
+    "evidence": [
+      "qf-lra-bad-rounded-equals-exact"
+    ],
+    "next_step": "Promote additional rounding-shadow rows only when they add distinct rounding-mode, cancellation, accumulation, interval-error, QF_FP, bit-vector, or numerical-honesty pressure; keep IEEE semantics and stability theorems in future QF_FP or Lean-horizon lanes."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/curriculum/01-number-systems/reals.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/rounding-shadow-end-to-end.md",
+    "artifacts/examples/math/finite-rounding-shadow-v0/smt2/bad-rounded-delta-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+  ],
+  "expected_results": [
+    "exact-increment-replay",
+    "rounding-grid-replay",
+    "rounded-increment-loss-replay",
+    "bad-rounded-equals-exact-rejected",
+    "qf-lra-bad-rounded-equals-exact",
+    "general-floating-roundoff-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode the fixed rational addition, exact increment, three-decimal rounding grid, rounded increment, and exact-vs-rounded difference as deterministic exact-rational replay obligations.",
+    "Route the false exact-vs-rounded equality through checked QF_LRA/Farkas evidence after replay computes both scalar values.",
+    "Expose the pack through real-analysis, numerical-analysis, and exact-vs-floating learner and consumer query surfaces.",
+    "Keep IEEE floating-point semantics, hardware rounding modes, accumulation-error theory, and numerical stability marked as future QF_FP, bit-vector, numerical-honesty, or Lean-horizon work until formal routes exist."
+  ]
+}

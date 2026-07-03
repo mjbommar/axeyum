@@ -23,6 +23,7 @@ Example packs:
 - [modular-arithmetic-v0](../../../artifacts/examples/math/modular-arithmetic-v0/)
 - [number-theory-v0](../../../artifacts/examples/math/number-theory-v0/)
 - [rationals-lra-v0](../../../artifacts/examples/math/rationals-lra-v0/)
+- [finite-rounding-shadow-v0](../../../artifacts/examples/math/finite-rounding-shadow-v0/)
 - [complex-algebraic-v0](../../../artifacts/examples/math/complex-algebraic-v0/)
 - [complex-plane-transforms-v0](../../../artifacts/examples/math/complex-plane-transforms-v0/)
 
@@ -37,7 +38,8 @@ checked incompatible CRT obstructions, checked fixed-width nonunit-inverse and
 Fermat-unit residue searches, bounded quadratic-residue and
 sum-of-two-squares checks, bounded Diophantine witnesses and gcd obstructions,
 rational density witnesses, Farkas-checked
-fixed trichotomy and order-transitivity refutations, and algebraic complex
+fixed trichotomy and order-transitivity refutations, fixed-decimal
+exact-vs-rounded shadows, and algebraic complex
 arithmetic as real-pair data. The complex-plane pack adds
 unit-root cycles, conjugation/product replay, exact rational Mobius transforms,
 and checked counterexamples to false conjugation-product and
@@ -140,6 +142,19 @@ now also promotes that nonresidue row to a QF_BV bit-blast/DRAT regression:
 `a = 1/3`, `b = 2/3`, and `midpoint = 1/2`; the checker verifies
 `a < midpoint < b` and `midpoint = (a + b) / 2`.
 
+For a fixed exact-vs-rounded arithmetic shadow, encode:
+
+```text
+x = 1
+y = 1/10000
+exact_delta = (x + y) - x = 1/10000
+round3(x + y) - round3(x) = 0
+```
+
+The `finite-rounding-shadow-v0` validator checks the exact rational sum, the
+three-decimal grid residuals, and the checked QF_LRA/Farkas contradiction for
+the bad equality claim `exact_delta = rounded_delta`.
+
 For complex arithmetic, encode `1 + 2i` as `[1, 2]` and `3 - i` as `[3, -1]`.
 The checker recomputes pair addition and twisted multiplication.
 For a complex-plane transform, encode `z = 2 + i` as `[2, 1]` and replay:
@@ -166,6 +181,7 @@ cargo test -p axeyum-solver --test math_resource_bv_routes modular_arithmetic_fe
 cargo test -p axeyum-solver --test math_resource_lia_routes qf_lia_resource_route_rejects_tampered_diophantine_certificate
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/number-theory-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/rationals-lra-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-rounding-shadow-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/complex-algebraic-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes complex_algebraic_bad_product_real_part_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes complex_algebraic_bad_norm_squared_artifact_emits_checked_farkas

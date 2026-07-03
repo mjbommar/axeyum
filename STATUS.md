@@ -240,6 +240,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite rounding-shadow resource landed.**
+  `finite-rounding-shadow-v0` now gives the real-analysis and
+  numerical-analysis lanes a compact exact-vs-rounded arithmetic example: it
+  checks `x = 1`, `y = 1/10000`, `exact_delta = (x + y) - x = 1/10000`, and
+  a fixed three-decimal rounding-grid transcript where
+  `round3(x + y) - round3(x) = 0`. It then isolates the malformed equality
+  claim `exact_delta = rounded_delta` as a source-linked QF_LRA/Farkas row.
+  The focused learner page, rational/real and analysis/numerical query guides,
+  exact-vs-floating bridge, validator, and `math_resource_lra_routes`
+  regression keep fixed rational rounding replay separate from IEEE
+  floating-point semantics, rounding-mode theory, accumulation-error bounds,
+  and numerical-stability theorems. The public summary now reports 122 concept
+  rows, 137 packs, 901 expected checks, 363 checked rows, 438 replay-only rows,
+  100 Lean-horizon rows, and 137 promoted solver-reuse packs.
 - **Finite shifted QR step resource landed.**
   `finite-shifted-qr-step-v0` now gives the linear-algebra,
   numerical-analysis, and functional-analysis/operator lanes an exact rational
@@ -256,8 +270,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   separate from shift-selection theory, deflation, QR convergence, Schur
   theorem reconstruction, loss-of-orthogonality analysis, and floating-point
   eigensolver stability. The public summary now reports 122 concept rows,
-  136 packs, 895 expected checks, 362 checked rows, 434 replay-only rows,
-  99 Lean-horizon rows, and 136 promoted solver-reuse packs.
+  137 packs, 901 expected checks, 363 checked rows, 438 replay-only rows,
+  100 Lean-horizon rows, and 137 promoted solver-reuse packs.
 - **Finite QR iteration step resource landed.**
   `finite-qr-iteration-step-v0` now gives the linear-algebra,
   numerical-analysis, and functional-analysis/operator lanes an exact rational
@@ -273,8 +287,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   QR-step replay separate from QR-iteration convergence, shifted/deflated
   variants, Schur theorem reconstruction, loss-of-orthogonality analysis, and
   floating-point eigensolver stability. The public summary now reports
-  122 concept rows, 136 packs, 895 expected checks, 362 checked rows,
-  434 replay-only rows, 99 Lean-horizon rows, and 136 promoted solver-reuse
+  122 concept rows, 137 packs, 901 expected checks, 363 checked rows,
+  438 replay-only rows, 100 Lean-horizon rows, and 137 promoted solver-reuse
   packs.
 - **Finite polar decomposition resource landed.**
   `finite-polar-decomposition-v0` now gives the linear-algebra,
@@ -290,8 +304,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   polar replay separate from the polar theorem, partial-isometry variants,
   square-root functional calculus, iterative algorithms, perturbation bounds,
   and floating-point stability. The public summary now reports 122 concept rows,
-  136 packs, 895 expected checks, 362 checked rows, 434 replay-only rows,
-  99 Lean-horizon rows, and 136 promoted solver-reuse packs.
+  137 packs, 901 expected checks, 363 checked rows, 438 replay-only rows,
+  100 Lean-horizon rows, and 137 promoted solver-reuse packs.
 - **Finite real Schur decomposition resource landed.**
   `finite-real-schur-decomposition-v0` now gives the linear-algebra,
   numerical-analysis, and functional-analysis/operator lanes an exact rational
@@ -306,8 +320,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   real-Schur replay separate from the general real/complex Schur theorem,
   eigenvalue ordering, QR-iteration convergence, perturbation bounds, and
   floating-point stability. The public summary now reports 122 concept rows,
-  136 packs, 895 expected checks, 362 checked rows, 434 replay-only rows,
-  99 Lean-horizon rows, and 136 promoted solver-reuse packs.
+  137 packs, 901 expected checks, 363 checked rows, 438 replay-only rows,
+  100 Lean-horizon rows, and 137 promoted solver-reuse packs.
 - **Finite orthogonal diagonalization resource landed.**
   `finite-orthogonal-diagonalization-v0` now gives the linear-algebra,
   numerical-analysis, and functional-analysis/operator lanes an exact rational
@@ -322,8 +336,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   regression keep fixed finite spectral replay separate from the spectral
   theorem, diagonalization criteria, multiplicity theory, perturbation bounds,
   eigensolver convergence, and floating-point stability. The public summary
-  now reports 122 concept rows, 136 packs, 895 expected checks, 362 checked
-  rows, 434 replay-only rows, 99 Lean-horizon rows, and 136 promoted
+  now reports 122 concept rows, 137 packs, 901 expected checks, 363 checked
+  rows, 438 replay-only rows, 100 Lean-horizon rows, and 137 promoted
   solver-reuse packs.
 - **Finite LDLT decomposition resource landed.**
   `finite-ldlt-decomposition-v0` now gives the linear-algebra,

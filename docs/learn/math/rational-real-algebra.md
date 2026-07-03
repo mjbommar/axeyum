@@ -13,6 +13,7 @@ Concept rows:
 Example packs:
 
 - [rationals-lra-v0](../../../artifacts/examples/math/rationals-lra-v0/)
+- [finite-rounding-shadow-v0](../../../artifacts/examples/math/finite-rounding-shadow-v0/)
 - [real-analysis-rational-v0](../../../artifacts/examples/math/real-analysis-rational-v0/)
 - [reals-rcf-shadow-v0](../../../artifacts/examples/math/reals-rcf-shadow-v0/)
 - [polynomial-identities-v0](../../../artifacts/examples/math/polynomial-identities-v0/)
@@ -58,7 +59,7 @@ Companion map:
 The real-algebra path is currently exact rational arithmetic plus algebraic
 shadows of real reasoning. It checks density witnesses, additive inverses,
 fixed order facts, rational interval/ball inclusions, bounded epsilon-delta
-samples, ordered-field real witnesses, small nonlinear polynomial constraints,
+samples, fixed-decimal rounding shadows, ordered-field real witnesses, small nonlinear polynomial constraints,
 fixed-degree polynomial identities and roots, rational polynomial
 factorization/division/GCD/square-free replay, finite generating-function
 coefficient extraction and Cauchy-product replay, finite recurrence-prefix and
@@ -124,6 +125,20 @@ distances, and rejects the false claim that `delta = 3/4` works using
 The adjacent `metric-continuity-v0` pack now carries the same checked
 QF_LRA/Farkas route for finite metric-space bad-delta and bad open-ball
 preimage rows.
+
+For an exact-vs-rounded shadow, encode:
+
+```text
+x = 1
+y = 1/10000
+exact_delta = (x + y) - x = 1/10000
+
+round3(x + y) - round3(x) = 0
+```
+
+The `finite-rounding-shadow-v0` validator checks the exact rational addition,
+the fixed three-decimal grid residuals, and the bad equality claim
+`exact_delta = rounded_delta` through checked QF_LRA/Farkas evidence.
 
 For a small real-algebra shadow, encode a nonlinear witness or a one-variable
 quadratic obstruction:

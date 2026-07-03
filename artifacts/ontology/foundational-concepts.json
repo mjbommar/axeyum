@@ -705,6 +705,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/polynomial-factorization-rational-v0",
           "notes": "Exact rational polynomial division, GCD, square-free decomposition, and irreducibility replay."
+        },
+        {
+          "id": "finite-rounding-shadow-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-rounding-shadow-v0",
+          "notes": "Exact rational addition, fixed three-decimal rounding replay, rounded-away increment, and checked bad exact-vs-rounded equality evidence."
         }
       ],
       "proof_routes": [
@@ -844,6 +850,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/multivariable-calculus-rational-v0",
           "notes": "Exact rational gradients, directional derivatives, Jacobian chain-rule replay, and Hessian minors."
+        },
+        {
+          "id": "finite-rounding-shadow-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-rounding-shadow-v0",
+          "notes": "Exact rational fixed-decimal rounding shadow with checked bad exact-vs-rounded equality evidence."
         }
       ],
       "proof_routes": [
@@ -3122,6 +3134,12 @@
           "notes": "Residual and solution-box rows that are exact rational shadows of numerical linear algebra."
         },
         {
+          "id": "finite-rounding-shadow-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-rounding-shadow-v0",
+          "notes": "Fixed three-decimal rounding transcript checked as exact rational grid arithmetic, not IEEE floating-point semantics."
+        },
+        {
           "id": "finite-lu-decomposition-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-lu-decomposition-v0",
@@ -3246,6 +3264,7 @@
             "docs/proof-cookbook/recipes/finite-model-replay.md",
             "docs/proof-cookbook/recipes/qf-lra-farkas.md",
             "docs/learn/math/numerical-linear-algebra-end-to-end.md",
+            "docs/learn/math/rounding-shadow-end-to-end.md",
             "docs/learn/math/lu-decomposition-end-to-end.md",
             "docs/learn/math/pivoted-lu-decomposition-end-to-end.md",
             "docs/learn/math/ldlt-decomposition-end-to-end.md",
@@ -3272,6 +3291,7 @@
         "docs/proof-cookbook/recipes/finite-model-replay.md",
         "docs/proof-cookbook/recipes/qf-lra-farkas.md",
         "docs/learn/math/numerical-linear-algebra-end-to-end.md",
+        "docs/learn/math/rounding-shadow-end-to-end.md",
         "docs/learn/math/lu-decomposition-end-to-end.md",
         "docs/learn/math/pivoted-lu-decomposition-end-to-end.md",
         "docs/learn/math/ldlt-decomposition-end-to-end.md",
@@ -3290,11 +3310,12 @@
         "docs/learn/math/householder-reflection-end-to-end.md",
         "docs/learn/math/descriptive-statistics-regression-end-to-end.md",
         "docs/learn/math/exact-statistical-tests-end-to-end.md",
+        "artifacts/examples/math/finite-rounding-shadow-v0/smt2/bad-rounded-delta-farkas-conflict.smt2",
         "docs/foundational-resources/MATH-CURRICULUM-RESOURCE-MASTER-PLAN.md",
         "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md"
       ],
       "open_gaps": [
-        "Exact rational replay does not prove floating-point roundoff, conditioning, singular-value perturbation, spectral perturbation, eigensolver convergence, Schur/QR iteration convergence, polar iteration convergence/stability, LU/LDLT pivot selection/stability, Gram-Schmidt/Givens/Householder/QR stability, Krylov/preconditioner stability, Lanczos breakdown behavior, loss of orthogonality, or convergence guarantees.",
+        "Exact rational replay and fixed-decimal rounding shadows do not prove IEEE floating-point roundoff, conditioning, singular-value perturbation, spectral perturbation, eigensolver convergence, Schur/QR iteration convergence, polar iteration convergence/stability, LU/LDLT pivot selection/stability, Gram-Schmidt/Givens/Householder/QR stability, Krylov/preconditioner stability, Lanczos breakdown behavior, loss of orthogonality, or convergence guarantees.",
         "QF_FP and numerical experiment metadata need their own trust boundary before floating-point resources can graduate.",
         "Learner pages must label exact rational shadows when a topic is normally taught numerically."
       ],
@@ -13329,7 +13350,7 @@
           "id": "numerical-linear-algebra-v0",
           "status": "validated",
           "path": "artifacts/examples/math/numerical-linear-algebra-v0",
-          "notes": "Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, interval bounds, inner-product projections, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, Lanczos/tridiagonalization, residual, and perturbation-bound shadows, fixed-step error recurrences, Jacobian/Hessian replay, finite root-finding, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."
+          "notes": "Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, interval bounds, inner-product projections, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, Lanczos/tridiagonalization, residual, rounding, and perturbation-bound shadows, fixed-step error recurrences, Jacobian/Hessian replay, finite root-finding, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."
         },
         {
           "id": "bounded-dynamics-v0",
@@ -13522,6 +13543,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-root-finding-v0",
           "notes": "Finite Root-Finding Checks"
+        },
+        {
+          "id": "finite-rounding-shadow-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-rounding-shadow-v0",
+          "notes": "Finite Rounding Shadow Checks"
         },
         {
           "id": "finite-schur-complement-v0",
@@ -14075,7 +14102,7 @@
           "id": "real-analysis-rational-v0",
           "status": "validated",
           "path": "artifacts/examples/math/real-analysis-rational-v0",
-          "notes": "Rational interval/ball checks, bounded epsilon-delta samples, algebraic factorization, multivariable-calculus and Newton-step shadows, and proof horizons."
+          "notes": "Rational interval/ball checks, bounded epsilon-delta samples, algebraic factorization, fixed-decimal rounding shadows, multivariable-calculus and Newton-step shadows, and proof horizons."
         },
         {
           "id": "affine-geometry-v0",
@@ -14268,6 +14295,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-root-finding-v0",
           "notes": "Finite Root-Finding Checks"
+        },
+        {
+          "id": "finite-rounding-shadow-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-rounding-shadow-v0",
+          "notes": "Finite Rounding Shadow Checks"
         },
         {
           "id": "finite-sdp-v0",

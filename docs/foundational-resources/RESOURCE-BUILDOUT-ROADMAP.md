@@ -64,15 +64,15 @@ The current committed data boundary reports:
 - 18 math-field concept rows.
 - 76 bridge-concept rows.
 - 5 example-family rows.
-- 136 non-template math example packs.
-- 895 expected checks.
-- 362 checked proof/evidence rows.
-- 434 replay-only rows.
-- 99 Lean-horizon rows.
-- 136 promoted solver-reuse packs.
+- 137 non-template math example packs.
+- 901 expected checks.
+- 363 checked proof/evidence rows.
+- 438 replay-only rows.
+- 100 Lean-horizon rows.
+- 137 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 136 focused learner-linked packs, with no path-only, index-only, or missing
+- 137 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 This is broad enough that the next work is not "create a few examples." The
@@ -2545,6 +2545,14 @@ Pick one item per commit unless the change is purely navigational.
      shift-selection theory, deflation, QR convergence, Schur theorem
      reconstruction, loss-of-orthogonality analysis, or floating-point
      eigensolver stability.
+183. Landed: add `finite-rounding-shadow-v0` as an exact finite
+     exact-vs-rounded arithmetic resource. The pack computes one rational
+     increment `1/10000`, replays a fixed three-decimal rounding grid where
+     the increment is rounded away after summing, then promotes the malformed
+     equality claim `exact_delta = rounded_delta` through a source-linked
+     QF_LRA/Farkas regression without claiming IEEE floating-point semantics,
+     rounding-mode theory, accumulation-error bounds, or numerical-stability
+     theorems.
 
 ## Validation Checklist
 

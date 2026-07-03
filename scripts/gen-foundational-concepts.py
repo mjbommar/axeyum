@@ -147,6 +147,10 @@ CURRICULUM_MAP = {
                 "polynomial-factorization-rational-v0",
                 "Exact rational polynomial division, GCD, square-free decomposition, and irreducibility replay.",
             ),
+            (
+                "finite-rounding-shadow-v0",
+                "Exact rational addition, fixed three-decimal rounding replay, rounded-away increment, and checked bad exact-vs-rounded equality evidence.",
+            ),
         ],
     },
     "reals": {
@@ -202,6 +206,10 @@ CURRICULUM_MAP = {
             (
                 "multivariable-calculus-rational-v0",
                 "Exact rational gradients, directional derivatives, Jacobian chain-rule replay, and Hessian minors.",
+            ),
+            (
+                "finite-rounding-shadow-v0",
+                "Exact rational fixed-decimal rounding shadow with checked bad exact-vs-rounded equality evidence.",
             ),
         ],
     },
@@ -625,7 +633,7 @@ FIELD_PACKS = {
     "number_theory": ("modular-arithmetic-v0", "Congruences, CRT, residues, finite fields, finite ideals in modular rings, and bounded Diophantine examples."),
     "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, covariance/Gram replay, orthogonal transforms, rank, inverse, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, Lanczos/tridiagonalization, and Jordan-chain shadows, Jacobians, Hessians, Newton-step Hessian solves, projections, and infeasibility."),
     "abstract_algebra": ("finite-fields-v0", "Finite groups, permutation groups, monoids, group actions, rings, fields, ideals, modules, dual spaces, tensor products, homomorphism tables, polynomial factorization slices, Jordan-chain polynomial/module shadows, and Cayley-table validation."),
-    "real_analysis": ("real-analysis-rational-v0", "Rational interval/ball checks, bounded epsilon-delta samples, algebraic factorization, multivariable-calculus and Newton-step shadows, and proof horizons."),
+    "real_analysis": ("real-analysis-rational-v0", "Rational interval/ball checks, bounded epsilon-delta samples, algebraic factorization, fixed-decimal rounding shadows, multivariable-calculus and Newton-step shadows, and proof horizons."),
     "complex_analysis": ("complex-algebraic-v0", "Complex arithmetic and polynomial factorization shadows as real/rational algebra before analytic proof horizons."),
     "topology": ("finite-topology-v0", "Finite topologies, metric balls, closure/interior, continuous maps, and finite simplicial-homology checks."),
     "measure_theory": ("finite-measure-v0", "Finite sigma-algebras, finite measures, monotonicity/subadditivity, random variables, conditional expectations, finite kernels, martingales, hitting times, concentration checks, product tables, and exact probability foundations."),
@@ -649,7 +657,7 @@ FIELD_PACKS = {
         ("finite-projected-gradient-v0", "Finite projected-gradient interval replay with checked bad-projection rejection."),
         ("finite-proximal-gradient-v0", "Finite proximal-gradient L1 soft-threshold/composite-decrease replay with checked bad proximal-gradient rows."),
     ],
-    "numerical_analysis": ("numerical-linear-algebra-v0", "Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, interval bounds, inner-product projections, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, Lanczos/tridiagonalization, residual, and perturbation-bound shadows, fixed-step error recurrences, Jacobian/Hessian replay, finite root-finding, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."),
+    "numerical_analysis": ("numerical-linear-algebra-v0", "Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, interval bounds, inner-product projections, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, Lanczos/tridiagonalization, residual, rounding, and perturbation-bound shadows, fixed-step error recurrences, Jacobian/Hessian replay, finite root-finding, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."),
     "differential_equations_and_dynamical_systems": ("bounded-dynamics-v0", "Recurrence systems, discretized dynamics, threshold reachability, invariant checks, Markov transitions, and finite hitting times."),
     "geometry": [
         (
@@ -1557,6 +1565,10 @@ BRIDGE_CONCEPTS = [
                 "Residual and solution-box rows that are exact rational shadows of numerical linear algebra.",
             ),
             (
+                "finite-rounding-shadow-v0",
+                "Fixed three-decimal rounding transcript checked as exact rational grid arithmetic, not IEEE floating-point semantics.",
+            ),
+            (
                 "finite-lu-decomposition-v0",
                 "LU factorization, determinant pivot-product, and triangular-solve rows checked as exact rational matrix arithmetic, not pivoting or floating-point stability evidence.",
             ),
@@ -1643,6 +1655,7 @@ BRIDGE_CONCEPTS = [
                     "docs/proof-cookbook/recipes/finite-model-replay.md",
                     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
                     "docs/learn/math/numerical-linear-algebra-end-to-end.md",
+                    "docs/learn/math/rounding-shadow-end-to-end.md",
                     "docs/learn/math/lu-decomposition-end-to-end.md",
                     "docs/learn/math/pivoted-lu-decomposition-end-to-end.md",
                     "docs/learn/math/ldlt-decomposition-end-to-end.md",
@@ -1674,6 +1687,7 @@ BRIDGE_CONCEPTS = [
             "docs/proof-cookbook/recipes/finite-model-replay.md",
             "docs/proof-cookbook/recipes/qf-lra-farkas.md",
             "docs/learn/math/numerical-linear-algebra-end-to-end.md",
+            "docs/learn/math/rounding-shadow-end-to-end.md",
             "docs/learn/math/lu-decomposition-end-to-end.md",
             "docs/learn/math/pivoted-lu-decomposition-end-to-end.md",
             "docs/learn/math/ldlt-decomposition-end-to-end.md",
@@ -1692,11 +1706,12 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/householder-reflection-end-to-end.md",
             "docs/learn/math/descriptive-statistics-regression-end-to-end.md",
             "docs/learn/math/exact-statistical-tests-end-to-end.md",
+            "artifacts/examples/math/finite-rounding-shadow-v0/smt2/bad-rounded-delta-farkas-conflict.smt2",
             "docs/foundational-resources/MATH-CURRICULUM-RESOURCE-MASTER-PLAN.md",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
         ],
         "open_gaps": [
-            "Exact rational replay does not prove floating-point roundoff, conditioning, singular-value perturbation, spectral perturbation, eigensolver convergence, Schur/QR iteration convergence, polar iteration convergence/stability, LU/LDLT pivot selection/stability, Gram-Schmidt/Givens/Householder/QR stability, Krylov/preconditioner stability, Lanczos breakdown behavior, loss of orthogonality, or convergence guarantees.",
+            "Exact rational replay and fixed-decimal rounding shadows do not prove IEEE floating-point roundoff, conditioning, singular-value perturbation, spectral perturbation, eigensolver convergence, Schur/QR iteration convergence, polar iteration convergence/stability, LU/LDLT pivot selection/stability, Gram-Schmidt/Givens/Householder/QR stability, Krylov/preconditioner stability, Lanczos breakdown behavior, loss of orthogonality, or convergence guarantees.",
             "QF_FP and numerical experiment metadata need their own trust boundary before floating-point resources can graduate.",
             "Learner pages must label exact rational shadows when a topic is normally taught numerically.",
         ],
