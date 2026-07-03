@@ -886,6 +886,49 @@ mod run {
         }
     }
 
+    /// Online CDCL(T) string second chance (P1.5b) — harness parity with the
+    /// `solve_smtlib` front door's `apply_online_string_route`, run **strictly after**
+    /// [`apply_word_route_upgrade`] leaves the record `unknown`. It decides the
+    /// Boolean-structured word problems (`or`/negated shapes) the flat conjunction
+    /// route cannot represent, over the parser's [`Script::word_skeleton`] `Seq`-level
+    /// view — a certified theory `unsat` or a replay-checked `sat`.
+    ///
+    /// A `sat` model is a `Seq`-level witness already replayed against the original
+    /// assertions inside the entry point; it is NOT replayed against the packed
+    /// bit-vector view, so `model_replay_failure` stays `false` (a packed replay would
+    /// spuriously fail on the empty/gated view). Runs **before** the oracle comparison
+    /// so the upgraded verdict is what the z3-binary cross-check sees.
+    fn apply_online_string_upgrade(
+        script: &mut Script,
+        config: &SolverConfig,
+        record: &mut SolveRecord,
+    ) {
+        if record.outcome != "unknown" || script.word_skeleton.is_empty() {
+            return;
+        }
+        match axeyum_solver::online_string_verdict(script, config) {
+            Some(CheckResult::Sat(_)) => {
+                record.outcome = "sat";
+                record.detail = Some(
+                    "online CDCL(T) string route (P1.5b): decided sat; model replayed \
+                     in-crate at the Seq level"
+                        .to_owned(),
+                );
+                record.model_replay_failure = false;
+            }
+            Some(CheckResult::Unsat) => {
+                record.outcome = "unsat";
+                record.detail = Some(
+                    "online CDCL(T) string route (P1.5b): decided unsat via a certified \
+                     theory conflict"
+                        .to_owned(),
+                );
+                record.model_replay_failure = false;
+            }
+            _ => {}
+        }
+    }
+
     /// Decides a **word-first-fallback** script (T-B.4d) — harness parity with
     /// the `solve_smtlib` front door. The flat assertion view is empty (the
     /// bounded ADR-0029 encoder declined at parse), so the sat-only,
@@ -909,13 +952,26 @@ mod run {
         let start = Instant::now();
         let decided = axeyum_solver::decide_word_only_script(script, &config);
         let solve = start.elapsed();
-        if let Ok(CheckResult::Sat(_)) = decided {
-            summary.sat += 1;
+        // The word route (T-B.4d) and the online CDCL(T) skeleton route (P1.5b) may
+        // both decide a word-first-fallback script: `sat` (a `Seq`-level replay-checked
+        // model) or `unsat` (a certified derivation / theory conflict). Both are real
+        // verdicts; a `sat` model is NOT replayed against the empty packed view.
+        let verdict = match &decided {
+            Ok(CheckResult::Sat(_)) => Some("sat"),
+            Ok(CheckResult::Unsat) => Some("unsat"),
+            _ => None,
+        };
+        if let Some(verdict) = verdict {
+            if verdict == "sat" {
+                summary.sat += 1;
+            } else {
+                summary.unsat += 1;
+            }
             summary.par2_seconds += solve.as_secs_f64();
             let oracle = if args.compare_z3 {
                 if let Some(result) = run_z3_binary(file, config.timeout) {
                     let compared = result.verdict.is_some();
-                    let agrees = result.verdict == Some("sat");
+                    let agrees = result.verdict == Some(verdict);
                     if compared {
                         summary.oracle_compared += 1;
                         if agrees {
@@ -951,9 +1007,11 @@ mod run {
             };
             return json!({
                 "file": name,
-                "outcome": "sat",
-                "detail": "word-first fallback (T-B.4d): decided by the word-equation \
-                           route; model replayed in-crate at the Seq level",
+                "outcome": verdict,
+                "detail": "word-first fallback (T-B.4d) / online CDCL(T) string route \
+                           (P1.5b): decided by the word-level string routes (sat models \
+                           replay in-crate at the Seq level; unsat is a certified \
+                           derivation)",
                 "word_only": true,
                 "solve_ms": duration_ms(solve),
                 "oracle": oracle,
@@ -992,7 +1050,9 @@ mod run {
         // declined at parse) — handing it to the backend would answer a vacuous
         // `sat`. The word route is its only decider; a decline restores the exact
         // pre-fallback `unsupported` classification.
-        if script.word_only_fallback.is_some() && script.word_problem.is_some() {
+        if script.word_only_fallback.is_some()
+            && (script.word_problem.is_some() || !script.word_skeleton.is_empty())
+        {
             return run_word_only(file, &name, &mut script, timeout, args, summary);
         }
         let input_shape = TermStats::compute(&script.arena, &script.assertions);
@@ -1032,6 +1092,7 @@ mod run {
             // rewrite-decision comparison never flags a word-route upgrade as a
             // rewrite-induced verdict change.
             apply_word_route_upgrade(&mut script, &config, &mut original.solve);
+            apply_online_string_upgrade(&mut script, &config, &mut original.solve);
             Some(original)
         } else {
             None
@@ -1062,6 +1123,9 @@ mod run {
         // grants. Runs BEFORE the oracle comparison so the upgraded verdict is what
         // `compare_with_oracle` cross-checks.
         apply_word_route_upgrade(&mut script, &config, &mut primary_solve.solve);
+        // Online CDCL(T) string second chance (P1.5b): decides the disjunctive word
+        // problems the flat route above cannot, before the oracle comparison.
+        apply_online_string_upgrade(&mut script, &config, &mut primary_solve.solve);
         if let Some(original) = &original_solve {
             compare_rewrite_decision(&original.solve, &primary_solve.solve, summary);
         }

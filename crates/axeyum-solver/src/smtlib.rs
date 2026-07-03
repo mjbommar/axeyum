@@ -163,11 +163,14 @@ fn decide_word_only(
                  the word-equation route (T-B.4d)"
             .to_owned(),
     });
-    match apply_word_route(script, config, base) {
-        // A replay-checked `sat` or a re-checked-derivation `unsat` (T-B.7) is a
-        // real verdict.
+    let after_word = apply_word_route(script, config, base);
+    // Online CDCL(T) string route (P1.5b): the disjunction-aware second chance for a
+    // word-first-fallback script too — a Boolean-structured word problem whose
+    // *bounded* parse declined at a length/width cap is still decidable here.
+    match apply_online_string_route(script, config, after_word) {
+        // A replay-checked `sat` or a certified-derivation `unsat` is a real verdict.
         result @ (CheckResult::Sat(_) | CheckResult::Unsat) => Ok(result),
-        // Decline (word route returned `unknown`): reproduce the original bounded
+        // Decline (both routes returned `unknown`): reproduce the original bounded
         // parse error verbatim.
         _ => Err(SolverError::Parse(
             script.word_only_fallback.clone().unwrap_or_default(),
@@ -222,6 +225,80 @@ pub fn word_route_verdict(script: &mut Script, config: &SolverConfig) -> Option<
         detail: String::new(),
     });
     match apply_word_route(script, config, seed) {
+        result @ (CheckResult::Sat(_) | CheckResult::Unsat) => Some(result),
+        CheckResult::Unknown(_) => None,
+    }
+}
+
+/// The **online CDCL(T) string route** (P1.5b) as a front-door second-chance stage,
+/// run *strictly after* the flat word route ([`apply_word_route`]) declines.
+///
+/// Where the flat word route is all-or-nothing over a top-level conjunction, this
+/// decides the **Boolean-structured** word problems (`or`/negated shapes) the parser
+/// captured in [`Script::word_skeleton`] — the disjunctive census `str002` family —
+/// by running [`check_qf_s_online_cdclt`](crate::check_qf_s_online_cdclt) over that
+/// `Seq`-level skeleton (never the packed-BV assertion view). It only ever *adds* a
+/// verdict to an `unknown`: `sat` is replay-checked against the original assertions
+/// inside the entry point, and `unsat` is a certified theory conflict — so it can
+/// never override a decided verdict or manufacture a wrong one. A `None`/empty
+/// skeleton or an online decline leaves the prior `unknown` untouched.
+fn apply_online_string_route(
+    script: &mut Script,
+    config: &SolverConfig,
+    result: CheckResult,
+) -> CheckResult {
+    let CheckResult::Unknown(reason) = result else {
+        return result;
+    };
+    if script.word_skeleton.is_empty() {
+        return CheckResult::Unknown(reason);
+    }
+    // Clone the (Copy-element) skeleton so the `&mut arena` borrow the online route
+    // needs does not overlap the immutable borrow of `script.word_skeleton`.
+    let skeleton = script.word_skeleton.clone();
+    match crate::string_theory::check_qf_s_online_cdclt(&mut script.arena, &skeleton, config) {
+        result @ (CheckResult::Sat(_) | CheckResult::Unsat) => result,
+        // Online route declined: preserve the prior `unknown`, recording the decline.
+        CheckResult::Unknown(online) => {
+            let detail = if reason.detail.is_empty() {
+                format!("online CDCL(T) string route declined ({})", online.detail)
+            } else {
+                format!(
+                    "{}; online CDCL(T) string route declined ({})",
+                    reason.detail, online.detail
+                )
+            };
+            CheckResult::Unknown(UnknownReason {
+                kind: reason.kind,
+                detail,
+            })
+        }
+    }
+}
+
+/// Harness-parity surface (P1.5b): consults the **online CDCL(T) string route** on
+/// an already-`unknown` [`Script`], returning `Some(Sat/Unsat)` only when the online
+/// route decides a Boolean-structured word problem, and `None` otherwise. The
+/// online mirror of [`word_route_verdict`]: a harness that reached `unknown` (after
+/// the flat word route also declined) can give the online route the same second
+/// chance the `solve_smtlib` front door grants it.
+///
+/// Soundness anchors are those of [`check_qf_s_online_cdclt`](crate::check_qf_s_online_cdclt):
+/// `unsat` only through a certified theory conflict, `sat` only through a model that
+/// replays against the original assertions at the `Seq` level. Callers must **not**
+/// replay a `sat` model against a packed bit-vector view — it is a `Seq`-level
+/// witness, already checked at that level. Returns `None` when the script carries no
+/// [`Script::word_skeleton`] or the route declines.
+#[must_use]
+pub fn online_string_verdict(script: &mut Script, config: &SolverConfig) -> Option<CheckResult> {
+    if script.word_skeleton.is_empty() {
+        return None;
+    }
+    let seed = CheckResult::Unknown(UnknownReason {
+        kind: UnknownKind::Incomplete,
+        detail: String::new(),
+    });
+    match apply_online_string_route(script, config, seed) {
         result @ (CheckResult::Sat(_) | CheckResult::Unsat) => Some(result),
         CheckResult::Unknown(_) => None,
     }
@@ -690,6 +767,11 @@ pub fn solve_smtlib(input: &str, config: &SolverConfig) -> Result<SmtLibOutcome,
     // Word-equation second-chance route (ADR-0053, T-B.4b): may only add `sat`
     // where the bounded path + gate left an `unknown`.
     let result = apply_word_route(&mut script, config, result);
+    // Online CDCL(T) string route (P1.5b): the disjunction-aware second chance, run
+    // strictly after the flat word route declines — decides the `or`/negated word
+    // problems the conjunction side channel cannot represent. Only ever adds `sat`
+    // (replay-checked) or a certified `unsat` to an `unknown`.
+    let result = apply_online_string_route(&mut script, config, result);
     Ok(SmtLibOutcome {
         result,
         logic: script.logic,

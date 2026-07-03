@@ -143,6 +143,25 @@ pub struct Script {
     /// error, so a previously-`unsupported` script never silently becomes a bare
     /// `unknown`/`sat`.
     pub word_only_fallback: Option<String>,
+    /// The **Boolean-structured word skeleton** (P1.5b): one `Sort::Bool`-sorted
+    /// term per top-level `assert`, translating the script's string fragment into
+    /// first-class `Seq` equality atoms combined by arbitrary Boolean structure
+    /// (`and`/`or`/`not`/`=>`/`xor`/`ite`, `distinct`, `true`/`false`). Where the
+    /// flat [`Script::word_problem`] side channel is all-or-nothing over a *top-level
+    /// conjunction*, this captures the `or`/negated shapes the conjunction cannot
+    /// represent — it is what the online CDCL(T) route
+    /// (`axeyum_solver::check_qf_s_online_cdclt`) decides at the front door,
+    /// **strictly after** the flat word route declines.
+    ///
+    /// Populated all-or-nothing (mirroring [`Script::word_problem`]) whenever *every*
+    /// asserted term is Boolean structure over `Seq` equalities/disequalities /
+    /// `distinct`s (nothing else — no `str.len`, `substr`, regex, extended functions,
+    /// or `ite` over strings); empty when any atom escapes that fragment. Built into
+    /// the same [`Script::arena`] as `Seq(BitVec(18))` terms, sharing the
+    /// `!weq!<name>` string-variable symbols with [`Script::word_problem`]. Carries
+    /// no incremental scoping (declined wholesale, same soundness argument as
+    /// [`Script::word_problem`]).
+    pub word_skeleton: Vec<TermId>,
 }
 
 /// A first-class `Sort::Seq` word-equation problem accumulated as a side channel
@@ -300,6 +319,11 @@ fn parse_script_bounded(input: &str) -> Result<Script, SmtError> {
     // "only ever add sat" invariant sound). `parse_sort`/`(Seq E)` are untouched.
     if script.uses_bounded_strings {
         script.word_problem = build_word_problem(&mut script.arena, &exprs);
+        // Parser-side Boolean-structured word skeleton (P1.5b): the superset the
+        // online CDCL(T) route decides — `or`/negated word problems the flat
+        // conjunction side channel above cannot represent. Same all-or-nothing
+        // discipline and same shared `!weq!` symbols.
+        script.word_skeleton = build_word_skeleton(&mut script.arena, &exprs).unwrap_or_default();
     }
     Ok(script)
 }
@@ -326,8 +350,19 @@ fn parse_word_only(input: &str) -> Option<Script> {
     desugar_const_arrays(&mut exprs);
 
     let mut script = Script::default();
-    let wp = build_word_problem(&mut script.arena, &exprs)?;
-    script.word_problem = Some(wp);
+    // The flat conjunction side channel (may decline on `or`/negation) and the
+    // Boolean-structured skeleton (P1.5b, decides the `or`/negated shapes). The
+    // fallback is accepted when **either** is representable — a purely disjunctive
+    // word problem whose *bounded* parse declined at a length/width cap is still
+    // decidable by the online route. The skeleton shares the `!weq!` symbols the flat
+    // build declared (`TermArena::declare` is idempotent).
+    script.word_problem = build_word_problem(&mut script.arena, &exprs);
+    script.word_skeleton = build_word_skeleton(&mut script.arena, &exprs).unwrap_or_default();
+    if script.word_problem.is_none() && script.word_skeleton.is_empty() {
+        // Neither route recognizes the script — not a word-equation problem; decline
+        // so the original bounded error stands.
+        return None;
+    }
     // The word channel *is* the bounded-string surface for this script; flag it so
     // downstream string-aware code paths recognize it (the front door special-cases
     // `word_only_fallback` before any bounded gate, so this is informational).
@@ -455,6 +490,172 @@ fn build_word_problem(arena: &mut TermArena, exprs: &[SExpr]) -> Option<WordProb
     }
     wp.seq_symbols = order;
     Some(wp)
+}
+
+/// Builds the [`Script::word_skeleton`] (P1.5b): the Boolean-structured superset of
+/// [`build_word_problem`]. Each top-level `assert` body is translated into one
+/// `Sort::Bool`-sorted term over first-class `Seq` equality atoms, preserving the
+/// full Boolean structure (`and`/`or`/`not`/`=>`/`xor`/`ite`, `distinct`,
+/// `true`/`false`) that the flat conjunction side channel flattens away. Returns
+/// `None` (all-or-nothing) when the script falls outside the fragment — any
+/// non-string atom, an `ite`/read over strings, `str.len`/`substr`/regex/extended
+/// functions, a Boolean symbol leaf, or any incremental scoping.
+///
+/// **Soundness.** The online route only ever *adds* a verdict (a certified theory
+/// `unsat` or a replay-checked `sat`, see `axeyum_solver::check_qf_s_online_cdclt`),
+/// so a `None` skeleton simply leaves the prior verdict untouched. Unlike
+/// [`build_word_problem`], **no** extended-function reductions
+/// (`prefixof`/`suffixof`/`contains`) are performed here: those are *sat-implying*
+/// only in a positive (top-level-conjunction) position and would be unsound under an
+/// arbitrary Boolean context, so an extended-function atom collapses the skeleton to
+/// `None`. Incremental scoping is declined for the same reason as
+/// [`build_word_problem`] (the active query at a `check-sat` would be a subset, so a
+/// whole-conjunction `unsat` need not transfer).
+fn build_word_skeleton(arena: &mut TermArena, exprs: &[SExpr]) -> Option<Vec<TermId>> {
+    // Incremental scoping / macros put the "active subset ⊆ all asserts" soundness
+    // argument out of reach — decline wholesale (mirrors `build_word_problem`).
+    for e in exprs {
+        if let Some(
+            "push" | "pop" | "check-sat-assuming" | "reset-assertions" | "define-fun"
+            | "define-fun-rec" | "define-funs-rec" | "define-sort",
+        ) = e.list().and_then(|l| l.first()).and_then(SExpr::atom)
+        {
+            return None;
+        }
+    }
+
+    // Declared string variables → the shared fresh `Seq`-sorted symbols (idempotent
+    // with `build_word_problem`: `TermArena::declare` returns the existing symbol for
+    // a matching name+sort, so the two builds share `!weq!<name>`).
+    let mut vars: BTreeMap<String, (SymbolId, TermId)> = BTreeMap::new();
+    for e in exprs {
+        if let Some(name) = declared_string_var(e)
+            && !vars.contains_key(name)
+        {
+            let sym = arena
+                .declare(&format!("!weq!{name}"), Sort::string())
+                .ok()?;
+            let term = arena.var(sym);
+            vars.insert(name.to_owned(), (sym, term));
+        }
+    }
+
+    // Translate every `assert` body into a Bool term over `Seq` equality atoms; a
+    // single unrepresentable atom aborts the whole skeleton.
+    let mut assertions: Vec<TermId> = Vec::new();
+    let mut saw_seq_atom = false;
+    for e in exprs {
+        let Some(items) = e.list() else { continue };
+        if items.first().and_then(SExpr::atom) == Some("assert") {
+            let [_, body] = items else { return None };
+            let t = word_bool(arena, body, &vars, &mut saw_seq_atom)?;
+            assertions.push(t);
+        }
+    }
+
+    // Require at least one genuine `Seq` equality atom — otherwise this is not a
+    // string problem the online route can decide (it declines a `Seq`-atom-free
+    // query anyway; declining here keeps the field a precise signal).
+    if assertions.is_empty() || !saw_seq_atom {
+        return None;
+    }
+    Some(assertions)
+}
+
+/// Translates one Boolean term into a `Sort::Bool` [`TermId`] over `Seq` equality
+/// atoms, or `None` on anything outside the skeleton fragment. Recurses through
+/// every Boolean connective; leaves are `Seq` equalities (`=`), `Seq` disequalities
+/// (`not (= …)` / `distinct`), and the Boolean constants. Sets `saw_seq_atom` when a
+/// genuine `Seq` equality atom is produced.
+///
+/// **No polarity tracking is needed** because — unlike [`word_atom`] — this build
+/// performs *no* sat-implying reductions: every leaf is an exact `Seq`
+/// equality/disequality, sound in any Boolean position. An extended-function atom or
+/// any non-string construct returns `None` (all-or-nothing).
+fn word_bool(
+    arena: &mut TermArena,
+    e: &SExpr,
+    vars: &BTreeMap<String, (SymbolId, TermId)>,
+    saw_seq_atom: &mut bool,
+) -> Option<TermId> {
+    match e.atom() {
+        Some("true") => return Some(arena.bool_const(true)),
+        Some("false") => return Some(arena.bool_const(false)),
+        _ => {}
+    }
+    let items = e.list()?;
+    let head = items.first().and_then(SExpr::atom)?;
+    match head {
+        // Boolean connectives: fold the (≥1) operands.
+        "and" | "or" | "xor" if items.len() >= 2 => {
+            let mut acc = word_bool(arena, &items[1], vars, saw_seq_atom)?;
+            for it in &items[2..] {
+                let next = word_bool(arena, it, vars, saw_seq_atom)?;
+                acc = match head {
+                    "and" => arena.and(acc, next).ok()?,
+                    "or" => arena.or(acc, next).ok()?,
+                    _ => arena.xor(acc, next).ok()?,
+                };
+            }
+            Some(acc)
+        }
+        "=>" if items.len() >= 3 => {
+            // Right-associative implication chain `a => b => … => z`.
+            let mut acc = word_bool(arena, items.last()?, vars, saw_seq_atom)?;
+            for it in items[1..items.len() - 1].iter().rev() {
+                let ante = word_bool(arena, it, vars, saw_seq_atom)?;
+                acc = arena.implies(ante, acc).ok()?;
+            }
+            Some(acc)
+        }
+        "not" if items.len() == 2 => {
+            let inner = word_bool(arena, &items[1], vars, saw_seq_atom)?;
+            arena.not(inner).ok()
+        }
+        // Boolean `ite` only (the branches must themselves be skeleton Booleans; an
+        // `ite` over *strings* is not a `word_str_expr` and is declined below).
+        "ite" if items.len() == 4 => {
+            let c = word_bool(arena, &items[1], vars, saw_seq_atom)?;
+            let t = word_bool(arena, &items[2], vars, saw_seq_atom)?;
+            let f = word_bool(arena, &items[3], vars, saw_seq_atom)?;
+            arena.ite(c, t, f).ok()
+        }
+        // `(= a b …)` — chained equality over ≥2 `Seq` expressions → conjunction of
+        // `(= a_0 a_i)`.
+        "=" if items.len() >= 3 => {
+            let terms = word_terms(arena, &items[1..], vars)?;
+            let mut acc: Option<TermId> = None;
+            for &t in &terms[1..] {
+                let atom = arena.eq(terms[0], t).ok()?;
+                *saw_seq_atom = true;
+                acc = Some(match acc {
+                    None => atom,
+                    Some(prev) => arena.and(prev, atom).ok()?,
+                });
+            }
+            acc
+        }
+        // `(distinct a b …)` — pairwise disequality → conjunction of `(not (= …))`.
+        "distinct" if items.len() >= 3 => {
+            let terms = word_terms(arena, &items[1..], vars)?;
+            let mut acc: Option<TermId> = None;
+            for i in 0..terms.len() {
+                for &t in &terms[i + 1..] {
+                    let atom = arena.eq(terms[i], t).ok()?;
+                    *saw_seq_atom = true;
+                    let diseq = arena.not(atom).ok()?;
+                    acc = Some(match acc {
+                        None => diseq,
+                        Some(prev) => arena.and(prev, diseq).ok()?,
+                    });
+                }
+            }
+            acc
+        }
+        // Anything else (extended functions, `str.len`, non-string atoms, …) is
+        // outside the skeleton fragment — decline the whole build.
+        _ => None,
+    }
 }
 
 /// The declared name of a 0-ary `String`-sorted symbol, if `e` is such a
