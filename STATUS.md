@@ -16202,6 +16202,20 @@ plan is built and committed on the current branch:
     **QF_S 58→61, QF_SLIA 12→13, totals 676→680 decided, 627
     oracle-compared, DISAGREE=0**; lex-order (`str.<=` over variables) and
     seq.update honestly declined. String day total: **QF_S 52→61 (+9)**.
+  - (`c5f181b9`) **T-C.5 REGEX MEMBERSHIP LANDED (ADR-0054)** — the largest
+    census demand (15 files) attacked: full SMT-LIB RegLan → code-point
+    derivative-engine translation; single-variable DFS witness search with
+    MANDATORY independent-matcher replay (sat); **re-checked
+    derivative-emptiness certificates** (unsat — complete nullable-free
+    closure, independently re-verified); front-door + bench routing.
+    **QF_S 61→67 (50%, PAR-2 4.372→2.928), QF_SLIA 13→14; totals 687
+    decided / 632 oracle-compared / DISAGREE=0.** Fuzzes vs BOTH oracles:
+    z3 627 jointly decided, cvc5 175, plus a 2000-case brute-force
+    differential — all zero disagreements. Census remainder honestly
+    unknown: membership+extended-fn coupling (Phase D), disjunctive
+    membership Boolean shapes (next: membership atoms in the online CDCL(T)
+    route), re.all+prefixof. **String day total: QF_S 52→67 (+15, 39%→50%),
+    with every verdict oracle-verified and DISAGREE=0 held throughout.**
   - Also: the pre-push compile gate is live (`hooks/pre-push`,
     `core.hooksPath`), the cap audit found only two CI-scaled sites (both
     healthy), ADR-0051/0053 flipped to accepted, and the tracker count-rot
