@@ -26,7 +26,7 @@ relentlessly. Scored against [the north-star definition of done](docs/plan/00-no
 | **Soundness (never a wrong verdict)** | **Strong / holding** | `DISAGREE = 0` across all 35 division baselines, 611 oracle-compared instances ([SCOREBOARD](bench-results/SCOREBOARD.md)). Two real wrong-safes in the consumer apps were found by new differential fuzzes and fixed. |
 | **Feature coverage (breadth)** | **Partial** | Columns exist for ~24 fragments (BV/ABV/UF/LRA/LIA/NRA/NIA/FP/DT/strings/seq/FF/…), but many are shallow. |
 | **Completeness / decide-rate** | **Partial — the central gap** | **674 / 992 decided (~68%)** per the generated [SCOREBOARD](bench-results/SCOREBOARD.md) (authoritative — check it rather than trusting this dated 2026-07-03 snapshot), decide-rate **0%–100%** across divisions; only **19/35 rows are decide-strong (≥80%)**. Z3/cvc5 decide far more on most fragments and cover more divisions than the 35 measured. |
-| **Measured performance (PAR-2 head-to-head)** | **Weak / largely unmeasured** | The north star says *no parity claim without this number*. Only narrow slices measured (public QF_BV: reduction moved 2→7/113; not competitive at scale). |
+| **Measured performance (PAR-2 head-to-head)** | **Weak — but now measured where it matters most** | The north star says *no parity claim without this number*. The first committed head-to-head exists (`582ecba8`, 2026-07-03, public QF_BV p4dfa lazy-vs-eager at 3s/20s, DISAGREE=0): lazy weakly dominates (7>4 at 20s) but `lazy_ops_total=0` on all 113 — the edge is inherited word-level preprocessing, not CEGAR, and Z3 decides all 113 in ≤1s. Not competitive at scale; the measured lever is reduction depth. |
 | **Lean parity (every unsat carries a kernel-checkable proof)** | **Early / narrow** | ~15/35 rows have a Lean route worth auditing; the trusted-reduction ledger is **not yet zero**. The Lean *tactic backend* (P3.7) is unbuilt. |
 | **Pareto-dominance on selected fragments** | **Growing — the real, defensible claim** | **23 fragments** carry a committed, audited `dominant%` ([DOMINANCE](bench-results/DOMINANCE.md)). This — not wholesale replacement — is what the strategy actually targets. |
 
@@ -83,27 +83,32 @@ wrong-unsat class vs Z3 was repaired**); **P1.9 FM→simplex keystone complete**
 **NRA coprime-split CAD projection** plus **first-class `/0` division
 witnesses** (`124e18aa`): the committed curated baseline now shows **QF_NRA
 21/38 decided** (was 9/38), DISAGREE=0.
-Landed 2026-07-03: **P2.7 Phase B started under ADR-0053** — the
-`axeyum-strings` crate (depends only on `axeyum-ir`, pure Rust, WASM-clean)
-with **T-B.1** (normalization invariant, `c5590668`) and **T-B.2** (flat/normal
-forms + explanation tracking, `bfc32805`) property-tested against the ground
-evaluator; T-B.3 (cycle ε-inference + normal-form inference rules) in flight.
-**ROI caveat recorded honestly:** in ADR-0053 bridge mode the word solver
-returns only replay-checked `sat` — word-level `unsat` stays declined until
-T-B.7 derivations are checkable — so Phase B's near-term decide-rate gain is
-unbounded-*sat* only, it recovers none of the 21 gate-downgraded unsats yet,
-and full integration waits on the P1.5 CDCL(T) loop (which is why P1.5 is the
-next keystone to close after the current slices). **Sequencing note:** the
-frontier doc's "string DP last" guidance was consciously overridden — the
-2026-06-29 re-measure showed the cheap string-bound lever had no verifiable
-headroom (QF_S already at z3 parity on accessible data), so the word-level DP
-became the only remaining route to the ~117-instance string gap.
-**The two starved north-star axes now have queued tasks:** (1) a committed
-PAR-2 head-to-head slice (wire the built-but-unwired lazy CEGAR bit-blaster
-into default solve/bench and measure public QF_BV) — the north star says *no
-parity claim without this number*; (2) frontier-baseline pre-merge gating + a
-budget-excused-cap audit (the nia_unsat 40→23 regression shipped and had to be
-bisected post-hoc; the ratchet must move to the merge gate).
+Landed 2026-07-03: **P2.7 Phase B COMPLETE as a live route, both directions
+(ADR-0053)** — the `axeyum-strings` crate through T-B.1…T-B.4d + extended-fn
+reductions + harness parity (**QF_S 52→57**, each new sat z3-binary-verified)
++ **T-B.7 slices 1–2** (word `unsat` only via the independent derivation
+checker; word fuzz **96 sat + 305 unsat, DISAGREE=0**). The coverage-boundary
+census (`3c13df63`) fixed the sequel: the word fragment's corpus ceiling is
+reached — the remaining 35 string unknowns split regex 15 (**Phase C,
+ADR-0054 proposed**, T-C.1/2 engine core in flight), extended functions 11
+(Phase D), lex-order/code-point↔LIA 8, seq+len 1.
+**Sequencing (4th review, 2026-07-03): the P1.5 CDCL(T) keystone outranks
+Phase-C broadening** — the whole string engine is still a one-shot side
+channel behind `check_auto`; integration is what reaches the 21
+gate-downgraded unsats and the 8 theory-coupled census files, and it serves
+UF/NRA/NIA combination too. Phase-C engine work proceeds where it is
+integration-independent (T-C.1/2 predicates+derivatives); T-C.5 routing waits
+on/behind P1.5. **Word-unsat hardening queued before any parity language:**
+cvc5 as a second string oracle (Z3-only is weakest exactly here), cargo-mutants
+on `check_derivation.rs`, a `normalize` denotation-preservation fuzz (the one
+shared primitive), and an Alethe emitter off the checker's minimal conflicts —
+the cheapest live Lean-ledger progress.
+**The two previously-starved north-star axes moved 2026-07-03:** (1) the
+first committed PAR-2 head-to-head exists (`582ecba8`, public QF_BV
+lazy-vs-eager: lazy weakly dominates at 20s but `lazy_ops_total=0` — the edge
+is preprocessing, not CEGAR; the parity lever is reduction depth); (2) the
+frontier ratchet is a recorded pre-merge gate (CLAUDE.md, `efdbb0ff`); the
+budget-excused-cap audit remains queued.
 
 **Grounding correction (important).** Reading the code + ADRs showed the NRA
 engine is *far more built* than the first plan draft assumed: the bignum algebraic

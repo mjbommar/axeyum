@@ -13,6 +13,15 @@ on:
       - 'artifacts/**'
       - 'bench-results/**'
       - '*.md'
+      # The curriculum lane's commits touch python generators/validators and
+      # the justfile alongside docs — none of which can change cargo
+      # build/test outcomes, and docs-ci.yml runs the resource+link checks on
+      # EVERY push regardless. Without these two lines each docs(math) commit
+      # still launched the full ~3h 8-job matrix and saturated the runner
+      # pool (measured 2026-07-03). A commit that ALSO touches any Rust/TOML
+      # path still runs everything.
+      - 'scripts/**'
+      - 'justfile'
   pull_request:
 
 # Pushes land every few minutes across two agent lanes and a run takes ~20

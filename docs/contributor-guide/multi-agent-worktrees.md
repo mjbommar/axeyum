@@ -214,3 +214,25 @@ If a worktree was deleted manually:
 git worktree prune
 ```
 
+
+## Shared-checkout index hygiene (when lanes share ONE checkout)
+
+Learned the hard way on 2026-07-03 (a bare `git commit` swept another
+agent's staged files into an unrelated commit and had to be recovered):
+
+- **Pathspec-only commits, always**: `git add <your files>` then
+  `git commit -m "..." -- <your files>`. The index is shared; a bare
+  `git commit` commits *everything staged by anyone*. Verify each commit
+  with `git show --stat` before moving on.
+- **Never** `git stash`, `git checkout`/`git restore` on files you did not
+  modify, or any history rewrite — other lanes keep uncommitted WIP in the
+  tree. A dirty file you don't recognize belongs to someone else.
+- **Per-file formatting only**: `rustfmt --edition 2024 <file>`. Both
+  `cargo fmt` and `cargo fmt -p <crate>` reformat files other lanes have
+  in flight.
+- **One writer per area**: two agents editing the same crate's sources
+  concurrently is a merge hazard even with pathspec discipline — partition
+  by crate/module before spawning.
+- If your staged set gets swept by another lane's commit: do NOT rewrite
+  history; re-stage and re-commit your pathspec set on the new HEAD, then
+  verify with `git show --stat`.

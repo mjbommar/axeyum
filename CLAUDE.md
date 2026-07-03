@@ -149,6 +149,22 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   (ADR-0002). Never expand reliance on linked solvers beyond
   backend/differential-oracle/CI-cross-check roles without a new ADR.
 
+## Multi-agent hygiene (multiple agents share this checkout)
+
+- **Pathspec-only commits, always:** `git add <files>` then
+  `git commit -m … -- <files>`. A bare `git commit` sweeps OTHER agents'
+  staged files from the shared index (it has happened; recovery cost real
+  work). Verify every commit with `git show --stat`.
+- **Never** `git stash`, `git checkout`/`restore` on files you did not
+  modify, or any history rewrite — another lane's uncommitted WIP lives in
+  this tree. Treat dirty files you don't own as off-limits.
+- Format single files with `rustfmt --edition 2024 <file>` — never
+  `cargo fmt`/`cargo fmt -p` (workspace-wide; clobbers other lanes' WIP).
+- One writer per worktree/area at a time; long-running background gates are
+  run FOREGROUND by the agent that owns them (waiting on completion
+  notifications has stalled agents repeatedly).
+- Full details: [docs/contributor-guide/multi-agent-worktrees.md](docs/contributor-guide/multi-agent-worktrees.md).
+
 ## Hard Rules
 
 - The default build must compile with **no C/C++ dependency**; native solver
