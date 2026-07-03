@@ -1,0 +1,107 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-heun-method-v0",
+  "witnesses": [
+    {
+      "id": "quadratic-forcing-heun-trace",
+      "description": "Exact rational Heun/explicit trapezoidal RK2 replay for y' = 2t, y(0) = 0, h = 1/2.",
+      "values": {
+        "ode": "y_prime_equals_2t",
+        "method": "explicit_trapezoidal_heun_rk2",
+        "step": "1/2",
+        "times": ["0", "1/2", "1", "3/2"],
+        "states": ["0", "1/4", "1", "9/4"],
+        "stage1_derivatives": ["0", "1", "2"],
+        "predictor_states": ["0", "3/4", "2"],
+        "endpoint_times": ["1/2", "1", "3/2"],
+        "endpoint_derivatives": ["1", "2", "3"],
+        "averaged_derivatives": ["1/2", "3/2", "5/2"],
+        "exact_solution": ["0", "1/4", "1", "9/4"],
+        "absolute_errors": ["0", "0", "0", "0"],
+        "max_error": "0"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "heun-stage-witness",
+      "claim": "The listed predictor states, endpoint derivatives, and averaged slopes are correct for Heun's method on y' = 2t with h = 1/2.",
+      "expected_result": "sat",
+      "validation": "exact_rational_heun_stage_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["quadratic-forcing-heun-trace"],
+      "notes": "The validator recomputes k1, predictor state, endpoint derivative, averaged derivative, and next state for every listed step."
+    },
+    {
+      "id": "heun-trace-exact-solution-witness",
+      "claim": "The Heun trace lands on the exact solution y = t^2 at the listed grid points.",
+      "expected_result": "sat",
+      "validation": "exact_rational_heun_trace_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["quadratic-forcing-heun-trace"],
+      "notes": "The validator recomputes y_{n+1} = y_n + h*(k1+k2)/2 and compares every listed state with t^2."
+    },
+    {
+      "id": "zero-error-table-witness",
+      "claim": "The finite Heun error table is identically zero on this grid.",
+      "expected_result": "sat",
+      "validation": "exact_rational_heun_error_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["quadratic-forcing-heun-trace"],
+      "notes": "The validator recomputes absolute errors and max_error exactly; this is a finite table, not a convergence theorem."
+    },
+    {
+      "id": "bad-heun-step-rejected",
+      "claim": "For y' = 2t, h = 1/2, t = 0, and y = 0, the first Heun step gives 1/2.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_bad_heun_step_replay",
+      "proof_status": "replay-only",
+      "data": {
+        "source_witness": "quadratic-forcing-heun-trace",
+        "step_index": 0,
+        "time": "0",
+        "state": "0",
+        "step": "1/2",
+        "stage1_derivative": "0",
+        "predictor_state": "0",
+        "endpoint_time": "1/2",
+        "endpoint_derivative": "1",
+        "averaged_derivative": "1/2",
+        "computed_next_state": "1/4",
+        "claimed_next_state": "1/2",
+        "next_state_gap": "1/4"
+      },
+      "notes": "Exact replay computes the first Heun next state as 1/4, so the claimed value 1/2 is rejected; the separate qf-lra-bad-heun-step row owns the checked Farkas evidence."
+    },
+    {
+      "id": "qf-lra-bad-heun-step",
+      "claim": "The fixed malformed Heun next-state claim is linearly inconsistent.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_farkas_evidence",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "quadratic-forcing-heun-trace",
+        "source_replay_row": "bad-heun-step-rejected",
+        "computed_next_state": "1/4",
+        "claimed_next_state": "1/2",
+        "farkas_conflict": "heun_next_state = 1/4 and heun_next_state = 1/2",
+        "smt2_artifact": "artifacts/examples/math/finite-heun-method-v0/smt2/bad-heun-step-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_heun_bad_step_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes the first Heun next state as 1/4, while the malformed row claims 1/2; the source QF_LRA artifact isolates that scalar contradiction for Farkas checking."
+    },
+    {
+      "id": "general-heun-rk2-theory-lean-horizon",
+      "claim": "General Heun/RK2 order conditions, convergence, stability regions, stiffness behavior, adaptive step-size control, and floating-point time-stepping correctness require future theorem or numerical-honesty resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_boundary",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "For explicit trapezoidal/Heun Runge-Kutta methods, prove order conditions, local/global error bounds, stability properties, and method-specific convergence hypotheses separately from finite replay rows.",
+        "future_checker": "Lean theorem statements for exact Heun/RK2 theory plus separate numerical-honesty or QF_FP artifacts for floating-point implementations."
+      },
+      "notes": "The finite exact row is a checked resource for one rational Heun trace, not a theorem about arbitrary ODEs, adaptive solvers, stiff systems, or floating-point implementations."
+    }
+  ]
+}

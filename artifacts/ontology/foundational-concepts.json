@@ -5129,6 +5129,12 @@
           "notes": "Fixed-step explicit midpoint Runge-Kutta stages, exact quadratic trace replay, zero-error table, and checked bad first-step row."
         },
         {
+          "id": "finite-heun-method-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-heun-method-v0",
+          "notes": "Fixed-step explicit trapezoidal Heun stages, exact quadratic trace replay, zero-error table, and checked bad first-step row."
+        },
+        {
           "id": "counting-v0",
           "status": "validated",
           "path": "artifacts/examples/math/counting-v0",
@@ -5152,6 +5158,7 @@
             "docs/learn/math/bounded-dynamics-end-to-end.md",
             "docs/learn/math/finite-euler-method-end-to-end.md",
             "docs/learn/math/runge-kutta-midpoint-end-to-end.md",
+            "docs/learn/math/heun-method-end-to-end.md",
             "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
             "crates/axeyum-solver/tests/math_resource_lia_routes.rs",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
@@ -5170,6 +5177,7 @@
         "docs/learn/math/bounded-dynamics-end-to-end.md",
         "docs/learn/math/finite-euler-method-end-to-end.md",
         "docs/learn/math/runge-kutta-midpoint-end-to-end.md",
+        "docs/learn/math/heun-method-end-to-end.md",
         "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
         "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
         "crates/axeyum-solver/tests/math_resource_lia_routes.rs",
@@ -8718,7 +8726,7 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "validated",
-      "summary": "Finite dynamics rows state an initial state, transition rule, horizon, trace, invariant, threshold, Euler step, Runge-Kutta midpoint stages, or finite error table over exact rational data. The trusted object is replay of the listed finite transition data or a checked QF_LRA/Farkas certificate for a malformed fixed trace, invariant, recurrence value, Euler update, or Runge-Kutta midpoint update.",
+      "summary": "Finite dynamics rows state an initial state, transition rule, horizon, trace, invariant, threshold, Euler step, Runge-Kutta midpoint stages, Heun predictor stages, or finite error table over exact rational data. The trusted object is replay of the listed finite transition data or a checked QF_LRA/Farkas certificate for a malformed fixed trace, invariant, recurrence value, Euler update, Runge-Kutta midpoint update, or Heun update.",
       "prerequisites": [
         "bridge_finite_model_replay",
         "bridge_qf_lra_farkas_anatomy",
@@ -8741,6 +8749,7 @@
         "finite recurrence replay",
         "explicit Euler replay",
         "Runge-Kutta midpoint replay",
+        "Heun method replay",
         "finite matrices",
         "QF_LRA",
         "Farkas certificate",
@@ -8770,6 +8779,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-runge-kutta-midpoint-v0",
           "notes": "Exact explicit midpoint Runge-Kutta stages, finite zero-error table for y' = 2t, and checked bad first-step row."
+        },
+        {
+          "id": "finite-heun-method-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-heun-method-v0",
+          "notes": "Exact explicit trapezoidal Heun stages, finite zero-error table for y' = 2t, and checked bad first-step row."
         }
       ],
       "proof_routes": [
@@ -8785,11 +8800,12 @@
             "docs/learn/math/bounded-dynamics-end-to-end.md",
             "docs/learn/math/finite-euler-method-end-to-end.md",
             "docs/learn/math/runge-kutta-midpoint-end-to-end.md",
+            "docs/learn/math/heun-method-end-to-end.md",
             "docs/learn/math/finite-dynamics-euler-end-to-end.md",
             "docs/learn/math/analysis-dynamics-end-to-end.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
           ],
-          "notes": "Positive rows recompute each finite transition, matrix state update, invariant, threshold, Euler step, or Runge-Kutta midpoint stage exactly. Negative rows graduate only when the source SMT-LIB or route regression yields rechecked Farkas evidence."
+          "notes": "Positive rows recompute each finite transition, matrix state update, invariant, threshold, Euler step, or Runge-Kutta midpoint or Heun stage exactly. Negative rows graduate only when the source SMT-LIB or route regression yields rechecked Farkas evidence."
         }
       ],
       "source_refs": [
@@ -8799,6 +8815,7 @@
         "docs/learn/math/bounded-dynamics-end-to-end.md",
         "docs/learn/math/finite-euler-method-end-to-end.md",
         "docs/learn/math/runge-kutta-midpoint-end-to-end.md",
+        "docs/learn/math/heun-method-end-to-end.md",
         "docs/learn/math/finite-dynamics-euler-end-to-end.md",
         "docs/learn/math/analysis-dynamics-end-to-end.md",
         "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
@@ -8807,13 +8824,13 @@
       "open_gaps": [
         "Finite dynamics replay does not prove continuous-time existence, uniqueness, stability, chaos, stiffness behavior, PDE theory, or convergence-rate theorems.",
         "A bounded invariant row proves only the listed horizon unless a separate induction or Lean proof route is supplied.",
-        "Euler and Runge-Kutta rows are exact rational numerical shadows; floating-point implementations, adaptive methods, stiffness behavior, and asymptotic error theory stay in numerical-honesty or Lean-horizon lanes."
+        "Euler, Runge-Kutta midpoint, and Heun rows are exact rational numerical shadows; floating-point implementations, adaptive methods, stiffness behavior, and asymptotic error theory stay in numerical-honesty or Lean-horizon lanes."
       ],
       "graduation": {
         "status": "validated",
         "criteria": [
           "Rows state the transition rule, horizon, initial condition, trace, invariant/threshold, and exact rational data.",
-          "The validator recomputes each finite transition, matrix state, Euler update, Runge-Kutta midpoint stage/update, and finite error value.",
+          "The validator recomputes each finite transition, matrix state, Euler update, Runge-Kutta midpoint or Heun stage/update, and finite error value.",
           "Malformed finite dynamics rows link source artifacts or route regressions before claiming checked Farkas evidence."
         ]
       }
@@ -11957,7 +11974,7 @@
           "id": "bounded-dynamics-v0",
           "status": "validated",
           "path": "artifacts/examples/math/bounded-dynamics-v0",
-          "notes": "Recurrence systems, discretized dynamics, threshold reachability, invariant checks, Euler and Runge-Kutta midpoint finite time-stepping, Markov transitions, and finite hitting times."
+          "notes": "Recurrence systems, discretized dynamics, threshold reachability, invariant checks, Euler, Runge-Kutta midpoint, and Heun finite time-stepping, Markov transitions, and finite hitting times."
         },
         {
           "id": "calculus-algebraic-shadow-v0",
@@ -11976,6 +11993,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-euler-method-v0",
           "notes": "Exact Finite Euler Method Checks"
+        },
+        {
+          "id": "finite-heun-method-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-heun-method-v0",
+          "notes": "Finite Heun Method Checks"
         },
         {
           "id": "finite-hitting-times-v0",
@@ -13499,7 +13522,7 @@
           "id": "numerical-linear-algebra-v0",
           "status": "validated",
           "path": "artifacts/examples/math/numerical-linear-algebra-v0",
-          "notes": "Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, interval bounds, inner-product projections, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, GMRES residual-minimization, Lanczos/tridiagonalization, residual, rounding, and perturbation-bound shadows, fixed-step error recurrences, Euler and Runge-Kutta midpoint time-stepping shadows, Jacobian/Hessian replay, finite root-finding, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."
+          "notes": "Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, interval bounds, inner-product projections, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, GMRES residual-minimization, Lanczos/tridiagonalization, residual, rounding, and perturbation-bound shadows, fixed-step error recurrences, Euler, Runge-Kutta midpoint, and Heun time-stepping shadows, Jacobian/Hessian replay, finite root-finding, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."
         },
         {
           "id": "bounded-dynamics-v0",
@@ -13590,6 +13613,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-gram-schmidt-v0",
           "notes": "Finite Gram-Schmidt Checks"
+        },
+        {
+          "id": "finite-heun-method-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-heun-method-v0",
+          "notes": "Finite Heun Method Checks"
         },
         {
           "id": "finite-householder-reflection-v0",
@@ -14275,7 +14304,7 @@
           "id": "real-analysis-rational-v0",
           "status": "validated",
           "path": "artifacts/examples/math/real-analysis-rational-v0",
-          "notes": "Rational interval/ball checks, bounded epsilon-delta samples, algebraic factorization, fixed-decimal rounding shadows, multivariable-calculus, Newton-step, and Runge-Kutta midpoint shadows, and proof horizons."
+          "notes": "Rational interval/ball checks, bounded epsilon-delta samples, algebraic factorization, fixed-decimal rounding shadows, multivariable-calculus, Newton-step, Runge-Kutta midpoint, and Heun-method shadows, and proof horizons."
         },
         {
           "id": "affine-geometry-v0",
@@ -14396,6 +14425,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-gradient-descent-v0",
           "notes": "Finite Gradient Descent Checks"
+        },
+        {
+          "id": "finite-heun-method-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-heun-method-v0",
+          "notes": "Finite Heun Method Checks"
         },
         {
           "id": "finite-integration-v0",

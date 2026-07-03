@@ -32161,6 +32161,86 @@ def validate_rk_midpoint_trace(context: str, values: dict[str, Any]) -> dict[str
     }
 
 
+def validate_heun_trace(context: str, values: dict[str, Any]) -> dict[str, Any]:
+    ode = require_euler_ode(f"{context}.ode", values.get("ode"))
+    method = values.get("method")
+    require_string(f"{context}.method", method)
+    if method != "explicit_trapezoidal_heun_rk2":
+        fail(f"{context}.method must be explicit_trapezoidal_heun_rk2")
+    step = require_fraction(f"{context}.step", values.get("step"))
+    times = require_fraction_vector(f"{context}.times", values.get("times"))
+    states = require_fraction_vector(f"{context}.states", values.get("states"))
+    stage1_derivatives = require_fraction_vector(
+        f"{context}.stage1_derivatives",
+        values.get("stage1_derivatives"),
+    )
+    predictor_states = require_fraction_vector(
+        f"{context}.predictor_states",
+        values.get("predictor_states"),
+    )
+    endpoint_times = require_fraction_vector(
+        f"{context}.endpoint_times",
+        values.get("endpoint_times"),
+    )
+    endpoint_derivatives = require_fraction_vector(
+        f"{context}.endpoint_derivatives",
+        values.get("endpoint_derivatives"),
+    )
+    averaged_derivatives = require_fraction_vector(
+        f"{context}.averaged_derivatives",
+        values.get("averaged_derivatives"),
+    )
+    if step <= 0:
+        fail(f"{context}.step must be positive")
+    if len(times) != len(states):
+        fail(f"{context}.times and states must have the same length")
+    transition_count = len(states) - 1
+    if transition_count <= 0:
+        fail(f"{context} must contain at least one transition")
+    for name, entries in [
+        ("stage1_derivatives", stage1_derivatives),
+        ("predictor_states", predictor_states),
+        ("endpoint_times", endpoint_times),
+        ("endpoint_derivatives", endpoint_derivatives),
+        ("averaged_derivatives", averaged_derivatives),
+    ]:
+        if len(entries) != transition_count:
+            fail(f"{context}.{name} must have one entry per transition")
+    for index in range(transition_count):
+        if times[index + 1] != times[index] + step:
+            fail(f"{context}.times transition {index}->{index + 1} does not match step")
+        expected_k1 = euler_derivative(ode, times[index], states[index])
+        if stage1_derivatives[index] != expected_k1:
+            fail(f"{context}.stage1_derivatives[{index}] is incorrect")
+        expected_predictor = states[index] + step * stage1_derivatives[index]
+        if predictor_states[index] != expected_predictor:
+            fail(f"{context}.predictor_states[{index}] is incorrect")
+        expected_endpoint_time = times[index] + step
+        if endpoint_times[index] != expected_endpoint_time:
+            fail(f"{context}.endpoint_times[{index}] is incorrect")
+        expected_k2 = euler_derivative(ode, endpoint_times[index], predictor_states[index])
+        if endpoint_derivatives[index] != expected_k2:
+            fail(f"{context}.endpoint_derivatives[{index}] is incorrect")
+        expected_average = (stage1_derivatives[index] + endpoint_derivatives[index]) / 2
+        if averaged_derivatives[index] != expected_average:
+            fail(f"{context}.averaged_derivatives[{index}] is incorrect")
+        expected_next = states[index] + step * averaged_derivatives[index]
+        if states[index + 1] != expected_next:
+            fail(f"{context}.states transition {index}->{index + 1} is not a Heun step")
+    return {
+        "ode": ode,
+        "method": method,
+        "step": step,
+        "times": times,
+        "states": states,
+        "stage1_derivatives": stage1_derivatives,
+        "predictor_states": predictor_states,
+        "endpoint_times": endpoint_times,
+        "endpoint_derivatives": endpoint_derivatives,
+        "averaged_derivatives": averaged_derivatives,
+    }
+
+
 def validate_finite_euler_method(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -32644,6 +32724,156 @@ def validate_finite_runge_kutta_midpoint(expected: dict[str, Any]) -> None:
     require_string("Runge-Kutta horizon future_checker", horizon_data.get("future_checker"))
 
 
+def validate_finite_heun_method(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    stage = checks["heun-stage-witness"]
+    if stage["expected_result"] != "sat":
+        fail("heun-stage-witness must expect sat")
+    if stage.get("proof_status") != "replay-only":
+        fail("heun-stage-witness must be replay-only")
+    values = single_witness_values(stage, witnesses)
+    replay = validate_heun_trace("Heun trace", values)
+    if replay["ode"] != "y_prime_equals_2t":
+        fail("finite Heun replay must use y' = 2t")
+    if replay["step"] != Fraction(1, 2):
+        fail("finite Heun replay must use h = 1/2")
+
+    trace = checks["heun-trace-exact-solution-witness"]
+    if trace["expected_result"] != "sat":
+        fail("heun-trace-exact-solution-witness must expect sat")
+    if trace.get("proof_status") != "replay-only":
+        fail("heun-trace-exact-solution-witness must be replay-only")
+    if single_witness_values(trace, witnesses) != values:
+        fail("heun-trace-exact-solution-witness must cite the Heun witness")
+    exact_solution = require_fraction_vector("Heun exact_solution", values.get("exact_solution"))
+    if len(exact_solution) != len(replay["states"]):
+        fail("Heun exact_solution must match state length")
+    for index, time in enumerate(replay["times"]):
+        if exact_solution[index] != time * time:
+            fail(f"Heun exact_solution[{index}] is incorrect")
+        if replay["states"][index] != exact_solution[index]:
+            fail(f"heun-trace-exact-solution-witness state {index} does not match t^2")
+
+    errors = checks["zero-error-table-witness"]
+    if errors["expected_result"] != "sat":
+        fail("zero-error-table-witness must expect sat")
+    if errors.get("proof_status") != "replay-only":
+        fail("zero-error-table-witness must be replay-only")
+    if single_witness_values(errors, witnesses) != values:
+        fail("zero-error-table-witness must cite the Heun witness")
+    absolute_errors = require_fraction_vector("Heun absolute_errors", values.get("absolute_errors"))
+    max_error = require_fraction("Heun max_error", values.get("max_error"))
+    if len(absolute_errors) != len(replay["states"]):
+        fail("Heun absolute_errors must match state length")
+    for index, state in enumerate(replay["states"]):
+        if absolute_errors[index] != abs(exact_solution[index] - state):
+            fail(f"Heun absolute_errors[{index}] is incorrect")
+    if max(absolute_errors) != max_error:
+        fail("Heun max_error is incorrect")
+    if max_error != 0:
+        fail("zero-error-table-witness expects max_error = 0")
+
+    bad = checks["bad-heun-step-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-heun-step-rejected must expect unsat")
+    if bad.get("proof_status") != "replay-only":
+        fail("bad-heun-step-rejected must be replay-only")
+    if bad.get("validation") != "exact_rational_bad_heun_step_replay":
+        fail("bad-heun-step-rejected validation is incorrect")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "quadratic-forcing-heun-trace":
+        fail("bad-heun-step-rejected must cite the Heun witness")
+    step_index = require_int("bad Heun step_index", data.get("step_index"))
+    if step_index < 0 or step_index >= len(replay["states"]) - 1:
+        fail("bad-heun-step-rejected step_index out of range")
+    time = require_fraction("bad Heun time", data.get("time"))
+    state = require_fraction("bad Heun state", data.get("state"))
+    step = require_fraction("bad Heun step", data.get("step"))
+    stage1_derivative = require_fraction("bad Heun stage1_derivative", data.get("stage1_derivative"))
+    predictor_state = require_fraction("bad Heun predictor_state", data.get("predictor_state"))
+    endpoint_time = require_fraction("bad Heun endpoint_time", data.get("endpoint_time"))
+    endpoint_derivative = require_fraction("bad Heun endpoint_derivative", data.get("endpoint_derivative"))
+    averaged_derivative = require_fraction("bad Heun averaged_derivative", data.get("averaged_derivative"))
+    computed_next_state = require_fraction("bad Heun computed_next_state", data.get("computed_next_state"))
+    claimed_next_state = require_fraction("bad Heun claimed_next_state", data.get("claimed_next_state"))
+    next_state_gap = require_fraction("bad Heun next_state_gap", data.get("next_state_gap"))
+    if replay["times"][step_index] != time:
+        fail("bad-heun-step-rejected time does not match source witness")
+    if replay["states"][step_index] != state:
+        fail("bad-heun-step-rejected state does not match source witness")
+    if replay["step"] != step:
+        fail("bad-heun-step-rejected step does not match source witness")
+    if replay["stage1_derivatives"][step_index] != stage1_derivative:
+        fail("bad-heun-step-rejected stage1_derivative does not match source witness")
+    if replay["predictor_states"][step_index] != predictor_state:
+        fail("bad-heun-step-rejected predictor_state does not match source witness")
+    if replay["endpoint_times"][step_index] != endpoint_time:
+        fail("bad-heun-step-rejected endpoint_time does not match source witness")
+    if replay["endpoint_derivatives"][step_index] != endpoint_derivative:
+        fail("bad-heun-step-rejected endpoint_derivative does not match source witness")
+    if replay["averaged_derivatives"][step_index] != averaged_derivative:
+        fail("bad-heun-step-rejected averaged_derivative does not match source witness")
+    if replay["states"][step_index + 1] != computed_next_state:
+        fail("bad-heun-step-rejected computed_next_state does not match source witness")
+    if state + step * averaged_derivative != computed_next_state:
+        fail("bad-heun-step-rejected next-state arithmetic is incorrect")
+    if computed_next_state == claimed_next_state:
+        fail("bad-heun-step-rejected malformed next state must disagree with replay")
+    if claimed_next_state - computed_next_state != next_state_gap:
+        fail("bad-heun-step-rejected next_state_gap is incorrect")
+    if next_state_gap <= 0:
+        fail("bad-heun-step-rejected next_state_gap must be positive")
+    if "separate qf-lra-bad-heun-step" not in bad.get("notes", ""):
+        fail("bad-heun-step-rejected notes must name the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-heun-step"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-heun-step must expect unsat")
+    if qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-heun-step must be checked")
+    if qf_bad.get("validation") != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-heun-step must use exact_rational_farkas_evidence")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_witness") != "quadratic-forcing-heun-trace":
+        fail("qf-lra-bad-heun-step must cite the Heun witness")
+    if qf_data.get("source_replay_row") != "bad-heun-step-rejected":
+        fail("qf-lra-bad-heun-step must cite the replay row")
+    qf_computed = require_fraction("qf Heun computed_next_state", qf_data.get("computed_next_state"))
+    qf_claimed = require_fraction("qf Heun claimed_next_state", qf_data.get("claimed_next_state"))
+    if qf_computed != computed_next_state or qf_claimed != claimed_next_state:
+        fail("qf-lra-bad-heun-step data must match the replay row")
+    if qf_data.get("farkas_conflict") != "heun_next_state = 1/4 and heun_next_state = 1/2":
+        fail("qf-lra-bad-heun-step must document the Farkas conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf Heun smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-heun-method-v0/smt2/"
+        "bad-heun-step-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-lra-bad-heun-step smt2_artifact must name the checked source artifact")
+    check_source("qf Heun smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf Heun farkas_regression", regression)
+    if "finite_heun_bad_step_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-heun-step must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf Heun certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-heun-step certificate must document checked Farkas evidence")
+
+    horizon = checks["general-heun-rk2-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-heun-rk2-theory-lean-horizon must be not-run")
+    if horizon.get("proof_status") != "lean-horizon":
+        fail("general-heun-rk2-theory-lean-horizon must remain lean-horizon")
+    horizon_data = horizon.get("data", {})
+    require_string("Heun horizon target_theorem_shape", horizon_data.get("target_theorem_shape"))
+    require_string("Heun horizon future_checker", horizon_data.get("future_checker"))
+
+
 def validate_bounded_dynamics(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -33001,6 +33231,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_euler_method(expected)
     if metadata["id"] == "finite-runge-kutta-midpoint-v0":
         validate_finite_runge_kutta_midpoint(expected)
+    if metadata["id"] == "finite-heun-method-v0":
+        validate_finite_heun_method(expected)
     if metadata["id"] == "finite-gaussian-elimination-v0":
         validate_finite_gaussian_elimination(expected)
     if metadata["id"] == "finite-lu-decomposition-v0":

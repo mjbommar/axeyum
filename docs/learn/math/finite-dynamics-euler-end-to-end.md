@@ -4,13 +4,16 @@ This lesson follows exact finite dynamics resources from recurrence data to
 checked transition replay. It uses
 [bounded-dynamics-v0](../../../artifacts/examples/math/bounded-dynamics-v0/) and
 [finite-euler-method-v0](../../../artifacts/examples/math/finite-euler-method-v0/),
-and [finite-runge-kutta-midpoint-v0](../../../artifacts/examples/math/finite-runge-kutta-midpoint-v0/).
+[finite-runge-kutta-midpoint-v0](../../../artifacts/examples/math/finite-runge-kutta-midpoint-v0/),
+and [finite-heun-method-v0](../../../artifacts/examples/math/finite-heun-method-v0/).
 For the bounded recurrence and invariant slice alone, read
 [End To End: Bounded Recurrence Dynamics](bounded-dynamics-end-to-end.md).
 For the explicit Euler and finite error-table slice alone, read
 [End To End: Finite Euler Method](finite-euler-method-end-to-end.md).
 For the explicit midpoint Runge-Kutta slice alone, read
 [End To End: Finite Runge-Kutta Midpoint](runge-kutta-midpoint-end-to-end.md).
+For the explicit trapezoidal Heun slice alone, read
+[End To End: Finite Heun Method](heun-method-end-to-end.md).
 
 Concept rows:
 
@@ -52,6 +55,11 @@ Concept rows:
 | `bad-rk-midpoint-step-rejected` | `unsat` | replay-only |
 | `qf-lra-bad-rk-midpoint-step` | `unsat` | checked |
 | `general-runge-kutta-theory-lean-horizon` | `not-run` | lean-horizon |
+| `heun-stage-witness` | `sat` | replay-only |
+| `heun-trace-exact-solution-witness` | `sat` | replay-only |
+| `bad-heun-step-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-heun-step` | `unsat` | checked |
+| `general-heun-rk2-theory-lean-horizon` | `not-run` | lean-horizon |
 | `general-ode-theory-lean-horizon` | `not-run` | lean-horizon |
 
 These rows are finite transition-system checks over exact rationals. They do
@@ -60,7 +68,7 @@ stiffness behavior, chaos, or PDE theory.
 The shared `bridge_finite_dynamics_euler_replay` row is the atlas vocabulary
 for this pattern across recurrence prefixes, bounded dynamics, finite
 invariants, threshold reachability, explicit Euler steps, Runge-Kutta midpoint
-stages, and finite error tables.
+stages, Heun predictor stages, and finite error tables.
 
 ## Replay A Bounded Recurrence
 
@@ -280,6 +288,31 @@ The bad midpoint row claims the first next state is `1/2`; exact replay
 computes `1/4`, and the separate `qf-lra-bad-rk-midpoint-step` row isolates
 that contradiction through checked Farkas evidence.
 
+## Encode Heun As A Transition System
+
+The Heun pack treats the explicit trapezoidal RK2 method as a distinct
+two-stage rational transition relation:
+
+```text
+k1 = f(t_n, y_n)
+y_predict = y_n + h*k1
+k2 = f(t_n + h, y_predict)
+avg = (k1 + k2) / 2
+y_(n+1) = y_n + h*avg
+```
+
+For the same `y' = 2t`, `y(0)=0`, and `h=1/2` grid, the finite Heun trace is:
+
+```text
+states = 0, 1/4, 1, 9/4
+exact  = 0, 1/4, 1, 9/4
+errors = 0, 0, 0, 0
+```
+
+The bad Heun row claims the first next state is `1/2`; exact replay computes
+`1/4`, and the separate `qf-lra-bad-heun-step` row isolates that contradiction
+through checked Farkas evidence.
+
 ## Name The Lean Horizon
 
 The finite rows are useful because they isolate a trustworthy kernel of the
@@ -291,6 +324,7 @@ bounded invariant
 threshold reachability
 Euler transition replay
 Runge-Kutta midpoint stage replay
+Heun predictor and averaged-slope replay
 finite error table
 bad-step refutation
 ```
@@ -318,12 +352,16 @@ From the repository root:
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/bounded-dynamics-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-euler-method-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-runge-kutta-midpoint-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-heun-method-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes bounded_dynamics_bad_transition_step_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes bounded_dynamics_bad_threshold_step_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes bounded_dynamics_bad_invariant_bound_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_euler_bad_step_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_euler_bad_max_error_bound_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_euler_bad_terminal_error_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_runge_kutta_midpoint_bad_step_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_heun_bad_step_artifact_emits_checked_farkas
 ```
 
 Expected output for each command:
@@ -342,8 +380,9 @@ trusted small checking -> exact rational transition replay, pointwise checks, an
 remaining horizon -> continuous ODE theory, convergence, stability, and PDEs
 ```
 
-The next practical graduation step is to lower fixed recurrence and Euler-step
-rows into deterministic QF_LRA or BV transition obligations, then replay SAT
-witnesses and checked refutations through Axeyum instead of pack-local Python
-alone. The separate bounded-dynamics and finite Euler `qf-lra-*` rows now
-exercise that QF_LRA/Farkas route after replay computes the finite values.
+The next practical graduation step is to lower fixed recurrence and
+time-stepping rows into deterministic QF_LRA or BV transition obligations, then
+replay SAT witnesses and checked refutations through Axeyum instead of
+pack-local Python alone. The separate bounded-dynamics, finite Euler,
+Runge-Kutta midpoint, and Heun `qf-lra-*` rows now exercise that QF_LRA/Farkas
+route after replay computes the finite values.

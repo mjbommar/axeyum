@@ -1104,7 +1104,16 @@ Build sequence:
     against exact `1/4`. The finite dynamics/time-stepping bridge keeps this
     fixed exact row separate from general Runge-Kutta order, convergence,
     stability, stiffness, and adaptive-step theorems.
-112. Revisit crate/repo boundaries only after three real consumers or repeated
+112. Landed: add the finite Heun method resource.
+    `finite-heun-method-v0` now records one exact explicit trapezoidal RK2
+    transcript for `y' = 2t`, `y(0)=0`, and `h=1/2`, including predictor
+    states, endpoint derivatives, averaged slopes, exact states
+    `[0, 1/4, 1, 9/4]`, and zero error. It includes a checked QF_LRA/Farkas
+    artifact for the malformed first-step claim `1/2` against exact `1/4`.
+    The finite dynamics/time-stepping bridge keeps this fixed exact row
+    separate from general RK2 order, convergence, stability, stiffness, and
+    adaptive-step theorems.
+113. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands

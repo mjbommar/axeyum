@@ -382,6 +382,9 @@ const FINITE_EULER_BAD_TERMINAL_ERROR: &str = include_str!(
 const FINITE_RUNGE_KUTTA_MIDPOINT_BAD_STEP: &str = include_str!(
     "../../../artifacts/examples/math/finite-runge-kutta-midpoint-v0/smt2/bad-rk-midpoint-step-farkas-conflict.smt2"
 );
+const FINITE_HEUN_BAD_STEP: &str = include_str!(
+    "../../../artifacts/examples/math/finite-heun-method-v0/smt2/bad-heun-step-farkas-conflict.smt2"
+);
 const NUMERICAL_LINEAR_ALGEBRA_BAD_JACOBI_ERROR_BOUND: &str = include_str!(
     "../../../artifacts/examples/math/numerical-linear-algebra-v0/smt2/bad-jacobi-error-bound-farkas-conflict.smt2"
 );
@@ -1823,6 +1826,14 @@ fn finite_runge_kutta_midpoint_bad_step_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "finite-runge-kutta-midpoint-v0 bad-rk-midpoint-step SMT-LIB artifact",
         FINITE_RUNGE_KUTTA_MIDPOINT_BAD_STEP,
+    );
+}
+
+#[test]
+fn finite_heun_bad_step_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-heun-method-v0 bad-heun-step SMT-LIB artifact",
+        FINITE_HEUN_BAD_STEP,
     );
 }
 

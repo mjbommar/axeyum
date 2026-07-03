@@ -64,15 +64,15 @@ The current committed data boundary reports:
 - 18 math-field concept rows.
 - 76 bridge-concept rows.
 - 5 example-family rows.
-- 141 non-template math example packs.
-- 929 expected checks.
-- 367 checked proof/evidence rows.
-- 458 replay-only rows.
-- 104 Lean-horizon rows.
-- 141 promoted solver-reuse packs.
+- 142 non-template math example packs.
+- 935 expected checks.
+- 368 checked proof/evidence rows.
+- 462 replay-only rows.
+- 105 Lean-horizon rows.
+- 142 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 141 focused learner-linked packs, with no path-only, index-only, or missing
+- 142 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 This is broad enough that the next work is not "create a few examples." The
@@ -2584,6 +2584,14 @@ Pick one item per commit unless the change is purely navigational.
      through a source-linked QF_LRA/Farkas regression against exact `1/4`
      without claiming general Runge-Kutta order theory, consistency,
      convergence, stability regions, stiffness, or adaptive-step correctness.
+188. Landed: add `finite-heun-method-v0` as an exact finite explicit
+     trapezoidal RK2 time-stepping resource. The pack computes `y' = 2t` from
+     `y(0)=0` with `h=1/2`, records predictor states, endpoint derivatives,
+     averaged slopes, exact solution values, and zero error table, then
+     promotes the malformed first-step claim `1/2` through a source-linked
+     QF_LRA/Farkas regression against exact `1/4` without claiming general
+     RK2 order theory, consistency, convergence, stability regions, stiffness,
+     or adaptive-step correctness.
 
 ## Validation Checklist
 
