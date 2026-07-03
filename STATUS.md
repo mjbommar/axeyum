@@ -15667,6 +15667,24 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-02 (evening)** — **UF+arith model parity, QF_UFLIA at 100%, and the
+  hash_sat diagnosis arc.** (`bff67679`) skeleton-only Bool symbols are now
+  injected in the UFLIA/UFLRA builders too — UFLIA had been *defaulting them to
+  `false`* (a wrong-witness value), UFLRA omitted them; TermId-sorted,
+  replay-gated; both z3 fuzzes DISAGREE=0. (`9037baa2`) both residual QF_UFLIA
+  divisions re-measured at **100% decided** (6→8/8, 0→2/2, DISAGREE=0, PAR-2
+  5.0→0.57 and 20.0→2.29) — movers attributed per-instance to the `3cd6c810`
+  deadline threading. (`c3ed7fe8`, `5536ccd5`) the NAS `hash_sat_*` grind was
+  measured twice-over: first relocated to the offline lazy-arith loop + the
+  CDCL(T) leaf re-search, then the implemented seeding fix *disproved that
+  premise honestly* — the committed leaf fails replay on one nested-congruence
+  literal (321/322 leaves die the same way); the real lever is
+  **congruence-aware model reconstruction** (opaque-app value pinning),
+  documented in P1.6 with the cap raise gated behind it. CI-runner test
+  hardening en route: frontier ratchets and the dispatch budget-excused cap are
+  hardware-relative and now scale/report under `CI=true` (`49534eb2`,
+  `f2dbb773`); route traces structurally end in a `Declined` on any early exit
+  (`8f29423c`, `570ba82d`).
 - **2026-07-02** — **P1.4 reframe + the last honest `#[ignore]` flips green**
   (`86998ea8`): a read-only scoping pass found the e-graph keystone is
   **essentially already built** (hash-cons + backtrackable union-find,
