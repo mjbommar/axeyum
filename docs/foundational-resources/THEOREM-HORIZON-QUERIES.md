@@ -419,6 +419,15 @@ python3 scripts/query-foundational-resources.py checks \
   --pack finite-root-finding-v0 \
   --proof-status lean-horizon \
   --require-any
+
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text secant \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-secant-method-v0 \
+  --proof-status lean-horizon \
+  --require-any
 ```
 
 Hyperplane-separation, Farkas-duality, and Hahn-Banach horizons:

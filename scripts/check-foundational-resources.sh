@@ -637,6 +637,12 @@ python3 scripts/query-foundational-resources.py checks --pack finite-root-findin
 python3 scripts/query-foundational-resources.py checks --pack finite-root-finding-v0 --proof-status replay-only --text rejected --require-any >/dev/null
 python3 scripts/query-foundational-resources.py horizon-frontier --text root-finding --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-root-finding-v0 --proof-status lean-horizon --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-secant-method-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-secant-method-v0 --route Farkas --proof-status checked --text qf-lra-bad-secant-step --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_exact_vs_floating_arithmetic --pack finite-secant-method-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-secant-method-v0 --proof-status replay-only --text rejected --require-any >/dev/null
+python3 scripts/query-foundational-resources.py horizon-frontier --text secant --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-secant-method-v0 --proof-status lean-horizon --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-newton-step-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-newton-step-v0 --proof-status replay-only --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-newton-step-v0 --proof-status lean-horizon --require-any >/dev/null

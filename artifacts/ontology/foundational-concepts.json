@@ -792,6 +792,12 @@
           "notes": "Finite bisection/Newton root-finding replay with separate checked bad-step and bad-width proof rows."
         },
         {
+          "id": "finite-secant-method-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-secant-method-v0",
+          "notes": "Finite secant-method replay with a separate checked bad-step proof row and convergence-theorem horizon."
+        },
+        {
           "id": "finite-newton-step-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-newton-step-v0",
@@ -1474,6 +1480,12 @@
           "notes": "Finite polynomial evaluation, bisection brackets, Newton steps, and bad-step plus bad-width rejections."
         },
         {
+          "id": "finite-secant-method-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-secant-method-v0",
+          "notes": "Finite secant-method polynomial evaluation, exact iterate replay, residual decrease, and checked bad-step rejection."
+        },
+        {
           "id": "finite-divided-differences-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-divided-differences-v0",
@@ -2016,6 +2028,12 @@
           "notes": "Exact rational root-finding iterations with replay-only bad source rows and separate checked bad-step/bad-width proof rows."
         },
         {
+          "id": "finite-secant-method-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-secant-method-v0",
+          "notes": "Exact rational secant-method iterations with replay-only bad source rows and a separate checked bad-step proof row."
+        },
+        {
           "id": "finite-separation-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-separation-v0",
@@ -2219,6 +2237,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-root-finding-v0",
           "notes": "Finite bisection/Newton root-finding replay, separate bad-width proof rows, and convergence-theorem horizon rows."
+        },
+        {
+          "id": "finite-secant-method-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-secant-method-v0",
+          "notes": "Finite secant-method root-finding replay with checked bad-step evidence and convergence-theorem horizon rows."
         },
         {
           "id": "finite-kkt-v0",
@@ -3380,6 +3404,12 @@
           "notes": "One-step bisection/Newton rows replayed exactly while convergence and floating-point stability remain horizon claims."
         },
         {
+          "id": "finite-secant-method-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-secant-method-v0",
+          "notes": "Two finite secant-method rows replay exact rational updates while convergence order, denominator safety, and floating-point stability remain horizon claims."
+        },
+        {
           "id": "finite-taylor-polynomials-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-taylor-polynomials-v0",
@@ -3438,6 +3468,7 @@
             "docs/learn/math/gram-schmidt-end-to-end.md",
             "docs/learn/math/givens-rotation-end-to-end.md",
             "docs/learn/math/householder-reflection-end-to-end.md",
+            "docs/learn/math/secant-method-end-to-end.md",
             "docs/learn/math/taylor-polynomials-end-to-end.md",
             "docs/learn/math/hermite-interpolation-end-to-end.md",
             "docs/learn/math/spline-interpolation-end-to-end.md",
@@ -4935,6 +4966,12 @@
           "notes": "Exact polynomial evaluation, bisection brackets, Newton steps, and checked bad-step plus bad-width rows."
         },
         {
+          "id": "finite-secant-method-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-secant-method-v0",
+          "notes": "Exact polynomial evaluation, secant finite-difference denominators, step replay, residual decrease, and checked bad-step row."
+        },
+        {
           "id": "finite-divided-differences-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-divided-differences-v0",
@@ -5558,6 +5595,12 @@
           "notes": "Finite bisection/Newton replay plus separate checked bad-step and bad-width proof rows for root-finding theorem shadows."
         },
         {
+          "id": "finite-secant-method-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-secant-method-v0",
+          "notes": "Finite secant-method replay plus a separate checked bad-step proof row for root-finding convergence shadows."
+        },
+        {
           "id": "real-analysis-rational-v0",
           "status": "validated",
           "path": "artifacts/examples/math/real-analysis-rational-v0",
@@ -5864,6 +5907,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-root-finding-v0",
           "notes": "Bisection interval replay with separate checked width-conflict rows over exact rational endpoints."
+        },
+        {
+          "id": "finite-secant-method-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-secant-method-v0",
+          "notes": "Secant root-finding replay over exact rational endpoints with a separate checked bad-step row."
         },
         {
           "id": "finite-interval-arithmetic-shadow-v0",
@@ -6290,6 +6339,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-root-finding-v0",
           "notes": "Newton-step rows that reuse exact derivative evaluation."
+        },
+        {
+          "id": "finite-secant-method-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-secant-method-v0",
+          "notes": "Secant-step rows that reuse exact polynomial evaluation without requiring derivative data."
         },
         {
           "id": "finite-newton-step-v0",
@@ -13849,7 +13904,7 @@
           "id": "numerical-linear-algebra-v0",
           "status": "validated",
           "path": "artifacts/examples/math/numerical-linear-algebra-v0",
-          "notes": "Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, interval bounds, inner-product projections, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, GMRES residual-minimization, Lanczos/tridiagonalization, residual, rounding, and perturbation-bound shadows, divided-difference and barycentric interpolation, finite-difference derivative stencils, finite Taylor polynomial replay, finite cubic Hermite interpolation replay, finite cubic spline assembly replay, fixed-step error recurrences, Simpson-rule quadrature, Romberg extrapolation, Euler, Runge-Kutta midpoint, Heun, backward Euler, Crank-Nicolson implicit, Adams-Bashforth explicit multistep, and BDF2 implicit multistep time-stepping shadows, Jacobian/Hessian replay, finite root-finding, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."
+          "notes": "Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, interval bounds, inner-product projections, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, GMRES residual-minimization, Lanczos/tridiagonalization, residual, rounding, and perturbation-bound shadows, divided-difference and barycentric interpolation, finite-difference derivative stencils, finite Taylor polynomial replay, finite cubic Hermite interpolation replay, finite cubic spline assembly replay, fixed-step error recurrences, Simpson-rule quadrature, Romberg extrapolation, Euler, Runge-Kutta midpoint, Heun, backward Euler, Crank-Nicolson implicit, Adams-Bashforth explicit multistep, and BDF2 implicit multistep time-stepping shadows, Jacobian/Hessian replay, finite root-finding/secant replay, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."
         },
         {
           "id": "bounded-dynamics-v0",
@@ -14138,6 +14193,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-schur-complement-v0",
           "notes": "Finite Schur-Complement Checks"
+        },
+        {
+          "id": "finite-secant-method-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-secant-method-v0",
+          "notes": "Finite Secant Method Checks"
         },
         {
           "id": "finite-shifted-qr-step-v0",
@@ -14703,7 +14764,7 @@
           "id": "real-analysis-rational-v0",
           "status": "validated",
           "path": "artifacts/examples/math/real-analysis-rational-v0",
-          "notes": "Rational interval/ball checks, bounded epsilon-delta samples, algebraic factorization, divided-difference and barycentric interpolation, finite-difference derivative stencils, finite Taylor polynomial replay, finite cubic Hermite interpolation replay, finite cubic spline assembly replay, fixed-decimal rounding shadows, Riemann-sum, Simpson-rule, and Romberg quadrature shadows, multivariable-calculus, Newton-step, Runge-Kutta midpoint, Heun-method, backward Euler, Crank-Nicolson, Adams-Bashforth, and BDF2 shadows, and proof horizons."
+          "notes": "Rational interval/ball checks, bounded epsilon-delta samples, algebraic factorization, divided-difference and barycentric interpolation, finite-difference derivative stencils, finite Taylor polynomial replay, finite cubic Hermite interpolation replay, finite cubic spline assembly replay, finite secant/root-finding replay, fixed-decimal rounding shadows, Riemann-sum, Simpson-rule, and Romberg quadrature shadows, multivariable-calculus, Newton-step, Runge-Kutta midpoint, Heun-method, backward Euler, Crank-Nicolson, Adams-Bashforth, and BDF2 shadows, and proof horizons."
         },
         {
           "id": "affine-geometry-v0",
@@ -14992,6 +15053,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-sdp-v0",
           "notes": "Finite SDP Checks"
+        },
+        {
+          "id": "finite-secant-method-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-secant-method-v0",
+          "notes": "Finite Secant Method Checks"
         },
         {
           "id": "finite-separation-v0",

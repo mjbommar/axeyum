@@ -1522,9 +1522,9 @@ Exit criteria:
   QF_LRA/Farkas infeasibility, Boolean CNF/LRAT refutations, integer/count
   Diophantine obstructions, and fixed-width QF_BV/DRAT rows.
 - At least 12 validated example packs.
-  Status: 154 non-template math example packs validate.
+  Status: 155 non-template math example packs validate.
 - At least 6 packs with checked proof/evidence routes.
-  Status: 154 non-template packs have at least one `checked` expected-result row.
+  Status: 155 non-template packs have at least one `checked` expected-result row.
 - At least one downstream consumer can read the data without repository-internal
   knowledge.
   Status: `scripts/consume-foundational-resources.py` reads the committed atlas
@@ -3679,6 +3679,16 @@ source-linked QF_LRA/Farkas artifact against exact `1/3`. General
 Romberg/Richardson convergence, asymptotic error expansions, adaptive
 quadrature behavior, floating-point quadrature correctness, and numerical
 stability stay in future Lean/theorem or numerical-honesty lanes.
+The real-analysis/numerical-analysis layer now adds
+`finite-secant-method-v0` as the 155th non-template math pack. Exact rational
+replay checks two secant-method updates for `x^2 - 2`: the first step from
+`1, 2` reaches `4/3`, the second step from `4/3, 3/2` reaches `24/17`, and the
+fixed residual decreases from `1/4` to `2/289`. A source-linked QF_LRA/Farkas
+artifact rejects the malformed first next-value claim `3/2` against exact
+`4/3`. General secant convergence order, nonzero-denominator preconditions,
+bracketing/globalization behavior, root-existence hypotheses, floating-point
+implementation correctness, and numerical stability stay in future
+Lean/theorem or numerical-honesty lanes.
 Continue by adding the next curriculum-adjacent pack from the field ledger
 or by replacing finite enumeration routes with emitted, checked proof objects
 where appropriate.

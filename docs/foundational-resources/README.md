@@ -277,6 +277,10 @@ schemas, examples, and validation workflows.
   checking, checked rejection of false Newton-iterate and bisection-width
   claims, and a
   root-finding-convergence Lean-horizon row.
+- [`artifacts/examples/math/finite-secant-method-v0/`](../../artifacts/examples/math/finite-secant-method-v0/)
+  validates two exact secant-method steps for `x^2 - 2`, fixed residual-decrease
+  checking, checked rejection of a false secant next value, and a secant
+  convergence/stability Lean-horizon row.
 - [`artifacts/examples/math/finite-separation-v0/`](../../artifacts/examples/math/finite-separation-v0/)
   validates exact convex-combination replay, separating-hyperplane dot-product
   replay, supporting-face checks, checked rejection of a false separator, and a
@@ -703,6 +707,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/se
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/bounded-monotone-sequence-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-recurrence-prefix-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-root-finding-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-secant-method-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-separation-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/metric-continuity-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-compactness-v0

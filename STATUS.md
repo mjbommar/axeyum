@@ -240,6 +240,22 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite secant method resource landed.**
+  `finite-secant-method-v0` now gives the real-analysis, calculus, polynomial,
+  rational, and numerical-analysis lanes a compact exact secant-method example:
+  it replays the `x^2 - 2` secant step from `1,2` to `4/3`, the follow-up step
+  from `4/3,3/2` to `24/17`, and the fixed residual decrease
+  `2/289 < 1/4`; rejects the malformed first next-value claim `3/2` versus
+  exact `4/3`; and routes that scalar conflict through a source-linked
+  QF_LRA/Farkas row. The focused learner page, analysis/numerical query guide,
+  exact-vs-floating and bounded-theorem-shadow bridge rows, validator, resource
+  smoke queries, generated dashboards, and `math_resource_lra_routes`
+  regression keep this fixed exact secant replay separate from general
+  convergence order, denominator-safety, bracketing/globalization,
+  floating-point implementation correctness, and numerical stability. The
+  public summary now reports 122 concept rows, 155 packs, 1008 expected checks,
+  381 checked rows, 509 replay-only rows, 118 Lean-horizon rows, and 155
+  promoted solver-reuse packs.
 - **Finite Romberg extrapolation resource landed.**
   `finite-romberg-extrapolation-v0` now gives the real-analysis, calculus,
   polynomial, and numerical-analysis lanes a compact exact
@@ -255,8 +271,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   replay separate from general Richardson/Romberg convergence, asymptotic
   error expansions, adaptive quadrature, floating-point quadrature
   correctness, and numerical stability. The public summary now reports 122
-  concept rows, 154 packs, 1002 expected checks, 380 checked rows, 505
-  replay-only rows, 117 Lean-horizon rows, and 154 promoted solver-reuse
+  concept rows, 155 packs, 1008 expected checks, 381 checked rows, 509
+  replay-only rows, 118 Lean-horizon rows, and 155 promoted solver-reuse
   packs.
 - **Finite cubic spline interpolation resource landed.**
   `finite-cubic-spline-interpolation-v0` now gives the real-analysis,
@@ -272,9 +288,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `math_resource_lra_routes` regression keep this fixed exact spline replay
   separate from general spline existence/uniqueness, convergence, error,
   shape-preservation, knot-selection, and floating-point spline-evaluation
-  theory. The public summary now reports 122 concept rows, 154 packs, 1002
-  expected checks, 380 checked rows, 505 replay-only rows, 117 Lean-horizon
-  rows, and 154 promoted solver-reuse packs.
+  theory. The public summary now reports 122 concept rows, 155 packs, 1008
+  expected checks, 381 checked rows, 509 replay-only rows, 118 Lean-horizon
+  rows, and 155 promoted solver-reuse packs.
 - **Finite cubic Hermite interpolation resource landed.**
   `finite-cubic-hermite-interpolation-v0` now gives the real-analysis,
   calculus, and numerical-analysis lanes a compact endpoint value/slope

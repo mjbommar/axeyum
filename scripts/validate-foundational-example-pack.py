@@ -11069,6 +11069,193 @@ def validate_finite_root_finding(expected: dict[str, Any]) -> None:
     require_string("root finding future_checker", data.get("future_checker"))
 
 
+def validate_secant_step_trace(context: str, values: dict[str, Any]) -> dict[str, Any]:
+    method = values.get("method")
+    if method != "secant_method_step":
+        fail(f"{context}.method must be secant_method_step")
+    polynomial = require_polynomial(f"{context}.polynomial", values.get("polynomial"))
+    x0 = require_fraction(f"{context}.x0", values.get("x0"))
+    x1 = require_fraction(f"{context}.x1", values.get("x1"))
+    f_x0 = require_fraction(f"{context}.f_x0", values.get("f_x0"))
+    f_x1 = require_fraction(f"{context}.f_x1", values.get("f_x1"))
+    delta_x = require_fraction(f"{context}.delta_x", values.get("delta_x"))
+    value_delta = require_fraction(f"{context}.value_delta", values.get("value_delta"))
+    secant_correction = require_fraction(
+        f"{context}.secant_correction",
+        values.get("secant_correction"),
+    )
+    next_value = require_fraction(f"{context}.next", values.get("next"))
+    f_next = require_fraction(f"{context}.f_next", values.get("f_next"))
+    residual_before = require_fraction(
+        f"{context}.residual_before",
+        values.get("residual_before"),
+    )
+    residual_after = require_fraction(
+        f"{context}.residual_after",
+        values.get("residual_after"),
+    )
+    if x0 == x1:
+        fail(f"{context} requires distinct source iterates")
+    if f_x0 != polynomial_eval(polynomial, x0):
+        fail(f"{context}.f_x0 is incorrect")
+    if f_x1 != polynomial_eval(polynomial, x1):
+        fail(f"{context}.f_x1 is incorrect")
+    if delta_x != x1 - x0:
+        fail(f"{context}.delta_x is incorrect")
+    if value_delta != f_x1 - f_x0:
+        fail(f"{context}.value_delta is incorrect")
+    if value_delta == 0:
+        fail(f"{context}.value_delta must be nonzero")
+    if secant_correction != f_x1 * delta_x / value_delta:
+        fail(f"{context}.secant_correction is incorrect")
+    if next_value != x1 - secant_correction:
+        fail(f"{context}.next is incorrect")
+    if f_next != polynomial_eval(polynomial, next_value):
+        fail(f"{context}.f_next is incorrect")
+    if residual_before != abs(f_x1):
+        fail(f"{context}.residual_before must be |f_x1|")
+    if residual_after != abs(f_next):
+        fail(f"{context}.residual_after must be |f_next|")
+    return {
+        "polynomial": polynomial,
+        "x0": x0,
+        "x1": x1,
+        "f_x0": f_x0,
+        "f_x1": f_x1,
+        "next": next_value,
+        "f_next": f_next,
+        "residual_before": residual_before,
+        "residual_after": residual_after,
+    }
+
+
+def validate_finite_secant_method(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    first = checks["secant-first-step-replay"]
+    if first["expected_result"] != "sat":
+        fail("secant-first-step-replay must expect sat")
+    if first.get("proof_status") != "replay-only":
+        fail("secant-first-step-replay must be replay-only")
+    if first.get("validation") != "exact_rational_secant_step_replay":
+        fail("secant-first-step-replay validation is incorrect")
+    first_values = single_witness_values(first, witnesses)
+    first_replay = validate_secant_step_trace("first secant row", first_values)
+    if first_replay["next"] != Fraction(4, 3):
+        fail("secant-first-step-replay must compute next = 4/3")
+    if first_replay["f_next"] != Fraction(-2, 9):
+        fail("secant-first-step-replay must compute f_next = -2/9")
+
+    second = checks["secant-second-step-replay"]
+    if second["expected_result"] != "sat":
+        fail("secant-second-step-replay must expect sat")
+    if second.get("proof_status") != "replay-only":
+        fail("secant-second-step-replay must be replay-only")
+    if second.get("validation") != "exact_rational_secant_step_replay":
+        fail("secant-second-step-replay validation is incorrect")
+    second_values = single_witness_values(second, witnesses)
+    second_replay = validate_secant_step_trace("second secant row", second_values)
+    if second_replay["polynomial"] != first_replay["polynomial"]:
+        fail("secant-second-step-replay must use the first row polynomial")
+    if second_replay["x0"] != first_replay["next"]:
+        fail("secant-second-step-replay must start from the first row's next value")
+    if second_replay["f_x0"] != first_replay["f_next"]:
+        fail("secant-second-step-replay must reuse the first row residual")
+    if second_replay["next"] != Fraction(24, 17):
+        fail("secant-second-step-replay must compute next = 24/17")
+    if second_replay["f_next"] != Fraction(-2, 289):
+        fail("secant-second-step-replay must compute f_next = -2/289")
+
+    residual = checks["secant-residual-decrease-witness"]
+    if residual["expected_result"] != "sat":
+        fail("secant-residual-decrease-witness must expect sat")
+    if residual.get("proof_status") != "replay-only":
+        fail("secant-residual-decrease-witness must be replay-only")
+    if residual.get("validation") != "exact_rational_secant_residual_replay":
+        fail("secant-residual-decrease-witness validation is incorrect")
+    residual_values = single_witness_values(residual, witnesses)
+    residual_replay = validate_secant_step_trace("secant residual row", residual_values)
+    if residual_replay["next"] != second_replay["next"]:
+        fail("secant-residual-decrease-witness must cite the second step")
+    if residual_replay["residual_after"] >= residual_replay["residual_before"]:
+        fail("secant-residual-decrease-witness must strictly decrease the residual")
+
+    bad = checks["bad-secant-step-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-secant-step-rejected must expect unsat")
+    if bad.get("proof_status") != "replay-only":
+        fail("bad-secant-step-rejected must be replay-only")
+    if bad.get("validation") != "exact_rational_bad_secant_step_replay":
+        fail("bad-secant-step-rejected validation is incorrect")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "sqrt-two-secant-first-step":
+        fail("bad-secant-step-rejected must cite the first secant witness")
+    computed = require_fraction("bad secant computed_next", data.get("computed_next"))
+    claimed = require_fraction("bad secant claimed_next", data.get("claimed_next"))
+    gap = require_fraction("bad secant secant_next_gap", data.get("secant_next_gap"))
+    if computed != first_replay["next"]:
+        fail("bad-secant-step-rejected computed_next must match first replay")
+    if computed == claimed:
+        fail("bad-secant-step-rejected malformed claim must disagree with replay")
+    if claimed - computed != gap:
+        fail("bad-secant-step-rejected secant_next_gap is incorrect")
+    if gap <= 0:
+        fail("bad-secant-step-rejected secant_next_gap must be positive")
+    for forbidden in ("smt2_artifact", "farkas_regression", "certificate"):
+        if forbidden in data:
+            fail("bad-secant-step-rejected must leave checked evidence to qf-lra-bad-secant-step")
+    if "separate qf-lra-bad-secant-step" not in bad.get("notes", ""):
+        fail("bad-secant-step-rejected notes must name the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-secant-step"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-secant-step must expect unsat")
+    if qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-secant-step must be checked")
+    if qf_bad.get("validation") != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-secant-step must use exact_rational_farkas_evidence")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_witness") != "sqrt-two-secant-first-step":
+        fail("qf-lra-bad-secant-step must cite the first secant witness")
+    if qf_data.get("source_replay_row") != "bad-secant-step-rejected":
+        fail("qf-lra-bad-secant-step must cite the replay row")
+    qf_computed = require_fraction("qf secant computed_next", qf_data.get("computed_next"))
+    qf_claimed = require_fraction("qf secant claimed_next", qf_data.get("claimed_next"))
+    if qf_computed != computed or qf_claimed != claimed:
+        fail("qf-lra-bad-secant-step data must match the replay row")
+    conflict = qf_data.get("farkas_conflict")
+    require_string("qf secant farkas_conflict", conflict)
+    if conflict != "secant_next = 4/3 and secant_next = 3/2":
+        fail("qf-lra-bad-secant-step must document the Farkas conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf secant smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-secant-method-v0/smt2/"
+        "bad-secant-step-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-lra-bad-secant-step smt2_artifact must name the checked source artifact")
+    check_source("qf secant smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf secant farkas_regression", regression)
+    if "finite_secant_method_bad_step_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-secant-step must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf secant certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-secant-step certificate must document checked Farkas evidence")
+
+    horizon = checks["general-secant-method-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-secant-method-theory-lean-horizon must be not-run")
+    if horizon.get("proof_status") != "lean-horizon":
+        fail("general-secant-method-theory-lean-horizon must remain lean-horizon")
+    horizon_data = horizon.get("data", {})
+    require_string("secant horizon target_theorem_shape", horizon_data.get("target_theorem_shape"))
+    require_string("secant horizon future_checker", horizon_data.get("future_checker"))
+
+
 def validate_calculus_algebraic_shadow(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -36016,6 +36203,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_recurrence_prefix(expected)
     if metadata["id"] == "finite-root-finding-v0":
         validate_finite_root_finding(expected)
+    if metadata["id"] == "finite-secant-method-v0":
+        validate_finite_secant_method(expected)
     if metadata["id"] == "finite-separation-v0":
         validate_finite_separation(expected)
     if metadata["id"] == "function-composition-v0":

@@ -1,0 +1,117 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-secant-method-v0",
+  "witnesses": [
+    {
+      "id": "sqrt-two-secant-first-step",
+      "description": "One exact secant step for f(x) = x^2 - 2 from x0 = 1 and x1 = 2.",
+      "values": {
+        "method": "secant_method_step",
+        "polynomial": ["-2", "0", "1"],
+        "x0": "1",
+        "x1": "2",
+        "f_x0": "-1",
+        "f_x1": "2",
+        "delta_x": "1",
+        "value_delta": "3",
+        "secant_correction": "2/3",
+        "next": "4/3",
+        "f_next": "-2/9",
+        "residual_before": "2",
+        "residual_after": "2/9"
+      }
+    },
+    {
+      "id": "sqrt-two-secant-second-step",
+      "description": "A second exact secant step for f(x) = x^2 - 2 from x0 = 4/3 and x1 = 3/2.",
+      "values": {
+        "method": "secant_method_step",
+        "polynomial": ["-2", "0", "1"],
+        "x0": "4/3",
+        "x1": "3/2",
+        "f_x0": "-2/9",
+        "f_x1": "1/4",
+        "delta_x": "1/6",
+        "value_delta": "17/36",
+        "secant_correction": "3/34",
+        "next": "24/17",
+        "f_next": "-2/289",
+        "residual_before": "1/4",
+        "residual_after": "2/289"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "secant-first-step-replay",
+      "claim": "The listed secant step from x0 = 1 and x1 = 2 for x^2 - 2 reaches 4/3.",
+      "expected_result": "sat",
+      "validation": "exact_rational_secant_step_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["sqrt-two-secant-first-step"],
+      "notes": "The validator recomputes f(x0), f(x1), the secant denominator, correction, next iterate, and residual over exact rationals."
+    },
+    {
+      "id": "secant-second-step-replay",
+      "claim": "The listed second secant step from x0 = 4/3 and x1 = 3/2 reaches 24/17.",
+      "expected_result": "sat",
+      "validation": "exact_rational_secant_step_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["sqrt-two-secant-second-step"],
+      "notes": "This row checks a second exact secant update without claiming convergence."
+    },
+    {
+      "id": "secant-residual-decrease-witness",
+      "claim": "For the listed second secant step, |f(24/17)| < |f(3/2)|.",
+      "expected_result": "sat",
+      "validation": "exact_rational_secant_residual_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["sqrt-two-secant-second-step"],
+      "notes": "The validator recomputes both residuals over exact rationals and checks only this fixed strict decrease."
+    },
+    {
+      "id": "bad-secant-step-rejected",
+      "claim": "The secant step from x0 = 1 and x1 = 2 for x^2 - 2 reaches 3/2.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_bad_secant_step_replay",
+      "proof_status": "replay-only",
+      "data": {
+        "source_witness": "sqrt-two-secant-first-step",
+        "computed_next": "4/3",
+        "claimed_next": "3/2",
+        "secant_next_gap": "1/6"
+      },
+      "notes": "Exact replay computes the secant next value as 4/3, so the claimed value 3/2 is rejected; the separate qf-lra-bad-secant-step row owns the checked Farkas evidence."
+    },
+    {
+      "id": "qf-lra-bad-secant-step",
+      "claim": "The fixed malformed secant-step claim is linearly inconsistent.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_farkas_evidence",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "sqrt-two-secant-first-step",
+        "source_replay_row": "bad-secant-step-rejected",
+        "computed_next": "4/3",
+        "claimed_next": "3/2",
+        "farkas_conflict": "secant_next = 4/3 and secant_next = 3/2",
+        "smt2_artifact": "artifacts/examples/math/finite-secant-method-v0/smt2/bad-secant-step-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_secant_method_bad_step_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes the secant next value as 4/3, while the malformed row claims 3/2; the source QF_LRA artifact isolates that scalar contradiction for Farkas checking."
+    },
+    {
+      "id": "general-secant-method-theory-lean-horizon",
+      "claim": "General secant-method convergence, convergence order, denominator-zero preconditions, bracketing/globalization behavior, and floating-point stability require future theorem or numerical-honesty resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "For the secant method, prove root existence assumptions, nonzero-denominator preconditions, convergence and order of convergence, hybrid bracketing/globalization conditions, and stability separately from fixed rational replay rows.",
+        "future_checker": "Lean theorem statements for secant convergence and preconditions plus separate numerical-honesty or QF_FP artifacts for floating-point implementations."
+      },
+      "notes": "The finite exact rows are checked resources for two rational secant updates, not theorem evidence for arbitrary functions, starting points, convergence rates, or floating-point implementations."
+    }
+  ]
+}

@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "id": "finite-secant-method-v0",
+  "title": "Finite Secant Method Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_numerical_analysis",
+    "field_real_analysis",
+    "curriculum_calculus",
+    "curriculum_polynomials",
+    "curriculum_reals",
+    "curriculum_rationals",
+    "bridge_exact_vs_floating_arithmetic",
+    "bridge_bounded_family_asymptotic_boundary"
+  ],
+  "field_ids": [
+    "numerical_analysis",
+    "real_analysis"
+  ],
+  "curriculum_nodes": [
+    "calculus",
+    "polynomials",
+    "reals",
+    "rationals"
+  ],
+  "axeyum_fragments": [
+    "finite algorithm replay",
+    "finite root-finding replay",
+    "polynomial evaluation",
+    "LRA (exact rationals)",
+    "QF_LRA",
+    "Farkas",
+    "finite replay",
+    "Lean horizon",
+    "numerical-honesty metadata"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-secant-method-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite secant-method bad step QF_LRA/Farkas regression seed",
+    "pressure": "Exact rational secant replay for f(x)=x^2-2 computes secant_next = 4/3 from x0=1 and x1=2, while a malformed row claims secant_next = 3/2, isolating a compact scalar equality conflict for the Farkas route.",
+    "evidence": [
+      "qf-lra-bad-secant-step"
+    ],
+    "next_step": "Promote additional secant/root-finding rows only when they add distinct denominator-safety, bracketing, residual-bound, hybrid-method, floating-point, or theorem-reconstruction pressure; keep general convergence order and stability claims in future Lean or numerical-honesty lanes."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/03-destinations/calculus.md",
+    "docs/curriculum/02-structures/polynomials.md",
+    "docs/curriculum/01-number-systems/reals.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/secant-method-end-to-end.md",
+    "artifacts/examples/math/finite-secant-method-v0/smt2/bad-secant-step-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+  ],
+  "expected_results": [
+    "secant-first-step-replay",
+    "secant-second-step-replay",
+    "secant-residual-decrease-witness",
+    "bad-secant-step-rejected",
+    "qf-lra-bad-secant-step",
+    "general-secant-method-theory-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode the fixed polynomial, source iterates, function values, finite-difference denominator, secant correction, next iterate, and residuals as deterministic rational replay obligations.",
+    "Route the false secant next value through checked QF_LRA/Farkas evidence after replay computes the exact value.",
+    "Expose the pack through root-finding, exact-vs-floating, calculus, real-analysis, numerical-analysis, and learner query surfaces.",
+    "Keep general secant convergence, convergence order, denominator-zero preconditions, bracketing/globalization behavior, floating-point implementation correctness, and numerical-stability claims marked as future Lean or numerical-honesty work until formal routes exist."
+  ]
+}

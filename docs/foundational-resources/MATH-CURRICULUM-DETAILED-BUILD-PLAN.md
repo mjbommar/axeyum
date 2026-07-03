@@ -62,15 +62,15 @@ The committed resource query currently reports:
 - 18 field rows.
 - 76 bridge-concept rows.
 - 5 example-family rows.
-- 154 non-template math packs.
-- 1002 expected checks.
-- 380 checked proof/evidence rows.
-- 505 replay-only rows.
-- 117 Lean-horizon rows.
-- 154 promoted solver-reuse packs.
+- 155 non-template math packs.
+- 1008 expected checks.
+- 381 checked proof/evidence rows.
+- 509 replay-only rows.
+- 118 Lean-horizon rows.
+- 155 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 154 focused learner-linked packs, with no path-only, index-only, or missing
+- 155 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 The next phase is therefore a depth phase, not a seed phase. New packs are
@@ -158,7 +158,7 @@ Exit criteria:
 - No lesson implies a finite bounded check proves an unbounded theorem.
 
 Current audit: [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md) records that
-all 154 current non-template packs satisfy the focused-lesson side of this
+all 155 current non-template packs satisfy the focused-lesson side of this
 gate. Keep this true as new packs land.
 
 ### Wave 3: Proof-Route Depth
@@ -2740,6 +2740,15 @@ Pick one row per commit unless the change is purely navigational.
      separate from general Richardson/Romberg convergence, asymptotic error
      expansions, adaptive quadrature, floating-point quadrature, and numerical
      stability theory.
+313. Landed: add `finite-secant-method-v0` as an exact finite secant-method
+     resource. The pack replays two `x^2 - 2` secant steps, computes
+     `4/3` from `1,2`, computes `24/17` from `4/3,3/2`, checks the fixed
+     residual decrease `2/289 < 1/4`, then adds `qf-lra-bad-secant-step` as
+     the source-linked Farkas row for the false next-value claim `3/2` versus
+     exact `4/3`. The learner and query pages keep this finite exact secant
+     shadow separate from convergence order, nonzero-denominator hypotheses,
+     bracketing/globalization, floating-point implementation correctness, and
+     numerical stability theory.
 
 ## Validation Checklist
 
