@@ -1,5 +1,15 @@
 # DRY across MIR & LLVM — the shared reflection core
 
+> **Now first-class:** this prototype series (rounds Q–U below) is the basis on
+> which the verified-systems trajectory was adopted as **Track 5**
+> ([ADR-0056](../../research/09-decisions/adr-0056-verified-systems-track.md),
+> 2026-07-06). The productization plan — crate-ifying these reflectors, a full
+> `.ll` parser, MIR extraction, contracts, kernel obligations, the fuzz-oracle
+> loop, and a measured external target — is
+> [`docs/plan/track-5-verified-systems/`](../../plan/track-5-verified-systems/README.md)
+> (this file is P5.1's starting inventory). This note remains the running
+> design log of the prototype rounds.
+>
 > **Status:** landed (2026-07-02). Two front ends reflect *real compiled code*
 > into `axeyum-ir` terms — MIR (`mir_reflection.rs`) and LLVM IR
 > (`llvm_reflection.rs`). They duplicated a real core; this note's plan factored

@@ -19,6 +19,12 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
 - [`track-3-proof-lean/`](track-3-proof-lean/README.md) — Proofs & Lean.
 - [`track-4-usecases-frontend/`](track-4-usecases-frontend/README.md) — Use Cases
   & Frontend.
+- [`track-5-verified-systems/`](track-5-verified-systems/README.md) — Verified
+  Systems (IR reflection): the seL4-inspired application trajectory — reflect
+  compiled Rust (MIR + LLVM IR) into the solver, discharge panic-freedom /
+  memory-safety / constant-time / equivalence / protocol obligations
+  push-button with certificates (adopted by
+  [ADR-0056](../research/09-decisions/adr-0056-verified-systems-track.md)).
 - [`references/`](references/README.md) — the distilled top-down review of the
   reference solvers this plan is built on (Z3, cvc5, bitwuzla, CaDiCaL, Kissat,
   Carcara, lean4, nanoda_lib, lean-smt, drat-trim).

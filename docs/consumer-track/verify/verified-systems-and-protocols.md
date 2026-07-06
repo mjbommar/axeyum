@@ -1,13 +1,20 @@
-# Verified systems & protocols — a horizon note for `axeyum-verify`
+# Verified systems & protocols — the Track 5 application charter
 
-> **Status:** research / design note (2026-06-29). Forward-looking. It does **not**
-> change the shipped positioning of `axeyum-verify` (a pure-Rust, certifying,
-> *bounded* panic-safety verifier with no annotation burden, positioned against
-> Kani — see [`PLAN.md`](PLAN.md) and [`STATUS.md`](STATUS.md)). It works
-> *backwards* from an ambitious application domain — **systems and network-protocol
-> code, in the spirit of seL4** — to a concrete, prioritized backlog that the
-> existing `#[axeyum::verify]` surface can start delivering on **today**, and names
-> the rungs above it.
+> **Status: adopted as a first-class goal (2026-07-06,
+> [ADR-0056](../../research/09-decisions/adr-0056-verified-systems-track.md)).**
+> Originally a horizon note (2026-06-29); the prototype rounds Q–U
+> (2026-07-02/03 — see
+> [`reflect-common-abstraction.md`](reflect-common-abstraction.md)) proved the
+> IR-reflection core, and the engineering plan now lives in
+> [`docs/plan/track-5-verified-systems/`](../../plan/track-5-verified-systems/README.md)
+> (P5.1 front end → P5.2 contracts → P5.3 kernel obligations → P5.4 fuzz-oracle
+> loop → P5.5 measured external target). This file remains the *charter*: it
+> works *backwards* from the application domain — **systems and
+> network-protocol code, in the spirit of seL4** — to the capability ladder and
+> the prioritized backlog. It still does **not** change the shipped positioning
+> of `axeyum-verify` (a pure-Rust, certifying, *bounded* panic-safety verifier
+> with no annotation burden, positioned against Kani — see [`PLAN.md`](PLAN.md)
+> and [`STATUS.md`](STATUS.md)); Track 5 is the trajectory above it.
 
 ## 1. The end goal (work backwards from here)
 

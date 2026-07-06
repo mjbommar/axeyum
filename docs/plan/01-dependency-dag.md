@@ -1,7 +1,7 @@
 # 01 — Dependency DAG, keystones, and execution order
 
 This is the shape of the work: what unblocks what, where the keystones are, and
-the order to actually do it in. The plan is four parallel tracks, but they are
+the order to actually do it in. The plan is five parallel tracks, but they are
 not independent — the arrows below are the real constraints.
 
 ## The cross-track DAG
@@ -43,6 +43,12 @@ not independent — the arrows below are the real constraints.
   │ {P3.8 interpolation + P2.6 MBP + P1.5 CDCL(T)} ─► P4.6 CHC/Horn (PDR/Spacer, unbounded invariants) │
   │                                                   P4.7 synthesis/abduction ◄ needs P2.6 + P3.8     │
   └───────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+  TRACK 5: VERIFIED SYSTEMS (IR REFLECTION) — ADR-0056; demand-pull, NOT keystone-blocked
+  prototype scaffolds (done, rounds Q–U) ─► P5.1 reflection front end ─┬─► P5.2 contracts/modular ─┐
+  (eager pipeline suffices for v1;                                     ├─► P5.4 fuzz-oracle loop   ├─► P5.5 external target (measured)
+   P1.4/P1.5 + lazy arrays make it warmer later)                       └─► P5.3 kernel obligations ┘
+  consumes: QF_BV/QF_ABV (shipped) · TransitionSystem/PDR/k-induction (shipped) · Track 3 certificates as they land
 ```
 
 ## The two keystones

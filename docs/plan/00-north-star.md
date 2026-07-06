@@ -52,6 +52,36 @@ reached fragment by fragment. A fragment is at **Z3 parity** when:
    proof terms (the lean-smt-style bridge), so axeyum can serve as a Lean tactic
    backend.
 
+## Definition of done — the verified-systems trajectory (Track 5)
+
+The **application-level** destination, adopted as first-class by
+[ADR-0056](../research/09-decisions/adr-0056-verified-systems-track.md)
+(2026-07-06): `Rust + axeyum` as a natural, low-ceremony way to build systems
+and network-protocol code — the seL4-inspired goal — whose safety- and
+correctness-critical core carries machine-checkable evidence. Z3 parity and
+Lean parity are the *capability* yardsticks; this is what the capabilities are
+**for**. Track 5 v1 is done when:
+
+1. **IR-level front end** — the MIR + LLVM IR reflection consumes real `cargo`
+   build artifacts (not curated fixtures), with contracts making calls modular
+   and loops bridged to the unbounded engines.
+2. **The kernel obligation families ship** — panic-freedom (overflow /
+   division / bounds, from the compiler's own checks), constant-time
+   (2-safety), cross-IR/cross-profile translation-validation, bounded
+   memory/page-table invariants, and protocol-FSM refinement — each
+   push-button, each with replayed or certified evidence.
+3. **The fuzz loop is one harness** — proofs where decidable, solver-witness
+   seeds and directed fuzz where not, the three outcomes never conflated.
+4. **Measured on someone else's code** — at least one external Rust systems
+   target with a committed scoreboard result (module verified or bug
+   found+reproduced), DISAGREE=0, wall-times recorded.
+
+What Track 5 never claims (the honesty boundary): seL4 parity, whole-kernel
+interactive functional correctness, or source-level Rust semantics — we verify
+what the compiler produced, post-borrowck and post-optimization, and the
+cross-IR equivalence proofs are what let us trust both views at once. Plan:
+[`track-5-verified-systems/`](track-5-verified-systems/README.md).
+
 ## What is already true (the starting line, 2026-06-15)
 
 - Broad decidable+arithmetic foundation, ~63k LoC Rust, pure (no C/C++ default).
