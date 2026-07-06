@@ -89,8 +89,9 @@ increment at a time and record each one.
 **Immediate next focus (2026-07-06, post-sprint rotation per the 6th
 periodic review): bank the string sprint's evidence, then the
 multiply-across-theories keystones.** The 2026-07-03…06 string sprint is
-complete and measured: **QF_S 52→74 (39%→55%), QF_SLIA 15/50, totals
-695/992 decided, DISAGREE=0 vs both oracles at every step** — Phase A
+complete and measured: **QF_S 52→78 (39%→58%), QF_SLIA 18/50, ~707/992
+decided (see the generated scoreboard — string counts are not hand-copied),
+DISAGREE=0 vs both oracles at every step** — Phase A
 (ADR-0052 len↔LIA + gate), Phase B (ADR-0053 word core, both directions,
 independently-checked derivations), the P1.5 CDCL(T) integration
 (ADR-0055, QF_S online default-on), Phase C through T-C.6 (ADR-0054
@@ -114,9 +115,15 @@ widening; `nra_degree` frontier 2/6 shows the headroom).
 the pre-push hook gates the pushed SHA incl. the ~6s `:status` corpus
 sweep (a wrong verdict must not leave the machine); STATUS truncated
 22,349→~600 lines with full archives (task #27); Track 5 (Verified
-Systems, ADR-0056) adopted by the concurrent lane — the review flags the
-P4.2/P5.1 symexec overlap for a single-owner decision and sequences
-Track 5 behind the Track 1/3 keystones it consumes.
+Systems, ADR-0056) adopted by the concurrent lane. **P4.2/P5.1 symexec
+overlap — DECIDED (was flagged twice; now resolved):** Track 4's
+`explore_cfg`/`SymbolicExecutor` is the single owner of the CFG
+symbolic-execution engine; Track 5's P5.1 IR reflectors CONSUME it (feed it
+reflected `axeyum-ir` CFG states) rather than build a parallel executor.
+Track 5 is sequenced behind the Track 1/3 keystones it consumes (the driver,
+the Lean ladder) — it advances where integration-independent (reflection,
+panic-spec extraction) but its solver-facing obligations ride the shared
+engine.
 **Standing from 2026-07-03:** the first committed PAR-2 head-to-head
 exists (`582ecba8`; the QF_BV parity lever is reduction depth, not CEGAR);
 the budget-excused-cap audit found two healthy sites; the quiet-box

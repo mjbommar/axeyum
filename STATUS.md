@@ -305,21 +305,28 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-06 (evening) — post-sprint rotation per the 6th periodic review.**
-  The string sprint is banked: **QF_S 74/134 (55%), QF_SLIA 15/50, totals
-  695/992 decided, 640 oracle-compared, DISAGREE=0** (bounded pre-check →
-  ADR-0052 gate → word core T-B.* → code↔LIA bridge → derivative-engine
-  membership T-C.5 → online CDCL(T) route with word+membership atoms T-C.6;
-  the \u-escape wrong-verdict class fixed on main; the vacuous-view harness
-  hole closed structurally; the pre-push hook gates the pushed SHA). Track 5
-  (Verified Systems, ADR-0056) adopted by the concurrent lane. **Rotation
-  (6th review): (1) reconstruct the fresh string certificates to
-  kernel-checked Lean (P3.7 — cheapest live Lean-parity progress); (2) the
-  CdclT arithmetic migration (ADR-0055 criterion 2 — the multiply-across-
-  theories keystone); (3) NRA levers (21/38, untouched since 07-02).** A
-  Phase D extended-fn census agent is in flight; further string slices wait
-  on its honest census. Session history: [docs/status-archive/](docs/status-archive/)
-  — this section is a FOCUS, not a log; keep it under ~30 lines.
+- **2026-07-06 (late) — string sprint closed; rotate to NRA + Lean + honest
+  keystone accounting (7th periodic review).** Live totals in the generated
+  [SCOREBOARD](bench-results/SCOREBOARD.md) (**QF_S 78/134 ≈58%, QF_SLIA 18/50,
+  ~707/992 decided**, DISAGREE=0 — do not hand-copy; string counts rotted twice
+  across review cycles). The **theory-coupled string frontier is closed** on
+  this corpus (len/code bridge, lex-order, membership, Phase D extended-fns);
+  the ~78 QF_S / 28 QF_SLIA still-undecided are almost all **unsupported**
+  fragment (to_int / replace_re / seq.* — each needs *new machinery*, not a
+  cheap lever), so strings are **expensive-not-done**: the Phase-D census
+  named the highest-count unsupported class before the lane parks.
+  **Rotation (7th review's ranking): (1) make one CdclT arith adapter
+  load-bearing OR honestly shelve it — the LIA/LRA adapters are landed but
+  DARK (opt-in, zero scoreboard rows; slice b combination declined as
+  redundant with the code-bridge), a recurrence of the 5th review's
+  dark-keystone flag; (2) NRA 26/38 → higher (FM→simplex nested `1/(a/b)`,
+  threshold-1 widening; `nra_degree` frontier 2/6 = the most headroom of any
+  lever, highest ROI-per-effort); (3) enforce the two soundness invariants
+  STRUCTURALLY (string-fuzz-generators-emit-escapes assert; the vacuous-view
+  guard at all harness consumers) — both are "fixed at known sites, not
+  enforced," the shape that produced the day's two P0s.** A bounded-encoder
+  deadline-robustness fix (task #33) is in flight. Session history:
+  [docs/status-archive/](docs/status-archive/) — FOCUS not log; keep ≤30 lines.
 
 ## Already shipped this session (pre-plan)
 
@@ -356,7 +363,7 @@ plan is built and committed on the current branch:
 | P2.4 | LIA cut portfolio (GCD, Gomory, HNF, cube, Diophantine) | WIP — **multi-equation Diophantine infeasibility** (`prove_lia_unsat_by_diophantine`, commit 96f07a3): a conjunction of integer equalities that is rational-feasible but **integer-infeasible** is UNSAT — fraction-free Hermite-style integer Gaussian elimination reports a contradiction row (`0=c` or per-row `gcd ∤ rhs`), deciding the case B&B can't terminate on for unbounded vars and the single-equation GCD misses (e.g. `x+y=0 ∧ x−y=1 → 2x=1`). **Strictly generalizes & replaced** the single-equation `prove_lia_unsat_by_gcd` in dispatch (no regression). Sound (only integer-preserving row ops; `checked_*` → "not refuted" on overflow, never a wrong unsat; SAT systems never refuted, negative-tested). 11+2 tests. Remaining: Gomory/cube cuts; inequality-integrated cuts |
 | P2.5 | NRA: incremental linearization → nlsat/CAD | WIP — linear-abstraction + sign/zero lemmas + McCormick + spatial B&B + point-lemma refinement already shipped. **Added threshold-1 monotonicity lemmas** — growing (`a≥1 ∧ b≥0 ⇒ r≥b`, decides `x≥1 ∧ y≥1 ∧ x·y<1`) and shrinking (`0≤a≤1 ∧ b≥0 ⇒ r≤b`, decides `0≤x≤1 ∧ y≥0 ∧ x·y>y` where only one operand is bounded so McCormick can't apply); two-operand only — **plus a refinement overflow safety net** (`too_large_to_refine`: stop refining past a 2³¹ magnitude bound, → `unknown` not a panic; hardens the exact-rational simplex against escalating witnesses). **Sum-of-squares lemmas landed (2026-06-18)** — `sos_lemmas`: for a pair `a,b` with `a·a`/`b·b`/`a·b` all abstracted, add `(a±b)² ≥ 0` over the result vars (sound), restoring the cross-product correlation independent abstraction drops, so **`a²+b² ≥ 2ab` / AM–GM₂ is now PROVED** (the Spivak SOS-frontier test promoted prompt-`Unknown`→`Unsat`; negative test confirms `a²+b²=2ab` stays sat). 26 NRA + 5 Spivak tests. **Since then (2026-06-28…07-02, see the changelog + [SCOREBOARD](bench-results/SCOREBOARD.md)): the CAD arc landed** — bignum algebraic core in `axeyum-ir` (ADR-0044/45/46), a 2-var-complete / N-var decision-complete fuzz-gated CAD, coprime-split projection, first-class `/0` division witnesses (`124e18aa`), and five z3-gated adversarial differential fuzzes at DISAGREE=0; the committed curated baseline is **QF_NRA 21/38 decided (was 9/38)**. Remaining: FM→simplex for nested `1/(a/b)` shapes, threshold-1 monotonicity widening, higher-degree/multi-var SOS (Bernoulli, general Cauchy–Schwarz), NRA proof production |
 | P2.6 | Quantifiers (MAM e-matching, trigger inference, MBQI, QE/MBP) | WIP — full e-matching vertical slice on the keystone: `enumerate_apps` + `ematch` engine + `instantiate_forall_via_egraph` (congruence-aware, single/multi-var, nested/joint triggers) + `prove_quantified_unsat_via_egraph` (the **instantiation loop**: instantiate → re-solve via `check_auto` → fixpoint, sound UNSAT). trigger *inference* (single + multi-pattern set cover) landed; loop **wired into `solve`** (infinite/too-wide-domain fallback → keystone before MBQI). **Closed-universal falsification lever landed 2026-07-03** (`3785c480`): the qinst census disproved the depth hypothesis (0/17 budget-starved — the blocker is quantifier shape), and a closed `∀` with QF body over exactly its bound vars is now refuted exactly via `¬body[x⃗:=fresh]` SAT (one bounded check_auto; the valid direction owned upstream); BV-quantified 37→38, new 600-case quantified-BV differential fuzz DISAGREE=0, 900-seed bounded-instance soundness harness. Next: MBQI on the keystone (the 16 existential/nested census files are its demand signal), then migrate `axeyum_rewrite`'s bespoke closure onto the keystone. (Verified: the multi-pattern join is already congruence-correct — `ematch` binds variables to canonical e-class roots and `trigger_to_pattern` never mutates the union-find, so raw `ENodeId` equality in `merge_substitutions` *is* root equality.) |
-| P2.7 | Strings (unbounded, full `str.*`, regex) | WIP — **Phase A DONE** (ADR-0051 `Sort::Seq`; ADR-0052 `len`↔LIA link + bounded-unsat gate, repaired a measured wrong-unsat class). **Phase B core LIVE both directions (ADR-0053, landed 2026-07-03):** T-B.1 normalization → T-B.4a arrangement search → T-B.4b routing + parser dual-build → extended-fn reductions → T-B.4d word-first fallback → harness parity (**QF_S 52→74 across 07-03…06**, each new verdict oracle-verified) → **T-B.7 slices 1–2**: word `unsat` ONLY via the independent derivation checker (`check_derivation.rs`, own union-find + walkers; word fuzz **96 sat + 305 unsat, DISAGREE=0**). Coverage-boundary census (3c13df63): the word fragment's corpus ceiling is reached — remaining 35 unknowns = regex 15 (→ **Phase C LANDED through T-C.6** (ADR-0054: derivative engine + membership sub-solver + membership atoms online)), extended-fns 11 (→ Phase D), lex-order/code↔LIA 8, seq+len 1. **P1.5 integration LANDED same day (superseding the morning caveat): the word core runs inside the online CDCL(T) loop** (StringTheory `c9d332c1`, front-door wiring `c924fcb0` — opt-in second-chance, default dispatch pending the routing ADR), and the certified refutation family widened to concat-congruence/cancellation (`c2c20734`: **QF_S 57→58**, str002 decides; quads honestly declined as Nielsen territory). Residual Phase B: T-B.5 F-Loop, T-B.6 eager conflicts (termination/perf polish) |
+| P2.7 | Strings (unbounded, full `str.*`, regex) | WIP — **Phase A DONE** (ADR-0051 `Sort::Seq`; ADR-0052 `len`↔LIA link + bounded-unsat gate, repaired a measured wrong-unsat class). **Phase B core LIVE both directions (ADR-0053, landed 2026-07-03):** T-B.1 normalization → T-B.4a arrangement search → T-B.4b routing + parser dual-build → extended-fn reductions → T-B.4d word-first fallback → harness parity (**QF_S 52→78 across 07-03…06** — see the generated scoreboard, oracle-verified) → **T-B.7 slices 1–2**: word `unsat` ONLY via the independent derivation checker (`check_derivation.rs`, own union-find + walkers; word fuzz **96 sat + 305 unsat, DISAGREE=0**). Coverage-boundary census (3c13df63): the word fragment's corpus ceiling is reached — remaining 35 unknowns = regex 15 (→ **Phase C LANDED through T-C.6** (ADR-0054: derivative engine + membership sub-solver + membership atoms online)), extended-fns 11 (→ Phase D), lex-order/code↔LIA 8, seq+len 1. **Phase C (ADR-0054, ACCEPTED) LANDED through T-C.6** (derivative engine + membership sub-solver + membership atoms online); **Phase D extended-fn reductions + the lexicographic-order theory landed** — the theory-coupled string frontier is CLOSED on this corpus at QF_S 78/QF_SLIA 18. Remaining declines are unsupported fragment (to_int/replace_re/seq.*), each needing new machinery. Residual: T-B.5 F-Loop, T-B.6 eager conflicts (perf polish); the bounded-encoder deadline-hole (task #33, in flight) |
 | P2.8 | FP polish (unspecified values, min/max ±0, lazy conversion) | WIP — the FP theory is broad already (classification, compare, abs/neg/min/max, add/sub/mul/div/fma/sqrt/rem/roundToIntegral, fp→fp resize, fp→real/ubv/sbv). min/max ±0 confirmed correct (deterministic allowed choice). **Added integer→float conversion** (`from_ubv`/`from_sbv`, 2026-06-18): rounds a w-bit unsigned/signed-two's-complement integer to a dst float under a rounding mode (reuses `pack_value`; exact 0→+0; |x| via two's-complement read unsigned, correct for INT_MIN). Differential-tested vs Rust's native `as f32`/`as f64` (i32/u32→F32, i64/u64→F64; edges + 3000-case sweep, exact). Completes the `to_fp` family on the builder side. Remaining: SMT-LIB parse wiring for `(_ to_fp …)`/`to_fp_unsigned` over bv sources (axeyum-smtlib, coordinate); `to_fp` from real constants; unspecified-value edge polish |
 | P2.9 | Datatypes lazy (e-graph splitting + occurs-check) | WIP — **structural refutation** (`prove_datatype_unsat_structurally`): acyclicity + distinctness + injectivity **+ congruence** (equal args ⇒ equal apps, e.g. `x=cons(h,a) ∧ y=cons(h,b) ∧ a=b ∧ x≠y`) + constructor exhaustiveness over a term-level union-find; also flattens top-level conjunctions and refutes top-level `or` when every branch is structurally contradictory. Sound, wired into dispatch/evidence/Lean reconstruction ahead of the eager expansion; the cvc5 QF_DT exact audit is now 3/3 dominant with Lean unsat 3/3. 13 focused tests. Remaining: e-graph constructor *splitting* (case-split `is-c` on the keystone) for SAT-side completeness; exact field guards to remove the relaxed `unknown` cases; broader datatype corpora beyond the cvc5 three-row slice |
 
@@ -402,7 +409,7 @@ plan is built and committed on the current branch:
 ## Changelog
 
 - **2026-07-06 (late) — Phase D + the theory-coupled string frontier closed;
-  the CdclT migration finishes; string program QF_S 52→78 (58%).**
+  the CdclT arith adapters land (dark: opt-in, parity-only); string program QF_S 52→78 (58%).**
   - (`d124f427`) **Phase D extended-function reductions**: constant-pattern
     `prefixof`/`suffixof`/`contains` → regex memberships (polarity-symmetric,
     ride the certified derivative-emptiness/matcher-replay routes),
@@ -410,7 +417,7 @@ plan is built and committed on the current branch:
     QF_SLIA 15→16, both-oracle fuzzes DISAGREE=0. (Flagged a pre-existing
     deadline-hole in the bounded ADR-0029 encoder on `str.replace`+membership
     — filed, no wrong verdict, no corpus trigger.)
-  - **CdclT arithmetic migration COMPLETE (ADR-0055 criterion 2):** LiaTheory
+  - **CdclT arithmetic migration — adapters landed, still DARK (ADR-0055 criterion 2 NOT yet met):** LiaTheory
     (`9c5be4fc`) + LraTheory (`fc4e33bc`) — both a thin sound adapter over the
     validated online machinery (each already implemented the TheorySolver
     trait); parity DISAGREE=0 (LIA 3100 cases, LRA 1500 fuzz + 8/8). Slice b

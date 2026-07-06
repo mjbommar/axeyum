@@ -1,6 +1,6 @@
 # ADR-0054: Regex via symbolic derivatives — from-scratch in `axeyum-strings`
 
-Status: proposed
+Status: accepted (2026-07-06 — the derivative engine + membership sub-solver + T-C.5/C.6 are landed, measured, and scoreboard-moving)
 Date: 2026-07-03
 
 ## Context
