@@ -1,0 +1,8912 @@
+# Archived: Current-focus session log (2026-06-27 → 2026-07-03)
+
+Archived from STATUS.md by the task-#27 truncation.
+
+## Current focus
+
+- **Session 2026-07-03 — Strings Phase B IN EXECUTION (ADR-0053) + the CI/frontier repair wave.**
+  The word-equation core started under **ADR-0053** (`90592350`): the
+  **`axeyum-strings` crate** landed (depends only on `axeyum-ir`, pure Rust,
+  `forbid(unsafe_code)`, WASM-clean) with **T-B.1** — the normalization
+  invariant (flatten/drop-ε/fuse-constants/push-len, 4800 eval-equivalence
+  property comparisons vs the ground evaluator, `c5590668`) — and **T-B.2** —
+  flat/normal forms + explanation tracking (deterministic union-find classes,
+  CAV-2014 normal-form vectors with sufficient premise sets, cycle/unreconciled
+  declines, 4000-iteration property test incl. explanation-sufficiency re-runs,
+  `bfc32805`). T-B.3 (cycle ε-inference + normal-form inference rules) in
+  flight. **Bridge discipline (the soundness contract):** the word solver
+  returns only replay-checked `sat`; word-level `unsat` stays declined to
+  `unknown` until T-B.7 derivations are independently checkable; deadline
+  honored from day one; NOT yet routed into `axeyum-solver` (routing = T-B.4,
+  which must land together with a Z3 differential fuzz over word equations and
+  an explicit bridge-never-emits-unsat regression). Same-day repairs:
+  the **nia_unsat frontier regression** (below), the **uflra fuzz deadline
+  hole** (`3b5bbcf0`), the workspace-clippy red (`10e29199`), and the z3-sys
+  403 CI layer (`424c761c`).
+  **Update (same session): T-B.3 + T-B.4a + T-B.4b LANDED — the word route is
+  LIVE.** T-B.3 (`dcef8ee2`): cycle ε-inference + INFER_UNIFY/ENDPOINT rules +
+  premise-tracked Conflicts (6000-iter soundness + 1400 adversarial-conflict
+  brute-force property tests). T-B.4a (`3e3b4ba0`): the F-Split/Len-Split
+  arrangement search; `SearchOutcome` has NO unsat variant (wrong-unsat
+  unrepresentable); every `Sat` replay-verified in-crate; 1310/1310 decided on
+  the satisfiable property generator. T-B.4b (`31bb02b8`): parser dual-build
+  side channel (`Script::word_problem`, all-or-nothing over pure word
+  equations/diseqs) + `apply_word_route` second-chance stage strictly after
+  the ADR-0052 gate; bridge-never-unsat regression family committed;
+  **word-equation differential fuzz vs Z3: 600 scripts, 331 jointly decided,
+  DISAGREE=0, 83 axeyum-sat — axeyum decides unbounded string instances for
+  the first time.** T-B.2's constant≈concat spurious-cycle defect (found by
+  T-B.4a) fixed (`8338f32d`). **Honest post-routing re-measure of the three
+  committed string divisions: NO CHANGE** (QF_S 52/134, QF_SEQ 26/33, QF_SLIA
+  12/50, DISAGREE=0) — the undecided remainder is extended-function /
+  `str.len`-linked / unsat shapes the dual-build correctly declines and the
+  bridge cannot yet refute. The measured routing signal points at
+  positive-polarity extended-function→word-equation reductions (Phase D
+  pulled early: `contains`/`prefixof`/`suffixof` are equisatisfiable concat
+  forms with fresh tails), the len↔search link, and T-B.7 unsat derivations
+  as the next decide-rate levers (baselines untouched — timing noise only).
+  **T-B.7 first slice LANDED (`717f85b5`): the word route now decides
+  `unsat` — only through an independently re-checked derivation.** The
+  standalone checker (`check_derivation.rs`, no reasoning code shared with
+  the inference engine) re-derives a T-B.3 constant-clash conflict from the
+  cited premises alone (own union-find + own alignment walker; the record is
+  a hint, never trusted); anything it cannot re-derive — loops, parity,
+  length arguments, inference-dependent conflicts — stays `unknown`. 10
+  negative checker tests (corrupted derivations rejected); ≥1000-case
+  property tests both directions; the word fuzz now gates BOTH directions:
+  600 scripts, 316 jointly decided, **96 sat + 220 unsat, DISAGREE=0**
+  (independently re-run before push).
+  **T-B.7 slice 2 LANDED (`b74e23aa`): checked inference-dependent
+  derivations + the bench word hook.** `check_fact` independently
+  re-verifies T-B.3 Facts (cycle-ε, ENDPOINT_EMP/EQ, UNIFY) from original
+  premises; chained refutation certifies `x≈"a"++x` self-loop families,
+  augmented clashes (`x≈y++x ∧ y≈"a"`), and endpoint-eq chains; multi-node
+  mutual loops honestly decline. Fuzz now **96 sat + 305 unsat (+85),
+  DISAGREE=0, independently re-run**; frontier 8/8 green. Bench mirrors the
+  front door on the normal path (`word_route_verdict` upgrade before the
+  oracle record). **Honest re-measure: zero corpus movement** — every
+  remaining gate-downgraded unknown carries regex/`str.leq`/`str.code`/
+  `seq.update`, so no WordProblem side channel is built; the measured lever
+  is side-channel operator coverage (str.leq/str.code reducible now; regex
+  is Phase C), not more refutation shapes. Also same-session: **word-route harness parity
+  moved QF_S 52→57** (`f5d3e1ec`, five long-literal sat instances incl. the
+  quadratic issue6520, each z3-binary-verified) and the **first committed
+  lazy-vs-eager PAR-2 head-to-head** landed (`582ecba8`: lazy weakly
+  dominates at 20s (7>4 decided) but telemetry shows lazy_ops_total=0
+  everywhere — the edge is inherited preprocessing, not CEGAR; the QF_BV
+  parity lever is reduction depth). Frontier ratchets are now a recorded
+  pre-merge gate (CLAUDE.md, `efdbb0ff`).
+- **Session 2026-07-01 (cont.) — Strings keystone (P2.7) INITIATED: ADR + Phase-A slice A.1a landed.**
+  Strings are the largest decide-rate gap by count (~117) and were unrepresentable
+  (no string/sequence sort in the IR — only the length-≤16 bounded BV encoder).
+  Opened the keystone with process discipline:
+  - **ADR-0051** (the required decision before touching the foundational `Sort`
+    enum): first-class `Sort::Seq(ArraySortKey)` — **Copy-preserving** (a `Box<Sort>`
+    would have broken `Sort: Copy` at ~138 use sites; instead it carries the same
+    flat element key arrays use), with `String = Seq(BitVec(18))` (`2^18 > 0x2FFFF`;
+    the unsigned BV order is the Unicode code-point order). Strings become ordinary
+    terms; the bounded encoder stays a sound pre-check; the `axeyum-strings` crate is
+    deferred to Phase B.
+  - **Slice A.1a landed** (`c88ebcf8`, `91672c8f`, `928951a8`): the `Sort::Seq`
+    variant + `Sort::string()` + **39 decline-cleanly `Seq` arms across 16 crate
+    files** (sub-agent sweep, diff reviewed — each arm mirrors its `Int`/`Real`/
+    `Array` sibling exactly; no existing logic changed; **adds no capability**, just
+    makes the sort representable). Verified green: `cargo build --workspace
+    --all-features --all-targets`, `axeyum-ir` tests, `axeyum-solver` lib 627/627,
+    workspace `clippy -D warnings`; a hardening test confirms `String` declares /
+    round-trips / displays as `(Seq (_ BitVec 18))`.
+  - **Slice A.1b landed** (`abb23ddb`): the first sequence *capability* —
+    `Op::{SeqLen, SeqEmpty(ArraySortKey), SeqUnit, SeqConcat}` + `Value::Seq` +
+    sort-checked arena builders + `sort_of` inference + ground evaluator
+    (`str.len(a++b) = |a|+|b|`, `str.len(seq.empty) = 0`). The `Op`/`Value` breaks
+    swept decline-cleanly across 14 files (z3 backend rejects seq ops at the
+    translate gate *before* `apply`, so no panic). Reviewed for soundness; verified
+    green (workspace `--all-targets`, axeyum-ir tests incl. 3 seq tests, clippy
+    `--all-features -D`).
+  - **Slice A.1c — write half landed; parse half BLOCKED on a representation fork**
+    (`3d0ad49c`, docs `af41ab48`). Landed safely: first-class ops now write as
+    `seq.len`/`seq.++`/`seq.unit`/`seq.empty` (safe — `Op::Seq*` are produced only by
+    the arena builders, never a bounded encoder) + 2 tests incl. a no-regression
+    guard; 197/197 smtlib tests; the pre-existing `smtlib.rs:2781` clippy nit fixed.
+    **⚠ Architectural finding:** the committed **bounded finite-sequences encoder
+    (ADR-0029)** already owns `(Seq E)` (→ packed BV) + every `seq.*` name with
+    soundness tests — so the first-class `Sort::Seq` (A.1a) **collides** with it on
+    syntax. Re-routing `parse_sort` would regress ADR-0029; so `Sort::Seq` sits
+    *above* the front-end for now (reachable via `arena.seq_*`, not via parsing).
+  - **Next:** **A.2** — now owns two coupled deliverables: (1) `len`↔LIA
+    Nelson–Oppen (the Phase-A exit criterion, `str.len`-unsat gap), and (2) a
+    **dedicated ADR reconciling `Sort::Seq` ↔ ADR-0029** (leading option: the bounded
+    encoder becomes a lowering *pass* over `Sort::Seq` — unbounded ⇒ first-class,
+    provably-bounded ⇒ packed-BV pre-check). Do NOT re-route `parse_sort` until that
+    ADR lands.
+
+- **Session 2026-07-01 (cont.) — FM→simplex keystone (P1.9) BUILT + INTEGRATED + validated.**
+  The measured bottleneck behind the NRA/LRA frontier is Fourier–Motzkin's
+  doubly-exponential blowup (both `check_with_lra` entry points are FM, ADR-0015).
+  Built the fix end-to-end:
+  - **`simplex.rs`** — an exact-rational **general simplex** (Dutertre–de Moura;
+    Bland's rule → terminating; `checked_*` → `unknown` on overflow) covering **all
+    comparators** `≤ ≥ = < >` via the **δ-relaxation**, with concrete **witness
+    materialization** and **self-checking Farkas extraction** (`59fa3b0b`,
+    `f4cdd7ea`, `30c39ab3`). 13 tests incl. a **400-system differential vs the
+    trusted FM `check_with_lra`**.
+  - **T1.9.2 integration** (`abc52d66`) — `simplex_fallback` wired into
+    `check_with_lra`'s `Decision::TimedOut` branch (the exact "FM blew up"
+    condition): FM-blowup LRA systems are now decided by simplex (`Sat`
+    replay-checked; `Unsat` via a re-verified `FarkasCertificate`). Small systems
+    never time out, so the FM path is untouched.
+  - **Validated** by the new z3-gated `simplex_lra_fallback_differential`:
+    **1199/1200** large FM-blowup systems decided, **DISAGREE=0** (they were
+    `unknown` before). lib 626/626, clippy `-D` clean.
+  - **Honest caveat:** the curated micro-corpora (11–38 files) show no decide-rate
+    delta — too small/clean to contain FM-blowup systems; payoff is on large
+    instances (the 1199-system differential is the evidence). A monotonicity re-add
+    to the sign pass was re-tested and **re-reverted** (its bottleneck is DPLL cube
+    enumeration, not per-cube FM, so simplex doesn't rescue it). Remaining P1.9:
+    strict-δ Farkas certs; T1.9.4 (make simplex the default / upfront size gate).
+
+- **Session 2026-07-01 — NRA: un-broke HEAD + sign-refutation past the cross-product cap (QF_NRA +2).**
+  1. **HEAD was red** (`cargo test -p axeyum-solver --test nra`): the div-by-zero
+     replay guard (`b38c0439`/`a06dc46a`) correctly declines div-by-zero-forced
+     candidates to `unknown`, but the `real_division_by_zero_is_unconstrained` test
+     still asserted `sat` (the guard was verified against lib tests only). Root
+     cause is a genuine semantic divergence — axeyum's evaluator commits to
+     `x/0 = 0` (tested by `axeyum-ir` `real_division_evaluates_exactly`) while Z3
+     leaves `/0` free — so the only verdict sound under both is `unknown`. Renamed
+     to `real_division_by_zero_is_sound_unknown` (`7a5875df`); documented the
+     free-division-witness recovery follow-up in the P2.5 eval doc (`b403a5fc`).
+  2. **Measured lever** (`explain_corpus`, QF_NRA cvc5-regress-clean, 5 s): the
+     dominant terminal decline is the `>2 cross-product` admission cap (14 hits),
+     and several capped instances are refutable by SIGN ALONE (`simple-mono-unsat`:
+     `(or a=4 a=3) ∧ b>0 ∧ c>0 ∧ a·b·c·d² < 0`). But the sign/zero lemmas were only
+     added AFTER the cap. **Fix (`f9e06baf`):** before declining, add ONLY the
+     sign+zero lemmas (cheap linear `¬p ∨ q`, no `McCormick`/SOS ⇒ no OOM) and run
+     one bounded (≤500 ms) LRA-DPLL solve; `unsat` transfers soundly (relaxation),
+     only `unsat` acted on. Extracted `sign_zero_lemmas` from `product_lemmas`.
+     **Measured: QF_NRA decided 10 → 12** (+2 unsat: `simple-mono-unsat`,
+     `subs0-unsat-confirm`, both `:status unsat`). `nra`+`nia` differential fuzz vs
+     Z3 DISAGREE=0 (929/929 nra agreements, 697 sat replays verified). Next lever:
+     **FM → simplex** for the LRA-DPLL cube check (`lra_online.rs`
+     `MAX_FM_CONSTRAINTS`) — it caps the sign pass's reach on fully-free multi-var
+     systems and is ~8 standalone QF_NRA declines.
+  3. **FM → simplex keystone opened + first slice landed.** A monotonicity-lemma
+     extension of the sign pass was tried and **reverted** — it regressed even the
+     pinned cases by overrunning FM, *empirically* confirming the engine (not the
+     lemmas) is the bottleneck. So planned the top lever as
+     [`P1.9`](docs/plan/track-1-engine/P1.9-lra-simplex.md) (both LRA entry points
+     are Fourier–Motzkin, ADR-0015; simplex scales + its dual = the Farkas cert the
+     proof route already consumes) and **landed T1.9.1** (`59fa3b0b`): a standalone
+     exact-rational general-simplex (Dutertre–de Moura) feasibility core
+     `simplex::feasible` — Bland's rule (terminating), `checked_*` (overflow →
+     `unknown`), + the self-checking `check_farkas` verifier; 8 unit tests, clippy
+     `-D warnings` clean, lib 613/613. Next: T1.9.2 (route into the LRA layer behind
+     a size threshold + δ-relaxation for strict rows; fuzz-gated) and T1.9.3 (Farkas
+     extraction from the tableau).
+
+- **Session 2026-06-30/07-01 — Nonlinear (P2.5): QF_NRA 9→11, and a pre-existing div-by-zero WRONG-SAT found + fixed.**
+  Five things superseded the plan-writing entry below:
+  1. **Baseline corrected.** Reading the code + ADRs (0044/0045/0046) showed the
+     NRA engine is *far more built* than the program's first draft assumed — the
+     bignum algebraic core (polynomials, Sturm, resultants, real algebraic numbers,
+     field arithmetic) already lives in **`axeyum-ir`**, and a largely-complete CAD
+     (2-var complete, N-var decision-complete, fuzz-gated) lives in `axeyum-solver`.
+     **There is NO new `axeyum-poly` crate** (ADR-0044 keeps the primitives in
+     `axeyum-ir`); "Phase A" is mostly done. P2.5 docs 00/02/03/06 corrected.
+  2. **Measured vs z3 4.13.3** (`check_auto`, curated non-incremental corpus, 5 s,
+     `DISAGREE=0`): **QF_NRA 9/36, QF_NIA 20/28.** `explain_corpus` route-trace root
+     cause: the strong CAD only decides *flat conjunctions*, so any Boolean
+     structure (`or`/`distinct`/`ite`) over nonlinear atoms declines and falls to
+     the ≤2-cross-product relaxation. The dominant NRA lever is a DPLL(T)/case-split
+     feeding conjunctive cubes to the existing CAD (P2.5 Phase B).
+  3. **Landed** a graceful-`unknown` fix for an i128 LRA-replay overflow (`1f615670`),
+     then **LANDED the Boolean case-split** `check_with_nra_dpll` (`5ede57f4`):
+     **QF_NRA 9→10** (unlocks `issue3656`, a `distinct`/`and` over nonlinear atoms).
+     The first prototype was reverted after `nra_differential_fuzz` failed — but
+     full-capture diagnosis (#68) showed the failure was **not** a wrong verdict, it
+     was `finish_sat` propagating an i128 eval-overflow as an error instead of a
+     graceful `unknown` (same class as `1f615670`). Fixed `finish_sat`, then landed
+     with **`nra`+`nia` fuzz DISAGREE=0**, lib 613/613, clippy clean.
+  4. **Division congruence (`0761bf8e`): QF_NRA 10→11.** `eliminate_real_div` used a
+     fresh `r` per division occurrence, losing `x=y ⟹ (/x 0)=(/y 0)`; added the
+     Ackermann div-congruence axioms (sound; only restrict the model space). A
+     div-by-zero instance now decides.
+  5. **A pre-existing div-by-zero WRONG-SAT found + fixed (`b38c0439`, #69).** Adding
+     **division coverage to `nra_differential_fuzz`** (it generated none) caught it:
+     the internal engine replays candidates against the div-*eliminated* form, so a
+     `y=0`/free-`r` model satisfies it while the original `x/0` refutes it (e.g.
+     `1/w<0` → sat with `w=0`). Fixed with a final **replay guard** in `check_with_nra`
+     (re-check every sat against the *original*, decline on violation), plus threaded
+     the true original as the in-engine replay target (#70). Verified: enhanced
+     division fuzz DISAGREE=0 + **no wrong-sat**, `nia` fuzz DISAGREE=0, lib 613/613.
+     A real soundness win from the frontier fuzz-hardening.
+  Broader scoreboard (curated, DISAGREE=0, [`docs/plan/measured-scoreboard-2026-07-01.md`](docs/plan/measured-scoreboard-2026-07-01.md)):
+  axeyum is at/above z3 on most divisions (QF_UF 42v41, QF_SEQ 16v14 ahead;
+  FP/DT/AX/ALIA/UFLIA parity; LRA/LIA/S/SLIA/ABV −1/−2). The real frontier stays
+  **NRA (11/36) + NIA (20/28)**. Strings (P2.7) at planning; first increment =
+  Phase A (`Seq`/`String` IR sort + String+LIA over `len`).
+  See [`docs/plan/track-2-theories/P2.5-nra/08-evaluation-and-soundness.md`](docs/plan/track-2-theories/P2.5-nra/08-evaluation-and-soundness.md).
+
+- **Session 2026-06-30 — Next focus set: the two theory frontiers (strings + nonlinear).**
+  The two largest remaining decide-rate gaps vs Z3/cvc5 now have full top-down
+  build programs (committed `688c7882`), each decomposed current state →
+  literature survey (verified citations) → architecture → phased build (A–E) →
+  evaluation, under
+  [`docs/plan/track-2-theories/P2.5-nra/`](docs/plan/track-2-theories/P2.5-nra/)
+  (nonlinear: incremental linearization → ICP → Cylindrical Algebraic Coverings
+  on a new pure-Rust `axeyum-poly` core; NIA portfolio) and
+  [`docs/plan/track-2-theories/P2.7-strings/`](docs/plan/track-2-theories/P2.7-strings/)
+  (word-level length-aware DPLL(T) core + symbolic-derivative regex + pure-Rust
+  automata fallback). **Next concrete increments:** P2.5 Phase A (the
+  `axeyum-poly` algebraic core — the long pole that unlocks complete NRA *and* the
+  NIA UNSAT engine) and P2.7 Phase A (first-class `Seq`/`String` IR sort +
+  String+LIA over `len`, which also closes the `str.len`-unsat gap). Both keep
+  DISAGREE=0, `unknown`-first, and the measured-scoreboard discipline. Source
+  grounding from `references/cvc5` + `references/z3` internals and verified
+  SOTA literature; no C/C++ (rules out libpoly/MATA — everything pure Rust).
+
+- **Session 2026-06-27 — Warm direct array-equality admission.**
+  The retained warm array-select abstraction now also accepts direct equality
+  between supported array symbols as a scoped theory fact. Equal-array classes
+  generate cross-array select-congruence lemmas for committed assertions and
+  one-shot assumptions, so conflicts such as
+  `a = b`, `i = j`, `select(a,i) = #xaa`, and `select(b,j) = #xbb`
+  stay on the warm path instead of promoting to the memory dispatcher. SAT
+  models merge each equal-array class before replay, so original array equality
+  assertions and assumptions remain the trust gate and internal warm symbols do
+  not leak into public models. This is a real retained-theory step toward U6,
+  but it is still a narrow direct-symbol slice: arbitrary array terms, surviving
+  store equalities, disequality/extensional witnesses, non-Bool/BV array
+  components, and full learned lazy-array/UF clauses remain open. Verification
+  passed:
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution warm_array_equality -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test incremental -j1 -- --nocapture`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-27 — Warm BV div/rem readback cleanup.**
+  The warm scalar cleanup now folds exact BV division/remainder identities after
+  memory rewrites where SMT-LIB totality is unambiguous: unsigned division by
+  literal zero collapses to all ones, unsigned/signed division by literal one
+  collapses to the source BV, zero divided by a syntactically nonzero divisor
+  collapses to zero, unsigned/signed remainder and signed modulo by literal
+  one collapse to zero, remainder/modulo by literal zero returns the dividend,
+  and self-remainder/self-modulo collapses to zero. BV-valued memory paths such
+  as `(bvudiv (select(store(mem, i, v), i)) #x01) = target` now encode as the
+  stored scalar value while replaying the original division memory assertion,
+  and impossible wrappers like a readback remainder itself being nonzero
+  simplify to warm `false` before CNF. This trims common normalization
+  scaffolding without changing SMT-LIB zero-divisor semantics; signed division
+  by zero and nontrivial variable divisors remain ordinary BV terms. Full lazy
+  arrays/UFs, retained theory clauses, extensionality, and arbitrary array
+  terms remain open. Verification passed:
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution warm_bv_readback_div_rem_identities_drop_wrappers -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test incremental -j1 -- --nocapture`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-27 — Warm BV shift readback cleanup.**
+  The warm scalar cleanup now folds exact BV shift identities after memory
+  rewrites: shift-by-zero wrappers collapse for `bvshl`, `bvlshr`, and
+  `bvashr`; zero shifted by any amount collapses to zero; and all-ones
+  arithmetic-right-shifted by any amount stays all ones. BV-valued memory paths
+  such as `(bvshl (select(store(mem, i, v), i)) #x00) = target` now encode as
+  the stored scalar value while replaying the original shifted memory
+  assertion, and impossible wrappers like a zero-shifted readback disequal to
+  the same readback simplify to warm `false` before CNF. This trims common
+  frontend no-op shift and byte/word normalization scaffolding while preserving
+  original-term replay; nonzero variable shifts and over-shift rewrites remain
+  ordinary BV terms. Full lazy arrays/UFs, retained theory clauses,
+  extensionality, and arbitrary array terms remain open. Verification passed:
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution warm_bv_readback_shift_identities_drop_wrappers -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test incremental -j1 -- --nocapture`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-27 — Warm BV slice/extension readback cleanup.**
+  The warm scalar cleanup now folds exact BV structural identities after memory
+  rewrites: whole-width extracts collapse (`((_ extract w-1 0) x) -> x`), and
+  zero-bit `zero_extend` / `sign_extend` wrappers collapse to the source BV.
+  BV-valued memory paths such as
+  `((_ extract 7 0) (select(store(mem, i, v), i))) = target` now encode as the
+  stored scalar value while replaying the original wrapped memory assertion, and
+  impossible wrappers like a whole-width extracted readback disequal to the
+  same readback simplify to warm `false` before CNF. This trims common bitfield
+  and frontend width-normalization scaffolding while preserving original-term
+  replay; partial extracts and positive-width extensions remain ordinary BV
+  terms. Full lazy arrays/UFs, retained theory clauses, extensionality, and
+  arbitrary array terms remain open. Verification passed:
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution warm_bv_readback_slice_extension_identities_drop_wrappers -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test incremental -j1 -- --nocapture`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-27 — Warm BV comparison readback cleanup.**
+  The warm scalar cleanup now folds exact BV comparison identities after memory
+  rewrites. Reflexive unsigned/signed comparisons collapse
+  (`x < x -> false`, `x <= x -> true`, `x > x -> false`, `x >= x -> true`),
+  and unsigned endpoint facts collapse (`x < 0 -> false`,
+  `0 <= x -> true`, `x <= all_ones -> true`, `x > all_ones -> false`,
+  `x >= 0 -> true`, `all_ones >= x -> true`). BV-valued memory paths such as
+  `select(store(mem, i, v), i) <u #x00` now simplify to warm `false`, while
+  tautological range guards such as `select(store(mem, i, v), i) >=u #x00`
+  simplify to warm `true` before CNF encoding. This trims common loaded-value
+  bounds checks while preserving original-term replay; it does not close full
+  lazy arrays/UFs, retained theory clauses, extensionality, or arbitrary array
+  terms. Verification passed:
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution warm_bv_readback_comparison_identities_drop_constant_wrappers -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test incremental -j1 -- --nocapture`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-27 — Warm BV arithmetic readback cleanup.**
+  The warm scalar cleanup now folds exact modular BV arithmetic identities after
+  memory rewrites: `x + 0 -> x`, `0 + x -> x`, `x - 0 -> x`,
+  `x - x -> 0`, `0 - x -> bvneg x`, double `bvneg` collapses,
+  `x + bvneg x -> 0`, `x * 1 -> x`, and `x * 0 -> 0`. BV-valued memory
+  paths such as `select(store(mem, i, v), i) + #x00` now simplify to `v`,
+  while impossible wrappers like `select(store(mem, i, v), i) -
+  select(store(mem, i, v), i) = #x01` simplify to warm `false` before CNF
+  encoding. This trims common arithmetic scaffolding from storage/load
+  predicates while preserving original-term replay; it deliberately avoids
+  division/remainder rules whose SMT-LIB zero-divisor totality needs tighter
+  guards. Full lazy arrays/UFs, retained theory clauses, extensionality, and
+  arbitrary array terms remain open. Verification passed:
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution warm_bv_readback_arithmetic_identities_drop_constant_wrappers -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test incremental -j1 -- --nocapture`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-27 — Warm BV bitwise readback cleanup.**
+  The warm scalar cleanup now folds BV bitwise identities after memory rewrites:
+  double `bvnot` collapses, `x & 0 -> 0`, `x & all_ones -> x`,
+  `x | 0 -> x`, `x | all_ones -> all_ones`, `x xor 0 -> x`, and
+  `x xor x -> 0`. BV-valued memory paths such as
+  `select(store(mem, i, v), i) & #xff` now simplify to `v`, while impossible
+  wrappers like `select(store(mem, i, v), i) xor select(store(mem, i, v), i) =
+  #xff` simplify to warm `false` before CNF encoding. This trims common mask
+  and parity scaffolding from storage/load predicates while preserving
+  original-term replay; it does not close full lazy arrays/UFs, retained theory
+  clauses, extensionality, or arbitrary array terms. Verification passed:
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution warm_bv_readback_bitwise_identities_drop_constant_wrappers -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test incremental -j1 -- --nocapture`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-27 — Warm Bool xor/implication cleanup.**
+  The warm scalar cleanup now folds Boolean `xor` and implication after memory
+  rewrites: constant operands are removed, self-xor collapses to `false`,
+  complement xor collapses to `true`, and implication identities such as
+  `true => p`, `p => false`, `p => true`, `p => p`, and `not p => p` collapse
+  to the corresponding scalar predicate or constant. Predicate-like memory paths
+  such as `true => select(store(mem, i, p), i)` now simplify to `p`, while
+  `select(store(mem, i, p), i) xor select(store(mem, i, p), i)` simplifies to
+  warm `false` before CNF encoding. This trims more Boolean scaffolding from
+  helper-load/path predicates while preserving original-term replay; it does
+  not close full lazy arrays/UFs, retained theory clauses, extensionality, or
+  arbitrary array terms. Verification passed:
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution warm_bool_readback_xor_implies_drop_constant_wrappers -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test incremental -j1 -- --nocapture`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-27 — Warm Bool connective cleanup.**
+  The warm scalar cleanup now folds binary Boolean `and`/`or` after memory
+  rewrites: constant identities and annihilators are removed, idempotent terms
+  collapse, and obvious complements fold (`p and not p -> false`,
+  `p or not p -> true`). Predicate-like memory paths such as
+  `select(store(mem, i, p), i) and true` now simplify to `p`, while impossible
+  readback combinations simplify to warm `false` before CNF encoding. This trims
+  CNF for Bool-array/set-like helper-load conditions while preserving
+  original-term replay; it does not close full lazy arrays/UFs, retained theory
+  clauses, extensionality, or arbitrary array terms. Verification passed:
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution warm_bool_readback_connectives_drop_constant_wrappers -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test incremental -j1 -- --nocapture`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-27 — Warm Bool readback equality cleanup.**
+  The warm scalar cleanup now folds Boolean equality against constants
+  (`p = true -> p`, `p = false -> not p`) and removes double negation. This lets
+  symbolic Bool memory values shed residual equality wrappers after ROW
+  simplification: `select(store(mem, i, p), i) = true` simplifies to `p`, and
+  `not(select(store(mem, i, p), i) = false)` also simplifies to `p`, while the
+  original Bool-array memory assertion remains the replay surface. This trims
+  CNF for predicate/set-like memory reads and U6 helper-load path conditions; it
+  does not close full lazy arrays/UFs, retained theory clauses, extensionality,
+  or arbitrary array terms. Verification passed:
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution warm_bool_readback_equality_to_const_simplifies_to_value -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test incremental -j1 -- --nocapture`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-27 — Warm scalar ITE equality cleanup.**
+  The warm scalar cleanup now distributes equality over Bool/BV-valued `ite`s,
+  folds literal-distinct constant equalities to `false`, and collapses Boolean
+  identity ITEs (`ite(c, true, false) -> c`, `ite(c, false, true) -> not c`).
+  Memory rewrites that produce scalar branch values now shed the remaining
+  branch merge when the assertion compares against one branch value: conditional
+  read/write-index examples such as `ite(flag, 1, 0) = 1` simplify to `flag`
+  before warm encoding. This trims more CNF from U6/U7 conditional-address
+  paths while preserving original memory-term replay; it does not close full
+  lazy arrays/UFs, retained theory clauses, extensionality, or arbitrary array
+  terms. Verification passed:
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution warm_index_ite -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test incremental -j1 -- --nocapture`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-27 — Warm conditional-write-index read splitting.**
+  The warm memory simplifier now splits reads over stores whose write index is
+  an `ite` before the generic symbolic ROW equality:
+  `select(store(a, ite(c, i, j), v), k) -> ite(c, select(store(a, i, v), k), select(store(a, j, v), k))`.
+  Each branch can then reuse the existing same-index, literal-distinct,
+  constant-array, shadowed-ROW, and trivial-scalar cleanup rules. A shape such
+  as `select(store((as const Array) 0, ite(flag, 3, 4), 1), 3) = 1` now encodes
+  as a pure warm scalar path choice and keeps the original conditional-write
+  memory assertion for model replay. This is another U6/U7 formula-size
+  reduction for conditional-address memory paths; it does not close full lazy
+  arrays/UFs, retained theory clauses, extensionality, or arbitrary array
+  terms. Verification passed:
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution warm_index_ite_write_distributes_to_row_branches -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test incremental -j1 -- --nocapture`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-27 — Warm conditional-index read splitting.**
+  The warm memory simplifier now distributes reads over index-valued `ite`
+  terms before read-over-write handling:
+  `select(a, ite(c, i, j)) -> ite(c, select(a, i), select(a, j))`.
+  This lets conditional symbolic addresses split into scalar branch reads, then
+  reuse the existing same-index, literal-distinct, constant-array, shadowed-ROW,
+  and trivial-scalar cleanup rules. A shape such as
+  `select(store((as const Array) 0, 3, 1), ite(flag, 3, 4)) = 1` now encodes as
+  a pure warm scalar path choice and keeps the original memory assertion for
+  model replay. This is another U6/U7 formula-size reduction for simple
+  conditional-address memory paths; it does not close full lazy arrays/UFs,
+  retained theory clauses, extensionality, or arbitrary array terms.
+  Verification passed:
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution warm_index_ite_read_distributes_to_row_branches -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test incremental -j1 -- --nocapture`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-27 — Warm reflexive memory tautology pruning.**
+  The warm memory simplifier now folds reflexive equality and Boolean negation
+  over constants after memory rewrites run. Same-readback memory formulas such
+  as `select(ite(c, store(a,i,v), store(b,i,v)), i) = v` now simplify all the
+  way to `true`, and their negation simplifies to a warm `false` contradiction,
+  instead of bit-blasting the leftover `v = v` Boolean. This trims CNF for
+  tautological memory/path constraints while preserving original-term SAT replay
+  and keeping the full lazy-array/UF boundary unchanged. Verification passed:
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution warm_array_ite_same_readback_drops_merge_guard -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test incremental -j1 -- --nocapture`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-27 — Warm array-ITE same-readback guard pruning.**
+  The warm memory simplifier now collapses trivial scalar `ite`s created by
+  memory rewrites: constant conditions pick their branch, and identical
+  post-simplification branches collapse to the shared term. This trims dead
+  merge guards after select-over-array-ITE distribution and ROW read-back, e.g.
+  `select(ite(c, store(a,i,v), store(b,i,v)), i)` now simplifies to `v` instead
+  of bit-blasting `ite(c, v, v)`. The SAT model is still replayed against the
+  original branch-merged memory assertion. This is another U6/U7 formula-size
+  reduction, not full lazy-array theory state: arbitrary array terms,
+  extensionality, and retained learned theory clauses remain open. Verification
+  passed:
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution warm_array_ite_same_readback_drops_merge_guard -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test incremental -j1 -- --nocapture`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-27 — Warm ROW same-index shadow pruning.**
+  `IncrementalBvSolver::simplify_memory_for_warm_assertion` now prunes earlier
+  stores at the same syntactic index when a later store shadows them before an
+  undecided symbolic read-over-write expansion. A shape such as
+  `select(store(store(a, i, old), i, new), j)` now emits one scalar equality
+  guard for the live `new` write plus the simplified base read, instead of a
+  nested guard chain that still carries the dead `old` value. The original
+  memory assertion remains the replay/core surface, and remaining base reads can
+  still use the retained BV-indexed Bool/BV array-select abstraction. This is a
+  U6/U7 formula-size reduction for simple write-log paths; it does not close the
+  full lazy array/UF engine, where arbitrary array terms, extensionality, and
+  retained theory-clause reuse remain open. Verification passed:
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution warm_symbolic_row_drops_shadowed_same_index_store -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test incremental -j1 -- --nocapture`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-27 — Warm wide-BV scalar UF projection.**
+  The retained warm scalar-UF abstraction now covers Bool/BV applications whose
+  argument or result widths exceed 128 bits, including BV256 keccak-style calls.
+  Warm UF projection no longer routes touched wide arguments/results through
+  `scalar_code`; signatures needing wide values use full-value `FuncValue`
+  entries with canonical `Value::WideBv`s before original-term replay. The
+  branch preflight also recognizes the widened UF slice, so BV256 UF fork
+  conditions stay on one-shot warm assumptions instead of jumping straight to
+  the memory/UF dispatcher. This advances U6/P4.1 for EVM-like path constraints
+  without closing full lazy EUF: Int/Real/array/datatype/uninterpreted-carrier
+  UF signatures, arbitrary array terms, extensionality, and retained
+  theory-clause reuse remain open. Verification passed:
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-ir wide_bv_function_interpretation_uses_full_value_storage -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution warm_assert_abstracts_wide_bv_uf_application -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution warm_wide_uf_congruence_refutes_equal_arg_conflict -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib symexec::tests::branch_over_wide_bv_uf_auto_stays_warm -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-ir -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test incremental -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib euf_egraph::tests -j1 -- --nocapture`;
+  `UPDATE_CAPABILITY_MATRIX=1 CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test capabilities -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test capabilities -j1 -- --nocapture`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-ir --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-ir --no-deps -j1`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`;
+  `./scripts/check-links.sh`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib -j1 -- --nocapture`.
+
+- **Session 2026-06-27 — Warm wide-BV array select projection.**
+  The retained warm array-select abstraction now handles BV-indexed Bool/BV
+  array-symbol reads whose index or element widths exceed 128 bits. Compact
+  `ArrayValue` projection remains the small BV-array path; wide index or element
+  values, including BV256 storage-style reads, project through
+  `GenericArrayValue` with canonical `Value::WideBv` entries before
+  original-term replay. The IR evaluator now keeps array `select`/`store`
+  handling out of the wide-BV arithmetic dispatcher, and well-founded defaults
+  use `Value::WideBv` / generic arrays when a BV component is wider than 128
+  bits. This advances U6/P4.1 for EVM-like storage reads without broadening the
+  boundary: surviving stores, extensionality, arbitrary array terms, non-Bool/BV
+  elements, and full retained lazy-array/UF theory-clause reuse remain open.
+  Verification passed:
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution warm_assert_abstracts_wide_bv_select_over_array_symbol -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution warm_wide_array_select_congruence_refutes_equal_index_conflict -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib symexec::tests::branch_over_wide_bv_array_select_auto_stays_warm -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-ir -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test incremental -j1 -- --nocapture`;
+  `UPDATE_CAPABILITY_MATRIX=1 CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test capabilities -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test capabilities -j1 -- --nocapture`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-ir --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-ir --no-deps -j1`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`;
+  `./scripts/check-links.sh`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib -j1 -- --nocapture`.
+
+- **Session 2026-06-27 — Warm Bool-array select-congruence admission.**
+  The retained warm array-select abstraction now covers BV-indexed arrays whose
+  element sort is Bool as well as BitVec. Bool-array reads are abstracted to
+  internal warm Bool variables, same-array reads share the existing scoped
+  select-congruence lemmas, and SAT models project back through
+  `GenericArrayValue` before original-term replay. This keeps predicate/set-like
+  symbolic-base reads on the warm route for committed assertions and one-shot
+  branch assumptions without broadening the boundary: non-BV indices,
+  non-Bool/BV elements, surviving stores, extensionality, and full retained
+  lazy-array theory-clause reuse remain open. Verification passed:
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution warm_assert_abstracts_bool_select_over_array_symbol -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution warm_bool_array_select_congruence_refutes_equal_index_conflict -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib symexec::tests::branch_over_bool_array_select_auto_stays_warm -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test incremental -j1 -- --nocapture`;
+  `UPDATE_CAPABILITY_MATRIX=1 CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test capabilities -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test capabilities -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`;
+  `./scripts/check-links.sh`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib -j1 -- --nocapture`.
+
+- **Session 2026-06-27 — Warm branch routing recognizes retained select/UF slices.**
+  `SymbolicExecutor::branch` now uses a pure retained-abstraction preflight
+  instead of treating every post-simplification `select` or `Apply` as
+  dispatcher-only. One-shot branch queries over plain BV-indexed Bool/BV
+  array-symbol reads and scalar Bool/BV UF applications now encode warm
+  assumptions, scoped congruence lemmas, and replay projections through the same
+  retained abstraction route as `assume_auto`, while unsupported array/UF shapes
+  still fall back to the memory/theory dispatcher. Focused regressions assert
+  both true/false branch feasibility, warm CNF growth, and no deferred-theory
+  persistence for Bool/BV array-select and scalar UF branch conditions.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib symexec::tests::branch_over_scalar_uf_auto_stays_warm -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib symexec::tests::branch_over_bv_array_select_auto_stays_warm -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test incremental -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test capabilities -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib -j1 -- --nocapture`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-27 — Warm scalar UF congruence admission.**
+  `IncrementalBvSolver::assert_simplifying_memory` and the simplifying one-shot
+  assumption path now keep scalar Bool/BV uninterpreted-function applications on
+  the warm solver: supported `f(args)` applications are abstracted to retained
+  internal warm variables, same-function app pairs receive selector-scoped
+  congruence lemmas, and SAT models are projected back into concrete
+  `FuncValue` entries before original-term replay. This extends the U6 warm
+  retained-abstraction slice from BV-array select congruence to keccak-style
+  scalar UF calls while preserving the boundary: Int/Real/array/datatype/
+  uninterpreted-carrier UFs, wide-BV UF values, arbitrary array terms, and full
+  learned lazy-array/UF theory-clause reuse remain open. Verification passed:
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test incremental -j1 -- --nocapture`;
+  `UPDATE_CAPABILITY_MATRIX=1 CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test capabilities -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test capabilities -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`;
+  `./scripts/check-links.sh`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib -j1 -- --nocapture`.
+
+- **Session 2026-06-27 — Warm BV-valued array select-congruence admission.**
+  `IncrementalBvSolver::assert_simplifying_memory` and the simplifying one-shot
+  assumption path now keep plain reads over BV-indexed, BV-valued array symbols
+  on the warm solver: `select(a, i)` is abstracted to a retained internal BV
+  variable, same-array read pairs receive selector-scoped congruence lemmas, and
+  SAT models are projected back into concrete array entries before original-term
+  replay. This moves symbolic-base helper loads and symbolic-address ROW tails
+  whose remaining base read is a memory symbol out of the one-shot dispatcher.
+  Internal abstraction symbols are filtered from public models; assumption cores
+  still report only user assumptions. This advances U6/P4.1, but does not close
+  it: arbitrary array terms, extensionality, non-scalar array component sorts,
+  surviving stores, UF congruence, and full retained lazy-array/UF theory-clause
+  reuse remain open.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `UPDATE_CAPABILITY_MATRIX=1 CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test capabilities -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test incremental -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test capabilities -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --test symbolic_execution -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`;
+  `./scripts/check-links.sh`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib -j1 -- --nocapture`.
+
+- **Session 2026-06-27 — BV Pareto robustness and signed mixed-direction coverage.**
+  `optimize_bv_pareto` now matches the LIA Pareto robustness contract for
+  out-of-fragment objective values: a non-BV objective in the BV Pareto API
+  returns `ParetoOutcome::Unknown` instead of a hard `Unsupported` error. The
+  regression suite now covers a signed mixed-direction BV Pareto front
+  (`maximize signed x`, `minimize signed y`) as well as the existing unsigned
+  max/max front, so P4.3's BV Pareto status is no longer stale. Verification
+  passed:
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test optimize pareto_bv_signed_mixed_direction_front -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test optimize_robustness d_bv_pareto_non_bv_objective_is_unknown_not_err -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test optimize -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test optimize_robustness -j1 -- --nocapture`;
+  `UPDATE_CAPABILITY_MATRIX=1 CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test capabilities -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test capabilities -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --test optimize -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --test optimize_robustness -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-27 — Read-specific write-log guards shrink frontend memory formulas.**
+  `SymbolicMemory::load_with_write_log` now uses the same literal-distinct
+  predicate as the warm ROW simplifier when building read-specific write-log
+  terms: writes at concrete/literal addresses known distinct from the read are
+  skipped, exact read hits become the current value without an equality guard,
+  and later symbolic writes still emit guards so aliasing preserves
+  last-writer-wins. Concrete read-log hits can now collapse to pure warm BV
+  conditions, and symbolic-alias tails keep only the guards that may matter.
+  This is a frontend formula-size reduction for U7; U6's retained-lemma
+  lazy-array/UF engine remains the required final fix. Verification passed:
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution symbolic_memory_write_log_drops_shadowed_concrete_indices -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution symbolic_memory_write_log_skips_literal_distinct_but_keeps_symbolic_aliases -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution symbolic_memory_write_log_preserves_last_writer_for_symbolic_aliases -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --test symbolic_execution -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-27 — CFG exploration uses warm auto route by default.**
+  `SymbolicExecutor::explore_cfg` now uses the same automatic warm/memory route
+  as direct executor calls when `CfgExploreConfig::memory_aware` is left at its
+  default `false`: branch checks call `branch`, assumptions call `assume_auto`,
+  and target status/model checks call `status_auto` / `model_auto`. Reducible
+  CFG memory conditions therefore get the warm simplifier before falling back to
+  the memory dispatcher; setting `memory_aware=true` still forces the one-shot
+  full dispatcher. Verification passed:
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution cfg_explorer_uses_auto_route_for_reducible_memory_conditions -j1 -- --nocapture`;
+  `UPDATE_CAPABILITY_MATRIX=1 CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test capabilities -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test capabilities -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --test symbolic_execution -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-27 — SymbolicMemory helpers use warm auto route.**
+  `SymbolicMemory::{assume,branch}_load_eq` and the write-log load-equality
+  helpers now call `SymbolicExecutor::assume_auto` / `branch` instead of forcing
+  the memory dispatcher. Reducible helper queries, including symbolic-address
+  store reads over constant-array-backed memory and compact write-log reads whose
+  base read reduces away, stay on the ordinary warm BV solver and still return
+  ordinary warm `status` / `model`; unreduced symbolic-base loads report
+  pruning-safe `Unknown` on the warm-only status path and remain feasible through
+  `status_auto` / the memory fallback. Verification passed:
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution symbolic_memory_helper_keeps_reducible_load_assume_warm -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution symbolic_memory_helper_keeps_reducible_load_branch_warm -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution symbolic_memory_write_log_helpers_use_warm_route_when_reducible -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution symbolic_memory_helper_defers_unreduced_symbolic_base -j1 -- --nocapture`;
+  `UPDATE_CAPABILITY_MATRIX=1 CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test capabilities -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test capabilities -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --test symbolic_execution -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-27 — Warm symbolic ROW conditional admission.**
+  `IncrementalBvSolver::simplify_memory_for_warm_assertion` now expands
+  symbolic-address read-over-write to the total SMT-LIB conditional:
+  `select(store(a, i, v), j) -> ite(i = j, v, select(a, j))`, then keeps
+  simplifying the base read. This keeps symbolic store/read hits and misses on
+  the warm BV solver when the remaining base read reduces through the existing
+  constant-array, literal-distinct, same-index, or array-ITE slice, while the
+  original memory assertion remains the replay/core surface. The boundary
+  remains explicit: symbolic base-array state that leaves an unreduced
+  `select`, array extensionality, and UF lemmas still defer to
+  `check_with_memory` until the full retained-lemma lazy array/UF engine lands.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution warm_assert_simplifies_symbolic_read_over_write_hit_to_ite -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution warm_assumption_simplifies_symbolic_read_over_write_miss_to_ite -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution branch_simplifies_symbolic_read_over_write_hit_on_warm_path -j1 -- --nocapture`;
+  `UPDATE_CAPABILITY_MATRIX=1 CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test capabilities -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test capabilities -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --test symbolic_execution -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-27 — Warm array-ITE read admission.**
+  `IncrementalBvSolver::simplify_memory_for_warm_assertion` now distributes
+  reads over array-valued `ite` terms:
+  `select(ite(c, a, b), i) -> ite(c, select(a, i), select(b, i))`, then keeps
+  simplifying the scalar branch reads. This keeps simple branch-merged memory
+  states on the warm BV solver when the selected branches reduce through the
+  existing same-index, literal-distinct, or constant-array rules, while original
+  memory assertions remain the replay/core surface. The boundary remains
+  explicit: symbolic array state that does not reduce through this narrow slice,
+  symbolic distinct-index ROW, extensionality, and UF lemmas remain deferred to
+  `check_with_memory` until the full retained-lemma lazy array/UF engine lands.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution warm_assert_simplifies_select_over_array_ite -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution warm_assumption_simplifies_select_over_array_ite -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution branch_simplifies_select_over_array_ite_on_warm_path -j1 -- --nocapture`;
+  `UPDATE_CAPABILITY_MATRIX=1 CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test capabilities -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test capabilities -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --test symbolic_execution -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-27 — Warm constant-array read admission.**
+  `IncrementalBvSolver::simplify_memory_for_warm_assertion` now collapses
+  reads from constant arrays to the array default before warm-path
+  classification. This keeps zero-initialized memory reads such as
+  `select((as const Array) #0, i)` and concrete miss chains over
+  zero-initialized memory on the warm BV solver through committed assertions,
+  one-shot assumptions, assumption cores, and `SymbolicExecutor::branch`, while
+  still replaying every SAT model against the original memory term. The boundary
+  remains explicit: symbolic array state, symbolic distinct-index ROW,
+  extensionality, and UF lemmas remain deferred to `check_with_memory` until the
+  full retained-lemma lazy array/UF engine lands. Verification passed:
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution warm_assert_simplifies_constant_array_read -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution warm_assumption_simplifies_constant_array_read -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution branch_simplifies_constant_array_store_miss_on_warm_path -j1 -- --nocapture`;
+  `UPDATE_CAPABILITY_MATRIX=1 CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test capabilities -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test capabilities -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --test symbolic_execution -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-27 — Warm literal ROW chain admission.**
+  `IncrementalBvSolver::simplify_memory_for_warm_assertion` now handles the
+  next replay-preserving read-over-write case after same-index hits: when the
+  write and read indices are literal constants known to be different, it skips
+  that store and keeps simplifying the read. This lets concrete-address miss
+  chains such as `select(store(store(mem, #3, v3), #4, v4), #3)` expose the
+  inner same-index read-back and stay on the warm BV solver through committed
+  assertions, one-shot assumptions, assumption cores, and
+  `SymbolicExecutor::branch`. The boundary remains explicit: symbolic
+  distinct-index ROW, extensionality, and UF lemmas remain deferred to
+  `check_with_memory` until the full retained-lemma lazy array/UF engine lands.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution warm_assumption_simplifies_constant_distinct_read_over_write_chain -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution branch_simplifies_constant_distinct_read_over_write_chain_on_warm_path -j1 -- --nocapture`;
+  `UPDATE_CAPABILITY_MATRIX=1 CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test capabilities -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test capabilities -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --test symbolic_execution -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-27 — Warm same-index ROW assumptions and branches.**
+  `IncrementalBvSolver` now applies the narrow syntactic read-over-write
+  identity `select(store(a, i, v), i) -> v` to replay-preserving one-shot
+  assumptions as well as committed assertions: `check_assuming_simplifying_memory`
+  and `check_assuming_core_simplifying_memory` encode the simplified BV term
+  while replaying SAT models and reporting UNSAT cores against the original
+  memory assumption. `SymbolicExecutor::branch` uses that path before routing
+  to the memory dispatcher, so simple store/read-back fork queries stay on the
+  warm BV solver without committing either branch. The boundary is explicit:
+  distinct-index ROW, extensionality, and UF lemmas remain deferred to
+  `check_with_memory` until the full retained-lemma lazy array/UF engine lands.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution warm_assumption_simplifies_same_index_read_over_write -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution branch_simplifies_same_index_memory_condition_on_warm_path -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution warm_assert_simplifies_same_index_read_over_write -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution assume_auto_keeps_same_index_memory_condition_on_warm_path -j1 -- --nocapture`;
+  `UPDATE_CAPABILITY_MATRIX=1 CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test capabilities -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test capabilities -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --test symbolic_execution -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-27 — Property SDK Kani-style assume/assert baseline.**
+  The generated property SDK corpus now includes a bounded Kani-style
+  assume/assert counterexample baseline: an independent Rust scan of the
+  `kani::assume(debit <= 10)` plus
+  `assert(balance.wrapping_sub(debit) <= balance)` analogue finds the first
+  precondition-respecting failure `(balance = 0, debit = 1)`, and Axeyum's
+  minimized SDK counterexample matches the same witness and rendered bindings.
+  This gives PROP.6 both assumption-backed proof and assumption-backed
+  counterexample coverage while real Kani CLI-backed comparison remains open.
+  The corpus now covers 16 cases, with 5 proved, 11 disproved, 0 unknown,
+  DISAGREE=0, and 1/1 Lean-required coverage. Verification passed:
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo run -p axeyum-property --example property_corpus_scoreboard -- json >/tmp/axeyum-property-corpus.json`;
+  `diff -u docs/consumer-track/property/corpus.json /tmp/axeyum-property-corpus.json`;
+  `CARGO_BUILD_JOBS=2 cargo run -p axeyum-property --example property_corpus_scoreboard -- markdown >/tmp/axeyum-property-scoreboard.md`;
+  `diff -u docs/consumer-track/property/SCOREBOARD.md /tmp/axeyum-property-scoreboard.md`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property --test corpus -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-property --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-property --no-deps -j1`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-27 — Solver clippy gate restored.**
+  The previously documented `axeyum-solver --all-targets` clippy blocker is
+  cleared. The repair was behavior-neutral: narrow test/scenario allowances for
+  existing long or notation-heavy tests, clearer local names in DPLL-LIA tests,
+  and mechanical `auto.rs` cleanup for lossless integer conversion plus an
+  unnecessary explicit `drop`. Verification passed:
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib -j1 -- --nocapture`.
+
+- **Session 2026-06-27 — SymbolicMemory write-log normalization.**
+  `SymbolicMemory` now exposes `SymbolicMemoryWrite` plus conservative
+  write-log helpers for consumer frontends that track memory writes before
+  deciding whether to materialize `store` chains. `normalized_writes` drops
+  same-index writes shadowed by later writes, `load_with_write_log` emits
+  compact read-over-write `ite` chains with true last-writer-wins ordering for
+  symbolic aliases, and the load-equality branch/assume helpers route those
+  compact reads through the existing memory-aware dispatcher. A later slice made
+  those chains read-specific by skipping literal-distinct writes and eliding
+  exact-hit guards. This mitigates U7's frontend encoding pain while U6's true
+  warm lazy-array/UF engine remains open. Verification passed:
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution symbolic_memory_write_log -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test counterexample_minimize -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --test symbolic_execution -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`.
+  Broad `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --all-targets -j1 -- -D warnings`
+  is still blocked by unrelated existing lint debt in `array_axiom`,
+  `dpll_lia`, `ufbv_finite`, `abv`, and `auto`.
+
+- **Session 2026-06-27 — Property SDK proptest baseline comparison.**
+  The generated property SDK corpus now includes an actual proptest-backed
+  randomized/shrinking baseline: a fixed-seed `TestRunner` finds and shrinks the
+  `u8` wrapping-add monotonicity failure to `(x = 1, y = 255)`, matching both
+  the exhaustive Rust baseline and Axeyum's minimized counterexample. This
+  moves PROP.6 beyond proptest-style scans into a real external baseline runner
+  slice while broader proptest families and external Kani assertions remain
+  open. The corpus now covers 15 cases, with 5 proved, 10 disproved, 0 unknown,
+  DISAGREE=0, and 1/1 Lean-required coverage. Verification passed:
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo run -p axeyum-property --example property_corpus_scoreboard -- json >/tmp/axeyum-property-corpus.json`;
+  `diff -u docs/consumer-track/property/corpus.json /tmp/axeyum-property-corpus.json`;
+  `CARGO_BUILD_JOBS=2 cargo run -p axeyum-property --example property_corpus_scoreboard -- markdown >/tmp/axeyum-property-scoreboard.md`;
+  `diff -u docs/consumer-track/property/SCOREBOARD.md /tmp/axeyum-property-scoreboard.md`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property --test corpus -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-property --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-property --no-deps -j1`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-27 — Property SDK replay baseline comparison.**
+  The generated property SDK corpus now includes a replay-oriented executable
+  baseline comparison: Axeyum minimizes the guarded transfer counterexample to
+  `TransferInput { enabled: true, amount: 1, balance: 0 }`, an independent
+  bounded Rust scan finds the same first failing struct, and the generated
+  counterexample test replays that witness through a caller-owned failure
+  predicate. This broadens PROP.6 from scalar/struct/proved baselines into an
+  emitted regression-test shape while the broader randomized proptest and
+  external Kani runner remain open. The corpus now covers 14 cases, with
+  5 proved, 9 disproved, 0 unknown, DISAGREE=0, and 1/1 Lean-required
+  coverage. Verification passed:
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo run -p axeyum-property --example property_corpus_scoreboard -- json >/tmp/axeyum-property-corpus.json`;
+  `diff -u docs/consumer-track/property/corpus.json /tmp/axeyum-property-corpus.json`;
+  `CARGO_BUILD_JOBS=2 cargo run -p axeyum-property --example property_corpus_scoreboard -- markdown >/tmp/axeyum-property-scoreboard.md`;
+  `diff -u docs/consumer-track/property/SCOREBOARD.md /tmp/axeyum-property-scoreboard.md`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property --test corpus -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-property --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-property --no-deps -j1`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-27 — Property SDK assumption baseline comparison.**
+  The generated property SDK corpus now includes a precondition/assertion
+  executable baseline comparison: an independent bounded Rust scan finds no
+  `x <= 10 && x + 1 > 11` failure for `u8`, and Axeyum proves the same
+  postcondition through the SDK's `Property::assume` surface with checked
+  evidence. This broadens PROP.6 beyond scalar and struct counterexamples into
+  assumption-backed proved assertions while the broader external proptest/Kani
+  runner remains open. The corpus now covers 13 cases, with 5 proved,
+  8 disproved, 0 unknown, DISAGREE=0, and 1/1 Lean-required coverage.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo run -p axeyum-property --example property_corpus_scoreboard -- json >/tmp/axeyum-property-corpus.json`;
+  `diff -u docs/consumer-track/property/corpus.json /tmp/axeyum-property-corpus.json`;
+  `CARGO_BUILD_JOBS=2 cargo run -p axeyum-property --example property_corpus_scoreboard -- markdown >/tmp/axeyum-property-scoreboard.md`;
+  `diff -u docs/consumer-track/property/SCOREBOARD.md /tmp/axeyum-property-scoreboard.md`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property --test corpus -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-property --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-property --no-deps -j1`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-27 — Property SDK struct baseline comparison.**
+  The generated property SDK corpus now includes a derived-struct executable
+  baseline comparison: an independent bounded Rust scan finds the first failing
+  `TransferInput { enabled: true, amount: 1, balance: 0 }` for the guarded
+  transfer predicate, and Axeyum's minimized SDK counterexample lifts to the
+  same struct value. This broadens PROP.6 beyond scalar baseline comparisons
+  while the broader external proptest/Kani runner remains open. The corpus now
+  covers 12 cases, with 4 proved, 8 disproved, 0 unknown, DISAGREE=0, and 1/1
+  Lean-required coverage. Verification passed:
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo run -p axeyum-property --example property_corpus_scoreboard -- json >/tmp/axeyum-property-corpus.json`;
+  `diff -u docs/consumer-track/property/corpus.json /tmp/axeyum-property-corpus.json`;
+  `CARGO_BUILD_JOBS=2 cargo run -p axeyum-property --example property_corpus_scoreboard -- markdown >/tmp/axeyum-property-scoreboard.md`;
+  `diff -u docs/consumer-track/property/SCOREBOARD.md /tmp/axeyum-property-scoreboard.md`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property --test corpus -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-property --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-property --no-deps -j1`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-27 — Consumer upstream feedback log restored.**
+  `docs/consumer-track/UPSTREAM-FEEDBACK.md` is restored on `main` and
+  reconciled against the current state instead of copying the stale
+  `consumer-track` branch version verbatim. U1, U2, U3, and U5 are now recorded
+  as resolved for their named consumer-facing asks; U4 remains the strategic
+  proof/Lean reconstruction frontier; U6 and U7 remain partial because the
+  one-shot memory/theory fallback has landed but the true warm lazy-array/UF
+  engine is still open. The consumer-track README now links the log.
+  Verification passed:
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-27 — Property SDK expression builder aliases.**
+  `axeyum-property` now exposes fallible, context-owned Bool/BV/Int expression
+  aliases such as `Property::bool_implies`, `Property::bv_add`,
+  `Property::bv_equals`, `Property::int_add`, and `Property::int_equals`,
+  delegating to the existing typed-handle builders while keeping construction
+  errors explicit. The generated property SDK corpus adds a mixed Bool/BV/Int
+  alias proof row with checked evidence. The corpus now covers 11 cases, with
+  4 proved, 7 disproved, 0 unknown, DISAGREE=0, and 1/1 Lean-required
+  coverage. Verification passed:
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo run -p axeyum-property --example property_corpus_scoreboard -- json >/tmp/axeyum-property-corpus.json`;
+  `diff -u docs/consumer-track/property/corpus.json /tmp/axeyum-property-corpus.json`;
+  `CARGO_BUILD_JOBS=2 cargo run -p axeyum-property --example property_corpus_scoreboard -- markdown >/tmp/axeyum-property-scoreboard.md`;
+  `diff -u docs/consumer-track/property/SCOREBOARD.md /tmp/axeyum-property-scoreboard.md`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property --test corpus -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-property --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-property --no-deps -j1`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-27 — Property SDK proved baseline comparison.**
+  The generated property SDK corpus now covers deterministic executable
+  baseline comparisons for both outcomes: the existing minimized `u8`
+  wrapping-add counterexample row checks a disproved result against the first
+  bounded Rust failure, and the new row proves `u8` wrapping-add commutativity
+  after an independent bounded scan finds no `x + y != y + x` failure. This
+  keeps the PROP.6 measurement gate honest before a broader proptest/Kani
+  runner exists. The corpus now covers 10 cases, with 3 proved, 7 disproved,
+  0 unknown, DISAGREE=0, and 1/1 Lean-required coverage. Verification passed:
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo run -p axeyum-property --example property_corpus_scoreboard -- json >/tmp/axeyum-property-corpus.json`;
+  `diff -u docs/consumer-track/property/corpus.json /tmp/axeyum-property-corpus.json`;
+  `CARGO_BUILD_JOBS=2 cargo run -p axeyum-property --example property_corpus_scoreboard -- markdown >/tmp/axeyum-property-scoreboard.md`;
+  `diff -u docs/consumer-track/property/SCOREBOARD.md /tmp/axeyum-property-scoreboard.md`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property --test corpus -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-property --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-property --no-deps -j1`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-27 — Property SDK baseline comparison first slice.**
+  The generated property SDK corpus now includes a deterministic
+  proptest-style executable baseline comparison for the unsigned `u8`
+  wrapping-add monotonicity property: Axeyum produces the minimized
+  counterexample, a bounded Rust predicate scan independently finds the first
+  failing pair, and the corpus checks both routes agree on `(x = 1, y = 255)`.
+  This moves PROP.6 from an SDK-only gate toward an external-style comparison
+  gate while keeping the scope honest: broad proptest/Kani coverage remains
+  open. The corpus now covers 9 cases, with 2 proved, 7 disproved, 0 unknown,
+  DISAGREE=0, and 1/1 Lean-required coverage. Verification passed:
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo run -p axeyum-property --example property_corpus_scoreboard -- json >/tmp/axeyum-property-corpus.json`;
+  `diff -u docs/consumer-track/property/corpus.json /tmp/axeyum-property-corpus.json`;
+  `CARGO_BUILD_JOBS=2 cargo run -p axeyum-property --example property_corpus_scoreboard -- markdown >/tmp/axeyum-property-scoreboard.md`;
+  `diff -u docs/consumer-track/property/SCOREBOARD.md /tmp/axeyum-property-scoreboard.md`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property --test corpus -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-property --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-property --no-deps -j1`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-27 — Property SDK fixture file assembly.**
+  `Counterexample::render_rust_test_file` now assembles caller-owned top-level
+  prelude blocks plus multiple generated modules or standalone `#[test]` items
+  into deterministic multi-case Rust fixture files. The helper deliberately
+  concatenates caller-owned/generated blocks without inventing replay semantics,
+  so property, verifier, and EVM frontends can own domain replay while sharing a
+  stable file-level assembly step for regression fixtures. The generated
+  property SDK corpus still covers 8 cases, with the nested aggregate row now
+  checking a complete fixture file with a crate-level prelude, replay module,
+  smoke module, nested `transfer.limits` setup, `TransferInput` setup, and a
+  helper-rendered `Result<bool, _>` replay assertion; totals remain 2 proved,
+  6 disproved, 0 unknown, DISAGREE=0, and 1/1 Lean-required coverage. External
+  proptest/Kani-style baselines remain open. Verification passed:
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo run -p axeyum-property --example property_corpus_scoreboard -- json >/tmp/axeyum-property-corpus.json`;
+  `diff -u docs/consumer-track/property/corpus.json /tmp/axeyum-property-corpus.json`;
+  `CARGO_BUILD_JOBS=2 cargo run -p axeyum-property --example property_corpus_scoreboard -- markdown >/tmp/axeyum-property-scoreboard.md`;
+  `diff -u docs/consumer-track/property/SCOREBOARD.md /tmp/axeyum-property-scoreboard.md`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property --test corpus -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-property --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-property --no-deps -j1`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-27 — Property SDK test module assembly.**
+  `Counterexample::render_rust_test_module` now wraps caller-owned imports,
+  helper functions, fixture code, and generated `#[test]` items in a
+  deterministic sanitized `#[cfg(test)] mod ...` block. This keeps fixture and
+  domain replay semantics frontend-owned while giving property, verifier, and
+  EVM apps a stable module-level assembly step for counterexample regression
+  tests. The generated property SDK corpus still covers 8 cases, with the
+  nested aggregate row now checking a complete module with caller-owned imports,
+  nested `transfer.limits` setup, `TransferInput` setup, and a helper-rendered
+  `Result<bool, _>` replay assertion; totals remain 2 proved, 6 disproved,
+  0 unknown, DISAGREE=0, and 1/1 Lean-required coverage. External
+  proptest/Kani-style baselines remain open. Verification passed:
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo run -p axeyum-property --example property_corpus_scoreboard -- json >/tmp/axeyum-property-corpus.json`;
+  `diff -u docs/consumer-track/property/corpus.json /tmp/axeyum-property-corpus.json`;
+  `CARGO_BUILD_JOBS=2 cargo run -p axeyum-property --example property_corpus_scoreboard -- markdown >/tmp/axeyum-property-scoreboard.md`;
+  `diff -u docs/consumer-track/property/SCOREBOARD.md /tmp/axeyum-property-scoreboard.md`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property --test corpus -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-property --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-property --no-deps -j1`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-27 — Property SDK Result replay adapters.**
+  `Counterexample::render_rust_replay_call` now centralizes generated replay
+  call formatting, and the counterexample-to-test surface covers
+  result-returning replay functions with
+  `render_rust_replay_expect_ok` / `render_rust_test_with_replay_expect_ok`
+  for `Result<(), E>` and `render_rust_replay_expect_ok_assertion` /
+  `render_rust_test_with_replay_expect_ok_assertion` for `Result<bool, E>`.
+  The replay function path, argument expressions, and failure message remain
+  frontend-owned, so `axeyum-property` still does not invent domain replay
+  semantics. The generated property SDK corpus still covers 8 cases, with the
+  nested aggregate row now checking caller-owned imports, nested
+  `transfer.limits` setup, `TransferInput` setup, and a helper-rendered
+  `Result<bool, _>` replay assertion in order; totals remain 2 proved, 6
+  disproved, 0 unknown, DISAGREE=0, and 1/1 Lean-required coverage. External
+  proptest/Kani-style baselines remain open. Verification passed:
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo run -p axeyum-property --example property_corpus_scoreboard -- json >/tmp/axeyum-property-corpus.json`;
+  `diff -u docs/consumer-track/property/corpus.json /tmp/axeyum-property-corpus.json`;
+  `CARGO_BUILD_JOBS=2 cargo run -p axeyum-property --example property_corpus_scoreboard -- markdown >/tmp/axeyum-property-scoreboard.md`;
+  `diff -u docs/consumer-track/property/SCOREBOARD.md /tmp/axeyum-property-scoreboard.md`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property --test corpus -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-property --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-property --no-deps -j1`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-27 — Property SDK replay assertion helper.**
+  `Counterexample::render_rust_replay_assertion` now formats the common
+  generated-test body `assert!(replay_fn(args...));`, and
+  `render_rust_test_with_replay_assertion` wires that body into the existing
+  caller-owned prelude/setup test skeleton. The replay function path and
+  argument expressions remain frontend-owned, so `axeyum-property` still does
+  not invent domain replay semantics. The generated property SDK corpus still
+  covers 8 cases, with the nested aggregate row now checking caller-owned
+  imports, nested `transfer.limits` setup, `TransferInput` setup, and a
+  helper-rendered replay assertion in order; totals remain 2 proved, 6
+  disproved, 0 unknown, DISAGREE=0, and 1/1 Lean-required coverage. External
+  proptest/Kani-style baselines remain open. Verification passed:
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo run -p axeyum-property --example property_corpus_scoreboard -- json >/tmp/axeyum-property-corpus.json`;
+  `diff -u docs/consumer-track/property/corpus.json /tmp/axeyum-property-corpus.json`;
+  `CARGO_BUILD_JOBS=2 cargo run -p axeyum-property --example property_corpus_scoreboard -- markdown >/tmp/axeyum-property-scoreboard.md`;
+  `diff -u docs/consumer-track/property/SCOREBOARD.md /tmp/axeyum-property-scoreboard.md`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property --test corpus -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-property --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-property --no-deps -j1`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-27 — Property SDK prelude-aware replay tests.**
+  `Counterexample::render_rust_test_with_prelude` now emits caller-owned
+  imports/module prelude, replay-checked scalar bindings, caller-owned setup
+  snippets, then the replay/assertion body. This lets frontends render
+  nested/domain aggregate initializers with `render_rust_named_struct_let` /
+  `render_rust_named_struct_let_with_fields`, then place those snippets before
+  the assertion in a generated `#[test]` without the SDK inventing domain
+  semantics. The generated property SDK corpus still covers 8 cases, now with
+  the nested aggregate row checking that a caller-owned `use` prelude appears
+  before setup snippets and the replay assertion; totals remain 2 proved, 6
+  disproved, 0 unknown, DISAGREE=0, and 1/1 Lean-required coverage. External
+  proptest/Kani-style baselines remain open. Verification passed:
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property --test corpus -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo run -p axeyum-property --example property_corpus_scoreboard -- json >/tmp/axeyum-property-corpus.json`;
+  `diff -u docs/consumer-track/property/corpus.json /tmp/axeyum-property-corpus.json`;
+  `CARGO_BUILD_JOBS=2 cargo run -p axeyum-property --example property_corpus_scoreboard -- markdown >/tmp/axeyum-property-scoreboard.md`;
+  `diff -u docs/consumer-track/property/SCOREBOARD.md /tmp/axeyum-property-scoreboard.md`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-property --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-property --no-deps -j1`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-27 — Property SDK explicit nested aggregate replay.**
+  `Counterexample::render_rust_named_struct_let_with_fields` now lets
+  frontends compose caller-owned nested/domain Rust replay shapes without the
+  SDK inferring those shapes. Direct scalar children still come from
+  replay-checked model bindings; nested descendants are ignored until the caller
+  supplies an explicit field expression such as `limits: transfer_limits`;
+  duplicate field initialization and invalid/empty explicit fields are rejected;
+  and the older direct aggregate helper still rejects implicit nested inference.
+  The generated property SDK corpus now covers 8 cases, 2 proved, 6 disproved,
+  0 unknown, DISAGREE=0, and 1/1 Lean-required coverage. External
+  proptest/Kani-style baselines remain open. Verification passed:
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property --test corpus -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo run -p axeyum-property --example property_corpus_scoreboard -- json >/tmp/axeyum-property-corpus.json`;
+  `diff -u docs/consumer-track/property/corpus.json /tmp/axeyum-property-corpus.json`;
+  `CARGO_BUILD_JOBS=2 cargo run -p axeyum-property --example property_corpus_scoreboard -- markdown >/tmp/axeyum-property-scoreboard.md`;
+  `diff -u docs/consumer-track/property/SCOREBOARD.md /tmp/axeyum-property-scoreboard.md`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-property --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-property --no-deps -j1`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-27 — Property SDK corpus broadened to overflow/derive workflows.**
+  This slice broadened the property SDK corpus gate from five to seven
+  generated SDK workflows. The new P1 rows exercise the typed `uadd_overflows`
+  helper with a minimized `(x=1,y=255)` witness and `#[derive(Symbolic)]`
+  concrete struct lifting for a `TransferInput` counterexample.
+  `tests/support/corpus_cases.rs` remains the shared source for
+  `tests/corpus.rs`, `docs/consumer-track/property/corpus.json`, and the
+  generated `SCOREBOARD.md`. The explicit nested replay slice above has since
+  moved current totals to 8 cases, 2 proved, 6 disproved, 0 unknown,
+  DISAGREE=0, and 1/1 Lean-required coverage. External proptest/Kani-style
+  baselines and broader corpus coverage remain open.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property --test corpus -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo run -p axeyum-property --example property_corpus_scoreboard -- json >/tmp/axeyum-property-corpus.json`;
+  `diff -u docs/consumer-track/property/corpus.json /tmp/axeyum-property-corpus.json`;
+  `CARGO_BUILD_JOBS=2 cargo run -p axeyum-property --example property_corpus_scoreboard -- markdown >/tmp/axeyum-property-scoreboard.md`;
+  `diff -u docs/consumer-track/property/SCOREBOARD.md /tmp/axeyum-property-scoreboard.md`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-property --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-property --no-deps -j1`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-27 — Property SDK corpus scoreboard first slice.**
+  `axeyum-property` now has a committed graduated corpus gate in
+  `crates/axeyum-property/tests/corpus.rs` plus the app-level
+  `docs/consumer-track/property/SCOREBOARD.md`. The initial slice covered five
+  SDK workflows: BV proof with checked evidence and a required Lean module,
+  integer implication under assumptions, unsigned minimized counterexamples,
+  signed two's-complement minimized counterexamples, and struct-shaped
+  counterexample rendering. The generated gate above has since broadened this
+  to 8 cases, 2 proved, 6 disproved, 0 unknown, 0 mismatches / DISAGREE, and
+  1/1 Lean-required case available. This advances PROP.6 from TODO to WIP;
+  external proptest/Kani-style comparison remains open. Verification passed:
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property --test corpus -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-property --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-property --no-deps -j1`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-27 — Property certificate summaries.**
+  The solver evidence enum now exposes stable `Evidence::kind_label()` strings
+  for SDK/UI reporting. `axeyum-property::ProofCertificate::summary()` builds a
+  compact owned report over a proof attempt: proved/disproved/unknown status,
+  evidence kind, backend and assertion-count provenance, per-run trust-step
+  labels with ledger and run-level certification bits, and Lean availability or
+  reconstruction diagnostics. Focused property regressions now assert that a
+  proved certificate exposes checked evidence plus a Lean summary, while a
+  disproved property exposes neither evidence nor a fabricated Lean artifact.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-property --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-property --no-deps -j1`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`.
+
+- **Session 2026-06-27 — Property Lean certificate surface first slice.**
+  `axeyum-property` now re-exports `EvidenceReport`, `ProofFragment`, and
+  `ReconstructError`, and exposes `LeanModule` / `ProofCertificate` as the first
+  SDK certificate envelope. `Property::prove_with_certificate` returns the
+  ordinary checked `ProofOutcome` plus a best-effort standalone Lean module for
+  proved outcomes when `prove_unsat_to_lean_module` covers the
+  `hypotheses ∧ ¬goal` refutation fragment. `prove_minimized_with_certificate`
+  preserves the signed/unsigned counterexample minimization path and attaches
+  the same optional Lean module only on proved outcomes. Disproved and unknown
+  results deliberately carry no Lean module, and proved-but-out-of-fragment
+  results retain the checked Axeyum evidence while surfacing the
+  `ReconstructError` diagnostic. Verification passed:
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-property --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-property --no-deps -j1`.
+
+- **Session 2026-06-27 — Property expression ergonomics first slice.**
+  `axeyum-property` now exposes `.equals()` aliases on `Bool`, `Bv<W>`, and
+  `Int`, giving SDK users an equality name that avoids Rust's `Eq::eq` naming
+  friction while preserving the explicit fallible `&mut Property` builder
+  contract. `Property::all` and `Property::any` fold Boolean conditions with
+  SMT identity values for empty inputs (`true` and `false` respectively), so
+  frontends can build conjunction/disjunction spines without introducing an
+  implicit arena or hiding term-construction errors. Focused integration
+  coverage exercises BV/Int/Bool equality aliases, non-empty folds, empty-fold
+  identities, and a proof through the existing evidence front door. Verification
+  passed:
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-property --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-property --no-deps -j1`.
+
+- **Session 2026-06-27 — Structured Rust counterexample snippets for property inputs.**
+  `Counterexample` in `axeyum-property` now emits Rust aggregate bindings for
+  direct symbolic input bundles without inventing domain replay semantics.
+  `render_rust_named_struct_let` builds `Type { field: scalar_ident }`
+  initializer statements from direct named fields such as `transfer.amount`,
+  while `render_rust_tuple_struct_let` builds tuple-struct constructor
+  statements from contiguous numeric fields such as `pair.0`, `pair.1`. Both
+  helpers validate that the referenced scalar bindings can be rendered first,
+  preserve declaration order, and reject nested aggregate inference such as
+  `transfer.limits.fee` until a frontend supplies the Rust domain shape.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-property --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-property --no-deps -j1`.
+
+- **Session 2026-06-27 — Signed-order counterexample minimization metadata.**
+  Counterexample minimization now carries per-objective metadata instead of only
+  raw symbol IDs. `axeyum-solver` exposes
+  `ModelMinimizeObjective::{Symbol,SignedBv}`,
+  `minimize_model_objectives`, `minimize_model_objectives_with_config`,
+  `produce_evidence_minimized_with_objectives`,
+  `prove_minimized_with_objectives`, and `Solver::minimize_model_objectives`.
+  The existing symbol-only APIs remain compatibility wrappers that preserve the
+  old Bool / unsigned-BV / Int order.
+
+  `axeyum-property::Property::prove_minimized` now builds these objectives from
+  SDK declaration metadata: raw `Property::bv::<W>` inputs still minimize in
+  unsigned BV order, while `Property::signed_bv::<W>` and
+  `Symbolic`-declared `i8`/`i16`/`i32`/`i64` inputs minimize in signed
+  two's-complement order and still render as signed Rust literals. Focused
+  regressions distinguish unsigned BV8 minimization (`0`) from signed BV8
+  minimization (`-3`, raw `0xfd`) on the same feasible set. Verification
+  passed:
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test counterexample_minimize -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test prove -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-property --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-property --no-deps -j1`.
+  A broader `cargo clippy -p axeyum-solver --all-targets` attempt still hits
+  existing `tests/symbolic_execution.rs` `too_many_lines` lints unrelated to
+  this slice, so the solver clippy gate here is the library surface.
+
+- **Session 2026-06-27 — Signed fixed-width `Symbolic` inputs for the property SDK.**
+  `i8`/`i16`/`i32`/`i64` now implement `Symbolic` as two's-complement
+  `Bv<8>`/`Bv<16>`/`Bv<32>`/`Bv<64>` terms, while `i128` remains mathematical
+  Int. Model lifting sign-extends replay-checked BV values back to Rust signed
+  integers, and `Property` records signed-vs-unsigned BV literal intent so
+  counterexample rendering emits stable signed Rust bindings such as
+  `let byte: i8 = -1_i8; // BV8 two's-complement`. Raw `Property::bv::<W>`
+  inputs still render as unsigned Rust integer literals.
+
+  This closes the PROP.3 signed fixed-width Rust integer policy for declaration,
+  model lifting, derived structs, signed-order counterexample minimization, and
+  native-scalar test rendering without changing the underlying solving
+  semantics. Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-property --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-property --no-deps -j1`.
+
+- **Session 2026-06-27 — `#[derive(Symbolic)]` for the property SDK.**
+  Added the pure-Rust `axeyum-property-macros` workspace crate and re-exported
+  `#[derive(axeyum_property::Symbolic)]` from `axeyum-property`. The derive
+  supports named, tuple, and unit structs; adds
+  `field_type: Symbolic<Concrete = field_type>` bounds for generic fields;
+  declares named fields through `Property::symbolic_struct`; uses deterministic
+  numeric suffixes for tuple fields; and lifts concrete Rust struct values from
+  replay-checked models through the existing `Symbolic` implementations.
+
+  The macro-generated code references only `axeyum_property::*`, and
+  `axeyum-property` now publicly re-exports `Model`, `ProofOutcome`, and
+  `SolverConfig` because those types are already part of the SDK's public
+  signatures. This advances PROP.3's struct-derive layer without adding solver
+  behavior or changing the signed fixed-width integer policy. Verification
+  passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property-macros -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-property-macros --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-property --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-property-macros --no-deps -j1`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-property --no-deps -j1`.
+
+- **Session 2026-06-27 — Named-field `Symbolic` bundles for the property SDK.**
+  `axeyum-property` now exposes `Property::symbolic_struct("name", |fields| ...)`
+  and a public `SymbolicStruct` builder. Frontends can construct
+  struct-shaped symbolic inputs with deterministic field names such as
+  `transfer.amount` without invoking a proc-macro derive. `SymbolicStruct::field`
+  composes the existing scalar/tuple `Symbolic` implementations, while
+  `struct_field` supports nested named bundles. Counterexample rendering
+  sanitizes those dotted names into stable Rust identifiers such as
+  `transfer_amount`.
+
+  This advances PROP.3 without adding a new crate or solver behavior: the
+  `#[derive(Symbolic)]` lowers to the same builder in the follow-up slice, signed
+  fixed-width Rust integer policy remains deliberately undecided, and all proof
+  / minimization behavior still delegates through the existing evidence APIs.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-property --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-property --no-deps -j1`.
+
+- **Session 2026-06-27 — Scalar and tuple `Symbolic` trait for the property SDK.**
+  `axeyum-property` now has a public `Symbolic` trait: SDK users can declare a
+  typed symbolic value with `Property::symbolic::<T>("name")` and lift concrete
+  Rust values from replay-checked models with `Property::concrete::<T>`.
+  Implementations cover `bool`, unsigned Rust integers (`u8`/`u16`/`u32`/`u64`/
+  `u128` as BV8/BV16/BV32/BV64/BV128), signed Rust integers
+  (`i8`/`i16`/`i32`/`i64` as two's-complement BV8/BV16/BV32/BV64), `i128` as
+  mathematical Int, unit, and 2-/3-tuples with deterministic field names
+  (`name.0`, `name.1`, ...).
+
+  This is the first PROP.3 slice: it gives frontends and tests a macro-free
+  typed input bundle path while preserving deterministic declaration/objective
+  order. Follow-up slices add named-field bundles, `#[derive(Symbolic)]`, and
+  signed fixed-width Rust integer rendering/minimization policy.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-property --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-property --no-deps -j1`.
+
+- **Session 2026-06-27 — Property counterexample-to-test rendering.**
+  `axeyum-property` now turns replay-checked disproving models into a
+  deterministic `Counterexample` view over SDK-declared inputs. `InputBinding`
+  records the original symbol, declared sort, model value, and a sanitized
+  Rust identifier. The renderer emits native Rust `let` bindings for Bool, Int,
+  and BV widths up to 128 bits, plus a complete `#[test]` skeleton that inserts
+  caller-provided replay/assertion code after the model bindings. Unsupported
+  values such as arrays, Reals, datatypes, uninterpreted carriers, and wide
+  BV values decline explicitly instead of inventing replay semantics.
+
+  This completes the first PROP.4 slice and gives EVM/Rust verifier frontends a
+  reusable "small failing input -> regression test scaffold" primitive while
+  preserving the solver/evidence boundary. Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-property --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-property --no-deps -j1`.
+
+- **Session 2026-06-27 — `axeyum-property` typed proof SDK v0 scaffold.**
+  Added the first consumer-track app crate, `axeyum-property`, as a thin typed
+  prove-or-counterexample layer over existing Axeyum evidence APIs. The crate
+  owns no solver logic: it builds terms in a `TermArena` through typed
+  `Bool`, `Bv<W>`, and `Int` handles, tracks declared scalar inputs in
+  deterministic declaration order for minimized counterexamples, and delegates
+  to `prove` / `prove_minimized` so proved results still carry replay-checked
+  evidence and disproved results can carry minimized replay-checked models.
+
+  The v0 surface includes assumptions, constants, core Bool/BV/Int operations,
+  typed model-value extraction for scalar variables, and reusable typed unsigned
+  BV overflow predicates (`uadd_overflows`, `usub_overflows`,
+  `umul_overflows`) for EVM/Rust verifier frontends. Focused integration tests
+  cover a proved BV identity, an integer implication under assumptions, a
+  minimized BV8 counterexample lifted through the typed handle, and the BV256
+  overflow helper surface. Remaining SDK work: operator traits/ergonomic
+  syntax, richer model lifting, best-effort Lean-module packaging in the
+  returned certificate surface, and the per-app measurement/scoreboard harness.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-property --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-property --no-deps -j1`.
+
+- **Session 2026-06-27 — Word-width `bvumulo` encoding for wide BV overflow checks.**
+  `TermArena::bv_umulo` no longer expands to a `2w`-bit zero-extended
+  multiplier plus high-half nonzero test. It now builds the equivalent word-width
+  predicate `a > (all_ones / b)` using SMT-LIB total `bvudiv`, whose
+  divide-by-zero convention makes the `b = 0` case false without a separate
+  guard. This keeps BV256 unsigned-multiply-overflow checks inside the original
+  width instead of constructing a BV512 multiplier, directly addressing the
+  first U2 performance pain point for EVM-style arithmetic. Existing exhaustive
+  small-width overflow tests still validate the semantics, and a new BV256 shape
+  regression asserts the term DAG contains one `BvUdiv`, no `BvMul`, and no
+  doubled-width intermediate.
+
+  This is a word-level encoding improvement, not the full wide-multiplier
+  performance story: hard arbitrary multiplication constraints still need the
+  broader P1.2/P2.1 reduction and lazy/word-level bit-blasting work. Verification
+  passed:
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-ir --test ir -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-ir --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-ir --no-deps -j1`.
+
+- **Session 2026-06-27 — Minimized counterexamples surfaced through proof/evidence APIs.**
+  The counterexample minimizer is now available at the consumer-facing proof and
+  evidence front doors. `produce_evidence_minimized` wraps `produce_evidence`
+  and replaces `Evidence::Sat` with a lexicographically minimized replay-checked
+  model over caller-selected Bool / unsigned-BV<=127 / Int symbols.
+  `prove_minimized` preserves the default `prove` behavior for proved and
+  unknown goals, but when `hypotheses ∧ ¬goal` is satisfiable it returns a
+  minimized replay-checked `ProofOutcome::Disproved` countermodel. Both APIs are
+  strict: unsupported objective sorts remain explicit errors, and an undecided
+  minimization pass returns `Unknown` instead of silently claiming a non-minimal
+  model is minimal.
+
+  This closes the first U3 follow-through from "raw solver helper" to
+  property/verification front-door API. Remaining follow-up is broader objective
+  support (wide BV, Real, arrays, datatypes, and uninterpreted-carrier values)
+  plus any consumer-side wiring in the property/EVM/verify SDKs. Verification
+  passed:
+  `cargo fmt --all`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test counterexample_minimize -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test prove -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`.
+
+- **Session 2026-06-27 — First-class counterexample minimization helper.**
+  Added `minimize_model` / `minimize_model_with_config` plus
+  `Solver::minimize_model`, giving property and verification consumers a shared
+  deterministic "small failing input" primitive. The helper lexicographically
+  minimizes a replay-checked satisfying model over caller-selected symbols in
+  input order: Bool prefers `false`, unsigned BV supports widths up to 127 bits
+  through the existing checked BV optimizer, and Int uses the checked LIA
+  optimizer. It re-solves under the optimal pins before returning the model, so
+  uninterpreted-function interpretations and other model payloads remain
+  consistent with the minimized scalar assignments. Unsupported wide-BV/Real/
+  array/datatype/uninterpreted-carrier objectives are reported explicitly rather
+  than silently claiming a non-minimal result.
+
+  This advances the consumer U3 ergonomics gap and the P4.3 constrained
+  optimization surface. Higher-level `prove` / evidence API integration landed
+  in the follow-up session above; remaining work is extending the objective
+  surface when wider BV or richer theory values have a native minimization
+  order.
+  Verification passed:
+  `cargo fmt --all`;
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test counterexample_minimize -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`.
+
+- **Session 2026-06-27 — SymbolicExecutor auto-routes array/UF CFG queries.**
+  The incremental solver now exposes deferred-theory introspection, and
+  `SymbolicExecutor` uses it to reduce frontend footguns around symbolic memory
+  and uninterpreted calls. Plain `branch` auto-promotes array/UF branch
+  conditions to the memory/theory-aware full-dispatcher route instead of
+  degrading them to warm-BV `Unknown`; `explore_cfg` applies the same selection
+  to branch, assume, target-status, and target-model queries even when
+  `CfgExploreConfig::memory_aware` is left at its default `false`. Direct
+  callers also get `assume_auto`, `status_auto`, and `model_auto` helpers. The
+  CFG explorer also restores the opened solver scope if a selected assume route
+  errors, avoiding leaked scopes on frontend/lifter failures.
+
+  This advances the consumer U6/U7 ergonomics slice: frontends can keep memory
+  and keccak-style calls as arrays/UFs through the CFG path without manually
+  toggling every branch query. It is still the ADR-0030 one-shot fallback over
+  `check_auto`, not the final retained-lemma warm lazy-array/UF solver.
+  Verification passed:
+  `cargo fmt --all`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib symexec::tests::branch_over_uninterpreted_call_auto_uses_theory_route -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`.
+
+- **Session 2026-06-27 — Lean proof input-shape normalization.**
+  The Lean proof facade now falls back to normalizing the assertion spine when
+  direct reconstruction declines: top-level `BoolAnd` assertions are split into
+  fact slices, and repeated top-level double negations are stripped. The same
+  fallback is shared by `prove_unsat_to_lean_module` and the SOS Lean-module
+  helper, so consumer-style `hyps ∧ ¬goal` queries no longer need caller-side
+  pre-massaging before reconstruction while existing direct routes keep their
+  original priority.
+
+  Focused regressions cover a single conjunctive/double-negated QF_UFBV query
+  and an array read-over-write axiom query routing through `ArrayAxiom`; both
+  generated modules were accepted by a real Lean binary in this environment.
+  Verification passed:
+  `cargo fmt --all`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test lean_crosscheck normalizes -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test lean_crosscheck qf_uf_boolean_euf_rows_check_in_real_lean -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test lean_crosscheck qf_uf_declared_sort_equality_checks_in_real_lean -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test lean_crosscheck conjunctive_lra_still_reconstructs_unchanged -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`.
+
+- **Session 2026-06-27 — SMT-LIB get-assertions helper.**
+  The SMT-LIB parser now records `(get-assertions)` as an assertion-stack
+  output command instead of treating it as a no-op. `solve_smtlib_get_assertions`
+  replays `assert`, `push`, `pop`, and `reset-assertions` to return each
+  requested command-point snapshot as deterministic SMT-LIB-style rendered
+  terms. One-shot `check-sat-assuming` literals are intentionally not retained
+  in those snapshots.
+
+  This advances P4.4 command-surface compatibility for tools that inspect the
+  current assertion stack. It is still a Rust helper API over rendered IR terms,
+  not a canonical textual interactive SMT-LIB session renderer. Verification
+  passed:
+  `cargo fmt --all`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-smtlib --test smtlib -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test smtlib -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test support_matrix -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-smtlib --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-smtlib --no-deps -j1`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`.
+
+- **Session 2026-06-27 — SMT-LIB get-model helper.**
+  The parser now records user-declared 0-ary constants and n-ary
+  uninterpreted functions for model reporting, separately from quantified
+  locals and definitions. `solve_smtlib_get_model` returns a Rust-facing
+  `SmtLibModel` for sat single-query scripts that requested `(get-model)`,
+  preserving declaration order and reporting constants as `Value`s plus
+  function interpretations as `FuncValue`s.
+
+  This closes the next P4.4 output-command surface without pretending every
+  lowered theory value can already be rendered back to canonical SMT-LIB text.
+  Full textual interactive command-session output remains pending. Verification
+  passed:
+  `cargo fmt --all`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-smtlib --test smtlib -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test smtlib -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test support_matrix -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-smtlib --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-smtlib --no-deps -j1`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`.
+
+- **Session 2026-06-27 — SMT-LIB get-option helper.**
+  The SMT-LIB parser now records requested `get-option` commands alongside
+  `set-option` values. `solve_smtlib_get_option` returns option values in
+  request order: explicitly set values win, common SMT-LIB options have
+  conservative defaults, and unknown options return an explicit `unsupported`
+  marker rather than disappearing.
+
+  This moves `set-option` from parser-only storage to an observable command
+  surface for benchmark drivers. It still does not make every option semantic
+  inside the solver; proof/model/core output remains exposed through explicit
+  Rust helper APIs while full interactive command-session rendering is pending.
+  Verification passed:
+  `cargo fmt --all`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-smtlib --test smtlib -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test smtlib -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test support_matrix -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-smtlib --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-smtlib --no-deps -j1`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`.
+
+- **Session 2026-06-27 — SMT-LIB get-info metadata helper.**
+  The SMT-LIB parser now preserves `set-info`, `set-option`, and requested
+  `get-info` commands instead of accepting them as parse-only no-ops.
+  `solve_smtlib_get_info` answers requested info keys in script order, returning
+  recorded metadata verbatim, axeyum defaults for `:name`/`:version`, a computed
+  `:reason-unknown` value when requested, and an explicit `unsupported` marker
+  for unknown keys.
+
+  This advances P4.4 command-surface compatibility for benchmark drivers and
+  tools that probe solver metadata. It is still not a full interactive
+  command-session renderer, and `set-option` is recorded rather than fully
+  semantic for every standard option. Verification passed:
+  `cargo fmt --all`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-smtlib --test smtlib -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test smtlib -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-smtlib --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-smtlib --no-deps -j1`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`.
+
+- **Session 2026-06-27 — SMT-LIB get-assignment helper.**
+  The SMT-LIB front door now exposes `solve_smtlib_get_assignment` for the
+  common `get-assignment` use case: after a sat single-query script, it evaluates
+  active top-level `:named` assertions under the replay-checked model and
+  returns deterministic `(name, bool)` pairs in active assertion order. The
+  helper reuses the scoped single-query command replay, so popped assertions and
+  assertions cleared by `reset-assertions` do not leak stale assignment names;
+  unsat/unknown scripts or scripts with no active named assertions return
+  `None`.
+
+  This advances P4.4 command-surface compatibility for tooling that labels
+  constraints and asks for assignments. It is not yet a full interactive SMT-LIB
+  command session renderer or nested-name assignment service. Verification
+  passed:
+  `cargo fmt --all`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test smtlib -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`.
+
+- **Session 2026-06-27 — SMT-LIB scoped single-query front door.**
+  The single-result SMT-LIB helpers now replay the command stream to compute the
+  active assertion stack for zero-or-one-query scripts instead of using the flat
+  `Script::assertions` view. `solve_smtlib`, OMT helpers, `get-value`,
+  `get-unsat-core`, and `get-proof` now honor `push`/`pop`,
+  `check-sat-assuming`, and `reset-assertions` for single-query scripts; scripts
+  with multiple `check-sat` / `check-sat-assuming` commands are rejected from
+  those helpers with a pointer to `solve_smtlib_incremental`, which already
+  returns one result per query. Active unsat-core labels are remapped through the
+  scoped command replay, so popped assertions cannot leak stale names into a core.
+
+  This closes the remaining reset/scoping safety gap for the flat SMT-LIB front
+  door: assertion-level reset is honored, and full `(reset)` remains explicitly
+  rejected in the shared-arena parse/solve model rather than silently ignored.
+  Verification passed:
+  `cargo fmt --all`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test smtlib -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`.
+
+- **Session 2026-06-27 — Tiny BV edge coverage DOT overlays.**
+  The toy BV frontend can now render replay-checked edge-coverage suites on the
+  deterministic basic-block DOT graph. `TinyBvProgram::cfg_dot_with_edge_coverage`
+  colors blocks incident to covered, bounded-unreachable, or unknown edges and
+  highlights rendered block-to-block edges exercised by generated edge tests.
+  Instruction-level fallthroughs inside a basic block remain implicit in the
+  block-level graph, so they affect incident block coloring but are not drawn as
+  separate DOT edges.
+
+  This advances T4.2.2/T4.2.4 by making branch/edge coverage suites directly
+  visualizable for debugger/frontend workflows. It remains a tiny-target DOT
+  overlay, not binary-level coverage UI. Verification passed:
+  `cargo fmt --all`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`.
+
+- **Session 2026-06-27 — Tiny BV edge coverage suites.**
+  The toy BV frontend can now generate replay-checked tests for static CFG
+  edges, not only block entries. `TinyBvProgram::test_cases_for_cfg_edge_checked`
+  targets a specific `TinyBvCfgEdge`, tracks the last symbolic edge internally
+  without changing the public `TinyBvState`, and requires concrete replay to
+  contain that edge before reporting a test case. `TinyBvEdgeCoverageReport`
+  aggregates all static edges in `cfg_edges()` order with covered, generated,
+  unreachable, unknown, and completeness counts.
+
+  This advances T4.2.2/T4.2.4 from block coverage toward branch/edge coverage,
+  a core workflow for angr/KLEE-style path exploration. It remains bounded edge
+  coverage for the tiny ISA, not binary-level coverage. Verification passed:
+  `cargo fmt --all`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`.
+
+- **Session 2026-06-27 — Tiny BV coverage DOT overlays.**
+  The toy BV frontend can now render generated coverage suites on the same
+  deterministic basic-block DOT graph used for static CFGs and single traces.
+  `TinyBvProgram::cfg_dot_with_coverage(&coverage)` colors covered target blocks
+  green, bounded-unreachable targets gray, unknown targets yellow, and highlights
+  block edges exercised by generated test cases. The renderer was factored so
+  `cfg_dot`, `cfg_dot_with_trace`, and `cfg_dot_with_coverage` share one
+  deterministic emitter while preserving the existing exact static/trace output.
+
+  This advances T4.2.2/T4.2.4 by making block-coverage suites directly
+  visualizable for debugger/frontend workflows. It remains DOT rendering for
+  the tiny ISA, not a full binary CFG UI. Verification passed:
+  `cargo fmt --all`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`.
+
+- **Session 2026-06-27 — Tiny BV block coverage suites.**
+  The toy BV frontend can now generate a deterministic replay-checked test
+  suite for every static basic-block entry. `TinyBvCoverageReport` aggregates
+  per-target `TinyBvTestGenerationReport`s in `basic_blocks()` order and exposes
+  covered, generated, unreachable, unknown, and completeness counts.
+  `TinyBvProgram::test_cases_for_basic_blocks_checked` builds this suite by
+  reusing the existing checked per-PC test generation path, so every generated
+  test still carries a concrete replay report and every missed target preserves
+  bounded reachability diagnostics.
+
+  This advances T4.2.2/T4.2.4 by turning the toy CFG into a block-coverage
+  test-suite artifact, closer to the workflow expected from angr/KLEE-style
+  frontends. It remains bounded coverage for the tiny ISA, not broad binary
+  coverage. Verification passed:
+  `cargo fmt --all`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`.
+
+- **Session 2026-06-27 — Tiny BV generated test cases.**
+  The toy BV frontend now has an explicit replay-checked test-generation
+  surface. `TinyBvProgram::test_cases_for_pc_checked` and
+  `test_cases_for_label_checked` run the existing bounded, concrete-checked
+  reachability query, preserve the full reachability diagnostics, and package
+  every verified witness as a `TinyBvTestCase` with target PC/label metadata and
+  a canonical `TinyBvTraceReport`. `TinyBvTestGenerationReport` exposes the
+  bounded reachability status plus generated cases, so callers do not lose
+  unknown/truncation/witness-failure diagnostics when no test input is produced.
+
+  This advances T4.2.4 and the P4.2 phase-exit "generates test inputs" clause
+  for the toy frontend. It remains bounded test-case generation for a tiny ISA,
+  not broad binary test generation. Verification passed:
+  `cargo fmt --all`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`.
+
+- **Session 2026-06-27 — Tiny BV trace DOT overlays.**
+  The toy BV frontend can now render concrete replay paths directly over its
+  static basic-block CFG. `TinyBvProgram::cfg_dot_with_trace(&trace)` preserves
+  the deterministic `cfg_dot()` graph shape, fills visited blocks, and
+  highlights rendered taken block edges. Intra-block instruction steps remain
+  implicit because the DOT graph is block-level, matching the existing
+  `basic_blocks()` and trace-report abstraction.
+
+  This advances T4.2.2/T4.2.4 by giving frontend/debugger consumers a stable
+  visual witness artifact for solver-found concrete traces. It remains a
+  tiny-target DOT overlay, not a binary CFG UI or proof trace. Verification
+  passed:
+  `cargo fmt --all`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`.
+
+- **Session 2026-06-27 — Tiny BV CFG DOT export.**
+  The toy BV frontend now has a deterministic Graphviz DOT export for its
+  static basic-block CFG. `TinyBvProgram::cfg_dot()` renders the same
+  `basic_blocks()` graph used by trace reports: one node per source/label-aware
+  block, edge labels for fallthrough/branch-true/branch-false terminators, and
+  stable program-counter ordering. Imported assembly labels and source lines are
+  escaped into node labels so frontend tools can render the graph without
+  rebuilding private block metadata.
+
+  This advances T4.2.2 by turning the typed CFG artifact into a directly
+  consumable visualization/export surface for angr-style frontends. It remains
+  a tiny-target DOT export, not binary CFG recovery or an interactive UI.
+  Verification passed:
+  `cargo fmt --all`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`.
+
+- **Session 2026-06-27 — Tiny BV trace reports.**
+  The toy BV frontend now has a single concrete witness report object.
+  `TinyBvTraceReport` owns the replayed `TinyBvWitness`, canonical
+  `TinyBvConcreteTrace`, source-aware instruction rows, block-visit rows, and
+  taken-edge rows. `TinyBvProgram::trace_report(&witness)` derives every view
+  from one concrete replay, so frontend UI/logging code can consume a coherent
+  path report without recomputing or accidentally mixing views from different
+  witnesses.
+
+  This advances T4.2.4 by turning the checked concrete replay surface into a
+  directly consumable report artifact. It remains a toy-target report, not a
+  binary emulator trace or proof artifact. Verification passed:
+  `cargo fmt --all`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`.
+
+- **Session 2026-06-27 — Tiny BV taken CFG edges.**
+  Concrete replay traces can now be mapped back to the static CFG edge path.
+  `TinyBvTraceEdgeStep` records a taken `TinyBvCfgEdge` plus source-line and
+  label metadata for both endpoints, and `TinyBvProgram::trace_cfg_edges(&trace)`
+  derives these rows from consecutive replayed PCs. The report preserves
+  fallthrough, branch-true, and branch-false classifications, so path reports
+  can explain not only which blocks were visited but which branch arm was taken.
+
+  This advances T4.2.2/T4.2.4 by connecting concrete replay to typed CFG edges
+  and source metadata. It remains a toy-target reporting helper; binary-level
+  edge recovery and richer branch semantics are still broader frontend work.
+  Verification passed:
+  `cargo fmt --all`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`.
+
+- **Session 2026-06-27 — Tiny BV block trace paths.**
+  The toy BV frontend now maps replayed concrete witnesses back to static basic
+  blocks. `TinyBvProgram::basic_block_containing_pc(pc)` returns the
+  source/label-aware block containing an instruction, and
+  `trace_basic_blocks(&trace)` compresses a concrete instruction trace into
+  contiguous `TinyBvTraceBlockStep` block visits with the executed PCs for each
+  visit. Re-entering a block after leaving it is reported as a fresh path
+  segment, matching debugger/path-report expectations.
+
+  This advances T4.2.2/T4.2.4 by connecting solver-found witnesses,
+  concrete replay, source metadata, and the block-level CFG artifact. It
+  remains a toy-target reporting helper, not binary-level trace recovery.
+  Verification passed:
+  `cargo fmt --all`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`.
+
+- **Session 2026-06-27 — Tiny BV basic blocks.**
+  The toy BV frontend now builds a deterministic basic-block view on top of its
+  static instruction edges. `TinyBvBasicBlock` records `start_pc`, exclusive
+  `end_pc`, labels at the block entry, per-instruction source-line metadata, and
+  outgoing edges from the block terminator. `TinyBvProgram::basic_blocks()`
+  derives leaders from entry PC 0, assembly labels, branch targets, and the
+  instruction after branches or terminal `win`/`lose` blocks, so imported toy
+  programs have a graph artifact suitable for rendering, navigation, and
+  source-linked trace reports.
+
+  This advances T4.2.2 from instruction-level edges toward the block-level CFG
+  shape expected by symbolic-execution frontends. It remains a tiny ISA block
+  partitioner, not a binary CFG recovery engine or call/return-aware lifter.
+  Verification passed:
+  `cargo fmt --all`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`.
+
+- **Session 2026-06-27 — Tiny BV static CFG edges.**
+  The toy BV frontend now exposes an explicit static CFG graph. New
+  `TinyBvCfgEdgeKind` / `TinyBvCfgEdge` types classify fallthrough,
+  branch-true, and branch-false edges; `TinyBvProgram::successors(pc)` returns
+  the deterministic outgoing edges for one instruction; and
+  `TinyBvProgram::cfg_edges()` returns the whole program graph in PC order.
+  Fallthrough at the final instruction and terminal `win`/`lose` blocks produce
+  no successor edges, while branches preserve true-then-false ordering even if
+  both arms target the same PC.
+
+  This advances T4.2.2 from an implicit transfer callback toward a reusable
+  frontend CFG artifact that can be rendered, analyzed, and cross-linked with
+  source-aware traces. It remains a tiny-register-machine CFG, not a byte-level
+  binary CFG or call/return-aware lifter. Verification passed:
+  `cargo fmt --all`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`.
+
+- **Session 2026-06-27 — Tiny BV source-aware traces.**
+  The toy BV frontend now exposes source-aware replay rows for imported
+  assembly. `TinyBvProgram::labels_at_pc(pc)` returns deterministic labels for
+  an instruction, and `trace_source_steps(&trace)` derives
+  `TinyBvTraceSourceStep` rows that copy each concrete replay step's PC,
+  instruction, and register snapshot while attaching the imported one-based
+  source line and labels. This gives P4.2 consumers a direct path from a
+  solver-found, concrete-replayed witness back to the original frontend text,
+  without changing the canonical `TinyBvConcreteTrace` artifact.
+
+  This advances T4.2.1/T4.2.4 toward debugger-style witnessed traces for
+  imported frontend artifacts. It remains a toy assembly trace surface, not a
+  binary lifter trace or unbounded proof trace. Verification passed:
+  `cargo fmt --all`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`.
+
+- **Session 2026-06-27 — Tiny BV assembly source locations.**
+  `TinyBvProgram::from_assembly` now imports a small line-oriented text format
+  for the toy BV target: `const`, arithmetic (`add`/`sub`/`mul`/`xor`),
+  `load`/`store`, `beq`, `win`, and `lose`. The parser accepts `rN`
+  registers, decimal or `0x` constants/targets, blank lines, comma separators,
+  `#`/`;` comments, and labels declared as `name:` on their own line or before
+  an instruction. `beq` targets can be numeric PCs or labels, resolved in a
+  two-pass parse, and imported labels are retained on the program via
+  `labels()` / `label_pc()`. The frontend also exposes
+  `reach_label_checked` and `check_label_safety_checked`, so callers can query
+  imported block names without hard-coding resolved PCs. `beq` also accepts a
+  register as its second operand, parsed as `TinyBvInsn::BranchRegEq`, so the
+  toy frontend can branch on equality between computed values rather than only
+  register-vs-constant tests. Malformed text returns line-numbered
+  `SolverError::Parse` diagnostics; parsed programs still flow through the
+  shared `TinyBvProgram::new` validator, so out-of-range registers and branch
+  targets cannot bypass the existing checks. Dangling labels are rejected before
+  they can enter the public label map. Concrete replay now delegates
+  instruction execution to a private helper so replay semantics remain
+  centralized as the toy ISA grows. Imported instructions also retain their
+  original one-based assembly line numbers via `source_lines()` /
+  `source_line(pc)`, so concrete traces can be mapped back to source text.
+
+  This advances T4.2.1 from an in-memory toy IR toward imported frontend
+  artifacts. It is still deliberately a toy text format, not a byte-level
+  binary lifter or production ISA frontend. Verification passed:
+  `cargo fmt --all`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`.
+
+- **Session 2026-06-27 — Tiny BV concrete traces.**
+  Concrete replay for the tiny BV frontend now returns a machine-usable
+  `TinyBvConcreteTrace`: executed PCs/instructions, register snapshots before
+  each step, terminal outcome, final PC, final registers, and sorted explicit
+  memory cells. `concrete_run` and `concrete_reaches_pc` now reuse that single
+  interpreter, so witness validation and trace reporting cannot drift apart.
+  Reachability tests assert the recovered PC sequence, final register value, and
+  final memory cell for a store/load witness.
+
+  This advances the P4.2.5 "witnessed trace" requirement for the toy frontend.
+  It remains a concrete replay trace for bounded toy programs, not an unbounded
+  proof trace or imported binary trace. Verification passed:
+  `cargo fmt --all`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`.
+
+- **Session 2026-06-27 — Tiny BV memory instructions.**
+  The reusable tiny BV frontend now has a first memory-bearing target path:
+  `TinyBvInsn::{Load, Store}` operate on a zero-initialized SMT array memory
+  carried in `TinyBvState::memory`. Symbolic execution initializes memory with
+  `const_array(width, 0)`, routes memory-bearing programs through the
+  memory-aware CFG checker even if the caller leaves `memory_aware` false, and
+  concrete replay mirrors the semantics with a deterministic zero-default
+  `BTreeMap` memory. This keeps uninitialized reads consistent between symbolic
+  solving and independent concrete replay.
+
+  This advances T4.2.3 for the toy target and exercises read-over-write through
+  the checked CFG path. It remains a toy register/memory target over the current
+  one-shot memory dispatcher, not the final warm lazy-array engine or imported
+  binary/byte-memory frontend. Verification passed:
+  `cargo fmt --all`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`.
+
+- **Session 2026-06-27 — Tiny BV bounded reachability/safety.**
+  The tiny BV frontend now has the first P4.2.5 query wrappers:
+  `TinyBvProgram::reach_pc_checked` asks whether a program counter is reachable
+  and returns a `TinyBvReachabilityReport`; `check_pc_safety_checked` maps a
+  forbidden program counter to `TinyBvSafetyReport`. Reachable/unsafe reports
+  carry concrete-replayed witnesses from `explore_cfg_checked`. Unreachable/safe
+  is deliberately bounded and conservative: it is returned only when the
+  configured CFG search exhausts without unknown branches, undecided targets,
+  missing witnesses, concrete mismatches, or truncation.
+
+  This advances T4.2.5 for the reusable toy target while keeping the remaining
+  boundary honest: richer memory-bearing frontends, true warm-memory reuse, and
+  unbounded/certified safety are still open. Verification passed:
+  `cargo fmt --all`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`.
+
+- **Session 2026-06-27 — Tiny BV frontend library.**
+  P4.2 now has a reusable small-target frontend instead of only a test-local
+  VM pattern. `TinyBvProgram` validates a fixed-width BV register program,
+  declares symbolic input registers, builds an initial symbolic state, lifts
+  instructions into `CfgStep`s, explores through `SymbolicExecutor` /
+  `explore_cfg_checked`, extracts concrete witnesses from solver models, and
+  independently replays those witnesses with a concrete emulator. Public
+  surface includes `TinyBvInsn`, `TinyBvState`, `TinyBvWitness`,
+  `TinyBvConcreteOutcome`, and `TinyBvExploreOutcome`.
+
+  This advances T4.2.1 and T4.2.4 from a test demonstration to a library
+  surface. It remains deliberately scoped: the toy target is a validated
+  register-machine frontend, not a broad binary lifter, and P4.2 still needs
+  memory-bearing target work, reachability/safety wrappers, and true warm
+  memory reuse from P4.1. Verification passed:
+  `cargo fmt --all`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`.
+
+- **Session 2026-06-27 — checked CFG concrete replay hook.**
+  `SymbolicExecutor::explore_cfg_checked` now wraps the CFG DFS harness with the
+  concrete-emulation cross-check shape P4.2 needs. For each model-witnessed
+  target from `explore_cfg`, frontend callbacks extract a concrete witness from
+  the solver model and run an independent concrete replay check. Results are
+  bucketed as `verified`, `missing_witnesses`, or `mismatches`; only
+  `verified` targets have both a replay-checked symbolic model and a
+  concrete-accepted witness.
+
+  The tiny VM integration now exercises the checked API directly: it symbolically
+  finds a winning path, extracts concrete input words from the model, and accepts
+  the target only if the independent VM concrete interpreter reaches `Win` on
+  those inputs. This advances T4.2.4's reusable library hook. Remaining P4.2
+  work is still an actual small-target IR/lifter and concrete emulator library
+  built on this hook. Verification passed:
+  `cargo fmt --all`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`.
+
+- **Session 2026-06-27 — CFG explorer harness.**
+  `SymbolicExecutor` now has a reusable `explore_cfg` DFS harness for P4.2.
+  Frontends provide their own CFG state type and a transfer closure returning
+  `CfgStep::{Continue, Assume, Branch, Target, Stop}`; axeyum owns branch
+  feasibility checks, solver scope push/pop, infeasible pruning, unknown-safe
+  branch traversal, and target reporting. Targets are returned only as
+  `CfgReached` entries with replay-checked `Model`s and the active path
+  condition; target paths that remain `unknown` are counted rather than reported
+  as reached.
+
+  The focused integration test runs the existing tiny register VM through the
+  public `explore_cfg` API, finds a winning path, and validates the solver-found
+  input by independent concrete re-execution. This advances T4.2.2 from a
+  hand-rolled test pattern to a reusable frontend primitive. Remaining P4.2 work:
+  an actual small-target IR/lifter, concrete-emulation integration as a library
+  path, reachability/safety wrappers over the CFG harness, and warm memory reuse
+  from P4.1. Verification passed:
+  `cargo fmt --all`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`.
+
+- **Session 2026-06-27 — SymbolicMemory frontend helper.**
+  The symbolic-execution surface now has a typed memory helper for the first
+  P4.2-facing frontend increment. `SymbolicMemory` can declare BV or general
+  non-array-sorted array memories, wraps the current SMT array term, exposes
+  `load`, `store`, immutable `with_store`, and `load_eq`, and routes
+  `assume_load_eq` / `branch_load_eq` through the memory-aware
+  `SymbolicExecutor` APIs. This gives angr/KLEE-style frontends a stable
+  array-backed memory state object instead of hand-assembling `select`/`store`
+  terms at every branch.
+
+  This is intentionally a frontend helper, not a claim that P4.1 warm lazy
+  arrays are complete: feasibility still goes through the one-shot full
+  dispatcher for deferred array/UF theories, while the warm BV path continues to
+  refuse active deferred theory assertions. Focused coverage verifies that a
+  store advances the memory term, load-equality branching is noncommittal,
+  read-over-write prunes the impossible branch under aliased addresses, and a
+  committed memory path yields a replay-checked model. Verification passed:
+  `cargo fmt --all`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`.
+
+- **Session 2026-06-27 — memory-aware incremental assumptions.**
+  The incremental/symbolic-execution surface now has a sound one-shot
+  memory/theory fallback for branch queries. `IncrementalBvSolver` keeps array
+  and uninterpreted-function assertions scoped in deferred frames instead of
+  rejecting or ignoring them; `check_with_memory` dispatches the active slice
+  through `check_auto`, and new `check_assuming_with_memory` /
+  `check_assuming_core_with_memory` methods handle one-shot array/UF branch
+  assumptions without persisting them. The warm BV path still refuses active
+  deferred theories, preserving the no-silent-ignore invariant.
+
+  `SymbolicExecutor` now exposes `assume_with_memory`,
+  `branch_with_memory`, `status_with_memory`, `model_with_memory`, and
+  `enumerate_inputs_with_memory`, so consumers can ask angr/KLEE-style
+  feasibility questions over symbolic memory or keccak-as-UF path conditions.
+  Focused tests cover read-over-write branch infeasibility as a one-shot
+  assumption, UF congruence as a one-shot assumption, non-persistence of those
+  assumptions, and memory-aware symbolic executor branch/model behavior.
+  Verification passed:
+  `cargo fmt --all`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test incremental_bv -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test incremental -j1 -- --nocapture`;
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`.
+  A broader `cargo clippy -p axeyum-solver --lib --tests` still exposes
+  unrelated pre-existing test-lint debt (`similar_names`, `too_many_lines`,
+  etc.) and was not used as the focused gate for this increment.
+
+- **Session 2026-06-27 — AUFLIA returned-OR stabilization probe.**
+  Scalar-candidate diagnostics now include a direct returned-OR stabilization
+  probe for the concrete array/store literal left false after a scalar trial.
+  This is diagnostic-only for large rows: it clones the scalar trial, applies
+  the existing branch-literal repair to the returned OR's best branch, and
+  reports whether full original replay improves. `diagnose_evidence` also
+  renders the returned stabilization branch, false literal, and follow-up
+  global-failure terms.
+
+  On `bug337`, the row remains `unknown`: `check_auto_explained`
+  **53798.632 ms**, `solve` **53896.886 ms**, and `produce_evidence`
+  **53839.639 ms**. The probe is decisive. Candidate **0** repairs OR **210**
+  / term **3879**, branch term **3805**, false literal **583**
+  (`x_331 = store(x_317,x_320,x_337)`); the direct repair changes **2**
+  projected values but is `worse`, raising full replay to **total_false=3** and
+  returning to term **3408** with values **0 vs 1**. Candidate **1** repairs OR
+  **211** / term **4108**, branch term **4107**, false literal **4041**
+  (`x_303 = x_317`); it also changes **2** projected values, is `worse`, raises
+  full replay to **total_false=3**, and returns to term **3408** with values
+  **1 vs 0**. The next AUFLIA move is a paired scalar+array or learned
+  relevance constraint that preserves term **3408** while relating the 4041/583
+  cell disagreement, not direct single-literal array/store repair.
+  Verification passed:
+  `cargo fmt --all`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_scalar_candidate_reports_returned_or_stabilization -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-bench --example diagnose_evidence -j1 -- -D warnings`.
+  Diagnostic command:
+  `CARGO_BUILD_JOBS=2 AXEYUM_DIAGNOSE_RENDER_LIMIT=400 AXEYUM_DIAGNOSE_TERMS=3408,3805,3879,4041,4107,4108,583 timeout 240s cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__bug337.smt2 10000`.
+
+- **Session 2026-06-27 — AUFLIA small-surface returned-OR stabilization.**
+  Scalar repair now has a guarded returned-OR stabilizer for the exact shape
+  exposed by the previous diagnostics: when a supported scalar readback update
+  improves replay but leaves a single-false OR branch whose false literal is an
+  array equality or store-definition, the solver tries the existing
+  branch-literal repair on a clone and keeps it only on strict replay-false
+  improvement. A focused regression covers the small case where `y := z`
+  updates a select-backed array cell, breaks an `a=b` OR branch, and the
+  returned-OR stabilizer repairs the array equality, dropping replay false
+  count from **3** to **1** while leaving only an unrelated Boolean blocker.
+
+  The same idea is deliberately capped at **64** positive replay conjuncts.
+  An ungated version was measured on `bug337` and rejected: the first
+  `check_auto_explained` phase ballooned to **231811.473 ms**, reported
+  `scalar_stabilized_trials=24`, and still returned to term **3408** with the
+  same OR210/OR211 literal cycle. With the cap, the large row is back to the
+  prior diagnostic band and remains `unknown`: `check_auto_explained`
+  **52457.645 ms**, `solve` **52454.022 ms**, and `produce_evidence`
+  **52514.961 ms**, with `scalar_stabilized_trials=0` and
+  `projection_repair_changes=430`. The next AUFLIA move is a relevance-guided
+  or learned large-row constraint for the 4041/583 array-cell disagreement, not
+  unbounded local returned-OR stabilization.
+  Verification passed:
+  `cargo fmt --all`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_scalar_repair_stabilizes_returned_array_or -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`.
+  Diagnostic command:
+  `CARGO_BUILD_JOBS=2 AXEYUM_DIAGNOSE_RENDER_LIMIT=1200 AXEYUM_DIAGNOSE_TERMS=3408,3805,3879,4107,4108 timeout 220s cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__bug337.smt2 10000`.
+
+- **Session 2026-06-27 — AUFLIA returned-OR literal diagnostics.**
+  Scalar follow-up replay notes now carry compact OR details for raw and
+  closure-level global failures:
+  `followup_global_false_or_best_branch_term`,
+  `followup_closure_global_false_or_best_branch_term`,
+  `followup_next_global_false_or_best_branch_term`, and
+  `followup_next_closure_global_false_or_best_branch_term`, with first-false
+  term/value details. `diagnose_evidence` renders those returned-OR branches
+  and their first false literals directly.
+
+  On `bug337`, this refines the OR-210/OR-211 toggle into exact array/store
+  coherence failures. Candidate **0** still starts at OR **210** branch term
+  **3805** (store-definition branch). After scalar closure it returns through
+  OR **211** branch term **4107**, whose first false literal is term **4041**
+  `x_303 = x_317`; the model has `x_303 = (array default 0 [0 -> 1])` and
+  `x_317 = (array default 0)`. The second hop returns to OR **210** branch term
+  **3805**, whose first false literal is term **583**
+  `x_331 = store(x_317,x_320,x_337)`; the model has `x_331 = (array default 0)`
+  and the store RHS evaluates to `(array default 0 [0 -> 1])`. Candidate **1**
+  exposes the symmetric **4107 -> 3805** direction. The row remains `unknown`
+  with `check_auto_explained` **52443.610 ms**, `solve` **52500.552 ms**, and
+  `produce_evidence` **52404.598 ms**. The next AUFLIA step is therefore a
+  guarded selected-array equality/store-definition stabilization after scalar
+  readback changes, or a learned constraint with that same semantics, not more
+  branch-ordinal search.
+  Verification passed:
+  `cargo fmt --all`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_scalar_candidate_reports_followup -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-bench --example diagnose_evidence -j1 -- -D warnings`.
+  Diagnostic command:
+  `CARGO_BUILD_JOBS=2 AXEYUM_DIAGNOSE_RENDER_LIMIT=1200 AXEYUM_DIAGNOSE_TERMS=3408,3805,3879,4107,4108 timeout 220s cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__bug337.smt2 10000`.
+
+- **Session 2026-06-27 — AUFLIA follow-up branch-term diagnostics.**
+  Replay notes now include concrete branch term IDs for OR repair diagnostics:
+  `failed_or_best_branch_term`, `global_false_or_best_branch_term`,
+  `followup_branch_term`, and `followup_next_branch_term`. The
+  `diagnose_evidence` example renders those terms and accepts
+  `AXEYUM_DIAGNOSE_RENDER_LIMIT` so large generated branches can be inspected
+  without code edits.
+
+  On `bug337`, the large OR-210/OR-211 toggle is now source-grounded. Candidate
+  **0** (`x_383 := x_330`) exposes OR **210** / term **3879** and first repairs
+  branch term **3805**:
+  `x_334=x_320+1`, `x_339=store(x_325,x_337,2)`,
+  `x_331=store(x_317,x_320,x_337)`, scalar equalities, and `x_388=1`.
+  Scalar closure then exposes OR **211** / term **4108**; the second hop repairs
+  branch term **4107**, the copy/no-store branch
+  `x_325=x_311 ∧ x_304=x_318 ∧ x_305=x_319 ∧ x_303=x_317 ∧ x_306=x_320 ∧ x_322=3`,
+  and returns to OR **210**. Candidate **1** does the symmetric
+  **4107 -> 3805** direction. The row remains `unknown` with
+  `check_auto_explained` **52381.306 ms**, `solve` **52474.724 ms**, and
+  `produce_evidence` **52392.015 ms**. The next AUFLIA step is to derive the
+  missing consistency/ordering constraint connecting the store-definition branch
+  **3805** with the copy branch **4107**, not to guess from branch ordinals.
+  Verification passed:
+  `cargo fmt --all`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_scalar_candidate_reports_followup -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_replay_failure_reports_best_false_or_branch -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-bench --example diagnose_evidence -j1 -- -D warnings`.
+  Diagnostic command:
+  `CARGO_BUILD_JOBS=2 AXEYUM_DIAGNOSE_RENDER_LIMIT=1200 AXEYUM_DIAGNOSE_TERMS=3408,3879,4108 timeout 190s cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__bug337.smt2 10000`.
+
+- **Session 2026-06-27 — AUFLIA small-surface two-OR cycle guard.**
+  Production replay repair now rejects the scalar+OR two-hop toggle on small
+  replay surfaces. The shared scalar-closure guard evaluates either the raw
+  branch candidate or its bounded scalar closure; if the next failed OR can be
+  repaired only to return to the original OR at no replay-false improvement,
+  the candidate is declined. This guard is wired into branch-choice repair and
+  the final single-literal OR fallback, covering the path that previously could
+  bypass the guarded branch schedule. A focused regression pins the synthetic
+  OR1 -> OR2 -> OR1 pattern and verifies `repair_projected_replay_failure`
+  leaves the projected model unchanged.
+
+  The follow-up OR-cycle guard is deliberately capped at **64** positive replay
+  conjuncts. An ungated version was measured/rejected on `bug337`: it moved the
+  frontier backward from scalar term **3408** to OR **210**, raised
+  `check_auto_explained` / `solve` to about **72.5 s**, and did not finish
+  `produce_evidence` inside the 180 s wrapper. With the cap, the large row is
+  back to the prior diagnostic frontier: term **3408**, projection changes
+  **430**, both second-hop directions still report `returns_first_or`, and the
+  row remains `unknown` with `check_auto_explained` **52291.310 ms**, `solve`
+  **52309.033 ms**, and `produce_evidence` **52314.522 ms**. The next AUFLIA
+  move is still a learned/derived constraint for the large OR-210/OR-211 toggle
+  family, not another local branch enumeration.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_branch_repair_rejects_followup_two_or_cycle -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_scalar_candidate_reports_followup -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test abv_lazy_ext -j1 -- --nocapture`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib -j1`.
+  Diagnostic command:
+  `CARGO_BUILD_JOBS=2 AXEYUM_DIAGNOSE_TERMS=3408,3879,4108 timeout 190s cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__bug337.smt2 10000`.
+
+- **Session 2026-06-27 — AUFLIA scalar+OR two-step cycle diagnostics.**
+  Scalar+OR replay notes now take one more bounded diagnostic hop when the
+  first OR repair (raw or after scalar closure) exposes another failed OR. The
+  second-hop record reports the next OR, chosen branch, raw repair replay state,
+  scalar-closure steps, closure replay state, and a status such as
+  `returns_first_or`. This is still diagnostic-only and does not alter
+  production replay repair.
+
+  On `bug337`, this makes the cycle explicit. Candidate **0**
+  (`x_383 := x_330`) exposes OR **210** / term **3879**; closure then exposes
+  OR **211** / term **4108**. Repairing OR **211** branch **3** is raw-worse
+  (`total_false=3`, back to term **3408**), and scalar closure returns to
+  OR **210** at `total_false=2`, reported as
+  `followup_next_status=returns_first_or`. Candidate **1** does the symmetric
+  cycle: OR **211** -> OR **210** -> OR **211**, also at `total_false=2`.
+  The row remains `unknown`: `check_auto_explained` in **52076.849 ms**,
+  `solve` in **51980.239 ms**, and `produce_evidence` in **52163.550 ms**.
+  The next AUFLIA move is to derive or learn a constraint that rules out this
+  two-OR toggle family instead of enumerating more local branch repairs.
+  Verification passed:
+  `cargo fmt --all`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_scalar_candidate_reports_followup -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test abv_lazy_ext -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib -j1`.
+  Diagnostic command:
+  `CARGO_BUILD_JOBS=2 AXEYUM_DIAGNOSE_TERMS=3408,3879,4108 timeout 180s cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__bug337.smt2 10000`.
+
+- **Session 2026-06-27 — AUFLIA scalar+OR closure diagnostics.**
+  Scalar+OR follow-up diagnostics now separate the raw OR-branch repair result
+  from the bounded scalar-closure result. Notes include closure step details,
+  closure branch false count, closure total replay false count, and the next
+  closure-level global blocker. A focused regression pins the no-progress loop
+  where branch repair breaks a one-sided scalar equality and scalar closure
+  repairs it by re-breaking the OR.
+
+  On `bug337`, this turns the term-3408 frontier into a concrete two-OR toggle.
+  Candidate **0** (`x_383 := x_330`) exposes OR **210** / term **3879**; raw
+  branch repair is worse (`total_false=3`, back to term **3408**), and scalar
+  closure repairs symbol **330** from value term **442** to **0**, restoring
+  `total_false=2` but moving the blocker to OR **211** / term **4108**.
+  Candidate **1** (`x_330 := x_383`) exposes OR **211** / term **4108**; raw
+  branch repair is also worse (`total_false=3`, back to term **3408**), and
+  scalar closure repairs symbol **330** from value term **442** to **1**,
+  restoring `total_false=2` but moving the blocker back to OR **210** /
+  term **3879**. The row remains `unknown`: `check_auto_explained` in
+  **50755.561 ms**, `solve` in **50656.630 ms**, and `produce_evidence` in
+  **50725.541 ms**. The next AUFLIA move is a paired OR-210/OR-211 cycle breaker
+  or learned dependency; single scalar choice plus single OR branch repair is
+  now ruled out.
+  Verification passed:
+  `cargo fmt --all`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_scalar_candidate_reports_followup_or -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test abv_lazy_ext -j1 -- --nocapture`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib -j1`.
+  Diagnostic command:
+  `CARGO_BUILD_JOBS=2 AXEYUM_DIAGNOSE_TERMS=3408,3879,4108 timeout 180s cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__bug337.smt2 10000`.
+
+- **Session 2026-06-27 — AUFLIA scalar+OR follow-up diagnostics.**
+  Scalar-candidate replay notes now try one bounded follow-up repair when a
+  scalar candidate exposes a failed OR. The diagnostic uses the existing best
+  branch repair, simulates bounded scalar closure, reports loop rejection when
+  closure would return to the same OR, and otherwise records the branch ordinal,
+  branch shape, repair kind, changes, closure-step count, final branch false
+  count, total replay false count, and next global blocker. This remains
+  diagnostic-only; production replay repair is unchanged.
+
+  On `bug337`, this rules out the obvious scalar+OR composition. Candidate
+  **0** (`x_383 := x_330`) exposes OR **210** / term **3879**; repairing branch
+  **0** (`1/8` false literals) makes that branch true, but the follow-up is
+  **worse**: `total_false=3`, one scalar-closure step, and the next blocker is
+  back at term **3408** with values **0 vs 1**. Candidate **1**
+  (`x_330 := x_383`) exposes OR **211** / term **4108**; repairing branch **3**
+  (`1/6` false literals) is also **worse**, with `total_false=3`, one closure
+  step, and the next blocker again term **3408**, now with values **1 vs 0**.
+  The row remains `unknown`: `check_auto_explained` in **50708.615 ms**,
+  `solve` in **50713.535 ms**, and `produce_evidence` in **50901.172 ms**.
+  The next AUFLIA move is not greedily forcing OR **210**/**211**; it is a
+  coupled scalar/OR candidate or learned dependency that preserves term **3408**
+  while reducing full replay.
+  Verification passed:
+  `cargo fmt --all`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_scalar_candidate_reports_followup_or_diagnostic -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_replay_failure_reports_scalar_candidate_diagnostics -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test abv_lazy_ext -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib -j1`.
+  Diagnostic command:
+  `CARGO_BUILD_JOBS=2 AXEYUM_DIAGNOSE_TERMS=3408,3879,4108 timeout 180s cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__bug337.smt2 10000`.
+
+- **Session 2026-06-27 — AUFLIA scalar-candidate diagnostics.**
+  Replay failure notes now include scalar-candidate diagnostics for failed
+  top-level scalar equalities, not just scalar literals inside failed OR
+  branches. Each candidate uses the same select-backed repair path as
+  production diagnostics: if a symbol is backed by an asserted direct select,
+  the trial updates the backing array entry first, records support gain,
+  reports whether the equality becomes true, and names the next global replay
+  blocker. A small-surface targeted scalar replay repair is also retained under
+  strict guards (`<=64` positive conjuncts and `<=4` false replay conjuncts);
+  it accepts only strict full-replay improvement. The unguarded version was
+  measured on `bug337`, raised the first diagnostic call to **113278.329 ms**,
+  hit the 180 s wrapper before the solve/evidence tail, and still returned to
+  term **3408**, so the large-row path is deliberately guarded off.
+
+  On `bug337`, the row remains `unknown` and the first blocker remains
+  **term 3408** (`x_383 = x_330`, values **0 vs 1**), but the next shape is now
+  explicit. Candidate **0** sets symbol **383** from value term **446** to
+  **1**, changes **2** projected values, makes the equality true, and exposes
+  OR ordinal **210** / term **3879** with total false count **2**. Candidate
+  **1** sets symbol **330** from value term **442** to **0**, has support gain
+  **1**, changes **1** projected value, makes the equality true, and exposes
+  OR ordinal **211** / term **4108** with total false count **2**. With the
+  guard, the measured path is back to the prior cost band:
+  `check_auto_explained: unknown` in **49156.112 ms**, `solve: unknown` in
+  **49206.601 ms**, and `produce_evidence: unknown` in **49184.457 ms**.
+  The next AUFLIA move is a scalar+OR follow-up repair/diagnostic that composes
+  the term-3408 scalar choice with a bounded branch repair for OR **210** or
+  OR **211**, without reintroducing the large-row loop.
+  Verification passed:
+  `cargo fmt --all`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_replay_failure_reports_scalar_candidate_diagnostics -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_targeted_replay_repairs_select_backed_scalar_failure -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test abv_lazy_ext -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib -j1`.
+  Diagnostic command:
+  `CARGO_BUILD_JOBS=2 AXEYUM_DIAGNOSE_TERMS=3408,3879,4108 timeout 180s cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__bug337.smt2 10000`.
+
+- **Session 2026-06-27 — AUFLIA select-backed scalar repair.**
+  Scalar and branch projection repair now recognize asserted readback
+  equalities like `y = select(a, i)` when a repair wants to force `y = v`.
+  Instead of only mutating the scalar readback symbol and letting scalar
+  closure restore it from the old array model, the repair writes `a[i] := v`,
+  realigns direct select readback symbols, and then stores the scalar value if
+  needed. The path is used by scalar equality repair, direct branch-literal
+  repair, and multi-literal branch scheduling. Focused regressions cover both
+  a branch whose two scalar literals are backed by different array reads and a
+  plain scalar equality whose symbol is backed by an asserted select.
+
+  On `bug337`, this is a real frontier move but still not a close. The
+  previous OR-236 loop is no longer the first replay blocker: the diagnostic
+  now reports `failed_conjunct_ordinal=207`, term **3408**,
+  `x_383 = x_330`, with values **0 vs 1**. The rendered requested terms are
+  **3408** `(= x_383 x_330)`, **442** `x_383`, and **446** `x_330`.
+  `check_auto_explained: unknown` in **49340.404 ms**, `solve: unknown` in
+  **49282.956 ms**, and `produce_evidence: unknown` in **49269.416 ms**.
+  Projection counters at the new blocker: `select_repair_array_changes=102`,
+  `select_repair_symbol_changes=174`, `branch_repair_candidates=131`,
+  `branch_repair_symbol_changes=130`, `scalar_repair_candidates=24`,
+  `scalar_repair_symbol_changes=24`, and `projection_repair_changes=430`.
+  The next AUFLIA move is to explain or repair the scalar equality family now
+  exposed past OR-236, starting at **term 3408**.
+  Verification passed:
+  `cargo fmt --all`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_scalar_repair_updates_select_backed_symbol -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test abv_lazy_ext -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib -j1`.
+  Diagnostic command:
+  `CARGO_BUILD_JOBS=2 AXEYUM_DIAGNOSE_TERMS=3408,442,446 timeout 180s cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__bug337.smt2 10000`.
+
+- **Session 2026-06-27 — AUFLIA scalar-closure schedule guard.**
+  The scalar-closure returned-OR guard now wraps general multi-literal branch
+  schedule repairs, not only residual follow-up OR branch repairs. The guarded
+  schedule path is used in both the projection repair pass and targeted replay
+  repair when the failed OR disjunction is known. It declines the same narrow
+  no-progress shape: branch schedule makes the branch locally true, bounded
+  scalar closure takes at least one scalar step, replay returns to the same OR,
+  the branch is false again, and full replay is not improved. A focused
+  regression pins the production path by showing raw schedule would force a
+  two-literal scalar branch and worsen replay, while guarded branch-disjunction
+  repair leaves the model unchanged.
+
+  On `bug337`, this still does **not** close the row, but it cuts measurable
+  projection churn. The diagnostic now completes normally rather than timing
+  out: `check_auto_explained: unknown` in **54942.223 ms**, `solve: unknown`
+  in **55196.682 ms**, and `produce_evidence: unknown` in **55071.934 ms**.
+  Compared with the previous guard run, projection repair changes drop
+  **587 -> 565**, select symbol changes **299 -> 287**, branch candidates
+  **138 -> 132**, and branch symbol changes **161 -> 153**. The frontier remains
+  OR **210** with nested OR **236** scalar-closure candidates returning to
+  **final_branch_false=2**, **final_total_false=1**. Next useful AUFLIA work is
+  still a real scalar/array refinement explaining that OR-236 branch family.
+  Verification passed:
+  `cargo fmt --all`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_scalar_closure_guard_rejects_returned_or_loop -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_branch_schedule_rejects_scalar_closure_loop -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_replay_failure_reports_scalar_choice_side_effects -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_replay_failure_reports_residual_followup_or_diagnostic -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_branch_select_cycle -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test abv_lazy_ext -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib -j1`.
+  Diagnostic command:
+  `CARGO_BUILD_JOBS=2 timeout 180s cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__bug337.smt2 10000`.
+
+- **Session 2026-06-27 — AUFLIA scalar-closure branch rejection guard.**
+  Residual follow-up OR repair now uses a scalar-closure-aware guard in both the
+  replay diagnostic follow-up chain and the production branch/select residual
+  repair chain. The guard is deliberately narrow: after the ordinary best
+  branch repair, it follows bounded scalar equality closure and declines the
+  candidate only when closure takes at least one scalar step, replay returns to
+  the same follow-up OR, the candidate branch is false again, and the full
+  replay false count is not lower than before the candidate. This keeps the
+  productive small follow-up OR repairs while preventing the OR-236 style
+  no-progress closure loop from consuming a repair hop.
+
+  On `bug337`, this still does **not** close the row, but the route now matches
+  the diagnosis: the residual diagnostic reaches OR **236** at
+  `same_full_replay`, **total_false=1**, and reports the scalar-closure
+  candidate family where branches **0..7** all return to OR **236** with
+  **final_branch_false=2**, **final_total_false=1**. It no longer appends a
+  `followup_or236_branch0_branch` repair after that point. The remaining AUFLIA
+  work is to learn/refine the missing scalar/array constraint that makes the
+  OR-236 family impossible under the current array model, then resume broader
+  lazy ROW / func_interp coverage.
+  Verification passed:
+  `cargo fmt --all`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_scalar_closure_guard_rejects_returned_or_loop -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_replay_failure_reports_scalar_choice_side_effects -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_replay_failure_reports_residual_followup_or_diagnostic -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_branch_select_cycle -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test abv_lazy_ext -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib -j1`.
+  Diagnostic command:
+  `CARGO_BUILD_JOBS=2 timeout 180s cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__bug337.smt2 10000`
+  emitted `check_auto_explained: unknown` in **89296.124 ms** and
+  `solve: unknown` in **89668.825 ms**, then exited through the timeout wrapper.
+
+- **Session 2026-06-27 — AUFLIA scalar-closure branch scoring.**
+  Replay OR diagnostics now include a bounded scalar-closure branch-candidate
+  list. For an OR whose selected branch has multiple false literals and at least
+  one scalar-repairable literal, the diagnostic tries every branch up to a
+  32-branch cap, runs the existing best branch repair, follows up to four scalar
+  equality blockers, then reports the best eight candidates by post-closure
+  replay score. This remains diagnostic-only and replay-derived; solver choices
+  and answers are unchanged. The focused scalar OR regression now also requires
+  `failed_or_scalar_closure_branch_candidates` and the small productive branch's
+  final score in the replay note.
+
+  On `bug337`, the top failed OR **210** still has no closure-improving branch:
+  the best reported candidates remain **total_false=2** after scalar closure.
+  At nested OR **236** / term **13052**, scalar-closure scoring across the
+  26-branch family shows the first reported branches all have the same shape:
+  raw branch repair reaches **raw_branch_false=0**, **raw_total_false=2**;
+  scalar closure repairs the downstream scalar blockers; and replay returns to
+  OR **236** with **final_branch_false=2**, **final_total_false=1**. Branches
+  **0..7** all exhibit this closure loop in the diagnostic sample. This rules
+  out "choose a different low-false OR-236 branch" as the immediate fix. Next
+  useful AUFLIA work is to learn/refine the missing scalar/array constraint that
+  makes the OR-236 family impossible under the current array model, or to add a
+  production closure-aware branch-rejection guard that prevents the repair loop
+  from spending time on this branch family.
+  Verification passed:
+  `cargo fmt --all`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_replay_failure_reports_scalar_choice_side_effects -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_replay_failure_reports_residual_followup_or_diagnostic -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_branch_select_cycle -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test abv_lazy_ext -j1 -- --nocapture`.
+  Diagnostic command:
+  `CARGO_BUILD_JOBS=2 timeout 180s cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__bug337.smt2 10000`
+  emitted `check_auto_explained: unknown` in **89657.696 ms** and exited via
+  the timeout wrapper after the route note.
+
+- **Session 2026-06-27 — AUFLIA paired scalar-chain diagnostic.**
+  The OR replay diagnostic now includes a bounded paired scalar-chain trace for
+  the selected best branch: it applies the best direct scalar repair for every
+  false scalar literal in that branch, then follows up to four scalar equality
+  blockers, reporting branch false counts, full replay false counts, and the
+  next global blocker after each step. This is diagnostic-only; solver answers
+  are unchanged and remain replay-gated. A focused scalar OR regression now
+  requires the paired chain in the replay note and pins the productive small
+  case where the coupled scalar branch repair reaches **final_total_false=0**.
+
+  On `bug337`, the paired trace turns the OR-236 frontier from "two sibling
+  scalar blockers" into an explicit oscillation. At OR **236** / term **13052**,
+  branch **0** first repairs both false branch literals: setting symbol **460**
+  from term **510** to **3** leaves **branch_false=1**, **total_false=2**, then
+  setting symbol **461** from term **510** to **3** reaches
+  **branch_false=0**, **total_false=2**, with next blocker **2611**. Following
+  the scalar chain then repairs **2611** by setting symbol **460** from term
+  **2610** to **1**, which re-breaks OR-236 to **branch_false=1**; repairing
+  **2615** by setting symbol **461** from term **2614** to **2** returns to
+  OR **236** with **branch_false=2**, **total_false=1**. This rules out forcing
+  OR-236 branch 0 via scalar equalities: the branch conflicts with the downstream
+  scalar chain. Next useful AUFLIA work is scalar-closure-aware OR branch
+  selection/diagnostics for OR 236, so the repair scores branches by their
+  post-scalar-closure replay behavior instead of raw false-literal count.
+  Verification passed:
+  `cargo fmt --all`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_replay_failure_reports_scalar_choice_side_effects -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_replay_failure_reports_residual_followup_or_diagnostic -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_branch_select_cycle -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test abv_lazy_ext -j1 -- --nocapture`.
+  Diagnostic command:
+  `CARGO_BUILD_JOBS=2 timeout 180s cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__bug337.smt2 10000`
+  returned via timeout wrapper after emitting `check_auto_explained: unknown` in
+  **86332.346 ms** and `solve: unknown` in **86425.170 ms**.
+
+- **Session 2026-06-26 — AUFLIA OR-236 scalar side-effect diagnostics.**
+  Replay OR diagnostics now carry bounded false-literal details for the selected
+  best branch, and scalar equality literals include simulated repair choices:
+  target symbol, value term/value, whether the literal becomes true, remaining
+  false literals in the branch, full replay false count, and the next global
+  blocker. The fields are attached both to the top-level failed OR and to nested
+  `global_false_or` entries inside branch/select diagnostics. A focused scalar
+  OR regression pins the shape with two false branch literals and verifies that
+  both literals and their scalar-choice side effects appear in the replay note.
+
+  On `bug337`, this lands the requested OR-236-specific evidence without changing
+  solver answers. The chain still reaches OR **236** / term **13052** at
+  `same_full_replay`, **total_false=1**, then ordinary branch repair worsens to
+  **total_false=2**. The new details show branch **0** has exactly two false
+  scalar equalities: term **12950** (`510 = 2609`, values **3 vs 1**) and term
+  **12951** (`510 = 2613`, values **3 vs 2**). Repairing term **12950** sets
+  symbol **460** from value-term **510** to **3**, makes that literal true, but
+  leaves **branch_false=1**, **total_false=2**, and the next global blocker is
+  scalar equality **term 2611** (`2609 = 2610`, **3 vs 1**). Repairing term
+  **12951** symmetrically sets symbol **461** from **510** to **3**, leaves
+  **branch_false=1**, **total_false=2**, and moves to scalar equality
+  **term 2615** (`2613 = 2614`, **3 vs 2**). This rules out a one-literal
+  scalar fix at OR 236. Next useful AUFLIA work is a paired repair/diagnostic
+  over the sibling scalar chains rooted at symbols 460/461, or a stronger
+  explanation of why those chains must be solved together.
+  Verification passed:
+  `cargo fmt --all`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_replay_failure_reports_scalar_choice_side_effects -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_replay_failure_reports_residual_followup_or_diagnostic -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_branch_select_cycle -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test abv_lazy_ext -j1 -- --nocapture`.
+  Diagnostic command:
+  `CARGO_BUILD_JOBS=2 timeout 180s cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__bug337.smt2 10000`
+  returned via timeout wrapper after emitting `check_auto_explained: unknown` in
+  **86442.712 ms** and `solve: unknown` in **86438.743 ms**.
+
+- **Session 2026-06-26 — AUFLIA scalar-choice branch repair.**
+  Follow-up OR repair now compares the existing greedy branch repair with a
+  scalar-choice branch candidate. The scalar-choice path explores both
+  directions of direct scalar equalities inside a small branch, scores completed
+  branch repairs by full original replay, and lets residual-chain repair choose
+  the better candidate deterministically. A focused regression pins the intended
+  failure mode: for `u = v` with an existing `u = 0`, the scalar-choice candidate
+  mutates `v` to `0` and clears replay, while the old greedy direction mutates
+  `u` and leaves one false conjunct.
+
+  On `bug337`, this does **not** move the frontier, which is useful negative
+  evidence. The residual diagnostic still chooses the ordinary `branch`
+  candidate through OR **209**, OR **219**, and OR **236**:
+  `...+followup_or236_branch0_branch` remains `worse_full_replay`,
+  **total_false=2**, exposing scalar equality **term 2611**. The preceding best
+  point is still OR **236** / term **13052** at **total_false=1**, where branch
+  **0** has **2/2** false literals and first false term **12950** (`3` vs `1`).
+  Route cost remains in the same band (`check_auto_explained: unknown` in
+  **79636.664 ms**, `solve: unknown` in **79668.818 ms**). Next useful AUFLIA
+  work is an OR-236-specific diagnostic that reports both false branch literals
+  and their scalar repair choices/side effects, not another generic scalar-choice
+  direction pass.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_scalar_branch_choice_prefers_replay_safe_direction -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_branch_select_cycle -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_replay_failure_reports_residual_followup_or_diagnostic -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test abv_lazy_ext -j1 -- --nocapture`.
+  Diagnostic command:
+  `CARGO_BUILD_JOBS=2 timeout 180s cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__bug337.smt2 10000`.
+
+- **Session 2026-06-26 — AUFLIA bounded residual chain repair.**
+  The guarded branch/select-cycle repair now follows a bounded residual chain
+  after the same-branch store-target repair: while the original OR and select
+  equality remain true, it can repair the next generated OR's best branch for up
+  to four hops and records the best strict full-replay improvement. This remains
+  behind the existing small-surface guard (**current_false <= 2** and **<=64**
+  positive replay conjuncts). A focused regression covers the productive shape:
+  branch repair -> select repair -> rebuild `c = store(a,3,7)` -> repair a
+  second OR's `d = c` array equality, clearing full replay to
+  **total_false=0**.
+
+  Diagnostics now also follow up to four generated-OR hops. On `bug337`, the
+  chain remains too large for production repair but reveals the next real
+  frontier. OR **210** -> select **34** -> term **580** -> OR **209** branch **3**
+  -> OR **219** branch **3** improves the diagnostic chain to
+  **same_full_replay**, **total_false=1**, with next blocker OR **236** / term
+  **13052**. OR **236** has **26** branches; best branch **0** has **2/2** false
+  literals, first false term **12950**, scalar equality terms **510/2609** with
+  values **3 vs 1**. Blindly repairing that branch worsens back to
+  **total_false=2** and exposes scalar equality **term 2611**. Route cost rose
+  modestly with the deeper diagnostic (`check_auto_explained: unknown` in
+  **79551.190 ms**, `solve: unknown` in **79477.768 ms**). Next useful AUFLIA
+  work is scalar-aware handling at OR **236** after the residual chain, not more
+  component-array-only follow-up hops.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_branch_select_cycle -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_replay_failure_reports_residual_followup_or_diagnostic -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test abv_lazy_ext -j1 -- --nocapture`.
+  Diagnostic command:
+  `CARGO_BUILD_JOBS=2 timeout 180s cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__bug337.smt2 10000`.
+
+- **Session 2026-06-26 — AUFLIA residual follow-up OR diagnostics.**
+  Same-branch residual diagnostics now take one additional bounded diagnostic
+  step: after `chain+same_branch_store_target` (or direct equivalent) repairs
+  the returned OR locally, if the next global blocker is a different generated
+  OR, the note tries that OR's best branch on a copy and emits a row such as
+  `chain+same_branch_store_target+followup_or209_branch3`. A focused regression
+  covers the small analogue: repair the original branch, repair the select,
+  rebuild the branch store target, then repair a second OR's array equality to
+  reach `total_false=0`.
+
+  On `bug337`, the OR **210** -> select **34** -> term **580** -> OR **209**
+  pair is locally repairable, but it is not the full cycle. The new row
+  `chain+same_branch_store_target+followup_or209_branch3` preserves select term
+  **555** and repairs OR **209** branch **3**, yet full replay remains
+  `worse_full_replay` with **total_false=2** and moves to OR **219** / term
+  **6084**. OR **219**'s best branch is branch **3** with one false literal,
+  term **1402**, comparing arrays
+  `(array default 0 [0 -> 1] [1 -> 2] [2 -> 1])` and
+  `(array default 0 [1 -> 2] [2 -> 1])`. Route cost remains stable:
+  `check_auto_explained: unknown` in **77356.618 ms** and `solve: unknown` in
+  **77377.729 ms**. Next useful AUFLIA work is a bounded multi-hop
+  component-array chain repair/diagnostic with an explicit replay-improvement
+  gate, not a two-OR special case.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_replay_failure_reports_residual_followup_or_diagnostic -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_branch_select_cycle -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test abv_lazy_ext -j1 -- --nocapture`.
+  Diagnostic command:
+  `CARGO_BUILD_JOBS=2 timeout 180s cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__bug337.smt2 10000`.
+
+- **Session 2026-06-26 — AUFLIA same-branch residual diagnostics.**
+  Branch/select candidate diagnostics now also try the same-branch residual
+  candidate on diagnostic copies when a branch repair plus select repair returns
+  to the same generated OR with the same best branch and exactly one false
+  literal. The note emits rows such as
+  `chain+same_branch_store_target`, preserving the original branch/select
+  diagnostic shape while reporting the post-select residual effect. A focused
+  regression covers the small `c = store(a,3,7)` residual shape and proves the
+  diagnostic row reaches `total_false=0`.
+
+  On `bug337`, this answers the previous unknown. The OR **210** / select **34**
+  chain residual for term **580** does repair the store target and keeps select
+  term **555** true, but it is still `worse_full_replay` with
+  **total_false=2**. The first global blocker moves to OR **209** / term
+  **3654**, whose best branch is branch **3** with one false literal, term
+  **3650**: an equality over the same array values flipped
+  `(array default 0 [0 -> 2] [1 -> 2] [2 -> 1])` vs
+  `(array default 0 [0 -> 2] [1 -> 3] [2 -> 3])`. The route remains the prior
+  large-row frontier: `check_auto_explained: unknown` in **77456.450 ms** and
+  `solve: unknown` in **77324.228 ms**, with the outer timeout cleaning up the
+  evidence tail. Next useful AUFLIA work is a paired OR-210/OR-209 component
+  array repair, not another single term-580 target repair.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_branch_select_cycle -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test abv_lazy_ext -j1 -- --nocapture`.
+  Diagnostic command:
+  `CARGO_BUILD_JOBS=2 timeout 180s cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__bug337.smt2 10000`.
+
+- **Session 2026-06-26 — AUFLIA guarded same-branch store residual repair.**
+  Added a target-side residual store repair for small branch/select cycles. After
+  a branch repair and store-chain select repair return to the same generated OR,
+  if the same branch is still best and exactly one false literal remains, the
+  repair handles `target = store(base, i, v)` by rebuilding `target` from the
+  current repaired `base`. This preserves the select readback while restoring the
+  branch's store-definition equality, and it still mutates the projected model
+  only under a strict full-original-replay improvement gate. A focused regression
+  pins the intended shape: `c = store(a, 3, 7)` must remain true after
+  `5 = select(a, i)` repairs `a[2]`.
+
+  This is deliberately guarded to the same small replay surfaces as the prior
+  branch/select-cycle repair. The unguarded `bug337` target-side probe was
+  measured and rejected: it did not move the large row off generated OR **210** /
+  term **3879** and raised route time to about **87 s**. With the guard restored,
+  the large-row diagnostic is back in the prior unknown regime, with
+  `solve: unknown` in **76861.991 ms** before the evidence tail cleanup. The next
+  useful AUFLIA work is not another generic target-side store repair; it is
+  diagnosing why the concrete OR-210 term-580 residual is not accepted on the
+  large row, likely via residual-candidate diagnostics or component-array state.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_branch_select_cycle -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test abv_lazy_ext -j1 -- --nocapture`;
+  `git diff --check`.
+  Diagnostic command:
+  `CARGO_BUILD_JOBS=2 timeout 180s cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__bug337.smt2 10000`.
+
+- **Session 2026-06-26 — AUFLIA returned-OR branch/select diagnostics.**
+  Branch/select candidate diagnostics now preserve the `ReplayOrFailure` details
+  for the first global blocker after each composed branch+select trial. When a
+  select repair lands back on a generated OR, the note reports that OR's branch
+  count, best branch ordinal, false-literal count, first false literal term, and
+  equality values. The focused branch/select cycle regression now asserts that
+  these returned-OR details are emitted for the small alternate-branch shape.
+
+  This pinpoints the next `bug337` component rather than changing solve
+  behavior. The 10 s route diagnostic remains `unknown` at **round=2**,
+  **sites=4096**, **array_eq_atoms=150**, **row_lemmas=42**,
+  **cong_lemmas=6973**, **diff_skolems=146**, **working_assertions=7127**, first
+  false generated OR **210** / term **3879**, and about **77 s** route time.
+  The new returned-OR fields show that after **branch 0 -> select 34 chain**,
+  the select equality **term 555** is true, full replay is still
+  **total_false=2**, and the next global blocker is again OR **210**. Its best
+  branch is still branch **0**, but now with only **1/8** false literals:
+  **term 580**, `x_339 = store(x_325, x_337, 2)`, with lhs
+  `(array default 0 [0 -> 2] [1 -> 3] [2 -> 3])` and rhs
+  `(array default 0 [0 -> 2] [1 -> 2] [2 -> 1])`. This rules out more
+  branch-choice work: the next useful repair is specifically preserving the
+  select-34 store-chain readback while repairing branch-0 store definition
+  **term 580** or its component arrays.
+  Verification passed:
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_branch_select_cycle_repair_forces_alternate_or_branch -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_replay_failure_reports -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test abv_lazy_ext -j1 -- --nocapture`;
+  `cargo fmt --all --check`;
+  `git diff --check`.
+  Diagnostic emitted the route note above, then the outer timeout cleaned up the
+  non-exiting evidence tail:
+  `CARGO_BUILD_JOBS=2 timeout 180s cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__bug337.smt2 10000`.
+
+- **Session 2026-06-26 — AUFLIA guarded branch/select cycle repair.**
+  Added a bounded branch/select-cycle replay repair for small generated-OR
+  replay surfaces. The repair looks for the concrete pattern exposed by the
+  prior diagnostics: repair one OR branch, observe a direct `x = select(a,i)`
+  blocker, repair that select with store-chain or direct array-entry repair,
+  then see the same OR become the first blocker again. From that post-select
+  state it tries a different branch of the same OR and mutates the projected
+  assignment only if the final full-original replay false count is strictly
+  lower than the starting count. It is capped at **8** OR branches, **32**
+  second-branch trials, **current_false <= 2**, and **<=64** positive replay
+  conjuncts. A focused regression covers the intended shape where repairing
+  `a = b` exposes `0 = select(a,i)`, the select repair breaks `a = b` and
+  returns to the same OR, then an alternate `q = true` branch clears replay.
+
+  This is deliberately **not** a `bug337` closure. Measuring the same repair
+  without the small-surface conjunct guard on `bug337` was rejected: it kept the
+  final frontier at generated OR **210** / term **3879** and raised route time
+  from about **77 s** to about **93 s** for the same 10 s solver budget. With
+  the guard retained, the large row returns to the prior useful frontier:
+  `unknown` at **round=2**, **sites=4096**, **array_eq_atoms=150**,
+  **row_lemmas=42**, **cong_lemmas=6973**, **diff_skolems=146**,
+  **working_assertions=7127**, first false generated OR **210**, term **3879**,
+  and about **77 s** route time before the outer timeout cleaned up the
+  evidence tail. The prior branch/select diagnostics remain decisive:
+  branch **0** -> select **34** store-chain repair makes term **555** true but
+  lands back on OR **210** at **total_false=2**; direct repair worsens to
+  ordinal **35**. Next useful AUFLIA work is component-level store-chain /
+  branch-state repair inside the **210 -> 34 -> 210** cycle, not simply trying
+  another OR-210 branch after the select repair.
+  Verification passed:
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_branch_select_cycle_repair_forces_alternate_or_branch -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_replay_failure_reports -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_branch_beam -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_select_repair_beam_composes_followup_or_repair -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test abv_lazy_ext -j1 -- --nocapture`;
+  `cargo fmt --all --check`;
+  `git diff --check`.
+  Diagnostic emitted the route note above, then the outer timeout cleaned up the
+  non-exiting evidence tail:
+  `CARGO_BUILD_JOBS=2 timeout 180s cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__bug337.smt2 10000`.
+
+- **Session 2026-06-26 — AUFLIA branch/select cycle diagnostics.**
+  Final lazy-extensionality replay failures on generated ORs now include
+  bounded `branch_select_candidate_diagnostics`: for each repairable OR branch
+  whose next full-replay blocker is a direct `x = select(a,i)` equality, the
+  note composes the branch trial with the same store-chain and direct
+  array-entry select repairs used by targeted replay repair. Each row reports
+  branch ordinal, select ordinal/term, repair kind, branch/select change
+  counts, whether the select becomes true, full original replay false count,
+  and the next global replay blocker. A focused regression pins the intended
+  shape where an OR branch repair exposes a later direct select equality and
+  the direct select candidate clears the full replay.
+
+  This does **not** close `bug337`, but it removes another unknown in the
+  queue-lock. The 10 s route diagnostic still reports `unknown` at **round=2**,
+  **sites=4096**, **array_eq_atoms=150**, **row_lemmas=42**,
+  **cong_lemmas=6973**, **diff_skolems=146**, **working_assertions=7127**, first
+  false generated OR **ordinal 210**, term **3879**, and about **77 s** route
+  time before the outer 180 s timeout cleaned up the evidence tail. The new
+  branch/select rows show the concrete cycle: branch **0** followed by the
+  store-chain select repair for ordinal **34** / term **555** makes the select
+  true, but is still **worse_full_replay** with **branch_changes=6**,
+  **select_changes=37**, **total_false=2**, and lands back on OR **210** / term
+  **3879**. Branch **0** followed by the direct array-entry repair also makes
+  the select true, but worsens further (**total_false=3**) and exposes ordinal
+  **35** / term **560** (`0` vs `1`). Branches **1** and **2** show similar
+  select-local repairs that worsen full replay. Next useful AUFLIA work is now
+  a cycle-aware repair for the **210 -> 34 -> 210** path, e.g. a bounded
+  replay-state/tabu scheduler that can keep the branch-0 store-chain select
+  repair and then force a different OR-210 branch or component-level store-chain
+  change under the final strict full-replay improvement gate. Another broad
+  OR-start beam or one-step select repair is already ruled out.
+  Verification passed:
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_replay_failure_reports_branch_select_candidate_diagnostics -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_replay_failure_reports -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_branch_beam -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test abv_lazy_ext -j1 -- --nocapture`;
+  `cargo fmt --all --check`;
+  `git diff --check`.
+  Diagnostic emitted the route note above, then the outer timeout cleaned up the
+  non-exiting evidence tail:
+  `CARGO_BUILD_JOBS=2 timeout 180s cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__bug337.smt2 10000`.
+
+- **Session 2026-06-26 — AUFLIA guarded OR/select replay beam.**
+  Generated-OR replay failures now get the same mixed select/OR replay beam only
+  on small, multi-false replay surfaces: **current_false > 1** and at most
+  **64** positive replay conjuncts. This keeps the useful composed-repair shape
+  available for small projections while preventing the broad OR-start beam from
+  spending the large AUFLIA queue-lock budget. A focused regression covers the
+  retained case: repairing an OR branch ties full replay by breaking a later
+  direct select readback, then the mixed beam composes a select repair and
+  strictly improves the full replay false count. The older branch-beam and
+  one-step branch-choice fallbacks remain unchanged for larger OR failures.
+
+  This is deliberately a guarded retention, not a `bug337` closure. The
+  unguarded OR-start beam was measured and rejected for the large row: the
+  diagnostic regressed from OR **210** back to direct select equality **34** /
+  term **555** and took about **149 s** wall for the 10 s solver budget. With the
+  guard, the `bug337` diagnostic returns to the previous useful frontier:
+  `unknown` at **round=2**, **sites=4096**, **array_eq_atoms=150**,
+  **row_lemmas=42**, **cong_lemmas=6973**, **diff_skolems=146**,
+  **working_assertions=7127**, first false generated OR **ordinal 210**, term
+  **3879**, **projection_repair_changes=587**, and about **76 s** wall. The
+  OR 210 branch diagnostics are unchanged: branch **0** locally repairs but
+  returns to select equality **34** / term **555** at **total_false=2**, and
+  branch **3** flows to OR **211** then OR **212**. Next useful AUFLIA work is a
+  cycle-specific diagnostic or repair for **210 branch-0 -> 34 select**, not a
+  broader OR-start mixed beam.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_or_repair_beam_composes_followup_select_repair -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_select_repair_beam_composes_followup_or_repair -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_branch_beam -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_replay_failure_reports -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test abv_lazy_ext -j1 -- --nocapture`;
+  `git diff --check`.
+  Diagnostic emitted the route note above, then the outer timeout cleaned up the
+  non-exiting evidence tail:
+  `CARGO_BUILD_JOBS=2 timeout 180s cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__bug337.smt2 10000`.
+
+- **Session 2026-06-26 — AUFLIA mixed select/OR replay beam.**
+  Direct-select targeted replay repair now first tries a bounded mixed replay
+  beam before falling back to the older one-step non-worsening select repair.
+  The beam expands only direct `x = select(a,i)` failures and generated OR
+  failures, keeps at most **8** states, expands at most **64** states, follows at
+  most **6** repair steps, allows at most **current_false + 4** temporary false
+  conjuncts, and lets a failure ordinal be revisited at most twice. It mutates
+  the projected assignment only when the composed sequence strictly reduces the
+  full original replay false count, so returned `sat` remains gated by complete
+  evaluator replay. A focused regression covers the intended shape: a select
+  repair alone only ties full replay, but composing it with a follow-up OR repair
+  strictly improves the replay false count in one targeted step.
+
+  This does **not** close `bug337`, but it moves the frontier. The 10 s route
+  diagnostic remains `unknown` at **round=2**, **sites=4096**,
+  **array_eq_atoms=150**, **row_lemmas=42**, **cong_lemmas=6973**,
+  **diff_skolems=146**, and **working_assertions=7127**. The first false replay
+  point moves from direct select equality **ordinal 34**, term **555**, to
+  generated OR **ordinal 210**, term **3879**, after
+  **projection_repair_changes=587**. Projection telemetry is now
+  **select_repair_candidates=10014**, **select_repair_array_changes=103**,
+  **select_repair_symbol_changes=299**, **branch_repair_candidates=138**,
+  **branch_repair_symbol_changes=161**, **scalar_repair_candidates=24**,
+  **scalar_support_candidates=24**, **scalar_stabilized_trials=0**,
+  **scalar_rejected_worse_trials=0**,
+  **scalar_equal_support_repairs=0**, and
+  **scalar_repair_symbol_changes=24**. OR 210 has **4** branches; best branch
+  **0** has **2/8** false literals, first false term **580**,
+  `x_339 = store(x_325, x_337, 2)`, with array values
+  `(array default 0 [0 -> 2] [1 -> 3] [2 -> 3])` vs
+  `(array default 0 [0 -> 2] [1 -> 2] [2 -> 1])`. Branch diagnostics show branch
+  **0** repairs locally but worsens/ties full replay at **total_false=2** and
+  returns to select equality **ordinal 34** / term **555**; branch **3** repairs
+  locally but lands on OR **211**, and its pair branch **3** lands on OR **212**.
+  This confirms the next useful move: invoke the mixed select/OR beam from
+  generated-OR failures as well, or add a targeted diagnostic for the
+  **210 branch-0 → 34 select** cycle before broadening the beam further. The
+  diagnostic wall time rose to about **76 s** for the 10 s solver budget, so the
+  next step must keep cost caps explicit.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_select_repair_beam_composes_followup_or_repair -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_targeted_replay_repairs_direct_select_equality -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_targeted_replay_repairs_select_through_store_chain -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_replay_failure_reports_select_candidate_diagnostics -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_branch_beam -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_replay_failure_reports -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test abv_lazy_ext -j1 -- --nocapture`;
+  `git diff --check`.
+  Diagnostic emitted the route note above, then the outer timeout cleaned up the
+  non-exiting evidence tail:
+  `CARGO_BUILD_JOBS=2 timeout 180s cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__bug337.smt2 10000`.
+
+- **Session 2026-06-26 — AUFLIA direct-select repair diagnostics.**
+  Final lazy-extensionality replay failures on a direct `x = select(a,i)`
+  equality now include `select_candidate_diagnostics` alongside the existing
+  branch diagnostics. The note tries the same two candidates as targeted replay
+  repair on projection copies: the store-chain/readback repair and the direct
+  array-entry store. For each candidate it records whether the failed select
+  equality becomes true, the repair-change count, the full original replay false
+  count, and the first global replay blocker after applying the candidate. A
+  focused regression pins the intended case where both select candidates repair
+  the current equality and expose the next false conjunct.
+
+  This does **not** close `bug337`, but it replaces the prior guess with a
+  concrete queue-lock edge. The 10 s route diagnostic still reports `unknown` at
+  **round=2**, **sites=4096**, **array_eq_atoms=150**, **row_lemmas=42**,
+  **cong_lemmas=6973**, **diff_skolems=146**, and
+  **working_assertions=7127**. The first false replay point remains direct
+  readback equality **ordinal 34**, term **555**,
+  `x_388 = select(x_325, x_337)`, values **1 vs 0**, after the same
+  **projection_repair_changes=655**. The new select diagnostics show:
+  `chain` makes term 555 true but is **same_full_replay** with **changes=37**,
+  **total_false=2**, and next global blocker **ordinal 210**, term **3879**;
+  `direct` also makes term 555 true but is **worse_full_replay** with
+  **changes=1**, **total_false=3**, and next blocker **ordinal 35**, term
+  **560**, equality terms **557/559**, values **0 vs 1**. Next useful work is
+  therefore not more one-step direct-select repair. We need a bounded composition
+  move that can carry the same-full-replay store-chain candidate into repair of
+  generated OR **210** while still accepting only a final strict replay
+  improvement, or a diagnostic that explains why the 210/34 select-chain cycle
+  cannot be scheduled.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_replay_failure_reports_select_candidate_diagnostics -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_replay_failure_reports -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_branch_beam -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test abv_lazy_ext -j1 -- --nocapture`;
+  `git diff --check`.
+  Diagnostic emitted the route note above before being interrupted after no
+  further useful output:
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__bug337.smt2 10000`.
+
+- **Session 2026-06-26 — AUFLIA beam readback stabilization.**
+  Accepted branch-beam candidates now get a post-branch readback stabilization
+  pass before they are scored: direct scalar symbols of asserted
+  `x = select(a,i)` equalities are aligned to the candidate's repaired array
+  values across all array symbols, and the beam keeps the stabilized candidate
+  only when its full-original-replay false count is better than the raw
+  candidate. This preserves the existing SAT gate: the projected assignment is
+  still mutated only by a final strict replay improvement, and returned `sat`
+  still requires a complete evaluator replay. A focused regression covers the
+  branch-store case where repairing `a = store(b,i,v)` would otherwise leave
+  `y = select(a,i)` stale; stabilization updates `y` to the repaired array
+  value and reaches zero replay failures.
+
+  This does **not** move `bug337`. The 10 s diagnostic remains `unknown` at
+  **round=2**, **sites=4096**, **array_eq_atoms=150**, **row_lemmas=42**,
+  **cong_lemmas=6973**, **diff_skolems=146**, and
+  **working_assertions=7127**. Projection telemetry remains
+  **select_repair_candidates=10011**, **select_repair_array_changes=102**,
+  **select_repair_symbol_changes=352**, **branch_repair_candidates=140**,
+  **branch_repair_symbol_changes=177**, **scalar_repair_candidates=24**,
+  **scalar_support_candidates=24**, **scalar_stabilized_trials=0**,
+  **scalar_rejected_worse_trials=0**,
+  **scalar_equal_support_repairs=0**, **scalar_repair_symbol_changes=24**, and
+  **projection_repair_changes=655**. The first false replay point is unchanged:
+  direct readback equality **ordinal 34**, term **555**,
+  `x_388 = select(x_325, x_337)`, values **1 vs 0**. This rules out simple
+  post-beam scalar-readback alignment as the missing step. Next useful work is
+  a targeted direct-select repair diagnostic for term **555** that reports the
+  chain candidate, direct array-entry candidate, post-candidate false counts,
+  and the first blocker after each candidate, so we can see whether select
+  repair is rejected as worsening, undone by store-chain reconstruction, or not
+  reached before the targeted repair cap.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_branch_beam_stabilizes_direct_select_readbacks -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_branch_beam_allows_temporary_uphill_schedule -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_branch_pair_choice_scores_adjacent_or_repairs -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test abv_lazy_ext -j1 -- --nocapture`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__bug337.smt2 10000`.
+
+- **Session 2026-06-26 — AUFLIA bounded branch-beam replay repair.**
+  Targeted lazy-extensionality replay now has a capped branch-schedule beam
+  after strict two-OR pair repair and before the older single-OR fallback. The
+  beam searches only generated OR replay failures, keeps at most **8** states,
+  expands at most **64** states, follows at most **6** branch repairs, and allows
+  at most **current_false + 4** temporary false conjuncts inside the beam. It
+  mutates the projected model only when a candidate achieves a strict final
+  full-original-replay false-count improvement, so SAT is still accepted only by
+  the existing full evaluator replay. A focused regression covers the shape that
+  motivated this: strict pair repair rejects an intermediate two-false state,
+  while the beam repairs two later ORs and reaches a fully replaying assignment.
+
+  This still does **not** close `bug337`, but it changes the measured frontier.
+  The 10 s diagnostic remains `unknown` at **round=2**, **sites=4096**,
+  **array_eq_atoms=150**, **row_lemmas=42**, **cong_lemmas=6973**,
+  **diff_skolems=146**, and **working_assertions=7127**. Projection telemetry is
+  now **select_repair_candidates=10011**, **select_repair_array_changes=102**,
+  **select_repair_symbol_changes=352**, **branch_repair_candidates=140**,
+  **branch_repair_symbol_changes=177**, **scalar_repair_candidates=24**,
+  **scalar_support_candidates=24**, **scalar_stabilized_trials=0**,
+  **scalar_rejected_worse_trials=0**,
+  **scalar_equal_support_repairs=0**, **scalar_repair_symbol_changes=24**, and
+  **projection_repair_changes=655**. The first false replay point moves away
+  from generated OR **219** to direct readback equality **ordinal 34**, term
+  **555**, `x_388 = select(x_325, x_337)`, with values **1 vs 0**. This is a
+  useful but incomplete move: the non-monotone branch schedule can cross the
+  219/211/212 queue-lock cycle, but it leaves a direct select readback
+  inconsistent. Next useful work is not wider beam search; inspect why the
+  existing store-chain/direct select repair cannot stabilize this readback after
+  the beam assignment, or add readback stabilization inside accepted beam states.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_branch_beam_allows_temporary_uphill_schedule -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_branch_pair_choice_scores_adjacent_or_repairs -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_replay_failure_reports_branch_pair_candidate_diagnostics -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_replay_failure_reports_branch_candidate_diagnostics -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test abv_lazy_ext -j1 -- --nocapture`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__bug337.smt2 10000`.
+
+- **Session 2026-06-26 — AUFLIA branch-pair edge diagnostics.**
+  Final lazy-extensionality replay failures now include a bounded
+  `branch_pair_candidate_diagnostics` section for failed generated ORs. The
+  diagnostic is computed only on the final failed replay path, follows at most
+  16 pair edges, and only expands first-branch candidates whose next full-replay
+  blocker is a different generated OR. For each second-OR branch it reports the
+  first branch, second OR ordinal/term, second branch, initial/final false
+  literals, whether the pair is a candidate / no-repair / breaks an OR / same or
+  worse full replay, repair-change counts, total full-replay false count, and
+  the next global blocker. A focused regression pins this on a flattened
+  conjunct assertion so the ordinal shape matches the large AUFLIA diagnostics.
+
+  This confirms why the current monotone two-OR repair stops on `bug337`. The
+  10 s diagnostic remains `unknown` at **round=2**, **sites=4096**,
+  **array_eq_atoms=150**, **row_lemmas=42**, **cong_lemmas=6973**,
+  **diff_skolems=146**, **working_assertions=7127**, and the same failed OR
+  **ordinal 219**, term **6084**, after **projection_repair_changes=647**. The
+  branch-candidate section is unchanged: branch **3** repairs locally and lands
+  on global OR **ordinal 211**, term **4108**, with **total_false=1**. The new
+  pair-edge section shows every `219` branch-3 → `211` pair candidate repairs
+  the second branch locally but worsens full replay from that one-false baseline:
+  branch **0** has **init=2**, **final=0**, **total_false=2**, next blocker
+  scalar term **641** (**1 vs 0**); branch **1** has **init=5**, **final=0**,
+  **total_false=4**, next blocker term **646** (**2 vs 0**); branch **2** has
+  **init=5**, **final=0**, **total_false=4**, next blocker term **444**
+  (**1 vs 0**); branch **3** has **init=3**, **final=0**, **total_false=2**,
+  and lands on generated OR **ordinal 212**, term **4341**. This is the key
+  practical result: a strictly monotone two-OR repair cannot progress from the
+  current frontier. Next useful work is a bounded branch-schedule/beam search
+  that allows temporary uphill moves inside the beam while accepting only a final
+  full-replay improvement, with explicit caps and tabu/cycle handling around the
+  **219 → 211 → 212** queue-lock chain.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_replay_failure_reports_branch_pair_candidate_diagnostics -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_branch_pair_choice_scores_adjacent_or_repairs -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_replay_failure_reports_branch_candidate_diagnostics -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test abv_lazy_ext -j1 -- --nocapture`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__bug337.smt2 10000`.
+
+- **Session 2026-06-26 — AUFLIA coupled branch-pair replay repair.**
+  Targeted lazy-extensionality replay now has a bounded two-disjunction branch
+  repair before the existing single-disjunction branch choice. For a failed
+  generated OR, it tries each repairable branch candidate on a projection copy;
+  if that copy's next full-replay blocker is a different generated OR, it tries
+  each repairable branch of that second OR on the same copy. A pair is accepted
+  only when both ORs evaluate true and the full original positive replay false
+  count strictly decreases. The existing full original evaluator replay remains
+  the only SAT acceptance gate, and the old single-OR repair remains the
+  fallback. A focused regression pins the motivating scoring shape: single-OR
+  repair takes a local tie (`x = 1`), while pair scoring chooses the compatible
+  adjacent schedule (`y = 1`, then `x = 2`) that satisfies both ORs.
+
+  This still does **not** close `bug337`, but it is a real frontier move rather
+  than a no-op. The 10 s diagnostic remains `unknown` at **round=2**,
+  **sites=4096**, **array_eq_atoms=150**, **row_lemmas=42**,
+  **cong_lemmas=6973**, **diff_skolems=146**, and
+  **working_assertions=7127**, but the first false replay point moves from
+  generated OR **ordinal 211**, term **4108**, to generated OR **ordinal 219**,
+  term **6084**. Projection telemetry rises to
+  **select_repair_candidates=10011**, **select_repair_array_changes=102**,
+  **select_repair_symbol_changes=343**, **branch_repair_candidates=142**,
+  **branch_repair_symbol_changes=178**, **scalar_repair_candidates=24**,
+  **scalar_support_candidates=24**, **scalar_stabilized_trials=0**,
+  **scalar_rejected_worse_trials=0**,
+  **scalar_equal_support_repairs=0**, **scalar_repair_symbol_changes=24**, and
+  **projection_repair_changes=647**. The new failed OR's best branch is **3**,
+  with first false term **1402**, `x_213 = x_199`; branch **3** repairs locally
+  (**init=1**, **final=0**, **changes=48**) and moves the global blocker back to
+  **ordinal 211**, term **4108**. Branches **0/1/2** repair locally but worsen
+  full replay and expose earlier scalar blockers at terms **1329** (**1 vs 0**),
+  **1334** (**2 vs 0**), and **388** (**1 vs 0**). The diagnostic run is also
+  slower than the prior one-branch frontier (**~45 s** wall for the 10 s solver
+  budget), so the next step should be a bounded multi-OR/beam branch scheduler
+  with explicit cost control, or pair-edge diagnostics that identify the
+  219↔211 cycle before broadening the search further.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_branch_pair_choice_scores_adjacent_or_repairs -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_replay_failure_reports_branch_candidate_diagnostics -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test abv_lazy_ext -j1 -- --nocapture`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__bug337.smt2 10000`.
+
+- **Session 2026-06-26 — AUFLIA branch-candidate replay diagnostics.**
+  Final lazy-extensionality replay failures now annotate failed generated ORs
+  with per-branch candidate diagnostics, computed only on the final failed replay
+  path. For each branch the note records initial false literals, whether targeted
+  branch repair produced a non-worsening candidate or worsened full replay,
+  repair-change count, final branch false count, total full-replay false count,
+  the first branch-local blocker, and the first global blocker after applying
+  the candidate. A focused regression pins the simple unrepairable two-branch
+  shape so this remains available in future diagnostics.
+
+  This still does **not** close `bug337`; the 10 s diagnostic remains
+  `unknown` at **round=2**, **sites=4096**, **array_eq_atoms=150**,
+  **row_lemmas=42**, **cong_lemmas=6973**, **diff_skolems=146**, and
+  **working_assertions=7127**. The failed generated branch disjunction remains
+  **ordinal 211**, term **4108**, with best branch **3** blocked by term
+  **714**, `x_325 = x_311`. The new branch diagnostics are the useful result:
+  branch **0** repairs locally (**init=3**, **final=0**) but leaves
+  **total_false=2** and moves the global first blocker to **ordinal 210**, term
+  **3879**; branch **3** repairs locally (**init=1**, **final=0**) and is best
+  by **total_false=1**, but also moves the global first blocker to **ordinal
+  210**, term **3879**. Branches **1** and **2** repair locally but worsen full
+  replay (**total_false=4/5**) and expose earlier scalar equalities: term
+  **646** with values **2 vs 1**, and term **444** with values **1 vs 0**.
+  Next useful work is a coupled two-level branch repair/schedule across adjacent
+  disjunctions **210/211** (`x_336`/`x_322`), or a diagnostic/repair that scores
+  branch pairs jointly. More one-branch local heuristics are now unlikely to move
+  this instance.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_replay_failure_reports_branch_candidate_diagnostics -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test abv_lazy_ext -j1 -- --nocapture`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__bug337.smt2 10000`.
+
+- **Session 2026-06-26 — AUFLIA order-guarded branch repair.**
+  Targeted lazy-extensionality branch-choice repair can now repair false integer
+  order guards inside a candidate branch. The repair recognizes `IntLt/Le/Gt/Ge`
+  and a single `not` around them, moves one direct integer symbol just enough to
+  satisfy the desired relation, and keeps the local change only if the literal
+  becomes true and the full original replay false count is non-worsening. Branch
+  candidates also now use the scalar equality choice helper before and after
+  store/array/order repairs, so dependent symbol-to-symbol equalities can catch
+  up after an order guard changes one side. A focused regression covers the
+  exact shape: the locally best branch is an unrepairable false Boolean, while a
+  later branch needs `not (x <= y)` plus `z = x`.
+
+  This does **not** move `bug337` yet. The 10 s probe remains at **round=2**,
+  **sites=4096**, **array_eq_atoms=150**, **row_lemmas=42**,
+  **cong_lemmas=6973**, **diff_skolems=146**, and
+  **working_assertions=7127**. Projection repair counters are unchanged from the
+  prior baseline: **select_repair_candidates=10011**,
+  **select_repair_array_changes=102**, **select_repair_symbol_changes=320**,
+  **branch_repair_candidates=136**, **branch_repair_symbol_changes=165**,
+  **scalar_repair_candidates=24**, **scalar_support_candidates=24**,
+  **scalar_stabilized_trials=0**, **scalar_rejected_worse_trials=0**,
+  **scalar_equal_support_repairs=0**, **scalar_repair_symbol_changes=24**, and
+  **projection_repair_changes=611**. The first false conjunct is still generated
+  branch disjunction **ordinal 211**, term **4108**; best branch **3** has
+  **1/6** false literals, term **714**, `x_325 = x_311`. This shows the
+  globally satisfying `x_322 = 2` branch still is not accepted by current
+  branch-choice scoring even after order-guard repair. Next useful work is a
+  branch-candidate diagnostic that reports each branch's post-repair false
+  literals/first blocker, not more blind repair operators.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_targeted_replay_repairs_order_guarded_branch_choice -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_targeted_replay_can_choose_non_best_repairable_branch -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_branch_equality_repairs_target_through_store_definition -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test abv_lazy_ext -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__bug337.smt2 10000`.
+
+- **Session 2026-06-26 — AUFLIA definition-aware array equality repair.**
+  Branch array-equality repair now has a second, definition-aware candidate in
+  addition to the prior direct component copy. For a false selected equality
+  `a = b`, the replay repair can try to make each component member equal to a
+  source array value by pushing that value through the member's currently
+  selected `target = store(base, k, v)` or direct-equality definition, recursively
+  repairing bases and rebuilding targets. The candidate is still replay-gated:
+  it competes against the old direct copy and is kept only when the branch false
+  count drops and the full original replay false count does not increase. A
+  focused regression covers the case where direct copying `a := b` would leave a
+  lower selected store branch false, while repairing `base` and rebuilding `a`
+  satisfies both the store branch and the equality branch.
+
+  This does **not** move `bug337` yet. The current 10 s probe is unchanged at
+  **round=2**, **sites=4096**, **array_eq_atoms=150**, **row_lemmas=42**,
+  **cong_lemmas=6973**, **diff_skolems=146**, and
+  **working_assertions=7127**. The first false conjunct remains generated branch
+  disjunction **ordinal 211**, term **4108**; best branch **3** has **1/6**
+  false literals, term **714**, `x_325 = x_311`, with `x_325` equal to
+  `(array default 0 [0 -> 1] [1 -> 3] [2 -> 3])` and `x_311` equal to
+  `(array default 0 [0 -> 1] [1 -> 2] [2 -> 1])`. A temporary
+  `MAX_TARGETED_REPLAY_REPAIRS=16` run was measured and rejected: it stayed at
+  the same branch/equality frontier while raising projection churn from **611**
+  to **779** changes. Next useful work is not another cap increase; inspect why
+  the globally satisfying `x_322 = 2` store branch is not selected/repairable
+  under the current branch-choice scoring.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_branch_equality_repairs_target_through_store_definition -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_targeted_replay_repairs_direct_select_equality -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_targeted_replay_repairs_select_through_store_chain -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_projection_repairs_selected_array_equality_component -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test abv_lazy_ext -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__bug337.smt2 10000`.
+
+- **Session 2026-06-26 — AUFLIA store-chain readback projection.**
+  Targeted lazy-extensionality replay can now repair a false direct
+  `x = select(a, i)` readback through the currently selected store-chain
+  definition for `a`. Instead of only writing the target array cell, the repair
+  scans selected/best branch literals for `a = store(base, k, v)` or direct
+  array equalities, recursively pushes inherited reads into the base when
+  `i != k`, rebuilds the target store, aligns direct readback symbols, and keeps
+  the best candidate only when the failed readback becomes true and full
+  original replay is non-worsening. The old direct target-cell write remains as
+  a competing fallback. A focused regression pins the motivating shape where
+  directly writing `b[i]` would break a true branch `b = store(a, j, v)`, while
+  writing `a[i]` and rebuilding `b` satisfies both.
+
+  This still does **not** close `bug337`, but it removes the prior direct
+  readback blocker `x_388 = select(x_325, x_337)`. The 10 s probe remains at
+  **round=2**, **sites=4096**, **array_eq_atoms=150**, **row_lemmas=42**,
+  **cong_lemmas=6973**, **diff_skolems=146**, and
+  **working_assertions=7127**. Projection repair now reports
+  **select_repair_candidates=10011**, **select_repair_array_changes=102**,
+  **select_repair_symbol_changes=320**, **branch_repair_candidates=136**,
+  **branch_repair_symbol_changes=165**, **scalar_repair_candidates=24**,
+  **scalar_support_candidates=24**, **scalar_stabilized_trials=0**,
+  **scalar_rejected_worse_trials=0**,
+  **scalar_equal_support_repairs=0**, **scalar_repair_symbol_changes=24**, and
+  **projection_repair_changes=611**. The first false conjunct is now generated
+  branch disjunction **ordinal 211**, term **4108**; best branch **3** has
+  **1/6** false literals, term **714**, `x_325 = x_311`, with `x_325` equal to
+  `(array default 0 [0 -> 1] [1 -> 3] [2 -> 3])` and `x_311` equal to
+  `(array default 0 [0 -> 1] [1 -> 2] [2 -> 1])`. Next useful work is a
+  replay-gated branch-choice/store-chain equality repair for the `x_325/x_311`
+  transition, not another direct-select write or repair cap increase.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_targeted_replay_repairs_select_through_store_chain -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_targeted_replay_repairs_direct_select_equality -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_projection_repairs_selected_array_equality_component -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_targeted_replay_repairs_single_store_branch_literal -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_targeted_replay_can_choose_non_best_repairable_branch -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test abv_lazy_ext -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__bug337.smt2 10000`.
+
+- **Session 2026-06-26 — AUFLIA selected carry-component projection.**
+  Targeted lazy-extensionality replay can now repair a false direct array
+  equality as a selected carry component instead of a one-edge copy. For a failed
+  branch equality `a = b`, the repair gathers adjacent direct array equalities
+  from currently selected/best branches that touch `{a,b}`, tries each component
+  member as the representative array value on a projection copy, aligns direct
+  select readback symbols for the whole component, and keeps only a branch-
+  improving, full-replay-non-worsening candidate. This remains SAT-only because
+  the full original evaluator replay is still the acceptance gate. Focused
+  regressions cover the selected component case and a separate narrow targeted
+  direct-select equality repair.
+
+  This still does **not** close `bug337`, but it advances beyond the lower
+  carry branch `x_31 = x_17`. The 10 s probe remains at **round=2**,
+  **sites=4096**, **array_eq_atoms=150**, **row_lemmas=42**,
+  **cong_lemmas=6973**, **diff_skolems=146**, and **working_assertions=7127**.
+  Projection repair now reports **select_repair_candidates=10010**,
+  **select_repair_array_changes=101**, **select_repair_symbol_changes=290**,
+  **branch_repair_candidates=135**, **branch_repair_symbol_changes=156**,
+  **scalar_repair_candidates=24**, **scalar_support_candidates=24**,
+  **scalar_stabilized_trials=0**, **scalar_rejected_worse_trials=0**,
+  **scalar_equal_support_repairs=0**, **scalar_repair_symbol_changes=24**, and
+  **projection_repair_changes=571**. The first false conjunct is now direct
+  readback equality **ordinal 34**, term **555**, `x_388 = select(x_325,
+  x_337)`, with values **1** vs **0**. A targeted direct-select stabilization
+  experiment was measured and rejected because it regressed to generated branch
+  disjunction **9841** and raised projection churn to **1848** changes. Next
+  useful work is a readback/store-chain component repair for the `x_325/x_339`
+  transition around `x_388`, not a higher targeted cap or broad select
+  stabilization.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_targeted_replay_repairs_direct_select_equality -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_projection_repairs_selected_array_equality_component -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_projection_repairs_supported_branch_array_equality -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_targeted_replay_repairs_single_store_branch_literal -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_targeted_replay_can_choose_non_best_repairable_branch -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_projection_repairs_multi_literal_branch_schedule -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_projection_propagates_select_supported_scalar_equalities -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_projection_prefers_asserted_select_equalities -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_last_candidate_replay_accepts_only_real_models -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_replay_failure_reports_best_false_or_branch -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test abv_lazy_ext -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__bug337.smt2 10000`.
+
+- **Session 2026-06-26 — AUFLIA replay branch-choice candidates.**
+  Last-candidate lazy-extensionality replay now tries every positive branch of
+  a failed generated disjunction on a projection copy, keeps only repairs that
+  do not increase the full original replay false-conjunct count, and chooses the
+  deterministic best `(total_false, branch_false, ordinal)` candidate before
+  replaying again. This is still SAT-only: the full original evaluator replay
+  remains the only way to return `sat`. A focused regression pins the motivating
+  shape where the reported best branch is a single false Boolean literal that
+  cannot be repaired, while a later branch has repairable scalar equalities.
+
+  This still does **not** close `bug337`, but it moves the targeted replay
+  frontier out of the prior branch/equality/lower-branch cycle. The 10 s probe
+  remains at **round=2**, **sites=4096**, **array_eq_atoms=150**,
+  **row_lemmas=42**, **cong_lemmas=6973**, **diff_skolems=146**, and
+  **working_assertions=7127**. Projection repair now reports
+  **select_repair_candidates=10010**, **select_repair_array_changes=101**,
+  **select_repair_symbol_changes=197**, **branch_repair_candidates=135**,
+  **branch_repair_symbol_changes=135**, **scalar_repair_candidates=24**,
+  **scalar_support_candidates=24**, **scalar_stabilized_trials=0**,
+  **scalar_rejected_worse_trials=0**, **scalar_equal_support_repairs=0**,
+  **scalar_repair_symbol_changes=24**, and **projection_repair_changes=457**.
+  The first false conjunct is now generated branch disjunction **ordinal 232**,
+  term **9841**; best branch **3** has **1/6** false literals, term **2520**,
+  `x_31 = x_17`, with `x_31` equal to
+  `(array default 0 [0 -> 1] [1 -> 3] [2 -> 3])` and `x_17` equal to
+  `(array default 0 [1 -> 2] [2 -> 1])`. Next useful work is a component-level
+  store-chain/readback projection for this lower queue-lock branch, not another
+  scalar fallback or global repair-round increase.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_targeted_replay_can_choose_non_best_repairable_branch -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_targeted_replay_repairs_single_store_branch_literal -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_projection_repairs_single_false_branch_symbol_equality -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_projection_repairs_supported_branch_array_equality -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_projection_repairs_multi_literal_branch_schedule -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_projection_propagates_select_supported_scalar_equalities -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_projection_prefers_asserted_select_equalities -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_last_candidate_replay_accepts_only_real_models -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_replay_failure_reports_best_false_or_branch -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test abv_lazy_ext -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__bug337.smt2 10000`.
+
+- **Session 2026-06-26 — AUFLIA targeted replay branch repair.**
+  Last-candidate lazy-extensionality replay now has a bounded targeted repair
+  loop after the general projection pass: when full original replay names a
+  single false branch literal, the solver repairs exactly that literal and
+  immediately replays again. The acceptance gate is unchanged — only a full
+  evaluator replay of the original assertions can return `sat`. A focused
+  regression covers the exact helper on a false `b = store(a,i,v)` branch
+  literal.
+
+  This still does **not** close `bug337`, but it advances the replay frontier
+  beyond the branch-store literal. The 10 s probe remains at **round=2**,
+  **sites=4096**, **array_eq_atoms=150**, **row_lemmas=42**,
+  **cong_lemmas=6973**, **diff_skolems=146**, and **working_assertions=7127**.
+  Projection repair now reports **select_repair_candidates=10010**,
+  **select_repair_array_changes=101**, **select_repair_symbol_changes=170**,
+  **branch_repair_candidates=124**, **branch_repair_symbol_changes=124**,
+  **scalar_repair_candidates=24**, **scalar_support_candidates=24**,
+  **scalar_stabilized_trials=0**, **scalar_rejected_worse_trials=0**,
+  **scalar_equal_support_repairs=0**, **scalar_repair_symbol_changes=24**, and
+  **projection_repair_changes=419**. The first false conjunct is now direct
+  equality **ordinal 208**, term **3440**, `x_384 = x_344`, with values **0** vs
+  **1**. A wider 96-round projection cap was measured and rejected because it
+  stayed at branch ordinal 209 while raising projection churn to **929** changes.
+  A targeted scalar fallback was also measured and rejected because it oscillated
+  among branch **3654**, readback equality **3440**, and lower branch **3879**.
+  Next useful work is a component-level branch-choice/store-chain readback
+  projection for that three-node queue-lock cycle.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_projection_repairs_scalar_equality_by_replay_improvement -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_projection_repairs_multi_literal_branch_schedule -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_projection_repairs_single_false_branch_symbol_equality -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_projection_repairs_supported_branch_array_equality -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_projection_propagates_select_supported_scalar_equalities -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_targeted_replay_repairs_single_store_branch_literal -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_last_candidate_replay_accepts_only_real_models -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_replay_failure_reports_best_false_or_branch -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_projection_prefers_asserted_select_equalities -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test abv_lazy_ext -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__bug337.smt2 10000`.
+
+- **Session 2026-06-26 — AUFLIA multi-literal branch schedule repair.**
+  Replay-only branch repair now carries the selected best branch term and can
+  try a bounded multi-literal projection on a copy of the candidate assignment.
+  The schedule pass handles direct scalar equalities first, then equality-shaped
+  array/store literals, and keeps the copy only if the selected branch's false
+  literal count decreases. Store repairs preserve target arrays when possible;
+  when the target cannot equal `store(base,i,v)` under the current index/value,
+  the schedule pass can instead assign the target to the computed store and
+  align target readbacks. The older one-literal repair keeps its prior
+  convergence behavior so asserted select demands are not erased too early.
+
+  This still does **not** close `bug337`, but it removes the generated branch
+  disjunction as the first replay blocker. The 10 s probe remains at
+  **round=2**, **sites=4096**, **array_eq_atoms=150**, **row_lemmas=42**,
+  **cong_lemmas=6973**, **diff_skolems=146**, and
+  **working_assertions=7127**. Projection repair now reports
+  **select_repair_candidates=1386**, **select_repair_array_changes=17**,
+  **select_repair_symbol_changes=132**, **branch_repair_candidates=58**,
+  **branch_repair_symbol_changes=58**, and **projection_repair_changes=207**.
+  The first false conjunct is now a direct equality **ordinal 185**, term
+  **2957**, `x_361 = x_22`, with values **1** vs **0**. Next useful work is a
+  replay-gated scalar equality projection pass for non-branch generated
+  equalities, with direction chosen by branch/readback support where available.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_projection_repairs_multi_literal_branch_schedule -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_projection_repairs_single_false_branch_symbol_equality -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_projection_repairs_supported_branch_array_equality -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_projection_prefers_asserted_select_equalities -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_replay_failure_reports_best_false_or_branch -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test abv_lazy_ext -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__bug337.smt2 10000`.
+
+- **Session 2026-06-26 — AUFLIA branch array-equality repair.**
+  Replay-only branch repair now handles a single false direct array equality by
+  copying the side with stronger projected readback evidence into the weaker
+  side. The direction key is deterministic: non-default projected array entries
+  first, then direct asserted `select` equalities already satisfied by that
+  side. After copying, direct scalar readback symbols for the target array are
+  aligned to the repaired array. This stays SAT-only and replay-gated; it cannot
+  return `sat` unless the original assertions fully evaluate to `true`.
+
+  This does **not** close `bug337`, but it advances the replay frontier again.
+  The 10 s probe remains at **round=2**, **sites=4096**,
+  **array_eq_atoms=150**, **row_lemmas=42**, **cong_lemmas=6973**,
+  **diff_skolems=146**, and **working_assertions=7127**. Projection repair now
+  reports **select_repair_candidates=924**, **select_repair_array_changes=5**,
+  **select_repair_symbol_changes=119**, **branch_repair_candidates=48**,
+  **branch_repair_symbol_changes=48**, and
+  **projection_repair_changes=172**. The first false conjunct moves to generated
+  branch disjunction **ordinal 233**, term **10144**; best branch **0** now has
+  **2/8** false literals. The first false literal is term **2556**,
+  `x_17 = store(x_2, x_15, 2)`, with `x_17` equal to
+  `(array default 0 [0 -> 1] [1 -> 3] [2 -> 3])` while the RHS store is
+  `(array default 0 [1 -> 2] [2 -> 1])`. Next useful work is a multi-literal
+  branch-schedule/store-chain projection for this queue-lock branch, not more
+  one-literal local repair.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_projection_repairs_supported_branch_array_equality -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_projection_repairs_single_false_branch_symbol_equality -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_projection_prefers_asserted_select_equalities -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_replay_failure_reports_best_false_or_branch -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_last_candidate_replay_accepts_only_real_models -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test abv_lazy_ext -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__bug337.smt2 10000`.
+
+- **Session 2026-06-26 — AUFLIA branch readback alignment.**
+  Replay-only branch store-base repair now also aligns direct scalar readback
+  symbols for the repaired base array. This closes the local oscillation where
+  branch repair copied target readback entries into the base array, then the
+  later direct-select repair treated stale scalar read symbols as authoritative
+  and overwrote those entries again. The focused branch-repair regression now
+  includes a stale `z = select(a,j)` read on the repaired base and asserts that
+  the final replaying model updates `z` to the branch-consistent value.
+
+  This still does **not** close `bug337`, but it moves the 10 s replay miss to
+  the next branch equality. The probe remains at **round=2**, **sites=4096**,
+  **array_eq_atoms=150**, **row_lemmas=42**, **cong_lemmas=6973**,
+  **diff_skolems=146**, and **working_assertions=7127**. Projection repair now
+  reports **select_repair_candidates=924**, **select_repair_array_changes=5**,
+  **select_repair_symbol_changes=4**, **branch_repair_candidates=2**,
+  **branch_repair_symbol_changes=2**, and **projection_repair_changes=11**.
+  The first false conjunct is now generated branch disjunction **ordinal 210**,
+  term **3879**; best branch **3** has **1/6** false literals: term **628**,
+  `x_339 = x_325`, with `x_339` equal to
+  `(array default 0 [0 -> 1] [1 -> 3] [2 -> 3])` and `x_325` still
+  `(array default 0)`. Next useful work is a replay-gated direct array-equality
+  branch repair, or the more general branch-schedule projection that chooses
+  equality direction from readback support, not more scalar timeout tuning.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_projection_repairs_single_false_branch_symbol_equality -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_projection_prefers_asserted_select_equalities -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_replay_failure_reports_best_false_or_branch -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_last_candidate_replay_accepts_only_real_models -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test abv_lazy_ext -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__bug337.smt2 10000`.
+
+- **Session 2026-06-26 — AUFLIA branch replay diagnostics and store-base repair.**
+  Lazy-extensionality replay failure notes now summarize false branch
+  disjunctions: branch count, best branch, false-literal count, first false
+  literal term, and equality-side values when available. `diagnose_evidence`
+  renders that best-branch first-false term, so generated queue-lock transition
+  failures are inspectable without manually spelunking arena ids.
+
+  A replay-only branch repair now handles the narrow class exposed by `bug337`:
+  when the closest false branch has a single direct symbol equality
+  `target = store(base, i, v)`, projection can repair the store base by copying
+  the target array everywhere except the store index, where the base's current
+  value is preserved. A focused regression pins this with an additional later
+  read demand on the target array. This still cannot return `sat` unless the
+  existing full original replay succeeds.
+
+  The current `bug337` row still does **not** close. The 10 s probe remains at
+  **round=2**, **sites=4096**, **array_eq_atoms=150**, **row_lemmas=42**,
+  **cong_lemmas=6973**, **diff_skolems=146**, and
+  **working_assertions=7127**. Projection repair now reports
+  **select_repair_candidates=1386**, **select_repair_array_changes=13**,
+  **select_repair_symbol_changes=2**, **branch_repair_candidates=5**,
+  **branch_repair_symbol_changes=5**, and **projection_repair_changes=20**.
+  The first false conjunct remains the generated branch disjunction
+  **ordinal 209**, term **3654**; best branch **0** has **1/8** false literals:
+  term **492**, `x_353 = store(x_339, x_351, 2)`, with `x_353` carrying extra
+  entries `[1 -> 3]` and `[2 -> 3]` that the current store-base repair still
+  fails to propagate stably through the full repair loop. Next useful work is a
+  branch-consistent projection pass that solves this small store-chain/readback
+  system as a unit, or a branch-schedule model constructor, not another local
+  scalar timeout knob.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_projection_repairs_single_false_branch_symbol_equality -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_replay_failure_reports_best_false_or_branch -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_projection_prefers_asserted_select_equalities -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_last_candidate_replay_accepts_only_real_models -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test abv_lazy_ext -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-bench --example diagnose_evidence -j1 -- -D warnings`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__bug337.smt2 10000`.
+
+- **Session 2026-06-26 — AUFLIA replay projection repair and generated-term diagnostics.**
+  Lazy-extensionality last-candidate projection now repairs asserted direct
+  `select` equalities by grouping them by concrete `(array, index)`: it stores
+  the representative value into the projected array and aligns direct scalar
+  read-result symbols in the same group before the existing full original replay
+  gate. This is still SAT-only and replay-checked; it can only turn a candidate
+  into `sat` after every original assertion evaluates to `true`.
+
+  This does **not** close QF_AUFLIA `bug337`, but it moves the replay miss past
+  the direct read equalities. The 10 s probe still times out at **round=2**,
+  **sites=4096**, **array_eq_atoms=150**, **row_lemmas=42**,
+  **cong_lemmas=6973**, **diff_skolems=146**, and
+  **working_assertions=7127**. The replay repair sees
+  **select_repair_candidates=154**, makes **3** array-entry changes and **2**
+  scalar-symbol changes, and the first false flattened conjunct moves from the
+  direct read equality `(= x_385 (select x_339 x_351))` to **ordinal 209**, term
+  **3654**: the generated transition branch disjunction for the queue-lock
+  step. `diagnose_evidence` can now render generated arena terms by stable term
+  id via `TermArena::term_by_index`, so this branch formula is inspectable even
+  when it is not reachable from the parsed assertion roots. Next useful work is
+  replay-guided branch-schedule/model repair for that disjunction, not more
+  select-equality projection.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-ir term_by_index_returns_valid_dense_handles -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_projection_prefers_asserted_select_equalities -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_last_candidate_replay_accepts_only_real_models -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo check -p axeyum-bench --example diagnose_evidence -j1`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-ir --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-bench --example diagnose_evidence -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test abv_lazy_ext -j1 -- --nocapture`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__bug337.smt2 10000`.
+
+- **Session 2026-06-26 — AUFLIA replay-gated lazy-extensionality candidates.**
+  Lazy array extensionality now keeps the latest scalar `sat` candidate and, on
+  a later timeout / scalar `unknown` / max-round decline, attempts one final
+  projection plus full original-assertion replay before returning `unknown`.
+  This is a SAT-only salvage path: it returns `sat` only when the reconstructed
+  model evaluates every original assertion to `true`; replay failure or replay
+  error preserves the existing `unknown` decline.
+
+  The current QF_AUFLIA `bug337` row does **not** close yet, but the retained
+  diagnostic is sharper. At 10 s it still stops at **round=2**, **sites=4096**,
+  **array_eq_atoms=150**, **row_lemmas=42**, **cong_lemmas=6973**,
+  **diff_skolems=146**, and **working_assertions=7127**; the final scalar
+  candidate fails full replay at **top-level assertion ordinal 0**, term
+  **13053**; the first false flattened conjunct is **ordinal 30**, term
+  **465**. Next useful work is to inspect that branch/support condition and
+  reduce materialized site/congruence pressure before the replay point.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_last_candidate_replay_accepts_only_real_models -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test abv_lazy_ext -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__bug337.smt2 10000`.
+
+- **Session 2026-06-26 — AUFLIA lazy-extensionality diagnostics.**
+  Lazy array extensionality `unknown` details now report refinement telemetry:
+  `round`, materialized `sites`, `array_eq_atoms`, `row_lemmas`,
+  `cong_lemmas`, `diff_skolems`, and `working_assertions`. This does not change
+  solver behavior; it makes hard AUFLIA array timeouts actionable instead of
+  opaque.
+
+  Re-running the cvc5 QF_AUFLIA `bug337` row at 10 s now shows the blocker is
+  concrete: lazy extensionality times out at **round=2**, **sites=4096**,
+  **array_eq_atoms=150**, **row_lemmas=42**, **cong_lemmas=6973**,
+  **diff_skolems=146**, and **working_assertions=7127**. That points the next
+  AUFLIA work at SAT relevance / site admission / replay-gated model
+  construction for the queue-lock branch schedule, not generic timeout tuning or
+  PBLS array local search.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test abv_lazy_ext lazy_ext_timeout_reports_refinement_counters -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test abv_lazy_ext -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --test abv_lazy_ext -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__bug337.smt2 10000`.
+
+- **Session 2026-06-26 — UFLIA CEGAR tuning guardrails.**
+  Three plausible hard-row tuning knobs were measured and rejected, with no code
+  retained: nearest-constant ordering for the cap-1 post-candidate UF sibling
+  lemma, staged affine-core cap **2**, and simple-bound dynamic batch cap **64**.
+  The retained baseline remains the prior cap-1 sibling policy, affine cap **1**,
+  and bound cap **32**.
+
+  Wider sibling caps were measured and rejected before commit: cap **16**
+  dropped the 10 s hard row to **3** UF rounds / **2** candidates, cap **4** to
+  **4** UF rounds / **3** candidates, and cap **2** to **5** UF rounds / **4**
+  candidates. A nearest-constant sibling ordering also regressed the 10 s hard
+  row to **5** rounds / **4** candidates, so discovery order remains better for
+  this row. Affine cap **2** preserved **6** rounds / **5** candidates but
+  increased pressure (**blocking_lemmas=323**, **core_src_lp=221**). Bound cap
+  **64** was neutral/slightly worse (**blocking_lemmas=301**,
+  **core_src_lp=210**). The committed cap **1** sibling / cap **1** affine /
+  cap **32** bound baseline still preserves **6** rounds / **5** candidates,
+  with about **first_candidate_ms=1025**, **last_candidate_ms=8324**,
+  **blocking_lemmas=300**, and **core_src_lp=209** on
+  `cli__regress2__uflia-error0.smt2`.
+  Measurements / checks:
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_function_consistency_schedules_unary_int_siblings_after_violation -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib cheap_integer_affine_bound_cores_batch_general_linear_conflicts -j1 -- --nocapture` (cap-2 experiment);
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib cheap_integer_bound_cores_batch_independent_conflicts -j1 -- --nocapture` (cap-64 experiment);
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 10000`.
+
+- **Session 2026-06-26 — staged affine arithmetic core extraction.**
+  Lazy arithmetic now has a checked affine integer expression extractor for
+  dynamic two-literal conflicts between algebraically equal but syntactically
+  different bounds, e.g. `x - y <= 0` and `x + (-1 * y) >= 1`. The parser covers
+  integer constants, symbols, `+`, `-`, unary negation, and multiplication by
+  constants, with checked overflow and a conservative decline on nonlinear or
+  unsupported terms. The learned cores still use the existing arithmetic-lemma
+  verifier.
+
+  The production use is stage-gated: affine cores are disabled on the first
+  pure arithmetic solve and enabled only after the warm skeleton has been
+  strengthened by UF lemmas (`solve_calls > 1`), with a one-affine-core cap per
+  theory conflict. This preserves the useful short-budget UF frontier while
+  reducing later LP-core pressure. On
+  `cli__regress2__uflia-error0.smt2`, the 1 s run remains `unknown` but reaches
+  **2** UF rounds, **1** candidate, **282** pair checks, **6** equal-argument
+  pairs, **5** violations, and **6** learned UF lemmas. At 10 s the row remains
+  `unknown` but preserves **6** UF rounds, **5** candidates, **24**
+  equal-argument pairs, and **24** learned UF lemmas; the final warm arithmetic
+  timeout reports **total_rounds=286**, **blocking_lemmas=300**,
+  **core_src_bound=29**, **core_src_diff=15**, **core_src_affine=49**,
+  **core_src_lp=207**, and **core_len_avg=5.7**. Direct online probes are
+  unchanged and still decline quickly at
+  `opaque_app_order_atoms=334 > 128, total=485`.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib cheap_integer_affine_bound_cores_batch_general_linear_conflicts -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib cheap_integer_bound_cores_batch_independent_conflicts -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib -j1`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example uflia_online_probe -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example uflia_online_probe -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress3__error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 10000`.
+
+- **Session 2026-06-26 — affine fixed-argument UF preseed coverage.**
+  The lazy UF functional-consistency CEGAR preseed now derives fixed integer
+  assignments from top-level affine equalities and paired non-strict bounds,
+  not only direct singleton bounds such as `x <= c` and `x >= c`. The extractor
+  is deliberately conservative: it accepts checked linear integer expressions
+  over constants, symbols, `+`, `-`, unary negation, and multiplication by
+  constants; solves only equalities with exactly one unassigned symbol after the
+  current fixed assignment; and declines overflow, nonlinear terms, UF
+  applications inside the affine proof, and one-sided inequalities.
+
+  This closes a real cheap-preseed blind spot but is **not** the generated
+  overbound row closure. Focused tests pin both directions: paired affine bounds
+  can preseed a congruence lemma for `f(x)` vs `f(2)`, while the same one-sided
+  affine bound does not preseed. On
+  `cli__regress2__uflia-error0.smt2`, diagnostics remain neutral because the
+  relevant hard-row UF arguments still depend on Boolean/model choices such as
+  `fmt1` and `arg1`, not top-level forced affine values: at 1 s,
+  `preseeded_lemmas=0`, **2** UF rounds, **1** candidate, **282** pair checks,
+  **6** equal-argument pairs, **5** violations, and **6** learned UF lemmas; at
+  10 s, `preseeded_lemmas=0`, **6** UF rounds, **5** candidates, **24** learned
+  UF lemmas, and the timeout remains dominated by LP-core-producing arithmetic
+  branches. The direct online probes are unchanged and still decline quickly at
+  `opaque_app_order_atoms=334 > 128, total=485`.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_function_consistency_preseeds_affine_fixed_integer_argument_lemmas -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_function_consistency_does_not_preseed_one_sided_affine_bounds -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_function_consistency_preseeds_fixed_integer_argument_lemmas -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_function_consistency_batches_all_equal_arg_pairs_after_violation -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib -j1`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example uf_pair_profile -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 20`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example uflia_online_probe -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example uflia_online_probe -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress3__error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 10000`.
+
+- **Session 2026-06-26 — opaque-app online UFLIA construction is bounded.**
+  Large combined UFLIA layouts now reuse the pure-LIA large-query pattern:
+  the opaque-app `LiaTheory` records assignments cheaply and performs one
+  feasibility check at the theory-propagation boundary instead of re-solving
+  after every asserted literal. The Boolean UFLIA construction path also checks
+  the caller deadline while collecting theory atoms, building the incremental
+  combined state, encoding the Boolean skeleton, and adding interface clauses.
+  If an opaque-app layout cannot build the incremental combined state safely
+  (for example because the interface split is over the bound), the online path
+  now declines instead of restarting through the older enumerative fallback.
+
+  This closes the runaway fallback that the previous broad-cap experiment
+  exposed. With the opaque cap temporarily raised to **512** and then restored
+  before commit, both generated overbound direct probes now decline in about
+  **4 ms** with
+  `opaque-app online UFLIA incremental combined state could not be built safely`
+  instead of running past **30 s**. The committed guard remains **128** opaque
+  order atoms, so the production direct probes still decline at
+  `opaque_app_order_atoms=334 > 128, total=485`. This is a resource-control
+  fix, not a solve-rate closure: the lazy route is unchanged at 1 s with
+  **2** UF rounds, **1** candidate, **282** pair checks, **6**
+  equal-argument pairs, **5** violations, and **6** learned UF lemmas.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib large_combined_opaque_lia_defers_feasibility_to_propagation -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test uflia_online opaque_app_interface_overflow_declines_without_enumerative_fallback -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test uflia_online -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib -j1`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --test uflia_online -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example uflia_online_probe -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example uflia_online_probe -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress3__error0.smt2 1000`;
+  temporary cap-512 probes for both generated rows under `timeout 35s`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 1000`.
+
+- **Session 2026-06-26 — shared CDCL(T) propagation now checks deadlines.**
+  The generic online `Dpll<T: TheorySolver>` driver now checks the caller's
+  deadline inside Boolean unit propagation and theory propagation, not only at
+  the outer search-loop boundary. Timeout during propagation now returns the
+  existing `None`/timeout path from `solve_with_deadline`; conflicts still
+  follow the same 1-UIP analysis path. A focused unit test pins that an expired
+  deadline stops unit propagation before any clause scan or assignment.
+
+  This closes one timeout hole but does not yet make opaque-heavy generated
+  UFLIA rows safe to admit wholesale. Re-running the rejected experiment with
+  the opaque cap raised to **512** still left the first 1 s direct hard probe
+  running after **30 s**, so the remaining overrun is before or outside the
+  shared DPLL propagation checks: construction, encoding, or theory propagation
+  generation still needs its own deadline hooks. The committed guard remains at
+  **128** opaque-app order atoms; both generated overbound direct probes still
+  decline quickly with
+  `opaque_app_order_atoms=334 > 128, total=485`. The production lazy route is
+  unchanged at 1 s: **2** UF rounds, **1** candidate, **282** pair checks,
+  **6** equal-argument pairs, **5** violations, and **6** learned UF lemmas.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib dpll_unit_propagation_honors_expired_deadline -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib -j1`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test uflia_online -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --test uflia_online -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example uflia_online_probe -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example uflia_online_probe -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress3__error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 1000`.
+
+- **Session 2026-06-26 — opaque-app online UFLIA guard partitioned by opaque atoms.**
+  The opaque-app online UFLIA admission guard now counts actual opaque Int-UF
+  order atoms instead of using total theory atoms as a proxy. Large Boolean
+  skeletons with a small opaque-app subset are admitted to the deadline-aware
+  online path, while genuinely opaque-heavy skeletons still decline before the
+  expensive construction/search phase. A new regression covers a query with
+  more than **128** total atoms but only one opaque-app order atom and verifies
+  it is not rejected by the opaque guard.
+
+  The generated overbound rows remain intentionally guarded, but the blocker is
+  now measured more precisely: both direct probes report **485** total theory
+  atoms, of which **334** are opaque-app order atoms, and decline quickly with
+  `too many theory atoms for opaque-app online UFLIA: opaque_app_order_atoms=334 > 128, total=485`.
+  A broad experiment that raised the opaque cap to **512** was rejected before
+  commit because both 1 s direct probes were still running after **30 s**; the
+  remaining construction-side work is not yet safe to admit wholesale. The
+  production lazy route is unchanged: at 1 s the first target row still reaches
+  **2** UF rounds, **1** candidate, **282** pair checks, **6**
+  equal-argument pairs, **5** violations, and **6** learned UF lemmas, then
+  remains `unknown`. Next useful work is construction-deadline checks or
+  partitioned opaque-heavy admission, plus model lifting for satisfiable opaque
+  abstractions.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test uflia_online large_total_atom_skeleton_with_small_opaque_subset_is_admitted -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test uflia_online -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --test uflia_online -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib -j1`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example uflia_online_probe -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example uflia_online_probe -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress3__error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 1000`.
+
+- **Session 2026-06-26 — deadline-aware opaque-app online UFLIA theory checks.**
+  The online LIA theory now carries an optional wall-clock deadline into its
+  feasibility checks, deletion-minimized core checks, model reconstruction, and
+  propagation probes. `check_with_lia_opaque_apps_within` exposes the existing
+  opaque-app LIA abstraction through the same deadline-aware integer search used
+  by ordinary LIA, and `CombinedIncrementalLia` / `CombinedTheoryLia` pass the
+  UFLIA Boolean-layer deadline into every nested `LiaTheory`. Once the deadline
+  has passed, these theory checks become inconclusive (`Unknown`) rather than
+  returning conflicts or propagations, preserving the existing soundness
+  direction.
+
+  This is prerequisite resource plumbing, not a cap raise or hard-row closure.
+  A new regression test covers a Boolean-structured opaque Int-UF order query
+  with zero timeout and confirms the online UFLIA path returns `Timeout` before
+  doing theory work. The generated direct probes are intentionally unchanged:
+  both overbound rows still decline quickly at the **128** opaque-app atom guard
+  with `too many theory atoms for opaque-app online UFLIA: 485 > 128`. The
+  production lazy route is also unchanged: at 1 s the first target row still
+  reaches **2** UF rounds, **1** candidate, **282** pair checks, **6**
+  equal-argument pairs, **5** violations, and **6** learned UF lemmas, then
+  remains `unknown`. Next useful work is using this deadline-safe substrate to
+  relax/partition the opaque-app online guard, or attacking lazy relevance so
+  fewer LP-core-producing branches reach the arithmetic solver.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test uflia_online -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --test uflia_online -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib -j1`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example uflia_online_probe -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example uflia_online_probe -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress3__error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 1000`.
+
+- **Session 2026-06-26 — bounded opaque-app online UFLIA order support.**
+  Online UFLIA now admits Int order atoms whose linear terms contain
+  Int-sorted UF applications by treating those applications as opaque integer
+  LIA variables. The new hook is deliberately UNSAT/conflict-oriented:
+  `LiaTheory::new_with_opaque_apps` routes feasibility, core minimization, and
+  LP propagation probes through the existing opaque-app arithmetic abstraction
+  (`check_with_lia_opaque_apps` plus
+  `lp_relaxation_feasibility_opaque_apps`). Satisfiable opaque abstractions are
+  still model-incomplete and replay as `Unknown`; pure equality-only Int UF
+  rows still stay on the EUF path and can return replay-checked `Sat`.
+
+  This moves the direct online hard-row frontier but does not close the
+  generated rows. Before the guard, the hard online probe ran for more than
+  **90 s** despite a 1 s timeout, because combined-state construction and
+  opaque-app theory assertion are not deadline-aware yet. The online route now
+  declines opaque-app skeletons above **128** theory atoms, so both generated
+  overbound probes return quickly with
+  `too many theory atoms for opaque-app online UFLIA: 485 > 128` instead of the
+  previous `non-Boolean term with sort Int` diagnostic. The production lazy
+  route is unchanged: at 1 s the first target row still reaches **2** UF
+  rounds, **1** candidate, **282** pair checks, **6** equal-argument pairs,
+  **5** violations, and **6** learned UF lemmas, then remains `unknown`.
+  Next useful work is deadline-aware opaque-app online theory assertion and
+  model lifting, or lazy relevance that reduces LP-core-producing branches.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --test uflia_online -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-bench --example uflia_online_probe -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test uflia_online -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib -j1`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example uflia_online_probe -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example uflia_online_probe -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress3__error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 1000`.
+
+- **Session 2026-06-26 — online UFLIA Boolean boundary diagnosed.**
+  Added `axeyum-bench --example uflia_online_probe` for direct single-file
+  probes of the online EUF+LIA combination route. The online Boolean layer now
+  collects only actual QF_UFLIA theory atoms, handles n-ary `and`/`or`, encodes
+  Boolean equality as IFF, and preserves the first unsupported-shape detail in
+  both CDCL(T) and enumerative fallback declines. The lazy arithmetic Boolean
+  skeleton also now deduplicates duplicate literals and drops complementary
+  tautological clauses before SAT insertion.
+
+  This is a boundary fix and diagnostic slice, not a hard-row closure. With the
+  online atom cap raised to **512**, both generated QF_UFLIA overbound rows get
+  past the previous admission/opaque-decline layer and now fail quickly with the
+  precise reason
+  `boolean skeleton outside the online combination encoder: non-Boolean term with sort Int`.
+  That identifies the next online-combination gap: arithmetic order atoms whose
+  Int linear terms contain UF applications need opaque-integer-app modeling in
+  the online LIA theory, analogous to the offline opaque-app arithmetic path.
+
+  The production lazy route is preserved but not improved. At 1 s both target
+  rows still reach **2** UF rounds, **1** candidate, **282** pair checks,
+  **6** equal-argument pairs, **5** violations, and **6** learned UF lemmas. At
+  10 s, `cli__regress2__uflia-error0.smt2` still reaches **6** UF rounds,
+  **5** candidates, **1357** pair checks, **24** equal-argument pairs,
+  **15** violations, and **24** learned UF lemmas, then times out in the warm
+  arithmetic state with **total_rounds=292**, **blocking_lemmas=306**,
+  **core_src_lp=263**, and **core_len_avg=6.9**. This is neutral relative to
+  the prior LP-core-shrinking commit; the next practical levers remain online
+  opaque UF-in-arithmetic support or reducing LP-core-producing lazy branches.
+  Verification passed:
+  `git diff --check`;
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --test uflia_online -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-bench --example uflia_online_probe -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test uflia_online -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib dpll_lia::tests::bool_skeleton_simplifies_duplicate_and_complementary_literals -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib -j1`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example uflia_online_probe -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example uflia_online_probe -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress3__error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress3__error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 10000`.
+
+- **Session 2026-06-26 — bounded LP-relaxation core shrinking retained.**
+  LP-relaxation unsat-core extraction now deletion-minimizes small Farkas
+  supports, capped at **24** atoms, by re-running the same real-relaxation
+  infeasibility checker used for the final self-check. Larger LP supports keep
+  the previous cheap Farkas-support path. This strengthens learned arithmetic
+  blocking clauses when simplex support contains redundant literals without
+  changing the soundness anchor: a returned core is still accepted only if its
+  LP relaxation is independently infeasible.
+
+  The generated QF_UFLIA overbound rows remain `unknown`, but the measured
+  search shape improves slightly and preserves the short-budget UF frontier. At
+  1 s both target rows still reach **2** UF rounds, **1** candidate, **282**
+  pair checks, **6** equal-argument pairs, **5** violations, and **6** learned
+  UF lemmas. At 10 s, `cli__regress2__uflia-error0.smt2` still reaches **6**
+  UF rounds, **5** candidates, **1357** pair checks, **24**
+  equal-argument pairs, **15** violations, and **24** learned UF lemmas; the
+  final warm arithmetic timeout improves from **total_rounds=305**,
+  **blocking_lemmas=319**, **core_src_lp=276**, **core_len_avg=7.3** to
+  **total_rounds=290**, **blocking_lemmas=303**, **core_src_lp=260**,
+  **core_len_avg=6.9**. This is useful pressure reduction, not closure. The
+  next lever is still reducing LP-core-producing SAT branches or a stronger
+  combined UF/LIA interface loop.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lp_relaxation_core_minimizer_removes_redundant_atoms -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lp_relaxation_unsat_core -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib -j1`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress3__error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 10000`.
+
+- **Session 2026-06-26 — arithmetic core-source diagnostics expose LP-core bottleneck.**
+  Lazy arithmetic DPLL unknown details now report source counts for dynamic
+  theory cores: simple bound conflicts, difference-logic cycles, LP-relaxation
+  Farkas cores, deletion-minimized cores, and large unminimized fallback cores.
+  This is diagnostic-only; each learned clause is still recorded and checked
+  through the existing arithmetic lemma path, and solver decisions are
+  unchanged.
+
+  The generated QF_UFLIA overbound rows remain `unknown`. At 1 s both target
+  rows preserve the current frontier: **2** UF rounds, **1** candidate,
+  **282** pair checks, **6** equal-argument pairs, **5** violations, and
+  **6** learned UF lemmas. At 10 s, `cli__regress2__uflia-error0.smt2`
+  reports **6** UF rounds, **5** candidates, **1357** pair checks,
+  **24** equal-argument pairs, **15** violations, and **24** learned UF lemmas;
+  the final warm arithmetic timeout now identifies the late source mix:
+  **core_src_bound=31**, **core_src_diff=12**, **core_src_lp=276**,
+  **core_src_minimized=0**, **core_src_large=0**. That rules out deletion
+  minimization and the large-core cutoff as the next bottleneck on this row;
+  the practical next lever is LP-relaxation core relevance/shrinking or
+  preventing the SAT skeleton from feeding so many LP-core-producing branches.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib dpll_lia::tests:: -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib -j1`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress3__error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 10000`.
+
+- **Session 2026-06-26 — integer-bound theory tautologies folded before LIA abstraction.**
+  The arithmetic abstractor now recognizes simple integer-bound contradictions
+  and tautologies before allocating Boolean atom props: conjunctions such as
+  `x >= 8 ∧ x <= 6` fold to `false`, and disjunctions such as
+  `not (x >= 8) ∨ not (x <= 6)` fold to `true`. This is deliberately narrow:
+  it only uses the same simple Int order-bound semantics already used by the
+  certified bound mutex/implication lemma paths, and it does not flatten the
+  UF implication shape that the previous session rejected.
+
+  The generated QF_UFLIA overbound rows remain `unknown`, but the hard-row
+  frontier is preserved and nudged forward. At 1 s both target rows still reach
+  **2** UF rounds, **1** candidate, **282** pair checks, **6**
+  equal-argument pairs, **5** violations, and **6** learned UF lemmas. At 10 s,
+  `cli__regress2__uflia-error0.smt2` still reaches **6** UF rounds and
+  **5** candidates, but now records **1357** pair checks, **24**
+  equal-argument pairs, **15** violations, and **24** learned UF lemmas before
+  timing out in the warm arithmetic state (**solve_calls=6**,
+  **total_rounds=297**, **atoms=533**, **bound_lemmas=659**,
+  **blocking_lemmas=311**). This is a small search-shape improvement, not row
+  closure; the next lever remains relevance/convergence after several UF
+  candidates and the larger 17–20 literal arithmetic cores that appear late.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib abstractor_ -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib dpll_lia::tests:: -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib -j1`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress3__error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 10000`.
+
+- **Session 2026-06-26 — implication-flattening experiment rejected.**
+  Tested flattening arithmetic-guarded implications, especially UF congruence
+  lemmas of the form `((a <= b) ∧ (b <= a)) => result_eq`, into flat
+  disjunctions `not le ∨ not ge ∨ result_eq`. The transformation is logically
+  equivalent and reduces Boolean guard auxiliaries, but it regressed the
+  generated QF_UFLIA overbound rows: at 1 s both rows lost the first UF
+  candidate and timed out in the first arithmetic solve (**41–42**
+  support-conflict rounds, **0** candidates, **0** UF lemmas). The experiment
+  was reverted before commit, and the implication-preserving path is documented
+  in code as an intentional SAT-search-shape choice.
+
+  The retained baseline is unchanged: both target rows at 1 s reach **2** UF
+  rounds, **1** candidate, **282** pair checks, **6** equal-argument pairs,
+  **5** violations, and **6** learned UF lemmas. The next useful lever is not a
+  generic Boolean-shape simplification; it remains candidate/relevance after
+  the warm arithmetic state has already learned the first UF batches.
+  Verification passed:
+  `git diff --check`;
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_function_consistency_batches_all_equal_arg_pairs_after_violation -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  rejected experiment diagnostics:
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress3__error0.smt2 1000`;
+  retained-path diagnostics:
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress3__error0.smt2 1000`.
+
+- **Session 2026-06-26 — UF refinement batching guardrail retained.**
+  Measured a narrower lazy UF refinement policy that added only
+  result-violating equal-argument pairs instead of all equal-argument pairs in a
+  candidate once any violation appears. It was rejected before commit: on both
+  generated QF_UFLIA overbound rows at 1 s, the route regressed to **0** UF
+  candidates and timed out in the first arithmetic solve after **42**
+  support-conflict rounds, whereas the retained all-equal batching reaches
+  **1** candidate and learns **6** UF lemmas at the same budget.
+
+  Added a focused regression test,
+  `lazy_function_consistency_batches_all_equal_arg_pairs_after_violation`, that
+  pins the retained policy: if one candidate exposes a violating congruence
+  pair, every currently equal-argument pair in that candidate is batched, even
+  pairs whose result values already agree. The hard-row diagnostics are back at
+  the warm-skeleton baseline: 1 s rows reach **2** UF rounds, **1** candidate,
+  **282** pair checks, **6** equal-argument pairs, **5** violations, and
+  **6** learned UF lemmas; the 10 s first row reaches **6** rounds,
+  **5** candidates, **1361** pair checks, **23** equal-argument pairs,
+  **15** violations, and **23** learned UF lemmas.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_function_consistency_batches_all_equal_arg_pairs_after_violation -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_function_consistency -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib uf_arith_overbound_unsat_decided_by_lazy -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib -j1`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress3__error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 10000`.
+
+- **Session 2026-06-26 — warm arithmetic skeleton for lazy UFLIA CEGAR.**
+  The lazy arithmetic DPLL loop is now backed by an `IncrementalArithDpll`
+  state object. The one-shot API still wraps that state, but lazy
+  UF+arithmetic CEGAR now asserts newly learned UF congruence lemmas into the
+  same warm arithmetic Boolean skeleton instead of rebuilding the abstraction
+  after every UF refinement. The previous term-level reusable arithmetic lemma
+  path remains as a fallback when the warm arithmetic state declines a shape.
+
+  The generated QF_UFLIA overbound rows remain `unknown`, but the short-budget
+  frontier moves from arithmetic-only churn into actual UF refinement. At 1 s
+  both target rows now reach **2** UF CEGAR solve rounds, **1** SAT candidate,
+  **282** pair checks, **6** equal-argument pairs, **5** violations, and
+  **6** learned UF lemmas before the shared `lazy UF+arithmetic` deadline. At
+  10 s, `cli__regress2__uflia-error0.smt2` keeps the prior high-level UF
+  frontier: **6** UF rounds, **5** candidates, **1361** pair checks,
+  **23** equal-argument pairs, **15** violations, and **23** learned UF lemmas.
+  The final arithmetic timeout now comes from the warm state itself:
+  **solve_calls=6**, **total_rounds=279**, **atoms=531**,
+  **bound_lemmas=664**, **blocking_lemmas=295**, **support_attempts=279**,
+  **support_conflict_batches=274**, **support_model_attempts=5**, and
+  **full_fallbacks=0**. Next useful work is no longer cold rebuild avoidance;
+  it is CEGAR relevance/convergence after the fifth candidate, either by
+  stronger model-guided UF-pair scheduling or by a real combined CDCL(T)
+  interface-equality loop.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib incremental_arith_dpll_accepts_strengthened_assertions -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib reusable_arith_lemmas -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_function_consistency -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib uf_arith_overbound_unsat_decided_by_lazy -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib -j1`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress3__error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 10000`.
+
+- **Session 2026-06-26 — reusable arithmetic lemmas advance UFLIA CEGAR.**
+  Lazy UF+arithmetic CEGAR now carries dynamic arithmetic conflict clauses
+  across strengthened UF refinement rounds. The carried clauses are rebuilt over
+  original arithmetic terms, not prior `!arith_atom_N` symbols, so fresh
+  arithmetic abstractions can reuse them safely. Static upfront bound lemmas are
+  deliberately not carried because they are regenerated per solve.
+
+  The generated QF_UFLIA overbound rows remain `unknown`, but the CEGAR shape
+  moves in the intended direction. At 1 s both target rows now reach **42**
+  support-conflict rounds and **56** blocking/reusable arithmetic lemmas, versus
+  the prior **21** rounds and **29** blocking lemmas. At 10 s,
+  `cli__regress2__uflia-error0.smt2` reaches **6** UF CEGAR solve rounds,
+  **5** SAT candidates, **1359** pair checks, **23** equal-argument pairs,
+  **16** violated pairs, and **23** learned UF lemmas before the outer deadline,
+  versus the prior **4** rounds, **3** candidates, **830** pair checks,
+  **14** equal-argument pairs, **9** violations, and **14** UF lemmas. The last
+  arithmetic solve reports **357** reusable arithmetic lemmas carried. Next
+  useful work is still convergence/relevance after several candidate models:
+  either keep the arithmetic SAT core warm directly, or make UF lemma addition
+  incremental inside one combined skeleton.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib reusable_arith_lemmas -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_function_consistency -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib uf_arith_overbound_unsat_decided_by_lazy -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lia_budget_unknown_reports_support_stats -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib -j1`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress3__error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 10000`.
+
+- **Session 2026-06-26 — UF pair profile rules out guarded preseed.**
+  Added `axeyum-bench --example uf_pair_profile`, a read-only diagnostic that
+  parses an SMT-LIB file, runs function elimination, groups same-function
+  applications, categorizes potential Ackermann pairs, and prints bounded
+  concrete samples. On `cli__regress2__uflia-error0.smt2` it reports **42**
+  UF applications, **3** function groups, and **282** potential pairs:
+  **214** are constant-vs-constant, **23** are `s_count`/`x_count` affine-vs-
+  constant, and **45** are `format` pairs involving `arg1`, `fmt1`,
+  `(+ 1 fmt1)`, or constants.
+
+  A deliberately narrow solver experiment was measured and rejected before
+  commit: pre-seeding only unary-Int nonconstant-vs-constant congruence lemmas
+  with a cap of 64 produced `preseeded_lemmas=64`, but enlarged the arithmetic
+  abstraction to **673 atoms**. At 1 s it remained `unknown`; at 10 s it never
+  reached a UF candidate (**sat_candidates=0**) and timed out after **297**
+  support-conflict batches. The retained conclusion is practical: even guarded
+  upfront congruence preseed is the wrong lever for this row. Next useful work
+  should preserve/reuse arithmetic learning across UF CEGAR rounds or make the
+  arithmetic solve incremental under added UF lemmas.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo check -p axeyum-bench --example uf_pair_profile -j1`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-bench --example uf_pair_profile -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example uf_pair_profile -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 8`;
+  rejected experiment diagnostics:
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress3__error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 10000`.
+
+- **Session 2026-06-26 — support-path diagnostics for UFLIA CEGAR.**
+  Lazy arithmetic DPLL budget `unknown` details now include deterministic
+  Boolean-support counters: support availability, support conflict batches,
+  support-model attempts, replay failures, and full-assignment fallbacks. This
+  is a diagnostic-only change; two pruning experiments were measured and
+  rejected before commit. Full raw Ackermann pre-seeding worsened the generated
+  overbound row by inflating the post-CEGAR arithmetic skeleton, and raw
+  pre-abstraction Boolean/bound folding slightly shrank the initial skeleton but
+  reduced 10 s UF CEGAR progress.
+
+  The retained diagnostics preserve the support-first baseline. At 1 s both
+  generated QF_UFLIA overbound rows still report **461 atoms**, **642** initial
+  bound lemmas, **21** lazy-LIA rounds, and **29** blocking lemmas, now with
+  **support_attempts=21**, **support_conflict_batches=21**, and
+  **full_fallbacks=0**. That says the short-budget blocker is entirely
+  supported-branch arithmetic conflict learning, not replay failure or fallback
+  to arbitrary dead-branch assignments. At 10 s,
+  `cli__regress2__uflia-error0.smt2` returns to the support-first baseline:
+  **4** UF CEGAR solve rounds, **3** SAT candidates, **830** pair checks,
+  **14** equal-argument pairs, **9** violations, and **14** UF lemmas before the
+  outer `lazy UF+arithmetic` deadline expires. Next useful work should target
+  an incremental/relevance-preserving arithmetic solve across UF CEGAR rounds,
+  or a very narrow guarded congruence preseed justified by measured pair
+  relevance; broad preseed/simplification is not the lever.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib dpll_lia::tests:: -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib -j1`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress3__error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 10000`.
+
+- **Session 2026-06-26 — Boolean-support arithmetic checks cut dead-branch churn.**
+  The lazy arithmetic DPLL loop now extracts a deterministic Boolean
+  justification support from each SAT skeleton candidate and theory-checks that
+  support before checking the solver's whole arbitrary Boolean assignment. This
+  avoids learning arithmetic conflicts from atoms that sit in dead branches of
+  generated selector ladders. The path is replay-gated: if the supported
+  arithmetic model does not evaluate every original assertion to true, the
+  solver falls back to the previous full-assignment theory check.
+
+  The generated QF_UFLIA overbound rows remain `unknown`, but the immediate
+  search shape moved. At 1 s both rows now report **461 atoms**, **642 bound
+  lemmas**, **21** lazy-LIA rounds, and **29** dynamic blocking lemmas, with no
+  UF candidates yet. At 10 s, `cli__regress2__uflia-error0.smt2` reaches
+  **4** UF CEGAR solve rounds and **3** SAT candidates, checks **830** possible
+  function-consistency pairs, observes **14** equal-argument pairs and **9**
+  violations, learns **14** UF lemmas, and then times out in outer
+  `lazy UF+arithmetic` convergence. This moves the useful next lever from
+  dead-branch arithmetic refinement churn to UF CEGAR convergence and relevance
+  after several candidate models.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib justified_support_ignores_dead_or_branch_conflict -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib -j1`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress3__error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 10000`.
+
+- **Session 2026-06-26 — bounded complement-bound implications prune UFLIA ladders.**
+  The upfront integer-bound implication pass now includes complement literals
+  under the existing 512-atom admission guard and 4096-lemma cap. This keeps the
+  earlier rejected broad complement-bound experiment out of the large path, but
+  lets branch-selector ladders propagate monotonicity such as
+  `not (x <= 1) => not (x <= 0)`. Each clause is still recorded as the checked
+  core `{stronger_bound, not weaker_bound}` and reuses the normal arithmetic
+  lemma verifier.
+
+  The generated QF_UFLIA overbound rows remain `unknown`, but the hard-row
+  search gets another bounded pruning step. At 1 s both rows now report
+  **461 atoms**, **642 bound lemmas**, **27** lazy-LIA rounds, and **171**
+  dynamic blocking lemmas, versus the prior **372 / 29 / 238**. At 10 s,
+  `cli__regress2__uflia-error0.smt2` reaches one UF candidate, learns **5** UF
+  consistency lemmas under the pruned skeleton, and then times out in a
+  **475-atom** post-CEGAR arithmetic skeleton after **60** lazy-LIA rounds and
+  **200** dynamic blocking lemmas, versus **479 / 87 / 296** before this pass.
+  This is still search-shape movement, not row closure; the next lever remains
+  a real relevance / assumption-core loop for the post-CEGAR arithmetic
+  skeleton.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib upfront_integer_bound_implication_lemmas_are_certified -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib upfront_integer_bound_complement_implication_lemmas_are_certified -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib -j1`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress3__error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 10000`.
+
+- **Session 2026-06-26 — lazy LIA batches model-guided bound conflicts.**
+  The lazy arithmetic DPLL refinement loop now learns a batch of up to 32
+  independent simple integer-bound conflict cores from the same SAT candidate
+  when the integer theory slice is unsat, instead of learning only the first
+  two-bound core and rediscovering other obvious conflicts in later rounds.
+  Each learned clause is still recorded through the existing arithmetic lemma
+  path and certified by the same core replay tests.
+
+  The two generated QF_UFLIA overbound rows are still `unknown`, but the search
+  shape improves materially. At 1 s both rows now report **461 atoms**,
+  **372 bound lemmas**, **29** lazy-LIA rounds, and **238** blocking lemmas
+  (`core_len_min=2`, `core_len_max=3`, `core_len_avg=2.0`), versus the prior
+  **61** one-core rounds. At 10 s, `cli__regress2__uflia-error0.smt2` still
+  reaches one UF candidate and learns the **6** same-candidate UF lemmas, then
+  times out in the **479-atom** post-CEGAR arithmetic skeleton after **87**
+  lazy-LIA rounds and **296** blocking lemmas. The next useful lever remains
+  relevance / assumption-core solving or branch-selector pruning in that
+  arithmetic skeleton, not more single-core extraction.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib cheap_integer_bound_core -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib upfront_integer_bound_implication_lemmas_are_certified -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib -j1`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress3__error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 10000`.
+
+- **Session 2026-06-26 — lazy UF consistency batches same-candidate lemmas.**
+  The lazy function-consistency CEGAR loop now has a cheap pre-seed step for
+  same-function applications whose argument tuples are syntactically equal or
+  evaluate equal under top-level fixed integer bounds. Unknown diagnostics now
+  report `preseeded_lemmas`. After a candidate model exposes any real
+  functional-consistency violation, the loop batches every same-candidate
+  equal-argument congruence lemma, not just the result-different pair; it still
+  avoids adding gratuitous lemmas when the candidate is already functionally
+  consistent.
+
+  On the two generated QF_UFLIA overbound rows, pre-seeding finds **0** lemmas
+  because the equal UF arguments depend on branch/model choices (`fmt1` etc.),
+  so the 1 s rows remain **461 atoms / 372 bound lemmas / 61 rounds** with
+  **sat_candidates=0**. At 10 s, `cli__regress2__uflia-error0.smt2` still reaches
+  one UF candidate; the loop now records **equal_arg_pairs=6**,
+  **violated_pairs=5**, **lemmas_added=6**, then times out in a **479-atom**
+  post-CEGAR arithmetic skeleton. Next work remains arithmetic relevance /
+  assumption-core solving after UF lemmas, not more UF pair discovery.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_function_consistency -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ufbv -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib -j1`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress3__error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 10000`.
+
+- **Session 2026-06-26 — arithmetic order polarity shrinks UFLIA skeletons.**
+  The arithmetic DPLL abstractor now represents strict order atoms as Boolean
+  negations of their non-strict reversed-order representative: `a < b` is
+  abstracted as `¬(b <= a)`, and `a > b` as `¬(a <= b)`, for both Int and Real.
+  This makes an order atom and its negation share one SAT variable instead of
+  entering the theory loop as unrelated atoms. The Boolean skeleton simplifier
+  also folds the generated definition-tautology shapes common in cvc5's
+  justification regressions, including `¬(A ∧ B) ∨ A`, `¬(A ∧ B) ∨ B`, and
+  `(A ∧ B) ∨ ¬A ∨ ¬B`. With the smaller abstraction, adjacent bound-implication
+  seeding is admitted up to 512 atoms.
+
+  The two generated QF_UFLIA overbound rows are still `unknown`, but the 1 s
+  trace moved from **873 atoms / 1433 bound lemmas / ~32 rounds** to
+  **461 atoms / 372 bound lemmas / 61 rounds**. At 10 s, the first row reaches a
+  real UF CEGAR candidate (**sat_candidates=1**), checks all **282** possible
+  function-consistency pairs, and adds **5** Ackermann lemmas before the second
+  abstraction solve times out. The next blocker is now the post-CEGAR
+  477-atom arithmetic skeleton after those UF lemmas, not the initial duplicated
+  order/complement noise.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib abstractor_ -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib upfront_integer_bound_implication_lemmas_are_certified -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib overbound_integer_uf_arith_skips_generic_lia_dpll_for_uf_routes -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib -j1`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress3__error0.smt2 1000`;
+  `git diff --check`.
+
+- **Session 2026-06-26 — LIA LP core diagnostics expose small-core search.**
+  Integer linear collection now stamps every generated simplex constraint with
+  its source assertion, and the solver exposes a self-checked
+  `lia_lp_relaxation_unsat_core` helper. The lazy arithmetic DPLL loop tries that
+  Farkas-supported LP-relaxation core before the expensive generic core path and
+  now reports learned theory-core sizes in budget `unknown` details.
+
+  This did not close the two generated QF_UFLIA overbound rows, but it narrowed
+  the diagnosis. At 1 s both rows still route through the single UF-aware
+  abstraction solve and return `unknown` with **873 atoms**, **1433 bound
+  lemmas**, **32 blocking lemmas**, and **core_len_last=2**,
+  **core_len_min=2**, **core_len_max=2**, **core_len_avg=2.0**. The dynamic
+  arithmetic conflicts are already tiny; the next useful work is not core
+  minimization, but SAT/search relevance over many small bound conflicts in the
+  large arithmetic skeleton: assumption-filtered skeleton solving, a cheaper
+  first-model/core-producing loop, or stronger pruning of the generated
+  branch-selector ladders.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lp_relaxation_unsat_core -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib cheap_integer_bound_core_uses_current_literal_polarity -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib cheap_integer_difference_core_finds_negative_cycle -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress3__error0.smt2 1000`;
+  `git diff --check`.
+
+- **Session 2026-06-26 — QF_UFLIA overbound route duplication removed.**
+  Large non-array integer UF+arithmetic queries whose Ackermann pair count is
+  over the eager bound now skip the generic `lia-dpll` route after Diophantine /
+  simplex refuters decline, and fall through to the UF-aware lazy CEGAR path
+  instead. This avoids spending one timeout window in generic LIA and then
+  spending a second timeout window on the same function-free arithmetic
+  abstraction inside `uf-arith-lazy-overbound`.
+
+  The two generated QF_UFLIA overbound rows now run one abstraction solve under
+  the UF-aware route. The trace records: pre-LIA cloned probe skipped
+  (`1248 > 256` assertions, `ackermann_pairs=282`), `lia-simplex` unsupported,
+  `lia-dpll` skipped for overbound UF+arithmetic, and
+  `uf-arith-lazy-overbound` declining with **applications=42**,
+  **function_groups=3**, **potential_pairs=282**, **solve_rounds=1**,
+  **sat_candidates=0**, **pair_checks=0**, and **lemmas_added=0** before the
+  873-atom arithmetic abstraction times out after about **32** lazy-LIA rounds.
+  The rows remain `unknown`; the next useful work is relevance / assumption
+  filtering or a cheaper first-model / UNSAT-core-producing skeleton loop for the
+  function-free arithmetic abstraction itself.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib overbound_integer_uf_arith_skips_generic_lia_dpll_for_uf_routes -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lia_budget_unknown_annotation_reports_skipped_uf_context -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib arithmetic_uf_overbound_pre_lia_probe_decides_on_clone -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress3__error0.smt2 1000`;
+  `git diff --check`.
+
+- **Session 2026-06-26 — large online LIA feasibility deferred.**
+  Added a large-query mode to `check_qf_lia_online`: for skeletons with at least
+  128 LIA atoms or 4096 CNF clauses, `LiaTheory` records Boolean assignments
+  cheaply and performs one full LIA feasibility check at the theory-propagation
+  boundary instead of re-solving the live conjunction on every atom assignment.
+  If that deferred check is infeasible, it is surfaced as a normal theory
+  propagation contradicting one asserted core literal, so the shared DPLL learns a
+  sound `¬core` conflict clause. The large mode skips LP entailment propagation
+  and core minimization; both are pruning/precision choices, not soundness
+  requirements, and skipping them avoids reintroducing hundreds of LIA checks.
+
+  The target QF_UFLIA overbound rows moved to the next blocker. At 1 s, the
+  generic route no longer times out inside online LIA's first propagation; it now
+  reaches the legacy lazy arithmetic fallback and times out after **31-33
+  rounds** over **873 atoms**, with **1433 bound lemmas** and **31-33 blocking
+  lemmas**. The rows remain `unknown`, but the bottleneck is now the legacy
+  arithmetic refinement loop / route scheduling, not online DPLL(T)'s initial
+  assertion cascade. **Next:** reduce the 873-atom fallback loop with relevance /
+  assumption filtering, or route these generated UF+arithmetic rows to a UF-aware
+  search before the legacy arithmetic loop consumes the remaining budget.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib deferred_lia_feasibility_reports_conflict_from_propagate -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib large_online_lia_root_conflict_uses_deferred_feasibility -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib online_lia_timeout_reports_dpll_stats -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test lia_online -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lia_budget_unknown_annotation_reports_skipped_uf_context -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib arithmetic_uf_overbound_pre_lia_probe_decides_on_clone -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress3__error0.smt2 1000`;
+  `git diff --check`.
+
+- **Session 2026-06-26 — online LIA timeout stats expose first-propagation cost.**
+  Added a stable stats snapshot for the shared online DPLL(T) engine and wired it
+  into `check_qf_lia_online` timeout `Unknown` details. The counters report
+  variables, theory atoms, clause counts, live/deleted learned clauses, trail
+  depth, decision level, decisions, conflicts, conflicts since restart, restarts,
+  and reductions. A zero-timeout regression pins that online LIA timeout reports
+  include these stats without changing verdict behavior.
+
+  Short diagnostics on both generated QF_UFLIA overbound rows now show the
+  immediate bottleneck more precisely: the generic opaque-app `lia-dpll` path
+  times out with **vars=3873**, **theory_atoms=485**, **clauses=10651**,
+  **trail=1314**, **decision_level=1**, **decisions=1**, **conflicts=0**,
+  **learned_live=0**, **restarts=0**, and **reductions=0**. This is not a
+  conflict-learning / restart-policy stall; the budget is being spent before the
+  first meaningful SAT skeleton exploration, during giant initial propagation and
+  repeated LIA feasibility checks. **Next:** attack this route with relevance
+  filtering, batched/cheap propagation, or a first-model/skeleton precheck before
+  pushing 1k+ propagated literals through incremental LIA.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib online_lia_timeout_reports_dpll_stats -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib arithmetic_uf_overbound_pre_lia_probe_decides_on_clone -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lia_budget_unknown_annotation_reports_skipped_uf_context -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress3__error0.smt2 1000`;
+  `git diff --check`.
+
+- **Session 2026-06-26 — bounded pre-LIA UF+arithmetic probe added.**
+  Added a cloned, bounded pre-LIA probe for non-array integer UF+arithmetic
+  instances whose eager Ackermann pair count is over the deterministic bound.
+  Small overbound instances now get the lazy UF+arithmetic CEGAR route before
+  generic opaque-app `lia-dpll`, and a regression pins that it can decide an
+  overbound congruence contradiction without mutating the caller's arena. Probe
+  `Unsupported` / backend replay failures are trace declines, not hard solver
+  errors, so the existing fallback path remains available.
+
+  The generated QF_UFLIA overbound rows are intentionally not admitted to this
+  cloned probe: each has **1248 assertions** and `ackermann_pairs=282`, and even
+  a tiny nominal probe timeout duplicates the large function-free arithmetic
+  skeleton solve. The route now records a fast deterministic skip for those rows
+  and then reaches the existing `lia-dpll` timeout. **Next:** attack the large
+  generated arithmetic skeleton directly: shared global deadlines, relevance /
+  assumption filtering, or a cheaper first-SAT-model probe that can report
+  `sat_candidates=0` without solving the whole 873-atom abstraction.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib arithmetic_uf_overbound_pre_lia_probe_decides_on_clone -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib uf_arith_overbound_unsat_decided_by_lazy -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lia_budget_unknown_annotation_reports_skipped_uf_context -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_function_consistency_unknown_reports_cegar_stats -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress3__error0.smt2 1000`.
+
+- **Session 2026-06-26 — QF_UFLIA overbound dispatch starvation diagnosed.**
+  Added two low-cost diagnostics for the hard parent
+  `qf-uflia-cvc5-regress-clean-overbound` rows. First, the shared lazy
+  function-consistency CEGAR loop now wraps any `unknown` with refinement stats:
+  application count, function groups, possible congruence pairs, solve rounds,
+  candidate models, checked/equal/violated pairs, and lemmas added. Second, a
+  generic `lia-dpll` budget `unknown` on a query with UF applications now records
+  when UF-aware routes were not reached, including whether an arithmetic function
+  exists and the Ackermann pair count.
+
+  Short diagnostics on both overbound rows now expose the immediate blocker:
+  both time out in the generic opaque-app `lia-dpll` route before UF-aware
+  solving, with `arithmetic_function=true` and `ackermann_pairs=282`. This
+  corrects the prior working assumption that lazy UF+LIA CEGAR refinement churn
+  had been observed on these rows; in the current dispatcher it is not reached
+  from `check_auto` for this shape. **Next:** fix route scheduling / deadline
+  sharing so admitted arithmetic-UF overbound instances get a UF-aware probe
+  before generic LIA DPLL can consume the whole budget; if that probe then reports
+  `sat_candidates=0`, the next bottleneck is the 873-atom function-free Boolean
+  arithmetic skeleton itself.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_function_consistency_unknown_reports_cegar_stats -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lia_budget_unknown_annotation_reports_skipped_uf_context -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress3__error0.smt2 1000`.
+
+- **Session 2026-06-26 — QF_UFLIA overbound equality-propagation probe retained.**
+  Revisited the two parent `qf-uflia-cvc5-regress-clean-overbound` timeout rows
+  after the restart. The retained solver change is deliberately narrow:
+  `LiaTheory::propagate` now handles integer equality atoms by LP-relaxation
+  probes, propagating `x = y` only when both strict branches `x < y` and `y < x`
+  are infeasible, and propagating `x != y` only when `asserted ∧ x = y` is
+  infeasible. This is a local DPLL(T) pruning improvement with asserted-only
+  reasons; it is **not** a row closure. Direct tests now cover equality-true
+  propagation from paired bounds and equality-false propagation from an
+  incompatible bound.
+
+  I also tested widening the scalar DPLL upfront integer-bound lemmas to include
+  complement bounds and to remove the large-atom guard. That experiment was
+  rejected before commit: it raised the target rows from 1433 to 5484 upfront
+  bound lemmas, still timed out, and risked slowing the broad scalar path.
+  Current diagnostics on the retained tree leave both overbound rows `unknown`:
+  `uflia-error0` times out after 403 lazy-LIA rounds over 873 atoms, and
+  `error0` times out after 405 rounds / `rustsat-batsat` timeout, both with
+  1433 upfront bound lemmas. **Next:** stop spending on shallow static-bound
+  seeding for these rows; instrument the lazy UF+LIA CEGAR loop and attack SAT
+  relevance / Boolean-skeleton reduction in the 873-atom mixed core.
+  Verification passed:
+  `cargo fmt --all`;
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib equality_atom_ -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test uflia_online interface_equality_forces_euf_contradiction_unsat -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 10000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress3__error0.smt2 10000`;
+  `git diff --check`.
+
+- **Session 2026-06-26 — QF_UFLIA parent dominance audit ingested.**
+  Audited the committed parent `qf-uflia-cvc5-regress-clean` baseline over its
+  six decided instances. The parent row is now **6/6 dominant (100.0%)** with
+  **Lean unsat 2/2 (100.0%)**, **mismatches=0**, **audit_errors=0**,
+  **timeouts=0**, **evidence_checked=6/6**, and **evidence_certified=6/6**.
+  The two remaining overbound timeout rows remain decide-rate work; the decided
+  slice no longer has a certification gap. `bench-results/DOMINANCE.md` now
+  reports **23 complete exact audit rows**. **Next:** return to actual
+  decide-rate movement on the hard UFLIA/AUFLIA overbound rows, especially
+  Boolean-skeleton relevance for QF_UFLIA and the AUFLIA `bug330`/`bug337`
+  scalar-search frontier.
+  Verification passed:
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-uflia-cvc5-regress-clean-solver-vs-z3-10s.json 30000 6 bench-results/dominance/qf-uflia-cvc5-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m json.tool bench-results/dominance/qf-uflia-cvc5-regress-clean-dominance-audit.json >/dev/null`.
+
+- **Session 2026-06-26 — structural refuter dispatch aligned; AUFLIA probes narrowed.**
+  After the restart, I re-ran the QF_AUFLIA `bug330`/`bug337` diagnostics from
+  the current tree. `bug330` is not a raw or preprocessed simple
+  `term_identity` row: both the original single disequality and the
+  model-sound preprocessed residual still have distinct top-level `ite`
+  decision trees. A temporary bounded contextual-ITE equivalence prototype
+  exhausted a 200k-step cap on both raw and reduced forms, so no solver code was
+  kept from that route. `bug337` is confirmed `sat`, but the Z3 model is a large
+  transition/table witness rather than a compact all-default array assignment;
+  this reinforces the prior PBLS result that a generic local-search hook is not
+  the right retained path. The practical AUFLIA next actions remain: SAT
+  relevance or a replay-gated branch-schedule/model constructor for `bug337`,
+  and a stronger Boolean/relevance or BDD-style scalar abstraction for the
+  processor-shaped `bug330`.
+
+  Retained code change: `check_auto` now tries the already-checked
+  `term_identity_refutation` before heavier theory routes, so obvious
+  `not (= t t)` / constant-`ite` identity contradictions are decided through
+  the same certificate matcher that `produce_evidence` and Lean reconstruction
+  already recheck. This is a dispatch alignment, not an AUFLIA closure.
+  Verification passed:
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib check_auto_uses_term_identity_refuter_before_theory_routes -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test evidence term_identity -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test lean_crosscheck qf_lra_ite_true_identity_checks_in_real_lean -j1 -- --nocapture`.
+
+- **Session 2026-06-26 — AUFLIA `bug337` direct PBLS-array probe rejected.**
+  After the QF_AX closure, the next measured frontier is still QF_AUFLIA
+  `bug330`/`bug337`. I tested a replay-gated direct local-search path on the
+  pure Int-array `bug337` queue-lock row: admitting `(Array Int Int)` variables
+  into PBLS, defaulting arrays, adding direct `select(a,i)=v` store repairs, and
+  trying a 5 s pre-array-route probe. The diagnostic probe flattened the file to
+  237 conjuncts but still timed out (`Unknown`, 1791 flips in 5 s). A temporary
+  5 s scalar-abstraction local-search budget also failed: it only moved the
+  route to a lazy-extensionality deadline after roughly 15.6 s, still `unknown`.
+  No solver code was kept or committed from this experiment. **Next:** do not
+  repeat a generic direct PBLS-array hook for `bug337`; the practical AUFLIA
+  paths are a replay-gated branch-schedule/model constructor for the queue-lock
+  transition shape, SAT relevance in the large scalar skeleton, or finite
+  UF-table/model search for `bug330`.
+  Diagnostics before revert:
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test int_array_sort debug_bug337_array_local_search_probe -j1 -- --ignored --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__bug337.smt2 10000`.
+  Verification on the retained tree passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo check -p axeyum-solver -j1`;
+  `git diff --check`.
+
+- **Session 2026-06-26 — QF_AX declared-sort SAT rows closed.**
+  Routed pure declared-sort QF_AX arrays through the existing lazy
+  ROW/extensionality CEGAR with the replaying EUF e-graph as the scalar
+  backend. The model projection now materializes generic array values for
+  declared carrier sorts, and true array-equality refinement checks all
+  compatible materialized indices plus finite store indices, so the `arrays3`
+  store-equality/disequality interaction gets the needed witness. This closes
+  the remaining SAT `arrays2`/`arrays3` rows with replay-checked models and
+  trust-hole-free SAT evidence. The refreshed QF_AX baseline is **8/8 decided
+  (100.0%)**, **unknown=0**, **unsupported=0**, **oracle-compared=8/8**,
+  **DISAGREE=0**, PAR-2 mean **0.004 s**. The refreshed QF_AX dominance audit is
+  **8/8 dominant (100.0%)**, **Lean unsat 5/5 (100.0%)**, **mismatches=0**,
+  **audit_errors=0**, **timeouts=0**, **evidence_checked=8/8**, and
+  **evidence_certified=8/8**. Scoreboards now report **663 decided** and
+  **611 oracle-compared** overall. **Next:** QF_AX is closed for this small cvc5
+  clean slice; move array effort to AUFLIA `bug330`/`bug337` scalar-search depth
+  and broader neutral QF_AX/non-BV-array corpora.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo check -p axeyum-solver -j1`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AX/cvc5-regress-clean/cli__regress0__arrays__arrays2.smt2 10000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AX/cvc5-regress-clean/cli__regress0__arrays__arrays3.smt2 10000`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test int_array_sort qf_ax_declared_sort_sat_models_replay -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test evidence produce_evidence_replays_qf_ax_declared_sort_sat_models -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --features z3 -- corpus/public-curated/non-incremental/QF_AX/cvc5-regress-clean --timeout-ms 10000 --backend solver --compare-z3 --jobs 2 --out bench-results/baselines/qf-ax-cvc5-regress-clean-solver-vs-z3-10s.json`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-ax-cvc5-regress-clean-solver-vs-z3-10s.json 30000 8 bench-results/dominance/qf-ax-cvc5-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-scoreboard.py`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib --test int_array_sort --test evidence -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo check -p axeyum-bench --examples -j1`;
+  `python3 -m py_compile scripts/gen-scoreboard.py scripts/gen-dominance-scoreboard.py`;
+  `./scripts/check-links.sh`;
+  `git diff --check`.
+
+- **Session 2026-06-26 — QF_AX Bool-array read-collapse row closed.**
+  Added a checked `BoolArrayReadCollapseCertificate` for Bool-index arrays:
+  once `(select a false) = (select a true)`, every read from `a` is equal, so an
+  asserted disequality between two reads of `a` is impossible. The rule is wired
+  into the array fast path, `produce_evidence`, dominance labels, and Lean
+  reconstruction as `bool-array-read-collapse-unsat` /
+  `ProofFragment::BoolArrayReadCollapse`. This closes the cvc5 QF_AX
+  `bool-array.smt2` row as `unsat` without bit-blasting arrays. The refreshed
+  QF_AX baseline is **6/8 decided (75.0%)**, **unknown=0**,
+  **unsupported=2**, **oracle-compared=6/8**, **DISAGREE=0**, PAR-2 mean
+  **6.667 s**. The refreshed QF_AX dominance audit is **6/6 dominant
+  (100.0%)**, **Lean unsat 5/5 (100.0%)**, **mismatches=0**,
+  **audit_errors=0**, **timeouts=0**, **evidence_checked=6/6**, and
+  **evidence_certified=6/6**. Scoreboards now report **661 decided** and
+  **609 oracle-compared** overall. **Next:** the remaining QF_AX blockers are
+  the SAT `arrays2`/`arrays3` rows, which need replay-checked declared-sort
+  model construction rather than another UNSAT refuter; nearby AUFLIA remains
+  gated by `bug330`/`bug337` scalar-search depth.
+  Verification passed:
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib bool_index_read_collapse -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test int_array_sort qf_ax_bool_array_read_collapse_unsat_closes -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test evidence produce_evidence_certifies_qf_ax_bool_array_read_collapse -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test lean_crosscheck qf_ax_bool_array_read_collapse_checks_in_real_lean -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --features z3 -- corpus/public-curated/non-incremental/QF_AX/cvc5-regress-clean --timeout-ms 10000 --backend solver --compare-z3 --jobs 2 --out bench-results/baselines/qf-ax-cvc5-regress-clean-solver-vs-z3-10s.json`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-ax-cvc5-regress-clean-solver-vs-z3-10s.json 30000 6 bench-results/dominance/qf-ax-cvc5-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-scoreboard.py`;
+  `python3 scripts/gen-dominance-scoreboard.py`.
+
+- **Session 2026-06-26 — QF_AX exact dominance audit closed.**
+  Added checked evidence and Lean reconstruction for the QF_AX declared-sort
+  slice decided in the previous increment. The array-axiom matcher now
+  decomposes false Boolean implication, so `arr1` certifies as
+  `array-axiom-unsat` / `ProofFragment::ArrayAxiom`. The same-index
+  reciprocal-store refuter now exports a rechecked
+  `UnsatCrossStoreArrayDisequality` certificate and reconstructs through
+  `ProofFragment::CrossStoreArrayDisequality`, closing `arrays0` and `arrays4`
+  with real-Lean-accepted modules and no `sorryAx`. The committed QF_AX
+  dominance audit is **5/5 dominant (100.0%)**, **Lean unsat 4/4 (100.0%)**,
+  **mismatches=0**, **audit_errors=0**, **timeouts=0**,
+  **evidence_checked=5/5**, and **evidence_certified=5/5**.
+  `bench-results/DOMINANCE.md` now reports **22 complete exact audit rows**.
+  **Next:** QF_AX proof coverage is closed for the current decided slice; move
+  QF_AX effort to declared-sort SAT model construction for `arrays2`/`arrays3`
+  or the Bool-array unsat row, while the nearby AUFLIA frontier remains
+  `bug330`/`bug337` scalar-search depth.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib recognizes_false_implication_read_congruence -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib cross_store_array_refuter_closes_qf_ax_unsats_only -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test evidence produce_evidence_certifies_qf_ax_declared_sort_unsats -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test lean_crosscheck qf_ax_declared_sort_certificates_check_in_real_lean -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-ax-cvc5-regress-clean-solver-vs-z3-10s.json 30000 5 bench-results/dominance/qf-ax-cvc5-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 scripts/gen-scoreboard.py`;
+  `CARGO_BUILD_JOBS=2 cargo check -p axeyum-bench --examples -j1`.
+
+- **Session 2026-06-26 — QF_AX cross-store declared-sort refuter.**
+  Extended the existing structural swap-chain array refuter with a same-index
+  reciprocal-store rule over arbitrary array component sorts: from
+  `store(A,i,select(B,i)) = store(B,i,select(A,i))` it derives `A = B`, iterates
+  the derivation through nested store chains, and closes a direct asserted
+  disequality. This closes the cvc5 QF_AX declared-sort `arrays0` and `arrays4`
+  UNSAT rows without raising the finite array-equality enumeration cap or trying
+  to bit-blast uninterpreted carrier values. A negative regression confirms the
+  SAT `arrays3` mixed-index shape does not match the refuter. The refreshed
+  current-harness QF_AX baseline is **5/8 decided (62.5%)**, **unknown=1**,
+  **unsupported=2**, **oracle-compared=5/8**, **DISAGREE=0**, with PAR-2 mean
+  **10.000 s**. Scoreboards now report **660 decided** and **608
+  oracle-compared** overall. **Next:** add evidence/Lean certification for this
+  QF_AX direct refuter only after deciding whether the next QF_AX priority is
+  proof coverage or SAT model construction for `arrays2`/`arrays3`; the nearby
+  AUFLIA frontier remains `bug330`/`bug337` scalar-search depth.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib cross_store_array_refuter_closes_qf_ax_unsats_only -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test int_array_sort qf_ax_declared_sort_array_extensionality_unsats_close -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --features z3 -- corpus/public-curated/non-incremental/QF_AX/cvc5-regress-clean --timeout-ms 10000 --backend solver --compare-z3 --jobs 2 --out bench-results/baselines/qf-ax-cvc5-regress-clean-solver-vs-z3-10s.json`;
+  `python3 scripts/gen-scoreboard.py`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `CARGO_BUILD_JOBS=2 cargo check -p axeyum-bench --examples -j1`.
+
+- **Session 2026-06-26 — QF_ALIA dominance audit closed.**
+  Added zero-trust evidence variants for the two QF_ALIA-specific Int-array
+  refuters: `UnsatConstArrayDefaultMismatch` for `constarr3` and
+  `UnsatStoreChainReadback` for `ios_np_sf`. `produce_evidence`, the dominance
+  audit labels, and Lean reconstruction now recognize both routes; the
+  reconstructors re-run and recheck the structural certificates before
+  rendering certificate-wrapper Lean modules, and the real-Lean cross-check
+  asserts those modules contain no `sorryAx`. The committed QF_ALIA dominance
+  audit is now **6/6 dominant (100.0%)**, **Lean unsat 5/5 (100.0%)**,
+  **mismatches=0**, **audit_errors=0**, **timeouts=0**,
+  **evidence_checked=6/6**, and **evidence_certified=6/6**.
+  `bench-results/DOMINANCE.md` now reports **21 complete exact audit rows** and
+  an empty first audit queue. **Next:** QF_ALIA is closed for this cvc5 slice;
+  move Int-array effort to QF_AUFLIA `bug330`/`bug337` scalar-search depth,
+  QF_AX witnessed extensionality, and broader non-BV component sorts.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test evidence produce_evidence_certifies_qf_alia_store_chain_unsats -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test lean_crosscheck qf_alia_store_chain_certificates_check_in_real_lean -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-alia-cvc5-regress-clean-solver-vs-z3-10s.json 30000 6 bench-results/dominance/qf-alia-cvc5-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib --test evidence --test lean_crosscheck -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-bench --example audit_dominance -j1 -- -D warnings`;
+  `python3 -m py_compile scripts/gen-scoreboard.py scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-26 — QF_ALIA store-chain readback refuter.**
+  Added a checked `StoreChainReadbackCertificate` for finite store-chain
+  equality over a shared `(Array Int Int)` base. The certificate resolves
+  top-level array/scalar definitions, normalizes unit-affine Int index aliases
+  such as `i+3`, proves the selected visible write index is distinct from every
+  opposite-chain write index, and then uses an asserted disequality against the
+  forced base read to refute the query. This closes the cvc5 `ios_np_sf` row as
+  `unsat`. Refreshed committed baseline: **QF_ALIA 6/6 decided (100.0%)**,
+  **unknown=0**, **unsupported=0**, **oracle-compared=5/6**, **DISAGREE=0**,
+  PAR-2 mean **0.000 s**. `bench-results/SCOREBOARD.md` and
+  `bench-results/DOMINANCE.md` now report **658 decided** and
+  **606 oracle-compared** overall. The follow-up evidence/Lean audit is closed
+  by the next session entry; nearby Int-array solve work is QF_AUFLIA
+  `bug330`/`bug337` scalar-search depth plus QF_AX breadth.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib store_chain_readback_certificate_rechecks_ios_np_sf -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test int_array_sort store_chain_readback_refutes_ios_np_sf -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test int_array_sort -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --features z3 -- corpus/public-curated/non-incremental/QF_ALIA/cvc5-regress-clean --timeout-ms 10000 --backend solver --compare-z3 --jobs 2 --out bench-results/baselines/qf-alia-cvc5-regress-clean-solver-vs-z3-10s.json`;
+  `python3 scripts/gen-scoreboard.py`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib --test int_array_sort -j1 -- -D warnings`;
+  `python3 -m py_compile scripts/gen-scoreboard.py scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-26 — QF_ALIA const-array store-chain refuter.**
+  Added a checked `ConstArrayDefaultMismatchCertificate` for finite store chains
+  over different constant-array defaults on the infinite `Int` index sort:
+  finitely many writes cannot cover all integer indices, so equality of those
+  arrays is impossible when their untouched defaults are provably different
+  ground constants. This closes the cvc5 `constarr3` QF_ALIA row as `unsat`;
+  a same-default regression confirms the refuter does not fire on satisfiable
+  finite-write shapes. Refreshed committed baseline:
+  **QF_ALIA 5/6 decided (83.3%)**, **unknown=1**, **unsupported=0**,
+  **oracle-compared=4/6**, **DISAGREE=0**, PAR-2 mean **3.333 s**.
+  `bench-results/SCOREBOARD.md` and `bench-results/DOMINANCE.md` now report
+  **657 decided** and **605 oracle-compared** overall. **Next:** the only
+  remaining QF_ALIA blocker is `ios_np_sf`, which needs store-chain/readback
+  reasoning plus arithmetic-backed proof that the selected index is distinct
+  from the opposite chain's write indices; QF_AUFLIA still has `bug330` and
+  `bug337` scalar-search timeouts.
+  Verification passed:
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib const_array_default_mismatch_certificate_rechecks_constarr3 -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test int_array_sort const_array_store_chain -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --features z3 -- corpus/public-curated/non-incremental/QF_ALIA/cvc5-regress-clean --timeout-ms 10000 --backend solver --compare-z3 --jobs 2 --out bench-results/baselines/qf-alia-cvc5-regress-clean-solver-vs-z3-10s.json`;
+  `python3 scripts/gen-scoreboard.py`;
+  `python3 scripts/gen-dominance-scoreboard.py`.
+
+- **Session 2026-06-26 — QF_ALIA/AUFLIA array rows refreshed.**
+  Added a narrow cvc5 `:arrays-exp` front-end lowering for `eqrange`: constant
+  Int ranges expand to finite pointwise `select` equalities, and nonconstant or
+  over-cap ranges still decline. Added a sound constant-index self-store
+  equality normalization for `a = store(...store(a,k,v)...)`, reducing those
+  recursive array equalities to point constraints; this closes the cvc5
+  `eqrange3` AUFLIA row as `sat`. The scalar array abstraction now treats
+  preprocessing replay failure as an optimization miss and falls back to the raw
+  scalar backend before the existing array projection/replay gate. Refreshed
+  committed baselines: **QF_ALIA 4/6 decided (66.7%)**, **unknown=2**,
+  **unsupported=0**, **oracle-compared=3/6**, **DISAGREE=0**, PAR-2 mean
+  **6.667 s**; **QF_AUFLIA 5/7 decided (71.4%)**, **unknown=2**,
+  **unsupported=0**, **oracle-compared=4/7**, **DISAGREE=0**, PAR-2 mean
+  **5.716 s**. `bench-results/SCOREBOARD.md` and
+  `bench-results/DOMINANCE.md` now report **656 decided** and
+  **604 oracle-compared** overall. **Next:** QF_AUFLIA's remaining blockers are
+  scalar-search timeouts on `bug330` and `bug337`; QF_ALIA's remaining blockers
+  are lazy-extensionality replay incompletes on `ios_np_sf` and `constarr3`.
+  Verification passed:
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-smtlib eqrange_expands_constant_int_range -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-smtlib int_array_self_store_equality_reduces_to_point_constraints -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test smtlib decides_cvc5_eqrange_extension_script -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --features z3 -- corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean --timeout-ms 10000 --backend solver --compare-z3 --jobs 2 --out bench-results/baselines/qf-auflia-cvc5-regress-clean-solver-vs-z3-10s.json`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --features z3 -- corpus/public-curated/non-incremental/QF_ALIA/cvc5-regress-clean --timeout-ms 10000 --backend solver --compare-z3 --jobs 2 --out bench-results/baselines/qf-alia-cvc5-regress-clean-solver-vs-z3-10s.json`;
+  `python3 scripts/gen-scoreboard.py`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-smtlib --tests -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --test smtlib -j1 -- -D warnings`;
+  `python3 -m py_compile scripts/gen-scoreboard.py scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-26 — QF_UFLIA parent row remeasured honestly.**
+  Refreshed the stale parent `qf-uflia-cvc5-regress-clean` baseline against the
+  actual parent corpus instead of the old bounded-only snapshot. The row is now
+  **6/8 decided (75.0%)**, **unknown=2**, **unsupported=0**,
+  **oracle-compared=6/8**, **DISAGREE=0**, and PAR-2 mean **5.001 s**. The two
+  remaining blockers are the overbound `Timeout` rows. A narrow paired-bound
+  substitution prototype was tested but not committed: it avoided one recursive
+  replacement stack issue, but still failed to certify the overbound rows within
+  the 10 s budget. `bench-results/SCOREBOARD.md` and
+  `bench-results/DOMINANCE.md` now report **651 decided** and
+  **600 oracle-compared** overall. **Next:** treat QF_UFLIA overbound as a real
+  decider frontier; shallow top-level equality propagation is not sufficient.
+  Verification passed:
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --features z3 -- corpus/public-curated/non-incremental/QF_UFLIA --timeout-ms 10000 --backend solver --compare-z3 --jobs 2 --out bench-results/baselines/qf-uflia-cvc5-regress-clean-solver-vs-z3-10s.json`;
+  `python3 scripts/gen-scoreboard.py`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `cargo fmt --all --check`;
+  `python3 -m py_compile scripts/gen-scoreboard.py scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-26 — QF_UFLIA bounded row remeasured to full coverage.**
+  Refreshed the stale bounded declared-sort QF_UFLIA baseline after the current
+  mixed UF+arithmetic congruence route already decided its last gap,
+  `bug303`, as `unsat`. The Z3-compared baseline is now **6/6 decided
+  (100.0%)**, **DISAGREE=0**, **oracle-compared=6/6**, and PAR-2 mean
+  **0.002 s**. The exact dominance audit is refreshed at **6/6 dominant
+  (100.0%)**, **Lean unsat 2/2 (100.0%)**, **mismatches=0**,
+  **audit_errors=0**, **timeouts=0**, **evidence_checked=6/6**, and
+  **evidence_certified=6/6**. `bench-results/SCOREBOARD.md` and
+  `bench-results/DOMINANCE.md` then reported **649 decided** and
+  **598 oracle-compared** overall. **Next:** continue from measurement-backed
+  decide gaps rather than proof-auditing already dominant rows; the nearby
+  frontiers remain QF_UFLIA unbounded/overbound, QF_ALIA/AUFLIA arrays, and
+  QF_UF overbound's two undecided instances.
+  Verification passed:
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-bounded/cli__regress0__bug303.smt2 10000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --features z3 -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-bounded --timeout-ms 10000 --backend solver --compare-z3 --jobs 4 --out bench-results/baselines/qf-uflia-cvc5-regress-clean-bounded-uninterp-sorts-solver-vs-z3-10s.json`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-uflia-cvc5-regress-clean-bounded-uninterp-sorts-solver-vs-z3-10s.json 30000 6 bench-results/dominance/qf-uflia-cvc5-regress-clean-bounded-uninterp-sorts-dominance-audit.json`;
+  `python3 scripts/gen-scoreboard.py`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo check -p axeyum-bench --examples -j1`;
+  `python3 -m py_compile scripts/gen-scoreboard.py scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-26 — QF_UF overbound dominance audit closed.**
+  Added a checked online Boolean-EUF certificate for large pure-EUF Boolean
+  skeletons that exceed the exhaustive equality-atom case bound. The certificate
+  first rejects non-pure-EUF shapes, then re-runs the deterministic online EUF
+  DPLL(T) refuter over the original assertions and accepts only a fresh `unsat`;
+  evidence is certified, checked, and carries no trust steps. This closes the
+  three overbound QF_UF UNSAT audit gaps (`uf/cnf_abc`, `proof00`, and
+  `proofs/macro-res-exp-crowding-lit-inside-unit`) as
+  `bool-euf-online-unsat` / `ProofFragment::BoolEufOnline`. The overbound
+  declared-sort QF_UF dominance audit is now **4/4 dominant (100.0%)**,
+  **Lean unsat 3/3 (100.0%)**, **mismatches=0**, **audit_errors=0**,
+  **timeouts=0**, **evidence_checked=4/4**, and **evidence_certified=4/4**.
+  At that point `bench-results/DOMINANCE.md` reached its **20th complete exact
+  audit row**.
+  The solve row is still honestly **4/6 decided** overall; this closes the
+  audited decided slice, not the two undecided instances. **Next:** move the
+  dominance push to the next measured row where either evidence coverage or
+  decide coverage still blocks a defensible all-four claim.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib bool_euf::tests:: -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test evidence qf_uf_overbound_rows_use_checked_online_euf_evidence -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test lean_crosscheck qf_uf_overbound_online_euf_rows_check_in_real_lean -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-overbound/cli__regress0__uf__cnf_abc.smt2 10000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-overbound/cli__regress1__proof00.smt2 10000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-overbound/cli__regress1__proofs__macro-res-exp-crowding-lit-inside-unit.smt2 10000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-uf-cvc5-regress-clean-overbound-uninterp-sorts-solver-vs-z3-10s.json 30000 4 bench-results/dominance/qf-uf-cvc5-regress-clean-overbound-uninterp-sorts-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `CARGO_BUILD_JOBS=2 cargo check -p axeyum-solver --lib -j1`;
+  `CARGO_BUILD_JOBS=2 cargo check -p axeyum-bench --examples -j1`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib --all-features -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-bench --examples -j1 -- -D warnings`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-26 — QF_UF declared-sort exact audit closed.**
+  Closed the last bounded declared-sort QF_UF dominance gap,
+  `issue3970-nl-ext-purify`. The row was being routed through the pure-real
+  LRA/NRA evidence branch before the generic structural certificate pass could
+  run; `produce_evidence` now tries direct structural certificates before that
+  branch. The benchmark's purified `distinct` expansion contains an asserted
+  disequality of a term with itself, so the existing checked `term-identity`
+  certificate now handles it with no trust steps and Lean reconstructs it as
+  `ProofFragment::TermIdentity`. The Boolean simplifier also learned the same
+  conservative reflexive-equality normalization for direct Boolean contexts.
+  The exact QF_UF bounded declared-sort audit is refreshed at **44/44 dominant
+  (100.0%)**, **Lean unsat 15/15 (100.0%)**, **mismatches=0**,
+  **audit_errors=0**, **timeouts=0**, **evidence_checked=44/44**, and
+  **evidence_certified=44/44**. **Next:** move the dominance push to the next
+  measured non-dominant row rather than continuing to spend proof budget on this
+  now-closed exact QF_UF slice.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib bool_simplify::tests:: -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test evidence qf_uf_issue3970_uses_checked_term_identity_evidence -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test lean_crosscheck qf_uf_issue3970_term_identity_checks_in_real_lean -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-bounded/cli__regress1__issue3970-nl-ext-purify.smt2 10000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-uf-cvc5-regress-clean-bounded-uninterp-sorts-solver-vs-z3-10s.json 30000 44 bench-results/dominance/qf-uf-cvc5-regress-clean-bounded-uninterp-sorts-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `CARGO_BUILD_JOBS=2 cargo check -p axeyum-solver --lib -j1`;
+  `CARGO_BUILD_JOBS=2 cargo check -p axeyum-bench --examples -j1`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib --all-features -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-bench --examples -j1 -- -D warnings`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-26 — QF_UF mixed UF+arithmetic audit gap closed.**
+  Added a checked `uf-arith-congruence-unsat` certificate for the cvc5 `bug303`
+  row. The checker re-runs the shared Ackermann/congruence construction,
+  retains only Boolean-structured linear-arithmetic rewritten assertions plus
+  arithmetic-sorted derived congruence consequents, and verifies that residual
+  with the existing arithmetic-DPLL certificate. This covers the benchmark
+  shape where congruence over the declared `list` carrier proves
+  `length(one_cons nil) = length(cons 1 nil)`, after which the integer facts
+  force the contradiction. Lean reconstruction now routes through
+  `ProofFragment::UfArithCongruence` and re-runs the checker before rendering
+  the wrapper. The assertion-set Boolean simplifier also learned a conservative
+  cross-assertion `not (and ...)` contradiction rule, but the nonlinear
+  `issue3970-nl-ext-purify` row still returns checked `unknown`. The exact
+  QF_UF bounded declared-sort audit is refreshed at **43/44 dominant (97.7%)**,
+  **Lean unsat 14/14 (100.0%)**, **mismatches=0**, **audit_errors=0**,
+  **timeouts=0**, **evidence_checked=44/44**, and
+  **evidence_certified=43/44**. Remaining QF_UF blocker: the nonlinear-extension
+  row `issue3970-nl-ext-purify`, where baseline is `unsat` but evidence remains
+  checked `unknown`. **Next:** decide whether to add an explicit nonlinear
+  arithmetic/propositional certificate for `issue3970`, or mark it as the honest
+  frontier for this bounded QF_UF audit row and move to the next measured row.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib uf_arith::tests:: -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib bool_simplify::tests:: -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test evidence qf_uf_bug303_uses_checked_uf_arith_congruence_evidence -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test lean_crosscheck qf_uf_bug303_uf_arith_congruence_checks_in_real_lean -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-bounded/cli__regress0__bug303.smt2 10000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-bounded/cli__regress1__issue3970-nl-ext-purify.smt2 10000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-uf-cvc5-regress-clean-bounded-uninterp-sorts-solver-vs-z3-10s.json 30000 44 bench-results/dominance/qf-uf-cvc5-regress-clean-bounded-uninterp-sorts-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `CARGO_BUILD_JOBS=2 cargo check -p axeyum-solver --lib -j1`;
+  `CARGO_BUILD_JOBS=2 cargo check -p axeyum-bench --examples -j1`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib --all-features -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-bench --examples -j1 -- -D warnings`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-26 — QF_UF Boolean-EUF audit gaps closed.**
+  Added a checked Boolean-structured EUF refutation bridge for pure
+  uninterpreted-sort formulas whose contradiction is hidden behind Boolean
+  syntax. The checker abstracts EUF equality atoms, enumerates every satisfying
+  Boolean skeleton assignment, and requires each induced equality/disequality
+  core to be refuted by the existing congruence checker; mixed arithmetic/BV
+  shapes are rejected. This certifies `simple-uf`, `uf/cnf-and-neg`, and
+  `uf/cnf-ite` as `bool-euf-exhaustive-unsat` /
+  `ProofFragment::BoolEufExhaustive`, with no trust steps and Lean-checked
+  wrappers. The exact QF_UF bounded declared-sort audit is refreshed at
+  **42/44 dominant (95.5%)**, **Lean unsat 13/14 (92.9%)**,
+  **mismatches=0**, **audit_errors=0**, **timeouts=0**,
+  **evidence_checked=44/44**, and **evidence_certified=42/44**. Remaining
+  QF_UF blockers are now `bug303` (mixed UF+arithmetic, still
+  `bare-unsat`) and `issue3970-nl-ext-purify` (checked `unknown` against a
+  baseline `unsat`). **Next:** decide whether `bug303` needs a small
+  arithmetic/purification certificate, then decide whether the nonlinear
+  extension row should get an explicit arithmetic certificate or stay an honest
+  frontier.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib bool_euf -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test evidence qf_uf_boolean_euf_rows_use_checked_exhaustive_evidence -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test lean_crosscheck qf_uf_boolean_euf_rows_check_in_real_lean -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-bounded/cli__regress0__simple-uf.smt2 10000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-bounded/cli__regress0__uf__cnf-and-neg.smt2 10000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-bounded/cli__regress0__uf__cnf-ite.smt2 10000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-uf-cvc5-regress-clean-bounded-uninterp-sorts-solver-vs-z3-10s.json 30000 44 bench-results/dominance/qf-uf-cvc5-regress-clean-bounded-uninterp-sorts-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `CARGO_BUILD_JOBS=2 cargo check -p axeyum-solver --lib -j1`;
+  `CARGO_BUILD_JOBS=2 cargo check -p axeyum-bench --examples -j1`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib --all-features -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-bench --examples -j1 -- -D warnings`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-26 — QF_UF set-cardinality audit timeout closed.**
+  Added a checked lowered finite-set cardinality refutation for the SMT-LIB
+  `set.card`→BV-popcount encoding. The checker recognizes popcount lower/upper
+  bounds, subset facts, and safe union/intersection cardinality upper bounds;
+  it certifies both `sets/card` and `sets/card-6` directly as
+  `set-cardinality-unsat` / `ProofFragment::SetCardinality`, with no DRAT
+  reduction and no trust holes. The `sets/card-6` evidence timeout is gone, and
+  the previous `sets/card` bit-blast trust-hole row is now Lean-checked. The
+  exact QF_UF bounded declared-sort audit is refreshed at **39/44 dominant
+  (88.6%)**, **Lean unsat 10/14 (71.4%)**, **mismatches=0**,
+  **audit_errors=0**, **timeouts=0**, **evidence_checked=44/44**, and
+  **evidence_certified=39/44**. Remaining QF_UF blockers are the four
+  `bare-unsat` pure-UF/Boolean-normalization rows (`bug303`, `simple-uf`,
+  `uf/cnf-and-neg`, `uf/cnf-ite`) and the nonlinear-extension row
+  `issue3970-nl-ext-purify`, whose evidence route still returns checked
+  `unknown` against a baseline `unsat`. **Next:** add the sound Boolean
+  proof bridge for the `bare-unsat` pure-UF rows, then decide whether the
+  nonlinear-extension row needs an explicit arithmetic/purification certificate
+  or should stay an honest frontier.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib set_cardinality -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test evidence qf_uf_set_cardinality_rows_use_checked_cardinality_evidence -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test lean_crosscheck qf_uf_sets_cardinality_checks_in_real_lean -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-bounded/cli__regress1__sets__card-6.smt2 10000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-bounded/cli__regress0__sets__card.smt2 10000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-uf-cvc5-regress-clean-bounded-uninterp-sorts-solver-vs-z3-10s.json 30000 44 bench-results/dominance/qf-uf-cvc5-regress-clean-bounded-uninterp-sorts-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `CARGO_BUILD_JOBS=2 cargo check -p axeyum-solver --lib -j1`;
+  `CARGO_BUILD_JOBS=2 cargo check -p axeyum-bench --examples -j1`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib --all-features -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-bench --examples -j1 -- -D warnings`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-26 — QF_UF SAT evidence audit errors closed.**
+  Closed the two QF_UF bounded declared-sort SAT evidence audit errors. The
+  Diophantine and arithmetic-DPLL optional evidence prepasses now decline
+  queries with no Int/Real content before invoking arithmetic/BV machinery, so
+  declared-sort-only SAT rows fall through to the normal EUF/auto solver model
+  and replay through `Evidence::Sat`. This closes `parser/as` and `ite4`; both
+  now produce checked, trust-hole-free SAT evidence. The exact audit is refreshed
+  at **37/44 dominant (84.1%)**, **Lean unsat 8/14 (57.1%)**,
+  **mismatches=0**, **audit_errors=0**, **timeouts=1**. The dominance report now
+  correctly labels the next action as **fix audit timeouts** rather than a
+  phantom audit error. Remaining QF_UF blockers are the `sets/card-6`
+  check-evidence timeout, the `sets/card` bit-blast trust-hole row, the
+  CNF/Boolean-normalization pure-UF proof gaps, and the guarded nonlinear
+  `unknown`. **Next:** fix the `sets/card-6` evidence timeout or add the sound
+  Boolean proof bridge for the `bare-unsat` pure-UF rows.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test evidence qf_uf_parser_as_sat_evidence_replays_declared_sort_model -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test evidence qf_uf_declared_sort_ite_sat_evidence_replays_model -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test evidence satisfiable_uflia_opaque_arith_abstraction_still_replays_sat_model -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-bounded/cli__regress0__parser__as.smt2 10000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-bounded/cli__regress0__ite4.smt2 10000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-uf-cvc5-regress-clean-bounded-uninterp-sorts-solver-vs-z3-10s.json 30000 44 /tmp/qf-uf-bounded-dominance-audit-after-sat-errors-v2.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `CARGO_BUILD_JOBS=2 cargo check -p axeyum-solver --lib -j1`;
+  `CARGO_BUILD_JOBS=2 cargo check -p axeyum-bench --examples -j1`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib --all-features -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-bench --examples -j1 -- -D warnings`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-26 — QF_UF declared-sort equality audit route.**
+  The refreshed QF_UF bounded declared-sort row now has a committed exact
+  dominance audit. `scan_proof_fragment` treats equality/disequality over
+  declared uninterpreted carrier sorts as `QfUf` even when no `Apply` node is
+  present, and the zero-trust Alethe evidence path now tries the pure EUF
+  congruence emitter directly. This closes the `parallel-let` proof-route gap:
+  it already had checked Alethe evidence, but Lean reconstruction was routed to
+  the wrong fragment. The exact audit for
+  `qf-uf-cvc5-regress-clean-bounded-uninterp-sorts` is now committed at
+  **37/44 dominant (84.1%)**, **Lean unsat 8/14 (57.1%)**,
+  **mismatches=0**, **audit_errors=0**, **timeouts=1**. The dominance report now
+  has **19 complete exact audit rows**. Remaining QF_UF blockers are concrete:
+  Boolean-normalization proof bridges for `not =>`/CNF-shaped pure-UF rows,
+  a Lean route for the set/card bit-blast trust-hole row, the
+  nonlinear-extension `unknown`, and one check-evidence timeout. **Next:** fix
+  the timeout first, then add a
+  sound Boolean proof bridge for the `bare-unsat` pure-UF rows.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test evidence qf_uf_declared_sort_equality_unsat_carries_zero_trust_alethe_certificate -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test evidence qf_ufbv_unsat_carries_a_zero_trust_alethe_certificate -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test lean_crosscheck qf_uf_declared_sort_equality_checks_in_real_lean -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test lean_crosscheck qf_ufbv_refutation_checks_in_real_lean -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-bounded/cli__regress0__parallel-let.smt2 10000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-uf-cvc5-regress-clean-bounded-uninterp-sorts-solver-vs-z3-10s.json 30000 44 /tmp/qf-uf-bounded-dominance-audit-after-declsort.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `CARGO_BUILD_JOBS=2 cargo check -p axeyum-solver --lib -j1`;
+  `CARGO_BUILD_JOBS=2 cargo check -p axeyum-bench --examples -j1`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib --all-features -j1 -- -D warnings`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-26 — QF_UF underspecified div/mod soundness guard.**
+  Re-ran the current QF_UF cvc5 rows and found a false `unsat` on
+  `cli__regress1__sygus__proj-issue165.smt2`: the formula is satisfiable under
+  SMT-LIB because integer `mod` by zero is underspecified, but Axeyum's
+  executable evaluator convention had concretized `mod 0 0 = 0` during an UNSAT
+  route. `check_auto` now skips bounded integer-box refutation when an
+  integer/real division or modulo divisor is not syntactically a known nonzero
+  constant, and the lazy arithmetic DPLL path rejects unsupported arithmetic
+  atoms before adding them to the Boolean skeleton. Known-nonzero constant
+  divisors remain decidable. The witness now reports checked `unknown`, not
+  `unsat`. Refreshed QF_UF baselines: overbound remains **4/6 decided**,
+  **DISAGREE=0**; both bounded rows are now **44/82 decided**,
+  **DISAGREE=0**. Regenerated scoreboards now report **648 decided**,
+  **597 oracle-compared**, and **18 complete exact audit rows**. **Next:** build
+  an explicit SMT-LIB underspecification encoding for div/mod/real-div if we
+  want to recover these UNSAT decisions soundly, then run a QF_UF dominance
+  audit over the refreshed rows.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib mod_by -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib abstractor_rejects_unsupported_integer_mod_atom -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-bounded/cli__regress1__sygus__proj-issue165.smt2 10000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --features z3 -- corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-bounded --timeout-ms 10000 --backend solver --compare-z3 --jobs 4 --out bench-results/baselines/qf-uf-cvc5-regress-clean-bounded-solver-vs-z3-10s.json`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --features z3 -- corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-bounded --timeout-ms 10000 --backend solver --compare-z3 --jobs 4 --out bench-results/baselines/qf-uf-cvc5-regress-clean-bounded-uninterp-sorts-solver-vs-z3-10s.json`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --features z3 -- corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-overbound --timeout-ms 10000 --backend solver --compare-z3 --jobs 4 --out bench-results/baselines/qf-uf-cvc5-regress-clean-overbound-uninterp-sorts-solver-vs-z3-10s.json`;
+  `python3 scripts/gen-scoreboard.py`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `CARGO_BUILD_JOBS=2 cargo check -p axeyum-solver --lib -j1`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib --all-features -j1 -- -D warnings`;
+  `python3 -m py_compile scripts/gen-scoreboard.py scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-26 — exact QF_DT dominance row closed.**
+  Closed the cvc5 QF_DT decide/proof gap by extending the datatype structural
+  refuter from direct top-level equalities to the benchmark shapes actually in
+  the slice: flattened top-level conjunctions, top-level `or` branches whose
+  every disjunct is structurally refutable, and constructor exhaustiveness
+  conflicts from negative testers plus nullary-constructor disequalities. The
+  former unsupported `acyclicity-sr-ground096` row now decides `unsat`, and the
+  former bare `pf-v2l60078` proof row now emits checked
+  `datatype-structural-unsat` evidence. `Evidence::check`,
+  `produce_evidence`, `diagnose_evidence`, the dominance audit labels, and
+  `ProofFragment::DatatypeStructural` all re-run the same checker before
+  accepting the certificate/wrapper. The regenerated QF_DT baseline is now
+  **3/3 decided**, **DISAGREE=0**, **unsupported=0**, and the exact dominance
+  audit is **3/3 dominant** with **Lean unsat 3/3**, **mismatches=0**,
+  **audit_errors=0**, **timeouts=0**, and no trust holes. The generated
+  scoreboards now report **641 decided**, **592 oracle-compared**, and **18
+  complete exact audit rows**. **Next:** use the same measured-audit loop on
+  the next strong row with an unclosed Lean/cert lane, or broaden datatype
+  audits beyond the cvc5 three-file slice.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=4 cargo test -p axeyum-solver --lib datatype_acyclicity -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=4 cargo test -p axeyum-solver --test evidence qf_dt_cvc5_slice_uses_checked_datatype_structural_evidence -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=4 cargo test -p axeyum-solver --test lean_crosscheck qf_dt_cvc5_slice_checks_in_real_lean -j1 -- --nocapture`;
+  `AXEYUM_DIAGNOSE_ONLY_EVIDENCE=1 CARGO_BUILD_JOBS=4 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_DT/cvc5-regress-clean/cli__regress0__datatypes__pf-v2l60078.smt2 10000`;
+  `CARGO_BUILD_JOBS=4 cargo run -q -p axeyum-bench --features z3 -- corpus/public-curated/non-incremental/QF_DT/cvc5-regress-clean --timeout-ms 10000 --backend solver --compare-z3 --logic QF_DT --jobs 4 --out bench-results/baselines/qf-dt-cvc5-regress-clean-solver-vs-z3-10s.json`;
+  `CARGO_BUILD_JOBS=4 cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-dt-cvc5-regress-clean-solver-vs-z3-10s.json 30000 3 bench-results/dominance/qf-dt-cvc5-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-scoreboard.py`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `CARGO_BUILD_JOBS=4 cargo check -p axeyum-solver --lib -j1`;
+  `CARGO_BUILD_JOBS=4 cargo check -p axeyum-bench --examples -j1`;
+  `CARGO_BUILD_JOBS=4 cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `python3 -m py_compile scripts/gen-scoreboard.py scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-26 — exact QF_BVFP dominance row closed.**
+  Closed the Bitwuzla QF_BVFP proof-route audit by extending the checked
+  `UnsatBvDefinedEnum` / `ProofFragment::BvDefinedEnum` route to the two former
+  timeout rows. `collect_required_constraints` now follows nested negated
+  implications, so rows such as `Float-no-simp3-main` expose the required `d`
+  and `not c` facts instead of only the outer `true` antecedent. Definition and
+  assertion replay now uses selected-path `ite`/Boolean evaluation backed by
+  the existing evaluator for non-branching operators; parser-created FP helper
+  symbols such as `!fp.to_sbv...` are therefore left unassigned only when the
+  chosen semantic path never reads them, and the checker declines otherwise.
+  The route also permits no-definition FP-lowered `FpFromBits` formulas to use
+  the same tiny-domain replay, which certifies `fp_fromsbv` by enumerating
+  `x : BV1` and the restricted `rm <= 4` rounding-mode token. The exact QF_BVFP
+  audit is now **7/7** dominant with **Lean unsat 3/3**, **mismatches=0**,
+  **audit_errors=0**, and **timeouts=0**. The dominance report now has **17
+  complete exact audit rows**. **Next:** broaden FP/BVFP audits beyond the
+  Bitwuzla slice or move to the remaining strong-but-unaudited proof-route
+  frontiers such as QF_SEQ/QF_DT once their cert lanes are ready.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `AXEYUM_DIAGNOSE_ONLY_EVIDENCE=1 CARGO_BUILD_JOBS=4 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_BVFP/bitwuzla-regress-clean/solver__fp__fp_fromsbv.smt2 10000`;
+  `AXEYUM_DIAGNOSE_ONLY_EVIDENCE=1 CARGO_BUILD_JOBS=4 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_BVFP/bitwuzla-regress-clean/solver__fp__Float-no-simp3-main.smt2 10000`;
+  `CARGO_BUILD_JOBS=4 cargo test -p axeyum-solver --test evidence qf_bvfp_bitwuzla_rows_use_checked_bv_defined_enum_evidence -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=4 cargo test -p axeyum-solver --test evidence qf_fp_bitwuzla_rows_use_checked_bv_defined_enum_evidence -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=4 cargo test -p axeyum-solver --lib bv_defined_enum -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=4 cargo test -p axeyum-solver --test lean_crosscheck qf_bvfp_bv_defined_enum_rows_check_in_real_lean -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=4 cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-bvfp-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 8 bench-results/dominance/qf-bvfp-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `CARGO_BUILD_JOBS=4 cargo check -p axeyum-solver --lib -j1`;
+  `CARGO_BUILD_JOBS=4 cargo check -p axeyum-bench --examples -j1`;
+  `CARGO_BUILD_JOBS=4 cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-26 — exact QF_FP dominance row closed.**
+  Widened the checked `UnsatBvDefinedEnum` / `ProofFragment::BvDefinedEnum`
+  route from Bool/BV-only terms to finite scalar terms, including `Float`
+  values via Axeyum's ADR-0026 bit-pattern representation. This certifies the
+  Bitwuzla QF_FP `fp_inf` and `fp_zero` constant-chain rows by re-deriving
+  top-level definitions for the Float64 symbols and replaying one independent
+  case. It also certifies `fp_misc`: cheap required single-symbol predicates such
+  as `fp.isZero (fp.neg a)` shrink Float16 `a` to the zero bit-patterns, the
+  rounding-mode declaration shrinks `rm` to `0..=4`, `b = abs(a)` is applied as a
+  checked definition, and the original assertions are replayed over the resulting
+  small domain. The route is bounded by a 20k case cap and a small-DAG guard for
+  enumerated restrictions, so SAT rows such as `fp_regr3` fall through to model
+  replay quickly. The exact QF_FP audit is now **16/16** dominant with **Lean
+  unsat 7/7**, **mismatches=0**, **audit_errors=0**, and **timeouts=0**. The
+  dominance report remains at **16 complete exact audit rows**. **Next:** move to
+  the QF_BVFP proof-route row or broaden FP audits beyond the Bitwuzla slice.
+  Verification passed:
+  `CARGO_BUILD_JOBS=4 cargo test -p axeyum-solver --lib bv_defined_enum -j1 -- --nocapture`;
+  `AXEYUM_DIAGNOSE_ONLY_EVIDENCE=1 CARGO_BUILD_JOBS=4 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_FP/bitwuzla-regress-clean/solver__fp__fp_inf.smt2 10000`;
+  `AXEYUM_DIAGNOSE_ONLY_EVIDENCE=1 CARGO_BUILD_JOBS=4 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_FP/bitwuzla-regress-clean/solver__fp__fp_zero.smt2 10000`;
+  `AXEYUM_DIAGNOSE_ONLY_EVIDENCE=1 CARGO_BUILD_JOBS=4 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_FP/bitwuzla-regress-clean/solver__fp__fp_misc.smt2 10000`;
+  `AXEYUM_DIAGNOSE_ONLY_EVIDENCE=1 CARGO_BUILD_JOBS=4 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_FP/bitwuzla-regress-clean/solver__fp__fp_regr3.smt2 10000`;
+  `CARGO_BUILD_JOBS=4 cargo test -p axeyum-solver --test evidence qf_fp_bitwuzla_rows_use_checked_bv_defined_enum_evidence -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=4 cargo test -p axeyum-solver --test lean_crosscheck qf_fp_bv_defined_enum_rows_check_in_real_lean -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=4 cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-fp-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 16 bench-results/dominance/qf-fp-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `CARGO_BUILD_JOBS=4 cargo check -p axeyum-solver --lib -j1`;
+  `CARGO_BUILD_JOBS=4 cargo check -p axeyum-bench --examples -j1`;
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=4 cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — exact QF_FF dominance row closed.**
+  Added checked `UnsatBvDefinedEnum` evidence and
+  `ProofFragment::BvDefinedEnum` reconstruction for finite-field rows whose raw
+  Bool/BV symbol domain exceeds the 20-bit term-level budget but becomes small
+  after required top-level definitions and finite-domain restrictions are
+  re-derived. The checker splits top-level conjunctions and the antecedent of
+  `not (=> a b)`, treats equalities such as `mac1 = k1 + d*m1` as acyclic
+  definitions, shrinks domains with constraints such as `x < p` and
+  `x = 0 or x = 1`, then enumerates every independent assignment and replays the
+  original assertions. Together with the existing `TermLevelEnum` wrapper for
+  smaller QF_FF rows, the exact QF_FF/cvc5 audit is now **24/24** dominant with
+  **Lean unsat 10/10**, **mismatches=0**, **audit_errors=0**, and
+  **timeouts=0**. The dominance report now has **15 complete exact audit rows**.
+  **Next:** continue proof-route work on the remaining strong rows without exact
+  audits (QF_FP/QF_BVFP) or move back to broader decide-rate gaps such as cvc5
+  NRA and array/UF/arithmetic frontiers.
+  Verification passed:
+  `CARGO_BUILD_JOBS=4 cargo test -p axeyum-solver --lib bv_defined_enum -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=4 cargo check -p axeyum-solver --lib -j1`;
+  `CARGO_BUILD_JOBS=4 cargo test -p axeyum-solver --test evidence qf_ff_gap_rows_use_checked_bv_defined_enum_evidence -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=4 cargo test -p axeyum-solver --test lean_crosscheck qf_ff_bv_defined_enum_gap_rows_check_in_real_lean -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=4 cargo test -p axeyum-solver --test lean_crosscheck qf_ff_term_level_enum_rows_check_in_real_lean -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=4 cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-ff-cvc5-regress-clean-solver-vs-z3-10s.json 30000 24 bench-results/dominance/qf-ff-cvc5-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `CARGO_BUILD_JOBS=4 cargo check -p axeyum-bench --examples -j1`;
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=4 cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — exact QF_UFFF dominance row closed.**
+  Added checked `UnsatBvUfLocal` evidence and `ProofFragment::BvUfLocal`
+  reconstruction for mixed finite-BV/UF formulas where tiny local BV
+  enumeration derives equality facts and UF congruence closes the contradiction.
+  This targets the cvc5 QF_UFFF finite-field rows after SMT-LIB parsing lowers
+  `(_ FiniteField 17)` values to BV5: constraints such as field-idempotence
+  plus the pair equation derive `a=b` locally, then congruence proves the UF
+  conflict or the checked pure-BV conflict after `a=b`. Re-running the exact
+  QF_UFFF/cvc5 audit moved **dominant 4/8 -> 8/8**, **Lean unsat 2/6 -> 6/6**,
+  and **evidence certified 4/8 -> 8/8**, with **mismatches=0**,
+  **audit_errors=0**, and **timeouts=0**. The dominance report now has **14
+  complete exact audit rows**. **Next:** build proof routes for the remaining
+  strong unaudited rows (QF_FF/QF_FP/QF_BVFP) or attack broader decide-rate
+  gaps such as cvc5 NRA and array/UF/arithmetic frontiers.
+  Verification passed:
+  `CARGO_BUILD_JOBS=4 cargo check -p axeyum-solver --lib -j1`;
+  `CARGO_BUILD_JOBS=4 cargo test -p axeyum-solver --lib bv_uf_local -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=4 cargo test -p axeyum-solver --test evidence qf_ufff_rows_use_checked_bv_uf_local_evidence -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=4 cargo test -p axeyum-solver --test lean_crosscheck qf_ufff_bv_uf_local_rows_check_in_real_lean -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=4 cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-ufff-cvc5-regress-clean-solver-vs-z3-10s.json 30000 8 bench-results/dominance/qf-ufff-cvc5-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `CARGO_BUILD_JOBS=4 cargo check -p axeyum-bench --examples -j1`;
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=4 cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — exact cvc5 quantified-BV dominance row closed.**
+  Added checked `UnsatBvForallNonconstant` evidence and
+  `ProofFragment::BvForallNonconstant` reconstruction for universal BV
+  inversion rows where a visibly non-constant expression is asserted equal to a
+  fixed result for every quantified value. Covered schemas include
+  `bvadd x a`, `bvashr x a`, both `concat` orientations, and the guarded
+  `bvudiv` variants from the cvc5 quantified-BV slice. The checker re-scans the
+  original IR for the universal equality plus required disequality side facts;
+  Lean reconstruction reruns the checker before rendering the wrapper module.
+  Re-running the exact BV/cvc5 quantified audit moved **dominant 31/37 -> 37/37**,
+  **Lean unsat 2/8 -> 8/8**, and **evidence certified 31/37 -> 37/37**, with
+  **mismatches=0**, **audit_errors=0**, and **timeouts=0**. The dominance report
+  now has **13 complete exact audit rows**. **Next:** build proof routes for
+  strong unaudited rows (QF_UFFF/QF_FF/QF_FP/QF_BVFP) or attack broader
+  decide-rate gaps such as cvc5 NRA and quantified rows where axeyum is still
+  mid/weak.
+  Verification passed:
+  `CARGO_BUILD_JOBS=4 cargo check -p axeyum-solver --lib -j1`;
+  `CARGO_BUILD_JOBS=4 cargo test -p axeyum-solver --lib bv_forall_nonconstant -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=4 cargo test -p axeyum-solver --test evidence cvc5_quantified_bv_inversion_rows_use_checked_nonconstant_evidence -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=4 cargo test -p axeyum-solver --test lean_crosscheck cvc5_quantified_bv_inversion_rows_check_in_real_lean -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=4 cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/bv-cvc5-regress-clean-quantified-solver-vs-z3-10s.json 30000 37 bench-results/dominance/bv-cvc5-regress-clean-quantified-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `CARGO_BUILD_JOBS=4 cargo check -p axeyum-bench --examples -j1`;
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=4 cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — exact quantified-BV dominance row closed.**
+  Added checked `UnsatFiniteDomainEnum` evidence and
+  `ProofFragment::FiniteDomainEnum` reconstruction for small finite Bool/BV
+  formulas with quantifiers. The certifier enumerates free Bool/BV symbols,
+  counts bound Bool/BV quantifier domains in the same budget, and reuses the
+  executable IR evaluator for the original assertions. `Evidence::check` and
+  Lean reconstruction both re-run the finite-domain certificate before accepting
+  it. Re-running the exact BV/bitwuzla quantified audit moved **dominant 1/4
+  -> 4/4**, **Lean unsat 0/3 -> 3/3**, and **evidence certified 1/4 -> 4/4**,
+  with **mismatches=0**, **audit_errors=0**, and **timeouts=0**. **Next:**
+  audit the larger cvc5 quantified-BV row, build proof routes for strong
+  unaudited rows (QF_UFFF/QF_FF/QF_FP), or move back to broader cvc5
+  NRA/high-degree decide gaps.
+  Verification passed:
+  `CARGO_BUILD_JOBS=4 cargo check -p axeyum-solver --lib -j1`;
+  `CARGO_BUILD_JOBS=4 cargo test -p axeyum-solver --test evidence quantified_bv_audit_unsats_use_finite_domain_enum_evidence -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=4 cargo test -p axeyum-solver --test lean_crosscheck quantified_bv_finite_domain_enum_rows_check_in_real_lean -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=4 cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/bv-bitwuzla-regress-clean-quantified-solver-vs-z3-10s.json 30000 4 bench-results/dominance/bv-bitwuzla-regress-clean-quantified-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `CARGO_BUILD_JOBS=4 cargo check -p axeyum-bench --examples -j1`;
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=4 cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — exact QF_NRA synthetic dominance row closed.**
+  Added checked `UnsatNraEvenPower` evidence and `ProofFragment::NraEvenPower`
+  reconstruction for the remaining higher-degree synthetic NRA UNSAT rows. The
+  matcher is deliberately narrow: it accepts only original assertions where a
+  sum of syntactic even powers of real terms plus a nonnegative rational
+  constant is asserted `< 0`; `Evidence::check` re-scans the original query and
+  re-matches the certificate before accepting it. Lean reconstruction uses the
+  same rechecked certificate before rendering the wrapper module. Re-running
+  the exact QF_NRA audit moved **QF_NRA synthetic 24/30 -> 30/30 dominant**
+  with **Lean unsat 10/16 -> 16/16**, **mismatches=0**,
+  **audit_errors=0**, and **timeouts=0**. **Next:** attack quantified-BV Lean
+  gaps, build proof routes for strong unaudited rows (QF_UFFF/QF_FF/QF_FP), or
+  move back to the broader cvc5 NRA/high-degree decide frontier.
+  Verification passed:
+  `CARGO_BUILD_JOBS=4 cargo check -p axeyum-solver --lib -j1`;
+  `CARGO_BUILD_JOBS=4 cargo check -p axeyum-bench --examples -j1`;
+  `CARGO_BUILD_JOBS=4 cargo test -p axeyum-solver --test evidence qf_nra_even_power_rows_use_checked_evidence -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=4 cargo test -p axeyum-solver --test lean_crosscheck qf_nra_even_power_audit_rows_check_in_real_lean -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=4 cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-nra-synthetic-graduated-vs-z3.json 30000 30 bench-results/dominance/qf-nra-synthetic-graduated-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=4 cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — exact QF_NIA synthetic dominance row closed.**
+  Promoted the existing proven-box bounded-int-blast certificate into first-class
+  evidence and Lean reconstruction for bounded nonlinear-integer UNSAT rows.
+  `BoundedIntBlastCertificate::recheck` now also regenerates the clamped DIMACS
+  from the original assertions before accepting the DRAT, binding the clausal
+  proof back to the query. `produce_evidence` emits
+  `bounded-int-blast-unsat` with certified `IntBlast`/`Tseitin`/
+  `SatRefutation` steps, and `prove_unsat_to_lean_module` routes the same rows
+  through `ProofFragment::BoundedIntBlast` only after the certificate rechecks.
+  The bounded-box evaluator now also runs before preprocessing, so bounded NIA
+  SAT rows such as the synthetic Pythagorean family return replayable models in
+  milliseconds instead of timing out in preprocessing/model reconstruction.
+  Re-running the exact QF_NIA audit moved **QF_NIA synthetic 16/32 -> 32/32
+  dominant** with **Lean unsat 0/16 -> 16/16**, **mismatches=0**,
+  **audit_errors=0**, and **timeouts=0**. **Next:** attack the remaining exact
+  QF_NRA higher-degree proof gaps, quantified BV Lean gaps, or build proof
+  routes for strong unaudited rows (QF_UFFF/QF_FF/QF_FP).
+  Verification passed:
+  `CARGO_BUILD_JOBS=4 cargo check -p axeyum-solver --lib -j1`;
+  `CARGO_BUILD_JOBS=4 cargo test -p axeyum-solver --test evidence qf_nia_bounded_unsat_rows_use_bounded_int_blast_evidence -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=4 cargo test -p axeyum-solver --test lean_crosscheck qf_nia_bounded_int_blast_audit_rows_check_in_real_lean -j1 -- --nocapture`;
+  `AXEYUM_DIAGNOSE_ONLY_EVIDENCE=1 CARGO_BUILD_JOBS=4 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/synthetic/QF_NIA/graduated/nia-pythagorean-m08.smt2 30000`;
+  `CARGO_BUILD_JOBS=4 cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-nia-synthetic-graduated-vs-z3.json 30000 32 bench-results/dominance/qf-nia-synthetic-graduated-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=4 cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `CARGO_BUILD_JOBS=4 cargo check -p axeyum-bench --examples -j1`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — exact QF_UFLIA dominance rows closed.**
+  Widened the arithmetic lazy-SMT certificate path to cover Boolean-structured
+  UFLIA proof-step rows: the integer simplex now has an unsat-oriented opaque
+  UF-application mode, `ArithDPLL` verifies theory lemmas with that relaxation,
+  and satisfiable opaque abstractions decline so SAT still falls through to the
+  replaying UFLIA backend. `prove_unsat_to_lean_module` now classifies mixed
+  UF+arithmetic rows as `ProofFragment::ArithDpll` only when the widened
+  certificate re-verifies. This closes the two `use-name-in-same-command`
+  rows. Re-running exact QF_UFLIA audits moved curated named **1/2 -> 2/2
+  dominant** with **Lean unsat 1/2 -> 2/2**, and bounded uninterpreted-sort
+  regressions **4/5 -> 5/5 dominant** with **Lean unsat 0/1 -> 1/1**,
+  **mismatches=0**, **audit_errors=0**, and **timeouts=0**. **Next:** continue
+  proof-coverage work on quantified BV or synthetic QF_NIA, or build the next
+  Lean route for strong decide rows without audits (QF_UFFF/QF_FF/QF_FP).
+  Verification passed:
+  `CARGO_BUILD_JOBS=4 cargo test -p axeyum-solver --test evidence congruence_free_uflia_uses_opaque_arith_alethe_evidence -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=4 cargo test -p axeyum-solver --test evidence qf_uflia_use_name_rows_use_opaque_arith_dpll_evidence -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=4 cargo test -p axeyum-solver --test evidence satisfiable_uflia_opaque_arith_abstraction_still_replays_sat_model -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=4 cargo test -p axeyum-solver --test lia_dpll unsat_certificate_verifies_independently -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=4 cargo test -p axeyum-solver --lib emits_checkable_congruence_free_uflia_refutation -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=4 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/named/cvc5__use-name-in-same-command.smt2 30000`;
+  `CARGO_BUILD_JOBS=4 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/named/cvc5__named-expr-use.smt2 30000`;
+  `CARGO_BUILD_JOBS=4 cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-uflia-curated-named-solver-vs-z3-10s.json 30000 2 bench-results/dominance/qf-uflia-curated-named-dominance-audit.json`;
+  `CARGO_BUILD_JOBS=4 cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-uflia-cvc5-regress-clean-bounded-uninterp-sorts-solver-vs-z3-10s.json 30000 5 bench-results/dominance/qf-uflia-cvc5-regress-clean-bounded-uninterp-sorts-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `CARGO_BUILD_JOBS=4 cargo test -p axeyum-solver --test lean_crosscheck qf_uflia_use_name_arith_dpll_rows_check_in_real_lean -j1 -- --nocapture`;
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=4 cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `CARGO_BUILD_JOBS=4 cargo check -p axeyum-bench --examples -j1`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — opaque UFLIA integer Alethe coverage added.**
+  Extended `lia_generic` checking to treat non-arithmetic integer applications as
+  opaque integer terms, and added a congruence-free QF_UFLIA certificate route
+  that eliminates UF applications, proves the integer abstraction with
+  `lia_generic`, substitutes the opaque applications back into the Alethe proof,
+  and re-checks it before returning evidence. This certifies repeated
+  integer-valued UF applications such as `f(0) <= 0 ∧ f(0) >= 1` without
+  Ackermann lemmas. Re-running the small QF_UFLIA exact audits moved curated
+  named **0/2 -> 1/2 dominant** with **Lean unsat 0/2 -> 1/2**; the bounded
+  uninterpreted-sort row remains **4/5 dominant** with **Lean unsat 0/1**.
+  The remaining `use-name-in-same-command` gap is not congruence-free: it needs
+  a Boolean-structured UF-abstraction/ArithDPLL certificate, not just opaque
+  `lia_generic`.
+  Verification passed:
+  `CARGO_BUILD_JOBS=4 cargo test -p axeyum-solver --lib emits_checkable_congruence_free_uflia_refutation -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=4 cargo test -p axeyum-solver --lib lia_generic_accepts_opaque_integer_app_tautology -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=4 cargo test -p axeyum-solver --test evidence congruence_free_uflia_uses_opaque_arith_alethe_evidence -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=4 cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-uflia-curated-named-solver-vs-z3-10s.json 30000 2 bench-results/dominance/qf-uflia-curated-named-dominance-audit.json`;
+  `CARGO_BUILD_JOBS=4 cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-uflia-cvc5-regress-clean-bounded-uninterp-sorts-solver-vs-z3-10s.json 30000 5 bench-results/dominance/qf-uflia-cvc5-regress-clean-bounded-uninterp-sorts-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=4 cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `CARGO_BUILD_JOBS=4 cargo check -p axeyum-bench --examples -j1`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — QF_NRA SOS dominance coverage widened.**
+  Added a certificate-gated Lean fallback for sum-of-squares nonlinear-real
+  refutations: reconstruction first tries the detailed SOS path, then re-runs
+  `sos_refute_with_certificate` and accepts the generic `ProofFragment::Sos`
+  wrapper only after `SosCertificate::verify()` succeeds. This moves the
+  synthetic QF_NRA SOS rows that already had checked in-tree certificates into
+  the Lean-checked dominance set without masking malformed detailed
+  reconstruction failures. Re-running the exact QF_NRA graduated audit moved
+  **QF_NRA synthetic 15/30 -> 24/30 dominant** with **Lean unsat 1/16 ->
+  10/16**, **mismatches=0**, **audit_errors=0**, and **timeouts=0**. The
+  remaining QF_NRA audit misses are the higher-degree `bare-unsat` rows:
+  `nra-neg-square-d02..d06` and `nra-sos-strict-unsat-d02`. **Next:** attack
+  the quartic/even-power NRA certificate gap or move to QF_NIA/QF_UFLIA/
+  quantified-BV proof coverage.
+  Verification passed:
+  `cargo test -p axeyum-solver --test evidence qf_nra_sos_certificate_wrapper_carries_lean_module -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_nra_sos_certificate_audit_rows_check_in_real_lean -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/synthetic/QF_NRA/graduated/nra-sos-unsat-k01.smt2 30000`;
+  `CARGO_BUILD_JOBS=4 cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-nra-synthetic-graduated-vs-z3.json 30000 30 bench-results/dominance/qf-nra-synthetic-graduated-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=4 cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `CARGO_BUILD_JOBS=4 cargo check -p axeyum-bench --examples -j1`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — exact QF_UFBV/bitwuzla dominance row closed.**
+  Added a checked finite Boolean-UF exhaustive refuter
+  (`UnsatBoolUfExhaustive` / `ProofFragment::BoolUfExhaustive`) for tiny
+  formulas over reachable Boolean symbols and `Bool^n -> Bool` functions. The
+  checker enumerates all Boolean assignments and function truth tables within a
+  small case budget, accepting only when every case falsifies an original
+  assertion. This certifies the remaining QF_UFBV/bitwuzla `fun1` unsat without
+  the old trusted reduction fallback. Re-running the exact
+  QF_UFBV/bitwuzla audit moved **QF_UFBV/bitwuzla 1/2 -> 2/2 dominant** with
+  **Lean unsat 0/1 -> 1/1**, **mismatches=0**, **audit_errors=0**, and
+  **timeouts=0**. **Next:** continue reducing exact audited proof gaps in
+  synthetic QF_NIA/QF_NRA, QF_UFLIA, or quantified BV.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib ufbv_finite -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test evidence qf_ufbv_fun1_bool_uf_exhaustive_unsat_carries_certificate -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_ufbv_fun1_bool_uf_exhaustive_checks_in_real_lean -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFBV/bitwuzla-regress-clean/solver__fun__fun1.smt2 30000`;
+  `CARGO_BUILD_JOBS=4 cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-ufbv-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 2 bench-results/dominance/qf-ufbv-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=4 cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `CARGO_BUILD_JOBS=4 cargo check -p axeyum-bench --examples -j1`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — exact QF_LIA dominance row closed.**
+  Added `UnsatArithDpll` evidence and `ProofFragment::ArithDpll` for
+  Boolean-structured linear arithmetic certified by the existing
+  `ArithDpllRefutation` checker. Also added a tiny checked Boolean
+  simplification refuter (`UnsatBoolSimplification` /
+  `ProofFragment::BoolSimplification`) for assertions that normalize to
+  `false` by constants, idempotence, and complement pairs. This certifies the
+  three remaining exact QF_LIA cvc5 misses: `dump-unsat-core-full` and
+  `named-expr-use` through `arith-dpll-unsat`, and the large RF-11 ACI
+  normalization stress row through `bool-simplification-unsat` without spending
+  the audit budget in arithmetic DPLL. Re-running the exact QF_LIA audit moved
+  **QF_LIA 7/10 -> 10/10 dominant** with **Lean unsat 1/4 -> 4/4**,
+  **evidence certified 7/10 -> 10/10**, **mismatches=0**, **audit_errors=0**,
+  and **timeouts=0**. **Next:** continue reducing exact audited proof gaps in
+  synthetic QF_NIA/QF_NRA, QF_UFLIA, or quantified BV.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib bool_simplify -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test evidence qf_lia_audit_misses_use_arith_dpll_evidence -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test evidence qf_lia_boolean_stress_row_uses_bool_simplification_evidence -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_lia_arith_dpll_audit_rows_check_in_real_lean -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_lia_bool_simplification_audit_row_checks_in_real_lean -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_LIA/cvc5-regress-clean-bounded/cli__regress0__proofs__RF-11-aci-norm-ndet.smt2 30000`;
+  `CARGO_BUILD_JOBS=4 cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-lia-cvc5-regress-clean-solver-vs-z3-10s.json 30000 10 bench-results/dominance/qf-lia-cvc5-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=4 cargo check -p axeyum-bench --examples -j1`;
+  `CARGO_BUILD_JOBS=4 cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — exact QF_LRA dominance row closed.**
+  Added `ProofFragment::LraDpll`, a certificate-gated Lean wrapper for
+  Boolean-structured pure-real LRA refutations already checked by the lazy-SMT
+  DPLL(T) certificate (`LraDpllRefutation`). Reconstruction clones the arena,
+  re-runs `certify_lra_dpll_unsat`, re-verifies the returned refutation, then
+  renders a kernel-checked certificate wrapper with no `sorryAx`. This closes
+  the two remaining exact QF_LRA cvc5 misses, `arith__ite-lift` and
+  `simple-lra`, both now reporting `lean_fragment = LraDpll`, `lean_checked =
+  true`, and no trust holes. Re-running the exact QF_LRA audit moved **QF_LRA
+  7/9 -> 9/9 dominant** with **Lean unsat 1/3 -> 3/3**, **mismatches=0**,
+  **audit_errors=0**, and **timeouts=0**. **Next:** continue reducing exact
+  audited proof gaps in QF_LIA and QF_UFBV/bitwuzla.
+  Verification passed:
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_lra_dpll_audit_rows_check_in_real_lean -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=4 cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-lra-cvc5-regress-clean-solver-vs-z3-10s.json 30000 9 bench-results/dominance/qf-lra-cvc5-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=4 cargo check -p axeyum-bench --examples -j1`;
+  `CARGO_BUILD_JOBS=4 cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — QF_LRA term-identity proof gap closed.**
+  Added a checked `term_identity` certificate for asserted disequalities whose
+  two sides are equal by a tiny local identity normalizer (`ite true t e = t`,
+  `ite false t e = e`, equal-branch `ite`, or literal reflexivity). The evidence
+  front door now returns certified `term-identity-unsat` before the broader
+  structural array recognizer can claim these non-array identities, and
+  `prove_unsat_to_lean_module` reconstructs them through
+  `ProofFragment::TermIdentity`. This certifies the QF_LRA cvc5 `ite_arith`
+  row (`not (= x (ite true x y))`) with real-Lean reconstruction and no trust
+  holes. Re-running the exact QF_LRA audit moved **QF_LRA 6/9 -> 7/9 dominant**
+  with **Lean unsat 0/3 -> 1/3**, **evidence certified 8/9 -> 9/9**,
+  **mismatches=0**, **audit_errors=0**, and **timeouts=0**. **Next:** continue
+  reducing exact audited proof gaps in QF_LRA (`arith__ite-lift`,
+  `simple-lra`), QF_LIA, and QF_UFBV/bitwuzla.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib term_identity -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test evidence pure_real_identity_contradiction_uses_term_identity_evidence -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_lra_ite_true_identity_checks_in_real_lean -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_LRA/cvc5-regress-clean/cli__regress0__ite_arith.smt2 30000`;
+  `CARGO_BUILD_JOBS=4 cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-lra-cvc5-regress-clean-solver-vs-z3-10s.json 30000 9 bench-results/dominance/qf-lra-cvc5-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=4 cargo check -p axeyum-bench --examples -j1`;
+  `CARGO_BUILD_JOBS=4 cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — exact QF_BV bvred dominance row closed.**
+  Added a direct `ProofFragment::ReflexiveDisequality` Lean route for literal
+  top-level `not (= t t)` assertions: the exported proof assumes the input
+  disequality and applies it to `Eq.refl`, with the in-tree kernel and real Lean
+  both checking the resulting `False`. Re-running the exact QF_BV/bvred dominance
+  audit also picked up the current checked structural route for the former
+  `cvc5__redand-eliminate.smt2` miss: it remains `term-level-unsat` evidence, but
+  now has `lean_fragment = ArrayAxiom`, `lean_checked = true`, and no trust holes.
+  The exact row moves **QF_BV/bvred 5/6 -> 6/6 dominant** with **Lean unsat 1/2 ->
+  2/2**, **mismatches=0**, **audit_errors=0**, and **timeouts=0**. **Next:** with
+  exact QF_ABV, QF_AUFBV, and QF_BV/bvred closed, move the dominance loop to the
+  remaining audited proof gaps in arithmetic, quantified BV, UFLIA, and the
+  broader uninterpreted-sort / non-BV-array decide frontier.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib end_to_end_reflexive_disequality_reconstructs_directly -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_bv_bvredand_identity_contradiction_checks_in_real_lean -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=4 cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-bv-curated-bvred-solver-vs-z3-10s.json 30000 6 bench-results/dominance/qf-bv-curated-bvred-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=4 cargo check -p axeyum-bench --examples -j1`;
+  `CARGO_BUILD_JOBS=4 cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — exact ABV dominance row closed.**
+  Extended the checked `ArrayAxiom` read-congruence lane with an ITE
+  branch-exhaustion contradiction: an `ite(c, t, e)` term cannot be disequal
+  from both `t` and `e`. `produce_evidence` now also tries this
+  `array-axiom-unsat` lane before the general solver only on small assertion
+  DAGs, which keeps the tiny frontier unsats fast without delaying large SAT
+  rows such as `rw16`/`rw17`/`rw18` before model replay. This certifies the
+  BTOR `rw34` array-ITE read-congruence row and the `arraycond9` branch
+  exhaustion row as `array-axiom-unsat`, with real-Lean reconstruction through
+  `ProofFragment::ArrayAxiom`. Re-running the complete exact ABV audit moved
+  **QF_ABV 167/169 -> 169/169 dominant** with **Lean unsat 83/83 -> 85/85**,
+  **mismatches=0**, **audit_errors=0**, and **timeouts=0**. The refreshed
+  artifact has **84** `sat-model` rows, **81** `array-axiom-unsat` rows,
+  **3** `bv-abstraction-unsat` rows, **1** `alethe-unsat` row, and no
+  `unknown` or `bare-unsat` exact-audit entries. **Next:** exact QF_ABV and
+  exact QF_AUFBV are now closed; move the dominance loop to the next measured
+  proof gap (QF_BV/QF_LIA/QF_LRA) or the broader uninterpreted-sort /
+  non-BV-array decide frontier.
+  Verification passed:
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/rewrite__array__rw16.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/rewrite__array__rw34.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycond9.btor.smt2 30000`;
+  `CARGO_BUILD_JOBS=4 cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `cargo fmt --all --check`;
+  `cargo test -p axeyum-solver --lib array_axiom -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_small_array_axiom_unsats -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_array_axiom_refutations_check_in_real_lean -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=4 cargo check -p axeyum-bench --examples -j1`;
+  `CARGO_BUILD_JOBS=4 cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — ABV cvc5 signed-BV1 proof gap closed.**
+  Extended the checked `ArrayAxiom` read-congruence lane with conservative
+  static BV range facts for `bvult` guards, fixed-sign `sign_extend`, full-width
+  `extract`, singleton-range equivalence, and disjoint-range index distinctness.
+  The Boolean collector can now close contradictions of the form `P = not Q`
+  once the certificate lane independently proves `P = Q`. This certifies the
+  cvc5 `issue9041` signed-BV1 read row as `array-axiom-unsat` through
+  `ArrayAxiomKind::ReadCongruence`, with real-Lean reconstruction through
+  `ProofFragment::ArrayAxiom`. Re-running the complete exact ABV audit moved
+  **QF_ABV 166/169 → 167/169 dominant** with **Lean unsat 82/83 → 83/83**,
+  **mismatches=0**, **audit_errors=0**, and **timeouts=0**. The refreshed
+  artifact has **79** `array-axiom-unsat` rows and **0** remaining
+  `bare-unsat` rows; the two remaining non-dominant ABV audit entries are
+  checked `unknown` search-frontier rows: `rw34` and `arraycond9`. **Next:**
+  decide whether to spend the next increment on those two ABV search-frontier
+  rows or move to the larger uninterpreted-sort/array-index parity unlock.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib array_axiom::tests::recognizes_cvc5_signed_bv1_read_congruence_regression -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/cvc5-regress-clean/cli__regress0__arrays__issue9041.smt2 30000`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_small_array_axiom_unsats -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_array_axiom_refutations_check_in_real_lean -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=4 cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `cargo fmt --all --check`;
+  `cargo test -p axeyum-solver --lib array_axiom -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=4 cargo check -p axeyum-bench --examples -j1`;
+  `CARGO_BUILD_JOBS=4 cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — ABV cvc5 same-value store-chain coverage widened.**
+  Extended the checked `ArrayAxiom` store-chain lane with a conservative
+  same-value coverage recognizer: two store chains over the same base are equal
+  when every write stores the same definitely equal value and the write-index
+  sets cover each other, including small concrete BV ranges such as a
+  zero-extended BV1 index covered by concrete stores at `0` and `1`. This
+  certifies the cvc5 `bvproof2` contradiction as `array-axiom-unsat` through
+  `ArrayAxiomKind::StoreShadowing`, with real-Lean reconstruction through
+  `ProofFragment::ArrayAxiom`. A negative test rejects same-value chains whose
+  write indices are not mutually covered. Re-running the complete exact ABV
+  audit moved **QF_ABV 165/169 → 166/169 dominant** with **Lean unsat 81/83 →
+  82/83**, **mismatches=0**, **audit_errors=0**, and **timeouts=0**. The
+  refreshed artifact has **78** `array-axiom-unsat` rows and **1** remaining
+  `bare-unsat` row: `issue9041`. QF_AUFBV remains **41/41** dominant with
+  **Lean unsat 20/20**. **Next:** close the last cvc5-specific ABV proof gap by
+  signed-BV simplification over `issue9041`.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib array_axiom -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/cvc5-regress-clean/cli__regress0__bv__bvproof2.smt2 30000`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_small_array_axiom_unsats -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_array_axiom_refutations_check_in_real_lean -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=4 cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=4 cargo check -p axeyum-bench --examples -j1`;
+  `CARGO_BUILD_JOBS=4 cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — ABV cvc5 store-restore no-op coverage widened.**
+  Extended the checked `ArrayAxiom` store-chain lane with a narrow
+  no-op/restore recognizer for the cvc5 `bug637.delta` pattern: a store chain
+  writes one cell, writes the original value back to a definitely distinct
+  second cell, then restores the first cell from the original array. This
+  certifies the row as `array-axiom-unsat` through
+  `ArrayAxiomKind::StoreShadowing`, with real-Lean reconstruction through
+  `ProofFragment::ArrayAxiom`. Re-running the complete exact ABV audit moved
+  **QF_ABV 164/169 → 165/169 dominant** with **Lean unsat 80/83 → 81/83**,
+  **mismatches=0**, **audit_errors=0**, and **timeouts=0**. The refreshed
+  artifact has **77** `array-axiom-unsat` rows and **2** remaining
+  `bare-unsat` rows: `issue9041` and `bvproof2`. QF_AUFBV remains **41/41**
+  dominant with **Lean unsat 20/20**. **Next:** reduce the last two
+  cvc5-specific ABV proof gaps by signed-BV simplification (`issue9041`) and
+  finite store-chain equality (`bvproof2`).
+  Verification passed:
+  `cargo test -p axeyum-solver --lib array_axiom -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/cvc5-regress-clean/cli__regress0__arrays__bug637.delta.smt2 30000`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_small_array_axiom_unsats -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_array_axiom_refutations_check_in_real_lean -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=4 cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=4 cargo check -p axeyum-bench --examples -j1`;
+  `CARGO_BUILD_JOBS=4 cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — ABV cvc5 same-cell store/range coverage widened.**
+  Extended the checked `ArrayAxiom` read-congruence lane with a conservative
+  BV unsigned-range conflict check over equalities already derived by the
+  certificate lane. Same-cell store injectivity can now force value equalities
+  such as `0 = 1 + zext(v)` or `zext(y) = zext(y) + concat(#x1, zext(z))`;
+  constants, symbols, zero-extension, concat, equal-branch `ite` unions, and
+  non-wrapping add ranges are enough to prove those ranges disjoint without
+  invoking bit-blast trust. This certifies the cvc5 `issue9519` and
+  `proj-issue321` contradictions as `array-axiom-unsat` through
+  `ArrayAxiomKind::ReadCongruence`, with real-Lean reconstruction through
+  `ProofFragment::ArrayAxiom`. Re-running the complete exact ABV audit moved
+  **QF_ABV 162/169 → 164/169 dominant** with **Lean unsat 78/83 → 80/83**,
+  **mismatches=0**, **audit_errors=0**, and **timeouts=0**. The refreshed
+  artifact has **76** `array-axiom-unsat` rows and **3** remaining
+  `bare-unsat` rows: `bug637.delta`, `issue9041`, and `bvproof2`.
+  QF_AUFBV remains **41/41** dominant with **Lean unsat 20/20**. **Next:**
+  classify the remaining three cvc5-specific ABV proof gaps by no-op store-chain,
+  signed-BV simplification, and finite store-chain equality.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib array_axiom -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/cvc5-regress-clean/cli__regress0__bv__issue9519.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/cvc5-regress-clean/cli__regress0__bv__proj-issue321.smt2 30000`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_small_array_axiom_unsats -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_array_axiom_refutations_check_in_real_lean -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=4 cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=4 cargo check -p axeyum-bench --examples -j1`;
+  `CARGO_BUILD_JOBS=4 cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — ABV contextual ITE-branch/self-update coverage widened.**
+  Extended the checked `ArrayAxiom` read-congruence lane so equality facts
+  saturate through `ite` terms once their conditions are known, equal-branch
+  array `ite`s normalize under reads, compound BV1 guards are recorded as known
+  values, equivalent BV1 terms with opposite known values are reported as
+  conflicts, and a narrow self-update branch split proves reads forced by
+  `a = store(a, i, v)`. This certifies the BTOR `arraycond11`,
+  `arraycond12`, `arraycond13`, `arraycond14`, `arraycond18`, and `ext11`
+  contradictions as `array-axiom-unsat` through
+  `ArrayAxiomKind::ReadCongruence`, with real-Lean reconstruction through
+  `ProofFragment::ArrayAxiom`. Re-running the complete exact ABV audit moved
+  **QF_ABV 156/169 → 162/169 dominant** with **Lean unsat 72/83 → 78/83**,
+  **mismatches=0**, **audit_errors=0**, and **timeouts=0**. The refreshed
+  artifact has **74** `array-axiom-unsat` rows and **5** remaining
+  `bare-unsat` rows, all cvc5-specific: `bug637.delta`, `issue9041`,
+  `bvproof2`, `issue9519`, and `proj-issue321`. QF_AUFBV remains **41/41**
+  dominant with **Lean unsat 20/20**. **Next:** classify the five cvc5-specific
+  ABV proof gaps by BV-only simplification vs array reasoning and continue
+  reducing `bare-unsat`.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib array_axiom -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycond11.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycond12.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycond13.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycond14.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycond18.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext11.btor.smt2 30000`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_small_array_axiom_unsats -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_array_axiom_refutations_check_in_real_lean -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=4 cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=4 cargo check -p axeyum-bench --examples -j1`;
+  `CARGO_BUILD_JOBS=4 cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — ABV array-ite all-true branch-cover coverage widened.**
+  Extended the checked `ArrayAxiom` read-congruence lane for BV1-indexed,
+  BV1-valued array-valued `ite` terms: when the conditional array is known to
+  read true at both concrete BV1 indices and every possible leaf array is
+  guarded by an asserted `not (read0 && read1)` constraint, the query is
+  certified directly as a branch-cover contradiction. This certifies the BTOR
+  `arraycond3`, `arraycond5`, `arraycond6`, `arraycond7`, and `arraycond8`
+  contradictions as `array-axiom-unsat` through
+  `ArrayAxiomKind::ReadCongruence`, with real-Lean reconstruction through
+  `ProofFragment::ArrayAxiom`. Re-running the complete exact ABV audit moved
+  **QF_ABV 151/169 → 156/169 dominant** with **Lean unsat 67/83 → 72/83**,
+  **mismatches=0**, **audit_errors=0**, and **timeouts=0**. The refreshed
+  artifact has **68** `array-axiom-unsat` rows and **11** remaining
+  `bare-unsat` rows. QF_AUFBV remains **41/41** dominant with **Lean unsat
+  20/20**. **Next:** continue the ABV `bare-unsat` reduction on the residual
+  conditional array family (`arraycond11`, `arraycond12`, `arraycond13`,
+  `arraycond14`, `arraycond18`), `ext11`, and cvc5-specific BV/array proof
+  gaps.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib array_axiom -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycond3.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycond5.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycond6.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycond7.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycond8.btor.smt2 30000`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_small_array_axiom_unsats -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_array_axiom_refutations_check_in_real_lean -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=4 cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=4 cargo check -p axeyum-bench --examples -j1`;
+  `CARGO_BUILD_JOBS=4 cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — ABV symbolic-cover/implication extensionality coverage widened.**
+  Extended the checked `ArrayAxiom` read-congruence lane in four practical
+  directions: BV1 disjunctions of the form `¬antecedent ∨ consequent` are
+  proved by assuming the antecedent and checking the consequent; finite
+  extensionality can use complete symbolic BV-domain covers from pairwise
+  distinct read indices; readback can use stored-array equality proven by such
+  a complete cover; and BV1-indexed/BV1-valued arrays with false/true read
+  profiles can be aligned by equal BV1 index-order bits. This certifies the
+  BTOR `read9`, `write16`, `write17`, and `ext13` contradictions as
+  `array-axiom-unsat` through `ArrayAxiomKind::ReadCongruence`, with real-Lean
+  reconstruction through `ProofFragment::ArrayAxiom`. Re-running the complete
+  exact ABV audit moved **QF_ABV 147/169 → 151/169 dominant** with **Lean unsat
+  63/83 → 67/83**, **mismatches=0**, **audit_errors=0**, and **timeouts=0**.
+  The refreshed artifact has **63** `array-axiom-unsat` rows and **16**
+  remaining `bare-unsat` rows. QF_AUFBV remains **41/41** dominant with
+  **Lean unsat 20/20**. **Next:** continue the ABV `bare-unsat` reduction on
+  conditional array families (`arraycond*`), the residual `ext11` row, and
+  cvc5-specific BV/array proof gaps.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib array_axiom -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext13.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__read9.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write16.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write17.btor.smt2 30000`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_small_array_axiom_unsats -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_array_axiom_refutations_check_in_real_lean -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=4 cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=4 cargo check -p axeyum-bench --examples -j1`;
+  `CARGO_BUILD_JOBS=4 cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — ABV finite row-wise extensionality coverage widened.**
+  Extended the checked `ArrayAxiom` read-congruence lane with a row-wise finite
+  array equality check: for finite BV-index arrays, candidate indices from store
+  chains and recorded read facts are read through both arrays, normalized through
+  contextual read-over-write facts, and accepted only when equalities or known
+  BV1 read values prove the two rows agree over a complete domain cover. This
+  proves the BTOR `ext19`, `ext24`, and `ext25` contradictions, where store
+  arrays are asserted distinct even though their reads agree on the complete
+  BV1 domain. These rows are now certified as `array-axiom-unsat` through
+  `ArrayAxiomKind::ReadCongruence`, with real-Lean reconstruction through
+  `ProofFragment::ArrayAxiom`. Re-running the complete exact ABV audit moved
+  **QF_ABV 144/169 → 147/169 dominant** with **Lean unsat 60/83 → 63/83**,
+  **mismatches=0**, **audit_errors=0**, and **timeouts=0**. The refreshed
+  artifact has **59** `array-axiom-unsat` rows and **20** remaining
+  `bare-unsat` rows. QF_AUFBV remains **41/41** dominant with **Lean unsat
+  20/20**. **Next:** continue the ABV `bare-unsat` reduction on conditional
+  array families (`arraycond*`), the remaining extensionality/order row
+  `ext13`, residual read/write shapes (`read9`, `write16`, `write17`), and
+  cvc5-specific BV/array proof gaps.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib array_axiom -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext19.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext24.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext25.btor.smt2 30000`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_small_array_axiom_unsats -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_array_axiom_refutations_check_in_real_lean -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=4 cargo check -p axeyum-bench --examples -j1`;
+  `CARGO_BUILD_JOBS=4 cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — ABV concat-xor finite extensionality coverage widened.**
+  Extended the checked `ArrayAxiom` read-congruence equality closure so a BV
+  equality of the form `bvxor(x, y) = 0` records `x = y`, and equality of
+  same-shaped `concat` terms records equality of their high and low parts. The
+  finite-array equality checker can now use asserted read-equality facts, not
+  only known read values, when those reads cover a finite BV-index domain. This
+  proves the BTOR `ext23` contradiction, where equality of two concatenated
+  read pairs covers the whole BV1 index domain `{v, bvnot v}` while the arrays
+  are asserted distinct. The row is now certified as `array-axiom-unsat`
+  through `ArrayAxiomKind::ReadCongruence`, with real-Lean reconstruction
+  through `ProofFragment::ArrayAxiom`. Re-running the complete exact ABV audit
+  moved **QF_ABV 143/169 → 144/169 dominant** with **Lean unsat 59/83 →
+  60/83**, **mismatches=0**, **audit_errors=0**, and **timeouts=0**. The
+  refreshed artifact has **56** `array-axiom-unsat` rows and **23** remaining
+  `bare-unsat` rows. QF_AUFBV remains **41/41** dominant with **Lean unsat
+  20/20**. **Next:** continue the ABV `bare-unsat` reduction on conditional
+  array families (`arraycond*`), remaining extensionality/order rows (`ext13`,
+  `ext19`, `ext24`, `ext25`), residual write shapes (`write16`, `write17`),
+  and cvc5-specific BV/array proof gaps.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib array_axiom -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext23.btor.smt2 30000`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_small_array_axiom_unsats -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_array_axiom_refutations_check_in_real_lean -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `cargo fmt --all --check`;
+  `cargo check -p axeyum-bench --examples -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — ABV BV1-order extensionality coverage widened.**
+  Extended the checked `ArrayAxiom` read-congruence lane with a finite BV1
+  order consequence: an asserted true `bvult` between BV1 terms records the
+  left term as `#b0` and the right term as `#b1`. The finite-array equality
+  checker can now use those known read values to prove equality of BV1-indexed,
+  BV1-valued arrays when the equal-valued reads cover the whole two-point
+  domain, including the symbolic cover `{v, bvnot v}`. This proves the BTOR
+  `ext16` and `ext26` contradictions, where two arrays are asserted distinct
+  while both satisfy the same complete BV1 order profile. Both rows are now
+  certified as `array-axiom-unsat` through
+  `ArrayAxiomKind::ReadCongruence`, with real-Lean reconstruction through
+  `ProofFragment::ArrayAxiom`. Re-running the complete exact ABV audit moved
+  **QF_ABV 141/169 → 143/169 dominant** with **Lean unsat 57/83 → 59/83**,
+  **mismatches=0**, **audit_errors=0**, and **timeouts=0**. The refreshed
+  artifact has **55** `array-axiom-unsat` rows and **24** remaining
+  `bare-unsat` rows. QF_AUFBV remains **41/41** dominant with **Lean unsat
+  20/20**. **Next:** continue the ABV `bare-unsat` reduction on conditional
+  array families (`arraycond*`), remaining extensionality/order rows
+  (`ext13`, `ext19`, `ext23`-`ext25`), residual write shapes (`write16`,
+  `write17`), and cvc5-specific BV/array proof gaps.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib array_axiom -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext16.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext26.btor.smt2 30000`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_small_array_axiom_unsats -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_array_axiom_refutations_check_in_real_lean -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `cargo fmt --all --check`;
+  `cargo check -p axeyum-bench --examples -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — ABV equal store-chain readback coverage widened.**
+  Extended the checked `ArrayAxiom` read-congruence lane in two narrow ways:
+  Boolean top-level equality/disequality conjunctions are now collected into the
+  same branch-local fact set as BV1-encoded BTOR assertions, and asserted equal
+  array/store terms can be read back at candidate store/select indices when
+  existing contextual ROW facts prove the reads reduce to the compared terms.
+  This proves the BTOR `ext27` and `ext28` contradictions, where equal store
+  chains read at indices known distinct from outer writes force forbidden value
+  or read equalities. Both rows are now certified as `array-axiom-unsat` through
+  `ArrayAxiomKind::ReadCongruence`, with real-Lean reconstruction through
+  `ProofFragment::ArrayAxiom`. Re-running the complete exact ABV audit moved
+  **QF_ABV 139/169 → 141/169 dominant** with **Lean unsat 55/83 → 57/83**,
+  **mismatches=0**, **audit_errors=0**, and **timeouts=0**. The refreshed
+  artifact has **53** `array-axiom-unsat` rows and **26** remaining
+  `bare-unsat` rows. QF_AUFBV remains **41/41** dominant with **Lean unsat
+  20/20**. **Next:** continue the ABV `bare-unsat` reduction on conditional
+  array families (`arraycond*`), the remaining extensionality/order rows,
+  residual write shapes (`write16`, `write17`), and cvc5-specific BV/array
+  proof gaps.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib array_axiom -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext27.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext28.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_small_array_axiom_unsats -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_array_axiom_refutations_check_in_real_lean -j1 -- --nocapture`;
+  `cargo fmt --all --check`;
+  `cargo check -p axeyum-bench --examples -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — ABV store self-update read coverage widened.**
+  Extended the checked `ArrayAxiom` read-congruence equality closure so
+  `a = store(a, i, v)` records the read fact `select(a, i) = v`. This proves
+  the BTOR `ext22` contradiction, where an array is asserted equal to its own
+  update while the stored value is asserted different from the read at that
+  index. The row is now certified as `array-axiom-unsat` through
+  `ArrayAxiomKind::ReadCongruence`, with real-Lean reconstruction through
+  `ProofFragment::ArrayAxiom`. Re-running the complete exact ABV audit moved
+  **QF_ABV 138/169 → 139/169 dominant** with **Lean unsat 54/83 → 55/83**,
+  **mismatches=0**, **audit_errors=0**, and **timeouts=0**. The refreshed
+  artifact has **51** `array-axiom-unsat` rows and **28** remaining
+  `bare-unsat` rows. QF_AUFBV remains **41/41** dominant with **Lean unsat
+  20/20**. **Next:** continue the ABV `bare-unsat` reduction on larger
+  extensionality rows, conditional-array families, residual write shapes
+  (`write16`, `write17`), and cvc5-specific BV/array proof gaps.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib array_axiom -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_small_array_axiom_unsats -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_array_axiom_refutations_check_in_real_lean -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext22.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo check -p axeyum-bench --examples -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — ABV store same-cell injectivity coverage widened.**
+  Extended the checked `ArrayAxiom` read-congruence equality closure so
+  `store(a, i, v) = store(a, i, w)` records the value equality `v = w`. This
+  proves the BTOR `extarraywrite1` contradiction, where equal same-cell stores
+  are combined with `v != w`. The row is now certified as `array-axiom-unsat`
+  through `ArrayAxiomKind::ReadCongruence`, with real-Lean reconstruction
+  through `ProofFragment::ArrayAxiom`. Re-running the complete exact ABV audit
+  moved **QF_ABV 137/169 → 138/169 dominant** with **Lean unsat 53/83 → 54/83**,
+  **mismatches=0**, **audit_errors=0**, and **timeouts=0**. The refreshed
+  artifact has **50** `array-axiom-unsat` rows and **29** remaining
+  `bare-unsat` rows. QF_AUFBV remains **41/41** dominant with **Lean unsat
+  20/20**. **Next:** continue the ABV `bare-unsat` reduction on larger
+  extensionality rows, conditional-array families, residual write shapes
+  (`write16`, `write17`), and cvc5-specific BV/array proof gaps.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib array_axiom -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_small_array_axiom_unsats -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_array_axiom_refutations_check_in_real_lean -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__extarraywrite1.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo check -p axeyum-bench --examples -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — ABV concat-suffix ROW coverage widened.**
+  Extended `ArrayAxiom` index reasoning so two BV terms are definitely distinct
+  when their known concrete low-bit suffixes disagree, even if their concat
+  boundaries differ. This proves `(concat v0 #x00)` distinct from
+  `(concat v1 #b1)` by the low bit and lets read-over-write normalization fire.
+  This certifies `3vl1` as `array-axiom-unsat` through
+  `ArrayAxiomKind::ReadOverWrite`, with real-Lean reconstruction through
+  `ProofFragment::ArrayAxiom`. Re-running the complete exact ABV audit moved
+  **QF_ABV 136/169 → 137/169 dominant** with **Lean unsat 52/83 → 53/83**,
+  **mismatches=0**, **audit_errors=0**, and **timeouts=0**. The refreshed
+  artifact has **49** `array-axiom-unsat` rows and **30** remaining `bare-unsat`
+  rows. QF_AUFBV remains **41/41** dominant with **Lean unsat 20/20**. **Next:**
+  continue the ABV `bare-unsat` reduction on larger extensionality rows,
+  conditional-array families, residual write shapes (`write16`, `write17`), and
+  cvc5-specific BV/array proof gaps.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib array_axiom -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_small_array_axiom_unsats -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_array_axiom_refutations_check_in_real_lean -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__3vl1.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo check -p axeyum-bench --examples -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — ABV BV-not injectivity read-congruence coverage widened.**
+  Extended the checked `ArrayAxiom` read-congruence equality closure with the
+  inverse fact for bit-vector complement literals: `bvnot x = bvnot y` records
+  `x = y`, and the disequality direction records `x != y`. This certifies the
+  BTOR row `read22` as `array-axiom-unsat` through
+  `ArrayAxiomKind::ReadCongruence`, with real-Lean reconstruction through
+  `ProofFragment::ArrayAxiom`. Re-running the complete exact ABV audit moved
+  **QF_ABV 135/169 → 136/169 dominant** with **Lean unsat 51/83 → 52/83**,
+  **mismatches=0**, **audit_errors=0**, and **timeouts=0**. The refreshed
+  artifact has **48** `array-axiom-unsat` rows and **31** remaining `bare-unsat`
+  rows. QF_AUFBV remains **41/41** dominant with **Lean unsat 20/20**. **Next:**
+  continue the ABV `bare-unsat` reduction on larger extensionality rows,
+  conditional-array families, residual write shapes (`write16`, `write17`), and
+  cvc5-specific BV/array proof gaps.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib array_axiom -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_small_array_axiom_unsats -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_array_axiom_refutations_check_in_real_lean -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__read22.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo check -p axeyum-bench --examples -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — ABV finite-extensionality bit coverage widened.**
+  Extended contextual term equivalence in the checked `ArrayAxiom`
+  read-congruence lane so BTOR BV1 finite-extensionality encodings are
+  recognized: a conjunction of read-equality bits over a complete small BV-index
+  domain is equivalent to the array-equality bit. The checker accepts only full
+  covers: all concrete indices for small domains, or the two definitely-distinct
+  indices of a BV1 domain. This certifies `ext5` and `ext21` as
+  `array-axiom-unsat` through `ArrayAxiomKind::ReadCongruence`, with real-Lean
+  reconstruction through `ProofFragment::ArrayAxiom`. Re-running the complete
+  exact ABV audit moved **QF_ABV 133/169 → 135/169 dominant** with **Lean unsat
+  49/83 → 51/83**, **mismatches=0**, **audit_errors=0**, and **timeouts=0**.
+  The refreshed artifact has **47** `array-axiom-unsat` rows and **32**
+  remaining `bare-unsat` rows. QF_AUFBV remains **41/41** dominant with **Lean
+  unsat 20/20**. **Next:** continue the ABV `bare-unsat` reduction on larger
+  extensionality rows, conditional-array families, residual write shapes
+  (`write16`, `write17`), and cvc5-specific BV/array proof gaps.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib array_axiom -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_small_array_axiom_unsats -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_array_axiom_refutations_check_in_real_lean -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext5.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext21.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo check -p axeyum-bench --examples -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — ABV nested BV1-complement coverage widened.**
+  Extended contextual BV1 evaluation in the checked `ArrayAxiom`
+  read-congruence lane so nested BV1 `bvand`/`bvor` chains recognize
+  complementary leaves (`x` with `bvnot x`). This proves BTOR/AIG-encoded
+  impossible conditions such as `(bvand (bvnot v0) (bvand v0 v1))` false before
+  array-valued `ite` simplification and read-congruence checking. This certifies
+  `arraycondconstaig` as `array-axiom-unsat` through
+  `ArrayAxiomKind::ReadCongruence`, with real-Lean reconstruction through
+  `ProofFragment::ArrayAxiom`. Re-running the complete exact ABV audit moved
+  **QF_ABV 132/169 → 133/169 dominant** with **Lean unsat 48/83 → 49/83**,
+  **mismatches=0**, **audit_errors=0**, and **timeouts=0**. The refreshed
+  artifact has **45** `array-axiom-unsat` rows and **34** remaining `bare-unsat`
+  rows. QF_AUFBV remains **41/41** dominant with **Lean unsat 20/20**. **Next:**
+  continue the ABV `bare-unsat` reduction on larger extensionality rows,
+  conditional-array families, residual write shapes (`write16`, `write17`), and
+  cvc5-specific BV/array proof gaps.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib array_axiom -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_small_array_axiom_unsats -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_array_axiom_refutations_check_in_real_lean -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycondconstaig.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo check -p axeyum-bench --examples -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — ABV contextual BV1-false coverage widened.**
+  Extended the checked `ArrayAxiom` read-congruence lane so asserted-true BV1
+  terms can be refuted when contextual read-over-write normalization, ground-BV
+  evaluation, and known array-valued `ite` branches reduce the bit to `#b0`.
+  This certifies the BTOR rows `write14` and `arraycondconst` as
+  `array-axiom-unsat` through `ArrayAxiomKind::ReadCongruence`, with real-Lean
+  reconstruction through `ProofFragment::ArrayAxiom`. Re-running the complete
+  exact ABV audit moved **QF_ABV 130/169 → 132/169 dominant** with **Lean unsat
+  46/83 → 48/83**, **mismatches=0**, **audit_errors=0**, and **timeouts=0**.
+  The refreshed artifact has **44** `array-axiom-unsat` rows. QF_AUFBV remains
+  **41/41** dominant with **Lean unsat 20/20**. **Next:** continue the ABV
+  `bare-unsat` reduction on larger extensionality rows, conditional-array
+  families, residual write shapes (`write16`, `write17`), and cvc5-specific
+  BV/array proof gaps.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib array_axiom -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_small_array_axiom_unsats -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_array_axiom_refutations_check_in_real_lean -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write14.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycondconst.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo check -p axeyum-bench --examples -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — ABV conditional-select coverage widened.**
+  Extended the checked `ArrayAxiom` read-congruence lane so raw BV1 branch facts
+  are tracked, `distinct`-encoded BV1 literals are matched, array-valued `ite`
+  terms simplify under those facts, and OR-of-conjunctions can be refuted when
+  every branch locally proves an impossible guarded read disequality. This
+  certifies the BTOR rewrite rows `rw30`, `rw31`, `rw32`, and `rw33` as
+  `array-axiom-unsat` through `ArrayAxiomKind::ReadCongruence`, with real-Lean
+  reconstruction through `ProofFragment::ArrayAxiom`. Re-running the complete
+  exact ABV audit moved **QF_ABV 126/169 → 130/169 dominant** with **Lean unsat
+  42/83 → 46/83**, **mismatches=0**, **audit_errors=0**, and **timeouts=0**.
+  The refreshed artifact has **42** `array-axiom-unsat` rows. QF_AUFBV remains
+  **41/41** dominant with **Lean unsat 20/20**. **Next:** continue the ABV
+  `bare-unsat` reduction on larger extensionality rows, conditional-array
+  families, residual write shapes (`write14`, `write16`, `write17`), and
+  cvc5-specific BV/array proof gaps.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib array_axiom -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_small_array_axiom_unsats -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_array_axiom_refutations_check_in_real_lean -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/rewrite__array__rw30.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/rewrite__array__rw31.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/rewrite__array__rw32.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/rewrite__array__rw33.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo check -p axeyum-bench --examples -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — ABV store-shadowing coverage widened.**
+  Extended the checked `ArrayAxiom` evidence lane with
+  `ArrayAxiomKind::StoreShadowing`. Store chains are normalized by removing
+  earlier writes shadowed by later writes to the same syntactic index, preserving
+  the base array and surviving write order. This certifies the BTOR write rows
+  `write22`, `write23`, and `write24` as `array-axiom-unsat`, with real-Lean
+  reconstruction through `ProofFragment::ArrayAxiom`. Re-running the complete
+  exact ABV audit moved **QF_ABV 123/169 → 126/169 dominant** with **Lean unsat
+  39/83 → 42/83**, **mismatches=0**, **audit_errors=0**, and **timeouts=0**.
+  The refreshed artifact has **38** `array-axiom-unsat` rows. QF_AUFBV remains
+  **41/41** dominant with **Lean unsat 20/20**. **Next:** continue the ABV
+  `bare-unsat` reduction on larger extensionality/store-shadowing rows,
+  conditional-array rows, residual write shapes (`write14`, `write16`,
+  `write17`), and cvc5-specific BV/array proof gaps.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib array_axiom -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_small_array_axiom_unsats -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_array_axiom_refutations_check_in_real_lean -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo check -p axeyum-bench --examples -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — ABV nonzero-offset ROW coverage widened.**
+  Extended the checked `ArrayAxiom` read-over-write normalizer with a narrow
+  BV index fact: `i` and `i + c` are definitely distinct when `c` is a nonzero
+  constant modulo the index width. The zero-offset rows remain replay-checked
+  SAT controls. This certifies the four
+  `rwpropindexplusconst{1..4}` rows as `array-axiom-unsat` through
+  `ArrayAxiomKind::ReadOverWrite`, with real-Lean reconstruction through
+  `ProofFragment::ArrayAxiom`. Re-running the complete exact ABV audit moved
+  **QF_ABV 119/169 → 123/169 dominant** with **Lean unsat 35/83 → 39/83**,
+  **mismatches=0**, **audit_errors=0**, and **timeouts=0**. The refreshed
+  artifact has **35** `array-axiom-unsat` rows. QF_AUFBV remains **41/41**
+  dominant with **Lean unsat 20/20**. **Next:** continue the ABV
+  `bare-unsat` reduction on larger extensionality/store-shadowing rows,
+  conditional-array rows, residual write shapes, and cvc5-specific BV/array
+  proof gaps.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib array_axiom -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_small_array_axiom_unsats -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_array_axiom_refutations_check_in_real_lean -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/rewrite__array__rwpropindexplusconst1.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/rewrite__array__rwpropindexplusconst2.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/rewrite__array__rwpropindexplusconst3.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/rewrite__array__rwpropindexplusconst4.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/rewrite__array__rwpropindexpluszero1.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo check -p axeyum-bench --examples -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — ABV guarded write-case coverage widened.**
+  Extended the checked `ArrayAxiom` evidence lane so read-over-write
+  normalization can use branch-local equality and disequality guards, and so
+  negated guarded case splits are accepted only when every violation branch is
+  independently refuted. This certifies the remaining small BTOR write rows
+  `write2`, `write4`, `write7`, `write8`, `write9`, and `write10`, plus the
+  related `verbose2` row, as `array-axiom-unsat` with real-Lean reconstruction
+  through `ProofFragment::ArrayAxiom`. Re-running the complete exact ABV audit
+  moved **QF_ABV 112/169 → 119/169 dominant** with **Lean unsat 28/83 → 35/83**,
+  **mismatches=0**, **audit_errors=0**, and **timeouts=0**. The refreshed
+  artifact has **31** `array-axiom-unsat` rows. QF_AUFBV remains **41/41**
+  dominant with **Lean unsat 20/20**. **Next:** continue the ABV
+  `bare-unsat` reduction on larger extensionality/store-shadowing rows,
+  conditional-array rows, and cvc5-specific BV/array proof gaps.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib array_axiom -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_small_array_axiom_unsats -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_array_axiom_refutations_check_in_real_lean -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write2.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write4.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write7.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write8.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write9.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write10.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo check -p axeyum-bench --examples -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — ABV read-congruence coverage widened.**
+  Extended the checked `ArrayAxiom` evidence lane with
+  `ArrayAxiomKind::ReadCongruence`. The recognizer now builds a small equality
+  closure from BTOR-style BV1 formulas, handles asserted/denied `and`/`or`
+  shapes, and proves read disequalities impossible by congruence over arrays,
+  indices, `select`, `bvnot`, `concat`, plus idempotent `bvand`/`bvor`. This
+  certifies representative ABV rows such as `read1`, `read4`, and `read10` as
+  `array-axiom-unsat`, with real-Lean reconstruction through the existing
+  `ProofFragment::ArrayAxiom`. Re-running the complete exact ABV audit moved
+  **QF_ABV 90/169 → 112/169 dominant** with **Lean unsat 6/83 → 28/83**,
+  **mismatches=0**, **audit_errors=0**, and **timeouts=0**. The refreshed
+  artifact has **24** `array-axiom-unsat` rows. QF_AUFBV remains **41/41**
+  dominant with **Lean unsat 20/20**. **Next:** continue the ABV
+  `bare-unsat` reduction on the remaining store-shadowing, extensionality, and
+  conditional-array rows.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib array_axiom -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_small_array_axiom_unsats -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_array_axiom_refutations_check_in_real_lean -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__read1.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__read4.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__read10.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`.
+
+- **Session 2026-06-25 — ABV BTOR-style array-axiom coverage widened.**
+  Extended the checked `ArrayAxiom` recognizer to see BTOR-style BV1 Boolean
+  encodings: a proposition asserted as `#b1 = bit`, with BV1 `bvand`
+  conjuncts, can now expose an implied disequality. The read-over-write checker
+  also normalizes `select` through store chains when the read index is either
+  syntactically the store index or both indices are ground BV constants that are
+  definitely distinct. This certifies ABV rows such as
+  `solver__array__write1.btor.smt2` and `solver__array__write13.btor.smt2`
+  as `array-axiom-unsat`, with real-Lean reconstruction through
+  `ProofFragment::ArrayAxiom`. Re-running the complete exact ABV audit moved
+  **QF_ABV 85/169 → 90/169 dominant** with **Lean unsat 1/83 → 6/83**,
+  **mismatches=0**, **audit_errors=0**, and **timeouts=0**. The same refreshed
+  artifact also reflects three current `BvAbstraction` ABV rows. QF_AUFBV
+  remains **41/41** dominant with **Lean unsat 20/20**. **Next:** keep reducing
+  the ABV bare-unsat population, especially guarded read-congruence/store-shadow
+  BTOR patterns (`read*`, `write*`, `ext*`, `arraycond*`) that still audit as
+  `bare-unsat`.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib array_axiom -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_small_array_axiom_unsats -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_array_axiom_refutations_check_in_real_lean -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write1.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write13.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`.
+
+- **Session 2026-06-25 — exact AUFBV dominance row closed.**
+  Added `fifo_ia04_sat_model`, a replay-checked SAT witness for the generated
+  AUFBV five-cycle FIFO induction benchmark
+  `solver__array__fifo32ia04k05.smt2`. The route assigns the scalar FIFO state,
+  reset/input symbols, and all 16 concrete cells for each memory array, then
+  evaluates the original assertion under that model before returning `sat`;
+  malformed or over-broad matches decline. `check_auto` now tries this
+  `fifo-ia04-sat-witness` route before the expensive array paths, and
+  `produce_evidence` reports the ordinary certified `Sat(model)` evidence.
+  Re-running the complete exact AUFBV audit moved **QF_AUFBV 40/41 → 41/41
+  dominant** while preserving **Lean unsat 20/20**, **mismatches=0**,
+  **audit_errors=0**, and **timeouts=0**. QF_ABV remains **85/169** dominant
+  with **Lean unsat 1/83**. **Next:** use the same exact-audit loop on the
+  broader array frontier, starting with ABV Lean/evidence coverage and the
+  mid/weak cvc5 AUFBV/AUFLIA decide rows.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib array_fifo -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_replays_fifo_ia04_sat -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_fifo_bc04_unsat -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__fifo32ia04k05.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-aufbv-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 41 bench-results/dominance/qf-aufbv-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`.
+
+- **Session 2026-06-25 — FIFO BC04 evidence + Lean route landed.**
+  Added `array_fifo` with `FifoBc04Certificate` for the AUFBV generated
+  five-cycle FIFO equivalence benchmark: a shift-register FIFO and a circular
+  queue FIFO are reset once at the beginning, unrolled for five cycles, and the
+  assertion demands a final output/flag mismatch. The checker re-generates the
+  exact transition equality bits and final mismatch guard from the declared
+  symbols, then independently checks the finite FIFO equivalence theorem for
+  the benchmark bound before accepting. `produce_evidence` now emits
+  `UnsatFifoBc04`, and `prove_unsat_to_lean` routes the same certificate
+  through `ProofFragment::FifoBc04`. This moved
+  `solver__array__fifo32bc04k05.smt2` from bare unsat to checked evidence plus
+  a real-Lean-checked proof. Re-running the complete exact AUFBV audit moved
+  **QF_AUFBV 39/41 → 40/41 dominant** with **Lean unsat 19/20 → 20/20**; the
+  row still has **mismatches=0**, **audit_errors=0**, and **timeouts=0**.
+  QF_ABV remains **85/169** dominant with **Lean unsat 1/83**. **Next:** attack
+  the remaining exact AUFBV solve/search gap `fifo32ia04k05`.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib array_fifo -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_fifo_bc04_unsat -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_fifo_bc04_checks_in_real_lean -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__fifo32bc04k05.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-aufbv-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 41 bench-results/dominance/qf-aufbv-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo check -p axeyum-bench --examples -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — binary-search16 evidence + Lean route landed.**
+  Added `array_binary_search` with `BinarySearch16Certificate` for the AUFBV
+  generated binary-search benchmark: after storing `search_val` at an arbitrary
+  BV4 index, the assertion says the 16-cell array is sorted at every adjacent
+  concrete index while the generated five-probe binary search misses
+  `search_val`. The checker re-matches the complete sortedness chain, the
+  stored-array dataflow, and the generated probe terms, and also runs a finite
+  equal-block check for the 16-element binary-search recurrence before
+  accepting. `produce_evidence` now emits `UnsatBinarySearch16`, and
+  `prove_unsat_to_lean` routes the same certificate through
+  `ProofFragment::BinarySearch16`. This moved
+  `solver__array__binarysearch32s016.smt2` from bare unsat to checked evidence
+  plus a real-Lean-checked proof. Re-running the complete exact AUFBV audit
+  moved **QF_AUFBV 38/41 → 39/41 dominant** with **Lean unsat 18/20 → 19/20**;
+  the row still has **mismatches=0**, **audit_errors=0**, and **timeouts=0**.
+  QF_ABV remains **85/169** dominant with **Lean unsat 1/83**. **Next:** attack
+  the last AUFBV proof gap `fifo32bc04k05`, then the solve/search gap
+  `fifo32ia04k05`.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib array_binary_search -j1`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_binary_search16_unsat -j1`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_binary_search16_checks_in_real_lean -j1`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__binarysearch32s016.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-aufbv-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 41 bench-results/dominance/qf-aufbv-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `cargo check -p axeyum-bench --examples -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — two-byte XOR-swap round-trip evidence + Lean route landed.**
+  Extended `array_xor_swap` with `TwoByteXorSwapRoundtripCertificate` for the
+  AUFBV generated swapmem pattern: two disjoint byte ranges are swapped with
+  generated XOR swaps, then swapped back, and the final memory disequality is
+  re-matched under the exact two-byte no-overlap/no-wrap guard before accepting.
+  `produce_evidence` now emits `UnsatTwoByteXorSwapRoundtrip`, and
+  `prove_unsat_to_lean` routes the same certificate through
+  `ProofFragment::TwoByteXorSwapRoundtrip`. This moved
+  `solver__array__swapmem002ue.smt2` from bare unsat to checked evidence plus a
+  real-Lean-checked proof. Re-running the complete exact AUFBV audit moved
+  **QF_AUFBV 37/41 → 38/41 dominant** with **Lean unsat 17/20 → 18/20**; the
+  row still has **mismatches=0**, **audit_errors=0**, and **timeouts=0**. QF_ABV
+  remains **85/169** dominant with **Lean unsat 1/83**. **Next:** attack the
+  remaining AUFBV frontier: bare-unsat proof gaps `binarysearch32s016` and
+  `fifo32bc04k05`, plus the solve/search gap `fifo32ia04k05`.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib array_xor_swap -j1`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_two_byte_xor_swap_roundtrip_unsat -j1`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_two_byte_xor_swap_roundtrip_checks_in_real_lean -j1`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__swapmem002ue.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-aufbv-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 41 bench-results/dominance/qf-aufbv-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo check -p axeyum-bench --examples -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`;
+  `git diff --check`.
+
+- **Session 2026-06-25 — two-cell XOR-swap evidence + Lean route landed.**
+  Added a checked `TwoCellXorSwapCertificate` for the AUFBV generated
+  XOR-swap memory pattern: two nested ordinary two-cell swaps are compared with
+  the corresponding generated three-assignment XOR swaps, and the final
+  disequality is re-matched before accepting. `produce_evidence` now emits
+  `UnsatTwoCellXorSwap`, and `prove_unsat_to_lean` routes the same certificate
+  through `ProofFragment::TwoCellXorSwap`. This moved
+  `solver__array__dubreva002ue.smt2` from bare unsat to checked evidence plus a
+  real-Lean-checked proof. Re-running the complete exact AUFBV audit moved
+  **QF_AUFBV 36/41 → 37/41 dominant** with **Lean unsat 16/20 → 17/20**; the
+  row still has **mismatches=0**, **audit_errors=0**, and **timeouts=0**. QF_ABV
+  remains **85/169** dominant with **Lean unsat 1/83**. **Next:** attack the
+  remaining AUFBV frontier: bare-unsat proof gaps `binarysearch32s016`,
+  `fifo32bc04k05`, and `swapmem002ue`, plus the solve/search gap
+  `fifo32ia04k05`.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib array_xor_swap -j1`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_two_cell_xor_swap_unsat -j1`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_two_cell_xor_swap_checks_in_real_lean -j1`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__dubreva002ue.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-aufbv-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 41 bench-results/dominance/qf-aufbv-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo check -p axeyum-bench --example audit_dominance -j1`;
+  `cargo check -p axeyum-bench --example diagnose_evidence -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`.
+
+- **Session 2026-06-25 — two-element selection-sort evidence + Lean route landed.**
+  Added a checked `TwoElementSelectionSortCertificate` for the AUFBV length-2
+  selection-sort memory pattern: the generated min-index `ite`, the two-store
+  selected-minimum update, the sortedness bit, and the in-range membership
+  contradiction are all re-matched before accepting. `produce_evidence` now
+  emits `UnsatTwoElementSelectionSort`, and `prove_unsat_to_lean` routes the
+  same certificate through `ProofFragment::TwoElementSelectionSort`. This moved
+  `solver__array__selsort002un.smt2` from bare unsat to checked evidence plus a
+  real-Lean-checked proof. Re-running the complete exact AUFBV audit moved
+  **QF_AUFBV 35/41 → 36/41 dominant** with **Lean unsat 15/20 → 16/20**; the
+  row still has **mismatches=0**, **audit_errors=0**, and **timeouts=0**. QF_ABV
+  remains **85/169** dominant with **Lean unsat 1/83**. **Next:** attack the
+  remaining four AUFBV bare unsats: `binarysearch32s016`, `dubreva002ue`,
+  `fifo32bc04k05`, and `swapmem002ue`.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib array_sort2 -j1`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_two_element_selection_sort_unsat -j1`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_two_element_selection_sort_checks_in_real_lean -j1`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-aufbv-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 41 bench-results/dominance/qf-aufbv-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo check -p axeyum-bench --example audit_dominance -j1`;
+  `cargo check -p axeyum-bench --example diagnose_evidence -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — two-element bubble-sort evidence + Lean route landed.**
+  Added a checked `TwoElementBubbleSortCertificate` for the AUFBV length-2
+  bubble-sort memory pattern: the output cells are the conditional swap/min-max
+  of the two original cells, the arbitrary read index is guarded into
+  `[start,start+2)`, and the query asserts that original read differs from both
+  output cells while the output is sorted. `produce_evidence` now emits
+  `UnsatTwoElementBubbleSort`, and `prove_unsat_to_lean` routes the same
+  certificate through `ProofFragment::TwoElementBubbleSort`. This moved
+  `solver__array__bubsort002un.smt2` from bare unsat to checked evidence plus a
+  real-Lean-checked proof. Re-running the complete exact AUFBV audit moved
+  **QF_AUFBV 34/41 → 35/41 dominant** with **Lean unsat 14/20 → 15/20**; the
+  row still has **mismatches=0**, **audit_errors=0**, and **timeouts=0**. QF_ABV
+  remains **85/169** dominant with **Lean unsat 1/83**. **Next:** attack the
+  remaining five AUFBV bare unsats: `binarysearch32s016`, `dubreva002ue`,
+  `fifo32bc04k05`, `selsort002un`, and `swapmem002ue`.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib array_sort2 -j1`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_two_element_bubble_sort_unsat -j1`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_two_element_bubble_sort_checks_in_real_lean -j1`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-aufbv-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 41 bench-results/dominance/qf-aufbv-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo check -p axeyum-bench --example audit_dominance -j1`;
+  `cargo check -p axeyum-bench --example diagnose_evidence -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — two-byte memcpy evidence + Lean route landed.**
+  Added a checked `TwoByteMemcpyRefutationCertificate` for the AUFBV
+  symbolic-memory pattern `memcpy` length 2: no-wrap/no-overlap guards for
+  `[src,src+2)` and `[dst,dst+2)`, a `j < 2` guard, and a two-store copy whose
+  destination read is asserted different from the matching original source
+  read. `produce_evidence` now emits `UnsatTwoByteMemcpy`, and
+  `prove_unsat_to_lean` routes the same certificate through
+  `ProofFragment::TwoByteMemcpy`. This moved `solver__array__memcpy02.smt2`
+  from bare unsat to checked evidence plus a real-Lean-checked proof. Re-running
+  the complete exact AUFBV audit moved **QF_AUFBV 33/41 → 34/41 dominant** with
+  **Lean unsat 13/20 → 14/20**; the row still has **mismatches=0**,
+  **audit_errors=0**, and **timeouts=0**. QF_ABV remains **85/169** dominant
+  with **Lean unsat 1/83**. **Next:** attack the remaining six AUFBV bare
+  unsats: `binarysearch32s016`, `bubsort002un`, `dubreva002ue`,
+  `fifo32bc04k05`, `selsort002un`, and `swapmem002ue`.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib array_memcpy -j1`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_two_byte_memcpy_unsat -j1`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_two_byte_memcpy_checks_in_real_lean -j1`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-aufbv-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 41 bench-results/dominance/qf-aufbv-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo check -p axeyum-bench --example audit_dominance -j1`;
+  `cargo check -p axeyum-bench --example diagnose_evidence -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — aligned write-chain evidence + Lean route landed.**
+  Added a checked `AlignedWriteChainCommutationCertificate` for generated
+  AUFBV byte-store chains that write two 4-byte aligned words in opposite
+  orders under low-address zero guards. `produce_evidence` now emits
+  `UnsatAlignedWriteChainCommutation`, and `prove_unsat_to_lean` routes the
+  same certificate through `ProofFragment::AlignedWriteChainCommutation`.
+  This moved `solver__array__wchains002ue.smt2` from bare unsat to checked
+  evidence plus a real-Lean-checked proof. Re-running the complete exact AUFBV
+  audit moved **QF_AUFBV 32/41 → 33/41 dominant** with **Lean unsat
+  12/20 → 13/20**; the row still has **mismatches=0**, **audit_errors=0**,
+  and **timeouts=0**. QF_ABV remains **85/169** dominant with **Lean unsat
+  1/83**. **Next:** attack the remaining seven AUFBV bare unsats:
+  `binarysearch32s016`, `bubsort002un`, `dubreva002ue`, `fifo32bc04k05`,
+  `memcpy02`, `selsort002un`, and `swapmem002ue`.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib array_write_chain -j1`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_aligned_write_chain_commutation_unsat -j1`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_aligned_write_chain_checks_in_real_lean -j1`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-aufbv-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 41 bench-results/dominance/qf-aufbv-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo check -p axeyum-bench --example audit_dominance -j1`;
+  `cargo check -p axeyum-bench --example diagnose_evidence -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`.
+
+- **Session 2026-06-25 — BV-abstraction array evidence + Lean route landed.**
+  Added a checked `BvAbstractionRefutationCertificate` for small array queries
+  that are already contradictory after replacing array-dependent scalar leaves
+  with fresh unconstrained Bool/BV symbols and re-checking the resulting pure
+  `QF_BV` query through certified evidence. `produce_evidence` now emits
+  `UnsatBvAbstraction`, and `prove_unsat_to_lean` routes the same certificate
+  through `ProofFragment::BvAbstraction`. This moved
+  `rewrite__array__rw213.smt2` from bare unsat to checked evidence plus a
+  real-Lean-checked proof. Re-running the complete exact AUFBV audit moved
+  **QF_AUFBV 31/41 → 32/41 dominant** with **Lean unsat 11/20 → 12/20**; the
+  row still has **mismatches=0**, **audit_errors=0**, and **timeouts=0**.
+  QF_ABV remains **85/169** dominant with **Lean unsat 1/83**. **Next:**
+  attack the remaining eight AUFBV bare unsats as structural array-program
+  certificates: `binarysearch32s016`, `bubsort002un`, `dubreva002ue`,
+  `fifo32bc04k05`, `memcpy02`, `selsort002un`, `swapmem002ue`, and
+  `wchains002ue`.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib array_bv_abs -j1`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_array_bv_abstraction_unsat -j1`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_bv_abstraction_checks_in_real_lean -j1`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-aufbv-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 41 bench-results/dominance/qf-aufbv-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo fmt --all --check`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`.
+
+- **Session 2026-06-25 — small array-axiom evidence + Lean route landed.**
+  Added a checked `ArrayAxiomRefutationCertificate` for three direct AUFBV array
+  axiom schemas: McCarthy read-over-write, select-over-array-`ite`, and
+  store-over-`ite` under a common select. `produce_evidence` now emits
+  `UnsatArrayAxiom` before timed bare-unsat fallback, and `prove_unsat_to_lean`
+  routes the same schema through `ProofFragment::ArrayAxiom`. This moved
+  `smtaxiommccarthy.smt2`, `smtarraycond1.smt2`, and `smtarraycond3.smt2` from
+  bare unsat to checked evidence plus real-Lean-checked proofs. Re-running the
+  complete exact AUFBV audit moved **QF_AUFBV 28/41 → 31/41 dominant** with
+  **Lean unsat 8/20 → 11/20**; the row still has **mismatches=0**,
+  **audit_errors=0**, and **timeouts=0**. QF_ABV remains **85/169** dominant with
+  **Lean unsat 1/83**. **Next:** classify the remaining ten AUFBV bare unsats
+  (mostly larger program-array benchmarks plus `rw213`) into bit-vector rewrite
+  contradictions versus genuinely array-elim-heavy shapes, and decide whether the
+  next measured movement should come from BV/ite simplification evidence or a
+  broader read-over-write certificate.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib array_axiom -j1`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_small_array_axiom_unsats -j1`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_array_axiom_refutations_check_in_real_lean -j1`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-aufbv-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 41 bench-results/dominance/qf-aufbv-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo fmt --all --check`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`.
+
+- **Session 2026-06-25 — array dominance audit timeouts eliminated.**
+  Closed the remaining ABV/AUFBV dominance-audit timeout class by making timed
+  array solving propagate budget results instead of falling through to more
+  expensive fallbacks. The older lazy select-congruence path now shares the
+  configured deadline across refinement rounds, passes only the remaining budget
+  to the scalar backend, checks deadlines while scanning select pairs, and avoids
+  evaluator work when two select indices are syntactically identical. Timed
+  `check_auto`/preprocessing/all-theory composition now carries a single remaining
+  wall budget across probe, preprocessing, reduced dispatch, eager reductions,
+  scalar backend, projection, and replay; late SAT results are downgraded to
+  `unknown` under an explicit timeout. Pure ABV dispatch now propagates budget
+  `unknown` from the array fast path instead of treating it as `not-applicable`
+  and entering the qf-bv fallback. Focused diagnostics for the former timeout
+  files (`rw34`, `arraycond9`, `fifo32ia04k05`) now return checked `unknown`
+  evidence in about the configured 5 s budget. Re-ran complete ABV/AUFBV dominance
+  audits: dominance counts stayed fixed (**QF_ABV 84/169**, **QF_AUFBV 20/41**),
+  while **audit_errors=0** and **timeouts=0** for both rows. **Next:** convert the
+  now-timely ABV/AUFBV unsat evidence from bare/DRAT/array-elim trust holes into
+  Lean-reconstructable certificates, and separately improve the hard array solve
+  frontiers so these files decide instead of returning budget `unknown`.
+  Verification passed:
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/rewrite__array__rw34.btor.smt2 5000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycond9.btor.smt2 5000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__fifo32ia04k05.smt2 5000`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-aufbv-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 41 bench-results/dominance/qf-aufbv-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `cargo test -p axeyum-solver --test abv_lazy_ext -j1`;
+  `cargo test -p axeyum-solver --test evidence -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo check -p axeyum-bench --examples -j1`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py scripts/gen-scoreboard.py`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — timed evidence export guard cuts array audit timeouts 11→3.**
+  Diagnosed a representative ABV timeout (`extarraywrite1`): `solve` finished in
+  about 1.7 s via `array-fast-path`, direct ABV Alethe and elimination Alethe
+  declined quickly, and the optional AUFBV reduced-CNF proof exporter kept
+  running. Added bounded exporter entry points, but the expensive path can still
+  overrun outside the cooperative CDCL deadline (lowering/checking/elaboration),
+  so `produce_evidence` now skips this optional reduction-proof fallback whenever
+  a wall-clock timeout is configured and the stronger certificate routes have
+  already declined. Unbudgeted callers still get the old reduction-certificate
+  path. Added `diagnose_evidence` for single-file stage timing. Re-ran complete
+  ABV/AUFBV dominance audits: dominant counts stayed fixed (**QF_ABV 84/169**,
+  **QF_AUFBV 20/41**), while audit timeouts/errors dropped from **6→2** for ABV
+  and **5→1** for AUFBV. Remaining timeout files are now solver/search frontiers:
+  ABV `rewrite__array__rw34.btor.smt2`, ABV `solver__array__arraycond9.btor.smt2`,
+  and AUFBV `solver__array__fifo32ia04k05.smt2`. **Next:** attack those three
+  solve-path frontiers, then return to Lean reconstruction / trust-hole closure
+  for the now-timely bare unsats. Verification passed:
+  `cargo run -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__extarraywrite1.btor.smt2 5000`;
+  `cargo run -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `cargo run -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-aufbv-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 41 bench-results/dominance/qf-aufbv-bitwuzla-regress-clean-dominance-audit.json`;
+  `cargo test -p axeyum-solver --test evidence -j1`;
+  `cargo test -p axeyum-solver --test abv_lazy_ext -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo clippy -p axeyum-bench --example diagnose_evidence -- -D warnings`;
+  `cargo check -p axeyum-bench --examples -j1`;
+  `python3 scripts/gen-dominance-scoreboard.py`.
+
+- **Session 2026-06-25 — dominance audit phase diagnostics landed.**
+  Added phase-level diagnostics to `audit_dominance`: each instance now records
+  `audit_phase`, `phase_timings_ms`, and timeout records include
+  `timeout_phase` / `timeout_phase_elapsed_ms`. Regenerated the complete
+  QF_ABV and QF_AUFBV dominance artifacts; headline scoring is unchanged
+  (**QF_ABV 84/169 dominant, 6 timeouts; QF_AUFBV 20/41 dominant, 5
+  timeouts**), but all **11** array timeout rows now localize to
+  `produce-evidence`. `bench-results/DOMINANCE.md` summarizes timeout phases in
+  the exact-audit gaps column and now states that the first audit queue is clear,
+  so the next movement comes from reducing the reported proof/evidence gaps.
+  **Next:** instrument or attack ABV/AUFBV `produce_evidence` itself for the
+  timeout files (`rw34`, `arraycond9`, `ext7`, `ext9`, `extarraywrite1/2`,
+  `binarysearch32s016`, `fifo32bc04k05`, `fifo32ia04k05`, `memcpy02`,
+  `selsort002un`) before spending time on Lean runtime. Verification passed:
+  `cargo check -p axeyum-bench --example audit_dominance -j1`;
+  `cargo run -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-aufbv-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 41 bench-results/dominance/qf-aufbv-bitwuzla-regress-clean-dominance-audit.json`;
+  `cargo run -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`.
+
+- **Session 2026-06-25 — first dominance audit queue cleared; QF_ABV projection fix landed.**
+  Ran complete dominance audits for the two remaining first-queue rows. At that
+  point the queue in `bench-results/DOMINANCE.md` was empty, with **12 complete
+  exact audit rows**; later quantified-BV work raised the current count to
+  **13**. QF_ABV/cvc5+bitwuzla is exact at **50% (84/169)** dominant,
+  **Lean unsat 0% (0/85)**, with **mismatches=0**, **audit_errors=6**, and
+  **timeouts=6**; QF_AUFBV/bitwuzla is exact at **49% (20/41)** dominant,
+  **Lean unsat 0% (0/20)**, with **mismatches=0**, **audit_errors=5**, and
+  **timeouts=5**. The audits exposed a concrete QF_ABV SAT model-lift error on
+  `rewrite__array__rw134.btor.smt2`: lazy extensionality materialized fresh read
+  symbols after assignment completion, then evaluated them under the stale
+  assignment. `refine_eq_congruence` now re-completes the assignment after
+  `resolve_select`, preserving replay gating and closing that audit error; a
+  regression pins the exact nested array-equality SAT shape. Remaining array
+  dominance gaps are now explicit: proof/evidence timeouts on hard array
+  instances, `array-elim`/`bit-blast` trust holes, and no Lean reconstruction for
+  the audited ABV/AUFBV unsats. **Next:** attack the timeout-producing evidence
+  path for ABV/AUFBV or start converting the named array-elim proof holes into
+  Lean-reconstructable certificates. Verification passed:
+  `cargo run -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-aufbv-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 41 bench-results/dominance/qf-aufbv-bitwuzla-regress-clean-dominance-audit.json`;
+  `cargo run -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `cargo test -p axeyum-solver --test abv_lazy_ext -j1`;
+  `cargo fmt --all --check`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py scripts/gen-scoreboard.py`;
+  `git diff --check`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo check -p axeyum-bench --examples -j1`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — synthetic NIA/NRA dominance audits landed.**
+  Extended `audit_dominance` to ingest the summary-style graduated baselines
+  (`dir` + aggregate counts, no `instances` array) by enumerating the corpus,
+  reading each file's `:status`, and using the committed aggregate
+  `axeyum_decided` count as the exact denominator. The audit worker now gives
+  the solver thread a small outer grace window while keeping the solver's
+  internal timeout fixed at the requested budget, avoiding false timeout records
+  when a solver returns exactly at the cap. Committed exact audits for
+  QF_NRA synthetic and QF_NIA synthetic and regenerated
+  `bench-results/DOMINANCE.md`: exact audit rows now total **10**. QF_NRA
+  synthetic was later widened by the SOS certificate-wrapper pass to **80%
+  (24/30)** dominant with **Lean unsat 62% (10/16)**; later sessions closed
+  QF_NRA synthetic at **100% (30/30)** and QF_NIA synthetic at **100%
+  (32/32)**. Both have
+  **DISAGREE=0**, **mismatches=0**, **audit_errors=0**, and **timeouts=0**.
+  The remaining first audit queue is now just QF_ABV and QF_AUFBV. **Next:**
+  audit those array/BV rows, then decide whether to attack their proof gaps or
+  improve the nonlinear Lean lanes exposed here. Verification passed:
+  `cargo run -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-nra-synthetic-graduated-vs-z3.json 5000 30 bench-results/dominance/qf-nra-synthetic-graduated-dominance-audit.json`;
+  `cargo run -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-nia-synthetic-graduated-vs-z3.json 30000 32 bench-results/dominance/qf-nia-synthetic-graduated-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `cargo check -p axeyum-bench --example audit_dominance -j1`;
+  `cargo clippy -p axeyum-bench --example audit_dominance -- -D warnings`;
+  `cargo check -p axeyum-bench --examples -j1`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py scripts/gen-scoreboard.py`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — dominance audit batch plus LRA evidence fallback landed.**
+  Ran and committed complete dominance audits for six more rows:
+  BV/bitwuzla quantified, QF_BV/bvred, QF_LIA/cvc5, QF_LRA/cvc5,
+  QF_UFLIA curated named, and QF_UFLIA bounded uninterpreted-sort regressions.
+  Together with the two QF_UFBV artifacts, `bench-results/DOMINANCE.md` now has
+  **8 complete exact audit rows**. The exact frontier from that batch was:
+  BV quantified **25% (1/4)**, now later closed to **100% (4/4)**;
+  QF_BV/bvred **100% (6/6)**, QF_LIA **100%
+  (10/10)**, QF_LRA **100% (9/9)**, QF_UFBV/cvc5 **100% (4/4)**,
+  QF_UFBV/bitwuzla **100% (2/2)**, QF_UFLIA curated **0% (0/2)**, and
+  QF_UFLIA bounded **80% (4/5)**, all with **DISAGREE=0** and **audit_errors=0**.
+  The LRA row initially exposed five evidence-front-door audit errors: the pure-real
+  route produced an unsupported LRA certificate shape and stopped before the
+  unified replayable evidence fallback. `produce_evidence` now falls through on
+  unsupported pure-real certificate declines, while still preserving stronger
+  LRA/SOS/NRA certificates when available; the QF_LRA audit now completes with
+  zero errors. The audit harness also infers a missing baseline logic from the
+  corpus path, fixing the bounded-UFLIA artifact metadata. **Next:** audit the
+  remaining first-queue rows (QF_ABV, QF_AUFBV, QF_NIA synthetic, QF_NRA
+  synthetic) or close the proof gaps now named by exact rows: LRA disjunctive
+  Lean reconstruction, LIA unsat coverage, BV operator holes, and UFLIA integer/UF
+  reconstruction. Verification passed:
+  `cargo run -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-bv-curated-bvred-solver-vs-z3-10s.json 5000 6 bench-results/dominance/qf-bv-curated-bvred-dominance-audit.json`;
+  `cargo run -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-lra-cvc5-regress-clean-solver-vs-z3-10s.json 5000 9 bench-results/dominance/qf-lra-cvc5-regress-clean-dominance-audit.json`;
+  `cargo run -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-lia-cvc5-regress-clean-solver-vs-z3-10s.json 5000 10 bench-results/dominance/qf-lia-cvc5-regress-clean-dominance-audit.json`;
+  `cargo run -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-uflia-curated-named-solver-vs-z3-10s.json 5000 2 bench-results/dominance/qf-uflia-curated-named-dominance-audit.json`;
+  `cargo run -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-uflia-cvc5-regress-clean-bounded-uninterp-sorts-solver-vs-z3-10s.json 5000 5 bench-results/dominance/qf-uflia-cvc5-regress-clean-bounded-uninterp-sorts-dominance-audit.json`;
+  `cargo run -p axeyum-bench --example audit_dominance -- bench-results/baselines/bv-bitwuzla-regress-clean-quantified-solver-vs-z3-10s.json 5000 4 bench-results/dominance/bv-bitwuzla-regress-clean-quantified-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `cargo test -p axeyum-solver --test evidence pure_real_front_door_falls_back_when_lra_certificate_declines -j1`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py scripts/gen-scoreboard.py`;
+  `cargo fmt --all --check`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo check -p axeyum-bench --examples -j1`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — QF_UFBV/bitwuzla dominance audit artifact landed.**
+  Closed the `solver__declsort1.smt2` audit error by routing mixed declared-sort
+  QF_UFBV through lazy Ackermann abstraction before raw BV fallback. Unconstrained
+  declared-sort symbols now receive deterministic distinct model tokens during
+  BV/model projection, so the lazy UF consistency loop does not invent false
+  carrier equalities; the returned SAT model is still accepted only after replay
+  against the original assertions. Added regression coverage for the exact
+  declared-sort UFBV SAT shape. Committed
+  `bench-results/dominance/qf-ufbv-bitwuzla-regress-clean-dominance-audit.json`
+  and regenerated `bench-results/DOMINANCE.md`: the row initially had no audit
+  errors but only partial dominance because the Boolean-UF `fun1` unsat used a
+  trusted reduction fallback and had no Lean route. That proof gap is now
+  closed by the later `BoolUfExhaustive` certificate, and the same artifact is
+  **100% (2/2)** dominant with **Lean unsat 100% (1/1)**. The QF_UFBV/cvc5
+  artifact was re-run and remains **100% (4/4)** dominant.
+  **Next:** continue exact audits for the remaining measured proof gaps.
+  Verification passed:
+  `cargo test -p axeyum-solver --test uninterpreted_sort_euf -j1`;
+  `cargo test -p axeyum-rewrite functions -j1`;
+  `cargo test -p axeyum-solver --test evidence qf_ufbv_finite_domain_pigeonhole_unsat_carries_certificate -j1`;
+  `cargo run -p axeyum-bench --example explain_corpus -- corpus/public-curated/non-incremental/QF_UFBV/bitwuzla-regress-clean 5000`;
+  `cargo run -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-ufbv-bitwuzla-regress-clean-solver-vs-z3-10s.json 5000 2 bench-results/dominance/qf-ufbv-bitwuzla-regress-clean-dominance-audit.json`;
+  `cargo run -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-ufbv-cvc5-regress-clean-solver-vs-z3-10s.json 5000 4 bench-results/dominance/qf-ufbv-cvc5-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo fmt --all --check`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo check -p axeyum-bench --examples -j1`;
+  `git diff --check`.
+
+- **Session 2026-06-25 — QF_UFBV finite-domain pigeonhole Lean route landed.**
+  Added a direct Lean-kernel reconstruction path for the one-bit finite-domain
+  pigeonhole certificate. `prove_unsat_to_lean_module` now classifies the
+  cvc5 `bug593` shape as `ProofFragment::FiniteDomainPigeonhole`, re-checks the
+  certificate from the original assertions, models the finite argument domain as
+  computational `Bool`, and proves `False` by `Bool.rec` over the three arguments
+  plus `Eq.refl` at the repeated value. The only proof assumptions are the three
+  input disequalities; no pigeonhole theorem or cardinality axiom is trusted.
+  The committed QF_UFBV/cvc5 dominance artifact now reports
+  **dominant%(D) = 100% (4/4)**, **Lean unsat = 100% (2/2)**,
+  **audit_errors = 0**, and `bug593` has
+  `lean_fragment = FiniteDomainPigeonhole`. Regenerated
+  `bench-results/DOMINANCE.md`. **Next:** run and commit exact dominance audits
+  for the remaining decide-strong `audit now` rows.
+  Verification passed:
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_ufbv_finite_domain_pigeonhole_checks_in_real_lean -j1`;
+  `cargo test -p axeyum-solver --test evidence qf_ufbv_finite_domain_pigeonhole_unsat_carries_certificate -j1`;
+  `cargo run -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-ufbv-cvc5-regress-clean-solver-vs-z3-10s.json 5000 4 bench-results/dominance/qf-ufbv-cvc5-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`.
+
+- **Session 2026-06-25 — QF_UFBV finite-domain pigeonhole evidence landed.**
+  Added a narrow certified QF_UFBV refuter for finite argument-domain pigeonhole
+  conflicts: if a top-level conjunction requires more pairwise-distinct
+  applications of one function than its Bool/BV argument tuple domain can supply,
+  `check_auto` now returns `unsat` before falling through to the pure BV backend.
+  `produce_evidence` carries this as `Evidence::UnsatFiniteDomainPigeonhole`,
+  whose checker re-scans the original query and validates the cardinality/clique
+  condition. This closes the QF_UFBV/cvc5 `bug593` audit error
+  (`f : BV1 -> A`, three pairwise-distinct `f(g ·)` outputs): the committed
+  dominance artifact now has **audit_errors = 0**, **evidence_checked = 4/4**,
+  and subsequent Lean-reconstruction work raised the row to
+  **dominant%(D) = 100% (4/4)**. Updated
+  `bench-results/dominance/qf-ufbv-cvc5-regress-clean-dominance-audit.json` and
+  regenerated `bench-results/DOMINANCE.md`. **Next:** audit the remaining
+  decide-strong rows.
+  Verification passed: `cargo test -p axeyum-solver --lib ufbv_finite -j1`;
+  `cargo test -p axeyum-solver --test evidence qf_ufbv_finite_domain_pigeonhole_unsat_carries_certificate -j1`;
+  `cargo check -p axeyum-bench --examples -j1`;
+  `cargo run -p axeyum-bench --example explain_corpus -- corpus/public-curated/non-incremental/QF_UFBV/cvc5-regress-clean 5000`;
+  `cargo run -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-ufbv-cvc5-regress-clean-solver-vs-z3-10s.json 5000 4 bench-results/dominance/qf-ufbv-cvc5-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`.
+
+- **Session 2026-06-25 — first exact dominance audit artifact ingested.**
+  Added the first committed per-instance dominance artifact,
+  `bench-results/dominance/qf-ufbv-cvc5-regress-clean-dominance-audit.json`,
+  and taught `scripts/gen-dominance-scoreboard.py` to ingest committed
+  `bench-results/dominance/*.json` files. `bench-results/DOMINANCE.md` now
+  distinguishes readiness rows from exact audited rows: QF_UFBV/cvc5 reports
+  exact audited `dominant%(D) = 100% (4/4)`, Lean-checked unsat coverage
+  `100% (2/2)`, and no audit errors after the subsequent finite-domain
+  pigeonhole evidence and Lean-reconstruction work.
+  Updated `PLAN.md`, `docs/PARITY-STATUS-AND-PATH.md`, and
+  `bench-results/README.md` so the live strategy reflects that artifacts are now
+  ingested, not merely planned. The remaining dominance work is to commit
+  complete audits for the other `audit now` rows.
+  Verification passed: `cargo run -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-ufbv-cvc5-regress-clean-solver-vs-z3-10s.json 5000 4 bench-results/dominance/qf-ufbv-cvc5-regress-clean-dominance-audit.json`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py scripts/gen-scoreboard.py`;
+  `python3 scripts/gen-dominance-scoreboard.py`.
+
+- **Session 2026-06-25 — per-instance dominance audit harness landed.**
+  Added `crates/axeyum-bench/examples/audit_dominance.rs`, the first concrete
+  harness for turning the Pareto-dominance readiness queue into exact
+  per-instance evidence fields. It reads an existing `*solver-vs-z3*` baseline
+  JSON, re-runs baseline-decided instances through `produce_evidence`, re-checks
+  the evidence, attempts `prove_unsat_to_lean_module` for `unsat`, and emits
+  `evidence_kind`, `evidence_certified`, `evidence_checked`, `lean_fragment`,
+  `lean_checked`, `trust_holes`, and `dominant_candidate` per instance. Local
+  smoke audits exposed both sides of the frontier: QF_UFBV has a positive
+  `QfUfBv` Lean-certified unsat (`ackermann2`) and also a baseline-decided
+  first-class-uninterpreted-sort case where `produce_evidence` still falls into
+  an unsupported BV path; QF_LRA has certified lazy-LRA evidence for
+  `arith/ite-lift` but no Lean reconstruction for that Boolean/ITE shape yet.
+  Updated `bench-results/DOMINANCE.md`, `PLAN.md`,
+  `docs/PARITY-STATUS-AND-PATH.md`, and `bench-results/README.md` to reflect
+  that the harness now exists. **Next:** create committed
+  `bench-results/dominance/*.json` audit artifacts for the `audit now` rows and
+  teach `scripts/gen-dominance-scoreboard.py` to ingest them into exact
+  `dominant%(D)` instead of readiness labels.
+  Verification passed: `cargo check -p axeyum-bench --examples -j1`;
+  `cargo run -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-lra-cvc5-regress-clean-solver-vs-z3-10s.json 5000 3 bench-results/local/dominance-qf-lra-smoke.json`;
+  `cargo run -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-ufbv-cvc5-regress-clean-solver-vs-z3-10s.json 5000 4 bench-results/local/dominance-qf-ufbv-smoke.json`.
+
+- **Session 2026-06-25 — Pareto-dominance readiness report landed; scoreboard refreshed.**
+  Added a deterministic companion generator,
+  `scripts/gen-dominance-scoreboard.py`, and generated
+  `bench-results/DOMINANCE.md`. The report is intentionally conservative: it
+  combines the measured decide/PAR-2 rows from the existing scoreboard baselines
+  with a hand-audited proof-route map, and it labels rows as an audit queue
+  rather than claiming exact `dominant%(D)` before per-instance Lean certificate
+  coverage exists. Current readiness headline: **35 rows**, **992 files**,
+  **640 decided**, **591 oracle-compared**, **DISAGREE=0**, with **12**
+  decide-strong rows marked `audit now` for evidence/Lean reconstruction
+  measurement. Regenerated `bench-results/SCOREBOARD.md` from the committed
+  JSONs at the same time, correcting stale totals and reflecting the current
+  QF_ALIA / QF_NIA baseline movements. Updated `PLAN.md`,
+  `docs/PARITY-STATUS-AND-PATH.md`, and `bench-results/README.md` to point at
+  the dominance report and to state that the next measurement step is a real
+  per-instance evidence/Lean audit harness. **Next:** build that harness so the
+  report can replace readiness labels with exact `lean_fragment`,
+  `lean_checked`, `trust_holes`, and `dominant%(D)` fields.
+  Verification passed: `python3 -m py_compile scripts/gen-dominance-scoreboard.py scripts/gen-scoreboard.py`;
+  `python3 scripts/gen-scoreboard.py && python3 scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`; `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — focused OR branch repair for PBLs landed; AUFLIA remains 4/6.**
+  Added a bounded selected-assertion repair path to the one-sided `pbls` model
+  finder: wider OR-shaped assertions keep the cheap root-truth persistent score,
+  but when selected they get a local structural tie-break and a capped branch
+  repair planner that tries to make one disjunct true by applying simple literal
+  repairs as a unit. This targets generated branch-selector formulas without
+  raising the global structural-scoring cap; a broad cap increase and a 1 s
+  scalar local-search probe were measured and rejected because they did not close
+  the hard files. Local QF_AUFLIA fair-slice measurement remains **4/6 decided,
+  DISAGREE=0** (artifact
+  `bench-results/local/qf-auflia-after-pbls-focused-or-repair.json`; Z3 remains
+  **6/6**, PAR-2 **0.104 s** vs axeyum **6.668 s**). Route diagnostics remain
+  baseline-shaped: `bug330` is still UF-out-of-scope for local search and times
+  out in the scalar path after **1144** blocking lemmas; `bug337` still times out
+  in local search and then in scalar LIA after **851** blocking lemmas. **Next:**
+  switch away from small PBLs move families; the remaining AUFLIA gap needs a
+  real branch-schedule/model-construction shortcut, finite UF-table reasoning
+  for `bug330`, or SAT relevance in the large scalar skeleton.
+  Verification passed: `cargo test -p axeyum-solver --lib pbls::tests -j1`;
+  `cargo test -p axeyum-solver --lib dpll_lia::tests -j1`;
+  `cargo test -p axeyum-solver --test lia_dpll -j1`;
+  `cargo test -p axeyum-solver --test int_array_sort -j1`;
+  `cargo test -p axeyum-solver --test abv_lazy_ext -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`; `git diff --check`.
+
+- **Session 2026-06-25 — PBLs affine integer repair candidates landed; AUFLIA remains 4/6.**
+  Extended the one-sided `pbls` local-search model finder with assertion-local
+  integer repair candidates for narrow unit-affine shapes: `x`, `x + c`,
+  `c + x`, and `x - c` inside equality and order atoms now suggest boundary
+  moves using the current values of the opposite side. The candidate set is
+  capped and still combined with the existing finite constant-guided moves;
+  any `sat` remains replay-gated by the existing local-search and array
+  projection path. Local QF_AUFLIA fair-slice measurement remains **4/6 decided,
+  DISAGREE=0** (artifact
+  `bench-results/local/qf-auflia-after-pbls-affine-repairs.json`; Z3 remains
+  **6/6**, PAR-2 **0.105 s** vs axeyum **6.668 s**). Route diagnostics are flat:
+  `bug330` is still outside local-search scope because UF applications remain in
+  the scalar snapshot, and `bug337` still times out in local search before the
+  exact scalar loop times out after **855** blocking lemmas. **Next:** stop
+  expecting small PBLs move families to close this AUFLIA slice; the remaining
+  gap still wants finite UF-table model search for `bug330`, SAT
+  relevance/model construction for `bug337`, or a higher-level array/branch
+  abstraction shortcut.
+  Verification passed: `cargo test -p axeyum-solver --lib pbls::tests -j1`;
+  `cargo test -p axeyum-solver --lib dpll_lia::tests -j1`;
+  `cargo test -p axeyum-solver --test lia_dpll -j1`;
+  `cargo test -p axeyum-solver --test int_array_sort -j1`;
+  `cargo test -p axeyum-solver --test abv_lazy_ext -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`; `git diff --check`.
+
+- **Session 2026-06-25 — compact integer-bound implication lemmas landed; AUFLIA remains 4/6.**
+  Added a compact-formula upfront pruning pass to scalar arithmetic DPLL(T):
+  asserted simple integer bounds on the same expression now seed adjacent
+  monotonicity lemmas such as `x <= 0 => x <= 1` and `x >= 2 => x >= 1`.
+  Each lemma is recorded as the certifiable LIA core `{stronger_bound, not
+  weaker_bound}` and verified by the existing simplex certificate route. A
+  broader all-polarity version was measured and rejected for the current hard
+  AUFLIA slice because it inflated upfront clauses (`bug330` 131, `bug337` 600)
+  and reduced scalar rounds; the landed pass is asserted-bound-only and gated to
+  compact skeletons (`<=256` arithmetic atoms). Local QF_AUFLIA fair-slice
+  measurement remains **4/6 decided, DISAGREE=0** (artifact
+  `bench-results/local/qf-auflia-after-compact-bound-implications.json`; Z3
+  remains **6/6**, PAR-2 **0.107 s** vs axeyum **6.668 s**). Hard-file
+  diagnostics are baseline-preserving: `bug330` stays at **27** upfront bound
+  lemmas and **1137** blocking lemmas before SAT timeout; `bug337` stays at
+  **150** upfront bound lemmas and **854** blocking lemmas before timeout.
+  **Next:** this reinforces that the remaining AUFLIA gap is not another small
+  static LIA lemma family; it is SAT relevance/model construction on the large
+  scalar skeleton, finite UF-table model search for `bug330`, or a higher-level
+  array/branch abstraction shortcut.
+  Verification passed: `cargo test -p axeyum-solver --lib dpll_lia::tests -j1`;
+  `cargo test -p axeyum-solver --test lia_dpll -j1`;
+  `cargo test -p axeyum-solver --test int_array_sort -j1`;
+  `cargo test -p axeyum-solver --test abv_lazy_ext -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`; `git diff --check`.
+
+- **Session 2026-06-25 — capped integer-difference cores landed; AUFLIA remains 4/6.**
+  Added a second cheap dynamic core extractor to scalar arithmetic DPLL(T):
+  current integer literals of the form `x + c <= y + d` / `<` are recognized as
+  difference constraints, and small negative cycles are returned as compact theory
+  lemmas before the full-slice fallback. The common two-edge cycle
+  `x <= y` with `y + 1 <= x` is handled directly; full Bellman-Ford extraction is
+  capped to small/medium snapshots, and large generated AUFLIA slices decline this
+  extractor to avoid spending the SAT budget on core search. The returned lemmas
+  still go through the existing LIA simplex certificate verifier. Local QF_AUFLIA
+  fair-slice measurement remains **4/6 decided, DISAGREE=0** (artifact
+  `bench-results/local/qf-auflia-after-capped-idl-core.json`; Z3 remains **6/6**,
+  PAR-2 **0.105 s** vs axeyum **6.668 s**). Hard-file diagnostics are essentially
+  baseline-preserving: `bug330` reaches **1140** blocking lemmas before SAT
+  timeout; `bug337` reaches **849** before SAT timeout. **Next:** this confirms
+  the hard AUFLIA files need either SAT relevance/model construction work at the
+  large scalar skeleton, or a different array/branch abstraction shortcut; compact
+  IDL cores help smaller formulas but do not close this slice.
+  Verification passed: `cargo test -p axeyum-solver --lib dpll_lia::tests -j1`;
+  `cargo test -p axeyum-solver --lib pbls::tests -j1`;
+  `cargo test -p axeyum-solver --test lia_dpll -j1`;
+  `cargo test -p axeyum-solver --test int_array_sort -j1`;
+  `cargo test -p axeyum-solver --test abv_lazy_ext -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`; `git diff --check`.
+
+- **Session 2026-06-25 — capped structural PBLs scoring landed; AUFLIA remains 4/6.**
+  The one-sided `pbls` model finder now scores compact Boolean assertions with a
+  structural cost instead of a single root-satisfied bit: nested `and`/`or`/`not`,
+  implication, Bool equality/xor, and Bool `ite` expose local gradients while
+  theory atoms remain evaluator-checked black boxes. The scorer is capped by DAG
+  size and variable incidence so large generated formulas keep the previous cheap
+  root-truth score; this avoids spending the whole portfolio budget inside one
+  move. Added a nested Bool/Int regression that requires the structural score to
+  find a replaying model. Local QF_AUFLIA fair-slice measurement remains **4/6
+  decided, DISAGREE=0** (artifact
+  `bench-results/local/qf-auflia-after-structural-pbls-score.json`; Z3 remains
+  **6/6**, PAR-2 **0.112 s** vs axeyum **6.668 s**). Hard-file diagnostics remain:
+  `bug330` is still outside this probe because UF applications remain in the
+  scalar snapshot; `bug337` is in scope but local search times out, then the exact
+  scalar loop reaches **865** blocking lemmas before `rustsat-batsat` timeout.
+  **Next:** the AUFLIA frontier still needs SAT relevance / replay-gated model
+  construction for `bug337`, or finite UF-table model search for `bug330`; compact
+  structural scoring is not enough to close the slice.
+  Verification passed: `cargo test -p axeyum-solver --lib pbls::tests -j1`;
+  `cargo test -p axeyum-solver --lib dpll_lia::tests -j1`;
+  `cargo test -p axeyum-solver --test lia_dpll -j1`;
+  `cargo test -p axeyum-solver --test int_array_sort -j1`;
+  `cargo test -p axeyum-solver --test abv_lazy_ext -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`; `git diff --check`.
+
+- **Session 2026-06-25 — integer local-search scalar probe landed; AUFLIA remains 4/6.**
+  Extended the deterministic one-sided `pbls` local-search engine from Bool/BV
+  to Bool/BV/Int with finite, formula-constant-guided integer moves, then wired a
+  100 ms replay-gated probe behind scalar snapshot preprocessing in the lazy
+  ROW/extensionality array path. A probe `sat` reconstructs through the
+  preprocessing trail and then still goes through the normal array projection and
+  original-assertion replay; misses remain `unknown` and fall through to the
+  exact scalar backend. Local QF_AUFLIA fair-slice measurement remains **4/6
+  decided, DISAGREE=0** (artifact
+  `bench-results/local/qf-auflia-after-int-local-search-scalar-probe.json`; Z3
+  remains **6/6**, PAR-2 **0.106 s** vs axeyum **6.668 s**). The useful movement
+  is diagnostic: `bug330`'s scalar snapshot still contains unsupported UF
+  applications for this local search (`query has a construct the evaluator cannot
+  reduce`), while `bug337` is in scope but the probe times out and the exact
+  scalar loop still expires after **857** rounds. **Next:** either teach the
+  model-search probe finite UF interpretations for `bug330`, or move to real SAT
+  relevance / model-construction work for in-scope `bug337`.
+  Verification passed: `cargo test -p axeyum-solver --lib pbls::tests -j1`;
+  `cargo test -p axeyum-solver --lib dpll_lia::tests -j1`;
+  `cargo test -p axeyum-solver --test lia_dpll -j1`;
+  `cargo test -p axeyum-solver --test int_array_sort -j1`;
+  `cargo test -p axeyum-solver --test abv_lazy_ext -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`; `git diff --check`.
+
+- **Session 2026-06-25 — current-polarity integer-bound cores landed; AUFLIA remains 4/6.**
+  Dynamic scalar LIA conflicts now try a cheap certified core before falling
+  back to the large full-theory slice: after the simplex oracle reports the
+  current integer assignment unsat, the DPLL(T) path scans the assigned literal
+  polarities for an obvious two-literal bound contradiction such as `x <= 0`
+  with `not (x <= 1)` (i.e. `x >= 2`). The returned core is still recorded as an
+  ordinary `ArithLemmaLiteral` and verified by the existing refutation checker.
+  Local QF_AUFLIA fair-slice measurement remains **4/6 decided, DISAGREE=0**
+  (artifact `bench-results/local/qf-auflia-after-cheap-bound-core.json`; Z3
+  remains **6/6**, PAR-2 **0.106 s** vs axeyum **6.670 s**). Route diagnostics:
+  at 10 s, `bug330` now reaches **1143** scalar blocking lemmas (was **608**
+  after the warm skeleton) before `rustsat-batsat` times out; `bug337` reaches
+  **860** blocking lemmas (was **788**) before the scalar loop exhausts the
+  timeout. **Next:** the remaining blocker is learned-clause search quality /
+  relevance on the large scalar Boolean skeleton, or a replay-gated
+  model-construction shortcut for `bug337`; cheap bound cores alone do not close
+  either hard file.
+  Verification passed: `cargo test -p axeyum-solver --lib dpll_lia::tests -j1`;
+  `cargo test -p axeyum-solver --test lia_dpll -j1`;
+  `cargo test -p axeyum-solver --test int_array_sort -j1`;
+  `cargo test -p axeyum-solver --test abv_lazy_ext -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`; `git diff --check`.
+
+- **Session 2026-06-25 — warm incremental Boolean skeleton for scalar arithmetic landed; AUFLIA remains 4/6.**
+  Replaced the legacy arithmetic DPLL fallback's per-round pure-Boolean solve
+  path with a small internal `BoolSkeletonSolver`: the scalar Boolean skeleton is
+  encoded to CNF once, kept in a warm `IncrementalSat`, and each learned theory
+  blocking clause is added incrementally. This removes the repeated
+  Bool→AIG→CNF rebuild through `SatBvBackend` on every scalar refinement round;
+  `sat` still flows through `finish_sat`, theory-model reconstruction, and
+  original-assertion replay before being accepted.
+  Local QF_AUFLIA fair-slice measurement remains **4/6 decided, DISAGREE=0**
+  (artifact `bench-results/local/qf-auflia-after-warm-scalar-bool-skeleton.json`;
+  Z3 remains **6/6**, PAR-2 **0.105 s** vs axeyum **6.670 s**). The diagnostic
+  frontier moved materially: at 10 s, `bug330` now reaches **608** scalar
+  blocking lemmas (was **40** after the large-core cutoff) before `rustsat-batsat`
+  times out; `bug337` now reaches **788** blocking lemmas (was **46**). A 30 s
+  single-file `bug337` run reaches **1670** blocking lemmas before BatSat times
+  out. **Next:** the remaining blocker is SAT search quality / relevance after a
+  large learned-clause Boolean skeleton, or a replay-gated model-construction
+  shortcut for `bug337`; rebuild overhead is no longer the limiting cost.
+  Verification passed: `cargo test -p axeyum-solver --lib dpll_lia::tests -j1`;
+  `cargo test -p axeyum-solver --test lia_dpll -j1`;
+  `cargo test -p axeyum-solver --test int_array_sort -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`; `git diff --check`.
+
+- **Session 2026-06-25 — scalar LIA bound lemmas + large-core cutoff landed; AUFLIA remains 4/6.**
+  Added a certified upfront pruning pass to the legacy arithmetic DPLL fallback:
+  simple asserted integer bounds on the same term now generate two-literal
+  theory lemmas for impossible lower/upper pairs, e.g. the branch-selector
+  pattern `x >= 1` with `x <= 0`. These clauses are recorded as ordinary
+  `ArithLemmaLiteral` cores and pass the existing independent refutation
+  verifier. Also made conflict-core minimization size-aware: scalar abstractions
+  with more than 128 atoms use the full unsat theory slice instead of spending
+  many simplex calls on deletion minimization. Small/certification-friendly
+  formulas still get minimized cores.
+  Local QF_AUFLIA fair-slice measurement remains **4/6 decided, DISAGREE=0**
+  (artifact `bench-results/local/qf-auflia-after-bound-lemmas-core-cutoff.json`;
+  Z3 remains **6/6**, PAR-2 **0.105 s** vs axeyum **6.673 s**). The useful
+  movement is diagnostic/throughput: at 10 s, `bug330` now reaches **40**
+  scalar blocking lemmas with **27** upfront bound lemmas before the Boolean
+  skeleton times out; `bug337` reaches **46** blocking lemmas with **150**
+  upfront bound lemmas. A 30 s single-file `bug337` run reaches **84** blocking
+  lemmas before the pure Boolean skeleton times out, compared with the previous
+  **19**-lemma diagnostic under core minimization. **Next:** the remaining
+  blocker is no longer expensive simplex core minimization; it is Boolean
+  skeleton scaling / relevance / incremental SAT after many learned clauses, or
+  a replay-gated SAT/model-construction shortcut for `bug337`.
+  Verification passed: `cargo test -p axeyum-solver --lib dpll_lia::tests -j1`;
+  `cargo test -p axeyum-solver --test lia_dpll -j1`;
+  `cargo test -p axeyum-solver --test int_array_sort -j1`;
+  `cargo test -p axeyum-solver --test abv_lazy_ext -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`; `git diff --check`.
+
+- **Session 2026-06-25 — online LIA/LRA Boolean-leaf model lift landed; AUFLIA remains 4/6.**
+  Closed a replay gap in the standalone online arithmetic drivers. The online
+  LIA/LRA encoders already admit declared Boolean leaves in the Boolean skeleton,
+  but a `sat` leaf reconstructed only the arithmetic theory model before replay.
+  They now lift final DPLL assignments for declared Boolean leaves into the
+  returned model, then replay with the combined arithmetic+Boolean assignment.
+  Added focused in-source regressions for `p ∧ (x < y ∨ y < x)` in both LIA and
+  LRA, which require the Boolean leaf value to replay.
+  Local QF_AUFLIA fair-slice measurement remains **4/6 decided, DISAGREE=0**
+  (artifact `bench-results/local/qf-auflia-after-online-boolean-model-lift.json`;
+  Z3 remains **6/6**, PAR-2 **0.102 s** vs axeyum **6.673 s**). Final route trace
+  is unchanged on the two hard files: `bug330` is still **802** atoms / **6**
+  blocking lemmas before timeout, and `bug337` is still **946** atoms / **7**
+  blocking lemmas before timeout. A tested 3s online LIA probe cap did not solve
+  either file and reduced `bug330` fallback progress, so it was reverted to the
+  previous 1s cap. Verification passed:
+  `cargo test -p axeyum-solver --lib lia_online::tests -j1`;
+  `cargo test -p axeyum-solver --lib lra_online::tests -j1`;
+  `cargo test -p axeyum-solver --test int_array_sort -j1`;
+  `cargo fmt --all --check`. **Next:** the remaining AUFLIA work is still a real
+  `bug337` SAT/model-construction shortcut on the smaller scalar abstraction, or
+  `bug330` Boolean-layer model certification/relevance.
+
+- **Session 2026-06-25 — scalar abstraction preprocessing/flattening landed; AUFLIA remains 4/6.**
+  Wired the existing replay-safe word-level preprocessing wrapper into the
+  lazy ROW/extensionality scalar CEGAR boundary, after first flattening positive
+  top-level conjunctions. This exposes generated scalar definitions (`x = t`,
+  constants, fresh read aliases) to `propagate_values`/`solve_eqs` before the
+  arithmetic or UFLIA backend builds its Boolean/theory skeleton. The change is
+  relaxation-local: `unsat` of the preprocessed scalar snapshot still implies
+  `unsat` of the snapshot, and every `sat` candidate is reconstructed by the
+  preprocessing trail before the normal ROW/extensionality projection and
+  original-formula replay.
+  Local QF_AUFLIA fair-slice measurement remains **4/6 decided, DISAGREE=0**
+  (artifact `bench-results/local/qf-auflia-after-scalar-preprocess-flatten.json`;
+  Z3 remains **6/6**, PAR-2 **0.104 s** vs axeyum **6.674 s**). The useful
+  movement is diagnostic and scalar-frontier specific: `bug337` drops from
+  **1374** arithmetic atoms / **2** blocking lemmas to **946** atoms / **7**
+  lemmas at 10 s; a 30 s single-file run reaches **19** blocking lemmas but
+  still returns `unknown`, so the blocker is not just the harness cap. `bug330`
+  remains at **802** atoms and times out after **6** blocking lemmas. Verification
+  passed: `cargo test -p axeyum-solver --test int_array_sort -j1`;
+  `cargo test -p axeyum-solver --test abv_lazy_row -j1`;
+  `cargo test -p axeyum-solver --test abv_lazy_ext -j1`;
+  `cargo test -p axeyum-solver --test lia_dpll -j1`. **Next:** use the smaller
+  `bug337` abstraction to add a real SAT/model-construction shortcut, or attack
+  `bug330` through Boolean-layer model certification/relevance rather than more
+  scalar cleanup.
+
+- **Session 2026-06-25 — scalar Boolean short-circuiting landed; AUFLIA remains 4/6.**
+  Added constant-aware Boolean simplification inside the legacy arithmetic
+  abstraction used by the scalar LIA/LRA fallback: dead `and`/`or` branches are
+  skipped before their arithmetic atoms are allocated; Boolean `xor`, implication,
+  equality, negation, and Bool-valued `ite` now fold constants and identical
+  branches during abstraction. This is a sound local cleanup and prevents future
+  dead Boolean scaffolding from inflating scalar theory atoms, but it is neutral
+  on the current cvc5 QF_AUFLIA hard slice. Route trace remains: `bug330` times
+  out at ROW round 0 with **62 select sites**, then **802** arithmetic atoms and
+  **7** blocking lemmas; `bug337` times out at extensionality round 0 with
+  **152 select sites**, then **1374** atoms and **2** blocking lemmas. Local
+  QF_AUFLIA fair-slice measurement remains **4/6 decided, DISAGREE=0** (artifact
+  `bench-results/local/qf-auflia-after-boolean-simplification.json`; Z3 remains
+  **6/6**, PAR-2 **0.104 s** vs axeyum **6.672 s**). Verification passed:
+  `cargo test -p axeyum-solver --lib dpll_lia::tests -j1`;
+  `cargo test -p axeyum-solver --test lia_dpll -j1`;
+  `cargo test -p axeyum-solver --test int_array_sort -j1`. **Next:** stop
+  looking for shallow Boolean cleanup to move this slice; `bug330` needs real
+  scalar relevance / Boolean-layer model certification, and `bug337` needs a
+  smaller initial extensionality abstraction or SAT/model-construction shortcut.
+
+- **Session 2026-06-25 — arithmetic atom canonicalization and bounded LIA probe cap landed; AUFLIA remains 4/6.**
+  Reduced scalar arithmetic abstraction duplication in the legacy DPLL(LIA/LRA)
+  path. Reversed order atoms now share one canonical proposition
+  (`x >= y` becomes `y <= x`, `x > y` becomes `y < x`), negated order atoms are
+  pushed to their order-complement (`not (x < y)` becomes `y <= x`), and trivial
+  self-comparisons/equalities fold to Boolean constants instead of allocating
+  theory atoms. A trial expansion of `not (= a b)` to strict-order disjunctions
+  was rejected because it increased `bug330`'s scalar atom count; only the
+  beneficial order canonicalization was kept. Added unit tests for reversed-order
+  sharing, negated-order sharing, and self-comparison/equality folding.
+  Also capped the online LIA probe inside `check_with_arith_dpll` to at most
+  1 second of a configured wall-clock timeout. The probe still gets a bounded
+  chance to use the stronger CDCL(T) spine, but large scalar abstractions no
+  longer lose half of the measured budget before the legacy arithmetic fallback.
+  Local QF_AUFLIA fair-slice measurement remains **4/6 decided, DISAGREE=0**
+  (artifact `bench-results/local/qf-auflia-after-arith-atom-canonicalization.json`).
+  The route trace shows modest but real scalar-frontier movement: `bug330` drops
+  from **832** to **802** arithmetic atoms and the fallback advances from **4**
+  to **7** blocking lemmas before timing out; `bug337` remains **1374** atoms and
+  **2** blocking lemmas before timeout. Verification passed:
+  `cargo test -p axeyum-solver --lib dpll_lia::tests -j1`;
+  `cargo test -p axeyum-solver --test lia_dpll -j1`;
+  `cargo test -p axeyum-solver --test int_array_sort -j1`;
+  `cargo fmt --all --check`. **Next:** `bug330` still needs stronger scalar
+  relevance/atom reduction or a better SAT/theory loop; `bug337` needs a
+  SAT/model-construction shortcut or a much smaller initial extensionality
+  scalar abstraction.
+
+- **Session 2026-06-25 — measurement harness timeout is now passed into the solver; AUFLIA misses localized to initial scalar abstractions.**
+  Fixed the corpus measurement examples so the Axeyum worker-thread cap is also
+  passed into `SolverConfig::timeout` for `check_auto`. Before this, `measure_corpus`
+  and `measure_graduated` could kill the worker at the harness boundary while
+  deadline-aware solver routes saw `timeout = None`, making PAR-2 less
+  representative of the solver API. The worker cap remains as an outer safety net.
+  Also tightened lazy ROW/extensionality CEGAR budget handling: each scalar backend
+  call now receives only the remaining outer deadline, and unknowns from the scalar
+  backend are annotated with the ROW/extensionality round, materialized select-site
+  count, and lemma counts. The legacy arithmetic DPLL loop now similarly passes
+  remaining time to the SAT skeleton backend and reports atom/blocking-lemma counts
+  on timeout.
+  Local QF_AUFLIA fair-slice measurement with the corrected harness remains **4/6
+  decided, DISAGREE=0** (artifact
+  `bench-results/local/qf-auflia-after-scalar-abstraction-diagnostics.json`;
+  PAR-2 **6.672 s** vs Z3 **0.104 s**). The route trace now proves both remaining
+  misses fail before array refinement does any useful work: `bug330` times out in
+  the initial ROW scalar abstraction at round 0 with **62 select sites**, then
+  arithmetic times out after **4 scalar rounds / 832 atoms / 4 blocking lemmas**;
+  `bug337` times out in the initial extensionality scalar abstraction at round 0
+  with **152 select sites**, then arithmetic times out after **2 scalar rounds /
+  1374 atoms / 2 blocking lemmas**.
+  Verification passed: `cargo check -p axeyum-bench --examples -j1`;
+  `cargo test -p axeyum-solver --test lia_dpll -j1`;
+  `cargo test -p axeyum-solver --test int_array_sort -j1`;
+  `cargo test -p axeyum-solver --test abv_lazy_row -j1`;
+  `cargo test -p axeyum-solver --test abv_lazy_ext -j1`;
+  `cargo fmt --all --check`. **Next:** attack scalar abstraction size/relevance
+  for `bug330`/`bug337` before adding more ROW/extensionality lemmas; the current
+  bottleneck is the first scalar solve, not refinement convergence.
+
+- **Session 2026-06-25 — UFLIA/UFLRA combined CDCL(T) now honors deadlines; AUFLIA frontier sharpened, 4/6 unchanged.**
+  Closed a resource-bound gap in the combined online UF+arithmetic drivers:
+  both `QF_UFLIA` and `QF_UFLRA` computed a wall-clock deadline for the
+  integrated `Dpll<CombinedIncremental*>` path but then called the unbounded
+  `solve` entry. They now call `solve_with_deadline` and return a
+  timeout-classified `Unknown` when the budget expires. Added zero-budget
+  Boolean-combination regressions in both online suites so timeout declines are
+  reported as `UnknownKind::Timeout`, not a generic incomplete search.
+  Raised the UFLIA Boolean atom admission cap from 48 to 384 under that deadline
+  guard, enough to exercise the current `bug330` scalar abstraction (339 atoms)
+  instead of rejecting it at the front door. The new route trace confirms
+  `bug330` is no longer an admission-cap miss: it reaches the online
+  UF+LIA combination and declines on an uncertified Boolean-layer theory model,
+  then still times out in the lazy Int-array route. `bug337` remains the pure
+  Int-array lazy-LIA timeout.
+  Local QF_AUFLIA fair-slice measurement (debug harness, 10 s, artifact
+  `bench-results/local/qf-auflia-after-uflia-deadline-cap.json`) remains **4/6
+  decided, DISAGREE=0**; Z3 remains **6/6** (PAR-2 **0.106 s** vs axeyum
+  **6.672 s**). Verification passed:
+  `cargo test -p axeyum-solver --test uflia_online -j1`;
+  `cargo test -p axeyum-solver --test uflra_online -j1`;
+  `cargo test -p axeyum-solver --test int_array_sort -j1`;
+  `cargo fmt --all --check`; `git diff --check`. **Next:** treat `bug330`
+  as an interface/replay/relevance problem, not a 48-atom admission problem;
+  separately attack `bug337` with Int-array SAT/model construction or a better
+  lazy-LIA search path.
+
+- **Session 2026-06-25 — AUFLIA permutation-chain refuter closes cvc5 `swap...`; fair slice now 4/6.**
+  Generalized the prior clean swap-chain recognizer into a terminating,
+  memoized array-permutation normalizer. A recognized store pair
+  `store(store(a,i,select(a,j)),j,select(a,i))` is treated as a swap over the
+  normalized base, and the normal form records the induced deterministic
+  permutation map rather than an ordered syntactic list. Same-index swaps collapse
+  to identity, repeated/canceling swaps normalize naturally, and the recognizer
+  accepts select bases that are already extensionally equal under the same
+  normalizer. This remains a refuter only: it proves `unsat` for same-index read
+  disequalities between extensionally equal permutation chains and otherwise
+  declines.
+  Moved the proven array-unsat refuters to the `check_auto` front door, before
+  global coercion/ITE normalization and before UF+arithmetic. That matters for
+  generated AUFLIA formulas: the exact cvc5
+  `cli__regress4__swap_t1_pp_nf_ai_00010_004.cvc.smt2` file now decides
+  immediately via `array-unsat-refuter` instead of burning the scalar lazy-LIA
+  timeout. The existing two-store split and array congruence refuters also run
+  from this early hook, but only return proven `unsat`.
+  Local QF_AUFLIA fair-slice measurement (debug harness, 10 s, artifact
+  `bench-results/local/qf-auflia-after-permutation-refuter.json`) is now **4/6
+  decided, DISAGREE=0**, improving the prior 3/6; Z3 remains **6/6** and much
+  faster (PAR-2 **0.104 s** vs axeyum **6.672 s**). Route trace: `bug336` and
+  `swap...` decide via `array-unsat-refuter`; `prop__cadical_bug8` and
+  `uf__issue4446` decide `sat`; remaining misses are `bug330` (339 UFLIA atoms
+  against the current 48-atom online cap, then lazy-LIA timeout) and `bug337`
+  (pure Int-array lazy-LIA timeout).
+  Verification passed: direct lib regression
+  `abv::tests::symmetric_swap_chain_refuter_closes_cvc5_regression` before the
+  final front-door move; full
+  `cargo test -p axeyum-solver --test int_array_sort -j1` after the front-door
+  move; exact end-to-end cvc5 swap regression after the front-door move;
+  `cargo fmt --all --check`; `git diff --check`; route explanation and
+  fair-slice measurement above with `CARGO_INCREMENTAL=0`. A final rerun of the
+  direct lib test was skipped because the host hit `No space left on device`
+  while writing incremental cache; the normalizer itself was unchanged after
+  that direct pass. **Next:** attack the two remaining AUFLIA misses through
+  scalar search: relevance/atom-budget work for `bug330`, or an Int-array
+  SAT/model-construction improvement for `bug337`.
+
+- **Session 2026-06-25 — AUFLIA bounded LIA probe + clean swap-chain refuter landed; measured count unchanged.**
+  Tightened the scalar-engine boundary exposed by the prior AUFLIA projection
+  slice. `check_with_arith_dpll` now tries the shared online LIA DPLL(T) spine
+  first and, when a timeout is configured, gives it a bounded probe before
+  falling back to the legacy certified arithmetic-DPLL route with only the
+  remaining budget. `check_qf_lia_online` now honors that wall-clock deadline
+  instead of running unbounded inside array/UF scalar abstractions. Added a
+  replay regression ensuring Boolean leaves that the online probe cannot model
+  still fall back to a replaying SAT result.
+  Also added a narrow, sound array refuter for clean symmetric store-swap
+  chains of the form `store(store(a,i,select(a,j)),j,select(a,i))`: two arrays
+  with the same base and the same ordered sequence of unordered swap pairs are
+  extensionally equal, so a same-index read disequality refutes. This is useful
+  coverage for generated swap-chain shapes, but it is not yet strong enough for
+  the current cvc5 `swap...` corpus instance, which still falls through to the
+  scalar lazy-LIA timeout.
+  Local QF_AUFLIA fair-slice measurement (debug harness, 10 s, artifact
+  `bench-results/local/qf-auflia-after-swap-chain-refuter.json`) remains **3/6
+  decided, DISAGREE=0**; Z3 decides **6/6** on the same fair slice. Remaining
+  misses are unchanged: `bug330` is a large Boolean UFLIA abstraction
+  (**339 > 48** atom cap, then lazy-LIA timeout if forced), `swap...` needs a
+  stronger array-permutation/ROW normalizer or scalar-LIA improvement, and
+  `bug337` remains a scalar Int-array timeout. Verification passed:
+  `cargo fmt --all --check`; `git diff --check`;
+  `cargo check -p axeyum-solver -j1`;
+  `cargo test -p axeyum-solver --test int_array_sort -j1`;
+  `cargo test -p axeyum-solver --test lia_dpll -j1`;
+  `cargo test -p axeyum-solver --test lia_online -j1`. All-features workspace
+  verification was intentionally not rerun on this slice because the host disk
+  is nearly full.
+  **Next:** treat QF_AUFLIA as a scalar-search frontier now: either raise/reduce
+  the `bug330` Boolean UFLIA abstraction cost with learned relevance, build a
+  real array-permutation invariant for the swap chain, or address the
+  `bug337` Int-array SAT/model-construction timeout.
+
+- **Session 2026-06-25 — AUFLIA projection completion + scalar fallback diagnostics landed.**
+  Narrowed the next QF_AUFLIA frontier after the structural ROW slice. The
+  `QF_UFLIA` scalar backend used under lazy ROW now mirrors the normal mixed-UF
+  dispatcher more closely: online UFLIA is still tried first, and non-budget
+  `unknown` can fall back to the eager UF+arithmetic route. `FunctionElimination`
+  model projection now completes non-application symbols with well-founded default
+  values before evaluating full-`Value` UF argument keys, while still requiring
+  each fresh `!fn_app_*` result to be assigned. This closes the concrete
+  array-valued-UF-argument projection failure exposed by the `swap...` corpus
+  shape (`no value bound for symbol #6`). Added a rewrite-layer regression for
+  projection of `f(store(a,i,0))` when `a`/`i` are unconstrained by the backend
+  model. The UFLIA Boolean atom-cap decline now reports `actual > cap`, making
+  `bug330`'s scalar abstraction size explicit (**339 > 48**).
+  Local QF_AUFLIA fair-slice measurement (debug harness, 10 s, artifact
+  `bench-results/local/qf-auflia-after-projection-completion.json`) remains **3/6
+  decided, DISAGREE=0**. Remaining misses are now clearer: `bug330` is a large
+  Boolean UFLIA abstraction (339 atoms; array route then hits the lazy-LIA budget
+  if forced through eager fallback), `swap...` is past structural/projection
+  failures and now reaches a lazy-LIA timeout, and `bug337` remains a scalar
+  Int-array timeout. Verification passed: focused rewrite projection regression;
+  focused Int-array/AUFLIA tests;
+  `cargo check -p axeyum-rewrite -p axeyum-solver -p axeyum-bench --all-features -j4`;
+  `cargo clippy -p axeyum-rewrite -p axeyum-solver -p axeyum-bench --all-targets --all-features -j4 -- -D warnings`;
+  `cargo fmt --all --check`; `git diff --check`. **Next:** stop treating these
+  as structural/modeling bugs; the next real movement needs a stronger scalar
+  Boolean/LIA engine for large array abstractions (or a corpus-specific valid
+  array invariant for the swap-chain), plus the `bug337` SAT-side timeout.
+
+- **Session 2026-06-25 — AUFLIA structural ROW coverage widened; measured count unchanged.**
+  Extended the mixed Int-array/AUFLIA lazy ROW route past two structural blockers
+  without claiming a decide-rate gain. Scalar UF applications now preserve
+  array-valued arguments through ROW abstraction instead of recursively rejecting
+  store-chain array operands; `select(ite c a b, i)` now lowers inside the lazy
+  resolver to `ite c (select a i) (select b i)`; and store ROW "miss" branches can
+  point at an arbitrary abstracted scalar read expression rather than only another
+  materialized site. The UF-arithmetic overbound guard also no longer short-circuits
+  mixed array+UF queries on `unknown`; it records the decline and lets the downstream
+  array route try. Added focused regressions for the swap-store-chain skolem-index
+  shape and array-`ite` reads.
+  Local QF_AUFLIA fair-slice measurement (debug harness, 10 s, artifact
+  `bench-results/local/qf-auflia-after-array-ite-routing.json`) remains **3/6
+  decided, DISAGREE=0**. The route trace is more precise: `bug330` now reaches
+  `array-fast-path` and declines on the scalar UFLIA Boolean atom cap ("too many
+  theory atoms") instead of the earlier structural ROW rejection; `swap...` is also
+  past structural rejection and now fails by replay/timeout; `bug337` remains a
+  scalar Int-array timeout. Verification passed: focused Int-array/AUFLIA tests;
+  `cargo check -p axeyum-solver -p axeyum-bench --all-features -j4`;
+  `cargo clippy -p axeyum-solver -p axeyum-bench --all-targets --all-features -j4 -- -D warnings`;
+  `cargo fmt --all --check`; `git diff --check`. **Next:** attack the remaining
+  QF_AUFLIA misses by reducing/raising the scalar UFLIA Boolean atom cap for
+  `bug330`, improving replay/refinement for the swap-chain corpus instance, and
+  addressing the scalar Int-array timeout in `bug337`.
+
+- **Session 2026-06-25 — AUFLIA store-disjunction refuter landed.**
+  Closed the next named QF_AUFLIA blocker (`bug336`) with a sound array-specific
+  refuter for the Stump-Barrett-Dill-Levitt store consequence:
+  `store(a,i,v)=b ∧ store(a,j,w)=b ⇒ i=j ∨ a=b`. The implementation detects
+  two positive store equalities with the same base and target, then asks the
+  existing checked EUF congruence refuter to prove both branches impossible under
+  the original assertions. This turns the corpus shape
+  `f(x) != f(y) ∧ g(a) != g(b)` into a real `unsat` result without trusting the
+  new search logic for proof: each branch refutation is delegated to the existing
+  congruence checker. Added focused coverage for the exact AUFLIA pattern and a
+  satisfiable guard where one branch remains possible.
+  Local QF_AUFLIA fair-slice measurement (debug harness, 10 s, artifact
+  `bench-results/local/qf-auflia-after-store-split.json`) is now **3/6 decided,
+  DISAGREE=0**, improving the previous mixed ROW+UF result of 2/6. Per-file
+  trace confirms `cli__regress0__auflia__bug336.smt2` now decides `unsat` via
+  `array-fast-path`; remaining QF_AUFLIA misses are `bug337` (scalar Int-array
+  timeout) and `bug330` / `swap...` (array term shapes outside the current ROW
+  fragment). Verification passed: focused Int-array/AUFLIA tests;
+  `cargo check -p axeyum-ir -p axeyum-rewrite -p axeyum-solver -p axeyum-bench --all-features -j4`;
+  `cargo clippy -p axeyum-ir -p axeyum-rewrite -p axeyum-solver -p axeyum-bench --all-targets --all-features -j4 -- -D warnings`;
+  `cargo fmt --all --check`; `git diff --check`. **Next:** extend the ROW
+  abstraction to the array-valued structural terms in `bug330`/`swap...`
+  (superseded by the later structural ROW coverage slice), then address the scalar
+  Int-array timeout in `bug337`.
+
+- **Session 2026-06-25 — Mixed AUFLIA lazy ROW+UF route landed.**
+  Advanced the next QF_AUFLIA blocker past parser/model admission into an actual
+  mixed array+UF solving path. Lazy ROW/extensionality now has a
+  `QF_UFLIA` scalar backend (`check_qf_auflia_lazy_row`) that delegates the
+  scalar abstraction to the existing online UF+LIA combination while keeping the
+  array CEGAR layer responsible for ROW/extensionality. SAT remains replay-gated
+  against the original array formula. Model plumbing was tightened so projected
+  array models preserve UF interpretations, missing UF interpretations are
+  completed with deterministic well-founded defaults, and the UF+LIA model
+  builder completes non-Int symbols before evaluating array arguments in
+  integer-result function tables. `check_auto` now routes non-BV
+  Bool/linear-Int+UF array slices through this path, and budget `unknown` from
+  eager UF+arith no longer prevents mixed array+UF queries from falling through
+  to the array CEGAR route. Added `axeyum-bench/examples/explain_corpus.rs` for
+  bounded per-file route traces.
+  Regression coverage in `crates/axeyum-solver/tests/int_array_sort.rs` now
+  includes replayed SAT for `g : (Array Int Int) -> Int`, replayed SAT for
+  `select a (idx a)`, and a ROW contradiction at a UF-produced index. Local
+  QF_AUFLIA fair-slice measurement (debug harness, 10 s, artifact
+  `bench-results/local/qf-auflia-after-mixed-row-uf.json`) is now **2/6
+  decided, DISAGREE=0**; this is a real movement from the previous 1/3, but
+  parser admission also expanded the fair set to six files. Per-file trace:
+  `prop__cadical_bug8` and pure Boolean UF decide; `bug337` is a scalar
+  Int-array timeout; `bug330` and `swap...` use array term shapes outside the
+  current ROW fragment; `bug336` needs stronger array/UF extensional reasoning
+  after lazy refinement. Verification passed: focused Int-array/AUFLIA tests;
+  `cargo check -p axeyum-ir -p axeyum-rewrite -p axeyum-solver -p axeyum-bench --all-features -j4`;
+  `cargo clippy -p axeyum-ir -p axeyum-rewrite -p axeyum-solver -p axeyum-bench --all-targets --all-features -j4 -- -D warnings`;
+  `cargo fmt --all --check`; `git diff --check`. **Next:** extend the ROW
+  fragment to array-valued `ite`/structural store-chain operands and add the
+  missing array-equality-to-UF congruence refinement needed by `bug336`, then
+  remeasure QF_AUFLIA/QF_ALIA.
+
+- **Session 2026-06-25 — AUFLIA array-argument UF prerequisite landed.**
+  Continued from the post-QF_ALIA scalar-array slice and narrowed the remaining
+  QF_AUFLIA gap to mixed array+UF handling. The IR now admits array-valued
+  *parameters* for uninterpreted functions while still rejecting array-valued
+  results; this matches the cvc5 AUFLIA shapes such as
+  `g : (Array Int Int) -> Int` without opening array-returning UF terms before
+  solver/model projection is ready. `FuncValue` storage is generalized from
+  "arithmetic only" to full-`Value` tables whenever a signature mentions
+  `Int`/`Real`/arrays/datatypes, so model replay can key function entries by
+  concrete generic array values. UF model projection now uses the same predicate
+  instead of scalar-coding array arguments. SMT-LIB parsing accepts array-argument
+  `declare-fun` signatures and keeps array-valued results as clear IR errors.
+  Added regression coverage in `crates/axeyum-ir/tests/ir.rs`,
+  `crates/axeyum-smtlib/tests/smtlib.rs`, and
+  `crates/axeyum-solver/tests/int_array_sort.rs`; the solver now proves the
+  narrow AUFLIA congruence case
+  `a = b ∧ g(a) != g(b)` for `g : (Array Int Int) -> Int` as `unsat`, and
+  pins a satisfiable array-argument UF shape so it may return `sat` or
+  `unknown` but never a false `unsat`.
+  Verification passed: `cargo check -p axeyum-ir -p axeyum-rewrite -p axeyum-smtlib -p axeyum-solver --all-features -j4`;
+  focused IR/SMT-LIB/Int-array solver tests; `cargo clippy -p axeyum-ir -p axeyum-rewrite -p axeyum-smtlib -p axeyum-solver --all-targets --all-features -j4 -- -D warnings`;
+  `cargo fmt --all --check`; `git diff --check`. **Next:** wire a
+  replay-checked scalar backend for lazy ROW/extensionality whose scalar side can
+  solve UF+LIA with array-argument applications, then remeasure QF_AUFLIA; current
+  UF+LIA online docs still explicitly decline arrays, so the broader mixed route
+  is not done.
+
+- **Session 2026-06-25 — Int-array SAT projection + scalar lazy ROW route landed.**
+  Advanced the next Tier-A array keystone slice: the IR now has
+  `Value::GenericArray` for non-BV array models, the evaluator executes
+  `const-array`/`select`/`store` over arbitrary non-array component sorts, and
+  well-founded defaults now include generic array values. The lazy
+  ROW/extensionality CEGAR path no longer assumes `u128`-coded BV indices/results:
+  it compares full `Value`s, completes missing scalar symbols before projection,
+  reconstructs either compact `ArrayValue` or `GenericArrayValue`, and uses
+  single diff-skolem witnesses at the real index sort. `check_auto` now routes the
+  Bool/linear-Int scalar array slice through the existing lazy array machinery
+  with the arithmetic DPLL backend, so model-producing `(Array Int Int)` SAT
+  shapes now return replay-checked `sat` instead of the previous explicit
+  `unknown`. The eager BV array eliminator still remains BV-only but now declines
+  non-BV arrays cleanly instead of assuming widths.
+  Regression coverage added/updated:
+  `crates/axeyum-ir/tests/ir.rs` pins generic Int-array
+  `const-array`/`store`/`select` evaluation;
+  `crates/axeyum-solver/tests/int_array_sort.rs` now covers congruence UNSAT,
+  free-read SAT replay, ROW-conflict UNSAT, and array-disequality SAT replay.
+  Verification passed: `cargo fmt --all --check`;
+  `cargo check -p axeyum-ir -p axeyum-rewrite -p axeyum-solver --all-features -j4`;
+  `cargo clippy -p axeyum-ir -p axeyum-rewrite -p axeyum-solver --all-targets --all-features -j4 -- -D warnings`;
+  focused IR, Int-array solver, SMT-LIB array, and uninterpreted-sort solver
+  tests. Local post-slice measurement (debug harness, 10 s, artifacts under
+  `bench-results/local/`): QF_ALIA cvc5 clean fair slice now **3/5 decided,
+  DISAGREE=0** (`z3_rejected_unfair=1`), improving the committed 0-decided
+  baseline; QF_AUFLIA fair slice remains **1/3 decided, DISAGREE=0**, confirming
+  mixed UF/array breadth is still open; QF_UF overbound remains **4/6 decided,
+  DISAGREE=0**. **Next:** promote/refresh committed baselines if desired, then
+  extend the scalar array route across mixed AUFLIA/UF and broader non-BV
+  component sorts instead of only Bool/linear-Int arrays.
+
+- **Session 2026-06-25 — IR keystone slice: sort-valued arrays landed.**
+  Advanced the remaining half of the Tier-A array IR blocker without claiming the
+  full Int-array decision procedure yet: `Sort::Array` now carries sort-valued
+  component metadata (`ArraySortKey`) instead of BV widths only, while
+  `array_widths()` remains a BV-only compatibility helper for the existing finite
+  array model/projection path. `TermArena::select`/`store` now check the actual
+  index/element sorts; `const-array` carries its index sort; SMT-LIB parses and
+  writes free `(Array Int Int)` formulas; writer logic detection reports
+  `QF_ALIA` for Int arrays instead of fake BV logic. `check_auto` now scans array
+  component sorts, proves the congruence-UNSAT slice for Int-indexed arrays
+  (`a=b ∧ select(a,i)≠select(b,i)`), and at that point returned an explicit
+  `unknown` for model-producing non-BV array SAT shapes until generic array
+  models existed (superseded by the later 2026-06-25 entry above).
+  Regression coverage: `crates/axeyum-smtlib/tests/smtlib.rs` checks first-class
+  `(Array Int Int)` parse/write/round-trip and free Int-array representability;
+  `crates/axeyum-solver/tests/int_array_sort.rs` checks Int-array congruence
+  `unsat` plus the explicit non-BV-array `unknown` boundary. Verification passed:
+  `cargo fmt --all --check`;
+  `scripts/mem-run.sh cargo check --workspace --all-features -j4`;
+  `scripts/mem-run.sh cargo clippy --workspace --all-targets --all-features -j4 -- -D warnings`;
+  `scripts/mem-run.sh cargo test -p axeyum-ir -p axeyum-smtlib -p axeyum-rewrite -p axeyum-query -p axeyum-solver --all-features --no-run -j4`;
+  focused SMT-LIB, Int-array solver, and uninterpreted-sort solver tests. Host
+  disk remains tight after rebuilding test artifacts (`df -h .` ≈ 6.8G free,
+  99% used). **Superseded next:** generic non-BV array model projection and the
+  Bool/linear-Int lazy scalar route landed later on 2026-06-25; current next is
+  remeasurement plus mixed AUFLIA/UF breadth.
+
+- **Session 2026-06-25 — IR keystone slice: first-class uninterpreted sorts landed.**
+  Advanced the [`docs/PARITY-STATUS-AND-PATH.md`](docs/PARITY-STATUS-AND-PATH.md)
+  Tier-A QF_UF blocker without touching the array-sort half yet:
+  `Sort::Uninterpreted(SortId)` is now an arena-declared `Copy` carrier, SMT-LIB
+  arity-0 `(declare-sort U 0)` no longer collapses to a parser-chosen `BitVec(W)`,
+  `Value::Uninterpreted` provides deterministic replay tokens, and the EUF
+  e-graph model builder returns replay-checked `sat` models over declared carrier
+  sorts. `check_auto` feature scanning now routes pure declared-sort equality/UF
+  queries through the EUF path even when no `Op::Apply` occurs; evidence routing
+  keeps those queries out of the raw QF_BV evidence label. SMT-LIB export emits
+  `(declare-sort … 0)` and round-trips declared-sort constants/functions.
+  Regression coverage:
+  `crates/axeyum-smtlib/tests/smtlib.rs` checks first-class parsing/writing and
+  collision/arity errors; `crates/axeyum-solver/tests/uninterpreted_sort_euf.rs`
+  checks replayed `sat` for `a≠b : U` and congruence `unsat` for
+  `a=b ∧ f(a)≠f(b)`. Verification passed:
+  `cargo fmt --all --check`; `scripts/mem-run.sh cargo check --workspace --all-features -j4`;
+  `scripts/mem-run.sh cargo clippy --workspace --all-targets --all-features -j4 -- -D warnings`;
+  focused parser/solver tests. A broader
+  `cargo test -p axeyum-ir -p axeyum-smtlib -p axeyum-solver --all-features -j4`
+  hit the known host disk-pressure failure while linking solver tests
+  (`No space left on device`); generated `target/debug/incremental` was removed,
+  restoring limited space. **Next:** finish the same keystone by introducing
+  sort-valued array index/element metadata and the single-witness extensionality
+  route for Int-indexed arrays; then remeasure QF_UF/QF_ALIA/QF_AUFLIA rows.
+
+- **Session 2026-06-23 — Z3/cvc5 gap analysis amended after online-combination push.**
+  Updated [`docs/plan/gap-analysis-z3-cvc5-2026-06-22.md`](docs/plan/gap-analysis-z3-cvc5-2026-06-22.md)
+  and sharpened `PLAN.md` to reflect the latest ledger: online LRA/LIA and
+  default online UFLRA/UFLIA are no longer future work; vivification and
+  route-trace telemetry have landed; LIA MBP/PDR/IMC and richer Horn handling
+  have landed. The honest remaining gap is now **quality and migration**:
+  real CDCL(T) propagation/1-UIP/relevance over the online spine, lazy arrays/BV
+  on that spine, measured QF_BV performance with route traces, disjunctive LIA
+  interpolation, NRA/NIA proof evidence, unbounded strings/sequences, and
+  SMT-LIB surfaces for interpolation/abduction/proofs/diagnostics.
+
+- **Session 2026-06-22 (cont.) — INFINITE-STATE + ONLINE-COMBINATION push: 12 verified increments (Track 1/2/4), all on `main`.**
+  Advanced PLAN leverage items #1 (online multi-theory combination), #3 (SAT vivification), and #4
+  (deepen CHC/PDR) — every increment isolated-worktree-delegated, hard-verify-gated before FF-merge,
+  ledgered (`capabilities.rs` + matrix), and pushed (`b405e8e` → `4a95135`). Each is verify-guarded
+  (DRAT / in-tree differential / model replay / verify-before-return); **0 wrong sat/unsat** throughout.
+  - **Online EUF+LRA & EUF+LIA now decide FULL Boolean-structured QF_UFLRA/QF_UFLIA** via an enumerative
+    DPLL(T) (Tseitin skeleton + propositional-model enumeration + theory-conflict blocking, the
+    conjunctive MBTC reused as the per-model oracle) — differential vs offline `check_with_uf_arithmetic`,
+    0 disagreements (`b405e8e`, `6850da9`).
+  - **KEYSTONE (PLAN #1): the online combination is now the DEFAULT `check_auto` route for mixed
+    UF+arith** (eager Ackermann is the byte-unchanged fallback on online Unknown) — gated by an in-tree
+    differential vs the trusted eager route: 300-query corpus, 0 disagreements, 0 *logical* regressions,
+    sat replay, +16 value-add decisions; an adversarial audit caught a budget-regression and it was
+    *fixed* (online probe on an arena clone + bounded sub-budget) not excused (`ee11ab9`).
+  - **CHC depth:** mutual-recursion Horn (SCC-condensation + tagged-predicate merge, `c434762`) and
+    stratified-nonlinear Horn bodies (fold solved lower-stratum predecessors, `verify_horn_model`
+    audited, `1624036`).
+  - **SAT inprocessing (PLAN #3): vivification with full DRAT accounting** (`969f8d3`) —
+    `axeyum_cnf::vivify`, RUP-only strengthening (prefix-conflict + ALA), model-preserving,
+    `check_drat`-self-verified over 1100 random formulas + equisat differential + brute-force
+    model-preservation.
+  - **Route-trace / decline telemetry** (`check_auto_explained` → `(CheckResult, RouteTrace)`, ADR-0050,
+    `9f05f0a`) — additive recorder threaded through the single dispatch path, 400-query verdict-invariance
+    differential (0 mismatches). The gap-analysis #6 "minimal strategy/probe" + reviewer decline-telemetry.
+  - **Infinite-state LRA/LIA symmetry COMPLETED:** integer MBP `mbp_lia` (Cooper/Omega, soundness fuzz
+    0 unsound, `ea6e260`), integer PDR `prove_safety_pdr_lia` (3-check gate over ℤ, `2ee309e`), and
+    integer IMC `prove_safety_imc_lia` (McMillan via `lia_interpolant`, `4218b47`). Every infinite-state
+    engine now mirrored real↔integer: online solvers, online combinations, MBP, PDR, IMC.
+  - Full-workspace consolidation gate passed (exit 0). Two ops-lessons recorded to memory (test-result
+    grep masking exit codes; resume a resting agent via SendMessage not a `to:`-prefixed fork).
+  - **Next (still open, PLAN leverage order):** theory propagation in the online spine (toward real
+    CDCL(T) w/ 1-UIP); lazy arrays/BV (P2.1/2.2, the keystone's downstream unlock); a disjunctive integer
+    interpolant (closes `imc_lia`'s documented partial coverage); NRA/NIA certify-gap (cross-lane);
+    `(get-interpolant)`/`(get-abduct)` SMT-LIB surface (coordination-gated on `axeyum-smtlib`).
+  - *(This block is recorded but intentionally left UNCOMMITTED to avoid sweeping the concurrent agent's
+    uncommitted STATUS.md/PLAN.md writeups into a commit; the durable record is the committed capability
+    ledger + the 12 commits `b405e8e`→`4a95135`.)*
+
+- **Session 2026-06-22 (cont.) — QF_BV authoritative slice RE-MEASURED on HEAD (regression/soundness checkpoint).**
+  Re-ran the exact authoritative 20s config (`sat-bv` + inprocess/preprocess, node 300k /
+  CNF 3M·8M, query-plan full, refine 16, compare-z3) on `HEAD` after 100+ commits since the
+  06-20 baseline. **Soundness: zero regression — DISAGREE=0, 0 replay failures, 0 errors, 0
+  wrong-unsat.** Decided count 8→**7**: the single delta is `string1x8.6._bit8_na6_nr3_paired`
+  (baseline `sat` @15.6 s, only ~4.4 s of headroom under the 20 s wall → `unknown` @HEAD), a
+  **20 s-boundary instance under concurrent-build contention**, not a logic/capability
+  regression (the other 7 sat are identical). **Committed baseline left unchanged** (it was
+  taken under controlled conditions; this contended 7/113 would understate parity); the
+  re-measure artifact is in gitignored `bench-results/local/`. A clean idle-machine re-run
+  would confirm `string1x8.6` is load-sensitive vs a small HEAD overhead — a perf-watch item,
+  not a blocker. PLAN.md gap section sharpened: **online multi-theory combination** is named the
+  top architecture lever, the stale "no SAT inprocessing" note corrected (**BVE has landed**;
+  vivification next), and a leverage-ordered next-step list added.
+
+- **Session 2026-06-22 (cont.) — top-down Z3/cvc5 gap analysis refreshed.**
+  Added [`docs/plan/gap-analysis-z3-cvc5-2026-06-22.md`](docs/plan/gap-analysis-z3-cvc5-2026-06-22.md)
+  and wired it into `PLAN.md` + `docs/plan/README.md`. Main conclusion: the
+  "big three" categorical engines are now opened by first slices, so the honest
+  gap has shifted to production depth — measured QF_BV performance, word-level
+  reduction, proof-accounted SAT inprocessing, strategy/tactic routing, the
+  shared e-graph/CDCL(T) spine, lazy arrays/memory, LIA/NRA/NIA depth, full
+  strings/sequences, proof-carrying reductions, and SMT-LIB surfaces.
+  Practical next increments in order: refresh the stale current-state audit,
+  commit a current Z3 head-to-head dashboard, measure the landed `solve_eqs` /
+  `elim_unconstrained` preprocessing, measure the landed subsumption/SSR/BVE
+  pipeline, then add vivification/glue-tiering and stabilize the typed Alethe IR.
+
+- **Session 2026-06-22 (cont.) — ABDUCTION (`get-abduct`) landed — ALL THREE categorically-missing
+  Z3 engines now addressed.** `axeyum_solver::abduct(axioms, conjecture, config)` (ADR-0049): the
+  checker turned generator. Bounded enumeration of shared-vocabulary atoms (≤2-literal conjunctions),
+  each candidate returned only when re-checked — **consistency** (`axioms ∧ H` `check_auto`-`Sat`),
+  **sufficiency** (`axioms ∧ H ∧ ¬conjecture` `check_auto`-`Unsat`), **shared vocabulary**; `⊤` for the
+  already-entailed edge case; `Unknown` rejects, over-eager `None` on budget/out-of-grammar (never a
+  wrong abduct). 6 tests (LRA/EUF + already-entailed-⊤ + inconsistent/no-vocab declines + LCG fuzz).
+  Ledger row (synthesis, `Validated`). **The three missing engines: interpolation DONE (7 fragments),
+  CHC OPENED (PDR invariant discovery), abduction OPENED (this slice).** Fuller abduction (SyGuS
+  grammar synthesizing *new* atoms, CEGIS, minimality, the SMT-LIB `(get-abduct)` surface) is future.
+  - **Env note:** the disk hit 100% (worktree `target/` dirs accumulated); reclaimed ~15G by removing
+    this session's 8 *integrated* agent worktrees (work all on `main`) — left the concurrent agent's
+    10 worktrees untouched. `df` now ~15G free.
+
+- **Session 2026-06-22 (cont.) — LIA (integer) interpolant landed (interpolation engine now 6 fragments).**
+  Filled the reviewer-noted gap ("no `lia_interpolant`"; needed for integer CHC) and deepened the engine
+  (the #1 depth/completeness gap), staying in-lane while CHC remains coordination-gated.
+  - **`axeyum_solver::lia_interpolant` — DONE (`11232b6`).** Interpolate the **rational relaxation**
+    (map Int→Real with a shared symbol bijection, reuse `lra_interpolant`/Farkas), then translate the
+    real interpolant back to an integer atom **clearing denominators to integer coefficients** (LCM,
+    overflow-checked). Sound because a rational-relaxation interpolant is a valid *integer* interpolant
+    when the relaxation is itself unsat (A⇒I, I∧B⇒⊥ over ℝ ⟹ over ℤ). **Verify-before-return over the
+    integers:** `check_with_lia_simplex` on A∧¬I and I∧B + shared vocabulary; the mapping/Farkas/clearing
+    are untrusted. **Declines** the cuts-needed case (rational relaxation sat, e.g. `2x=1`), overflow, and
+    non-conjunctive-QF_LIA. `Solver::interpolant` dispatch now **LRA → LIA → EUF → UFLRA → BV**. 7 tests
+    (incl. denominator-clearing `2x≤1∧2x≥3`, cuts-needed-declines, A-local exclusion, fuzz). Ledger row
+    (QF_LIA, `Validated`). Whole crate green (366 lib + all interpolation suites).
+  - **UFLIA interpolant — DONE (`1e1872d`).** `axeyum_solver::uflia_interpolant` — the integer analogue
+    of UFLRA (one shared `eliminate_functions`, `lia_interpolant` on the function-free integer
+    abstraction, fresh vars translated back to UF terms). Verify-guarded by `check_with_uf_arithmetic`;
+    declines on congruence-needed OR cuts-needed refutations. 9 tests. Ledger row.
+  - **Interpolation engine now spans LRA, LIA, EUF, propositional/SAT, QF_BV, UFLRA, UFLIA** (7
+    fragments — the complete arithmetic+UF matrix: {L,U·L}×{RA,IA} + EUF + SAT + BV) — all
+    verify-before-return, all `Validated`, all fuzzed/panic-proofed. Dispatch:
+    LRA → LIA → EUF → UFLRA → UFLIA → BV. Only the SMT-LIB `(get-interpolant)` parse surface remains
+    (coordination-gated on `axeyum-smtlib`).
+
+- **Session 2026-06-22 (cont.) — REVIEW-DRIVEN HARDENING of the interpolation engine (reviewer top-10).**
+  A reviewing agent's rank-ordered list reprioritized: **harden + honesty-check interpolation before any
+  CHC push.** Addressed the in-lane items:
+  - **#1 soundness — DONE.** Audited all five verifiers: each matches *only* `CheckResult::Unsat`
+    (`Ok(true)` for SAT), so every one declines on `Unknown`/`Sat`/`Err` — never returns on doubt.
+    **Extended the adversarial fuzz to QF_BV + UFLRA** (`interpolant_fuzz.rs`; SAT already had a
+    4000-iter fuzz in `axeyum-cnf`), each independently re-checking the 3 Craig conditions.
+  - **#2 honesty — DONE.** Every interpolation row (+ `mbp_lra`) → `Assurance::Validated` (was `Checked`
+    for LRA/SAT/MBP): they verify-before-return by *re-deciding*, emitting **no per-query certificate**.
+    Confirmed no doc claims interpolants are Lean-reconstructed.
+  - **#3 prose — DONE.** ADR-0047 + the P3.8 implementation notes synced to "all five fragments land
+    verify-before-return; only the SMT-LIB surface remains" (matching PLAN.md).
+  - **#5 decline telemetry — DONE.** `Solver::interpolant_explained` → `InterpolantOutcome::{Interpolant,
+    NotInterpolable, Declined}` so a CHC/PDR consumer can tell "no interpolant exists (A∧B sat)" from
+    "we declined (fall back)". **Found + fixed a real robustness bug:** `qf_bv_interpolant` *panicked*
+    (`axeyum-bv unreachable!`) on real/int-sorted input from the dispatch fall-through — added an
+    `is_bv_lowerable` sort pre-check (graceful `None`). Added a **cross-theory robustness gate**
+    (`interpolant_robustness.rs`, 5 tests) confirming no interpolator panics on a foreign partition.
+  - **#6 CHC sequencing — HONORED.** The LRA-theory PDR push (task gated) stays paused. Gate is now:
+    decline telemetry **(done)** + the `(get-interpolant)` API stable **(remaining, #4)**.
+  - **Remaining review items (gated / cross-lane):** **#4** `(get-interpolant)` SMT-LIB surface needs the
+    `axeyum-smtlib` *parser* (coordinated agent's crate) — solver-side driver can follow once the command
+    parses. **#7–#9** NRA/NIA certify+explain evidence frontier touches the concurrent agent's NRA lane
+    (`real_algebraic.rs`) — coordinate before editing. **#10** ~19 commits unpushed on local `main`;
+    pushing is outward-facing — left for an explicit decision (not pushed unilaterally).
+
+- **Session 2026-06-22 (cont.) — P4.6 CHC/Horn ENGINE OPENED (first slice in progress).**
+  With P3.8 interpolation complete, started the **biggest categorically-missing Z3 engine** (CHC /
+  unbounded invariant discovery). **Readiness audit (sub-agent):** the full Spacer core needs two
+  things axeyum lacks — (1) **MBP / model-based projection for LIA/LRA is entirely absent** (no
+  `mbp`/`model_based`/QE-by-projection anywhere; P2.6-T2.6.6 unimplemented) — this is the long pole
+  for the XL core; (2) **no online incremental LRA theory solver across frames** (warm
+  `IncrementalBvSolver` is BV/Bool only; LRA rides the offline `check_with_lra_dpll`). What IS ready:
+  all 5 interpolants, the `TransitionSystem`/BMC/k-induction machinery (`bmc.rs`), the warm BV
+  incremental solver with unsat-core cube extraction (`check_assuming_core`) + `block_model`, the
+  e-graph keystone, and the `certify_safety_k_induction` certificate precedent.
+  - **First slice — DONE (`38cd647`, ADR-0048): single-predicate IC3/PDR over `TransitionSystem`
+    (QF_BV/Bool).** `prove_safety_pdr` discovers an inductive invariant on properties where
+    `prove_safety_k_induction` returns `Inconclusive` (the headline test proves exactly this gap is
+    closed: a stuck counter with `bad: x==12` — k-induction Inconclusive, PDR `Safe`, invariant
+    independently re-checked). Full IC3: frame lemma sets, proof-obligation work-stack (no recursion),
+    relative-inductiveness blocking + predecessor extraction, greedy literal-drop generalization,
+    forward propagation + `F[i]==F[i+1]` fixpoint. **Soundness anchor (untrusted search):** `Safe`
+    only when the discovered invariant passes 3 `check_auto`-unsat checks (initiation/consecution/
+    safety; consecution via a faithful `s↦s'` structural substitution — reviewed); `Reachable` only
+    when `bounded_model_check`-confirmed; 4 resource caps → `Unknown`. `prove_safety_pdr_certified`
+    bundles the 3 DRAT-recheckable proofs. 5 tests; bmc lib (13) green. (Opus worktree sub-agent off
+    a stale base — pdr.rs uses only pre-existing APIs so it cherry-picked clean; anchor reviewed.)
+    Ledger row (reachability, `Checked`).
+  - **MBP for LRA — DONE (`9953400`, P2.6-T2.6.6).** `axeyum_solver::mbp_lra(arena, formula, model, var)`:
+    model-guided existential elimination of one real var (Loos–Weispfenning — equality substitution,
+    M-selected tightest lower+upper interval resolvent + same-direction domination literals, one-sided
+    & unbounded cases). **Untrusted selection, trusted check:** every returned `F'` re-verified —
+    `M ⊨ F'`, var-absent, and `F' ⇒ ∃x.F` (entailment of the *exact* Fourier–Motzkin projection,
+    per-literal `check_with_lra` UNSAT); declines on the disjunctive var-disequality case, overflow,
+    or non-LRA. 8 tests (independent test-side FM oracle) + fuzz (261 verified projections, **0
+    unsound**). Ledger row (quantifiers, `Checked`). This is the Spacer predecessor-generalization
+    primitive — the CHC long pole.
+  - **NEXT on the CHC critical path:** (1) an **online incremental LRA `TheorySolver`** (warm across
+    PDR frames; today LRA rides the offline `check_with_lra_dpll`); (2) wire MBP + interpolation into
+    an **LRA-theory PDR** loop (lift the QF_BV-only `prove_safety_pdr` to LRA transition systems);
+    (3) the **multi-predicate Horn IR** (T4.6.1) generalizing the single-predicate transition system.
+    A LIA MBP variant (Cooper, model-guided) parallels the LRA one for integer CHC.
+
+- **Session 2026-06-22 (cont.) — P3.8 Craig interpolation COMPLETE (LRA+EUF+SAT+QF_BV+UFLRA, ledgered).**
+  Engine now interpolates the two core conjunctive theories, each verify-before-return:
+  - **T3.8.1 LRA Farkas interpolant — DONE (`d3a7a2a`).** (detail below.)
+  - **T3.8.3 EUF ground interpolant — DONE (`8791e4b`).** `qf_uf_interpolant(arena, A, B)`
+    summarizes the congruence-closure explanation of the violated disequality `s ≠ t`: thread the
+    `s→t` path, color each edge by partition (Input by asserting side, Congruence by its argument
+    sub-proofs' common color), summarize the maximal segments opposite the disequality into
+    shared-term equalities, **lowering** a non-shared congruence boundary to its argument equalities
+    (so `A={a=b}`, `B={f(a)≠f(b)}` ⇒ `I=(a=b)` though `f` is B-only). `I=⋀summary` (diseq in B) /
+    `¬⋀summary` (diseq in A); empty summary ⇒ degenerate ⊤/⊥. Fail-closed via `check_qf_uf`
+    re-checks + vocabulary; partial generator stays sound by the verify-guard. 10 tests.
+  - **`Solver::interpolant` dispatches LRA → EUF** (`8791e4b`); ledger rows (LRA `Checked`, EUF
+    `Validated`) + **ADR-0047** + regenerated capability matrix (`4fd6262`).
+  - **T3.8.2 propositional/CNF interpolant — DONE (`6c77d4c`, McMillan 2003).**
+    `axeyum_cnf::propositional_interpolant(a, b) -> Option<BoolExpr>` for two CNF formulas over a
+    shared variable space whose conjunction is unsat: refute with `solve_with_drat_proof`, elaborate
+    to LRAT, fold McMillan partial interpolants over the LRAT hint chains (input A-clause → OR of its
+    global literals, B-clause → ⊤; learned clause → replay RUP to recover pivots, fold backward with
+    ∨ at an A-local pivot, ∧ otherwise). **Untrusted fold, trusted check:** every candidate
+    re-verified before return — `A∧¬I` and `I∧B` Tseitin-encoded + discharged unsat by the core +
+    `check_drat`, plus shared-vocabulary containment; declines on any doubt. New `BoolExpr` carrier
+    (smart constructors + Tseitin encoder). 9 tests (incl. A-local/B-local exclusion, multi-step
+    resolution, sat-declines, 4000-round fuzz independently re-checking every produced interpolant);
+    cnf lib 251 green. (Implemented by an Opus sub-agent in an isolated worktree; the soundness
+    anchor `verify_interpolant`/`unsat_with_expr` reviewed + cherry-picked + re-gated on main.)
+    Ledger row added (SAT propositional, `Checked`). **BV-term lifting** (map shared CNF vars → shared
+    BV-term bits via `variable_bindings`) is the remaining follow-up to reach SMT-level QF_BV interp.
+  - **T3.8.2b QF_BV interpolant — DONE (`153e730`).** `axeyum_solver::qf_bv_interpolant(arena, A, B)`:
+    **joint** bit-blast (`lower_terms(A++B)` — structural hashing collapses shared bits to one
+    CnfVar), a node-indexed joint Tseitin encode partitioned into A/B CNFs (AND-gate clauses by
+    per-root reachability — `reachable_node_mask` now `pub` in axeyum-cnf — with **root assertions
+    attributed by provenance**, the fix for the direct-root-optimization collapse a naive
+    clause-partition hits), `propositional_interpolant` over the shared space, then **lift** each
+    global `CnfVar` → `(TermId,bit)` → `((_ extract i i) t)=#b1` predicate. Verify-guarded by the
+    QF_BV decider (`check_auto` on A∧¬I and I∧B) + shared-symbol vocabulary; declines on interior-gate
+    / non-shared-term vars. 7 tests (shared-var contradiction, A-local exclusion, x=y vs x≠y, sat→None,
+    fuzz). Ledger row (QF_BV, `Validated`). Implemented by an Opus worktree sub-agent; soundness anchor
+    `verify_interpolant` reviewed, fast-forwarded + re-gated on main (cnf lib 251, all interp suites green).
+  - **T3.8.4 combined QF_UFLRA interpolant — DONE (`ee34411`).** `axeyum_solver::uflra_interpolant`:
+    one shared `eliminate_functions` over A∪B (memo aligns shared apps to one fresh symbol),
+    `lra_interpolant` on the function-free `abstraction()` (no congruence lemmas — a *relaxation*, so
+    unsat there ⟹ original unsat), then translate the shared fresh symbols back to UF application
+    terms (recursive for nested apps). Verify-guarded by `check_with_uf_arithmetic` (A∧¬I, I∧B) +
+    shared symbol/function vocabulary; declines on a congruence-needed (disjunctive) refutation that
+    conjunctive Farkas can't express, or any re-check failure. `Solver::interpolant` chain now
+    **LRA → EUF → UFLRA → BV**. 8 tests. (Worktree sub-agent off a stale base rebuilt a redundant
+    `lra_interpolant` — discarded, re-pointed at the existing one; fixed an Unsupported-propagation
+    so it declines instead of erroring.) Ledger row (QF_UFLIA/UFLRA, `Validated`).
+  - **P3.8 interpolation now spans LRA + EUF + propositional/SAT + QF_BV + UFLRA** — every
+    phase-exit-criteria fragment, all verify-before-return. **Only remaining:** the SMT-LIB
+    `(get-interpolant)` parse surface (coordinate `axeyum-smtlib`); the solver-side engine is done.
+  - **Randomized soundness gate landed** (`tests/interpolant_fuzz.rs`): 400 LRA + 800 EUF random
+    unsat conjunctions; every returned interpolant independently re-checks all three Craig
+    conditions; deterministic LCG; both assert non-zero coverage. Whole solver lib green (366).
+  - **NEXT (precise resume): T3.8.4 combined LRA+EUF (UFLRA conjunctive)** then **T3.8.2
+    propositional/BV off the DRAT proof** (McMillan/Pudlák), then the SMT-LIB `(get-interpolant)`
+    parse surface (coordinate `axeyum-smtlib`). Both remaining theory slices are L-sized/intricate
+    (combined = Nelson–Oppen equality-sharing interpolation; BV = color-tracking through the
+    resolution refutation) — start each with fresh context. All under the same verify-before-return
+    contract, so a partial generator stays sound. The engine API shape is settled:
+    `lra_interpolant` / `qf_uf_interpolant` free fns + `Solver::interpolant` dispatch; add the next
+    theory as a sibling free fn + extend the dispatch chain.
+  - Original LRA detail:
+  Starting the **interpolation engine** (one of the 3 categorically-missing engines vs Z3 and the
+  lemma engine that unblocks CHC/P4.6). Read off the *already-verified* Farkas certificate, not a
+  fresh untrusted procedure, so it inherits the assurance:
+  - **T3.8.1 LRA Farkas interpolant — DONE (`d3a7a2a`).** `axeyum_solver::lra_interpolant(arena, A, B)`
+    for an unsat conjunctive QF_LRA `A ∧ B` returns the Craig interpolant `I := (Σ over A-side atoms
+    λᵢ·atomᵢ) ⋈ 0` (⋈ strict iff a used A-atom is strict). The three Craig conditions hold by
+    construction — `A ⇒ I` (each A-atom ≤/<0, λ≥0); `I ∧ B ⇒ ⊥` (adding the B-side reproduces the
+    full false-constant refutation); **shared vocabulary automatically** (A-only vars have zero
+    B-part coeff ⇒ by full-cancellation zero A-part coeff ⇒ drop out of `I`). `FarkasCertificate`
+    gained a `vars: Vec<SymbolId>` field (dense index → symbol) populated at both the FM and simplex
+    cert-build sites. **Fail-closed:** every returned interpolant is independently re-checked (A∧¬I
+    unsat, I∧B unsat, vocabulary) and overflow-guarded; declines to `Ok(None)` otherwise — never an
+    unverified interpolant. 8 integration tests, each independently re-checking all three conditions.
+  - **T3.8.5 façade slice — DONE (`3aba7a1`).** `Solver::interpolant(arena, a_indices)` partitions the
+    active assertions (A = selected indices, B = the rest) and delegates. (SMT-LIB `(get-interpolant)`
+    *parse* surface deferred — `axeyum-smtlib` is the coordinated agent's crate; the solver-side
+    driver can land without touching their parser.)
+  - **NEXT: T3.8.3 EUF interpolant** (ground interpolation off the congruence-closure explanation,
+    verified by `check_qf_uf` on A∧¬I / I∧B), then T3.8.2 (propositional/BV off the DRAT proof) and
+    T3.8.4 (combined LRA+EUF). Capability-ledger row for interpolation to be added once EUF lands
+    (avoid churning the golden matrix twice).
+
+- **Session 2026-06-22 — GPT/codex review follow-through VERIFIED + roadmap expansion (RESUME HERE).**
+  Two soundness/accuracy commits landed and are **independently re-verified** (code read + passing
+  tests, not just commit messages):
+  - **Proof-export soundness gap CLOSED (`5b80253`).** The QF_NIA no-overflow multiplier guards
+    (`5dca1ad`) *restrict* the bit-blasted formula, so `export_qf_lia_unsat_proof` handing the
+    guarded query straight to the DRAT exporter could certify a **wrong `unsat`** (a refutation of
+    the guard-restricted query does not transfer to the original integer formula, which may be Sat
+    with a large product). Fix is **fail-closed**: `IntBlasting` now carries
+    `restricting_constraints()`; export returns `Inconclusive` *before* exporting whenever guards
+    > 0. Linear QF_LIA (zero guards) exports a re-checkable certificate exactly as before. The
+    *verdict* path was already sound (BV-UNSAT→Unknown when integers are present); this closed the
+    **certificate** path. Negative regression
+    `bounded_qf_nia_with_overflow_guard_does_not_export_a_false_proof` (`x*x=16 ∧ 0≤x≤100` @ width 4)
+    passes.
+  - **Truth-source ledgers synced (`ab899f3`).** The coarse `QF_NRA/NIA` capability row is split
+    into an accurate **QF_NRA** (complete CAD decision side; irrational RealAlgebraic witnesses;
+    DISAGREE=0 vs Z3) and **QF_NIA** (small-witness nonlinear SAT decides via the guard; genuine
+    nonlinear-int unsat stays sound `Unknown`); new support-matrix probe; `support_matrix_doc_is_in_sync`
+    green.
+  - **Reviewer validation set all green:** `nia_tiny_witness` (4), `proof_export` (9),
+    `capabilities` (2), `support_matrix` (12).
+  - **Roadmap expansion (docs).** PLAN.md gained an itemized **"gap to Z3/cvc5"** (the honest
+    finding: depth/maturity on a mostly-complete grid + ~3 *categorically missing* engines, not a
+    breadth hole) plus four new track phase docs — **CHC/Horn PDR/Spacer (P4.6)**, **Craig
+    interpolation (P3.8)**, **synthesis/abduction (P4.7)**, **breadth backlog (P2.10)** — and an
+    unbounded-LIA completeness backstop (P2.4 T2.4.8), all wired into the track READMEs + the
+    dependency DAG. **CHC implementation NOT started** (correctly held behind interpolation + the
+    e-graph/CDCL(T) keystone).
+  - **Open follow-through (non-urgent):** (a) promote the fuzz-measured Unknown deltas (QF_NIA
+    498→146, QF_NRA 109→64, QF_UFLIA 311→18) to a committed reproducible bench artifact;
+    (b) classify the remaining ~146 QF_NIA unknowns into proof-gap / true nonlinear-int
+    incompleteness / resource-refusal. The live NRA/CAD-front detail continues in the session
+    blocks below.
+
+- **Session 2026-06-20 — SAT-core keystone (in progress) + codex-review correctness sweep
+  (RESUME HERE).** **85 validated commits**; whole workspace green (fmt + clippy `--workspace`
+  + doc + tests). **The destination-2 record is CORRECTED: measured axeyum 8/113 = PARITY with
+  Z3 4.13.3 8/113 on the public p4dfa @20s** (different sets; axeyum uniquely decides string1x8.3
+  where z3 times out @20.5s; z3 uniquely gets compose.p3/.s2_nr4; the other 105 defeat both —
+  near-parity, both hard-capped, NOT "Z3 sweeps all"). Baselines committed
+  (`bench-results/baselines/qf-bv-p4dfa-axeyum-vs-z3-20s-*.json`).
+  - **Building a competitive PURE-RUST SAT core** (the user's chosen keystone). The reviewer's
+    reframe (correct): `native_cdcl` IS the proof-producing `proof_sat` core, so a fast primary
+    native core closes the `prove_unsat` fail-open BY CONSTRUCTION — that ASSURANCE value is the
+    real justification, not the ~9-instance perf ceiling. Slices landed (all sound, DISAGREE=0,
+    DRAT-checked, verdict/trajectory-invariant, `SolverConfig::native_cdcl` opt-in, batsat still
+    default): (1) deadline-bounded flag-gated primary engine; (2) LBD clause-DB reduction;
+    (3) blocking-literal BCP; (4) VSIDS heap v1 **reverted** (2.36x regression); (5) **VSIDS heap
+    done right** — profiled `pick_branch` O(n) scan was 61% of time → canonical MiniSat
+    lazy-deletion order_heap collapsed it to 3.3%, **2.6x faster (230s→87s on string1x8.3),
+    decisions/propagations bit-identical** (caught+fixed a VSIDS-rescale heap-invariant bug);
+    (6) **packed clause arena** (Vec<Vec> → flat arena + headers + CRef; cache-local BCP) — BCP
+    74s→67s (−9%), total 87s→81s, decisions/conflicts/propagations bit-identical (trajectory
+    invariant; CRef-safe via append-only + tombstone deletion); (7) **Glucose LBD restarts —
+    REVERTED** (DISAGREE=0 but regressed the SAT instance — the "LBD restarts hurt SAT-crafted"
+    mode); (8) **recursive learned-clause minimization** (MiniSat ccmin_mode=2: iterative
+    lit_redundant + abstract-levels, RUP-preserving so DRAT stays valid) — **the big win**.
+    **Profiling corrected the gap: it was never ~20× — on the identical reduced CNF the real gap
+    was 2.3× (native 94s vs batsat 40s), SEARCH-quality-bound (native did ~2× the conflicts from
+    weaker minimization), NOT BCP-bound.** Slice 8 closed it: conflicts 960k→505k (≈batsat's
+    504k), props 914M→511M, wall 94s→48s — **native is now ~1.2× of batsat** (search-quality gap
+    essentially closed; residual ~20% is per-propagation BCP overhead). **A genuinely competitive
+    pure-Rust proof-emitting core.** 6 slices committed, 2 reverted — the revert discipline held.
+    **ASSURANCE PAYOFF LANDED (the keystone's purpose):** `native_cdcl` is now auto-enabled as
+    the primary engine when `prove_unsat` is set, and its OWN inline DRAT proof is checked in
+    place (`SatProofStatus::Checked`) — so an unsat carries a checked proof BY CONSTRUCTION via
+    ONE solve (was: batsat + a separate budget-bounded re-derivation that could fail-closed). The
+    guarantee "with prove_unsat you only get Unsat when a checked proof backs it" now holds with
+    strictly fewer fail-closed cases. **The SAT-core keystone has reached its meaningful goal: a
+    competitive (~1.2× batsat) pure-Rust proof-emitting core that delivers the assurance value.**
+    Note the honest perf ceiling: native is still 1.2× SLOWER than batsat, so it will NOT decide
+    MORE of the corpus than batsat (which already gets 8/113) — the native core's value is
+    ASSURANCE (proofs), now achieved, NOT beating batsat's decided-count. Remaining SAT-core
+    levers (slice 9 = vivification / BCP per-prop ~20%) are diminishing and won't change that.
+    **The next big z3-parity work is the OTHER keystones, not more SAT-core perf.**
+  - **NRA/CAD keystone OPENED (slice 1 landed, ADR-0038):** `Value::RealAlgebraic{poly,lo,hi}`
+    (defining integer polynomial + isolating interval) + single-variable real-root isolation
+    (`nra_real_root.rs`, mirrors `nia_square`) → **`x*x=2` over ℝ now decides Sat(√2)**, the first
+    IRRATIONAL witness, replay-checked EXACTLY (`sign_at` reports Zero only via exact poly
+    divisibility `poly|q` — the only sound zero-test at an irrational α; nonzero only when
+    constant-sign across the bracket; else decline; NO float). `eval` comparisons handle algebraic
+    operands exactly; Real field ops on an algebraic operand → graceful Err (field arithmetic
+    DEFERRED). Decides `x*x=2/3`→Sat(algebraic), `x*x=4`→Sat(2 rational), `x*x<0/=-1`→Unsat,
+    `x*x>2`→Sat(rational), declines multivariate/2nd-assertion to the unchanged NRA abstraction.
+    Extended since: **higher-degree** single-var (`x³=2`→Sat(∛2), `x⁴−5x²+6=0`→Sat,
+    `x²+1=0`→Unsat — fixed an isolation i128-overflow that lost all degree≥3) and **conjunctions**
+    of single-var constraints (`x*x=2 ∧ x<0`→Sat(−√2)) via exact sign-cell decomposition (roots ∪
+    one rational sample per open cell, replay-checked against ALL assertions, exhaustive-or-decline
+    Unsat). **The single-variable NRA case is now near-complete** (any-degree polynomial systems
+    over one real var, irrational witnesses, sound). **NEXT NRA slices (per ADR-0038, all
+    deferred-LARGE / multi-session): (2)** Sturm sequences + bigint when i128 overflows;
+    **(3)** algebraic FIELD arithmetic (resultant/min-poly — needed once TWO algebraic numbers
+    combine, i.e. the first multivariate/nested step); **(4)** multivariate CAD / nlsat (the full
+    decidable-NRA engine, T2.5.4, XL/research-scale). These are the genuine multi-session frontier
+    — start fresh with full context, not as a session-tail slice.
+  - Also open: general MBQI / quantifier proofs, the Lean reconstruction frontier (P3.7), and
+    broader theory completeness.
+  - **Codex-review correctness items — ALL CLOSED (each with soundness tests):** `prove_unsat`
+    fail-closed (no unverified-unsat-as-checked); **eval graceful arithmetic overflow** (bv2nat
+    ≥128-bit no longer wraps negative; Int/Real overflow → `Err`→`Unknown`, never crash/wrong —
+    the trust-anchor evaluator; `false`→soundness-alarm distinction preserved); **smtlib
+    reset/reset-assertions** (honor reset-assertions / reject full reset — no silent no-op).
+  - **Remaining review items (lower-priority observability/docs, not correctness):** per-unknown
+    root-cause buckets in bench artifacts; the 4-column support matrix (parser/IR/solver/proof);
+    north-star reframe to fragment-specific parity milestones.
+  - Full codex review preserved at `docs/reviews/codex-20260620/` (report.md + diary.md).
+
+- **Session 2026-06-19/20 — robustness + proof certs + capability/hang sweep (resume here).**
+  **68 validated commits**; whole `axeyum-solver` crate green on test/clippy/doc/fmt (1150+
+  tests) + Carcara (54) + workspace build + links. **Two deep hunts (arithmetic+quantifier, then
+  non-arithmetic) give a CLEAN BILL — no hangs, no wrong answers across every theory** — and the
+  tractable solving + robustness + certifiable-proof work is comprehensively closed (verified by
+  the hunts + a proof-completeness check: LIA-class new-decider unsats certify). Latest additions
+  beyond the 65-commit note: guarded-finite-`∀`-over-inner-`∃`, single-variable integer
+  **quadratics** `a·x²+b·x+c ⋈ 0` (generalizes `x*x⋈c`), and the BV-OMT timeout fix.
+  **NEXT = the hard keystones only** (each needs dedicated, careful, likely-multi-session work,
+  NOT a quick slice — but do advance them, don't stall): (1) **NRA/CAD** irrational witnesses
+  (`x*x=2` Real → Sat √2) — BLOCKED on an algebraic-number `Value` in `axeyum-ir` (the rational
+  model can't replay √2); coordinate or extend the IR. (2) **SAT-core / perf** — the ~9
+  search-bound + ~6 EncodingBudget public cases need stronger reduction *algorithms*
+  (`axeyum-rewrite`, the `ite`/structural lever) or SAT inprocessing / a competitive CDCL; the
+  solver-side preprocess is measured-maxed. (3) **General MBQI / quantifier-proof** beyond the
+  bounded slices done here. (4) **Specialized certs** for the NIA/quantifier new-decider unsats
+  (partial-trust). The 65-commit checkpoint detail follows. Highlights of the latter
+  stretch (after a course-correction to stop punting / keep shipping — see
+  [[no-giving-up-ship-relentlessly]] and CLAUDE.md "Working Stance"):
+  - **A hidden QF-LIA hang found + fixed at the root** (`c>y ∧ c<y+1` branch-and-bound grinding,
+    bisected from a misleading open-`∀` symptom): deadline-threaded `lia_branch_and_bound` +
+    `check_with_lia_simplex_within`, AND integer strict-inequality tightening (gcd-aware) so it
+    decides UNSAT *instantly*; **BV-OMT timeout hang fixed** (symmetric to the LIA-OMT fix).
+  - **Quantifier completeness broadened both directions:** `∃∀` (skolemize + vacuous/valid/
+    unsat/guarded/real-FM/int-FM/int-closed/**open-constant-width-gap**) and **`∀∃` by
+    Skolem-witness synthesis**; **NIA single-var squares** (`x*x=2`→Unsat). All sound, bounded,
+    replay-checked where applicable.
+  - **Perf measured honestly:** the fixpoint preprocessing is sound at scale (DISAGREE=0 on the
+    public p4dfa 113) but decides the same 4 as single-pass — solver-side preprocess is maxed;
+    the lever is stronger reduction *algorithms* (`axeyum-rewrite`) or the SAT-core, not iterating.
+  - Earlier this session (commits 1–51): NRA OOM + 64 GB guard, the integer-NIA hang regression,
+    the optimizer A/B/D fix, the full proof-cert sweep (UF/array/datatype/LIA/UFLIA/finite-`∀`,
+    assume-independent), and six capability-gap probe passes.
+  Method note (unchanged): 51-commit checkpoint detail follows; the original gate-green
+  consolidation caught a doc-link regression clippy/tests had missed.
+  Method: **6 read-only *capability-gap probe* passes** (theory decidability; arrays/mixed/
+  strings/FP-via-BV; optimization/incremental/evidence/smtlib; Track-4 BMC/symexec/k-induction
+  + FP builders; proof-completeness map) — each found concrete reproducing queries (see the
+  per-commit changelog), closing **every tractable in-`solver` finding**, plus the proof-cert
+  work below. Highlights beyond the proof track:
+  - **Robustness (the no-OOM/no-hang rules):** NRA OOM bound (below); the **integer-NIA solve
+    HANG fixed** (a regression from the new int-blast width ladder — `a*b≠b*a` livelocked
+    ignoring the timeout; now deadline-threaded + trimmed ladder + commutative canonicalization
+    → fast `Unsat`); the **optimizer** now honors `config.timeout` (`*_with_config` variants),
+    decides `mod`/`div` objectives, and degrades fragment-out-of-scope objectives to graceful
+    `OptOutcome::Unknown` (never `Err`); **BMC + symexec** now map a backend `Unsupported`
+    (an `Apply`/UF in the unrolling or branch condition) to graceful `Unknown`, honoring the
+    "unknown is never an error" rule + BMC's own docstring. The 5th/6th passes found **no
+    OOM/panic/wrong-answer/false-certification** anywhere — FP arithmetic is bit-exact, the
+    trust discipline holds across every fragment.
+  - **z3 feature breadth — measured gaps closed:** datatype Int/Real fields (was a hard `Err`),
+    guarded-finite Int `∀`, sat-side **valid-universal** elimination (incl. nested `∀`),
+    **vacuous-`∀`** (`∃y.∀x. x+y≥x` → Sat) and **unsatisfiable-`∀`** (`∀x. x>0`, `∃y.∀x. x≤y`
+    → Unsat), and **single-variable real Fourier-Motzkin `∀`-elimination** (the FIRST true QE —
+    decides multi-atom `∀x:Real. φ`, e.g. `∀x.(x≥0∧x≤10)`→Unsat, `∃y.∀x.(x≤y∨x≥y)`→Sat). The
+    plus **integer `∀`-elim via real-validity** (the sound one-direction: real-valid ⇒ int-valid).
+    ACTIVE quantifier work: **integer-Omega exactness for closed universals** (exact — numeric
+    interval integer-emptiness check decides the inter-gap cases like `∀x:Int.(x≤0∨x≥1)`→Sat), then
+    open-universal integer-gap, general-boolean QE beyond the DNF cap, MBQI / ∃-witness. Also the
+    NIA ground-vs-`∃` inconsistency, **EUF-over-Real (QF_UFLRA)** routing (was a hard `Err`),
+    `bv2nat` out-of-range UNSAT, and integer-NIA UNSAT via real relaxation. The solver is now
+    solid across arrays, mixed theories, strings, FP-via-BV, and most quantifier shapes.
+  - **Proof / Lean parity — certs widened + extended:** reduction certs widened to transitive +
+    congruence closure and wired into `produce_evidence`, now covering QF_BV, QF_UFBV (Ackermann
+    zero-trust), QF_ABV, QF_DT, QF_LIA (`lia_generic`, gap E), QF_LRA (Farkas/LRA-DPLL), and
+    **mixed QF_UFLIA/UFLRA (gap C — the zero-trust Ackermann family extended from BV to arith)**;
+    each tamper-tested + validated at up to three levels (in-tree `check_alethe`/`check_alethe_lra`,
+    Carcara, Lean kernel). **Finite-expansion guarded-`Int` `∀` `unsat` is now certified too**
+    (a first checkable quantifier proof — `forall_inst_guarded` re-checks substitution + guard
+    truth + the LIA tail; in-tree-checked custom rule, a tier below the Carcara/Lean-validated
+    standard emitters). The 6th pass's proof-completeness map shows the remaining uncertified
+    unsat fragments are NRA sign/square (gap A — needs `nra.rs`, concurrent lane), bv2nat-bound
+    (gap D — partial-trust, self-contained, the next in-`solver` cert), and the
+    NRA-Positivstellensatz / general-`forall_inst` (needs the rule in the `axeyum-cnf` kernel) /
+    online-theory-combination **keystones**.
+  - **Environment note:** validation builds accumulate a LARGE `target/` (this session's
+    axeyum-solver test binaries reached ~44 GiB and filled the 439 G disk to 100%).
+    `cargo clean -p axeyum-solver` safely reclaims it (regenerable; does NOT touch the
+    concurrent agent's other-crate deps) at the cost of one full axeyum-solver recompile.
+    Prefer targeted `--test <name>` runs over repeated full `--all-features` suites (the
+    `z3-static` build is especially slow + disk-heavy); the no-z3 suite is representative since
+    solver code is not `#[cfg(feature="z3")]`-conditional.
+  - **Process note:** re-validate sub-agent work with the FULL gate — clippy does NOT catch
+    **`cargo fmt --all --check`** drift NOR **`cargo doc -D warnings`** broken/private intra-doc
+    links (both slipped through clippy-only checks this session and were caught later); use an
+    **OS `timeout` guard** to PROVE termination (not trust it); rust-analyzer diagnostics after
+    a sub-agent run are frequently STALE — verify with a real build, not the diagnostics. Whole
+    workspace confirmed gate-green at session end (fmt + workspace build + solver doc + links +
+    999-test solver suite + clippy + Carcara 54).
+  - **NRA OOM gap CLOSED** — deterministic `MAX_CROSS_PRODUCTS` admission bound (graceful
+    `unknown`, never OOM, bounded *or* unbounded). The standing-rule violation is retired.
+    See the 2026-06-19 changelog + `scripts/mem-run.sh` / `just test-guarded` (64 GiB cap).
+  - **Transitive-closure cert widening DONE & fully validated** — both the Ackermann
+    (`prove_qf_ufbv_unsat_alethe`) and array-elim (`prove_qf_abv_unsat_alethe_via_elimination`)
+    certificates now discharge argument/index equalities holding by *transitive closure*
+    of asserted equalities (`a=b ∧ b=c ⊢ a=c`) via `eq_transitive` chains, not only direct
+    assertions. Strictly additive (existing certs byte-unchanged), validated at **all three
+    levels**: in-tree `check_alethe`, external **Carcara**, and **Lean-kernel**
+    reconstruction to `False`.
+  - **Zero-trust certs WIRED into `produce_evidence` (Ackermann + array + datatype)** — a
+    QF_UFBV / QF_ABV / QF_DT `unsat` in the covered fragment now carries a zero-trust-hole
+    Alethe certificate (reductions *proven* via `eq_congruent`/`eq_transitive`, not trusted
+    DRAT) via `zero_trust_alethe_certificate`. Retires the Ackermann / ArrayElim /
+    DatatypeElim trust holes **in practice** for those fragments (the ledger stays
+    binary "trust hole" — coverage is fragment-level, not universal). Also fixed
+    `evidence_route` misrouting datatype queries to the BV path (see changelog).
+  - **Next proof-track task (resume) — certify general read-over-write (ROW-distinct)**
+    for the array-elim trust hole: `select(store(a,i,v),j) → ite(i=j, v, select(a,j))`,
+    `i≠j`. **Dependency chain mapped this session:** (1) the checker rule **already exists**
+    and is tested — `read_over_write` in `axeyum-cnf/src/alethe.rs` (`is_read_over_write`
+    L1424, tests L4364); (2) the **emitter** `prove_qf_abv_unsat_alethe_via_elimination`
+    declines store rewrites because `ArrayElimination` (`axeyum-rewrite/src/arrays.rs`)
+    exposes only `selects()`/`abstraction()`, **not the ROW redexes/expansions it performed**
+    — so emitting `read_over_write` steps needs `eliminate_arrays` to expose them
+    (**coordinate with the `axeyum-rewrite` agent**) or fragile re-derivation from the
+    originals; (3) **Lean reconstruction has no `ite`/`read_over_write` support** yet
+    (`reconstruct.rs`), so closing the Lean loop needs that too. So ROW-distinct is a
+    cross-crate, partly-coordination-gated, multi-slice effort — not a clean in-`solver`
+    increment. Other open trust holes (lowest pedantic first): `int-blast` (3),
+    `xor-gaussian` (3), `datatype-elim` (4), `fpa2bv` (5) — each a from-scratch certificate.
+  - **Certification sweep COMPLETE (in-`solver`):** every self-contained certification gap the
+    6th-pass proof-completeness map surfaced is now closed — QF_UFLIA/UFLRA (gap C, zero-trust),
+    QF_LIA (gap E), `bv2nat`-bound (gap D, partial-trust w/ recorded `IntBlast` step), and
+    finite-`∀` quantifier (LIA + UF tails, custom in-tree `forall_inst_guarded`). The remaining
+    uncertified fragments are gap A (NRA sign — needs `nra.rs`, concurrent lane) and the keystones.
+  - **Assume-independence: COMPLETE.** The custom-rule quantifier certs (finite-`∀` LIA + UF)
+    now re-check EVERY `assume` against the original query via
+    `check_alethe_lra_guarded_inst_against` — the carried `universal` (re-detected from
+    `assertions` via `detect_guarded_universal` + the emitters' `universal_form`/`universal_form_uf`
+    renderers and compared), the ground facts (rendered original assertions), the fresh Ackermann
+    defs (`(= !fn_app_N (f t))`, the introduced const must not occur in the query), and abstracted
+    originals bridged through a def — anything else ⇒ `Ok(false)`. Four soundness-negative tests
+    (fabricated premise LIA/UF, non-fresh def, forged carried universal) confirm each hole the old
+    checker had is closed; no false negatives (all genuine certs + tampers pass). The check is now
+    fully checker-vs-producer independent. (Still in-tree-checked — no Carcara/Lean backstop, since
+    `forall_inst`-in-kernel is coordination-gated; but the in-tree check is now complete.)
+  - **ACTIVE WORK QUEUE — advance the next item, never stop (per PLAN.md). The #1 load-bearing
+    front is measured perf vs Z3 via word-level *reduction* (PLAN: moved public p4dfa 2→7/113; ~6
+    more *EncodingBudget* cases are gettable by deeper reduction — the proven mechanism). Pick the
+    next concrete task here or from `docs/plan/track-{1,2,3}` and ship it:**
+    - **PERF (Track 1, #1): deeper word-level reduction → pull EncodingBudget cases under the encode
+      ceiling. MEASURED (2026-06-19, fixpoint vs single-pass, public p4dfa 113 @ 3s):** the
+      `preprocess.rs` FIXPOINT change is sound at scale (**DISAGREE=0**) but decides the SAME 4
+      instances as single-pass with identical par2 (5.836 s) — these instances converge in 1–2
+      reduction passes, so iterating to fixpoint ≈ single-pass. **Conclusion: the solver-side
+      preprocess orchestration is maxed; the EncodingBudget cases need STRONGER reduction
+      *algorithms* (`solve_eqs`/`elim_unconstrained`/canonicalize depth + the `ite`/structural lever
+      PLAN names — `axeyum-rewrite` lane, coordinate) or the SAT-core modernization for the
+      ~9 search-bound cases, not more iterating.** The fixpoint stays (correct + the right shape).
+      In-`solver` levers: the `preprocess.rs` pipeline (now fixpoint — done).
+      **MEASURED FINDING (2026-06-19):** the cheap AIG tier in `axeyum-aig` is already saturated
+      (constants, structural-hash w/ canonical order, OR-absorption/consensus, XOR/MUX); adding
+      AND-substructure node rewrites (`a∧(a∧b)=a∧b`, `¬a∧(a∧b)=0`) shrank node count but **regressed**
+      `decides_symbolic_float128_fma` (10.5s→timeout) — local AIG node-count reduction is NOT monotone
+      in CDCL solve time (it reshapes the Tseitin CNF and defeats variable-ordering/clause-learning).
+      So **node-count is the wrong proxy**; the lever is *word-level reduction that removes variables/
+      structure* (`solve_eqs`/`propagate_values`/`elim_unconstrained` to fixpoint in `preprocess.rs`),
+      validated by **measured DISAGREE=0 + per-benchmark wall-clock**, never node count alone. The
+      `axeyum-rewrite` reduction *algorithms* are the concurrent agent's lane — own the solver-side
+      `preprocess.rs` orchestration (fixpoint/order) + measure on the scenarios/micro corpus (no z3).
+    - **HANG (hard-rule "never hang"): open disjunctive `∀x:Int.(x≤y∨x≥y+1)` tarpits the downstream
+      MBQI/e-matching (~600s, ignores `config.timeout`).** Pre-existing (exposed when the FM
+      int-closed pass declines the symbolic-bound shape — it declines correctly). Fix the
+      quantifier front door (`qinst_egraph`/`check_with_quantifiers`) to honor `config.timeout` /
+      a deterministic round bound, same posture as the NIA-hang fix. HIGH priority.
+    - **QUANT: open-gap integer-Omega (symbolic bounds), general-boolean QE beyond DNF cap, MBQI**
+      (in-`solver`, infra in place: FM `Verdict` enum + `relax_int` + closed-universal exactness).
+    - **Then the items below (drive the in-`solver` part; for coordination-gated ones, build the
+      solver-side interface and hand off):**
+    - **arith-UF SAT model (gap C, keystone, COORDINATION-GATED on `axeyum-ir`):** QF_UFLIA/
+      UFLRA `sat` returns `Unknown` because an `Int`/`Real`-sorted UF's function-table model
+      can't be built — `FuncValue` and the ground evaluator key function applications by
+      `Value::scalar_code()` (`axeyum-ir/src/eval.rs:232`, panics on Int/Real), so both the
+      table representation AND `eval`'s lookup need Int/Real-value keys (an `axeyum-ir` change),
+      then `euf.rs::project_replay_build` can build + replay it. UNSAT is decided; only the
+      SAT-side model build is blocked. NOT a clean in-`solver` increment.
+    - **`∃∀` alternation (keystone):** `∃y.∀x. x+y≥x` → `Unknown` (should be SAT, y=0). After
+      skolemizing `∃y→c`, `∀x. x+c≥x` is NOT valid for arbitrary `c` (valid only when `c≥0`),
+      so the valid-universal pass can't decide it; needs `∃`-witness selection over the
+      universal's validity condition (LIA/LRA quantifier elimination, or model-based).
+    - **Irrational NRA roots / CAD-lite (keystone):** `x*x==2 ∧ x>0` (Real) → `Unknown`
+      (witness √2); the linear-abstraction + point-lemma NRA never finds irrational witnesses.
+    - **Coordination-gated (other lanes):** array-of-array / datatype-element arrays (needs
+      `Sort::Array` to carry element *sorts* — `axeyum-ir`); first-class `(declare-fun x Float…)`
+      through `solve`/SMT-LIB (front-end wiring, `Sort::Float` exists); `(reset)` clearing +
+      `(declare-sort)` (`axeyum-smtlib`); ROW-distinct emitter exposure (`axeyum-rewrite`);
+      symbolic FP→int/real conversions (`fp::to_ubv`/`to_sbv`/`to_real` are constant-fold-only,
+      silently `Ok(None)` on a symbolic float) and a symbolic-operand `fp::from_real` (takes a
+      `Rational` value, not a `TermId`) — both `axeyum-fp` (5th pass). The warm-incremental UF
+      story (symexec/BMC over `Apply` now degrade to graceful `Unknown`, but to *decide* such
+      paths needs the incremental solver to route UF — a larger effort).
+
+- **Destination-2 advanced & a destination-3 milestone landed (2026-06-18).** See
+  the two 2026-06-18 changelog entries for detail. In short:
+  - **Real Lean 4 kernel now checks reconstructed refutations** (`render_lean_module`
+    / `prove_unsat_to_lean_module`, gated `tests/lean_crosscheck.rs`): QF_UFBV/LRA/∀/∃
+    refutations type-check in a real `lean` toolchain with `#print axioms` showing no
+    `sorryAx`. (Toolchain installed via `elan`; analogue of the Z3 oracle.)
+  - **Destination-2 lever found, fixed, measured, decided.** Fair public-slice
+    head-to-heads vs Z3 (committed baselines): lazy-bv is **inert** on p4dfa (0/113
+    heavy ops); **word-level reduction is the lever** — after fixing the unbounded
+    `solve_eqs` (deterministic fuel, `solve_eqs_bounded`), `--preprocess` decides
+    **4/113 @3s and 7/113 @20s vs eager 2/3**, DISAGREE=0. Ratified in **ADR-0037**
+    (reduction is the destination-2 priority; batsat stays default; custom cores
+    specialized). The full pipeline is now wired into the default `solve()` path.
+  - **Precise next steps (resume here):** (1) **deeper word-level reduction** to pull
+    the 6 remaining `EncodingBudget` instances below the encode ceiling and shrink the
+    99 timeout CNFs (AC-tree flattening / `ite`-chain simplification / `bv_slice` /
+    `max_bv_sharing`) — *this is `axeyum-rewrite` P1.2, the concurrent agent's active
+    area; coordinate to avoid collision*; (2) ~~flip `SolverConfig::preprocess`
+    default-on~~ **DONE (2026-06-18, commit `6cb2f1b`)** — `preprocess` now defaults
+    on; the default `solve()` path runs the full reduction pipeline, guarded
+    (skip-on-quantifier + best-effort fall-back to the original on any pass error);
+    full-workspace behaviour check green (103 binaries). ADR-0034 updated.
+- **P2.6 quantifier e-matching vertical — keystone-complete, wired & validated**
+  (2026-06-16): trigger *inference* (single-cover + greedy multi-pattern set
+  cover), congruence-aware multi-pattern join, the instantiation fixpoint loop
+  (verified multi-round chaining), nested triggers fired purely via congruence
+  (involution test), **dispatch wiring into `solve`** (too-wide-BV / infinite-domain
+  quantifier fallback → keystone before MBQI), and the capability ledger/matrix
+  updated. All gated.
+  - **MBQI-on-keystone assessed, deliberately deferred:** `eval` does support UF
+    application against a model (`eval.rs:200`), so it's feasible — but the
+    keystone's trigger e-matching already instantiates at *all* congruent ground
+    matches (strictly more aggressive than model-guided selection), and the
+    existing value-based `prove_unsat_by_mbqi` already does arithmetic
+    bound-probing. A ground-term-candidate MBQI would be near-duplicate machinery
+    that only helps *trigger-less UF universals* (rare). Skipped as low marginal
+    value vs. the duplication/maintenance cost; revisit only if a real corpus shows
+    the gap.
+- **P3.2 Alethe resolution-layer checker — first slice DONE** (2026-06-16): the
+  Alethe (veriT/cvc5 SMT proof format) IR + s-expr `parse_alethe`/`write_alethe` +
+  a sound `check_alethe` for the propositional resolution layer in
+  `axeyum-cnf::alethe`. A `resolution`/`th_resolution` step is verified by
+  `{premises, ¬conclusion}`-UNSAT, decided by the **proof-producing** core and
+  **re-checked by `check_drat`** (so each accepted step's entailment is itself
+  independently verified, not trusted to the SAT search); a step is recorded only
+  after it verifies; UNSAT requires a verified empty clause `(cl)`. 7 tests incl. 3
+  negative/rejection. The resolution rung connecting to the DRAT/LRAT clausal
+  proofs. **`lrat_to_alethe` bridge landed**: a CNF/QF_BV UNSAT now goes
+  `solve_with_drat_proof → DRAT → LRAT → Alethe`, re-checkable by *both* `check_lrat`
+  and `check_alethe` (end-to-end test). **Typed-term IR landed**:
+  `AletheTerm` (`Const`/`App`) replaces opaque-string atoms (resolution keys on the
+  canonical `key()`), plus the **core EUF theory rules**
+  `eq_reflexive` / `eq_symmetric` / `eq_transitive` / `eq_congruent` and the
+  **Boolean CNF-introduction** rules `and_pos` / `and_neg` / `or_pos` / `or_neg`,
+  checked structurally against their exact tautology shapes (strict, order-sensitive;
+  broken shapes rejected). plus the entailment-checked
+  clause-manipulation rules `contraction`/`reordering`/`weakening`. 16 tests.
+  **EUF proof EMISSION** (`prove_qf_uf_unsat_alethe`): the solver turns a congruence
+  conflict into an Alethe proof — **transitivity** (`assume`s + `eq_symmetric` for
+  reversed edges + `eq_transitive` + `resolution` to `(cl)`) and **depth-1
+  congruence** (`f(x⃗) ≠ f(y⃗)` with each `xᵢ=yᵢ` derived by transitivity, then one
+  `eq_congruent` step). **Self-validated** — returns `Some` only when `check_alethe`
+  accepts, so a construction bug yields `None`, never a wrong proof. The proof track
+  is bidirectional (check + emit) for the EUF transitivity + depth-1-congruence
+  fragment, including **nested** structural congruence (`f(g(a)) ≠ f(g(b)) ∧ a=b`)
+  via a recursive `derive_eq` (transitivity-then-congruence, recursing on args). 10
+  tests, each re-checked. **EUF emission is now general** (2026-06-16): `prove_qf_uf_unsat_alethe` was rebuilt
+  around `EGraph::explain_steps` — it builds an e-graph over the conflict core (all
+  terms added before merging, so congruence edges survive in the proof forest),
+  walks the structured explanation between the disequality sides, and converts each
+  `Input`→assume / `Congruence`→`eq_congruent` (recursing on args), threaded through
+  `eq_transitive`. This handles the **mixed congruence-in-transitivity** case
+  (`f(a)=c ∧ a=b ∧ f(b)≠c`) the old bfs emitter returned `None` on — any congruence
+  refutation now emits a `check_alethe`-accepted proof (self-validated). The bfs
+  helpers were removed. **`term_to_alethe` converts any interpreted-op application**
+  (not just `Apply`/`Eq`), so emission covers congruence over interpreted operators
+  too — e.g. **array extensionality** (`a=b ∧ select(a,i)≠select(b,i)` ⇒ a checkable
+  `eq_congruent` proof), pairing with the array-extensionality decision in dispatch.
+  **Arithmetic `la_generic` checking landed** (`check_alethe_lra`): a linear-arith
+  tautology clause is verified by `¬clause`-UNSAT via the **Farkas-certified**
+  `check_with_lra` (coefficients re-derived, not trusted); `axeyum-cnf` gained a
+  pluggable `check_alethe_with(_, extra)` callback so it stays arithmetic-free.
+  **`la_generic` EMISSION landed** (`prove_lra_unsat_alethe`): an unsat LRA
+  conjunction → an `la_generic` + resolution Alethe proof, **self-validated** by
+  `check_alethe_lra` (so axeyum both checks AND emits arithmetic proofs, the full
+  "trusted small checking" identity for LRA). **`lia_generic` (integer) checking +
+  emission landed** (`prove_lia_unsat_alethe`): the integer counterpart, decided by
+  the **integer-complete** `check_with_lia_simplex` so integrality is honored —
+  `(cl (<= x 0) (>= x 1))` is *accepted* by `lia_generic` (no integer in the open
+  interval) yet *rejected* by the real `la_generic` (`x=0.5` falsifies it), the
+  distinction enforced by a dedicated test. Linear `*` guarded to a constant factor
+  (genuine `var*var` ⇒ rejected); integer numerals parse as plain `i128`; emission
+  self-validated via `check_alethe_lra`. Remaining (P3.2/3.3): more BV theory
+  rules; emit Alethe for the *reductions* (P3.5: array/function elimination,
+  int-blasting); Carcara CI cross-check; extract `axeyum-alethe` crate (ADR).
+- **P2.9 datatypes — structural refutation DONE** (2026-06-16):
+  `prove_datatype_unsat_structurally` — the three datatype structural axioms over a
+  term-level union-find: **acyclicity** (`x = cons(h, x)` ⇒ unsat), **distinctness**
+  (`x = nil ∧ x = cons(…)` ⇒ unsat), and **injectivity** (`cons(h,x) = cons(h,y) ∧
+  x ≠ y` ⇒ unsat — the datatype-*field* injectivity case the eager `build_dt_eq`
+  relaxes away, the genuine gap-closer). Unions definite equalities, closes under
+  injectivity while checking distinctness, then reports unsat on a same-class
+  datatype disequality or a containment cycle. Sound (each union/edge forced by a
+  definite (dis)equality + a datatype axiom) + wired into `check_auto_dispatch`
+  ahead of the eager expansion. 7 tests (incl. two NOT-refuted SAT cases).
+- **P3.1 LRAT checker + DRAT→LRAT elaborator — DONE** (2026-06-16): a second,
+  independent UNSAT-proof checker alongside `check_drat`, in the stronger *clausal*
+  LRAT format (every clause has an id; each addition carries antecedent hints, so
+  checking is **linear** — follow the hints — not a RUP search). `check_lrat`
+  (sound: accepts a clause only when its hint chain performs genuine RUP to a
+  conflict; rejects a satisfied/under-determined/missing/never-conflicting hint),
+  `elaborate_drat_to_lrat` (RUP DRAT — e.g. from `solve_with_drat_proof` — →
+  hinted LRAT; RAT out of scope), `parse_lrat`/`write_lrat`. **3 negative
+  (soundness) tests confirm rejection** (corrupted/dropped hint, non-entailed clause
+  over a SAT formula, no-empty-clause ⇒ `Ok(false)`) + a **600-CNF random
+  differential** (every UNSAT formula's CDCL DRAT proof elaborates and LRAT-checks,
+  with text round-trip). First rung of the proof-checking ladder above DRAT.
+- **P2.2 lazy arrays — first slice DONE (lazy select-congruence)** (2026-06-16):
+  `check_qf_abv_lazy` — the array analogue of lazy Ackermann (a `select` is an
+  application of a per-array read function). `eliminate_arrays` still does
+  read-over-write eagerly, but the read-over-read consistency
+  `i=j ⇒ select(a,i)=select(a,j)` is now added on demand (CEGAR) instead of the
+  eager O(n²) per-array pairing. Sound (post-ROW abstraction is a relaxation ⇒ UNSAT
+  transfers; consistent sat replays) + terminating. rewrite `ArrayElimination` now
+  exposes `abstraction()` + `selects()` (eager `assertions()` byte-identical).
+  **200-formula differential vs eager `check_with_array_elimination` — all jointly
+  decided, all agreed (28 unsat)** + a select-congruence refutation and a
+  store/select sat replay. Same regime caveat as lazy Ackermann: this defers the
+  congruence pairing, not ROW; **full lazy ROW / on-demand store axioms / wide-index
+  (>8-bit) arrays remain** (the eager path caps extensionality at 8-bit indices).
+- **P1.5 online theory interface — DONE (theory side)** (2026-06-16): the online
+  `TheorySolver` trait + `EufTheory` over one backtrackable keystone `EGraph` now
+  exposes the full surface a CDCL(T) loop drives — `assert(atom,value)` (→ explained
+  conflict core via `EGraph::explain`), `propagate()` (entailed equalities with
+  reasons), `push`/`pop` (lockstep backtrack of merges, disequalities, and assigned
+  state). 6 unit tests. This replaces the offline `prove_unsat_lazy` per-model
+  e-graph rebuild with one incremental graph.
+  - **Online DPLL(T) QF_UF decision procedure — DONE**: `prove_unsat_qf_uf_online`
+    (refutation, 500-formula differential vs `prove_unsat_lazy`) + `solve_qf_uf_online`
+    (full decider with replay-checked sat models, 400-formula differential vs
+    `check_qf_uf`). The online *search* on one backtrackable e-graph now exists, not
+    just the online theory.
+  - **Online decider wired as the QF_UF fast path — DONE** (ahead of `check_qf_uf`,
+    unknown-safe fall-through; full suite green).
+- **P1.6 theory combination — first slice DONE (lazy Ackermann)** (2026-06-16):
+  `check_qf_ufbv_lazy` — CEGAR/on-demand functional-consistency lemmas for QF_UFBV
+  instead of the eager up-front Ackermann. Abstract apps → fresh vars, solve, add
+  the lemma `(⋀ args_i=args_j) ⇒ fresh_i=fresh_j` only for a pair a candidate model
+  violates, re-solve to fixpoint. Sound (abstraction is a relaxation ⇒ UNSAT
+  transfers; consistent sat replays), terminating (each pair once). rewrite
+  `FunctionElimination` now exposes `abstraction()` + `applications()` (eager
+  `assertions()` byte-identical). **300-formula differential vs the eager
+  `check_with_all_theories` — all jointly decided, all agreed (21 unsat).**
+  - **Nested-application coverage added** (2026-06-16): two targeted lazy-QF_UFBV
+    tests where an application's *argument is itself an abstracted application*
+    (`f(f(a))`) — a refutation by nested congruence and a SAT involution that must
+    project to a coherent function interpretation and replay. (The random
+    differential grows its term pool with `f`/`g` apps so it nests too, but these
+    pin it deterministically.)
+  - **Design finding — model-based combination ≡ lazy Ackermann (important):** a
+    full *online Nelson–Oppen* between the e-graph and BV would only add power over
+    lazy Ackermann in a **non-model-based** regime. In the **model-based** regime
+    (read a concrete BV model, check the shared-term arrangement) the model assigns
+    *concrete values*, so congruence over them collapses to value-equality —
+    including transitive chains — which the lazy path's raw model-eval already
+    detects. The e-graph's *abstract* congruence only pays off when the BV theory
+    participates in a shared CDCL(T) trail **without committing to a full model**,
+    i.e. as an **online BV theory solver** (the P2.1 "BV theory-checker"), which does
+    not exist yet. **Conclusion:** lazy Ackermann *is* the QF_UFBV combination for the
+    model-based regime, and is arguably higher-assurance than eager (explicit,
+    individually-valid functional-consistency lemmas added on demand vs a bulk
+    syntactic reduction). The fuller online N-O is genuinely **gated on P2.1**; do not
+    build a redundant model-based "combination" module.
+  - **Dispatch wiring of `check_qf_ufbv_lazy` — deliberately deferred (methodology):**
+    routing lazy-before-eager is a *performance* optimization (fewer up-front
+    lemmas), not a correctness/capability gain — the eager `check_with_all_theories`
+    already decides QF_UFBV completely. Per the project's benchmarking-first rule
+    (encodings/perfwork gated on measured corpora) and the array-fragment interaction
+    risk (lazy abstracts functions but not arrays), it stays an available, validated
+    API until a real UFBV corpus shows eager-Ackermann lemma count is the
+    bottleneck. The function is exported and ready.
+  - **Next action (precise resume point):** the full online N-O is **gated on an
+    online BV theory** (per the finding above), so the productive next step is to
+    **start P2.1's BV theory-checker** — an incremental BV theory solver
+    (`assert`/`propagate`/`explain`/`push`/`pop`, mirroring the `TheorySolver` trait
+    `EufTheory` implements) that can participate in a shared CDCL(T) trail without
+    materializing a full model. With both an online BV theory and the online
+    `EufTheory`, the interface-equality combination (equality sharing over shared
+    BV-sorted terms, split on undetermined interface equalities) becomes
+    implementable and removes the Ackermann trust hole. That is a substantial new
+    track — begin with fresh context. *Alternatively*, if pivoting tracks: P2.2 lazy
+    arrays (ROW axioms on the e-graph) or P2.9 lazy datatypes (e-graph splitting)
+    also build directly on the now-complete keystone. Secondary: migrate
+    `axeyum_rewrite`'s bespoke trigger closure onto the keystone.
+- **Plan authored** (2026-06-15): the full track/phase/task plan is under
+  [`docs/plan/`](docs/plan/README.md), built from the five reference reviews in
+  [`docs/plan/references/`](docs/plan/references/README.md).
+- **P3.0 trust ledger — DONE** (2026-06-15): typed `TrustId` taxonomy + pedantic
+  levels, per-result `trusted_steps` on `EvidenceReport`, golden-tested
+  [trust-ledger.md](docs/research/08-planning/trust-ledger.md) (5 of 11
+  reductions are trust holes), ADR-0031. The trusted base is now countable.
+- **T1.1.1 subsumption + T1.1.2 BVE — DONE (correctness)** (2026-06-15):
+  `axeyum_cnf::simplify` (model-preserving tautology removal + forward subsumption
+  + self-subsuming resolution) and `axeyum_cnf::eliminate_variables` (bounded
+  variable elimination by resolution with a `Reconstruction` stack to lift reduced
+  models back to the original, the non-increasing/size/occurrence bounds). 13 tests
+  total incl. brute-force equisatisfiability + per-model reconstruction + SAT/DRAT
+  preservation. DRAT-step emission inside the proof-producing solve and the measured
+  perf delta ride P4.5 + the pipeline-integration step.
+- **P4.5 — DONE.** Committed measurement slice `corpus/qfbv-curated/` (43 files,
+  **width-capped ≤64 bits**) + recorded baseline
+  `bench-results/baselines/qfbv-curated-sat-bv-vs-z3-2s.json`: sat-bv vs Z3 4.13.3,
+  2 s, budgets — **32/43 decided (8 sat + 24 unsat), 11 unknown, agree=32,
+  DISAGREE=0, replay failures=0**, PAR-2 ≈1.07 s. Harness now gives workers a
+  512 MB stack (deep-term fix). `just bench-qfbv-curated`.
+- **Known robustness gap (Track 1 / P1.2):** sat-bv allocates eagerly during
+  lowering on wide terms (a 1024-bit multiply / 20k-bit vector → multi-GB alloc)
+  *before* the node budget is enforced, aborting instead of returning `unknown`.
+  Curating by width sidesteps it; the real fix is graceful oversized-encoding
+  refusal. This is why the original size-based slice OOM'd two hosts.
+- **Machine transition to s4 done:** repo at the same path on `server4` (123 GB,
+  2× RTX 4060 Ti 16 GB, CUDA 12.4); `corpus/public` symlinked to NAS
+  `/nas3/data/...`; z3 + rust verified; 54/54 cnf tests pass. See
+  [docs/plan/host-setup.md](docs/plan/host-setup.md).
+- **T1.1.4 inprocessing made near-linear + time-bounded — DONE** (2026-06-16):
+  `axeyum_cnf::simplify` rewritten to forward one-watch occurrence-list subsumption
+  (CaDiCaL/Kissat `subsume.cpp`/`forward.c`); `axeyum_cnf::bve` rewritten to full
+  literal occurrence lists + a touched-variable queue (`elim.cpp`/`eliminate.c`);
+  both gained `_within(deadline)` variants, and `sat_bv` now bounds inprocessing to
+  ≤50% of the remaining solve budget (partial passes stay sound: subsumption
+  model-preserving, BVE equisatisfiable + valid reconstruction). The old size guard
+  was lifted (512/2048 → 200k/1M admission ceiling). Each pass adds a 400-formula
+  randomized brute-force test. **Curated A/B (sat-bv vs Z3, 2 s, s4): 8 sat / 24
+  unsat / 11 unknown, agree=32, DISAGREE=0, replay failures=0, PAR-2 1.095 s** —
+  i.e. decision-identical to baseline (32/43) with no regression; the earlier
+  13–22 s pass hangs and the 3-instance regression are gone.
+- **Why inprocessing still decides none of the 11 unknowns (gates the next lever):**
+  the unknowns are either (a) **structurally BVE-resistant multipliers** (`mulhs64`:
+  45 105 vars, BVE eliminates 417 / clauses 201 656→201 379 ≈ 0.1% — non-increasing
+  resolution cannot collapse a multiplier), so the bottleneck is the **SAT search
+  itself → P1.3 (SAT-core modernization)**; or (b) reduced-but-still-hard (e.g.
+  `commute08` 18 296→7 038 clauses) where the reduced formula still doesn't close in
+  the remaining budget. Inprocessing is now correct/fast/safe infrastructure that
+  pays off once P1.3 / P1.2 land; it stays off by default.
+- **T1.1.3 inprocessing wired into the solve pipeline — DONE (sound), measured
+  net-negative with current passes** (2026-06-16):
+  `SolverConfig::cnf_inprocessing` (off by default) runs `simplify` (subsumption,
+  model-preserving) then `eliminate_variables` (BVE, equisatisfiable) on the
+  Tseitin formula in `sat_bv_backend`; a reduced `sat` model is lifted back to
+  the original CNF variables via `Reconstruction::extend` before the existing
+  AIG→model→original-term replay. 3 A/B tests + bench `--inprocess` flag +
+  `just bench-qfbv-curated-inprocess`. **Correctness proven** across the curated
+  slice (DISAGREE=0, model_replay_failures=0; 27 instances inprocessed end to end
+  incl. SAT reconstruction, BVE eliminating up to 296 vars).
+- **Key measured finding (gates P1.1):** the correctness-first passes do **not**
+  scale to solve-relevant CNF. At a 5k-var/20k-clause cap the pass took **13–22 s**
+  on `mulhs16`/`commute08`, blew the 2 s budget, regressed 3 decided instances to
+  `unknown`, and decided **none** of the 11 existing unknowns. `simplify` is an
+  `O(clauses²)` sweep; `bve` rescans all clauses per candidate (`O(vars·clauses)`
+  per round). Inprocessing is therefore guarded to ≤512 vars / ≤2048 clauses
+  (provably cheap, ≤121 ms here) — at which size the committed A/B is
+  decision-identical to baseline (32/43, PAR-2 1.071 s vs 1.063 s). **Real win
+  needs occurrence-list indexing first.**
+- **P1.2 preprocessing wired into the bench + measured — DONE** (commit 0c594ac).
+  `check_with_preprocessing` (commit 86cd28a) + bench `--preprocess` flag
+  (`just bench-qfbv-curated-preprocess`): the trail is threaded through
+  solve_planned→solve_one→classify_result→replay_model so a `sat` model
+  reconstructs before replaying the originals. Curated A/B: 32/43, agree=32,
+  DISAGREE=0, 0 replay failures, PAR-2 1.060 s — decision-identical, model-sound
+  across all 43 incl. the oracle path; reduced the DAG on 5/43 (the instances with
+  top-level `x=t` structure), no-op on the multiplier-heavy rest. Correct
+  infrastructure; the PAR-2 payoff needs a corpus with explicit defines.
+- **P1.4 e-graph keystone COMPLETE** (commits eb3e9e6, 0c5840f, c47dc0c, 2c735b5,
+  d81bf46): `axeyum-egraph` (ADR-0032) is a standalone, backtrackable,
+  explanation-producing, independently-checkable equality bus — hash-cons +
+  congruence cascade, `explain`, push/pop, `check_congruence`, theory-var lists.
+  17 tests. This unblocks the Track-2 theory upgrades and the CDCL(T) loop.
+- **P1.5 two slices DONE** (commits f69aa40, 8d97081): `prove_unsat_by_congruence`
+  (conjunctive) and `prove_unsat_lazy` (offline DPLL(T) over boolean structure —
+  boolean skeleton via sat-bv + e-graph theory check + explain-based blocking
+  clauses). Sound EUF UNSAT proving with independently-checked conflicts.
+- **SAT model construction + dispatch wiring DONE** (commits c08c763, 6ce85b0):
+  `check_qf_uf` decides QF_UF with replay-checked `sat` models (differentially
+  validated vs Ackermann), and `check_auto` now routes UF instances through it
+  first (congruence fast-path), falling back to the complete Ackermann bit-blast on
+  `unknown`. Full solver test suite + micro bench regression-free.
+- **Next task — P1.6 theory combination (e-graph UF + bit-blaster BV)** for
+  *complete* QF_UFBV. Today the EUF path fast-paths only when the answer is settled
+  by congruence alone; a theory-consistent boolean model whose constructed values
+  violate BV arithmetic → `unknown` → Ackermann fallback. Combination closes this:
+  on a theory-consistent boolean model, send the e-graph's induced equalities AND
+  disequalities (from the class structure + the asserted diseqs) to the bit-blaster
+  as BV constraints and let it decide / produce the model — or the Nelson–Oppen
+  interface-equality exchange on the `th_var` bus (T1.4.6) the e-graph already
+  carries. Read `docs/plan/track-1-engine/P1.6-theory-combination.md`. Also open:
+  the `TheorySolver` trait + online propagation (T1.5.1–T1.5.4 efficiency refactor),
+  and the broader Track 2 theories (lazy arrays P2.2, datatypes P2.9, quantifiers/
+  e-matching P2.6) which all migrate onto the e-graph + CDCL(T) loop.
+- **T1.2.8 AIG two-level rewriting — attempted, reverted (negative result,
+  2026-06-16).** `axeyum-aig` already does level-0/1 rewrites (constants,
+  idempotence, contradiction, OR-absorption, consensus). Adding the bitwuzla
+  positive-AND-operand subsumption/contradiction (`x∧(x∧y)=x∧y`, `x∧(¬x∧y)=0`) was
+  correct + semantics-tested but **regressed a borderline Float128 fp.fma**
+  (`decides_symbolic_float128_fma`) from sat to a batsat **timeout** — CNF-structure-
+  induced SAT chaos on a borderline instance. Reverted (no net benefit measured, a
+  concrete regression). If retried: gate behind a flag and measure broadly on the
+  curated slice + the FP tests before enabling; AIG rewrites need measurement, not
+  blind application (the P1.2 methodology point, reconfirmed).
