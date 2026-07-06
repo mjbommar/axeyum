@@ -20,8 +20,7 @@
 use axeyum_ir::{Assignment, Sort, SymbolId, TermArena, TermId, Value, eval};
 use axeyum_solver::{ProofOutcome, SolverConfig, prove};
 
-mod reflect_common;
-use reflect_common::mir::{MirParam, reflect_mir_params_checked};
+use axeyum_verify::reflect::mir::{MirParam, reflect_mir_params_checked};
 
 // ---- the real Rust functions (replay oracles) -------------------------------------
 

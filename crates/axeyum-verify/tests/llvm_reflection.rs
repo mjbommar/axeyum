@@ -22,11 +22,10 @@ use axeyum_solver::{
     bounded_model_check, prove, prove_safety_k_induction,
 };
 
-mod reflect_common;
-use reflect_common::llvm::{
+use axeyum_verify::reflect::llvm::{
     Reflected, lower_body, lower_rhs, reflect_ll, reflect_unary_into, resolve,
 };
-use reflect_common::width_of;
+use axeyum_verify::reflect::width_of;
 
 // ---- committed `.ll` fixtures (rustc 1.96 -O --emit=llvm-ir) --------------------
 

@@ -15,9 +15,8 @@
 use axeyum_ir::{Assignment, Sort, TermArena, Value, eval};
 use axeyum_solver::{ProofOutcome, SolverConfig, prove};
 
-mod reflect_common;
-use reflect_common::llvm::reflect_unary_into;
-use reflect_common::mir::reflect_mir_unary;
+use axeyum_verify::reflect::llvm::reflect_unary_into;
+use axeyum_verify::reflect::mir::reflect_mir_unary;
 
 /// Reflect both sides over one symbol, require `Disproved`, then replay-check
 /// the countermodel: the two terms must evaluate to *different* values at the

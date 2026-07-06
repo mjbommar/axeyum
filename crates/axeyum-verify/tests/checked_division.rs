@@ -20,9 +20,8 @@
 use axeyum_ir::{Sort, SymbolId, TermArena, TermId, Value};
 use axeyum_solver::{ProofOutcome, SolverConfig, prove};
 
-mod reflect_common;
-use reflect_common::llvm::reflect_into;
-use reflect_common::mir::reflect_mir_into_checked;
+use axeyum_verify::reflect::llvm::reflect_into;
+use axeyum_verify::reflect::mir::reflect_mir_into_checked;
 
 // ---- the real Rust functions (replay oracles; division checks are unconditional) --
 

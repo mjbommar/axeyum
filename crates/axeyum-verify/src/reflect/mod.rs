@@ -1,23 +1,33 @@
-//! Shared, IR-agnostic reflection core used by **both** the MIR and LLVM
-//! front-end test suites (`mir_reflection.rs`, `llvm_reflection.rs`). The parsers
-//! differ per platform; the op vocabulary and the proof/eval harness are one
-//! thing — here — so a fix or a new op benefits both platforms at once, and the
-//! same harness proves the two reflections of one function equivalent.
+//! IR reflection: parse the **compiled artifacts of a Rust build** — rustc
+//! **MIR** ([`mir`]) and **LLVM IR** ([`llvm`]) — into `axeyum-ir` terms, so the
+//! solver can prove properties of the code the compiler actually produced. This
+//! is the front end of the verified-systems trajectory (Track 5, ADR-0056);
+//! the crate-vs-module boundary is ADR-0057 — a module now, a crate when a
+//! second consumer appears.
 //!
-//! (Included via `mod reflect_common;` — the `subdir/mod.rs` form, so cargo does
-//! not compile it as its own test binary. Each test crate compiles its own copy;
-//! this is source-level DRY, not a public API.)
-#![allow(dead_code)] // each front end uses a subset of the shared vocabulary.
+//! The two parsers differ per platform, but the **op vocabulary** ([`binop`],
+//! [`compare`], [`width_of`]) and the **proof/eval harness** ([`prove_goal`],
+//! [`eval_bv`]) are one thing — shared here — so a fix or a new op benefits both
+//! platforms at once, and one harness proves the two reflections of a single
+//! function equivalent (translation-validation of the compiler's own lowering).
+//!
+//! The reflectors are *untrusted search*: every `sat`/countermodel a caller
+//! obtains should be replayed against the real compiled function, and every
+//! `unsat` should ride the certificate ladder — the same discipline the rest of
+//! axeyum follows.
 
-/// The single-block LLVM-IR reflector (parse `define … ret` → term).
+/// The `br`/`phi`/`switch` LLVM-IR reflector (parse `define … ret` → term).
 pub mod llvm;
-/// The `switchInt` / straight-line `BinaryOp` MIR reflector.
+/// The `switchInt`/`assert`/checked-arithmetic MIR reflector.
 pub mod mir;
 
 use axeyum_ir::{Assignment, TermArena, TermId, Value, eval};
 use axeyum_solver::{ProofOutcome, SolverConfig, prove};
 
 /// Width of an `iN`/`uN` type token (`i8`, `i32`, `u64`, …).
+///
+/// # Panics
+/// Panics if the IR/token is malformed or uses an unsupported construct.
 pub fn width_of(ty: &str) -> u32 {
     ty.trim_start_matches(['i', 'u'])
         .trim_end_matches(|c: char| !c.is_ascii_digit())
@@ -35,6 +45,9 @@ pub fn is_int_ty(tok: &str) -> bool {
 /// The binary-op → arena BV-op map, keyed by **both** LLVM and MIR spellings —
 /// the DRY vocabulary. (`Shr` maps to logical shift: correct for MIR's unsigned
 /// `Shr`; a signed `Shr` on `iN` would need `ashr`, added when a case needs it.)
+///
+/// # Panics
+/// Panics if the IR/token is malformed or uses an unsupported construct.
 pub fn binop(arena: &mut TermArena, op: &str, a: TermId, b: TermId) -> TermId {
     match op {
         "and" | "BitAnd" => arena.bv_and(a, b),
@@ -56,6 +69,9 @@ pub fn binop(arena: &mut TermArena, op: &str, a: TermId, b: TermId) -> TermId {
 }
 
 /// The comparison-predicate → arena BV-compare map (LLVM `icmp` predicates).
+///
+/// # Panics
+/// Panics if the IR/token is malformed or uses an unsupported construct.
 pub fn compare(arena: &mut TermArena, pred: &str, a: TermId, b: TermId) -> TermId {
     match pred {
         "eq" => arena.eq(a, b),
@@ -79,6 +95,9 @@ pub fn compare(arena: &mut TermArena, pred: &str, a: TermId, b: TermId) -> TermI
 // ---- the proof / eval harness (identical across front ends) --------------------
 
 /// Prove `goal` for all inputs (no hypotheses).
+///
+/// # Panics
+/// Panics if the solver hard-errors (a resource/config fault, not `unknown`).
 pub fn prove_goal(arena: &mut TermArena, goal: TermId) -> ProofOutcome {
     prove(arena, &[], goal, &SolverConfig::default()).expect("solver should not hard-error")
 }
@@ -94,6 +113,9 @@ pub fn is_disproved(arena: &mut TermArena, goal: TermId) -> bool {
 }
 
 /// Evaluate a BV-valued term under an assignment (the fuzz/eval reader).
+///
+/// # Panics
+/// Panics if `term` does not evaluate to a bit-vector value.
 pub fn eval_bv(arena: &TermArena, term: TermId, asg: &Assignment) -> u128 {
     match eval(arena, term, asg).unwrap() {
         Value::Bv { value, .. } => value,

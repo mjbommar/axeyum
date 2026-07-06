@@ -5,7 +5,7 @@
 //! demonstration that both front ends land in one term algebra: the proof is
 //! `∀x. mir_reflect(f)(x) == llvm_reflect(f)(x)`, discharged by the solver.
 //!
-//! Both reflectors come from `reflect_common` (the MIR and LLVM parsers over the
+//! Both reflectors come from `axeyum_verify::reflect` (the MIR and LLVM parsers over the
 //! *shared* op vocabulary), so this file is only fixtures + the equivalence
 //! assertions — the DRY payoff realized.
 //!
@@ -15,9 +15,8 @@
 use axeyum_ir::{Assignment, Sort, TermArena, Value, eval};
 use axeyum_solver::{ProofOutcome, SolverConfig, prove};
 
-mod reflect_common;
-use reflect_common::llvm::{reflect_into, reflect_unary_into};
-use reflect_common::mir::{reflect_mir_into, reflect_mir_unary};
+use axeyum_verify::reflect::llvm::{reflect_into, reflect_unary_into};
+use axeyum_verify::reflect::mir::{reflect_mir_into, reflect_mir_unary};
 
 // ---- `masked(x) = (x & 0xff) | 0x100` : straight-line BitAnd/BitOr ~ and/or -----
 

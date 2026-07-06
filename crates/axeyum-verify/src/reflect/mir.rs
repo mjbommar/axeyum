@@ -417,7 +417,9 @@ fn exec_block(
 /// A caller-supplied parameter binding for [`reflect_mir_params_checked`]:
 /// a typed scalar, or a fixed `[u8; N]` array as one term per element.
 pub enum MirParam {
+    /// A scalar parameter: `(term, width, signed)`.
     Scalar(TermId, u32, bool),
+    /// A fixed `[u8; N]` array parameter, one 8-bit term per element.
     Bytes(Vec<TermId>),
 }
 
@@ -425,6 +427,9 @@ pub enum MirParam {
 /// `params[i]` binds local `_{i+1}`; types come from the bindings, not the
 /// signature. Returns `(value of _0, panic condition)` like
 /// [`reflect_mir_into_checked`].
+///
+/// # Panics
+/// Panics if the IR/token is malformed or uses an unsupported construct.
 pub fn reflect_mir_params_checked(
     arena: &mut TermArena,
     params: &[MirParam],
@@ -448,6 +453,9 @@ pub fn reflect_mir_params_checked(
 /// a Bool term true exactly on inputs that fail a debug-profile `assert`
 /// (overflow/bounds check) — proving it `== false` is a **panic-freedom proof**;
 /// a countermodel is a concrete panicking input.
+///
+/// # Panics
+/// Panics if the IR/token is malformed or uses an unsupported construct.
 pub fn reflect_mir_into_checked(
     arena: &mut TermArena,
     params: &[TermId],
@@ -473,11 +481,17 @@ pub fn reflect_mir_into_checked(
 
 /// Reflect a MIR function, returning only the `_0` value term (for fixtures
 /// without checked arithmetic the panic condition is constant false anyway).
+///
+/// # Panics
+/// Panics if the IR/token is malformed or uses an unsupported construct.
 pub fn reflect_mir_into(arena: &mut TermArena, params: &[TermId], mir: &str) -> TermId {
     reflect_mir_into_checked(arena, params, mir).0
 }
 
 /// Single-input convenience over [`reflect_mir_into`] (`x` is `_1`).
+///
+/// # Panics
+/// Panics if the IR/token is malformed or uses an unsupported construct.
 pub fn reflect_mir_unary(arena: &mut TermArena, x: TermId, mir: &str) -> TermId {
     reflect_mir_into(arena, &[x], mir)
 }

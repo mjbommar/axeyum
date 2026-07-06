@@ -1,7 +1,7 @@
 //! **Panic-freedom from debug-profile MIR** — the symbolic-fuzzing story.
 //!
 //! Debug MIR carries rustc's own overflow checks (`AddWithOverflow` + `assert`).
-//! The shared reflector (`reflect_common::mir::reflect_mir_into_checked`) turns
+//! The shared reflector (`axeyum_verify::reflect::mir::reflect_mir_into_checked`) turns
 //! them into a Bool *panic-condition term*, so:
 //!
 //! - proving `panic == false` is a **panic-freedom proof** over ALL inputs —
@@ -18,9 +18,8 @@
 use axeyum_ir::{Sort, TermArena, Value};
 use axeyum_solver::{ProofOutcome, SolverConfig, prove};
 
-mod reflect_common;
-use reflect_common::llvm::reflect_unary_into;
-use reflect_common::mir::reflect_mir_into_checked;
+use axeyum_verify::reflect::llvm::reflect_unary_into;
+use axeyum_verify::reflect::mir::reflect_mir_into_checked;
 
 // ---- the real Rust functions (the replay oracles) --------------------------------
 

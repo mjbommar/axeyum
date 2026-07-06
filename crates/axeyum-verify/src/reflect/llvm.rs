@@ -12,29 +12,41 @@ use super::{binop, compare, width_of};
 /// A reflected function: the arena it lives in, its parameters, the SSA
 /// environment (every `%name` → `(term, width)`), and the `ret` term.
 pub struct Reflected {
+    /// The arena the reflected term lives in (owns the reflection).
     pub arena: TermArena,
     /// `(name, symbol, width)` for each function parameter (width 1 = `i1`/Bool).
     pub params: Vec<(String, SymbolId, u32)>,
     /// every SSA name (params + results) → `(term, width)`.
     pub env: HashMap<String, (TermId, u32)>,
+    /// The term produced by the function's `ret` — what a property is proved of.
     pub result: TermId,
 }
 
 impl Reflected {
+    /// The term for parameter `name` (panics if there is no such parameter).
     pub fn param(&self, name: &str) -> TermId {
         self.env[name].0
     }
+    /// Prove `goal` over this reflection for all inputs (no hypotheses).
+    ///
+    /// # Panics
+    /// Panics if the solver hard-errors (a resource/config fault, not `unknown`).
     pub fn prove_goal(&mut self, goal: TermId) -> ProofOutcome {
         prove(&mut self.arena, &[], goal, &SolverConfig::default())
             .expect("solver should not hard-error")
     }
 }
 
+/// Whether an operand token names an SSA register (`%…`).
 pub fn is_reg(tok: &str) -> bool {
     tok.starts_with('%')
 }
 
 /// Resolve an operand token to a term of the given width (1 = Bool).
+///
+/// # Panics
+/// Panics if the IR/token is malformed or uses an unsupported construct.
+#[allow(clippy::implicit_hasher)] // the reflector's SSA env is always the default-hasher `HashMap`.
 pub fn resolve(
     arena: &mut TermArena,
     env: &HashMap<String, (TermId, u32)>,
@@ -60,6 +72,10 @@ pub fn resolve(
 }
 
 /// Lower one instruction's right-hand side to `(term, width)`.
+///
+/// # Panics
+/// Panics if the IR/token is malformed or uses an unsupported construct.
+#[allow(clippy::implicit_hasher)] // the reflector's SSA env is always the default-hasher `HashMap`.
 pub fn lower_rhs(
     arena: &mut TermArena,
     env: &HashMap<String, (TermId, u32)>,
@@ -131,6 +147,9 @@ pub fn lower_rhs(
 }
 
 /// Parse the parameter list of the `define` line into `(name, width)` pairs.
+///
+/// # Panics
+/// Panics if the IR/token is malformed or uses an unsupported construct.
 pub fn param_decls(ll: &str) -> Vec<(String, u32)> {
     let define = ll
         .lines()
@@ -164,6 +183,10 @@ pub fn param_decls(ll: &str) -> Vec<(String, u32)> {
 
 /// Lower the instruction body (parameters must already be seeded in `env`) to the
 /// `(result_term, result_width)` produced by `ret`.
+///
+/// # Panics
+/// Panics if the IR/token is malformed or uses an unsupported construct.
+#[allow(clippy::implicit_hasher)] // the reflector's SSA env is always the default-hasher `HashMap`.
 pub fn lower_body(
     arena: &mut TermArena,
     env: &mut HashMap<String, (TermId, u32)>,
@@ -391,6 +414,10 @@ fn exec_cfg_block(
 
 /// Lower a function body — dispatching to the CFG executor when the body
 /// branches (`br`), and the fast single-block path otherwise.
+///
+/// # Panics
+/// Panics if the IR/token is malformed or uses an unsupported construct.
+#[allow(clippy::implicit_hasher)] // the reflector's SSA env is always the default-hasher `HashMap`.
 pub fn lower_fn(
     arena: &mut TermArena,
     env: &mut HashMap<String, (TermId, u32)>,
@@ -410,6 +437,11 @@ pub fn lower_fn(
     }
 }
 
+/// Reflect a whole `define` into a fresh arena, declaring one symbol per
+/// parameter, and return the [`Reflected`] bundle (arena + params + `ret` term).
+///
+/// # Panics
+/// Panics if the IR/token is malformed or uses an unsupported construct.
 pub fn reflect_ll(ll: &str) -> Reflected {
     let mut arena = TermArena::new();
     let mut env: HashMap<String, (TermId, u32)> = HashMap::new();
@@ -436,6 +468,9 @@ pub fn reflect_ll(ll: &str) -> Reflected {
 /// Reflect a function into an *existing* arena, binding `params[i]` to the i-th
 /// declared parameter — so several functions can be lowered over the *same*
 /// symbols and proved equivalent.
+///
+/// # Panics
+/// Panics if the IR/token is malformed or uses an unsupported construct.
 pub fn reflect_into(arena: &mut TermArena, params: &[TermId], ll: &str) -> TermId {
     let decls = param_decls(ll);
     assert_eq!(
@@ -451,6 +486,9 @@ pub fn reflect_into(arena: &mut TermArena, params: &[TermId], ll: &str) -> TermI
 }
 
 /// Single-input convenience over [`reflect_into`] (`x` is the sole parameter).
+///
+/// # Panics
+/// Panics if the IR/token is malformed or uses an unsupported construct.
 pub fn reflect_unary_into(arena: &mut TermArena, x: TermId, ll: &str) -> TermId {
     reflect_into(arena, &[x], ll)
 }

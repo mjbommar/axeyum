@@ -5,7 +5,7 @@
 //! the CPU runs) into the solver's IR, faithfully.
 //!
 //! Design + feasibility: `docs/consumer-track/verify/real-rust-frontend.md`.
-//! The reflector itself lives in `reflect_common::mir` — the same one the
+//! The reflector itself lives in `axeyum_verify::reflect::mir` — the same one the
 //! cross-IR equivalence suite uses (`cross_ir_equivalence.rs`), over the same op
 //! vocabulary as the LLVM front end. This file is the MIR-side fixtures + the
 //! reflect-then-{enumerate,prove} tests.
@@ -21,9 +21,8 @@
 use axeyum_ir::{Assignment, Sort, SymbolId, TermArena, TermId, Value};
 use axeyum_solver::ProofOutcome;
 
-mod reflect_common;
-use reflect_common::mir::reflect_mir_unary;
-use reflect_common::{eval_bv, is_proved, prove_goal};
+use axeyum_verify::reflect::mir::reflect_mir_unary;
+use axeyum_verify::reflect::{eval_bv, is_proved, prove_goal};
 
 /// The real Rust function. Its compiled MIR (below) is what we reflect; the
 /// function itself is the reference oracle for the exhaustive cross-check.
@@ -110,7 +109,7 @@ fn lut32(_1: u32) -> u32 {
 ";
 
 /// Reflect a fixture into a fresh arena over a symbolic input `x` of the given
-/// width, via the **shared** `reflect_common::mir` reflector.
+/// width, via the **shared** `axeyum_verify::reflect::mir` reflector.
 fn reflect_mir(mir: &str, in_w: u32) -> (TermArena, SymbolId, TermId) {
     let mut arena = TermArena::new();
     let x_sym = arena.declare("x", Sort::BitVec(in_w)).unwrap();
