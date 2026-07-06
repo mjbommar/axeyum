@@ -808,13 +808,18 @@ fn check_terms_with_options(
 /// Tseitin encoder from the typed Boolean IR into a CNF skeleton, with the first
 /// `atom_terms.len()` variables reserved for the registered `LIA` atoms (numbered
 /// to match [`LiaTheory`]).
-struct Encoder {
-    term_var: HashMap<TermId, usize>,
-    var_count: usize,
+///
+/// `pub(crate)` so the sibling online CDCL(T) LIA entry point
+/// ([`crate::lia_theory::check_qf_lia_online_cdclt`]) can reuse the identical
+/// skeleton construction and translate its clauses into the generic driver's own
+/// literal type.
+pub(crate) struct Encoder {
+    pub(crate) term_var: HashMap<TermId, usize>,
+    pub(crate) var_count: usize,
 }
 
 impl Encoder {
-    fn new(atom_terms: &[TermId]) -> Self {
+    pub(crate) fn new(atom_terms: &[TermId]) -> Self {
         let mut term_var = HashMap::new();
         for (i, &t) in atom_terms.iter().enumerate() {
             term_var.insert(t, i);
@@ -833,7 +838,7 @@ impl Encoder {
 
     /// Encodes Boolean term `t`, returning the variable whose truth equals `t`, or
     /// `None` for structure outside the supported connectives (sound give-up).
-    fn encode(
+    pub(crate) fn encode(
         &mut self,
         arena: &TermArena,
         t: TermId,
@@ -925,7 +930,7 @@ impl Encoder {
 
 /// Collects the distinct integer order/equality atoms in `term`, in a stable
 /// left-to-right scan (so atom indexing is deterministic).
-fn collect_lia_atoms(
+pub(crate) fn collect_lia_atoms(
     arena: &TermArena,
     term: TermId,
     out: &mut Vec<TermId>,
@@ -1104,7 +1109,7 @@ fn theory_model(theory: &LiaTheory) -> Option<Model> {
 /// integer theory values plus optional Boolean skeleton leaves. Any non-`true`,
 /// non-Int/non-Bool value, or evaluation error makes it not replay (→ `Unknown`,
 /// never a wrong `sat`).
-fn replays_integer(arena: &TermArena, assertions: &[TermId], model: &Model) -> bool {
+pub(crate) fn replays_integer(arena: &TermArena, assertions: &[TermId], model: &Model) -> bool {
     let mut assignment = Assignment::new();
     for (symbol, value) in model.iter() {
         if !matches!(value, Value::Int(_) | Value::Bool(_)) {

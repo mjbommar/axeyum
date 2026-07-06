@@ -83,6 +83,7 @@ mod lia_gcd;
 mod lia_interpolant;
 mod lia_interpolant_cnf;
 mod lia_online;
+mod lia_theory;
 mod lra;
 mod lra_interpolant_cnf;
 mod lra_online;
@@ -294,6 +295,7 @@ pub use lia_gcd::{
 pub use lia_interpolant::{LiaInterpolantCertificate, lia_interpolant, lia_interpolant_certified};
 pub use lia_interpolant_cnf::lia_interpolant_cnf;
 pub use lia_online::{LiaTheory, check_qf_lia_online};
+pub use lia_theory::check_qf_lia_online_cdclt;
 pub use lra::{
     FarkasAtom, FarkasCertificate, check_with_lia_simplex, check_with_lra, check_with_lra_simplex,
     lra_farkas_certificate, lra_unsat_core,
