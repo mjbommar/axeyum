@@ -26,10 +26,10 @@ the route named in the pack metadata.
 
 Generated from the current math resource queue:
 
-- math example packs: 170
-- learner-linked packs: 170 focused links
-- packs with non-checked proof rows: 159
-- non-checked proof rows: 714
+- math example packs: 171
+- learner-linked packs: 171 focused links
+- packs with non-checked proof rows: 160
+- non-checked proof rows: 720
 
 Candidate route totals:
 

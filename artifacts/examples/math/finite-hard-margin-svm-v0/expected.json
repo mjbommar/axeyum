@@ -1,0 +1,198 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-hard-margin-svm-v0",
+  "witnesses": [
+    {
+      "id": "six-point-hard-margin-svm",
+      "description": "A six-point linearly separable training set with the committed maximum-margin hyperplane w = (1/2, 1/2), b = -1, dual multipliers 1/4 on the two support vectors, functional margins 1, 1, 2, 3/2, 2, 2, and a zero primal-dual objective gap 1/4 = 1/4.",
+      "values": {
+        "classes": [
+          "positive",
+          "negative"
+        ],
+        "training_points": [
+          {
+            "id": "s1",
+            "coordinates": [
+              "2",
+              "2"
+            ],
+            "class": "positive",
+            "label": "1"
+          },
+          {
+            "id": "s2",
+            "coordinates": [
+              "0",
+              "0"
+            ],
+            "class": "negative",
+            "label": "-1"
+          },
+          {
+            "id": "p2",
+            "coordinates": [
+              "3",
+              "3"
+            ],
+            "class": "positive",
+            "label": "1"
+          },
+          {
+            "id": "p3",
+            "coordinates": [
+              "1",
+              "4"
+            ],
+            "class": "positive",
+            "label": "1"
+          },
+          {
+            "id": "n2",
+            "coordinates": [
+              "-1",
+              "-1"
+            ],
+            "class": "negative",
+            "label": "-1"
+          },
+          {
+            "id": "n3",
+            "coordinates": [
+              "0",
+              "-2"
+            ],
+            "class": "negative",
+            "label": "-1"
+          }
+        ],
+        "weights": [
+          "1/2",
+          "1/2"
+        ],
+        "bias": "-1",
+        "multipliers": {
+          "s1": "1/4",
+          "s2": "1/4",
+          "p2": "0",
+          "p3": "0",
+          "n2": "0",
+          "n3": "0"
+        },
+        "support_vector_ids": [
+          "s1",
+          "s2"
+        ],
+        "functional_margins": {
+          "s1": "1",
+          "s2": "1",
+          "p2": "2",
+          "p3": "3/2",
+          "n2": "2",
+          "n3": "2"
+        },
+        "minimum_margin": "1",
+        "multiplier_label_balance": "0",
+        "weight_norm_squared": "1/2",
+        "primal_objective": "1/4",
+        "dual_objective": "1/4",
+        "duality_gap": "0"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "svm-table-witness",
+      "claim": "The listed six-point training set has three positive and three negative points with rational coordinates, and the committed hyperplane has weights (1/2, 1/2) and bias -1.",
+      "expected_result": "sat",
+      "validation": "exact_rational_svm_table_replay",
+      "proof_status": "replay-only",
+      "witnesses": [
+        "six-point-hard-margin-svm"
+      ],
+      "notes": "The validator checks the committed coordinates, labels, classes, weight vector, and bias exactly."
+    },
+    {
+      "id": "svm-feasibility-witness",
+      "claim": "Every training point satisfies the hard-margin constraint y*(w.x + b) >= 1 at the committed hyperplane; the functional margins are 1, 1, 2, 3/2, 2, 2 with minimum 1, and the two support vectors sit exactly on the margin.",
+      "expected_result": "sat",
+      "validation": "exact_rational_svm_margin_replay",
+      "proof_status": "replay-only",
+      "witnesses": [
+        "six-point-hard-margin-svm"
+      ],
+      "notes": "All coordinates, weights, and the bias are rational, so every functional margin y*(w.x + b) in the table is exact rational arithmetic."
+    },
+    {
+      "id": "svm-kkt-witness",
+      "claim": "The committed dual multipliers are nonnegative, sum to zero against the labels, reproduce the weight vector through stationarity w = sum(alpha*y*x), and satisfy complementary slackness: every multiplier is zero unless its point sits exactly on the margin.",
+      "expected_result": "sat",
+      "validation": "exact_rational_svm_kkt_replay",
+      "proof_status": "replay-only",
+      "witnesses": [
+        "six-point-hard-margin-svm"
+      ],
+      "notes": "The validator recomputes sum(alpha_i * y_i * x_i), sum(alpha_i * y_i), and alpha_i * (margin_i - 1) for every training point over exact rationals."
+    },
+    {
+      "id": "svm-duality-witness",
+      "claim": "The primal objective (1/2)*||w||^2 and the dual objective sum(alpha) - (1/2)*||sum(alpha*y*x)||^2 both equal 1/4, so the committed primal-dual pair has zero duality gap.",
+      "expected_result": "sat",
+      "validation": "exact_rational_svm_duality_replay",
+      "proof_status": "replay-only",
+      "witnesses": [
+        "six-point-hard-margin-svm"
+      ],
+      "notes": "The squared norm ||w||^2 = 1/2 is exact rational arithmetic; the zero gap is replayed as committed data, while the strong-duality and KKT-sufficiency theorems that interpret it stay in the horizon row."
+    },
+    {
+      "id": "bad-bias-rejected",
+      "claim": "The maximum-margin hyperplane for this training set has bias -1/2.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_bad_bias_replay",
+      "proof_status": "replay-only",
+      "data": {
+        "source_witness": "six-point-hard-margin-svm",
+        "metric": "svm_bias",
+        "computed_bias": "-1",
+        "claimed_bias": "-1/2"
+      },
+      "notes": "Exact replay of the support-vector margin equalities y*(w.x + b) = 1 at w = (1/2, 1/2) gives b = -1, so the claimed value -1/2 is rejected; the separate qf-lra-bad-bias row owns the checked Farkas evidence."
+    },
+    {
+      "id": "qf-lra-bad-bias",
+      "claim": "The fixed malformed bias claim is linearly inconsistent with the replayed support-vector margin equation.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_farkas_evidence",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "six-point-hard-margin-svm",
+        "source_replay_row": "bad-bias-rejected",
+        "metric": "svm_bias",
+        "computed_bias": "-1",
+        "claimed_bias": "-1/2",
+        "bias_equations": [
+          "svm_b = -1",
+          "svm_b = -1/2"
+        ],
+        "farkas_conflict": "replayed support-vector bias equation plus svm_b = -1/2",
+        "smt2_artifact": "artifacts/examples/math/finite-hard-margin-svm-v0/smt2/bad-bias-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_hard_margin_svm_bad_bias_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes svm_b = -1 from the committed support vectors and weights, while the malformed row claims svm_b = -1/2; the source QF_LRA artifact isolates that scalar contradiction for Farkas checking."
+    },
+    {
+      "id": "general-svm-theory-lean-horizon",
+      "claim": "Strong duality and KKT sufficiency for the SVM quadratic program, maximum-margin uniqueness, geometric-margin theory, soft-margin/hinge-loss and kernel variants, SMO/working-set solver behavior, margin-based generalization bounds, and floating-point training behavior require future theorem, statistical-inference, or numerical-honesty resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_boundary",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "For linearly separable data, prove that the hard-margin SVM quadratic program has a unique optimal hyperplane, that KKT conditions are necessary and sufficient at that optimum, that strong duality holds with zero gap, and prove margin or generalization claims only with explicit theorem hypotheses; the finite rows here replay one committed primal-dual pair.",
+        "future_checker": "Lean theorem statements for convex strong duality and KKT sufficiency on the SVM quadratic program plus separate numerical-honesty artifacts for floating-point SVM training and kernel evaluations."
+      },
+      "notes": "The finite exact rows replay one committed support-vector-machine primal-dual pair with margins, KKT identities, and a zero duality gap; they do not prove strong duality, KKT sufficiency, optimality or uniqueness of the maximum-margin hyperplane, geometric-margin theory (which divides by an irrational norm), soft-margin or kernel behavior, statistical generalization, or floating-point training behavior."
+    }
+  ]
+}

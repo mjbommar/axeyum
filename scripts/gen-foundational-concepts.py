@@ -211,6 +211,10 @@ CURRICULUM_MAP = {
                 "finite-k-nearest-neighbors-v0",
                 "Exact rational nearest-neighbor distance, ranking, and majority-vote replay with checked bad squared-distance evidence.",
             ),
+            (
+                "finite-hard-margin-svm-v0",
+                "Exact rational maximum-margin hyperplane, KKT multiplier, and zero-duality-gap replay with checked bad-bias evidence.",
+            ),
         ],
     },
     "reals": {
@@ -612,6 +616,10 @@ CURRICULUM_MAP = {
                 "Exact integer perceptron training-trace replay: dot products, mistake updates, converged weights, strict margins, and checked bad weight-update evidence.",
             ),
             (
+                "finite-hard-margin-svm-v0",
+                "Exact rational maximum-margin hyperplane replay: margin constraints, KKT stationarity and slackness, zero duality gap, and checked bad-bias evidence.",
+            ),
+            (
                 "finite-gaussian-elimination-v0",
                 "Exact rational elimination transcript, pivot multiplier, determinant pivot product, back-substitution, and checked bad eliminated-RHS evidence.",
             ),
@@ -877,14 +885,14 @@ FIELD_PACKS = {
     "discrete_math": ("counting-v0", "Finite counting, finite permutations, finite transformation monoids, group-action orbits, order/lattice, decision-tree feature/class partitions, dyadic entropy/information-gain partitions, nearest-neighbor majority votes, and combinatorial witness checks."),
     "graph_theory": ("graph-coloring-v0", "SAT colorings, non-colorability, reachability, search cost counters, matching, cuts, finite flow/cut certificates, finite shortest-path certificates, finite DAG/topological-order certificates, and d-separation."),
     "number_theory": ("modular-arithmetic-v0", "Congruences, CRT, residues, finite fields, finite ideals in modular rings, and bounded Diophantine examples."),
-    "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, covariance/Gram, PCA, k-means centroid/objective, and linear-discriminant replay, orthogonal transforms, rank, inverse, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, GMRES residual-minimization, Lanczos/tridiagonalization, regularized normal-equation replay, and Jordan-chain shadows, perceptron training-trace replay, Jacobians, Hessians, Newton-step Hessian solves, projections, and infeasibility."),
+    "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, covariance/Gram, PCA, k-means centroid/objective, and linear-discriminant replay, orthogonal transforms, rank, inverse, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, GMRES residual-minimization, Lanczos/tridiagonalization, regularized normal-equation replay, and Jordan-chain shadows, perceptron training-trace replay, hard-margin SVM hyperplane/KKT replay, Jacobians, Hessians, Newton-step Hessian solves, projections, and infeasibility."),
     "abstract_algebra": ("finite-fields-v0", "Finite groups, permutation groups, monoids, group actions, rings, fields, ideals, modules, dual spaces, tensor products, homomorphism tables, polynomial factorization slices, Jordan-chain polynomial/module shadows, and Cayley-table validation."),
     "real_analysis": ("real-analysis-rational-v0", "Rational interval/ball checks, bounded epsilon-delta samples, algebraic factorization, sequence and fixed-point acceleration, divided-difference and barycentric interpolation, finite-difference derivative stencils, finite Taylor polynomial replay, finite cubic Hermite interpolation replay, finite cubic spline assembly replay, finite secant/root-finding replay, fixed-decimal rounding shadows, Riemann-sum, Simpson-rule, and Romberg quadrature shadows, multivariable-calculus, Newton-step, Runge-Kutta midpoint, Heun-method, backward Euler, Crank-Nicolson, Adams-Bashforth, and BDF2 shadows, and proof horizons."),
     "complex_analysis": ("complex-algebraic-v0", "Complex arithmetic, real-pair transforms, finite Cauchy-Riemann derivative shadows, and polynomial factorization shadows as real/rational algebra before analytic proof horizons."),
     "topology": ("finite-topology-v0", "Finite topologies, metric balls, closure/interior, continuous maps, and finite simplicial-homology checks."),
     "measure_theory": ("finite-measure-v0", "Finite sigma-algebras, finite measures, monotonicity/subadditivity, random variables, conditional expectations, finite kernels, martingales, hitting times, concentration checks, product tables, and exact probability foundations."),
     "probability_theory": ("finite-probability-v0", "Finite mass tables, random variables, conditional expectation, kernels, martingales, hitting times, concentration/tail bounds, finite covariance tables, conditioning, independence, Bayes rule, Naive Bayes classifier posterior replay, confusion-matrix classifier metrics, finite ROC/AUC ranking metrics, finite precision-recall ranking metrics, finite calibration/Brier scoring rows, finite decision-tree Gini split rows, finite dyadic entropy/information-gain rows, finite nearest-neighbor vote rows, finite perceptron training traces, product measures, and exact discrete distributions."),
-    "statistics": ("descriptive-statistics-v0", "Mean/variance/covariance/PCA and finite clustering identities, Schur conditional-variance shadows, random variables, conditional expectation, finite kernel, hitting-time, martingale, and concentration checks, contingency tables, exact tests, ordinary and ridge regression, finite linear-discriminant/classification replay, finite Naive Bayes classifier replay, finite confusion-matrix classifier metrics, finite ROC/AUC ranking metrics, finite precision-recall ranking metrics, finite calibration/Brier scoring rows, finite decision-tree Gini split rows, finite dyadic entropy/information-gain rows, finite nearest-neighbor classification rows, finite perceptron training traces, and Simpson witnesses."),
+    "statistics": ("descriptive-statistics-v0", "Mean/variance/covariance/PCA and finite clustering identities, Schur conditional-variance shadows, random variables, conditional expectation, finite kernel, hitting-time, martingale, and concentration checks, contingency tables, exact tests, ordinary and ridge regression, finite linear-discriminant/classification replay, finite Naive Bayes classifier replay, finite confusion-matrix classifier metrics, finite ROC/AUC ranking metrics, finite precision-recall ranking metrics, finite calibration/Brier scoring rows, finite decision-tree Gini split rows, finite dyadic entropy/information-gain rows, finite nearest-neighbor classification rows, finite perceptron training traces, finite hard-margin SVM hyperplane/KKT rows, and Simpson witnesses."),
     "optimization_and_convexity": [
         ("linear-optimization-v0", "LP feasibility, threshold cliffs, and Farkas-style certificates."),
         ("convexity-rational-v0", "Finite midpoint convexity, second differences, affine threshold monotonicity, and checked bad midpoint-convexity plus affine-threshold rejection."),
@@ -905,6 +913,7 @@ FIELD_PACKS = {
         ("finite-principal-components-v0", "Finite PCA covariance eigenpair and projection replay with checked bad principal-eigenvalue rejection."),
         ("finite-k-means-clustering-v0", "Finite k-means centroid/objective replay with checked bad centroid-coordinate rejection."),
         ("finite-linear-discriminant-v0", "Finite Fisher-discriminant direction and threshold replay with checked bad-direction rejection."),
+        ("finite-hard-margin-svm-v0", "Finite hard-margin SVM hyperplane, KKT multiplier, and zero-duality-gap replay with checked bad-bias rejection."),
     ],
     "numerical_analysis": ("numerical-linear-algebra-v0", "Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, interval bounds, inner-product projections, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, GMRES residual-minimization, Lanczos/tridiagonalization, residual, regularized normal-equation, PCA, k-means centroid/objective, linear-discriminant/classification, rounding, and perturbation-bound shadows, sequence and fixed-point acceleration, divided-difference and barycentric interpolation, finite-difference derivative stencils, finite Taylor polynomial replay, finite cubic Hermite interpolation replay, finite cubic spline assembly replay, fixed-step error recurrences, Simpson-rule quadrature, Romberg extrapolation, Euler, Runge-Kutta midpoint, Heun, backward Euler, Crank-Nicolson implicit, Adams-Bashforth explicit multistep, and BDF2 implicit multistep time-stepping shadows, Jacobian/Hessian replay, finite root-finding/secant replay, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."),
     "differential_equations_and_dynamical_systems": ("bounded-dynamics-v0", "Recurrence systems, discretized dynamics, threshold reachability, invariant checks, Euler, Runge-Kutta midpoint, Heun, backward Euler, Crank-Nicolson, Adams-Bashforth, and BDF2 finite time-stepping, Markov transitions, and finite hitting times."),
@@ -1691,6 +1700,7 @@ BRIDGE_CONCEPTS = [
             "bridge_finite_entropy_information_gain_shadow",
             "bridge_finite_nearest_neighbor_shadow",
             "bridge_finite_perceptron_shadow",
+            "bridge_finite_hard_margin_svm_shadow",
             "bridge_eigenpair",
         ],
         "decidability": "decidable",
@@ -1749,6 +1759,10 @@ BRIDGE_CONCEPTS = [
             (
                 "finite-perceptron-v0",
                 "Malformed weight-update row checked through exact rational Farkas evidence after finite training-trace replay.",
+            ),
+            (
+                "finite-hard-margin-svm-v0",
+                "Malformed maximum-margin bias row checked through exact rational Farkas evidence after finite hyperplane/KKT replay.",
             ),
             (
                 "numerical-linear-algebra-v0",
@@ -1812,6 +1826,7 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/entropy-information-gain-end-to-end.md",
             "docs/learn/math/k-nearest-neighbors-end-to-end.md",
             "docs/learn/math/perceptron-end-to-end.md",
+            "docs/learn/math/hard-margin-svm-end-to-end.md",
             "docs/learn/math/linear-algebra-and-optimization.md",
             "docs/foundational-resources/PROOF-UPGRADE-FRONTIER.md",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
@@ -1868,6 +1883,7 @@ BRIDGE_CONCEPTS = [
             "bridge_finite_entropy_information_gain_shadow",
             "bridge_finite_nearest_neighbor_shadow",
             "bridge_finite_perceptron_shadow",
+            "bridge_finite_hard_margin_svm_shadow",
             "field_numerical_analysis",
             "field_statistics",
         ],
@@ -2022,6 +2038,10 @@ BRIDGE_CONCEPTS = [
                 "Perceptron dot products, mistake updates, converged weights, margins, and bad weight-update rows checked as exact rational replay, not floating-point training or statistical generalization evidence.",
             ),
             (
+                "finite-hard-margin-svm-v0",
+                "Maximum-margin hyperplane, functional margins, KKT identities, duality gap, and bad-bias rows checked as exact rational replay, not floating-point training or statistical generalization evidence.",
+            ),
+            (
                 "finite-root-finding-v0",
                 "One-step bisection/Newton rows replayed exactly while convergence and floating-point stability remain horizon claims.",
             ),
@@ -2102,6 +2122,7 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/entropy-information-gain-end-to-end.md",
                     "docs/learn/math/k-nearest-neighbors-end-to-end.md",
                     "docs/learn/math/perceptron-end-to-end.md",
+                    "docs/learn/math/hard-margin-svm-end-to-end.md",
                     "docs/learn/math/principal-components-end-to-end.md",
                     "docs/learn/math/k-means-clustering-end-to-end.md",
                     "docs/foundational-resources/MATH-FIELDS.md",
@@ -2151,6 +2172,7 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/entropy-information-gain-end-to-end.md",
             "docs/learn/math/k-nearest-neighbors-end-to-end.md",
             "docs/learn/math/perceptron-end-to-end.md",
+            "docs/learn/math/hard-margin-svm-end-to-end.md",
             "artifacts/examples/math/finite-rounding-shadow-v0/smt2/bad-rounded-delta-farkas-conflict.smt2",
             "artifacts/examples/math/finite-interval-arithmetic-shadow-v0/smt2/bad-product-upper-farkas-conflict.smt2",
             "artifacts/examples/math/finite-calibration-brier-v0/smt2/bad-brier-score-farkas-conflict.smt2",
@@ -2158,6 +2180,7 @@ BRIDGE_CONCEPTS = [
             "artifacts/examples/math/finite-entropy-information-gain-v0/smt2/bad-weighted-entropy-farkas-conflict.smt2",
             "artifacts/examples/math/finite-k-nearest-neighbors-v0/smt2/bad-squared-distance-farkas-conflict.smt2",
             "artifacts/examples/math/finite-perceptron-v0/smt2/bad-weight-update-farkas-conflict.smt2",
+            "artifacts/examples/math/finite-hard-margin-svm-v0/smt2/bad-bias-farkas-conflict.smt2",
             "docs/foundational-resources/MATH-CURRICULUM-RESOURCE-MASTER-PLAN.md",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
         ],
@@ -3797,6 +3820,117 @@ BRIDGE_CONCEPTS = [
                 "The validator replays the whole training trace from committed source data and rejects final weights that do not classify every point strictly correctly.",
                 "Malformed finite weight-update claims link to source SMT-LIB artifacts and checked QF_LRA/Farkas regressions after replay.",
                 "Learner and query docs keep finite exact perceptron trace replay separate from mistake-bound, convergence, geometric-margin, kernel/variant, statistical, and floating-point claims.",
+            ],
+        },
+    },
+    {
+        "id": "bridge_finite_hard_margin_svm_shadow",
+        "title": "Finite Hard-Margin SVM Shadow",
+        "field_ids": [
+            "statistics",
+            "optimization_and_convexity",
+            "linear_algebra",
+        ],
+        "resource_status": "validated",
+        "summary": (
+            "Finite hard-margin SVM rows replay a fixed rational training "
+            "set, the committed maximum-margin hyperplane, every functional "
+            "margin and hard-margin constraint, the KKT stationarity, "
+            "multiplier-balance, and complementary-slackness identities, a "
+            "zero primal-dual duality gap, and source-linked bad-bias "
+            "Farkas evidence while keeping strong duality, KKT sufficiency, "
+            "maximum-margin optimality theorems, geometric-margin theory, "
+            "soft-margin and kernel variants, statistical generalization, "
+            "and floating-point training behavior separate."
+        ),
+        "prerequisites": [
+            "curriculum_linear_algebra",
+            "curriculum_rationals",
+            "bridge_probability_mass_table",
+            "bridge_exact_vs_floating_arithmetic",
+            "bridge_qf_lra_farkas_anatomy",
+        ],
+        "unlocks": [
+            "field_statistics",
+            "field_optimization_and_convexity",
+            "field_linear_algebra",
+            "bridge_lean_horizon",
+        ],
+        "decidability": "bounded",
+        "axeyum_fragments": [
+            "finite classifier table replay",
+            "finite maximum-margin hyperplane replay",
+            "finite KKT replay",
+            "finite duality-gap replay",
+            "exact rational arithmetic",
+            "QF_LRA",
+            "Farkas certificate",
+            "finite replay",
+            "Lean horizon",
+            "numerical-honesty metadata",
+        ],
+        "example_packs": [
+            (
+                "finite-hard-margin-svm-v0",
+                "Exact six-point separable primal-dual pair with weights (1/2, 1/2), bias -1, support multipliers 1/4, margins 1, 1, 2, 3/2, 2, 2, zero duality gap, bad-bias replay, and checked QF_LRA/Farkas row.",
+            ),
+            (
+                "finite-perceptron-v0",
+                "Exact iterative training-trace replay that supplies the mistake-driven contrast to the committed optimum.",
+            ),
+            (
+                "finite-kkt-v0",
+                "Exact KKT stationarity and complementary-slackness replay that supplies the general constrained-optimization contrast.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "finite SVM hyperplane/KKT replay plus QF_LRA/Farkas",
+                "status": "checked",
+                "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_lra_routes",
+                "lean_status": "partial",
+                "sources": [
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+                    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+                    "docs/learn/math/hard-margin-svm-end-to-end.md",
+                    "artifacts/examples/math/finite-hard-margin-svm-v0/smt2/bad-bias-farkas-conflict.smt2",
+                    "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+                ],
+                "notes": (
+                    "The finite checker replays the committed primal-dual "
+                    "pair — margins, stationarity, multiplier balance, "
+                    "complementary slackness, and the zero duality gap — "
+                    "over exact rationals. Only the final malformed bias "
+                    "row is promoted to checked Farkas evidence."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/foundational-resources/MATH-FIELDS.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+            "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+            "docs/proof-cookbook/recipes/lean-horizon-template.md",
+            "docs/learn/math/hard-margin-svm-end-to-end.md",
+            "docs/learn/math/probability-and-statistics.md",
+            "artifacts/examples/math/finite-hard-margin-svm-v0/smt2/bad-bias-farkas-conflict.smt2",
+            "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+        ],
+        "open_gaps": [
+            "Finite replay of one committed primal-dual pair does not prove strong duality, KKT sufficiency, or maximum-margin optimality and uniqueness for the SVM quadratic program.",
+            "Geometric margins divide by the irrational norm of the weight vector and need algebraic-real or theorem resources before they can be replayed exactly.",
+            "Soft-margin/hinge-loss, kernel, and non-separable SVM variants and SMO/working-set solver behavior need separate resources before they can be treated as checked claims.",
+            "Floating-point dot-product, kernel-evaluation, and training behavior needs numerical-honesty or QF_FP resources before it can be presented as checked implementation behavior.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Rows state the finite training set, the committed weights, bias, and multipliers, every functional margin, the support-vector margin equalities, the KKT identities, and the zero primal-dual gap.",
+                "The validator replays the whole primal-dual pair from committed source data and rejects hyperplanes, multipliers, or objectives that break feasibility, KKT identities, or the committed gap.",
+                "Malformed finite bias claims link to source SMT-LIB artifacts and checked QF_LRA/Farkas regressions after replay.",
+                "Learner and query docs keep finite exact SVM primal-dual replay separate from strong-duality, KKT-sufficiency, geometric-margin, soft-margin/kernel, statistical, and floating-point claims.",
             ],
         },
     },
@@ -8564,6 +8698,7 @@ BRIDGE_CONCEPTS = [
             "bridge_finite_entropy_information_gain_shadow",
             "bridge_finite_nearest_neighbor_shadow",
             "bridge_finite_perceptron_shadow",
+            "bridge_finite_hard_margin_svm_shadow",
         ],
         "decidability": "bounded",
         "axeyum_fragments": [
@@ -8613,6 +8748,10 @@ BRIDGE_CONCEPTS = [
             (
                 "finite-perceptron-v0",
                 "Finite labeled training points, mistake-update trace replay, and checked bad weight-update evidence.",
+            ),
+            (
+                "finite-hard-margin-svm-v0",
+                "Finite labeled training points, maximum-margin hyperplane/KKT replay, and checked bad-bias evidence.",
             ),
             (
                 "finite-measure-v0",

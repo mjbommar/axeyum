@@ -247,6 +247,32 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite hard-margin SVM resource landed.**
+  `finite-hard-margin-svm-v0` now gives the statistics, optimization, and
+  linear-algebra lanes a committed-optimum primal-dual pair — a new proof
+  shape next to the iterative perceptron trace and the closed-form
+  ridge/LDA classifier packs: it replays a six-point linearly separable
+  training set with the committed maximum-margin hyperplane
+  `w = (1/2, 1/2)`, `b = -1`, every functional margin
+  `1, 1, 2, 3/2, 2, 2` with the support vectors exactly on the margin, the
+  KKT stationarity, multiplier-balance, and complementary-slackness
+  identities, and the zero primal-dual objective gap `1/4 = 1/4`; rejects
+  the malformed maximum-margin bias claim `-1/2` against exact `-1`; and
+  routes that scalar conflict through a source-linked QF_LRA/Farkas row.
+  All coordinates, weights, multipliers, margins, and objectives are
+  rational, so the whole primal-dual pair is exact arithmetic; the
+  geometric margin (which divides by the irrational norm `sqrt(2)`) stays
+  explicitly out of scope. The focused learner page, probability/statistics
+  query guide, probability-mass-table, SVM, exact-vs-floating, and
+  QF_LRA/Farkas bridge rows, validator, resource smoke queries, generated
+  dashboards, and `math_resource_lra_routes` regression keep this fixed
+  finite replay separate from strong duality, KKT sufficiency,
+  maximum-margin optimality, soft-margin/kernel variants, statistical
+  generalization, and floating-point training behavior. The public summary
+  now reports 135 concept rows, 171 packs, 1117 expected checks, 397
+  checked rows, 586 replay-only rows, 134 Lean-horizon rows, and 171
+  promoted solver-reuse packs.
+
 - **Finite perceptron resource landed.**
   `finite-perceptron-v0` now gives the statistics, probability, and
   linear-algebra lanes an iterative learning-algorithm trace — a new proof
@@ -266,10 +292,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   smoke queries, generated dashboards, and `math_resource_lra_routes`
   regression keep this fixed finite trace separate from the Novikoff
   mistake bound, convergence theorems, kernel/averaged/voted variants,
-  statistical generalization, and floating-point training behavior. The
-  public summary now reports 134 concept rows, 170 packs, 1110 expected
-  checks, 396 checked rows, 581 replay-only rows, 133 Lean-horizon rows,
-  and 170 promoted solver-reuse packs.
+  statistical generalization, and floating-point training behavior. At
+  that landing, the public summary reported 134 concept rows, 170 packs,
+  1110 expected checks, 396 checked rows, 581 replay-only rows, 133
+  Lean-horizon rows, and 170 promoted solver-reuse packs.
 
 - **Finite k-nearest-neighbors resource landed.**
   `finite-k-nearest-neighbors-v0` now gives the statistics, probability, and

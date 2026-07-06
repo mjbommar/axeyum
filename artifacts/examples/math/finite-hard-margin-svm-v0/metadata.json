@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "id": "finite-hard-margin-svm-v0",
+  "title": "Finite Hard-Margin SVM",
+  "domain": "statistics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_statistics",
+    "field_optimization_and_convexity",
+    "field_linear_algebra",
+    "curriculum_linear_algebra",
+    "curriculum_rationals",
+    "bridge_probability_mass_table",
+    "bridge_finite_hard_margin_svm_shadow",
+    "bridge_exact_vs_floating_arithmetic",
+    "bridge_qf_lra_farkas_anatomy"
+  ],
+  "field_ids": [
+    "statistics",
+    "optimization_and_convexity",
+    "linear_algebra"
+  ],
+  "curriculum_nodes": [
+    "linear-algebra",
+    "rationals"
+  ],
+  "axeyum_fragments": [
+    "finite classifier table replay",
+    "finite maximum-margin hyperplane replay",
+    "finite KKT replay",
+    "finite duality-gap replay",
+    "exact rational arithmetic",
+    "LRA (exact rationals)",
+    "QF_LRA",
+    "Farkas",
+    "finite replay",
+    "Lean horizon",
+    "numerical-honesty metadata"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-hard-margin-svm-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite hard-margin SVM bad bias QF_LRA/Farkas regression seed",
+    "pressure": "Exact finite replay computes the maximum-margin hyperplane bias -1 from the committed support vectors, while a malformed row claims -1/2, isolating a compact scalar Farkas conflict beneath the KKT and duality-gap replay.",
+    "evidence": [
+      "qf-lra-bad-bias"
+    ],
+    "next_step": "Promote additional SVM rows only when they add distinct soft-margin/hinge-loss, kernel, working-set/SMO, geometric-margin, statistical-generalization, or numerical-honesty pressure; keep strong duality, KKT sufficiency theorems, margin-based generalization bounds, and floating-point training claims in theorem or statistical-inference lanes."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/curriculum/03-destinations/linear-algebra.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/hard-margin-svm-end-to-end.md",
+    "artifacts/examples/math/finite-hard-margin-svm-v0/smt2/bad-bias-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+  ],
+  "expected_results": [
+    "svm-table-witness",
+    "svm-feasibility-witness",
+    "svm-kkt-witness",
+    "svm-duality-witness",
+    "bad-bias-rejected",
+    "qf-lra-bad-bias",
+    "general-svm-theory-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode the fixed finite training set, the committed maximum-margin weights and bias, the dual multipliers, every functional margin, the support-vector margin equalities, the KKT stationarity/balance/complementary-slackness identities, and the zero primal-dual gap as deterministic exact-rational replay obligations.",
+    "Route the false bias claim through a source-linked QF_LRA artifact and checked Farkas evidence after exact replay computes the conflicting bias equation.",
+    "Expose the pack through statistics, optimization, linear-algebra, SVM, exact-vs-floating, and learner-query surfaces.",
+    "Keep strong duality and KKT sufficiency theorems, geometric margins, soft-margin and kernel variants, solver/SMO behavior, statistical generalization, and floating-point training marked theorem, statistical-inference, or numerical-honesty horizon."
+  ]
+}

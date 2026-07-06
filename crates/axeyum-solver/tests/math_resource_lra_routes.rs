@@ -94,6 +94,9 @@ const FINITE_K_NEAREST_NEIGHBORS_BAD_SQUARED_DISTANCE: &str = include_str!(
 const FINITE_PERCEPTRON_BAD_WEIGHT_UPDATE: &str = include_str!(
     "../../../artifacts/examples/math/finite-perceptron-v0/smt2/bad-weight-update-farkas-conflict.smt2"
 );
+const FINITE_HARD_MARGIN_SVM_BAD_BIAS: &str = include_str!(
+    "../../../artifacts/examples/math/finite-hard-margin-svm-v0/smt2/bad-bias-farkas-conflict.smt2"
+);
 const LEAST_SQUARES_BAD_RSS_IMPROVEMENT: &str = include_str!(
     "../../../artifacts/examples/math/least-squares-regression-v0/smt2/bad-rss-improvement-farkas-conflict.smt2"
 );
@@ -1024,6 +1027,14 @@ fn finite_perceptron_bad_weight_update_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "finite-perceptron-v0 bad-weight-update SMT-LIB artifact",
         FINITE_PERCEPTRON_BAD_WEIGHT_UPDATE,
+    );
+}
+
+#[test]
+fn finite_hard_margin_svm_bad_bias_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-hard-margin-svm-v0 bad-bias SMT-LIB artifact",
+        FINITE_HARD_MARGIN_SVM_BAD_BIAS,
     );
 }
 

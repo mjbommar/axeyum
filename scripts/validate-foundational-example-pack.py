@@ -37349,6 +37349,242 @@ def validate_finite_perceptron(expected: dict[str, Any]) -> None:
         fail("general-perceptron-theory-lean-horizon must be searchable")
 
 
+def validate_finite_hard_margin_svm(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    def require_vector(context: str, value: Any, length: int) -> list[Fraction]:
+        if not isinstance(value, list):
+            fail(f"{context} must be a list")
+        if len(value) != length:
+            fail(f"{context} must have exactly {length} coordinates")
+        return [require_fraction(f"{context}[{i}]", entry) for i, entry in enumerate(value)]
+
+    def dot(u: list[Fraction], v: list[Fraction]) -> Fraction:
+        return sum((a * b for a, b in zip(u, v)), Fraction(0))
+
+    def require_sat_replay(check_id: str, validation: str) -> None:
+        check = checks[check_id]
+        if check["expected_result"] != "sat":
+            fail(f"{check_id} must expect sat")
+        if check.get("proof_status") != "replay-only":
+            fail(f"{check_id} must be replay-only")
+        if check["validation"] != validation:
+            fail(f"{check_id} validation is incorrect")
+        values_again = single_witness_values(check, witnesses)
+        if values_again != values:
+            fail(f"{check_id} must cite the shared SVM witness")
+
+    table_check = checks["svm-table-witness"]
+    if table_check["expected_result"] != "sat":
+        fail("svm-table-witness must expect sat")
+    if table_check.get("proof_status") != "replay-only":
+        fail("svm-table-witness must be replay-only")
+    if table_check["validation"] != "exact_rational_svm_table_replay":
+        fail("svm-table-witness validation is incorrect")
+    values = single_witness_values(table_check, witnesses)
+
+    classes = require_string_list("svm classes", values.get("classes"))
+    if classes != ["positive", "negative"]:
+        fail("svm classes must be positive and negative")
+
+    dimension = 2
+    raw_points = values.get("training_points")
+    if not isinstance(raw_points, list) or not raw_points:
+        fail("svm training_points must be a non-empty list")
+    points: dict[str, dict[str, Any]] = {}
+    class_totals = {label: 0 for label in classes}
+    for index, point in enumerate(raw_points):
+        if not isinstance(point, dict):
+            fail(f"svm training_points[{index}] must be an object")
+        point_id = point.get("id")
+        point_class = point.get("class")
+        require_string(f"svm training_points[{index}].id", point_id)
+        require_string(f"svm training_points[{index}].class", point_class)
+        if point_id in points:
+            fail(f"svm training_points repeats id {point_id!r}")
+        if point_class not in classes:
+            fail(f"svm training_points[{index}].class is unknown")
+        coordinates = require_vector(
+            f"svm training_points[{index}].coordinates",
+            point.get("coordinates"),
+            dimension,
+        )
+        label = require_fraction(f"svm training_points[{index}].label", point.get("label"))
+        expected_label = Fraction(1) if point_class == "positive" else Fraction(-1)
+        if label != expected_label:
+            fail(f"svm training_points[{index}].label must match its class")
+        class_totals[point_class] += 1
+        points[point_id] = {"coordinates": coordinates, "label": label}
+    if any(total <= 0 for total in class_totals.values()):
+        fail("svm training set must include both classes")
+
+    weights = require_vector("svm weights", values.get("weights"), dimension)
+    bias = require_fraction("svm bias", values.get("bias"))
+
+    require_sat_replay("svm-feasibility-witness", "exact_rational_svm_margin_replay")
+    require_sat_replay("svm-kkt-witness", "exact_rational_svm_kkt_replay")
+    require_sat_replay("svm-duality-witness", "exact_rational_svm_duality_replay")
+
+    raw_multipliers = values.get("multipliers")
+    if not isinstance(raw_multipliers, dict) or set(raw_multipliers) != set(points):
+        fail("svm multipliers must cover every training point")
+    multipliers: dict[str, Fraction] = {}
+    for point_id in points:
+        multiplier = require_fraction(f"svm multipliers.{point_id}", raw_multipliers[point_id])
+        if multiplier < 0:
+            fail(f"svm multiplier for {point_id} must be nonnegative")
+        multipliers[point_id] = multiplier
+
+    support_ids = require_string_list("svm support_vector_ids", values.get("support_vector_ids"))
+    if len(set(support_ids)) != len(support_ids):
+        fail("svm support_vector_ids must not repeat")
+    if set(support_ids) != {pid for pid, alpha in multipliers.items() if alpha > 0}:
+        fail("svm support_vector_ids must be exactly the points with positive multipliers")
+
+    raw_margins = values.get("functional_margins")
+    if not isinstance(raw_margins, dict) or set(raw_margins) != set(points):
+        fail("svm functional_margins must cover every training point")
+    computed_margins: dict[str, Fraction] = {}
+    for point_id, point in points.items():
+        committed_margin = require_fraction(
+            f"svm functional_margins.{point_id}", raw_margins[point_id]
+        )
+        computed_margin = point["label"] * (dot(weights, point["coordinates"]) + bias)
+        if committed_margin != computed_margin:
+            fail(f"svm functional margin for {point_id} is incorrect")
+        if computed_margin < 1:
+            fail(f"svm hard-margin constraint fails for {point_id}")
+        if multipliers[point_id] * (computed_margin - 1) != 0:
+            fail(f"svm complementary slackness fails for {point_id}")
+        if point_id in support_ids and computed_margin != 1:
+            fail(f"svm support vector {point_id} must sit exactly on the margin")
+        computed_margins[point_id] = computed_margin
+    minimum_margin = require_fraction("svm minimum_margin", values.get("minimum_margin"))
+    if minimum_margin != min(computed_margins.values()):
+        fail("svm minimum_margin is incorrect")
+
+    balance = require_fraction(
+        "svm multiplier_label_balance", values.get("multiplier_label_balance")
+    )
+    computed_balance = sum(
+        (multipliers[pid] * point["label"] for pid, point in points.items()),
+        Fraction(0),
+    )
+    if balance != computed_balance or computed_balance != 0:
+        fail("svm multiplier/label balance must replay to zero")
+
+    stationarity = [
+        sum(
+            (multipliers[pid] * point["label"] * point["coordinates"][axis] for pid, point in points.items()),
+            Fraction(0),
+        )
+        for axis in range(dimension)
+    ]
+    if stationarity != weights:
+        fail("svm stationarity sum(alpha*y*x) must reproduce the weights")
+
+    norm_squared = require_fraction("svm weight_norm_squared", values.get("weight_norm_squared"))
+    if norm_squared != dot(weights, weights):
+        fail("svm weight_norm_squared is incorrect")
+    primal = require_fraction("svm primal_objective", values.get("primal_objective"))
+    if primal != norm_squared / 2:
+        fail("svm primal_objective is incorrect")
+    dual = require_fraction("svm dual_objective", values.get("dual_objective"))
+    multiplier_total = sum(multipliers.values(), Fraction(0))
+    if dual != multiplier_total - norm_squared / 2:
+        fail("svm dual_objective is incorrect")
+    gap = require_fraction("svm duality_gap", values.get("duality_gap"))
+    if gap != primal - dual or gap != 0:
+        fail("svm duality_gap must replay to zero")
+
+    bad = checks["bad-bias-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-bias-rejected must expect unsat")
+    if bad.get("proof_status") != "replay-only":
+        fail("bad-bias-rejected must be replay-only")
+    if bad["validation"] != "exact_rational_bad_bias_replay":
+        fail("bad-bias-rejected validation is incorrect")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "six-point-hard-margin-svm":
+        fail("bad-bias-rejected must cite the source witness")
+    if data.get("metric") != "svm_bias":
+        fail("bad-bias-rejected must document svm_bias")
+    bad_computed = require_fraction("bad svm computed_bias", data.get("computed_bias"))
+    bad_claimed = require_fraction("bad svm claimed_bias", data.get("claimed_bias"))
+    if bad_computed != bias:
+        fail("bad-bias-rejected computed value must match replay")
+    if bad_claimed == bad_computed:
+        fail("bad-bias-rejected must document a false bias claim")
+    if "separate qf-lra-bad-bias" not in bad.get("notes", ""):
+        fail("bad-bias-rejected notes must name the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-bias"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-bias must expect unsat")
+    if qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-bias must be checked")
+    if qf_bad["validation"] != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-bias must use exact_rational_farkas_evidence")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_witness") != "six-point-hard-margin-svm":
+        fail("qf-lra-bad-bias must cite the source witness")
+    if qf_data.get("source_replay_row") != "bad-bias-rejected":
+        fail("qf-lra-bad-bias must cite the replay row")
+    if qf_data.get("metric") != "svm_bias":
+        fail("qf-lra-bad-bias must document svm_bias")
+    qf_computed = require_fraction("qf svm computed_bias", qf_data.get("computed_bias"))
+    qf_claimed = require_fraction("qf svm claimed_bias", qf_data.get("claimed_bias"))
+    if (qf_computed, qf_claimed) != (bad_computed, bad_claimed):
+        fail("qf-lra-bad-bias data must match the replay row")
+    equations = require_string_list("qf svm bias_equations", qf_data.get("bias_equations"))
+    if equations != ["svm_b = -1", "svm_b = -1/2"]:
+        fail("qf-lra-bad-bias must document the linear conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf svm smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-hard-margin-svm-v0/smt2/"
+        "bad-bias-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-lra-bad-bias smt2_artifact must name the checked source artifact")
+    check_source("qf svm smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf svm farkas_regression", regression)
+    if "finite_hard_margin_svm_bad_bias_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-bias must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf svm certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-bias certificate must document checked Farkas evidence")
+
+    horizon = checks["general-svm-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-svm-theory-lean-horizon must be not-run")
+    if horizon.get("proof_status") != "lean-horizon":
+        fail("general-svm-theory-lean-horizon must remain lean-horizon")
+    horizon_data = horizon.get("data", {})
+    require_string(
+        "svm horizon target_theorem_shape",
+        horizon_data.get("target_theorem_shape"),
+    )
+    require_string("svm horizon future_checker", horizon_data.get("future_checker"))
+    horizon_text = " ".join(
+        [
+            horizon.get("claim", ""),
+            horizon_data.get("target_theorem_shape", ""),
+            horizon_data.get("future_checker", ""),
+            horizon.get("notes", ""),
+        ]
+    ).lower()
+    if (
+        "svm" not in horizon_text
+        or "margin" not in horizon_text
+        or "duality" not in horizon_text
+    ):
+        fail("general-svm-theory-lean-horizon must be searchable")
+
+
 def validate_descriptive_statistics(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -40577,6 +40813,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_k_nearest_neighbors(expected)
     if metadata["id"] == "finite-perceptron-v0":
         validate_finite_perceptron(expected)
+    if metadata["id"] == "finite-hard-margin-svm-v0":
+        validate_finite_hard_margin_svm(expected)
     if metadata["id"] == "finite-cardinality-v0":
         validate_finite_cardinality(expected)
     if metadata["id"] == "cardinality-principles-v0":
