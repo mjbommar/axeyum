@@ -111,7 +111,9 @@ pub use check_derivation::{
 };
 pub use classes::{Classes, Declined, FlatForm, NormalForm, NormalForms, Unreconciled};
 pub use infer::{Conflict, ConflictReason, Fact, Inference, Inferences, Rule, infer};
-pub use lex_order::{Atom as LexAtom, Formula as LexFormula, LexOutcome, LexProblem, Seg, refute_lex};
+pub use lex_order::{
+    Atom as LexAtom, Formula as LexFormula, LexOutcome, LexProblem, Seg, refute_lex,
+};
 pub use normal_form::{concat_components, normalize};
 pub use refute::{RefuteOutcome, refute_word_equations};
 pub use regex::{Membership, MembershipOutcome, Regex};
