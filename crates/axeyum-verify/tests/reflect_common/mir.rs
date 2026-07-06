@@ -28,12 +28,14 @@ use super::{binop, compare};
 /// `(term, width, signed)` — width 1 = Bool.
 type Operand = (TermId, u32, bool);
 
-/// A local's value: a scalar, or the `(value, overflowed)` pair produced by the
-/// `*WithOverflow` checked-arithmetic rvalues.
-#[derive(Clone, Copy)]
+/// A local's value: a scalar, the `(value, overflowed)` pair produced by the
+/// `*WithOverflow` checked-arithmetic rvalues, or a fixed byte array (`[u8; N]`
+/// parameters, one term per element).
+#[derive(Clone)]
 enum Slot {
     Scalar(Operand),
     Pair(Operand, Operand),
+    Bytes(Vec<TermId>),
 }
 
 type Env = HashMap<u32, Slot>;
@@ -100,11 +102,12 @@ fn param_tys(mir: &str) -> Vec<(u32, bool)> {
         .collect()
 }
 
-/// The scalar in a slot (a `Pair` is not a scalar — project it first).
-fn scalar(slot: Slot, what: &str) -> Operand {
+/// The scalar in a slot (a `Pair`/`Bytes` is not a scalar — project/index it).
+fn scalar(slot: &Slot, what: &str) -> Operand {
     match slot {
-        Slot::Scalar(op) => op,
+        Slot::Scalar(op) => *op,
         Slot::Pair(..) => panic!("{what}: expected a scalar local, found a tuple"),
+        Slot::Bytes(_) => panic!("{what}: expected a scalar local, found an array"),
     }
 }
 
@@ -125,14 +128,42 @@ fn operand(arena: &mut TermArena, env: &Env, tok: &str) -> Operand {
                 (Some(Slot::Pair(v, _)), 0) => *v,
                 (Some(Slot::Pair(_, o)), 1) => *o,
                 (Some(Slot::Pair(..)), f) => panic!("tuple local _{n} has no field {f}"),
-                (Some(Slot::Scalar(_)), _) => panic!("local _{n} is a scalar, not a tuple"),
+                (Some(_), _) => panic!("local _{n} is not a tuple"),
                 (None, _) => panic!("undefined local _{n}"),
             }
+        }
+        // Array indexing: `copy _1[_2]` — an ite table over the element terms
+        // keyed by the index local (the bounds `assert` guards the read; the
+        // out-of-range table value is a don't-care).
+        ["copy" | "move", loc] if loc.contains('[') => {
+            let (base_s, idx_s) = loc.split_once('[').expect("`_B[_I]`");
+            let base: u32 = base_s.trim_start_matches('_').parse().expect("array local");
+            let idx_n: u32 = idx_s
+                .trim_end_matches(']')
+                .trim_start_matches('_')
+                .parse()
+                .expect("index local");
+            let (idx, idx_w, _) = scalar(
+                env.get(&idx_n)
+                    .unwrap_or_else(|| panic!("undefined local _{idx_n}")),
+                "array index",
+            );
+            let Some(Slot::Bytes(bytes)) = env.get(&base) else {
+                panic!("local _{base} is not a byte array");
+            };
+            let bytes = bytes.clone();
+            let mut acc = *bytes.first().expect("nonempty array");
+            for (k, &byte) in bytes.iter().enumerate().skip(1) {
+                let kc = arena.bv_const(idx_w, k as u128).unwrap();
+                let cond = arena.eq(idx, kc).unwrap();
+                acc = arena.ite(cond, byte, acc).unwrap();
+            }
+            (acc, 8, false)
         }
         ["copy" | "move", loc] => {
             let n: u32 = loc.trim_start_matches('_').parse().expect("local index");
             scalar(
-                *env.get(&n)
+                env.get(&n)
                     .unwrap_or_else(|| panic!("undefined local _{n}")),
                 tok,
             )
@@ -305,10 +336,7 @@ fn exec_block(
             continue;
         }
         if stmt == "return" {
-            let ret = scalar(
-                *env.get(&0).expect("MIR must assign _0 before return"),
-                "_0",
-            );
+            let ret = scalar(env.get(&0).expect("MIR must assign _0 before return"), "_0");
             return (ret, arena.bool_const(false));
         }
         if let Some(target) = stmt.strip_prefix("goto -> ") {
@@ -384,6 +412,35 @@ fn exec_block(
         exec_stmt(arena, &mut env, stmt);
     }
     panic!("block {bb} fell through without a terminator");
+}
+
+/// A caller-supplied parameter binding for [`reflect_mir_params_checked`]:
+/// a typed scalar, or a fixed `[u8; N]` array as one term per element.
+pub enum MirParam {
+    Scalar(TermId, u32, bool),
+    Bytes(Vec<TermId>),
+}
+
+/// Reflect a MIR function whose parameters may include `[u8; N]` arrays —
+/// `params[i]` binds local `_{i+1}`; types come from the bindings, not the
+/// signature. Returns `(value of _0, panic condition)` like
+/// [`reflect_mir_into_checked`].
+pub fn reflect_mir_params_checked(
+    arena: &mut TermArena,
+    params: &[MirParam],
+    mir: &str,
+) -> (TermId, TermId) {
+    let map = blocks(mir);
+    let mut env: Env = HashMap::new();
+    for (i, p) in params.iter().enumerate() {
+        let slot = match p {
+            MirParam::Scalar(t, w, signed) => Slot::Scalar((*t, *w, *signed)),
+            MirParam::Bytes(v) => Slot::Bytes(v.clone()),
+        };
+        env.insert(u32::try_from(i).unwrap() + 1, slot);
+    }
+    let (value, panic) = exec_block(arena, &map, env, "bb0", 0);
+    (value.0, panic)
 }
 
 /// Reflect a MIR function into an *existing* arena, binding `params[i]` to local
