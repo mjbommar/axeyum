@@ -163,14 +163,42 @@ per-commit as ordinary tests.
 0.08 s; `cross_ir_equivalence` 16 tests in ~3 s (fuzz-dominated). The whole
 `axeyum-verify` crate: 32 test binaries green.
 
+## Round U (2026-07-03): division, memory safety — the checks rustc ships
+
+- **U1+U3 (`f51d24ad`):** checked **division** — the panic that survives
+  release mode. Vocabulary: `udiv`/`sdiv`/`urem`/`srem` (MIR `Div`/`Rem`
+  sign-select onto them), bool-typed `BitAnd`/`BitOr` (chained check
+  conditions), `usize`/`isize`; LLVM side-effect-only `call void` lines skip,
+  so a release panic block (`call core::panicking::*; unreachable`) is the
+  don't-care path it is. Proofs (`checked_division.rs`): the **exact panic
+  specs** — `div` panics iff `b == 0`; `sdiv` panics iff
+  `b == 0 ∨ (a == i32::MIN ∧ b == -1)` (two accumulated asserts, captured
+  precisely); witnesses replayed on the real fns (division panics in *every*
+  profile, so replay is unconditional — and with `b ≠ 0` hypothesized, the
+  witness is *forced* to exactly `(i32::MIN, -1)`); conditional cross-IR
+  `panic ∨ (mir == release-llvm)`.
+- **U2 (`2d29c942`):** **bounds checks over symbolic byte arrays** —
+  `Slot::Bytes` reflects `[u8; N]` params one term per element
+  (`reflect_mir_params_checked`), `_1[_2]` lowers to an ite table keyed by the
+  64-bit index. `get_clamped` (`buf[i & 3]`): the compiled bounds check proved
+  **unreachable for every 64-bit index** and every buffer content; unguarded
+  `get`: the OOB witness replayed against the real Rust
+  (index-out-of-bounds panic under `catch_unwind`); in-bounds values
+  cross-checked concretely. The buffer half of the sel4-direction story.
+
+**Measured (debug, single run, 2026-07-03):** `checked_division` 5 proofs in
+0.06 s; `checked_bounds` 3 tests (incl. the all-2^64-indices safety proof) in
+< 0.01 s.
+
 ### Next (follow-ups, not blocking)
 
-- MIR bounds-check `assert`s (`index out of bounds`) — same terminator, array
-  rvalues needed; connects the panic-condition machinery to buffer safety.
 - LLVM `getelementptr`+`load` inside the CFG executor (currently only in the
-  dedicated straight-line buffer reflectors).
+  dedicated straight-line buffer reflectors); an LLVM-side panic-*condition*
+  (branch-to-panic-block reachability) to prove debug-LLVM == debug-MIR panic
+  behavior, not just treat panic arms as don't-care.
 - Function **calls** in MIR fixtures (currently the MIR inliner's output is the
   composition story); a call-aware reflector would prove the inliner itself.
+- Array *writes* (`_1[_2] = v`) and pass-through of modified buffers.
 - Promotion out of test-module DRY into a real crate is still ADR-gated.
 
 **Honest scope:** the shared module is source-level DRY across integration tests
