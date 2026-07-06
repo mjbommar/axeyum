@@ -55,15 +55,16 @@ fn collect_smt2(dir: &Path, out: &mut Vec<PathBuf>) {
 
 /// Decide a parsed script on a worker thread, `None` if it overruns [`SOLVE_CAP`].
 ///
-/// Scope-free scripts with a populated flat `assertions` view go through
-/// [`check_auto`] (the auto-dispatch this gate targets). A script whose flat view
-/// is **empty** — a **word-first-fallback** parse (an over-`STRING_MAX_LEN` literal
-/// or a bounded-unsupported regex like `re.loop`), whose real content lives only in
-/// the parser side channels (`word_skeleton` / `membership_problem`) — is decided
-/// through the sound text front door [`solve_smtlib`] instead. Solving the empty
-/// flat view directly is a **vacuous `sat`** (the empty conjunction), which would
-/// be a wrong verdict for a genuinely-unsat fallback script (the P0 this closes:
-/// `instance1079-re-loop-cong`, unsat, was reported `sat`).
+/// Scope-free scripts with a [solvable flat view](axeyum_smtlib::Script::solvable_flat_view)
+/// go through [`check_auto`] (the auto-dispatch this gate targets). A
+/// **word-first-fallback** parse (an over-`STRING_MAX_LEN` literal or a
+/// bounded-unsupported regex like `re.loop`), whose flat view is **empty** and
+/// whose real content lives only in the parser side channels — reports
+/// `solvable_flat_view() == None` and is decided through the sound text front door
+/// [`solve_smtlib`] instead. Solving the empty flat view directly is a **vacuous
+/// `sat`** (the empty conjunction), which would be a wrong verdict for a
+/// genuinely-unsat fallback script (the P0 this closes: `instance1079-re-loop-cong`,
+/// unsat, was reported `sat`).
 fn solve_capped(text: String, script: axeyum_smtlib::Script) -> Option<CheckResult> {
     let (tx, rx) = mpsc::channel();
     thread::Builder::new()
@@ -71,7 +72,7 @@ fn solve_capped(text: String, script: axeyum_smtlib::Script) -> Option<CheckResu
         .spawn(move || {
             // A solver error is `unknown`-equivalent for this gate (never a wrong
             // verdict), so both routes collapse to `Option<CheckResult>`.
-            let res: Option<CheckResult> = if script.assertions.is_empty() {
+            let res: Option<CheckResult> = if script.solvable_flat_view().is_none() {
                 // Side-channel-only (fallback) script: decide via the full front
                 // door, which consults the word / online / membership routes.
                 solve_smtlib(&text, &SolverConfig::default())
@@ -89,11 +90,9 @@ fn solve_capped(text: String, script: axeyum_smtlib::Script) -> Option<CheckResu
             let _ = tx.send(res);
         })
         .expect("spawn solver thread");
-    match rx.recv_timeout(SOLVE_CAP) {
-        Ok(result) => result,
-        // Overran the wall-clock cap — an `unknown`-equivalent skip.
-        Err(_) => None,
-    }
+    // `Ok(result)` is the worker's decision; a `recv` error means the wall-clock
+    // cap overran — an `unknown`-equivalent skip (`None`).
+    rx.recv_timeout(SOLVE_CAP).unwrap_or_default()
 }
 
 fn corpus_root() -> PathBuf {

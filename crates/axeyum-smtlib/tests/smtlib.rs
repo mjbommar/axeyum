@@ -5011,3 +5011,35 @@ fn bounded_string_and_seq_sorts_stay_packed_bv() {
         "(Seq Int) must stay the bounded BitVec encoder, got {sort:?}"
     );
 }
+
+#[test]
+fn solvable_flat_view_is_none_for_word_first_fallback() {
+    // A bounded-unsupported regex (`re.loop`) makes the bounded encoder decline the
+    // whole script, so it parses through the word-first fallback: the flat view is
+    // empty and MUST NOT be solved directly (that is a vacuous `sat`).
+    let fallback = "(set-logic QF_S)\n\
+                    (declare-const s0 String)\n\
+                    (assert (str.in_re s0 ((_ re.loop 2 3) (str.to_re \"a\"))))\n\
+                    (check-sat)";
+    let script = parse_script(fallback).unwrap();
+    assert!(
+        script.word_only_fallback.is_some(),
+        "re.loop script should take the word-first fallback"
+    );
+    assert!(
+        script.solvable_flat_view().is_none(),
+        "a word-first-fallback script has no solvable flat view"
+    );
+
+    // An ordinary QF_BV script has a solvable flat view.
+    let ordinary = "(set-logic QF_BV)\n\
+                    (declare-const x (_ BitVec 8))\n\
+                    (assert (= x #x00))\n\
+                    (check-sat)";
+    let script = parse_script(ordinary).unwrap();
+    assert!(script.word_only_fallback.is_none());
+    assert_eq!(
+        script.solvable_flat_view(),
+        Some(script.assertions.as_slice())
+    );
+}

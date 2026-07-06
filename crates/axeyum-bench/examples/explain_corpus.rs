@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use axeyum_smtlib::parse_script;
-use axeyum_solver::{CheckResult, SolverConfig, check_auto_explained};
+use axeyum_solver::{CheckResult, SolverConfig, check_auto_explained, solve_smtlib};
 
 fn collect_smt2(dir: &Path, out: &mut Vec<PathBuf>) {
     let Ok(entries) = std::fs::read_dir(dir) else {
@@ -73,7 +73,22 @@ fn main() {
             println!("{short}: parse-error");
             continue;
         };
-        match check_auto_explained(&mut script.arena, &script.assertions, &config) {
+        // A word-first-fallback parse has an EMPTY flat view whose content lives in
+        // the parser side channels; solving that view directly is a vacuous `sat`
+        // (the P0 `instance1079-re-loop-cong` hole). Route it through the text front
+        // door, which consults the word / online / membership routes soundly.
+        let Some(assertions) = script.solvable_flat_view() else {
+            match solve_smtlib(&text, &config) {
+                Ok(outcome) => println!(
+                    "{short}: {} (word-first fallback)",
+                    verdict(&outcome.result)
+                ),
+                Err(error) => println!("{short}: error: {error} (word-first fallback)"),
+            }
+            continue;
+        };
+        let assertions = assertions.to_vec();
+        match check_auto_explained(&mut script.arena, &assertions, &config) {
             Ok((result, trace)) => {
                 println!("{short}: {}", verdict(&result));
                 for attempt in trace.attempts() {
