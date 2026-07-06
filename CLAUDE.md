@@ -75,6 +75,13 @@ just bench-public-qfbv-sat-bv-replay-refine  # replay-checked query refinement
 cargo fmt --all --check
 cargo clippy --workspace --all-targets --all-features -- -D warnings
 cargo test --workspace --all-features
+# PRE-MERGE GATE for any string-route change: the oracle-free :status corpus
+# sweep (~6s). CI's copy of this caught a vacuous-sat harness hole two oracle
+# fuzzes missed (f5b00c72) — after the SHA was already public. Related rule:
+# string fuzz GENERATORS must cover the full SMT-LIB literal grammar,
+# including \u{…}/\uXXXX escapes and >0xFF code points — every generator
+# omitted escapes and a wrong-verdict class (ba0d9149) hid for weeks.
+cargo test -p axeyum-solver --test corpus_regression
 # PRE-MERGE GATE for any solver/decider/dispatch change: the capability
 # ratchets (~60s when healthy). A 17-point nia_unsat frontier regression once
 # shipped and needed an 829-commit bisect because only full sweeps ran this.

@@ -65,5 +65,11 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$REPO_ROOT/target}"
   cd "$tmp_wt"
   MEM_LIMIT_GB="${MEM_LIMIT_GB:-64}" ./scripts/mem-run.sh cargo check --workspace --quiet
   cargo fmt --all --check
+  # The oracle-free :status corpus sweep (~6s warm): CI's copy caught a
+  # vacuous-sat harness hole (f5b00c72) only AFTER the SHA was public —
+  # a wrong verdict must never leave the machine when a 6-second local
+  # sweep can catch it.
+  MEM_LIMIT_GB="${MEM_LIMIT_GB:-64}" ./scripts/mem-run.sh \
+    cargo test -p axeyum-solver --test corpus_regression --quiet
 )
-echo "pre-push: gate green (pushed SHA compiles and is formatted)" >&2
+echo "pre-push: gate green (pushed SHA compiles, is formatted, corpus-sound)" >&2
