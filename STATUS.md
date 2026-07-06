@@ -368,13 +368,27 @@ plan is built and committed on the current branch:
 ### Track 5 — Verified Systems (IR reflection) — ADR-0056, adopted 2026-07-06
 | Phase | Title | Status |
 |---|---|---|
-| P5.1 | Reflection front end (crate-ify the MIR+LLVM reflectors, full `.ll` parser, MIR extraction pipeline, loops→`TransitionSystem`, memory beyond byte arrays) | TODO — the *capability* is prototyped green as `crates/axeyum-verify/tests/reflect_common/{mod,mir,llvm}.rs` + 7 proof suites (rounds Q–U, 2026-07-02/03; design log `docs/consumer-track/verify/reflect-common-abstraction.md`): CFG symbolic executors for both IRs over one shared op vocabulary; 16 cross-IR equivalence proofs (MIR≡LLVM per function, LLVM O0≡O2, if-conversion/strength-reduction/umin-idiom validated, hypothesis-gated `unreachable`); 5-shape wrong-transform refutation corpus with replay-checked countermodels; exact panic specs from rustc's own checks (overflow, division `b==0` / signed `∨ (a==MIN ∧ b==-1)`, bounds over all 2^64 indices) with `catch_unwind` witness replay; checksum micro-module end-to-end on both platforms. What P5.1 adds is robustness + consumability: a real crate boundary (needs its own ADR), a token-level `.ll` parser for unmodified compiler output, build-time MIR extraction, automatic loop bridging, `gep`/`load`/`store` + array writes. Individual proofs are milliseconds — the suites already run as ordinary per-commit tests |
+| P5.1 | Reflection front end (crate-ify the MIR+LLVM reflectors, full `.ll` parser, MIR extraction pipeline, loops→`TransitionSystem`, memory beyond byte arrays) | WIP — **T5.1.1 DONE (`cc695925`, ADR-0057)**: the reflectors are now the real library module `axeyum_verify::reflect` (`src/reflect/{mod,mir,llvm}.rs`, submodules `reflect::mir`/`reflect::llvm`), no longer per-test scaffolding — 8 test binaries (62 tests) rewired to `use axeyum_verify::reflect::…` and green, `missing_docs`+`implicit_hasher` API-hardened, clippy/rustdoc `-D warnings` clean; the crate split is deferred (one consumer today). The prototyped *capability* (rounds Q–U, design log `docs/consumer-track/verify/reflect-common-abstraction.md`): CFG symbolic executors for both IRs over one shared op vocabulary; 16 cross-IR equivalence proofs (MIR≡LLVM per function, LLVM O0≡O2, if-conversion/strength-reduction/umin-idiom validated, hypothesis-gated `unreachable`); 5-shape wrong-transform refutation corpus with replay-checked countermodels; exact panic specs from rustc's own checks (overflow, division `b==0` / signed `∨ (a==MIN ∧ b==-1)`, bounds over all 2^64 indices) with `catch_unwind` witness replay; checksum micro-module end-to-end on both platforms. Remaining T5.1.2–6: token-level `.ll` parser for unmodified compiler output, build-time MIR extraction, automatic loop bridging, `gep`/`load`/`store` + array writes, the semantics gate. Individual proofs are milliseconds — the suites already run as ordinary per-commit tests |
 | P5.2 | Contracts & modular verification (`#[requires]`/`#[ensures]`, calls as composition) | TODO — the architectural unlock for cross-function claims; exit: the checksum module re-proves modularly (without the MIR inliner), with a modular-vs-inlined differential gate at DISAGREE=0 |
 | P5.3 | Kernel obligations: bounded memory/page-table math, 2-safety/constant-time via self-composition, protocol-FSM refinement | TODO — 2-safety and FSM refinement are unblocked now (self-composition reuses the shared-arena pattern; the spec-side FSM toolkit + PDR/k-induction ship today); page-table math waits on P5.1 memory |
 | P5.4 | Fuzz-oracle loop (reflections as differential oracles, countermodels as seed corpora + generated `#[test]`s, honest `unknown`→directed-fuzz handoff) | TODO — mostly packaging of demonstrated capability (every prototype suite closes the loop by hand today) |
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-06 — Track 5 / P5.1 T5.1.1 (`cc695925`, ADR-0057): the IR
+  reflectors are a real library module.** `tests/reflect_common/{mod,mir,llvm}.rs`
+  (recompiled by 8 test binaries each) → `axeyum_verify::reflect`
+  (`src/reflect/*`, submodules `reflect::mir`/`reflect::llvm`), so
+  `axeyum-verify`'s own code — the coming P5.2 contracts / P5.3 kernel
+  obligations — can call the reflectors, not just the tests. Decision: a
+  **module, not a new crate** (ADR-0057 — one consumer today, ADR-0001
+  minimality, no workspace-`Cargo.toml` edit, which also keeps it off the
+  concurrent solver/strings lane). Library-API hardening: `missing_docs` on all
+  newly-public items (the repo's `# Panics` convention for the parse-or-die
+  reflectors) + per-item `#[allow(clippy::implicit_hasher)]` on the SSA-env
+  maps. Exit criterion met: 8 reflection test binaries (62 tests) green against
+  the module API; clippy + rustdoc `-D warnings` clean.
 
 - **2026-07-06 — T-C.6 membership atoms online + a pre-existing escape-decoding
   wrong-verdict class fixed: QF_S 74 (55%), QF_SLIA 15, totals 695.**
