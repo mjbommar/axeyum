@@ -994,6 +994,33 @@ mod run {
         }
     }
 
+    /// Applies the **lexicographic-order route** upgrade (P2.7 T-C.6) — harness
+    /// parity with the `solve_smtlib` front door's `apply_lex_order_route`, run
+    /// **strictly after** [`apply_membership_upgrade`] leaves the record `unknown`.
+    /// It decides the `str.<=` / `str.<` problems the parser captured in
+    /// [`Script::lex_problem`] via the certified refuter — a variable-independent
+    /// constant fold or a transitivity + first-character clash. It only ever adds a
+    /// re-checked `unsat` (never `sat`). Runs **before** the oracle comparison so the
+    /// upgraded verdict is what the z3-binary cross-check sees.
+    fn apply_lex_order_upgrade(
+        script: &mut Script,
+        config: &SolverConfig,
+        record: &mut SolveRecord,
+    ) {
+        if record.outcome != "unknown" || script.lex_problem.is_none() {
+            return;
+        }
+        if let Some(CheckResult::Unsat) = axeyum_solver::lex_order_verdict(script, config) {
+            record.outcome = "unsat";
+            record.detail = Some(
+                "lexicographic-order route (T-C.6): decided unsat via a re-checked \
+                 constant fold or transitivity + first-character clash"
+                    .to_owned(),
+            );
+            record.model_replay_failure = false;
+        }
+    }
+
     /// Decides a **word-first-fallback** script (T-B.4d) — harness parity with
     /// the `solve_smtlib` front door. The flat assertion view is empty (the
     /// bounded ADR-0029 encoder declined at parse), so the sat-only,
@@ -1159,6 +1186,7 @@ mod run {
             apply_word_route_upgrade(&mut script, &config, &mut original.solve);
             apply_online_string_upgrade(&mut script, &config, &mut original.solve);
             apply_membership_upgrade(&mut script, &config, &mut original.solve);
+            apply_lex_order_upgrade(&mut script, &config, &mut original.solve);
             Some(original)
         } else {
             None
@@ -1195,6 +1223,9 @@ mod run {
         // Regex-membership second chance (P2.7 T-C.5): decides the `str.in_re`
         // membership problems by symbolic derivatives, before the oracle comparison.
         apply_membership_upgrade(&mut script, &config, &mut primary_solve.solve);
+        // Lexicographic-order second chance (P2.7 T-C.6): decides the `str.<=`/`str.<`
+        // problems by the certified refuter, before the oracle comparison.
+        apply_lex_order_upgrade(&mut script, &config, &mut primary_solve.solve);
         if let Some(original) = &original_solve {
             compare_rewrite_decision(&original.solve, &primary_solve.solve, summary);
         }

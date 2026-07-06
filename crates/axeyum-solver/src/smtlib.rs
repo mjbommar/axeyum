@@ -450,6 +450,76 @@ pub fn membership_verdict(script: &mut Script, config: &SolverConfig) -> Option<
     }
 }
 
+/// The **lexicographic-order route** (P2.7 T-C.6): the `str.<=`/`str.<` second
+/// chance, run *strictly after* the bounded, word, online, and membership routes
+/// decline, and only when the current verdict is `unknown` (typically because the
+/// ADR-0052 [`StringGate`] downgraded a bounded `unsat` carrying a coarsely-
+/// abstracted `str.<`/`str.<=` atom). The certified refuter
+/// ([`refute_lex`](axeyum_strings::refute_lex)) decides the reachable fragment:
+///
+/// - a variable-independent **constant fold** (some lex atoms decide to a fixed
+///   truth value at the first determined differing code point; folding them through
+///   the Boolean skeleton can drive an assertion to `false`), or
+/// - a **transitivity + first-character clash** over the forced-true `≤` atoms (a
+///   chain `s ≤* t` with `lead(s) > lead(t)` fixed by word equalities).
+///
+/// It only ever **adds a re-checked `unsat`** to an `unknown` — never `sat` (a
+/// satisfiable lex script is already decided by the bounded encoder, whose `sat` is
+/// a concrete short witness), and never overrides a decided verdict. A `None`
+/// side channel or an undecided problem leaves the prior `unknown` untouched.
+fn apply_lex_order_route(
+    script: &mut Script,
+    _config: &SolverConfig,
+    result: CheckResult,
+) -> CheckResult {
+    let CheckResult::Unknown(reason) = result else {
+        return result;
+    };
+    let Some(problem) = script.lex_problem.as_ref() else {
+        return CheckResult::Unknown(reason);
+    };
+    match axeyum_strings::refute_lex(problem) {
+        axeyum_strings::LexOutcome::Unsat => CheckResult::Unsat,
+        axeyum_strings::LexOutcome::Unknown => {
+            let detail = if reason.detail.is_empty() {
+                "lexicographic-order route declined (outside the decided fragment)".to_owned()
+            } else {
+                format!(
+                    "{}; lexicographic-order route declined (outside the decided fragment)",
+                    reason.detail
+                )
+            };
+            CheckResult::Unknown(UnknownReason {
+                kind: reason.kind,
+                detail,
+            })
+        }
+    }
+}
+
+/// Harness-parity surface (P2.7 T-C.6): consults the **lexicographic-order route**
+/// on an already-`unknown` [`Script`], returning `Some(Unsat)` only when the route
+/// certifies a lexicographic contradiction, and `None` otherwise. The lex mirror of
+/// [`word_route_verdict`] / [`online_string_verdict`] / [`membership_verdict`].
+///
+/// Soundness anchor: `unsat` only through the re-checked
+/// [`refute_lex`](axeyum_strings::refute_lex) derivation (a variable-independent
+/// constant fold or a transitivity + first-character clash). The route never adds
+/// `sat`. Returns `None` when the script carries no
+/// [`lex_problem`](axeyum_smtlib::Script::lex_problem) or the route declines.
+#[must_use]
+pub fn lex_order_verdict(script: &mut Script, config: &SolverConfig) -> Option<CheckResult> {
+    script.lex_problem.as_ref()?;
+    let seed = CheckResult::Unknown(UnknownReason {
+        kind: UnknownKind::Incomplete,
+        detail: String::new(),
+    });
+    match apply_lex_order_route(script, config, seed) {
+        result @ CheckResult::Unsat => Some(result),
+        CheckResult::Sat(_) | CheckResult::Unknown(_) => None,
+    }
+}
+
 /// The result of deciding an SMT-LIB script, with the script's own declarations.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
@@ -983,6 +1053,11 @@ pub fn solve_smtlib(input: &str, config: &SolverConfig) -> Result<SmtLibOutcome,
     // symbolic derivatives (witness + matcher replay for `sat`, a re-checked
     // emptiness certificate for `unsat`). Only ever adds a verdict to an `unknown`.
     let result = apply_membership_route(&mut script, config, result);
+    // Lexicographic-order route (P2.7 T-C.6): the `str.<`/`str.<=` second chance, run
+    // strictly after the word/online/membership routes decline — decides the reachable
+    // lex fragment (a variable-independent constant fold or a transitivity +
+    // first-character clash). Only ever adds a re-checked `unsat` to an `unknown`.
+    let result = apply_lex_order_route(&mut script, config, result);
     Ok(SmtLibOutcome {
         result,
         logic: script.logic,

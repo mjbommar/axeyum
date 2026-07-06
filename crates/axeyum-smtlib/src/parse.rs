@@ -9,7 +9,7 @@
 //! (ADR-0009 lifecycle). Term conversion is iterative, so deep benchmark terms
 //! cannot overflow the stack.
 
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
 use axeyum_fp::{FloatFormat, RoundingMode};
 use axeyum_ir::{ArraySortKey, FuncId, Op, Rational, Sort, SymbolId, TermArena, TermId, TermNode};
@@ -190,6 +190,20 @@ pub struct Script {
     /// shapes: a per-variable regex-intersection emptiness is a certified theory
     /// conflict, and a `sat` branch is replayed by the reference matcher.
     pub word_skeleton_memberships: Vec<(TermId, SymbolId, axeyum_strings::regex::Regex)>,
+    /// The parser-side **lexicographic-order side channel** (P2.7 T-C.6): a
+    /// translation of the script's `str.<=` / `str.<` fragment into a Boolean
+    /// skeleton over lex-order and word-equality atoms
+    /// ([`LexProblem`](axeyum_strings::LexProblem)), populated all-or-nothing over
+    /// the recognized fragment (Boolean structure over `str.<=`/`str.<`/`=`/`distinct`
+    /// atoms whose operands are words — string literals, declared string variables,
+    /// and `str.++` of those; nothing else). The solver consults it as a
+    /// second-chance route strictly after the bounded, word, online, and membership
+    /// routes decline: it may add a re-checked lexicographic `unsat` (a variable-
+    /// independent constant fold or a transitivity + first-character clash), so a
+    /// `None` (or an undecided problem) simply leaves the prior verdict untouched. It
+    /// never adds `sat` — a satisfiable lex script is already decided by the bounded
+    /// encoder (whose `sat` is a concrete short witness).
+    pub lex_problem: Option<axeyum_strings::LexProblem>,
 }
 
 impl Script {
@@ -395,6 +409,10 @@ fn parse_script_bounded(input: &str) -> Result<Script, SmtError> {
         // symbolic-derivative sub-solver (ADR-0054). Same all-or-nothing discipline
         // and shared `!weq!` symbols.
         script.membership_problem = crate::MembershipProblem::build(&mut script.arena, &exprs);
+        // Parser-side lexicographic-order side channel (P2.7 T-C.6): the
+        // `str.<=`/`str.<` fragment translated to a Boolean skeleton over lex/word-eq
+        // atoms for the certified lex-order refuter. Same all-or-nothing discipline.
+        script.lex_problem = build_lex_problem(&exprs);
     }
     Ok(script)
 }
@@ -662,6 +680,242 @@ fn build_word_skeleton(arena: &mut TermArena, exprs: &[SExpr]) -> Option<WordSke
 struct WordSkeleton {
     assertions: Vec<TermId>,
     memberships: Vec<(TermId, SymbolId, axeyum_strings::regex::Regex)>,
+}
+
+/// Builds the [`Script::lex_problem`] (P2.7 T-C.6): the Boolean skeleton over
+/// `str.<=` / `str.<` and word-equality atoms that the certified lexicographic-order
+/// refuter decides.
+///
+/// All-or-nothing (mirroring [`build_word_skeleton`]): every `assert` body must be
+/// Boolean structure (`and`/`or`/`not`/`=>`/`xor`/`ite`/`true`/`false`) over lex-order
+/// atoms (`str.<`/`str.<=`), word equalities (`=`), and word disequalities
+/// (`distinct`/`not =`), whose operands are **words** — string literals, declared
+/// string variables, and `str.++` of those. Any other atom (`str.len`, `substr`,
+/// regex, extended functions, a non-string `=`, incremental scoping) declines the
+/// whole build (`None`). Requires at least one genuine lex-order atom — a pure
+/// word-equation problem is left to the word/online routes.
+///
+/// **Soundness.** The refuter only ever *adds* a re-checked `unsat` to an `unknown`
+/// (never `sat`, never overriding a decided verdict), so a `None` skeleton simply
+/// leaves the prior verdict untouched. Incremental scoping is declined for the same
+/// reason as [`build_word_skeleton`].
+fn build_lex_problem(exprs: &[SExpr]) -> Option<axeyum_strings::LexProblem> {
+    // Incremental scoping / macros put the "active subset ⊆ all asserts" soundness
+    // argument out of reach — decline wholesale (mirrors `build_word_skeleton`).
+    for e in exprs {
+        if let Some(
+            "push" | "pop" | "check-sat-assuming" | "reset-assertions" | "define-fun"
+            | "define-fun-rec" | "define-funs-rec" | "define-sort",
+        ) = e.list().and_then(|l| l.first()).and_then(SExpr::atom)
+        {
+            return None;
+        }
+    }
+
+    // Declared string variables (identity keys for the word segments).
+    let mut vars: BTreeSet<String> = BTreeSet::new();
+    for e in exprs {
+        if let Some(name) = declared_string_var(e) {
+            vars.insert(name.to_owned());
+        }
+    }
+
+    let mut atoms: Vec<axeyum_strings::LexAtom> = Vec::new();
+    let mut assertions: Vec<axeyum_strings::LexFormula> = Vec::new();
+    let mut saw_lex = false;
+    for e in exprs {
+        let Some(items) = e.list() else { continue };
+        if items.first().and_then(SExpr::atom) == Some("assert") {
+            let [_, body] = items else { return None };
+            let f = lex_bool(body, &vars, &mut atoms, &mut saw_lex)?;
+            assertions.push(f);
+        }
+    }
+    if assertions.is_empty() || !saw_lex {
+        return None;
+    }
+    Some(axeyum_strings::LexProblem { atoms, assertions })
+}
+
+/// Interns a lex/equality atom into `atoms`, returning its index (structural
+/// deduplication so a repeated atom shares one entry / one folded valuation).
+fn intern_lex_atom(
+    atoms: &mut Vec<axeyum_strings::LexAtom>,
+    atom: axeyum_strings::LexAtom,
+) -> usize {
+    if let Some(i) = atoms.iter().position(|a| *a == atom) {
+        return i;
+    }
+    atoms.push(atom);
+    atoms.len() - 1
+}
+
+/// The flattened word of `e` (a `Vec` of literal code points and variable spans),
+/// or `None` if `e` is outside the word fragment.
+fn lex_word_full(e: &SExpr, vars: &BTreeSet<String>) -> Option<Vec<axeyum_strings::Seg>> {
+    use axeyum_strings::Seg;
+    if let Some(a) = e.atom() {
+        if a.len() >= 2 && a.starts_with('"') && a.ends_with('"') {
+            let cps = literal_pattern_cps(e)?;
+            return Some(cps.into_iter().map(Seg::Lit).collect());
+        }
+        if vars.contains(a) {
+            return Some(vec![Seg::Var(a.to_owned())]);
+        }
+        return None;
+    }
+    let items = e.list()?;
+    match items.first().and_then(SExpr::atom)? {
+        "str.++" if items.len() >= 2 => {
+            let mut word = Vec::new();
+            for it in &items[1..] {
+                word.extend(lex_word_full(it, vars)?);
+            }
+            Some(word)
+        }
+        _ => None,
+    }
+}
+
+/// Translates a Boolean `e` into a [`LexFormula`](axeyum_strings::LexFormula) over
+/// interned lex/equality atoms, or `None` on anything outside the lex fragment.
+/// Sets `saw_lex` when a genuine `str.<`/`str.<=` atom is produced.
+fn lex_bool(
+    e: &SExpr,
+    vars: &BTreeSet<String>,
+    atoms: &mut Vec<axeyum_strings::LexAtom>,
+    saw_lex: &mut bool,
+) -> Option<axeyum_strings::LexFormula> {
+    use axeyum_strings::{LexAtom, LexFormula};
+    match e.atom() {
+        Some("true") => return Some(LexFormula::Const(true)),
+        Some("false") => return Some(LexFormula::Const(false)),
+        _ => {}
+    }
+    let items = e.list()?;
+    let head = items.first().and_then(SExpr::atom)?;
+    match head {
+        "and" | "or" if items.len() >= 2 => {
+            let mut children = Vec::with_capacity(items.len() - 1);
+            for it in &items[1..] {
+                children.push(lex_bool(it, vars, atoms, saw_lex)?);
+            }
+            Some(if head == "and" {
+                LexFormula::And(children)
+            } else {
+                LexFormula::Or(children)
+            })
+        }
+        "xor" if items.len() >= 2 => {
+            let mut acc = lex_bool(&items[1], vars, atoms, saw_lex)?;
+            for it in &items[2..] {
+                let next = lex_bool(it, vars, atoms, saw_lex)?;
+                acc = LexFormula::Xor(Box::new(acc), Box::new(next));
+            }
+            Some(acc)
+        }
+        "=>" if items.len() >= 3 => {
+            let mut acc = lex_bool(items.last()?, vars, atoms, saw_lex)?;
+            for it in items[1..items.len() - 1].iter().rev() {
+                let ante = lex_bool(it, vars, atoms, saw_lex)?;
+                acc = LexFormula::Implies(Box::new(ante), Box::new(acc));
+            }
+            Some(acc)
+        }
+        "not" if items.len() == 2 => {
+            let inner = lex_bool(&items[1], vars, atoms, saw_lex)?;
+            Some(LexFormula::Not(Box::new(inner)))
+        }
+        "ite" if items.len() == 4 => {
+            let c = lex_bool(&items[1], vars, atoms, saw_lex)?;
+            let t = lex_bool(&items[2], vars, atoms, saw_lex)?;
+            let f = lex_bool(&items[3], vars, atoms, saw_lex)?;
+            Some(LexFormula::Ite(Box::new(c), Box::new(t), Box::new(f)))
+        }
+        "str.<" | "str.<=" if items.len() == 3 => {
+            let left = lex_word_full(&items[1], vars)?;
+            let right = lex_word_full(&items[2], vars)?;
+            *saw_lex = true;
+            let idx = intern_lex_atom(
+                atoms,
+                LexAtom::Lex {
+                    left,
+                    right,
+                    strict: head == "str.<",
+                },
+            );
+            Some(LexFormula::Atom(idx))
+        }
+        "=" if items.len() >= 3 => lex_eq_chain(&items[1..], vars, atoms),
+        "distinct" if items.len() >= 3 => lex_distinct(&items[1..], vars, atoms),
+        _ => None,
+    }
+}
+
+/// Left-folds a list of [`LexFormula`]s into an `And`, or `None` if empty.
+fn lex_and_fold(children: Vec<axeyum_strings::LexFormula>) -> Option<axeyum_strings::LexFormula> {
+    let mut acc: Option<axeyum_strings::LexFormula> = None;
+    for c in children {
+        acc = Some(match acc {
+            None => c,
+            Some(prev) => axeyum_strings::LexFormula::And(vec![prev, c]),
+        });
+    }
+    acc
+}
+
+/// `(= a b …)` over words → a conjunction of `(= a_0 a_i)` equality atoms.
+fn lex_eq_chain(
+    operands: &[SExpr],
+    vars: &BTreeSet<String>,
+    atoms: &mut Vec<axeyum_strings::LexAtom>,
+) -> Option<axeyum_strings::LexFormula> {
+    use axeyum_strings::{LexAtom, LexFormula};
+    let words: Vec<_> = operands
+        .iter()
+        .map(|it| lex_word_full(it, vars))
+        .collect::<Option<_>>()?;
+    let children = words[1..]
+        .iter()
+        .map(|w| {
+            let idx = intern_lex_atom(
+                atoms,
+                LexAtom::Eq {
+                    left: words[0].clone(),
+                    right: w.clone(),
+                },
+            );
+            LexFormula::Atom(idx)
+        })
+        .collect();
+    lex_and_fold(children)
+}
+
+/// `(distinct a b …)` over words → a conjunction of pairwise `(not (= a_i a_j))`.
+fn lex_distinct(
+    operands: &[SExpr],
+    vars: &BTreeSet<String>,
+    atoms: &mut Vec<axeyum_strings::LexAtom>,
+) -> Option<axeyum_strings::LexFormula> {
+    use axeyum_strings::{LexAtom, LexFormula};
+    let words: Vec<_> = operands
+        .iter()
+        .map(|it| lex_word_full(it, vars))
+        .collect::<Option<_>>()?;
+    let mut children = Vec::new();
+    for i in 0..words.len() {
+        for w in &words[i + 1..] {
+            let idx = intern_lex_atom(
+                atoms,
+                LexAtom::Eq {
+                    left: words[i].clone(),
+                    right: w.clone(),
+                },
+            );
+            children.push(LexFormula::Not(Box::new(LexFormula::Atom(idx))));
+        }
+    }
+    lex_and_fold(children)
 }
 
 /// Interns the `str.in_re` membership atoms of a word skeleton into fresh
