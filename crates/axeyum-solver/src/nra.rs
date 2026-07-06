@@ -157,6 +157,10 @@ pub fn check_with_nra(
 }
 
 /// The internal NRA engine (see [`check_with_nra`] for the final soundness guard).
+// Orchestration pipeline: exact poly decider → DPLL(T) case-split → sat-witness
+// probe → division elimination → linear-abstraction relaxation, each a distinct
+// sound stage; splitting them further would only obscure the fall-through order.
+#[allow(clippy::too_many_lines)]
 fn check_with_nra_impl(
     arena: &mut TermArena,
     assertions: &[TermId],
@@ -182,6 +186,13 @@ fn check_with_nra_impl(
     // against THIS rejects such spurious candidates and lets the search find a
     // genuine model (e.g. `1/w < 0` at `w < 0`, not the spurious `w = 0`).
     let original: Vec<TermId> = assertions.to_vec();
+
+    // Cheap, sound sat-witness probe before the heavy relaxation (replay-gated —
+    // never a wrong `sat`; see [`sat_witness_probe`]). Closes the unbounded-free-
+    // variable `sat` class the branch-and-bound cannot converge on (`issue9164-2`).
+    if let Some(sat @ CheckResult::Sat(_)) = sat_witness_probe(arena, &original) {
+        return Ok(sat);
+    }
 
     // Wall-clock deadline (only when a timeout is configured): an *absolute*
     // instant shared by every sub-solve below, so the branch-and-bound, the
@@ -298,6 +309,8 @@ fn check_with_nra_impl(
         // transfers to the original. Only `unsat` is acted on — a `sat`/`unknown`
         // of this weak relaxation proves nothing and falls through to the decline —
         // so it can never produce a wrong verdict.
+        //
+        // Sign/zero refutation FIRST, on its own (the historically cheap path).
         let mut sign_base = base.clone();
         for &(pa, pb, r) in &triples {
             for lemma in sign_zero_lemmas(arena, pa, pb, r)? {
@@ -314,6 +327,34 @@ fn check_with_nra_impl(
             earliest_deadline(deadline, Instant::now().checked_add(SIGN_REFUTE_BUDGET));
         if let CheckResult::Unsat =
             check_with_lra_dpll_within(arena, &sign_base, config, sign_deadline)?
+        {
+            return Ok(CheckResult::Unsat);
+        }
+
+        // Second stage: augment with the **threshold-1 monotonicity** clauses
+        // ([`threshold_1_lemmas`]) and retry. Kept SEPARATE from (and after) the
+        // sign-only solve so the extra clauses never slow the sign refutation past
+        // its budget (a 7-factor `v₁···v₇ ≠ 0 ∧ (v₁=0 ∨ v₂=0)` zero-rule refutation
+        // must stay fast). Threshold-1 is the same cheap `¬p ∨ q` shape (no
+        // McCormick envelopes, no SOS coupling — the OOM-prone parts stay out) and
+        // refutes the *bounded-product* class sign alone cannot: the `ones`
+        // benchmark `a,b,c,d ≥ 1 ∧ a·b·c·d < 1`, where the abstraction chains
+        // `r₀=a·b, r₁=r₀·c, r₂=r₁·d` and each link's `(x≥1 ∧ y≥0) ⇒ x·y ≥ y`
+        // propagates `r₀ ≥ b ≥ 1 ⇒ r₁ ≥ c ≥ 1 ⇒ r₂ ≥ d ≥ 1`, contradicting `r₂ < 1`.
+        // Same soundness argument: valid facts about `r = a·b`, so `unsat` transfers
+        // and a `sat`/`unknown` of the weak relaxation is ignored.
+        let mut mono_base = sign_base;
+        for &(pa, pb, r) in &triples {
+            for lemma in threshold_1_lemmas(arena, pa, pb, r)? {
+                let rewritten = replace_subterms(arena, lemma, &map, &mut memo)
+                    .map_err(|e| SolverError::Backend(e.to_string()))?;
+                mono_base.push(rewritten);
+            }
+        }
+        let mono_deadline =
+            earliest_deadline(deadline, Instant::now().checked_add(SIGN_REFUTE_BUDGET));
+        if let CheckResult::Unsat =
+            check_with_lra_dpll_within(arena, &mono_base, config, mono_deadline)?
         {
             return Ok(CheckResult::Unsat);
         }
@@ -830,6 +871,109 @@ fn attach_div_zero_witness(
     }
 }
 
+/// The distinct free `Real`-sorted symbols referenced anywhere in `assertions`,
+/// in ascending [`SymbolId`] order (deterministic — declaration order).
+fn free_real_symbols(arena: &TermArena, assertions: &[TermId]) -> Vec<axeyum_ir::SymbolId> {
+    let mut real_sorts = BTreeSet::new();
+    for (sym, _name, sort) in arena.symbols() {
+        if sort == Sort::Real {
+            real_sorts.insert(sym);
+        }
+    }
+    let mut found: BTreeSet<axeyum_ir::SymbolId> = BTreeSet::new();
+    let mut visited = BTreeSet::new();
+    let mut stack: Vec<TermId> = assertions.to_vec();
+    while let Some(t) = stack.pop() {
+        if !visited.insert(t) {
+            continue;
+        }
+        match arena.node(t) {
+            TermNode::Symbol(s) if real_sorts.contains(s) => {
+                found.insert(*s);
+            }
+            TermNode::App { args, .. } => {
+                let args = args.clone();
+                stack.extend(args);
+            }
+            _ => {}
+        }
+    }
+    found.into_iter().collect()
+}
+
+/// Bounded, sound sat-witness probe: try a small fixed grid of rational
+/// assignments to the free real variables and return `Some(Sat(model))` for the
+/// first that makes **every** original assertion evaluate `true` under the ground
+/// evaluator.
+///
+/// Soundness: acceptance is a full replay of the *original* (division-intact)
+/// assertions against the trusted ground evaluator, so any hit is a genuine model
+/// (choosing `x/0 = 0` for any forced division-by-zero — a valid SMT-LIB witness,
+/// since real `/0` is unspecified). It therefore never yields a wrong `sat`; a
+/// miss returns `None` and the caller continues with the exact engine. `unsat` is
+/// never inferred here (absence of a grid witness proves nothing).
+///
+/// Cost is bounded: `|grid|` uniform candidates for any variable count (catches
+/// all-equal witnesses like the all-zero root of `(Σ vᵢ)⁴ = 0`), plus the full
+/// `|grid|^n` product only when `n ≤ MAX_PROBE_VARS`.
+fn sat_witness_probe(arena: &TermArena, assertions: &[TermId]) -> Option<CheckResult> {
+    const MAX_PROBE_VARS: usize = 4;
+    let grid: [Rational; 7] = [
+        Rational::integer(0),
+        Rational::integer(1),
+        Rational::integer(-1),
+        Rational::new(1, 2),
+        Rational::new(-1, 2),
+        Rational::integer(2),
+        Rational::integer(-2),
+    ];
+    let vars = free_real_symbols(arena, assertions);
+    if vars.is_empty() {
+        return None; // pure-constant shapes are handled by the poly/linear paths
+    }
+    let replays = |assign: &Assignment| -> bool {
+        assertions
+            .iter()
+            .all(|&a| matches!(eval(arena, a, assign), Ok(Value::Bool(true))))
+    };
+    let build_model = |assign: &Assignment| -> CheckResult {
+        let mut model = Model::new();
+        for &s in &vars {
+            if let Some(value) = assign.get(s) {
+                model.set(s, value);
+            }
+        }
+        CheckResult::Sat(model)
+    };
+    // Uniform candidates (all vars = v): cheap for any variable count.
+    for v in &grid {
+        let mut assign = Assignment::new();
+        for &s in &vars {
+            assign.set(s, Value::Real(*v));
+        }
+        if replays(&assign) {
+            return Some(build_model(&assign));
+        }
+    }
+    // Full grid product for a small number of variables.
+    if vars.len() <= MAX_PROBE_VARS {
+        let total = grid.len().checked_pow(u32::try_from(vars.len()).ok()?)?;
+        for idx in 0..total {
+            let mut assign = Assignment::new();
+            let mut k = idx;
+            for &s in &vars {
+                let v = &grid[k % grid.len()];
+                k /= grid.len();
+                assign.set(s, Value::Real(*v));
+            }
+            if replays(&assign) {
+                return Some(build_model(&assign));
+            }
+        }
+    }
+    None
+}
+
 /// The model value of a real term, if it evaluates to a `Real`.
 fn real_value(
     arena: &TermArena,
@@ -915,40 +1059,61 @@ fn sign_zero_lemmas(
 /// about real multiplication, so adding them keeps the abstraction a relaxation
 /// (original models, with `r = a·b`, satisfy them) while making it strong enough to
 /// decide sign-based nonlinear queries.
-#[allow(clippy::similar_names)] // a_ge/a_le/b_ge/… mirror the sign-rule structure
 fn product_lemmas(
     arena: &mut TermArena,
     a: TermId,
     b: TermId,
     r: TermId,
 ) -> Result<Vec<TermId>, IrError> {
+    // sign + zero rules (the cheap, blowup-free core).
+    let mut out = sign_zero_lemmas(arena, a, b, r)?;
+    // plus the threshold-1 monotonicity clauses (also small `¬p ∨ q` linear
+    // implications; see `threshold_1_lemmas`).
+    out.extend(threshold_1_lemmas(arena, a, b, r)?);
+    Ok(out)
+}
+
+/// Threshold-1 monotonicity lemmas for the product `r = a·b` — the sound linear
+/// implications relating `r` to its operands once a factor crosses `1` (grow) or
+/// falls into `[0,1]` (shrink). Split out of [`product_lemmas`] so the
+/// cross-product-cap pre-check ([`check_nonlinear_abstraction`]) can add them
+/// *without* the `McCormick` envelopes / SOS coupling that make the full relaxation
+/// OOM — they are the same cheap `¬p ∨ q` clause shape as the sign/zero rules.
+///
+/// Each is a valid fact about real multiplication, so the augmented system stays a
+/// *relaxation* of the original (every real model with `r = a·b` satisfies them);
+/// only an `unsat` of the relaxation is ever acted on, so no wrong verdict is
+/// possible. They are what turns the chained abstraction of an n-ary product
+/// (`a·b·c·d` → `r₀=a·b, r₁=r₀·c, r₂=r₁·d`) into a decidable refutation of e.g.
+/// `a,b,c,d ≥ 1 ∧ a·b·c·d < 1` (`r₀ ≥ b ≥ 1 ⇒ r₁ ≥ c ≥ 1 ⇒ r₂ ≥ d ≥ 1`), the
+/// `ones` benchmark — a chain the two-operand lemmas already express once applied
+/// to every link.
+///
+/// Squares (`a == b`) return no clauses: for a square these reduce to `r ≥ x`,
+/// which on an *unbounded* square makes the incremental-linearization refinement
+/// chase a quadratically-escalating witness (and the exact-rational simplex would
+/// overflow before the round bound). A square is already pinned by the sign rule
+/// (`x² ≥ 0`), so it loses nothing here.
+#[allow(clippy::similar_names)] // a_ge/a_le/b_ge/… mirror the sign-rule structure
+fn threshold_1_lemmas(
+    arena: &mut TermArena,
+    a: TermId,
+    b: TermId,
+    r: TermId,
+) -> Result<Vec<TermId>, IrError> {
+    let mut out = Vec::new();
+    if a == b {
+        return Ok(out);
+    }
+    let imp = |arena: &mut TermArena, p: TermId, q: TermId| -> Result<TermId, IrError> {
+        let np = arena.not(p)?;
+        arena.or(np, q)
+    };
     let zero = arena.real_const(axeyum_ir::Rational::integer(0));
     let a_ge = arena.real_ge(a, zero)?;
     let a_le = arena.real_le(a, zero)?;
     let b_ge = arena.real_ge(b, zero)?;
     let b_le = arena.real_le(b, zero)?;
-
-    // implication p → q, as ¬p ∨ q.
-    let imp = |arena: &mut TermArena, p: TermId, q: TermId| -> Result<TermId, IrError> {
-        let np = arena.not(p)?;
-        arena.or(np, q)
-    };
-    // sign + zero rules (the cheap, blowup-free core).
-    let mut out = sign_zero_lemmas(arena, a, b, r)?;
-
-    // Monotonicity at threshold 1: multiplying by a factor ≥ 1 moves the other
-    // operand away from 0. Each is a sound consequence of r = a·b — e.g. a≥1 ∧ b≥0
-    // ⇒ a·b ≥ 1·b = b. These decide cases the sign/zero rules miss, such as
-    // `x≥1 ∧ y≥1 ∧ x·y < 1` (unsat: x·y ≥ y ≥ 1).
-    //
-    // Only for genuine two-operand products (`a ≠ b`): for a square these reduce to
-    // `r ≥ x`, which, on an *unbounded* square, makes the incremental-linearization
-    // refinement chase a quadratically-escalating witness (and the exact-rational
-    // simplex would overflow before the round bound). A square is already pinned by
-    // the sign rule (`x² ≥ 0`), so it loses nothing here.
-    if a == b {
-        return Ok(out);
-    }
     let one = arena.real_const(axeyum_ir::Rational::integer(1));
     let a_ge1 = arena.real_ge(a, one)?;
     let b_ge1 = arena.real_ge(b, one)?;

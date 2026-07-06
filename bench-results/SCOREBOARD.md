@@ -15,7 +15,7 @@ A single-glance, honest view of where the pure-Rust axeyum solver stands against
 ## Headline
 
 - **35 division baselines** measured vs z3 4.13.3, spanning **24 logic fragments** (BV, LIA, QF_ABV, QF_ALIA, QF_AUFBV, QF_AUFLIA, QF_AX, QF_BV, QF_BVFP, QF_DT, QF_FF, QF_FP, QF_LIA, QF_LRA, QF_NIA, QF_NRA, QF_S, QF_SEQ, QF_SLIA, QF_UF, QF_UFBV, QF_UFFF, QF_UFLIA, UF).
-- **DISAGREE = 0 across all baselines** — zero wrong verdicts over 640 oracle-compared instances (992 files total, 695 decided).
+- **DISAGREE = 0 across all baselines** — zero wrong verdicts over 645 oracle-compared instances (992 files total, 700 decided).
 - Decide-rate ranges **0%–100%** across divisions — that spread *is* the capability frontier; DISAGREE = 0 is the soundness floor that holds everywhere.
 
 ## Divisions vs Z3
@@ -44,7 +44,7 @@ Sorted by logic, then by descending decide-rate. Every committed `*solver-vs-z3*
 | QF_NIA | `qf-nia-cvc5-regress-clean` | 39 | 21 | 54% | 10 | 8 | 20 | 0 | z3-binary | 6.577 |
 | QF_NIA | `qf-nia-curated-iand` | 3 | 1 | 33% | 2 | 0 | 0 | 0 | :status | 13.333 |
 | QF_NRA | `qf-nra-synthetic-graduated` | 33 | 30 | 91% | 3 | 0 | 30 | 0 | z3-binary | 5.455 |
-| QF_NRA | `qf-nra-cvc5-regress-clean` | 38 | 21 | 55% | 16 | 1 | 21 | 0 | z3-binary | 8.660 |
+| QF_NRA | `qf-nra-cvc5-regress-clean` | 38 | 26 | 68% | 11 | 1 | 26 | 0 | z3-binary | 5.969 |
 | QF_S | `qf-s-cvc5-regress-clean` | 134 | 74 | 55% | 9 | 51 | 70 | 0 | z3-library+binary | 2.182 |
 | QF_SEQ | `qf-seq-cvc5-regress-clean` | 33 | 26 | 79% | 6 | 1 | 15 | 0 | z3-library+binary | 3.752 |
 | QF_SLIA | `qf-slia-cvc5-regress-clean` | 50 | 15 | 30% | 6 | 29 | 13 | 0 | z3-library+binary | 5.728 |
@@ -60,9 +60,34 @@ Sorted by logic, then by descending decide-rate. Every committed `*solver-vs-z3*
 | QF_UFLIA | `qf-uflia-cvc5-regress-clean-overbound-uninterp-sorts` | 2 | 2 | 100% | 0 | 0 | 2 | 0 | z3-binary | 2.294 |
 | UF | `uf-cvc5-regress-clean-quantified` | 5 | 0 | 0% | 0 | 5 | 0 | 0 | :status | 0.000 |
 
-**Totals:** 992 files, 695 decided, 640 oracle-compared, **0 disagreements.**
+**Totals:** 992 files, 700 decided, 645 oracle-compared, **0 disagreements.**
 
 <!-- NOTES:BEGIN (hand-written attribution notes — preserved by the generator) -->
+### QF_NRA cvc5 row re-measured 2026-07-06 (P2.5 — census-driven levers: bounded sat-witness probe + threshold-1 monotonicity past the cap)
+
+Two sound, cheap NRA levers move this row. **(1) A bounded rational sat-witness
+probe** runs before the interval branch-and-bound: it tries a small fixed grid of
+rational assignments (`{0, ±1, ±2, ±1/2}`; uniform for any variable count, full
+product for ≤ 4 free reals) and returns `sat` only for a candidate that **replays
+every original (division-intact) assertion true under the ground evaluator** — so
+it can never emit a wrong `sat`, and closes the unbounded-free-variable `sat` class
+the relaxation leaves as a timeout: the named nested-division `issue9164-2`
+(`1/(a/b) > a²/a`, sat at a=1,b=2), the all-zero high-degree root `dist-big`
+(`(Σvᵢ)⁴=0`), the high-power positivity `nlExtPurify-test`, and (bonus) the bounded
+`poly-1025`. **(2) Threshold-1 monotonicity past the cross-product cap:** the
+sign/zero refutation that already fires past the ADR-0024 cap now retries, as a
+second bounded stage, with the threshold-1 monotonicity clauses (same cheap
+`¬p ∨ q` shape, no McCormick/SOS) — refuting the `ones` benchmark
+(`a,b,c,d ≥ 1 ∧ a·b·c·d < 1`) via the chained abstraction `r₀≥b≥1 ⇒ r₁≥c≥1 ⇒
+r₂≥d≥1`. Staged *after* the sign-only solve so the extra clauses never slow the fast
+zero-rule refutations (`subs0-unsat-confirm` stays `unsat`). Net (same-command HEAD
+re-run, 10 s / 4 jobs): **decided 21 → 26 (sat 10 → 14, unsat 11 → 12), unknown
+16 → 11, PAR-2 8.660 → 5.969, DISAGREE = 0, model-replay-failures = 0**; every mover
+agrees with the z3-binary oracle. Soundness backing: **both** `nra_differential_fuzz`
+(2000 seeds, 1641 jointly decided, 1478 sat replays verified) **and**
+`nia_differential_fuzz` (2500 seeds, 2197 jointly decided) — shared multivariate
+path — **DISAGREE = 0**; `progress_frontier`, `corpus_regression` green.
+
 ### QF_S + QF_SLIA rows re-measured 2026-07-06 (P2.7 T-C.6 — membership atoms in the online CDCL(T) route + the `\u` string-literal escape fix)
 
 Two landings move these rows. **(1) Membership atoms in the online CDCL(T) string

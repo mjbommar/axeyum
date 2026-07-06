@@ -335,6 +335,55 @@ FM → simplex lever above. The committed baseline
 row also absorbs the prior sign-refutation/coprime-split landings that had not been
 re-measured on this route: committed row 9 → 21 decided).
 
+#### LANDED 2026-07-06 — census-driven levers: bounded sat-witness probe + threshold-1 monotonicity past the cap
+
+The census of the 16 remaining `cvc5-regress-clean` QF_NRA `unknown`s showed two
+tractable, sound, cheap levers (neither the FM → simplex work above, which the
+residual `metitarski-*` / `approx-sqrt` FM-declines still need):
+
+- **Bounded rational sat-witness probe** (`sat_witness_probe`, `nra.rs`): before the
+  interval branch-and-bound, try a small fixed grid of rational assignments (`{0,
+  ±1, ±2, ±1/2}`) to the free real variables — uniform (all-equal) for any variable
+  count, full `|grid|^n` product for `n ≤ 4` — and accept a candidate **only** when
+  it replays every *original* (division-intact) assertion `true` under the ground
+  evaluator. Because acceptance is a full replay against the trusted evaluator
+  (choosing `x/0 = 0`, a valid SMT-LIB witness since real `/0` is unspecified), it
+  never emits a wrong `sat`; a miss falls through to the exact engine. This closes
+  the **unbounded-free-variable `sat` class** the relaxation leaves as a
+  branch-and-bound timeout — the named nested-division `issue9164-2`
+  (`1/(a/b) > a²/a`, sat at a=1, b=2), the all-zero high-degree root `dist-big`
+  (`(Σvᵢ)⁴ = 0`), `nlExtPurify-test` (high-power positivity), and the bounded
+  `poly-1025`. (The doc's suggested `1/(a/b) → b/a` rewrite was **declined**: it is
+  fragile under the SMT-LIB `/0`-unspecified totality — the identity holds only when
+  `a ≠ 0 ∧ b ≠ 0`, forcing nested case-splits — and even reduced to two
+  cross-products the residual search remained an unbounded-box timeout, so the probe
+  is the sound closer, not the rewrite.)
+- **Threshold-1 monotonicity past the cross-product cap** (`threshold_1_lemmas`,
+  `nra.rs`): the sign/zero refutation that already fires past the ADR-0024 cap now
+  retries, as a **second bounded stage**, augmented with the threshold-1
+  monotonicity clauses (the same cheap `¬p ∨ q` linear-implication shape — no
+  McCormick envelopes, no SOS coupling, so the cap's OOM rationale is untouched).
+  It refutes the `ones` benchmark (`a,b,c,d ≥ 1 ∧ a·b·c·d < 1`) through the chained
+  binary abstraction `r₀=a·b, r₁=r₀·c, r₂=r₁·d`, each link's
+  `(x≥1 ∧ y≥0) ⇒ x·y ≥ y` propagating `r₀ ≥ b ≥ 1 ⇒ r₁ ≥ c ≥ 1 ⇒ r₂ ≥ d ≥ 1`
+  against `r₂ < 1`. Kept strictly *after* the sign-only solve so the extra clauses
+  never slow the fast zero-rule refutations (a first cut that merged both into one
+  solve regressed the 7-factor `subs0-unsat-confirm` `unsat → unknown` past the
+  500 ms budget; the staged form keeps it `unsat`). Sound by the same relaxation
+  argument: valid facts about `r = a·b`, only `unsat` acted on.
+
+**Measured effect** (same command, 10 s / 4 jobs): **decided 21 → 26 (sat 10 → 14,
+unsat 11 → 12), unknown 16 → 11, PAR-2 8.660 → 5.969, DISAGREE = 0,
+model-replay-failures = 0**; the five movers (`issue9164-2`, `dist-big`,
+`nlExtPurify-test`, `poly-1025`, `ones`) all agree with the z3-binary oracle, no
+regressions. Gates: **both** `nra_differential_fuzz` (2000 seeds, 1641 jointly
+decided, 1478 sat replays verified, DISAGREE = 0) **and** `nia_differential_fuzz`
+(2500 seeds, 2197 jointly decided, DISAGREE = 0) — the shared multivariate path —
+plus `progress_frontier` (8/8) and `corpus_regression`. Baseline + SCOREBOARD row
+refreshed (committed row 21 → 26 decided). The residual 11 `unknown`s are the
+FM-budget / mixed-int / transcendental `metitarski-*` / `approx-sqrt` cases (the
+FM → simplex lever) and the `int↔real coercion` routing of `very-simple-unsat`.
+
 ## Per-phase soundness obligations
 
 | Phase | `sat` checkable by | `unsat` certified by | `unknown` triggers |
