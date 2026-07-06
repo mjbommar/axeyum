@@ -1,0 +1,289 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-policy-iteration-v0",
+  "witnesses": [
+    {
+      "id": "three-state-mdp-policy-iteration",
+      "description": "A fixed three-state, two-action discounted MDP with gamma = 1/2 and a complete policy-iteration trace: exact policy-evaluation linear solves for three committed policies, two greedy improvement rounds, termination by policy stability at (a, a, a), monotone value improvement (2, 2/3, 0) <= (2, 3, 0) <= (5/2, 3, 0), and the same exact optimum as finite-value-iteration-v0.",
+      "values": {
+        "states": [
+          "s1",
+          "s2",
+          "s3"
+        ],
+        "actions": [
+          "a",
+          "b"
+        ],
+        "discount": "1/2",
+        "mdp_rows": [
+          {
+            "state": "s1",
+            "action": "a",
+            "reward": "1",
+            "transition": [
+              "0",
+              "1",
+              "0"
+            ]
+          },
+          {
+            "state": "s1",
+            "action": "b",
+            "reward": "2",
+            "transition": [
+              "0",
+              "0",
+              "1"
+            ]
+          },
+          {
+            "state": "s2",
+            "action": "a",
+            "reward": "3",
+            "transition": [
+              "0",
+              "0",
+              "1"
+            ]
+          },
+          {
+            "state": "s2",
+            "action": "b",
+            "reward": "0",
+            "transition": [
+              "1/2",
+              "1/2",
+              "0"
+            ]
+          },
+          {
+            "state": "s3",
+            "action": "a",
+            "reward": "0",
+            "transition": [
+              "0",
+              "0",
+              "1"
+            ]
+          }
+        ],
+        "policies": [
+          {
+            "index": "0",
+            "policy": {
+              "s1": "b",
+              "s2": "b",
+              "s3": "a"
+            },
+            "values": [
+              "2",
+              "2/3",
+              "0"
+            ]
+          },
+          {
+            "index": "1",
+            "policy": {
+              "s1": "b",
+              "s2": "a",
+              "s3": "a"
+            },
+            "values": [
+              "2",
+              "3",
+              "0"
+            ]
+          },
+          {
+            "index": "2",
+            "policy": {
+              "s1": "a",
+              "s2": "a",
+              "s3": "a"
+            },
+            "values": [
+              "5/2",
+              "3",
+              "0"
+            ]
+          }
+        ],
+        "improvement_rounds": [
+          {
+            "from_index": "0",
+            "q_values": {
+              "s1": {
+                "a": "4/3",
+                "b": "2"
+              },
+              "s2": {
+                "a": "3",
+                "b": "2/3"
+              },
+              "s3": {
+                "a": "0"
+              }
+            },
+            "greedy_policy": {
+              "s1": "b",
+              "s2": "a",
+              "s3": "a"
+            }
+          },
+          {
+            "from_index": "1",
+            "q_values": {
+              "s1": {
+                "a": "5/2",
+                "b": "2"
+              },
+              "s2": {
+                "a": "3",
+                "b": "5/4"
+              },
+              "s3": {
+                "a": "0"
+              }
+            },
+            "greedy_policy": {
+              "s1": "a",
+              "s2": "a",
+              "s3": "a"
+            }
+          },
+          {
+            "from_index": "2",
+            "q_values": {
+              "s1": {
+                "a": "5/2",
+                "b": "2"
+              },
+              "s2": {
+                "a": "3",
+                "b": "11/8"
+              },
+              "s3": {
+                "a": "0"
+              }
+            },
+            "greedy_policy": {
+              "s1": "a",
+              "s2": "a",
+              "s3": "a"
+            }
+          }
+        ],
+        "optimal_policy": {
+          "s1": "a",
+          "s2": "a",
+          "s3": "a"
+        },
+        "optimal_values": [
+          "5/2",
+          "3",
+          "0"
+        ]
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "mdp-policy-table-witness",
+      "claim": "The listed MDP has three states, at most two actions per state, rational rewards, a discount factor 1/2 in [0, 1), every transition row is a probability distribution, and every committed policy assigns each state one of its available actions.",
+      "expected_result": "sat",
+      "validation": "exact_rational_policy_mdp_table_replay",
+      "proof_status": "replay-only",
+      "witnesses": [
+        "three-state-mdp-policy-iteration"
+      ],
+      "notes": "The validator checks the committed states, actions, rewards, discount, exact row sums of every transition distribution, and the well-formedness of the three committed policies."
+    },
+    {
+      "id": "policy-evaluation-witness",
+      "claim": "Each committed policy's value vector solves its policy-evaluation linear system V = r_pi + gamma * P_pi * V exactly: (2, 2/3, 0) for (b, b, a), (2, 3, 0) for (b, a, a), and (5/2, 3, 0) for (a, a, a).",
+      "expected_result": "sat",
+      "validation": "exact_rational_policy_evaluation_replay",
+      "proof_status": "replay-only",
+      "witnesses": [
+        "three-state-mdp-policy-iteration"
+      ],
+      "notes": "The validator substitutes each committed value vector back into its policy's fixed-point equation state by state and requires an exact zero residual; the first system needs a genuine solve because s2 under action b transitions back into s1 and s2."
+    },
+    {
+      "id": "policy-improvement-witness",
+      "claim": "Every improvement round matches exact replay of Q(s, a) = r(s, a) + gamma * sum(P(s'|s, a) * V_pi(s')) against the evaluated policy values, each round's unique greedy argmax equals the next committed policy, and the final round reproduces its own policy, so policy iteration terminates by stability at (a, a, a).",
+      "expected_result": "sat",
+      "validation": "exact_rational_policy_improvement_replay",
+      "proof_status": "replay-only",
+      "witnesses": [
+        "three-state-mdp-policy-iteration"
+      ],
+      "notes": "The greedy action at s2 switches first (round one) and s1 switches second (round two); the third round is the stability check that stops the algorithm."
+    },
+    {
+      "id": "policy-monotonicity-witness",
+      "claim": "The evaluated policy values improve monotonically: (2, 2/3, 0) <= (2, 3, 0) <= (5/2, 3, 0) componentwise, with a strict improvement in at least one state at every round, and the final values match the exact Bellman fixed point of finite-value-iteration-v0.",
+      "expected_result": "sat",
+      "validation": "exact_rational_policy_monotonicity_replay",
+      "proof_status": "replay-only",
+      "witnesses": [
+        "three-state-mdp-policy-iteration"
+      ],
+      "notes": "The replayed componentwise inequalities are single-instance policy-improvement checks on this trace; the policy-improvement theorem in general is a theorem-lane claim owned by the horizon row."
+    },
+    {
+      "id": "bad-policy-value-rejected",
+      "claim": "Under the initial policy (b, b, a), the evaluated value of state s2 is 1/2.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_bad_policy_value_replay",
+      "proof_status": "replay-only",
+      "data": {
+        "source_witness": "three-state-mdp-policy-iteration",
+        "metric": "policy_evaluation_value",
+        "policy_index": "0",
+        "state": "s2",
+        "computed_policy_value": "2/3",
+        "claimed_policy_value": "1/2"
+      },
+      "notes": "Exact replay of the policy-evaluation equation V(s2) = 0 + (1/2)*((1/2)*2 + (1/2)*V(s2)) solves to V(s2) = 2/3, so the claimed value 1/2 is rejected; the separate qf-lra-bad-policy-value row owns the checked Farkas evidence."
+    },
+    {
+      "id": "qf-lra-bad-policy-value",
+      "claim": "The fixed malformed policy-evaluation claim is linearly inconsistent with the replayed policy-value equation.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_farkas_evidence",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "three-state-mdp-policy-iteration",
+        "source_replay_row": "bad-policy-value-rejected",
+        "metric": "policy_evaluation_value",
+        "policy_index": "0",
+        "state": "s2",
+        "computed_policy_value": "2/3",
+        "claimed_policy_value": "1/2",
+        "policy_value_equations": [
+          "mdp_v_pi0_s2 = 2/3",
+          "mdp_v_pi0_s2 = 1/2"
+        ],
+        "farkas_conflict": "replayed policy-evaluation equation plus mdp_v_pi0_s2 = 1/2",
+        "smt2_artifact": "artifacts/examples/math/finite-policy-iteration-v0/smt2/bad-policy-value-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_policy_iteration_bad_policy_value_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay solves mdp_v_pi0_s2 = 2/3 from the fixed policy-evaluation linear system, while the malformed row claims mdp_v_pi0_s2 = 1/2; the source QF_LRA artifact isolates that scalar contradiction for Farkas checking."
+    },
+    {
+      "id": "general-policy-iteration-theory-lean-horizon",
+      "claim": "The policy-improvement theorem in general, policy-iteration termination and optimality theorems, uniqueness of the optimal value function, modified and asynchronous policy iteration, average-reward and infinite-horizon theory, continuous state/action spaces, the linear-programming formulation of MDPs, stochastic approximation and Q-learning, and floating-point dynamic-programming behavior require future theorem, statistical-inference, or numerical-honesty resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_boundary",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "For a finite discounted MDP with gamma in [0, 1), prove the policy-improvement theorem (a greedy policy against V_pi is at least as good as pi, strictly better unless pi is already greedy), that policy iteration terminates in finitely many rounds at an optimal policy, and that its final value function is the unique Bellman fixed point; the finite rows here replay one committed trace with two improvement rounds and a stability round.",
+        "future_checker": "Lean theorem statements for the policy-improvement theorem and policy-iteration termination on finite MDPs plus separate numerical-honesty artifacts for floating-point policy-evaluation and policy-iteration implementations."
+      },
+      "notes": "The finite exact rows replay one committed policy-iteration trace with exact policy-evaluation linear solves, greedy improvement rounds, termination by stability, and monotone value improvement; they do not prove the policy-improvement theorem in general, termination or optimality for other MDPs or discounts, average-reward or continuous MDP theory, the LP formulation, stochastic approximation, or floating-point dynamic-programming behavior."
+    }
+  ]
+}

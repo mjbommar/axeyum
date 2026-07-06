@@ -29,21 +29,21 @@ python3 scripts/query-foundational-resources.py summary
 
 Current summary:
 
-- 136 concept rows.
-- 172 non-template math packs.
-- 1124 expected checks.
-- 398 checked proof/evidence rows.
-- 591 replay-only rows.
-- 135 Lean-horizon rows.
-- 172 promoted solver-reuse packs.
+- 137 concept rows.
+- 173 non-template math packs.
+- 1131 expected checks.
+- 399 checked proof/evidence rows.
+- 596 replay-only rows.
+- 136 Lean-horizon rows.
+- 173 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 
 The generated learner dashboard reports:
 
 ```text
-math example packs: 172
+math example packs: 173
 Learner Status Totals:
-- focused: 172
+- focused: 173
 ```
 
 `focused` means the pack is explicitly mentioned by at least one
@@ -58,7 +58,7 @@ coverage as follows:
 
 | Status | Meaning | Current Count |
 |---|---|---:|
-| `focused` | At least one non-README `docs/learn/math/*-end-to-end.md` page mentions the pack id or pack path. | 172 |
+| `focused` | At least one non-README `docs/learn/math/*-end-to-end.md` page mentions the pack id or pack path. | 173 |
 | `path-only` | Only a non-end-to-end learner page mentions the pack. | 0 |
 | `index-only` | Only `docs/learn/math/README.md` mentions the pack. | 0 |
 | `missing` | No learner page mentions the pack id or pack path. | 0 |

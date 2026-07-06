@@ -37861,6 +37861,297 @@ def validate_finite_value_iteration(expected: dict[str, Any]) -> None:
         fail("general-mdp-theory-lean-horizon must be searchable")
 
 
+
+def validate_finite_policy_iteration(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    def require_vector(context: str, value: Any, length: int) -> list[Fraction]:
+        if not isinstance(value, list):
+            fail(f"{context} must be a list")
+        if len(value) != length:
+            fail(f"{context} must have exactly {length} entries")
+        return [require_fraction(f"{context}[{i}]", entry) for i, entry in enumerate(value)]
+
+    def require_sat_replay(check_id: str, validation: str) -> None:
+        check = checks[check_id]
+        if check["expected_result"] != "sat":
+            fail(f"{check_id} must expect sat")
+        if check.get("proof_status") != "replay-only":
+            fail(f"{check_id} must be replay-only")
+        if check["validation"] != validation:
+            fail(f"{check_id} validation is incorrect")
+        values_again = single_witness_values(check, witnesses)
+        if values_again != values:
+            fail(f"{check_id} must cite the shared policy-iteration witness")
+
+    table_check = checks["mdp-policy-table-witness"]
+    if table_check["expected_result"] != "sat":
+        fail("mdp-policy-table-witness must expect sat")
+    if table_check.get("proof_status") != "replay-only":
+        fail("mdp-policy-table-witness must be replay-only")
+    if table_check["validation"] != "exact_rational_policy_mdp_table_replay":
+        fail("mdp-policy-table-witness validation is incorrect")
+    values = single_witness_values(table_check, witnesses)
+
+    states = require_string_list("policy mdp states", values.get("states"))
+    if len(set(states)) != len(states) or not states:
+        fail("policy mdp states must be a non-empty list without repeats")
+    actions = require_string_list("policy mdp actions", values.get("actions"))
+    if len(set(actions)) != len(actions) or not actions:
+        fail("policy mdp actions must be a non-empty list without repeats")
+
+    discount = require_fraction("policy mdp discount", values.get("discount"))
+    if not (0 <= discount < 1):
+        fail("policy mdp discount must lie in [0, 1)")
+
+    raw_rows = values.get("mdp_rows")
+    if not isinstance(raw_rows, list) or not raw_rows:
+        fail("policy mdp_rows must be a non-empty list")
+    rows: dict[tuple[str, str], dict[str, Any]] = {}
+    for index, row in enumerate(raw_rows):
+        if not isinstance(row, dict):
+            fail(f"policy mdp_rows[{index}] must be an object")
+        state = row.get("state")
+        action = row.get("action")
+        require_string(f"policy mdp_rows[{index}].state", state)
+        require_string(f"policy mdp_rows[{index}].action", action)
+        if state not in states or action not in actions:
+            fail(f"policy mdp_rows[{index}] references an unknown state or action")
+        if (state, action) in rows:
+            fail(f"policy mdp_rows repeats the pair ({state!r}, {action!r})")
+        reward = require_fraction(f"policy mdp_rows[{index}].reward", row.get("reward"))
+        transition = require_vector(
+            f"policy mdp_rows[{index}].transition", row.get("transition"), len(states)
+        )
+        if any(entry < 0 for entry in transition):
+            fail(f"policy mdp_rows[{index}].transition entries must be nonnegative")
+        if sum(transition, Fraction(0)) != 1:
+            fail(f"policy mdp_rows[{index}].transition must sum to one")
+        rows[(state, action)] = {"reward": reward, "transition": transition}
+    state_actions: dict[str, list[str]] = {
+        state: [action for action in actions if (state, action) in rows] for state in states
+    }
+    if any(not available for available in state_actions.values()):
+        fail("every policy mdp state must have at least one action row")
+
+    def require_policy(context: str, value: Any) -> dict[str, str]:
+        if not isinstance(value, dict) or set(value) != set(states):
+            fail(f"{context} must assign an action to every state")
+        for state, action in value.items():
+            if action not in state_actions[state]:
+                fail(f"{context} assigns an unavailable action to {state!r}")
+        return value
+
+    require_sat_replay("policy-evaluation-witness", "exact_rational_policy_evaluation_replay")
+    require_sat_replay("policy-improvement-witness", "exact_rational_policy_improvement_replay")
+    require_sat_replay(
+        "policy-monotonicity-witness",
+        "exact_rational_policy_monotonicity_replay",
+    )
+
+    def backup(current: list[Fraction], state: str, action: str) -> Fraction:
+        row = rows[(state, action)]
+        expected_value = sum(
+            (p * v for p, v in zip(row["transition"], current)), Fraction(0)
+        )
+        return row["reward"] + discount * expected_value
+
+    raw_policies = values.get("policies")
+    if not isinstance(raw_policies, list) or len(raw_policies) < 2:
+        fail("policy mdp policies must list at least two policies")
+    policies: list[dict[str, str]] = []
+    policy_values: list[list[Fraction]] = []
+    bad_value: Fraction | None = None
+    for index, entry in enumerate(raw_policies):
+        if not isinstance(entry, dict):
+            fail(f"policy mdp policies[{index}] must be an object")
+        entry_index = require_fraction(f"policy mdp policies[{index}].index", entry.get("index"))
+        if entry_index != Fraction(index):
+            fail(f"policy mdp policies[{index}] must be numbered {index}")
+        policy = require_policy(f"policy mdp policies[{index}].policy", entry.get("policy"))
+        evaluated = require_vector(
+            f"policy mdp policies[{index}].values", entry.get("values"), len(states)
+        )
+        for position, state in enumerate(states):
+            if evaluated[position] != backup(evaluated, state, policy[state]):
+                fail(f"policy mdp policies[{index}] evaluation residual at {state!r} is nonzero")
+        if index == 0:
+            bad_value = evaluated[states.index("s2")]
+        policies.append(policy)
+        policy_values.append(evaluated)
+
+    raw_rounds = values.get("improvement_rounds")
+    if not isinstance(raw_rounds, list) or len(raw_rounds) != len(raw_policies):
+        fail("policy mdp improvement_rounds must cover every committed policy")
+    for index, round_entry in enumerate(raw_rounds):
+        if not isinstance(round_entry, dict):
+            fail(f"policy mdp improvement_rounds[{index}] must be an object")
+        from_index = require_fraction(
+            f"policy mdp improvement_rounds[{index}].from_index",
+            round_entry.get("from_index"),
+        )
+        if from_index != Fraction(index):
+            fail(f"policy mdp improvement_rounds[{index}] must start from policy {index}")
+        raw_q = round_entry.get("q_values")
+        if not isinstance(raw_q, dict) or set(raw_q) != set(states):
+            fail(f"policy mdp improvement_rounds[{index}].q_values must cover every state")
+        greedy: dict[str, str] = {}
+        for state in states:
+            state_q = raw_q[state]
+            if not isinstance(state_q, dict) or set(state_q) != set(state_actions[state]):
+                fail(
+                    f"policy mdp improvement_rounds[{index}].q_values[{state!r}] must cover the state's actions"
+                )
+            computed_q = {}
+            for action in state_actions[state]:
+                committed = require_fraction(
+                    f"policy mdp improvement_rounds[{index}].q_values[{state!r}][{action!r}]",
+                    state_q[action],
+                )
+                computed = backup(policy_values[index], state, action)
+                if committed != computed:
+                    fail(
+                        f"policy mdp improvement_rounds[{index}] backup for ({state!r}, {action!r}) is incorrect"
+                    )
+                computed_q[action] = computed
+            best_value = max(computed_q.values())
+            best_actions = [a for a, q in computed_q.items() if q == best_value]
+            if len(best_actions) != 1:
+                fail(
+                    f"policy mdp improvement_rounds[{index}] greedy action for {state!r} must be unique"
+                )
+            greedy[state] = best_actions[0]
+        committed_greedy = round_entry.get("greedy_policy")
+        if committed_greedy != greedy:
+            fail(f"policy mdp improvement_rounds[{index}].greedy_policy must match the replayed argmax")
+        if index + 1 < len(policies):
+            if greedy != policies[index + 1]:
+                fail(f"policy mdp improvement_rounds[{index}] greedy policy must equal the next committed policy")
+        else:
+            if greedy != policies[index]:
+                fail("the final policy mdp improvement round must reproduce its own policy")
+
+    for index in range(1, len(policy_values)):
+        previous, current = policy_values[index - 1], policy_values[index]
+        if any(c < p for p, c in zip(previous, current)):
+            fail(f"policy mdp values must improve componentwise at round {index}")
+        if all(c == p for p, c in zip(previous, current)):
+            fail(f"policy mdp values must strictly improve somewhere at round {index}")
+
+    optimal_policy = require_policy("policy mdp optimal_policy", values.get("optimal_policy"))
+    if optimal_policy != policies[-1]:
+        fail("policy mdp optimal_policy must match the final committed policy")
+    optimal_values = require_vector(
+        "policy mdp optimal_values", values.get("optimal_values"), len(states)
+    )
+    if optimal_values != policy_values[-1]:
+        fail("policy mdp optimal_values must match the final evaluation")
+
+    bad = checks["bad-policy-value-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-policy-value-rejected must expect unsat")
+    if bad.get("proof_status") != "replay-only":
+        fail("bad-policy-value-rejected must be replay-only")
+    if bad["validation"] != "exact_rational_bad_policy_value_replay":
+        fail("bad-policy-value-rejected validation is incorrect")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "three-state-mdp-policy-iteration":
+        fail("bad-policy-value-rejected must cite the source witness")
+    if data.get("metric") != "policy_evaluation_value":
+        fail("bad-policy-value-rejected must document policy_evaluation_value")
+    if data.get("policy_index") != "0" or data.get("state") != "s2":
+        fail("bad-policy-value-rejected must document the policy-0 value at s2")
+    bad_computed = require_fraction(
+        "bad policy computed_policy_value", data.get("computed_policy_value")
+    )
+    bad_claimed = require_fraction(
+        "bad policy claimed_policy_value", data.get("claimed_policy_value")
+    )
+    if bad_value is None or bad_computed != bad_value:
+        fail("bad-policy-value-rejected computed value must match replay")
+    if bad_claimed == bad_computed:
+        fail("bad-policy-value-rejected must document a false policy-value claim")
+    if "separate qf-lra-bad-policy-value" not in bad.get("notes", ""):
+        fail("bad-policy-value-rejected notes must name the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-policy-value"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-policy-value must expect unsat")
+    if qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-policy-value must be checked")
+    if qf_bad["validation"] != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-policy-value must use exact_rational_farkas_evidence")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_witness") != "three-state-mdp-policy-iteration":
+        fail("qf-lra-bad-policy-value must cite the source witness")
+    if qf_data.get("source_replay_row") != "bad-policy-value-rejected":
+        fail("qf-lra-bad-policy-value must cite the replay row")
+    if qf_data.get("metric") != "policy_evaluation_value":
+        fail("qf-lra-bad-policy-value must document policy_evaluation_value")
+    if qf_data.get("policy_index") != "0" or qf_data.get("state") != "s2":
+        fail("qf-lra-bad-policy-value must document the policy-0 value at s2")
+    qf_computed = require_fraction(
+        "qf policy computed_policy_value", qf_data.get("computed_policy_value")
+    )
+    qf_claimed = require_fraction(
+        "qf policy claimed_policy_value", qf_data.get("claimed_policy_value")
+    )
+    if (qf_computed, qf_claimed) != (bad_computed, bad_claimed):
+        fail("qf-lra-bad-policy-value data must match the replay row")
+    equations = require_string_list(
+        "qf policy policy_value_equations", qf_data.get("policy_value_equations")
+    )
+    if equations != ["mdp_v_pi0_s2 = 2/3", "mdp_v_pi0_s2 = 1/2"]:
+        fail("qf-lra-bad-policy-value must document the linear conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf policy smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-policy-iteration-v0/smt2/"
+        "bad-policy-value-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-lra-bad-policy-value smt2_artifact must name the checked source artifact")
+    check_source("qf policy smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf policy farkas_regression", regression)
+    if (
+        "finite_policy_iteration_bad_policy_value_artifact_emits_checked_farkas"
+        not in regression
+    ):
+        fail("qf-lra-bad-policy-value must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf policy certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-policy-value certificate must document checked Farkas evidence")
+
+    horizon = checks["general-policy-iteration-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-policy-iteration-theory-lean-horizon must be not-run")
+    if horizon.get("proof_status") != "lean-horizon":
+        fail("general-policy-iteration-theory-lean-horizon must remain lean-horizon")
+    horizon_data = horizon.get("data", {})
+    require_string(
+        "policy horizon target_theorem_shape",
+        horizon_data.get("target_theorem_shape"),
+    )
+    require_string("policy horizon future_checker", horizon_data.get("future_checker"))
+    horizon_text = " ".join(
+        [
+            horizon.get("claim", ""),
+            horizon_data.get("target_theorem_shape", ""),
+            horizon_data.get("future_checker", ""),
+            horizon.get("notes", ""),
+        ]
+    ).lower()
+    if (
+        "policy" not in horizon_text
+        or "improvement" not in horizon_text
+        or "termination" not in horizon_text
+    ):
+        fail("general-policy-iteration-theory-lean-horizon must be searchable")
+
+
 def validate_descriptive_statistics(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -41093,6 +41384,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_hard_margin_svm(expected)
     if metadata["id"] == "finite-value-iteration-v0":
         validate_finite_value_iteration(expected)
+    if metadata["id"] == "finite-policy-iteration-v0":
+        validate_finite_policy_iteration(expected)
     if metadata["id"] == "finite-cardinality-v0":
         validate_finite_cardinality(expected)
     if metadata["id"] == "cardinality-principles-v0":

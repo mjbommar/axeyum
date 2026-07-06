@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "id": "finite-policy-iteration-v0",
+  "title": "Finite Policy Iteration",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_probability_theory",
+    "field_differential_equations_and_dynamical_systems",
+    "field_optimization_and_convexity",
+    "curriculum_linear_algebra",
+    "curriculum_rationals",
+    "bridge_stochastic_kernel",
+    "bridge_finite_value_iteration_shadow",
+    "bridge_finite_policy_iteration_shadow",
+    "bridge_exact_vs_floating_arithmetic",
+    "bridge_qf_lra_farkas_anatomy"
+  ],
+  "field_ids": [
+    "probability_theory",
+    "differential_equations_and_dynamical_systems",
+    "optimization_and_convexity"
+  ],
+  "curriculum_nodes": [
+    "linear-algebra",
+    "rationals"
+  ],
+  "axeyum_fragments": [
+    "finite transition systems",
+    "finite policy-evaluation linear solve",
+    "finite policy-improvement replay",
+    "finite policy-stability replay",
+    "exact rational arithmetic",
+    "LRA (exact rationals)",
+    "QF_LRA",
+    "Farkas",
+    "finite replay",
+    "Lean horizon",
+    "numerical-honesty metadata"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-policy-iteration-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite policy-iteration bad policy-value QF_LRA/Farkas regression seed",
+    "pressure": "Exact finite replay solves the first policy-evaluation linear system to V(s2) = 2/3 from the committed MDP table, while a malformed row claims 1/2, isolating a compact scalar Farkas conflict beneath the policy-iteration trace.",
+    "evidence": [
+      "qf-lra-bad-policy-value"
+    ],
+    "next_step": "Promote additional dynamic-programming rows only when they add distinct modified-policy-iteration, undiscounted/average-reward, linear-programming-formulation, stochastic-approximation/Q-learning, or numerical-honesty pressure; keep policy-iteration termination and optimality theorems, the policy-improvement theorem in general, and floating-point dynamic-programming claims in theorem or numerical-honesty lanes."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/curriculum/03-destinations/linear-algebra.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/policy-iteration-end-to-end.md",
+    "artifacts/examples/math/finite-value-iteration-v0/README.md",
+    "artifacts/examples/math/finite-policy-iteration-v0/smt2/bad-policy-value-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+  ],
+  "expected_results": [
+    "mdp-policy-table-witness",
+    "policy-evaluation-witness",
+    "policy-improvement-witness",
+    "policy-monotonicity-witness",
+    "bad-policy-value-rejected",
+    "qf-lra-bad-policy-value",
+    "general-policy-iteration-theory-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode the fixed finite MDP table, every committed policy, each policy-evaluation linear-system solution, every improvement round's Q-values and greedy argmax, the termination-by-stability round, and the componentwise monotone value improvement as deterministic exact-rational replay obligations.",
+    "Route the false policy-evaluation claim through a source-linked QF_LRA artifact and checked Farkas evidence after exact replay solves the conflicting value equation.",
+    "Expose the pack through probability, dynamics, optimization, policy-iteration, exact-vs-floating, and learner-query surfaces.",
+    "Keep the policy-improvement theorem in general, policy-iteration termination and optimality theorems, average-reward and continuous MDP theory, stochastic approximation, and floating-point dynamic programming marked theorem or numerical-honesty horizon."
+  ]
+}

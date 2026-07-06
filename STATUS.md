@@ -247,6 +247,30 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite policy-iteration resource landed.**
+  `finite-policy-iteration-v0` now pairs with the value-iteration pack to
+  show two algorithms reaching one committed optimum on the same fixed
+  three-state discounted MDP: it substitutes each committed policy's value
+  vector back into its fixed-point equation for an exact zero residual —
+  `(2, 2/3, 0)` for the deliberately suboptimal `(b, b, a)` (a genuine
+  linear solve, since `s2` feeds back into `s1` and `s2`), `(2, 3, 0)`,
+  then `(5/2, 3, 0)` — replays two greedy improvement rounds and the
+  termination-by-stability round at `(a, a, a)`, and checks the
+  componentwise monotone improvement ending at the exact optimum shared
+  with `finite-value-iteration-v0`; rejects the malformed policy-evaluation
+  claim `1/2` against exact `2/3`; and routes that scalar conflict through
+  a source-linked QF_LRA/Farkas row. The focused learner page,
+  probability/statistics and dynamics query guides, stochastic-kernel,
+  value-iteration, policy-iteration, exact-vs-floating, and QF_LRA/Farkas
+  bridge rows, validator, resource smoke queries, generated dashboards, and
+  `math_resource_lra_routes` regression keep this fixed finite trace
+  separate from the policy-improvement theorem in general, termination and
+  optimality theorems, average-reward/continuous MDP theory, stochastic
+  approximation, and floating-point dynamic programming. The public summary
+  now reports 137 concept rows, 173 packs, 1131 expected checks, 399
+  checked rows, 596 replay-only rows, 136 Lean-horizon rows, and 173
+  promoted solver-reuse packs.
+
 - **Finite value-iteration resource landed.**
   `finite-value-iteration-v0` now gives the probability, dynamics, and
   optimization lanes a dynamic-programming trace — a new proof shape next to
@@ -267,10 +291,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   dashboards, and `math_resource_lra_routes` regression keep this fixed
   finite trace separate from the Banach fixed-point theorem,
   value-iteration convergence in general, optimality/uniqueness theorems,
-  stochastic approximation, and floating-point dynamic programming. The
-  public summary now reports 136 concept rows, 172 packs, 1124 expected
-  checks, 398 checked rows, 591 replay-only rows, 135 Lean-horizon rows,
-  and 172 promoted solver-reuse packs.
+  stochastic approximation, and floating-point dynamic programming. At
+  that landing, the public summary reported 136 concept rows, 172 packs,
+  1124 expected checks, 398 checked rows, 591 replay-only rows, 135
+  Lean-horizon rows, and 172 promoted solver-reuse packs.
 
 - **Finite hard-margin SVM resource landed.**
   `finite-hard-margin-svm-v0` now gives the statistics, optimization, and

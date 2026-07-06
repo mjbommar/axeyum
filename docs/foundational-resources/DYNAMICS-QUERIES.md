@@ -74,6 +74,7 @@ needs concrete checked rows to display.
 | Implicit BDF2 multistep display rows | pack `finite-bdf2-method-v0` | `Farkas` | `checks --pack finite-bdf2-method-v0 --route Farkas --proof-status checked` |
 | Finite Markov-chain display rows | pack `finite-markov-chain-v0` | `Farkas` | `checks --pack finite-markov-chain-v0 --route Farkas --proof-status checked --text qf-lra-bad-stationary-distribution` |
 | Finite value-iteration Bellman-backup display rows | pack `finite-value-iteration-v0` | `Farkas` | `checks --pack finite-value-iteration-v0 --route Farkas --proof-status checked --text qf-lra-bad-backup` |
+| Finite policy-iteration evaluation/improvement display rows | pack `finite-policy-iteration-v0` | `Farkas` | `checks --pack finite-policy-iteration-v0 --route Farkas --proof-status checked --text qf-lra-bad-policy-value` |
 | Hitting-time display rows | pack `finite-hitting-times-v0` | `Farkas` | `checks --pack finite-hitting-times-v0 --route Farkas --proof-status checked --text qf-lra-bad-expected-time` |
 | Calculus shadow prerequisites | packs `calculus-algebraic-shadow-v0`, `calculus-riemann-sum-v0` | `Farkas` | `checks --pack calculus-algebraic-shadow-v0 --route Farkas --proof-status checked`; `checks --pack calculus-riemann-sum-v0 --route Farkas --proof-status checked` |
 
@@ -225,6 +226,12 @@ python3 scripts/query-foundational-resources.py horizon-frontier \
 
 python3 scripts/query-foundational-resources.py checks \
   --pack finite-value-iteration-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-policy-iteration-v0 \
   --route Farkas \
   --proof-status checked \
   --require-any

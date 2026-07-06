@@ -180,13 +180,13 @@ proof upgrades, solver feedback, and consumer boundaries is
 [`docs/foundational-resources/CURRICULUM-RESOURCE-EXECUTION-PLAN.md`](docs/foundational-resources/CURRICULUM-RESOURCE-EXECUTION-PLAN.md).
 The commit-sized curriculum/resource work matrix is
 [`docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md`](docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md).
-The current execution ledger for stabilizing the 172 current math packs,
+The current execution ledger for stabilizing the 173 current math packs,
 resolving unclassified solver-reuse rows, completing learner paths, and
 deepening proof routes field by field is
 [`docs/foundational-resources/MATH-CURRICULUM-DETAILED-BUILD-PLAN.md`](docs/foundational-resources/MATH-CURRICULUM-DETAILED-BUILD-PLAN.md).
 The current learner-spine audit over all non-template math packs is
 [`docs/foundational-resources/LEARNER-COVERAGE-AUDIT.md`](docs/foundational-resources/LEARNER-COVERAGE-AUDIT.md);
-it records all 172 current non-template packs as focused-lesson linked, with no
+it records all 173 current non-template packs as focused-lesson linked, with no
 path-only, index-only, or missing learner buckets.
 The detailed operating roadmap for building the math-curriculum resource system
 across ontology rows, example packs, learner pages, proof routes, solver reuse,
@@ -398,14 +398,15 @@ The learner-facing rules/law trust-boundary page is
 it walks from human-authored source rules through formal models, replayed
 witnesses, checked obligations, and explicit legal/theorem horizons.
 Current resource-buildout status (2026-07-06): the public JSON layer reports
-136 concept rows, 172 non-template packs, 1124 expected checks (577 `sat`,
-412 `unsat`, 135 `not-run`), 398 checked rows, 591 replay-only rows, 135
-Lean-horizon rows, and 172 promoted solver-reuse packs. The latest math pack
-adds finite value-iteration replay with an exact rational discounted MDP
-table, every Bellman backup and greedy maximum, a greedy-policy switch, an
-exact Bellman fixed point, sup-norm contraction steps, a checked bad-backup
-QF_LRA/Farkas row, and explicit Banach-fixed-point, convergence,
-optimality/uniqueness, infinite-horizon, stochastic-approximation, and
+137 concept rows, 173 non-template packs, 1131 expected checks (581 `sat`,
+414 `unsat`, 136 `not-run`), 399 checked rows, 596 replay-only rows, 136
+Lean-horizon rows, and 173 promoted solver-reuse packs. The latest math pack
+adds finite policy-iteration replay with exact zero-residual
+policy-evaluation linear solves on the shared discounted MDP, greedy
+improvement rounds, termination by policy stability, monotone value
+improvement to the same exact optimum as value iteration, a checked bad
+policy-value QF_LRA/Farkas row, and explicit policy-improvement-theorem,
+termination/optimality, average-reward, stochastic-approximation, and
 floating-point-dynamic-programming horizons.
 The rules/law JSON
 layer now reports 7 packs, 1,037
@@ -1148,8 +1149,9 @@ for the overlapping-set false-additivity count conflict. The five active resourc
 now each have a route-specific tamper/rejection regression: Boolean CNF/LRAT,
 QF_BV DRAT, QF_LRA/Farkas, QF_LIA/Diophantine, and QF_UF/Alethe all mutate an
 emitted resource certificate and require the independent checker to reject it;
-the foundational resource dashboards now report **172 promoted solver-reuse
+the foundational resource dashboards now report **173 promoted solver-reuse
 packs**, **0 non-benchmark-horizon packs**, and **0 unclassified packs** after
+the latest finite policy-iteration bad policy-value QF_LRA/Farkas promotion,
 the latest finite value-iteration bad Bellman-backup QF_LRA/Farkas promotion,
 the latest finite hard-margin SVM bad-bias QF_LRA/Farkas promotion,
 the latest finite perceptron bad weight-update QF_LRA/Farkas promotion,

@@ -30,16 +30,16 @@ is checked, what is trusted, and what remains a theorem/proof horizon.
 
 The committed public query boundary currently reports:
 
-- 136 concept rows: 23 curriculum nodes, 18 field rows, 90 bridge concepts, and
+- 137 concept rows: 23 curriculum nodes, 18 field rows, 91 bridge concepts, and
   5 example-family rows.
-- 172 non-template math example packs.
-- 1124 expected checks: 577 `sat`, 412 `unsat`, and 135 `not-run`.
-- 398 checked proof/evidence rows, 591 replay-only rows, and 135 Lean-horizon
+- 173 non-template math example packs.
+- 1131 expected checks: 581 `sat`, 414 `unsat`, and 136 `not-run`.
+- 399 checked proof/evidence rows, 596 replay-only rows, and 136 Lean-horizon
   rows.
-- 172 promoted solver-reuse packs.
+- 173 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 172 focused learner-linked packs, with no path-only, index-only, or missing
+- 173 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 The seed phase is complete. The build problem is now depth, navigation, proof

@@ -100,6 +100,9 @@ const FINITE_HARD_MARGIN_SVM_BAD_BIAS: &str = include_str!(
 const FINITE_VALUE_ITERATION_BAD_BACKUP: &str = include_str!(
     "../../../artifacts/examples/math/finite-value-iteration-v0/smt2/bad-backup-farkas-conflict.smt2"
 );
+const FINITE_POLICY_ITERATION_BAD_POLICY_VALUE: &str = include_str!(
+    "../../../artifacts/examples/math/finite-policy-iteration-v0/smt2/bad-policy-value-farkas-conflict.smt2"
+);
 const LEAST_SQUARES_BAD_RSS_IMPROVEMENT: &str = include_str!(
     "../../../artifacts/examples/math/least-squares-regression-v0/smt2/bad-rss-improvement-farkas-conflict.smt2"
 );
@@ -1046,6 +1049,14 @@ fn finite_value_iteration_bad_backup_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "finite-value-iteration-v0 bad-backup SMT-LIB artifact",
         FINITE_VALUE_ITERATION_BAD_BACKUP,
+    );
+}
+
+#[test]
+fn finite_policy_iteration_bad_policy_value_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-policy-iteration-v0 bad-policy-value SMT-LIB artifact",
+        FINITE_POLICY_ITERATION_BAD_POLICY_VALUE,
     );
 }
 
