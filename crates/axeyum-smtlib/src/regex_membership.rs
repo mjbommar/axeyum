@@ -392,7 +392,11 @@ fn literal_code_points(e: &SExpr) -> Option<Vec<u32>> {
 /// Translates a `RegLan` s-expression into a code-point [`Regex`], or `None` when
 /// it is outside the supported regex fragment (an unfaithful translation is never
 /// produced — it declines instead).
-fn translate_regex(e: &SExpr) -> Option<Regex> {
+///
+/// Shared with the Boolean-structured word skeleton
+/// ([`crate::parse`]), which lifts `str.in_re` atoms into theory atoms for the
+/// online CDCL(T) route.
+pub(crate) fn translate_regex(e: &SExpr) -> Option<Regex> {
     match e {
         SExpr::Atom(a) => match a.as_str() {
             "re.none" => Some(Regex::none()),

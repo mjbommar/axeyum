@@ -257,10 +257,17 @@ fn apply_online_string_route(
     if script.word_skeleton.is_empty() {
         return CheckResult::Unknown(reason);
     }
-    // Clone the (Copy-element) skeleton so the `&mut arena` borrow the online route
-    // needs does not overlap the immutable borrow of `script.word_skeleton`.
+    // Clone the (Copy-element) skeleton and its membership atom table so the
+    // `&mut arena` borrow the online route needs does not overlap the immutable
+    // borrow of `script`.
     let skeleton = script.word_skeleton.clone();
-    match crate::string_theory::check_qf_s_online_cdclt(&mut script.arena, &skeleton, config) {
+    let memberships = script.word_skeleton_memberships.clone();
+    match crate::string_theory::check_qf_s_online_cdclt_with_memberships(
+        &mut script.arena,
+        &skeleton,
+        &memberships,
+        config,
+    ) {
         result @ (CheckResult::Sat(_) | CheckResult::Unsat) => result,
         // Online route declined: preserve the prior `unknown`, recording the decline.
         CheckResult::Unknown(online) => {

@@ -380,7 +380,7 @@ pub use smtlib::{
 };
 pub use solver::{InterpolantOutcome, Solver};
 pub use strategy::{Strategy, recommended_portfolio, solve_with_portfolio, solve_with_strategy};
-pub use string_theory::check_qf_s_online_cdclt;
+pub use string_theory::{check_qf_s_online_cdclt, check_qf_s_online_cdclt_with_memberships};
 pub use symexec::{
     Branch, CfgCheckedOutcome, CfgCheckedReached, CfgConcreteMismatch, CfgExploreConfig,
     CfgExploreOutcome, CfgReached, CfgStep, PathStatus, SymbolicExecutor, SymbolicMemory,

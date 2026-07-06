@@ -15,7 +15,7 @@ A single-glance, honest view of where the pure-Rust axeyum solver stands against
 ## Headline
 
 - **35 division baselines** measured vs z3 4.13.3, spanning **24 logic fragments** (BV, LIA, QF_ABV, QF_ALIA, QF_AUFBV, QF_AUFLIA, QF_AX, QF_BV, QF_BVFP, QF_DT, QF_FF, QF_FP, QF_LIA, QF_LRA, QF_NIA, QF_NRA, QF_S, QF_SEQ, QF_SLIA, QF_UF, QF_UFBV, QF_UFFF, QF_UFLIA, UF).
-- **DISAGREE = 0 across all baselines** — zero wrong verdicts over 632 oracle-compared instances (992 files total, 687 decided).
+- **DISAGREE = 0 across all baselines** — zero wrong verdicts over 640 oracle-compared instances (992 files total, 695 decided).
 - Decide-rate ranges **0%–100%** across divisions — that spread *is* the capability frontier; DISAGREE = 0 is the soundness floor that holds everywhere.
 
 ## Divisions vs Z3
@@ -45,9 +45,9 @@ Sorted by logic, then by descending decide-rate. Every committed `*solver-vs-z3*
 | QF_NIA | `qf-nia-curated-iand` | 3 | 1 | 33% | 2 | 0 | 0 | 0 | :status | 13.333 |
 | QF_NRA | `qf-nra-synthetic-graduated` | 33 | 30 | 91% | 3 | 0 | 30 | 0 | z3-binary | 5.455 |
 | QF_NRA | `qf-nra-cvc5-regress-clean` | 38 | 21 | 55% | 16 | 1 | 21 | 0 | z3-binary | 8.660 |
-| QF_S | `qf-s-cvc5-regress-clean` | 134 | 67 | 50% | 11 | 56 | 63 | 0 | z3-library+binary | 2.928 |
+| QF_S | `qf-s-cvc5-regress-clean` | 134 | 74 | 55% | 9 | 51 | 70 | 0 | z3-library+binary | 2.182 |
 | QF_SEQ | `qf-seq-cvc5-regress-clean` | 33 | 26 | 79% | 6 | 1 | 15 | 0 | z3-library+binary | 3.752 |
-| QF_SLIA | `qf-slia-cvc5-regress-clean` | 50 | 14 | 28% | 7 | 29 | 12 | 0 | z3-library+binary | 6.786 |
+| QF_SLIA | `qf-slia-cvc5-regress-clean` | 50 | 15 | 30% | 6 | 29 | 13 | 0 | z3-library+binary | 5.728 |
 | QF_UF | `qf-uf-cvc5-regress-clean-overbound-uninterp-sorts` | 6 | 4 | 67% | 2 | 0 | 4 | 0 | z3-binary | 7.489 |
 | QF_UF | `qf-uf-cvc5-regress-clean-bounded` | 82 | 44 | 54% | 13 | 24 | 37 | 0 | z3-library+binary | 4.845 |
 | QF_UF | `qf-uf-cvc5-regress-clean-bounded-uninterp-sorts` | 82 | 44 | 54% | 13 | 24 | 37 | 0 | z3-library+binary | 4.845 |
@@ -60,9 +60,34 @@ Sorted by logic, then by descending decide-rate. Every committed `*solver-vs-z3*
 | QF_UFLIA | `qf-uflia-cvc5-regress-clean-overbound-uninterp-sorts` | 2 | 2 | 100% | 0 | 0 | 2 | 0 | z3-binary | 2.294 |
 | UF | `uf-cvc5-regress-clean-quantified` | 5 | 0 | 0% | 0 | 5 | 0 | 0 | :status | 0.000 |
 
-**Totals:** 992 files, 687 decided, 632 oracle-compared, **0 disagreements.**
+**Totals:** 992 files, 695 decided, 640 oracle-compared, **0 disagreements.**
 
 <!-- NOTES:BEGIN (hand-written attribution notes — preserved by the generator) -->
+### QF_S + QF_SLIA rows re-measured 2026-07-06 (P2.7 T-C.6 — membership atoms in the online CDCL(T) route + the `\u` string-literal escape fix)
+
+Two landings move these rows. **(1) Membership atoms in the online CDCL(T) string
+route (T-C.6):** the Boolean-structured word skeleton now carries `str.in_re`
+theory atoms, so the disjunctive / negated membership shapes the one-shot
+side channel declines (atoms under `or` / `not(and)`) are decided — `unsat` only
+behind a per-variable regex-intersection **re-checked derivative-emptiness
+certificate**, `sat` only via a model whose per-class witnesses and membership-atom
+truths are replayed by the **independent reference matcher** against the original
+assertions. This decides the census shapes `re-mod-eq` (QF_SLIA + QF_S) and
+`re-neg-unfold-rev-a` (QF_S), and the word-first-fallback `instance1079-re-loop-cong`.
+**(2) A pre-existing SMT-LIB string-literal escape bug (fix(strings) seed-215):** the
+byte-model encoder and word/skeleton route decoded string literals without expanding
+the `\u{h…}` / `\uhhhh` Unicode escapes (the regex side always did), so `"\u{62}"`
+was six raw bytes instead of the character `b` — a wrong verdict against Z3/cvc5 for
+any literal with an escape (`issue9784`, `instance3303/7075-delta`, `regexp003`).
+Net (same-command HEAD re-run): **QF_S 67 → 74 decided (sat 48 → 51, unsat 19 → 23;
+oracle-compared 63 → 70; PAR-2 2.928 → 2.182), QF_SLIA 14 → 15 decided (unsat 4 → 5),
+QF_SEQ 26 unchanged** (no `str.in_re` / no escaped literals). Every upgraded file
+agrees with the z3-binary oracle; **DISAGREE=0 and model-replay-failures=0** across
+all three divisions. Soundness backing: a new online-membership differential fuzz
+over 700 generated Boolean-structured `str.in_re` scripts vs **both** Z3 (552 jointly
+decided) and cvc5 (549) — all DISAGREE=0, both verdict directions exercised — plus
+the T-C.5 regex-membership fuzz and the deterministic `\u`-escape regression suite.
+
 ### QF_S + QF_SLIA rows re-measured 2026-07-03 (P2.7 T-C.5 — regex membership via symbolic derivatives)
 
 The `str.in_re` membership fragment now decides over **unbounded** strings via the

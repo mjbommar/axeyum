@@ -110,6 +110,99 @@ fn front_door_str002_congruence_unsat() {
     assert_eq!(verdict(s), CheckResult::Unsat);
 }
 
+// ---------- census-shape membership UNSAT through the text front door ----------
+//
+// Disjunctive / negated `str.in_re` shapes the one-shot membership route declines
+// (its atoms sit under `or` / `not(and)`), decided by the online CDCL(T) route via
+// per-variable regex intersection behind a re-checked emptiness certificate.
+
+#[test]
+fn front_door_re_mod_eq_disjunctive_membership_unsat() {
+    // The exact `re-mod-eq` census shape: (or (= x y) (= x z)) forces x equal to a
+    // variable whose language is disjoint from x's, so both branches intersect to
+    // the empty language. x ∈ A(BAA)*, y,z ∈ AB(AAB)*A.
+    let s = r#"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun y () String)
+(declare-fun z () String)
+(assert (or (= x y)(= x z)))
+(assert (str.in_re x (re.++ (str.to_re "A") (re.* (str.to_re "BAA")))))
+(assert (str.in_re y (re.++ (str.to_re "AB") (re.* (str.to_re "AAB")) (str.to_re "A"))))
+(assert (str.in_re z (re.++ (str.to_re "AB") (re.* (str.to_re "AAB")) (str.to_re "A"))))
+(check-sat)"#;
+    assert_eq!(verdict(s), CheckResult::Unsat);
+}
+
+#[test]
+fn front_door_re_neg_unfold_negated_membership_unsat() {
+    // The exact `re-neg-unfold-rev-a` shape: assert1 forces `x ∈ R1`; assert2 is
+    // ¬(A ∧ (x ∈ R2)) with A already true, so it forces `x ∉ R2`. R1 ⊆ R2, so
+    // R1 ∩ ∁R2 is empty — a negative-membership intersection conflict.
+    let s = r#"(set-logic QF_S)
+(declare-const x String)
+(declare-const y String)
+(assert (and (= y "foobar") (str.in_re x (re.++ (str.to_re "ab") (re.* re.allchar) (str.to_re "b") (re.* re.allchar) (str.to_re "b") (re.* re.allchar) (str.to_re "b")))))
+(assert (not (and (= y "foobar") (str.in_re x (re.++ (str.to_re "a") (re.* re.allchar) (str.to_re "b") (re.* re.allchar) (str.to_re "b") (re.* re.allchar) (str.to_re "b"))))))
+(check-sat)"#;
+    assert_eq!(verdict(s), CheckResult::Unsat);
+}
+
+#[test]
+fn front_door_disjunctive_pure_membership_all_branches_empty_unsat() {
+    // A pure-membership disjunction (no equalities): every disjunct intersects an
+    // over-arching positive membership to the empty language.
+    //   x ∈ (ab)*  ∧  (x ∈ (abab)ac* ∨ x ∈ (ba)*)
+    // (ab)* ∩ anything-starting-"aba…"→"ac" is empty, and (ab)* ∩ (ba)* = {ε} but
+    // the left needs length ≥ 2, forced below.
+    let s = r#"(set-logic QF_S)
+(declare-const x String)
+(assert (str.in_re x (re.+ (str.to_re "ab"))))
+(assert (or (str.in_re x (re.++ (str.to_re "abab") (str.to_re "ac")))
+            (str.in_re x (re.+ (str.to_re "ba")))))
+(check-sat)"#;
+    assert_eq!(verdict(s), CheckResult::Unsat);
+}
+
+#[test]
+fn front_door_re_loop_cong_fallback_membership_unsat() {
+    // Regression for the P0 wrong-sat (`instance1079-re-loop-cong`): a `re.loop` is
+    // outside the bounded encoder, so the script takes the word-first parse fallback
+    // (empty flat `assertions`); its real content is the membership skeleton. X is
+    // pinned by a positive singleton membership to an 11-char string ending in "\n",
+    // which IS in the negated loop-concat language, so the conjunction is unsat.
+    // A naive `check_auto` on the empty flat view returns a vacuous `sat`; the front
+    // door consults the online membership route and returns `unsat`.
+    let s = "(set-logic QF_S)\n\
+(declare-const X String)\n\
+(assert (not (str.in_re X (re.++ ((_ re.loop 0 16) (re.union re.allchar (str.to_re \"\\u{0a}\"))) (str.to_re \"\\u{0a}\")))))\n\
+(assert (str.in_re X (str.to_re \"//cdmax/Ui\\u{0a}\")))\n\
+(check-sat)";
+    assert_eq!(verdict(s), CheckResult::Unsat);
+    // The fallback parse leaves the flat view empty but populates the membership
+    // skeleton — the route the front door consults.
+    let script = parse_script(s).expect("parse re-loop fallback");
+    assert!(script.assertions.is_empty());
+    assert!(!script.word_skeleton_memberships.is_empty());
+}
+
+// ---------- census-shape membership SAT through the text front door ----------
+
+#[test]
+fn front_door_disjunctive_membership_consistent_branch_sat() {
+    // (x ∈ (ab)*) ∧ (x ∈ (ab)+ ∨ x ∈ (cd)+) — branch 1 holds; a witness "abab"
+    // matches, replayed by the reference matcher.
+    let s = r#"(set-logic QF_S)
+(declare-const x String)
+(assert (str.in_re x (re.* (str.to_re "ab"))))
+(assert (or (str.in_re x (re.+ (str.to_re "ab"))) (str.in_re x (re.+ (str.to_re "cd")))))
+(assert (< 1 (str.len x)))
+(check-sat)"#;
+    assert!(
+        matches!(verdict(s), CheckResult::Sat(_)),
+        "the consistent-branch membership disjunction must decide sat"
+    );
+}
+
 // ---------- census-shape SAT through the text front door ----------
 
 #[test]

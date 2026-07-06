@@ -8,7 +8,7 @@
     "cnf_vivify": false,
     "compare_backend": "z3 4.13.3.0",
     "compare_z3": true,
-    "config_hash": "fb53a6f261dd87b8",
+    "config_hash": "a10a9788803f5581",
     "corpus": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean",
     "corpus_hash": "96f7dbe69a9eedcc",
     "corpus_source": null,
@@ -21,7 +21,7 @@
     "harness": "axeyum-bench 0.1.0",
     "jobs": 4,
     "limit": null,
-    "logic": "QF_S",
+    "logic": null,
     "native_cdcl": false,
     "node_budget": null,
     "preprocess": false,
@@ -46,7 +46,7 @@
     {
       "assertions": 3,
       "backend_stats": {
-        "solve_ms": 322.855735
+        "solve_ms": 35.786456
       },
       "dag_nodes": 2516,
       "distinct_symbols": 1,
@@ -67,7 +67,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 9,
+          "solve_ms": 10,
           "verdict": "sat"
         }
       },
@@ -112,14 +112,14 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 322,
+      "solve_ms": 35,
       "translate_ms": 0,
       "tree_nodes": 181418
     },
     {
       "assertions": 4,
       "backend_stats": {
-        "solve_ms": 6.2860119999999995
+        "solve_ms": 1.641662
       },
       "dag_nodes": 109,
       "distinct_symbols": 2,
@@ -140,7 +140,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 18,
+          "solve_ms": 21,
           "verdict": "sat"
         }
       },
@@ -185,17 +185,17 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 6,
+      "solve_ms": 1,
       "translate_ms": 0,
       "tree_nodes": 193
     },
     {
       "assertions": 3,
       "backend_stats": {
-        "solve_ms": 14992.234011
+        "solve_ms": 2512.151747
       },
       "dag_nodes": 4266,
-      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
+      "detail": "Incomplete: no model within the bounded integer width 32; widen the bound",
       "distinct_symbols": 2,
       "expected": "unsat",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_ctn-repl-to-ctn.smt2",
@@ -247,7 +247,7 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 14992,
+      "solve_ms": 2512,
       "translate_ms": 0,
       "tree_nodes": 1325803564
     },
@@ -264,7 +264,7 @@
     {
       "assertions": 3,
       "backend_stats": {
-        "solve_ms": 126.14335099999998
+        "solve_ms": 19.699409000000003
       },
       "dag_nodes": 646,
       "detail": "Incomplete: no model within the bounded integer width 32; widen the bound",
@@ -319,14 +319,14 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 126,
+      "solve_ms": 19,
       "translate_ms": 0,
       "tree_nodes": 327093
     },
     {
       "assertions": 4,
       "backend_stats": {
-        "solve_ms": 337.76871000000006
+        "solve_ms": 37.633577
       },
       "dag_nodes": 2383,
       "distinct_symbols": 2,
@@ -392,7 +392,7 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 337,
+      "solve_ms": 37,
       "translate_ms": 0,
       "tree_nodes": 91350
     },
@@ -417,18 +417,18 @@
         "outcome": "sat",
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 9,
+          "solve_ms": 10,
           "verdict": "sat"
         }
       },
       "outcome": "sat",
-      "solve_ms": 5,
+      "solve_ms": 0,
       "word_only": true
     },
     {
       "assertions": 3,
       "backend_stats": {
-        "solve_ms": 917.174462
+        "solve_ms": 103.273004
       },
       "dag_nodes": 4303,
       "distinct_symbols": 2,
@@ -449,7 +449,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 10,
+          "solve_ms": 9,
           "verdict": "sat"
         }
       },
@@ -494,7 +494,7 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 917,
+      "solve_ms": 103,
       "translate_ms": 0,
       "tree_nodes": 2512030108
     },
@@ -509,12 +509,12 @@
         "outcome": "sat",
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 11,
+          "solve_ms": 12,
           "verdict": "sat"
         }
       },
       "outcome": "sat",
-      "solve_ms": 26,
+      "solve_ms": 3,
       "word_only": true
     },
     {
@@ -525,7 +525,7 @@
     {
       "assertions": 3,
       "backend_stats": {
-        "solve_ms": 42.219077
+        "solve_ms": 6.07559
       },
       "dag_nodes": 1058,
       "detail": "bounded-string unsat not confirmed bound-independent (P2.7 A.2 gate); reported unknown",
@@ -580,14 +580,14 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 42,
+      "solve_ms": 6,
       "translate_ms": 0,
       "tree_nodes": 199477
     },
     {
       "assertions": 17,
       "backend_stats": {
-        "solve_ms": 25.521299
+        "solve_ms": 3.7713170000000003
       },
       "dag_nodes": 948,
       "detail": "regex-membership route (T-C.5): decided unsat via a re-checked derivative-emptiness certificate",
@@ -599,9 +599,9 @@
       "oracle": {
         "backend_kind": "z3",
         "backend_stats": {
-          "max memory": 92.35,
-          "memory": 83.57,
-          "num allocs": 58152239.0,
+          "max memory": 101.12,
+          "memory": 67.15,
+          "num allocs": 20164109.0,
           "rlimit count": 28305.0,
           "sat backjumps": 14.0,
           "sat conflicts": 15.0,
@@ -624,7 +624,7 @@
         "model_lift_ms": 0,
         "outcome": "unsat",
         "solve_ms": 6,
-        "translate_ms": 2
+        "translate_ms": 1
       },
       "outcome": "unsat",
       "query_plan": {
@@ -667,7 +667,7 @@
         "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
-      "solve_ms": 25,
+      "solve_ms": 3,
       "translate_ms": 0,
       "tree_nodes": 42142
     },
@@ -685,7 +685,7 @@
       "detail": "unsupported: str.++ result of bounded max length 24 exceeds the cap 16 (ADR-0029); the query needs a larger string bound",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_quad-028-2-2-unsat.smt2",
       "outcome": "unsupported",
-      "solve_ms": 20173,
+      "solve_ms": 20031,
       "word_only": true,
       "word_route_declined": true
     },
@@ -693,14 +693,14 @@
       "detail": "unsupported: str.++ result of bounded max length 24 exceeds the cap 16 (ADR-0029); the query needs a larger string bound",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_quad-138-4-2-unsat.smt2",
       "outcome": "unsupported",
-      "solve_ms": 22236,
+      "solve_ms": 20515,
       "word_only": true,
       "word_route_declined": true
     },
     {
       "assertions": 2,
       "backend_stats": {
-        "solve_ms": 1.5903479999999999
+        "solve_ms": 0.295297
       },
       "dag_nodes": 54,
       "distinct_symbols": 1,
@@ -711,9 +711,9 @@
       "oracle": {
         "backend_kind": "z3",
         "backend_stats": {
-          "max memory": 92.35,
-          "memory": 82.84,
-          "num allocs": 57198274.0,
+          "max memory": 101.12,
+          "memory": 66.46,
+          "num allocs": 92440508.0,
           "rlimit count": 208.0
         },
         "decision_agrees": true,
@@ -765,7 +765,7 @@
         "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
-      "solve_ms": 1,
+      "solve_ms": 0,
       "translate_ms": 0,
       "tree_nodes": 85
     },
@@ -777,7 +777,7 @@
     {
       "assertions": 3,
       "backend_stats": {
-        "solve_ms": 4.158075
+        "solve_ms": 0.6862870000000001
       },
       "dag_nodes": 250,
       "detail": "bounded-string unsat not confirmed bound-independent (P2.7 A.2 gate); reported unknown",
@@ -832,14 +832,14 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 4,
+      "solve_ms": 0,
       "translate_ms": 0,
       "tree_nodes": 1664
     },
     {
       "assertions": 7,
       "backend_stats": {
-        "solve_ms": 11.458943
+        "solve_ms": 1.7709430000000002
       },
       "dag_nodes": 574,
       "distinct_symbols": 2,
@@ -850,9 +850,9 @@
       "oracle": {
         "backend_kind": "z3-binary",
         "backend_stats": {
-          "max memory": 92.2,
-          "memory": 83.26,
-          "num allocs": 49701566.0,
+          "max memory": 101.12,
+          "memory": 66.85,
+          "num allocs": 8805414.0,
           "rlimit count": 7799.0,
           "sat decisions": 11.0,
           "sat mk clause 2ary": 460.0,
@@ -861,7 +861,7 @@
           "sat propagations 2ary": 200.0,
           "sat propagations nary": 9.0,
           "sat units": 1.0,
-          "time": 0.002
+          "time": 0.004
         },
         "decision_agrees": true,
         "decision_compared": true,
@@ -869,11 +869,11 @@
         "in_repo_z3_detail": "z3 oracle does not lift integer models yet (ADR-0014)",
         "model_lift_ms": 0,
         "outcome": "sat",
-        "solve_ms": 2,
-        "translate_ms": 1,
+        "solve_ms": 4,
+        "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 16,
+          "solve_ms": 13,
           "verdict": "sat"
         }
       },
@@ -918,7 +918,7 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 11,
+      "solve_ms": 1,
       "translate_ms": 0,
       "tree_nodes": 3464
     },
@@ -930,7 +930,7 @@
     {
       "assertions": 3,
       "backend_stats": {
-        "solve_ms": 2.8743800000000004
+        "solve_ms": 0.566325
       },
       "dag_nodes": 39,
       "distinct_symbols": 2,
@@ -951,7 +951,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 9,
+          "solve_ms": 12,
           "verdict": "sat"
         }
       },
@@ -996,14 +996,14 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 2,
+      "solve_ms": 0,
       "translate_ms": 0,
       "tree_nodes": 174
     },
     {
       "assertions": 8,
       "backend_stats": {
-        "solve_ms": 19.95406
+        "solve_ms": 2.852618
       },
       "dag_nodes": 439,
       "distinct_symbols": 6,
@@ -1024,7 +1024,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "unsat",
-          "solve_ms": 10,
+          "solve_ms": 7,
           "verdict": "unsat"
         }
       },
@@ -1069,7 +1069,7 @@
         "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
-      "solve_ms": 19,
+      "solve_ms": 2,
       "translate_ms": 0,
       "tree_nodes": 3828
     },
@@ -1086,7 +1086,7 @@
     {
       "assertions": 3,
       "backend_stats": {
-        "solve_ms": 4.114972
+        "solve_ms": 0.600776
       },
       "dag_nodes": 135,
       "distinct_symbols": 1,
@@ -1107,7 +1107,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 10,
+          "solve_ms": 8,
           "verdict": "sat"
         }
       },
@@ -1152,14 +1152,14 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 4,
+      "solve_ms": 0,
       "translate_ms": 0,
       "tree_nodes": 1030
     },
     {
       "assertions": 7,
       "backend_stats": {
-        "solve_ms": 2.186269
+        "solve_ms": 0.318419
       },
       "dag_nodes": 145,
       "distinct_symbols": 3,
@@ -1170,9 +1170,9 @@
       "oracle": {
         "backend_kind": "z3-binary",
         "backend_stats": {
-          "max memory": 92.2,
-          "memory": 83.12,
-          "num allocs": 44806835.0,
+          "max memory": 101.12,
+          "memory": 66.71,
+          "num allocs": 6403187.0,
           "rlimit count": 1818.0,
           "solve-eqs-elim-vars": 3.0,
           "solve-eqs-steps": 3.0
@@ -1187,7 +1187,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 9,
+          "solve_ms": 7,
           "verdict": "sat"
         }
       },
@@ -1232,14 +1232,14 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 2,
+      "solve_ms": 0,
       "translate_ms": 0,
       "tree_nodes": 264
     },
     {
       "assertions": 3,
       "backend_stats": {
-        "solve_ms": 5.03323
+        "solve_ms": 0.8120850000000001
       },
       "dag_nodes": 382,
       "distinct_symbols": 1,
@@ -1250,9 +1250,9 @@
       "oracle": {
         "backend_kind": "z3",
         "backend_stats": {
-          "max memory": 92.2,
-          "memory": 83.18,
-          "num allocs": 47130211.0,
+          "max memory": 101.12,
+          "memory": 66.77,
+          "num allocs": 7506695.0,
           "rlimit count": 5343.0,
           "sat backjumps": 8.0,
           "sat conflicts": 9.0,
@@ -1268,14 +1268,14 @@
           "sat propagations nary": 25.0,
           "sat subs resolution dyn": 1.0,
           "sat units": 10.0,
-          "time": 0.002
+          "time": 0.003
         },
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
         "model_lift_ms": 0,
         "outcome": "unsat",
-        "solve_ms": 2,
+        "solve_ms": 3,
         "translate_ms": 0
       },
       "outcome": "unsat",
@@ -1319,7 +1319,7 @@
         "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
-      "solve_ms": 5,
+      "solve_ms": 0,
       "translate_ms": 0,
       "tree_nodes": 1111
     },
@@ -1336,7 +1336,7 @@
     {
       "assertions": 5,
       "backend_stats": {
-        "solve_ms": 348.346074
+        "solve_ms": 43.97486
       },
       "dag_nodes": 3692,
       "distinct_symbols": 4,
@@ -1357,7 +1357,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 9,
+          "solve_ms": 11,
           "verdict": "sat"
         }
       },
@@ -1402,7 +1402,7 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 348,
+      "solve_ms": 43,
       "translate_ms": 0,
       "tree_nodes": 8722737
     },
@@ -1412,7 +1412,7 @@
       "outcome": "unsupported"
     },
     {
-      "detail": "string literal longer than the bounded length 8 (ADR-0029)",
+      "detail": "string literal code point U+2C6B exceeds the bounded byte model (ADR-0029)",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_issue5384-double-conflict.smt2",
       "outcome": "unsupported"
     },
@@ -1422,14 +1422,28 @@
       "outcome": "unsupported"
     },
     {
-      "detail": "0 assertions parsed from a file containing assert/constraint text; the slice-parser dropped constraints — solving the empty problem would be a vacuous verdict",
+      "detail": "word-first fallback (T-B.4d) / online CDCL(T) string route (P1.5b): decided by the word-level string routes (sat models replay in-crate at the Seq level; unsat is a certified derivation)",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_issue9784.smt2",
-      "outcome": "unsupported"
+      "oracle": {
+        "backend_kind": "z3-binary",
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "outcome": "sat",
+        "z3_binary": {
+          "raw": "sat",
+          "solve_ms": 9,
+          "verdict": "sat"
+        }
+      },
+      "outcome": "sat",
+      "solve_ms": 0,
+      "word_only": true
     },
     {
       "assertions": 3,
       "backend_stats": {
-        "solve_ms": 2.2873229999999998
+        "solve_ms": 0.39519400000000005
       },
       "dag_nodes": 155,
       "distinct_symbols": 1,
@@ -1450,7 +1464,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 7,
+          "solve_ms": 8,
           "verdict": "sat"
         }
       },
@@ -1495,14 +1509,14 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 2,
+      "solve_ms": 0,
       "translate_ms": 0,
       "tree_nodes": 3797
     },
     {
       "assertions": 7,
       "backend_stats": {
-        "solve_ms": 11.772006
+        "solve_ms": 2.70014
       },
       "dag_nodes": 343,
       "distinct_symbols": 6,
@@ -1513,20 +1527,20 @@
       "oracle": {
         "backend_kind": "z3",
         "backend_stats": {
-          "max memory": 91.47,
-          "memory": 83.26,
-          "num allocs": 20796661.0,
+          "max memory": 98.95,
+          "memory": 66.85,
+          "num allocs": 556825.0,
           "rlimit count": 17431.0,
           "solve-eqs-elim-vars": 45.0,
           "solve-eqs-steps": 284.0,
-          "time": 0.002
+          "time": 0.017
         },
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
         "model_lift_ms": 0,
         "outcome": "unsat",
-        "solve_ms": 2,
+        "solve_ms": 17,
         "translate_ms": 0
       },
       "outcome": "unsat",
@@ -1570,14 +1584,14 @@
         "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
-      "solve_ms": 11,
+      "solve_ms": 2,
       "translate_ms": 0,
       "tree_nodes": 711
     },
     {
       "assertions": 4,
       "backend_stats": {
-        "solve_ms": 4.7226040000000005
+        "solve_ms": 0.740007
       },
       "dag_nodes": 101,
       "distinct_symbols": 2,
@@ -1643,17 +1657,17 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 4,
+      "solve_ms": 0,
       "translate_ms": 0,
       "tree_nodes": 179
     },
     {
       "assertions": 3,
       "backend_stats": {
-        "solve_ms": 5.991319
+        "solve_ms": 0.978776
       },
       "dag_nodes": 223,
-      "detail": "regex-membership route (T-C.5): decided unsat via a re-checked derivative-emptiness certificate",
+      "detail": "online CDCL(T) string route (P1.5b): decided unsat via a certified theory conflict",
       "distinct_symbols": 1,
       "expected": "unsat",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_re-include-union.smt2",
@@ -1662,9 +1676,9 @@
       "oracle": {
         "backend_kind": "z3",
         "backend_stats": {
-          "max memory": 91.47,
-          "memory": 83.14,
-          "num allocs": 21954061.0,
+          "max memory": 101.12,
+          "memory": 92.88,
+          "num allocs": 1641909.0,
           "rlimit count": 6203.0,
           "sat backjumps": 11.0,
           "sat conflicts": 12.0,
@@ -1680,14 +1694,14 @@
           "sat propagations nary": 96.0,
           "sat subs resolution dyn": 6.0,
           "sat units": 106.0,
-          "time": 0.003
+          "time": 0.004
         },
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
         "model_lift_ms": 0,
         "outcome": "unsat",
-        "solve_ms": 3,
+        "solve_ms": 4,
         "translate_ms": 0
       },
       "outcome": "unsat",
@@ -1731,14 +1745,14 @@
         "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
-      "solve_ms": 5,
+      "solve_ms": 0,
       "translate_ms": 0,
       "tree_nodes": 15757
     },
     {
       "assertions": 9,
       "backend_stats": {
-        "solve_ms": 11.596489
+        "solve_ms": 1.7629130000000002
       },
       "dag_nodes": 469,
       "distinct_symbols": 6,
@@ -1749,9 +1763,9 @@
       "oracle": {
         "backend_kind": "z3",
         "backend_stats": {
-          "max memory": 91.47,
-          "memory": 83.17,
-          "num allocs": 22712216.0,
+          "max memory": 101.12,
+          "memory": 66.81,
+          "num allocs": 2682041.0,
           "rlimit count": 11167.0,
           "solve-eqs-elim-vars": 68.0,
           "solve-eqs-steps": 68.0,
@@ -1763,7 +1777,7 @@
         "model_lift_ms": 0,
         "outcome": "unsat",
         "solve_ms": 1,
-        "translate_ms": 1
+        "translate_ms": 0
       },
       "outcome": "unsat",
       "query_plan": {
@@ -1806,14 +1820,14 @@
         "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
-      "solve_ms": 11,
+      "solve_ms": 1,
       "translate_ms": 0,
       "tree_nodes": 3828
     },
     {
       "assertions": 8,
       "backend_stats": {
-        "solve_ms": 9.040397
+        "solve_ms": 1.323334
       },
       "dag_nodes": 274,
       "distinct_symbols": 6,
@@ -1834,7 +1848,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "unsat",
-          "solve_ms": 8,
+          "solve_ms": 7,
           "verdict": "unsat"
         }
       },
@@ -1879,14 +1893,14 @@
         "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
-      "solve_ms": 9,
+      "solve_ms": 1,
       "translate_ms": 0,
       "tree_nodes": 513
     },
     {
       "assertions": 3,
       "backend_stats": {
-        "solve_ms": 236.47952899999999
+        "solve_ms": 35.874918
       },
       "dag_nodes": 190,
       "detail": "Incomplete: no model within the bounded integer width 32; widen the bound",
@@ -1941,14 +1955,14 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 236,
+      "solve_ms": 35,
       "translate_ms": 0,
       "tree_nodes": 3843
     },
     {
       "assertions": 5,
       "backend_stats": {
-        "solve_ms": 6.725066
+        "solve_ms": 1.090861
       },
       "dag_nodes": 185,
       "distinct_symbols": 2,
@@ -2014,7 +2028,7 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 6,
+      "solve_ms": 1,
       "translate_ms": 0,
       "tree_nodes": 8959
     },
@@ -2031,7 +2045,7 @@
     {
       "assertions": 15,
       "backend_stats": {
-        "solve_ms": 26.437014
+        "solve_ms": 3.890678
       },
       "dag_nodes": 379,
       "distinct_symbols": 4,
@@ -2052,7 +2066,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 11,
+          "solve_ms": 15,
           "verdict": "sat"
         }
       },
@@ -2097,7 +2111,7 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 26,
+      "solve_ms": 3,
       "translate_ms": 0,
       "tree_nodes": 4812
     },
@@ -2109,7 +2123,7 @@
     {
       "assertions": 8,
       "backend_stats": {
-        "solve_ms": 1040.796022
+        "solve_ms": 101.493246
       },
       "dag_nodes": 4213,
       "distinct_symbols": 4,
@@ -2130,7 +2144,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 11,
+          "solve_ms": 13,
           "verdict": "sat"
         }
       },
@@ -2175,7 +2189,7 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 1040,
+      "solve_ms": 101,
       "translate_ms": 0,
       "tree_nodes": 9127878
     },
@@ -2207,7 +2221,7 @@
     {
       "assertions": 4,
       "backend_stats": {
-        "solve_ms": 10.311914
+        "solve_ms": 2.79044
       },
       "dag_nodes": 136,
       "distinct_symbols": 4,
@@ -2228,7 +2242,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "(error \"line 4 column 29: unknown parameter 'strings_lazy_pp'",
-          "solve_ms": 8,
+          "solve_ms": 12,
           "verdict": null
         }
       },
@@ -2273,7 +2287,7 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 10,
+      "solve_ms": 2,
       "translate_ms": 0,
       "tree_nodes": 679
     },
@@ -2300,7 +2314,7 @@
     {
       "assertions": 8,
       "backend_stats": {
-        "solve_ms": 38.74803
+        "solve_ms": 5.129751
       },
       "dag_nodes": 256,
       "distinct_symbols": 4,
@@ -2321,7 +2335,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 9,
+          "solve_ms": 11,
           "verdict": "sat"
         }
       },
@@ -2366,7 +2380,7 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 38,
+      "solve_ms": 5,
       "translate_ms": 0,
       "tree_nodes": 759
     },
@@ -2378,7 +2392,7 @@
     {
       "assertions": 3,
       "backend_stats": {
-        "solve_ms": 6.74536
+        "solve_ms": 1.070063
       },
       "dag_nodes": 131,
       "distinct_symbols": 1,
@@ -2444,7 +2458,7 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 6,
+      "solve_ms": 1,
       "translate_ms": 0,
       "tree_nodes": 296
     },
@@ -2456,7 +2470,7 @@
     {
       "assertions": 17,
       "backend_stats": {
-        "solve_ms": 30.926233
+        "solve_ms": 4.297276
       },
       "dag_nodes": 1002,
       "distinct_symbols": 13,
@@ -2467,9 +2481,9 @@
       "oracle": {
         "backend_kind": "z3-binary",
         "backend_stats": {
-          "max memory": 92.2,
-          "memory": 83.61,
-          "num allocs": 33160212.0,
+          "max memory": 101.12,
+          "memory": 67.15,
+          "num allocs": 2058368.0,
           "rlimit count": 28626.0,
           "sat backjumps": 3.0,
           "sat conflicts": 3.0,
@@ -2482,7 +2496,7 @@
           "sat propagations 2ary": 1296.0,
           "sat propagations nary": 110.0,
           "sat units": 1.0,
-          "time": 0.006
+          "time": 0.013
         },
         "decision_agrees": true,
         "decision_compared": true,
@@ -2490,11 +2504,11 @@
         "in_repo_z3_detail": "z3 oracle does not lift integer models yet (ADR-0014)",
         "model_lift_ms": 0,
         "outcome": "sat",
-        "solve_ms": 6,
-        "translate_ms": 2,
+        "solve_ms": 13,
+        "translate_ms": 1,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 16,
+          "solve_ms": 18,
           "verdict": "sat"
         }
       },
@@ -2539,7 +2553,7 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 30,
+      "solve_ms": 4,
       "translate_ms": 0,
       "tree_nodes": 44658
     },
@@ -2551,7 +2565,7 @@
     {
       "assertions": 5,
       "backend_stats": {
-        "solve_ms": 168.03037600000002
+        "solve_ms": 32.957523
       },
       "dag_nodes": 626,
       "detail": "Incomplete: no model within the bounded integer width 32; widen the bound",
@@ -2606,19 +2620,22 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 168,
+      "solve_ms": 32,
       "translate_ms": 0,
       "tree_nodes": 24343
     },
     {
-      "detail": "string literal longer than the bounded length 8 (ADR-0029)",
+      "detail": "unsupported: string literal longer than the bounded length 8 (ADR-0029)",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_pattern1.smt2",
-      "outcome": "unsupported"
+      "outcome": "unsupported",
+      "solve_ms": 24512,
+      "word_only": true,
+      "word_route_declined": true
     },
     {
       "assertions": 6,
       "backend_stats": {
-        "solve_ms": 6.1603650000000005
+        "solve_ms": 0.989668
       },
       "dag_nodes": 354,
       "detail": "regex-membership route (T-C.5): decided unsat via a re-checked derivative-emptiness certificate",
@@ -2640,7 +2657,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "(error \"line 5 column 21: unknown parameter 're_elim'",
-          "solve_ms": 11,
+          "solve_ms": 9,
           "verdict": null
         }
       },
@@ -2685,14 +2702,14 @@
         "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
-      "solve_ms": 6,
+      "solve_ms": 0,
       "translate_ms": 0,
       "tree_nodes": 1739
     },
     {
       "assertions": 3,
       "backend_stats": {
-        "solve_ms": 35.055367
+        "solve_ms": 5.050887
       },
       "dag_nodes": 2404,
       "detail": "regex-membership route (T-C.5): decided sat; witness replayed in-crate through the reference matcher",
@@ -2714,7 +2731,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 364,
+          "solve_ms": 347,
           "verdict": "sat"
         }
       },
@@ -2759,17 +2776,17 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 35,
+      "solve_ms": 5,
       "translate_ms": 0,
       "tree_nodes": 18611305
     },
     {
       "assertions": 7,
       "backend_stats": {
-        "solve_ms": 10.832424
+        "solve_ms": 1.755286
       },
       "dag_nodes": 588,
-      "detail": "bounded-string unsat not confirmed bound-independent (P2.7 A.2 gate); reported unknown",
+      "detail": "online CDCL(T) string route (P1.5b): decided unsat via a certified theory conflict",
       "distinct_symbols": 3,
       "expected": "unsat",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_re-mod-eq.smt2",
@@ -2777,10 +2794,34 @@
       "model_lift_ms": 0,
       "oracle": {
         "backend_kind": "z3",
+        "backend_stats": {
+          "max memory": 101.12,
+          "memory": 66.96,
+          "num allocs": 132650654.0,
+          "rlimit count": 11295.0,
+          "sat backjumps": 7.0,
+          "sat conflicts": 8.0,
+          "sat decisions": 9.0,
+          "sat del clause": 274.0,
+          "sat elim clauses": 138.0,
+          "sat elim literals": 206.0,
+          "sat mk clause 2ary": 774.0,
+          "sat mk clause nary": 633.0,
+          "sat mk var": 421.0,
+          "sat propagations 2ary": 1029.0,
+          "sat propagations nary": 570.0,
+          "sat units": 70.0,
+          "time": 0.003
+        },
+        "decision_agrees": true,
+        "decision_compared": true,
         "enabled": true,
-        "skipped": "primary-outcome-unknown"
+        "model_lift_ms": 0,
+        "outcome": "unsat",
+        "solve_ms": 3,
+        "translate_ms": 0
       },
-      "outcome": "unknown",
+      "outcome": "unsat",
       "query_plan": {
         "cache_key": {
           "assertions": 7,
@@ -2818,10 +2859,10 @@
         "output_distinct_symbols": 3,
         "output_max_depth": 32,
         "output_tree_nodes": 2499,
-        "rewritten_outcome": "unknown",
+        "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
-      "solve_ms": 10,
+      "solve_ms": 1,
       "translate_ms": 0,
       "tree_nodes": 2499
     },
@@ -2833,7 +2874,7 @@
     {
       "assertions": 2,
       "backend_stats": {
-        "solve_ms": 9.280961000000001
+        "solve_ms": 1.400152
       },
       "dag_nodes": 603,
       "distinct_symbols": 1,
@@ -2844,9 +2885,9 @@
       "oracle": {
         "backend_kind": "z3-binary",
         "backend_stats": {
-          "max memory": 91.47,
-          "memory": 83.24,
-          "num allocs": 20030072.0,
+          "max memory": 101.12,
+          "memory": 66.92,
+          "num allocs": 138936286.0,
           "rlimit count": 6668.0,
           "sat backjumps": 2.0,
           "sat conflicts": 2.0,
@@ -2856,7 +2897,7 @@
           "sat mk var": 96.0,
           "sat propagations 2ary": 105.0,
           "sat propagations nary": 10.0,
-          "time": 0.003
+          "time": 0.002
         },
         "decision_agrees": true,
         "decision_compared": true,
@@ -2864,11 +2905,11 @@
         "in_repo_z3_detail": "z3 oracle does not lift integer models yet (ADR-0014)",
         "model_lift_ms": 0,
         "outcome": "sat",
-        "solve_ms": 3,
-        "translate_ms": 1,
+        "solve_ms": 2,
+        "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 11,
+          "solve_ms": 8,
           "verdict": "sat"
         }
       },
@@ -2913,7 +2954,7 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 9,
+      "solve_ms": 1,
       "translate_ms": 0,
       "tree_nodes": 143216
     },
@@ -2925,7 +2966,7 @@
     {
       "assertions": 14,
       "backend_stats": {
-        "solve_ms": 28.255817
+        "solve_ms": 4.325447
       },
       "dag_nodes": 324,
       "distinct_symbols": 4,
@@ -2946,7 +2987,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 28,
+          "solve_ms": 30,
           "verdict": "sat"
         }
       },
@@ -2991,14 +3032,14 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 28,
+      "solve_ms": 4,
       "translate_ms": 0,
       "tree_nodes": 638
     },
     {
       "assertions": 3,
       "backend_stats": {
-        "solve_ms": 3.9063530000000006
+        "solve_ms": 0.5880660000000001
       },
       "dag_nodes": 64,
       "detail": "bounded-string unknown upgraded to unsat by the unbounded length/code abstraction (P2.7 A.2 code/len↔LIA)",
@@ -3020,7 +3061,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "unsat",
-          "solve_ms": 11,
+          "solve_ms": 9,
           "verdict": "unsat"
         }
       },
@@ -3065,14 +3106,14 @@
         "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
-      "solve_ms": 3,
+      "solve_ms": 0,
       "translate_ms": 0,
       "tree_nodes": 114
     },
     {
       "assertions": 12,
       "backend_stats": {
-        "solve_ms": 123.152187
+        "solve_ms": 20.278299
       },
       "dag_nodes": 233,
       "detail": "bounded-string unknown upgraded to unsat by the unbounded length/code abstraction (P2.7 A.2 code/len↔LIA)",
@@ -3094,7 +3135,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "unsat",
-          "solve_ms": 28,
+          "solve_ms": 29,
           "verdict": "unsat"
         }
       },
@@ -3139,14 +3180,14 @@
         "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
-      "solve_ms": 123,
+      "solve_ms": 20,
       "translate_ms": 0,
       "tree_nodes": 474
     },
     {
       "assertions": 12,
       "backend_stats": {
-        "solve_ms": 89.668194
+        "solve_ms": 14.073087999999998
       },
       "dag_nodes": 174,
       "detail": "bounded-string unknown upgraded to unsat by the unbounded length/code abstraction (P2.7 A.2 code/len↔LIA)",
@@ -3168,7 +3209,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "unsat",
-          "solve_ms": 11,
+          "solve_ms": 8,
           "verdict": "unsat"
         }
       },
@@ -3213,14 +3254,14 @@
         "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
-      "solve_ms": 89,
+      "solve_ms": 14,
       "translate_ms": 0,
       "tree_nodes": 384
     },
     {
       "assertions": 3,
       "backend_stats": {
-        "solve_ms": 2413.936464
+        "solve_ms": 275.478074
       },
       "dag_nodes": 5174,
       "detail": "Incomplete: no model within the bounded integer width 32; widen the bound",
@@ -3275,14 +3316,14 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 2413,
+      "solve_ms": 275,
       "translate_ms": 0,
       "tree_nodes": 2224977052
     },
     {
       "assertions": 9,
       "backend_stats": {
-        "solve_ms": 21.925072
+        "solve_ms": 3.1711460000000002
       },
       "dag_nodes": 624,
       "detail": "bounded-string unsat not confirmed bound-independent (P2.7 A.2 gate); reported unknown",
@@ -3337,14 +3378,14 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 21,
+      "solve_ms": 3,
       "translate_ms": 0,
       "tree_nodes": 5306
     },
     {
       "assertions": 4,
       "backend_stats": {
-        "solve_ms": 7.59495
+        "solve_ms": 1.087588
       },
       "dag_nodes": 264,
       "distinct_symbols": 1,
@@ -3365,7 +3406,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 365,
+          "solve_ms": 359,
           "verdict": "sat"
         }
       },
@@ -3410,14 +3451,14 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 7,
+      "solve_ms": 1,
       "translate_ms": 0,
       "tree_nodes": 1451
     },
     {
       "assertions": 3,
       "backend_stats": {
-        "solve_ms": 5.712483
+        "solve_ms": 0.88686
       },
       "dag_nodes": 261,
       "distinct_symbols": 1,
@@ -3428,9 +3469,9 @@
       "oracle": {
         "backend_kind": "z3-binary",
         "backend_stats": {
-          "max memory": 91.47,
-          "memory": 83.1,
-          "num allocs": 29457169.0,
+          "max memory": 101.12,
+          "memory": 66.77,
+          "num allocs": 126575682.0,
           "rlimit count": 3568.0,
           "sat backjumps": 2.0,
           "sat conflicts": 2.0,
@@ -3440,7 +3481,7 @@
           "sat mk var": 107.0,
           "sat propagations 2ary": 98.0,
           "sat propagations nary": 10.0,
-          "time": 0.001
+          "time": 0.002
         },
         "decision_agrees": true,
         "decision_compared": true,
@@ -3452,7 +3493,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 125,
+          "solve_ms": 128,
           "verdict": "sat"
         }
       },
@@ -3497,14 +3538,14 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 5,
+      "solve_ms": 0,
       "translate_ms": 0,
       "tree_nodes": 1446
     },
     {
       "assertions": 6,
       "backend_stats": {
-        "solve_ms": 52.47621
+        "solve_ms": 7.277616
       },
       "dag_nodes": 738,
       "distinct_symbols": 5,
@@ -3570,7 +3611,7 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 52,
+      "solve_ms": 7,
       "translate_ms": 0,
       "tree_nodes": 5343
     },
@@ -3582,7 +3623,7 @@
     {
       "assertions": 4,
       "backend_stats": {
-        "solve_ms": 52.463471
+        "solve_ms": 8.078604
       },
       "dag_nodes": 159,
       "distinct_symbols": 1,
@@ -3603,7 +3644,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 10,
+          "solve_ms": 13,
           "verdict": "sat"
         }
       },
@@ -3648,7 +3689,7 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 52,
+      "solve_ms": 8,
       "translate_ms": 0,
       "tree_nodes": 3803
     },
@@ -3678,12 +3719,12 @@
         "outcome": "sat",
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 26,
+          "solve_ms": 28,
           "verdict": "sat"
         }
       },
       "outcome": "sat",
-      "solve_ms": 1684,
+      "solve_ms": 243,
       "word_only": true
     },
     {
@@ -3694,7 +3735,7 @@
     {
       "assertions": 6,
       "backend_stats": {
-        "solve_ms": 11.400236
+        "solve_ms": 1.782276
       },
       "dag_nodes": 330,
       "distinct_symbols": 2,
@@ -3715,7 +3756,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "(error \"line 4 column 25: unknown parameter 'strings_fmf'",
-          "solve_ms": 12,
+          "solve_ms": 13,
           "verdict": null
         }
       },
@@ -3760,14 +3801,14 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 11,
+      "solve_ms": 1,
       "translate_ms": 0,
       "tree_nodes": 14867
     },
     {
       "assertions": 4,
       "backend_stats": {
-        "solve_ms": 37.511432
+        "solve_ms": 4.948046000000001
       },
       "dag_nodes": 724,
       "distinct_symbols": 1,
@@ -3788,7 +3829,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 13,
+          "solve_ms": 10,
           "verdict": "sat"
         }
       },
@@ -3833,29 +3874,71 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 37,
+      "solve_ms": 4,
       "translate_ms": 0,
       "tree_nodes": 5312
     },
     {
-      "detail": "0 assertions parsed from a file containing assert/constraint text; the slice-parser dropped constraints — solving the empty problem would be a vacuous verdict",
+      "detail": "word-first fallback (T-B.4d) / online CDCL(T) string route (P1.5b): decided by the word-level string routes (sat models replay in-crate at the Seq level; unsat is a certified derivation)",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_instance1079-re-loop-cong.smt2",
-      "outcome": "unsupported"
+      "oracle": {
+        "backend_kind": "z3-binary",
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "outcome": "unsat",
+        "z3_binary": {
+          "raw": "unsat",
+          "solve_ms": 9,
+          "verdict": "unsat"
+        }
+      },
+      "outcome": "unsat",
+      "solve_ms": 0,
+      "word_only": true
     },
     {
-      "detail": "0 assertions parsed from a file containing assert/constraint text; the slice-parser dropped constraints — solving the empty problem would be a vacuous verdict",
+      "detail": "word-first fallback (T-B.4d) / online CDCL(T) string route (P1.5b): decided by the word-level string routes (sat models replay in-crate at the Seq level; unsat is a certified derivation)",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_instance3303-delta.smt2",
-      "outcome": "unsupported"
+      "oracle": {
+        "backend_kind": "z3-binary",
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "outcome": "unsat",
+        "z3_binary": {
+          "raw": "unsat",
+          "solve_ms": 13,
+          "verdict": "unsat"
+        }
+      },
+      "outcome": "unsat",
+      "solve_ms": 0,
+      "word_only": true
     },
     {
-      "detail": "0 assertions parsed from a file containing assert/constraint text; the slice-parser dropped constraints — solving the empty problem would be a vacuous verdict",
+      "detail": "word-first fallback (T-B.4d) / online CDCL(T) string route (P1.5b): decided by the word-level string routes (sat models replay in-crate at the Seq level; unsat is a certified derivation)",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_instance7075-delta.smt2",
-      "outcome": "unsupported"
+      "oracle": {
+        "backend_kind": "z3-binary",
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "outcome": "sat",
+        "z3_binary": {
+          "raw": "sat",
+          "solve_ms": 8,
+          "verdict": "sat"
+        }
+      },
+      "outcome": "sat",
+      "solve_ms": 0,
+      "word_only": true
     },
     {
       "assertions": 3,
       "backend_stats": {
-        "solve_ms": 5.818813
+        "solve_ms": 0.679707
       },
       "dag_nodes": 162,
       "distinct_symbols": 1,
@@ -3866,9 +3949,9 @@
       "oracle": {
         "backend_kind": "z3-binary",
         "backend_stats": {
-          "max memory": 91.47,
-          "memory": 83.13,
-          "num allocs": 15447574.0,
+          "max memory": 101.12,
+          "memory": 66.75,
+          "num allocs": 106496839.0,
           "rlimit count": 2791.0,
           "solve-eqs-elim-vars": 60.0,
           "solve-eqs-steps": 60.0
@@ -3883,7 +3966,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 9,
+          "solve_ms": 10,
           "verdict": "sat"
         }
       },
@@ -3928,14 +4011,17 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 5,
+      "solve_ms": 0,
       "translate_ms": 0,
       "tree_nodes": 1012
     },
     {
-      "detail": "str.++ result of bounded max length 24 exceeds the cap 16 (ADR-0029); the query needs a larger string bound",
+      "detail": "unsupported: str.++ result of bounded max length 24 exceeds the cap 16 (ADR-0029); the query needs a larger string bound",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_issue2060.smt2",
-      "outcome": "unsupported"
+      "outcome": "unsupported",
+      "solve_ms": 0,
+      "word_only": true,
+      "word_route_declined": true
     },
     {
       "detail": "re.comp/re.diff nested inside another regex construct is declined (ADR-0029)",
@@ -3970,7 +4056,7 @@
     {
       "assertions": 4,
       "backend_stats": {
-        "solve_ms": 9.792722
+        "solve_ms": 1.6301709999999998
       },
       "dag_nodes": 214,
       "distinct_symbols": 3,
@@ -3981,9 +4067,9 @@
       "oracle": {
         "backend_kind": "z3-binary",
         "backend_stats": {
-          "max memory": 42.2,
-          "memory": 33.95,
-          "num allocs": 75982.0,
+          "max memory": 101.12,
+          "memory": 66.87,
+          "num allocs": 10347440.0,
           "rlimit count": 15506.0,
           "sat backjumps": 1.0,
           "sat conflicts": 1.0,
@@ -3998,7 +4084,7 @@
           "sat propagations nary": 42.0,
           "solve-eqs-elim-vars": 58.0,
           "solve-eqs-steps": 355.0,
-          "time": 0.005
+          "time": 0.004
         },
         "decision_agrees": true,
         "decision_compared": true,
@@ -4006,11 +4092,11 @@
         "in_repo_z3_detail": "z3 oracle does not lift integer models yet (ADR-0014)",
         "model_lift_ms": 0,
         "outcome": "sat",
-        "solve_ms": 5,
+        "solve_ms": 4,
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 11,
+          "solve_ms": 10,
           "verdict": "sat"
         }
       },
@@ -4055,14 +4141,14 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 9,
+      "solve_ms": 1,
       "translate_ms": 0,
       "tree_nodes": 459
     },
     {
       "assertions": 7,
       "backend_stats": {
-        "solve_ms": 13.615917
+        "solve_ms": 2.579619
       },
       "dag_nodes": 343,
       "distinct_symbols": 6,
@@ -4073,9 +4159,9 @@
       "oracle": {
         "backend_kind": "z3-binary",
         "backend_stats": {
-          "max memory": 42.33,
-          "memory": 34.02,
-          "num allocs": 519979.0,
+          "max memory": 101.12,
+          "memory": 66.94,
+          "num allocs": 12419804.0,
           "rlimit count": 17348.0,
           "sat decisions": 48.0,
           "sat mk clause 2ary": 620.0,
@@ -4097,7 +4183,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 11,
+          "solve_ms": 9,
           "verdict": "sat"
         }
       },
@@ -4142,7 +4228,7 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 13,
+      "solve_ms": 2,
       "translate_ms": 0,
       "tree_nodes": 711
     },
@@ -4157,7 +4243,7 @@
         "outcome": "sat",
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 9,
+          "solve_ms": 11,
           "verdict": "sat"
         }
       },
@@ -4168,7 +4254,7 @@
     {
       "assertions": 7,
       "backend_stats": {
-        "solve_ms": 24.043353
+        "solve_ms": 3.384662
       },
       "dag_nodes": 315,
       "distinct_symbols": 6,
@@ -4179,9 +4265,9 @@
       "oracle": {
         "backend_kind": "z3-binary",
         "backend_stats": {
-          "max memory": 43.0,
-          "memory": 34.11,
-          "num allocs": 2082237.0,
+          "max memory": 101.12,
+          "memory": 67.03,
+          "num allocs": 16708086.0,
           "rlimit count": 26462.0,
           "sat decisions": 67.0,
           "sat mk clause 2ary": 1837.0,
@@ -4197,11 +4283,11 @@
         "in_repo_z3_detail": "z3 oracle does not lift integer models yet (ADR-0014)",
         "model_lift_ms": 0,
         "outcome": "sat",
-        "solve_ms": 7,
+        "solve_ms": 6,
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 8,
+          "solve_ms": 11,
           "verdict": "sat"
         }
       },
@@ -4246,14 +4332,14 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 24,
+      "solve_ms": 3,
       "translate_ms": 0,
       "tree_nodes": 712
     },
     {
       "assertions": 3,
       "backend_stats": {
-        "solve_ms": 7.095688999999999
+        "solve_ms": 1.422012
       },
       "dag_nodes": 112,
       "distinct_symbols": 1,
@@ -4274,7 +4360,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 12,
+          "solve_ms": 10,
           "verdict": "sat"
         }
       },
@@ -4319,7 +4405,7 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 7,
+      "solve_ms": 1,
       "translate_ms": 0,
       "tree_nodes": 296
     },
@@ -4327,14 +4413,14 @@
       "detail": "unsupported: str.++ result of bounded max length 24 exceeds the cap 16 (ADR-0029); the query needs a larger string bound",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_nf-ff-contains-abs.smt2",
       "outcome": "unsupported",
-      "solve_ms": 10104,
+      "solve_ms": 10029,
       "word_only": true,
       "word_route_declined": true
     },
     {
       "assertions": 17,
       "backend_stats": {
-        "solve_ms": 40.057257
+        "solve_ms": 5.412722
       },
       "dag_nodes": 1068,
       "distinct_symbols": 13,
@@ -4345,9 +4431,9 @@
       "oracle": {
         "backend_kind": "z3-binary",
         "backend_stats": {
-          "max memory": 92.35,
-          "memory": 83.72,
-          "num allocs": 55011973.0,
+          "max memory": 101.12,
+          "memory": 67.34,
+          "num allocs": 24362520.0,
           "rlimit count": 33921.0,
           "sat backjumps": 2.0,
           "sat conflicts": 2.0,
@@ -4361,7 +4447,7 @@
           "sat propagations 2ary": 1181.0,
           "sat propagations nary": 115.0,
           "sat units": 1.0,
-          "time": 0.006
+          "time": 0.007
         },
         "decision_agrees": true,
         "decision_compared": true,
@@ -4369,11 +4455,11 @@
         "in_repo_z3_detail": "z3 oracle does not lift integer models yet (ADR-0014)",
         "model_lift_ms": 0,
         "outcome": "sat",
-        "solve_ms": 6,
-        "translate_ms": 2,
+        "solve_ms": 7,
+        "translate_ms": 1,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 10,
+          "solve_ms": 11,
           "verdict": "sat"
         }
       },
@@ -4418,7 +4504,7 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 40,
+      "solve_ms": 5,
       "translate_ms": 0,
       "tree_nodes": 49191
     },
@@ -4430,7 +4516,7 @@
     {
       "assertions": 4,
       "backend_stats": {
-        "solve_ms": 6.874134
+        "solve_ms": 1.061559
       },
       "dag_nodes": 243,
       "distinct_symbols": 1,
@@ -4441,9 +4527,9 @@
       "oracle": {
         "backend_kind": "z3-binary",
         "backend_stats": {
-          "max memory": 92.2,
-          "memory": 83.18,
-          "num allocs": 35242741.0,
+          "max memory": 101.12,
+          "memory": 66.81,
+          "num allocs": 27876306.0,
           "rlimit count": 4337.0,
           "sat decisions": 10.0,
           "sat mk clause 2ary": 196.0,
@@ -4451,7 +4537,7 @@
           "sat mk var": 114.0,
           "sat propagations 2ary": 96.0,
           "sat propagations nary": 8.0,
-          "time": 0.002
+          "time": 0.003
         },
         "decision_agrees": true,
         "decision_compared": true,
@@ -4459,11 +4545,11 @@
         "in_repo_z3_detail": "z3 oracle does not lift integer models yet (ADR-0014)",
         "model_lift_ms": 0,
         "outcome": "sat",
-        "solve_ms": 2,
+        "solve_ms": 3,
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 14,
+          "solve_ms": 10,
           "verdict": "sat"
         }
       },
@@ -4508,17 +4594,17 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 6,
+      "solve_ms": 1,
       "translate_ms": 0,
       "tree_nodes": 1972
     },
     {
       "assertions": 4,
       "backend_stats": {
-        "solve_ms": 7.658544
+        "solve_ms": 1.217747
       },
       "dag_nodes": 398,
-      "detail": "bounded-string unsat not confirmed bound-independent (P2.7 A.2 gate); reported unknown",
+      "detail": "online CDCL(T) string route (P1.5b): decided unsat via a certified theory conflict",
       "distinct_symbols": 2,
       "expected": "unsat",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_re-neg-unfold-rev-a.smt2",
@@ -4526,10 +4612,37 @@
       "model_lift_ms": 0,
       "oracle": {
         "backend_kind": "z3",
+        "backend_stats": {
+          "max memory": 101.12,
+          "memory": 66.83,
+          "num allocs": 30902536.0,
+          "rlimit count": 8491.0,
+          "sat backjumps": 14.0,
+          "sat conflicts": 15.0,
+          "sat decisions": 23.0,
+          "sat del clause": 16.0,
+          "sat elim clauses": 7.0,
+          "sat elim literals": 26.0,
+          "sat minimized lits": 2.0,
+          "sat mk clause 2ary": 321.0,
+          "sat mk clause nary": 98.0,
+          "sat mk var": 160.0,
+          "sat propagations 2ary": 674.0,
+          "sat propagations nary": 171.0,
+          "sat units": 25.0,
+          "solve-eqs-elim-vars": 1.0,
+          "solve-eqs-steps": 1.0,
+          "time": 0.004
+        },
+        "decision_agrees": true,
+        "decision_compared": true,
         "enabled": true,
-        "skipped": "primary-outcome-unknown"
+        "model_lift_ms": 0,
+        "outcome": "unsat",
+        "solve_ms": 4,
+        "translate_ms": 0
       },
-      "outcome": "unknown",
+      "outcome": "unsat",
       "query_plan": {
         "cache_key": {
           "assertions": 4,
@@ -4567,20 +4680,20 @@
         "output_distinct_symbols": 2,
         "output_max_depth": 40,
         "output_tree_nodes": 8217,
-        "rewritten_outcome": "unknown",
+        "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
-      "solve_ms": 7,
+      "solve_ms": 1,
       "translate_ms": 0,
       "tree_nodes": 8217
     },
     {
       "assertions": 3,
       "backend_stats": {
-        "solve_ms": 5.847674
+        "solve_ms": 0.9705649999999999
       },
       "dag_nodes": 217,
-      "detail": "regex-membership route (T-C.5): decided unsat via a re-checked derivative-emptiness certificate",
+      "detail": "online CDCL(T) string route (P1.5b): decided unsat via a certified theory conflict",
       "distinct_symbols": 1,
       "expected": "unsat",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_regexp-strat-fix.smt2",
@@ -4589,9 +4702,9 @@
       "oracle": {
         "backend_kind": "z3",
         "backend_stats": {
-          "max memory": 92.2,
-          "memory": 83.2,
-          "num allocs": 37159924.0,
+          "max memory": 101.12,
+          "memory": 66.83,
+          "num allocs": 34065420.0,
           "rlimit count": 5639.0,
           "sat backjumps": 9.0,
           "sat conflicts": 10.0,
@@ -4605,14 +4718,14 @@
           "sat propagations 2ary": 280.0,
           "sat propagations nary": 27.0,
           "sat units": 27.0,
-          "time": 0.002
+          "time": 0.003
         },
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
         "model_lift_ms": 0,
         "outcome": "unsat",
-        "solve_ms": 2,
+        "solve_ms": 3,
         "translate_ms": 0
       },
       "outcome": "unsat",
@@ -4656,14 +4769,14 @@
         "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
-      "solve_ms": 5,
+      "solve_ms": 0,
       "translate_ms": 0,
       "tree_nodes": 2009
     },
     {
       "assertions": 3,
       "backend_stats": {
-        "solve_ms": 5.367685
+        "solve_ms": 0.850444
       },
       "dag_nodes": 173,
       "distinct_symbols": 1,
@@ -4729,14 +4842,14 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 5,
+      "solve_ms": 0,
       "translate_ms": 0,
       "tree_nodes": 7433
     },
     {
       "assertions": 7,
       "backend_stats": {
-        "solve_ms": 12.720588
+        "solve_ms": 2.776963
       },
       "dag_nodes": 332,
       "distinct_symbols": 2,
@@ -4757,7 +4870,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 10,
+          "solve_ms": 13,
           "verdict": "sat"
         }
       },
@@ -4802,20 +4915,34 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 12,
+      "solve_ms": 2,
       "translate_ms": 0,
       "tree_nodes": 14872
     },
     {
-      "detail": "0 assertions parsed from a file containing assert/constraint text; the slice-parser dropped constraints — solving the empty problem would be a vacuous verdict",
+      "detail": "word-first fallback (T-B.4d) / online CDCL(T) string route (P1.5b): decided by the word-level string routes (sat models replay in-crate at the Seq level; unsat is a certified derivation)",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_regexp003.smt2",
-      "outcome": "unsupported"
+      "oracle": {
+        "backend_kind": "z3-binary",
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "outcome": "sat",
+        "z3_binary": {
+          "raw": "sat",
+          "solve_ms": 11,
+          "verdict": "sat"
+        }
+      },
+      "outcome": "sat",
+      "solve_ms": 0,
+      "word_only": true
     },
     {
       "detail": "unsupported: str.++ result of bounded max length 24 exceeds the cap 16 (ADR-0029); the query needs a larger string bound",
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_str001.smt2",
       "outcome": "unsupported",
-      "solve_ms": 32,
+      "solve_ms": 4,
       "word_only": true,
       "word_route_declined": true
     },
@@ -4830,7 +4957,7 @@
         "outcome": "unsat",
         "z3_binary": {
           "raw": "unsat",
-          "solve_ms": 8,
+          "solve_ms": 7,
           "verdict": "unsat"
         }
       },
@@ -4854,13 +4981,13 @@
         }
       },
       "outcome": "sat",
-      "solve_ms": 1455,
+      "solve_ms": 193,
       "word_only": true
     },
     {
       "assertions": 5,
       "backend_stats": {
-        "solve_ms": 7.014328
+        "solve_ms": 1.217208
       },
       "dag_nodes": 196,
       "distinct_symbols": 2,
@@ -4871,9 +4998,9 @@
       "oracle": {
         "backend_kind": "z3",
         "backend_stats": {
-          "max memory": 91.47,
-          "memory": 83.25,
-          "num allocs": 3468420.0,
+          "max memory": 101.12,
+          "memory": 66.86,
+          "num allocs": 42044722.0,
           "rlimit count": 13633.0,
           "sat backjumps": 2.0,
           "sat conflicts": 3.0,
@@ -4940,14 +5067,14 @@
         "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
-      "solve_ms": 7,
+      "solve_ms": 1,
       "translate_ms": 0,
       "tree_nodes": 589
     },
     {
       "assertions": 6,
       "backend_stats": {
-        "solve_ms": 19.887819
+        "solve_ms": 2.834515
       },
       "dag_nodes": 480,
       "detail": "bounded-string unsat not confirmed bound-independent (P2.7 A.2 gate); reported unknown",
@@ -5002,14 +5129,14 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 19,
+      "solve_ms": 2,
       "translate_ms": 0,
       "tree_nodes": 32159
     },
     {
       "assertions": 2,
       "backend_stats": {
-        "solve_ms": 105.73381900000001
+        "solve_ms": 12.243021
       },
       "dag_nodes": 2210,
       "distinct_symbols": 1,
@@ -5030,7 +5157,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 7,
+          "solve_ms": 9,
           "verdict": "sat"
         }
       },
@@ -5075,14 +5202,14 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 105,
+      "solve_ms": 12,
       "translate_ms": 0,
       "tree_nodes": 90752
     },
     {
       "assertions": 2,
       "backend_stats": {
-        "solve_ms": 165.290011
+        "solve_ms": 17.700435
       },
       "dag_nodes": 2160,
       "distinct_symbols": 1,
@@ -5103,7 +5230,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 9,
+          "solve_ms": 17,
           "verdict": "sat"
         }
       },
@@ -5148,14 +5275,14 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 165,
+      "solve_ms": 17,
       "translate_ms": 0,
       "tree_nodes": 90670
     },
     {
       "assertions": 3,
       "backend_stats": {
-        "solve_ms": 153.933129
+        "solve_ms": 17.873126
       },
       "dag_nodes": 10587,
       "distinct_symbols": 1,
@@ -5166,9 +5293,9 @@
       "oracle": {
         "backend_kind": "z3-binary",
         "backend_stats": {
-          "max memory": 91.47,
-          "memory": 84.37,
-          "num allocs": 4394552.0,
+          "max memory": 101.12,
+          "memory": 67.99,
+          "num allocs": 52383325.0,
           "rlimit count": 73830.0,
           "solve-eqs-elim-vars": 1.0,
           "solve-eqs-steps": 1.0,
@@ -5181,10 +5308,10 @@
         "model_lift_ms": 0,
         "outcome": "sat",
         "solve_ms": 4,
-        "translate_ms": 18,
+        "translate_ms": 5,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 7,
+          "solve_ms": 10,
           "verdict": "sat"
         }
       },
@@ -5229,14 +5356,14 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 153,
+      "solve_ms": 17,
       "translate_ms": 0,
       "tree_nodes": 18446744073709551615
     },
     {
       "assertions": 4,
       "backend_stats": {
-        "solve_ms": 815.0165099999999
+        "solve_ms": 113.944847
       },
       "dag_nodes": 14429,
       "distinct_symbols": 1,
@@ -5302,14 +5429,14 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 815,
+      "solve_ms": 113,
       "translate_ms": 0,
       "tree_nodes": 18446744073709551615
     },
     {
       "assertions": 2,
       "backend_stats": {
-        "solve_ms": 7.339615
+        "solve_ms": 1.133109
       },
       "dag_nodes": 706,
       "distinct_symbols": 1,
@@ -5320,9 +5447,9 @@
       "oracle": {
         "backend_kind": "z3-binary",
         "backend_stats": {
-          "max memory": 91.47,
-          "memory": 83.23,
-          "num allocs": 5923084.0,
+          "max memory": 101.12,
+          "memory": 66.85,
+          "num allocs": 63758694.0,
           "rlimit count": 6517.0,
           "sat decisions": 3.0,
           "sat mk clause 2ary": 161.0,
@@ -5340,10 +5467,10 @@
         "model_lift_ms": 0,
         "outcome": "sat",
         "solve_ms": 3,
-        "translate_ms": 1,
+        "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 10,
+          "solve_ms": 12,
           "verdict": "sat"
         }
       },
@@ -5388,14 +5515,14 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 7,
+      "solve_ms": 1,
       "translate_ms": 0,
       "tree_nodes": 2530
     },
     {
       "assertions": 2,
       "backend_stats": {
-        "solve_ms": 1.903256
+        "solve_ms": 0.581088
       },
       "dag_nodes": 55,
       "distinct_symbols": 1,
@@ -5406,9 +5533,9 @@
       "oracle": {
         "backend_kind": "z3-binary",
         "backend_stats": {
-          "max memory": 91.47,
-          "memory": 83.08,
-          "num allocs": 6604459.0,
+          "max memory": 101.12,
+          "memory": 66.7,
+          "num allocs": 67625191.0,
           "rlimit count": 1514.0,
           "sat decisions": 11.0,
           "sat mk clause 2ary": 81.0,
@@ -5416,7 +5543,7 @@
           "sat mk var": 84.0,
           "sat propagations 2ary": 71.0,
           "sat propagations nary": 2.0,
-          "time": 0.001
+          "time": 0.002
         },
         "decision_agrees": true,
         "decision_compared": true,
@@ -5424,7 +5551,7 @@
         "in_repo_z3_detail": "z3 oracle does not lift sequence models yet (P2.7)",
         "model_lift_ms": 0,
         "outcome": "sat",
-        "solve_ms": 1,
+        "solve_ms": 2,
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
@@ -5473,14 +5600,14 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 1,
+      "solve_ms": 0,
       "translate_ms": 0,
       "tree_nodes": 87
     },
     {
       "assertions": 3,
       "backend_stats": {
-        "solve_ms": 0.920486
+        "solve_ms": 0.196376
       },
       "dag_nodes": 55,
       "distinct_symbols": 1,
@@ -5491,9 +5618,9 @@
       "oracle": {
         "backend_kind": "z3-binary",
         "backend_stats": {
-          "max memory": 91.47,
-          "memory": 83.03,
-          "num allocs": 7232572.0,
+          "max memory": 101.12,
+          "memory": 66.65,
+          "num allocs": 70859321.0,
           "rlimit count": 620.0,
           "solve-eqs-elim-vars": 1.0,
           "solve-eqs-steps": 1.0
@@ -5508,7 +5635,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "unknown",
-          "solve_ms": 10,
+          "solve_ms": 16,
           "verdict": null
         }
       },
@@ -5560,7 +5687,7 @@
     {
       "assertions": 3,
       "backend_stats": {
-        "solve_ms": 164.478893
+        "solve_ms": 20.337998
       },
       "dag_nodes": 14425,
       "detail": "regex-membership route (T-C.5): decided unsat via a re-checked derivative-emptiness certificate",
@@ -5572,9 +5699,9 @@
       "oracle": {
         "backend_kind": "z3",
         "backend_stats": {
-          "max memory": 91.47,
-          "memory": 84.59,
-          "num allocs": 9163270.0,
+          "max memory": 101.12,
+          "memory": 68.21,
+          "num allocs": 79594809.0,
           "rlimit count": 91736.0,
           "time": 0.005
         },
@@ -5584,7 +5711,7 @@
         "model_lift_ms": 0,
         "outcome": "unsat",
         "solve_ms": 5,
-        "translate_ms": 27
+        "translate_ms": 7
       },
       "outcome": "unsat",
       "query_plan": {
@@ -5627,14 +5754,14 @@
         "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
-      "solve_ms": 164,
+      "solve_ms": 20,
       "translate_ms": 0,
       "tree_nodes": 18446744073709551615
     },
     {
       "assertions": 2,
       "backend_stats": {
-        "solve_ms": 1.524082
+        "solve_ms": 0.303032
       },
       "dag_nodes": 54,
       "distinct_symbols": 1,
@@ -5645,9 +5772,9 @@
       "oracle": {
         "backend_kind": "z3",
         "backend_stats": {
-          "max memory": 91.47,
-          "memory": 82.84,
-          "num allocs": 10368761.0,
+          "max memory": 101.12,
+          "memory": 66.46,
+          "num allocs": 84709428.0,
           "rlimit count": 208.0
         },
         "decision_agrees": true,
@@ -5699,14 +5826,14 @@
         "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
-      "solve_ms": 1,
+      "solve_ms": 0,
       "translate_ms": 0,
       "tree_nodes": 85
     },
     {
       "assertions": 2,
       "backend_stats": {
-        "solve_ms": 1.464661
+        "solve_ms": 0.30337000000000003
       },
       "dag_nodes": 56,
       "distinct_symbols": 1,
@@ -5717,9 +5844,9 @@
       "oracle": {
         "backend_kind": "z3",
         "backend_stats": {
-          "max memory": 91.47,
-          "memory": 82.93,
-          "num allocs": 11023983.0,
+          "max memory": 101.12,
+          "memory": 66.55,
+          "num allocs": 87391560.0,
           "rlimit count": 373.0
         },
         "decision_agrees": true,
@@ -5771,14 +5898,14 @@
         "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
-      "solve_ms": 1,
+      "solve_ms": 0,
       "translate_ms": 0,
       "tree_nodes": 87
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 0.013242
+        "solve_ms": 0.002549
       },
       "dag_nodes": 3,
       "distinct_symbols": 0,
@@ -5789,9 +5916,9 @@
       "oracle": {
         "backend_kind": "z3",
         "backend_stats": {
-          "max memory": 91.47,
-          "memory": 82.84,
-          "num allocs": 11704588.0,
+          "max memory": 101.12,
+          "memory": 66.46,
+          "num allocs": 90099043.0,
           "rlimit count": 10.0
         },
         "decision_agrees": true,
@@ -5849,11 +5976,10 @@
     }
   ],
   "summary": {
-    "agree": 61,
+    "agree": 63,
     "blocker_buckets": {
-      "unknown:Incomplete": 4,
-      "unknown:Timeout": 1,
-      "unknown:bounded-string unsat not confirmed bound-independent (P2.7 A.2 gate); reported unknown": 6
+      "unknown:Incomplete": 5,
+      "unknown:bounded-string unsat not confirmed bound-independent (P2.7 A.2 gate); reported unknown": 4
     },
     "disagree": 0,
     "errors": 0,
@@ -5861,14 +5987,14 @@
     "layer_attribution": null,
     "model_replay_failures": 0,
     "oracle": {
-      "agree": 63,
+      "agree": 70,
       "backend": "z3 4.13.3.0",
-      "compared": 63,
+      "compared": 70,
       "disagree": 0,
       "enabled": true,
-      "skipped": 15
+      "skipped": 13
     },
-    "par2_mean_s": 2.9282342944999993,
+    "par2_mean_s": 2.181737431192771,
     "query_plan": {
       "original_dag_nodes": 92633,
       "original_tree_nodes": 18446744073709551615,
@@ -5889,10 +6015,10 @@
       "output_tree_nodes": 0,
       "sat_unsat_conflicts": 0
     },
-    "sat": 48,
-    "unknown": 11,
-    "unsat": 19,
-    "unsupported": 56
+    "sat": 51,
+    "unknown": 9,
+    "unsat": 23,
+    "unsupported": 51
   },
   "triage": {
     "errors": [],
@@ -5985,18 +6111,13 @@
         "outcome": "unsupported"
       },
       {
-        "detail": "string literal longer than the bounded length 8 (ADR-0029)",
+        "detail": "string literal code point U+2C6B exceeds the bounded byte model (ADR-0029)",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_issue5384-double-conflict.smt2",
         "outcome": "unsupported"
       },
       {
         "detail": "re.diff expects exactly two arguments",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_issue5428-re-diff-assoc.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "0 assertions parsed from a file containing assert/constraint text; the slice-parser dropped constraints — solving the empty problem would be a vacuous verdict",
-        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_issue9784.smt2",
         "outcome": "unsupported"
       },
       {
@@ -6075,7 +6196,7 @@
         "outcome": "unsupported"
       },
       {
-        "detail": "string literal longer than the bounded length 8 (ADR-0029)",
+        "detail": "unsupported: string literal longer than the bounded length 8 (ADR-0029)",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_pattern1.smt2",
         "outcome": "unsupported"
       },
@@ -6115,22 +6236,7 @@
         "outcome": "unsupported"
       },
       {
-        "detail": "0 assertions parsed from a file containing assert/constraint text; the slice-parser dropped constraints — solving the empty problem would be a vacuous verdict",
-        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_instance1079-re-loop-cong.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "0 assertions parsed from a file containing assert/constraint text; the slice-parser dropped constraints — solving the empty problem would be a vacuous verdict",
-        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_instance3303-delta.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "0 assertions parsed from a file containing assert/constraint text; the slice-parser dropped constraints — solving the empty problem would be a vacuous verdict",
-        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_instance7075-delta.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "str.++ result of bounded max length 24 exceeds the cap 16 (ADR-0029); the query needs a larger string bound",
+        "detail": "unsupported: str.++ result of bounded max length 24 exceeds the cap 16 (ADR-0029); the query needs a larger string bound",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_issue2060.smt2",
         "outcome": "unsupported"
       },
@@ -6172,11 +6278,6 @@
       {
         "detail": "str.++ result of bounded max length 24 exceeds the cap 16 (ADR-0029); the query needs a larger string bound",
         "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_norn-nel-bug-052116.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "0 assertions parsed from a file containing assert/constraint text; the slice-parser dropped constraints — solving the empty problem would be a vacuous verdict",
-        "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_regexp003.smt2",
         "outcome": "unsupported"
       },
       {

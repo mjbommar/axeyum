@@ -13,38 +13,41 @@
 //!
 //! ## Atoms and representability
 //!
-//! The theory's atoms are the equality atoms `(= s t)` collected from the
-//! assertions ([`collect_eq_atoms`]). An atom is **representable** iff both sides
-//! are `Seq`-sorted — then asserting it *true* records a word equality and
-//! asserting it *false* records a word disequality. Any other atom (a non-`Seq`
-//! equality) is declined: the theory treats it as an uninterpreted Boolean-only
-//! atom (a no-op for the word core, exactly as [`EufTheory`](crate::euf_egraph)
-//! treats a non-equality atom), keeping atom indices aligned with the caller's
-//! variable numbering. The entry point [`check_qf_s_online_cdclt`] additionally
-//! **declines the whole query** up front when a non-`Seq` equality atom is
-//! present, so the online path only ever runs on the pure `QF_S` fragment.
+//! The theory's atoms are the `Seq` equality atoms `(= s t)` collected from the
+//! assertions ([`collect_eq_atoms`]) **plus** the regex membership atoms
+//! `(str.in_re X R)` the caller passes in (P2.7 T-C.6). An equality atom asserted
+//! *true* records a word equality and *false* a word disequality; a membership
+//! atom asserted *true* records `X ∈ R` and *false* records `X ∉ R` (a single
+//! atom kind for both polarities — the negative language is the engine's native
+//! complement). The entry point
+//! [`check_qf_s_online_cdclt_with_memberships`] **declines the whole query** up
+//! front when a non-`Seq` equality atom is present, so the online path only ever
+//! runs on the pure `QF_S` fragment.
 //!
 //! ## Verdict discipline (ADR-0053 / ADR-0054)
 //!
 //! - **`unsat`** is theory-driven *only* through a checked derivation. On every
-//!   representable assertion the theory re-runs the T-B.7
-//!   [`refute_word_equations`] refuter over the currently-asserted equalities and
-//!   disequalities; a [`RefuteOutcome::Unsat`] is produced by
-//!   `axeyum-strings` **only** behind its own independent `check_conflict` /
-//!   `check_fact` re-checks. The theory maps the refuter's cited **original
-//!   premise indices** back to the exact asserted literals that named them (this
-//!   is what the word core's premise tracking buys us), so the theory conflict —
-//!   and hence every 1-UIP lemma the driver learns from it — is a genuine theory
-//!   entailment. A telemetry invariant ([`StringTheory::assert_conflicts_certified`])
-//!   pins that no conflict is ever reported without a certified refutation behind
-//!   it.
+//!   assertion the theory (a) re-runs the T-B.7 [`refute_word_equations`] refuter
+//!   over the currently-asserted equalities and disequalities, and (b) checks the
+//!   regex-membership consistency: it groups the asserted memberships by the
+//!   equivalence classes the word equalities induce and refutes any class whose
+//!   positive/negative regex intersection is provably empty behind the re-checked
+//!   derivative-emptiness certificate ([`Membership::refute_empty`], ADR-0054).
+//!   Both refutations map their premises back to the exact asserted literals, so
+//!   the theory conflict — and hence every 1-UIP lemma the driver learns from it —
+//!   is a genuine theory entailment. A telemetry invariant
+//!   ([`StringTheory::assert_conflicts_certified`]) pins that no conflict is ever
+//!   reported without a certified refutation behind it.
 //! - **`sat`** is never trusted from the search. When the driver reaches a total,
-//!   theory-consistent assignment the entry point runs
-//!   [`solve_word_equations`] over the asserted set to obtain a concrete,
-//!   `axeyum-strings`-replayed model, assembles a combined [`Model`], and
-//!   **replays it against the original assertions** through the ground evaluator
-//!   ([`replays`]). A non-replay (or a word search that finds no model) downgrades
-//!   to [`CheckResult::Unknown`], never a wrong `sat`.
+//!   theory-consistent assignment the entry point assembles a concrete model: a
+//!   [`solve_word_equations`] assignment for the word part, a matcher-replayed
+//!   [`Membership::solve`] witness per membership class (spread across its
+//!   word-equal members), and each membership atom's truth **recomputed by the
+//!   independent reference [`matches()`]** on the model's string binding — never
+//!   trusted from the SAT search. The combined [`Model`] is then **replayed against
+//!   the original assertions** through the ground evaluator ([`replays`]). A
+//!   non-replay (or a search that finds no witnessing model) downgrades to
+//!   [`CheckResult::Unknown`], never a wrong `sat`.
 //! - **Deadline / budget.** The CDCL search is deadline-bounded like the EUF
 //!   route; the per-assert refuter and the final word search honor the same
 //!   [`SearchBudget`] deadline, so the path degrades to `Unknown` under a
@@ -62,12 +65,14 @@
 //!   theory). This is correct but not cheap; a backtrackable word core is the
 //!   incrementality TODO.
 
-use std::collections::HashSet;
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::time::Instant;
 
 use axeyum_ir::{Op, Sort, SymbolId, TermArena, TermId, TermNode, Value};
+use axeyum_strings::regex::{Regex, matches};
 use axeyum_strings::{
-    RefuteOutcome, SearchBudget, SearchOutcome, refute_word_equations, solve_word_equations,
+    Membership, RefuteOutcome, SearchBudget, SearchOutcome, refute_word_equations,
+    solve_word_equations,
 };
 
 use crate::backend::{CheckResult, SolverConfig, UnknownKind, UnknownReason};
@@ -83,6 +88,58 @@ use crate::model::Model;
 /// `wasm32`, where the deadline is absent). Mirrors `smtlib::WORD_ROUTE_MAX_NODES`.
 const WORD_MAX_NODES: u64 = 200_000;
 
+/// The distinct-canonical-residual cap the per-class regex-membership emptiness
+/// check materializes before declining (⇒ no conflict detected on that class).
+/// Mirrors `axeyum_strings::regex::membership::DEFAULT_MAX_STATES`.
+const MEMBERSHIP_MAX_STATES: usize = 20_000;
+
+/// A theory atom of the online string route.
+enum AtomKind {
+    /// A `Seq` equality `(= l r)`: asserted `true` ⇒ a word equality, `false` ⇒ a
+    /// word disequality.
+    Eq(TermId, TermId),
+    /// A regex membership `(str.in_re operand R)` on a single string variable:
+    /// asserted `true` ⇒ `operand ∈ R` (a positive constraint), `false` ⇒
+    /// `operand ∉ R` (a negative constraint, i.e. `operand ∈ ∁R`).
+    Membership { operand: SymbolId, regex: Regex },
+}
+
+/// A tiny union-find over `Seq` variable symbols, for grouping memberships into
+/// equivalence classes under the asserted word equalities. Path-halving find over
+/// a `HashMap` parent table; deterministic because it is only ever queried for
+/// class-root equality, never iterated for output.
+#[derive(Default)]
+struct UnionFind {
+    parent: HashMap<SymbolId, SymbolId>,
+}
+
+impl UnionFind {
+    /// Registers `s` as its own singleton class if unseen.
+    fn make(&mut self, s: SymbolId) {
+        self.parent.entry(s).or_insert(s);
+    }
+
+    /// The class root of `s` (registering `s` first if unseen).
+    fn find(&mut self, s: SymbolId) -> SymbolId {
+        self.make(s);
+        let mut root = s;
+        while self.parent[&root] != root {
+            let grand = self.parent[&self.parent[&root]];
+            self.parent.insert(root, grand); // path halving
+            root = grand;
+        }
+        root
+    }
+
+    /// Merges the classes of `a` and `b`.
+    fn union(&mut self, a: SymbolId, b: SymbolId) {
+        let (ra, rb) = (self.find(a), self.find(b));
+        if ra != rb {
+            self.parent.insert(ra, rb);
+        }
+    }
+}
+
 /// Online word-level string theory over the CDCL(T) driver.
 ///
 /// Owns a mutable borrow of the arena because the word core
@@ -91,9 +148,8 @@ const WORD_MAX_NODES: u64 = 200_000;
 /// variable numbering: the first `atoms.len()` skeleton variables are these atoms.
 pub(crate) struct StringTheory<'a> {
     arena: &'a mut TermArena,
-    /// Per atom index: the `Seq` equality sides `(l, r)`, or `None` for a
-    /// non-representable atom (a no-op — treated as uninterpreted Boolean-only).
-    atoms: Vec<Option<(TermId, TermId)>>,
+    /// Per atom index: its kind (a word equality or a regex membership).
+    atoms: Vec<AtomKind>,
     /// Per atom index: the value it is currently asserted at (`None` if
     /// unassigned). Guards against a double-assert of the same atom.
     assigned: Vec<Option<bool>>,
@@ -105,9 +161,14 @@ pub(crate) struct StringTheory<'a> {
     active_eqs: Vec<(usize, (TermId, TermId))>,
     /// Currently-asserted **disequalities**: `(atom index, (l, r))`.
     active_diseqs: Vec<(usize, (TermId, TermId))>,
+    /// Currently-asserted **positive** memberships: `(atom index, operand, R)`.
+    active_pos_mem: Vec<(usize, SymbolId, Regex)>,
+    /// Currently-asserted **negative** memberships: `(atom index, operand, R)`.
+    active_neg_mem: Vec<(usize, SymbolId, Regex)>,
     /// Backtrack trail: per [`StringTheory::push`], the
-    /// `(active_eqs, active_diseqs, assigned_log)` lengths.
-    trail: Vec<(usize, usize, usize)>,
+    /// `(active_eqs, active_diseqs, active_pos_mem, active_neg_mem, assigned_log)`
+    /// lengths.
+    trail: Vec<(usize, usize, usize, usize, usize)>,
     /// The refuter budget (deadline + node cap).
     budget: SearchBudget,
     /// Telemetry: theory conflicts reported to the driver.
@@ -120,22 +181,19 @@ pub(crate) struct StringTheory<'a> {
 }
 
 impl<'a> StringTheory<'a> {
-    /// Builds the theory over `atom_sides` (per atom, its `Seq` equality sides or
-    /// `None`), borrowing `arena` for the word core and using `budget` for the
-    /// per-assert refuter.
-    pub(crate) fn new(
-        arena: &'a mut TermArena,
-        atom_sides: Vec<Option<(TermId, TermId)>>,
-        budget: SearchBudget,
-    ) -> Self {
-        let n = atom_sides.len();
+    /// Builds the theory over `atom_kinds` (per atom, its kind), borrowing `arena`
+    /// for the word core and using `budget` for the per-assert refuter.
+    fn new(arena: &'a mut TermArena, atom_kinds: Vec<AtomKind>, budget: SearchBudget) -> Self {
+        let n = atom_kinds.len();
         Self {
             arena,
-            atoms: atom_sides,
+            atoms: atom_kinds,
             assigned: vec![None; n],
             assigned_log: Vec::new(),
             active_eqs: Vec::new(),
             active_diseqs: Vec::new(),
+            active_pos_mem: Vec::new(),
+            active_neg_mem: Vec::new(),
             trail: Vec::new(),
             budget,
             conflicts_reported: 0,
@@ -152,6 +210,22 @@ impl<'a> StringTheory<'a> {
     /// The currently-asserted disequalities as bare `(l, r)` pairs.
     pub(crate) fn disequalities(&self) -> Vec<(TermId, TermId)> {
         self.active_diseqs.iter().map(|&(_, p)| p).collect()
+    }
+
+    /// The currently-asserted positive memberships as `(operand, regex)` pairs.
+    fn positive_memberships(&self) -> Vec<(SymbolId, Regex)> {
+        self.active_pos_mem
+            .iter()
+            .map(|&(_, op, ref r)| (op, r.clone()))
+            .collect()
+    }
+
+    /// The currently-asserted negative memberships as `(operand, regex)` pairs.
+    fn negative_memberships(&self) -> Vec<(SymbolId, Regex)> {
+        self.active_neg_mem
+            .iter()
+            .map(|&(_, op, ref r)| (op, r.clone()))
+            .collect()
     }
 
     /// The soundness telemetry: every reported theory conflict was backed by a
@@ -220,6 +294,110 @@ impl<'a> StringTheory<'a> {
         self.conflicts_certified += 1;
         Err(core)
     }
+
+    /// Re-checks the **regex-membership** consistency of the current assertion set.
+    /// Groups the asserted memberships into equivalence classes by the word
+    /// equalities that merge single-variable operands (`(= x y)` over two `Seq`
+    /// *variables*), intersects each class's positive/negative regexes, and — on a
+    /// **certified emptiness** ([`Membership::refute_empty`], the same re-checked
+    /// derivative-closure certificate the one-shot route uses for `unsat`) — reports
+    /// a theory conflict.
+    ///
+    /// The conflict core is the class's membership literals (at their asserted
+    /// polarity) together with the variable-variable equalities that built the class
+    /// (each `true`) and the just-asserted `trigger` (for the same 1-UIP
+    /// well-formedness reason as [`Self::check_conflict`]). Every such literal is on
+    /// the trail at the stated value, so the clause `¬⋀core` is a genuine theory
+    /// lemma: the class members are all equal and jointly constrained to an empty
+    /// language.
+    ///
+    /// Only variable-variable equalities merge classes; an equality with a compound
+    /// or literal side is **not** used (a conservative under-merge that can only
+    /// *miss* a conflict, never fabricate one — the missed branch is caught later by
+    /// the mandatory `sat`-model replay). A class that is not proven empty within the
+    /// state cap, or a past-deadline budget, reports no conflict.
+    fn check_membership_conflict(&mut self, trigger: (usize, bool)) -> Result<(), Vec<TheoryLit>> {
+        if (self.active_pos_mem.is_empty() && self.active_neg_mem.is_empty())
+            || self.budget.past_deadline()
+        {
+            return Ok(());
+        }
+
+        // Union-find over the `Seq` variable symbols, merged by variable-variable
+        // equalities. Record those equalities so the conflict core can cite them.
+        let mut uf: UnionFind = UnionFind::default();
+        for &(_, op, _) in self.active_pos_mem.iter().chain(&self.active_neg_mem) {
+            uf.make(op);
+        }
+        let mut var_eqs: Vec<(usize, SymbolId, SymbolId)> = Vec::new();
+        for &(atom, (l, r)) in &self.active_eqs {
+            if let (TermNode::Symbol(a), TermNode::Symbol(b)) =
+                (self.arena.node(l), self.arena.node(r))
+                && matches!(self.arena.sort_of(l), Sort::Seq(_))
+                && matches!(self.arena.sort_of(r), Sort::Seq(_))
+            {
+                let (a, b) = (*a, *b);
+                uf.make(a);
+                uf.make(b);
+                uf.union(a, b);
+                var_eqs.push((atom, a, b));
+            }
+        }
+
+        // Group the memberships by class root: `(atom, regex, positive)`.
+        let mut classes: BTreeMap<SymbolId, Vec<(usize, Regex, bool)>> = BTreeMap::new();
+        for &(atom, op, ref regex) in &self.active_pos_mem {
+            classes
+                .entry(uf.find(op))
+                .or_default()
+                .push((atom, regex.clone(), true));
+        }
+        for &(atom, op, ref regex) in &self.active_neg_mem {
+            classes
+                .entry(uf.find(op))
+                .or_default()
+                .push((atom, regex.clone(), false));
+        }
+
+        for (root, members) in &classes {
+            let mut problem = Membership::default();
+            for (_, regex, positive) in members {
+                if *positive {
+                    problem.positives.push(regex.clone());
+                } else {
+                    problem.negatives.push(regex.clone());
+                }
+            }
+            if !problem.refute_empty(MEMBERSHIP_MAX_STATES) {
+                continue;
+            }
+            // Certified empty ⇒ theory conflict. Core = this class's membership
+            // literals + the variable-variable equalities inside the class + trigger.
+            let mut core: Vec<TheoryLit> = members
+                .iter()
+                .map(|&(atom, _, positive)| TheoryLit {
+                    atom,
+                    value: positive,
+                })
+                .collect();
+            for &(atom, a, b) in &var_eqs {
+                if uf.find(a) == *root && uf.find(b) == *root {
+                    core.push(TheoryLit { atom, value: true });
+                }
+            }
+            let (t_atom, t_value) = trigger;
+            if !core.iter().any(|l| l.atom == t_atom) {
+                core.push(TheoryLit {
+                    atom: t_atom,
+                    value: t_value,
+                });
+            }
+            self.conflicts_reported += 1;
+            self.conflicts_certified += 1;
+            return Err(core);
+        }
+        Ok(())
+    }
 }
 
 impl TheorySolver for StringTheory<'_> {
@@ -228,31 +406,45 @@ impl TheorySolver for StringTheory<'_> {
             self.assigned[atom] = Some(value);
             self.assigned_log.push(atom);
         }
-        let Some((l, r)) = self.atoms[atom] else {
-            // Non-representable atom: uninterpreted Boolean-only, nothing for the
-            // word core to do (indices stay aligned).
-            return Ok(());
-        };
-        if value {
-            self.active_eqs.push((atom, (l, r)));
-        } else {
-            self.active_diseqs.push((atom, (l, r)));
+        match &self.atoms[atom] {
+            AtomKind::Eq(l, r) => {
+                let (l, r) = (*l, *r);
+                if value {
+                    self.active_eqs.push((atom, (l, r)));
+                } else {
+                    self.active_diseqs.push((atom, (l, r)));
+                }
+            }
+            AtomKind::Membership { operand, regex } => {
+                let (operand, regex) = (*operand, regex.clone());
+                if value {
+                    self.active_pos_mem.push((atom, operand, regex));
+                } else {
+                    self.active_neg_mem.push((atom, operand, regex));
+                }
+            }
         }
-        self.check_conflict((atom, value))
+        // Both refuters are certified; report the first conflict found.
+        self.check_conflict((atom, value))?;
+        self.check_membership_conflict((atom, value))
     }
 
     fn push(&mut self) {
         self.trail.push((
             self.active_eqs.len(),
             self.active_diseqs.len(),
+            self.active_pos_mem.len(),
+            self.active_neg_mem.len(),
             self.assigned_log.len(),
         ));
     }
 
     fn pop(&mut self) {
-        if let Some((eqs_len, diseqs_len, assigned_len)) = self.trail.pop() {
+        if let Some((eqs_len, diseqs_len, pos_len, neg_len, assigned_len)) = self.trail.pop() {
             self.active_eqs.truncate(eqs_len);
             self.active_diseqs.truncate(diseqs_len);
+            self.active_pos_mem.truncate(pos_len);
+            self.active_neg_mem.truncate(neg_len);
             while self.assigned_log.len() > assigned_len {
                 if let Some(atom) = self.assigned_log.pop() {
                     self.assigned[atom] = None;
@@ -361,42 +553,69 @@ pub fn check_qf_s_online_cdclt(
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> CheckResult {
-    // Distinct equality atoms — the theory's atom indices and the first
-    // `atom_terms.len()` skeleton variables.
+    check_qf_s_online_cdclt_with_memberships(arena, assertions, &[], config)
+}
+
+/// The prepared inputs to the online CDCL(T) driver: the theory atom kinds, the
+/// encoded Boolean skeleton, and the model-assembly metadata.
+struct Prepared {
+    atom_kinds: Vec<AtomKind>,
+    driver_clauses: Vec<Vec<CdcltLit>>,
+    eq_count: usize,
+    var_count: usize,
+    seq_syms: Vec<SymbolId>,
+    mem_proxy_syms: HashSet<SymbolId>,
+    term_vars: Vec<(TermId, usize)>,
+}
+
+/// Collects the theory atoms (`Seq` equalities followed by the membership atoms),
+/// encodes the Boolean skeleton, and gathers the model-assembly metadata. Returns
+/// `Err(decline)` — a [`CheckResult::Unknown`] — when the query is out of the
+/// route's fragment (a non-`Seq` equality atom, no atoms, or skeleton structure the
+/// shared [`Encoder`] does not cover).
+fn prepare_skeleton(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    memberships: &[(TermId, SymbolId, Regex)],
+) -> Result<Prepared, CheckResult> {
+    // Distinct equality atoms — the first theory atoms / skeleton variables.
     let mut atom_terms: Vec<TermId> = Vec::new();
     let mut seen = HashSet::new();
     for &a in assertions {
         collect_eq_atoms(arena, a, &mut atom_terms, &mut seen);
     }
-    if atom_terms.is_empty() {
-        return CheckResult::Unknown(unknown(
-            "no equality atoms for the online CDCL(T) string path",
-        ));
-    }
 
-    // Scope gate: every equality atom must be `Seq`-sorted. A non-`Seq` equality
-    // is outside the pure `QF_S` fragment this route decides — decline the whole
-    // query rather than let the theory silently ignore it (which could otherwise
-    // manufacture a Boolean model the replay would then have to catch).
-    let mut atom_sides: Vec<Option<(TermId, TermId)>> = Vec::with_capacity(atom_terms.len());
-    let mut any_seq = false;
+    // Scope gate: every equality atom must be `Seq`-sorted. A non-`Seq` equality is
+    // outside the `QF_S` fragment this route decides — decline the whole query.
+    let mut atom_kinds: Vec<AtomKind> = Vec::with_capacity(atom_terms.len() + memberships.len());
     for &t in &atom_terms {
         match seq_eq_sides(arena, t) {
-            Some(sides) => {
-                any_seq = true;
-                atom_sides.push(Some(sides));
-            }
+            Some((l, r)) => atom_kinds.push(AtomKind::Eq(l, r)),
             None => {
-                return CheckResult::Unknown(unknown(
+                return Err(CheckResult::Unknown(unknown(
                     "non-sequence equality atom outside the QF_S online CDCL(T) scope",
-                ));
+                )));
             }
         }
     }
-    if !any_seq {
-        return CheckResult::Unknown(unknown(
-            "no sequence equality atoms for the online CDCL(T) string path",
-        ));
+
+    // Membership atoms follow the equality atoms in the theory's atom-index space.
+    // Deduplicate on the proxy atom term (the parser interns identical atoms, but
+    // guard against a caller passing a repeat).
+    for &(atom, operand, ref regex) in memberships {
+        if seen.insert(atom) {
+            atom_terms.push(atom);
+            atom_kinds.push(AtomKind::Membership {
+                operand,
+                regex: regex.clone(),
+            });
+        }
+    }
+
+    if atom_terms.is_empty() {
+        return Err(CheckResult::Unknown(unknown(
+            "no theory atoms for the online CDCL(T) string path",
+        )));
     }
 
     // Encode the Boolean skeleton over the atoms with the shared Tseitin encoder.
@@ -404,9 +623,9 @@ pub fn check_qf_s_online_cdclt(
     let mut clauses: Vec<Vec<Lit>> = Vec::new();
     for &assertion in assertions {
         let Some(top) = enc.encode(arena, assertion, &mut clauses) else {
-            return CheckResult::Unknown(unknown(
+            return Err(CheckResult::Unknown(unknown(
                 "boolean skeleton outside the online CDCL(T) encoder",
-            ));
+            )));
         };
         clauses.push(vec![Lit {
             var: top,
@@ -428,17 +647,89 @@ pub fn check_qf_s_online_cdclt(
 
     let eq_count = atom_terms.len();
     let var_count = enc.var_count;
-    let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
-    let budget = word_budget(config);
-    // The `Seq` symbols a model must bind (before the theory borrows the arena).
-    let seq_syms = collect_seq_symbols(arena, &atom_terms);
+    // The `Seq` symbols a model must bind: those reachable from the equality atoms,
+    // plus every membership operand (a membership-only variable never surfaces as an
+    // equality side, yet the replay must bind it).
+    let mut seq_syms = collect_seq_symbols(arena, &atom_terms);
+    for &(_, operand, _) in memberships {
+        if !seq_syms.contains(&operand) {
+            seq_syms.push(operand);
+        }
+    }
+    seq_syms.sort_unstable_by_key(|s| s.index());
+    seq_syms.dedup();
+    // The membership proxy symbols — skipped by the generic skeleton-Bool injection
+    // (their truth comes from the matcher, never the SAT search).
+    let mem_proxy_syms: HashSet<SymbolId> = memberships
+        .iter()
+        .filter_map(|&(atom, _, _)| match arena.node(atom) {
+            TermNode::Symbol(s) => Some(*s),
+            _ => None,
+        })
+        .collect();
     // A deterministic (TermId-sorted) view of the encoder's Bool-symbol variables,
     // for skeleton-only Bool injection after the search (`term_var` is a HashMap).
     let mut term_vars: Vec<(TermId, usize)> = enc.term_var.iter().map(|(&t, &v)| (t, v)).collect();
     term_vars.sort_by_key(|(term, _)| *term);
 
+    Ok(Prepared {
+        atom_kinds,
+        driver_clauses,
+        eq_count,
+        var_count,
+        seq_syms,
+        mem_proxy_syms,
+        term_vars,
+    })
+}
+
+/// The online CDCL(T) string route (P1.5b / P2.7 T-C.6) extended with **regex
+/// membership** theory atoms.
+///
+/// `memberships` maps each `(str.in_re X R)` atom the skeleton references to
+/// `(proxy_atom_term, operand_symbol, regex)`: `proxy_atom_term` is the
+/// `Sort::Bool` symbol standing for the atom inside `assertions`, `operand_symbol`
+/// is the single `Seq` variable it constrains, and `regex` is the code-point
+/// language (see [`axeyum_smtlib::Script::word_skeleton_memberships`]). Asserting
+/// the atom `true` is `operand ∈ R`; `false` is `operand ∉ R` (the complemented
+/// language) — a single atom kind for both polarities.
+///
+/// Verdict discipline is unchanged and extended to memberships:
+/// - **`unsat`** — only via a certified theory conflict. Word (dis)equalities are
+///   refuted by the T-B.7 word core; membership intersections are refuted by the
+///   re-checked derivative-emptiness certificate ([`Membership::refute_empty`]),
+///   grouped by the equivalence classes the word equalities induce.
+/// - **`sat`** — only via a model that **replays** against the original assertions:
+///   each membership class contributes a matcher-replayed witness, and each
+///   membership proxy's truth is recomputed by the independent reference
+///   [`matches()`] on the model's string binding (never trusted from the SAT search).
+/// - **`Unknown`** — on deadline/budget, an out-of-fragment atom, or when no
+///   replaying model is found.
+#[must_use]
+pub fn check_qf_s_online_cdclt_with_memberships(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    memberships: &[(TermId, SymbolId, Regex)],
+    config: &SolverConfig,
+) -> CheckResult {
+    let prepared = match prepare_skeleton(arena, assertions, memberships) {
+        Ok(prepared) => prepared,
+        Err(decline) => return decline,
+    };
+    let Prepared {
+        atom_kinds,
+        driver_clauses,
+        eq_count,
+        var_count,
+        seq_syms,
+        mem_proxy_syms,
+        term_vars,
+    } = prepared;
+
+    let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
+    let budget = word_budget(config);
     let mut solver = CdclT::new(var_count, eq_count, driver_clauses, deadline);
-    let mut theory = StringTheory::new(arena, atom_sides, budget.clone());
+    let mut theory = StringTheory::new(arena, atom_kinds, budget.clone());
     let outcome = solver.solve(&mut theory);
 
     match outcome {
@@ -452,69 +743,226 @@ pub fn check_qf_s_online_cdclt(
             CheckResult::Unknown(unknown("timeout in the online CDCL(T) string driver"))
         }
         Outcome::Sat => {
-            // The driver reached a total, theory-consistent assignment. The refuter
-            // is incomplete, so "no conflict" is not a model — search for a concrete,
-            // replay-checked word model over the asserted set, then replay the
-            // combined model against the ORIGINAL assertions.
+            // The driver reached a total, theory-consistent assignment. The refuters
+            // are incomplete, so "no conflict" is not a model — assemble a concrete,
+            // replay-checked model over the asserted word + membership set, then
+            // replay it against the ORIGINAL assertions.
             theory.assert_conflicts_certified();
             let eqs = theory.equalities();
             let diseqs = theory.disequalities();
+            let pos_mem = theory.positive_memberships();
+            let neg_mem = theory.negative_memberships();
             drop(theory); // release the arena borrow for the model search + replay
-            string_sat_model(
-                arena, assertions, &eqs, &diseqs, &budget, &seq_syms, &term_vars, &solver,
-            )
+            let ctx = SatModelCtx {
+                assertions,
+                eqs: &eqs,
+                diseqs: &diseqs,
+                pos_mem: &pos_mem,
+                neg_mem: &neg_mem,
+                budget: &budget,
+                seq_syms: &seq_syms,
+                memberships,
+                mem_proxy_syms: &mem_proxy_syms,
+                term_vars: &term_vars,
+                solver: &solver,
+            };
+            string_sat_model(arena, &ctx)
         }
     }
 }
 
-/// Assembles and replay-checks a `sat` model on a theory-consistent branch: search
-/// the asserted word system for a concrete, `axeyum-strings`-replayed assignment,
-/// inject any skeleton-only Bool symbols from the solver trail, and replay the
-/// combined [`Model`] against the original assertions. Returns
-/// [`CheckResult::Unknown`] when no word model is found or the combined model does
-/// not replay — never a wrong `sat`.
-#[allow(clippy::too_many_arguments)]
-fn string_sat_model(
-    arena: &mut TermArena,
-    assertions: &[TermId],
-    eqs: &[(TermId, TermId)],
-    diseqs: &[(TermId, TermId)],
-    budget: &SearchBudget,
-    seq_syms: &[SymbolId],
-    term_vars: &[(TermId, usize)],
-    solver: &CdclT,
-) -> CheckResult {
-    match solve_word_equations(arena, eqs, diseqs, budget) {
-        SearchOutcome::Sat(assignment) => {
-            let mut model = Model::new();
-            for &sym in seq_syms {
-                if let Some(value) = assignment.get(sym) {
-                    model.set(sym, value);
-                }
-            }
-            // Inject any skeleton-only Bool symbol (never a Seq atom side, so absent
-            // from the word model) from the solver trail. Additive and replay-gated,
-            // so it cannot manufacture a wrong `sat`.
-            for (term, var) in term_vars {
-                if let TermNode::Symbol(sym) = arena.node(*term)
-                    && arena.sort_of(*term) == Sort::Bool
-                    && model.get(*sym).is_none()
-                    && let Some(value) = solver.value(*var)
-                {
-                    model.set(*sym, Value::Bool(value));
-                }
-            }
-            if replays(arena, assertions, &model) {
-                CheckResult::Sat(model)
-            } else {
-                CheckResult::Unknown(unknown(
-                    "online CDCL(T) string model did not replay against the assertions",
-                ))
-            }
-        }
-        SearchOutcome::Unknown { .. } => CheckResult::Unknown(unknown(
+/// The inputs to [`string_sat_model`] on a theory-consistent branch, bundled to
+/// keep the argument list bounded.
+struct SatModelCtx<'a> {
+    assertions: &'a [TermId],
+    eqs: &'a [(TermId, TermId)],
+    diseqs: &'a [(TermId, TermId)],
+    pos_mem: &'a [(SymbolId, Regex)],
+    neg_mem: &'a [(SymbolId, Regex)],
+    budget: &'a SearchBudget,
+    seq_syms: &'a [SymbolId],
+    memberships: &'a [(TermId, SymbolId, Regex)],
+    mem_proxy_syms: &'a HashSet<SymbolId>,
+    term_vars: &'a [(TermId, usize)],
+    solver: &'a CdclT,
+}
+
+/// Assembles and replay-checks a `sat` model on a theory-consistent branch:
+/// 1. solve the asserted word (dis)equalities for a base string assignment;
+/// 2. override each membership equivalence class with a matcher-replayed witness;
+/// 3. inject each membership proxy's truth via the reference [`matches()`] on the
+///    model's operand binding, and any other skeleton-only Bool from the SAT trail;
+/// 4. replay the combined [`Model`] against the original assertions.
+///
+/// Returns [`CheckResult::Unknown`] when no model is found or the combined model
+/// does not replay — never a wrong `sat`.
+fn string_sat_model(arena: &mut TermArena, ctx: &SatModelCtx) -> CheckResult {
+    let SearchOutcome::Sat(assignment) =
+        solve_word_equations(arena, ctx.eqs, ctx.diseqs, ctx.budget)
+    else {
+        return CheckResult::Unknown(unknown(
             "online CDCL(T) string search found no replaying model on a \
              theory-consistent branch",
-        )),
+        ));
+    };
+
+    let mut model = Model::new();
+    for &sym in ctx.seq_syms {
+        if let Some(value) = assignment.get(sym) {
+            model.set(sym, value);
+        }
     }
+
+    // Override membership-class symbols with per-class witnesses (each replayed by
+    // the reference matcher inside `Membership::solve`). A class the sub-solver
+    // cannot witness within budget downgrades the whole model to `Unknown`.
+    if !ctx.pos_mem.is_empty() || !ctx.neg_mem.is_empty() {
+        let Some(witnesses) =
+            membership_witnesses(arena, ctx.eqs, ctx.pos_mem, ctx.neg_mem, ctx.budget)
+        else {
+            return CheckResult::Unknown(unknown(
+                "online CDCL(T) membership class has no witnessing model within budget",
+            ));
+        };
+        for (sym, codepoints) in witnesses {
+            model.set(sym, seq_value(&codepoints));
+        }
+    }
+
+    // Inject each membership proxy's truth from the reference matcher on the model's
+    // operand binding — the sole (faithful) source for a membership atom's value.
+    for &(atom, operand, ref regex) in ctx.memberships {
+        let TermNode::Symbol(proxy) = arena.node(atom) else {
+            continue;
+        };
+        let proxy = *proxy;
+        let holds = match model.get(operand) {
+            Some(Value::Seq(elems)) => matches(regex, &seq_code_points(&elems)),
+            // An unbound operand cannot be matched — leave the proxy unset so replay
+            // reports Unknown rather than guess.
+            _ => continue,
+        };
+        model.set(proxy, Value::Bool(holds));
+    }
+
+    // Inject any remaining skeleton-only Bool symbol (never a Seq atom side, never a
+    // membership proxy) from the solver trail. Additive and replay-gated.
+    for (term, var) in ctx.term_vars {
+        if let TermNode::Symbol(sym) = arena.node(*term)
+            && arena.sort_of(*term) == Sort::Bool
+            && !ctx.mem_proxy_syms.contains(sym)
+            && model.get(*sym).is_none()
+            && let Some(value) = ctx.solver.value(*var)
+        {
+            model.set(*sym, Value::Bool(value));
+        }
+    }
+
+    if replays(arena, ctx.assertions, &model) {
+        CheckResult::Sat(model)
+    } else {
+        CheckResult::Unknown(unknown(
+            "online CDCL(T) string model did not replay against the assertions",
+        ))
+    }
+}
+
+/// Solves each membership equivalence class (grouped by the variable-variable word
+/// equalities, exactly as [`StringTheory::check_membership_conflict`]) for a
+/// concrete matcher-replayed witness, returning `symbol → witness code points` for
+/// every symbol in a witnessed class. Returns `None` if any class has no witness
+/// within budget (or is unexpectedly empty), so the caller reports `Unknown`.
+fn membership_witnesses(
+    arena: &TermArena,
+    eqs: &[(TermId, TermId)],
+    pos_mem: &[(SymbolId, Regex)],
+    neg_mem: &[(SymbolId, Regex)],
+    budget: &SearchBudget,
+) -> Option<HashMap<SymbolId, Vec<u32>>> {
+    let mut uf = UnionFind::default();
+    for &(op, _) in pos_mem.iter().chain(neg_mem) {
+        uf.make(op);
+    }
+    // Merge classes on variable-variable equalities, and collect every symbol so we
+    // can assign the class witness to non-membership members too.
+    let mut all_syms: Vec<SymbolId> = Vec::new();
+    for &(op, _) in pos_mem.iter().chain(neg_mem) {
+        all_syms.push(op);
+    }
+    for &(l, r) in eqs {
+        if let (TermNode::Symbol(a), TermNode::Symbol(b)) = (arena.node(l), arena.node(r))
+            && matches!(arena.sort_of(l), Sort::Seq(_))
+            && matches!(arena.sort_of(r), Sort::Seq(_))
+        {
+            let (a, b) = (*a, *b);
+            uf.make(a);
+            uf.make(b);
+            uf.union(a, b);
+            all_syms.push(a);
+            all_syms.push(b);
+        }
+    }
+
+    // Per class root: the membership problem.
+    let mut classes: BTreeMap<SymbolId, Membership> = BTreeMap::new();
+    for &(op, ref regex) in pos_mem {
+        classes
+            .entry(uf.find(op))
+            .or_default()
+            .positives
+            .push(regex.clone());
+    }
+    for &(op, ref regex) in neg_mem {
+        classes
+            .entry(uf.find(op))
+            .or_default()
+            .negatives
+            .push(regex.clone());
+    }
+
+    // Witness each class.
+    let mut witness_by_root: BTreeMap<SymbolId, Vec<u32>> = BTreeMap::new();
+    for (root, problem) in &classes {
+        match problem.solve(budget) {
+            axeyum_strings::MembershipOutcome::Sat(w) => {
+                witness_by_root.insert(*root, w);
+            }
+            // On a theory-consistent branch the class is not certified-empty, but the
+            // witness search may still be over budget (`Unknown`) — report no model.
+            _ => return None,
+        }
+    }
+
+    // Spread each class witness to every symbol in the class.
+    let mut out: HashMap<SymbolId, Vec<u32>> = HashMap::new();
+    for sym in all_syms {
+        let root = uf.find(sym);
+        if let Some(w) = witness_by_root.get(&root) {
+            out.insert(sym, w.clone());
+        }
+    }
+    Some(out)
+}
+
+/// Builds a `Seq(BitVec(18))` model value from a witness's Unicode code points
+/// (mirrors `crate::smtlib::seq_value`).
+fn seq_value(codepoints: &[u32]) -> Value {
+    Value::Seq(
+        codepoints
+            .iter()
+            .map(|&cp| {
+                Value::from_scalar_code(Sort::BitVec(Sort::STRING_ELEM_WIDTH), u128::from(cp))
+            })
+            .collect(),
+    )
+}
+
+/// The Unicode code points of a `Seq(BitVec(18))` string value's elements, for the
+/// reference matcher. A non-scalar element (never produced by [`seq_value`]) maps
+/// to `0`.
+fn seq_code_points(elems: &[Value]) -> Vec<u32> {
+    elems
+        .iter()
+        .map(|v| u32::try_from(v.scalar_code()).unwrap_or(0))
+        .collect()
 }

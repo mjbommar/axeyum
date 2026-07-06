@@ -173,6 +173,58 @@ pub struct Script {
     /// the reference matcher) or a re-checked-emptiness `unsat`, so a `None` (or an
     /// undecided problem) simply leaves the prior verdict untouched.
     pub membership_problem: Option<crate::MembershipProblem>,
+    /// The **membership theory atoms** of the Boolean-structured word skeleton
+    /// (P2.7 T-C.6): one entry per distinct `(str.in_re X R)` atom that appears
+    /// inside [`Script::word_skeleton`], as `(proxy_atom_term, operand_symbol,
+    /// regex)`. The `proxy_atom_term` is a fresh `Sort::Bool` symbol leaf standing
+    /// for the atom in the skeleton's Boolean structure; `operand_symbol` is the
+    /// `!weq!<name>` `Seq` symbol the membership constrains (shared with the
+    /// equality atoms, so word equalities merge membership constraints across
+    /// variables); `regex` is the code-point [`Regex`](axeyum_strings::Regex) the
+    /// operand must (asserted `true`) or must not (asserted `false`) match.
+    ///
+    /// Populated in lockstep with [`Script::word_skeleton`] and only for the
+    /// single-**variable**-operand fragment (a `str.++`/`substr`/literal operand
+    /// collapses the whole skeleton to empty, same all-or-nothing discipline). The
+    /// online CDCL(T) route consumes it to decide disjunctive/negated membership
+    /// shapes: a per-variable regex-intersection emptiness is a certified theory
+    /// conflict, and a `sat` branch is replayed by the reference matcher.
+    pub word_skeleton_memberships: Vec<(TermId, SymbolId, axeyum_strings::regex::Regex)>,
+}
+
+impl Script {
+    /// The flat assertion view **only when it is a sound thing to solve directly**.
+    ///
+    /// Returns `Some(&self.assertions)` for an ordinary script, but **`None` for a
+    /// word-first-fallback parse** ([`Script::word_only_fallback`] set) — a script
+    /// the bounded encoder declined wholesale, whose [`Script::assertions`] view is
+    /// **empty** and whose real content lives only in the parser side channels
+    /// ([`Script::word_problem`] / [`Script::word_skeleton`] /
+    /// [`Script::word_skeleton_memberships`]).
+    ///
+    /// # Why this matters (a soundness trap)
+    ///
+    /// Handing a fallback script's empty `assertions` slice straight to
+    /// `check_auto` / `solve` decides the **empty conjunction**, i.e. a **vacuous
+    /// `sat`** — a *wrong verdict* for a genuinely-unsat fallback script. This is
+    /// exactly the P0 that shipped as `instance1079-re-loop-cong` (unsat, reported
+    /// `sat`). Any consumer that parses **arbitrary** SMT-LIB text (a corpus reader,
+    /// not a fixed embedded literal) and then solves the flat view must gate on this
+    /// helper and route a `None` through the text front door
+    /// (`axeyum_solver::solve_smtlib` / `decide_word_only_script`) instead.
+    ///
+    /// A `Some(view)` may still be empty for a *legitimately* assertion-free script
+    /// (e.g. `(check-sat)` with no `assert`) — that empty conjunction really is
+    /// `sat`; the hazard is *only* the fallback case, which this helper alone
+    /// distinguishes.
+    #[must_use]
+    pub fn solvable_flat_view(&self) -> Option<&[TermId]> {
+        if self.word_only_fallback.is_some() {
+            None
+        } else {
+            Some(&self.assertions)
+        }
+    }
 }
 
 /// A first-class `Sort::Seq` word-equation problem accumulated as a side channel
@@ -334,7 +386,10 @@ fn parse_script_bounded(input: &str) -> Result<Script, SmtError> {
         // online CDCL(T) route decides — `or`/negated word problems the flat
         // conjunction side channel above cannot represent. Same all-or-nothing
         // discipline and same shared `!weq!` symbols.
-        script.word_skeleton = build_word_skeleton(&mut script.arena, &exprs).unwrap_or_default();
+        if let Some(skeleton) = build_word_skeleton(&mut script.arena, &exprs) {
+            script.word_skeleton = skeleton.assertions;
+            script.word_skeleton_memberships = skeleton.memberships;
+        }
         // Parser-side regex-membership side channel (P2.7 T-C.5): the `str.in_re`
         // fragment translated to code-point membership problems for the
         // symbolic-derivative sub-solver (ADR-0054). Same all-or-nothing discipline
@@ -373,7 +428,10 @@ fn parse_word_only(input: &str) -> Option<Script> {
     // decidable by the online route. The skeleton shares the `!weq!` symbols the flat
     // build declared (`TermArena::declare` is idempotent).
     script.word_problem = build_word_problem(&mut script.arena, &exprs);
-    script.word_skeleton = build_word_skeleton(&mut script.arena, &exprs).unwrap_or_default();
+    if let Some(skeleton) = build_word_skeleton(&mut script.arena, &exprs) {
+        script.word_skeleton = skeleton.assertions;
+        script.word_skeleton_memberships = skeleton.memberships;
+    }
     // Regex-membership side channel (P2.7 T-C.5): a script whose *bounded* parse
     // declined at a length/loop cap may still be a pure `str.in_re` membership
     // problem the unbounded symbolic-derivative sub-solver decides.
@@ -534,7 +592,7 @@ fn build_word_problem(arena: &mut TermArena, exprs: &[SExpr]) -> Option<WordProb
 /// `None`. Incremental scoping is declined for the same reason as
 /// [`build_word_problem`] (the active query at a `check-sat` would be a subset, so a
 /// whole-conjunction `unsat` need not transfer).
-fn build_word_skeleton(arena: &mut TermArena, exprs: &[SExpr]) -> Option<Vec<TermId>> {
+fn build_word_skeleton(arena: &mut TermArena, exprs: &[SExpr]) -> Option<WordSkeleton> {
     // Incremental scoping / macros put the "active subset ⊆ all asserts" soundness
     // argument out of reach — decline wholesale (mirrors `build_word_problem`).
     for e in exprs {
@@ -563,26 +621,79 @@ fn build_word_skeleton(arena: &mut TermArena, exprs: &[SExpr]) -> Option<Vec<Ter
         }
     }
 
-    // Translate every `assert` body into a Bool term over `Seq` equality atoms; a
-    // single unrepresentable atom aborts the whole skeleton.
+    // Translate every `assert` body into a Bool term over `Seq` equality and
+    // `str.in_re` membership atoms; a single unrepresentable atom aborts the whole
+    // skeleton. `mem` accumulates the membership theory atoms (deduplicated).
     let mut assertions: Vec<TermId> = Vec::new();
     let mut saw_seq_atom = false;
+    let mut mem = MembershipCollector {
+        intern: BTreeMap::new(),
+        memberships: Vec::new(),
+        next: 0,
+    };
     for e in exprs {
         let Some(items) = e.list() else { continue };
         if items.first().and_then(SExpr::atom) == Some("assert") {
             let [_, body] = items else { return None };
-            let t = word_bool(arena, body, &vars, &mut saw_seq_atom)?;
+            let t = word_bool(arena, body, &vars, &mut saw_seq_atom, &mut mem)?;
             assertions.push(t);
         }
     }
 
-    // Require at least one genuine `Seq` equality atom — otherwise this is not a
-    // string problem the online route can decide (it declines a `Seq`-atom-free
-    // query anyway; declining here keeps the field a precise signal).
-    if assertions.is_empty() || !saw_seq_atom {
+    // Require at least one genuine `Seq` equality atom **or** a membership atom —
+    // otherwise this is not a string problem the online route can decide.
+    if assertions.is_empty() || (!saw_seq_atom && mem.memberships.is_empty()) {
         return None;
     }
-    Some(assertions)
+    Some(WordSkeleton {
+        assertions,
+        memberships: mem.memberships,
+    })
+}
+
+/// The result of [`build_word_skeleton`]: the Boolean-structured assertions plus
+/// the membership theory atoms they reference (see
+/// [`Script::word_skeleton_memberships`]).
+struct WordSkeleton {
+    assertions: Vec<TermId>,
+    memberships: Vec<(TermId, SymbolId, axeyum_strings::regex::Regex)>,
+}
+
+/// Interns the `str.in_re` membership atoms of a word skeleton into fresh
+/// `Sort::Bool` proxy symbols, so a repeated `(str.in_re X R)` shares one theory
+/// atom (and hence one skeleton variable).
+struct MembershipCollector {
+    /// Distinct `(operand, regex)` → its proxy atom term.
+    intern: BTreeMap<(SymbolId, axeyum_strings::regex::Regex), TermId>,
+    /// The accumulated `(proxy_atom_term, operand_symbol, regex)` triples, in
+    /// first-encounter order.
+    memberships: Vec<(TermId, SymbolId, axeyum_strings::regex::Regex)>,
+    /// Fresh-proxy-symbol counter.
+    next: u32,
+}
+
+impl MembershipCollector {
+    /// Returns the `Sort::Bool` proxy atom term for `(str.in_re operand R)`,
+    /// minting a fresh `!inre!<k>` symbol on first encounter. `None` on an arena
+    /// declaration failure (never expected).
+    fn atom(
+        &mut self,
+        arena: &mut TermArena,
+        operand: SymbolId,
+        regex: axeyum_strings::regex::Regex,
+    ) -> Option<TermId> {
+        if let Some(&t) = self.intern.get(&(operand, regex.clone())) {
+            return Some(t);
+        }
+        let sym = arena
+            .declare(&format!("!inre!{}", self.next), Sort::Bool)
+            .ok()?;
+        self.next += 1;
+        let term = arena.var(sym);
+        self.intern.insert((operand, regex.clone()), term);
+        self.memberships.push((term, operand, regex));
+        Some(term)
+    }
 }
 
 /// Translates one Boolean term into a `Sort::Bool` [`TermId`] over `Seq` equality
@@ -600,6 +711,7 @@ fn word_bool(
     e: &SExpr,
     vars: &BTreeMap<String, (SymbolId, TermId)>,
     saw_seq_atom: &mut bool,
+    mem: &mut MembershipCollector,
 ) -> Option<TermId> {
     match e.atom() {
         Some("true") => return Some(arena.bool_const(true)),
@@ -611,9 +723,9 @@ fn word_bool(
     match head {
         // Boolean connectives: fold the (≥1) operands.
         "and" | "or" | "xor" if items.len() >= 2 => {
-            let mut acc = word_bool(arena, &items[1], vars, saw_seq_atom)?;
+            let mut acc = word_bool(arena, &items[1], vars, saw_seq_atom, mem)?;
             for it in &items[2..] {
-                let next = word_bool(arena, it, vars, saw_seq_atom)?;
+                let next = word_bool(arena, it, vars, saw_seq_atom, mem)?;
                 acc = match head {
                     "and" => arena.and(acc, next).ok()?,
                     "or" => arena.or(acc, next).ok()?,
@@ -624,23 +736,33 @@ fn word_bool(
         }
         "=>" if items.len() >= 3 => {
             // Right-associative implication chain `a => b => … => z`.
-            let mut acc = word_bool(arena, items.last()?, vars, saw_seq_atom)?;
+            let mut acc = word_bool(arena, items.last()?, vars, saw_seq_atom, mem)?;
             for it in items[1..items.len() - 1].iter().rev() {
-                let ante = word_bool(arena, it, vars, saw_seq_atom)?;
+                let ante = word_bool(arena, it, vars, saw_seq_atom, mem)?;
                 acc = arena.implies(ante, acc).ok()?;
             }
             Some(acc)
         }
         "not" if items.len() == 2 => {
-            let inner = word_bool(arena, &items[1], vars, saw_seq_atom)?;
+            let inner = word_bool(arena, &items[1], vars, saw_seq_atom, mem)?;
             arena.not(inner).ok()
+        }
+        // `(str.in_re X R)`: a membership theory atom on a single declared string
+        // variable `X` (negative polarity is expressed by the enclosing `not`,
+        // never here — the atom itself is always positive). A `str.++`/`substr`/
+        // literal operand or an unsupported regex declines the whole skeleton.
+        "str.in_re" if items.len() == 3 => {
+            let name = variable_name_skeleton(&items[1], vars)?;
+            let (operand, _) = *vars.get(&name)?;
+            let regex = crate::regex_membership::translate_regex(&items[2])?;
+            mem.atom(arena, operand, regex)
         }
         // Boolean `ite` only (the branches must themselves be skeleton Booleans; an
         // `ite` over *strings* is not a `word_str_expr` and is declined below).
         "ite" if items.len() == 4 => {
-            let c = word_bool(arena, &items[1], vars, saw_seq_atom)?;
-            let t = word_bool(arena, &items[2], vars, saw_seq_atom)?;
-            let f = word_bool(arena, &items[3], vars, saw_seq_atom)?;
+            let c = word_bool(arena, &items[1], vars, saw_seq_atom, mem)?;
+            let t = word_bool(arena, &items[2], vars, saw_seq_atom, mem)?;
+            let f = word_bool(arena, &items[3], vars, saw_seq_atom, mem)?;
             arena.ite(c, t, f).ok()
         }
         // `(= a b …)` — chained equality over ≥2 `Seq` expressions → conjunction of
@@ -679,6 +801,17 @@ fn word_bool(
         // outside the skeleton fragment — decline the whole build.
         _ => None,
     }
+}
+
+/// The declared string-variable name if `e` is a bare atom naming one of the
+/// skeleton's `vars` (a single-variable membership operand). A `str.++`/`substr`/
+/// literal operand is not an atom in `vars`, so returns `None` (⇒ decline).
+fn variable_name_skeleton(
+    e: &SExpr,
+    vars: &BTreeMap<String, (SymbolId, TermId)>,
+) -> Option<String> {
+    let a = e.atom()?;
+    vars.contains_key(a).then(|| a.to_owned())
 }
 
 /// The declared name of a 0-ary `String`-sorted symbol, if `e` is such a

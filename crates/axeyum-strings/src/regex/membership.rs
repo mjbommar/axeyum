@@ -155,6 +155,32 @@ impl Membership {
         }
     }
 
+    /// Whether this membership problem is provably **unsatisfiable** behind the
+    /// re-checked emptiness certificate — the `unsat`-only half of
+    /// [`solve_with_caps`](Self::solve_with_caps) *without* the witness search.
+    ///
+    /// Returns `true` iff the combined regex `⋂ positives ∩ ⋂ ∁negatives ∩
+    /// Σ{len_lo,len_hi}` has a complete, nullable-free, independently
+    /// [`recheck_empty`]-verified derivative closure (⇒ its language is empty).
+    /// A `false` means "not proven empty within `max_states`" — it is **not** a
+    /// claim of satisfiability. Soundness rests only on the
+    /// `derivative`/`nullable`/`canon` substrate, exactly as `solve`'s `unsat`
+    /// arm does.
+    ///
+    /// This is the cheap consistency check the online CDCL(T) string route runs
+    /// per-assert on a per-variable membership intersection: it never allocates a
+    /// witness, so an intractable-but-satisfiable class is a fast `false`, never a
+    /// witness-search hang.
+    #[must_use]
+    pub fn refute_empty(&self, max_states: usize) -> bool {
+        let combined = self.combined();
+        matches!(
+            derivative_closure(&combined, max_states),
+            Closure::Complete(states)
+                if states.iter().all(|s| !nullable(s)) && recheck_empty(&combined, &states)
+        )
+    }
+
     /// Whether the concrete code-point string `w` satisfies this membership
     /// problem — it matches every positive regex, no negative regex, and the
     /// length bounds. Each check goes through the **independent** reference
@@ -349,6 +375,34 @@ mod tests {
             }
             other => panic!("expected sat, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn refute_empty_matches_solve_unsat() {
+        // The same empty intersection `solve` reports `unsat`, `refute_empty`
+        // certifies directly; a satisfiable set is `false` (not proven empty).
+        let empty = Membership {
+            positives: vec![Regex::star(lit("ab")), Regex::star(lit("ababac"))],
+            len_lo: 2,
+            ..Membership::default()
+        };
+        assert!(empty.refute_empty(DEFAULT_MAX_STATES));
+        assert_eq!(empty.solve(&budget()), MembershipOutcome::Unsat);
+
+        let sat = Membership {
+            positives: vec![Regex::star(lit("ab"))],
+            len_lo: 2,
+            ..Membership::default()
+        };
+        assert!(!sat.refute_empty(DEFAULT_MAX_STATES));
+
+        // Inclusion emptiness (A* ∩ ∁(A|B)*) is likewise certified.
+        let incl = Membership {
+            positives: vec![Regex::star(lit("A"))],
+            negatives: vec![Regex::star(Regex::union(lit("A"), lit("B")))],
+            ..Membership::default()
+        };
+        assert!(incl.refute_empty(DEFAULT_MAX_STATES));
     }
 
     #[test]
