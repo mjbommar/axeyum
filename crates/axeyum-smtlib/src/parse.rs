@@ -902,18 +902,19 @@ fn word_str_expr(
 /// code points — matching the `axeyum-strings` constant convention. The empty
 /// literal `""` is `seq.empty`.
 fn word_literal(arena: &mut TermArena, atom: &str) -> Option<TermId> {
-    let inner = &atom[1..atom.len() - 1];
-    let unescaped = inner.replace("\"\"", "\"");
+    let inner = atom[1..atom.len() - 1].replace("\"\"", "\"");
     let key = ArraySortKey::BitVec(Sort::STRING_ELEM_WIDTH);
-    let chars: Vec<char> = unescaped.chars().collect();
-    if chars.is_empty() {
+    // Expand `\u{…}` / `\uhhhh` escapes to code points (shared with the byte-model
+    // route, so `"\u{62}"` is the one character `b` on every route).
+    let code_points = decode_string_code_points(&inner)?;
+    if code_points.is_empty() {
         return Some(arena.seq_empty(key));
     }
     // Right-associate: unit(c0) ++ (unit(c1) ++ (… ++ unit(cn))).
     let mut acc: Option<TermId> = None;
-    for &c in chars.iter().rev() {
+    for &cp in code_points.iter().rev() {
         let elem = arena
-            .bv_const(Sort::STRING_ELEM_WIDTH, u128::from(c as u32))
+            .bv_const(Sort::STRING_ELEM_WIDTH, u128::from(cp))
             .ok()?;
         let unit = arena.seq_unit(elem).ok()?;
         acc = Some(match acc {
@@ -4290,6 +4291,91 @@ fn single_char_code(arena: &TermArena, t: TermId) -> Option<u8> {
 
 /// Packs a string literal's bytes into the canonical bit-vector representation
 /// (length low, content above, padding zero). Errors if it exceeds the bound.
+/// The SMT-LIB maximum string code point (`\u{2FFFF}`). A larger escape is
+/// ill-formed; the literal is declined rather than silently truncated.
+const SMTLIB_MAX_CODE_POINT: u32 = 0x2_FFFF;
+
+/// Decodes the inner text of an SMT-LIB string literal — the characters between
+/// the surrounding quotes, with the doubled-quote escape `""` **already**
+/// collapsed to a single `"` — into its sequence of Unicode code points, expanding
+/// the two SMT-LIB escape forms `\u{h…}` (1–5 hex digits, braces) and `\uhhhh`
+/// (exactly 4 hex digits). Every other backslash is a **literal** `\` — SMT-LIB
+/// gives `\` no special meaning outside those two escapes, matching Z3/cvc5.
+///
+/// Both the byte-model bounded encoder ([`string_literal_bytes`]) and the
+/// code-point word/skeleton route ([`word_literal`]) decode through this one
+/// function, so a literal like `"\u{62}"` denotes the single character `b`
+/// **identically** on every route (the P0 hole was that neither string-literal
+/// route expanded escapes, so `"\u{62}"` was six raw bytes `\ u { 6 2 }` — a wrong
+/// verdict against the regex side, which does expand them).
+///
+/// Returns `None` if an escape names a code point above [`SMTLIB_MAX_CODE_POINT`],
+/// so the caller declines the literal instead of emitting a truncated character.
+pub(crate) fn decode_string_code_points(inner: &str) -> Option<Vec<u32>> {
+    let chars: Vec<char> = inner.chars().collect();
+    let mut out: Vec<u32> = Vec::new();
+    let mut i = 0;
+    while i < chars.len() {
+        // A `\u{h…}` / `\uhhhh` escape, or a literal backslash if neither matches.
+        if chars[i] == '\\' && chars.get(i + 1) == Some(&'u') {
+            let after = i + 2;
+            if chars.get(after) == Some(&'{') {
+                if let Some(close) = chars[after + 1..].iter().position(|&c| c == '}') {
+                    let hex: String = chars[after + 1..after + 1 + close].iter().collect();
+                    if (1..=5).contains(&hex.len())
+                        && let Ok(v) = u32::from_str_radix(&hex, 16)
+                    {
+                        if v > SMTLIB_MAX_CODE_POINT {
+                            return None;
+                        }
+                        out.push(v);
+                        i = after + 1 + close + 1;
+                        continue;
+                    }
+                }
+            } else if after + 4 <= chars.len() {
+                let hex: String = chars[after..after + 4].iter().collect();
+                if let Ok(v) = u32::from_str_radix(&hex, 16) {
+                    if v > SMTLIB_MAX_CODE_POINT {
+                        return None;
+                    }
+                    out.push(v);
+                    i = after + 4;
+                    continue;
+                }
+            }
+            // Not a well-formed `\u` escape: a literal backslash.
+            out.push(u32::from('\\'));
+            i += 1;
+        } else {
+            out.push(chars[i] as u32);
+            i += 1;
+        }
+    }
+    Some(out)
+}
+
+/// The byte-model bytes of an SMT-LIB string literal's inner text (see
+/// [`decode_string_code_points`]): one byte per decoded code point. A code point
+/// above `0xFF` has no byte-model representation, so the literal is declined
+/// ([`SmtError::Unsupported`]) — the word / membership routes then decide it,
+/// never a wrong verdict from a truncated character.
+fn string_literal_bytes(inner: &str) -> Result<Vec<u8>, SmtError> {
+    let code_points = decode_string_code_points(inner).ok_or_else(|| {
+        SmtError::Unsupported("string literal escape names a code point above U+2FFFF".to_owned())
+    })?;
+    code_points
+        .iter()
+        .map(|&cp| {
+            u8::try_from(cp).map_err(|_| {
+                SmtError::Unsupported(format!(
+                    "string literal code point U+{cp:04X} exceeds the bounded byte model (ADR-0029)"
+                ))
+            })
+        })
+        .collect()
+}
+
 fn pack_string_literal(arena: &mut TermArena, bytes: &[u8]) -> Result<TermId, SmtError> {
     if bytes.len() > STRING_MAX_LEN as usize {
         return Err(SmtError::Unsupported(format!(
@@ -5534,9 +5620,11 @@ fn parse_atom(
     // SMT-LIB string literal `"..."` (the lexer keeps the surrounding quotes;
     // a doubled `""` escapes one quote). Pack into the canonical bit-vector.
     if a.len() >= 2 && a.starts_with('"') && a.ends_with('"') {
-        let inner = &a[1..a.len() - 1];
-        let unescaped = inner.replace("\"\"", "\"");
-        return pack_string_literal(arena, unescaped.as_bytes());
+        let inner = a[1..a.len() - 1].replace("\"\"", "\"");
+        // Expand `\u{…}` / `\uhhhh` escapes to code points, then to byte-model bytes
+        // (declining a > 0xFF code point) — never the six raw bytes of an unexpanded
+        // escape (the P0 wrong-verdict hole).
+        return pack_string_literal(arena, &string_literal_bytes(&inner)?);
     }
     if let Some(&t) = aliases.get(a) {
         return Ok(t);
@@ -9566,4 +9654,46 @@ fn apply_parameterized(
         }
         other => return Err(SmtError::Unsupported(format!("indexed operator `{other}`"))),
     })
+}
+
+#[cfg(test)]
+mod string_escape_tests {
+    use super::decode_string_code_points;
+
+    #[test]
+    fn braced_escape_decodes_to_code_point() {
+        // `\u{62}` is U+0062 = 'b', a single code point — not six raw bytes.
+        assert_eq!(decode_string_code_points("\\u{62}"), Some(vec![0x62]));
+        assert_eq!(decode_string_code_points("\\u{0a}"), Some(vec![0x0a]));
+        // Equal to the plain letter.
+        assert_eq!(
+            decode_string_code_points("\\u{62}"),
+            decode_string_code_points("b")
+        );
+    }
+
+    #[test]
+    fn four_digit_escape_decodes_to_code_point() {
+        assert_eq!(decode_string_code_points("\\u0062"), Some(vec![0x62]));
+        assert_eq!(
+            decode_string_code_points("a\\u0062c"),
+            Some(vec![0x61, 0x62, 0x63])
+        );
+    }
+
+    #[test]
+    fn non_escape_backslash_is_literal() {
+        // A `\` not starting a valid `\u` escape is a literal backslash (Z3 semantics).
+        assert_eq!(
+            decode_string_code_points("\\n"),
+            Some(vec![0x5c, u32::from(b'n')])
+        );
+        assert_eq!(decode_string_code_points("\\"), Some(vec![0x5c]));
+    }
+
+    #[test]
+    fn code_point_above_max_declines() {
+        // U+30000 exceeds the SMT-LIB maximum U+2FFFF — decline (None), never truncate.
+        assert_eq!(decode_string_code_points("\\u{30000}"), None);
+    }
 }
