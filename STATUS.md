@@ -401,6 +401,42 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-06 (evening) — the post-sprint rotation lands: string sprint
+  banked to Lean, the CdclT arithmetic keystone opens, NRA moves again.**
+  Three of the 6th review's top-ranked levers, all pushed, DISAGREE=0 held:
+  - (`ff648094`) **String word-clash certificates reconstruct to
+    kernel-checked Lean — P3.7 gains its 9th fragment**, no new kernel
+    axioms. `Char` is a finite enum (one nullary constructor per distinct
+    code point, so constant-inequality is a constructor-distinctness
+    ι-computation — no unary-`Nat` magnitude); `Str = List Char`; `append`
+    opaque so equality-joining is pure `Eq`-congruence. Covers contradicted
+    disequality + concrete constant clash (direct + chained); variable-prefix
+    cancellation / self-loop-length / derivative-emptiness honestly deferred.
+    360-case property all kernel-check; 2 negative kernel-rejection tests.
+    This banks the QF_S 52→74 sprint as *checkable* evidence, not asserted
+    soundness.
+  - (`9c5be4fc`) **LiaTheory on the online CDCL(T) driver — ADR-0055
+    criterion 2, slice (a).** Key finding: the validated online `LiaTheory`
+    (`lia_online.rs`) *already* implemented the `TheorySolver` trait the
+    driver consumes, so the migration is a thin sound adapter, not a rewrite.
+    Trigger-literal invariant handled (deterministic fold-in when a minimized
+    core drops the just-asserted literal — a superset of an unsat set stays
+    unsat); propagation deferred; opt-in `check_qf_lia_online_cdclt`, default
+    dispatch unchanged. Parity: 2500-case Boolean-structured 0 DISAGREE + a
+    600-case conjunctive 600/600 vs the trusted simplex; step budget never
+    tripped. The keystone that unlocks strings+LIA combination (the 8
+    theory-coupled census files + 21 gate-downgraded unsats), QF_UF
+    default-on, and NRA/NIA service.
+  - (`5cc63a15`) **NRA off 21/38 → 26/38 (68%), PAR-2 8.66→5.97** — untouched
+    since 07-02. Two sound levers: a bounded rational sat-witness probe (grid
+    `{0,±1,±2,±½}`, replay-gated against the *original* division-intact
+    assertions ⇒ never a wrong sat; closed issue9164-2 / dist-big /
+    nlExtPurify-test / poly-1025), and threshold-1 monotonicity past the
+    sign-refutation cap as a second bounded stage (chained `r≥b≥1` refutes
+    `ones`). Correctly DECLINED the `1/(a/b)→b/a` rewrite (unsound under `/0`
+    totality). Independently re-verified before push: nra fuzz 1713 jointly
+    decided / 1478 sat replays / **DISAGREE=0**, nia fuzz DISAGREE=0 (the
+    shared-multivariate-path guard).
 - **2026-07-06 — Track 5 / P5.4 T5.4.1 (`2423eaeb`): the differential-fuzz
   oracle harness.** `reflect::oracle::DiffFuzz` packages the
   verification↔fuzzing loop as reusable API — deterministic (seeded-LCG +
