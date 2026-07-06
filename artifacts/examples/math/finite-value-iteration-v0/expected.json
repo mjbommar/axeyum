@@ -1,0 +1,275 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-value-iteration-v0",
+  "witnesses": [
+    {
+      "id": "three-state-mdp-value-iteration",
+      "description": "A fixed three-state, two-action discounted MDP with gamma = 1/2 and a complete value-iteration trace from the zero value vector: three exact Bellman-backup iterations, a greedy-policy switch at s1, the exact fixed point (5/2, 3, 0), and sup-norm contraction steps 3, 1/2, 0.",
+      "values": {
+        "states": [
+          "s1",
+          "s2",
+          "s3"
+        ],
+        "actions": [
+          "a",
+          "b"
+        ],
+        "discount": "1/2",
+        "mdp_rows": [
+          {
+            "state": "s1",
+            "action": "a",
+            "reward": "1",
+            "transition": [
+              "0",
+              "1",
+              "0"
+            ]
+          },
+          {
+            "state": "s1",
+            "action": "b",
+            "reward": "2",
+            "transition": [
+              "0",
+              "0",
+              "1"
+            ]
+          },
+          {
+            "state": "s2",
+            "action": "a",
+            "reward": "3",
+            "transition": [
+              "0",
+              "0",
+              "1"
+            ]
+          },
+          {
+            "state": "s2",
+            "action": "b",
+            "reward": "0",
+            "transition": [
+              "1/2",
+              "1/2",
+              "0"
+            ]
+          },
+          {
+            "state": "s3",
+            "action": "a",
+            "reward": "0",
+            "transition": [
+              "0",
+              "0",
+              "1"
+            ]
+          }
+        ],
+        "initial_values": [
+          "0",
+          "0",
+          "0"
+        ],
+        "iterations": [
+          {
+            "index": "1",
+            "q_values": {
+              "s1": {
+                "a": "1",
+                "b": "2"
+              },
+              "s2": {
+                "a": "3",
+                "b": "0"
+              },
+              "s3": {
+                "a": "0"
+              }
+            },
+            "values": [
+              "2",
+              "3",
+              "0"
+            ],
+            "greedy_policy": {
+              "s1": "b",
+              "s2": "a",
+              "s3": "a"
+            }
+          },
+          {
+            "index": "2",
+            "q_values": {
+              "s1": {
+                "a": "5/2",
+                "b": "2"
+              },
+              "s2": {
+                "a": "3",
+                "b": "5/4"
+              },
+              "s3": {
+                "a": "0"
+              }
+            },
+            "values": [
+              "5/2",
+              "3",
+              "0"
+            ],
+            "greedy_policy": {
+              "s1": "a",
+              "s2": "a",
+              "s3": "a"
+            }
+          },
+          {
+            "index": "3",
+            "q_values": {
+              "s1": {
+                "a": "5/2",
+                "b": "2"
+              },
+              "s2": {
+                "a": "3",
+                "b": "11/8"
+              },
+              "s3": {
+                "a": "0"
+              }
+            },
+            "values": [
+              "5/2",
+              "3",
+              "0"
+            ],
+            "greedy_policy": {
+              "s1": "a",
+              "s2": "a",
+              "s3": "a"
+            }
+          }
+        ],
+        "fixed_point_values": [
+          "5/2",
+          "3",
+          "0"
+        ],
+        "optimal_policy": {
+          "s1": "a",
+          "s2": "a",
+          "s3": "a"
+        },
+        "sup_norm_steps": [
+          "3",
+          "1/2",
+          "0"
+        ]
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "mdp-table-witness",
+      "claim": "The listed MDP has three states, at most two actions per state, rational rewards, a discount factor 1/2 in [0, 1), and every transition row is a probability distribution over the states.",
+      "expected_result": "sat",
+      "validation": "exact_rational_mdp_table_replay",
+      "proof_status": "replay-only",
+      "witnesses": [
+        "three-state-mdp-value-iteration"
+      ],
+      "notes": "The validator checks the committed states, actions, rewards, discount, and exact row sums of every transition distribution."
+    },
+    {
+      "id": "value-iteration-witness",
+      "claim": "Every committed iteration matches exact replay of the Bellman backup Q(s, a) = r(s, a) + gamma * sum(P(s'|s, a) * V(s')) and the greedy value V'(s) = max_a Q(s, a); the trace runs three iterations from the zero value vector.",
+      "expected_result": "sat",
+      "validation": "exact_rational_value_iteration_replay",
+      "proof_status": "replay-only",
+      "witnesses": [
+        "three-state-mdp-value-iteration"
+      ],
+      "notes": "All rewards, probabilities, and the discount are rational, so every backup, maximum, and greedy policy in the trace is exact rational arithmetic; the greedy action at s1 switches from b to a at the second iteration."
+    },
+    {
+      "id": "bellman-fixed-point-witness",
+      "claim": "The third iteration reproduces the second iteration's values exactly, so the committed vector (5/2, 3, 0) is an exact fixed point of the Bellman optimality operator for this MDP, with greedy policy (a, a, a).",
+      "expected_result": "sat",
+      "validation": "exact_rational_bellman_fixed_point_replay",
+      "proof_status": "replay-only",
+      "witnesses": [
+        "three-state-mdp-value-iteration"
+      ],
+      "notes": "The validator recomputes one full Bellman backup at the committed fixed point and requires it to reproduce the same values; that this fixed point is the unique optimal value function in general is a theorem-lane claim owned by the horizon row."
+    },
+    {
+      "id": "contraction-step-witness",
+      "claim": "The sup-norm distances between successive value vectors are 3, 1/2, 0, and each successive distance is at most gamma times the previous one.",
+      "expected_result": "sat",
+      "validation": "exact_rational_contraction_step_replay",
+      "proof_status": "replay-only",
+      "witnesses": [
+        "three-state-mdp-value-iteration"
+      ],
+      "notes": "The replayed inequalities 1/2 <= (1/2)*3 and 0 <= (1/2)*(1/2) are single-instance contraction checks on this trace, not the Banach contraction theorem."
+    },
+    {
+      "id": "bad-backup-rejected",
+      "claim": "At the second iteration, the Bellman backup for state s1 under action a is 2.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_bad_backup_replay",
+      "proof_status": "replay-only",
+      "data": {
+        "source_witness": "three-state-mdp-value-iteration",
+        "metric": "bellman_backup_value",
+        "iteration": "2",
+        "state": "s1",
+        "action": "a",
+        "computed_backup_value": "5/2",
+        "claimed_backup_value": "2"
+      },
+      "notes": "Exact replay computes 1 + (1/2)*3 = 5/2 for Q2(s1, a), so the claimed value 2 is rejected; the separate qf-lra-bad-backup row owns the checked Farkas evidence."
+    },
+    {
+      "id": "qf-lra-bad-backup",
+      "claim": "The fixed malformed Bellman-backup claim is linearly inconsistent with the replayed backup equation.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_farkas_evidence",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "three-state-mdp-value-iteration",
+        "source_replay_row": "bad-backup-rejected",
+        "metric": "bellman_backup_value",
+        "iteration": "2",
+        "state": "s1",
+        "action": "a",
+        "computed_backup_value": "5/2",
+        "claimed_backup_value": "2",
+        "backup_equations": [
+          "mdp_q2_s1_a = 5/2",
+          "mdp_q2_s1_a = 2"
+        ],
+        "farkas_conflict": "replayed Bellman-backup equation plus mdp_q2_s1_a = 2",
+        "smt2_artifact": "artifacts/examples/math/finite-value-iteration-v0/smt2/bad-backup-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_value_iteration_bad_backup_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes mdp_q2_s1_a = 5/2 from the fixed MDP table and first-iteration values, while the malformed row claims mdp_q2_s1_a = 2; the source QF_LRA artifact isolates that scalar contradiction for Farkas checking."
+    },
+    {
+      "id": "general-mdp-theory-lean-horizon",
+      "claim": "The Banach fixed-point theorem, value-iteration and policy-iteration convergence for general MDPs, uniqueness and optimality of the Bellman fixed point, greedy-policy optimality theorems, infinite-horizon and average-reward theory, continuous state/action spaces, stochastic approximation and Q-learning, and floating-point dynamic-programming behavior require future theorem, statistical-inference, or numerical-honesty resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_boundary",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "For a finite discounted MDP with gamma in [0, 1), prove the Bellman optimality operator is a gamma-contraction in the sup norm, that value iteration converges to the unique optimal value function from any start, and that any greedy policy at the fixed point is optimal; the finite rows here replay one committed trace that happens to reach its exact fixed point in three iterations.",
+        "future_checker": "Lean theorem statements for the Banach fixed-point theorem and Bellman optimality on finite MDPs plus separate numerical-honesty artifacts for floating-point value-iteration and Q-learning implementations."
+      },
+      "notes": "The finite exact rows replay one committed value-iteration trace with an exact fixed point, a greedy-policy switch, and single-instance contraction inequalities; they do not prove the Banach contraction theorem, convergence for other MDPs or discounts, uniqueness or optimality of the fixed point in general, average-reward or continuous MDP theory, stochastic approximation, or floating-point dynamic-programming behavior."
+    }
+  ]
+}

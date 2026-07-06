@@ -215,6 +215,10 @@ CURRICULUM_MAP = {
                 "finite-hard-margin-svm-v0",
                 "Exact rational maximum-margin hyperplane, KKT multiplier, and zero-duality-gap replay with checked bad-bias evidence.",
             ),
+            (
+                "finite-value-iteration-v0",
+                "Exact rational Bellman-backup, greedy-policy, and fixed-point replay with checked bad-backup evidence.",
+            ),
         ],
     },
     "reals": {
@@ -620,6 +624,10 @@ CURRICULUM_MAP = {
                 "Exact rational maximum-margin hyperplane replay: margin constraints, KKT stationarity and slackness, zero duality gap, and checked bad-bias evidence.",
             ),
             (
+                "finite-value-iteration-v0",
+                "Exact rational discounted Bellman-backup replay: matrix-vector expected values, greedy maxima, and an exact fixed point with checked bad-backup evidence.",
+            ),
+            (
                 "finite-gaussian-elimination-v0",
                 "Exact rational elimination transcript, pivot multiplier, determinant pivot product, back-substitution, and checked bad eliminated-RHS evidence.",
             ),
@@ -891,7 +899,7 @@ FIELD_PACKS = {
     "complex_analysis": ("complex-algebraic-v0", "Complex arithmetic, real-pair transforms, finite Cauchy-Riemann derivative shadows, and polynomial factorization shadows as real/rational algebra before analytic proof horizons."),
     "topology": ("finite-topology-v0", "Finite topologies, metric balls, closure/interior, continuous maps, and finite simplicial-homology checks."),
     "measure_theory": ("finite-measure-v0", "Finite sigma-algebras, finite measures, monotonicity/subadditivity, random variables, conditional expectations, finite kernels, martingales, hitting times, concentration checks, product tables, and exact probability foundations."),
-    "probability_theory": ("finite-probability-v0", "Finite mass tables, random variables, conditional expectation, kernels, martingales, hitting times, concentration/tail bounds, finite covariance tables, conditioning, independence, Bayes rule, Naive Bayes classifier posterior replay, confusion-matrix classifier metrics, finite ROC/AUC ranking metrics, finite precision-recall ranking metrics, finite calibration/Brier scoring rows, finite decision-tree Gini split rows, finite dyadic entropy/information-gain rows, finite nearest-neighbor vote rows, finite perceptron training traces, product measures, and exact discrete distributions."),
+    "probability_theory": ("finite-probability-v0", "Finite mass tables, random variables, conditional expectation, kernels, martingales, hitting times, concentration/tail bounds, finite covariance tables, conditioning, independence, Bayes rule, Naive Bayes classifier posterior replay, confusion-matrix classifier metrics, finite ROC/AUC ranking metrics, finite precision-recall ranking metrics, finite calibration/Brier scoring rows, finite decision-tree Gini split rows, finite dyadic entropy/information-gain rows, finite nearest-neighbor vote rows, finite perceptron training traces, finite value-iteration Bellman backups, product measures, and exact discrete distributions."),
     "statistics": ("descriptive-statistics-v0", "Mean/variance/covariance/PCA and finite clustering identities, Schur conditional-variance shadows, random variables, conditional expectation, finite kernel, hitting-time, martingale, and concentration checks, contingency tables, exact tests, ordinary and ridge regression, finite linear-discriminant/classification replay, finite Naive Bayes classifier replay, finite confusion-matrix classifier metrics, finite ROC/AUC ranking metrics, finite precision-recall ranking metrics, finite calibration/Brier scoring rows, finite decision-tree Gini split rows, finite dyadic entropy/information-gain rows, finite nearest-neighbor classification rows, finite perceptron training traces, finite hard-margin SVM hyperplane/KKT rows, and Simpson witnesses."),
     "optimization_and_convexity": [
         ("linear-optimization-v0", "LP feasibility, threshold cliffs, and Farkas-style certificates."),
@@ -914,9 +922,10 @@ FIELD_PACKS = {
         ("finite-k-means-clustering-v0", "Finite k-means centroid/objective replay with checked bad centroid-coordinate rejection."),
         ("finite-linear-discriminant-v0", "Finite Fisher-discriminant direction and threshold replay with checked bad-direction rejection."),
         ("finite-hard-margin-svm-v0", "Finite hard-margin SVM hyperplane, KKT multiplier, and zero-duality-gap replay with checked bad-bias rejection."),
+        ("finite-value-iteration-v0", "Finite discounted Bellman-backup, greedy-policy, and exact fixed-point replay with checked bad-backup rejection."),
     ],
     "numerical_analysis": ("numerical-linear-algebra-v0", "Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, interval bounds, inner-product projections, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, GMRES residual-minimization, Lanczos/tridiagonalization, residual, regularized normal-equation, PCA, k-means centroid/objective, linear-discriminant/classification, rounding, and perturbation-bound shadows, sequence and fixed-point acceleration, divided-difference and barycentric interpolation, finite-difference derivative stencils, finite Taylor polynomial replay, finite cubic Hermite interpolation replay, finite cubic spline assembly replay, fixed-step error recurrences, Simpson-rule quadrature, Romberg extrapolation, Euler, Runge-Kutta midpoint, Heun, backward Euler, Crank-Nicolson implicit, Adams-Bashforth explicit multistep, and BDF2 implicit multistep time-stepping shadows, Jacobian/Hessian replay, finite root-finding/secant replay, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."),
-    "differential_equations_and_dynamical_systems": ("bounded-dynamics-v0", "Recurrence systems, discretized dynamics, threshold reachability, invariant checks, Euler, Runge-Kutta midpoint, Heun, backward Euler, Crank-Nicolson, Adams-Bashforth, and BDF2 finite time-stepping, Markov transitions, and finite hitting times."),
+    "differential_equations_and_dynamical_systems": ("bounded-dynamics-v0", "Recurrence systems, discretized dynamics, threshold reachability, invariant checks, Euler, Runge-Kutta midpoint, Heun, backward Euler, Crank-Nicolson, Adams-Bashforth, and BDF2 finite time-stepping, Markov transitions, finite hitting times, and finite value-iteration Bellman backups."),
     "geometry": [
         (
             "coordinate-geometry-v0",
@@ -1701,6 +1710,7 @@ BRIDGE_CONCEPTS = [
             "bridge_finite_nearest_neighbor_shadow",
             "bridge_finite_perceptron_shadow",
             "bridge_finite_hard_margin_svm_shadow",
+            "bridge_finite_value_iteration_shadow",
             "bridge_eigenpair",
         ],
         "decidability": "decidable",
@@ -1765,6 +1775,10 @@ BRIDGE_CONCEPTS = [
                 "Malformed maximum-margin bias row checked through exact rational Farkas evidence after finite hyperplane/KKT replay.",
             ),
             (
+                "finite-value-iteration-v0",
+                "Malformed Bellman-backup row checked through exact rational Farkas evidence after finite value-iteration replay.",
+            ),
+            (
                 "numerical-linear-algebra-v0",
                 "Bad residual-bound, solution-box, and Jacobi error-bound rows whose final contradictions are exact rational linear arithmetic.",
             ),
@@ -1827,6 +1841,7 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/k-nearest-neighbors-end-to-end.md",
             "docs/learn/math/perceptron-end-to-end.md",
             "docs/learn/math/hard-margin-svm-end-to-end.md",
+            "docs/learn/math/value-iteration-end-to-end.md",
             "docs/learn/math/linear-algebra-and-optimization.md",
             "docs/foundational-resources/PROOF-UPGRADE-FRONTIER.md",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
@@ -1884,6 +1899,7 @@ BRIDGE_CONCEPTS = [
             "bridge_finite_nearest_neighbor_shadow",
             "bridge_finite_perceptron_shadow",
             "bridge_finite_hard_margin_svm_shadow",
+            "bridge_finite_value_iteration_shadow",
             "field_numerical_analysis",
             "field_statistics",
         ],
@@ -2042,6 +2058,10 @@ BRIDGE_CONCEPTS = [
                 "Maximum-margin hyperplane, functional margins, KKT identities, duality gap, and bad-bias rows checked as exact rational replay, not floating-point training or statistical generalization evidence.",
             ),
             (
+                "finite-value-iteration-v0",
+                "Bellman backups, greedy maxima, exact fixed points, contraction steps, and bad-backup rows checked as exact rational replay, not floating-point dynamic-programming or convergence-theorem evidence.",
+            ),
+            (
                 "finite-root-finding-v0",
                 "One-step bisection/Newton rows replayed exactly while convergence and floating-point stability remain horizon claims.",
             ),
@@ -2123,6 +2143,7 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/k-nearest-neighbors-end-to-end.md",
                     "docs/learn/math/perceptron-end-to-end.md",
                     "docs/learn/math/hard-margin-svm-end-to-end.md",
+                    "docs/learn/math/value-iteration-end-to-end.md",
                     "docs/learn/math/principal-components-end-to-end.md",
                     "docs/learn/math/k-means-clustering-end-to-end.md",
                     "docs/foundational-resources/MATH-FIELDS.md",
@@ -2173,6 +2194,7 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/k-nearest-neighbors-end-to-end.md",
             "docs/learn/math/perceptron-end-to-end.md",
             "docs/learn/math/hard-margin-svm-end-to-end.md",
+            "docs/learn/math/value-iteration-end-to-end.md",
             "artifacts/examples/math/finite-rounding-shadow-v0/smt2/bad-rounded-delta-farkas-conflict.smt2",
             "artifacts/examples/math/finite-interval-arithmetic-shadow-v0/smt2/bad-product-upper-farkas-conflict.smt2",
             "artifacts/examples/math/finite-calibration-brier-v0/smt2/bad-brier-score-farkas-conflict.smt2",
@@ -2181,6 +2203,7 @@ BRIDGE_CONCEPTS = [
             "artifacts/examples/math/finite-k-nearest-neighbors-v0/smt2/bad-squared-distance-farkas-conflict.smt2",
             "artifacts/examples/math/finite-perceptron-v0/smt2/bad-weight-update-farkas-conflict.smt2",
             "artifacts/examples/math/finite-hard-margin-svm-v0/smt2/bad-bias-farkas-conflict.smt2",
+            "artifacts/examples/math/finite-value-iteration-v0/smt2/bad-backup-farkas-conflict.smt2",
             "docs/foundational-resources/MATH-CURRICULUM-RESOURCE-MASTER-PLAN.md",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
         ],
@@ -3931,6 +3954,117 @@ BRIDGE_CONCEPTS = [
                 "The validator replays the whole primal-dual pair from committed source data and rejects hyperplanes, multipliers, or objectives that break feasibility, KKT identities, or the committed gap.",
                 "Malformed finite bias claims link to source SMT-LIB artifacts and checked QF_LRA/Farkas regressions after replay.",
                 "Learner and query docs keep finite exact SVM primal-dual replay separate from strong-duality, KKT-sufficiency, geometric-margin, soft-margin/kernel, statistical, and floating-point claims.",
+            ],
+        },
+    },
+    {
+        "id": "bridge_finite_value_iteration_shadow",
+        "title": "Finite Value Iteration Shadow",
+        "field_ids": [
+            "probability_theory",
+            "differential_equations_and_dynamical_systems",
+            "optimization_and_convexity",
+        ],
+        "resource_status": "validated",
+        "summary": (
+            "Finite value-iteration rows replay a fixed rational discounted "
+            "MDP table, every Bellman backup and greedy maximum in the "
+            "committed trace, a greedy-policy switch, an exact Bellman "
+            "fixed point, single-instance sup-norm contraction steps, and "
+            "source-linked bad-backup Farkas evidence while keeping the "
+            "Banach fixed-point theorem, value-iteration convergence in "
+            "general, greedy-policy optimality theorems, infinite-horizon "
+            "and continuous MDP theory, stochastic approximation, and "
+            "floating-point dynamic programming separate."
+        ),
+        "prerequisites": [
+            "curriculum_linear_algebra",
+            "curriculum_rationals",
+            "bridge_stochastic_kernel",
+            "bridge_exact_vs_floating_arithmetic",
+            "bridge_qf_lra_farkas_anatomy",
+        ],
+        "unlocks": [
+            "field_probability_theory",
+            "field_differential_equations_and_dynamical_systems",
+            "field_optimization_and_convexity",
+            "bridge_lean_horizon",
+        ],
+        "decidability": "bounded",
+        "axeyum_fragments": [
+            "finite transition systems",
+            "finite Bellman backup replay",
+            "finite greedy-policy replay",
+            "finite fixed-point replay",
+            "exact rational arithmetic",
+            "QF_LRA",
+            "Farkas certificate",
+            "finite replay",
+            "Lean horizon",
+            "numerical-honesty metadata",
+        ],
+        "example_packs": [
+            (
+                "finite-value-iteration-v0",
+                "Exact three-state discounted MDP trace with three Bellman-backup iterations, a greedy-policy switch, the exact fixed point (5/2, 3, 0), sup-norm steps 3, 1/2, 0, bad-backup replay, and checked QF_LRA/Farkas row.",
+            ),
+            (
+                "finite-markov-chain-v0",
+                "Exact stochastic-matrix evolution replay that supplies the uncontrolled-dynamics contrast to the greedy backup.",
+            ),
+            (
+                "finite-hitting-times-v0",
+                "Exact expected-hitting-time linear-system replay that supplies the fixed-policy contrast to the optimality backup.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "finite Bellman-backup replay plus QF_LRA/Farkas",
+                "status": "checked",
+                "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_lra_routes",
+                "lean_status": "partial",
+                "sources": [
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+                    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+                    "docs/learn/math/value-iteration-end-to-end.md",
+                    "artifacts/examples/math/finite-value-iteration-v0/smt2/bad-backup-farkas-conflict.smt2",
+                    "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+                ],
+                "notes": (
+                    "The finite checker replays the whole value-iteration "
+                    "trace — backups, greedy maxima, policies, the exact "
+                    "fixed point, and the sup-norm contraction steps — over "
+                    "exact rationals. Only the final malformed backup row "
+                    "is promoted to checked Farkas evidence."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/foundational-resources/MATH-FIELDS.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+            "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+            "docs/proof-cookbook/recipes/lean-horizon-template.md",
+            "docs/learn/math/value-iteration-end-to-end.md",
+            "docs/learn/math/probability-and-statistics.md",
+            "artifacts/examples/math/finite-value-iteration-v0/smt2/bad-backup-farkas-conflict.smt2",
+            "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+        ],
+        "open_gaps": [
+            "Finite replay of one committed trace that reaches its exact fixed point does not prove the Banach fixed-point theorem, gamma-contraction of the Bellman operator, or value-iteration convergence for other MDPs, discounts, or starting vectors.",
+            "Uniqueness and optimality of the Bellman fixed point and greedy-policy optimality need theorem resources before they can be treated as checked claims.",
+            "Policy iteration, average-reward and infinite-horizon theory, continuous state/action spaces, and stochastic approximation/Q-learning need separate resources before they can be treated as checked claims.",
+            "Floating-point dynamic-programming behavior needs numerical-honesty or QF_FP resources before it can be presented as checked implementation behavior.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Rows state the finite MDP table, discount, every iteration's backups, greedy values and policies, the exact fixed point, and the sup-norm contraction steps.",
+                "The validator replays the whole trace from committed source data and rejects backups, maxima, fixed points, or contraction steps that break exact replay.",
+                "Malformed finite backup claims link to source SMT-LIB artifacts and checked QF_LRA/Farkas regressions after replay.",
+                "Learner and query docs keep finite exact value-iteration replay separate from Banach/convergence, optimality, infinite-horizon, stochastic-approximation, and floating-point claims.",
             ],
         },
     },
@@ -9088,6 +9222,7 @@ BRIDGE_CONCEPTS = [
         ],
         "unlocks": [
             "bridge_conditional_expectation",
+            "bridge_finite_value_iteration_shadow",
             "field_probability_theory",
             "field_differential_equations_and_dynamical_systems",
         ],
@@ -9115,6 +9250,10 @@ BRIDGE_CONCEPTS = [
             (
                 "bounded-dynamics-v0",
                 "Bounded recurrence and invariant rows that share finite transition-system vocabulary.",
+            ),
+            (
+                "finite-value-iteration-v0",
+                "Finite discounted Bellman backups over stochastic transition rows with greedy maxima and checked bad-backup evidence.",
             ),
         ],
         "proof_routes": [

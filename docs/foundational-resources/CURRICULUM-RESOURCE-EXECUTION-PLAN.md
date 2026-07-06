@@ -75,13 +75,13 @@ As of this plan, the math resource lane has:
   operator/Jordan/Chebyshev replay, Schur-complement replay, natural cubic
   spline replay, and Lean horizons, plus five route-specific
   example families.
-- 171 non-template math example packs, plus the validating template pack.
+- 172 non-template math example packs, plus the validating template pack.
 - generated coverage, curriculum-status audit, field, proof-gap,
   learner/proof-upgrade, and curriculum-pressure dashboards under
   [generated/](generated/).
 - learner paths under [docs/learn/math](../learn/math/README.md).
 - [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md), which records that all
-  171 current non-template math packs are focused-lesson linked with no
+  172 current non-template math packs are focused-lesson linked with no
   path-only, index-only, or missing learner buckets.
 - a stable in-repo data boundary through JSON schemas, validators, generated
   dashboards, and `scripts/consume-foundational-resources.py`.
@@ -617,7 +617,7 @@ Next buildout:
    R4-to-R5 solver-reuse candidates visible in the coverage, field, proof-gap,
    and learner/proof-upgrade dashboards. The curriculum-status audit now shows
    where source `planned` rows have validated resources and need a source DAG
-   decision. The curriculum-pressure view now groups the 171 non-template packs
+   decision. The curriculum-pressure view now groups the 172 non-template packs
    into overlapping Bool/CNF, QF_BV, QF_LIA, QF_LRA, QF_UF, finite-replay, and
    Lean-horizon buckets for fragment-level planning.
    Candidate status: the first `solver_reuse` batch is now fully promoted:

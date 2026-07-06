@@ -28,6 +28,7 @@ Example packs:
 - [finite-k-nearest-neighbors-v0](../../../artifacts/examples/math/finite-k-nearest-neighbors-v0/)
 - [finite-perceptron-v0](../../../artifacts/examples/math/finite-perceptron-v0/)
 - [finite-hard-margin-svm-v0](../../../artifacts/examples/math/finite-hard-margin-svm-v0/)
+- [finite-value-iteration-v0](../../../artifacts/examples/math/finite-value-iteration-v0/)
 - [least-squares-regression-v0](../../../artifacts/examples/math/least-squares-regression-v0/)
 - [finite-linear-discriminant-v0](../../../artifacts/examples/math/finite-linear-discriminant-v0/)
 - [exact-statistical-tests-v0](../../../artifacts/examples/math/exact-statistical-tests-v0/)
@@ -98,6 +99,9 @@ QF_LRA bad weight-update evidence,
 finite hard-margin SVM replay with an exact maximum-margin hyperplane, KKT
 identities, a zero duality gap, replayed bad-bias rejection, and checked
 QF_LRA bad-bias evidence,
+finite value-iteration replay with exact Bellman backups, greedy policies,
+an exact fixed point, replayed bad-backup rejection, and checked QF_LRA
+bad-backup evidence,
 contingency table margins, a checked QF_LIA bad contingency-total certificate,
 least-squares normal equations, checked QF_LRA bad-RSS and bad-coefficients
 certificates, finite linear-discriminant class means, within-class scatter,
@@ -397,6 +401,10 @@ For finite hard-margin SVMs, it replays every functional margin, the KKT
 stationarity, multiplier-balance, and complementary-slackness identities,
 and the zero primal-dual gap at the committed hyperplane, then emits checked
 `UnsatFarkas` evidence for a malformed bias claim.
+For finite value iteration, it replays every Bellman backup, greedy maximum,
+and greedy policy across the committed iterations, requires the exact
+Bellman fixed point and the sup-norm contraction steps, then emits checked
+`UnsatFarkas` evidence for a malformed backup claim.
 For DAG examples, the validator enumerates simple skeleton paths and applies
 the collider/non-collider conditioning rules. For random matrices, it
 recomputes weighted trace, determinant, Gram, and rank claims from exact
@@ -435,6 +443,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-k-nearest-neighbors-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-perceptron-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-hard-margin-svm-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-value-iteration-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/least-squares-regression-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/exact-statistical-tests-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-measure-v0
@@ -482,6 +491,8 @@ For exact finite perceptron training-trace replay, read
 [End To End: Finite Perceptron](perceptron-end-to-end.md).
 For exact finite hard-margin SVM hyperplane, KKT, and duality-gap replay,
 read [End To End: Finite Hard-Margin SVM](hard-margin-svm-end-to-end.md).
+For exact finite Bellman-backup and fixed-point replay, read
+[End To End: Finite Value Iteration](value-iteration-end-to-end.md).
 For finite matrix-valued probability tables, read
 [End To End: Finite Random Matrices](random-matrix-finite-end-to-end.md).
 For the cross-pack finite random-matrix query map, read
@@ -505,7 +516,8 @@ measures, Markov chains, d-separation rows, exact statistics, finite
 covariance matrices, finite Naive Bayes classifiers, finite decision-tree
 Gini rows, finite dyadic entropy/information-gain rows, finite
 nearest-neighbor vote rows, finite perceptron traces, finite hard-margin
-SVM primal-dual rows, and random-matrix moments first use
+SVM primal-dual rows, finite value-iteration Bellman backups, and
+random-matrix moments first use
 [Finite Model Replay](../../proof-cookbook/recipes/finite-model-replay.md):
 the validator recomputes exact atom-table sums and finite path conditions.
 Malformed probability normalization, Bayes-posterior rows, measure-complement
@@ -514,8 +526,8 @@ equations, tail bounds, regression coefficients, covariance entries, classifier
 posteriors, classifier metric rows, ROC/AUC rows, precision-recall rows,
 calibration/Brier rows, decision-tree weighted-Gini rows, dyadic
 weighted-entropy rows, nearest-neighbor squared-distance rows, perceptron
-weight-update rows, SVM bias rows, and random-matrix moment/rank rows
-graduate through
+weight-update rows, SVM bias rows, Bellman-backup rows, and random-matrix
+moment/rank rows graduate through
 [QF_LRA / Farkas Evidence](../../proof-cookbook/recipes/qf-lra-farkas.md).
 Discrete count contradictions such as contingency totals and exact tail counts
 use
@@ -543,7 +555,8 @@ tie/interpolation conventions beyond committed finite rows, continuous score
 distributions, decision-tree greedy optimality, pruning, threshold search,
 non-dyadic entropy and log-loss splitting, nearest-neighbor consistency and
 tie policy, perceptron mistake bounds and convergence, SVM strong duality,
-KKT sufficiency, and maximum-margin optimality, causal
+KKT sufficiency, and maximum-margin optimality, Bellman fixed-point
+uniqueness and value-iteration convergence, causal
 identification,
 do-calculus, and floating-point
 diagnostics are not proof claims. They need either

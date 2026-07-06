@@ -97,6 +97,9 @@ const FINITE_PERCEPTRON_BAD_WEIGHT_UPDATE: &str = include_str!(
 const FINITE_HARD_MARGIN_SVM_BAD_BIAS: &str = include_str!(
     "../../../artifacts/examples/math/finite-hard-margin-svm-v0/smt2/bad-bias-farkas-conflict.smt2"
 );
+const FINITE_VALUE_ITERATION_BAD_BACKUP: &str = include_str!(
+    "../../../artifacts/examples/math/finite-value-iteration-v0/smt2/bad-backup-farkas-conflict.smt2"
+);
 const LEAST_SQUARES_BAD_RSS_IMPROVEMENT: &str = include_str!(
     "../../../artifacts/examples/math/least-squares-regression-v0/smt2/bad-rss-improvement-farkas-conflict.smt2"
 );
@@ -1035,6 +1038,14 @@ fn finite_hard_margin_svm_bad_bias_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "finite-hard-margin-svm-v0 bad-bias SMT-LIB artifact",
         FINITE_HARD_MARGIN_SVM_BAD_BIAS,
+    );
+}
+
+#[test]
+fn finite_value_iteration_bad_backup_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-value-iteration-v0 bad-backup SMT-LIB artifact",
+        FINITE_VALUE_ITERATION_BAD_BACKUP,
     );
 }
 

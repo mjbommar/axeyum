@@ -37585,6 +37585,282 @@ def validate_finite_hard_margin_svm(expected: dict[str, Any]) -> None:
         fail("general-svm-theory-lean-horizon must be searchable")
 
 
+
+def validate_finite_value_iteration(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    def require_vector(context: str, value: Any, length: int) -> list[Fraction]:
+        if not isinstance(value, list):
+            fail(f"{context} must be a list")
+        if len(value) != length:
+            fail(f"{context} must have exactly {length} entries")
+        return [require_fraction(f"{context}[{i}]", entry) for i, entry in enumerate(value)]
+
+    def require_sat_replay(check_id: str, validation: str) -> None:
+        check = checks[check_id]
+        if check["expected_result"] != "sat":
+            fail(f"{check_id} must expect sat")
+        if check.get("proof_status") != "replay-only":
+            fail(f"{check_id} must be replay-only")
+        if check["validation"] != validation:
+            fail(f"{check_id} validation is incorrect")
+        values_again = single_witness_values(check, witnesses)
+        if values_again != values:
+            fail(f"{check_id} must cite the shared MDP witness")
+
+    table_check = checks["mdp-table-witness"]
+    if table_check["expected_result"] != "sat":
+        fail("mdp-table-witness must expect sat")
+    if table_check.get("proof_status") != "replay-only":
+        fail("mdp-table-witness must be replay-only")
+    if table_check["validation"] != "exact_rational_mdp_table_replay":
+        fail("mdp-table-witness validation is incorrect")
+    values = single_witness_values(table_check, witnesses)
+
+    states = require_string_list("mdp states", values.get("states"))
+    if len(set(states)) != len(states) or not states:
+        fail("mdp states must be a non-empty list without repeats")
+    actions = require_string_list("mdp actions", values.get("actions"))
+    if len(set(actions)) != len(actions) or not actions:
+        fail("mdp actions must be a non-empty list without repeats")
+
+    discount = require_fraction("mdp discount", values.get("discount"))
+    if not (0 <= discount < 1):
+        fail("mdp discount must lie in [0, 1)")
+
+    raw_rows = values.get("mdp_rows")
+    if not isinstance(raw_rows, list) or not raw_rows:
+        fail("mdp_rows must be a non-empty list")
+    rows: dict[tuple[str, str], dict[str, Any]] = {}
+    for index, row in enumerate(raw_rows):
+        if not isinstance(row, dict):
+            fail(f"mdp_rows[{index}] must be an object")
+        state = row.get("state")
+        action = row.get("action")
+        require_string(f"mdp_rows[{index}].state", state)
+        require_string(f"mdp_rows[{index}].action", action)
+        if state not in states or action not in actions:
+            fail(f"mdp_rows[{index}] references an unknown state or action")
+        if (state, action) in rows:
+            fail(f"mdp_rows repeats the pair ({state!r}, {action!r})")
+        reward = require_fraction(f"mdp_rows[{index}].reward", row.get("reward"))
+        transition = require_vector(
+            f"mdp_rows[{index}].transition", row.get("transition"), len(states)
+        )
+        if any(entry < 0 for entry in transition):
+            fail(f"mdp_rows[{index}].transition entries must be nonnegative")
+        if sum(transition, Fraction(0)) != 1:
+            fail(f"mdp_rows[{index}].transition must sum to one")
+        rows[(state, action)] = {"reward": reward, "transition": transition}
+    state_actions: dict[str, list[str]] = {
+        state: [action for action in actions if (state, action) in rows] for state in states
+    }
+    if any(not available for available in state_actions.values()):
+        fail("every mdp state must have at least one action row")
+
+    require_sat_replay("value-iteration-witness", "exact_rational_value_iteration_replay")
+    require_sat_replay(
+        "bellman-fixed-point-witness",
+        "exact_rational_bellman_fixed_point_replay",
+    )
+    require_sat_replay("contraction-step-witness", "exact_rational_contraction_step_replay")
+
+    def backup(current: list[Fraction], state: str, action: str) -> Fraction:
+        row = rows[(state, action)]
+        expected_value = sum(
+            (p * v for p, v in zip(row["transition"], current)), Fraction(0)
+        )
+        return row["reward"] + discount * expected_value
+
+    current = require_vector("mdp initial_values", values.get("initial_values"), len(states))
+    if any(entry != 0 for entry in current):
+        fail("mdp initial_values must be the zero vector")
+
+    raw_iterations = values.get("iterations")
+    if not isinstance(raw_iterations, list) or not raw_iterations:
+        fail("mdp iterations must be a non-empty list")
+    history = [current]
+    bad_q_value: Fraction | None = None
+    for index, iteration in enumerate(raw_iterations):
+        if not isinstance(iteration, dict):
+            fail(f"mdp iterations[{index}] must be an object")
+        iteration_index = require_fraction(
+            f"mdp iterations[{index}].index", iteration.get("index")
+        )
+        if iteration_index != Fraction(index + 1):
+            fail(f"mdp iterations[{index}] must be numbered {index + 1}")
+        raw_q = iteration.get("q_values")
+        if not isinstance(raw_q, dict) or set(raw_q) != set(states):
+            fail(f"mdp iterations[{index}].q_values must cover every state")
+        greedy: dict[str, str] = {}
+        next_values: list[Fraction] = []
+        for state in states:
+            state_q = raw_q[state]
+            if not isinstance(state_q, dict) or set(state_q) != set(state_actions[state]):
+                fail(f"mdp iterations[{index}].q_values[{state!r}] must cover the state's actions")
+            computed_q = {}
+            for action in state_actions[state]:
+                committed = require_fraction(
+                    f"mdp iterations[{index}].q_values[{state!r}][{action!r}]",
+                    state_q[action],
+                )
+                computed = backup(current, state, action)
+                if committed != computed:
+                    fail(f"mdp iterations[{index}] backup for ({state!r}, {action!r}) is incorrect")
+                computed_q[action] = computed
+            best_value = max(computed_q.values())
+            best_actions = [a for a, q in computed_q.items() if q == best_value]
+            if len(best_actions) != 1:
+                fail(f"mdp iterations[{index}] greedy action for {state!r} must be unique")
+            greedy[state] = best_actions[0]
+            next_values.append(best_value)
+            if index == 1 and state == "s1":
+                bad_q_value = computed_q.get("a")
+        committed_values = require_vector(
+            f"mdp iterations[{index}].values", iteration.get("values"), len(states)
+        )
+        if committed_values != next_values:
+            fail(f"mdp iterations[{index}].values must match the replayed backups")
+        committed_greedy = iteration.get("greedy_policy")
+        if committed_greedy != greedy:
+            fail(f"mdp iterations[{index}].greedy_policy must match the replayed argmax")
+        current = next_values
+        history.append(current)
+
+    fixed_point = require_vector(
+        "mdp fixed_point_values", values.get("fixed_point_values"), len(states)
+    )
+    if fixed_point != current:
+        fail("mdp fixed_point_values must match the final iteration")
+    if len(history) < 3 or history[-1] != history[-2]:
+        fail("the final mdp iteration must reproduce the previous values exactly")
+    rebacked = [
+        max(backup(fixed_point, state, action) for action in state_actions[state])
+        for state in states
+    ]
+    if rebacked != fixed_point:
+        fail("mdp fixed_point_values must be an exact Bellman fixed point")
+    optimal_policy = values.get("optimal_policy")
+    committed_last_greedy = raw_iterations[-1].get("greedy_policy")
+    if optimal_policy != committed_last_greedy:
+        fail("mdp optimal_policy must match the final greedy policy")
+
+    sup_steps = require_vector(
+        "mdp sup_norm_steps", values.get("sup_norm_steps"), len(raw_iterations)
+    )
+    for index, committed_step in enumerate(sup_steps):
+        computed_step = max(
+            abs(a - b) for a, b in zip(history[index + 1], history[index])
+        )
+        if committed_step != computed_step:
+            fail(f"mdp sup_norm_steps[{index}] is incorrect")
+        if index > 0 and computed_step > discount * sup_steps[index - 1]:
+            fail(f"mdp sup_norm_steps[{index}] must satisfy the contraction inequality")
+
+    bad = checks["bad-backup-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-backup-rejected must expect unsat")
+    if bad.get("proof_status") != "replay-only":
+        fail("bad-backup-rejected must be replay-only")
+    if bad["validation"] != "exact_rational_bad_backup_replay":
+        fail("bad-backup-rejected validation is incorrect")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "three-state-mdp-value-iteration":
+        fail("bad-backup-rejected must cite the source witness")
+    if data.get("metric") != "bellman_backup_value":
+        fail("bad-backup-rejected must document bellman_backup_value")
+    if data.get("iteration") != "2" or data.get("state") != "s1" or data.get("action") != "a":
+        fail("bad-backup-rejected must document the iteration-2 backup at (s1, a)")
+    bad_computed = require_fraction(
+        "bad mdp computed_backup_value", data.get("computed_backup_value")
+    )
+    bad_claimed = require_fraction(
+        "bad mdp claimed_backup_value", data.get("claimed_backup_value")
+    )
+    if bad_q_value is None or bad_computed != bad_q_value:
+        fail("bad-backup-rejected computed value must match replay")
+    if bad_claimed == bad_computed:
+        fail("bad-backup-rejected must document a false backup claim")
+    if "separate qf-lra-bad-backup" not in bad.get("notes", ""):
+        fail("bad-backup-rejected notes must name the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-backup"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-backup must expect unsat")
+    if qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-backup must be checked")
+    if qf_bad["validation"] != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-backup must use exact_rational_farkas_evidence")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_witness") != "three-state-mdp-value-iteration":
+        fail("qf-lra-bad-backup must cite the source witness")
+    if qf_data.get("source_replay_row") != "bad-backup-rejected":
+        fail("qf-lra-bad-backup must cite the replay row")
+    if qf_data.get("metric") != "bellman_backup_value":
+        fail("qf-lra-bad-backup must document bellman_backup_value")
+    if (
+        qf_data.get("iteration") != "2"
+        or qf_data.get("state") != "s1"
+        or qf_data.get("action") != "a"
+    ):
+        fail("qf-lra-bad-backup must document the iteration-2 backup at (s1, a)")
+    qf_computed = require_fraction(
+        "qf mdp computed_backup_value", qf_data.get("computed_backup_value")
+    )
+    qf_claimed = require_fraction(
+        "qf mdp claimed_backup_value", qf_data.get("claimed_backup_value")
+    )
+    if (qf_computed, qf_claimed) != (bad_computed, bad_claimed):
+        fail("qf-lra-bad-backup data must match the replay row")
+    equations = require_string_list("qf mdp backup_equations", qf_data.get("backup_equations"))
+    if equations != ["mdp_q2_s1_a = 5/2", "mdp_q2_s1_a = 2"]:
+        fail("qf-lra-bad-backup must document the linear conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf mdp smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-value-iteration-v0/smt2/"
+        "bad-backup-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-lra-bad-backup smt2_artifact must name the checked source artifact")
+    check_source("qf mdp smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf mdp farkas_regression", regression)
+    if "finite_value_iteration_bad_backup_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-backup must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf mdp certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-backup certificate must document checked Farkas evidence")
+
+    horizon = checks["general-mdp-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-mdp-theory-lean-horizon must be not-run")
+    if horizon.get("proof_status") != "lean-horizon":
+        fail("general-mdp-theory-lean-horizon must remain lean-horizon")
+    horizon_data = horizon.get("data", {})
+    require_string(
+        "mdp horizon target_theorem_shape",
+        horizon_data.get("target_theorem_shape"),
+    )
+    require_string("mdp horizon future_checker", horizon_data.get("future_checker"))
+    horizon_text = " ".join(
+        [
+            horizon.get("claim", ""),
+            horizon_data.get("target_theorem_shape", ""),
+            horizon_data.get("future_checker", ""),
+            horizon.get("notes", ""),
+        ]
+    ).lower()
+    if (
+        "bellman" not in horizon_text
+        or "fixed point" not in horizon_text
+        or "value iteration" not in horizon_text.replace("value-iteration", "value iteration")
+    ):
+        fail("general-mdp-theory-lean-horizon must be searchable")
+
+
 def validate_descriptive_statistics(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -40815,6 +41091,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_perceptron(expected)
     if metadata["id"] == "finite-hard-margin-svm-v0":
         validate_finite_hard_margin_svm(expected)
+    if metadata["id"] == "finite-value-iteration-v0":
+        validate_finite_value_iteration(expected)
     if metadata["id"] == "finite-cardinality-v0":
         validate_finite_cardinality(expected)
     if metadata["id"] == "cardinality-principles-v0":

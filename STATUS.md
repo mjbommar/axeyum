@@ -247,6 +247,31 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite value-iteration resource landed.**
+  `finite-value-iteration-v0` now gives the probability, dynamics, and
+  optimization lanes a dynamic-programming trace — a new proof shape next to
+  the committed-optimum SVM pair and the iterative perceptron trace: it
+  replays a fixed three-state, two-action discounted MDP with `gamma = 1/2`
+  from the zero value vector, every Bellman backup
+  `Q(s, a) = r + gamma * P . V` and greedy maximum across three iterations,
+  a greedy-policy switch at `s1` from the myopic to the far-sighted action,
+  the exact Bellman fixed point `(5/2, 3, 0)` reproduced by a full backup,
+  and the sup-norm contraction steps `3, 1/2, 0`; rejects the malformed
+  Bellman-backup claim `2` against exact `5/2`; and routes that scalar
+  conflict through a source-linked QF_LRA/Farkas row. All rewards,
+  probabilities, and the discount are rational, so the whole trace is exact
+  arithmetic and the fixed point is reached exactly — no epsilon threshold.
+  The focused learner page, probability/statistics and dynamics query
+  guides, stochastic-kernel, value-iteration, exact-vs-floating, and
+  QF_LRA/Farkas bridge rows, validator, resource smoke queries, generated
+  dashboards, and `math_resource_lra_routes` regression keep this fixed
+  finite trace separate from the Banach fixed-point theorem,
+  value-iteration convergence in general, optimality/uniqueness theorems,
+  stochastic approximation, and floating-point dynamic programming. The
+  public summary now reports 136 concept rows, 172 packs, 1124 expected
+  checks, 398 checked rows, 591 replay-only rows, 135 Lean-horizon rows,
+  and 172 promoted solver-reuse packs.
+
 - **Finite hard-margin SVM resource landed.**
   `finite-hard-margin-svm-v0` now gives the statistics, optimization, and
   linear-algebra lanes a committed-optimum primal-dual pair — a new proof
@@ -268,10 +293,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   dashboards, and `math_resource_lra_routes` regression keep this fixed
   finite replay separate from strong duality, KKT sufficiency,
   maximum-margin optimality, soft-margin/kernel variants, statistical
-  generalization, and floating-point training behavior. The public summary
-  now reports 135 concept rows, 171 packs, 1117 expected checks, 397
-  checked rows, 586 replay-only rows, 134 Lean-horizon rows, and 171
-  promoted solver-reuse packs.
+  generalization, and floating-point training behavior. At that landing,
+  the public summary reported 135 concept rows, 171 packs, 1117 expected
+  checks, 397 checked rows, 586 replay-only rows, 134 Lean-horizon rows,
+  and 171 promoted solver-reuse packs.
 
 - **Finite perceptron resource landed.**
   `finite-perceptron-v0` now gives the statistics, probability, and

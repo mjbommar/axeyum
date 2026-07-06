@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "id": "finite-value-iteration-v0",
+  "title": "Finite Value Iteration",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_probability_theory",
+    "field_differential_equations_and_dynamical_systems",
+    "field_optimization_and_convexity",
+    "curriculum_linear_algebra",
+    "curriculum_rationals",
+    "bridge_stochastic_kernel",
+    "bridge_finite_value_iteration_shadow",
+    "bridge_exact_vs_floating_arithmetic",
+    "bridge_qf_lra_farkas_anatomy"
+  ],
+  "field_ids": [
+    "probability_theory",
+    "differential_equations_and_dynamical_systems",
+    "optimization_and_convexity"
+  ],
+  "curriculum_nodes": [
+    "linear-algebra",
+    "rationals"
+  ],
+  "axeyum_fragments": [
+    "finite transition systems",
+    "finite Bellman backup replay",
+    "finite greedy-policy replay",
+    "finite fixed-point replay",
+    "exact rational arithmetic",
+    "LRA (exact rationals)",
+    "QF_LRA",
+    "Farkas",
+    "finite replay",
+    "Lean horizon",
+    "numerical-honesty metadata"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-value-iteration-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite value-iteration bad Bellman-backup QF_LRA/Farkas regression seed",
+    "pressure": "Exact finite replay computes the second-iteration Bellman backup Q2(s1, a) = 5/2 from the committed MDP table, while a malformed row claims 2, isolating a compact scalar Farkas conflict beneath the value-iteration trace.",
+    "evidence": [
+      "qf-lra-bad-backup"
+    ],
+    "next_step": "Promote additional dynamic-programming rows only when they add distinct policy-iteration, undiscounted/average-reward, stochastic-approximation/Q-learning, larger-horizon, or numerical-honesty pressure; keep the Banach fixed-point theorem, value-iteration convergence in general, greedy-policy optimality theorems, and floating-point dynamic-programming claims in theorem or numerical-honesty lanes."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/curriculum/03-destinations/linear-algebra.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/value-iteration-end-to-end.md",
+    "artifacts/examples/math/finite-value-iteration-v0/smt2/bad-backup-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+  ],
+  "expected_results": [
+    "mdp-table-witness",
+    "value-iteration-witness",
+    "bellman-fixed-point-witness",
+    "contraction-step-witness",
+    "bad-backup-rejected",
+    "qf-lra-bad-backup",
+    "general-mdp-theory-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode the fixed finite MDP table, the discount factor, every iteration's Bellman backups, greedy values and policies, the exact fixed point, and the sup-norm contraction steps as deterministic exact-rational replay obligations.",
+    "Route the false Bellman-backup claim through a source-linked QF_LRA artifact and checked Farkas evidence after exact replay computes the conflicting value equation.",
+    "Expose the pack through probability, dynamics, optimization, value-iteration, exact-vs-floating, and learner-query surfaces.",
+    "Keep the Banach fixed-point theorem, value-iteration and policy-iteration convergence in general, greedy-policy optimality theorems, infinite-horizon and continuous MDP theory, stochastic approximation, and floating-point dynamic programming marked theorem or numerical-honesty horizon."
+  ]
+}
