@@ -16216,6 +16216,23 @@ plan is built and committed on the current branch:
     membership Boolean shapes (next: membership atoms in the online CDCL(T)
     route), re.all+prefixof. **String day total: QF_S 52→67 (+15, 39%→50%),
     with every verdict oracle-verified and DISAGREE=0 held throughout.**
+  - (`f5b00c72`) **P0 incident, resolved same evening — a vacuous-sat HARNESS
+    hole, engine exonerated.** CI's corpus_regression reported 1 DISAGREE at
+    `c5f181b9` (instance1079-re-loop-cong: declared+z3 unsat, reported sat).
+    Direct probes cleared the engine, matcher, translation, and front door
+    (all correct on the shape; `solve_smtlib` decides the file unsat). Root
+    cause: T-C.5 made membership scripts word-only-fallback eligible (EMPTY
+    flat assertion view), and corpus_regression handed that empty view to
+    `check_auto` — the vacuous empty conjunction. The same class was fixed
+    for the bench in `f5d3e1ec`; this harness was never taught. Fixed:
+    empty-flat-view scripts decide via the front door (118 agree, 0
+    DISAGREE). **Lessons queued (task #29): audit the other 11 parse_script
+    consumers + a structural guard; the pre-push hook must gate the pushed
+    SHA, not the working tree (it blocked this validated fix over unrelated
+    WIP); corpus_regression joins the standard string-slice gate list.** A
+    second suspected wrong-sat (fuzz seed 215) was confined to an
+    UNCOMMITTED feature WIP — quarantined on `wip/t-c5-membership-atoms`
+    with a do-not-merge note; verified absent at HEAD.
   - Also: the pre-push compile gate is live (`hooks/pre-push`,
     `core.hooksPath`), the cap audit found only two CI-scaled sites (both
     healthy), ADR-0051/0053 flipped to accepted, and the tracker count-rot
