@@ -9,28 +9,61 @@
 # rustdoc) stay in CI and `just check` — this hook only guarantees "main
 # always compiles and is formatted".
 #
+# Gates the PUSHED COMMIT, not the working tree. The old hook ran `cargo check`
+# over the working tree, so an unrelated agent's uncommitted WIP (a shared
+# checkout always has some) failed the gate for a perfectly good pushed SHA —
+# forcing a `--no-verify` that defeats the whole mechanism (happened 2026-07-06).
+# We instead check out the exact pushed SHA into a throwaway **detached
+# worktree** (never `git stash`, which would clobber a sibling lane's WIP) and
+# run the gate there. A shared `CARGO_TARGET_DIR` keeps it warm (~seconds hot).
+#
 # Install (per checkout): git config core.hooksPath hooks
 set -euo pipefail
 
-# Only gate pushes that change Rust/TOML relative to the remote.
-range_changed_code() {
-  while read -r _local_ref local_sha _remote_ref remote_sha; do
-    [ "$local_sha" = "0000000000000000000000000000000000000000" ] && continue
-    if [ "$remote_sha" = "0000000000000000000000000000000000000000" ]; then
-      base="$(git merge-base origin/main "$local_sha" 2>/dev/null || echo "$local_sha~20")"
-    else
-      base="$remote_sha"
-    fi
-    git diff --name-only "$base" "$local_sha" -- '*.rs' '*.toml' | head -1
-  done
-}
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+ZERO=0000000000000000000000000000000000000000
 
-changed="$(range_changed_code || true)"
-if [ -z "$changed" ]; then
+# Collect the distinct pushed SHAs whose diff-to-remote touches Rust/TOML.
+# (A branch delete — local_sha all-zero — is skipped; a new branch diffs from
+# its merge-base with origin/main.)
+shas_to_gate=()
+while read -r _local_ref local_sha _remote_ref remote_sha; do
+  [ "$local_sha" = "$ZERO" ] && continue
+  if [ "$remote_sha" = "$ZERO" ]; then
+    base="$(git merge-base origin/main "$local_sha" 2>/dev/null || echo "$local_sha~20")"
+  else
+    base="$remote_sha"
+  fi
+  if [ -n "$(git diff --name-only "$base" "$local_sha" -- '*.rs' '*.toml' | head -1)" ]; then
+    shas_to_gate+=("$local_sha")
+  fi
+done
+
+if [ "${#shas_to_gate[@]}" -eq 0 ]; then
   exit 0 # docs/bench-results/scripts-only push — no cargo gate needed
 fi
 
-echo "pre-push: Rust/TOML changed — running compile + fmt gate (mem-capped)" >&2
-MEM_LIMIT_GB="${MEM_LIMIT_GB:-64}" ./scripts/mem-run.sh cargo check --workspace --quiet
-cargo fmt --all --check
-echo "pre-push: gate green" >&2
+# Gate the TIP pushed SHA (if several refs are pushed at once, the most recent
+# code state is the one that must compile; earlier ones are its ancestors).
+target_sha="${shas_to_gate[-1]}"
+
+# A throwaway detached worktree holding exactly the pushed tree — isolated from
+# whatever uncommitted WIP sits in this checkout.
+tmp_wt="$(mktemp -d "${TMPDIR:-/tmp}/axeyum-prepush.XXXXXX")"
+cleanup() {
+  git -C "$REPO_ROOT" worktree remove --force "$tmp_wt" >/dev/null 2>&1 || rm -rf "$tmp_wt"
+}
+trap cleanup EXIT
+
+echo "pre-push: Rust/TOML changed — compile + fmt gate on pushed SHA ${target_sha:0:12} (mem-capped)" >&2
+git -C "$REPO_ROOT" worktree add --detach --quiet "$tmp_wt" "$target_sha"
+
+# Reuse this checkout's target dir so the check is warm (~seconds hot), and run
+# under the same memory cap the rest of the toolchain uses.
+export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$REPO_ROOT/target}"
+(
+  cd "$tmp_wt"
+  MEM_LIMIT_GB="${MEM_LIMIT_GB:-64}" ./scripts/mem-run.sh cargo check --workspace --quiet
+  cargo fmt --all --check
+)
+echo "pre-push: gate green (pushed SHA compiles and is formatted)" >&2
