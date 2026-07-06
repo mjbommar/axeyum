@@ -16259,6 +16259,36 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-06 — T-C.6 membership atoms online + a pre-existing escape-decoding
+  wrong-verdict class fixed: QF_S 74 (55%), QF_SLIA 15, totals 695.**
+  - (`ba0d9149`) **The seed-215 investigation exonerated the quarantined WIP
+    and convicted MAIN**: both string-literal decoders (byte-model +
+    word/skeleton routes) never expanded `\u{h…}`/`\uhhhh` escapes while the
+    regex side always did — two denotations for one text, a wrong-verdict
+    class against Z3/cvc5 for ANY escaped literal mixed with `str.in_re`
+    (issue9784, instance3303/7075-delta, regexp003). One shared
+    `decode_string_code_points` now serves every route; >0xFF declines in
+    the byte model rather than truncating.
+  - (`2bec9d87`) **T-C.6: membership atoms in the online CDCL(T) route** —
+    both polarities in the word skeleton; unsat only via the per-variable
+    regex-intersection re-checked emptiness certificate; sat only via full
+    replay (word atoms by eval + membership truths recomputed by the
+    independent matcher). Census: re-mod-eq (×2), re-neg-unfold-rev-a, and
+    instance1079 all decide. New 700-script online-membership fuzz vs BOTH
+    oracles (z3 552 jointly, cvc5 549) — DISAGREE=0.
+    **Re-measure: QF_S 67→74 (55%, PAR-2 2.928→2.182), QF_SLIA 14→15,
+    totals 695 decided / 640 compared / DISAGREE=0.**
+  - (`84cd1a21`) vacuous-view audit: 9 embedded-literal consumers safe by
+    construction; `explain_corpus` was the one real hole — closed via the
+    new structural `Script::solvable_flat_view()` guard (None exactly when
+    word-only-fallback), adopted at both risky call sites.
+  - (`3a7f86b6`) the pre-push hook now gates the PUSHED SHA in a throwaway
+    detached worktree (8-10s hot; docs-only skip 0.02s) — unrelated WIP in
+    the shared checkout can no longer force `--no-verify`. First real push
+    through it validated clean.
+  - The `wip/t-c5-membership-atoms` quarantine branch is superseded and
+    deleted; the string program stands at **QF_S 52→74 (+22, 39%→55%)
+    across 2026-07-03…06 with DISAGREE=0 held at every step**.
 - **2026-07-06 — Track 5 (Verified Systems, IR reflection) adopted as a
   first-class goal (ADR-0056).** The seL4-inspired application trajectory —
   reflect compiled Rust (rustc MIR + LLVM IR) into `axeyum-ir`, discharge
