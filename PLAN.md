@@ -86,45 +86,41 @@ increment at a time and record each one.
    Not keystone-blocked (eager pipeline suffices for v1); the standing
    measured-not-seeded rule applies doubly (P5.5 is an *external* target).
 
-**Immediate next focus (2026-07-03): strings Phase B is IN EXECUTION; the two
-parity-blocking axes get owners.** Strings (P2.7) and nonlinear arithmetic
-(P2.5) remain the largest decide-rate gaps, each decomposed under
-[`docs/plan/track-2-theories/P2.7-strings/`](docs/plan/track-2-theories/P2.7-strings/)
-and [`docs/plan/track-2-theories/P2.5-nra/`](docs/plan/track-2-theories/P2.5-nra/).
-Landed 2026-07-01/02: **P2.7 Phase A complete** (A.1a/b sort+ops;
-**A.2 = ADR-0052**: the `bv2nat`-linear blast + the parser-built unbounded
-length abstraction + the bounded-string `unsat` gate at every front door — the
-Gap-10 `str.len`-unsat marker decides, and a **measured pre-existing
-wrong-unsat class vs Z3 was repaired**); **P1.9 FM→simplex keystone complete**;
-**NRA coprime-split CAD projection** plus **first-class `/0` division
-witnesses** (`124e18aa`): the committed curated baseline now shows **QF_NRA
-21/38 decided** (was 9/38), DISAGREE=0.
-Landed 2026-07-03: **P2.7 Phase B COMPLETE as a live route, both directions
-(ADR-0053)** — the `axeyum-strings` crate through T-B.1…T-B.4d + extended-fn
-reductions + harness parity (**QF_S 52→57**, each new sat z3-binary-verified)
-+ **T-B.7 slices 1–2** (word `unsat` only via the independent derivation
-checker; word fuzz **96 sat + 305 unsat, DISAGREE=0**). The coverage-boundary
-census (`3c13df63`) fixed the sequel: the word fragment's corpus ceiling is
-reached — the remaining 35 string unknowns split regex 15 (**Phase C,
-ADR-0054 proposed**, T-C.1/2 engine core in flight), extended functions 11
-(Phase D), lex-order/code-point↔LIA 8, seq+len 1.
-**Sequencing (4th review, 2026-07-03): the P1.5 CDCL(T) keystone outranks
-Phase-C broadening** — the whole string engine is still a one-shot side
-channel behind `check_auto`; integration is what reaches the 21
-gate-downgraded unsats and the 8 theory-coupled census files, and it serves
-UF/NRA/NIA combination too. Phase-C engine work proceeds where it is
-integration-independent (T-C.1/2 predicates+derivatives); T-C.5 routing waits
-on/behind P1.5. **Word-unsat hardening queued before any parity language:**
-cvc5 as a second string oracle (Z3-only is weakest exactly here), cargo-mutants
-on `check_derivation.rs`, a `normalize` denotation-preservation fuzz (the one
-shared primitive), and an Alethe emitter off the checker's minimal conflicts —
-the cheapest live Lean-ledger progress.
-**The two previously-starved north-star axes moved 2026-07-03:** (1) the
-first committed PAR-2 head-to-head exists (`582ecba8`, public QF_BV
-lazy-vs-eager: lazy weakly dominates at 20s but `lazy_ops_total=0` — the edge
-is preprocessing, not CEGAR; the parity lever is reduction depth); (2) the
-frontier ratchet is a recorded pre-merge gate (CLAUDE.md, `efdbb0ff`); the
-budget-excused-cap audit remains queued.
+**Immediate next focus (2026-07-06, post-sprint rotation per the 6th
+periodic review): bank the string sprint's evidence, then the
+multiply-across-theories keystones.** The 2026-07-03…06 string sprint is
+complete and measured: **QF_S 52→74 (39%→55%), QF_SLIA 15/50, totals
+695/992 decided, DISAGREE=0 vs both oracles at every step** — Phase A
+(ADR-0052 len↔LIA + gate), Phase B (ADR-0053 word core, both directions,
+independently-checked derivations), the P1.5 CDCL(T) integration
+(ADR-0055, QF_S online default-on), Phase C through T-C.6 (ADR-0054
+derivative engine, membership sub-solver, membership atoms online), the
+code↔LIA bridge, and two latent wrong-verdict classes found and fixed en
+route (bound-bite ADR-0052; the `\u`-escape decoding class `ba0d9149`).
+The remaining string census (extended-fns, lex-order, Nielsen quads, seq)
+is diminishing-marginal — a Phase D census agent reports before any
+further slice.
+**The rotation (in order):** (1) **reconstruct the string certificates to
+kernel-checked Lean** (P3.7 — the word-clash Alethe `5ad952b8` and
+derivative-emptiness `c5f181b9` certs exist; strings joins the 8
+reconstructed fragments; the cheapest live Lean-parity progress); (2)
+**CdclT arithmetic migration** (ADR-0055 criterion 2 — LIA/LRA as
+TheorySolver impls on the shared driver; unlocks strings+LIA combination
+= the 8 theory-coupled census files + the 21 gate-downgraded unsats,
+QF_UF default-on, and NRA/NIA service); (3) **NRA levers** (21/38
+untouched since 07-02: FM→simplex for nested `1/(a/b)`, threshold-1
+widening; `nra_degree` frontier 2/6 shows the headroom).
+**Process state:** first green CI in 200+ runs held into a green cadence;
+the pre-push hook gates the pushed SHA incl. the ~6s `:status` corpus
+sweep (a wrong verdict must not leave the machine); STATUS truncated
+22,349→~600 lines with full archives (task #27); Track 5 (Verified
+Systems, ADR-0056) adopted by the concurrent lane — the review flags the
+P4.2/P5.1 symexec overlap for a single-owner decision and sequences
+Track 5 behind the Track 1/3 keystones it consumes.
+**Standing from 2026-07-03:** the first committed PAR-2 head-to-head
+exists (`582ecba8`; the QF_BV parity lever is reduction depth, not CEGAR);
+the budget-excused-cap audit found two healthy sites; the quiet-box
+frontier ratchet (lia_cuts 20→26) remains queued.
 
 **Grounding correction (important).** Reading the code + ADRs showed the NRA
 engine is *far more built* than the first plan draft assumed: the bignum algebraic
