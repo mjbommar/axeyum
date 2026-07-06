@@ -17,6 +17,7 @@ use axeyum_solver::{ProofOutcome, SolverConfig, prove};
 
 use axeyum_verify::reflect::llvm::{reflect_into, reflect_unary_into};
 use axeyum_verify::reflect::mir::{reflect_mir_into, reflect_mir_unary};
+use axeyum_verify::reflect::oracle::DiffFuzz;
 
 // ---- `masked(x) = (x & 0xff) | 0x100` : straight-line BitAnd/BitOr ~ and/or -----
 
@@ -487,44 +488,16 @@ fn differential_fuzz_mir_vs_llvm_reflections() {
         ("scale", SCALE_MIR, SCALE_LL, 32),
         ("lut", LUT_MIR, LUT_LL, 8),
     ];
-    let mut state = 0x5DEE_CE66_D1CE_5EEDu64;
-    let mut lcg = move || {
-        state = state
-            .wrapping_mul(6_364_136_223_846_793_005)
-            .wrapping_add(1);
-        u128::from(state >> 32)
-    };
     for (name, mir, ll, width) in pairs {
         let mut arena = TermArena::new();
         let x_sym = arena.declare("x", Sort::BitVec(*width)).unwrap();
         let x = arena.var(x_sym);
         let from_mir = reflect_mir_unary(&mut arena, x, mir);
         let from_llvm = reflect_unary_into(&mut arena, x, ll);
-        let mask = if *width == 128 {
-            u128::MAX
-        } else {
-            (1u128 << width) - 1
-        };
-        for _ in 0..10_000 {
-            let v = lcg() & mask;
-            let mut asg = Assignment::new();
-            asg.set(
-                x_sym,
-                Value::Bv {
-                    width: *width,
-                    value: v,
-                },
-            );
-            let m = match eval(&arena, from_mir, &asg).unwrap() {
-                Value::Bv { value, .. } => value,
-                other => panic!("mir eval not BV: {other:?}"),
-            };
-            let l = match eval(&arena, from_llvm, &asg).unwrap() {
-                Value::Bv { value, .. } => value,
-                other => panic!("llvm eval not BV: {other:?}"),
-            };
-            assert_eq!(m, l, "{name}: mir/llvm reflections disagree at x={v}");
-        }
+        // The reflection == reflection shape, via the shared oracle harness.
+        DiffFuzz::new(vec![(x_sym, *width)], 10_000)
+            .check_agree(&arena, from_mir, from_llvm)
+            .assert_agreed(&format!("{name}: mir/llvm reflections"));
     }
 }
 

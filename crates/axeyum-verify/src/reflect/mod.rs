@@ -20,6 +20,9 @@
 pub mod llvm;
 /// The `switchInt`/`assert`/checked-arithmetic MIR reflector.
 pub mod mir;
+/// The deterministic differential-fuzz oracle harness (reflection vs
+/// reflection, or reflection vs the real Rust function).
+pub mod oracle;
 
 use axeyum_ir::{Assignment, TermArena, TermId, Value, eval};
 use axeyum_solver::{ProofOutcome, SolverConfig, prove};

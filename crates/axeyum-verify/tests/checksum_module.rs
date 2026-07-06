@@ -16,11 +16,12 @@
 //! functions the compiler produced, prove the per-function contracts and the
 //! protocol identities over them.
 
-use axeyum_ir::{Assignment, Sort, SymbolId, TermArena, TermId, Value, eval};
+use axeyum_ir::{Sort, SymbolId, TermArena, TermId};
 use axeyum_solver::{ProofOutcome, SolverConfig, prove};
 
 use axeyum_verify::reflect::llvm::reflect_into;
 use axeyum_verify::reflect::mir::reflect_mir_into;
+use axeyum_verify::reflect::oracle::DiffFuzz;
 
 // ---- the real Rust module (concrete oracle) ---------------------------------------
 
@@ -219,58 +220,31 @@ fn module_receiver_property_sum_plus_cksum_is_all_ones() {
 #[test]
 fn module_reflections_match_real_rust() {
     let m = reflect_module();
-    let mut state = 0x00DD_BA11_u64;
-    let mut lcg = move || {
-        state = state
-            .wrapping_mul(6_364_136_223_846_793_005)
-            .wrapping_add(1);
-        u16::try_from((state >> 40) & 0xffff).unwrap()
+    // Both shapes for all four reflections, via the shared oracle harness: the
+    // real Rust module is the oracle (inputs arrive as [a, b] in symbol order).
+    let inputs = vec![(m.a_sym, 16), (m.b_sym, 16)];
+    let fuzz = DiffFuzz::new(inputs, 2000);
+    let ab = |vals: &[u128]| -> (u16, u16) {
+        (
+            u16::try_from(vals[0]).unwrap(),
+            u16::try_from(vals[1]).unwrap(),
+        )
     };
-    let eval_at = |term: TermId, a: u16, b: u16| -> u16 {
-        let mut asg = Assignment::new();
-        asg.set(
-            m.a_sym,
-            Value::Bv {
-                width: 16,
-                value: u128::from(a),
-            },
-        );
-        asg.set(
-            m.b_sym,
-            Value::Bv {
-                width: 16,
-                value: u128::from(b),
-            },
-        );
-        match eval(&m.arena, term, &asg).unwrap() {
-            Value::Bv { value, .. } => u16::try_from(value).unwrap(),
-            other => panic!("expected BV, got {other:?}"),
-        }
-    };
-    let mut corners = vec![(0, 0), (0xffff, 0xffff), (0xffff, 1), (0x8000, 0x8000)];
-    for _ in 0..2000 {
-        corners.push((lcg(), lcg()));
-    }
-    for (a, b) in corners {
-        assert_eq!(
-            eval_at(m.sum_mir, a, b),
-            sum16(a, b),
-            "sum_mir at ({a},{b})"
-        );
-        assert_eq!(
-            eval_at(m.sum_llvm, a, b),
-            sum16(a, b),
-            "sum_llvm at ({a},{b})"
-        );
-        assert_eq!(
-            eval_at(m.cksum_mir, a, b),
-            cksum_pair(a, b),
-            "cksum_mir at ({a},{b})"
-        );
-        assert_eq!(
-            eval_at(m.cksum_llvm, a, b),
-            cksum_pair(a, b),
-            "cksum_llvm at ({a},{b})"
-        );
+    for (term, name, oracle) in [
+        (m.sum_mir, "sum_mir", true),
+        (m.sum_llvm, "sum_llvm", true),
+        (m.cksum_mir, "cksum_mir", false),
+        (m.cksum_llvm, "cksum_llvm", false),
+    ] {
+        fuzz.check_against(&m.arena, term, |vals| {
+            let (a, b) = ab(vals);
+            let out = if oracle {
+                sum16(a, b)
+            } else {
+                cksum_pair(a, b)
+            };
+            u128::from(out)
+        })
+        .assert_agreed(name);
     }
 }
