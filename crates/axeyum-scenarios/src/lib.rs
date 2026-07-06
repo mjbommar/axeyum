@@ -48,6 +48,7 @@ mod coverage;
 mod exercise;
 mod functions;
 mod identities;
+mod induction;
 mod integers;
 mod linear_algebra;
 mod logic;
@@ -59,7 +60,11 @@ mod number_system;
 mod number_theory;
 mod polynomial;
 mod predicate;
+mod proof_methods;
+mod rationals;
+mod real_algebra;
 mod reals;
+mod relations;
 mod render;
 mod rng;
 mod sets;
@@ -85,6 +90,9 @@ pub use exercise::{Answer, Difficulty, DifficultyTier, Exercise, Grade};
 pub use functions::{function_binary_merge, function_catalog, function_chain, function_lookup};
 pub use identities::{
     de_morgan_identity, full_adder_identity, twos_complement_identity, xor_swap_identity,
+};
+pub use induction::{
+    bad_invariant_step, gauss_sum_step, induction_catalog, sum_of_odds_obligations,
 };
 pub use integers::{integer_catalog, integer_equation, integer_system};
 pub use linear_algebra::{
@@ -118,7 +126,21 @@ pub use predicate::{
     exists_square_root, fermat_little_theorem, forall_additive_identity, forall_exists_inverse,
     predicate_catalog,
 };
+pub use proof_methods::{
+    case_analysis_elimination, contradiction_odd_square, contrapositive_equivalence,
+    counterexample_square_growth, proof_methods_catalog,
+};
+pub use rationals::{
+    density_midpoint, exact_linear_solution, mediant_between, rational_catalog, trichotomy_case,
+};
+pub use real_algebra::{
+    am_gm_instance, nested_intervals_point, quadratic_rational_root, real_algebra_catalog,
+};
 pub use reals::{real_catalog, real_ratio_equation, real_system};
+pub use relations::{
+    bijection_witness, injective_composition, no_injection_into_smaller, relation_catalog,
+    symmetric_transitive_not_reflexive,
+};
 pub use render::Renderable;
 pub use sets::{absorption, complement_union_is_universe, distributivity, sets_catalog};
 pub use verification::{
@@ -190,6 +212,22 @@ pub enum Family {
     /// Number systems: signed-order (trichotomy, transitivity) and naturals
     /// (non-negativity, successor injectivity) theorems.
     NumberSystem,
+    /// Proof methods: contrapositive, contradiction, case analysis, and
+    /// disproof-by-counterexample as refutation shapes.
+    ProofMethods,
+    /// Induction: base and step obligations of concrete invariants as
+    /// quantifier-free bit-vector facts, plus a failing step for a false
+    /// invariant.
+    Induction,
+    /// Relations & functions: packed finite function tables and relations —
+    /// injectivity, bijections, composition, and equivalence-axiom facts.
+    Relation,
+    /// Rational numbers: exact ordered-field facts over `QF_LRA` — density,
+    /// the mediant inequality, exact linear solving, and trichotomy.
+    Rational,
+    /// Real numbers: algebraic (real-closed-field) facts with exact rational
+    /// witnesses — quadratic roots, an AM–GM instance, and nested intervals.
+    RealAlgebra,
 }
 
 impl Family {
@@ -214,6 +252,11 @@ impl Family {
             Family::Sets => "sets",
             Family::Predicate => "predicate",
             Family::NumberSystem => "number_system",
+            Family::ProofMethods => "proof_methods",
+            Family::Induction => "induction",
+            Family::Relation => "relation",
+            Family::Rational => "rational",
+            Family::RealAlgebra => "real_algebra",
         }
     }
 }

@@ -1,6 +1,6 @@
 # Rational Numbers
 
-> Layer 1 · number systems · decidability: `computable` · axeyum theory: LRA (exact rationals) · status: `planned`
+> Layer 1 · number systems · decidability: `computable` · axeyum theory: LRA (exact rationals) · status: `covered`
 
 ## What it is
 
@@ -32,6 +32,12 @@ identities (`(p/q)·(q/p) = 1` for nonzero) are checkable.
 Example exercise: solve a `2×2` rational linear system (SAT, with the exact
 rational solution as witness), and refute an inconsistent one (`x = 1 ∧ x = 2`)
 with a Farkas certificate — teaching both solving and certified impossibility.
+
+**Built** (`Family::Rational`): `density_midpoint` (the midpoint strictly
+between two rationals), `mediant_between` (the mediant inequality),
+`exact_linear_solution` (an exact 2×2 rational linear system), and
+`trichotomy_case`, all satisfiable by construction with exact rational
+witnesses verified by the evaluator.
 
 ## Lean-horizon
 

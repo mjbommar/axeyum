@@ -61,7 +61,7 @@ pub struct MathNode {
 // fully undecidable (general-theorem undecidability is captured by
 // `Status::LeanHorizon`), so it is not imported here.
 use Decidability::{Bounded, Computable, Decidable};
-use Status::{Covered, LeanHorizon, Planned};
+use Status::{Covered, LeanHorizon};
 
 /// Every curriculum node, mirroring `docs/curriculum/curriculum.toml`.
 pub const NODES: &[MathNode] = &[
@@ -90,8 +90,8 @@ pub const NODES: &[MathNode] = &[
         layer: 0,
         prerequisites: &["propositional-logic", "predicate-logic"],
         decidability: Bounded,
-        family: None,
-        status: Planned,
+        family: Some(Family::ProofMethods),
+        status: Covered,
     },
     MathNode {
         id: "induction",
@@ -99,8 +99,8 @@ pub const NODES: &[MathNode] = &[
         layer: 0,
         prerequisites: &["proof-methods", "naturals"],
         decidability: Bounded,
-        family: None,
-        status: Planned,
+        family: Some(Family::Induction),
+        status: Covered,
     },
     MathNode {
         id: "sets",
@@ -117,8 +117,8 @@ pub const NODES: &[MathNode] = &[
         layer: 0,
         prerequisites: &["sets"],
         decidability: Bounded,
-        family: None,
-        status: Planned,
+        family: Some(Family::Relation),
+        status: Covered,
     },
     MathNode {
         id: "cardinality",
@@ -154,8 +154,8 @@ pub const NODES: &[MathNode] = &[
         layer: 1,
         prerequisites: &["integers"],
         decidability: Computable,
-        family: None,
-        status: Planned,
+        family: Some(Family::Rational),
+        status: Covered,
     },
     MathNode {
         id: "reals",
@@ -163,8 +163,8 @@ pub const NODES: &[MathNode] = &[
         layer: 1,
         prerequisites: &["rationals"],
         decidability: Bounded,
-        family: None,
-        status: Planned,
+        family: Some(Family::RealAlgebra),
+        status: Covered,
     },
     MathNode {
         id: "complex",

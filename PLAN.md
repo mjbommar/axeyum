@@ -409,6 +409,14 @@ The learner-facing rules/law trust-boundary page is
 [`docs/learn/rules-law-trust-boundary.md`](docs/learn/rules-law-trust-boundary.md);
 it walks from human-authored source rules through formal models, replayed
 witnesses, checked obligations, and explicit legal/theorem horizons.
+Curriculum coverage status (2026-07-06): all 19 non-Lean-horizon nodes of the
+23-node formal-mathematics-tour DAG are `covered` — the last five `planned`
+nodes (proof-methods, induction, relations-and-functions, rationals, reals)
+gained self-checking `axeyum-scenarios` families (ProofMethods, Induction,
+Relation, Rational, RealAlgebra), the mathtour covered-implies-realized
+invariant enforces them, and the curriculum-status audit's review queue is
+empty; the remaining 4 nodes (cardinality, complex, sequences-and-limits,
+calculus) are Lean-horizon proof-reconstruction targets by design.
 Current resource-buildout status (2026-07-06): the public JSON layer reports
 137 concept rows, 173 non-template packs, 1131 expected checks (581 `sat`,
 414 `unsat`, 136 `not-run`), 399 checked rows, 596 replay-only rows, 136

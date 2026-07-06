@@ -60,17 +60,17 @@ proof-reconstruction target (P3.6/P3.7), not a benchmark.
 ### Layer 0 — Foundations (the "bridge")
 - [Propositional Logic](00-foundations/propositional-logic.md) · `covered`
 - [Predicate Logic](00-foundations/predicate-logic.md) · `covered`
-- [Proof Methods](00-foundations/proof-methods.md) · `planned`
-- [Mathematical Induction](00-foundations/induction.md) · `planned`
+- [Proof Methods](00-foundations/proof-methods.md) · `covered`
+- [Mathematical Induction](00-foundations/induction.md) · `covered`
 - [Sets](00-foundations/sets.md) · `covered`
-- [Relations & Functions](00-foundations/relations-and-functions.md) · `planned`
+- [Relations & Functions](00-foundations/relations-and-functions.md) · `covered`
 - [Cardinality](00-foundations/cardinality.md) · `lean-horizon`
 
 ### Layer 1 — Number systems
 - [Natural Numbers (Peano)](01-number-systems/naturals.md) · `covered`
 - [Integers](01-number-systems/integers.md) · `covered`
-- [Rational Numbers](01-number-systems/rationals.md) · `planned`
-- [Real Numbers](01-number-systems/reals.md) · `planned`
+- [Rational Numbers](01-number-systems/rationals.md) · `covered`
+- [Real Numbers](01-number-systems/reals.md) · `covered`
 - [Complex Numbers](01-number-systems/complex.md) · `lean-horizon`
 
 ### Layer 2 — Core structures & tools

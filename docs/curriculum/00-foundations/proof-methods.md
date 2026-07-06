@@ -1,6 +1,6 @@
 # Proof Methods
 
-> Layer 0 · foundations · decidability: `bounded` · axeyum theory: Refutation (negate-and-decide) · status: `planned`
+> Layer 0 · foundations · decidability: `bounded` · axeyum theory: Refutation (negate-and-decide) · status: `covered`
 
 ## What it is
 
@@ -35,6 +35,12 @@ Example exercise: prove `x > 0 ⊨ x ≥ 0` over the reals — axeyum refutes
 `x > 0 ∧ x < 0` (LRA, Farkas-certified) and the certificate re-checks. A
 non-theorem (`x > 0 ⊨ x > 1`) yields a counter-model (e.g. `x = 1/2`),
 illustrating the difference between a proof and a refutation.
+
+**Built** (`Family::ProofMethods`): `contrapositive_equivalence`
+(`(p → q) ↔ (¬q → ¬p)` refuted-by-negation), `case_analysis_elimination`
+(disjunction elimination), `contradiction_odd_square` (assume `n` odd and
+`n²` even — exhaustively UNSAT), and `counterexample_square_growth` (the
+false conjecture `x² ≥ x` disproved by a concrete wraparound witness).
 
 ## Lean-horizon
 

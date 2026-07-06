@@ -1,6 +1,6 @@
 # Real Numbers
 
-> Layer 1 · number systems · decidability: `bounded` · axeyum theory: LRA / NRA (real-closed fields) · status: `planned`
+> Layer 1 · number systems · decidability: `bounded` · axeyum theory: LRA / NRA (real-closed fields) · status: `covered`
 
 ## What it is
 
@@ -35,6 +35,11 @@ the decidable real-closed-field theory in the Tarski sense.
 Example exercise: `x ≥ 1 ∧ y ≥ 1 ⇒ x·y ≥ 1` (decided by NRA monotonicity
 lemmas); AM–GM for two terms `x² + y² ≥ 2xy` (a sum-of-squares fact). These are
 genuine real-analysis-adjacent theorems decided without floating point.
+
+**Built** (`Family::RealAlgebra`): `quadratic_rational_root` (a monic
+quadratic with rational roots), `am_gm_instance` (an AM–GM instance whose
+geometric mean is rational by construction), and `nested_intervals_point`
+(a bounded completeness shadow), all with exact rational witnesses.
 
 ## Lean-horizon
 

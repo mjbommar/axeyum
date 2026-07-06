@@ -18,9 +18,10 @@ use std::fmt::Write as _;
 
 use crate::{
     Concept, Family, Scenario, algebra_catalog, catalog, concept::ALL, counting_catalog,
-    function_catalog, integer_catalog, linear_algebra_catalog, logic_catalog, memory_catalog,
-    number_system_catalog, number_theory_catalog, polynomial_catalog, predicate_catalog,
-    real_catalog, sets_catalog, verification_catalog,
+    function_catalog, induction_catalog, integer_catalog, linear_algebra_catalog, logic_catalog,
+    memory_catalog, number_system_catalog, number_theory_catalog, polynomial_catalog,
+    predicate_catalog, proof_methods_catalog, rational_catalog, real_algebra_catalog, real_catalog,
+    relation_catalog, sets_catalog, verification_catalog,
 };
 
 /// Every self-checking scenario across all family catalogs.
@@ -44,6 +45,11 @@ pub fn all_catalog_scenarios() -> Vec<Scenario> {
     scenarios.extend(function_catalog());
     scenarios.extend(integer_catalog());
     scenarios.extend(real_catalog());
+    scenarios.extend(proof_methods_catalog());
+    scenarios.extend(induction_catalog());
+    scenarios.extend(relation_catalog());
+    scenarios.extend(rational_catalog());
+    scenarios.extend(real_algebra_catalog());
     scenarios
 }
 

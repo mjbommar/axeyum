@@ -1,6 +1,6 @@
 # Relations & Functions
 
-> Layer 0 · foundations · decidability: `bounded` · axeyum theory: BV / EUF (finite domains) · status: `planned`
+> Layer 0 · foundations · decidability: `bounded` · axeyum theory: BV / EUF (finite domains) · status: `covered`
 
 ## What it is
 
@@ -38,6 +38,13 @@ congruence (`a = b ⇒ f(a) = f(b)`) — `valid`, refuting its negation via the
 e-graph — versus injectivity (`f(a) = f(b) ⇒ a = b`), which is *not* forced,
 yielding a counter-model. Teaches the difference between a function and an
 injection.
+
+**Built** (`Family::Relation`): `no_injection_into_smaller` (pigeonhole —
+no injection from a 4-set into a 3-set), `bijection_witness` (a
+permutation table), `symmetric_transitive_not_reflexive` (the classic
+fallacy refuted by the empty relation), and `injective_composition`
+(injective ∘ injective is injective), all over packed function-table and
+relation bit-vectors.
 
 ## Lean-horizon
 

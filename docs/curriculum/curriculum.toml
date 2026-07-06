@@ -65,8 +65,8 @@ prerequisites = ["propositional-logic", "predicate-logic"]
 unlocks = ["induction"]
 decidability = "bounded"
 axeyum_theory = "Refutation (negate-and-decide)"
-family = ""
-status = "planned"
+family = "ProofMethods"
+status = "covered"
 summary = "Direct, contrapositive, and contradiction proofs; refutation is exactly what a solver does."
 
 [[node]]
@@ -78,8 +78,8 @@ prerequisites = ["proof-methods", "naturals"]
 unlocks = ["number-theory"]
 decidability = "bounded"
 axeyum_theory = "LIA / BV (base + step instances)"
-family = ""
-status = "planned"
+family = "Induction"
+status = "covered"
 summary = "The induction schema is undecidable; individual base/step obligations are decidable."
 
 [[node]]
@@ -104,8 +104,8 @@ prerequisites = ["sets"]
 unlocks = ["cardinality", "groups", "linear-algebra"]
 decidability = "bounded"
 axeyum_theory = "BV / EUF (finite domains)"
-family = ""
-status = "planned"
+family = "Relation"
+status = "covered"
 summary = "Relations, equivalence, functions; properties (injective/surjective) decidable on finite domains."
 
 [[node]]
@@ -160,8 +160,8 @@ prerequisites = ["integers"]
 unlocks = ["reals", "fields"]
 decidability = "computable"
 axeyum_theory = "LRA (exact rationals)"
-family = ""
-status = "planned"
+family = "Rational"
+status = "covered"
 summary = "Exact fractions; linear rational facts decided by the exact-rational simplex."
 
 [[node]]
@@ -173,8 +173,8 @@ prerequisites = ["rationals"]
 unlocks = ["sequences-and-limits", "calculus", "complex"]
 decidability = "bounded"
 axeyum_theory = "LRA / NRA (real-closed fields)"
-family = ""
-status = "planned"
+family = "RealAlgebra"
+status = "covered"
 summary = "Ordered complete field; the elementary (algebraic) theory is decidable (Tarski), completeness is not."
 
 [[node]]

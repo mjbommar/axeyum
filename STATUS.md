@@ -247,6 +247,31 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Curriculum coverage complete: every `planned` node now has a
+  self-checking exercise family.** The five remaining `planned` nodes in the
+  23-node formal-mathematics-tour DAG — `proof-methods`, `induction`,
+  `relations-and-functions`, `rationals`, and `reals` — are now `covered`,
+  each backed by a new oracle-free `axeyum-scenarios` family (ADR-0008: SAT
+  by concrete-witness evaluation, UNSAT by exhaustive enumeration):
+  `Family::ProofMethods` (contrapositive/case-analysis tautologies,
+  proof-by-contradiction parity, and a wraparound counterexample),
+  `Family::Induction` (base+step obligations for `Σ odds = n²` and the Gauss
+  sum with the hypothesis abstracted into a fresh symbol, plus a false
+  invariant's satisfiable step), `Family::Relation` (pigeonhole
+  no-injection, a bijection witness, the symmetric+transitive⇏reflexive
+  fallacy refuted by the empty relation, and injective-composition over
+  packed function tables), `Family::Rational` (density midpoint, mediant
+  inequality, exact 2×2 solves, trichotomy — exact rational witnesses), and
+  `Family::RealAlgebra` (rational-root quadratics, an AM–GM instance with a
+  rational geometric mean, nested intervals). The mathtour invariant test
+  ("every Covered node's family is realized by a self-checking scenario")
+  now enforces all 19 covered nodes; the curriculum source, node pages,
+  README, and generated dashboards report **19 covered / 4 lean-horizon /
+  0 planned**, and the curriculum-status audit's
+  `source-planned-resource-validated` review queue is empty. The 4
+  lean-horizon nodes (cardinality, complex, sequences-and-limits, calculus)
+  remain proof-reconstruction targets by design.
+
 - **Finite policy-iteration resource landed.**
   `finite-policy-iteration-v0` now pairs with the value-iteration pack to
   show two algorithms reaching one committed optimum on the same fixed

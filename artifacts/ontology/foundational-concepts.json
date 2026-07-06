@@ -149,8 +149,8 @@
       "curriculum_node": "proof-methods",
       "curriculum_layer": 0,
       "curriculum_area": "foundations",
-      "curriculum_status": "planned",
-      "curriculum_family": "",
+      "curriculum_status": "covered",
+      "curriculum_family": "ProofMethods",
       "resource_status": "validated",
       "summary": "Direct, contrapositive, and contradiction proofs; refutation is exactly what a solver does.",
       "prerequisites": [
@@ -198,7 +198,8 @@
       ],
       "open_gaps": [
         "Validated example pack exists; solver/proof integration still needs promotion where noted.",
-        "Generated dashboards now report pack status and replay/proof rows; keep lessons linked to the validated pack."
+        "Generated dashboards now report pack status and replay/proof rows; keep lessons linked to the validated pack.",
+        "Existing curriculum family ProofMethods still needs migration into example-pack metadata."
       ],
       "graduation": {
         "status": "planned",
@@ -221,8 +222,8 @@
       "curriculum_node": "induction",
       "curriculum_layer": 0,
       "curriculum_area": "foundations",
-      "curriculum_status": "planned",
-      "curriculum_family": "",
+      "curriculum_status": "covered",
+      "curriculum_family": "Induction",
       "resource_status": "validated",
       "summary": "The induction schema is undecidable; individual base/step obligations are decidable.",
       "prerequisites": [
@@ -270,7 +271,8 @@
       ],
       "open_gaps": [
         "Validated example pack exists; solver/proof integration still needs promotion where noted.",
-        "Generated dashboards now report pack status and replay/proof rows; keep lessons linked to the validated pack."
+        "Generated dashboards now report pack status and replay/proof rows; keep lessons linked to the validated pack.",
+        "Existing curriculum family Induction still needs migration into example-pack metadata."
       ],
       "graduation": {
         "status": "planned",
@@ -365,8 +367,8 @@
       "curriculum_node": "relations-and-functions",
       "curriculum_layer": 0,
       "curriculum_area": "foundations",
-      "curriculum_status": "planned",
-      "curriculum_family": "",
+      "curriculum_status": "covered",
+      "curriculum_family": "Relation",
       "resource_status": "validated",
       "summary": "Relations, equivalence, functions; properties (injective/surjective) decidable on finite domains.",
       "prerequisites": [
@@ -445,7 +447,8 @@
       ],
       "open_gaps": [
         "Validated example pack exists; solver/proof integration still needs promotion where noted.",
-        "Generated dashboards now report pack status and replay/proof rows; keep lessons linked to the validated pack."
+        "Generated dashboards now report pack status and replay/proof rows; keep lessons linked to the validated pack.",
+        "Existing curriculum family Relation still needs migration into example-pack metadata."
       ],
       "graduation": {
         "status": "planned",
@@ -678,8 +681,8 @@
       "curriculum_node": "rationals",
       "curriculum_layer": 1,
       "curriculum_area": "number-systems",
-      "curriculum_status": "planned",
-      "curriculum_family": "",
+      "curriculum_status": "covered",
+      "curriculum_family": "Rational",
       "resource_status": "validated",
       "summary": "Exact fractions; linear rational facts decided by the exact-rational simplex.",
       "prerequisites": [
@@ -841,7 +844,8 @@
       ],
       "open_gaps": [
         "Validated example pack exists; solver/proof integration still needs promotion where noted.",
-        "Generated dashboards now report pack status and replay/proof rows; keep lessons linked to the validated pack."
+        "Generated dashboards now report pack status and replay/proof rows; keep lessons linked to the validated pack.",
+        "Existing curriculum family Rational still needs migration into example-pack metadata."
       ],
       "graduation": {
         "status": "planned",
@@ -864,8 +868,8 @@
       "curriculum_node": "reals",
       "curriculum_layer": 1,
       "curriculum_area": "number-systems",
-      "curriculum_status": "planned",
-      "curriculum_family": "",
+      "curriculum_status": "covered",
+      "curriculum_family": "RealAlgebra",
       "resource_status": "validated",
       "summary": "Ordered complete field; the elementary (algebraic) theory is decidable (Tarski), completeness is not.",
       "prerequisites": [
@@ -1046,7 +1050,8 @@
       ],
       "open_gaps": [
         "Validated example pack exists; solver/proof integration still needs promotion where noted.",
-        "Generated dashboards now report pack status and replay/proof rows; keep lessons linked to the validated pack."
+        "Generated dashboards now report pack status and replay/proof rows; keep lessons linked to the validated pack.",
+        "Existing curriculum family RealAlgebra still needs migration into example-pack metadata."
       ],
       "graduation": {
         "status": "planned",

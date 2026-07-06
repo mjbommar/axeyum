@@ -1,6 +1,6 @@
 # Mathematical Induction
 
-> Layer 0 · foundations · decidability: `bounded` · axeyum theory: LIA / BV (base + step instances) · status: `planned`
+> Layer 0 · foundations · decidability: `bounded` · axeyum theory: LIA / BV (base + step instances) · status: `covered`
 
 ## What it is
 
@@ -36,6 +36,12 @@ Example exercise: to teach `1 + 2 + … + n = n(n+1)/2`, give the learner the tw
 obligations — base `0 = 0`, and step `S(k) = n(n+1)/2 ⇒ S(k+1) = (k+1)(k+2)/2`
 — and have axeyum discharge the (algebraic) step over LIA/BV. The learner sees
 induction decomposed into machine-checkable pieces.
+
+**Built** (`Family::Induction`): `sum_of_odds_obligations` (base and step
+of `Σ odds = n²` refuted-by-negation, with the inductive hypothesis
+abstracted into a fresh symbol `s`), `gauss_sum_step` (the `2s = n(n+1)`
+step obligation), and `bad_invariant_step` (the false invariant
+`Σ odds = n² + n` has a satisfiable step counterexample).
 
 ## Lean-horizon
 
