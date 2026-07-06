@@ -106,13 +106,13 @@ const OVERSHOOT: u32 = 3;
 /// and decides UNSAT within budget. Measured frontier ≈ 33; the committed floor
 /// is set below it with margin for timing noise near the knee. Rises when
 /// word-level reduction deepens (collapses more multipliers per unit budget).
-const BASELINE_BV_REDUCTION: u32 = 28;
+const BASELINE_BV_REDUCTION: u32 = 30;
 
 /// `lia_cuts`: largest integer-linear system size decided (SAT, witness-checked)
 /// under the bounded integer engine. Measured frontier ≈ 26; floor set below it
 /// with margin (branch-and-bound runtime near the knee is noisy). Rises as the
 /// LIA engine deepens.
-const BASELINE_LIA_CUTS: u32 = 20;
+const BASELINE_LIA_CUTS: u32 = 26;
 
 /// `string_bound`: largest required string length decided before the
 /// packed-string bound (`STRING_MAX_LEN`, currently 8) cuts it off. The fall-off
