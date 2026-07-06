@@ -146,6 +146,7 @@ mod uflia_online;
 mod uflra_interpolant;
 mod uflra_online;
 mod word_alethe;
+mod word_reconstruct;
 #[cfg(feature = "z3")]
 mod z3_backend;
 

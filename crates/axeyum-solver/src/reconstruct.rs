@@ -1386,6 +1386,12 @@ pub enum ProofFragment {
     Forall,
     /// A top-level existential quantifier (skolemized).
     Exists,
+    /// A word-level (string/sequence) refutation: a contradicted disequality or a
+    /// concrete constant clash over the free monoid `Str = List Char`, checked by
+    /// the independent word refuter and reconstructed over the string prelude
+    /// (P3.7 strings fragment). Cancellation, self-loop/length, and regex-derivative
+    /// shapes are deferred (the reconstructor declines them).
+    WordEquation,
     /// Empty / no reconstructable content.
     Unsupported,
 }
@@ -1740,7 +1746,15 @@ pub fn scan_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> ProofFra
             stack.extend(args.iter().copied());
         }
     }
-    if crate::bv_forall_nonconstant::bv_forall_nonconstant_refutation(arena, assertions).is_some() {
+    if crate::word_reconstruct::is_word_equation_shape(arena, assertions) {
+        // A pure word (string/sequence) equality/disequality system. The real
+        // `unsat` gate + class selection runs in the reconstructor (it needs a
+        // mutable arena for the independent refuter); this cheap structural check
+        // only routes the shape here.
+        ProofFragment::WordEquation
+    } else if crate::bv_forall_nonconstant::bv_forall_nonconstant_refutation(arena, assertions)
+        .is_some()
+    {
         ProofFragment::BvForallNonconstant
     } else if crate::bv_uf_local::bv_uf_local_refutation(arena, assertions).is_some() {
         ProofFragment::BvUfLocal
@@ -3713,6 +3727,12 @@ fn reconstruct_proof_fragment_to_lean_module(
             // integer-prelude kernel, gates the `False` proof via discreteness, and
             // renders the module (ADR-0042).
             crate::int_reconstruct::reconstruct_int_inequality_to_lean_module(arena, assertions)?
+        }
+        ProofFragment::WordEquation => {
+            // The word (string/sequence) reconstructor runs the independent refuter,
+            // builds its own logic + string prelude kernel, gates the `False` proof,
+            // and renders the module (P3.7 strings fragment).
+            crate::word_reconstruct::reconstruct_word_clash_to_lean_module(arena, assertions)?
         }
         ProofFragment::Unsupported => {
             return Err(ReconstructError::UnsupportedRule {

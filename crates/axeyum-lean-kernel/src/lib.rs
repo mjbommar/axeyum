@@ -55,6 +55,7 @@ mod lean_pp;
 mod level;
 mod name;
 mod prelude;
+mod string_prelude;
 mod tc;
 
 use std::collections::HashMap;
@@ -70,6 +71,7 @@ pub use prelude::{
     DatatypeFamily, DatatypeInductive, LogicPrelude, RecField, RecursiveDatatypeFamily,
     build_logic_prelude,
 };
+pub use string_prelude::{StringPrelude, build_string_prelude};
 pub use tc::{KernelError, LocalContext, LocalDecl};
 
 use expr::ExprMeta;

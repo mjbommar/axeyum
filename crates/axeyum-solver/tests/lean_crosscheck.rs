@@ -153,6 +153,7 @@ const FAMILY_BUILDERS: &[FamilyBuilder] = &[
     certified_euf_interpolant_both_congruence_certs_checked_by_real_lean,
     certified_lia_interpolant_both_integer_certs_checked_by_real_lean,
     certified_uflia_interpolant_both_integer_certs_checked_by_real_lean,
+    qf_s_word_clash_refutations_check_in_real_lean,
 ];
 
 /// Collect the Lean modules a builder produces (running its Rust-side structural
@@ -450,6 +451,66 @@ fn qf_ufbv_lean_entry_normalizes_conjunction_and_double_negation() {
     let (_fragment, source) = prove_unsat_to_lean_module(&mut arena, &[single_assertion])
         .expect("QF_UFBV normalized assertion spine reconstructs");
     lean_accepts("qf_ufbv_normalized_spine", &source);
+}
+
+/// P3.7 strings fragment: a word-level (string/sequence) refutation reconstructed
+/// over the free-monoid string prelude (`Str = List Char`). Two representative
+/// shapes — a concrete constant clash and a contradicted disequality — render
+/// self-contained modules that must check in real Lean (the `Char`/`Str`/`Bool`
+/// inductives regenerate their recursors, and the is-tester / discriminator folds
+/// ι-compute).
+fn qf_s_word_clash_refutations_check_in_real_lean() {
+    let elem = Sort::Seq(axeyum_ir::ArraySortKey::BitVec(8));
+    let mk_char = |arena: &mut TermArena, c: u8| {
+        let e = arena.bv_const(8, u128::from(c)).unwrap();
+        arena.seq_unit(e).unwrap()
+    };
+
+    // (a) Concrete constant clash: x = "a" ∧ x = "b".
+    {
+        let mut arena = TermArena::new();
+        let x = {
+            let s = arena.declare("x", elem).unwrap();
+            arena.var(s)
+        };
+        let a = mk_char(&mut arena, b'a');
+        let b = mk_char(&mut arena, b'b');
+        let e1 = arena.eq(x, a).unwrap();
+        let e2 = arena.eq(x, b).unwrap();
+        let (fragment, source) = prove_unsat_to_lean_module(&mut arena, &[e1, e2])
+            .expect("word constant clash reconstructs");
+        assert_eq!(fragment, ProofFragment::WordEquation);
+        lean_accepts("qf_s_word_constant_clash", &source);
+    }
+
+    // (b) Contradicted disequality: x = "hi" ∧ y = "hi" ∧ x ≠ y.
+    {
+        let mut arena = TermArena::new();
+        let x = {
+            let s = arena.declare("x", elem).unwrap();
+            arena.var(s)
+        };
+        let y = {
+            let s = arena.declare("y", elem).unwrap();
+            arena.var(s)
+        };
+        let h1 = mk_char(&mut arena, b'h');
+        let i1 = mk_char(&mut arena, b'i');
+        let hi_x = arena.seq_concat(h1, i1).unwrap();
+        let h2 = mk_char(&mut arena, b'h');
+        let i2 = mk_char(&mut arena, b'i');
+        let hi_y = arena.seq_concat(h2, i2).unwrap();
+        let e1 = arena.eq(x, hi_x).unwrap();
+        let e2 = arena.eq(y, hi_y).unwrap();
+        let e3 = {
+            let e = arena.eq(x, y).unwrap();
+            arena.not(e).unwrap()
+        };
+        let (fragment, source) = prove_unsat_to_lean_module(&mut arena, &[e1, e2, e3])
+            .expect("word disequality reconstructs");
+        assert_eq!(fragment, ProofFragment::WordEquation);
+        lean_accepts("qf_s_word_disequality", &source);
+    }
 }
 
 /// `QF_UFBV`: three pairwise-distinct `f(g ·)` outputs over a one-bit domain are
