@@ -401,6 +401,33 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-06 (late) — Phase D + the theory-coupled string frontier closed;
+  the CdclT migration finishes; string program QF_S 52→78 (58%).**
+  - (`d124f427`) **Phase D extended-function reductions**: constant-pattern
+    `prefixof`/`suffixof`/`contains` → regex memberships (polarity-symmetric,
+    ride the certified derivative-emptiness/matcher-replay routes),
+    constant-fold `str.replace` → exact first-occurrence splice. QF_S 74→76,
+    QF_SLIA 15→16, both-oracle fuzzes DISAGREE=0. (Flagged a pre-existing
+    deadline-hole in the bounded ADR-0029 encoder on `str.replace`+membership
+    — filed, no wrong verdict, no corpus trigger.)
+  - **CdclT arithmetic migration COMPLETE (ADR-0055 criterion 2):** LiaTheory
+    (`9c5be4fc`) + LraTheory (`fc4e33bc`) — both a thin sound adapter over the
+    validated online machinery (each already implemented the TheorySolver
+    trait); parity DISAGREE=0 (LIA 3100 cases, LRA 1500 fuzz + 8/8). Slice b
+    (strings+LIA combination) was **census-DECLINED honestly**: the len/code
+    sharing was already eager+default-on via the code-bridge (`122c3c27`), so
+    a CombinedStringLiaTheory would move zero files while adding cross-theory
+    trust surface — measure-don't-seed. The census redirected to the real
+    lever below.
+  - (`0f864852`) **Lexicographic-order theory — `str.<=`/`str.<` over
+    variables**, the last theory-coupled string class. A certified unsat-only
+    refuter: constant folding (Arm A) + transitivity closure with first-char
+    code-clash and prefix-exclusion (Arm B); independently re-derived from the
+    word operands; only adds re-checked unsat to unknown, never sat. QF_S
+    76→78, QF_SLIA 16→18; fuzz z3 653/653 + cvc5 641/641 DISAGREE=0
+    (276 certified unsats, independently re-verified). **String program:
+    QF_S 52→78 (39%→58%), QF_SLIA 36%, DISAGREE=0 held across the whole
+    sprint; the theory-coupled string frontier on this corpus is closed.**
 - **2026-07-06 (evening) — the post-sprint rotation lands: string sprint
   banked to Lean, the CdclT arithmetic keystone opens, NRA moves again.**
   Three of the 6th review's top-ranked levers, all pushed, DISAGREE=0 held:
