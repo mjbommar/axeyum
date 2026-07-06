@@ -312,3 +312,107 @@ fn front_door_never_wrong_unsat_on_sat_disjunction() {
         CheckResult::Sat(_) | CheckResult::Unknown(_) => {}
     }
 }
+
+// ---------- Phase D: constant-pattern extended functions as regex memberships ----------
+//
+// `str.prefixof`/`str.suffixof`/`str.contains` with a **constant pattern** and a
+// **single-variable subject** are exact regex memberships (`P·Σ*` / `Σ*·S` /
+// `Σ*·C·Σ*`) — polarity-symmetric, so sound under a `not`. The online route
+// decides them via the same certified-emptiness / matcher-replay discipline.
+
+#[test]
+fn front_door_prefixof_membership_conflict_unsat() {
+    // The `re.all` census file: x ∈ "abc"·Σ* ∧ ¬prefixof("abc", x). The negated
+    // prefixof is x ∉ "abc"·Σ* — the same language, so the class is empty.
+    let s = r#"(set-logic QF_SLIA)
+(declare-const x String)
+(assert (str.in_re x (re.++ (str.to_re "abc") re.all)))
+(assert (not (str.prefixof "abc" x)))
+(check-sat)"#;
+    assert_eq!(verdict(s), CheckResult::Unsat);
+}
+
+#[test]
+fn front_door_contains_and_negated_contains_unsat() {
+    // contains(x,"a") ∧ ¬contains(x,"a") — x ∈ Σ*·a·Σ* ∧ x ∉ Σ*·a·Σ*, empty class.
+    let s = r#"(set-logic QF_S)
+(declare-const x String)
+(assert (str.contains x "a"))
+(assert (not (str.contains x "a")))
+(check-sat)"#;
+    assert_eq!(verdict(s), CheckResult::Unsat);
+}
+
+#[test]
+fn front_door_suffixof_membership_sat_replays() {
+    // ¬suffixof("a", x) ∧ contains(x, "b") is SAT (e.g. x = "b"); the model must
+    // replay against the original extended-function atoms.
+    let s = r#"(set-logic QF_S)
+(declare-const x String)
+(assert (not (str.suffixof "a" x)))
+(assert (str.contains x "b"))
+(check-sat)"#;
+    match verdict(s) {
+        CheckResult::Sat(_) => {}
+        other => panic!("expected SAT for a satisfiable suffix/contains problem, got {other:?}"),
+    }
+}
+
+#[test]
+fn front_door_never_wrong_unsat_on_sat_contains() {
+    // contains(x,"a") ∧ contains(x,"b") is SAT (x = "ab"); never unsat.
+    let s = r#"(set-logic QF_S)
+(declare-const x String)
+(assert (str.contains x "a"))
+(assert (str.contains x "b"))
+(check-sat)"#;
+    if let CheckResult::Unsat = verdict(s) {
+        panic!("WRONG UNSAT on a satisfiable contains conjunction — a soundness bug");
+    }
+}
+
+// ---------- Phase D: constant-fold str.replace (constant haystack + needle) ----------
+
+#[test]
+fn front_door_constant_replace_identity_unsat() {
+    // The `replace-find-base` census file: replace("ABCDEF","C",x) is exactly
+    // "AB"++x++"DEF", so the negated equality is unsatisfiable.
+    let s = r#"(set-logic QF_SLIA)
+(declare-fun x () String)
+(assert (not (= (str.replace "ABCDEF" "C" x) (str.++ "AB" x "DEF"))))
+(check-sat)"#;
+    assert_eq!(verdict(s), CheckResult::Unsat);
+}
+
+#[test]
+fn front_door_constant_replace_empty_needle_unsat() {
+    // Empty needle: replace("abc","",x) = x ++ "abc" (first occurrence at index 0).
+    let s = r#"(set-logic QF_SLIA)
+(declare-fun x () String)
+(assert (not (= (str.replace "abc" "" x) (str.++ x "abc"))))
+(check-sat)"#;
+    assert_eq!(verdict(s), CheckResult::Unsat);
+}
+
+#[test]
+fn front_door_constant_replace_absent_needle_unsat() {
+    // Needle absent: replace("abc","z",x) = "abc" (unchanged, x irrelevant).
+    let s = r#"(set-logic QF_SLIA)
+(declare-fun x () String)
+(assert (not (= (str.replace "abc" "z" x) "abc")))
+(check-sat)"#;
+    assert_eq!(verdict(s), CheckResult::Unsat);
+}
+
+#[test]
+fn front_door_constant_replace_sat_replays() {
+    // replace("ABCDEF","C",x) = "ABzDEF" pins x = "z"; SAT with a replaying model.
+    let s = r#"(set-logic QF_SLIA)
+(declare-fun x () String)
+(assert (= (str.replace "ABCDEF" "C" x) "ABzDEF"))
+(check-sat)"#;
+    match verdict(s) {
+        CheckResult::Sat(_) => {}
+        other => panic!("expected SAT pinning x = \"z\", got {other:?}"),
+    }
+}

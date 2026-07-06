@@ -6,7 +6,14 @@
 //!
 //! The route decides Boolean-structured `str.in_re` problems — `or` / `not` over
 //! membership atoms, mixed with word equalities — that the one-shot membership
-//! side channel declines (its atoms sit under `or` / `not(and)` structure). It
+//! side channel declines (its atoms sit under `or` / `not(and)` structure). This
+//! sweep also covers the **Phase D** constant-pattern extended functions that lift
+//! into the same membership machinery — `str.prefixof` / `str.suffixof` /
+//! `str.contains` on a single variable (as `P·Σ*` / `Σ*·S` / `Σ*·C·Σ*`, sound in
+//! both polarities). (The Phase D constant-fold `str.replace` word atom is fuzzed
+//! separately in `qf_s_replace_fold_differential_fuzz.rs`: a `str.replace` mixed
+//! with a regex membership drives the bounded pre-check encoder into a large SAT
+//! instance, so the replace fold is exercised over pure word problems there.) It
 //! moves the verdict in **both** directions:
 //!
 //! - `unsat` only through a certified theory conflict: a per-variable regex
@@ -159,15 +166,40 @@ fn gen_regex(rng: &mut Lcg, depth: u32) -> String {
 }
 
 /// A membership atom `(str.in_re sVAR R)` on a single declared variable, or its
-/// negation `(not (str.in_re …))`.
+/// negation `(not (str.in_re …))`. One time in four the membership is spelled as a
+/// **constant-pattern extended-function** atom instead — `str.prefixof` /
+/// `str.suffixof` / `str.contains` on a single variable — which the Phase D
+/// translation lifts into an exact regex membership (`P·Σ*` / `Σ*·S` / `Σ*·C·Σ*`).
+/// Both spellings are decided by the same online route, and both are adjudicated
+/// against z3 **and** cvc5, so a faithfulness bug in the extended-function encoding
+/// (either polarity) surfaces as a differential disagreement.
 fn gen_membership(rng: &mut Lcg, num_vars: usize) -> String {
-    let v = rng.below(num_vars as u64);
-    let re = gen_regex(rng, 2);
-    let atom = format!("(str.in_re s{v} {re})");
+    let atom = if rng.below(4) == 0 {
+        gen_ext_pred(rng, num_vars)
+    } else {
+        let v = rng.below(num_vars as u64);
+        let re = gen_regex(rng, 2);
+        format!("(str.in_re s{v} {re})")
+    };
     if rng.below(3) == 0 {
         format!("(not {atom})")
     } else {
         atom
+    }
+}
+
+/// A constant-pattern extended-function predicate on a single variable:
+/// `(str.prefixof "lit" sVAR)`, `(str.suffixof "lit" sVAR)`, or
+/// `(str.contains sVAR "lit")` — exactly the Phase D regex-membership fragment. The
+/// pattern is a short (possibly `\u{…}`-escaped, possibly empty) literal, exercising
+/// the boundary shapes (`ε`-prefix ⇒ Σ*, single-char infix, …).
+fn gen_ext_pred(rng: &mut Lcg, num_vars: usize) -> String {
+    let v = rng.below(num_vars as u64);
+    let lit = gen_literal(rng);
+    match rng.below(3) {
+        0 => format!("(str.prefixof \"{lit}\" s{v})"),
+        1 => format!("(str.suffixof \"{lit}\" s{v})"),
+        _ => format!("(str.contains s{v} \"{lit}\")"),
     }
 }
 
@@ -244,7 +276,7 @@ impl Instance {
 /// Decide a script with axeyum's SMT-LIB front door. A `Sat` is already
 /// matcher-replayed; any error or `Unknown` is a sound SKIP.
 fn axeyum_decide(text: &str) -> Verdict {
-    let config = SolverConfig::new().with_timeout(Duration::from_secs(10));
+    let config = SolverConfig::new().with_timeout(Duration::from_secs(3));
     match solve_smtlib(text, &config) {
         Ok(outcome) => match outcome.result {
             CheckResult::Sat(_) => Verdict::Sat,

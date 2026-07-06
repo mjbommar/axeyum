@@ -15,7 +15,7 @@ A single-glance, honest view of where the pure-Rust axeyum solver stands against
 ## Headline
 
 - **35 division baselines** measured vs z3 4.13.3, spanning **24 logic fragments** (BV, LIA, QF_ABV, QF_ALIA, QF_AUFBV, QF_AUFLIA, QF_AX, QF_BV, QF_BVFP, QF_DT, QF_FF, QF_FP, QF_LIA, QF_LRA, QF_NIA, QF_NRA, QF_S, QF_SEQ, QF_SLIA, QF_UF, QF_UFBV, QF_UFFF, QF_UFLIA, UF).
-- **DISAGREE = 0 across all baselines** — zero wrong verdicts over 645 oracle-compared instances (992 files total, 700 decided).
+- **DISAGREE = 0 across all baselines** — zero wrong verdicts over 648 oracle-compared instances (992 files total, 703 decided).
 - Decide-rate ranges **0%–100%** across divisions — that spread *is* the capability frontier; DISAGREE = 0 is the soundness floor that holds everywhere.
 
 ## Divisions vs Z3
@@ -45,9 +45,9 @@ Sorted by logic, then by descending decide-rate. Every committed `*solver-vs-z3*
 | QF_NIA | `qf-nia-curated-iand` | 3 | 1 | 33% | 2 | 0 | 0 | 0 | :status | 13.333 |
 | QF_NRA | `qf-nra-synthetic-graduated` | 33 | 30 | 91% | 3 | 0 | 30 | 0 | z3-binary | 5.455 |
 | QF_NRA | `qf-nra-cvc5-regress-clean` | 38 | 26 | 68% | 11 | 1 | 26 | 0 | z3-binary | 5.969 |
-| QF_S | `qf-s-cvc5-regress-clean` | 134 | 74 | 55% | 9 | 51 | 70 | 0 | z3-library+binary | 2.182 |
+| QF_S | `qf-s-cvc5-regress-clean` | 134 | 76 | 57% | 8 | 50 | 72 | 0 | z3-library+binary | 1.918 |
 | QF_SEQ | `qf-seq-cvc5-regress-clean` | 33 | 26 | 79% | 6 | 1 | 15 | 0 | z3-library+binary | 3.752 |
-| QF_SLIA | `qf-slia-cvc5-regress-clean` | 50 | 15 | 30% | 6 | 29 | 13 | 0 | z3-library+binary | 5.728 |
+| QF_SLIA | `qf-slia-cvc5-regress-clean` | 50 | 16 | 32% | 6 | 28 | 14 | 0 | z3-library+binary | 5.467 |
 | QF_UF | `qf-uf-cvc5-regress-clean-overbound-uninterp-sorts` | 6 | 4 | 67% | 2 | 0 | 4 | 0 | z3-binary | 7.489 |
 | QF_UF | `qf-uf-cvc5-regress-clean-bounded` | 82 | 44 | 54% | 13 | 24 | 37 | 0 | z3-library+binary | 4.845 |
 | QF_UF | `qf-uf-cvc5-regress-clean-bounded-uninterp-sorts` | 82 | 44 | 54% | 13 | 24 | 37 | 0 | z3-library+binary | 4.845 |
@@ -60,9 +60,39 @@ Sorted by logic, then by descending decide-rate. Every committed `*solver-vs-z3*
 | QF_UFLIA | `qf-uflia-cvc5-regress-clean-overbound-uninterp-sorts` | 2 | 2 | 100% | 0 | 0 | 2 | 0 | z3-binary | 2.294 |
 | UF | `uf-cvc5-regress-clean-quantified` | 5 | 0 | 0% | 0 | 5 | 0 | 0 | :status | 0.000 |
 
-**Totals:** 992 files, 700 decided, 645 oracle-compared, **0 disagreements.**
+**Totals:** 992 files, 703 decided, 648 oracle-compared, **0 disagreements.**
 
 <!-- NOTES:BEGIN (hand-written attribution notes — preserved by the generator) -->
+### QF_S + QF_SLIA rows re-measured 2026-07-06 (P2.7 Phase D — constant-pattern extended functions as regex memberships + constant-fold `str.replace`)
+
+Phase D opens the extended-function census remainder through two **exact,
+polarity-guarded** parser reductions that feed the existing certified routes — no
+new trusted machinery. **(1) Constant-pattern `prefixof`/`suffixof`/`contains`:** a
+`(str.prefixof P X)` / `(str.suffixof S X)` / `(str.contains X C)` whose pattern is a
+**string constant** and whose subject is a **single declared variable** is exactly a
+regex-language membership (`X ∈ P·Σ*` / `Σ*·S` / `Σ*·C·Σ*`). Unlike the sat-implying
+fresh-variable word reductions (sound only in a positive conjunction), a membership
+atom is **polarity-symmetric** — the online route complements the language natively
+for the negative literal — so the skeleton lifts these in **any** Boolean position
+and the online CDCL(T) route decides them with the same per-class re-checked
+derivative-emptiness certificate (`unsat`) and matcher-replayed model (`sat`). **(2)
+Constant-fold `str.replace`:** `(str.replace H N R)` with **constant** haystack `H`
+and needle `N` reduces at translation time to the exact first-occurrence splice
+`H[..i] ++ R ++ H[i+|N|..]` (or `H` when `N ∉ H`; empty needle `⇒ R ++ H` at `i=0`) —
+a value-preserving rewrite (verified against Z3 and cvc5), with `R` left symbolic.
+A variable/compound pattern, a compound subject, or a variable haystack/needle
+declines (unchanged verdict). Net (same-command HEAD re-run): **QF_S 74 → 76 decided
+(unsat 23 → 25), QF_SLIA 15 → 16 decided (unsat 5 → 6), QF_SEQ 26 unchanged.** The
+upgrades: `re.all` (QF_S — `x ∈ "abc"·Σ* ∧ ¬prefixof("abc",x)` is an empty class) and
+`replace-find-base` (QF_S + QF_SLIA — `replace("ABCDEF","C",x)` folds to
+`"AB"++x++"DEF"`, so the negated identity is `unsat`). Every upgraded file agrees with
+the z3-binary oracle; **DISAGREE=0 and model-replay-failures=0** across all three
+divisions. Soundness backing: the online-membership differential fuzz extended with
+the Phase D constant-pattern `prefixof`/`suffixof`/`contains` atoms (both polarities,
+`\u`-escaped/empty/boundary patterns), and a new
+`qf_s_replace_fold_differential_fuzz` over pure-word constant-fold `str.replace`
+scripts — each over 700 generated scripts vs **both** Z3 and cvc5, all **DISAGREE=0**.
+
 ### QF_NRA cvc5 row re-measured 2026-07-06 (P2.5 — census-driven levers: bounded sat-witness probe + threshold-1 monotonicity past the cap)
 
 Two sound, cheap NRA levers move this row. **(1) A bounded rational sat-witness
@@ -322,8 +352,8 @@ Each frontier tracks how deep a single capability lever reaches: a family is sca
 
 | Lever family | Frontier | Baseline | Δ | Max knob | Budget (s) | Tracks |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| bv_reduction | 32 | 28 | +4 | 36 | 4 | QF_BV word-level reduction depth (unsat at knob N) |
-| lia_cuts | 26 | 20 | +6 | 37 | 4 | QF_LIA branch-and-cut depth (sat at knob N) |
+| bv_reduction | 31 | 28 | +3 | 35 | 4 | QF_BV word-level reduction depth (unsat at knob N) |
+| lia_cuts | 26 | 20 | +6 | 36 | 4 | QF_LIA branch-and-cut depth (sat at knob N) |
 | nia_unsat | 40 | 40 | 0 | 40 | 4 | QF_NIA unsat-proving depth (knob N) |
 | nra_degree | 2 | 2 | 0 | 6 | 4 | QF_NRA polynomial-degree decision depth (knob N) |
 | string_bound | 8 | 8 | 0 | 12 | 4 | QF_S string-length bound (sat at knob N) |

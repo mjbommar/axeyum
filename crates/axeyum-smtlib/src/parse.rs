@@ -585,10 +585,15 @@ fn build_word_problem(arena: &mut TermArena, exprs: &[SExpr]) -> Option<WordProb
 /// **Soundness.** The online route only ever *adds* a verdict (a certified theory
 /// `unsat` or a replay-checked `sat`, see `axeyum_solver::check_qf_s_online_cdclt`),
 /// so a `None` skeleton simply leaves the prior verdict untouched. Unlike
-/// [`build_word_problem`], **no** extended-function reductions
-/// (`prefixof`/`suffixof`/`contains`) are performed here: those are *sat-implying*
-/// only in a positive (top-level-conjunction) position and would be unsound under an
-/// arbitrary Boolean context, so an extended-function atom collapses the skeleton to
+/// [`build_word_problem`], the *sat-implying* fresh-variable word reductions of
+/// `prefixof`/`suffixof`/`contains` are **not** performed here — those are sound
+/// only in a positive (top-level-conjunction) position. Instead, a `prefixof` /
+/// `suffixof` / `contains` atom whose **pattern is a string constant** and whose
+/// **subject is a single declared variable** is translated into an *exact regex
+/// membership* (`P·Σ*` / `Σ*·S` / `Σ*·C·Σ*`); a membership atom is
+/// polarity-symmetric (the online route complements the language for the negative
+/// literal), so this is sound in any Boolean context (P2.7 Phase D). A
+/// variable/compound pattern or a compound subject still collapses the skeleton to
 /// `None`. Incremental scoping is declined for the same reason as
 /// [`build_word_problem`] (the active query at a `check-sat` would be a subset, so a
 /// whole-conjunction `unsat` need not transfer).
@@ -703,9 +708,12 @@ impl MembershipCollector {
 /// genuine `Seq` equality atom is produced.
 ///
 /// **No polarity tracking is needed** because — unlike [`word_atom`] — this build
-/// performs *no* sat-implying reductions: every leaf is an exact `Seq`
-/// equality/disequality, sound in any Boolean position. An extended-function atom or
-/// any non-string construct returns `None` (all-or-nothing).
+/// performs *no* sat-implying reductions: every leaf is either an exact `Seq`
+/// equality/disequality or an exact regex-membership atom (a `str.in_re`, or a
+/// constant-pattern `prefixof`/`suffixof`/`contains` translated to `P·Σ*` / `Σ*·S`
+/// / `Σ*·C·Σ*`), each sound in any Boolean position. A `str.len`/`substr`/`to_int`,
+/// a compound-subject or variable-pattern extended function, or any non-string
+/// construct returns `None` (all-or-nothing).
 fn word_bool(
     arena: &mut TermArena,
     e: &SExpr,
@@ -757,6 +765,38 @@ fn word_bool(
             let regex = crate::regex_membership::translate_regex(&items[2])?;
             mem.atom(arena, operand, regex)
         }
+        // Constant-pattern extended-function atoms as **regex memberships** (P2.7
+        // Phase D). Each is *exactly* a regex-language membership when its pattern is
+        // a string constant and its subject is a single declared string variable —
+        // and, unlike the sat-implying fresh-variable word reductions in
+        // [`word_extended_fn`], a membership atom is **polarity-symmetric** (the
+        // online route complements the language natively for the negative literal),
+        // so these are sound in *any* Boolean position:
+        //
+        //   * `(str.prefixof P X)` ⟺ `X ∈ L(P·Σ*)`   (P a constant prefix)
+        //   * `(str.suffixof S X)` ⟺ `X ∈ L(Σ*·S)`   (S a constant suffix)
+        //   * `(str.contains X C)` ⟺ `X ∈ L(Σ*·C·Σ*)` (C a constant infix)
+        //
+        // A variable/compound pattern, or a `str.++`/`substr`/literal subject (not a
+        // single declared variable), declines the whole skeleton.
+        "str.prefixof" if items.len() == 3 => {
+            let cps = literal_pattern_cps(&items[1])?;
+            let name = variable_name_skeleton(&items[2], vars)?;
+            let (operand, _) = *vars.get(&name)?;
+            mem.atom(arena, operand, prefix_pattern_regex(&cps))
+        }
+        "str.suffixof" if items.len() == 3 => {
+            let cps = literal_pattern_cps(&items[1])?;
+            let name = variable_name_skeleton(&items[2], vars)?;
+            let (operand, _) = *vars.get(&name)?;
+            mem.atom(arena, operand, suffix_pattern_regex(&cps))
+        }
+        "str.contains" if items.len() == 3 => {
+            let name = variable_name_skeleton(&items[1], vars)?;
+            let (operand, _) = *vars.get(&name)?;
+            let cps = literal_pattern_cps(&items[2])?;
+            mem.atom(arena, operand, contains_pattern_regex(&cps))
+        }
         // Boolean `ite` only (the branches must themselves be skeleton Booleans; an
         // `ite` over *strings* is not a `word_str_expr` and is declined below).
         "ite" if items.len() == 4 => {
@@ -801,6 +841,56 @@ fn word_bool(
         // outside the skeleton fragment — decline the whole build.
         _ => None,
     }
+}
+
+/// Decodes an SMT-LIB string-literal `SExpr` atom (quotes included, `""`-escaped
+/// quotes, `\u{…}`/`\uhhhh` escapes) to its Unicode code points, or `None` when `e`
+/// is not a string literal (or a code point exceeds the alphabet — the shared
+/// [`decode_string_code_points`] bound). Used to translate the **constant pattern**
+/// of a `str.prefixof`/`str.suffixof`/`str.contains` atom into a regex membership.
+fn literal_pattern_cps(e: &SExpr) -> Option<Vec<u32>> {
+    let a = e.atom()?;
+    if a.len() < 2 || !a.starts_with('"') || !a.ends_with('"') {
+        return None;
+    }
+    let inner = a[1..a.len() - 1].replace("\"\"", "\"");
+    decode_string_code_points(&inner)
+}
+
+/// A literal code-point sequence as a `Regex` (concat of single-character
+/// predicates; the empty sequence is `ε`). Mirrors
+/// `regex_membership::literal_regex`.
+fn literal_pattern_regex(cps: &[u32]) -> axeyum_strings::regex::Regex {
+    use axeyum_strings::regex::Regex;
+    let mut acc: Option<Regex> = None;
+    for &c in cps {
+        let ch = Regex::character(c);
+        acc = Some(match acc {
+            None => ch,
+            Some(prev) => Regex::concat(prev, ch),
+        });
+    }
+    acc.unwrap_or(Regex::Empty)
+}
+
+/// `L(P·Σ*)` — the strings with constant prefix `P` (`str.prefixof P X`).
+fn prefix_pattern_regex(cps: &[u32]) -> axeyum_strings::regex::Regex {
+    use axeyum_strings::regex::Regex;
+    Regex::concat(literal_pattern_regex(cps), Regex::star(Regex::any_char()))
+}
+
+/// `L(Σ*·S)` — the strings with constant suffix `S` (`str.suffixof S X`).
+fn suffix_pattern_regex(cps: &[u32]) -> axeyum_strings::regex::Regex {
+    use axeyum_strings::regex::Regex;
+    Regex::concat(Regex::star(Regex::any_char()), literal_pattern_regex(cps))
+}
+
+/// `L(Σ*·C·Σ*)` — the strings containing the constant infix `C`
+/// (`str.contains X C`).
+fn contains_pattern_regex(cps: &[u32]) -> axeyum_strings::regex::Regex {
+    use axeyum_strings::regex::Regex;
+    let any = || Regex::star(Regex::any_char());
+    Regex::concat(Regex::concat(any(), literal_pattern_regex(cps)), any())
 }
 
 /// The declared string-variable name if `e` is a bare atom naming one of the
@@ -1001,7 +1091,9 @@ fn word_terms(
 }
 
 /// Translates one string expression into a `Seq`-sorted term: a string literal,
-/// a declared string variable, or `(str.++ …)` over string expressions. Returns
+/// a declared string variable, `(str.++ …)` over string expressions, or a
+/// **constant-folded** `(str.replace H N R)` whose haystack `H` and needle `N` are
+/// string constants (the replacement `R` may be any string expression). Returns
 /// `None` for anything else.
 fn word_str_expr(
     arena: &mut TermArena,
@@ -1016,18 +1108,64 @@ fn word_str_expr(
                 vars.get(a).map(|&(_, term)| term)
             }
         }
-        SExpr::List(items) => {
-            if items.first().and_then(SExpr::atom) != Some("str.++") || items.len() < 2 {
-                return None;
+        SExpr::List(items) => match items.first().and_then(SExpr::atom) {
+            Some("str.++") if items.len() >= 2 => {
+                let mut acc = word_str_expr(arena, &items[1], vars)?;
+                for it in &items[2..] {
+                    let next = word_str_expr(arena, it, vars)?;
+                    acc = arena.seq_concat(acc, next).ok()?;
+                }
+                Some(acc)
             }
-            let mut acc = word_str_expr(arena, &items[1], vars)?;
-            for it in &items[2..] {
-                let next = word_str_expr(arena, it, vars)?;
-                acc = arena.seq_concat(acc, next).ok()?;
+            // `(str.replace H N R)` with **constant** `H` and `N`: the first
+            // occurrence of `N` in `H` is fixed at translation time, so the whole
+            // term reduces to `H[..i] ++ R ++ H[i+|N|..]` (or `H` if `N ∉ H`) — an
+            // *exact*, value-preserving rewrite (verified against the SMT-LIB
+            // first-occurrence semantics, including the empty-needle case
+            // `replace(H,ε,R) = R ++ H` where `i = 0`). `R` itself may be any string
+            // expression, so a variable replacement stays symbolic.
+            Some("str.replace") if items.len() == 4 => {
+                let haystack = literal_pattern_cps(&items[1])?;
+                let needle = literal_pattern_cps(&items[2])?;
+                let replacement = word_str_expr(arena, &items[3], vars)?;
+                match first_occurrence(&haystack, &needle) {
+                    Some(i) => {
+                        // `H[..i] ++ R ++ H[i+|N|..]`, but skip an *empty* prefix or
+                        // suffix segment so the folded term interns identically to a
+                        // written `(str.++ …)` (no stray leading/trailing `ε` concat,
+                        // which the flat refuter would not normalize away).
+                        let pre = &haystack[..i];
+                        let suf = &haystack[i + needle.len()..];
+                        let mut acc = replacement;
+                        if !pre.is_empty() {
+                            let pre_t = seq_from_code_points(arena, pre)?;
+                            acc = arena.seq_concat(pre_t, acc).ok()?;
+                        }
+                        if !suf.is_empty() {
+                            let suf_t = seq_from_code_points(arena, suf)?;
+                            acc = arena.seq_concat(acc, suf_t).ok()?;
+                        }
+                        Some(acc)
+                    }
+                    // Needle absent ⇒ the string is unchanged.
+                    None => seq_from_code_points(arena, &haystack),
+                }
             }
-            Some(acc)
-        }
+            _ => None,
+        },
     }
+}
+
+/// The start index of the **first** occurrence of `needle` in `haystack` (an empty
+/// needle occurs at index 0), or `None` when `needle` does not occur.
+fn first_occurrence(haystack: &[u32], needle: &[u32]) -> Option<usize> {
+    if needle.is_empty() {
+        return Some(0);
+    }
+    if needle.len() > haystack.len() {
+        return None;
+    }
+    (0..=haystack.len() - needle.len()).find(|&i| haystack[i..i + needle.len()] == *needle)
 }
 
 /// Builds the `Seq(BitVec(18))` term for a string literal atom (quotes included,
@@ -1036,10 +1174,17 @@ fn word_str_expr(
 /// literal `""` is `seq.empty`.
 fn word_literal(arena: &mut TermArena, atom: &str) -> Option<TermId> {
     let inner = atom[1..atom.len() - 1].replace("\"\"", "\"");
-    let key = ArraySortKey::BitVec(Sort::STRING_ELEM_WIDTH);
     // Expand `\u{…}` / `\uhhhh` escapes to code points (shared with the byte-model
     // route, so `"\u{62}"` is the one character `b` on every route).
     let code_points = decode_string_code_points(&inner)?;
+    seq_from_code_points(arena, &code_points)
+}
+
+/// Builds the `Seq(BitVec(18))` term for a Unicode code-point sequence as the
+/// right-associated `seq.unit` chain (matching the `axeyum-strings` constant
+/// convention). The empty sequence is `seq.empty`.
+fn seq_from_code_points(arena: &mut TermArena, code_points: &[u32]) -> Option<TermId> {
+    let key = ArraySortKey::BitVec(Sort::STRING_ELEM_WIDTH);
     if code_points.is_empty() {
         return Some(arena.seq_empty(key));
     }
