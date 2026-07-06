@@ -46,6 +46,10 @@ pub fn binop(arena: &mut TermArena, op: &str, a: TermId, b: TermId) -> TermId {
         "shl" | "Shl" => arena.bv_shl(a, b),
         "lshr" | "Shr" => arena.bv_lshr(a, b),
         "ashr" => arena.bv_ashr(a, b),
+        "udiv" => arena.bv_udiv(a, b),
+        "sdiv" => arena.bv_sdiv(a, b),
+        "urem" => arena.bv_urem(a, b),
+        "srem" => arena.bv_srem(a, b),
         other => panic!("unsupported binop {other}"),
     }
     .unwrap()

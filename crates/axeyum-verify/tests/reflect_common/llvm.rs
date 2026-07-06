@@ -322,6 +322,12 @@ fn exec_cfg_block(
         if line == "unreachable" {
             return None;
         }
+        // Side-effect-only calls (e.g. `tail call void @core::panicking::panic`)
+        // produce no SSA value; on the panic path the following `unreachable`
+        // makes the whole block a don't-care.
+        if line.starts_with("call void") || line.starts_with("tail call void") {
+            continue;
+        }
         // switch iW %x, label %default [ \n iW K, label %case \n ... ]
         if let Some(rest) = line.strip_prefix("switch ") {
             return exec_switch(arena, blocks, &env, rest, lines, &mut i, label, depth);

@@ -65,6 +65,12 @@ fn ty_info(ty: &str) -> (u32, bool) {
     if ty == "bool" {
         return (1, false);
     }
+    if ty == "usize" {
+        return (64, false);
+    }
+    if ty == "isize" {
+        return (64, true);
+    }
     let signed = ty.starts_with('i');
     let width = ty
         .trim_start_matches(['u', 'i'])
@@ -219,6 +225,25 @@ fn exec_stmt(arena: &mut TermArena, env: &mut Env, stmt: &str) {
                 }
                 if let Some(pred) = compare_pred(op, signed) {
                     Slot::Scalar((compare(arena, pred, a, b), 1, false))
+                } else if w == 1 && matches!(op, "BitAnd" | "BitOr") {
+                    // Bool-typed BitAnd/BitOr (rustc chains check conditions
+                    // this way, e.g. the signed-division MIN/-1 test).
+                    let t = if op == "BitAnd" {
+                        arena.and(a, b).unwrap()
+                    } else {
+                        arena.or(a, b).unwrap()
+                    };
+                    Slot::Scalar((t, 1, false))
+                } else if matches!(op, "Div" | "Rem") {
+                    // Sign-selected division (the fixtures carry the div-by-zero
+                    // and MIN/-1 asserts separately; the BV op is total).
+                    let llvm_op = match (op, signed) {
+                        ("Div", true) => "sdiv",
+                        ("Div", false) => "udiv",
+                        ("Rem", true) => "srem",
+                        _ => "urem",
+                    };
+                    Slot::Scalar((binop(arena, llvm_op, a, b), w, signed))
                 } else {
                     // Rust shift amounts are independently typed (`x << 1` is an
                     // `i32` literal) — adjust to the shiftee's width for the BV op.
