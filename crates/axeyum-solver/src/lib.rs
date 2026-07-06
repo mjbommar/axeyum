@@ -87,6 +87,7 @@ mod lia_theory;
 mod lra;
 mod lra_interpolant_cnf;
 mod lra_online;
+mod lra_theory;
 mod maxsat;
 mod mbp;
 mod model;
@@ -302,6 +303,7 @@ pub use lra::{
 };
 pub use lra_interpolant_cnf::lra_interpolant_cnf;
 pub use lra_online::{LraTheory, check_qf_lra_online};
+pub use lra_theory::check_qf_lra_online_cdclt;
 pub use maxsat::{
     MaxSatOutcome, max_satisfiable, max_satisfiable_model, max_satisfiable_weighted,
     max_satisfiable_weighted_model,

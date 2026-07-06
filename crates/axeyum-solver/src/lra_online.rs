@@ -2152,13 +2152,13 @@ impl Dpll {
 /// Tseitin encoder from the typed Boolean IR into a CNF skeleton, with the first
 /// `atom_terms.len()` variables reserved for the registered LRA atoms (numbered
 /// to match [`LraTheory`]).
-struct Encoder {
-    term_var: HashMap<TermId, usize>,
-    var_count: usize,
+pub(crate) struct Encoder {
+    pub(crate) term_var: HashMap<TermId, usize>,
+    pub(crate) var_count: usize,
 }
 
 impl Encoder {
-    fn new(atom_terms: &[TermId]) -> Self {
+    pub(crate) fn new(atom_terms: &[TermId]) -> Self {
         let mut term_var = HashMap::new();
         for (i, &t) in atom_terms.iter().enumerate() {
             term_var.insert(t, i);
@@ -2177,7 +2177,7 @@ impl Encoder {
 
     /// Encodes Boolean term `t`, returning the variable whose truth equals `t`,
     /// or `None` for structure outside the supported connectives (sound give-up).
-    fn encode(
+    pub(crate) fn encode(
         &mut self,
         arena: &TermArena,
         t: TermId,
@@ -2269,7 +2269,7 @@ impl Encoder {
 
 /// Collects the distinct real order/equality atoms in `term`, in a stable
 /// left-to-right scan (so atom indexing is deterministic).
-fn collect_lra_atoms(
+pub(crate) fn collect_lra_atoms(
     arena: &TermArena,
     term: TermId,
     out: &mut Vec<TermId>,
@@ -2420,7 +2420,7 @@ fn add_boolean_leaf_values(
 /// Whether `model` satisfies every assertion under the ground evaluator. Any
 /// non-`true` or evaluation error makes it not replay (→ `Unknown`, never a
 /// wrong `sat`).
-fn replays(arena: &TermArena, assertions: &[TermId], model: &Model) -> bool {
+pub(crate) fn replays(arena: &TermArena, assertions: &[TermId], model: &Model) -> bool {
     let mut assignment = Assignment::new();
     for (symbol, value) in model.iter() {
         assignment.set(symbol, value);
