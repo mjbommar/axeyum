@@ -68,7 +68,7 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::time::Instant;
 
-use axeyum_ir::{Op, Sort, SymbolId, TermArena, TermId, TermNode, Value};
+use axeyum_ir::{ArraySortKey, Op, Sort, SymbolId, TermArena, TermId, TermNode, Value};
 use axeyum_strings::regex::{Regex, matches};
 use axeyum_strings::{
     Membership, RefuteOutcome, SearchBudget, SearchOutcome, refute_word_equations,
@@ -92,6 +92,16 @@ const WORD_MAX_NODES: u64 = 200_000;
 /// check materializes before declining (⇒ no conflict detected on that class).
 /// Mirrors `axeyum_strings::regex::membership::DEFAULT_MAX_STATES`.
 const MEMBERSHIP_MAX_STATES: usize = 20_000;
+
+/// The derivative-residual cap for a **concat operand's** shape-augmented witness
+/// search (`R ∩ shape`). Smaller than [`MEMBERSHIP_MAX_STATES`] because the shape's
+/// `Σ*` runs enlarge the closure and the emptiness pass does not poll the deadline —
+/// a tight cap keeps a pathological concat regex a fast `Unknown`. Ample for the
+/// real corpus rows, whose regexes close in well under this bound.
+const CONCAT_WITNESS_MAX_STATES: usize = 4_000;
+
+/// The witness-length cap for a concat operand's shape-augmented witness search.
+const CONCAT_WITNESS_MAX_LEN: usize = 512;
 
 /// A theory atom of the online string route.
 enum AtomKind {
@@ -368,7 +378,10 @@ impl<'a> StringTheory<'a> {
                     problem.negatives.push(regex.clone());
                 }
             }
-            if !problem.refute_empty(MEMBERSHIP_MAX_STATES) {
+            // Deadline-bounded: the emptiness closure of a complex regex-intersection
+            // must not stall the CDCL loop past its timeout. An abandoned closure just
+            // misses this conflict (safe — caught later by the mandatory sat replay).
+            if !problem.refute_empty_within(MEMBERSHIP_MAX_STATES, &self.budget) {
                 continue;
             }
             // Certified empty ⇒ theory conflict. Core = this class's membership
@@ -797,8 +810,48 @@ struct SatModelCtx<'a> {
 /// Returns [`CheckResult::Unknown`] when no model is found or the combined model
 /// does not replay — never a wrong `sat`.
 fn string_sat_model(arena: &mut TermArena, ctx: &SatModelCtx) -> CheckResult {
+    // When membership atoms are present, witness each membership equivalence class
+    // (a matcher-replayed string per class) and **pin** each class symbol to its
+    // witness as an extra word equation, then solve the *augmented* word system.
+    //
+    // This is what composes membership with `str.++` word equations soundly. The
+    // earlier design solved the word part first and then *overrode* each membership
+    // symbol with an independently-searched witness — but a symbol a `str.++`
+    // equation also constrains (e.g. `w ∈ R ∧ w = x ++ "B" ++ y`, or the coupled
+    // `action ∈ R ∧ action = a1 ++ k ++ a2` shape) would then desync from its
+    // decomposition, and the mandatory replay would reject the model to `Unknown`.
+    // Pinning `symbol = witness` and re-solving instead threads the witness THROUGH
+    // the word arrangement, so the concat components (`x`/`y`, `a1`/`k`/`a2`) are
+    // chosen consistently with the witnessed whole. Soundness is unchanged: the
+    // combined model still must replay against the original assertions, and the pin
+    // only ever *adds* a constraint (a pinned system that fails to solve degrades to
+    // `Unknown`, never a wrong `sat`).
+    let mut pin_eqs: Vec<(TermId, TermId)> = Vec::new();
+    if !ctx.pos_mem.is_empty() || !ctx.neg_mem.is_empty() {
+        let Some(witnesses) =
+            membership_witnesses(arena, ctx.eqs, ctx.pos_mem, ctx.neg_mem, ctx.budget)
+        else {
+            return CheckResult::Unknown(unknown(
+                "online CDCL(T) membership class has no witnessing model within budget",
+            ));
+        };
+        // Deterministic (symbol-index) order for stable arena construction.
+        let mut pairs: Vec<(SymbolId, Vec<u32>)> = witnesses.into_iter().collect();
+        pairs.sort_by_key(|(s, _)| s.index());
+        for (sym, codepoints) in pairs {
+            let Some(lit) = seq_term_from_code_points(arena, &codepoints) else {
+                return CheckResult::Unknown(unknown(
+                    "online CDCL(T) string membership witness term construction failed",
+                ));
+            };
+            let var = arena.var(sym);
+            pin_eqs.push((var, lit));
+        }
+    }
+
+    let all_eqs: Vec<(TermId, TermId)> = ctx.eqs.iter().copied().chain(pin_eqs).collect();
     let SearchOutcome::Sat(assignment) =
-        solve_word_equations(arena, ctx.eqs, ctx.diseqs, ctx.budget)
+        solve_word_equations(arena, &all_eqs, ctx.diseqs, ctx.budget)
     else {
         return CheckResult::Unknown(unknown(
             "online CDCL(T) string search found no replaying model on a \
@@ -810,22 +863,6 @@ fn string_sat_model(arena: &mut TermArena, ctx: &SatModelCtx) -> CheckResult {
     for &sym in ctx.seq_syms {
         if let Some(value) = assignment.get(sym) {
             model.set(sym, value);
-        }
-    }
-
-    // Override membership-class symbols with per-class witnesses (each replayed by
-    // the reference matcher inside `Membership::solve`). A class the sub-solver
-    // cannot witness within budget downgrades the whole model to `Unknown`.
-    if !ctx.pos_mem.is_empty() || !ctx.neg_mem.is_empty() {
-        let Some(witnesses) =
-            membership_witnesses(arena, ctx.eqs, ctx.pos_mem, ctx.neg_mem, ctx.budget)
-        else {
-            return CheckResult::Unknown(unknown(
-                "online CDCL(T) membership class has no witnessing model within budget",
-            ));
-        };
-        for (sym, codepoints) in witnesses {
-            model.set(sym, seq_value(&codepoints));
         }
     }
 
@@ -867,11 +904,96 @@ fn string_sat_model(arena: &mut TermArena, ctx: &SatModelCtx) -> CheckResult {
     }
 }
 
+/// One component of a `str.in_re` `str.++` subject's defining concatenation: a
+/// fixed literal, or a `Seq` variable symbol.
+enum ConcatPart {
+    /// A constant component (a fused literal run), as code points.
+    Lit(Vec<u32>),
+    /// A variable component (a `Seq` symbol).
+    Var(SymbolId),
+}
+
+/// The parts of the defining concatenation of a membership operand `w`, if some
+/// asserted equality binds `w = <str.++ …>` (a genuine concatenation, i.e. **not**
+/// a plain variable-variable equality). Each part is a fixed literal (a fused
+/// constant run) or a `Seq` variable symbol. `None` when `w` has no such defining
+/// equation (it is an ordinary variable operand).
+///
+/// This is how the online route recognizes a *membership-over-concat*: the parser
+/// rewrote `(str.in_re (str.++ p…) R)` into `w ∈ R ∧ w = p…` with a fresh `w`, so
+/// the concat structure is recoverable from the equalities alone — no extra side
+/// channel is needed.
+fn concat_parts_for(
+    arena: &TermArena,
+    eqs: &[(TermId, TermId)],
+    w: SymbolId,
+) -> Option<Vec<ConcatPart>> {
+    for &(l, r) in eqs {
+        let other = match (arena.node(l), arena.node(r)) {
+            (TermNode::Symbol(a), _) if *a == w => r,
+            (_, TermNode::Symbol(b)) if *b == w => l,
+            _ => continue,
+        };
+        // A genuine concatenation, not a bare symbol/constant (a bare symbol is a
+        // variable-variable equality handled by the union-find; a bare constant is a
+        // pin the arrangement solves directly).
+        if !matches!(
+            arena.node(other),
+            TermNode::App {
+                op: Op::SeqConcat,
+                ..
+            }
+        ) {
+            continue;
+        }
+        let comps = axeyum_strings::normal_form::concat_components(arena, other);
+        let mut parts = Vec::with_capacity(comps.len());
+        for c in comps {
+            if let TermNode::Symbol(s) = arena.node(c) {
+                parts.push(ConcatPart::Var(*s));
+            } else if let Ok(Value::Seq(elems)) =
+                axeyum_ir::eval(arena, c, &axeyum_ir::Assignment::new())
+            {
+                parts.push(ConcatPart::Lit(seq_code_points(&elems)));
+            } else {
+                // A non-constant, non-variable component (should not occur for a
+                // word-fragment concat) — decline the decomposition.
+                return None;
+            }
+        }
+        return Some(parts);
+    }
+    None
+}
+
+/// A code-point literal sequence as a `Regex` (concat of single-character
+/// predicates; empty ⇒ `ε`). Mirrors `axeyum_smtlib`'s `literal_regex`.
+fn literal_regex(cps: &[u32]) -> Regex {
+    let mut acc: Option<Regex> = None;
+    for &c in cps {
+        let ch = Regex::character(c);
+        acc = Some(match acc {
+            None => ch,
+            Some(prev) => Regex::concat(prev, ch),
+        });
+    }
+    acc.unwrap_or(Regex::Empty)
+}
+
 /// Solves each membership equivalence class (grouped by the variable-variable word
 /// equalities, exactly as [`StringTheory::check_membership_conflict`]) for a
 /// concrete matcher-replayed witness, returning `symbol → witness code points` for
 /// every symbol in a witnessed class. Returns `None` if any class has no witness
 /// within budget (or is unexpectedly empty), so the caller reports `Unknown`.
+///
+/// A **membership-over-concat** operand `w` (one bound by `w = p₁ ++ p₂ ++ …`, see
+/// [`concat_parts_for`]) is witnessed in a second stage: its witness is searched over
+/// `R ∩ shape`, where `shape` concatenates each part's language — a first-stage
+/// witness (as a fixed literal) for a constrained component variable, the literal for
+/// a constant part, and `Σ*` for a free component variable. The intersection makes
+/// `w`'s witness *decomposable* into the parts (so the caller's pin-and-resolve can
+/// solve `w = p₁ ++ …` for the free components); the whole model still replays at the
+/// `Seq` level, so a wrong `sat` is impossible even if `shape` were imprecise.
 fn membership_witnesses(
     arena: &TermArena,
     eqs: &[(TermId, TermId)],
@@ -920,9 +1042,21 @@ fn membership_witnesses(
             .push(regex.clone());
     }
 
-    // Witness each class.
+    // Recover the concat structure of each membership operand (a `str.in_re` over a
+    // `str.++`, rewritten by the parser to `w ∈ R ∧ w = parts`). A concat operand's
+    // witness is deferred to a second stage so its parts' first-stage witnesses can
+    // guide (shape) the search.
+    let concat_parts: BTreeMap<SymbolId, Vec<ConcatPart>> = classes
+        .keys()
+        .filter_map(|&root| concat_parts_for(arena, eqs, root).map(|parts| (root, parts)))
+        .collect();
+
+    // Stage 1: witness the ordinary (non-concat) class roots.
     let mut witness_by_root: BTreeMap<SymbolId, Vec<u32>> = BTreeMap::new();
     for (root, problem) in &classes {
+        if concat_parts.contains_key(root) {
+            continue;
+        }
         match problem.solve(budget) {
             axeyum_strings::MembershipOutcome::Sat(w) => {
                 witness_by_root.insert(*root, w);
@@ -930,6 +1064,46 @@ fn membership_witnesses(
             // On a theory-consistent branch the class is not certified-empty, but the
             // witness search may still be over budget (`Unknown`) — report no model.
             _ => return None,
+        }
+    }
+
+    // Stage 2: witness each concat operand over `R ∩ shape`, the shape built from the
+    // parts' Stage-1 witnesses (constrained), literals, or `Σ*` (free).
+    for (root, parts) in &concat_parts {
+        // The `R ∩ shape` intersection adds `Σ*` runs, so its derivative closure can
+        // be markedly larger than a bare `R`. Cap the closure/witness search
+        // conservatively (and bail on a past deadline) so a pathological concat regex
+        // is a fast decline-to-`Unknown`, never a multi-second grind — the emptiness
+        // closure itself does not poll the deadline.
+        if budget.past_deadline() {
+            return None;
+        }
+        let mut shape: Option<Regex> = None;
+        let mut push = |r: Regex| {
+            shape = Some(match shape.take() {
+                None => r,
+                Some(prev) => Regex::concat(prev, r),
+            });
+        };
+        for part in parts {
+            match part {
+                ConcatPart::Lit(cps) => push(literal_regex(cps)),
+                ConcatPart::Var(s) => match witness_by_root.get(&uf.find(*s)) {
+                    Some(w) => push(literal_regex(w)),
+                    None => push(Regex::star(Regex::any_char())),
+                },
+            }
+        }
+        let mut problem = classes.get(root).cloned().unwrap_or_default();
+        problem.positives.push(shape.unwrap_or(Regex::Empty));
+        // Witness-only (no emptiness pre-pass): the concat route never emits `unsat`,
+        // and the emptiness closure over `R ∩ shape` does not poll the deadline, so a
+        // pathological shape would grind. `Membership::witness` polls per node.
+        match problem.witness(budget, CONCAT_WITNESS_MAX_STATES, CONCAT_WITNESS_MAX_LEN) {
+            Some(w) => {
+                witness_by_root.insert(*root, w);
+            }
+            None => return None,
         }
     }
 
@@ -944,22 +1118,36 @@ fn membership_witnesses(
     Some(out)
 }
 
-/// Builds a `Seq(BitVec(18))` model value from a witness's Unicode code points
-/// (mirrors `crate::smtlib::seq_value`).
-fn seq_value(codepoints: &[u32]) -> Value {
-    Value::Seq(
-        codepoints
-            .iter()
-            .map(|&cp| {
-                Value::from_scalar_code(Sort::BitVec(Sort::STRING_ELEM_WIDTH), u128::from(cp))
-            })
-            .collect(),
-    )
+/// Builds the `Seq(BitVec(18))` **term** for a witness's Unicode code points, as
+/// the right-associated `seq.unit` chain (mirrors
+/// `axeyum_smtlib::parse::seq_from_code_points`; the empty sequence is `seq.empty`).
+///
+/// Used to pin a membership-class symbol to its matcher-replayed witness as an extra
+/// word equation, so the word arrangement solves the concat components consistently
+/// with the witnessed whole. Returns `None` only on an arena construction failure
+/// (never expected for the scalar string element sort).
+fn seq_term_from_code_points(arena: &mut TermArena, codepoints: &[u32]) -> Option<TermId> {
+    let key = ArraySortKey::BitVec(Sort::STRING_ELEM_WIDTH);
+    if codepoints.is_empty() {
+        return Some(arena.seq_empty(key));
+    }
+    let mut acc: Option<TermId> = None;
+    for &cp in codepoints.iter().rev() {
+        let elem = arena
+            .bv_const(Sort::STRING_ELEM_WIDTH, u128::from(cp))
+            .ok()?;
+        let unit = arena.seq_unit(elem).ok()?;
+        acc = Some(match acc {
+            None => unit,
+            Some(rest) => arena.seq_concat(unit, rest).ok()?,
+        });
+    }
+    acc
 }
 
 /// The Unicode code points of a `Seq(BitVec(18))` string value's elements, for the
-/// reference matcher. A non-scalar element (never produced by [`seq_value`]) maps
-/// to `0`.
+/// reference matcher. A non-scalar element (never produced by
+/// [`seq_term_from_code_points`]) maps to `0`.
 fn seq_code_points(elems: &[Value]) -> Vec<u32> {
     elems
         .iter()

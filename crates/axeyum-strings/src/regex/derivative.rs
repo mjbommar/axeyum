@@ -392,11 +392,39 @@ pub enum Closure {
 /// later, by derivative-emptiness reasoning.
 #[must_use]
 pub fn derivative_closure(regex: &Regex, max_states: usize) -> Closure {
+    derivative_closure_within(regex, max_states, || false)
+}
+
+/// [`derivative_closure`] with a caller **stop poll**: `over_deadline` is checked
+/// every few expansions and, when it returns `true`, the enumeration abandons with
+/// [`Closure::Budget`] — exactly as an exhausted `max_states` budget does.
+///
+/// Materializing the closure of a complex regex (a `re.comp`/`re.inter` intersected
+/// with `Σ*` runs) can visit thousands of residuals, each requiring a `derivative` +
+/// `canon` that is itself non-trivial, so the plain [`derivative_closure`] can run
+/// well past a wall-clock deadline before the `max_states` guard trips. This variant
+/// lets a deadline-bounded caller (the online string route's per-assert emptiness
+/// refuter and its `sat`-branch witnessing) keep the closure a first-class, timely
+/// `unknown`. A `Closure::Budget` is always sound: emptiness reasoning only ever
+/// concludes `unsat` on a **`Complete`** nullable-free closure, so an abandoned
+/// closure simply declines.
+#[must_use]
+pub fn derivative_closure_within(
+    regex: &Regex,
+    max_states: usize,
+    mut over_deadline: impl FnMut() -> bool,
+) -> Closure {
     let start = canon(regex);
     let mut seen: BTreeSet<Regex> = BTreeSet::new();
     let mut worklist: Vec<Regex> = vec![start.clone()];
     seen.insert(start);
+    let mut steps: u32 = 0;
     while let Some(state) = worklist.pop() {
+        // `Instant::now()` is not free; poll every 64 expansions.
+        steps = steps.wrapping_add(1);
+        if steps.is_multiple_of(64) && over_deadline() {
+            return Closure::Budget;
+        }
         for (_, residual) in derivative(&state).branches {
             if !seen.contains(&residual) {
                 if seen.len() >= max_states {

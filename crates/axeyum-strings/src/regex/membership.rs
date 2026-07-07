@@ -30,7 +30,9 @@
 use std::collections::BTreeSet;
 
 use super::ast::Regex;
-use super::derivative::{Closure, canon, derivative, derivative_closure, nullable};
+use super::derivative::{
+    Closure, canon, derivative, derivative_closure, derivative_closure_within, nullable,
+};
 use super::matcher::matches;
 use crate::arrange::SearchBudget;
 
@@ -148,8 +150,11 @@ impl Membership {
         let combined = self.combined();
 
         // (2) Emptiness certificate: a complete, nullable-free, re-checked closure
-        // proves the language empty ⇒ `unsat`.
-        if let Closure::Complete(states) = derivative_closure(&combined, max_states)
+        // proves the language empty ⇒ `unsat`. The closure is bounded by the deadline
+        // too (not only `max_states`) so a complex regex is a timely `unknown`, never
+        // a grind — an abandoned (`Budget`) closure is not `Complete`, so it declines.
+        if let Closure::Complete(states) =
+            derivative_closure_within(&combined, max_states, || budget.past_deadline())
             && states.iter().all(|s| !nullable(s))
             && recheck_empty(&combined, &states)
         {
@@ -166,6 +171,33 @@ impl Membership {
             // and matcher disagreeing is a bug, and the honest response is
             // `unknown` (the property fuzz drives replay to never fail).
             _ => MembershipOutcome::Unknown,
+        }
+    }
+
+    /// Searches for a satisfying witness **without** the emptiness-closure pre-pass
+    /// [`solve_with_caps`](Self::solve_with_caps) runs first — for callers that only
+    /// need a `sat` witness and treat "no witness within budget" as `unknown`, never
+    /// `unsat`.
+    ///
+    /// The emptiness pass ([`derivative_closure`]) materializes the *whole* residual
+    /// set and does **not** poll the deadline, so on a regex whose closure is large
+    /// (e.g. a `re.comp`/`re.inter` intersected with the `Σ*` runs of a
+    /// membership-over-concat shape) it can grind well past the configured timeout.
+    /// The witness search alone polls [`SearchBudget::past_deadline`] on every node,
+    /// so this is the deadline-bounded path for such shapes: it returns `Some(w)` for
+    /// a replay-checked witness, or `None` (⇒ the caller's `unknown`) on an empty
+    /// language, an over-budget search, or a witness that fails the mandatory replay.
+    #[must_use]
+    pub fn witness(
+        &self,
+        budget: &SearchBudget,
+        max_states: usize,
+        max_witness_len: usize,
+    ) -> Option<Vec<u32>> {
+        let combined = self.combined();
+        match witness_search(&combined, budget, max_states, max_witness_len) {
+            Some(w) if self.replay(&w) => Some(w),
+            _ => None,
         }
     }
 
@@ -190,6 +222,24 @@ impl Membership {
         let combined = self.combined();
         matches!(
             derivative_closure(&combined, max_states),
+            Closure::Complete(states)
+                if states.iter().all(|s| !nullable(s)) && recheck_empty(&combined, &states)
+        )
+    }
+
+    /// [`refute_empty`](Self::refute_empty) with a `budget` **deadline**: the
+    /// emptiness closure abandons (⇒ `false`, "not proven empty") once the deadline
+    /// passes, instead of grinding to `max_states`. Used on the online string route's
+    /// hot per-assert consistency check, where a complex regex-intersection must not
+    /// stall the CDCL loop past its timeout. Soundness is identical to
+    /// [`refute_empty`](Self::refute_empty): `true` only behind a **complete**,
+    /// nullable-free, re-checked closure, so an abandoned closure can only *miss* a
+    /// conflict (a safe under-approximation), never fabricate one.
+    #[must_use]
+    pub fn refute_empty_within(&self, max_states: usize, budget: &SearchBudget) -> bool {
+        let combined = self.combined();
+        matches!(
+            derivative_closure_within(&combined, max_states, || budget.past_deadline()),
             Closure::Complete(states)
                 if states.iter().all(|s| !nullable(s)) && recheck_empty(&combined, &states)
         )

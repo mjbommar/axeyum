@@ -33,7 +33,10 @@ pub mod membership;
 pub mod predicate;
 
 pub use ast::Regex;
-pub use derivative::{Closure, TransitionRegex, canon, derivative, derivative_closure, nullable};
+pub use derivative::{
+    Closure, TransitionRegex, canon, derivative, derivative_closure, derivative_closure_within,
+    nullable,
+};
 pub use matcher::matches;
 pub use membership::{Membership, MembershipOutcome, recheck_empty};
 pub use predicate::{ALPHABET_MAX, CharPred};

@@ -15,7 +15,7 @@ A single-glance, honest view of where the pure-Rust axeyum solver stands against
 ## Headline
 
 - **35 division baselines** measured vs z3 4.13.3, spanning **24 logic fragments** (BV, LIA, QF_ABV, QF_ALIA, QF_AUFBV, QF_AUFLIA, QF_AX, QF_BV, QF_BVFP, QF_DT, QF_FF, QF_FP, QF_LIA, QF_LRA, QF_NIA, QF_NRA, QF_S, QF_SEQ, QF_SLIA, QF_UF, QF_UFBV, QF_UFFF, QF_UFLIA, UF).
-- **DISAGREE = 0 across all baselines** — zero wrong verdicts over 661 oracle-compared instances (992 files total, 727 decided).
+- **DISAGREE = 0 across all baselines** — zero wrong verdicts over 665 oracle-compared instances (992 files total, 731 decided).
 - Decide-rate ranges **0%–100%** across divisions — that spread *is* the capability frontier; DISAGREE = 0 is the soundness floor that holds everywhere.
 
 ## Divisions vs Z3
@@ -45,7 +45,7 @@ Sorted by logic, then by descending decide-rate. Every committed `*solver-vs-z3*
 | QF_NIA | `qf-nia-cvc5-regress-clean` | 39 | 33 | 85% | 5 | 1 | 23 | 0 | z3-binary | 2.730 |
 | QF_NRA | `qf-nra-synthetic-graduated` | 33 | 30 | 91% | 3 | 0 | 30 | 0 | z3-binary | 5.455 |
 | QF_NRA | `qf-nra-cvc5-regress-clean` | 38 | 32 | 84% | 6 | 0 | 32 | 0 | z3-binary | 3.169 |
-| QF_S | `qf-s-cvc5-regress-clean` | 134 | 78 | 58% | 6 | 50 | 74 | 0 | z3-library+binary | 1.442 |
+| QF_S | `qf-s-cvc5-regress-clean` | 134 | 82 | 61% | 6 | 46 | 78 | 0 | z3-library+binary | 1.443 |
 | QF_SEQ | `qf-seq-cvc5-regress-clean` | 33 | 26 | 79% | 6 | 1 | 15 | 0 | z3-library+binary | 3.752 |
 | QF_SLIA | `qf-slia-cvc5-regress-clean` | 50 | 18 | 36% | 4 | 28 | 16 | 0 | z3-library+binary | 3.650 |
 | QF_UF | `qf-uf-cvc5-regress-clean-overbound-uninterp-sorts` | 6 | 4 | 67% | 2 | 0 | 4 | 0 | z3-binary | 7.489 |
@@ -60,9 +60,38 @@ Sorted by logic, then by descending decide-rate. Every committed `*solver-vs-z3*
 | QF_UFLIA | `qf-uflia-cvc5-regress-clean-overbound-uninterp-sorts` | 2 | 2 | 100% | 0 | 0 | 2 | 0 | z3-binary | 2.294 |
 | UF | `uf-cvc5-regress-clean-quantified` | 5 | 0 | 0% | 0 | 5 | 0 | 0 | :status | 0.000 |
 
-**Totals:** 992 files, 727 decided, 661 oracle-compared, **0 disagreements.**
+**Totals:** 992 files, 731 decided, 665 oracle-compared, **0 disagreements.**
 
 <!-- NOTES:BEGIN (hand-written attribution notes — preserved by the generator) -->
+### QF_S row re-measured 2026-07-07 (P2.7 task #49 — `str.in_re` over a symbolic `str.++`, and membership coupled with `str.++` word equations)
+
+The membership fragment previously **declined** whenever a `str.in_re` subject was a
+symbolic `str.++` (e.g. `(str.in_re (str.++ x "B" y) R)`), or when a membership atom
+was coupled with `str.++` word equations. Two composition fixes land these rows:
+**(1)** the parser rewrites `(str.in_re (str.++ p…) R)` into `w ∈ R ∧ w = p…` with a
+fresh operand `w`, so a membership-over-concat reuses the single-variable membership
+machinery inside the online CDCL(T) route; **(2)** on the sat branch the route now
+witnesses each membership class, **pins** the witness as an extra word equation, and
+re-solves the *augmented* word system (a concat operand's witness is searched over
+`R ∩ shape`, `shape` built from the parts' own witnessed languages, so it decomposes
+into the components) — the earlier design witnessed memberships independently of the
+word part and desynced. `sat` stays gated **only** by the mandatory `Seq`-level model
+replay against the skeleton (the concatenation *and* the membership both hold under
+the model), so no wrong `sat` is possible even when the shape heuristic is imprecise;
+an undecomposable shape stays first-class `unknown`. This is a **sat-side** slice —
+certifying concat *emptiness* (`unsat`) is deferred, so unsat concat rows stay
+`unknown`. Net (same-command HEAD re-run): **QF_S 78 → 82 decided (sat 51 → 55)** — the
+five upgraded files `issue2060`, `issue5510`, `issue5520`, `issue7677-test-const-rv`,
+`issue4608-re-derive` all move `unsupported → sat`, **each agreeing with the z3 binary
+AND cvc5; DISAGREE=0, model-replay-failures=0** across the division. (The concurrent
+`simple-nth-fail` `sat → unsupported` move is unrelated — the task #46 `str.from_code`
+symbolic-argument decline.) Soundness backing: the online-membership differential fuzz
+was extended to emit `str.in_re` over `str.++`-of-variables and re-run over 700
+generated scripts vs **both** Z3 and cvc5 (DISAGREE=0, both verdict directions), plus a
+new `qf_s_concat_membership` suite whose sat test re-checks the witnessed concatenation
+is in the language through the independent reference matcher and whose negative tests
+pin that an UNSAT / `re.none` membership-over-concat is never reported `sat`.
+
 ### QF_NIA cvc5 row CORRECTED DOWN 2026-07-07 (23→21) — a soundness fix, not a regression
 
 The NIA div/mod slice (`a946f925`) committed this row at **23 decided**, but 2 of

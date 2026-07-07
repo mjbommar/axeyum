@@ -181,18 +181,53 @@ fn gen_regex(rng: &mut Lcg, depth: u32) -> String {
 /// against z3 **and** cvc5, so a faithfulness bug in the extended-function encoding
 /// (either polarity) surfaces as a differential disagreement.
 fn gen_membership(rng: &mut Lcg, num_vars: usize) -> String {
-    let atom = if rng.below(4) == 0 {
-        gen_ext_pred(rng, num_vars)
-    } else {
-        let v = rng.below(num_vars as u64);
-        let re = gen_regex(rng, 2);
-        format!("(str.in_re s{v} {re})")
+    let atom = match rng.below(4) {
+        0 => gen_ext_pred(rng, num_vars),
+        // A membership over a symbolic **`str.++`** subject (task #49): the parser
+        // rewrites it into `w ∈ R ∧ w = parts`, and the online route composes the
+        // membership with the word part. Adjudicated against z3 AND cvc5, so a wrong
+        // sat (an undecomposable witness) or wrong unsat surfaces as a disagreement.
+        // The regex is kept **shallow** (depth 0 — a leaf) here: the concat route
+        // intersects it with the `Σ*` runs of the operand shape, and a deep
+        // `re.comp`/`re.inter` blown up by those runs makes the (regex-engine, not
+        // route) derivative closure pathological — that engine is fuzzed separately
+        // (`regex_membership_differential_fuzz`). A leaf still exercises the full
+        // route: parser rewrite, word/membership composition, and witness split.
+        1 => {
+            let subject = gen_concat_subject(rng, num_vars);
+            let re = gen_regex(rng, 0);
+            format!("(str.in_re {subject} {re})")
+        }
+        _ => {
+            let v = rng.below(num_vars as u64);
+            let re = gen_regex(rng, 2);
+            format!("(str.in_re s{v} {re})")
+        }
     };
     if rng.below(3) == 0 {
         format!("(not {atom})")
     } else {
         atom
     }
+}
+
+/// A symbolic `str.++` subject for a `str.in_re` atom: a concatenation of 2..=3
+/// parts, each a declared variable or a short (possibly empty, possibly escaped)
+/// string literal. Exercises the membership-over-concat route (leading/trailing/
+/// interior literals, repeated variables, and the free-variable decomposition).
+fn gen_concat_subject(rng: &mut Lcg, num_vars: usize) -> String {
+    let parts = 2 + rng.below(2); // 2..=3
+    let mut out = String::from("(str.++");
+    for _ in 0..parts {
+        if rng.below(2) == 0 {
+            let v = rng.below(num_vars as u64);
+            let _ = write!(out, " s{v}");
+        } else {
+            let _ = write!(out, " \"{}\"", gen_literal(rng));
+        }
+    }
+    out.push(')');
+    out
 }
 
 /// A constant-pattern extended-function predicate on a single variable:

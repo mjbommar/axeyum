@@ -689,6 +689,8 @@ fn build_word_skeleton(arena: &mut TermArena, exprs: &[SExpr]) -> Option<WordSke
         intern: BTreeMap::new(),
         memberships: Vec::new(),
         next: 0,
+        concat_defs: Vec::new(),
+        next_concat: 0,
     };
     for e in exprs {
         let Some(items) = e.list() else { continue };
@@ -698,6 +700,12 @@ fn build_word_skeleton(arena: &mut TermArena, exprs: &[SExpr]) -> Option<WordSke
             assertions.push(t);
         }
     }
+
+    // Conjoin the definitional equations minted for `str.in_re` over `str.++`
+    // subjects (`!inre_arg!k = <concat>`) as unconditional top-level assertions —
+    // they name the concatenation the membership constrains and must hold in the
+    // model the online route replays.
+    assertions.extend(mem.concat_defs.iter().copied());
 
     // Require at least one genuine `Seq` equality atom **or** a membership atom —
     // otherwise this is not a string problem the online route can decide.
@@ -965,9 +973,43 @@ struct MembershipCollector {
     memberships: Vec<(TermId, SymbolId, axeyum_strings::regex::Regex)>,
     /// Fresh-proxy-symbol counter.
     next: u32,
+    /// Definitional word equations `!inre_arg!k = <concat operand>` minted when a
+    /// `str.in_re` subject is a `str.++` (or other word expression) rather than a
+    /// single variable — see [`MembershipCollector::concat_operand`]. Each is a
+    /// **top-level, unconditional** `Seq` equality the skeleton conjoins alongside
+    /// the asserted formulas, tying the fresh operand symbol to the concatenation so
+    /// the online CDCL(T) route composes the membership with the word part.
+    concat_defs: Vec<TermId>,
+    /// Fresh-concat-operand-symbol counter (disjoint from the `!weq!<name>` user
+    /// symbols and the `!inre!k` proxy symbols).
+    next_concat: u32,
 }
 
 impl MembershipCollector {
+    /// Introduces a fresh `Seq`-sorted operand symbol `w` for a `str.in_re` whose
+    /// subject is a compound word expression `concat` (a `str.++` of variables and
+    /// literals), records the definitional equation `w = concat`, and returns `w`'s
+    /// symbol. The caller then asserts the membership on `w` via
+    /// [`MembershipCollector::atom`]. `None` on an arena declaration/build failure.
+    ///
+    /// The definitional equation is **unconditional** (it is not gated by any
+    /// enclosing `or`/`ite`/`not`): `w` simply *names* the concatenation, so it holds
+    /// in every branch. This is what lets a `str.in_re (str.++ …) R` atom reuse the
+    /// single-variable membership machinery — the atom becomes `w ∈ R` with `w`
+    /// pinned to the concatenation by the equation — while the mandatory Seq-level
+    /// replay against the skeleton (which carries both the equation and the
+    /// membership) remains the sole gate on any `sat`.
+    fn concat_operand(&mut self, arena: &mut TermArena, concat: TermId) -> Option<SymbolId> {
+        let sym = arena
+            .declare(&format!("!inre_arg!{}", self.next_concat), Sort::string())
+            .ok()?;
+        self.next_concat += 1;
+        let w = arena.var(sym);
+        let def = arena.eq(w, concat).ok()?;
+        self.concat_defs.push(def);
+        Some(sym)
+    }
+
     /// Returns the `Sort::Bool` proxy atom term for `(str.in_re operand R)`,
     /// minting a fresh `!inre!<k>` symbol on first encounter. `None` on an arena
     /// declaration failure (never expected).
@@ -1045,15 +1087,31 @@ fn word_bool(
             let inner = word_bool(arena, &items[1], vars, saw_seq_atom, mem)?;
             arena.not(inner).ok()
         }
-        // `(str.in_re X R)`: a membership theory atom on a single declared string
-        // variable `X` (negative polarity is expressed by the enclosing `not`,
-        // never here — the atom itself is always positive). A `str.++`/`substr`/
-        // literal operand or an unsupported regex declines the whole skeleton.
+        // `(str.in_re X R)`: a membership theory atom (negative polarity is expressed
+        // by the enclosing `not`, never here — the atom itself is always positive).
+        //
+        // * A single declared string variable `X` → a membership on `X`.
+        // * A `str.++` (or other word expression) subject → introduce a fresh operand
+        //   `w`, define `w = <subject>` unconditionally (a top-level `Seq` equality),
+        //   and assert the membership on `w`. This routes a membership-over-concat
+        //   into the same online CDCL(T) composition as a variable membership: the
+        //   equation ties `w` to the concatenation, and the mandatory Seq-level model
+        //   replay against this skeleton (equation + membership) is the sole `sat`
+        //   gate. An unsupported regex, or a subject outside the word fragment,
+        //   declines the whole skeleton.
         "str.in_re" if items.len() == 3 => {
-            let name = variable_name_skeleton(&items[1], vars)?;
-            let (operand, _) = *vars.get(&name)?;
             let regex = crate::regex_membership::translate_regex(&items[2])?;
-            mem.atom(arena, operand, regex)
+            if let Some(name) = variable_name_skeleton(&items[1], vars) {
+                let (operand, _) = *vars.get(&name)?;
+                mem.atom(arena, operand, regex)
+            } else {
+                let concat = word_str_expr(arena, &items[1], vars)?;
+                let operand = mem.concat_operand(arena, concat)?;
+                // The definitional equation `w = concat` is a genuine `Seq` equality
+                // atom the online route must see (it grounds the word part).
+                *saw_seq_atom = true;
+                mem.atom(arena, operand, regex)
+            }
         }
         // Constant-pattern extended-function atoms as **regex memberships** (P2.7
         // Phase D). Each is *exactly* a regex-language membership when its pattern is
