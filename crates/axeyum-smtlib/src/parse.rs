@@ -1419,20 +1419,7 @@ fn word_bool(
         //   replay against this skeleton (equation + membership) is the sole `sat`
         //   gate. An unsupported regex, or a subject outside the word fragment,
         //   declines the whole skeleton.
-        "str.in_re" if items.len() == 3 => {
-            let regex = crate::regex_membership::translate_regex(&items[2])?;
-            if let Some(name) = variable_name_skeleton(&items[1], vars) {
-                let (operand, _) = *vars.get(&name)?;
-                mem.atom(arena, operand, regex)
-            } else {
-                let concat = word_str_expr(arena, &items[1], vars)?;
-                let operand = mem.concat_operand(arena, concat)?;
-                // The definitional equation `w = concat` is a genuine `Seq` equality
-                // atom the online route must see (it grounds the word part).
-                *saw_seq_atom = true;
-                mem.atom(arena, operand, regex)
-            }
-        }
+        "str.in_re" if items.len() == 3 => word_in_re_atom(arena, items, vars, saw_seq_atom, mem),
         // Constant-pattern extended-function atoms as **regex memberships** (P2.7
         // Phase D). Each is *exactly* a regex-language membership when its pattern is
         // a string constant and its subject is a single declared string variable —
@@ -1473,6 +1460,13 @@ fn word_bool(
             let f = word_bool(arena, &items[3], vars, saw_seq_atom, mem)?;
             arena.ite(c, t, f).ok()
         }
+        // A **trivially-true length guard** (`(<= 0 (str.len W))` / `(>= (str.len W)
+        // 0)`) is a tautology — replaced by `true` so the redundant `norn-*` guard does
+        // not collapse the skeleton (see [`is_trivial_nonneg_length_atom`]; any other
+        // length comparison still declines).
+        "<=" | ">=" if items.len() == 3 && is_trivial_nonneg_length_atom(head, &items[1..]) => {
+            Some(arena.bool_const(true))
+        }
         // `(= a b …)` — chained equality over ≥2 `Seq` expressions → conjunction of
         // `(= a_0 a_i)`.
         "=" if items.len() >= 3 => {
@@ -1508,6 +1502,38 @@ fn word_bool(
         // Anything else (extended functions, `str.len`, non-string atoms, …) is
         // outside the skeleton fragment — decline the whole build.
         _ => None,
+    }
+}
+
+/// Translates a `(str.in_re X R)` atom into its membership proxy for [`word_bool`]
+/// (negative polarity is expressed by the enclosing `not`, never here).
+///
+/// * A single declared string variable `X` → a membership on `X`.
+/// * A `str.++` (or other word expression) subject → introduce a fresh operand `w`,
+///   define `w = <subject>` unconditionally (a top-level `Seq` equality), and assert
+///   the membership on `w`. This routes a membership-over-concat into the same online
+///   CDCL(T) composition as a variable membership: the equation ties `w` to the
+///   concatenation, and the mandatory Seq-level replay against this skeleton
+///   (equation + membership) is the sole `sat` gate. An unsupported regex, or a
+///   subject outside the word fragment, declines the whole skeleton (`None`).
+fn word_in_re_atom(
+    arena: &mut TermArena,
+    items: &[SExpr],
+    vars: &BTreeMap<String, (SymbolId, TermId)>,
+    saw_seq_atom: &mut bool,
+    mem: &mut MembershipCollector,
+) -> Option<TermId> {
+    let regex = crate::regex_membership::translate_regex(&items[2])?;
+    if let Some(name) = variable_name_skeleton(&items[1], vars) {
+        let (operand, _) = *vars.get(&name)?;
+        mem.atom(arena, operand, regex)
+    } else {
+        let concat = word_str_expr(arena, &items[1], vars)?;
+        let operand = mem.concat_operand(arena, concat)?;
+        // The definitional equation `w = concat` is a genuine `Seq` equality atom the
+        // online route must see (it grounds the word part).
+        *saw_seq_atom = true;
+        mem.atom(arena, operand, regex)
     }
 }
 
@@ -1559,6 +1585,32 @@ fn contains_pattern_regex(cps: &[u32]) -> axeyum_strings::regex::Regex {
     use axeyum_strings::regex::Regex;
     let any = || Regex::star(Regex::any_char());
     Regex::concat(Regex::concat(any(), literal_pattern_regex(cps)), any())
+}
+
+/// Whether `head args` is a **tautological** non-negativity guard on a string
+/// length — `(<= 0 (str.len W))` or `(>= (str.len W) 0)` (also the `seq.len`
+/// spelling). A `str.len`/`seq.len` is non-negative for every string, so the atom
+/// holds in every model; the word-skeleton builder may soundly treat it as `true`.
+///
+/// Deliberately narrow: only the literal-`0` bound against a bare `str.len`/`seq.len`
+/// application is recognized. `(<= (str.len W) 0)` (⇒ `W = ""`), `(< 0 (str.len W))`
+/// (⇒ `W ≠ ""`), or any other length comparison is **not** a tautology and is left
+/// for the caller to decline (the membership skeleton has no `str.len` theory).
+fn is_trivial_nonneg_length_atom(head: &str, args: &[SExpr]) -> bool {
+    let [a, b] = args else { return false };
+    let is_len = |e: &SExpr| {
+        e.list().is_some_and(|l| {
+            l.len() == 2 && matches!(l.first().and_then(SExpr::atom), Some("str.len" | "seq.len"))
+        })
+    };
+    let is_zero = |e: &SExpr| e.atom() == Some("0");
+    match head {
+        // `(<= 0 (str.len W))`
+        "<=" => is_zero(a) && is_len(b),
+        // `(>= (str.len W) 0)`
+        ">=" => is_len(a) && is_zero(b),
+        _ => false,
+    }
 }
 
 /// The declared string-variable name if `e` is a bare atom naming one of the

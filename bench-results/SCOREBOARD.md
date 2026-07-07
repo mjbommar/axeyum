@@ -45,7 +45,7 @@ Sorted by logic, then by descending decide-rate. Every committed `*solver-vs-z3*
 | QF_NIA | `qf-nia-cvc5-regress-clean` | 39 | 33 | 85% | 5 | 1 | 23 | 0 | z3-binary | 2.730 |
 | QF_NRA | `qf-nra-synthetic-graduated` | 33 | 30 | 91% | 3 | 0 | 30 | 0 | z3-binary | 5.455 |
 | QF_NRA | `qf-nra-cvc5-regress-clean` | 38 | 32 | 84% | 6 | 0 | 32 | 0 | z3-binary | 3.169 |
-| QF_S | `qf-s-cvc5-regress-clean` | 134 | 82 | 61% | 6 | 46 | 78 | 0 | z3-library+binary | 1.443 |
+| QF_S | `qf-s-cvc5-regress-clean` | 134 | 87 | 65% | 6 | 41 | 82 | 0 | z3-library+binary | 1.323 |
 | QF_SEQ | `qf-seq-cvc5-regress-clean` | 33 | 26 | 79% | 6 | 1 | 15 | 0 | z3-library+binary | 3.752 |
 | QF_SLIA | `qf-slia-cvc5-regress-clean` | 50 | 18 | 36% | 4 | 28 | 16 | 0 | z3-library+binary | 3.650 |
 | QF_UF | `qf-uf-cvc5-regress-clean-overbound-uninterp-sorts` | 6 | 4 | 67% | 2 | 0 | 4 | 0 | z3-binary | 7.489 |
@@ -60,7 +60,7 @@ Sorted by logic, then by descending decide-rate. Every committed `*solver-vs-z3*
 | QF_UFLIA | `qf-uflia-cvc5-regress-clean-overbound-uninterp-sorts` | 2 | 2 | 100% | 0 | 0 | 2 | 0 | z3-binary | 2.294 |
 | UF | `uf-cvc5-regress-clean-quantified` | 5 | 0 | 0% | 0 | 5 | 0 | 0 | :status | 0.000 |
 
-**Totals:** 992 files, 731 decided, 665 oracle-compared, **0 disagreements.**
+**Totals:** 992 files, 736 decided, 669 oracle-compared, **0 disagreements.**
 
 <!-- NOTES:BEGIN (hand-written attribution notes — preserved by the generator) -->
 ### QF_S row re-measured 2026-07-07 (P2.7 task #49 — `str.in_re` over a symbolic `str.++`, and membership coupled with `str.++` word equations)

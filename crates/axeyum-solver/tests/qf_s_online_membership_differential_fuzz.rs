@@ -230,6 +230,50 @@ fn gen_concat_subject(rng: &mut Lcg, num_vars: usize) -> String {
     out
 }
 
+/// A **norn-shaped** structured concat row (task #55): a membership over a symbolic
+/// `str.++` subject whose part variable is *also* separately constrained by its own
+/// membership — the shape that drives the coarse-shape concat emptiness (unsat) and
+/// the joint product-search (sat, when the whole regex is tight and the part loose).
+/// Returned as an `(and …)` so both atoms land in the same query and share the part
+/// variable. Adjudicated against z3 AND cvc5, so a wrong verdict from either the
+/// emptiness certificate or the joint search surfaces as a disagreement.
+fn gen_concat_with_part_constraint(rng: &mut Lcg, num_vars: usize) -> String {
+    let v = rng.below(num_vars as u64);
+    // A concat subject that embeds `sv` between literals/other parts.
+    let mut subject = String::from("(str.++");
+    let parts = 2 + rng.below(2); // 2..=3
+    let at = rng.below(parts as u64);
+    for i in 0..parts {
+        if i == at {
+            let _ = write!(subject, " s{v}");
+        } else if rng.below(2) == 0 {
+            let w = rng.below(num_vars as u64);
+            let _ = write!(subject, " s{w}");
+        } else {
+            let _ = write!(subject, " \"{}\"", gen_literal(rng));
+        }
+    }
+    subject.push(')');
+    let whole_re = gen_regex(rng, 0);
+    let part_re = gen_regex(rng, 0);
+    format!("(and (str.in_re {subject} {whole_re}) (str.in_re s{v} {part_re}))")
+}
+
+/// A **tautological** non-negativity length guard on a variable —
+/// `(<= 0 (str.len sX))` or `(>= (str.len sX) 0)` — the always-true `norn-*` guard
+/// (task #55). The parser's trivial-length pass must treat it as `true` so the
+/// membership skeleton still builds; here it also checks the guard never perturbs the
+/// oracle-agreed verdict (it is a tautology, so the query's satisfiability is
+/// unchanged). Emitting it forces the whole script to the `QF_SLIA` logic.
+fn gen_trivial_length_guard(rng: &mut Lcg, num_vars: usize) -> String {
+    let v = rng.below(num_vars as u64);
+    if rng.below(2) == 0 {
+        format!("(<= 0 (str.len s{v}))")
+    } else {
+        format!("(>= (str.len s{v}) 0)")
+    }
+}
+
 /// A constant-pattern extended-function predicate on a single variable:
 /// `(str.prefixof "lit" sVAR)`, `(str.suffixof "lit" sVAR)`, or
 /// `(str.contains sVAR "lit")` — exactly the Phase D regex-membership fragment. The
@@ -274,14 +318,9 @@ impl Instance {
         let num_vars = 1 + rng.below(3); // 1..=3
         let num_asserts = 2 + rng.below(4); // 2..=5
 
-        let mut text = String::new();
-        text.push_str("(set-logic QF_S)\n");
-        for i in 0..num_vars {
-            let _ = writeln!(text, "(declare-const s{i} String)");
-        }
-
+        let mut asserts: Vec<String> = Vec::with_capacity(num_asserts);
         for _ in 0..num_asserts {
-            let assertion = match rng.below(6) {
+            let assertion = match rng.below(8) {
                 // A bare (positive or negated) membership atom.
                 0 => gen_membership(rng, num_vars),
                 // A disjunction of two memberships — the `re-mod-eq` shape's core.
@@ -300,6 +339,13 @@ impl Instance {
                 // A word equality — merges membership classes (the `re-mod-eq`
                 // cross-variable intersection).
                 4 => gen_word_atom(rng, num_vars),
+                // A norn-shaped concat membership + part-variable membership (task
+                // #55): drives coarse-shape concat emptiness and the joint search.
+                5 => gen_concat_with_part_constraint(rng, num_vars),
+                // A tautological length guard (task #55): the parser's trivial-length
+                // pass must not collapse the skeleton, and the guard must not perturb
+                // the oracle-agreed verdict.
+                6 => gen_trivial_length_guard(rng, num_vars),
                 // A conjunction mixing a word atom and a membership.
                 _ => format!(
                     "(and {} {})",
@@ -307,9 +353,24 @@ impl Instance {
                     gen_membership(rng, num_vars)
                 ),
             };
-            let _ = writeln!(text, "(assert {assertion})");
+            asserts.push(assertion);
         }
 
+        // A length atom (from the trivial-length guard) requires the `QF_SLIA` logic;
+        // otherwise the pure-membership fragment is `QF_S`.
+        let logic = if asserts.iter().any(|a| a.contains("str.len")) {
+            "QF_SLIA"
+        } else {
+            "QF_S"
+        };
+        let mut text = String::new();
+        let _ = writeln!(text, "(set-logic {logic})");
+        for i in 0..num_vars {
+            let _ = writeln!(text, "(declare-const s{i} String)");
+        }
+        for a in &asserts {
+            let _ = writeln!(text, "(assert {a})");
+        }
         text.push_str("(check-sat)\n");
         Instance { text }
     }

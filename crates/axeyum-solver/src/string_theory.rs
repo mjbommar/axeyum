@@ -411,6 +411,170 @@ impl<'a> StringTheory<'a> {
         }
         Ok(())
     }
+
+    /// The defining concatenation of operand `w` from the asserted equalities: the
+    /// atom index of the equality `w = <str.++ …>` and the concatenation's parts, or
+    /// `None` when no asserted equality binds `w` to a genuine `str.++`. The
+    /// atom-indexed counterpart of [`concat_def_for_root`] (which works over bare
+    /// `(l, r)` pairs for the model search).
+    fn concat_def_for(&self, w: SymbolId) -> Option<(usize, Vec<ConcatPart>)> {
+        for &(atom, (l, r)) in &self.active_eqs {
+            let other = match (self.arena.node(l), self.arena.node(r)) {
+                (TermNode::Symbol(a), _) if *a == w => r,
+                (_, TermNode::Symbol(b)) if *b == w => l,
+                _ => continue,
+            };
+            if !matches!(
+                self.arena.node(other),
+                TermNode::App {
+                    op: Op::SeqConcat,
+                    ..
+                }
+            ) {
+                continue;
+            }
+            let comps = axeyum_strings::normal_form::concat_components(self.arena, other);
+            let mut parts = Vec::with_capacity(comps.len());
+            for c in comps {
+                if let TermNode::Symbol(s) = self.arena.node(c) {
+                    parts.push(ConcatPart::Var(*s));
+                } else if let Ok(Value::Seq(elems)) =
+                    axeyum_ir::eval(self.arena, c, &axeyum_ir::Assignment::new())
+                {
+                    parts.push(ConcatPart::Lit(seq_code_points(&elems)));
+                } else {
+                    return None;
+                }
+            }
+            return Some((atom, parts));
+        }
+        None
+    }
+
+    /// The **concat-membership emptiness** conflict (P2.7, task #55): a membership
+    /// whose subject is a `str.++` (`w ∈ R` / `w ∉ R` with `w = p₁ ++ … ++ pₙ`
+    /// asserted) is refuted when the *coarse shape* of the concatenation is provably
+    /// disjoint from the membership constraint — the concat-side counterpart of
+    /// [`Self::check_membership_conflict`], which only merges bare variable operands.
+    ///
+    /// For each concat operand `w` (a symbol some asserted equality binds to a
+    /// `str.++`), the shape `p₁·…·pₙ` is built as: the literal language of each
+    /// constant part, and — for a variable part `pⱼ` — the intersection of `pⱼ`'s
+    /// own **positive** membership regexes (an over-approximation of `pⱼ`'s possible
+    /// values), or `Σ*` when `pⱼ` has none. The problem
+    /// `⋂(w's positives) ∩ {shape} ∩ ⋂∁(w's negatives)` is checked for a
+    /// certified-empty language ([`Membership::refute_empty_within`]) — an empty
+    /// language ⇒ no assignment to the parts can make `w` a member ⇒ a conflict.
+    ///
+    /// **Soundness.** The shape is an *over-approximation* of `w`'s reachable
+    /// language (each part's shape ⊇ its possible values), so `shape ∩ Wcon = ∅`
+    /// entails `reachable(w) ∩ Wcon = ∅`, i.e. no model satisfies the cited
+    /// literals. The conflict core cites exactly the premises the entailment uses:
+    /// `w`'s membership literals (at their asserted polarity), the `w = concat`
+    /// definitional equality (`true`), and each part variable's cited positive
+    /// membership literals (`true`) — every one on the trail at the stated value, so
+    /// `¬⋀core` is a genuine theory lemma. The emptiness rides the same re-checked
+    /// derivative-closure certificate as the per-class check; an abandoned (deadline
+    /// / cap) closure just misses the conflict (safe — caught by the sat replay).
+    fn check_concat_emptiness_conflict(
+        &mut self,
+        trigger: (usize, bool),
+    ) -> Result<(), Vec<TheoryLit>> {
+        if (self.active_pos_mem.is_empty() && self.active_neg_mem.is_empty())
+            || self.budget.past_deadline()
+        {
+            return Ok(());
+        }
+
+        // Distinct membership operands, in first-encounter order.
+        let mut operands: Vec<SymbolId> = Vec::new();
+        let mut seen: HashSet<SymbolId> = HashSet::new();
+        for &(_, op, _) in self.active_pos_mem.iter().chain(&self.active_neg_mem) {
+            if seen.insert(op) {
+                operands.push(op);
+            }
+        }
+
+        for &w in &operands {
+            let Some((def_atom, parts)) = self.concat_def_for(w) else {
+                continue;
+            };
+
+            // Build the shape `p₁·…·pₙ`, recording each part variable's cited
+            // positive membership atoms.
+            let mut shape: Option<Regex> = None;
+            let mut cited_part_mem: Vec<usize> = Vec::new();
+            for part in &parts {
+                let r = match part {
+                    ConcatPart::Lit(cps) => literal_regex(cps),
+                    ConcatPart::Var(s) => {
+                        let mut sub: Option<Regex> = None;
+                        for &(atom, op, ref regex) in &self.active_pos_mem {
+                            if op == *s {
+                                cited_part_mem.push(atom);
+                                sub = Some(match sub.take() {
+                                    None => regex.clone(),
+                                    Some(prev) => Regex::inter(prev, regex.clone()),
+                                });
+                            }
+                        }
+                        sub.unwrap_or_else(|| Regex::star(Regex::any_char()))
+                    }
+                };
+                shape = Some(match shape.take() {
+                    None => r,
+                    Some(prev) => Regex::concat(prev, r),
+                });
+            }
+
+            // `w`'s own membership constraints.
+            let mut problem = Membership::default();
+            let mut w_mem: Vec<(usize, bool)> = Vec::new();
+            for &(atom, op, ref regex) in &self.active_pos_mem {
+                if op == w {
+                    problem.positives.push(regex.clone());
+                    w_mem.push((atom, true));
+                }
+            }
+            for &(atom, op, ref regex) in &self.active_neg_mem {
+                if op == w {
+                    problem.negatives.push(regex.clone());
+                    w_mem.push((atom, false));
+                }
+            }
+            problem.positives.push(shape.unwrap_or(Regex::Empty));
+
+            if !problem.refute_empty_within(MEMBERSHIP_MAX_STATES, &self.budget) {
+                continue;
+            }
+
+            // Certified empty ⇒ theory conflict.
+            let mut core: Vec<TheoryLit> = w_mem
+                .iter()
+                .map(|&(atom, value)| TheoryLit { atom, value })
+                .collect();
+            core.push(TheoryLit {
+                atom: def_atom,
+                value: true,
+            });
+            for &atom in &cited_part_mem {
+                if !core.iter().any(|l| l.atom == atom) {
+                    core.push(TheoryLit { atom, value: true });
+                }
+            }
+            let (t_atom, t_value) = trigger;
+            if !core.iter().any(|l| l.atom == t_atom) {
+                core.push(TheoryLit {
+                    atom: t_atom,
+                    value: t_value,
+                });
+            }
+            self.conflicts_reported += 1;
+            self.conflicts_certified += 1;
+            return Err(core);
+        }
+        Ok(())
+    }
 }
 
 impl TheorySolver for StringTheory<'_> {
@@ -437,9 +601,10 @@ impl TheorySolver for StringTheory<'_> {
                 }
             }
         }
-        // Both refuters are certified; report the first conflict found.
+        // All three refuters are certified; report the first conflict found.
         self.check_conflict((atom, value))?;
-        self.check_membership_conflict((atom, value))
+        self.check_membership_conflict((atom, value))?;
+        self.check_concat_emptiness_conflict((atom, value))
     }
 
     fn push(&mut self) {
@@ -906,6 +1071,7 @@ fn string_sat_model(arena: &mut TermArena, ctx: &SatModelCtx) -> CheckResult {
 
 /// One component of a `str.in_re` `str.++` subject's defining concatenation: a
 /// fixed literal, or a `Seq` variable symbol.
+#[derive(Clone)]
 enum ConcatPart {
     /// A constant component (a fused literal run), as code points.
     Lit(Vec<u32>),
@@ -913,30 +1079,26 @@ enum ConcatPart {
     Var(SymbolId),
 }
 
-/// The parts of the defining concatenation of a membership operand `w`, if some
-/// asserted equality binds `w = <str.++ …>` (a genuine concatenation, i.e. **not**
-/// a plain variable-variable equality). Each part is a fixed literal (a fused
-/// constant run) or a `Seq` variable symbol. `None` when `w` has no such defining
-/// equation (it is an ordinary variable operand).
-///
-/// This is how the online route recognizes a *membership-over-concat*: the parser
-/// rewrote `(str.in_re (str.++ p…) R)` into `w ∈ R ∧ w = p…` with a fresh `w`, so
-/// the concat structure is recoverable from the equalities alone — no extra side
-/// channel is needed.
-fn concat_parts_for(
+/// The defining concatenation of a membership operand `w`: the defining `str.++`
+/// **term id** and its parts, if some asserted equality binds `w = <str.++ …>` (a
+/// genuine concatenation, not a plain variable-variable equality). The term id lets
+/// membership operands bound to the *same* concatenation be grouped (their regex
+/// constraints intersected) for the joint witness search. `None` when `w` has no such
+/// defining equation. This is how the online route recognizes a
+/// *membership-over-concat*: the parser rewrote `(str.in_re (str.++ p…) R)` into
+/// `w ∈ R ∧ w = p…` with a fresh `w`, so the concat structure is recoverable from the
+/// equalities alone.
+fn concat_def_for_root(
     arena: &TermArena,
     eqs: &[(TermId, TermId)],
     w: SymbolId,
-) -> Option<Vec<ConcatPart>> {
+) -> Option<(TermId, Vec<ConcatPart>)> {
     for &(l, r) in eqs {
         let other = match (arena.node(l), arena.node(r)) {
             (TermNode::Symbol(a), _) if *a == w => r,
             (_, TermNode::Symbol(b)) if *b == w => l,
             _ => continue,
         };
-        // A genuine concatenation, not a bare symbol/constant (a bare symbol is a
-        // variable-variable equality handled by the union-find; a bare constant is a
-        // pin the arrangement solves directly).
         if !matches!(
             arena.node(other),
             TermNode::App {
@@ -956,12 +1118,10 @@ fn concat_parts_for(
             {
                 parts.push(ConcatPart::Lit(seq_code_points(&elems)));
             } else {
-                // A non-constant, non-variable component (should not occur for a
-                // word-fragment concat) — decline the decomposition.
                 return None;
             }
         }
-        return Some(parts);
+        return Some((other, parts));
     }
     None
 }
@@ -987,13 +1147,19 @@ fn literal_regex(cps: &[u32]) -> Regex {
 /// within budget (or is unexpectedly empty), so the caller reports `Unknown`.
 ///
 /// A **membership-over-concat** operand `w` (one bound by `w = p₁ ++ p₂ ++ …`, see
-/// [`concat_parts_for`]) is witnessed in a second stage: its witness is searched over
-/// `R ∩ shape`, where `shape` concatenates each part's language — a first-stage
-/// witness (as a fixed literal) for a constrained component variable, the literal for
-/// a constant part, and `Σ*` for a free component variable. The intersection makes
-/// `w`'s witness *decomposable* into the parts (so the caller's pin-and-resolve can
-/// solve `w = p₁ ++ …` for the free components); the whole model still replays at the
-/// `Seq` level, so a wrong `sat` is impossible even if `shape` were imprecise.
+/// [`concat_def_for_root`]) is witnessed in a **joint** second stage. Operands bound
+/// to the *same* concatenation are grouped so their regexes intersect (`⋂R`), and the
+/// group is witnessed over `⋂R ∩ shape`, where `shape` concatenates each part's own
+/// membership **language** (`combined_regex`; `Σ*` for an unconstrained part). Using
+/// each part's *full language* — not a fixed first-stage witness — lets the search
+/// reconcile a tight whole-concat regex with loosely-constrained parts (the
+/// product-automaton search the `norn-*` rows need). The witnessed whole is pinned on
+/// every operand of the group, and the caller's `solve_word_equations` factors it into
+/// the part variables — which are therefore witnessed *neither* in Stage 1 *nor*
+/// pinned here (a standalone pin would fight the factorization). The whole model still
+/// replays at the `Seq` level, so a wrong `sat` is impossible even if `shape` were
+/// imprecise or the factorization misaligned (a misaligned factor fails replay ⇒
+/// `Unknown`).
 fn membership_witnesses(
     arena: &TermArena,
     eqs: &[(TermId, TermId)],
@@ -1043,18 +1209,31 @@ fn membership_witnesses(
     }
 
     // Recover the concat structure of each membership operand (a `str.in_re` over a
-    // `str.++`, rewritten by the parser to `w ∈ R ∧ w = parts`). A concat operand's
-    // witness is deferred to a second stage so its parts' first-stage witnesses can
-    // guide (shape) the search.
-    let concat_parts: BTreeMap<SymbolId, Vec<ConcatPart>> = classes
+    // `str.++`, rewritten by the parser to `w ∈ R ∧ w = parts`): the defining `str.++`
+    // term id and its parts. The term id groups operands bound to the same
+    // concatenation (⋂R below).
+    let concat_of_root: BTreeMap<SymbolId, (TermId, Vec<ConcatPart>)> = classes
         .keys()
-        .filter_map(|&root| concat_parts_for(arena, eqs, root).map(|parts| (root, parts)))
+        .filter_map(|&root| concat_def_for_root(arena, eqs, root).map(|d| (root, d)))
         .collect();
 
-    // Stage 1: witness the ordinary (non-concat) class roots.
+    // The concat-part variable roots: *derived* from the concat factorization by the
+    // caller's `solve_word_equations`, so they are witnessed neither in Stage 1 nor
+    // pinned in the output. Their own membership languages still shape the search.
+    let mut part_roots: HashSet<SymbolId> = HashSet::new();
+    for (_, parts) in concat_of_root.values() {
+        for p in parts {
+            if let ConcatPart::Var(s) = p {
+                part_roots.insert(uf.find(*s));
+            }
+        }
+    }
+
+    // Stage 1: witness the ordinary classes — neither a concat operand nor a concat
+    // part variable.
     let mut witness_by_root: BTreeMap<SymbolId, Vec<u32>> = BTreeMap::new();
     for (root, problem) in &classes {
-        if concat_parts.contains_key(root) {
+        if concat_of_root.contains_key(root) || part_roots.contains(root) {
             continue;
         }
         match problem.solve(budget) {
@@ -1067,55 +1246,86 @@ fn membership_witnesses(
         }
     }
 
-    // Stage 2: witness each concat operand over `R ∩ shape`, the shape built from the
-    // parts' Stage-1 witnesses (constrained), literals, or `Σ*` (free).
-    for (root, parts) in &concat_parts {
-        // The `R ∩ shape` intersection adds `Σ*` runs, so its derivative closure can
-        // be markedly larger than a bare `R`. Cap the closure/witness search
-        // conservatively (and bail on a past deadline) so a pathological concat regex
-        // is a fast decline-to-`Unknown`, never a multi-second grind — the emptiness
-        // closure itself does not poll the deadline.
-        if budget.past_deadline() {
-            return None;
-        }
-        let mut shape: Option<Regex> = None;
-        let mut push = |r: Regex| {
-            shape = Some(match shape.take() {
-                None => r,
-                Some(prev) => Regex::concat(prev, r),
-            });
-        };
-        for part in parts {
-            match part {
-                ConcatPart::Lit(cps) => push(literal_regex(cps)),
-                ConcatPart::Var(s) => match witness_by_root.get(&uf.find(*s)) {
-                    Some(w) => push(literal_regex(w)),
-                    None => push(Regex::star(Regex::any_char())),
-                },
-            }
-        }
-        let mut problem = classes.get(root).cloned().unwrap_or_default();
-        problem.positives.push(shape.unwrap_or(Regex::Empty));
-        // Witness-only (no emptiness pre-pass): the concat route never emits `unsat`,
-        // and the emptiness closure over `R ∩ shape` does not poll the deadline, so a
-        // pathological shape would grind. `Membership::witness` polls per node.
-        match problem.witness(budget, CONCAT_WITNESS_MAX_STATES, CONCAT_WITNESS_MAX_LEN) {
-            Some(w) => {
-                witness_by_root.insert(*root, w);
-            }
-            None => return None,
+    // Group concat operands by their defining `str.++` term (so `str.in_re`s over the
+    // same subject intersect their regexes into one joint problem).
+    let mut groups: BTreeMap<TermId, (Vec<SymbolId>, Vec<ConcatPart>)> = BTreeMap::new();
+    for (&root, (term, parts)) in &concat_of_root {
+        groups
+            .entry(*term)
+            .or_insert_with(|| (Vec::new(), parts.clone()))
+            .0
+            .push(root);
+    }
+
+    // Stage 2: witness each concat GROUP jointly over `⋂R ∩ shape` and pin the
+    // witnessed whole on every operand of the group (the caller's word solver factors
+    // it into the unpinned part variables).
+    for (roots, parts) in groups.values() {
+        let w = witness_concat_group(&classes, &mut uf, roots, parts, budget)?;
+        for r in roots {
+            witness_by_root.insert(*r, w.clone());
         }
     }
 
-    // Spread each class witness to every symbol in the class.
+    // Spread each class witness to every symbol in the class, EXCEPT the concat part
+    // variables — those are left free for the caller's word-equation factorization.
     let mut out: HashMap<SymbolId, Vec<u32>> = HashMap::new();
     for sym in all_syms {
         let root = uf.find(sym);
+        if part_roots.contains(&root) {
+            continue;
+        }
         if let Some(w) = witness_by_root.get(&root) {
             out.insert(sym, w.clone());
         }
     }
     Some(out)
+}
+
+/// Witnesses one **concat group** (operands bound to the same `str.++`) jointly over
+/// `⋂R ∩ shape`, where `⋂R` intersects every group operand's regexes and `shape`
+/// concatenates each part's own membership *language* (`combined_regex`; `Σ*` for an
+/// unconstrained part). Returns the code-point witness for the whole concatenation,
+/// or `None` on a past deadline or no witness within budget (⇒ the caller's
+/// `Unknown`).
+///
+/// The `⋂R ∩ shape` intersection adds `Σ*`/`re.comp` runs, so its derivative closure
+/// can be markedly larger than a bare `R` — but `Membership::witness` polls the
+/// deadline per node and the state cap bounds it, so a pathological concat regex is a
+/// fast decline, never a multi-second grind.
+fn witness_concat_group(
+    classes: &BTreeMap<SymbolId, Membership>,
+    uf: &mut UnionFind,
+    roots: &[SymbolId],
+    parts: &[ConcatPart],
+    budget: &SearchBudget,
+) -> Option<Vec<u32>> {
+    if budget.past_deadline() {
+        return None;
+    }
+    let mut problem = Membership::default();
+    for r in roots {
+        if let Some(p) = classes.get(r) {
+            problem.positives.extend(p.positives.iter().cloned());
+            problem.negatives.extend(p.negatives.iter().cloned());
+        }
+    }
+    let mut shape: Option<Regex> = None;
+    for part in parts {
+        let r = match part {
+            ConcatPart::Lit(cps) => literal_regex(cps),
+            ConcatPart::Var(s) => match classes.get(&uf.find(*s)) {
+                Some(p) => p.combined_regex(),
+                None => Regex::star(Regex::any_char()),
+            },
+        };
+        shape = Some(match shape.take() {
+            None => r,
+            Some(prev) => Regex::concat(prev, r),
+        });
+    }
+    problem.positives.push(shape.unwrap_or(Regex::Empty));
+    problem.witness(budget, CONCAT_WITNESS_MAX_STATES, CONCAT_WITNESS_MAX_LEN)
 }
 
 /// Builds the `Seq(BitVec(18))` **term** for a witness's Unicode code points, as

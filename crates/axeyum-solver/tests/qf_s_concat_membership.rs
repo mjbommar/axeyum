@@ -148,25 +148,28 @@ fn negated_concat_membership_sat() {
 // ---------------------------------------------------------------------------
 
 #[test]
-fn concat_membership_unsat_shape_never_reported_sat() {
+fn concat_membership_unsat_shape_certified_unsat() {
     // (x ++ "B" ++ y) ∈ L("AAA").  Every value of the concat contains a 'B', but
-    // "AAA" has none, so this is UNSAT.  The route does not (yet) certify concat
-    // emptiness, so it declines — but it must NEVER answer `sat`.
+    // "AAA" has none, so this is UNSAT — certified by the coarse-shape emptiness check
+    // (task #55): `shape = Σ*·"B"·Σ*`, and `"AAA" ∩ shape = ∅`.  It must NEVER be `sat`.
     let s = r#"(set-logic QF_S)
 (declare-const x String)
 (declare-const y String)
 (assert (str.in_re (str.++ x "B" y) (str.to_re "AAA")))
 (check-sat)"#;
-    // A decline (reproduced bounded parse error) or a first-class `unknown` are both
-    // sound here — only a `sat` would be a wrong verdict.
     assert!(
         !matches!(decide(s), Ok(CheckResult::Sat(_))),
         "UNSAT membership-over-concat wrongly reported sat"
     );
+    assert_eq!(
+        decide(s),
+        Ok(CheckResult::Unsat),
+        "coarse-shape emptiness should certify this concat membership UNSAT"
+    );
 }
 
 #[test]
-fn concat_membership_empty_language_never_reported_sat() {
+fn concat_membership_empty_language_certified_unsat() {
     // (x ++ "B" ++ y) ∈ re.none — the empty language, so UNSAT. Must never be `sat`.
     let s = r#"(set-logic QF_S)
 (declare-const x String)
@@ -176,5 +179,127 @@ fn concat_membership_empty_language_never_reported_sat() {
     assert!(
         !matches!(decide(s), Ok(CheckResult::Sat(_))),
         "membership over re.none must never be sat"
+    );
+    assert_eq!(decide(s), Ok(CheckResult::Unsat));
+}
+
+// ---------------------------------------------------------------------------
+// Task #55: coarse-shape concat emptiness (unsat), joint product-search (sat), and
+// the trivial-length-atom skeleton pass — the deferred `norn-*` decide-rate slice.
+// ---------------------------------------------------------------------------
+
+#[test]
+fn concat_emptiness_over_part_language_certified_unsat() {
+    // The `norn-simp-rew` reason: b ++ x with x ∈ (a-u)* must be ∉ (a-u)*, but
+    // b ∈ [a-u] and x ∈ (a-u)* ⇒ b ++ x ∈ (a-u)* — contradiction. The coarse-shape
+    // emptiness uses x's OWN positive membership as the part shape:
+    // `shape = "b"·(a-u)*`, `negatives = {(a-u)*}`, and `"b"(a-u)* ∩ ∁(a-u)* = ∅`.
+    let s = r#"(set-logic QF_S)
+(declare-const x String)
+(assert (str.in_re x (re.* (re.range "a" "u"))))
+(assert (not (str.in_re (str.++ "b" x) (re.* (re.range "a" "u")))))
+(check-sat)"#;
+    assert_eq!(
+        decide(s),
+        Ok(CheckResult::Unsat),
+        "b ++ x ∈ (a-u)* forced by x ∈ (a-u)* — negated membership is UNSAT"
+    );
+}
+
+#[test]
+fn joint_product_search_tight_whole_loose_parts_sat_replays() {
+    // The `norn-360` shape: the WHOLE `x ++ "z" ++ y` is tight (x only a's, y only
+    // b's, via `a* z b*`), while the parts are only loosely `(a|b)*`. The staged
+    // per-part witness cannot align them (it might pick x = "b"); the joint search over
+    // `⋂R ∩ shape` must. The Seq-level replay is the sole `sat` gate.
+    let s = r#"(set-logic QF_S)
+(declare-const x String)
+(declare-const y String)
+(assert (str.in_re (str.++ x "z" y) (re.++ (re.* (str.to_re "a")) (re.++ (str.to_re "z") (re.* (str.to_re "b"))))))
+(assert (str.in_re x (re.* (re.union (str.to_re "a") (str.to_re "b")))))
+(assert (str.in_re y (re.* (re.union (str.to_re "a") (str.to_re "b")))))
+(check-sat)"#;
+    let mut script = parse_script(s).expect("parse");
+    let CheckResult::Sat(model) = decide_word_only_script(&mut script, &cfg()).expect("decide")
+    else {
+        panic!("expected sat");
+    };
+    // Independently re-check the witnessed concatenation against every constraint.
+    let x = binding(&mut script, &model, "x");
+    let y = binding(&mut script, &model, "y");
+    let mut whole = x.clone();
+    whole.push(u32::from(b'z'));
+    whole.extend_from_slice(&y);
+    let a_star = Regex::star(Regex::character(u32::from(b'a')));
+    let b_star = Regex::star(Regex::character(u32::from(b'b')));
+    let whole_re = Regex::concat(
+        Regex::concat(a_star, Regex::character(u32::from(b'z'))),
+        b_star,
+    );
+    assert!(
+        matches(&whole_re, &whole),
+        "witnessed x={x:?} y={y:?} whole={whole:?} must be in a* z b*"
+    );
+}
+
+#[test]
+fn joint_product_search_negated_concat_membership_sat_replays() {
+    // The `norn-nel-bug` shape: a positive AND a negated concat membership over the
+    // same `"a" ++ v ++ "b"`. The joint search must pick v so the whole avoids the
+    // negated language while the parts stay loose. Seq-level replay is the sole gate.
+    let s = r#"(set-logic QF_S)
+(declare-const v String)
+(assert (str.in_re v (re.* (re.range "a" "u"))))
+(assert (str.in_re (str.++ "a" v "b") (re.* (re.range "a" "u"))))
+(assert (not (str.in_re (str.++ "a" v "b") (re.++ (re.* (str.to_re "a")) (re.++ (str.to_re "b") (re.* (str.to_re "b")))))))
+(check-sat)"#;
+    assert!(
+        matches!(decide(s), Ok(CheckResult::Sat(_))),
+        "expected sat via the joint product search"
+    );
+}
+
+#[test]
+fn concat_membership_actually_sat_not_over_refuted() {
+    // Soundness: a concat that IS satisfiable must NOT be certified unsat by the
+    // coarse-shape emptiness. b ++ x ∈ (a-u)* with x ∈ (a-u)* is SAT (x = "" ⇒ "b").
+    // `shape = "b"(a-u)*`, `positives = {(a-u)*, shape}`, non-empty ⇒ never refuted.
+    let s = r#"(set-logic QF_S)
+(declare-const x String)
+(assert (str.in_re x (re.* (re.range "a" "u"))))
+(assert (str.in_re (str.++ "b" x) (re.* (re.range "a" "u"))))
+(check-sat)"#;
+    assert!(
+        matches!(decide(s), Ok(CheckResult::Sat(_))),
+        "a satisfiable concat membership must not be over-refuted to unsat"
+    );
+}
+
+#[test]
+fn trivial_length_guard_does_not_collapse_word_skeleton() {
+    // A tautological `(<= 0 (str.len x))` guard must NOT collapse the membership
+    // skeleton (task #55): the online route builds and decides the row.
+    let with_trivial = r#"(set-logic QF_S)
+(declare-const x String)
+(assert (str.in_re x (re.range "a" "u")))
+(assert (<= 0 (str.len x)))
+(check-sat)"#;
+    let script = parse_script(with_trivial).expect("parse");
+    assert!(
+        !script.word_skeleton.is_empty(),
+        "a trivial (<= 0 (str.len x)) guard must not collapse the word skeleton"
+    );
+
+    // A NON-trivial length atom is still outside the skeleton fragment — it declines
+    // (the pass is deliberately narrow to only the always-true shapes).
+    let with_real_len = r#"(set-logic QF_S)
+(declare-const x String)
+(assert (str.in_re x (re.range "a" "u")))
+(assert (<= (str.len x) 5))
+(check-sat)"#;
+    let script2 = parse_script(with_real_len).expect("parse");
+    assert!(
+        script2.word_skeleton.is_empty(),
+        "a real length bound must still collapse the word skeleton (narrow pass)"
     );
 }
