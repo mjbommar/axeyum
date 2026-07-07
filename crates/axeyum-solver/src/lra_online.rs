@@ -62,6 +62,20 @@ use crate::model::Model;
 /// "don't know", treated as feasible — never a wrong `unsat`).
 const MAX_FM_CONSTRAINTS: usize = 20_000;
 
+/// Defense-in-depth ceiling on [`Dpll::solve_with_deadline`] main-loop iterations
+/// when no wall-clock deadline is configured (`config.timeout == None`, the
+/// [`SolverConfig::default`] and the `wasm32` case). The loop already polls the
+/// deadline at its head and inside every propagation fixpoint, so a *deadline-set*
+/// run cannot spin; this belt is the braces for the *no-deadline* run, guaranteeing
+/// the search cannot livelock on a pathological / non-monotone theory. Exhaustion
+/// is **sound** — the loop degrades to a graceful `None` (⇒ [`CheckResult::Unknown`]
+/// upstream), never a wrong `sat`/`unsat`. Mirrors [`crate::cdclt`]'s
+/// `DEFAULT_STEP_BUDGET` so both online CDCL(T) drivers carry the identical
+/// termination guarantee (ADR-0060). The value is deliberately enormous: a real
+/// query that runs 16M CDCL main-loop iterations without a deadline is already
+/// pathological, so no in-corpus instance is turned into `Unknown` by the belt.
+const DEFAULT_STEP_BUDGET: usize = 16_000_000;
+
 /// A linear expression `Σ coeff_i · x_i + constant` over densely-indexed real
 /// variables. A local mirror of the offline `lra::LinExpr` (kept private there);
 /// all arithmetic is `i128`-`checked_*`, returning `None` on overflow so the
@@ -1088,6 +1102,16 @@ pub(crate) struct Dpll {
     /// conflict-clause lengths). Compiled out of the production library.
     #[cfg(test)]
     diag: Diagnostics,
+    /// Defense-in-depth main-loop iteration ceiling (starts at
+    /// [`DEFAULT_STEP_BUDGET`]); [`Self::solve_with_deadline`] degrades to a
+    /// graceful decline once [`Self::steps`] reaches it, so the no-deadline search
+    /// cannot livelock on a pathological theory. Sound — exhaustion is `Unknown`.
+    step_budget: usize,
+    /// Main-loop iterations taken so far (the step-budget counter).
+    steps: usize,
+    /// Set once the step budget was exhausted, so a test can distinguish a
+    /// budget-driven decline from a deadline-driven one.
+    step_budget_hit: bool,
 }
 
 /// Stable snapshot of the shared online DPLL(T) state for timeout diagnostics.
@@ -1202,7 +1226,26 @@ impl Dpll {
             restart_unit_override: None,
             #[cfg(test)]
             diag,
+            step_budget: DEFAULT_STEP_BUDGET,
+            steps: 0,
+            step_budget_hit: false,
         }
+    }
+
+    /// Overrides the defense-in-depth step budget (see [`DEFAULT_STEP_BUDGET`]).
+    /// Test-only: production always uses the default enormous ceiling so no
+    /// in-corpus query is turned into `Unknown` by the belt.
+    #[cfg(test)]
+    pub(crate) fn with_step_budget(mut self, budget: usize) -> Self {
+        self.step_budget = budget;
+        self
+    }
+
+    /// Whether the last [`Self::solve_with_deadline`] ended by exhausting the step
+    /// budget (rather than the deadline or a real verdict). Test-only.
+    #[cfg(test)]
+    pub(crate) fn step_budget_hit(&self) -> bool {
+        self.step_budget_hit
     }
 
     fn lit_sat(&self, lit: Lit) -> Option<bool> {
@@ -1892,6 +1935,15 @@ impl Dpll {
         deadline: Option<Instant>,
     ) -> Option<bool> {
         loop {
+            // Defense in depth against a non-monotone-theory livelock: bound the
+            // main-loop iterations even with no deadline (the default `SolverConfig`
+            // and `wasm32`). Sound — `None` (⇒ `Unknown` upstream) is a permitted
+            // verdict — never a wrong sat/unsat. Mirrors `crate::cdclt::CdclT::solve`.
+            if self.steps >= self.step_budget {
+                self.step_budget_hit = true;
+                return None;
+            }
+            self.steps += 1;
             if deadline.is_some_and(|d| Instant::now() >= d) {
                 return None;
             }
@@ -3449,5 +3501,201 @@ mod tests {
              (unsat, restarts) {first:?} != {second:?}"
         );
         assert!(first.1 > 0, "expected restarts to fire (count={})", first.1);
+    }
+}
+
+#[cfg(test)]
+mod step_budget_termination_tests {
+    //! Termination re-verify for the shared arith online CDCL(T) driver
+    //! ([`Dpll`]) under **no wall-clock deadline** — the belt that closes the
+    //! `deadline == None` livelock hole (ADR-0060, mirroring `crate::cdclt`'s
+    //! `DEFAULT_STEP_BUDGET` gate from ADR-0055). The driver already polls the
+    //! deadline at the loop head + every propagation fixpoint, so a *deadline-set*
+    //! run cannot spin; these tests pin that even a *deadline-free* run degrades to
+    //! a graceful decline (`None` ⇒ `Unknown` upstream) rather than hanging, and
+    //! that the belt is strictly additive (never changes a verdict it does not trip).
+
+    use super::{Dpll, Lit};
+    use crate::euf_egraph::{TheoryLit, TheoryProp, TheorySolver};
+
+    /// A trivial theory that accepts every atom: no conflicts, no propagations. Lets
+    /// the driver run as a pure Boolean CDCL search so the belt is tested against a
+    /// verdict-unambiguous instance (the Boolean skeleton alone decides).
+    struct AcceptAll;
+
+    impl TheorySolver for AcceptAll {
+        fn assert(&mut self, _atom: usize, _value: bool) -> Result<(), Vec<TheoryLit>> {
+            Ok(())
+        }
+        fn push(&mut self) {}
+        fn pop(&mut self) {}
+        fn propagate(&self) -> Vec<TheoryProp> {
+            Vec::new()
+        }
+    }
+
+    /// A **sound, complete-on-total** forbidding theory whose *core reporting* is
+    /// non-monotone in shape: `atom 0 = true` is genuinely forbidden, so it always
+    /// reports a conflict when `atom 0` is asserted true (completeness — no wrong
+    /// `sat` can slip through), but it alternates between the minimal core `{0=true}`
+    /// and a padded superset that also carries `atom 0 = true` twice-safe siblings —
+    /// mirroring how the real combination theories return variable-shaped cores per
+    /// assert. Every reported core is a genuine `¬(atom0)` lemma, so the driver's
+    /// 1-UIP resolution is stressed on a hostile schedule while the verdict stays
+    /// well-defined (`atom 0` must be false).
+    struct ForbidZeroVaryingCore {
+        toggle: bool,
+    }
+
+    impl ForbidZeroVaryingCore {
+        fn new() -> Self {
+            Self { toggle: false }
+        }
+    }
+
+    impl TheorySolver for ForbidZeroVaryingCore {
+        fn assert(&mut self, atom: usize, value: bool) -> Result<(), Vec<TheoryLit>> {
+            if atom == 0 && value {
+                self.toggle = !self.toggle;
+                // Always a genuine `¬{0=true}` lemma (soundness + completeness on any
+                // assignment that sets `atom 0` true); the padded variant repeats the
+                // same forbidden literal, a sound (if redundant) superset core.
+                return Err(if self.toggle {
+                    vec![TheoryLit {
+                        atom: 0,
+                        value: true,
+                    }]
+                } else {
+                    vec![
+                        TheoryLit {
+                            atom: 0,
+                            value: true,
+                        },
+                        TheoryLit {
+                            atom: 0,
+                            value: true,
+                        },
+                    ]
+                });
+            }
+            Ok(())
+        }
+        fn push(&mut self) {}
+        fn pop(&mut self) {}
+        fn propagate(&self) -> Vec<TheoryProp> {
+            Vec::new()
+        }
+    }
+
+    /// Builds the pigeonhole CNF PHP(pigeons, holes) as a `Vec<Vec<Lit>>` over
+    /// variables `v(i, h) = i * holes + h`. UNSAT exactly when `pigeons > holes`; a
+    /// hard-enough search that a small step budget cannot exhaust it.
+    fn php(pigeons: usize, holes: usize) -> (usize, Vec<Vec<Lit>>) {
+        let var = |i: usize, h: usize| i * holes + h;
+        let mut clauses: Vec<Vec<Lit>> = Vec::new();
+        // Each pigeon sits in at least one hole.
+        for i in 0..pigeons {
+            clauses.push(
+                (0..holes)
+                    .map(|h| Lit {
+                        var: var(i, h),
+                        positive: true,
+                    })
+                    .collect(),
+            );
+        }
+        // No two pigeons share a hole.
+        for h in 0..holes {
+            for i in 0..pigeons {
+                for j in (i + 1)..pigeons {
+                    clauses.push(vec![
+                        Lit {
+                            var: var(i, h),
+                            positive: false,
+                        },
+                        Lit {
+                            var: var(j, h),
+                            positive: false,
+                        },
+                    ]);
+                }
+            }
+        }
+        (pigeons * holes, clauses)
+    }
+
+    #[test]
+    fn full_budget_decides_php_unsat_no_deadline() {
+        // With the default (enormous) step budget and NO deadline, the driver decides
+        // the hard PHP(5,4) instance UNSAT — the additivity anchor: the belt never
+        // trips on a real query, so the verdict is the true one.
+        let (nvars, clauses) = php(5, 4);
+        let mut solver = Dpll::new(nvars, 0, clauses);
+        let verdict = solver.solve_with_deadline(&mut AcceptAll, None);
+        assert_eq!(verdict, Some(true), "PHP(5,4) is UNSAT");
+        assert!(
+            !solver.step_budget_hit(),
+            "the default budget must not trip on a normal query"
+        );
+    }
+
+    #[test]
+    fn tiny_budget_declines_within_budget_no_deadline() {
+        // The livelock belt: with a tiny step budget and NO deadline, the search on a
+        // hard instance degrades to a graceful decline (`None`) via the budget — never
+        // a hang, never a (wrong) verdict. This is the regression that pins the poll.
+        let (nvars, clauses) = php(5, 4);
+        let mut solver = Dpll::new(nvars, 0, clauses).with_step_budget(5);
+        let verdict = solver.solve_with_deadline(&mut AcceptAll, None);
+        assert_eq!(
+            verdict, None,
+            "the step budget must force a graceful decline"
+        );
+        assert!(
+            solver.step_budget_hit(),
+            "the decline must be attributed to the step budget, not a deadline"
+        );
+    }
+
+    #[test]
+    fn varying_core_theory_terminates_no_deadline() {
+        // A sound theory with hostile, varying-shape conflict cores that forbids
+        // `atom 0 = true`: the driver must TERMINATE (return a verdict) with the
+        // default budget and NO deadline — no livelock. The clause set
+        // `(0 ∨ 1) ∧ (0 ∨ 2)` with the theory's `¬0` fact is satisfiable
+        // (`0=false, 1=true, 2=true`), so the sound outcome is SAT (`Some(false)`).
+        let clauses = vec![
+            vec![
+                Lit {
+                    var: 0,
+                    positive: true,
+                },
+                Lit {
+                    var: 1,
+                    positive: true,
+                },
+            ],
+            vec![
+                Lit {
+                    var: 0,
+                    positive: true,
+                },
+                Lit {
+                    var: 2,
+                    positive: true,
+                },
+            ],
+        ];
+        let mut solver = Dpll::new(3, 3, clauses);
+        let verdict = solver.solve_with_deadline(&mut ForbidZeroVaryingCore::new(), None);
+        assert_eq!(
+            verdict,
+            Some(false),
+            "the varying-core theory run must terminate with the sound SAT verdict"
+        );
+        assert!(
+            !solver.step_budget_hit(),
+            "a well-behaved (if hostile) run must finish well inside the budget"
+        );
     }
 }
