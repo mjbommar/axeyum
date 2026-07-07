@@ -322,16 +322,28 @@ fn audit_instance(
     let evidence_certified = report.evidence.is_certified();
     mark_phase(progress, "check-evidence");
     let check_start = Instant::now();
-    // For a string script the verdict comes from `solve_smtlib`: its `sat` model is a
-    // Seq-level witness (already replay-checked inside the string routes) and its `unsat`
-    // is a bare-but-sound theory conflict — neither is an arena-checkable certificate
-    // against the bounded/empty flat view here (running `check` would either replay a
-    // Seq model against the wrong view or accept a bare `unsat` vacuously). Record
-    // `evidence_checked` HONESTLY as false; a transferable in-tree string certificate is
-    // separate future work (#58). The KEY audited field is `baseline_matches_audit`,
-    // which is now correct because the verdict itself is sound.
+    // For a string script only a certified evidence whose `check` performs a GENUINE
+    // self-contained re-derivation counts. Two vacuous-`Ok(true)` traps must both be
+    // excluded here, or the audit would over-credit:
+    //   1. A bare `Evidence::Unsat(None)` (word clash, concat/length conflict) is
+    //      correct-but-uncertified; its `check` returns a vacuous `Ok(true)`. Gating on
+    //      `is_certified()` FIRST excludes it (`is_certified()` is false for `Unsat(None)`).
+    //   2. A string `sat` is `Evidence::Sat(seq_model)` — `is_certified()` IS true, but the
+    //      Seq-level witness has no in-tree assertion view to replay against here (the flat
+    //      arena is the bounded/empty view, and we pass `&[]`), so `check` iterates zero
+    //      assertions and returns a vacuous `Ok(true)`. The route already Seq-replay-checked
+    //      that model internally; this audit records it HONESTLY as unchecked (as #64 did).
+    // What remains is the regex derivative-emptiness class (#58): a transferable
+    // `Evidence::UnsatRegexEmptiness` whose `check` re-derives the emptiness certificate from
+    // a self-contained `Membership` (ignoring the arena) and re-runs the kernel — a real
+    // independent re-validation, credited here.
     let evidence_checked = if is_string_script {
-        false
+        evidence_certified
+            && !matches!(report.evidence, Evidence::Sat(_))
+            && report
+                .evidence
+                .check(&evidence_script.arena, &[])
+                .unwrap_or(false)
     } else {
         report
             .evidence
@@ -362,9 +374,20 @@ fn audit_instance(
     let mut lean_module_bytes = JsonValue::Null;
     let mut parse_lean_ms = JsonValue::Null;
     let mut lean_reconstruction_ms = JsonValue::Null;
-    // String-script `unsat` is a Seq-level theory conflict, not an arena refutation, so
-    // the arena Lean reconstruction does not apply; leave `lean_checked` honestly false.
-    if audit_outcome == Verdict::Unsat && !is_string_script {
+    // A string-script `unsat` that is the certified regex derivative-emptiness class carries a
+    // kernel-checked Lean `False` module that `check` re-derives from first principles; credit
+    // `lean_checked` only for that variant (and only when `evidence_checked` — the honest
+    // re-derivation — passed). Bare `Evidence::Unsat(None)` string unsats (word clash,
+    // concat/length) have no arena refutation and no Lean module, so they stay honestly false.
+    if is_string_script {
+        if let Evidence::UnsatRegexEmptiness { lean_module, .. } = &report.evidence
+            && evidence_checked
+        {
+            lean_fragment = json!("RegexEmptiness");
+            lean_module_bytes = json!(lean_module.len());
+            lean_checked = true;
+        }
+    } else if audit_outcome == Verdict::Unsat {
         mark_phase(progress, "parse-lean");
         let parse_lean_start = Instant::now();
         match parse_script(&text) {
