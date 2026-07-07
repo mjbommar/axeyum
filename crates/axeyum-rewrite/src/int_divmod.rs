@@ -8,7 +8,12 @@
 //! Replacing the terms with fresh variables `q, r` and adding those linear
 //! constraints is therefore an **exact, equisatisfiable** encoding (not a
 //! relaxation): a simplex `unsat` transfers soundly to the original. `c = 0`
-//! uses the in-tree convention (`div a 0 = 0`, `mod a 0 = a`). `abs a` becomes a
+//! (div/mod by a constant zero) is **UNDERSPECIFIED** in SMT-LIB — any
+//! total-function value — so it maps to a **fresh unconstrained variable**,
+//! never a fixed convention: committing to `div a 0 = 0` would be a valid
+//! *witness* but an unsound *unsat* (a formula sat under a different free value
+//! would be wrongly refuted — the P0 regressed by `a946f925`, fixed by
+//! `52f3b1d1`). `abs a` becomes a
 //! fresh `v` with `v ≥ a ∧ v ≥ −a ∧ (v = a ∨ v = −a)` (i.e. `v = |a|`); the
 //! disjunction needs the Boolean-structured (DPLL) integer path.
 
