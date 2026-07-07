@@ -166,6 +166,22 @@ fn check_with_nra_impl(
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> Result<CheckResult, SolverError> {
+    // Cheap syntactic even-power refutation, tried FIRST: a top-level conjunct of
+    // the shape `Σ tᵢ^{2kᵢ} + c < 0` (a sum of syntactic even powers plus a
+    // nonnegative rational constant, right side zero) is impossible because every
+    // even power is `≥ 0`, so the sum is `≥ c ≥ 0`, never `< 0`. This is a
+    // from-first-principles nonnegativity fact — the matcher (`nra_even_power`) is
+    // deliberately narrow and the certificate is re-scanned in the evidence route,
+    // so acting on it here is sound. It fires in O(term size) and closes the whole
+    // shifted-sum-of-even-powers family (`sos-strict-unsat-dN`, the `nra_degree`
+    // frontier) at ANY degree — the linear-abstraction relaxation below only reaches
+    // degree 4 before the McCormick/branch-and-bound search times out. Declines
+    // (`None`) on every other shape, so it never weakens the search or risks an
+    // unsound verdict.
+    if crate::nra_even_power::nra_even_power_refutation(arena, assertions).is_some() {
+        return Ok(CheckResult::Unsat);
+    }
+
     // Complete, exact decision for pure real-polynomial constraints (single- and
     // multi-variable), including polynomial *identities* whose negation collapses to
     // a constant comparison `0 ⋈ 0`. This is the same sound decider the `solve`

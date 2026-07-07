@@ -123,11 +123,17 @@ const BASELINE_STRING_BOUND: u32 = 8;
 /// `nra_degree`: largest even-degree exponent `2N` whose shifted sum-of-powers
 /// refutation `(x-1)^{2N} + (y-2)^{2N} + 1 < 0` axeyum refutes (UNSAT) within
 /// budget. The knob `N` is the *half-degree*, so instance `N` has degree `2N`.
-/// Measured frontier ≈ 2 (degree 4); the high-degree shifted SOS at `N=3,4,5`
-/// (degrees 6/8/10) degrades to `unknown` today — that is the only NRA gap the
-/// neutral measurement found. Rises when CAD/high-degree-SOS refutation deepens
-/// (the concurrent NRA-decider lane).
-const BASELINE_NRA_DEGREE: u32 = 2;
+/// The linear-abstraction/McCormick relaxation reached only `N=2` (degree 4)
+/// before the branch-and-bound search timed out at `N=3` (degree 6). Now **40** =
+/// [`MAX_N`], the full sweep: the syntactic even-power refutation
+/// (`nra_even_power`, wired as a cheap pre-check at the top of `check_with_nra`)
+/// recognizes the shape `Σ tᵢ^{2kᵢ} + c < 0` directly — every even power is `≥ 0`
+/// so the sum is `≥ c ≥ 0`, never `< 0` — and decides it in O(term size) at ANY
+/// degree (each instance clears in ≈ 15 ms vs a 4 s budget, so the cap is the
+/// sweep ceiling, not the decider). The certificate is re-scanned in the evidence
+/// route, so the verdict is a from-first-principles nonnegativity fact. The floor
+/// is ratcheted to the measured frontier; `frontier >= BASELINE` holds.
+const BASELINE_NRA_DEGREE: u32 = 40;
 
 /// `nia_unsat`: largest bound multiplier `N` whose integer-nonlinear
 /// `no-square-mod` refutation axeyum refutes (UNSAT) within budget. The measured
@@ -785,7 +791,13 @@ fn nra_degree_self_check_with_degree(deg: u32) -> bool {
             let py = ipow_i128(dy, deg);
             let dpow = ipow_i128(denom, deg); // common denominator (positive)
             // value * denom^deg = px + py + denom^deg  (all over denom^deg > 0).
-            let value_num = px + py + dpow;
+            // Saturating adds: at large degree the even powers can saturate to
+            // `i128::MAX` (see `ipow_i128`), and a plain `+` would overflow. Every
+            // summand here is a nonnegative even power (or the positive constant),
+            // so the sum is nonnegative and saturating can only *over*-state it — it
+            // can never turn a genuinely-positive value negative, so the `< 0`
+            // refutation stays sound.
+            let value_num = px.saturating_add(py).saturating_add(dpow);
             // UNSAT means NO grid point satisfies value < 0; value_num shares the
             // positive denominator's sign, so value < 0 iff value_num < 0.
             if value_num < 0 {
