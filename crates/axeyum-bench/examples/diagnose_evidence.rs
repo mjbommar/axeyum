@@ -88,6 +88,7 @@ fn evidence_kind(evidence: &Evidence) -> &'static str {
         Evidence::UnsatTwoByteXorSwapRoundtrip(_) => "two-byte-xor-swap-roundtrip-unsat",
         Evidence::UnsatBinarySearch16(_) => "binary-search16-unsat",
         Evidence::UnsatFifoBc04(_) => "fifo-bc04-unsat",
+        Evidence::UnsatRegexEmptiness { .. } => "regex-emptiness-unsat",
         Evidence::Unknown(_) => "unknown",
     }
 }

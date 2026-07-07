@@ -484,6 +484,25 @@ pub fn membership_verdict(script: &mut Script, config: &SolverConfig) -> Option<
 /// decided.
 #[must_use]
 pub fn membership_unsat_lean_module(script: &Script, config: &SolverConfig) -> Option<String> {
+    membership_unsat_certificate(script, config).map(|(_, module)| module)
+}
+
+/// The **transferable** form of [`membership_unsat_lean_module`]: alongside the
+/// kernel-checked Lean module, return the deciding
+/// [`Membership`](axeyum_strings::Membership) object itself, so a downstream
+/// [`Evidence`](crate::Evidence) carrier can re-derive the certificate from first
+/// principles later (the stored module string is an output artifact, never trusted
+/// on its own — the `Membership` is the self-contained re-check input, mirroring how
+/// [`Evidence::UnsatDiophantine`](crate::Evidence::UnsatDiophantine) re-derives).
+///
+/// Same decision loop, same decline conditions (no side channel, `sat`/`unknown`, a
+/// pinned-witness refutation, or a reconstruction-cap decline) as
+/// [`membership_unsat_lean_module`]; it never changes the verdict.
+#[must_use]
+pub fn membership_unsat_certificate(
+    script: &Script,
+    config: &SolverConfig,
+) -> Option<(axeyum_strings::Membership, String)> {
     let problem = script.membership_problem.as_ref()?;
     let budget = membership_budget(config);
     for var in &problem.vars {
@@ -503,7 +522,9 @@ pub fn membership_unsat_lean_module(script: &Script, config: &SolverConfig) -> O
             // reconstruct it to a kernel-checked Lean `False` (or decline to `None`
             // within the reconstruction caps — never a wrong module).
             MembershipOutcome::Unsat => {
-                return crate::reconstruct_regex_emptiness_to_lean_module(&var.membership).ok();
+                let module =
+                    crate::reconstruct_regex_emptiness_to_lean_module(&var.membership).ok()?;
+                return Some((var.membership.clone(), module));
             }
             // A satisfiable / undecided class does not decide `unsat`; keep scanning
             // for the deciding class, exactly as the route does.

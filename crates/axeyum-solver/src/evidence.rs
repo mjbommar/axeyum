@@ -476,6 +476,30 @@ pub enum Evidence {
     /// transition equality bits and independently checks the finite FIFO
     /// equivalence theorem for the benchmark bound.
     UnsatFifoBc04(FifoBc04Certificate),
+    /// Unsatisfiable (`QF_S`/`QF_SLIA` regex membership): a **kernel-checked
+    /// derivative-emptiness** refutation (#44/#52). A single-variable membership
+    /// class `x ∈ ⋂Rᵢ ∖ ⋃Nⱼ` is certified empty by a complete, nullable-free,
+    /// re-checked derivative closure; the carried `lean_module` is the reconstruction
+    /// of that certificate to a kernel-`infer`-checked Lean `False`.
+    ///
+    /// Regexes are **not** representable in the `axeyum-ir` term arena — they live in
+    /// the parser's [`MembershipProblem`](axeyum_smtlib::MembershipProblem) side
+    /// channel — so unlike the arena-scanning certificates above, [`Evidence::check`]
+    /// re-derives this one from the self-contained
+    /// [`membership`](Evidence::UnsatRegexEmptiness::membership) object (ignoring the
+    /// bounded/empty arena view), never trusting the stored module string. This is the
+    /// transferable, checkable counterpart of the bare-but-sound
+    /// [`Evidence::Unsat(None)`](Evidence::Unsat) that
+    /// [`produce_evidence_smtlib`] emits for the yet-uncertified string `unsat`
+    /// classes (word clash, concat/length conflict).
+    UnsatRegexEmptiness {
+        /// The deciding single-variable membership problem — the self-contained
+        /// re-derivation input for [`Evidence::check`].
+        membership: axeyum_strings::Membership,
+        /// The kernel-checked Lean `False` module reconstructed from the emptiness
+        /// certificate; an output artifact, re-derived (not trusted) on re-check.
+        lean_module: String,
+    },
     /// Undecided, with the classified reason.
     Unknown(UnknownReason),
 }
@@ -531,6 +555,7 @@ impl Evidence {
             Evidence::UnsatTwoByteXorSwapRoundtrip(_) => "unsat-two-byte-xor-swap-roundtrip",
             Evidence::UnsatBinarySearch16(_) => "unsat-binary-search-16",
             Evidence::UnsatFifoBc04(_) => "unsat-fifo-bc04",
+            Evidence::UnsatRegexEmptiness { .. } => "unsat-regex-emptiness",
             Evidence::Unknown(_) => "unknown",
         }
     }
@@ -697,6 +722,15 @@ impl Evidence {
             | Evidence::UnsatFifoBc04(_) => {
                 Ok(check_direct_structural_evidence(self, arena, assertions))
             }
+            // Regex membership emptiness (#44/#52): re-derive the certificate from the
+            // self-contained `Membership` from first principles and re-run the kernel
+            // `infer`/`def_eq False` check inside the reconstructor — the stored module
+            // string is never trusted on its own. Regexes are not in the term arena, so
+            // this ignores `arena`/`assertions` (they are the bounded/empty flat view).
+            // A reconstruction decline is a clean `Ok(false)`, never a bad certificate.
+            Evidence::UnsatRegexEmptiness { membership, .. } => {
+                Ok(crate::reconstruct_regex_emptiness_to_lean_module(membership).is_ok())
+            }
             Evidence::Unsat(None) | Evidence::Unknown(_) => Ok(true),
         }
     }
@@ -748,6 +782,7 @@ impl Evidence {
                 | Evidence::UnsatTwoByteXorSwapRoundtrip(_)
                 | Evidence::UnsatBinarySearch16(_)
                 | Evidence::UnsatFifoBc04(_)
+                | Evidence::UnsatRegexEmptiness { .. }
         )
     }
 }
@@ -2151,10 +2186,20 @@ pub fn produce_evidence_smtlib(
         // as-is (its faithful re-check is the Seq-level evaluation the route already
         // ran, not an arena replay against the bounded/empty view).
         CheckResult::Sat(model) => Evidence::Sat(model),
-        // A certified word-clash / regex-emptiness / concat-emptiness / length
-        // conflict decided the `unsat`; record the correct verdict as a bare (but
-        // sound) `unsat` — a transferable string refutation object is future work.
-        CheckResult::Unsat => Evidence::Unsat(None),
+        // A word-clash / regex-emptiness / concat-emptiness / length conflict decided
+        // the `unsat`. When the deciding class is a **regex derivative-emptiness**
+        // membership refutation, we can carry the same kernel-checked certificate #52
+        // wires into the live path (re-derivable from the `Membership` — check() re-runs
+        // it, never trusting the module string). The other string `unsat` classes have
+        // no transferable in-tree certificate object yet, so they stay a correct
+        // bare-but-sound `Evidence::Unsat(None)` (word-clash certification is #58b).
+        CheckResult::Unsat => match crate::membership_unsat_certificate(&script, config) {
+            Some((membership, lean_module)) => Evidence::UnsatRegexEmptiness {
+                membership,
+                lean_module,
+            },
+            None => Evidence::Unsat(None),
+        },
         CheckResult::Unknown(reason) => Evidence::Unknown(reason),
     };
     Ok(EvidenceReport {
@@ -2782,7 +2827,8 @@ pub fn prove(
         | Evidence::UnsatTwoCellXorSwap(_)
         | Evidence::UnsatTwoByteXorSwapRoundtrip(_)
         | Evidence::UnsatBinarySearch16(_)
-        | Evidence::UnsatFifoBc04(_) => {
+        | Evidence::UnsatFifoBc04(_)
+        | Evidence::UnsatRegexEmptiness { .. } => {
             if !report.evidence.check(arena, &query)? {
                 return Err(SolverError::Backend(
                     "prove: refutation of the negated goal failed its own check".to_owned(),
