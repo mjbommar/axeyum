@@ -49,6 +49,11 @@ Out of scope:
 | `rotate_left/right k` | `k >= n` | Rotation by `k mod n` |
 | `concat` | Width overflow past max width | Static build error |
 
+Every partial/underspecified operator's fuzz-coverage status (which
+differential fuzz deliberately emits its degenerate argument) is tracked as an
+enforceable per-operator checklist in
+[underspecified-operator-fuzz-coverage.md](underspecified-operator-fuzz-coverage.md).
+
 ## Design Implications
 
 - Implement and property-test the evaluator before the rewriter; the rewriter

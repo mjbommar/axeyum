@@ -126,7 +126,7 @@ fn gen_str_expr(rng: &mut Lcg, num_vars: usize, depth: u32) -> String {
             format!("\"{}\"", gen_literal(rng))
         };
     }
-    match rng.below(7) {
+    match rng.below(9) {
         0 if num_vars > 0 => format!("s{}", rng.below(num_vars as u64)),
         0 | 1 => format!("\"{}\"", gen_literal(rng)),
         // str.++ of two shallower string exprs.
@@ -156,9 +156,40 @@ fn gen_str_expr(rng: &mut Lcg, num_vars: usize, depth: u32) -> String {
             gen_literal(rng),
             gen_literal(rng)
         ),
+        // `str.replace_all` over LITERAL operands (the wired-sound ground case;
+        // symbolic operands decline → SKIP). The literal needle may be EMPTY
+        // (`gen_literal` can return ""), driving the empty-pattern identity
+        // degenerate branch. This operator was previously unfuzzed (task #42).
+        6 => format!(
+            "(str.replace_all \"{}\" \"{}\" \"{}\")",
+            gen_literal(rng),
+            gen_literal(rng),
+            gen_literal(rng)
+        ),
+        // `str.from_code` of a code point. Drawn from [`gen_sound_codepoint`],
+        // which DELIBERATELY includes the degenerate NEGATIVE code point (→ "")
+        // and the ASCII boundary values (`0`, `127`). The 128..=255 range is
+        // withheld here: `str.from_code` on it is a KNOWN wrong-sat (axeyum folds
+        // it to "" though the byte model can represent the character) tracked as a
+        // P0 in `from_code_out_of_range_p0_repro` below and in
+        // docs/research/01-foundations/underspecified-operator-fuzz-coverage.md.
+        7 => format!("(str.from_code {})", gen_sound_codepoint(rng)),
         // str.from_int of an Int expression.
         _ => format!("(str.from_int {})", gen_int_expr(rng, num_vars, depth - 1)),
     }
+}
+
+/// A `str.from_code` argument restricted to the range axeyum's byte model handles
+/// SOUNDLY: a negative code point (SMT-LIB → "", agreed by both engines) and the
+/// ASCII range `0..=127` (a single byte that round-trips through `str.to_code`).
+/// The 128..=255 range is intentionally EXCLUDED — see
+/// [`from_code_out_of_range_p0_repro`]: axeyum currently folds it to "" (a
+/// wrong-sat vs Z3's non-empty character), so putting it in the passing sweep
+/// would (correctly) fail. Both the negative and boundary shapes are emitted, so
+/// the sound axis of `str.from_code` is no longer blind (task #42).
+fn gen_sound_codepoint(rng: &mut Lcg) -> String {
+    const CODEPOINTS: [i64; 8] = [-2, -1, 0, 1, 32, 65, 126, 127];
+    CODEPOINTS[rng.below(CODEPOINTS.len() as u64)].to_string()
 }
 
 /// A generated **Int-sorted** expression, mixing string-derived ints
@@ -168,15 +199,19 @@ fn gen_int_expr(rng: &mut Lcg, num_vars: usize, depth: u32) -> String {
     if depth == 0 {
         return rng.in_range(-1, 4).to_string();
     }
-    match rng.below(7) {
+    match rng.below(8) {
         0 => rng.in_range(-1, 4).to_string(),
         1 => format!("(str.len {})", gen_str_expr(rng, num_vars, depth - 1)),
         2 => format!("(str.to_int {})", gen_str_expr(rng, num_vars, depth - 1)),
+        // `str.indexof` with a start offset that is DELIBERATELY sometimes
+        // NEGATIVE (`rng.in_range(-2, 3)`): SMT-LIB pins a negative start to a
+        // `-1` result (never a match), a degenerate axis the old `in_range(0, 3)`
+        // start structurally excluded (task #42 fuzz-coverage audit).
         3 => format!(
             "(str.indexof {} {} {})",
             gen_str_expr(rng, num_vars, depth - 1),
             gen_str_expr(rng, num_vars, depth - 1),
-            rng.in_range(0, 3)
+            rng.in_range(-2, 3)
         ),
         4 => format!("(str.to_code {})", gen_str_expr(rng, num_vars, depth - 1)),
         5 => format!(
@@ -184,7 +219,29 @@ fn gen_int_expr(rng: &mut Lcg, num_vars: usize, depth: u32) -> String {
             gen_int_expr(rng, num_vars, depth - 1),
             gen_int_expr(rng, num_vars, depth - 1)
         ),
+        // `str.to_int` of a SIGNED / non-digit-leading literal (`"-5"`, `"+3"`,
+        // `"1-2"`, …): every one is non-numeric under SMT-LIB (`str.to_int`
+        // accepts only a non-empty all-`0..9` string) and must fold to `-1`. The
+        // base `ALPHABET` carries no sign, so this arm is the only generator that
+        // drives the "looks-signed → -1" degenerate shape (task #42).
+        6 => format!("(str.to_int \"{}\")", gen_signed_numeric_literal(rng)),
         _ => rng.in_range(0, 8).to_string(),
+    }
+}
+
+/// A short literal that *looks* numeric but carries a sign or an embedded
+/// non-digit, so `str.to_int` of it is the degenerate `-1` case (SMT-LIB only
+/// parses a non-empty pure-`0..9` string; anything with a `-`/`+`/interior
+/// non-digit yields `-1`). Deterministic, no escapes needed.
+fn gen_signed_numeric_literal(rng: &mut Lcg) -> String {
+    let body: String = (0..=rng.below(2))
+        .map(|_| char::from(b'0' + u8::try_from(rng.below(10)).expect("digit fits u8")))
+        .collect();
+    match rng.below(4) {
+        0 => format!("-{body}"),
+        1 => format!("+{body}"),
+        2 => format!("{body}-{body}"),
+        _ => format!("{body}a"),
     }
 }
 
@@ -485,5 +542,40 @@ fn string_differential_fuzz_disagree_zero() {
         jointly_decided > 50,
         "too few jointly-decided scripts ({jointly_decided}); the differential \
          gate is not meaningfully exercised"
+    );
+}
+
+/// P0 REPRODUCER (task #42 underspecified-operator fuzz-coverage audit) —
+/// **currently failing**, hence `#[ignore]`d so CI stays green until the parser
+/// lowering is fixed. Un-ignore it to verify the fix.
+///
+/// `str.from_code i` for a code point `i` in `128..=255` is a WRONG-SAT: the byte
+/// model CAN represent that character (a single byte; `str.to_code` of a byte-`i`
+/// string is exactly `i` for all `0..=255`), yet `string_from_code`
+/// (`crates/axeyum-smtlib/src/parse.rs`) folds every `i > 127` to the empty string.
+/// So `(= (str.from_code 200) "")` is decided **Sat** by axeyum while Z3 (and the
+/// real SMT-LIB `UnicodeStrings` semantics) say **Unsat** — `str.from_code 200` is
+/// the non-empty length-1 string U+00C8. The model even self-contradicts:
+/// `str.to_code (str.from_code 200) = 200` is a theorem yet axeyum makes
+/// `str.from_code 200 = ""`.
+///
+/// Discovered by this audit while closing the `str.from_code` fuzz gap; the sound
+/// range (negative, `0..=127`) is exercised by the passing sweep above via
+/// [`gen_sound_codepoint`]. The fix is a parser change (widen the sound byte range
+/// to `0..=255`, or DECLINE `128..=255` to `Unknown` instead of committing to "")
+/// deliberately left out of the fuzz-coverage slice — report, do not paper over.
+#[test]
+#[ignore = "P0 wrong-sat: str.from_code 128..=255 folds to \"\" (parser fix pending); un-ignore after fix"]
+fn from_code_out_of_range_p0_repro() {
+    // The exact confirmed wrong-sat. Correct answer (and Z3's) is Unsat, because
+    // `str.from_code 200` is a non-empty character. A sound engine returns Unsat
+    // or (conservatively) Unknown — NEVER Sat.
+    let text = "(set-logic QF_S)\n(assert (= (str.from_code 200) \"\"))\n(check-sat)\n";
+    let ax = axeyum_decide(text);
+    assert_ne!(
+        ax,
+        Verdict::Sat,
+        "str.from_code 200 = \"\" must not be Sat (Z3: Unsat); axeyum folds \
+         out-of-ASCII code points to the empty string — a wrong-sat"
     );
 }
