@@ -35,7 +35,7 @@ pub mod predicate;
 pub use ast::Regex;
 pub use derivative::{
     Closure, TransitionRegex, canon, derivative, derivative_closure, derivative_closure_within,
-    nullable,
+    derivative_within, nullable,
 };
 pub use matcher::matches;
 pub use membership::{Membership, MembershipOutcome, recheck_empty};

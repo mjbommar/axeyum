@@ -31,7 +31,8 @@ use std::collections::BTreeSet;
 
 use super::ast::Regex;
 use super::derivative::{
-    Closure, canon, derivative, derivative_closure, derivative_closure_within, nullable,
+    Closure, canon, derivative, derivative_closure, derivative_closure_within, derivative_within,
+    nullable,
 };
 use super::matcher::matches;
 use crate::arrange::SearchBudget;
@@ -309,7 +310,19 @@ fn witness_search(
         if path.len() >= max_witness_len {
             continue;
         }
-        for (guard, residual) in derivative(&state).branches() {
+        // Poll the deadline INSIDE the derivative too (not only per node above):
+        // a single `∂state` over a `Σ*`-enlarged intersection can multiply out a
+        // huge `product` before the next node-level poll, so abandon mid-derivative
+        // once the deadline passes — the tripped poll ⇒ `None` ⇒ the caller's
+        // `unknown`, never a wrong verdict.
+        let mut ticks: u64 = 0;
+        let mut poll = || {
+            ticks = ticks.wrapping_add(1);
+            ticks.is_multiple_of(256) && budget.past_deadline()
+        };
+        // A tripped poll ⇒ `None` ⇒ this over-budget witness search declines.
+        let tr = derivative_within(&state, &mut poll)?;
+        for (guard, residual) in tr.branches() {
             // A witness character for this branch (the guard is non-empty, since
             // `coalesce` drops empty guards).
             let Some(c) = guard.witness() else { continue };

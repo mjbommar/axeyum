@@ -293,3 +293,58 @@ fn transition_guards_partition_alphabet() {
         }
     }
 }
+
+// ---------------------------------------------------------------------------
+// Deadline-poll (task #54): the derivative frontier must be interruptible.
+// ---------------------------------------------------------------------------
+
+/// `derivative_within` with a **never-tripping** poll is result-identical to the
+/// plain `derivative` — the drift guard that keeps the bounded frontier faithful
+/// to the anchored derivative (the only path that matters for soundness; an
+/// aborted poll only ever yields a decline).
+#[test]
+fn derivative_within_matches_derivative_when_poll_never_trips() {
+    use axeyum_strings::regex::derivative::derivative_within;
+    let mut rng = Lcg(0x5454_5454_D00D_F00D);
+    for _ in 0..5_000 {
+        let r = random_regex(&mut rng, 5);
+        let got = derivative_within(&r, &mut || false).expect("never-tripping poll cannot abort");
+        assert_eq!(got, derivative(&r), "bounded derivative diverged for {r:?}");
+    }
+}
+
+/// A poll that trips after a fixed number of frontier steps aborts the
+/// derivative (⇒ `None`), so a single expensive `∂R` is interruptible mid-flight
+/// rather than a deadline-uninterruptible grind. The subject is a deeply-nested
+/// `Σ*`-enlarged intersection — exactly the membership-over-concat shape whose
+/// `product` cascade is the pathological frontier.
+#[test]
+fn derivative_within_aborts_when_poll_trips() {
+    use axeyum_strings::regex::derivative::derivative_within;
+
+    // `contains([lo,hi]) = Σ* [lo,hi] Σ*`, intersected across overlapping ranges
+    // so the derivative's `product` frontier does real (non-collapsing) work.
+    let contains = |lo: u32, hi: u32| {
+        Regex::concat(
+            Regex::star(Regex::any_char()),
+            Regex::concat(Regex::char_range(lo, hi), Regex::star(Regex::any_char())),
+        )
+    };
+    let mut r = contains(A, A + 40);
+    for i in 1..16u32 {
+        r = Regex::inter(r, contains(A + i, A + i + 40));
+    }
+    let r = Regex::inter(r, Regex::star(Regex::any_char()));
+
+    // Poll trips after 8 frontier steps: far fewer than this intersection's
+    // derivative needs, so it must abort to `None`.
+    let mut ticks = 0u32;
+    let out = derivative_within(&r, &mut || {
+        ticks += 1;
+        ticks > 8
+    });
+    assert!(
+        out.is_none(),
+        "expected an aborted (None) derivative under a tight poll"
+    );
+}

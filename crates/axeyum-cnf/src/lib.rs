@@ -3209,8 +3209,24 @@ p cnf 1 2
     fn dimacs_micro_corpus_solves_through_sat_trait() {
         let corpus =
             std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus/micro-cnf");
-        let mut files = std::fs::read_dir(corpus)
-            .unwrap()
+        // `read_dir` can transiently return `NotFound` on a shared checkout when a
+        // concurrent process is walking/rebuilding the tree during a
+        // `--workspace --lib` sweep; the directory is committed and static, so a
+        // bounded retry rides over the race instead of a spurious test failure.
+        let entries = {
+            let mut attempt = 0;
+            loop {
+                match std::fs::read_dir(&corpus) {
+                    Ok(entries) => break entries,
+                    Err(err) if err.kind() == std::io::ErrorKind::NotFound && attempt < 10 => {
+                        attempt += 1;
+                        std::thread::sleep(std::time::Duration::from_millis(50));
+                    }
+                    Err(err) => panic!("read_dir({}): {err}", corpus.display()),
+                }
+            }
+        };
+        let mut files = entries
             .map(|entry| entry.unwrap().path())
             .filter(|path| path.extension().is_some_and(|extension| extension == "cnf"))
             .collect::<Vec<_>>();

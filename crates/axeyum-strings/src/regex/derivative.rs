@@ -107,25 +107,33 @@ fn coalesce(raw: Vec<(CharPred, Regex)>) -> TransitionRegex {
     }
 }
 
-/// Combine two transition regexes pointwise on the refinement of their guards:
-/// for every pair of branches, intersect the guards (dropping empty ones) and
-/// combine the residuals with `f`. Inputs cover the alphabet with disjoint
-/// guards ⇒ so does the output.
-fn product(
+/// Combine two transition regexes pointwise on the refinement of their guards
+/// with a caller **stop poll** (`over`) checked once per guard pair. This is
+/// the multiplicative frontier of the derivative: `|a| · |b|` pairs, each a
+/// guard intersection plus a residual [`canon`]. On a Σ*-enlarged intersection
+/// this loop is where a single derivative spends a long, otherwise
+/// deadline-uninterruptible interval, so `over` lets the caller abandon it
+/// mid-product (⇒ `None`, which the closure/witness search turns into a timely
+/// decline). Returns `Some(branches)` when the loop completes within budget.
+fn product_within<F: FnMut() -> bool>(
     a: &[(CharPred, Regex)],
     b: &[(CharPred, Regex)],
     f: impl Fn(&Regex, &Regex) -> Regex,
-) -> Vec<(CharPred, Regex)> {
+    over: &mut F,
+) -> Option<Vec<(CharPred, Regex)>> {
     let mut out = Vec::new();
     for (g1, r1) in a {
         for (g2, r2) in b {
+            if over() {
+                return None;
+            }
             let guard = g1.and(g2);
             if !guard.is_empty() {
                 out.push((guard, canon(&f(r1, r2))));
             }
         }
     }
-    out
+    Some(out)
 }
 
 /// The transition-regex derivative `∂R`: after consuming one character in each
@@ -139,9 +147,41 @@ pub fn derivative(r: &Regex) -> TransitionRegex {
     coalesce(deriv_raw(r))
 }
 
+/// [`derivative`] with a caller **stop poll** threaded **into** the computation:
+/// `over` is checked at every recursion node and every `product_within` guard pair,
+/// so a single derivative over a deeply-nested, `Σ*`-enlarged intersection is
+/// **interruptible mid-flight** and returns [`None`] once `over` trips — the
+/// same first-class decline an exhausted budget produces elsewhere.
+///
+/// This closes the deadline hole the plain [`derivative`] leaves: the between-node
+/// deadline polls in the closure and witness searches only fire *between* whole
+/// derivatives, so one pathological derivative (its `product` cascade multiplies
+/// branch counts before `coalesce` prunes them) could run well past a wall-clock
+/// deadline before the next node-level poll. Threading the poll into the frontier
+/// bounds that overshoot to a single poll interval. Result-identical to
+/// [`derivative`] whenever `over` never trips.
+#[must_use]
+pub fn derivative_within<F: FnMut() -> bool>(r: &Regex, over: &mut F) -> Option<TransitionRegex> {
+    Some(coalesce(deriv_raw_within(r, over)?))
+}
+
 /// Uncoalesced derivative branches (guards disjoint, covering the alphabet).
 fn deriv_raw(r: &Regex) -> Vec<(CharPred, Regex)> {
-    match r {
+    deriv_raw_within(r, &mut || false)
+        .expect("deriv_raw_within with a never-tripping budget cannot abort")
+}
+
+/// [`deriv_raw`] with a caller **stop poll** (`over`) checked at every recursion
+/// node and threaded through every [`product_within`]. Returns [`None`] as soon
+/// as `over` trips, so an expensive derivative is a timely decline rather than a
+/// deadline-uninterruptible grind. With a never-tripping `over` it is exactly
+/// [`deriv_raw`] (the identity the fundamental-derivative-theorem property test
+/// anchors, since [`derivative`] routes through this function).
+fn deriv_raw_within<F: FnMut() -> bool>(r: &Regex, over: &mut F) -> Option<Vec<(CharPred, Regex)>> {
+    if over() {
+        return None;
+    }
+    Some(match r {
         // ∂ε = ∂∅ = ∅ everywhere.
         Regex::Empty | Regex::None => vec![(CharPred::all(), Regex::None)],
         // ∂(pred): match ⇒ ε, else ⇒ ∅.
@@ -154,66 +194,84 @@ fn deriv_raw(r: &Regex) -> Vec<(CharPred, Regex)> {
             out
         }
         // ∂(R | S) = ∂R | ∂S.
-        Regex::Union(a, b) => product(&deriv_raw(a), &deriv_raw(b), |x, y| {
-            Regex::union(x.clone(), y.clone())
-        }),
+        Regex::Union(a, b) => {
+            let da = deriv_raw_within(a, over)?;
+            let db = deriv_raw_within(b, over)?;
+            return product_within(&da, &db, |x, y| Regex::union(x.clone(), y.clone()), over);
+        }
         // ∂(R & S) = ∂R & ∂S.
-        Regex::Inter(a, b) => product(&deriv_raw(a), &deriv_raw(b), |x, y| {
-            Regex::inter(x.clone(), y.clone())
-        }),
+        Regex::Inter(a, b) => {
+            let da = deriv_raw_within(a, over)?;
+            let db = deriv_raw_within(b, over)?;
+            return product_within(&da, &db, |x, y| Regex::inter(x.clone(), y.clone()), over);
+        }
         // ∂(∁R) = ∁∂R (pointwise).
-        Regex::Comp(a) => deriv_raw(a)
+        Regex::Comp(a) => deriv_raw_within(a, over)?
             .into_iter()
             .map(|(g, d)| (g, canon(&Regex::comp(d))))
             .collect(),
         // ∂(R · S) = ∂R · S  ∪  (nullable R) ∂S.
         Regex::Concat(a, b) => {
-            let part1: Vec<(CharPred, Regex)> = deriv_raw(a)
+            let part1: Vec<(CharPred, Regex)> = deriv_raw_within(a, over)?
                 .into_iter()
                 .map(|(g, d)| (g, canon(&Regex::concat(d, (**b).clone()))))
                 .collect();
             if nullable(a) {
-                product(&part1, &deriv_raw(b), |x, y| {
-                    Regex::union(x.clone(), y.clone())
-                })
-            } else {
-                part1
+                let db = deriv_raw_within(b, over)?;
+                return product_within(
+                    &part1,
+                    &db,
+                    |x, y| Regex::union(x.clone(), y.clone()),
+                    over,
+                );
             }
+            part1
         }
         // ∂(R*) = ∂R · R*.
-        Regex::Star(a) => deriv_raw(a)
+        Regex::Star(a) => deriv_raw_within(a, over)?
             .into_iter()
             .map(|(g, d)| (g, canon(&Regex::concat(d, Regex::star((**a).clone())))))
             .collect(),
         // ∂(R{lo,hi}) — native loop step, never pre-unrolled.
-        Regex::Loop { inner, lo, hi } => deriv_loop(inner, *lo, *hi),
-    }
+        Regex::Loop { inner, lo, hi } => return deriv_loop_within(inner, *lo, *hi, over),
+    })
 }
 
 /// `∂(R{lo,hi})` = `∂(R · R{lo-1,hi-1})` with the lower bound saturating at 0
-/// and `hi = None` treated as `ω`. Degenerate loops are folded by [`canon`],
-/// which bounds the recursion (each level strictly shrinks `hi`, or shrinks
-/// `lo` toward 0 with `hi = None`).
-fn deriv_loop(inner: &Regex, lo: u32, hi: Option<u32>) -> Vec<(CharPred, Regex)> {
+/// and `hi = None` treated as `ω`, with a caller **stop poll** (`over`) threaded
+/// through the inner [`deriv_raw_within`]/[`product_within`] so a loop step over
+/// an enlarged body is interruptible too. Degenerate loops are folded by
+/// [`canon`], which bounds the recursion (each level strictly shrinks `hi`, or
+/// shrinks `lo` toward 0 with `hi = None`). Returns [`None`] once `over` trips.
+fn deriv_loop_within<F: FnMut() -> bool>(
+    inner: &Regex,
+    lo: u32,
+    hi: Option<u32>,
+    over: &mut F,
+) -> Option<Vec<(CharPred, Regex)>> {
     // R{lo,0} = ε (lo must be 0), so ∂ = ∅ everywhere.
     if hi == Some(0) {
-        return vec![(CharPred::all(), Regex::None)];
+        return Some(vec![(CharPred::all(), Regex::None)]);
     }
     let lo2 = lo.saturating_sub(1);
     let hi2 = hi.map(|h| h - 1);
     let rest = canon(&Regex::repeat(inner.clone(), lo2, hi2));
 
     // ∂(R · rest) with `R = inner`.
-    let part1: Vec<(CharPred, Regex)> = deriv_raw(inner)
+    let part1: Vec<(CharPred, Regex)> = deriv_raw_within(inner, over)?
         .into_iter()
         .map(|(g, d)| (g, canon(&Regex::concat(d, rest.clone()))))
         .collect();
     if nullable(inner) {
-        product(&part1, &deriv_raw(&rest), |x, y| {
-            Regex::union(x.clone(), y.clone())
-        })
+        let drest = deriv_raw_within(&rest, over)?;
+        product_within(
+            &part1,
+            &drest,
+            |x, y| Regex::union(x.clone(), y.clone()),
+            over,
+        )
     } else {
-        part1
+        Some(part1)
     }
 }
 
@@ -405,9 +463,12 @@ pub fn derivative_closure(regex: &Regex, max_states: usize) -> Closure {
 /// well past a wall-clock deadline before the `max_states` guard trips. This variant
 /// lets a deadline-bounded caller (the online string route's per-assert emptiness
 /// refuter and its `sat`-branch witnessing) keep the closure a first-class, timely
-/// `unknown`. A `Closure::Budget` is always sound: emptiness reasoning only ever
-/// concludes `unsat` on a **`Complete`** nullable-free closure, so an abandoned
-/// closure simply declines.
+/// `unknown`. The poll is honored **both** between nodes and **inside** each
+/// derivative via [`derivative_within`], so even one pathological, `Σ*`-enlarged
+/// derivative cannot run uninterrupted for a whole between-node window. A
+/// `Closure::Budget` is always sound: emptiness reasoning only ever concludes
+/// `unsat` on a **`Complete`** nullable-free closure, so an abandoned closure simply
+/// declines.
 #[must_use]
 pub fn derivative_closure_within(
     regex: &Regex,
@@ -420,12 +481,29 @@ pub fn derivative_closure_within(
     seen.insert(start);
     let mut steps: u32 = 0;
     while let Some(state) = worklist.pop() {
-        // `Instant::now()` is not free; poll every 64 expansions.
+        // `Instant::now()` is not free; poll *between* nodes only every 64
+        // expansions (cheap when most derivatives are tiny).
         steps = steps.wrapping_add(1);
         if steps.is_multiple_of(64) && over_deadline() {
             return Closure::Budget;
         }
-        for (_, residual) in derivative(&state).branches {
+        // Poll the deadline INSIDE the derivative frontier too. The 64-expansion
+        // window above is uninterruptible, so a single derivative over a
+        // `Σ*`-enlarged intersection (whose `product` multiplies branch counts
+        // before `coalesce` prunes them) could grind for the whole window — up to
+        // ~64 × the per-derivative cost — before the next between-node poll. The
+        // frontier poll (checked every 256 guard pairs, `Instant` amortized) bounds
+        // that overshoot to a single poll interval; a tripped poll ⇒ `None` ⇒ the
+        // same timely `Budget` decline the other bounds produce.
+        let mut ticks: u32 = 0;
+        let mut poll = || {
+            ticks = ticks.wrapping_add(1);
+            ticks.is_multiple_of(256) && over_deadline()
+        };
+        let Some(tr) = derivative_within(&state, &mut poll) else {
+            return Closure::Budget;
+        };
+        for (_, residual) in tr.branches {
             if !seen.contains(&residual) {
                 if seen.len() >= max_states {
                     return Closure::Budget;
