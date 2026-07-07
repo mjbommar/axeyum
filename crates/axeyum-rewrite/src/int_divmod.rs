@@ -45,13 +45,19 @@ pub fn eliminate_int_divmod(
     // div/mod groups, keyed by (dividend, constant divisor).
     for ((dividend, divisor), terms) in collector.divmod {
         if divisor == 0 {
-            // Convention: div a 0 = 0, mod a 0 = a.
-            let zero = arena.int_const(0);
-            for t in terms.div {
-                map.insert(t, zero);
-            }
-            for t in terms.mod_ {
-                map.insert(t, dividend);
+            // SMT-LIB leaves `div`/`mod` by zero UNDERSPECIFIED (any total-function
+            // value). Folding to a fixed convention (`div a 0 = 0`, `mod a 0 = a`)
+            // is sound for a *witness* but produces a WRONG UNSAT — a solver could
+            // refute a formula that is satisfiable by some *other* choice of the
+            // free value (e.g. `775 < mod(0,0)` is sat, not `775 < 0`). So each
+            // div/mod-by-zero term becomes a FRESH UNCONSTRAINED variable: no
+            // constraint forces its value, so it can never be the pivot of an
+            // unsat, and a `sat` model whose free value disagrees with the
+            // evaluator convention is caught by the ground-evaluator replay
+            // (declined to `unknown`, never a wrong verdict).
+            for t in terms.div.into_iter().chain(terms.mod_) {
+                let v = fresh_int(arena, &mut fresh)?;
+                map.insert(t, v);
             }
             continue;
         }
