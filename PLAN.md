@@ -25,7 +25,7 @@ relentlessly. Scored against [the north-star definition of done](docs/plan/00-no
 |---|---|---|
 | **Soundness (never a wrong verdict)** | **Strong / holding** | `DISAGREE = 0` across all 35 division baselines (oracle-compared count lives in the generated scoreboard — hand-copies rotted three times) ([SCOREBOARD](bench-results/SCOREBOARD.md)). Two real wrong-safes in the consumer apps were found by new differential fuzzes and fixed. |
 | **Feature coverage (breadth)** | **Partial** | Columns exist for ~24 fragments (BV/ABV/UF/LRA/LIA/NRA/NIA/FP/DT/strings/seq/FF/…), but many are shallow. |
-| **Completeness / decide-rate** | **Partial — the central gap** | decided/total live in the generated [SCOREBOARD](bench-results/SCOREBOARD.md) **Totals** line (authoritative; ~68% as of 2026-07-03 evening — do not hand-copy the integers, they rotted three times today), decide-rate **0%–100%** across divisions; only **19/35 rows are decide-strong (≥80%)**. Z3/cvc5 decide far more on most fragments and cover more divisions than the 35 measured. |
+| **Completeness / decide-rate** | **Partial — the central gap, narrowing** | decided/total live in the generated [SCOREBOARD](bench-results/SCOREBOARD.md) **Totals** line (authoritative; ~73% as of 2026-07-07 — do not hand-copy the integers, they rotted repeatedly), decide-rate **0%–100%** across divisions. Arithmetic now decide-strong (QF_NIA-cvc5 85%, QF_NRA-cvc5 84%); the dominant remaining wired-fragment gap is strings (QF_SLIA 36%, QF_S 58%). Z3/cvc5 still cover more divisions than the ~35 measured. |
 | **Measured performance (PAR-2 head-to-head)** | **Weak — but now measured where it matters most** | The north star says *no parity claim without this number*. The first committed head-to-head exists (`582ecba8`, 2026-07-03, public QF_BV p4dfa lazy-vs-eager at 3s/20s, DISAGREE=0): lazy weakly dominates (7>4 at 20s) but `lazy_ops_total=0` on all 113 — the edge is inherited word-level preprocessing, not CEGAR, and Z3 decides all 113 in ≤1s. Not competitive at scale; the measured lever is reduction depth. |
 | **Lean parity (every unsat carries a kernel-checkable proof)** | **Early / narrow** | ~15/35 rows have a Lean route worth auditing; the trusted-reduction ledger is **not yet zero**. The Lean *tactic backend* (P3.7) is unbuilt. |
 | **Pareto-dominance on selected fragments** | **Growing — the real, defensible claim** | **23 fragments** carry a committed, audited `dominant%` ([DOMINANCE](bench-results/DOMINANCE.md)). This — not wholesale replacement — is what the strategy actually targets. |
@@ -86,31 +86,42 @@ increment at a time and record each one.
    Not keystone-blocked (eager pipeline suffices for v1); the standing
    measured-not-seeded rule applies doubly (P5.5 is an *external* target).
 
-**Immediate next focus (2026-07-06, post-sprint rotation per the 6th
-periodic review): bank the string sprint's evidence, then the
-multiply-across-theories keystones.** The 2026-07-03…06 string sprint is
-complete and measured: **QF_S 52→78 (39%→58%), QF_SLIA 18/50, ~707/992
-decided (see the generated scoreboard — string counts are not hand-copied),
-DISAGREE=0 vs both oracles at every step** — Phase A
-(ADR-0052 len↔LIA + gate), Phase B (ADR-0053 word core, both directions,
-independently-checked derivations), the P1.5 CDCL(T) integration
-(ADR-0055, QF_S online default-on), Phase C through T-C.6 (ADR-0054
-derivative engine, membership sub-solver, membership atoms online), the
-code↔LIA bridge, and two latent wrong-verdict classes found and fixed en
-route (bound-bite ADR-0052; the `\u`-escape decoding class `ba0d9149`).
-The remaining string census (extended-fns, lex-order, Nielsen quads, seq)
-is diminishing-marginal — a Phase D census agent reports before any
-further slice.
-**The rotation (in order):** (1) **reconstruct the string certificates to
-kernel-checked Lean** (P3.7 — the word-clash Alethe `5ad952b8` and
-derivative-emptiness `c5f181b9` certs exist; strings joins the 8
-reconstructed fragments; the cheapest live Lean-parity progress); (2)
-**CdclT arithmetic migration** (ADR-0055 criterion 2 — LIA/LRA as
-TheorySolver impls on the shared driver; unlocks strings+LIA combination
-= the 8 theory-coupled census files + the 21 gate-downgraded unsats,
-QF_UF default-on, and NRA/NIA service); (3) **NRA levers** (21/38
-untouched since 07-02: FM→simplex for nested `1/(a/b)`, threshold-1
-widening; `nra_degree` frontier 2/6 shows the headroom).
+**Immediate next focus (2026-07-07 — the arithmetic arc executed + 4 soundness
+bugs closed; strings breadth is now the dominant measured gap).** Since the
+2026-07-06 rotation, the arithmetic levers were HARVESTED and the plan
+re-ranked twice (9th + 10th reviews):
+- **Arithmetic (measured, DISAGREE=0):** QF_NIA-cvc5 **21→33/39 (85%)** — congruent
+  Ackermann div/mod-by-zero (#40, recovered the structural div-0 unsats), `int.pow2`
+  first-class op + value-table axioms (#41, cvc5 neg-exp=0 verified from source).
+  QF_NRA-cvc5 **27→32/38 (84%)** — equality-anchored decision + bignum CAD-entry
+  coefficients + parser slices (#43, slices 4+7). The bounded arithmetic levers
+  (div/mod-0, iand, pow2, √2) are now **harvested**; the genuine-engine NRA residue
+  (~6/12: Boolean-CAD multivar, MetiTarski transcendental, degree-8/10) is the
+  ADR-0058 Phase C/D arc — **DE-PRIORITIZED below strings** (10th review: Phase B
+  was OBE — the DPLL→CAD edge already existed at `5ede57f4`, #43 used it).
+- **Soundness (4 wrong-verdict bugs closed this arc):** the div/mod-by-const-0
+  convention fold (P0, `52f3b1d1`), a pre-existing const-0 wrong-sat (caught by the
+  new const-0 fuzz), `str.from_code` over 128..=0x2FFFF (#46), and FP
+  `isNegative`/`isPositive` on signed zeros (#50, wrong-UNSAT). **The partial-operator
+  Hard Rule is now an ENFORCED per-op fuzz-coverage checklist** (#42,
+  `docs/research/01-foundations/underspecified-operator-fuzz-coverage.md`); every
+  bug was surfaced the instant a differential fuzz could see the degenerate shape.
+- **Lean-parity:** #44 landed the **regex derivative-emptiness → kernel-checked Lean
+  `False`** reconstruction (`cd6783b9`, full multi-state closure, no new kernel
+  axioms; a kernel-checked narrowing; not yet wired into the live evidence path).
+**The rotation NOW (10th review, scout-verified):** (1) **strings breadth — the
+dominant measured gap** (QF_SLIA 18/50=36%, QF_S 78/134=58%). A scout PROVED the
+"str.++ bound-cap" census was a mis-diagnosis (raising the cap gains ~0 rows — the
+cap message masks extended-function rejections). Real levers: **(1a)
+membership-over-concatenation** (~12 rows — route `str.in_re` over a symbolic
+`str.++` into the regex-derivative core; #49 ACTIVE); **(1b) the LenAbs length/LIA
+bridge = P2.7 Phase A** (the deferred multi-slice keystone, ~13+ QF_SLIA rows —
+the biggest strings unlock); **(1c) quadratic word-equation certified unsat** (~4-5,
+hardest). (2) **wire #44's regex-emptiness reconstruction into the live evidence
+dispatcher** (capability landed, wiring pending). (3) **close the remaining #42 fuzz
+GAPs** (seq.nth OOB — the last UNDERSPEC blind axis). (4) **CdclT arithmetic
+migration** (ADR-0055 criterion 2 — LIA/LRA TheorySolver impls; unlocks strings+LIA
+combination). Decide-rate ~73% and climbing.
 **Process state:** first green CI in 200+ runs held into a green cadence;
 the pre-push hook gates the pushed SHA incl. the ~6s `:status` corpus
 sweep (a wrong verdict must not leave the machine); STATUS truncated
@@ -137,14 +148,15 @@ CAD** (2-variable complete, N-variable decision-complete, fuzz-gated) lives in
 `axeyum-solver`. So there is **no new `axeyum-poly` crate** (ADR-0044 keeps the
 primitives in `axeyum-ir`) and "Phase A" is mostly done — see the corrected
 [P2.5 current-state](docs/plan/track-2-theories/P2.5-nra/00-current-state.md).
-**Next-arc decomposition (2026-07-06, `fcbde209`):**
-[09-next-arithmetic-lever-decomposition](docs/plan/track-2-theories/P2.5-nra/09-next-arithmetic-lever-decomposition.md)
-— the measured ROI verdict is **QF_NIA (54%) beats QF_NRA (68%)** for the next
-increment (QF_NIA's unknowns are 3 bounded levers reusing existing machinery —
-div/mod Euclidean linearization, `iand` blast, `int.pow2`; QF_NRA's residue is
-mostly a multi-week CAD/transcendental engine). ROI-ordered slices, first =
-NIA div/mod linearization (Phase E.0). QF_NRA `nra_degree` frontier is maxed at
-40 (`e0e24085`, even-power matcher).
+**Next-arc decomposition (2026-07-06, `fcbde209`) — EXECUTED 2026-07-07:**
+[09-next-arithmetic-lever-decomposition](docs/plan/track-2-theories/P2.5-nra/09-next-arithmetic-lever-decomposition.md).
+The ROI verdict (QF_NIA's bounded levers first) played out: all landed —
+div/mod Euclidean linearization + congruent div-0 recovery (#40), `iand` blast,
+`int.pow2` (#41), and the NRA cheap pickups incl algebraic-√2 (#43). QF_NIA-cvc5
+21→33, QF_NRA-cvc5 27→32, DISAGREE=0. The bounded arithmetic levers are now
+**harvested**; §3's "the DPLL→CAD edge is missing" premise was CORRECTED (it
+existed at `5ede57f4`; #43 used it — see the doc's 10th-review note). The residue
+is the ADR-0058 Phase C/D engine arc, de-prioritized below strings.
 
 **Measured (2026-07-01/02, `check_auto` vs z3 4.13.3, curated corpus,
 DISAGREE=0): QF_NRA 21→26/38 (`5cc63a15`; was 9/38 at `124e18aa`), QF_NIA
