@@ -16,6 +16,9 @@
 //! `unsat` should ride the certificate ladder — the same discipline the rest of
 //! axeyum follows.
 
+/// Hyperproperties over reflected code — 2-safety by self-composition
+/// (constant-time / secret-independence).
+pub mod hyper;
 /// The `br`/`phi`/`switch` LLVM-IR reflector (parse `define … ret` → term).
 pub mod llvm;
 /// The `switchInt`/`assert`/checked-arithmetic MIR reflector.

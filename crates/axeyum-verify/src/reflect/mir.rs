@@ -322,6 +322,7 @@ fn exec_block(
     mut env: Env,
     bb: &str,
     depth: usize,
+    leaks: &mut Vec<TermId>,
 ) -> (Operand, TermId) {
     assert!(
         depth < 64,
@@ -340,7 +341,7 @@ fn exec_block(
             return (ret, arena.bool_const(false));
         }
         if let Some(target) = stmt.strip_prefix("goto -> ") {
-            return exec_block(arena, map, env, target.trim(), depth + 1);
+            return exec_block(arena, map, env, target.trim(), depth + 1, leaks);
         }
         // assert(!move (_2.1: bool), "…") -> [success: bb1, unwind continue];
         // Panics exactly when the asserted condition is false.
@@ -366,13 +367,16 @@ fn exec_block(
                 .next()
                 .expect("success block")
                 .trim();
-            let (value, rest_panic) = exec_block(arena, map, env, success, depth + 1);
+            let (value, rest_panic) = exec_block(arena, map, env, success, depth + 1, leaks);
             let panic = arena.or(panic_here, rest_panic).unwrap();
             return (value, panic);
         }
         if let Some(rest) = stmt.strip_prefix("switchInt(") {
             let (scrut_tok, arms_part) = rest.split_once(')').expect("switchInt scrutinee");
             let (scrut, w, _) = operand(arena, &env, scrut_tok.trim());
+            // Control-flow leakage: which arm is taken is observable, so the
+            // scrutinee is a leaked observation (2-safety / constant-time).
+            leaks.push(scrut);
             let inside = arms_part
                 .split_once('[')
                 .and_then(|(_, r)| r.split_once(']'))
@@ -389,9 +393,10 @@ fn exec_block(
                 }
             }
             let (mut acc, mut acc_panic) =
-                exec_block(arena, map, env.clone(), otherwise, depth + 1);
+                exec_block(arena, map, env.clone(), otherwise, depth + 1, leaks);
             for (val, target) in arms.iter().rev() {
-                let (then, then_panic) = exec_block(arena, map, env.clone(), target, depth + 1);
+                let (then, then_panic) =
+                    exec_block(arena, map, env.clone(), target, depth + 1, leaks);
                 // Bool scrutinee: arm `0` is the false edge, so its guard is ¬scrut.
                 let cond = if w == 1 {
                     if *val == 0 {
@@ -435,6 +440,25 @@ pub fn reflect_mir_params_checked(
     params: &[MirParam],
     mir: &str,
 ) -> (TermId, TermId) {
+    let (value, panic, _leaks) = reflect_mir_params_with_leaks(arena, params, mir);
+    (value, panic)
+}
+
+/// As [`reflect_mir_params_checked`], but also returns the **control-flow
+/// leakage**: the branch scrutinees (`switchInt` conditions), in traversal
+/// order, encountered while reflecting `mir`. These are the observations a
+/// timing side channel exposes; comparing two reflections' leakage under a
+/// shared public / distinct secret input decides **constant-time**
+/// (2-safety by self-composition — see [`super::hyper`]). Memory-access index
+/// leakage is not yet collected (documented residual).
+///
+/// # Panics
+/// Panics if the IR/token is malformed or uses an unsupported construct.
+pub fn reflect_mir_params_with_leaks(
+    arena: &mut TermArena,
+    params: &[MirParam],
+    mir: &str,
+) -> (TermId, TermId, Vec<TermId>) {
     let map = blocks(mir);
     let mut env: Env = HashMap::new();
     for (i, p) in params.iter().enumerate() {
@@ -444,8 +468,9 @@ pub fn reflect_mir_params_checked(
         };
         env.insert(u32::try_from(i).unwrap() + 1, slot);
     }
-    let (value, panic) = exec_block(arena, &map, env, "bb0", 0);
-    (value.0, panic)
+    let mut leaks = Vec::new();
+    let (value, panic) = exec_block(arena, &map, env, "bb0", 0, &mut leaks);
+    (value.0, panic, leaks)
 }
 
 /// Reflect a MIR function into an *existing* arena, binding `params[i]` to local
@@ -467,16 +492,13 @@ pub fn reflect_mir_into_checked(
         params.len(),
         "parameter count mismatch between the MIR signature and the given terms"
     );
-    let map = blocks(mir);
-    let mut env: Env = HashMap::new();
-    for (i, (&term, &(w, signed))) in params.iter().zip(tys.iter()).enumerate() {
-        env.insert(
-            u32::try_from(i).unwrap() + 1,
-            Slot::Scalar((term, w, signed)),
-        );
-    }
-    let (value, panic) = exec_block(arena, &map, env, "bb0", 0);
-    (value.0, panic)
+    let mir_params: Vec<MirParam> = params
+        .iter()
+        .zip(tys.iter())
+        .map(|(&term, &(w, signed))| MirParam::Scalar(term, w, signed))
+        .collect();
+    let (value, panic, _leaks) = reflect_mir_params_with_leaks(arena, &mir_params, mir);
+    (value, panic)
 }
 
 /// Reflect a MIR function, returning only the `_0` value term (for fixtures
