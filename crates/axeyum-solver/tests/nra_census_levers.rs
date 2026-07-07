@@ -133,6 +133,74 @@ fn ones_product_ge_one_is_unsat_via_threshold1() {
 }
 
 #[test]
+fn decoupled_circles_five_vars_is_sat_via_coordinate_probe() {
+    // The `very-easy-sat` shape (5 free reals): two *independent* circles
+    // `sB² = 1 − cB²` and `s² = 1 − c²`, plus `0 ≤ x < 177/366500000 ∧ x ≤ 1e-7`.
+    // The uniform (all-equal) fallback can never satisfy two decoupled circles;
+    // the per-variable coordinate search (slice 3) climbs to `c=1,s=0` on each
+    // pair with `x=0`. Replay-gated, so a returned model must satisfy every term.
+    let mut a = TermArena::new();
+    let cos_a = real(&mut a, "skoC");
+    let sin_a = real(&mut a, "skoS");
+    let cos_b = real(&mut a, "skoCB");
+    let sin_b = real(&mut a, "skoSB");
+    let sko_x = real(&mut a, "skoX");
+    let one = a.real_const(Rational::integer(1));
+    let zero = a.real_const(Rational::integer(0));
+    let bound = a.real_const(Rational::new(177, 366_500_000));
+    let tiny = a.real_const(Rational::new(1, 10_000_000));
+
+    // sB² = 1 − cB²  ⟺  sB² + cB² = 1
+    let sb2 = a.real_mul(sin_b, sin_b).unwrap();
+    let cb2 = a.real_mul(cos_b, cos_b).unwrap();
+    let sum_b = a.real_add(sb2, cb2).unwrap();
+    let circle_b = a.eq(sum_b, one).unwrap();
+    // s² = 1 − c²
+    let s2 = a.real_mul(sin_a, sin_a).unwrap();
+    let c2 = a.real_mul(cos_a, cos_a).unwrap();
+    let sum_a = a.real_add(s2, c2).unwrap();
+    let circle_a = a.eq(sum_a, one).unwrap();
+    // 0 ≤ x < 177/366500000 ∧ x ≤ 1e-7
+    let x_ge0 = a.real_ge(sko_x, zero).unwrap();
+    let x_below_bound = a.real_lt(sko_x, bound).unwrap();
+    let x_below_tiny = a.real_le(sko_x, tiny).unwrap();
+
+    let asserts = [circle_b, circle_a, x_ge0, x_below_bound, x_below_tiny];
+    let r = check_with_nra(&mut a, &asserts, &SolverConfig::default()).unwrap();
+    match r {
+        CheckResult::Sat(m) => assert!(
+            model_satisfies(&a, &m, &asserts),
+            "very-easy-sat model must replay true"
+        ),
+        other => panic!("decoupled 5-var circles must be sat, got {other:?}"),
+    }
+}
+
+#[test]
+fn coordinate_probe_bounds_five_var_sum_of_squares_unsat() {
+    // A >4-var shape with NO grid witness: `v0²+v1²+v2²+v3²+v4² = −1`. Every real
+    // square is ≥ 0, so the sum is ≥ 0 > −1 — unsat. The 5-variable coordinate
+    // search runs (past the ≤4-var full product), never finds a satisfying
+    // candidate (correct — there is none), and terminates within its bounded
+    // budget: the verdict must NOT be a (wrong) sat.
+    let mut a = TermArena::new();
+    let vs: Vec<_> = (0..5).map(|i| real(&mut a, &format!("v{i}"))).collect();
+    let mut sum = a.real_mul(vs[0], vs[0]).unwrap();
+    for &v in &vs[1..] {
+        let sq = a.real_mul(v, v).unwrap();
+        sum = a.real_add(sum, sq).unwrap();
+    }
+    let neg1 = a.real_const(Rational::integer(-1));
+    let goal = a.eq(sum, neg1).unwrap();
+
+    let r = check_with_nra(&mut a, &[goal], &SolverConfig::default()).unwrap();
+    assert!(
+        !matches!(r, CheckResult::Sat(_)),
+        "sum of 5 squares = -1 must never be sat, got {r:?}"
+    );
+}
+
+#[test]
 fn probe_never_reports_wrong_sat_on_negative_square() {
     // (= (* x x) (- 2)) is unsat (a real square is ≥ 0). The grid probe includes
     // x=±2 etc.; none satisfy, so it must NOT report sat — the verdict is unsat

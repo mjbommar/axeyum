@@ -930,8 +930,14 @@ fn free_real_symbols(arena: &TermArena, assertions: &[TermId]) -> Vec<axeyum_ir:
 /// never inferred here (absence of a grid witness proves nothing).
 ///
 /// Cost is bounded: `|grid|` uniform candidates for any variable count (catches
-/// all-equal witnesses like the all-zero root of `(Σ vᵢ)⁴ = 0`), plus the full
-/// `|grid|^n` product only when `n ≤ MAX_PROBE_VARS`.
+/// all-equal witnesses like the all-zero root of `(Σ vᵢ)⁴ = 0`), the full
+/// `|grid|^n` product only when `n ≤ MAX_PROBE_VARS`, and — above that boundary —
+/// a **bounded per-variable coordinate search** (greedy round-robin over the grid,
+/// scored by satisfied-conjunct count) that reaches *decoupled* witnesses the
+/// uniform fallback cannot (e.g. two independent circles `s²=1−c²` solved by
+/// `c=1,s=0` per pair). Every accepted candidate still replays every original
+/// assertion, so the coordinate search can only turn `unknown → sat`, never a
+/// wrong verdict.
 fn sat_witness_probe(arena: &TermArena, assertions: &[TermId]) -> Option<CheckResult> {
     const MAX_PROBE_VARS: usize = 4;
     let grid: [Rational; 7] = [
@@ -984,6 +990,114 @@ fn sat_witness_probe(arena: &TermArena, assertions: &[TermId]) -> Option<CheckRe
             }
             if replays(&assign) {
                 return Some(build_model(&assign));
+            }
+        }
+        return None;
+    }
+
+    // Above the full-product boundary the `|grid|^n` cross product is too large, so
+    // fall back to a **bounded per-variable coordinate search** (slice 3). It
+    // reaches *decoupled* witnesses (e.g. two independent circles `s²=1−c²` solved
+    // by `c=1,s=0` per pair) that neither the uniform grid nor a tractable product
+    // finds. Still replay-gated — a miss falls through, never a wrong `sat`.
+    coordinate_witness_probe(arena, assertions, &vars, &grid)
+}
+
+/// Bounded per-variable coordinate sat-witness search for `> MAX_PROBE_VARS` free
+/// reals (slice 3), where the full `|grid|^n` product is infeasible.
+///
+/// From each uniform starting base, greedy round-robin coordinate descent fixes
+/// every variable to the grid value maximizing the count of satisfied conjuncts
+/// (scored over the flattened top-level `and`, since the whole-formula replay is
+/// all-or-nothing and gives no partial-progress signal), then replay-checks the
+/// full assignment against **every original assertion** through the ground
+/// evaluator. It returns `Some(Sat(model))` only for an assignment that genuinely
+/// satisfies the originals, so — like the grid probe — it can only turn
+/// `unknown → sat`, never a wrong verdict; a miss returns `None`.
+///
+/// Cost is hard-bounded: at most `|grid|` bases × `MAX_COORD_ROUNDS` rounds ×
+/// `n` variables × `|grid|` trials, and it declines entirely above
+/// `MAX_COORD_VARS` free reals.
+fn coordinate_witness_probe(
+    arena: &TermArena,
+    assertions: &[TermId],
+    vars: &[axeyum_ir::SymbolId],
+    grid: &[Rational],
+) -> Option<CheckResult> {
+    const MAX_COORD_VARS: usize = 64; // cost guard: decline unbounded variable counts
+    const MAX_COORD_ROUNDS: usize = 4; // hard iteration cap per starting base
+    if vars.len() > MAX_COORD_VARS {
+        return None;
+    }
+    // Flatten the top-level `and` structure into atomic conjuncts to score partial
+    // progress (the whole-formula replay is all-or-nothing, so coordinate descent
+    // needs per-conjunct credit to make progress).
+    let mut conjuncts: Vec<TermId> = Vec::new();
+    let mut stack: Vec<TermId> = assertions.iter().rev().copied().collect();
+    while let Some(t) = stack.pop() {
+        match arena.node(t) {
+            TermNode::App {
+                op: Op::BoolAnd,
+                args,
+            } => {
+                for &a in args.iter().rev() {
+                    stack.push(a);
+                }
+            }
+            _ => conjuncts.push(t),
+        }
+    }
+    let score = |assign: &Assignment| -> usize {
+        conjuncts
+            .iter()
+            .filter(|&&c| matches!(eval(arena, c, assign), Ok(Value::Bool(true))))
+            .count()
+    };
+    let replays = |assign: &Assignment| -> bool {
+        assertions
+            .iter()
+            .all(|&a| matches!(eval(arena, a, assign), Ok(Value::Bool(true))))
+    };
+    let build_model = |assign: &Assignment| -> CheckResult {
+        let mut model = Model::new();
+        for &s in vars {
+            if let Some(value) = assign.get(s) {
+                model.set(s, value);
+            }
+        }
+        CheckResult::Sat(model)
+    };
+    // Try each uniform grid value as a starting base (all bounded); from each, run
+    // greedy round-robin coordinate descent and replay-check after every round.
+    for base in grid {
+        let mut assign = Assignment::new();
+        for &s in vars {
+            assign.set(s, Value::Real(*base));
+        }
+        for _round in 0..MAX_COORD_ROUNDS {
+            let mut improved = false;
+            for &s in vars {
+                let mut best_val = match assign.get(s) {
+                    Some(Value::Real(r)) => r,
+                    _ => *base,
+                };
+                let mut best_score = score(&assign);
+                for g in grid {
+                    assign.set(s, Value::Real(*g));
+                    let sc = score(&assign);
+                    if sc > best_score {
+                        best_score = sc;
+                        best_val = *g;
+                        improved = true;
+                    }
+                }
+                assign.set(s, Value::Real(best_val));
+            }
+            if replays(&assign) {
+                return Some(build_model(&assign));
+            }
+            if !improved {
+                break; // local optimum with no full witness — try the next base
             }
         }
     }
