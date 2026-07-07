@@ -113,6 +113,20 @@ impl Membership {
         canon(&acc.unwrap_or_else(Regex::universal))
     }
 
+    /// The combined canonical regex `⋂ positives ∩ ⋂ ∁negatives ∩ Σ{len_lo,len_hi}`
+    /// — the single object whose language emptiness *is* this problem's
+    /// unsatisfiability.
+    ///
+    /// Exposed for the Lean-reconstruction of a regex-membership
+    /// derivative-emptiness `unsat` (P3.7): the reconstructor re-establishes the
+    /// emptiness certificate ([`derivative_closure`] +
+    /// [`recheck_empty`]) over this regex before building its kernel-checked
+    /// `False`. It is the same object [`refute_empty`](Self::refute_empty) certifies.
+    #[must_use]
+    pub fn combined_regex(&self) -> Regex {
+        self.combined()
+    }
+
     /// Decides this membership problem with the default caps.
     #[must_use]
     pub fn solve(&self, budget: &SearchBudget) -> MembershipOutcome {

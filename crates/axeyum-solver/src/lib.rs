@@ -122,6 +122,7 @@ mod quant_vacuous_universal;
 mod quant_valid_universal;
 mod reconstruct;
 mod records;
+mod regex_reconstruct;
 pub mod route_trace;
 mod sat_bv_backend;
 mod set_cardinality;
@@ -373,6 +374,7 @@ pub use reconstruct::{
     reconstruct_skolem_unsat_proof, reconstruct_sos_proof, scan_proof_fragment,
 };
 pub use records::{RecordError, RecordSort};
+pub use regex_reconstruct::reconstruct_regex_emptiness_to_lean_module;
 pub use route_trace::{DeclineReason, RouteAttempt, RouteOutcome, RouteTrace, Verdict};
 pub use sat_bv_backend::SatBvBackend;
 pub use set_cardinality::{SetCardinalityRefutationCertificate, set_cardinality_refutation};
