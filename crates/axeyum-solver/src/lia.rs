@@ -65,6 +65,15 @@ pub fn check_with_int_blasting<B: SolverBackend>(
                 "invalid integer bit-blast width {width}"
             )));
         }
+        Err(IntBlastError::UnsupportedOp(op)) => {
+            return Ok(CheckResult::Unknown(UnknownReason {
+                kind: UnknownKind::Incomplete,
+                detail: format!(
+                    "integer bit-blast does not support operator {op:?}; a specialized \
+                     decider must handle this query"
+                ),
+            }));
+        }
         Err(IntBlastError::Ir(error)) => {
             return Err(SolverError::Backend(error.to_string()));
         }

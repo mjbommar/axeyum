@@ -725,6 +725,7 @@ fn rewrite_app(
         | Op::IntDiv
         | Op::IntMod
         | Op::IntAbs
+        | Op::IntPow2
         | Op::IntLt
         | Op::IntLe
         | Op::IntGt
@@ -1589,6 +1590,7 @@ pub fn build_app(arena: &mut TermArena, op: Op, args: &[TermId]) -> Result<TermI
         Op::IntDiv => arena.int_div(args[0], args[1]),
         Op::IntMod => arena.int_mod(args[0], args[1]),
         Op::IntAbs => arena.int_abs(args[0]),
+        Op::IntPow2 => arena.int_pow2(args[0]),
         Op::IntLt => arena.int_lt(args[0], args[1]),
         Op::IntLe => arena.int_le(args[0], args[1]),
         Op::IntGt => arena.int_gt(args[0], args[1]),

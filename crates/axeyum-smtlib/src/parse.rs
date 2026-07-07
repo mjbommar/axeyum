@@ -9696,6 +9696,13 @@ fn apply_op(
             }
             arena.int_abs(a[0])?
         }
+        // cvc5 native `(int.pow2 x)` — total integer power-of-two (`2^x` for
+        // `x ≥ 0`, the defined value `0` for `x < 0`; see [`Op::IntPow2`]). Unary,
+        // `Int → Int`. `int_pow2` rejects a non-integer argument.
+        "int.pow2" => {
+            need(1)?;
+            arena.int_pow2(args[0])?
+        }
         // Int↔Real coercions. Constant operands fold exactly; symbolic operands
         // need cross-sort (Nelson-Oppen) reasoning and are not yet supported.
         "to_real" => {

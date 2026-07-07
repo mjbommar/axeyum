@@ -1646,6 +1646,17 @@ impl TermArena {
         Ok(self.app(Op::IntAbs, &[a], Sort::Int))
     }
 
+    /// `int.pow2` — the cvc5 total integer power-of-two: `2^a` for `a ≥ 0` and the
+    /// defined value `0` for `a < 0` (see [`Op::IntPow2`]). Result sort `Int`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError::SortMismatch`] unless `a` is an integer.
+    pub fn int_pow2(&mut self, a: TermId) -> Result<TermId, IrError> {
+        self.expect_int(a)?;
+        Ok(self.app(Op::IntPow2, &[a], Sort::Int))
+    }
+
     /// SMT-LIB `(_ divisible n) x` — true iff `n` divides `x`. Sugar for
     /// `mod x n = 0` (result sort `Bool`); reuses the Euclidean [`Op::IntMod`].
     ///

@@ -345,6 +345,351 @@ fn collect_symbols(arena: &TermArena, roots: &[TermId]) -> BTreeSet<SymbolId> {
     syms
 }
 
+/// Distinct `int.pow2` terms reachable from `roots` (hash-consed ⇒ each surface
+/// occurrence of the same `pow2(x)` is one `TermId`, so the abstraction is
+/// congruent — identical arguments map to one fresh variable — by construction).
+fn collect_pow2(arena: &TermArena, roots: &[TermId]) -> BTreeSet<TermId> {
+    let mut pow2s = BTreeSet::new();
+    let mut seen = BTreeSet::new();
+    let mut stack: Vec<TermId> = roots.to_vec();
+    while let Some(term) = stack.pop() {
+        if !seen.insert(term) {
+            continue;
+        }
+        let TermNode::App { op, args } = arena.node(term) else {
+            continue;
+        };
+        if *op == Op::IntPow2 {
+            pow2s.insert(term);
+        }
+        stack.extend(args.iter().copied());
+    }
+    pow2s
+}
+
+/// Every distinct subterm reachable from `roots` (used for cheap membership tests).
+fn all_subterms(arena: &TermArena, roots: &[TermId]) -> BTreeSet<TermId> {
+    let mut seen = BTreeSet::new();
+    let mut stack: Vec<TermId> = roots.to_vec();
+    while let Some(term) = stack.pop() {
+        if !seen.insert(term) {
+            continue;
+        }
+        if let TermNode::App { args, .. } = arena.node(term) {
+            stack.extend(args.iter().copied());
+        }
+    }
+    seen
+}
+
+/// An integer literal's value, or `None` for a non-constant term.
+fn as_int_const(arena: &TermArena, t: TermId) -> Option<i128> {
+    match arena.node(t) {
+        TermNode::IntConst(v) => Some(*v),
+        _ => None,
+    }
+}
+
+/// The exact cvc5 `pow2` value at a *constant* exponent `k`: `0` for `k < 0`,
+/// `2^k` for `0 ≤ k`; `None` when `2^k` would leave the safe `i128` table range.
+fn pow2_value(k: i128) -> Option<i128> {
+    if k < 0 {
+        Some(0)
+    } else if k <= POW2_TABLE_MAX_EXP {
+        Some(1i128 << k)
+    } else {
+        None
+    }
+}
+
+/// Largest exponent enumerated in a value table (`2^62 < i128::MAX`).
+const POW2_TABLE_MAX_EXP: i128 = 62;
+/// Largest number of `x = k` cases emitted in one value table.
+const POW2_TABLE_MAX_CASES: i128 = 128;
+
+/// Sound constant bounds `[lo, hi]` on `target`, derived ONLY from top-level
+/// asserted conjuncts (descending exclusively through `and` — never through
+/// `or`/`not`/`ite`, whose sub-atoms would not be *implied*). Either endpoint may
+/// be absent. Every returned bound is a logical consequence of `assertions`, so
+/// enumerating `target ∈ [lo, hi]` is a theorem.
+fn const_bounds_of_term(
+    arena: &TermArena,
+    assertions: &[TermId],
+    target: TermId,
+) -> (Option<i128>, Option<i128>) {
+    // Ignore constants outside a sane band: they can only widen the range past
+    // the table cap anyway, and `c ± 1` stays in-range.
+    const BAND: i128 = 1 << 62;
+    let mut lo: Option<i128> = None;
+    let mut hi: Option<i128> = None;
+    let mut tighten_lo = |v: i128| lo = Some(lo.map_or(v, |c| c.max(v)));
+    let mut tighten_hi = |v: i128| hi = Some(hi.map_or(v, |c| c.min(v)));
+    let mut stack: Vec<TermId> = assertions.to_vec();
+    let mut seen = BTreeSet::new();
+    while let Some(t) = stack.pop() {
+        if !seen.insert(t) {
+            continue;
+        }
+        let TermNode::App { op, args } = arena.node(t) else {
+            continue;
+        };
+        let op = *op;
+        if op == Op::BoolAnd {
+            stack.extend(args.iter().copied());
+            continue;
+        }
+        if args.len() != 2 {
+            continue;
+        }
+        let (a, b) = (args[0], args[1]);
+        let ac = as_int_const(arena, a).filter(|c| c.abs() < BAND);
+        let bc = as_int_const(arena, b).filter(|c| c.abs() < BAND);
+        match op {
+            // a ≤ b
+            Op::IntLe => {
+                if a == target
+                    && let Some(c) = bc
+                {
+                    tighten_hi(c);
+                }
+                if b == target
+                    && let Some(c) = ac
+                {
+                    tighten_lo(c);
+                }
+            }
+            // a < b
+            Op::IntLt => {
+                if a == target
+                    && let Some(c) = bc
+                {
+                    tighten_hi(c - 1);
+                }
+                if b == target
+                    && let Some(c) = ac
+                {
+                    tighten_lo(c + 1);
+                }
+            }
+            // a ≥ b
+            Op::IntGe => {
+                if a == target
+                    && let Some(c) = bc
+                {
+                    tighten_lo(c);
+                }
+                if b == target
+                    && let Some(c) = ac
+                {
+                    tighten_hi(c);
+                }
+            }
+            // a > b
+            Op::IntGt => {
+                if a == target
+                    && let Some(c) = bc
+                {
+                    tighten_lo(c + 1);
+                }
+                if b == target
+                    && let Some(c) = ac
+                {
+                    tighten_hi(c - 1);
+                }
+            }
+            // a = b pins both endpoints.
+            Op::Eq => {
+                if a == target
+                    && let Some(c) = bc
+                {
+                    tighten_lo(c);
+                    tighten_hi(c);
+                }
+                if b == target
+                    && let Some(c) = ac
+                {
+                    tighten_lo(c);
+                    tighten_hi(c);
+                }
+            }
+            _ => {}
+        }
+    }
+    (lo, hi)
+}
+
+/// The output of [`abstract_pow2`]: `(rewritten_assertions, axioms)`.
+type Pow2Abstraction = (Vec<TermId>, Vec<TermId>);
+
+/// The exact value table `⋁_{k=lo}^{hi} (x = k ∧ p = pow2(k))` for a `pow2`
+/// exponent `x` provably confined to `[lo, hi]`, or `None` when the window is
+/// empty, too wide, or reaches an out-of-range exponent (a partial table is never
+/// emitted — it would forbid legitimate values and could refute a real model).
+/// Given `lo ≤ x ≤ hi`, the returned disjunction is a genuine theorem.
+fn pow2_value_table(
+    arena: &mut TermArena,
+    x: TermId,
+    p: TermId,
+    lo: i128,
+    hi: i128,
+) -> Result<Option<TermId>, SolverError> {
+    // `hi - lo < N` ⟺ at most `N` cases; guards against an unbounded/huge table.
+    if lo > hi || hi > POW2_TABLE_MAX_EXP || hi - lo >= POW2_TABLE_MAX_CASES {
+        return Ok(None);
+    }
+    let mut table: Option<TermId> = None;
+    for k in lo..=hi {
+        let Some(val) = pow2_value(k) else {
+            return Ok(None); // out-of-range exponent ⇒ decline the whole table
+        };
+        let k_const = arena.int_const(k);
+        let val_const = arena.int_const(val);
+        let x_is_k = arena.eq(x, k_const).map_err(err)?;
+        let p_is_val = arena.eq(p, val_const).map_err(err)?;
+        let case = arena.and(x_is_k, p_is_val).map_err(err)?;
+        table = Some(match table {
+            None => case,
+            Some(acc) => arena.or(acc, case).map_err(err)?,
+        });
+    }
+    Ok(table)
+}
+
+/// Replaces every `int.pow2(x)` subterm with a fresh `Int` variable `p` and
+/// returns `(rewritten_assertions, axioms)` — or `None` when the query has no
+/// `pow2` terms. Every axiom is a genuine theorem of cvc5's total semantics
+/// (`pow2(x) = 2^x` for `x ≥ 0`, `pow2(x) = 0` for `x < 0`), so it only shrinks
+/// the abstracted relaxation's model space and an `unsat` transfers soundly:
+///
+///  - **negative (defined, not underspecified):** `x < 0 ⇒ p = 0`;
+///  - **positivity:** `x ≥ 0 ⇒ p ≥ 1`;
+///  - **super-linear lower bound:** `x ≥ 0 ⇒ p ≥ x + 1` (i.e. `2^x ≥ x+1`);
+///  - **evenness:** `x ≠ 0 ⇒ p = 2·q` for a fresh `q` (`2^x` is even for `x ≥ 1`,
+///    and `p = 0` is even for `x < 0`);
+///  - **strict monotonicity (pairwise):** `0 ≤ x_i ∧ x_i < x_j ⇒ p_i < p_j`;
+///  - **exact value table (bounded `x`):** when the other assertions pin
+///    `lo ≤ x ≤ hi` with a small enough range, the complete disjunction
+///    `⋁_{k=lo}^{hi} (x = k ∧ p = pow2(k))`, which decides the value exactly.
+fn abstract_pow2(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    counter: &mut u32,
+) -> Result<Option<Pow2Abstraction>, SolverError> {
+    let pow2_terms = collect_pow2(arena, assertions);
+    if pow2_terms.is_empty() {
+        return Ok(None);
+    }
+
+    // A fresh Int variable per distinct pow2 term.
+    let mut map: HashMap<TermId, TermId> = HashMap::new();
+    // (original pow2 term t, raw argument x, fresh replacement variable p).
+    let mut args: Vec<(TermId, TermId, TermId)> = Vec::new();
+    for &t in &pow2_terms {
+        let TermNode::App { args: a, .. } = arena.node(t) else {
+            continue;
+        };
+        let x = a[0];
+        let sym = arena
+            .declare(&format!("!pow2_{counter}"), Sort::Int)
+            .map_err(err)?;
+        *counter += 1;
+        let p = arena.var(sym);
+        map.insert(t, p);
+        args.push((t, x, p));
+    }
+
+    // Rewrite the assertions (pow2 → fresh var).
+    let mut memo: HashMap<TermId, TermId> = HashMap::new();
+    let mut rewritten = Vec::with_capacity(assertions.len());
+    for &a in assertions {
+        rewritten.push(replace_subterms(arena, a, &map, &mut memo).map_err(err)?);
+    }
+    // Every subterm of the abstracted query, used to add the `div`/`mod`-of-pow2
+    // lemmas only when the corresponding term is actually present.
+    let rewritten_subterms = all_subterms(arena, &rewritten);
+
+    let zero = arena.int_const(0);
+    let one = arena.int_const(1);
+    let two = arena.int_const(2);
+    let mut axioms: Vec<TermId> = Vec::new();
+    // The rewritten argument of each pow2 (a nested pow2 in `x` is abstracted too),
+    // retained for the pairwise monotonicity lemmas.
+    let mut rewritten_args: Vec<(TermId, TermId)> = Vec::with_capacity(args.len());
+
+    for &(_t, x_raw, p) in &args {
+        let x = replace_subterms(arena, x_raw, &map, &mut memo).map_err(err)?;
+        rewritten_args.push((x, p));
+
+        let x_ge0 = arena.int_ge(x, zero).map_err(err)?;
+        let x_lt0 = arena.int_lt(x, zero).map_err(err)?;
+
+        // x < 0 ⇒ p = 0   (cvc5 defines the negative case as exactly 0).
+        let p_eq0 = arena.eq(p, zero).map_err(err)?;
+        axioms.push(arena.implies(x_lt0, p_eq0).map_err(err)?);
+        // x ≥ 0 ⇒ p ≥ 1.
+        let p_ge1 = arena.int_ge(p, one).map_err(err)?;
+        axioms.push(arena.implies(x_ge0, p_ge1).map_err(err)?);
+        // x ≥ 0 ⇒ p ≥ x + 1   (2^x ≥ x + 1 for x ≥ 0).
+        let x_plus1 = arena.int_add(x, one).map_err(err)?;
+        let p_ge_x1 = arena.int_ge(p, x_plus1).map_err(err)?;
+        axioms.push(arena.implies(x_ge0, p_ge_x1).map_err(err)?);
+        // x ≠ 0 ⇒ p = 2·q   (p is even off zero; q fresh existential witness).
+        let x_nonzero = {
+            let x_eq0 = arena.eq(x, zero).map_err(err)?;
+            arena.not(x_eq0).map_err(err)?
+        };
+        let q_sym = arena
+            .declare(&format!("!pow2_even_{counter}"), Sort::Int)
+            .map_err(err)?;
+        *counter += 1;
+        let q = arena.var(q_sym);
+        let two_q = arena.int_mul(two, q).map_err(err)?;
+        let p_even = arena.eq(p, two_q).map_err(err)?;
+        axioms.push(arena.implies(x_nonzero, p_even).map_err(err)?);
+
+        // `div`/`mod` OF a `pow2` BY its own exponent: for `x ≥ 0` we have
+        // `0 ≤ x < pow2(x)` (from `p ≥ x + 1`), hence the exact Euclidean facts
+        // `div(x, pow2(x)) = 0` and `mod(x, pow2(x)) = x`. Both are theorems; add
+        // them only when the term is present (otherwise they would introduce a new
+        // variable-divisor `div`/`mod` for nothing). The abstracted divisor is `p`.
+        let div_xp = arena.int_div(x, p).map_err(err)?;
+        if rewritten_subterms.contains(&div_xp) {
+            let div_eq0 = arena.eq(div_xp, zero).map_err(err)?;
+            axioms.push(arena.implies(x_ge0, div_eq0).map_err(err)?);
+        }
+        let mod_xp = arena.int_mod(x, p).map_err(err)?;
+        if rewritten_subterms.contains(&mod_xp) {
+            let mod_eq_x = arena.eq(mod_xp, x).map_err(err)?;
+            axioms.push(arena.implies(x_ge0, mod_eq_x).map_err(err)?);
+        }
+
+        // Exact value table when `x` is pinned to a small constant window.
+        let (lo, hi) = const_bounds_of_term(arena, assertions, x_raw);
+        if let (Some(lo), Some(hi)) = (lo, hi)
+            && let Some(table) = pow2_value_table(arena, x, p, lo, hi)?
+        {
+            axioms.push(table);
+        }
+    }
+
+    // Pairwise strict monotonicity: 0 ≤ x_i ∧ x_i < x_j ⇒ p_i < p_j (both orders).
+    for i in 0..rewritten_args.len() {
+        for j in (i + 1)..rewritten_args.len() {
+            let (xi, pi) = rewritten_args[i];
+            let (xj, pj) = rewritten_args[j];
+            for &((xa, pa), (xb, pb)) in &[((xi, pi), (xj, pj)), ((xj, pj), (xi, pi))] {
+                let xa_ge0 = arena.int_ge(xa, zero).map_err(err)?;
+                let xa_lt_xb = arena.int_lt(xa, xb).map_err(err)?;
+                let hyp = arena.and(xa_ge0, xa_lt_xb).map_err(err)?;
+                let concl = arena.int_lt(pa, pb).map_err(err)?;
+                axioms.push(arena.implies(hyp, concl).map_err(err)?);
+            }
+        }
+    }
+
+    Ok(Some((rewritten, axioms)))
+}
+
 /// Integer nonlinear decider (Phase E first slice) — the integer analog of
 /// [`crate::nra::check_with_nra`]. Linearizes variable-divisor `div`/`mod`,
 /// abstracts each integer product with its valid sign/zero lemmas, and
@@ -363,17 +708,36 @@ pub fn check_with_nia(
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> Result<Option<CheckResult>, SolverError> {
-    // 1. Eliminate constant-divisor div/mod + abs exactly (equisatisfiable).
-    let lin = axeyum_rewrite::eliminate_int_divmod(arena, assertions).map_err(err)?;
-    // 2. Eliminate variable-divisor div/mod (guarded Euclidean + self-division).
     let mut counter = 0u32;
+    // 0. Abstract `int.pow2` terms to fresh integer variables + theory-valid
+    //    axioms, BEFORE div/mod elimination so a `div`/`mod` whose divisor is a
+    //    `pow2` term (e.g. `(div x (int.pow2 x))`) still linearizes through the
+    //    variable-divisor Euclidean route below. Every axiom is a genuine theorem
+    //    of cvc5's total semantics, so an `unsat` of the abstracted query
+    //    transfers; a `sat` is (as always) accepted only after replaying the
+    //    ORIGINAL assertions — with `int.pow2` intact — under the ground
+    //    evaluator, so a mis-abstraction can never yield a wrong `sat`.
+    let pow2_abstraction = abstract_pow2(arena, assertions, &mut counter)?;
+    let had_pow2 = pow2_abstraction.is_some();
+    let base: Vec<TermId> = match &pow2_abstraction {
+        Some((rewritten, axioms)) => {
+            let mut v = axioms.clone();
+            v.extend_from_slice(rewritten);
+            v
+        }
+        None => assertions.to_vec(),
+    };
+
+    // 1. Eliminate constant-divisor div/mod + abs exactly (equisatisfiable).
+    let lin = axeyum_rewrite::eliminate_int_divmod(arena, &base).map_err(err)?;
+    // 2. Eliminate variable-divisor div/mod (guarded Euclidean + self-division).
     let after_divmod = eliminate_variable_divmod(arena, &lin, &mut counter)?;
     let had_var_divmod = after_divmod.is_some();
     let working = after_divmod.unwrap_or(lin);
 
     // 3. Abstract integer products and add their valid lemmas.
     let products = int_products(arena, &working);
-    if products.is_empty() && !had_var_divmod {
+    if products.is_empty() && !had_var_divmod && !had_pow2 {
         // Nothing nonlinear to exploit — a pure-linear query the LIA path already
         // owns; decline rather than re-solve it.
         return Ok(None);

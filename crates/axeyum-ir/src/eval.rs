@@ -780,6 +780,21 @@ fn apply(op: Op, vals: &[Value]) -> Result<Value, IrError> {
                     .ok_or(IrError::ArithmeticOverflow { op: "int_abs" })?,
             )
         }
+        // `int.pow2` (cvc5 total semantics, verbatim): `2^x` for `x ≥ 0` and the
+        // DEFINED value `0` for `x < 0`. Overflow past the i128 reference range is
+        // reported (never a wrapped/wrong value) so a dependent sat model degrades
+        // to a graceful `unknown`.
+        Op::IntPow2 => {
+            let x = vals[0].as_int().expect("builder guaranteed Int operand");
+            if x < 0 {
+                Value::Int(0)
+            } else if x < 127 {
+                // 2^x with x ≤ 126 fits i128 (2^126 < i128::MAX); the shift is exact.
+                Value::Int(1i128 << x)
+            } else {
+                return Err(IrError::ArithmeticOverflow { op: "int_pow2" });
+            }
+        }
         Op::IntLt => int_cmp(vals, |x, y| x < y),
         Op::IntLe => int_cmp(vals, |x, y| x <= y),
         Op::IntGt => int_cmp(vals, |x, y| x > y),

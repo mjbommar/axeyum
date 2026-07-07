@@ -649,6 +649,7 @@ fn update_op(hash: &mut u64, op: Op) {
         Op::IntDiv => update_u64(hash, 66),
         Op::IntMod => update_u64(hash, 67),
         Op::IntAbs => update_u64(hash, 68),
+        Op::IntPow2 => update_u64(hash, 80),
         Op::IntLt => update_u64(hash, 49),
         Op::IntLe => update_u64(hash, 50),
         Op::IntGt => update_u64(hash, 51),

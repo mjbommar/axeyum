@@ -919,6 +919,8 @@ impl<'a> LoweringBuilder<'a> {
                 | Op::DtConstruct { .. }
                 | Op::DtSelect { .. }
                 | Op::DtTest(_)
+                // `int.pow2` is an integer (NIA) term with no bit-vector lowering.
+                | Op::IntPow2
                 // Sequences (ADR-0051, P2.7) have no bit-vector lowering.
                 | Op::SeqLen
                 | Op::SeqEmpty(_)

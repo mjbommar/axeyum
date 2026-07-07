@@ -108,6 +108,12 @@ pub fn check_with_all_theories<B: SolverBackend>(
                 "invalid integer bit-blast width {width}"
             )));
         }
+        Err(IntBlastError::UnsupportedOp(op)) => {
+            return Ok(unknown(format!(
+                "integer bit-blast does not support operator {op:?}; deferring to a \
+                 specialized decider"
+            )));
+        }
         Err(IntBlastError::Ir(error)) => return Err(SolverError::Backend(error.to_string())),
     };
     if past_deadline(deadline) {

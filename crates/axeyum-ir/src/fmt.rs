@@ -70,6 +70,7 @@ fn op_name(op: Op) -> String {
         Op::IntDiv => "div".into(),
         Op::IntMod => "mod".into(),
         Op::IntAbs => "abs".into(),
+        Op::IntPow2 => "int.pow2".into(),
         Op::IntLt | Op::RealLt => "<".into(),
         Op::IntLe | Op::RealLe => "<=".into(),
         Op::IntGt | Op::RealGt => ">".into(),

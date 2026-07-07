@@ -15,7 +15,7 @@ A single-glance, honest view of where the pure-Rust axeyum solver stands against
 ## Headline
 
 - **35 division baselines** measured vs z3 4.13.3, spanning **24 logic fragments** (BV, LIA, QF_ABV, QF_ALIA, QF_AUFBV, QF_AUFLIA, QF_AX, QF_BV, QF_BVFP, QF_DT, QF_FF, QF_FP, QF_LIA, QF_LRA, QF_NIA, QF_NRA, QF_S, QF_SEQ, QF_SLIA, QF_UF, QF_UFBV, QF_UFFF, QF_UFLIA, UF).
-- **DISAGREE = 0 across all baselines** — zero wrong verdicts over 655 oracle-compared instances (992 files total, 714 decided).
+- **DISAGREE = 0 across all baselines** — zero wrong verdicts over 656 oracle-compared instances (992 files total, 722 decided).
 - Decide-rate ranges **0%–100%** across divisions — that spread *is* the capability frontier; DISAGREE = 0 is the soundness floor that holds everywhere.
 
 ## Divisions vs Z3
@@ -42,7 +42,7 @@ Sorted by logic, then by descending decide-rate. Every committed `*solver-vs-z3*
 | QF_LRA | `qf-lra-cvc5-regress-clean` | 11 | 9 | 82% | 2 | 0 | 5 | 0 | z3-binary | 3.637 |
 | QF_NIA | `qf-nia-curated-iand` | 3 | 3 | 100% | 0 | 0 | 0 | 0 | :status | 0.003 |
 | QF_NIA | `qf-nia-synthetic-graduated` | 32 | 32 | 100% | 0 | 0 | 32 | 0 | z3-binary | 6.772 |
-| QF_NIA | `qf-nia-cvc5-regress-clean` | 39 | 25 | 64% | 6 | 8 | 22 | 0 | z3-binary | 3.894 |
+| QF_NIA | `qf-nia-cvc5-regress-clean` | 39 | 33 | 85% | 5 | 1 | 23 | 0 | z3-binary | 2.730 |
 | QF_NRA | `qf-nra-synthetic-graduated` | 33 | 30 | 91% | 3 | 0 | 30 | 0 | z3-binary | 5.455 |
 | QF_NRA | `qf-nra-cvc5-regress-clean` | 38 | 27 | 71% | 10 | 1 | 27 | 0 | z3-binary | 5.421 |
 | QF_S | `qf-s-cvc5-regress-clean` | 134 | 78 | 58% | 6 | 50 | 74 | 0 | z3-library+binary | 1.442 |
@@ -60,7 +60,7 @@ Sorted by logic, then by descending decide-rate. Every committed `*solver-vs-z3*
 | QF_UFLIA | `qf-uflia-cvc5-regress-clean-overbound-uninterp-sorts` | 2 | 2 | 100% | 0 | 0 | 2 | 0 | z3-binary | 2.294 |
 | UF | `uf-cvc5-regress-clean-quantified` | 5 | 0 | 0% | 0 | 5 | 0 | 0 | :status | 0.000 |
 
-**Totals:** 992 files, 714 decided, 655 oracle-compared, **0 disagreements.**
+**Totals:** 992 files, 722 decided, 656 oracle-compared, **0 disagreements.**
 
 <!-- NOTES:BEGIN (hand-written attribution notes — preserved by the generator) -->
 ### QF_NIA cvc5 row CORRECTED DOWN 2026-07-07 (23→21) — a soundness fix, not a regression
@@ -102,6 +102,38 @@ the **new `qf_nia_divmod_const_differential_fuzz`** (the const-zero seed-class t
 variable-divisor fuzz structurally could not generate; the P0's gate). Gated by
 `nia`/`nra`/`qf_nia_divmod_var`/`qf_nia_divmod_const` differential fuzzes (all
 DISAGREE = 0), `progress_frontier` (8/8), `corpus_regression`, `--workspace --lib`.
+
+### QF_NIA cvc5 row RECOVERED UP 2026-07-07 (25 → 33) — `int.pow2` wiring + bounded value-table axioms (P2.5 task #41, slice 6)
+
+`int.pow2` is now a first-class IR operator (`Op::IntPow2`) parsed from the cvc5
+native surface `(int.pow2 x)`, evaluated by the ground evaluator with cvc5's
+**total** semantics **verbatim** (authoritative source
+`references/cvc5/src/theory/evaluator.cpp`): `pow2(x) = 2^x` for `x ≥ 0`, and the
+**DEFINED** value `pow2(x) = 0` for `x < 0` — *not* underspecified (cvc5's
+`ARITH_NL_POW2_NEG_REFINE` lemma `x < 0 ⇒ pow2(x) = 0` and its `pow2-native-0`
+regression, which is *unsat* on `x < 0 ∧ pow2(x) ≠ 0`, both pin the negative case
+to `0`). The NIA linearizer (`nia_linearize::abstract_pow2`, run **before**
+div/mod elimination) abstracts each `pow2(x)` to a fresh integer with **six
+theory-valid axiom families** (each a genuine theorem, so `unsat` transfers and a
+`sat` is still replay-checked against the original `pow2` term): negative
+(`x<0 ⇒ p=0`), positivity (`x≥0 ⇒ p≥1`), super-linear lower bound
+(`x≥0 ⇒ p≥x+1`), evenness (`x≠0 ⇒ p=2q`), pairwise strict monotonicity
+(`0≤xᵢ<xⱼ ⇒ pᵢ<pⱼ`), the exact `div`/`mod`-of-pow2 facts
+(`x≥0 ⇒ div(x,pow2(x))=0 ∧ mod(x,pow2(x))=x`), and a complete **value table**
+`⋁ₖ (x=k ∧ p=2^k)` for a `pow2` exponent pinned to a small window. `interval_of`
+also learns the exact `pow2` interval on a bounded exponent, so the finite-box
+enumeration decides bounded `pow2`-and-product rows (e.g. `2x² > pow2(x)`,
+`7≤x≤9`) by concrete evaluation. All **7 committed `pow2-native` rows** decide,
+matching cvc5. Row: **25 → 33 decided (64% → 85%), DISAGREE = 0,
+model_replay_failures = 0.** The monotonicity axiom is guarded by `x ≥ 0` so
+cvc5's `pow2-monotone-neg-soundness` (`x<y ∧ y²=4 ∧ pow2(y)≤pow2(x)`, **sat** via
+`y=−2, x<−2, pow2=0`) is never wrongly refuted — the P0 negative-exponent
+soundness test. Z3 has no native `int.pow2`, so the **new
+`qf_nia_pow2_differential_fuzz`** encodes it independently as an exact nested-`ite`
+ground-truth over the proven window and DELIBERATELY seeds the degenerate
+negative and zero exponents (the fragile axis); DISAGREE = 0. Gated by
+`nia`/`nra`/`qf_nia_pow2` differential fuzzes (all DISAGREE = 0),
+`progress_frontier` (8/8), `corpus_regression`, `--workspace --lib`.
 
 ### QF_NRA cvc5 row re-measured 2026-07-06 (P2.5 slice 2 — `a²=−k` int↔real coercion + even-power-equality refutation)
 

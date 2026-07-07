@@ -2579,6 +2579,30 @@ fn interval_of(
                     let hi = (1i128 << w).checked_sub(1)?;
                     Some(IntInterval { lo: 0, hi })
                 }
+                // `int.pow2(x)` on a bounded exponent has an EXACTLY computable
+                // interval under cvc5's total semantics (`2^x` for `x ≥ 0`, `0` for
+                // `x < 0`): `pow2` is `0` for negative `x` and monotone increasing
+                // for `x ≥ 0`, so for `x ∈ [lo, hi]` the value lies in
+                // `[pow2(max(lo, 0)) (or 0 if any x < 0 is possible), pow2(hi)]`.
+                // Recognizing it lets the finite-box proof cover a `pow2`-bearing
+                // query (the exact enumeration then evaluates it via the ground
+                // evaluator). Decline (sound) when `hi` is too large for `2^hi` to
+                // stay in the safe `i128` table range.
+                Op::IntPow2 => {
+                    // Largest exponent whose `2^hi` we admit (keeps the covering
+                    // width and enumeration modest; larger declines to other routes).
+                    const MAX_EXP: i128 = 62;
+                    let xi = interval_of(arena, args[0], bounds, depth + 1)?;
+                    if xi.hi > MAX_EXP {
+                        return None;
+                    }
+                    let hi_val = if xi.hi < 0 { 0 } else { 1i128 << xi.hi };
+                    let lo_val = if xi.lo < 0 { 0 } else { 1i128 << xi.lo };
+                    Some(IntInterval {
+                        lo: lo_val,
+                        hi: hi_val,
+                    })
+                }
                 _ => None,
             }
         }

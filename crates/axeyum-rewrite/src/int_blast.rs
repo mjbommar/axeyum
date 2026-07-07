@@ -42,6 +42,11 @@ pub enum IntBlastError {
     },
     /// The requested width is zero or exceeds [`MAX_INT_BLAST_WIDTH`].
     InvalidWidth(u32),
+    /// An integer operator with no faithful finite bit-vector encoding in this
+    /// route (e.g. `int.pow2`, whose value is exponential in its operand). The
+    /// caller should treat this as `unknown` and let a specialized decider (the
+    /// NIA linearizer) handle the query instead.
+    UnsupportedOp(Op),
     /// An IR builder error while constructing replacement terms.
     Ir(IrError),
 }
@@ -57,6 +62,9 @@ impl core::fmt::Display for IntBlastError {
             }
             IntBlastError::InvalidWidth(width) => {
                 write!(f, "invalid integer bit-blast width {width}")
+            }
+            IntBlastError::UnsupportedOp(op) => {
+                write!(f, "integer bit-blast does not support operator {op:?}")
             }
             IntBlastError::Ir(error) => write!(f, "integer bit-blast IR error: {error}"),
         }
@@ -268,6 +276,12 @@ impl Blaster {
                     core::cmp::Ordering::Greater => arena.sign_ext(width - self.width, x)?,
                 }
             }
+            // `int.pow2` has no faithful finite bit-vector encoding here (its value
+            // is exponential in the operand); decline so the query falls through to
+            // the NIA linearizer, which abstracts it with theory-valid axioms.
+            TermNode::App {
+                op: Op::IntPow2, ..
+            } => return Err(IntBlastError::UnsupportedOp(Op::IntPow2)),
             TermNode::App {
                 op: Op::IntMul,
                 args,

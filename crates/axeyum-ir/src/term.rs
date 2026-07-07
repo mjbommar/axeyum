@@ -241,6 +241,17 @@ pub enum Op {
     IntMod,
     /// Integer absolute value (SMT-LIB `abs`).
     IntAbs,
+    /// `int.pow2`: the cvc5 total integer power-of-two `pow2(x)` (unary,
+    /// `Int → Int`). Semantics follow cvc5's evaluator verbatim (authoritative,
+    /// checked against `references/cvc5/src/theory/evaluator.cpp`): `pow2(x) = 2^x`
+    /// for `x ≥ 0`, and — crucially — the **defined** value `pow2(x) = 0` for
+    /// `x < 0` (NOT underspecified: cvc5's `ARITH_NL_POW2_NEG_REFINE` lemma
+    /// `x < 0 ⇒ pow2(x) = 0` and its `pow2-native-0` regression, which is *unsat*
+    /// on `x < 0 ∧ pow2(x) ≠ 0`, both pin the negative case to `0`). The ground
+    /// evaluator reports [`crate::IrError::ArithmeticOverflow`] when `2^x` would
+    /// exceed the `i128` reference range (a dependent sat model degrades to a
+    /// graceful `unknown`, never a wrong value).
+    IntPow2,
     /// Integer less-than (result sort `Bool`).
     IntLt,
     /// Integer less-or-equal (result sort `Bool`).

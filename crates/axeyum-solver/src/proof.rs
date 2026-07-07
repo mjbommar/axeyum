@@ -362,6 +362,8 @@ pub fn export_qf_lia_unsat_proof(
                 "invalid integer bit-blast width {width}"
             )));
         }
+        // No finite bit-vector encoding (e.g. `int.pow2`): no bit-blast proof here.
+        Err(IntBlastError::UnsupportedOp(_)) => return Ok(UnsatProofOutcome::Inconclusive),
         Err(IntBlastError::Ir(inner)) => return Err(SolverError::Backend(inner.to_string())),
     };
     // Fail-closed against restricting guards: when the blast added any
