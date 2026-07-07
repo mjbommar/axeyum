@@ -423,6 +423,25 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-07 — Lean-parity: regex derivative-emptiness → kernel-checked Lean
+  `False` (#44, `cd6783b9`).** A new fragment `regex_reconstruct.rs` (mirroring
+  word/lex reconstruct): the emptiness certificate (finite derivative closure S —
+  start∈S, closed under derivative, no nullable member ⇒ `L=∅`) is encoded as an
+  automaton (`Q` state enum, `delta`/`accept`/`run` recursors) whose "never
+  accepts" invariant is proved by `Str`-induction and contradicts an assumed
+  membership → `Eq Bool false true` → `False` via the `Bool` discriminator. The
+  FULL multi-state closure reconstructs (empty-language, intersection/inclusion/
+  disjoint-char emptiness), **NO new kernel axioms** (the `Q` enum goes through the
+  trusted `add_inductive` gate); every term is `infer`+`def_eq`-checked to the
+  prelude `False` (the kernel IS the checker — a wrong cert declines). 7/7 tests
+  incl. a NEGATIVE test (kernel rejects a reflexive-`Eq` discriminator).
+  **Honest scope:** a kernel-checked NARROWING (trust rests on the `recheck_empty`
+  derivative substrate, like the `certify_*` sub-cases), not a from-nothing
+  faithful proof — a Lean `InRe` relation needs recursive-indexed inductives the
+  kernel doesn't yet support (documented follow-up). Also NOT yet wired into the
+  live evidence dispatcher (`reconstruct_regex_emptiness_to_lean_module` is
+  pub+test-exercised; wiring into `produce_evidence` is a follow-up). Landed
+  alongside the concurrent Track-5 lane's T5.3.1 (below) on the same push.
 - **2026-07-06 — Track 5 / P5.3 T5.3.1 (`ac7494f0`): certificate-backed
   constant-time by self-composition.** The first kernel-obligation family, and
   the most differentiating — a hyperproperty no current Rust tool proves with
