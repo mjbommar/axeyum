@@ -1,8 +1,10 @@
 # Underspecified / Partial Operator — Fuzz Coverage Checklist
 
 Status: living checklist
-Last updated: 2026-07-07 (task #47, 10th review — FP + RealDiv-0 GAPs closed; the
-FP signed-zero P0 they surfaced was fixed in task #50, see below)
+Last updated: 2026-07-07 (task #51, 11th review — GAP-Q1 closed: the first QF_SEQ
+differential fuzz lands, `seq.nth` OOB UNDERSPEC confirmed sound `DISAGREE=0`; it
+also surfaced a Z3 oracle gap, `seq.rev` unsupported → harness error-guard. Prior:
+task #47 FP + RealDiv-0 GAPs; the FP signed-zero P0 fixed in task #50, see below)
 
 ## Purpose — make the Hard Rule enforceable
 
@@ -121,12 +123,41 @@ through a *separate* folding branch (`string_at_const`, `string_from_int_const`)
 
 ### Sequence (Seq) — packed-BV, parse-lowered (ADR-0029/0051)
 
+Fuzzed by `seq_differential_fuzz` (SMT-LIB text vs the system Z3 binary's `Seq`
+theory under `(set-logic ALL)`), over `(Seq Bool)`, `(Seq (_ BitVec 4))`, and
+small `(Seq Int)` (the exactly/safely representable element sorts — `(_ BitVec 8)`
+is reserved for `String`, and out-of-range `Int` element literals decline, so the
+differential carries no modeling-difference false positives). The generator plants
+the UNDERSPEC `seq.nth` OOB shapes (negative / `≥ len` / empty-sequence indices,
+biased) and exercises **both** verdicts (560 jointly-decided, 403 sat / 157 unsat,
+`DISAGREE=0`).
+
 | Operator | Degenerate input | Class | Convention (cite) | Fuzz emits degenerate shape | Status |
 |---|---|---|---|---|---|
-| `seq.nth` | index OOB | UNDERSPEC | fresh free value + eager congruence (parse.rs:8063; `seq_nth_oob_value` 8038) | no seq fuzz emits `seq.nth` (probe: axeyum≡Z3 on OOB) | **GAP-Q1** |
-| `seq.extract` | OOB start/len | TOTAL-BY-DEF | clamp/"" (parse.rs:8778) | no seq fuzz emits `seq.extract` | **GAP-Q1** |
-| `seq.at` | OOB | TOTAL-BY-DEF | empty seq (parse.rs:8106) | no seq fuzz | GAP-Q1 |
-| `seq.len`,`seq.++`,`seq.unit`,`seq.empty` | — | total | — | `normalize_denotation_fuzz` (axeyum-strings) | ✓ (total, not partial) |
+| `seq.nth` | index OOB | UNDERSPEC | fresh free value + eager congruence (parse.rs:8104; `seq_nth_oob_value` 8090) | `seq_differential_fuzz::seed_seq_nth_oob_is_free_not_folded` (neg/≥len/empty idx; `nth != 0` SAT proves no zero-fold) + the sweep | ✓ (#51) |
+| `seq.extract` | OOB start/len | TOTAL-BY-DEF | clamp/empty (parse.rs:7893) | `seq_differential_fuzz::seed_seq_extract_oob_is_empty` + Family D | ✓ (#51) |
+| `seq.at` | OOB | TOTAL-BY-DEF | empty seq (parse.rs:8154) | `seq_differential_fuzz::seed_seq_at_oob_is_empty` + Family D | ✓ (#51) |
+| `seq.len`,`seq.++`,`seq.unit`,`seq.empty` | — | total | — | `normalize_denotation_fuzz` (axeyum-strings) + `seq_differential_fuzz` (length/concat facts) | ✓ (total, not partial) |
+| `seq.rev` | — | total | involution (parse.rs:8209) | **not adjudicable** — Z3 4.13.3 lacks `seq.rev` (see the harness note) | n/a (oracle gap) |
+
+**Bounded-model soundness (the seq wrong-unsat guard).** The packed layout bounds
+each sequence's length (`SEQ_LEN_SOFT_CAP`) and, for `(Seq Int)`, the element
+width. axeyum's unbounded length abstraction (P2.7 A.2) downgrades a bounded
+`unsat` to `unknown` whenever the encoding bound could have caused it (an over-cap
+`(= (seq.len s) 12)` decides `unknown`, never a wrong `unsat`). So axeyum is
+*incomplete* on many sequence unsats (they SKIP), but the fuzz confirms it never
+emits a **wrong** verdict — including that a *free* OOB `seq.nth` value cannot
+rescue an independent length contradiction
+(`seed_seq_nth_oob_does_not_rescue_length_contradiction`).
+
+**Harness note (Z3 oracle gap, task #51).** Z3 4.13.3 does **not** implement
+`seq.rev`: it emits `(error … unknown constant seq.rev)` and then answers
+`check-sat` for the *remaining* (weaker) assertion stack — a bogus verdict that
+manufactured a false `WRONG-UNSAT` on the first run (axeyum's `unsat` was in fact
+correct: `rev(rev(unit)) = unit`, so `not (= …)` is unsat). The fuzz's `z3_decide`
+now captures **both** streams and treats any `(error …)` as a hard SKIP, and the
+generator omits `seq.rev`. This is a real defensive lesson: an oracle that drops an
+unsupported command silently answers a different formula.
 
 ### Array / Datatype
 
@@ -232,9 +263,15 @@ this fuzz-coverage slice):** widen the sound byte range in `string_from_code` to
 - **GAP-BV1** — BV div/rem/shift lack a *deliberate* const-0-divisor /
   const-over-shift seed-class and don't force `BV_CONST_FOLD` on `bvudiv <c> <0>`.
   Low-risk (total-by-def, oracle-shared, replay-checked).
-- **GAP-Q1** — no seq differential fuzz emits `seq.nth` (UNDERSPEC OOB — the
-  high-value one), `seq.extract`, or `seq.at`. A focused probe shows axeyum ≡ Z3
-  on `seq.nth` OOB, but the axis is untested at scale.
+- ~~**GAP-Q1**~~ — **CLOSED (#51)**. `seq_differential_fuzz` now emits the
+  UNDERSPEC `seq.nth` OOB shapes (negative / `≥ len` / empty-sequence indices,
+  biased) plus `seq.extract`/`seq.at` OOB and length/concat/order facts, over
+  `(Seq Bool)`/`(Seq (_ BitVec 4))`/small `(Seq Int)`. `DISAGREE=0` on 560
+  jointly-decided scripts (403 sat / 157 unsat, both verdicts). The OOB value is a
+  sound **free** value on axeyum (`nth != 0` is SAT — no zero-fold), and the
+  bounded-`unsat`→`unknown` downgrade means no over-cap wrong-unsat. The one
+  non-adjudicable operator is `seq.rev` (Z3 4.13.3 does not implement it; the
+  harness now SKIPs any Z3 `(error …)` — see the sequence-section harness note).
 - ~~**GAP-F1**~~ — **CLOSED (#47)**. `fp_differential_fuzz` (SMT-LIB text vs the
   system Z3 binary) now fuzzes the FP fragment with explicit degenerate seeds:
   `fp.div`/`fp.rem`/`fp.sqrt` edges, NaN/±∞ propagation, and the UNDERSPEC
