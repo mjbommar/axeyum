@@ -1,0 +1,25 @@
+{
+  "baseline": "bench-results/baselines/lia-cvc5-regress-clean-quantified-solver-vs-z3-10s.json",
+  "complete_audit": true,
+  "instances": [],
+  "limit": 100000,
+  "logic": "LIA",
+  "slice": "lia-cvc5-regress-clean-quantified-solver-vs-z3-10s.json",
+  "summary": {
+    "audit_errors": 0,
+    "audited_decided": 0,
+    "audited_unsat": 0,
+    "baseline_decided": 0,
+    "baseline_mismatches": 0,
+    "dominant_candidates": 0,
+    "dominant_pct_audited": 0.0,
+    "evidence_certified": 0,
+    "evidence_checked": 0,
+    "instances": 12,
+    "lean_checked_unsat": 0,
+    "lean_unsat_pct": 100.0,
+    "timeouts": 0
+  },
+  "timeout_ms": 10000,
+  "version": 1
+}

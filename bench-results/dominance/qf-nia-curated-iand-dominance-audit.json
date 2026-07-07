@@ -1,0 +1,130 @@
+{
+  "baseline": "bench-results/baselines/qf-nia-curated-iand-solver-vs-z3-10s.json",
+  "complete_audit": true,
+  "instances": [
+    {
+      "audit_outcome": "sat",
+      "audit_phase": "complete",
+      "baseline_matches_audit": true,
+      "baseline_outcome": "sat",
+      "dominant_candidate": true,
+      "elapsed_ms": 1.3545479999999999,
+      "evidence_certified": true,
+      "evidence_checked": true,
+      "evidence_kind": "sat-model",
+      "file": "corpus/public-curated/iand/cvc5__iand-native-1.smt2",
+      "lean_checked": false,
+      "lean_error": null,
+      "lean_fragment": null,
+      "lean_module_bytes": null,
+      "phase_timings_ms": {
+        "check_evidence": 0.019196,
+        "lean_reconstruction": null,
+        "parse_evidence": 0.275013,
+        "parse_lean": null,
+        "produce_evidence": 1.020698,
+        "read": 0.031618
+      },
+      "trust_holes": [],
+      "trust_steps": []
+    },
+    {
+      "audit_outcome": "unsat",
+      "audit_phase": "complete",
+      "baseline_matches_audit": true,
+      "baseline_outcome": "unsat",
+      "dominant_candidate": true,
+      "elapsed_ms": 39.98191,
+      "evidence_certified": true,
+      "evidence_checked": true,
+      "evidence_kind": "bounded-int-blast-unsat",
+      "file": "corpus/public-curated/iand/cvc5__iand-native-2.smt2",
+      "lean_checked": true,
+      "lean_error": null,
+      "lean_fragment": "BoundedIntBlast",
+      "lean_module_bytes": 579,
+      "phase_timings_ms": {
+        "check_evidence": 6.481342000000001,
+        "lean_reconstruction": 12.126647,
+        "parse_evidence": 0.16375800000000001,
+        "parse_lean": 0.057525,
+        "produce_evidence": 21.101467,
+        "read": 0.036096
+      },
+      "trust_holes": [],
+      "trust_steps": [
+        {
+          "certified": true,
+          "id": "tseitin"
+        },
+        {
+          "certified": true,
+          "id": "sat-refutation"
+        },
+        {
+          "certified": true,
+          "id": "int-blast"
+        }
+      ]
+    },
+    {
+      "audit_outcome": "unsat",
+      "audit_phase": "complete",
+      "baseline_matches_audit": true,
+      "baseline_outcome": "unsat",
+      "dominant_candidate": true,
+      "elapsed_ms": 4.889444,
+      "evidence_certified": true,
+      "evidence_checked": true,
+      "evidence_kind": "bounded-int-blast-unsat",
+      "file": "corpus/public-curated/iand/cvc5__iand-native-granularities.smt2",
+      "lean_checked": true,
+      "lean_error": null,
+      "lean_fragment": "BoundedIntBlast",
+      "lean_module_bytes": 579,
+      "phase_timings_ms": {
+        "check_evidence": 0.324007,
+        "lean_reconstruction": 1.394107,
+        "parse_evidence": 0.048671,
+        "parse_lean": 0.028521,
+        "produce_evidence": 3.0739080000000003,
+        "read": 0.013042
+      },
+      "trust_holes": [],
+      "trust_steps": [
+        {
+          "certified": true,
+          "id": "tseitin"
+        },
+        {
+          "certified": true,
+          "id": "sat-refutation"
+        },
+        {
+          "certified": true,
+          "id": "int-blast"
+        }
+      ]
+    }
+  ],
+  "limit": 100000,
+  "logic": "QF_NIA",
+  "slice": "qf-nia-curated-iand-solver-vs-z3-10s.json",
+  "summary": {
+    "audit_errors": 0,
+    "audited_decided": 3,
+    "audited_unsat": 2,
+    "baseline_decided": 3,
+    "baseline_mismatches": 0,
+    "dominant_candidates": 3,
+    "dominant_pct_audited": 100.0,
+    "evidence_certified": 3,
+    "evidence_checked": 3,
+    "instances": 3,
+    "lean_checked_unsat": 2,
+    "lean_unsat_pct": 100.0,
+    "timeouts": 0
+  },
+  "timeout_ms": 10000,
+  "version": 1
+}

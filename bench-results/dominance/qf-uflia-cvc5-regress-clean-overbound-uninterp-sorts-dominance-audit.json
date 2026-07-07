@@ -1,0 +1,78 @@
+{
+  "baseline": "bench-results/baselines/qf-uflia-cvc5-regress-clean-overbound-uninterp-sorts-solver-vs-z3-10s.json",
+  "complete_audit": true,
+  "instances": [
+    {
+      "audit_outcome": "unsat",
+      "audit_phase": "complete",
+      "baseline_matches_audit": true,
+      "baseline_outcome": "unsat",
+      "dominant_candidate": false,
+      "elapsed_ms": 3592.6075690000002,
+      "evidence_certified": false,
+      "evidence_checked": true,
+      "evidence_kind": "bare-unsat",
+      "file": "corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2",
+      "lean_checked": false,
+      "lean_error": "malformed `prove_unsat_to_lean` step: emitter declined: not unsat through this fragment",
+      "lean_fragment": null,
+      "lean_module_bytes": null,
+      "phase_timings_ms": {
+        "check_evidence": 0.000241,
+        "lean_reconstruction": 663.4951030000001,
+        "parse_evidence": 20.057683,
+        "parse_lean": 13.012630000000001,
+        "produce_evidence": 2895.630536,
+        "read": 0.247531
+      },
+      "trust_holes": [],
+      "trust_steps": []
+    },
+    {
+      "audit_outcome": "unsat",
+      "audit_phase": "complete",
+      "baseline_matches_audit": true,
+      "baseline_outcome": "unsat",
+      "dominant_candidate": false,
+      "elapsed_ms": 3544.747342,
+      "evidence_certified": false,
+      "evidence_checked": true,
+      "evidence_kind": "bare-unsat",
+      "file": "corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress3__error0.smt2",
+      "lean_checked": false,
+      "lean_error": "malformed `prove_unsat_to_lean` step: emitter declined: not unsat through this fragment",
+      "lean_fragment": null,
+      "lean_module_bytes": null,
+      "phase_timings_ms": {
+        "check_evidence": 0.000273,
+        "lean_reconstruction": 658.9858509999999,
+        "parse_evidence": 13.565209999999999,
+        "parse_lean": 12.477314,
+        "produce_evidence": 2859.488819,
+        "read": 0.06135299999999999
+      },
+      "trust_holes": [],
+      "trust_steps": []
+    }
+  ],
+  "limit": 100000,
+  "logic": "QF_UFLIA",
+  "slice": "qf-uflia-cvc5-regress-clean-overbound-uninterp-sorts-solver-vs-z3-10s.json",
+  "summary": {
+    "audit_errors": 0,
+    "audited_decided": 2,
+    "audited_unsat": 2,
+    "baseline_decided": 2,
+    "baseline_mismatches": 0,
+    "dominant_candidates": 0,
+    "dominant_pct_audited": 0.0,
+    "evidence_certified": 0,
+    "evidence_checked": 2,
+    "instances": 2,
+    "lean_checked_unsat": 0,
+    "lean_unsat_pct": 0.0,
+    "timeouts": 0
+  },
+  "timeout_ms": 10000,
+  "version": 1
+}
