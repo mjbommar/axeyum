@@ -50,9 +50,11 @@ increments**:
   `unknown`s are its routing signal). The scoreboard re-run landed
   (`cf923084`): QF_S 48/134, QF_SEQ 26/33, QF_SLIA 11/50 — 23 prior `unsat`s
   are honest `unknown`s, **two of them on declared-`sat` instances** (hidden
-  wrong verdicts, repaired). Next: recover the 21 declared-`unsat` downgrades
-  via regex Parikh intervals + `substr`-family facts + width widening
-  (ADR-0052 residual; in progress).
+  wrong verdicts, repaired). **UPDATE 2026-07-07: those downgrades are largely
+  recovered — QF_S is now 82/134 (61%), QF_SEQ 26/33, QF_SLIA 18/50 (36%)** after
+  Phase B/C/D, lex-order, the code↔LIA bridge, and #49 (membership-over-concat).
+  The dominant remaining strings gap is now QF_SLIA (36%), whose lever is the
+  **LenAbs length/LIA bridge (P2.7 Phase A, task #53)** — see the current focus.
 - **Nonlinear (P2.5): there is NO new `axeyum-poly` crate** (ADR-0044 keeps the
   primitives in `axeyum-ir`); the FM→simplex keystone (P1.9) is complete, the
   Boolean case-split + sign-refutation landed, and **coprime-split CAD
@@ -423,6 +425,30 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-07 — strings decide-rate: `str.in_re` over a symbolic `str.++`
+  routes into the regex-derivative core (#49, `7197da29`). QF_S 78→82.**
+  The scout corrected the census (the "str.++ bound-cap" was a mis-diagnosis —
+  raising the cap gains ~0 rows; the real gap is the membership fragment
+  declining a `str.++` subject). Extension: `word_bool`'s `str.in_re` arm
+  (`parse.rs`) now rewrites `(str.in_re (str.++ p…) R)` to `w∈R ∧ w=p…` with a
+  fresh operand `w` (reusing the single-variable machinery), and the online route
+  (`string_theory.rs`) witnesses each membership class, **pins** the witness as an
+  extra word equation, and re-solves the augmented word system (a concat operand
+  is witnessed over `R ∩ shape`, decomposing into its parts). **5 rows
+  unsupported→sat** (issue2060/5510/5520/7677/4608), each agreeing with **z3 AND
+  cvc5**. **SAT-SIDE slice — sound by construction:** every sat replays at the
+  `Seq` level vs the original (concat + membership both true) through the ground
+  evaluator + the independent reference matcher; concat *emptiness*/unsat is
+  deferred (stays `unknown`, never a wrong verdict); single-var unsat unchanged
+  (re-checked `refute_empty`). Also a deadline-poll robustness fix
+  (`derivative_closure_within`). Independently re-validated: #44's
+  `regex_reconstruct` 7/7 survived the shared-core edit, corpus green,
+  `qf_s_concat_membership` 6/6 (Seq-level replay + never-wrongly-sat), --lib
+  18/18, membership fuzz DISAGREE=0 vs z3 AND cvc5 (413/413 each), string+seq
+  fuzzes DISAGREE=0. **Sliced off (follow-up):** concat-unsat via coarse-shape
+  emptiness, the joint product-automaton search for loosely-constrained parts
+  (norn-*), the trivial-length-atom skeleton pass, and a latent
+  single-pathological-`canon` deadline edge.
 - **2026-07-07 — Lean-parity: regex derivative-emptiness → kernel-checked Lean
   `False` (#44, `cd6783b9`).** A new fragment `regex_reconstruct.rs` (mirroring
   word/lex reconstruct): the emptiness certificate (finite derivative closure S —
