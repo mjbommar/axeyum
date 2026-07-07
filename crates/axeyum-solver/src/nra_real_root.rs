@@ -1462,6 +1462,46 @@ fn collect(arena: &TermArena, t: TermId) -> Option<RatPoly> {
             Op::RealMul if args.len() == 2 => {
                 collect(arena, args[0])?.mul(&collect(arena, args[1])?)
             }
+            // `to_real` is the exact ring embedding ℤ ↪ ℝ, so an integer
+            // sub-term denotes the same real value as its collected rational
+            // polynomial. Collecting through it lets an integer numeral written
+            // in a real context — e.g. `(- 2)` in `(= (* a a) (- 2))`, which the
+            // SMT-LIB front end parses as `(to_real (- 2))` — reach the exact
+            // real decider instead of the coercion-relaxation fall-through.
+            Op::IntToReal if args.len() == 1 => collect_int(arena, args[0]),
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
+/// Recursively collect an `Int`-sorted term into a single-variable rational
+/// polynomial over `{+, −, ·, neg, IntConst, symbol}`, mirroring [`collect`].
+///
+/// This is only ever reached under a [`Op::IntToReal`] node, whose semantics
+/// are the **exact** embedding ℤ ↪ ℝ. That embedding is a ring homomorphism
+/// (`to_real(a+b)=to_real a+to_real b`, `to_real(a·b)=to_real a·to_real b`,
+/// `to_real(-a)=-to_real a`, `to_real k = k`), so the collected polynomial
+/// denotes the same real value as `(to_real t)` — the coercion is
+/// value-preserving and the resulting constraint is semantically identical.
+fn collect_int(arena: &TermArena, t: TermId) -> Option<RatPoly> {
+    if arena.sort_of(t) != Sort::Int {
+        return None;
+    }
+    match arena.node(t) {
+        TermNode::IntConst(k) => Some(RatPoly::constant(Rational::integer(*k))),
+        TermNode::Symbol(s) => Some(RatPoly::var_of(*s)),
+        TermNode::App { op, args } => match op {
+            Op::IntNeg if args.len() == 1 => collect_int(arena, args[0])?.neg(),
+            Op::IntAdd if args.len() == 2 => {
+                collect_int(arena, args[0])?.add(&collect_int(arena, args[1])?)
+            }
+            Op::IntSub if args.len() == 2 => {
+                collect_int(arena, args[0])?.sub(collect_int(arena, args[1])?)
+            }
+            Op::IntMul if args.len() == 2 => {
+                collect_int(arena, args[0])?.mul(&collect_int(arena, args[1])?)
+            }
             _ => None,
         },
         _ => None,

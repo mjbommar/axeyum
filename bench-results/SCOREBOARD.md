@@ -15,7 +15,7 @@ A single-glance, honest view of where the pure-Rust axeyum solver stands against
 ## Headline
 
 - **35 division baselines** measured vs z3 4.13.3, spanning **24 logic fragments** (BV, LIA, QF_ABV, QF_ALIA, QF_AUFBV, QF_AUFLIA, QF_AX, QF_BV, QF_BVFP, QF_DT, QF_FF, QF_FP, QF_LIA, QF_LRA, QF_NIA, QF_NRA, QF_S, QF_SEQ, QF_SLIA, QF_UF, QF_UFBV, QF_UFFF, QF_UFLIA, UF).
-- **DISAGREE = 0 across all baselines** — zero wrong verdicts over 654 oracle-compared instances (992 files total, 709 decided).
+- **DISAGREE = 0 across all baselines** — zero wrong verdicts over 655 oracle-compared instances (992 files total, 710 decided).
 - Decide-rate ranges **0%–100%** across divisions — that spread *is* the capability frontier; DISAGREE = 0 is the soundness floor that holds everywhere.
 
 ## Divisions vs Z3
@@ -44,7 +44,7 @@ Sorted by logic, then by descending decide-rate. Every committed `*solver-vs-z3*
 | QF_NIA | `qf-nia-cvc5-regress-clean` | 39 | 23 | 59% | 8 | 8 | 22 | 0 | z3-binary | 5.283 |
 | QF_NIA | `qf-nia-curated-iand` | 3 | 1 | 33% | 2 | 0 | 0 | 0 | :status | 13.333 |
 | QF_NRA | `qf-nra-synthetic-graduated` | 33 | 30 | 91% | 3 | 0 | 30 | 0 | z3-binary | 5.455 |
-| QF_NRA | `qf-nra-cvc5-regress-clean` | 38 | 26 | 68% | 11 | 1 | 26 | 0 | z3-binary | 5.969 |
+| QF_NRA | `qf-nra-cvc5-regress-clean` | 38 | 27 | 71% | 10 | 1 | 27 | 0 | z3-binary | 5.421 |
 | QF_S | `qf-s-cvc5-regress-clean` | 134 | 78 | 58% | 6 | 50 | 74 | 0 | z3-library+binary | 1.442 |
 | QF_SEQ | `qf-seq-cvc5-regress-clean` | 33 | 26 | 79% | 6 | 1 | 15 | 0 | z3-library+binary | 3.752 |
 | QF_SLIA | `qf-slia-cvc5-regress-clean` | 50 | 18 | 36% | 4 | 28 | 16 | 0 | z3-library+binary | 3.650 |
@@ -60,9 +60,36 @@ Sorted by logic, then by descending decide-rate. Every committed `*solver-vs-z3*
 | QF_UFLIA | `qf-uflia-cvc5-regress-clean-overbound-uninterp-sorts` | 2 | 2 | 100% | 0 | 0 | 2 | 0 | z3-binary | 2.294 |
 | UF | `uf-cvc5-regress-clean-quantified` | 5 | 0 | 0% | 0 | 5 | 0 | 0 | :status | 0.000 |
 
-**Totals:** 992 files, 709 decided, 654 oracle-compared, **0 disagreements.**
+**Totals:** 992 files, 710 decided, 655 oracle-compared, **0 disagreements.**
 
 <!-- NOTES:BEGIN (hand-written attribution notes — preserved by the generator) -->
+### QF_NRA cvc5 row re-measured 2026-07-06 (P2.5 slice 2 — `a²=−k` int↔real coercion + even-power-equality refutation)
+
+**QF_NRA `qf-nra-cvc5-regress-clean` 26 → 27 decided (68% → 71%), unsat 12 → 13,
+`unknown:Incomplete` 2 → 1; DISAGREE=0, model-replay-failures=0.** The one upgraded
+file is `nl__very-simple-unsat` (`(= (* a a) (- 2))`), previously the coercion
+residual the P2.5 census named. Two coupled, near-zero-risk changes close it:
+
+- **The int↔real coercion routing.** The SMT-LIB front end parses `(- 2)` in a real
+  context as `(to_real (- 2))`, so the atom reached only the (incomplete)
+  Nelson-Oppen coercion relaxation and returned `unknown`. The **even-power
+  refutation now sees through `to_real(<int const>)`** (`constant_real_value`) and is
+  tried *before* the coercion relaxation in `check_auto_inner`; the NRA collector
+  (`collect_int`) likewise coerces an integer numeral / `(- k)` under `to_real` into
+  the real-poly form for direct `check_with_nra` callers. `to_real` is the exact
+  ℤ ↪ ℝ embedding, so the coercion is value-preserving.
+- **The even-power-*equality* arm.** `Σ tᵢ^{2kᵢ} = c` with `c < 0` is unsat because a
+  sum of even powers is `≥ 0 > c` (the equality analogue of the existing
+  `Σ tᵢ^{2kᵢ} < 0` refutation). Deliberately narrow — it requires at least one
+  genuine even-power summand and a strictly-negative constant — re-scanned against
+  the original assertion, and it only ever concludes `unsat`. `a² = 2` (sat,
+  a = ±√2) stays sat: the arm declines on a nonnegative right side.
+
+Soundness backing: **both** `nra_differential_fuzz` **and** `nia_differential_fuzz`
+(shared multivariate path) vs the Z3 oracle, each **DISAGREE=0**; the change is
+strictly additive (`unknown → unsat`, no decided verdict flips) and the only outcome
+delta vs the prior baseline is the single `very-simple-unsat` upgrade.
+
 ### QF_S + QF_SLIA rows re-measured 2026-07-06 (P2.7 T-C.6 — lexicographic-order theory: `str.<=` / `str.<` over variables)
 
 The lexicographic-order lever closes the last theory-coupled string gap the census

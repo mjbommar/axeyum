@@ -786,6 +786,21 @@ fn check_auto_inner(
     config: &SolverConfig,
     rec: &mut Recorder<'_>,
 ) -> Result<CheckResult, SolverError> {
+    // Cheap syntactic even-power refutation, tried BEFORE the int↔real coercion
+    // handling. A top-level conjunct of the shape `Σ tᵢ^{2kᵢ} + c < 0` or the
+    // equality analogue `Σ tᵢ^{2kᵢ} = c` with `c < 0` is impossible (a sum of
+    // even powers is `≥ 0`). The matcher (`nra_even_power`) sees through a
+    // `to_real(<int const>)` right side, so it refutes e.g.
+    // `(= (* a a) (- 2))` — parsed as `(= (* a a) (to_real (- 2)))` — that
+    // otherwise reaches only the (incomplete) Nelson-Oppen coercion relaxation
+    // below and returns `unknown`. It is deliberately narrow, re-scannable
+    // against the original assertions, and only ever concludes `unsat`, so it
+    // never risks a wrong verdict and never reroutes a satisfiable query.
+    if crate::nra_even_power::nra_even_power_refutation(arena, assertions).is_some() {
+        with_recorder(rec, |t| t.record_decided("nra-even-power", Verdict::Unsat));
+        return Ok(CheckResult::Unsat);
+    }
+
     // `to_real` is a ring homomorphism, so fold `to_real(a) ± to_real(b)` into
     // `to_real(a ± b)` (bottom-up): a linear combination of coerced integers
     // collapses to one coercion, which the comparison rewrites below can then

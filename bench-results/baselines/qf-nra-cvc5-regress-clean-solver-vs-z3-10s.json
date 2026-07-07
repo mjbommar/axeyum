@@ -46,7 +46,7 @@
     {
       "assertions": 3,
       "backend_stats": {
-        "solve_ms": 3.1288869999999998
+        "solve_ms": 6.48595
       },
       "dag_nodes": 12,
       "distinct_symbols": 3,
@@ -67,7 +67,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "unsat",
-          "solve_ms": 9,
+          "solve_ms": 11,
           "verdict": "unsat"
         }
       },
@@ -112,14 +112,14 @@
         "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
-      "solve_ms": 3,
+      "solve_ms": 6,
       "translate_ms": 0,
       "tree_nodes": 18
     },
     {
       "assertions": 2,
       "backend_stats": {
-        "solve_ms": 0.223382
+        "solve_ms": 0.125049
       },
       "dag_nodes": 9,
       "distinct_symbols": 3,
@@ -140,7 +140,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 9,
+          "solve_ms": 10,
           "verdict": "sat"
         }
       },
@@ -192,7 +192,7 @@
     {
       "assertions": 5,
       "backend_stats": {
-        "solve_ms": 2.0362560000000003
+        "solve_ms": 2.0883410000000002
       },
       "dag_nodes": 12,
       "distinct_symbols": 3,
@@ -213,7 +213,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "unsat",
-          "solve_ms": 10,
+          "solve_ms": 8,
           "verdict": "unsat"
         }
       },
@@ -265,7 +265,7 @@
     {
       "assertions": 5,
       "backend_stats": {
-        "solve_ms": 0.17000300000000002
+        "solve_ms": 0.139951
       },
       "dag_nodes": 10,
       "distinct_symbols": 2,
@@ -286,7 +286,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "unsat",
-          "solve_ms": 11,
+          "solve_ms": 10,
           "verdict": "unsat"
         }
       },
@@ -338,7 +338,7 @@
     {
       "assertions": 4,
       "backend_stats": {
-        "solve_ms": 0.293257
+        "solve_ms": 0.5586019999999999
       },
       "dag_nodes": 13,
       "distinct_symbols": 2,
@@ -359,7 +359,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 9,
+          "solve_ms": 10,
           "verdict": "sat"
         }
       },
@@ -411,7 +411,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 0.229325
+        "solve_ms": 0.303848
       },
       "dag_nodes": 16,
       "distinct_symbols": 2,
@@ -484,7 +484,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 0.094484
+        "solve_ms": 0.09027800000000001
       },
       "dag_nodes": 6,
       "distinct_symbols": 1,
@@ -505,7 +505,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 9,
+          "solve_ms": 10,
           "verdict": "sat"
         }
       },
@@ -557,7 +557,7 @@
     {
       "assertions": 20,
       "backend_stats": {
-        "solve_ms": 0.92073
+        "solve_ms": 1.33868
       },
       "dag_nodes": 111,
       "distinct_symbols": 0,
@@ -623,14 +623,14 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 0,
+      "solve_ms": 1,
       "translate_ms": 0,
       "tree_nodes": 544
     },
     {
       "assertions": 6,
       "backend_stats": {
-        "solve_ms": 0.495041
+        "solve_ms": 0.806854
       },
       "dag_nodes": 17,
       "distinct_symbols": 4,
@@ -651,7 +651,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 8,
+          "solve_ms": 13,
           "verdict": "sat"
         }
       },
@@ -703,7 +703,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 0.628823
+        "solve_ms": 1.217142
       },
       "dag_nodes": 44,
       "distinct_symbols": 3,
@@ -769,14 +769,14 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 0,
+      "solve_ms": 1,
       "translate_ms": 0,
       "tree_nodes": 140
     },
     {
       "assertions": 3,
       "backend_stats": {
-        "solve_ms": 0.194609
+        "solve_ms": 0.10630300000000001
       },
       "dag_nodes": 10,
       "distinct_symbols": 2,
@@ -849,7 +849,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 606.550707
+        "solve_ms": 529.115634
       },
       "dag_nodes": 53,
       "detail": "ResourceLimit: nonlinear abstraction: 7 cross-products exceed the deterministic admission bound of 2 (the multi-variable nonlinear case can OOM the relaxation; this needs a nlsat/CAD engine)",
@@ -904,14 +904,14 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 606,
+      "solve_ms": 529,
       "translate_ms": 0,
       "tree_nodes": 73
     },
     {
       "assertions": 2,
       "backend_stats": {
-        "solve_ms": 7.386796
+        "solve_ms": 7.602305
       },
       "dag_nodes": 19,
       "distinct_symbols": 7,
@@ -984,7 +984,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 10182.220505
+        "solve_ms": 10035.794174999999
       },
       "dag_nodes": 32,
       "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
@@ -1039,28 +1039,39 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 10182,
+      "solve_ms": 10035,
       "translate_ms": 0,
       "tree_nodes": 44
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 0.190061
+        "solve_ms": 0.098293
       },
       "dag_nodes": 6,
-      "detail": "Incomplete: int↔real coercion relaxation: candidate fails the original coupling",
       "distinct_symbols": 1,
       "expected": "unsat",
       "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__nl__very-simple-unsat.smt2",
       "max_depth": 4,
       "model_lift_ms": 0,
       "oracle": {
-        "backend_kind": "z3",
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
         "enabled": true,
-        "skipped": "primary-outcome-unknown"
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, floating point, or sequences yet",
+        "model_lift_ms": 0,
+        "outcome": "unsat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "unsat",
+          "solve_ms": 11,
+          "verdict": "unsat"
+        }
       },
-      "outcome": "unknown",
+      "outcome": "unsat",
       "query_plan": {
         "cache_key": {
           "assertions": 1,
@@ -1098,7 +1109,7 @@
         "output_distinct_symbols": 1,
         "output_max_depth": 4,
         "output_tree_nodes": 7,
-        "rewritten_outcome": "unknown",
+        "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
       "solve_ms": 0,
@@ -1113,7 +1124,7 @@
     {
       "assertions": 4,
       "backend_stats": {
-        "solve_ms": 544.522799
+        "solve_ms": 338.546463
       },
       "dag_nodes": 11,
       "distinct_symbols": 3,
@@ -1134,7 +1145,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 12,
+          "solve_ms": 13,
           "verdict": "sat"
         }
       },
@@ -1179,14 +1190,14 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 544,
+      "solve_ms": 338,
       "translate_ms": 0,
       "tree_nodes": 16
     },
     {
       "assertions": 3,
       "backend_stats": {
-        "solve_ms": 23.174752
+        "solve_ms": 15.115751
       },
       "dag_nodes": 29,
       "detail": "ResourceLimit: nonlinear abstraction: 3 cross-products exceed the deterministic admission bound of 2 (the multi-variable nonlinear case can OOM the relaxation; this needs a nlsat/CAD engine)",
@@ -1241,17 +1252,17 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 23,
+      "solve_ms": 15,
       "translate_ms": 0,
       "tree_nodes": 43
     },
     {
       "assertions": 5,
       "backend_stats": {
-        "solve_ms": 10018.799157
+        "solve_ms": 5901.996934
       },
       "dag_nodes": 27,
-      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
+      "detail": "ResourceLimit: nonlinear abstraction: refinement round bound reached (raise the budget to attempt more)",
       "distinct_symbols": 1,
       "expected": "sat",
       "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__approx-sqrt.smt2",
@@ -1303,14 +1314,14 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 10018,
+      "solve_ms": 5901,
       "translate_ms": 0,
       "tree_nodes": 41
     },
     {
       "assertions": 4,
       "backend_stats": {
-        "solve_ms": 0.243558
+        "solve_ms": 0.314662
       },
       "dag_nodes": 12,
       "distinct_symbols": 2,
@@ -1331,7 +1342,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "unsat",
-          "solve_ms": 13,
+          "solve_ms": 8,
           "verdict": "unsat"
         }
       },
@@ -1383,7 +1394,7 @@
     {
       "assertions": 4,
       "backend_stats": {
-        "solve_ms": 0.404075
+        "solve_ms": 0.28009900000000004
       },
       "dag_nodes": 13,
       "distinct_symbols": 2,
@@ -1404,7 +1415,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "unsat",
-          "solve_ms": 12,
+          "solve_ms": 10,
           "verdict": "unsat"
         }
       },
@@ -1456,7 +1467,7 @@
     {
       "assertions": 3,
       "backend_stats": {
-        "solve_ms": 0.209105
+        "solve_ms": 0.222211
       },
       "dag_nodes": 9,
       "distinct_symbols": 3,
@@ -1477,7 +1488,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "unsat",
-          "solve_ms": 10,
+          "solve_ms": 11,
           "verdict": "unsat"
         }
       },
@@ -1529,7 +1540,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 1.4167990000000001
+        "solve_ms": 1.401463
       },
       "dag_nodes": 20,
       "distinct_symbols": 8,
@@ -1602,7 +1613,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 642.6118240000001
+        "solve_ms": 588.995963
       },
       "dag_nodes": 67,
       "detail": "ResourceLimit: nonlinear abstraction: 15 cross-products exceed the deterministic admission bound of 2 (the multi-variable nonlinear case can OOM the relaxation; this needs a nlsat/CAD engine)",
@@ -1657,14 +1668,14 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 642,
+      "solve_ms": 588,
       "translate_ms": 0,
       "tree_nodes": 194
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 0.136289
+        "solve_ms": 0.09074800000000001
       },
       "dag_nodes": 13,
       "distinct_symbols": 2,
@@ -1685,7 +1696,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 13,
+          "solve_ms": 11,
           "verdict": "sat"
         }
       },
@@ -1737,7 +1748,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 0.13087400000000002
+        "solve_ms": 0.150742
       },
       "dag_nodes": 8,
       "distinct_symbols": 2,
@@ -1758,7 +1769,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 15,
+          "solve_ms": 10,
           "verdict": "sat"
         }
       },
@@ -1810,7 +1821,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 10081.840312
+        "solve_ms": 10018.900359
       },
       "dag_nodes": 33,
       "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
@@ -1865,14 +1876,14 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 10081,
+      "solve_ms": 10018,
       "translate_ms": 0,
       "tree_nodes": 42
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 564.114953
+        "solve_ms": 567.583436
       },
       "dag_nodes": 67,
       "detail": "ResourceLimit: nonlinear abstraction: 14 cross-products exceed the deterministic admission bound of 2 (the multi-variable nonlinear case can OOM the relaxation; this needs a nlsat/CAD engine)",
@@ -1927,14 +1938,14 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 564,
+      "solve_ms": 567,
       "translate_ms": 0,
       "tree_nodes": 166
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 10006.066262999999
+        "solve_ms": 10102.948279
       },
       "dag_nodes": 91,
       "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
@@ -1989,14 +2000,14 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 10006,
+      "solve_ms": 10102,
       "translate_ms": 0,
       "tree_nodes": 123
     },
     {
       "assertions": 6,
       "backend_stats": {
-        "solve_ms": 204.001292
+        "solve_ms": 172.174844
       },
       "dag_nodes": 20,
       "distinct_symbols": 4,
@@ -2017,7 +2028,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "unsat",
-          "solve_ms": 9,
+          "solve_ms": 13,
           "verdict": "unsat"
         }
       },
@@ -2062,14 +2073,14 @@
         "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
-      "solve_ms": 204,
+      "solve_ms": 172,
       "translate_ms": 0,
       "tree_nodes": 36
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 0.5211480000000001
+        "solve_ms": 0.343567
       },
       "dag_nodes": 93,
       "distinct_symbols": 3,
@@ -2090,7 +2101,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 14,
+          "solve_ms": 11,
           "verdict": "sat"
         }
       },
@@ -2142,7 +2153,7 @@
     {
       "assertions": 2,
       "backend_stats": {
-        "solve_ms": 66.872542
+        "solve_ms": 40.654545999999996
       },
       "dag_nodes": 15,
       "distinct_symbols": 2,
@@ -2163,7 +2174,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "unsat",
-          "solve_ms": 15,
+          "solve_ms": 12,
           "verdict": "unsat"
         }
       },
@@ -2208,14 +2219,14 @@
         "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
-      "solve_ms": 66,
+      "solve_ms": 40,
       "translate_ms": 0,
       "tree_nodes": 25
     },
     {
       "assertions": 4,
       "backend_stats": {
-        "solve_ms": 15.103003000000001
+        "solve_ms": 7.282368
       },
       "dag_nodes": 17,
       "distinct_symbols": 4,
@@ -2236,7 +2247,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "unsat",
-          "solve_ms": 17,
+          "solve_ms": 11,
           "verdict": "unsat"
         }
       },
@@ -2281,14 +2292,14 @@
         "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
-      "solve_ms": 15,
+      "solve_ms": 7,
       "translate_ms": 0,
       "tree_nodes": 24
     },
     {
       "assertions": 3,
       "backend_stats": {
-        "solve_ms": 0.20730600000000002
+        "solve_ms": 0.144274
       },
       "dag_nodes": 9,
       "distinct_symbols": 3,
@@ -2309,7 +2320,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "unsat",
-          "solve_ms": 13,
+          "solve_ms": 11,
           "verdict": "unsat"
         }
       },
@@ -2361,7 +2372,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 1.2832970000000001
+        "solve_ms": 0.8718940000000001
       },
       "dag_nodes": 31,
       "distinct_symbols": 3,
@@ -2382,7 +2393,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 15,
+          "solve_ms": 14,
           "verdict": "sat"
         }
       },
@@ -2427,14 +2438,14 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 1,
+      "solve_ms": 0,
       "translate_ms": 0,
       "tree_nodes": 39
     },
     {
       "assertions": 2,
       "backend_stats": {
-        "solve_ms": 0.803448
+        "solve_ms": 0.472362
       },
       "dag_nodes": 13,
       "distinct_symbols": 5,
@@ -2507,7 +2518,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 22.849574
+        "solve_ms": 16.940298
       },
       "dag_nodes": 30,
       "detail": "Incomplete: int↔real coercion relaxation: candidate fails the original coupling",
@@ -2562,14 +2573,14 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 22,
+      "solve_ms": 16,
       "translate_ms": 0,
       "tree_nodes": 39
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 5.390898
+        "solve_ms": 4.326261
       },
       "dag_nodes": 70,
       "detail": "ResourceLimit: nonlinear abstraction: 12 cross-products exceed the deterministic admission bound of 2 (the multi-variable nonlinear case can OOM the relaxation; this needs a nlsat/CAD engine)",
@@ -2624,17 +2635,17 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 5,
+      "solve_ms": 4,
       "translate_ms": 0,
       "tree_nodes": 103
     }
   ],
   "summary": {
-    "agree": 26,
+    "agree": 27,
     "blocker_buckets": {
-      "unknown:Incomplete": 2,
-      "unknown:ResourceLimit": 5,
-      "unknown:Timeout": 4
+      "unknown:Incomplete": 1,
+      "unknown:ResourceLimit": 6,
+      "unknown:Timeout": 3
     },
     "disagree": 0,
     "errors": 0,
@@ -2642,14 +2653,14 @@
     "layer_attribution": null,
     "model_replay_failures": 0,
     "oracle": {
-      "agree": 26,
+      "agree": 27,
       "backend": "z3 4.13.3.0",
-      "compared": 26,
+      "compared": 27,
       "disagree": 0,
       "enabled": true,
-      "skipped": 11
+      "skipped": 10
     },
-    "par2_mean_s": 5.96896370616216,
+    "par2_mean_s": 5.42118680645946,
     "query_plan": {
       "original_dag_nodes": 1068,
       "original_tree_nodes": 2276,
@@ -2671,8 +2682,8 @@
       "sat_unsat_conflicts": 0
     },
     "sat": 14,
-    "unknown": 11,
-    "unsat": 12,
+    "unknown": 10,
+    "unsat": 13,
     "unsupported": 1
   },
   "triage": {
