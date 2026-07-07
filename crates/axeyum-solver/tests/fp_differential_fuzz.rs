@@ -214,24 +214,22 @@ fn fp_expr(rng: &mut Lcg, depth: u32, nvars: usize) -> String {
 /// trees (see the module-level domain-alignment note for why only these).
 fn atom(rng: &mut Lcg, depth: u32, nvars: usize) -> String {
     let a = if rng.flip() {
-        // Unary classifier. NOTE: `fp.isNegative` / `fp.isPositive` are
-        // DELIBERATELY excluded from the random menu — this fuzz surfaced a
-        // confirmed P0 (both Z3 and cvc5 disagree with axeyum) on their
-        // signed-zero convention: axeyum makes `fp.isNegative(-0) = false` and
-        // `fp.isPositive(+0) = false`, but SMT-LIB (and both oracles) say `-0`
-        // IS negative and `+0` IS positive. Left in the generator they would
-        // keep the sweep permanently red and mask the fact that the rest of the
-        // FP surface is sound. The bug is pinned by the `#[ignore]`d
-        // `p0_signed_zero_sign_predicate_repro` below; re-add them here once it
-        // is fixed. (`fp.isNegative(±oo)` — the min/max ±0 keystone route — is
-        // correct in axeyum, so the explicit min/max seeds still use it.)
+        // Unary classifier. `fp.isNegative`/`fp.isPositive` are BACK in the menu
+        // (task #50): this fuzz surfaced the GAP-F2 wrong-unsat — axeyum used to
+        // make `fp.isNegative(-0) = false`/`fp.isPositive(+0) = false`, but
+        // SMT-LIB and both oracles classify by the sign bit (`-0` negative, `+0`
+        // positive). Now fixed (sign-bit based, excluding only NaN), so the sweep
+        // exercises them and the `signed_zero_sign_predicates_agree` regression
+        // below asserts agreement.
         let e = fp_expr(rng, depth, nvars);
-        let pred = match rng.below(5) {
+        let pred = match rng.below(7) {
             0 => "fp.isNaN",
             1 => "fp.isInfinite",
             2 => "fp.isZero",
             3 => "fp.isNormal",
-            _ => "fp.isSubnormal",
+            4 => "fp.isSubnormal",
+            5 => "fp.isNegative",
+            _ => "fp.isPositive",
         };
         format!("({pred} {e})")
     } else {
@@ -665,17 +663,18 @@ fn seed_fp_to_int_real_out_of_domain_is_free() {
 /// `is_positive(x) = ¬sign_bit(x) ∧ ¬isNaN(x)` (so `-0`/`+0` are covered), then
 /// flip the `fp.rs::sign_predicates` unit-test expectations and re-run the FP +
 /// carcara + fpa2bv gates. Until fixed, the two predicates are held out of the
-/// random generator above; this test is `#[ignore]`d and asserts the exact
-/// wrong verdicts so it goes GREEN the moment the bug is fixed.
+/// random generator above; this regression asserts they now agree with Z3.
+/// FIXED (task #50): `is_negative`/`is_positive` are now sign-bit-based
+/// (`-0` negative, `+0` positive), and the two predicates are back in the
+/// generator menu above.
 #[test]
-#[ignore = "P0 (task #47): axeyum fp.isNegative(-0)/isPositive(+0) disagree with SMT-LIB/Z3/cvc5 — unfixed"]
-fn p0_signed_zero_sign_predicate_repro() {
+fn signed_zero_sign_predicates_agree() {
     if !z3_available() {
-        eprintln!("[fp-fuzz] {Z3_BIN} unavailable; cannot adjudicate P0 repro");
+        eprintln!("[fp-fuzz] {Z3_BIN} unavailable; cannot adjudicate the signed-zero regression");
         return;
     }
-    // Each of these MUST agree with Z3. They currently do NOT (see the table in
-    // the doc comment): this test fails until the sign-predicate bug is fixed.
+    // Each of these MUST agree with Z3 (and cvc5): the GAP-F2 wrong-unsat was
+    // fixed in task #50, so they are green.
     for (text, note) in [
         (
             "(set-logic QF_FP)\n(assert (fp.isNegative (_ -zero 8 24)))\n(check-sat)\n",

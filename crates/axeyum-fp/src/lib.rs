@@ -12,8 +12,9 @@
 //! Layout (MSB→LSB): sign (1 bit), biased exponent (`eb` bits), trailing
 //! significand (`sb - 1` bits). Semantics follow SMT-LIB / IEEE 754:
 //! `fp.eq` is *not* bit equality (`NaN ≠ NaN`, `+0 = -0`), `fp.lt`/`fp.leq` order
-//! by value (NaN unordered, `±0` equal), and `fp.isNegative`/`isPositive` exclude
-//! NaN and zeros.
+//! by value (NaN unordered, `±0` equal), and `fp.isNegative`/`isPositive`
+//! classify by the **sign bit** (so `−0` is negative and `+0` is positive),
+//! excluding only NaN.
 //!
 //! What is here: classification (`isNaN`/`isInfinite`/`isZero`/`isNormal`/
 //! `isSubnormal`/`isNegative`/`isPositive`), `abs`/`neg`, `eq`, the four
@@ -355,23 +356,44 @@ pub fn is_normal(arena: &mut TermArena, fmt: FloatFormat, x: TermId) -> Result<T
     arena.and(not_z, not_o)
 }
 
-/// `x` is negative: sign bit set, and `x` is neither NaN nor a zero.
+/// `fp.isNegative x` (SMT-LIB `FloatingPoint` theory): `x` has its sign bit set
+/// and is not NaN — i.e. `x` is a negative number, `−∞`, **or `−0`**. The
+/// classification is by the **sign bit**, not a numeric `x < 0`: SMT-LIB and both
+/// oracles (Z3, cvc5) classify `−0` as negative (`(fp.isNegative -0)` is sat).
+/// A prior version wrongly excluded zeros (a wrong-**unsat** — GAP-F2); fixed here.
 pub fn is_negative(arena: &mut TermArena, fmt: FloatFormat, x: TermId) -> Result<TermId, IrError> {
     fmt.check(arena, x)?;
     let signed = sign_set(arena, fmt, x)?;
     let nan = is_nan(arena, fmt, x)?;
-    let zero = is_zero(arena, fmt, x)?;
-    not_nan_not_zero_and(arena, signed, nan, zero)
+    let not_nan = arena.not(nan)?;
+    arena.and(signed, not_nan)
 }
 
-/// `x` is positive: sign bit clear, and `x` is neither NaN nor a zero.
+/// `fp.isPositive x` (SMT-LIB): sign bit clear and not NaN — a positive number,
+/// `+∞`, **or `+0`** (sign-bit classification; `(fp.isPositive +0)` is sat).
 pub fn is_positive(arena: &mut TermArena, fmt: FloatFormat, x: TermId) -> Result<TermId, IrError> {
     fmt.check(arena, x)?;
     let signed = sign_set(arena, fmt, x)?;
     let unsigned = arena.not(signed)?;
     let nan = is_nan(arena, fmt, x)?;
+    let not_nan = arena.not(nan)?;
+    arena.and(unsigned, not_nan)
+}
+
+/// `x` is **strictly** negative: sign bit set, and `x` is neither NaN nor a zero
+/// (so `−0` is EXCLUDED). Internal helper — distinct from the SMT-LIB
+/// [`is_negative`], which classifies `−0` as negative. Used where `−0` must be
+/// distinguished from a genuine negative, e.g. `sqrt(−0) = −0` (not NaN).
+fn is_strictly_negative(
+    arena: &mut TermArena,
+    fmt: FloatFormat,
+    x: TermId,
+) -> Result<TermId, IrError> {
+    fmt.check(arena, x)?;
+    let signed = sign_set(arena, fmt, x)?;
+    let nan = is_nan(arena, fmt, x)?;
     let zero = is_zero(arena, fmt, x)?;
-    not_nan_not_zero_and(arena, unsigned, nan, zero)
+    not_nan_not_zero_and(arena, signed, nan, zero)
 }
 
 /// Absolute value: clears the sign bit.
@@ -976,7 +998,7 @@ pub fn sqrt(
 
     // Special cases.
     let nan_x = is_nan(arena, fmt, x)?;
-    let neg_x = is_negative(arena, fmt, x)?; // negative finite or −∞ (excludes −0, NaN)
+    let neg_x = is_strictly_negative(arena, fmt, x)?; // negative finite or −∞ (excludes −0, NaN): sqrt(−0)=−0, not NaN
     let zero_x = is_zero(arena, fmt, x)?;
     let inf_x = is_infinite(arena, fmt, x)?;
     let nan_flag = arena.or(nan_x, neg_x)?; // sqrt(NaN) and sqrt(negative) → NaN

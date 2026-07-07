@@ -62,17 +62,28 @@ fn sign_predicates() {
     let neg0 = c(&mut a, NEG0);
     let nan = c(&mut a, NAN);
 
+    let pos0 = c(&mut a, POS0);
+
     let t = fp::is_negative(&mut a, F32, neg_two).unwrap();
     assert!(eval_bool(&a, t), "-2.0 is negative");
     let t = fp::is_negative(&mut a, F32, pos_two).unwrap();
     assert!(!eval_bool(&a, t), "+2.0 is not negative");
+    // SMT-LIB / IEEE classify by the sign bit: `-0` IS negative, `+0` is not
+    // (both oracles agree; the old "zeros are neither" convention was a wrong-unsat
+    // — GAP-F2, task #50).
     let t = fp::is_negative(&mut a, F32, neg0).unwrap();
-    assert!(!eval_bool(&a, t), "-0.0 is not negative (it is a zero)");
+    assert!(eval_bool(&a, t), "-0.0 IS negative (sign bit set)");
+    let t = fp::is_negative(&mut a, F32, pos0).unwrap();
+    assert!(!eval_bool(&a, t), "+0.0 is not negative");
     let t = fp::is_negative(&mut a, F32, nan).unwrap();
     assert!(!eval_bool(&a, t), "NaN is not negative");
 
     let t = fp::is_positive(&mut a, F32, pos_two).unwrap();
     assert!(eval_bool(&a, t), "+2.0 is positive");
+    let t = fp::is_positive(&mut a, F32, pos0).unwrap();
+    assert!(eval_bool(&a, t), "+0.0 IS positive (sign bit clear)");
+    let t = fp::is_positive(&mut a, F32, neg0).unwrap();
+    assert!(!eval_bool(&a, t), "-0.0 is not positive");
     let t = fp::is_positive(&mut a, F32, nan).unwrap();
     assert!(!eval_bool(&a, t), "NaN is not positive");
 }

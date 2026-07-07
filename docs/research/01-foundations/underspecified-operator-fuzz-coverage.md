@@ -1,8 +1,8 @@
 # Underspecified / Partial Operator — Fuzz Coverage Checklist
 
 Status: living checklist
-Last updated: 2026-07-07 (task #47, 10th review — FP + RealDiv-0 GAPs closed; a
-new FP signed-zero P0 surfaced, see below)
+Last updated: 2026-07-07 (task #47, 10th review — FP + RealDiv-0 GAPs closed; the
+FP signed-zero P0 they surfaced was fixed in task #50, see below)
 
 ## Purpose — make the Hard Rule enforceable
 
@@ -151,13 +151,21 @@ witnesses. It found a **P0** (see below).
 | `fp.sqrt` | `x<0` / NaN | TOTAL-BY-DEF | NaN (lib.rs:982) | `seed_sqrt_negative_is_nan` (+ sweep) | ✓ (#47) |
 | `fp.rem` | `y=0` / `x=∞` | TOTAL-BY-DEF | NaN (lib.rs:1751) | `seed_rem_zero_divisor_is_nan` (+ sweep) | ✓ (#47) |
 | `fp.min`/`fp.max` | opposite-sign zeros `+0`/`-0` | **UNDERSPEC** | fresh free sign bit (lib.rs:3286) | `seed_min/max_opposite_sign_zero_free_both_ways` (observed via `1/min(±0)`∈{±oo}; BOTH signs SAT, no wrong-unsat) | ✓ (#47) |
-| `fp.isNegative`/`fp.isPositive` | signed zeros `-0`/`+0` | edge | **WRONG** — folds `-0`/`+0` to neither-sign | `p0_signed_zero_sign_predicate_repro` (`#[ignore]`, failing) | **P0 / GAP-F2** |
+| `fp.isNegative`/`fp.isPositive` | signed zeros `-0`/`+0` | edge (sign-bit) | sign-bit based, excl. NaN only (`-0` neg, `+0` pos; lib.rs:359,368) | `signed_zero_sign_predicates_agree` + the sweep (predicates re-enabled) | ✓ (#50, was GAP-F2 P0) |
 | `fp.to_ubv`/`to_sbv` | NaN/∞/OOB/neg | UNDERSPEC → DECLINES | `None` / fresh BV (lib.rs:2886,3041) | `seed_fp_to_int_real_out_of_domain_is_free` | ✓ (#47) |
 | `fp.to_real` | NaN/∞ | UNDERSPEC → DECLINES | `None` (lib.rs:2823) | `seed_fp_to_int_real_out_of_domain_is_free` (axeyum declines → sound skip) | ✓ (#47) |
 
-## P0 finding (task #47) — FP signed-zero sign predicates
+## P0 finding (task #47) — FP signed-zero sign predicates — ✅ FIXED (task #50)
 
-**GAP-F2 / P0 — `fp.isNegative(-0)` and `fp.isPositive(+0)` are wrong verdicts.**
+> **FIXED (task #50):** `axeyum_fp::is_negative`/`is_positive` are now sign-bit
+> based (`sign_bit ∧ ¬isNaN`), so `-0` is negative and `+0` is positive, matching
+> Z3/cvc5. An internal `is_strictly_negative` (sign ∧ ¬nan ∧ ¬zero) preserves the
+> `sqrt(-0)=-0` path (lib.rs:979). The `fp.rs::sign_predicates` unit test was
+> corrected, the reproducer un-ignored (`signed_zero_sign_predicates_agree`, now
+> green), and the two predicates are back in the fuzz generator menu at DISAGREE=0.
+> The finding below is retained as the record of the bug.
+
+**GAP-F2 / P0 (FIXED) — `fp.isNegative(-0)` and `fp.isPositive(+0)` were wrong verdicts.**
 The SMT-LIB `FloatingPoint` theory (confirmed against **both** Z3 4.13.3 and
 cvc5) makes the sign bit decisive for these predicates: `-0` **is** negative and
 `+0` **is** positive. axeyum instead treats *both* signed zeros as neither
