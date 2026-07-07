@@ -2519,8 +2519,10 @@ fn iv_mul(a: IntInterval, b: IntInterval) -> Option<IntInterval> {
 /// Evaluates the integer interval of `term` given known variable bounds in
 /// `bounds`. Returns `None` (decline) for any construct whose range is not
 /// computable here: an unbounded integer variable, a non-`Int`-arithmetic op
-/// (`div`/`mod`/`abs`/comparisons/`ite`/`bv2nat`/uninterpreted), or an `i128`
-/// overflow. Recognizing FEWER shapes is always sound — it only declines.
+/// (`div`/`mod`/`abs`/comparisons/`ite`/uninterpreted), or an `i128` overflow.
+/// `bv2nat` is the one bit-vector bridge admitted — its result is structurally in
+/// `[0, 2^w)` (the `iand` desugaring path). Recognizing FEWER shapes is always
+/// sound — it only declines.
 fn interval_of(
     arena: &TermArena,
     term: TermId,
@@ -2559,6 +2561,24 @@ fn interval_of(
                     interval_of(arena, args[0], bounds, depth + 1)?,
                     interval_of(arena, args[1], bounds, depth + 1)?,
                 ),
+                // `(bv2nat x)` of a width-`w` bit-vector is ALWAYS the unsigned
+                // value in `[0, 2^w - 1]`, independent of `x`'s structure. This is
+                // the integer bridge behind the SMT-LIB `((_ iand k) a b)`
+                // desugaring `bv2nat(bvand(int2bv k a, int2bv k b))`, whose value is
+                // structurally in `[0, 2^k)`. Recognizing this exact interval lets
+                // the finite-box proof cover an `iand`-bearing query. Decline (sound)
+                // if the width does not fit `i128` (`w >= 127` ⇒ `2^w` overflows).
+                Op::Bv2Nat => {
+                    let inner = *args.first()?;
+                    let Sort::BitVec(w) = arena.sort_of(inner) else {
+                        return None;
+                    };
+                    if w >= 127 {
+                        return None;
+                    }
+                    let hi = (1i128 << w).checked_sub(1)?;
+                    Some(IntInterval { lo: 0, hi })
+                }
                 _ => None,
             }
         }
@@ -3090,6 +3110,19 @@ fn prove_int_box(arena: &TermArena, assertions: &[TermId]) -> IntBoxProof {
             }
         }
     }
+
+    // 2b. Enrich the half-bounds by linear bound propagation over the
+    //     UNCONDITIONAL top-level (in)equality conjuncts, to a fixpoint. From
+    //     `x + y ≤ 32 ∧ y ≥ 0` this derives `x ≤ 32` (and symmetrically `y ≤ 32`)
+    //     — a variable bounded only inside a linear relation, which the
+    //     atomic-literal (step 2) and single-equality (step 3) passes miss. Each
+    //     derived half-bound is a logical consequence (interval propagation over
+    //     facts holding in every model), so conjoining `lo ≤ v ≤ hi` later in
+    //     `clamp_to_box` is equisatisfiability-preserving. It only tightens the
+    //     half-bound maps; a resulting `lo > hi` is caught by the existing
+    //     contradiction check below (→ `TriviallyUnsat`).
+    propagate_linear_bounds(arena, &conjuncts, &mut lo, &mut hi);
+
     let mut bounds: BTreeMap<SymbolId, IntInterval> = BTreeMap::new();
     for &v in &int_vars {
         if let (Some(&l), Some(&h)) = (lo.get(&v), hi.get(&v)) {
@@ -3603,6 +3636,264 @@ fn div_floor(a: i128, b: i128) -> Option<i128> {
         q.checked_sub(1)
     } else {
         Some(q)
+    }
+}
+
+/// A normalized affine integer form `sum coeffs[v]·v + constant`. Used by the
+/// linear bound propagator; declines (never constructed) for any non-linear
+/// subterm, so every form it carries is exact.
+#[derive(Clone, Debug, Default)]
+struct LinForm {
+    coeffs: BTreeMap<SymbolId, i128>,
+    constant: i128,
+}
+
+impl LinForm {
+    fn constant(c: i128) -> Self {
+        LinForm {
+            coeffs: BTreeMap::new(),
+            constant: c,
+        }
+    }
+
+    fn symbol(s: SymbolId) -> Self {
+        let mut coeffs = BTreeMap::new();
+        coeffs.insert(s, 1);
+        LinForm {
+            coeffs,
+            constant: 0,
+        }
+    }
+
+    /// `self - other`, or `None` on `i128` overflow.
+    fn sub(&self, other: &LinForm) -> Option<LinForm> {
+        let mut coeffs = self.coeffs.clone();
+        for (&s, &c) in &other.coeffs {
+            let e = coeffs.entry(s).or_insert(0);
+            *e = e.checked_sub(c)?;
+        }
+        Some(LinForm {
+            coeffs,
+            constant: self.constant.checked_sub(other.constant)?,
+        })
+    }
+
+    /// `self + other`, or `None` on `i128` overflow.
+    fn add(&self, other: &LinForm) -> Option<LinForm> {
+        let mut coeffs = self.coeffs.clone();
+        for (&s, &c) in &other.coeffs {
+            let e = coeffs.entry(s).or_insert(0);
+            *e = e.checked_add(c)?;
+        }
+        Some(LinForm {
+            coeffs,
+            constant: self.constant.checked_add(other.constant)?,
+        })
+    }
+
+    /// `-self`, or `None` on `i128` overflow.
+    fn neg(&self) -> Option<LinForm> {
+        let mut coeffs = BTreeMap::new();
+        for (&s, &c) in &self.coeffs {
+            coeffs.insert(s, c.checked_neg()?);
+        }
+        Some(LinForm {
+            coeffs,
+            constant: self.constant.checked_neg()?,
+        })
+    }
+
+    /// `self · c` (scalar), or `None` on `i128` overflow.
+    fn scale(&self, c: i128) -> Option<LinForm> {
+        let mut coeffs = BTreeMap::new();
+        for (&s, &k) in &self.coeffs {
+            coeffs.insert(s, k.checked_mul(c)?);
+        }
+        Some(LinForm {
+            coeffs,
+            constant: self.constant.checked_mul(c)?,
+        })
+    }
+}
+
+/// Linearizes an `Int`-sorted `term` as an exact affine [`LinForm`], or `None`
+/// if any subterm is non-linear (a product of two non-constant factors,
+/// `div`/`mod`/`abs`/`bv2nat`/uninterpreted, …). Declining is always sound: no
+/// bound is then derived from the atom containing it.
+fn lin_form(arena: &TermArena, term: TermId, depth: u32) -> Option<LinForm> {
+    if depth > 256 {
+        return None;
+    }
+    match arena.node(term) {
+        TermNode::IntConst(c) => Some(LinForm::constant(*c)),
+        TermNode::Symbol(sym) if arena.sort_of(term) == Sort::Int => Some(LinForm::symbol(*sym)),
+        TermNode::App { op, args } => {
+            let args = args.clone();
+            match op {
+                Op::IntAdd => {
+                    lin_form(arena, args[0], depth + 1)?.add(&lin_form(arena, args[1], depth + 1)?)
+                }
+                Op::IntSub => {
+                    lin_form(arena, args[0], depth + 1)?.sub(&lin_form(arena, args[1], depth + 1)?)
+                }
+                Op::IntNeg => lin_form(arena, args[0], depth + 1)?.neg(),
+                Op::IntMul => {
+                    let a = lin_form(arena, args[0], depth + 1)?;
+                    let b = lin_form(arena, args[1], depth + 1)?;
+                    // Affine only if at least one factor is a pure constant.
+                    if a.coeffs.is_empty() {
+                        b.scale(a.constant)
+                    } else if b.coeffs.is_empty() {
+                        a.scale(b.constant)
+                    } else {
+                        None
+                    }
+                }
+                _ => None,
+            }
+        }
+        _ => None,
+    }
+}
+
+/// Normalizes a top-level relational conjunct `l ⋈ r` (`⋈ ∈ {≤, <, ≥, >, =}` on
+/// `Int`) into one or two `form ≤ 0` [`LinForm`] constraints, pushed onto `out`.
+/// A non-relational or non-linear conjunct contributes nothing (sound). Integer
+/// strictness is tightened exactly (`l < r ⇔ l − r + 1 ≤ 0`).
+fn collect_le_zero_forms(arena: &TermArena, term: TermId, out: &mut Vec<LinForm>) {
+    let TermNode::App { op, args } = arena.node(term) else {
+        return;
+    };
+    if args.len() != 2 {
+        return;
+    }
+    let (l, r) = (args[0], args[1]);
+    if arena.sort_of(l) != Sort::Int || arena.sort_of(r) != Sort::Int {
+        return;
+    }
+    let (Some(lf), Some(rf)) = (lin_form(arena, l, 0), lin_form(arena, r, 0)) else {
+        return;
+    };
+    // `diff = lin(l) - lin(r)` represents `l - r`.
+    let Some(diff) = lf.sub(&rf) else {
+        return;
+    };
+    // Push `form ≤ 0` for the requested relation. Strict `<`/`>` add 1 to the
+    // constant (integers). `=` yields BOTH `diff ≤ 0` and `-diff ≤ 0`.
+    let plus_one = |f: &LinForm| -> Option<LinForm> { f.add(&LinForm::constant(1)) };
+    match op {
+        Op::IntLe => out.push(diff),
+        Op::IntGe => {
+            if let Some(f) = diff.neg() {
+                out.push(f);
+            }
+        }
+        Op::IntLt => {
+            if let Some(f) = plus_one(&diff) {
+                out.push(f);
+            }
+        }
+        Op::IntGt => {
+            if let Some(f) = diff.neg().and_then(|n| plus_one(&n)) {
+                out.push(f);
+            }
+        }
+        Op::Eq => {
+            out.push(diff.clone());
+            if let Some(f) = diff.neg() {
+                out.push(f);
+            }
+        }
+        _ => {}
+    }
+}
+
+/// The maximum of `c_v · v`'s upper bound over a `form ≤ 0` constraint, isolating
+/// `v`: `c_v·v ≤ -k - Σ_{w≠v} min(c_w·w)`. Returns the numeric right-hand-side
+/// upper bound, or `None` if a needed half-bound of some other variable is
+/// missing or `i128` overflows.
+fn constraint_rhs_max(
+    form: &LinForm,
+    v: SymbolId,
+    lo: &HashMap<SymbolId, i128>,
+    hi: &HashMap<SymbolId, i128>,
+) -> Option<i128> {
+    let mut acc = form.constant.checked_neg()?; // -k
+    for (&w, &cw) in &form.coeffs {
+        if w == v || cw == 0 {
+            continue;
+        }
+        // min(c_w · w): positive coeff uses w's LOWER bound, negative its UPPER.
+        let min_term = if cw > 0 {
+            cw.checked_mul(*lo.get(&w)?)?
+        } else {
+            cw.checked_mul(*hi.get(&w)?)?
+        };
+        acc = acc.checked_sub(min_term)?;
+    }
+    Some(acc)
+}
+
+/// Deterministic iteration cap for the linear bound-propagation fixpoint.
+const MAX_BOUND_PROP_ROUNDS: u32 = 256;
+
+/// Tightens the `lo`/`hi` half-bound maps by interval bound propagation over the
+/// linear `form ≤ 0` constraints extracted from `conjuncts`, to a fixpoint (round
+/// cap [`MAX_BOUND_PROP_ROUNDS`]). All arithmetic is `checked_*` — an overflow
+/// simply skips that derivation (sound decline). Every tightening is a valid
+/// consequence of the (unconditional) conjuncts, so it can only prune models
+/// that violate them, never a real one.
+fn propagate_linear_bounds(
+    arena: &TermArena,
+    conjuncts: &[TermId],
+    lo: &mut HashMap<SymbolId, i128>,
+    hi: &mut HashMap<SymbolId, i128>,
+) {
+    let mut constraints: Vec<LinForm> = Vec::new();
+    for &c in conjuncts {
+        collect_le_zero_forms(arena, c, &mut constraints);
+    }
+    if constraints.is_empty() {
+        return;
+    }
+    for _ in 0..MAX_BOUND_PROP_ROUNDS {
+        let mut changed = false;
+        for form in &constraints {
+            for (&v, &cv) in &form.coeffs {
+                if cv == 0 {
+                    continue;
+                }
+                let Some(rhs_max) = constraint_rhs_max(form, v, lo, hi) else {
+                    continue;
+                };
+                if cv > 0 {
+                    // c_v·v ≤ rhs_max, c_v > 0  ⇒  v ≤ floor(rhs_max / c_v).
+                    if let Some(new_hi) = div_floor(rhs_max, cv) {
+                        match hi.get(&v).copied() {
+                            Some(cur) if new_hi >= cur => {}
+                            _ => {
+                                hi.insert(v, new_hi);
+                                changed = true;
+                            }
+                        }
+                    }
+                } else {
+                    // c_v·v ≤ rhs_max, c_v < 0  ⇒  v ≥ ceil(rhs_max / c_v).
+                    if let Some(new_lo) = div_ceil(rhs_max, cv) {
+                        match lo.get(&v).copied() {
+                            Some(cur) if new_lo <= cur => {}
+                            _ => {
+                                lo.insert(v, new_lo);
+                                changed = true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if !changed {
+            break;
+        }
     }
 }
 
@@ -5584,5 +5875,103 @@ mod tests {
             matches!(result, CheckResult::Unsat),
             "value-set x∈{{2,4}} + derived t bound, x*x=t must be unsat, got {result:?}"
         );
+    }
+
+    // ---- slice 5: `iand` bounded blast — bv2nat interval + linear bound prop ----
+
+    #[test]
+    fn interval_of_bv2nat_is_structural_zero_to_two_pow_w() {
+        // `bv2nat(bvand(int2bv 4 x, int2bv 4 y))` — the `iand 4` bridge — has the
+        // structural interval `[0, 15]`, independent of x,y's (here unbounded) values.
+        let mut arena = TermArena::new();
+        let x = arena.int_var("x").unwrap();
+        let y = arena.int_var("y").unwrap();
+        let xb = arena.int2bv(4, x).unwrap();
+        let yb = arena.int2bv(4, y).unwrap();
+        let anded = arena.bv_and(xb, yb).unwrap();
+        let n = arena.bv2nat(anded).unwrap();
+        let bounds = BTreeMap::new(); // x,y intentionally UNbounded
+        let iv = interval_of(&arena, n, &bounds, 0).expect("bv2nat interval");
+        assert_eq!((iv.lo, iv.hi), (0, 15));
+    }
+
+    #[test]
+    fn propagate_linear_bounds_derives_upper_from_sum_constraint() {
+        // `x + y ≤ 32 ∧ y ≥ 0`  ⇒  `x ≤ 32` (needs only y's LOWER bound).
+        let mut arena = TermArena::new();
+        let x = arena.declare("x", Sort::Int).unwrap();
+        let y = arena.declare("y", Sort::Int).unwrap();
+        let (xv, yv) = (arena.var(x), arena.var(y));
+        let sum = arena.int_add(xv, yv).unwrap();
+        let c32 = arena.int_const(32);
+        let le = arena.int_le(sum, c32).unwrap();
+        let conjuncts = vec![le];
+        let mut lo = HashMap::new();
+        let mut hi = HashMap::new();
+        lo.insert(x, 0);
+        lo.insert(y, 0); // x ≥ 0, y ≥ 0
+        propagate_linear_bounds(&arena, &conjuncts, &mut lo, &mut hi);
+        assert_eq!(hi.get(&x).copied(), Some(32), "x ≤ 32 from x+y≤32, y≥0");
+        assert_eq!(hi.get(&y).copied(), Some(32), "y ≤ 32 symmetric");
+    }
+
+    #[test]
+    fn propagate_linear_bounds_negative_coeff_sign_is_correct() {
+        // `2y − x ≤ 4 ∧ 0 ≤ y ≤ 10`. Isolate x (coeff −1 < 0 ⇒ LOWER bound on x):
+        //   −x ≤ 4 − 2y  ⇒  x ≥ 2y − 4  ⇒  x ≥ 2·y_lo − 4 = −4.
+        // And isolate y (coeff +2): 2y ≤ 4 + x, needs x's lower bound (absent) ⇒ no
+        // y tightening here; we only assert the x lower bound sign is right.
+        let mut arena = TermArena::new();
+        let x = arena.declare("x", Sort::Int).unwrap();
+        let y = arena.declare("y", Sort::Int).unwrap();
+        let (xv, yv) = (arena.var(x), arena.var(y));
+        let two = arena.int_const(2);
+        let two_y = arena.int_mul(two, yv).unwrap();
+        let lhs = arena.int_sub(two_y, xv).unwrap(); // 2y - x
+        let four = arena.int_const(4);
+        let le = arena.int_le(lhs, four).unwrap();
+        let mut lo = HashMap::new();
+        let mut hi = HashMap::new();
+        lo.insert(y, 0);
+        hi.insert(y, 10);
+        propagate_linear_bounds(&arena, &[le], &mut lo, &mut hi);
+        assert_eq!(
+            lo.get(&x).copied(),
+            Some(-4),
+            "x ≥ 2·y_lo − 4 = −4 (negative-coeff isolation gives a LOWER bound)"
+        );
+    }
+
+    #[test]
+    fn prove_int_box_covers_iand_sum_bounded_query() {
+        // The `granularities` skeleton: x,y ≥ 0, x+y ≤ 4, and an iand term. The box
+        // proof must now succeed (bv2nat interval + derived upper bounds) where it
+        // formerly declined.
+        let mut arena = TermArena::new();
+        let x = arena.declare("x", Sort::Int).unwrap();
+        let y = arena.declare("y", Sort::Int).unwrap();
+        let (xv, yv) = (arena.var(x), arena.var(y));
+        let zero = arena.int_const(0);
+        let gx = arena.int_ge(xv, zero).unwrap();
+        let gy = arena.int_ge(yv, zero).unwrap();
+        let sum = arena.int_add(xv, yv).unwrap();
+        let four = arena.int_const(4);
+        let sle = arena.int_le(sum, four).unwrap();
+        let xb = arena.int2bv(4, xv).unwrap();
+        let yb = arena.int2bv(4, yv).unwrap();
+        let anded = arena.bv_and(xb, yb).unwrap();
+        let iand = arena.bv2nat(anded).unwrap();
+        let one = arena.int_const(1);
+        let ge_iand = arena.int_ge(iand, one).unwrap(); // iand(x,y) ≥ 1
+        match prove_int_box(&arena, &[gx, gy, sle, ge_iand]) {
+            IntBoxProof::Box(b) => {
+                assert_eq!(b.bounds.get(&x).map(|iv| (iv.lo, iv.hi)), Some((0, 4)));
+                assert_eq!(b.bounds.get(&y).map(|iv| (iv.lo, iv.hi)), Some((0, 4)));
+            }
+            IntBoxProof::TriviallyUnsat => {
+                panic!("expected a proven finite box, got TriviallyUnsat")
+            }
+            IntBoxProof::Decline => panic!("expected a proven finite box, got Decline"),
+        }
     }
 }

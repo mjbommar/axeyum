@@ -15,7 +15,7 @@ A single-glance, honest view of where the pure-Rust axeyum solver stands against
 ## Headline
 
 - **35 division baselines** measured vs z3 4.13.3, spanning **24 logic fragments** (BV, LIA, QF_ABV, QF_ALIA, QF_AUFBV, QF_AUFLIA, QF_AX, QF_BV, QF_BVFP, QF_DT, QF_FF, QF_FP, QF_LIA, QF_LRA, QF_NIA, QF_NRA, QF_S, QF_SEQ, QF_SLIA, QF_UF, QF_UFBV, QF_UFFF, QF_UFLIA, UF).
-- **DISAGREE = 0 across all baselines** — zero wrong verdicts over 653 oracle-compared instances (992 files total, 708 decided).
+- **DISAGREE = 0 across all baselines** — zero wrong verdicts over 653 oracle-compared instances (992 files total, 712 decided).
 - Decide-rate ranges **0%–100%** across divisions — that spread *is* the capability frontier; DISAGREE = 0 is the soundness floor that holds everywhere.
 
 ## Divisions vs Z3
@@ -40,9 +40,9 @@ Sorted by logic, then by descending decide-rate. Every committed `*solver-vs-z3*
 | QF_FP | `qf-fp-bitwuzla-regress-clean` | 16 | 16 | 100% | 0 | 0 | 16 | 0 | z3-library+binary | 0.010 |
 | QF_LIA | `qf-lia-cvc5-regress-clean` | 11 | 10 | 91% | 1 | 0 | 9 | 0 | z3-binary | 1.819 |
 | QF_LRA | `qf-lra-cvc5-regress-clean` | 11 | 9 | 82% | 2 | 0 | 5 | 0 | z3-binary | 3.637 |
+| QF_NIA | `qf-nia-curated-iand` | 3 | 3 | 100% | 0 | 0 | 0 | 0 | :status | 0.003 |
 | QF_NIA | `qf-nia-synthetic-graduated` | 32 | 32 | 100% | 0 | 0 | 32 | 0 | z3-binary | 6.772 |
-| QF_NIA | `qf-nia-cvc5-regress-clean` | 39 | 21 | 54% | 10 | 8 | 20 | 0 | z3-binary | 6.570 |
-| QF_NIA | `qf-nia-curated-iand` | 3 | 1 | 33% | 2 | 0 | 0 | 0 | :status | 13.333 |
+| QF_NIA | `qf-nia-cvc5-regress-clean` | 39 | 23 | 59% | 8 | 8 | 20 | 0 | z3-binary | 5.278 |
 | QF_NRA | `qf-nra-synthetic-graduated` | 33 | 30 | 91% | 3 | 0 | 30 | 0 | z3-binary | 5.455 |
 | QF_NRA | `qf-nra-cvc5-regress-clean` | 38 | 27 | 71% | 10 | 1 | 27 | 0 | z3-binary | 5.421 |
 | QF_S | `qf-s-cvc5-regress-clean` | 134 | 78 | 58% | 6 | 50 | 74 | 0 | z3-library+binary | 1.442 |
@@ -60,7 +60,7 @@ Sorted by logic, then by descending decide-rate. Every committed `*solver-vs-z3*
 | QF_UFLIA | `qf-uflia-cvc5-regress-clean-overbound-uninterp-sorts` | 2 | 2 | 100% | 0 | 0 | 2 | 0 | z3-binary | 2.294 |
 | UF | `uf-cvc5-regress-clean-quantified` | 5 | 0 | 0% | 0 | 5 | 0 | 0 | :status | 0.000 |
 
-**Totals:** 992 files, 708 decided, 653 oracle-compared, **0 disagreements.**
+**Totals:** 992 files, 712 decided, 653 oracle-compared, **0 disagreements.**
 
 <!-- NOTES:BEGIN (hand-written attribution notes — preserved by the generator) -->
 ### QF_NIA cvc5 row CORRECTED DOWN 2026-07-07 (23→21) — a soundness fix, not a regression

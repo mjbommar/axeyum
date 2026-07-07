@@ -1,6 +1,6 @@
 {
   "config": {
-    "backend": "axeyum-solver check_auto",
+    "backend": "axeyum-solver solve",
     "backend_kind": "solver",
     "cnf_clause_budget": null,
     "cnf_inprocessing": false,
@@ -8,7 +8,7 @@
     "cnf_vivify": false,
     "compare_backend": "z3 4.13.3.0",
     "compare_z3": true,
-    "config_hash": "93490eee3a8be066",
+    "config_hash": "69521e63d153f18f",
     "corpus": "corpus/public-curated/iand",
     "corpus_hash": "5767a58da974a2b3",
     "corpus_source": null,
@@ -46,7 +46,7 @@
     {
       "assertions": 3,
       "backend_stats": {
-        "check_auto_ms": 0.323504
+        "solve_ms": 0.443117
       },
       "dag_nodes": 15,
       "distinct_symbols": 2,
@@ -60,14 +60,14 @@
         "decision_agrees": null,
         "decision_compared": false,
         "enabled": true,
-        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, floating point, or sequences yet",
         "model_lift_ms": 0,
         "outcome": "unsupported",
         "solve_ms": 0,
         "translate_ms": 0,
         "z3_binary": {
           "raw": "(error \"line 17 column 26: unknown constant iand (Int Int) \")",
-          "solve_ms": 11,
+          "solve_ms": 13,
           "verdict": null
         }
       },
@@ -119,21 +119,32 @@
     {
       "assertions": 5,
       "backend_stats": {
-        "check_auto_ms": 39.079445
+        "solve_ms": 2.6723120000000002
       },
       "dag_nodes": 20,
-      "detail": "Incomplete: no model within the bounded integer width 32; widen the bound",
       "distinct_symbols": 2,
       "expected": "unsat",
       "file": "corpus/public-curated/iand/cvc5__iand-native-2.smt2",
       "max_depth": 5,
       "model_lift_ms": 0,
       "oracle": {
-        "backend_kind": "z3",
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": null,
+        "decision_compared": false,
         "enabled": true,
-        "skipped": "primary-outcome-unknown"
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, floating point, or sequences yet",
+        "model_lift_ms": 0,
+        "outcome": "unsupported",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "(error \"line 12 column 26: unknown constant iand (Int Int) \")",
+          "solve_ms": 31,
+          "verdict": null
+        }
       },
-      "outcome": "unknown",
+      "outcome": "unsat",
       "query_plan": {
         "cache_key": {
           "assertions": 5,
@@ -171,31 +182,42 @@
         "output_distinct_symbols": 2,
         "output_max_depth": 5,
         "output_tree_nodes": 32,
-        "rewritten_outcome": "unknown",
+        "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
-      "solve_ms": 39,
+      "solve_ms": 2,
       "translate_ms": 0,
       "tree_nodes": 32
     },
     {
       "assertions": 4,
       "backend_stats": {
-        "check_auto_ms": 3.1085879999999997
+        "solve_ms": 5.33217
       },
       "dag_nodes": 19,
-      "detail": "Incomplete: bounded integer model overflowed at width 32 (assertion #7 is false over exact semantics); widen the bound",
       "distinct_symbols": 2,
       "expected": "unsat",
       "file": "corpus/public-curated/iand/cvc5__iand-native-granularities.smt2",
       "max_depth": 6,
       "model_lift_ms": 0,
       "oracle": {
-        "backend_kind": "z3",
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": null,
+        "decision_compared": false,
         "enabled": true,
-        "skipped": "primary-outcome-unknown"
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, floating point, or sequences yet",
+        "model_lift_ms": 0,
+        "outcome": "unsupported",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "(error \"line 19 column 30: unknown constant iand (Int Int) \")",
+          "solve_ms": 15,
+          "verdict": null
+        }
       },
-      "outcome": "unknown",
+      "outcome": "unsat",
       "query_plan": {
         "cache_key": {
           "assertions": 4,
@@ -233,19 +255,17 @@
         "output_distinct_symbols": 2,
         "output_max_depth": 6,
         "output_tree_nodes": 28,
-        "rewritten_outcome": "unknown",
+        "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
-      "solve_ms": 3,
+      "solve_ms": 5,
       "translate_ms": 0,
       "tree_nodes": 28
     }
   ],
   "summary": {
-    "agree": 1,
-    "blocker_buckets": {
-      "unknown:Incomplete": 2
-    },
+    "agree": 3,
+    "blocker_buckets": {},
     "disagree": 0,
     "errors": 0,
     "files": 3,
@@ -259,7 +279,7 @@
       "enabled": true,
       "skipped": 3
     },
-    "par2_mean_s": 13.333441168,
+    "par2_mean_s": 0.0028158663333333334,
     "query_plan": {
       "original_dag_nodes": 54,
       "original_tree_nodes": 82,
@@ -281,8 +301,8 @@
       "sat_unsat_conflicts": 0
     },
     "sat": 1,
-    "unknown": 2,
-    "unsat": 0,
+    "unknown": 0,
+    "unsat": 2,
     "unsupported": 0
   },
   "triage": {
