@@ -936,10 +936,19 @@ pub(crate) fn collect_lia_atoms(
     out: &mut Vec<TermId>,
     seen: &mut HashSet<TermId>,
 ) {
+    // Memoize EVERY visited node, not just atoms. The assertion structure is a
+    // shared DAG, so a subterm reachable by `k` distinct paths (e.g. a bounded
+    // `str.replace` result feeding many `str.in_re` NFA positions) would be
+    // re-descended `k` times without this guard — exponential in the sharing
+    // depth, a deadline-blind hang before the DPLL loop's timeout ever fires
+    // (the str.replace×membership deadline hole). Marking interior nodes visited
+    // makes the walk linear in the DAG and is verdict-neutral: `out` still holds
+    // exactly the distinct LIA atoms (each pushed on its first, now only, visit).
+    if !seen.insert(term) {
+        return;
+    }
     if is_lia_atom(arena, term) {
-        if seen.insert(term) {
-            out.push(term);
-        }
+        out.push(term);
         return;
     }
     if let TermNode::App { args, .. } = arena.node(term) {

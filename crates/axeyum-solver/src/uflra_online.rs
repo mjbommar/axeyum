@@ -1987,19 +1987,22 @@ pub(crate) fn collect_uflra_atoms(
     out: &mut Vec<TermId>,
     seen: &mut BTreeSet<TermId>,
 ) {
+    // Memoize EVERY visited node (not just atoms): the assertion is a shared DAG,
+    // so a non-atom subterm reachable by many paths would be re-descended once per
+    // path — exponential in the sharing depth, a deadline-blind hang before the
+    // DPLL loop is even entered (the same class as the str.replace×membership hole
+    // fixed in `collect_lia_atoms`). Verdict-neutral: `out` still holds the distinct
+    // atoms.
+    if !seen.insert(term) {
+        return;
+    }
     match arena.node(term) {
         TermNode::App {
             op: Op::Eq | Op::RealLt | Op::RealLe | Op::RealGt | Op::RealGe,
             ..
-        } if seen.insert(term) => {
+        } => {
             out.push(term);
         }
-        // An already-seen atom (the guard above failed) is skipped; only descend into
-        // genuine Boolean structure.
-        TermNode::App {
-            op: Op::Eq | Op::RealLt | Op::RealLe | Op::RealGt | Op::RealGe,
-            ..
-        } => {}
         TermNode::App { args, .. } => {
             let args = args.clone();
             for a in args {

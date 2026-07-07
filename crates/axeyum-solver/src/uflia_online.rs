@@ -2359,10 +2359,16 @@ pub(crate) fn collect_uflia_atoms(
     out: &mut Vec<TermId>,
     seen: &mut BTreeSet<TermId>,
 ) {
+    // Memoize EVERY visited node (not just atoms): the assertion is a shared DAG,
+    // so a subterm reachable by many paths would be re-descended once per path —
+    // exponential in the sharing depth, a deadline-blind hang before the DPLL loop
+    // is even entered (the same class as the str.replace×membership hole fixed in
+    // `collect_lia_atoms`). Verdict-neutral: `out` still holds the distinct atoms.
+    if !seen.insert(term) {
+        return;
+    }
     if is_uflia_theory_atom(arena, term) {
-        if seen.insert(term) {
-            out.push(term);
-        }
+        out.push(term);
         return;
     }
 
