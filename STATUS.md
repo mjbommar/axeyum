@@ -408,6 +408,25 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-07 — NIA `iand` bounded blast (sound +2) + the P0 backstop
+  validated.**
+  - (`c5a829a3`) **NIA `iand` bit-blast — QF_NIA curated-iand 33%→100% (1→3),
+    cvc5-regress 21→23 (59%) SOUNDLY.** Census verdict: `iand` is NOT an IR op
+    (parse desugars `((_ iand k) a b)` to `bv2nat(bvand(int2bv k a, int2bv k
+    b))`), so contained — a solver-side dispatch fix, not a workspace-wide IR
+    rollout. Two additions to the finite-box exact blast: an `interval_of`
+    `Bv2Nat` arm (`bv2nat` of a width-w BV ∈ [0, 2^w), the tight iand-bridge
+    interval) + `propagate_linear_bounds` (interval propagation over top-level
+    linear conjuncts to a fixpoint, so `x+y≤32 ∧ y≥0 ⇒ x≤32` bounds the box).
+    Both are logical consequences → the box clamp is equisat-preserving, the
+    covering-width invariant keeps the blast wraparound-free → BV-unsat is
+    genuine integer unsat. Full `--lib` 716/716, both nra+nia fuzzes + a new
+    `iand` differential fuzz (461/461, independently re-run) all DISAGREE=0.
+    The +2 here are the iand rows — distinct from div.01/minimal_unsat_core
+    (still awaiting the sound congruent-div-0 recovery, task #40).
+  - The pre-push hook's new `--lib` gate **ran on this push and passed**
+    ("corpus- and unit-sound") — the P0-recurrence prevention is live and
+    validated.
 - **2026-07-07 — P0 wrong-unsat caught + fixed; NRA slice 2; the pre-push
   unit backstop.**
   - (`52f3b1d1`) **A wrong-unsat that shipped to main, found and repaired.**
