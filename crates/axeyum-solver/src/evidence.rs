@@ -500,6 +500,17 @@ pub enum Evidence {
         /// certificate; an output artifact, re-derived (not trusted) on re-check.
         lean_module: String,
     },
+    /// Unsatisfiable (`QF_S`/`QF_SLIA` word equations): a **self-checking Alethe**
+    /// word-clash refutation (ADR-0053/0061). A pure word-equation-and-disequation
+    /// system is refuted by a checked derivation whose Alethe proof
+    /// ([`WordClashCertificate`](crate::WordClashCertificate)) is **self-contained** —
+    /// it carries its own commands, premise core, and element sort key, and
+    /// [`Evidence::check`] re-runs the Alethe replay to the empty clause with no arena
+    /// (a tampered clause/premise/constant/rule fails). This is the word-clash
+    /// counterpart of [`Evidence::UnsatRegexEmptiness`] and the sibling upgrade of the
+    /// bare [`Evidence::Unsat(None)`](Evidence::Unsat) for the word-only string
+    /// fragment.
+    UnsatWordClash(crate::WordClashCertificate),
     /// Undecided, with the classified reason.
     Unknown(UnknownReason),
 }
@@ -556,6 +567,7 @@ impl Evidence {
             Evidence::UnsatBinarySearch16(_) => "unsat-binary-search-16",
             Evidence::UnsatFifoBc04(_) => "unsat-fifo-bc04",
             Evidence::UnsatRegexEmptiness { .. } => "unsat-regex-emptiness",
+            Evidence::UnsatWordClash(_) => "unsat-word-clash",
             Evidence::Unknown(_) => "unknown",
         }
     }
@@ -731,6 +743,10 @@ impl Evidence {
             Evidence::UnsatRegexEmptiness { membership, .. } => {
                 Ok(crate::reconstruct_regex_emptiness_to_lean_module(membership).is_ok())
             }
+            // Self-checking Alethe word-clash refutation: re-run the embedded proof to
+            // the empty clause (arena-free; the certificate carries its own premises and
+            // element sort key). A tampered proof fails here — never trusted as-is.
+            Evidence::UnsatWordClash(certificate) => Ok(certificate.check()),
             Evidence::Unsat(None) | Evidence::Unknown(_) => Ok(true),
         }
     }
@@ -783,6 +799,7 @@ impl Evidence {
                 | Evidence::UnsatBinarySearch16(_)
                 | Evidence::UnsatFifoBc04(_)
                 | Evidence::UnsatRegexEmptiness { .. }
+                | Evidence::UnsatWordClash(_)
         )
     }
 }
@@ -2187,19 +2204,9 @@ pub fn produce_evidence_smtlib(
         // ran, not an arena replay against the bounded/empty view).
         CheckResult::Sat(model) => Evidence::Sat(model),
         // A word-clash / regex-emptiness / concat-emptiness / length conflict decided
-        // the `unsat`. When the deciding class is a **regex derivative-emptiness**
-        // membership refutation, we can carry the same kernel-checked certificate #52
-        // wires into the live path (re-derivable from the `Membership` — check() re-runs
-        // it, never trusting the module string). The other string `unsat` classes have
-        // no transferable in-tree certificate object yet, so they stay a correct
-        // bare-but-sound `Evidence::Unsat(None)` (word-clash certification is #58b).
-        CheckResult::Unsat => match crate::membership_unsat_certificate(&script, config) {
-            Some((membership, lean_module)) => Evidence::UnsatRegexEmptiness {
-                membership,
-                lean_module,
-            },
-            None => Evidence::Unsat(None),
-        },
+        // the `unsat`; upgrade it to a transferable certified variant where one exists,
+        // else a correct bare-but-sound `Evidence::Unsat(None)`.
+        CheckResult::Unsat => string_unsat_evidence(&mut script, config),
         CheckResult::Unknown(reason) => Evidence::Unknown(reason),
     };
     Ok(EvidenceReport {
@@ -2207,6 +2214,44 @@ pub fn produce_evidence_smtlib(
         provenance,
         trusted_steps: Vec::new(),
     })
+}
+
+/// Upgrade a string-route `unsat` verdict to the strongest transferable, self-checking
+/// [`Evidence`] variant the deciding class admits (ADR-0061):
+///
+/// 1. **Regex derivative-emptiness** → [`Evidence::UnsatRegexEmptiness`], carrying the
+///    kernel-checked Lean module #52 wires into the live path (re-derived from the
+///    self-contained `Membership` on re-check — the module string is never trusted).
+/// 2. **Word clash** → [`Evidence::UnsatWordClash`], carrying the self-contained,
+///    self-checking Alethe [`WordClashCertificate`](crate::WordClashCertificate)
+///    (`check()` re-runs the Alethe replay, arena-free — a tampered proof fails).
+/// 3. Otherwise (concat/length conflict, or a reconstruction/cap decline) a correct
+///    bare-but-sound [`Evidence::Unsat(None)`](Evidence::Unsat).
+///
+/// The verdict is never changed — this is a pure evidence upgrade over the object the
+/// route already decided. Each certificate independently re-checks; a decline is a
+/// clean fall-through to the next class, never a fabricated certificate.
+fn string_unsat_evidence(script: &mut axeyum_smtlib::Script, config: &SolverConfig) -> Evidence {
+    // (1) Regex derivative-emptiness (kernel-checked Lean).
+    if let Some((membership, lean_module)) = crate::membership_unsat_certificate(script, config) {
+        return Evidence::UnsatRegexEmptiness {
+            membership,
+            lean_module,
+        };
+    }
+    // (2) Word clash (self-checking Alethe certificate). Clone the (Copy-element)
+    // equalities/disequalities so the immutable borrow of `word_problem` ends before
+    // `word_conflict_alethe` takes `&mut script.arena` (mirrors the word route).
+    if let Some((eqs, diseqs)) = script
+        .word_problem
+        .as_ref()
+        .map(|wp| (wp.equalities.clone(), wp.disequalities.clone()))
+        && let Ok(certificate) = crate::word_conflict_alethe(&mut script.arena, &eqs, &diseqs)
+    {
+        return Evidence::UnsatWordClash(certificate);
+    }
+    // (3) No transferable certificate yet: the correct, honestly-uncertified verdict.
+    Evidence::Unsat(None)
 }
 
 /// Like [`produce_evidence`], but when the query is satisfiable, optionally
@@ -2828,7 +2873,8 @@ pub fn prove(
         | Evidence::UnsatTwoByteXorSwapRoundtrip(_)
         | Evidence::UnsatBinarySearch16(_)
         | Evidence::UnsatFifoBc04(_)
-        | Evidence::UnsatRegexEmptiness { .. } => {
+        | Evidence::UnsatRegexEmptiness { .. }
+        | Evidence::UnsatWordClash(_) => {
             if !report.evidence.check(arena, &query)? {
                 return Err(SolverError::Backend(
                     "prove: refutation of the negated goal failed its own check".to_owned(),

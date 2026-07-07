@@ -102,11 +102,11 @@ fn satisfiable_membership_is_never_fabricated_into_a_certified_unsat() {
 }
 
 #[test]
-fn word_clash_unsat_stays_correct_but_uncertified() {
-    // A pure word clash `x = "a" ∧ x = "b"`: correctly `unsat`, but there is no
-    // transferable regex-emptiness certificate (it is not a membership problem), so it
-    // must remain a bare-but-sound `Evidence::Unsat(None)` — NOT falsely certified, and
-    // NOT a fabricated `sat`. (Word-clash certification is the #58b follow-up.)
+fn word_clash_unsat_is_a_certified_alethe_variant() {
+    // A pure word clash `x = "a" ∧ x = "b"`: correctly `unsat`, and now carried as the
+    // self-checking Alethe `Evidence::UnsatWordClash` (#58b) — its `check()` re-runs the
+    // embedded Alethe refutation to the empty clause, arena-free. Never a fabricated
+    // `sat`, never a wrong verdict.
     let word = r#"(set-logic QF_S)
 (declare-const x String)
 (assert (= x "a"))
@@ -114,13 +114,23 @@ fn word_clash_unsat_stays_correct_but_uncertified() {
 (check-sat)"#;
     let report = produce_evidence_smtlib(word, &cfg()).expect("produce evidence for word clash");
     assert!(
-        matches!(report.evidence, Evidence::Unsat(None)),
-        "a word-clash unsat is a correct bare-but-sound unsat, got {:?}",
+        matches!(report.evidence, Evidence::UnsatWordClash(_)),
+        "a word-clash unsat is a certified Alethe word-clash refutation, got {:?}",
         report.evidence.kind_label()
     );
+    assert_eq!(report.evidence.kind_label(), "unsat-word-clash");
     assert!(
-        !report.evidence.is_certified(),
-        "the word-clash unsat is honestly uncertified (no regex-emptiness cert)"
+        report.evidence.is_certified(),
+        "a self-checking Alethe word-clash refutation is certified evidence"
+    );
+    // `check()` re-runs the Alethe replay (arena-free); a fresh empty arena suffices.
+    let arena = TermArena::new();
+    assert!(
+        report
+            .evidence
+            .check(&arena, &[])
+            .expect("re-check the word-clash certificate"),
+        "the word-clash Alethe certificate must re-validate on re-check"
     );
 }
 
