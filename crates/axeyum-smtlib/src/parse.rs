@@ -5644,31 +5644,69 @@ fn string_to_code(arena: &mut TermArena, s: TermId) -> Result<TermId, SmtError> 
 }
 
 /// `str.from_code i`: the length-1 string whose single character has code point
-/// `i` when `i` is a valid code point, else the empty string (SMT-LIB total
-/// function). The byte model represents a character as one byte, so this is
-/// **sound only** for `0 ≤ i ≤ 127` (ASCII, where the code point round-trips
-/// through a single UTF-8 byte and matches how literals are packed); a code
-/// point in `128..` would be a multi-byte UTF-8 character that the byte layout
-/// cannot represent faithfully. We therefore build the byte for `0 ≤ i ≤ 127`
-/// and the empty string otherwise — which is **conservative**: it returns `""`
-/// for `i ≥ 128` where SMT-LIB would return a non-empty string, so any equality
-/// against a (necessarily ASCII, in this model) string still decides correctly,
-/// and a `from_code` over a non-ASCII code never claims a byte it cannot model.
+/// `i` when `i` is a valid Unicode code point (`0 ≤ i ≤ 0x2FFFF`), else the empty
+/// string (SMT-LIB `UnicodeStrings` total function).
+///
+/// **Soundness.** axeyum's string model is an 8-bit *byte* alphabet — a character
+/// is one byte — so [`string_to_code`] round-trips the full range `0..=255` via
+/// `bv2nat(s[0])`. `str.from_code` must be the exact partial inverse over that
+/// same range; anything else self-contradicts the theorem
+/// `str.to_code (str.from_code i) = i`. We split on the argument:
+///
+/// * **`0 ≤ i ≤ 255`** — representable: the length-1 string of byte `i`. Exact,
+///   and round-trips with `str.to_code` (`to_code (from_code i) = i`).
+/// * **`i < 0` or `i > 0x2FFFF`** — not a valid code point: the empty string,
+///   exactly as SMT-LIB specifies. Byte-model-agnostic and sound.
+/// * **`256 ≤ i ≤ 0x2FFFF`** — a *valid, non-empty* code point the 8-bit byte
+///   alphabet cannot faithfully encode. Folding it to `""` is the wrong-sat this
+///   function shipped (P0: `(= (str.from_code 200) "")` was `sat`; Z3 `unsat`),
+///   and every byte-level surrogate is likewise unsound — `i mod 256` fabricates
+///   a wrong-sat on `(= (from_code i) c)` and a wrong-unsat on
+///   `(= (to_code (from_code i)) i)`. So we **decline** (`Unsupported` → the query
+///   is reported `Unknown`), never a wrong verdict.
+///
+/// A **symbolic** `i` could be assigned by the solver anywhere, including the
+/// unrepresentable `256..=0x2FFFF` window where no byte-model encoding is sound
+/// (an empty/`mod 256`/fresh-byte result each admits a wrong-sat or a wrong-unsat
+/// on `to_code ∘ from_code`). Since the argument is not provably `≤ 255` at parse
+/// time, a non-constant argument declines wholesale — conservative (loses some
+/// symbolic completeness) but never wrong. Constant arguments — the common case,
+/// including the P0 — fold exactly.
 fn string_from_code(arena: &mut TermArena, i: TermId) -> Result<TermId, SmtError> {
-    let zero_i = arena.int_const(0);
-    let hi_i = arena.int_const(127);
-    let lo_ok = arena.int_ge(i, zero_i)?;
-    let hi_ok = arena.int_le(i, hi_i)?;
-    let valid = arena.and(lo_ok, hi_ok)?;
-    // Byte value = i mod 256, but under `valid` (0..=127) it is exactly i. We take
-    // the low 8 bits of `int2bv 8 i`, which equals i for 0..=127.
-    let byte = arena.int2bv(8, i)?;
-    let zero8 = arena.bv_const(8, 0)?;
-    let rbyte = arena.ite(valid, byte, zero8)?;
-    let one_len = arena.bv_const(len_width(1), 1)?;
-    let zero_len = arena.bv_const(len_width(1), 0)?;
-    let rlen = arena.ite(valid, one_len, zero_len)?;
-    arena.concat(rbyte, rlen).map_err(SmtError::Ir)
+    /// SMT-LIB `UnicodeStrings` maximum code point.
+    const MAX_CODE_POINT: i128 = 0x2FFFF;
+    // `constant_int_value` folds literals *and* constant arithmetic (e.g. the
+    // SMT-LIB negative literal `(- 1)` → `-1`), so every ground code point takes
+    // the exact path below rather than declining as "symbolic".
+    if let Some(v) = constant_int_value(arena, i) {
+        return if (0..=255).contains(&v) {
+            // Representable: the length-1 byte string, packed exactly as a literal
+            // so it compares against string constants and round-trips `str.to_code`.
+            let byte = u8::try_from(v).expect("0..=255 fits u8");
+            pack_string_literal(arena, &[byte])
+        } else if !(0..=MAX_CODE_POINT).contains(&v) {
+            // Invalid code point → the empty string (SMT-LIB total function).
+            pack_string_literal(arena, &[])
+        } else {
+            // 256..=0x2FFFF: a valid, non-empty character outside the byte
+            // alphabet. Decline rather than commit any wrong (byte) string.
+            Err(SmtError::Unsupported(format!(
+                "str.from_code of the constant {v}: a valid code point in \
+                 256..=0x2FFFF is a non-empty character the 8-bit byte model \
+                 cannot represent — declining to Unknown rather than folding to a \
+                 wrong string (ADR-0029; P0, task #46)"
+            )))
+        };
+    }
+    // Symbolic argument: the solver could assign `i` into the unrepresentable
+    // 256..=0x2FFFF window, where no byte-model encoding is sound. Decline.
+    Err(SmtError::Unsupported(
+        "str.from_code over a symbolic code point is outside the sound byte-model \
+         subset: an argument in 256..=0x2FFFF is a valid non-empty character the \
+         8-bit alphabet cannot represent, and no byte encoding decides that window \
+         soundly, so a non-constant argument is declined (ADR-0029; task #46)"
+            .to_owned(),
+    ))
 }
 
 /// Maximum number of decimal digits a `str.from_int` result string carries (the
@@ -9224,8 +9262,11 @@ fn apply_op(
             lenabs.note_code_bridge(arena, args[0], r)?;
             r
         }
-        // `str.from_code i` — the length-1 string of code point `i` (conservative
-        // to ASCII `0..=127`, else ""), the partial inverse of `str.to_code`.
+        // `str.from_code i` — the length-1 byte string of code point `i` for a
+        // constant `0 ≤ i ≤ 255` (exact, round-trips `str.to_code`), `""` for an
+        // invalid code point (`i < 0` or `i > 0x2FFFF`), and a decline (Unknown)
+        // for the valid-but-unrepresentable `256..=0x2FFFF` window or any symbolic
+        // argument. The partial inverse of `str.to_code` (task #46).
         "str.from_code" => {
             need(1)?;
             let r = string_from_code(arena, args[0])?;

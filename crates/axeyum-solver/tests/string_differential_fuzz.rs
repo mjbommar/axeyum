@@ -179,17 +179,37 @@ fn gen_str_expr(rng: &mut Lcg, num_vars: usize, depth: u32) -> String {
     }
 }
 
-/// A `str.from_code` argument restricted to the range axeyum's byte model handles
-/// SOUNDLY: a negative code point (SMT-LIB → "", agreed by both engines) and the
-/// ASCII range `0..=127` (a single byte that round-trips through `str.to_code`).
-/// The 128..=255 range is intentionally EXCLUDED — see
-/// [`from_code_out_of_range_p0_repro`]: axeyum currently folds it to "" (a
-/// wrong-sat vs Z3's non-empty character), so putting it in the passing sweep
-/// would (correctly) fail. Both the negative and boundary shapes are emitted, so
-/// the sound axis of `str.from_code` is no longer blind (task #42).
+/// Code points for the `str.from_code` fuzz axis. Since the task #46 fix, the
+/// FULL range is adjudication-safe (axeyum is sound everywhere): a constant
+/// `0..=255` folds exactly (byte string), `i < 0` / `i > 0x2FFFF` fold to `""`,
+/// and the valid-but-unrepresentable `256..=0x2FFFF` window declines to Unknown →
+/// a SKIP. So we now cover `0..=300` densely (spanning the old ASCII-only
+/// `0..=127`, the once-wrong `128..=255`, and the `256..=300` decline window),
+/// plus negatives and code points above the SMT-LIB maximum — every class Z3
+/// adjudicates. DISAGREE must stay 0 across all of them.
 fn gen_sound_codepoint(rng: &mut Lcg) -> String {
-    const CODEPOINTS: [i64; 8] = [-2, -1, 0, 1, 32, 65, 126, 127];
-    CODEPOINTS[rng.below(CODEPOINTS.len() as u64)].to_string()
+    // A weighted mix: fixed boundary values that must be exercised every run,
+    // plus a uniform draw over 0..=300 and the invalid tails.
+    const FIXED: [i64; 14] = [
+        -0x30001, -256, -2, -1, 0, 1, 32, 65, 126, 127, 128, 200, 255, 256,
+    ];
+    // `Lcg::below` returns a small `usize`; `i64::try_from` is infallible here and
+    // keeps clippy's `cast_possible_wrap` gate happy without an `as` cast.
+    let draw = |rng: &mut Lcg, n: u64| i64::try_from(rng.below(n)).expect("small draw fits i64");
+    match rng.below(3) {
+        // Boundary/regression values (includes the exact P0 code point 200).
+        0 => FIXED[rng.below(FIXED.len() as u64)].to_string(),
+        // Dense sweep across 0..=300 (spans 0..=255 exact + 256..=300 decline).
+        1 => draw(rng, 301).to_string(),
+        // Invalid tails: negative and above the SMT-LIB maximum code point.
+        _ => {
+            if rng.below(2) == 0 {
+                (-1 - draw(rng, 300)).to_string()
+            } else {
+                (0x2FFFF + 1 + draw(rng, 300)).to_string()
+            }
+        }
+    }
 }
 
 /// A generated **Int-sorted** expression, mixing string-derived ints
@@ -545,27 +565,22 @@ fn string_differential_fuzz_disagree_zero() {
     );
 }
 
-/// P0 REPRODUCER (task #42 underspecified-operator fuzz-coverage audit) —
-/// **currently failing**, hence `#[ignore]`d so CI stays green until the parser
-/// lowering is fixed. Un-ignore it to verify the fix.
+/// P0 REPRODUCER (task #42 underspecified-operator fuzz-coverage audit), **now
+/// fixed** (task #46). `str.from_code i` for a code point `i` in `128..=255` was a
+/// WRONG-SAT: the byte model CAN represent that character (a single byte;
+/// `str.to_code` of a byte-`i` string is exactly `i` for all `0..=255`), yet
+/// `string_from_code` (`crates/axeyum-smtlib/src/parse.rs`) folded every `i > 127`
+/// to the empty string. So `(= (str.from_code 200) "")` was decided **Sat** by
+/// axeyum while Z3 (and the real SMT-LIB `UnicodeStrings` semantics) say **Unsat**
+/// — `str.from_code 200` is the non-empty length-1 string U+00C8. The model even
+/// self-contradicted: `str.to_code (str.from_code 200) = 200` is a theorem yet
+/// axeyum made `str.from_code 200 = ""`.
 ///
-/// `str.from_code i` for a code point `i` in `128..=255` is a WRONG-SAT: the byte
-/// model CAN represent that character (a single byte; `str.to_code` of a byte-`i`
-/// string is exactly `i` for all `0..=255`), yet `string_from_code`
-/// (`crates/axeyum-smtlib/src/parse.rs`) folds every `i > 127` to the empty string.
-/// So `(= (str.from_code 200) "")` is decided **Sat** by axeyum while Z3 (and the
-/// real SMT-LIB `UnicodeStrings` semantics) say **Unsat** — `str.from_code 200` is
-/// the non-empty length-1 string U+00C8. The model even self-contradicts:
-/// `str.to_code (str.from_code 200) = 200` is a theorem yet axeyum makes
-/// `str.from_code 200 = ""`.
-///
-/// Discovered by this audit while closing the `str.from_code` fuzz gap; the sound
-/// range (negative, `0..=127`) is exercised by the passing sweep above via
-/// [`gen_sound_codepoint`]. The fix is a parser change (widen the sound byte range
-/// to `0..=255`, or DECLINE `128..=255` to `Unknown` instead of committing to "")
-/// deliberately left out of the fuzz-coverage slice — report, do not paper over.
+/// The fix widened the exact byte range to `0..=255`, keeps `""` for genuinely
+/// invalid code points (`i < 0` or `i > 0x2FFFF`), and declines the
+/// valid-but-unrepresentable `256..=0x2FFFF` window (and any symbolic argument) to
+/// `Unknown` — never a wrong verdict.
 #[test]
-#[ignore = "P0 wrong-sat: str.from_code 128..=255 folds to \"\" (parser fix pending); un-ignore after fix"]
 fn from_code_out_of_range_p0_repro() {
     // The exact confirmed wrong-sat. Correct answer (and Z3's) is Unsat, because
     // `str.from_code 200` is a non-empty character. A sound engine returns Unsat
