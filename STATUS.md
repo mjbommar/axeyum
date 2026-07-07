@@ -408,6 +408,36 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-07 — P0 wrong-unsat caught + fixed; NRA slice 2; the pre-push
+  unit backstop.**
+  - (`52f3b1d1`) **A wrong-unsat that shipped to main, found and repaired.**
+    The NIA div/mod slice (`a946f925`) routed unsat decisions through
+    `eliminate_int_divmod`, which folded div/mod by a constant-ZERO divisor to
+    a FIXED convention value (`div a 0→0`, `mod a 0→a`) — valid as a witness
+    but an unsound unsat, since SMT-LIB leaves div/mod-by-zero underspecified
+    (`775 < mod(0,0)` is sat, not `775 < 0`). Fix: divisor-zero terms become
+    FRESH UNCONSTRAINED variables (underspecified → free; strictly more
+    conservative — removes refutations, adds none; a non-convention sat model
+    is caught by ground-evaluator replay). Verified: the P0 test passes,
+    full `--lib` 712/712, rewrite 88/88, corpus 0 DISAGREE, divmod fuzz
+    DISAGREE=0. **Found by the slice-2 agent's full `--lib` sweep — the nia
+    lane's targeted `--test`+fuzz gates had skipped it.**
+  - (`hooks/pre-push`, CLAUDE.md) **Durable fix: the pre-push hook now runs
+    the full solver `--lib` sweep (~30s) on the pushed SHA**, alongside the
+    corpus sweep. Both corpus_regression and the fuzzes miss soundness holes
+    on shapes that are neither in the committed corpus nor fuzz-generated;
+    `--lib` is the backstop that would have blocked `a946f925`. The wrong
+    verdict must not leave the machine when a 30s local sweep catches it.
+  - (`631be06f`) **NRA slice 2: `a²=−k` int↔real coercion + even-power-equality
+    — QF_NRA 26→27 (71%), PAR-2 down.** The even-power matcher now sees
+    through `to_real(int const)`/`(- k)` (exact ℤ↪ℝ), tried before the
+    Nelson-Oppen coercion relaxation; a new even-power-EQUALITY arm refutes
+    `Σ tᵢ^{2k} = c` (c<0). `a²=2` stays SAT (a=±√2) — verified + property-tested
+    both directions; nra+nia fuzzes DISAGREE=0 (nra re-run independently).
+    A soundness save during dev: a broad `to_real` fold rerouted a sat
+    instance into the CAD's algebraic (non-replayable) model — reverted for
+    the surgical approach.
+
 - **2026-07-06 (night, cont.) — the next arithmetic arc opens: QF_NIA over
   QF_NRA, first slice lands.** The string program having closed at its
   theory-coupled ceiling, the remaining z3/cvc5 gap is nonlinear arithmetic —

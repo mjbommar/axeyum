@@ -71,5 +71,14 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$REPO_ROOT/target}"
   # sweep can catch it.
   MEM_LIMIT_GB="${MEM_LIMIT_GB:-64}" ./scripts/mem-run.sh \
     cargo test -p axeyum-solver --test corpus_regression --quiet
+  # The solver unit sweep (~30s warm): a wrong-unsat unit test
+  # (int_mod_by_zero_underspecification, 52f3b1d1) shipped to main because a
+  # lane ran targeted `--test <file>` + fuzzes but not `--lib` — the corpus
+  # sweep above misses soundness holes on shapes that are neither in the
+  # committed corpus nor hit by a differential-fuzz generator. `--lib` is the
+  # backstop that would have blocked that push. ("full sweep catches what
+  # per-commit --test misses", now enforced at the push boundary.)
+  MEM_LIMIT_GB="${MEM_LIMIT_GB:-64}" ./scripts/mem-run.sh \
+    cargo test -p axeyum-solver --lib --quiet
 )
-echo "pre-push: gate green (pushed SHA compiles, is formatted, corpus-sound)" >&2
+echo "pre-push: gate green (pushed SHA compiles, is formatted, corpus- and unit-sound)" >&2
