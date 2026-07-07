@@ -2078,6 +2078,92 @@ pub fn produce_evidence(
     })
 }
 
+/// The **string-capable** evidence front door: produce a self-checking
+/// [`EvidenceReport`] for an SMT-LIB *text* script, routing string queries
+/// through the same word-level / online CDCL(T) decision the text solver
+/// ([`crate::solve_smtlib`]) uses.
+///
+/// # Why a text entry point exists (soundness — task #63)
+///
+/// [`produce_evidence`] takes a `TermArena` + `assertions`, but an *unbounded*
+/// string query cannot be represented faithfully at that layer:
+///
+/// - the term IR has no `str.in_re`/`str.replace`/`str.contains` operators — those
+///   live only in the bounded packed-BV *encoding* or in the parser's word /
+///   membership / length **side channels** (built from the parse tree, not the
+///   arena), and
+/// - a *word-only-fallback* script (the bounded encoder declined it wholesale)
+///   has an **empty** flat assertion view, so `produce_evidence(arena, &[])` would
+///   trivially — and *wrongly* — report `sat` for an `unsat` word problem.
+///
+/// Feeding those flat/bounded assertions to the arena front door produced
+/// `certified`/`checked` **wrong verdicts** (the `QF_S`/`QF_SLIA` P0 the #62 dominance
+/// audit caught: a spurious bounded `sat` for an `unsat` word/regex problem, and a
+/// bounded `unsat` for a `sat` membership problem — each passing `Evidence::check`
+/// against the *same* bounded/empty view). This front door decides the script with
+/// [`crate::solve_smtlib`] — whose `sat` is **Seq-level** replay-checked and whose
+/// `unsat` is a certified word-clash / regex-emptiness / concat-emptiness / length
+/// conflict — and wraps that already-sound verdict. It never fabricates a bounded
+/// model with `checked = true`.
+///
+/// Non-string scripts delegate to [`produce_evidence`] over the flat assertion
+/// view, so every existing rich-certificate route (DRAT, Farkas, Diophantine,
+/// Alethe, …) is preserved byte-for-byte.
+///
+/// # Errors
+///
+/// [`SolverError::Parse`] for malformed/unsupported text, or any [`SolverError`]
+/// from the chosen engine.
+pub fn produce_evidence_smtlib(
+    input: &str,
+    config: &SolverConfig,
+) -> Result<EvidenceReport, SolverError> {
+    let mut script = axeyum_smtlib::parse_script(input)
+        .map_err(|error| SolverError::Parse(error.to_string()))?;
+    // A string script is one that used the bounded string/sequence encoding, or one
+    // the bounded encoder declined wholesale (word-first fallback). Both cases carry
+    // their decidable content in the parser side channels, NOT in the flat arena
+    // assertions — so the arena front door cannot see (let alone soundly decide) the
+    // real query. Everything else is faithfully represented by the flat view and
+    // keeps the full arena certificate ladder.
+    let is_string_script = script.uses_bounded_strings || script.word_only_fallback.is_some();
+    if !is_string_script {
+        let assertions = script.assertions.clone();
+        return produce_evidence(&mut script.arena, &assertions, config);
+    }
+
+    // String script: delegate the DECISION to the string-capable text front door.
+    // `solve_smtlib`'s `sat` is Seq-level replay-checked inside the string routes and
+    // its `unsat` is a re-checked theory conflict, so the verdict is already sound;
+    // we wrap it without inventing a bounded model. The bounded/word side channels
+    // are not re-expressible as a checkable in-tree certificate object here, so the
+    // report is the CORRECT verdict recorded honestly (no spurious `checked = true`
+    // sat) — a correct-verdict-uncertified report, never a wrong-verdict-certified
+    // one.
+    let outcome = crate::solve_smtlib(input, config)?;
+    let provenance = Provenance::for_query(
+        config,
+        "smtlib-string-front-door".to_owned(),
+        script.assertions.len(),
+    );
+    let evidence = match outcome.result {
+        // The model is the string routes' Seq-level replay-checked witness; wrap it
+        // as-is (its faithful re-check is the Seq-level evaluation the route already
+        // ran, not an arena replay against the bounded/empty view).
+        CheckResult::Sat(model) => Evidence::Sat(model),
+        // A certified word-clash / regex-emptiness / concat-emptiness / length
+        // conflict decided the `unsat`; record the correct verdict as a bare (but
+        // sound) `unsat` — a transferable string refutation object is future work.
+        CheckResult::Unsat => Evidence::Unsat(None),
+        CheckResult::Unknown(reason) => Evidence::Unknown(reason),
+    };
+    Ok(EvidenceReport {
+        evidence,
+        provenance,
+        trusted_steps: Vec::new(),
+    })
+}
+
 /// Like [`produce_evidence`], but when the query is satisfiable, optionally
 /// replaces the replay-checked model with a lexicographically minimized
 /// replay-checked model over `symbols`.
