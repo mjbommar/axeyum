@@ -29,7 +29,9 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use axeyum_smtlib::parse_script;
-use axeyum_solver::{Evidence, SolverConfig, produce_evidence, prove_unsat_to_lean_module};
+use axeyum_solver::{
+    Evidence, SolverConfig, produce_evidence, produce_evidence_smtlib, prove_unsat_to_lean_module,
+};
 use serde_json::{Value as JsonValue, json};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -258,9 +260,24 @@ fn audit_instance(
     let parse_evidence_ms = ms(parse_start.elapsed());
 
     let assertions = evidence_script.assertions.clone();
+    // A string script (bounded string/sequence encoding, or one the bounded encoder
+    // declined wholesale into a word-first fallback) carries its decidable content in
+    // the parser side channels, NOT in the flat arena assertions — for a word-only
+    // fallback `assertions` is even EMPTY. Feeding that flat/empty view to the arena
+    // front door `produce_evidence` returns a vacuous (wrong) `sat`. The string-capable
+    // text front door `produce_evidence_smtlib` (soundness fix f719c27d) decides such a
+    // script through `solve_smtlib` and wraps the already-sound verdict. Non-string
+    // scripts keep the arena path byte-for-byte, preserving the full certificate ladder.
+    let is_string_script =
+        evidence_script.uses_bounded_strings || evidence_script.word_only_fallback.is_some();
     mark_phase(progress, "produce-evidence");
     let produce_start = Instant::now();
-    let report = match produce_evidence(&mut evidence_script.arena, &assertions, &config) {
+    let produced = if is_string_script {
+        produce_evidence_smtlib(&text, &config)
+    } else {
+        produce_evidence(&mut evidence_script.arena, &assertions, &config)
+    };
+    let report = match produced {
         Ok(report) => report,
         Err(error) => {
             return AuditResult {
@@ -304,10 +321,22 @@ fn audit_instance(
     let evidence_certified = report.evidence.is_certified();
     mark_phase(progress, "check-evidence");
     let check_start = Instant::now();
-    let evidence_checked = report
-        .evidence
-        .check(&evidence_script.arena, &assertions)
-        .unwrap_or(false);
+    // For a string script the verdict comes from `solve_smtlib`: its `sat` model is a
+    // Seq-level witness (already replay-checked inside the string routes) and its `unsat`
+    // is a bare-but-sound theory conflict — neither is an arena-checkable certificate
+    // against the bounded/empty flat view here (running `check` would either replay a
+    // Seq model against the wrong view or accept a bare `unsat` vacuously). Record
+    // `evidence_checked` HONESTLY as false; a transferable in-tree string certificate is
+    // separate future work (#58). The KEY audited field is `baseline_matches_audit`,
+    // which is now correct because the verdict itself is sound.
+    let evidence_checked = if is_string_script {
+        false
+    } else {
+        report
+            .evidence
+            .check(&evidence_script.arena, &assertions)
+            .unwrap_or(false)
+    };
     let check_evidence_ms = ms(check_start.elapsed());
     let trust_steps: Vec<JsonValue> = report
         .trusted_steps
@@ -332,7 +361,9 @@ fn audit_instance(
     let mut lean_module_bytes = JsonValue::Null;
     let mut parse_lean_ms = JsonValue::Null;
     let mut lean_reconstruction_ms = JsonValue::Null;
-    if audit_outcome == Verdict::Unsat {
+    // String-script `unsat` is a Seq-level theory conflict, not an arena refutation, so
+    // the arena Lean reconstruction does not apply; leave `lean_checked` honestly false.
+    if audit_outcome == Verdict::Unsat && !is_string_script {
         mark_phase(progress, "parse-lean");
         let parse_lean_start = Instant::now();
         match parse_script(&text) {
