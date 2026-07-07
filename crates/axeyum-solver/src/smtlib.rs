@@ -450,6 +450,65 @@ pub fn membership_verdict(script: &mut Script, config: &SolverConfig) -> Option<
     }
 }
 
+/// Reconstruct a **regex derivative-emptiness** `unsat` decided by the
+/// regex-membership route (`apply_membership_route` / [`membership_verdict`]) to a
+/// self-contained, **kernel-checked** Lean module (P3.7, task #52).
+///
+/// This is the live wiring of the landed
+/// [`crate::reconstruct_regex_emptiness_to_lean_module`] reconstruction (#44) into
+/// the string-`unsat` evidence path: a real `QF_S` regex-membership `unsat` behind
+/// the derivative-emptiness certificate now carries an end-to-end kernel-checked
+/// Lean `False`. Because regexes are **not** represented in the `axeyum-ir` term
+/// arena (they live in the parser's [`MembershipProblem`](axeyum_smtlib::MembershipProblem)
+/// side channel), this
+/// cannot route through the arena-scanning `prove_unsat_to_lean_module` dispatch —
+/// the reconstruction is threaded here, at the point where the deciding
+/// [`Membership`](axeyum_strings::Membership) object is in hand.
+///
+/// It re-runs the route's own decision loop and, when the **deciding** `unsat`
+/// comes from a re-checked derivative-emptiness certificate, reconstructs that same
+/// certificate over the class's combined regex: the returned module's `False` proof
+/// has already been `infer`-checked and `def_eq False`-compared inside the
+/// reconstructor (a wrong reconstruction is declined, never a wrong `False`).
+///
+/// Returns `None` — never a fabricated module — when: the script carries no
+/// membership side channel; the route decides `sat`/`unknown` (no emptiness
+/// `unsat`); the **deciding** `unsat` is a *pinned-witness* refutation (a
+/// matcher-rejected fixed witness, not the emptiness certificate); or the
+/// reconstruction declines within its module-size caps. It never changes the
+/// verdict — this is a pure evidence add-on over the object the route already
+/// decided.
+#[must_use]
+pub fn membership_unsat_lean_module(script: &Script, config: &SolverConfig) -> Option<String> {
+    let problem = script.membership_problem.as_ref()?;
+    let budget = membership_budget(config);
+    for var in &problem.vars {
+        // A pinned / ground-literal atom decides `unsat` by a matcher-refuted fixed
+        // witness, NOT the derivative-emptiness certificate — no regex-emptiness Lean
+        // module for such a verdict. This mirrors `apply_membership_route`'s order:
+        // the first deciding `unsat` (here a pin refutation) wins.
+        if let Some(pin) = &var.pinned {
+            if !var.membership.accepts(pin) {
+                return None;
+            }
+            continue;
+        }
+        match var.membership.solve(&budget) {
+            // This class is certified empty behind the same re-checked
+            // derivative-closure certificate the route's `unsat` rests on:
+            // reconstruct it to a kernel-checked Lean `False` (or decline to `None`
+            // within the reconstruction caps — never a wrong module).
+            MembershipOutcome::Unsat => {
+                return crate::reconstruct_regex_emptiness_to_lean_module(&var.membership).ok();
+            }
+            // A satisfiable / undecided class does not decide `unsat`; keep scanning
+            // for the deciding class, exactly as the route does.
+            MembershipOutcome::Sat(_) | MembershipOutcome::Unknown => {}
+        }
+    }
+    None
+}
+
 /// The **lexicographic-order route** (P2.7 T-C.6): the `str.<=`/`str.<` second
 /// chance, run *strictly after* the bounded, word, online, and membership routes
 /// decline, and only when the current verdict is `unknown` (typically because the
