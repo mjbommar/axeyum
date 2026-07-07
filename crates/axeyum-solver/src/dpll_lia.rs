@@ -767,7 +767,7 @@ impl IncrementalArithDpll {
                         &propositional,
                         &lits,
                         &support,
-                    )? {
+                    ) {
                         return Ok(result);
                     }
                     self.support_stats.replay_failures += 1;
@@ -1851,7 +1851,7 @@ fn finish_sat(
     lits: &[TermId],
 ) -> Result<CheckResult, SolverError> {
     let all_indices = (0..ctx.atoms.len()).collect::<Vec<_>>();
-    try_finish_sat(arena, assertions, ctx, propositional, lits, &all_indices)?.ok_or_else(|| {
+    try_finish_sat(arena, assertions, ctx, propositional, lits, &all_indices).ok_or_else(|| {
         SolverError::Backend(
             "arith dpll sat model replay failed after full theory check".to_owned(),
         )
@@ -1865,13 +1865,29 @@ fn try_finish_sat(
     propositional: &Model,
     lits: &[TermId],
     indices: &[usize],
-) -> Result<Option<CheckResult>, SolverError> {
+) -> Option<CheckResult> {
     // Re-decide each theory's conjunction to recover its model (the loop only
-    // learned that they are *consistent*).
+    // learned that they are *consistent*). Sat-model reconstruction is INFALLIBLE at
+    // the caller boundary: every failure to produce a checkable model degrades to a
+    // first-class `Unknown` (returned as `Some(Unknown)`), never a hard error — so this
+    // returns a bare `Option` (`None` = this atom subset did not replay `true`; retry
+    // or, at full indices, an internal-invariant miss the caller reports).
     let int_lits: Vec<TermId> = atom_lits(ctx, lits, indices, Theory::Int);
     let real_lits: Vec<TermId> = atom_lits(ctx, lits, indices, Theory::Real);
-    let int_model = theory_model(arena, &int_lits, check_with_lia_simplex)?;
-    let real_model = theory_model(arena, &real_lits, check_with_lra)?;
+    // Re-decoding a theory's model can fail when a concrete theory solver rejects a
+    // subterm the abstraction accepted as opaque — e.g. an opaque UF application (the
+    // live entry guards the integer case via `has_opaque_int_apps`, but an opaque
+    // *real* application reaches `check_with_lra` here). That is "no checkable model",
+    // not an internal error: degrade to a first-class `Unknown`, never a hard error and
+    // never an unchecked `sat`.
+    let int_model = match theory_model(arena, &int_lits, check_with_lia_simplex) {
+        Ok(model) => model,
+        Err(error) => return Some(sat_reconstruction_unknown("integer", &error)),
+    };
+    let real_model = match theory_model(arena, &real_lits, check_with_lra) {
+        Ok(model) => model,
+        Err(error) => return Some(sat_reconstruction_unknown("real", &error)),
+    };
 
     let mut model = Model::new();
     let mut assignment = axeyum_ir::Assignment::new();
@@ -1895,16 +1911,37 @@ fn try_finish_sat(
     for &assertion in assertions {
         match eval(arena, assertion, &assignment) {
             Ok(Value::Bool(true)) => {}
-            Ok(_) => return Ok(None),
+            Ok(_) => return None,
+            // The arithmetic model could not *evaluate* this assertion — e.g. it
+            // contains an opaque UF application the LIA/LRA abstraction does not model.
+            // As with a theory re-decode failure above, this is "no checkable model",
+            // not an internal error: degrade to a first-class `Unknown`.
             Err(error) => {
-                return Err(SolverError::Backend(format!(
-                    "arith dpll sat model replay error on assertion #{}: {error}",
-                    assertion.index()
-                )));
+                return Some(sat_reconstruction_unknown(
+                    &format!("model replay of assertion #{}", assertion.index()),
+                    &error,
+                ));
             }
         }
     }
-    Ok(Some(CheckResult::Sat(model)))
+    Some(CheckResult::Sat(model))
+}
+
+/// Build the first-class `Unknown` returned when linear-arithmetic **sat-model
+/// reconstruction** cannot produce a checkable model — a theory re-decode error or an
+/// unevaluable replay (typically an opaque UF application outside the LIA/LRA
+/// abstraction). Never a hard error, never an unchecked `sat` (the solver-result hard
+/// rule / ADR-0002): the caller degrades to `Unknown` and points at the UFLIA/UFLRA
+/// backend for model lifting.
+fn sat_reconstruction_unknown(stage: &str, error: &dyn std::fmt::Display) -> CheckResult {
+    CheckResult::Unknown(UnknownReason {
+        kind: UnknownKind::Incomplete,
+        detail: format!(
+            "linear-arithmetic sat-model reconstruction failed at {stage} \
+             (likely an opaque UF application outside the LIA/LRA abstraction): \
+             {error}; use the UFLIA/UFLRA backend for model lifting"
+        ),
+    })
 }
 
 /// The literals of one theory's atoms.
@@ -3650,10 +3687,55 @@ mod tests {
                 &propositional,
                 &lits,
                 &support,
-            )
-            .unwrap(),
+            ),
             Some(CheckResult::Sat(_))
         ));
+    }
+
+    /// Regression (#59): when the arithmetic model cannot *evaluate* a replayed
+    /// assertion — here an opaque UF application `(g x)` the LIA abstraction treats as
+    /// an opaque atom but the reconstructed model does not bind — `try_finish_sat`
+    /// must degrade to a first-class `Unknown`, NOT return a hard `SolverError`.
+    /// `unknown` is a first-class result; a model-replay eval failure is "no checkable
+    /// model", never an error (and never an unchecked `sat`). (The live solve entry
+    /// guards this via `has_opaque_int_apps` → `Unknown` before `finish_sat`; this test
+    /// exercises the inner replay path directly, which must be equally graceful.)
+    #[test]
+    fn opaque_uf_model_replay_is_unknown_not_error() {
+        let mut arena = TermArena::new();
+        let x = arena.declare("x", Sort::Int).unwrap();
+        let xv = arena.var(x);
+        let g = arena
+            .declare_fun("g", &[Sort::Int], Sort::Int)
+            .expect("declare opaque int UF");
+        let gx = arena.apply(g, &[xv]).expect("apply g");
+        let zero = arena.int_const(0);
+        // `(g x) >= 0`: LIA-consistent in the abstraction (the opaque `(g x)` term is
+        // unconstrained), but the reconstructed arithmetic model binds no value for the
+        // uninterpreted `g`, so replaying the assertion fails to evaluate.
+        let assertion = arena.int_ge(gx, zero).unwrap();
+
+        let mut ctx = ArithAbstractor::default();
+        // Populate `ctx.atoms` via the abstraction (its side effect is what we need).
+        let _atom = ctx.abstract_term(&mut arena, assertion).unwrap();
+        let mut propositional = Model::new();
+        for atom in &ctx.atoms {
+            propositional.set(atom.prop, Value::Bool(true));
+        }
+        let lits = ctx.atoms.iter().map(|atom| atom.term).collect::<Vec<_>>();
+        let all = (0..ctx.atoms.len()).collect::<Vec<_>>();
+
+        // `try_finish_sat` is infallible now: a replay/re-decode failure is a
+        // `Some(Unknown)`, never a hard error.
+        let outcome = try_finish_sat(&mut arena, &[assertion], &ctx, &propositional, &lits, &all);
+        assert!(
+            matches!(outcome, Some(CheckResult::Unknown(_))),
+            "an unevaluable opaque-UF replay degrades to Unknown, got {outcome:?}"
+        );
+        // And the wrapping `finish_sat` propagates the same `Unknown` (not an `Err`).
+        let finished = finish_sat(&mut arena, &[assertion], &ctx, &propositional, &lits)
+            .expect("finish_sat must surface Unknown, not a backend error");
+        assert!(matches!(finished, CheckResult::Unknown(_)));
     }
 
     #[test]
