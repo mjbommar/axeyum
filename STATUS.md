@@ -305,36 +305,33 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-07 (early) — the arithmetic arc + a P0 handled; pivot off
-  slicing (8th periodic review).** Live totals in the generated
-  [SCOREBOARD](bench-results/SCOREBOARD.md) (do not hand-copy): **QF_S 78/134
-  (58%), QF_NRA 27/38 (71%), QF_NIA cvc5 23/39 (59%) + curated-iand 3/3 +
-  synthetic 32/32, ~712/992 decided, DISAGREE=0.** The strings frontier is
-  theory-coupled-closed (remaining = unsupported to_int/replace_re/seq
-  fragment, new machinery). The **arithmetic arc** (decomposition `fcbde209`,
-  verdict QF_NIA>QF_NRA) landed slices 1/2/3/5 — but its **honest measured net
-  is ~+5 decided rows over ~57 commits and one P0**: slice 1 (NIA div/mod) net
-  **0** after the P0 correction (see below), slice 2 (NRA a²=−2) +1, slice 5
-  (NIA iand) +4, slice 3 (NRA grid) budget-marginal (+0). **Arithmetic slicing
-  has hit diminishing returns** (the QF_NRA residue is 7/12 multi-week
-  CAD/transcendental engine per the decomposition doc's own rollup).
-  **A P0 wrong-unsat shipped and was fully handled**: `eliminate_int_divmod`
-  folded div/mod-by-constant-0 to a fixed convention (unsound — SMT-LIB leaves
-  it underspecified); found by a full `--lib` sweep, fixed (`52f3b1d1`, fresh
-  var), the QF_NIA baseline honestly corrected DOWN 23→21 (`39708636`), and
-  the durable holes the 8th review found closed (`b3c4150c`: the pre-push
-  `--lib` gate widened to `--workspace` — the defect lived in axeyum-rewrite,
-  not solver; a Hard Rule that every partial operator's fuzz generates the
-  degenerate argument — the fuzz couldn't emit the shape that bit).
-  **Pivot (8th review's ranking): (1) task #40 congruent-div-0 — recovers
-  div.01/minimal_unsat_core SOUNDLY, turning slice 1 net-0 → net-+2 and
-  closing the div/mod-0 story; (2) STOP slicing NRA — put day-cadence energy
-  into Lean breadth (P3.7, 10 kernel-checked fragments, the north star's
-  second axis) OR a funded CAD/nlsat engine arc with its own ADR; (3) the
-  partial-operator fuzz policy is now a Hard Rule.** The CdclT LIA/LRA adapters
-  remain DARK (opt-in, no scoreboard row) — reactivate only on real
-  strings+LIA demand or a measured win (#35, shelved). Session history:
-  [docs/status-archive/](docs/status-archive/) — FOCUS not log; ≤30 lines.
+- **2026-07-07 — arithmetic arc + P0 handled; 9th review re-ranks the pivot.**
+  Live totals in the generated [SCOREBOARD](bench-results/SCOREBOARD.md) (never
+  hand-copy): **QF_S 78/134, QF_NRA 27/38, QF_NIA cvc5 23/39 + iand 3/3 +
+  synthetic 32/32, ~712/992 decided, DISAGREE=0.** Strings frontier is
+  theory-coupled-closed (remaining = unsupported to_int/replace_re/seq, new
+  machinery). The arithmetic arc's honest net was ~+5 rows / ~57 commits / one
+  P0 (div/mod-by-const-0 convention fold, wrong-unsat, caught by a full `--lib`
+  sweep, fixed `52f3b1d1`, baseline corrected DOWN 23→21, durable holes closed
+  `b3c4150c` — see Changelog for the full arc+P0 detail).
+- **Pivot (9th review, correcting the 8th) — the active queue:**
+  (1) **#40** congruent-div-0 recovery (SOUNDLY recovers div.01/minimal_unsat_core,
+  slice 1 net-0→+2) — *in flight*;
+  (2) **#41** NIA `int.pow2` (slice 6) — biggest UNHARVESTED bounded lever, ~7 rows,
+  M (confirmed unwired in axeyum-smtlib/axeyum-ir) — **NIA is NOT bounded-exhausted**;
+  (3) **#42** underspecified-operator fuzz-COVERAGE audit (S, high) — make the
+  partial-operator Hard Rule an ENFORCED per-op checklist (str.at/str.substr OOB,
+  str.to_code non-singleton, seq.nth OOB, pow2 neg-exp): until each has a
+  degenerate-emitting generator the differential gate is blind on the P0's axis;
+  (4) **#43** last cheap NRA pickups (parser slice 4, algebraic-√2 slice 7, ~+3);
+  (5) **#45** THEN stop ad-hoc NRA slicing → open a funded QF_NRA CAD/nlsat engine
+  ARC (own ADR; first sub-slice: route check_with_nra_dpll cubes into the exact CAD).
+  The 9th review corrected two 8th-review premises: Lean breadth is FAR more
+  complete than assumed (8+ fragments incl. integer equality-systems; only the
+  regex-emptiness cert **#44** is a cheap Lean pickup left), and the lazy-CEGAR
+  QF_BV perf lever is a DEAD END (never fires on public p4dfa — the real Track-1
+  lever is word-level reduction depth). CdclT LIA/LRA adapters stay DARK (#35,
+  shelved). Session history: [docs/status-archive/](docs/status-archive/) — FOCUS not log.
 
 ## Already shipped this session (pre-plan)
 
