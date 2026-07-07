@@ -408,6 +408,36 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-06 (night) — the 7th review applied + three robustness/decide-rate
+  wins.**
+  - (`a8f09e94`) **A whole bug class eliminated across 4 collectors.** The
+    reported "bounded-encoder deadline hole" (str.replace×membership hang) was
+    actually the EXPONENTIAL per-path DAG walk class (visited-set memoized only
+    atoms, re-descending shared subtrees) — same as the 9h hang / set_cardinality
+    / bv2nat. Fixed VERDICT-NEUTRALLY (memoize every node → linear) in
+    collect_lia/lra/uflia/uflra_atoms; the shape now DECIDES sat in 0.27s (was
+    ~6.2s @ 30× deadline overrun). Regression can't hang CI; uflia fuzz + cdclt
+    parity DISAGREE=0.
+  - (`e0e24085`) **nra_degree frontier 2→40.** Wired the existing sound
+    `nra_even_power_refutation` matcher into the NRA decide path (was
+    evidence-only): `(x-1)^2N+(y-2)^2N+1<0` is always-unsat, decided
+    O(term-size) at any degree → a deterministic (load-insensitive) floor.
+    Independently verified (nra fuzz + nia fuzz + corpus DISAGREE=0). Honest
+    decline of the QF_NRA corpus front: the FM→simplex premise was FALSE (the
+    linear residual already routes through Farkas-checked simplex); the 11
+    unknowns need real CAD/nlsat, beyond a bounded increment — QF_NRA stays 26/38.
+  - (`c82e6a5a`) **Two soundness invariants enforced STRUCTURALLY** (closing
+    the class behind the day's two P0s): string fuzz generators now hard-assert
+    ≥10% \u-escape + ≥2% >0x7F coverage (with a #[should_panic] plain-ASCII
+    trip test), and `Script::checked_flat_view()` debug-asserts against the
+    vacuous-sat path, adopted across the fixed-text consumers.
+  - (`e4fe342a`) **7th-review currency:** ADR-0054 accepted; the twice-rotted
+    string counts now LINK the scoreboard (78/707) instead of hand-copying;
+    the CdclT LIA/LRA adapters honestly relabeled DARK + formally SHELVED
+    (no measured win — a parity twin with 85 conservative unknowns — and no
+    demand: slice b was census-declined as redundant); the P4.2/P5.1 symexec
+    single-owner overlap DECIDED (Track 4's explore_cfg owns it, Track 5
+    consumes). Frontier ratcheted (lia_cuts 26 / bv_reduction 30, quiet-box).
 - **2026-07-06 (late) — Phase D + the theory-coupled string frontier closed;
   the CdclT arith adapters land (dark: opt-in, parity-only); string program QF_S 52→78 (58%).**
   - (`d124f427`) **Phase D extended-function reductions**: constant-pattern
