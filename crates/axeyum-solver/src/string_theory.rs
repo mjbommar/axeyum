@@ -1154,3 +1154,289 @@ fn seq_code_points(elems: &[Value]) -> Vec<u32> {
         .map(|v| u32::try_from(v.scalar_code()).unwrap_or(0))
         .collect()
 }
+
+/// The largest solved string length the length↔LIA route will materialize as an
+/// `'a'`-fill witness. A LIA model is free to pick a needlessly large length for an
+/// under-constrained variable; capping keeps the witness build (and the subsequent
+/// ground-evaluator replay) bounded and deterministic. Exceeding the cap declines to
+/// `Unknown` — never a wrong verdict, since the cap only *misses* a witness.
+const LENGTH_SAT_MAX_LEN: i128 = 20_000;
+
+/// The `'a'`-fill code point (U+0061) — the canonical single-character filler whose
+/// concatenation is length-homomorphic (`'a'^m ++ 'a'^n = 'a'^(m+n)`), so a length
+/// assignment satisfying the concat length homomorphism yields string bindings that
+/// satisfy the word `str.++` equalities automatically.
+const FILL_CODE_POINT: u128 = 0x61;
+
+/// Collects the distinct `Int`-sorted symbols reachable from `terms` (deterministic,
+/// sorted by symbol id) — the free integer variables a length↔LIA model must bind
+/// for the replay.
+fn collect_int_symbols(arena: &TermArena, terms: &[TermId]) -> Vec<SymbolId> {
+    let mut out = Vec::new();
+    let mut seen = HashSet::new();
+    let mut visited = HashSet::new();
+    let mut stack: Vec<TermId> = terms.to_vec();
+    while let Some(t) = stack.pop() {
+        if !visited.insert(t) {
+            continue;
+        }
+        match arena.node(t) {
+            // A first-encounter `Int` symbol (the `seen.insert` side effect in the
+            // guard dedups; a repeat / non-`Int` symbol falls to the `_` arm).
+            TermNode::Symbol(sym) if arena.sort_of(t) == Sort::Int && seen.insert(*sym) => {
+                out.push(*sym);
+            }
+            TermNode::App { args, .. } => {
+                for &a in args {
+                    stack.push(a);
+                }
+            }
+            _ => {}
+        }
+    }
+    out.sort_unstable_by_key(|s| s.index());
+    out
+}
+
+/// The `Int`-valued length of a `Seq` term as a term over the fresh per-variable
+/// length symbols `lmap` — pushing `len` through `str.++`
+/// (`len(a++b) = len(a)+len(b)`), `seq.unit` (`1`), `seq.empty` (`0`), decoding a
+/// string constant to its element count, and mapping a bare `Seq` variable to its
+/// length symbol. Returns `None` for an opaque `Seq` term outside this fragment
+/// (the caller then declines to `Unknown`).
+fn abstract_length_of(
+    arena: &mut TermArena,
+    t: TermId,
+    lmap: &HashMap<SymbolId, TermId>,
+    memo: &mut HashMap<TermId, TermId>,
+) -> Option<TermId> {
+    if let Some(&c) = memo.get(&t) {
+        return Some(c);
+    }
+    let node = arena.node(t).clone();
+    let r = match node {
+        TermNode::Symbol(s) => *lmap.get(&s)?,
+        TermNode::App {
+            op: Op::SeqConcat,
+            args,
+        } => {
+            let mut acc: Option<TermId> = None;
+            for a in args {
+                let e = abstract_length_of(arena, a, lmap, memo)?;
+                acc = Some(match acc {
+                    None => e,
+                    Some(prev) => arena.int_add(prev, e).ok()?,
+                });
+            }
+            acc.unwrap_or_else(|| arena.int_const(0))
+        }
+        TermNode::App {
+            op: Op::SeqUnit, ..
+        } => arena.int_const(1),
+        TermNode::App {
+            op: Op::SeqEmpty(_),
+            ..
+        } => arena.int_const(0),
+        _ => {
+            // A folded string/sequence constant: decode to its element count.
+            match axeyum_ir::eval(arena, t, &axeyum_ir::Assignment::new()) {
+                Ok(Value::Seq(elems)) => arena.int_const(i128::try_from(elems.len()).ok()?),
+                _ => return None,
+            }
+        }
+    };
+    memo.insert(t, r);
+    Some(r)
+}
+
+/// Walks `t`, recording in `map` the length-abstraction replacement for every
+/// `str.len` subterm (`SeqLen(w) → len_of(w)`) and every `Seq` equality atom
+/// (`(= a b) → (= len_of(a) len_of(b))`, a **necessary** length condition of the
+/// word equality). Both replacements are handed to
+/// [`axeyum_rewrite::replace_subterms`] to build the pure `Bool`+`LIA` abstraction.
+/// Returns `None` if a length cannot be abstracted (opaque `Seq` term).
+fn collect_length_abstraction(
+    arena: &mut TermArena,
+    t: TermId,
+    lmap: &HashMap<SymbolId, TermId>,
+    map: &mut HashMap<TermId, TermId>,
+    lenmemo: &mut HashMap<TermId, TermId>,
+    visited: &mut HashSet<TermId>,
+) -> Option<()> {
+    if !visited.insert(t) {
+        return Some(());
+    }
+    let node = arena.node(t).clone();
+    match node {
+        TermNode::App {
+            op: Op::SeqLen,
+            args,
+        } => {
+            let e = abstract_length_of(arena, args[0], lmap, lenmemo)?;
+            map.insert(t, e);
+        }
+        TermNode::App { op: Op::Eq, args } if args.len() == 2 => {
+            if matches!(arena.sort_of(args[0]), Sort::Seq(_)) {
+                let la = abstract_length_of(arena, args[0], lmap, lenmemo)?;
+                let lb = abstract_length_of(arena, args[1], lmap, lenmemo)?;
+                let e = arena.eq(la, lb).ok()?;
+                map.insert(t, e);
+                // The `Seq` children are replaced wholesale — do not descend.
+            } else {
+                for a in args {
+                    collect_length_abstraction(arena, a, lmap, map, lenmemo, visited)?;
+                }
+            }
+        }
+        TermNode::App { args, .. } => {
+            for a in args {
+                collect_length_abstraction(arena, a, lmap, map, lenmemo, visited)?;
+            }
+        }
+        _ => {}
+    }
+    Some(())
+}
+
+/// The **length↔LIA `sat` bridge** (P2.7 Phase A, LenAbs): decides the
+/// `str.len`-coupled `QF_SLIA` fragment the bounded packed encoder cannot witness
+/// (its length is capped at `STRING_MAX_LEN`), by linking `str.len` to the LIA
+/// solver Nelson-Oppen-style over fresh per-variable length symbols.
+///
+/// `assertions` is the parser's faithful, first-class `Seq`-level re-encoding of the
+/// script's length-coupled fragment ([`axeyum_smtlib::Script::length_skeleton`]):
+/// Boolean structure over `Seq` equality atoms and linear-`Int` atoms whose only
+/// string content is `str.len` of a word.
+///
+/// The route:
+/// 1. builds a pure `Bool`+`LIA` **length abstraction** — a fresh `Int` length
+///    variable `len(x) ≥ 0` per `Seq` symbol, `str.len(w)` rewritten to the length
+///    homomorphism over those, and each `Seq` equality atom rewritten to the
+///    corresponding length equality (a necessary condition of the word equality);
+/// 2. solves it with the exact LIA engine ([`crate::dpll_lia::check_with_arith_dpll`]);
+/// 3. on a LIA `sat` model, binds each `Seq` symbol to an **`'a'`-fill** of its
+///    solved length (length-homomorphic under `str.++`, so the word equalities
+///    hold), binds each free `Int` symbol from the LIA model, and **replays the
+///    combined model against `assertions` through the ground evaluator**.
+///
+/// **Soundness.** The route only ever returns [`CheckResult::Sat`] — and only when
+/// the concrete `Seq`-level model **replays** against the original assertions (the
+/// length abstraction is a mere *heuristic* for picking candidate lengths; the
+/// replay is the sole `sat` gate, so a wrong `sat` is impossible even if the
+/// abstraction were imprecise). It never returns `unsat` (the bounded `unsat` gate /
+/// `StringGate` owns the length-abstraction refutation). A LIA `unsat`/`unknown`, a
+/// length past the witness cap (`LENGTH_SAT_MAX_LEN`), or a non-replaying candidate
+/// all degrade to [`CheckResult::Unknown`], leaving the caller's prior verdict
+/// untouched.
+#[must_use]
+pub fn check_qf_slia_length(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+) -> CheckResult {
+    if assertions.is_empty() {
+        return CheckResult::Unknown(unknown("no length-skeleton assertions"));
+    }
+    let seq_syms = collect_seq_symbols(arena, assertions);
+    if seq_syms.is_empty() {
+        return CheckResult::Unknown(unknown("length skeleton binds no Seq variable"));
+    }
+
+    // A fresh `Int` length symbol `len(x)` per `Seq` variable, `≥ 0`.
+    let mut lmap: HashMap<SymbolId, TermId> = HashMap::new();
+    let mut len_syms: Vec<(SymbolId, SymbolId)> = Vec::new(); // (seq sym, len sym)
+    let mut zero_facts: Vec<TermId> = Vec::new();
+    for (i, &sym) in seq_syms.iter().enumerate() {
+        let Ok(len_sym) = arena.declare(&format!("!len!{i}"), Sort::Int) else {
+            return CheckResult::Unknown(unknown("length symbol declaration failed"));
+        };
+        let len_term = arena.var(len_sym);
+        lmap.insert(sym, len_term);
+        len_syms.push((sym, len_sym));
+        let zero = arena.int_const(0);
+        let Ok(ge) = arena.int_ge(len_term, zero) else {
+            return CheckResult::Unknown(unknown("length non-negativity fact build failed"));
+        };
+        zero_facts.push(ge);
+    }
+
+    // Build the pure Bool+LIA length abstraction: replace every `str.len`/`Seq`
+    // equality atom with its length term / length equality.
+    let mut repl: HashMap<TermId, TermId> = HashMap::new();
+    let mut lenmemo: HashMap<TermId, TermId> = HashMap::new();
+    let mut visited: HashSet<TermId> = HashSet::new();
+    for &a in assertions {
+        if collect_length_abstraction(arena, a, &lmap, &mut repl, &mut lenmemo, &mut visited)
+            .is_none()
+        {
+            return CheckResult::Unknown(unknown(
+                "length skeleton has an opaque Seq term outside the length↔LIA fragment",
+            ));
+        }
+    }
+    let mut abstraction: Vec<TermId> = Vec::with_capacity(assertions.len() + zero_facts.len());
+    let mut memo: HashMap<TermId, TermId> = HashMap::new();
+    for &a in assertions {
+        match axeyum_rewrite::replace_subterms(arena, a, &repl, &mut memo) {
+            Ok(t) => abstraction.push(t),
+            Err(_) => {
+                return CheckResult::Unknown(unknown("length abstraction rewrite failed"));
+            }
+        }
+    }
+    abstraction.extend(zero_facts);
+
+    // Solve the abstraction with the exact LIA engine. No `sat` candidate (a LIA
+    // `unsat`/`unknown` or an unsupported-fragment error) leaves the verdict as
+    // `unknown` — the route never emits `unsat`.
+    let Ok(CheckResult::Sat(model)) =
+        crate::dpll_lia::check_with_arith_dpll(arena, &abstraction, config)
+    else {
+        return CheckResult::Unknown(unknown(
+            "length↔LIA abstraction did not yield a sat length model",
+        ));
+    };
+
+    // Assemble the concrete `Seq`-level model: each string an `'a'`-fill of its
+    // solved length, each free `Int` symbol from the LIA model.
+    let mut witness = Model::new();
+    for &(seq_sym, len_sym) in &len_syms {
+        let len = match model.get(len_sym) {
+            Some(Value::Int(n)) => n,
+            // An unconstrained length the LIA model left unbound is a free 0-length
+            // choice (the empty string satisfies no length constraint on it).
+            None => 0,
+            _ => {
+                return CheckResult::Unknown(unknown("length model bound a non-integer length"));
+            }
+        };
+        if !(0..=LENGTH_SAT_MAX_LEN).contains(&len) {
+            return CheckResult::Unknown(unknown(
+                "solved string length is negative or exceeds the witness cap",
+            ));
+        }
+        #[allow(clippy::cast_sign_loss)] // guarded `0 ≤ len ≤ LENGTH_SAT_MAX_LEN`
+        let n = len as usize;
+        let elems =
+            vec![
+                Value::from_scalar_code(Sort::BitVec(Sort::STRING_ELEM_WIDTH), FILL_CODE_POINT);
+                n
+            ];
+        witness.set(seq_sym, Value::Seq(elems));
+    }
+    for int_sym in collect_int_symbols(arena, assertions) {
+        if let Some(value) = model.get(int_sym) {
+            witness.set(int_sym, value);
+        }
+    }
+
+    // The sole `sat` gate: the concrete model must replay against the original
+    // (faithful) assertions at the `Seq` level through the ground evaluator.
+    if replays(arena, assertions, &witness) {
+        CheckResult::Sat(witness)
+    } else {
+        CheckResult::Unknown(unknown(
+            "length↔LIA candidate model did not replay against the assertions",
+        ))
+    }
+}

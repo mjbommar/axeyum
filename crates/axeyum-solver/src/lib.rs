@@ -382,16 +382,18 @@ pub use set_cardinality::{SetCardinalityRefutationCertificate, set_cardinality_r
 pub use skolem_alethe::{SkolemCert, SkolemRecord, prove_skolem_unsat_alethe};
 pub use smtlib::{
     SmtLibModel, SmtLibOutcome, confirm_bounded_string_verdict, decide_word_only_script,
-    lex_order_verdict, membership_unsat_lean_module, membership_verdict, online_string_verdict,
-    optimize_smtlib, optimize_smtlib_lexicographic, solve_smtlib, solve_smtlib_get_assertions,
-    solve_smtlib_get_assignment, solve_smtlib_get_info, solve_smtlib_get_model,
-    solve_smtlib_get_option, solve_smtlib_get_proof, solve_smtlib_get_value,
-    solve_smtlib_incremental, solve_smtlib_unsat_core, upgrade_bounded_string_unknown,
-    word_route_verdict,
+    length_lia_verdict, lex_order_verdict, membership_unsat_lean_module, membership_verdict,
+    online_string_verdict, optimize_smtlib, optimize_smtlib_lexicographic, solve_smtlib,
+    solve_smtlib_get_assertions, solve_smtlib_get_assignment, solve_smtlib_get_info,
+    solve_smtlib_get_model, solve_smtlib_get_option, solve_smtlib_get_proof,
+    solve_smtlib_get_value, solve_smtlib_incremental, solve_smtlib_unsat_core,
+    upgrade_bounded_string_unknown, word_route_verdict,
 };
 pub use solver::{InterpolantOutcome, Solver};
 pub use strategy::{Strategy, recommended_portfolio, solve_with_portfolio, solve_with_strategy};
-pub use string_theory::{check_qf_s_online_cdclt, check_qf_s_online_cdclt_with_memberships};
+pub use string_theory::{
+    check_qf_s_online_cdclt, check_qf_s_online_cdclt_with_memberships, check_qf_slia_length,
+};
 pub use symexec::{
     Branch, CfgCheckedOutcome, CfgCheckedReached, CfgConcreteMismatch, CfgExploreConfig,
     CfgExploreOutcome, CfgReached, CfgStep, PathStatus, SymbolicExecutor, SymbolicMemory,

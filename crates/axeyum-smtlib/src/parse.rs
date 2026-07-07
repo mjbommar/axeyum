@@ -204,6 +204,28 @@ pub struct Script {
     /// never adds `sat` — a satisfiable lex script is already decided by the bounded
     /// encoder (whose `sat` is a concrete short witness).
     pub lex_problem: Option<axeyum_strings::LexProblem>,
+    /// The parser-side **length/LIA side channel** (P2.7 Phase A, `LenAbs` SAT
+    /// bridge): a faithful, first-class `Seq`-level re-encoding of the script's
+    /// `str.len`-coupled fragment — Boolean structure over `Seq` equality atoms
+    /// (`=`/`distinct` of string words) and linear-`Int` atoms whose only string
+    /// content is `str.len` of a word (`str.++`/literal/variable). Populated
+    /// all-or-nothing over exactly that fragment (any regex, `substr`, `str.to_int`,
+    /// extended function, or other string operator collapses the whole build to
+    /// empty), and only when at least one `str.len` atom is present. The `Seq`
+    /// variables share the `!weq!<name>` symbols with the word skeleton, and the
+    /// terms use the first-class `Op::SeqLen`/`Op::SeqConcat` IR (so the ground
+    /// evaluator replays them).
+    ///
+    /// The solver consults it as a second-chance route strictly after the bounded,
+    /// word, online, membership, and lex routes decline: it links `str.len` to the
+    /// LIA solver Nelson-Oppen-style over fresh length variables, and may add a
+    /// `sat` — a concrete `Seq`-level witness (each string an `'a'`-fill of its
+    /// solved length) that has **replayed against these very assertions through the
+    /// ground evaluator** (the sole `sat` gate; a non-replay stays `unknown`). It
+    /// never adds `unsat` (the bounded `unsat` gate / `StringGate` already owns the
+    /// length-abstraction refutation), so a `None`/empty skeleton or a
+    /// non-replaying candidate simply leaves the prior verdict untouched.
+    pub length_skeleton: Vec<TermId>,
 }
 
 impl Script {
@@ -449,6 +471,12 @@ fn parse_script_bounded(input: &str) -> Result<Script, SmtError> {
         // `str.<=`/`str.<` fragment translated to a Boolean skeleton over lex/word-eq
         // atoms for the certified lex-order refuter. Same all-or-nothing discipline.
         script.lex_problem = build_lex_problem(&exprs);
+        // Parser-side length/LIA side channel (P2.7 Phase A, `LenAbs` SAT bridge): the
+        // `str.len`-coupled fragment re-encoded at the first-class `Seq` level for the
+        // length↔LIA route. Same all-or-nothing discipline and shared `!weq!` symbols.
+        if let Some(skeleton) = build_length_skeleton(&mut script.arena, &exprs) {
+            script.length_skeleton = skeleton;
+        }
     }
     Ok(script)
 }
@@ -490,9 +518,16 @@ fn parse_word_only(input: &str) -> Option<Script> {
     // declined at a length/loop cap may still be a pure `str.in_re` membership
     // problem the unbounded symbolic-derivative sub-solver decides.
     script.membership_problem = crate::MembershipProblem::build(&mut script.arena, &exprs);
+    // Length/LIA side channel (P2.7 Phase A): a script whose *bounded* parse declined
+    // at a length/width cap may still be a `str.len`-coupled fragment the length↔LIA
+    // route decides (a `sat` witness whose strings exceed the bounded length cap).
+    if let Some(skeleton) = build_length_skeleton(&mut script.arena, &exprs) {
+        script.length_skeleton = skeleton;
+    }
     if script.word_problem.is_none()
         && script.word_skeleton.is_empty()
         && script.membership_problem.is_none()
+        && script.length_skeleton.is_empty()
     {
         // No route recognizes the script — not a word-equation/membership problem;
         // decline so the original bounded error stands.
@@ -724,6 +759,291 @@ fn build_word_skeleton(arena: &mut TermArena, exprs: &[SExpr]) -> Option<WordSke
 struct WordSkeleton {
     assertions: Vec<TermId>,
     memberships: Vec<(TermId, SymbolId, axeyum_strings::regex::Regex)>,
+}
+
+/// The declared name of a 0-ary `Int`-sorted symbol, if `e` is such a declaration
+/// (`(declare-const n Int)` or `(declare-fun n () Int)`). The `Int` counterpart of
+/// [`declared_string_var`], for the length/LIA skeleton's linear-integer variables.
+fn declared_int_var(e: &SExpr) -> Option<&str> {
+    let items = e.list()?;
+    match items.first().and_then(SExpr::atom)? {
+        "declare-const" if items.len() == 3 => {
+            (items[2].atom() == Some("Int")).then(|| items[1].atom())?
+        }
+        "declare-fun" if items.len() == 4 => {
+            let empty_params = items[2].list().is_some_and(<[SExpr]>::is_empty);
+            (empty_params && items[2].list().is_some() && items[3].atom() == Some("Int"))
+                .then(|| items[1].atom())?
+        }
+        _ => None,
+    }
+}
+
+/// Builds the [`Script::length_skeleton`] (P2.7 Phase A, `LenAbs` SAT bridge): a
+/// faithful first-class `Seq`-level re-encoding of the script's `str.len`-coupled
+/// fragment, so the length↔LIA route can add a `sat` witness that the bounded
+/// packed encoder (length-capped at [`STRING_MAX_LEN`]) cannot represent.
+///
+/// Each top-level `assert` body is translated into one `Sort::Bool` term over
+/// **`Seq` equality atoms** (`=`/`distinct` of string words — literals, declared
+/// string variables, `str.++` of those) and **linear-`Int` atoms** (`=`/`distinct`/
+/// `<`/`<=`/`>`/`>=` over `Int` expressions whose only string content is
+/// `str.len`/`seq.len` of a word, alongside `Int` literals, declared `Int`
+/// variables, and `+`/`-`/`*`), preserving the full Boolean structure
+/// (`and`/`or`/`not`/`=>`/`xor`/`ite`). Returns `None` (all-or-nothing) on any atom
+/// outside that fragment — regex, `substr`, `str.to_int`/`to_code`, `str.at`,
+/// `indexof`, extended functions, a non-`Seq`/non-`Int` atom, a bare Boolean leaf,
+/// or any incremental scoping — and also when **no** `str.len` atom is present (a
+/// pure word or pure LIA problem is left to those routes).
+///
+/// **Soundness.** The terms use the first-class `Op::SeqLen`/`Op::SeqConcat`/`Seq`
+/// symbols, so the ground evaluator replays them exactly; the skeleton is a
+/// *faithful* re-encoding of the assert bodies (same models), so replaying it
+/// equals replaying the original assertions. The length↔LIA route only ever *adds*
+/// a replay-checked `sat` (never `unsat`, never overriding a decided verdict), so a
+/// `None` skeleton simply leaves the prior verdict untouched. Incremental scoping
+/// is declined for the same "active subset ⊆ all asserts" reason as
+/// [`build_word_skeleton`].
+fn build_length_skeleton(arena: &mut TermArena, exprs: &[SExpr]) -> Option<Vec<TermId>> {
+    for e in exprs {
+        if let Some(
+            "push" | "pop" | "check-sat-assuming" | "reset-assertions" | "define-fun"
+            | "define-fun-rec" | "define-funs-rec" | "define-sort",
+        ) = e.list().and_then(|l| l.first()).and_then(SExpr::atom)
+        {
+            return None;
+        }
+    }
+
+    // Declared string variables → the shared fresh `!weq!<name>` `Seq` symbols
+    // (idempotent with the word skeleton via `TermArena::declare`).
+    let mut seq_vars: BTreeMap<String, (SymbolId, TermId)> = BTreeMap::new();
+    for e in exprs {
+        if let Some(name) = declared_string_var(e)
+            && !seq_vars.contains_key(name)
+        {
+            let sym = arena
+                .declare(&format!("!weq!{name}"), Sort::string())
+                .ok()?;
+            let term = arena.var(sym);
+            seq_vars.insert(name.to_owned(), (sym, term));
+        }
+    }
+    // Declared `Int` variables → the script's own `Int` symbols (idempotent
+    // `declare`; the length skeleton is solved and replayed in isolation, so
+    // sharing the real symbol is harmless and keeps the model bindings aligned).
+    let mut int_vars: BTreeMap<String, (SymbolId, TermId)> = BTreeMap::new();
+    for e in exprs {
+        if let Some(name) = declared_int_var(e)
+            && !int_vars.contains_key(name)
+        {
+            let sym = arena.declare(name, Sort::Int).ok()?;
+            let term = arena.var(sym);
+            int_vars.insert(name.to_owned(), (sym, term));
+        }
+    }
+
+    let mut assertions: Vec<TermId> = Vec::new();
+    let mut saw_len = false;
+    for e in exprs {
+        let Some(items) = e.list() else { continue };
+        if items.first().and_then(SExpr::atom) == Some("assert") {
+            let [_, body] = items else { return None };
+            let t = length_bool(arena, body, &seq_vars, &int_vars, &mut saw_len)?;
+            assertions.push(t);
+        }
+    }
+    // Require at least one `str.len` atom — otherwise this is not the length-coupled
+    // fragment this route targets (a pure word/LIA problem is left to those routes).
+    if assertions.is_empty() || !saw_len {
+        return None;
+    }
+    Some(assertions)
+}
+
+/// Translates a Boolean body into a `Sort::Bool` term over `Seq` equality and
+/// linear-`Int` atoms for [`build_length_skeleton`]. Returns `None` on anything
+/// outside the length-coupled fragment (aborting the whole all-or-nothing build).
+/// Sets `saw_len` when a `str.len`/`seq.len` atom is encountered.
+fn length_bool(
+    arena: &mut TermArena,
+    e: &SExpr,
+    seq_vars: &BTreeMap<String, (SymbolId, TermId)>,
+    int_vars: &BTreeMap<String, (SymbolId, TermId)>,
+    saw_len: &mut bool,
+) -> Option<TermId> {
+    match e.atom() {
+        Some("true") => return Some(arena.bool_const(true)),
+        Some("false") => return Some(arena.bool_const(false)),
+        _ => {}
+    }
+    let items = e.list()?;
+    let head = items.first().and_then(SExpr::atom)?;
+    match head {
+        "and" | "or" | "xor" if items.len() >= 2 => {
+            let mut acc = length_bool(arena, &items[1], seq_vars, int_vars, saw_len)?;
+            for it in &items[2..] {
+                let next = length_bool(arena, it, seq_vars, int_vars, saw_len)?;
+                acc = match head {
+                    "and" => arena.and(acc, next).ok()?,
+                    "or" => arena.or(acc, next).ok()?,
+                    _ => arena.xor(acc, next).ok()?,
+                };
+            }
+            Some(acc)
+        }
+        "=>" if items.len() >= 3 => {
+            let mut acc = length_bool(arena, items.last()?, seq_vars, int_vars, saw_len)?;
+            for it in items[1..items.len() - 1].iter().rev() {
+                let ante = length_bool(arena, it, seq_vars, int_vars, saw_len)?;
+                acc = arena.implies(ante, acc).ok()?;
+            }
+            Some(acc)
+        }
+        "not" if items.len() == 2 => {
+            let inner = length_bool(arena, &items[1], seq_vars, int_vars, saw_len)?;
+            arena.not(inner).ok()
+        }
+        "ite" if items.len() == 4 => {
+            let c = length_bool(arena, &items[1], seq_vars, int_vars, saw_len)?;
+            let t = length_bool(arena, &items[2], seq_vars, int_vars, saw_len)?;
+            let f = length_bool(arena, &items[3], seq_vars, int_vars, saw_len)?;
+            arena.ite(c, t, f).ok()
+        }
+        // `(= a b …)` — a chained equality that is **either** all `Seq` words or all
+        // `Int` expressions. Try the `Seq` reading first (word operands), then `Int`.
+        "=" if items.len() >= 3 => {
+            let terms = match word_terms(arena, &items[1..], seq_vars) {
+                Some(terms) => terms,
+                None => length_int_terms(arena, &items[1..], seq_vars, int_vars, saw_len)?,
+            };
+            let mut acc: Option<TermId> = None;
+            for &t in &terms[1..] {
+                let atom = arena.eq(terms[0], t).ok()?;
+                acc = Some(match acc {
+                    None => atom,
+                    Some(prev) => arena.and(prev, atom).ok()?,
+                });
+            }
+            acc
+        }
+        // `(distinct a b …)` — pairwise disequality over `Seq` words or `Int` exprs.
+        "distinct" if items.len() >= 3 => {
+            let terms = match word_terms(arena, &items[1..], seq_vars) {
+                Some(terms) => terms,
+                None => length_int_terms(arena, &items[1..], seq_vars, int_vars, saw_len)?,
+            };
+            let mut acc: Option<TermId> = None;
+            for i in 0..terms.len() {
+                for &t in &terms[i + 1..] {
+                    let atom = arena.eq(terms[i], t).ok()?;
+                    let diseq = arena.not(atom).ok()?;
+                    acc = Some(match acc {
+                        None => diseq,
+                        Some(prev) => arena.and(prev, diseq).ok()?,
+                    });
+                }
+            }
+            acc
+        }
+        // Linear-`Int` order comparisons — chained (`(< a b c)` ⇒ `a<b ∧ b<c`).
+        "<" | "<=" | ">" | ">=" if items.len() >= 3 => {
+            let terms = length_int_terms(arena, &items[1..], seq_vars, int_vars, saw_len)?;
+            let mut acc: Option<TermId> = None;
+            for w in terms.windows(2) {
+                let atom = match head {
+                    "<" => arena.int_lt(w[0], w[1]),
+                    "<=" => arena.int_le(w[0], w[1]),
+                    ">" => arena.int_gt(w[0], w[1]),
+                    _ => arena.int_ge(w[0], w[1]),
+                }
+                .ok()?;
+                acc = Some(match acc {
+                    None => atom,
+                    Some(prev) => arena.and(prev, atom).ok()?,
+                });
+            }
+            acc
+        }
+        _ => None,
+    }
+}
+
+/// Translates every element of `exprs` as a linear-`Int` expression for
+/// [`length_bool`], returning `None` if any is not one.
+fn length_int_terms(
+    arena: &mut TermArena,
+    exprs: &[SExpr],
+    seq_vars: &BTreeMap<String, (SymbolId, TermId)>,
+    int_vars: &BTreeMap<String, (SymbolId, TermId)>,
+    saw_len: &mut bool,
+) -> Option<Vec<TermId>> {
+    exprs
+        .iter()
+        .map(|e| length_int_expr(arena, e, seq_vars, int_vars, saw_len))
+        .collect()
+}
+
+/// Translates one `Int`-sorted expression for the length skeleton: an `Int`
+/// literal, a declared `Int` variable, `str.len`/`seq.len` of a word (the only
+/// string content allowed), or `+`/`-`/`*` over such expressions. Returns `None`
+/// for anything else. Sets `saw_len` on a length atom.
+fn length_int_expr(
+    arena: &mut TermArena,
+    e: &SExpr,
+    seq_vars: &BTreeMap<String, (SymbolId, TermId)>,
+    int_vars: &BTreeMap<String, (SymbolId, TermId)>,
+    saw_len: &mut bool,
+) -> Option<TermId> {
+    match e {
+        SExpr::Atom(a) => {
+            if let Ok(n) = a.parse::<i128>() {
+                Some(arena.int_const(n))
+            } else {
+                int_vars.get(a).map(|&(_, term)| term)
+            }
+        }
+        SExpr::List(items) => {
+            let head = items.first().and_then(SExpr::atom)?;
+            match head {
+                "str.len" | "seq.len" if items.len() == 2 => {
+                    let s = word_str_expr(arena, &items[1], seq_vars)?;
+                    *saw_len = true;
+                    arena.seq_len(s).ok()
+                }
+                "+" if items.len() >= 2 => {
+                    let mut acc = length_int_expr(arena, &items[1], seq_vars, int_vars, saw_len)?;
+                    for it in &items[2..] {
+                        let next = length_int_expr(arena, it, seq_vars, int_vars, saw_len)?;
+                        acc = arena.int_add(acc, next).ok()?;
+                    }
+                    Some(acc)
+                }
+                // Unary `(- a)` is negation; `(- a b …)` is left-folded subtraction.
+                "-" if items.len() == 2 => {
+                    let a = length_int_expr(arena, &items[1], seq_vars, int_vars, saw_len)?;
+                    arena.int_neg(a).ok()
+                }
+                "-" if items.len() >= 3 => {
+                    let mut acc = length_int_expr(arena, &items[1], seq_vars, int_vars, saw_len)?;
+                    for it in &items[2..] {
+                        let next = length_int_expr(arena, it, seq_vars, int_vars, saw_len)?;
+                        acc = arena.int_sub(acc, next).ok()?;
+                    }
+                    Some(acc)
+                }
+                "*" if items.len() >= 2 => {
+                    let mut acc = length_int_expr(arena, &items[1], seq_vars, int_vars, saw_len)?;
+                    for it in &items[2..] {
+                        let next = length_int_expr(arena, it, seq_vars, int_vars, saw_len)?;
+                        acc = arena.int_mul(acc, next).ok()?;
+                    }
+                    Some(acc)
+                }
+                _ => None,
+            }
+        }
+    }
 }
 
 /// Builds the [`Script::lex_problem`] (P2.7 T-C.6): the Boolean skeleton over

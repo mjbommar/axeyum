@@ -171,7 +171,11 @@ fn decide_word_only(
     let after_online = apply_online_string_route(script, config, after_word);
     // Regex-membership route (P2.7 T-C.5): a pure `str.in_re` problem whose bounded
     // parse declined at a length/loop cap is decidable by symbolic derivatives.
-    match apply_membership_route(script, config, after_online) {
+    let after_mem = apply_membership_route(script, config, after_online);
+    // Length↔LIA route (P2.7 Phase A): a `str.len`-coupled problem whose bounded parse
+    // declined at a length/width cap may still have a `sat` witness the length↔LIA
+    // route builds (strings exceeding the bounded length cap).
+    match apply_length_lia_route(script, config, after_mem) {
         // A replay-checked `sat` or a certified-derivation `unsat` is a real verdict.
         result @ (CheckResult::Sat(_) | CheckResult::Unsat) => Ok(result),
         // Decline (both routes returned `unknown`): reproduce the original bounded
@@ -576,6 +580,82 @@ pub fn lex_order_verdict(script: &mut Script, config: &SolverConfig) -> Option<C
     match apply_lex_order_route(script, config, seed) {
         result @ CheckResult::Unsat => Some(result),
         CheckResult::Sat(_) | CheckResult::Unknown(_) => None,
+    }
+}
+
+/// The **length↔LIA route** (P2.7 Phase A, `LenAbs` `sat` bridge): the
+/// `str.len`-coupled second chance, run *strictly after* the bounded, word, online,
+/// membership, and lex routes decline, and only when the current verdict is
+/// `unknown`. It decides `str.len`-coupled `QF_SLIA` rows whose `sat` witness the
+/// bounded packed encoder cannot represent (its length is capped at
+/// `STRING_MAX_LEN`) — e.g. `(= (str.len x) 20)` — by linking `str.len` to the LIA
+/// solver over fresh per-variable length symbols
+/// ([`check_qf_slia_length`](crate::check_qf_slia_length) over
+/// [`Script::length_skeleton`](axeyum_smtlib::Script::length_skeleton)).
+///
+/// It only ever **adds a replay-checked `sat`** to an `unknown`: the candidate model
+/// (each string an `'a'`-fill of its solved length, plus the LIA-model integers) is
+/// replayed against the original `Seq`-level assertions through the ground evaluator
+/// (the sole `sat` gate), so it can never manufacture a wrong `sat` or override a
+/// decided verdict. It never adds `unsat` (the ADR-0052 `StringGate` already owns the
+/// length-abstraction refutation). A `None`/empty skeleton or a non-replaying
+/// candidate leaves the prior `unknown` untouched.
+fn apply_length_lia_route(
+    script: &mut Script,
+    config: &SolverConfig,
+    result: CheckResult,
+) -> CheckResult {
+    let CheckResult::Unknown(reason) = result else {
+        return result;
+    };
+    if script.length_skeleton.is_empty() {
+        return CheckResult::Unknown(reason);
+    }
+    let skeleton = script.length_skeleton.clone();
+    match crate::string_theory::check_qf_slia_length(&mut script.arena, &skeleton, config) {
+        result @ CheckResult::Sat(_) => result,
+        // The route never emits `unsat`; a `Sat`-only surface. Preserve the prior
+        // `unknown` on a decline.
+        CheckResult::Unsat | CheckResult::Unknown(_) => {
+            let detail = if reason.detail.is_empty() {
+                "length↔LIA route declined (no replaying length model)".to_owned()
+            } else {
+                format!(
+                    "{}; length↔LIA route declined (no replaying length model)",
+                    reason.detail
+                )
+            };
+            CheckResult::Unknown(UnknownReason {
+                kind: reason.kind,
+                detail,
+            })
+        }
+    }
+}
+
+/// Harness-parity surface (P2.7 Phase A): consults the **length↔LIA route** on an
+/// already-`unknown` [`Script`], returning `Some(Sat)` only when the route finds a
+/// replay-checked length model, and `None` otherwise. The length mirror of
+/// [`word_route_verdict`] / [`online_string_verdict`] / [`membership_verdict`] /
+/// [`lex_order_verdict`].
+///
+/// Soundness anchor: `sat` only through a concrete `Seq`-level model that replayed
+/// against the original assertions through the ground evaluator (see
+/// [`check_qf_slia_length`](crate::check_qf_slia_length)). The route never adds
+/// `unsat`. Returns `None` when the script carries no
+/// [`length_skeleton`](axeyum_smtlib::Script::length_skeleton) or the route declines.
+#[must_use]
+pub fn length_lia_verdict(script: &mut Script, config: &SolverConfig) -> Option<CheckResult> {
+    if script.length_skeleton.is_empty() {
+        return None;
+    }
+    let seed = CheckResult::Unknown(UnknownReason {
+        kind: UnknownKind::Incomplete,
+        detail: String::new(),
+    });
+    match apply_length_lia_route(script, config, seed) {
+        result @ CheckResult::Sat(_) => Some(result),
+        CheckResult::Unsat | CheckResult::Unknown(_) => None,
     }
 }
 
@@ -1117,6 +1197,12 @@ pub fn solve_smtlib(input: &str, config: &SolverConfig) -> Result<SmtLibOutcome,
     // lex fragment (a variable-independent constant fold or a transitivity +
     // first-character clash). Only ever adds a re-checked `unsat` to an `unknown`.
     let result = apply_lex_order_route(&mut script, config, result);
+    // Length↔LIA route (P2.7 Phase A): the `str.len`-coupled second chance, run
+    // strictly after every string route above declines — decides `str.len`-coupled
+    // rows whose `sat` witness exceeds the bounded length cap (e.g. `str.len x = 20`)
+    // by linking `str.len` to LIA. Only ever adds a replay-checked `sat` to an
+    // `unknown`.
+    let result = apply_length_lia_route(&mut script, config, result);
     Ok(SmtLibOutcome {
         result,
         logic: script.logic,
