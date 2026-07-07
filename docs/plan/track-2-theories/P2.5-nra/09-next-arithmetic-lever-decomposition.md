@@ -146,11 +146,16 @@ NRA engine (I/J/K) to the funded Phase B/C/D arc.
    mixed). Accepts **conjunctions only** of polynomial comparisons (equalities,
    strict, `≤/≥`, `≠`, mixed). **Disjunctions are NOT in the CAD collector** —
    `collect_conjuncts`/`collect_multi_conjuncts` have no `BoolOr` arm, so a
-   top-level `or` makes the CAD *decline entirely*. Only `check_with_nra_dpll`
-   (commit 5ede57f4) splits Boolean structure — **but each theory cube it produces
-   is handed to the linear abstraction (step 3), NOT back to the exact CAD.** So a
-   disjunction of nonlinear atoms currently reaches only the ≤2-cross-product
-   relaxation.
+   top-level `or` makes the *top-level* CAD collector decline. **CORRECTED
+   (2026-07-07, 10th review): `check_with_nra_dpll_within` (`dpll_t.rs:253`,
+   commit 5ede57f4) DOES hand each split theory cube to the exact CAD
+   (`decide_real_poly_constraint`), not only to the linear abstraction** — the
+   DPLL→CAD edge exists (task #43 `4d74b288` then added the equality-anchored
+   decision + bignum coefficients that use it to close `approx-sqrt-unsat`). The
+   original text below claimed the edge was missing; it was not. A disjunction of
+   nonlinear atoms whose cubes are within CAD reach now decides; what still
+   escapes is CAD *reach* (degree/variable/cell guards) and the absence of a
+   transcendental substrate — not routing.
 
 **The CAD's hard guards** (each a *decline-to-`unknown`*, never a wrong verdict):
 

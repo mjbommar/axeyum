@@ -20,8 +20,8 @@ exit-criteria'd tracks we advance one increment at a time.
   oracle-compared count lives in the generated scoreboard) — *holding*. (Two consumer-app wrong-safes found by new fuzzes
   + fixed this session.)
 - **Decide-rate (the central gap):** see the generated
-  [SCOREBOARD](bench-results/SCOREBOARD.md) totals (~68% as of
-  2026-07-03 — the scoreboard is authoritative; this line links rather than
+  [SCOREBOARD](bench-results/SCOREBOARD.md) totals (~73% as of
+  2026-07-07 — the scoreboard is authoritative; this line links rather than
   hand-copies because hand-copied totals rotted twice), 0–100% across
   divisions, **19/35 decide-strong**. Z3/cvc5 decide more on most fragments.
 - **Performance:** the **first committed PAR-2 head-to-head exists**

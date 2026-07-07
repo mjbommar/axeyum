@@ -1,7 +1,21 @@
 # ADR-0058: The funded QF_NRA CAD/nlsat engine arc
 
-Status: proposed
+Status: proposed — **Phase B superseded/OBE (see Scope refresh); remaining arc = Phase C + D**
 Date: 2026-07-07
+
+> **Scope refresh (2026-07-07, 10th review).** Both of Phase B's named
+> deliverables turned out to already exist / land independently: the
+> **DPLL-cube→exact-CAD edge** shipped in `5ede57f4` (2026-06-30, `dpll_t.rs:253`),
+> and the **bignum CAD-entry coefficient path** shipped in task #43 (`4d74b288`,
+> the equality-anchored `approx-sqrt` rows). This ADR's Context originally
+> asserted the edge was "missing" — that was **already false** when written
+> (Context point 1 is struck through below). So **Phase B is done**; do NOT
+> launch it. The genuine remaining engine arc is **Phase C** (transcendental ICP
+> substrate for the MetiTarski/`sin-cos` residue) and **Phase D** (CAD
+> projection / cell-count scaling for the degree-8/10 residue) — ~6 QF_NRA rows,
+> multi-week. **ROI check (10th review): that residue is now BELOW strings
+> breadth** (QF_SLIA 36% / QF_S 58% is the dominant measured gap post-arithmetic
+> at qf-nra/nia ~85%). Re-open the pivot before committing Phase C/D resource.
 
 ## Context
 
@@ -35,11 +49,16 @@ decision-complete *in principle* for **conjunctions** of polynomial comparisons
 ADR-0044/45/46), and `check_with_nra_dpll` (commit `5ede57f4`) splits Boolean
 structure. But three structural facts keep the residue out of reach:
 
-1. **The DPLL↔CAD edge is missing.** `collect_conjuncts` has no `BoolOr` arm, so
-   a top-level disjunction makes the exact CAD *decline entirely*; only
-   `check_with_nra_dpll` case-splits it, and **each theory cube it produces is
-   handed to the ≤2-cross-product linear abstraction, NOT back to the exact
-   CAD.** A disjunction of nonlinear atoms never reaches the complete procedure.
+1. ~~**The DPLL↔CAD edge is missing.**~~ **CORRECTED (2026-07-07, 10th review):
+   this premise was already false when this ADR was written.** The edge
+   EXISTS — `check_with_nra_dpll_within` (`dpll_t.rs:253`, commit `5ede57f4`,
+   2026-06-30) hands each DPLL theory cube to the **exact CAD**
+   (`decide_real_poly_constraint`), not the linear abstraction. Task #43
+   (`4d74b288`) then landed Phase B's *other* named deliverable, the bignum
+   CAD-entry coefficient path (deciding `approx-sqrt`/`approx-sqrt-unsat` via
+   equality-anchored decision). **So Phase B as originally scoped is already
+   landed** — see the Scope refresh below. The residue escapes on the remaining
+   guards (next) and the absence of a transcendental substrate, NOT on routing.
 2. **Four bounded engineering guards** (`MAX_CROSS_PRODUCTS=2`,
    `MAX_ABS_COEFF=2^40` i128, the ≤4-var product grid, `MAX_CAD_CELLS=256`) each
    *decline to `unknown`* (never a wrong verdict) but cap the reachable class.
@@ -74,7 +93,12 @@ capability. But it is still landed incrementally — each phase is a sequence of
 compiling, gated, additive commits (`unknown → decision`, never a flipped
 verdict), per the working stance's "slice the keystone" rule.
 
-### Phase B — Boolean-CAD: route DPLL cubes into the exact CAD (the missing edge)
+### Phase B — Boolean-CAD: route DPLL cubes into the exact CAD ✅ ALREADY LANDED
+
+**Status: DONE (see the Scope refresh at the top).** The DPLL-cube→exact-CAD
+edge shipped in `5ede57f4` and the bignum coefficient path in #43 (`4d74b288`).
+The description below is retained for the record of what Phase B *was*; it is
+not remaining work.
 
 The single highest-ROI engine step, and the one the decomposition doc already
 identified. Make `check_with_nra_dpll`'s per-cube theory query call the **exact
@@ -178,13 +202,18 @@ than trading one for the other.
   standing i128/Rational lesson), δ-sat⇒unknown in Phase C, and unsat-certificate
   re-checking. No phase ships a `sat` without a ground-evaluator replay or an
   `unsat` without a re-checkable certificate.
-- **Revisited when:** after Phase B lands and is measured, re-evaluate whether
-  Phase C (transcendental) or Phase D (high-degree) is the higher-ROI next
-  fragment against the then-current residue; the phase order past B is
-  data-driven, not fixed here. If Phase B's measured yield is below the bounded
-  slices it displaced, re-open the pivot question (this ADR is `proposed`, not a
-  standing mandate — it is ratified to `accepted` only once Phase B's first
-  sub-slice, the DPLL→CAD edge, is scoped and launchable with a measured target).
+- **Revisited NOW (2026-07-07, 10th review):** Phase B effectively *already ran*
+  — its DPLL→CAD edge (`5ede57f4`) + bignum coefficient path (#43) landed and
+  yielded ~+2 measured QF_NRA rows (`approx-sqrt`/`approx-sqrt-unsat`). Per the
+  Consequences clause "if Phase B's measured yield is below the bounded slices it
+  displaced, re-open the pivot," that yield is below strings-breadth ROI
+  (QF_SLIA 36% is now the dominant measured gap). **So the pivot is re-opened:
+  Phase C/D (transcendental ICP + high-degree CAD projection, ~6 rows,
+  multi-week) is DE-PRIORITIZED below strings breadth.** This ADR stays
+  `proposed` and is NOT ratified to `accepted` — Phase C/D launch only after a
+  fresh ROI check confirms the residue is worth the multi-week arc versus the
+  strings/Lean/perf alternatives. The original ratification criterion (Phase B's
+  DPLL→CAD sub-slice "scoped and launchable") is void — that sub-slice is done.
 
 ## Backlinks
 
