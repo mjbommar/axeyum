@@ -321,11 +321,12 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   (2) ✅ **#41** NIA `int.pow2` — first-class `Op::IntPow2` + value-table axioms,
   cvc5 semantics verified from source (neg-exp = 0, DEFINED not underspecified)
   (`fb2da08b`, qf-nia 25→33, DISAGREE=0);
-  (3) **#42** underspecified-operator fuzz-COVERAGE audit (S, high) — *in flight*:
-  make the partial-operator Hard Rule an ENFORCED per-op checklist (str.at/str.substr
-  OOB, str.to_code non-singleton, seq.nth OOB, bv/fp partial ops; div-0 + pow2-neg-exp
-  already covered by #40/#41) — until each has a degenerate-emitting generator the
-  differential gate is blind on the P0's axis;
+  (3) ✅ **#42** underspecified-operator fuzz-COVERAGE audit — the Hard Rule is now an
+  ENFORCED per-op checklist (`docs/research/01-foundations/underspecified-operator-fuzz-coverage.md`),
+  4 degenerate seed-classes added (`7ce23583`); it SURFACED a live P0 → ✅ **#46**
+  `str.from_code` wrong-sat fixed (`6877c365`, decline the unrepresentable code-point
+  window instead of folding to `""`). Tracked GAPs remain (RealDiv-0, BV const-0
+  seed, seq/FP fuzzes);
   (4) **#43** last cheap NRA pickups (parser slice 4, algebraic-√2 slice 7, ~+3);
   (5) **#45** THEN stop ad-hoc NRA slicing → open a funded QF_NRA CAD/nlsat engine
   ARC (ADR-0058 proposed; first sub-slice: route check_with_nra_dpll cubes into the exact CAD).
@@ -416,6 +417,34 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-07 — the partial-operator Hard Rule made ENFORCEABLE + a third
+  soundness bug closed (`str.from_code`).**
+  - (`7ce23583`) **#42 — underspecified-operator fuzz-coverage audit.** Turned
+    the Hard Rule from prose into an enforced per-operator checklist
+    (`docs/research/01-foundations/underspecified-operator-fuzz-coverage.md`):
+    every partial op × {semantics, underspec-vs-total, evaluator convention, the
+    fuzz generator that emits its degenerate shape}. Added four degenerate
+    seed-classes to `string_differential_fuzz` (`str.indexof` negative start,
+    `str.replace_all`, `str.from_code`, `str.to_int` signed) — all DISAGREE=0 vs
+    Z3 (447 jointly decided) — and honestly tracked the remaining GAPs (RealDiv-0,
+    a BV const-0 seed, seq/FP differential fuzzes). **The audit did its job: it
+    surfaced a live P0 wrong-sat** (below).
+  - (`6877c365`) **#46 — `str.from_code` wrong-sat, fixed.** `string_from_code`
+    capped its sound range at `0..=127` and folded `i≥128` to `""`, while
+    `str.to_code` round-trips the full byte range `0..=255` → `(= (str.from_code
+    200) "")` was wrongly **sat** (Z3: unsat; U+00C8 is non-empty). A live
+    pre-existing wrong-verdict on main. Fix splits on the constant-folded arg:
+    `0..=255` → exact byte string (round-trips `to_code`, kills the class);
+    `i<0`/`i>0x2FFFF` → `""` (genuinely-invalid code point); **`256..=0x2FFFF`
+    and symbolic `i` → DECLINE to Unknown** (valid non-empty chars the 8-bit
+    model can't represent — every byte surrogate is unsound BOTH ways, proven, so
+    decline is the only sound choice; never `""`). 6 soundness bars + the
+    un-ignored repro pass; `string_differential_fuzz` (seeded 0..=300) DISAGREE=0
+    (independently re-run, 138s); `--workspace --lib` 18/18; corpus_regression 0
+    DISAGREE. Completeness cost: one symbolic NAS-corpus case sat→Unknown (not in
+    any committed gate). Third soundness bug closed this session (div-0 P0, the
+    const-0 wrong-sat, now from_code) — the untrusted-search/trusted-check loop
+    catching its own blind spots.
 - **2026-07-07 — the NIA arc: congruent div-0 recovery + `int.pow2`, qf-nia 21→33
   (+12 sound), two soundness bugs closed. 9th review's pivot executing.**
   - (`b91dd918`, `73dceb72`) **#40 — congruent Ackermann div/mod-by-zero.** The
