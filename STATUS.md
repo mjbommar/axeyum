@@ -408,6 +408,29 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-06 (night, cont.) — the next arithmetic arc opens: QF_NIA over
+  QF_NRA, first slice lands.** The string program having closed at its
+  theory-coupled ceiling, the remaining z3/cvc5 gap is nonlinear arithmetic —
+  scoped (`fcbde209`,
+  [decomposition doc](docs/plan/track-2-theories/P2.5-nra/09-next-arithmetic-lever-decomposition.md))
+  to the measured ROI verdict **QF_NIA (54%) beats QF_NRA (68%)**: NIA's
+  unknowns are bounded levers reusing existing machinery, NRA's residue is
+  mostly a multi-week CAD/transcendental engine.
+  - (`a946f925`) **First slice — NIA div/mod Euclidean linearization (P2.5
+    Phase E.0): QF_NIA 21→23 (54%→59%), PAR-2 6.577→5.283.** `check_with_nia`
+    (the integer analog of `check_with_nra`) reaches `div.03` (integer sign
+    lemma over the variable-divisor Euclidean form) and `mod.02`
+    (self-division identity), routed pre-width-ladder. Euclidean identity
+    `x=b·q+r ∧ 0≤r<|b|` is theory-valid with the SMT-LIB sign convention
+    matched to z3; the `b=0` branch is left FREE (a sound relaxation), so
+    relaxation-unsat ⇒ original-unsat, and sat replays against the original
+    div/mod. Honest declines: mod.03/div.08 (div-by-zero
+    underspecification/congruence — the fixed evaluator convention can't
+    soundly replay z3's free choice). DISAGREE=0 + replay=0 across the
+    re-measure and THREE fuzzes (nra 2000, nia 2500, and the NEW
+    variable-divisor div/mod 1500 — the last independently re-run:
+    1227 jointly decided, 853 sat replays, 0 disagree). Next ROI slices:
+    NRA a²=−2 coercion, NIA iand blast, NIA int.pow2.
 - **2026-07-06 (night) — the 7th review applied + three robustness/decide-rate
   wins.**
   - (`a8f09e94`) **A whole bug class eliminated across 4 collectors.** The
