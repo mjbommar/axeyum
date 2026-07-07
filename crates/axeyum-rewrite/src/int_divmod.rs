@@ -46,6 +46,8 @@ pub fn eliminate_int_divmod(
     let mut map: HashMap<TermId, TermId> = HashMap::new();
     let mut constraints: Vec<TermId> = Vec::new();
     let mut fresh = 0u32;
+    // Zero-divisor groups retained for the pairwise Ackermann congruence pass.
+    let mut zero_groups: Vec<ZeroGroup> = Vec::new();
 
     // div/mod groups, keyed by (dividend, constant divisor).
     for ((dividend, divisor), terms) in collector.divmod {
@@ -55,15 +57,44 @@ pub fn eliminate_int_divmod(
             // is sound for a *witness* but produces a WRONG UNSAT — a solver could
             // refute a formula that is satisfiable by some *other* choice of the
             // free value (e.g. `775 < mod(0,0)` is sat, not `775 < 0`). So each
-            // div/mod-by-zero term becomes a FRESH UNCONSTRAINED variable: no
-            // constraint forces its value, so it can never be the pivot of an
-            // unsat, and a `sat` model whose free value disagrees with the
-            // evaluator convention is caught by the ground-evaluator replay
-            // (declined to `unknown`, never a wrong verdict).
-            for t in terms.div.into_iter().chain(terms.mod_) {
+            // div/mod-by-zero *group* (keyed by dividend) becomes a fresh
+            // unconstrained variable — the underspecified free value.
+            //
+            // The free values are nevertheless kept **congruent** across groups
+            // (see the pairwise pass after this loop): `div`/`mod` are total binary
+            // functions, so `div a 0` and `div b 0` must be EQUAL when `a = b`, for
+            // whatever the underspecified zero-divisor value is. Without that, the
+            // fresh-per-group relaxation is unsound for *sat*: two zero-divisor
+            // terms whose dividends are provably equal could be assigned different
+            // values, yielding a model that is not a real SMT model (a WRONG SAT —
+            // the `div (mod (2x) 3) 0 ≠ div (mod (3−x) 3) 0` shape, unsat because
+            // `2x ≡ 3−x (mod 3)`). One fresh var per group (not per term) already
+            // shares within a group; the congruence lemmas share across groups.
+            let has_div = !terms.div.is_empty();
+            let has_mod = !terms.mod_.is_empty();
+            let q0 = if has_div {
                 let v = fresh_int(arena, &mut fresh)?;
-                map.insert(t, v);
-            }
+                for t in terms.div {
+                    map.insert(t, v);
+                }
+                Some(v)
+            } else {
+                None
+            };
+            let r0 = if has_mod {
+                let v = fresh_int(arena, &mut fresh)?;
+                for t in terms.mod_ {
+                    map.insert(t, v);
+                }
+                Some(v)
+            } else {
+                None
+            };
+            zero_groups.push(ZeroGroup {
+                dividend,
+                q: q0,
+                r: r0,
+            });
             continue;
         }
         let q = fresh_int(arena, &mut fresh)?;
@@ -100,6 +131,33 @@ pub fn eliminate_int_divmod(
         constraints.push(arena.or(v_eq_a, v_eq_neg)?); // v = a ∨ v = −a
     }
 
+    // Pairwise Ackermann congruence over the zero-divisor groups. `div`/`mod` are
+    // total binary functions and the divisor is the constant `0` in every group, so
+    // for groups `(a, 0)` and `(c, 0)` the lemma `a = c → v_a = v_c` (the div
+    // quotients, and separately the mod remainders) is a valid consequence for
+    // whatever the underspecified `_/0` value is. This makes the fresh-per-group
+    // relaxation sound for *sat* (a satisfying assignment now induces a consistent
+    // total `_/0` function — no wrong sat) while remaining monotone (the true model
+    // satisfies every lemma, so no wrong unsat, and a lone `mod(0,0)` with no
+    // congruence partner stays free — the P0 `775 < mod(0,0)` is still not refuted).
+    // Bounded by `MAX_CONGRUENCE_GROUPS` to keep the pass `O(k²)` small.
+    if zero_groups.len() <= MAX_CONGRUENCE_GROUPS {
+        for i in 0..zero_groups.len() {
+            for j in (i + 1)..zero_groups.len() {
+                let (gi, gj) = (&zero_groups[i], &zero_groups[j]);
+                let same_dividend = arena.eq(gi.dividend, gj.dividend)?;
+                if let (Some(qi), Some(qj)) = (gi.q, gj.q) {
+                    let q_eq = arena.eq(qi, qj)?;
+                    constraints.push(arena.implies(same_dividend, q_eq)?);
+                }
+                if let (Some(ri), Some(rj)) = (gi.r, gj.r) {
+                    let r_eq = arena.eq(ri, rj)?;
+                    constraints.push(arena.implies(same_dividend, r_eq)?);
+                }
+            }
+        }
+    }
+
     // Substitute the eliminated terms throughout the assertions and constraints
     // (nested div/mod inside a dividend or constraint are handled too).
     let mut memo: HashMap<TermId, TermId> = HashMap::new();
@@ -119,6 +177,26 @@ fn fresh_int(arena: &mut TermArena, counter: &mut u32) -> Result<TermId, IrError
     let sym = arena.declare(&name, Sort::Int)?;
     Ok(arena.var(sym))
 }
+
+/// A zero-divisor `div`/`mod` group: the (shared) dividend and the fresh
+/// quotient / remainder variables (each `None` when the group has no such term).
+/// Retained for the pairwise Ackermann congruence pass over `_/0` terms.
+struct ZeroGroup {
+    dividend: TermId,
+    q: Option<TermId>,
+    r: Option<TermId>,
+}
+
+/// Upper bound on the number of *distinct zero-divisor dividends* over which the
+/// `O(k²)` eager Ackermann congruence lemmas are emitted. Below it (every realistic
+/// shape — a formula with >48 syntactically-distinct `_/0` dividends is
+/// pathological) the relaxation is fully congruence-closed, so a relaxation `sat`
+/// is a genuine model. This is a strict soundness improvement over the prior
+/// fresh-per-term relaxation (which was *not* congruence-closed at any size and
+/// could report a wrong `sat`); the follow-up to make it unconditional is to route
+/// `_/0` through the lazy-CEGAR UF congruence path. `unsat` transfers soundly at
+/// every size (the relaxation only enlarges the model space).
+const MAX_CONGRUENCE_GROUPS: usize = 48;
 
 #[derive(Default)]
 struct DivModTerms {

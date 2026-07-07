@@ -127,6 +127,23 @@ struct VarDivMod {
     mod_: Vec<TermId>,
 }
 
+/// Per-group data retained by [`eliminate_variable_divmod`] for the pairwise
+/// Ackermann congruence pass (the fresh quotient `q` / remainder `r` and whether
+/// the group actually contributed a `div` / `mod` term).
+struct GroupInfo {
+    dividend: TermId,
+    divisor: TermId,
+    q: TermId,
+    r: TermId,
+    has_div: bool,
+    has_mod: bool,
+}
+
+/// Upper bound on the number of variable-divisor `div`/`mod` groups over which the
+/// eager Ackermann congruence lemmas are emitted (the pass is `O(k²)` in the group
+/// count). Beyond this the lemmas are skipped — still sound, only less complete.
+const MAX_CONGRUENCE_GROUPS: usize = 48;
+
 /// Collects every `div`/`mod` term whose divisor is a **non-constant** term,
 /// grouped by `(dividend, divisor)` (deterministic key order). Constant-divisor
 /// terms are ignored here — they are eliminated exactly beforehand by
@@ -167,12 +184,23 @@ fn collect_var_divmod(
 /// Returns the rewritten assertions followed by the new constraints; when there is
 /// no variable-divisor `div`/`mod`, returns `None` (the caller declines).
 ///
-/// The `divisor = 0` case is intentionally left **unconstrained** — a sound
-/// relaxation of the evaluator's total `div a 0 = 0` / `mod a 0 = a` convention:
-/// every SMT-LIB model induces a model of the relaxation (Euclidean when the
-/// divisor is nonzero; free when it is zero), so an `unsat` of the relaxation
-/// transfers soundly, while a `sat` is only ever accepted after replay against the
-/// original under the evaluator's total convention.
+/// The `divisor = 0` case is intentionally left **unconstrained by the Euclidean
+/// identity** — a sound relaxation of the evaluator's total `div a 0 = 0` /
+/// `mod a 0 = a` convention: every SMT-LIB model induces a model of the relaxation
+/// (Euclidean when the divisor is nonzero; free when it is zero), so an `unsat` of
+/// the relaxation transfers soundly, while a `sat` is only ever accepted after
+/// replay against the original under the evaluator's total convention.
+///
+/// The free `q, r` are nevertheless kept **congruent** across groups: `div` and
+/// `mod` are *total binary functions*, so for groups `(a, b)` and `(c, d)` the
+/// eager Ackermann lemma `(a = c ∧ b = d) → q_ab = q_cd` (and the same for `r`) is
+/// a valid consequence for **every** divisor value, including `b = d = 0`. Adding
+/// these lemmas is monotone-sound (the true model satisfies every congruence
+/// lemma, so no satisfiable formula can be turned unsat), yet it recovers the
+/// value-independent structural contradictions a fresh-per-term relaxation loses:
+/// e.g. the nested `div(div n n) n` chains where an asserted `t2 = t3` propagates
+/// by congruence to `t3 = t4 = t5`, contradicting an asserted `t2 ≠ t5` regardless
+/// of the underspecified div-by-zero value.
 fn eliminate_variable_divmod(
     arena: &mut TermArena,
     assertions: &[TermId],
@@ -186,10 +214,14 @@ fn eliminate_variable_divmod(
     let one = arena.int_const(1);
     let mut map: HashMap<TermId, TermId> = HashMap::new();
     let mut constraints: Vec<TermId> = Vec::new();
+    // Per-group metadata retained for the pairwise Ackermann congruence pass.
+    let mut infos: Vec<GroupInfo> = Vec::new();
 
     for ((dividend, divisor), terms) in groups {
         let q = fresh_int(arena, counter)?;
         let r = fresh_int(arena, counter)?;
+        let has_div = !terms.div.is_empty();
+        let has_mod = !terms.mod_.is_empty();
         for t in terms.div {
             map.insert(t, q);
         }
@@ -228,6 +260,47 @@ fn eliminate_variable_divmod(
             let b_zero = arena.eq(divisor, zero).map_err(err)?;
             let b_ne_0 = arena.not(b_zero).map_err(err)?;
             constraints.push(arena.implies(b_ne_0, both).map_err(err)?);
+        }
+
+        infos.push(GroupInfo {
+            dividend,
+            divisor,
+            q,
+            r,
+            has_div,
+            has_mod,
+        });
+    }
+
+    // Eager Ackermann congruence over every pair of groups: `div`/`mod` are total
+    // binary functions, so `(a_i = a_j ∧ b_i = b_j) → q_i = q_j` (and the same for
+    // the remainders `r`) holds for ALL divisor values, INCLUDING zero. This is the
+    // sound recovery for the div-by-zero *structural* unsats: the antecedent's
+    // dividend/divisor terms are rewritten downstream by `replace_subterms`, so
+    // when a dividend is itself a nested `div`/`mod` term the equality links the
+    // quotient variables and an asserted equality among nested quotients propagates
+    // by congruence (contradicting an asserted `distinct`), regardless of the
+    // underspecified div-by-zero value. Adding these lemmas is monotone-sound (the
+    // true model satisfies every congruence lemma, so no satisfiable formula can be
+    // turned unsat). Bounded by `MAX_CONGRUENCE_GROUPS` to keep the O(k²) lemma
+    // count small — a larger group set simply forgoes the lemmas (still sound, just
+    // less complete) and relies on the width ladder / other routes.
+    if infos.len() <= MAX_CONGRUENCE_GROUPS {
+        for first in 0..infos.len() {
+            for second in (first + 1)..infos.len() {
+                let (left, right) = (&infos[first], &infos[second]);
+                let same_dividend = arena.eq(left.dividend, right.dividend).map_err(err)?;
+                let same_divisor = arena.eq(left.divisor, right.divisor).map_err(err)?;
+                let same_args = arena.and(same_dividend, same_divisor).map_err(err)?;
+                if left.has_div && right.has_div {
+                    let q_eq = arena.eq(left.q, right.q).map_err(err)?;
+                    constraints.push(arena.implies(same_args, q_eq).map_err(err)?);
+                }
+                if left.has_mod && right.has_mod {
+                    let r_eq = arena.eq(left.r, right.r).map_err(err)?;
+                    constraints.push(arena.implies(same_args, r_eq).map_err(err)?);
+                }
+            }
         }
     }
 

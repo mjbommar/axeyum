@@ -15,7 +15,7 @@ A single-glance, honest view of where the pure-Rust axeyum solver stands against
 ## Headline
 
 - **35 division baselines** measured vs z3 4.13.3, spanning **24 logic fragments** (BV, LIA, QF_ABV, QF_ALIA, QF_AUFBV, QF_AUFLIA, QF_AX, QF_BV, QF_BVFP, QF_DT, QF_FF, QF_FP, QF_LIA, QF_LRA, QF_NIA, QF_NRA, QF_S, QF_SEQ, QF_SLIA, QF_UF, QF_UFBV, QF_UFFF, QF_UFLIA, UF).
-- **DISAGREE = 0 across all baselines** — zero wrong verdicts over 653 oracle-compared instances (992 files total, 712 decided).
+- **DISAGREE = 0 across all baselines** — zero wrong verdicts over 655 oracle-compared instances (992 files total, 714 decided).
 - Decide-rate ranges **0%–100%** across divisions — that spread *is* the capability frontier; DISAGREE = 0 is the soundness floor that holds everywhere.
 
 ## Divisions vs Z3
@@ -42,7 +42,7 @@ Sorted by logic, then by descending decide-rate. Every committed `*solver-vs-z3*
 | QF_LRA | `qf-lra-cvc5-regress-clean` | 11 | 9 | 82% | 2 | 0 | 5 | 0 | z3-binary | 3.637 |
 | QF_NIA | `qf-nia-curated-iand` | 3 | 3 | 100% | 0 | 0 | 0 | 0 | :status | 0.003 |
 | QF_NIA | `qf-nia-synthetic-graduated` | 32 | 32 | 100% | 0 | 0 | 32 | 0 | z3-binary | 6.772 |
-| QF_NIA | `qf-nia-cvc5-regress-clean` | 39 | 23 | 59% | 8 | 8 | 20 | 0 | z3-binary | 5.278 |
+| QF_NIA | `qf-nia-cvc5-regress-clean` | 39 | 25 | 64% | 6 | 8 | 22 | 0 | z3-binary | 3.894 |
 | QF_NRA | `qf-nra-synthetic-graduated` | 33 | 30 | 91% | 3 | 0 | 30 | 0 | z3-binary | 5.455 |
 | QF_NRA | `qf-nra-cvc5-regress-clean` | 38 | 27 | 71% | 10 | 1 | 27 | 0 | z3-binary | 5.421 |
 | QF_S | `qf-s-cvc5-regress-clean` | 134 | 78 | 58% | 6 | 50 | 74 | 0 | z3-library+binary | 1.442 |
@@ -60,7 +60,7 @@ Sorted by logic, then by descending decide-rate. Every committed `*solver-vs-z3*
 | QF_UFLIA | `qf-uflia-cvc5-regress-clean-overbound-uninterp-sorts` | 2 | 2 | 100% | 0 | 0 | 2 | 0 | z3-binary | 2.294 |
 | UF | `uf-cvc5-regress-clean-quantified` | 5 | 0 | 0% | 0 | 5 | 0 | 0 | :status | 0.000 |
 
-**Totals:** 992 files, 712 decided, 653 oracle-compared, **0 disagreements.**
+**Totals:** 992 files, 714 decided, 655 oracle-compared, **0 disagreements.**
 
 <!-- NOTES:BEGIN (hand-written attribution notes — preserved by the generator) -->
 ### QF_NIA cvc5 row CORRECTED DOWN 2026-07-07 (23→21) — a soundness fix, not a regression
@@ -79,6 +79,29 @@ soundly-decided unsats the slice actually added; the net vs the pre-slice 21 is 
 sound swap. **Recovering `div.01`/`minimal_unsat_core` soundly needs congruent
 uninterpreted div-0 reasoning** (same args → same free value, so a
 value-independent structural contradiction still refutes) — a tracked follow-up.
+
+### QF_NIA cvc5 row RECOVERED UP 2026-07-07 (21 → 25) — sound congruent div/mod-by-zero (P2.5 task #40)
+
+The tracked follow-up landed. `div`/`mod`-by-zero is now treated as an
+**underspecified total function**: the fresh `_/0` value stays free (so the P0
+`775 < mod(0,0)` is still not refuted — a lone term has no congruence partner),
+but eager **Ackermann congruence** across `_/0` groups (`a = c → v_a = v_c`, for
+both the constant-divisor path in `eliminate_int_divmod` and the variable-divisor
+path in `nia_linearize`) restores functional consistency. This is monotone-sound
+(every congruence lemma is a valid consequence, so it can never turn a satisfiable
+formula unsat), and it recovers the **value-independent structural contradictions**
+the fresh-per-term relaxation lost: `div.01`, `minimal_unsat_core`, and `div.08`
+(nested `div(div n n) n` chains where an asserted equality among nested quotients
+propagates by congruence to contradict an asserted `distinct`, regardless of the
+`_/0` value) all decide **unsat** again — matching z3. Row: **21 → 25 decided
+(54% → 64%), unsat 4 → 8, DISAGREE = 0, model_replay_failures = 0, oracle
+22/22 agree.** The same congruence closed a **pre-existing wrong-`sat`** in the
+constant-`_/0` relaxation (`div (mod 2x 3) 0 ≠ div (mod (3−x) 3) 0`, unsat because
+`2x ≡ 3−x (mod 3)`) that a fresh-per-term relaxation reported `sat` — surfaced by
+the **new `qf_nia_divmod_const_differential_fuzz`** (the const-zero seed-class the
+variable-divisor fuzz structurally could not generate; the P0's gate). Gated by
+`nia`/`nra`/`qf_nia_divmod_var`/`qf_nia_divmod_const` differential fuzzes (all
+DISAGREE = 0), `progress_frontier` (8/8), `corpus_regression`, `--workspace --lib`.
 
 ### QF_NRA cvc5 row re-measured 2026-07-06 (P2.5 slice 2 — `a²=−k` int↔real coercion + even-power-equality refutation)
 

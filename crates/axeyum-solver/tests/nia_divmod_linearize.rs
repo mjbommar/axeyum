@@ -59,6 +59,104 @@ fn mod02_real_file_unsat() {
 }
 
 // ---------------------------------------------------------------------------
+// Sound congruent div-by-zero recovery (P2.5 task #40).
+//
+// `div.01` / `minimal_unsat_core` are nested `div(div n n) n` chains with `n = 0`.
+// They are unsat for EVERY div-by-zero value: an asserted equality among nested
+// quotients propagates by congruence to a value that contradicts an asserted
+// `distinct`. The fresh-per-term div-0 relaxation (the P0 fix) lost this because
+// the free quotients were unrelated; the eager Ackermann congruence over the
+// variable-divisor `div`/`mod` groups recovers it SOUNDLY (a monotone-valid
+// consequence of `div`/`mod` being total binary functions).
+// ---------------------------------------------------------------------------
+
+#[test]
+fn div01_real_file_unsat_via_congruence() {
+    // n=0 ∧ div-chain equality ∧ div-chain distinct — unsat for any div-0 value.
+    let r = verdict_smt(&read_target("cli__regress0__arith__div.01.smt2"));
+    assert!(
+        matches!(r, CheckResult::Unsat),
+        "div.01 must be unsat (congruent div-0 recovery), got {r:?}"
+    );
+}
+
+#[test]
+fn minimal_unsat_core_real_file_unsat_via_congruence() {
+    let r = verdict_smt(&read_target("cli__regress1__minimal_unsat_core.smt2"));
+    assert!(
+        matches!(r, CheckResult::Unsat),
+        "minimal_unsat_core must be unsat (congruent div-0 recovery), got {r:?}"
+    );
+}
+
+// Soundness bar #3: a formula that is SAT only under a specific div-0 value must
+// NOT be refuted (distinct from the P0 shape, over the VARIABLE-divisor path).
+// `n = 0 ∧ (div x n) = 5` — `div(x, 0)` is a single free value; picking it = 5 is
+// a legal SMT-LIB model, so this is SAT and must never be refuted.
+#[test]
+fn variable_div_by_zero_specific_value_is_not_refuted() {
+    let mut a = TermArena::new();
+    let n = ivar(&mut a, "n");
+    let x = ivar(&mut a, "x");
+    let zero = a.int_const(0);
+    let five = a.int_const(5);
+    let n_is_0 = a.eq(n, zero).unwrap();
+    let dxn = a.int_div(x, n).unwrap();
+    let dxn_is_5 = a.eq(dxn, five).unwrap();
+    let r = check_auto(&mut a, &[n_is_0, dxn_is_5], &cfg()).unwrap();
+    assert!(
+        !matches!(r, CheckResult::Unsat),
+        "underspecified variable div-by-zero must not be refuted, got {r:?}"
+    );
+}
+
+// Soundness bar #4a: congruence holds — `div(a,0)` and `div(b,0)` with a=b MUST be
+// equal, so `a=b ∧ n=0 ∧ (div a n) != (div b n)` is UNSAT (for any div-0 value).
+#[test]
+fn congruent_div_by_zero_equal_dividends_forces_equal_quotients() {
+    let mut a = TermArena::new();
+    let n = ivar(&mut a, "n");
+    let av = ivar(&mut a, "a");
+    let bv = ivar(&mut a, "b");
+    let zero = a.int_const(0);
+    let n_is_0 = a.eq(n, zero).unwrap();
+    let a_is_b = a.eq(av, bv).unwrap();
+    let da = a.int_div(av, n).unwrap();
+    let db = a.int_div(bv, n).unwrap();
+    let da_eq_db = a.eq(da, db).unwrap();
+    let distinct = a.not(da_eq_db).unwrap();
+    let r = check_auto(&mut a, &[n_is_0, a_is_b, distinct], &cfg()).unwrap();
+    assert!(
+        matches!(r, CheckResult::Unsat),
+        "a=b ⇒ div(a,0)=div(b,0) (congruence): must be unsat, got {r:?}"
+    );
+}
+
+// Soundness bar #4b: congruence does NOT over-constrain — `div(a,0)` and
+// `div(b,0)` with a≠b MAY differ, so `a!=b ∧ n=0 ∧ (div a n) != (div b n)` is SAT
+// (the two free values are allowed to differ). Must NOT be refuted.
+#[test]
+fn congruent_div_by_zero_distinct_dividends_may_differ() {
+    let mut a = TermArena::new();
+    let n = ivar(&mut a, "n");
+    let av = ivar(&mut a, "a");
+    let bv = ivar(&mut a, "b");
+    let zero = a.int_const(0);
+    let n_is_0 = a.eq(n, zero).unwrap();
+    let a_eq_b = a.eq(av, bv).unwrap();
+    let a_ne_b = a.not(a_eq_b).unwrap();
+    let da = a.int_div(av, n).unwrap();
+    let db = a.int_div(bv, n).unwrap();
+    let da_eq_db = a.eq(da, db).unwrap();
+    let distinct = a.not(da_eq_db).unwrap();
+    let r = check_auto(&mut a, &[n_is_0, a_ne_b, distinct], &cfg()).unwrap();
+    assert!(
+        !matches!(r, CheckResult::Unsat),
+        "a≠b allows div(a,0)≠div(b,0): must not be refuted, got {r:?}"
+    );
+}
+
+// ---------------------------------------------------------------------------
 // Hand-built minimal versions (arena front door).
 // ---------------------------------------------------------------------------
 
