@@ -308,7 +308,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 - **2026-07-07 — the NIA arc pays off: qf-nia-cvc5 21→33 (+12 sound rows), 9th
   review's pivot executing.** Live totals in the generated
   [SCOREBOARD](bench-results/SCOREBOARD.md) (never hand-copy): **QF_S 78/134,
-  QF_NRA 27/38, QF_NIA cvc5 33/39 (85%) + iand 3/3 + synthetic 32/32, DISAGREE=0.**
+  QF_NRA cvc5 32/38 (84%), QF_NIA cvc5 33/39 (85%) + iand 3/3 + synthetic 32/32, DISAGREE=0.**
   Strings frontier is theory-coupled-closed (remaining = unsupported
   to_int/replace_re/seq, new machinery). The 9th review's "NIA is NOT
   bounded-exhausted" call was RIGHT: the two landed NIA slices (#40 congruent
@@ -327,9 +327,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `str.from_code` wrong-sat fixed (`6877c365`, decline the unrepresentable code-point
   window instead of folding to `""`). Tracked GAPs remain (RealDiv-0, BV const-0
   seed, seq/FP fuzzes);
-  (4) **#43** last cheap NRA pickups (parser slice 4, algebraic-√2 slice 7, ~+3);
-  (5) **#45** THEN stop ad-hoc NRA slicing → open a funded QF_NRA CAD/nlsat engine
-  ARC (ADR-0058 proposed; first sub-slice: route check_with_nra_dpll cubes into the exact CAD).
+  (4) ✅ **#43** last cheap NRA pickups (`4d74b288`, slices 4+7a+7b: parser Int→Real,
+  algebraic-√2 sat, equality-anchored disjunctive unsat + the DPLL→CAD edge; qf-nra
+  27→32/38 84%, DISAGREE=0);
+  (5) **#45/ADR-0058** — the bounded arithmetic levers are now HARVESTED; a **10th
+  review is re-ranking** the next major thrust (funded NRA CAD/nlsat engine arc for
+  the 6/12 genuine-engine residue vs **#44** regex-emptiness→Lean vs strings breadth
+  vs Track-1 word-level-reduction perf vs closing the #42 fuzz GAPs). NB #43 already
+  landed the DPLL→CAD edge ADR-0058 Phase B was scoped around — ADR-0058 needs a
+  scope/status refresh.
   The 9th review corrected two 8th-review premises: Lean breadth is FAR more
   complete than assumed (8+ fragments incl. integer equality-systems; only the
   regex-emptiness cert **#44** is a cheap Lean pickup left), and the lazy-CEGAR
@@ -417,6 +423,35 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-07 — the last cheap QF_NRA pickups: qf-nra-cvc5 27→32 (84%),
+  equality-anchored decision + the DPLL→CAD edge.**
+  - (`4d74b288`) **#43 — decomposition slices 4 + 7a + 7b.** Slice 4
+    (`parse.rs`): a nullary `(define-fun c () Real …)` with an Int-literal body
+    now coerces Int→Real (was a parse-fail decline) → `parser__real-numerals`
+    sat. Slice 7a (`nra_real_root.rs`): `nl__approx-sqrt` unknown→**sat** with the
+    algebraic √2 witness — the CAD-entry coefficient path moved off the i128
+    `MAX_ABS_COEFF=2^40` guard onto the bignum algebraic core (`poly.rs`
+    `rat_to_int_poly_wide`: BigInt-intermediate denominator clearing so a 10²⁸
+    denominator no longer overflows `num×lcm` even though the result fits i128).
+    Slice 7b (LANDED, not deferred to the ADR-0058 arc): `nl__approx-sqrt-unsat`
+    unknown→**unsat** — the DPLL-cube→exact-CAD edge already existed in
+    `dpll_t.rs`; the missing pieces were recognizing the `x²≤2 ∧ x²≥2` pinning
+    pair as an equality anchor + the wide clearing. **Mechanism (sound):** an
+    equality atom `p(x)=0` bounds the witness set to the roots of that
+    small-coefficient `p`; isolate ONLY those roots (exact Sturm) and sign-test
+    ALL atoms — including the big-coefficient inequalities — via exact bignum
+    `RealAlgebraic::sign_at`. sat = ground-evaluator/`sign_at` replay of the exact
+    witness; unsat = complete enumeration of the anchor's roots; every clearing is
+    `checked_*` → Unknown on overflow, never a wrong verdict; the anchored path
+    only fires as a fallback after the guarded collector declines and returns None
+    for any multi-var/structural shape. Independently re-validated: 4 anchored
+    tests + 34/34 nra suite, progress_frontier 8/8 (no nra_degree regression),
+    BOTH nra+nia differential fuzzes DISAGREE=0 (extended with tight/giant-rational
+    single-var anchored seeds up to 10²⁸), `--workspace --lib` 18/18. qf-nra-cvc5
+    27→32 (PAR-2 5.421→3.169), DISAGREE=0, model_replay_failures=0. **The bounded
+    arithmetic levers (div-0, iand, pow2, √2) are now largely harvested; the
+    genuine-engine NRA residue (6/12: Boolean-CAD multivar, MetiTarski, deg-8/10)
+    is the ADR-0058 arc.**
 - **2026-07-07 — the partial-operator Hard Rule made ENFORCEABLE + a third
   soundness bug closed (`str.from_code`).**
   - (`7ce23583`) **#42 — underspecified-operator fuzz-coverage audit.** Turned
