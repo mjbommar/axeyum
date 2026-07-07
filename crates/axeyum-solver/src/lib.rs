@@ -91,6 +91,7 @@ mod lra_online;
 mod lra_theory;
 mod maxsat;
 mod mbp;
+mod mbqi_model_finder;
 mod model;
 mod nia_linearize;
 mod nia_square;

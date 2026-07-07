@@ -4487,6 +4487,19 @@ pub fn prove_unsat_by_mbqi(
             // `unsat` (sound — instances are implied) or `unknown` transfers.
             return Ok(result);
         };
+        // MBQI-as-model-finder (P2.6 T2.6.5): before trying to *refute* the
+        // candidate, test whether it is already a **genuine** model of every
+        // universal. For the almost-uninterpreted fragment (bound var Int/Real
+        // occurring only as a direct UF argument) this is an exhaustive finite
+        // check over the model's finite UF tables + defaults, so a `true`
+        // verdict certifies `model` satisfies `∀x. body` over the whole infinite
+        // domain — a real, replay-checked `sat`. Strictly additive: it only ever
+        // turns this loop's `unknown` into `sat`; a decline (`false`) leaves the
+        // refutation logic below byte-identical, so the `unsat`/`unknown`
+        // directions are unchanged.
+        if crate::mbqi_model_finder::all_universals_genuine(arena, &universals, &model) {
+            return Ok(CheckResult::Sat(model));
+        }
         let assignment = model.to_assignment();
         // Candidate instantiation values: the distinct values the model assigns,
         // grouped by sort, plus 0/1 defaults for arithmetic robustness.
