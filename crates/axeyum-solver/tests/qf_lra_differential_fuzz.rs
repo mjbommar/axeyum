@@ -117,13 +117,30 @@ impl Cmp {
     }
 }
 
-/// A linear atom: `Σ coeff_i · x_i + constant ⋈ 0`, optionally negated.
+/// A divisor for the optional `RealDiv` wrap on an atom's LHS (GAP-R1). SMT-LIB
+/// `/` by `0` is **UNDERSPEC** — any total (but functionally-consistent) value —
+/// so a stray fold that pins it could wrongly refute a formula that is `Sat`
+/// only under a particular `x/0` value (the `a946f925` shape, `RealDiv` analog).
+/// The generator deliberately emits the **constant-`0`** divisor (a separate
+/// fold branch from a variable divisor) and a variable that another atom can pin
+/// to `0` (the NRA `r·y = x` purification path).
+#[derive(Clone, Copy)]
+enum Divisor {
+    /// Divide by a literal constant — including `0` (the degenerate case).
+    Const(i64),
+    /// Divide by `var[i]`, which another atom may constrain to `0`.
+    Var(usize),
+}
+
+/// A linear atom: `(Σ coeff_i · x_i + constant) ⋈ 0`, optionally divided by a
+/// `Divisor` first (`(poly / d) ⋈ 0`), optionally negated.
 #[derive(Clone)]
 struct LinAtom {
     terms: Vec<(i64, usize)>,
     constant: i64,
     cmp: Cmp,
     neg: bool,
+    divisor: Option<Divisor>,
 }
 
 /// A generated instance: linear atoms folded into a Boolean formula by `ops`
@@ -146,11 +163,29 @@ impl Instance {
             for _ in 0..nterms {
                 terms.push((rng.in_range(-3, 3), rng.below(num_vars as u64)));
             }
+            // ~1/4 of atoms wrap the LHS in a `RealDiv` (GAP-R1). The divisor is
+            // biased toward the degenerate shapes: a constant (often `0`), or a
+            // variable another atom can pin to `0`. A constant nonzero divisor
+            // keeps the atom linear (LRA scaling); `0` and variable divisors are
+            // the underspecified / purification axes.
+            let divisor = if rng.below(4) == 0 {
+                Some(match rng.below(3) {
+                    // Constant `0` — the deliberate degenerate `(poly / 0)` case.
+                    0 => Divisor::Const(0),
+                    // Small nonzero constant divisor (stays linear).
+                    1 => Divisor::Const(rng.in_range(-3, 3) | 1),
+                    // Variable divisor — pinnable to `0` by another atom.
+                    _ => Divisor::Var(rng.below(num_vars as u64)),
+                })
+            } else {
+                None
+            };
             atoms.push(LinAtom {
                 terms,
                 constant: rng.in_range(-3, 3),
                 cmp: Cmp::pick(rng),
                 neg: rng.flip(),
+                divisor,
             });
         }
         let ops = (0..num_atoms - 1).map(|_| rng.flip()).collect();
@@ -183,7 +218,14 @@ impl Instance {
                     poly = Some(poly.map_or(term, |acc| a.real_add(acc, term).unwrap()));
                 }
                 let c = a.real_const(Rational::integer(i128::from(atom.constant)));
-                let lhs = poly.map_or(c, |acc| a.real_add(acc, c).unwrap());
+                let mut lhs = poly.map_or(c, |acc| a.real_add(acc, c).unwrap());
+                if let Some(d) = atom.divisor {
+                    let dt = match d {
+                        Divisor::Const(k) => a.real_const(Rational::integer(i128::from(k))),
+                        Divisor::Var(v) => vars[v],
+                    };
+                    lhs = a.real_div(lhs, dt).unwrap();
+                }
                 let b = atom.cmp.build_ir(&mut a, lhs, zero);
                 if atom.neg { a.not(b).unwrap() } else { b }
             })
@@ -217,7 +259,14 @@ impl Instance {
                     poly = Some(poly.map_or(term.clone(), |acc| acc + term));
                 }
                 let c = Real::from_rational(atom.constant, 1);
-                let lhs = poly.map_or(c.clone(), |acc| acc + c);
+                let mut lhs = poly.map_or(c.clone(), |acc| acc + c);
+                if let Some(d) = atom.divisor {
+                    let dt = match d {
+                        Divisor::Const(k) => Real::from_rational(k, 1),
+                        Divisor::Var(v) => vars[v].clone(),
+                    };
+                    lhs /= dt;
+                }
                 let b = atom.cmp.build_z3(&lhs, &zero);
                 if atom.neg { b.not() } else { b }
             })
@@ -244,8 +293,13 @@ impl Instance {
                 .map(|&(c, v)| format!("{c}*{}", names[v]))
                 .collect();
             let neg = if atom.neg { "NOT " } else { "" };
+            let div = match atom.divisor {
+                None => String::new(),
+                Some(Divisor::Const(k)) => format!(" / {k}"),
+                Some(Divisor::Var(v)) => format!(" / {}", names[v]),
+            };
             lines.push(format!(
-                "  atom[{i}]: {neg}({} + {} {} 0)",
+                "  atom[{i}]: {neg}(({} + {}){div} {} 0)",
                 parts.join(" + "),
                 atom.constant,
                 atom.cmp.symbol()
@@ -332,9 +386,216 @@ fn qf_lra_differential_fuzz_disagree_zero() {
     );
     // Sanity: the LRA path must actually decide a substantial share, else the
     // gate is vacuous (e.g. a dispatch regression sending everything to Unknown).
+    // The `RealDiv`-by-variable atoms are nonlinear and legitimately raise the
+    // axeyum-Unknown rate, so the floor is a third (not a half) of the sweep.
     assert!(
-        agree >= INSTANCES / 2,
+        agree >= INSTANCES / 3,
         "expected >= {} agreements, got {agree} (axeyum-unknown {ax_unknown}) — LRA dispatch regression?",
-        INSTANCES / 2
+        INSTANCES / 3
     );
+}
+
+// ---------------------------------------------------------------------------
+// GAP-R1 — explicit `RealDiv`-by-0 degenerate seeds. SMT-LIB `/` by `0` is
+// UNDERSPEC: any total value, but **functionally consistent** (congruent). The
+// `a946f925` RealDiv analog: a formula that is `Sat` only under a particular
+// `x/0` value must NOT be refuted; and two occurrences of the SAME `x/0` must
+// agree (congruence). Adjudicated by `Solver::new()` (no set-logic → Z3's
+// default tactic models `/0` as the congruent uninterpreted value, matching
+// axeyum's `real_div_zero`). Built as raw IR + Z3 (the linear-atom `Instance`
+// form cannot express a bare `(/ x 0) = k`).
+// ---------------------------------------------------------------------------
+
+/// Decide a raw axeyum assertion set (tiny → no worker thread needed).
+fn ax_decide(a: &mut TermArena, assertions: &[TermId]) -> Verdict {
+    match solve(a, assertions, &SolverConfig::default()) {
+        Ok(CheckResult::Sat(_)) => Verdict::Sat,
+        Ok(CheckResult::Unsat) => Verdict::Unsat,
+        Ok(CheckResult::Unknown(_)) | Err(_) => Verdict::Unknown,
+    }
+}
+
+/// Decide a raw Z3 assertion set with the default (no-logic) tactic.
+fn z3_decide_bools(bools: &[Bool]) -> Verdict {
+    let solver = Solver::new();
+    let mut params = Params::new();
+    params.set_u32(
+        "timeout",
+        u32::try_from(Z3_TIMEOUT.as_millis()).unwrap_or(u32::MAX),
+    );
+    solver.set_params(&params);
+    for b in bools {
+        solver.assert(b.clone());
+    }
+    match solver.check() {
+        SatResult::Sat => Verdict::Sat,
+        SatResult::Unsat => Verdict::Unsat,
+        SatResult::Unknown => Verdict::Unknown,
+    }
+}
+
+fn real_k(a: &mut TermArena, k: i64) -> TermId {
+    a.real_const(Rational::integer(i128::from(k)))
+}
+
+/// `(/ x 0) = 5` — the free `x/0` value: SAT on both. axeyum must NOT refute a
+/// formula satisfiable only by choosing a particular `x/0`.
+#[test]
+fn seed_realdiv_const_zero_free_value_is_sat() {
+    let mut a = TermArena::new();
+    let x = {
+        let s = a.declare("x", Sort::Real).unwrap();
+        a.var(s)
+    };
+    let zero = real_k(&mut a, 0);
+    let q = a.real_div(x, zero).unwrap();
+    let five = real_k(&mut a, 5);
+    let eq = a.eq(q, five).unwrap();
+    let ax = ax_decide(&mut a, &[eq]);
+
+    let zx = Real::new_const("x");
+    let zq = zx / Real::from_rational(0, 1);
+    let zeq = zq.eq(Real::from_rational(5, 1));
+    let z3 = z3_decide_bools(&[zeq]);
+
+    assert!(
+        !(matches!(
+            (ax, z3),
+            (Verdict::Unsat, Verdict::Sat) | (Verdict::Sat, Verdict::Unsat)
+        )),
+        "(/ x 0) = 5: axeyum={ax:?}, Z3={z3:?} — RealDiv-by-0 must be a free value, not refuted"
+    );
+}
+
+/// `(/ x 0) = 5 ∧ (/ x 0) = 6` — the SAME `x/0` term twice: congruence forbids
+/// two values, so UNSAT on both. (A model that let `x/0` be both 5 and 6 would
+/// be a wrong-SAT.)
+#[test]
+fn seed_realdiv_const_zero_congruence_is_unsat() {
+    let mut a = TermArena::new();
+    let x = {
+        let s = a.declare("x", Sort::Real).unwrap();
+        a.var(s)
+    };
+    let zero = real_k(&mut a, 0);
+    let q = a.real_div(x, zero).unwrap();
+    let five = real_k(&mut a, 5);
+    let six = real_k(&mut a, 6);
+    let e5 = a.eq(q, five).unwrap();
+    let e6 = a.eq(q, six).unwrap();
+    let ax = ax_decide(&mut a, &[e5, e6]);
+
+    let zx = Real::new_const("x");
+    let zq = zx / Real::from_rational(0, 1);
+    let z3 = z3_decide_bools(&[
+        zq.eq(Real::from_rational(5, 1)),
+        zq.eq(Real::from_rational(6, 1)),
+    ]);
+
+    assert!(
+        !(matches!(
+            (ax, z3),
+            (Verdict::Unsat, Verdict::Sat) | (Verdict::Sat, Verdict::Unsat)
+        )),
+        "(/ x 0)=5 ∧ (/ x 0)=6: axeyum={ax:?}, Z3={z3:?} — congruence must forbid two values"
+    );
+}
+
+/// `(/ 0 0) = 7` — `0/0` is likewise a free congruent value: SAT on both.
+#[test]
+fn seed_realdiv_zero_over_zero_is_free() {
+    let mut a = TermArena::new();
+    let z0 = real_k(&mut a, 0);
+    let z0b = real_k(&mut a, 0);
+    let q = a.real_div(z0, z0b).unwrap();
+    let seven = real_k(&mut a, 7);
+    let eq = a.eq(q, seven).unwrap();
+    let ax = ax_decide(&mut a, &[eq]);
+
+    let zq = Real::from_rational(0, 1) / Real::from_rational(0, 1);
+    let z3 = z3_decide_bools(&[zq.eq(Real::from_rational(7, 1))]);
+
+    assert!(
+        !(matches!(
+            (ax, z3),
+            (Verdict::Unsat, Verdict::Sat) | (Verdict::Sat, Verdict::Unsat)
+        )),
+        "(/ 0 0) = 7: axeyum={ax:?}, Z3={z3:?} — 0/0 must be a free value"
+    );
+}
+
+/// Symbolic divisor pinned to `0` — the NRA `r·y = x` purification path. With
+/// `y = 0`, a single `(/ x y) = 5` must stay SAT (free), and a conflicting pair
+/// `(/ x y) = 5 ∧ (/ x y) = 6` must be UNSAT (congruence). Both checked.
+#[test]
+fn seed_realdiv_symbolic_divisor_pinned_zero() {
+    // (a) single constraint under y = 0 → SAT (must not refute the free value).
+    {
+        let mut a = TermArena::new();
+        let x = {
+            let s = a.declare("x", Sort::Real).unwrap();
+            a.var(s)
+        };
+        let y = {
+            let s = a.declare("y", Sort::Real).unwrap();
+            a.var(s)
+        };
+        let zero = real_k(&mut a, 0);
+        let y_is_zero = a.eq(y, zero).unwrap();
+        let q = a.real_div(x, y).unwrap();
+        let five = real_k(&mut a, 5);
+        let eq = a.eq(q, five).unwrap();
+        let ax = ax_decide(&mut a, &[y_is_zero, eq]);
+
+        let zx = Real::new_const("x");
+        let zy = Real::new_const("y");
+        let zq = zx / zy.clone();
+        let z3 = z3_decide_bools(&[
+            zy.eq(Real::from_rational(0, 1)),
+            zq.eq(Real::from_rational(5, 1)),
+        ]);
+        assert!(
+            !(matches!(
+                (ax, z3),
+                (Verdict::Unsat, Verdict::Sat) | (Verdict::Sat, Verdict::Unsat)
+            )),
+            "y=0 ∧ (/ x y)=5: axeyum={ax:?}, Z3={z3:?} — pinned /0 must not be refuted"
+        );
+    }
+    // (b) conflicting pair under y = 0 → UNSAT (congruence).
+    {
+        let mut a = TermArena::new();
+        let x = {
+            let s = a.declare("x", Sort::Real).unwrap();
+            a.var(s)
+        };
+        let y = {
+            let s = a.declare("y", Sort::Real).unwrap();
+            a.var(s)
+        };
+        let zero = real_k(&mut a, 0);
+        let y_is_zero = a.eq(y, zero).unwrap();
+        let q = a.real_div(x, y).unwrap();
+        let five = real_k(&mut a, 5);
+        let six = real_k(&mut a, 6);
+        let e5 = a.eq(q, five).unwrap();
+        let e6 = a.eq(q, six).unwrap();
+        let ax = ax_decide(&mut a, &[y_is_zero, e5, e6]);
+
+        let zx = Real::new_const("x");
+        let zy = Real::new_const("y");
+        let zq = zx / zy.clone();
+        let z3 = z3_decide_bools(&[
+            zy.eq(Real::from_rational(0, 1)),
+            zq.eq(Real::from_rational(5, 1)),
+            zq.eq(Real::from_rational(6, 1)),
+        ]);
+        assert!(
+            !(matches!(
+                (ax, z3),
+                (Verdict::Unsat, Verdict::Sat) | (Verdict::Sat, Verdict::Unsat)
+            )),
+            "y=0 ∧ (/ x y)=5 ∧ (/ x y)=6: axeyum={ax:?}, Z3={z3:?} — congruence must hold"
+        );
+    }
 }

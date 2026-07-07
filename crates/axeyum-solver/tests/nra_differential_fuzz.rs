@@ -691,6 +691,183 @@ fn nra_differential_fuzz_disagree_zero() {
     );
 }
 
+// ---------------------------------------------------------------------------
+// GAP-R1 (NRA) — explicit `RealDiv`-by-0 seeds that route through the NONLINEAR
+// purification path (`eliminate_real_div`, the `r·y = x` fold). The random
+// sweep above already divides by a *variable* pinnable to 0; these pin the exact
+// degenerate shapes — a **constant-`0`** divisor (a separate const-fold branch,
+// the `a946f925` lesson) and a symbolic divisor pinned to 0 — each anchored by a
+// genuinely nonlinear atom so the instance is NRA-dispatched, not LRA. `/0` is
+// UNDERSPEC (free but congruent): a formula sat only under a particular `x/0`
+// must NOT be refuted, and two occurrences of the same `x/0` must agree.
+// ---------------------------------------------------------------------------
+
+fn nra_ax(a: &mut TermArena, assertions: &[TermId]) -> Verdict {
+    match solve(a, assertions, &SolverConfig::default()) {
+        Ok(CheckResult::Sat(_)) => Verdict::Sat,
+        Ok(CheckResult::Unsat) => Verdict::Unsat,
+        Ok(CheckResult::Unknown(_)) | Err(_) => Verdict::Unknown,
+    }
+}
+
+fn nra_z3(bools: &[Bool]) -> Verdict {
+    let solver = Solver::new();
+    let mut params = Params::new();
+    params.set_u32(
+        "timeout",
+        u32::try_from(Z3_TIMEOUT.as_millis()).unwrap_or(u32::MAX),
+    );
+    solver.set_params(&params);
+    for b in bools {
+        solver.assert(b);
+    }
+    match solver.check() {
+        SatResult::Sat => Verdict::Sat,
+        SatResult::Unsat => Verdict::Unsat,
+        SatResult::Unknown => Verdict::Unknown,
+    }
+}
+
+fn not_a_disagreement(ax: Verdict, z3: Verdict) -> bool {
+    !matches!(
+        (ax, z3),
+        (Verdict::Sat, Verdict::Unsat) | (Verdict::Unsat, Verdict::Sat)
+    )
+}
+
+/// Nonlinear anchor + `(/ x 0) = 5`: free `x/0` ⇒ SAT (must not refute); and the
+/// congruent pair `(/ x 0) = 5 ∧ (/ x 0) = 6` ⇒ UNSAT.
+#[test]
+fn seed_nra_realdiv_const_zero_free_and_congruent() {
+    let rk = |a: &mut TermArena, k: i128| a.real_const(Rational::integer(k));
+    // (a) SAT: x·y = 1 (nonlinear) ∧ (/ x 0) = 5.
+    {
+        let mut a = TermArena::new();
+        let xs = a.declare("x", Sort::Real).unwrap();
+        let ys = a.declare("y", Sort::Real).unwrap();
+        let (x, y) = (a.var(xs), a.var(ys));
+        let xy = a.real_mul(x, y).unwrap();
+        let one = rk(&mut a, 1);
+        let anchor = a.eq(xy, one).unwrap();
+        let zero = rk(&mut a, 0);
+        let q = a.real_div(x, zero).unwrap();
+        let five = rk(&mut a, 5);
+        let e5 = a.eq(q, five).unwrap();
+        let ax = nra_ax(&mut a, &[anchor, e5]);
+
+        let zx = Real::new_const("x");
+        let zy = Real::new_const("y");
+        let zq = zx.clone() / Real::from_rational(0, 1);
+        let z3 = nra_z3(&[
+            (zx * zy).eq(Real::from_rational(1, 1)),
+            zq.eq(Real::from_rational(5, 1)),
+        ]);
+        assert!(
+            not_a_disagreement(ax, z3),
+            "x·y=1 ∧ (/ x 0)=5: axeyum={ax:?}, Z3={z3:?} — free /0 must not be refuted"
+        );
+    }
+    // (b) UNSAT: congruence forbids (/ x 0) = 5 ∧ (/ x 0) = 6.
+    {
+        let mut a = TermArena::new();
+        let xs = a.declare("x", Sort::Real).unwrap();
+        let ys = a.declare("y", Sort::Real).unwrap();
+        let (x, y) = (a.var(xs), a.var(ys));
+        let xy = a.real_mul(x, y).unwrap();
+        let one = rk(&mut a, 1);
+        let anchor = a.eq(xy, one).unwrap();
+        let zero = rk(&mut a, 0);
+        let q = a.real_div(x, zero).unwrap();
+        let five = rk(&mut a, 5);
+        let six = rk(&mut a, 6);
+        let e5 = a.eq(q, five).unwrap();
+        let e6 = a.eq(q, six).unwrap();
+        let ax = nra_ax(&mut a, &[anchor, e5, e6]);
+
+        let zx = Real::new_const("x");
+        let zy = Real::new_const("y");
+        let zq = zx.clone() / Real::from_rational(0, 1);
+        let z3 = nra_z3(&[
+            (zx * zy).eq(Real::from_rational(1, 1)),
+            zq.eq(Real::from_rational(5, 1)),
+            zq.eq(Real::from_rational(6, 1)),
+        ]);
+        assert!(
+            not_a_disagreement(ax, z3),
+            "x·y=1 ∧ (/ x 0)=5 ∧ (/ x 0)=6: axeyum={ax:?}, Z3={z3:?} — congruence must hold"
+        );
+    }
+}
+
+/// The `r·y = x` purification path with the divisor pinned to 0: `x² = 2` (an
+/// irrational anchor, genuinely NRA) ∧ `y = 0` ∧ conflicting `(/ x y)` values ⇒
+/// UNSAT (congruence), and the single-constraint form ⇒ SAT (must not refute).
+#[test]
+fn seed_nra_realdiv_symbolic_divisor_pinned_zero() {
+    let rk = |a: &mut TermArena, k: i128| a.real_const(Rational::integer(k));
+    // (a) SAT single constraint.
+    {
+        let mut a = TermArena::new();
+        let xs = a.declare("x", Sort::Real).unwrap();
+        let ys = a.declare("y", Sort::Real).unwrap();
+        let (x, y) = (a.var(xs), a.var(ys));
+        let xx = a.real_mul(x, x).unwrap();
+        let two = rk(&mut a, 2);
+        let anchor = a.eq(xx, two).unwrap();
+        let zero = rk(&mut a, 0);
+        let y0 = a.eq(y, zero).unwrap();
+        let q = a.real_div(x, y).unwrap();
+        let five = rk(&mut a, 5);
+        let e5 = a.eq(q, five).unwrap();
+        let ax = nra_ax(&mut a, &[anchor, y0, e5]);
+
+        let zx = Real::new_const("x");
+        let zy = Real::new_const("y");
+        let zq = zx.clone() / zy.clone();
+        let z3 = nra_z3(&[
+            (zx.clone() * zx).eq(Real::from_rational(2, 1)),
+            zy.eq(Real::from_rational(0, 1)),
+            zq.eq(Real::from_rational(5, 1)),
+        ]);
+        assert!(
+            not_a_disagreement(ax, z3),
+            "x²=2 ∧ y=0 ∧ (/ x y)=5: axeyum={ax:?}, Z3={z3:?} — pinned /0 must not be refuted"
+        );
+    }
+    // (b) UNSAT conflicting pair.
+    {
+        let mut a = TermArena::new();
+        let xs = a.declare("x", Sort::Real).unwrap();
+        let ys = a.declare("y", Sort::Real).unwrap();
+        let (x, y) = (a.var(xs), a.var(ys));
+        let xx = a.real_mul(x, x).unwrap();
+        let two = rk(&mut a, 2);
+        let anchor = a.eq(xx, two).unwrap();
+        let zero = rk(&mut a, 0);
+        let y0 = a.eq(y, zero).unwrap();
+        let q = a.real_div(x, y).unwrap();
+        let five = rk(&mut a, 5);
+        let six = rk(&mut a, 6);
+        let e5 = a.eq(q, five).unwrap();
+        let e6 = a.eq(q, six).unwrap();
+        let ax = nra_ax(&mut a, &[anchor, y0, e5, e6]);
+
+        let zx = Real::new_const("x");
+        let zy = Real::new_const("y");
+        let zq = zx.clone() / zy.clone();
+        let z3 = nra_z3(&[
+            (zx.clone() * zx).eq(Real::from_rational(2, 1)),
+            zy.eq(Real::from_rational(0, 1)),
+            zq.eq(Real::from_rational(5, 1)),
+            zq.eq(Real::from_rational(6, 1)),
+        ]);
+        assert!(
+            not_a_disagreement(ax, z3),
+            "x²=2 ∧ y=0 ∧ (/ x y)=5 ∧ (/ x y)=6: axeyum={ax:?}, Z3={z3:?} — congruence must hold"
+        );
+    }
+}
+
 /// Pretty-print an axeyum model's bindings for the named symbols.
 fn dump_model(syms: &[SymbolId], model: &axeyum_solver::Model) -> String {
     let names = ["x", "y", "z", "w"];

@@ -1,7 +1,8 @@
 # Underspecified / Partial Operator — Fuzz Coverage Checklist
 
 Status: living checklist
-Last updated: 2026-07-07 (task #42, 9th review high-priority soundness item)
+Last updated: 2026-07-07 (task #47, 10th review — FP + RealDiv-0 GAPs closed; a
+new FP signed-zero P0 surfaced, see below)
 
 ## Purpose — make the Hard Rule enforceable
 
@@ -67,7 +68,8 @@ Fuzz files are under `crates/axeyum-solver/tests/`.
 
 | Operator | Degenerate input | Class | Convention (cite) | Fuzz emits degenerate shape | Status |
 |---|---|---|---|---|---|
-| `/` (`RealDiv`) | divisor `0` | UNDERSPEC | model value, default `x/0 = 0` (eval.rs:311,859); NRA purifies `x/y` via `r·y=x` (nra.rs:674) | `qf_lra_differential_fuzz` emits **no** `/`; no fuzz drives a `0` divisor | **GAP-R1** |
+| `/` (`RealDiv`) | divisor `0`, **const** | UNDERSPEC | free congruent value (eval.rs:311,859) — separate const-fold branch | `qf_lra_differential_fuzz` const-`0` divisor seed-class + `seed_realdiv_const_zero_*` | ✓ (#47) |
+| `/` (`RealDiv`) | divisor var pinned `0` | UNDERSPEC | NRA purifies `x/y` via `r·y=x` (`eliminate_real_div`) | `nra_differential_fuzz` var divisor + `seed_nra_realdiv_symbolic_divisor_pinned_zero`; LRA `seed_realdiv_symbolic_divisor_pinned_zero` | ✓ (#47) |
 
 ### Bit-vector (QF_BV)
 
@@ -138,19 +140,52 @@ through a *separate* folding branch (`string_at_const`, `string_from_int_const`)
 FP arithmetic ops are **not** IR `Op` variants (only `FpFromBits` is); they are
 built in `axeyum-fp` and bit-blast. The IEEE corners (`fp.div`-by-0 = ±∞,
 `fp.sqrt` of `<0` = NaN, `fp.rem`-by-0 = NaN) are TOTAL-BY-DEF; the underspecified
-ones are the genuine risk axis. **No FP differential fuzz exists** (there is a
-`fpa2bv_faithfulness` unit test, not a fuzz).
+ones (`fp.min`/`fp.max` opposite-sign-zero sign) are the genuine risk axis. The
+differential fuzz is `fp_differential_fuzz` (SMT-LIB text vs the system Z3 binary
+`4.13.3`'s full `FloatingPoint` theory), with explicit `seed_*` degenerate
+witnesses. It found a **P0** (see below).
 
 | Operator | Degenerate input | Class | Convention (cite) | Fuzz emits degenerate shape | Status |
 |---|---|---|---|---|---|
-| `fp.div` | `0/0`,`∞/∞`,`x/0` | TOTAL-BY-DEF | NaN / ±∞ (lib.rs:1267) | none | **GAP-F1** |
-| `fp.sqrt` | `x<0` / NaN | TOTAL-BY-DEF | NaN (lib.rs:982) | none | GAP-F1 |
-| `fp.rem` | `y=0` / `x=∞` | TOTAL-BY-DEF | NaN (lib.rs:1751) | none | GAP-F1 |
-| `fp.min`/`fp.max` | opposite-sign zeros `+0`/`-0` | **UNDERSPEC** | fresh free sign bit (lib.rs:3286) | none | **GAP-F1 (high)** |
-| `fp.to_ubv`/`to_sbv` | NaN/∞/OOB/neg | UNDERSPEC → DECLINES | `None` / fresh BV (lib.rs:2886,3041) | none | GAP-F1 |
-| `fp.to_real` | NaN/∞ | UNDERSPEC → DECLINES | `None` (lib.rs:2823) | none | GAP-F1 |
+| `fp.div` | `0/0`,`∞/∞`,`x/0` | TOTAL-BY-DEF | NaN / ±∞ (lib.rs:1267) | `fp_differential_fuzz` (div-by-`±0` seed bias) + `seed_div_by_zero_infinities`, `seed_div_zero_over_zero_and_inf_over_inf_is_nan` | ✓ (#47) |
+| `fp.sqrt` | `x<0` / NaN | TOTAL-BY-DEF | NaN (lib.rs:982) | `seed_sqrt_negative_is_nan` (+ sweep) | ✓ (#47) |
+| `fp.rem` | `y=0` / `x=∞` | TOTAL-BY-DEF | NaN (lib.rs:1751) | `seed_rem_zero_divisor_is_nan` (+ sweep) | ✓ (#47) |
+| `fp.min`/`fp.max` | opposite-sign zeros `+0`/`-0` | **UNDERSPEC** | fresh free sign bit (lib.rs:3286) | `seed_min/max_opposite_sign_zero_free_both_ways` (observed via `1/min(±0)`∈{±oo}; BOTH signs SAT, no wrong-unsat) | ✓ (#47) |
+| `fp.isNegative`/`fp.isPositive` | signed zeros `-0`/`+0` | edge | **WRONG** — folds `-0`/`+0` to neither-sign | `p0_signed_zero_sign_predicate_repro` (`#[ignore]`, failing) | **P0 / GAP-F2** |
+| `fp.to_ubv`/`to_sbv` | NaN/∞/OOB/neg | UNDERSPEC → DECLINES | `None` / fresh BV (lib.rs:2886,3041) | `seed_fp_to_int_real_out_of_domain_is_free` | ✓ (#47) |
+| `fp.to_real` | NaN/∞ | UNDERSPEC → DECLINES | `None` (lib.rs:2823) | `seed_fp_to_int_real_out_of_domain_is_free` (axeyum declines → sound skip) | ✓ (#47) |
 
-## P0 finding (this audit)
+## P0 finding (task #47) — FP signed-zero sign predicates
+
+**GAP-F2 / P0 — `fp.isNegative(-0)` and `fp.isPositive(+0)` are wrong verdicts.**
+The SMT-LIB `FloatingPoint` theory (confirmed against **both** Z3 4.13.3 and
+cvc5) makes the sign bit decisive for these predicates: `-0` **is** negative and
+`+0` **is** positive. axeyum instead treats *both* signed zeros as neither
+positive nor negative (`is_negative(-0) = false`, `is_positive(+0) = false` — the
+convention is even encoded in `crates/axeyum-solver/tests/fp.rs::sign_predicates`).
+End-to-end through `solve_smtlib` this is a **wrong-UNSAT** (the worst class) on
+the affirmative forms and a wrong-SAT on their negations:
+
+| script (`QF_FP`) | axeyum | Z3 / cvc5 |
+|---|---|---|
+| `(assert (fp.isNegative (_ -zero 8 24)))`       | **unsat** | sat   |
+| `(assert (not (fp.isNegative (_ -zero 8 24))))` | **sat**   | unsat |
+| `(assert (fp.isPositive (_ +zero 8 24)))`       | **unsat** | sat   |
+| `(assert (not (fp.isPositive (_ +zero 8 24))))` | **sat**   | unsat |
+
+`fp.isNegative(+0)` and `fp.isPositive(-0)` are correct (both false), so only the
+same-sign-as-the-zero pairing is wrong. Reproducer (failing, `#[ignore]`d):
+`crates/axeyum-solver/tests/fp_differential_fuzz.rs::p0_signed_zero_sign_predicate_repro`.
+The random FP sweep holds `fp.isNegative`/`fp.isPositive` out of its classifier
+menu until this is fixed (they would keep it red and mask the otherwise-clean FP
+surface); everything else is fuzzed `DISAGREE=0` (598/598 jointly decided, both
+verdicts). **Fix (an `axeyum-fp` semantics change, out of scope for this
+fuzz-closure slice):** `is_negative(x) = sign_bit(x) ∧ ¬isNaN(x)`,
+`is_positive(x) = ¬sign_bit(x) ∧ ¬isNaN(x)` (so `±0` are covered), then flip the
+`fp.rs::sign_predicates` expectations and re-run FP + carcara + fpa2bv gates.
+Report, do not paper over.
+
+## P0 finding (task #42) — string `str.from_code`
 
 **GAP-S1 / P0 — `str.from_code` of a code point in `128..=255` is a wrong-sat.**
 axeyum's byte string model represents characters as bytes `0..=255`, and
@@ -176,18 +211,29 @@ this fuzz-coverage slice):** widen the sound byte range in `string_from_code` to
 
 ## Tracked gaps (documented > silent blind spot)
 
-- **GAP-R1** — `RealDiv`-by-0 unfuzzed: `qf_lra_differential_fuzz` emits no `/`.
-  UNDERSPEC (model value / default 0); NRA purifies via `r·y=x`. Add a `/`
-  seed-class that forces a `0` divisor (LRA fold path + NRA purification path).
+- ~~**GAP-R1**~~ — **CLOSED (#47)**. `qf_lra_differential_fuzz` now emits a `/`
+  seed-class biased to a constant-`0` divisor (+ a variable divisor pinnable to
+  0) and explicit `seed_realdiv_*` congruence witnesses; the NRA purification
+  (`r·y=x`) path is covered by the existing variable-divisor sweep plus
+  `seed_nra_realdiv_*`. All `DISAGREE=0` — RealDiv-by-0 is a sound free congruent
+  value on both the LRA and NRA routes.
+- **GAP-F2** — **P0, open** (see the FP P0 finding above): `fp.isNegative(-0)` /
+  `fp.isPositive(+0)` disagree with SMT-LIB/Z3/cvc5 (a wrong-unsat). Held out of
+  the FP random generator; pinned by an `#[ignore]`d repro. Needs a dedicated
+  `axeyum-fp` semantics fix slice.
 - **GAP-BV1** — BV div/rem/shift lack a *deliberate* const-0-divisor /
   const-over-shift seed-class and don't force `BV_CONST_FOLD` on `bvudiv <c> <0>`.
   Low-risk (total-by-def, oracle-shared, replay-checked).
 - **GAP-Q1** — no seq differential fuzz emits `seq.nth` (UNDERSPEC OOB — the
   high-value one), `seq.extract`, or `seq.at`. A focused probe shows axeyum ≡ Z3
   on `seq.nth` OOB, but the axis is untested at scale.
-- **GAP-F1** — no FP differential fuzz at all; the degenerate IEEE corners and
-  especially the UNDERSPEC `fp.min/max` opposite-sign-zero free sign are
-  untested differentially.
+- ~~**GAP-F1**~~ — **CLOSED (#47)**. `fp_differential_fuzz` (SMT-LIB text vs the
+  system Z3 binary) now fuzzes the FP fragment with explicit degenerate seeds:
+  `fp.div`/`fp.rem`/`fp.sqrt` edges, NaN/±∞ propagation, and the UNDERSPEC
+  `fp.min`/`fp.max` opposite-sign-zero free sign (observed through `1/min(±0)` ∈
+  {±oo}: BOTH signs SAT, no wrong-unsat). `DISAGREE=0` on 598/598 jointly-decided
+  scripts (both verdicts). The one exception is the signed-zero **sign
+  predicates**, now split out as the **GAP-F2 P0** above.
 
 ## How to extend (for the next partial operator)
 
