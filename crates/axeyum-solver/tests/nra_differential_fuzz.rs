@@ -147,7 +147,12 @@ impl Cmp {
 /// term and pretty-prints for a reproducing dump.
 #[derive(Clone)]
 struct Monomial {
-    coeff: i64,
+    /// Rational coefficient `num / den` (`den > 0`). The ordinary generator sets
+    /// `den = 1` (integer coefficients, unchanged); the *tight-anchored* mode
+    /// (see [`Instance::generate`]) uses large denominators (up to `10^28`) to drive
+    /// the equality-anchored bignum CAD-entry path — the slice-7 axis.
+    num: i128,
+    den: i128,
     factors: Vec<usize>,
 }
 
@@ -184,6 +189,14 @@ impl Instance {
     ///   constant monomial in `-3..=3`;
     /// - comparator uniform over the six.
     fn generate(rng: &mut Lcg) -> Instance {
+        // ~1 in 5 instances is a single-variable **tight-anchored** shape: an
+        // algebraic equality `x² = c` (`c ∈ {2,3,5,6,7}`, an irrational √c witness)
+        // plus strict/loose inequalities whose coefficients carry large denominators
+        // (up to 10^28) — the `approx-sqrt` axis that exercises the equality-anchored
+        // bignum CAD-entry path (slice 7). Z3 adjudicates; DISAGREE must stay 0.
+        if rng.below(5) == 0 {
+            return Instance::generate_tight_anchored(rng);
+        }
         let num_vars = rng.below(3) + 2; // 2..=4
         let num_atoms = rng.below(4) + 1; // 1..=4
         let mut atoms = Vec::with_capacity(num_atoms);
@@ -197,12 +210,17 @@ impl Instance {
                 for _ in 0..degree {
                     factors.push(rng.below(num_vars as u64));
                 }
-                monomials.push(Monomial { coeff, factors });
+                monomials.push(Monomial {
+                    num: i128::from(coeff),
+                    den: 1,
+                    factors,
+                });
             }
             // Optional constant monomial (~half the time).
             if rng.below(2) == 0 {
                 monomials.push(Monomial {
-                    coeff: rng.in_range(-3, 3),
+                    num: i128::from(rng.in_range(-3, 3)),
+                    den: 1,
                     factors: Vec::new(),
                 });
             }
@@ -223,6 +241,67 @@ impl Instance {
         Instance { num_vars, atoms }
     }
 
+    /// A single-variable **tight-anchored** instance (slice-7 axis): an equality
+    /// `x² = c` (irrational √c witness) plus 1..=3 inequalities whose coefficients
+    /// carry large denominators, so the equality-anchored bignum CAD-entry path is
+    /// exercised (isolate `x²−c`, sign-test the big-coefficient atoms at √c). Never
+    /// divides (the anchored path is polynomial). Z3 is the oracle.
+    fn generate_tight_anchored(rng: &mut Lcg) -> Instance {
+        // Candidate denominators: 1 (integer), and powers of ten that trip the i128
+        // `MAX_ABS_COEFF = 2^40 ≈ 1.1×10^12` CAD-entry guard (10^3 does not, 10^13 /
+        // 10^28 do — the latter also exercises the wide bignum-intermediate clearing).
+        const DENS: [i128; 5] = [1, 1_000, 10i128.pow(13), 10i128.pow(20), 10i128.pow(28)];
+        let cs = [2i128, 3, 5, 6, 7];
+        let c = cs[rng.below(cs.len() as u64)];
+
+        let mut atoms = Vec::new();
+        // Equality `x² − c = 0`.
+        atoms.push(Atom {
+            monomials: vec![
+                Monomial {
+                    num: 1,
+                    den: 1,
+                    factors: vec![0, 0],
+                },
+                Monomial {
+                    num: -c,
+                    den: 1,
+                    factors: Vec::new(),
+                },
+            ],
+            cmp: Cmp::Eq,
+            divisor: None,
+        });
+
+        // 1..=3 inequalities `a·x² + b·x + k ⋈ 0` with large-denominator coefficients.
+        let num_ineq = rng.below(3) + 1;
+        for _ in 0..num_ineq {
+            let mono = |rng: &mut Lcg, factors: Vec<usize>| {
+                let den = DENS[rng.below(DENS.len() as u64)];
+                // Numerator near ±den so the coefficient is O(1) (tight around √c),
+                // occasionally larger; kept well within i128.
+                let scale = rng.in_range(-4, 4);
+                let jitter = rng.in_range(-9, 9);
+                Monomial {
+                    num: i128::from(scale) * den + i128::from(jitter),
+                    den,
+                    factors,
+                }
+            };
+            let monomials = vec![
+                mono(rng, vec![0, 0]),
+                mono(rng, vec![0]),
+                mono(rng, Vec::new()),
+            ];
+            atoms.push(Atom {
+                monomials,
+                cmp: Cmp::pick(rng),
+                divisor: None,
+            });
+        }
+        Instance { num_vars: 1, atoms }
+    }
+
     /// Materialize the instance as IR assertions over a fresh arena, returning
     /// the arena, the per-variable symbol ids, and the assertion term ids.
     fn build(&self) -> (TermArena, Vec<SymbolId>, Vec<TermId>) {
@@ -240,7 +319,7 @@ impl Instance {
             let mut poly: Option<TermId> = None;
             for m in &atom.monomials {
                 // coeff * (factor product)
-                let coeff_t = a.real_const(Rational::integer(i128::from(m.coeff)));
+                let coeff_t = a.real_const(Rational::checked_new(m.num, m.den).unwrap());
                 let mut term = coeff_t;
                 for &f in &m.factors {
                     term = a.real_mul(term, vars[f]).unwrap();
@@ -277,7 +356,10 @@ impl Instance {
                 // Sum the monomials.
                 let mut poly: Option<Real> = None;
                 for m in &atom.monomials {
-                    let mut term = Real::from_rational(m.coeff, 1);
+                    // Arbitrary-precision exact rational via decimal strings, so the
+                    // 10^28-denominator tight coefficients reach Z3 without loss.
+                    let mut term =
+                        Real::from_rational_str(&m.num.to_string(), &m.den.to_string()).unwrap();
                     for &f in &m.factors {
                         term *= vars[f].clone();
                     }
@@ -311,7 +393,11 @@ impl Instance {
                 .monomials
                 .iter()
                 .map(|m| {
-                    let mut s = m.coeff.to_string();
+                    let mut s = if m.den == 1 {
+                        m.num.to_string()
+                    } else {
+                        format!("{}/{}", m.num, m.den)
+                    };
                     for &f in &m.factors {
                         s.push('*');
                         s.push_str(names[f]);

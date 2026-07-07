@@ -223,6 +223,84 @@ pub fn rat_to_int_poly(p: &[Rational], max_abs_coeff: i128) -> Option<Vec<i128>>
     Some(out)
 }
 
+/// As [`rat_to_int_poly`] but computes the LCM denominator-clearing in **arbitrary
+/// precision** so a large-denominator coefficient (e.g. a 28-digit decimal) does
+/// not overflow the `i128` intermediate `numerator × lcm`. Only the **result**
+/// coefficients must fit `i128` (and be `< max_abs_coeff`); the intermediate product
+/// is a `BigInt`, exact.
+///
+/// This exists for the equality-anchored NRA fallback, which evaluates such
+/// big-coefficient polynomials' signs at an already-isolated (small-coefficient)
+/// anchor root in bignum (via [`crate::RealAlgebraic::sign_at`]) and never isolates
+/// them directly — so the cleared integer polynomial only ever feeds an exact sign
+/// evaluation, never i128 root isolation. The multiplier is positive, so the real
+/// roots are unchanged.
+///
+/// ```
+/// use axeyum_ir::{Rational, poly::{rat_to_int_poly, rat_to_int_poly_wide}};
+/// // Constant `(2·10^28 + 1) / 10^28` (the `approx-sqrt-unsat` shape). The naive
+/// // clearing computes `num × lcm ≈ 2·10^56`, overflowing i128 → declines. The wide
+/// // (bignum-intermediate) clearing yields the exact i128-fitting `[2·10^28+1, 10^28]`.
+/// let ten28 = 10i128.pow(28);
+/// let big = Rational::checked_new(20_000_000_000_000_000_000_000_000_001, ten28).unwrap();
+/// let p = [big, Rational::integer(1)]; // 1·x + (2·10^28+1)/10^28
+/// assert_eq!(rat_to_int_poly(&p, i128::MAX), None); // intermediate overflows
+/// assert_eq!(
+///     rat_to_int_poly_wide(&p, i128::MAX),
+///     Some(vec![20_000_000_000_000_000_000_000_000_001, ten28]),
+/// );
+/// ```
+#[must_use]
+pub fn rat_to_int_poly_wide(p: &[Rational], max_abs_coeff: i128) -> Option<Vec<i128>> {
+    use num_bigint::BigInt;
+
+    /// Euclid gcd of two **non-negative** `BigInt`s.
+    fn big_gcd(a: &BigInt, b: &BigInt) -> BigInt {
+        let mut a = a.clone();
+        let mut b = b.clone();
+        let zero = BigInt::from(0);
+        while b != zero {
+            let t = &a % &b;
+            a = b;
+            b = t;
+        }
+        a
+    }
+
+    if p.is_empty() {
+        return None;
+    }
+    // LCM of the (positive) denominators, in bignum.
+    let mut lcm = BigInt::from(1);
+    for c in p {
+        // `Rational` keeps denominators strictly positive.
+        let d = BigInt::from(c.denominator());
+        let g = big_gcd(&lcm, &d);
+        lcm = &lcm / &g * &d;
+    }
+    let zero = BigInt::from(0);
+    let mut out = Vec::with_capacity(p.len());
+    for c in p {
+        let num = BigInt::from(c.numerator());
+        let den = BigInt::from(c.denominator());
+        let scaled = &num * &lcm; // exact bignum — den | lcm so this is divisible
+        let rem = &scaled % &den;
+        if rem != zero {
+            return None; // should not happen (den | lcm), but stay safe
+        }
+        let quot = &scaled / &den;
+        let v = i128::try_from(quot).ok()?;
+        if v.checked_abs()? >= max_abs_coeff {
+            return None;
+        }
+        out.push(v);
+    }
+    while out.len() > 1 && out.last().copied() == Some(0) {
+        out.pop();
+    }
+    Some(out)
+}
+
 /// Exact Horner evaluation of a rational polynomial (LSB-first) at `x`. `None` on
 /// overflow.
 #[must_use]

@@ -741,3 +741,134 @@ fn square_only_multivariable_is_not_gated_by_cross_product_bound() {
         "square-only x²+y²+z²+1=0 must stay decidable (unsat), not be gated, got {r:?}"
     );
 }
+
+// --- equality-anchored bignum CAD-entry fallback (P2.5 slice 7, task #43) -------
+//
+// These replicate the QF_NRA `approx-sqrt` regress rows exactly: a single-variable
+// conjunction with the equality `x²=2` (an algebraic √2 witness) plus strict
+// inequalities whose tight decimal coefficients exceed the i128 `MAX_ABS_COEFF`
+// CAD-entry guard. The equality-anchored fallback isolates only the small anchor
+// poly `x²−2` and tests the big-coefficient atoms by exact bignum `sign_at`.
+
+/// `coeff·x` for a decimal rational coefficient `num/den`.
+fn scaled(arena: &mut TermArena, num: i128, den: i128, x: axeyum_ir::TermId) -> axeyum_ir::TermId {
+    let c = arena.real_const(Rational::checked_new(num, den).unwrap());
+    arena.real_mul(c, x).unwrap()
+}
+
+#[test]
+fn anchored_approx_sqrt_is_sat_with_algebraic_witness() {
+    // x²=2 ∧ x>0 ∧ three tight strict inequalities — SAT at x=√2 (algebraic).
+    let mut a = TermArena::new();
+    let x = real(&mut a, "x");
+    let xx = a.real_mul(x, x).unwrap();
+    let two = a.real_const(Rational::integer(2));
+    let eq2 = a.eq(xx, two).unwrap();
+    let zero = a.real_const(Rational::integer(0));
+    let xpos = a.real_gt(x, zero).unwrap();
+
+    // (> (+ (* x x) (* -2.8 x)) -1.9598)
+    let t1 = scaled(&mut a, -28, 10, x);
+    let s1 = a.real_add(xx, t1).unwrap();
+    let r1 = a.real_const(Rational::checked_new(-19598, 10_000).unwrap());
+    let a1 = a.real_gt(s1, r1).unwrap();
+    // (> (+ (* x x) (* -2.8284271247 x)) -1.9999999999999)   [den 10^13 trips guard]
+    let t2 = scaled(&mut a, -28_284_271_247, 10_000_000_000, x);
+    let s2 = a.real_add(xx, t2).unwrap();
+    let r2 = a.real_const(Rational::checked_new(-19_999_999_999_999, 10_000_000_000_000).unwrap());
+    let a2 = a.real_gt(s2, r2).unwrap();
+    // (> (+ (* x x) (* -2.82842712475 x)) -2.00000001)
+    let t3 = scaled(&mut a, -282_842_712_475, 100_000_000_000, x);
+    let s3 = a.real_add(xx, t3).unwrap();
+    let r3 = a.real_const(Rational::checked_new(-200_000_001, 100_000_000).unwrap());
+    let a3 = a.real_gt(s3, r3).unwrap();
+
+    let assertions = [eq2, xpos, a1, a2, a3];
+    let r = check_with_nra(&mut a, &assertions, &SolverConfig::default()).unwrap();
+    let CheckResult::Sat(model) = r else {
+        panic!("approx-sqrt must be sat via the algebraic √2 witness, got {r:?}");
+    };
+    // Soundness: the witness must replay every original assertion to Bool(true).
+    let asg = model.to_assignment();
+    for &c in &assertions {
+        assert_eq!(
+            eval(&a, c, &asg).unwrap(),
+            Value::Bool(true),
+            "the √2 witness must satisfy every original assertion exactly"
+        );
+    }
+}
+
+#[test]
+fn anchored_approx_sqrt_unsat_via_disjunction_is_unsat() {
+    // x²=2 ∧ x>0 ∧ (A ∨ B ∨ C) where none of A,B,C holds at √2 — UNSAT.
+    // C's constant 2.0000000000000000000000000001 has a 10^28 denominator: the
+    // wide (bignum-intermediate) clearing keeps it exact; the pinning pair
+    // x²≤2 ∧ x²≥2 the DPLL abstractor emits anchors the CAD on x²−2.
+    let mut a = TermArena::new();
+    let x = real(&mut a, "x");
+    let xx = a.real_mul(x, x).unwrap();
+    let two = a.real_const(Rational::integer(2));
+    let eq2 = a.eq(xx, two).unwrap();
+    let zero = a.real_const(Rational::integer(0));
+    let xpos = a.real_gt(x, zero).unwrap();
+
+    // A: (> (+ x² (* -2.8 x)) -1.95)
+    let ta = scaled(&mut a, -28, 10, x);
+    let sa = a.real_add(xx, ta).unwrap();
+    let ra = a.real_const(Rational::checked_new(-195, 100).unwrap());
+    let da = a.real_gt(sa, ra).unwrap();
+    // B: (> (+ x² (* -2.8284271247 x)) -1.999999)
+    let tb = scaled(&mut a, -28_284_271_247, 10_000_000_000, x);
+    let sb = a.real_add(xx, tb).unwrap();
+    let rb = a.real_const(Rational::checked_new(-1_999_999, 1_000_000).unwrap());
+    let db = a.real_gt(sb, rb).unwrap();
+    // C: (> (+ x² (* -2.82842712475 x)) -2.0000000000000000000000000001)
+    let tc = scaled(&mut a, -282_842_712_475, 100_000_000_000, x);
+    let sc = a.real_add(xx, tc).unwrap();
+    let rc = a.real_const(
+        Rational::checked_new(
+            -20_000_000_000_000_000_000_000_000_001,
+            10_000_000_000_000_000_000_000_000_000,
+        )
+        .unwrap(),
+    );
+    let dc = a.real_gt(sc, rc).unwrap();
+
+    let disj = {
+        let ab = a.or(da, db).unwrap();
+        a.or(ab, dc).unwrap()
+    };
+    let r = check_with_nra(&mut a, &[eq2, xpos, disj], &SolverConfig::default()).unwrap();
+    assert!(
+        matches!(r, CheckResult::Unsat),
+        "approx-sqrt-unsat must be unsat (no disjunct holds at √2), got {r:?}"
+    );
+}
+
+#[test]
+fn anchored_equality_pins_out_of_range_inequality_is_unsat() {
+    // x²=2 ∧ x>0 ∧ x² − 2.8284271247·x + 1.95 > 0 is UNSAT: the only candidate is
+    // x=√2, at which 2 − 2.8284271247·√2 + 1.95 < 0. Exercises the anchored
+    // Unsat return on a flat conjunction (no disjunction), with a guard-tripping
+    // coefficient (den 10^13 on the constant).
+    let mut a = TermArena::new();
+    let x = real(&mut a, "x");
+    let xx = a.real_mul(x, x).unwrap();
+    let two = a.real_const(Rational::integer(2));
+    let eq2 = a.eq(xx, two).unwrap();
+    let zero = a.real_const(Rational::integer(0));
+    let xpos = a.real_gt(x, zero).unwrap();
+    let t = scaled(&mut a, -28_284_271_247, 10_000_000_000, x);
+    let s = a.real_add(xx, t).unwrap();
+    // + 1.9500000000001 (den 10^13 → cleared leading > 2^40, trips the guard)
+    let cst = a.real_const(Rational::checked_new(19_500_000_000_001, 10_000_000_000_000).unwrap());
+    let lhs = a.real_add(s, cst).unwrap();
+    let gt0 = a.real_gt(lhs, zero).unwrap();
+
+    let r = check_with_nra(&mut a, &[eq2, xpos, gt0], &SolverConfig::default()).unwrap();
+    assert!(
+        matches!(r, CheckResult::Unsat),
+        "the only candidate √2 fails the inequality ⇒ unsat, got {r:?}"
+    );
+}

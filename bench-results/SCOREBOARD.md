@@ -15,7 +15,7 @@ A single-glance, honest view of where the pure-Rust axeyum solver stands against
 ## Headline
 
 - **35 division baselines** measured vs z3 4.13.3, spanning **24 logic fragments** (BV, LIA, QF_ABV, QF_ALIA, QF_AUFBV, QF_AUFLIA, QF_AX, QF_BV, QF_BVFP, QF_DT, QF_FF, QF_FP, QF_LIA, QF_LRA, QF_NIA, QF_NRA, QF_S, QF_SEQ, QF_SLIA, QF_UF, QF_UFBV, QF_UFFF, QF_UFLIA, UF).
-- **DISAGREE = 0 across all baselines** — zero wrong verdicts over 656 oracle-compared instances (992 files total, 722 decided).
+- **DISAGREE = 0 across all baselines** — zero wrong verdicts over 661 oracle-compared instances (992 files total, 727 decided).
 - Decide-rate ranges **0%–100%** across divisions — that spread *is* the capability frontier; DISAGREE = 0 is the soundness floor that holds everywhere.
 
 ## Divisions vs Z3
@@ -44,7 +44,7 @@ Sorted by logic, then by descending decide-rate. Every committed `*solver-vs-z3*
 | QF_NIA | `qf-nia-synthetic-graduated` | 32 | 32 | 100% | 0 | 0 | 32 | 0 | z3-binary | 6.772 |
 | QF_NIA | `qf-nia-cvc5-regress-clean` | 39 | 33 | 85% | 5 | 1 | 23 | 0 | z3-binary | 2.730 |
 | QF_NRA | `qf-nra-synthetic-graduated` | 33 | 30 | 91% | 3 | 0 | 30 | 0 | z3-binary | 5.455 |
-| QF_NRA | `qf-nra-cvc5-regress-clean` | 38 | 27 | 71% | 10 | 1 | 27 | 0 | z3-binary | 5.421 |
+| QF_NRA | `qf-nra-cvc5-regress-clean` | 38 | 32 | 84% | 6 | 0 | 32 | 0 | z3-binary | 3.169 |
 | QF_S | `qf-s-cvc5-regress-clean` | 134 | 78 | 58% | 6 | 50 | 74 | 0 | z3-library+binary | 1.442 |
 | QF_SEQ | `qf-seq-cvc5-regress-clean` | 33 | 26 | 79% | 6 | 1 | 15 | 0 | z3-library+binary | 3.752 |
 | QF_SLIA | `qf-slia-cvc5-regress-clean` | 50 | 18 | 36% | 4 | 28 | 16 | 0 | z3-library+binary | 3.650 |
@@ -60,7 +60,7 @@ Sorted by logic, then by descending decide-rate. Every committed `*solver-vs-z3*
 | QF_UFLIA | `qf-uflia-cvc5-regress-clean-overbound-uninterp-sorts` | 2 | 2 | 100% | 0 | 0 | 2 | 0 | z3-binary | 2.294 |
 | UF | `uf-cvc5-regress-clean-quantified` | 5 | 0 | 0% | 0 | 5 | 0 | 0 | :status | 0.000 |
 
-**Totals:** 992 files, 722 decided, 656 oracle-compared, **0 disagreements.**
+**Totals:** 992 files, 727 decided, 661 oracle-compared, **0 disagreements.**
 
 <!-- NOTES:BEGIN (hand-written attribution notes — preserved by the generator) -->
 ### QF_NIA cvc5 row CORRECTED DOWN 2026-07-07 (23→21) — a soundness fix, not a regression
@@ -386,6 +386,28 @@ honest: the witness change itself moves **+1** (`cli__regress1__arith__div.06`,
 sign-refutation + coprime-split CAD landings that had not yet been re-measured
 on this route. `issue9164-2` (nested `1/(a/b)`) still declines: it needs the
 FM → simplex lever in addition to the `/0` witness.
+
+### QF_NRA row re-measured 2026-07-07 (equality-anchored bignum CAD entry + parser slices)
+
+The P2.5 slice-4 + slice-7 landing (equality-anchored bignum CAD-entry path +
+nullary `define-fun` Real-const coercion; task #43) re-measured
+`qf-nra-cvc5-regress-clean` on the 10 s route (`--backend solver --compare-z3
+--jobs 1` for contention-free timing): **27 → 32 decided (71% → 84%),
+PAR-2 5.421 → 3.169, DISAGREE=0, model_replay_failures=0.** Attribution is honest:
+**+3 are this landing** — `parser__real-numerals` (`(define-fun x () Real 0)` +
+chained `(<= -1 x 3)`, `unsupported` → `sat`), `nl__approx-sqrt` (`x²=2` algebraic
+√2 witness through three tight strict inequalities, `unknown` → `sat`), and
+`nl__approx-sqrt-unsat` (the same √2 anchor under a top-level `or` of a
+28-digit-rational disjunction, decided through the existing DPLL cube → exact CAD
+edge once the pinning pair `x²≤2 ∧ x²≥2` anchors and the wide bignum-intermediate
+coefficient clearing keeps the 10²⁸ denominator exact, `unknown` → `unsat`). The
+other **+2** (`nl__very-easy-sat`, `nl__metitarski-3-4`) are **prior landings**
+surfacing on this stale-baseline re-measure — both are multi-variable /
+transcendental shapes the single-variable anchored path does not touch. `jobs 1`
+was used because the `jobs 4` run flakes 1–2 boundary rows at the 10 s cap
+(`nl__ones` is deterministically `unsat`, 5/5 at ~140 ms single-threaded). The
+genuine-engine residue (`factor_agg_s`, the remaining MetiTarski rows,
+`sin-cos`/`nt-lemmas-bad`) stays on the funded CAD/nlsat arc (ADR-0058).
 
 ### String rows re-measured 2026-07-02 (ADR-0052 gate — soundness over decide-rate)
 

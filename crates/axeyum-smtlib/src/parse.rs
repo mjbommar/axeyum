@@ -3160,12 +3160,26 @@ fn parse_define_fun_alias(
         lenabs,
     )?;
     let body_sort = script.arena.sort_of(body);
-    if body_sort != declared_sort {
-        return Err(SmtError::Ir(axeyum_ir::IrError::SortsDiffer(
-            declared_sort,
-            body_sort,
-        )));
-    }
+    // Int→Real coercion for a Real-declared nullary constant whose body is an
+    // integer literal/term: SMT-LIB admits `(define-fun x () Real 0)` (a numeral
+    // denotes a Real in a Reals context). Fold an integer constant to the exact
+    // real constant, or embed a non-constant Int term via the exact `to_real`
+    // operator — denotation-preserving, matching Z3/cvc5. Any other sort mismatch
+    // is still a genuine error.
+    let body =
+        if body_sort != declared_sort && declared_sort == Sort::Real && body_sort == Sort::Int {
+            match *script.arena.node(body) {
+                TermNode::IntConst(value) => script.arena.real_const(Rational::integer(value)),
+                _ => script.arena.int_to_real(body)?,
+            }
+        } else if body_sort != declared_sort {
+            return Err(SmtError::Ir(axeyum_ir::IrError::SortsDiffer(
+                declared_sort,
+                body_sort,
+            )));
+        } else {
+            body
+        };
     aliases.insert(name.to_owned(), body);
     Ok(())
 }

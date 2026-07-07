@@ -194,6 +194,23 @@ fn integer_numerals_coerce_to_real_in_real_context() {
 }
 
 #[test]
+fn nullary_define_fun_real_const_coerces_int_body() {
+    // `(define-fun x () Real 0)` binds a Real constant to the integer literal `0`
+    // (SMT-LIB: a numeral denotes a Real in a Reals context). The chained
+    // `(<= -1 x 3)` desugars to `(and (<= -1 x) (<= x 3))`. Before slice 4 this
+    // raised a `Real vs Int` sort error at the define-fun; now it parses to a
+    // trivially-sat script. (The QF_NRA `parser__real-numerals` regress row.)
+    let text = r"
+        (set-logic QF_NRA)
+        (define-fun x () Real 0)
+        (assert (<= (- 1) x 3))
+        (check-sat)
+    ";
+    let script = parse_script(text).unwrap();
+    assert_eq!(script.assertions.len(), 1);
+}
+
+#[test]
 fn parses_and_round_trips_quantifiers() {
     let text = r"
         (set-logic BV)

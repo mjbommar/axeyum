@@ -199,6 +199,32 @@ impl RatPoly {
     /// obtain an integer polynomial (LSB-first), declining on overflow. The
     /// multiplier is positive, so it preserves every comparison `p ⋈ 0`.
     fn to_integer_poly(&self) -> Option<Vec<i128>> {
+        self.to_integer_poly_bounded(MAX_ABS_COEFF)
+    }
+
+    /// As [`RatPoly::to_integer_poly`] but with the coefficient-magnitude guard
+    /// left at the natural `i128` overflow bound (`max_abs_coeff = i128::MAX`).
+    /// Used by the **equality-anchored** bignum-aware fallback
+    /// ([`decide_anchored`]), which never isolates the roots of a big-coefficient
+    /// atom (only *evaluates* its sign at an already-isolated anchor root, exactly
+    /// and in bignum via [`RealAlgebraic::sign_at`]), so the tight rational
+    /// coefficients of e.g. `approx-sqrt` no longer force a decline. Still returns
+    /// `None` on a genuine `i128` overflow (denominators that do not fit — the
+    /// caller declines soundly).
+    fn to_integer_poly_unguarded(&self) -> Option<Vec<i128>> {
+        // Clear denominators with a **bignum intermediate** so a large-denominator
+        // coefficient (e.g. the 28-digit `approx-sqrt-unsat` rational) does not
+        // overflow the i128 `numerator × lcm` product even when the *result*
+        // coefficients fit i128. Only the result must fit i128 (root isolation is
+        // never run on these polynomials — only exact bignum sign evaluation).
+        axeyum_ir::poly::rat_to_int_poly_wide(&self.coeffs, i128::MAX)
+    }
+
+    /// Shared clearing routine: multiply through by the LCM of all denominators to
+    /// obtain an integer polynomial (LSB-first), declining (`None`) on `i128`
+    /// overflow or a coefficient reaching `max_abs_coeff`. The multiplier is
+    /// positive, so it preserves every comparison `p ⋈ 0`.
+    fn to_integer_poly_bounded(&self, max_abs_coeff: i128) -> Option<Vec<i128>> {
         // LCM of the denominators.
         let mut lcm = 1i128;
         for c in &self.coeffs {
@@ -213,7 +239,7 @@ impl RatPoly {
                 return None; // should not happen (den | lcm), but stay safe
             }
             let v = scaled / c.denominator();
-            if v.checked_abs()? >= MAX_ABS_COEFF {
+            if v.checked_abs()? >= max_abs_coeff {
                 return None;
             }
             out.push(v);
@@ -288,6 +314,18 @@ pub fn decide_real_poly_constraint(
         return Ok(decide_system(arena, assertions, var, &atoms));
     }
 
+    // The single-variable collector declined. If that decline was because an atom's
+    // **tight/large rational coefficient** exceeded the `i128` `MAX_ABS_COEFF` entry
+    // guard (not a structural decline), try the **equality-anchored** fallback: the
+    // conjunction contains an equality `p_eq(x) = 0`, so every model pins `x` to a
+    // root of `p_eq`; isolate only those (small-coefficient) roots and test *all*
+    // atoms — including the big-coefficient ones — by exact `sign_at` (which lifts
+    // to bignum internally). This decides the algebraic-√2 rows (`approx-sqrt`)
+    // without ever isolating a big-coefficient polynomial.
+    if let Some(res) = decide_anchored(arena, assertions) {
+        return Ok(Some(res));
+    }
+
     // The single-variable collector declined (most often because a *second*
     // distinct variable appears). Try the sound, bounded **multivariate
     // decomposition** path (linear-substitution fixpoint + connected components
@@ -295,6 +333,181 @@ pub fn decide_real_poly_constraint(
     // coupled / nonlinear-multivariate / non-polynomial / overflow shape, leaving
     // the query to the NRA layer.
     Ok(decompose_multivariate(arena, assertions))
+}
+
+/// Equality-anchored decision for a single-variable polynomial conjunction whose
+/// tight/large rational coefficients exceed the `i128` `MAX_ABS_COEFF` CAD-entry
+/// guard (e.g. `approx-sqrt`: `x²=2 ∧ x>0 ∧` three 13-digit-coefficient strict
+/// inequalities).
+///
+/// **Soundness / completeness.** The conjunction contains an equality atom
+/// `p_eq(x) = 0`. Any satisfying assignment makes `p_eq(x)` vanish, so the witness
+/// set is a *subset of the real roots of `p_eq`*. We isolate **every** real root of
+/// `p_eq` (exactly, via [`isolate_roots`] — Sturm/grid, exhaustive or `None` →
+/// decline) and test each root against **all** atoms by exact sign evaluation
+/// ([`rational_satisfies_all`] for a rational root, [`algebraic_satisfies_all`]'s
+/// `sign_at` for an algebraic root — the latter evaluates the big-coefficient
+/// polynomials in bignum, exactly). A root that satisfies every atom → **Sat**
+/// (replay-checked against the original assertions / re-checked by `sign_at`); no
+/// root satisfying every atom → **Unsat** (complete: cell interiors between the
+/// roots cannot satisfy the equality). Any unresolved sign / overflow / ordering →
+/// `None` (decline), never a guessed verdict.
+///
+/// This never isolates the roots of a big-coefficient atom, so the `i128`
+/// `MAX_ABS_COEFF` guard on root isolation is not exercised for those atoms; only
+/// the small-coefficient anchor equality is isolated.
+/// Collect the equality-anchor polynomials of a conjunction: every `Cmp::Eq`
+/// atom's polynomial, plus every polynomial `p` that appears as a **pinning pair**
+/// `p ≤ 0 ∧ p ≥ 0` (the two order atoms the DPLL abstractor emits for `a = b`).
+/// Each anchor forces `p(x) = 0`, so a satisfying `x` is a root of it. Comparison
+/// is up to sign (`p` and `−p` denote the same zero-set); the returned polynomials
+/// are as stored (LSB-first, integer-cleared).
+fn anchor_polys(atoms: &[Atom]) -> Vec<Vec<i128>> {
+    let mut out: Vec<Vec<i128>> = Vec::new();
+    // Explicit equalities.
+    for atom in atoms {
+        if matches!(atom.cmp, Cmp::Eq) {
+            out.push(atom.poly.clone());
+        }
+    }
+    // Pinning pairs `p ≤ 0 ∧ p ≥ 0` (non-strict only — a strict pair `p < 0 ∧ p > 0`
+    // is contradictory, not an equality). Match `p` against `p'` up to a positive
+    // scaling / sign flip via [`same_zero_set`].
+    for (i, ai) in atoms.iter().enumerate() {
+        if !matches!(ai.cmp, Cmp::Le) {
+            continue;
+        }
+        for aj in &atoms[i + 1..] {
+            if matches!(aj.cmp, Cmp::Ge) && same_zero_set(&ai.poly, &aj.poly) {
+                out.push(ai.poly.clone());
+            }
+        }
+    }
+    out
+}
+
+/// Whether two integer polynomials define the same real zero set as an
+/// **equality boundary**, i.e. one is a nonzero scalar multiple of the other.
+/// A conservative sufficient test: equal after dividing each by the gcd of its
+/// coefficients and normalizing the leading sign. (`p` and `−p`, or `p` and `2p`,
+/// all match.) `false` on any degree mismatch or the zero polynomial.
+fn same_zero_set(a: &[i128], b: &[i128]) -> bool {
+    match (normalize_int_poly(a), normalize_int_poly(b)) {
+        (Some(na), Some(nb)) => na == nb,
+        _ => false,
+    }
+}
+
+/// Primitive-part normalization of an integer polynomial (LSB-first): divide by the
+/// gcd of the coefficient magnitudes and flip the sign so the leading coefficient is
+/// positive. `None` for the zero polynomial (no genuine leading term).
+fn normalize_int_poly(p: &[i128]) -> Option<Vec<i128>> {
+    // Trim trailing zeros.
+    let mut end = p.len();
+    while end > 0 && p[end - 1] == 0 {
+        end -= 1;
+    }
+    let p = &p[..end];
+    if p.is_empty() {
+        return None;
+    }
+    let mut g: u128 = 0;
+    for &c in p {
+        g = gcd_i128(g, c.unsigned_abs());
+    }
+    if g == 0 {
+        return None;
+    }
+    let g = i128::try_from(g).ok()?;
+    let sign = if *p.last()? < 0 { -1 } else { 1 };
+    let mut out = Vec::with_capacity(p.len());
+    for &c in p {
+        out.push(c.checked_div(g)?.checked_mul(sign)?);
+    }
+    Some(out)
+}
+
+fn decide_anchored(arena: &TermArena, assertions: &[TermId]) -> Option<CheckResult> {
+    // Re-collect the conjunction with the coefficient guard relaxed to the natural
+    // i128 bound. A structural decline (`or`/`=>`, a second variable, a
+    // non-polynomial atom, a genuine i128 overflow) still returns `None`.
+    let mut atoms: Vec<Atom> = Vec::new();
+    let mut var: Option<SymbolId> = None;
+    for &a in assertions {
+        collect_conjuncts_unguarded(arena, a, &mut var, &mut atoms)?;
+    }
+    let var = var?;
+    if atoms.is_empty() {
+        return None;
+    }
+
+    // Only engage when at least one atom genuinely exceeds the i128 CAD-entry guard
+    // — otherwise the ordinary (fully-general) `decide_system` path already applies
+    // and we must not shadow it (it also decides pure-inequality conjunctions this
+    // anchored path deliberately cannot).
+    let exceeds_guard = atoms.iter().any(|a| {
+        a.poly
+            .iter()
+            .any(|&c| c.checked_abs().is_none_or(|v| v >= MAX_ABS_COEFF))
+    });
+    if !exceeds_guard {
+        return None;
+    }
+
+    // Pick an equality anchor whose (small-coefficient) polynomial isolates in i128.
+    // An equality on `p` is either an explicit `Cmp::Eq` atom (the flat-conjunction
+    // shape, e.g. `approx-sqrt`) OR a **pinning pair** `p ≤ 0 ∧ p ≥ 0` on the SAME
+    // oriented polynomial — the shape the `check_with_nra_dpll` abstractor produces
+    // when it rewrites `a = b` into `(a ≤ b) ∧ (a ≥ b)` (e.g. each cube of
+    // `approx-sqrt-unsat`). Both force `p(x) = 0`, so every model pins `x` to a root
+    // of `p`. Prefer a small-coefficient anchor so root isolation never trips the
+    // i128 arithmetic.
+    let anchors = anchor_polys(&atoms);
+    let mut anchor_roots: Option<Vec<Root>> = None;
+    for poly in &anchors {
+        if poly
+            .iter()
+            .any(|&c| c.checked_abs().is_none_or(|v| v >= MAX_ABS_COEFF))
+        {
+            continue; // a big-coefficient equality: do not isolate it here.
+        }
+        if let Some(roots) = isolate_roots(poly) {
+            anchor_roots = Some(roots);
+            break;
+        }
+    }
+    let roots = anchor_roots?;
+
+    // Test every anchor root against every atom (rational sign eval / exact
+    // `sign_at`), then replay a candidate before accepting `Sat`.
+    for root in &roots {
+        match root {
+            Root::Rational(q) => {
+                if rational_satisfies_all(&atoms, *q)? {
+                    match replay_rational(arena, assertions, var, *q) {
+                        Some(true) => {
+                            let mut model = Model::new();
+                            model.set(var, Value::Real(*q));
+                            return Some(CheckResult::Sat(model));
+                        }
+                        _ => return None,
+                    }
+                }
+            }
+            Root::Algebraic(a) => {
+                if algebraic_satisfies_all(&atoms, a)? && algebraic_replay_all(&atoms, a) {
+                    let mut model = Model::new();
+                    model.set(var, Value::RealAlgebraic(a.clone()));
+                    return Some(CheckResult::Sat(model));
+                }
+            }
+        }
+    }
+
+    // No anchor root satisfies the whole conjunction. The equality restricts the
+    // witness set to exactly these roots, so the enumeration is complete ⇒ Unsat.
+    // (Every sign test above resolved; an indeterminate one returned `None`.)
+    Some(CheckResult::Unsat)
 }
 
 /// One atomic comparison `poly(x) ⋈ 0`, with the integer-cleared polynomial.
@@ -834,7 +1047,9 @@ impl Root {
 // field arithmetic). Re-imported here; the few that take the solver's degree /
 // coefficient guards are wrapped so existing call sites pass `MAX_DEGREE` /
 // `MAX_ABS_COEFF` implicitly.
-use axeyum_ir::poly::{RatVec, count_roots_in, lcm_i128, rat_from_int, sylvester_determinant};
+use axeyum_ir::poly::{
+    RatVec, count_roots_in, gcd_i128, lcm_i128, rat_from_int, sylvester_determinant,
+};
 
 /// The squarefree part of `p`, bounded by [`MAX_DEGREE`]
 /// ([`axeyum_ir::poly::squarefree_part`] with the solver's degree guard).
@@ -1349,6 +1564,28 @@ fn collect_conjuncts(
     var: &mut Option<SymbolId>,
     atoms: &mut Vec<Atom>,
 ) -> Option<()> {
+    collect_conjuncts_inner(arena, assertion, var, atoms, true)
+}
+
+/// As [`collect_conjuncts`] but with the `i128` `MAX_ABS_COEFF` coefficient guard
+/// relaxed to the natural overflow bound (see [`RatPoly::to_integer_poly_unguarded`]).
+/// Used by [`decide_anchored`], which never isolates a big-coefficient atom.
+fn collect_conjuncts_unguarded(
+    arena: &TermArena,
+    assertion: TermId,
+    var: &mut Option<SymbolId>,
+    atoms: &mut Vec<Atom>,
+) -> Option<()> {
+    collect_conjuncts_inner(arena, assertion, var, atoms, false)
+}
+
+fn collect_conjuncts_inner(
+    arena: &TermArena,
+    assertion: TermId,
+    var: &mut Option<SymbolId>,
+    atoms: &mut Vec<Atom>,
+    guarded: bool,
+) -> Option<()> {
     // Top-level `and`: flatten its conjuncts. (`BoolNot` is handled below as the
     // `≠` shape, NOT as a general negation, so we don't push De Morgan into it.)
     if let TermNode::App {
@@ -1357,7 +1594,7 @@ fn collect_conjuncts(
     } = arena.node(assertion)
     {
         for &c in args {
-            collect_conjuncts(arena, c, var, atoms)?;
+            collect_conjuncts_inner(arena, c, var, atoms, guarded)?;
         }
         return Some(());
     }
@@ -1374,7 +1611,11 @@ fn collect_conjuncts(
     if rat.degree() == 0 || rat.degree() > MAX_DEGREE {
         return None;
     }
-    let poly = rat.to_integer_poly()?;
+    let poly = if guarded {
+        rat.to_integer_poly()?
+    } else {
+        rat.to_integer_poly_unguarded()?
+    };
     if poly.len() <= 1 {
         return None;
     }
