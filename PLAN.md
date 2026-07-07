@@ -3839,7 +3839,23 @@ lives in its **own** STATUS.md section (no line collision). All changes are
 **new-crate-only + an additive root `Cargo.toml` member line** — zero conflict
 with their IR/solver edits. Build/test via `scripts/mem-run.sh` (64 GB cap).
 
-## The gap to Z3/cvc5, itemized (2026-06-22; amended 2026-06-23)
+## The gap to Z3/cvc5, itemized (2026-06-22; amended 2026-06-23; re-audited 2026-07-07)
+
+> **2026-07-07 re-audit — read
+> [gap-analysis-z3-cvc5-2026-07-07.md](docs/plan/gap-analysis-z3-cvc5-2026-07-07.md)
+> first; it supersedes this section's priority ordering.** Three framing
+> corrections were verified in code: (1) "still eager Ackermann" is stale — the
+> online Nelson–Oppen CDCL(T) route (`cdclt.rs` 1-UIP driver,
+> `combined_theory.rs` interface propagation) is now *first* in `check_auto`
+> with eager Ackermann the fallback; the gap is spine *migration + default-on*,
+> not existence. (2) "no inprocessing" is stale — subsumption/BVE/vivification
+> exist in `axeyum-cnf` but are **default-off** (`cnf_inprocessing`/`cnf_vivify`
+> in `backend.rs`), so Gap-1's first step is a measurement, not a build.
+> (3) The quantifier hole is precisely the **sat direction**: e-matching + MBQI
+> refutation exist (`qinst_egraph.rs`, `auto.rs`), but outside finite domains
+> only `unsat` is reachable — no MBQI model-finding (T2.6.5), which is why
+> quantified LIA/UF rows measure 0%. The 2026-07-07 leverage order is at the
+> end of this section.
 
 A grounded audit against `crates/axeyum-solver/src/capabilities.rs` (the golden
 capability ledger) corrected the framing: **the gap is not breadth — it is depth,
@@ -4003,8 +4019,35 @@ in-tree Lean-grade kernel + universal model replay) — ahead of Z3, competitive
 with cvc5. That is the moat and it exists today; the plan's job is to keep
 *widening* it (Track 3) while closing depth (Track 2) and adding the three engines.
 
-**Next, in leverage order (amended 2026-06-23)** — full rationale in the
-[gap analysis](docs/plan/gap-analysis-z3-cvc5-2026-06-22.md):
+**Next, in leverage order (2026-07-07)** — full rationale in the
+[current gap analysis](docs/plan/gap-analysis-z3-cvc5-2026-07-07.md); every
+step gated on a scoreboard re-measure (decide% moves, DISAGREE stays 0, Lean
+coverage never regresses):
+
+1. **Measure the built perf levers** (Gap 1): enable
+   `cnf_inprocessing`/`cnf_vivify` + the T1.2 reduction passes on the
+   committed p4dfa pulse, re-run PAR-2, split every `unknown` by cause
+   (`EncodingBudget`/`SearchBound`/`LargeCnf`/timeout), compare
+   post-reduction CNF size vs Z3. Flag-flip + measurement before any new
+   engine code; the outcome decides encoding-vs-search for the next dollar.
+2. **Open the quantified sat direction** (Gap 2): MBQI model-finding for the
+   almost-uninterpreted fragment
+   ([P2.6 T2.6.5](docs/plan/track-2-theories/P2.6-quantifiers.md)) — the
+   refutation side exists; sat is structurally unreachable today (quantified
+   LIA/UF rows at 0%). MAM/trigger-inference (T2.6.1/2) follow as throughput.
+3. **Bank the CDCL(T) spine** (Gap 3): the default-dispatch ADR for the
+   built-but-opt-in `CdclT` routes, then port arrays-lazy
+   ([P2.2](docs/plan/track-2-theories/P2.2-arrays-lazy.md)) onto it — the
+   measured combination tail (QF_AUFBV/AUFLIA, `bug337`/`bug330`) lives here.
+4. **Strings unsupported-fragment machinery** (Gap 4): QF_SLIA (36%) first;
+   census-ranked to_int/replace_re/seq.* + the sliced concat-unsat follow-ups
+   ([P2.7](docs/plan/track-2-theories/P2.7-strings.md)).
+5. **Dominance denominator** (Gap 7): `audit_dominance` over the 12 unaudited
+   rows; trusted-reduction ledger → 0 (Fpa2Bv is the load-bearing hole).
+6. **NIA residue, then the funded ADR-0058 NRA arc** (Gap 5) — honest
+   `unknown` is acceptable parity on the CAD frontier; last by design.
+
+*(Superseded 2026-06-23 order, kept for history:)*
 1. **Make online combination a real CDCL(T) spine** ([P1.6](docs/plan/track-1-engine/README.md)):
    theory propagation, lazy antecedents, 1-UIP theory learning, relevance, then
    lazy arrays/BV ([P2.2](docs/plan/track-2-theories/P2.2-arrays-lazy.md)/[P2.1](docs/plan/track-2-theories/P2.1-bv-lazy.md)).

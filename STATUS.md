@@ -307,6 +307,22 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-07 — top-down Z3/cvc5 gap re-audit COMMITTED
+  ([gap-analysis-z3-cvc5-2026-07-07.md](docs/plan/gap-analysis-z3-cvc5-2026-07-07.md));
+  PLAN.md's leverage order superseded.** The audit (grounded in the scoreboard
+  + direct code inspection, independently re-verified) corrected three stale
+  premises — online NO CDCL(T) is already the *first* UF+arith route (not
+  eager Ackermann); SAT inprocessing (subsumption/BVE/vivify) is *built,
+  default-off* (so the perf lever is a flag-flip + measurement); and the
+  quantifier hole is precisely the **sat direction** (e-matching/MBQI
+  refutation exist, no model-finding → quantified LIA/UF at 0%). **The
+  standing queue toward 100% Pareto dominance (PLAN.md § leverage order
+  2026-07-07):** (1) measure the built inprocessing+reduction levers on p4dfa
+  w/ unknown-cause split; (2) MBQI model-finding T2.6.5; (3) CdclT
+  default-dispatch ADR + arrays onto the spine; (4) strings unsupported
+  fragment (QF_SLIA first); (5) dominance audits for the 12 unaudited rows +
+  ledger→0 (Fpa2Bv); (6) NIA residue then the ADR-0058 NRA arc. New theory
+  columns stay deferred (P2.10, counted not built).
 - **2026-07-07 — the NIA arc pays off: qf-nia-cvc5 21→33 (+12 sound rows), 9th
   review's pivot executing.** Live totals in the generated
   [SCOREBOARD](bench-results/SCOREBOARD.md) (never hand-copy): **QF_S 78/134,
@@ -425,7 +441,19 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
-- **2026-07-07 — strings decide-rate: `str.in_re` over a symbolic `str.++`
+- **2026-07-07 — Z3/cvc5 gap re-audit: new dated analysis
+  (`docs/plan/gap-analysis-z3-cvc5-2026-07-07.md`) + PLAN.md leverage order
+  superseded.** Grounded in the generated scoreboard (992/727≈73%,
+  DISAGREE=0), the frontier ratchets, and direct code inspection with an
+  independent second read. Three stale premises corrected in PLAN.md's gap
+  section: online NO CDCL(T) is the first UF+arith route (eager Ackermann is
+  the *fallback*); subsumption/BVE/vivification exist but are default-off
+  (`backend.rs` `cnf_inprocessing`/`cnf_vivify`) — the Gap-1 first step is a
+  measurement; the quantifier gap is the sat direction specifically (T2.6.5
+  MBQI model-finding), not instantiation. Added Gap 7 (the dominance
+  denominator): 100% Pareto dominance = decide%→100 per division **and**
+  complete audits on all 35 rows (12 still unaudited) **and** trusted ledger
+  → 0. Docs-only change; no solver code touched.
   routes into the regex-derivative core (#49, `7197da29`). QF_S 78→82.**
   The scout corrected the census (the "str.++ bound-cap" was a mis-diagnosis —
   raising the cap gains ~0 rows; the real gap is the membership fragment
