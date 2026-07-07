@@ -51,8 +51,10 @@ use axeyum_strings::{RefuteOutcome, SearchBudget, refute_word_equations};
 
 use crate::reconstruct::ReconstructError;
 
-/// The rendered theorem name for a word-clash refutation module.
-const WORD_LEAN_THEOREM: &str = "axeyum_word_refutation";
+/// The rendered theorem name for a word-clash refutation module. Matches the
+/// shared `axeyum_refutation` audit name the real-Lean cross-check greps for in
+/// `#print axioms` output (a distinct name silently failed that audit grep).
+const WORD_LEAN_THEOREM: &str = "axeyum_refutation";
 
 /// A generous, deadline-free node budget for the entry refutation gate (the
 /// refutation itself is non-recursive and hard-bounded internally).

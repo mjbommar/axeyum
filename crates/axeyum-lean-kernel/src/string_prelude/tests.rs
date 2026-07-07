@@ -346,3 +346,141 @@ fn bool_true_ne_false(
     let e = k.app(e, bool_true);
     k.app(e, h)
 }
+
+// ---------------------------------------------------------------------------
+// Lexicographic-order builders (`char_eq_fn` / `char_lt_fn` / `lex_cmp_fn`).
+// ---------------------------------------------------------------------------
+
+/// Declare a fresh opaque `Str` constant (a variable tail), returning its term.
+fn opaque_str(k: &mut Kernel, sp: &crate::StringPrelude, tag: &str) -> crate::ExprId {
+    let anon = k.anon();
+    let name = k.name_str(anon, tag);
+    let ty = sp.str_const(k);
+    k.add_declaration(crate::Declaration::Axiom {
+        name,
+        uparams: vec![],
+        ty,
+    })
+    .expect("opaque Str axiom admits");
+    k.const_(name, vec![])
+}
+
+/// A concrete `Str` from alphabet indices, as a flat `cons`-chain.
+fn str_of(k: &mut Kernel, sp: &crate::StringPrelude, idxs: &[usize]) -> crate::ExprId {
+    let mut acc = sp.nil(k);
+    for &i in idxs.iter().rev() {
+        let c = sp.char(k, i);
+        acc = sp.cons(k, c, acc);
+    }
+    acc
+}
+
+#[test]
+fn char_eq_table_iota_folds() {
+    let (mut k, sp) = setup(3);
+    let eq = sp.char_eq_fn(&mut k);
+    let btrue = k.const_(sp.logic.bool_true, vec![]);
+    let bfalse = k.const_(sp.logic.bool_false, vec![]);
+    for i in 0..3 {
+        for j in 0..3 {
+            let a = sp.char(&mut k, i);
+            let b = sp.char(&mut k, j);
+            let app = {
+                let e = k.app(eq, a);
+                k.app(e, b)
+            };
+            let want = if i == j { btrue } else { bfalse };
+            assert!(k.def_eq(app, want), "char_eq c{i} c{j} ↝ {}", i == j);
+        }
+    }
+}
+
+#[test]
+fn char_lt_table_iota_folds() {
+    let (mut k, sp) = setup(4);
+    let lt = sp.char_lt_fn(&mut k);
+    let btrue = k.const_(sp.logic.bool_true, vec![]);
+    let bfalse = k.const_(sp.logic.bool_false, vec![]);
+    for i in 0..4 {
+        for j in 0..4 {
+            let a = sp.char(&mut k, i);
+            let b = sp.char(&mut k, j);
+            let app = {
+                let e = k.app(lt, a);
+                k.app(e, b)
+            };
+            let want = if i < j { btrue } else { bfalse };
+            assert!(k.def_eq(app, want), "char_lt c{i} c{j} ↝ {}", i < j);
+        }
+    }
+}
+
+#[test]
+fn lex_le_iota_reduces_on_concrete_strings() {
+    let (mut k, sp) = setup(4);
+    let le = sp.lex_cmp_fn(&mut k, false);
+    let btrue = k.const_(sp.logic.bool_true, vec![]);
+    let bfalse = k.const_(sp.logic.bool_false, vec![]);
+
+    // First chars differ: [2,..] vs [1,..] ⇒ le false (2 > 1 at pos 0).
+    let a = str_of(&mut k, &sp, &[2, 0]);
+    let b = str_of(&mut k, &sp, &[1, 3]);
+    let app = {
+        let e = k.app(le, a);
+        k.app(e, b)
+    };
+    assert!(k.def_eq(app, bfalse), "le [2,0] [1,3] ↝ false");
+
+    // Equal first char, second decides: [1,2] vs [1,0] ⇒ false (2 > 0 at pos 1).
+    let a = str_of(&mut k, &sp, &[1, 2]);
+    let b = str_of(&mut k, &sp, &[1, 0]);
+    let app = {
+        let e = k.app(le, a);
+        k.app(e, b)
+    };
+    assert!(k.def_eq(app, bfalse), "le [1,2] [1,0] ↝ false");
+
+    // Smaller-left: [0,3] vs [1,0] ⇒ true (0 < 1 at pos 0).
+    let a = str_of(&mut k, &sp, &[0, 3]);
+    let b = str_of(&mut k, &sp, &[1, 0]);
+    let app = {
+        let e = k.app(le, a);
+        k.app(e, b)
+    };
+    assert!(k.def_eq(app, btrue), "le [0,3] [1,0] ↝ true");
+}
+
+#[test]
+fn lex_lt_iota_reduces_at_clash_ignoring_opaque_tail() {
+    // The load-bearing property for a first-clash refutation: `lt A B` ι-reduces to
+    // `false` when A > B at the first differing DETERMINED position, even though the
+    // tails past that position are opaque `Str` variables (never forced).
+    let (mut k, sp) = setup(3);
+    let lt = sp.lex_cmp_fn(&mut k, true);
+    let bfalse = k.const_(sp.logic.bool_false, vec![]);
+
+    // A = cons c2 (cons c1 tailA),  B = cons c2 (cons c0 tailB): equal at pos0,
+    // clash at pos1 (1 > 0), tails opaque.
+    let tail_a = opaque_str(&mut k, &sp, "tailA");
+    let tail_b = opaque_str(&mut k, &sp, "tailB");
+    let a = {
+        let c1 = sp.char(&mut k, 1);
+        let inner = sp.cons(&mut k, c1, tail_a);
+        let c2 = sp.char(&mut k, 2);
+        sp.cons(&mut k, c2, inner)
+    };
+    let b = {
+        let c0 = sp.char(&mut k, 0);
+        let inner = sp.cons(&mut k, c0, tail_b);
+        let c2 = sp.char(&mut k, 2);
+        sp.cons(&mut k, c2, inner)
+    };
+    let app = {
+        let e = k.app(lt, a);
+        k.app(e, b)
+    };
+    assert!(
+        k.def_eq(app, bfalse),
+        "lt (c2 c1 …) (c2 c0 …) ↝ false regardless of opaque tails"
+    );
+}

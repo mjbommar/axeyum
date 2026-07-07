@@ -22,7 +22,10 @@ use std::time::{Duration, Instant};
 
 use axeyum_ir::{Rational, Sort, TermArena};
 use axeyum_smtlib::parse_script;
-use axeyum_solver::{ProofFragment, prove_unsat_to_lean_module};
+use axeyum_solver::{
+    ProofFragment, prove_unsat_to_lean_module, reconstruct_lex_clash_to_lean_module,
+};
+use axeyum_strings::{LexAtom, LexFormula, LexProblem, Seg};
 
 /// Resolve the `lean` binary: `AXEYUM_LEAN_BIN` if set, otherwise the first
 /// `lean` on `PATH`. Returns `None` (→ skip) if unavailable.
@@ -154,6 +157,7 @@ const FAMILY_BUILDERS: &[FamilyBuilder] = &[
     certified_lia_interpolant_both_integer_certs_checked_by_real_lean,
     certified_uflia_interpolant_both_integer_certs_checked_by_real_lean,
     qf_s_word_clash_refutations_check_in_real_lean,
+    qf_s_lex_clash_refutations_check_in_real_lean,
 ];
 
 /// Collect the Lean modules a builder produces (running its Rust-side structural
@@ -510,6 +514,49 @@ fn qf_s_word_clash_refutations_check_in_real_lean() {
             .expect("word disequality reconstructs");
         assert_eq!(fragment, ProofFragment::WordEquation);
         lean_accepts("qf_s_word_disequality", &source);
+    }
+}
+
+/// P3.7 strings fragment: a lexicographic-order (`str.<=` / `str.<`) first-clash
+/// refutation reconstructed over the free-monoid string prelude. A forced-true lex
+/// atom that is variable-independently false (its first determined differing
+/// position has the left code greater) closes to `False` because the `lex`
+/// comparison ι-computes to `Bool.false` — kernel-checked in real Lean (the
+/// `Char`/`Str`/`Bool` inductives regenerate their recursors, and the nested
+/// `Char.rec`/`Str.rec` order table ι-folds).
+fn qf_s_lex_clash_refutations_check_in_real_lean() {
+    let ch = |c: char| Seg::Lit(c as u32);
+    let vr = |n: &str| Seg::Var(n.to_owned());
+
+    // (a) First-character clash: (str.<= "B"++x "A"++y) — 66 > 65 at pos 0.
+    {
+        let problem = LexProblem {
+            atoms: vec![LexAtom::Lex {
+                left: vec![ch('B'), vr("x")],
+                right: vec![ch('A'), vr("y")],
+                strict: false,
+            }],
+            assertions: vec![LexFormula::Atom(0)],
+        };
+        let source = reconstruct_lex_clash_to_lean_module(&problem)
+            .expect("lex first-char clash reconstructs");
+        lean_accepts("qf_s_lex_first_char_clash", &source);
+    }
+
+    // (b) Second-character clash under a variable tail, strict `<`:
+    //     (str.< "AD"++x "AC"++y) — equal at pos 0, 68 > 67 at pos 1.
+    {
+        let problem = LexProblem {
+            atoms: vec![LexAtom::Lex {
+                left: vec![ch('A'), ch('D'), vr("x")],
+                right: vec![ch('A'), ch('C'), vr("y")],
+                strict: true,
+            }],
+            assertions: vec![LexFormula::Atom(0)],
+        };
+        let source = reconstruct_lex_clash_to_lean_module(&problem)
+            .expect("lex strict second-char clash reconstructs");
+        lean_accepts("qf_s_lex_strict_second_char_clash", &source);
     }
 }
 

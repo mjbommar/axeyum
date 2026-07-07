@@ -78,6 +78,7 @@ mod int_reconstruct;
 mod interpolant;
 mod layers;
 mod lazy_bv;
+mod lex_reconstruct;
 mod lia;
 mod lia_gcd;
 mod lia_interpolant;
@@ -287,6 +288,7 @@ pub use lazy_bv::{
     LazyBvBackend, LazyBvOutcome, check_lazy_bv_abstraction, check_lazy_bv_abstraction_ro,
     solve_lazy_bv_abstraction,
 };
+pub use lex_reconstruct::reconstruct_lex_clash_to_lean_module;
 pub use lia::{DEFAULT_INT_WIDTH, check_with_int_blasting};
 pub use lia_gcd::{
     DiophantineCertificate, Equality, check_diophantine_certificate,

@@ -319,6 +319,177 @@ impl StringPrelude {
         let body = kernel.app(e, c);
         kernel.lam(anon, char_const, body, BinderInfo::Default)
     }
+
+    /// A closed `Char → Char → Bool` **truth table** for a binary predicate
+    /// `f(i, j)` over the alphabet indices: `table (Char.c_i) (Char.c_j)`
+    /// ι-reduces to `Bool.true` iff `f(i, j)` (and `Bool.false` otherwise). Built
+    /// as a nested `Char.rec`: the outer eliminator selects the row `i`, the inner
+    /// one the cell `j`, both folding to a concrete `Bool` constructor — no
+    /// numeric magnitude is ever encoded (the order lives entirely in the
+    /// constructor-index table). Used to build the code-point ordering
+    /// (`char_lt_fn`) and equality (`char_eq_fn`) the lexicographic comparison
+    /// needs.
+    fn char_table_fn(&self, kernel: &mut Kernel, f: impl Fn(usize, usize) -> bool) -> ExprId {
+        let anon = kernel.anon();
+        let char_const = kernel.const_(self.char_ind, vec![]);
+        let bool_const = kernel.const_(self.logic.bool_, vec![]);
+        // Outer motive: `λ _ : Char, Char → Bool`.
+        let char_to_bool = kernel.pi(anon, char_const, bool_const, BinderInfo::Default);
+        let outer_motive = kernel.lam(anon, char_const, char_to_bool, BinderInfo::Default);
+        let outer_rec = kernel.const_(self.char_rec, vec![self.one]);
+        let mut outer = kernel.app(outer_rec, outer_motive);
+        let n = self.char_ctors.len();
+        for i in 0..n {
+            // Row `i`: `λ (b : Char), Char.rec (λ _, Bool) [f(i,0) … f(i,n-1)] b`.
+            let inner_motive = kernel.lam(anon, char_const, bool_const, BinderInfo::Default);
+            let inner_rec = kernel.const_(self.char_rec, vec![self.one]);
+            let mut inner = kernel.app(inner_rec, inner_motive);
+            for j in 0..n {
+                let value = if f(i, j) {
+                    self.logic.bool_true
+                } else {
+                    self.logic.bool_false
+                };
+                let minor = kernel.const_(value, vec![]);
+                inner = kernel.app(inner, minor);
+            }
+            let b = kernel.bvar(0);
+            let inner_body = kernel.app(inner, b);
+            let row = kernel.lam(anon, char_const, inner_body, BinderInfo::Default);
+            outer = kernel.app(outer, row);
+        }
+        let a = kernel.bvar(0);
+        let outer_body = kernel.app(outer, a);
+        kernel.lam(anon, char_const, outer_body, BinderInfo::Default)
+    }
+
+    /// The alphabet **equality** `char_eq : Char → Char → Bool`;
+    /// `char_eq (Char.c_i) (Char.c_j)` ι-reduces to `Bool.true` iff `i == j`.
+    #[must_use]
+    pub fn char_eq_fn(&self, kernel: &mut Kernel) -> ExprId {
+        self.char_table_fn(kernel, |i, j| i == j)
+    }
+
+    /// The alphabet **strict code-point order** `char_lt : Char → Char → Bool`;
+    /// `char_lt (Char.c_i) (Char.c_j)` ι-reduces to `Bool.true` iff `i < j`. The
+    /// alphabet is interned in ascending code-point order, so the constructor
+    /// index order *is* the Unicode code-point order (ADR-0051).
+    #[must_use]
+    pub fn char_lt_fn(&self, kernel: &mut Kernel) -> ExprId {
+        self.char_table_fn(kernel, |i, j| i < j)
+    }
+
+    /// `cond c t e : Bool` — the `Bool` if-then-else via `Bool.rec`
+    /// (`cond Bool.true t e ↝ t`, `cond Bool.false t e ↝ e`).
+    fn bool_cond(&self, kernel: &mut Kernel, c: ExprId, t: ExprId, e: ExprId) -> ExprId {
+        let anon = kernel.anon();
+        let bool_const = kernel.const_(self.logic.bool_, vec![]);
+        let motive = kernel.lam(anon, bool_const, bool_const, BinderInfo::Default);
+        let rec = kernel.const_(self.logic.bool_rec, vec![self.one]);
+        let e0 = kernel.app(rec, motive);
+        let e0 = kernel.app(e0, t); // minor for Bool.true
+        let e0 = kernel.app(e0, e); // minor for Bool.false
+        kernel.app(e0, c)
+    }
+
+    /// The lexicographic comparison `lex : Str → Str → Bool` (`strict = false` for
+    /// `str.<=`, `strict = true` for `str.<`), a closed double `Str.rec` term over
+    /// the free monoid `Str = List Char`:
+    ///
+    /// ```text
+    /// lex nil          u            = if strict then (u ≠ nil) else true
+    /// lex (cons a s')  nil          = false
+    /// lex (cons a s')  (cons b t')  = if char_eq a b then lex s' t' else char_lt a b
+    /// ```
+    ///
+    /// It ι-computes: on two concrete `cons`-prefixes that first differ at a
+    /// determined position `k` (equal code points before `k`), `lex A B` reduces —
+    /// through exactly `k` `char_eq`-true steps — to `char_lt (A[k]) (B[k])`, a
+    /// constant `Bool`, **without forcing any tail past `k`** (so opaque variable
+    /// tails are irrelevant to a first-clash refutation). The `strict`/`≤` variants
+    /// coincide on that differing-position branch (`char_lt a b`); they differ only
+    /// in the `nil` base cases, which such a refutation never reaches.
+    #[must_use]
+    pub fn lex_cmp_fn(&self, kernel: &mut Kernel, strict: bool) -> ExprId {
+        let anon = kernel.anon();
+        let str_const = kernel.const_(self.str_ind, vec![]);
+        let char_const = kernel.const_(self.char_ind, vec![]);
+        let bool_const = kernel.const_(self.logic.bool_, vec![]);
+        let bool_true = kernel.const_(self.logic.bool_true, vec![]);
+        let bool_false = kernel.const_(self.logic.bool_false, vec![]);
+        let char_eq = self.char_eq_fn(kernel);
+        let char_lt = self.char_lt_fn(kernel);
+
+        // Outer motive: `λ _ : Str, Str → Bool`.
+        let str_to_bool = kernel.pi(anon, str_const, bool_const, BinderInfo::Default);
+        let outer_motive = kernel.lam(anon, str_const, str_to_bool, BinderInfo::Default);
+
+        // Outer `nil` minor: `λ (u : Str), <nil-case>`.
+        let outer_nil_minor = if strict {
+            // `lt nil u = (u ≠ nil)`: `Str.rec (λ _, Bool) false (λ _ _ _, true) u`.
+            let inner_motive = kernel.lam(anon, str_const, bool_const, BinderInfo::Default);
+            let inner_rec = kernel.const_(self.str_rec, vec![self.one]);
+            let cons_minor = {
+                let m = kernel.lam(anon, bool_const, bool_true, BinderInfo::Default); // ih
+                let m = kernel.lam(anon, str_const, m, BinderInfo::Default); // tail
+                kernel.lam(anon, char_const, m, BinderInfo::Default) // head
+            };
+            let e0 = kernel.app(inner_rec, inner_motive);
+            let e0 = kernel.app(e0, bool_false); // nil
+            let e0 = kernel.app(e0, cons_minor); // cons
+            let u = kernel.bvar(0);
+            let body = kernel.app(e0, u);
+            kernel.lam(anon, str_const, body, BinderInfo::Default)
+        } else {
+            // `le nil u = true`.
+            kernel.lam(anon, str_const, bool_true, BinderInfo::Default)
+        };
+
+        // Outer `cons` minor: `λ (a : Char)(s' : Str)(ih : Str → Bool)(u : Str), …`.
+        // Binder stack (outermost→innermost): a, s', ih, u, then inner b, t', ih2.
+        let outer_cons_minor = {
+            let inner_motive = kernel.lam(anon, str_const, bool_const, BinderInfo::Default);
+            let inner_rec = kernel.const_(self.str_rec, vec![self.one]);
+            // Inner `cons` minor body (deepest): stack indices —
+            //   ih2=0, t'=1, b=2, u=3, ih=4, s'=5, a=6.
+            let inner_cons_minor = {
+                let a = kernel.bvar(6);
+                let b = kernel.bvar(2);
+                let ih = kernel.bvar(4);
+                let tp = kernel.bvar(1);
+                let cheq = {
+                    let e0 = kernel.app(char_eq, a);
+                    kernel.app(e0, b)
+                };
+                let chlt = {
+                    let e0 = kernel.app(char_lt, a);
+                    kernel.app(e0, b)
+                };
+                let ih_tp = kernel.app(ih, tp);
+                let condv = self.bool_cond(kernel, cheq, ih_tp, chlt);
+                let m = kernel.lam(anon, bool_const, condv, BinderInfo::Default); // ih2 : Bool
+                let m = kernel.lam(anon, str_const, m, BinderInfo::Default); // t' : Str
+                kernel.lam(anon, char_const, m, BinderInfo::Default) // b : Char
+            };
+            let e0 = kernel.app(inner_rec, inner_motive);
+            let e0 = kernel.app(e0, bool_false); // inner nil: (cons a s') vs nil = false
+            let e0 = kernel.app(e0, inner_cons_minor);
+            let u = kernel.bvar(0); // u at the `λ u` body level
+            let inner_applied = kernel.app(e0, u);
+            let m = kernel.lam(anon, str_const, inner_applied, BinderInfo::Default); // u : Str
+            let m = kernel.lam(anon, str_to_bool, m, BinderInfo::Default); // ih : Str → Bool
+            let m = kernel.lam(anon, str_const, m, BinderInfo::Default); // s' : Str
+            kernel.lam(anon, char_const, m, BinderInfo::Default) // a : Char
+        };
+
+        let outer_rec = kernel.const_(self.str_rec, vec![self.one]);
+        let outer = kernel.app(outer_rec, outer_motive);
+        let outer = kernel.app(outer, outer_nil_minor);
+        let outer = kernel.app(outer, outer_cons_minor);
+        let s = kernel.bvar(0);
+        let body = kernel.app(outer, s);
+        kernel.lam(anon, str_const, body, BinderInfo::Default)
+    }
 }
 
 #[cfg(test)]
