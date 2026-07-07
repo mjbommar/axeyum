@@ -137,9 +137,17 @@ CAD** (2-variable complete, N-variable decision-complete, fuzz-gated) lives in
 `axeyum-solver`. So there is **no new `axeyum-poly` crate** (ADR-0044 keeps the
 primitives in `axeyum-ir`) and "Phase A" is mostly done — see the corrected
 [P2.5 current-state](docs/plan/track-2-theories/P2.5-nra/00-current-state.md).
+**Next-arc decomposition (2026-07-06, `fcbde209`):**
+[09-next-arithmetic-lever-decomposition](docs/plan/track-2-theories/P2.5-nra/09-next-arithmetic-lever-decomposition.md)
+— the measured ROI verdict is **QF_NIA (54%) beats QF_NRA (68%)** for the next
+increment (QF_NIA's unknowns are 3 bounded levers reusing existing machinery —
+div/mod Euclidean linearization, `iand` blast, `int.pow2`; QF_NRA's residue is
+mostly a multi-week CAD/transcendental engine). ROI-ordered slices, first =
+NIA div/mod linearization (Phase E.0). QF_NRA `nra_degree` frontier is maxed at
+40 (`e0e24085`, even-power matcher).
 
 **Measured (2026-07-01/02, `check_auto` vs z3 4.13.3, curated corpus,
-DISAGREE=0): QF_NRA 21/38 (was 9/38; committed baseline `124e18aa`), QF_NIA
+DISAGREE=0): QF_NRA 21→26/38 (`5cc63a15`; was 9/38 at `124e18aa`), QF_NIA
 20/28.** The 2026-06-30 route-trace
 finding (the CAD declines Boolean structure) was resolved by the landed
 case-split (`5ede57f4` — the earlier fuzz "failure" was a benign i128
