@@ -125,7 +125,7 @@ fn finite_simplicial_cup_product_bad_value_emits_checked_bv_drat() {
 fn qf_bv_resource_route_rejects_tampered_drat_certificate() {
     let script = parse_script(FINITE_FIELDS_COMPOSITE_NONFIELD)
         .expect("finite-fields-v0 composite-modulus artifact parses");
-    let assertions = script.assertions.clone();
+    let assertions = script.checked_flat_view().to_vec();
     let proof = match export_qf_bv_unsat_proof(&script.arena, &assertions) {
         Ok(UnsatProofOutcome::Proved(proof)) => proof,
         other => panic!("expected checked DRAT proof, got {other:?}"),
@@ -144,7 +144,7 @@ fn qf_bv_resource_route_rejects_tampered_drat_certificate() {
 fn assert_resource_qf_bv_drat(label: &str, smt2: &str) {
     let mut script = parse_script(smt2)
         .unwrap_or_else(|error| panic!("{label}: resource SMT-LIB artifact parses: {error}"));
-    let assertions = script.assertions.clone();
+    let assertions = script.checked_flat_view().to_vec();
     assert!(
         !assertions.is_empty(),
         "{label}: artifact must contain assertions"

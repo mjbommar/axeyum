@@ -80,7 +80,8 @@ fn bug330_honors_config_timeout() {
     let cfg = SolverConfig::default().with_timeout(budget);
 
     let start = Instant::now();
-    let result = check_auto(&mut script.arena, &script.assertions, &cfg).expect("no solver error");
+    let assertions = script.checked_flat_view().to_vec();
+    let result = check_auto(&mut script.arena, &assertions, &cfg).expect("no solver error");
     let elapsed = start.elapsed();
 
     // Generous multiple of the budget so the assert is robust on a loaded CI

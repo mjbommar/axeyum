@@ -256,7 +256,7 @@ fn extensionality_nested_array_equalities_materialize_reads_after_completion() {
     ",
     )
     .unwrap();
-    let assertions = script.assertions.clone();
+    let assertions = script.checked_flat_view().to_vec();
     let result = check_auto(&mut script.arena, &assertions, &SolverConfig::default()).unwrap();
     let CheckResult::Sat(model) = result else {
         panic!("expected SAT for the rw134 extensionality shape, got {result:?}");
@@ -457,9 +457,10 @@ fn qf_ax_arrays3_lazy_ext_verdict_is_deterministic() {
     );
     for _ in 0..64 {
         let mut script = parse_script(input).unwrap();
+        let assertions = script.checked_flat_view().to_vec();
         let result = check_qf_ax_declared_sort_lazy_row(
             &mut script.arena,
-            &script.assertions,
+            &assertions,
             &SolverConfig::default(),
         )
         .unwrap();

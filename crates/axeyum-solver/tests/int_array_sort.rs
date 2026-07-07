@@ -23,24 +23,16 @@ fn int_indexed_array_congruence_conflict_is_unsat() {
     )
     .unwrap();
 
-    let result = check_auto(
-        &mut script.arena,
-        &script.assertions,
-        &SolverConfig::default(),
-    )
-    .unwrap();
+    let assertions = script.checked_flat_view().to_vec();
+    let result = check_auto(&mut script.arena, &assertions, &SolverConfig::default()).unwrap();
     assert_eq!(result, CheckResult::Unsat);
 }
 
 fn assert_sat_model_replays(text: &str) {
     let mut script = parse_script(text).unwrap();
 
-    let result = check_auto(
-        &mut script.arena,
-        &script.assertions,
-        &SolverConfig::default(),
-    )
-    .unwrap();
+    let assertions = script.checked_flat_view().to_vec();
+    let result = check_auto(&mut script.arena, &assertions, &SolverConfig::default()).unwrap();
     let CheckResult::Sat(model) = result else {
         panic!("expected SAT, got {result:?}");
     };
@@ -81,12 +73,8 @@ fn int_indexed_array_row_conflict_is_unsat() {
     )
     .unwrap();
 
-    let result = check_auto(
-        &mut script.arena,
-        &script.assertions,
-        &SolverConfig::default(),
-    )
-    .unwrap();
+    let assertions = script.checked_flat_view().to_vec();
+    let result = check_auto(&mut script.arena, &assertions, &SolverConfig::default()).unwrap();
     assert_eq!(result, CheckResult::Unsat);
 }
 
@@ -118,12 +106,8 @@ fn array_argument_uf_congruence_conflict_is_unsat() {
     )
     .unwrap();
 
-    let result = check_auto(
-        &mut script.arena,
-        &script.assertions,
-        &SolverConfig::default(),
-    )
-    .unwrap();
+    let assertions = script.checked_flat_view().to_vec();
+    let result = check_auto(&mut script.arena, &assertions, &SolverConfig::default()).unwrap();
     assert_eq!(result, CheckResult::Unsat);
 }
 
@@ -166,12 +150,8 @@ fn row_conflict_at_array_argument_uf_index_is_unsat() {
     )
     .unwrap();
 
-    let result = check_auto(
-        &mut script.arena,
-        &script.assertions,
-        &SolverConfig::default(),
-    )
-    .unwrap();
+    let assertions = script.checked_flat_view().to_vec();
+    let result = check_auto(&mut script.arena, &assertions, &SolverConfig::default()).unwrap();
     assert_eq!(result, CheckResult::Unsat);
 }
 
@@ -193,12 +173,8 @@ fn store_chain_swap_with_array_argument_skolem_index_is_unsat() {
     )
     .unwrap();
 
-    let result = check_auto(
-        &mut script.arena,
-        &script.assertions,
-        &SolverConfig::default(),
-    )
-    .unwrap();
+    let assertions = script.checked_flat_view().to_vec();
+    let result = check_auto(&mut script.arena, &assertions, &SolverConfig::default()).unwrap();
     assert_eq!(result, CheckResult::Unsat);
 }
 
@@ -224,12 +200,8 @@ fn symmetric_store_swap_chain_refutes_skolem_read_disequality() {
     )
     .unwrap();
 
-    let result = check_auto(
-        &mut script.arena,
-        &script.assertions,
-        &SolverConfig::default(),
-    )
-    .unwrap();
+    let assertions = script.checked_flat_view().to_vec();
+    let result = check_auto(&mut script.arena, &assertions, &SolverConfig::default()).unwrap();
     assert_eq!(result, CheckResult::Unsat);
 }
 
@@ -240,12 +212,8 @@ fn cvc5_swap_chain_refuter_closes_real_regression() {
     ))
     .unwrap();
 
-    let result = check_auto(
-        &mut script.arena,
-        &script.assertions,
-        &SolverConfig::default(),
-    )
-    .unwrap();
+    let assertions = script.checked_flat_view().to_vec();
+    let result = check_auto(&mut script.arena, &assertions, &SolverConfig::default()).unwrap();
     assert_eq!(result, CheckResult::Unsat);
 }
 
@@ -266,12 +234,8 @@ fn qf_ax_declared_sort_array_extensionality_unsats_close() {
         ),
     ] {
         let mut script = parse_script(input).unwrap_or_else(|error| panic!("{tag}: {error}"));
-        let result = check_auto(
-            &mut script.arena,
-            &script.assertions,
-            &SolverConfig::default(),
-        )
-        .unwrap();
+        let assertions = script.checked_flat_view().to_vec();
+        let result = check_auto(&mut script.arena, &assertions, &SolverConfig::default()).unwrap();
         assert_eq!(result, CheckResult::Unsat, "{tag}");
     }
 }
@@ -283,12 +247,8 @@ fn qf_ax_bool_array_read_collapse_unsat_closes() {
     ))
     .unwrap();
 
-    let result = check_auto(
-        &mut script.arena,
-        &script.assertions,
-        &SolverConfig::default(),
-    )
-    .unwrap();
+    let assertions = script.checked_flat_view().to_vec();
+    let result = check_auto(&mut script.arena, &assertions, &SolverConfig::default()).unwrap();
     assert_eq!(result, CheckResult::Unsat);
 }
 
@@ -309,12 +269,8 @@ fn qf_ax_declared_sort_sat_models_replay() {
         ),
     ] {
         let mut script = parse_script(input).unwrap_or_else(|error| panic!("{tag}: {error}"));
-        let result = check_auto(
-            &mut script.arena,
-            &script.assertions,
-            &SolverConfig::default(),
-        )
-        .unwrap();
+        let assertions = script.checked_flat_view().to_vec();
+        let result = check_auto(&mut script.arena, &assertions, &SolverConfig::default()).unwrap();
         let CheckResult::Sat(model) = result else {
             panic!("{tag}: expected SAT, got {result:?}");
         };
@@ -345,12 +301,8 @@ fn select_over_array_ite_lowers_to_branch_reads() {
     )
     .unwrap();
 
-    let result = check_auto(
-        &mut script.arena,
-        &script.assertions,
-        &SolverConfig::default(),
-    )
-    .unwrap();
+    let assertions = script.checked_flat_view().to_vec();
+    let result = check_auto(&mut script.arena, &assertions, &SolverConfig::default()).unwrap();
     assert_eq!(result, CheckResult::Unsat);
 }
 
@@ -376,12 +328,8 @@ fn two_store_same_target_uf_branches_refute_unsat() {
     )
     .unwrap();
 
-    let result = check_auto(
-        &mut script.arena,
-        &script.assertions,
-        &SolverConfig::default(),
-    )
-    .unwrap();
+    let assertions = script.checked_flat_view().to_vec();
+    let result = check_auto(&mut script.arena, &assertions, &SolverConfig::default()).unwrap();
     assert_eq!(result, CheckResult::Unsat);
 }
 
@@ -405,12 +353,8 @@ fn two_store_same_target_declines_when_one_branch_remains_possible() {
     )
     .unwrap();
 
-    let result = check_auto(
-        &mut script.arena,
-        &script.assertions,
-        &SolverConfig::default(),
-    )
-    .unwrap();
+    let assertions = script.checked_flat_view().to_vec();
+    let result = check_auto(&mut script.arena, &assertions, &SolverConfig::default()).unwrap();
     match result {
         CheckResult::Sat(model) => {
             let assignment = model.to_assignment();
@@ -433,12 +377,8 @@ fn const_array_store_chain_default_mismatch_refutes_constarr3() {
     ))
     .unwrap();
 
-    let result = check_auto(
-        &mut script.arena,
-        &script.assertions,
-        &SolverConfig::default(),
-    )
-    .unwrap();
+    let assertions = script.checked_flat_view().to_vec();
+    let result = check_auto(&mut script.arena, &assertions, &SolverConfig::default()).unwrap();
     assert_eq!(result, CheckResult::Unsat);
 }
 
@@ -449,12 +389,8 @@ fn store_chain_readback_refutes_ios_np_sf() {
     ))
     .unwrap();
 
-    let result = check_auto(
-        &mut script.arena,
-        &script.assertions,
-        &SolverConfig::default(),
-    )
-    .unwrap();
+    let assertions = script.checked_flat_view().to_vec();
+    let result = check_auto(&mut script.arena, &assertions, &SolverConfig::default()).unwrap();
     assert_eq!(result, CheckResult::Unsat);
 }
 
@@ -479,11 +415,7 @@ fn const_array_store_chain_same_default_is_not_refuted() {
     )
     .unwrap();
 
-    let result = check_auto(
-        &mut script.arena,
-        &script.assertions,
-        &SolverConfig::default(),
-    )
-    .unwrap();
+    let assertions = script.checked_flat_view().to_vec();
+    let result = check_auto(&mut script.arena, &assertions, &SolverConfig::default()).unwrap();
     assert_ne!(result, CheckResult::Unsat);
 }

@@ -31,6 +31,9 @@ use axeyum_solver::{CheckResult, SolverConfig, solve_smtlib};
 mod common_cvc5;
 use common_cvc5::{Verdict, cvc5_bin, cvc5_decide};
 
+mod common_string_grammar;
+use common_string_grammar::GrammarCoverage;
+
 /// Number of scripts generated and adjudicated (≥ 600 as required).
 const INSTANCES: u64 = 700;
 
@@ -69,15 +72,18 @@ impl Lcg {
 const ALPHABET: &[u8] = b"ab";
 
 /// One character of a generated literal: usually a plain `{a,b}` byte, but ~1 in 4
-/// an SMT-LIB `\u{…}` escape (`\n`, or `a`/`b` spelled `\u{61}`/`\u{62}`) — the same
-/// text is fed to axeyum and the oracles, so a decode mismatch surfaces as a
-/// differential disagreement, and the escaped spellings alias the plain letters.
+/// an SMT-LIB `\u{…}` escape (`\n`, or `a`/`b` spelled `\u{61}`/`\u{62}`, plus the
+/// `>0x7F` byte-model boundary `\u{ff}`) — the same text is fed to axeyum and the
+/// oracles, so a decode mismatch surfaces as a differential disagreement, and the
+/// escaped spellings alias the plain letters. The [`generator_emits_full_literal_grammar`]
+/// gate enforces that this emission does not silently regress to plain ASCII.
 fn push_char(rng: &mut Lcg, s: &mut String) {
     if rng.below(4) == 0 {
-        match rng.below(3) {
+        match rng.below(4) {
             0 => s.push_str("\\u{0a}"),
             1 => s.push_str("\\u{61}"),
-            _ => s.push_str("\\u{62}"),
+            2 => s.push_str("\\u{62}"),
+            _ => s.push_str("\\u{ff}"), // top of the byte model (>0x7F)
         }
     } else {
         s.push(char::from(ALPHABET[rng.below(ALPHABET.len() as u64)]));
@@ -282,4 +288,21 @@ fn qf_s_replace_fold_differential_fuzz_cvc5_disagree_zero() {
         return;
     };
     run_against("cvc5", |text| cvc5_decide(&bin, text, ORACLE_TIMEOUT));
+}
+
+/// INVARIANT A (structural, oracle-free): the generator must provably emit the full
+/// literal grammar — `\u{…}` escapes **and** a `>0x7F` boundary code point — over the
+/// batch it feeds the differential fuzz, so a future regression to plain ASCII (which
+/// would silently stop exercising the escape decoder — the `ba0d9149` P0 class) fails
+/// the build instead of staying green while blind. Re-runs the *same* deterministic
+/// seeds the fuzz uses.
+#[test]
+fn generator_emits_full_literal_grammar() {
+    let mut cov = GrammarCoverage::new();
+    for seed in 0..INSTANCES {
+        let mut rng = Lcg::new(seed);
+        cov.observe(&Instance::generate(&mut rng).text);
+    }
+    cov.assert_escape_coverage(0.10, "qf_s_replace_fold");
+    cov.assert_boundary_coverage(0.02, "qf_s_replace_fold");
 }

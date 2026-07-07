@@ -212,7 +212,7 @@ fn finite_dag_topological_bad_edge_order_emits_checked_lia_evidence() {
 fn qf_lia_resource_route_rejects_tampered_diophantine_certificate() {
     let script = parse_script(MODULAR_NONUNIT_DIOPHANTINE)
         .expect("modular-arithmetic-v0 nonunit artifact parses");
-    let assertions = script.assertions.clone();
+    let assertions = script.checked_flat_view().to_vec();
     let report = produce_diophantine_evidence(&script.arena, &assertions)
         .expect("Diophantine evidence production must not error")
         .expect("resource obligation emits Diophantine evidence");
@@ -239,7 +239,7 @@ fn qf_lia_resource_route_rejects_tampered_diophantine_certificate() {
 fn assert_resource_diophantine(label: &str, smt2: &str) {
     let mut script = parse_script(smt2)
         .unwrap_or_else(|error| panic!("{label}: resource SMT-LIB artifact parses: {error}"));
-    let assertions = script.assertions.clone();
+    let assertions = script.checked_flat_view().to_vec();
 
     assert_eq!(
         check_auto(&mut script.arena, &assertions, &SolverConfig::default()).unwrap(),
@@ -265,7 +265,7 @@ fn assert_resource_diophantine(label: &str, smt2: &str) {
 fn assert_resource_lia_checked(label: &str, smt2: &str) {
     let mut script = parse_script(smt2)
         .unwrap_or_else(|error| panic!("{label}: resource SMT-LIB artifact parses: {error}"));
-    let assertions = script.assertions.clone();
+    let assertions = script.checked_flat_view().to_vec();
 
     assert_eq!(
         check_auto(&mut script.arena, &assertions, &SolverConfig::default()).unwrap(),

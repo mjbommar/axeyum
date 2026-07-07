@@ -5043,3 +5043,36 @@ fn solvable_flat_view_is_none_for_word_first_fallback() {
         Some(script.assertions.as_slice())
     );
 }
+
+/// INVARIANT B (structural guard): the "safe by construction" flat-view accessor for
+/// fixed-text consumers returns the assertions for an ordinary script.
+#[test]
+fn checked_flat_view_returns_assertions_for_ordinary_script() {
+    let ordinary = "(set-logic QF_BV)\n\
+                    (declare-const x (_ BitVec 8))\n\
+                    (assert (= x #x00))\n\
+                    (check-sat)";
+    let script = parse_script(ordinary).unwrap();
+    assert!(script.word_only_fallback.is_none());
+    assert_eq!(script.checked_flat_view(), script.assertions.as_slice());
+}
+
+/// INVARIANT B (structural guard, the trip test): `checked_flat_view()` on a
+/// word-first-fallback script MUST fire the debug-time guard rather than hand back an
+/// empty flat view that solves to a vacuous `sat` (the `f5b00c72` P0 class). Gated on
+/// `debug_assertions` because the guard is a `debug_assert!` (a release build elides
+/// it — the safe consumers are all fixed non-string text, so the guard is a
+/// test/debug-build tripwire, not a runtime cost).
+#[cfg(debug_assertions)]
+#[test]
+#[should_panic(expected = "word-first-fallback script")]
+fn checked_flat_view_trips_the_guard_on_word_first_fallback() {
+    let fallback = "(set-logic QF_S)\n\
+                    (declare-const s0 String)\n\
+                    (assert (str.in_re s0 ((_ re.loop 2 3) (str.to_re \"a\"))))\n\
+                    (check-sat)";
+    let script = parse_script(fallback).unwrap();
+    assert!(script.word_only_fallback.is_some());
+    // This access must panic: a fallback script has no solvable flat view.
+    let _ = script.checked_flat_view();
+}

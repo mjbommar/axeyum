@@ -582,7 +582,7 @@ fn assert_farkas_checked(label: &str, arena: &TermArena, assertions: &[TermId]) 
 fn assert_resource_farkas(label: &str, smt2: &str) {
     let mut script = parse_script(smt2)
         .unwrap_or_else(|error| panic!("{label}: resource SMT-LIB artifact parses: {error}"));
-    let assertions = script.assertions.clone();
+    let assertions = script.checked_flat_view().to_vec();
 
     assert_eq!(
         check_auto(&mut script.arena, &assertions, &SolverConfig::default()).unwrap(),
@@ -595,7 +595,7 @@ fn assert_resource_farkas(label: &str, smt2: &str) {
 fn assert_resource_farkas_rejects_tampered_certificate(label: &str, smt2: &str) {
     let mut script = parse_script(smt2)
         .unwrap_or_else(|error| panic!("{label}: resource SMT-LIB artifact parses: {error}"));
-    let assertions = script.assertions.clone();
+    let assertions = script.checked_flat_view().to_vec();
 
     assert_eq!(
         check_auto(&mut script.arena, &assertions, &SolverConfig::default()).unwrap(),

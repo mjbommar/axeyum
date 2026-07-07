@@ -48,6 +48,9 @@ use axeyum_solver::{CheckResult, SolverConfig, solve_smtlib};
 mod common_cvc5;
 use common_cvc5::{Verdict, cvc5_bin, cvc5_decide};
 
+mod common_string_grammar;
+use common_string_grammar::GrammarCoverage;
+
 /// Number of scripts generated and adjudicated (≥ 600 as required).
 const INSTANCES: u64 = 700;
 
@@ -88,16 +91,20 @@ const ALPHABET: &[u8] = b"ab";
 
 /// One character of a generated literal: usually a plain `{a,b}` byte, but ~1 in 4
 /// an SMT-LIB `\u{…}` escape — for `\n` (`0a`), or `a`/`b` themselves spelled as
-/// `\u{61}`/`\u{62}`. This exercises the escape decoder in **both** string-literal
-/// and regex-literal positions (the same text is fed to axeyum and Z3, so a decode
-/// mismatch surfaces as a differential disagreement). `\u{61}`/`\u{62}` alias the
-/// plain letters, so escaped and plain spellings intersect and clash frequently.
+/// `\u{61}`/`\u{62}`, plus the `>0x7F` byte-model boundary `\u{ff}`. This exercises
+/// the escape decoder in **both** string-literal and regex-literal positions (the
+/// same text is fed to axeyum and Z3, so a decode mismatch surfaces as a differential
+/// disagreement), including the high half of the byte model. `\u{61}`/`\u{62}` alias
+/// the plain letters, so escaped and plain spellings intersect and clash frequently.
+/// The [`generator_emits_full_literal_grammar`] gate enforces that this emission does
+/// not silently regress to plain ASCII.
 fn push_char(rng: &mut Lcg, s: &mut String) {
     if rng.below(4) == 0 {
-        match rng.below(3) {
+        match rng.below(4) {
             0 => s.push_str("\\u{0a}"), // newline
             1 => s.push_str("\\u{61}"), // 'a'
-            _ => s.push_str("\\u{62}"), // 'b'
+            2 => s.push_str("\\u{62}"), // 'b'
+            _ => s.push_str("\\u{ff}"), // top of the byte model (>0x7F)
         }
     } else {
         s.push(char::from(ALPHABET[rng.below(ALPHABET.len() as u64)]));
@@ -424,4 +431,46 @@ fn qf_s_online_membership_differential_fuzz_cvc5_disagree_zero() {
         return;
     };
     run_against("cvc5", |text| cvc5_decide(&bin, text, Z3_TIMEOUT));
+}
+
+/// INVARIANT A (structural, oracle-free): the generator must provably emit the full
+/// literal grammar — `\u{…}` escapes **and** a `>0x7F` boundary code point — over the
+/// batch it feeds the differential fuzz. If a future cleanup drops escape/boundary
+/// emission back to plain ASCII the escape decoder stops being exercised and the
+/// differential fuzz stays green while blind (the `ba0d9149` P0 class). This is a
+/// hard gate that fails the build on that regression; it re-runs the *same*
+/// deterministic seeds the fuzz uses, so it measures the real corpus.
+#[test]
+fn generator_emits_full_literal_grammar() {
+    let mut cov = GrammarCoverage::new();
+    for seed in 0..INSTANCES {
+        let mut rng = Lcg::new(seed);
+        cov.observe(&Instance::generate(&mut rng).text);
+    }
+    cov.assert_escape_coverage(0.10, "qf_s_online_membership");
+    cov.assert_boundary_coverage(0.02, "qf_s_online_membership");
+}
+
+/// The coverage gate must actually FAIL on a plain-ASCII regression — proof that
+/// [`generator_emits_full_literal_grammar`] is a real gate, not a no-op. A generator
+/// that emits only `{a,b}` bytes (no `\u` escape, no `>0x7F` code point) must trip
+/// the escape assertion.
+#[test]
+#[should_panic(expected = "ESCAPE COVERAGE REGRESSION")]
+fn plain_ascii_generator_trips_the_escape_gate() {
+    let mut cov = GrammarCoverage::new();
+    for seed in 0..INSTANCES {
+        let mut rng = Lcg::new(seed);
+        // A degenerate plain-ASCII literal generator standing in for a regressed one.
+        let mut text = String::from("(set-logic QF_S)\n(declare-const s0 String)\n");
+        let mut lit = String::new();
+        let len = 1 + rng.below(3);
+        for _ in 0..len {
+            lit.push(char::from(ALPHABET[rng.below(ALPHABET.len() as u64)]));
+        }
+        let _ = writeln!(text, "(assert (= s0 \"{lit}\"))");
+        text.push_str("(check-sat)\n");
+        cov.observe(&text);
+    }
+    cov.assert_escape_coverage(0.10, "plain-ascii-regression");
 }

@@ -239,6 +239,42 @@ impl Script {
             Some(&self.assertions)
         }
     }
+
+    /// The flat assertion view for a consumer whose input is **fixed, non-string
+    /// text** that can never take the word-first fallback — with the "safe by
+    /// construction" claim turned into an **enforced invariant**.
+    ///
+    /// Returns `&self.assertions`, but `debug_assert!`s that
+    /// [`Script::word_only_fallback`] is unset first. This is the structural guard
+    /// for the second half of the vacuous-`sat` P0 (`f5b00c72`): a consumer that
+    /// parses embedded `QF_BV`/`QF_UF`/`QF_LIA`/`QF_ABV` text and hands the flat view
+    /// to `check_auto`/`solve` is safe *only because* that text cannot regress into
+    /// the string fallback (whose empty flat view solves to a vacuous `sat`). Reading
+    /// the view through this accessor makes that latent assumption a checked one: if
+    /// the consumer's text ever grows a string construct that trips the fallback, the
+    /// `debug_assert` fires in any test/debug build **instead of silently shipping a
+    /// wrong verdict**.
+    ///
+    /// Use [`Script::solvable_flat_view`] instead for consumers over **arbitrary**
+    /// SMT-LIB text (corpus readers): those must *handle* the fallback (route a `None`
+    /// through the text front door), not assert it away.
+    ///
+    /// # Panics
+    ///
+    /// In debug builds, panics if [`Script::word_only_fallback`] is set — i.e. this
+    /// was a word-first-fallback parse and solving its (empty) flat view would be a
+    /// vacuous `sat`.
+    #[must_use]
+    pub fn checked_flat_view(&self) -> &[TermId] {
+        debug_assert!(
+            self.word_only_fallback.is_none(),
+            "checked_flat_view() on a word-first-fallback script: its flat view is EMPTY \
+             and solving it directly is a vacuous `sat` (the f5b00c72 P0 class). A consumer \
+             over arbitrary SMT-LIB text must use solvable_flat_view()/solve_smtlib and route \
+             the word case; only fixed non-string-text consumers may use this accessor."
+        );
+        &self.assertions
+    }
 }
 
 /// A first-class `Sort::Seq` word-equation problem accumulated as a side channel
