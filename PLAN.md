@@ -109,18 +109,27 @@ re-ranked twice (9th + 10th reviews):
 - **Lean-parity:** #44 landed the **regex derivative-emptiness → kernel-checked Lean
   `False`** reconstruction (`cd6783b9`, full multi-state closure, no new kernel
   axioms; a kernel-checked narrowing; not yet wired into the live evidence path).
-**The rotation NOW (10th review, scout-verified):** (1) **strings breadth — the
-dominant measured gap** (QF_SLIA 18/50=36%, QF_S 78/134=58%). A scout PROVED the
+**The rotation NOW (11th review, scout-verified):** (1) **strings breadth — the
+dominant measured gap** (QF_SLIA 18/50=36%, QF_S 82/134=61%). A scout PROVED the
 "str.++ bound-cap" census was a mis-diagnosis (raising the cap gains ~0 rows — the
 cap message masks extended-function rejections). Real levers: **(1a)
-membership-over-concatenation** (~12 rows — route `str.in_re` over a symbolic
-`str.++` into the regex-derivative core; #49 ACTIVE); **(1b) the LenAbs length/LIA
-bridge = P2.7 Phase A** (the deferred multi-slice keystone, ~13+ QF_SLIA rows —
-the biggest strings unlock); **(1c) quadratic word-equation certified unsat** (~4-5,
-hardest). (2) **wire #44's regex-emptiness reconstruction into the live evidence
-dispatcher** (capability landed, wiring pending). (3) **close the remaining #42 fuzz
-GAPs** (seq.nth OOB — the last UNDERSPEC blind axis). (4) **CdclT arithmetic
-migration** (ADR-0055 criterion 2 — LIA/LRA TheorySolver impls; unlocks strings+LIA
+membership-over-concatenation** — ✅ **#49 LANDED** (`7197da29`, QF_S 78→82: 5 rows
+issue2060/5510/5520/7677/4608 unsupported→sat, sat-side slice, DISAGREE=0 z3+cvc5);
+the concat-UNSAT + joint-product-automaton-sat (norn-*) + norn length-atom slices it
+DEFERRED are the next increment (#49-follow, ~4-6 rows); **(1b) the LenAbs length/LIA
+bridge = P2.7 Phase A (task #53)** (the deferred multi-slice keystone, ~13+ QF_SLIA
+rows — the biggest strings unlock, the 11th review's flagship thrust); **(1c)
+quadratic word-equation certified unsat** (~4-5, hardest). **URGENT fast-follow
+before extending #49's concat route:** guard the derivative-closure deadline edge —
+`canon`/`derivative` poll BETWEEN nodes but not INSIDE one expansion, the
+"bounded-but-non-polling loop" anti-pattern that cost two multi-hour sweeps (8h
+`set_cardinality`, 9h `bv2nat`); benign for verdicts (declines to Unknown) but can
+overshoot the timeout — add an in-frontier poll + a pathological-shape regression.
+(2) **wire #44's regex-emptiness reconstruction into the live evidence dispatcher**
+(task #52 — capability landed `cd6783b9`, wiring pending; the cheapest Lean-parity
+row, ledger −1; the 11th review's do-FIRST). (3) ✅ **the #42 fuzz GAPs are CLOSED**
+(FP+RealDiv-0 #47, seq.nth #51 — only low-risk GAP-BV1 remains). (4) **CdclT
+arithmetic migration** (ADR-0055 criterion 2 — LIA/LRA TheorySolver impls; unlocks strings+LIA
 combination). Decide-rate ~73% and climbing.
 **Process state:** first green CI in 200+ runs held into a green cadence;
 the pre-push hook gates the pushed SHA incl. the ~6s `:status` corpus
