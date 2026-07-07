@@ -423,6 +423,28 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-07 — 10th review re-ranks the pivot; the FP fuzz GAP-closure finds +
+  fixes a FOURTH soundness bug (FP signed-zero wrong-unsat).**
+  - **10th review** (`6b5e33bf`): caught a load-bearing false premise — ADR-0058
+    Phase B ("route DPLL cubes into the exact CAD") was ~90% OBE (the edge existed
+    at `5ede57f4`; #43 landed the bignum coeffs). Rescoped ADR-0058 (Phase B done;
+    remaining = Phase C/D, DE-PRIORITIZED below strings), fixed the decomposition
+    §3 + STATUS stale premise, refreshed decide-rate ~68%→~73%. Ranked the next
+    thrusts: close the soundness fuzz-GAPs first, then strings breadth (the
+    dominant measured gap now: QF_SLIA 36%, QF_S 58%). Strings census (#49): the
+    #1 decline is the ADR-0029 bound-cap (~52 rows), not an extended function.
+  - (`b6cd2af6`) **#47 — closed the FP + RealDiv-0 differential-fuzz GAPs.** New
+    `fp_differential_fuzz` (598/598 DISAGREE=0) + RealDiv-0 seeds in the lra/nra
+    fuzzes (DISAGREE=0). The FP fuzz **surfaced a P0** (the session's 4th, and the
+    100%-hit-rate held: every blind axis given sight found a wrong verdict).
+  - (`bqxsnujic`) **#50 — the P0 fixed: FP `isNegative`/`isPositive` classify
+    signed zeros by the SIGN BIT.** They were `sign ∧ ¬nan ∧ ¬zero`, so
+    `(fp.isNegative -0)` was a wrong-**UNSAT** (Z3+cvc5: −0 IS negative, +0 IS
+    positive). Fix: public builders `sign ∧ ¬nan` (include signed zeros); an
+    internal `is_strictly_negative` preserves the one legit zero-excluding use
+    (`sqrt(-0)=-0`). FP is parse-desugared so the builder is both solve+replay.
+    Verified: fuzz DISAGREE=0 (predicates re-enabled), axeyum-fp 55/55 incl
+    min/max ±0, carcara 76/76, corpus 0 DISAGREE, `--workspace --lib` 18/18.
 - **2026-07-07 — the last cheap QF_NRA pickups: qf-nra-cvc5 27→32 (84%),
   equality-anchored decision + the DPLL→CAD edge.**
   - (`4d74b288`) **#43 — decomposition slices 4 + 7a + 7b.** Slice 4
