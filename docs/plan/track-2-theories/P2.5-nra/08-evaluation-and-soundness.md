@@ -384,6 +384,43 @@ refreshed (committed row 21 → 26 decided). The residual 11 `unknown`s are the
 FM-budget / mixed-int / transcendental `metitarski-*` / `approx-sqrt` cases (the
 FM → simplex lever) and the `int↔real coercion` routing of `very-simple-unsat`.
 
+#### LANDED 2026-07-06 — Phase E.0: NIA div/mod Euclidean linearization (`check_with_nia`)
+
+The [census/decomposition](09-next-arithmetic-lever-decomposition.md) named the
+`cvc5-regress-clean` QF_NIA slice (54 %) as the best next ROI, with div/mod by a
+**variable** divisor as the first bounded, theory-valid lever. Landed
+`check_with_nia` (`nia_linearize.rs`) — the integer analog of `check_with_nra`,
+routed in `dispatch_nonlinear_int_tail` **before** the width ladder:
+
+- **Variable-divisor Euclidean elimination.** Each `(div a b)`/`(mod a b)` with a
+  non-constant `b` introduces fresh `q, r` with the `b ≠ 0`-guarded constraints
+  `b>0 → (a = b·q + r ∧ 0 ≤ r ≤ b−1)`, `b<0 → (… ∧ 0 ≤ r ≤ −b−1)`, plus a
+  self-division arm `b ≠ 0 → (div b b = 1 ∧ mod b b = 0)`. The `b·q` product feeds
+  the existing product-abstraction + integer **sign/zero lemmas**, solved over the
+  integer DPLL(T) (`check_with_lia_dpll`) so integrality is preserved
+  (`q<1 ⟹ q≤0`). The `b = 0` case is left **free** — a sound relaxation of the
+  evaluator's total `div a 0 = 0` / `mod a 0 = a` convention, so `unsat` transfers
+  while the div-0-underspecified sat cases (`mod.03`, `div.08`) honestly decline.
+- **Soundness.** `unsat` is a valid transfer (relaxation ⊇ every SMT-LIB model);
+  `sat` is returned **only** after replay against the original div/mod atoms under
+  the ground evaluator; bounded 600 ms DPLL slice so it never starves the ladder.
+
+**Measured effect** (`cvc5-regress-clean` QF_NIA, `--backend solver --compare-z3`,
+10 s, 4 jobs, `--logic QF_NIA`, via `scripts/mem-run.sh`): **decided 21 → 23
+(unsat 4 → 6), unknown 10 → 8, PAR-2 6.577 → 5.283, DISAGREE = 0,
+model_replay_failures = 0**. The movers are `arith__div.03`
+(`n>0 ∧ x≥n ∧ (div x n)<1`, unsat over ℤ / sat over ℝ — the sign-lemma refutation)
+and `arith__mod.02` (`n≠0 ∧ (mod n n)>0`, via the self-division arm). `div.08` /
+`mod.03` decline (div-0 congruence / underspecification, out of this slice);
+`issue3480` / `learned-rewrite-int-mod-range` remain coupled/`abs`-`sgn` cases.
+Gated by **both** `nra_differential_fuzz` (2000 seeds, DISAGREE = 0) **and**
+`nia_differential_fuzz` (2500 seeds, 2305 jointly decided, DISAGREE = 0) — the
+shared multivariate path — plus a **new** `qf_nia_divmod_var_differential_fuzz`
+(1500 variable-divisor seeds incl. the div-0 corner, 1226 jointly decided, 852 sat
+replays, DISAGREE = 0), `progress_frontier` (8/8), `corpus_regression`, clippy /
+doc `-D warnings`. Baseline + SCOREBOARD QF_NIA row refreshed (committed row
+21 → 23 decided, 54 % → 59 %).
+
 ## Per-phase soundness obligations
 
 | Phase | `sat` checkable by | `unsat` certified by | `unknown` triggers |

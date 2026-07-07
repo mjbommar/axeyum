@@ -2258,6 +2258,19 @@ fn dispatch_nonlinear_int_tail(
             with_recorder(rec, |t| t.record_decided("int-real-relax", Verdict::Unsat));
             return Ok(CheckResult::Unsat);
         }
+        // **Integer nonlinear decider** (Phase E first slice): linearize
+        // variable-divisor `div`/`mod` into their `≠0`-guarded Euclidean form,
+        // abstract each integer product with valid sign/zero lemmas, and
+        // solve over the integer DPLL(T). Run *before* the width ladder so a case
+        // like `div.03` (`n>0 ∧ x≥n ∧ (div x n)<1`, unsat over ℤ but sat over ℝ)
+        // decides by linearization rather than blowing up the bounded blast.
+        // Strictly additive: `unsat` transfers soundly from the relaxation, `sat`
+        // is accepted only after replay against the original, and it declines
+        // (`None`) on everything else.
+        if let Some(result) = crate::nia_linearize::check_with_nia(arena, assertions, config)? {
+            with_recorder(rec, |t| t.record_result("nia-linearize", &result));
+            return Ok(result);
+        }
         // **Bound-aware EXACT int-blast** (closes the QF_NIA UNSAT blind spot):
         // when every free `Int` variable is provably confined to a finite box,
         // blasting at a box-covering width is EXACT, so a bit-vector `Unsat` is a
@@ -2269,20 +2282,10 @@ fn dispatch_nonlinear_int_tail(
         }
         let result = dispatch_int_blast_width_ladder(arena, assertions, config)?;
         with_recorder(rec, |t| t.record_result("int-blast-ladder", &result));
-        // Last resort — the **integer nonlinear UNSAT refuter** (Phase E first
-        // slice): only when the ladder gives up, so it never slows a decided case.
-        // Abstract each integer product `a·b` to a fresh `Int` var, add the valid
-        // integer sign/zero lemmas, solve over the integer DPLL(T); an `unsat`
-        // transfers soundly. Unlike the real relaxation, it keeps integrality
-        // (`q<1 ⟹ q≤0` combines with `q≤0 ∧ n≥0 ⟹ q·n≤0`), refuting cases unsat
-        // over ℤ but sat over ℝ (e.g. Euclidean-eliminated `div`). `unsat`-only.
-        if matches!(result, CheckResult::Unknown(_))
-            && let Some(refuted) =
-                crate::nia_linearize::refute_nia_by_sign_lemmas(arena, assertions, config)?
-        {
-            with_recorder(rec, |t| t.record_result("nia-sign-lemmas", &refuted));
-            return Ok(refuted);
-        }
+        // The integer nonlinear decider (`check_with_nia`) already ran *before* the
+        // width ladder above — its product/sign-lemma relaxation and variable-
+        // divisor Euclidean linearization refute the `unsat` cases (`div.03`,
+        // `mod.02`) the ladder structurally cannot, and replay-check any `sat`.
         Ok(result)
     }
 }
