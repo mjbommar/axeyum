@@ -460,6 +460,48 @@ pub struct WordProblem {
     /// declines any non-string atom), so the inverted integer carries no competing
     /// arithmetic constraint. A failed inversion leaves the verdict `unknown`.
     pub obligations: Vec<WordObligation>,
+    /// Linear integer bounds on the `str.from_int` argument variables (task #78).
+    ///
+    /// A `str.from_int(i)`-coupled script whose only *non-string* atoms are linear
+    /// bounds `i ⋈ c` on the (declared `Int`) `from_int` argument is still decidable
+    /// by the word route: the solver couples the `from_int` digit structure to these
+    /// bounds by enumerating candidate integers in the bound-satisfying range, pinning
+    /// the fresh `Seq` variable to the candidate's canonical decimal, and re-solving the
+    /// residual word problem (see `axeyum_solver`'s coupled route). Every bound here is
+    /// on a symbol that is *also* a [`WordObligation::FromInt`] `int_sym` — the builder
+    /// declines any bound on an integer with no `from_int` coupling — so a chosen
+    /// candidate that satisfies every bound and replays the word problem is a genuine
+    /// model. A bound the route cannot satisfy leaves the verdict `unknown`; the route
+    /// never emits `unsat`.
+    pub int_bounds: Vec<IntBound>,
+}
+
+/// A relational operator for a linear integer bound `var ⋈ const` (task #78).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IntBoundKind {
+    /// `var >= const`.
+    Ge,
+    /// `var > const`.
+    Gt,
+    /// `var <= const`.
+    Le,
+    /// `var < const`.
+    Lt,
+    /// `var = const`.
+    Eq,
+}
+
+/// A single linear integer bound `sym ⋈ bound` on a `str.from_int` argument
+/// (task #78). Recorded by [`build_word_problem`] for the LIA-coupled word route;
+/// `sym` is always a [`WordObligation::FromInt`] `int_sym`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct IntBound {
+    /// The declared `Int` symbol the bound constrains (a `from_int` argument).
+    pub sym: SymbolId,
+    /// The bound's relational operator.
+    pub kind: IntBoundKind,
+    /// The integer literal the operator compares against.
+    pub bound: i128,
 }
 
 /// A post-search integer-inversion obligation for the flat word route (task #77).
@@ -948,6 +990,26 @@ fn build_word_problem(arena: &mut TermArena, exprs: &[SExpr]) -> Option<WordProb
     if wp.equalities.is_empty() && wp.disequalities.is_empty() {
         return None;
     }
+
+    // Task #78 soundness gate: an integer bound is only sound to *accept* (rather than
+    // decline the whole script on) when its variable is a `str.from_int` argument the
+    // coupled word route can drive. A bound on an integer with no `from_int` coupling
+    // has no string channel to enforce it, so admitting it would risk a wrong `sat` —
+    // decline the whole word problem instead (the bounded parse error stands → unknown).
+    if !wp.int_bounds.is_empty() {
+        let from_int_args: BTreeSet<SymbolId> = wp
+            .obligations
+            .iter()
+            .filter_map(|ob| match ob {
+                WordObligation::FromInt { int_sym, .. } => Some(*int_sym),
+                WordObligation::Substr { .. } => None,
+            })
+            .collect();
+        if !wp.int_bounds.iter().all(|b| from_int_args.contains(&b.sym)) {
+            return None;
+        }
+    }
+
     wp.seq_symbols = order;
     Some(wp)
 }
@@ -1973,6 +2035,15 @@ fn word_atom(
     let Some(head) = items.first().and_then(SExpr::atom) else {
         return false;
     };
+    // Task #78: a linear integer bound `i ⋈ c` on a declared `Int` variable (the
+    // `str.from_int` argument channel). Recognized *before* the string `=` case so an
+    // integer equality `(= i 420)` is captured as a bound rather than mis-parsed as a
+    // (failing) string equality. The build-time soundness gate in `build_word_problem`
+    // rejects the whole script if any bound's variable is not a `from_int` argument.
+    if let Some(bound) = int_bound_atom(head, items, opaque.int_vars) {
+        wp.int_bounds.push(bound);
+        return true;
+    }
     match head {
         "and" => items[1..]
             .iter()
@@ -2252,6 +2323,58 @@ fn sexpr_key(e: &SExpr) -> String {
             s
         }
     }
+}
+
+/// Recognizes a linear integer bound atom `(⋈ var lit)` or `(⋈ lit var)` where `var`
+/// is a **declared `Int` variable** (in `int_vars`), `lit` an integer literal, and
+/// `⋈ ∈ {>=, >, <=, <, =}` (task #78). Returns the normalized [`IntBound`] on the
+/// variable's symbol, or `None` for any other shape (two variables, two literals, a
+/// compound arithmetic operand, a non-relational head, or the wrong arity). The
+/// `(lit ⋈ var)` orientation flips the relation so the bound is always `var ⋈ lit`.
+fn int_bound_atom(
+    head: &str,
+    items: &[SExpr],
+    int_vars: &BTreeMap<String, SymbolId>,
+) -> Option<IntBound> {
+    let kind = match head {
+        ">=" => IntBoundKind::Ge,
+        ">" => IntBoundKind::Gt,
+        "<=" => IntBoundKind::Le,
+        "<" => IntBoundKind::Lt,
+        "=" => IntBoundKind::Eq,
+        _ => return None,
+    };
+    if items.len() != 3 {
+        return None;
+    }
+    let lhs = &items[1];
+    let rhs = &items[2];
+    // `(⋈ var lit)`.
+    if let (Some(&sym), Some(bound)) = (
+        lhs.atom().and_then(|n| int_vars.get(n)),
+        parse_int_literal(rhs),
+    ) {
+        return Some(IntBound { sym, kind, bound });
+    }
+    // `(⋈ lit var)` — flip the relation so the bound reads `var ⋈ lit`.
+    if let (Some(bound), Some(&sym)) = (
+        parse_int_literal(lhs),
+        rhs.atom().and_then(|n| int_vars.get(n)),
+    ) {
+        let flipped = match kind {
+            IntBoundKind::Ge => IntBoundKind::Le,
+            IntBoundKind::Gt => IntBoundKind::Lt,
+            IntBoundKind::Le => IntBoundKind::Ge,
+            IntBoundKind::Lt => IntBoundKind::Gt,
+            IntBoundKind::Eq => IntBoundKind::Eq,
+        };
+        return Some(IntBound {
+            sym,
+            kind: flipped,
+            bound,
+        });
+    }
+    None
 }
 
 /// Parses an SMT-LIB integer literal: a bare numeral atom, or `(- n)` for a negative

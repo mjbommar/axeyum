@@ -57,12 +57,37 @@ fn from_int_in_distinct_is_sat() {
     );
 }
 
-/// cvc5 `type002` is `sat`, but the `(>= i 420)` arithmetic constraint on the
-/// `str.from_int` argument takes the script out of the pure word fragment (the flat
-/// builder declines any non-string atom). The slice leaves it a **sound** `unknown` —
-/// never a wrong `sat` from ignoring the bound.
+/// cvc5 `type002` (task #78): `str.from_int(i)` under an arithmetic bound `(>= i 420)`,
+/// coupled to a word equation forcing an interior `"0"`. The LIA-coupled route
+/// enumerates candidate integers in `[420, ∞)`, pinning each to its decimal and
+/// re-solving — `i = 500` (`x = "500" = "5"·"0"·"0"`, `y = "5"`, `z = "0"`) is a
+/// replay-checked witness that satisfies the bound.
 #[test]
-fn from_int_with_arith_bound_stays_unknown() {
+fn from_int_type002_arith_bound_is_sat() {
+    let src = r#"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun y () String)
+(declare-fun z () String)
+(declare-fun i () Int)
+(assert (>= i 420))
+(assert (= x (str.from_int i)))
+(assert (= x (str.++ y "0" z)))
+(assert (not (= y "")))
+(assert (not (= z "")))
+(check-sat)"#;
+    assert!(
+        is_sat(src),
+        "type002 (from_int under an arithmetic bound) must decide sat via LIA coupling"
+    );
+}
+
+/// Soundness trap (task #78): a `str.from_int(i)` under a bound `(>= i 420)` forced by
+/// the word equation to end in **non-digit** characters (`"aaaa…"`). cvc5 reports
+/// `unsat` (no integer's decimal ends in `"a"`); every enumerated candidate's pin
+/// conflicts with the word equation, so the coupled route must stay `unknown` — never a
+/// wrong `sat` and never `unsat`.
+#[test]
+fn from_int_arith_bound_non_digit_suffix_is_unknown() {
     let src = r#"(set-logic QF_SLIA)
 (declare-fun x () String)
 (declare-fun y () String)
@@ -75,8 +100,62 @@ fn from_int_with_arith_bound_stays_unknown() {
 (assert (not (= z "")))
 (check-sat)"#;
     assert!(
+        !is_sat(src),
+        "a from_int whose word equation forces non-digit content must never be a wrong sat"
+    );
+    assert!(
         is_unknown(src),
-        "an arithmetic bound on the from_int argument must keep the verdict unknown"
+        "the non-digit-suffix from_int trap must stay unknown"
+    );
+}
+
+/// Soundness trap (task #78): the arithmetic bounds on the `str.from_int` argument are
+/// **jointly unsatisfiable** (`i >= 420 ∧ i <= 5`). The intersected integer range is
+/// empty, so no candidate exists and no witness can be built — the route must stay
+/// `unknown` (never a wrong `sat` from ignoring one of the bounds, and never `unsat`).
+#[test]
+fn from_int_unsat_arith_range_is_unknown_not_sat() {
+    let src = r#"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun y () String)
+(declare-fun z () String)
+(declare-fun i () Int)
+(assert (>= i 420))
+(assert (<= i 5))
+(assert (= x (str.from_int i)))
+(assert (= x (str.++ y "0" z)))
+(assert (not (= y "")))
+(assert (not (= z "")))
+(check-sat)"#;
+    assert!(
+        !is_sat(src),
+        "an empty from_int bound range must never yield a wrong sat"
+    );
+    assert!(
+        is_unknown(src),
+        "the empty-range from_int trap must stay unknown"
+    );
+}
+
+/// A `str.from_int(i)` under an **equality** bound `(= i 700)` coupled to a word
+/// equation the value satisfies (`"700" = "7"·"0"·"0"`) is `sat`; the single candidate
+/// `700` is pinned and inverts back to `i = 700` (task #78, `IntBoundKind::Eq`).
+#[test]
+fn from_int_eq_bound_is_sat() {
+    let src = r#"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun y () String)
+(declare-fun z () String)
+(declare-fun i () Int)
+(assert (= i 700))
+(assert (= x (str.from_int i)))
+(assert (= x (str.++ y "0" z)))
+(assert (not (= y "")))
+(assert (not (= z "")))
+(check-sat)"#;
+    assert!(
+        is_sat(src),
+        "an equality-bounded from_int coupled to a satisfiable word equation must be sat"
     );
 }
 

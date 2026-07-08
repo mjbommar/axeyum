@@ -15,9 +15,10 @@ use axeyum_cnf::{check_alethe, write_alethe};
 use std::collections::{BTreeMap, HashMap, VecDeque};
 
 use axeyum_ir::{
-    FuncValue, Op, Sort, SymbolId, TermArena, TermId, TermNode, Value, render, well_founded_default,
+    ArraySortKey, FuncValue, Op, Sort, SymbolId, TermArena, TermId, TermNode, Value, render,
+    well_founded_default,
 };
-use axeyum_smtlib::{Script, ScriptCommand, WordObligation, parse_script};
+use axeyum_smtlib::{IntBound, IntBoundKind, Script, ScriptCommand, WordObligation, parse_script};
 use axeyum_strings::{
     MembershipOutcome, RefuteOutcome, SearchBudget, SearchOutcome, refute_word_equations,
     solve_word_equations,
@@ -73,14 +74,17 @@ fn apply_word_route(
     // Clone the (Copy-element) problem so the immutable borrow of `word_problem`
     // ends before the `&mut arena` search call; leaves the side channel in place
     // for the incremental path's later queries.
-    let Some((eqs, diseqs, syms, obligations)) = script.word_problem.as_ref().map(|wp| {
-        (
-            wp.equalities.clone(),
-            wp.disequalities.clone(),
-            wp.seq_symbols.clone(),
-            wp.obligations.clone(),
-        )
-    }) else {
+    let Some((eqs, diseqs, syms, obligations, int_bounds)) =
+        script.word_problem.as_ref().map(|wp| {
+            (
+                wp.equalities.clone(),
+                wp.disequalities.clone(),
+                wp.seq_symbols.clone(),
+                wp.obligations.clone(),
+                wp.int_bounds.clone(),
+            )
+        })
+    else {
         return CheckResult::Unknown(reason);
     };
 
@@ -92,6 +96,25 @@ fn apply_word_route(
         refute_word_equations(&mut script.arena, &eqs, &diseqs, &budget)
     {
         return CheckResult::Unsat;
+    }
+
+    // Task #78: a `str.from_int`-coupled word problem carrying linear integer bounds
+    // on the `from_int` argument is decided by the LIA-coupled enumeration route — the
+    // plain arrangement search cannot honor the bound (it minimizes the string, which
+    // usually inverts to an integer outside the bound). The route only ever *adds*
+    // `sat` (each candidate is replay-checked over the word problem and its integer is
+    // verified against every bound); it never emits `unsat`.
+    if !int_bounds.is_empty() {
+        return couple_from_int_bounds(
+            &mut script.arena,
+            &eqs,
+            &diseqs,
+            &syms,
+            &obligations,
+            &int_bounds,
+            &budget,
+            &reason,
+        );
     }
 
     match solve_word_equations(&mut script.arena, &eqs, &diseqs, &budget) {
@@ -200,6 +223,303 @@ fn resolve_word_obligations(
         model.set(sym, Value::Int(value));
     }
     true
+}
+
+/// The maximum number of candidate integers the [`couple_from_int_bounds`] route
+/// enumerates before giving up with `unknown`. The `str.from_int`-coupled search
+/// pins the fresh `Seq` variable to each candidate's decimal and re-solves the
+/// residual word problem, so this bounds the pathological "unbounded range, no
+/// witness" shape to a fast, first-class `unknown` when no deadline is set. Sized to
+/// decide the small-integer-witness class (the cvc5 regress shapes need a two- or
+/// three-digit integer) while keeping the worst case fast under the default
+/// (deadline-free) config. A witness must lie within this many integers of the range's
+/// lower bound; anything further stays a sound `unknown`. On native targets the
+/// internal wall-clock cap ([`WORD_INT_COUPLE_INTERNAL_MS`]) usually bites first; this
+/// count is the sole guard under `wasm32` (no deadline there).
+const WORD_INT_COUPLE_MAX_CANDIDATES: u64 = 512;
+
+/// The per-candidate branch-node cap for the [`couple_from_int_bounds`] enumeration, so
+/// one pathological pin cannot monopolize the wall-clock budget.
+const WORD_INT_COUPLE_MAX_NODES_PER_CANDIDATE: u64 = 2_000;
+
+/// The internal wall-clock cap (milliseconds) the coupling enumeration imposes when the
+/// caller's [`SolverConfig::timeout`] set no deadline. Each pinned re-solve rebuilds the
+/// arrangement classes, so a large unsat-shaped range is expensive to sweep; this bounds
+/// the whole enumeration to a fast, first-class `unknown` even with no configured
+/// timeout (native targets only — under `wasm32` the candidate count governs).
+const WORD_INT_COUPLE_INTERNAL_MS: u64 = 2_000;
+
+/// Decides a `str.from_int`-coupled word problem carrying linear integer bounds on
+/// the `from_int` argument (task #78), by Nelson-Oppen-style enumeration over the
+/// bound-satisfying integer range.
+///
+/// The plain arrangement search minimizes the fresh `Seq` variable that stands for
+/// `str.from_int(i)`, which usually inverts to an integer *outside* the bound, so it
+/// cannot decide these on its own. Instead this route intersects every bound into a
+/// concrete range `[lo, hi]`, then enumerates candidate integers `c` in that range:
+/// each candidate pins the fresh variable to `str.from_int(c)`'s canonical decimal and
+/// re-solves the residual word problem. On the first replay-checked arrangement whose
+/// recovered integers satisfy every bound, the model is a genuine witness.
+///
+/// **Soundness.** Every emitted `sat` is anchored three ways: (1) the pinned
+/// arrangement replays through the ground evaluator against the word equations
+/// (`solve_word_equations`'s mandatory replay), so the string structure holds; (2) the
+/// pin `w = str.from_int(c)` is exact — `str.from_int(c)` *is* the decimal we pinned —
+/// so substituting the fresh variable by `str.from_int(i)` with `i = c` is
+/// model-preserving; (3) `c` is enumerated inside the intersected range and every bound
+/// is re-verified on the final integer, so the original arithmetic atoms hold. Together
+/// the model satisfies every original assertion. A bad coupling cannot slip through:
+/// an arrangement that does not replay is rejected by (1), and a `c` violating a bound
+/// is rejected by (3). The route never emits `unsat`; an empty range, a too-large range,
+/// or an exhausted enumeration all stay `unknown`.
+///
+/// Restricted to a **single** bounded `from_int` argument (the tractable slice); a
+/// script with bounds on two or more distinct `from_int` integers stays `unknown`.
+#[allow(clippy::too_many_arguments)]
+fn couple_from_int_bounds(
+    arena: &mut TermArena,
+    eqs: &[(TermId, TermId)],
+    diseqs: &[(TermId, TermId)],
+    syms: &[SymbolId],
+    obligations: &[WordObligation],
+    int_bounds: &[IntBound],
+    budget: &SearchBudget,
+    reason: &UnknownReason,
+) -> CheckResult {
+    // The tractable slice: exactly one bounded `from_int` argument.
+    let mut bsyms: Vec<SymbolId> = int_bounds.iter().map(|b| b.sym).collect();
+    bsyms.sort_unstable();
+    bsyms.dedup();
+    let [bsym] = bsyms.as_slice() else {
+        return word_decline(reason, "from_int LIA coupling: multiple bounded arguments");
+    };
+    let bsym = *bsym;
+
+    // Intersect every bound into an inclusive integer range `[lo, hi]`.
+    let Some((lo, hi)) = intersect_int_bounds(int_bounds) else {
+        // Empty range (e.g. `i >= 420 ∧ i <= 5`) — no integer satisfies the bounds, so
+        // no witness exists. Stay `unknown` (the route never claims `unsat`).
+        return word_decline(reason, "from_int LIA coupling: empty integer bound range");
+    };
+
+    // The fresh `Seq` symbol standing for `str.from_int(bsym)`.
+    let Some(seq_sym) = obligations.iter().find_map(|ob| match ob {
+        WordObligation::FromInt { seq_sym, int_sym } if *int_sym == bsym => Some(*seq_sym),
+        _ => None,
+    }) else {
+        return word_decline(
+            reason,
+            "from_int LIA coupling: no obligation for bounded argument",
+        );
+    };
+
+    // The per-candidate budget: a small node cap plus a wall-clock deadline (the outer
+    // one, or an internal cap when none was configured) that bounds the whole sweep.
+    let cand_budget = enum_candidate_budget(budget);
+    let mut tried: u64 = 0;
+
+    // (a) The non-positive range collapses to a single representative: `str.from_int` of
+    // every negative integer is `""`, so one pin `w = ""` covers it. Bind the bounded
+    // integer to a concrete negative value in range.
+    if lo < 0 {
+        let neg = hi.min(-1);
+        if neg >= lo
+            && let Some(result) = try_from_int_candidate(
+                arena,
+                eqs,
+                diseqs,
+                syms,
+                obligations,
+                int_bounds,
+                bsym,
+                seq_sym,
+                neg,
+                &[],
+                &cand_budget,
+            )
+        {
+            return result;
+        }
+        tried += 1;
+    }
+
+    // (b) Non-negative candidates ascending from `max(lo, 0)`; each pins the canonical
+    // decimal of `c`.
+    let mut c = lo.max(0);
+    while c <= hi {
+        if tried >= WORD_INT_COUPLE_MAX_CANDIDATES || cand_budget.past_deadline() {
+            break;
+        }
+        let cps = decimal_cps(c);
+        if let Some(result) = try_from_int_candidate(
+            arena,
+            eqs,
+            diseqs,
+            syms,
+            obligations,
+            int_bounds,
+            bsym,
+            seq_sym,
+            c,
+            &cps,
+            &cand_budget,
+        ) {
+            return result;
+        }
+        tried += 1;
+        let Some(next) = c.checked_add(1) else { break };
+        c = next;
+    }
+
+    word_decline(
+        reason,
+        "from_int LIA coupling: no bound-satisfying witness in the enumerated range",
+    )
+}
+
+/// Tries one candidate integer `c` for the LIA-coupled `from_int` route: pins the fresh
+/// `Seq` variable `seq_sym` to `cps` (the code points of `str.from_int(c)`), re-solves
+/// the residual word problem, and on a replay-checked arrangement builds a model with
+/// the recovered strings, inverts every obligation, forces the bounded integer to
+/// exactly `c`, and re-verifies every bound. Returns `Some(Sat)` on success, `None`
+/// otherwise (so the enumeration continues).
+#[allow(clippy::too_many_arguments)]
+fn try_from_int_candidate(
+    arena: &mut TermArena,
+    eqs: &[(TermId, TermId)],
+    diseqs: &[(TermId, TermId)],
+    syms: &[SymbolId],
+    obligations: &[WordObligation],
+    int_bounds: &[IntBound],
+    bsym: SymbolId,
+    seq_sym: SymbolId,
+    c: i128,
+    cps: &[u32],
+    budget: &SearchBudget,
+) -> Option<CheckResult> {
+    let lit = seq_literal_term(arena, cps)?;
+    let w_term = arena.var(seq_sym);
+    let mut pinned = eqs.to_vec();
+    pinned.push((w_term, lit));
+    // `budget` already carries the per-candidate node cap and the enumeration deadline.
+    let SearchOutcome::Sat(assignment) = solve_word_equations(arena, &pinned, diseqs, budget)
+    else {
+        return None;
+    };
+    let mut model = Model::new();
+    for &sym in syms {
+        if let Some(value) = assignment.get(sym) {
+            model.set(sym, value);
+        }
+    }
+    // Invert every obligation (the pinned one recovers `c`; others invert their solved
+    // strings). A non-invertible sibling obligation means this arrangement does not
+    // lift — try the next candidate.
+    if !resolve_word_obligations(&assignment, obligations, &mut model) {
+        return None;
+    }
+    // Force the bounded integer to exactly `c` (covers the negative/empty case where the
+    // inversion yields the `-1` representative rather than the chosen value).
+    model.set(bsym, Value::Int(c));
+    // Re-verify every bound on the final integer — the arithmetic safety net. `c` is
+    // enumerated in range, so this holds by construction; the check makes the coupling
+    // self-guarding against any future range-computation slip.
+    if int_bounds.iter().all(|b| int_bound_holds(b, c)) {
+        Some(CheckResult::Sat(model))
+    } else {
+        None
+    }
+}
+
+/// Builds the per-candidate [`SearchBudget`] for the coupled enumeration: the outer
+/// budget with a per-candidate node cap, and — on native targets, when the caller set no
+/// deadline — an internal wall-clock deadline so the whole sweep stays bounded.
+fn enum_candidate_budget(budget: &SearchBudget) -> SearchBudget {
+    let mut b = budget.clone();
+    b.max_nodes = b.max_nodes.min(WORD_INT_COUPLE_MAX_NODES_PER_CANDIDATE);
+    #[cfg(not(target_arch = "wasm32"))]
+    if b.deadline.is_none() {
+        b.deadline = std::time::Instant::now().checked_add(std::time::Duration::from_millis(
+            WORD_INT_COUPLE_INTERNAL_MS,
+        ));
+    }
+    b
+}
+
+/// Intersects a set of linear integer bounds into an inclusive range `[lo, hi]`, or
+/// `None` when the range is empty (no integer satisfies every bound). All bounds are
+/// on one symbol; the caller enforces that.
+fn intersect_int_bounds(int_bounds: &[IntBound]) -> Option<(i128, i128)> {
+    let mut lo = i128::MIN;
+    let mut hi = i128::MAX;
+    for b in int_bounds {
+        match b.kind {
+            IntBoundKind::Ge => lo = lo.max(b.bound),
+            IntBoundKind::Gt => lo = lo.max(b.bound.checked_add(1)?),
+            IntBoundKind::Le => hi = hi.min(b.bound),
+            IntBoundKind::Lt => hi = hi.min(b.bound.checked_sub(1)?),
+            IntBoundKind::Eq => {
+                lo = lo.max(b.bound);
+                hi = hi.min(b.bound);
+            }
+        }
+    }
+    if lo > hi { None } else { Some((lo, hi)) }
+}
+
+/// Whether the integer `v` satisfies the bound.
+fn int_bound_holds(b: &IntBound, v: i128) -> bool {
+    match b.kind {
+        IntBoundKind::Ge => v >= b.bound,
+        IntBoundKind::Gt => v > b.bound,
+        IntBoundKind::Le => v <= b.bound,
+        IntBoundKind::Lt => v < b.bound,
+        IntBoundKind::Eq => v == b.bound,
+    }
+}
+
+/// The Unicode code points of `str.from_int(n)`: the canonical decimal digits of a
+/// non-negative `n` (no leading zeros; `0` → `"0"`), or empty for a negative `n`.
+fn decimal_cps(n: i128) -> Vec<u32> {
+    if n < 0 {
+        return Vec::new();
+    }
+    n.to_string().chars().map(|ch| ch as u32).collect()
+}
+
+/// Builds a `Seq(BitVec(18))` literal term from Unicode code points (the right-
+/// associated `seq.unit` chain the word builder uses), so a pinned candidate string
+/// interns identically to a written string literal.
+fn seq_literal_term(arena: &mut TermArena, cps: &[u32]) -> Option<TermId> {
+    let key = ArraySortKey::BitVec(Sort::STRING_ELEM_WIDTH);
+    if cps.is_empty() {
+        return Some(arena.seq_empty(key));
+    }
+    let mut acc: Option<TermId> = None;
+    for &cp in cps.iter().rev() {
+        let elem = arena
+            .bv_const(Sort::STRING_ELEM_WIDTH, u128::from(cp))
+            .ok()?;
+        let unit = arena.seq_unit(elem).ok()?;
+        acc = Some(match acc {
+            None => unit,
+            Some(rest) => arena.seq_concat(unit, rest).ok()?,
+        });
+    }
+    acc
+}
+
+/// Preserves a prior `unknown`, appending a word-route decline note to its detail.
+fn word_decline(reason: &UnknownReason, note: &str) -> CheckResult {
+    let detail = if reason.detail.is_empty() {
+        note.to_owned()
+    } else {
+        format!("{}; {note}", reason.detail)
+    };
+    CheckResult::Unknown(UnknownReason {
+        kind: reason.kind,
+        detail,
+    })
 }
 
 /// The Unicode code points of an assignment's `Seq`-valued symbol, or `None` when it
