@@ -5788,9 +5788,22 @@ fn string_suffixof(arena: &mut TermArena, x: TermId, y: TermId) -> Result<TermId
 /// it composes with equality. Pure BV/Bool — decides both directions.
 fn string_at_const(arena: &mut TermArena, s: TermId, k: i128) -> Result<TermId, SmtError> {
     let m = string_max_len(arena, s)?;
-    // Out of the representable range: always the empty string (all-zero packing).
-    if k < 0 || k >= i128::from(m) {
+    // A negative index is out of range for EVERY string (SMT-LIB), regardless of
+    // length — so folding to the empty string is sound and bound-independent.
+    if k < 0 {
         return arena.bv_const(string_total(1), 0).map_err(SmtError::Ir);
+    }
+    // `k ≥ m` is beyond the *packed* length, but a SYMBOLIC `s` could really be
+    // longer than `m`, so folding to a hard `""` is UNSOUND — it manufactured
+    // wrong-unsats (e.g. `(= (str.at s 100) "x")` is sat: `s` of length 101 with
+    // 'x' at 100, but the bounded fold makes it `(= "" "x")` = unsat; task #76).
+    // Route through the Int-index mux instead, so the result carries the length
+    // channel: the bounded path reports a sound `unknown` (mirroring `str.substr`
+    // past the cap), and the bounded-completeness route (#75) still upgrades the
+    // genuinely length-capped cases to `unsat`.
+    if k >= i128::from(m) {
+        let ki = arena.int_const(k);
+        return string_at_int(arena, s, ki);
     }
     let kk = u32::try_from(k).expect("0 ≤ k < m");
     let slen = string_len_field(arena, s, m)?;

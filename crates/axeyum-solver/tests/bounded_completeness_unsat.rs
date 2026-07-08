@@ -71,3 +71,42 @@ fn unbounded_string_analyzer_rejects() {
         );
     }
 }
+
+/// Regression for the pre-existing wrong-unsat (#76): `str.at` at a CONSTANT
+/// index beyond the packed cap on a SYMBOLIC string used to fold to a hard `""`,
+/// making `(= (str.at s 100) "x")` a wrong `unsat` (cvc5: sat, `s` = 101 chars
+/// with 'x' at 100). It must now be sound — never `unsat` (the fix routes it
+/// through the Int mux → `unknown`).
+#[test]
+fn str_at_past_cap_symbolic_is_not_wrongly_unsat() {
+    let text = "(set-logic QF_S)\n(declare-fun s () String)\n\
+                (assert (= (str.at s 100) \"x\"))\n(check-sat)\n";
+    assert_ne!(
+        verdict(text),
+        CheckResult::Unsat,
+        "str.at past cap on a symbolic string must not fold to a wrong unsat (#76)"
+    );
+}
+
+/// The bounded-complete counterpart: with `s` length-capped `≤ 8 < 100`,
+/// `str.at s 100` is genuinely `""`, so the query IS unsat — decided via the
+/// bounded-completeness route (#75).
+#[test]
+fn str_at_past_cap_length_capped_is_unsat() {
+    let text = "(set-logic QF_S)\n(declare-fun s () String)\n\
+                (assert (<= (str.len s) 8))\n(assert (= (str.at s 100) \"x\"))\n(check-sat)\n";
+    assert_eq!(verdict(text), CheckResult::Unsat);
+}
+
+/// In-cap constant `str.at` folds are unchanged (regression guard).
+#[test]
+fn str_at_in_cap_still_folds() {
+    assert!(matches!(
+        verdict("(set-logic QF_S)\n(assert (= (str.at \"abc\" 1) \"b\"))\n(check-sat)\n"),
+        CheckResult::Sat(_)
+    ));
+    assert_eq!(
+        verdict("(set-logic QF_S)\n(assert (= (str.at \"abc\" 1) \"x\"))\n(check-sat)\n"),
+        CheckResult::Unsat
+    );
+}
