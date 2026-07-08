@@ -1,38 +1,32 @@
-//! Exhaustive **F16 faithfulness witness for the structurally-exact FP operators**
-//! (task #69), the ops the per-query `Fpa2Bv` certified sub-case relies on.
+//! **F16 faithfulness witnesses for the `Fpa2Bv`-certified FP operators** (tasks
+//! #69/#70/#70a), the ops the per-query certified sub-case relies on. The companion
+//! `fpa2bv_faithfulness.rs` witnesses the *arithmetic* circuits at `FP8_E5M2`; this
+//! file witnesses the **certified** operators at F16 (S1E5M10, matching
+//! [`FloatFormat::F16`]) against the independent [`rustc_apfloat`] `ieee::Half`
+//! reference. Two tiers:
 //!
-//! The companion `fpa2bv_faithfulness.rs` witnesses the *arithmetic* circuits at
-//! `FP8_E5M2` (8 bits). This file witnesses the **simple** operators — `fp.neg`,
-//! `fp.abs`, and the five mutually-exclusive category predicates `fp.isNaN`,
-//! `fp.isInfinite`, `fp.isZero`, `fp.isNormal`, `fp.isSubnormal` — over **every**
-//! F16 bit pattern (all 65 536), against the independent [`rustc_apfloat`]
-//! `ieee::Half` reference (S1E5M10, matching [`FloatFormat::F16`] bit-for-bit).
+//! **Exact bit ops / predicates — exhaustive over all 65 536 patterns.** Each is a
+//! pure, width-parametric bit operation / exact field-pattern test, so confirming
+//! the circuit **is** exactly that operation at one fully-enumerable width (F16),
+//! plus the width-parametric builders, establishes faithfulness at every width:
 //!
-//! These are the operators `axeyum_smtlib::FpUsage::fpa2bv_simple_op_certified`
-//! puts on the allow-list. The by-construction argument is that each is a pure,
-//! width-parametric bit operation / exact field-pattern test:
+//! - `fp.neg` = `bvxor` sign mask (flip bit 15); `fp.abs` = `bvand` ~sign mask;
+//! - the category predicates — equalities on the exponent / trailing-significand
+//!   fields (`exp all-ones ∧ sig≠0`=NaN, `∧ sig=0`=∞, `exp all-zero ∧ sig=0`=zero,
+//!   `∧ sig≠0`=subnormal, else normal);
+//! - the sign predicates `fp.isNegative` (`sign ∧ ¬NaN`) / `fp.isPositive`
+//!   (`¬sign ∧ ¬NaN`) — the reference is `rustc_apfloat`'s raw `is_negative`
+//!   conjoined with `¬is_nan` (the signed-NaN case is exactly where the SMT-LIB
+//!   predicate `false` differs from apfloat's bare sign bit `true`).
 //!
-//! - `fp.neg` = `bvxor` with the sign mask (flip bit 15); `fp.abs` = `bvand` with
-//!   the sign mask's complement (clear bit 15) — independent of the format width;
-//! - the category predicates are equalities on the extracted exponent / trailing
-//!   significand fields (`exp all-ones ∧ sig≠0` = NaN, `exp all-ones ∧ sig=0` = ∞,
-//!   `exp all-zero ∧ sig=0` = zero, `exp all-zero ∧ sig≠0` = subnormal, `exp
-//!   neither` = normal).
-//!
-//! Confirming the circuit **is** exactly that operation at F16 (16 bits, fully
-//! enumerable), together with the width-parametric structure of the builders,
-//! establishes faithfulness at every format width. F16 is chosen (over F32) so the
-//! witness is genuinely *exhaustive*, not sampled.
-//!
-//! `fp.isNegative`/`fp.isPositive` are **not** on the certified allow-list — their
-//! signed-zero/NaN semantics are disputed (note that `rustc_apfloat`'s
-//! `is_negative` classifies a signed NaN as negative, whereas axeyum's
-//! `fp.isNegative` excludes NaN). A focused documentation check below records that
-//! divergence so the exclusion is on the record, not accidental.
+//! **Proven-faithful comparison circuits — F16 edge cross-product** (the exhaustive
+//! anchor is `fpa2bv_faithfulness.rs` at FP8). `fp.eq`/`fp.lt`/`fp.leq` are faithful
+//! by a width-independent argument (monotone `order_key` + `¬NaN`/`±0` guards); the
+//! curated F16 edge set double-anchors that claim at a second width.
 
 use axeyum_fp::{
-    FloatFormat, abs, is_infinite, is_nan, is_negative, is_normal, is_positive, is_subnormal,
-    is_zero, neg,
+    FloatFormat, abs, eq, is_infinite, is_nan, is_negative, is_normal, is_positive, is_subnormal,
+    is_zero, leq, lt, neg,
 };
 use axeyum_ir::{Assignment, Sort, TermArena, TermId, Value, eval};
 use rustc_apfloat::Float;
@@ -72,6 +66,38 @@ fn unary_bv_evaluator(
         match eval(&arena, t, &asg).unwrap() {
             Value::Bv { value, .. } => value,
             other => panic!("expected BV, got {other:?}"),
+        }
+    }
+}
+
+/// Builds a binary FP comparison circuit (BV × BV → Bool) once and evaluates it.
+fn binary_cmp_evaluator(
+    build: impl Fn(&mut TermArena, FloatFormat, TermId, TermId) -> Result<TermId, axeyum_ir::IrError>,
+) -> impl Fn(u128, u128) -> bool {
+    let mut arena = TermArena::new();
+    let sx = arena.declare("x", Sort::BitVec(WIDTH)).unwrap();
+    let sy = arena.declare("y", Sort::BitVec(WIDTH)).unwrap();
+    let (x, y) = (arena.var(sx), arena.var(sy));
+    let t = build(&mut arena, FMT, x, y).unwrap();
+    move |xb, yb| {
+        let mut asg = Assignment::new();
+        asg.set(
+            sx,
+            Value::Bv {
+                width: WIDTH,
+                value: xb,
+            },
+        );
+        asg.set(
+            sy,
+            Value::Bv {
+                width: WIDTH,
+                value: yb,
+            },
+        );
+        match eval(&arena, t, &asg).unwrap() {
+            Value::Bool(b) => b,
+            other => panic!("expected Bool, got {other:?}"),
         }
     }
 }
@@ -221,6 +247,58 @@ fn f16_ispositive_faithful_exhaustive() {
     for xb in 0..N {
         let want = !r_from(xb).is_negative() && !r_from(xb).is_nan();
         assert_eq!(circuit(xb), want, "fp.isPositive({xb:#06x})");
+    }
+}
+
+// --- comparison circuits: F16 second-width witness (edge cross-product) ------
+
+/// A curated set of F16 edge bit patterns — both zeros, both infinities, a NaN, the
+/// min/max subnormal and normal of both signs, and ±1.0 — i.e. exactly where FP
+/// comparison semantics live (NaN unordered, ±0 equal, sign/magnitude boundaries).
+/// The full cross-product exercises every ordering relation at the **second** width
+/// (F16), double-anchoring the `FP8_E5M2` exhaustive comparison witness
+/// (`fpa2bv_faithfulness.rs`) for the width-parametric `order_key` argument.
+const F16_EDGE: &[u128] = &[
+    0x0000, 0x8000, // +0, -0
+    0x7c00, 0xfc00, // +inf, -inf
+    0x7e00, // qNaN
+    0x0001, 0x8001, // ± smallest subnormal
+    0x03ff, 0x83ff, // ± largest subnormal
+    0x0400, 0x8400, // ± smallest normal
+    0x3c00, 0xbc00, // ±1.0
+    0x7bff, 0xfbff, // ± largest normal
+];
+
+#[test]
+fn f16_eq_faithful_over_edge_cases() {
+    // Oracle: rustc_apfloat IEEE `==` (NaN ≠ NaN, +0 == -0) — the SMT-LIB `fp.eq`.
+    let circuit = binary_cmp_evaluator(eq);
+    for &xb in F16_EDGE {
+        for &yb in F16_EDGE {
+            let want = r_from(xb) == r_from(yb);
+            assert_eq!(circuit(xb, yb), want, "fp.eq({xb:#06x},{yb:#06x})");
+        }
+    }
+}
+
+#[test]
+fn f16_lt_leq_faithful_over_edge_cases() {
+    // Oracle: rustc_apfloat `PartialOrd` (NaN ⇒ false, ±0 equal) — SMT-LIB fp.lt/leq.
+    let lt_c = binary_cmp_evaluator(lt);
+    let leq_c = binary_cmp_evaluator(leq);
+    for &xb in F16_EDGE {
+        for &yb in F16_EDGE {
+            assert_eq!(
+                lt_c(xb, yb),
+                r_from(xb) < r_from(yb),
+                "fp.lt({xb:#06x},{yb:#06x})"
+            );
+            assert_eq!(
+                leq_c(xb, yb),
+                r_from(xb) <= r_from(yb),
+                "fp.leq({xb:#06x},{yb:#06x})"
+            );
+        }
     }
 }
 

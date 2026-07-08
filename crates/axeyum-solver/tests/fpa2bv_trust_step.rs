@@ -6,17 +6,17 @@
 //! [`TrustId::Fpa2Bv`] [`TrustStep`] to any FP `unsat`:
 //!
 //! - **`certified: true`** iff every FP operator the reduction lowered is
-//!   *structurally exact* — `fp.neg`/`fp.abs` (sign-bit ops) and the five
-//!   mutually-exclusive category predicates `fp.isNaN`/`fp.isInfinite`/`fp.isZero`/
-//!   `fp.isNormal`/`fp.isSubnormal` (exact field-pattern tests). These are faithful
-//!   by construction at every width (exhaustively cross-checked against
-//!   `rustc_apfloat` at F16 in `axeyum-fp/tests/fpa2bv_simple_faithfulness.rs`), so
-//!   the reduction is faithful and the `unsat` is genuinely certified.
-//! - **`certified: false`** for any query using an operator with rounding / NaN /
-//!   signed-zero circuit logic (`fp.add`, `fp.lt`, …) and every conversion
-//!   (`to_fp`, `fp.to_ubv`, …). `fp.isNegative`/`fp.isPositive` are ALSO certified —
-//!   they are structurally-exact `sign ∧ ¬NaN` predicates (the `af6c8bf`/GAP-F2
-//!   sign-bit semantics that Z3 and cvc5 share).
+//!   by-construction faithful (at the guarded `≤128`-bit widths): the exact bit ops
+//!   `fp.neg`/`fp.abs`, the category predicates `fp.isNaN`/`isInfinite`/`isZero`/
+//!   `isNormal`/`isSubnormal`, the sign predicates `fp.isNegative`/`isPositive`
+//!   (`sign ∧ ¬NaN`), and the **proven-faithful comparison circuits**
+//!   `fp.eq`/`lt`/`leq`/`gt`/`geq` (width-independent monotone `order_key` +
+//!   FP8-exhaustive witness). See `axeyum-fp/tests/fpa2bv_simple_faithfulness.rs` and
+//!   `fpa2bv_faithfulness.rs`.
+//! - **`certified: false`** for any query using a rounding-bearing operator
+//!   (`fp.add`/`sub`/`mul`/`div`/`rem`/`fma`/`sqrt`/`min`/`max`) or a conversion
+//!   (`to_fp`, `fp.to_ubv`, …) — those need the by-construction rounding-circuit
+//!   proof (task #70).
 //!
 //! The global [`TrustId::Fpa2Bv::is_certified`] stays `false` (not every FP query
 //! qualifies); this is the per-run [`TrustStep::certified`] flag, exactly like the
@@ -107,9 +107,11 @@ fn neg_normal_and_subnormal_is_certified() {
 // --- (b) certified: false — a non-simple op disqualifies ---------------------
 
 /// `fp.lt(x, x)` is UNSAT (irreflexive; even a non-NaN `x < x` is false, NaN is
-/// unordered). `fp.lt` has comparison circuit logic → **not certified**.
+/// unordered). `fp.lt` is a **proven-faithful comparison circuit** (`¬NaN ∧
+/// ¬both-zero ∧ ult(order_key)`, width-independent monotonicity + FP8-exhaustive
+/// witness), so the `Fpa2Bv` step is **certified**.
 #[test]
-fn lt_self_is_not_certified() {
+fn lt_self_is_certified() {
     let step = fpa2bv_step(
         "(set-logic QF_FP)\n\
          (declare-const x Float32)\n\
@@ -121,9 +123,9 @@ fn lt_self_is_not_certified() {
         step,
         TrustStep {
             id: TrustId::Fpa2Bv,
-            certified: false,
+            certified: true,
         },
-        "fp.lt is a non-simple comparison — Fpa2Bv must NOT be certified"
+        "fp.lt is a proven-faithful comparison — Fpa2Bv must be certified"
     );
 }
 

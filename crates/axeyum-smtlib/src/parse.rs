@@ -246,30 +246,37 @@ pub struct Script {
 /// the global `TrustId::Fpa2Bv::is_certified()` stays `false`).
 ///
 /// The FP → BV reduction is **faithful-by-construction** exactly when every FP
-/// operator it lowered is a *structurally-exact bit operation / exact bit-pattern
-/// predicate* at the format's width. Those are:
+/// operator it lowered is faithful at the format's width (FP formats are guarded to
+/// `≤ 128` bits, so the `u128` sign masks the circuits use never overflow). Two
+/// tiers qualify:
 ///
-/// - `fp.neg` (flip the sign bit) and `fp.abs` (clear the sign bit) — pure,
-///   width-parametric bit ops by the IEEE-754 / SMT-LIB definition;
+/// **Exact bit operations / predicates** (trivially faithful by inspection at any
+/// width):
+/// - `fp.neg` (flip the sign bit) and `fp.abs` (clear the sign bit);
 /// - the five **mutually-exclusive category** predicates `fp.isNaN`,
 ///   `fp.isInfinite`, `fp.isZero`, `fp.isNormal`, `fp.isSubnormal` — exact
 ///   exponent/significand field-pattern tests;
 /// - the **sign classification** predicates `fp.isNegative` (`sign bit set ∧ ¬NaN`)
-///   and `fp.isPositive` (`sign bit clear ∧ ¬NaN`) — exact bit-pattern tests. Their
-///   SMT-LIB semantics is *sign-bit* classification, not numeric `x < 0`, so `−0` is
-///   negative and `+0` is positive; both oracles (Z3, cvc5) agree, and this is the
-///   `af6c8bf` / GAP-F2 fix (`axeyum_fp::is_negative` doc). The faithfulness witness
-///   (`axeyum-fp/tests/fpa2bv_simple_faithfulness.rs`) confirms the circuit against
-///   the `rustc_apfloat` reference `sign_bit ∧ ¬is_nan` exhaustively at F16 —
-///   including the signed-NaN case, where the SMT-LIB predicate (`false`) differs
-///   from `rustc_apfloat`'s raw `is_negative` (which returns the bare sign bit).
+///   and `fp.isPositive` (`sign bit clear ∧ ¬NaN`). Their SMT-LIB semantics is
+///   *sign-bit* classification, not numeric `x < 0`, so `−0` is negative and `+0`
+///   positive; both oracles (Z3, cvc5) agree (`af6c8bf`/GAP-F2 fix).
 ///
-/// Every other FP operator carries rounding / NaN / signed-zero circuit logic
-/// (`fp.add`/`sub`/`mul`/`div`/`rem`/`fma`/`sqrt`/`roundToIntegral`/`min`/`max`,
-/// the comparisons `fp.eq`/`lt`/`leq`/`gt`/`geq`, and every conversion `to_fp` /
-/// `fp.to_ubv` / `fp.to_sbv` / `fp.to_real`) and is **not** in the allow-list — the
-/// allow-list, not a block-list, so any unknown / future / rounding-bearing FP
-/// operator is treated as non-simple and can never be silently certified.
+/// **Proven-faithful comparison circuits** `fp.eq`/`fp.lt`/`fp.leq`/`fp.gt`/`fp.geq`
+/// — not bit-trivial, but faithful by a **width-independent** argument: `fp.eq` is
+/// `¬NaN ∧ (bit-equal ∨ both-zero)`; `fp.lt` is `¬NaN ∧ ¬both-zero ∧ ult(order_key
+/// x, order_key y)` where `order_key` is the sign-magnitude → monotone-unsigned
+/// transform, correct at any width by the uniform IEEE `[sign][exp][sig]` layout
+/// (`leq = lt ∨ eq`, `gt`/`geq` = argument-swapped). The whole comparison logic is
+/// **exhaustively** cross-checked at `FP8_E5M2` (all 65 536 pairs vs `rustc_apfloat`,
+/// `axeyum-fp/tests/fpa2bv_faithfulness.rs`) plus a second-width F16 witness — so
+/// width-parametric code + a proven-monotone key + one exhaustive width ⇒ faithful
+/// at every constructible width.
+///
+/// Every **other** FP operator carries rounding logic and is **not** certified
+/// (`fp.add`/`sub`/`mul`/`div`/`rem`/`fma`/`sqrt`/`roundToIntegral`/`min`/`max` and
+/// every conversion `to_fp` / `fp.to_ubv` / `fp.to_sbv` / `fp.to_real`). The
+/// allow-list is not a block-list, so any unknown / future / rounding-bearing FP
+/// operator is treated as non-certified and can never be silently certified.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct FpUsage {
     /// The script uses the FP theory at all — an FP sort (`FloatingPoint` /
@@ -284,13 +291,28 @@ pub struct FpUsage {
 }
 
 impl FpUsage {
-    /// The structurally-exact / by-construction-faithful FP operator allow-list.
-    /// Any operator head symbol **not** in this set (including unknown / future
-    /// `fp.*` operators and every rounding-bearing op / conversion) is treated as
-    /// non-simple — the allow-list, not a block-list, so an unrecognized FP operator
-    /// can never be silently certified.
+    /// The **by-construction-faithful** FP operator allow-list (faithful at every
+    /// *constructible* width — FP formats are guarded to `≤ 128` bits, so the `u128`
+    /// sign masks the circuits use never overflow). Any operator head symbol **not**
+    /// in this set (including unknown / future `fp.*` operators and every
+    /// rounding-bearing op / `to_fp`-style conversion) is treated as non-simple — an
+    /// allow-list, not a block-list, so an unrecognized FP operator can never be
+    /// silently certified. Two faithfulness tiers, both certified:
+    ///
+    /// - **exact bit ops** — `fp.neg`/`fp.abs`, the five category predicates, and the
+    ///   sign predicates `fp.isNegative`/`fp.isPositive` (trivially faithful by
+    ///   inspection at any width);
+    /// - **proven-faithful comparison circuits** — `fp.eq`/`fp.lt`/`fp.leq`/`fp.gt`/
+    ///   `fp.geq`. Not bit-trivial, but faithful by a *width-independent* argument:
+    ///   they reduce to `¬NaN` guards, the `±0` special-case, and an unsigned compare
+    ///   of the monotone `order_key` (sign-magnitude → monotone-unsigned transform,
+    ///   correct at any width by the IEEE `[sign][exp][sig]` layout), and the whole
+    ///   comparison logic is exhaustively cross-checked at `FP8_E5M2` (all 65 536
+    ///   pairs, `axeyum-fp/tests/fpa2bv_faithfulness.rs`) with a second-width F16
+    ///   witness. Width-parametric code + no width branch + a proven-monotone key +
+    ///   an exhaustive width ⇒ faithful at every constructible width.
     #[must_use]
-    pub fn is_structurally_exact_op(op: &str) -> bool {
+    pub fn certified_faithful_op(op: &str) -> bool {
         matches!(
             op,
             "fp.neg"
@@ -302,6 +324,11 @@ impl FpUsage {
                 | "fp.isSubnormal"
                 | "fp.isNegative"
                 | "fp.isPositive"
+                | "fp.eq"
+                | "fp.lt"
+                | "fp.leq"
+                | "fp.gt"
+                | "fp.geq"
         )
     }
 
@@ -318,7 +345,7 @@ impl FpUsage {
     /// the whole reduction is faithful, so the `unsat` is genuinely certified.
     #[must_use]
     pub fn fpa2bv_simple_op_certified(&self) -> bool {
-        self.uses_fp && self.ops.iter().all(|op| Self::is_structurally_exact_op(op))
+        self.uses_fp && self.ops.iter().all(|op| Self::certified_faithful_op(op))
     }
 }
 
