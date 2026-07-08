@@ -448,6 +448,55 @@ pub struct WordProblem {
     /// The `Seq`-sorted symbols standing for the script's string variables (the
     /// symbols a returned model binds), in first-declaration order.
     pub seq_symbols: Vec<SymbolId>,
+    /// Post-search inversion obligations (task #77). A `str.from_int` / `str.substr`
+    /// subterm over a **symbolic** integer argument is replaced by a fresh `Seq`
+    /// variable while building the word problem; after the arrangement search binds
+    /// that variable to a concrete string, the solver inverts the string value back
+    /// onto the integer argument (see [`WordObligation`]). Each obligation is
+    /// *sat-implying*: the fresh variable stands for exactly the opaque term, so a
+    /// successful inversion (`f(int) == word`) makes replacing the fresh variable by
+    /// its defining term a model-preserving substitution. The flat word problem is
+    /// built **only** when every assertion is a pure string atom (`build_word_problem`
+    /// declines any non-string atom), so the inverted integer carries no competing
+    /// arithmetic constraint. A failed inversion leaves the verdict `unknown`.
+    pub obligations: Vec<WordObligation>,
+}
+
+/// A post-search integer-inversion obligation for the flat word route (task #77).
+///
+/// The `Seq`-producing extended function was replaced by a fresh `Seq` variable
+/// while building the word problem; after the search assigns that variable a
+/// concrete string value, the solver inverts the value to the integer argument the
+/// original term requires and binds it in the model. Inversion is *exact* — it only
+/// succeeds when the recovered integer reproduces the solved string under the
+/// function's SMT-LIB semantics — so the returned `sat` model still replays against
+/// the original assertions. A non-invertible value keeps the verdict `unknown`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum WordObligation {
+    /// The fresh `seq_sym` stands for `(str.from_int int_sym)`. Its solved string
+    /// value must be a canonical decimal (`0` or a leading-digit-nonzero numeral) —
+    /// inverted to that non-negative integer — or the empty string, inverted to any
+    /// negative integer (`-1`). Anything else fails inversion.
+    FromInt {
+        /// The fresh `Seq` symbol the arrangement search binds.
+        seq_sym: SymbolId,
+        /// The `Int` symbol the recovered numeral is bound onto.
+        int_sym: SymbolId,
+    },
+    /// The fresh `seq_sym` stands for `(str.substr literal offset len_sym)` with a
+    /// constant string `literal` (its code points) and a constant `offset`. Its
+    /// solved string value is inverted to the shortest non-negative `len` that
+    /// reproduces it under SMT-LIB `str.substr` totality, bound onto `len_sym`.
+    Substr {
+        /// The fresh `Seq` symbol the arrangement search binds.
+        seq_sym: SymbolId,
+        /// The constant subject string's Unicode code points.
+        literal: Vec<u32>,
+        /// The constant offset argument.
+        offset: i128,
+        /// The `Int` symbol the recovered length is bound onto.
+        len_sym: SymbolId,
+    },
 }
 
 /// Parses an SMT-LIB script.
@@ -861,17 +910,36 @@ fn build_word_problem(arena: &mut TermArena, exprs: &[SExpr]) -> Option<WordProb
         }
     }
 
+    // Collect declared `Int` variables → their own `Int` symbols. These name the
+    // integer arguments of any `str.from_int`/`str.substr` opaque subterm (task #77);
+    // an obligation binds the recovered numeral onto exactly these symbols. Sharing
+    // the real name keeps a returned model's integer bindings aligned with the script.
+    let mut int_vars: BTreeMap<String, SymbolId> = BTreeMap::new();
+    for e in exprs {
+        if let Some(name) = declared_int_var(e)
+            && !int_vars.contains_key(name)
+        {
+            let sym = arena.declare(name, Sort::Int).ok()?;
+            int_vars.insert(name.to_owned(), sym);
+        }
+    }
+
     // Translate every assertion; a single unrepresentable atom aborts the whole.
     // `next_k` names the fresh `Seq` variables introduced by the positive-polarity
     // extended-function reductions (prefixof/suffixof/contains); it threads across
     // all assertions so every fresh symbol is globally unique.
     let mut wp = WordProblem::default();
     let mut next_k: u32 = 0;
+    let mut opaque = OpaqueCtx {
+        int_vars: &int_vars,
+        intern: BTreeMap::new(),
+        next: 0,
+    };
     for e in exprs {
         let Some(items) = e.list() else { continue };
         if items.first().and_then(SExpr::atom) == Some("assert") {
             let [_, body] = items else { return None };
-            if !word_atom(arena, body, &vars, &mut wp, &mut next_k) {
+            if !word_atom(arena, body, &vars, &mut wp, &mut next_k, &mut opaque) {
                 return None;
             }
         }
@@ -1893,6 +1961,7 @@ fn word_atom(
     vars: &BTreeMap<String, (SymbolId, TermId)>,
     wp: &mut WordProblem,
     next_k: &mut u32,
+    opaque: &mut OpaqueCtx,
 ) -> bool {
     // `true` is a trivial conjunct.
     if e.atom() == Some("true") {
@@ -1907,10 +1976,10 @@ fn word_atom(
     match head {
         "and" => items[1..]
             .iter()
-            .all(|c| word_atom(arena, c, vars, wp, next_k)),
+            .all(|c| word_atom(arena, c, vars, wp, next_k, opaque)),
         // `(= a b …)` — chained equality over ≥2 string expressions.
         "=" if items.len() >= 3 => {
-            let Some(terms) = word_terms(arena, &items[1..], vars) else {
+            let Some(terms) = word_terms_flat(arena, &items[1..], vars, wp, opaque) else {
                 return false;
             };
             for &t in &terms[1..] {
@@ -1920,7 +1989,7 @@ fn word_atom(
         }
         // `(distinct a b …)` — pairwise disequality over ≥2 string expressions.
         "distinct" if items.len() >= 3 => {
-            let Some(terms) = word_terms(arena, &items[1..], vars) else {
+            let Some(terms) = word_terms_flat(arena, &items[1..], vars, wp, opaque) else {
                 return false;
             };
             for i in 0..terms.len() {
@@ -1937,7 +2006,7 @@ fn word_atom(
                 return false;
             };
             if inner.first().and_then(SExpr::atom) == Some("=") && inner.len() == 3 {
-                let Some(terms) = word_terms(arena, &inner[1..], vars) else {
+                let Some(terms) = word_terms_flat(arena, &inner[1..], vars, wp, opaque) else {
                     return false;
                 };
                 wp.disequalities.push((terms[0], terms[1]));
@@ -1950,7 +2019,7 @@ fn word_atom(
         // suffixof / contains. Each is equisatisfiable with the atom *in this
         // positive position* (see `word_extended_fn`). Negative/disjunctive
         // contexts never reach here — see the `word_atom` / module polarity notes.
-        _ => word_extended_fn(arena, head, items, vars, wp, next_k),
+        _ => word_extended_fn(arena, head, items, vars, wp, next_k, opaque),
     }
 }
 
@@ -1976,13 +2045,14 @@ fn word_extended_fn(
     vars: &BTreeMap<String, (SymbolId, TermId)>,
     wp: &mut WordProblem,
     next_k: &mut u32,
+    opaque: &mut OpaqueCtx,
 ) -> bool {
     if items.len() != 3 {
         return false;
     }
     let (Some(a), Some(b)) = (
-        word_str_expr(arena, &items[1], vars),
-        word_str_expr(arena, &items[2], vars),
+        word_str_expr_flat(arena, &items[1], vars, wp, opaque),
+        word_str_expr_flat(arena, &items[2], vars, wp, opaque),
     ) else {
         return false;
     };
@@ -2032,6 +2102,201 @@ fn word_terms(
         .iter()
         .map(|e| word_str_expr(arena, e, vars))
         .collect()
+}
+
+/// The flat-word-problem context for the opaque `str.from_int`/`str.substr` subterms
+/// (task #77): the declared `Int` variables (name → symbol) and the intern table +
+/// counter for the fresh `Seq` variables that stand in for symbolic occurrences.
+struct OpaqueCtx<'a> {
+    /// Declared integer variables (`name → Int symbol`) — the inversion targets.
+    int_vars: &'a BTreeMap<String, SymbolId>,
+    /// Structurally-identical opaque subterms → the one fresh `Seq` variable term
+    /// standing for them (so `(str.from_int i)` written twice shares one obligation).
+    intern: BTreeMap<String, TermId>,
+    /// Monotonic counter for unique `!weqop!<n>` fresh-variable names.
+    next: u32,
+}
+
+/// The flat-path [`word_terms`]: translates each element as a string expression
+/// **with** `str.from_int`/`str.substr` support (see [`word_str_expr_flat`]).
+fn word_terms_flat(
+    arena: &mut TermArena,
+    exprs: &[SExpr],
+    vars: &BTreeMap<String, (SymbolId, TermId)>,
+    wp: &mut WordProblem,
+    opaque: &mut OpaqueCtx,
+) -> Option<Vec<TermId>> {
+    exprs
+        .iter()
+        .map(|e| word_str_expr_flat(arena, e, vars, wp, opaque))
+        .collect()
+}
+
+/// The flat-path [`word_str_expr`] (task #77). Identical to [`word_str_expr`] except
+/// it also recognizes two integer-coupled `Seq`-producing functions:
+///
+///   * `(str.from_int n)` / `(str.substr lit off n)` with a **ground** integer
+///     argument fold directly to their literal value (pure constant folding, exactly
+///     like an inline string literal — no obligation);
+///   * `(str.from_int i)` / `(str.substr lit off i)` over a **declared `Int`
+///     variable** are replaced by a fresh `Seq` variable and recorded as a
+///     [`WordObligation`], so the solver inverts the solved string value back onto the
+///     integer argument after the arrangement search (see [`WordProblem::obligations`]).
+///
+/// Every other shape delegates to [`word_str_expr`] (literal / variable / `str.++`
+/// recursion carries the opaque support inward / constant-folded `str.replace`).
+fn word_str_expr_flat(
+    arena: &mut TermArena,
+    e: &SExpr,
+    vars: &BTreeMap<String, (SymbolId, TermId)>,
+    wp: &mut WordProblem,
+    opaque: &mut OpaqueCtx,
+) -> Option<TermId> {
+    if let SExpr::List(items) = e {
+        match items.first().and_then(SExpr::atom) {
+            // `(str.++ …)` — recurse with the flat translator so a nested
+            // `str.from_int`/`str.substr` operand is still recognized.
+            Some("str.++") if items.len() >= 2 => {
+                let mut acc = word_str_expr_flat(arena, &items[1], vars, wp, opaque)?;
+                for it in &items[2..] {
+                    let next = word_str_expr_flat(arena, it, vars, wp, opaque)?;
+                    acc = arena.seq_concat(acc, next).ok()?;
+                }
+                return Some(acc);
+            }
+            // `(str.from_int n)`.
+            Some("str.from_int") if items.len() == 2 => {
+                // Ground argument → fold to the canonical decimal literal.
+                if let Some(n) = parse_int_literal(&items[1]) {
+                    return seq_from_code_points(arena, &decimal_code_points(n));
+                }
+                // Symbolic argument → fresh `Seq` variable + inversion obligation.
+                let int_sym = *items[1].atom().and_then(|nm| opaque.int_vars.get(nm))?;
+                let (term, seq_sym) = opaque_fresh(arena, e, opaque)?;
+                if let Some(sym) = seq_sym {
+                    wp.obligations.push(WordObligation::FromInt {
+                        seq_sym: sym,
+                        int_sym,
+                    });
+                }
+                return Some(term);
+            }
+            // `(str.substr lit off n)` with a **constant string subject** and a
+            // **constant offset**.
+            Some("str.substr") if items.len() == 4 => {
+                let literal = literal_pattern_cps(&items[1])?;
+                let offset = parse_int_literal(&items[2])?;
+                // Ground length → fold to the exact substring literal.
+                if let Some(len) = parse_int_literal(&items[3]) {
+                    return seq_from_code_points(arena, &substr_code_points(&literal, offset, len));
+                }
+                // Symbolic length → fresh `Seq` variable + inversion obligation.
+                let len_sym = *items[3].atom().and_then(|nm| opaque.int_vars.get(nm))?;
+                let (term, seq_sym) = opaque_fresh(arena, e, opaque)?;
+                if let Some(sym) = seq_sym {
+                    wp.obligations.push(WordObligation::Substr {
+                        seq_sym: sym,
+                        literal,
+                        offset,
+                        len_sym,
+                    });
+                }
+                return Some(term);
+            }
+            _ => {}
+        }
+    }
+    // Everything else: the base string-expression fragment.
+    word_str_expr(arena, e, vars)
+}
+
+/// Returns the interned fresh `Seq` variable term for the opaque subterm `e`, plus
+/// its symbol **only when freshly minted** (so the caller records exactly one
+/// obligation per structurally-distinct opaque term). A re-encountered opaque term
+/// reuses the existing fresh variable and yields `None` for the symbol.
+fn opaque_fresh(
+    arena: &mut TermArena,
+    e: &SExpr,
+    opaque: &mut OpaqueCtx,
+) -> Option<(TermId, Option<SymbolId>)> {
+    let key = sexpr_key(e);
+    if let Some(&term) = opaque.intern.get(&key) {
+        return Some((term, None));
+    }
+    let n = opaque.next;
+    opaque.next += 1;
+    // `!weqop!<n>` is disjoint from the `!weq!<name>` user variables and the
+    // `!weqk!<n>` extended-function skolems (distinct fifth byte), so a fresh opaque
+    // variable can never alias any of them.
+    let sym = arena
+        .declare_internal(&format!("!weqop!{n}"), Sort::string())
+        .ok()?;
+    let term = arena.var(sym);
+    opaque.intern.insert(key, term);
+    Some((term, Some(sym)))
+}
+
+/// A structural key for interning identical opaque subterms.
+fn sexpr_key(e: &SExpr) -> String {
+    match e {
+        SExpr::Atom(a) => a.clone(),
+        SExpr::List(items) => {
+            let mut s = String::from("(");
+            for (i, it) in items.iter().enumerate() {
+                if i > 0 {
+                    s.push(' ');
+                }
+                s.push_str(&sexpr_key(it));
+            }
+            s.push(')');
+            s
+        }
+    }
+}
+
+/// Parses an SMT-LIB integer literal: a bare numeral atom, or `(- n)` for a negative
+/// numeral. Returns `None` for any other (compound / symbolic) integer expression.
+fn parse_int_literal(e: &SExpr) -> Option<i128> {
+    match e {
+        SExpr::Atom(a) => a.parse::<i128>().ok(),
+        SExpr::List(items) => {
+            if items.len() == 2 && items[0].atom() == Some("-") {
+                let n = items[1].atom()?.parse::<i128>().ok()?;
+                n.checked_neg()
+            } else {
+                None
+            }
+        }
+    }
+}
+
+/// The Unicode code points of `str.from_int(n)` (SMT-LIB `UnicodeStrings`): the
+/// canonical decimal digits of a non-negative `n` (no leading zeros; `0` → "0"), or
+/// the empty sequence for a negative `n`.
+fn decimal_code_points(n: i128) -> Vec<u32> {
+    if n < 0 {
+        return Vec::new();
+    }
+    n.to_string().chars().map(|c| c as u32).collect()
+}
+
+/// The Unicode code points of `str.substr(s, offset, len)` (SMT-LIB totality): the
+/// maximal substring of `s` starting at `offset` of length at most `len`, or empty
+/// when `offset` is out of `0..|s|` or `len ≤ 0`.
+fn substr_code_points(s: &[u32], offset: i128, len: i128) -> Vec<u32> {
+    if offset < 0 || len <= 0 {
+        return Vec::new();
+    }
+    let Ok(off) = usize::try_from(offset) else {
+        return Vec::new();
+    };
+    if off >= s.len() {
+        return Vec::new();
+    }
+    let take = usize::try_from(len)
+        .unwrap_or(usize::MAX)
+        .min(s.len() - off);
+    s[off..off + take].to_vec()
 }
 
 /// Translates one string expression into a `Seq`-sorted term: a string literal,

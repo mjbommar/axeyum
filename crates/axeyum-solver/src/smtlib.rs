@@ -15,9 +15,9 @@ use axeyum_cnf::{check_alethe, write_alethe};
 use std::collections::{BTreeMap, HashMap, VecDeque};
 
 use axeyum_ir::{
-    FuncValue, Op, Sort, TermArena, TermId, TermNode, Value, render, well_founded_default,
+    FuncValue, Op, Sort, SymbolId, TermArena, TermId, TermNode, Value, render, well_founded_default,
 };
-use axeyum_smtlib::{Script, ScriptCommand, parse_script};
+use axeyum_smtlib::{Script, ScriptCommand, WordObligation, parse_script};
 use axeyum_strings::{
     MembershipOutcome, RefuteOutcome, SearchBudget, SearchOutcome, refute_word_equations,
     solve_word_equations,
@@ -73,11 +73,12 @@ fn apply_word_route(
     // Clone the (Copy-element) problem so the immutable borrow of `word_problem`
     // ends before the `&mut arena` search call; leaves the side channel in place
     // for the incremental path's later queries.
-    let Some((eqs, diseqs, syms)) = script.word_problem.as_ref().map(|wp| {
+    let Some((eqs, diseqs, syms, obligations)) = script.word_problem.as_ref().map(|wp| {
         (
             wp.equalities.clone(),
             wp.disequalities.clone(),
             wp.seq_symbols.clone(),
+            wp.obligations.clone(),
         )
     }) else {
         return CheckResult::Unknown(reason);
@@ -103,7 +104,30 @@ fn apply_word_route(
                     model.set(sym, value);
                 }
             }
-            CheckResult::Sat(model)
+            // Task #77: invert each `str.from_int`/`str.substr` obligation from the
+            // solved fresh-variable string value back onto its integer argument. A
+            // failed inversion means the arrangement search picked a string the opaque
+            // function cannot produce for any integer — the witness does not lift to
+            // the original assertions, so preserve the prior `unknown` (never a
+            // silent/unchecked `sat`).
+            if resolve_word_obligations(&assignment, &obligations, &mut model) {
+                CheckResult::Sat(model)
+            } else {
+                CheckResult::Unknown(UnknownReason {
+                    kind: reason.kind,
+                    detail: if reason.detail.is_empty() {
+                        "word-equation route: opaque str.from_int/str.substr obligation did not \
+                         invert to an integer witness"
+                            .to_owned()
+                    } else {
+                        format!(
+                            "{}; word-equation route: opaque str.from_int/str.substr obligation \
+                             did not invert",
+                            reason.detail
+                        )
+                    },
+                })
+            }
         }
         // First-class `unknown`: keep the prior verdict, record the decline.
         SearchOutcome::Unknown { reason: word } => {
@@ -118,6 +142,134 @@ fn apply_word_route(
             })
         }
     }
+}
+
+/// Inverts each flat-word-route [`WordObligation`] (task #77) from its solved
+/// fresh-`Seq`-variable string value back onto the integer argument, binding the
+/// integer in `model`. Returns `false` (keep the verdict `unknown`) if any
+/// obligation's string value is not producible by the opaque function for any
+/// integer, or if two obligations force conflicting integers on one symbol.
+///
+/// **Soundness.** Each fresh `Seq` variable stands for *exactly* its opaque term
+/// (`str.from_int(i)` / `str.substr(lit, off, i)`); an inversion succeeds only when
+/// the recovered integer reproduces the solved string under the SMT-LIB semantics of
+/// that function. So substituting the fresh variable back by its defining term is a
+/// model-preserving rewrite, and the search's replay of the fresh-variable word
+/// problem transfers to the original assertions. The flat word problem is built only
+/// when every assertion is a pure string atom, so the recovered integer never
+/// competes with an arithmetic constraint the word route did not see.
+fn resolve_word_obligations(
+    assignment: &axeyum_ir::Assignment,
+    obligations: &[WordObligation],
+    model: &mut Model,
+) -> bool {
+    // Chosen integer per symbol; a second obligation on the same symbol must agree.
+    let mut chosen: BTreeMap<SymbolId, i128> = BTreeMap::new();
+    for ob in obligations {
+        let (int_sym, value) = match ob {
+            WordObligation::FromInt { seq_sym, int_sym } => {
+                let Some(cps) = seq_codepoints(assignment, *seq_sym) else {
+                    return false;
+                };
+                let Some(v) = invert_from_int(&cps) else {
+                    return false;
+                };
+                (*int_sym, v)
+            }
+            WordObligation::Substr {
+                seq_sym,
+                literal,
+                offset,
+                len_sym,
+            } => {
+                let Some(cps) = seq_codepoints(assignment, *seq_sym) else {
+                    return false;
+                };
+                let Some(v) = invert_substr(literal, *offset, &cps) else {
+                    return false;
+                };
+                (*len_sym, v)
+            }
+        };
+        match chosen.insert(int_sym, value) {
+            Some(prev) if prev != value => return false,
+            _ => {}
+        }
+    }
+    for (sym, value) in chosen {
+        model.set(sym, Value::Int(value));
+    }
+    true
+}
+
+/// The Unicode code points of an assignment's `Seq`-valued symbol, or `None` when it
+/// is unbound or not a sequence of scalar bit-vector elements.
+fn seq_codepoints(assignment: &axeyum_ir::Assignment, sym: SymbolId) -> Option<Vec<u32>> {
+    let Value::Seq(elems) = assignment.get(sym)? else {
+        return None;
+    };
+    elems
+        .iter()
+        .map(|v| u32::try_from(v.scalar_code()).ok())
+        .collect()
+}
+
+/// Inverts `str.from_int`: a canonical decimal (`0`, or a leading-nonzero numeral)
+/// maps to that non-negative integer; the empty string maps to `-1` (any negative
+/// integer's `str.from_int` is `""`). A leading-zero numeral, a non-digit, or an
+/// out-of-range numeral is not a `str.from_int` output — inversion fails.
+fn invert_from_int(cps: &[u32]) -> Option<i128> {
+    if cps.is_empty() {
+        return Some(-1);
+    }
+    if !cps.iter().all(|&c| (0x30..=0x39).contains(&c)) {
+        return None;
+    }
+    // Reject a non-canonical leading zero (`"00"`, `"01"`, …); `"0"` alone is fine.
+    if cps.len() > 1 && cps[0] == 0x30 {
+        return None;
+    }
+    let mut n: i128 = 0;
+    for &c in cps {
+        n = n.checked_mul(10)?.checked_add(i128::from(c - 0x30))?;
+    }
+    Some(n)
+}
+
+/// Inverts `str.substr(literal, offset, len)`: the shortest non-negative `len` that
+/// reproduces the solved code points `w` under SMT-LIB totality, or `None` when no
+/// length can.
+fn invert_substr(literal: &[u32], offset: i128, w: &[u32]) -> Option<i128> {
+    // `len = 0` yields the empty string for every offset.
+    if w.is_empty() {
+        return Some(0);
+    }
+    // A non-empty target needs an in-range offset and a `literal`-prefix match; the
+    // recovered length is exactly `|w|`. Recompute the substring at that length and
+    // require an exact match (this rejects out-of-range offsets and mismatches).
+    let len = i128::try_from(w.len()).ok()?;
+    if substr_at(literal, offset, len) == w {
+        Some(len)
+    } else {
+        None
+    }
+}
+
+/// `str.substr(literal, offset, len)` on concrete code points (SMT-LIB totality).
+fn substr_at(literal: &[u32], offset: i128, len: i128) -> Vec<u32> {
+    if offset < 0 || len <= 0 {
+        return Vec::new();
+    }
+    let Ok(off) = usize::try_from(offset) else {
+        return Vec::new();
+    };
+    if off >= literal.len() {
+        return Vec::new();
+    }
+    let take = usize::try_from(len)
+        .unwrap_or(usize::MAX)
+        .min(literal.len() - off);
+    literal[off..off + take].to_vec()
 }
 
 /// The word-route [`SearchBudget`]: an absolute deadline from `config.timeout`
