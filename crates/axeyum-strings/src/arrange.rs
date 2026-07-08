@@ -675,9 +675,13 @@ fn fresh_skolem(ctx: &mut Ctx, arena: &mut TermArena, key: ArraySortKey) -> Term
     loop {
         let name = format!("!wesk!{}", ctx.skolem_names);
         ctx.skolem_names += 1;
-        if arena.find_symbol(&name).is_none() {
+        // Mint on the internal-symbol namespace (disjoint from user `declare`),
+        // so a crafted `(declare-fun !wesk!N …)` can never alias this fresh
+        // word-equation Skolem. The freshness guard checks the same internal
+        // namespace we mint into.
+        if arena.find_internal_symbol(&name).is_none() {
             let s = arena
-                .declare(&name, Sort::Seq(key))
+                .declare_internal(&name, Sort::Seq(key))
                 .expect("fresh skolem name is unique");
             return arena.var(s);
         }

@@ -293,3 +293,43 @@ fn identical_runs_give_identical_outcomes() {
         _ => panic!("nondeterministic outcome"),
     }
 }
+
+// ----- soundness firewall: user declares cannot alias the fresh Skolem --------
+
+#[test]
+fn user_declare_cannot_alias_wesk_skolem() {
+    // A crafted user symbol named exactly like the word-equation Skolem helper
+    // (`!wesk!0`) must NOT alias the fresh Skolem the search mints. The user and
+    // internal namespaces are disjoint, so the search can freely use `!wesk!0`
+    // internally even while a user symbol of the same name exists, and the two
+    // resolve to distinct `SymbolId`s — a returned model still replays.
+    use axeyum_ir::Sort;
+    let mut arena = TermArena::new();
+
+    // The attacker declares a user seq symbol `!wesk!0` up front (as the SMT-LIB
+    // parser would for `(declare-fun !wesk!0 () (Seq (_ BitVec 8)))`). It does not
+    // appear in the assertion, so no model needs to bind it.
+    let user = arena
+        .declare("!wesk!0", Sort::Seq(axeyum_ir::ArraySortKey::BitVec(8)))
+        .expect("declare user !wesk!0");
+
+    // x ++ y ≈ "ab" forces the arrangement search through skolem_tail, minting a
+    // fresh `!wesk!` on the internal namespace.
+    let x = seq_var(&mut arena, "x");
+    let y = seq_var(&mut arena, "y");
+    let xy = cat(&mut arena, x, y);
+    let ab = string(&mut arena, "ab");
+    let asg = assert_sat(&mut arena, &[(xy, ab)], &[]);
+    // The model replays (assert_sat already checks) and binds only originals.
+    let _ = asg;
+
+    let internal = arena
+        .find_internal_symbol("!wesk!0")
+        .expect("the search minted its fresh Skolem on the internal namespace");
+    assert_ne!(
+        internal, user,
+        "user declare aliased the internal word-equation Skolem — firewall breached",
+    );
+    assert_eq!(arena.find_symbol("!wesk!0"), Some(user));
+    assert_eq!(arena.find_internal_symbol("!wesk!0"), Some(internal));
+}
