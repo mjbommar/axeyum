@@ -717,3 +717,55 @@ fn nan_is_not_less_than_itself_but_neither_is_anything_symbolic() {
         "there is a float greater than 1.0; got {result:?}"
     );
 }
+
+// ---- SOUNDNESS: user declares cannot alias internal fp.min/fp.max sign bits --
+
+/// Adversarial: a user `declare-fun` whose name collides with the internally
+/// minted opposite-sign-zero sign bit of `fp.min`/`fp.max` must **not** alias
+/// it. The bit stands for the SMT-LIB-*unspecified* ±0 result; aliasing it lets
+/// a crafted script pin that result and forge a wrong `unsat` (the `af6c8bf`
+/// class). The fix routes the mint through the arena's internal namespace
+/// ([`TermArena::declare_internal`]), disjoint from user `declare`.
+#[test]
+fn user_declare_cannot_alias_fp_max_signzero_bit() {
+    let mut a = TermArena::new();
+    let pos0 = c(&mut a, POS0);
+    let neg0 = c(&mut a, NEG0);
+    let mx = fp::max(&mut a, F32, pos0, neg0).unwrap();
+
+    // The reduction's predictable, operand-keyed helper name.
+    let name = format!("axeyum_fp.max.signzero.{}.{}", pos0.index(), neg0.index());
+    let internal = a
+        .find_internal_symbol(&name)
+        .expect("fp.max(+0,-0) minted its fresh sign bit internally");
+
+    // The attacker declares a USER symbol of that exact name — precisely what the
+    // SMT-LIB parser does for `(declare-fun <name> () (_ BitVec 1))`.
+    let user = a.declare(&name, axeyum_ir::Sort::BitVec(1)).unwrap();
+    assert_ne!(
+        internal, user,
+        "user declare aliased the internal sign bit — soundness firewall breached",
+    );
+    let user_v = a.var(user);
+
+    // Pin the ±0 result to +0 (internal sign bit 0) AND set the USER symbol to 1.
+    // With the firewall these are independent -> SAT. Under the OLD aliasing bug
+    // `user_v` WAS the sign bit, so `mx = +0` and `user_v = 1` contradict -> a
+    // WRONG `unsat`.
+    let pos0_c = c(&mut a, POS0);
+    let mx_is_pos0 = a.eq(mx, pos0_c).unwrap();
+    let one_bit = a.bv_const(1, 1).unwrap();
+    let user_is_one = a.eq(user_v, one_bit).unwrap();
+    let query = a.and(mx_is_pos0, user_is_one).unwrap();
+
+    let r = solve(&mut a, &[query], &SolverConfig::default()).unwrap();
+    assert!(
+        !matches!(r, CheckResult::Unsat),
+        "fp.max(+0,-0)=+0 with an unrelated user symbol set to 1 is satisfiable; \
+         a wrong `unsat` means the alias firewall failed (got {r:?})",
+    );
+    assert!(
+        matches!(r, CheckResult::Sat(_)),
+        "expected a decided SAT (the firewall keeps the sign bit free); got {r:?}",
+    );
+}

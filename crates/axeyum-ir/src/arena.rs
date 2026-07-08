@@ -25,6 +25,12 @@ use crate::term::{ConstructorId, DatatypeId, FuncId, Op, SymbolId, TermId, TermN
 pub struct TermArena {
     symbols: Vec<(String, Sort)>,
     symbol_lookup: HashMap<String, SymbolId>,
+    /// Name → id map for symbols minted by internal reductions
+    /// ([`TermArena::declare_internal`]). Deliberately **disjoint** from
+    /// `symbol_lookup`: the same name string may appear in both maps as two
+    /// distinct [`SymbolId`]s (one user, one internal). This split is a
+    /// soundness firewall — see [`TermArena::declare_internal`].
+    internal_lookup: HashMap<String, SymbolId>,
     functions: Vec<FuncDecl>,
     function_lookup: HashMap<String, FuncId>,
     uninterpreted_sorts: Vec<String>,
@@ -108,9 +114,19 @@ impl TermArena {
         self.sorts[t.index()]
     }
 
-    /// Looks up a declared symbol by name.
+    /// Looks up a **user-declared** symbol by name.
+    ///
+    /// Never returns a symbol minted by [`TermArena::declare_internal`]: the
+    /// user and internal namespaces are disjoint (soundness firewall). Use
+    /// [`TermArena::find_internal_symbol`] to look up an internal helper.
     pub fn find_symbol(&self, name: &str) -> Option<SymbolId> {
         self.symbol_lookup.get(name).copied()
+    }
+
+    /// Looks up an **internal helper** symbol by name (one previously minted by
+    /// [`TermArena::declare_internal`]). Never returns a user-declared symbol.
+    pub fn find_internal_symbol(&self, name: &str) -> Option<SymbolId> {
+        self.internal_lookup.get(name).copied()
     }
 
     /// The name and sort of a declared symbol.
@@ -257,6 +273,74 @@ impl TermArena {
         self.symbols.push((name.to_owned(), sort));
         self.symbol_lookup.insert(name.to_owned(), id);
         Ok(id)
+    }
+
+    /// Declares an **internal helper** symbol — a fresh placeholder minted by a
+    /// reduction (e.g. an `fp.min`/`fp.max` opposite-sign-zero sign bit, an
+    /// FP→int unspecified-conversion value, a word-equation channel), *not* by
+    /// user input — in a namespace disjoint from [`TermArena::declare`].
+    ///
+    /// # Soundness firewall (the no-aliasing invariant)
+    ///
+    /// Internal reductions key these helpers by a *predictable* name (often a
+    /// function of operand ids, so identical applications deliberately **share**
+    /// one helper — e.g. `(= (fp.min x y) (fp.min x y))` must hold). Interning by
+    /// name is therefore intended *within* the internal namespace, but must never
+    /// cross into user territory: a crafted `declare-fun` whose name collides with
+    /// a helper (`.`, `!`, letters are all legal SMT-LIB symbol chars) would
+    /// otherwise alias the helper and pin an SMT-LIB-*unspecified* result, forging
+    /// a wrong verdict (the `af6c8bf` ±0 wrong-`unsat` class).
+    ///
+    /// This method resolves and mints **only** against `internal_lookup`, and
+    /// [`TermArena::declare`] resolves and mints **only** against `symbol_lookup`.
+    /// Hence, for every name `n`:
+    ///
+    /// - `declare_internal` never returns a user symbol, and
+    /// - `declare` never returns an internal symbol,
+    ///
+    /// so a user-declared symbol can never alias an internal helper and vice
+    /// versa — even when both carry the same name string (they become two
+    /// distinct [`SymbolId`]s). Sharing across identical internal applications is
+    /// preserved because `declare_internal` still reuses by name within its own
+    /// namespace.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError::SymbolSortConflict`] if `name` exists **as an internal
+    /// symbol** with a different sort, or [`IrError::InvalidWidth`] for a bad BV
+    /// sort. A user symbol of the same name never conflicts (disjoint namespaces).
+    ///
+    /// # Panics
+    ///
+    /// Panics on arena corruption (symbol count exceeding `u32`).
+    pub fn declare_internal(&mut self, name: &str, sort: Sort) -> Result<SymbolId, IrError> {
+        check_sort(sort)?;
+        if let Some(&existing) = self.internal_lookup.get(name) {
+            let (_, existing_sort) = self.symbols[existing.index()];
+            if existing_sort == sort {
+                return Ok(existing);
+            }
+            return Err(IrError::SymbolSortConflict {
+                name: name.to_owned(),
+                existing: existing_sort,
+                requested: sort,
+            });
+        }
+        let id = SymbolId(u32::try_from(self.symbols.len()).expect("symbol count fits u32"));
+        self.symbols.push((name.to_owned(), sort));
+        self.internal_lookup.insert(name.to_owned(), id);
+        Ok(id)
+    }
+
+    /// Declares an internal bit-vector helper symbol and returns its variable
+    /// term. See [`TermArena::declare_internal`] for the no-aliasing invariant.
+    ///
+    /// # Errors
+    ///
+    /// See [`TermArena::declare_internal`].
+    pub fn bv_var_internal(&mut self, name: &str, width: u32) -> Result<TermId, IrError> {
+        let s = self.declare_internal(name, Sort::BitVec(width))?;
+        Ok(self.var(s))
     }
 
     /// The variable term referring to a declared symbol.

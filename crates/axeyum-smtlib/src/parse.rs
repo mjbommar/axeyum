@@ -843,7 +843,7 @@ fn build_word_problem(arena: &mut TermArena, exprs: &[SExpr]) -> Option<WordProb
             && !vars.contains_key(name)
         {
             let sym = arena
-                .declare(&format!("!weq!{name}"), Sort::string())
+                .declare_internal(&format!("!weq!{name}"), Sort::string())
                 .ok()?;
             let term = arena.var(sym);
             vars.insert(name.to_owned(), (sym, term));
@@ -920,7 +920,7 @@ fn build_word_skeleton(arena: &mut TermArena, exprs: &[SExpr]) -> Option<WordSke
             && !vars.contains_key(name)
         {
             let sym = arena
-                .declare(&format!("!weq!{name}"), Sort::string())
+                .declare_internal(&format!("!weq!{name}"), Sort::string())
                 .ok()?;
             let term = arena.var(sym);
             vars.insert(name.to_owned(), (sym, term));
@@ -1035,7 +1035,7 @@ fn build_length_skeleton(arena: &mut TermArena, exprs: &[SExpr]) -> Option<Vec<T
             && !seq_vars.contains_key(name)
         {
             let sym = arena
-                .declare(&format!("!weq!{name}"), Sort::string())
+                .declare_internal(&format!("!weq!{name}"), Sort::string())
                 .ok()?;
             let term = arena.var(sym);
             seq_vars.insert(name.to_owned(), (sym, term));
@@ -1533,7 +1533,7 @@ impl MembershipCollector {
     /// membership) remains the sole gate on any `sat`.
     fn concat_operand(&mut self, arena: &mut TermArena, concat: TermId) -> Option<SymbolId> {
         let sym = arena
-            .declare(&format!("!inre_arg!{}", self.next_concat), Sort::string())
+            .declare_internal(&format!("!inre_arg!{}", self.next_concat), Sort::string())
             .ok()?;
         self.next_concat += 1;
         let w = arena.var(sym);
@@ -1555,7 +1555,7 @@ impl MembershipCollector {
             return Some(t);
         }
         let sym = arena
-            .declare(&format!("!inre!{}", self.next), Sort::Bool)
+            .declare_internal(&format!("!inre!{}", self.next), Sort::Bool)
             .ok()?;
         self.next += 1;
         let term = arena.var(sym);
@@ -1863,7 +1863,9 @@ fn declared_string_var(e: &SExpr) -> Option<&str> {
 fn fresh_seq_k(arena: &mut TermArena, next_k: &mut u32) -> Option<TermId> {
     let n = *next_k;
     *next_k += 1;
-    let sym = arena.declare(&format!("!weqk!{n}"), Sort::string()).ok()?;
+    let sym = arena
+        .declare_internal(&format!("!weqk!{n}"), Sort::string())
+        .ok()?;
     Some(arena.var(sym))
 }
 
@@ -4680,9 +4682,12 @@ fn fresh_conversion_value(
     mode: RoundingMode,
 ) -> Result<TermId, SmtError> {
     let name = format!("!fp.{tag}.{}.{width}.{mode:?}", operand.index());
-    let sym = match arena.find_symbol(&name) {
+    // Internal namespace: reuse by name for sharing across identical conversions
+    // (a conversion is a function), but never alias a user `declare` of this
+    // name (no-aliasing firewall — see `TermArena::declare_internal`).
+    let sym = match arena.find_internal_symbol(&name) {
         Some(s) => s,
-        None => arena.declare(&name, Sort::BitVec(width))?,
+        None => arena.declare_internal(&name, Sort::BitVec(width))?,
     };
     Ok(arena.var(sym))
 }
@@ -5215,7 +5220,7 @@ impl LenAbs {
     ) -> Result<TermId, SmtError> {
         let n = self.fresh.get();
         self.fresh.set(n + 1);
-        let sym = arena.declare(&format!("!lenabs.{n}"), sort)?;
+        let sym = arena.declare_internal(&format!("!lenabs.{n}"), sort)?;
         let v = arena.var(sym);
         if nonneg {
             let zero = arena.int_const(0);
@@ -8736,9 +8741,12 @@ fn seq_nth_oob_value(
     ew: u32,
 ) -> Result<TermId, SmtError> {
     let name = format!("!seq.nth.oob.{}.{}.{ew}", s.index(), i.index());
-    let sym = match arena.find_symbol(&name) {
+    // Internal namespace: reuse by name so the same OOB `seq.nth` shares one
+    // unspecified value, but never alias a user `declare` of this name
+    // (no-aliasing firewall — see `TermArena::declare_internal`).
+    let sym = match arena.find_internal_symbol(&name) {
         Some(sym) => sym,
-        None => arena.declare(&name, Sort::BitVec(ew))?,
+        None => arena.declare_internal(&name, Sort::BitVec(ew))?,
     };
     Ok(arena.var(sym))
 }

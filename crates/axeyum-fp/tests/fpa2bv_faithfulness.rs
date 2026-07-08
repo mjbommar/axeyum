@@ -371,7 +371,7 @@ fn minmax_const_bits(build_min: bool, xb: u128, yb: u128) -> u128 {
     };
     let op = if build_min { "min" } else { "max" };
     let mut asg = Assignment::new();
-    if let Some(sym) = arena.find_symbol(&format!(
+    if let Some(sym) = arena.find_internal_symbol(&format!(
         "axeyum_fp.{op}.signzero.{}.{}",
         xc.index(),
         yc.index()
@@ -401,7 +401,7 @@ fn assert_opposite_zero_minmax(build_min: bool, xb: u128, yb: u128) {
     let op = if build_min { "min" } else { "max" };
     let sym_name = format!("axeyum_fp.{op}.signzero.{}.{}", xc.index(), yc.index());
     let sym = arena
-        .find_symbol(&sym_name)
+        .find_internal_symbol(&sym_name)
         .unwrap_or_else(|| panic!("opposite-sign-zero fp.{op} must allocate {sym_name}"));
     let mut saw_pos = false;
     let mut saw_neg = false;

@@ -1759,3 +1759,59 @@ fn bv_repeat_concatenates_copies() {
         assert_eq!(eval(&a, r2, &asg2).unwrap(), bv(8, (v << 4) | v), "y={v}");
     }
 }
+
+// ---- internal-namespace no-aliasing invariant (soundness firewall) --------
+
+#[test]
+fn internal_namespace_is_disjoint_from_user_declares() {
+    // A user `declare` and an internal helper mint that share the SAME name
+    // string must resolve to DISTINCT symbols — neither can alias the other.
+    // This is the firewall that closes the `af6c8bf` ±0 wrong-`unsat` class:
+    // a crafted `(declare-fun axeyum_fp.min.signzero.0.1 () (_ BitVec 1))`
+    // cannot pin an internally-minted fresh sign bit.
+    let mut a = TermArena::new();
+    let name = "axeyum_fp.min.signzero.0.1";
+
+    // User declares the name first; the internal mint must NOT reuse it.
+    let user = a.declare(name, Sort::BitVec(1)).unwrap();
+    let internal = a.declare_internal(name, Sort::BitVec(1)).unwrap();
+    assert_ne!(user, internal, "internal mint aliased the user symbol");
+
+    // Cross-namespace lookups never leak across the firewall.
+    assert_eq!(a.find_symbol(name), Some(user));
+    assert_eq!(a.find_internal_symbol(name), Some(internal));
+
+    // The distinct symbols produce distinct terms (no structural-hash merge).
+    assert_ne!(a.var(user), a.var(internal));
+}
+
+#[test]
+fn internal_mint_precedes_user_declare_without_aliasing() {
+    // Order-independence: minting the helper FIRST, then a user declare of the
+    // same name, still yields two distinct symbols.
+    let mut a = TermArena::new();
+    let name = "!seq.nth.oob.3.4.8";
+    let internal = a.declare_internal(name, Sort::BitVec(8)).unwrap();
+    let user = a.declare(name, Sort::BitVec(8)).unwrap();
+    assert_ne!(user, internal);
+    assert_eq!(a.find_internal_symbol(name), Some(internal));
+    assert_eq!(a.find_symbol(name), Some(user));
+}
+
+#[test]
+fn internal_mint_shares_by_name_within_its_namespace() {
+    // Identical internal applications must SHARE one helper (determinism:
+    // `(= (fp.min x y) (fp.min x y))`). Re-minting the same internal name
+    // returns the same symbol.
+    let mut a = TermArena::new();
+    let name = "axeyum_fp.max.signzero.5.7";
+    let first = a.declare_internal(name, Sort::BitVec(1)).unwrap();
+    let second = a.declare_internal(name, Sort::BitVec(1)).unwrap();
+    assert_eq!(first, second, "identical internal applications must share");
+
+    // A conflicting sort on the SAME internal name is a genuine error.
+    assert!(matches!(
+        a.declare_internal(name, Sort::BitVec(2)),
+        Err(IrError::SymbolSortConflict { .. })
+    ));
+}

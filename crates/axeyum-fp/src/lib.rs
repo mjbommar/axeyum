@@ -3384,7 +3384,12 @@ fn free_sign_zero(
 ) -> Result<TermId, IrError> {
     let flavor = if want_smaller { "min" } else { "max" };
     let name = format!("axeyum_fp.{flavor}.signzero.{}.{}", x.index(), y.index());
-    let sign = arena.bv_var(&name, 1)?;
+    // Mint into the arena's INTERNAL namespace so a user `declare-fun` of this
+    // exact name can never alias the fresh sign bit and pin the SMT-LIB-
+    // unspecified ±0 result (the `af6c8bf` wrong-`unsat` class). Interning by
+    // name inside the internal namespace still lets identical applications share
+    // one bit (determinism), which the `bv_var` sharing below relies on.
+    let sign = arena.bv_var_internal(&name, 1)?;
     // result = sign-bit ++ (width-1) zero bits = ±0 with the chosen sign.
     let lower = arena.bv_const(fmt.width() - 1, 0)?;
     arena.concat(sign, lower)
@@ -6883,14 +6888,14 @@ mod fp_to_int_symbolic_tests {
         // The fresh sign bits are deterministically named per application
         // (`<flavor>.signzero.<x>.<y>`); look them up by that exact name.
         let s_xy = a
-            .find_symbol(&format!(
+            .find_internal_symbol(&format!(
                 "axeyum_fp.max.signzero.{}.{}",
                 xp.index(),
                 yn.index()
             ))
             .expect("fp.max(+0,−0) declared its fresh sign bit");
         let s_yx = a
-            .find_symbol(&format!(
+            .find_internal_symbol(&format!(
                 "axeyum_fp.max.signzero.{}.{}",
                 yn.index(),
                 xp.index()
@@ -6973,14 +6978,14 @@ mod fp_to_int_symbolic_tests {
         let mn_xy = min(&mut a, FloatFormat::F64, xp, yn).unwrap();
         let mn_yx = min(&mut a, FloatFormat::F64, yn, xp).unwrap();
         let s_xy = a
-            .find_symbol(&format!(
+            .find_internal_symbol(&format!(
                 "axeyum_fp.min.signzero.{}.{}",
                 xp.index(),
                 yn.index()
             ))
             .expect("fp.min(+0,−0) declared its fresh sign bit");
         let s_yx = a
-            .find_symbol(&format!(
+            .find_internal_symbol(&format!(
                 "axeyum_fp.min.signzero.{}.{}",
                 yn.index(),
                 xp.index()

@@ -100,7 +100,7 @@ impl MembershipProblem {
                 && !vars.contains_key(name)
             {
                 let sym = arena
-                    .declare(&format!("!weq!{name}"), Sort::string())
+                    .declare_internal(&format!("!weq!{name}"), Sort::string())
                     .ok()?;
                 vars.insert(name.to_owned(), sym);
                 order.push(name.to_owned());

@@ -246,6 +246,63 @@ fn nested_quantifier_binding_does_not_capture() {
     assert_eq!(parse_script(&rendered).unwrap().assertions.len(), 1);
 }
 
+/// SOUNDNESS (front door): a user `declare-fun` whose name collides with an
+/// internally minted `fp.min`/`fp.max` opposite-sign-zero sign bit must resolve
+/// to a **distinct** symbol from the internal helper. The parser routes user
+/// declares into the arena's user namespace and the fp reduction mints into the
+/// disjoint internal namespace, so the crafted alias cannot pin the SMT-LIB-
+/// unspecified ±0 result (the `af6c8bf` wrong-`unsat` class).
+#[test]
+fn user_declare_fun_cannot_alias_internal_fp_signzero_helper() {
+    // `fp.max` over +0 / -0 forces the opposite-sign-zero override, minting the
+    // fresh internal sign bit `axeyum_fp.max.signzero.<x>.<y>`.
+    let body = r"(assert (fp.eq (fp.max (_ +zero 8 24) (_ -zero 8 24)) (_ +zero 8 24)))";
+    let benign = format!("(set-logic QF_FP)\n{body}\n(check-sat)\n");
+    let script = parse_script(&benign).expect("benign fp.max(+0,-0) script parses");
+
+    // Discover the exact internal helper name the reduction minted.
+    let signzero: Vec<String> = script
+        .arena
+        .symbols()
+        .filter(|(_, name, _)| name.starts_with("axeyum_fp.max.signzero."))
+        .map(|(_, name, _)| name.to_owned())
+        .collect();
+    assert_eq!(
+        signzero.len(),
+        1,
+        "expected exactly one fp.max sign-bit helper, found {signzero:?}",
+    );
+    let name = &signzero[0];
+    // It lives in the internal namespace, and NO user symbol of that name exists.
+    assert!(script.arena.find_internal_symbol(name).is_some());
+    assert!(
+        script.arena.find_symbol(name).is_none(),
+        "internal helper leaked into the user namespace",
+    );
+
+    // Now the attack: declare a USER symbol of that exact name. Since the added
+    // declare interns no expression term, the +0/-0 operand ids — and thus the
+    // helper name — are identical to the benign parse.
+    let attack =
+        format!("(set-logic QF_FP)\n(declare-fun {name} () (_ BitVec 1))\n{body}\n(check-sat)\n");
+    let attacked = parse_script(&attack).expect("attack script parses");
+    let user = attacked
+        .arena
+        .find_symbol(name)
+        .expect("the user declare-fun created a user symbol");
+    let internal = attacked
+        .arena
+        .find_internal_symbol(name)
+        .expect("the fp reduction still minted its internal helper");
+    assert_ne!(
+        user, internal,
+        "user declare-fun aliased the internal fp sign bit — firewall breached",
+    );
+    // The two same-named symbols are distinct terms (no structural-hash merge).
+    let mut arena = attacked.arena;
+    assert_ne!(arena.var(user), arena.var(internal));
+}
+
 #[test]
 fn builtin_operators_take_priority_over_function_names() {
     // A declared function may not shadow a builtin: `bvadd` stays the builtin.
@@ -2321,7 +2378,13 @@ fn eval_seq_script_multi(text: &str, binds: &[(&str, Value)]) -> bool {
     let script = parse_script(text).expect("script parses");
     let mut asg = Assignment::new();
     for (name, val) in binds {
-        let sym = script.arena.find_symbol(name).expect("symbol declared");
+        // The binds mix user symbols (the sequence variable) with the internal
+        // `!seq.nth.oob.*` helper, which lives in the disjoint internal namespace.
+        let sym = script
+            .arena
+            .find_symbol(name)
+            .or_else(|| script.arena.find_internal_symbol(name))
+            .expect("symbol declared");
         asg.set(sym, val.clone());
     }
     script
