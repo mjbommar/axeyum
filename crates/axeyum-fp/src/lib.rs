@@ -161,6 +161,18 @@ impl FloatFormat {
     }
 
     fn check(self, arena: &TermArena, x: TermId) -> Result<(), IrError> {
+        // Width guard (soundness): the generic FP circuits use `u128` sign masks
+        // (`1u128 << (width - 1)` — see `sign_mask`), so a format wider than 128 bits
+        // is unrepresentable and the raw shift would overflow (debug: panic; release:
+        // a silently-wrong mask → a corrupt circuit → a possibly-wrong verdict, and
+        // hence a wrong `certified: true`). `width() == 128` (F128, sign bit at 127)
+        // is fine. This is the sole chokepoint every FP builder calls, so rejecting
+        // an out-of-range width here degrades an exotic `(_ FloatingPoint eb sb)` with
+        // `eb + sb > 128` to an honest [`IrError::InvalidWidth`] (→ unsupported /
+        // unknown upstream) — never a panic, a wrong verdict, or a false certificate.
+        if self.width() > 128 {
+            return Err(IrError::InvalidWidth(self.width()));
+        }
         // An operand may be a plain `BitVec` (the builders' internal
         // representation) or a `Float` of this format (ADR-0026); both carry the
         // `width()` bits this format operates on.
