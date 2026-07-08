@@ -64,23 +64,43 @@ threading a callback there — a cross-crate change to a foundational crate,
 ADR-worthy.
 
 **Measured ROI (2026-07-08, post-#88, re-measured over all four curated arith
-corpora — corrects the earlier "~1–2 rows" estimate).** The timeout/overrun class
-is the DOMINANT remaining arithmetic decline: **7 rows** across the curated
-corpora, all "preprocessed dispatch timeout after reduced solve" at a 5 s budget —
-- `cvc5-regress-clean/QF_NIA`: `mod.03` (5.0 s, sat), `ext-rew-aggr-test`
-  (12.2 s, sat), `rewriting-sums` (10.7 s, unsat) — 3 rows;
-- `synthetic/QF_NIA`: 4 rows (all `Timeout`).
+corpora — corrects the earlier "~1–2 rows" estimate).** The initial re-measure
+showed **7** "preprocessed dispatch timeout after reduced solve" rows at a 5 s
+budget, but they are NOT one class — classifying each by shape split them into
+distinct causes, and **4 of the 7 were a fixable dispatch bug, now closed**:
 
-By contrast the *other* remaining declines are one-offs each needing distinct
-machinery: `learned-rewrite-int-mod-range` (unsat, **not** a timeout — the bounded
-int-blast overflows at width 32; needs mod-range / `|n|<|d|` reasoning),
-two QF_NRA transcendentals (`sin-cos-*`, `metitarski-1025`), `nt-lemmas-bad`
-(QF_NRA unsat), and `issue3003` (QF_NRA — verdict-correct sat whose algebraic
-model fails the *public* `eval` replay, task #89). Synthetic `QF_NRA` is fully
-decided (33/33). So the deadline residual is the single highest-count arithmetic
-lever, and it also unblocks #87 — its priority is accordingly RAISED, not
-deferred. The concrete next step is the profile-to-inner-loop + callback described
-above.
+- **FIXED — bounded nonlinear SAT (4 rows, `synthetic/QF_NIA/nia-pythagorean-m05..08`,
+  `x²+y²=z², 1≤·≤25`).** These are fully *bounded* boxes the exact int-blast owns,
+  but the nonlinear-multiplier blast (step 8 of `decide_bounded_int_blast`) burned
+  the whole budget and starved the trusted exhaustive-enum fallback (step 9), and
+  even when a verdict was reached `dispatch_reduced` discarded it at its
+  `past_deadline` gates. Fix (`auto.rs`): give the blast HALF the budget when the
+  box is exhaustively enumerable (reserving the rest for the exact enum), and stop
+  `dispatch_reduced` discarding an *already-decided, replay-checked* verdict (the
+  deadline bounds SEARCH, not the bounded O(term-size) reconstruct+replay). Result:
+  synthetic QF_NIA 32/32, sat 12→16, unknown 4→0, DISAGREE = 0, PAR-2 1.256→0.709;
+  `frontier_nia_unsat` held (the 10⁴ pre-blast cap — which the fix deliberately
+  does NOT touch — still guards the `nia_unsat` family). This was a dispatch bug,
+  NOT the poly hot-loop below.
+- **STILL OPEN — genuine poly hot-loop (1 row): `ext-rew-aggr-test`** (12.2 s, sat,
+  105-line nonlinear conjunction, no disjunctions) — the true #85 residual: cost in
+  the `axeyum-ir` poly primitives, needs the profile-to-inner-loop + callback above.
+- **STILL OPEN — finite-domain disjunction (1 row): `rewriting-sums`** (10.7 s,
+  unsat) — a #87 target, not a poly issue: `(or (= x c)…)` chains pin a finite set
+  but the conditional equalities are not propagated into `z²>10⁹`; needs the
+  *finite-domain* disjunction split (see #87).
+- **STILL OPEN — div/mod-by-zero SAT (1 row): `mod.03`** (5.0 s) — `mod x n < 0`
+  is sat only at `n = 0` (SMT-LIB `mod` is ≥ 0 for `n ≠ 0`); the `n = 0` witness
+  (unconstrained div/mod-by-0, ADR-0040) is not found in budget. Distinct decider.
+
+The remaining one-offs each need distinct machinery: `learned-rewrite-int-mod-range`
+(unsat, bounded int-blast overflows at width 32; needs mod-range / `|n|<|d|`
+reasoning), two QF_NRA transcendentals (`sin-cos-*`, `metitarski-1025`),
+`nt-lemmas-bad` (QF_NRA unsat), and `issue3003` (QF_NRA — verdict-correct sat whose
+algebraic model fails the *public* `eval` replay, task #89). So the "dominant
+timeout class" was mostly a dispatch bug; the true poly-hot-loop residual is now a
+single row (`ext-rew`), and #87's `rewriting-sums` is a separate finite-domain
+lever.
 
 ## Consequence for #87 (disjunction case-split)
 

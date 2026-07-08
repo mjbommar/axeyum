@@ -785,12 +785,20 @@ fn dispatch_reduced(
         c
     };
     let result = check_auto_inner(arena, reduced, &inner_config, rec)?;
-    if past_deadline(deadline) {
-        return Ok(CheckResult::Unknown(timeout_reason(
-            "preprocessed dispatch timeout after reduced solve",
-        )));
-    }
+    // A DEFINITE verdict (Sat/Unsat) from the reduced solve is valid regardless of
+    // the wall clock — the deadline is a resource budget, not a correctness gate.
+    // Discarding a decided (and, for Sat, about-to-be-replay-checked) verdict just
+    // because the budget expired *during the deciding route* needlessly throws away
+    // a real answer: measured, `nia-bounded-blast` decides bounded nonlinear SATs
+    // like `nia-pythagorean` a hair past the budget, and the old unconditional
+    // `past_deadline` gate below turned that decided `sat` into `unknown`. Only an
+    // UNDECIDED (`Unknown`) result degrades to the timeout reason.
     let CheckResult::Sat(model) = result else {
+        if matches!(result, CheckResult::Unknown(_)) && past_deadline(deadline) {
+            return Ok(CheckResult::Unknown(timeout_reason(
+                "preprocessed dispatch timeout after reduced solve",
+            )));
+        }
         return Ok(result);
     };
 
@@ -802,17 +810,14 @@ fn dispatch_reduced(
                 "preprocessing model reconstruction failed: {error}"
             ))
         })?;
-    if past_deadline(deadline) {
-        return Ok(CheckResult::Unknown(timeout_reason(
-            "preprocessed dispatch timeout after model reconstruction",
-        )));
-    }
+    // No `past_deadline` bail here or in the replay loop below: the reduced solve
+    // already produced a DEFINITE `Sat`, and reconstruction + replay are bounded,
+    // cheap O(term-size) validation passes — abandoning them on an expired budget
+    // would throw away a real, checkable answer (measured: `nia-bounded-blast`
+    // decides bounded nonlinear SATs a hair past the budget, and the old bails
+    // turned that decided `sat` into `unknown`). The deadline bounds SEARCH, not
+    // the final linear validation of an already-decided model.
     for &assertion in assertions {
-        if past_deadline(deadline) {
-            return Ok(CheckResult::Unknown(timeout_reason(
-                "preprocessed dispatch timeout during model replay",
-            )));
-        }
         if !matches!(
             eval(arena, assertion, &reconstructed),
             Ok(Value::Bool(true))
@@ -2969,14 +2974,30 @@ fn decide_bounded_int_blast(
     //    is exact there). Build on the real arena (clones inside the blast).
     let clamped = clamp_to_box(arena, assertions, &proven)?;
 
-    // 8. Solve the clamped, exactly-encoded box at the covering width.
-    let blasted = solve_exact_bounded_box(arena, &clamped, proven.width, config)?;
+    // 8. Solve the clamped, exactly-encoded box at the covering width. When the
+    //    box is small enough to enumerate EXHAUSTIVELY as a trusted fallback
+    //    (step 9), give the blast only HALF the budget: it decides the UNSAT
+    //    family in milliseconds (so a half-budget never regresses `nia_unsat` —
+    //    the frontier the 10^4 pre-blast cap protects), but a *bounded nonlinear*
+    //    sat like `x²+y²=z²` can burn the whole budget in the blast's multiplier
+    //    search and starve the enumeration that would decide it instantly.
+    //    Reserving half guarantees the exact, trusted enumeration below still runs
+    //    IN-budget. A box too large to enumerate keeps the full budget on the
+    //    blast (its only decider).
+    let enumerable = int_box_case_count(&proven).is_some_and(|c| c <= MAX_INT_BOX_ENUM_CASES);
+    let blast_config = match (enumerable, config.timeout) {
+        (true, Some(t)) => config.clone().with_timeout(t / 2),
+        _ => config.clone(),
+    };
+    let blasted = solve_exact_bounded_box(arena, &clamped, proven.width, &blast_config)?;
     if blasted.is_some() {
         return Ok(blasted);
     }
 
-    // 9. The blast declined (covering width or CNF too large) — full-budget
-    //    exhaustive evaluation is the last decider for the proven box.
+    // 9. The blast declined (covering width, CNF too large, or the reserved
+    //    half-budget expired on a hard nonlinear box) — the exact exhaustive
+    //    evaluation is the trusted last decider for the proven box, and now has
+    //    the reserved budget to finish.
     Ok(decide_int_box_by_evaluation(
         arena,
         assertions,
