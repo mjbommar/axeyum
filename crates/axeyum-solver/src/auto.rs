@@ -378,7 +378,56 @@ pub fn check_auto(
     // sites — it never participates in a branch condition — so this returns
     // byte-for-byte the verdict `check_auto_explained` does (verdict invariance,
     // pinned by `tests/route_trace.rs`).
-    check_auto_with_recorder(arena, assertions, config, &mut None)
+    let result = check_auto_with_recorder(arena, assertions, config, &mut None)?;
+    if matches!(result, CheckResult::Unknown(_))
+        && let Some(unsat) = try_conjunct_refutation(arena, assertions, config)?
+    {
+        return Ok(unsat);
+    }
+    Ok(result)
+}
+
+/// Last-resort refutation for a `unknown` verdict: flatten the top-level
+/// conjuncts and solve each ALONE with a small budget. If any single conjunct is
+/// `unsat`, the whole conjunction is `unsat` — sound, because the dropped
+/// conjuncts only ADD constraints (an unsat sub-system stays unsat under more
+/// constraints). Only fires with ≥ 2 conjuncts (nothing to gain otherwise) under
+/// a finite budget; the recursion terminates because a single-conjunct sub-solve
+/// re-enters here, sees `< 2`, and stops. A `sat` conjunct is ignored (it says
+/// nothing about the conjunction). Decides `issue3480`-style queries where one
+/// conjunct (`a = 7 − a²`, no integer root) is alone unsat but buried in an `and`
+/// beside constraints that route the whole query to `unknown`.
+fn try_conjunct_refutation(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+) -> Result<Option<CheckResult>, SolverError> {
+    let Some(total) = config.timeout else {
+        return Ok(None); // unbounded ⇒ skip (avoid runaway sub-solves)
+    };
+    let mut conjuncts: Vec<TermId> = Vec::new();
+    for &a in assertions {
+        collect_top_conjuncts(arena, a, &mut conjuncts);
+    }
+    conjuncts.sort_unstable();
+    conjuncts.dedup();
+    if conjuncts.len() < 2 || conjuncts.len() > 64 {
+        return Ok(None);
+    }
+    // Split HALF the budget across the conjuncts: the fallback adds ≤ ~50%
+    // wall-clock over the (already-`unknown`) main solve.
+    let n = u32::try_from(conjuncts.len()).unwrap_or(64);
+    let per = total / (2 * n);
+    if per.is_zero() {
+        return Ok(None);
+    }
+    let sub = config.clone().with_timeout(per);
+    for &c in &conjuncts {
+        if matches!(check_auto(arena, &[c], &sub)?, CheckResult::Unsat) {
+            return Ok(Some(CheckResult::Unsat));
+        }
+    }
+    Ok(None)
 }
 
 /// Like [`check_auto`], but additionally returns a [`RouteTrace`]: the ordered
@@ -398,6 +447,18 @@ pub fn check_auto_explained(
 ) -> Result<(CheckResult, RouteTrace), SolverError> {
     let mut trace = RouteTrace::new();
     let result = check_auto_with_recorder(arena, assertions, config, &mut Some(&mut trace))?;
+    // Conjunct-split refutation fallback (mirrors `check_auto` for verdict
+    // invariance), recorded as a `Decided` route so the trace's terminal entry
+    // matches the upgraded `unsat`. Run BEFORE the invariant block so it sees the
+    // final verdict.
+    let result = if matches!(result, CheckResult::Unknown(_))
+        && let Some(unsat) = try_conjunct_refutation(arena, assertions, config)?
+    {
+        trace.record_decided("conjunct-refutation", Verdict::Unsat);
+        unsat
+    } else {
+        result
+    };
     // Structural trace invariant: an `Unknown` verdict always ends in a
     // Declined entry. Individual early-exit paths (an ultra-tight budget can
     // expire between any two recorded attempts — feature scans, lifting,
@@ -5911,11 +5972,15 @@ mod tests {
         let xv = arena.var(x);
         let disj = or_var_eq_consts(&mut arena, xv, &[5, 7]);
         let neg = arena.not(disj).unwrap();
-        // x*x = 50 — unbounded, undecidable here; the point is NEVER a wrong unsat
-        // arising from treating the negated set as a `[5,7]` bound.
+        // x*x = 49 has the witness x = -7 (which `x ∉ {5,7}` admits), so the query is
+        // genuinely SAT — the point is NEVER a wrong unsat from treating the negated
+        // set as a `[5,7]` bound (that bug would force x ∈ {5,6,7}, excluding −7 ⇒ a
+        // FALSE unsat). (The old value 50 is genuinely unsat over Int — no integer
+        // root — and is now correctly decided so by the conjunct-split refutation, so
+        // it no longer isolates the false-bound bug; 49 does.)
         let sq = arena.int_mul(xv, xv).unwrap();
-        let fifty = arena.int_const(50);
-        let eq = arena.eq(sq, fifty).unwrap();
+        let target = arena.int_const(49);
+        let eq = arena.eq(sq, target).unwrap();
         let config = SolverConfig {
             timeout: Some(std::time::Duration::from_secs(5)),
             ..Default::default()
