@@ -969,7 +969,7 @@ impl IncrementalBvSolver {
         let base_name = format!("!axeyum_warm_select_{}", term.index());
         let name = fresh_internal_symbol_name(arena, &base_name);
         let value_symbol = arena
-            .declare(&name, select.element_sort)
+            .declare_internal(&name, select.element_sort)
             .map_err(|error| map_ir_error(&error))?;
         let value_term = arena.var(value_symbol);
         self.internal_symbols.insert(value_symbol);
@@ -1073,7 +1073,7 @@ impl IncrementalBvSolver {
         let base_name = format!("!axeyum_warm_uf_{}", term.index());
         let name = fresh_internal_symbol_name(arena, &base_name);
         let value_symbol = arena
-            .declare(&name, app.result_sort)
+            .declare_internal(&name, app.result_sort)
             .map_err(|error| map_ir_error(&error))?;
         let value_term = arena.var(value_symbol);
         self.internal_symbols.insert(value_symbol);

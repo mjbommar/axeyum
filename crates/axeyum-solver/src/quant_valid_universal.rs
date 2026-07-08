@@ -134,7 +134,7 @@ fn try_eliminate(
         let sort = arena.symbol(var).1;
         let name = format!("!vu_{fresh}");
         *fresh += 1;
-        let constant = arena.declare(&name, sort).map_err(err)?;
+        let constant = arena.declare_internal(&name, sort).map_err(err)?;
         replacements.insert(arena.var(var), arena.var(constant));
     }
 

@@ -134,7 +134,7 @@ fn skolemize_positive(
             // (now-substituted) body.
             let sort = arena.symbol(sym).1;
             let skolem = arena
-                .declare(&format!("!gk_{}", *next_skolem), sort)
+                .declare_internal(&format!("!gk_{}", *next_skolem), sort)
                 .map_err(err)?;
             *next_skolem += 1;
             let bound = arena.var(sym);

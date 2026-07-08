@@ -571,7 +571,7 @@ mod tests {
 
     fn counter_var(arena: &mut TermArena, step: usize) -> SymbolId {
         arena
-            .declare(&format!("x@{step}"), Sort::BitVec(8))
+            .declare_internal(&format!("x@{step}"), Sort::BitVec(8))
             .unwrap()
     }
 
@@ -681,7 +681,7 @@ mod tests {
                 assert_eq!(steps, 5, "0 → 5 takes exactly five increments");
                 // The counterexample trace is a genuine, replay-checked path.
                 for k in 0..=5u128 {
-                    let sym = arena.find_symbol(&format!("x@{k}")).unwrap();
+                    let sym = arena.find_internal_symbol(&format!("x@{k}")).unwrap();
                     assert_eq!(
                         model.get(sym),
                         Some(Value::Bv { width: 8, value: k }),

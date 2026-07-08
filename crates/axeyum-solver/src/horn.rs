@@ -541,7 +541,7 @@ impl ReducedSystem<'_> {
     ) -> Result<Vec<SymbolId>, SolverError> {
         let mut vars = Vec::with_capacity(self.classified.arg_sorts.len());
         for (i, &sort) in self.classified.arg_sorts.iter().enumerate() {
-            vars.push(arena.declare(&format!("p@{step}_{i}"), sort)?);
+            vars.push(arena.declare_internal(&format!("p@{step}_{i}"), sort)?);
         }
         Ok(vars)
     }
@@ -1370,7 +1370,7 @@ fn solve_direct(
     // Fresh parameter symbols, one per predicate argument.
     let mut params = Vec::with_capacity(arg_sorts.len());
     for (i, &sort) in arg_sorts.iter().enumerate() {
-        params.push(arena.declare(&format!("q@{}_{i}", pred.index()), sort)?);
+        params.push(arena.declare_internal(&format!("q@{}_{i}", pred.index()), sort)?);
     }
     let param_set: std::collections::BTreeSet<SymbolId> = params.iter().copied().collect();
 
@@ -1641,7 +1641,7 @@ impl SelfReduced {
     ) -> Result<Vec<SymbolId>, SolverError> {
         let mut vars = Vec::with_capacity(self.arg_sorts.len());
         for (i, &sort) in self.arg_sorts.iter().enumerate() {
-            vars.push(arena.declare(&format!("p@{step}_{i}"), sort)?);
+            vars.push(arena.declare_internal(&format!("p@{step}_{i}"), sort)?);
         }
         Ok(vars)
     }

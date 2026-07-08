@@ -320,7 +320,7 @@ fn eliminate_variable_divmod(
 fn fresh_int(arena: &mut TermArena, counter: &mut u32) -> Result<TermId, SolverError> {
     let name = format!("!nia_dm_{counter}");
     *counter += 1;
-    let sym = arena.declare(&name, Sort::Int).map_err(err)?;
+    let sym = arena.declare_internal(&name, Sort::Int).map_err(err)?;
     Ok(arena.var(sym))
 }
 
@@ -590,7 +590,7 @@ fn abstract_pow2(
         };
         let x = a[0];
         let sym = arena
-            .declare(&format!("!pow2_{counter}"), Sort::Int)
+            .declare_internal(&format!("!pow2_{counter}"), Sort::Int)
             .map_err(err)?;
         *counter += 1;
         let p = arena.var(sym);
@@ -639,7 +639,7 @@ fn abstract_pow2(
             arena.not(x_eq0).map_err(err)?
         };
         let q_sym = arena
-            .declare(&format!("!pow2_even_{counter}"), Sort::Int)
+            .declare_internal(&format!("!pow2_even_{counter}"), Sort::Int)
             .map_err(err)?;
         *counter += 1;
         let q = arena.var(q_sym);
@@ -751,7 +751,7 @@ pub fn check_with_nia(
         };
         let (a, b) = (args[0], args[1]);
         let fresh = arena
-            .declare(&format!("!nia_{i}"), Sort::Int)
+            .declare_internal(&format!("!nia_{i}"), Sort::Int)
             .map_err(err)?;
         let r = arena.var(fresh);
         map.insert(product, r);

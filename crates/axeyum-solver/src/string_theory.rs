@@ -1557,7 +1557,7 @@ pub fn check_qf_slia_length(
     let mut len_syms: Vec<(SymbolId, SymbolId)> = Vec::new(); // (seq sym, len sym)
     let mut zero_facts: Vec<TermId> = Vec::new();
     for (i, &sym) in seq_syms.iter().enumerate() {
-        let Ok(len_sym) = arena.declare(&format!("!len!{i}"), Sort::Int) else {
+        let Ok(len_sym) = arena.declare_internal(&format!("!len!{i}"), Sort::Int) else {
             return CheckResult::Unknown(unknown("length symbol declaration failed"));
         };
         let len_term = arena.var(len_sym);

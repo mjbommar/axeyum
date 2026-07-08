@@ -95,7 +95,7 @@ pub fn abstract_bv2nat_for_refutation(
     let mut bounds: Vec<TermId> = Vec::new();
     for (i, &(target, width)) in targets.iter().enumerate() {
         let name = format!("!bv2nat.{i}");
-        let sym = arena.declare(&name, Sort::Int).map_err(err)?;
+        let sym = arena.declare_internal(&name, Sort::Int).map_err(err)?;
         let var = arena.var(sym);
         replacements.insert(target, var);
 

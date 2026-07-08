@@ -565,7 +565,7 @@ impl Relax {
         }
         let name = format!("!lia-interp.relax.{}", int_sym.index());
         let real_sym = arena
-            .declare(&name, Sort::Real)
+            .declare_internal(&name, Sort::Real)
             .map_err(|e| SolverError::Backend(e.to_string()))?;
         self.int_to_real.insert(int_sym, real_sym);
         self.real_to_int.insert(real_sym, int_sym);

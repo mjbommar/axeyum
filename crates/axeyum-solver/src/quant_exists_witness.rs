@@ -461,7 +461,7 @@ fn witness_validates(
     for (k, &u) in universals.iter().enumerate() {
         let sort = arena.symbol(u).1;
         let name = format!("!few_{k}");
-        let c = arena.declare(&name, sort).map_err(err)?;
+        let c = arena.declare_internal(&name, sort).map_err(err)?;
         umap.insert(arena.var(u), arena.var(c));
     }
     let mut umemo: HashMap<TermId, TermId> = HashMap::new();

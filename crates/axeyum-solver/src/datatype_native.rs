@@ -282,7 +282,7 @@ fn unfold_traversals(
                 c
             } else {
                 let name = format!("!dt_child_{}_{ctor_idx}_{field_idx}", sym.index());
-                let c = arena.declare(&name, field_sort)?;
+                let c = arena.declare_internal(&name, field_sort)?;
                 links.insert(key, c);
                 c
             };
@@ -518,7 +518,7 @@ fn build_sym_vars(
     let tag_width = tag_width_for(count);
 
     let tag = arena
-        .declare(&format!("!dt_tag_{oidx}"), Sort::BitVec(tag_width))
+        .declare_internal(&format!("!dt_tag_{oidx}"), Sort::BitVec(tag_width))
         .map_err(|e| SolverError::Backend(e.to_string()))?;
     let tag_var = arena.var(tag);
 
@@ -553,7 +553,7 @@ fn build_sym_vars(
                 continue;
             }
             let field = arena
-                .declare(&format!("!dt_fld_{oidx}_{j}_{i}"), fsort)
+                .declare_internal(&format!("!dt_fld_{oidx}_{j}_{i}"), fsort)
                 .map_err(|e| SolverError::Backend(e.to_string()))?;
             row.push(Some(field));
 

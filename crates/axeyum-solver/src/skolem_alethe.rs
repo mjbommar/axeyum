@@ -109,7 +109,7 @@ pub fn prove_skolem_unsat_alethe(
             let body_alethe = term_to_alethe(arena, body)?;
             // Fresh skolem constant of the bound variable's sort.
             let skolem_name = format!("!skq_{k}");
-            let skolem = arena.declare(&skolem_name, sort).ok()?;
+            let skolem = arena.declare_internal(&skolem_name, sort).ok()?;
             let skolem_term = arena.var(skolem);
             let inst = substitute(arena, body, sym, skolem_term)?;
             skolemized.push(inst);

@@ -323,7 +323,9 @@ fn skolemize_top_existentials(
         {
             let (sym, body) = (*sym, args[0]);
             let sort = arena.symbol(sym).1;
-            let skolem = arena.declare(&format!("!sk_{k}"), sort).map_err(err)?;
+            let skolem = arena
+                .declare_internal(&format!("!sk_{k}"), sort)
+                .map_err(err)?;
             k += 1;
             let bound = arena.var(sym);
             let fresh = arena.var(skolem);
@@ -1035,7 +1037,7 @@ impl LiraLower {
         }
         let name = format!("!milp.{}", int_sym.index());
         let r = arena
-            .declare(&name, Sort::Real)
+            .declare_internal(&name, Sort::Real)
             .map_err(|e| SolverError::Backend(e.to_string()))?;
         self.int_to_real.insert(int_sym, r);
         Ok(arena.var(r))
@@ -4780,7 +4782,9 @@ fn lift_ite_matching(
         };
         let (c, a, b) = (args[0], args[1], args[2]);
         let sort = arena.sort_of(*t);
-        let sym = arena.declare(&format!("!ite_{k}"), sort).map_err(err)?;
+        let sym = arena
+            .declare_internal(&format!("!ite_{k}"), sort)
+            .map_err(err)?;
         let tv = arena.var(sym);
         map.insert(*t, tv);
         let nc = arena.not(c).map_err(err)?;
@@ -5099,7 +5103,7 @@ fn relax_coercions(
     for (idx, t) in terms.into_iter().enumerate() {
         let sort = arena.sort_of(t);
         let sym = arena
-            .declare(&format!("!coerce_{idx}"), sort)
+            .declare_internal(&format!("!coerce_{idx}"), sort)
             .map_err(err)?;
         let fresh = arena.var(sym);
         map.insert(t, fresh);

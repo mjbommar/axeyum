@@ -2340,7 +2340,7 @@ impl RowCtx {
         let name = format!("!row_sel_{}", self.fresh_counter);
         self.fresh_counter += 1;
         arena
-            .declare(&name, sort)
+            .declare_internal(&name, sort)
             .map_err(|e| SolverError::Backend(format!("lazy-ROW fresh symbol failed: {e}")))
     }
 
@@ -2419,7 +2419,7 @@ impl RowCtx {
         let name = format!("!ext_eq_{}", self.fresh_counter);
         self.fresh_counter += 1;
         let flag = arena
-            .declare(&name, Sort::Bool)
+            .declare_internal(&name, Sort::Bool)
             .map_err(|e| SolverError::Backend(format!("lazy-ext flag declare failed: {e}")))?;
         let idx = self.eq_atoms.len();
         self.eq_atoms.push(ArrayEqAtom {
@@ -6109,7 +6109,7 @@ fn refine_diff_skolem(
     let name = format!("!ext_diff_{}", ctx.fresh_counter);
     ctx.fresh_counter += 1;
     let k_sym = arena
-        .declare(&name, index_sort)
+        .declare_internal(&name, index_sort)
         .map_err(|e| SolverError::Backend(format!("lazy-ext diff-skolem declare failed: {e}")))?;
     let k = arena.var(k_sym);
 

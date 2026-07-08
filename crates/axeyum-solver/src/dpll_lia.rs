@@ -3010,7 +3010,7 @@ impl ArithAbstractor {
         let name = format!("{ATOM_PREFIX}{}", self.fresh_counter);
         self.fresh_counter += 1;
         let prop = arena
-            .declare(&name, Sort::Bool)
+            .declare_internal(&name, Sort::Bool)
             .expect("fresh Boolean proposition declares");
         self.atom_of.insert(term, prop);
         self.props.insert(prop);

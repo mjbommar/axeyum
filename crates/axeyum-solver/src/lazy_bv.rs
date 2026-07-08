@@ -125,7 +125,7 @@ pub fn solve_lazy_bv_abstraction(
     let mut fresh_sym: HashMap<TermId, axeyum_ir::SymbolId> = HashMap::new();
     for (i, &op_term) in ops.iter().enumerate() {
         let sort = arena.sort_of(op_term);
-        let sym = arena.declare(&format!("{FRESH_PREFIX}{i}"), sort)?;
+        let sym = arena.declare_internal(&format!("{FRESH_PREFIX}{i}"), sort)?;
         let var = arena.var(sym);
         replacements.insert(op_term, var);
         fresh_sym.insert(op_term, sym);

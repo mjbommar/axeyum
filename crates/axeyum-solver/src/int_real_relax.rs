@@ -107,7 +107,7 @@ impl Relax {
         }
         let name = format!("!relax.{}", int_sym.index());
         let r = arena
-            .declare(&name, Sort::Real)
+            .declare_internal(&name, Sort::Real)
             .map_err(|e| SolverError::Backend(e.to_string()))?;
         self.int_to_real.insert(int_sym, r);
         Ok(arena.var(r))

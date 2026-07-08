@@ -358,7 +358,7 @@ fn refute_closed_universal(
     for &v in &vars {
         let sort = arena.symbol(v).1;
         let fresh = arena
-            .declare(&format!("!cu_{}", v.index()), sort)
+            .declare_internal(&format!("!cu_{}", v.index()), sort)
             .map_err(|e| SolverError::Backend(e.to_string()))?;
         let var = arena.var(v);
         let fresh_term = arena.var(fresh);

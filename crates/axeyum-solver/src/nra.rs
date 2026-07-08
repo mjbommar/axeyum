@@ -260,7 +260,7 @@ fn check_with_nra_impl(
         };
         let (pa, pb) = (args[0], args[1]);
         let fresh = arena
-            .declare(&format!("!nra_{i}"), Sort::Real)
+            .declare_internal(&format!("!nra_{i}"), Sort::Real)
             .map_err(|e| SolverError::Backend(e.to_string()))?;
         let var = arena.var(fresh);
         map.insert(product, var);
@@ -717,7 +717,7 @@ fn eliminate_real_div(
         };
         let (x, y) = (args[0], args[1]);
         let fresh = arena
-            .declare(&format!("!div_{i}"), Sort::Real)
+            .declare_internal(&format!("!div_{i}"), Sort::Real)
             .map_err(err)?;
         let r = arena.var(fresh);
         map.insert(div, r);

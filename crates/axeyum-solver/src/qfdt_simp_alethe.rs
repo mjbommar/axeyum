@@ -180,7 +180,7 @@ pub fn prove_qf_dt_unsat_alethe_via_simplification(
             return None;
         }
         let name = format!("!dt_w_{n}");
-        let sym = arena.declare(&name, field_sort).ok()?;
+        let sym = arena.declare_internal(&name, field_sort).ok()?;
         let w = arena.var(sym);
         subst.insert(redex.term, w);
         certs.push(ProjectionCert {
@@ -200,7 +200,7 @@ pub fn prove_qf_dt_unsat_alethe_via_simplification(
     let mut tester_certs: Vec<TesterCert> = Vec::new();
     for (n, redex) in tester_redexes.iter().enumerate() {
         let name = format!("!dt_t_{n}");
-        let sym = arena.declare(&name, Sort::BitVec(1)).ok()?;
+        let sym = arena.declare_internal(&name, Sort::BitVec(1)).ok()?;
         let w = arena.var(sym);
         let one = arena.bv_const(1, 1).ok()?;
         let pred = arena.eq(w, one).ok()?;

@@ -348,7 +348,7 @@ pub fn prove_unsat_lazy(arena: &mut TermArena, assertions: &[TermId]) -> bool {
     let mut atoms: Vec<(TermId, SymbolId)> = Vec::new();
     for (i, &atom) in atom_terms.iter().enumerate() {
         let sym = arena
-            .declare(&format!("!euf_atom_{i}"), Sort::Bool)
+            .declare_internal(&format!("!euf_atom_{i}"), Sort::Bool)
             .expect("fresh atom symbol");
         let var = arena.var(sym);
         subst.insert(atom, var);
@@ -663,7 +663,7 @@ pub fn check_qf_uf_with_config(
     let mut atoms: Vec<(TermId, SymbolId)> = Vec::new();
     for (i, &atom) in atom_terms.iter().enumerate() {
         let sym = arena
-            .declare(&format!("!euf_atom_{i}"), Sort::Bool)
+            .declare_internal(&format!("!euf_atom_{i}"), Sort::Bool)
             .expect("fresh atom symbol");
         let var = arena.var(sym);
         subst.insert(atom, var);

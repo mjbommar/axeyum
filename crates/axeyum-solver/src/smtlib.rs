@@ -1067,7 +1067,7 @@ fn relax_bridge_atoms(
                 let n = *fresh;
                 *fresh += 1;
                 let sym = arena
-                    .declare(&format!("!strgate.{n}"), Sort::Bool)
+                    .declare_internal(&format!("!strgate.{n}"), Sort::Bool)
                     .map_err(err)?;
                 *changed = true;
                 arena.var(sym)
