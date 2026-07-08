@@ -61,7 +61,26 @@ So the clean, soundness-neutral, non-regressing ceiling is the entry-poll set
 above. Closing the last residual means *profiling to the exact inner loop* (in
 `axeyum-ir` polynomial arithmetic or the NIA relaxation for `rewriting-sums`) and
 threading a callback there — a cross-crate change to a foundational crate,
-ADR-worthy, for ~1–2 corpus rows. Deferred.
+ADR-worthy.
+
+**Measured ROI (2026-07-08, post-#88, re-measured over all four curated arith
+corpora — corrects the earlier "~1–2 rows" estimate).** The timeout/overrun class
+is the DOMINANT remaining arithmetic decline: **7 rows** across the curated
+corpora, all "preprocessed dispatch timeout after reduced solve" at a 5 s budget —
+- `cvc5-regress-clean/QF_NIA`: `mod.03` (5.0 s, sat), `ext-rew-aggr-test`
+  (12.2 s, sat), `rewriting-sums` (10.7 s, unsat) — 3 rows;
+- `synthetic/QF_NIA`: 4 rows (all `Timeout`).
+
+By contrast the *other* remaining declines are one-offs each needing distinct
+machinery: `learned-rewrite-int-mod-range` (unsat, **not** a timeout — the bounded
+int-blast overflows at width 32; needs mod-range / `|n|<|d|` reasoning),
+two QF_NRA transcendentals (`sin-cos-*`, `metitarski-1025`), `nt-lemmas-bad`
+(QF_NRA unsat), and `issue3003` (QF_NRA — verdict-correct sat whose algebraic
+model fails the *public* `eval` replay, task #89). Synthetic `QF_NRA` is fully
+decided (33/33). So the deadline residual is the single highest-count arithmetic
+lever, and it also unblocks #87 — its priority is accordingly RAISED, not
+deferred. The concrete next step is the profile-to-inner-loop + callback described
+above.
 
 ## Consequence for #87 (disjunction case-split)
 
