@@ -88,6 +88,41 @@ fn deadline_reached(deadline: Option<Instant>) -> bool {
     deadline.is_some_and(|d| Instant::now() >= d)
 }
 
+thread_local! {
+    /// The active wall-clock deadline for root isolation, set for the dynamic
+    /// extent of [`decide_real_poly_constraint`]. The Sturm root isolation
+    /// (`isolate_roots` → `isolate_roots_sturm` → `sturm_isolate_rec`) is reached
+    /// from ~20 call sites, so rather than thread `Option<Instant>` through all of
+    /// them we scope it here and poll it at the isolation entry points. A fired
+    /// poll only turns a would-be-slow isolation into a `None` (⇒ the caller
+    /// declines to the sound grid fallback / `unknown`), never a changed verdict —
+    /// so it is soundness-neutral and behavior-identical for a generous/absent
+    /// deadline (task #85; the un-clocked isolation overran a per-branch budget,
+    /// which in turn blocked the disjunction case-split #87).
+    static ISOLATE_DEADLINE: std::cell::Cell<Option<Instant>> = const { std::cell::Cell::new(None) };
+}
+
+/// Sets [`ISOLATE_DEADLINE`] for its lifetime, restoring the previous value on
+/// drop (so nested calls / recursion compose correctly).
+struct IsolateDeadlineGuard(Option<Instant>);
+
+impl IsolateDeadlineGuard {
+    fn set(deadline: Option<Instant>) -> Self {
+        IsolateDeadlineGuard(ISOLATE_DEADLINE.with(|c| c.replace(deadline)))
+    }
+}
+
+impl Drop for IsolateDeadlineGuard {
+    fn drop(&mut self) {
+        ISOLATE_DEADLINE.with(|c| c.set(self.0));
+    }
+}
+
+/// `true` if the thread-local root-isolation deadline has passed.
+fn isolate_deadline_reached() -> bool {
+    deadline_reached(ISOLATE_DEADLINE.with(std::cell::Cell::get))
+}
+
 /// The `Unknown` returned when a decision loop bails at [`deadline_reached`].
 fn cad_timeout_unknown() -> CheckResult {
     CheckResult::Unknown(UnknownReason {
@@ -306,6 +341,10 @@ pub fn decide_real_poly_constraint(
     if assertions.is_empty() {
         return Ok(None);
     }
+    // Scope the wall-clock deadline for every root isolation reached below (#85):
+    // a single huge-polynomial `isolate_roots` was the un-clocked step that overran
+    // a per-branch budget. Restored on drop, so nested/recursive calls compose.
+    let _isolate_guard = IsolateDeadlineGuard::set(deadline);
     // Flatten the query into the set of atomic comparisons, declining on any
     // non-conjunctive structure or non-(single-var real poly) atom. Every atom
     // must collect over the SAME variable.
@@ -1149,6 +1188,9 @@ fn sturm_isolate_rec(
     depth: u32,
     out: &mut Vec<Root>,
 ) -> Option<()> {
+    if isolate_deadline_reached() {
+        return None; // #85: bail the recursive subdivision/bisection on a huge poly
+    }
     if count == 0 {
         return Some(());
     }
@@ -1265,6 +1307,9 @@ fn sturm_isolate_single(
 /// count is exact, NO root is ever missed; on any overflow/bound the whole path
 /// declines and the grid takes over.
 fn isolate_roots_sturm(poly: &[i128]) -> Option<Vec<Root>> {
+    if isolate_deadline_reached() {
+        return None; // #85: bail before the O(deg²) Sturm-chain build on a huge poly
+    }
     if poly.last().copied()? == 0 {
         return None;
     }
@@ -1364,6 +1409,9 @@ const ISOLATE_REFINE_DEPTH: u32 = 48;
 /// root represented) whenever Sturm succeeds, and the grid's sound behavior is
 /// preserved otherwise. A whole-isolation `None` makes the caller decline.
 fn isolate_roots(poly: &[i128]) -> Option<Vec<Root>> {
+    if isolate_deadline_reached() {
+        return None; // wall-clock timeout (#85) ⇒ decline (caller falls back / declines)
+    }
     if let Some(mut roots) = isolate_roots_sturm(poly) {
         // Sturm yields distinct roots but not necessarily in ascending order;
         // sort to match the documented contract (callers rely on ascending order
@@ -2174,6 +2222,9 @@ fn decompose_multivariate(
     assertions: &[TermId],
     deadline: Option<Instant>,
 ) -> Option<CheckResult> {
+    if isolate_deadline_reached() {
+        return None; // #85: bail the multivariate CAD on wall-clock timeout
+    }
     // 1. Re-collect every assertion as a multivariate comparison.
     let mut atoms: Vec<MultiAtom> = Vec::new();
     for &a in assertions {
@@ -2811,6 +2862,9 @@ fn strict_cad_along(
     elim: SymbolId,
     keep: SymbolId,
 ) -> Option<TwoVarVerdict> {
+    if isolate_deadline_reached() {
+        return None; // #85: bail the two-var CAD projection/lift on timeout
+    }
     // 2a. PROJECTION onto `keep`: the sign-invariant set of univariate-in-`keep`
     //     polynomials. For each `p`: leading coeff in `elim`, discriminant in
     //     `elim`; for each pair: their resultant in `elim`. Every `p` MUST have
@@ -3727,6 +3781,9 @@ fn project_strict(
     elim: SymbolId,
     rest: &BTreeSet<SymbolId>,
 ) -> Option<Vec<MultiPoly>> {
+    if isolate_deadline_reached() {
+        return None; // #85: bail the recursive projection on timeout
+    }
     // Coprime-split the projection INPUTS at every recursion level: a shared factor
     // between two of them (which arises freshly among the PROJECTED polynomials, not
     // only among the original atoms) makes their pairwise resultant vanish
@@ -5496,6 +5553,9 @@ fn resultant_univariate(
     elim: SymbolId,
     keep: SymbolId,
 ) -> Option<Vec<i128>> {
+    if isolate_deadline_reached() {
+        return None; // #85: bail the O(atoms²) resultant loop on timeout
+    }
     let pc = poly_in_elim_over_keep(p, elim, keep)?;
     let qc = poly_in_elim_over_keep(q, elim, keep)?;
     let m = pc.len() - 1; // deg_elim(p)
