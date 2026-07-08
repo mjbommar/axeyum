@@ -212,6 +212,19 @@ struct Cdcl {
     var_inc: f64,
     /// Saved decision polarity per variable (phase saving).
     phase: Vec<bool>,
+    /// Target-phase rephasing (T1.3.1): the decision polarities of the deepest
+    /// (largest-trail) conflict-free assignment seen so far — the "closest to a
+    /// model" phase. On a restart (when [`Cdcl::use_target_rephase`] is set) the
+    /// saved [`Cdcl::phase`] is reset to this target, so search re-descends toward the
+    /// best assignment instead of the last-seen polarities. Pure decision-order
+    /// heuristic (verdict-preserving).
+    best_phase: Vec<bool>,
+    /// The trail length at which [`Cdcl::best_phase`] was last snapshotted (a
+    /// monotone high-water mark; a new maximum triggers a fresh snapshot).
+    best_trail_len: usize,
+    /// When set (the default), restarts rephase [`Cdcl::phase`] to
+    /// [`Cdcl::best_phase`] (target rephasing); otherwise plain phase saving is kept.
+    use_target_rephase: bool,
     /// Conflicts since the last restart (the restart trigger's interval counter).
     conflicts_since_restart: usize,
     /// Index into the Luby sequence (1-based; advances on each restart).
@@ -331,6 +344,9 @@ impl Cdcl {
             activity: vec![0.0; n],
             var_inc: 1.0,
             phase: vec![false; n],
+            best_phase: vec![false; n],
+            best_trail_len: 0,
+            use_target_rephase: true,
             conflicts_since_restart: 0,
             restart_count: 1,
             glue_fast: 0.0,
@@ -598,6 +614,22 @@ impl Cdcl {
         self.glue_fast > RESTART_MARGIN * self.glue_slow
     }
 
+    /// Snapshot the current conflict-free assignment as the target phase when it is
+    /// the deepest (largest-trail) one seen so far — the polarities "closest to a
+    /// model" (T1.3.1). Reads `assign` directly (a disjoint field from `best_phase`),
+    /// and only walks the trail on a fresh high-water mark, so the amortized cost is
+    /// negligible.
+    fn snapshot_target_phase(&mut self) {
+        if self.trail.len() <= self.best_trail_len {
+            return;
+        }
+        self.best_trail_len = self.trail.len();
+        for idx in 0..self.trail.len() {
+            let var = self.trail[idx];
+            self.best_phase[var] = self.assign[var] == Some(true);
+        }
+    }
+
     fn decision_level(&self) -> usize {
         self.trail_lim.len()
     }
@@ -708,12 +740,22 @@ impl Cdcl {
                     self.reductions += 1;
                 }
             } else {
-                // No conflict: consider a restart (EMA glue by default, Luby
-                // fallback), then make a decision.
+                // No conflict: snapshot the target phase if this is the deepest
+                // conflict-free assignment yet (the "closest to a model" polarities),
+                // then consider a restart (EMA glue by default, Luby fallback) and make
+                // a decision.
+                if self.use_target_rephase {
+                    self.snapshot_target_phase();
+                }
                 if self.decision_level() > 0 && self.should_restart() {
                     self.conflicts_since_restart = 0;
                     self.restart_count += 1;
                     self.backtrack_to(0);
+                    // Target rephasing (T1.3.1): re-descend toward the best assignment
+                    // seen, not the last-seen polarities. Pure decision-order heuristic.
+                    if self.use_target_rephase {
+                        self.phase.copy_from_slice(&self.best_phase);
+                    }
                     continue;
                 }
                 if let Some(var) = self.pick_branch() {
