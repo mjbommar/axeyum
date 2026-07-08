@@ -280,7 +280,7 @@ fn find_elimination(
 fn mint_fresh(arena: &mut TermArena, width: u32, next_fresh: &mut u64) -> Result<TermId, IrError> {
     let name = format!("!unconstr!{next_fresh}");
     *next_fresh += 1;
-    let sym = arena.declare(&name, Sort::BitVec(width))?;
+    let sym = arena.declare_internal(&name, Sort::BitVec(width))?;
     Ok(arena.var(sym))
 }
 
@@ -441,7 +441,7 @@ mod tests {
             "x is eliminated"
         );
 
-        let u = arena.find_symbol("!unconstr!0").unwrap();
+        let u = arena.find_internal_symbol("!unconstr!0").unwrap();
         let mut reduced = Assignment::new();
         reduced.set(u, bv8(10));
         reduced.set(y, bv8(3));
@@ -475,7 +475,7 @@ mod tests {
             "both eliminated/orphaned"
         );
 
-        let u = arena.find_symbol("!unconstr!0").unwrap();
+        let u = arena.find_internal_symbol("!unconstr!0").unwrap();
         let mut reduced = Assignment::new();
         reduced.set(u, bv8(10));
         let full = out.trail().reconstruct(&arena, &reduced).unwrap();
@@ -558,7 +558,7 @@ mod tests {
 
         let out = elim_unconstrained(&mut arena, &originals).unwrap();
         assert_eq!(out.eliminated(), 1);
-        let u = arena.find_symbol("!unconstr!0").unwrap();
+        let u = arena.find_internal_symbol("!unconstr!0").unwrap();
         let mut reduced = Assignment::new();
         reduced.set(u, bv8(30)); // 30 < 100
         let full = out.trail().reconstruct(&arena, &reduced).unwrap();

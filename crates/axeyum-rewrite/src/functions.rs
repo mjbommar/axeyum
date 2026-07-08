@@ -353,7 +353,7 @@ impl Eliminator {
     ) -> Result<SymbolId, FuncElimError> {
         let name = format!("!fn_app_{}", self.fresh_counter);
         self.fresh_counter += 1;
-        Ok(arena.declare(&name, sort)?)
+        Ok(arena.declare_internal(&name, sort)?)
     }
 
     fn record_apply(&mut self, func: FuncId, args: Vec<TermId>, fresh: SymbolId) {

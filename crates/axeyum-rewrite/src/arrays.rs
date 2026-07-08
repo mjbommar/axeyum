@@ -399,7 +399,7 @@ impl Eliminator {
     ) -> Result<SymbolId, ArrayElimError> {
         let name = format!("!arr_sel_{}", self.fresh_counter);
         self.fresh_counter += 1;
-        Ok(arena.declare(&name, Sort::BitVec(width))?)
+        Ok(arena.declare_internal(&name, Sort::BitVec(width))?)
     }
 
     fn record_select(&mut self, array: SymbolId, index: TermId, fresh: SymbolId) {

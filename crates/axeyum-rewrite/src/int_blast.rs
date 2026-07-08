@@ -435,7 +435,7 @@ impl Blaster {
         }
         let name = format!("!int_bv_{}", self.fresh_counter);
         self.fresh_counter += 1;
-        let bv_sym = arena.declare(&name, Sort::BitVec(self.width))?;
+        let bv_sym = arena.declare_internal(&name, Sort::BitVec(self.width))?;
         self.symbol_memo.insert(symbol, bv_sym);
         self.vars.push((symbol, bv_sym));
         Ok(bv_sym)
@@ -505,6 +505,34 @@ mod tests {
     }
 
     #[test]
+    fn user_declare_cannot_alias_int_blast_fresh_bv() {
+        // Soundness firewall: a crafted user symbol named exactly like the fresh
+        // bit-blast helper (`!int_bv_0`) must NOT alias the internal helper the
+        // reduction mints. The user and internal namespaces are disjoint, so even
+        // with the same name string they resolve to two distinct `SymbolId`s.
+        let mut arena = TermArena::new();
+        // The attacker declares the user symbol first — exactly what the SMT-LIB
+        // parser does for `(declare-fun !int_bv_0 () (_ BitVec 8))`.
+        let user = arena.declare("!int_bv_0", Sort::BitVec(8)).unwrap();
+
+        let x_sym = arena.declare("x", Sort::Int).unwrap();
+        let x = arena.var(x_sym);
+        let five = arena.int_const(5);
+        let eq = arena.eq(x, five).unwrap();
+        let _blast = blast_integers(&mut arena, &[eq], 8).unwrap();
+
+        let internal = arena
+            .find_internal_symbol("!int_bv_0")
+            .expect("blast minted its fresh bv symbol on the internal namespace");
+        assert_ne!(
+            internal, user,
+            "user declare aliased the internal bit-blast symbol — firewall breached",
+        );
+        assert_eq!(arena.find_symbol("!int_bv_0"), Some(user));
+        assert_eq!(arena.find_internal_symbol("!int_bv_0"), Some(internal));
+    }
+
+    #[test]
     fn linear_constraint_blasts_and_model_reads_back() {
         // x + 2 == 5 && x > 0 : the bit-vector model reads back to the integer
         // x = 3, which satisfies the original integer assertions exactly.
@@ -526,7 +554,7 @@ mod tests {
 
         // A bit-vector model with x_bv = 3 satisfies the blasted assertions;
         // reading it back yields the integer x = 3 satisfying the originals.
-        let bv_sym = arena.find_symbol("!int_bv_0").unwrap();
+        let bv_sym = arena.find_internal_symbol("!int_bv_0").unwrap();
         let mut bv_model = Assignment::new();
         bv_model.set(
             bv_sym,
@@ -551,7 +579,7 @@ mod tests {
         let eq = arena.eq(x, neg3).unwrap();
 
         let blast = blast_integers(&mut arena, &[eq], 8).unwrap();
-        let bv_sym = arena.find_symbol("!int_bv_0").unwrap();
+        let bv_sym = arena.find_internal_symbol("!int_bv_0").unwrap();
         // -3 in two's complement, width 8, is 0xfd.
         let mut bv_model = Assignment::new();
         bv_model.set(

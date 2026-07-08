@@ -174,7 +174,7 @@ pub fn eliminate_int_divmod(
 fn fresh_int(arena: &mut TermArena, counter: &mut u32) -> Result<TermId, IrError> {
     let name = format!("!divmod_{counter}");
     *counter += 1;
-    let sym = arena.declare(&name, Sort::Int)?;
+    let sym = arena.declare_internal(&name, Sort::Int)?;
     Ok(arena.var(sym))
 }
 
