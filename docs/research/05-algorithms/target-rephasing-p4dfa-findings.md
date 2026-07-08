@@ -78,5 +78,26 @@ binary modulo the `use_target_rephase` default:
   and without rephasing. The current default is the measured optimum of the four
   (Luby/EMA) × (rephase on/off) configurations on the decidable families.
 
-<!-- full-113 headline (native-cdcl rephase-on @20s vs the ADR-0059 batsat 4–7/113 and
-     Z3 8–9/113 baselines) to be appended once the committed full-slice run lands. -->
+## Full-113 headline (native-cdcl rephase-on, 20 s, DISAGREE = 0)
+
+Run over the **entire** committed 113-file p4dfa slice at the 20 s budget ADR-0059
+used for its baselines:
+
+| solver / config | decided @20s |
+|---|---:|
+| batsat OFF (eager) | 4 / 113 |
+| **native-cdcl + target rephasing** | **7 / 113** |
+| batsat ALL-ON (inprocessing + vivify) | 7 / 113 |
+| Z3 4.13.3 crate | 8 / 113 |
+| Z3 4.13.3 CLI | 9 / 113 |
+
+- The custom core — which the P1.3 scoping clocked at **4–8× slower than batsat** on
+  decided instances — is now **decide-count-competitive with batsat's best config**
+  (7 = 7) and within **1–2 of Z3** on this hard, all-`sat` slice, all `sat` decisions
+  replay-checked (`DISAGREE = 0`, PAR-2 mean 37.71 s).
+- Rephasing is the increment that closed the last of that gap: the decidable-family
+  A/B (above) is a clean `+1` decide over plain phase saving, and it is what lifts the
+  native core to batsat-ALL-ON parity here. The residual 106 unknowns are the deeply
+  search-bound instances that time out under *every* engine measured (batsat, Z3, and
+  the native core alike) — the province of the larger in-solver-inprocessing arc, not a
+  phase/restart heuristic.
