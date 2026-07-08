@@ -63,6 +63,7 @@
 use core::cmp::Ordering;
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::time::Instant;
 
 use axeyum_ir::{
     Assignment, Op, Rational, RealAlgebraic, Sign, Sort, SymbolId, TermArena, TermId, TermNode,
@@ -71,6 +72,29 @@ use axeyum_ir::{
 
 use crate::backend::{CheckResult, SolverError, UnknownKind, UnknownReason};
 use crate::model::Model;
+
+/// Whether the shared wall-clock `deadline` (if any) has passed.
+///
+/// The sign-cell / decomposition decision below is otherwise a single un-clocked
+/// computation — on a large lazy-SMT cube (100+ polynomial atoms) its root
+/// isolation and cell enumeration can run many seconds past a configured budget
+/// with no interception point. Polling this at the head of each expensive loop
+/// lets the decision bail near the budget with a timely `Unknown` instead of
+/// overrunning it. A poll that fires only turns a would-be-slow decision into
+/// `Unknown`; it never changes a `sat`/`unsat` verdict, so it is soundness-neutral
+/// (and, because a poll only fires when the clock is actually exhausted, it is
+/// behavior-identical for any caller with a generous / absent timeout).
+fn deadline_reached(deadline: Option<Instant>) -> bool {
+    deadline.is_some_and(|d| Instant::now() >= d)
+}
+
+/// The `Unknown` returned when a decision loop bails at [`deadline_reached`].
+fn cad_timeout_unknown() -> CheckResult {
+    CheckResult::Unknown(UnknownReason {
+        kind: UnknownKind::ResourceLimit,
+        detail: "nra sign-cell decomposition: wall-clock timeout reached".to_owned(),
+    })
+}
 
 /// Coefficient magnitude guard (mirrors `nia_square::MAX_ABS_COEFF`): above this
 /// the pass declines to keep the exact-rational arithmetic and root isolation
@@ -277,6 +301,7 @@ impl RatPoly {
 pub fn decide_real_poly_constraint(
     arena: &TermArena,
     assertions: &[TermId],
+    deadline: Option<Instant>,
 ) -> Result<Option<CheckResult>, SolverError> {
     if assertions.is_empty() {
         return Ok(None);
@@ -311,7 +336,7 @@ pub fn decide_real_poly_constraint(
         }
 
         // Conjunction: sign-cell decomposition over the shared variable.
-        return Ok(decide_system(arena, assertions, var, &atoms));
+        return Ok(decide_system(arena, assertions, var, &atoms, deadline));
     }
 
     // The single-variable collector declined. If that decline was because an atom's
@@ -332,7 +357,7 @@ pub fn decide_real_poly_constraint(
     // of single-variable sub-systems). It declines (`None`) on any genuinely
     // coupled / nonlinear-multivariate / non-polynomial / overflow shape, leaving
     // the query to the NRA layer.
-    Ok(decompose_multivariate(arena, assertions))
+    Ok(decompose_multivariate(arena, assertions, deadline))
 }
 
 /// Equality-anchored decision for a single-variable polynomial conjunction whose
@@ -582,20 +607,38 @@ fn decide_system(
     assertions: &[TermId],
     var: SymbolId,
     atoms: &[Atom],
+    deadline: Option<Instant>,
 ) -> Option<CheckResult> {
-    // 1. Collect every real root of every constraint polynomial.
+    // 1. Collect every real root of every constraint polynomial. Poll the deadline
+    //    per atom: a large lazy-SMT cube (100+ atoms) can spend seconds here, so we
+    //    bail to a timely `Unknown` rather than overrun the budget (soundness-neutral).
     let mut roots: Vec<Root> = Vec::new();
     for atom in atoms {
+        if deadline_reached(deadline) {
+            return Some(cad_timeout_unknown());
+        }
         let rs = isolate_roots(&atom.poly)?; // overflow during isolation ⇒ decline
         roots.extend(rs);
     }
 
     // 2. Sort the roots into a deterministic ascending order. Any pair we cannot
     //    order exactly (algebraic-vs-algebraic that does not resolve) ⇒ decline.
-    let ordered = sort_roots(&roots)?;
+    //    `sort_roots` polls `deadline` per outer iteration — the O(n²) exact
+    //    comparator was the single un-clocked step that overran the budget (#84);
+    //    a `None` on a reached deadline surfaces as a sound `unknown`.
+    let Some(ordered) = sort_roots(&roots, deadline) else {
+        return if deadline_reached(deadline) {
+            Some(cad_timeout_unknown())
+        } else {
+            None // an indeterminate exact comparison ⇒ decline
+        };
+    };
 
     // 3. Build the candidate sample points strictly between/around the roots.
     //    Each is a RATIONAL preferred witness for an open cell.
+    if deadline_reached(deadline) {
+        return Some(cad_timeout_unknown());
+    }
     let samples = cell_samples(&ordered)?;
 
     // 4. Test rational samples FIRST (so the model stays rational when a cell
@@ -604,6 +647,9 @@ fn decide_system(
     //    enumeration is *incomplete* for this query, so we must not claim Unsat
     //    — propagate the decline.
     for q in &samples {
+        if deadline_reached(deadline) {
+            return Some(cad_timeout_unknown());
+        }
         if rational_satisfies_all(atoms, *q)? {
             // The exact integer-polynomial check already proves `q` satisfies every
             // constraint. Confirm via the original terms; a `None` (overflow ⇒ could
@@ -620,6 +666,9 @@ fn decide_system(
         }
     }
     for root in &ordered {
+        if deadline_reached(deadline) {
+            return Some(cad_timeout_unknown());
+        }
         match root {
             Root::Rational(q) => {
                 if rational_satisfies_all(atoms, *q)? {
@@ -675,7 +724,7 @@ fn decide_system_value(atoms: &[Atom]) -> Option<SystemVerdict> {
     for atom in atoms {
         roots.extend(isolate_roots(&atom.poly)?);
     }
-    let ordered = sort_roots(&roots)?;
+    let ordered = sort_roots(&roots, None)?;
     let samples = cell_samples(&ordered)?;
 
     for q in &samples {
@@ -764,11 +813,18 @@ fn replay_rational(
 /// Sort isolated roots into ascending order, returning `None` if any pair cannot
 /// be ordered exactly (an algebraic-vs-algebraic comparison that does not resolve
 /// within the refinement bound) so the caller declines rather than guessing.
-fn sort_roots(roots: &[Root]) -> Option<Vec<Root>> {
+fn sort_roots(roots: &[Root], deadline: Option<Instant>) -> Option<Vec<Root>> {
     let mut out: Vec<Root> = roots.to_vec();
     // Insertion sort with a total, exact comparator; on any indeterminate
-    // comparison return None.
+    // comparison return None. The comparator is exact-algebraic and can be
+    // expensive, so this O(n²) loop is the single un-clocked step that overran
+    // the budget on large cubes (task #84): poll the deadline per outer iteration
+    // and bail with `None` (⇒ the caller declines to a sound `unknown`) — never a
+    // changed verdict.
     for i in 1..out.len() {
+        if deadline_reached(deadline) {
+            return None;
+        }
         let mut j = i;
         while j > 0 {
             match compare_roots(&out[j - 1], &out[j])? {
@@ -1313,7 +1369,7 @@ fn isolate_roots(poly: &[i128]) -> Option<Vec<Root>> {
         // sort to match the documented contract (callers rely on ascending order
         // for `decide_eq`'s first-root and the inequality separators). If the
         // sort cannot order a pair exactly, fall through to the grid.
-        if let Some(sorted) = sort_roots(&roots) {
+        if let Some(sorted) = sort_roots(&roots, None) {
             roots = sorted;
             return Some(roots);
         }
@@ -2112,7 +2168,12 @@ fn fold_constant_atoms(atoms: Vec<MultiAtom>) -> Result<Vec<MultiAtom>, Option<C
     Ok(nonconstant)
 }
 
-fn decompose_multivariate(arena: &TermArena, assertions: &[TermId]) -> Option<CheckResult> {
+#[allow(clippy::too_many_lines)] // coherent multivariate-CAD routine; deadline polls added (#84)
+fn decompose_multivariate(
+    arena: &TermArena,
+    assertions: &[TermId],
+    deadline: Option<Instant>,
+) -> Option<CheckResult> {
     // 1. Re-collect every assertion as a multivariate comparison.
     let mut atoms: Vec<MultiAtom> = Vec::new();
     for &a in assertions {
@@ -2162,6 +2223,9 @@ fn decompose_multivariate(arena: &TermArena, assertions: &[TermId]) -> Option<Ch
     //    back-substitution at the end resolves these to concrete values).
     let mut subst: Vec<(SymbolId, MultiPoly)> = Vec::new();
     for _ in 0..MAX_SUBST_ITERS {
+        if deadline_reached(deadline) {
+            return Some(cad_timeout_unknown());
+        }
         // Find an equality atom that defines a variable linearly.
         let mut found: Option<(usize, SymbolId, MultiPoly)> = None;
         for (i, atom) in atoms.iter().enumerate() {
@@ -2223,6 +2287,9 @@ fn decompose_multivariate(arena: &TermArena, assertions: &[TermId]) -> Option<Ch
     // model. Any in-component `Unsat`/`Unknown` short-circuits the whole query.
     let mut model = Model::new();
     for comp in &components {
+        if deadline_reached(deadline) {
+            return Some(cad_timeout_unknown());
+        }
         match decide_component(comp)? {
             ComponentOutcome::Unsat => return Some(CheckResult::Unsat),
             ComponentOutcome::Unknown => {
@@ -2817,7 +2884,7 @@ fn strict_cad_along(
     for pp in &proj {
         roots.extend(isolate_roots(pp)?);
     }
-    let ordered = sort_roots(&roots)?;
+    let ordered = sort_roots(&roots, None)?;
     // Deduplicate equal critical values (a shared root from two projection polys)
     // so the cell samples land in genuinely distinct open cells.
     let mut crit: Vec<Root> = Vec::new();
@@ -3638,7 +3705,7 @@ fn visit_open_cells(
 /// root of two polys) so cell samples land in genuinely distinct open cells. `None`
 /// if any pair cannot be ordered exactly (caller declines).
 fn dedup_sorted_roots(roots: &[Root]) -> Option<Vec<Root>> {
-    let ordered = sort_roots(roots)?;
+    let ordered = sort_roots(roots, None)?;
     let mut crit: Vec<Root> = Vec::new();
     for r in ordered {
         match crit.last() {

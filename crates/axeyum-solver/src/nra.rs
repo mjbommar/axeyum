@@ -190,7 +190,10 @@ fn check_with_nra_impl(
     // same completeness instead of grinding the abstraction search to a timeout. It
     // returns `None` (declines) on anything it cannot decide exactly, so it never
     // weakens the search below or risks an unsound verdict.
-    if let Some(result) = crate::nra_real_root::decide_real_poly_constraint(arena, assertions)? {
+    let poly_deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
+    if let Some(result) =
+        crate::nra_real_root::decide_real_poly_constraint(arena, assertions, poly_deadline)?
+    {
         return Ok(result);
     }
 

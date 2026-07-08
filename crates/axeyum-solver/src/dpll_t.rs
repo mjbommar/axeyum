@@ -225,12 +225,22 @@ pub fn check_with_nra_dpll_within(
         }
         let mut sat_assertions = skeleton.clone();
         sat_assertions.extend(blocking.iter().copied());
+        // Bound this round's propositional solve by the budget REMAINING to the
+        // shared deadline, so a round entered near the deadline cannot run a further
+        // full `config.timeout` past it (the loop-head check then bails promptly).
+        let round_config = {
+            let mut c = config.clone();
+            if let Some(d) = deadline {
+                c.timeout = Some(d.saturating_duration_since(Instant::now()));
+            }
+            c
+        };
         let propositional = match check_with_all_theories(
             &mut backend,
             arena,
             &sat_assertions,
             DEFAULT_INT_WIDTH,
-            config,
+            &round_config,
         )? {
             CheckResult::Sat(model) => model,
             CheckResult::Unsat => return Ok(CheckResult::Unsat),
@@ -250,7 +260,7 @@ pub fn check_with_nra_dpll_within(
                 arena.not(atom.term)?
             });
         }
-        match crate::nra_real_root::decide_real_poly_constraint(arena, &theory_lits)? {
+        match crate::nra_real_root::decide_real_poly_constraint(arena, &theory_lits, deadline)? {
             Some(CheckResult::Sat(theory_model)) => {
                 return finish_sat(arena, assertions, &ctx, &propositional, &theory_model);
             }

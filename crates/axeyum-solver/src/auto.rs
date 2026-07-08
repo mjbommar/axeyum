@@ -1997,7 +1997,9 @@ fn check_auto_dispatch(
         // a rational witness via the ground evaluator) and every `Unsat` is exact
         // by exhaustive sign-cell coverage of the single variable, so it can never
         // produce a wrong verdict; strictly additive (`Unknown` → decision).
-        if let Some(result) = crate::nra_real_root::decide_real_poly_constraint(arena, assertions)?
+        let poly_deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
+        if let Some(result) =
+            crate::nra_real_root::decide_real_poly_constraint(arena, assertions, poly_deadline)?
         {
             with_recorder(rec, |t| t.record_result("nra-real-root", &result));
             return Ok(result);
@@ -4070,7 +4072,14 @@ fn dispatch_int_blast_width_ladder(
         // arena unchanged.
         let mut scratch = arena.clone();
         let mut backend = SatBvBackend::new();
-        match check_with_all_theories(&mut backend, &mut scratch, assertions, width, config)? {
+        // Bound each per-width solve by the budget REMAINING to the shared deadline,
+        // not a fresh full `config.timeout`: a width entered just before the deadline
+        // must not run a further full timeout past it. The between-width check above
+        // then catches the loop promptly (mirrors the NRA path's remaining-deadline
+        // sub-solves).
+        let width_config = config_with_remaining_deadline(config, deadline);
+        match check_with_all_theories(&mut backend, &mut scratch, assertions, width, &width_config)?
+        {
             // Replay-checked by `check_with_all_theories`: a sound `Sat`.
             sat @ CheckResult::Sat(_) => return Ok(sat),
             // A definite `Unsat` (no integers present) transfers immediately. With
