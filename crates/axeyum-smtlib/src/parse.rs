@@ -5917,6 +5917,59 @@ fn string_substr(
     arena.concat(content, rlen).map_err(SmtError::Ir)
 }
 
+/// `str.update s i t` (SMT-LIB total function): the string equal to `s` except that
+/// the `len(t)` bytes starting at position `i` are overwritten by `t` — but ONLY when
+/// `0 ≤ i < len(s)` (otherwise the result is `s` unchanged), and the overwrite is
+/// clipped to `[i, min(len(s), i + len(t)))`. The result length is **always** `len(s)`
+/// (an update never grows or shrinks the string), so the result is packed in the
+/// **same** max length `m` as `s` — no cap risk. Output byte `p` is `t[p − i]` when it
+/// is inside the (active, clipped) window and `s[p]` otherwise. Every byte read goes
+/// through the in-range mux [`string_byte_at_int`], which yields `0` past the source
+/// length, so out-of-length output positions are canonically zero. `i` is an arbitrary
+/// `Int`; a negative or `≥ len(s)` index leaves `s` unchanged, matching cvc5/SMT-LIB.
+fn string_update(
+    arena: &mut TermArena,
+    s: TermId,
+    idx: TermId,
+    t: TermId,
+) -> Result<TermId, SmtError> {
+    let m = string_max_len(arena, s)?;
+    let mt = string_max_len(arena, t)?;
+    let len_s = string_len_int(arena, s, m)?;
+    let len_t = string_len_int(arena, t, mt)?;
+    let zero_i = arena.int_const(0);
+    // The update applies only for a start index inside `s` (`0 ≤ i < len(s)`); any
+    // other index leaves `s` unchanged.
+    let idx_nonneg = arena.int_ge(idx, zero_i)?;
+    let idx_in = arena.int_lt(idx, len_s)?;
+    let active = arena.and(idx_nonneg, idx_in)?;
+    let mut content: Option<TermId> = None;
+    for p in (0..m).rev() {
+        let pconst = arena.int_const(i128::from(p));
+        // `s[p]` (0 past `len(s)`) and `t[p − i]` (0 outside `[0, len(t))`).
+        let (s_byte, _) = string_byte_at_int(arena, s, pconst, m)?;
+        let t_idx = arena.int_sub(pconst, idx)?;
+        let (t_byte, _) = string_byte_at_int(arena, t, t_idx, mt)?;
+        // in_window = active ∧ (i ≤ p) ∧ (p < i + len(t)) ∧ (p < len(s)).
+        let p_ge_idx = arena.int_ge(pconst, idx)?;
+        let end = arena.int_add(idx, len_t)?;
+        let p_lt_end = arena.int_lt(pconst, end)?;
+        let p_lt_lens = arena.int_lt(pconst, len_s)?;
+        let w = arena.and(active, p_ge_idx)?;
+        let w = arena.and(w, p_lt_end)?;
+        let in_window = arena.and(w, p_lt_lens)?;
+        let out_byte = arena.ite(in_window, t_byte, s_byte)?;
+        content = Some(match content {
+            None => out_byte,
+            Some(acc) => arena.concat(acc, out_byte)?,
+        });
+    }
+    let content = content.expect("m ≥ 1");
+    // Result length is exactly `len(s)`, packed back into the length field.
+    let rlen = arena.int2bv(len_width(m), len_s)?;
+    arena.concat(content, rlen).map_err(SmtError::Ir)
+}
+
 /// `(str.replace s a b)` — replace the **first leftmost** occurrence of `a` in
 /// `s` with `b` (SMT-LIB total function). Corner cases verbatim: if `a` does not
 /// occur in `s`, the result is `s` unchanged; if `a` is the **empty** string, the
@@ -9880,6 +9933,21 @@ fn apply_op(
             let lr = lenabs.len_expr_string(arena, r)?;
             let ls = lenabs.len_expr_string(arena, args[0])?;
             let fact = arena.int_le(lr, ls)?;
+            lenabs.facts.borrow_mut().push(fact);
+            r
+        }
+        // `str.update s i t` — overwrite the `len(t)` bytes of `s` starting at index
+        // `i` with `t` (clipped to `s`; index out of `[0, len(s))` leaves `s`
+        // unchanged). A byte-wise splice over the packed layout; sound for literal or
+        // symbolic operands (ADR-0029). Result length is always `len(s)`.
+        "str.update" => {
+            need(3)?;
+            let r = string_update(arena, args[0], args[1], args[2])?;
+            // P2.7 A.2: `len(update(s, i, t)) = len(s)` universally (an update never
+            // changes the length) — a tighter equality than the substr/replace bounds.
+            let lr = lenabs.len_expr_string(arena, r)?;
+            let ls = lenabs.len_expr_string(arena, args[0])?;
+            let fact = arena.eq(lr, ls)?;
             lenabs.facts.borrow_mut().push(fact);
             r
         }

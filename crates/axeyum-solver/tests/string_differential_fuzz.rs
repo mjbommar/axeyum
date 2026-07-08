@@ -174,6 +174,12 @@ fn gen_str_expr(rng: &mut Lcg, num_vars: usize, depth: u32) -> String {
         // P0 in `from_code_out_of_range_p0_repro` below and in
         // docs/research/01-foundations/underspecified-operator-fuzz-coverage.md.
         7 => format!("(str.from_code {})", gen_sound_codepoint(rng)),
+        // NOTE: `str.update` is DELIBERATELY absent from this z3-differential
+        // generator — the system Z3 binary does not implement `str.update`
+        // (`unknown constant str.update`), so it cannot adjudicate it; its
+        // degenerate-`idx` seed-class (Hard Rule, task #74) lives in the
+        // self-checking `string_update_reference_fuzz.rs` instead, where a
+        // trusted ground reference is the oracle. See `z3_decide`'s error guard.
         // str.from_int of an Int expression.
         _ => format!("(str.from_int {})", gen_int_expr(rng, num_vars, depth - 1)),
     }
@@ -473,6 +479,15 @@ fn z3_decide(text: &str) -> Verdict {
         return Verdict::Skip;
     };
     let stdout = String::from_utf8_lossy(&output.stdout);
+    // If Z3 emitted ANY parse/type error, it could not build the asserted
+    // context (e.g. an operator this Z3 build lacks, like `str.update`) and any
+    // later `sat`/`unsat` token is decided on a PARTIAL context — a false
+    // verdict. Treat an errored run as adjudication-neutral SKIP, never a
+    // verdict. (Without this, `unknown constant …` + a trailing `sat` on the
+    // empty context reads as a spurious DISAGREEMENT — task #74.)
+    if stdout.contains("(error") {
+        return Verdict::Skip;
+    }
     // The first `(check-sat)` answer is the first sat/unsat/unknown token.
     for line in stdout.lines() {
         match line.trim() {

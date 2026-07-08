@@ -1540,3 +1540,112 @@ fn full_reset_is_rejected_not_silently_ignored() {
         "full (reset) must be rejected, not silently ignored; got {result:?}"
     );
 }
+
+// --- str.update semantics (task #74) -----------------------------------------
+//
+// `(str.update s i t)` replaces the chars of `s` starting at position `i` with
+// `t`, but only when `0 ≤ i < len(s)` (out of range → `s` unchanged), and the
+// substituted region is clipped to `len(s)`. Semantics match cvc5/SMT-LIB
+// exactly (the corpus is cvc5-regress; DISAGREE=0 is absolute).
+//
+// The bounded string path decides the SAT (positive-equality) direction: a
+// negated-equality UNSAT over Int-arithmetic-bearing string ops routes through
+// the int-blast ladder, which cannot prove unsat from "no bounded-width model"
+// (true for `str.substr` too — a separate deep arc, not specific to update). So
+// each ground check asserts the CORRECT bytes are producible (`(= update expr)`
+// is sat iff the bytes match — replay-checked), paired with a guard that the
+// WRONG bytes are NOT sat (the encoding does not vacuously match everything).
+
+/// In-range update: position 1 of "AAAAAA" becomes 'B' → "ABAAAA".
+#[test]
+fn str_update_in_range_ground() {
+    let ok =
+        "(set-logic QF_S)\n(assert (= (str.update \"AAAAAA\" 1 \"B\") \"ABAAAA\"))\n(check-sat)\n";
+    assert!(
+        matches!(run(ok).result, CheckResult::Sat(_)),
+        "update at 1 → ABAAAA"
+    );
+    // The wrong bytes (unchanged / off-by-one position) must NOT be satisfiable.
+    let wrong =
+        "(set-logic QF_S)\n(assert (= (str.update \"AAAAAA\" 1 \"B\") \"AAAAAA\"))\n(check-sat)\n";
+    assert!(
+        !matches!(run(wrong).result, CheckResult::Sat(_)),
+        "must not equal unchanged"
+    );
+}
+
+/// Negative index is out of range → `s` returned unchanged (no-op). Degenerate
+/// `i` axis (Hard Rule): `i < 0` must NOT write.
+#[test]
+fn str_update_negative_index_is_noop() {
+    let ok = "(set-logic QF_S)\n(assert (= (str.update \"AAAAAA\" (- 1) \"B\") \"AAAAAA\"))\n(check-sat)\n";
+    assert!(
+        matches!(run(ok).result, CheckResult::Sat(_)),
+        "i<0 → unchanged"
+    );
+    let wrong = "(set-logic QF_S)\n(assert (= (str.update \"AAAAAA\" (- 1) \"B\") \"BAAAAA\"))\n(check-sat)\n";
+    assert!(
+        !matches!(run(wrong).result, CheckResult::Sat(_)),
+        "i<0 must not write"
+    );
+}
+
+/// Index == len(s) is out of range (positions are `0..len`) → unchanged.
+#[test]
+fn str_update_index_at_len_is_noop() {
+    let ok =
+        "(set-logic QF_S)\n(assert (= (str.update \"AAAAAA\" 6 \"B\") \"AAAAAA\"))\n(check-sat)\n";
+    assert!(
+        matches!(run(ok).result, CheckResult::Sat(_)),
+        "i==len → unchanged"
+    );
+}
+
+/// Index past len(s) → unchanged.
+#[test]
+fn str_update_index_past_len_is_noop() {
+    let ok =
+        "(set-logic QF_S)\n(assert (= (str.update \"AAAAAA\" 9 \"B\") \"AAAAAA\"))\n(check-sat)\n";
+    assert!(
+        matches!(run(ok).result, CheckResult::Sat(_)),
+        "i>len → unchanged"
+    );
+}
+
+/// The replacement is clipped to `len(s)`: updating position 5 of a length-6
+/// string with "XY" writes only 'X' (position 5); the trailing 'Y' would land at
+/// position 6 (past the end) and is dropped → "AAAAAX".
+#[test]
+fn str_update_tail_is_clipped() {
+    let ok =
+        "(set-logic QF_S)\n(assert (= (str.update \"AAAAAA\" 5 \"XY\") \"AAAAAX\"))\n(check-sat)\n";
+    assert!(
+        matches!(run(ok).result, CheckResult::Sat(_)),
+        "tail clipped → AAAAAX"
+    );
+    // "AAAAAXY" (length 7, i.e. the un-clipped tail) must NOT be producible.
+    let wrong = "(set-logic QF_S)\n(assert (= (str.update \"AAAAAA\" 5 \"XY\") \"AAAAAXY\"))\n(check-sat)\n";
+    assert!(
+        !matches!(run(wrong).result, CheckResult::Sat(_)),
+        "update never grows the string"
+    );
+}
+
+/// The corpus SAT shape (cvc5 `r1_QF_SLIA_update-ex1`): find `s` with
+/// `(str.substr (str.update "AAAAAA" 1 s) 5 1) ≠ "A"`. Witness: any `s` pushing a
+/// non-'A' to position 5 (e.g. `s = "BBBBB"`). The sat model is Seq-level
+/// replay-checked, so a wrong-sat cannot slip through.
+#[test]
+fn str_update_symbolic_substr_is_sat() {
+    let text = "\
+(set-info :status sat)
+(set-logic QF_SLIA)
+(declare-fun s () String)
+(assert (not (= (str.substr (str.update \"AAAAAA\" 1 s) 5 1) \"A\")))
+(check-sat)
+";
+    assert!(
+        matches!(run(text).result, CheckResult::Sat(_)),
+        "symbolic str.update substr is sat (replay-checked)"
+    );
+}
