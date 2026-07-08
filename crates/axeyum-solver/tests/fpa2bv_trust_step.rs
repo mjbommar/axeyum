@@ -129,6 +129,31 @@ fn lt_self_is_certified() {
     );
 }
 
+/// `(fp.lt (fp.max x y) x)` is UNSAT: `fp.max(x,y) ≥ x` always (for a NaN operand the
+/// max returns the other value, and `fp.lt` with a NaN is `false`). `fp.min`/`fp.max`
+/// are proven-faithful exact selections (their SMT-LIB-unspecified ±0 sign uses an
+/// internal fresh bit, firewalled from user aliasing since #72), so a query using only
+/// them plus `fp.lt` IS certified.
+#[test]
+fn max_lt_operand_is_certified() {
+    let step = fpa2bv_step(
+        "(set-logic QF_FP)\n\
+         (declare-const x Float32)\n\
+         (declare-const y Float32)\n\
+         (assert (fp.lt (fp.max x y) x))\n\
+         (check-sat)\n",
+    )
+    .expect("FP unsat must carry an Fpa2Bv trust step");
+    assert_eq!(
+        step,
+        TrustStep {
+            id: TrustId::Fpa2Bv,
+            certified: true,
+        },
+        "fp.max/fp.lt are proven-faithful — Fpa2Bv must be certified"
+    );
+}
+
 /// A single non-simple op (`fp.add`) anywhere in the query disqualifies the whole
 /// `Fpa2Bv` step, even alongside otherwise-simple operators. `isNaN(add(rne,x,x))
 /// ∧ isZero(add(rne,x,x))` is UNSAT (a value cannot be both NaN and zero), but the

@@ -302,15 +302,23 @@ impl FpUsage {
     /// - **exact bit ops** — `fp.neg`/`fp.abs`, the five category predicates, and the
     ///   sign predicates `fp.isNegative`/`fp.isPositive` (trivially faithful by
     ///   inspection at any width);
-    /// - **proven-faithful comparison circuits** — `fp.eq`/`fp.lt`/`fp.leq`/`fp.gt`/
-    ///   `fp.geq`. Not bit-trivial, but faithful by a *width-independent* argument:
-    ///   they reduce to `¬NaN` guards, the `±0` special-case, and an unsigned compare
-    ///   of the monotone `order_key` (sign-magnitude → monotone-unsigned transform,
-    ///   correct at any width by the IEEE `[sign][exp][sig]` layout), and the whole
-    ///   comparison logic is exhaustively cross-checked at `FP8_E5M2` (all 65 536
-    ///   pairs, `axeyum-fp/tests/fpa2bv_faithfulness.rs`) with a second-width F16
-    ///   witness. Width-parametric code + no width branch + a proven-monotone key +
-    ///   an exhaustive width ⇒ faithful at every constructible width.
+    /// - **proven-faithful comparison / selection circuits** — the comparisons
+    ///   `fp.eq`/`fp.lt`/`fp.leq`/`fp.gt`/`fp.geq` and the selections `fp.min`/`fp.max`.
+    ///   Not bit-trivial, but faithful by a *width-independent* argument: they reduce
+    ///   to `¬NaN` guards, the `±0` special-case, and the monotone `order_key`
+    ///   (sign-magnitude → monotone-unsigned transform, correct at any width by the
+    ///   IEEE `[sign][exp][sig]` layout), exhaustively cross-checked at `FP8_E5M2`
+    ///   (all 65 536 pairs for each of `eq`/`lt`/`leq`/`min`/`max`,
+    ///   `axeyum-fp/tests/fpa2bv_faithfulness.rs`); the comparisons additionally carry a
+    ///   second-width F16 edge witness. `fp.min`/`fp.max` are exact selections (a
+    ///   result verbatim, no
+    ///   rounding); their SMT-LIB-*unspecified* opposite-sign-zero result uses a fresh
+    ///   sign bit that is minted in the **internal** symbol namespace
+    ///   (`bv_var_internal`, task #72), so it is genuinely free — a user `declare`
+    ///   cannot alias it — and the reduction over-approximates the FP allowed-result
+    ///   set (`{+0,−0}`), keeping `BV-unsat ⟹ FP-unsat` sound. Width-parametric code +
+    ///   a proven-monotone key + an exhaustive width ⇒ faithful at every constructible
+    ///   width.
     #[must_use]
     pub fn certified_faithful_op(op: &str) -> bool {
         matches!(
@@ -329,6 +337,8 @@ impl FpUsage {
                 | "fp.leq"
                 | "fp.gt"
                 | "fp.geq"
+                | "fp.min"
+                | "fp.max"
         )
     }
 

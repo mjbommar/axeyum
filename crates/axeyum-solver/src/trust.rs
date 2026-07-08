@@ -256,10 +256,13 @@ impl TrustId {
     ///    five category predicates
     ///    `fp.isNaN`/`fp.isInfinite`/`fp.isZero`/`fp.isNormal`/`fp.isSubnormal`, and
     ///    the sign predicates `fp.isNegative`/`fp.isPositive` (`sign ∧ ¬NaN`) —
-    ///    faithful by inspection at any width; and (ii) **proven-faithful comparison
-    ///    circuits** `fp.eq`/`fp.lt`/`fp.leq`/`fp.gt`/`fp.geq` — faithful by a
-    ///    width-independent monotone-`order_key` argument, exhaustively witnessed at
-    ///    `FP8_E5M2` + an F16 edge witness. (FP formats are guarded to `≤128` bits so
+    ///    faithful by inspection at any width; and (ii) **proven-faithful comparison /
+    ///    selection circuits** `fp.eq`/`fp.lt`/`fp.leq`/`fp.gt`/`fp.geq` and
+    ///    `fp.min`/`fp.max` — faithful by a width-independent monotone-`order_key`
+    ///    argument, exhaustively witnessed at `FP8_E5M2` + an F16 edge witness (the
+    ///    `fp.min`/`fp.max` unspecified ±0 sign bit is minted in the internal symbol
+    ///    namespace since #72, so it stays genuinely free and the reduction
+    ///    over-approximates the FP allowed-result set — `BV-unsat ⟹ FP-unsat` holds). (FP formats are guarded to `≤128` bits so
     ///    the circuits' `u128` sign masks never overflow — else a wider format would
     ///    corrupt the circuit and its certificate.) The parser records the FP op-set
     ///    on `FpUsage`; `produce_evidence_smtlib` gates the step on that allow-list
