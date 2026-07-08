@@ -1224,11 +1224,37 @@ pub fn solve_smtlib(input: &str, config: &SolverConfig) -> Result<SmtLibOutcome,
     // by linking `str.len` to LIA. Only ever adds a replay-checked `sat` to an
     // `unknown`.
     let result = apply_length_lia_route(&mut script, config, result);
+    // Bounded-completeness UNSAT route (P2.7, task #75): the FINAL string second
+    // chance. When every prior route declined and the residual `unknown` is the
+    // bounded encoder's "no model within the bounded integer width …" (which is
+    // exactly a bounded-encoding `unsat`), a conservative syntactic check confirms
+    // the query is bounded-complete (C1∧C2∧C3 — no free Int, every free String
+    // length-capped ≤ MAX_LEN, every Int provably < 2^31) and upgrades it to a
+    // real `unsat`. Only ever turns that specific `unknown` into `unsat`.
+    let result = apply_bounded_completeness_unsat(input, result);
     Ok(SmtLibOutcome {
         result,
         logic: script.logic,
         expected_status: script.status,
     })
+}
+
+/// Upgrades the bounded string encoder's "no model within the bounded integer
+/// width" `unknown` to `unsat` when the raw query is provably bounded-complete
+/// (task #75; see `docs/research/01-foundations/bounded-string-completeness-unsat.md`
+/// and [`axeyum_smtlib::is_bounded_complete`]). A no-op for any other result —
+/// so it can never turn a `sat`/`unsat`/other-`unknown` into a wrong verdict.
+fn apply_bounded_completeness_unsat(input: &str, result: CheckResult) -> CheckResult {
+    if let CheckResult::Unknown(reason) = &result
+        && reason.kind == UnknownKind::Incomplete
+        && reason
+            .detail
+            .contains("no model within the bounded integer width")
+        && axeyum_smtlib::is_bounded_complete(input)
+    {
+        return CheckResult::Unsat;
+    }
+    result
 }
 
 /// Solves an **optimization** (OMT) SMT-LIB script: each `(maximize t)` /

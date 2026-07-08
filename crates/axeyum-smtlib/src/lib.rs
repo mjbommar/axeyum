@@ -12,12 +12,14 @@
 //! Both directions are iterative; adversarially deep input cannot overflow
 //! the stack.
 
+mod bounded_completeness;
 mod parse;
 mod regex;
 mod regex_membership;
 mod sexpr;
 mod write;
 
+pub use bounded_completeness::is_bounded_complete;
 pub use parse::{FpUsage, Script, ScriptCommand, parse_script};
 pub use regex_membership::{MemberVar, MembershipProblem};
 pub use sexpr::{SExpr, read_all};
