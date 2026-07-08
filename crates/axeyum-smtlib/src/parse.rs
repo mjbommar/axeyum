@@ -229,13 +229,13 @@ pub struct Script {
     /// Which floating-point operators (ADR-0023 `Fpa2Bv`) the script uses, for the
     /// per-query `Fpa2Bv` trust-step sub-case (task #69). FP → BV lowering happens
     /// eagerly at parse time (the `axeyum_fp::*` builder calls scattered through
-    /// [`parse_term`]), so by the time the solver's `QF_BV` evidence path sees the
+    /// `parse_term`), so by the time the solver's `QF_BV` evidence path sees the
     /// query it is already bit-vector terms and the FP op-set is lost. This field
     /// preserves the op-set so the text front door
     /// (`axeyum_solver::produce_evidence_smtlib`) can decide whether a resulting
     /// `unsat` may carry a **certified** `Fpa2Bv` trust step — see
     /// [`FpUsage::fpa2bv_simple_op_certified`]. Populated by a **conservative**
-    /// allow-list scan of the raw s-expressions (see [`scan_fp_usage`]): it can only
+    /// allow-list scan of the raw s-expressions (see `scan_fp_usage`): it can only
     /// ever over-report a non-simple operator (→ certified `false`), never miss one.
     pub fp_usage: FpUsage,
 }
