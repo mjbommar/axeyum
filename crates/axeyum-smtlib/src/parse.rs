@@ -10994,6 +10994,25 @@ fn apply_op(
             }
             acc
         }
+        "@int_div_by_zero" | "@mod_by_zero" => {
+            // cvc5's parse-skolem (`:parse-skolem-definitions`) for the
+            // underspecified value of division/modulo by zero:
+            // `@int_div_by_zero(x) ≡ (div x 0)`, `@mod_by_zero(x) ≡ (mod x 0)`. Map
+            // it straight back to axeyum's TOTAL div/mod-by-zero — the congruent
+            // uninterpreted convention (ADR / task #40) — so a script that names the
+            // skolem decides identically to one that writes `(div x 0)` directly, and
+            // the same congruence (`@f(x) = @f(y) ⟺ x = y`) is preserved.
+            let (_, a) = numeric_args(arena, args)?;
+            if a.len() != 1 {
+                return Err(SmtError::Syntax(format!("`{op}` expects 1 argument")));
+            }
+            let zero = arena.int_const(0);
+            if op == "@int_div_by_zero" {
+                arena.int_div(a[0], zero)?
+            } else {
+                arena.int_mod(a[0], zero)?
+            }
+        }
         "abs" => {
             let (_, a) = numeric_args(arena, args)?;
             if a.len() != 1 {

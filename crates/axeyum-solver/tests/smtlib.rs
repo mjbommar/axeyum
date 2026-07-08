@@ -1649,3 +1649,31 @@ fn str_update_symbolic_substr_is_sat() {
         "symbolic str.update substr is sat (replay-checked)"
     );
 }
+
+// --- @int_div_by_zero / @mod_by_zero parse-skolem (cvc5 :parse-skolem-definitions) ---
+//
+// cvc5's skolem for the underspecified value of `(div x 0)`/`(mod x 0)`:
+// `@int_div_by_zero(x) ≡ (div x 0)`. axeyum maps it back to its total, congruent
+// div/mod-by-zero (task #40), so naming the skolem decides identically to writing
+// `(div x 0)` directly.
+
+/// The cvc5 `parse-skolem-test-int-div-by-zero` shape decides sat (matching cvc5
+/// and `:status sat`): with `a > b`, `a ≠ b`, `b = div(a,0)`, the disjunction over
+/// `@int_div_by_zero a` holds because `a > div(a,0)` forces `a ≠ div(a,0)`.
+#[test]
+fn int_div_by_zero_skolem_decides_sat() {
+    let text = "(set-logic QF_NIA)\n(declare-fun b () Int)\n(declare-fun a () Int)\n\
+                (assert (not (= a b)))\n(assert (not (<= a b)))\n(assert (= b (div a 0)))\n\
+                (assert (or (not (= a (@int_div_by_zero a)))\
+                            (not (>= (+ a (* (- 1) (@int_div_by_zero a))) 1))))\n(check-sat)\n";
+    assert!(matches!(run(text).result, CheckResult::Sat(_)));
+}
+
+/// SOUNDNESS: `@int_div_by_zero` maps to the SAME congruent function as `(div _ 0)`,
+/// so `@int_div_by_zero(a) = (div a 0)` must hold — asserting they differ is unsat.
+#[test]
+fn int_div_by_zero_skolem_equals_div_by_zero() {
+    let text = "(set-logic QF_NIA)\n(declare-fun a () Int)\n\
+                (assert (not (= (@int_div_by_zero a) (div a 0))))\n(check-sat)\n";
+    assert_eq!(run(text).result, CheckResult::Unsat);
+}
