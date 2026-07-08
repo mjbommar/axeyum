@@ -182,6 +182,14 @@ fn check_with_nra_impl(
         return Ok(CheckResult::Unsat);
     }
 
+    // Cheap interval bound-propagation refutation (the `ones` class): a product /
+    // polynomial atom whose interval — under the linear variable bounds — cannot
+    // satisfy its own comparison (`a,b,c,d ≥ 1 ⊢ a·b·c·d ≥ 1` vs `< 1`). Sound
+    // (interval over-approximation), incomplete (declines on any unhandled shape).
+    if interval_refutation(arena, assertions) {
+        return Ok(CheckResult::Unsat);
+    }
+
     // Complete, exact decision for pure real-polynomial constraints (single- and
     // multi-variable), including polynomial *identities* whose negation collapses to
     // a constant comparison `0 ⋈ 0`. This is the same sound decider the `solve`
@@ -1349,6 +1357,240 @@ fn as_real_const(arena: &TermArena, t: TermId) -> Option<axeyum_ir::Rational> {
         TermNode::RealConst(r) => Some(*r),
         _ => None,
     }
+}
+
+// --- Interval bound-propagation refutation (the `ones` class) -----------------
+//
+// A cheap, SOUND, incomplete refutation: harvest each atom's polynomial interval
+// from the linear variable bounds and refute any asserted comparison whose
+// interval makes it always-false (e.g. `a,b,c,d ≥ 1 ⊢ a·b·c·d ≥ 1`, contradicting
+// `a·b·c·d < 1`). Interval arithmetic is an OVER-approximation, so an
+// "always-false" verdict is a genuine consequence — never a wrong `unsat`. Every
+// unhandled operator / indeterminate (`0·∞`) / overflow declines to "no interval"
+// (`None`), so the refutation only ever *adds* a sound `unsat`, never a verdict.
+
+/// An extended-real endpoint: `−∞`, a finite rational, or `+∞`.
+#[derive(Clone, Copy)]
+enum Ext {
+    NegInf,
+    Fin(axeyum_ir::Rational),
+    PosInf,
+}
+
+/// A closed real interval; `lo = None` is `−∞`, `hi = None` is `+∞`.
+#[derive(Clone, Copy)]
+struct Interval {
+    lo: Option<axeyum_ir::Rational>,
+    hi: Option<axeyum_ir::Rational>,
+}
+
+fn ext_cmp(x: Ext, y: Ext) -> Option<core::cmp::Ordering> {
+    use core::cmp::Ordering::{Equal, Greater, Less};
+    match (x, y) {
+        (Ext::NegInf, Ext::NegInf) | (Ext::PosInf, Ext::PosInf) => Some(Equal),
+        (Ext::NegInf, _) | (_, Ext::PosInf) => Some(Less),
+        (Ext::PosInf, _) | (_, Ext::NegInf) => Some(Greater),
+        (Ext::Fin(a), Ext::Fin(b)) => a.checked_cmp(&b),
+    }
+}
+
+/// Product of two extended endpoints; `None` on the indeterminate `0·∞` or an
+/// `i128` overflow (⇒ the caller declines to no interval — sound).
+fn ext_mul(x: Ext, y: Ext) -> Option<Ext> {
+    let zero = axeyum_ir::Rational::integer(0);
+    let sign = |r: axeyum_ir::Rational| r.checked_cmp(&zero); // Some(Greater/Less/Equal)
+    match (x, y) {
+        (Ext::Fin(a), Ext::Fin(b)) => a.checked_mul(b).map(Ext::Fin),
+        // 0·∞ is indeterminate — decline.
+        (Ext::Fin(z), Ext::PosInf | Ext::NegInf) | (Ext::PosInf | Ext::NegInf, Ext::Fin(z))
+            if z.is_zero() =>
+        {
+            None
+        }
+        (Ext::Fin(f), inf) | (inf, Ext::Fin(f)) => {
+            let pos = matches!(sign(f)?, core::cmp::Ordering::Greater);
+            Some(match (inf, pos) {
+                (Ext::PosInf, true) | (Ext::NegInf, false) => Ext::PosInf,
+                (Ext::PosInf, false) | (Ext::NegInf, true) => Ext::NegInf,
+                _ => unreachable!("inf arm"),
+            })
+        }
+        (Ext::PosInf, Ext::PosInf) | (Ext::NegInf, Ext::NegInf) => Some(Ext::PosInf),
+        (Ext::PosInf, Ext::NegInf) | (Ext::NegInf, Ext::PosInf) => Some(Ext::NegInf),
+    }
+}
+
+fn to_ext_lo(o: Option<axeyum_ir::Rational>) -> Ext {
+    o.map_or(Ext::NegInf, Ext::Fin)
+}
+fn to_ext_hi(o: Option<axeyum_ir::Rational>) -> Ext {
+    o.map_or(Ext::PosInf, Ext::Fin)
+}
+fn from_ext_lo(e: Ext) -> Option<axeyum_ir::Rational> {
+    match e {
+        Ext::Fin(r) => Some(r),
+        _ => None, // ±∞ ⇒ unbounded
+    }
+}
+
+/// `[a,b] · [c,d]` via the four corner products (min = lo, max = hi); `None` if
+/// any corner is indeterminate/overflows or a pair cannot be ordered.
+fn interval_mul(x: Interval, y: Interval) -> Option<Interval> {
+    let corners = [
+        ext_mul(to_ext_lo(x.lo), to_ext_lo(y.lo))?,
+        ext_mul(to_ext_lo(x.lo), to_ext_hi(y.hi))?,
+        ext_mul(to_ext_hi(x.hi), to_ext_lo(y.lo))?,
+        ext_mul(to_ext_hi(x.hi), to_ext_hi(y.hi))?,
+    ];
+    let mut lo = corners[0];
+    let mut hi = corners[0];
+    for &c in &corners[1..] {
+        if matches!(ext_cmp(c, lo)?, core::cmp::Ordering::Less) {
+            lo = c;
+        }
+        if matches!(ext_cmp(c, hi)?, core::cmp::Ordering::Greater) {
+            hi = c;
+        }
+    }
+    Some(Interval {
+        lo: from_ext_lo(lo),
+        hi: from_ext_lo(hi),
+    })
+}
+
+/// The interval of `t` under the linear variable bounds in `assertions`, or
+/// `None` if any sub-term is outside the handled fragment (`+ - * neg` /
+/// constants / bounded leaves). Depth-bounded so a pathological term declines.
+#[allow(clippy::many_single_char_names)]
+fn interval_of(
+    arena: &TermArena,
+    assertions: &[TermId],
+    t: TermId,
+    depth: u32,
+) -> Option<Interval> {
+    if depth > 24 {
+        return None;
+    }
+    if let Some(c) = as_real_const(arena, t) {
+        return Some(Interval {
+            lo: Some(c),
+            hi: Some(c),
+        });
+    }
+    let TermNode::App { op, args } = arena.node(t) else {
+        // A bare (symbol) leaf: use its asserted linear bounds.
+        let (lo, hi) = extract_bounds(arena, assertions, t);
+        return Some(Interval { lo, hi });
+    };
+    match (*op, &args[..]) {
+        (Op::RealNeg, [a]) => {
+            let ia = interval_of(arena, assertions, *a, depth + 1)?;
+            // −[lo,hi] = [−hi, −lo].
+            let neg = |o: Option<axeyum_ir::Rational>| -> Option<Option<axeyum_ir::Rational>> {
+                match o {
+                    None => Some(None),
+                    Some(r) => axeyum_ir::Rational::integer(0).checked_sub(r).map(Some),
+                }
+            };
+            Some(Interval {
+                lo: neg(ia.hi)?,
+                hi: neg(ia.lo)?,
+            })
+        }
+        (Op::RealAdd, [a, b]) => {
+            let ia = interval_of(arena, assertions, *a, depth + 1)?;
+            let ib = interval_of(arena, assertions, *b, depth + 1)?;
+            let add = |x: Option<axeyum_ir::Rational>, y: Option<axeyum_ir::Rational>| match (x, y)
+            {
+                (Some(p), Some(q)) => p.checked_add(q).map(Some),
+                _ => Some(None), // unbounded end stays unbounded
+            };
+            Some(Interval {
+                lo: add(ia.lo, ib.lo)?,
+                hi: add(ia.hi, ib.hi)?,
+            })
+        }
+        (Op::RealSub, [a, b]) => {
+            let ia = interval_of(arena, assertions, *a, depth + 1)?;
+            let ib = interval_of(arena, assertions, *b, depth + 1)?;
+            // [la,ha] − [lb,hb] = [la − hb, ha − lb].
+            let sub = |x: Option<axeyum_ir::Rational>, y: Option<axeyum_ir::Rational>| match (x, y)
+            {
+                (Some(p), Some(q)) => p.checked_sub(q).map(Some),
+                _ => Some(None),
+            };
+            Some(Interval {
+                lo: sub(ia.lo, ib.hi)?,
+                hi: sub(ia.hi, ib.lo)?,
+            })
+        }
+        (Op::RealMul, [a, b]) => {
+            let ia = interval_of(arena, assertions, *a, depth + 1)?;
+            let ib = interval_of(arena, assertions, *b, depth + 1)?;
+            interval_mul(ia, ib)
+        }
+        _ => {
+            // Unhandled op (RealDiv, …): fall back to any direct linear bound.
+            let (lo, hi) = extract_bounds(arena, assertions, t);
+            Some(Interval { lo, hi })
+        }
+    }
+}
+
+/// `true` if the asserted comparison `lhs ⋈ rhs` is unsatisfiable for EVERY value
+/// in the operands' intervals (so the whole conjunction is `unsat`). Compares
+/// only FINITE endpoints; an unbounded end is inconclusive (returns `false`).
+#[allow(clippy::many_single_char_names)]
+fn atom_interval_infeasible(
+    arena: &TermArena,
+    assertions: &[TermId],
+    op: Op,
+    l: TermId,
+    r: TermId,
+) -> bool {
+    use core::cmp::Ordering::{Equal, Greater, Less};
+    let (Some(il), Some(ir)) = (
+        interval_of(arena, assertions, l, 0),
+        interval_of(arena, assertions, r, 0),
+    ) else {
+        return false;
+    };
+    // `x ⋈ y` for two finite endpoints; unbounded (`None`) end ⇒ `false`.
+    let rel = |a: &Option<axeyum_ir::Rational>,
+               b: &Option<axeyum_ir::Rational>,
+               want: &[core::cmp::Ordering]| match (a, b) {
+        (Some(x), Some(y)) => x.checked_cmp(y).is_some_and(|o| want.contains(&o)),
+        _ => false,
+    };
+    match op {
+        // `l < r` false ∀ ⟺ min(l) ≥ max(r).
+        Op::RealLt => rel(&il.lo, &ir.hi, &[Greater, Equal]),
+        // `l ≤ r` false ∀ ⟺ min(l) > max(r).
+        Op::RealLe => rel(&il.lo, &ir.hi, &[Greater]),
+        // `l > r` false ∀ ⟺ max(l) ≤ min(r).
+        Op::RealGt => rel(&il.hi, &ir.lo, &[Less, Equal]),
+        // `l ≥ r` false ∀ ⟺ max(l) < min(r).
+        Op::RealGe => rel(&il.hi, &ir.lo, &[Less]),
+        _ => false,
+    }
+}
+
+/// Interval bound-propagation refutation: `unsat` if any single asserted
+/// comparison is interval-infeasible under the linear variable bounds. Sound
+/// (interval over-approximation) and incomplete (declines otherwise).
+fn interval_refutation(arena: &TermArena, assertions: &[TermId]) -> bool {
+    for &asrt in assertions {
+        let TermNode::App { op, args } = arena.node(asrt) else {
+            continue;
+        };
+        if let [l, r] = &args[..]
+            && matches!(op, Op::RealLt | Op::RealLe | Op::RealGt | Op::RealGe)
+            && atom_interval_infeasible(arena, assertions, *op, *l, *r)
+        {
+            return true;
+        }
+    }
+    false
 }
 
 /// Tightest constant lower/upper bounds on `t` read off the **top-level**
