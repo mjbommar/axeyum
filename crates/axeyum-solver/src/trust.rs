@@ -240,13 +240,32 @@ impl TrustId {
     /// certificate, so this bit stays `false`.
     ///
     /// [`Fpa2Bv`] is analogous in spirit but witnessed *forward* rather than by
-    /// re-derivation: its **small IEEE-style-format** sub-case (`FP8_E5M2`) now
-    /// carries an **exhaustive faithfulness** check — every input bit pattern of the
-    /// per-operator circuit agrees with the independent `rustc_apfloat` reference
-    /// (`crates/axeyum-fp/tests/fpa2bv_faithfulness.rs`), a stronger guarantee than
-    /// re-blasting the same circuit. This bit stays `false` because the large
-    /// formats (`F32`/`F64`/`F128`, only sampled) and the non-IEEE small formats
-    /// (`FP8_E4M3`/`FP4_E2M1`) have no per-query certificate.
+    /// re-derivation, and now carries **two** distinct sub-case witnesses (both of
+    /// which the per-run [`TrustStep::certified`] flag reports, while this global bit
+    /// stays `false`):
+    ///
+    /// 1. A **small IEEE-style-format** sub-case (`FP8_E5M2`) with an **exhaustive
+    ///    faithfulness** check — every input bit pattern of the per-operator circuit
+    ///    agrees with the independent `rustc_apfloat` reference
+    ///    (`crates/axeyum-fp/tests/fpa2bv_faithfulness.rs`), a stronger guarantee than
+    ///    re-blasting the same circuit.
+    /// 2. A **structurally-exact-operator** sub-case (tasks #69/#70a): a `Fpa2Bv`
+    ///    `unsat` query whose FP operators are **all** exact bit-pattern ops —
+    ///    `fp.neg`/`fp.abs`, the five category predicates
+    ///    `fp.isNaN`/`fp.isInfinite`/`fp.isZero`/`fp.isNormal`/`fp.isSubnormal`, and
+    ///    the sign predicates `fp.isNegative`/`fp.isPositive` (`sign ∧ ¬NaN`) — is
+    ///    certified at **any** width, because each such op is faithful by construction
+    ///    (a bit flip/clear or an exact field-pattern test) and F16-exhaustively
+    ///    witnessed (`fpa2bv_simple_faithfulness.rs`). The parser records the FP
+    ///    op-set on `FpUsage` and `produce_evidence_smtlib` gates the step on the
+    ///    allow-list (over-approximation: a free FP var lowers to a fresh BV over all
+    ///    patterns, so `BV-unsat ⟹ FP-unsat` when every lowered op is faithful).
+    ///
+    /// This bit stays `false` because it is not *every* `Fpa2Bv` query: the large
+    /// formats (`F32`/`F64`/`F128`, only sampled) and any query using a
+    /// rounding/comparison/conversion op (`fp.add`, `fp.lt`, `to_fp`, …) have no
+    /// per-query certificate — those need the by-construction rounding-circuit proof
+    /// (a funded arc, task #70).
     ///
     /// [`XorGaussian`]: TrustId::XorGaussian
     /// [`IntBlast`]: TrustId::IntBlast
