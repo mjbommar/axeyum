@@ -13,8 +13,10 @@
 //!   `rustc_apfloat` at F16 in `axeyum-fp/tests/fpa2bv_simple_faithfulness.rs`), so
 //!   the reduction is faithful and the `unsat` is genuinely certified.
 //! - **`certified: false`** for any query using an operator with rounding / NaN /
-//!   signed-zero circuit logic (`fp.add`, `fp.lt`, …) — including the deliberately
-//!   excluded `fp.isNegative`/`fp.isPositive`.
+//!   signed-zero circuit logic (`fp.add`, `fp.lt`, …) and every conversion
+//!   (`to_fp`, `fp.to_ubv`, …). `fp.isNegative`/`fp.isPositive` are ALSO certified —
+//!   they are structurally-exact `sign ∧ ¬NaN` predicates (the `af6c8bf`/GAP-F2
+//!   sign-bit semantics that Z3 and cvc5 share).
 //!
 //! The global [`TrustId::Fpa2Bv::is_certified`] stays `false` (not every FP query
 //! qualifies); this is the per-run [`TrustStep::certified`] flag, exactly like the
@@ -145,13 +147,14 @@ fn add_with_simple_ops_is_not_certified() {
     );
 }
 
-/// `fp.isNegative`/`fp.isPositive` are conservatively excluded (their SMT-LIB
-/// signed-zero/NaN semantics are disputed), so a query using `fp.isNegative` is
-/// **not certified** even though axeyum implements it as a sign-bit test.
-/// `isNegative(x) ∧ isPositive(x)` is UNSAT (sign bit cannot be both set and
-/// clear, modulo the shared not-NaN guard).
+/// `fp.isNegative`/`fp.isPositive` are structurally-exact sign-bit classification
+/// predicates (`sign ∧ ¬NaN` / `¬sign ∧ ¬NaN`), faithful by construction at every
+/// width — SMT-LIB and both oracles (Z3, cvc5) classify `−0` as negative
+/// (`af6c8bf`/GAP-F2), and the F16-exhaustive witness confirms the circuit. So a
+/// query using ONLY them IS certified. `isNegative(x) ∧ isPositive(x)` is UNSAT
+/// (sign bit cannot be both set and clear under the shared not-NaN guard).
 #[test]
-fn isnegative_ispositive_is_not_certified() {
+fn isnegative_ispositive_is_certified() {
     let step = fpa2bv_step(
         "(set-logic QF_FP)\n\
          (declare-const x Float32)\n\
@@ -160,9 +163,13 @@ fn isnegative_ispositive_is_not_certified() {
          (check-sat)\n",
     )
     .expect("FP unsat must carry an Fpa2Bv trust step");
-    assert!(
-        !step.certified,
-        "isNegative/isPositive are conservatively excluded — not certified"
+    assert_eq!(
+        step,
+        TrustStep {
+            id: TrustId::Fpa2Bv,
+            certified: true,
+        },
+        "isNegative/isPositive are structurally-exact sign-bit predicates — certified"
     );
 }
 

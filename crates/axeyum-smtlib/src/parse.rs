@@ -253,21 +253,23 @@ pub struct Script {
 ///   width-parametric bit ops by the IEEE-754 / SMT-LIB definition;
 /// - the five **mutually-exclusive category** predicates `fp.isNaN`,
 ///   `fp.isInfinite`, `fp.isZero`, `fp.isNormal`, `fp.isSubnormal` — exact
-///   exponent/significand field-pattern tests.
+///   exponent/significand field-pattern tests;
+/// - the **sign classification** predicates `fp.isNegative` (`sign bit set ∧ ¬NaN`)
+///   and `fp.isPositive` (`sign bit clear ∧ ¬NaN`) — exact bit-pattern tests. Their
+///   SMT-LIB semantics is *sign-bit* classification, not numeric `x < 0`, so `−0` is
+///   negative and `+0` is positive; both oracles (Z3, cvc5) agree, and this is the
+///   `af6c8bf` / GAP-F2 fix (`axeyum_fp::is_negative` doc). The faithfulness witness
+///   (`axeyum-fp/tests/fpa2bv_simple_faithfulness.rs`) confirms the circuit against
+///   the `rustc_apfloat` reference `sign_bit ∧ ¬is_nan` exhaustively at F16 —
+///   including the signed-NaN case, where the SMT-LIB predicate (`false`) differs
+///   from `rustc_apfloat`'s raw `is_negative` (which returns the bare sign bit).
 ///
 /// Every other FP operator carries rounding / NaN / signed-zero circuit logic
 /// (`fp.add`/`sub`/`mul`/`div`/`rem`/`fma`/`sqrt`/`roundToIntegral`/`min`/`max`,
 /// the comparisons `fp.eq`/`lt`/`leq`/`gt`/`geq`, and every conversion `to_fp` /
-/// `fp.to_ubv` / `fp.to_sbv` / `fp.to_real`) and is **not** in the allow-list.
-///
-/// `fp.isNegative` / `fp.isPositive` are **deliberately excluded** even though
-/// axeyum implements them as sign-bit tests: their SMT-LIB semantics over signed
-/// zeros / NaN are disputed (axeyum classifies `-0` as negative and is
-/// Z3-validated by `tests/fp_differential_fuzz.rs`, but `rustc_apfloat` also
-/// treats a signed NaN as negative while axeyum does not, and an independent spec
-/// reading classifies both zeros as neither), so a certified claim would rest on
-/// an unresolved semantic question. Conservatively treating them as non-simple can
-/// only under-certify, never emit a false `certified: true`.
+/// `fp.to_ubv` / `fp.to_sbv` / `fp.to_real`) and is **not** in the allow-list — the
+/// allow-list, not a block-list, so any unknown / future / rounding-bearing FP
+/// operator is treated as non-simple and can never be silently certified.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct FpUsage {
     /// The script uses the FP theory at all — an FP sort (`FloatingPoint` /
@@ -284,9 +286,9 @@ pub struct FpUsage {
 impl FpUsage {
     /// The structurally-exact / by-construction-faithful FP operator allow-list.
     /// Any operator head symbol **not** in this set (including unknown / future
-    /// `fp.*` operators, all conversions, and the disputed `fp.isNegative` /
-    /// `fp.isPositive`) is treated as non-simple — the allow-list, not a
-    /// block-list, so an unrecognized FP operator can never be silently certified.
+    /// `fp.*` operators and every rounding-bearing op / conversion) is treated as
+    /// non-simple — the allow-list, not a block-list, so an unrecognized FP operator
+    /// can never be silently certified.
     #[must_use]
     pub fn is_structurally_exact_op(op: &str) -> bool {
         matches!(
@@ -298,6 +300,8 @@ impl FpUsage {
                 | "fp.isZero"
                 | "fp.isNormal"
                 | "fp.isSubnormal"
+                | "fp.isNegative"
+                | "fp.isPositive"
         )
     }
 

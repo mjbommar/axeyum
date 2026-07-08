@@ -30,7 +30,10 @@
 //! `fp.isNegative` excludes NaN). A focused documentation check below records that
 //! divergence so the exclusion is on the record, not accidental.
 
-use axeyum_fp::{FloatFormat, abs, is_infinite, is_nan, is_normal, is_subnormal, is_zero, neg};
+use axeyum_fp::{
+    FloatFormat, abs, is_infinite, is_nan, is_negative, is_normal, is_positive, is_subnormal,
+    is_zero, neg,
+};
 use axeyum_ir::{Assignment, Sort, TermArena, TermId, Value, eval};
 use rustc_apfloat::Float;
 use rustc_apfloat::ieee::Half as Ref;
@@ -192,6 +195,32 @@ fn f16_issubnormal_faithful_exhaustive() {
             r_from(xb).is_denormal(),
             "fp.isSubnormal({xb:#06x})"
         );
+    }
+}
+
+/// `fp.isNegative x` = `sign bit set ∧ ¬NaN` (SMT-LIB sign classification: `−0` is
+/// negative, `+0` is not; NaN is neither). The reference is `rustc_apfloat`'s raw
+/// `is_negative` (the bare sign bit) conjoined with `¬is_nan` — this is exactly the
+/// signed-NaN case where the SMT-LIB predicate (`false`) differs from apfloat's raw
+/// sign bit (`true`), and the exhaustive check confirms the axeyum circuit matches
+/// the SMT-LIB predicate over the entire input space.
+#[test]
+fn f16_isnegative_faithful_exhaustive() {
+    let circuit = unary_pred_evaluator(is_negative);
+    for xb in 0..N {
+        let want = r_from(xb).is_negative() && !r_from(xb).is_nan();
+        assert_eq!(circuit(xb), want, "fp.isNegative({xb:#06x})");
+    }
+}
+
+/// `fp.isPositive x` = `sign bit clear ∧ ¬NaN` (`+0` is positive, `−0` is not; NaN
+/// is neither) — the sign-mirror of `fp.isNegative`.
+#[test]
+fn f16_ispositive_faithful_exhaustive() {
+    let circuit = unary_pred_evaluator(is_positive);
+    for xb in 0..N {
+        let want = !r_from(xb).is_negative() && !r_from(xb).is_nan();
+        assert_eq!(circuit(xb), want, "fp.isPositive({xb:#06x})");
     }
 }
 
