@@ -1,7 +1,8 @@
 # ADR-0059: Enable CNF inprocessing + vivification by default (paired), gated on a broader measure
 
-Status: proposed
-Date: 2026-07-07
+Status: **proposed → resolved: flip DECLINED (broader measure, 2026-07-08, task #60).**
+The paired levers stay `false` by default (opt-in). See "Resolution" below.
+Date: 2026-07-07 (proposed); 2026-07-08 (resolved)
 
 ## Context
 
@@ -54,6 +55,41 @@ Caveat on scope: `p4dfa` is **arithmetic-free** DFA/protocol bit-logic (ADR-0037
 the +3 is real but the corpus is narrow. A broader QF_BV re-measure (arithmetic-
 heavy + mixed slices) must confirm no regression before the default flip — hence
 `proposed`, not `accepted`.
+
+## Resolution (2026-07-08, task #60) — flip declined
+
+The gated broader QF_BV re-measure landed on `corpus/qfbv-curated` (43 instances,
+arithmetic-mixed sat+unsat: multiplier families `brummayerbiere3__mulhs`,
+`wienand-cav2008`, `calypto`, `stp_samples`; 19/43 with `bvmul`/`bv*div`/`bv*rem`).
+Paired levers A/B (`--preprocess` held on in both arms; only `--inprocess`+`--vivify`
+toggle), Z3 4.13.3 oracle, `--jobs 2`:
+
+| config | 3s | 20s |
+|---|---:|---:|
+| OFF (preprocess only) — dec / PAR-2 | 35 / 1.126 | 36 / 6.666 |
+| PAIRED-ON — dec / PAR-2 | 35 / **1.166** | 36 / **6.735** |
+
+`DISAGREE = 0` and `0` replay failures in all four configs; the decided **sets** are
+byte-identical OFF vs ON at both budgets (no swaps).
+
+**Finding: on arithmetic-heavy QF_BV the paired levers are decide-NEUTRAL but
+PAR-2-NEGATIVE** — +3.5% PAR-2 @3s, +1.0% @20s, driven entirely by inprocessing/
+vivify overhead on the multiplier CNFs (`calypto` 292→1889 ms ≈6×; `brummayerbiere3`
+6224→7519 ms +21% @20s) with zero decide payoff. This is exactly the arithmetic-slice
+regression the broader-measure gate existed to catch. Per the gate ("worse PAR-2 →
+do not flip"), **the `SolverConfig` default is NOT flipped**; `cnf_inprocessing` and
+`cnf_vivify` remain `false` (opt-in).
+
+**The `config.timeout` budget-gate fallback is also not warranted by this data:** the
+multiplier overhead is present at *both* 3s and 20s, so a timeout-keyed gate does not
+separate benefit (p4dfa +3 at loose budgets) from cost (multiplier overhead at those
+same budgets). The discriminating axis is CNF *structure* (bit-logic vs
+arithmetic-multiplier), not the timeout. The clean path is structure-aware /
+in-solver interleaved inprocessing (P1.3), not a default flip or a budget gate. No
+code change lands from this ADR. Evidence: `bench-results/baselines/qfbv-curated-
+inprocess-vivify-broader-{off,paired-on}-{3s,20s}-task60.json`; write-up in the
+[findings doc](../05-algorithms/inprocessing-reduction-levers-p4dfa-findings.md)
+("Broader QF_BV re-measure").
 
 ## Alternatives
 
