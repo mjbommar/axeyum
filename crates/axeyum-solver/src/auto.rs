@@ -387,6 +387,9 @@ pub fn check_auto(
         if let Some(unsat) = try_conjunct_refutation(arena, assertions, config)? {
             return Ok(unsat);
         }
+        if let Some(verdict) = try_finite_domain_split(arena, assertions, config)? {
+            return Ok(verdict);
+        }
     }
     Ok(result)
 }
@@ -434,6 +437,135 @@ fn try_conjunct_refutation(
     Ok(None)
 }
 
+/// Upper bound on the cartesian-product branch count of a finite-domain
+/// case-split ([`try_finite_domain_split`]). Past this the fan-out is left to the
+/// (unchanged) width ladder rather than spawning a large sub-solve fleet.
+const MAX_FINITE_DOMAIN_BRANCHES: u64 = 64;
+
+/// If `term` is a disjunction `(or d₁ … dₖ)` (k ≥ 2) whose every disjunct is an
+/// equality `(= a b)`, returns the disjuncts; else `None`. Equality disjuncts are
+/// what make the case-split ([`try_finite_domain_split`]) pay: each chosen
+/// equality is unconditional in its branch, so the branch's own preprocessing
+/// propagates it (a `(< x 5)`-style region disjunct would not, and splitting it
+/// only multiplies work — hence the equality restriction).
+fn as_equality_disjunction(arena: &TermArena, term: TermId) -> Option<Vec<TermId>> {
+    let TermNode::App {
+        op: Op::BoolOr,
+        args,
+    } = arena.node(term)
+    else {
+        return None;
+    };
+    if args.len() < 2 {
+        return None;
+    }
+    let args = args.to_vec();
+    if args
+        .iter()
+        .all(|&d| matches!(arena.node(d), TermNode::App { op: Op::Eq, .. }))
+    {
+        Some(args)
+    } else {
+        None
+    }
+}
+
+/// Case-split a `unknown` query on its top-level FINITE-DOMAIN disjunctions —
+/// conjuncts `(or (= v e₁) … (= v eₖ))` whose every disjunct is an equality.
+///
+/// `D₁ ∧ … ∧ Dₘ ∧ rest` is satisfiable **iff** some choice of one equality from
+/// each `Dᵢ`, conjoined with `rest`, is satisfiable. So:
+/// - every branch `unsat` ⇒ the whole query is `unsat`;
+/// - any branch `sat` ⇒ the whole query is `sat` — that branch's model satisfies
+///   every `Dᵢ` (its chosen equality is a disjunct of `Dᵢ`, so `Dᵢ` holds) and
+///   `rest` (included verbatim), hence the original conjunction;
+/// - otherwise (some branch `unknown`, none `sat`) we cannot conclude ⇒ decline.
+///
+/// Restricting to EQUALITY disjuncts keeps each branch cheap (see
+/// [`as_equality_disjunction`]): e.g. `rewriting-sums` (`x∈{5,7,9}`, `y∈{x+1,x+2}`,
+/// `z∈{y+5,y+10}`, `z²>10⁹`) splits into 12 branches, each of which propagates to
+/// a concrete `z` and refutes `z²>10⁹`. Fires ONLY on an `Unknown` verdict (never
+/// slowing the decided fast path) and only for a small branch product; each branch
+/// re-enters `check_auto` with no equality-disjunction left, so the recursion
+/// bottoms out. Sound: it never emits a wrong `unsat` (a branch it cannot decide
+/// forces a decline) and its `sat` is a genuine model of the original.
+fn try_finite_domain_split(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+) -> Result<Option<CheckResult>, SolverError> {
+    let Some(total) = config.timeout else {
+        return Ok(None); // unbounded ⇒ skip (avoid runaway sub-solves)
+    };
+    let mut conjuncts: Vec<TermId> = Vec::new();
+    for &a in assertions {
+        collect_top_conjuncts(arena, a, &mut conjuncts);
+    }
+    // Partition into finite-domain (all-equality) disjunctions and the rest.
+    let mut disjunctions: Vec<Vec<TermId>> = Vec::new();
+    let mut rest: Vec<TermId> = Vec::new();
+    for &c in &conjuncts {
+        match as_equality_disjunction(arena, c) {
+            Some(ds) => disjunctions.push(ds),
+            None => rest.push(c),
+        }
+    }
+    if disjunctions.is_empty() {
+        return Ok(None); // nothing to case-split
+    }
+    // Bound the branch product; a large fan-out declines to the width ladder.
+    let mut branches: u64 = 1;
+    for d in &disjunctions {
+        branches = branches.saturating_mul(d.len() as u64);
+        if branches > MAX_FINITE_DOMAIN_BRANCHES {
+            return Ok(None);
+        }
+    }
+    if branches < 2 {
+        return Ok(None);
+    }
+    // Split HALF the budget across the branches (bounded fallback overhead over
+    // the already-`unknown` main solve).
+    let n = u32::try_from(branches).unwrap_or(u32::MAX);
+    let per = total / (2 * n);
+    if per.is_zero() {
+        return Ok(None);
+    }
+    let sub = config.clone().with_timeout(per);
+    // Enumerate the cartesian product via a mixed-radix index vector.
+    let mut idx = vec![0usize; disjunctions.len()];
+    let mut all_unsat = true;
+    loop {
+        let mut branch: Vec<TermId> = Vec::with_capacity(disjunctions.len() + rest.len());
+        for (di, d) in disjunctions.iter().enumerate() {
+            branch.push(d[idx[di]]);
+        }
+        branch.extend_from_slice(&rest);
+        match check_auto(arena, &branch, &sub)? {
+            CheckResult::Sat(model) => return Ok(Some(CheckResult::Sat(model))),
+            CheckResult::Unsat => {}
+            CheckResult::Unknown(_) => all_unsat = false,
+        }
+        // Advance the mixed-radix counter; wrapping past the last position ends it.
+        let mut pos = 0;
+        loop {
+            idx[pos] += 1;
+            if idx[pos] < disjunctions[pos].len() {
+                break;
+            }
+            idx[pos] = 0;
+            pos += 1;
+            if pos == disjunctions.len() {
+                return Ok(if all_unsat {
+                    Some(CheckResult::Unsat)
+                } else {
+                    None // some branch unknown, none sat ⇒ cannot conclude
+                });
+            }
+        }
+    }
+}
+
 /// Like [`check_auto`], but additionally returns a [`RouteTrace`]: the ordered
 /// record of which dispatch routes were tried and why each declined, with the
 /// decisive route last. This is purely additive telemetry — the returned
@@ -465,6 +597,16 @@ pub fn check_auto_explained(
     {
         trace.record_decided("conjunct-refutation", Verdict::Unsat);
         unsat
+    } else if matches!(result, CheckResult::Unknown(_))
+        && let Some(verdict) = try_finite_domain_split(arena, assertions, config)?
+    {
+        let v = if matches!(verdict, CheckResult::Sat(_)) {
+            Verdict::Sat
+        } else {
+            Verdict::Unsat
+        };
+        trace.record_decided("finite-domain-split", v);
+        verdict
     } else {
         result
     };
