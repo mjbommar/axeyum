@@ -219,6 +219,26 @@ fn trust_steps(steps: &[(TrustId, bool)]) -> Vec<TrustStep> {
         .collect()
 }
 
+/// Whether an [`Evidence`] is an `unsat`-family certificate (anything but a `sat`
+/// model or an `unknown`) — i.e. a result whose reductions the trust ledger
+/// records. Used to gate attaching the `Fpa2Bv` trust step (task #69): `sat` is
+/// replay-checked and `unknown` records no reductions.
+fn is_unsat_evidence(evidence: &Evidence) -> bool {
+    !matches!(evidence, Evidence::Sat(_) | Evidence::Unknown(_))
+}
+
+/// Returns `existing` trust steps with a [`TrustId::Fpa2Bv`] step appended at its
+/// canonical position (task #69). Re-running [`trust_steps`] keeps the
+/// deterministic [`crate::trust::ALL_TRUST_IDS`] order. `certified` is the parser's
+/// [`FpUsage::fpa2bv_simple_op_certified`](axeyum_smtlib::FpUsage::fpa2bv_simple_op_certified)
+/// verdict — `true` only when every FP operator the reduction lowered is
+/// structurally exact, never otherwise.
+fn with_fpa2bv_step(existing: &[TrustStep], certified: bool) -> Vec<TrustStep> {
+    let mut pairs: Vec<(TrustId, bool)> = existing.iter().map(|s| (s.id, s.certified)).collect();
+    pairs.push((TrustId::Fpa2Bv, certified));
+    trust_steps(&pairs)
+}
+
 /// A decided (or undecided) result together with its checkable justification.
 #[derive(Debug, Clone)]
 pub enum Evidence {
@@ -2181,7 +2201,21 @@ pub fn produce_evidence_smtlib(
     let is_string_script = script.uses_bounded_strings || script.word_only_fallback.is_some();
     if !is_string_script {
         let assertions = script.assertions.clone();
-        return produce_evidence(&mut script.arena, &assertions, config);
+        let mut report = produce_evidence(&mut script.arena, &assertions, config)?;
+        // Fpa2Bv per-query trust step (task #69). FP → BV lowering happened eagerly
+        // during parsing, so `produce_evidence` (which sees only the bit-vector
+        // assertions) cannot record it. The parser preserved the FP op-set on the
+        // `Script`; attach the trust step here, `certified` iff every FP operator the
+        // reduction lowered is structurally exact (see `FpUsage`). Only for an
+        // `unsat`-family result: `sat` is replay-checked and `unknown` records no
+        // reductions.
+        if script.fp_usage.uses_fp && is_unsat_evidence(&report.evidence) {
+            report.trusted_steps = with_fpa2bv_step(
+                &report.trusted_steps,
+                script.fp_usage.fpa2bv_simple_op_certified(),
+            );
+        }
+        return Ok(report);
     }
 
     // String script: delegate the DECISION to the string-capable text front door.

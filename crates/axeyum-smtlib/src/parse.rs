@@ -226,6 +226,96 @@ pub struct Script {
     /// length-abstraction refutation), so a `None`/empty skeleton or a
     /// non-replaying candidate simply leaves the prior verdict untouched.
     pub length_skeleton: Vec<TermId>,
+    /// Which floating-point operators (ADR-0023 `Fpa2Bv`) the script uses, for the
+    /// per-query `Fpa2Bv` trust-step sub-case (task #69). FP → BV lowering happens
+    /// eagerly at parse time (the `axeyum_fp::*` builder calls scattered through
+    /// [`parse_term`]), so by the time the solver's `QF_BV` evidence path sees the
+    /// query it is already bit-vector terms and the FP op-set is lost. This field
+    /// preserves the op-set so the text front door
+    /// (`axeyum_solver::produce_evidence_smtlib`) can decide whether a resulting
+    /// `unsat` may carry a **certified** `Fpa2Bv` trust step — see
+    /// [`FpUsage::fpa2bv_simple_op_certified`]. Populated by a **conservative**
+    /// allow-list scan of the raw s-expressions (see [`scan_fp_usage`]): it can only
+    /// ever over-report a non-simple operator (→ certified `false`), never miss one.
+    pub fp_usage: FpUsage,
+}
+
+/// Which floating-point operators (ADR-0023 `Fpa2Bv`) a parsed script uses, split
+/// so the solver can decide whether an `Fpa2Bv` `unsat` may carry a **certified**
+/// trust step (task #69, the per-run `TrustStep::certified` sub-case mechanism —
+/// the global `TrustId::Fpa2Bv::is_certified()` stays `false`).
+///
+/// The FP → BV reduction is **faithful-by-construction** exactly when every FP
+/// operator it lowered is a *structurally-exact bit operation / exact bit-pattern
+/// predicate* at the format's width. Those are:
+///
+/// - `fp.neg` (flip the sign bit) and `fp.abs` (clear the sign bit) — pure,
+///   width-parametric bit ops by the IEEE-754 / SMT-LIB definition;
+/// - the five **mutually-exclusive category** predicates `fp.isNaN`,
+///   `fp.isInfinite`, `fp.isZero`, `fp.isNormal`, `fp.isSubnormal` — exact
+///   exponent/significand field-pattern tests.
+///
+/// Every other FP operator carries rounding / NaN / signed-zero circuit logic
+/// (`fp.add`/`sub`/`mul`/`div`/`rem`/`fma`/`sqrt`/`roundToIntegral`/`min`/`max`,
+/// the comparisons `fp.eq`/`lt`/`leq`/`gt`/`geq`, and every conversion `to_fp` /
+/// `fp.to_ubv` / `fp.to_sbv` / `fp.to_real`) and is **not** in the allow-list.
+///
+/// `fp.isNegative` / `fp.isPositive` are **deliberately excluded** even though
+/// axeyum implements them as sign-bit tests: their SMT-LIB semantics over signed
+/// zeros / NaN are disputed (axeyum classifies `-0` as negative and is
+/// Z3-validated by `tests/fp_differential_fuzz.rs`, but `rustc_apfloat` also
+/// treats a signed NaN as negative while axeyum does not, and an independent spec
+/// reading classifies both zeros as neither), so a certified claim would rest on
+/// an unresolved semantic question. Conservatively treating them as non-simple can
+/// only under-certify, never emit a false `certified: true`.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct FpUsage {
+    /// The script uses the FP theory at all — an FP sort (`FloatingPoint` /
+    /// `Float16`…`Float128`), an FP / rounding-mode literal, or any `fp.*` / `to_fp`
+    /// operator — i.e. the `Fpa2Bv` reduction was actually invoked. `false` means no
+    /// FP content, so no `Fpa2Bv` trust step applies.
+    pub uses_fp: bool,
+    /// The distinct FP operator head symbols seen (e.g. `"fp.neg"`, `"fp.add"`,
+    /// `"to_fp"`), sorted. Empty when the script only *declares* FP sorts or uses
+    /// core operators (`=`/`distinct`/`ite`) over FP terms.
+    pub ops: BTreeSet<String>,
+}
+
+impl FpUsage {
+    /// The structurally-exact / by-construction-faithful FP operator allow-list.
+    /// Any operator head symbol **not** in this set (including unknown / future
+    /// `fp.*` operators, all conversions, and the disputed `fp.isNegative` /
+    /// `fp.isPositive`) is treated as non-simple — the allow-list, not a
+    /// block-list, so an unrecognized FP operator can never be silently certified.
+    #[must_use]
+    pub fn is_structurally_exact_op(op: &str) -> bool {
+        matches!(
+            op,
+            "fp.neg"
+                | "fp.abs"
+                | "fp.isNaN"
+                | "fp.isInfinite"
+                | "fp.isZero"
+                | "fp.isNormal"
+                | "fp.isSubnormal"
+        )
+    }
+
+    /// Whether an `Fpa2Bv` `unsat` over this script may carry `certified: true`:
+    /// the FP theory is used **and** every FP operator seen is structurally exact.
+    ///
+    /// Soundness: a free FP variable is lowered to a fresh bit-vector ranging over
+    /// **every** bit pattern (all NaN payloads, both signed zeros), so the BV query
+    /// is an **over-approximation** of the FP query — every SMT-LIB model maps to a
+    /// BV model. Hence `BV-unsat ⟹ FP-unsat` provided every FP *operator* the
+    /// reduction lowered is faithful. When all operators are in the exact allow-list
+    /// (each proven faithful by construction, and confirmed exhaustively against
+    /// `rustc_apfloat` at F16 in `axeyum-fp/tests/fpa2bv_simple_faithfulness.rs`)
+    /// the whole reduction is faithful, so the `unsat` is genuinely certified.
+    #[must_use]
+    pub fn fpa2bv_simple_op_certified(&self) -> bool {
+        self.uses_fp && self.ops.iter().all(|op| Self::is_structurally_exact_op(op))
+    }
 }
 
 impl Script {
@@ -424,6 +514,11 @@ fn parse_script_bounded(input: &str) -> Result<Script, SmtError> {
     script.len_abstraction_bounds = len_bounds;
     script.len_abstraction_coarse = len_coarse;
     script.uses_bounded_strings |= ops_used;
+    // Floating-point op-set scan (task #69): record which FP operators the script
+    // used so the text front door can decide whether an `Fpa2Bv` `unsat` may carry
+    // a certified trust step. Conservative over the raw (already set/const-array
+    // desugared) s-expressions — see [`scan_fp_usage`].
+    script.fp_usage = scan_fp_usage(&exprs);
     // Eager `seq.nth` Ackermann congruence (ADR-0029 slice 2): two `seq.nth`
     // applications with provably-equal sequence and index operands must return the
     // same (otherwise-unconstrained) out-of-bounds value. The constraints only pin
@@ -479,6 +574,92 @@ fn parse_script_bounded(input: &str) -> Result<Script, SmtError> {
         }
     }
     Ok(script)
+}
+
+/// Conservatively scans the raw s-expressions for floating-point (ADR-0023
+/// `Fpa2Bv`) usage and records the operator op-set (task #69).
+///
+/// FP → BV lowering is eager (at parse time), so the op-set is otherwise lost by
+/// the time the solver's `QF_BV` evidence path runs. This walk over the s-expression
+/// *tokens* recovers it for the per-query `Fpa2Bv` trust-step decision.
+///
+/// # Why a token walk is sound-conservative
+///
+/// Every FP operator appears in the source as a head atom (`fp.add`, `fp.neg`, …)
+/// or an indexed head (`(_ fp.to_ubv m)`, `(_ to_fp e s)`). Walking **all** atoms
+/// of **all** commands — including `define-fun` / `let` bodies — therefore *sees
+/// every FP operator that could ever be built*. The only imprecision is the
+/// harmless direction: a `define-fun` body that is never applied still contributes
+/// its operator tokens, which can only *add* to [`FpUsage::ops`] and so can only
+/// turn a certified `true` into a conservative `false`, never the reverse. Hence
+/// [`FpUsage::fpa2bv_simple_op_certified`] never over-certifies.
+///
+/// FP sorts / literals / rounding modes set [`FpUsage::uses_fp`] (the reduction was
+/// invoked) without contributing an operator, so a script that only declares FP
+/// vars and uses core `=`/`distinct`/`ite` is still certifiable (sound by the
+/// over-approximation argument on [`FpUsage::fpa2bv_simple_op_certified`]).
+fn scan_fp_usage(exprs: &[SExpr]) -> FpUsage {
+    let mut usage = FpUsage::default();
+    // Iterative (no recursion — adversarially deep inputs must not overflow the
+    // stack, mirroring the s-expression reader's discipline).
+    let mut stack: Vec<&SExpr> = exprs.iter().collect();
+    while let Some(node) = stack.pop() {
+        match node {
+            SExpr::Atom(a) => classify_fp_atom(a, &mut usage),
+            SExpr::List(items) => stack.extend(items.iter()),
+        }
+    }
+    usage
+}
+
+/// Classifies a single atom for [`scan_fp_usage`]: records an FP operator into
+/// `usage.ops` (and marks `uses_fp`), or marks `uses_fp` for an FP sort / literal /
+/// rounding-mode token, or does nothing for a non-FP atom.
+fn classify_fp_atom(atom: &str, usage: &mut FpUsage) {
+    // Any `fp.*` operator (`fp.add`, `fp.neg`, `fp.isNaN`, `fp.to_ubv`, …). The
+    // `fp` literal constructor is a *value* (`(fp #b0 …)`), not an operator, and
+    // does not carry the trailing dot — it falls through to the `uses_fp` markers.
+    if let Some(rest) = atom.strip_prefix("fp.") {
+        debug_assert!(!rest.is_empty());
+        usage.uses_fp = true;
+        usage.ops.insert(atom.to_owned());
+        return;
+    }
+    match atom {
+        // FP-producing conversions that are NOT spelled `fp.*`: `(_ to_fp e s)` and
+        // `(_ to_fp_unsigned e s)`. They round, so they are non-simple operators.
+        "to_fp" | "to_fp_unsigned" => {
+            usage.uses_fp = true;
+            usage.ops.insert(atom.to_owned());
+        }
+        // FP sorts, value literals, and rounding modes: the reduction was invoked,
+        // but these contribute no operator to the op-set.
+        "FloatingPoint"
+        | "Float16"
+        | "Float32"
+        | "Float64"
+        | "Float128"
+        | "RoundingMode"
+        | "fp"
+        | "+zero"
+        | "-zero"
+        | "+oo"
+        | "-oo"
+        | "NaN"
+        | "roundNearestTiesToEven"
+        | "RNE"
+        | "roundNearestTiesToAway"
+        | "RNA"
+        | "roundTowardPositive"
+        | "RTP"
+        | "roundTowardNegative"
+        | "RTN"
+        | "roundTowardZero"
+        | "RTZ" => {
+            usage.uses_fp = true;
+        }
+        _ => {}
+    }
 }
 
 /// The word-first fallback parse (T-B.4d): build **only** the unbounded
