@@ -379,10 +379,14 @@ pub fn check_auto(
     // byte-for-byte the verdict `check_auto_explained` does (verdict invariance,
     // pinned by `tests/route_trace.rs`).
     let result = check_auto_with_recorder(arena, assertions, config, &mut None)?;
-    if matches!(result, CheckResult::Unknown(_))
-        && let Some(unsat) = try_conjunct_refutation(arena, assertions, config)?
-    {
-        return Ok(unsat);
+    if matches!(result, CheckResult::Unknown(_)) {
+        // Integer-algebraic identity refutation (QF_NIA): cheap, exact, unsat-only.
+        if crate::nra_real_root::integer_algebraic_refutation(arena, assertions) {
+            return Ok(CheckResult::Unsat);
+        }
+        if let Some(unsat) = try_conjunct_refutation(arena, assertions, config)? {
+            return Ok(unsat);
+        }
     }
     Ok(result)
 }
@@ -452,6 +456,11 @@ pub fn check_auto_explained(
     // matches the upgraded `unsat`. Run BEFORE the invariant block so it sees the
     // final verdict.
     let result = if matches!(result, CheckResult::Unknown(_))
+        && crate::nra_real_root::integer_algebraic_refutation(arena, assertions)
+    {
+        trace.record_decided("integer-algebraic-refutation", Verdict::Unsat);
+        CheckResult::Unsat
+    } else if matches!(result, CheckResult::Unknown(_))
         && let Some(unsat) = try_conjunct_refutation(arena, assertions, config)?
     {
         trace.record_decided("conjunct-refutation", Verdict::Unsat);

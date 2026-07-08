@@ -2106,6 +2106,51 @@ impl MultiPoly {
         Some((y, l))
     }
 
+    /// Isolate `var` from the equality `self = 0` when `var` occurs ONLY as the
+    /// standalone linear monomial `[(var,1)]` (never `var²`, never `var·other`):
+    /// returns `var = −(self − c·var)/c`, a polynomial in the OTHER variables that
+    /// may be NONLINEAR — e.g. `i² − i − 2s = 0` ⟹ `s = (i²−i)/2`. Substituting the
+    /// result into another equality is denotation-preserving over ℚ, so it soundly
+    /// drives a polynomial-IDENTITY refutation (an unsat over ℚ ⊇ ℤ). `None` if
+    /// `var` is absent, appears to degree > 1, or is multiplied by another variable.
+    fn solve_for_var(&self, var: SymbolId) -> Option<MultiPoly> {
+        let mut coeff: Option<Rational> = None;
+        for k in self.terms.keys() {
+            if k.iter().any(|(v, _)| *v == var) {
+                if k.as_slice() != [(var, 1)] {
+                    return None; // var², or var·(another var) ⇒ not cleanly isolable
+                }
+                coeff = self.terms.get(k).copied();
+            }
+        }
+        let cy = coeff?; // var absent ⇒ None
+        let scale = Rational::integer(-1).checked_div(cy)?; // −1/cy (cy ≠ 0)
+        let mut l = MultiPoly::zero();
+        for (k, &c) in &self.terms {
+            if k.as_slice() == [(var, 1)] {
+                continue;
+            }
+            l.add_term(k.clone(), c.checked_mul(scale)?)?;
+        }
+        Some(l)
+    }
+
+    /// A definition `y = L` for elimination: [`Self::as_linear_definition`] if it
+    /// applies, else a [`Self::solve_for_var`] isolation of any standalone-linear
+    /// variable (`L` may be nonlinear in the others). Deterministic (canonical
+    /// variable order).
+    fn as_solvable_definition(&self) -> Option<(SymbolId, MultiPoly)> {
+        if let Some(def) = self.as_linear_definition() {
+            return Some(def);
+        }
+        for v in self.vars() {
+            if let Some(l) = self.solve_for_var(v) {
+                return Some((v, l));
+            }
+        }
+        None
+    }
+
     /// Reduce a single-variable multivariate polynomial to the LSB-first integer
     /// polynomial layout the single-variable decider consumes. Requires exactly
     /// one variable. `None` on overflow / coefficient guard.
@@ -6092,6 +6137,245 @@ fn collect_multi(arena: &TermArena, t: TermId) -> Option<MultiPoly> {
             }
             Op::RealMul if args.len() == 2 => {
                 collect_multi(arena, args[0])?.mul(&collect_multi(arena, args[1])?)
+            }
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
+// ============================================================================
+// Integer-aware, UNSAT-ONLY polynomial-identity refutation (QF_NIA).
+// ============================================================================
+//
+// A class of QF_NIA unsats is genuinely INTEGER-specific — real-relaxation is
+// satisfiable, so the multivariate CAD (which requires `Sort::Real`) cannot see
+// them. Example (`nl-eq-infer`, unsat):
+//
+//     i = −2s + i²          (E1: i² − i − 2s = 0)
+//     i − n ≥ 1             (E2)
+//     ¬(i − n ≥ 2)          (E3: i − n < 2 ⟺ i − n ≤ 1 over ℤ)
+//     ¬(n = 2s − n²)        (D:  n² + n − 2s ≠ 0)
+//
+// Over ℝ this is SAT (`i−n = 1.5, i = 0, s = 0` works). Over ℤ, E2 ∧ E3 pin
+// `i − n = 1`, and substituting `n = i−1` and `s = (i²−i)/2` (from E1) into D's
+// polynomial collapses it IDENTICALLY to `0`, so D asserts `0 ≠ 0` — UNSAT.
+//
+// This refutation is **UNSAT-only**: it never constructs a model, so the
+// rational-coefficient substitution `s = (i²−i)/2` (from `solve_for_var`) carries
+// NO wrong-sat risk — it is used solely to reduce an asserted disequality to the
+// zero polynomial. Soundness: every substitution `y := L` comes from an asserted
+// equality `poly = 0` (a valid ℚ-consequence at every model satisfying it), and
+// each injected tight-bound equality `g = 0` follows from two asserted
+// inequalities `g ≥ 0` and `−g ≥ 0`. Hence when an asserted `p ≠ 0` reduces to
+// the zero polynomial, the conjunction is unsatisfiable over ℤ (indeed over ℚ).
+// The ONLY integer-specific step is tightening a strict `p < 0` to `−p − 1 ≥ 0`,
+// valid because the query is QF_NIA. Any non-integer / non-polynomial / overflow
+// shape DECLINES (`false`), never a verdict.
+
+/// Try to refute a `QF_NIA` conjunction by polynomial identity. Returns `true` only
+/// when the assertions are proven UNSATISFIABLE (see the section comment); `false`
+/// declines on every other shape and never claims sat. All arithmetic is exact
+/// rational; overflow declines.
+pub fn integer_algebraic_refutation(arena: &TermArena, assertions: &[TermId]) -> bool {
+    // 1. Collect every assertion as an integer polynomial comparison `poly ⋈ 0`.
+    let mut atoms: Vec<MultiAtom> = Vec::new();
+    for &a in assertions {
+        if collect_int_multi_conjuncts(arena, a, &mut atoms).is_none() {
+            return false; // non-integer / non-polynomial shape ⇒ decline
+        }
+    }
+    if atoms.is_empty() {
+        return false;
+    }
+    // 2. Equalities to substitute: the asserted `Eq` atoms, plus integer
+    //    tight-bounds. Normalize every inequality atom to `g ≥ 0` (integer-tighten
+    //    strict `<`/`>`); a pair `g ≥ 0`, `−g ≥ 0` from two atoms pins `g = 0`.
+    let mut eqs: Vec<MultiPoly> = Vec::new();
+    for atom in &atoms {
+        if matches!(atom.cmp, Cmp::Eq) {
+            eqs.push(atom.poly.clone());
+        }
+    }
+    let ge_polys: Vec<MultiPoly> = atoms.iter().filter_map(atom_as_ge).collect();
+    for i in 0..ge_polys.len() {
+        for j in (i + 1)..ge_polys.len() {
+            if let Some(sum) = ge_polys[i].add(&ge_polys[j])
+                && sum.is_zero()
+            {
+                eqs.push(ge_polys[i].clone()); // g ≥ 0 ∧ −g ≥ 0 ⇒ g = 0
+            }
+        }
+    }
+    // 3. Disequality targets `p ≠ 0`. With none, there is no identity to refute.
+    let mut neqs: Vec<MultiPoly> = atoms
+        .iter()
+        .filter(|a| matches!(a.cmp, Cmp::Ne))
+        .map(|a| a.poly.clone())
+        .collect();
+    if neqs.is_empty() {
+        return false;
+    }
+    // 4. Substitution fixpoint: eliminate a variable from an equality (`y = L`,
+    //    linear or standalone-linear via `solve_for_var`) into the other equalities
+    //    AND the disequalities. A disequality that reaches the ZERO polynomial is
+    //    `0 ≠ 0` ⇒ UNSAT. A residual equality that reduces to a nonzero constant
+    //    (`c = 0`, `c ≠ 0`) is likewise UNSAT.
+    for _ in 0..MAX_SUBST_ITERS {
+        if neqs.iter().any(MultiPoly::is_zero) {
+            return true;
+        }
+        let mut found: Option<(usize, SymbolId, MultiPoly)> = None;
+        for (i, p) in eqs.iter().enumerate() {
+            if let Some((y, l)) = p.as_solvable_definition() {
+                found = Some((i, y, l));
+                break;
+            }
+        }
+        let Some((idx, y, l)) = found else { break };
+        let mut next_eqs: Vec<MultiPoly> = Vec::with_capacity(eqs.len().saturating_sub(1));
+        for (i, p) in eqs.iter().enumerate() {
+            if i == idx {
+                continue;
+            }
+            let Some(q) = p.substitute(y, &l) else {
+                return false;
+            };
+            // A residual equality that is a nonzero constant is a contradiction.
+            if let Some(c) = q.as_constant() {
+                if !c.is_zero() {
+                    return true;
+                }
+                continue; // 0 = 0, drop
+            }
+            next_eqs.push(q);
+        }
+        eqs = next_eqs;
+        for d in &mut neqs {
+            let Some(q) = d.substitute(y, &l) else {
+                return false;
+            };
+            *d = q;
+        }
+    }
+    neqs.iter().any(MultiPoly::is_zero)
+}
+
+/// Normalize an integer (in)equality atom `poly ⋈ 0` to an equivalent `g ≥ 0`
+/// (returns `g`). Strict comparisons are integer-tightened (`p < 0 ⟺ −p − 1 ≥ 0`,
+/// `p > 0 ⟺ p − 1 ≥ 0`) — the sole integer-specific step, sound for `QF_NIA`.
+/// `Eq`/`Ne` atoms (and any overflow) return `None`.
+fn atom_as_ge(atom: &MultiAtom) -> Option<MultiPoly> {
+    let one = MultiPoly::constant(Rational::integer(1));
+    match atom.cmp {
+        Cmp::Ge => Some(atom.poly.clone()),    // p ≥ 0
+        Cmp::Le => atom.poly.neg(),            // p ≤ 0 ⟺ −p ≥ 0
+        Cmp::Gt => atom.poly.sub(&one),        // p > 0 ⟺ p − 1 ≥ 0  (ℤ)
+        Cmp::Lt => atom.poly.neg()?.sub(&one), // p < 0 ⟺ −p − 1 ≥ 0 (ℤ)
+        Cmp::Eq | Cmp::Ne => None,
+    }
+}
+
+/// Integer analogue of [`collect_multi_conjuncts`]: flatten `and`, collect each
+/// leaf as an integer polynomial comparison. `None` on any non-integer /
+/// non-polynomial leaf.
+fn collect_int_multi_conjuncts(
+    arena: &TermArena,
+    assertion: TermId,
+    atoms: &mut Vec<MultiAtom>,
+) -> Option<()> {
+    if let TermNode::App {
+        op: Op::BoolAnd,
+        args,
+    } = arena.node(assertion)
+    {
+        for &c in args {
+            collect_int_multi_conjuncts(arena, c, atoms)?;
+        }
+        return Some(());
+    }
+    let (cmp, poly) = match_int_multi_constraint(arena, assertion)?;
+    atoms.push(MultiAtom { cmp, poly });
+    Some(())
+}
+
+/// Integer analogue of [`match_multi_constraint`]: an `Int` comparison (or its
+/// negation) whose `lhs − rhs` collects to a multivariate polynomial.
+fn match_int_multi_constraint(arena: &TermArena, assertion: TermId) -> Option<(Cmp, MultiPoly)> {
+    let TermNode::App { op, args } = arena.node(assertion) else {
+        return None;
+    };
+    if matches!(op, Op::BoolNot) {
+        let TermNode::App {
+            op: inner_op,
+            args: inner_args,
+        } = arena.node(args[0])
+        else {
+            return None;
+        };
+        let cmp = match inner_op {
+            Op::Eq => {
+                if arena.sort_of(inner_args[0]) != Sort::Int {
+                    return None;
+                }
+                Cmp::Ne // ¬(a = b) ⇔ a ≠ b
+            }
+            Op::IntLt => Cmp::Ge, // ¬(a < b) ⇔ a ≥ b
+            Op::IntLe => Cmp::Gt, // ¬(a ≤ b) ⇔ a > b
+            Op::IntGt => Cmp::Le, // ¬(a > b) ⇔ a ≤ b
+            Op::IntGe => Cmp::Lt, // ¬(a ≥ b) ⇔ a < b
+            _ => return None,
+        };
+        let poly = collect_int_multi_diff(arena, inner_args[0], inner_args[1])?;
+        return Some((cmp, poly));
+    }
+    let cmp = match op {
+        Op::Eq => Cmp::Eq,
+        Op::IntLt => Cmp::Lt,
+        Op::IntLe => Cmp::Le,
+        Op::IntGt => Cmp::Gt,
+        Op::IntGe => Cmp::Ge,
+        _ => return None,
+    };
+    if matches!(op, Op::Eq) && arena.sort_of(args[0]) != Sort::Int {
+        return None;
+    }
+    let poly = collect_int_multi_diff(arena, args[0], args[1])?;
+    Some((cmp, poly))
+}
+
+fn collect_int_multi_diff(arena: &TermArena, lhs: TermId, rhs: TermId) -> Option<MultiPoly> {
+    collect_int_multi(arena, lhs)?.sub(&collect_int_multi(arena, rhs)?)
+}
+
+/// Recursively collect an `Int`-sorted term into a multivariate rational
+/// polynomial over `{+, −, ·, neg, IntConst, symbol}`. `+`/`·` are folded over
+/// all arguments (n-ary tolerant); anything else declines.
+fn collect_int_multi(arena: &TermArena, t: TermId) -> Option<MultiPoly> {
+    if arena.sort_of(t) != Sort::Int {
+        return None;
+    }
+    match arena.node(t) {
+        TermNode::IntConst(i) => Some(MultiPoly::constant(Rational::integer(*i))),
+        TermNode::Symbol(s) => Some(MultiPoly::var(*s)),
+        TermNode::App { op, args } => match op {
+            Op::IntNeg | Op::IntSub if args.len() == 1 => collect_int_multi(arena, args[0])?.neg(),
+            Op::IntSub if args.len() == 2 => {
+                collect_int_multi(arena, args[0])?.sub(&collect_int_multi(arena, args[1])?)
+            }
+            Op::IntAdd => {
+                let mut acc = MultiPoly::zero();
+                for &a in args {
+                    acc = acc.add(&collect_int_multi(arena, a)?)?;
+                }
+                Some(acc)
+            }
+            Op::IntMul => {
+                let mut acc = MultiPoly::constant(Rational::integer(1));
+                for &a in args {
+                    acc = acc.mul(&collect_int_multi(arena, a)?)?;
+                }
+                Some(acc)
             }
             _ => None,
         },
