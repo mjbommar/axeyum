@@ -474,6 +474,22 @@ pub struct WordProblem {
     /// model. A bound the route cannot satisfy leaves the verdict `unknown`; the route
     /// never emits `unsat`.
     pub int_bounds: Vec<IntBound>,
+    /// Direct integer pins `sym = v` from folding `str.to_int` of a **constant string**
+    /// (task #79). An atom `(= i (str.to_int <literal>))` binds the declared `Int`
+    /// variable `i` to the exact SMT-LIB value of `str.to_int <literal>` — a closed,
+    /// deterministic computation (all-digit decimal value, or `-1` for a non-digit /
+    /// empty literal; leading zeros allowed). Because the string is constant the pin has
+    /// no search: it is model-defining by construction, exactly like folding
+    /// `str.from_int` of a constant into a string literal.
+    ///
+    /// The builder accepts a pin **only** when its variable carries no competing
+    /// constraint the word route did not see: two pins on one variable must agree
+    /// (else the script is declined → `unknown`, never `unsat`), and a pinned variable
+    /// must not also be a `str.from_int`/`str.substr` obligation argument or an
+    /// [`IntBound`] variable (else decline). Under those gates every pin is a sound,
+    /// sat-implying binding the solver copies into the model after a replaying string
+    /// arrangement.
+    pub int_pins: Vec<(SymbolId, i128)>,
 }
 
 /// A relational operator for a linear integer bound `var ⋈ const` (task #78).
@@ -1006,6 +1022,38 @@ fn build_word_problem(arena: &mut TermArena, exprs: &[SExpr]) -> Option<WordProb
             })
             .collect();
         if !wp.int_bounds.iter().all(|b| from_int_args.contains(&b.sym)) {
+            return None;
+        }
+    }
+
+    // Task #79 soundness gates for constant `str.to_int` pins. A pin `i = to_int(lit)` is
+    // model-defining only when `i` carries no competing constraint the word route did not
+    // model: (1) two pins on one variable must agree — a disagreement makes the script
+    // unsat, which this route never claims, so decline to `unknown`; (2) a pinned variable
+    // must not also be a `str.from_int`/`str.substr` obligation argument or an integer-bound
+    // variable, or the recovered/bounded integer could contradict the pin. Any overlap or
+    // conflict declines the whole word problem (the bounded parse error stands → `unknown`).
+    if !wp.int_pins.is_empty() {
+        let mut pinned: BTreeMap<SymbolId, i128> = BTreeMap::new();
+        for &(sym, val) in &wp.int_pins {
+            match pinned.insert(sym, val) {
+                Some(prev) if prev != val => return None, // conflicting pins → unknown
+                _ => {}
+            }
+        }
+        let obligation_ints: BTreeSet<SymbolId> = wp
+            .obligations
+            .iter()
+            .map(|ob| match ob {
+                WordObligation::FromInt { int_sym, .. } => *int_sym,
+                WordObligation::Substr { len_sym, .. } => *len_sym,
+            })
+            .collect();
+        let bound_ints: BTreeSet<SymbolId> = wp.int_bounds.iter().map(|b| b.sym).collect();
+        if pinned
+            .keys()
+            .any(|s| obligation_ints.contains(s) || bound_ints.contains(s))
+        {
             return None;
         }
     }
@@ -2044,6 +2092,16 @@ fn word_atom(
         wp.int_bounds.push(bound);
         return true;
     }
+    // Task #79: a constant-string `str.to_int` pin `(= i (str.to_int <literal>))` on a
+    // declared `Int` variable. Recognized *before* the string `=` case (its right side
+    // is not a string expression, so the string translator would reject it). The value
+    // is the exact SMT-LIB `str.to_int` of the constant literal — pure constant folding,
+    // no obligation. Build-time gates in `build_word_problem` reject a conflicting or
+    // over-constrained pin (→ `unknown`, never `unsat`).
+    if let Some(pin) = to_int_const_pin_atom(head, items, opaque.int_vars) {
+        wp.int_pins.push(pin);
+        return true;
+    }
     match head {
         "and" => items[1..]
             .iter()
@@ -2375,6 +2433,69 @@ fn int_bound_atom(
         });
     }
     None
+}
+
+/// Recognizes a constant-string `str.to_int` pin atom `(= var (str.to_int <literal>))`
+/// or `(= (str.to_int <literal>) var)`, where `var` is a **declared `Int` variable**
+/// (in `int_vars`) and `<literal>` is a string constant (task #79). Returns the pin
+/// `(var-symbol, str.to_int value)` — the exact SMT-LIB `str.to_int` of the literal —
+/// or `None` for any other shape (a `str.to_int` over a *symbolic* string, a non-int
+/// left/right operand, the wrong head/arity, or a literal whose all-digit value
+/// overflows `i128`, which is declined so the value is never truncated to a wrong
+/// integer).
+///
+/// The pin is **exact**: `str.to_int` of a constant string is a closed function value,
+/// so binding `var` to it is model-defining with no search — the mirror of folding
+/// `str.from_int` of a constant into a string literal.
+fn to_int_const_pin_atom(
+    head: &str,
+    items: &[SExpr],
+    int_vars: &BTreeMap<String, SymbolId>,
+) -> Option<(SymbolId, i128)> {
+    if head != "=" || items.len() != 3 {
+        return None;
+    }
+    // Extract the `(str.to_int <literal>)` value from whichever side is that shape.
+    let to_int_val = |e: &SExpr| -> Option<i128> {
+        let sub = e.list()?;
+        if sub.len() != 2 || sub[0].atom() != Some("str.to_int") {
+            return None;
+        }
+        let cps = literal_pattern_cps(&sub[1])?;
+        to_int_of_code_points(&cps)
+    };
+    let var_sym =
+        |e: &SExpr| -> Option<SymbolId> { e.atom().and_then(|n| int_vars.get(n)).copied() };
+    // `(= var (str.to_int lit))`.
+    if let (Some(sym), Some(v)) = (var_sym(&items[1]), to_int_val(&items[2])) {
+        return Some((sym, v));
+    }
+    // `(= (str.to_int lit) var)`.
+    if let (Some(v), Some(sym)) = (to_int_val(&items[1]), var_sym(&items[2])) {
+        return Some((sym, v));
+    }
+    None
+}
+
+/// The exact SMT-LIB `UnicodeStrings` `str.to_int` value of a constant string given by
+/// its Unicode code points (task #79): the decimal value when **every** code point is
+/// an ASCII digit `'0'..='9'` (leading zeros allowed — `to_int("01") = 1`), and `-1`
+/// for the empty string or any string containing a non-digit code point (a `'-'` sign,
+/// letters, wide code points, …). Returns `None` — decline, never a wrong pin — when an
+/// all-digit value overflows `i128`, since the exact value cannot then be represented.
+fn to_int_of_code_points(cps: &[u32]) -> Option<i128> {
+    if cps.is_empty() {
+        return Some(-1);
+    }
+    let mut acc: i128 = 0;
+    for &c in cps {
+        if !(0x30..=0x39).contains(&c) {
+            return Some(-1);
+        }
+        let digit = i128::from(c - 0x30);
+        acc = acc.checked_mul(10)?.checked_add(digit)?;
+    }
+    Some(acc)
 }
 
 /// Parses an SMT-LIB integer literal: a bare numeral atom, or `(- n)` for a negative

@@ -74,7 +74,7 @@ fn apply_word_route(
     // Clone the (Copy-element) problem so the immutable borrow of `word_problem`
     // ends before the `&mut arena` search call; leaves the side channel in place
     // for the incremental path's later queries.
-    let Some((eqs, diseqs, syms, obligations, int_bounds)) =
+    let Some((eqs, diseqs, syms, obligations, int_bounds, int_pins)) =
         script.word_problem.as_ref().map(|wp| {
             (
                 wp.equalities.clone(),
@@ -82,6 +82,7 @@ fn apply_word_route(
                 wp.seq_symbols.clone(),
                 wp.obligations.clone(),
                 wp.int_bounds.clone(),
+                wp.int_pins.clone(),
             )
         })
     else {
@@ -112,6 +113,7 @@ fn apply_word_route(
             &syms,
             &obligations,
             &int_bounds,
+            &int_pins,
             &budget,
             &reason,
         );
@@ -134,6 +136,10 @@ fn apply_word_route(
             // the original assertions, so preserve the prior `unknown` (never a
             // silent/unchecked `sat`).
             if resolve_word_obligations(&assignment, &obligations, &mut model) {
+                // Task #79: copy each constant `str.to_int` pin into the model. Each pin
+                // is an exact, conflict-free, non-overlapping binding (gated at build
+                // time), so it does not compete with the replaying string arrangement.
+                apply_int_pins(&int_pins, &mut model);
                 CheckResult::Sat(model)
             } else {
                 CheckResult::Unknown(UnknownReason {
@@ -283,6 +289,7 @@ fn couple_from_int_bounds(
     syms: &[SymbolId],
     obligations: &[WordObligation],
     int_bounds: &[IntBound],
+    int_pins: &[(SymbolId, i128)],
     budget: &SearchBudget,
     reason: &UnknownReason,
 ) -> CheckResult {
@@ -335,6 +342,7 @@ fn couple_from_int_bounds(
                 seq_sym,
                 neg,
                 &[],
+                int_pins,
                 &cand_budget,
             )
         {
@@ -362,6 +370,7 @@ fn couple_from_int_bounds(
             seq_sym,
             c,
             &cps,
+            int_pins,
             &cand_budget,
         ) {
             return result;
@@ -395,6 +404,7 @@ fn try_from_int_candidate(
     seq_sym: SymbolId,
     c: i128,
     cps: &[u32],
+    int_pins: &[(SymbolId, i128)],
     budget: &SearchBudget,
 ) -> Option<CheckResult> {
     let lit = seq_literal_term(arena, cps)?;
@@ -425,9 +435,24 @@ fn try_from_int_candidate(
     // enumerated in range, so this holds by construction; the check makes the coupling
     // self-guarding against any future range-computation slip.
     if int_bounds.iter().all(|b| int_bound_holds(b, c)) {
+        // Task #79: copy each constant `str.to_int` pin (gated conflict-free and
+        // non-overlapping with `bsym` / the obligations at build time) into the model.
+        apply_int_pins(int_pins, &mut model);
         Some(CheckResult::Sat(model))
     } else {
         None
+    }
+}
+
+/// Copies each constant `str.to_int` pin `sym = v` (task #79) into `model`. Every pin is
+/// the exact SMT-LIB `str.to_int` value of a constant string, and the parser's
+/// `build_word_problem` has already verified the pins are mutually consistent and share
+/// no variable with a `str.from_int`/`str.substr` obligation or an integer bound — so
+/// this binding never competes with the replay-checked string arrangement or a recovered
+/// obligation integer.
+fn apply_int_pins(int_pins: &[(SymbolId, i128)], model: &mut Model) {
+    for &(sym, val) in int_pins {
+        model.set(sym, Value::Int(val));
     }
 }
 
