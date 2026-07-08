@@ -64,6 +64,28 @@ const CLAUSE_RESCALE_LIMIT: f64 = 1e20;
 /// Multiplier applied on a clause-activity rescale.
 const CLAUSE_RESCALE: f64 = 1e-20;
 
+/// EMA glue restart (Glucose/CaDiCaL, T1.3.2). The **fast** exponential moving
+/// average of learned-clause LBD (glue) reacts to recent conflicts; the **slow**
+/// average is the long-run baseline. A restart is forced when the fast average
+/// exceeds the slow one by [`RESTART_MARGIN`] — recent search is producing
+/// higher-LBD (less reusable) clauses, so the current decision prefix is
+/// unproductive and worth abandoning. `alpha = 2^-5` (fast) and `2^-14` (slow) are
+/// the standard smoothing rates; all-`f64` so the schedule is fully deterministic.
+const GLUE_EMA_FAST_ALPHA: f64 = 0.031_25; // 2^-5
+const GLUE_EMA_SLOW_ALPHA: f64 = 6.103_515_625e-5; // 2^-14
+/// Force a restart when `glue_fast > RESTART_MARGIN * glue_slow`.
+const RESTART_MARGIN: f64 = 1.25;
+/// Blocking restarts (Glucose): suppress an otherwise-due restart while the trail
+/// is far deeper than its slow average — the search is close to a model and
+/// restarting would throw that progress away. `trail_len > BLOCKING_MARGIN *
+/// trail_slow` blocks.
+const TRAIL_EMA_ALPHA: f64 = 6.103_515_625e-5; // 2^-14
+const BLOCKING_MARGIN: f64 = 1.40;
+/// Minimum conflicts between two EMA restarts (anti-thrash), and the conflict
+/// warmup before the EMA rule engages (so the slow average is meaningful).
+const MIN_RESTART_INTERVAL: usize = 50;
+const EMA_RESTART_WARMUP: usize = 100;
+
 /// The `i`-th term (1-indexed) of the Luby sequence `1,1,2,1,1,2,4,1,…`, used to
 /// space restarts (Knuth's reluctant-doubling formulation, iterative).
 fn luby(mut i: u64) -> u64 {
@@ -190,10 +212,31 @@ struct Cdcl {
     var_inc: f64,
     /// Saved decision polarity per variable (phase saving).
     phase: Vec<bool>,
-    /// Conflicts since the last restart (the Luby restart trigger).
+    /// Conflicts since the last restart (the restart trigger's interval counter).
     conflicts_since_restart: usize,
     /// Index into the Luby sequence (1-based; advances on each restart).
     restart_count: u64,
+    /// Fast exponential moving average of learned-clause LBD (Glucose EMA restart).
+    glue_fast: f64,
+    /// Slow (long-run) exponential moving average of learned-clause LBD.
+    glue_slow: f64,
+    /// Slow exponential moving average of trail size at conflict — the reference
+    /// for blocking restarts.
+    trail_slow: f64,
+    /// Restart schedule selector (T1.3.2). When set, the Glucose EMA glue rule
+    /// drives restarts; otherwise the Luby schedule does.
+    ///
+    /// **Default is Luby (`false`).** The EMA rule is implemented, sound
+    /// (verdict-preserving, DRAT-checked, deterministic) and measured on the public
+    /// `p4dfa` `QF_BV` slice, where it came out **neutral-to-slightly-negative**: at
+    /// both margins tried (`CaDiCaL` 1.10, `Glucose` 1.25) it improved `PAR-2` on the
+    /// `MobileDevice` family (~18%) but lost one decide on `Composition`, and made no
+    /// difference on the search-bound families (all timeout under either schedule).
+    /// So it is banked as a selectable option, not switched on by default, pending a
+    /// full-corpus or different-corpus re-measure (and likely combination with
+    /// rephasing / mode switching before it pays off) — mirroring the built-but-off
+    /// discipline of `ADR-0059`.
+    use_ema_restart: bool,
     /// Number of original (problem) clauses; clause ids `< num_original` are
     /// never deletable. Learned clauses are appended at id `>= num_original`.
     num_original: usize,
@@ -290,6 +333,13 @@ impl Cdcl {
             phase: vec![false; n],
             conflicts_since_restart: 0,
             restart_count: 1,
+            glue_fast: 0.0,
+            glue_slow: 0.0,
+            trail_slow: 0.0,
+            // Default is Luby: the EMA schedule is implemented and sound but measured
+            // neutral-to-slightly-negative on the public p4dfa slice (see the field
+            // doc), so it stays a selectable option, not the default.
+            use_ema_restart: false,
             num_original: num_clauses,
             lbd: vec![0; num_clauses],
             cla_activity: vec![0.0; num_clauses],
@@ -503,6 +553,51 @@ impl Cdcl {
         usize::try_from(luby(self.restart_count)).unwrap_or(usize::MAX) * LUBY_UNIT
     }
 
+    /// Update the Glucose EMA restart state from a just-analyzed conflict: the
+    /// fast/slow LBD (glue) averages and the slow trail average (blocking
+    /// reference), sampled at the conflict trail. Pure `f64` arithmetic in a fixed
+    /// order, so the restart schedule stays fully deterministic.
+    ///
+    /// The `usize -> f64` casts are exact: an LBD and a trail length are both bounded
+    /// by the variable count, far below `f64`'s 2^53 integer-exact range.
+    #[allow(clippy::cast_precision_loss)]
+    fn update_restart_emas(&mut self, lbd: usize) {
+        let glue = lbd as f64;
+        self.glue_fast += GLUE_EMA_FAST_ALPHA * (glue - self.glue_fast);
+        self.glue_slow += GLUE_EMA_SLOW_ALPHA * (glue - self.glue_slow);
+        let trail = self.trail.len() as f64;
+        self.trail_slow += TRAIL_EMA_ALPHA * (trail - self.trail_slow);
+    }
+
+    /// Whether to restart now.
+    ///
+    /// EMA (Glucose) mode — the default: after a conflict warmup and a minimum
+    /// inter-restart interval, restart when the fast glue average exceeds the slow
+    /// one by [`RESTART_MARGIN`] (recent learned clauses are less reusable, so the
+    /// current decision prefix is unproductive), **unless** a blocking condition
+    /// holds — the trail is more than [`BLOCKING_MARGIN`]× its slow average, i.e.
+    /// the search is deep and likely near a model, so a restart would waste it.
+    ///
+    /// Luby mode — the retained fallback: the legacy reluctant-doubling schedule.
+    ///
+    /// The `trail.len() as f64` cast is exact (trail length ≤ variable count ≪ 2^53).
+    #[allow(clippy::cast_precision_loss)]
+    fn should_restart(&self) -> bool {
+        if !self.use_ema_restart {
+            return self.conflicts_since_restart >= self.restart_limit();
+        }
+        if self.conflicts < EMA_RESTART_WARMUP
+            || self.conflicts_since_restart < MIN_RESTART_INTERVAL
+        {
+            return false;
+        }
+        // Blocking restart: don't abandon a deep trail (near-model) prefix.
+        if self.trail_slow > 0.0 && (self.trail.len() as f64) > BLOCKING_MARGIN * self.trail_slow {
+            return false;
+        }
+        self.glue_fast > RESTART_MARGIN * self.glue_slow
+    }
+
     fn decision_level(&self) -> usize {
         self.trail_lim.len()
     }
@@ -566,6 +661,14 @@ impl Cdcl {
                     return ProofSolveOutcome::Interrupted;
                 }
                 let (learned, backjump, lbd) = self.analyze(conflict);
+                // Update the Glucose EMA restart state from this conflict — the glue
+                // (LBD) averages and the blocking trail average, sampled at the
+                // conflict trail (before the backjump below). Only when the EMA schedule
+                // is active (the default is Luby; see `use_ema_restart`), so the
+                // averages cost nothing on the default path.
+                if self.use_ema_restart {
+                    self.update_restart_emas(lbd);
+                }
                 self.proof.push(DratStep::Add(learned.clone()));
                 if learned.is_empty() {
                     return ProofSolveOutcome::Unsat(self.proof);
@@ -605,9 +708,9 @@ impl Cdcl {
                     self.reductions += 1;
                 }
             } else {
-                // No conflict: consider a Luby restart, then make a decision.
-                if self.decision_level() > 0 && self.conflicts_since_restart >= self.restart_limit()
-                {
+                // No conflict: consider a restart (EMA glue by default, Luby
+                // fallback), then make a decision.
+                if self.decision_level() > 0 && self.should_restart() {
                     self.conflicts_since_restart = 0;
                     self.restart_count += 1;
                     self.backtrack_to(0);
@@ -1497,6 +1600,60 @@ mod tests {
                 }
                 (native, other) => {
                     panic!("DISAGREE: native={native:?} batsat={other:?}");
+                }
+            }
+        }
+    }
+
+    /// The EMA (Glucose) restart schedule (T1.3.2, `use_ema_restart = true`) is a
+    /// pure search-order change: it must preserve every verdict. Over harder random
+    /// CNFs near the 3-SAT phase transition (~4.2 clauses/var — enough conflicts to
+    /// pass the EMA warmup and actually fire glue restarts, unlike the tiny instances
+    /// above), the EMA-driven core agrees with `BatSat` on every instance
+    /// (`DISAGREE = 0`), every `sat` model satisfies, and every `unsat` proof
+    /// DRAT-checks — the same soundness net as the default Luby schedule. This keeps
+    /// the (default-off) EMA path covered.
+    #[test]
+    fn ema_restart_schedule_agrees_with_batsat_disagree_zero() {
+        let mut state = 0xe1a5_7a27_c0ff_ee42u64;
+        let mut next = || {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            state
+        };
+        let below = |n: &mut dyn FnMut() -> u64, bound: u64| usize::try_from(n() % bound).unwrap();
+        for _ in 0..60 {
+            let vars = 16 + below(&mut next, 12); // 16..=27 variables
+            let clause_count = vars * 42 / 10; // ~4.2 clauses/var (phase transition)
+            let mut f = CnfFormula::new(vars);
+            let vars_bound = u64::try_from(vars).unwrap();
+            for _ in 0..clause_count {
+                let mut lits = Vec::new();
+                for _ in 0..3 {
+                    let v = i64::try_from(next() % vars_bound).unwrap() + 1;
+                    let signed = if next() & 1 == 0 { v } else { -v };
+                    lits.push(lit(signed));
+                }
+                f.add_clause(CnfClause::new(lits)).unwrap();
+            }
+            let batsat = solve_with_rustsat_batsat(&f).unwrap();
+            // Drive the solver with the EMA restart schedule enabled.
+            let mut cdcl = Cdcl::new(&f);
+            cdcl.use_ema_restart = true;
+            match (cdcl.solve(None), batsat) {
+                (ProofSolveOutcome::Sat(model), SatResult::Sat(_)) => {
+                    assert!(model.satisfies(&f).unwrap(), "EMA sat model must satisfy");
+                }
+                (ProofSolveOutcome::Unsat(proof), SatResult::Unsat(_)) => {
+                    assert_eq!(
+                        check_drat(&f, &proof),
+                        Ok(true),
+                        "EMA unsat must DRAT-check"
+                    );
+                }
+                (native, other) => {
+                    panic!("DISAGREE (EMA restarts): native={native:?} batsat={other:?}");
                 }
             }
         }
