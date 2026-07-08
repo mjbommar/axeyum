@@ -4843,8 +4843,33 @@ fn fold_to_real_rec(
                 } => Some(args[0]),
                 _ => None,
             };
+            // to_real(<ground int term>)  ->  real const n.  The Int→Real embedding
+            // is a ring homomorphism, so folding a *constant* coercion is exact
+            // (denotation-preserving). It matters beyond simplification: a numeral in
+            // a Real context parses as `to_real(<int term>)` (e.g. `(* skoS3 3)` →
+            // `(* skoS3 (to_real 3))`, `(* skoS3 (- 8))` → `(* skoS3 (to_real (- 8)))`,
+            // `(/ 471 100)` → `(/ (to_real 471) …)`), and when such constant coercions
+            // sit inside a *product* neither the sum fold nor the const-compare rewrite
+            // removes them — so the whole query is needlessly sent through the
+            // incomplete int↔real relaxation (which relaxes each `to_real(const)` to a
+            // free variable and then rejects its own spurious candidates on replay).
+            // Evaluating the ground integer operand (guarded — a miss/overflow returns
+            // `Err` and we simply do not fold) removes the coercion so a purely-real
+            // query reaches its native NRA route. `(- 8)` is `IntNeg(IntConst 8)`, not a
+            // bare `IntConst`, so we fold any operand the evaluator resolves to an int.
+            let ground_int = if op == Op::IntToReal {
+                match eval(arena, new_args[0], &Assignment::new()) {
+                    Ok(Value::Int(n)) => Some(n),
+                    _ => None,
+                }
+            } else {
+                None
+            };
+            if let Some(n) = ground_int {
+                arena.real_const(Rational::integer(n))
+            }
             // to_real(a) +/- to_real(b)  ->  to_real(a +/- b)
-            if matches!(op, Op::RealAdd | Op::RealSub)
+            else if matches!(op, Op::RealAdd | Op::RealSub)
                 && let (Some(a), Some(b)) = (
                     to_real_arg(arena, new_args[0]),
                     to_real_arg(arena, new_args[1]),

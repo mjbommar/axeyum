@@ -940,14 +940,28 @@ fn free_real_symbols(arena: &TermArena, assertions: &[TermId]) -> Vec<axeyum_ir:
 /// wrong verdict.
 fn sat_witness_probe(arena: &TermArena, assertions: &[TermId]) -> Option<CheckResult> {
     const MAX_PROBE_VARS: usize = 4;
-    let grid: [Rational; 7] = [
+    // Small symmetric grid of low-denominator rationals: integers `0, ±1, ±2, ±3`
+    // and unit fractions `±1/2, ±1/3, ±1/4`. Denser than a bare `{0, ±1, ±2, ±1/2}`
+    // so the bounded full product reaches witnesses that sit at a moderate integer
+    // in one coordinate and a small fraction in another (e.g. the strict degree-3
+    // `arith__real2int-test`, satisfied at `x=1, sx=3, s3=1/4`). Every hit still
+    // replays the *original* assertions through the ground evaluator, so a larger
+    // grid can only turn `unknown → sat`, never a wrong verdict; the `|grid|^n`
+    // product stays bounded (`n ≤ MAX_PROBE_VARS`, so at most `13^4`).
+    let grid: [Rational; 13] = [
         Rational::integer(0),
         Rational::integer(1),
         Rational::integer(-1),
-        Rational::new(1, 2),
-        Rational::new(-1, 2),
         Rational::integer(2),
         Rational::integer(-2),
+        Rational::integer(3),
+        Rational::integer(-3),
+        Rational::new(1, 2),
+        Rational::new(-1, 2),
+        Rational::new(1, 3),
+        Rational::new(-1, 3),
+        Rational::new(1, 4),
+        Rational::new(-1, 4),
     ];
     let vars = free_real_symbols(arena, assertions);
     if vars.is_empty() {
