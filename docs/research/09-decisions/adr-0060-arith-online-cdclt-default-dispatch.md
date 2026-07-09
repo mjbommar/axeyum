@@ -104,10 +104,11 @@ that both drivers carry the same termination guarantee.**
   `QF_UF` slices; the online route decides the disjunctive / Boolean-structured
   mixed-theory class the eager route cannot.
 
-- **`QF_UF` online stays opt-in (unchanged from ADR-0055).** The generic
-  `CdclT` EUF twin remains a parity twin of the validated offline
-  `check_qf_uf`; its default-on criteria are unchanged. This ADR does not touch
-  that decision.
+- **`QF_UF` status:** this ADR did not decide the pure-EUF route. The later
+  2026-07-09 update to ADR-0055 records that its criterion (2) fired: production
+  QF_UF online solving now uses the generic replay-checked `CdclT` route at the
+  existing `euf-online` front-door position, with offline `check_qf_uf` retained
+  as fallback after an online `unknown`.
 
 - **Out of scope (future Gap-3 work).** Porting arrays-lazy onto the spine with
   real theory propagation (Gap 3 step 2, [P2.2](../../plan/track-2-theories/P2.2-arrays-lazy.md))
@@ -151,8 +152,9 @@ that both drivers carry the same termination guarantee.**
   the driver is generic over any `T: TheorySolver`, and the project's standing
   rule treats "bounded but non-polling" as a defect that has cost multi-hour
   sweeps. Matching `CdclT`'s belt is cheap, additive, and closes the asymmetry.
-- **Flip `QF_UF` online default-on too.** Rejected: no measured benefit; the
-  ADR-0055 criteria are unchanged and unmet. Out of scope here.
+- **Flip `QF_UF` online default-on too.** Rejected here: this arithmetic ADR was
+  not the place to change pure-EUF dispatch. ADR-0055 later revisited the pure
+  QF_UF criterion after the embedded-DPLL → generic-`CdclT` migration landed.
 - **Gate the arith routes behind a user-facing config flag.** Rejected: they
   are already first-route, additive, and soundness-gated; a routing-policy
   surface is a P1.8 (strategy/tactics) concern, not this ADR.
@@ -174,7 +176,8 @@ that both drivers carry the same termination guarantee.**
   and must stay in sync.
 - **Revisited when:** arrays-lazy lands on the spine (Gap 3 step 2); the
   arithmetic theories migrate onto the generic `CdclT` (#35 unshelved); or a
-  dedicated re-baseline banks the `QF_UF` decide-rate movement.
+  dedicated re-baseline banks the `QF_UF` decide-rate movement. The pure-QF_UF
+  default-dispatch status is now tracked by ADR-0055's 2026-07-09 update.
 
 ## Foundational-DAG / register updates
 

@@ -3595,8 +3595,11 @@ Its conclusion, ranked by quality × efficiency:
    asserted-literal reasons, while deeper word-core facts stay conflict-only.
    **Third follow-through:** `solve_qf_uf_online` / `prove_unsat_qf_uf_online` now
    route through the generic replay-checked `CdclT` driver, retiring the embedded
-   EUF DPLL from production (it remains test-only diagnostics); the QF_UF
-   front-door default flip is still broad-measurement/ADR-gated.
+   EUF DPLL from production (it remains test-only diagnostics). **Fourth
+   follow-through:** the existing `euf-online` front-door route now calls
+   `check_qf_uf_online_cdclt` with the caller's `SolverConfig`, so ADR-0055's
+   QF_UF criterion (2) has fired and pure QF_UF online dispatch is default-on;
+   offline EUF stays as the fallback after online `unknown`.
 2. **Keep a thin measured-leaf-BFS skirt in parallel** — measured-ROI leaves only
    (NRA tail, strings-Nielsen); fold the feature/scale-blocked leaves
    (dense-ILP MILP, large-LP performance) into a funded engine phase rather than

@@ -107,11 +107,16 @@ fn build_qf_lra(rng: &mut Lcg, arena: &mut TermArena) -> Vec<TermId> {
 }
 
 fn build_qf_uf(_rng: &mut Lcg, arena: &mut TermArena) -> Vec<TermId> {
-    let width = 8;
-    let bv = Sort::BitVec(width);
-    let fun = arena.declare_fun("uf_f", &[bv], bv).unwrap();
-    let lhs = arena.bv_var("uf_a", width).unwrap();
-    let rhs = arena.bv_var("uf_b", width).unwrap();
+    let carrier = Sort::Uninterpreted(arena.declare_uninterpreted_sort("U"));
+    let fun = arena.declare_fun("uf_f", &[carrier], carrier).unwrap();
+    let lhs = {
+        let s = arena.declare("uf_a", carrier).unwrap();
+        arena.var(s)
+    };
+    let rhs = {
+        let s = arena.declare("uf_b", carrier).unwrap();
+        arena.var(s)
+    };
     let f_lhs = arena.apply(fun, &[lhs]).unwrap();
     let f_rhs = arena.apply(fun, &[rhs]).unwrap();
     let lhs_eq_rhs = arena.eq(lhs, rhs).unwrap();
@@ -119,8 +124,18 @@ fn build_qf_uf(_rng: &mut Lcg, arena: &mut TermArena) -> Vec<TermId> {
         let eq = arena.eq(f_lhs, f_rhs).unwrap();
         arena.not(eq).unwrap()
     };
-    // a = b ∧ f(a) ≠ f(b)  ⇒ UNSAT by congruence.
-    vec![lhs_eq_rhs, f_lhs_ne_f_rhs]
+    let p = {
+        let s = arena.declare("uf_p", Sort::Bool).unwrap();
+        arena.var(s)
+    };
+    let not_p = arena.not(p).unwrap();
+    let left_clause = arena.or(lhs_eq_rhs, p).unwrap();
+    let right_clause = arena.or(lhs_eq_rhs, not_p).unwrap();
+    // (a = b ∨ p) ∧ (a = b ∨ ¬p) ∧ f(a) ≠ f(b) is UNSAT: Boolean
+    // resolution forces a = b, then EUF congruence forces f(a) = f(b).
+    // This keeps the default preprocessing path from collapsing the direct
+    // equality contradiction before route tracing reaches the online EUF loop.
+    vec![left_clause, right_clause, f_lhs_ne_f_rhs]
 }
 
 fn build_mixed_bv_int(rng: &mut Lcg, arena: &mut TermArena) -> Vec<TermId> {
@@ -306,6 +321,22 @@ fn qf_bv_unsat_route_is_decided() {
     let (result, trace) = check_auto_explained(&mut arena, &q, &cfg).unwrap();
     assert!(matches!(result, CheckResult::Unsat));
     let last = trace.last().expect("non-empty trace");
+    assert!(matches!(
+        last.outcome,
+        RouteOutcome::Decided(Verdict::Unsat)
+    ));
+}
+
+#[test]
+fn qf_uf_front_door_decides_with_online_cdclt() {
+    let cfg = SolverConfig::default();
+    let mut arena = TermArena::new();
+    let assertions = build_qf_uf(&mut Lcg(0), &mut arena);
+
+    let (result, trace) = check_auto_explained(&mut arena, &assertions, &cfg).unwrap();
+    assert_eq!(result, CheckResult::Unsat);
+    let last = trace.last().expect("non-empty trace");
+    assert_eq!(last.route, "euf-online", "trace:\n{trace}");
     assert!(matches!(
         last.outcome,
         RouteOutcome::Decided(Verdict::Unsat)

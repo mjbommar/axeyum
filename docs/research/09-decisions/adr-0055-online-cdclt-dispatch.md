@@ -23,8 +23,19 @@ cases at DISAGREE=0.
 ## Decision
 
 **The QF_S online CDCL(T) route is default-on at the front door (it already
-is — this ADR ratifies the landed ordering); the QF_UF online route stays
-opt-in until it has a measured reason to be default.**
+is — this ADR ratifies the landed ordering). QF_UF initially stayed opt-in
+until one recorded criterion fired; as of the 2026-07-09 update below, criterion
+(2) has fired and QF_UF online is default-on at the existing `euf-online`
+front-door position.**
+
+> **Update 2026-07-09:** the QF_UF criterion (2) fired. The production
+> `solve_qf_uf_online` wrapper now delegates to the generic replay-checked
+> `CdclT` route, the embedded EUF DPLL is test-only diagnostics, and
+> `check_auto`'s existing `euf-online` first route now calls
+> `check_qf_uf_online_cdclt` with the caller's `SolverConfig` so the front door
+> honors the configured timeout. QF_UF online is therefore default-on at the
+> front door by this ADR's recorded criterion. The offline `check_qf_uf` route
+> remains the fallback after an online `unknown`.
 
 - **QF_S (default-on, ratified).** The front-door second-chance stack is:
   bounded pre-check (ADR-0029) → bounded-unsat gate (ADR-0052) → one-shot
@@ -35,16 +46,23 @@ opt-in until it has a measured reason to be default.**
   through all of them and the driver carries the step-budget belt. Measured:
   QF_S 52→58 across the day with every new verdict oracle-verified — the
   route earns its place in the default path.
-- **QF_UF (opt-in, criteria recorded).** The online driver is currently a
-  *parity twin* of the validated offline `check_qf_uf` (which already
-  handles Boolean structure via its embedded DPLL): flipping the default
-  today buys consolidation, not capability, and the measured-first rule
-  (destination-2) says architecture swaps ride on measurement. Default-on
-  criteria (any one suffices): (1) a measured decide-rate or PAR-2 win on a
-  committed division; (2) the embedded-DPLL → `CdclT` migration landing, at
-  which point the twin becomes the only loop; (3) a theory-combination
-  slice (e.g. strings+LIA over the driver) that requires the shared loop in
-  the default path.
+- **QF_UF (default-on after criterion-2 update; criteria recorded).** At ADR
+  acceptance the online driver was a *parity twin* of the validated offline
+  `check_qf_uf` (which already handled Boolean structure via its embedded DPLL):
+  flipping the default then bought consolidation, not capability, and the
+  measured-first rule (destination-2) says architecture swaps ride on
+  measurement. Default-on criteria (any one suffices): (1) a measured
+  decide-rate or PAR-2 win on a committed division; (2) the embedded-DPLL →
+  `CdclT` migration landing, at which point the twin becomes the only loop; (3)
+  a theory-combination slice (e.g. strings+LIA over the driver) that requires
+  the shared loop in the default path.
+
+  **2026-07-09 criterion-2 update:** the embedded-DPLL → `CdclT` migration has
+  landed for production. `check_auto` already tried the `euf-online` route
+  before the offline enumeration; after the migration that route is the generic
+  `CdclT` driver, not a second EUF-specific production loop. The front-door call
+  also threads `SolverConfig` into `check_qf_uf_online_cdclt`, preserving the
+  timeout discipline.
 - **Future theories arrive online-first.** New `TheorySolver` impls (LIA/LRA
   migration, the len↔LIA string bridge, regex membership per ADR-0054) plug
   into `CdclT` and enter dispatch behind the same discipline: differential
@@ -61,7 +79,12 @@ opt-in until it has a measured reason to be default.**
   expansion size budget (a real defect fixed, not a hypothetical), polarity
   regressions + 400-case nested fuzz.
 - QF_UF: 2500/2500 online-offline agreement and an unchanged 3000-case z3
-  fuzz — evidence of parity, and exactly why default-on is not yet earned.
+  fuzz — the original parity evidence. 2026-07-09 adds the migration evidence:
+  `solve_qf_uf_online` is now a compatibility wrapper over
+  `check_qf_uf_online_cdclt`; the embedded EUF DPLL is compiled only for
+  diagnostics; and `tests/route_trace.rs::qf_uf_front_door_decides_with_online_cdclt`
+  pins that a congruence QF_UF refutation is decided by the `euf-online`
+  front-door route.
 
 ## Alternatives
 
@@ -87,7 +110,13 @@ opt-in until it has a measured reason to be default.**
   theories migrate onto the driver; or theory combination over `CdclT`
   (strings+LIA) lands and forces a broader routing table.
 
+  **2026-07-09:** criterion (2) has fired; the next revisit is no longer
+  "whether QF_UF online is default-on", but whether the offline EUF fallback can
+  be demoted further after broader corpus timing confirms no value from keeping
+  both routes in the default sequence.
+
 ## Foundational-DAG / register updates
 
 - Record the online CDCL(T) loop as the dispatch bus for Boolean-structured
-  theory queries (QF_S default; QF_UF opt-in with criteria).
+  theory queries (QF_S default; QF_UF default-on after the 2026-07-09
+  embedded-DPLL → `CdclT` migration; offline EUF fallback retained).

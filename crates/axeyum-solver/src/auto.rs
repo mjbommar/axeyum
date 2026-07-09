@@ -1598,7 +1598,7 @@ fn dispatch_arith_uf_overbound_probe_before_lia(
     }
 }
 
-/// The uninterpreted-function fast paths (online DPLL(T) EUF → offline EUF
+/// The uninterpreted-function fast paths (online CDCL(T) EUF → offline EUF
 /// enumeration → EUF + linear-arithmetic combination), split from
 /// [`check_auto_dispatch`] for length. Returns `Some(verdict)` when one decides
 /// the query (or the real-sorted-UF `Unknown` that must short-circuit), else
@@ -1673,11 +1673,12 @@ fn dispatch_uf_fast_paths(
         &lifted_euf
     };
 
-    // Try the **online** DPLL(T) decider on the backtrackable e-graph first: it
-    // keeps one incremental congruence graph across the Boolean search. Both its
-    // `sat` (replay-checked) and `unsat` (root-level congruence conflict) are
-    // sound. On `unknown` fall through to the offline enumeration, then bit-blast.
-    match crate::euf_egraph::solve_qf_uf_online(arena, euf_assertions) {
+    // Try the **online** CDCL(T) decider on the backtrackable e-graph first: it
+    // keeps one incremental congruence graph across the Boolean search and honors
+    // the caller's timeout. Both its `sat` (replay-checked) and `unsat`
+    // (congruence-conflict-derived) verdicts are sound. On `unknown` fall through
+    // to the offline enumeration, then bit-blast.
+    match crate::euf_egraph::check_qf_uf_online_cdclt(arena, euf_assertions, config) {
         CheckResult::Sat(model) => {
             with_recorder(rec, |t| t.record_decided("euf-online", Verdict::Sat));
             return Ok(Some(CheckResult::Sat(model)));
