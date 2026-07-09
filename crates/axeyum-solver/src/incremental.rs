@@ -23,6 +23,7 @@ use axeyum_ir::{
 };
 
 use std::collections::{BTreeMap, HashMap, HashSet};
+use std::time::Duration;
 
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
 use crate::model::Model;
@@ -186,6 +187,15 @@ impl IncrementalBvSolver {
             warm_uf_apps: HashMap::new(),
             internal_symbols: HashSet::new(),
         }
+    }
+
+    /// Replaces the wall-clock allowance used by the next warm SAT check.
+    ///
+    /// Internal online-theory adapters use this to pass an absolute query
+    /// deadline as a shrinking per-check timeout instead of accidentally granting
+    /// the full user budget to every trail assignment.
+    pub(crate) fn set_timeout(&mut self, timeout: Option<Duration>) {
+        self.config.timeout = timeout;
     }
 
     /// The number of currently open push scopes (excluding the base frame).

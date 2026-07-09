@@ -3626,8 +3626,17 @@ Its conclusion, ranked by quality × efficiency:
    **Tenth follow-through:** the P1.6 prerequisite is now real rather than nominal:
    lazy UFBV/UFLIA routes use a projection-preserving function abstraction that
    never constructs the eager quadratic Ackermann pair set. Eager elimination
-   remains unchanged for fallback and proof production. Next put the e-graph and
-   warm BV solver behind canonical `CdclT` with explicit interface equalities.
+   remains unchanged for fallback and proof production. **Eleventh
+   follow-through:** bounded scalar QF_UFBV now puts the e-graph and warm BV
+   solver behind canonical `CdclT` with explicit same-function argument/result
+   equalities. BV-infeasible arrangements learn clauses; congruence propagates
+   result equality into exact BV semantics; accepted models project and replay.
+   Three deterministic 512-case eager/front-door/Z3 matrices are clean, and the
+   public corpus decides/agrees on 6/6 with zero replay failures. This is an
+   architecture result, not a speed claim: the six-row mean is 0.061 s and
+   `bug520` is about 0.332 s online versus about 0.009 s in Z3. Next reduce wide
+   BV cores, generate interface equalities by relevance, and bring arrays onto
+   the live bus while retaining eager certifying fallbacks.
 2. **Keep a thin measured-leaf-BFS skirt in parallel** — measured-ROI leaves only
    (NRA tail, strings-Nielsen); fold the feature/scale-blocked leaves
    (dense-ILP MILP, large-LP performance) into a funded engine phase rather than

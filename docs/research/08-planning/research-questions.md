@@ -236,9 +236,12 @@ Out of scope:
     contract and let canonical `CdclT` own Boolean structure, interface-variable
     branching, propagation, and conflict learning. A direct conjunctive
     Nelson-Oppen search remains the replay/model-reconstruction oracle and a
-    conservative fallback, not a second production Boolean loop. QF_UFLIA and
-    QF_UFLRA now follow this architecture; see
-    [ADR-0060](../09-decisions/adr-0060-arith-online-cdclt-default-dispatch.md)
+    conservative fallback, not a second production Boolean loop. QF_UFLIA,
+    QF_UFLRA, and the bounded scalar QF_UFBV route now follow this architecture;
+    the latter combines an e-graph with exact warm BV checks over explicit
+    argument/result interface equalities. See
+    [ADR-0060](../09-decisions/adr-0060-arith-online-cdclt-default-dispatch.md),
+    [ADR-0066](../09-decisions/adr-0066-canonical-online-qf-ufbv-combination.md),
     and [P1.6](../../plan/track-1-engine/P1.6-theory-combination.md).
 
 ### Rust And Packaging

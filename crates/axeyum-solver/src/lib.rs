@@ -146,6 +146,7 @@ mod toy_bv_vm;
 pub mod trust;
 mod uf_arith;
 mod ufbv_finite;
+mod ufbv_online;
 mod uflia_interpolant;
 mod uflia_online;
 mod uflra_interpolant;
@@ -422,6 +423,7 @@ pub use ufbv_finite::{
     BoolUfExhaustiveCertificate, FiniteDomainPigeonholeCertificate, bool_uf_exhaustive_refutation,
     finite_domain_pigeonhole_refutation,
 };
+pub use ufbv_online::check_qf_ufbv_online_cdclt;
 pub use uflia_interpolant::{
     UfliaInterpolantCertificate, uflia_interpolant, uflia_interpolant_certified,
 };

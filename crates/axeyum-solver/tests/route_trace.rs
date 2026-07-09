@@ -344,6 +344,35 @@ fn qf_uf_front_door_decides_with_online_cdclt() {
 }
 
 #[test]
+fn qf_ufbv_front_door_uses_online_combination() {
+    let cfg = SolverConfig::default();
+    let mut arena = TermArena::new();
+    let f = arena
+        .declare_fun("f", &[Sort::BitVec(4)], Sort::BitVec(4))
+        .unwrap();
+    let x = arena.bv_var("ufbv_x", 4).unwrap();
+    let y = arena.bv_var("ufbv_y", 4).unwrap();
+    let one = arena.bv_const(4, 1).unwrap();
+    let x1 = arena.bv_add(x, one).unwrap();
+    let y1 = arena.bv_add(y, one).unwrap();
+    let same_shifted = arena.eq(x1, y1).unwrap();
+    let fx = arena.apply(f, &[x]).unwrap();
+    let fy = arena.apply(f, &[y]).unwrap();
+    let same_result = arena.eq(fx, fy).unwrap();
+    let different_result = arena.not(same_result).unwrap();
+
+    let (result, trace) =
+        check_auto_explained(&mut arena, &[same_shifted, different_result], &cfg).unwrap();
+    assert_eq!(result, CheckResult::Unsat);
+    let last = trace.last().expect("non-empty trace");
+    assert_eq!(last.route, "ufbv-online-cdclt", "trace:\n{trace}");
+    assert!(matches!(
+        last.outcome,
+        RouteOutcome::Decided(Verdict::Unsat)
+    ));
+}
+
+#[test]
 fn unsupported_fragment_ends_in_terminal_unknown() {
     let cfg = SolverConfig::default();
     let mut arena = TermArena::new();
