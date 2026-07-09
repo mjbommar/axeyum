@@ -70,6 +70,30 @@ pub enum AssumptionOutcome {
     Unknown(UnknownReason),
 }
 
+struct IncrementalSolveOutcome {
+    result: CheckResult,
+    assumption_core: Vec<TermId>,
+    active_assertion_core: Vec<TermId>,
+}
+
+impl IncrementalSolveOutcome {
+    fn sat(model: Model) -> Self {
+        Self {
+            result: CheckResult::Sat(model),
+            assumption_core: Vec::new(),
+            active_assertion_core: Vec::new(),
+        }
+    }
+
+    fn unknown(reason: UnknownReason) -> Self {
+        Self {
+            result: CheckResult::Unknown(reason),
+            assumption_core: Vec::new(),
+            active_assertion_core: Vec::new(),
+        }
+    }
+}
+
 /// One push/pop frame: its activation selector (none for the permanent base
 /// frame) and the terms asserted while it was the top frame.
 #[derive(Debug)]
@@ -585,7 +609,22 @@ impl IncrementalBvSolver {
     ///
     /// Returns [`SolverError::Backend`] for an adapter or lift failure.
     pub fn check(&mut self, arena: &TermArena) -> Result<CheckResult, SolverError> {
-        Ok(self.solve_with_extra(arena, &[])?.0)
+        Ok(self.solve_with_extra(arena, &[])?.result)
+    }
+
+    /// Checks active warm assertions and returns the SAT solver's failed-frame
+    /// assertion core on `unsat`.
+    ///
+    /// Each non-base frame is activated by one SAT assumption. The returned core
+    /// contains every base-frame assertion plus assertions from the failed frame
+    /// selectors. Callers that need literal-granular cores should place one
+    /// assertion in each frame.
+    pub(crate) fn check_with_active_assertion_core(
+        &mut self,
+        arena: &TermArena,
+    ) -> Result<(CheckResult, Vec<TermId>), SolverError> {
+        let outcome = self.solve_with_extra(arena, &[])?;
+        Ok((outcome.result, outcome.active_assertion_core))
     }
 
     /// Checks the active assertions together with one-shot `assumptions`, which
@@ -600,7 +639,7 @@ impl IncrementalBvSolver {
         arena: &TermArena,
         assumptions: &[TermId],
     ) -> Result<CheckResult, SolverError> {
-        Ok(self.solve_with_extra(arena, assumptions)?.0)
+        Ok(self.solve_with_extra(arena, assumptions)?.result)
     }
 
     /// Checks one-shot assumptions after applying the same narrow warm-safe
@@ -619,7 +658,7 @@ impl IncrementalBvSolver {
         assumptions: &[TermId],
     ) -> Result<CheckResult, SolverError> {
         let assumptions = self.simplified_one_shot_assumptions(arena, assumptions)?;
-        Ok(self.solve_with_encoded_extra(arena, &assumptions)?.0)
+        Ok(self.solve_with_encoded_extra(arena, &assumptions)?.result)
     }
 
     /// Like [`Self::check_assuming`], but on `unsat` also returns the
@@ -645,10 +684,12 @@ impl IncrementalBvSolver {
         arena: &TermArena,
         assumptions: &[TermId],
     ) -> Result<AssumptionOutcome, SolverError> {
-        let (result, core) = self.solve_with_extra(arena, assumptions)?;
-        Ok(match result {
+        let outcome = self.solve_with_extra(arena, assumptions)?;
+        Ok(match outcome.result {
             CheckResult::Sat(model) => AssumptionOutcome::Sat(model),
-            CheckResult::Unsat => AssumptionOutcome::Unsat { core },
+            CheckResult::Unsat => AssumptionOutcome::Unsat {
+                core: outcome.assumption_core,
+            },
             CheckResult::Unknown(reason) => AssumptionOutcome::Unknown(reason),
         })
     }
@@ -665,10 +706,12 @@ impl IncrementalBvSolver {
         assumptions: &[TermId],
     ) -> Result<AssumptionOutcome, SolverError> {
         let assumptions = self.simplified_one_shot_assumptions(arena, assumptions)?;
-        let (result, core) = self.solve_with_encoded_extra(arena, &assumptions)?;
-        Ok(match result {
+        let outcome = self.solve_with_encoded_extra(arena, &assumptions)?;
+        Ok(match outcome.result {
             CheckResult::Sat(model) => AssumptionOutcome::Sat(model),
-            CheckResult::Unsat => AssumptionOutcome::Unsat { core },
+            CheckResult::Unsat => AssumptionOutcome::Unsat {
+                core: outcome.assumption_core,
+            },
             CheckResult::Unknown(reason) => AssumptionOutcome::Unknown(reason),
         })
     }
@@ -1188,7 +1231,7 @@ impl IncrementalBvSolver {
         &mut self,
         arena: &TermArena,
         assumptions: &[TermId],
-    ) -> Result<(CheckResult, Vec<TermId>), SolverError> {
+    ) -> Result<IncrementalSolveOutcome, SolverError> {
         let assumptions = assumptions
             .iter()
             .map(|&term| OneShotAssumption {
@@ -1263,7 +1306,7 @@ impl IncrementalBvSolver {
         &mut self,
         arena: &TermArena,
         assumptions: &[OneShotAssumption],
-    ) -> Result<(CheckResult, Vec<TermId>), SolverError> {
+    ) -> Result<IncrementalSolveOutcome, SolverError> {
         // The warm path does not bit-blast arrays or UFs; if any deferred theory
         // assertion is active, refuse rather than silently ignore it (which would
         // risk a wrong result). Callers use `check_with_memory` for those
@@ -1319,7 +1362,7 @@ impl IncrementalBvSolver {
                     &one_shot_array_equalities,
                 ) {
                     Ok(model) => model,
-                    Err(reason) => return Ok((CheckResult::Unknown(reason), Vec::new())),
+                    Err(reason) => return Ok(IncrementalSolveOutcome::unknown(reason)),
                 };
                 // Replay is the soundness gate. If the trust-anchor evaluator
                 // cannot evaluate a term (e.g. an arithmetic overflow), the model
@@ -1327,9 +1370,9 @@ impl IncrementalBvSolver {
                 // accepting an unchecked sat or crashing.
                 let original_assumptions = original_assumptions(assumptions);
                 if let Some(reason) = self.replay(arena, &original_assumptions, &model)? {
-                    return Ok((CheckResult::Unknown(reason), Vec::new()));
+                    return Ok(IncrementalSolveOutcome::unknown(reason));
                 }
-                Ok((CheckResult::Sat(model), Vec::new()))
+                Ok(IncrementalSolveOutcome::sat(model))
             }
             SatResult::Unsat(evidence) => {
                 // Map the solver's failed-assumption selector literals back to the
@@ -1349,7 +1392,13 @@ impl IncrementalBvSolver {
                 if core.is_empty() && !assumptions.is_empty() {
                     core.extend(original_assumptions(assumptions));
                 }
-                Ok((CheckResult::Unsat, core))
+                let active_assertion_core =
+                    self.active_assertion_core(&evidence.failed_assumptions);
+                Ok(IncrementalSolveOutcome {
+                    result: CheckResult::Unsat,
+                    assumption_core: core,
+                    active_assertion_core,
+                })
             }
             SatResult::Unknown(reason) => {
                 let kind = if reason.detail.contains("timeout") {
@@ -1357,15 +1406,36 @@ impl IncrementalBvSolver {
                 } else {
                     UnknownKind::Other
                 };
-                Ok((
-                    CheckResult::Unknown(UnknownReason {
-                        kind,
-                        detail: reason.detail,
-                    }),
-                    Vec::new(),
-                ))
+                Ok(IncrementalSolveOutcome::unknown(UnknownReason {
+                    kind,
+                    detail: reason.detail,
+                }))
             }
         }
+    }
+
+    fn active_assertion_core(&self, failed_assumptions: &[axeyum_cnf::CnfLit]) -> Vec<TermId> {
+        let failed_selectors = failed_assumptions
+            .iter()
+            .map(|literal| literal.var())
+            .collect::<HashSet<_>>();
+        let mut core = Vec::new();
+        for frame in &self.frames {
+            if frame
+                .selector
+                .is_none_or(|selector| failed_selectors.contains(&selector))
+            {
+                core.extend(frame.assertions.iter().copied());
+            }
+        }
+        if core.is_empty() && self.frames.iter().any(|frame| !frame.assertions.is_empty()) {
+            core.extend(
+                self.frames
+                    .iter()
+                    .flat_map(|frame| frame.assertions.iter().copied()),
+            );
+        }
+        core
     }
 
     fn complete_model_with_warm_theories(

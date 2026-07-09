@@ -3636,7 +3636,15 @@ Its conclusion, ranked by quality × efficiency:
    architecture result, not a speed claim: the six-row mean is 0.061 s and
    `bug520` is about 0.332 s online versus about 0.009 s in Z3. Next reduce wide
    BV cores, generate interface equalities by relevance, and bring arrays onto
-   the live bus while retaining eager certifying fallbacks.
+   the live bus while retaining eager certifying fallbacks. **Twelfth
+   follow-through:** warm BV conflicts now reuse BatSat's failed persistent
+   decision-frame selectors from the same solve, omitting irrelevant earlier
+   levels with deterministic full-core fallback. A one-selector-per-literal
+   prototype was measured and reverted (mean 0.061 s → 0.072 s; `bug520` 0.332 s
+   → 0.382 s); decision-frame cores are neutral at 0.063 s / 0.332 s while the
+   1,536-case differential matrix and 6/6 public corpus stay clean. Next pursue
+   within-level precision only if it avoids repeated assumption overhead, then
+   BV propagation and relevance-driven interface generation.
 2. **Keep a thin measured-leaf-BFS skirt in parallel** — measured-ROI leaves only
    (NRA tail, strings-Nielsen); fold the feature/scale-blocked leaves
    (dense-ILP MILP, large-LP performance) into a funded engine phase rather than

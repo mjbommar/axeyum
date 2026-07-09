@@ -307,12 +307,24 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-09 — online UFBV BV conflicts now use same-solve decision-frame
+  cores.** `IncrementalBvSolver` separates one-shot assumption cores from failed
+  active-frame assertions, and `BvTheory` maps the latter back to tracked
+  atom/polarity pairs with deterministic full-core fallback. A mechanism gate
+  drops an irrelevant earlier frame; push/pop alignment is pinned. The
+  one-selector-per-literal prototype was rejected after regressing the public
+  six-row run from 0.061 s / `bug520` 0.332 s to 0.072 s / 0.382 s.
+  Decision-frame cores are neutral at 0.063 s / 0.332 s. Gates: 7 direct UFBV,
+  7 incremental, 77 symbolic-execution, three 512-case UFBV differentials,
+  front-door routing, and public QF_UFBV 6/6 with zero disagreements/replay
+  failures. ADR-0067 records the measured granularity; next is BV propagation
+  and relevant interface generation, not unmeasured literal selectors.
 - **2026-07-09 — bounded scalar QF_UFBV now combines EUF and exact BV through
   canonical `CdclT`.** `check_qf_ufbv_online_cdclt` starts from the
   abstraction-only function rewrite, registers explicit argument/result
   interface equalities, and drives `EufTheory` plus a warm
-  `IncrementalBvSolver` on one trail. BV conflicts learn full-active-core
-  clauses; e-graph congruence propagates result equality; `sat` projects a
+  `IncrementalBvSolver` on one trail. BV conflicts learn failed-frame cores;
+  e-graph congruence propagates result equality; `sat` projects a
   `FuncValue` model and replays every original assertion. The front door records
   `ufbv-online-cdclt`; unsupported shape falls through, while timeout/resource
   outcomes stay terminal and eager proof production remains unchanged. Gates:
@@ -498,6 +510,7 @@ plan is built and committed on the current branch:
 ### Track 1 — Engine & Performance
 | Phase | Title | Status |
 |---|---|---|
+| P1.6a | Warm BV conflict-core precision | **DONE (ADR-0067)** — online UFBV maps same-solve failed decision-frame selectors back to theory literals with deterministic full-core fallback. A per-literal selector prototype was reverted after a measured 0.061→0.072 s mean and 0.332→0.382 s `bug520` regression; accepted frame cores are neutral at 0.063 s / 0.332 s. Remaining P1.6 work is within-level precision without repeated-assumption cost, BV propagation, relevant interface generation, and arrays/mixed theories on the bus |
 | P1.1 | SAT inprocessing (subsumption → BVE → vivification → glue tiers) | WIP — subsumption+BVE landed (T1.1.1/2), wired into the solve pipeline (T1.1.3), made occurrence-list near-linear + time-bounded (T1.1.4): safe, no regression, but the curated unknowns are SAT-search-bound (→ P1.3) or BVE-resistant. **CDCL(XOR) foundation landed** (`gf2`/`xor_extract`/`xor_propagate` in `axeyum-cnf`) — the path-2 multiplier-wall attack: a sound GF(2) Gaussian engine + exact XOR-gate extraction + an entailment-checked propagation pass; slice 4 wires it into the live preprocess pipeline (measured). Vivification / glue tiers remain |
 | P1.2 | Preprocessing (word-level rewrite, solve_eqs, bv_slice/bounds/max-sharing, AIG 2-level rewrite) | WIP — T1.2.1 trail + T1.2.2 propagate_values + T1.2.3 solve_eqs landed (model-sound, unit-tested, 36 tests). **T1.2.4 elim_unconstrained landed** (`axeyum-rewrite::elim_unconstrained`): a variable occurring once under an invertible BV op (`bvadd`/`bvsub`/`bvxor`/`bvnot`/`bvneg`) makes that subterm unconstrained → replaced by a fresh var, operator dropped (Z3's `elim_unconstr`); peels nested layers, terminates. Model-sound via the trail (`x := op⁻¹(u,w…)`; orphaned operands defaulted, sound by the inverse identity); wired into `check_with_preprocessing` after solve_eqs (opt-in, default-off per ADR-0034). `bvumulo` now uses the word-width threshold encoding `a > all_ones / b` instead of a doubled-width multiplier, so BV256 overflow checks no longer build BV512 multiplication terms. 6 unit (incl. 300-trial randomized reconstruction) + 2 solver end-to-end plus focused IR overflow/shape coverage. Next: measure on the public p4dfa slice; then max_bv_sharing / bv_slice / AIG 2-level (T1.2.5–T1.2.9) |
 | P1.3 | SAT-core modernization (VSIDS/VMTF modes, EMA/Luby restarts, arena+packed watches, chrono BT) | WIP — the proof-producing core `solve_with_drat_proof` (`proof_sat.rs`) modernized: **VSIDS activity branching** (bump conflict-side vars, MiniSat-style decay, rescale-on-overflow; highest-activity unassigned var, ties to lowest index), **phase saving**, and **Luby restarts**. Sound by construction — every emitted clause is RUP and the proof is DRAT-checked, so a heuristic bug only slows search. All 231 cnf tests pass (incl. the 400-CNF differential vs BatSat + a new pigeonhole-4→3). NB the modern CDCL(XOR) core in `xor_cdcl.rs` already has VSIDS/Luby/LBD. Remaining: arena + packed watches, chronological backtracking; wire a modern core into the default path |
@@ -561,6 +574,13 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-09 — warm BV decision-frame conflict cores landed.** Online UFBV
+  now maps failed persistent frame selectors from the existing SAT solve back
+  to theory literals, omitting irrelevant levels without a second solve. The
+  per-literal-selector prototype was measured and reverted as a regression;
+  accepted frame cores are runtime-neutral on the six-row corpus. Incremental,
+  symbolic-execution, UFBV differential, and public corpus gates remain clean.
+  ADR-0067 amends ADR-0066's initial full-core policy.
 - **2026-07-09 — canonical online QF_UFBV combination landed.** Bounded scalar
   UFBV now runs one `CdclT` trail over e-graph congruence and warm exact BV
   feasibility, connected by explicit argument/result interface equalities.

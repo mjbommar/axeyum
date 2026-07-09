@@ -9,8 +9,9 @@
 //! A single CDCL(T) trail then drives two theories in lockstep:
 //! - [`crate::euf_egraph::EufTheory`] owns congruence over the original terms;
 //! - [`crate::IncrementalBvSolver`] owns exact finite-domain Bool/BV semantics over
-//!   the function-free abstraction and returns the full active trail as a sound
-//!   conflict core whenever that conjunction is bit-vector UNSAT.
+//!   the function-free abstraction and maps its failed decision-frame selectors
+//!   back to a sound active theory-literal core whenever that conjunction is
+//!   bit-vector UNSAT.
 //!
 //! Interface argument equalities are case-split by `CdclT`. Congruent applications
 //! make the e-graph propagate their generated result equality, which the BV theory
@@ -174,10 +175,16 @@ impl<'a> BvTheory<'a> {
     }
 
     fn assert(&mut self, atom: usize, value: bool) -> Result<(), Vec<TheoryLit>> {
-        if self.assigned[atom].is_none() {
-            self.assigned[atom] = Some(value);
-            self.assigned_log.push(atom);
+        if let Some(existing) = self.assigned[atom] {
+            if existing != value {
+                self.failure = Some(format!(
+                    "online UFBV received contradictory assignments for theory atom {atom}"
+                ));
+            }
+            return Ok(());
         }
+        self.assigned[atom] = Some(value);
+        self.assigned_log.push(atom);
         if self.failure.is_some() {
             return Ok(());
         }
@@ -205,18 +212,18 @@ impl<'a> BvTheory<'a> {
             return Ok(());
         }
 
-        match self.solver.check(self.arena) {
-            Ok(CheckResult::Sat(model)) => {
+        match self.solver.check_with_active_assertion_core(self.arena) {
+            Ok((CheckResult::Sat(model), _)) => {
                 self.last_model = Some(model);
                 self.last_unknown = None;
                 Ok(())
             }
-            Ok(CheckResult::Unsat) => {
+            Ok((CheckResult::Unsat, core)) => {
                 self.last_model = None;
                 self.last_unknown = None;
-                Err(self.active_core())
+                Err(self.map_active_core(&core))
             }
-            Ok(CheckResult::Unknown(reason)) => {
+            Ok((CheckResult::Unknown(reason), _)) => {
                 self.last_model = None;
                 self.last_unknown = Some(reason);
                 Ok(())
@@ -264,6 +271,31 @@ impl<'a> BvTheory<'a> {
             .enumerate()
             .filter_map(|(atom, value)| value.map(|value| TheoryLit { atom, value }))
             .collect()
+    }
+
+    fn map_active_core(&self, terms: &[TermId]) -> Vec<TheoryLit> {
+        let core_terms = terms.iter().copied().collect::<HashSet<_>>();
+        let core = self
+            .assigned
+            .iter()
+            .enumerate()
+            .filter_map(|(atom, value)| {
+                let value = (*value)?;
+                let term = if value {
+                    self.positive[atom]
+                } else {
+                    self.negative[atom]
+                };
+                core_terms
+                    .contains(&term)
+                    .then_some(TheoryLit { atom, value })
+            })
+            .collect::<Vec<_>>();
+        if core.is_empty() {
+            self.active_core()
+        } else {
+            core
+        }
     }
 
     fn projected_result(
@@ -818,8 +850,70 @@ mod tests {
 
     use axeyum_ir::{Sort, TermArena, Value, eval};
 
-    use super::check_qf_ufbv_online_cdclt;
+    use super::{BvTheory, check_qf_ufbv_online_cdclt};
+    use crate::euf_egraph::TheoryLit;
     use crate::{CheckResult, SolverConfig};
+
+    #[test]
+    fn warm_bv_final_conflict_drops_irrelevant_literal() {
+        let mut arena = TermArena::new();
+        let x = arena.bv_var("core_x", 4).unwrap();
+        let z = arena.bv_var("core_z", 4).unwrap();
+        let zero = arena.bv_const(4, 0).unwrap();
+        let one = arena.bv_const(4, 1).unwrap();
+        let z_zero = arena.eq(z, zero).unwrap();
+        let x_zero = arena.eq(x, zero).unwrap();
+        let x_one = arena.eq(x, one).unwrap();
+        let positive = vec![z_zero, x_zero, x_one];
+        let negative = positive
+            .iter()
+            .map(|&atom| arena.not(atom).unwrap())
+            .collect();
+        let mut theory = BvTheory::new(&arena, positive, negative, &SolverConfig::default(), None);
+
+        theory.push();
+        assert!(theory.assert(0, true).is_ok());
+        theory.push();
+        assert!(theory.assert(1, true).is_ok());
+        theory.push();
+        let core = theory.assert(2, true).unwrap_err();
+        assert_eq!(
+            core,
+            vec![
+                TheoryLit {
+                    atom: 1,
+                    value: true
+                },
+                TheoryLit {
+                    atom: 2,
+                    value: true
+                }
+            ]
+        );
+    }
+
+    #[test]
+    fn warm_bv_decision_frames_follow_theory_backtracking() {
+        let mut arena = TermArena::new();
+        let x = arena.bv_var("scope_x", 4).unwrap();
+        let zero = arena.bv_const(4, 0).unwrap();
+        let one = arena.bv_const(4, 1).unwrap();
+        let x_zero = arena.eq(x, zero).unwrap();
+        let x_one = arena.eq(x, one).unwrap();
+        let positive = vec![x_zero, x_one];
+        let negative = positive
+            .iter()
+            .map(|&atom| arena.not(atom).unwrap())
+            .collect();
+        let mut theory = BvTheory::new(&arena, positive, negative, &SolverConfig::default(), None);
+
+        theory.push();
+        assert!(theory.assert(0, true).is_ok());
+        assert_eq!(theory.solver.scope_depth(), 1);
+        theory.pop();
+        assert_eq!(theory.solver.scope_depth(), 0);
+        assert!(theory.assert(1, true).is_ok());
+    }
 
     #[test]
     fn bv_implied_argument_equality_refutes_uf_disequality() {
