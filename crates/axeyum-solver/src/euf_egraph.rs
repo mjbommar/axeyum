@@ -379,18 +379,18 @@ pub fn prove_unsat_lazy(arena: &mut TermArena, assertions: &[TermId]) -> bool {
     }
 }
 
-/// Online DPLL(T) refutation for the `QF_UF` equality fragment (Track 1, P1.5):
-/// a small self-contained CDCL-free DPLL search drives the **online** [`EufTheory`]
-/// over the backtrackable congruence-closure e-graph, instead of the offline
+/// Online CDCL(T) refutation for the `QF_UF` equality fragment (Track 1, P1.5):
+/// the generic [`CdclT`] driver runs the **online** [`EufTheory`] over the
+/// backtrackable congruence-closure e-graph, instead of the offline
 /// SAT-then-recheck enumeration of [`prove_unsat_lazy`].
 ///
 /// The assertions are Tseitin-encoded into a CNF skeleton whose atom variables are
 /// the distinct equality atoms (registered with [`EufTheory`]) plus Boolean-sorted
-/// leaves; auxiliary variables gate the Boolean connectives. A simple-scan DPLL
-/// loop then explores assignments: each equality-atom assignment is mirrored into
-/// the theory ([`EufTheory::assert`]), theory conflicts are learned as blocking
-/// clauses, theory propagations ([`EufTheory::propagate`]) extend the trail, and the
-/// theory is pushed/popped in lockstep with the decision levels.
+/// leaves; auxiliary variables gate the Boolean connectives. A CDCL(T) loop then
+/// explores assignments: each equality-atom assignment is mirrored into
+/// the theory ([`EufTheory::assert`]), theory conflicts/reasons flow into mixed
+/// 1-UIP learning, theory propagations ([`EufTheory::propagate`]) extend the trail,
+/// and the theory is pushed/popped in lockstep with the decision levels.
 ///
 /// Like [`prove_unsat_lazy`] this is a **sound, incomplete** prover with the *same*
 /// uninterpreted abstraction, so the two must return the identical Boolean verdict:
@@ -403,15 +403,15 @@ pub fn prove_unsat_qf_uf_online(arena: &mut TermArena, assertions: &[TermId]) ->
     matches!(solve_qf_uf_online(arena, assertions), CheckResult::Unsat)
 }
 
-/// Decides the `QF_UF`(-equality) fragment by the **online DPLL(T)** loop, returning
+/// Decides the `QF_UF`(-equality) fragment by the **online CDCL(T)** loop, returning
 /// a **replay-checked** model on `sat`. This is the decision-procedure form of
-/// [`prove_unsat_qf_uf_online`]: the same online search (Tseitin skeleton + one
-/// backtrackable [`EufTheory`]), but on a Boolean- and theory-consistent total
-/// assignment it builds a candidate model from the e-graph classes
-/// ([`EufTheory::model`]) and **replays it against the original assertions** — the
-/// soundness gate, so a model the uninterpreted abstraction cannot justify (base-sort
-/// semantics outside congruence) yields [`CheckResult::Unknown`], never a wrong
-/// `sat`. `unsat` is a sound refutation (only ever returned at a root-level conflict).
+/// [`prove_unsat_qf_uf_online`]: it is now the public compatibility wrapper over
+/// the generic [`CdclT`] route ([`check_qf_uf_online_cdclt`]). On a Boolean- and
+/// theory-consistent total assignment it builds a candidate model from the e-graph
+/// classes ([`EufTheory::model`]) and **replays it against the original
+/// assertions** — the soundness gate, so a model the uninterpreted abstraction
+/// cannot justify (base-sort semantics outside congruence) yields
+/// [`CheckResult::Unknown`], never a wrong `sat`. `unsat` is a sound refutation.
 ///
 /// Returns [`CheckResult::Unknown`] when there are no equality atoms or the Boolean
 /// skeleton has structure the encoder does not cover (the same conservative
@@ -421,87 +421,16 @@ pub fn prove_unsat_qf_uf_online(arena: &mut TermArena, assertions: &[TermId]) ->
 /// the offline loop).
 #[must_use]
 pub fn solve_qf_uf_online(arena: &mut TermArena, assertions: &[TermId]) -> CheckResult {
-    // Distinct equality atoms over the whole assertion set (these become the
-    // theory's atom indices and the first variables 0..eq_count).
-    let mut atom_terms: Vec<TermId> = Vec::new();
-    let mut seen = HashSet::new();
-    for &a in assertions {
-        collect_eq_atoms(arena, a, &mut atom_terms, &mut seen);
-    }
-    if atom_terms.is_empty() {
-        return CheckResult::Unknown(unknown("no equality atoms for the online e-graph path"));
-    }
-
-    // Variable map: each equality atom keeps its collected index; Boolean-sorted
-    // leaves that surface as atoms get fresh indices after the equalities. The
-    // theory is built over exactly `atom_terms`, so theory atom indices line up
-    // with the first `atom_terms.len()` variables.
-    let mut enc = Encoder::new(&atom_terms);
-    let mut clauses: Vec<Vec<Lit>> = Vec::new();
-    for &assertion in assertions {
-        let Some(top) = enc.encode(arena, assertion, &mut clauses) else {
-            // Un-encodable Boolean structure: conservative `unknown` (the bit-blaster
-            // handles it), never a guess.
-            return CheckResult::Unknown(unknown("boolean skeleton outside the online encoder"));
-        };
-        clauses.push(vec![Lit {
-            var: top,
-            positive: true,
-        }]);
-    }
-
-    let eq_count = atom_terms.len();
-    let mut theory = EufTheory::new(arena, &atom_terms);
-    let mut solver = Dpll::new(enc.var_count, eq_count, clauses);
-    if solver.solve(&mut theory) {
-        return CheckResult::Unsat;
-    }
-    // The search ended on a theory-consistent total assignment: the theory's e-graph
-    // holds that satisfying state. Build a model and replay it against the originals.
-    match theory.model(arena) {
-        Some(mut model) => {
-            // The e-graph model only carries symbols that surfaced as equality-atom
-            // sides. A genuine Bool symbol used purely as a Boolean-skeleton leaf
-            // (e.g. an uninterpreted-sort `ite` condition) never enters the e-graph,
-            // so `build_model` omits it and the replay of `(¬a ∨ …)` fails on the
-            // unassigned `a`. Inject each such skeleton-only Bool symbol from its
-            // solver variable. Iterating a sorted `(TermId, var)` snapshot keeps the
-            // injection order deterministic (`term_var` is a `HashMap`). The final
-            // `replays` gate against the ORIGINAL assertions is still the acceptance
-            // check, so this is additive and cannot manufacture a wrong `sat`.
-            let mut term_vars: Vec<(TermId, usize)> =
-                enc.term_var.iter().map(|(&t, &v)| (t, v)).collect();
-            term_vars.sort_by_key(|(term, _)| *term);
-            for (term, var) in term_vars {
-                if let TermNode::Symbol(sym) = arena.node(term)
-                    && arena.sort_of(term) == Sort::Bool
-                    && model.get(*sym).is_none()
-                    && let Some(value) = solver.value[var]
-                {
-                    model.set(*sym, Value::Bool(value));
-                }
-            }
-            if replays(arena, assertions, &model) {
-                CheckResult::Sat(model)
-            } else {
-                CheckResult::Unknown(unknown(
-                    "online e-graph model did not replay (base-sort semantics outside congruence)",
-                ))
-            }
-        }
-        None => CheckResult::Unknown(unknown(
-            "online e-graph model did not replay (base-sort semantics outside congruence)",
-        )),
-    }
+    check_qf_uf_online_cdclt(arena, assertions, &SolverConfig::default())
 }
 
 /// Decides the `QF_UF`(-equality) fragment via the **generic online CDCL(T)**
 /// driver `crate::cdclt::CdclT` with [`EufTheory`] as the first theory (Track 1,
-/// P1.5 slice a). This is the reusable-driver counterpart to [`solve_qf_uf_online`]
-/// (whose search is EUF-hardwired and embedded): the skeleton is identical (the same
-/// Tseitin `Encoder` and one backtrackable [`EufTheory`]), but the search itself is
-/// the theory-agnostic `CdclT` that any `T: TheorySolver` plugs into — so the same
-/// loop will drive the arithmetic / combined theories as they land.
+/// P1.5 slice a). This is the canonical production online route behind
+/// [`solve_qf_uf_online`]: the skeleton is the same Tseitin `Encoder` and one
+/// backtrackable [`EufTheory`], but the search itself is the theory-agnostic
+/// `CdclT` that any `T: TheorySolver` plugs into — so the same loop will drive the
+/// arithmetic / combined theories as they land.
 ///
 /// Verdict discipline matches the rest of the e-graph path:
 /// - `unsat` is a sound refutation. It carries **no new trust surface** over the
@@ -520,7 +449,8 @@ pub fn solve_qf_uf_online(arena: &mut TermArena, assertions: &[TermId]) -> Check
 ///
 /// Returns [`CheckResult::Unknown`] when there are no equality atoms or the Boolean
 /// skeleton has structure the encoder does not cover (the same conservative give-ups
-/// as [`solve_qf_uf_online`]). Not wired into default dispatch this slice.
+/// as [`solve_qf_uf_online`]). The `QF_UF` front-door default remains the offline
+/// route until the default-dispatch measurement/ADR flip lands.
 #[must_use]
 pub fn check_qf_uf_online_cdclt(
     arena: &mut TermArena,
@@ -1241,6 +1171,7 @@ impl Encoder {
 /// How a variable came to be assigned, so backtracking can undo theory state and
 /// (for theory propagations) chronological backtracking stays correct.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg(test)]
 enum Cause {
     /// A branching decision; its level owns a theory `push`.
     Decision,
@@ -1252,16 +1183,17 @@ enum Cause {
 /// with whether it is a **theory** clause (a theory conflict `¬⋀core`, entailed by
 /// the theory alone) or a Boolean input clause. The tag seeds the theory-lemma
 /// provenance tracked through 1-UIP resolution.
+#[cfg(test)]
 struct Conflict {
     clause: Vec<Lit>,
     is_theory: bool,
 }
 
-/// A self-contained DPLL(T) search over the CNF skeleton, driving an [`EufTheory`]
-/// online. **1-UIP** theory-conflict learning with non-chronological backjumping;
-/// the theory is pushed on each decision and popped once per decision crossed when
-/// backjumping, so its e-graph stays in lockstep with the trail. Mirrors
-/// [`crate::lra_online`]'s `Dpll` retargeted to [`EufTheory`].
+/// Test-only legacy embedded DPLL(T) search over the CNF skeleton, driving an
+/// [`EufTheory`] online. Production `QF_UF` online solving uses the generic
+/// [`CdclT`] route; this remains only for diagnostics that validate learned EUF
+/// clauses against the congruence checker.
+#[cfg(test)]
 struct Dpll {
     var_count: usize,
     eq_count: usize,
@@ -1314,6 +1246,7 @@ struct Diagnostics {
     lemma_flags: Vec<bool>,
 }
 
+#[cfg(test)]
 impl Dpll {
     fn new(var_count: usize, eq_count: usize, clauses: Vec<Vec<Lit>>) -> Self {
         #[cfg(test)]

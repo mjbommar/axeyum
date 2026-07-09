@@ -116,7 +116,10 @@ re-ranked twice (9th + 10th reviews):
   bug was surfaced the instant a differential fuzz could see the degenerate shape.
 - **Lean-parity:** #44 landed the **regex derivative-emptiness → kernel-checked Lean
   `False`** reconstruction (`cd6783b9`, full multi-state closure, no new kernel
-  axioms; a kernel-checked narrowing; not yet wired into the live evidence path).
+  axioms; a kernel-checked narrowing). Tracker correction 2026-07-09: the live
+  evidence path is already wired through `Evidence::UnsatRegexEmptiness` and the
+  string unsat evidence dispatcher; the remaining Lean work is broader ledger
+  coverage, not this wiring.
 **The rotation NOW (11th review, scout-verified):** (1) **strings breadth — the
 dominant measured gap** (QF_SLIA 18/50=36%, QF_S 82/134=61%). A scout PROVED the
 "str.++ bound-cap" census was a mis-diagnosis (raising the cap gains ~0 rows — the
@@ -133,9 +136,10 @@ before extending #49's concat route:** guard the derivative-closure deadline edg
 "bounded-but-non-polling loop" anti-pattern that cost two multi-hour sweeps (8h
 `set_cardinality`, 9h `bv2nat`); benign for verdicts (declines to Unknown) but can
 overshoot the timeout — add an in-frontier poll + a pathological-shape regression.
-(2) **wire #44's regex-emptiness reconstruction into the live evidence dispatcher**
-(task #52 — capability landed `cd6783b9`, wiring pending; the cheapest Lean-parity
-row, ledger −1; the 11th review's do-FIRST). (3) ✅ **the #42 fuzz GAPs are CLOSED**
+(2) **#44/#52 regex-emptiness evidence wiring is already live** (verified in code:
+`string_unsat_evidence` produces `Evidence::UnsatRegexEmptiness`, whose checker
+re-runs the Lean-module reconstruction; the stale "wiring pending" note is
+corrected). (3) ✅ **the #42 fuzz GAPs are CLOSED**
 (FP+RealDiv-0 #47, seq.nth #51 — only low-risk GAP-BV1 remains). (4) **CdclT
 arithmetic migration** (ADR-0055 criterion 2 — LIA/LRA TheorySolver impls; unlocks strings+LIA
 combination). Decide-rate ~73% and climbing.
@@ -3589,6 +3593,10 @@ Its conclusion, ranked by quality × efficiency:
    follow-through:** `StringTheory::propagate` now emits conservative whole-atom
    variable-equality consequences (equality closure + disequality transport) with
    asserted-literal reasons, while deeper word-core facts stay conflict-only.
+   **Third follow-through:** `solve_qf_uf_online` / `prove_unsat_qf_uf_online` now
+   route through the generic replay-checked `CdclT` driver, retiring the embedded
+   EUF DPLL from production (it remains test-only diagnostics); the QF_UF
+   front-door default flip is still broad-measurement/ADR-gated.
 2. **Keep a thin measured-leaf-BFS skirt in parallel** — measured-ROI leaves only
    (NRA tail, strings-Nielsen); fold the feature/scale-blocked leaves
    (dense-ILP MILP, large-LP performance) into a funded engine phase rather than
