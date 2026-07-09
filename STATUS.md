@@ -307,6 +307,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-09 — P1.6 prerequisite: lazy UF routes no longer build and discard
+  eager Ackermann constraints.** `abstract_functions` returns only the rewritten
+  relaxation plus deterministic application/model-projection metadata, so lazy
+  UFBV and UF+arithmetic construction is DAG-linear rather than secretly
+  materializing O(k²) pair lemmas. Eager elimination and proof routes are
+  unchanged. Gates: rewrite function tests 6/6, lazy EUF unit gates 22/22, UFBV
+  scenario/integration 6/6, UFLIA 31/31, UFLRA 21/21, online/eager dispatch
+  differential 2/2, and clippy clean. Next: canonical `CdclT` EUF+BV with warm BV
+  conflicts and explicit argument/result interface equalities.
 - **2026-07-09 — canonical `CdclT` now has deterministic LBD-based learned-clause
   reduction.** Aligned metadata records LBD, monotone recency, stable tombstones,
   and active reason-clause ids. Above a 2,000-clause budget growing by 300 per
@@ -537,6 +546,12 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-09 — true function abstraction split from eager Ackermann
+  elimination.** Added `FunctionAbstraction`/`abstract_functions`, retained the
+  full projection/replay contract, and migrated the shared lazy
+  functional-consistency loop. Lazy UFBV/UFLIA no longer constructs the
+  quadratic congruence set it intends to learn on demand; eager solving and
+  certifying reductions are unchanged. ADR-0013 and P1.6 record the boundary.
 - **2026-07-09 — LBD learned-clause reduction migrated into canonical `CdclT`.**
   Learned metadata stays aligned with stable clause slots; reductions preserve
   originals, glue, and all active reasons, then tombstone the worst eligible

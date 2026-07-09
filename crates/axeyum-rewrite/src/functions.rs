@@ -84,6 +84,22 @@ pub struct FunctionElimination {
     had_functions: bool,
 }
 
+/// Result of abstracting uninterpreted-function applications without adding
+/// Ackermann congruence constraints.
+///
+/// Each application is replaced by the same fresh scalar symbol used by
+/// [`eliminate_functions`], but [`Self::assertions`] contains only the rewritten
+/// originals. It is therefore a **relaxation**, not an equisatisfiable reduction:
+/// an `unsat` result transfers to the original query, while a `sat` candidate must
+/// first be made functionally consistent and projected/replayed through
+/// [`Self::project_model`]. This is the construction boundary for lazy EUF and
+/// online theory-combination procedures that generate congruence facts on demand
+/// instead of paying the eager quadratic expansion.
+#[derive(Debug, Clone)]
+pub struct FunctionAbstraction {
+    projection: FunctionElimination,
+}
+
 impl FunctionElimination {
     /// The pure-`QF_BV` assertions: rewritten originals plus congruence
     /// constraints.
@@ -201,6 +217,45 @@ impl FunctionElimination {
     }
 }
 
+impl FunctionAbstraction {
+    /// The rewritten original assertions with each application replaced by a
+    /// fresh scalar symbol and no congruence constraints appended.
+    pub fn assertions(&self) -> &[TermId] {
+        &self.projection.assertions
+    }
+
+    /// The abstracted applications as `(func, rewritten args, fresh symbol)`
+    /// triples in deterministic discovery order.
+    pub fn applications(&self) -> Vec<(FuncId, &[TermId], SymbolId)> {
+        self.projection.applications()
+    }
+
+    /// Whether the input actually contained any uninterpreted-function
+    /// applications.
+    pub fn had_functions(&self) -> bool {
+        self.projection.had_functions()
+    }
+
+    /// Projects a functionally-consistent model of the abstraction back to an
+    /// assignment over the original uninterpreted functions.
+    ///
+    /// This performs the same deterministic projection as
+    /// [`FunctionElimination::project_model`]. The caller must establish
+    /// functional consistency first; final replay remains the acceptance gate.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError`] if an argument or fresh application value cannot be
+    /// reconstructed from `model`.
+    pub fn project_model(
+        &self,
+        arena: &TermArena,
+        model: &Assignment,
+    ) -> Result<Assignment, IrError> {
+        self.projection.project_model(arena, model)
+    }
+}
+
 fn used_uninterpreted_tokens(
     arena: &TermArena,
     assignment: &Assignment,
@@ -235,6 +290,51 @@ fn projection_default_value(
         });
     }
     well_founded_default(arena, sort)
+}
+
+/// Abstracts uninterpreted-function applications to fresh scalar symbols without
+/// constructing eager Ackermann congruence constraints.
+///
+/// The returned formula is a relaxation. It is intended for lazy procedures that
+/// add only demanded congruence facts or explicitly case-split interface
+/// equalities. Callers may transfer `unsat` directly, but may return `sat` only
+/// after establishing functional consistency and replaying the projected model.
+/// Unlike [`eliminate_functions`], this construction never materializes the
+/// quadratic application-pair constraint set.
+///
+/// # Errors
+///
+/// Returns [`FuncElimError`] for constructs outside the supported scalar UF
+/// fragment or for an IR builder error.
+pub fn abstract_functions(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+) -> Result<FunctionAbstraction, FuncElimError> {
+    let had_functions = assertions.iter().any(|&term| contains_apply(arena, term));
+    if !had_functions {
+        return Ok(FunctionAbstraction {
+            projection: FunctionElimination {
+                assertions: assertions.to_vec(),
+                abstraction: assertions.to_vec(),
+                applies: Vec::new(),
+                had_functions: false,
+            },
+        });
+    }
+
+    let mut ctx = Eliminator::default();
+    let mut rewritten = Vec::with_capacity(assertions.len());
+    for &assertion in assertions {
+        rewritten.push(ctx.rewrite(arena, assertion)?);
+    }
+    Ok(FunctionAbstraction {
+        projection: FunctionElimination {
+            assertions: rewritten.clone(),
+            abstraction: rewritten,
+            applies: ctx.applies,
+            had_functions: true,
+        },
+    })
 }
 
 /// Eliminates all uninterpreted-function applications from `assertions`,
@@ -432,7 +532,7 @@ fn contains_apply(arena: &TermArena, term: TermId) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{contains_apply, eliminate_functions};
+    use super::{abstract_functions, contains_apply, eliminate_functions};
     use axeyum_ir::{Assignment, FuncValue, Sort, TermArena, Value, eval};
 
     fn bv(width: u32, value: u128) -> Value {
@@ -503,6 +603,40 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn abstraction_skips_congruence_and_preserves_projection() {
+        let mut arena = TermArena::new();
+        let f = arena
+            .declare_fun("f", &[Sort::BitVec(3)], Sort::BitVec(3))
+            .unwrap();
+        let x_sym = arena.declare("x", Sort::BitVec(3)).unwrap();
+        let y_sym = arena.declare("y", Sort::BitVec(3)).unwrap();
+        let x = arena.var(x_sym);
+        let y = arena.var(y_sym);
+        let fx = arena.apply(f, &[x]).unwrap();
+        let fy = arena.apply(f, &[y]).unwrap();
+        let formula = arena.eq(fx, fy).unwrap();
+
+        let abstraction = abstract_functions(&mut arena, &[formula]).unwrap();
+        assert!(abstraction.had_functions());
+        assert_eq!(abstraction.assertions().len(), 1);
+        assert!(!contains_apply(&arena, abstraction.assertions()[0]));
+        let applications = abstraction.applications();
+        assert_eq!(applications.len(), 2);
+
+        let mut candidate = Assignment::new();
+        candidate.set(x_sym, bv(3, 1));
+        candidate.set(y_sym, bv(3, 2));
+        candidate.set(applications[0].2, bv(3, 5));
+        candidate.set(applications[1].2, bv(3, 6));
+        let abstract_value = eval(&arena, abstraction.assertions()[0], &candidate).unwrap();
+        let projected = abstraction.project_model(&arena, &candidate).unwrap();
+        assert_eq!(eval(&arena, formula, &projected).unwrap(), abstract_value);
+
+        let eager = eliminate_functions(&mut arena, &[formula]).unwrap();
+        assert_eq!(eager.assertions().len(), 2);
     }
 
     #[test]

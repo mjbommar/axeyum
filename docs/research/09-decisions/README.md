@@ -66,7 +66,7 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0010](adr-0010-arrays-via-eager-elimination.md) | Arrays (QF_ABV) via eager elimination to QF_BV | accepted |
 | [0011](adr-0011-drat-unsat-proof-checking.md) | DRAT UNSAT proof format with an in-tree checker | accepted |
 | [0012](adr-0012-proof-producing-sat-core.md) | First proof-producing pure-Rust SAT core | accepted |
-| [0013](adr-0013-uninterpreted-functions.md) | Uninterpreted functions (EUF) via Ackermann reduction | accepted |
+| [0013](adr-0013-uninterpreted-functions.md) | Uninterpreted functions (EUF): eager Ackermann reduction plus a projection-preserving abstraction-only boundary for lazy UFBV/UFLIA and canonical theory combination | accepted |
 | [0014](adr-0014-first-arithmetic-fragment.md) | First arithmetic fragment: linear integer arithmetic, bit-blasted | accepted |
 | [0015](adr-0015-linear-real-arithmetic.md) | Linear real arithmetic via exact-rational simplex | accepted |
 | [0016](adr-0016-quantifiers-binder-representation.md) | Quantifiers: named binders and finite-domain semantics | accepted |

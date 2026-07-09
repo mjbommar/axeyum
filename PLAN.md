@@ -3622,8 +3622,12 @@ Its conclusion, ranked by quality × efficiency:
    pigeonhole gate matches a never-delete baseline and the full oracle matrix is
    clean; UFLIA remains neutral at 425.90 s. The planned VSIDS/phase/Luby/LBD
    search-feature migration is complete. The arithmetic-local driver remains a
-   standalone fallback/diagnostic implementation rather than being retired;
-   next take BV combination across P1.6.
+   standalone fallback/diagnostic implementation rather than being retired.
+   **Tenth follow-through:** the P1.6 prerequisite is now real rather than nominal:
+   lazy UFBV/UFLIA routes use a projection-preserving function abstraction that
+   never constructs the eager quadratic Ackermann pair set. Eager elimination
+   remains unchanged for fallback and proof production. Next put the e-graph and
+   warm BV solver behind canonical `CdclT` with explicit interface equalities.
 2. **Keep a thin measured-leaf-BFS skirt in parallel** — measured-ROI leaves only
    (NRA tail, strings-Nielsen); fold the feature/scale-blocked leaves
    (dense-ILP MILP, large-LP performance) into a funded engine phase rather than

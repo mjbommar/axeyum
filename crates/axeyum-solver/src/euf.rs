@@ -13,7 +13,10 @@ use std::time::Instant;
 use axeyum_ir::{
     Assignment, FuncId, Op, Sort, SymbolId, TermArena, TermId, TermNode, TermStats, Value, eval,
 };
-use axeyum_rewrite::{FuncElimError, eliminate_functions};
+use axeyum_rewrite::{
+    FuncElimError, FunctionAbstraction, FunctionElimination, abstract_functions,
+    eliminate_functions,
+};
 
 use crate::backend::{
     CheckResult, SolverBackend, SolverConfig, SolverError, UnknownKind, UnknownReason,
@@ -137,29 +140,26 @@ pub(crate) fn refuse_oversized_ackermann(
 /// eager [`MAX_ACKERMANN_CONGRUENCE_PAIRS`] (which the lazy route deliberately
 /// exceeds): the lazy loop never asserts all `O(pairs)` constraints up front —
 /// it refines only on observed violations — so the *downstream solve* stays
-/// bounded by the deadline regardless of pair count. The remaining cost the
-/// lazy route still pays eagerly is the **one** [`eliminate_functions`] call it
-/// makes to build the abstraction (which, as an artifact of the shared
-/// eliminator, also constructs the `O(pairs)` congruence terms it then
-/// discards). That construction is `O(pairs)` in time/memory and is *not*
-/// deadline-bounded, so an astronomically large pair count is refused here
-/// before construction — a graceful `Unknown`, never an OOM. The value is high
-/// enough that every realistically-decidable in-tree instance is admitted
-/// (the over-bound cvc5-regression files top out in the low thousands of
-/// pairs) yet bounds the eager abstraction build to a few million terms.
+/// bounded by the deadline regardless of pair count. [`abstract_functions`]
+/// now builds only the DAG-linear relaxation, but each candidate-model check can
+/// still inspect the finite same-function pair set. Refuse an astronomically
+/// large set before that repeated scan and metadata growth — a graceful
+/// `Unknown`, never an OOM. The value is high enough that every realistically
+/// decidable in-tree instance is admitted (the over-bound cvc5 regressions top
+/// out in the low thousands of pairs).
 pub(crate) const MAX_LAZY_ACKERMANN_CONGRUENCE_PAIRS: usize = 2_000_000;
 
 /// Secondary (pathological-input) admission bound on the **DAG node count** for
 /// the lazy UF+arithmetic route. The lazy abstraction build
-/// ([`eliminate_functions`]) recurses over the assertion DAG; a huge graph
+/// ([`abstract_functions`]) recurses over the assertion DAG; a huge graph
 /// makes the (memoized, so DAG-linear) rewrite expensive and — together with
 /// [`MAX_LAZY_DEPTH`] — bounds the work before any unbounded solve. Refusing an
 /// over-large graph here keeps the route bounded; it is a graceful `Unknown`.
 pub(crate) const MAX_LAZY_DAG_NODES: u64 = 2_000_000;
 
 /// Secondary (pathological-input) admission bound on the **maximum term depth**
-/// for the lazy UF+arithmetic route. The shared eliminator's `rewrite`
-/// ([`eliminate_functions`]) and the upstream e-graph passes recurse on the
+/// for the lazy UF+arithmetic route. The shared abstraction's `rewrite`
+/// ([`abstract_functions`]) and the upstream e-graph passes recurse on the
 /// term structure, so a deeply-nested assertion can **stack-overflow before any
 /// deadline check fires** (the exact failure mode `6233a7c` documented for the
 /// eager path). Refusing beyond this depth keeps the route bounded and
@@ -239,7 +239,8 @@ fn refuse_pathological_for_lazy(
 /// `O(pairs)` downstream-solve blowup. This helper is the additive bridge: when
 /// `refuse_oversized_ackermann` *would* fire (pairs > eager bound) **and** the
 /// instance is not pathological ([`refuse_pathological_for_lazy`] admits it),
-/// it tries the lazy route under the real `config`; a `Sat`/`Unsat` within
+/// it tries the abstraction-only lazy route under the real `config`; a
+/// `Sat`/`Unsat` within
 /// budget is returned, an `Unknown`/deadline degrades gracefully. Pathological
 /// inputs (huge / deeply-nested) still refuse fast — never a hang or
 /// stack-overflow.
@@ -321,9 +322,9 @@ pub fn check_with_function_elimination<B: SolverBackend>(
 /// projection, a non-`true` replay, or any indeterminate evaluation declines to a
 /// sound [`CheckResult::Unknown`] — never an emitted (possibly wrong) `Sat`, and
 /// never an error (`unknown` is a first-class result, not a failure).
-pub(crate) fn project_replay_build(
+pub(crate) fn project_replay_build<P: FunctionModelProjection>(
     arena: &TermArena,
-    elimination: &axeyum_rewrite::FunctionElimination,
+    elimination: &P,
     assertions: &[TermId],
     assignment: &Assignment,
 ) -> CheckResult {
@@ -334,7 +335,7 @@ pub(crate) fn project_replay_build(
     // only make replay fail (→ decline), never accept a wrong sat. Any projection
     // error (e.g. a value that cannot be reconstructed) is a sound decline to
     // `Unknown`, not a wrong answer.
-    let projected = match elimination.project_model(arena, assignment) {
+    let projected = match elimination.project_function_model(arena, assignment) {
         Ok(projected) => projected,
         Err(error) => {
             return CheckResult::Unknown(crate::backend::UnknownReason {
@@ -382,6 +383,38 @@ pub(crate) fn project_replay_build(
         }
     }
     CheckResult::Sat(out)
+}
+
+/// Shared model-projection contract implemented by eager function elimination
+/// and the congruence-free relaxation used by lazy/online procedures.
+pub(crate) trait FunctionModelProjection {
+    /// Reconstructs original function interpretations from the fresh application
+    /// symbols in `assignment`.
+    fn project_function_model(
+        &self,
+        arena: &TermArena,
+        assignment: &Assignment,
+    ) -> Result<Assignment, axeyum_ir::IrError>;
+}
+
+impl FunctionModelProjection for FunctionElimination {
+    fn project_function_model(
+        &self,
+        arena: &TermArena,
+        assignment: &Assignment,
+    ) -> Result<Assignment, axeyum_ir::IrError> {
+        self.project_model(arena, assignment)
+    }
+}
+
+impl FunctionModelProjection for FunctionAbstraction {
+    fn project_function_model(
+        &self,
+        arena: &TermArena,
+        assignment: &Assignment,
+    ) -> Result<Assignment, axeyum_ir::IrError> {
+        self.project_model(arena, assignment)
+    }
 }
 
 /// Lazy/on-demand Ackermann for `QF_UFBV` (P1.6): abstracts each uninterpreted
@@ -626,7 +659,7 @@ fn check_with_function_consistency<F>(
 where
     F: FnMut(&mut TermArena, &[TermId]) -> Result<CheckResult, SolverError>,
 {
-    let elim = eliminate_functions(arena, assertions).map_err(map_elim_error)?;
+    let elim = abstract_functions(arena, assertions).map_err(map_elim_error)?;
     if !elim.had_functions() {
         // No uninterpreted functions: nothing to abstract, solve directly.
         return solve(arena, assertions);
@@ -651,7 +684,7 @@ where
     }
 
     let mut stats = FunctionConsistencyStats::new(applications.len(), &groups);
-    let mut working = elim.abstraction().to_vec();
+    let mut working = elim.assertions().to_vec();
     // Index pairs whose congruence lemma has already been asserted; bounds the
     // loop and prevents re-adding the same lemma.
     let mut added: HashSet<(usize, usize)> = HashSet::new();

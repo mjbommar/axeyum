@@ -29,7 +29,10 @@ pub use canonical::{
 };
 pub use datatypes::simplify_datatypes;
 pub use elim_unconstrained::{UnconstrainedElimination, elim_unconstrained};
-pub use functions::{FuncElimError, FunctionElimination, eliminate_functions};
+pub use functions::{
+    FuncElimError, FunctionAbstraction, FunctionElimination, abstract_functions,
+    eliminate_functions,
+};
 pub use int_blast::{IntBlastError, IntBlasting, MAX_INT_BLAST_WIDTH, blast_integers};
 pub use int_divmod::eliminate_int_divmod;
 pub use lower_bv::lower_derived_bv;

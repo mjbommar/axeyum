@@ -116,6 +116,31 @@ mirroring the array rollout.
   scenarios, and `QF_AUFBV` composition. Array *equality* remains the one
   deferred theory feature.
 
+## Update (2026-07-09): a true abstraction-only boundary for lazy EUF
+
+The lazy UFBV and UF+arithmetic functional-consistency loops no longer call
+`eliminate_functions`. That eager API necessarily constructs every pairwise
+Ackermann implication before returning both its full reduction and its
+abstraction; the lazy callers used only the latter, so they paid O(k²) term
+construction and discarded it before their first solve.
+
+`axeyum_rewrite::abstract_functions` now returns a distinct
+`FunctionAbstraction`: rewritten original assertions, deterministic application
+metadata, and the same `FuncValue` model projection, but **no congruence
+constraints**. Its formula is explicitly a relaxation: `unsat` transfers, while
+`sat` is accepted only after the lazy procedure establishes functional
+consistency and the projected model replays against every original assertion.
+The eager `FunctionElimination` contract and all proof/certificate routes remain
+unchanged.
+
+This is not merely a construction optimization. It is the representation needed
+by P1.6's canonical EUF+BV combination: application arguments/results can become
+explicit interface equalities owned by `CdclT`, while the existing eager
+Ackermann reduction remains a differential oracle and fallback. Focused rewrite
+tests pin the absence of appended congruence constraints and projection parity;
+all 22 lazy EUF unit gates, UFBV scenarios, UFLIA 31/31, UFLRA 21/21, and the
+online/eager UF-arithmetic dispatch differential preserve their verdicts.
+
 ## Consequences
 
 - The IR can express `QF_UFBV` (and, combined with arrays, `QF_AUFBV`); the
