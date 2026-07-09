@@ -55,11 +55,12 @@
 //!
 //! ## What this slice does not do
 //!
-//! - **Theory propagation** is skipped ([`StringTheory::propagate`] returns
-//!   nothing). The word core's derived [`Fact`](axeyum_strings::Fact)s are
-//!   equalities over *sub-components*, which rarely coincide with a whole asserted
-//!   atom, so there is no clean atom-to-fact mapping to propagate this slice.
-//!   Correctness first; propagation is a later optimization.
+//! - **Theory propagation** is deliberately narrow: [`StringTheory::propagate`]
+//!   only emits whole-atom `Seq` equality consequences over variables. Asserted
+//!   variable equalities propagate equality closure, and asserted disequalities are
+//!   transported across those classes. The word core's derived
+//!   [`Fact`](axeyum_strings::Fact)s over sub-components still do not propagate
+//!   because most do not coincide with a tracked atom.
 //! - **Incrementality.** The word core is not incremental: the theory re-runs the
 //!   refuter from scratch on each representable assertion (a one-shot inside the
 //!   theory). This is correct but not cheap; a backtrackable word core is the
@@ -575,6 +576,139 @@ impl<'a> StringTheory<'a> {
         }
         Ok(())
     }
+
+    /// The variable-symbol sides of a tracked `Seq` equality, if both sides are
+    /// bare variables. This is the only atom shape this theory currently propagates
+    /// because it has a direct whole-atom explanation.
+    fn seq_var_pair(&self, l: TermId, r: TermId) -> Option<(SymbolId, SymbolId)> {
+        let (TermNode::Symbol(a), TermNode::Symbol(b)) = (self.arena.node(l), self.arena.node(r))
+        else {
+            return None;
+        };
+        if matches!(self.arena.sort_of(l), Sort::Seq(_))
+            && matches!(self.arena.sort_of(r), Sort::Seq(_))
+        {
+            Some((*a, *b))
+        } else {
+            None
+        }
+    }
+
+    /// Active variable-variable equalities, in trail order.
+    fn active_var_eqs(&self) -> Vec<(usize, SymbolId, SymbolId)> {
+        self.active_eqs
+            .iter()
+            .filter_map(|&(atom, (l, r))| self.seq_var_pair(l, r).map(|(a, b)| (atom, a, b)))
+            .collect()
+    }
+
+    /// Active variable-variable disequalities, in trail order.
+    fn active_var_diseqs(&self) -> Vec<(usize, SymbolId, SymbolId)> {
+        self.active_diseqs
+            .iter()
+            .filter_map(|&(atom, (l, r))| self.seq_var_pair(l, r).map(|(a, b)| (atom, a, b)))
+            .collect()
+    }
+
+    /// The asserted equality literals inside the requested equality classes. This
+    /// is a sound, deterministic over-approximation of a path explanation: all
+    /// active edges inside a connected component jointly entail equality of every
+    /// pair in that component.
+    fn equality_component_reason(
+        uf: &mut UnionFind,
+        eq_edges: &[(usize, SymbolId, SymbolId)],
+        roots: &[SymbolId],
+    ) -> Vec<TheoryLit> {
+        let mut out = Vec::new();
+        for &(atom, a, b) in eq_edges {
+            let ra = uf.find(a);
+            let rb = uf.find(b);
+            if roots.iter().any(|&root| ra == root && rb == root)
+                && !out.iter().any(|lit: &TheoryLit| lit.atom == atom)
+            {
+                out.push(TheoryLit { atom, value: true });
+            }
+        }
+        out
+    }
+
+    /// Conservative whole-atom string propagation over variable equality atoms.
+    ///
+    /// - if an unassigned `(= x y)` has `x` and `y` in the same asserted equality
+    ///   class, propagate it `true`;
+    /// - if an asserted disequality separates two equality classes, propagate any
+    ///   unassigned equality between those classes `false`.
+    ///
+    /// No compound word facts are used here; those remain conflict-only through the
+    /// certified word refuter.
+    fn variable_equality_propagations(&self) -> Vec<TheoryProp> {
+        let eq_edges = self.active_var_eqs();
+        let diseq_edges = self.active_var_diseqs();
+        if eq_edges.is_empty() && diseq_edges.is_empty() {
+            return Vec::new();
+        }
+
+        let mut uf = UnionFind::default();
+        for &(_, a, b) in eq_edges.iter().chain(&diseq_edges) {
+            uf.make(a);
+            uf.make(b);
+        }
+        for atom in &self.atoms {
+            if let AtomKind::Eq(l, r) = atom
+                && let Some((a, b)) = self.seq_var_pair(*l, *r)
+            {
+                uf.make(a);
+                uf.make(b);
+            }
+        }
+        for &(_, a, b) in &eq_edges {
+            uf.union(a, b);
+        }
+
+        let mut out = Vec::new();
+        for (atom, kind) in self.atoms.iter().enumerate() {
+            if self.assigned[atom].is_some() {
+                continue;
+            }
+            let AtomKind::Eq(l, r) = kind else {
+                continue;
+            };
+            let Some((a, b)) = self.seq_var_pair(*l, *r) else {
+                continue;
+            };
+            let ra = uf.find(a);
+            let rb = uf.find(b);
+            if ra == rb {
+                out.push(TheoryProp {
+                    lit: TheoryLit { atom, value: true },
+                    reason: if a == b {
+                        Vec::new()
+                    } else {
+                        Self::equality_component_reason(&mut uf, &eq_edges, &[ra])
+                    },
+                });
+                continue;
+            }
+
+            for &(d_atom, d_a, d_b) in &diseq_edges {
+                let da = uf.find(d_a);
+                let db = uf.find(d_b);
+                if (da == ra && db == rb) || (da == rb && db == ra) {
+                    let mut reason = Self::equality_component_reason(&mut uf, &eq_edges, &[ra, rb]);
+                    reason.push(TheoryLit {
+                        atom: d_atom,
+                        value: false,
+                    });
+                    out.push(TheoryProp {
+                        lit: TheoryLit { atom, value: false },
+                        reason,
+                    });
+                    break;
+                }
+            }
+        }
+        out
+    }
 }
 
 impl TheorySolver for StringTheory<'_> {
@@ -632,8 +766,7 @@ impl TheorySolver for StringTheory<'_> {
     }
 
     fn propagate(&self) -> Vec<TheoryProp> {
-        // Skipped this slice (see the module docs): no clean atom-to-fact mapping.
-        Vec::new()
+        self.variable_equality_propagations()
     }
 }
 
@@ -1648,5 +1781,94 @@ pub fn check_qf_slia_length(
         CheckResult::Unknown(unknown(
             "length↔LIA candidate model did not replay against the assertions",
         ))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn seq_sort() -> Sort {
+        Sort::Seq(ArraySortKey::BitVec(8))
+    }
+
+    fn seq_var(arena: &mut TermArena, name: &str) -> TermId {
+        let symbol = arena.declare(name, seq_sort()).expect("declare Seq symbol");
+        arena.var(symbol)
+    }
+
+    fn eq_atom(l: TermId, r: TermId) -> AtomKind {
+        AtomKind::Eq(l, r)
+    }
+
+    fn lit(atom: usize, value: bool) -> TheoryLit {
+        TheoryLit { atom, value }
+    }
+
+    fn string_theory(arena: &mut TermArena, atoms: Vec<AtomKind>) -> StringTheory<'_> {
+        StringTheory::new(arena, atoms, SearchBudget::new(WORD_MAX_NODES))
+    }
+
+    #[test]
+    fn propagates_variable_equality_closure() {
+        let mut arena = TermArena::new();
+        let x = seq_var(&mut arena, "x");
+        let y = seq_var(&mut arena, "y");
+        let z = seq_var(&mut arena, "z");
+        let mut theory = string_theory(
+            &mut arena,
+            vec![eq_atom(x, y), eq_atom(y, z), eq_atom(x, z)],
+        );
+
+        theory.assert(0, true).expect("x = y is consistent");
+        theory.assert(1, true).expect("y = z is consistent");
+
+        let props = theory.propagate();
+        assert_eq!(props.len(), 1);
+        assert_eq!(props[0].lit, lit(2, true));
+        assert!(props[0].reason.contains(&lit(0, true)));
+        assert!(props[0].reason.contains(&lit(1, true)));
+    }
+
+    #[test]
+    fn propagates_variable_disequality_through_classes() {
+        let mut arena = TermArena::new();
+        let x = seq_var(&mut arena, "x");
+        let y = seq_var(&mut arena, "y");
+        let z = seq_var(&mut arena, "z");
+        let mut theory = string_theory(
+            &mut arena,
+            vec![eq_atom(x, y), eq_atom(x, z), eq_atom(y, z)],
+        );
+
+        theory.assert(0, true).expect("x = y is consistent");
+        theory.assert(1, false).expect("x != z is consistent");
+
+        let props = theory.propagate();
+        assert_eq!(props.len(), 1);
+        assert_eq!(props[0].lit, lit(2, false));
+        assert!(props[0].reason.contains(&lit(0, true)));
+        assert!(props[0].reason.contains(&lit(1, false)));
+    }
+
+    #[test]
+    fn cdclt_driver_counts_string_theory_propagation() {
+        let mut arena = TermArena::new();
+        let x = seq_var(&mut arena, "x");
+        let y = seq_var(&mut arena, "y");
+        let atoms = vec![eq_atom(x, y), eq_atom(y, x)];
+        let mut theory = string_theory(&mut arena, atoms);
+        let clauses = vec![vec![CdcltLit {
+            var: 0,
+            positive: true,
+        }]];
+        let mut solver = CdclT::new(2, 2, clauses, None);
+
+        assert_eq!(solver.solve(&mut theory), Outcome::Sat);
+        assert_eq!(solver.value(1), Some(true));
+        assert!(
+            solver.theory_propagations() > 0,
+            "StringTheory propagation should assign the symmetric equality"
+        );
     }
 }

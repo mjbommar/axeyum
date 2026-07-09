@@ -3585,7 +3585,10 @@ Its conclusion, ranked by quality × efficiency:
    trust-preserving.
    **First DFS follow-through (2026-07-09):** the generic `CdclT` LIA/LRA adapters
    now forward checked theory propagations from `LiaTheory`/`LraTheory` into the
-   shared driver, with tests proving the propagation path fires.
+   shared driver, with tests proving the propagation path fires. **Second
+   follow-through:** `StringTheory::propagate` now emits conservative whole-atom
+   variable-equality consequences (equality closure + disequality transport) with
+   asserted-literal reasons, while deeper word-core facts stay conflict-only.
 2. **Keep a thin measured-leaf-BFS skirt in parallel** — measured-ROI leaves only
    (NRA tail, strings-Nielsen); fold the feature/scale-blocked leaves
    (dense-ILP MILP, large-LP performance) into a funded engine phase rather than
