@@ -33,13 +33,11 @@
 //!   thus no per-assert timeout subtlety; the theory has no internal deadline to
 //!   thread. Termination of the *driver* is the standard argument (each conflict,
 //!   carrying its trigger literal, forces a strict backjump).
-//! - **Propagation deferred.** [`CdcltLraTheory::propagate`] returns no propagations
-//!   this slice — even though [`LraTheory::propagate`] can (via its negation probe).
-//!   Completeness comes from per-assert feasibility, not propagation, so nothing is
-//!   lost for correctness; wiring the entailment propagations (whose
-//!   propagation-conflict cores would need the same trigger-literal guarantee threaded
-//!   through the driver's `theory_propagate` path) is a separate, measured step —
-//!   exactly the deferral the integer slice made.
+//! - **Propagation forwarded.** [`CdcltLraTheory::propagate`] forwards the
+//!   already-validated [`LraTheory::propagate`] negation probes into the generic
+//!   driver, so entailed order atoms can be assigned before a decision. Completeness
+//!   still comes from per-assert feasibility; propagation is a pruning layer whose
+//!   reasons are replayed as theory clauses by [`CdclT`].
 //!
 //! ## Soundness posture (no new trust surface over the offline route)
 //! - `unsat` is a sound refutation. Its theory conflict clauses are `¬core` where
@@ -89,8 +87,8 @@ use crate::model::Model;
 /// superset of an infeasible set is infeasible), so `¬core` remains a valid theory
 /// lemma — the fix is sound and never widens a verdict.
 ///
-/// Theory propagation is disabled on this route (returns no propagations); see the
-/// module docs.
+/// Theory propagation forwards the wrapped [`LraTheory`]'s checked negation-probe
+/// entailments; see the module docs.
 struct CdcltLraTheory {
     inner: LraTheory,
 }
@@ -135,9 +133,7 @@ impl TheorySolver for CdcltLraTheory {
     }
 
     fn propagate(&self) -> Vec<TheoryProp> {
-        // Deferred this slice: completeness comes from the per-assert feasibility
-        // check, not propagation (see the module docs).
-        Vec::new()
+        self.inner.propagate()
     }
 }
 
@@ -331,6 +327,28 @@ mod tests {
         );
     }
 
+    /// The generic-driver wrapper must expose the underlying `LraTheory`
+    /// propagation reasons unchanged: `x >= 1` entails `x > 0`.
+    #[test]
+    fn wrapper_forwards_lra_theory_propagation() {
+        let mut arena = TermArena::new();
+        let x = rvar(&mut arena, "x");
+        let zero = rconst(&mut arena, 0);
+        let one = rconst(&mut arena, 1);
+        let ge_one = arena.real_ge(x, one).expect("x>=1");
+        let gt_zero = arena.real_gt(x, zero).expect("x>0");
+
+        let mut theory = CdcltLraTheory::new(&arena, &[ge_one, gt_zero]);
+        theory.assert(0, true).expect("x>=1 feasible");
+        let props = theory.propagate();
+        assert!(
+            props.iter().any(|p| {
+                p.lit.atom == 1 && p.lit.value && p.reason.iter().any(|r| r.atom == 0 && r.value)
+            }),
+            "expected propagation x>=1 entails x>0 with reason x>=1, got {props:?}"
+        );
+    }
+
     /// A strict-bound `unsat` (`x < 0 ∧ x > 0`) decided by the CDCL(T) driver, and
     /// confirmed `unsat` offline.
     #[test]
@@ -506,5 +524,57 @@ mod tests {
                 other => panic!("shape {i}: unexpected pairing {other:?}"),
             }
         }
+    }
+
+    /// End-to-end through `CdclT`: the wrapper's forwarded propagation must assign
+    /// an entailed theory atom before the driver needs to decide it.
+    #[test]
+    fn cdclt_driver_counts_forwarded_lra_propagation() {
+        let mut arena = TermArena::new();
+        let x = rvar(&mut arena, "x");
+        let b_sym = arena.declare("b", Sort::Bool).expect("declare bool");
+        let b = arena.var(b_sym);
+        let zero = rconst(&mut arena, 0);
+        let one = rconst(&mut arena, 1);
+        let ge_one = arena.real_ge(x, one).expect("x>=1");
+        let gt_zero = arena.real_gt(x, zero).expect("x>0");
+        let clause = arena.or(gt_zero, b).expect("gt_zero or b");
+        let assertions = [ge_one, clause];
+
+        let mut atom_terms: Vec<TermId> = Vec::new();
+        let mut seen = HashSet::new();
+        for &a in &assertions {
+            collect_lra_atoms(&arena, a, &mut atom_terms, &mut seen);
+        }
+        let mut enc = Encoder::new(&atom_terms);
+        let mut clauses: Vec<Vec<Lit>> = Vec::new();
+        for &a in &assertions {
+            let top = enc.encode(&arena, a, &mut clauses).expect("encodable");
+            clauses.push(vec![Lit {
+                var: top,
+                positive: true,
+            }]);
+        }
+        let driver_clauses: Vec<Vec<CdcltLit>> = clauses
+            .iter()
+            .map(|c| {
+                c.iter()
+                    .map(|l| CdcltLit {
+                        var: l.var,
+                        positive: l.positive,
+                    })
+                    .collect()
+            })
+            .collect();
+        let atom_count = atom_terms.len();
+        let mut theory = CdcltLraTheory::new(&arena, &atom_terms);
+        let mut solver = CdclT::new(enc.var_count, atom_count, driver_clauses, None);
+
+        assert_eq!(solver.solve(&mut theory), Outcome::Sat);
+        assert!(
+            solver.theory_propagations() > 0,
+            "expected the LRA propagation path to fire"
+        );
+        assert_eq!(solver.value(1), Some(true), "x>0 should be propagated");
     }
 }

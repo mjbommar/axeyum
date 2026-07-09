@@ -158,6 +158,9 @@ pub(crate) struct CdclT {
     /// Set once the step budget was exhausted, so a caller/test can distinguish a
     /// budget-driven `Unknown` from a deadline- or fixpoint-driven one.
     step_budget_hit: bool,
+    /// Number of literals assigned by theory propagation. Internal telemetry for
+    /// routing/tests; decisions and Boolean unit propagation are not counted.
+    theory_propagations: usize,
 }
 
 impl CdclT {
@@ -184,6 +187,7 @@ impl CdclT {
             step_budget: DEFAULT_STEP_BUDGET,
             steps: 0,
             step_budget_hit: false,
+            theory_propagations: 0,
         }
     }
 
@@ -201,6 +205,12 @@ impl CdclT {
     #[cfg(test)]
     pub(crate) fn step_budget_hit(&self) -> bool {
         self.step_budget_hit
+    }
+
+    /// Number of literals assigned by theory propagation during the last solve.
+    #[cfg(test)]
+    pub(crate) fn theory_propagations(&self) -> usize {
+        self.theory_propagations
     }
 
     /// The current value of `var` (for the caller's model-assembly injection path).
@@ -342,6 +352,7 @@ impl CdclT {
                                 is_theory: true,
                             });
                         }
+                        self.theory_propagations += 1;
                         progress = true;
                     }
                 }

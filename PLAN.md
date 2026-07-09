@@ -3583,6 +3583,9 @@ Its conclusion, ranked by quality × efficiency:
    session — is the data-driven trigger to pivot from BFS to keystone-DFS. Build
    the independent congruence checker alongside so the eager→lazy migration is
    trust-preserving.
+   **First DFS follow-through (2026-07-09):** the generic `CdclT` LIA/LRA adapters
+   now forward checked theory propagations from `LiaTheory`/`LraTheory` into the
+   shared driver, with tests proving the propagation path fires.
 2. **Keep a thin measured-leaf-BFS skirt in parallel** — measured-ROI leaves only
    (NRA tail, strings-Nielsen); fold the feature/scale-blocked leaves
    (dense-ILP MILP, large-LP performance) into a funded engine phase rather than
