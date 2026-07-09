@@ -3615,9 +3615,15 @@ Its conclusion, ranked by quality × efficiency:
    arithmetic oracle gates clean; the 2,500-case UFLIA sweep is runtime-neutral
    at 426.17 s → 426.19 s. **Eighth follow-through:** deterministic Luby
    restarts now preserve learned clauses/activity/phases, balance the theory
-   stack, and leave the same sweep neutral at 425.18 s. The last local-driver
-   search feature to migrate is LBD-based learned-clause reduction; then take BV
-   combination across P1.6.
+   stack, and leave the same sweep neutral at 425.18 s. **Ninth
+   follow-through:** deterministic LBD-based learned-clause reduction now keeps
+   originals, glue clauses, and every active reason while tombstoning the worst
+   half of eligible learned clauses in stable order. A forced-reduction
+   pigeonhole gate matches a never-delete baseline and the full oracle matrix is
+   clean; UFLIA remains neutral at 425.90 s. The planned VSIDS/phase/Luby/LBD
+   search-feature migration is complete. The arithmetic-local driver remains a
+   standalone fallback/diagnostic implementation rather than being retired;
+   next take BV combination across P1.6.
 2. **Keep a thin measured-leaf-BFS skirt in parallel** — measured-ROI leaves only
    (NRA tail, strings-Nielsen); fold the feature/scale-blocked leaves
    (dense-ILP MILP, large-LP performance) into a funded engine phase rather than

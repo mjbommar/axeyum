@@ -232,6 +232,42 @@ disagreements; the long UFLIA run stays neutral (426.19 s before, 425.18 s
 after). Five-second UFLIA remains bounded 6/6 and overbound 0/2 timeout with no
 replay failures. This is a mechanism landing, not a claimed performance win.
 
+## Update (2026-07-09): canonical `CdclT` gains LBD clause reduction
+
+Canonical `CdclT` now carries aligned learned-clause metadata and deterministic
+database reduction. Each learned 1-UIP clause records its literal-block distance
+(the number of distinct decision levels), a monotone recency stamp, and a stable
+tombstone slot. The first reduction is triggered above 2,000 live learned
+clauses; the budget grows additively by 300 after each reduction. Original
+clauses, LBD <= 2 glue clauses, and every clause currently recorded as an active
+trail reason are permanent. The latter check follows reason ids directly because
+this whole-clause scanner does not maintain a distinguished watched-literal
+position.
+
+Eligible clauses are totally ordered worst-first by descending LBD, oldest
+recency, then newest stable slot; the worst half are tombstoned. Propagation
+skips tombstones and clause slots are never reused. Deletion cannot change a
+verdict: every candidate is a redundant learned resolvent already entailed by
+the original Boolean clauses plus theory lemmas, while originals and all active
+implication reasons remain present.
+
+A forced-reduction PHP(7,6) test proves that reduction fires, tombstones learned
+clauses, preserves the UNSAT verdict against a never-delete baseline, leaves no
+deleted active reason, and repeats the same trajectory. A direct policy test
+protects glue and a locked clause whose current implied literal is deliberately
+not its first slot. All eight canonical-driver mechanism/adversarial tests and
+the EUF, string, UFLIA, and UFLRA adapter suites pass. Z3 differentials for QF_UF,
+QF_S, UFLIA, and UFLRA remain at zero disagreements; the 2,500-case UFLIA sweep
+is runtime-neutral (425.18 s before, 425.90 s after). Five-second UFLIA corpus
+results remain bounded 6/6 and overbound 0/2 timeout, with zero disagreements
+and replay failures. No performance win is claimed.
+
+This completes the planned canonical search-feature migration of deterministic
+VSIDS, phase saving, Luby restarts, and LBD reduction. It does not make the two
+drivers identical or retire `lra_online::Dpll`, which remains on standalone
+fallback and diagnostic paths; P1.6 BV/array combination is the next shared-spine
+boundary.
+
 ## Evidence
 
 - **Dispatch position:** `auto.rs::dispatch_uf_fast_paths` runs
@@ -289,11 +325,11 @@ replay failures. This is a mechanism landing, not a claimed performance win.
   and the eventual arithmetic-theory migration to build on.
 - **Harder / cost:** two CDCL(T) implementations (`CdclT` and
   `lra_online::Dpll`) still coexist for standalone fallback/diagnostic paths;
-  their termination belts and remaining learned-clause-management policies must
-  stay coherent until the arithmetic-local implementation is fully absorbed.
-- **Revisited when:** arrays-lazy lands on the spine (Gap 3 step 2); LBD-based
-  learned-clause reduction migrates into canonical `CdclT`; or a dedicated
-  re-baseline banks the `QF_UF` decide-rate movement.
+  their termination belts and any remaining driver-specific policies must stay
+  coherent until the arithmetic-local implementation is fully absorbed.
+- **Revisited when:** arrays-lazy lands on the spine (Gap 3 step 2); BV theory
+  combination reaches canonical `CdclT`; or a dedicated re-baseline banks the
+  `QF_UF` decide-rate movement.
   The pure-QF_UF default-dispatch status is now tracked by ADR-0055's 2026-07-09
   update.
 
@@ -304,4 +340,7 @@ replay failures. This is a mechanism landing, not a claimed performance win.
   fallback, with deadline polling + a `DEFAULT_STEP_BUDGET` termination belt
   matching `CdclT` (ADR-0055). Their Boolean-structured combined theories now
   implement the canonical `CdclT` path directly; direct conjunctive combination
-  remains the model/replay oracle and conservative fallback.
+  remains the model/replay oracle and conservative fallback. Canonical search
+  now includes deterministic VSIDS, phase saving, Luby restarts, and LBD-based
+  learned-clause reduction with stable tombstones and glue/active-reason
+  protection.

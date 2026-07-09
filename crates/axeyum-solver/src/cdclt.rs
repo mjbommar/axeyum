@@ -33,11 +33,15 @@
 //! - `Sat` is *not* trusted from the driver: the caller assembles a model from the
 //!   theory and **replays** it against the original assertions, downgrading to
 //!   `Unknown` on any non-replay.
+//! - Learned-clause reduction is satisfiability-preserving: only redundant 1-UIP
+//!   resolvents are tombstoned. Original clauses, low-LBD glue clauses, and every
+//!   clause currently serving as a trail reason are retained.
 //! - Deterministic: conflict-side VSIDS selects the highest-activity unassigned
 //!   variable with lowest-index ties, phase saving reuses its last polarity, Luby
-//!   restarts are a pure function of conflict count, and every search data
-//!   structure is a `Vec`; there is no hash-iteration order or clock-derived
-//!   choice. The only clock read is the deadline check.
+//!   restarts are a pure function of conflict count, and LBD reduction uses a total
+//!   value/recency/slot order over stable clause slots. Every search data structure
+//!   is a `Vec`; there is no hash-iteration order or clock-derived choice. The only
+//!   clock read is the deadline check.
 //! - Deadline: `deadline` is checked at the head of the search loop and of the
 //!   propagation fixpoint, so the search degrades to `Unknown` under a deterministic
 //!   resource bound (the deadline-hole class is designed out).
@@ -131,6 +135,13 @@ const VSIDS_RESCALE_LIMIT: f64 = 1e100;
 /// schedule matches the arithmetic-local and proof-producing CDCL engines.
 const LUBY_UNIT: usize = 100;
 
+/// Live learned clauses tolerated before the first database reduction.
+const REDUCE_FIRST: usize = 2_000;
+/// Additive growth of the live learned-clause budget after each reduction.
+const REDUCE_INCREMENT: usize = 300;
+/// Clauses at or below this literal-block distance are permanent glue clauses.
+const GLUE_LBD: usize = 2;
+
 /// The 1-indexed Luby sequence `1,1,2,1,1,2,4,...` in reluctant-doubling form.
 fn luby(mut index: u64) -> u64 {
     let mut exponent = 1_u64;
@@ -176,6 +187,10 @@ pub(crate) struct CdclT {
     /// Per variable: whether its reason clause is a theory clause. A 1-UIP clause
     /// resolved only through theory clauses is itself a theory lemma.
     reason_theory: Vec<bool>,
+    /// Stored clause currently serving as each assigned variable's reason, when
+    /// that reason came from the clause database. Used to protect locked learned
+    /// clauses during reduction.
+    reason_clause: Vec<Option<usize>>,
     /// Current decision level.
     decision_level: usize,
     /// When set, the search returns [`Outcome::Unknown`] once the deadline passes.
@@ -211,6 +226,24 @@ pub(crate) struct CdclT {
     /// deterministic fixtures.
     #[cfg(test)]
     restart_unit_override: Option<usize>,
+    /// Number of original clauses. Slots at or beyond this index are learned and
+    /// deletion-eligible subject to glue/lock protection.
+    num_original: usize,
+    /// Literal-block distance aligned with `clauses` (`0` for originals).
+    lbd: Vec<usize>,
+    /// Monotone recency stamp aligned with `clauses` (`0.0` for originals).
+    clause_activity: Vec<f64>,
+    /// Tombstone flag aligned with `clauses`; deleted slots are never reused.
+    deleted: Vec<bool>,
+    /// Next monotone learned-clause recency stamp.
+    clause_increment: f64,
+    /// Number of live learned clauses.
+    learned_live: usize,
+    /// Completed learned-clause database reductions.
+    reductions: usize,
+    /// Test-only first-reduction budget override.
+    #[cfg(test)]
+    reduce_first_override: Option<usize>,
 }
 
 impl CdclT {
@@ -223,6 +256,7 @@ impl CdclT {
         clauses: Vec<Vec<Lit>>,
         deadline: Option<Instant>,
     ) -> Self {
+        let num_original = clauses.len();
         Self {
             var_count,
             eq_count,
@@ -232,6 +266,7 @@ impl CdclT {
             level: vec![0; var_count],
             reason: vec![None; var_count],
             reason_theory: vec![false; var_count],
+            reason_clause: vec![None; var_count],
             decision_level: 0,
             deadline,
             step_budget: DEFAULT_STEP_BUDGET,
@@ -245,6 +280,15 @@ impl CdclT {
             restart_index: 1,
             #[cfg(test)]
             restart_unit_override: None,
+            num_original,
+            lbd: vec![0; num_original],
+            clause_activity: vec![0.0; num_original],
+            deleted: vec![false; num_original],
+            clause_increment: 1.0,
+            learned_live: 0,
+            reductions: 0,
+            #[cfg(test)]
+            reduce_first_override: None,
         }
     }
 
@@ -268,6 +312,40 @@ impl CdclT {
     #[cfg(test)]
     fn restarts(&self) -> u64 {
         self.restart_index - 1
+    }
+
+    /// Overrides the first learned-clause reduction budget for a small fixture.
+    #[cfg(test)]
+    fn with_reduce_first(mut self, first: usize) -> Self {
+        self.reduce_first_override = Some(first);
+        self
+    }
+
+    /// Number of completed learned-clause database reductions.
+    #[cfg(test)]
+    fn reductions(&self) -> usize {
+        self.reductions
+    }
+
+    /// Number of tombstoned learned clauses.
+    #[cfg(test)]
+    fn deleted_learned(&self) -> usize {
+        self.deleted[self.num_original..]
+            .iter()
+            .filter(|&&deleted| deleted)
+            .count()
+    }
+
+    /// No active variable may name a tombstoned clause as its reason.
+    #[cfg(test)]
+    fn no_deleted_active_reason(&self) -> bool {
+        self.reason_clause
+            .iter()
+            .enumerate()
+            .all(|(var, reason)| match reason {
+                Some(clause) => self.value[var].is_none() || !self.deleted[*clause],
+                None => true,
+            })
     }
 
     /// Whether the last [`Self::solve`] ended by exhausting the step budget (rather
@@ -321,6 +399,7 @@ impl CdclT {
         self.level[var] = self.decision_level;
         self.reason[var] = reason;
         self.reason_theory[var] = reason_is_theory;
+        self.reason_clause[var] = None;
         self.trail.push((var, value, cause));
         if var < self.eq_count {
             theory.assert(var, value)?;
@@ -336,6 +415,9 @@ impl CdclT {
         while changed {
             changed = false;
             for ci in 0..self.clauses.len() {
+                if self.deleted[ci] {
+                    continue;
+                }
                 let mut unassigned: Option<Lit> = None;
                 let mut satisfied = false;
                 let mut count = 0;
@@ -364,7 +446,7 @@ impl CdclT {
                 if count == 1 {
                     let lit = unassigned.expect("count == 1 has the unit literal");
                     let reason = self.clauses[ci].clone();
-                    if let Err(core) = self.assign(
+                    match self.assign(
                         theory,
                         lit.var,
                         lit.positive,
@@ -372,10 +454,13 @@ impl CdclT {
                         Some(reason),
                         false,
                     ) {
-                        return Err(Conflict {
-                            clause: Self::theory_conflict_clause(&core),
-                            is_theory: true,
-                        });
+                        Ok(()) => self.reason_clause[lit.var] = Some(ci),
+                        Err(core) => {
+                            return Err(Conflict {
+                                clause: Self::theory_conflict_clause(&core),
+                                is_theory: true,
+                            });
+                        }
                     }
                     changed = true;
                 }
@@ -556,6 +641,7 @@ impl CdclT {
             self.value[var] = None;
             self.reason[var] = None;
             self.reason_theory[var] = false;
+            self.reason_clause[var] = None;
             if cause == Cause::Decision {
                 theory.pop();
             }
@@ -652,19 +738,31 @@ impl CdclT {
         } else {
             Some(learned.clone())
         };
+        let lbd = self.compute_lbd(&learned);
+        let clause_id = self.clauses.len();
+        let locked = reason.is_some();
         self.clauses.push(learned);
+        self.register_learned(lbd);
         // Enqueue the UIP literal. Its theory assertion is consistent at the backjump
         // level (the asserting clause is an entailed resolvent), but a theory conflict
         // can still surface — re-analyse it. The learned clause is the UIP's reason,
         // a theory clause iff it is a theory lemma.
-        match self.assign(
+        let assigned = self.assign(
             theory,
             uip.var,
             uip.positive,
             Cause::Implied,
             reason,
             is_theory_lemma,
-        ) {
+        );
+        if locked {
+            self.reason_clause[uip.var] = Some(clause_id);
+        }
+        if self.learned_live > self.reduce_budget() {
+            self.reduce_db();
+            self.reductions += 1;
+        }
+        match assigned {
             Ok(()) => Learn::Continue,
             Err(core) => self.learn_and_backjump(
                 theory,
@@ -673,6 +771,67 @@ impl CdclT {
                     is_theory: true,
                 },
             ),
+        }
+    }
+
+    /// Number of distinct decision levels represented by a learned clause.
+    fn compute_lbd(&self, clause: &[Lit]) -> usize {
+        let mut levels: Vec<usize> = clause.iter().map(|lit| self.level[lit.var]).collect();
+        levels.sort_unstable();
+        levels.dedup();
+        levels.len()
+    }
+
+    /// Appends metadata for the learned clause just pushed into `clauses`.
+    fn register_learned(&mut self, lbd: usize) {
+        self.lbd.push(lbd);
+        self.clause_activity.push(self.clause_increment);
+        self.deleted.push(false);
+        self.clause_increment += 1.0;
+        self.learned_live += 1;
+    }
+
+    /// Current live learned-clause budget under the additive reduction schedule.
+    fn reduce_budget(&self) -> usize {
+        #[cfg(test)]
+        let first = self.reduce_first_override.unwrap_or(REDUCE_FIRST);
+        #[cfg(not(test))]
+        let first = REDUCE_FIRST;
+        first.saturating_add(REDUCE_INCREMENT.saturating_mul(self.reductions))
+    }
+
+    /// Whether `clause` is currently the reason for any assigned literal.
+    ///
+    /// This driver scans whole clauses without moving the implied literal into a
+    /// distinguished watch slot, so a clause can later imply a literal other than
+    /// its original UIP. Consult the recorded reason ids instead of assuming the
+    /// first literal remains the locked one.
+    fn is_locked(&self, clause: usize) -> bool {
+        self.reason_clause
+            .iter()
+            .enumerate()
+            .any(|(var, reason)| self.value[var].is_some() && *reason == Some(clause))
+    }
+
+    /// Tombstones the worst half of deletion-eligible learned clauses. Originals,
+    /// glue clauses, and active reasons are retained. Ordering is total and
+    /// deterministic: descending LBD, oldest activity, then newest slot.
+    fn reduce_db(&mut self) {
+        let mut candidates: Vec<usize> = (self.num_original..self.clauses.len())
+            .filter(|&clause| {
+                !self.deleted[clause] && self.lbd[clause] > GLUE_LBD && !self.is_locked(clause)
+            })
+            .collect();
+        candidates.sort_by(|&left, &right| {
+            self.lbd[right]
+                .cmp(&self.lbd[left])
+                .then_with(|| self.clause_activity[left].total_cmp(&self.clause_activity[right]))
+                .then_with(|| right.cmp(&left))
+        });
+        let remove = candidates.len() / 2;
+        for clause in candidates.into_iter().take(remove) {
+            self.deleted[clause] = true;
+            self.learned_live -= 1;
         }
     }
 
@@ -1323,5 +1482,82 @@ mod termination_tests {
     fn luby_sequence_matches_reluctant_doubling_prefix() {
         let actual: Vec<u64> = (1..=15).map(luby).collect();
         assert_eq!(actual, vec![1, 1, 2, 1, 1, 2, 4, 1, 1, 2, 1, 1, 2, 4, 8]);
+    }
+
+    #[test]
+    fn lbd_reduction_fires_and_matches_never_delete_baseline() {
+        struct NoTheory;
+        impl TheorySolver for NoTheory {
+            fn assert(&mut self, _atom: usize, _value: bool) -> Result<(), Vec<TheoryLit>> {
+                Ok(())
+            }
+
+            fn push(&mut self) {}
+
+            fn pop(&mut self) {}
+
+            fn propagate(&self) -> Vec<TheoryProp> {
+                Vec::new()
+            }
+        }
+
+        let (variables, clauses) = pigeonhole(7, 6);
+        let run = |first| {
+            let mut solver = CdclT::new(variables, 0, clauses.clone(), None)
+                .with_reduce_first(first)
+                .with_restart_unit(usize::MAX);
+            let outcome = solver.solve(&mut NoTheory);
+            (
+                outcome,
+                solver.reductions(),
+                solver.deleted_learned(),
+                solver.no_deleted_active_reason(),
+            )
+        };
+
+        let baseline = run(usize::MAX);
+        assert_eq!(baseline.0, Outcome::Unsat);
+        assert_eq!(baseline.1, 0);
+        assert_eq!(baseline.2, 0);
+        let reduced = run(3);
+        assert_eq!(reduced.0, baseline.0);
+        assert!(reduced.1 > 0, "the lowered reduction budget must fire");
+        assert!(reduced.2 > 0, "reduction must tombstone learned clauses");
+        assert!(reduced.3, "a tombstoned clause remained an active reason");
+        assert_eq!(
+            reduced,
+            run(3),
+            "reduction trajectory must be deterministic"
+        );
+    }
+
+    #[test]
+    fn reduction_protects_glue_and_locked_clauses() {
+        let mut solver = CdclT::new(4, 0, Vec::new(), None);
+        for (var, distance) in [(0, 2), (1, 5), (2, 4), (3, 3)] {
+            solver.clauses.push(vec![Lit {
+                var,
+                positive: true,
+            }]);
+            solver.register_learned(distance);
+        }
+        solver.value[1] = Some(true);
+        solver.reason_clause[1] = Some(1);
+        // Clause 1's locked literal is deliberately not its first literal in this
+        // fixture: lock protection follows the implication graph, not clause order.
+        solver.clauses[1].insert(
+            0,
+            Lit {
+                var: 0,
+                positive: false,
+            },
+        );
+
+        solver.reduce_db();
+
+        assert!(!solver.deleted[0], "LBD-2 glue clause must be permanent");
+        assert!(!solver.deleted[1], "locked reason clause must be retained");
+        assert!(solver.deleted[2], "worst eligible clause should be removed");
+        assert!(!solver.deleted[3], "only the worst half should be removed");
     }
 }
