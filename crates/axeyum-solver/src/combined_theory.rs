@@ -474,7 +474,8 @@ enum AtomRoute {
 /// freshly-allocated propositional variables of its three structural atoms
 /// (`eq` / `lt` / `gt`), beyond the original Tseitin `atom_count`. Slice 3c adds the
 /// structural clauses (`eq ∨ lt ∨ gt`, mutual exclusion, the `EUF` ↔ `LRA` tie) over
-/// these variables to the `SAT` clause DB and lets the generic `Dpll` branch them.
+/// these variables to the `SAT` clause DB and lets the generic
+/// [`crate::cdclt::CdclT`] branch them.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct InterfacePair {
     /// The shared real terms `(s, t)`, in [`TermId`] order.
@@ -489,14 +490,15 @@ pub(crate) struct InterfacePair {
 
 /// A structural clause over the registered interface variables (slice 3b output): a
 /// disjunction of `(variable, polarity)` literals. Slice 3c adds these to the `SAT`
-/// clause DB so the generic `Dpll` branches the interface case-split soundly.
+/// clause DB so the generic [`crate::cdclt::CdclT`] branches the interface
+/// case-split soundly.
 pub(crate) type StructuralClause = Vec<(usize, bool)>;
 
 /// **Incremental, backtrackable combined-theory state** (slice 3b): live `EUF` + `LRA`
 /// sub-theories over the **full** atom set `[original atoms ++ interface eq/lt/gt per
 /// shared pair]`, with the up-front interface variables registered beyond the original
 /// `atom_count`. It [`impl TheorySolver`](TheorySolver) so the generic
-/// [`crate::lra_online::Dpll`] (slice 3c) can drive it: each `SAT` trail assignment of a
+/// [`crate::cdclt::CdclT`] can drive it: each `SAT` trail assignment of a
 /// theory atom is forwarded to the owning sub-theory ([`CombinedIncremental::assert`]),
 /// decisions backtrack in lockstep ([`push`](CombinedIncremental::push) /
 /// [`pop`](CombinedIncremental::pop)), and the combination's entailments are returned by
@@ -512,15 +514,15 @@ pub(crate) type StructuralClause = Vec<(usize, bool)>;
 /// their own atom indices (which are the combined variables directly, since each
 /// sub-theory is built over the full combined layout). A core therefore names only
 /// currently-asserted literals at their asserted polarity — exactly the shape `1-UIP`
-/// conflict analysis in [`crate::lra_online::Dpll`] consumes (every reason literal is a
+/// conflict analysis in [`crate::cdclt::CdclT`] consumes (every reason literal is a
 /// trail literal, so resolution terminates at the first unique implication point).
 ///
-/// **Validation (no `Dpll` yet).** Slice 3b keeps the trusted per-call
+/// **Validation (before the generic driver was wired).** Slice 3b keeps the trusted per-call
 /// [`CombinedTheory::check`] and validates this surface against it
 /// (`combined_incremental_vs_check`): driving the incremental surface to a fixpoint and
 /// reading its verdict must AGREE with `check` on every case the incremental surface
 /// *decides on its own*. Where an interface pair stays `Undetermined` (a genuine
-/// case-split that only the slice-3c `Dpll` branching resolves), the incremental surface
+/// case-split that only the slice-3c [`crate::cdclt::CdclT`] branching resolves), the incremental surface
 /// honestly *defers* to `check` rather than guessing.
 pub(crate) struct CombinedIncremental {
     /// Live `EUF` sub-theory over the full combined atom layout (index = combined var).
@@ -622,7 +624,7 @@ impl CombinedIncremental {
 
     /// The registered shared-interface pairs (their fresh `eq` / `lt` / `gt` variables and
     /// `(s, t)` terms). Slice 3c reads these to wire the structural clauses + the case-split
-    /// branching into the generic `Dpll`.
+    /// branching into the generic [`crate::cdclt::CdclT`].
     #[must_use]
     pub(crate) fn interface_pairs(&self) -> &[InterfacePair] {
         &self.pairs
@@ -696,7 +698,7 @@ impl TheorySolver for CombinedIncremental {
     /// Asserts combined variable `var` at `value`, routing it to the owning sub-theory
     /// (or both, for a shared / interface-eq atom). Returns the conflicting **asserted**
     /// literal core (over combined variables) on inconsistency — suitable verbatim for
-    /// `1-UIP` conflict analysis in [`crate::lra_online::Dpll`].
+    /// `1-UIP` conflict analysis in [`crate::cdclt::CdclT`].
     fn assert(&mut self, var: usize, value: bool) -> Result<(), Vec<TheoryLit>> {
         match self.record(var, value) {
             RecordOutcome::Repeat => return Ok(()), // idempotent re-assert at the same value
@@ -865,7 +867,7 @@ pub enum IncrementalDecision {
 /// per-call [`CombinedTheory::check`] verdict code, so the test can assert they agree on
 /// every case the incremental surface decides on its own.
 ///
-/// The incremental surface is driven exactly as the slice-3c `Dpll` will: a fresh
+/// The incremental surface is driven exactly as production `CdclT` does: a fresh
 /// `push`, then `assert` each literal (returning `Inconsistent` on the first sub-theory
 /// conflict), reaching the `propagate` fixpoint between asserts (so any entailed atom is
 /// itself asserted, surfacing the conflicts a pure literal-by-literal assert would miss).
@@ -981,7 +983,7 @@ fn drive_incremental(
 
 /// Asserts `var := value` then drains the propagation fixpoint, asserting every entailed
 /// literal in turn (so a conflict reachable only *through* a propagation is detected, as
-/// the slice-3c `Dpll` would). Returns `Err` on the first sub-theory conflict.
+/// production `CdclT` would). Returns `Err` on the first sub-theory conflict.
 fn assert_to_fixpoint(
     state: &mut CombinedIncremental,
     var: usize,

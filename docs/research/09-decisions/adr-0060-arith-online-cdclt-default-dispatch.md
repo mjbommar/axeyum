@@ -111,10 +111,10 @@ that both drivers carry the same termination guarantee.**
   as fallback after an online `unknown`.
 
 - **Out of scope (future Gap-3 work).** Porting arrays-lazy onto the spine with
-  real theory propagation (Gap 3 step 2, [P2.2](../../plan/track-2-theories/P2.2-arrays-lazy.md))
-  and migrating the combined arithmetic theories fully onto the generic `CdclT`
-  spine remain future work. The 2026-07-09 update below moves the pure LIA/LRA
-  front doors, but not the full UFLIA/UFLRA combination, onto that spine.
+  real theory propagation (Gap 3 step 2,
+  [P2.2](../../plan/track-2-theories/P2.2-arrays-lazy.md)) and theory combination
+  with BV remain future work. The 2026-07-09 updates below move pure and combined
+  linear arithmetic onto the generic spine.
 
 ## Update (2026-07-09): pure LIA/LRA default probes use generic `CdclT`
 
@@ -148,9 +148,43 @@ verdict with zero expected-status disagreements and zero model-replay failures:
 
 Route-pinning tests assert the default wrappers reach the generic drivers;
 LIA/LRA differential fuzz, NRA/auto/route-trace regressions, and UFLIA/UFLRA
-combination suites preserve the existing soundness gates. This update is a
-partial consolidation: combined UFLIA/UFLRA and theory combination with BV
-remain the next P1.5/P1.6 work.
+combination suites preserve the existing soundness gates. This update was a
+partial consolidation; the combined-arithmetic migration is recorded below.
+Theory combination with BV remains the next P1.6 boundary.
+
+## Update (2026-07-09): combined UFLIA/UFLRA use canonical `CdclT`
+
+The default Boolean-structured `QF_UFLIA` and `QF_UFLRA` routes now drive
+`CombinedIncrementalLia` / `CombinedIncremental` through
+`crate::cdclt::CdclT`, using the same generic online loop as QF_UF, QF_S, and
+the pure arithmetic first probes. The combined theory's atom numbering,
+registered interface `eq`/`lt`/`gt` variables, structural clauses,
+asserted-only conflict cores, leaf reconstruction, and original-assertion replay
+gate are unchanged. Only the owning Boolean driver changed.
+
+The propagation diagnostic entry points now exercise that production route and
+read `CdclT`'s propagation counter. The older enumerative combination remains a
+conservative fallback when an incremental combined state cannot be built. The
+arithmetic-local `lra_online::Dpll` remains for standalone arithmetic fallback
+paths and test-only learned-lemma diagnostics; it no longer owns the production
+combined routes.
+
+Verification and measurement:
+
+- UFLIA online integration: 31/31; UFLRA online integration: 21/21, including
+  production-path theory-propagation fire checks and Boolean differential cases.
+- Z3 differential fuzz: UFLIA 2,500 cases and UFLRA 1,500 cases, zero
+  disagreements. The online-first vs eager-Ackermann dispatch differential is
+  also clean.
+- Five-second curated UFLIA: bounded remains 4 sat / 2 unsat / 0 unknown,
+  `DISAGREE=0`, replay failures 0; overbound remains two timeout unknowns. The
+  two-file regression slice remains 1 sat / 1 unsat.
+
+This is routing consolidation, not the end of driver modernization. The
+arithmetic-local engine already has VSIDS, phase saving, Luby restarts, LBD, and
+learned-clause reduction that canonical `CdclT` does not yet carry. Those
+heuristics should migrate into `CdclT` under corpus measurement before the local
+engine is retired; keeping two production combined loops is no longer necessary.
 
 ## Evidence
 
@@ -207,11 +241,12 @@ remain the next P1.5/P1.6 work.
   recorded decision, and both online drivers carry the identical termination
   guarantee — the spine is proven sound + terminating for the array-lazy port
   and the eventual arithmetic-theory migration to build on.
-- **Harder / cost:** two CDCL(T) drivers (`CdclT` and `lra_online::Dpll`)
-  still coexist for combined/fallback paths until a future consolidation; the
-  step-budget belt now lives in both and must stay in sync.
-- **Revisited when:** arrays-lazy lands on the spine (Gap 3 step 2); the
-  combined arithmetic theories migrate onto the generic `CdclT`; or a
+- **Harder / cost:** two CDCL(T) implementations (`CdclT` and
+  `lra_online::Dpll`) still coexist for standalone fallback/diagnostic paths;
+  their termination belts and search heuristics must stay coherent until the
+  arithmetic-local implementation is fully absorbed.
+- **Revisited when:** arrays-lazy lands on the spine (Gap 3 step 2); the mature
+  arithmetic search heuristics migrate into canonical `CdclT`; or a
   dedicated re-baseline banks the `QF_UF` decide-rate movement. The pure-QF_UF
   default-dispatch status is now tracked by ADR-0055's 2026-07-09 update.
 
@@ -220,4 +255,6 @@ remain the next P1.5/P1.6 work.
 - Record the arith online CDCL(T) routes (`QF_UFLIA` / `QF_UFLRA`) as
   default-first in `check_auto` dispatch, additive over the eager Ackermann
   fallback, with deadline polling + a `DEFAULT_STEP_BUDGET` termination belt
-  matching `CdclT` (ADR-0055).
+  matching `CdclT` (ADR-0055). Their Boolean-structured combined theories now
+  implement the canonical `CdclT` path directly; direct conjunctive combination
+  remains the model/replay oracle and conservative fallback.

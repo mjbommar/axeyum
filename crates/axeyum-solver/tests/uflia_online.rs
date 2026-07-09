@@ -1141,9 +1141,9 @@ fn combined_theory_propagation_is_sound_and_fires() {
     );
 }
 
-/// **Slice-2 propagation fires through the integrated `BoolSearch` path.** Combined
-/// theory propagation must engage in the joint fixpoint (`props_fired > 0`), and the
-/// verdict must still agree with the offline decider (verdict-invariant).
+/// **Combined propagation fires through the production `CdclT` path.** Combined theory
+/// propagation must engage in the joint fixpoint (`props_fired > 0`), and the verdict
+/// must still agree with the offline decider (verdict-invariant).
 #[test]
 fn combined_theory_propagation_fires_in_boolean_search() {
     let config = SolverConfig::default();
@@ -1178,13 +1178,12 @@ fn combined_theory_propagation_fires_in_boolean_search() {
     assert!(decided > 0, "expected some jointly-decided cases, got none");
     assert!(
         total_props > 0,
-        "combined theory propagation never fired through BoolSearch ({total_props}) — \
-         the slice-2 wiring is not engaging"
+        "combined theory propagation never fired through CdclT ({total_props})"
     );
 }
 
 /// **Slice-3b-lia incremental-vs-`check` validation gate (load-bearing).** Driving the
-/// `CombinedIncrementalLia` surface to a fixpoint (as the slice-3c-lia `Dpll` will: `push`,
+/// `CombinedIncrementalLia` surface to a fixpoint (as `CdclT` does: `push`,
 /// `assert` each literal to a propagation fixpoint) must AGREE with the trusted reference
 /// `check` on every case it decides on its own, with **zero disagreements**, and never
 /// refute a genuinely-SAT conjunction over ℤ:

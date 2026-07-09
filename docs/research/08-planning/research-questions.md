@@ -230,8 +230,16 @@ Out of scope:
 - [ ] Should the proof-assistant bridge export obligations to Lean, import
       checked rewrite rules from Lean, or both — and how early is a
       Lean-checked rewrite-rule library worth prototyping?
-- [ ] When two theories exist, is Nelson-Oppen combination implemented
+- [x] When two theories exist, is Nelson-Oppen combination implemented
       directly or via a CDCL(T) core from the start?
+  - Answer: expose each live combined theory through the shared `TheorySolver`
+    contract and let canonical `CdclT` own Boolean structure, interface-variable
+    branching, propagation, and conflict learning. A direct conjunctive
+    Nelson-Oppen search remains the replay/model-reconstruction oracle and a
+    conservative fallback, not a second production Boolean loop. QF_UFLIA and
+    QF_UFLRA now follow this architecture; see
+    [ADR-0060](../09-decisions/adr-0060-arith-online-cdclt-default-dispatch.md)
+    and [P1.6](../../plan/track-1-engine/P1.6-theory-combination.md).
 
 ### Rust And Packaging
 

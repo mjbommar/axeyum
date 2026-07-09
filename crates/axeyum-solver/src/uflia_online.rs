@@ -40,23 +40,15 @@
 //!   **replayed against the original assertions**; all branches infeasible ⇒ `UNSAT`.
 //!   This is the conjunctive fast-path and its behaviour is unchanged.
 //!
-//! - Full (Boolean-structured) `QF_UFLIA` (`check_qf_uflia_boolean`): when the
-//!   assertions are *not* a conjunction, a **`DPLL(T)`** layer (the online `CDCL(T)`
-//!   payoff) wraps the combination. The Boolean structure (`and` / `or` / `not` /
-//!   `xor` / `=>` / `ite` over the distinct `EUF` / `LIA` atoms) is Tseitin-encoded
-//!   into a propositional skeleton with one variable per distinct theory atom. An
-//!   enumerative `DPLL` search assigns those propositions; on each total propositional
-//!   model the corresponding conjunction of theory literals is decided by the **same**
-//!   `decide_conjunction` combination above. A model whose combination is `sat`
-//!   (replay-checked) ⇒ `SAT`; a model whose combination is `unsat` is blocked by a
-//!   theory-conflict clause (the negation of the model's theory-literal assignment) and
-//!   the search continues; when every propositional model is blocked ⇒ `UNSAT`. A
-//!   combination that returns `Unknown` on some model, or any of the enumeration caps,
-//!   degrades the whole query to a conservative [`CheckResult::Unknown`] — never a wrong
-//!   `sat` / `unsat`. This is the sound **enumerative `DPLL(T)`** slice: it handles
-//!   arbitrary Boolean structure by reusing the conjunctive combination as the theory
-//!   oracle behind a propositional search, with theory-conflict blocking clauses for
-//!   pruning.
+//! - Full (Boolean-structured) `QF_UFLIA` (`check_qf_uflia_boolean`): the Boolean
+//!   structure is Tseitin-encoded over the distinct `EUF` / `LIA` atoms and driven by
+//!   the canonical [`crate::cdclt::CdclT`] loop over a live
+//!   [`crate::combined_theory_lia::CombinedIncrementalLia`]. Original theory atoms and
+//!   registered interface `eq`/`lt`/`gt` variables share one trail, propagation
+//!   fixpoint, and 1-UIP implication graph. A consistent leaf is rebuilt through the
+//!   same replay-checked conjunctive combination above. The older enumerative search
+//!   remains only as a conservative fallback when the incremental combined state cannot
+//!   be built.
 //!
 //! **Trust.** This is a decision procedure; its soundness is established by the
 //! differential gate against the trusted offline
@@ -233,11 +225,10 @@ pub fn check_qf_uflia_online(
         return Ok(decide_conjunction(arena, &literals, deadline));
     }
 
-    // 2. Boolean-structured QF_UFLIA: drive the combination from the real CDCL(T) layer —
-    //    a single generic `Dpll` over the live `CombinedIncrementalLia` (EUF + LIA with
-    //    registered interface-equality variables) over the extended Tseitin skeleton plus
-    //    the interface structural clauses. The interface case-split is ordinary SAT
-    //    branching on the registered interface vars (no private DFS enumeration).
+    // 2. Boolean-structured QF_UFLIA: drive the combination through the canonical
+    //    `CdclT` layer over the live `CombinedIncrementalLia` and the extended
+    //    Tseitin skeleton. Interface splitting is ordinary SAT branching on the
+    //    registered interface variables.
     Ok(check_qf_uflia_boolean(arena, assertions, config))
 }
 
@@ -266,12 +257,10 @@ pub fn check_qf_uflia_boolean_with_metrics(
     (result, metrics.prunes_fired, metrics.models_tried)
 }
 
-/// Test-only entry returning the Boolean-`DPLL(T)` verdict together with the
-/// **combined-theory-propagation** fire count (slice 2): how many genuinely-entailed
-/// literals the joint (Boolean + theory) propagation fixpoint assigned (or conflicts it
-/// learned) across the search — so the slice-2 "propagation fires through the integrated
-/// path" assertion can observe that theory propagation actually engages. Not part of the
-/// production surface.
+/// Diagnostic entry returning the Boolean-`CDCL(T)` verdict together with the
+/// number of literals assigned by combined-theory propagation through the same
+/// canonical [`crate::cdclt::CdclT`] route used in production. Not part of the
+/// supported production surface.
 #[doc(hidden)]
 #[must_use]
 pub fn check_qf_uflia_boolean_prop_metrics(
@@ -279,10 +268,10 @@ pub fn check_qf_uflia_boolean_prop_metrics(
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> (CheckResult, usize) {
-    let mut metrics = Metrics::default();
+    let mut theory_propagations = 0;
     let result =
-        check_qf_uflia_boolean_enumerative(arena, assertions, config, true, Some(&mut metrics));
-    (result, metrics.props_fired)
+        check_qf_uflia_boolean_cdclt(arena, assertions, config, Some(&mut theory_propagations));
+    (result, theory_propagations)
 }
 
 /// Decides a **conjunction** of `QF_UFLIA` literals by the model-based combination (the
@@ -1539,7 +1528,7 @@ impl BoolLit {
 }
 
 /// Decides a Boolean-structured `QF_UFLIA` query by the **real `CDCL(T)`** layer
-/// (slice 3c-lia): a single generic [`crate::lra_online::Dpll`] drives a
+/// (slice 3c-lia): the canonical [`crate::cdclt::CdclT`] drives a
 /// [`crate::combined_theory_lia::CombinedIncrementalLia`] (the live `EUF` + `LIA`
 /// combination with registered interface-equality variables) over the **extended**
 /// Tseitin skeleton (theory atoms ++ interface `eq`/`lt`/`gt` vars ++ Tseitin auxiliaries)
@@ -1565,6 +1554,15 @@ fn check_qf_uflia_boolean(
     arena: &mut TermArena,
     assertions: &[TermId],
     config: &SolverConfig,
+) -> CheckResult {
+    check_qf_uflia_boolean_cdclt(arena, assertions, config, None)
+}
+
+fn check_qf_uflia_boolean_cdclt(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+    theory_propagations: Option<&mut usize>,
 ) -> CheckResult {
     let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
     if deadline.is_some_and(|d| Instant::now() >= d) {
@@ -1611,12 +1609,19 @@ fn check_qf_uflia_boolean(
         }
         return check_qf_uflia_boolean_enumerative(arena, assertions, config, true, None);
     };
-    cdclt_combined(arena, assertions, &atom_terms, combined, deadline)
+    cdclt_combined(
+        arena,
+        assertions,
+        &atom_terms,
+        combined,
+        deadline,
+        theory_propagations,
+    )
 }
 
 /// The real-`CDCL(T)` body (slice 3c-lia): build the extended skeleton (theory atoms ++
 /// interface vars ++ Tseitin auxiliaries) and the interface structural clauses, run the
-/// generic [`crate::lra_online::Dpll`] over
+/// generic [`crate::cdclt::CdclT`] over
 /// [`crate::combined_theory_lia::CombinedIncrementalLia`], and translate the outcome to the
 /// verdict contract (rebuilding + replaying the leaf **integer** model through
 /// [`decide_conjunction`]).
@@ -1626,6 +1631,7 @@ fn cdclt_combined(
     atom_terms: &[TermId],
     mut combined: crate::combined_theory_lia::CombinedIncrementalLia,
     deadline: Option<Instant>,
+    theory_propagations: Option<&mut usize>,
 ) -> CheckResult {
     let atom_count = atom_terms.len();
     let interface_count = combined.interface_pairs().len() * 3;
@@ -1668,12 +1674,12 @@ fn cdclt_combined(
         );
     }
 
-    let lit_clauses: Vec<Vec<crate::lra_online::Lit>> = bool_clauses
+    let lit_clauses: Vec<Vec<crate::cdclt::Lit>> = bool_clauses
         .into_iter()
         .map(|clause| {
             clause
                 .into_iter()
-                .map(|l| crate::lra_online::Lit {
+                .map(|l| crate::cdclt::Lit {
                     var: l.var,
                     positive: l.positive,
                 })
@@ -1685,13 +1691,18 @@ fn cdclt_combined(
         return timeout_unknown("timeout in the online combination boolean layer");
     }
 
-    // The generic Dpll drives the live combination: vars `0..combined_count` are forwarded
-    // to `CombinedIncrementalLia` (theory atoms + interface vars); the rest are Tseitin aux.
-    let mut solver = crate::lra_online::Dpll::new(enc.var_count, combined_count, lit_clauses);
-    match solver.solve_with_deadline(&mut combined, deadline) {
-        Some(true) => return CheckResult::Unsat,
-        Some(false) => {}
-        None => {
+    // The canonical generic driver owns the live combination: vars
+    // `0..combined_count` are forwarded to `CombinedIncrementalLia` (theory atoms
+    // + interface vars); the rest are Tseitin auxiliaries.
+    let mut solver = crate::cdclt::CdclT::new(enc.var_count, combined_count, lit_clauses, deadline);
+    let outcome = solver.solve(&mut combined);
+    if let Some(count) = theory_propagations {
+        *count = solver.theory_propagations();
+    }
+    match outcome {
+        crate::cdclt::Outcome::Unsat => return CheckResult::Unsat,
+        crate::cdclt::Outcome::Sat => {}
+        crate::cdclt::Outcome::Unknown => {
             return timeout_unknown("timeout in the online combination boolean layer");
         }
     }
@@ -1701,7 +1712,7 @@ fn cdclt_combined(
     // degrades to Unknown.
     let mut literals: Vec<Literal> = Vec::with_capacity(atom_count);
     for (var, &atom) in atom_terms.iter().enumerate() {
-        if let Some(value) = solver.value_of(var) {
+        if let Some(value) = solver.value(var) {
             literals.push(Literal { atom, value });
         }
     }
@@ -1714,14 +1725,14 @@ fn cdclt_combined(
             // Inject each such skeleton-only Bool symbol from the SAT layer's committed
             // value, then replay the completed witness against the ORIGINAL assertions as
             // the acceptance gate — additive and replay-gated, so no wrong `sat`.
-            inject_skeleton_bool_symbols(arena, &enc.term_var, |v| solver.value_of(v), &mut model);
+            inject_skeleton_bool_symbols(arena, &enc.term_var, |v| solver.value(v), &mut model);
             if replays_assertions(arena, assertions, &model) {
                 CheckResult::Sat(model)
             } else {
                 decline("combined CDCL(T) leaf did not rebuild a replaying model")
             }
         }
-        // The Dpll found the combined theory consistent at this leaf, but the conjunctive
+        // CdclT found the combined theory consistent at this leaf, but the conjunctive
         // core could not certify a replaying model. Degrade — never call it Unsat.
         CheckResult::Unsat | CheckResult::Unknown(_) => {
             decline("combined CDCL(T) leaf did not rebuild a replaying model")

@@ -380,7 +380,7 @@ pub fn prove_unsat_lazy(arena: &mut TermArena, assertions: &[TermId]) -> bool {
 }
 
 /// Online CDCL(T) refutation for the `QF_UF` equality fragment (Track 1, P1.5):
-/// the generic [`CdclT`] driver runs the **online** [`EufTheory`] over the
+/// the generic `CdclT` driver runs the **online** [`EufTheory`] over the
 /// backtrackable congruence-closure e-graph, instead of the offline
 /// SAT-then-recheck enumeration of [`prove_unsat_lazy`].
 ///
@@ -406,7 +406,7 @@ pub fn prove_unsat_qf_uf_online(arena: &mut TermArena, assertions: &[TermId]) ->
 /// Decides the `QF_UF`(-equality) fragment by the **online CDCL(T)** loop, returning
 /// a **replay-checked** model on `sat`. This is the decision-procedure form of
 /// [`prove_unsat_qf_uf_online`]: it is now the public compatibility wrapper over
-/// the generic [`CdclT`] route ([`check_qf_uf_online_cdclt`]). On a Boolean- and
+/// the generic `CdclT` route ([`check_qf_uf_online_cdclt`]). On a Boolean- and
 /// theory-consistent total assignment it builds a candidate model from the e-graph
 /// classes ([`EufTheory::model`]) and **replays it against the original
 /// assertions** — the soundness gate, so a model the uninterpreted abstraction

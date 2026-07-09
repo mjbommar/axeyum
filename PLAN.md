@@ -3605,7 +3605,13 @@ Its conclusion, ranked by quality × efficiency:
    Fourier–Motzkin pass, and a deterministic 1,024-atom resource cap avoids the
    eager per-assert stack/cost cliff. Curated 5 s A/B preserves 10/11 LIA and
    9/11 LRA decided with zero disagreements/replay failures; the two LRA unknown
-   rows improve from 5.250 s / 11.853 s to 4.838 s / 5.031 s.
+   rows improve from 5.250 s / 11.853 s to 4.838 s / 5.031 s. **Sixth
+   follow-through:** Boolean-structured QF_UFLIA/QF_UFLRA now drive
+   `CombinedIncrementalLia` / `CombinedIncremental` through canonical `CdclT`;
+   their propagation gates exercise that production route. The arithmetic-local
+   driver remains only for standalone fallback and learned-lemma diagnostics.
+   The next engine slice is to import its mature VSIDS/Luby/LBD/clause-reduction
+   machinery into canonical `CdclT`, then take BV combination across P1.6.
 2. **Keep a thin measured-leaf-BFS skirt in parallel** — measured-ROI leaves only
    (NRA tail, strings-Nielsen); fold the feature/scale-blocked leaves
    (dense-ILP MILP, large-LP performance) into a funded engine phase rather than

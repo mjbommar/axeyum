@@ -8,11 +8,9 @@
 //! via the explained core, and the theory is pushed/popped in lockstep with the
 //! search's decision levels ([`TheorySolver::push`]/[`TheorySolver::pop`]).
 //!
-//! This is the *generic* counterpart to the EUF-hardwired online search embedded in
-//! [`crate::euf_egraph`]: [`CdclT`] is parameterised over any `T: TheorySolver`, so
-//! the same driver serves EUF today and the arithmetic / combined theories
-//! (UF/NRA/NIA) as they gain a [`TheorySolver`] impl. Slice (a) wires **EUF** as the
-//! first theory (see [`crate::euf_egraph::check_qf_uf_online_cdclt`]).
+//! [`CdclT`] is parameterised over any `T: TheorySolver`. The same driver now serves
+//! EUF, strings, pure LIA/LRA, and the live EUF+LIA/EUF+LRA combined theories; the
+//! adapters retain responsibility for model construction and original-assertion replay.
 //!
 //! ## Conflict learning — 1-UIP over the mixed implication graph
 //! Both Boolean input clauses and theory clauses (a theory conflict `¬⋀core` or a
@@ -208,7 +206,6 @@ impl CdclT {
     }
 
     /// Number of literals assigned by theory propagation during the last solve.
-    #[cfg(test)]
     pub(crate) fn theory_propagations(&self) -> usize {
         self.theory_propagations
     }

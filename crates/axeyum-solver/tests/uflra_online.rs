@@ -890,10 +890,10 @@ fn combined_theory_propagation_is_sound_and_fires() {
     );
 }
 
-/// **Slice-2 propagation fires through the integrated `BoolSearch` path.** A
+/// **Combined propagation fires through the production `CdclT` path.** A
 /// Boolean-structured query whose early atoms force a downstream theory entailment must
 /// see combined theory propagation engage in the joint fixpoint (`props_fired > 0`),
-/// confirming the wiring into `BoolSearch::solve` is live — not just the standalone
+/// confirming the production wiring is live — not just the standalone
 /// `propagate`. The verdict must still agree with the offline decider (verdict-invariant).
 #[test]
 fn combined_theory_propagation_fires_in_boolean_search() {
@@ -932,14 +932,13 @@ fn combined_theory_propagation_fires_in_boolean_search() {
     assert!(decided > 0, "expected some jointly-decided cases, got none");
     assert!(
         total_props > 0,
-        "combined theory propagation never fired through BoolSearch ({total_props}) — \
-         the slice-2 wiring is not engaging"
+        "combined theory propagation never fired through CdclT ({total_props})"
     );
 }
 
 /// **Slice-3b incremental-surface-vs-`check` differential (load-bearing).** The new
 /// backtrackable `impl TheorySolver` surface on `CombinedIncremental` — driven exactly as
-/// the slice-3c `Dpll` will (`push`, `assert` each literal to a propagation fixpoint) —
+/// `CdclT` does (`push`, `assert` each literal to a propagation fixpoint) —
 /// must AGREE with the trusted reference [`check`] on every case it decides on its own,
 /// with **zero disagreements**, and never refute a genuinely-SAT conjunction:
 ///
@@ -953,7 +952,7 @@ fn combined_theory_propagation_fires_in_boolean_search() {
 ///   that offline cannot be UNSAT: like `check`, the incremental surface is intentionally
 ///   incomplete on disequalities outside an interface pair — it does not *claim* SAT, only
 ///   "no conflict found", exactly as `check` returns `Unknown` on the same shape, so the
-///   slice-3c `Dpll` returns `Unknown` there too, never a wrong SAT.)
+///   production `CdclT` returns `Unknown` there too, never a wrong SAT.)
 /// - `Deferred` (an `Undetermined` pair only the slice-3c case-split resolves) imposes
 ///   no constraint — the honest handles/defers split.
 ///
