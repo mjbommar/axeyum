@@ -296,7 +296,9 @@ pub(crate) fn decide_conjunction(
         });
     }
 
-    let mut lra = LraTheory::new(arena, &lra_atom_terms);
+    let Some(mut lra) = LraTheory::new_with_deadline(arena, &lra_atom_terms, deadline) else {
+        return timeout_unknown("timeout while constructing the online combination LRA theory");
+    };
     for (index, lit) in part.lra.iter().enumerate() {
         if lra.assert(index, lit.value).is_err() {
             return CheckResult::Unsat;
@@ -1258,13 +1260,23 @@ fn check_qf_uflra_boolean(
         return decline("too many theory atoms for the online combination boolean layer");
     }
 
+    let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
     // Build the live combined state: it registers the interface eq/lt/gt variables beyond
     // the original `atom_count`. If it cannot be built, fall back to the enumerative layer.
-    let Some(combined) = crate::combined_theory::CombinedIncremental::new(arena, &atom_terms)
-    else {
-        return check_qf_uflra_boolean_enumerative(arena, assertions, config, true, None);
+    let combined = match crate::combined_theory::CombinedIncremental::new_with_deadline(
+        arena,
+        &atom_terms,
+        deadline,
+    ) {
+        Some(combined) => combined,
+        None if past_deadline(deadline) => {
+            return timeout_unknown("timeout while constructing combined UFLRA theory");
+        }
+        None => {
+            return check_qf_uflra_boolean_enumerative(arena, assertions, config, true, None);
+        }
     };
-    cdclt_combined(arena, assertions, config, &atom_terms, combined)
+    cdclt_combined(arena, assertions, &atom_terms, combined, deadline)
 }
 
 /// The real-`CDCL(T)` body (slice 3c): build the extended skeleton (theory atoms ++
@@ -1275,9 +1287,9 @@ fn check_qf_uflra_boolean(
 fn cdclt_combined(
     arena: &mut TermArena,
     assertions: &[TermId],
-    config: &SolverConfig,
     atom_terms: &[TermId],
     mut combined: crate::combined_theory::CombinedIncremental,
+    deadline: Option<Instant>,
 ) -> CheckResult {
     let atom_count = atom_terms.len();
     let interface_count = combined.interface_pairs().len() * 3;
@@ -1324,7 +1336,6 @@ fn cdclt_combined(
         })
         .collect();
 
-    let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
     if deadline.is_some_and(|d| Instant::now() >= d) {
         return timeout_unknown("timeout in the online combination boolean layer");
     }

@@ -22,7 +22,7 @@
 use axeyum_ir::{Assignment, Rational, Sort, TermArena, TermId, Value, eval};
 use axeyum_solver::{
     CheckResult, Model, SolverConfig, check_qf_lra_online, check_qf_lra_online_cdclt,
-    check_with_lra,
+    check_with_lra, check_with_lra_dpll,
 };
 
 /// Deterministic LCG (Numerical Recipes constants) — reproducible, no `rand`, no
@@ -343,5 +343,24 @@ fn deadline_gives_unknown_not_wrong_answer() {
     assert!(
         matches!(r, CheckResult::Unknown(_)),
         "zero-timeout must yield Unknown, got {r:?}"
+    );
+}
+
+#[test]
+fn default_lra_wrapper_leads_with_generic_cdclt() {
+    let mut arena = TermArena::new();
+    let x = rvar(&mut arena, "x");
+    let zero = rconst(&mut arena, 0);
+    let lt = arena.real_lt(x, zero).unwrap();
+    let gt = arena.real_gt(x, zero).unwrap();
+    let cfg = SolverConfig::default().with_timeout(std::time::Duration::ZERO);
+    let CheckResult::Unknown(reason) =
+        check_with_lra_dpll(&mut arena, &[lt, gt], &cfg).expect("result")
+    else {
+        panic!("zero-timeout default LRA route must yield Unknown");
+    };
+    assert!(
+        reason.detail.contains("online CDCL(T) LRA driver"),
+        "default LRA route did not lead with generic CDCL(T): {reason:?}"
     );
 }

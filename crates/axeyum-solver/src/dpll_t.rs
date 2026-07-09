@@ -1,9 +1,12 @@
 //! Lazy SMT (DPLL(T)) over linear real arithmetic, **combined with the
 //! bit-blasted theories** (ADR-0015 follow-on).
 //!
-//! [`check_with_lra_dpll`] decides an arbitrary Boolean combination of linear
-//! real constraints **and** bit-vector / array / uninterpreted-function /
-//! bounded-integer constraints in one query. Reals share no sort with those
+//! [`check_with_lra_dpll`] first sends pure linear-real Boolean structure through
+//! the generic online [`crate::cdclt::CdclT`] + [`crate::lra_online::LraTheory`]
+//! route. Structural or arithmetic-incompleteness declines retain the established
+//! refinement loop below, which decides linear real constraints **and** bit-vector /
+//! array / uninterpreted-function / bounded-integer constraints in one query.
+//! Reals share no sort with those
 //! theories, so the only coupling is propositional — making this lazy-SMT loop a
 //! *complete* combination procedure (no interface-equality propagation needed).
 //! Only the real atoms are abstracted to fresh Boolean propositions; every
@@ -76,6 +79,20 @@ fn past_deadline(deadline: Option<Instant>) -> bool {
     deadline.is_some_and(|d| Instant::now() >= d)
 }
 
+/// Re-bases a relative solver timeout onto the caller-owned absolute deadline
+/// after the online probe has consumed part of the budget.
+fn config_with_remaining_deadline(
+    config: &SolverConfig,
+    deadline: Option<Instant>,
+) -> SolverConfig {
+    let Some(deadline) = deadline else {
+        return config.clone();
+    };
+    let mut fallback = config.clone();
+    fallback.timeout = Some(deadline.saturating_duration_since(Instant::now()));
+    fallback
+}
+
 /// Lazy-SMT entry that respects an **absolute** wall-clock `deadline` (rather
 /// than re-deriving one from `config.timeout`, which would reset the clock on
 /// every call). The deadline is checked once per refinement round, so a caller
@@ -96,6 +113,26 @@ pub fn check_with_lra_dpll_within(
     config: &SolverConfig,
     deadline: Option<Instant>,
 ) -> Result<CheckResult, SolverError> {
+    // Prefer the shared generic CDCL(T) spine for pure Boolean-structured LRA.
+    // Mixed real+BV/array/UF shapes decline its skeleton encoder quickly and retain
+    // the established abstraction/refinement loop below. A pure-LRA timeout owns
+    // the caller's remaining budget and returns directly; only structural or
+    // arithmetic-incompleteness declines fall through to the legacy mixed route.
+    let probe_config = config_with_remaining_deadline(config, deadline);
+    match crate::lra_theory::check_qf_lra_online_cdclt(arena, assertions, &probe_config)? {
+        result @ (CheckResult::Sat(_) | CheckResult::Unsat) => return Ok(result),
+        CheckResult::Unknown(reason)
+            if matches!(
+                reason.kind,
+                UnknownKind::Timeout | UnknownKind::ResourceLimit
+            ) || past_deadline(deadline) =>
+        {
+            return Ok(CheckResult::Unknown(reason));
+        }
+        CheckResult::Unknown(_) => {}
+    }
+    let fallback_config = config_with_remaining_deadline(config, deadline);
+
     // 1. Boolean abstraction: skeleton terms + the atom map.
     let mut ctx = Abstractor::default();
     let mut skeleton = Vec::with_capacity(assertions.len());
@@ -128,7 +165,7 @@ pub fn check_with_lra_dpll_within(
             arena,
             &sat_assertions,
             DEFAULT_INT_WIDTH,
-            config,
+            &fallback_config,
         )? {
             CheckResult::Sat(model) => model,
             CheckResult::Unsat => return Ok(CheckResult::Unsat),

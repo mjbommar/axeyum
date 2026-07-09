@@ -55,7 +55,9 @@
 //!   defense-in-depth backstop, so the search degrades to `Unknown` under a
 //!   deterministic resource bound.
 //!
-//! Not wired into default dispatch this slice (ADR-0055's measured-first rule).
+//! The pure `QF_LIA` front door now gives this generic route a bounded first
+//! probe, retaining the established arithmetic-DPLL route on `Unknown`
+//! (ADR-0060's 2026-07-09 update).
 
 use std::collections::HashSet;
 use std::time::Instant;
@@ -148,8 +150,8 @@ impl TheorySolver for CdcltLiaTheory {
 ///
 /// Returns [`CheckResult::Unknown`] when there are no `LIA` atoms or the Boolean
 /// skeleton has structure the encoder does not cover — the same conservative
-/// give-ups as [`crate::lia_online::check_qf_lia_online`]. Not wired into default
-/// dispatch this slice.
+/// give-ups as [`crate::lia_online::check_qf_lia_online`]. This is the bounded
+/// default first probe for pure `QF_LIA`, with the established route as fallback.
 ///
 /// # Errors
 ///

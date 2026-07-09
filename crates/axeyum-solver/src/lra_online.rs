@@ -22,9 +22,10 @@
 //! - [`LraTheory::push`] / [`LraTheory::pop`] snapshot and restore the trail
 //!   length, so a backtrack drops exactly the constraints and atom assignments
 //!   added since the matching `push`.
-//! - `propagate` is an honest empty under-approximation in this first slice (a
-//!   sound choice: the driver still terminates, just with less theory-level
-//!   pruning). It is documented as deferred.
+//! - [`LraTheory::propagate`] probes each unassigned order atom's opposite
+//!   polarity; an infeasible probe yields an asserted-literal explanation for
+//!   the entailed atom. Deadline or arithmetic-budget exhaustion emits no
+//!   propagation, a sound under-approximation.
 //!
 //! [`check_qf_lra_online`] wires [`LraTheory`] into a self-contained `DPLL(T)`
 //! search over the Boolean skeleton (the same shape as
@@ -42,7 +43,8 @@
 //! combination of asserted atoms. All exact arithmetic is `i128`-`checked_*`;
 //! any overflow degrades the *current feasibility check* to "don't know"
 //! (treated as feasible — never a wrong `unsat`), and the driver carries that to
-//! a conservative [`CheckResult::Unknown`] verdict.
+//! a conservative [`CheckResult::Unknown`] verdict. Caller deadlines cover atom
+//! normalization, feasibility, propagation, and model reconstruction.
 
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::fmt;
@@ -75,6 +77,11 @@ const MAX_FM_CONSTRAINTS: usize = 20_000;
 /// query that runs 16M CDCL main-loop iterations without a deadline is already
 /// pathological, so no in-corpus instance is turned into `Unknown` by the belt.
 const DEFAULT_STEP_BUDGET: usize = 16_000_000;
+
+/// Whether the caller-owned absolute deadline has passed.
+fn past_deadline(deadline: Option<Instant>) -> bool {
+    deadline.is_some_and(|d| Instant::now() >= d)
+}
 
 /// A linear expression `Σ coeff_i · x_i + constant` over densely-indexed real
 /// variables. A local mirror of the offline `lra::LinExpr` (kept private there);
@@ -233,6 +240,9 @@ pub struct LraTheory {
     /// symbol of variable `i`. Lets [`LraTheory::real_model`] read a witness back
     /// over the original symbols (used by the online theory-combination path).
     vars: Vec<SymbolId>,
+    /// Caller-owned absolute deadline for incremental feasibility, propagation,
+    /// and model reconstruction. `None` preserves the original untimed behavior.
+    deadline: Option<Instant>,
 }
 
 impl LraTheory {
@@ -243,16 +253,39 @@ impl LraTheory {
     ///
     /// Variable indices are assigned in first-seen order over the atom terms,
     /// deterministically (a stable scan), so the dense indexing is reproducible.
+    ///
+    /// # Panics
+    ///
+    /// Only if the untimed construction path reports a timeout, which is
+    /// unreachable because its deadline is `None`.
     #[must_use]
     pub fn new(arena: &TermArena, atom_terms: &[TermId]) -> Self {
-        let mut builder = AtomBuilder::default();
-        let atoms: Vec<AtomKind> = atom_terms
-            .iter()
-            .map(|&t| builder.build(arena, t))
-            .collect();
+        Self::new_with_deadline(arena, atom_terms, None)
+            .expect("an unbounded LRA theory construction cannot time out")
+    }
+
+    /// Builds the theory while honoring a caller-owned absolute deadline during
+    /// atom normalization. Returns `None` only when that deadline expires.
+    #[must_use]
+    pub(crate) fn new_with_deadline(
+        arena: &TermArena,
+        atom_terms: &[TermId],
+        deadline: Option<Instant>,
+    ) -> Option<Self> {
+        let mut builder = AtomBuilder::with_deadline(deadline);
+        let mut atoms = Vec::with_capacity(atom_terms.len());
+        for &term in atom_terms {
+            if past_deadline(deadline) {
+                return None;
+            }
+            atoms.push(builder.build(arena, term));
+            if past_deadline(deadline) {
+                return None;
+            }
+        }
         let nvars = builder.vars.len();
         let count = atoms.len();
-        Self {
+        Some(Self {
             atoms,
             nvars,
             live: Vec::new(),
@@ -260,7 +293,17 @@ impl LraTheory {
             assigned_log: Vec::new(),
             trail: Vec::new(),
             vars: builder.vars,
-        }
+            deadline,
+        })
+    }
+
+    /// Bounds every Fourier–Motzkin pass performed by this incremental theory by
+    /// the caller's absolute deadline.
+    #[must_use]
+    #[cfg(test)]
+    pub(crate) fn with_deadline(mut self, deadline: Option<Instant>) -> Self {
+        self.deadline = deadline;
+        self
     }
 
     /// A real witness for the currently-asserted constraints, over the original
@@ -290,7 +333,7 @@ impl LraTheory {
         if self.live.is_empty() {
             return Feasibility::Sat;
         }
-        solve(&self.live, self.nvars)
+        solve(&self.live, self.nvars, self.deadline)
     }
 
     /// Maps a set of live row indices (a Farkas-participating constraint subset)
@@ -371,7 +414,7 @@ impl LraTheory {
     /// overflows — the caller then yields `Unknown`, never a wrong `sat`.
     #[must_use]
     fn model(&self, builder_vars: &[SymbolId]) -> Option<Model> {
-        let values = solve_values(&self.live, self.nvars)?;
+        let values = solve_values(&self.live, self.nvars, self.deadline)?;
         let mut model = Model::new();
         for (index, &symbol) in builder_vars.iter().enumerate() {
             model.set(symbol, Value::Real(values[index]));
@@ -397,6 +440,9 @@ impl LraTheory {
     pub fn propagate(&self) -> Vec<TheoryProp> {
         let mut out = Vec::new();
         for atom in 0..self.atoms.len() {
+            if past_deadline(self.deadline) {
+                break;
+            }
             if self.assigned.get(atom).copied().flatten().is_some() {
                 continue; // already decided by the search
             }
@@ -433,7 +479,7 @@ impl LraTheory {
     fn probe_entails(&self, probe_constraint: &Constraint, atom: usize) -> Option<Vec<TheoryLit>> {
         let mut probe = self.live.clone();
         probe.push(tag(probe_constraint, atom));
-        match solve(&probe, self.nvars) {
+        match solve(&probe, self.nvars, self.deadline) {
             Feasibility::Unsat(rows) => self.probe_core(&probe, &rows, atom),
             Feasibility::Sat | Feasibility::Unknown => None,
         }
@@ -518,9 +564,18 @@ fn tag(template: &Constraint, atom: usize) -> Constraint {
 struct AtomBuilder {
     var_index: BTreeMap<SymbolId, usize>,
     vars: Vec<SymbolId>,
+    linearized: HashMap<TermId, Option<LinExpr>>,
+    deadline: Option<Instant>,
 }
 
 impl AtomBuilder {
+    fn with_deadline(deadline: Option<Instant>) -> Self {
+        Self {
+            deadline,
+            ..Self::default()
+        }
+    }
+
     fn index_of(&mut self, symbol: SymbolId) -> usize {
         if let Some(&index) = self.var_index.get(&symbol) {
             return index;
@@ -534,6 +589,9 @@ impl AtomBuilder {
     /// Parses one atom term into its [`AtomKind`]. Any overflow or non-LRA shape
     /// yields [`AtomKind::Unsupported`] (a registered no-op), never a panic.
     fn build(&mut self, arena: &TermArena, term: TermId) -> AtomKind {
+        if past_deadline(self.deadline) {
+            return AtomKind::Unsupported;
+        }
         match arena.node(term) {
             TermNode::App { op, args }
                 if matches!(op, Op::RealLt | Op::RealLe | Op::RealGt | Op::RealGe) =>
@@ -544,10 +602,14 @@ impl AtomBuilder {
                 ) else {
                     return AtomKind::Unsupported;
                 };
-                match (
-                    normalize(*op, &left, &right),
-                    normalize(negate_op(*op), &left, &right),
-                ) {
+                if past_deadline(self.deadline) {
+                    return AtomKind::Unsupported;
+                }
+                let when_true = normalize(*op, &left, &right);
+                if past_deadline(self.deadline) {
+                    return AtomKind::Unsupported;
+                }
+                match (when_true, normalize(negate_op(*op), &left, &right)) {
                     (Some(when_true), Some(when_false)) => AtomKind::Order {
                         when_true,
                         when_false,
@@ -563,9 +625,15 @@ impl AtomBuilder {
                     return AtomKind::Unsupported;
                 };
                 // a == b  <=>  a - b <= 0  AND  b - a <= 0.
+                if past_deadline(self.deadline) {
+                    return AtomKind::Unsupported;
+                }
                 let Some(diff) = left.sub(&right) else {
                     return AtomKind::Unsupported;
                 };
+                if past_deadline(self.deadline) {
+                    return AtomKind::Unsupported;
+                }
                 let Some(diff_neg) = diff.neg() else {
                     return AtomKind::Unsupported;
                 };
@@ -593,7 +661,13 @@ impl AtomBuilder {
     /// Converts a real-sorted term into a [`LinExpr`]; `None` on overflow or a
     /// non-linear / non-real subterm (→ unsupported atom).
     fn linearize(&mut self, arena: &TermArena, term: TermId) -> Option<LinExpr> {
-        match arena.node(term) {
+        if past_deadline(self.deadline) {
+            return None;
+        }
+        if let Some(cached) = self.linearized.get(&term) {
+            return cached.clone();
+        }
+        let result = match arena.node(term) {
             TermNode::RealConst(value) => Some(LinExpr::constant(*value)),
             TermNode::Symbol(symbol) if is_real(arena, term) => {
                 Some(LinExpr::var(self.index_of(*symbol)))
@@ -601,13 +675,22 @@ impl AtomBuilder {
             TermNode::App {
                 op: Op::RealNeg,
                 args,
-            } => self.linearize(arena, args[0])?.neg(),
+            } => {
+                let inner = self.linearize(arena, args[0])?;
+                if past_deadline(self.deadline) {
+                    return None;
+                }
+                inner.neg()
+            }
             TermNode::App {
                 op: Op::RealAdd,
                 args,
             } => {
                 let a = self.linearize(arena, args[0])?;
                 let b = self.linearize(arena, args[1])?;
+                if past_deadline(self.deadline) {
+                    return None;
+                }
                 a.add(&b)
             }
             TermNode::App {
@@ -616,6 +699,9 @@ impl AtomBuilder {
             } => {
                 let a = self.linearize(arena, args[0])?;
                 let b = self.linearize(arena, args[1])?;
+                if past_deadline(self.deadline) {
+                    return None;
+                }
                 a.sub(&b)
             }
             TermNode::App {
@@ -624,6 +710,9 @@ impl AtomBuilder {
             } => {
                 let a = self.linearize(arena, args[0])?;
                 let b = self.linearize(arena, args[1])?;
+                if past_deadline(self.deadline) {
+                    return None;
+                }
                 if a.is_constant() {
                     b.scale(a.constant)
                 } else if b.is_constant() {
@@ -633,7 +722,9 @@ impl AtomBuilder {
                 }
             }
             _ => None,
-        }
+        };
+        self.linearized.insert(term, result.clone());
+        result
     }
 }
 
@@ -693,26 +784,34 @@ fn add_vec(a: &[Rational], b: &[Rational]) -> Option<Vec<Rational>> {
 /// multiplier is nonzero. Multipliers are seeded as unit vectors over the input
 /// rows and accumulated through elimination, so a residual infeasible constant
 /// constraint names the rows behind it.
-fn solve(constraints: &[Constraint], nvars: usize) -> Feasibility {
+fn solve(constraints: &[Constraint], nvars: usize, deadline: Option<Instant>) -> Feasibility {
     let n = constraints.len();
-    let mut current: Vec<Constraint> = constraints
-        .iter()
-        .enumerate()
-        .map(|(i, c)| Constraint {
+    let mut current: Vec<Constraint> = Vec::with_capacity(n);
+    for (i, c) in constraints.iter().enumerate() {
+        if i % 64 == 0 && past_deadline(deadline) {
+            return Feasibility::Unknown;
+        }
+        current.push(Constraint {
             expr: c.expr.clone(),
             strict: c.strict,
             mult: unit_vec(n, i),
             atom: c.atom,
-        })
-        .collect();
+        });
+    }
 
     for v in (0..nvars).rev() {
-        match eliminate(&current, v) {
+        if past_deadline(deadline) {
+            return Feasibility::Unknown;
+        }
+        match eliminate(&current, v, deadline) {
             Some(next) => current = next,
             None => return Feasibility::Unknown,
         }
     }
-    for c in &current {
+    for (i, c) in current.iter().enumerate() {
+        if i % 64 == 0 && past_deadline(deadline) {
+            return Feasibility::Unknown;
+        }
         if !constant_feasible(c) {
             let rows: Vec<usize> = c
                 .mult
@@ -730,33 +829,59 @@ fn solve(constraints: &[Constraint], nvars: usize) -> Feasibility {
 /// Reconstructs a feasible assignment for `constraints` over `nvars` variables,
 /// or `None` if the system is infeasible / arithmetic overflows. Used only to
 /// build a `sat` model (which is then replayed against the originals).
-fn solve_values(constraints: &[Constraint], nvars: usize) -> Option<Vec<Rational>> {
+fn solve_values(
+    constraints: &[Constraint],
+    nvars: usize,
+    deadline: Option<Instant>,
+) -> Option<Vec<Rational>> {
     let mut saved: Vec<(usize, Vec<Constraint>)> = Vec::with_capacity(nvars);
-    let mut current: Vec<Constraint> = constraints.to_vec();
-    for v in (0..nvars).rev() {
-        saved.push((v, current.clone()));
-        current = eliminate(&current, v)?;
+    let mut current: Vec<Constraint> = Vec::with_capacity(constraints.len());
+    for (i, constraint) in constraints.iter().enumerate() {
+        if i % 64 == 0 && past_deadline(deadline) {
+            return None;
+        }
+        current.push(constraint.clone());
     }
-    for c in &current {
+    for v in (0..nvars).rev() {
+        if past_deadline(deadline) {
+            return None;
+        }
+        saved.push((v, current.clone()));
+        current = eliminate(&current, v, deadline)?;
+    }
+    for (i, c) in current.iter().enumerate() {
+        if i % 64 == 0 && past_deadline(deadline) {
+            return None;
+        }
         if !constant_feasible(c) {
             return None;
         }
     }
     let mut model = vec![Rational::zero(); nvars];
     for (v, system) in saved.iter().rev() {
-        model[*v] = pick_value(system, &model, *v)?;
+        if past_deadline(deadline) {
+            return None;
+        }
+        model[*v] = pick_value(system, &model, *v, deadline)?;
     }
     Some(model)
 }
 
 /// One Fourier–Motzkin elimination of variable `v`, carrying multipliers. `None`
 /// on overflow or when the cross product would exceed [`MAX_FM_CONSTRAINTS`].
-fn eliminate(system: &[Constraint], v: usize) -> Option<Vec<Constraint>> {
+fn eliminate(
+    system: &[Constraint],
+    v: usize,
+    deadline: Option<Instant>,
+) -> Option<Vec<Constraint>> {
     let mut out = Vec::new();
     let mut pos = Vec::new();
     let mut neg = Vec::new();
     let zero = Rational::zero();
-    for c in system {
+    for (i, c) in system.iter().enumerate() {
+        if i % 64 == 0 && past_deadline(deadline) {
+            return None;
+        }
         let a = c.expr.coeff(v);
         if a.is_zero() {
             out.push(c.clone());
@@ -781,6 +906,9 @@ fn eliminate(system: &[Constraint], v: usize) -> Option<Vec<Constraint>> {
     for p in &pos {
         let pc = p.expr.coeff(v); // > 0
         for q in &neg {
+            if deadline.is_some() && past_deadline(deadline) {
+                return None;
+            }
             let qc = q.expr.coeff(v); // < 0
             let neg_qc = qc.checked_neg()?; // > 0
             let scaled_p = p.expr.scale(neg_qc)?;
@@ -812,15 +940,26 @@ fn constant_feasible(c: &Constraint) -> bool {
 
 /// Picks a feasible value for variable `v` given earlier-indexed variables are
 /// assigned in `model`; `None` on overflow or no feasible value.
-fn pick_value(system: &[Constraint], model: &[Rational], v: usize) -> Option<Rational> {
+fn pick_value(
+    system: &[Constraint],
+    model: &[Rational],
+    v: usize,
+    deadline: Option<Instant>,
+) -> Option<Rational> {
     use core::cmp::Ordering;
     let zero = Rational::zero();
     let mut lower: Option<(Rational, bool)> = None;
     let mut upper: Option<(Rational, bool)> = None;
-    for c in system {
+    for (row, c) in system.iter().enumerate() {
+        if row % 64 == 0 && past_deadline(deadline) {
+            return None;
+        }
         let a = c.expr.coeff(v);
         let mut rest = c.expr.constant;
-        for (&i, &coeff) in &c.expr.coeffs {
+        for (column, (&i, &coeff)) in c.expr.coeffs.iter().enumerate() {
+            if column % 64 == 0 && past_deadline(deadline) {
+                return None;
+            }
             if i != v {
                 rest = rest.checked_add(coeff.checked_mul(model[i])?)?;
             }
@@ -1922,6 +2061,7 @@ impl Dpll {
 
     /// Runs the search. Returns `true` iff the skeleton is UNSAT under the theory,
     /// `false` on a Boolean- and theory-consistent total assignment.
+    #[cfg(test)]
     pub(crate) fn solve<T: TheorySolver>(&mut self, theory: &mut T) -> bool {
         self.solve_with_deadline(theory, None)
             .expect("unbounded DPLL(T) solve cannot time out")
@@ -2385,8 +2525,9 @@ fn is_lra_atom(arena: &TermArena, term: TermId) -> bool {
 pub fn check_qf_lra_online(
     arena: &TermArena,
     assertions: &[TermId],
-    _config: &SolverConfig,
+    config: &SolverConfig,
 ) -> Result<CheckResult, SolverError> {
+    let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
     // Distinct real atoms over the whole assertion set become the theory's atom
     // indices and the first `atom_count` skeleton variables.
     let mut atom_terms: Vec<TermId> = Vec::new();
@@ -2415,30 +2556,27 @@ pub fn check_qf_lra_online(
     }
 
     let atom_count = atom_terms.len();
-    let mut builder = AtomBuilder::default();
-    let atoms: Vec<AtomKind> = atom_terms
-        .iter()
-        .map(|&t| builder.build(arena, t))
-        .collect();
-    let builder_vars = builder.vars.clone();
-    let nvars = builder.vars.len();
-    let mut theory = LraTheory {
-        atoms,
-        nvars,
-        live: Vec::new(),
-        assigned: vec![None; atom_count],
-        assigned_log: Vec::new(),
-        trail: Vec::new(),
-        vars: builder.vars,
+    let Some(mut theory) = LraTheory::new_with_deadline(arena, &atom_terms, deadline) else {
+        return Ok(CheckResult::Unknown(UnknownReason {
+            kind: UnknownKind::Timeout,
+            detail: "timeout while constructing the online LRA theory".to_owned(),
+        }));
     };
 
     let mut solver = Dpll::new(enc.var_count, atom_count, clauses);
-    if solver.solve(&mut theory) {
-        return Ok(CheckResult::Unsat);
+    match solver.solve_with_deadline(&mut theory, deadline) {
+        Some(true) => return Ok(CheckResult::Unsat),
+        Some(false) => {}
+        None => {
+            return Ok(CheckResult::Unknown(UnknownReason {
+                kind: UnknownKind::Timeout,
+                detail: "timeout in the online LRA driver".to_owned(),
+            }));
+        }
     }
     // Theory-consistent total assignment: build a model, add any Boolean leaves
     // from the final DPLL assignment, and replay it.
-    match theory.model(&builder_vars) {
+    match theory.real_model() {
         Some(mut model) => {
             add_boolean_leaf_values(arena, &enc, atom_count, &solver, &mut model);
             if replays(arena, assertions, &model) {
@@ -2544,6 +2682,7 @@ fn run_online_diag(arena: &TermArena, assertions: &[TermId]) -> Option<OnlineDia
         assigned_log: Vec::new(),
         trail: Vec::new(),
         vars: builder.vars,
+        deadline: None,
     };
     let mut solver = Dpll::new(enc.var_count, atom_count, clauses);
     let _ = solver.solve(&mut theory);
@@ -2587,6 +2726,32 @@ mod tests {
     fn rvar(arena: &mut TermArena, name: &str) -> TermId {
         let s = arena.declare(name, Sort::Real).expect("declare real");
         arena.var(s)
+    }
+
+    #[test]
+    fn expired_deadline_stops_incremental_feasibility_and_model_rebuild() {
+        let mut arena = TermArena::new();
+        let x = rvar(&mut arena, "x");
+        let zero = rconst(&mut arena, 0);
+        let ge = arena.real_ge(x, zero).expect("x>=0");
+        let deadline = Some(Instant::now());
+        let mut theory = LraTheory::new(&arena, &[ge]).with_deadline(deadline);
+
+        // A timed-out theory check is inconclusive, never a fabricated conflict.
+        assert!(theory.assert(0, true).is_ok());
+        assert!(matches!(theory.feasibility(), Feasibility::Unknown));
+        assert!(theory.real_model().is_none());
+        assert!(theory.propagate().is_empty());
+    }
+
+    #[test]
+    fn expired_deadline_stops_theory_construction() {
+        let mut arena = TermArena::new();
+        let x = rvar(&mut arena, "x");
+        let zero = rconst(&mut arena, 0);
+        let ge = arena.real_ge(x, zero).expect("x>=0");
+
+        assert!(LraTheory::new_with_deadline(&arena, &[ge], Some(Instant::now())).is_none());
     }
 
     #[test]
@@ -3302,6 +3467,7 @@ mod tests {
             assigned_log: Vec::new(),
             trail: Vec::new(),
             vars: builder.vars,
+            deadline: None,
         };
         let solver = Dpll::new(enc.var_count, atom_count, clauses);
         (solver, theory)

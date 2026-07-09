@@ -284,7 +284,7 @@ pub fn check_with_arith_dpll(
     // `run_arith_dpll` directly, preserving its explicit refutation artifact.
     let probe_started = Instant::now();
     let probe_config = online_lia_probe_config(config);
-    match crate::lia_online::check_qf_lia_online(arena, assertions, &probe_config)? {
+    match crate::lia_theory::check_qf_lia_online_cdclt(arena, assertions, &probe_config)? {
         CheckResult::Sat(model) => return Ok(CheckResult::Sat(model)),
         CheckResult::Unsat => return Ok(CheckResult::Unsat),
         CheckResult::Unknown(reason) if budget_unknown_kind(reason.kind) => {

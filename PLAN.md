@@ -3599,7 +3599,13 @@ Its conclusion, ranked by quality × efficiency:
    follow-through:** the existing `euf-online` front-door route now calls
    `check_qf_uf_online_cdclt` with the caller's `SolverConfig`, so ADR-0055's
    QF_UF criterion (2) has fired and pure QF_UF online dispatch is default-on;
-   offline EUF stays as the fallback after online `unknown`.
+   offline EUF stays as the fallback after online `unknown`. **Fifth
+   follow-through:** pure QF_LIA/QF_LRA now lead with the generic `CdclT`
+   adapters (ADR-0060 update); LRA deadlines cover theory construction and every
+   Fourier–Motzkin pass, and a deterministic 1,024-atom resource cap avoids the
+   eager per-assert stack/cost cliff. Curated 5 s A/B preserves 10/11 LIA and
+   9/11 LRA decided with zero disagreements/replay failures; the two LRA unknown
+   rows improve from 5.250 s / 11.853 s to 4.838 s / 5.031 s.
 2. **Keep a thin measured-leaf-BFS skirt in parallel** — measured-ROI leaves only
    (NRA tail, strings-Nielsen); fold the feature/scale-blocked leaves
    (dense-ILP MILP, large-LP performance) into a funded engine phase rather than

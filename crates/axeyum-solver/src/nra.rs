@@ -166,6 +166,11 @@ fn check_with_nra_impl(
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> Result<CheckResult, SolverError> {
+    // One absolute budget for the whole orchestration. Individual stages may
+    // decline, but none receives a fresh timeout after an earlier stage consumed
+    // the caller's budget.
+    let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
+
     // Cheap syntactic even-power refutation, tried FIRST: a top-level conjunct of
     // the shape `Σ tᵢ^{2kᵢ} + c < 0` (a sum of syntactic even powers plus a
     // nonnegative rational constant, right side zero) is impossible because every
@@ -198,9 +203,9 @@ fn check_with_nra_impl(
     // same completeness instead of grinding the abstraction search to a timeout. It
     // returns `None` (declines) on anything it cannot decide exactly, so it never
     // weakens the search below or risks an unsound verdict.
-    let poly_deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
-    if let Some(result) =
-        crate::nra_real_root::decide_real_poly_constraint(arena, assertions, poly_deadline)?
+    if !nonlinear_products(arena, assertions).is_empty()
+        && let Some(result) =
+            crate::nra_real_root::decide_real_poly_constraint(arena, assertions, deadline)?
     {
         return Ok(result);
     }
@@ -221,13 +226,6 @@ fn check_with_nra_impl(
         return Ok(sat);
     }
 
-    // Wall-clock deadline (only when a timeout is configured): an *absolute*
-    // instant shared by every sub-solve below, so the branch-and-bound, the
-    // refinement loop, *and* each lazy-SMT solve bail to a timely `unknown`
-    // rather than overrunning the budget inside a single solve (#15). Derived
-    // once here so the clock is not reset per call.
-    let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
-
     // Boolean structure over nonlinear atoms (the flat-conjunction CAD above
     // declined): run the NRA lazy-SMT loop on the ORIGINAL assertions, **before**
     // division elimination, so its `finish_sat` replays against the true division
@@ -236,9 +234,11 @@ fn check_with_nra_impl(
     // handles original Boolean structure (e.g. `distinct`/`and` over nonlinear
     // atoms) without ever asserting a division-induced spurious model. Strictly
     // additive; `DISAGREE=0` on `nra_differential_fuzz` (incl. division) vs Z3.
-    match check_with_nra_dpll_within(arena, &original, config, deadline)? {
-        result @ (CheckResult::Sat(_) | CheckResult::Unsat) => return Ok(result),
-        CheckResult::Unknown(_) => {}
+    if !nonlinear_products(arena, &original).is_empty() || contains_real_div(arena, &original) {
+        match check_with_nra_dpll_within(arena, &original, config, deadline)? {
+            result @ (CheckResult::Sat(_) | CheckResult::Unsat) => return Ok(result),
+            CheckResult::Unknown(_) => {}
+        }
     }
 
     // Eliminate real division: `x/y → r` with `(y = 0) ∨ (x = r·y)` (+ the division
@@ -1772,8 +1772,8 @@ fn nonlinear_products(arena: &TermArena, roots: &[TermId]) -> BTreeSet<TermId> {
         let op = *op;
         let args = args.clone();
         if op == Op::RealMul && args.len() == 2 {
-            let a_const = matches!(arena.node(args[0]), TermNode::RealConst(_));
-            let b_const = matches!(arena.node(args[1]), TermNode::RealConst(_));
+            let a_const = is_numeric_real_constant(arena, args[0]);
+            let b_const = is_numeric_real_constant(arena, args[1]);
             if !a_const && !b_const {
                 products.insert(term);
             }
@@ -1781,4 +1781,40 @@ fn nonlinear_products(arena: &TermArena, roots: &[TermId]) -> BTreeSet<TermId> {
         stack.extend(args.iter().copied());
     }
     products
+}
+
+/// Whether any reachable term contains real division. Division is handled by
+/// the NRA elimination path even when its divisor is a numeric constant, so it
+/// must not take the pure-LRA shortcut used for product-free formulas.
+fn contains_real_div(arena: &TermArena, roots: &[TermId]) -> bool {
+    let mut seen = BTreeSet::new();
+    let mut stack = roots.to_vec();
+    while let Some(term) = stack.pop() {
+        if !seen.insert(term) {
+            continue;
+        }
+        let TermNode::App { op, args } = arena.node(term) else {
+            continue;
+        };
+        if *op == Op::RealDiv {
+            return true;
+        }
+        stack.extend(args.iter().copied());
+    }
+    false
+}
+
+/// Whether `term` is a syntactic exact numeric constant in a real expression.
+/// SMT-LIB numerals can arrive as `IntToReal(IntConst(_))`; treating that shape
+/// as a variable would misclassify ordinary scalar multiplication as nonlinear.
+pub(crate) fn is_numeric_real_constant(arena: &TermArena, term: TermId) -> bool {
+    match arena.node(term) {
+        TermNode::RealConst(_) | TermNode::IntConst(_) => true,
+        TermNode::App { op, args }
+            if args.len() == 1 && matches!(op, Op::RealNeg | Op::IntNeg | Op::IntToReal) =>
+        {
+            is_numeric_real_constant(arena, args[0])
+        }
+        _ => false,
+    }
 }

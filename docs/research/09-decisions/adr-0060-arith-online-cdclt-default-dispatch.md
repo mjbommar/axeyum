@@ -112,9 +112,45 @@ that both drivers carry the same termination guarantee.**
 
 - **Out of scope (future Gap-3 work).** Porting arrays-lazy onto the spine with
   real theory propagation (Gap 3 step 2, [P2.2](../../plan/track-2-theories/P2.2-arrays-lazy.md))
-  and migrating the arithmetic theories fully onto the generic `CdclT` spine
-  (#35, shelved) are **not** decided here. They ride on this ADR proving the
-  spine's default dispatch is sound and terminating — which it now does.
+  and migrating the combined arithmetic theories fully onto the generic `CdclT`
+  spine remain future work. The 2026-07-09 update below moves the pure LIA/LRA
+  front doors, but not the full UFLIA/UFLRA combination, onto that spine.
+
+## Update (2026-07-09): pure LIA/LRA default probes use generic `CdclT`
+
+The shared-spine migration now includes the pure arithmetic front doors:
+
+- `check_with_arith_dpll` gives pure `QF_LIA` a bounded first probe through
+  `check_qf_lia_online_cdclt`; the established arithmetic-DPLL route receives
+  only the remaining timeout after an online `Unknown`.
+- `check_with_lra_dpll_within` gives pure `QF_LRA` the full remaining deadline
+  through `check_qf_lra_online_cdclt`. A timeout or deterministic resource cap
+  is terminal; structural/arithmetic incompleteness still falls through to the
+  mixed-theory abstraction/refinement route.
+- LRA deadlines now cover atom normalization, every incremental
+  Fourier–Motzkin feasibility/propagation/model pass, combined UFLRA
+  construction, and per-derived-row elimination polling. Linear real queries no
+  longer enter the NRA/CAD cube route first; exact numeric coefficients include
+  SMT-LIB's `IntToReal(IntConst(_))` shape.
+- Generic LRA admits at most 1,024 distinct theory atoms. This deterministic cap
+  avoids the eager per-assert Fourier–Motzkin route's stack/cost cliff and returns
+  `ResourceLimit` before theory construction.
+
+Five-second curated A/B measurements, raw and `--preprocess`, preserve every
+verdict with zero expected-status disagreements and zero model-replay failures:
+
+- `QF_LIA/cvc5-regress-clean-bounded`: 6 sat / 4 unsat / 1 unknown before and
+  after (10/11 decided).
+- `QF_LRA/cvc5-regress-clean`: 6 sat / 3 unsat / 2 unknown before and after
+  (9/11 decided). The two unknown rows improve from 5.250 s / 11.853 s to
+  4.838 s / 5.031 s; their final reasons are the 2,468-atom resource cap and a
+  deadline timeout respectively.
+
+Route-pinning tests assert the default wrappers reach the generic drivers;
+LIA/LRA differential fuzz, NRA/auto/route-trace regressions, and UFLIA/UFLRA
+combination suites preserve the existing soundness gates. This update is a
+partial consolidation: combined UFLIA/UFLRA and theory combination with BV
+remain the next P1.5/P1.6 work.
 
 ## Evidence
 
@@ -172,10 +208,10 @@ that both drivers carry the same termination guarantee.**
   guarantee — the spine is proven sound + terminating for the array-lazy port
   and the eventual arithmetic-theory migration to build on.
 - **Harder / cost:** two CDCL(T) drivers (`CdclT` and `lra_online::Dpll`)
-  coexist until a future consolidation; the step-budget belt now lives in both
-  and must stay in sync.
+  still coexist for combined/fallback paths until a future consolidation; the
+  step-budget belt now lives in both and must stay in sync.
 - **Revisited when:** arrays-lazy lands on the spine (Gap 3 step 2); the
-  arithmetic theories migrate onto the generic `CdclT` (#35 unshelved); or a
+  combined arithmetic theories migrate onto the generic `CdclT`; or a
   dedicated re-baseline banks the `QF_UF` decide-rate movement. The pure-QF_UF
   default-dispatch status is now tracked by ADR-0055's 2026-07-09 update.
 

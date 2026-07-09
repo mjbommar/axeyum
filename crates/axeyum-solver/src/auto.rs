@@ -1005,6 +1005,7 @@ fn check_auto_inner(
     config: &SolverConfig,
     rec: &mut Recorder<'_>,
 ) -> Result<CheckResult, SolverError> {
+    let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
     // Cheap syntactic even-power refutation, tried BEFORE the int↔real coercion
     // handling. A top-level conjunct of the shape `Σ tᵢ^{2kᵢ} + c < 0` or the
     // equality analogue `Σ tᵢ^{2kᵢ} = c` with `c < 0` is impossible (a sum of
@@ -1044,7 +1045,13 @@ fn check_auto_inner(
     // coupling fails on replay is `unknown`.
     let (relaxed, had_coercion) = relax_coercions(arena, assertions)?;
     if !had_coercion {
-        return check_auto_dispatch(arena, assertions, config, rec);
+        if past_deadline(deadline) {
+            return Ok(CheckResult::Unknown(timeout_reason(
+                "auto-dispatch timeout during arithmetic normalization",
+            )));
+        }
+        let dispatch_config = config_with_remaining_deadline(config, deadline);
+        return check_auto_dispatch(arena, assertions, &dispatch_config, rec);
     }
     // A `to_real` coercion couples the integer and real theories. Before the
     // (sound but incomplete) relaxation above, try exact mixed-integer linear
@@ -1074,7 +1081,13 @@ fn check_auto_inner(
             });
         }
     }
-    match check_auto_dispatch(arena, &relaxed, config, rec)? {
+    if past_deadline(deadline) {
+        return Ok(CheckResult::Unknown(timeout_reason(
+            "auto-dispatch timeout after mixed-integer normalization",
+        )));
+    }
+    let dispatch_config = config_with_remaining_deadline(config, deadline);
+    match check_auto_dispatch(arena, &relaxed, &dispatch_config, rec)? {
         CheckResult::Sat(model) => {
             let assignment = model.to_assignment();
             if assertions
@@ -1935,7 +1948,6 @@ fn dispatch_uf_arith_online(
 /// cancels): a `false` positive only routes an already-linear-decidable query
 /// through the NRA decider, which decides it too; it never changes a verdict.
 fn has_nonlinear_real(arena: &TermArena, assertions: &[TermId]) -> bool {
-    let is_const = |t: TermId| matches!(arena.node(t), TermNode::RealConst(_));
     let mut seen: BTreeSet<TermId> = BTreeSet::new();
     let mut stack = assertions.to_vec();
     while let Some(term) = stack.pop() {
@@ -1945,8 +1957,8 @@ fn has_nonlinear_real(arena: &TermArena, assertions: &[TermId]) -> bool {
         if let TermNode::App { op, args } = arena.node(term) {
             if matches!(op, Op::RealMul | Op::RealDiv)
                 && args.len() == 2
-                && !is_const(args[0])
-                && !is_const(args[1])
+                && !crate::nra::is_numeric_real_constant(arena, args[0])
+                && !crate::nra::is_numeric_real_constant(arena, args[1])
             {
                 return true;
             }
@@ -2215,12 +2227,14 @@ fn check_auto_dispatch(
         // a rational witness via the ground evaluator) and every `Unsat` is exact
         // by exhaustive sign-cell coverage of the single variable, so it can never
         // produce a wrong verdict; strictly additive (`Unknown` → decision).
-        let poly_deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
-        if let Some(result) =
-            crate::nra_real_root::decide_real_poly_constraint(arena, assertions, poly_deadline)?
-        {
-            with_recorder(rec, |t| t.record_result("nra-real-root", &result));
-            return Ok(result);
+        if has_nonlinear_real(arena, assertions) {
+            let poly_deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
+            if let Some(result) =
+                crate::nra_real_root::decide_real_poly_constraint(arena, assertions, poly_deadline)?
+            {
+                with_recorder(rec, |t| t.record_result("nra-real-root", &result));
+                return Ok(result);
+            }
         }
         with_recorder(rec, |t| {
             t.record_declined("nra-real-root", DeclineReason::NotApplicable);

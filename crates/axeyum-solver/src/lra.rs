@@ -977,13 +977,14 @@ fn eliminate(
     {
         return None;
     }
-    for (i, p) in pos.iter().enumerate() {
-        // Re-check the wall clock periodically inside the cross product (rows can
-        // still be many thousands even under the size guard).
-        if i % 64 == 0 && past_deadline(deadline) {
-            return None;
-        }
+    for p in &pos {
         for n in &neg {
+            // One side of the cross product can contain nearly the full row cap,
+            // so an outer-loop-only check can still overrun by seconds. Poll per
+            // derived row when timed; untimed calls retain the original hot path.
+            if deadline.is_some() && past_deadline(deadline) {
+                return None;
+            }
             let a = p.expr.coeff(v); // > 0
             let b = n.expr.coeff(v); // < 0
             // Positive combination (-b)*p + a*n cancels v; both scalars are

@@ -27,12 +27,12 @@
 //! - **Per-assert consistency (eager).** The wrapped [`LraTheory`] re-decides
 //!   feasibility of the live set on every theory-atom assignment. This makes the
 //!   theory **complete per assert**: a wrong `sat` is impossible because every total
-//!   Boolean assignment is theory-checked. Unlike the integer [`crate::lia_theory`]
-//!   route (whose branch-and-bound feasibility check carries a deadline), the
-//!   Fourier–Motzkin feasibility check **always terminates** — there is no B&B and
-//!   thus no per-assert timeout subtlety; the theory has no internal deadline to
-//!   thread. Termination of the *driver* is the standard argument (each conflict,
-//!   carrying its trigger literal, forces a strict backjump).
+//!   Boolean assignment is theory-checked. Fourier–Motzkin always terminates under
+//!   the deterministic row cap, but can still be expensive, so the caller's absolute
+//!   deadline is threaded into every feasibility, propagation, and model-rebuild
+//!   pass. Termination of the *driver* is the standard argument (each conflict,
+//!   carrying its trigger literal, forces a strict backjump), with deadline/step
+//!   budgets as backstops.
 //! - **Propagation forwarded.** [`CdcltLraTheory::propagate`] forwards the
 //!   already-validated [`LraTheory::propagate`] negation probes into the generic
 //!   driver, so entailed order atoms can be assigned before a decision. Completeness
@@ -56,7 +56,9 @@
 //!   defense-in-depth backstop, so the search degrades to `Unknown` under a
 //!   deterministic resource bound.
 //!
-//! Not wired into default dispatch this slice (ADR-0055's measured-first rule).
+//! The pure `QF_LRA` front door now tries this generic route first (ADR-0060's
+//! 2026-07-09 update). Budget exhaustion is terminal for that query; structural
+//! or arithmetic-incompleteness declines retain the established mixed fallback.
 
 use std::collections::HashSet;
 use std::time::Instant;
@@ -68,6 +70,11 @@ use crate::cdclt::{CdclT, Lit as CdcltLit, Outcome};
 use crate::euf_egraph::{TheoryLit, TheoryProp, TheorySolver};
 use crate::lra_online::{Encoder, Lit, LraTheory, collect_lra_atoms, replays};
 use crate::model::Model;
+
+/// The eager per-assert Fourier–Motzkin theory is not an efficient or stack-safe
+/// online choice above this many distinct atoms. Larger formulas return a
+/// first-class resource-limit result before atom normalization.
+const MAX_ONLINE_LRA_ATOMS: usize = 1_024;
 
 /// Adapts the validated online [`LraTheory`] to the generic [`CdclT`] driver's
 /// **trigger-literal precondition**.
@@ -95,13 +102,11 @@ struct CdcltLraTheory {
 
 impl CdcltLraTheory {
     /// Wraps a fresh [`LraTheory`] over `atom_terms` (per-assert exact-rational
-    /// feasibility). Unlike the integer companion, the real feasibility check always
-    /// terminates, so there is no theory-internal deadline to thread — the driver's
-    /// deadline bounds the search.
-    fn new(arena: &TermArena, atom_terms: &[TermId]) -> Self {
-        Self {
-            inner: LraTheory::new(arena, atom_terms),
-        }
+    /// feasibility), bounded by the online driver's absolute `deadline`.
+    fn new(arena: &TermArena, atom_terms: &[TermId], deadline: Option<Instant>) -> Option<Self> {
+        Some(Self {
+            inner: LraTheory::new_with_deadline(arena, atom_terms, deadline)?,
+        })
     }
 
     /// The wrapped theory, for model reconstruction after a `sat` verdict.
@@ -152,8 +157,8 @@ impl TheorySolver for CdcltLraTheory {
 ///
 /// Returns [`CheckResult::Unknown`] when there are no `LRA` atoms or the Boolean
 /// skeleton has structure the encoder does not cover — the same conservative
-/// give-ups as [`crate::lra_online::check_qf_lra_online`]. Not wired into default
-/// dispatch this slice.
+/// give-ups as [`crate::lra_online::check_qf_lra_online`]. This is the default
+/// first route for pure `QF_LRA`; non-budget incompleteness can still fall back.
 ///
 /// # Errors
 ///
@@ -165,12 +170,22 @@ pub fn check_qf_lra_online_cdclt(
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> Result<CheckResult, SolverError> {
+    let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
     // Distinct real atoms — the theory's atom indices and the first `atom_count`
     // skeleton variables.
     let mut atom_terms: Vec<TermId> = Vec::new();
     let mut seen = HashSet::new();
     for &a in assertions {
         collect_lra_atoms(arena, a, &mut atom_terms, &mut seen);
+    }
+    if atom_terms.len() > MAX_ONLINE_LRA_ATOMS {
+        return Ok(CheckResult::Unknown(UnknownReason {
+            kind: UnknownKind::ResourceLimit,
+            detail: format!(
+                "online CDCL(T) LRA atom cap exceeded ({} > {MAX_ONLINE_LRA_ATOMS})",
+                atom_terms.len()
+            ),
+        }));
     }
     if atom_terms.is_empty() {
         return Ok(CheckResult::Unknown(unknown(
@@ -208,8 +223,12 @@ pub fn check_qf_lra_online_cdclt(
         .collect();
 
     let atom_count = atom_terms.len();
-    let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
-    let mut theory = CdcltLraTheory::new(arena, &atom_terms);
+    let Some(mut theory) = CdcltLraTheory::new(arena, &atom_terms, deadline) else {
+        return Ok(CheckResult::Unknown(UnknownReason {
+            kind: UnknownKind::Timeout,
+            detail: "timeout in the online CDCL(T) LRA driver".to_owned(),
+        }));
+    };
     let mut solver = CdclT::new(enc.var_count, atom_count, driver_clauses, deadline);
     match solver.solve(&mut theory) {
         Outcome::Unsat => Ok(CheckResult::Unsat),
@@ -266,10 +285,10 @@ fn add_boolean_leaf_values(
 }
 
 /// A classified `unknown` reason for the online CDCL(T) LRA path.
-fn unknown(detail: &str) -> UnknownReason {
+fn unknown(detail: impl Into<String>) -> UnknownReason {
     UnknownReason {
         kind: UnknownKind::Incomplete,
-        detail: detail.to_owned(),
+        detail: detail.into(),
     }
 }
 
@@ -288,6 +307,26 @@ mod tests {
         arena.real_const(Rational::integer(n))
     }
 
+    #[test]
+    fn oversized_atom_set_declines_before_online_theory_construction() {
+        let mut arena = TermArena::new();
+        let zero = rconst(&mut arena, 0);
+        let mut assertions = Vec::with_capacity(MAX_ONLINE_LRA_ATOMS + 1);
+        for index in 0..=MAX_ONLINE_LRA_ATOMS {
+            let x = rvar(&mut arena, &format!("x{index}"));
+            assertions.push(arena.real_ge(x, zero).expect("x>=0"));
+        }
+
+        let CheckResult::Unknown(reason) =
+            check_qf_lra_online_cdclt(&arena, &assertions, &SolverConfig::default())
+                .expect("result")
+        else {
+            panic!("oversized generic LRA query must decline");
+        };
+        assert_eq!(reason.kind, UnknownKind::ResourceLimit);
+        assert!(reason.detail.contains("atom cap exceeded"));
+    }
+
     /// The wrapper must always fold the just-asserted (current-level) literal into a
     /// conflict core — the driver's trigger-literal precondition.
     #[test]
@@ -299,7 +338,7 @@ mod tests {
         let lt = arena.real_lt(x, zero).expect("x<0");
         let gt = arena.real_gt(x, zero).expect("x>0");
 
-        let mut theory = CdcltLraTheory::new(&arena, &[lt, gt]);
+        let mut theory = CdcltLraTheory::new(&arena, &[lt, gt], None).expect("unbounded theory");
         assert!(theory.assert(0, true).is_ok());
         let core = theory.assert(1, true).expect_err("real-infeasible");
         assert!(
@@ -317,7 +356,7 @@ mod tests {
         let lt = arena.real_lt(x, zero).expect("x<0");
         let gt = arena.real_gt(x, zero).expect("x>0");
 
-        let mut theory = CdcltLraTheory::new(&arena, &[lt, gt]);
+        let mut theory = CdcltLraTheory::new(&arena, &[lt, gt], None).expect("unbounded theory");
         assert!(theory.assert(0, true).is_ok());
         let core = theory.assert(1, true).expect_err("infeasible");
         let occurrences = core.iter().filter(|l| l.atom == 1).count();
@@ -338,7 +377,8 @@ mod tests {
         let ge_one = arena.real_ge(x, one).expect("x>=1");
         let gt_zero = arena.real_gt(x, zero).expect("x>0");
 
-        let mut theory = CdcltLraTheory::new(&arena, &[ge_one, gt_zero]);
+        let mut theory =
+            CdcltLraTheory::new(&arena, &[ge_one, gt_zero], None).expect("unbounded theory");
         theory.assert(0, true).expect("x>=1 feasible");
         let props = theory.propagate();
         assert!(
@@ -496,7 +536,8 @@ mod tests {
                 })
                 .collect();
             let atom_count = atom_terms.len();
-            let mut theory = CdcltLraTheory::new(&arena, &atom_terms);
+            let mut theory =
+                CdcltLraTheory::new(&arena, &atom_terms, None).expect("unbounded theory");
             let mut solver = CdclT::new(enc.var_count, atom_count, driver_clauses, None)
                 .with_step_budget(50_000);
             let outcome = solver.solve(&mut theory);
@@ -567,7 +608,7 @@ mod tests {
             })
             .collect();
         let atom_count = atom_terms.len();
-        let mut theory = CdcltLraTheory::new(&arena, &atom_terms);
+        let mut theory = CdcltLraTheory::new(&arena, &atom_terms, None).expect("unbounded theory");
         let mut solver = CdclT::new(enc.var_count, atom_count, driver_clauses, None);
 
         assert_eq!(solver.solve(&mut theory), Outcome::Sat);

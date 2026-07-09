@@ -36,7 +36,7 @@ use std::time::Instant;
 
 use axeyum_ir::{TermArena, TermId};
 
-use crate::backend::CheckResult;
+use crate::backend::{CheckResult, UnknownKind, UnknownReason};
 use crate::euf_egraph::{EufTheory, TheoryLit, TheoryProp, TheorySolver};
 use crate::lra_online::LraTheory;
 use crate::theory_combination::{InterfaceStatus, classify_interface_equalities};
@@ -49,6 +49,13 @@ use crate::uflra_online::{
 /// Hard ceiling on interface case-split pairs, mirroring the cold core's `MAX_SPLIT_DEPTH`
 /// decline so the warm and cold paths reject the same oversized splits identically.
 const MAX_SPLIT_PAIRS: usize = 64;
+
+fn timeout_unknown(detail: impl Into<String>) -> CheckResult {
+    CheckResult::Unknown(UnknownReason {
+        kind: UnknownKind::Timeout,
+        detail: detail.into(),
+    })
+}
 
 /// The warm `EUF` + `LRA` equality-sharing theory oracle (slice 1).
 ///
@@ -175,7 +182,11 @@ impl CombinedTheory {
         // LRA literals — the same state the cold core constructs.
         let warm = matches!(&self.cache, Some(c) if c.layout == layout);
         if !warm {
-            let mut theory = LraTheory::new(arena, &layout);
+            let Some(mut theory) = LraTheory::new_with_deadline(arena, &layout, self.deadline)
+            else {
+                self.cache = None;
+                return timeout_unknown("timeout while constructing combined LRA theory");
+            };
             for (index, lit) in part.lra.iter().enumerate() {
                 if theory.assert(index, lit.value).is_err() {
                     // A base conflict is the cold core's immediate `Unsat`. Do not cache a
@@ -285,7 +296,10 @@ impl CombinedTheory {
         asserted: &[Literal],
         out: &mut Vec<TheoryProp>,
     ) {
-        let mut lra = LraTheory::new(arena, &self.atom_terms);
+        let Some(mut lra) = LraTheory::new_with_deadline(arena, &self.atom_terms, self.deadline)
+        else {
+            return;
+        };
         for lit in asserted {
             let var = self.atom_var[&lit.atom];
             if lra.assert(var, lit.value).is_err() {
@@ -542,6 +556,17 @@ impl CombinedIncremental {
     /// caller then falls back to the per-call [`CombinedTheory::check`].
     #[must_use]
     pub(crate) fn new(arena: &mut TermArena, atom_terms: &[TermId]) -> Option<Self> {
+        Self::new_with_deadline(arena, atom_terms, None)
+    }
+
+    /// Builds the incremental combined state with one caller-owned absolute
+    /// deadline shared by the `LRA` sub-theory and the outer Boolean search.
+    #[must_use]
+    pub(crate) fn new_with_deadline(
+        arena: &mut TermArena,
+        atom_terms: &[TermId],
+        deadline: Option<Instant>,
+    ) -> Option<Self> {
         let original_atoms: Vec<TermId> = atom_terms.to_vec();
 
         // Shared pairs over the full atom set, once. Build a Partition from "all atoms
@@ -582,7 +607,7 @@ impl CombinedIncremental {
 
         let routes = build_routes(&part, &original_atoms, &combined, &pairs);
         let euf = EufTheory::new(arena, &combined);
-        let lra = LraTheory::new(arena, &combined);
+        let lra = LraTheory::new_with_deadline(arena, &combined, deadline)?;
         let n = combined.len();
         Some(Self {
             euf,
