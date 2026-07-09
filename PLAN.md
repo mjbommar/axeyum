@@ -3644,7 +3644,18 @@ Its conclusion, ranked by quality × efficiency:
    → 0.382 s); decision-frame cores are neutral at 0.063 s / 0.332 s while the
    1,536-case differential matrix and 6/6 public corpus stay clean. Next pursue
    within-level precision only if it avoids repeated assumption overhead, then
-   BV propagation and relevance-driven interface generation.
+   BV propagation and relevance-driven interface generation. **Thirteenth
+   follow-through:** exact BV-to-EUF propagation is now live for interface sets
+   up to 64 atoms (128 total probes). One round-robin candidate per state is
+   proved by refuting its opposite polarity in the same warm CNF; failed frame
+   selectors become the reason, pending facts survive monotone trail growth, and
+   backtracking clears them. `bug520` exercises 50 interface atoms (93 probes,
+   31 BV hits, 46 total combined propagations in the diagnostic run). An exact
+   five-run enabled/disabled A/B measures 149.96-152.79 ms versus
+   347.10-352.39 ms on that row, with corpus mean 0.034-0.036 s versus
+   0.065-0.066 s; 1,536 differential comparisons and public 6/6 remain clean.
+   Z3 is still ~9-11 ms, so next reduce the interface census by relevance rather
+   than simply raising caps.
 2. **Keep a thin measured-leaf-BFS skirt in parallel** — measured-ROI leaves only
    (NRA tail, strings-Nielsen); fold the feature/scale-blocked leaves
    (dense-ILP MILP, large-LP performance) into a funded engine phase rather than

@@ -31,7 +31,7 @@
 use std::collections::{HashMap, HashSet};
 use std::time::Instant;
 
-use axeyum_ir::{FuncId, Op, Sort, TermArena, TermId, TermNode, TermStats};
+use axeyum_ir::{FuncId, Op, Sort, TermArena, TermId, TermNode, TermStats, Value, eval};
 use axeyum_rewrite::{FuncElimError, FunctionAbstraction, abstract_functions, replace_subterms};
 
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
@@ -53,6 +53,10 @@ const MAX_INTERFACE_ATOMS: usize = 512;
 const MAX_BOOLEAN_VARIABLES: usize = 8_192;
 /// Maximum Boolean clauses after Tseitin encoding.
 const MAX_BOOLEAN_CLAUSES: usize = 32_768;
+/// Maximum interface set eligible for exact one-candidate-per-state BV propagation.
+const MAX_BV_PROPAGATION_INTERFACE_ATOMS: usize = 64;
+/// Maximum implication probes accumulated in one online BV theory instance.
+const MAX_BV_PROPAGATION_PROBES: usize = 128;
 
 #[derive(Debug, Clone)]
 struct OriginalApplication {
@@ -73,6 +77,7 @@ enum WalkError {
     NonBoolean(TermId),
 }
 
+#[derive(Debug)]
 enum BuildFailure {
     Unknown(UnknownReason),
     Error(SolverError),
@@ -89,6 +94,7 @@ struct PreparedAbstraction {
 struct TheoryAtoms {
     original: Vec<TermId>,
     abstracted: Vec<TermId>,
+    propagation_candidates: Vec<bool>,
 }
 
 #[derive(Default)]
@@ -96,6 +102,7 @@ struct AtomAccumulator {
     original: Vec<TermId>,
     abstracted: Vec<TermId>,
     abstract_index: HashMap<TermId, usize>,
+    propagation_candidates: Vec<bool>,
 }
 
 impl AtomAccumulator {
@@ -104,21 +111,25 @@ impl AtomAccumulator {
         arena: &TermArena,
         original: TermId,
         abstracted: TermId,
+        propagation_candidate: bool,
     ) -> Result<(), SolverError> {
         if arena.sort_of(original) != Sort::Bool || arena.sort_of(abstracted) != Sort::Bool {
             return Err(SolverError::Backend(
                 "online UFBV atom abstraction changed Boolean sort".to_owned(),
             ));
         }
-        if matches!(arena.node(abstracted), TermNode::BoolConst(_))
-            || self.abstract_index.contains_key(&abstracted)
-        {
+        if matches!(arena.node(abstracted), TermNode::BoolConst(_)) {
+            return Ok(());
+        }
+        if let Some(&index) = self.abstract_index.get(&abstracted) {
+            self.propagation_candidates[index] |= propagation_candidate;
             return Ok(());
         }
         let index = self.abstracted.len();
         self.original.push(original);
         self.abstracted.push(abstracted);
         self.abstract_index.insert(abstracted, index);
+        self.propagation_candidates.push(propagation_candidate);
         Ok(())
     }
 
@@ -126,6 +137,7 @@ impl AtomAccumulator {
         TheoryAtoms {
             original: self.original,
             abstracted: self.abstracted,
+            propagation_candidates: self.propagation_candidates,
         }
     }
 }
@@ -144,6 +156,11 @@ struct BvTheory<'a> {
     assigned: Vec<Option<bool>>,
     assigned_log: Vec<usize>,
     scopes: Vec<(usize, bool)>,
+    propagation_candidates: Vec<bool>,
+    propagation_cursor: usize,
+    pending_propagations: Vec<TheoryProp>,
+    propagation_probes: usize,
+    propagation_hits: usize,
     deadline: Option<Instant>,
     last_model: Option<Model>,
     last_unknown: Option<UnknownReason>,
@@ -155,6 +172,7 @@ impl<'a> BvTheory<'a> {
         arena: &'a TermArena,
         positive: Vec<TermId>,
         negative: Vec<TermId>,
+        propagation_candidates: Vec<bool>,
         config: &SolverConfig,
         deadline: Option<Instant>,
     ) -> Self {
@@ -167,6 +185,11 @@ impl<'a> BvTheory<'a> {
             assigned: vec![None; atom_count],
             assigned_log: Vec::new(),
             scopes: Vec::new(),
+            propagation_candidates,
+            propagation_cursor: 0,
+            pending_propagations: Vec::new(),
+            propagation_probes: 0,
+            propagation_hits: 0,
             deadline,
             last_model: None,
             last_unknown: None,
@@ -216,21 +239,25 @@ impl<'a> BvTheory<'a> {
             Ok((CheckResult::Sat(model), _)) => {
                 self.last_model = Some(model);
                 self.last_unknown = None;
+                self.refresh_propagation();
                 Ok(())
             }
             Ok((CheckResult::Unsat, core)) => {
                 self.last_model = None;
                 self.last_unknown = None;
+                self.pending_propagations.clear();
                 Err(self.map_active_core(&core))
             }
             Ok((CheckResult::Unknown(reason), _)) => {
                 self.last_model = None;
                 self.last_unknown = Some(reason);
+                self.pending_propagations.clear();
                 Ok(())
             }
             Err(error) => {
                 self.failure = Some(format!("online UFBV warm BV check failed: {error}"));
                 self.last_model = None;
+                self.pending_propagations.clear();
                 Ok(())
             }
         }
@@ -263,6 +290,8 @@ impl<'a> BvTheory<'a> {
                 self.assigned[atom] = None;
             }
         }
+        self.pending_propagations.clear();
+        self.refresh_propagation();
     }
 
     fn active_core(&self) -> Vec<TheoryLit> {
@@ -296,6 +325,80 @@ impl<'a> BvTheory<'a> {
         } else {
             core
         }
+    }
+
+    fn refresh_propagation(&mut self) {
+        self.pending_propagations
+            .retain(|propagation| self.assigned[propagation.lit.atom].is_none());
+        if self.failure.is_some()
+            || self.last_unknown.is_some()
+            || self.propagation_probes >= MAX_BV_PROPAGATION_PROBES
+            || self
+                .propagation_candidates
+                .iter()
+                .filter(|&&candidate| candidate)
+                .count()
+                > MAX_BV_PROPAGATION_INTERFACE_ATOMS
+        {
+            return;
+        }
+        let Some(model) = &self.last_model else {
+            return;
+        };
+        let atom_count = self.positive.len();
+        let Some(atom) = (0..atom_count)
+            .map(|offset| (self.propagation_cursor + offset) % atom_count)
+            .find(|&atom| {
+                self.propagation_candidates[atom]
+                    && self.assigned[atom].is_none()
+                    && !self
+                        .pending_propagations
+                        .iter()
+                        .any(|propagation| propagation.lit.atom == atom)
+            })
+        else {
+            return;
+        };
+        self.propagation_cursor = (atom + 1) % atom_count;
+        let assignment = model.to_assignment();
+        let Ok(Value::Bool(value)) = eval(self.arena, self.positive[atom], &assignment) else {
+            return;
+        };
+        let opposite = if value {
+            self.negative[atom]
+        } else {
+            self.positive[atom]
+        };
+        let remaining = self
+            .deadline
+            .map(|deadline| deadline.saturating_duration_since(Instant::now()));
+        if remaining.is_some_and(|duration| duration.is_zero()) {
+            return;
+        }
+        self.solver.set_timeout(remaining);
+        self.propagation_probes += 1;
+        match self.solver.refute_assumption(self.arena, opposite) {
+            Ok(crate::incremental::WarmRefutationProbe::Refuted { active_core }) => {
+                self.propagation_hits += 1;
+                self.pending_propagations.push(TheoryProp {
+                    lit: TheoryLit { atom, value },
+                    reason: self.map_active_core(&active_core),
+                });
+            }
+            Ok(crate::incremental::WarmRefutationProbe::Satisfiable) => {}
+            Ok(crate::incremental::WarmRefutationProbe::Unknown(reason)) => {
+                if reason.kind == UnknownKind::Timeout {
+                    self.last_unknown = Some(reason);
+                }
+            }
+            Err(error) => {
+                self.failure = Some(format!("online UFBV BV propagation probe failed: {error}"));
+            }
+        }
+    }
+
+    fn propagations(&self) -> Vec<TheoryProp> {
+        self.pending_propagations.clone()
     }
 
     fn projected_result(
@@ -348,7 +451,16 @@ impl TheorySolver for CombinedUfbvTheory<'_> {
     }
 
     fn propagate(&self) -> Vec<TheoryProp> {
-        self.euf.propagate()
+        let mut propagations = self.euf.propagate();
+        for propagation in self.bv.propagations() {
+            if !propagations
+                .iter()
+                .any(|existing| existing.lit == propagation.lit)
+            {
+                propagations.push(propagation);
+            }
+        }
+        propagations
     }
 }
 
@@ -401,7 +513,14 @@ fn build_and_solve(
     }
     let atom_count = atoms.original.len();
     let euf = EufTheory::new(arena, &atoms.original);
-    let bv = BvTheory::new(arena, atoms.abstracted, negative_atoms, config, deadline);
+    let bv = BvTheory::new(
+        arena,
+        atoms.abstracted,
+        negative_atoms,
+        atoms.propagation_candidates,
+        config,
+        deadline,
+    );
     let mut theory = CombinedUfbvTheory { euf, bv };
     let mut solver = CdclT::new(
         skeleton.variable_count,
@@ -578,7 +697,7 @@ fn build_theory_atoms(
     }
     for atom in formula_atoms {
         let rewritten = replace_subterms(arena, atom, &prepared.replacements, &mut atom_memo)?;
-        atoms.register(arena, atom, rewritten)?;
+        atoms.register(arena, atom, rewritten, false)?;
     }
 
     let groups = application_groups(&prepared.applications);
@@ -668,13 +787,13 @@ fn add_interface_atoms(
                 {
                     let original_eq = arena.eq(original_left, original_right)?;
                     let abstract_eq = arena.eq(abstract_left, abstract_right)?;
-                    atoms.register(arena, original_eq, abstract_eq)?;
+                    atoms.register(arena, original_eq, abstract_eq, true)?;
                 }
                 let original_result = arena.eq(left.original.term, right.original.term)?;
                 let left_fresh = arena.var(left.fresh);
                 let right_fresh = arena.var(right.fresh);
                 let abstract_result = arena.eq(left_fresh, right_fresh)?;
-                atoms.register(arena, original_result, abstract_result)?;
+                atoms.register(arena, original_result, abstract_result, true)?;
             }
         }
     }
@@ -849,10 +968,69 @@ mod tests {
     use std::time::Duration;
 
     use axeyum_ir::{Sort, TermArena, Value, eval};
+    use axeyum_smtlib::parse_script;
 
-    use super::{BvTheory, check_qf_ufbv_online_cdclt};
-    use crate::euf_egraph::TheoryLit;
+    use super::{
+        BvTheory, CombinedUfbvTheory, build_theory_atoms, check_qf_ufbv_online_cdclt,
+        encode_boolean_skeleton, prepare_abstraction,
+    };
+    use crate::cdclt::{CdclT, Outcome};
+    use crate::euf_egraph::EufTheory;
+    use crate::euf_egraph::{TheoryLit, TheoryProp};
     use crate::{CheckResult, SolverConfig};
+
+    #[derive(Debug)]
+    struct RawSolveStats {
+        outcome: Outcome,
+        interface_atoms: usize,
+        propagation_probes: usize,
+        propagation_hits: usize,
+        driver_propagations: usize,
+    }
+
+    fn raw_solve_stats(arena: &mut TermArena, assertions: &[axeyum_ir::TermId]) -> RawSolveStats {
+        let prepared = prepare_abstraction(arena, assertions, None)
+            .expect("bounded UFBV case should abstract");
+        let atoms = build_theory_atoms(arena, assertions, &prepared, None)
+            .expect("bounded UFBV case should build theory atoms");
+        let skeleton = encode_boolean_skeleton(
+            arena,
+            prepared.abstraction.assertions(),
+            &atoms.abstracted,
+            None,
+        )
+        .expect("bounded UFBV case should encode");
+        let negative = atoms
+            .abstracted
+            .iter()
+            .map(|&atom| arena.not(atom).unwrap())
+            .collect();
+        let atom_count = atoms.original.len();
+        let interface_atoms = atoms
+            .propagation_candidates
+            .iter()
+            .filter(|&&candidate| candidate)
+            .count();
+        let euf = EufTheory::new(arena, &atoms.original);
+        let bv = BvTheory::new(
+            arena,
+            atoms.abstracted,
+            negative,
+            atoms.propagation_candidates,
+            &SolverConfig::default(),
+            None,
+        );
+        let mut theory = CombinedUfbvTheory { euf, bv };
+        let mut solver = CdclT::new(skeleton.variable_count, atom_count, skeleton.clauses, None);
+        let outcome = solver.solve(&mut theory);
+        RawSolveStats {
+            outcome,
+            interface_atoms,
+            propagation_probes: theory.bv.propagation_probes,
+            propagation_hits: theory.bv.propagation_hits,
+            driver_propagations: solver.theory_propagations(),
+        }
+    }
 
     #[test]
     fn warm_bv_final_conflict_drops_irrelevant_literal() {
@@ -869,7 +1047,14 @@ mod tests {
             .iter()
             .map(|&atom| arena.not(atom).unwrap())
             .collect();
-        let mut theory = BvTheory::new(&arena, positive, negative, &SolverConfig::default(), None);
+        let mut theory = BvTheory::new(
+            &arena,
+            positive,
+            negative,
+            vec![false; 3],
+            &SolverConfig::default(),
+            None,
+        );
 
         theory.push();
         assert!(theory.assert(0, true).is_ok());
@@ -905,7 +1090,14 @@ mod tests {
             .iter()
             .map(|&atom| arena.not(atom).unwrap())
             .collect();
-        let mut theory = BvTheory::new(&arena, positive, negative, &SolverConfig::default(), None);
+        let mut theory = BvTheory::new(
+            &arena,
+            positive,
+            negative,
+            vec![false; 2],
+            &SolverConfig::default(),
+            None,
+        );
 
         theory.push();
         assert!(theory.assert(0, true).is_ok());
@@ -913,6 +1105,87 @@ mod tests {
         theory.pop();
         assert_eq!(theory.solver.scope_depth(), 0);
         assert!(theory.assert(1, true).is_ok());
+    }
+
+    #[test]
+    fn warm_bv_propagates_an_entailed_interface_equality() {
+        let mut arena = TermArena::new();
+        let x = arena.bv_var("prop_x", 4).unwrap();
+        let y = arena.bv_var("prop_y", 4).unwrap();
+        let one = arena.bv_const(4, 1).unwrap();
+        let x_shifted = arena.bv_add(x, one).unwrap();
+        let y_shifted = arena.bv_add(y, one).unwrap();
+        let same_shifted = arena.eq(x_shifted, y_shifted).unwrap();
+        let same_input = arena.eq(x, y).unwrap();
+        let positive = vec![same_shifted, same_input];
+        let negative = positive
+            .iter()
+            .map(|&atom| arena.not(atom).unwrap())
+            .collect();
+        let mut theory = BvTheory::new(
+            &arena,
+            positive,
+            negative,
+            vec![false, true],
+            &SolverConfig::default(),
+            None,
+        );
+
+        assert!(theory.assert(0, true).is_ok());
+        assert_eq!(
+            theory.propagations(),
+            vec![TheoryProp {
+                lit: TheoryLit {
+                    atom: 1,
+                    value: true
+                },
+                reason: vec![TheoryLit {
+                    atom: 0,
+                    value: true
+                }]
+            }]
+        );
+    }
+
+    #[test]
+    fn cdclt_driver_consumes_bv_interface_propagation() {
+        let mut arena = TermArena::new();
+        let function = arena
+            .declare_fun("prop_f", &[Sort::BitVec(4)], Sort::BitVec(4))
+            .unwrap();
+        let x = arena.bv_var("driver_prop_x", 4).unwrap();
+        let y = arena.bv_var("driver_prop_y", 4).unwrap();
+        let one = arena.bv_const(4, 1).unwrap();
+        let x_shifted = arena.bv_add(x, one).unwrap();
+        let y_shifted = arena.bv_add(y, one).unwrap();
+        let same_shifted = arena.eq(x_shifted, y_shifted).unwrap();
+        let fx = arena.apply(function, &[x]).unwrap();
+        let fy = arena.apply(function, &[y]).unwrap();
+        let same_result = arena.eq(fx, fy).unwrap();
+        let assertions = vec![same_shifted, same_result];
+        let stats = raw_solve_stats(&mut arena, &assertions);
+        assert_eq!(stats.outcome, Outcome::Sat);
+        assert!(
+            stats.driver_propagations > 0,
+            "the canonical driver should consume the BV-implied x=y interface equality; probes={}, hits={}",
+            stats.propagation_probes,
+            stats.propagation_hits,
+        );
+    }
+
+    #[test]
+    fn bug520_exercises_bounded_bv_interface_propagation() {
+        let mut script = parse_script(include_str!(
+            "../../../corpus/public-curated/non-incremental/QF_UFBV/cvc5-regress-clean/cli__regress1__bug520.smt2"
+        ))
+        .expect("bug520 parses");
+        let stats = raw_solve_stats(&mut script.arena, &script.assertions);
+
+        assert_eq!(stats.outcome, Outcome::Sat);
+        assert_eq!(stats.interface_atoms, 50);
+        assert!(stats.propagation_probes > 0, "stats={stats:?}");
+        assert!(stats.propagation_hits > 0, "stats={stats:?}");
+        assert!(stats.driver_propagations > 0, "stats={stats:?}");
     }
 
     #[test]

@@ -307,6 +307,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-09 — bounded exact BV-to-EUF interface propagation is live and
+  measured.** One round-robin generated interface equality per theory-state
+  change is proved by refuting its opposite polarity in the same warm CNF;
+  failed frame selectors become the reason. Pending consequences survive
+  stronger assignments and clear on pop. Caps: at most 64 interface atoms and
+  128 probes. `bug520` has 50 deduplicated candidates; diagnostics recorded 93
+  probes, 31 BV hits, and 46 total combined propagations. Exact five-run A/B:
+  enabled 149.96-152.79 ms / corpus mean 0.034-0.036 s, disabled
+  347.10-352.39 ms / 0.065-0.066 s. Public QF_UFBV remains 6/6 with zero
+  disagreements/replay failures and the 1,536-case matrix is clean. Z3 remains
+  about 9-11 ms, so this is a bounded ~2.3x win, not parity. ADR-0068; next:
+  relevance-driven interface generation before cap expansion.
 - **2026-07-09 — online UFBV BV conflicts now use same-solve decision-frame
   cores.** `IncrementalBvSolver` separates one-shot assumption cores from failed
   active-frame assertions, and `BvTheory` maps the latter back to tracked
@@ -510,7 +522,8 @@ plan is built and committed on the current branch:
 ### Track 1 — Engine & Performance
 | Phase | Title | Status |
 |---|---|---|
-| P1.6a | Warm BV conflict-core precision | **DONE (ADR-0067)** — online UFBV maps same-solve failed decision-frame selectors back to theory literals with deterministic full-core fallback. A per-literal selector prototype was reverted after a measured 0.061→0.072 s mean and 0.332→0.382 s `bug520` regression; accepted frame cores are neutral at 0.063 s / 0.332 s. Remaining P1.6 work is within-level precision without repeated-assumption cost, BV propagation, relevant interface generation, and arrays/mixed theories on the bus |
+| P1.6b | Exact BV interface propagation | **DONE (ADR-0068)** — generated argument/result equalities are probed one per state by exact opposite-polarity warm-CNF refutation; failed frames explain propagation; 64-interface/128-probe caps. Same-tree 5-run A/B improves `bug520` 347.10-352.39→149.96-152.79 ms and corpus mean 0.065-0.066→0.034-0.036 s, with 6/6 public agreement and 1,536 clean differential comparisons. Remaining: relevance-driven interface generation, then arrays/mixed theories on the bus |
+| P1.6a | Warm BV conflict-core precision | **DONE (ADR-0067)** — online UFBV maps same-solve failed decision-frame selectors back to theory literals with deterministic full-core fallback. A per-literal selector prototype was reverted after a measured 0.061→0.072 s mean and 0.332→0.382 s `bug520` regression; accepted frame cores are neutral at 0.063 s / 0.332 s. Remaining P1.6 work is within-level precision without repeated-assumption cost, relevant interface generation, and arrays/mixed theories on the bus |
 | P1.1 | SAT inprocessing (subsumption → BVE → vivification → glue tiers) | WIP — subsumption+BVE landed (T1.1.1/2), wired into the solve pipeline (T1.1.3), made occurrence-list near-linear + time-bounded (T1.1.4): safe, no regression, but the curated unknowns are SAT-search-bound (→ P1.3) or BVE-resistant. **CDCL(XOR) foundation landed** (`gf2`/`xor_extract`/`xor_propagate` in `axeyum-cnf`) — the path-2 multiplier-wall attack: a sound GF(2) Gaussian engine + exact XOR-gate extraction + an entailment-checked propagation pass; slice 4 wires it into the live preprocess pipeline (measured). Vivification / glue tiers remain |
 | P1.2 | Preprocessing (word-level rewrite, solve_eqs, bv_slice/bounds/max-sharing, AIG 2-level rewrite) | WIP — T1.2.1 trail + T1.2.2 propagate_values + T1.2.3 solve_eqs landed (model-sound, unit-tested, 36 tests). **T1.2.4 elim_unconstrained landed** (`axeyum-rewrite::elim_unconstrained`): a variable occurring once under an invertible BV op (`bvadd`/`bvsub`/`bvxor`/`bvnot`/`bvneg`) makes that subterm unconstrained → replaced by a fresh var, operator dropped (Z3's `elim_unconstr`); peels nested layers, terminates. Model-sound via the trail (`x := op⁻¹(u,w…)`; orphaned operands defaulted, sound by the inverse identity); wired into `check_with_preprocessing` after solve_eqs (opt-in, default-off per ADR-0034). `bvumulo` now uses the word-width threshold encoding `a > all_ones / b` instead of a doubled-width multiplier, so BV256 overflow checks no longer build BV512 multiplication terms. 6 unit (incl. 300-trial randomized reconstruction) + 2 solver end-to-end plus focused IR overflow/shape coverage. Next: measure on the public p4dfa slice; then max_bv_sharing / bv_slice / AIG 2-level (T1.2.5–T1.2.9) |
 | P1.3 | SAT-core modernization (VSIDS/VMTF modes, EMA/Luby restarts, arena+packed watches, chrono BT) | WIP — the proof-producing core `solve_with_drat_proof` (`proof_sat.rs`) modernized: **VSIDS activity branching** (bump conflict-side vars, MiniSat-style decay, rescale-on-overflow; highest-activity unassigned var, ties to lowest index), **phase saving**, and **Luby restarts**. Sound by construction — every emitted clause is RUP and the proof is DRAT-checked, so a heuristic bug only slows search. All 231 cnf tests pass (incl. the 400-CNF differential vs BatSat + a new pigeonhole-4→3). NB the modern CDCL(XOR) core in `xor_cdcl.rs` already has VSIDS/Luby/LBD. Remaining: arena + packed watches, chronological backtracking; wire a modern core into the default path |
@@ -574,6 +587,12 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-09 — exact warm BV interface propagation landed.** The canonical
+  UFBV theory now proves bounded interface consequences with same-CNF
+  opposite-polarity probes and failed-frame reasons, then feeds them to
+  `CdclT`/EUF. Mechanism, production telemetry, `bug520`, differential, and
+  public-corpus gates pin both soundness and the exact 5-run ~2.3x row win.
+  ADR-0068 records caps and the model-is-hint/UNSAT-is-proof boundary.
 - **2026-07-09 — warm BV decision-frame conflict cores landed.** Online UFBV
   now maps failed persistent frame selectors from the existing SAT solve back
   to theory literals, omitting irrelevant levels without a second solve. The

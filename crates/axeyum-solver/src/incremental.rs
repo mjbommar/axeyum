@@ -94,6 +94,12 @@ impl IncrementalSolveOutcome {
     }
 }
 
+pub(crate) enum WarmRefutationProbe {
+    Refuted { active_core: Vec<TermId> },
+    Satisfiable,
+    Unknown(UnknownReason),
+}
+
 /// One push/pop frame: its activation selector (none for the permanent base
 /// frame) and the terms asserted while it was the top frame.
 #[derive(Debug)]
@@ -625,6 +631,61 @@ impl IncrementalBvSolver {
     ) -> Result<(CheckResult, Vec<TermId>), SolverError> {
         let outcome = self.solve_with_extra(arena, &[])?;
         Ok((outcome.result, outcome.active_assertion_core))
+    }
+
+    /// Checks whether the active warm assertions refute one additional Boolean
+    /// assumption, without reconstructing or replaying a SAT model.
+    ///
+    /// On refutation, the returned active-frame assertion core is a reason for
+    /// the negation of `assumption`. This is the exact implication primitive used
+    /// by bounded online BV theory propagation.
+    pub(crate) fn refute_assumption(
+        &mut self,
+        arena: &TermArena,
+        assumption: TermId,
+    ) -> Result<WarmRefutationProbe, SolverError> {
+        if self.has_deferred_theory_assertions() {
+            return Err(SolverError::Unsupported(
+                "active array/UF theory assertions cannot use the warm BV implication probe"
+                    .to_owned(),
+            ));
+        }
+        let one_shot = [OneShotAssumption {
+            original: assumption,
+            encoded: assumption,
+            warm_array_selects: Vec::new(),
+            warm_uf_apps: Vec::new(),
+            warm_array_equalities: Vec::new(),
+            congruence_lemmas: Vec::new(),
+        }];
+        let (ephemeral, _) = self.encode_one_shot_assumptions(arena, &one_shot)?;
+        let mut active = self
+            .frames
+            .iter()
+            .filter_map(|frame| frame.selector)
+            .collect::<Vec<_>>();
+        active.extend_from_slice(&ephemeral);
+        match self
+            .cnf
+            .solve(&active, self.config.timeout)
+            .map_err(|error| map_sat_error(&error))?
+        {
+            SatResult::Sat(_) => Ok(WarmRefutationProbe::Satisfiable),
+            SatResult::Unsat(evidence) => Ok(WarmRefutationProbe::Refuted {
+                active_core: self.active_assertion_core(&evidence.failed_assumptions),
+            }),
+            SatResult::Unknown(reason) => {
+                let kind = if reason.detail.contains("timeout") {
+                    UnknownKind::Timeout
+                } else {
+                    UnknownKind::Other
+                };
+                Ok(WarmRefutationProbe::Unknown(UnknownReason {
+                    kind,
+                    detail: reason.detail,
+                }))
+            }
+        }
     }
 
     /// Checks the active assertions together with one-shot `assumptions`, which
