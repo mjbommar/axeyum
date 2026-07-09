@@ -12,6 +12,14 @@ session state.
 > without ever losing the thread. **We do not stop and we do not hand-wave; we
 > advance the next task and record it.**
 
+> **Current sequencing (2026-07-09).** The breadth-first pass over the theory
+> decide-rate leaves has reached its ROI wall (measured this session). The
+> ranked next move is to **depth-first the engine keystone (P1.4 e-graph →
+> P1.5 CDCL(T))**, keeping a thin measured-leaf skirt and the trust-ledger proof
+> spine running in parallel. Full BFS-vs-DFS traversal analysis + ranking:
+> [build-sequencing-bfs-dfs.md](docs/research/08-planning/build-sequencing-bfs-dfs.md);
+> the ranked steps live in [§ The two engineering keystones](#the-two-engineering-keystones).
+
 ## Where we are vs the north star — measured reality check (2026-06-28)
 
 **Measured status: the build is well underway, soundness is holding, and there
@@ -3558,6 +3566,33 @@ untrusted search and validated by small independent checkers.
   simultaneously Rust-checkable (Carcara, no C/C++), BV-shaped (matches axeyum's
   lowering and existing miter), and the on-ramp to Lean. Everything downstream in
   the proof track depends on it.
+
+**Sequencing — pivot from leaf-BFS to keystone-DFS (2026-07-09).** A traversal
+analysis over the [dependency DAG](docs/plan/01-dependency-dag.md) — the two
+keystones above, a keystone-blocked deep interior (lazy arrays/EUF/BV/datatypes,
+quantifier maturity, combination-at-scale, warm memory, CHC/Horn), and a skirt of
+independent theory leaves — is written up in
+[build-sequencing-bfs-dfs.md](docs/research/08-planning/build-sequencing-bfs-dfs.md).
+Its conclusion, ranked by quality × efficiency:
+
+1. **DFS the engine keystone `P1.4 → P1.5` now.** The breadth-first pass over the
+   theory decide-rate leaves (LIA/NRA/strings) has **empirically exhausted its
+   ROI**: every remaining leaf now needs this keystone (eager encodings no longer
+   scale), a large-scale engine (dense-ILP MILP; 200–360 KB LPs), or a
+   research-grade completeness proof (Nielsen strings). That wall — reached this
+   session — is the data-driven trigger to pivot from BFS to keystone-DFS. Build
+   the independent congruence checker alongside so the eager→lazy migration is
+   trust-preserving.
+2. **Keep a thin measured-leaf-BFS skirt in parallel** — measured-ROI leaves only
+   (NRA tail, strings-Nielsen); fold the feature/scale-blocked leaves
+   (dense-ILP MILP, large-LP performance) into a funded engine phase rather than
+   grinding them as slices (measure-don't-seed).
+3. **Run the proof/trust-ledger spine (`P3.5 → ledger→0`) in parallel** — the
+   quality axis of the north star; each theory that becomes lazy under (1) drops
+   a trust-ledger entry via its Alethe reduction proof.
+4. **After P1.5 lands: DFS the categorical gap `P3.8 → P4.6 CHC/Horn`** — the
+   largest single categorical gain vs Z3 (unbounded verification); its Farkas/LRA
+   interpolant slice can start early inside the (2) skirt, de-risking the path.
 
 ## Track map
 
