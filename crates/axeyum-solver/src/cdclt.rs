@@ -33,8 +33,9 @@
 //! - `Sat` is *not* trusted from the driver: the caller assembles a model from the
 //!   theory and **replays** it against the original assertions, downgrading to
 //!   `Unknown` on any non-replay.
-//! - Deterministic: the decision heuristic is the lowest-index unassigned variable
-//!   and every data structure is a `Vec`; there is no hash-iteration order and no
+//! - Deterministic: conflict-side VSIDS selects the highest-activity unassigned
+//!   variable with lowest-index ties, phase saving reuses its last polarity, and
+//!   every search data structure is a `Vec`; there is no hash-iteration order or
 //!   clock-derived choice. The only clock read is the deadline check.
 //! - Deadline: `deadline` is checked at the head of the search loop and of the
 //!   propagation fixpoint, so the search degrades to `Unknown` under a deterministic
@@ -116,6 +117,15 @@ struct Conflict {
 /// is the primary bound.
 const DEFAULT_STEP_BUDGET: usize = 16_000_000;
 
+/// VSIDS activity decay. Growing the bump increment by `1 / VSIDS_DECAY`
+/// makes recent conflicts weigh more without scanning every activity.
+const VSIDS_DECAY: f64 = 0.95;
+/// Common rescale factor used before activity values approach floating-point
+/// overflow. Multiplying every value preserves the decision order.
+const VSIDS_RESCALE: f64 = 1e-100;
+/// Activity ceiling that triggers a common rescale.
+const VSIDS_RESCALE_LIMIT: f64 = 1e100;
+
 /// The outcome of one conflict-learning step.
 enum Learn {
     /// The asserting clause was learned and the UIP enqueued; keep searching.
@@ -159,6 +169,16 @@ pub(crate) struct CdclT {
     /// Number of literals assigned by theory propagation. Internal telemetry for
     /// routing/tests; decisions and Boolean unit propagation are not counted.
     theory_propagations: usize,
+    /// VSIDS activity per variable. Conflict analysis bumps each variable when it
+    /// first enters the conflict side; decisions choose the maximum activity with
+    /// deterministic lowest-index ties.
+    activity: Vec<f64>,
+    /// Current VSIDS bump increment. It grows once per conflict so old activity
+    /// decays relative to newly implicated variables.
+    var_inc: f64,
+    /// Last assigned polarity per variable. Initialized to the previous
+    /// true-first behavior and retained across backtracking.
+    saved_phase: Vec<bool>,
 }
 
 impl CdclT {
@@ -186,6 +206,9 @@ impl CdclT {
             steps: 0,
             step_budget_hit: false,
             theory_propagations: 0,
+            activity: vec![0.0; var_count],
+            var_inc: 1.0,
+            saved_phase: vec![true; var_count],
         }
     }
 
@@ -245,6 +268,7 @@ impl CdclT {
         reason_is_theory: bool,
     ) -> Result<(), Vec<TheoryLit>> {
         self.value[var] = Some(value);
+        self.saved_phase[var] = value;
         self.level[var] = self.decision_level;
         self.reason[var] = reason;
         self.reason_theory[var] = reason_is_theory;
@@ -395,7 +419,11 @@ impl CdclT {
     /// literal — the first UIP — remains. Returns the asserting clause (UIP at index
     /// 0, lower-level literals after), the backjump level, and whether the clause is a
     /// pure theory lemma (resolved through theory clauses only).
-    fn analyze_conflict(&self, conflict: &[Lit], seed_is_theory: bool) -> (Vec<Lit>, usize, bool) {
+    fn analyze_conflict(
+        &mut self,
+        conflict: &[Lit],
+        seed_is_theory: bool,
+    ) -> (Vec<Lit>, usize, bool) {
         let mut seen = vec![false; self.var_count];
         let mut lower: Vec<Lit> = Vec::new();
         let mut path_count = 0_usize;
@@ -412,6 +440,7 @@ impl CdclT {
                     continue;
                 }
                 seen[v] = true;
+                self.bump_var(v);
                 if self.level[v] >= current {
                     path_count += 1;
                 } else {
@@ -485,9 +514,40 @@ impl CdclT {
         self.decision_level = target_level;
     }
 
-    /// The lowest-index unassigned variable, or `None` when the assignment is total.
+    /// The highest-activity unassigned variable, with deterministic lowest-index
+    /// ties, or `None` when the assignment is total.
     fn pick_unassigned(&self) -> Option<usize> {
-        (0..self.var_count).find(|&v| self.value[v].is_none())
+        let mut best = None;
+        for var in 0..self.var_count {
+            if self.value[var].is_some() {
+                continue;
+            }
+            match best {
+                None => best = Some(var),
+                Some(current) if self.activity[var] > self.activity[current] => {
+                    best = Some(var);
+                }
+                Some(_) => {}
+            }
+        }
+        best
+    }
+
+    /// Bumps one variable's VSIDS activity, rescaling all activities by the same
+    /// positive factor before they can overflow. Rescaling preserves ordering.
+    fn bump_var(&mut self, var: usize) {
+        self.activity[var] += self.var_inc;
+        if self.activity[var] > VSIDS_RESCALE_LIMIT {
+            for activity in &mut self.activity {
+                *activity *= VSIDS_RESCALE;
+            }
+            self.var_inc *= VSIDS_RESCALE;
+        }
+    }
+
+    /// Advances the VSIDS recency window after one analyzed conflict.
+    fn decay_activity(&mut self) {
+        self.var_inc /= VSIDS_DECAY;
     }
 
     /// Unit propagation interleaved with theory propagation to a joint fixpoint.
@@ -518,6 +578,7 @@ impl CdclT {
     ) -> Learn {
         let (learned, backjump, is_theory_lemma) =
             self.analyze_conflict(&conflict.clause, conflict.is_theory);
+        self.decay_activity();
         if learned.is_empty() {
             return Learn::Unsat;
         }
@@ -584,7 +645,9 @@ impl CdclT {
                 Some(var) => {
                     self.decision_level += 1;
                     theory.push();
-                    if let Err(core) = self.assign(theory, var, true, Cause::Decision, None, false)
+                    let polarity = self.saved_phase[var];
+                    if let Err(core) =
+                        self.assign(theory, var, polarity, Cause::Decision, None, false)
                     {
                         let conflict = Conflict {
                             clause: Self::theory_conflict_clause(&core),
@@ -622,7 +685,7 @@ mod termination_tests {
     //! a verdict that matches an independent brute-force over the Boolean skeleton ∧
     //! the forbidden-cube semantics — a wrong `Sat`/`Unsat` is a hard failure.
 
-    use super::{CdclT, Lit, Outcome};
+    use super::{Cause, CdclT, Lit, Outcome};
     use crate::euf_egraph::{TheoryLit, TheoryProp, TheorySolver};
 
     /// A deterministic linear-congruential PRNG (MMIX constants) — the house
@@ -999,5 +1062,100 @@ mod termination_tests {
         );
         assert_eq!(outcome, Outcome::Unsat, "a ∧ ¬a-forbidden is UNSAT");
         assert!(!brute_force_sat(&inst), "brute force agrees: UNSAT");
+    }
+
+    #[test]
+    fn vsids_bumps_conflict_vars_and_reorders_decisions_deterministically() {
+        fn run() -> (Vec<f64>, Vec<Lit>) {
+            let mut solver = CdclT::new(4, 0, Vec::new(), None);
+            solver.decision_level = 1;
+            solver.value[0] = Some(true);
+            solver.level[0] = 1;
+            solver.trail.push((0, true, Cause::Decision));
+            solver.value[1] = Some(true);
+            solver.level[1] = 1;
+            solver.reason[1] = Some(vec![
+                Lit {
+                    var: 0,
+                    positive: false,
+                },
+                Lit {
+                    var: 1,
+                    positive: true,
+                },
+            ]);
+            solver.trail.push((1, true, Cause::Implied));
+            let conflict = vec![
+                Lit {
+                    var: 0,
+                    positive: false,
+                },
+                Lit {
+                    var: 1,
+                    positive: false,
+                },
+            ];
+            let (learned, _, _) = solver.analyze_conflict(&conflict, false);
+            (solver.activity, learned)
+        }
+
+        let (activity, learned) = run();
+        assert!(activity[0] > 0.0 && activity[1] > 0.0);
+        assert!(activity[2] <= 0.0);
+        assert!(activity[3] <= 0.0);
+        assert_eq!(
+            learned,
+            vec![Lit {
+                var: 0,
+                positive: false,
+            }]
+        );
+
+        let mut picker = CdclT::new(4, 0, Vec::new(), None);
+        picker.bump_var(2);
+        assert_eq!(picker.pick_unassigned(), Some(2));
+        let plain = CdclT::new(4, 0, Vec::new(), None);
+        assert_eq!(plain.pick_unassigned(), Some(0));
+
+        let (activity_again, learned_again) = run();
+        assert_eq!(activity, activity_again);
+        assert_eq!(learned, learned_again);
+    }
+
+    #[test]
+    fn phase_saving_survives_backtracking_and_preserves_true_first_default() {
+        struct NoTheory;
+        impl TheorySolver for NoTheory {
+            fn assert(&mut self, _atom: usize, _value: bool) -> Result<(), Vec<TheoryLit>> {
+                Ok(())
+            }
+
+            fn push(&mut self) {}
+
+            fn pop(&mut self) {}
+
+            fn propagate(&self) -> Vec<TheoryProp> {
+                Vec::new()
+            }
+        }
+
+        let mut theory = NoTheory;
+        let mut solver = CdclT::new(3, 0, Vec::new(), None);
+        assert_eq!(solver.saved_phase, vec![true, true, true]);
+
+        solver.decision_level = 1;
+        solver
+            .assign(&mut theory, 0, false, Cause::Decision, None, false)
+            .expect("pure Boolean assignment cannot conflict");
+        solver
+            .assign(&mut theory, 1, false, Cause::Implied, None, false)
+            .expect("pure Boolean propagation cannot conflict");
+        assert!(!solver.saved_phase[0]);
+        assert!(!solver.saved_phase[1]);
+
+        solver.backjump_to(&mut theory, 0);
+        assert_eq!(solver.value[0], None);
+        assert!(!solver.saved_phase[0]);
+        assert!(solver.saved_phase[2]);
     }
 }

@@ -180,11 +180,37 @@ Verification and measurement:
   `DISAGREE=0`, replay failures 0; overbound remains two timeout unknowns. The
   two-file regression slice remains 1 sat / 1 unsat.
 
-This is routing consolidation, not the end of driver modernization. The
-arithmetic-local engine already has VSIDS, phase saving, Luby restarts, LBD, and
-learned-clause reduction that canonical `CdclT` does not yet carry. Those
-heuristics should migrate into `CdclT` under corpus measurement before the local
-engine is retired; keeping two production combined loops is no longer necessary.
+This is routing consolidation, not the end of driver modernization. The first
+canonical-driver heuristic slice is recorded below; Luby restarts, LBD, and
+learned-clause reduction remain to migrate before the arithmetic-local engine
+can be retired.
+
+## Update (2026-07-09): canonical `CdclT` gains VSIDS and phase saving
+
+Canonical `CdclT` now uses the same deterministic conflict-side VSIDS and phase
+saving policy as the arithmetic-local driver:
+
+- 1-UIP analysis bumps each variable when it first enters the conflict side;
+  the bump increment decays once per analyzed Boolean or theory conflict and
+  rescales all activities uniformly before floating-point overflow.
+- Decisions choose the highest-activity unassigned variable, breaking ties by
+  the lowest variable index. Every assignment records its polarity, and a later
+  re-decision reuses that saved phase; untouched variables preserve the previous
+  true-first default.
+- Learned clauses, theory cores/reasons, backjump levels, step/deadline budgets,
+  and model/evidence replay are unchanged. This is a deterministic search-order
+  change, not a new trust surface.
+
+Direct mechanism tests pin conflict-variable bumps, non-uniform decision
+reordering, deterministic ties/repeated runs, and phase persistence across
+backtracking. The existing adversarial non-monotone-theory sweep still decides
+20,000/20,000 cases within the belt and agrees with brute force. Adapter and
+oracle gates remain clean: QF_UF, QF_S, pure LIA/LRA, UFLIA, and UFLRA focused
+suites pass; Z3 differentials cover 3,000+ QF_UF, 1,500 QF_S, 2,500 UFLIA, and
+1,500 UFLRA cases with zero disagreements. The long UFLIA oracle sweep is
+runtime-neutral (426.17 s before, 426.19 s after). Five-second UFLIA corpus
+results remain bounded 6/6 and overbound 0/2 timeout, with no disagreements or
+replay failures. No performance win is claimed from this first mechanism slice.
 
 ## Evidence
 
@@ -243,12 +269,13 @@ engine is retired; keeping two production combined loops is no longer necessary.
   and the eventual arithmetic-theory migration to build on.
 - **Harder / cost:** two CDCL(T) implementations (`CdclT` and
   `lra_online::Dpll`) still coexist for standalone fallback/diagnostic paths;
-  their termination belts and search heuristics must stay coherent until the
-  arithmetic-local implementation is fully absorbed.
-- **Revisited when:** arrays-lazy lands on the spine (Gap 3 step 2); the mature
-  arithmetic search heuristics migrate into canonical `CdclT`; or a
-  dedicated re-baseline banks the `QF_UF` decide-rate movement. The pure-QF_UF
-  default-dispatch status is now tracked by ADR-0055's 2026-07-09 update.
+  their termination belts and remaining restart/clause-management policies must
+  stay coherent until the arithmetic-local implementation is fully absorbed.
+- **Revisited when:** arrays-lazy lands on the spine (Gap 3 step 2); Luby
+  restarts and LBD-based learned-clause reduction migrate into canonical
+  `CdclT`; or a dedicated re-baseline banks the `QF_UF` decide-rate movement.
+  The pure-QF_UF default-dispatch status is now tracked by ADR-0055's 2026-07-09
+  update.
 
 ## Foundational-DAG / register updates
 
