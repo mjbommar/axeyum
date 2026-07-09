@@ -181,9 +181,8 @@ Verification and measurement:
   two-file regression slice remains 1 sat / 1 unsat.
 
 This is routing consolidation, not the end of driver modernization. The first
-canonical-driver heuristic slice is recorded below; Luby restarts, LBD, and
-learned-clause reduction remain to migrate before the arithmetic-local engine
-can be retired.
+canonical-driver heuristic slices are recorded below; LBD-based learned-clause
+reduction remains to migrate before the arithmetic-local engine can be retired.
 
 ## Update (2026-07-09): canonical `CdclT` gains VSIDS and phase saving
 
@@ -211,6 +210,27 @@ suites pass; Z3 differentials cover 3,000+ QF_UF, 1,500 QF_S, 2,500 UFLIA, and
 runtime-neutral (426.17 s before, 426.19 s after). Five-second UFLIA corpus
 results remain bounded 6/6 and overbound 0/2 timeout, with no disagreements or
 replay failures. No performance win is claimed from this first mechanism slice.
+
+## Update (2026-07-09): canonical `CdclT` gains Luby restarts
+
+Canonical `CdclT` now uses the same deterministic reluctant-doubling Luby
+schedule as the arithmetic-local and proof-producing CDCL engines. After each
+analyzed Boolean or theory conflict, the interval counter advances. Once
+`luby(restart_index) * 100` conflicts have accumulated above level zero, the
+driver backjumps through its existing lockstep theory-pop path to level zero,
+retains every learned clause, VSIDS activity, and saved phase, resets only the
+interval counter, and advances the restart index. Deadline and no-deadline step
+budgets remain authoritative.
+
+The restart mechanism gate lowers the unit on a conflict-heavy pigeonhole
+instance and proves: a restart actually fires, the verdict matches a
+never-restart baseline, the theory push/pop depth returns to zero, and repeated
+runs have the same restart trajectory. The first 15 Luby values are pinned.
+The 20,000-run adversarial theory sweep and all current theory adapters remain
+green. Z3 differentials again cover QF_UF, QF_S, UFLIA, and UFLRA with zero
+disagreements; the long UFLIA run stays neutral (426.19 s before, 425.18 s
+after). Five-second UFLIA remains bounded 6/6 and overbound 0/2 timeout with no
+replay failures. This is a mechanism landing, not a claimed performance win.
 
 ## Evidence
 
@@ -269,11 +289,11 @@ replay failures. No performance win is claimed from this first mechanism slice.
   and the eventual arithmetic-theory migration to build on.
 - **Harder / cost:** two CDCL(T) implementations (`CdclT` and
   `lra_online::Dpll`) still coexist for standalone fallback/diagnostic paths;
-  their termination belts and remaining restart/clause-management policies must
+  their termination belts and remaining learned-clause-management policies must
   stay coherent until the arithmetic-local implementation is fully absorbed.
-- **Revisited when:** arrays-lazy lands on the spine (Gap 3 step 2); Luby
-  restarts and LBD-based learned-clause reduction migrate into canonical
-  `CdclT`; or a dedicated re-baseline banks the `QF_UF` decide-rate movement.
+- **Revisited when:** arrays-lazy lands on the spine (Gap 3 step 2); LBD-based
+  learned-clause reduction migrates into canonical `CdclT`; or a dedicated
+  re-baseline banks the `QF_UF` decide-rate movement.
   The pure-QF_UF default-dispatch status is now tracked by ADR-0055's 2026-07-09
   update.
 

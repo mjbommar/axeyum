@@ -3613,8 +3613,11 @@ Its conclusion, ranked by quality × efficiency:
    **Seventh follow-through:** canonical `CdclT` now carries deterministic
    conflict-side VSIDS and phase saving, with mechanism tests and all EUF/string/
    arithmetic oracle gates clean; the 2,500-case UFLIA sweep is runtime-neutral
-   at 426.17 s → 426.19 s. The next engine slices are Luby restarts, then
-   LBD-based learned-clause reduction, before taking BV combination across P1.6.
+   at 426.17 s → 426.19 s. **Eighth follow-through:** deterministic Luby
+   restarts now preserve learned clauses/activity/phases, balance the theory
+   stack, and leave the same sweep neutral at 425.18 s. The last local-driver
+   search feature to migrate is LBD-based learned-clause reduction; then take BV
+   combination across P1.6.
 2. **Keep a thin measured-leaf-BFS skirt in parallel** — measured-ROI leaves only
    (NRA tail, strings-Nielsen); fold the feature/scale-blocked leaves
    (dense-ILP MILP, large-LP performance) into a funded engine phase rather than

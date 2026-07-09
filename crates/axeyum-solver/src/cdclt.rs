@@ -34,9 +34,10 @@
 //!   theory and **replays** it against the original assertions, downgrading to
 //!   `Unknown` on any non-replay.
 //! - Deterministic: conflict-side VSIDS selects the highest-activity unassigned
-//!   variable with lowest-index ties, phase saving reuses its last polarity, and
-//!   every search data structure is a `Vec`; there is no hash-iteration order or
-//!   clock-derived choice. The only clock read is the deadline check.
+//!   variable with lowest-index ties, phase saving reuses its last polarity, Luby
+//!   restarts are a pure function of conflict count, and every search data
+//!   structure is a `Vec`; there is no hash-iteration order or clock-derived
+//!   choice. The only clock read is the deadline check.
 //! - Deadline: `deadline` is checked at the head of the search loop and of the
 //!   propagation fixpoint, so the search degrades to `Unknown` under a deterministic
 //!   resource bound (the deadline-hole class is designed out).
@@ -126,6 +127,28 @@ const VSIDS_RESCALE: f64 = 1e-100;
 /// Activity ceiling that triggers a common rescale.
 const VSIDS_RESCALE_LIMIT: f64 = 1e100;
 
+/// Conflict interval unit multiplied by the current Luby value. The production
+/// schedule matches the arithmetic-local and proof-producing CDCL engines.
+const LUBY_UNIT: usize = 100;
+
+/// The 1-indexed Luby sequence `1,1,2,1,1,2,4,...` in reluctant-doubling form.
+fn luby(mut index: u64) -> u64 {
+    let mut exponent = 1_u64;
+    loop {
+        let power = 1_u64 << exponent;
+        if index == power - 1 {
+            return 1_u64 << (exponent - 1);
+        }
+        let half = 1_u64 << (exponent - 1);
+        if half <= index && index < power - 1 {
+            index = index - half + 1;
+            exponent = 1;
+        } else {
+            exponent += 1;
+        }
+    }
+}
+
 /// The outcome of one conflict-learning step.
 enum Learn {
     /// The asserting clause was learned and the UIP enqueued; keep searching.
@@ -179,6 +202,15 @@ pub(crate) struct CdclT {
     /// Last assigned polarity per variable. Initialized to the previous
     /// true-first behavior and retained across backtracking.
     saved_phase: Vec<bool>,
+    /// Conflicts analyzed since the last restart.
+    conflicts_since_restart: usize,
+    /// 1-indexed position in the Luby schedule. The completed restart count is
+    /// `restart_index - 1`.
+    restart_index: u64,
+    /// Test-only restart-unit override used to force or disable restarts on small
+    /// deterministic fixtures.
+    #[cfg(test)]
+    restart_unit_override: Option<usize>,
 }
 
 impl CdclT {
@@ -209,6 +241,10 @@ impl CdclT {
             activity: vec![0.0; var_count],
             var_inc: 1.0,
             saved_phase: vec![true; var_count],
+            conflicts_since_restart: 0,
+            restart_index: 1,
+            #[cfg(test)]
+            restart_unit_override: None,
         }
     }
 
@@ -219,6 +255,19 @@ impl CdclT {
     pub(crate) fn with_step_budget(mut self, budget: usize) -> Self {
         self.step_budget = budget;
         self
+    }
+
+    /// Overrides the Luby schedule unit for a deterministic restart test.
+    #[cfg(test)]
+    fn with_restart_unit(mut self, unit: usize) -> Self {
+        self.restart_unit_override = Some(unit);
+        self
+    }
+
+    /// Number of completed restarts.
+    #[cfg(test)]
+    fn restarts(&self) -> u64 {
+        self.restart_index - 1
     }
 
     /// Whether the last [`Self::solve`] ended by exhausting the step budget (rather
@@ -550,6 +599,19 @@ impl CdclT {
         self.var_inc /= VSIDS_DECAY;
     }
 
+    /// Number of conflicts allowed in the current restart interval. Saturation
+    /// turns unreachable arithmetic overflow into a delayed restart, never a
+    /// spuriously early one.
+    fn restart_limit(&self) -> usize {
+        #[cfg(test)]
+        let unit = self.restart_unit_override.unwrap_or(LUBY_UNIT);
+        #[cfg(not(test))]
+        let unit = LUBY_UNIT;
+        usize::try_from(luby(self.restart_index))
+            .unwrap_or(usize::MAX)
+            .saturating_mul(unit)
+    }
+
     /// Unit propagation interleaved with theory propagation to a joint fixpoint.
     /// Returns `Ok(())` early (not at fixpoint) when the deadline elapses so the
     /// caller's loop can turn it into [`Outcome::Unknown`].
@@ -579,6 +641,7 @@ impl CdclT {
         let (learned, backjump, is_theory_lemma) =
             self.analyze_conflict(&conflict.clause, conflict.is_theory);
         self.decay_activity();
+        self.conflicts_since_restart += 1;
         if learned.is_empty() {
             return Learn::Unsat;
         }
@@ -640,6 +703,12 @@ impl CdclT {
             if self.timed_out() {
                 return Outcome::Unknown;
             }
+            if self.decision_level > 0 && self.conflicts_since_restart >= self.restart_limit() {
+                self.backjump_to(theory, 0);
+                self.conflicts_since_restart = 0;
+                self.restart_index += 1;
+                continue;
+            }
             match self.pick_unassigned() {
                 None => return Outcome::Sat,
                 Some(var) => {
@@ -685,7 +754,7 @@ mod termination_tests {
     //! a verdict that matches an independent brute-force over the Boolean skeleton ∧
     //! the forbidden-cube semantics — a wrong `Sat`/`Unsat` is a hard failure.
 
-    use super::{Cause, CdclT, Lit, Outcome};
+    use super::{Cause, CdclT, Lit, Outcome, luby};
     use crate::euf_egraph::{TheoryLit, TheoryProp, TheorySolver};
 
     /// A deterministic linear-congruential PRNG (MMIX constants) — the house
@@ -1157,5 +1226,102 @@ mod termination_tests {
         assert_eq!(solver.value[0], None);
         assert!(!solver.saved_phase[0]);
         assert!(solver.saved_phase[2]);
+    }
+
+    fn pigeonhole(pigeons: usize, holes: usize) -> (usize, Vec<Vec<Lit>>) {
+        let variable = |pigeon: usize, hole: usize| pigeon * holes + hole;
+        let mut clauses = Vec::new();
+        for pigeon in 0..pigeons {
+            clauses.push(
+                (0..holes)
+                    .map(|hole| Lit {
+                        var: variable(pigeon, hole),
+                        positive: true,
+                    })
+                    .collect(),
+            );
+            for left in 0..holes {
+                for right in (left + 1)..holes {
+                    clauses.push(vec![
+                        Lit {
+                            var: variable(pigeon, left),
+                            positive: false,
+                        },
+                        Lit {
+                            var: variable(pigeon, right),
+                            positive: false,
+                        },
+                    ]);
+                }
+            }
+        }
+        for hole in 0..holes {
+            for left in 0..pigeons {
+                for right in (left + 1)..pigeons {
+                    clauses.push(vec![
+                        Lit {
+                            var: variable(left, hole),
+                            positive: false,
+                        },
+                        Lit {
+                            var: variable(right, hole),
+                            positive: false,
+                        },
+                    ]);
+                }
+            }
+        }
+        (pigeons * holes, clauses)
+    }
+
+    #[test]
+    fn luby_restarts_fire_without_changing_verdict_or_theory_balance() {
+        struct DepthTheory {
+            depth: usize,
+        }
+        impl TheorySolver for DepthTheory {
+            fn assert(&mut self, _atom: usize, _value: bool) -> Result<(), Vec<TheoryLit>> {
+                Ok(())
+            }
+
+            fn push(&mut self) {
+                self.depth += 1;
+            }
+
+            fn pop(&mut self) {
+                self.depth = self.depth.checked_sub(1).expect("balanced theory pop");
+            }
+
+            fn propagate(&self) -> Vec<TheoryProp> {
+                Vec::new()
+            }
+        }
+
+        let (variables, clauses) = pigeonhole(5, 4);
+        let run = |restart_unit| {
+            let mut solver =
+                CdclT::new(variables, 0, clauses.clone(), None).with_restart_unit(restart_unit);
+            let mut theory = DepthTheory { depth: 0 };
+            let outcome = solver.solve(&mut theory);
+            (outcome, solver.restarts(), theory.depth)
+        };
+
+        let baseline = run(usize::MAX);
+        assert_eq!(baseline, (Outcome::Unsat, 0, 0));
+        let restarted = run(1);
+        assert_eq!(restarted.0, baseline.0);
+        assert!(restarted.1 > 0, "the lowered Luby schedule must restart");
+        assert_eq!(restarted.2, 0, "restart must balance theory push/pop");
+        assert_eq!(
+            restarted,
+            run(1),
+            "restart trajectory must be deterministic"
+        );
+    }
+
+    #[test]
+    fn luby_sequence_matches_reluctant_doubling_prefix() {
+        let actual: Vec<u64> = (1..=15).map(luby).collect();
+        assert_eq!(actual, vec![1, 1, 2, 1, 1, 2, 4, 1, 1, 2, 1, 1, 2, 4, 8]);
     }
 }
