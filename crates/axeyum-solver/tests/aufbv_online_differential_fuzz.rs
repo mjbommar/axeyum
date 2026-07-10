@@ -536,6 +536,68 @@ fn build_structural_store_parent_case(seed: u64, arena: &mut TermArena) -> Vec<T
     }
 }
 
+fn build_dynamic_row_case(seed: u64, arena: &mut TermArena) -> Vec<TermId> {
+    let width = 3;
+    let base_array = arena.array_var("dynamic_row_a", width, width).unwrap();
+    let row_function = arena
+        .declare_fun("dynamic_row_f", &[Sort::BitVec(width)], Sort::BitVec(width))
+        .unwrap();
+    let write_index = arena.bv_var("dynamic_row_x", width).unwrap();
+    let peer_index = arena.bv_var("dynamic_row_y", width).unwrap();
+    let read_index = arena.bv_var("dynamic_row_k", width).unwrap();
+    let stored_value = arena.bv_var("dynamic_row_v", width).unwrap();
+    let shadow_value = arena.bv_var("dynamic_row_w", width).unwrap();
+    let fallback = arena.bool_var("dynamic_row_guard").unwrap();
+    let function_write = arena.apply(row_function, &[write_index]).unwrap();
+    let function_peer = arena.apply(row_function, &[peer_index]).unwrap();
+    let first_store = arena.store(base_array, write_index, stored_value).unwrap();
+    let nested_store = arena.store(first_store, peer_index, shadow_value).unwrap();
+    let shadow_store = arena.store(first_store, write_index, shadow_value).unwrap();
+    let function_store = arena
+        .store(base_array, function_write, stored_value)
+        .unwrap();
+    let hit_read = arena.select(first_store, write_index).unwrap();
+    let peer_read = arena.select(first_store, peer_index).unwrap();
+    let base_peer_read = arena.select(base_array, peer_index).unwrap();
+    let nested_read = arena.select(nested_store, read_index).unwrap();
+    let base_read = arena.select(base_array, read_index).unwrap();
+    let function_read = arena.select(function_store, function_peer).unwrap();
+    let shadow_read = arena.select(shadow_store, write_index).unwrap();
+    let same_indices = arena.eq(write_index, peer_index).unwrap();
+    let different_indices = arena.not(same_indices).unwrap();
+    let read_hits_write = arena.eq(read_index, write_index).unwrap();
+    let read_misses_write = arena.not(read_hits_write).unwrap();
+    let read_hits_peer = arena.eq(read_index, peer_index).unwrap();
+    let read_misses_peer = arena.not(read_hits_peer).unwrap();
+    let hit_is_value = arena.eq(hit_read, stored_value).unwrap();
+    let bad_hit = arena.not(hit_is_value).unwrap();
+    let peer_is_base = arena.eq(peer_read, base_peer_read).unwrap();
+    let bad_miss = arena.not(peer_is_base).unwrap();
+    let base_peer_is_value = arena.eq(base_peer_read, stored_value).unwrap();
+    let base_peer_differs = arena.not(base_peer_is_value).unwrap();
+    let peer_is_value = arena.eq(peer_read, stored_value).unwrap();
+    let repairable_choice = arena.or(peer_is_value, fallback).unwrap();
+    let nested_is_base = arena.eq(nested_read, base_read).unwrap();
+    let bad_nested_miss = arena.not(nested_is_base).unwrap();
+    let function_is_value = arena.eq(function_read, stored_value).unwrap();
+    let bad_function_hit = arena.not(function_is_value).unwrap();
+    let shadow_is_value = arena.eq(shadow_read, shadow_value).unwrap();
+    let bad_shadow_hit = arena.not(shadow_is_value).unwrap();
+    let branch = arena.or(same_indices, fallback).unwrap();
+    let peer_differs_from_value = arena.not(peer_is_value).unwrap();
+
+    match seed % 8 {
+        0 => vec![bad_hit],
+        1 => vec![different_indices, bad_miss],
+        2 => vec![different_indices, base_peer_differs, repairable_choice],
+        3 => vec![read_misses_write, read_misses_peer, bad_nested_miss],
+        4 => vec![different_indices, peer_is_base],
+        5 => vec![same_indices, bad_function_hit],
+        6 => vec![bad_shadow_hit],
+        _ => vec![branch, peer_differs_from_value],
+    }
+}
+
 #[cfg(feature = "z3")]
 fn z3_verdict(seed: u64) -> Verdict {
     let width = 3 + u32::try_from(seed % 2).unwrap();
@@ -723,6 +785,67 @@ fn z3_structural_store_parent_verdict(seed: u64) -> Verdict {
     }
 }
 
+#[cfg(feature = "z3")]
+fn z3_dynamic_row_verdict(seed: u64) -> Verdict {
+    let width = 3;
+    let bv_sort = Z3Sort::bitvector(width);
+    let base_array = Array::new_const("dynamic_row_a", &bv_sort, &bv_sort);
+    let row_function = FuncDecl::new("dynamic_row_f", &[&bv_sort], &bv_sort);
+    let write_index = BV::new_const("dynamic_row_x", width);
+    let peer_index = BV::new_const("dynamic_row_y", width);
+    let read_index = BV::new_const("dynamic_row_k", width);
+    let stored_value = BV::new_const("dynamic_row_v", width);
+    let shadow_value = BV::new_const("dynamic_row_w", width);
+    let fallback = Bool::new_const("dynamic_row_guard");
+    let function_write = row_function.apply(&[&write_index]).as_bv().unwrap();
+    let function_peer = row_function.apply(&[&peer_index]).as_bv().unwrap();
+    let first_store = base_array.store(&write_index, &stored_value);
+    let nested_store = first_store.store(&peer_index, &shadow_value);
+    let shadow_store = first_store.store(&write_index, &shadow_value);
+    let function_store = base_array.store(&function_write, &stored_value);
+    let hit_read = first_store.select(&write_index).as_bv().unwrap();
+    let peer_read = first_store.select(&peer_index).as_bv().unwrap();
+    let base_peer_read = base_array.select(&peer_index).as_bv().unwrap();
+    let nested_read = nested_store.select(&read_index).as_bv().unwrap();
+    let base_read = base_array.select(&read_index).as_bv().unwrap();
+    let function_read = function_store.select(&function_peer).as_bv().unwrap();
+    let shadow_read = shadow_store.select(&write_index).as_bv().unwrap();
+    let same_indices = write_index.eq(&peer_index);
+    let different_indices = same_indices.not();
+    let read_misses_write = read_index.eq(&write_index).not();
+    let read_misses_peer = read_index.eq(&peer_index).not();
+    let peer_is_base = peer_read.eq(&base_peer_read);
+    let peer_is_value = peer_read.eq(&stored_value);
+
+    let assertions = match seed % 8 {
+        0 => vec![hit_read.eq(&stored_value).not()],
+        1 => vec![different_indices, peer_is_base.not()],
+        2 => vec![
+            different_indices,
+            base_peer_read.eq(&stored_value).not(),
+            Bool::or(&[peer_is_value, fallback]),
+        ],
+        3 => vec![
+            read_misses_write,
+            read_misses_peer,
+            nested_read.eq(&base_read).not(),
+        ],
+        4 => vec![different_indices, peer_is_base],
+        5 => vec![same_indices, function_read.eq(&stored_value).not()],
+        6 => vec![shadow_read.eq(&shadow_value).not()],
+        _ => vec![Bool::or(&[same_indices, fallback]), peer_is_value.not()],
+    };
+    let solver = Solver::new();
+    for assertion in assertions {
+        solver.assert(&assertion);
+    }
+    match solver.check() {
+        SatResult::Sat => Verdict::Sat,
+        SatResult::Unsat => Verdict::Unsat,
+        SatResult::Unknown => Verdict::Unknown,
+    }
+}
+
 #[test]
 fn finite_scalar_arrays_match_analytic_oracle_and_front_door() {
     for seed in 0..128 {
@@ -849,6 +972,78 @@ fn structural_store_parents_match_z3_matrix() {
             verdict(&online),
             z3,
             "online/Z3 structural-store disagreement at seed {seed}: online={online:?}, z3={z3:?}"
+        );
+    }
+}
+
+#[test]
+fn dynamic_row_insertion_matches_eager_and_front_door() {
+    for seed in 0..128 {
+        let mut eager_arena = TermArena::new();
+        let eager_assertions = build_dynamic_row_case(seed, &mut eager_arena);
+        let eager = check_with_arrays_and_functions(
+            &mut SatBvBackend::new(),
+            &mut eager_arena,
+            &eager_assertions,
+            &SolverConfig::default(),
+        )
+        .unwrap();
+        assert_ne!(
+            verdict(&eager),
+            Verdict::Unknown,
+            "eager dynamic-ROW seed {seed}: {eager:?}"
+        );
+
+        let mut online_arena = TermArena::new();
+        let online_assertions = build_dynamic_row_case(seed, &mut online_arena);
+        let online = check_qf_aufbv_online_cdclt(
+            &mut online_arena,
+            &online_assertions,
+            &SolverConfig::default(),
+        )
+        .unwrap();
+        assert_eq!(
+            verdict(&online),
+            verdict(&eager),
+            "online/eager dynamic-ROW disagreement at seed {seed}: online={online:?}, eager={eager:?}"
+        );
+        assert_sat_replays(&online_arena, &online_assertions, &online, seed);
+
+        let mut front_arena = TermArena::new();
+        let front_assertions = build_dynamic_row_case(seed, &mut front_arena);
+        let front = check_auto(
+            &mut front_arena,
+            &front_assertions,
+            &SolverConfig::default(),
+        )
+        .unwrap();
+        assert_eq!(
+            verdict(&front),
+            verdict(&eager),
+            "front-door/eager dynamic-ROW disagreement at seed {seed}: front={front:?}, eager={eager:?}"
+        );
+        assert_sat_replays(&front_arena, &front_assertions, &front, seed);
+    }
+}
+
+#[cfg(feature = "z3")]
+#[test]
+fn dynamic_row_insertion_matches_z3_matrix() {
+    for seed in 0..128 {
+        let mut online_arena = TermArena::new();
+        let online_assertions = build_dynamic_row_case(seed, &mut online_arena);
+        let online = check_qf_aufbv_online_cdclt(
+            &mut online_arena,
+            &online_assertions,
+            &SolverConfig::default(),
+        )
+        .unwrap();
+        let z3 = z3_dynamic_row_verdict(seed);
+
+        assert_eq!(
+            verdict(&online),
+            z3,
+            "online/Z3 dynamic-ROW disagreement at seed {seed}: online={online:?}, z3={z3:?}"
         );
     }
 }

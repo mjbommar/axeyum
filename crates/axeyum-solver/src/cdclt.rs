@@ -12,6 +12,14 @@
 //! EUF, strings, pure LIA/LRA, and the live EUF+LIA/EUF+LRA combined theories; the
 //! adapters retain responsibility for model construction and original-assertion replay.
 //!
+//! Final-check refinements may reserve Boolean variables without exposing them to
+//! branching or theory propagation. [`CdclT::add_permanent_clause`] activates the
+//! reserved variables named by a valid refinement clause, preserves the current
+//! learned-clause database, phase state, and variable activities, and lets the next
+//! [`CdclT::solve`] call resume from the retained search state. This supports
+//! same-search theory growth when all prospective atoms can be bounded and reserved
+//! before search begins.
+//!
 //! ## Conflict learning — 1-UIP over the mixed implication graph
 //! Both Boolean input clauses and theory clauses (a theory conflict `¬⋀core` or a
 //! theory propagation `¬reason ∨ lit`, both entailed by the theory alone) live in
@@ -35,7 +43,10 @@
 //!   `Unknown` on any non-replay.
 //! - Learned-clause reduction is satisfiability-preserving: only redundant 1-UIP
 //!   resolvents are tombstoned. Original clauses, low-LBD glue clauses, and every
-//!   clause currently serving as a trail reason are retained.
+//!   clause currently serving as a trail reason are retained. Dynamically inserted
+//!   permanent clauses are theory-valid constraints and are retained with the input
+//!   clauses; dormant variables cannot affect search until such a clause activates
+//!   them.
 //! - Deterministic: conflict-side VSIDS selects the highest-activity unassigned
 //!   variable with lowest-index ties, phase saving reuses its last polarity, Luby
 //!   restarts are a pure function of conflict count, and LBD reduction uses a total
@@ -175,6 +186,9 @@ pub(crate) struct CdclT {
     var_count: usize,
     /// The first `eq_count` variables are theory atoms mirrored into the theory.
     eq_count: usize,
+    /// Variables currently owned by the search. Reserved theory atoms may remain
+    /// inactive until a final-check lemma names them.
+    active: Vec<bool>,
     clauses: Vec<Vec<Lit>>,
     /// Current value per variable (`None` if unassigned).
     value: Vec<Option<bool>>,
@@ -260,6 +274,7 @@ impl CdclT {
         Self {
             var_count,
             eq_count,
+            active: vec![true; var_count],
             clauses,
             value: vec![None; var_count],
             trail: Vec::new(),
@@ -290,6 +305,45 @@ impl CdclT {
             #[cfg(test)]
             reduce_first_override: None,
         }
+    }
+
+    /// Marks `variables` inactive until [`Self::add_permanent_clause`] activates
+    /// them. Clauses supplied to [`Self::new`] must not reference an inactive
+    /// variable.
+    pub(crate) fn with_inactive_variables(mut self, variables: &[usize]) -> Self {
+        for &variable in variables {
+            assert!(
+                variable < self.var_count,
+                "inactive variable is out of range"
+            );
+            self.active[variable] = false;
+        }
+        debug_assert!(
+            self.clauses
+                .iter()
+                .flatten()
+                .all(|lit| self.active[lit.var])
+        );
+        self
+    }
+
+    /// Adds a permanent clause and activates every variable it names. This is the
+    /// final-check insertion boundary: the current trail and learned database are
+    /// retained, and a subsequent [`Self::solve`] resumes from that state.
+    pub(crate) fn add_permanent_clause(&mut self, clause: Vec<Lit>) {
+        for lit in &clause {
+            assert!(
+                lit.var < self.var_count,
+                "inserted clause variable is out of range"
+            );
+            self.active[lit.var] = true;
+        }
+        self.clauses.push(clause);
+        // LBD zero keeps a post-construction clause out of learned-clause
+        // reduction even though it sits beyond `num_original`.
+        self.lbd.push(0);
+        self.clause_activity.push(0.0);
+        self.deleted.push(false);
     }
 
     /// Overrides the defense-in-depth step budget (see [`DEFAULT_STEP_BUDGET`]).
@@ -477,6 +531,9 @@ impl CdclT {
             let mut progress = false;
             for prop in props {
                 let var = prop.lit.atom;
+                if var >= self.var_count || !self.active[var] {
+                    continue;
+                }
                 match self.value[var] {
                     Some(v) if v == prop.lit.value => {}
                     Some(_) => {
@@ -654,7 +711,7 @@ impl CdclT {
     fn pick_unassigned(&self) -> Option<usize> {
         let mut best = None;
         for var in 0..self.var_count {
-            if self.value[var].is_some() {
+            if !self.active[var] || self.value[var].is_some() {
                 continue;
             }
             match best {
@@ -1559,5 +1616,89 @@ mod termination_tests {
         assert!(!solver.deleted[1], "locked reason clause must be retained");
         assert!(solver.deleted[2], "worst eligible clause should be removed");
         assert!(!solver.deleted[3], "only the worst half should be removed");
+    }
+
+    #[test]
+    fn permanent_clause_activates_reserved_variable_and_resumes_search() {
+        struct NoTheory;
+        impl TheorySolver for NoTheory {
+            fn assert(&mut self, _atom: usize, _value: bool) -> Result<(), Vec<TheoryLit>> {
+                Ok(())
+            }
+
+            fn push(&mut self) {}
+
+            fn pop(&mut self) {}
+
+            fn propagate(&self) -> Vec<TheoryProp> {
+                Vec::new()
+            }
+        }
+
+        let mut solver = CdclT::new(2, 0, Vec::new(), None).with_inactive_variables(&[1]);
+        assert_eq!(solver.solve(&mut NoTheory), Outcome::Sat);
+        assert_eq!(solver.value(0), Some(true));
+        assert_eq!(solver.value(1), None);
+
+        solver.add_permanent_clause(vec![Lit {
+            var: 1,
+            positive: false,
+        }]);
+        assert_eq!(solver.solve(&mut NoTheory), Outcome::Sat);
+        assert_eq!(solver.value(0), Some(true));
+        assert_eq!(solver.value(1), Some(false));
+
+        solver.add_permanent_clause(vec![
+            Lit {
+                var: 0,
+                positive: false,
+            },
+            Lit {
+                var: 1,
+                positive: true,
+            },
+        ]);
+        assert_eq!(solver.solve(&mut NoTheory), Outcome::Sat);
+        assert_eq!(solver.value(0), Some(false));
+        assert_eq!(solver.value(1), Some(false));
+    }
+
+    #[test]
+    fn inactive_theory_propagation_waits_for_activation() {
+        struct ReservedPropagation;
+        impl TheorySolver for ReservedPropagation {
+            fn assert(&mut self, _atom: usize, _value: bool) -> Result<(), Vec<TheoryLit>> {
+                Ok(())
+            }
+
+            fn push(&mut self) {}
+
+            fn pop(&mut self) {}
+
+            fn propagate(&self) -> Vec<TheoryProp> {
+                vec![TheoryProp {
+                    lit: TheoryLit {
+                        atom: 1,
+                        value: true,
+                    },
+                    reason: Vec::new(),
+                }]
+            }
+        }
+
+        let clauses = vec![vec![Lit {
+            var: 0,
+            positive: true,
+        }]];
+        let mut solver = CdclT::new(2, 2, clauses, None).with_inactive_variables(&[1]);
+        let mut theory = ReservedPropagation;
+        assert_eq!(solver.solve(&mut theory), Outcome::Sat);
+        assert_eq!(solver.value(1), None);
+
+        solver.add_permanent_clause(vec![Lit {
+            var: 1,
+            positive: false,
+        }]);
+        assert_eq!(solver.solve(&mut theory), Outcome::Unsat);
     }
 }

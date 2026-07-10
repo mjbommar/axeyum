@@ -10,8 +10,10 @@
 //! eager Ackermann constraints.
 //! The Boolean structure is Tseitin-encoded once per canonical round. The first
 //! block of Boolean variables denotes every semantic Bool/BV atom plus the
-//! currently materialized interface equalities for same-function application
-//! arguments and results.
+//! currently materialized pair-generated interface equalities for same-function
+//! application arguments and results. Each store-read site also reserves its three
+//! bounded local read-over-write atoms; newly reserved atoms stay dormant until a
+//! violated site activates them.
 //!
 //! Each canonical CDCL(T) round drives two theories in lockstep:
 //! - [`crate::euf_egraph::EufTheory`] owns congruence over the original terms;
@@ -30,10 +32,14 @@
 //! backtrackable e-graph instead of by cross-diff observations. Cross-parent select
 //! lemmas carry the e-graph equality explanation as a Boolean guard, so they remain
 //! valid after another canonical round chooses a different branch.
-//! Only violated pairs/sites materialize argument/index/result equalities, hit/miss
-//! axioms, or extensionality instances for the next round. Congruent applications
-//! use the e-graph; array facts add valid implications directly to the Boolean
-//! skeleton. Exact BV owns every scalar atom.
+//! A violated store-read site inserts its two read-over-write clauses permanently
+//! into the live [`crate::cdclt::CdclT`] instance, activates the site's reserved
+//! atoms, and resumes with learned clauses, phase state, and activities retained.
+//! Violated function pairs, cross-parent select pairs, and array-extensionality
+//! observations can create atoms not bounded per local site, so those refinements
+//! still materialize argument/index/result equalities for the next canonical round.
+//! Congruent applications use the e-graph; array facts add valid implications
+//! directly to the Boolean skeleton. Exact BV owns every scalar atom.
 //! The loop reaches a replaying model, relaxation UNSAT, or explicit
 //! round/interface/deadline bounds. Eager reductions remain fallbacks and
 //! differential oracles.
@@ -44,6 +50,8 @@
 //! - each materialized array implication is a valid select-congruence or
 //!   read-over-write instance; cross-parent congruence is guarded by the equality
 //!   literals explaining the parent merge;
+//! - dormant reserved ROW atoms are neither branch candidates nor theory
+//!   propagations until a valid permanent ROW clause activates them;
 //! - every BV conflict is a re-solved UNSAT conjunction of the reported active
 //!   literals;
 //! - every EUF conflict/propagation is an e-graph explanation;
@@ -119,6 +127,28 @@ struct CombinedRowStore {
     rewritten_store_index: TermId,
     rewritten_store_elem: TermId,
     rewritten_inner: TermId,
+}
+
+#[derive(Debug, Clone, Copy)]
+enum RowAtomRef {
+    Constant(bool),
+    Variable { index: usize, reserved: bool },
+}
+
+#[derive(Debug, Clone, Copy)]
+struct RowAtomIds {
+    same_index: RowAtomRef,
+    hit: RowAtomRef,
+    miss: RowAtomRef,
+}
+
+struct RowAtomTerms {
+    original_same: TermId,
+    abstract_same: TermId,
+    original_hit: TermId,
+    abstract_hit: TermId,
+    original_miss: TermId,
+    abstract_miss: TermId,
 }
 
 #[derive(Debug, Clone)]
@@ -205,6 +235,7 @@ struct TheoryAtoms {
     original: Vec<TermId>,
     abstracted: Vec<TermId>,
     propagation_candidates: Vec<bool>,
+    row_atoms: Vec<RowAtomIds>,
 }
 
 #[derive(Default)]
@@ -223,24 +254,35 @@ impl AtomAccumulator {
         abstracted: TermId,
         propagation_candidate: bool,
     ) -> Result<(), SolverError> {
+        self.register_index(arena, original, abstracted, propagation_candidate)
+            .map(|_| ())
+    }
+
+    fn register_index(
+        &mut self,
+        arena: &TermArena,
+        original: TermId,
+        abstracted: TermId,
+        propagation_candidate: bool,
+    ) -> Result<Option<usize>, SolverError> {
         if arena.sort_of(original) != Sort::Bool || arena.sort_of(abstracted) != Sort::Bool {
             return Err(SolverError::Backend(
                 "online UFBV atom abstraction changed Boolean sort".to_owned(),
             ));
         }
         if matches!(arena.node(abstracted), TermNode::BoolConst(_)) {
-            return Ok(());
+            return Ok(None);
         }
         if let Some(&index) = self.abstract_index.get(&abstracted) {
             self.propagation_candidates[index] |= propagation_candidate;
-            return Ok(());
+            return Ok(Some(index));
         }
         let index = self.abstracted.len();
         self.original.push(original);
         self.abstracted.push(abstracted);
         self.abstract_index.insert(abstracted, index);
         self.propagation_candidates.push(propagation_candidate);
-        Ok(())
+        Ok(Some(index))
     }
 
     fn finish(self) -> TheoryAtoms {
@@ -248,6 +290,7 @@ impl AtomAccumulator {
             original: self.original,
             abstracted: self.abstracted,
             propagation_candidates: self.propagation_candidates,
+            row_atoms: Vec::new(),
         }
     }
 }
@@ -255,15 +298,43 @@ impl AtomAccumulator {
 struct BooleanSkeleton {
     variable_count: usize,
     clauses: Vec<Vec<CdcltLit>>,
+    active_variables: Vec<bool>,
 }
 
-enum RoundResult {
+enum RoundOutcome {
     Unsat,
     Unknown(UnknownReason),
     Sat {
         assignment: Assignment,
         select_parent_classes: Vec<SelectParentClass>,
     },
+}
+
+struct RoundResult {
+    outcome: RoundOutcome,
+    row_axioms: Vec<usize>,
+    row_refinements: usize,
+}
+
+impl RoundResult {
+    fn new(outcome: RoundOutcome, row_axioms: Vec<usize>, row_refinements: usize) -> Self {
+        Self {
+            outcome,
+            row_axioms,
+            row_refinements,
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+struct RoundRequest<'a> {
+    config: &'a SolverConfig,
+    deadline: Option<Instant>,
+    assertions: &'a [TermId],
+    select_parent_terms: &'a [TermId],
+    row_stores: &'a [CombinedRowStore],
+    materialized_rows: &'a HashSet<usize>,
+    interface_count: usize,
 }
 
 #[derive(Debug, Default)]
@@ -276,6 +347,7 @@ struct InterfaceRefinementStats {
     parent_select_pairs_added: usize,
     store_parent_select_pairs_added: usize,
     row_axioms_added: usize,
+    in_search_row_refinements: usize,
     array_equality_axioms_added: usize,
     max_interface_atoms: usize,
 }
@@ -760,19 +832,36 @@ fn build_and_solve_with_stats_impl(
                 .filter(|&&candidate| candidate)
                 .count(),
         );
-        match solve_cdclt_round(
+        let round = solve_cdclt_round(
             arena,
-            config,
-            deadline,
-            &round_assertions,
             atoms,
-            &select_parent_terms,
-        )? {
-            RoundResult::Unsat => return Ok((CheckResult::Unsat, stats)),
-            RoundResult::Unknown(reason) => {
+            RoundRequest {
+                config,
+                deadline,
+                assertions: &round_assertions,
+                select_parent_terms: &select_parent_terms,
+                row_stores: &prepared.row_stores,
+                materialized_rows: &materialized_rows,
+                interface_count,
+            },
+        )?;
+        stats.in_search_row_refinements = stats
+            .in_search_row_refinements
+            .saturating_add(round.row_refinements);
+        stats.sat_candidates = stats.sat_candidates.saturating_add(round.row_refinements);
+        for site in round.row_axioms {
+            if materialized_rows.insert(site) {
+                interface_count = interface_count.saturating_add(3);
+                row_axioms.push(site);
+                stats.row_axioms_added += 1;
+            }
+        }
+        match round.outcome {
+            RoundOutcome::Unsat => return Ok((CheckResult::Unsat, stats)),
+            RoundOutcome::Unknown(reason) => {
                 return Ok((CheckResult::Unknown(reason), stats));
             }
-            RoundResult::Sat {
+            RoundOutcome::Sat {
                 assignment,
                 select_parent_classes,
             } => {
@@ -795,13 +884,6 @@ fn build_and_solve_with_stats_impl(
                     &mut ground_values,
                     deadline,
                 )?;
-                let violated_rows = violated_row_stores(
-                    arena,
-                    &prepared.row_stores,
-                    &assignment,
-                    &materialized_rows,
-                    deadline,
-                )?;
                 let violated_array_equalities = violated_array_equality_axioms(
                     arena,
                     &prepared.array_equalities,
@@ -811,7 +893,6 @@ fn build_and_solve_with_stats_impl(
                 )?;
                 if violated_functions.is_empty()
                     && violated_arrays.is_empty()
-                    && violated_rows.is_empty()
                     && violated_array_equalities.is_empty()
                 {
                     return Ok((
@@ -873,16 +954,6 @@ fn build_and_solve_with_stats_impl(
                         stats.array_pairs_added += 1;
                     }
                 }
-                for site in violated_rows {
-                    interface_count = interface_count.saturating_add(3);
-                    if interface_count > MAX_INTERFACE_ATOMS {
-                        return Ok((interface_limit_unknown(true), stats));
-                    }
-                    if materialized_rows.insert(site) {
-                        row_axioms.push(site);
-                        stats.row_axioms_added += 1;
-                    }
-                }
                 for axiom in violated_array_equalities {
                     interface_count = interface_count.saturating_add(1);
                     if interface_count > MAX_INTERFACE_ATOMS {
@@ -899,31 +970,97 @@ fn build_and_solve_with_stats_impl(
 }
 
 fn interface_limit_unknown(has_arrays: bool) -> CheckResult {
+    CheckResult::Unknown(interface_limit_reason(has_arrays))
+}
+
+fn interface_limit_reason(has_arrays: bool) -> UnknownReason {
     let logic = if has_arrays { "AUFBV" } else { "UFBV" };
-    unknown(
-        UnknownKind::ResourceLimit,
-        format!(
+    UnknownReason {
+        kind: UnknownKind::ResourceLimit,
+        detail: format!(
             "online {logic} materialized interface equalities exceed the bounded cap of {MAX_INTERFACE_ATOMS}"
         ),
-    )
+    }
+}
+
+fn round_search_unknown(deadline: Option<Instant>) -> UnknownReason {
+    let kind = if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
+        UnknownKind::Timeout
+    } else {
+        UnknownKind::ResourceLimit
+    };
+    UnknownReason {
+        kind,
+        detail: "online UFBV canonical CdclT search exhausted its budget".to_owned(),
+    }
+}
+
+fn inactive_reserved_row_variables(
+    row_atoms: &[RowAtomIds],
+    active_variables: &[bool],
+) -> Vec<usize> {
+    let mut inactive = row_atoms
+        .iter()
+        .flat_map(|row| [row.same_index, row.hit, row.miss])
+        .filter_map(|atom| match atom {
+            RowAtomRef::Variable {
+                index,
+                reserved: true,
+            } if !active_variables[index] => Some(index),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    inactive.sort_unstable();
+    inactive.dedup();
+    inactive
+}
+
+fn final_select_parent_classes(
+    euf: &EufTheory,
+    select_parent_terms: &[TermId],
+    abstract_atoms: &[TermId],
+) -> Vec<SelectParentClass> {
+    euf.observed_classes_with_reasons(select_parent_terms)
+        .into_iter()
+        .map(|(root, reasons)| SelectParentClass {
+            root,
+            reasons: reasons
+                .into_iter()
+                .map(|atom| abstract_atoms[atom])
+                .collect(),
+        })
+        .collect()
+}
+
+fn negate_atoms(arena: &mut TermArena, atoms: &[TermId]) -> BuildResult<Vec<TermId>> {
+    atoms
+        .iter()
+        .map(|&atom| arena.not(atom))
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(BuildFailure::from)
 }
 
 fn solve_cdclt_round(
     arena: &mut TermArena,
-    config: &SolverConfig,
-    deadline: Option<Instant>,
-    assertions: &[TermId],
     atoms: TheoryAtoms,
-    select_parent_terms: &[TermId],
+    request: RoundRequest<'_>,
 ) -> BuildResult<RoundResult> {
+    let RoundRequest {
+        config,
+        deadline,
+        assertions,
+        select_parent_terms,
+        row_stores,
+        materialized_rows,
+        interface_count,
+    } = request;
     let skeleton = encode_boolean_skeleton(arena, assertions, &atoms.abstracted, deadline)?;
 
-    let mut negative_atoms = Vec::with_capacity(atoms.abstracted.len());
-    for &atom in &atoms.abstracted {
-        negative_atoms.push(arena.not(atom)?);
-    }
+    let negative_atoms = negate_atoms(arena, &atoms.abstracted)?;
     let atom_count = atoms.original.len();
     let abstract_atoms = atoms.abstracted.clone();
+    let row_atoms = atoms.row_atoms;
+    debug_assert_eq!(row_atoms.len(), row_stores.len());
     let euf = EufTheory::new_with_observed_terms(arena, &atoms.original, select_parent_terms);
     let bv = BvTheory::new(
         arena,
@@ -934,47 +1071,83 @@ fn solve_cdclt_round(
         deadline,
     );
     let mut theory = CombinedUfbvTheory { euf, bv };
+    let inactive_variables =
+        inactive_reserved_row_variables(&row_atoms, &skeleton.active_variables);
     let mut solver = CdclT::new(
         skeleton.variable_count,
         atom_count,
         skeleton.clauses,
         deadline,
-    );
-    Ok(match solver.solve(&mut theory) {
-        Outcome::Unsat => RoundResult::Unsat,
-        Outcome::Unknown => {
-            let kind = if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
-                UnknownKind::Timeout
-            } else {
-                UnknownKind::ResourceLimit
-            };
-            RoundResult::Unknown(UnknownReason {
-                kind,
-                detail: "online UFBV canonical CdclT search exhausted its budget".to_owned(),
-            })
-        }
-        Outcome::Sat => match theory.bv.candidate_assignment() {
-            Ok(assignment) => {
-                let select_parent_classes = theory
-                    .euf
-                    .observed_classes_with_reasons(select_parent_terms)
-                    .into_iter()
-                    .map(|(root, reasons)| SelectParentClass {
-                        root,
-                        reasons: reasons
-                            .into_iter()
-                            .map(|atom| abstract_atoms[atom])
-                            .collect(),
-                    })
-                    .collect();
-                RoundResult::Sat {
-                    assignment,
-                    select_parent_classes,
-                }
+    )
+    .with_inactive_variables(&inactive_variables);
+    let mut active_rows = materialized_rows.clone();
+    let mut added_rows = Vec::new();
+    let mut row_refinements = 0;
+
+    loop {
+        match solver.solve(&mut theory) {
+            Outcome::Unsat => {
+                return Ok(RoundResult::new(
+                    RoundOutcome::Unsat,
+                    added_rows,
+                    row_refinements,
+                ));
             }
-            Err(reason) => RoundResult::Unknown(reason),
-        },
-    })
+            Outcome::Unknown => {
+                return Ok(RoundResult::new(
+                    RoundOutcome::Unknown(round_search_unknown(deadline)),
+                    added_rows,
+                    row_refinements,
+                ));
+            }
+            Outcome::Sat => {}
+        }
+
+        let assignment = match theory.bv.candidate_assignment() {
+            Ok(assignment) => assignment,
+            Err(reason) => {
+                return Ok(RoundResult::new(
+                    RoundOutcome::Unknown(reason),
+                    added_rows,
+                    row_refinements,
+                ));
+            }
+        };
+        let violated_rows =
+            violated_row_stores(arena, row_stores, &assignment, &active_rows, deadline)?;
+        if !violated_rows.is_empty() {
+            let materialized_count = added_rows.len().saturating_add(violated_rows.len());
+            if interface_count.saturating_add(materialized_count.saturating_mul(3))
+                > MAX_INTERFACE_ATOMS
+            {
+                return Ok(RoundResult::new(
+                    RoundOutcome::Unknown(interface_limit_reason(true)),
+                    added_rows,
+                    row_refinements,
+                ));
+            }
+            for site in violated_rows {
+                for clause in row_axiom_clauses(row_atoms[site]) {
+                    solver.add_permanent_clause(clause);
+                }
+                active_rows.insert(site);
+                added_rows.push(site);
+            }
+            row_refinements += 1;
+            continue;
+        }
+
+        let select_parent_classes =
+            final_select_parent_classes(&theory.euf, select_parent_terms, &abstract_atoms);
+        return Ok(RoundResult::new(
+            RoundOutcome::Sat {
+                assignment,
+                select_parent_classes,
+            },
+            added_rows,
+            row_refinements,
+        ));
+    }
 }
 
 fn admit_input(
@@ -1362,12 +1535,12 @@ fn build_theory_atoms(
         &mut atoms,
         &mut round_assertions,
     )?;
-    add_row_axiom_atoms(
+    let row_atoms = register_row_atoms(arena, &prepared.row_stores, deadline, &mut atoms)?;
+    add_row_axiom_assertions(
         arena,
         &prepared.row_stores,
         row_axioms,
         deadline,
-        &mut atoms,
         &mut round_assertions,
     )?;
     add_array_equality_axiom_atoms(
@@ -1393,7 +1566,9 @@ fn build_theory_atoms(
             ),
         ));
     }
-    Ok((atoms.finish(), round_assertions))
+    let mut atoms = atoms.finish();
+    atoms.row_atoms = row_atoms;
+    Ok((atoms, round_assertions))
 }
 
 fn application_groups(applications: &[CombinedApplication]) -> Vec<(FuncId, Vec<usize>)> {
@@ -1564,6 +1739,38 @@ fn violated_row_stores(
         }
     }
     Ok(violated)
+}
+
+fn simplified_row_clause(literals: [(RowAtomRef, bool); 2]) -> Option<Vec<CdcltLit>> {
+    let mut clause = Vec::with_capacity(2);
+    for (atom, positive) in literals {
+        match atom {
+            RowAtomRef::Constant(value) if value == positive => return None,
+            RowAtomRef::Constant(_) => {}
+            RowAtomRef::Variable { index: var, .. } => {
+                let literal = CdcltLit { var, positive };
+                if clause.iter().any(|existing: &CdcltLit| {
+                    existing.var == literal.var && existing.positive != literal.positive
+                }) {
+                    return None;
+                }
+                if !clause.contains(&literal) {
+                    clause.push(literal);
+                }
+            }
+        }
+    }
+    Some(clause)
+}
+
+fn row_axiom_clauses(atoms: RowAtomIds) -> Vec<Vec<CdcltLit>> {
+    [
+        [(atoms.same_index, false), (atoms.hit, true)],
+        [(atoms.same_index, true), (atoms.miss, true)],
+    ]
+    .into_iter()
+    .filter_map(simplified_row_clause)
+    .collect()
 }
 
 fn violated_array_equality_axioms(
@@ -1780,48 +1987,93 @@ fn add_array_interface_atoms(
     Ok(())
 }
 
-fn add_row_axiom_atoms(
+fn row_atom_terms(arena: &mut TermArena, store: &CombinedRowStore) -> BuildResult<RowAtomTerms> {
+    let RowKind::Store {
+        store_index,
+        store_elem,
+        inner,
+        ..
+    } = store.original.kind
+    else {
+        return Err(BuildFailure::Error(SolverError::Backend(
+            "online ROW metadata lost its store kind".to_owned(),
+        )));
+    };
+    let result = arena.var(store.original.fresh);
+    Ok(RowAtomTerms {
+        original_same: arena.eq(store.original.index, store_index)?,
+        abstract_same: arena.eq(store.rewritten_index, store.rewritten_store_index)?,
+        original_hit: arena.eq(result, store_elem)?,
+        abstract_hit: arena.eq(result, store.rewritten_store_elem)?,
+        original_miss: arena.eq(result, inner)?,
+        abstract_miss: arena.eq(result, store.rewritten_inner)?,
+    })
+}
+
+fn register_row_atom(
+    arena: &TermArena,
+    atoms: &mut AtomAccumulator,
+    original: TermId,
+    abstracted: TermId,
+) -> BuildResult<RowAtomRef> {
+    if let TermNode::BoolConst(value) = arena.node(abstracted) {
+        return Ok(RowAtomRef::Constant(*value));
+    }
+    let existing = atoms.abstract_index.get(&abstracted).copied();
+    let Some(index) = atoms.register_index(arena, original, abstracted, false)? else {
+        return Err(BuildFailure::Error(SolverError::Backend(
+            "online ROW nonconstant atom was folded during registration".to_owned(),
+        )));
+    };
+    Ok(RowAtomRef::Variable {
+        index,
+        reserved: existing.is_none(),
+    })
+}
+
+fn register_row_atoms(
+    arena: &mut TermArena,
+    stores: &[CombinedRowStore],
+    deadline: Option<Instant>,
+    atoms: &mut AtomAccumulator,
+) -> BuildResult<Vec<RowAtomIds>> {
+    let mut rows = Vec::with_capacity(stores.len());
+    for store in stores {
+        if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
+            return Err(build_unknown(
+                UnknownKind::Timeout,
+                "online AUFBV deadline elapsed while reserving ROW atoms",
+            ));
+        }
+        let terms = row_atom_terms(arena, store)?;
+        rows.push(RowAtomIds {
+            same_index: register_row_atom(arena, atoms, terms.original_same, terms.abstract_same)?,
+            hit: register_row_atom(arena, atoms, terms.original_hit, terms.abstract_hit)?,
+            miss: register_row_atom(arena, atoms, terms.original_miss, terms.abstract_miss)?,
+        });
+    }
+    Ok(rows)
+}
+
+fn add_row_axiom_assertions(
     arena: &mut TermArena,
     stores: &[CombinedRowStore],
     sites: &[usize],
     deadline: Option<Instant>,
-    atoms: &mut AtomAccumulator,
     round_assertions: &mut Vec<TermId>,
 ) -> BuildResult<()> {
     for &site in sites {
         if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
             return Err(build_unknown(
                 UnknownKind::Timeout,
-                "online AUFBV deadline elapsed while building ROW axioms",
+                "online AUFBV deadline elapsed while rebuilding ROW axioms",
             ));
         }
         let store = &stores[site];
-        let RowKind::Store {
-            store_index,
-            store_elem,
-            inner,
-            ..
-        } = store.original.kind
-        else {
-            return Err(BuildFailure::Error(SolverError::Backend(
-                "online ROW metadata lost its store kind".to_owned(),
-            )));
-        };
-        let original_same = arena.eq(store.original.index, store_index)?;
-        let abstract_same = arena.eq(store.rewritten_index, store.rewritten_store_index)?;
-        atoms.register(arena, original_same, abstract_same, true)?;
-
-        let result = arena.var(store.original.fresh);
-        let original_hit = arena.eq(result, store_elem)?;
-        let abstract_hit = arena.eq(result, store.rewritten_store_elem)?;
-        atoms.register(arena, original_hit, abstract_hit, true)?;
-        let original_miss = arena.eq(result, inner)?;
-        let abstract_miss = arena.eq(result, store.rewritten_inner)?;
-        atoms.register(arena, original_miss, abstract_miss, true)?;
-
-        let hit = arena.implies(abstract_same, abstract_hit)?;
-        let different = arena.not(abstract_same)?;
-        let miss = arena.implies(different, abstract_miss)?;
+        let terms = row_atom_terms(arena, store)?;
+        let hit = arena.implies(terms.abstract_same, terms.abstract_hit)?;
+        let different = arena.not(terms.abstract_same)?;
+        let miss = arena.implies(different, terms.abstract_miss)?;
         round_assertions.push(arena.and(hit, miss)?);
     }
     Ok(())
@@ -1906,7 +2158,7 @@ fn encode_boolean_skeleton(
             ),
         ));
     }
-    let clauses = clauses
+    let clauses: Vec<Vec<CdcltLit>> = clauses
         .into_iter()
         .map(|clause| {
             clause
@@ -1918,9 +2170,14 @@ fn encode_boolean_skeleton(
                 .collect()
         })
         .collect();
+    let mut active_variables = vec![false; encoder.var_count];
+    for literal in clauses.iter().flatten() {
+        active_variables[literal.var] = true;
+    }
     Ok(BooleanSkeleton {
         variable_count: encoder.var_count,
         clauses,
+        active_variables,
     })
 }
 
@@ -2155,7 +2412,7 @@ mod tests {
     use crate::cdclt::{CdclT, Outcome};
     use crate::euf_egraph::EufTheory;
     use crate::euf_egraph::{TheoryLit, TheoryProp};
-    use crate::{CheckResult, SolverConfig};
+    use crate::{CheckResult, SolverConfig, UnknownKind};
 
     #[derive(Debug)]
     struct RawSolveStats {
@@ -2644,7 +2901,10 @@ mod tests {
         assert_eq!(result, CheckResult::Unsat, "stats={stats:?}");
         assert_eq!(stats.rounds, 2, "stats={stats:?}");
         assert_eq!(stats.store_parent_select_pairs_added, 1, "stats={stats:?}");
-        assert_eq!(stats.parent_select_pairs_added, 1, "stats={stats:?}");
+        assert_eq!(stats.parent_select_pairs_added, 2, "stats={stats:?}");
+        assert_eq!(stats.array_pairs_added, 2, "stats={stats:?}");
+        assert_eq!(stats.row_axioms_added, 2, "stats={stats:?}");
+        assert_eq!(stats.in_search_row_refinements, 2, "stats={stats:?}");
         assert_eq!(stats.array_equality_axioms_added, 0, "stats={stats:?}");
     }
 
@@ -3129,9 +3389,10 @@ mod tests {
 
         let (result, stats) = dynamic_array_solve_stats(&mut arena, &[different]);
         assert_eq!(result, CheckResult::Unsat);
-        assert_eq!(stats.rounds, 2, "stats={stats:?}");
+        assert_eq!(stats.rounds, 1, "stats={stats:?}");
         assert_eq!(stats.sat_candidates, 1, "stats={stats:?}");
         assert_eq!(stats.row_axioms_added, 1, "stats={stats:?}");
+        assert_eq!(stats.in_search_row_refinements, 1, "stats={stats:?}");
         assert_eq!(stats.array_pairs_added, 0, "stats={stats:?}");
     }
 
@@ -3153,8 +3414,112 @@ mod tests {
         let (result, stats) =
             dynamic_array_solve_stats(&mut arena, &[different_index, different_read]);
         assert_eq!(result, CheckResult::Unsat);
-        assert_eq!(stats.rounds, 2, "stats={stats:?}");
+        assert_eq!(stats.rounds, 1, "stats={stats:?}");
+        assert_eq!(stats.sat_candidates, 1, "stats={stats:?}");
         assert_eq!(stats.row_axioms_added, 1, "stats={stats:?}");
+        assert_eq!(stats.in_search_row_refinements, 1, "stats={stats:?}");
+    }
+
+    #[test]
+    fn row_final_check_resumes_to_a_replayable_sat_branch() {
+        let mut arena = TermArena::new();
+        let array = arena.array_var("dynamic_row_branch_array", 4, 8).unwrap();
+        let stored_index = arena.bv_var("dynamic_row_branch_stored_index", 4).unwrap();
+        let read_index = arena.bv_var("dynamic_row_branch_read_index", 4).unwrap();
+        let value = arena.bv_var("dynamic_row_branch_value", 8).unwrap();
+        let fallback = arena.bool_var("dynamic_row_branch_fallback").unwrap();
+        let stored = arena.store(array, stored_index, value).unwrap();
+        let read = arena.select(stored, read_index).unwrap();
+        let base_read = arena.select(array, read_index).unwrap();
+        let same_index = arena.eq(stored_index, read_index).unwrap();
+        let different_index = arena.not(same_index).unwrap();
+        let base_is_value = arena.eq(base_read, value).unwrap();
+        let base_is_different = arena.not(base_is_value).unwrap();
+        let read_is_value = arena.eq(read, value).unwrap();
+        let choice = arena.or(read_is_value, fallback).unwrap();
+
+        let (result, stats) =
+            dynamic_array_solve_stats(&mut arena, &[different_index, base_is_different, choice]);
+        let CheckResult::Sat(model) = result else {
+            panic!("expected ROW-refined branch SAT, stats={stats:?}");
+        };
+        let assignment = model.to_assignment();
+
+        assert_eq!(
+            eval(&arena, different_index, &assignment),
+            Ok(Value::Bool(true))
+        );
+        assert_eq!(
+            eval(&arena, base_is_different, &assignment),
+            Ok(Value::Bool(true))
+        );
+        assert_eq!(eval(&arena, choice, &assignment), Ok(Value::Bool(true)));
+        assert_eq!(eval(&arena, fallback, &assignment), Ok(Value::Bool(true)));
+        assert_eq!(stats.rounds, 1, "stats={stats:?}");
+        assert_eq!(stats.sat_candidates, 2, "stats={stats:?}");
+        assert_eq!(stats.row_axioms_added, 1, "stats={stats:?}");
+        assert_eq!(stats.in_search_row_refinements, 1, "stats={stats:?}");
+    }
+
+    #[test]
+    fn nested_row_final_checks_stay_inside_one_canonical_round() {
+        let mut arena = TermArena::new();
+        let array = arena.array_var("dynamic_nested_row_array", 4, 8).unwrap();
+        let first_index = arena.bv_var("dynamic_nested_row_first_index", 4).unwrap();
+        let second_index = arena.bv_var("dynamic_nested_row_second_index", 4).unwrap();
+        let read_index = arena.bv_var("dynamic_nested_row_read_index", 4).unwrap();
+        let first_value = arena.bv_var("dynamic_nested_row_first_value", 8).unwrap();
+        let second_value = arena.bv_var("dynamic_nested_row_second_value", 8).unwrap();
+        let first_store = arena.store(array, first_index, first_value).unwrap();
+        let second_store = arena
+            .store(first_store, second_index, second_value)
+            .unwrap();
+        let base_read = arena.select(array, read_index).unwrap();
+        let stored_read = arena.select(second_store, read_index).unwrap();
+        let read_hits_first = arena.eq(read_index, first_index).unwrap();
+        let read_misses_first = arena.not(read_hits_first).unwrap();
+        let read_hits_second = arena.eq(read_index, second_index).unwrap();
+        let read_misses_second = arena.not(read_hits_second).unwrap();
+        let reads_equal = arena.eq(base_read, stored_read).unwrap();
+        let reads_differ = arena.not(reads_equal).unwrap();
+
+        let (result, stats) = dynamic_array_solve_stats(
+            &mut arena,
+            &[read_misses_first, read_misses_second, reads_differ],
+        );
+
+        assert_eq!(result, CheckResult::Unsat, "stats={stats:?}");
+        assert_eq!(stats.rounds, 1, "stats={stats:?}");
+        assert_eq!(stats.row_axioms_added, 2, "stats={stats:?}");
+        assert!(
+            (1..=2).contains(&stats.in_search_row_refinements),
+            "stats={stats:?}"
+        );
+    }
+
+    #[test]
+    fn dynamic_row_insertion_respects_the_shared_interface_cap() {
+        let mut arena = TermArena::new();
+        let array = arena.array_var("dynamic_row_cap_array", 8, 8).unwrap();
+        let index = arena.bv_var("dynamic_row_cap_index", 8).unwrap();
+        let mut assertions = Vec::new();
+        for ordinal in 0_u128..171 {
+            let value = arena.bv_const(8, ordinal).unwrap();
+            let stored = arena.store(array, index, value).unwrap();
+            let read = arena.select(stored, index).unwrap();
+            let same = arena.eq(read, value).unwrap();
+            assertions.push(arena.not(same).unwrap());
+        }
+
+        let (result, stats) = dynamic_array_solve_stats(&mut arena, &assertions);
+
+        let CheckResult::Unknown(reason) = result else {
+            panic!("expected dynamic ROW cap decline, stats={stats:?}");
+        };
+        assert_eq!(reason.kind, UnknownKind::ResourceLimit);
+        assert_eq!(stats.rounds, 1, "stats={stats:?}");
+        assert_eq!(stats.row_axioms_added, 0, "stats={stats:?}");
+        assert_eq!(stats.in_search_row_refinements, 0, "stats={stats:?}");
     }
 
     #[test]
@@ -3177,8 +3542,10 @@ mod tests {
 
         let (result, stats) = dynamic_array_solve_stats(&mut arena, &[same_arg, different_value]);
         assert_eq!(result, CheckResult::Unsat);
-        assert!(stats.row_axioms_added >= 1, "stats={stats:?}");
-        assert!(stats.rounds <= 3, "stats={stats:?}");
+        assert_eq!(stats.function_pairs_added, 0, "stats={stats:?}");
+        assert_eq!(stats.row_axioms_added, 1, "stats={stats:?}");
+        assert_eq!(stats.in_search_row_refinements, 1, "stats={stats:?}");
+        assert_eq!(stats.rounds, 1, "stats={stats:?}");
     }
 
     #[test]
