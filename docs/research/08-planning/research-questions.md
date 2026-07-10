@@ -47,9 +47,12 @@ Out of scope:
     theory composition (`check_with_arrays_and_functions`: array then function
     elimination with combined model projection and replay) and oracle-free
     `QF_UFBV` scenarios (`function_catalog`). The EUF rollout now matches the
-    array track end to end; array *equality* is the one deferred theory feature
-    (composition handles mixed array+UF formulas, not extensional array
-    equality). See [ADR-0013](../09-decisions/adr-0013-uninterpreted-functions.md).
+    array track end to end. Array equality is no longer wholly deferred:
+    canonical ABV/AUFBV has bounded diff witnesses, candidate-guided observed
+    reads, and candidate-triggered transitive equality paths (ADR-0073/0076),
+    with replayed models. Live in-search merge hooks, class-owned models, and
+    broader array operators remain. See
+    [ADR-0013](../09-decisions/adr-0013-uninterpreted-functions.md).
 - [ ] How should undefined or partial operations be represented?
 - [ ] What public support matrix should define the first release boundary
       across IR, evaluator, SMT-LIB, oracle, pure Rust backend, and evidence?

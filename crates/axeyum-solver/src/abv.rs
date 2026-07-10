@@ -337,6 +337,8 @@ const MAX_ROW_ROUNDS: usize = 64;
 /// this many sites (deeply nested stores fanned out over many reads) declines to
 /// `unknown` rather than risk an unbounded blow-up.
 const MAX_ROW_SITES: usize = 4096;
+/// Shared global site ceiling for the canonical online ROW extension path.
+pub(crate) const MAX_ONLINE_ROW_SITES: usize = MAX_ROW_SITES;
 const SCALAR_LOCAL_SEARCH_PROBE_MS: u64 = 100;
 
 /// Builds the `unknown` result with the lazy-ROW resource-limit classification.
@@ -2152,6 +2154,7 @@ pub(crate) struct OnlineRowAbstraction {
     pub(crate) assertions: Vec<TermId>,
     pub(crate) sites: Vec<RowSite>,
     pub(crate) equalities: Vec<OnlineArrayEquality>,
+    pub(crate) next_fresh: usize,
 }
 
 /// One array equality flag plus the finite observations prepared for online
@@ -2160,6 +2163,9 @@ pub(crate) struct OnlineRowAbstraction {
 #[derive(Debug, Clone)]
 pub(crate) struct OnlineArrayEquality {
     pub(crate) flag: SymbolId,
+    pub(crate) lhs: TermId,
+    pub(crate) rhs: TermId,
+    pub(crate) diff_index: TermId,
     pub(crate) observations: Vec<OnlineArrayEqualityObservation>,
 }
 
@@ -2501,6 +2507,7 @@ pub(crate) fn abstract_rows_for_online(
         assertions: abstracted,
         sites: ctx.sites,
         equalities,
+        next_fresh: ctx.fresh_counter,
     }))
 }
 
@@ -2564,9 +2571,48 @@ fn prepare_online_array_equalities(
                 is_diff_witness: index == diff_index,
             });
         }
-        equalities.push(OnlineArrayEquality { flag, observations });
+        equalities.push(OnlineArrayEquality {
+            flag,
+            lhs,
+            rhs,
+            diff_index,
+            observations,
+        });
     }
     Ok(Some(equalities))
+}
+
+/// Builds one additional paired observation for an online array equality at a
+/// candidate-relevant index. The returned ROW sites are independent additions;
+/// the caller owns global deduplication, site budgeting, function abstraction,
+/// and insertion into the canonical refinement queue.
+pub(crate) fn build_online_array_equality_observation(
+    arena: &mut TermArena,
+    lhs: TermId,
+    rhs: TermId,
+    index: TermId,
+    next_fresh: &mut usize,
+) -> Result<Option<(OnlineArrayEqualityObservation, Vec<RowSite>)>, SolverError> {
+    let mut ctx = RowCtx {
+        fresh_counter: *next_fresh,
+        ..RowCtx::default()
+    };
+    let Some(lhs_read) = ctx.resolve_select(arena, lhs, index)? else {
+        return Ok(None);
+    };
+    let Some(rhs_read) = ctx.resolve_select(arena, rhs, index)? else {
+        return Ok(None);
+    };
+    *next_fresh = ctx.fresh_counter;
+    Ok(Some((
+        OnlineArrayEqualityObservation {
+            index,
+            lhs_read,
+            rhs_read,
+            is_diff_witness: false,
+        },
+        ctx.sites,
+    )))
 }
 
 /// Reconstructs base-array values from the variable-read sites of a consistent

@@ -24,10 +24,14 @@
 //! same-function applications with equal argument values and unequal result values,
 //! plus same-array selects with equal indices and unequal results, and store-read
 //! sites whose result violates read-over-write, plus equality flags inconsistent
-//! with an observed read or diff witness. Only violated pairs/sites materialize
-//! argument/index/result equalities, hit/miss axioms, or extensionality instances
-//! for the next round. Congruent applications use the e-graph; array facts add valid
-//! implications directly to the Boolean skeleton. Exact BV owns every scalar atom.
+//! with an observed read or diff witness. A false array equality whose endpoints
+//! become connected by candidate-true equality flags schedules its own diff index
+//! only along a deterministic shortest equality path; a `new`/`delayed`/`applied`
+//! queue avoids the eager cross-atom observation product. Only violated pairs/sites
+//! materialize argument/index/result equalities, hit/miss axioms, or extensionality
+//! instances for the next round. Congruent applications use the e-graph; array facts
+//! add valid implications directly to the Boolean skeleton. Exact BV owns every
+//! scalar atom.
 //! The loop reaches a replaying model, relaxation UNSAT, or explicit
 //! round/interface/deadline bounds. Eager reductions remain fallbacks and
 //! differential oracles.
@@ -45,7 +49,7 @@
 //!   assertion replays;
 //! - unsupported/resource-bound states degrade to `Unknown`.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque};
 use std::time::Instant;
 
 use axeyum_ir::{
@@ -55,7 +59,9 @@ use axeyum_ir::{
 use axeyum_rewrite::{FuncElimError, FunctionAbstraction, abstract_functions, replace_subterms};
 
 use crate::abv::{
-    OnlineArrayEquality, RowKind, RowSite, abstract_rows_for_online, project_online_row_assignment,
+    MAX_ONLINE_ROW_SITES, OnlineArrayEquality, OnlineArrayEqualityObservation, RowKind, RowSite,
+    abstract_rows_for_online, build_online_array_equality_observation,
+    project_online_row_assignment,
 };
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
 use crate::cdclt::{CdclT, Lit as CdcltLit, Outcome};
@@ -115,6 +121,7 @@ struct CombinedRowStore {
 
 #[derive(Debug, Clone)]
 struct CombinedArrayEqualityObservation {
+    original_index: TermId,
     original_lhs_read: TermId,
     original_rhs_read: TermId,
     rewritten_lhs_read: TermId,
@@ -125,6 +132,9 @@ struct CombinedArrayEqualityObservation {
 #[derive(Debug, Clone)]
 struct CombinedArrayEquality {
     flag: SymbolId,
+    lhs: TermId,
+    rhs: TermId,
+    diff_index: TermId,
     observations: Vec<CombinedArrayEqualityObservation>,
 }
 
@@ -139,6 +149,133 @@ struct ArrayEqualityAxiom {
     equality: usize,
     observation: usize,
     kind: ArrayEqualityAxiomKind,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ArrayAxiomQueueState {
+    New,
+    Delayed,
+    Applied,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct CrossEqualityRequest {
+    source_equality: usize,
+    target_equality: usize,
+    index: TermId,
+}
+
+struct ArrayAxiomQueue {
+    states: Vec<ArrayAxiomQueueState>,
+}
+
+impl ArrayAxiomQueue {
+    fn new(equality_count: usize) -> Self {
+        Self {
+            states: vec![ArrayAxiomQueueState::New; equality_count],
+        }
+    }
+
+    fn requests(
+        &mut self,
+        equalities: &[CombinedArrayEquality],
+        assignment: &Assignment,
+    ) -> Vec<CrossEqualityRequest> {
+        let mut adjacency: BTreeMap<TermId, Vec<(TermId, usize)>> = BTreeMap::new();
+        for (equality_index, equality) in equalities.iter().enumerate() {
+            if !matches!(assignment.get(equality.flag), Some(Value::Bool(true))) {
+                continue;
+            }
+            adjacency
+                .entry(equality.lhs)
+                .or_default()
+                .push((equality.rhs, equality_index));
+            adjacency
+                .entry(equality.rhs)
+                .or_default()
+                .push((equality.lhs, equality_index));
+        }
+
+        let mut requests = Vec::new();
+        for (source_equality, equality) in equalities.iter().enumerate() {
+            if !matches!(assignment.get(equality.flag), Some(Value::Bool(false))) {
+                if self.states[source_equality] != ArrayAxiomQueueState::Applied {
+                    self.states[source_equality] = ArrayAxiomQueueState::New;
+                }
+                continue;
+            }
+            let Some(path) = equality_path(&adjacency, equality.lhs, equality.rhs) else {
+                if self.states[source_equality] != ArrayAxiomQueueState::Applied {
+                    self.states[source_equality] = ArrayAxiomQueueState::Delayed;
+                }
+                continue;
+            };
+            self.states[source_equality] = ArrayAxiomQueueState::Applied;
+            for target_equality in path {
+                if equalities[target_equality]
+                    .observations
+                    .iter()
+                    .any(|observation| observation.original_index == equality.diff_index)
+                {
+                    continue;
+                }
+                requests.push(CrossEqualityRequest {
+                    source_equality,
+                    target_equality,
+                    index: equality.diff_index,
+                });
+            }
+        }
+        requests
+    }
+
+    fn counts(&self) -> (usize, usize, usize) {
+        let mut new = 0;
+        let mut delayed = 0;
+        let mut applied = 0;
+        for state in &self.states {
+            match state {
+                ArrayAxiomQueueState::New => new += 1,
+                ArrayAxiomQueueState::Delayed => delayed += 1,
+                ArrayAxiomQueueState::Applied => applied += 1,
+            }
+        }
+        (new, delayed, applied)
+    }
+}
+
+fn equality_path(
+    adjacency: &BTreeMap<TermId, Vec<(TermId, usize)>>,
+    start: TermId,
+    goal: TermId,
+) -> Option<Vec<usize>> {
+    if start == goal {
+        return Some(Vec::new());
+    }
+    let mut queue = VecDeque::from([start]);
+    let mut seen = BTreeSet::from([start]);
+    let mut predecessor: BTreeMap<TermId, (TermId, usize)> = BTreeMap::new();
+    while let Some(current) = queue.pop_front() {
+        for &(next, equality) in adjacency.get(&current).into_iter().flatten() {
+            if !seen.insert(next) {
+                continue;
+            }
+            predecessor.insert(next, (current, equality));
+            if next == goal {
+                let mut path = Vec::new();
+                let mut cursor = goal;
+                while cursor != start {
+                    let &(previous, edge) = predecessor.get(&cursor)?;
+                    path.push(edge);
+                    cursor = previous;
+                }
+                path.reverse();
+                return Some(path);
+            }
+            queue.push_back(next);
+        }
+    }
+    None
 }
 
 enum WalkError {
@@ -165,6 +302,7 @@ struct PreparedAbstraction {
     row_stores: Vec<CombinedRowStore>,
     array_equalities: Vec<CombinedArrayEquality>,
     replacements: HashMap<TermId, TermId>,
+    next_row_fresh: usize,
 }
 
 struct PreparedArrayRoots {
@@ -173,6 +311,7 @@ struct PreparedArrayRoots {
     row_sites: Vec<RowSite>,
     array_equalities: Vec<OnlineArrayEquality>,
     function_roots: Vec<TermId>,
+    next_row_fresh: usize,
 }
 
 struct TheoryAtoms {
@@ -246,6 +385,10 @@ struct InterfaceRefinementStats {
     array_pairs_added: usize,
     row_axioms_added: usize,
     array_equality_axioms_added: usize,
+    cross_equality_observations_added: usize,
+    array_queue_new: usize,
+    array_queue_delayed: usize,
+    array_queue_applied: usize,
     max_interface_atoms: usize,
 }
 
@@ -625,9 +768,10 @@ pub fn check_qf_ufbv_online_cdclt(
 /// results. Candidate equal-index/unequal-result pairs materialize select
 /// congruence; violated store reads materialize the exact hit/miss ROW axiom.
 /// Array equality flags materialize only violated observed-index congruence or
-/// diff-witness instances. Function applications use the same dynamic interface
-/// path. SAT is accepted only after projecting functions, then arrays, and
-/// replaying the original query.
+/// diff-witness instances; false flags connected by candidate-true equality
+/// paths queue their diff index only on the missing path edges. Function
+/// applications use the same dynamic interface path. SAT is accepted only after
+/// projecting functions, then arrays, and replaying the original query.
 ///
 /// # Errors
 ///
@@ -688,9 +832,9 @@ fn build_and_solve_with_stats_impl(
     admit_arrays: bool,
 ) -> BuildResult<(CheckResult, InterfaceRefinementStats)> {
     admit_input(arena, assertions, config, deadline, admit_arrays)?;
-    let prepared = prepare_abstraction(arena, assertions, deadline, admit_arrays)?;
+    let mut prepared = prepare_abstraction(arena, assertions, deadline, admit_arrays)?;
     let groups = application_groups(&prepared.applications);
-    let select_groups = select_groups(&prepared.selects);
+    let mut select_group_indices = select_groups(&prepared.selects);
     let mut ground_values = GroundValueCache::default();
     let mut function_pairs = Vec::new();
     let mut array_pairs = Vec::new();
@@ -700,6 +844,7 @@ fn build_and_solve_with_stats_impl(
     let mut materialized_arrays = HashSet::new();
     let mut materialized_rows = HashSet::new();
     let mut materialized_array_equalities = HashSet::new();
+    let mut array_queue = ArrayAxiomQueue::new(prepared.array_equalities.len());
     let mut interface_count = 0usize;
     let mut stats = InterfaceRefinementStats::default();
 
@@ -743,7 +888,7 @@ fn build_and_solve_with_stats_impl(
                 let violated_arrays = violated_select_pairs(
                     arena,
                     &prepared.selects,
-                    &select_groups,
+                    &select_group_indices,
                     &assignment,
                     &materialized_arrays,
                     &mut ground_values,
@@ -763,10 +908,16 @@ fn build_and_solve_with_stats_impl(
                     &materialized_array_equalities,
                     deadline,
                 )?;
+                let cross_requests = array_queue.requests(&prepared.array_equalities, &assignment);
+                let (queue_new, queue_delayed, queue_applied) = array_queue.counts();
+                stats.array_queue_new = queue_new;
+                stats.array_queue_delayed = queue_delayed;
+                stats.array_queue_applied = queue_applied;
                 if violated_functions.is_empty()
                     && violated_arrays.is_empty()
                     && violated_rows.is_empty()
                     && violated_array_equalities.is_empty()
+                    && cross_requests.is_empty()
                 {
                     return Ok((
                         project_replay_composed(arena, &prepared, assertions, &assignment),
@@ -783,6 +934,33 @@ fn build_and_solve_with_stats_impl(
                         ),
                         stats,
                     ));
+                }
+                let mut cross_observation_added = false;
+                for request in cross_requests {
+                    debug_assert!(
+                        matches!(
+                            assignment.get(prepared.array_equalities[request.source_equality].flag),
+                            Some(Value::Bool(false))
+                        ),
+                        "cross observation source must be a candidate disequality"
+                    );
+                    if interface_count >= MAX_INTERFACE_ATOMS {
+                        return Ok((interface_limit_unknown(true), stats));
+                    }
+                    if add_cross_equality_observation(
+                        arena,
+                        &mut prepared,
+                        request.target_equality,
+                        request.index,
+                        deadline,
+                    )? {
+                        interface_count += 1;
+                        stats.cross_equality_observations_added += 1;
+                        cross_observation_added = true;
+                    }
+                }
+                if cross_observation_added {
+                    select_group_indices = select_groups(&prepared.selects);
                 }
                 for pair @ (left, _right) in violated_functions {
                     interface_count = interface_count.saturating_add(
@@ -1004,15 +1182,20 @@ fn prepare_array_roots(
             "online UFBV combination does not admit arrays".to_owned(),
         )));
     }
-    let (semantic_assertions, row_sites, array_equalities) = if had_arrays {
+    let (semantic_assertions, row_sites, array_equalities, next_row_fresh) = if had_arrays {
         let Some(rows) = abstract_rows_for_online(arena, assertions)? else {
             return Err(BuildFailure::Error(SolverError::Unsupported(
                 "online AUFBV lazy-ROW abstraction does not admit this array shape".to_owned(),
             )));
         };
-        (rows.assertions, rows.sites, rows.equalities)
+        (
+            rows.assertions,
+            rows.sites,
+            rows.equalities,
+            rows.next_fresh,
+        )
     } else {
-        (assertions.to_vec(), Vec::new(), Vec::new())
+        (assertions.to_vec(), Vec::new(), Vec::new(), 0)
     };
     let mut roots = semantic_assertions.clone();
     for site in &row_sites {
@@ -1042,6 +1225,7 @@ fn prepare_array_roots(
         row_sites,
         array_equalities,
         function_roots: roots,
+        next_row_fresh,
     })
 }
 
@@ -1095,6 +1279,7 @@ fn combine_array_equalities(
         let mut observations = Vec::with_capacity(equality.observations.len());
         for observation in &equality.observations {
             observations.push(CombinedArrayEqualityObservation {
+                original_index: observation.index,
                 original_lhs_read: observation.lhs_read,
                 original_rhs_read: observation.rhs_read,
                 rewritten_lhs_read: replace_subterms(
@@ -1114,10 +1299,164 @@ fn combine_array_equalities(
         }
         combined.push(CombinedArrayEquality {
             flag: equality.flag,
+            lhs: equality.lhs,
+            rhs: equality.rhs,
+            diff_index: equality.diff_index,
             observations,
         });
     }
     Ok(combined)
+}
+
+fn ensure_cross_observation_applications_are_known(
+    arena: &TermArena,
+    observation: &OnlineArrayEqualityObservation,
+    sites: &[RowSite],
+    replacements: &HashMap<TermId, TermId>,
+    deadline: Option<Instant>,
+) -> BuildResult<()> {
+    let mut roots = vec![
+        observation.index,
+        observation.lhs_read,
+        observation.rhs_read,
+    ];
+    for site in sites {
+        roots.push(site.index);
+        match site.kind {
+            RowKind::Store {
+                store_index,
+                store_elem,
+                inner,
+            } => roots.extend([store_index, store_elem, inner]),
+            RowKind::Const { value } => roots.push(value),
+            RowKind::Var { .. } => {}
+        }
+    }
+    let applications = match collect_original_applications(arena, &roots, deadline) {
+        Ok(applications) => applications,
+        Err(WalkError::Timeout) => {
+            return Err(build_unknown(
+                UnknownKind::Timeout,
+                "online array queue deadline elapsed during cross-observation discovery",
+            ));
+        }
+        Err(WalkError::NonBoolean(term)) => {
+            return Err(BuildFailure::Error(SolverError::NonBooleanAssertion(term)));
+        }
+    };
+    if applications
+        .iter()
+        .any(|application| !replacements.contains_key(&application.term))
+    {
+        return Err(BuildFailure::Error(SolverError::Unsupported(
+            "online array queue exposed a new uninterpreted application after initial abstraction"
+                .to_owned(),
+        )));
+    }
+    Ok(())
+}
+
+fn add_cross_equality_observation(
+    arena: &mut TermArena,
+    prepared: &mut PreparedAbstraction,
+    equality_index: usize,
+    index: TermId,
+    deadline: Option<Instant>,
+) -> BuildResult<bool> {
+    let Some(equality) = prepared.array_equalities.get(equality_index) else {
+        return Err(BuildFailure::Error(SolverError::Backend(
+            "online array queue referenced a missing equality".to_owned(),
+        )));
+    };
+    if equality
+        .observations
+        .iter()
+        .any(|observation| observation.original_index == index)
+    {
+        return Ok(false);
+    }
+    let (lhs, rhs) = (equality.lhs, equality.rhs);
+    let Some((observation, new_sites)) = build_online_array_equality_observation(
+        arena,
+        lhs,
+        rhs,
+        index,
+        &mut prepared.next_row_fresh,
+    )?
+    else {
+        return Err(BuildFailure::Error(SolverError::Unsupported(
+            "online array queue could not build a cross-equality observation".to_owned(),
+        )));
+    };
+    if prepared.row_sites.len().saturating_add(new_sites.len()) > MAX_ONLINE_ROW_SITES {
+        return Err(build_unknown(
+            UnknownKind::ResourceLimit,
+            format!(
+                "online array queue exceeded the bounded ROW-site cap of {MAX_ONLINE_ROW_SITES}"
+            ),
+        ));
+    }
+
+    ensure_cross_observation_applications_are_known(
+        arena,
+        &observation,
+        &new_sites,
+        &prepared.replacements,
+        deadline,
+    )?;
+
+    let (new_selects, new_stores) = combine_row_sites(arena, &new_sites, &prepared.replacements)?;
+    let mut memo = HashMap::new();
+    let combined_observation = CombinedArrayEqualityObservation {
+        original_index: observation.index,
+        original_lhs_read: observation.lhs_read,
+        original_rhs_read: observation.rhs_read,
+        rewritten_lhs_read: replace_subterms(
+            arena,
+            observation.lhs_read,
+            &prepared.replacements,
+            &mut memo,
+        )?,
+        rewritten_rhs_read: replace_subterms(
+            arena,
+            observation.rhs_read,
+            &prepared.replacements,
+            &mut memo,
+        )?,
+        is_diff_witness: false,
+    };
+
+    let mut const_assertions = Vec::new();
+    for site in &new_sites {
+        if let RowKind::Const { value } = site.kind {
+            let read = arena.var(site.fresh);
+            let original = arena.eq(read, value).map_err(|error| {
+                SolverError::Backend(format!(
+                    "online array queue const observation build failed: {error}"
+                ))
+            })?;
+            let rewritten_value =
+                replace_subterms(arena, value, &prepared.replacements, &mut memo)?;
+            let abstracted = arena.eq(read, rewritten_value).map_err(|error| {
+                SolverError::Backend(format!(
+                    "online array queue const abstraction build failed: {error}"
+                ))
+            })?;
+            const_assertions.push((original, abstracted));
+        }
+    }
+
+    prepared.row_sites.extend(new_sites);
+    prepared.selects.extend(new_selects);
+    prepared.row_stores.extend(new_stores);
+    for (original, abstracted) in const_assertions {
+        prepared.semantic_assertions.push(original);
+        prepared.abstracted_assertions.push(abstracted);
+    }
+    prepared.array_equalities[equality_index]
+        .observations
+        .push(combined_observation);
+    Ok(true)
 }
 
 fn prepare_abstraction(
@@ -1132,6 +1471,7 @@ fn prepare_abstraction(
         row_sites,
         array_equalities,
         function_roots,
+        next_row_fresh,
     } = prepare_array_roots(arena, assertions, admit_arrays)?;
     let semantic_count = semantic_assertions.len();
     let original_applications =
@@ -1197,6 +1537,7 @@ fn prepare_abstraction(
         row_stores,
         array_equalities,
         replacements,
+        next_row_fresh,
     })
 }
 
@@ -1984,19 +2325,19 @@ fn unknown(kind: UnknownKind, detail: impl Into<String>) -> CheckResult {
 mod tests {
     use std::time::Duration;
 
-    use axeyum_ir::{Sort, TermArena, TermNode, Value, eval};
+    use axeyum_ir::{Assignment, Sort, TermArena, TermNode, Value, eval};
     use axeyum_smtlib::parse_script;
 
     use super::{
-        BvTheory, CombinedUfbvTheory, application_groups, build_and_solve_arrays_with_stats,
-        build_and_solve_with_stats, build_theory_atoms, check_qf_aufbv_online_cdclt,
-        check_qf_ufbv_online_cdclt, encode_boolean_skeleton, prepare_abstraction,
-        relevant_application_pairs,
+        ArrayAxiomQueue, ArrayAxiomQueueState, BvTheory, CombinedArrayEquality, CombinedUfbvTheory,
+        application_groups, build_and_solve_arrays_with_stats, build_and_solve_with_stats,
+        build_theory_atoms, check_qf_aufbv_online_cdclt, check_qf_ufbv_online_cdclt,
+        encode_boolean_skeleton, prepare_abstraction, relevant_application_pairs,
     };
     use crate::cdclt::{CdclT, Outcome};
     use crate::euf_egraph::EufTheory;
     use crate::euf_egraph::{TheoryLit, TheoryProp};
-    use crate::{CheckResult, SolverConfig};
+    use crate::{CheckResult, SolverConfig, UnknownKind};
 
     #[derive(Debug)]
     struct RawSolveStats {
@@ -2005,6 +2346,58 @@ mod tests {
         propagation_probes: usize,
         propagation_hits: usize,
         driver_propagations: usize,
+    }
+
+    #[test]
+    fn array_queue_transitions_delayed_to_applied_on_a_true_path() {
+        let mut arena = TermArena::new();
+        let a = arena.array_var("queue_state_a", 4, 8).unwrap();
+        let b = arena.array_var("queue_state_b", 4, 8).unwrap();
+        let c = arena.array_var("queue_state_c", 4, 8).unwrap();
+        let mut equality = |name: &str, lhs, rhs| {
+            let flag_term = arena.bool_var(&format!("{name}_flag")).unwrap();
+            let TermNode::Symbol(flag) = arena.node(flag_term) else {
+                panic!("queue flag must be a symbol");
+            };
+            let flag = *flag;
+            let diff_index = arena.bv_var(&format!("{name}_diff"), 4).unwrap();
+            CombinedArrayEquality {
+                flag,
+                lhs,
+                rhs,
+                diff_index,
+                observations: Vec::new(),
+            }
+        };
+        let equalities = vec![
+            equality("queue_ab", a, b),
+            equality("queue_bc", b, c),
+            equality("queue_ac", a, c),
+        ];
+        let mut queue = ArrayAxiomQueue::new(equalities.len());
+
+        let mut disconnected = Assignment::new();
+        disconnected.set(equalities[0].flag, Value::Bool(true));
+        disconnected.set(equalities[1].flag, Value::Bool(false));
+        disconnected.set(equalities[2].flag, Value::Bool(false));
+        assert!(queue.requests(&equalities, &disconnected).is_empty());
+        assert_eq!(queue.states[2], ArrayAxiomQueueState::Delayed);
+
+        let mut connected = Assignment::new();
+        connected.set(equalities[0].flag, Value::Bool(true));
+        connected.set(equalities[1].flag, Value::Bool(true));
+        connected.set(equalities[2].flag, Value::Bool(false));
+        let requests = queue.requests(&equalities, &connected);
+        assert_eq!(
+            requests
+                .iter()
+                .map(|request| request.target_equality)
+                .collect::<Vec<_>>(),
+            vec![0, 1]
+        );
+        assert_eq!(queue.states[0], ArrayAxiomQueueState::New);
+        assert_eq!(queue.states[1], ArrayAxiomQueueState::New);
+        assert_eq!(queue.states[2], ArrayAxiomQueueState::Applied);
     }
 
     fn raw_solve_stats(arena: &mut TermArena, assertions: &[axeyum_ir::TermId]) -> RawSolveStats {
@@ -2429,6 +2822,124 @@ mod tests {
         assert_eq!(stats.rounds, 2, "stats={stats:?}");
         assert_eq!(stats.sat_candidates, 1, "stats={stats:?}");
         assert_eq!(stats.array_equality_axioms_added, 1, "stats={stats:?}");
+    }
+
+    #[test]
+    fn transitive_array_disequality_applies_cross_observations() {
+        let mut arena = TermArena::new();
+        let a = arena.array_var("dynamic_queue_a", 4, 8).unwrap();
+        let b = arena.array_var("dynamic_queue_b", 4, 8).unwrap();
+        let c = arena.array_var("dynamic_queue_c", 4, 8).unwrap();
+        let a_eq_b = arena.eq(a, b).unwrap();
+        let b_eq_c = arena.eq(b, c).unwrap();
+        let a_eq_c = arena.eq(a, c).unwrap();
+        let a_ne_c = arena.not(a_eq_c).unwrap();
+
+        let (result, stats) = dynamic_array_solve_stats(&mut arena, &[a_eq_b, b_eq_c, a_ne_c]);
+        assert_eq!(result, CheckResult::Unsat, "stats={stats:?}");
+        assert_eq!(
+            stats.cross_equality_observations_added, 2,
+            "stats={stats:?}"
+        );
+        assert_eq!(stats.array_queue_new, 2, "stats={stats:?}");
+        assert_eq!(stats.array_queue_delayed, 0, "stats={stats:?}");
+        assert_eq!(stats.array_queue_applied, 1, "stats={stats:?}");
+        assert!(stats.rounds <= 8, "stats={stats:?}");
+    }
+
+    #[test]
+    fn disconnected_array_disequality_stays_delayed_and_replays() {
+        let mut arena = TermArena::new();
+        let a = arena.array_var("dynamic_delayed_a", 4, 8).unwrap();
+        let b = arena.array_var("dynamic_delayed_b", 4, 8).unwrap();
+        let c = arena.array_var("dynamic_delayed_c", 4, 8).unwrap();
+        let d = arena.array_var("dynamic_delayed_d", 4, 8).unwrap();
+        let a_eq_b = arena.eq(a, b).unwrap();
+        let c_eq_d = arena.eq(c, d).unwrap();
+        let c_ne_d = arena.not(c_eq_d).unwrap();
+
+        let (result, stats) = dynamic_array_solve_stats(&mut arena, &[a_eq_b, c_ne_d]);
+        let CheckResult::Sat(model) = result else {
+            panic!("expected replayed SAT, stats={stats:?}");
+        };
+        let assignment = model.to_assignment();
+        assert_eq!(eval(&arena, a_eq_b, &assignment), Ok(Value::Bool(true)));
+        assert_eq!(eval(&arena, c_ne_d, &assignment), Ok(Value::Bool(true)));
+        assert_eq!(
+            stats.cross_equality_observations_added, 0,
+            "stats={stats:?}"
+        );
+        assert_eq!(stats.array_queue_new, 1, "stats={stats:?}");
+        assert_eq!(stats.array_queue_delayed, 1, "stats={stats:?}");
+        assert_eq!(stats.array_queue_applied, 0, "stats={stats:?}");
+    }
+
+    #[test]
+    fn cross_observation_path_reuses_uf_and_row_abstractions() {
+        let mut arena = TermArena::new();
+        let a = arena.array_var("dynamic_queue_store_a", 4, 8).unwrap();
+        let b = arena.array_var("dynamic_queue_store_b", 4, 8).unwrap();
+        let c = arena.array_var("dynamic_queue_store_c", 4, 8).unwrap();
+        let function = arena
+            .declare_fun(
+                "dynamic_queue_store_index",
+                &[Sort::BitVec(4)],
+                Sort::BitVec(4),
+            )
+            .unwrap();
+        let x = arena.bv_var("dynamic_queue_store_x", 4).unwrap();
+        let value = arena.bv_var("dynamic_queue_store_value", 8).unwrap();
+        let index = arena.apply(function, &[x]).unwrap();
+        let stored = arena.store(a, index, value).unwrap();
+        let stored_eq_b = arena.eq(stored, b).unwrap();
+        let b_eq_c = arena.eq(b, c).unwrap();
+        let stored_eq_c = arena.eq(stored, c).unwrap();
+        let stored_ne_c = arena.not(stored_eq_c).unwrap();
+
+        let (result, stats) =
+            dynamic_array_solve_stats(&mut arena, &[stored_eq_b, b_eq_c, stored_ne_c]);
+        assert_eq!(result, CheckResult::Unsat, "stats={stats:?}");
+        assert_eq!(
+            stats.cross_equality_observations_added, 2,
+            "stats={stats:?}"
+        );
+        assert!(stats.row_axioms_added >= 1, "stats={stats:?}");
+        assert_eq!(stats.array_queue_applied, 1, "stats={stats:?}");
+        assert!(stats.rounds <= 12, "stats={stats:?}");
+    }
+
+    #[test]
+    fn cross_observation_queue_respects_the_interface_cap() {
+        let mut arena = TermArena::new();
+        let arrays: Vec<_> = (0..40)
+            .map(|index| {
+                arena
+                    .array_var(&format!("dynamic_queue_cap_{index}"), 4, 8)
+                    .unwrap()
+            })
+            .collect();
+        let mut assertions = Vec::new();
+        for pair in arrays.windows(2) {
+            assertions.push(arena.eq(pair[0], pair[1]).unwrap());
+        }
+        for target in 20..40 {
+            let equal = arena.eq(arrays[0], arrays[target]).unwrap();
+            assertions.push(arena.not(equal).unwrap());
+        }
+
+        let (result, stats) = dynamic_array_solve_stats(&mut arena, &assertions);
+        let CheckResult::Unknown(reason) = result else {
+            panic!("expected bounded queue decline, stats={stats:?}");
+        };
+        assert_eq!(reason.kind, UnknownKind::ResourceLimit, "reason={reason:?}");
+        assert_eq!(
+            stats.cross_equality_observations_added,
+            super::MAX_INTERFACE_ATOMS,
+            "stats={stats:?}"
+        );
+        assert_eq!(stats.array_queue_new, 39, "stats={stats:?}");
+        assert_eq!(stats.array_queue_delayed, 0, "stats={stats:?}");
+        assert_eq!(stats.array_queue_applied, 20, "stats={stats:?}");
     }
 
     #[test]

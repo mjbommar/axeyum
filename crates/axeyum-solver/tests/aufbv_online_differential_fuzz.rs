@@ -25,6 +25,42 @@ fn verdict(result: &CheckResult) -> Verdict {
     }
 }
 
+fn build_cross_equality_case(
+    case: u64,
+    arena: &mut TermArena,
+    width: u32,
+    array: TermId,
+    other_array: TermId,
+    stored: TermId,
+) -> Vec<TermId> {
+    let third_array = arena.array_var("c", width, width).unwrap();
+    let fourth_array = arena.array_var("d", width, width).unwrap();
+    let arrays_equal = arena.eq(array, other_array).unwrap();
+    let other_equals_third = arena.eq(other_array, third_array).unwrap();
+    let array_equals_third = arena.eq(array, third_array).unwrap();
+    match case {
+        16 => vec![
+            arrays_equal,
+            other_equals_third,
+            arena.not(array_equals_third).unwrap(),
+        ],
+        17 => {
+            let third_equals_fourth = arena.eq(third_array, fourth_array).unwrap();
+            vec![arrays_equal, arena.not(third_equals_fourth).unwrap()]
+        }
+        18 => {
+            let stored_equals_other = arena.eq(stored, other_array).unwrap();
+            let stored_equals_third = arena.eq(stored, third_array).unwrap();
+            vec![
+                stored_equals_other,
+                other_equals_third,
+                arena.not(stored_equals_third).unwrap(),
+            ]
+        }
+        _ => vec![arrays_equal, other_equals_third, array_equals_third],
+    }
+}
+
 fn build_case(seed: u64, arena: &mut TermArena) -> Vec<TermId> {
     let width = 3 + u32::try_from(seed % 2).unwrap();
     let modulus = 1u128 << width;
@@ -87,7 +123,7 @@ fn build_case(seed: u64, arena: &mut TermArena) -> Vec<TermId> {
     let stored_self_equal = arena.eq(stored, stored).unwrap();
     let stored_self_different = arena.not(stored_self_equal).unwrap();
 
-    match seed % 16 {
+    match seed % 20 {
         0 => vec![same_xy, different_reads],
         1 => vec![different_xy, read_x_first, read_y_second],
         2 => vec![same_xy, arena.bv_ult(f_read_x, f_read_y).unwrap()],
@@ -117,7 +153,8 @@ fn build_case(seed: u64, arena: &mut TermArena) -> Vec<TermId> {
         ],
         13 => vec![stored_equals_other],
         14 => vec![stored_self_different],
-        _ => vec![arrays_different, cross_reads_equal],
+        15 => vec![arrays_different, cross_reads_equal],
+        case => build_cross_equality_case(case, arena, width, array, other_array, stored),
     }
 }
 
@@ -136,6 +173,8 @@ fn z3_verdict(seed: u64) -> Verdict {
     let first = BV::from_u64(u64::try_from(first_value).unwrap(), width);
     let second = BV::from_u64(u64::try_from(second_value).unwrap(), width);
     let other_array = Array::new_const("b", &bv_sort, &bv_sort);
+    let third_array = Array::new_const("c", &bv_sort, &bv_sort);
+    let fourth_array = Array::new_const("d", &bv_sort, &bv_sort);
     let read_x = array.select(&x).as_bv().unwrap();
     let read_y = array.select(&y).as_bv().unwrap();
     let other_read_x = other_array.select(&x).as_bv().unwrap();
@@ -166,8 +205,13 @@ fn z3_verdict(seed: u64) -> Verdict {
     let stored = array.store(&x, &first);
     let arrays_equal = array.eq(&other_array);
     let arrays_different = arrays_equal.not();
+    let other_equals_third = other_array.eq(&third_array);
+    let array_equals_third = array.eq(&third_array);
+    let array_differs_third = array_equals_third.not();
+    let third_differs_fourth = third_array.eq(&fourth_array).not();
+    let stored_differs_third = stored.eq(&third_array).not();
 
-    let assertions: Vec<Bool> = match seed % 16 {
+    let assertions: Vec<Bool> = match seed % 20 {
         0 => vec![same_xy, different_reads],
         1 => vec![different_xy, read_x.eq(&first), read_y.eq(&second)],
         2 => vec![same_xy, f_read_x.bvult(&f_read_y)],
@@ -197,7 +241,15 @@ fn z3_verdict(seed: u64) -> Verdict {
         ],
         13 => vec![stored.eq(&other_array)],
         14 => vec![stored.eq(&stored).not()],
-        _ => vec![arrays_different, read_x.eq(&other_read_x)],
+        15 => vec![arrays_different, read_x.eq(&other_read_x)],
+        16 => vec![arrays_equal, other_equals_third, array_differs_third],
+        17 => vec![arrays_equal, third_differs_fourth],
+        18 => vec![
+            stored.eq(&other_array),
+            other_equals_third,
+            stored_differs_third,
+        ],
+        _ => vec![arrays_equal, other_equals_third, array_equals_third],
     };
     let solver = Solver::new();
     for assertion in assertions {

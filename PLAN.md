@@ -3720,7 +3720,8 @@ Its conclusion, ranked by quality × efficiency:
    16-read canonical model uses default `7`, four overrides, one round, and full
    replay. The 768 comparisons stay clean and public decisions remain QF_ABV
    187/193 / QF_AUFBV 49/53 with zero disagreement/replay failures. A single
-   AUFBV PAR-2 sample moves 221→206 ms but is not a speed claim. Next:
+   AUFBV PAR-2 sample moves 221→206 ms but is not a speed claim. At that
+   checkpoint, next was:
    merge-triggered/cross-atom queue states, e-graph-class/warm model ownership,
    proof integration, and opaque-heavy arithmetic model exchange. **Twentieth
    follow-through (proof spine):** direct equal-array/select conflicts now emit
@@ -3730,9 +3731,23 @@ Its conclusion, ranked by quality × efficiency:
    rejected. `produce_evidence` carries no reduction trust step, and the
    67-family representative real-Lean gate checks the reversed artifact. This is
    ordinary select congruence, not the disequality/diff-witness direction of
-   array extensionality. Next remains merge-triggered/cross-atom queue states,
+   array extensionality. At that checkpoint, next remained
+   merge-triggered/cross-atom queue states,
    e-graph-class/warm models, full ROW/diff-witness proof logging, and
-   opaque-heavy arithmetic model exchange.
+   opaque-heavy arithmetic model exchange. **Twenty-first follow-through:** the
+   first cross-atom queue slice is live (ADR-0076). Equality obligations carry
+   deterministic `new`/`delayed`/`applied` state; a candidate-false equality
+   whose endpoints are connected by candidate-true flags schedules its own diff
+   index only along one stable shortest path. `a=b ∧ b=c ∧ a≠c` now returns
+   UNSAT with exactly two cross observations; disconnected disequalities remain
+   delayed and replay SAT; a store/UF path composes with ROW; and a stress case
+   declines after exactly 512 observations. The expanded 20-shape matrix keeps
+   all 768 comparisons clean, now 456 equality-bearing. Public decisions and
+   PAR-2 remain QF_ABV 187/193 at 84 ms and QF_AUFBV 49/53 at 206 ms, with zero
+   disagreements/replay failures. This avoids the eager cross product but still
+   rebuilds outer `CdclT` rounds. Next: live backtrackable e-graph merge hooks,
+   class-parent/multiple-path scheduling, e-graph-class/warm models, full
+   ROW/diff-witness proof logging, and opaque-heavy arithmetic model exchange.
 2. **Keep a thin measured-leaf-BFS skirt in parallel** — measured-ROI leaves only
    (NRA tail, strings-Nielsen); fold the feature/scale-blocked leaves
    (dense-ILP MILP, large-LP performance) into a funded engine phase rather than

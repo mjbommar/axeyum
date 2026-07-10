@@ -333,20 +333,20 @@ attempt is written up as an ADR documenting why not.
 - ADR for select/store, extensionality, congruence closure, model replay, and
   proof/evidence commitments before public arrays/EUF surface expands.
 
-Progress update (2026-07-09): ADR-0071 adds replay-guided base-select congruence
+Progress update (2026-07-10): ADR-0071 adds replay-guided base-select congruence
 on canonical `CdclT`; ADR-0072 reuses the shared ROW abstraction and materializes
 only candidate-violated store hit/miss axioms. Both compose with dynamic UFBV
 interfaces and function-then-array projection. Public QF_ABV/QF_AUFBV runs
-remain DISAGREE=0 with zero replay failures. This is not phase exit:
-merge-triggered queue states, cross-atom extensionality, e-graph-class model
+remain DISAGREE=0 with zero replay failures. This is not phase exit: live
+merge-triggered queue hooks, class-parent extensionality, e-graph-class model
 ownership, and the warm memory path remain.
 
 ADR-0073 adds candidate-guided array equality: one bounded diff witness per
 equality flag plus observed query/store indices, with only violated congruence or
-witness instances materialized. The 768-comparison matrix is now half
-equality-bearing and remains clean. Full phase exit still requires class-merge
-queue scheduling, cross-atom observations, scalable models, warm reuse, and
-proof integration.
+witness instances materialized. ADR-0076 expands the 768-comparison matrix to
+456 equality-bearing cases and it remains clean. Full phase exit still requires
+in-search class-merge scheduling, class-parent/alternate-path observations,
+scalable class models, warm reuse, and proof integration.
 
 ADR-0074 adds deterministic majority-default array projection shared by the
 canonical and fallback routes. Votes count distinct observed indices; stable
@@ -359,6 +359,13 @@ select conflict now emits literal SMT-LIB `select` and standard equality rules,
 checking in-tree, in Carcara, and in real Lean with no reduction trust step.
 This is select congruence, not the diff-witness direction of extensionality; ROW,
 diff-witness, equality-chain, and canonical online proof logging remain.
+
+ADR-0076 adds deterministic new/delayed/applied cross-equality state across
+canonical rounds. A false equality observes its diff index only along one
+candidate-true BFS path, closing transitive equality without eager quadratic
+preparation. Disconnected SAT stays delayed/replayed, store/UF paths compose with
+ROW, and all existing caps remain explicit. The remaining queue step is to trail
+this state inside `CdclT` and trigger it from live e-graph merges/parent selects.
 
 Implementation note: a first infosec-workflow client example landed early
 (2026-06-13), ahead of arrays — a register-VM symbolic executor over
