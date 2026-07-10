@@ -14,6 +14,9 @@ repos=(
   https://github.com/sarsko/CreuSAT
   # Rust SMT bindings
   https://github.com/prove-rs/z3.rs
+  # Symbolic execution / reverse engineering references
+  https://github.com/angr/angr
+  https://github.com/mjbommar/glaurung
   # Rewriting / e-graphs
   https://github.com/egraphs-good/egg
   https://github.com/egraphs-good/egglog
@@ -42,7 +45,8 @@ repos=(
 for url in "${repos[@]}"; do
   name="$(basename "$url")"
   if [ -d "$name" ]; then
-    echo "skip $name (exists)"
+    echo "pull $name"
+    git -C "$name" pull --ff-only --quiet || echo "FAILED: $url"
   else
     echo "clone $name"
     git clone --depth 1 --quiet "$url" "$name" || echo "FAILED: $url"

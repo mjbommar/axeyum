@@ -13,6 +13,8 @@ Axeyum. The clones themselves are gitignored; run
 | `batsat` | MiniSat-derived Rust solver; simplest adapter candidate. |
 | `CreuSAT` | Formally verified Rust SAT solver; evidence/checking reference. |
 | `z3.rs` | Z3 Rust bindings; M0 backend path and lifetime-design cautionary tale. |
+| `angr` | Symbolic execution and binary-analysis reference for CFG/path exploration. |
+| `glaurung` | Modern reverse-engineering framework reference for binary-analysis workflows. |
 | `egg` | E-graph rewriting; optional optimizer research path. |
 | `egglog` | Successor to egg; where active e-graph development moved. |
 | `carcara` | Alethe SMT proof checker in Rust; proof-checking reference. |
@@ -30,7 +32,3 @@ Axeyum. The clones themselves are gitignored; run
 | `vampire` | Leading first-order superposition prover; proving-horizon reference. |
 | `eprover` | E superposition prover; cleaner/smaller saturation architecture reference. |
 | `lean4` | Proof assistant; trusted-kernel architecture and future interop target. |
-
-Z3 itself is not cloned (very large); use the system package or the `z3.rs`
-bundled build, and the upstream repo https://github.com/Z3Prover/z3 for
-source reading.
