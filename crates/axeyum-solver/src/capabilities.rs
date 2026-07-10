@@ -233,22 +233,25 @@ pub const CAPABILITIES: &[Capability] = &[
                   original array equality on the backtrackable e-graph, and candidate-true symbol \
                   classes share one deterministic majority-default model; direct base reads are \
                   grouped by final e-class and candidate-violated cross-parent congruence is guarded \
-                  by the merge explanation; scalar UF applications in indices/elements share the \
-                  same exact BV + e-graph bus; array index and element components may each be Bool \
-                  or BitVec, with mixed shapes projected through GenericArrayValue",
+                  by the merge explanation; reads through store terms join the same parent scheduler \
+                  while lazy read-over-write remains an independent candidate obligation; scalar UF \
+                  applications in indices/elements share the same exact BV + e-graph bus; array index \
+                  and element components may each be Bool or BitVec, with mixed shapes projected \
+                  through GenericArrayValue",
         assurance: Assurance::Validated,
         evidence: "every partial round is a relaxation, so UNSAT transfers; SAT requires \
-                   function-then-array projection and original-query replay. 797 solver-lib \
-                   tests plus 1,152 array comparisons are clean: the existing 768 BV-array \
-                   comparisons and 384 Bool/mixed analytic/front-door/Z3 comparisons; \
-                   456 comparisons carry equality/disequality/store-equality/UF-index/transitive \
-                   shapes, including disjoint reads over a transitive SAT class. An 80-array/read \
-                   gate avoids the former direct-symbol equality-by-index preparation product. The \
+                   function-then-array projection and original-query replay. 802 solver-lib \
+                   tests plus 1,536 array comparisons are clean: 768 established BV-array \
+                   comparisons, 384 Bool/mixed analytic/front-door/Z3 comparisons, and 384 \
+                   structural-store eager/front-door/Z3 comparisons; the established BV belt includes \
+                   456 equality-bearing cases, and the structural belt adds same/congruent/unrelated \
+                   parents, branch/transitive paths, and UF indices. Separate 80-parent \
+                   gates avoid direct-symbol and congruent-store preparation products. The \
                    public Bool-component rows issue5925 and issue4240 move unknown→unsat/sat; \
                    DISAGREE=0 and all SAT models replay. ADR-0078's low-load 1 s aggregate baseline \
                    remains QF_ABV 187/193 and QF_AUFBV 49/53 pending a comparable remeasure; online \
                    probes use cloned arenas so fallback inputs remain pristine",
-        reference: "ADR-0071/0072/0073/0074/0077/0078/0079",
+        reference: "ADR-0071/0072/0073/0074/0077/0078/0079/0080",
     },
     Capability {
         area: "QF_UF",

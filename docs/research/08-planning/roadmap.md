@@ -393,6 +393,14 @@ and `issue4240` move unknown→unsat/sat; the expanded 1,152-comparison array be
 is clean. A low-load 1 s aggregate remeasure remains because the current host
 run moved four unrelated boundary rows to timeout under sustained I/O wait.
 
+ADR-0080 extends final-class parent scheduling from direct symbols to original
+store terms. Store reads now receive explanation-guarded select congruence while
+remaining independently subject to lazy ROW. Same-parent, congruent-parent,
+alternate-branch, unrelated-parent, UF-index, and 80-parent scaling gates pass;
+the expanded 1,536-comparison belt and all 802 solver tests are clean. Dynamic
+in-search insertion, array-valued ITE/default/UF and merge-triggered ROW events,
+non-symbol/warm models, proof integration, and the low-load aggregate remain.
+
 Implementation note: a first infosec-workflow client example landed early
 (2026-06-13), ahead of arrays — a register-VM symbolic executor over
 `IncrementalBvSolver` that forks at branches, prunes infeasible paths, and

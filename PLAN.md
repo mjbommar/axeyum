@@ -3777,9 +3777,17 @@ Its conclusion, ranked by quality × efficiency:
    all 1,152 are clean, all SAT models replay, and 797 solver tests pass. The
    current host's sustained I/O load pushed four unrelated boundary rows over
    the 1 s cap, so ADR-0078's 187/193 and 49/53 remain the last comparable
-   aggregate pending a low-load rerun. Next:
-   store/ITE/default/ROW parent events with dynamic in-search insertion,
-   store/ITE/array-valued-UF class models, warm reuse, full
+   aggregate pending a low-load rerun. **Twenty-fifth follow-through:** ADR-0080
+   extends the same explanation-guarded final-class scheduler to original store
+   parents. A store read now participates in select congruence while retaining
+   its independent lazy ROW obligation. Same-parent, congruent-parent,
+   alternate-branch, unrelated-parent, UF-index, and 80-parent scaling gates
+   pass; the new 384-comparison structural matrix brings the clean total to
+   1,536, and all 802 solver tests pass. A fresh load sample still showed four
+   blocked tasks and 13-25% I/O wait, so the comparable public aggregate remains
+   ADR-0078's baseline. Next:
+   array-valued ITE/default/UF and merge-triggered ROW events with dynamic
+   in-search insertion, store/ITE/array-valued-UF class models, warm reuse, full
    ROW/diff-witness/equality-chain proof logging, opaque-heavy arithmetic model
    exchange, and the low-load public aggregate remeasure.
 2. **Keep a thin measured-leaf-BFS skirt in parallel** — measured-ROI leaves only
