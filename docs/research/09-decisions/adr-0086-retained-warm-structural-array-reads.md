@@ -3,6 +3,10 @@
 Status: accepted
 Date: 2026-07-10
 
+Follow-up: [ADR-0087](adr-0087-candidate-triggered-retained-warm-row.md)
+replaces observation-time per-parent installation with candidate-triggered
+transitive scalar summaries. This ADR remains the ownership/admission decision.
+
 ## Context
 
 ADR-0030 requires incremental symbolic-memory queries to keep array reasoning

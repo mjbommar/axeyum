@@ -638,11 +638,11 @@ fn render_scaling(rows: &[ScaleRow]) -> String {
         "A safe contract that `SSTORE`s `n` distinct concrete slots then `SLOAD`s a \
          symbolic key — the read-over-write depth knob. Both encodings prove it \
          safe at every depth (agreement = soundness); the times show how each \
-         encoding's cost grows with chain depth. ADR-0086 retains exact structural \
-         read definitions and SAT state across checks; this table therefore measures \
-         the current observation-triggered warm definitions, not the old one-shot \
-         memory dispatcher. A slower warm column means candidate-triggered ROW \
-         activation remains necessary; it is not hidden by changing the EVM default.\n\n",
+         encoding's cost grows with chain depth. ADR-0086 retains structural read \
+         owners; ADR-0087 keeps one exact transitive scalar summary per observed \
+         read dormant until candidate violation, then installs it permanently in \
+         the warm CNF. A slower warm column measures the remaining incremental-array \
+         gap honestly; it is not hidden by changing the EVM default.\n\n",
     );
     out.push_str("| Store-chain depth | `ite`-fold | t µs | warm-array | t µs | agree |\n");
     out.push_str("|---|---|---|---|---|---|\n");

@@ -454,9 +454,20 @@ over stores, constant arrays, and array ITEs now receive exact private scalar
 definitions installed once in `IncrementalBvSolver`'s persistent CNF; scoped
 roots retract, only direct leaves project models, and original replay gates SAT.
 Exact 512-node/256-depth limits and 192 warm/check-auto/Z3 comparisons pass. The
-EVM depth sweep remains slower than frontend ITE folding, so candidate-triggered
-activation, broader warm equality/extensionality/UF, memory BMC, and proofs
-remain before phase exit.
+EVM depth sweep remains slower than frontend ITE folding, motivating ADR-0087
+below. Broader warm equality/extensionality/UF, memory BMC, and proofs remain
+before phase exit.
+
+ADR-0087 makes that retained structural boundary candidate-triggered. Each
+observed structural owner keeps one exact transitive scalar summary as dormant
+metadata; candidate-false summaries become permanent roots and resume the same
+incremental SAT instance under a shared deadline. Replayable misses can install
+zero summaries, while nested violated store chains close through one compact
+summary rather than one definition per parent. The 192-comparison matrix and
+all prior replay gates remain clean. Release EVM depth 32 improves from 30.933
+ms to 11.257 ms, but frontend ITE folding remains faster at 0.405 ms. Warm
+equality/extensionality/array-valued UF parents, the remaining performance gap,
+memory BMC, and proofs remain before phase exit.
 
 Implementation note: a first infosec-workflow client example landed early
 (2026-06-13), ahead of arrays — a register-VM symbolic executor over

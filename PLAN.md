@@ -3868,6 +3868,19 @@ Its conclusion, ranked by quality × efficiency:
    30.933 ms for observation-triggered retained definitions. Next: activate warm
    ROW definitions only after candidate violation, then warm structural equality/
    extensionality and array-valued UF parents, memory BMC/k-induction, and proofs.
+   **Thirty-second follow-through:** ADR-0087 makes retained warm ROW candidate-
+   triggered. Each observed structural read keeps one exact bounded transitive
+   scalar summary as dormant metadata; a candidate-false summary becomes a
+   permanent root in the same CNF/SAT instance under one shared deadline.
+   Replayable misses install zero summaries, nested violated store chains close
+   through one compact summary, selectors/cores remain sound, direct leaves alone
+   project, and original replay still gates SAT. The 64-seed warm/`check_auto`/Z3
+   matrix remains 192/192 clean; all 816 solver units, 77 symexec tests, and the
+   complete EVM suite pass. Design/implementation commits `c777e756`/`3977f78b`
+   are on `origin/main`. Measurement improves depth 32 from 30.933 ms to 11.257
+   ms, while ITE folding still wins at 0.405 ms and remains default. Next: warm
+   structural equality/extensionality and array-valued UF parents, then memory
+   BMC/k-induction, online array proofs, and the remaining performance gap.
 2. **Keep a thin measured-leaf-BFS skirt in parallel** — measured-ROI leaves only
    (NRA tail, strings-Nielsen); fold the feature/scale-blocked leaves
    (dense-ILP MILP, large-LP performance) into a funded engine phase rather than
@@ -3981,6 +3994,10 @@ exercises, not an unbounded fold-list.
   one-shot dispatcher. The release rerun still loses at depth 32 (0.368 ms ITE-
   fold vs 30.933 ms warm), localizing the next lever to candidate-triggered ROW
   activation rather than more frontend folding.
+  **ADR-0087 update (`c777e756`/`3977f78b`):** exact transitive scalar summaries
+  now stay dormant until a violating candidate, then persist in the same warm
+  CNF. Depth 32 improves 2.75x to 11.257 ms; ITE-fold remains faster at 0.405 ms,
+  so the default is unchanged and the remaining gap is explicit.
 
 **Forward backlog (autonomous continuation — pick the top unblocked item).**
 Each is a self-contained increment under the standing discipline below; do them

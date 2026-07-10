@@ -69,9 +69,10 @@ decomposition and bounded store/ITE/constant realization close structural total-
 model gaps without changing observed reads (ADR-0071–0085).
 `dpll_t.rs`/`dpll_lia.rs` remain arithmetic fallbacks and
 `lazy_bv.rs` drops heavy mul/div gadgets. The warm path admits a narrow symbolic
-array/UF slice and now retains exact store/constant/ITE read definitions in its
-persistent CNF (ADR-0086), but still rebuilds for general deferred theories;
-candidate-triggered warm activation and extensionality remain.
+array/UF slice and retains bounded store/constant/ITE read owners plus candidate-
+triggered exact transitive summaries in its persistent CNF (ADR-0086/0087), but
+still rebuilds for general deferred theories; warm extensionality, structural
+equality, and broader UF parents remain.
 
 ## Performance posture (real numbers)
 Two committed public QF_BV slices (SMT-LIB 2024):

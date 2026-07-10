@@ -47,21 +47,21 @@ Both storage encodings are denotation-equivalent, so **cross-encoding agreement 
 
 | Case | Shape | `ite`-fold | t µs | warm-array | t µs | agree |
 |---|---|---|---|---|---|---|
-| symbolic-storage-roundtrip-revert | symbolic-storage | bug-found | 2346 | bug-found | 3263 | yes |
-| cold-slot-load-safe | symbolic-storage | safe-proved | 128 | safe-proved | 432 | yes |
-| keccak-mapping-alias-revert | keccak-mapping | bug-found | 5150 | bug-found | 6164 | yes |
+| symbolic-storage-roundtrip-revert | symbolic-storage | bug-found | 2359 | bug-found | 2928 | yes |
+| cold-slot-load-safe | symbolic-storage | safe-proved | 150 | safe-proved | 482 | yes |
+| keccak-mapping-alias-revert | keccak-mapping | bug-found | 5189 | bug-found | 5810 | yes |
 
 ## Storage-depth scaling (warm-array vs `ite`-fold)
 
-A safe contract that `SSTORE`s `n` distinct concrete slots then `SLOAD`s a symbolic key — the read-over-write depth knob. Both encodings prove it safe at every depth (agreement = soundness); the times show how each encoding's cost grows with chain depth. ADR-0086 retains exact structural read definitions and SAT state across checks; this table therefore measures the current observation-triggered warm definitions, not the old one-shot memory dispatcher. A slower warm column means candidate-triggered ROW activation remains necessary; it is not hidden by changing the EVM default.
+A safe contract that `SSTORE`s `n` distinct concrete slots then `SLOAD`s a symbolic key — the read-over-write depth knob. Both encodings prove it safe at every depth (agreement = soundness); the times show how each encoding's cost grows with chain depth. ADR-0086 retains structural read owners; ADR-0087 keeps one exact transitive scalar summary per observed read dormant until candidate violation, then installs it permanently in the warm CNF. A slower warm column measures the remaining incremental-array gap honestly; it is not hidden by changing the EVM default.
 
 | Store-chain depth | `ite`-fold | t µs | warm-array | t µs | agree |
 |---|---|---|---|---|---|
-| 2 | safe-proved | 171 | safe-proved | 2123 | yes |
-| 4 | safe-proved | 179 | safe-proved | 3482 | yes |
-| 8 | safe-proved | 212 | safe-proved | 6360 | yes |
-| 16 | safe-proved | 259 | safe-proved | 13686 | yes |
-| 32 | safe-proved | 368 | safe-proved | 30933 | yes |
+| 2 | safe-proved | 199 | safe-proved | 1017 | yes |
+| 4 | safe-proved | 197 | safe-proved | 1343 | yes |
+| 8 | safe-proved | 234 | safe-proved | 2385 | yes |
+| 16 | safe-proved | 290 | safe-proved | 4582 | yes |
+| 32 | safe-proved | 405 | safe-proved | 11257 | yes |
 
 ## Multi-transaction invariants (A1)
 

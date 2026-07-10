@@ -64,8 +64,8 @@ Out of scope:
     equality, and nested scalar-UF use (ADR-0084). Exact array-ITE equality
     decomposition and bounded observed-read-preserving store/ITE/constant class
     realization now close the structural total-model boundary (ADR-0085).
-    Bounded warm structural ownership is retained by ADR-0086; candidate-
-    triggered activation of those exact definitions is proposed in ADR-0087.
+    Bounded warm structural ownership is retained by ADR-0086; ADR-0087 makes
+    its exact transitive summaries candidate-triggered and persistent.
     Warm equality/extensionality, nested/extended array operators, and proofs
     remain. See
     [ADR-0013](../09-decisions/adr-0013-uninterpreted-functions.md) and

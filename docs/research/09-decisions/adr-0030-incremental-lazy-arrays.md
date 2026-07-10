@@ -126,9 +126,18 @@ scalar owners whose exact definitions are installed once in the persistent CNF.
 Scoped user roots retract normally, only direct symbol leaves project models,
 and original replay gates SAT. Exact 512-node/256-depth limits and 192 warm/
 check-auto/Z3 comparisons validate the slice. This does not close the deferred
-half: the EVM measurement shows eager observation-time definitions remain slower
-than frontend ITE folding, so candidate-triggered activation, extensionality,
-broader equality/UF parents, memory BMC/k-induction, and proofs remain.
+half by itself: the EVM measurement shows eager observation-time definitions
+remain slower than frontend ITE folding.
+
+ADR-0087 follows with candidate-triggered transitive ROW summaries. Admission
+retains one exact bounded scalar summary per observed structural read; a SAT
+candidate that violates it activates the summary permanently and resumes the
+same CNF/SAT instance under one shared deadline. Default-completed replayable
+misses can activate zero summaries, and inactive pending metadata creates no
+work. Depth 32 improves from 30.933 ms to 11.257 ms, while direct ITE folding is
+still 0.405 ms. Extensionality, broader equality/UF parents, memory BMC/
+k-induction, proofs, and the remaining performance gap keep the deferred half
+open.
 
 ## Consequences
 

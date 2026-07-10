@@ -124,19 +124,20 @@ Last reconciled with `main`: 2026-06-27.
   the corpus with the memory shapes real contracts exercise, and let the
   unknown/fallback rows (not an open-ended fold list) drive which general
   capability is worth building next.
-- **Measured perf signal (updated 2026-07-10, ADR-0086):** `axeyum-evm` decides
+- **Measured perf signal (updated 2026-07-10, ADR-0087):** `axeyum-evm` decides
   symbolic storage two ways — frontend `ite`-fold vs real `select`/`store`
   arrays routed through `SymbolicMemory` + `assume_auto`. They agree on every
   row (DISAGREE=0). Supported observed store/constant/ITE reads no longer fall
-  to the one-shot dispatcher: exact private definitions and SAT state persist
-  across checks. The depth sweep nevertheless remains slower, and the gap grows
-  (depth 32: `ite`-fold 0.368 ms vs retained warm definitions 30.933 ms; both
-  prove safe). The measured cause has moved: observation-time admission eagerly
-  defines every store parent, adding more SAT structure than the direct scalar
-  fold. **Takeaway for U6:** candidate-triggered ROW activation is now the next
-  performance mechanism, followed by extensionality/equality and broader UF
-  parents. Until that wins the measured gate, frontend `ite`-fold correctly
-  remains the EVM default. Reproduce: `cargo run -p axeyum-evm --release
+  to the one-shot dispatcher: private owners and SAT state persist, while one
+  exact transitive scalar summary per observed read stays dormant until a SAT
+  candidate violates it. This improves depth 32 from ADR-0086's 30.933 ms to
+  11.257 ms (2.75x), but frontend `ite`-fold is still faster at 0.405 ms; both
+  prove safe. The rejected one-step candidate prototype measured 51.432 ms,
+  confirming that repeated resumes through every store parent are the wrong
+  granularity. **Takeaway for U6:** candidate activation pays, but the remaining
+  gap now belongs to warm summary/search reuse plus structural equality/
+  extensionality and broader UF parents. Frontend `ite`-fold correctly remains
+  the EVM default. Reproduce: `cargo run -p axeyum-evm --release
   --example measure_evm` → "Storage-depth scaling" table.
 - **What:** the original consumer pain was that `SymbolicExecutor`'s warm path
   refused active array/UF assertions and `Op::Apply` was unsupported by the
@@ -175,10 +176,11 @@ Last reconciled with `main`: 2026-06-27.
   Selected stores with conditional write indices split the same way before the
   generic symbolic ROW equality, so `select(store(a, ite(c, i, j), v), k)`
   becomes a scalar branch choice over two branch-local store/read terms.
-  ADR-0086 now preserves undecided structural reads instead of flattening them:
-  store/constant/ITE reads get exact private definitions installed once in the
-  persistent CNF, generated reads recurse to direct projected leaves, scoped
-  roots pop normally, and original replay remains mandatory.
+  ADR-0086 preserves undecided structural reads instead of flattening them;
+  ADR-0087 retains one exact transitive scalar summary per structural owner and
+  installs it permanently only after candidate violation. Direct leaves alone
+  project array models, inactive pending summaries create no work, scoped roots
+  pop normally, and original replay remains mandatory.
   Trivial scalar `ite`s exposed by memory rewrites collapse too, and the scalar
   cleanup now distributes equality over Bool/BV-valued `ite`s plus folds
   literal-distinct constant equalities, Boolean identity `ite`s, Boolean

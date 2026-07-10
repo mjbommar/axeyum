@@ -1,6 +1,6 @@
 # ADR-0087: Candidate-Triggered Retained Warm ROW
 
-Status: proposed
+Status: accepted
 Date: 2026-07-10
 
 ## Context
@@ -27,62 +27,74 @@ the deferred warm half of ADR-0030.
 
 ## Decision
 
-`IncrementalBvSolver` will retain exact structural-read definition terms at
-admission but leave them dormant until a SAT candidate violates them.
+`IncrementalBvSolver` will retain one exact transitive scalar summary for each
+observed structural read, but leave that summary dormant until a SAT candidate
+violates it.
 
 - The initial warm CNF contains scoped user roots, existing valid congruence
-  lemmas, and previously activated structural definitions. A newly retained
+  lemmas, and previously activated structural summaries. A newly retained
   structural owner is otherwise an unconstrained scalar input.
+- Admission expands the bounded store/constant/array-ITE dependency cone into
+  one scalar summary and abstracts only its direct array-symbol leaves and
+  scalar UF applications. Intermediate structural parents do not receive
+  separate CNF definitions unless they are independently observed by a user
+  root. The expansion is retained as IR metadata and is not lowered yet.
 - After SAT, reconstruction supplies every lowered private owner. Private
   owners not yet present in the AIG receive their sort's deterministic
   well-founded default, producing a total candidate extension.
-- The solver evaluates every currently active retained structural equation in
-  stable term-ID order. All equations false in that candidate are lowered and
+- The solver evaluates every currently active retained structural summary in
+  stable term-ID order. All summaries false in that candidate are lowered and
   asserted permanently as one deterministic batch. The same incremental CNF
   and BatSat instance then solve again under the same frame and one-shot
   selectors.
-- A structural equation is activated at most once. The existing 512-node and
-  256-depth admission limits remain exact; refinement performs at most 256
-  candidate-activation rounds, matching the admitted maximum dependency depth.
-  Exhausting that limit degrades to a resource `Unknown` rather than accepting
-  a partially checked model.
+- A structural summary is activated at most once. The existing 512-node and
+  256-depth admission limits remain exact; refinement performs at most 512
+  candidate-activation rounds. Exhausting that limit degrades to a resource
+  `Unknown` rather than accepting a partially checked model.
 - The user timeout becomes one absolute deadline shared by initial SAT,
   candidate evaluation, definition lowering, and every resumed SAT call. A
   resumed call receives only the remaining duration.
-- Only structural equations reachable from active frame roots or the current
+- Only structural summaries reachable from active frame roots or the current
   one-shot assumptions are checked. Definitions activated by an earlier scope
   remain harmless permanent lemmas, but inactive pending definitions do not
   create new work.
 - Array model projection remains leaf-only. A SAT result is returned only after
-  all active structural equations hold in one candidate, direct leaf arrays and
+  all active structural summaries hold in one candidate, direct leaf arrays and
   scalar function tables are projected, and every original active assertion and
   one-shot assumption replays successfully.
 
-The exact retained equations remain those of ADR-0086:
+The transitive summary is the recursive closure of the ADR-0086 equations:
 
 ```text
-r_select(const(v), j)       = v
-r_select(store(a,i,v), j)   = ite(i = j, v, r_select(a,j))
-r_select(ite(c,a,b), j)     = ite(c, r_select(a,j), r_select(b,j))
+expand(select(const(v), j))       = v
+expand(select(store(a,i,v), j))   = ite(i = j, v, expand(select(a,j)))
+expand(select(ite(c,a,b), j))     = ite(c, expand(select(a,j)),
+                                           expand(select(b,j)))
+expand(select(symbol, j))         = retained_leaf_owner(symbol, j)
 ```
+
+For observed read `t` with owner `r_t`, the one dormant equation is
+`r_t = expand(t)`. This preserves structural ownership and warm reuse while
+avoiding the repeated SAT resumes and per-parent equalities of the initial
+one-step prototype.
 
 ## Soundness Argument
 
 The initial formula is a relaxation of the exact definitional extension: fresh
 structural owners may take arbitrary scalar values. Therefore UNSAT before all
-definitions are active transfers directly to the original query. Every later
+summaries are active transfers directly to the original query. Every later
 refinement adds only a valid total array identity, so UNSAT after refinement
 also transfers and existing learned clauses remain valid.
 
 For SAT, deterministic defaults merely complete otherwise absent private
-variables for the purpose of testing equations; they are not projected as user
+variables for the purpose of testing summaries; they are not projected as user
 values. A candidate is eligible for projection only when every active retained
-equation evaluates to true under one total extension. Induction over the
-bounded structural dependency DAG then equates each observed structural owner
-with the corresponding array read. Leaf projection realizes direct array
-observations, and original-term evaluator replay remains the final acceptance
-gate. Missing defaults, failed equation evaluation, exhausted bounds, or failed
-replay cannot produce an accepted SAT result.
+summary evaluates to true under one total extension. Induction over the bounded
+expansion equates each observed structural owner with the corresponding array
+read. Leaf projection realizes direct array observations, and original-term
+evaluator replay remains the final acceptance gate. Missing defaults, failed
+equation evaluation, exhausted bounds, or failed replay cannot produce an
+accepted SAT result.
 
 Permanent activation is scope-safe because a definition constrains only a
 private owner to the denotation of its source read; it does not assert any user
@@ -90,28 +102,26 @@ root. Failed-assumption cores remain sound: a relaxed-formula core is sufficient
 for the stronger exact query, while an activated definition is unconditional
 and valid independently of every selector.
 
-## Required Validation Before Acceptance
+## Acceptance Validation
 
-- A violated store hit activates ROW and changes a relaxed SAT candidate to
-  UNSAT without rebuilding the incremental solver.
-- A satisfiable miss whose default-completed candidate already obeys ROW
-  activates zero structural definitions and replays the original array term.
-- Nested store, constant-array, array-ITE, and Bool-element cases activate only
-  candidate-false definitions and reach the same replayed verdicts as the eager
-  ADR-0086 implementation.
-- Push/pop and opposite one-shot assumptions show that activated definitions
-  persist, pending inactive definitions do not trigger work, and cores remain
-  sound.
-- Exact depth/round and node admission controls, plus a shared-deadline timeout
-  regression, degrade conservatively.
-- The existing 64-seed warm/`check_auto`/Z3 matrix remains disagreement-free,
-  with every SAT model replayed.
-- Full solver and symbolic-execution tests, EVM tests and differential fuzz,
-  strict clippy, warning-denied rustdoc, links, foundational resources, and the
-  exact-SHA pre-push gate pass.
-- The release EVM storage-depth sweep is regenerated. The result is reported
-  honestly; ITE folding remains the default unless the measured warm route wins
-  reliably enough to justify a separate policy decision.
+Accepted on 2026-07-10 in `3977f78b` after the required routes passed:
+
+- ten all-feature mechanism/differential tests cover zero-activation replayed
+  misses, violated-hit activation, transitive nested-store closure in one
+  candidate round, constant/ITE/Bool summaries, push/pop with inactive pending
+  metadata, reasserted leaf dependency closure, opposite one-shot assumptions,
+  core soundness, zero-timeout classification, and exact node/depth admission;
+- the existing eight-shape matrix over 64 seeds remains clean across warm,
+  `check_auto`, and direct Z3 routes: 192 comparisons, zero disagreements, and
+  every warm SAT model replayed;
+- all 816 solver units, 77 symbolic-execution tests, the complete EVM suite and
+  its four differential fuzz gates, strict all-target/all-feature clippy,
+  warning-denied rustdoc, links, foundational resources, and the exact-SHA
+  compile/format/corpus/unit gate pass;
+- release EVM remains DISAGREE=0 over 18 cases. At depth 32, candidate-triggered
+  transitive summaries take 11.257 ms versus ADR-0086's 30.933 ms, a 2.75x warm
+  improvement. Frontend ITE folding still wins at 0.405 ms, so the EVM default
+  correctly remains unchanged.
 
 ## Alternatives
 
@@ -120,6 +130,14 @@ and valid independently of every selector.
 Rejected as the next increment because the depth-32 measurement is roughly 84x
 slower than frontend folding after the one-shot-dispatch cost has already been
 removed.
+
+### Activate candidate-violated one-step parent equations
+
+Rejected after implementation and measurement. It is sound, but a depth-32
+UNSAT safety query eventually activates the whole chain over repeated SAT
+resumes and measured 51.432 ms, worse than ADR-0086's 30.933 ms. One transitive
+summary per observed root measured 11.257 ms and preserves the same candidate-
+triggered, permanent-valid-lemma contract.
 
 ### Guard definitions with user selectors
 
@@ -144,10 +162,12 @@ existing incremental CNF already owns.
 
 Warm structural ownership remains persistent while its semantic cost becomes
 candidate-driven. Queries that already admit a replayable default extension can
-avoid all structural definition CNF; violated paths pay only for equations that
+avoid all structural summary CNF; violated paths pay only for summaries that
 have demonstrated relevance, and that payment is reused by later checks.
 
 The final-check loop becomes multi-solve and must account for one deadline and
-an explicit round bound. Structural equality/extensionality, array-valued UF
-parents, proof logging for activated ROW, and a policy change for the EVM
-frontend remain later decisions.
+an explicit round bound. Building a transitive summary retains bounded scalar
+expansion work in the arena, but defers its expensive lowering/CNF cost and
+avoids separate intermediate owners. Structural equality/extensionality,
+array-valued UF parents, proof logging for activated ROW, and closing the
+remaining EVM performance gap remain later decisions.
