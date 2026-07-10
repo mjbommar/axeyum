@@ -33,7 +33,7 @@ const WIDE_AUFBV_DIVISION: &str = include_str!(concat!(
     "cli__regress0__unconstrained__array1.smt2"
 ));
 
-const ADMITTED_AUFBV_DIVISION: &str = r#"
+const ADMITTED_AUFBV_DIVISION: &str = r"
 (set-logic QF_AUFBV)
 (declare-fun i () (_ BitVec 16))
 (declare-fun a () (Array (_ BitVec 16) (_ BitVec 1024)))
@@ -41,7 +41,7 @@ const ADMITTED_AUFBV_DIVISION: &str = r#"
 (declare-fun y () (_ BitVec 1024))
 (assert (not (= (select a i) (bvudiv x y))))
 (check-sat)
-"#;
+";
 
 #[test]
 fn wide_aufbv_division_honors_config_timeout() {

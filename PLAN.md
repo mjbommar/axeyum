@@ -3814,7 +3814,20 @@ Its conclusion, ranked by quality × efficiency:
    and merge-triggered events requiring new e-graph terms, store/ITE/array-valued-
    UF class models, warm reuse, full ROW/diff-witness/equality-chain proof
    logging, opaque-heavy arithmetic model exchange, and the low-load public
-   aggregate remeasure.
+   aggregate remeasure. **Twenty-eighth follow-through (deadline robustness):**
+   ADR-0083 closes a measured pre-SAT cancellation hole. A 1 s public AUFBV row
+   with five BV1024 dividers had returned after 437.5 s because lowering was
+   deadline-blind. One-shot and incremental AIG construction now poll the shared
+   absolute deadline through DAG and wide-circuit loops; expiry is
+   `Unknown(Timeout)`, and canonical BV shares the cumulative conservative
+   clause estimator. The exact row now declines in 1 ms at 157,298,694 projected
+   clauses versus the 64M ceiling. A fresh nine-row cvc5-regress-clean run is 7
+   SAT / 1 encoding-budget unknown / 1 unsupported, with DISAGREE=0 and zero
+   replay failures; admitted scalar and AUFBV divider regressions exercise the
+   polling path. Commit `85e007b2` passed the exact-SHA gate. Next remains the
+   structural array target: array-valued UF/select events, cyclic function/array
+   projection, non-symbol class models, warm reuse, and online proof logging;
+   retain a broader low-load ABV/AUFBV aggregate remeasure as the measured skirt.
 2. **Keep a thin measured-leaf-BFS skirt in parallel** — measured-ROI leaves only
    (NRA tail, strings-Nielsen); fold the feature/scale-blocked leaves
    (dense-ILP MILP, large-LP performance) into a funded engine phase rather than

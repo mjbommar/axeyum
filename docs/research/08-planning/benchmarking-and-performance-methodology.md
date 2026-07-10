@@ -1,7 +1,7 @@
 # Benchmarking And Performance Methodology
 
 Status: draft
-Last updated: 2026-06-13
+Last updated: 2026-07-10
 
 ## Purpose
 
@@ -30,6 +30,9 @@ Out of scope:
   client-generated queries answer "does this matter for real workloads".
 - Wall time alone is insufficient; layer-attributed time (rewrite, lower,
   encode, SAT) is what justifies replacing a layer.
+- A configured wall-clock timeout covers the complete admitted pipeline,
+  including preprocessing, lowering, encoding, and search. A downstream solver
+  timeout is not a valid bound for an uninterruptible upstream phase.
 - PAR-2 scoring with fixed timeout (the SAT/SMT competition convention) is the
   cross-corpus comparison metric, so results are comparable to published data.
 
@@ -167,6 +170,10 @@ records the contract and the first measured baselines.
   size and SAT cost is measured before it is committed to.
 - Fixed seeds and pinned solver versions everywhere; repeated runs with
   variance reported for anything under a few seconds.
+- Timeout regressions must pin the exact pathological public or minimized query
+  and exercise both admission outcomes: deterministic oversized refusal before
+  allocation and cooperative expiry inside admitted superlinear work. Every
+  budget exhaustion remains a classified `Unknown` (ADR-0083).
 - Corpus-level parallelism is an execution accelerator, not a solver-quality
   claim by itself: artifacts must preserve deterministic file ordering and
   per-instance model replay/oracle comparison, and single-instance solver

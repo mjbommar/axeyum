@@ -1093,7 +1093,7 @@ impl<'a> LoweringBuilder<'a> {
             let multiplier_bit = rhs[i];
             let mut partial = vec![AigLit::FALSE; width];
             for j in i..width {
-                if j & 63 == 0 {
+                if j.is_multiple_of(64) {
                     self.poll_deadline()?;
                 }
                 partial[j] = self.aig.and(lhs[j - i], multiplier_bit);
@@ -1522,7 +1522,7 @@ impl<'a> LoweringBuilder<'a> {
         }
         let mut equal = AigLit::TRUE;
         for (index, (lhs, rhs)) in lhs.iter().copied().zip(rhs.iter().copied()).enumerate() {
-            if index & 63 == 0 {
+            if index.is_multiple_of(64) {
                 self.poll_deadline()?;
             }
             let bit_equal = self.aig.xor(lhs, rhs).negated();
@@ -1582,7 +1582,7 @@ impl<'a> LoweringBuilder<'a> {
         }
         let mut result = Vec::with_capacity(lhs.len());
         for (index, (lhs, rhs)) in lhs.iter().copied().zip(rhs.iter().copied()).enumerate() {
-            if index & 63 == 0 {
+            if index.is_multiple_of(64) {
                 self.poll_deadline()?;
             }
             let pair_sum = self.aig.xor(lhs, rhs);
@@ -1640,7 +1640,7 @@ impl<'a> LoweringBuilder<'a> {
         let mut less = AigLit::FALSE;
         let mut equal = AigLit::TRUE;
         for index in (0..lhs.len()).rev() {
-            if index & 63 == 0 {
+            if index.is_multiple_of(64) {
                 self.poll_deadline()?;
             }
             let lhs = lhs[index];
@@ -1749,7 +1749,7 @@ impl<'a> LoweringBuilder<'a> {
         }
         let mut result = Vec::with_capacity(lhs.len());
         for (index, (lhs, rhs)) in lhs.iter().copied().zip(rhs.iter().copied()).enumerate() {
-            if index & 63 == 0 {
+            if index.is_multiple_of(64) {
                 self.poll_deadline()?;
             }
             result.push(build(&mut self.aig, lhs, rhs));
