@@ -457,6 +457,85 @@ fn build_case(seed: u64, arena: &mut TermArena) -> Vec<TermId> {
     }
 }
 
+fn build_structural_store_parent_case(seed: u64, arena: &mut TermArena) -> Vec<TermId> {
+    let width = 3;
+    let left_array = arena.array_var("store_parent_a", width, width).unwrap();
+    let peer_array = arena.array_var("store_parent_b", width, width).unwrap();
+    let transitive_array = arena.array_var("store_parent_c", width, width).unwrap();
+    let function = arena
+        .declare_fun(
+            "store_parent_f",
+            &[Sort::BitVec(width)],
+            Sort::BitVec(width),
+        )
+        .unwrap();
+    let write_left = arena.bv_var("store_parent_x", width).unwrap();
+    let write_peer = arena.bv_var("store_parent_y", width).unwrap();
+    let read_index = arena.bv_var("store_parent_k", width).unwrap();
+    let value = arena.bv_var("store_parent_value", width).unwrap();
+    let other_value = arena.bv_var("store_parent_other_value", width).unwrap();
+    let left_function_index = arena.apply(function, &[write_left]).unwrap();
+    let peer_function_index = arena.apply(function, &[write_peer]).unwrap();
+    let left_store = arena.store(left_array, write_left, value).unwrap();
+    let peer_store_distinct = arena.store(peer_array, write_peer, other_value).unwrap();
+    let peer_store_matched = arena.store(peer_array, write_left, value).unwrap();
+    let transitive_store_matched = arena.store(transitive_array, write_left, value).unwrap();
+    let left_store_function_index = arena.store(left_array, left_function_index, value).unwrap();
+    let peer_store_function_index = arena
+        .store(peer_array, peer_function_index, other_value)
+        .unwrap();
+    let left_read = arena.select(left_store, read_index).unwrap();
+    let peer_distinct_read = arena.select(peer_store_distinct, read_index).unwrap();
+    let peer_matched_read = arena.select(peer_store_matched, read_index).unwrap();
+    let transitive_matched_read = arena.select(transitive_store_matched, read_index).unwrap();
+    let left_function_read = arena.select(left_store_function_index, read_index).unwrap();
+    let peer_function_read = arena.select(peer_store_function_index, read_index).unwrap();
+    let left_index_read = arena.select(left_store, write_left).unwrap();
+    let peer_index_read = arena.select(left_store, write_peer).unwrap();
+    let left_peer_equal = arena.eq(left_array, peer_array).unwrap();
+    let peer_transitive_equal = arena.eq(peer_array, transitive_array).unwrap();
+    let left_transitive_equal = arena.eq(left_array, transitive_array).unwrap();
+    let left_peer_distinct = arena.not(left_peer_equal).unwrap();
+    let same_indices = arena.eq(write_left, write_peer).unwrap();
+    let same_values = arena.eq(value, other_value).unwrap();
+    let store_reads_equal = arena.eq(left_read, peer_distinct_read).unwrap();
+    let store_reads_differ = arena.not(store_reads_equal).unwrap();
+    let shared_reads_equal = arena.eq(left_read, peer_matched_read).unwrap();
+    let shared_reads_differ = arena.not(shared_reads_equal).unwrap();
+    let transitive_reads_equal = arena.eq(left_read, transitive_matched_read).unwrap();
+    let transitive_reads_differ = arena.not(transitive_reads_equal).unwrap();
+    let uf_reads_equal = arena.eq(left_function_read, peer_function_read).unwrap();
+    let uf_reads_differ = arena.not(uf_reads_equal).unwrap();
+    let same_parent_reads_equal = arena.eq(left_index_read, peer_index_read).unwrap();
+    let same_parent_reads_differ = arena.not(same_parent_reads_equal).unwrap();
+    let branch = arena.or(left_peer_equal, left_transitive_equal).unwrap();
+
+    match seed % 8 {
+        0 => vec![
+            left_peer_equal,
+            same_indices,
+            same_values,
+            store_reads_differ,
+        ],
+        1 => vec![same_indices, same_parent_reads_differ],
+        2 => vec![store_reads_differ],
+        3 => vec![branch, shared_reads_differ],
+        4 => vec![
+            left_peer_equal,
+            peer_transitive_equal,
+            transitive_reads_differ,
+        ],
+        5 => vec![left_peer_equal, same_indices, same_values, uf_reads_differ],
+        6 => vec![
+            left_peer_equal,
+            same_indices,
+            same_values,
+            store_reads_equal,
+        ],
+        _ => vec![left_peer_distinct, shared_reads_equal],
+    }
+}
+
 #[cfg(feature = "z3")]
 fn z3_verdict(seed: u64) -> Verdict {
     let width = 3 + u32::try_from(seed % 2).unwrap();
@@ -557,6 +636,93 @@ fn z3_verdict(seed: u64) -> Verdict {
     }
 }
 
+#[cfg(feature = "z3")]
+fn z3_structural_store_parent_verdict(seed: u64) -> Verdict {
+    let width = 3;
+    let bv_sort = Z3Sort::bitvector(width);
+    let left_array = Array::new_const("store_parent_a", &bv_sort, &bv_sort);
+    let peer_array = Array::new_const("store_parent_b", &bv_sort, &bv_sort);
+    let transitive_array = Array::new_const("store_parent_c", &bv_sort, &bv_sort);
+    let function = FuncDecl::new("store_parent_f", &[&bv_sort], &bv_sort);
+    let write_left = BV::new_const("store_parent_x", width);
+    let write_peer = BV::new_const("store_parent_y", width);
+    let read_index = BV::new_const("store_parent_k", width);
+    let value = BV::new_const("store_parent_value", width);
+    let other_value = BV::new_const("store_parent_other_value", width);
+    let left_function_index = function.apply(&[&write_left]).as_bv().unwrap();
+    let peer_function_index = function.apply(&[&write_peer]).as_bv().unwrap();
+    let left_store = left_array.store(&write_left, &value);
+    let peer_store_distinct = peer_array.store(&write_peer, &other_value);
+    let peer_store_matched = peer_array.store(&write_left, &value);
+    let transitive_store_matched = transitive_array.store(&write_left, &value);
+    let left_store_function_index = left_array.store(&left_function_index, &value);
+    let peer_store_function_index = peer_array.store(&peer_function_index, &other_value);
+    let left_read = left_store.select(&read_index).as_bv().unwrap();
+    let peer_distinct_read = peer_store_distinct.select(&read_index).as_bv().unwrap();
+    let peer_matched_read = peer_store_matched.select(&read_index).as_bv().unwrap();
+    let transitive_matched_read = transitive_store_matched
+        .select(&read_index)
+        .as_bv()
+        .unwrap();
+    let left_function_read = left_store_function_index
+        .select(&read_index)
+        .as_bv()
+        .unwrap();
+    let peer_function_read = peer_store_function_index
+        .select(&read_index)
+        .as_bv()
+        .unwrap();
+    let left_index_read = left_store.select(&write_left).as_bv().unwrap();
+    let peer_index_read = left_store.select(&write_peer).as_bv().unwrap();
+    let left_peer_equal = left_array.eq(&peer_array);
+    let peer_transitive_equal = peer_array.eq(&transitive_array);
+    let left_transitive_equal = left_array.eq(&transitive_array);
+    let same_indices = write_left.eq(&write_peer);
+    let same_values = value.eq(&other_value);
+
+    let assertions = match seed % 8 {
+        0 => vec![
+            left_peer_equal,
+            same_indices,
+            same_values,
+            left_read.eq(&peer_distinct_read).not(),
+        ],
+        1 => vec![same_indices, left_index_read.eq(&peer_index_read).not()],
+        2 => vec![left_read.eq(&peer_distinct_read).not()],
+        3 => vec![
+            Bool::or(&[left_peer_equal, left_transitive_equal]),
+            left_read.eq(&peer_matched_read).not(),
+        ],
+        4 => vec![
+            left_peer_equal,
+            peer_transitive_equal,
+            left_read.eq(&transitive_matched_read).not(),
+        ],
+        5 => vec![
+            left_peer_equal,
+            same_indices,
+            same_values,
+            left_function_read.eq(&peer_function_read).not(),
+        ],
+        6 => vec![
+            left_peer_equal,
+            same_indices,
+            same_values,
+            left_read.eq(&peer_distinct_read),
+        ],
+        _ => vec![left_peer_equal.not(), left_read.eq(&peer_matched_read)],
+    };
+    let solver = Solver::new();
+    for assertion in assertions {
+        solver.assert(&assertion);
+    }
+    match solver.check() {
+        SatResult::Sat => Verdict::Sat,
+        SatResult::Unsat => Verdict::Unsat,
+        SatResult::Unknown => Verdict::Unknown,
+    }
+}
+
 #[test]
 fn finite_scalar_arrays_match_analytic_oracle_and_front_door() {
     for seed in 0..128 {
@@ -611,6 +777,78 @@ fn finite_scalar_arrays_match_z3_matrix() {
             verdict(&online),
             z3,
             "online/Z3 disagreement at finite scalar seed {seed}: online={online:?}, z3={z3:?}"
+        );
+    }
+}
+
+#[test]
+fn structural_store_parents_match_eager_and_front_door() {
+    for seed in 0..128 {
+        let mut eager_arena = TermArena::new();
+        let eager_assertions = build_structural_store_parent_case(seed, &mut eager_arena);
+        let eager = check_with_arrays_and_functions(
+            &mut SatBvBackend::new(),
+            &mut eager_arena,
+            &eager_assertions,
+            &SolverConfig::default(),
+        )
+        .unwrap();
+        assert_ne!(
+            verdict(&eager),
+            Verdict::Unknown,
+            "eager structural-store seed {seed}: {eager:?}"
+        );
+
+        let mut online_arena = TermArena::new();
+        let online_assertions = build_structural_store_parent_case(seed, &mut online_arena);
+        let online = check_qf_aufbv_online_cdclt(
+            &mut online_arena,
+            &online_assertions,
+            &SolverConfig::default(),
+        )
+        .unwrap();
+        assert_eq!(
+            verdict(&online),
+            verdict(&eager),
+            "online/eager structural-store disagreement at seed {seed}: online={online:?}, eager={eager:?}"
+        );
+        assert_sat_replays(&online_arena, &online_assertions, &online, seed);
+
+        let mut front_arena = TermArena::new();
+        let front_assertions = build_structural_store_parent_case(seed, &mut front_arena);
+        let front = check_auto(
+            &mut front_arena,
+            &front_assertions,
+            &SolverConfig::default(),
+        )
+        .unwrap();
+        assert_eq!(
+            verdict(&front),
+            verdict(&eager),
+            "front-door/eager structural-store disagreement at seed {seed}: front={front:?}, eager={eager:?}"
+        );
+        assert_sat_replays(&front_arena, &front_assertions, &front, seed);
+    }
+}
+
+#[cfg(feature = "z3")]
+#[test]
+fn structural_store_parents_match_z3_matrix() {
+    for seed in 0..128 {
+        let mut online_arena = TermArena::new();
+        let online_assertions = build_structural_store_parent_case(seed, &mut online_arena);
+        let online = check_qf_aufbv_online_cdclt(
+            &mut online_arena,
+            &online_assertions,
+            &SolverConfig::default(),
+        )
+        .unwrap();
+        let z3 = z3_structural_store_parent_verdict(seed);
+
+        assert_eq!(
+            verdict(&online),
+            z3,
+            "online/Z3 structural-store disagreement at seed {seed}: online={online:?}, z3={z3:?}"
         );
     }
 }

@@ -2137,6 +2137,8 @@ pub(crate) enum RowKind {
     /// `select(store(_, store_index, store_elem), index)`; `inner` is the
     /// already-abstracted scalar expression for `select(base', index)`.
     Store {
+        /// The original `store` term that is this read's array parent.
+        parent: TermId,
         store_index: TermId,
         store_elem: TermId,
         inner: TermId,
@@ -2310,6 +2312,7 @@ impl RowCtx {
                     return Ok(None);
                 };
                 let kind = RowKind::Store {
+                    parent: base,
                     store_index,
                     store_elem,
                     inner,
@@ -2862,6 +2865,7 @@ fn row_violated(
         store_index,
         store_elem,
         inner,
+        ..
     } = &site.kind
     else {
         return Ok(false);
@@ -2888,6 +2892,7 @@ fn row_axiom_lemma(arena: &mut TermArena, ctx: &RowCtx, idx: usize) -> Result<Te
         store_index,
         store_elem,
         inner,
+        ..
     } = site.kind
     else {
         return Err(SolverError::Backend(

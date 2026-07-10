@@ -22,8 +22,8 @@
 //!
 //! The first round is the function-free relaxation. A SAT candidate is scanned for
 //! same-function applications with equal argument values and unequal result values,
-//! plus base-array selects whose parents share a final e-class and whose equal
-//! indices have unequal results, and store-read sites whose result violates
+//! plus base- or store-parent selects whose parents share a final e-class and
+//! whose equal indices have unequal results, and store-read sites whose result violates
 //! read-over-write, plus equality flags inconsistent with an observed read or diff
 //! witness. Array flags retain their original array equality as the EUF atom, so
 //! equality transitivity and congruence are handled directly by the live
@@ -106,7 +106,6 @@ struct CombinedApplication {
 
 #[derive(Debug, Clone)]
 struct CombinedSelect {
-    array: SymbolId,
     array_term: TermId,
     original_index: TermId,
     rewritten_index: TermId,
@@ -275,6 +274,7 @@ struct InterfaceRefinementStats {
     function_pairs_added: usize,
     array_pairs_added: usize,
     parent_select_pairs_added: usize,
+    store_parent_select_pairs_added: usize,
     row_axioms_added: usize,
     array_equality_axioms_added: usize,
     max_interface_atoms: usize,
@@ -854,7 +854,18 @@ fn build_and_solve_with_stats_impl(
                     }
                     let pair = (axiom.left, axiom.right);
                     if materialized_arrays.insert(axiom.clone()) {
-                        if prepared.selects[pair.0].array != prepared.selects[pair.1].array {
+                        if matches!(
+                            arena.node(prepared.selects[pair.0].array_term),
+                            TermNode::App { op: Op::Store, .. }
+                        ) || matches!(
+                            arena.node(prepared.selects[pair.1].array_term),
+                            TermNode::App { op: Op::Store, .. }
+                        ) {
+                            stats.store_parent_select_pairs_added += 1;
+                        }
+                        if prepared.selects[pair.0].array_term
+                            != prepared.selects[pair.1].array_term
+                        {
                             stats.parent_select_pairs_added += 1;
                         }
                         array_pairs.push(axiom);
@@ -1090,10 +1101,11 @@ fn prepare_array_roots(
         roots.push(site.index);
         match site.kind {
             RowKind::Store {
+                parent,
                 store_index,
                 store_elem,
                 inner,
-            } => roots.extend([store_index, store_elem, inner]),
+            } => roots.extend([parent, store_index, store_elem, inner]),
             RowKind::Const { value } => roots.push(value),
             RowKind::Var { .. } => {}
         }
@@ -1130,7 +1142,6 @@ fn combine_row_sites(
             RowKind::Var { array } => {
                 let array_term = arena.var(array);
                 selects.push(CombinedSelect {
-                    array,
                     array_term,
                     original_index: site.index,
                     rewritten_index,
@@ -1138,21 +1149,35 @@ fn combine_row_sites(
                 });
             }
             RowKind::Store {
+                parent,
                 store_index,
                 store_elem,
                 inner,
-            } => stores.push(CombinedRowStore {
-                original: site.clone(),
-                rewritten_index,
-                rewritten_store_index: replace_subterms(
-                    arena,
-                    store_index,
-                    replacements,
-                    &mut memo,
-                )?,
-                rewritten_store_elem: replace_subterms(arena, store_elem, replacements, &mut memo)?,
-                rewritten_inner: replace_subterms(arena, inner, replacements, &mut memo)?,
-            }),
+            } => {
+                selects.push(CombinedSelect {
+                    array_term: parent,
+                    original_index: site.index,
+                    rewritten_index,
+                    fresh: site.fresh,
+                });
+                stores.push(CombinedRowStore {
+                    original: site.clone(),
+                    rewritten_index,
+                    rewritten_store_index: replace_subterms(
+                        arena,
+                        store_index,
+                        replacements,
+                        &mut memo,
+                    )?,
+                    rewritten_store_elem: replace_subterms(
+                        arena,
+                        store_elem,
+                        replacements,
+                        &mut memo,
+                    )?,
+                    rewritten_inner: replace_subterms(arena, inner, replacements, &mut memo)?,
+                });
+            }
             RowKind::Const { .. } => {}
         }
     }
@@ -1775,6 +1800,7 @@ fn add_row_axiom_atoms(
             store_index,
             store_elem,
             inner,
+            ..
         } = store.original.kind
         else {
             return Err(BuildFailure::Error(SolverError::Backend(
@@ -2582,6 +2608,171 @@ mod tests {
         assert_eq!(stats.rounds, 2, "stats={stats:?}");
         assert_eq!(stats.sat_candidates, 1, "stats={stats:?}");
         assert_eq!(stats.parent_select_pairs_added, 1, "stats={stats:?}");
+        assert_eq!(stats.array_equality_axioms_added, 0, "stats={stats:?}");
+    }
+
+    #[test]
+    fn congruent_store_parents_schedule_select_congruence() {
+        let mut arena = TermArena::new();
+        let left = arena.array_var("dynamic_store_parent_left", 4, 8).unwrap();
+        let right = arena.array_var("dynamic_store_parent_right", 4, 8).unwrap();
+        let left_index = arena.bv_var("dynamic_store_parent_left_index", 4).unwrap();
+        let right_index = arena.bv_var("dynamic_store_parent_right_index", 4).unwrap();
+        let left_value = arena.bv_var("dynamic_store_parent_left_value", 8).unwrap();
+        let right_value = arena.bv_var("dynamic_store_parent_right_value", 8).unwrap();
+        let read_index = arena.bv_var("dynamic_store_parent_read_index", 4).unwrap();
+        let left_store = arena.store(left, left_index, left_value).unwrap();
+        let right_store = arena.store(right, right_index, right_value).unwrap();
+        let left_read = arena.select(left_store, read_index).unwrap();
+        let right_read = arena.select(right_store, read_index).unwrap();
+        let same_arrays = arena.eq(left, right).unwrap();
+        let same_write_index = arena.eq(left_index, right_index).unwrap();
+        let same_write_value = arena.eq(left_value, right_value).unwrap();
+        let same_reads = arena.eq(left_read, right_read).unwrap();
+        let different_reads = arena.not(same_reads).unwrap();
+
+        let (result, stats) = dynamic_array_solve_stats(
+            &mut arena,
+            &[
+                same_arrays,
+                same_write_index,
+                same_write_value,
+                different_reads,
+            ],
+        );
+
+        assert_eq!(result, CheckResult::Unsat, "stats={stats:?}");
+        assert_eq!(stats.rounds, 2, "stats={stats:?}");
+        assert_eq!(stats.store_parent_select_pairs_added, 1, "stats={stats:?}");
+        assert_eq!(stats.parent_select_pairs_added, 1, "stats={stats:?}");
+        assert_eq!(stats.array_equality_axioms_added, 0, "stats={stats:?}");
+    }
+
+    #[test]
+    fn one_store_parent_schedules_equal_candidate_indices() {
+        let mut arena = TermArena::new();
+        let array = arena.array_var("dynamic_same_store_parent", 4, 8).unwrap();
+        let write_index = arena.bv_var("dynamic_same_store_write_index", 4).unwrap();
+        let value = arena.bv_var("dynamic_same_store_parent_value", 8).unwrap();
+        let left_index = arena.bv_var("dynamic_same_store_left_index", 4).unwrap();
+        let right_index = arena.bv_var("dynamic_same_store_right_index", 4).unwrap();
+        let stored = arena.store(array, write_index, value).unwrap();
+        let left_read = arena.select(stored, left_index).unwrap();
+        let right_read = arena.select(stored, right_index).unwrap();
+        let same_indices = arena.eq(left_index, right_index).unwrap();
+        let same_reads = arena.eq(left_read, right_read).unwrap();
+        let different_reads = arena.not(same_reads).unwrap();
+
+        let (result, stats) =
+            dynamic_array_solve_stats(&mut arena, &[same_indices, different_reads]);
+
+        assert_eq!(result, CheckResult::Unsat, "stats={stats:?}");
+        assert_eq!(stats.rounds, 2, "stats={stats:?}");
+        assert_eq!(stats.store_parent_select_pairs_added, 1, "stats={stats:?}");
+        assert_eq!(stats.parent_select_pairs_added, 0, "stats={stats:?}");
+    }
+
+    #[test]
+    fn store_parent_axiom_is_guarded_across_array_branches() {
+        let mut arena = TermArena::new();
+        let a = arena.array_var("dynamic_store_guard_a", 4, 8).unwrap();
+        let b = arena.array_var("dynamic_store_guard_b", 4, 8).unwrap();
+        let c = arena.array_var("dynamic_store_guard_c", 4, 8).unwrap();
+        let write_index = arena.bv_const(4, 0).unwrap();
+        let read_index = arena.bv_const(4, 1).unwrap();
+        let value = arena.bv_const(8, 9).unwrap();
+        let stored_a = arena.store(a, write_index, value).unwrap();
+        let stored_b = arena.store(b, write_index, value).unwrap();
+        let read_a = arena.select(stored_a, read_index).unwrap();
+        let read_b = arena.select(stored_b, read_index).unwrap();
+        let a_eq_b = arena.eq(a, b).unwrap();
+        let a_eq_c = arena.eq(a, c).unwrap();
+        let choice = arena.or(a_eq_b, a_eq_c).unwrap();
+        let same_reads = arena.eq(read_a, read_b).unwrap();
+        let different_reads = arena.not(same_reads).unwrap();
+
+        let (result, stats) = dynamic_array_solve_stats(&mut arena, &[choice, different_reads]);
+        let CheckResult::Sat(model) = result else {
+            panic!("expected alternate array branch SAT, stats={stats:?}");
+        };
+        let assignment = model.to_assignment();
+
+        assert_eq!(eval(&arena, choice, &assignment), Ok(Value::Bool(true)));
+        assert_eq!(
+            eval(&arena, different_reads, &assignment),
+            Ok(Value::Bool(true))
+        );
+        assert_eq!(eval(&arena, a_eq_b, &assignment), Ok(Value::Bool(false)));
+        assert_eq!(eval(&arena, a_eq_c, &assignment), Ok(Value::Bool(true)));
+        assert!(
+            stats.store_parent_select_pairs_added >= 1,
+            "stats={stats:?}"
+        );
+    }
+
+    #[test]
+    fn unrelated_store_parents_remain_replayable() {
+        let mut arena = TermArena::new();
+        let left = arena
+            .array_var("dynamic_store_unrelated_left", 4, 8)
+            .unwrap();
+        let right = arena
+            .array_var("dynamic_store_unrelated_right", 4, 8)
+            .unwrap();
+        let write_index = arena.bv_const(4, 0).unwrap();
+        let read_index = arena.bv_const(4, 1).unwrap();
+        let value = arena.bv_const(8, 9).unwrap();
+        let left_store = arena.store(left, write_index, value).unwrap();
+        let right_store = arena.store(right, write_index, value).unwrap();
+        let left_read = arena.select(left_store, read_index).unwrap();
+        let right_read = arena.select(right_store, read_index).unwrap();
+        let same_reads = arena.eq(left_read, right_read).unwrap();
+        let different_reads = arena.not(same_reads).unwrap();
+
+        let (result, stats) = dynamic_array_solve_stats(&mut arena, &[different_reads]);
+        let CheckResult::Sat(model) = result else {
+            panic!("expected unrelated stores to replay SAT, stats={stats:?}");
+        };
+
+        assert_eq!(
+            eval(&arena, different_reads, &model.to_assignment()),
+            Ok(Value::Bool(true))
+        );
+        assert_eq!(stats.store_parent_select_pairs_added, 0, "stats={stats:?}");
+    }
+
+    #[test]
+    fn congruent_store_parents_do_not_prepare_a_cross_product() {
+        let mut arena = TermArena::new();
+        let arrays: Vec<_> = (0..80)
+            .map(|index| {
+                arena
+                    .array_var(&format!("dynamic_store_scale_{index}"), 8, 8)
+                    .unwrap()
+            })
+            .collect();
+        let zero = arena.bv_const(8, 0).unwrap();
+        let write_index = arena.bv_const(8, 255).unwrap();
+        let mut assertions = Vec::new();
+        for pair in arrays.windows(2) {
+            assertions.push(arena.eq(pair[0], pair[1]).unwrap());
+        }
+        for (index, &array) in arrays.iter().enumerate() {
+            let index = arena.bv_const(8, index as u128).unwrap();
+            let base_read = arena.select(array, index).unwrap();
+            let stored = arena.store(array, write_index, zero).unwrap();
+            let stored_read = arena.select(stored, index).unwrap();
+            assertions.push(arena.eq(base_read, zero).unwrap());
+            assertions.push(arena.eq(stored_read, zero).unwrap());
+        }
+
+        let (result, stats) = dynamic_array_solve_stats(&mut arena, &assertions);
+
+        assert!(matches!(result, CheckResult::Sat(_)), "stats={stats:?}");
+        assert_eq!(stats.rounds, 1, "stats={stats:?}");
+        assert_eq!(stats.store_parent_select_pairs_added, 0, "stats={stats:?}");
+        assert_eq!(stats.parent_select_pairs_added, 0, "stats={stats:?}");
+        assert_eq!(stats.row_axioms_added, 0, "stats={stats:?}");
         assert_eq!(stats.array_equality_axioms_added, 0, "stats={stats:?}");
     }
 
