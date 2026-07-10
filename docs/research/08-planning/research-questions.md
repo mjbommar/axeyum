@@ -68,9 +68,10 @@ Out of scope:
     its exact transitive summaries candidate-triggered and persistent. ADR-0088
     retains scalar-keyed array-valued UF application parents, conditional read
     congruence, and full-value result projection on the same warm path. Warm
-    projection-owned equality and exact structural diff witnesses are proposed
-    in ADR-0089. Positive structural equality, arbitrary Boolean relation flags,
-    array-valued parameters, nested/extended array operators, and proofs remain.
+    projection-owned equality and exact structural diff witnesses now stay warm
+    under ADR-0089. Positive structural equality, arbitrary Boolean relation
+    flags, array-valued parameters, nested/extended array operators, and proofs
+    remain.
     See
     [ADR-0013](../09-decisions/adr-0013-uninterpreted-functions.md) and
     [ADR-0084](../09-decisions/adr-0084-array-valued-uf-results-on-the-canonical-array-bus.md),

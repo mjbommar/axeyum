@@ -3896,6 +3896,21 @@ Its conclusion, ranked by quality × efficiency:
    Next: warm structural equality/extensionality and array-valued parameters,
    then memory BMC/k-induction, online array proofs, and the remaining
    performance gap.
+   **Thirty-fourth follow-through:** ADR-0089 adds retained warm array
+   relations without approximating structural equality. Positive equality
+   accepts direct symbols and scalar-keyed array-result UFs, tracks applications
+   independently of reads, merges projection classes before function-table
+   construction, hides private owners, and replays. Top-level disequality over
+   symbol/store/constant/ITE/application parents introduces one private BV diff
+   index and two exact retained reads, so ADR-0087 summaries supply structural
+   semantics on demand. Eight default/nine all-feature mechanism/differential
+   tests add 192 warm/`check_auto`/Z3 comparisons with zero disagreement; all
+   816 solver units, 77 symexec tests, the ADR-0088 suite, and complete EVM gates
+   pass. Design/implementation commits `d891c901`/`70c8a15c` are on
+   `origin/main`. EVM has no whole-array relation root, so no timing change is
+   claimed. Next: positive warm structural equality and Boolean relation flags,
+   then array-valued parameters, memory BMC/k-induction, online proofs, and the
+   remaining performance gap.
 2. **Keep a thin measured-leaf-BFS skirt in parallel** — measured-ROI leaves only
    (NRA tail, strings-Nielsen); fold the feature/scale-blocked leaves
    (dense-ILP MILP, large-LP performance) into a funded engine phase rather than

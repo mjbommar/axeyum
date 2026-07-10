@@ -747,11 +747,14 @@ depth 32 improves from 30.933 ms to 11.257 ms, though ITE folding still wins at
 conditional argument/index congruence constrains private reads, and concrete-
 equal tuples merge into full-value function results before private-owner
 filtering and replay. Its 192 warm/`check_auto`/Z3 comparisons are clean; the EVM
-corpus has no array-result UF, so it adds no timing claim. This is not the final
-warm lazy-array/UF engine: deferred theory checks still rebuild through
-`check_auto`, and warm extensionality/structural equality, array-valued
-parameters, proofs, a real small-target lifter, and an emulator library remain
-Track 4 work.
+corpus has no array-result UF, so it adds no timing claim. ADR-0089 then merges
+projection-owned positive equality before function construction and reduces top-
+level disequality over supported structural parents to one private diff index
+plus two exact retained reads. Its additional 192 comparisons are clean, and
+EVM has no whole-array relation root. This is not the final warm lazy-array/UF
+engine: deferred theory checks still rebuild through `check_auto`, and positive
+structural equality, Boolean relation flags, array-valued parameters, proofs, a
+real small-target lifter, and an emulator library remain Track 4 work.
 
 The wide-BV overflow path now has a targeted word-level encoding improvement:
 `bvumulo(a,b)` is built as `a > (all_ones / b)` at width `w` instead of by

@@ -479,6 +479,15 @@ Warm structural equality/extensionality, array-valued parameters, nested/
 extended arrays, memory BMC, and proofs remain before phase exit. The EVM corpus
 does not exercise array-valued UFs, so no performance change is claimed here.
 
+ADR-0089 adds retained warm array relations. Positive equality merges direct or
+array-result-UF projection owners before function construction; top-level
+disequality over symbol/store/constant/ITE/application parents receives one
+private diff index whose two reads reuse candidate-triggered summaries. Eight
+default/nine all-feature gates and 192 warm/`check_auto`/Z3 comparisons pass.
+Positive structural equality, Boolean relation flags, array-valued parameters,
+memory BMC, and proofs remain. The EVM corpus has no whole-array relation root,
+so this increment makes no timing claim.
+
 Implementation note: a first infosec-workflow client example landed early
 (2026-06-13), ahead of arrays — a register-VM symbolic executor over
 `IncrementalBvSolver` that forks at branches, prunes infeasible paths, and

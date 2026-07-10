@@ -145,6 +145,14 @@ comparison warm/`check_auto`/Z3 matrix validate this slice. Extensionality,
 structural equality, array-valued parameters, memory BMC/k-induction, proofs,
 and the remaining performance gap keep the deferred half open.
 
+ADR-0089 adds the first exact warm extensionality relation. Positive equality
+merges direct/application projection owners before function construction; top-
+level disequality over symbol/store/constant/ITE/application parents introduces
+one private diff index and two retained reads. A 192-comparison warm/
+`check_auto`/Z3 matrix validates the slice. Positive structural equality,
+Boolean relation flags, array-valued parameters, memory BMC/k-induction, proofs,
+and the performance gap keep the deferred half open.
+
 ## Consequences
 
 - *Easier:* symbolic execution / reachability over memory becomes a warm,

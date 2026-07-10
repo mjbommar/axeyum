@@ -1,6 +1,6 @@
 # ADR-0089: Retained Warm Array Relations and Diff Witnesses
 
-Status: proposed
+Status: accepted
 Date: 2026-07-10
 
 ## Context
@@ -119,28 +119,28 @@ without solving store/ITE equations can change structural semantics. Missing
 owners, inconsistent merges, exhausted limits/deadlines, or replay uncertainty
 therefore cannot yield an accepted verdict.
 
-## Required Validation Before Acceptance
+## Acceptance Validation
 
-- `f(x) = a`, `f(x) = g(y)`, and equality with no pre-existing reads project
-  full-value function results, hide private owners, and replay.
-- Projection-owned equality refutes same-index conflicting reads, including
-  reads asserted before the equality and equality chains mixing symbols/apps.
-- Symbol/application disequality returns a concrete replayed diff witness; self-
-  disequality refutes.
+- Eight default-feature and nine all-feature focused tests cover no-read
+  `f(x) = g(y)` function projection, symbol/application equality, equality
+  chains over reads asserted first, private diff-witness projection, self-
+  disequality, push/pop, one-shot cores, and private-owner filtering.
 - Store, constant-array, and array-ITE disequalities compose with candidate-
-  triggered structural summaries, including Bool elements and BV256 indices or
-  elements.
-- Push/pop and opposite one-shot relation assumptions scope roots, projection
-  participation, and user-facing cores correctly.
-- Unsupported sorts/signatures, positive structural equality, nested Boolean
-  relation use, and exact one-over structural/application limits defer without
-  partial warm state.
-- A deterministic 64-seed warm/`check_auto`/direct-Z3 matrix covers positive
-  symbol/application equality, disequality, stores, ITEs, Bool values, and
-  congruence with zero disagreement and original replay for every warm SAT.
-- All solver and symbolic-execution tests, EVM tests/fuzz, strict clippy,
-  warning-denied rustdoc, links, foundational resources, and exact-SHA push
-  gates pass.
+  triggered summaries. Bool elements and BV256 index/element values replay.
+- Positive structural equality and nested Boolean relation use defer before
+  mutation. Depth 256 is admitted while 257 defers with zero diff witnesses;
+  ADR-0088's exact 64/65 application-parent regression remains green.
+- A deterministic 64-seed matrix contributes 64 warm, 64 `check_auto`, and 64
+  direct-Z3 comparisons. All 192 agree, and every warm SAT model replays every
+  original relation and scalar assertion.
+- All 816 solver unit tests, 77 symbolic-execution tests, the ten-test retained
+  array-result-UF suite, and the complete EVM test/fuzz suite pass. The EVM
+  corpus does not construct whole-array relation roots, so no timing change is
+  claimed.
+- Strict solver/EVM clippy, warning-denied solver/EVM rustdoc, documentation
+  links, foundational-resource generation, and exact-SHA push gates pass.
+  Design commit `d891c901` and implementation commit `70c8a15c` are on
+  `origin/main`.
 
 ## Alternatives
 

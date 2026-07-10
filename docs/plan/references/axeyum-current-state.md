@@ -31,7 +31,7 @@ Total src ≈ 48k (≈63k with tests); 57 test files. Largest solver modules:
 | QF_BV (full scalar, ≤2¹⁶) | validated | replay + differential vs Z3 |
 | QF_BV UNSAT (DRAT) | **checked** | `check_drat`; `UnsatProof::recheck` |
 | QF_BV end-to-end (miter) | **checked** | exhaustive bit-blast faithfulness miter + DRAT, modulo independent reference |
-| QF_ABV / QF_UF / QF_AUFBV | validated | canonical e-graph/BV refinement + replay, including original array equalities, explanation-guarded base/store-parent select scheduling, same-search ROW plus dynamically appended UF/select/extensionality scalar interfaces, shared direct-symbol class models, Bool/BitVec component combinations, finite-scalar array-valued UF results with array-first/function-second projection, bounded structural store/ITE/constant class equations, and retained scalar-keyed warm array-result parents (ADR-0071–0088); eager certifying fallback; direct equal-array select congruence checked in-tree/Carcara/Lean (ADR-0075); broader UNSAT DRAT **modulo trusted reduction** |
+| QF_ABV / QF_UF / QF_AUFBV | validated | canonical e-graph/BV refinement + replay, including original array equalities, explanation-guarded base/store-parent select scheduling, same-search ROW plus dynamically appended UF/select/extensionality scalar interfaces, shared direct-symbol class models, Bool/BitVec component combinations, finite-scalar array-valued UF results with array-first/function-second projection, bounded structural store/ITE/constant class equations, retained scalar-keyed warm array-result parents, and projection equality/exact structural diff witnesses (ADR-0071–0089); eager certifying fallback; direct equal-array select congruence checked in-tree/Carcara/Lean (ADR-0075); broader UNSAT DRAT **modulo trusted reduction** |
 | QF_LRA (exact-rational) | **checked** | Farkas + exact model |
 | QF_LIA / QF_LIRA | validated | replay; bounded UNSAT DRAT at chosen width |
 | QF_NRA/NIA | sound-incomplete | replay (SAT), relaxation-unsat, else `unknown` |
@@ -73,8 +73,10 @@ array/UF slice and retains store/constant/ITE read owners plus candidate-
 triggered exact transitive summaries in its persistent CNF (ADR-0086/0087).
 Scalar-keyed array-valued UF applications also retain private array owners,
 conditional read congruence, and full-value result projection (ADR-0088). The
-solver still rebuilds for general deferred theories; warm extensionality,
-structural equality, and array-valued parameters remain.
+warm path now merges projection-owned positive equality and gives top-level
+structural disequality one exact private diff witness (ADR-0089). The solver
+still rebuilds for general deferred theories; positive structural equality,
+Boolean relation flags, and array-valued parameters remain.
 
 ## Performance posture (real numbers)
 Two committed public QF_BV slices (SMT-LIB 2024):

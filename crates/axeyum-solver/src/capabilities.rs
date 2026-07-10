@@ -943,17 +943,20 @@ pub const CAPABILITIES: &[Capability] = &[
                   abstract to retained warm variables with scoped congruence lemmas and \
                   replay-projected function interpretations; reads over scalar-keyed array-valued \
                   UF applications retain private array owners, enforce conditional argument/index \
-                  congruence, and project full-value function results before replay; warm \
-                  extensionality, structural equality, and array-valued parameters remain)",
+                  congruence, and project full-value function results before replay; positive \
+                  equality merges direct/application projection owners before function construction, \
+                  while top-level disequality over supported structural parents uses one exact \
+                  private diff index and two retained reads; positive structural equality, Boolean \
+                  relation flags, and array-valued parameters remain)",
         assurance: Assurance::Validated,
         evidence: "full dispatcher model replay; same-index/literal-distinct/const-array/array-ite/\
-                   symbolic-ROW/select-congruence/scalar-UF/array-result-UF assertion and branch warm \
-                   replay; 816 solver units, 77 symbolic-execution tests, and two 192-case warm/\
+                   symbolic-ROW/select-congruence/scalar-UF/array-result-UF/array-relation assertion \
+                   and branch warm replay; 816 solver units, 77 symbolic-execution tests, and three 192-case warm/\
                    check_auto/Z3 matrices pass; the EVM scoreboard remains DISAGREE=0 and depth-32 \
                    warm improves from 30.933 to 11.257 ms, though direct ITE folding remains faster at \
                    0.405 ms; warm path refuses \
                    remaining deferred array/UF theories",
-        reference: "ADR-0010/0030/0086/0087/0088",
+        reference: "ADR-0010/0030/0086/0087/0088/0089",
     },
     Capability {
         area: "symbolic execution",

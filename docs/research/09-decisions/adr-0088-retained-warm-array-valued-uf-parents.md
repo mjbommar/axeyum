@@ -162,3 +162,12 @@ models. Projection groups use full values and deterministic application order,
 and conditional congruence adds a bounded quadratic surface. Structural array
 equality/extensionality, array-valued parameters, proof artifacts, memory BMC/
 k-induction, and the remaining EVM performance gap remain later work.
+
+## Subsequent Decision
+
+[ADR-0089](adr-0089-retained-warm-array-relations.md) closes the whole-array
+relation boundary for those private owners. Positive equality can merge symbol/
+application projection classes before function construction, while one exact
+private diff witness handles disequality across all supported structural
+parents. Positive structural equality, arbitrary Boolean relation flags, array-
+valued parameters, proofs, and the performance gap remain.
