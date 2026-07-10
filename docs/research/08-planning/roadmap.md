@@ -333,6 +333,13 @@ attempt is written up as an ADR documenting why not.
 - ADR for select/store, extensionality, congruence closure, model replay, and
   proof/evidence commitments before public arrays/EUF surface expands.
 
+Progress update (2026-07-09): ADR-0071 adds a true abstraction-only array
+boundary and replay-guided base-select congruence on canonical `CdclT`, composed
+with dynamic UFBV interfaces and function-then-array model projection. Public
+QF_ABV/QF_AUFBV runs remain DISAGREE=0 with zero replay failures. This is the
+first live-bus slice, not phase exit: lazy store axioms, diff-skolem
+extensionality, scalable array defaults, and the warm memory path remain.
+
 Implementation note: a first infosec-workflow client example landed early
 (2026-06-13), ahead of arrays — a register-VM symbolic executor over
 `IncrementalBvSolver` that forks at branches, prunes infeasible paths, and

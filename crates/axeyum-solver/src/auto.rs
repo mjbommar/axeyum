@@ -1817,30 +1817,40 @@ fn dispatch_ufbv_online(
         || !features.has_bv_or_float
         || features.has_int
         || features.has_real
-        || features.has_array
+        || features.has_non_bv_array
         || features.has_uninterpreted_sort
         || features.has_datatype
     {
         return Ok(None);
     }
-    match crate::ufbv_online::check_qf_ufbv_online_cdclt(arena, assertions, config) {
+    let route = if features.has_array {
+        "aufbv-online-cdclt"
+    } else {
+        "ufbv-online-cdclt"
+    };
+    let result = if features.has_array {
+        crate::ufbv_online::check_qf_aufbv_online_cdclt(arena, assertions, config)
+    } else {
+        crate::ufbv_online::check_qf_ufbv_online_cdclt(arena, assertions, config)
+    };
+    match result {
         Ok(CheckResult::Sat(model)) => {
             with_recorder(rec, |t| {
-                t.record_decided("ufbv-online-cdclt", Verdict::Sat);
+                t.record_decided(route, Verdict::Sat);
             });
             Ok(Some(CheckResult::Sat(model)))
         }
         Ok(CheckResult::Unsat) => {
             with_recorder(rec, |t| {
-                t.record_decided("ufbv-online-cdclt", Verdict::Unsat);
+                t.record_decided(route, Verdict::Unsat);
             });
             Ok(Some(CheckResult::Unsat))
         }
         Ok(CheckResult::Unknown(reason)) => {
             with_recorder(rec, |t| {
-                t.record_declined("ufbv-online-cdclt", DeclineReason::from_unknown(&reason));
+                t.record_declined(route, DeclineReason::from_unknown(&reason));
             });
-            if is_budget_unknown_kind(reason.kind) {
+            if is_budget_unknown_kind(reason.kind) && !features.has_array {
                 Ok(Some(CheckResult::Unknown(reason)))
             } else {
                 Ok(None)
@@ -1848,7 +1858,7 @@ fn dispatch_ufbv_online(
         }
         Err(SolverError::Unsupported(_)) => {
             with_recorder(rec, |t| {
-                t.record_declined("ufbv-online-cdclt", DeclineReason::Unsupported);
+                t.record_declined(route, DeclineReason::Unsupported);
             });
             Ok(None)
         }
@@ -2415,6 +2425,9 @@ fn check_auto_dispatch(
         return Ok(result);
     }
     if features.has_array {
+        if let Some(result) = dispatch_abv_online(arena, assertions, config, &features, rec)? {
+            return Ok(result);
+        }
         if let Some(result) = dispatch_array_fast_paths(arena, assertions, config, &features)? {
             with_recorder(rec, |t| t.record_result("array-fast-path", &result));
             return Ok(result);
@@ -2480,6 +2493,43 @@ fn check_auto_dispatch(
             Ok(result)
         }
         Err(e) => Err(e),
+    }
+}
+
+fn dispatch_abv_online(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+    features: &Features,
+    rec: &mut Recorder<'_>,
+) -> Result<Option<CheckResult>, SolverError> {
+    if features.has_function
+        || features.has_int
+        || features.has_real
+        || features.has_non_bv_array
+        || features.has_uninterpreted_sort
+        || features.has_datatype
+    {
+        return Ok(None);
+    }
+    match crate::ufbv_online::check_qf_aufbv_online_cdclt(arena, assertions, config) {
+        Ok(result @ (CheckResult::Sat(_) | CheckResult::Unsat)) => {
+            with_recorder(rec, |t| t.record_result("abv-online-cdclt", &result));
+            Ok(Some(result))
+        }
+        Ok(CheckResult::Unknown(reason)) => {
+            with_recorder(rec, |t| {
+                t.record_declined("abv-online-cdclt", DeclineReason::from_unknown(&reason));
+            });
+            Ok(None)
+        }
+        Err(SolverError::Unsupported(_)) => {
+            with_recorder(rec, |t| {
+                t.record_declined("abv-online-cdclt", DeclineReason::Unsupported);
+            });
+            Ok(None)
+        }
+        Err(error) => Err(error),
     }
 }
 

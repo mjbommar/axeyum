@@ -21,7 +21,9 @@ mod quantifiers;
 mod reconstruct;
 mod solve_eqs;
 
-pub use arrays::{ArrayElimError, ArrayElimination, eliminate_arrays};
+pub use arrays::{
+    ArrayAbstraction, ArrayElimError, ArrayElimination, abstract_arrays, eliminate_arrays,
+};
 pub use canonical::{
     CanonicalizeOutcome, CanonicalizeTermsOutcome, Canonicalizer, RewriteError, RewriteReport,
     RuleApplication, build_app, canonicalize, canonicalize_terms, default_manifest,

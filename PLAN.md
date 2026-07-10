@@ -3681,7 +3681,19 @@ Its conclusion, ranked by quality × efficiency:
    narrow row ~4.4x faster. Public 6/6, 1,536 comparisons, replay, and 763 solver
    tests remain clean. Next bring arrays onto the live bus, then mixed BV+LIA/
    `str.len`; retain cross-round learned state only if wider telemetry makes
-   rebuild cost dominant.
+   rebuild cost dominant. **Sixteenth follow-through:** base-array selects now
+   participate in those replay-guided canonical rounds (ADR-0071). A new
+   `abstract_arrays` boundary applies exact read-over-write without constructing
+   the eager O(k²) select-pair set; equal-index/unequal-result candidates add
+   index/result atoms plus select congruence. QF_AUFBV composes array-first and
+   function-second abstraction, then projects functions before arrays and
+   replays originals. Gates pin a two-round array conflict, a three-round
+   array→UF fixpoint, a 24-symbolic-read zero-interface SAT, and the shared cap;
+   768 eager/front-door/Z3 comparisons are clean. Public 1 s runs are QF_ABV
+   185/193 and QF_AUFBV 48/53 decided, both DISAGREE=0 with zero replay failures.
+   This is base-select congruence after exact eager ROW, not full lazy arrays.
+   Next: mixed BV+LIA/`str.len` on P1.6 while P2.2 deepens the store-axiom queue,
+   extensionality, and scalable array models.
 2. **Keep a thin measured-leaf-BFS skirt in parallel** — measured-ROI leaves only
    (NRA tail, strings-Nielsen); fold the feature/scale-blocked leaves
    (dense-ILP MILP, large-LP performance) into a funded engine phase rather than

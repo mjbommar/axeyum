@@ -373,6 +373,60 @@ fn qf_ufbv_front_door_uses_online_combination() {
 }
 
 #[test]
+fn qf_abv_front_door_uses_online_combination() {
+    let cfg = SolverConfig::default();
+    let mut arena = TermArena::new();
+    let array = arena.array_var("route_array", 4, 8).unwrap();
+    let zero_index = arena.bv_const(4, 0).unwrap();
+    let one_index = arena.bv_const(4, 1).unwrap();
+    let zero_value = arena.bv_const(8, 0x2a).unwrap();
+    let one_value = arena.bv_const(8, 0x7c).unwrap();
+    let read_zero = arena.select(array, zero_index).unwrap();
+    let read_one = arena.select(array, one_index).unwrap();
+    let read_zero_value = arena.eq(read_zero, zero_value).unwrap();
+    let read_one_value = arena.eq(read_one, one_value).unwrap();
+
+    let (result, trace) =
+        check_auto_explained(&mut arena, &[read_zero_value, read_one_value], &cfg).unwrap();
+    assert!(matches!(result, CheckResult::Sat(_)));
+    let last = trace.last().expect("non-empty trace");
+    assert_eq!(last.route, "abv-online-cdclt", "trace:\n{trace}");
+    assert!(matches!(last.outcome, RouteOutcome::Decided(Verdict::Sat)));
+}
+
+#[test]
+fn qf_aufbv_front_door_uses_online_combination() {
+    let cfg = SolverConfig::default();
+    let mut arena = TermArena::new();
+    let array = arena.array_var("route_aufbv_array", 4, 4).unwrap();
+    let function = arena
+        .declare_fun("route_aufbv_function", &[Sort::BitVec(4)], Sort::BitVec(4))
+        .unwrap();
+    let zero_index = arena.bv_const(4, 0).unwrap();
+    let one_index = arena.bv_const(4, 1).unwrap();
+    let three = arena.bv_const(4, 3).unwrap();
+    let four = arena.bv_const(4, 4).unwrap();
+    let one = arena.bv_const(4, 1).unwrap();
+    let two = arena.bv_const(4, 2).unwrap();
+    let read_zero = arena.select(array, zero_index).unwrap();
+    let read_one = arena.select(array, one_index).unwrap();
+    let f_read_zero = arena.apply(function, &[read_zero]).unwrap();
+    let f_read_one = arena.apply(function, &[read_one]).unwrap();
+    let assertions = [
+        arena.eq(read_zero, three).unwrap(),
+        arena.eq(read_one, four).unwrap(),
+        arena.eq(f_read_zero, one).unwrap(),
+        arena.eq(f_read_one, two).unwrap(),
+    ];
+
+    let (result, trace) = check_auto_explained(&mut arena, &assertions, &cfg).unwrap();
+    assert!(matches!(result, CheckResult::Sat(_)));
+    let last = trace.last().expect("non-empty trace");
+    assert_eq!(last.route, "aufbv-online-cdclt", "trace:\n{trace}");
+    assert!(matches!(last.outcome, RouteOutcome::Decided(Verdict::Sat)));
+}
+
+#[test]
 fn unsupported_fragment_ends_in_terminal_unknown() {
     let cfg = SolverConfig::default();
     let mut arena = TermArena::new();

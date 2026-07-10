@@ -75,6 +75,18 @@ pub struct ArrayElimination {
     had_arrays: bool,
 }
 
+/// Array abstraction without eager select-congruence constraints.
+///
+/// Read-over-write and bounded extensionality are still rewritten exactly, but
+/// each remaining select over an array symbol is represented by a fresh scalar
+/// symbol. The returned assertions are therefore a relaxation until a caller
+/// enforces select congruence or accepts a candidate only after projection and
+/// replay.
+#[derive(Debug, Clone)]
+pub struct ArrayAbstraction {
+    projection: ArrayElimination,
+}
+
 impl ArrayElimination {
     /// The pure-`QF_BV` assertions: rewritten originals plus Ackermann
     /// consistency constraints.
@@ -158,6 +170,82 @@ impl ArrayElimination {
         }
         Ok(projected)
     }
+}
+
+impl ArrayAbstraction {
+    /// The rewritten original assertions with base-array selects replaced by
+    /// fresh scalar symbols and no select-congruence constraints appended.
+    pub fn assertions(&self) -> &[TermId] {
+        &self.projection.assertions
+    }
+
+    /// The abstracted selects as `(array symbol, rewritten index, fresh result)`
+    /// triples in deterministic discovery order.
+    pub fn selects(&self) -> Vec<(SymbolId, TermId, SymbolId)> {
+        self.projection.selects()
+    }
+
+    /// Whether the input actually contained an array construct.
+    pub fn had_arrays(&self) -> bool {
+        self.projection.had_arrays()
+    }
+
+    /// Projects a select-consistent abstraction model back to array values.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError`] if a select index cannot be evaluated.
+    pub fn project_model(
+        &self,
+        arena: &TermArena,
+        model: &Assignment,
+    ) -> Result<Assignment, IrError> {
+        self.projection.project_model(arena, model)
+    }
+}
+
+/// Abstracts array reads to fresh scalar symbols without constructing eager
+/// pairwise select-congruence constraints.
+///
+/// The returned formula is a relaxation. Callers may transfer `unsat`
+/// directly, but may return `sat` only after establishing select consistency,
+/// projecting array values, and replaying the original assertions. Unlike
+/// [`eliminate_arrays`], this construction never materializes the quadratic
+/// select-pair constraint set.
+///
+/// # Errors
+///
+/// Returns [`ArrayElimError`] for constructs outside the supported `QF_ABV`
+/// fragment or for an IR builder error.
+pub fn abstract_arrays(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+) -> Result<ArrayAbstraction, ArrayElimError> {
+    let had_arrays = assertions.iter().any(|&term| contains_array(arena, term));
+    if !had_arrays {
+        return Ok(ArrayAbstraction {
+            projection: ArrayElimination {
+                assertions: assertions.to_vec(),
+                abstraction: assertions.to_vec(),
+                selects: Vec::new(),
+                had_arrays: false,
+            },
+        });
+    }
+
+    let mut ctx = Eliminator::default();
+    let mut rewritten = Vec::with_capacity(assertions.len());
+    for &assertion in assertions {
+        rewritten.push(ctx.rewrite(arena, assertion)?);
+    }
+    Ok(ArrayAbstraction {
+        projection: ArrayElimination {
+            assertions: rewritten.clone(),
+            abstraction: rewritten,
+            selects: ctx.selects,
+            had_arrays: true,
+        },
+    })
 }
 
 /// Eliminates all array constructs from `assertions`, returning equisatisfiable
@@ -485,7 +573,7 @@ fn contains_array(arena: &TermArena, term: TermId) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{ArrayElimError, contains_array, eliminate_arrays};
+    use super::{ArrayElimError, abstract_arrays, contains_array, eliminate_arrays};
     use axeyum_ir::{ArraySortKey, ArrayValue, Assignment, Sort, TermArena, Value, eval};
 
     fn bv(width: u32, value: u128) -> Value {
@@ -508,6 +596,27 @@ mod tests {
         let elim = eliminate_arrays(&mut arena, &[f]).unwrap();
         assert!(!elim.had_arrays());
         assert_eq!(elim.assertions(), &[f]);
+    }
+
+    #[test]
+    fn abstraction_does_not_materialize_quadratic_select_pairs() {
+        let mut arena = TermArena::new();
+        let array = arena.array_var("table", 8, 8).unwrap();
+        let mut assertions = Vec::new();
+        for ordinal in 0..24 {
+            let index = arena.bv_var(&format!("index_{ordinal}"), 8).unwrap();
+            let value = arena.bv_var(&format!("value_{ordinal}"), 8).unwrap();
+            let read = arena.select(array, index).unwrap();
+            assertions.push(arena.eq(read, value).unwrap());
+        }
+
+        let abstraction = abstract_arrays(&mut arena, &assertions).unwrap();
+        assert!(abstraction.had_arrays());
+        assert_eq!(abstraction.selects().len(), 24);
+        assert_eq!(abstraction.assertions().len(), assertions.len());
+
+        let eager = eliminate_arrays(&mut arena, &assertions).unwrap();
+        assert_eq!(eager.assertions().len(), assertions.len() + 24 * 23 / 2);
     }
 
     #[test]

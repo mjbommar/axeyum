@@ -423,7 +423,7 @@ pub use ufbv_finite::{
     BoolUfExhaustiveCertificate, FiniteDomainPigeonholeCertificate, bool_uf_exhaustive_refutation,
     finite_domain_pigeonhole_refutation,
 };
-pub use ufbv_online::check_qf_ufbv_online_cdclt;
+pub use ufbv_online::{check_qf_aufbv_online_cdclt, check_qf_ufbv_online_cdclt};
 pub use uflia_interpolant::{
     UfliaInterpolantCertificate, uflia_interpolant, uflia_interpolant_certified,
 };
