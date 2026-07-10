@@ -1,12 +1,12 @@
 //! Deterministic differential gate for canonical online array+EUF+BV combination.
 
-use axeyum_ir::{Sort, TermArena, TermId};
+use axeyum_ir::{Sort, TermArena, TermId, Value, eval};
 use axeyum_solver::{
     CheckResult, SatBvBackend, SolverConfig, check_auto, check_qf_aufbv_online_cdclt,
     check_with_arrays_and_functions,
 };
 #[cfg(feature = "z3")]
-use z3::ast::{Array, BV, Bool};
+use z3::ast::{Array, BV, Bool, Dynamic};
 #[cfg(feature = "z3")]
 use z3::{FuncDecl, SatResult, Solver, Sort as Z3Sort};
 
@@ -22,6 +22,249 @@ fn verdict(result: &CheckResult) -> Verdict {
         CheckResult::Sat(_) => Verdict::Sat,
         CheckResult::Unsat => Verdict::Unsat,
         CheckResult::Unknown(_) => Verdict::Unknown,
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+enum ScalarKind {
+    Bool,
+    Bv3,
+}
+
+impl ScalarKind {
+    fn ir_sort(self) -> Sort {
+        match self {
+            Self::Bool => Sort::Bool,
+            Self::Bv3 => Sort::BitVec(3),
+        }
+    }
+
+    fn ir_var(self, arena: &mut TermArena, name: &str) -> TermId {
+        match self {
+            Self::Bool => arena.bool_var(name).unwrap(),
+            Self::Bv3 => arena.bv_var(name, 3).unwrap(),
+        }
+    }
+
+    fn ir_value(self, arena: &mut TermArena, one: bool) -> TermId {
+        match self {
+            Self::Bool => arena.bool_const(one),
+            Self::Bv3 => arena.bv_const(3, u128::from(one)).unwrap(),
+        }
+    }
+
+    #[cfg(feature = "z3")]
+    fn z3_sort(self) -> Z3Sort {
+        match self {
+            Self::Bool => Z3Sort::bool(),
+            Self::Bv3 => Z3Sort::bitvector(3),
+        }
+    }
+
+    #[cfg(feature = "z3")]
+    fn z3_var(self, name: &str) -> Dynamic {
+        match self {
+            Self::Bool => Dynamic::from_ast(&Bool::new_const(name)),
+            Self::Bv3 => Dynamic::from_ast(&BV::new_const(name, 3)),
+        }
+    }
+
+    #[cfg(feature = "z3")]
+    fn z3_value(self, one: bool) -> Dynamic {
+        match self {
+            Self::Bool => Dynamic::from_ast(&Bool::from_bool(one)),
+            Self::Bv3 => Dynamic::from_ast(&BV::from_u64(u64::from(one), 3)),
+        }
+    }
+}
+
+fn finite_scalar_shape(seed: u64) -> (ScalarKind, ScalarKind) {
+    match (seed / 12) % 3 {
+        0 => (ScalarKind::Bool, ScalarKind::Bool),
+        1 => (ScalarKind::Bool, ScalarKind::Bv3),
+        _ => (ScalarKind::Bv3, ScalarKind::Bool),
+    }
+}
+
+fn finite_scalar_expected(seed: u64) -> Verdict {
+    match seed % 12 {
+        1 | 3 | 5 | 7 | 9 => Verdict::Sat,
+        _ => Verdict::Unsat,
+    }
+}
+
+fn build_finite_scalar_array_case(seed: u64, arena: &mut TermArena) -> Vec<TermId> {
+    let (index_kind, element_kind) = finite_scalar_shape(seed);
+    let array = arena
+        .array_var_with_sorts("finite_a", index_kind.ir_sort(), element_kind.ir_sort())
+        .unwrap();
+    let other = arena
+        .array_var_with_sorts("finite_b", index_kind.ir_sort(), element_kind.ir_sort())
+        .unwrap();
+    let third = arena
+        .array_var_with_sorts("finite_c", index_kind.ir_sort(), element_kind.ir_sort())
+        .unwrap();
+    let x = index_kind.ir_var(arena, "finite_x");
+    let y = index_kind.ir_var(arena, "finite_y");
+    let index_zero = index_kind.ir_value(arena, false);
+    let index_one = index_kind.ir_value(arena, true);
+    let value_zero = element_kind.ir_value(arena, false);
+    let value_one = element_kind.ir_value(arena, true);
+    let read_x = arena.select(array, x).unwrap();
+    let read_y = arena.select(array, y).unwrap();
+    let other_read_x = arena.select(other, x).unwrap();
+    let third_read_one = arena.select(third, index_one).unwrap();
+    let same_indices = arena.eq(x, y).unwrap();
+    let different_indices = arena.not(same_indices).unwrap();
+    let same_reads = arena.eq(read_x, read_y).unwrap();
+    let different_reads = arena.not(same_reads).unwrap();
+    let read_x_zero = arena.eq(read_x, value_zero).unwrap();
+    let stored_source_is_one = arena.eq(read_x, value_one).unwrap();
+    let other_index_is_one = arena.eq(read_y, value_one).unwrap();
+    let stored = arena.store(array, x, value_zero).unwrap();
+    let stored_read_y = arena.select(stored, y).unwrap();
+    let stored_read_y_zero = arena.eq(stored_read_y, value_zero).unwrap();
+    let stored_read_y_not_zero = arena.not(stored_read_y_zero).unwrap();
+    let stored_read_y_one = arena.eq(stored_read_y, value_one).unwrap();
+    let arrays_equal = arena.eq(array, other).unwrap();
+    let arrays_different = arena.not(arrays_equal).unwrap();
+    let other_third_equal = arena.eq(other, third).unwrap();
+    let array_third_equal = arena.eq(array, third).unwrap();
+    let array_third_different = arena.not(array_third_equal).unwrap();
+    let cross_reads_equal = arena.eq(read_x, other_read_x).unwrap();
+    let cross_reads_different = arena.not(cross_reads_equal).unwrap();
+    let stored_equals_array = arena.eq(stored, array).unwrap();
+    let stored_differs_array = arena.not(stored_equals_array).unwrap();
+    let constant = arena
+        .const_array_with_index_sort(index_kind.ir_sort(), value_zero)
+        .unwrap();
+    let constant_read_one = arena.select(constant, index_one).unwrap();
+    let constant_read_is_zero = arena.eq(constant_read_one, value_zero).unwrap();
+    let constant_read_not_zero = arena.not(constant_read_is_zero).unwrap();
+    let array_read_zero = arena.select(array, index_zero).unwrap();
+    let array_read_zero_is_zero = arena.eq(array_read_zero, value_zero).unwrap();
+    let read_x_not_zero = arena.not(read_x_zero).unwrap();
+    let array_or_index_equal = arena.or(arrays_equal, same_indices).unwrap();
+
+    match seed % 12 {
+        0 => vec![same_indices, different_reads],
+        1 => vec![different_indices, read_x_zero, other_index_is_one],
+        2 => vec![same_indices, stored_read_y_not_zero],
+        3 => vec![different_indices, stored_read_y_one],
+        4 => vec![arrays_equal, cross_reads_different],
+        5 => vec![arrays_different, cross_reads_equal],
+        6 => vec![
+            arrays_equal,
+            other_third_equal,
+            array_third_different,
+            read_x_zero,
+        ],
+        7 => vec![
+            arrays_equal,
+            other_third_equal,
+            array_read_zero_is_zero,
+            arena.eq(third_read_one, value_one).unwrap(),
+        ],
+        8 => vec![stored_equals_array, read_x_not_zero],
+        9 => vec![stored_differs_array, stored_source_is_one],
+        10 => vec![constant_read_not_zero, read_x_zero],
+        _ => vec![
+            array_or_index_equal,
+            arrays_different,
+            different_indices,
+            read_x_zero,
+        ],
+    }
+}
+
+fn assert_sat_replays(arena: &TermArena, assertions: &[TermId], result: &CheckResult, seed: u64) {
+    if let CheckResult::Sat(model) = result {
+        let assignment = model.to_assignment();
+        assert!(
+            assertions
+                .iter()
+                .all(|&term| eval(arena, term, &assignment) == Ok(Value::Bool(true))),
+            "finite scalar SAT model failed replay at seed {seed}: {model:?}"
+        );
+    }
+}
+
+#[cfg(feature = "z3")]
+fn z3_finite_scalar_verdict(seed: u64) -> Verdict {
+    let (index_kind, element_kind) = finite_scalar_shape(seed);
+    let index_sort = index_kind.z3_sort();
+    let element_sort = element_kind.z3_sort();
+    let array = Array::new_const("finite_a", &index_sort, &element_sort);
+    let other = Array::new_const("finite_b", &index_sort, &element_sort);
+    let third = Array::new_const("finite_c", &index_sort, &element_sort);
+    let x = index_kind.z3_var("finite_x");
+    let y = index_kind.z3_var("finite_y");
+    let index_zero = index_kind.z3_value(false);
+    let index_one = index_kind.z3_value(true);
+    let value_zero = element_kind.z3_value(false);
+    let value_one = element_kind.z3_value(true);
+    let read_x = array.select(&x);
+    let read_y = array.select(&y);
+    let other_read_x = other.select(&x);
+    let third_read_one = third.select(&index_one);
+    let same_indices = x.eq(&y);
+    let different_indices = same_indices.not();
+    let different_reads = read_x.eq(&read_y).not();
+    let read_x_zero = read_x.eq(&value_zero);
+    let stored_source_is_one = read_x.eq(&value_one);
+    let other_index_is_one = read_y.eq(&value_one);
+    let stored = array.store(&x, &value_zero);
+    let stored_read_y = stored.select(&y);
+    let stored_read_y_not_zero = stored_read_y.eq(&value_zero).not();
+    let stored_read_y_one = stored_read_y.eq(&value_one);
+    let arrays_equal = array.eq(&other);
+    let arrays_different = arrays_equal.not();
+    let other_third_equal = other.eq(&third);
+    let array_third_different = array.eq(&third).not();
+    let cross_reads_equal = read_x.eq(&other_read_x);
+    let cross_reads_different = cross_reads_equal.not();
+    let stored_equals_array = stored.eq(&array);
+    let stored_differs_array = stored_equals_array.not();
+    let constant = Array::const_array(&index_sort, &value_zero);
+    let constant_read_not_zero = constant.select(&index_one).eq(&value_zero).not();
+
+    let assertions = match seed % 12 {
+        0 => vec![same_indices, different_reads],
+        1 => vec![different_indices, read_x_zero, other_index_is_one],
+        2 => vec![same_indices, stored_read_y_not_zero],
+        3 => vec![different_indices, stored_read_y_one],
+        4 => vec![arrays_equal, cross_reads_different],
+        5 => vec![arrays_different, cross_reads_equal],
+        6 => vec![
+            arrays_equal,
+            other_third_equal,
+            array_third_different,
+            read_x_zero,
+        ],
+        7 => vec![
+            arrays_equal,
+            other_third_equal,
+            array.select(&index_zero).eq(&value_zero),
+            third_read_one.eq(&value_one),
+        ],
+        8 => vec![stored_equals_array, read_x_zero.not()],
+        9 => vec![stored_differs_array, stored_source_is_one],
+        10 => vec![constant_read_not_zero, read_x_zero],
+        _ => vec![
+            Bool::or(&[arrays_equal, same_indices]),
+            arrays_different,
+            different_indices,
+            read_x_zero,
+        ],
+    };
+    let solver = Solver::new();
+    for assertion in assertions {
+        solver.assert(&assertion);
+    }
+    match solver.check() {
+        SatResult::Sat => Verdict::Sat,
+        SatResult::Unsat => Verdict::Unsat,
+        SatResult::Unknown => Verdict::Unknown,
     }
 }
 
@@ -311,6 +554,64 @@ fn z3_verdict(seed: u64) -> Verdict {
         SatResult::Sat => Verdict::Sat,
         SatResult::Unsat => Verdict::Unsat,
         SatResult::Unknown => Verdict::Unknown,
+    }
+}
+
+#[test]
+fn finite_scalar_arrays_match_analytic_oracle_and_front_door() {
+    for seed in 0..128 {
+        let expected = finite_scalar_expected(seed);
+        let mut online_arena = TermArena::new();
+        let online_assertions = build_finite_scalar_array_case(seed, &mut online_arena);
+        let online = check_qf_aufbv_online_cdclt(
+            &mut online_arena,
+            &online_assertions,
+            &SolverConfig::default(),
+        )
+        .unwrap();
+        assert_eq!(
+            verdict(&online),
+            expected,
+            "online/analytic disagreement at finite scalar seed {seed}: {online:?}"
+        );
+        assert_sat_replays(&online_arena, &online_assertions, &online, seed);
+
+        let mut front_arena = TermArena::new();
+        let front_assertions = build_finite_scalar_array_case(seed, &mut front_arena);
+        let front = check_auto(
+            &mut front_arena,
+            &front_assertions,
+            &SolverConfig::default(),
+        )
+        .unwrap();
+        assert_eq!(
+            verdict(&front),
+            expected,
+            "front-door/analytic disagreement at finite scalar seed {seed}: {front:?}"
+        );
+        assert_sat_replays(&front_arena, &front_assertions, &front, seed);
+    }
+}
+
+#[cfg(feature = "z3")]
+#[test]
+fn finite_scalar_arrays_match_z3_matrix() {
+    for seed in 0..128 {
+        let mut online_arena = TermArena::new();
+        let online_assertions = build_finite_scalar_array_case(seed, &mut online_arena);
+        let online = check_qf_aufbv_online_cdclt(
+            &mut online_arena,
+            &online_assertions,
+            &SolverConfig::default(),
+        )
+        .unwrap();
+        let z3 = z3_finite_scalar_verdict(seed);
+
+        assert_eq!(
+            verdict(&online),
+            z3,
+            "online/Z3 disagreement at finite scalar seed {seed}: online={online:?}, z3={z3:?}"
+        );
     }
 }
 

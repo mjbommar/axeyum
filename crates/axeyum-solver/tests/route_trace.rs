@@ -449,15 +449,15 @@ fn bool_only_uf_array_query_uses_online_combination() {
     let y = arena.bool_var("bool_uf_y").unwrap();
     let fx = arena.apply(function, &[x]).unwrap();
     let fy = arena.apply(function, &[y]).unwrap();
-    let read_fx = arena.select(array, fx).unwrap();
-    let read_fy = arena.select(array, fy).unwrap();
+    let first_function_read = arena.select(array, fx).unwrap();
+    let second_function_read = arena.select(array, fy).unwrap();
     let same_arguments = arena.eq(x, y).unwrap();
     let different_arguments = arena.not(same_arguments).unwrap();
-    let not_read_fy = arena.not(read_fy).unwrap();
+    let not_second_read = arena.not(second_function_read).unwrap();
 
     let (result, trace) = check_auto_explained(
         &mut arena,
-        &[different_arguments, read_fx, not_read_fy],
+        &[different_arguments, first_function_read, not_second_read],
         &cfg,
     )
     .unwrap();
