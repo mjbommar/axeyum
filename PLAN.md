@@ -3893,9 +3893,9 @@ Its conclusion, ranked by quality × efficiency:
    array-result integration, and complete EVM gates pass. Design/implementation
    commits `41019413`/`f2bb16ab` are on `origin/main`. The EVM corpus has no
    array-valued UF application, so this increment makes no EVM timing claim.
-   Next: warm structural equality/extensionality and array-valued parameters,
-   then memory BMC/k-induction, online array proofs, and the remaining
-   performance gap.
+   ADR-0089/0090 subsequently land warm relations and structural equality;
+   array-valued parameters, memory BMC/k-induction, online array proofs, and the
+   remaining performance gap remain.
    **Thirty-fourth follow-through:** ADR-0089 adds retained warm array
    relations without approximating structural equality. Positive equality
    accepts direct symbols and scalar-keyed array-result UFs, tracks applications
@@ -3908,9 +3908,20 @@ Its conclusion, ranked by quality × efficiency:
    816 solver units, 77 symexec tests, the ADR-0088 suite, and complete EVM gates
    pass. Design/implementation commits `d891c901`/`70c8a15c` are on
    `origin/main`. EVM has no whole-array relation root, so no timing change is
-   claimed. Next: positive warm structural equality and Boolean relation flags,
-   then array-valued parameters, memory BMC/k-induction, online proofs, and the
-   remaining performance gap.
+   claimed. ADR-0090 takes the positive structural-equality step next; Boolean
+   relation flags, array-valued parameters, memory BMC/k-induction, online proofs,
+   and the remaining performance gap stay open.
+   **Thirty-fifth follow-through:** ADR-0090 lands retained warm structural array
+   equality. Top-level positive equality over supported store/constant/array-ITE
+   parents now uses cached private constructor owners, bounded old/future shared-
+   index observations plus a private probe, class-aware fixed-point realization
+   before array-valued function construction, private-owner filtering, and
+   original replay. Default structural-equality gates cover no-read SAT,
+   constants/store conflicts, selected/unselected ITE branches, array-result UF
+   composition, push/pop and one-shot cores, Bool elements, BV256 components,
+   exact limits, timeout, and a 64-seed warm/`check_auto` matrix. ADR-0090 is
+   accepted. Next: Boolean relation flags, array-valued parameters, memory BMC/
+   k-induction, online array proofs, and broader low-load aggregate timing.
 2. **Keep a thin measured-leaf-BFS skirt in parallel** — measured-ROI leaves only
    (NRA tail, strings-Nielsen); fold the feature/scale-blocked leaves
    (dense-ILP MILP, large-LP performance) into a funded engine phase rather than

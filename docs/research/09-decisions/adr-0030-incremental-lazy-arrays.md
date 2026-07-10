@@ -141,17 +141,24 @@ ADR-0088 then retains scalar-keyed array-valued UF applications as warm array
 leaves. Conditional argument/index congruence constrains observed reads; private
 array owners project one full array result per concrete argument tuple before
 function construction and original replay. The 64-parent boundary and a 192-
-comparison warm/`check_auto`/Z3 matrix validate this slice. Extensionality,
-structural equality, array-valued parameters, memory BMC/k-induction, proofs,
-and the remaining performance gap keep the deferred half open.
+comparison warm/`check_auto`/Z3 matrix validate this slice. Extensionality and
+structural equality follow in ADR-0089/0090; array-valued parameters, memory
+BMC/k-induction, proofs, and the remaining performance gap keep the deferred
+half open.
 
 ADR-0089 adds the first exact warm extensionality relation. Positive equality
 merges direct/application projection owners before function construction; top-
 level disequality over symbol/store/constant/ITE/application parents introduces
 one private diff index and two retained reads. A 192-comparison warm/
-`check_auto`/Z3 matrix validates the slice. Positive structural equality,
-Boolean relation flags, array-valued parameters, memory BMC/k-induction, proofs,
-and the performance gap keep the deferred half open.
+`check_auto`/Z3 matrix validates the slice.
+
+ADR-0090 then admits top-level positive equality over warm-supported structural
+parents. It gives store/constant/array-ITE parents cached private constructor
+owners, adds bounded old/future shared-index observations, realizes owner
+equations to a class-aware fixed point before array-valued function projection,
+filters private symbols, and still gates SAT by original replay. Boolean
+relation flags, array-valued parameters, memory BMC/k-induction, proofs, and
+the performance gap keep the deferred half open.
 
 ## Consequences
 

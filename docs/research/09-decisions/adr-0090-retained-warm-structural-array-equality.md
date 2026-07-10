@@ -1,6 +1,6 @@
 # ADR-0090: Retained Warm Structural Array Equality
 
-Status: proposed
+Status: accepted
 Date: 2026-07-10
 
 ## Context
