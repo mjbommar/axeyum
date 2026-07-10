@@ -1540,14 +1540,14 @@ impl TermArena {
 
     // ----- uninterpreted functions (ADR-0013) ---------------------------
 
-    /// Declares an uninterpreted function with the given parameter sorts and
-    /// non-array result sort, or returns the existing one if `name` was already
-    /// declared with the identical signature.
+    /// Declares an uninterpreted function with the given parameter and result
+    /// sorts, or returns the existing one if `name` was already declared with
+    /// the identical signature.
     ///
     /// # Errors
     ///
-    /// Returns [`IrError::SortMismatch`] if the result is an array sort,
-    /// [`IrError::InvalidWidth`] for a bad bit-vector width, or
+    /// Returns [`IrError::SortMismatch`] for a datatype or sequence result,
+    /// [`IrError::InvalidWidth`] for a bad bit-vector/array-component width, or
     /// [`IrError::FunctionSignatureConflict`] if `name` exists with a different
     /// signature.
     ///
@@ -2052,8 +2052,8 @@ fn check_scalar_width(sort: Sort) -> Result<(), IrError> {
 /// Sort admissibility for an uninterpreted-function parameter. Wider than
 /// [`check_scalar_width`]: in addition to the finite scalars (`Bool`/`BitVec`/
 /// `Float`) it admits arithmetic sorts, declared carrier sorts, and first-class
-/// array sorts. Mixed AUFLIA uses array-valued *arguments* to scalar/arithmetic
-/// functions; array-valued results remain deferred by [`check_uf_result_sort`].
+/// array sorts. Mixed AUFLIA uses array-valued arguments; canonical AUFBV also
+/// supports finite-scalar array-valued results (ADR-0084).
 fn check_uf_param_sort(sort: Sort) -> Result<(), IrError> {
     match sort {
         Sort::Int | Sort::Real | Sort::Uninterpreted(_) | Sort::Array { .. } => Ok(()),
@@ -2065,20 +2065,18 @@ fn check_uf_param_sort(sort: Sort) -> Result<(), IrError> {
     }
 }
 
-/// Sort admissibility for an uninterpreted-function result. This intentionally
-/// still rejects array-valued results: the IR can represent array terms, but the
-/// current solver/model projection route only covers array-valued *arguments* to
-/// scalar/arithmetic functions.
+/// Sort admissibility for an uninterpreted-function result. First-class arrays
+/// use the same flat component validation as array symbols; datatype and
+/// sequence results remain under their separate theory gates.
 fn check_uf_result_sort(sort: Sort) -> Result<(), IrError> {
     match sort {
         Sort::Int | Sort::Real | Sort::Uninterpreted(_) => Ok(()),
         Sort::Bool | Sort::BitVec(_) | Sort::Float { .. } => check_scalar_width(sort),
-        found @ (Sort::Array { .. } | Sort::Datatype(_) | Sort::Seq(_)) => {
-            Err(IrError::SortMismatch {
-                expected: "Bool, BitVec, Float, Int, Real, or uninterpreted sort",
-                found,
-            })
-        }
+        Sort::Array { .. } => check_sort(sort),
+        found @ (Sort::Datatype(_) | Sort::Seq(_)) => Err(IrError::SortMismatch {
+            expected: "Bool, BitVec, Float, Int, Real, array, or uninterpreted sort",
+            found,
+        }),
     }
 }
 

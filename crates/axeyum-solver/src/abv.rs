@@ -2145,6 +2145,10 @@ pub(crate) enum RowKind {
     },
     /// `select(v, index)` for an array variable `v`.
     Var { array: SymbolId },
+    /// `select(f(args), index)` for an array-valued UF application. Canonical
+    /// AUFBV later maps `application` to function abstraction's fresh array
+    /// symbol for projection while retaining the original term on the e-graph.
+    Apply { application: TermId },
     /// `select((as const _) value, index)`.
     Const { value: TermId },
 }
@@ -2208,6 +2212,10 @@ struct RowCtx {
     /// `(lhs term, rhs term) -> eq_atoms index` (order-insensitive: stored with
     /// the smaller `TermId` first) so an identical array equality maps to one flag.
     eq_memo: HashMap<(TermId, TermId), usize>,
+    /// Whether `select` over an array-valued UF application is admitted. Only
+    /// canonical AUFBV enables this; generic lazy ROW has no function-projection
+    /// owner and therefore keeps declining the shape.
+    allow_array_apply: bool,
 }
 
 impl RowCtx {
@@ -2340,6 +2348,17 @@ impl RowCtx {
                     return Ok(None);
                 }
                 let kind = RowKind::Var { array: sym };
+                let fresh = self.fresh_symbol(arena, element_sort)?;
+                self.sites.push(RowSite { fresh, index, kind });
+                arena.var(fresh)
+            }
+            TermNode::App {
+                op: Op::Apply(_), ..
+            } if self.allow_array_apply => {
+                if self.sites.len() >= MAX_ROW_SITES {
+                    return Ok(None);
+                }
+                let kind = RowKind::Apply { application: base };
                 let fresh = self.fresh_symbol(arena, element_sort)?;
                 self.sites.push(RowSite { fresh, index, kind });
                 arena.var(fresh)
@@ -2481,7 +2500,10 @@ pub(crate) fn abstract_rows_for_online(
     arena: &mut TermArena,
     assertions: &[TermId],
 ) -> Result<Option<OnlineRowAbstraction>, SolverError> {
-    let mut ctx = RowCtx::default();
+    let mut ctx = RowCtx {
+        allow_array_apply: true,
+        ..RowCtx::default()
+    };
     let mut abstracted = Vec::with_capacity(assertions.len());
     for &assertion in assertions {
         let Some(term) = ctx.abstract_with_array_eq(arena, assertion)? else {

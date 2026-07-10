@@ -120,7 +120,11 @@ struct CombinedApplication {
 
 #[derive(Debug, Clone)]
 struct CombinedSelect {
+    /// Original semantic parent observed on the e-graph.
     array_term: TermId,
+    /// Array symbol whose entries this read defines during model projection.
+    /// Structural store parents have no independent projection owner.
+    projection_array: Option<SymbolId>,
     original_index: TermId,
     rewritten_index: TermId,
     fresh: SymbolId,
@@ -224,7 +228,7 @@ type BuildResult<T> = Result<T, BuildFailure>;
 
 struct PreparedAbstraction {
     had_arrays: bool,
-    row_sites: Vec<RowSite>,
+    projection_row_sites: Vec<RowSite>,
     semantic_assertions: Vec<TermId>,
     abstracted_assertions: Vec<TermId>,
     abstraction: FunctionAbstraction,
@@ -771,6 +775,7 @@ struct CombinedUfbvTheory {
     euf: EufTheory,
     bv: BvTheory,
     abstract_index: HashMap<TermId, usize>,
+    array_equality_proxies: HashMap<(TermId, TermId), TermId>,
 }
 
 impl CombinedUfbvTheory {
@@ -809,7 +814,24 @@ impl CombinedUfbvTheory {
         let (original, abstracted, negative) = {
             let arena = &mut self.bv.arena;
             let original = arena.eq(original_left, original_right)?;
-            let abstracted = arena.eq(abstract_left, abstract_right)?;
+            let abstracted = if matches!(arena.sort_of(abstract_left), Sort::Array { .. }) {
+                let key = if abstract_left.index() <= abstract_right.index() {
+                    (abstract_left, abstract_right)
+                } else {
+                    (abstract_right, abstract_left)
+                };
+                if let Some(&proxy) = self.array_equality_proxies.get(&key) {
+                    proxy
+                } else {
+                    let name = format!("!uf_array_eq_{}", self.array_equality_proxies.len());
+                    let symbol = arena.declare_internal(&name, Sort::Bool)?;
+                    let proxy = arena.var(symbol);
+                    self.array_equality_proxies.insert(key, proxy);
+                    proxy
+                }
+            } else {
+                arena.eq(abstract_left, abstract_right)?
+            };
             let negative = arena.not(abstracted)?;
             (original, abstracted, negative)
         };
@@ -1147,7 +1169,13 @@ fn build_and_solve_with_stats_impl(
                     && violated_array_equalities.is_empty()
                 {
                     return Ok((
-                        project_replay_composed(arena, &prepared, assertions, &assignment),
+                        project_replay_composed(
+                            arena,
+                            &prepared,
+                            assertions,
+                            &assignment,
+                            &select_parent_classes,
+                        ),
                         stats,
                     ));
                 }
@@ -1336,6 +1364,7 @@ fn solve_cdclt_round(
         euf,
         bv,
         abstract_index: atoms.abstract_index,
+        array_equality_proxies: HashMap::new(),
     };
     let inactive_variables =
         inactive_reserved_row_variables(&row_atoms, &skeleton.active_variables);
@@ -1670,6 +1699,7 @@ fn prepare_array_roots(
             } => roots.extend([parent, store_index, store_elem, inner]),
             RowKind::Const { value } => roots.push(value),
             RowKind::Var { .. } => {}
+            RowKind::Apply { application } => roots.push(application),
         }
     }
     for equality in &array_equalities {
@@ -1694,10 +1724,11 @@ fn combine_row_sites(
     arena: &mut TermArena,
     row_sites: &[RowSite],
     replacements: &HashMap<TermId, TermId>,
-) -> BuildResult<(Vec<CombinedSelect>, Vec<CombinedRowStore>)> {
+) -> BuildResult<(Vec<CombinedSelect>, Vec<CombinedRowStore>, Vec<RowSite>)> {
     let mut memo = HashMap::new();
     let mut selects = Vec::new();
     let mut stores = Vec::new();
+    let mut projection_sites = Vec::new();
     for site in row_sites {
         let rewritten_index = replace_subterms(arena, site.index, replacements, &mut memo)?;
         match site.kind {
@@ -1705,9 +1736,42 @@ fn combine_row_sites(
                 let array_term = arena.var(array);
                 selects.push(CombinedSelect {
                     array_term,
+                    projection_array: Some(array),
                     original_index: site.index,
                     rewritten_index,
                     fresh: site.fresh,
+                });
+                projection_sites.push(RowSite {
+                    fresh: site.fresh,
+                    index: rewritten_index,
+                    kind: RowKind::Var { array },
+                });
+            }
+            RowKind::Apply { application } => {
+                let replacement = replacements.get(&application).copied().ok_or_else(|| {
+                    BuildFailure::Error(SolverError::Backend(
+                        "array-valued application read lost its function abstraction replacement"
+                            .to_owned(),
+                    ))
+                })?;
+                let TermNode::Symbol(array) = arena.node(replacement) else {
+                    return Err(BuildFailure::Error(SolverError::Backend(
+                        "array-valued application replacement is not a fresh array symbol"
+                            .to_owned(),
+                    )));
+                };
+                let array = *array;
+                selects.push(CombinedSelect {
+                    array_term: application,
+                    projection_array: Some(array),
+                    original_index: site.index,
+                    rewritten_index,
+                    fresh: site.fresh,
+                });
+                projection_sites.push(RowSite {
+                    fresh: site.fresh,
+                    index: rewritten_index,
+                    kind: RowKind::Var { array },
                 });
             }
             RowKind::Store {
@@ -1718,6 +1782,7 @@ fn combine_row_sites(
             } => {
                 selects.push(CombinedSelect {
                     array_term: parent,
+                    projection_array: None,
                     original_index: site.index,
                     rewritten_index,
                     fresh: site.fresh,
@@ -1743,7 +1808,7 @@ fn combine_row_sites(
             RowKind::Const { .. } => {}
         }
     }
-    Ok((selects, stores))
+    Ok((selects, stores, projection_sites))
 }
 
 fn combine_array_equalities(
@@ -1849,11 +1914,12 @@ fn prepare_abstraction(
             fresh,
         });
     }
-    let (selects, row_stores) = combine_row_sites(arena, &row_sites, &replacements)?;
+    let (selects, row_stores, projection_row_sites) =
+        combine_row_sites(arena, &row_sites, &replacements)?;
     let array_equalities = combine_array_equalities(arena, &array_equalities, &replacements)?;
     Ok(PreparedAbstraction {
         had_arrays,
-        row_sites,
+        projection_row_sites,
         semantic_assertions,
         abstracted_assertions,
         abstraction,
@@ -2175,7 +2241,10 @@ fn violated_application_pairs(
     deadline: Option<Instant>,
 ) -> BuildResult<Vec<(usize, usize)>> {
     let mut violated = Vec::new();
-    for (_func, members) in groups {
+    for (func, members) in groups {
+        if matches!(arena.function(*func).2, Sort::Array { .. }) {
+            continue;
+        }
         for left_pos in 0..members.len() {
             for right_pos in (left_pos + 1)..members.len() {
                 if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
@@ -2432,7 +2501,10 @@ fn relevant_application_pairs(
     let mut ground_values = GroundValueCache::default();
     let mut pairs = Vec::new();
     let mut interface_count = 0usize;
-    for (_func, members) in groups {
+    for (func, members) in groups {
+        if matches!(arena.function(*func).2, Sort::Array { .. }) {
+            continue;
+        }
         for left_pos in 0..members.len() {
             for right_pos in (left_pos + 1)..members.len() {
                 if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
@@ -2848,24 +2920,22 @@ fn project_replay_composed(
     prepared: &PreparedAbstraction,
     assertions: &[TermId],
     assignment: &Assignment,
+    select_parent_classes: &[SelectParentClass],
 ) -> CheckResult {
-    let with_functions = match prepared.abstraction.project_model(arena, assignment) {
-        Ok(projected) => projected,
-        Err(error) => {
-            return unknown(
-                UnknownKind::Incomplete,
-                format!("online AUFBV function projection failed: {error}"),
-            );
-        }
-    };
-    let projected = if prepared.had_arrays {
-        let equivalent_arrays =
-            true_symbol_array_equalities(arena, &prepared.array_equalities, &with_functions);
+    let with_arrays = if prepared.had_arrays {
+        let mut equivalent_arrays =
+            true_symbol_array_equalities(arena, &prepared.array_equalities, assignment);
+        equivalent_arrays.extend(equivalent_projection_arrays(
+            &prepared.selects,
+            select_parent_classes,
+        ));
+        equivalent_arrays.sort_unstable();
+        equivalent_arrays.dedup();
         match project_online_row_assignment(
             arena,
-            &prepared.row_sites,
+            &prepared.projection_row_sites,
             &equivalent_arrays,
-            &with_functions,
+            assignment,
         ) {
             Ok(projected) => projected,
             Err(error) => {
@@ -2876,7 +2946,16 @@ fn project_replay_composed(
             }
         }
     } else {
-        with_functions
+        assignment.clone()
+    };
+    let projected = match prepared.abstraction.project_model(arena, &with_arrays) {
+        Ok(projected) => projected,
+        Err(error) => {
+            return unknown(
+                UnknownKind::Incomplete,
+                format!("online AUFBV function projection failed: {error}"),
+            );
+        }
     };
 
     for &assertion in assertions {
@@ -2933,6 +3012,25 @@ fn project_replay_composed(
     CheckResult::Sat(model)
 }
 
+fn equivalent_projection_arrays(
+    selects: &[CombinedSelect],
+    classes: &[SelectParentClass],
+) -> Vec<(SymbolId, SymbolId)> {
+    let mut pairs = Vec::new();
+    for (_class, members) in select_class_groups(classes) {
+        let mut owners = members
+            .into_iter()
+            .filter_map(|member| selects[member].projection_array)
+            .collect::<Vec<_>>();
+        owners.sort_unstable();
+        owners.dedup();
+        if let Some((&representative, rest)) = owners.split_first() {
+            pairs.extend(rest.iter().map(|&owner| (representative, owner)));
+        }
+    }
+    pairs
+}
+
 fn true_symbol_array_equalities(
     arena: &TermArena,
     equalities: &[CombinedArrayEquality],
@@ -2962,9 +3060,10 @@ fn unknown(kind: UnknownKind, detail: impl Into<String>) -> CheckResult {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
     use std::time::Duration;
 
-    use axeyum_ir::{Sort, TermArena, TermId, TermNode, Value, eval};
+    use axeyum_ir::{ArraySortKey, Sort, TermArena, TermId, TermNode, Value, eval};
     use axeyum_smtlib::parse_script;
 
     use super::{
@@ -3043,6 +3142,7 @@ mod tests {
             euf,
             bv,
             abstract_index,
+            array_equality_proxies: HashMap::new(),
         };
         let mut solver = CdclT::new(skeleton.variable_count, atom_count, skeleton.clauses, None);
         let outcome = solver.solve(&mut theory);
@@ -4230,6 +4330,185 @@ mod tests {
                 .iter()
                 .all(|&assertion| eval(&arena, assertion, &assignment) == Ok(Value::Bool(true)))
         );
+    }
+
+    #[test]
+    fn array_valued_application_projects_and_replays() {
+        let mut arena = TermArena::new();
+        let array_sort = Sort::Array {
+            index: ArraySortKey::BitVec(4),
+            element: ArraySortKey::BitVec(8),
+        };
+        let function = arena
+            .declare_fun("dynamic_array_result_f", &[Sort::BitVec(3)], array_sort)
+            .unwrap();
+        let argument = arena.bv_var("dynamic_array_result_x", 3).unwrap();
+        let application = arena.apply(function, &[argument]).unwrap();
+        let index = arena.bv_const(4, 2).unwrap();
+        let expected = arena.bv_const(8, 0xaa).unwrap();
+        let read = arena.select(application, index).unwrap();
+        let assertion = arena.eq(read, expected).unwrap();
+
+        let (result, stats) = dynamic_array_solve_stats(&mut arena, &[assertion]);
+        let CheckResult::Sat(model) = result else {
+            panic!("expected replayed SAT, stats={stats:?}");
+        };
+        assert!(model.function(function).is_some());
+        assert_eq!(stats.rounds, 1, "stats={stats:?}");
+        assert_eq!(stats.function_pairs_added, 0, "stats={stats:?}");
+        let assignment = model.to_assignment();
+        assert_eq!(eval(&arena, assertion, &assignment), Ok(Value::Bool(true)));
+    }
+
+    #[test]
+    fn congruent_array_valued_applications_share_equal_index_reads() {
+        let mut arena = TermArena::new();
+        let array_sort = Sort::Array {
+            index: ArraySortKey::BitVec(4),
+            element: ArraySortKey::BitVec(8),
+        };
+        let function = arena
+            .declare_fun("dynamic_congruent_array_f", &[Sort::BitVec(3)], array_sort)
+            .unwrap();
+        let x = arena.bv_var("dynamic_congruent_array_x", 3).unwrap();
+        let y = arena.bv_var("dynamic_congruent_array_y", 3).unwrap();
+        let fx = arena.apply(function, &[x]).unwrap();
+        let fy = arena.apply(function, &[y]).unwrap();
+        let index = arena.bv_const(4, 1).unwrap();
+        let first = arena.bv_const(8, 0x11).unwrap();
+        let second = arena.bv_const(8, 0x22).unwrap();
+        let first_read = arena.select(fx, index).unwrap();
+        let second_read = arena.select(fy, index).unwrap();
+        let assertions = [
+            arena.eq(x, y).unwrap(),
+            arena.eq(first_read, first).unwrap(),
+            arena.eq(second_read, second).unwrap(),
+        ];
+
+        let (result, stats) = dynamic_array_solve_stats(&mut arena, &assertions);
+        assert_eq!(result, CheckResult::Unsat, "stats={stats:?}");
+        assert_eq!(stats.rounds, 1, "stats={stats:?}");
+        assert_eq!(stats.function_pairs_added, 0, "stats={stats:?}");
+        assert_eq!(stats.array_pairs_added, 1, "stats={stats:?}");
+        assert_eq!(stats.in_search_interface_refinements, 1, "stats={stats:?}");
+    }
+
+    #[test]
+    fn congruent_array_result_projection_unions_disjoint_observations() {
+        let mut arena = TermArena::new();
+        let array_sort = Sort::Array {
+            index: ArraySortKey::BitVec(4),
+            element: ArraySortKey::BitVec(8),
+        };
+        let function = arena
+            .declare_fun("dynamic_union_array_f", &[Sort::BitVec(3)], array_sort)
+            .unwrap();
+        let x = arena.bv_var("dynamic_union_array_x", 3).unwrap();
+        let y = arena.bv_var("dynamic_union_array_y", 3).unwrap();
+        let fx = arena.apply(function, &[x]).unwrap();
+        let fy = arena.apply(function, &[y]).unwrap();
+        let zero = arena.bv_const(4, 0).unwrap();
+        let one = arena.bv_const(4, 1).unwrap();
+        let first = arena.bv_const(8, 0x31).unwrap();
+        let second = arena.bv_const(8, 0x72).unwrap();
+        let fx_zero = arena.select(fx, zero).unwrap();
+        let fy_one = arena.select(fy, one).unwrap();
+        let assertions = [
+            arena.eq(x, y).unwrap(),
+            arena.eq(fx_zero, first).unwrap(),
+            arena.eq(fy_one, second).unwrap(),
+        ];
+
+        let (result, stats) = dynamic_array_solve_stats(&mut arena, &assertions);
+        let CheckResult::Sat(model) = result else {
+            panic!("expected replayed SAT, stats={stats:?}");
+        };
+        assert_eq!(stats.rounds, 1, "stats={stats:?}");
+        assert_eq!(stats.array_pairs_added, 0, "stats={stats:?}");
+        let assignment = model.to_assignment();
+        assert!(
+            assertions
+                .iter()
+                .all(|&term| eval(&arena, term, &assignment) == Ok(Value::Bool(true)))
+        );
+    }
+
+    #[test]
+    fn store_over_array_valued_application_uses_row() {
+        let mut arena = TermArena::new();
+        let array_sort = Sort::Array {
+            index: ArraySortKey::BitVec(4),
+            element: ArraySortKey::BitVec(8),
+        };
+        let function = arena
+            .declare_fun("dynamic_store_array_f", &[Sort::Bool], array_sort)
+            .unwrap();
+        let argument = arena.bool_var("dynamic_store_array_arg").unwrap();
+        let application = arena.apply(function, &[argument]).unwrap();
+        let index = arena.bv_var("dynamic_store_array_index", 4).unwrap();
+        let value = arena.bv_var("dynamic_store_array_value", 8).unwrap();
+        let stored = arena.store(application, index, value).unwrap();
+        let read = arena.select(stored, index).unwrap();
+        let same = arena.eq(read, value).unwrap();
+        let assertion = arena.not(same).unwrap();
+
+        let (result, stats) = dynamic_array_solve_stats(&mut arena, &[assertion]);
+        assert_eq!(result, CheckResult::Unsat, "stats={stats:?}");
+        assert_eq!(stats.row_axioms_added, 1, "stats={stats:?}");
+        assert_eq!(stats.in_search_row_refinements, 1, "stats={stats:?}");
+    }
+
+    #[test]
+    fn array_valued_application_and_symbol_equality_share_reads() {
+        let mut arena = TermArena::new();
+        let array_sort = Sort::Array {
+            index: ArraySortKey::BitVec(4),
+            element: ArraySortKey::BitVec(8),
+        };
+        let function = arena
+            .declare_fun("dynamic_equal_array_f", &[Sort::Bool], array_sort)
+            .unwrap();
+        let argument = arena.bool_var("dynamic_equal_array_arg").unwrap();
+        let application = arena.apply(function, &[argument]).unwrap();
+        let array = arena
+            .array_var_with_sorts("dynamic_equal_array", Sort::BitVec(4), Sort::BitVec(8))
+            .unwrap();
+        let index = arena.bv_const(4, 3).unwrap();
+        let first = arena.bv_const(8, 0x41).unwrap();
+        let second = arena.bv_const(8, 0x42).unwrap();
+        let application_read = arena.select(application, index).unwrap();
+        let array_read = arena.select(array, index).unwrap();
+        let assertions = [
+            arena.eq(application, array).unwrap(),
+            arena.eq(application_read, first).unwrap(),
+            arena.eq(array_read, second).unwrap(),
+        ];
+
+        let (result, stats) = dynamic_array_solve_stats(&mut arena, &assertions);
+        assert_eq!(result, CheckResult::Unsat, "stats={stats:?}");
+        assert_eq!(stats.array_pairs_added, 1, "stats={stats:?}");
+    }
+
+    #[test]
+    fn array_valued_uf_with_integer_components_stays_outside_aufbv() {
+        let mut arena = TermArena::new();
+        let array_sort = Sort::Array {
+            index: ArraySortKey::Int,
+            element: ArraySortKey::Int,
+        };
+        let function = arena
+            .declare_fun("dynamic_int_array_f", &[Sort::Bool], array_sort)
+            .unwrap();
+        let argument = arena.bool_var("dynamic_int_array_arg").unwrap();
+        let application = arena.apply(function, &[argument]).unwrap();
+        let zero = arena.int_const(0);
+        let read = arena.select(application, zero).unwrap();
+        let assertion = arena.eq(read, zero).unwrap();
+
+        assert!(matches!(
+            check_qf_aufbv_online_cdclt(&mut arena, &[assertion], &SolverConfig::default()),
+            Err(crate::SolverError::Unsupported(_))
+        ));
     }
 
     #[test]

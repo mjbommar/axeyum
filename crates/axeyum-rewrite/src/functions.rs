@@ -2,7 +2,7 @@
 //! by Ackermann reduction (ADR-0013).
 //!
 //! Each distinct application `f(a_1, .., a_n)` over an uninterpreted function
-//! `f` becomes a fresh scalar symbol, and for every pair of applications of the
+//! `f` becomes a fresh result-sort symbol, and for every pair of applications of the
 //! same `f` a **congruence** constraint is added:
 //!
 //! ```text
@@ -61,7 +61,7 @@ impl From<IrError> for FuncElimError {
     }
 }
 
-/// Applications of one function as `(rewritten args, fresh symbol)` pairs, in
+/// Applications of one function as `(rewritten args, fresh result symbol)` pairs, in
 /// discovery order — the per-function group used for congruence pairing.
 type ApplyGroup = Vec<(Vec<TermId>, SymbolId)>;
 
@@ -70,7 +70,7 @@ type ApplyGroup = Vec<(Vec<TermId>, SymbolId)>;
 #[derive(Debug, Clone)]
 struct ProjectedApply {
     func: FuncId,
-    /// The rewritten (pure-`QF_BV`) argument terms.
+    /// The rewritten argument terms.
     args: Vec<TermId>,
     fresh: SymbolId,
 }
@@ -87,7 +87,7 @@ pub struct FunctionElimination {
 /// Result of abstracting uninterpreted-function applications without adding
 /// Ackermann congruence constraints.
 ///
-/// Each application is replaced by the same fresh scalar symbol used by
+/// Each application is replaced by the same fresh result-sort symbol used by
 /// [`eliminate_functions`], but [`Self::assertions`] contains only the rewritten
 /// originals. It is therefore a **relaxation**, not an equisatisfiable reduction:
 /// an `unsat` result transfers to the original query, while a `sat` candidate must
@@ -176,16 +176,23 @@ impl FunctionElimination {
             for &arg in &apply.args {
                 key.push(eval(arena, arg, &projected)?);
             }
-            // A fresh application symbol may be unassigned in the model — notably a
-            // NESTED arithmetic-sorted application (e.g. `g(f(c), …)` where the inner
-            // result feeds an outer one), whose value is not pinned in the base
-            // model. Decline gracefully (the caller maps a projection `Err` to a
-            // sound `Unknown`) rather than panic — `unknown` is first-class, and the
-            // "never crash" invariant is total.
-            let result = model.get(apply.fresh).ok_or(IrError::Unsupported(
-                "uninterpreted-function model projection: a fresh application symbol \
-                 (e.g. a nested arithmetic-sorted application) is unassigned",
-            ))?;
+            // A metadata-only or nested application may not occur in the scalar
+            // abstraction. Choosing the result sort's well-founded default is a
+            // valid interpretation for that unconstrained point; inserting it into
+            // `projected` also lets later, outer application keys evaluate.
+            if projected.get(apply.fresh).is_none() {
+                let result_sort = arena.symbol(apply.fresh).1;
+                let default =
+                    projection_default_value(arena, result_sort, &mut used_uninterpreted_tokens)
+                        .ok_or(IrError::Unsupported(
+                            "uninterpreted-function model projection: application result sort \
+                     has no well-founded default",
+                        ))?;
+                projected.set(apply.fresh, default);
+            }
+            let result = projected
+                .get(apply.fresh)
+                .expect("application result was assigned or default-completed");
             if !tables.contains_key(&apply.func) {
                 func_order.push(apply.func);
             }
@@ -219,7 +226,7 @@ impl FunctionElimination {
 
 impl FunctionAbstraction {
     /// The rewritten original assertions with each application replaced by a
-    /// fresh scalar symbol and no congruence constraints appended.
+    /// fresh result-sort symbol and no congruence constraints appended.
     pub fn assertions(&self) -> &[TermId] {
         &self.projection.assertions
     }
@@ -292,7 +299,7 @@ fn projection_default_value(
     well_founded_default(arena, sort)
 }
 
-/// Abstracts uninterpreted-function applications to fresh scalar symbols without
+/// Abstracts uninterpreted-function applications to fresh result-sort symbols without
 /// constructing eager Ackermann congruence constraints.
 ///
 /// The returned formula is a relaxation. It is intended for lazy procedures that
@@ -304,8 +311,7 @@ fn projection_default_value(
 ///
 /// # Errors
 ///
-/// Returns [`FuncElimError`] for constructs outside the supported scalar UF
-/// fragment or for an IR builder error.
+/// Returns [`FuncElimError`] for unsupported result sorts or an IR builder error.
 pub fn abstract_functions(
     arena: &mut TermArena,
     assertions: &[TermId],
@@ -366,6 +372,17 @@ pub fn eliminate_functions(
     let mut rewritten = Vec::with_capacity(assertions.len());
     for &assertion in assertions {
         rewritten.push(ctx.rewrite(arena, assertion)?);
+    }
+    if ctx
+        .applies
+        .iter()
+        .any(|apply| matches!(arena.function(apply.func).2, Sort::Array { .. }))
+    {
+        return Err(FuncElimError::Unsupported(
+            "eager Ackermann elimination does not admit array-valued function results; \
+             use canonical AUFBV combination"
+                .to_owned(),
+        ));
     }
     // The abstraction is the rewritten-only assertions, before the eager
     // congruence lemmas are appended.
@@ -428,8 +445,8 @@ impl Eliminator {
         Ok(result)
     }
 
-    /// Resolves `func(args)` (with `args` already rewritten) to a fresh scalar
-    /// symbol, recording it for congruence and projection.
+    /// Resolves `func(args)` (with `args` already rewritten) to a fresh
+    /// result-sort symbol, recording it for congruence and projection.
     fn resolve_apply(
         &mut self,
         arena: &mut TermArena,
@@ -532,8 +549,10 @@ fn contains_apply(arena: &TermArena, term: TermId) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{abstract_functions, contains_apply, eliminate_functions};
-    use axeyum_ir::{Assignment, FuncValue, Sort, TermArena, Value, eval};
+    use super::{FuncElimError, abstract_functions, contains_apply, eliminate_functions};
+    use axeyum_ir::{
+        ArraySortKey, ArrayValue, Assignment, FuncValue, Sort, TermArena, Value, eval,
+    };
 
     fn bv(width: u32, value: u128) -> Value {
         Value::Bv { width, value }
@@ -637,6 +656,47 @@ mod tests {
 
         let eager = eliminate_functions(&mut arena, &[formula]).unwrap();
         assert_eq!(eager.assertions().len(), 2);
+    }
+
+    #[test]
+    fn abstraction_projects_array_results_while_eager_elimination_declines() {
+        let mut arena = TermArena::new();
+        let array_sort = Sort::Array {
+            index: ArraySortKey::BitVec(4),
+            element: ArraySortKey::BitVec(8),
+        };
+        let f = arena
+            .declare_fun("array_result_f", &[Sort::BitVec(3)], array_sort)
+            .unwrap();
+        let x = arena.bv_var("array_result_x", 3).unwrap();
+        let application = arena.apply(f, &[x]).unwrap();
+        let index = arena.bv_const(4, 2).unwrap();
+        let value = arena.bv_const(8, 0xaa).unwrap();
+        let read = arena.select(application, index).unwrap();
+        let formula = arena.eq(read, value).unwrap();
+
+        let abstraction = abstract_functions(&mut arena, &[formula]).unwrap();
+        assert_eq!(abstraction.applications().len(), 1);
+        assert!(!contains_apply(&arena, abstraction.assertions()[0]));
+        let (_, _, fresh) = abstraction.applications()[0];
+        assert_eq!(arena.symbol(fresh).1, array_sort);
+
+        let projected_array = Value::Array(ArrayValue::constant(4, 8, 0).store(2, 0xaa));
+        let mut candidate = Assignment::new();
+        candidate.set(fresh, projected_array);
+        let projected = abstraction.project_model(&arena, &candidate).unwrap();
+        assert_eq!(eval(&arena, formula, &projected), Ok(Value::Bool(true)));
+        assert_eq!(
+            projected.function(f).unwrap().result(),
+            array_sort,
+            "projection must retain the array result sort"
+        );
+
+        assert!(matches!(
+            eliminate_functions(&mut arena, &[formula]),
+            Err(FuncElimError::Unsupported(message))
+                if message.contains("array-valued function results")
+        ));
     }
 
     #[test]

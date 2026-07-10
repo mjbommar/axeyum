@@ -114,6 +114,25 @@ fn parses_and_round_trips_qf_ufbv_applications() {
 }
 
 #[test]
+fn parses_and_round_trips_array_valued_function_results() {
+    let text = r"
+        (set-logic QF_AUFBV)
+        (declare-fun f ((_ BitVec 3)) (Array (_ BitVec 4) (_ BitVec 8)))
+        (declare-const x (_ BitVec 3))
+        (assert (= (select (f x) (_ bv2 4)) (_ bv170 8)))
+        (check-sat)
+    ";
+    let script = parse_script(text).expect("array-valued UF result parses");
+    assert_eq!(script.assertions.len(), 1);
+
+    let rendered = write_script(&script.arena, &script.assertions);
+    assert!(rendered.contains("(declare-fun f ((_ BitVec 3)) (Array (_ BitVec 4) (_ BitVec 8)))"));
+    assert!(rendered.contains("(select (f x) (_ bv2 4))"));
+    let reparsed = parse_script(&rendered).expect("rendered array-valued UF reparses");
+    assert_eq!(reparsed.assertions.len(), 1);
+}
+
+#[test]
 fn parses_and_round_trips_qf_lia() {
     let text = r"
         (set-logic QF_LIA)
@@ -418,15 +437,11 @@ fn unsupported_constructs_are_clear_errors() {
         parse_script("(declare-sort List 1)"),
         Err(SmtError::Unsupported(_))
     ));
-    // n-ary functions over scalar sorts are supported (ADR-0013), and mixed
-    // AUFLIA signatures may use array-sorted parameters. Array-valued results
-    // remain outside the supported solver/model route and are rejected cleanly.
+    // n-ary functions over scalar sorts are supported (ADR-0013), mixed AUFLIA
+    // signatures may use array parameters, and ADR-0084 admits array results.
     assert!(parse_script("(declare-fun f ((_ BitVec 8)) (_ BitVec 8))").is_ok());
     assert!(parse_script("(declare-fun f ((Array (_ BitVec 4) (_ BitVec 8))) Bool)").is_ok());
-    assert!(matches!(
-        parse_script("(declare-fun f (Bool) (Array (_ BitVec 4) (_ BitVec 8)))"),
-        Err(SmtError::Ir(_))
-    ));
+    assert!(parse_script("(declare-fun f (Bool) (Array (_ BitVec 4) (_ BitVec 8)))").is_ok());
     assert!(matches!(
         parse_script("(assert (bvadd"),
         Err(SmtError::Syntax(_))
@@ -2165,14 +2180,20 @@ fn string_from_int_constant_corners_eval() {
 #[test]
 fn string_from_int_over_bound_constant_declines() {
     // A non-negative constant whose decimal needs more than FROM_INT_MAX_DIGITS
-    // bytes cannot be represented in the bounded string sort — a clean Unsupported
-    // (Unknown to the consumer), never a truncated/wrong string.
-    let err = parse_script(
+    // bytes cannot be represented in the bounded string sort. The parser retains
+    // that clean decline on a word-only fallback script, so consumers can return
+    // Unknown rather than use a truncated or otherwise wrong string value.
+    let script = parse_script(
         "(declare-fun x () String)\n\
          (assert (= x (str.from_int 4785582390527685649)))\n(check-sat)\n",
     )
-    .expect_err("19-digit from_int constant exceeds the bound");
-    assert!(matches!(err, SmtError::Unsupported(_)), "got {err:?}");
+    .expect("19-digit from_int constant reaches the honest word-only fallback");
+    let fallback = script
+        .word_only_fallback
+        .as_deref()
+        .expect("bounded from_int decline is retained");
+    assert!(fallback.contains("str.from_int"), "got {fallback:?}");
+    assert!(fallback.contains("19 decimal digits"), "got {fallback:?}");
 }
 
 #[test]

@@ -924,17 +924,13 @@ fn apply_rejects_bad_signatures_and_arguments() {
         arena.apply(f, &[y]),
         Err(IrError::SortsDiffer(..))
     ));
-    // Array-valued parameters are supported for AUFLIA-style signatures, but an
-    // array-valued result is still outside the current solver/model route.
+    // Array-valued parameters and results are first-class signature sorts.
     let array = Sort::Array {
         index: ArraySortKey::BitVec(4),
         element: ArraySortKey::BitVec(8),
     };
     assert!(arena.declare_fun("g", &[array], Sort::Bool).is_ok());
-    assert!(matches!(
-        arena.declare_fun("h", &[Sort::Bool], array),
-        Err(IrError::SortMismatch { .. })
-    ));
+    assert!(arena.declare_fun("h", &[Sort::Bool], array).is_ok());
     // Re-declaring a name with a different signature conflicts.
     assert!(matches!(
         arena.declare_fun("f", &[Sort::BitVec(4)], Sort::BitVec(8)),
@@ -999,6 +995,39 @@ fn wide_bv_function_interpretation_uses_full_value_storage() {
     model.set(x_sym, arg);
     model.set_function(f, interp);
     assert_eq!(eval(&arena, app, &model).unwrap(), result);
+}
+
+#[test]
+fn array_valued_function_interpretation_evaluates_selects() {
+    let mut arena = TermArena::new();
+    let array_sort = Sort::Array {
+        index: ArraySortKey::BitVec(4),
+        element: ArraySortKey::BitVec(8),
+    };
+    let f = arena
+        .declare_fun("array_f", &[Sort::BitVec(3)], array_sort)
+        .unwrap();
+    let x_symbol = arena.declare("array_f_x", Sort::BitVec(3)).unwrap();
+    let x = arena.var(x_symbol);
+    let application = arena.apply(f, &[x]).unwrap();
+    let index = arena.bv_const(4, 2).unwrap();
+    let read = arena.select(application, index).unwrap();
+
+    let default_array = Value::Array(ArrayValue::constant(4, 8, 0x11));
+    let special_array = Value::Array(ArrayValue::constant(4, 8, 0x22).store(2, 0xaa));
+    let interpretation =
+        FuncValue::constant_value(vec![Sort::BitVec(3)], array_sort, default_array.clone())
+            .define_value(&[bv(3, 1)], special_array.clone());
+
+    let mut model = Assignment::new();
+    model.set_function(f, interpretation);
+    model.set(x_symbol, bv(3, 1));
+    assert_eq!(eval(&arena, application, &model).unwrap(), special_array);
+    assert_eq!(eval(&arena, read, &model).unwrap(), bv(8, 0xaa));
+
+    model.set(x_symbol, bv(3, 0));
+    assert_eq!(eval(&arena, application, &model).unwrap(), default_array);
+    assert_eq!(eval(&arena, read, &model).unwrap(), bv(8, 0x11));
 }
 
 #[test]
@@ -1182,7 +1211,7 @@ fn int_const_and_negative_evaluate() {
 fn uf_argument_sorts_admit_arithmetic_and_array_params() {
     // Uninterpreted functions now admit Int/Real params/results (QF_UFLIA/UFLRA,
     // decided by EUF+arithmetic combination, not bit-blasting). Array parameters
-    // are admitted for mixed AUFLIA; array results and datatypes stay rejected.
+    // are admitted for mixed AUFLIA; array results are first-class too.
     let mut arena = TermArena::new();
     assert!(
         arena.declare_fun("f", &[Sort::Int], Sort::Int).is_ok(),
@@ -1200,10 +1229,10 @@ fn uf_argument_sorts_admit_arithmetic_and_array_params() {
         element: ArraySortKey::BitVec(8),
     };
     assert!(arena.declare_fun("arr", &[array], Sort::Bool).is_ok());
-    assert!(matches!(
-        arena.declare_fun("arr_result", &[Sort::Bool], array),
-        Err(IrError::SortMismatch { .. })
-    ));
+    let result = arena
+        .declare_fun("arr_result", &[Sort::Bool], array)
+        .unwrap();
+    assert_eq!(arena.function(result).2, array);
 }
 
 // ----- linear real arithmetic (ADR-0015) --------------------------------
