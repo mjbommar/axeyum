@@ -166,6 +166,23 @@ struct WarmArraySelect {
 struct WarmArrayEquality {
     left: SymbolId,
     right: SymbolId,
+    left_parent: TermId,
+    right_parent: TermId,
+    left_structural: Option<TermId>,
+    right_structural: Option<TermId>,
+}
+
+impl WarmArrayEquality {
+    fn has_structural_side(self) -> bool {
+        self.left_structural.is_some() || self.right_structural.is_some()
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct WarmArrayEqualityOperand {
+    owner: SymbolId,
+    parent: TermId,
+    structural: Option<TermId>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -222,6 +239,13 @@ enum WarmCandidateCheck {
     Unknown(UnknownReason),
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum WarmStructuralRealization {
+    Unchanged,
+    Changed,
+    Incompatible,
+}
+
 #[derive(Debug, Clone)]
 struct WarmUfApp {
     func: FuncId,
@@ -238,6 +262,15 @@ struct WarmArrayUfApp {
     encoded_args: Vec<TermId>,
     projection_symbol: SymbolId,
     result_sort: Sort,
+}
+
+#[derive(Debug, Clone)]
+struct WarmStructuralArrayOwner {
+    projection_symbol: SymbolId,
+    rewritten_term: TermId,
+    select_terms: Vec<TermId>,
+    uf_app_terms: Vec<TermId>,
+    array_uf_app_terms: Vec<TermId>,
 }
 
 struct WarmArrayUfProjectionGroup {
@@ -264,6 +297,8 @@ pub struct IncrementalBvSolver {
     warm_array_refinement_rounds: usize,
     warm_uf_apps: HashMap<TermId, WarmUfApp>,
     warm_array_uf_apps: HashMap<TermId, WarmArrayUfApp>,
+    warm_structural_array_owners: HashMap<TermId, WarmStructuralArrayOwner>,
+    warm_array_equality_probe_symbols: HashMap<TermId, SymbolId>,
     warm_array_diff_symbols: HashMap<TermId, SymbolId>,
     internal_symbols: HashSet<SymbolId>,
 }
@@ -304,6 +339,8 @@ impl IncrementalBvSolver {
             warm_array_refinement_rounds: 0,
             warm_uf_apps: HashMap::new(),
             warm_array_uf_apps: HashMap::new(),
+            warm_structural_array_owners: HashMap::new(),
+            warm_array_equality_probe_symbols: HashMap::new(),
             warm_array_diff_symbols: HashMap::new(),
             internal_symbols: HashSet::new(),
         }
@@ -350,8 +387,8 @@ impl IncrementalBvSolver {
     #[must_use]
     pub fn retained_warm_structural_read_count(&self) -> usize {
         self.warm_array_selects
-            .values()
-            .filter(|select| select.projection_symbol.is_none())
+            .keys()
+            .filter(|select_term| self.warm_array_semantics.contains_key(select_term))
             .count()
     }
 
@@ -380,6 +417,20 @@ impl IncrementalBvSolver {
     #[must_use]
     pub fn retained_warm_array_uf_app_count(&self) -> usize {
         self.warm_array_uf_apps.len()
+    }
+
+    /// Number of private total-array owners retained for structural parents
+    /// that have participated in positive warm equality.
+    #[must_use]
+    pub fn retained_warm_structural_array_owner_count(&self) -> usize {
+        self.warm_structural_array_owners.len()
+    }
+
+    /// Number of private shared-index probes retained for positive structural
+    /// equality. Probe metadata may harmlessly outlive a popped scope.
+    #[must_use]
+    pub fn retained_warm_array_equality_probe_count(&self) -> usize {
+        self.warm_array_equality_probe_symbols.len()
     }
 
     /// Number of private extensional diff-index witnesses retained by relation
@@ -618,6 +669,20 @@ impl IncrementalBvSolver {
             return Ok(encoded);
         }
         let relation = warm_array_relation_literal(arena, encoded);
+        if !self.warm_array_equality_observation_budget_holds(
+            arena,
+            encoded,
+            relation,
+            &existing_selects,
+            &existing_equalities,
+        ) {
+            self.frames
+                .last_mut()
+                .expect("base frame always present")
+                .deferred_assertions
+                .push(original);
+            return Ok(encoded);
+        }
         if relation.is_some_and(|relation| relation.polarity == WarmArrayRelationPolarity::Equal) {
             return self.assert_warm_array_equality(
                 arena,
@@ -715,6 +780,44 @@ impl IncrementalBvSolver {
         let encoded = self.encode_warm_root_with_deadline(arena, term, selector, None)?;
         debug_assert!(encoded, "deadline-free warm root cannot be interrupted");
         Ok(())
+    }
+
+    fn warm_array_equality_observation_budget_holds(
+        &self,
+        arena: &TermArena,
+        root: TermId,
+        relation: Option<WarmArrayRelation>,
+        existing_selects: &[TermId],
+        existing_equalities: &[WarmArrayEquality],
+    ) -> bool {
+        let mut new_indices = Vec::new();
+        collect_warm_select_indices(arena, root, &mut new_indices);
+        let generated_diff_index = relation
+            .is_some_and(|relation| relation.polarity == WarmArrayRelationPolarity::Distinct);
+        let new_index_count = new_indices
+            .len()
+            .saturating_add(usize::from(generated_diff_index));
+        let active_structural = existing_equalities
+            .iter()
+            .filter(|equality| equality.has_structural_side())
+            .count();
+        let mut prospective_reads = active_structural
+            .saturating_mul(new_index_count)
+            .saturating_mul(2);
+
+        if let Some(relation) = relation
+            && relation.polarity == WarmArrayRelationPolarity::Equal
+            && warm_array_relation_has_structural_parent(arena, relation)
+        {
+            let mut relation_indices = self.warm_array_select_indices(existing_selects);
+            extend_unique_terms(&mut relation_indices, &new_indices);
+            let index_sort = Sort::BitVec(relation.index_width);
+            collect_warm_store_indices(arena, relation.left, index_sort, &mut relation_indices);
+            collect_warm_store_indices(arena, relation.right, index_sort, &mut relation_indices);
+            prospective_reads = prospective_reads
+                .saturating_add(relation_indices.len().saturating_add(1).saturating_mul(2));
+        }
+        prospective_reads <= MAX_WARM_STRUCTURAL_ARRAY_NODES
     }
 
     fn encode_warm_root_with_deadline(
@@ -1140,6 +1243,14 @@ impl IncrementalBvSolver {
         let mut work = WarmAbstractionWork::default();
         let term = self.abstract_warm_array_selects_inner(arena, term, &mut work)?;
         let mut congruence_lemmas = Vec::new();
+        let new_indices = self.warm_array_select_indices(&work.select_terms);
+        self.add_warm_array_equality_observations(
+            arena,
+            existing_equalities,
+            &new_indices,
+            &mut work,
+            &mut congruence_lemmas,
+        )?;
         let mut prior = existing_selects.to_vec();
         for &select in &work.select_terms {
             for &other in &prior {
@@ -1307,12 +1418,16 @@ impl IncrementalBvSolver {
             if !work.array_uf_app_terms.contains(&app_term) {
                 work.array_uf_app_terms.push(app_term);
             }
+        } else if let Some(owner) = self.warm_structural_array_owners.get(&select.array_parent) {
+            select.projection_symbol = Some(owner.projection_symbol);
         }
         let abstracted = self.get_or_create_warm_array_select(arena, term, select)?;
         if !work.select_terms.contains(&term) {
             work.select_terms.push(term);
         }
-        if abstracted.projection_symbol.is_some() {
+        if matches!(arena.node(abstracted.array_parent), TermNode::Symbol(_))
+            || abstracted.array_uf_app.is_some()
+        {
             return Ok(abstracted.value_term);
         }
         if self.warm_array_semantics.contains_key(&term) {
@@ -1401,18 +1516,70 @@ impl IncrementalBvSolver {
     ) -> Result<(WarmArrayEquality, WarmArrayEncoding), SolverError> {
         debug_assert_eq!(relation.polarity, WarmArrayRelationPolarity::Equal);
         let mut work = WarmAbstractionWork::default();
-        let left = self.retain_warm_array_projection_owner(arena, relation.left, &mut work)?;
-        let right = self.retain_warm_array_projection_owner(arena, relation.right, &mut work)?;
-        let equality = WarmArrayEquality { left, right };
+        let left = self.retain_warm_array_equality_operand(arena, relation.left, &mut work)?;
+        let right = self.retain_warm_array_equality_operand(arena, relation.right, &mut work)?;
+        let equality = WarmArrayEquality {
+            left: left.owner,
+            right: right.owner,
+            left_parent: left.parent,
+            right_parent: right.parent,
+            left_structural: left.structural,
+            right_structural: right.structural,
+        };
 
+        let newly_introduced_indices = self.warm_array_select_indices(&work.select_terms);
+        let mut congruence_lemmas = Vec::new();
+        self.add_warm_array_equality_observations(
+            arena,
+            existing_equalities,
+            &newly_introduced_indices,
+            &mut work,
+            &mut congruence_lemmas,
+        )?;
         let mut equalities = existing_equalities.to_vec();
         equalities.push(equality);
+        let mut observation_indices = self.warm_array_select_indices(existing_selects);
+        extend_unique_terms(
+            &mut observation_indices,
+            &self.warm_array_select_indices(&work.select_terms),
+        );
+        if equality.has_structural_side() {
+            collect_warm_store_indices(
+                arena,
+                equality.left_parent,
+                Sort::BitVec(relation.index_width),
+                &mut observation_indices,
+            );
+            collect_warm_store_indices(
+                arena,
+                equality.right_parent,
+                Sort::BitVec(relation.index_width),
+                &mut observation_indices,
+            );
+            let probe = self.warm_array_equality_probe(arena, relation)?;
+            if !observation_indices.contains(&probe) {
+                observation_indices.push(probe);
+            }
+        }
+        observation_indices.sort_by_key(|term| term.index());
+        observation_indices.dedup();
+
+        self.add_warm_array_equality_observations(
+            arena,
+            std::slice::from_ref(&equality),
+            &observation_indices,
+            &mut work,
+            &mut congruence_lemmas,
+        )?;
         let mut all_selects = existing_selects.to_vec();
         all_selects.extend(work.select_terms.iter().copied());
         all_selects.sort_by_key(|term| term.index());
         all_selects.dedup();
-        let mut congruence_lemmas =
-            self.warm_array_congruence_lemmas_for_selects(arena, &all_selects, &equalities)?;
+        congruence_lemmas.extend(self.warm_array_congruence_lemmas_for_selects(
+            arena,
+            &all_selects,
+            &equalities,
+        )?);
 
         let mut prior_uf_apps = existing_uf_apps.to_vec();
         for &app in &work.uf_app_terms {
@@ -1437,26 +1604,218 @@ impl IncrementalBvSolver {
         ))
     }
 
-    fn retain_warm_array_projection_owner(
+    fn warm_array_select_indices(&self, selects: &[TermId]) -> Vec<TermId> {
+        let mut indices = selects
+            .iter()
+            .filter_map(|term| self.warm_array_selects.get(term).map(|select| select.index))
+            .collect::<Vec<_>>();
+        indices.sort_by_key(|term| term.index());
+        indices.dedup();
+        indices
+    }
+
+    fn warm_array_equality_probe(
+        &mut self,
+        arena: &mut TermArena,
+        relation: WarmArrayRelation,
+    ) -> Result<TermId, SolverError> {
+        if let Some(&symbol) = self
+            .warm_array_equality_probe_symbols
+            .get(&relation.literal)
+        {
+            let (_name, sort) = arena.symbol(symbol);
+            if sort != Sort::BitVec(relation.index_width) {
+                return Err(SolverError::Backend(format!(
+                    "warm array equality #{} retained a probe of inconsistent sort",
+                    relation.literal.index()
+                )));
+            }
+            return Ok(arena.var(symbol));
+        }
+        let base_name = format!("!axeyum_warm_array_probe_{}", relation.literal.index());
+        let name = fresh_internal_symbol_name(arena, &base_name);
+        let symbol = arena
+            .declare_internal(&name, Sort::BitVec(relation.index_width))
+            .map_err(|error| map_ir_error(&error))?;
+        self.internal_symbols.insert(symbol);
+        self.warm_array_equality_probe_symbols
+            .insert(relation.literal, symbol);
+        Ok(arena.var(symbol))
+    }
+
+    fn add_warm_array_equality_observations(
+        &mut self,
+        arena: &mut TermArena,
+        equalities: &[WarmArrayEquality],
+        indices: &[TermId],
+        work: &mut WarmAbstractionWork,
+        roots: &mut Vec<TermId>,
+    ) -> Result<(), SolverError> {
+        for equality in equalities {
+            if !equality.has_structural_side() {
+                continue;
+            }
+            let index_sort = arena
+                .sort_of(equality.left_parent)
+                .array_sorts()
+                .map(|sorts| sorts.0);
+            for &index in indices {
+                if Some(arena.sort_of(index)) != index_sort {
+                    continue;
+                }
+                let left_read = arena
+                    .select(equality.left_parent, index)
+                    .map_err(|error| map_ir_error(&error))?;
+                let right_read = arena
+                    .select(equality.right_parent, index)
+                    .map_err(|error| map_ir_error(&error))?;
+                let left = self.abstract_warm_array_selects_inner(arena, left_read, work)?;
+                let right = self.abstract_warm_array_selects_inner(arena, right_read, work)?;
+                let root = arena
+                    .eq(left, right)
+                    .map_err(|error| map_ir_error(&error))?;
+                if !roots.contains(&root) {
+                    roots.push(root);
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn retain_warm_array_equality_operand(
         &mut self,
         arena: &mut TermArena,
         term: TermId,
         work: &mut WarmAbstractionWork,
-    ) -> Result<SymbolId, SolverError> {
+    ) -> Result<WarmArrayEqualityOperand, SolverError> {
         if let TermNode::Symbol(symbol) = arena.node(term) {
-            return Ok(*symbol);
+            return Ok(WarmArrayEqualityOperand {
+                owner: *symbol,
+                parent: term,
+                structural: None,
+            });
         }
         if supported_warm_array_uf_app_shape(arena, term) {
             let app = self.retain_warm_array_uf_app(arena, term, work)?;
             if !work.array_uf_app_terms.contains(&term) {
                 work.array_uf_app_terms.push(term);
             }
-            return Ok(app.projection_symbol);
+            return Ok(WarmArrayEqualityOperand {
+                owner: app.projection_symbol,
+                parent: term,
+                structural: None,
+            });
         }
-        Err(SolverError::Unsupported(format!(
-            "warm positive array equality operand #{} has no projection owner",
-            term.index()
-        )))
+        if !is_supported_warm_array_parent(arena, term) {
+            return Err(SolverError::Unsupported(format!(
+                "warm positive array equality operand #{} has no supported structural owner",
+                term.index()
+            )));
+        }
+        if let Some(owner) = self.warm_structural_array_owners.get(&term).cloned() {
+            extend_unique_terms(&mut work.select_terms, &owner.select_terms);
+            extend_unique_terms(&mut work.uf_app_terms, &owner.uf_app_terms);
+            extend_unique_terms(&mut work.array_uf_app_terms, &owner.array_uf_app_terms);
+            return Ok(WarmArrayEqualityOperand {
+                owner: owner.projection_symbol,
+                parent: term,
+                structural: Some(owner.rewritten_term),
+            });
+        }
+
+        let select_start = work.select_terms.len();
+        let uf_start = work.uf_app_terms.len();
+        let array_uf_start = work.array_uf_app_terms.len();
+        let rewritten = self.rewrite_warm_structural_array_parent(arena, term, work)?;
+        let base_name = format!("!axeyum_warm_array_owner_{}", term.index());
+        let name = fresh_internal_symbol_name(arena, &base_name);
+        let sort = arena.sort_of(term);
+        let projection_symbol = arena
+            .declare_internal(&name, sort)
+            .map_err(|error| map_ir_error(&error))?;
+        self.internal_symbols.insert(projection_symbol);
+        let owner = WarmStructuralArrayOwner {
+            projection_symbol,
+            rewritten_term: rewritten,
+            select_terms: work.select_terms[select_start..].to_vec(),
+            uf_app_terms: work.uf_app_terms[uf_start..].to_vec(),
+            array_uf_app_terms: work.array_uf_app_terms[array_uf_start..].to_vec(),
+        };
+        self.warm_structural_array_owners.insert(term, owner);
+        for select in self.warm_array_selects.values_mut() {
+            if select.array_parent == term {
+                select.projection_symbol = Some(projection_symbol);
+            }
+        }
+        Ok(WarmArrayEqualityOperand {
+            owner: projection_symbol,
+            parent: term,
+            structural: Some(rewritten),
+        })
+    }
+
+    fn rewrite_warm_structural_array_parent(
+        &mut self,
+        arena: &mut TermArena,
+        term: TermId,
+        work: &mut WarmAbstractionWork,
+    ) -> Result<TermId, SolverError> {
+        let node = arena.node(term).clone();
+        match node {
+            TermNode::Symbol(_) => Ok(term),
+            TermNode::App {
+                op: Op::Apply(_), ..
+            } if supported_warm_array_uf_app_shape(arena, term) => {
+                let app = self.retain_warm_array_uf_app(arena, term, work)?;
+                if !work.array_uf_app_terms.contains(&term) {
+                    work.array_uf_app_terms.push(term);
+                }
+                Ok(arena.var(app.projection_symbol))
+            }
+            TermNode::App {
+                op: Op::ConstArray { .. },
+                args,
+            } => {
+                let [value] = args.as_ref() else {
+                    return Err(SolverError::Backend(
+                        "warm constant-array owner had invalid arity".to_owned(),
+                    ));
+                };
+                let value = self.abstract_warm_array_selects_inner(arena, *value, work)?;
+                Ok(arena.rebuild_with_args(term, &[value]))
+            }
+            TermNode::App {
+                op: Op::Store,
+                args,
+            } => {
+                let [base, index, value] = args.as_ref() else {
+                    return Err(SolverError::Backend(
+                        "warm store-array owner had invalid arity".to_owned(),
+                    ));
+                };
+                let base = self.rewrite_warm_structural_array_parent(arena, *base, work)?;
+                let index = self.abstract_warm_array_selects_inner(arena, *index, work)?;
+                let value = self.abstract_warm_array_selects_inner(arena, *value, work)?;
+                Ok(arena.rebuild_with_args(term, &[base, index, value]))
+            }
+            TermNode::App { op: Op::Ite, args } => {
+                let [condition, then_array, else_array] = args.as_ref() else {
+                    return Err(SolverError::Backend(
+                        "warm array-ITE owner had invalid arity".to_owned(),
+                    ));
+                };
+                let condition = self.abstract_warm_array_selects_inner(arena, *condition, work)?;
+                let then_array =
+                    self.rewrite_warm_structural_array_parent(arena, *then_array, work)?;
+                let else_array =
+                    self.rewrite_warm_structural_array_parent(arena, *else_array, work)?;
+                Ok(arena.rebuild_with_args(term, &[condition, then_array, else_array]))
+            }
+            _ => Err(SolverError::Unsupported(format!(
+                "warm structural array owner #{} uses an unsupported parent",
+                term.index()
+            ))),
+        }
     }
 
     fn abstract_warm_array_disequality(
@@ -1517,7 +1876,18 @@ impl IncrementalBvSolver {
         term: TermId,
         mut select: WarmArraySelect,
     ) -> Result<WarmArraySelect, SolverError> {
-        if let Some(existing) = self.warm_array_selects.get(&term).copied() {
+        if let Some(mut existing) = self.warm_array_selects.get(&term).copied() {
+            if existing.projection_symbol.is_none() && select.projection_symbol.is_some() {
+                existing.projection_symbol = select.projection_symbol;
+                self.warm_array_selects.insert(term, existing);
+            } else if existing.projection_symbol != select.projection_symbol
+                && select.projection_symbol.is_some()
+            {
+                return Err(SolverError::Backend(format!(
+                    "warm array read #{} acquired inconsistent projection owners",
+                    term.index()
+                )));
+            }
             return Ok(existing);
         }
         let base_name = format!("!axeyum_warm_select_{}", term.index());
@@ -1785,6 +2155,18 @@ impl IncrementalBvSolver {
                 )));
             }
             let relation = warm_array_relation_literal(arena, encoded);
+            if !self.warm_array_equality_observation_budget_holds(
+                arena,
+                encoded,
+                relation,
+                &active_selects,
+                &active_equalities,
+            ) {
+                return Err(SolverError::Unsupported(format!(
+                    "array/UF assumption #{} exceeds the retained structural-equality observation budget",
+                    term.index()
+                )));
+            }
             if relation
                 .is_some_and(|relation| relation.polarity == WarmArrayRelationPolarity::Equal)
             {
@@ -2065,17 +2447,11 @@ impl IncrementalBvSolver {
         if !violated.is_empty() {
             return Ok(WarmCandidateCheck::Refine(violated));
         }
-        let model = match self.complete_model_with_warm_theories(
-            arena,
-            assignment,
-            &one_shot.selects,
-            &one_shot.uf_apps,
-            &one_shot.array_uf_apps,
-            &one_shot.array_equalities,
-        ) {
-            Ok(model) => model,
-            Err(reason) => return Ok(WarmCandidateCheck::Unknown(reason)),
-        };
+        let model =
+            match self.complete_model_with_warm_theories(arena, assignment, one_shot, deadline) {
+                Ok(model) => model,
+                Err(reason) => return Ok(WarmCandidateCheck::Unknown(reason)),
+            };
         let original_assumptions = original_assumptions(assumptions);
         if let Some(reason) = self.replay(arena, &original_assumptions, &model)? {
             return Ok(WarmCandidateCheck::Unknown(reason));
@@ -2207,16 +2583,21 @@ impl IncrementalBvSolver {
         &self,
         arena: &TermArena,
         assignment: &Assignment,
-        one_shot_selects: &[TermId],
-        one_shot_uf_apps: &[TermId],
-        one_shot_array_uf_apps: &[TermId],
-        one_shot_array_equalities: &[WarmArrayEquality],
+        one_shot: &WarmOneShotTerms,
+        deadline: Option<Instant>,
     ) -> Result<Model, UnknownReason> {
         let mut model = complete_model_filtered(arena, assignment, &self.internal_symbols);
-        self.project_warm_array_selects(arena, assignment, one_shot_selects, &mut model)?;
-        self.project_warm_uf_apps(arena, assignment, one_shot_uf_apps, &mut model)?;
-        self.project_warm_array_equalities(arena, one_shot_array_equalities, &mut model)?;
-        self.project_warm_array_uf_apps(arena, assignment, one_shot_array_uf_apps, &mut model)?;
+        self.project_warm_array_selects(arena, assignment, &one_shot.selects, &mut model)?;
+        self.project_warm_uf_apps(arena, assignment, &one_shot.uf_apps, &mut model)?;
+        self.project_warm_array_equalities(
+            arena,
+            assignment,
+            &one_shot.selects,
+            &one_shot.array_equalities,
+            &mut model,
+            deadline,
+        )?;
+        self.project_warm_array_uf_apps(arena, assignment, &one_shot.array_uf_apps, &mut model)?;
         Ok(filter_internal_model(&model, &self.internal_symbols))
     }
 
@@ -2448,8 +2829,11 @@ impl IncrementalBvSolver {
     fn project_warm_array_equalities(
         &self,
         arena: &TermArena,
+        assignment: &Assignment,
+        one_shot_selects: &[TermId],
         one_shot_array_equalities: &[WarmArrayEquality],
         model: &mut Model,
+        deadline: Option<Instant>,
     ) -> Result<(), UnknownReason> {
         let mut equalities = self.active_warm_array_equalities();
         equalities.extend_from_slice(one_shot_array_equalities);
@@ -2466,7 +2850,268 @@ impl IncrementalBvSolver {
                 model.set(symbol, merged.clone());
             }
         }
+        self.realize_warm_structural_array_equalities(
+            arena,
+            assignment,
+            one_shot_selects,
+            &equalities,
+            model,
+            deadline,
+        )
+    }
+
+    fn realize_warm_structural_array_equalities(
+        &self,
+        arena: &TermArena,
+        assignment: &Assignment,
+        one_shot_selects: &[TermId],
+        equalities: &[WarmArrayEquality],
+        model: &mut Model,
+        deadline: Option<Instant>,
+    ) -> Result<(), UnknownReason> {
+        let equations = equalities
+            .iter()
+            .flat_map(|equality| {
+                [
+                    equality.left_structural.map(|term| (equality.left, term)),
+                    equality.right_structural.map(|term| (equality.right, term)),
+                ]
+            })
+            .flatten()
+            .collect::<Vec<_>>();
+        if equations.is_empty() {
+            return Ok(());
+        }
+
+        let groups = warm_array_equality_groups(equalities);
+        let active_selects = self.active_warm_array_select_closure(one_shot_selects);
+        let mut projected =
+            assignment_with_internal(arena, model, assignment, &self.internal_symbols);
+        let max_rounds = equations
+            .len()
+            .saturating_mul(2)
+            .clamp(1, MAX_WARM_STRUCTURAL_REFINEMENT_ROUNDS);
+        for _round in 0..max_rounds {
+            check_warm_structural_projection_deadline(deadline)?;
+            let mut mismatches = 0usize;
+            let mut progressed = false;
+            for &(owner, structural) in &equations {
+                check_warm_structural_projection_deadline(deadline)?;
+                let owner_value = warm_array_owner_value(owner, &projected)?;
+                let structural_value = eval_warm_structural_term(arena, structural, &projected)?;
+                if owner_value == structural_value {
+                    continue;
+                }
+                mismatches += 1;
+                if self.try_realize_warm_structural_equation(
+                    arena,
+                    &active_selects,
+                    &groups,
+                    owner,
+                    structural,
+                    &owner_value,
+                    &structural_value,
+                    &mut projected,
+                    deadline,
+                )? {
+                    progressed = true;
+                }
+            }
+            if mismatches == 0 {
+                break;
+            }
+            if !progressed {
+                return Err(UnknownReason {
+                    kind: UnknownKind::Other,
+                    detail: "warm structural array equality could not realize a total model"
+                        .to_owned(),
+                });
+            }
+        }
+        for &(owner, structural) in &equations {
+            check_warm_structural_projection_deadline(deadline)?;
+            if warm_array_owner_value(owner, &projected)?
+                != eval_warm_structural_term(arena, structural, &projected)?
+            {
+                return Err(UnknownReason {
+                    kind: UnknownKind::ResourceLimit,
+                    detail: "warm structural array equality did not converge within its fixed-point bound"
+                        .to_owned(),
+                });
+            }
+        }
+
+        for (symbol, _name, sort) in arena.symbols() {
+            if matches!(sort, Sort::Array { .. })
+                && let Some(value) = projected.get(symbol)
+            {
+                model.set(symbol, value);
+            }
+        }
         Ok(())
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn try_realize_warm_structural_equation(
+        &self,
+        arena: &TermArena,
+        active_selects: &[TermId],
+        groups: &[Vec<SymbolId>],
+        owner: SymbolId,
+        structural: TermId,
+        owner_value: &Value,
+        structural_value: &Value,
+        projected: &mut Assignment,
+        deadline: Option<Instant>,
+    ) -> Result<bool, UnknownReason> {
+        let mut candidate = projected.clone();
+        if self.assign_warm_array_owner_class(
+            arena,
+            active_selects,
+            groups,
+            owner,
+            structural_value,
+            &mut candidate,
+        )? && warm_array_owner_value(owner, &candidate)?
+            == eval_warm_structural_term(arena, structural, &candidate)?
+        {
+            *projected = candidate;
+            return Ok(true);
+        }
+
+        let mut candidate = projected.clone();
+        if self.realize_warm_structural_array_term(
+            arena,
+            active_selects,
+            groups,
+            structural,
+            owner_value,
+            &mut candidate,
+            deadline,
+        )? == WarmStructuralRealization::Changed
+            && warm_array_owner_value(owner, &candidate)?
+                == eval_warm_structural_term(arena, structural, &candidate)?
+        {
+            *projected = candidate;
+            return Ok(true);
+        }
+        Ok(false)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn realize_warm_structural_array_term(
+        &self,
+        arena: &TermArena,
+        active_selects: &[TermId],
+        groups: &[Vec<SymbolId>],
+        term: TermId,
+        target: &Value,
+        projected: &mut Assignment,
+        deadline: Option<Instant>,
+    ) -> Result<WarmStructuralRealization, UnknownReason> {
+        let mut current = term;
+        for _step in 0..MAX_WARM_STRUCTURAL_ARRAY_NODES {
+            check_warm_structural_projection_deadline(deadline)?;
+            if eval_warm_structural_term(arena, current, projected)? == *target {
+                return Ok(WarmStructuralRealization::Unchanged);
+            }
+            match arena.node(current) {
+                TermNode::Symbol(owner) if matches!(arena.sort_of(current), Sort::Array { .. }) => {
+                    return if self.assign_warm_array_owner_class(
+                        arena,
+                        active_selects,
+                        groups,
+                        *owner,
+                        target,
+                        projected,
+                    )? {
+                        Ok(WarmStructuralRealization::Changed)
+                    } else {
+                        Ok(WarmStructuralRealization::Incompatible)
+                    };
+                }
+                TermNode::App {
+                    op: Op::Store,
+                    args,
+                } => {
+                    let index = eval_warm_structural_term(arena, args[1], projected)?;
+                    let element = eval_warm_structural_term(arena, args[2], projected)?;
+                    if warm_array_value_select(target, &index)? != element {
+                        return Ok(WarmStructuralRealization::Incompatible);
+                    }
+                    current = args[0];
+                }
+                TermNode::App { op: Op::Ite, args } => {
+                    let condition = eval_warm_structural_term(arena, args[0], projected)?;
+                    let Value::Bool(condition) = condition else {
+                        return Err(UnknownReason {
+                            kind: UnknownKind::Other,
+                            detail: "warm structural array ITE guard evaluated to a non-Boolean"
+                                .to_owned(),
+                        });
+                    };
+                    current = if condition { args[1] } else { args[2] };
+                }
+                _ => return Ok(WarmStructuralRealization::Incompatible),
+            }
+        }
+        Ok(WarmStructuralRealization::Incompatible)
+    }
+
+    fn assign_warm_array_owner_class(
+        &self,
+        arena: &TermArena,
+        active_selects: &[TermId],
+        groups: &[Vec<SymbolId>],
+        owner: SymbolId,
+        target: &Value,
+        projected: &mut Assignment,
+    ) -> Result<bool, UnknownReason> {
+        let members = groups
+            .iter()
+            .find(|group| group.contains(&owner))
+            .map_or_else(|| vec![owner], Clone::clone);
+        for &select_term in active_selects {
+            let Some(select) = self.warm_array_selects.get(&select_term).copied() else {
+                continue;
+            };
+            if !select
+                .projection_symbol
+                .is_some_and(|symbol| members.contains(&symbol))
+            {
+                continue;
+            }
+            let Some(value_symbol) = select.value_symbol else {
+                return Err(UnknownReason {
+                    kind: UnknownKind::Other,
+                    detail: format!(
+                        "warm structural equality read #{} lost its scalar owner",
+                        select_term.index()
+                    ),
+                });
+            };
+            let expected = projected.get(value_symbol).ok_or_else(|| UnknownReason {
+                kind: UnknownKind::Other,
+                detail: format!(
+                    "warm structural equality read #{} lost its candidate value",
+                    select_term.index()
+                ),
+            })?;
+            let index = eval_warm_structural_term(arena, select.encoded_index, projected)?;
+            if warm_array_value_select(target, &index)? != expected {
+                return Ok(false);
+            }
+        }
+        let changed = members
+            .iter()
+            .any(|&symbol| projected.get(symbol).as_ref() != Some(target));
+        if !changed {
+            return Ok(false);
+        }
+        for symbol in members {
+            projected.set(symbol, target.clone());
+        }
+        Ok(true)
     }
 
     /// Replays the model against every active assertion plus the one-shot
@@ -3515,23 +4160,44 @@ fn warm_array_relation_covers(
     scalar_memo: &mut HashMap<TermId, bool>,
 ) -> bool {
     match relation.polarity {
-        WarmArrayRelationPolarity::Equal => {
+        WarmArrayRelationPolarity::Equal | WarmArrayRelationPolarity::Distinct => {
             [relation.left, relation.right]
                 .into_iter()
-                .all(|term| match arena.node(term) {
-                    TermNode::Symbol(_) => true,
-                    TermNode::App {
-                        op: Op::Apply(_), ..
-                    } if supported_warm_array_uf_app_shape(arena, term) => {
-                        warm_array_parent_covers(arena, term, scalar_memo)
-                    }
-                    _ => false,
-                })
+                .all(|term| warm_array_parent_covers(arena, term, scalar_memo))
         }
-        WarmArrayRelationPolarity::Distinct => [relation.left, relation.right]
-            .into_iter()
-            .all(|term| warm_array_parent_covers(arena, term, scalar_memo)),
     }
+}
+
+fn warm_array_relation_has_structural_parent(
+    arena: &TermArena,
+    relation: WarmArrayRelation,
+) -> bool {
+    [relation.left, relation.right].into_iter().any(|parent| {
+        !matches!(arena.node(parent), TermNode::Symbol(_))
+            && !supported_warm_array_uf_app_shape(arena, parent)
+    })
+}
+
+fn collect_warm_select_indices(arena: &TermArena, root: TermId, indices: &mut Vec<TermId>) {
+    let mut stack = vec![root];
+    let mut seen = HashSet::new();
+    while let Some(term) = stack.pop() {
+        if !seen.insert(term) {
+            continue;
+        }
+        if let TermNode::App {
+            op: Op::Select,
+            args,
+        } = arena.node(term)
+            && !indices.contains(&args[1])
+        {
+            indices.push(args[1]);
+        }
+        if let TermNode::App { args, .. } = arena.node(term) {
+            stack.extend(args.iter().rev().copied());
+        }
+    }
+    indices.sort_by_key(|term| term.index());
 }
 
 fn is_warm_array_element_sort(sort: ArraySortKey) -> bool {
@@ -4117,6 +4783,118 @@ fn push_equal_generic_array_entry(
     Ok(())
 }
 
+fn extend_unique_terms(target: &mut Vec<TermId>, terms: &[TermId]) {
+    for &term in terms {
+        if !target.contains(&term) {
+            target.push(term);
+        }
+    }
+}
+
+fn collect_warm_store_indices(
+    arena: &TermArena,
+    root: TermId,
+    index_sort: Sort,
+    indices: &mut Vec<TermId>,
+) {
+    let mut stack = vec![root];
+    let mut seen = HashSet::new();
+    while let Some(term) = stack.pop() {
+        if !seen.insert(term) {
+            continue;
+        }
+        match arena.node(term) {
+            TermNode::App {
+                op: Op::Store,
+                args,
+            } => {
+                if arena.sort_of(args[1]) == index_sort && !indices.contains(&args[1]) {
+                    indices.push(args[1]);
+                }
+                stack.push(args[0]);
+            }
+            TermNode::App { op: Op::Ite, args }
+                if matches!(arena.sort_of(term), Sort::Array { .. }) =>
+            {
+                stack.push(args[2]);
+                stack.push(args[1]);
+            }
+            _ => {}
+        }
+    }
+}
+
+fn check_warm_structural_projection_deadline(
+    deadline: Option<Instant>,
+) -> Result<(), UnknownReason> {
+    if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
+        Err(UnknownReason {
+            kind: UnknownKind::Timeout,
+            detail: "warm structural array equality exhausted the shared query deadline".to_owned(),
+        })
+    } else {
+        Ok(())
+    }
+}
+
+fn eval_warm_structural_term(
+    arena: &TermArena,
+    term: TermId,
+    assignment: &Assignment,
+) -> Result<Value, UnknownReason> {
+    eval(arena, term, assignment).map_err(|error| UnknownReason {
+        kind: UnknownKind::Other,
+        detail: format!(
+            "warm structural array equality could not evaluate term #{}: {error}",
+            term.index()
+        ),
+    })
+}
+
+fn warm_array_owner_value(
+    owner: SymbolId,
+    assignment: &Assignment,
+) -> Result<Value, UnknownReason> {
+    assignment.get(owner).ok_or_else(|| UnknownReason {
+        kind: UnknownKind::Other,
+        detail: format!(
+            "warm structural array equality lost owner #{}",
+            owner.index()
+        ),
+    })
+}
+
+fn warm_array_value_select(array: &Value, index: &Value) -> Result<Value, UnknownReason> {
+    match array {
+        Value::Array(array) => {
+            let Some((_, index)) = index.as_bv() else {
+                return Err(UnknownReason {
+                    kind: UnknownKind::Other,
+                    detail: "warm structural compact array received a non-BV index".to_owned(),
+                });
+            };
+            Ok(Value::Bv {
+                width: array.element_width(),
+                value: array.select(index),
+            })
+        }
+        Value::GenericArray(array) => {
+            if index.sort() != array.index_sort().to_sort() {
+                return Err(UnknownReason {
+                    kind: UnknownKind::Other,
+                    detail: "warm structural generic array received an index of wrong sort"
+                        .to_owned(),
+                });
+            }
+            Ok(array.select(index))
+        }
+        other => Err(UnknownReason {
+            kind: UnknownKind::Other,
+            detail: format!("warm structural equality expected an array value, got {other}"),
+        }),
+    }
+}
+
 fn fresh_internal_symbol_name(arena: &TermArena, base_name: &str) -> String {
     let mut name = base_name.to_owned();
     let mut suffix = 0usize;
@@ -4397,9 +5175,9 @@ fn assignment_with_internal(
     let mut merged = model.to_assignment();
     for &symbol in internal_symbols {
         let (_name, sort) = arena.symbol(symbol);
-        if let Some(value) = assignment
+        if let Some(value) = model
             .get(symbol)
-            .or_else(|| model.get(symbol))
+            .or_else(|| assignment.get(symbol))
             .or_else(|| well_founded_default(arena, sort))
         {
             merged.set(symbol, value);
@@ -4505,4 +5283,89 @@ fn map_lower_error(error: BitLowerError) -> SolverError {
 
 fn map_sat_error(error: &SatError) -> SolverError {
     SolverError::Backend(error.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn structural_observation_root(arena: &mut TermArena, count: u128) -> TermId {
+        let array = arena
+            .array_var_with_sorts(
+                "warm_observation_budget_reads",
+                Sort::BitVec(16),
+                Sort::BitVec(8),
+            )
+            .unwrap();
+        let zero = arena.bv_const(8, 0).unwrap();
+        let mut root = arena.bool_const(true);
+        for raw_index in 0..count {
+            let index = arena.bv_const(16, raw_index).unwrap();
+            let read = arena.select(array, index).unwrap();
+            let equality = arena.eq(read, zero).unwrap();
+            root = arena.and(root, equality).unwrap();
+        }
+        root
+    }
+
+    fn structural_equality_metadata(arena: &mut TermArena) -> WarmArrayEquality {
+        let left = arena
+            .array_var_with_sorts(
+                "warm_observation_budget_left",
+                Sort::BitVec(16),
+                Sort::BitVec(8),
+            )
+            .unwrap();
+        let right = arena
+            .array_var_with_sorts(
+                "warm_observation_budget_right",
+                Sort::BitVec(16),
+                Sort::BitVec(8),
+            )
+            .unwrap();
+        let index = arena.bv_const(16, 511).unwrap();
+        let value = arena.bv_const(8, 1).unwrap();
+        let stored = arena.store(left, index, value).unwrap();
+        let TermNode::Symbol(left_owner) = arena.node(left) else {
+            unreachable!()
+        };
+        let TermNode::Symbol(right_owner) = arena.node(right) else {
+            unreachable!()
+        };
+        WarmArrayEquality {
+            left: *left_owner,
+            right: *right_owner,
+            left_parent: stored,
+            right_parent: right,
+            left_structural: Some(stored),
+            right_structural: None,
+        }
+    }
+
+    #[test]
+    fn structural_equality_observation_budget_is_exact() {
+        let mut admitted_arena = TermArena::new();
+        let equality = structural_equality_metadata(&mut admitted_arena);
+        let root = structural_observation_root(&mut admitted_arena, 256);
+        let solver = IncrementalBvSolver::new();
+        assert!(solver.warm_array_equality_observation_budget_holds(
+            &admitted_arena,
+            root,
+            None,
+            &[],
+            &[equality]
+        ));
+
+        let mut refused_arena = TermArena::new();
+        let equality = structural_equality_metadata(&mut refused_arena);
+        let root = structural_observation_root(&mut refused_arena, 257);
+        let solver = IncrementalBvSolver::new();
+        assert!(!solver.warm_array_equality_observation_budget_holds(
+            &refused_arena,
+            root,
+            None,
+            &[],
+            &[equality]
+        ));
+    }
 }

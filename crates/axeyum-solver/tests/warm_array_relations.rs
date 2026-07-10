@@ -298,35 +298,7 @@ fn deep_store_relation(arena: &mut TermArena, depth: usize) -> TermId {
 }
 
 #[test]
-fn unsupported_positive_structure_nested_boolean_and_one_over_depth_defer_cleanly() {
-    let mut structural_arena = TermArena::new();
-    let base = structural_arena
-        .array_var_with_sorts(
-            "warm_relation_unsupported_a",
-            Sort::BitVec(8),
-            Sort::BitVec(8),
-        )
-        .unwrap();
-    let index = structural_arena
-        .bv_var("warm_relation_unsupported_i", 8)
-        .unwrap();
-    let value = structural_arena.bv_const(8, 1).unwrap();
-    let stored = structural_arena.store(base, index, value).unwrap();
-    let structural_equality = structural_arena.eq(stored, base).unwrap();
-    assert!(!IncrementalBvSolver::term_supported_by_warm_abstraction(
-        &structural_arena,
-        structural_equality
-    ));
-    let mut structural_solver = IncrementalBvSolver::new();
-    structural_solver
-        .assert_simplifying_memory(&mut structural_arena, structural_equality)
-        .unwrap();
-    assert!(structural_solver.has_deferred_theory_assertions());
-    assert_eq!(
-        structural_solver.retained_warm_array_diff_witness_count(),
-        0
-    );
-
+fn unsupported_nested_boolean_and_one_over_depth_defer_cleanly() {
     let mut nested_arena = TermArena::new();
     let array_sort = bv_array_sort(8);
     let f = nested_arena
