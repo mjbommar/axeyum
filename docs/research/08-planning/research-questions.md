@@ -65,10 +65,11 @@ Out of scope:
     decomposition and bounded observed-read-preserving store/ITE/constant class
     realization now close the structural total-model boundary (ADR-0085).
     Bounded warm structural ownership is retained by ADR-0086; ADR-0087 makes
-    its exact transitive summaries candidate-triggered and persistent. Retained
-    array-valued UF application parents with scalar keys are proposed in
-    ADR-0088. Warm equality/extensionality, nested/extended array operators, and
-    proofs remain. See
+    its exact transitive summaries candidate-triggered and persistent. ADR-0088
+    retains scalar-keyed array-valued UF application parents, conditional read
+    congruence, and full-value result projection on the same warm path. Warm
+    equality/extensionality, array-valued parameters, nested/extended array
+    operators, and proofs remain. See
     [ADR-0013](../09-decisions/adr-0013-uninterpreted-functions.md) and
     [ADR-0084](../09-decisions/adr-0084-array-valued-uf-results-on-the-canonical-array-bus.md),
     followed by

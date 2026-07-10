@@ -1,6 +1,6 @@
 # ADR-0088: Retained Warm Array-Valued UF Parents
 
-Status: proposed
+Status: accepted
 Date: 2026-07-10
 
 ## Context
@@ -104,29 +104,26 @@ observations. Private owners are hidden, and evaluator replay remains the final
 acceptance gate. Missing values, conflicting projection, unsupported shapes,
 deadline/resource exhaustion, or replay failure cannot yield accepted SAT.
 
-## Required Validation Before Acceptance
+## Acceptance Validation
 
-- A single array-result application read returns a projected function model
-  that replays the original assertion and exposes no private owner.
-- Equal scalar arguments plus equal read indices refute conflicting results;
-  distinct arguments and distinct indices remain independently satisfiable.
-- Two syntactically distinct applications that evaluate to the same argument
-  tuple merge split index observations into one function result array.
-- Scalar UF applications nested in array-function arguments and read indices
-  use the existing abstraction/congruence path and replay.
-- Store and array-ITE parents rooted at an array-valued application compose with
-  candidate-triggered transitive ROW summaries, including Bool elements and
-  BV256 arguments/results/components.
-- Push/pop and opposite one-shot assumptions retain harmless owners but scope
-  congruence, projection participation, and assumption cores correctly.
-- Exact 64-parent and existing node/depth boundaries admit at-limit roots and
-  defer one-over roots without partial state.
-- A deterministic warm/`check_auto`/direct-Z3 matrix covers SAT and UNSAT
-  application, congruence, store, ITE, Bool, split-observation, and nested-scalar
-  cases with zero disagreement and original replay for every warm SAT.
-- All solver and symbolic-execution tests, EVM tests/fuzz, strict clippy,
-  warning-denied rustdoc, links, foundational resources, and exact-SHA push
-  gates pass.
+- Ten all-feature mechanism and differential tests cover single-application
+  model projection, private-owner filtering, equal-argument/index conflicts,
+  split-observation merging, nested scalar UFs, store/ITE parents, Bool and
+  BV256 components, push/pop, one-shot cores, and unsupported-shape deferral.
+- The exact parent boundary admits 64 distinct applications and defers 65
+  without partial retained state. Int keys, array keys, Int result indices, and
+  whole-array equality involving an application also defer cleanly.
+- A deterministic 64-seed matrix contributes 64 warm, 64 `check_auto`, and 64
+  direct-Z3 comparisons. All 192 agree, and every warm SAT model replays the
+  original query.
+- All 816 solver unit tests, 77 symbolic-execution tests, the canonical three-
+  test array-result-UF integration, and the complete EVM test/fuzz suite pass.
+  The EVM corpus does not construct array-valued UFs, so this decision makes no
+  EVM timing claim.
+- Strict solver/EVM clippy, warning-denied solver/EVM rustdoc, documentation
+  links, foundational-resource generation, and the exact-SHA push gate pass.
+  Design commit `41019413` and implementation commit `f2bb16ab` are on
+  `origin/main`.
 
 ## Alternatives
 

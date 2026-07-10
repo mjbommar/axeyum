@@ -171,3 +171,12 @@ expansion work in the arena, but defers its expensive lowering/CNF cost and
 avoids separate intermediate owners. Structural equality/extensionality,
 array-valued UF parents, proof logging for activated ROW, and closing the
 remaining EVM performance gap remain later decisions.
+
+## Subsequent Decision
+
+[ADR-0088](adr-0088-retained-warm-array-valued-uf-parents.md) closes the scalar-
+keyed array-valued UF-parent part of that residual. Applications retain private
+array owners, observed reads receive conditional argument/index congruence, and
+concrete-equal keys project one full-value result before owner filtering and
+original replay. Structural equality/extensionality, array-valued parameters,
+proof logging, and the EVM performance gap remain.

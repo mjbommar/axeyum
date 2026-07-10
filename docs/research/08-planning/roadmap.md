@@ -466,8 +466,18 @@ zero summaries, while nested violated store chains close through one compact
 summary rather than one definition per parent. The 192-comparison matrix and
 all prior replay gates remain clean. Release EVM depth 32 improves from 30.933
 ms to 11.257 ms, but frontend ITE folding remains faster at 0.405 ms. Warm
-equality/extensionality/array-valued UF parents, the remaining performance gap,
-memory BMC, and proofs remain before phase exit.
+equality/extensionality, the remaining performance gap, memory BMC, and proofs
+remain before phase exit.
+
+ADR-0088 retains scalar-keyed array-valued UF applications as warm leaves.
+Their finite-scalar arguments and observed indices reuse existing abstraction;
+conditional argument/index congruence constrains private read owners; and one
+private array result per concrete argument tuple projects into a full-value
+function table before original replay. Exact 64/65-parent admission, ten focused
+tests, and 192 warm/`check_auto`/Z3 comparisons pass with zero disagreement.
+Warm structural equality/extensionality, array-valued parameters, nested/
+extended arrays, memory BMC, and proofs remain before phase exit. The EVM corpus
+does not exercise array-valued UFs, so no performance change is claimed here.
 
 Implementation note: a first infosec-workflow client example landed early
 (2026-06-13), ahead of arrays — a register-VM symbolic executor over

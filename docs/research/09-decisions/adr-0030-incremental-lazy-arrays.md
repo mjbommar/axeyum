@@ -135,9 +135,15 @@ candidate that violates it activates the summary permanently and resumes the
 same CNF/SAT instance under one shared deadline. Default-completed replayable
 misses can activate zero summaries, and inactive pending metadata creates no
 work. Depth 32 improves from 30.933 ms to 11.257 ms, while direct ITE folding is
-still 0.405 ms. Extensionality, broader equality/UF parents, memory BMC/
-k-induction, proofs, and the remaining performance gap keep the deferred half
-open.
+still 0.405 ms.
+
+ADR-0088 then retains scalar-keyed array-valued UF applications as warm array
+leaves. Conditional argument/index congruence constrains observed reads; private
+array owners project one full array result per concrete argument tuple before
+function construction and original replay. The 64-parent boundary and a 192-
+comparison warm/`check_auto`/Z3 matrix validate this slice. Extensionality,
+structural equality, array-valued parameters, memory BMC/k-induction, proofs,
+and the remaining performance gap keep the deferred half open.
 
 ## Consequences
 

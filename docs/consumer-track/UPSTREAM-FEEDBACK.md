@@ -136,7 +136,10 @@ Last reconciled with `main`: 2026-06-27.
   confirming that repeated resumes through every store parent are the wrong
   granularity. **Takeaway for U6:** candidate activation pays, but the remaining
   gap now belongs to warm summary/search reuse plus structural equality/
-  extensionality and broader UF parents. Frontend `ite`-fold correctly remains
+  extensionality. ADR-0088 separately retains scalar-keyed array-valued UF
+  parents with conditional read congruence and full-value projection; the EVM
+  corpus does not construct that shape, so it adds no timing delta. Frontend
+  `ite`-fold correctly remains
   the EVM default. Reproduce: `cargo run -p axeyum-evm --release
   --example measure_evm` → "Storage-depth scaling" table.
 - **What:** the original consumer pain was that `SymbolicExecutor`'s warm path
@@ -180,7 +183,10 @@ Last reconciled with `main`: 2026-06-27.
   ADR-0087 retains one exact transitive scalar summary per structural owner and
   installs it permanently only after candidate violation. Direct leaves alone
   project array models, inactive pending summaries create no work, scoped roots
-  pop normally, and original replay remains mandatory.
+  pop normally, and original replay remains mandatory. ADR-0088 retains reads
+  over scalar-keyed array-valued UF applications as private arrays, enforces
+  conditional argument/index congruence, and projects one full-value array
+  result per concrete argument tuple before owner filtering and replay.
   Trivial scalar `ite`s exposed by memory rewrites collapse too, and the scalar
   cleanup now distributes equality over Bool/BV-valued `ite`s plus folds
   literal-distinct constant equalities, Boolean identity `ite`s, Boolean

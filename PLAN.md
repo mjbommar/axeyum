@@ -3881,6 +3881,21 @@ Its conclusion, ranked by quality × efficiency:
    ms, while ITE folding still wins at 0.405 ms and remains default. Next: warm
    structural equality/extensionality and array-valued UF parents, then memory
    BMC/k-induction, online array proofs, and the remaining performance gap.
+   **Thirty-third follow-through:** ADR-0088 retains scalar-keyed array-valued UF
+   applications as first-class warm leaves. Finite Bool/BV arguments and read
+   indices reuse the scalar warm abstraction; private application arrays and
+   read owners are constrained by conditional argument/index congruence; and
+   equal concrete argument tuples merge split observations before full-value
+   function projection, owner filtering, and original replay. Store and array-
+   ITE parents compose with ADR-0087 summaries. Exact 64/65-parent admission,
+   ten all-feature mechanism/differential tests, and 192 warm/`check_auto`/Z3
+   comparisons are clean; all 816 solver units, 77 symexec tests, the canonical
+   array-result integration, and complete EVM gates pass. Design/implementation
+   commits `41019413`/`f2bb16ab` are on `origin/main`. The EVM corpus has no
+   array-valued UF application, so this increment makes no EVM timing claim.
+   Next: warm structural equality/extensionality and array-valued parameters,
+   then memory BMC/k-induction, online array proofs, and the remaining
+   performance gap.
 2. **Keep a thin measured-leaf-BFS skirt in parallel** — measured-ROI leaves only
    (NRA tail, strings-Nielsen); fold the feature/scale-blocked leaves
    (dense-ILP MILP, large-LP performance) into a funded engine phase rather than

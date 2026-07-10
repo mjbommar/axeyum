@@ -183,5 +183,12 @@ than simpler.
 structural equality residual recorded here. Exact array-ITE equality
 decomposition and bounded observed-read-preserving store/ITE/constant
 realization now compose with the array-result projection order established by
-this decision. Warm reuse, nested/extended arrays, and proofs remain separate
+this decision.
+
+[ADR-0088](adr-0088-retained-warm-array-valued-uf-parents.md) reuses that
+array-first/function-second ownership order in `IncrementalBvSolver` for
+scalar-keyed array-valued applications. It retains private application arrays,
+enforces conditional read congruence, groups concrete argument tuples, hides
+private owners, and replays originals. Warm structural equality/extensionality,
+array-valued parameters, nested/extended arrays, and proofs remain separate
 work.
