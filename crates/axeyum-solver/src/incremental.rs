@@ -36,6 +36,7 @@ use crate::model::Model;
 const MAX_WARM_STRUCTURAL_ARRAY_NODES: usize = 512;
 const MAX_WARM_STRUCTURAL_ARRAY_DEPTH: usize = 256;
 const MAX_WARM_STRUCTURAL_REFINEMENT_ROUNDS: usize = MAX_WARM_STRUCTURAL_ARRAY_NODES;
+const MAX_WARM_ARRAY_UF_APPS_PER_ROOT: usize = 64;
 
 /// Whether `term` needs the deferred theory path instead of the warm
 /// bit-blaster: arrays (`select`/`store`/array values) or uninterpreted function
@@ -147,7 +148,9 @@ struct OneShotAssumption {
 struct WarmArraySelect {
     array_parent: TermId,
     projection_symbol: Option<SymbolId>,
+    array_uf_app: Option<TermId>,
     index: TermId,
+    encoded_index: TermId,
     value_symbol: Option<SymbolId>,
     value_term: TermId,
     index_width: u32,
@@ -206,6 +209,22 @@ struct WarmUfApp {
     result_sort: Sort,
 }
 
+#[derive(Debug, Clone)]
+struct WarmArrayUfApp {
+    func: FuncId,
+    args: Vec<TermId>,
+    encoded_args: Vec<TermId>,
+    projection_symbol: SymbolId,
+    result_sort: Sort,
+}
+
+struct WarmArrayUfProjectionGroup {
+    func: FuncId,
+    args: Vec<Value>,
+    projection_symbols: Vec<SymbolId>,
+    result_sort: Sort,
+}
+
 /// A warm, incremental pure-Rust bit-vector solver.
 ///
 /// Bound to a single [`TermArena`] over its lifetime (term IDs are arena-stable
@@ -222,6 +241,7 @@ pub struct IncrementalBvSolver {
     warm_array_semantics_encoded: HashSet<TermId>,
     warm_array_refinement_rounds: usize,
     warm_uf_apps: HashMap<TermId, WarmUfApp>,
+    warm_array_uf_apps: HashMap<TermId, WarmArrayUfApp>,
     internal_symbols: HashSet<SymbolId>,
 }
 
@@ -259,6 +279,7 @@ impl IncrementalBvSolver {
             warm_array_semantics_encoded: HashSet::new(),
             warm_array_refinement_rounds: 0,
             warm_uf_apps: HashMap::new(),
+            warm_array_uf_apps: HashMap::new(),
             internal_symbols: HashSet::new(),
         }
     }
@@ -328,6 +349,12 @@ impl IncrementalBvSolver {
     #[must_use]
     pub fn retained_warm_structural_refinement_round_count(&self) -> usize {
         self.warm_array_refinement_rounds
+    }
+
+    /// Number of retained finite-scalar array-valued UF application parents.
+    #[must_use]
+    pub fn retained_warm_array_uf_app_count(&self) -> usize {
+        self.warm_array_uf_apps.len()
     }
 
     /// Whether `term` contains array or uninterpreted-function structure that
@@ -1090,9 +1117,7 @@ impl IncrementalBvSolver {
             return Ok(abstracted);
         }
 
-        if let Some(select) = Self::supported_warm_array_select(arena, term)
-            && !needs_deferred_theory(arena, select.index)
-        {
+        if let Some(select) = Self::supported_warm_array_select(arena, term) {
             let value_term = self.retain_warm_array_select(arena, term, select, work)?;
             work.memo.insert(term, value_term);
             return Ok(value_term);
@@ -1130,9 +1155,7 @@ impl IncrementalBvSolver {
         } else {
             term
         };
-        let abstracted = if let Some(select) = Self::supported_warm_array_select(arena, rebuilt)
-            && !needs_deferred_theory(arena, select.index)
-        {
+        let abstracted = if let Some(select) = Self::supported_warm_array_select(arena, rebuilt) {
             self.retain_warm_array_select(arena, rebuilt, select, work)?
         } else if let Some(app) = Self::supported_warm_uf_app(arena, rebuilt)
             && app
@@ -1186,10 +1209,13 @@ impl IncrementalBvSolver {
             TermNode::Symbol(symbol) => Some(*symbol),
             _ => None,
         };
+        let array_uf_app = supported_warm_array_uf_app_shape(arena, *array).then_some(*array);
         Some(WarmArraySelect {
             array_parent: *array,
             projection_symbol,
+            array_uf_app,
             index: *index,
+            encoded_index: *index,
             value_symbol: None,
             value_term: term,
             index_width,
@@ -1202,9 +1228,20 @@ impl IncrementalBvSolver {
         &mut self,
         arena: &mut TermArena,
         term: TermId,
-        select: WarmArraySelect,
+        mut select: WarmArraySelect,
         work: &mut WarmAbstractionWork,
     ) -> Result<TermId, SolverError> {
+        select.encoded_index = self.abstract_warm_array_selects_inner(arena, select.index, work)?;
+        if needs_deferred_theory(arena, select.encoded_index) {
+            return Err(SolverError::Unsupported(format!(
+                "warm array read #{} has an unsupported scalar index",
+                term.index()
+            )));
+        }
+        if let Some(app_term) = select.array_uf_app {
+            let app = self.retain_warm_array_uf_app(arena, app_term, work)?;
+            select.projection_symbol = Some(app.projection_symbol);
+        }
         let abstracted = self.get_or_create_warm_array_select(arena, term, select)?;
         if !work.select_terms.contains(&term) {
             work.select_terms.push(term);
@@ -1360,25 +1397,45 @@ impl IncrementalBvSolver {
         let Some(right) = self.warm_array_selects.get(&right).copied() else {
             return Ok(None);
         };
-        let parents_equal = left.array_parent == right.array_parent
+        let same_parent_guard = if left.array_parent == right.array_parent
             || left
                 .projection_symbol
                 .zip(right.projection_symbol)
-                .is_some_and(|(left, right)| warm_array_symbols_equal(left, right, equalities));
-        if !parents_equal {
+                .filter(|_| left.array_uf_app.is_none() && right.array_uf_app.is_none())
+                .is_some_and(|(left, right)| warm_array_symbols_equal(left, right, equalities))
+        {
+            None
+        } else if let (Some(left_app), Some(right_app)) = (left.array_uf_app, right.array_uf_app) {
+            let Some(left_app) = self.warm_array_uf_apps.get(&left_app) else {
+                return Ok(None);
+            };
+            let Some(right_app) = self.warm_array_uf_apps.get(&right_app) else {
+                return Ok(None);
+            };
+            if left_app.func != right_app.func {
+                return Ok(None);
+            }
+            conjunction_of_equalities(arena, &left_app.encoded_args, &right_app.encoded_args)?
+        } else {
             return Ok(None);
-        }
+        };
         let same_index = arena
-            .eq(left.index, right.index)
+            .eq(left.encoded_index, right.encoded_index)
             .map_err(|error| map_ir_error(&error))?;
         let same_value = arena
             .eq(left.value_term, right.value_term)
             .map_err(|error| map_ir_error(&error))?;
-        let distinct_index = arena
-            .not(same_index)
+        let same_inputs = match same_parent_guard {
+            Some(same_parent) => arena
+                .and(same_parent, same_index)
+                .map_err(|error| map_ir_error(&error))?,
+            None => same_index,
+        };
+        let distinct_inputs = arena
+            .not(same_inputs)
             .map_err(|error| map_ir_error(&error))?;
         arena
-            .or(distinct_index, same_value)
+            .or(distinct_inputs, same_value)
             .map(Some)
             .map_err(|error| map_ir_error(&error))
     }
@@ -1429,6 +1486,77 @@ impl IncrementalBvSolver {
             value_term: term,
             result_sort,
         })
+    }
+
+    fn retain_warm_array_uf_app(
+        &mut self,
+        arena: &mut TermArena,
+        term: TermId,
+        work: &mut WarmAbstractionWork,
+    ) -> Result<WarmArrayUfApp, SolverError> {
+        let TermNode::App {
+            op: Op::Apply(func),
+            args,
+            ..
+        } = arena.node(term)
+        else {
+            return Err(SolverError::Backend(format!(
+                "warm array UF parent #{} is not an application",
+                term.index()
+            )));
+        };
+        let func = *func;
+        let args = args.to_vec();
+        let (_name, params, result_sort) = arena.function(func);
+        let param_count = params.len();
+        if !supported_warm_array_uf_app_shape(arena, term) {
+            return Err(SolverError::Unsupported(format!(
+                "warm array UF parent #{} has an unsupported signature",
+                term.index()
+            )));
+        }
+
+        let mut encoded_args = Vec::with_capacity(args.len());
+        for &arg in &args {
+            let encoded = self.abstract_warm_array_selects_inner(arena, arg, work)?;
+            if needs_deferred_theory(arena, encoded) {
+                return Err(SolverError::Unsupported(format!(
+                    "warm array UF parent #{} has an unsupported scalar argument",
+                    term.index()
+                )));
+            }
+            encoded_args.push(encoded);
+        }
+        if let Some(existing) = self.warm_array_uf_apps.get(&term) {
+            if existing.func != func
+                || existing.args != args
+                || existing.encoded_args != encoded_args
+                || existing.result_sort != result_sort
+            {
+                return Err(SolverError::Backend(format!(
+                    "warm array UF parent #{} was retained inconsistently",
+                    term.index()
+                )));
+            }
+            return Ok(existing.clone());
+        }
+
+        debug_assert_eq!(args.len(), param_count);
+        let base_name = format!("!axeyum_warm_array_uf_{}", term.index());
+        let name = fresh_internal_symbol_name(arena, &base_name);
+        let projection_symbol = arena
+            .declare_internal(&name, result_sort)
+            .map_err(|error| map_ir_error(&error))?;
+        self.internal_symbols.insert(projection_symbol);
+        let app = WarmArrayUfApp {
+            func,
+            args,
+            encoded_args,
+            projection_symbol,
+            result_sort,
+        };
+        self.warm_array_uf_apps.insert(term, app.clone());
+        Ok(app)
     }
 
     fn get_or_create_warm_uf_app(
@@ -1910,8 +2038,9 @@ impl IncrementalBvSolver {
         let mut model = complete_model_filtered(arena, assignment, &self.internal_symbols);
         self.project_warm_array_selects(arena, assignment, one_shot_selects, &mut model)?;
         self.project_warm_uf_apps(arena, assignment, one_shot_uf_apps, &mut model)?;
+        self.project_warm_array_uf_apps(arena, assignment, one_shot_selects, &mut model)?;
         self.project_warm_array_equalities(arena, one_shot_array_equalities, &mut model)?;
-        Ok(model)
+        Ok(filter_internal_model(&model, &self.internal_symbols))
     }
 
     fn project_warm_array_selects(
@@ -2048,6 +2177,104 @@ impl IncrementalBvSolver {
                 interpretation.define(&arg_codes, result.scalar_code())
             };
             model.set_function(app.func, interpretation);
+        }
+        Ok(())
+    }
+
+    fn project_warm_array_uf_apps(
+        &self,
+        arena: &TermArena,
+        assignment: &Assignment,
+        one_shot_selects: &[TermId],
+        model: &mut Model,
+    ) -> Result<(), UnknownReason> {
+        let mut select_terms = self.active_warm_array_select_terms();
+        select_terms.extend_from_slice(one_shot_selects);
+        select_terms.sort_by_key(|term| term.index());
+        select_terms.dedup();
+
+        let mut app_terms = select_terms
+            .into_iter()
+            .filter_map(|select_term| {
+                self.warm_array_selects
+                    .get(&select_term)
+                    .and_then(|select| select.array_uf_app)
+            })
+            .collect::<Vec<_>>();
+        app_terms.sort_by_key(|term| term.index());
+        app_terms.dedup();
+
+        let mut groups: Vec<WarmArrayUfProjectionGroup> = Vec::new();
+        for app_term in app_terms {
+            let Some(app) = self.warm_array_uf_apps.get(&app_term) else {
+                return Err(UnknownReason {
+                    kind: UnknownKind::Other,
+                    detail: format!(
+                        "warm array UF application #{} lost its retained metadata",
+                        app_term.index()
+                    ),
+                });
+            };
+            let model_assignment =
+                assignment_with_internal(arena, model, assignment, &self.internal_symbols);
+            let (_name, params, result_sort) = arena.function(app.func);
+            let mut args = Vec::with_capacity(app.encoded_args.len());
+            for (&arg, &sort) in app.encoded_args.iter().zip(params) {
+                let value = eval(arena, arg, &model_assignment).map_err(|error| UnknownReason {
+                    kind: UnknownKind::Other,
+                    detail: format!(
+                        "warm array UF argument #{} for application #{} could not be evaluated: {error}",
+                        arg.index(),
+                        app_term.index()
+                    ),
+                })?;
+                let value = normalize_bitvec_value(value);
+                if value.sort() != sort {
+                    return Err(UnknownReason {
+                        kind: UnknownKind::Other,
+                        detail: format!(
+                            "warm array UF argument #{} for application #{} evaluated to {value} of wrong sort",
+                            arg.index(),
+                            app_term.index()
+                        ),
+                    });
+                }
+                args.push(value);
+            }
+            debug_assert_eq!(result_sort, app.result_sort);
+            if let Some(group) = groups
+                .iter_mut()
+                .find(|group| group.func == app.func && group.args == args)
+            {
+                group.projection_symbols.push(app.projection_symbol);
+            } else {
+                groups.push(WarmArrayUfProjectionGroup {
+                    func: app.func,
+                    args,
+                    projection_symbols: vec![app.projection_symbol],
+                    result_sort: app.result_sort,
+                });
+            }
+        }
+
+        for group in groups {
+            let result = merge_equal_array_group(arena, model, &group.projection_symbols)?;
+            let (_name, params, result_sort) = arena.function(group.func);
+            debug_assert_eq!(result_sort, group.result_sort);
+            let interpretation = match model.function(group.func).cloned() {
+                Some(existing) if existing.uses_value_storage() => existing,
+                _ => {
+                    let default =
+                        well_founded_default(arena, result_sort).ok_or_else(|| UnknownReason {
+                            kind: UnknownKind::Other,
+                            detail: format!(
+                                "warm array UF result sort {result_sort} has no default value"
+                            ),
+                        })?;
+                    FuncValue::constant_value(params.to_vec(), result_sort, default)
+                }
+            };
+            model.set_function(group.func, interpretation.define_value(&group.args, result));
         }
         Ok(())
     }
@@ -3093,7 +3320,7 @@ fn is_supported_warm_array_parent(arena: &TermArena, term: TermId) -> bool {
                 op: Op::Store | Op::Ite | Op::ConstArray { .. },
                 ..
             }
-    )
+    ) || supported_warm_array_uf_app_shape(arena, term)
 }
 
 fn warm_array_parent_covers(
@@ -3159,6 +3386,18 @@ fn warm_array_parent_covers(
                 stack.push((*else_array, depth + 1));
                 stack.push((*then_array, depth + 1));
             }
+            TermNode::App {
+                op: Op::Apply(_),
+                args,
+            } if supported_warm_array_uf_app_shape(arena, term) => {
+                if !args
+                    .iter()
+                    .copied()
+                    .all(|arg| warm_abstraction_covers_term(arena, arg, scalar_memo))
+                {
+                    return false;
+                }
+            }
             _ => return false,
         }
     }
@@ -3169,6 +3408,7 @@ fn warm_structural_array_limits_hold(arena: &TermArena, root: TermId) -> bool {
     let mut stack = vec![root];
     let mut seen = HashSet::new();
     let mut structural = HashSet::new();
+    let mut array_uf_apps = HashSet::new();
     while let Some(term) = stack.pop() {
         if !seen.insert(term) {
             continue;
@@ -3221,6 +3461,14 @@ fn warm_structural_array_limits_hold(arena: &TermArena, root: TermId) -> bool {
                         op: Op::ConstArray { .. },
                         ..
                     } => {}
+                    TermNode::App {
+                        op: Op::Apply(_), ..
+                    } if supported_warm_array_uf_app_shape(arena, parent) => {
+                        array_uf_apps.insert(parent);
+                        if array_uf_apps.len() > MAX_WARM_ARRAY_UF_APPS_PER_ROOT {
+                            return false;
+                        }
+                    }
                     _ => return false,
                 }
             }
@@ -3331,6 +3579,32 @@ fn supported_warm_uf_app_shape(arena: &TermArena, term: TermId) -> bool {
     };
     let (_name, params, result_sort) = arena.function(*func);
     is_warm_scalar_sort(result_sort)
+        && args.len() == params.len()
+        && params.iter().copied().all(is_warm_scalar_sort)
+        && args
+            .iter()
+            .zip(params)
+            .all(|(&arg, &sort)| arena.sort_of(arg) == sort)
+}
+
+fn supported_warm_array_uf_app_shape(arena: &TermArena, term: TermId) -> bool {
+    let TermNode::App {
+        op: Op::Apply(func),
+        args,
+        ..
+    } = arena.node(term)
+    else {
+        return false;
+    };
+    let (_name, params, result_sort) = arena.function(*func);
+    let Sort::Array {
+        index: ArraySortKey::BitVec(_),
+        element,
+    } = result_sort
+    else {
+        return false;
+    };
+    is_warm_array_element_sort(element)
         && args.len() == params.len()
         && params.iter().copied().all(is_warm_scalar_sort)
         && args
@@ -3654,7 +3928,7 @@ fn warm_array_select_index_value(
     assignment: &Assignment,
     select: WarmArraySelect,
 ) -> Result<Value, UnknownReason> {
-    match eval(arena, select.index, assignment) {
+    match eval(arena, select.encoded_index, assignment) {
         Ok(value) if value.sort() == Sort::BitVec(select.index_width) => {
             Ok(normalize_bitvec_value(value))
         }
@@ -3854,6 +4128,7 @@ fn assignment_with_internal(
         let (_name, sort) = arena.symbol(symbol);
         if let Some(value) = assignment
             .get(symbol)
+            .or_else(|| model.get(symbol))
             .or_else(|| well_founded_default(arena, sort))
         {
             merged.set(symbol, value);
@@ -3896,6 +4171,22 @@ fn collect_warm_one_shot_terms(assumptions: &[OneShotAssumption]) -> WarmOneShot
             .flat_map(|assumption| assumption.warm_array_equalities.iter().copied())
             .collect(),
     }
+}
+
+fn filter_internal_model(model: &Model, hidden_symbols: &HashSet<SymbolId>) -> Model {
+    let mut filtered = Model::new();
+    for (symbol, value) in model.iter() {
+        if !hidden_symbols.contains(&symbol) {
+            filtered.set(symbol, value);
+        }
+    }
+    for (func, value) in model.functions() {
+        filtered.set_function(func, value.clone());
+    }
+    for (numerator, quotient) in model.real_div_zeros() {
+        filtered.set_real_div_zero(numerator, quotient);
+    }
+    filtered
 }
 
 fn complete_model_filtered(
