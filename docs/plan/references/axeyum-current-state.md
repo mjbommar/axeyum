@@ -31,7 +31,7 @@ Total src ≈ 48k (≈63k with tests); 57 test files. Largest solver modules:
 | QF_BV (full scalar, ≤2¹⁶) | validated | replay + differential vs Z3 |
 | QF_BV UNSAT (DRAT) | **checked** | `check_drat`; `UnsatProof::recheck` |
 | QF_BV end-to-end (miter) | **checked** | exhaustive bit-blast faithfulness miter + DRAT, modulo independent reference |
-| QF_ABV / QF_UF / QF_AUFBV | validated | canonical e-graph/BV refinement + replay, including original array equalities, explanation-guarded base/store-parent select scheduling, same-search ROW plus dynamically appended UF/select/extensionality scalar interfaces, shared direct-symbol class models, Bool/BitVec component combinations, and finite-scalar array-valued UF results with array-first/function-second projection (ADR-0071–0084); eager certifying fallback; direct equal-array select congruence checked in-tree/Carcara/Lean (ADR-0075); broader UNSAT DRAT **modulo trusted reduction** |
+| QF_ABV / QF_UF / QF_AUFBV | validated | canonical e-graph/BV refinement + replay, including original array equalities, explanation-guarded base/store-parent select scheduling, same-search ROW plus dynamically appended UF/select/extensionality scalar interfaces, shared direct-symbol class models, Bool/BitVec component combinations, finite-scalar array-valued UF results with array-first/function-second projection, and bounded structural store/ITE/constant class equations (ADR-0071–0085); eager certifying fallback; direct equal-array select congruence checked in-tree/Carcara/Lean (ADR-0075); broader UNSAT DRAT **modulo trusted reduction** |
 | QF_LRA (exact-rational) | **checked** | Farkas + exact model |
 | QF_LIA / QF_LIRA | validated | replay; bounded UNSAT DRAT at chosen width |
 | QF_NRA/NIA | sound-incomplete | replay (SAT), relaxation-unsat, else `unknown` |
@@ -63,8 +63,10 @@ retained; BMC/symexec ride it.
 UFBV, and bounded ABV/AUFBV interfaces; arrays over Bool/BitVec components use candidate-guided select,
 ROW, and equality/diff instances, original equality atoms on live `EufTheory`,
 explanation-guarded base/store-parent merge scheduling, and majority-default
-direct-symbol class models, with violated local ROW sites inserted permanently
-inside the same canonical search (ADR-0071–0081).
+direct-symbol/application-result class models, with violated local ROW sites
+inserted permanently inside the same canonical search. Exact array-ITE equality
+decomposition and bounded store/ITE/constant realization close structural total-
+model gaps without changing observed reads (ADR-0071–0085).
 `dpll_t.rs`/`dpll_lia.rs` remain arithmetic fallbacks and
 `lazy_bv.rs` drops heavy mul/div gadgets. The warm path admits a narrow symbolic
 array/UF slice but still rebuilds for general deferred theories.

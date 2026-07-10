@@ -176,3 +176,12 @@ already provide the relevant semantic relation.
 Rejected: it loses extensional sharing across indices and duplicates function
 declarations, while making array equality and model projection harder rather
 than simpler.
+
+## Subsequent Decision
+
+[ADR-0085](adr-0085-bounded-structural-array-class-equations.md) closes the
+structural equality residual recorded here. Exact array-ITE equality
+decomposition and bounded observed-read-preserving store/ITE/constant
+realization now compose with the array-result projection order established by
+this decision. Warm reuse, nested/extended arrays, and proofs remain separate
+work.

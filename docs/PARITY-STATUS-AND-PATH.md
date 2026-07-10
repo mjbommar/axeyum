@@ -197,7 +197,8 @@ a named mechanism.**
    remains **1/3 decided**. **Third prerequisite slice landed (2026-06-25):**
    SMT-LIB/IR now admit array-valued UF parameters such as
    `g : (Array Int Int) -> Int`; finite Bool/BitVec array-valued results are
-   also admitted on canonical AUFBV (ADR-0084), and
+   also admitted on canonical AUFBV (ADR-0084); bounded structural store/ITE/
+   constant class equations preserve total-model replay (ADR-0085), and
    function models use full-`Value` keys so concrete generic arrays can appear in
    UF tables; the narrow AUFLIA congruence conflict `a=b ∧ g(a)≠g(b)` is now
    decided `unsat`. The next blocker is the broader mixed UF/array route: lazy

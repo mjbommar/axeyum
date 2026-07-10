@@ -61,10 +61,14 @@ Out of scope:
     results now retain their original application parents on the e-graph,
     project fresh result arrays by final parent class, build function tables
     after array projection, and replay through `select`, `store`, array `ite`,
-    equality, and nested scalar-UF use (ADR-0084). Structural store/ITE/default
-    class projection, warm ownership, and broader array operators remain. See
+    equality, and nested scalar-UF use (ADR-0084). Exact array-ITE equality
+    decomposition and bounded observed-read-preserving store/ITE/constant class
+    realization now close the structural total-model boundary (ADR-0085). Warm
+    ownership, nested/extended array operators, and proofs remain. See
     [ADR-0013](../09-decisions/adr-0013-uninterpreted-functions.md) and
-    [ADR-0084](../09-decisions/adr-0084-array-valued-uf-results-on-the-canonical-array-bus.md).
+    [ADR-0084](../09-decisions/adr-0084-array-valued-uf-results-on-the-canonical-array-bus.md),
+    followed by
+    [ADR-0085](../09-decisions/adr-0085-bounded-structural-array-class-equations.md).
 - [ ] How should undefined or partial operations be represented?
 - [ ] What public support matrix should define the first release boundary
       across IR, evaluator, SMT-LIB, oracle, pure Rust backend, and evidence?

@@ -3841,6 +3841,19 @@ Its conclusion, ranked by quality × efficiency:
    ITE/default class projection, warm reuse, online ROW/extensionality/equality-
    chain proof logging, opaque-heavy arithmetic exchange, and the low-load
    public aggregate remeasure.
+   **Thirtieth follow-through:** ADR-0085 closes the bounded structural class-
+   equation slice. Array-ITE equality is decomposed exactly before search, so a
+   selected branch equality reaches the live e-graph; candidate-true store/ITE/
+   constant equations then realize total leaf-array values without changing any
+   scalar read, under explicit leaf/depth/fixed-point/deadline caps. Array-result
+   owners and array-valued UF keys compose with the same array-first/function-
+   second projection and mandatory replay. A 16-shape matrix contributes 192
+   direct/front-door/Z3 comparisons with zero disagreements; all 816 solver
+   units, the existing AUFBV and array-result matrices, strict clippy, and the
+   exact-SHA gate pass. Design/implementation commits `e47da7a1`/`da957695` are
+   on `origin/main`. Next: true warm array/UF ownership with learned-clause reuse,
+   nested/extended array operators, online ROW/diff-witness/equality-chain proof
+   logging, opaque-heavy arithmetic exchange, and the low-load public aggregate.
 2. **Keep a thin measured-leaf-BFS skirt in parallel** — measured-ROI leaves only
    (NRA tail, strings-Nielsen); fold the feature/scale-blocked leaves
    (dense-ILP MILP, large-LP performance) into a funded engine phase rather than

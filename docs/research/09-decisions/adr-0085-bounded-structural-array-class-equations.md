@@ -1,6 +1,6 @@
 # ADR-0085: Bounded Structural Array-Class Equations
 
-Status: proposed
+Status: accepted
 Date: 2026-07-10
 
 ## Context
@@ -123,6 +123,27 @@ ROW, select-congruence, and extensionality consequences.
   direct Z3 comparison under the native feature.
 - Existing AUFBV differential fuzz, full solver units, strict clippy, rustdoc,
   link checks, and exact-SHA pre-push validation.
+
+## Acceptance Validation
+
+Accepted on 2026-07-10 in `da957695` after the required routes passed:
+
+- a 16-shape matrix repeated over 64 seeds through the direct canonical and
+  `check_auto` front doors, with every SAT model replayed, plus the same 64 cases
+  compared directly with Z3: 192 new comparisons, zero disagreements;
+- explicit store-total-model SAT replay, selected-ITE/equality UNSAT, literal
+  SMT-LIB front-door UNSAT, Bool-component SAT replay, and Int-component decline;
+- exact 256-leaf and 256-depth ITE expansion bounds returning
+  `Unknown(ResourceLimit)`, plus an expired structural-projection deadline unit;
+- stores against symbols/stores, constant defaults, true/false/nested ITE
+  branches, selected and unselected disequalities, array-valued UF/store
+  equalities, and structural array arguments to scalar UF congruence;
+- all 816 solver library tests, the existing 11-test AUFBV differential binary,
+  the 96-case array-result matrix, strict all-target/all-feature clippy, and the
+  exact-SHA compile/format/corpus/unit pre-push gate.
+
+Every SAT case replays against the original structural terms; the selected ITE
+conflicts decide during search rather than relying on projection failure.
 
 ## Alternatives Considered
 

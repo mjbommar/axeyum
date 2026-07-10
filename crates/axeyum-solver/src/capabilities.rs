@@ -240,17 +240,19 @@ pub const CAPABILITIES: &[Capability] = &[
                   pre-observed e-graph terms to that retained search; scalar UF applications in \
                   indices/elements share the same exact BV + e-graph bus; finite-scalar \
                   array-valued UF results retain semantic application parents on the e-graph and \
-                  project fresh result arrays by final parent class before function tables; array index \
+                  project fresh result arrays by final parent class before function tables; array-ITE \
+                  equality decomposes exactly before search, and bounded store/ITE/constant class \
+                  equations realize total leaf-array models without changing observed reads; array index \
                   and element components may each be Bool or BitVec, with mixed shapes projected \
                   through GenericArrayValue",
         assurance: Assurance::Validated,
         evidence: "every partial round is a relaxation, so UNSAT transfers; SAT requires \
-                   array-first/function-second projection and original-query replay. 815 solver-lib \
-                   tests plus 2,592 array comparisons are clean: 768 established BV-array \
+                   array-first/function-second projection and original-query replay. 816 solver-lib \
+                   tests plus 2,784 array comparisons are clean: 768 established BV-array \
                    comparisons, 384 Bool/mixed analytic/front-door/Z3 comparisons, and 384 \
                    structural-store eager/front-door/Z3 comparisons, plus 384 dynamic-ROW \
                    and 384 dynamic-interface eager/front-door/Z3 comparisons, plus 288 array-result \
-                   analytic/front-door/Z3 comparisons; the established BV belt includes \
+                   and 192 structural-class analytic/front-door/Z3 comparisons; the established BV belt includes \
                    456 equality-bearing cases, and the structural belt adds same/congruent/unrelated \
                    parents, branch/transitive paths, and UF indices. Dynamic ROW gates cover \
                    hit/miss, nested sites, replayed branch changes, UF indices, shadowing, and the \
@@ -263,7 +265,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    DISAGREE=0 and all SAT models replay. ADR-0078's low-load 1 s aggregate baseline \
                    remains QF_ABV 187/193 and QF_AUFBV 49/53 pending a comparable remeasure; online \
                    probes use cloned arenas so fallback inputs remain pristine",
-        reference: "ADR-0071/0072/0073/0074/0077/0078/0079/0080/0081/0082/0084",
+        reference: "ADR-0071/0072/0073/0074/0077/0078/0079/0080/0081/0082/0084/0085",
     },
     Capability {
         area: "QF_UF",

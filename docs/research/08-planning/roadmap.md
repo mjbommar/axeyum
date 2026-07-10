@@ -440,6 +440,15 @@ analytic/front-door/Z3 comparisons with zero disagreement. Structural store/ITE/
 default class ownership, warm reuse, and online proof logging remain before
 phase exit.
 
+ADR-0085 closes the bounded structural class-equation slice. Exact pre-search
+array-ITE equality decomposition gives the selected branch a normal e-graph
+equality; observed-read-preserving fixed-point realization constructs total leaf
+arrays for true store/ITE/constant equations before function projection and
+replay. Leaf/depth/step/deadline caps are explicit. A 16-shape matrix contributes
+192 direct/front-door/Z3 comparisons with zero disagreement; all 816 solver
+units and the prior AUFBV belts remain clean. Warm reuse, nested/extended arrays,
+and online array proof logging remain before phase exit.
+
 Implementation note: a first infosec-workflow client example landed early
 (2026-06-13), ahead of arrays — a register-VM symbolic executor over
 `IncrementalBvSolver` that forks at branches, prunes infeasible paths, and
