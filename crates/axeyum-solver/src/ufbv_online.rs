@@ -1984,7 +1984,7 @@ fn unknown(kind: UnknownKind, detail: impl Into<String>) -> CheckResult {
 mod tests {
     use std::time::Duration;
 
-    use axeyum_ir::{Sort, TermArena, Value, eval};
+    use axeyum_ir::{Sort, TermArena, TermNode, Value, eval};
     use axeyum_smtlib::parse_script;
 
     use super::{
@@ -2631,6 +2631,41 @@ mod tests {
         assert_eq!(stats.rounds, 1, "stats={stats:?}");
         assert_eq!(stats.array_pairs_added, 0, "stats={stats:?}");
         assert_eq!(stats.max_interface_atoms, 0, "stats={stats:?}");
+    }
+
+    #[test]
+    fn projected_array_model_uses_majority_else_value() {
+        let mut arena = TermArena::new();
+        let array = arena.array_var("dynamic_majority_model", 8, 8).unwrap();
+        let TermNode::Symbol(array_symbol) = arena.node(array) else {
+            panic!("array variable must be a symbol");
+        };
+        let array_symbol = *array_symbol;
+        let mut assertions = Vec::new();
+        for index in 0..16u128 {
+            let index_term = arena.bv_const(8, index).unwrap();
+            let expected = if index < 12 { 7 } else { index - 9 };
+            let expected_term = arena.bv_const(8, expected).unwrap();
+            let read = arena.select(array, index_term).unwrap();
+            assertions.push(arena.eq(read, expected_term).unwrap());
+        }
+
+        let (result, stats) = dynamic_array_solve_stats(&mut arena, &assertions);
+        let CheckResult::Sat(model) = result else {
+            panic!("expected replayed SAT, stats={stats:?}");
+        };
+        let Value::Array(array_value) = model.get(array_symbol).unwrap() else {
+            panic!("expected a projected BV array value");
+        };
+        assert_eq!(array_value.default_element(), 7);
+        assert_eq!(array_value.entries().count(), 4);
+        assert_eq!(stats.rounds, 1, "stats={stats:?}");
+        let assignment = model.to_assignment();
+        assert!(
+            assertions
+                .iter()
+                .all(|&assertion| eval(&arena, assertion, &assignment) == Ok(Value::Bool(true)))
+        );
     }
 
     #[test]

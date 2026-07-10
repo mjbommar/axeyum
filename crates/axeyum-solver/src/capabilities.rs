@@ -227,15 +227,16 @@ pub const CAPABILITIES: &[Capability] = &[
         feature: "canonical online CDCL(T) arrays: replay-guided base-select congruence, \
                   candidate-guided lazy read-over-write, and bounded array equality/disequality \
                   observations with one diff witness per equality atom; scalar UF applications \
-                  in indices/elements share the same exact BV + e-graph bus",
+                  in indices/elements share the same exact BV + e-graph bus; projected arrays use \
+                  deterministic distinct-index majority defaults with normalized overrides",
         assurance: Assurance::Validated,
         evidence: "every partial round is a relaxation, so UNSAT transfers; SAT requires \
-                   function-then-array projection and original-query replay. 779 solver-lib \
+                   function-then-array projection and original-query replay. 783 solver-lib \
                    tests plus 768 AUFBV online/eager/front-door/Z3 comparisons are clean; \
                    384 comparisons carry equality/disequality/store-equality/UF-index shapes. \
                    Public QF_ABV 187/193 and QF_AUFBV 49/53 at 1 s, DISAGREE=0; online probes \
                    use cloned arenas so fallback inputs remain pristine",
-        reference: "ADR-0071/0072/0073",
+        reference: "ADR-0071/0072/0073/0074",
     },
     Capability {
         area: "QF_UF",

@@ -30,7 +30,7 @@ Total src ≈ 48k (≈63k with tests); 57 test files. Largest solver modules:
 | QF_BV (full scalar, ≤2¹⁶) | validated | replay + differential vs Z3 |
 | QF_BV UNSAT (DRAT) | **checked** | `check_drat`; `UnsatProof::recheck` |
 | QF_BV end-to-end (miter) | **checked** | exhaustive bit-blast faithfulness miter + DRAT, modulo independent reference |
-| QF_ABV / QF_UF / QF_AUFBV | validated | eager elim/Ackermann→BV; replay; UNSAT DRAT **modulo trusted reduction** |
+| QF_ABV / QF_UF / QF_AUFBV | validated | canonical e-graph/BV refinement + replay (ADR-0071–0074); eager certifying fallback; UNSAT DRAT **modulo trusted reduction** |
 | QF_LRA (exact-rational) | **checked** | Farkas + exact model |
 | QF_LIA / QF_LIRA | validated | replay; bounded UNSAT DRAT at chosen width |
 | QF_NRA/NIA | sound-incomplete | replay (SAT), relaxation-unsat, else `unknown` |
@@ -49,18 +49,19 @@ replay-blind (evaluator runs the same lowered circuit), so it rests entirely on
 differential validation.
 
 ## Eager vs lazy/incremental
-**Eager / one-shot (dominant):** arrays (`abv.rs`, read-over-write+Ackermann
-re-run per check; `check_with_memory` re-eliminates every call), UF (Ackermann),
+**Eager / one-shot (certifying fallback):** arrays (`abv.rs`, read-over-write+
+Ackermann), UF (Ackermann),
 LIA/LIRA (bit-blast to fixed width), datatypes, FP, strings, and the whole
 `check_with_all_theories` pipeline.
 **Genuinely incremental:** `IncrementalBvSolver` (`incremental.rs`) — warm AIG +
 warm CNF over a persistent SAT solver, push/pop via selectors, learned clauses
 retained; BMC/symexec ride it.
-**Genuinely lazy (DPLL(T)-style):** `dpll_t.rs`/`dpll_lia.rs` over the exact
-simplices, with theory propagation/conflict learning — but coupling is **purely
-propositional**; there is **no Nelson–Oppen / interface-equality propagation**.
-`lazy_bv.rs` is abstraction-refinement dropping heavy mul/div gadgets. The warm
-path **refuses arrays** (incremental QF_ABV re-eliminates eagerly per depth).
+**Genuinely lazy (DPLL(T)-style):** canonical `CdclT` drives EUF, LIA/LRA,
+UFBV, and bounded ABV/AUFBV interfaces; arrays use candidate-guided select,
+ROW, and equality/diff instances plus majority-default replayed models
+(ADR-0071–0074). `dpll_t.rs`/`dpll_lia.rs` remain arithmetic fallbacks and
+`lazy_bv.rs` drops heavy mul/div gadgets. The warm path admits a narrow symbolic
+array/UF slice but still rebuilds for general deferred theories.
 
 ## Performance posture (real numbers)
 Two committed public QF_BV slices (SMT-LIB 2024):

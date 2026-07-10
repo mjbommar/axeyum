@@ -2875,6 +2875,12 @@ fn collect_base_array_entries(
 }
 
 /// Builds a concrete array value for `array` from projected read entries.
+///
+/// The most frequent value over distinct observed indices becomes the total
+/// array's else value; ties use the deterministic value order. Every other
+/// observation remains an explicit override. This mirrors the compact
+/// `func_interp` model policy used by mature array solvers without changing any
+/// observed read.
 fn array_value_from_entries(
     arena: &TermArena,
     array: SymbolId,
@@ -2882,7 +2888,7 @@ fn array_value_from_entries(
 ) -> Result<Value, SolverError> {
     let sort = arena.symbol(array).1;
     if let Some((index_width, element_width)) = sort.array_widths() {
-        let mut value = ArrayValue::constant(index_width, element_width, 0);
+        let mut normalized = BTreeMap::new();
         for (index, element) in entries {
             let (_, index) = index.as_bv().ok_or_else(|| {
                 SolverError::Backend("array projection expected a bit-vector index".to_owned())
@@ -2890,6 +2896,22 @@ fn array_value_from_entries(
             let (_, element) = element.as_bv().ok_or_else(|| {
                 SolverError::Backend("array projection expected a bit-vector element".to_owned())
             })?;
+            normalized.insert(index, element);
+        }
+        let mut frequencies: BTreeMap<u128, usize> = BTreeMap::new();
+        for &element in normalized.values() {
+            *frequencies.entry(element).or_default() += 1;
+        }
+        let default = frequencies
+            .into_iter()
+            .max_by(|(left_value, left_count), (right_value, right_count)| {
+                left_count
+                    .cmp(right_count)
+                    .then_with(|| right_value.cmp(left_value))
+            })
+            .map_or(0, |(element, _count)| element);
+        let mut value = ArrayValue::constant(index_width, element_width, default);
+        for (index, element) in normalized {
             value = value.store(index, element);
         }
         return Ok(Value::Array(value));
@@ -2900,16 +2922,50 @@ fn array_value_from_entries(
             "array projection requested for a non-array symbol".to_owned(),
         ));
     };
-    let default = well_founded_default(arena, element.to_sort()).ok_or_else(|| {
+    let fallback_default = well_founded_default(arena, element.to_sort()).ok_or_else(|| {
         SolverError::Backend(
             "array projection could not construct a default element value".to_owned(),
         )
     })?;
-    let mut value = GenericArrayValue::constant(index, element, default);
+    let mut normalized: Vec<(Value, Value)> = Vec::new();
     for (entry_index, entry_element) in entries {
-        value = value.store(entry_index.clone(), entry_element.clone());
+        if let Some((_, existing)) = normalized
+            .iter_mut()
+            .find(|(index, _)| index == entry_index)
+        {
+            *existing = entry_element.clone();
+        } else {
+            normalized.push((entry_index.clone(), entry_element.clone()));
+        }
+    }
+    let mut frequencies: Vec<(Value, usize)> = Vec::new();
+    for (_, entry_element) in &normalized {
+        if let Some((_, count)) = frequencies
+            .iter_mut()
+            .find(|(value, _)| value == entry_element)
+        {
+            *count += 1;
+        } else {
+            frequencies.push((entry_element.clone(), 1));
+        }
+    }
+    let default = frequencies
+        .into_iter()
+        .max_by(|(left_value, left_count), (right_value, right_count)| {
+            left_count.cmp(right_count).then_with(|| {
+                generic_value_order_key(right_value).cmp(&generic_value_order_key(left_value))
+            })
+        })
+        .map_or(fallback_default, |(value, _count)| value);
+    let mut value = GenericArrayValue::constant(index, element, default);
+    for (entry_index, entry_element) in normalized {
+        value = value.store(entry_index, entry_element);
     }
     Ok(Value::GenericArray(value))
+}
+
+fn generic_value_order_key(value: &Value) -> String {
+    format!("{}:{value}", value.sort())
 }
 
 fn direct_array_symbol(arena: &TermArena, term: TermId) -> Option<SymbolId> {
@@ -11082,8 +11138,80 @@ mod tests {
     };
     use crate::backend::{CheckResult, SolverConfig};
     use crate::sat_bv_backend::SatBvBackend;
-    use axeyum_ir::{Assignment, Sort, TermArena, TermNode, Value, eval};
+    use axeyum_ir::{ArraySortKey, Assignment, Sort, TermArena, TermNode, Value, eval};
     use axeyum_smtlib::parse_script;
+
+    fn bv_value(width: u32, value: u128) -> Value {
+        Value::Bv { width, value }
+    }
+
+    #[test]
+    fn array_projection_uses_majority_bv_default() {
+        let mut arena = TermArena::new();
+        let array = arena.array_var("majority_bv_array", 4, 8).unwrap();
+        let TermNode::Symbol(array) = arena.node(array) else {
+            panic!("array variable must be a symbol");
+        };
+        let entries = [
+            (bv_value(4, 0), bv_value(8, 7)),
+            (bv_value(4, 1), bv_value(8, 7)),
+            (bv_value(4, 2), bv_value(8, 7)),
+            (bv_value(4, 3), bv_value(8, 3)),
+            (bv_value(4, 4), bv_value(8, 4)),
+        ];
+
+        let projected = array_value_from_entries(&arena, *array, &entries).unwrap();
+        let value = projected.as_array().unwrap();
+        assert_eq!(value.default_element(), 7);
+        assert_eq!(value.entries().collect::<Vec<_>>(), vec![(3, 3), (4, 4)]);
+        for (index, expected) in [7, 7, 7, 3, 4].into_iter().enumerate() {
+            assert_eq!(value.select(u128::try_from(index).unwrap()), expected);
+        }
+    }
+
+    #[test]
+    fn array_projection_majority_tie_uses_smallest_value() {
+        let mut arena = TermArena::new();
+        let array = arena.array_var("majority_tie_array", 4, 8).unwrap();
+        let TermNode::Symbol(array) = arena.node(array) else {
+            panic!("array variable must be a symbol");
+        };
+        let entries = [
+            (bv_value(4, 0), bv_value(8, 9)),
+            (bv_value(4, 1), bv_value(8, 3)),
+        ];
+
+        let projected = array_value_from_entries(&arena, *array, &entries).unwrap();
+        let value = projected.as_array().unwrap();
+        assert_eq!(value.default_element(), 3);
+        assert_eq!(value.entries().collect::<Vec<_>>(), vec![(0, 9)]);
+    }
+
+    #[test]
+    fn generic_array_projection_uses_majority_default() {
+        let mut arena = TermArena::new();
+        let array = arena
+            .declare(
+                "majority_generic_array",
+                Sort::Array {
+                    index: ArraySortKey::Int,
+                    element: ArraySortKey::Int,
+                },
+            )
+            .unwrap();
+        let entries = [
+            (Value::Int(0), Value::Int(7)),
+            (Value::Int(1), Value::Int(7)),
+            (Value::Int(2), Value::Int(3)),
+        ];
+
+        let projected = array_value_from_entries(&arena, array, &entries).unwrap();
+        let value = projected.as_generic_array().unwrap();
+        assert_eq!(value.default_value(), &Value::Int(7));
+        assert_eq!(value.entries().collect::<Vec<_>>().len(), 1);
+        assert_eq!(value.select(&Value::Int(0)), Value::Int(7));
+        assert_eq!(value.select(&Value::Int(2)), Value::Int(3));
+    }
 
     #[test]
     fn lazy_abv_refutes_select_congruence() {

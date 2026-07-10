@@ -3712,9 +3712,17 @@ Its conclusion, ranked by quality × efficiency:
    isolation gates pass. Half of the 768-comparison AUFBV matrix now carries
    equality-bearing cases and remains clean. Public decisions hold at QF_ABV
    187/193 and QF_AUFBV 49/53 with zero disagreements/replay failures; PAR-2 means
-   move 77→84 ms and 155→221 ms, so this is not a speed claim. Next:
-   merge-triggered/cross-atom queue states, scalable array models, proof
-   integration, and opaque-heavy arithmetic model exchange.
+   move 77→84 ms and 155→221 ms, so this is not a speed claim. **Nineteenth
+   follow-through:** projected arrays now use deterministic majority-default
+   models shared by canonical and fallback routes (ADR-0074). Votes count
+   distinct observed indices, ties choose the smallest stable value, and only
+   true overrides remain. Focused compact-BV/tie/generic tests pass; an end-to-end
+   16-read canonical model uses default `7`, four overrides, one round, and full
+   replay. The 768 comparisons stay clean and public decisions remain QF_ABV
+   187/193 / QF_AUFBV 49/53 with zero disagreement/replay failures. A single
+   AUFBV PAR-2 sample moves 221→206 ms but is not a speed claim. Next:
+   merge-triggered/cross-atom queue states, e-graph-class/warm model ownership,
+   proof integration, and opaque-heavy arithmetic model exchange.
 2. **Keep a thin measured-leaf-BFS skirt in parallel** — measured-ROI leaves only
    (NRA tail, strings-Nielsen); fold the feature/scale-blocked leaves
    (dense-ILP MILP, large-LP performance) into a funded engine phase rather than
