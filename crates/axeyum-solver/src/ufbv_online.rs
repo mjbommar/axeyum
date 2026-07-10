@@ -83,6 +83,7 @@ use crate::cdclt::{CdclT, Lit as CdcltLit, Outcome};
 use crate::euf_egraph::{Encoder, EufTheory, TheoryLit, TheoryProp, TheorySolver};
 use crate::incremental::IncrementalBvSolver;
 use crate::model::Model;
+use crate::sat_bv_backend::{ABSOLUTE_CLAUSE_CEILING, estimate_blast_clauses};
 
 /// Maximum input DAG admitted before the recursive function abstraction.
 const MAX_INPUT_DAG_NODES: u64 = 16_384;
@@ -438,6 +439,8 @@ struct BvTheory {
     propagation_probes: usize,
     propagation_hits: usize,
     deadline: Option<Instant>,
+    encoded_roots: Vec<TermId>,
+    encoding_clause_cap: u64,
     last_model: Option<Model>,
     last_unknown: Option<UnknownReason>,
     failure: Option<String>,
@@ -467,6 +470,8 @@ impl BvTheory {
             propagation_probes: 0,
             propagation_hits: 0,
             deadline,
+            encoded_roots: Vec::new(),
+            encoding_clause_cap: config.cnf_clause_budget.unwrap_or(ABSOLUTE_CLAUSE_CEILING),
             last_model: None,
             last_unknown: None,
             failure: None,
@@ -511,7 +516,7 @@ impl BvTheory {
         }
         self.assigned[atom] = Some(value);
         self.assigned_log.push(atom);
-        if self.failure.is_some() {
+        if self.failure.is_some() || self.last_unknown.is_some() {
             return Ok(());
         }
 
@@ -532,10 +537,47 @@ impl BvTheory {
         } else {
             self.negative[atom]
         };
-        if let Err(error) = self.solver.assert(&self.arena, literal) {
-            self.failure = Some(format!("online UFBV BV assertion failed: {error}"));
-            self.last_model = None;
-            return Ok(());
+        let is_new_root = !self.encoded_roots.contains(&literal);
+        if is_new_root {
+            let mut candidate_roots = self.encoded_roots.clone();
+            candidate_roots.push(literal);
+            let estimated_clauses = estimate_blast_clauses(&self.arena, &candidate_roots);
+            if estimated_clauses > self.encoding_clause_cap {
+                self.last_model = None;
+                self.last_unknown = Some(UnknownReason {
+                    kind: UnknownKind::EncodingBudget,
+                    detail: format!(
+                        "online UFBV estimated {estimated_clauses} cumulative CNF clauses before \
+                         lowering, budget {} (oversized encoding refused gracefully)",
+                        self.encoding_clause_cap
+                    ),
+                });
+                return Ok(());
+            }
+        }
+        match self
+            .solver
+            .assert_with_deadline(&self.arena, literal, self.deadline)
+        {
+            Ok(true) => {
+                if is_new_root {
+                    self.encoded_roots.push(literal);
+                }
+            }
+            Ok(false) => {
+                self.last_model = None;
+                self.last_unknown = Some(UnknownReason {
+                    kind: UnknownKind::Timeout,
+                    detail: "online UFBV exhausted its shared deadline during bit-vector lowering"
+                        .to_owned(),
+                });
+                return Ok(());
+            }
+            Err(error) => {
+                self.failure = Some(format!("online UFBV BV assertion failed: {error}"));
+                self.last_model = None;
+                return Ok(());
+            }
         }
 
         match self.solver.check_with_active_assertion_core(&self.arena) {

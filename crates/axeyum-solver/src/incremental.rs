@@ -25,6 +25,11 @@ use axeyum_ir::{
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::time::Duration;
 
+#[cfg(not(target_arch = "wasm32"))]
+use std::time::Instant;
+#[cfg(target_arch = "wasm32")]
+use web_time::Instant;
+
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
 use crate::model::Model;
 
@@ -343,12 +348,39 @@ impl IncrementalBvSolver {
         self.assert_encoded(arena, term, term)
     }
 
+    /// Asserts `term` while honoring an absolute lowering deadline.
+    ///
+    /// Returns `false` only when bit-vector lowering reaches `deadline`; no CNF
+    /// root or frame assertion is installed for the interrupted term. This is
+    /// crate-private because online theory combinations translate the outcome
+    /// into their shared query's [`UnknownKind::Timeout`].
+    pub(crate) fn assert_with_deadline(
+        &mut self,
+        arena: &TermArena,
+        term: TermId,
+        deadline: Option<Instant>,
+    ) -> Result<bool, SolverError> {
+        self.assert_encoded_with_deadline(arena, term, term, deadline)
+    }
+
     fn assert_encoded(
         &mut self,
         arena: &TermArena,
         original: TermId,
         encoded: TermId,
     ) -> Result<(), SolverError> {
+        let asserted = self.assert_encoded_with_deadline(arena, original, encoded, None)?;
+        debug_assert!(asserted, "deadline-free assertion cannot be interrupted");
+        Ok(())
+    }
+
+    fn assert_encoded_with_deadline(
+        &mut self,
+        arena: &TermArena,
+        original: TermId,
+        encoded: TermId,
+        deadline: Option<Instant>,
+    ) -> Result<bool, SolverError> {
         if arena.sort_of(original) != Sort::Bool {
             return Err(SolverError::NonBooleanAssertion(original));
         }
@@ -369,7 +401,7 @@ impl IncrementalBvSolver {
                 .expect("base frame always present")
                 .deferred_assertions
                 .push(original);
-            return Ok(());
+            return Ok(true);
         }
         if let Some((unsupported, op)) = first_unsupported_op(arena, &[encoded]) {
             return Err(SolverError::Unsupported(format!(
@@ -377,10 +409,11 @@ impl IncrementalBvSolver {
                 unsupported.index()
             )));
         }
-        let lowered = self
-            .lowering
-            .lower(arena, encoded)
-            .map_err(map_lower_error)?;
+        let lowered = match self.lowering.lower_with_deadline(arena, encoded, deadline) {
+            Ok(lowered) => lowered,
+            Err(BitLowerError::DeadlineExceeded) => return Ok(false),
+            Err(error) => return Err(map_lower_error(error)),
+        };
         let root = lowered.bits()[0];
         let selector = self
             .frames
@@ -395,7 +428,7 @@ impl IncrementalBvSolver {
             .expect("base frame always present")
             .assertions
             .push(original);
-        Ok(())
+        Ok(true)
     }
 
     fn assert_encoded_with_warm_array_selects(

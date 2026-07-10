@@ -21,8 +21,117 @@ use std::time::{Duration, Instant};
 use axeyum_ir::{Rational, Sort, TermArena, TermId};
 use axeyum_smtlib::parse_script;
 use axeyum_solver::{
-    CheckResult, SolverConfig, check_auto, check_qf_uflra_online, check_with_uf_arithmetic,
+    CheckResult, SatBvBackend, SolverBackend, SolverConfig, UnknownKind, check_auto,
+    check_qf_aufbv_online_cdclt, check_qf_uflra_online, check_with_uf_arithmetic,
 };
+
+/// Public cvc5 regression whose five 1024-bit dividers exposed deadline-blind
+/// AIG construction: a 1s benchmark timeout previously returned after 437.5s.
+const WIDE_AUFBV_DIVISION: &str = include_str!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../../corpus/public-curated/non-incremental/QF_AUFBV/cvc5-regress-clean/",
+    "cli__regress0__unconstrained__array1.smt2"
+));
+
+const ADMITTED_AUFBV_DIVISION: &str = r#"
+(set-logic QF_AUFBV)
+(declare-fun i () (_ BitVec 16))
+(declare-fun a () (Array (_ BitVec 16) (_ BitVec 1024)))
+(declare-fun x () (_ BitVec 1024))
+(declare-fun y () (_ BitVec 1024))
+(assert (not (= (select a i) (bvudiv x y))))
+(check-sat)
+"#;
+
+#[test]
+fn wide_aufbv_division_honors_config_timeout() {
+    let budget = Duration::from_millis(25);
+    let cfg = SolverConfig::default().with_timeout(budget);
+
+    let mut direct_script = parse_script(WIDE_AUFBV_DIVISION).expect("public AUFBV row parses");
+    let direct_assertions = direct_script.checked_flat_view().to_vec();
+    let start = Instant::now();
+    let direct = check_qf_aufbv_online_cdclt(&mut direct_script.arena, &direct_assertions, &cfg)
+        .expect("canonical AUFBV route has no operational error");
+    let direct_elapsed = start.elapsed();
+    assert!(
+        direct_elapsed < budget * 200,
+        "canonical AUFBV route overran its {budget:?} budget: elapsed {direct_elapsed:?} \
+         (result {direct:?})"
+    );
+
+    let mut auto_script = parse_script(WIDE_AUFBV_DIVISION).expect("public AUFBV row parses");
+    let auto_assertions = auto_script.checked_flat_view().to_vec();
+    let start = Instant::now();
+    let automatic = check_auto(&mut auto_script.arena, &auto_assertions, &cfg)
+        .expect("automatic dispatch has no operational error");
+    let auto_elapsed = start.elapsed();
+    assert!(
+        auto_elapsed < budget * 200,
+        "automatic AUFBV dispatch overran its {budget:?} budget: elapsed {auto_elapsed:?} \
+         (result {automatic:?})"
+    );
+
+    assert!(
+        matches!(
+            direct,
+            CheckResult::Unknown(ref reason) if reason.kind == UnknownKind::EncodingBudget
+        ),
+        "oversized public row should be refused before lowering, got {direct:?}"
+    );
+
+    // Automatic dispatch may retain the canonical refusal or try another
+    // deadline-bounded route. Timeliness, checked above, is its contract here.
+    let _ = automatic;
+}
+
+#[test]
+fn admitted_wide_divisions_expire_during_lowering() {
+    let budget = Duration::from_millis(20);
+    let cfg = SolverConfig::default().with_timeout(budget);
+
+    let mut arena = TermArena::new();
+    let x_symbol = arena.declare("x", Sort::BitVec(1024)).unwrap();
+    let y_symbol = arena.declare("y", Sort::BitVec(1024)).unwrap();
+    let expected_symbol = arena.declare("expected", Sort::BitVec(1024)).unwrap();
+    let x = arena.var(x_symbol);
+    let y = arena.var(y_symbol);
+    let expected = arena.var(expected_symbol);
+    let quotient = arena.bv_udiv(x, y).unwrap();
+    let assertion = arena.eq(quotient, expected).unwrap();
+
+    let start = Instant::now();
+    let scalar = SatBvBackend::new()
+        .check(&arena, &[assertion], &cfg)
+        .expect("scalar BV backend has no operational error");
+    let scalar_elapsed = start.elapsed();
+    assert!(
+        scalar_elapsed < budget * 250,
+        "scalar BV lowering overran its {budget:?} budget: elapsed {scalar_elapsed:?} \
+         (result {scalar:?})"
+    );
+    assert!(
+        matches!(scalar, CheckResult::Unknown(ref reason) if reason.kind == UnknownKind::Timeout),
+        "admitted scalar divider should time out during lowering, got {scalar:?}"
+    );
+
+    let mut array_script =
+        parse_script(ADMITTED_AUFBV_DIVISION).expect("admitted AUFBV row parses");
+    let array_assertions = array_script.checked_flat_view().to_vec();
+    let start = Instant::now();
+    let array = check_qf_aufbv_online_cdclt(&mut array_script.arena, &array_assertions, &cfg)
+        .expect("canonical AUFBV route has no operational error");
+    let array_elapsed = start.elapsed();
+    assert!(
+        array_elapsed < budget * 250,
+        "canonical AUFBV lowering overran its {budget:?} budget: elapsed {array_elapsed:?} \
+         (result {array:?})"
+    );
+    assert!(
+        matches!(array, CheckResult::Unknown(ref reason) if reason.kind == UnknownKind::Timeout),
+        "admitted canonical divider should time out during lowering, got {array:?}"
+    );
+}
 
 /// The `QF_AUFLIA` `bug330` instance verbatim (declared `unsat` upstream; the
 /// point here is *timeliness*, not the verdict).

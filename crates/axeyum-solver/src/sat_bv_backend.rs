@@ -18,6 +18,7 @@ use web_time::Instant;
 
 use axeyum_bv::{
     BitLowerError, BitLowering, first_unsupported_op, first_unsupported_sort, lower_terms,
+    lower_terms_with_deadline,
 };
 use axeyum_cnf::{
     BveOptions, CnfAssignment, CnfEncoding, CnfError, CnfFormula, CompactMap, ProofSolveOutcome,
@@ -112,7 +113,22 @@ impl SatBvBackend {
         };
 
         let bit_blast_start = Instant::now();
-        let lowering = lower_terms(arena, assertions).map_err(map_lower_error)?;
+        let lowering = match lower_terms_with_deadline(arena, assertions, deadline) {
+            Ok(lowering) => lowering,
+            Err(BitLowerError::DeadlineExceeded) => {
+                let bit_blast = bit_blast_start.elapsed();
+                stats.translate = bit_blast;
+                push_duration_ms(&mut stats, "bit_blast_ms", bit_blast);
+                self.stats = Some(stats);
+                return Ok(CheckResult::Unknown(UnknownReason {
+                    kind: UnknownKind::Timeout,
+                    detail:
+                        "pure-Rust BV backend exhausted its deadline during bit-vector lowering"
+                            .to_owned(),
+                }));
+            }
+            Err(error) => return Err(map_lower_error(error)),
+        };
         let bit_blast = bit_blast_start.elapsed();
 
         let roots = lowering
@@ -970,7 +986,6 @@ fn oversized_encoding_refusal(
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> Option<CheckResult> {
-    const ABSOLUTE_CLAUSE_CEILING: u64 = 64_000_000;
     let estimated_clauses = estimate_blast_clauses(arena, assertions);
     let clause_cap = config.cnf_clause_budget.unwrap_or(ABSOLUTE_CLAUSE_CEILING);
     if estimated_clauses > clause_cap {
@@ -985,14 +1000,18 @@ fn oversized_encoding_refusal(
     None
 }
 
+/// Default projected clause ceiling when the caller did not set an explicit
+/// encoding budget.
+pub(crate) const ABSOLUTE_CLAUSE_CEILING: u64 = 64_000_000;
+
 /// A cheap, pre-lowering **over-estimate** of the bit-blasted CNF clause count,
 /// used to refuse oversized encodings before `lower_terms` allocates them
 /// (graceful `unknown` instead of an out-of-memory abort). Walks the shared term
 /// DAG once; each node contributes a per-operator cost in its result width —
-/// multiplies are ~`w²`, divides/remainders ~`4w²`, shifts ~`w·log w`, and
+/// multiplies are ~`8w²`, divides/remainders ~`10w²`, shifts ~`w·log w`, and
 /// everything else linear in `w` — then `~3×` the gate total approximates the
 /// Tseitin clause count.
-fn estimate_blast_clauses(arena: &TermArena, assertions: &[TermId]) -> u64 {
+pub(crate) fn estimate_blast_clauses(arena: &TermArena, assertions: &[TermId]) -> u64 {
     use std::collections::HashSet;
 
     use axeyum_ir::{Op, TermNode};

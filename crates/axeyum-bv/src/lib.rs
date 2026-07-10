@@ -9,6 +9,11 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+#[cfg(not(target_arch = "wasm32"))]
+use std::time::Instant;
+#[cfg(target_arch = "wasm32")]
+use web_time::Instant;
+
 use axeyum_aig::{Aig, AigInputId, AigLit, AigNode};
 use axeyum_ir::{
     Assignment, IrError, Op, Sort, SymbolId, TermArena, TermId, TermNode, Value, eval,
@@ -24,6 +29,26 @@ use axeyum_ir::{
 /// internal lowering invariant is violated.
 pub fn lower_terms(arena: &TermArena, roots: &[TermId]) -> Result<BitLowering, BitLowerError> {
     LoweringBuilder::new(arena).lower_roots(roots)
+}
+
+/// Lowers one or more root terms into an AIG while honoring an absolute
+/// wall-clock deadline.
+///
+/// The lowerer polls between DAG nodes and inside the quadratic multiplier and
+/// divider circuits. Already-built AIG state is irrelevant for this one-shot
+/// entry; on expiry it returns [`BitLowerError::DeadlineExceeded`] rather than
+/// completing an oversized circuit after the caller's solving budget.
+///
+/// # Errors
+///
+/// Returns the same errors as [`lower_terms`], plus
+/// [`BitLowerError::DeadlineExceeded`] when `deadline` passes.
+pub fn lower_terms_with_deadline(
+    arena: &TermArena,
+    roots: &[TermId],
+    deadline: Option<Instant>,
+) -> Result<BitLowering, BitLowerError> {
+    LoweringBuilder::with_deadline(arena, deadline).lower_roots(roots)
 }
 
 /// Returns the first operator outside the current bit-lowering subset.
@@ -429,11 +454,33 @@ impl IncrementalLowering {
     /// subset or an internal lowering invariant is violated. On error the
     /// partially-built AIG state is retained.
     pub fn lower(&mut self, arena: &TermArena, root: TermId) -> Result<LoweredTerm, BitLowerError> {
+        self.lower_with_deadline(arena, root, None)
+    }
+
+    /// Lowers `root` into the persistent AIG while honoring an absolute
+    /// wall-clock deadline.
+    ///
+    /// Shared terms already present in the memo remain reusable. On expiry,
+    /// completed child terms and any structurally hashed orphan gates are
+    /// retained, but the interrupted root is not memoized; callers normally end
+    /// the current query with `Unknown` and may reuse the completed prefix later.
+    ///
+    /// # Errors
+    ///
+    /// Returns the same errors as [`Self::lower`], plus
+    /// [`BitLowerError::DeadlineExceeded`] when `deadline` passes.
+    pub fn lower_with_deadline(
+        &mut self,
+        arena: &TermArena,
+        root: TermId,
+        deadline: Option<Instant>,
+    ) -> Result<LoweredTerm, BitLowerError> {
         // Move the persistent accumulators into a one-shot builder, reuse the
         // existing lowering logic, then move the grown state back. The memo
         // makes shared subterms (and symbols) lower once across calls.
         let mut builder = LoweringBuilder {
             arena,
+            deadline,
             aig: core::mem::take(&mut self.aig),
             memo: core::mem::take(&mut self.memo),
             term_bits: core::mem::take(&mut self.term_bits),
@@ -475,6 +522,9 @@ pub enum BitLowerError {
     Ir(IrError),
     /// Error from the AIG layer.
     Aig(axeyum_aig::AigError),
+    /// The caller's absolute lowering deadline elapsed before construction
+    /// completed.
+    DeadlineExceeded,
     /// Operator is outside the currently supported lowering subset.
     UnsupportedOp {
         /// Source term containing the unsupported operator.
@@ -551,6 +601,9 @@ impl core::fmt::Display for BitLowerError {
         match self {
             BitLowerError::Ir(error) => write!(f, "{error}"),
             BitLowerError::Aig(error) => write!(f, "{error}"),
+            BitLowerError::DeadlineExceeded => {
+                write!(f, "bit-vector lowering deadline exceeded")
+            }
             BitLowerError::UnsupportedOp { term, op } => {
                 write!(
                     f,
@@ -606,6 +659,7 @@ impl core::error::Error for BitLowerError {}
 
 struct LoweringBuilder<'a> {
     arena: &'a TermArena,
+    deadline: Option<Instant>,
     aig: Aig,
     memo: BTreeMap<TermId, Vec<AigLit>>,
     term_bits: Vec<TermBitBinding>,
@@ -632,8 +686,13 @@ impl SymbolModelBits {
 
 impl<'a> LoweringBuilder<'a> {
     fn new(arena: &'a TermArena) -> Self {
+        Self::with_deadline(arena, None)
+    }
+
+    fn with_deadline(arena: &'a TermArena, deadline: Option<Instant>) -> Self {
         Self {
             arena,
+            deadline,
             aig: Aig::new(),
             memo: BTreeMap::new(),
             term_bits: Vec::new(),
@@ -642,9 +701,21 @@ impl<'a> LoweringBuilder<'a> {
         }
     }
 
+    fn poll_deadline(&self) -> Result<(), BitLowerError> {
+        if self
+            .deadline
+            .is_some_and(|deadline| Instant::now() >= deadline)
+        {
+            Err(BitLowerError::DeadlineExceeded)
+        } else {
+            Ok(())
+        }
+    }
+
     fn lower_roots(mut self, roots: &[TermId]) -> Result<BitLowering, BitLowerError> {
         let mut lowered_roots = Vec::with_capacity(roots.len());
         for &root in roots {
+            self.poll_deadline()?;
             let bits = self.lower_term(root)?;
             lowered_roots.push(LoweredTerm {
                 term: root,
@@ -664,6 +735,7 @@ impl<'a> LoweringBuilder<'a> {
     fn lower_term(&mut self, root: TermId) -> Result<Vec<AigLit>, BitLowerError> {
         let mut stack = vec![(root, false)];
         while let Some((term, children_ready)) = stack.pop() {
+            self.poll_deadline()?;
             if self.memo.contains_key(&term) {
                 continue;
             }
@@ -815,6 +887,7 @@ impl<'a> LoweringBuilder<'a> {
         op: Op,
         operands: &[Vec<AigLit>],
     ) -> Result<Vec<AigLit>, BitLowerError> {
+        self.poll_deadline()?;
         let bits = match op {
                 Op::BoolNot => vec![expect_bool(term, &operands[0])?.negated()],
                 Op::BoolAnd => vec![self.aig.and(
@@ -1016,9 +1089,13 @@ impl<'a> LoweringBuilder<'a> {
         // it is not the right size lever here (see PLAN.md Status 2026-06-13).
         let mut result = vec![AigLit::FALSE; width];
         for i in 0..width {
+            self.poll_deadline()?;
             let multiplier_bit = rhs[i];
             let mut partial = vec![AigLit::FALSE; width];
             for j in i..width {
+                if j & 63 == 0 {
+                    self.poll_deadline()?;
+                }
                 partial[j] = self.aig.and(lhs[j - i], multiplier_bit);
             }
             result = self.lower_add_bits(term, &result, &partial, AigLit::FALSE)?;
@@ -1083,6 +1160,7 @@ impl<'a> LoweringBuilder<'a> {
         let mut quotient = vec![AigLit::FALSE; width];
 
         for index in (0..width).rev() {
+            self.poll_deadline()?;
             // shifted = (remainder << 1) | dividend[index], width + 1 bits.
             let mut shifted = Vec::with_capacity(width + 1);
             shifted.push(dividend[index]);
@@ -1291,6 +1369,7 @@ impl<'a> LoweringBuilder<'a> {
         let mut stage_shift = 1usize;
         let mut amount_bit = 0usize;
         while stage_shift < source.len() {
+            self.poll_deadline()?;
             let shifted = Self::shifted_bits(op, &result, stage_shift);
             result = self.lower_mux_bits(term, amount[amount_bit], &shifted, &result)?;
             stage_shift <<= 1;
@@ -1442,7 +1521,10 @@ impl<'a> LoweringBuilder<'a> {
             });
         }
         let mut equal = AigLit::TRUE;
-        for (lhs, rhs) in lhs.iter().copied().zip(rhs.iter().copied()) {
+        for (index, (lhs, rhs)) in lhs.iter().copied().zip(rhs.iter().copied()).enumerate() {
+            if index & 63 == 0 {
+                self.poll_deadline()?;
+            }
             let bit_equal = self.aig.xor(lhs, rhs).negated();
             equal = self.aig.and(equal, bit_equal);
         }
@@ -1456,6 +1538,7 @@ impl<'a> LoweringBuilder<'a> {
         then_bits: &[AigLit],
         else_bits: &[AigLit],
     ) -> Result<Vec<AigLit>, BitLowerError> {
+        self.poll_deadline()?;
         if then_bits.len() != else_bits.len() {
             return Err(BitLowerError::BitWidthMismatch {
                 term,
@@ -1498,7 +1581,10 @@ impl<'a> LoweringBuilder<'a> {
             });
         }
         let mut result = Vec::with_capacity(lhs.len());
-        for (lhs, rhs) in lhs.iter().copied().zip(rhs.iter().copied()) {
+        for (index, (lhs, rhs)) in lhs.iter().copied().zip(rhs.iter().copied()).enumerate() {
+            if index & 63 == 0 {
+                self.poll_deadline()?;
+            }
             let pair_sum = self.aig.xor(lhs, rhs);
             let sum = self.aig.xor(pair_sum, carry);
             let carry_from_pair = self.aig.and(lhs, rhs);
@@ -1554,6 +1640,9 @@ impl<'a> LoweringBuilder<'a> {
         let mut less = AigLit::FALSE;
         let mut equal = AigLit::TRUE;
         for index in (0..lhs.len()).rev() {
+            if index & 63 == 0 {
+                self.poll_deadline()?;
+            }
             let lhs = lhs[index];
             let rhs = rhs[index];
             let bit_less = self.aig.and(lhs.negated(), rhs);
@@ -1658,12 +1747,14 @@ impl<'a> LoweringBuilder<'a> {
                 found: rhs.len(),
             });
         }
-        Ok(lhs
-            .iter()
-            .copied()
-            .zip(rhs.iter().copied())
-            .map(|(lhs, rhs)| build(&mut self.aig, lhs, rhs))
-            .collect())
+        let mut result = Vec::with_capacity(lhs.len());
+        for (index, (lhs, rhs)) in lhs.iter().copied().zip(rhs.iter().copied()).enumerate() {
+            if index & 63 == 0 {
+                self.poll_deadline()?;
+            }
+            result.push(build(&mut self.aig, lhs, rhs));
+        }
+        Ok(result)
     }
 
     fn lower_any_bit_set(&mut self, bits: &[AigLit]) -> AigLit {
@@ -1906,6 +1997,8 @@ pub fn eval_lowered_once(
 
 #[cfg(test)]
 mod tests {
+    use std::time::{Duration, Instant};
+
     use axeyum_aig::AigLit;
     use axeyum_ir::{Assignment, IrError, Sort, TermArena, Value, eval};
 
@@ -1913,6 +2006,31 @@ mod tests {
 
     fn bv(width: u32, value: u128) -> Value {
         Value::Bv { width, value }
+    }
+
+    #[test]
+    fn incremental_lowering_interrupts_wide_division() {
+        let mut arena = TermArena::new();
+        let x_symbol = arena.declare("x", Sort::BitVec(1024)).unwrap();
+        let y_symbol = arena.declare("y", Sort::BitVec(1024)).unwrap();
+        let x = arena.var(x_symbol);
+        let y = arena.var(y_symbol);
+        let quotient = arena.bv_udiv(x, y).unwrap();
+
+        let mut lowering = IncrementalLowering::new();
+        lowering.lower(&arena, x).unwrap();
+        lowering.lower(&arena, y).unwrap();
+
+        let start = Instant::now();
+        let deadline = start.checked_add(Duration::from_millis(20));
+        let result = lowering.lower_with_deadline(&arena, quotient, deadline);
+        let elapsed = start.elapsed();
+
+        assert_eq!(result, Err(BitLowerError::DeadlineExceeded));
+        assert!(
+            elapsed < Duration::from_secs(5),
+            "wide division lowering ignored its deadline for {elapsed:?}"
+        );
     }
 
     #[test]

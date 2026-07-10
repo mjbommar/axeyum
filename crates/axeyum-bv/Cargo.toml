@@ -14,6 +14,9 @@ publish = false
 [dependencies]
 axeyum-aig.workspace = true
 axeyum-ir.workspace = true
+# `std::time::Instant` has no browser clock on wasm32; keep deadline-aware
+# lowering on the same portable monotonic clock as the CNF/solver layers.
+web-time.workspace = true
 
 [lints]
 workspace = true
