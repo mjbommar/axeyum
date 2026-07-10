@@ -57,7 +57,63 @@ fn build_cross_equality_case(
                 arena.not(stored_equals_third).unwrap(),
             ]
         }
-        _ => vec![arrays_equal, other_equals_third, array_equals_third],
+        _ => {
+            let first_index = arena.bv_const(width, 1).unwrap();
+            let second_index = arena.bv_const(width, 2).unwrap();
+            let first_value = arena.bv_const(width, 3).unwrap();
+            let second_value = arena.bv_const(width, 4).unwrap();
+            let first_read = arena.select(array, first_index).unwrap();
+            let second_read = arena.select(third_array, second_index).unwrap();
+            vec![
+                arrays_equal,
+                other_equals_third,
+                arena.eq(first_read, first_value).unwrap(),
+                arena.eq(second_read, second_value).unwrap(),
+            ]
+        }
+    }
+}
+
+#[cfg(feature = "z3")]
+fn z3_cross_equality_case(
+    case: u64,
+    width: u32,
+    array: &Array,
+    other_array: &Array,
+    third_array: &Array,
+    fourth_array: &Array,
+    stored: &Array,
+) -> Vec<Bool> {
+    let arrays_equal = array.eq(other_array);
+    let other_equals_third = other_array.eq(third_array);
+    match case {
+        16 => vec![
+            arrays_equal,
+            other_equals_third,
+            array.eq(third_array).not(),
+        ],
+        17 => vec![arrays_equal, third_array.eq(fourth_array).not()],
+        18 => vec![
+            stored.eq(other_array),
+            other_equals_third,
+            stored.eq(third_array).not(),
+        ],
+        _ => {
+            let first_index = BV::from_u64(1, width);
+            let second_index = BV::from_u64(2, width);
+            let first_value = BV::from_u64(3, width);
+            let second_value = BV::from_u64(4, width);
+            vec![
+                arrays_equal,
+                other_equals_third,
+                array.select(&first_index).as_bv().unwrap().eq(first_value),
+                third_array
+                    .select(&second_index)
+                    .as_bv()
+                    .unwrap()
+                    .eq(second_value),
+            ]
+        }
     }
 }
 
@@ -205,11 +261,6 @@ fn z3_verdict(seed: u64) -> Verdict {
     let stored = array.store(&x, &first);
     let arrays_equal = array.eq(&other_array);
     let arrays_different = arrays_equal.not();
-    let other_equals_third = other_array.eq(&third_array);
-    let array_equals_third = array.eq(&third_array);
-    let array_differs_third = array_equals_third.not();
-    let third_differs_fourth = third_array.eq(&fourth_array).not();
-    let stored_differs_third = stored.eq(&third_array).not();
 
     let assertions: Vec<Bool> = match seed % 20 {
         0 => vec![same_xy, different_reads],
@@ -242,14 +293,15 @@ fn z3_verdict(seed: u64) -> Verdict {
         13 => vec![stored.eq(&other_array)],
         14 => vec![stored.eq(&stored).not()],
         15 => vec![arrays_different, read_x.eq(&other_read_x)],
-        16 => vec![arrays_equal, other_equals_third, array_differs_third],
-        17 => vec![arrays_equal, third_differs_fourth],
-        18 => vec![
-            stored.eq(&other_array),
-            other_equals_third,
-            stored_differs_third,
-        ],
-        _ => vec![arrays_equal, other_equals_third, array_equals_third],
+        case => z3_cross_equality_case(
+            case,
+            width,
+            &array,
+            &other_array,
+            &third_array,
+            &fourth_array,
+            &stored,
+        ),
     };
     let solver = Solver::new();
     for assertion in assertions {

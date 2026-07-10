@@ -12,7 +12,7 @@ session state.
 > without ever losing the thread. **We do not stop and we do not hand-wave; we
 > advance the next task and record it.**
 
-> **Current sequencing (2026-07-09).** The breadth-first pass over the theory
+> **Current sequencing (2026-07-10).** The breadth-first pass over the theory
 > decide-rate leaves has reached its ROI wall (measured this session). The
 > ranked next move is to **depth-first the engine keystone (P1.4 e-graph →
 > P1.5 CDCL(T))**, keeping a thin measured-leaf skirt and the trust-ledger proof
@@ -3745,9 +3745,20 @@ Its conclusion, ranked by quality × efficiency:
    all 768 comparisons clean, now 456 equality-bearing. Public decisions and
    PAR-2 remain QF_ABV 187/193 at 84 ms and QF_AUFBV 49/53 at 206 ms, with zero
    disagreements/replay failures. This avoids the eager cross product but still
-   rebuilds outer `CdclT` rounds. Next: live backtrackable e-graph merge hooks,
-   class-parent/multiple-path scheduling, e-graph-class/warm models, full
-   ROW/diff-witness proof logging, and opaque-heavy arithmetic model exchange.
+   rebuilds outer `CdclT` rounds. **Twenty-second follow-through:** ADR-0077
+   identifies the queue as a compensating mechanism and supersedes it. Each array
+   flag now retains its original array equality at the same canonical theory-atom
+   index, so `EufTheory` handles reflexivity, transitivity, congruence, and
+   backtracking directly. The transitive conflict, self-disequality, store/UF
+   path, and former 512-observation stress case all refute in one round with no
+   extensionality work. Candidate-true direct-symbol classes also project one
+   shared majority-default model; a transitive SAT class with disjoint reads now
+   replays. The strengthened 768-comparison matrix remains clean (456 equality-
+   bearing), and public 1 s results remain QF_ABV 187/193 at 84 ms and QF_AUFBV
+   49/53 at 205 ms, with zero disagreements/replay failures. Next: parent-select
+   merge scheduling, store/ITE/array-valued-UF class models, warm reuse, full
+   ROW/diff-witness/equality-chain proof logging, and opaque-heavy arithmetic
+   model exchange.
 2. **Keep a thin measured-leaf-BFS skirt in parallel** — measured-ROI leaves only
    (NRA tail, strings-Nielsen); fold the feature/scale-blocked leaves
    (dense-ILP MILP, large-LP performance) into a funded engine phase rather than

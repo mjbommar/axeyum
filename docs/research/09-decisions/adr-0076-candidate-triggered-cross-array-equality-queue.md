@@ -1,7 +1,12 @@
 # ADR-0076: Candidate-Triggered Cross-Array Equality Queue
 
-Status: accepted
+Status: superseded by ADR-0077
 Date: 2026-07-10
+
+ADR-0077 connects the flags to their original array equalities on the canonical
+e-graph, so ordinary equality transitivity now subsumes this cross-diff queue.
+The measurements below remain the historical evidence that exposed the missing
+bus connection.
 
 ## Context
 

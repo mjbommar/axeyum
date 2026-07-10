@@ -337,8 +337,6 @@ const MAX_ROW_ROUNDS: usize = 64;
 /// this many sites (deeply nested stores fanned out over many reads) declines to
 /// `unknown` rather than risk an unbounded blow-up.
 const MAX_ROW_SITES: usize = 4096;
-/// Shared global site ceiling for the canonical online ROW extension path.
-pub(crate) const MAX_ONLINE_ROW_SITES: usize = MAX_ROW_SITES;
 const SCALAR_LOCAL_SEARCH_PROBE_MS: u64 = 100;
 
 /// Builds the `unknown` result with the lazy-ROW resource-limit classification.
@@ -2154,7 +2152,6 @@ pub(crate) struct OnlineRowAbstraction {
     pub(crate) assertions: Vec<TermId>,
     pub(crate) sites: Vec<RowSite>,
     pub(crate) equalities: Vec<OnlineArrayEquality>,
-    pub(crate) next_fresh: usize,
 }
 
 /// One array equality flag plus the finite observations prepared for online
@@ -2165,7 +2162,6 @@ pub(crate) struct OnlineArrayEquality {
     pub(crate) flag: SymbolId,
     pub(crate) lhs: TermId,
     pub(crate) rhs: TermId,
-    pub(crate) diff_index: TermId,
     pub(crate) observations: Vec<OnlineArrayEqualityObservation>,
 }
 
@@ -2507,15 +2503,16 @@ pub(crate) fn abstract_rows_for_online(
         assertions: abstracted,
         sites: ctx.sites,
         equalities,
-        next_fresh: ctx.fresh_counter,
     }))
 }
 
 /// Prepares a bounded set of shared-index observations for every abstracted
 /// array equality. Each atom receives one diff witness. Existing query-read and
 /// store indices are also observed so a true equality can refine only the
-/// concrete indices already relevant to the query. Diff indices are not crossed
-/// between equality atoms; merge-triggered cross-atom scheduling remains P2.2.
+/// concrete indices already relevant to the query. The canonical route retains
+/// each flag's original equality for EUF transitivity, so diff indices do not need
+/// to be crossed between equality atoms. Parent-select merge scheduling remains
+/// P2.2.
 fn prepare_online_array_equalities(
     arena: &mut TermArena,
     ctx: &mut RowCtx,
@@ -2575,44 +2572,10 @@ fn prepare_online_array_equalities(
             flag,
             lhs,
             rhs,
-            diff_index,
             observations,
         });
     }
     Ok(Some(equalities))
-}
-
-/// Builds one additional paired observation for an online array equality at a
-/// candidate-relevant index. The returned ROW sites are independent additions;
-/// the caller owns global deduplication, site budgeting, function abstraction,
-/// and insertion into the canonical refinement queue.
-pub(crate) fn build_online_array_equality_observation(
-    arena: &mut TermArena,
-    lhs: TermId,
-    rhs: TermId,
-    index: TermId,
-    next_fresh: &mut usize,
-) -> Result<Option<(OnlineArrayEqualityObservation, Vec<RowSite>)>, SolverError> {
-    let mut ctx = RowCtx {
-        fresh_counter: *next_fresh,
-        ..RowCtx::default()
-    };
-    let Some(lhs_read) = ctx.resolve_select(arena, lhs, index)? else {
-        return Ok(None);
-    };
-    let Some(rhs_read) = ctx.resolve_select(arena, rhs, index)? else {
-        return Ok(None);
-    };
-    *next_fresh = ctx.fresh_counter;
-    Ok(Some((
-        OnlineArrayEqualityObservation {
-            index,
-            lhs_read,
-            rhs_read,
-            is_diff_witness: false,
-        },
-        ctx.sites,
-    )))
 }
 
 /// Reconstructs base-array values from the variable-read sites of a consistent
@@ -2621,19 +2584,89 @@ pub(crate) fn build_online_array_equality_observation(
 pub(crate) fn project_online_row_assignment(
     arena: &TermArena,
     sites: &[RowSite],
+    equivalent_arrays: &[(SymbolId, SymbolId)],
     assignment: &Assignment,
 ) -> Result<Assignment, SolverError> {
     let ctx = RowCtx {
         sites: sites.to_vec(),
         ..RowCtx::default()
     };
-    let arrays =
+    let mut arrays =
         collect_base_array_entries(arena, &ctx, assignment, "online ROW projection failed")?;
     let mut projected = complete_assignment(arena, assignment);
-    for (array, entries) in arrays {
-        projected.set(array, array_value_from_entries(arena, array, &entries)?);
+
+    let mut parents = BTreeMap::new();
+    for &array in arrays.keys() {
+        parents.insert(array, array);
+    }
+    for &(left, right) in equivalent_arrays {
+        let left_sort = arena.symbol(left).1;
+        let right_sort = arena.symbol(right).1;
+        if left_sort != right_sort || !matches!(left_sort, Sort::Array { .. }) {
+            return Err(SolverError::Backend(
+                "online ROW projection received an ill-sorted array equality class".to_owned(),
+            ));
+        }
+        parents.entry(left).or_insert(left);
+        parents.entry(right).or_insert(right);
+        let left_root = array_class_root(&parents, left);
+        let right_root = array_class_root(&parents, right);
+        if left_root != right_root {
+            let (root, child) = if left_root < right_root {
+                (left_root, right_root)
+            } else {
+                (right_root, left_root)
+            };
+            parents.insert(child, root);
+        }
+    }
+
+    let mut classes: BTreeMap<SymbolId, Vec<SymbolId>> = BTreeMap::new();
+    for &array in parents.keys() {
+        classes
+            .entry(array_class_root(&parents, array))
+            .or_default()
+            .push(array);
+    }
+    for members in classes.values() {
+        let representative = members[0];
+        let mut entries = Vec::new();
+        for member in members {
+            entries.extend(arrays.remove(member).unwrap_or_default());
+        }
+        ensure_array_entries_consistent(&entries)?;
+        let value = array_value_from_entries(arena, representative, &entries)?;
+        for &member in members {
+            projected.set(member, value.clone());
+        }
     }
     Ok(projected)
+}
+
+fn array_class_root(parents: &BTreeMap<SymbolId, SymbolId>, mut array: SymbolId) -> SymbolId {
+    while let Some(&parent) = parents.get(&array)
+        && parent != array
+    {
+        array = parent;
+    }
+    array
+}
+
+fn ensure_array_entries_consistent(entries: &[(Value, Value)]) -> Result<(), SolverError> {
+    let mut normalized: HashMap<&Value, &Value> = HashMap::new();
+    for (index, element) in entries {
+        if let Some(existing) = normalized.get(index) {
+            if **existing != *element {
+                return Err(SolverError::Backend(
+                    "online ROW projection found conflicting reads in one array equality class"
+                        .to_owned(),
+                ));
+            }
+        } else {
+            normalized.insert(index, element);
+        }
+    }
+    Ok(())
 }
 
 /// The lazy-ROW CEGAR loop over `substituted` (array-equality-free) assertions,

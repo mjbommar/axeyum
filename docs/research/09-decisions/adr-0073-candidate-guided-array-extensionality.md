@@ -116,6 +116,6 @@ online-arena pollution but does not repair that downstream deadline hole.
 - Equality flags, select congruence, lazy ROW, UF congruence, and exact BV refine
   in one deterministic outer loop with replayed models.
 - T2.2.3 is complete only for this candidate-guided observed-index/diff slice.
-  Full phase exit still requires merge-triggered new/delayed/applied queue state,
-  cross-atom observation scheduling, scalable majority-default models, warm
-  reuse, and proof/evidence integration.
+  ADR-0077 subsequently places equality flags on live `EufTheory` and shares
+  direct-symbol class models. Full phase exit still requires parent-select merge
+  scheduling, non-symbol/warm class models, and proof/evidence integration.

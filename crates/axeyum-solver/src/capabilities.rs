@@ -229,20 +229,19 @@ pub const CAPABILITIES: &[Capability] = &[
         area: "QF_ABV / QF_AUFBV",
         feature: "canonical online CDCL(T) arrays: replay-guided base-select congruence, \
                   candidate-guided lazy read-over-write, and bounded array equality/disequality \
-                  observations with one diff witness per equality atom; a deterministic \
-                  new/delayed/applied queue adds only missing observations along candidate-true \
-                  equality paths; scalar UF applications in indices/elements share the same exact \
-                  BV + e-graph bus; projected arrays use deterministic distinct-index majority \
-                  defaults with normalized overrides",
+                  observations with one diff witness per equality atom; equality flags retain their \
+                  original array equality on the backtrackable e-graph, and candidate-true symbol \
+                  classes share one deterministic majority-default model; scalar UF applications in \
+                  indices/elements share the same exact BV + e-graph bus",
         assurance: Assurance::Validated,
         evidence: "every partial round is a relaxation, so UNSAT transfers; SAT requires \
-                   function-then-array projection and original-query replay. 788 solver-lib \
+                   function-then-array projection and original-query replay. 790 solver-lib \
                    tests plus 768 AUFBV online/eager/front-door/Z3 comparisons are clean; \
                    456 comparisons carry equality/disequality/store-equality/UF-index/transitive \
-                   shapes. \
+                   shapes, including disjoint reads over a transitive SAT class. \
                    Public QF_ABV 187/193 and QF_AUFBV 49/53 at 1 s, DISAGREE=0; online probes \
                    use cloned arenas so fallback inputs remain pristine",
-        reference: "ADR-0071/0072/0073/0074/0076",
+        reference: "ADR-0071/0072/0073/0074/0077",
     },
     Capability {
         area: "QF_UF",

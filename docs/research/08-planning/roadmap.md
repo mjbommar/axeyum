@@ -337,22 +337,23 @@ Progress update (2026-07-10): ADR-0071 adds replay-guided base-select congruence
 on canonical `CdclT`; ADR-0072 reuses the shared ROW abstraction and materializes
 only candidate-violated store hit/miss axioms. Both compose with dynamic UFBV
 interfaces and function-then-array projection. Public QF_ABV/QF_AUFBV runs
-remain DISAGREE=0 with zero replay failures. This is not phase exit: live
-merge-triggered queue hooks, class-parent extensionality, e-graph-class model
-ownership, and the warm memory path remain.
+remain DISAGREE=0 with zero replay failures. This is not phase exit: parent-
+select/ROW/default scheduling on class merges, non-symbol class models, and the
+warm memory path remain.
 
 ADR-0073 adds candidate-guided array equality: one bounded diff witness per
 equality flag plus observed query/store indices, with only violated congruence or
 witness instances materialized. ADR-0076 expands the 768-comparison matrix to
-456 equality-bearing cases and it remains clean. Full phase exit still requires
-in-search class-merge scheduling, class-parent/alternate-path observations,
-scalable class models, warm reuse, and proof integration.
+456 equality-bearing cases and it remains clean. ADR-0077 subsequently makes
+ordinary equality live on `EufTheory`. Full phase exit still requires parent-
+select merge scheduling, scalable non-symbol class models, warm reuse, and proof
+integration.
 
 ADR-0074 adds deterministic majority-default array projection shared by the
 canonical and fallback routes. Votes count distinct observed indices; stable
 ties and normalized overrides preserve deterministic output. A 16-read model
-compresses to four overrides with replay intact. E-graph-class model ownership
-and warm reuse remain before phase exit.
+compresses to four overrides with replay intact. ADR-0077 shares one such model
+across true direct-symbol classes; non-symbol ownership and warm reuse remain.
 
 ADR-0075 advances the parallel proof spine: a direct equal-array/same-index
 select conflict now emits literal SMT-LIB `select` and standard equality rules,
@@ -364,8 +365,16 @@ ADR-0076 adds deterministic new/delayed/applied cross-equality state across
 canonical rounds. A false equality observes its diff index only along one
 candidate-true BFS path, closing transitive equality without eager quadratic
 preparation. Disconnected SAT stays delayed/replayed, store/UF paths compose with
-ROW, and all existing caps remain explicit. The remaining queue step is to trail
-this state inside `CdclT` and trigger it from live e-graph merges/parent selects.
+ROW, and all existing caps remain explicit. It is retained as the historical
+precursor that exposed opaque array flags.
+
+ADR-0077 supersedes the cross-diff queue by aligning each flag with its original
+array equality in `EufTheory`. The live backtrackable e-graph now closes
+reflexive/transitive/congruent array conflicts directly, including the former
+512-observation stress case in one round. Candidate-true direct-symbol classes
+also share one majority-default projected model, closing transitive SAT replay
+with disjoint reads. Parent-select merge scheduling, non-symbol/warm class model
+ownership, and proof integration remain before phase exit.
 
 Implementation note: a first infosec-workflow client example landed early
 (2026-06-13), ahead of arrays — a register-VM symbolic executor over
