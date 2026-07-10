@@ -2,25 +2,30 @@
 //!
 //! Uninterpreted applications are first replaced by fresh scalar symbols through
 //! [`axeyum_rewrite::abstract_functions`], with no eager Ackermann constraints.
-//! The Boolean structure is Tseitin-encoded once. The first block of Boolean
-//! variables denotes every semantic Bool/BV atom plus explicit interface
-//! equalities for same-function application arguments and results.
+//! The Boolean structure is Tseitin-encoded once per canonical round. The first
+//! block of Boolean variables denotes every semantic Bool/BV atom plus the
+//! currently materialized interface equalities for same-function application
+//! arguments and results.
 //!
-//! A single CDCL(T) trail then drives two theories in lockstep:
+//! Each canonical CDCL(T) round drives two theories in lockstep:
 //! - [`crate::euf_egraph::EufTheory`] owns congruence over the original terms;
 //! - [`crate::IncrementalBvSolver`] owns exact finite-domain Bool/BV semantics over
 //!   the function-free abstraction and maps its failed decision-frame selectors
 //!   back to a sound active theory-literal core whenever that conjunction is
 //!   bit-vector UNSAT.
 //!
-//! Interface argument equalities are case-split by `CdclT`. Congruent applications
-//! make the e-graph propagate their generated result equality, which the BV theory
-//! immediately enforces over the fresh result symbols. Conversely, a BV-infeasible
-//! interface choice becomes a learned theory clause. This is the first live P1.6
-//! equality bus between EUF and BV; eager Ackermann remains the fallback and
-//! differential oracle.
+//! The first round is the function-free relaxation. A SAT candidate is scanned for
+//! same-function applications with equal argument values and unequal result values;
+//! only those violated pairs materialize argument/result equalities for the next
+//! round. Congruent applications then make the e-graph propagate result equality,
+//! which BV enforces over the fresh result symbols. A BV-infeasible interface choice
+//! becomes a learned theory clause. The loop reaches a replaying model, relaxation
+//! UNSAT, or explicit round/interface/deadline bounds. Eager Ackermann remains the
+//! fallback and differential oracle.
 //!
 //! Soundness:
+//! - each partial interface set is a relaxation of full UF consistency, so UNSAT
+//!   from any round implies original-query UNSAT;
 //! - every BV conflict is a re-solved UNSAT conjunction of the reported active
 //!   literals;
 //! - every EUF conflict/propagation is an e-graph explanation;
@@ -49,8 +54,10 @@ const MAX_INPUT_DAG_NODES: u64 = 16_384;
 const MAX_INPUT_DEPTH: u64 = 4_096;
 /// Maximum semantic atoms (formula atoms plus generated interface equalities).
 const MAX_THEORY_ATOMS: usize = 1_024;
-/// Maximum generated interface equalities before the bounded first slice declines.
+/// Maximum materialized interface equalities before bounded refinement declines.
 const MAX_INTERFACE_ATOMS: usize = 512;
+/// Maximum canonical-driver rebuilds while materializing violated interface pairs.
+const MAX_INTERFACE_REFINEMENT_ROUNDS: usize = 64;
 /// Maximum Boolean variables after Tseitin encoding.
 const MAX_BOOLEAN_VARIABLES: usize = 8_192;
 /// Maximum Boolean clauses after Tseitin encoding.
@@ -147,6 +154,20 @@ impl AtomAccumulator {
 struct BooleanSkeleton {
     variable_count: usize,
     clauses: Vec<Vec<CdcltLit>>,
+}
+
+enum RoundResult {
+    Unsat,
+    Unknown(UnknownReason),
+    Sat(Assignment),
+}
+
+#[derive(Debug, Default)]
+struct InterfaceRefinementStats {
+    rounds: usize,
+    sat_candidates: usize,
+    pairs_added: usize,
+    max_interface_atoms: usize,
 }
 
 #[derive(Default)]
@@ -428,24 +449,23 @@ impl<'a> BvTheory<'a> {
         self.pending_propagations.clone()
     }
 
-    fn projected_result(
-        &self,
-        abstraction: &FunctionAbstraction,
-        originals: &[TermId],
-    ) -> CheckResult {
+    fn candidate_assignment(&self) -> Result<Assignment, UnknownReason> {
         if let Some(detail) = &self.failure {
-            return unknown(UnknownKind::Incomplete, detail.clone());
+            return Err(UnknownReason {
+                kind: UnknownKind::Incomplete,
+                detail: detail.clone(),
+            });
         }
         if let Some(reason) = &self.last_unknown {
-            return CheckResult::Unknown(reason.clone());
+            return Err(reason.clone());
         }
         let Some(model) = &self.last_model else {
-            return unknown(
-                UnknownKind::Incomplete,
-                "online UFBV reached a total trail without a BV model",
-            );
+            return Err(UnknownReason {
+                kind: UnknownKind::Incomplete,
+                detail: "online UFBV reached a total trail without a BV model".to_owned(),
+            });
         };
-        project_replay_build(self.arena, abstraction, originals, &model.to_assignment())
+        Ok(model.to_assignment())
     }
 }
 
@@ -524,9 +544,106 @@ fn build_and_solve(
     config: &SolverConfig,
     deadline: Option<Instant>,
 ) -> BuildResult<CheckResult> {
+    build_and_solve_with_stats(arena, assertions, config, deadline).map(|(result, _stats)| result)
+}
+
+fn build_and_solve_with_stats(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+    deadline: Option<Instant>,
+) -> BuildResult<(CheckResult, InterfaceRefinementStats)> {
     admit_input(arena, assertions, config, deadline)?;
     let prepared = prepare_abstraction(arena, assertions, deadline)?;
-    let atoms = build_theory_atoms(arena, assertions, &prepared, deadline)?;
+    let groups = application_groups(&prepared.applications);
+    let mut ground_values = GroundValueCache::default();
+    let mut interface_pairs = Vec::new();
+    let mut materialized = HashSet::new();
+    let mut interface_count = 0usize;
+    let mut stats = InterfaceRefinementStats::default();
+
+    // Every round contains only valid UF congruence obligations, so it remains a
+    // relaxation of the original query. UNSAT transfers immediately; SAT must
+    // either replay or expose at least one new violated application pair.
+    loop {
+        stats.rounds += 1;
+        let atoms = build_theory_atoms(arena, assertions, &prepared, &interface_pairs, deadline)?;
+        stats.max_interface_atoms = stats.max_interface_atoms.max(
+            atoms
+                .propagation_candidates
+                .iter()
+                .filter(|&&candidate| candidate)
+                .count(),
+        );
+        match solve_cdclt_round(arena, config, deadline, &prepared, atoms)? {
+            RoundResult::Unsat => return Ok((CheckResult::Unsat, stats)),
+            RoundResult::Unknown(reason) => {
+                return Ok((CheckResult::Unknown(reason), stats));
+            }
+            RoundResult::Sat(assignment) => {
+                stats.sat_candidates += 1;
+                let violated = violated_application_pairs(
+                    arena,
+                    &prepared.applications,
+                    &groups,
+                    &assignment,
+                    &materialized,
+                    &mut ground_values,
+                    deadline,
+                )?;
+                if violated.is_empty() {
+                    return Ok((
+                        project_replay_build(arena, &prepared.abstraction, assertions, &assignment),
+                        stats,
+                    ));
+                }
+                if stats.rounds >= MAX_INTERFACE_REFINEMENT_ROUNDS {
+                    return Ok((
+                        unknown(
+                            UnknownKind::ResourceLimit,
+                            format!(
+                                "online UFBV interface refinement exceeded {MAX_INTERFACE_REFINEMENT_ROUNDS} rounds"
+                            ),
+                        ),
+                        stats,
+                    ));
+                }
+                for pair @ (left, _right) in violated {
+                    interface_count = interface_count.saturating_add(
+                        prepared.applications[left]
+                            .original
+                            .args
+                            .len()
+                            .saturating_add(1),
+                    );
+                    if interface_count > MAX_INTERFACE_ATOMS {
+                        return Ok((
+                            unknown(
+                                UnknownKind::ResourceLimit,
+                                format!(
+                                    "online UFBV materialized interface equalities exceed the bounded cap of {MAX_INTERFACE_ATOMS}"
+                                ),
+                            ),
+                            stats,
+                        ));
+                    }
+                    if materialized.insert(pair) {
+                        interface_pairs.push(pair);
+                        stats.pairs_added += 1;
+                    }
+                }
+            }
+        }
+    }
+}
+
+fn solve_cdclt_round(
+    arena: &mut TermArena,
+    config: &SolverConfig,
+    deadline: Option<Instant>,
+    prepared: &PreparedAbstraction,
+    atoms: TheoryAtoms,
+) -> BuildResult<RoundResult> {
     let skeleton = encode_boolean_skeleton(
         arena,
         prepared.abstraction.assertions(),
@@ -556,21 +673,22 @@ fn build_and_solve(
         deadline,
     );
     Ok(match solver.solve(&mut theory) {
-        Outcome::Unsat => CheckResult::Unsat,
+        Outcome::Unsat => RoundResult::Unsat,
         Outcome::Unknown => {
             let kind = if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
                 UnknownKind::Timeout
             } else {
                 UnknownKind::ResourceLimit
             };
-            unknown(
+            RoundResult::Unknown(UnknownReason {
                 kind,
-                "online UFBV canonical CdclT search exhausted its budget",
-            )
+                detail: "online UFBV canonical CdclT search exhausted its budget".to_owned(),
+            })
         }
-        Outcome::Sat => theory
-            .bv
-            .projected_result(&prepared.abstraction, assertions),
+        Outcome::Sat => match theory.bv.candidate_assignment() {
+            Ok(assignment) => RoundResult::Sat(assignment),
+            Err(reason) => RoundResult::Unknown(reason),
+        },
     })
 }
 
@@ -697,6 +815,7 @@ fn build_theory_atoms(
     arena: &mut TermArena,
     assertions: &[TermId],
     prepared: &PreparedAbstraction,
+    interface_pairs: &[(usize, usize)],
     deadline: Option<Instant>,
 ) -> BuildResult<TheoryAtoms> {
     let mut atoms = AtomAccumulator::default();
@@ -727,13 +846,10 @@ fn build_theory_atoms(
         atoms.register(arena, atom, rewritten, false)?;
     }
 
-    let groups = application_groups(&prepared.applications);
-    let relevant_pairs =
-        relevant_application_pairs(arena, &prepared.applications, &groups, deadline)?;
     add_interface_atoms(
         arena,
         &prepared.applications,
-        relevant_pairs,
+        interface_pairs,
         deadline,
         &mut atoms,
     )?;
@@ -770,6 +886,76 @@ fn application_groups(applications: &[CombinedApplication]) -> Vec<(FuncId, Vec<
     groups
 }
 
+fn violated_application_pairs(
+    arena: &TermArena,
+    applications: &[CombinedApplication],
+    groups: &[(FuncId, Vec<usize>)],
+    assignment: &Assignment,
+    materialized: &HashSet<(usize, usize)>,
+    ground_values: &mut GroundValueCache,
+    deadline: Option<Instant>,
+) -> BuildResult<Vec<(usize, usize)>> {
+    let mut violated = Vec::new();
+    for (_func, members) in groups {
+        for left_pos in 0..members.len() {
+            for right_pos in (left_pos + 1)..members.len() {
+                if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
+                    return Err(build_unknown(
+                        UnknownKind::Timeout,
+                        "online UFBV deadline elapsed while refining interface equalities",
+                    ));
+                }
+                let pair = (members[left_pos], members[right_pos]);
+                if materialized.contains(&pair) {
+                    continue;
+                }
+                let left = &applications[pair.0];
+                let right = &applications[pair.1];
+                if applications_may_be_congruent(arena, left, right, ground_values)
+                    && rewritten_arguments_equal(arena, left, right, assignment)
+                    && application_results_differ(left, right, assignment)
+                {
+                    violated.push(pair);
+                }
+            }
+        }
+    }
+    Ok(violated)
+}
+
+fn rewritten_arguments_equal(
+    arena: &TermArena,
+    left: &CombinedApplication,
+    right: &CombinedApplication,
+    assignment: &Assignment,
+) -> bool {
+    debug_assert_eq!(left.rewritten_args.len(), right.rewritten_args.len());
+    left.rewritten_args
+        .iter()
+        .zip(&right.rewritten_args)
+        .all(|(&left, &right)| {
+            match (
+                eval(arena, left, assignment),
+                eval(arena, right, assignment),
+            ) {
+                (Ok(left), Ok(right)) => left == right,
+                _ => false,
+            }
+        })
+}
+
+fn application_results_differ(
+    left: &CombinedApplication,
+    right: &CombinedApplication,
+    assignment: &Assignment,
+) -> bool {
+    matches!(
+        (assignment.get(left.fresh), assignment.get(right.fresh)),
+        (Some(left), Some(right)) if left != right
+    )
+}
+
+#[cfg(test)]
 fn relevant_application_pairs(
     arena: &TermArena,
     applications: &[CombinedApplication],
@@ -831,11 +1017,11 @@ fn applications_may_be_congruent(
 fn add_interface_atoms(
     arena: &mut TermArena,
     applications: &[CombinedApplication],
-    pairs: Vec<(usize, usize)>,
+    pairs: &[(usize, usize)],
     deadline: Option<Instant>,
     atoms: &mut AtomAccumulator,
 ) -> BuildResult<()> {
-    for (left, right) in pairs {
+    for &(left, right) in pairs {
         if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
             return Err(build_unknown(
                 UnknownKind::Timeout,
@@ -1035,8 +1221,9 @@ mod tests {
     use axeyum_smtlib::parse_script;
 
     use super::{
-        BvTheory, CombinedUfbvTheory, build_theory_atoms, check_qf_ufbv_online_cdclt,
-        encode_boolean_skeleton, prepare_abstraction,
+        BvTheory, CombinedUfbvTheory, application_groups, build_and_solve_with_stats,
+        build_theory_atoms, check_qf_ufbv_online_cdclt, encode_boolean_skeleton,
+        prepare_abstraction, relevant_application_pairs,
     };
     use crate::cdclt::{CdclT, Outcome};
     use crate::euf_egraph::EufTheory;
@@ -1055,7 +1242,10 @@ mod tests {
     fn raw_solve_stats(arena: &mut TermArena, assertions: &[axeyum_ir::TermId]) -> RawSolveStats {
         let prepared = prepare_abstraction(arena, assertions, None)
             .expect("bounded UFBV case should abstract");
-        let atoms = build_theory_atoms(arena, assertions, &prepared, None)
+        let groups = application_groups(&prepared.applications);
+        let pairs = relevant_application_pairs(arena, &prepared.applications, &groups, None)
+            .expect("bounded UFBV case should select interface pairs");
+        let atoms = build_theory_atoms(arena, assertions, &prepared, &pairs, None)
             .expect("bounded UFBV case should build theory atoms");
         let skeleton = encode_boolean_skeleton(
             arena,
@@ -1094,6 +1284,14 @@ mod tests {
             propagation_hits: theory.bv.propagation_hits,
             driver_propagations: solver.theory_propagations(),
         }
+    }
+
+    fn dynamic_solve_stats(
+        arena: &mut TermArena,
+        assertions: &[axeyum_ir::TermId],
+    ) -> (CheckResult, super::InterfaceRefinementStats) {
+        build_and_solve_with_stats(arena, assertions, &SolverConfig::default(), None)
+            .expect("bounded UFBV refinement case should build")
     }
 
     #[test]
@@ -1253,6 +1451,21 @@ mod tests {
     }
 
     #[test]
+    fn bug520_materializes_only_violated_interface_pairs() {
+        let mut script = parse_script(include_str!(
+            "../../../corpus/public-curated/non-incremental/QF_UFBV/cvc5-regress-clean/cli__regress1__bug520.smt2"
+        ))
+        .expect("bug520 parses");
+        let (result, stats) = dynamic_solve_stats(&mut script.arena, &script.assertions);
+
+        assert!(matches!(result, CheckResult::Sat(_)), "stats={stats:?}");
+        assert_eq!(stats.rounds, 1, "stats={stats:?}");
+        assert_eq!(stats.sat_candidates, 1, "stats={stats:?}");
+        assert_eq!(stats.pairs_added, 0, "stats={stats:?}");
+        assert_eq!(stats.max_interface_atoms, 0, "stats={stats:?}");
+    }
+
+    #[test]
     fn statically_distinct_ground_keys_prune_impossible_application_pairs() {
         let mut arena = TermArena::new();
         let f = arena
@@ -1337,11 +1550,42 @@ mod tests {
         let fy = arena.apply(f, &[y]).unwrap();
         let strict = arena.bv_ult(fx, fy).unwrap();
 
-        assert_eq!(
-            check_qf_ufbv_online_cdclt(&mut arena, &[same_arg, strict], &SolverConfig::default(),)
-                .unwrap(),
-            CheckResult::Unsat
-        );
+        let (result, stats) = dynamic_solve_stats(&mut arena, &[same_arg, strict]);
+        assert_eq!(result, CheckResult::Unsat);
+        assert_eq!(stats.rounds, 2, "stats={stats:?}");
+        assert_eq!(stats.sat_candidates, 1, "stats={stats:?}");
+        assert_eq!(stats.pairs_added, 1, "stats={stats:?}");
+        assert_eq!(stats.max_interface_atoms, 2, "stats={stats:?}");
+    }
+
+    #[test]
+    fn nested_congruence_refines_to_a_fixpoint() {
+        let mut arena = TermArena::new();
+        let g = arena
+            .declare_fun("dynamic_g", &[Sort::BitVec(4)], Sort::BitVec(4))
+            .unwrap();
+        let f = arena
+            .declare_fun("dynamic_outer_f", &[Sort::BitVec(4)], Sort::BitVec(4))
+            .unwrap();
+        let x = arena.bv_var("dynamic_nested_x", 4).unwrap();
+        let y = arena.bv_var("dynamic_nested_y", 4).unwrap();
+        let same_arg = arena.eq(x, y).unwrap();
+        let gx = arena.apply(g, &[x]).unwrap();
+        let gy = arena.apply(g, &[y]).unwrap();
+        let g_strict = arena.bv_ult(gx, gy).unwrap();
+        let fallback = arena.bool_var("dynamic_nested_fallback").unwrap();
+        let g_strict_or_fallback = arena.or(g_strict, fallback).unwrap();
+        let fgx = arena.apply(f, &[gx]).unwrap();
+        let fgy = arena.apply(f, &[gy]).unwrap();
+        let strict = arena.bv_ult(fgx, fgy).unwrap();
+
+        let (result, stats) =
+            dynamic_solve_stats(&mut arena, &[same_arg, g_strict_or_fallback, strict]);
+        assert_eq!(result, CheckResult::Unsat);
+        assert_eq!(stats.rounds, 3, "stats={stats:?}");
+        assert_eq!(stats.sat_candidates, 2, "stats={stats:?}");
+        assert_eq!(stats.pairs_added, 2, "stats={stats:?}");
+        assert_eq!(stats.max_interface_atoms, 3, "stats={stats:?}");
     }
 
     #[test]
@@ -1426,7 +1670,7 @@ mod tests {
     }
 
     #[test]
-    fn overbound_dynamic_interface_bus_is_first_class_unknown() {
+    fn unconstrained_symbolic_table_avoids_quadratic_interface_cap() {
         let mut arena = TermArena::new();
         let f = arena
             .declare_fun("dynamic_f", &[Sort::BitVec(8)], Sort::BitVec(8))
@@ -1438,14 +1682,50 @@ mod tests {
             assertions.push(arena.eq(application, argument).unwrap());
         }
 
-        let result =
-            check_qf_ufbv_online_cdclt(&mut arena, &assertions, &SolverConfig::default()).unwrap();
-        assert!(matches!(
-            result,
-            CheckResult::Unknown(crate::UnknownReason {
-                kind: crate::UnknownKind::ResourceLimit,
-                ..
-            })
-        ));
+        let (result, stats) = dynamic_solve_stats(&mut arena, &assertions);
+        let CheckResult::Sat(model) = result else {
+            panic!("expected the consistent symbolic table to replay, stats={stats:?}");
+        };
+        assert_eq!(stats.rounds, 1, "stats={stats:?}");
+        assert_eq!(stats.pairs_added, 0, "stats={stats:?}");
+        assert_eq!(stats.max_interface_atoms, 0, "stats={stats:?}");
+        let assignment = model.to_assignment();
+        assert!(assertions.iter().all(|&assertion| {
+            matches!(eval(&arena, assertion, &assignment), Ok(Value::Bool(true)))
+        }));
+    }
+
+    #[test]
+    fn forced_symbolic_violations_respect_materialized_interface_cap() {
+        let mut arena = TermArena::new();
+        let f = arena
+            .declare_fun("forced_dynamic_f", &[Sort::BitVec(8)], Sort::BitVec(8))
+            .unwrap();
+        let zero = arena.bv_const(8, 0).unwrap();
+        let mut assertions = Vec::new();
+        for index in 0..24 {
+            let argument = arena
+                .bv_var(&format!("forced_dynamic_x_{index}"), 8)
+                .unwrap();
+            let application = arena.apply(f, &[argument]).unwrap();
+            let output = arena.bv_const(8, index).unwrap();
+            assertions.push(arena.bv_ule(argument, zero).unwrap());
+            assertions.push(arena.eq(application, output).unwrap());
+        }
+
+        let (result, stats) = dynamic_solve_stats(&mut arena, &assertions);
+        assert!(
+            matches!(
+                result,
+                CheckResult::Unknown(crate::UnknownReason {
+                    kind: crate::UnknownKind::ResourceLimit,
+                    ..
+                })
+            ),
+            "stats={stats:?}"
+        );
+        assert_eq!(stats.rounds, 1, "stats={stats:?}");
+        assert_eq!(stats.sat_candidates, 1, "stats={stats:?}");
+        assert_eq!(stats.pairs_added, 256, "stats={stats:?}");
     }
 }

@@ -3667,7 +3667,21 @@ Its conclusion, ranked by quality × efficiency:
    8-10 ms on the row. Public 6/6, 1,536 differentials, replay, and the 760-test
    solver library remain clean. This is narrow row-level parity, not general
    UFBV parity. Next make symbolic interface creation dynamic/model-based, then
-   bring arrays onto the live bus.
+   bring arrays onto the live bus. **Fifteenth follow-through:** symbolic
+   interfaces are now replay-guided and dynamic (ADR-0070). Canonical `CdclT`
+   starts from the function-free relaxation, exposes a complete BV candidate,
+   and materializes only equal-argument/unequal-result application pairs before
+   rebuilding; partial-round UNSAT transfers and SAT remains projection/replay-
+   gated. Bounds are 64 rounds / 512 materialized raw interfaces under one
+   deadline. One-pair and nested two-pair fixpoints fire; a 24-symbolic-key table
+   moves cap-decline→replayed `sat` with zero pairs, while a forced 276-violation
+   control stops after 256 pairs at the cap. `bug520` needs one round / zero
+   pairs. Ten release samples improve its median 8.88→2.84 ms (~3.12x) and
+   six-row mean 2.89→0.647 ms (~4.47x); Z3's row median is 12.5 ms, making this
+   narrow row ~4.4x faster. Public 6/6, 1,536 comparisons, replay, and 763 solver
+   tests remain clean. Next bring arrays onto the live bus, then mixed BV+LIA/
+   `str.len`; retain cross-round learned state only if wider telemetry makes
+   rebuild cost dominant.
 2. **Keep a thin measured-leaf-BFS skirt in parallel** — measured-ROI leaves only
    (NRA tail, strings-Nielsen); fold the feature/scale-blocked leaves
    (dense-ILP MILP, large-LP performance) into a funded engine phase rather than
