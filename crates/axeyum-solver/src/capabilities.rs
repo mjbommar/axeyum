@@ -240,7 +240,9 @@ pub const CAPABILITIES: &[Capability] = &[
                   pre-observed e-graph terms to that retained search; scalar UF applications in \
                   indices/elements share the same exact BV + e-graph bus; finite-scalar \
                   array-valued UF results retain semantic application parents on the e-graph and \
-                  project fresh result arrays by final parent class before function tables; array-ITE \
+                  project fresh result arrays by final parent class before function tables; direct \
+                  finite-array parameters can key retained array-valued UF parents using relation-flag \
+                  guarded key congruence and distinct full-value key projection; array-ITE \
                   equality decomposes exactly before search, and bounded store/ITE/constant class \
                   equations realize total leaf-array models without changing observed reads; array index \
                   and element components may each be Bool or BitVec, with mixed shapes projected \
@@ -262,10 +264,12 @@ pub const CAPABILITIES: &[Capability] = &[
                    search. Separate 80-parent gates avoid direct-symbol and congruent-store \
                    preparation products. The \
                    public Bool-component rows issue5925 and issue4240 move unknown→unsat/sat; \
-                   DISAGREE=0 and all SAT models replay. ADR-0078's low-load 1 s aggregate baseline \
+                   DISAGREE=0 and all SAT models replay. The focused warm array-UF parent suite also \
+                   covers direct finite-array parameters, relation-flag guarded key congruence, distinct \
+                   full-value key projection, and structural array-key deferral. ADR-0078's low-load 1 s aggregate baseline \
                    remains QF_ABV 187/193 and QF_AUFBV 49/53 pending a comparable remeasure; online \
                    probes use cloned arenas so fallback inputs remain pristine",
-        reference: "ADR-0071/0072/0073/0074/0077/0078/0079/0080/0081/0082/0084/0085",
+        reference: "ADR-0071/0072/0073/0074/0077/0078/0079/0080/0081/0082/0084/0085/0086/0087/0088/0089/0090/0091/0092",
     },
     Capability {
         area: "QF_UF",

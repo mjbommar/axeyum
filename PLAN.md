@@ -3894,8 +3894,10 @@ Its conclusion, ranked by quality × efficiency:
    commits `41019413`/`f2bb16ab` are on `origin/main`. The EVM corpus has no
    array-valued UF application, so this increment makes no EVM timing claim.
    ADR-0089/0090 subsequently land warm relations and structural equality;
-   array-valued parameters, memory BMC/k-induction, online array proofs, and the
-   remaining performance gap remain.
+   ADR-0091 lands relation flags and ADR-0092 lands direct array-valued UF
+   parameters. Structural array-valued parameter expressions, memory
+   BMC/k-induction, online array proofs, and the remaining performance gap
+   remain.
    **Thirty-fourth follow-through:** ADR-0089 adds retained warm array
    relations without approximating structural equality. Positive equality
    accepts direct symbols and scalar-keyed array-result UFs, tracks applications
@@ -3938,6 +3940,19 @@ Its conclusion, ranked by quality × efficiency:
    nested-Boolean deferrals converted to positive coverage. Next: array-valued
    parameters, memory BMC/k-induction, online array proofs, and broader low-load
    aggregate timing.
+   **Thirty-seventh follow-through:** ADR-0092 lands retained warm direct array-
+   valued UF parameters. Direct finite-array symbols can now key retained array-
+   valued UF parents. Scalar keys still use the warm scalar abstraction; array-
+   key equality uses either an active retained equality class or a private
+   ADR-0091 relation flag, so congruence roots stay Boolean/BV-only. Projection
+   now separates non-equal array-key classes with deterministic full array
+   values before building `FuncValue` tables, preserves user-visible select
+   constraints, ignores private guarded relation reads as public entries, and
+   keeps original replay as the SAT gate. The focused warm array-UF parent suite
+   covers independent-key SAT replay, asserted-equality UNSAT, the private
+   relation-flag count, and structural array-key deferral. Next: structural
+   array-valued parameter expressions, memory BMC/k-induction, online array
+   proofs, and broader low-load aggregate timing.
 2. **Keep a thin measured-leaf-BFS skirt in parallel** — measured-ROI leaves only
    (NRA tail, strings-Nielsen); fold the feature/scale-blocked leaves
    (dense-ILP MILP, large-LP performance) into a funded engine phase rather than

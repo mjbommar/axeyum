@@ -92,8 +92,10 @@ enumeration or finite-observation approximation is involved.
 - Assumption cores report only original user literals; internal equality,
   congruence, and diff-witness roots are never exposed.
 - Unsupported indices/elements/signatures, positive structural equality,
-  array-valued UF parameters, nested/extended arrays, and proof logging remain
-  deferred.
+  structural array-key UF parameters, nested/extended arrays, and proof logging
+  remain deferred in this slice. Positive structural equality lands in ADR-0090,
+  relation flags land in ADR-0091, and direct array-valued UF parameters land in
+  ADR-0092; structural array-key expressions remain deferred.
 
 ## Soundness Argument
 

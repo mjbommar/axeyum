@@ -86,6 +86,7 @@ retained warm path with candidate-sensitive model projection and replay. This
 removes the ADR-0089/0090 nested-Boolean deferral without changing top-level
 literal relation handling.
 
-Array-valued parameters, memory BMC/k-induction, online array proof logging,
-nested/extended array components, and broader low-load aggregate timing remain
-future work.
+ADR-0092 subsequently uses these relation flags to admit direct finite-array UF
+parameters on the retained warm path. Structural array-valued parameter
+expressions, memory BMC/k-induction, online array proof logging, nested/extended
+array components, and broader low-load aggregate timing remain future work.

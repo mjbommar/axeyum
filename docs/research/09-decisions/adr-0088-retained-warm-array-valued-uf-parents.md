@@ -82,8 +82,9 @@ congruence and projection.
 
 Array-valued UF parameters, non-BV array indices, non-Bool/BV elements, nested
 array results, array equality/disequality involving applications, general warm
-extensionality, and proof logging remain outside this increment. They continue
-to use the canonical/fallback routes.
+extensionality, and proof logging remain outside this increment. Direct finite-
+array parameters subsequently land in ADR-0092; structural array-key
+expressions continue to use the canonical/fallback routes.
 
 ## Soundness Argument
 
@@ -146,9 +147,11 @@ does not advance ADR-0030's retained-state requirement.
 
 ### Admit array-valued parameters in the same slice
 
-Deferred. Their argument equality requires warm structural equality/e-graph
-ownership rather than scalar argument comparison. That is the next equality/
-extensionality boundary, not a safe extension of this scalar-key slice.
+Deferred in this slice. Their argument equality requires warm array equality
+ownership rather than scalar argument comparison. ADR-0092 later admits the
+direct-symbol finite-array subset by reusing ADR-0091 relation flags for
+candidate-sensitive key congruence; structural array-key expressions remain a
+separate boundary.
 
 ## Consequences
 
@@ -160,8 +163,9 @@ array-first/function-second semantic order.
 The warm solver gains private array owners and must filter them from public
 models. Projection groups use full values and deterministic application order,
 and conditional congruence adds a bounded quadratic surface. Structural array
-equality/extensionality follows in ADR-0089/0090, and nested Boolean relation
-flags follow in ADR-0091. Array-valued parameters, proof artifacts, memory
+equality/extensionality follows in ADR-0089/0090, nested Boolean relation flags
+follow in ADR-0091, and direct array-valued parameters follow in ADR-0092.
+Structural array-valued parameter expressions, proof artifacts, memory
 BMC/k-induction, and the remaining EVM performance gap remain later work.
 
 ## Subsequent Decision
@@ -170,6 +174,7 @@ BMC/k-induction, and the remaining EVM performance gap remain later work.
 relation boundary for those private owners. Positive equality can merge symbol/
 application projection classes before function construction, while one exact
 private diff witness handles disequality across all supported structural
-parents. Positive structural equality follows in ADR-0090, and arbitrary Boolean
-relation flags follow in ADR-0091. Array-valued parameters, proofs, and the
+parents. Positive structural equality follows in ADR-0090, arbitrary Boolean
+relation flags follow in ADR-0091, and direct finite-array parameters follow in
+ADR-0092. Structural array-valued parameter expressions, proofs, and the
 performance gap remain.

@@ -331,6 +331,86 @@ fn array_application_congruence_is_scoped_and_one_shot_core_is_user_facing() {
     assert_eq!(verdict(&solver.check(&arena).unwrap()), Verdict::Sat);
 }
 
+#[test]
+fn direct_array_parameters_project_distinct_function_keys() {
+    let mut arena = TermArena::new();
+    let array_sort = Sort::Array {
+        index: ArraySortKey::BitVec(4),
+        element: ArraySortKey::BitVec(4),
+    };
+    let function = arena
+        .declare_fun("warm_array_param_f", &[array_sort], array_sort)
+        .unwrap();
+    let a = arena
+        .array_var_with_sorts("warm_array_param_a", Sort::BitVec(4), Sort::BitVec(4))
+        .unwrap();
+    let b = arena
+        .array_var_with_sorts("warm_array_param_b", Sort::BitVec(4), Sort::BitVec(4))
+        .unwrap();
+    let zero = arena.bv_const(4, 0).unwrap();
+    let one = arena.bv_const(4, 1).unwrap();
+    let two = arena.bv_const(4, 2).unwrap();
+    let fa = arena.apply(function, &[a]).unwrap();
+    let fb = arena.apply(function, &[b]).unwrap();
+    let left = arena.select(fa, zero).unwrap();
+    let right = arena.select(fb, zero).unwrap();
+    let assertions = [arena.eq(left, one).unwrap(), arena.eq(right, two).unwrap()];
+
+    let mut solver = IncrementalBvSolver::new();
+    for &assertion in &assertions {
+        solver
+            .assert_simplifying_memory(&mut arena, assertion)
+            .unwrap();
+    }
+    assert!(!solver.has_deferred_theory_assertions());
+    assert_eq!(solver.retained_warm_array_uf_app_count(), 2);
+    assert_eq!(solver.retained_warm_array_relation_flag_count(), 1);
+    let result = solver.check(&arena).unwrap();
+    assert_eq!(verdict(&result), Verdict::Sat, "result={result:?}");
+    assert_replays(&arena, &assertions, &result);
+}
+
+#[test]
+fn direct_array_parameter_equality_guard_refutes_conflicting_results() {
+    let mut arena = TermArena::new();
+    let array_sort = Sort::Array {
+        index: ArraySortKey::BitVec(4),
+        element: ArraySortKey::BitVec(4),
+    };
+    let function = arena
+        .declare_fun("warm_array_param_cong_f", &[array_sort], array_sort)
+        .unwrap();
+    let a = arena
+        .array_var_with_sorts("warm_array_param_cong_a", Sort::BitVec(4), Sort::BitVec(4))
+        .unwrap();
+    let b = arena
+        .array_var_with_sorts("warm_array_param_cong_b", Sort::BitVec(4), Sort::BitVec(4))
+        .unwrap();
+    let index = arena.bv_var("warm_array_param_cong_i", 4).unwrap();
+    let one = arena.bv_const(4, 1).unwrap();
+    let two = arena.bv_const(4, 2).unwrap();
+    let fa = arena.apply(function, &[a]).unwrap();
+    let fb = arena.apply(function, &[b]).unwrap();
+    let left = arena.select(fa, index).unwrap();
+    let right = arena.select(fb, index).unwrap();
+    let same_arrays = arena.eq(a, b).unwrap();
+    let assertions = [
+        same_arrays,
+        arena.eq(left, one).unwrap(),
+        arena.eq(right, two).unwrap(),
+    ];
+
+    let mut solver = IncrementalBvSolver::new();
+    for &assertion in &assertions {
+        solver
+            .assert_simplifying_memory(&mut arena, assertion)
+            .unwrap();
+    }
+    assert!(!solver.has_deferred_theory_assertions());
+    assert_eq!(solver.retained_warm_array_uf_app_count(), 2);
+    assert_eq!(solver.check(&arena).unwrap(), CheckResult::Unsat);
+}
+
 fn application_parent_root(arena: &mut TermArena, count: usize) -> TermId {
     let array_sort = Sort::Array {
         index: ArraySortKey::BitVec(8),
@@ -404,22 +484,38 @@ fn unsupported_signatures_defer_without_partial_state() {
     assert!(solver.has_deferred_theory_assertions());
     assert_eq!(solver.retained_warm_array_uf_app_count(), 0);
 
-    let mut array_key_arena = TermArena::new();
-    let array_key_function = array_key_arena
-        .declare_fun("warm_array_uf_array_key", &[array_sort], array_sort)
+    let mut structural_array_key_arena = TermArena::new();
+    let structural_array_key_function = structural_array_key_arena
+        .declare_fun(
+            "warm_array_uf_structural_array_key",
+            &[array_sort],
+            array_sort,
+        )
         .unwrap();
-    let key = array_key_arena
-        .array_var_with_sorts("warm_array_uf_array_arg", Sort::BitVec(8), Sort::BitVec(8))
+    let key = structural_array_key_arena
+        .array_var_with_sorts(
+            "warm_array_uf_structural_array_arg",
+            Sort::BitVec(8),
+            Sort::BitVec(8),
+        )
         .unwrap();
-    let index = array_key_arena
-        .bv_var("warm_array_uf_array_key_i", 8)
+    let key_index = structural_array_key_arena
+        .bv_var("warm_array_uf_structural_array_key_k", 8)
         .unwrap();
-    let zero = array_key_arena.bv_const(8, 0).unwrap();
-    let app = array_key_arena.apply(array_key_function, &[key]).unwrap();
-    let read = array_key_arena.select(app, index).unwrap();
-    let root = array_key_arena.eq(read, zero).unwrap();
+    let index = structural_array_key_arena
+        .bv_var("warm_array_uf_structural_array_key_i", 8)
+        .unwrap();
+    let zero = structural_array_key_arena.bv_const(8, 0).unwrap();
+    let stored_key = structural_array_key_arena
+        .store(key, key_index, zero)
+        .unwrap();
+    let app = structural_array_key_arena
+        .apply(structural_array_key_function, &[stored_key])
+        .unwrap();
+    let read = structural_array_key_arena.select(app, index).unwrap();
+    let root = structural_array_key_arena.eq(read, zero).unwrap();
     assert!(!IncrementalBvSolver::term_supported_by_warm_abstraction(
-        &array_key_arena,
+        &structural_array_key_arena,
         root
     ));
 

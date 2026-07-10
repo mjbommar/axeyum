@@ -77,8 +77,10 @@ warm path now merges projection-owned positive equality and gives top-level
 structural disequality one exact private diff witness (ADR-0089), realizes
 positive structural equality through private owners (ADR-0090), and keeps nested
 Boolean array relation atoms warm through candidate-sensitive private flags
-(ADR-0091). The solver still rebuilds for general deferred theories;
-array-valued parameters remain.
+(ADR-0091). Direct finite-array UF parameters also stay warm through relation-
+flag guarded key congruence and full-value key projection (ADR-0092). The solver
+still rebuilds for general deferred theories; structural array-valued parameter
+expressions remain.
 
 ## Performance posture (real numbers)
 Two committed public QF_BV slices (SMT-LIB 2024):
