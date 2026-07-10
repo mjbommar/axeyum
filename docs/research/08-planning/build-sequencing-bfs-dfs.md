@@ -147,6 +147,54 @@ this session. Pivot to **DFS on the e-graph/CDCL(T) engine keystone**, keep a th
 measured-leaf skirt and the trust-ledger proof spine running in parallel, and let
 the CHC/Horn categorical gap fall out once P1.5 lands.
 
+## Post-keystone update — the pivot landed (2026-07-09)
+
+The Rank-1 move happened, fast. **P1.5 CDCL(T) online default dispatch** (plus P1.3
+SAT-core VSIDS/Luby/LBD/phase-saving and the P2.3-direction lazy-UF split) **landed
+and pushed** — every theory (LIA/LRA/NIA/NRA, QF_UF, strings, UF+arithmetic
+combination) now dispatches through the generic replay-checked `CdclT` driver, with
+the defaults flipped.
+
+**Independently validated** (read-only cross-check, no code touched):
+- **Soundness: 11 differential fuzzes vs Z3, ~17k+ instances, DISAGREE=0**
+  (nia/nra/uflia/qf_uf/qf_lra/qf_uflra/qf_ufnra/string/word/bv/abv) + real corpora
+  DISAGREE=0. The cross-every-theory dispatch flip — the class where wrong-verdicts
+  hide — is clean.
+- **Gates: `progress_frontier` 8/8, `--lib` 760/760** (no stale reds).
+- **Decide-rate gain: `nra_degree` frontier 2→40; QF_NRA real-corpus +1** — deep
+  engine work moving decide-rate where leaf-tweaks could not, exactly as predicted.
+- One benign blemish: `bv_reduction −1` = a budget-boundary timing flip (an
+  already-over-budget n=33) from ~5 % CdclT routing overhead — sound, minor.
+
+**Where we now stand vs Z3/cvc5** (measured, `bench-results/SCOREBOARD.md`):
+- **Soundness — parity (tied at perfect):** DISAGREE=0 across 35 baselines + the
+  fuzzes. Never a wrong verdict.
+- **Proof / trust — *ahead*:** DRAT + Alethe (Carcara-checkable) + in-tree Lean
+  kernel + reconstruction vs Z3's weak proof production. Coverage still narrow
+  (ledger ≠ 0). This is the north-star differentiator.
+- **Decide-rate — behind (~74 %):** parity on strong fragments (arrays/FP/UF-LIA/
+  LIA/synthetic arithmetic); the real gaps are **QF_SLIA 36 %, QF_UF 54 %, and
+  quantified fragments (0 % on some)**.
+- **Speed — behind, ~5–50×:** where both decide, Z3/cvc5 are faster (Z3 clears the
+  public QF_BV `p4dfa` slice in ≤1 s; axeyum's hard instance ~6.4 s).
+
+**Next fronts, re-ranked now that P1.5 is in.** The old Rank-1 (build the engine
+keystone) is retired; the graph re-prioritises to:
+1. **Speed is now co-equal with decide-rate.** The 5–50× gap is the biggest
+   *product* weakness. Continue P1.1/P1.2 (BVE, word-level preproc), and **profile
+   the CdclT routing overhead** the BV frontier surfaced (~5 %) — the online loop
+   must not tax the fragments the eager path already decided fast.
+2. **DFS-A continues on the new engine:** lazy EUF/arrays (P2.3/P2.2) and
+   **quantifier maturity (P2.6)** — the latter directly attacks the 0 % quantified
+   rows; the former the QF_UF 54 %. These are now *unblocked* (they needed P1.5).
+3. **The categorical gap `P3.8 → P4.6 CHC/Horn` is UNBLOCKED** (P1.5 exists) — the
+   largest single remaining vs-Z3 gain (unbounded verification). Start the
+   Farkas/LRA interpolant slice of P3.8 (rides existing certs).
+4. **Trust-ledger proof spine (P3.5 → ledger→0)** in parallel — each newly-lazy
+   theory drops a ledger entry; the one axis where axeyum *leads* Z3.
+5. **String decide-rate (QF_SLIA 36 %)** is the largest single theory-decide gap —
+   a measured-leaf-skirt target once the string routes settle on the new engine.
+
 ## Backlinks
 - [Cross-track dependency DAG](../../../docs/plan/01-dependency-dag.md) (keystones,
   critical paths, waterfall+parallelism order — this note reframes it as traversal).
