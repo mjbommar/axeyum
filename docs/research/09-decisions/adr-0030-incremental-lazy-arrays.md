@@ -142,10 +142,11 @@ leaves. Conditional argument/index congruence constrains observed reads; private
 array owners project one full array result per concrete argument tuple before
 function construction and original replay. The 64-parent boundary and a 192-
 comparison warm/`check_auto`/Z3 matrix validate this slice. Extensionality,
-structural equality, nested Boolean relation flags, and direct array-valued UF
-parameters follow in ADR-0089/0090/0091/0092; structural array-valued parameter
-expressions, memory BMC/k-induction, proofs, and the remaining performance gap
-keep the deferred half open.
+structural equality, nested Boolean relation flags, direct array-valued UF
+parameters, and supported structural array-valued UF parameters follow in
+ADR-0089/0090/0091/0092/0093; nested array-valued application keys, memory
+BMC/k-induction, proofs, and the remaining performance gap keep the deferred
+half open.
 
 ADR-0089 adds the first exact warm extensionality relation. Positive equality
 merges direct/application projection owners before function construction; top-

@@ -241,8 +241,9 @@ pub const CAPABILITIES: &[Capability] = &[
                   indices/elements share the same exact BV + e-graph bus; finite-scalar \
                   array-valued UF results retain semantic application parents on the e-graph and \
                   project fresh result arrays by final parent class before function tables; direct \
-                  finite-array parameters can key retained array-valued UF parents using relation-flag \
-                  guarded key congruence and distinct full-value key projection; array-ITE \
+                  and supported structural finite-array parameters can key retained array-valued UF \
+                  parents using relation-flag guarded key congruence, structural owner realization, \
+                  and full-value key projection; array-ITE \
                   equality decomposes exactly before search, and bounded store/ITE/constant class \
                   equations realize total leaf-array models without changing observed reads; array index \
                   and element components may each be Bool or BitVec, with mixed shapes projected \
@@ -265,11 +266,11 @@ pub const CAPABILITIES: &[Capability] = &[
                    preparation products. The \
                    public Bool-component rows issue5925 and issue4240 move unknown→unsat/sat; \
                    DISAGREE=0 and all SAT models replay. The focused warm array-UF parent suite also \
-                   covers direct finite-array parameters, relation-flag guarded key congruence, distinct \
-                   full-value key projection, and structural array-key deferral. ADR-0078's low-load 1 s aggregate baseline \
+                   covers direct and structural finite-array parameters, relation-flag guarded key \
+                   congruence, full-value key projection, and nested array-valued key deferral. ADR-0078's low-load 1 s aggregate baseline \
                    remains QF_ABV 187/193 and QF_AUFBV 49/53 pending a comparable remeasure; online \
                    probes use cloned arenas so fallback inputs remain pristine",
-        reference: "ADR-0071/0072/0073/0074/0077/0078/0079/0080/0081/0082/0084/0085/0086/0087/0088/0089/0090/0091/0092",
+        reference: "ADR-0071/0072/0073/0074/0077/0078/0079/0080/0081/0082/0084/0085/0086/0087/0088/0089/0090/0091/0092/0093",
     },
     Capability {
         area: "QF_UF",
@@ -956,17 +957,19 @@ pub const CAPABILITIES: &[Capability] = &[
                   filtering, and replay; supported array equality atoms nested under scalar Boolean \
                   structure become private relation flags with guarded true-branch read equality, \
                   guarded false-branch diff witnesses, candidate-true-only owner merging/structural \
-                  realization, filtering, and replay; array-valued parameters remain)",
+                  realization, filtering, and replay; direct and supported structural finite-array \
+                  parameters key retained array-valued UF parents with scalar dependency retention, \
+                  structural owner realization, relation-flag guarded congruence, filtering, and replay)",
         assurance: Assurance::Validated,
         evidence: "full dispatcher model replay; same-index/literal-distinct/const-array/array-ite/\
                    symbolic-ROW/select-congruence/scalar-UF/array-result-UF/array-relation/structural-equality/\
-                   relation-flag assertion and branch warm replay; 816 solver units, 77 symbolic-execution tests, \
+                   relation-flag/array-parameter assertion and branch warm replay; 816 solver units, 77 symbolic-execution tests, \
                    three 192-case warm/check_auto/Z3 matrices, the 64-seed structural-equality matrix, and the \
-                   focused relation-flag suite pass; the EVM scoreboard remains DISAGREE=0 and depth-32 \
+                   focused relation-flag and array-UF-parent suites pass; the EVM scoreboard remains DISAGREE=0 and depth-32 \
                    warm improves from 30.933 to 11.257 ms, though direct ITE folding remains faster at \
                    0.405 ms; warm path refuses \
-                   remaining deferred array/UF theories",
-        reference: "ADR-0010/0030/0086/0087/0088/0089/0090/0091",
+                   remaining deferred array/UF theories, including nested array-valued application keys",
+        reference: "ADR-0010/0030/0086/0087/0088/0089/0090/0091/0092/0093",
     },
     Capability {
         area: "symbolic execution",

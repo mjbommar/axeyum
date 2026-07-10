@@ -3894,10 +3894,10 @@ Its conclusion, ranked by quality × efficiency:
    commits `41019413`/`f2bb16ab` are on `origin/main`. The EVM corpus has no
    array-valued UF application, so this increment makes no EVM timing claim.
    ADR-0089/0090 subsequently land warm relations and structural equality;
-   ADR-0091 lands relation flags and ADR-0092 lands direct array-valued UF
-   parameters. Structural array-valued parameter expressions, memory
-   BMC/k-induction, online array proofs, and the remaining performance gap
-   remain.
+   ADR-0091 lands relation flags, ADR-0092 lands direct array-valued UF
+   parameters, and ADR-0093 lands supported structural parameter expressions.
+   Nested array-valued application keys, memory BMC/k-induction, online array
+   proofs, and the remaining performance gap remain.
    **Thirty-fourth follow-through:** ADR-0089 adds retained warm array
    relations without approximating structural equality. Positive equality
    accepts direct symbols and scalar-keyed array-result UFs, tracks applications
@@ -3950,9 +3950,22 @@ Its conclusion, ranked by quality × efficiency:
    constraints, ignores private guarded relation reads as public entries, and
    keeps original replay as the SAT gate. The focused warm array-UF parent suite
    covers independent-key SAT replay, asserted-equality UNSAT, the private
-   relation-flag count, and structural array-key deferral. Next: structural
-   array-valued parameter expressions, memory BMC/k-induction, online array
-   proofs, and broader low-load aggregate timing.
+   relation-flag count, and structural array-key deferral. ADR-0093
+   subsequently lands supported structural array-valued parameter expressions.
+   Nested array-valued application keys, memory BMC/k-induction, online array
+   proofs, and broader low-load aggregate timing remain.
+   **Thirty-eighth follow-through:** ADR-0093 lands retained warm structural
+   array-valued UF parameters. Supported store/constant/array-ITE expressions
+   can now key retained array-valued UF parents; scalar dependencies inside
+   those keys are retained before solving, private structural key owners are
+   realized against the original structural terms before full-value function
+   projection, and application read congruence reuses active equality classes or
+   ADR-0091 relation flags. The focused warm array-UF parent suite covers scalar
+   UF dependencies inside a structural key, relation-flag separation of
+   independent structural keys, asserted structural-key equality UNSAT, and
+   nested array-valued application-key deferral. Next: nested array-valued
+   application keys, memory BMC/k-induction, online array proofs, and broader
+   low-load aggregate timing.
 2. **Keep a thin measured-leaf-BFS skirt in parallel** — measured-ROI leaves only
    (NRA tail, strings-Nielsen); fold the feature/scale-blocked leaves
    (dense-ILP MILP, large-LP performance) into a funded engine phase rather than

@@ -92,10 +92,11 @@ constraint or projection conflict can only reject the candidate.
 ## Consequences
 
 Direct array parameters no longer force retained warm array-valued UF parents
-onto the fallback dispatcher. This closes the direct-parameter part of the
-ADR-0088 deferral while keeping the broader boundary explicit:
+onto the fallback dispatcher. ADR-0093 subsequently closes the supported
+store/constant/array-ITE structural-key part of the ADR-0088 deferral while
+keeping the broader boundary explicit:
 
-- structural array-valued UF parameters,
+- nested array-valued application keys,
 - nested/extended array components,
 - memory BMC/k-induction,
 - online array proof logging, and

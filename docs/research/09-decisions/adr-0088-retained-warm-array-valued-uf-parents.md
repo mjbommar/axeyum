@@ -150,8 +150,9 @@ does not advance ADR-0030's retained-state requirement.
 Deferred in this slice. Their argument equality requires warm array equality
 ownership rather than scalar argument comparison. ADR-0092 later admits the
 direct-symbol finite-array subset by reusing ADR-0091 relation flags for
-candidate-sensitive key congruence; structural array-key expressions remain a
-separate boundary.
+candidate-sensitive key congruence; ADR-0093 later admits supported
+store/constant/array-ITE structural keys. Nested array-valued application keys
+remain a separate boundary.
 
 ## Consequences
 
@@ -164,9 +165,10 @@ The warm solver gains private array owners and must filter them from public
 models. Projection groups use full values and deterministic application order,
 and conditional congruence adds a bounded quadratic surface. Structural array
 equality/extensionality follows in ADR-0089/0090, nested Boolean relation flags
-follow in ADR-0091, and direct array-valued parameters follow in ADR-0092.
-Structural array-valued parameter expressions, proof artifacts, memory
-BMC/k-induction, and the remaining EVM performance gap remain later work.
+follow in ADR-0091, direct array-valued parameters follow in ADR-0092, and
+supported structural array-valued parameters follow in ADR-0093. Nested
+array-valued application keys, proof artifacts, memory BMC/k-induction, and the
+remaining EVM performance gap remain later work.
 
 ## Subsequent Decision
 

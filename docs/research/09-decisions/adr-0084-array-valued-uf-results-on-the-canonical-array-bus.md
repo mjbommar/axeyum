@@ -190,6 +190,7 @@ array-first/function-second ownership order in `IncrementalBvSolver` for
 scalar-keyed array-valued applications. It retains private application arrays,
 enforces conditional read congruence, groups concrete argument tuples, hides
 private owners, and replays originals. Warm structural equality/extensionality
-lands in ADR-0089/0090, relation flags in ADR-0091, and direct array-valued UF
-parameters in ADR-0092. Structural array-valued parameter expressions,
-nested/extended arrays, and proofs remain separate work.
+lands in ADR-0089/0090, relation flags in ADR-0091, direct array-valued UF
+parameters in ADR-0092, and supported structural array-valued UF parameters in
+ADR-0093. Nested array-valued application keys, nested/extended arrays, and
+proofs remain separate work.

@@ -69,9 +69,11 @@ Out of scope:
     retains scalar-keyed array-valued UF application parents, conditional read
     congruence, and full-value result projection on the same warm path. Warm
     projection-owned equality and exact structural diff witnesses now stay warm
-    under ADR-0089. Retained positive structural equality is proposed in
-    ADR-0090; arbitrary Boolean relation flags, array-valued parameters,
-    nested/extended array operators, and proofs remain.
+    under ADR-0089. ADR-0090 retains positive structural equality, ADR-0091
+    retains Boolean relation flags, ADR-0092 admits direct array-valued UF
+    parameters, and ADR-0093 admits supported structural array-valued UF
+    parameters; nested array-valued application keys, nested/extended array
+    operators, and proofs remain.
     See
     [ADR-0013](../09-decisions/adr-0013-uninterpreted-functions.md) and
     [ADR-0084](../09-decisions/adr-0084-array-valued-uf-results-on-the-canonical-array-bus.md),
@@ -83,9 +85,12 @@ Out of scope:
     followed by
     [ADR-0088](../09-decisions/adr-0088-retained-warm-array-valued-uf-parents.md)
     and
-    [ADR-0089](../09-decisions/adr-0089-retained-warm-array-relations.md), followed
-    by
-    [ADR-0090](../09-decisions/adr-0090-retained-warm-structural-array-equality.md).
+    [ADR-0089](../09-decisions/adr-0089-retained-warm-array-relations.md),
+    [ADR-0090](../09-decisions/adr-0090-retained-warm-structural-array-equality.md),
+    [ADR-0091](../09-decisions/adr-0091-retained-warm-boolean-array-relation-flags.md),
+    [ADR-0092](../09-decisions/adr-0092-retained-warm-direct-array-valued-uf-parameters.md),
+    and
+    [ADR-0093](../09-decisions/adr-0093-retained-warm-structural-array-valued-uf-parameters.md).
 - [ ] How should undefined or partial operations be represented?
 - [ ] What public support matrix should define the first release boundary
       across IR, evaluator, SMT-LIB, oracle, pure Rust backend, and evidence?

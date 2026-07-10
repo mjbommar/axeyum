@@ -217,6 +217,7 @@ struct WarmArrayEncoding {
     select_terms: Vec<TermId>,
     uf_app_terms: Vec<TermId>,
     array_uf_app_terms: Vec<TermId>,
+    array_equalities: Vec<WarmArrayEquality>,
     array_relation_flags: Vec<WarmArrayRelationFlag>,
     congruence_lemmas: Vec<TermId>,
     structural_semantics: Vec<WarmArraySemantic>,
@@ -228,6 +229,7 @@ struct WarmAbstractionWork {
     select_terms: Vec<TermId>,
     uf_app_terms: Vec<TermId>,
     array_uf_app_terms: Vec<TermId>,
+    array_equalities: Vec<WarmArrayEquality>,
     array_relation_flags: Vec<WarmArrayRelationFlag>,
     congruence_lemmas: Vec<TermId>,
     structural_semantics: Vec<WarmArraySemantic>,
@@ -246,6 +248,28 @@ struct WarmOneShotTerms {
     array_uf_apps: Vec<TermId>,
     array_equalities: Vec<WarmArrayEquality>,
     array_relation_flags: Vec<WarmArrayRelationFlag>,
+}
+
+struct WarmOneShotActiveTerms {
+    selects: Vec<TermId>,
+    uf_apps: Vec<TermId>,
+    equalities: Vec<WarmArrayEquality>,
+    relation_flags: Vec<WarmArrayRelationFlag>,
+}
+
+impl WarmOneShotActiveTerms {
+    fn push_equality(&mut self, equality: WarmArrayEquality) {
+        self.equalities.push(equality);
+    }
+
+    fn extend_encoding(&mut self, encoding: &WarmArrayEncoding) {
+        self.selects.extend(encoding.select_terms.iter().copied());
+        self.uf_apps.extend(encoding.uf_app_terms.iter().copied());
+        self.equalities
+            .extend(encoding.array_equalities.iter().copied());
+        self.relation_flags
+            .extend(encoding.array_relation_flags.iter().copied());
+    }
 }
 
 enum WarmCandidateCheck {
@@ -438,7 +462,7 @@ impl IncrementalBvSolver {
     }
 
     /// Number of private total-array owners retained for structural parents
-    /// that have participated in positive warm equality.
+    /// that participate in positive warm equality or structural UF keys.
     #[must_use]
     pub fn retained_warm_structural_array_owner_count(&self) -> usize {
         self.warm_structural_array_owners.len()
@@ -767,6 +791,7 @@ impl IncrementalBvSolver {
         frame.warm_array_selects.extend(encoded.select_terms);
         frame.warm_uf_apps.extend(encoded.uf_app_terms);
         frame.warm_array_uf_apps.extend(encoded.array_uf_app_terms);
+        frame.warm_array_equalities.extend(encoded.array_equalities);
         frame
             .warm_array_relation_flags
             .extend(encoded.array_relation_flags);
@@ -811,6 +836,9 @@ impl IncrementalBvSolver {
         frame.warm_array_selects.extend(prepared.select_terms);
         frame.warm_uf_apps.extend(prepared.uf_app_terms);
         frame.warm_array_uf_apps.extend(prepared.array_uf_app_terms);
+        frame
+            .warm_array_equalities
+            .extend(prepared.array_equalities);
         frame.warm_array_equalities.push(equality);
         frame
             .warm_array_relation_flags
@@ -1288,6 +1316,15 @@ impl IncrementalBvSolver {
             .collect()
     }
 
+    fn active_warm_one_shot_terms(&self) -> WarmOneShotActiveTerms {
+        WarmOneShotActiveTerms {
+            selects: self.active_warm_array_select_terms(),
+            uf_apps: self.active_warm_uf_app_terms(),
+            equalities: self.active_warm_array_equalities(),
+            relation_flags: self.active_warm_array_relation_flags(),
+        }
+    }
+
     fn abstract_warm_array_selects(
         &mut self,
         arena: &mut TermArena,
@@ -1337,6 +1374,7 @@ impl IncrementalBvSolver {
             select_terms: work.select_terms,
             uf_app_terms: work.uf_app_terms,
             array_uf_app_terms: work.array_uf_app_terms,
+            array_equalities: work.array_equalities,
             array_relation_flags: work.array_relation_flags,
             congruence_lemmas: {
                 extend_unique_terms(&mut congruence_lemmas, &work.congruence_lemmas);
@@ -1672,6 +1710,7 @@ impl IncrementalBvSolver {
                 select_terms: work.select_terms,
                 uf_app_terms: work.uf_app_terms,
                 array_uf_app_terms: work.array_uf_app_terms,
+                array_equalities: work.array_equalities,
                 array_relation_flags: work.array_relation_flags,
                 congruence_lemmas: {
                     extend_unique_terms(&mut congruence_lemmas, &work.congruence_lemmas);
@@ -1720,6 +1759,11 @@ impl IncrementalBvSolver {
         extend_unique_terms(&mut work.select_terms, &positive.select_terms);
         extend_unique_terms(&mut work.uf_app_terms, &positive.uf_app_terms);
         extend_unique_terms(&mut work.array_uf_app_terms, &positive.array_uf_app_terms);
+        for equality in positive.array_equalities {
+            if !work.array_equalities.contains(&equality) {
+                work.array_equalities.push(equality);
+            }
+        }
         for flag in positive.array_relation_flags {
             if !work
                 .array_relation_flags
@@ -1742,6 +1786,11 @@ impl IncrementalBvSolver {
         extend_unique_terms(&mut work.select_terms, &negative.select_terms);
         extend_unique_terms(&mut work.uf_app_terms, &negative.uf_app_terms);
         extend_unique_terms(&mut work.array_uf_app_terms, &negative.array_uf_app_terms);
+        for equality in negative.array_equalities {
+            if !work.array_equalities.contains(&equality) {
+                work.array_equalities.push(equality);
+            }
+        }
         for flag in negative.array_relation_flags {
             if !work
                 .array_relation_flags
@@ -2257,10 +2306,7 @@ impl IncrementalBvSolver {
                 .eq(left, right)
                 .map_err(|error| map_ir_error(&error))?;
             let eq = if matches!(arena.sort_of(left), Sort::Array { .. }) {
-                if let (TermNode::Symbol(left_symbol), TermNode::Symbol(right_symbol)) =
-                    (arena.node(left), arena.node(right))
-                    && warm_array_symbols_equal(*left_symbol, *right_symbol, equalities)
-                {
+                if self.warm_array_argument_terms_equal(arena, left, right, equalities) {
                     continue;
                 }
                 let relation = warm_array_relation_literal(arena, eq).ok_or_else(|| {
@@ -2279,6 +2325,44 @@ impl IncrementalBvSolver {
             });
         }
         Ok(conjunct)
+    }
+
+    fn warm_array_argument_terms_equal(
+        &self,
+        arena: &TermArena,
+        left: TermId,
+        right: TermId,
+        equalities: &[WarmArrayEquality],
+    ) -> bool {
+        if left == right {
+            return true;
+        }
+        let Some(left_symbol) = self.warm_array_argument_projection_symbol(arena, left) else {
+            return false;
+        };
+        let Some(right_symbol) = self.warm_array_argument_projection_symbol(arena, right) else {
+            return false;
+        };
+        warm_array_symbols_equal(left_symbol, right_symbol, equalities)
+    }
+
+    fn warm_array_argument_projection_symbol(
+        &self,
+        arena: &TermArena,
+        term: TermId,
+    ) -> Option<SymbolId> {
+        match arena.node(term) {
+            TermNode::Symbol(symbol) => Some(*symbol),
+            _ => self
+                .warm_structural_array_owners
+                .get(&term)
+                .map(|owner| owner.projection_symbol)
+                .or_else(|| {
+                    self.warm_array_uf_apps
+                        .get(&term)
+                        .map(|app| app.projection_symbol)
+                }),
+        }
     }
 
     fn warm_array_congruence_lemmas_for_selects(
@@ -2376,8 +2460,9 @@ impl IncrementalBvSolver {
                     index: ArraySortKey::BitVec(_),
                     element,
                 } if is_warm_array_element_sort(element)
-                    && matches!(arena.node(arg), TermNode::Symbol(_)) =>
+                    && supported_warm_array_uf_arg(arena, arg, sort) =>
                 {
+                    self.retain_warm_array_uf_key_dependencies(arena, arg, work)?;
                     arg
                 }
                 _ => {
@@ -2419,6 +2504,111 @@ impl IncrementalBvSolver {
         };
         self.warm_array_uf_apps.insert(term, app.clone());
         Ok(app)
+    }
+
+    fn retain_warm_array_uf_key_dependencies(
+        &mut self,
+        arena: &mut TermArena,
+        root: TermId,
+        work: &mut WarmAbstractionWork,
+    ) -> Result<(), SolverError> {
+        self.retain_warm_array_uf_structural_key_owner(arena, root, work)?;
+        let mut stack = vec![root];
+        let mut seen = HashSet::new();
+        while let Some(term) = stack.pop() {
+            if !seen.insert(term) {
+                continue;
+            }
+            match arena.node(term).clone() {
+                TermNode::Symbol(_) => {}
+                TermNode::App {
+                    op: Op::ConstArray { .. },
+                    args,
+                } => {
+                    let [value] = args.as_ref() else {
+                        return Err(SolverError::Backend(
+                            "warm array UF parameter const-array key had invalid arity".to_owned(),
+                        ));
+                    };
+                    self.retain_warm_array_uf_key_scalar_dependency(arena, *value, work)?;
+                }
+                TermNode::App {
+                    op: Op::Store,
+                    args,
+                } => {
+                    let [base, index, value] = args.as_ref() else {
+                        return Err(SolverError::Backend(
+                            "warm array UF parameter store key had invalid arity".to_owned(),
+                        ));
+                    };
+                    self.retain_warm_array_uf_key_scalar_dependency(arena, *index, work)?;
+                    self.retain_warm_array_uf_key_scalar_dependency(arena, *value, work)?;
+                    stack.push(*base);
+                }
+                TermNode::App { op: Op::Ite, args }
+                    if matches!(arena.sort_of(term), Sort::Array { .. }) =>
+                {
+                    let [condition, then_array, else_array] = args.as_ref() else {
+                        return Err(SolverError::Backend(
+                            "warm array UF parameter array-ITE key had invalid arity".to_owned(),
+                        ));
+                    };
+                    self.retain_warm_array_uf_key_scalar_dependency(arena, *condition, work)?;
+                    stack.push(*else_array);
+                    stack.push(*then_array);
+                }
+                _ => {
+                    return Err(SolverError::Unsupported(format!(
+                        "warm array UF parent key #{} has an unsupported structural argument",
+                        root.index()
+                    )));
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn retain_warm_array_uf_structural_key_owner(
+        &mut self,
+        arena: &mut TermArena,
+        root: TermId,
+        work: &mut WarmAbstractionWork,
+    ) -> Result<(), SolverError> {
+        if matches!(arena.node(root), TermNode::Symbol(_)) {
+            return Ok(());
+        }
+        let operand = self.retain_warm_array_equality_operand(arena, root, work)?;
+        let Some(structural) = operand.structural else {
+            return Ok(());
+        };
+        let equality = WarmArrayEquality {
+            left: operand.owner,
+            right: operand.owner,
+            left_parent: operand.parent,
+            right_parent: operand.parent,
+            left_structural: Some(structural),
+            right_structural: None,
+        };
+        if !work.array_equalities.contains(&equality) {
+            work.array_equalities.push(equality);
+        }
+        Ok(())
+    }
+
+    fn retain_warm_array_uf_key_scalar_dependency(
+        &mut self,
+        arena: &mut TermArena,
+        term: TermId,
+        work: &mut WarmAbstractionWork,
+    ) -> Result<(), SolverError> {
+        let encoded = self.abstract_warm_array_selects_inner(arena, term, work)?;
+        if needs_deferred_theory(arena, encoded) {
+            return Err(SolverError::Unsupported(format!(
+                "warm array UF parent key scalar dependency #{} is unsupported",
+                term.index()
+            )));
+        }
+        Ok(())
     }
 
     fn get_or_create_warm_uf_app(
@@ -2480,10 +2670,7 @@ impl IncrementalBvSolver {
         arena: &mut TermArena,
         assumptions: &[TermId],
     ) -> Result<Vec<OneShotAssumption>, SolverError> {
-        let mut active_selects = self.active_warm_array_select_terms();
-        let mut active_uf_apps = self.active_warm_uf_app_terms();
-        let mut active_equalities = self.active_warm_array_equalities();
-        let mut active_relation_flags = self.active_warm_array_relation_flags();
+        let mut active = self.active_warm_one_shot_terms();
         let mut simplified = Vec::with_capacity(assumptions.len());
         for &term in assumptions {
             if arena.sort_of(term) != Sort::Bool {
@@ -2501,8 +2688,8 @@ impl IncrementalBvSolver {
                 arena,
                 encoded,
                 relation,
-                &active_selects,
-                &active_equalities,
+                &active.selects,
+                &active.equalities,
             ) {
                 return Err(SolverError::Unsupported(format!(
                     "array/UF assumption #{} exceeds the retained structural-equality observation budget",
@@ -2515,28 +2702,30 @@ impl IncrementalBvSolver {
                 let (equality, mut prepared) = self.prepare_warm_array_equality(
                     arena,
                     relation.expect("checked as positive relation"),
-                    &active_selects,
-                    &active_uf_apps,
-                    &active_equalities,
+                    &active.selects,
+                    &active.uf_apps,
+                    &active.equalities,
                 )?;
                 self.add_warm_array_relation_flag_observation_closure(
                     arena,
-                    &active_relation_flags,
-                    &active_selects,
+                    &active.relation_flags,
+                    &active.selects,
                     &mut prepared,
                 )?;
                 self.retain_warm_semantics(&prepared.structural_semantics)?;
-                active_equalities.push(equality);
-                active_selects.extend(prepared.select_terms.iter().copied());
-                active_uf_apps.extend(prepared.uf_app_terms.iter().copied());
-                active_relation_flags.extend(prepared.array_relation_flags.iter().copied());
+                active.push_equality(equality);
+                active.extend_encoding(&prepared);
                 simplified.push(OneShotAssumption {
                     original: term,
                     encoded: arena.bool_const(true),
                     warm_array_selects: prepared.select_terms,
                     warm_uf_apps: prepared.uf_app_terms,
                     warm_array_uf_apps: prepared.array_uf_app_terms,
-                    warm_array_equalities: vec![equality],
+                    warm_array_equalities: {
+                        let mut equalities = prepared.array_equalities;
+                        equalities.push(equality);
+                        equalities
+                    },
                     warm_array_relation_flags: prepared.array_relation_flags,
                     congruence_lemmas: prepared.congruence_lemmas,
                 });
@@ -2546,35 +2735,33 @@ impl IncrementalBvSolver {
                 Some(relation) => self.abstract_warm_array_disequality(
                     arena,
                     relation,
-                    &active_selects,
-                    &active_uf_apps,
-                    &active_equalities,
+                    &active.selects,
+                    &active.uf_apps,
+                    &active.equalities,
                 )?,
                 None => self.abstract_warm_array_selects(
                     arena,
                     encoded,
-                    &active_selects,
-                    &active_uf_apps,
-                    &active_equalities,
+                    &active.selects,
+                    &active.uf_apps,
+                    &active.equalities,
                 )?,
             };
             self.add_warm_array_relation_flag_observation_closure(
                 arena,
-                &active_relation_flags,
-                &active_selects,
+                &active.relation_flags,
+                &active.selects,
                 &mut encoded,
             )?;
             self.retain_warm_semantics(&encoded.structural_semantics)?;
-            active_selects.extend(encoded.select_terms.iter().copied());
-            active_uf_apps.extend(encoded.uf_app_terms.iter().copied());
-            active_relation_flags.extend(encoded.array_relation_flags.iter().copied());
+            active.extend_encoding(&encoded);
             simplified.push(OneShotAssumption {
                 original: term,
                 encoded: encoded.term,
                 warm_array_selects: encoded.select_terms,
                 warm_uf_apps: encoded.uf_app_terms,
                 warm_array_uf_apps: encoded.array_uf_app_terms,
-                warm_array_equalities: Vec::new(),
+                warm_array_equalities: encoded.array_equalities,
                 warm_array_relation_flags: encoded.array_relation_flags,
                 congruence_lemmas: encoded.congruence_lemmas,
             });
@@ -4989,12 +5176,79 @@ fn record_warm_array_parent_limits(
                 ..
             } => {}
             TermNode::App {
-                op: Op::Apply(_), ..
+                op: Op::Apply(func),
+                args,
             } if supported_warm_array_uf_app_shape(arena, parent) => {
                 array_uf_apps.insert(parent);
                 if array_uf_apps.len() > MAX_WARM_ARRAY_UF_APPS_PER_ROOT {
                     return false;
                 }
+                let (_name, params, _result_sort) = arena.function(*func);
+                for (&arg, &sort) in args.iter().zip(params) {
+                    if matches!(sort, Sort::Array { .. })
+                        && !record_warm_array_parameter_key_limits(arena, arg, structural)
+                    {
+                        return false;
+                    }
+                }
+            }
+            _ => return false,
+        }
+    }
+    true
+}
+
+fn record_warm_array_parameter_key_limits(
+    arena: &TermArena,
+    root: TermId,
+    structural: &mut HashSet<TermId>,
+) -> bool {
+    let mut stack = vec![(root, 0usize)];
+    let mut seen = HashSet::new();
+    while let Some((term, depth)) = stack.pop() {
+        if depth > MAX_WARM_STRUCTURAL_ARRAY_DEPTH {
+            return false;
+        }
+        if !seen.insert(term) {
+            continue;
+        }
+        let Sort::Array {
+            index: ArraySortKey::BitVec(_),
+            element,
+        } = arena.sort_of(term)
+        else {
+            return false;
+        };
+        if !is_warm_array_element_sort(element) {
+            return false;
+        }
+        if !matches!(arena.node(term), TermNode::Symbol(_)) {
+            structural.insert(term);
+            if structural.len() > MAX_WARM_STRUCTURAL_ARRAY_NODES {
+                return false;
+            }
+        }
+        match arena.node(term) {
+            TermNode::Symbol(_)
+            | TermNode::App {
+                op: Op::ConstArray { .. },
+                ..
+            } => {}
+            TermNode::App {
+                op: Op::Store,
+                args,
+            } => {
+                let [base, _, _] = args.as_ref() else {
+                    return false;
+                };
+                stack.push((*base, depth + 1));
+            }
+            TermNode::App { op: Op::Ite, args } => {
+                let [_, then_array, else_array] = args.as_ref() else {
+                    return false;
+                };
+                stack.push((*else_array, depth + 1));
+                stack.push((*then_array, depth + 1));
             }
             _ => return false,
         }
@@ -5145,9 +5399,86 @@ fn supported_warm_array_uf_arg(arena: &TermArena, arg: TermId, sort: Sort) -> bo
         Sort::Array {
             index: ArraySortKey::BitVec(_),
             element,
-        } if is_warm_array_element_sort(element) => matches!(arena.node(arg), TermNode::Symbol(_)),
+        } if is_warm_array_element_sort(element) => {
+            let mut scalar_memo = HashMap::new();
+            warm_array_uf_parameter_key_covers(arena, arg, &mut scalar_memo)
+        }
         _ => false,
     }
+}
+
+fn warm_array_uf_parameter_key_covers(
+    arena: &TermArena,
+    root: TermId,
+    scalar_memo: &mut HashMap<TermId, bool>,
+) -> bool {
+    let mut stack = vec![(root, 0usize)];
+    let mut seen = HashSet::new();
+    let mut structural_nodes = 0usize;
+    while let Some((term, depth)) = stack.pop() {
+        if depth > MAX_WARM_STRUCTURAL_ARRAY_DEPTH {
+            return false;
+        }
+        if !seen.insert(term) {
+            continue;
+        }
+        let Sort::Array {
+            index: ArraySortKey::BitVec(_),
+            element,
+        } = arena.sort_of(term)
+        else {
+            return false;
+        };
+        if !is_warm_array_element_sort(element) {
+            return false;
+        }
+        if !matches!(arena.node(term), TermNode::Symbol(_)) {
+            structural_nodes += 1;
+            if structural_nodes > MAX_WARM_STRUCTURAL_ARRAY_NODES {
+                return false;
+            }
+        }
+        match arena.node(term) {
+            TermNode::Symbol(_) => {}
+            TermNode::App {
+                op: Op::ConstArray { .. },
+                args,
+            } => {
+                let [value] = args.as_ref() else {
+                    return false;
+                };
+                if !warm_abstraction_covers_term(arena, *value, scalar_memo) {
+                    return false;
+                }
+            }
+            TermNode::App {
+                op: Op::Store,
+                args,
+            } => {
+                let [base, index, value] = args.as_ref() else {
+                    return false;
+                };
+                if !warm_abstraction_covers_term(arena, *index, scalar_memo)
+                    || !warm_abstraction_covers_term(arena, *value, scalar_memo)
+                {
+                    return false;
+                }
+                stack.push((*base, depth + 1));
+            }
+            TermNode::App { op: Op::Ite, args } => {
+                let [condition, then_array, else_array] = args.as_ref() else {
+                    return false;
+                };
+                if !warm_abstraction_covers_term(arena, *condition, scalar_memo) {
+                    return false;
+                }
+                stack.push((*else_array, depth + 1));
+                stack.push((*then_array, depth + 1));
+            }
+            _ => return false,
+        }
+    }
+    true
 }
 
 fn warm_array_uf_arg_covers(
@@ -5160,7 +5491,9 @@ fn warm_array_uf_arg_covers(
         Sort::Array {
             index: ArraySortKey::BitVec(_),
             element,
-        } if is_warm_array_element_sort(element) => matches!(arena.node(arg), TermNode::Symbol(_)),
+        } if is_warm_array_element_sort(element) => {
+            warm_array_uf_parameter_key_covers(arena, arg, scalar_memo)
+        }
         _ => false,
     }
 }
@@ -5427,6 +5760,11 @@ fn merge_warm_work_into_encoding(encoding: &mut WarmArrayEncoding, work: WarmAbs
     extend_unique_terms(&mut encoding.uf_app_terms, &work.uf_app_terms);
     extend_unique_terms(&mut encoding.array_uf_app_terms, &work.array_uf_app_terms);
     extend_unique_terms(&mut encoding.congruence_lemmas, &work.congruence_lemmas);
+    for equality in work.array_equalities {
+        if !encoding.array_equalities.contains(&equality) {
+            encoding.array_equalities.push(equality);
+        }
+    }
     for flag in work.array_relation_flags {
         if !encoding
             .array_relation_flags

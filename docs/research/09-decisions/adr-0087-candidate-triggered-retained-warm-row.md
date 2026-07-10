@@ -179,6 +179,7 @@ keyed array-valued UF-parent part of that residual. Applications retain private
 array owners, observed reads receive conditional argument/index congruence, and
 concrete-equal keys project one full-value result before owner filtering and
 original replay. ADR-0089/0090 add structural equality/extensionality, ADR-0091
-adds relation flags, and ADR-0092 adds direct array-valued UF parameters.
-Structural array-valued parameter expressions, proof logging, and the EVM
-performance gap remain.
+adds relation flags, ADR-0092 adds direct array-valued UF parameters, and
+ADR-0093 adds supported structural array-valued UF parameters. Nested
+array-valued application keys, proof logging, and the EVM performance gap
+remain.
