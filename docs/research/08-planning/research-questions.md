@@ -68,8 +68,10 @@ Out of scope:
     its exact transitive summaries candidate-triggered and persistent. ADR-0088
     retains scalar-keyed array-valued UF application parents, conditional read
     congruence, and full-value result projection on the same warm path. Warm
-    equality/extensionality, array-valued parameters, nested/extended array
-    operators, and proofs remain. See
+    projection-owned equality and exact structural diff witnesses are proposed
+    in ADR-0089. Positive structural equality, arbitrary Boolean relation flags,
+    array-valued parameters, nested/extended array operators, and proofs remain.
+    See
     [ADR-0013](../09-decisions/adr-0013-uninterpreted-functions.md) and
     [ADR-0084](../09-decisions/adr-0084-array-valued-uf-results-on-the-canonical-array-bus.md),
     followed by
@@ -78,7 +80,9 @@ Out of scope:
     and
     [ADR-0087](../09-decisions/adr-0087-candidate-triggered-retained-warm-row.md),
     followed by
-    [ADR-0088](../09-decisions/adr-0088-retained-warm-array-valued-uf-parents.md).
+    [ADR-0088](../09-decisions/adr-0088-retained-warm-array-valued-uf-parents.md)
+    and
+    [ADR-0089](../09-decisions/adr-0089-retained-warm-array-relations.md).
 - [ ] How should undefined or partial operations be represented?
 - [ ] What public support matrix should define the first release boundary
       across IR, evaluator, SMT-LIB, oracle, pure Rust backend, and evidence?
