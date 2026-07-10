@@ -337,6 +337,8 @@ const MAX_ROW_ROUNDS: usize = 64;
 /// this many sites (deeply nested stores fanned out over many reads) declines to
 /// `unknown` rather than risk an unbounded blow-up.
 const MAX_ROW_SITES: usize = 4096;
+/// Maximum structural store/ITE layers followed while realizing one array term.
+const MAX_STRUCTURAL_ARRAY_REALIZATION_STEPS: usize = 4_096;
 const SCALAR_LOCAL_SEARCH_PROBE_MS: u64 = 100;
 
 /// Builds the `unknown` result with the lazy-ROW resource-limit classification.
@@ -2618,7 +2620,9 @@ pub(crate) fn project_online_row_assignment(
     arena: &TermArena,
     sites: &[RowSite],
     equivalent_arrays: &[(SymbolId, SymbolId)],
+    structural_equalities: &[(TermId, TermId)],
     assignment: &Assignment,
+    deadline: Option<Instant>,
 ) -> Result<Assignment, SolverError> {
     let ctx = RowCtx {
         sites: sites.to_vec(),
@@ -2673,7 +2677,209 @@ pub(crate) fn project_online_row_assignment(
             projected.set(member, value.clone());
         }
     }
+    realize_structural_array_equalities(
+        arena,
+        sites,
+        structural_equalities,
+        &mut projected,
+        deadline,
+    )?;
     Ok(projected)
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum StructuralRealization {
+    Realized { changed: bool },
+    Incompatible,
+}
+
+fn realize_structural_array_equalities(
+    arena: &TermArena,
+    sites: &[RowSite],
+    equalities: &[(TermId, TermId)],
+    projected: &mut Assignment,
+    deadline: Option<Instant>,
+) -> Result<(), SolverError> {
+    if equalities.is_empty() {
+        return Ok(());
+    }
+    let max_rounds = equalities.len().saturating_mul(2).clamp(1, MAX_ROW_ROUNDS);
+    for _round in 0..max_rounds {
+        let mut mismatches = 0usize;
+        let mut progressed = false;
+        for &(lhs, rhs) in equalities {
+            check_structural_projection_deadline(deadline)?;
+            let lhs_value = eval_structural_array_term(arena, lhs, projected)?;
+            let rhs_value = eval_structural_array_term(arena, rhs, projected)?;
+            if lhs_value == rhs_value {
+                continue;
+            }
+            mismatches += 1;
+            if try_realize_structural_equality(
+                arena, sites, lhs, rhs, &lhs_value, &rhs_value, projected, deadline,
+            )? {
+                progressed = true;
+            }
+        }
+        if mismatches == 0 {
+            return Ok(());
+        }
+        if !progressed {
+            break;
+        }
+    }
+    for &(lhs, rhs) in equalities {
+        check_structural_projection_deadline(deadline)?;
+        if eval_structural_array_term(arena, lhs, projected)?
+            != eval_structural_array_term(arena, rhs, projected)?
+        {
+            return Err(SolverError::Backend(
+                "online ROW projection could not realize a bounded structural array equality"
+                    .to_owned(),
+            ));
+        }
+    }
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+fn try_realize_structural_equality(
+    arena: &TermArena,
+    sites: &[RowSite],
+    lhs: TermId,
+    rhs: TermId,
+    lhs_value: &Value,
+    rhs_value: &Value,
+    projected: &mut Assignment,
+    deadline: Option<Instant>,
+) -> Result<bool, SolverError> {
+    let lhs_is_owner = is_array_projection_owner(arena, lhs);
+    let rhs_is_owner = is_array_projection_owner(arena, rhs);
+    let attempts = if rhs_is_owner && !lhs_is_owner {
+        [(rhs, lhs_value), (lhs, rhs_value)]
+    } else {
+        [(lhs, rhs_value), (rhs, lhs_value)]
+    };
+    for (term, target) in attempts {
+        check_structural_projection_deadline(deadline)?;
+        let mut candidate = projected.clone();
+        let StructuralRealization::Realized { changed } =
+            realize_structural_array_term(arena, sites, term, target, &mut candidate, deadline)?
+        else {
+            continue;
+        };
+        if !changed {
+            continue;
+        }
+        let candidate_lhs = eval_structural_array_term(arena, lhs, &candidate)?;
+        let candidate_rhs = eval_structural_array_term(arena, rhs, &candidate)?;
+        if candidate_lhs == candidate_rhs {
+            *projected = candidate;
+            return Ok(true);
+        }
+    }
+    Ok(false)
+}
+
+fn realize_structural_array_term(
+    arena: &TermArena,
+    sites: &[RowSite],
+    term: TermId,
+    target: &Value,
+    projected: &mut Assignment,
+    deadline: Option<Instant>,
+) -> Result<StructuralRealization, SolverError> {
+    let mut current = term;
+    for _step in 0..MAX_STRUCTURAL_ARRAY_REALIZATION_STEPS {
+        check_structural_projection_deadline(deadline)?;
+        if eval_structural_array_term(arena, current, projected)? == *target {
+            return Ok(StructuralRealization::Realized { changed: false });
+        }
+        match arena.node(current) {
+            TermNode::Symbol(owner) if matches!(arena.sort_of(current), Sort::Array { .. }) => {
+                if !projection_owner_observations_hold(arena, sites, *owner, target, projected)? {
+                    return Ok(StructuralRealization::Incompatible);
+                }
+                projected.set(*owner, target.clone());
+                return Ok(StructuralRealization::Realized { changed: true });
+            }
+            TermNode::App {
+                op: Op::Store,
+                args,
+            } => {
+                let index = eval_structural_array_term(arena, args[1], projected)?;
+                let element = eval_structural_array_term(arena, args[2], projected)?;
+                if select_value(target, &index)? != element {
+                    return Ok(StructuralRealization::Incompatible);
+                }
+                current = args[0];
+            }
+            TermNode::App { op: Op::Ite, args } => {
+                let condition = eval_structural_array_term(arena, args[0], projected)?;
+                let Value::Bool(condition) = condition else {
+                    return Err(SolverError::Backend(
+                        "online ROW projection evaluated an array ITE guard to a non-Boolean"
+                            .to_owned(),
+                    ));
+                };
+                current = if condition { args[1] } else { args[2] };
+            }
+            _ => return Ok(StructuralRealization::Incompatible),
+        }
+    }
+    Ok(StructuralRealization::Incompatible)
+}
+
+fn check_structural_projection_deadline(deadline: Option<Instant>) -> Result<(), SolverError> {
+    if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
+        Err(SolverError::Backend(
+            "online ROW structural projection exhausted the shared deadline".to_owned(),
+        ))
+    } else {
+        Ok(())
+    }
+}
+
+fn projection_owner_observations_hold(
+    arena: &TermArena,
+    sites: &[RowSite],
+    owner: SymbolId,
+    target: &Value,
+    projected: &Assignment,
+) -> Result<bool, SolverError> {
+    for site in sites {
+        if !matches!(site.kind, RowKind::Var { array } if array == owner) {
+            continue;
+        }
+        let index = eval_structural_array_term(arena, site.index, projected)?;
+        let expected = projected.get(site.fresh).ok_or_else(|| {
+            SolverError::Backend(
+                "online ROW projection lost an observed scalar read value".to_owned(),
+            )
+        })?;
+        if select_value(target, &index)? != expected {
+            return Ok(false);
+        }
+    }
+    Ok(true)
+}
+
+fn eval_structural_array_term(
+    arena: &TermArena,
+    term: TermId,
+    assignment: &Assignment,
+) -> Result<Value, SolverError> {
+    eval(arena, term, assignment).map_err(|error| {
+        SolverError::Backend(format!(
+            "online ROW structural projection could not evaluate term #{}: {error}",
+            term.index()
+        ))
+    })
+}
+
+fn is_array_projection_owner(arena: &TermArena, term: TermId) -> bool {
+    matches!(arena.node(term), TermNode::Symbol(_))
+        && matches!(arena.sort_of(term), Sort::Array { .. })
 }
 
 fn array_class_root(parents: &BTreeMap<SymbolId, SymbolId>, mut array: SymbolId) -> SymbolId {
@@ -11240,8 +11446,9 @@ mod tests {
         collect_base_array_entries, complete_assignment, const_array_default_mismatch_refutation,
         cross_store_array_disequality_refutation, default_value_for_symbol,
         first_false_replay_conjunct, first_projected_replay_failure,
-        positive_replay_conjunct_count, positive_replay_false_count, project_replay_ext_candidate,
-        prove_unsat_by_symmetric_swap_chain, repair_projected_branch_as_candidate,
+        positive_replay_conjunct_count, positive_replay_false_count, project_online_row_assignment,
+        project_replay_ext_candidate, prove_unsat_by_symmetric_swap_chain,
+        repair_projected_branch_as_candidate,
         repair_projected_branch_best_candidate_with_scalar_closure_guard,
         repair_projected_branch_disjunctions, repair_projected_branch_scalar_choice_candidate,
         repair_projected_branch_schedule, repair_projected_replay_branch_beam,
@@ -11252,8 +11459,9 @@ mod tests {
     };
     use crate::backend::{CheckResult, SolverConfig};
     use crate::sat_bv_backend::SatBvBackend;
-    use axeyum_ir::{ArraySortKey, Assignment, Sort, TermArena, TermNode, Value, eval};
+    use axeyum_ir::{ArraySortKey, ArrayValue, Assignment, Sort, TermArena, TermNode, Value, eval};
     use axeyum_smtlib::parse_script;
+    use std::time::Instant;
 
     fn bv_value(width: u32, value: u128) -> Value {
         Value::Bv { width, value }
@@ -11299,6 +11507,38 @@ mod tests {
         let value = projected.as_array().unwrap();
         assert_eq!(value.default_element(), 3);
         assert_eq!(value.entries().collect::<Vec<_>>(), vec![(0, 9)]);
+    }
+
+    #[test]
+    fn structural_projection_honors_an_expired_deadline() {
+        let mut arena = TermArena::new();
+        let base = arena.array_var("deadline_structural_base", 3, 3).unwrap();
+        let target = arena.array_var("deadline_structural_target", 3, 3).unwrap();
+        let base_symbol = match arena.node(base) {
+            TermNode::Symbol(symbol) => *symbol,
+            _ => panic!("base must be a symbol"),
+        };
+        let target_symbol = match arena.node(target) {
+            TermNode::Symbol(symbol) => *symbol,
+            _ => panic!("target must be a symbol"),
+        };
+        let zero = arena.bv_const(3, 0).unwrap();
+        let one = arena.bv_const(3, 1).unwrap();
+        let stored = arena.store(base, zero, one).unwrap();
+        let mut assignment = Assignment::new();
+        assignment.set(base_symbol, Value::Array(ArrayValue::constant(3, 3, 0)));
+        assignment.set(target_symbol, Value::Array(ArrayValue::constant(3, 3, 0)));
+
+        let error = project_online_row_assignment(
+            &arena,
+            &[],
+            &[],
+            &[(stored, target)],
+            &assignment,
+            Some(Instant::now()),
+        )
+        .expect_err("expired structural projection declines");
+        assert!(error.to_string().contains("shared deadline"), "{error}");
     }
 
     #[test]

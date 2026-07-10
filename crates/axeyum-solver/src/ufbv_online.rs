@@ -103,6 +103,10 @@ const MAX_BOOLEAN_CLAUSES: usize = 32_768;
 const MAX_BV_PROPAGATION_INTERFACE_ATOMS: usize = 64;
 /// Maximum implication probes accumulated in one online BV theory instance.
 const MAX_BV_PROPAGATION_PROBES: usize = 128;
+/// Maximum leaf equalities produced by exact array-ITE equality decomposition.
+const MAX_ARRAY_ITE_EQUALITY_LEAVES: usize = 256;
+/// Maximum nested array-ITE layers expanded before canonical search.
+const MAX_ARRAY_ITE_EQUALITY_DEPTH: usize = 256;
 
 #[derive(Debug, Clone)]
 struct OriginalApplication {
@@ -181,6 +185,8 @@ struct CombinedArrayEquality {
     flag: SymbolId,
     lhs: TermId,
     rhs: TermId,
+    rewritten_lhs: TermId,
+    rewritten_rhs: TermId,
     observations: Vec<CombinedArrayEqualityObservation>,
 }
 
@@ -1175,6 +1181,7 @@ fn build_and_solve_with_stats_impl(
                             assertions,
                             &assignment,
                             &select_parent_classes,
+                            deadline,
                         ),
                         stats,
                     ));
@@ -1678,7 +1685,8 @@ fn prepare_array_roots(
         )));
     }
     let (semantic_assertions, row_sites, array_equalities) = if had_arrays {
-        let Some(rows) = abstract_rows_for_online(arena, assertions)? else {
+        let expanded_assertions = expand_array_ite_equalities(arena, assertions)?;
+        let Some(rows) = abstract_rows_for_online(arena, &expanded_assertions)? else {
             return Err(BuildFailure::Error(SolverError::Unsupported(
                 "online AUFBV lazy-ROW abstraction does not admit this array shape".to_owned(),
             )));
@@ -1718,6 +1726,136 @@ fn prepare_array_roots(
         array_equalities,
         function_roots: roots,
     })
+}
+
+fn expand_array_ite_equalities(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+) -> BuildResult<Vec<TermId>> {
+    fn visit(
+        arena: &mut TermArena,
+        term: TermId,
+        seen: &mut HashSet<TermId>,
+        replacements: &mut HashMap<TermId, TermId>,
+        leaves: &mut usize,
+    ) -> BuildResult<()> {
+        if !seen.insert(term) {
+            return Ok(());
+        }
+        let TermNode::App { args, .. } = arena.node(term).clone() else {
+            return Ok(());
+        };
+        for arg in args.iter().copied() {
+            visit(arena, arg, seen, replacements, leaves)?;
+        }
+        if let TermNode::App { op: Op::Eq, args } = arena.node(term).clone()
+            && matches!(arena.sort_of(args[0]), Sort::Array { .. })
+            && (matches!(arena.node(args[0]), TermNode::App { op: Op::Ite, .. })
+                || matches!(arena.node(args[1]), TermNode::App { op: Op::Ite, .. }))
+        {
+            let mut memo = HashMap::new();
+            let expanded = expand_array_ite_equality_pair(
+                arena,
+                args[0],
+                args[1],
+                replacements,
+                &mut memo,
+                leaves,
+                0,
+            )?;
+            replacements.insert(term, expanded);
+        }
+        Ok(())
+    }
+
+    let mut seen = HashSet::new();
+    let mut replacements = HashMap::new();
+    let mut leaves = 0usize;
+    for &assertion in assertions {
+        visit(arena, assertion, &mut seen, &mut replacements, &mut leaves)?;
+    }
+    if replacements.is_empty() {
+        return Ok(assertions.to_vec());
+    }
+    let mut memo = HashMap::new();
+    assertions
+        .iter()
+        .map(|&assertion| replace_subterms(arena, assertion, &replacements, &mut memo))
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(Into::into)
+}
+
+fn expand_array_ite_equality_pair(
+    arena: &mut TermArena,
+    lhs: TermId,
+    rhs: TermId,
+    replacements: &HashMap<TermId, TermId>,
+    memo: &mut HashMap<TermId, TermId>,
+    leaves: &mut usize,
+    depth: usize,
+) -> BuildResult<TermId> {
+    if depth > MAX_ARRAY_ITE_EQUALITY_DEPTH {
+        return Err(build_unknown(
+            UnknownKind::ResourceLimit,
+            format!(
+                "online AUFBV array-ITE equality expansion exceeds depth {MAX_ARRAY_ITE_EQUALITY_DEPTH}"
+            ),
+        ));
+    }
+    if let TermNode::App { op: Op::Ite, args } = arena.node(lhs).clone() {
+        let condition = replace_subterms(arena, args[0], replacements, memo)?;
+        let then_eq = expand_array_ite_equality_pair(
+            arena,
+            args[1],
+            rhs,
+            replacements,
+            memo,
+            leaves,
+            depth + 1,
+        )?;
+        let else_eq = expand_array_ite_equality_pair(
+            arena,
+            args[2],
+            rhs,
+            replacements,
+            memo,
+            leaves,
+            depth + 1,
+        )?;
+        return arena.ite(condition, then_eq, else_eq).map_err(Into::into);
+    }
+    if let TermNode::App { op: Op::Ite, args } = arena.node(rhs).clone() {
+        let condition = replace_subterms(arena, args[0], replacements, memo)?;
+        let then_eq = expand_array_ite_equality_pair(
+            arena,
+            lhs,
+            args[1],
+            replacements,
+            memo,
+            leaves,
+            depth + 1,
+        )?;
+        let else_eq = expand_array_ite_equality_pair(
+            arena,
+            lhs,
+            args[2],
+            replacements,
+            memo,
+            leaves,
+            depth + 1,
+        )?;
+        return arena.ite(condition, then_eq, else_eq).map_err(Into::into);
+    }
+    *leaves = leaves.saturating_add(1);
+    if *leaves > MAX_ARRAY_ITE_EQUALITY_LEAVES {
+        return Err(build_unknown(
+            UnknownKind::ResourceLimit,
+            format!(
+                "online AUFBV array-ITE equality expansion exceeds {MAX_ARRAY_ITE_EQUALITY_LEAVES} leaves"
+            ),
+        ));
+    }
+    arena.eq(lhs, rhs).map_err(Into::into)
 }
 
 fn combine_row_sites(
@@ -1819,6 +1957,8 @@ fn combine_array_equalities(
     let mut memo = HashMap::new();
     let mut combined = Vec::with_capacity(equalities.len());
     for equality in equalities {
+        let rewritten_lhs = replace_subterms(arena, equality.lhs, replacements, &mut memo)?;
+        let rewritten_rhs = replace_subterms(arena, equality.rhs, replacements, &mut memo)?;
         let mut observations = Vec::with_capacity(equality.observations.len());
         for observation in &equality.observations {
             observations.push(CombinedArrayEqualityObservation {
@@ -1843,6 +1983,8 @@ fn combine_array_equalities(
             flag: equality.flag,
             lhs: equality.lhs,
             rhs: equality.rhs,
+            rewritten_lhs,
+            rewritten_rhs,
             observations,
         });
     }
@@ -2921,6 +3063,7 @@ fn project_replay_composed(
     assertions: &[TermId],
     assignment: &Assignment,
     select_parent_classes: &[SelectParentClass],
+    deadline: Option<Instant>,
 ) -> CheckResult {
     let with_arrays = if prepared.had_arrays {
         let mut equivalent_arrays =
@@ -2931,16 +3074,25 @@ fn project_replay_composed(
         ));
         equivalent_arrays.sort_unstable();
         equivalent_arrays.dedup();
+        let structural_equalities =
+            true_structural_array_equalities(&prepared.array_equalities, assignment);
         match project_online_row_assignment(
             arena,
             &prepared.projection_row_sites,
             &equivalent_arrays,
+            &structural_equalities,
             assignment,
+            deadline,
         ) {
             Ok(projected) => projected,
             Err(error) => {
+                let kind = if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
+                    UnknownKind::Timeout
+                } else {
+                    UnknownKind::Incomplete
+                };
                 return unknown(
-                    UnknownKind::Incomplete,
+                    kind,
                     format!("online AUFBV array projection failed: {error}"),
                 );
             }
@@ -3049,6 +3201,17 @@ fn true_symbol_array_equalities(
         pairs.push((*left, *right));
     }
     pairs
+}
+
+fn true_structural_array_equalities(
+    equalities: &[CombinedArrayEquality],
+    assignment: &Assignment,
+) -> Vec<(TermId, TermId)> {
+    equalities
+        .iter()
+        .filter(|equality| matches!(assignment.get(equality.flag), Some(Value::Bool(true))))
+        .map(|equality| (equality.rewritten_lhs, equality.rewritten_rhs))
+        .collect()
 }
 
 fn unknown(kind: UnknownKind, detail: impl Into<String>) -> CheckResult {
