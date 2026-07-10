@@ -135,6 +135,10 @@ struct Frame {
     /// warm theory facts. They generate select-congruence clauses and drive
     /// equal-array model projection before replay.
     warm_array_equalities: Vec<WarmArrayEquality>,
+    /// Boolean flags that stand for array equality atoms nested inside scalar
+    /// Boolean structure. Their true branch contributes guarded equality
+    /// observations; their false branch contributes a guarded diff witness.
+    warm_array_relation_flags: Vec<WarmArrayRelationFlag>,
 }
 
 #[derive(Debug, Clone)]
@@ -145,6 +149,7 @@ struct OneShotAssumption {
     warm_uf_apps: Vec<TermId>,
     warm_array_uf_apps: Vec<TermId>,
     warm_array_equalities: Vec<WarmArrayEquality>,
+    warm_array_relation_flags: Vec<WarmArrayRelationFlag>,
     congruence_lemmas: Vec<TermId>,
 }
 
@@ -186,6 +191,12 @@ struct WarmArrayEqualityOperand {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct WarmArrayRelationFlag {
+    flag: SymbolId,
+    equality: WarmArrayEquality,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum WarmArrayRelationPolarity {
     Equal,
     Distinct,
@@ -206,6 +217,7 @@ struct WarmArrayEncoding {
     select_terms: Vec<TermId>,
     uf_app_terms: Vec<TermId>,
     array_uf_app_terms: Vec<TermId>,
+    array_relation_flags: Vec<WarmArrayRelationFlag>,
     congruence_lemmas: Vec<TermId>,
     structural_semantics: Vec<WarmArraySemantic>,
 }
@@ -216,6 +228,8 @@ struct WarmAbstractionWork {
     select_terms: Vec<TermId>,
     uf_app_terms: Vec<TermId>,
     array_uf_app_terms: Vec<TermId>,
+    array_relation_flags: Vec<WarmArrayRelationFlag>,
+    congruence_lemmas: Vec<TermId>,
     structural_semantics: Vec<WarmArraySemantic>,
 }
 
@@ -231,6 +245,7 @@ struct WarmOneShotTerms {
     uf_apps: Vec<TermId>,
     array_uf_apps: Vec<TermId>,
     array_equalities: Vec<WarmArrayEquality>,
+    array_relation_flags: Vec<WarmArrayRelationFlag>,
 }
 
 enum WarmCandidateCheck {
@@ -300,6 +315,7 @@ pub struct IncrementalBvSolver {
     warm_structural_array_owners: HashMap<TermId, WarmStructuralArrayOwner>,
     warm_array_equality_probe_symbols: HashMap<TermId, SymbolId>,
     warm_array_diff_symbols: HashMap<TermId, SymbolId>,
+    warm_array_relation_flag_symbols: HashMap<TermId, SymbolId>,
     internal_symbols: HashSet<SymbolId>,
 }
 
@@ -332,6 +348,7 @@ impl IncrementalBvSolver {
                 warm_uf_apps: Vec::new(),
                 warm_array_uf_apps: Vec::new(),
                 warm_array_equalities: Vec::new(),
+                warm_array_relation_flags: Vec::new(),
             }],
             warm_array_selects: HashMap::new(),
             warm_array_semantics: HashMap::new(),
@@ -342,6 +359,7 @@ impl IncrementalBvSolver {
             warm_structural_array_owners: HashMap::new(),
             warm_array_equality_probe_symbols: HashMap::new(),
             warm_array_diff_symbols: HashMap::new(),
+            warm_array_relation_flag_symbols: HashMap::new(),
             internal_symbols: HashSet::new(),
         }
     }
@@ -438,6 +456,13 @@ impl IncrementalBvSolver {
     #[must_use]
     pub fn retained_warm_array_diff_witness_count(&self) -> usize {
         self.warm_array_diff_symbols.len()
+    }
+
+    /// Number of private Boolean flags retained for array equality atoms that
+    /// appear under scalar Boolean structure.
+    #[must_use]
+    pub fn retained_warm_array_relation_flag_count(&self) -> usize {
+        self.warm_array_relation_flag_symbols.len()
     }
 
     /// Whether `term` contains array or uninterpreted-function structure that
@@ -660,6 +685,7 @@ impl IncrementalBvSolver {
         let existing_selects = self.active_warm_array_select_terms();
         let existing_uf_apps = self.active_warm_uf_app_terms();
         let existing_equalities = self.active_warm_array_equalities();
+        let existing_relation_flags = self.active_warm_array_relation_flags();
         if !Self::term_supported_by_warm_abstraction(arena, encoded) {
             self.frames
                 .last_mut()
@@ -691,9 +717,10 @@ impl IncrementalBvSolver {
                 &existing_selects,
                 &existing_uf_apps,
                 &existing_equalities,
+                &existing_relation_flags,
             );
         }
-        let encoded = match relation {
+        let mut encoded = match relation {
             Some(relation) => self.abstract_warm_array_disequality(
                 arena,
                 relation,
@@ -709,6 +736,12 @@ impl IncrementalBvSolver {
                 &existing_equalities,
             )?,
         };
+        self.add_warm_array_relation_flag_observation_closure(
+            arena,
+            &existing_relation_flags,
+            &existing_selects,
+            &mut encoded,
+        )?;
         if needs_deferred_theory(arena, encoded.term) {
             self.frames
                 .last_mut()
@@ -734,9 +767,13 @@ impl IncrementalBvSolver {
         frame.warm_array_selects.extend(encoded.select_terms);
         frame.warm_uf_apps.extend(encoded.uf_app_terms);
         frame.warm_array_uf_apps.extend(encoded.array_uf_app_terms);
+        frame
+            .warm_array_relation_flags
+            .extend(encoded.array_relation_flags);
         Ok(encoded.term)
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn assert_warm_array_equality(
         &mut self,
         arena: &mut TermArena,
@@ -745,13 +782,20 @@ impl IncrementalBvSolver {
         existing_selects: &[TermId],
         existing_uf_apps: &[TermId],
         existing_equalities: &[WarmArrayEquality],
+        existing_relation_flags: &[WarmArrayRelationFlag],
     ) -> Result<TermId, SolverError> {
-        let (equality, prepared) = self.prepare_warm_array_equality(
+        let (equality, mut prepared) = self.prepare_warm_array_equality(
             arena,
             relation,
             existing_selects,
             existing_uf_apps,
             existing_equalities,
+        )?;
+        self.add_warm_array_relation_flag_observation_closure(
+            arena,
+            existing_relation_flags,
+            existing_selects,
+            &mut prepared,
         )?;
         self.retain_warm_semantics(&prepared.structural_semantics)?;
         let selector = self
@@ -768,6 +812,9 @@ impl IncrementalBvSolver {
         frame.warm_uf_apps.extend(prepared.uf_app_terms);
         frame.warm_array_uf_apps.extend(prepared.array_uf_app_terms);
         frame.warm_array_equalities.push(equality);
+        frame
+            .warm_array_relation_flags
+            .extend(prepared.array_relation_flags);
         Ok(relation.literal)
     }
 
@@ -887,6 +934,7 @@ impl IncrementalBvSolver {
             warm_uf_apps: Vec::new(),
             warm_array_uf_apps: Vec::new(),
             warm_array_equalities: Vec::new(),
+            warm_array_relation_flags: Vec::new(),
         });
         Ok(())
     }
@@ -1019,6 +1067,7 @@ impl IncrementalBvSolver {
             warm_uf_apps: Vec::new(),
             warm_array_uf_apps: Vec::new(),
             warm_array_equalities: Vec::new(),
+            warm_array_relation_flags: Vec::new(),
             congruence_lemmas: Vec::new(),
         }];
         let (ephemeral, _) = self.encode_one_shot_assumptions(arena, &one_shot)?;
@@ -1232,6 +1281,13 @@ impl IncrementalBvSolver {
             .collect()
     }
 
+    fn active_warm_array_relation_flags(&self) -> Vec<WarmArrayRelationFlag> {
+        self.frames
+            .iter()
+            .flat_map(|frame| frame.warm_array_relation_flags.iter().copied())
+            .collect()
+    }
+
     fn abstract_warm_array_selects(
         &mut self,
         arena: &mut TermArena,
@@ -1242,7 +1298,7 @@ impl IncrementalBvSolver {
     ) -> Result<WarmArrayEncoding, SolverError> {
         let mut work = WarmAbstractionWork::default();
         let term = self.abstract_warm_array_selects_inner(arena, term, &mut work)?;
-        let mut congruence_lemmas = Vec::new();
+        let mut congruence_lemmas = std::mem::take(&mut work.congruence_lemmas);
         let new_indices = self.warm_array_select_indices(&work.select_terms);
         self.add_warm_array_equality_observations(
             arena,
@@ -1276,6 +1332,7 @@ impl IncrementalBvSolver {
             select_terms: work.select_terms,
             uf_app_terms: work.uf_app_terms,
             array_uf_app_terms: work.array_uf_app_terms,
+            array_relation_flags: work.array_relation_flags,
             congruence_lemmas,
             structural_semantics: work.structural_semantics,
         })
@@ -1289,6 +1346,14 @@ impl IncrementalBvSolver {
     ) -> Result<TermId, SolverError> {
         if let Some(&abstracted) = work.memo.get(&term) {
             return Ok(abstracted);
+        }
+
+        if let Some(relation) = warm_array_relation_literal(arena, term)
+            && relation.polarity == WarmArrayRelationPolarity::Equal
+        {
+            let flag = self.retain_warm_array_relation_flag(arena, relation, work)?;
+            work.memo.insert(term, flag);
+            return Ok(flag);
         }
 
         if let Some(select) = Self::supported_warm_array_select(arena, term) {
@@ -1528,7 +1593,7 @@ impl IncrementalBvSolver {
         };
 
         let newly_introduced_indices = self.warm_array_select_indices(&work.select_terms);
-        let mut congruence_lemmas = Vec::new();
+        let mut congruence_lemmas = std::mem::take(&mut work.congruence_lemmas);
         self.add_warm_array_equality_observations(
             arena,
             existing_equalities,
@@ -1598,10 +1663,104 @@ impl IncrementalBvSolver {
                 select_terms: work.select_terms,
                 uf_app_terms: work.uf_app_terms,
                 array_uf_app_terms: work.array_uf_app_terms,
+                array_relation_flags: work.array_relation_flags,
                 congruence_lemmas,
                 structural_semantics: work.structural_semantics,
             },
         ))
+    }
+
+    fn retain_warm_array_relation_flag(
+        &mut self,
+        arena: &mut TermArena,
+        relation: WarmArrayRelation,
+        work: &mut WarmAbstractionWork,
+    ) -> Result<TermId, SolverError> {
+        debug_assert_eq!(relation.polarity, WarmArrayRelationPolarity::Equal);
+        let flag_symbol = self.warm_array_relation_flag_symbol(arena, relation)?;
+        let flag_term = arena.var(flag_symbol);
+
+        let (equality, positive) =
+            self.prepare_warm_array_equality(arena, relation, &[], &[], &[])?;
+        let negative = self.abstract_warm_array_disequality(
+            arena,
+            WarmArrayRelation {
+                polarity: WarmArrayRelationPolarity::Distinct,
+                ..relation
+            },
+            &[],
+            &[],
+            &[],
+        )?;
+
+        for &lemma in &positive.congruence_lemmas {
+            let guarded = guarded_warm_root(arena, flag_term, lemma, true)?;
+            if !work.congruence_lemmas.contains(&guarded) {
+                work.congruence_lemmas.push(guarded);
+            }
+        }
+        let guarded_diff = guarded_warm_root(arena, flag_term, negative.term, false)?;
+        if !work.congruence_lemmas.contains(&guarded_diff) {
+            work.congruence_lemmas.push(guarded_diff);
+        }
+        extend_unique_terms(&mut work.congruence_lemmas, &negative.congruence_lemmas);
+
+        extend_unique_terms(&mut work.select_terms, &positive.select_terms);
+        extend_unique_terms(&mut work.uf_app_terms, &positive.uf_app_terms);
+        extend_unique_terms(&mut work.array_uf_app_terms, &positive.array_uf_app_terms);
+        for flag in positive.array_relation_flags {
+            if !work
+                .array_relation_flags
+                .iter()
+                .any(|existing| existing.flag == flag.flag)
+            {
+                work.array_relation_flags.push(flag);
+            }
+        }
+        for semantic in positive.structural_semantics {
+            if !work
+                .structural_semantics
+                .iter()
+                .any(|existing| existing.select_term == semantic.select_term)
+            {
+                work.structural_semantics.push(semantic);
+            }
+        }
+
+        extend_unique_terms(&mut work.select_terms, &negative.select_terms);
+        extend_unique_terms(&mut work.uf_app_terms, &negative.uf_app_terms);
+        extend_unique_terms(&mut work.array_uf_app_terms, &negative.array_uf_app_terms);
+        for flag in negative.array_relation_flags {
+            if !work
+                .array_relation_flags
+                .iter()
+                .any(|existing| existing.flag == flag.flag)
+            {
+                work.array_relation_flags.push(flag);
+            }
+        }
+        for semantic in negative.structural_semantics {
+            if !work
+                .structural_semantics
+                .iter()
+                .any(|existing| existing.select_term == semantic.select_term)
+            {
+                work.structural_semantics.push(semantic);
+            }
+        }
+
+        if !work.array_relation_flags.iter().any(|flag| {
+            flag.flag == flag_symbol
+                && flag.equality.left == equality.left
+                && flag.equality.right == equality.right
+        }) {
+            work.array_relation_flags.push(WarmArrayRelationFlag {
+                flag: flag_symbol,
+                equality,
+            });
+        }
+
+        Ok(flag_term)
     }
 
     fn warm_array_select_indices(&self, selects: &[TermId]) -> Vec<TermId> {
@@ -1643,6 +1802,32 @@ impl IncrementalBvSolver {
         Ok(arena.var(symbol))
     }
 
+    fn warm_array_relation_flag_symbol(
+        &mut self,
+        arena: &mut TermArena,
+        relation: WarmArrayRelation,
+    ) -> Result<SymbolId, SolverError> {
+        if let Some(&symbol) = self.warm_array_relation_flag_symbols.get(&relation.literal) {
+            let (_name, sort) = arena.symbol(symbol);
+            if sort != Sort::Bool {
+                return Err(SolverError::Backend(format!(
+                    "warm array relation #{} retained a non-Boolean flag",
+                    relation.literal.index()
+                )));
+            }
+            return Ok(symbol);
+        }
+        let base_name = format!("!axeyum_warm_array_rel_{}", relation.literal.index());
+        let name = fresh_internal_symbol_name(arena, &base_name);
+        let symbol = arena
+            .declare_internal(&name, Sort::Bool)
+            .map_err(|error| map_ir_error(&error))?;
+        self.internal_symbols.insert(symbol);
+        self.warm_array_relation_flag_symbols
+            .insert(relation.literal, symbol);
+        Ok(symbol)
+    }
+
     fn add_warm_array_equality_observations(
         &mut self,
         arena: &mut TermArena,
@@ -1676,6 +1861,87 @@ impl IncrementalBvSolver {
                     .map_err(|error| map_ir_error(&error))?;
                 if !roots.contains(&root) {
                     roots.push(root);
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn add_warm_array_relation_flag_observation_closure(
+        &mut self,
+        arena: &mut TermArena,
+        existing_flags: &[WarmArrayRelationFlag],
+        context_selects: &[TermId],
+        encoding: &mut WarmArrayEncoding,
+    ) -> Result<(), SolverError> {
+        if existing_flags.is_empty() && encoding.array_relation_flags.is_empty() {
+            return Ok(());
+        }
+
+        let new_indices = self.warm_array_select_indices(&encoding.select_terms);
+        if !existing_flags.is_empty() && !new_indices.is_empty() {
+            let mut work = WarmAbstractionWork::default();
+            let mut roots = Vec::new();
+            self.add_warm_array_relation_flag_observations(
+                arena,
+                existing_flags,
+                &new_indices,
+                &mut work,
+                &mut roots,
+            )?;
+            extend_unique_terms(&mut work.congruence_lemmas, &roots);
+            merge_warm_work_into_encoding(encoding, work);
+        }
+
+        if !encoding.array_relation_flags.is_empty() {
+            let mut indices = self.warm_array_select_indices(context_selects);
+            extend_unique_terms(&mut indices, &new_indices);
+            if !indices.is_empty() {
+                let flags = encoding.array_relation_flags.clone();
+                let mut work = WarmAbstractionWork::default();
+                let mut roots = Vec::new();
+                self.add_warm_array_relation_flag_observations(
+                    arena, &flags, &indices, &mut work, &mut roots,
+                )?;
+                extend_unique_terms(&mut work.congruence_lemmas, &roots);
+                merge_warm_work_into_encoding(encoding, work);
+            }
+        }
+        Ok(())
+    }
+
+    fn add_warm_array_relation_flag_observations(
+        &mut self,
+        arena: &mut TermArena,
+        flags: &[WarmArrayRelationFlag],
+        indices: &[TermId],
+        work: &mut WarmAbstractionWork,
+        roots: &mut Vec<TermId>,
+    ) -> Result<(), SolverError> {
+        for flag in flags {
+            let index_sort = arena
+                .sort_of(flag.equality.left_parent)
+                .array_sorts()
+                .map(|sorts| sorts.0);
+            let flag_term = arena.var(flag.flag);
+            for &index in indices {
+                if Some(arena.sort_of(index)) != index_sort {
+                    continue;
+                }
+                let left_read = arena
+                    .select(flag.equality.left_parent, index)
+                    .map_err(|error| map_ir_error(&error))?;
+                let right_read = arena
+                    .select(flag.equality.right_parent, index)
+                    .map_err(|error| map_ir_error(&error))?;
+                let left = self.abstract_warm_array_selects_inner(arena, left_read, work)?;
+                let right = self.abstract_warm_array_selects_inner(arena, right_read, work)?;
+                let read_equal = arena
+                    .eq(left, right)
+                    .map_err(|error| map_ir_error(&error))?;
+                let guarded = guarded_warm_root(arena, flag_term, read_equal, true)?;
+                if !roots.contains(&guarded) {
+                    roots.push(guarded);
                 }
             }
         }
@@ -2142,6 +2408,7 @@ impl IncrementalBvSolver {
         let mut active_selects = self.active_warm_array_select_terms();
         let mut active_uf_apps = self.active_warm_uf_app_terms();
         let mut active_equalities = self.active_warm_array_equalities();
+        let mut active_relation_flags = self.active_warm_array_relation_flags();
         let mut simplified = Vec::with_capacity(assumptions.len());
         for &term in assumptions {
             if arena.sort_of(term) != Sort::Bool {
@@ -2170,17 +2437,24 @@ impl IncrementalBvSolver {
             if relation
                 .is_some_and(|relation| relation.polarity == WarmArrayRelationPolarity::Equal)
             {
-                let (equality, prepared) = self.prepare_warm_array_equality(
+                let (equality, mut prepared) = self.prepare_warm_array_equality(
                     arena,
                     relation.expect("checked as positive relation"),
                     &active_selects,
                     &active_uf_apps,
                     &active_equalities,
                 )?;
+                self.add_warm_array_relation_flag_observation_closure(
+                    arena,
+                    &active_relation_flags,
+                    &active_selects,
+                    &mut prepared,
+                )?;
                 self.retain_warm_semantics(&prepared.structural_semantics)?;
                 active_equalities.push(equality);
                 active_selects.extend(prepared.select_terms.iter().copied());
                 active_uf_apps.extend(prepared.uf_app_terms.iter().copied());
+                active_relation_flags.extend(prepared.array_relation_flags.iter().copied());
                 simplified.push(OneShotAssumption {
                     original: term,
                     encoded: arena.bool_const(true),
@@ -2188,11 +2462,12 @@ impl IncrementalBvSolver {
                     warm_uf_apps: prepared.uf_app_terms,
                     warm_array_uf_apps: prepared.array_uf_app_terms,
                     warm_array_equalities: vec![equality],
+                    warm_array_relation_flags: prepared.array_relation_flags,
                     congruence_lemmas: prepared.congruence_lemmas,
                 });
                 continue;
             }
-            let encoded = match relation {
+            let mut encoded = match relation {
                 Some(relation) => self.abstract_warm_array_disequality(
                     arena,
                     relation,
@@ -2208,9 +2483,16 @@ impl IncrementalBvSolver {
                     &active_equalities,
                 )?,
             };
+            self.add_warm_array_relation_flag_observation_closure(
+                arena,
+                &active_relation_flags,
+                &active_selects,
+                &mut encoded,
+            )?;
             self.retain_warm_semantics(&encoded.structural_semantics)?;
             active_selects.extend(encoded.select_terms.iter().copied());
             active_uf_apps.extend(encoded.uf_app_terms.iter().copied());
+            active_relation_flags.extend(encoded.array_relation_flags.iter().copied());
             simplified.push(OneShotAssumption {
                 original: term,
                 encoded: encoded.term,
@@ -2218,6 +2500,7 @@ impl IncrementalBvSolver {
                 warm_uf_apps: encoded.uf_app_terms,
                 warm_array_uf_apps: encoded.array_uf_app_terms,
                 warm_array_equalities: Vec::new(),
+                warm_array_relation_flags: encoded.array_relation_flags,
                 congruence_lemmas: encoded.congruence_lemmas,
             });
         }
@@ -2243,6 +2526,7 @@ impl IncrementalBvSolver {
                 warm_uf_apps: Vec::new(),
                 warm_array_uf_apps: Vec::new(),
                 warm_array_equalities: Vec::new(),
+                warm_array_relation_flags: Vec::new(),
                 congruence_lemmas: Vec::new(),
             })
             .collect::<Vec<_>>();
@@ -2594,6 +2878,7 @@ impl IncrementalBvSolver {
             assignment,
             &one_shot.selects,
             &one_shot.array_equalities,
+            &one_shot.array_relation_flags,
             &mut model,
             deadline,
         )?;
@@ -2826,17 +3111,38 @@ impl IncrementalBvSolver {
         Ok(())
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn project_warm_array_equalities(
         &self,
         arena: &TermArena,
         assignment: &Assignment,
         one_shot_selects: &[TermId],
         one_shot_array_equalities: &[WarmArrayEquality],
+        one_shot_array_relation_flags: &[WarmArrayRelationFlag],
         model: &mut Model,
         deadline: Option<Instant>,
     ) -> Result<(), UnknownReason> {
         let mut equalities = self.active_warm_array_equalities();
         equalities.extend_from_slice(one_shot_array_equalities);
+        for flag in self
+            .active_warm_array_relation_flags()
+            .into_iter()
+            .chain(one_shot_array_relation_flags.iter().copied())
+        {
+            match assignment.get(flag.flag) {
+                Some(Value::Bool(true)) => equalities.push(flag.equality),
+                Some(Value::Bool(false)) | None => {}
+                Some(value) => {
+                    return Err(UnknownReason {
+                        kind: UnknownKind::Other,
+                        detail: format!(
+                            "warm array relation flag #{} evaluated to non-Boolean {value}",
+                            flag.flag.index()
+                        ),
+                    });
+                }
+            }
+        }
         if equalities.is_empty() {
             return Ok(());
         }
@@ -4331,7 +4637,9 @@ fn warm_structural_array_limits_hold(arena: &TermArena, root: TermId) -> bool {
             }
         }
         if let Some(relation) = warm_array_relation_literal(arena, term) {
-            if relation.polarity == WarmArrayRelationPolarity::Distinct {
+            let nested_positive_flag =
+                relation.polarity == WarmArrayRelationPolarity::Equal && term != root;
+            if relation.polarity == WarmArrayRelationPolarity::Distinct || nested_positive_flag {
                 generated_relation_reads = generated_relation_reads.saturating_add(2);
             }
             for parent in [relation.left, relation.right] {
@@ -4344,6 +4652,13 @@ fn warm_structural_array_limits_hold(arena: &TermArena, root: TermId) -> bool {
                     return false;
                 }
             }
+            if structural.len().saturating_add(generated_relation_reads)
+                > MAX_WARM_STRUCTURAL_ARRAY_NODES
+                || array_uf_apps.len() > MAX_WARM_ARRAY_UF_APPS_PER_ROOT
+            {
+                return false;
+            }
+            continue;
         }
         if structural.len().saturating_add(generated_relation_reads)
             > MAX_WARM_STRUCTURAL_ARRAY_NODES
@@ -4435,6 +4750,12 @@ fn warm_abstraction_covers_term_uncached(
     term: TermId,
     memo: &mut HashMap<TermId, bool>,
 ) -> bool {
+    if let Some(relation) = warm_array_relation_literal(arena, term)
+        && relation.polarity == WarmArrayRelationPolarity::Equal
+    {
+        return warm_array_relation_covers(arena, relation, memo);
+    }
+
     if supported_warm_array_select_shape(arena, term) {
         match arena.node(term) {
             TermNode::App { args, .. } => {
@@ -4787,6 +5108,47 @@ fn extend_unique_terms(target: &mut Vec<TermId>, terms: &[TermId]) {
     for &term in terms {
         if !target.contains(&term) {
             target.push(term);
+        }
+    }
+}
+
+fn guarded_warm_root(
+    arena: &mut TermArena,
+    flag: TermId,
+    root: TermId,
+    when_true: bool,
+) -> Result<TermId, SolverError> {
+    let guard = if when_true {
+        flag
+    } else {
+        arena.not(flag).map_err(|error| map_ir_error(&error))?
+    };
+    arena
+        .implies(guard, root)
+        .map_err(|error| map_ir_error(&error))
+}
+
+fn merge_warm_work_into_encoding(encoding: &mut WarmArrayEncoding, work: WarmAbstractionWork) {
+    extend_unique_terms(&mut encoding.select_terms, &work.select_terms);
+    extend_unique_terms(&mut encoding.uf_app_terms, &work.uf_app_terms);
+    extend_unique_terms(&mut encoding.array_uf_app_terms, &work.array_uf_app_terms);
+    extend_unique_terms(&mut encoding.congruence_lemmas, &work.congruence_lemmas);
+    for flag in work.array_relation_flags {
+        if !encoding
+            .array_relation_flags
+            .iter()
+            .any(|existing| existing.flag == flag.flag)
+        {
+            encoding.array_relation_flags.push(flag);
+        }
+    }
+    for semantic in work.structural_semantics {
+        if !encoding
+            .structural_semantics
+            .iter()
+            .any(|existing| existing.select_term == semantic.select_term)
+        {
+            encoding.structural_semantics.push(semantic);
         }
     }
 }
@@ -5222,6 +5584,10 @@ fn collect_warm_one_shot_terms(assumptions: &[OneShotAssumption]) -> WarmOneShot
         array_equalities: assumptions
             .iter()
             .flat_map(|assumption| assumption.warm_array_equalities.iter().copied())
+            .collect(),
+        array_relation_flags: assumptions
+            .iter()
+            .flat_map(|assumption| assumption.warm_array_relation_flags.iter().copied())
             .collect(),
     }
 }

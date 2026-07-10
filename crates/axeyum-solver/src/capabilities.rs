@@ -949,16 +949,20 @@ pub const CAPABILITIES: &[Capability] = &[
                   private diff index and two retained reads; top-level positive structural equality \
                   over supported store/constant/array-ITE parents uses cached private constructor \
                   owners, bounded equality observations, class-aware fixed-point realization, owner \
-                  filtering, and replay; Boolean relation flags and array-valued parameters remain)",
+                  filtering, and replay; supported array equality atoms nested under scalar Boolean \
+                  structure become private relation flags with guarded true-branch read equality, \
+                  guarded false-branch diff witnesses, candidate-true-only owner merging/structural \
+                  realization, filtering, and replay; array-valued parameters remain)",
         assurance: Assurance::Validated,
         evidence: "full dispatcher model replay; same-index/literal-distinct/const-array/array-ite/\
-                   symbolic-ROW/select-congruence/scalar-UF/array-result-UF/array-relation/structural-equality \
-                   assertion and branch warm replay; 816 solver units, 77 symbolic-execution tests, and three 192-case warm/\
-                   check_auto/Z3 matrices plus the 64-seed structural-equality matrix pass; the EVM scoreboard remains DISAGREE=0 and depth-32 \
+                   symbolic-ROW/select-congruence/scalar-UF/array-result-UF/array-relation/structural-equality/\
+                   relation-flag assertion and branch warm replay; 816 solver units, 77 symbolic-execution tests, \
+                   three 192-case warm/check_auto/Z3 matrices, the 64-seed structural-equality matrix, and the \
+                   focused relation-flag suite pass; the EVM scoreboard remains DISAGREE=0 and depth-32 \
                    warm improves from 30.933 to 11.257 ms, though direct ITE folding remains faster at \
                    0.405 ms; warm path refuses \
                    remaining deferred array/UF theories",
-        reference: "ADR-0010/0030/0086/0087/0088/0089/0090",
+        reference: "ADR-0010/0030/0086/0087/0088/0089/0090/0091",
     },
     Capability {
         area: "symbolic execution",

@@ -316,7 +316,7 @@ fn exact_depth_observation_budget_and_timeout_boundaries_are_clean() {
         .bool_var("warm_structural_nested_flag")
         .unwrap();
     let nested = nested_arena.or(flag, equality).unwrap();
-    assert!(!IncrementalBvSolver::term_supported_by_warm_abstraction(
+    assert!(IncrementalBvSolver::term_supported_by_warm_abstraction(
         &nested_arena,
         nested
     ));
@@ -324,12 +324,15 @@ fn exact_depth_observation_budget_and_timeout_boundaries_are_clean() {
     nested_solver
         .assert_simplifying_memory(&mut nested_arena, nested)
         .unwrap();
-    assert!(nested_solver.has_deferred_theory_assertions());
+    assert!(!nested_solver.has_deferred_theory_assertions());
+    assert_eq!(nested_solver.retained_warm_array_relation_flag_count(), 1);
     assert_eq!(
         nested_solver.retained_warm_structural_array_owner_count(),
-        0
+        1
     );
-    assert_eq!(nested_solver.retained_warm_array_equality_probe_count(), 0);
+    assert_eq!(nested_solver.retained_warm_array_equality_probe_count(), 1);
+    let result = nested_solver.check(&nested_arena).unwrap();
+    assert_sat_replays(&nested_arena, &[nested], &result);
 
     let mut at_limit_arena = TermArena::new();
     let equality = deep_positive_equality(&mut at_limit_arena, 256);

@@ -110,8 +110,8 @@ existing refinement-round ceiling apply.
   pop, but cannot participate without active frame or one-shot metadata.
 - Missing owners, observation conflicts, expired deadlines, failed fixed-point
   realization, or replay uncertainty return `Unknown`; they cannot yield SAT.
-- Array-valued parameters, nested/extended arrays, and online proof logging
-  remain deferred.
+- Nested Boolean relation flags are deferred to ADR-0091. Array-valued
+  parameters, nested/extended arrays, and online proof logging remain deferred.
 
 ## Soundness Argument
 
@@ -174,10 +174,9 @@ scalar summaries plus total model realization cover the required boundary.
 
 ### Add Boolean relation flags in the same step
 
-Deferred in dependency order. A flag's true branch needs the structural
-equality contract defined here, while its false branch can reuse ADR-0089's
-diff witness. Landing and validating the positive branch first keeps the next
-flag decision mechanical and independently auditable.
+Deferred in dependency order. A flag's true branch needs the structural equality
+contract defined here, while its false branch can reuse ADR-0089's diff witness.
+ADR-0091 subsequently lands the candidate-sensitive flag decision.
 
 ## Consequences
 
@@ -186,6 +185,6 @@ reuse the warm CNF/SAT state and produce replayed total models. Structural
 parents gain cached private model owners, and equality observations add a
 bounded cross-product surface over active relation/read indices.
 
-Arbitrary Boolean relation flags, array-valued parameters, memory BMC/
-k-induction, online array proofs, nested/extended arrays, and the remaining EVM
-performance gap remain later work.
+ADR-0091 subsequently closes arbitrary Boolean relation flags. Array-valued
+parameters, memory BMC/k-induction, online array proofs, nested/extended arrays,
+and the remaining EVM performance gap remain later work.

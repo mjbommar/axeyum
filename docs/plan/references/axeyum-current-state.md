@@ -74,9 +74,11 @@ triggered exact transitive summaries in its persistent CNF (ADR-0086/0087).
 Scalar-keyed array-valued UF applications also retain private array owners,
 conditional read congruence, and full-value result projection (ADR-0088). The
 warm path now merges projection-owned positive equality and gives top-level
-structural disequality one exact private diff witness (ADR-0089). The solver
-still rebuilds for general deferred theories; positive structural equality,
-Boolean relation flags, and array-valued parameters remain.
+structural disequality one exact private diff witness (ADR-0089), realizes
+positive structural equality through private owners (ADR-0090), and keeps nested
+Boolean array relation atoms warm through candidate-sensitive private flags
+(ADR-0091). The solver still rebuilds for general deferred theories;
+array-valued parameters remain.
 
 ## Performance posture (real numbers)
 Two committed public QF_BV slices (SMT-LIB 2024):

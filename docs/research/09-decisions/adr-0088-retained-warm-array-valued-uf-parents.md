@@ -160,8 +160,9 @@ array-first/function-second semantic order.
 The warm solver gains private array owners and must filter them from public
 models. Projection groups use full values and deterministic application order,
 and conditional congruence adds a bounded quadratic surface. Structural array
-equality/extensionality, array-valued parameters, proof artifacts, memory BMC/
-k-induction, and the remaining EVM performance gap remain later work.
+equality/extensionality follows in ADR-0089/0090, and nested Boolean relation
+flags follow in ADR-0091. Array-valued parameters, proof artifacts, memory
+BMC/k-induction, and the remaining EVM performance gap remain later work.
 
 ## Subsequent Decision
 
@@ -169,5 +170,6 @@ k-induction, and the remaining EVM performance gap remain later work.
 relation boundary for those private owners. Positive equality can merge symbol/
 application projection classes before function construction, while one exact
 private diff witness handles disequality across all supported structural
-parents. Positive structural equality, arbitrary Boolean relation flags, array-
-valued parameters, proofs, and the performance gap remain.
+parents. Positive structural equality follows in ADR-0090, and arbitrary Boolean
+relation flags follow in ADR-0091. Array-valued parameters, proofs, and the
+performance gap remain.

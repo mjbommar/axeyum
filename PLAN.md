@@ -3908,9 +3908,10 @@ Its conclusion, ranked by quality × efficiency:
    816 solver units, 77 symexec tests, the ADR-0088 suite, and complete EVM gates
    pass. Design/implementation commits `d891c901`/`70c8a15c` are on
    `origin/main`. EVM has no whole-array relation root, so no timing change is
-   claimed. ADR-0090 takes the positive structural-equality step next; Boolean
-   relation flags, array-valued parameters, memory BMC/k-induction, online proofs,
-   and the remaining performance gap stay open.
+   claimed. ADR-0090 takes the positive structural-equality step next, and
+   ADR-0091 subsequently lands Boolean relation flags. Array-valued parameters,
+   memory BMC/k-induction, online proofs, and the remaining performance gap stay
+   open.
    **Thirty-fifth follow-through:** ADR-0090 lands retained warm structural array
    equality. Top-level positive equality over supported store/constant/array-ITE
    parents now uses cached private constructor owners, bounded old/future shared-
@@ -3920,8 +3921,23 @@ Its conclusion, ranked by quality × efficiency:
    constants/store conflicts, selected/unselected ITE branches, array-result UF
    composition, push/pop and one-shot cores, Bool elements, BV256 components,
    exact limits, timeout, and a 64-seed warm/`check_auto` matrix. ADR-0090 is
-   accepted. Next: Boolean relation flags, array-valued parameters, memory BMC/
-   k-induction, online array proofs, and broader low-load aggregate timing.
+   accepted. ADR-0091 subsequently closes Boolean relation flags; array-valued
+   parameters, memory BMC/k-induction, online array proofs, and broader low-load
+   aggregate timing remain.
+   **Thirty-sixth follow-through:** ADR-0091 lands retained warm Boolean array
+   relation flags. Supported array equality atoms nested under scalar Boolean
+   structure now become private candidate-sensitive flags. The true branch adds
+   guarded paired-read equality observations and participates in owner merging
+   and structural realization only when the candidate assigns the flag true; the
+   false branch adds one guarded private diff witness. Existing and newly
+   introduced read indices are observed under the guard, private symbols stay
+   filtered, and replay gates SAT. Five focused relation-flag tests cover
+   forced-true structural equality, no-read total model projection, forced-false
+   disequality, conflict with an active equality, push/pop, one-shot cores, and
+   private filtering. The ADR-0088/0089/0090 suites remain green with stale
+   nested-Boolean deferrals converted to positive coverage. Next: array-valued
+   parameters, memory BMC/k-induction, online array proofs, and broader low-load
+   aggregate timing.
 2. **Keep a thin measured-leaf-BFS skirt in parallel** — measured-ROI leaves only
    (NRA tail, strings-Nielsen); fold the feature/scale-blocked leaves
    (dense-ILP MILP, large-LP performance) into a funded engine phase rather than

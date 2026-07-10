@@ -171,7 +171,8 @@ diff index is the exact existential witness used by standard array solvers.
 
 Deferred. That requires retained Boolean relation flags and candidate-sensitive
 positive/negative activation, naturally shared with the future warm equality
-bus. Literal roots establish the semantic and model boundary first.
+bus. Literal roots establish the semantic and model boundary first; ADR-0091
+subsequently closes this nested-Boolean boundary.
 
 ## Consequences
 
@@ -183,6 +184,7 @@ is compared with another owned array.
 Model construction must track active array-valued applications independently of
 observed reads and must merge positive equality classes before function-table
 projection. The arena gains private diff-index symbols, but public models and
-cores remain user-facing. Positive structural equality, Boolean relation flags,
-array-valued parameters, proof artifacts, memory BMC/k-induction, and the
-remaining EVM performance gap remain later work.
+cores remain user-facing. Positive structural equality lands in ADR-0090 and
+nested Boolean relation flags land in ADR-0091. Array-valued parameters, proof
+artifacts, memory BMC/k-induction, and the remaining EVM performance gap remain
+later work.

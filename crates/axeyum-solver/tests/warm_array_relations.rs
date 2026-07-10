@@ -298,7 +298,7 @@ fn deep_store_relation(arena: &mut TermArena, depth: usize) -> TermId {
 }
 
 #[test]
-fn unsupported_nested_boolean_and_one_over_depth_defer_cleanly() {
+fn nested_boolean_relation_flag_and_one_over_depth_are_clean() {
     let mut nested_arena = TermArena::new();
     let array_sort = bv_array_sort(8);
     let f = nested_arena
@@ -312,7 +312,7 @@ fn unsupported_nested_boolean_and_one_over_depth_defer_cleanly() {
     let equality = nested_arena.eq(fx, a).unwrap();
     let flag = nested_arena.bool_var("warm_relation_nested_flag").unwrap();
     let nested = nested_arena.or(flag, equality).unwrap();
-    assert!(!IncrementalBvSolver::term_supported_by_warm_abstraction(
+    assert!(IncrementalBvSolver::term_supported_by_warm_abstraction(
         &nested_arena,
         nested
     ));
@@ -320,8 +320,12 @@ fn unsupported_nested_boolean_and_one_over_depth_defer_cleanly() {
     nested_solver
         .assert_simplifying_memory(&mut nested_arena, nested)
         .unwrap();
-    assert!(nested_solver.has_deferred_theory_assertions());
-    assert_eq!(nested_solver.retained_warm_array_uf_app_count(), 0);
+    assert!(!nested_solver.has_deferred_theory_assertions());
+    assert_eq!(nested_solver.retained_warm_array_relation_flag_count(), 1);
+    assert_eq!(nested_solver.retained_warm_array_uf_app_count(), 1);
+    let result = nested_solver.check(&nested_arena).unwrap();
+    assert_eq!(verdict(&result), Verdict::Sat);
+    assert_replays(&nested_arena, &[nested], &result);
 
     let mut at_limit = TermArena::new();
     let relation = deep_store_relation(&mut at_limit, 256);
