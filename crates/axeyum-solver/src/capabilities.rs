@@ -231,17 +231,20 @@ pub const CAPABILITIES: &[Capability] = &[
                   candidate-guided lazy read-over-write, and bounded array equality/disequality \
                   observations with one diff witness per equality atom; equality flags retain their \
                   original array equality on the backtrackable e-graph, and candidate-true symbol \
-                  classes share one deterministic majority-default model; scalar UF applications in \
-                  indices/elements share the same exact BV + e-graph bus",
+                  classes share one deterministic majority-default model; direct base reads are \
+                  grouped by final e-class and candidate-violated cross-parent congruence is guarded \
+                  by the merge explanation; scalar UF applications in indices/elements share the \
+                  same exact BV + e-graph bus",
         assurance: Assurance::Validated,
         evidence: "every partial round is a relaxation, so UNSAT transfers; SAT requires \
-                   function-then-array projection and original-query replay. 790 solver-lib \
+                   function-then-array projection and original-query replay. 794 solver-lib \
                    tests plus 768 AUFBV online/eager/front-door/Z3 comparisons are clean; \
                    456 comparisons carry equality/disequality/store-equality/UF-index/transitive \
-                   shapes, including disjoint reads over a transitive SAT class. \
+                   shapes, including disjoint reads over a transitive SAT class. An 80-array/read \
+                   gate avoids the former direct-symbol equality-by-index preparation product. \
                    Public QF_ABV 187/193 and QF_AUFBV 49/53 at 1 s, DISAGREE=0; online probes \
                    use cloned arenas so fallback inputs remain pristine",
-        reference: "ADR-0071/0072/0073/0074/0077",
+        reference: "ADR-0071/0072/0073/0074/0077/0078",
     },
     Capability {
         area: "QF_UF",

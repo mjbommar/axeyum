@@ -125,6 +125,18 @@ impl EufTheory {
     /// indices stay aligned with the caller's atom numbering.
     #[must_use]
     pub fn new(arena: &TermArena, atom_terms: &[TermId]) -> Self {
+        Self::new_with_observed_terms(arena, atom_terms, &[])
+    }
+
+    /// Builds an online EUF theory and pre-registers additional terms whose final
+    /// e-class roots a cooperating theory needs to inspect. The observed terms do
+    /// not assert equalities or otherwise change congruence; they only ensure the
+    /// shared e-graph contains their structure.
+    pub(crate) fn new_with_observed_terms(
+        arena: &TermArena,
+        atom_terms: &[TermId],
+        observed_terms: &[TermId],
+    ) -> Self {
         let mut bridge = Bridge::new();
         let mut atoms = Vec::with_capacity(atom_terms.len());
         for &t in atom_terms {
@@ -139,6 +151,9 @@ impl EufTheory {
             };
             atoms.push(sides);
         }
+        for &term in observed_terms {
+            bridge.node(arena, term);
+        }
         let n = atoms.len();
         Self {
             bridge,
@@ -148,6 +163,50 @@ impl EufTheory {
             diseqs: Vec::new(),
             trail: Vec::new(),
         }
+    }
+
+    /// Returns each observed term's current class root plus the asserted equality
+    /// atom indices explaining its equality to that class's first observed term.
+    /// The explanation is empty for the representative itself.
+    pub(crate) fn observed_classes_with_reasons(
+        &self,
+        terms: &[TermId],
+    ) -> Vec<(ENodeId, Vec<usize>)> {
+        let nodes: Vec<ENodeId> = terms
+            .iter()
+            .map(|term| {
+                self.bridge
+                    .term_to_node
+                    .get(term)
+                    .copied()
+                    .expect("observed EUF term was registered at construction")
+            })
+            .collect();
+        let mut representatives: Vec<(ENodeId, ENodeId)> = Vec::new();
+        nodes
+            .into_iter()
+            .map(|node| {
+                let root = self.bridge.egraph.root(node);
+                let representative = if let Some((_, representative)) =
+                    representatives.iter().find(|(class, _)| *class == root)
+                {
+                    *representative
+                } else {
+                    representatives.push((root, node));
+                    node
+                };
+                let mut reasons: Vec<usize> = self
+                    .bridge
+                    .egraph
+                    .explain(node, representative)
+                    .into_iter()
+                    .map(|reason| reason as usize)
+                    .collect();
+                reasons.sort_unstable();
+                reasons.dedup();
+                (root, reasons)
+            })
+            .collect()
     }
 
     /// Sound EUF theory propagation: the unassigned equality atoms whose two sides

@@ -22,11 +22,14 @@
 //!
 //! The first round is the function-free relaxation. A SAT candidate is scanned for
 //! same-function applications with equal argument values and unequal result values,
-//! plus same-array selects with equal indices and unequal results, and store-read
-//! sites whose result violates read-over-write, plus equality flags inconsistent
-//! with an observed read or diff witness. Array flags retain their original array
-//! equality as the EUF atom, so equality transitivity and congruence are handled
-//! directly by the live backtrackable e-graph instead of by cross-diff observations.
+//! plus base-array selects whose parents share a final e-class and whose equal
+//! indices have unequal results, and store-read sites whose result violates
+//! read-over-write, plus equality flags inconsistent with an observed read or diff
+//! witness. Array flags retain their original array equality as the EUF atom, so
+//! equality transitivity and congruence are handled directly by the live
+//! backtrackable e-graph instead of by cross-diff observations. Cross-parent select
+//! lemmas carry the e-graph equality explanation as a Boolean guard, so they remain
+//! valid after another canonical round chooses a different branch.
 //! Only violated pairs/sites materialize argument/index/result equalities, hit/miss
 //! axioms, or extensionality instances for the next round. Congruent applications
 //! use the e-graph; array facts add valid implications directly to the Boolean
@@ -39,7 +42,8 @@
 //! - each partial interface set is a relaxation of full UF/array consistency, so
 //!   UNSAT from any round implies original-query UNSAT;
 //! - each materialized array implication is a valid select-congruence or
-//!   read-over-write instance;
+//!   read-over-write instance; cross-parent congruence is guarded by the equality
+//!   literals explaining the parent merge;
 //! - every BV conflict is a re-solved UNSAT conjunction of the reported active
 //!   literals;
 //! - every EUF conflict/propagation is an e-graph explanation;
@@ -51,6 +55,7 @@
 use std::collections::{HashMap, HashSet};
 use std::time::Instant;
 
+use axeyum_egraph::ENodeId;
 use axeyum_ir::{
     ArraySortKey, Assignment, FuncId, Op, Sort, SymbolId, TermArena, TermId, TermNode, TermStats,
     Value, eval,
@@ -102,6 +107,7 @@ struct CombinedApplication {
 #[derive(Debug, Clone)]
 struct CombinedSelect {
     array: SymbolId,
+    array_term: TermId,
     original_index: TermId,
     rewritten_index: TermId,
     fresh: SymbolId,
@@ -131,6 +137,22 @@ struct CombinedArrayEquality {
     lhs: TermId,
     rhs: TermId,
     observations: Vec<CombinedArrayEqualityObservation>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+struct ArraySelectAxiom {
+    left: usize,
+    right: usize,
+    /// Abstract equality atoms whose conjunction put the two array parents in one
+    /// e-class. Empty when both reads already have the same syntactic parent.
+    guard: Vec<TermId>,
+}
+
+struct SelectParentClass {
+    root: ENodeId,
+    /// Abstract equality atoms explaining this parent's equality to the first
+    /// observed parent in the class.
+    reasons: Vec<TermId>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -239,7 +261,10 @@ struct BooleanSkeleton {
 enum RoundResult {
     Unsat,
     Unknown(UnknownReason),
-    Sat(Assignment),
+    Sat {
+        assignment: Assignment,
+        select_parent_classes: Vec<SelectParentClass>,
+    },
 }
 
 #[derive(Debug, Default)]
@@ -249,6 +274,7 @@ struct InterfaceRefinementStats {
     pairs_added: usize,
     function_pairs_added: usize,
     array_pairs_added: usize,
+    parent_select_pairs_added: usize,
     row_axioms_added: usize,
     array_equality_axioms_added: usize,
     max_interface_atoms: usize,
@@ -696,7 +722,11 @@ fn build_and_solve_with_stats_impl(
     admit_input(arena, assertions, config, deadline, admit_arrays)?;
     let prepared = prepare_abstraction(arena, assertions, deadline, admit_arrays)?;
     let groups = application_groups(&prepared.applications);
-    let select_group_indices = select_groups(&prepared.selects);
+    let select_parent_terms: Vec<TermId> = prepared
+        .selects
+        .iter()
+        .map(|select| select.array_term)
+        .collect();
     let mut ground_values = GroundValueCache::default();
     let mut function_pairs = Vec::new();
     let mut array_pairs = Vec::new();
@@ -730,12 +760,22 @@ fn build_and_solve_with_stats_impl(
                 .filter(|&&candidate| candidate)
                 .count(),
         );
-        match solve_cdclt_round(arena, config, deadline, &round_assertions, atoms)? {
+        match solve_cdclt_round(
+            arena,
+            config,
+            deadline,
+            &round_assertions,
+            atoms,
+            &select_parent_terms,
+        )? {
             RoundResult::Unsat => return Ok((CheckResult::Unsat, stats)),
             RoundResult::Unknown(reason) => {
                 return Ok((CheckResult::Unknown(reason), stats));
             }
-            RoundResult::Sat(assignment) => {
+            RoundResult::Sat {
+                assignment,
+                select_parent_classes,
+            } => {
                 stats.sat_candidates += 1;
                 let violated_functions = violated_application_pairs(
                     arena,
@@ -749,7 +789,7 @@ fn build_and_solve_with_stats_impl(
                 let violated_arrays = violated_select_pairs(
                     arena,
                     &prepared.selects,
-                    &select_group_indices,
+                    &select_parent_classes,
                     &assignment,
                     &materialized_arrays,
                     &mut ground_values,
@@ -807,13 +847,17 @@ fn build_and_solve_with_stats_impl(
                         stats.function_pairs_added += 1;
                     }
                 }
-                for pair in violated_arrays {
+                for axiom in violated_arrays {
                     interface_count = interface_count.saturating_add(2);
                     if interface_count > MAX_INTERFACE_ATOMS {
                         return Ok((interface_limit_unknown(true), stats));
                     }
-                    if materialized_arrays.insert(pair) {
-                        array_pairs.push(pair);
+                    let pair = (axiom.left, axiom.right);
+                    if materialized_arrays.insert(axiom.clone()) {
+                        if prepared.selects[pair.0].array != prepared.selects[pair.1].array {
+                            stats.parent_select_pairs_added += 1;
+                        }
+                        array_pairs.push(axiom);
                         stats.pairs_added += 1;
                         stats.array_pairs_added += 1;
                     }
@@ -859,6 +903,7 @@ fn solve_cdclt_round(
     deadline: Option<Instant>,
     assertions: &[TermId],
     atoms: TheoryAtoms,
+    select_parent_terms: &[TermId],
 ) -> BuildResult<RoundResult> {
     let skeleton = encode_boolean_skeleton(arena, assertions, &atoms.abstracted, deadline)?;
 
@@ -867,7 +912,8 @@ fn solve_cdclt_round(
         negative_atoms.push(arena.not(atom)?);
     }
     let atom_count = atoms.original.len();
-    let euf = EufTheory::new(arena, &atoms.original);
+    let abstract_atoms = atoms.abstracted.clone();
+    let euf = EufTheory::new_with_observed_terms(arena, &atoms.original, select_parent_terms);
     let bv = BvTheory::new(
         arena,
         atoms.abstracted,
@@ -897,7 +943,24 @@ fn solve_cdclt_round(
             })
         }
         Outcome::Sat => match theory.bv.candidate_assignment() {
-            Ok(assignment) => RoundResult::Sat(assignment),
+            Ok(assignment) => {
+                let select_parent_classes = theory
+                    .euf
+                    .observed_classes_with_reasons(select_parent_terms)
+                    .into_iter()
+                    .map(|(root, reasons)| SelectParentClass {
+                        root,
+                        reasons: reasons
+                            .into_iter()
+                            .map(|atom| abstract_atoms[atom])
+                            .collect(),
+                    })
+                    .collect();
+                RoundResult::Sat {
+                    assignment,
+                    select_parent_classes,
+                }
+            }
             Err(reason) => RoundResult::Unknown(reason),
         },
     })
@@ -1062,12 +1125,16 @@ fn combine_row_sites(
     for site in row_sites {
         let rewritten_index = replace_subterms(arena, site.index, replacements, &mut memo)?;
         match site.kind {
-            RowKind::Var { array } => selects.push(CombinedSelect {
-                array,
-                original_index: site.index,
-                rewritten_index,
-                fresh: site.fresh,
-            }),
+            RowKind::Var { array } => {
+                let array_term = arena.var(array);
+                selects.push(CombinedSelect {
+                    array,
+                    array_term,
+                    original_index: site.index,
+                    rewritten_index,
+                    fresh: site.fresh,
+                });
+            }
             RowKind::Store {
                 store_index,
                 store_elem,
@@ -1212,7 +1279,7 @@ fn build_theory_atoms(
     arena: &mut TermArena,
     prepared: &PreparedAbstraction,
     function_pairs: &[(usize, usize)],
-    array_pairs: &[(usize, usize)],
+    array_pairs: &[ArraySelectAxiom],
     row_axioms: &[usize],
     array_equality_axioms: &[ArrayEqualityAxiom],
     deadline: Option<Instant>,
@@ -1317,13 +1384,16 @@ fn application_groups(applications: &[CombinedApplication]) -> Vec<(FuncId, Vec<
     groups
 }
 
-fn select_groups(selects: &[CombinedSelect]) -> Vec<(SymbolId, Vec<usize>)> {
-    let mut groups: Vec<(SymbolId, Vec<usize>)> = Vec::new();
-    for (index, select) in selects.iter().enumerate() {
-        if let Some((_, members)) = groups.iter_mut().find(|(array, _)| *array == select.array) {
+fn select_class_groups(classes: &[SelectParentClass]) -> Vec<(ENodeId, Vec<usize>)> {
+    let mut groups: Vec<(ENodeId, Vec<usize>)> = Vec::new();
+    for (index, class) in classes.iter().enumerate() {
+        if let Some((_, members)) = groups
+            .iter_mut()
+            .find(|(existing, _)| *existing == class.root)
+        {
             members.push(index);
         } else {
-            groups.push((select.array, vec![index]));
+            groups.push((class.root, vec![index]));
         }
     }
     groups
@@ -1369,14 +1439,15 @@ fn violated_application_pairs(
 fn violated_select_pairs(
     arena: &TermArena,
     selects: &[CombinedSelect],
-    groups: &[(SymbolId, Vec<usize>)],
+    classes: &[SelectParentClass],
     assignment: &Assignment,
-    materialized: &HashSet<(usize, usize)>,
+    materialized: &HashSet<ArraySelectAxiom>,
     ground_values: &mut GroundValueCache,
     deadline: Option<Instant>,
-) -> BuildResult<Vec<(usize, usize)>> {
+) -> BuildResult<Vec<ArraySelectAxiom>> {
+    debug_assert_eq!(selects.len(), classes.len());
     let mut violated = Vec::new();
-    for (_array, members) in groups {
+    for (_class, members) in select_class_groups(classes) {
         for left_pos in 0..members.len() {
             for right_pos in (left_pos + 1)..members.len() {
                 if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
@@ -1386,9 +1457,6 @@ fn violated_select_pairs(
                     ));
                 }
                 let pair = (members[left_pos], members[right_pos]);
-                if materialized.contains(&pair) {
-                    continue;
-                }
                 let left = &selects[pair.0];
                 let right = &selects[pair.1];
                 if ground_values.provably_distinct(arena, left.original_index, right.original_index)
@@ -1407,7 +1475,24 @@ fn violated_select_pairs(
                     (Some(left), Some(right)) if left != right
                 );
                 if indices_equal && results_differ {
-                    violated.push(pair);
+                    let guard = if left.array_term == right.array_term {
+                        Vec::new()
+                    } else {
+                        let mut guard = classes[pair.0].reasons.clone();
+                        guard.extend(classes[pair.1].reasons.iter().copied());
+                        guard.sort_unstable();
+                        guard.dedup();
+                        guard
+                    };
+                    debug_assert!(left.array_term == right.array_term || !guard.is_empty());
+                    let axiom = ArraySelectAxiom {
+                        left: pair.0,
+                        right: pair.1,
+                        guard,
+                    };
+                    if !materialized.contains(&axiom) {
+                        violated.push(axiom);
+                    }
                 }
             }
         }
@@ -1637,20 +1722,20 @@ fn add_interface_atoms(
 fn add_array_interface_atoms(
     arena: &mut TermArena,
     selects: &[CombinedSelect],
-    pairs: &[(usize, usize)],
+    axioms: &[ArraySelectAxiom],
     deadline: Option<Instant>,
     atoms: &mut AtomAccumulator,
     round_assertions: &mut Vec<TermId>,
 ) -> BuildResult<()> {
-    for &(left, right) in pairs {
+    for axiom in axioms {
         if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
             return Err(build_unknown(
                 UnknownKind::Timeout,
                 "online AUFBV deadline elapsed while building array interfaces",
             ));
         }
-        let left = &selects[left];
-        let right = &selects[right];
+        let left = &selects[axiom.left];
+        let right = &selects[axiom.right];
         let original_index_eq = arena.eq(left.original_index, right.original_index)?;
         let abstract_index_eq = arena.eq(left.rewritten_index, right.rewritten_index)?;
         atoms.register(arena, original_index_eq, abstract_index_eq, true)?;
@@ -1659,7 +1744,11 @@ fn add_array_interface_atoms(
         let right_result = arena.var(right.fresh);
         let result_eq = arena.eq(left_result, right_result)?;
         atoms.register(arena, result_eq, result_eq, true)?;
-        round_assertions.push(arena.implies(abstract_index_eq, result_eq)?);
+        let mut antecedent = abstract_index_eq;
+        for &guard in &axiom.guard {
+            antecedent = arena.and(guard, antecedent)?;
+        }
+        round_assertions.push(arena.implies(antecedent, result_eq)?);
     }
     Ok(())
 }
@@ -2475,11 +2564,11 @@ mod tests {
     }
 
     #[test]
-    fn array_equality_refines_observed_reads() {
+    fn merged_array_parents_schedule_select_congruence() {
         let mut arena = TermArena::new();
         let left = arena.array_var("dynamic_eq_left", 4, 8).unwrap();
         let right = arena.array_var("dynamic_eq_right", 4, 8).unwrap();
-        let index = arena.bv_var("dynamic_eq_index", 4).unwrap();
+        let index = arena.bv_const(4, 5).unwrap();
         let arrays_equal = arena.eq(left, right).unwrap();
         let left_read = arena.select(left, index).unwrap();
         let right_read = arena.select(right, index).unwrap();
@@ -2490,7 +2579,58 @@ mod tests {
         assert_eq!(result, CheckResult::Unsat);
         assert_eq!(stats.rounds, 2, "stats={stats:?}");
         assert_eq!(stats.sat_candidates, 1, "stats={stats:?}");
-        assert_eq!(stats.array_equality_axioms_added, 1, "stats={stats:?}");
+        assert_eq!(stats.parent_select_pairs_added, 1, "stats={stats:?}");
+        assert_eq!(stats.array_equality_axioms_added, 0, "stats={stats:?}");
+    }
+
+    #[test]
+    fn transitive_parent_merge_schedules_only_the_violated_endpoint_reads() {
+        let mut arena = TermArena::new();
+        let a = arena.array_var("dynamic_parent_a", 4, 8).unwrap();
+        let b = arena.array_var("dynamic_parent_b", 4, 8).unwrap();
+        let c = arena.array_var("dynamic_parent_c", 4, 8).unwrap();
+        let index = arena.bv_const(4, 5).unwrap();
+        let a_eq_b = arena.eq(a, b).unwrap();
+        let b_eq_c = arena.eq(b, c).unwrap();
+        let read_a = arena.select(a, index).unwrap();
+        let read_c = arena.select(c, index).unwrap();
+        let reads_equal = arena.eq(read_a, read_c).unwrap();
+        let reads_differ = arena.not(reads_equal).unwrap();
+
+        let (result, stats) =
+            dynamic_array_solve_stats(&mut arena, &[a_eq_b, b_eq_c, reads_differ]);
+        assert_eq!(result, CheckResult::Unsat, "stats={stats:?}");
+        assert_eq!(stats.rounds, 2, "stats={stats:?}");
+        assert_eq!(stats.parent_select_pairs_added, 1, "stats={stats:?}");
+        assert_eq!(stats.array_equality_axioms_added, 0, "stats={stats:?}");
+    }
+
+    #[test]
+    fn direct_symbol_equalities_do_not_prepare_the_query_index_cross_product() {
+        let mut arena = TermArena::new();
+        let arrays: Vec<_> = (0..80)
+            .map(|index| {
+                arena
+                    .array_var(&format!("dynamic_parent_scale_{index}"), 8, 8)
+                    .unwrap()
+            })
+            .collect();
+        let zero = arena.bv_const(8, 0).unwrap();
+        let mut assertions = Vec::new();
+        for pair in arrays.windows(2) {
+            assertions.push(arena.eq(pair[0], pair[1]).unwrap());
+        }
+        for (index, &array) in arrays.iter().enumerate() {
+            let index = arena.bv_const(8, index as u128).unwrap();
+            let read = arena.select(array, index).unwrap();
+            assertions.push(arena.eq(read, zero).unwrap());
+        }
+
+        let (result, stats) = dynamic_array_solve_stats(&mut arena, &assertions);
+        assert!(matches!(result, CheckResult::Sat(_)), "stats={stats:?}");
+        assert_eq!(stats.rounds, 1, "stats={stats:?}");
+        assert_eq!(stats.parent_select_pairs_added, 0, "stats={stats:?}");
+        assert_eq!(stats.array_equality_axioms_added, 0, "stats={stats:?}");
     }
 
     #[test]
@@ -2552,6 +2692,61 @@ mod tests {
         assert_eq!(eval(&arena, a_ne_b, &assignment), Ok(Value::Bool(true)));
         assert_eq!(eval(&arena, a_eq_c, &assignment), Ok(Value::Bool(true)));
         assert_eq!(eval(&arena, a, &assignment), eval(&arena, c, &assignment));
+    }
+
+    #[test]
+    fn parent_select_axiom_is_guarded_across_boolean_array_branches() {
+        let mut arena = TermArena::new();
+        let a = arena.array_var("dynamic_guard_a", 4, 8).unwrap();
+        let b = arena.array_var("dynamic_guard_b", 4, 8).unwrap();
+        let c = arena.array_var("dynamic_guard_c", 4, 8).unwrap();
+        let index = arena.bv_const(4, 5).unwrap();
+        let a_eq_b = arena.eq(a, b).unwrap();
+        let a_eq_c = arena.eq(a, c).unwrap();
+        let choice = arena.or(a_eq_b, a_eq_c).unwrap();
+        let read_a = arena.select(a, index).unwrap();
+        let read_b = arena.select(b, index).unwrap();
+        let reads_equal = arena.eq(read_a, read_b).unwrap();
+        let reads_differ = arena.not(reads_equal).unwrap();
+
+        let (result, stats) = dynamic_array_solve_stats(&mut arena, &[choice, reads_differ]);
+        let CheckResult::Sat(model) = result else {
+            panic!("expected the alternate array-equality branch, stats={stats:?}");
+        };
+        let assignment = model.to_assignment();
+        assert_eq!(eval(&arena, choice, &assignment), Ok(Value::Bool(true)));
+        assert_eq!(
+            eval(&arena, reads_differ, &assignment),
+            Ok(Value::Bool(true))
+        );
+        assert_eq!(eval(&arena, a_eq_b, &assignment), Ok(Value::Bool(false)));
+        assert_eq!(eval(&arena, a_eq_c, &assignment), Ok(Value::Bool(true)));
+        assert!(stats.parent_select_pairs_added >= 1, "stats={stats:?}");
+    }
+
+    #[test]
+    fn parent_select_pair_reschedules_for_an_alternate_equality_explanation() {
+        let mut arena = TermArena::new();
+        let a = arena.array_var("dynamic_reguard_a", 4, 8).unwrap();
+        let b = arena.array_var("dynamic_reguard_b", 4, 8).unwrap();
+        let c = arena.array_var("dynamic_reguard_c", 4, 8).unwrap();
+        let d = arena.array_var("dynamic_reguard_d", 4, 8).unwrap();
+        let index = arena.bv_const(4, 5).unwrap();
+        let a_eq_c = arena.eq(a, c).unwrap();
+        let c_eq_b = arena.eq(c, b).unwrap();
+        let a_eq_d = arena.eq(a, d).unwrap();
+        let d_eq_b = arena.eq(d, b).unwrap();
+        let path_c = arena.and(a_eq_c, c_eq_b).unwrap();
+        let path_d = arena.and(a_eq_d, d_eq_b).unwrap();
+        let choice = arena.or(path_c, path_d).unwrap();
+        let read_a = arena.select(a, index).unwrap();
+        let read_b = arena.select(b, index).unwrap();
+        let reads_equal = arena.eq(read_a, read_b).unwrap();
+        let reads_differ = arena.not(reads_equal).unwrap();
+
+        let (result, stats) = dynamic_array_solve_stats(&mut arena, &[choice, reads_differ]);
+        assert_eq!(result, CheckResult::Unsat, "stats={stats:?}");
+        assert!(stats.parent_select_pairs_added >= 2, "stats={stats:?}");
     }
 
     #[test]
@@ -2697,7 +2892,7 @@ mod tests {
     }
 
     #[test]
-    fn array_equality_shares_uf_bearing_observations() {
+    fn parent_select_hook_shares_uf_bearing_indices() {
         let mut arena = TermArena::new();
         let left = arena.array_var("dynamic_eq_uf_left", 4, 8).unwrap();
         let right = arena.array_var("dynamic_eq_uf_right", 4, 8).unwrap();
@@ -2724,7 +2919,8 @@ mod tests {
         assert_eq!(result, CheckResult::Unsat);
         assert!(stats.rounds <= 5, "stats={stats:?}");
         assert!(stats.function_pairs_added >= 1, "stats={stats:?}");
-        assert!(stats.array_equality_axioms_added >= 1, "stats={stats:?}");
+        assert!(stats.parent_select_pairs_added >= 1, "stats={stats:?}");
+        assert_eq!(stats.array_equality_axioms_added, 0, "stats={stats:?}");
     }
 
     #[test]

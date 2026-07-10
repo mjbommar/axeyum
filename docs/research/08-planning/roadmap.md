@@ -337,17 +337,17 @@ Progress update (2026-07-10): ADR-0071 adds replay-guided base-select congruence
 on canonical `CdclT`; ADR-0072 reuses the shared ROW abstraction and materializes
 only candidate-violated store hit/miss axioms. Both compose with dynamic UFBV
 interfaces and function-then-array projection. Public QF_ABV/QF_AUFBV runs
-remain DISAGREE=0 with zero replay failures. This is not phase exit: parent-
-select/ROW/default scheduling on class merges, non-symbol class models, and the
-warm memory path remain.
+remain DISAGREE=0 with zero replay failures. This is not phase exit: structural
+parent/ROW/default scheduling on class merges, non-symbol class models, dynamic
+in-search insertion, and the warm memory path remain.
 
 ADR-0073 adds candidate-guided array equality: one bounded diff witness per
 equality flag plus observed query/store indices, with only violated congruence or
 witness instances materialized. ADR-0076 expands the 768-comparison matrix to
 456 equality-bearing cases and it remains clean. ADR-0077 subsequently makes
 ordinary equality live on `EufTheory`. Full phase exit still requires parent-
-select merge scheduling, scalable non-symbol class models, warm reuse, and proof
-integration.
+select scheduling beyond direct base symbols, scalable non-symbol class models,
+warm reuse, and proof integration.
 
 ADR-0074 adds deterministic majority-default array projection shared by the
 canonical and fallback routes. Votes count distinct observed indices; stable
@@ -375,6 +375,16 @@ reflexive/transitive/congruent array conflicts directly, including the former
 also share one majority-default projected model, closing transitive SAT replay
 with disjoint reads. Parent-select merge scheduling, non-symbol/warm class model
 ownership, and proof integration remain before phase exit.
+
+ADR-0078 adds explanation-guarded base-parent select scheduling. Read parents are
+pre-registered on `EufTheory`; final candidate e-classes schedule only violated
+equal-index/unequal-result pairs. Cross-parent lemmas carry the exact equality
+explanation as a guard, so rebuilt rounds and Boolean backtracking remain sound.
+Direct-symbol equality no longer prepares every query index, and an 80-array/read
+gate stays below the previous 4,096-site failure boundary. All 794 solver tests,
+768 comparisons, and public QF_ABV 187/193 / QF_AUFBV 49/53 decisions remain
+clean. Structural store/ITE/default/ROW scheduling, dynamic insertion, warm reuse,
+non-symbol models, and proof integration remain before phase exit.
 
 Implementation note: a first infosec-workflow client example landed early
 (2026-06-13), ahead of arrays — a register-VM symbolic executor over

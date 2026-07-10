@@ -50,9 +50,10 @@ Out of scope:
     array track end to end. Array equality is no longer wholly deferred:
     canonical ABV/AUFBV has bounded diff witnesses and candidate-guided observed
     reads; each flag retains its original equality on live backtrackable
-    `EufTheory`, and true direct-symbol classes share one replayed model
-    (ADR-0073/0077). Parent-select merge scheduling, non-symbol/warm class models,
-    and broader array operators remain. See
+    `EufTheory`, true direct-symbol classes share one replayed model, and
+    candidate-violated base reads follow explanation-guarded final e-class merges
+    (ADR-0073/0077/0078). Structural parent/default/ROW scheduling, non-symbol/warm
+    class models, and broader array operators remain. See
     [ADR-0013](../09-decisions/adr-0013-uninterpreted-functions.md).
 - [ ] How should undefined or partial operations be represented?
 - [ ] What public support matrix should define the first release boundary

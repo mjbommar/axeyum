@@ -3755,8 +3755,21 @@ Its conclusion, ranked by quality × efficiency:
    shared majority-default model; a transitive SAT class with disjoint reads now
    replays. The strengthened 768-comparison matrix remains clean (456 equality-
    bearing), and public 1 s results remain QF_ABV 187/193 at 84 ms and QF_AUFBV
-   49/53 at 205 ms, with zero disagreements/replay failures. Next: parent-select
-   merge scheduling, store/ITE/array-valued-UF class models, warm reuse, full
+   49/53 at 205 ms, with zero disagreements/replay failures. **Twenty-third
+   follow-through:** explanation-guarded base-parent select scheduling is live
+   (ADR-0078). Base read parents are pre-registered on `EufTheory`; final live
+   classes schedule only candidate equal-index/unequal-result pairs. A
+   cross-parent lemma carries the exact merge explanation as its guard, so a
+   rebuilt round can backtrack to another equality branch without retaining an
+   invalid unconditional result equality. Direct-symbol equalities no longer
+   prepare every query index: the new 80-array/80-read gate replays SAT in one
+   round below the former 4,096-site failure boundary. Direct, transitive,
+   UF-index, and Boolean-backtracking gates pass; structural store equality still
+   uses ROW plus its retained observation. All 794 solver tests and 768
+   comparisons pass. Public 1 s results remain QF_ABV 187/193 at 84 ms and
+   QF_AUFBV 49/53 at 206 ms, with zero disagreements/replay failures. Next:
+   store/ITE/default/ROW parent events with dynamic in-search insertion,
+   store/ITE/array-valued-UF class models, warm reuse, full
    ROW/diff-witness/equality-chain proof logging, and opaque-heavy arithmetic
    model exchange.
 2. **Keep a thin measured-leaf-BFS skirt in parallel** — measured-ROI leaves only

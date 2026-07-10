@@ -2507,12 +2507,12 @@ pub(crate) fn abstract_rows_for_online(
 }
 
 /// Prepares a bounded set of shared-index observations for every abstracted
-/// array equality. Each atom receives one diff witness. Existing query-read and
-/// store indices are also observed so a true equality can refine only the
-/// concrete indices already relevant to the query. The canonical route retains
-/// each flag's original equality for EUF transitivity, so diff indices do not need
-/// to be crossed between equality atoms. Parent-select merge scheduling remains
-/// P2.2.
+/// array equality. Each atom receives one diff witness. Equalities involving a
+/// structural array term also retain existing query/store indices for ROW
+/// interaction. Direct-symbol equalities leave query reads to the canonical
+/// parent-select hook: once their e-classes merge, only a candidate-violated read
+/// pair is materialized. This avoids prebuilding the equality-by-query-index cross
+/// product while retaining the witness required by a false equality.
 fn prepare_online_array_equalities(
     arena: &mut TermArena,
     ctx: &mut RowCtx,
@@ -2527,7 +2527,15 @@ fn prepare_online_array_equalities(
     }
     let mut observed_indices: Vec<Vec<TermId>> = atoms
         .iter()
-        .map(|&(_flag, lhs, rhs)| read_indices_for(arena, ctx, lhs, rhs))
+        .map(|&(_flag, lhs, rhs)| {
+            if matches!(arena.node(lhs), TermNode::Symbol(_))
+                && matches!(arena.node(rhs), TermNode::Symbol(_))
+            {
+                Vec::new()
+            } else {
+                read_indices_for(arena, ctx, lhs, rhs)
+            }
+        })
         .collect();
     let mut diff_indices = Vec::with_capacity(atoms.len());
     for &(_flag, lhs, _rhs) in &atoms {
