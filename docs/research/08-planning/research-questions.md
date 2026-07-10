@@ -52,13 +52,14 @@ Out of scope:
     reads; each flag retains its original equality on live backtrackable
     `EufTheory`, true direct-symbol classes share one replayed model, and
     candidate-violated base and store-parent reads follow explanation-guarded
-    final e-class merges (ADR-0073/0077/0078/0080). Violated local ROW sites now
-    reserve bounded atoms and insert permanent clauses inside the same canonical
-    search (ADR-0081). Canonical finite-scalar
+    final e-class merges (ADR-0073/0077/0078/0080). Violated local ROW sites and
+    pair-generated UF/select/extensionality scalar interfaces now append or
+    activate aligned theory atoms and permanent clauses inside the same retained
+    canonical search (ADR-0081/0082). Canonical finite-scalar
     admission now covers Bool or BitVec independently at each component while
     other component theories still decline (ADR-0079). Array-valued
-    ITE/default/UF and pair-generating merge events, general dynamic atom growth,
-    non-symbol/warm class models, and broader array operators remain. See
+    ITE/default/UF events that require new e-graph terms, non-symbol/warm class
+    models, and broader array operators remain. See
     [ADR-0013](../09-decisions/adr-0013-uninterpreted-functions.md).
 - [ ] How should undefined or partial operations be represented?
 - [ ] What public support matrix should define the first release boundary

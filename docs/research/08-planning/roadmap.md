@@ -384,9 +384,10 @@ Direct-symbol equality no longer prepares every query index, and an 80-array/rea
 gate stays below the previous 4,096-site failure boundary. All 794 solver tests,
 768 comparisons, and public QF_ABV 187/193 / QF_AUFBV 49/53 decisions remain
 clean. ADR-0080 subsequently adds structural store parents and ADR-0081 inserts
-bounded local ROW inside one search. Structural ITE/default/UF events,
-pair-generating dynamic atoms, warm reuse, non-symbol models, and proof
-integration remain before phase exit.
+bounded local ROW inside one search. ADR-0082 subsequently moves pair-generated
+UF/select/extensionality scalar interfaces into that retained search. Structural
+ITE/default/UF events that require new e-graph terms, warm reuse, non-symbol
+models, and proof integration remain before phase exit.
 
 ADR-0079 admits every finite Bool/BitVec array component combination to the same
 canonical route. Generic mixed-component models replay, Bool-only UF+array
@@ -413,6 +414,19 @@ pinned, and a UF-bearing index reuses the aligned e-graph atom. The expanded
 1,920-comparison belt and all 807 solver tests are clean. Pair-generating
 UF/select/extensionality events still rebuild outer rounds; array-valued
 ITE/default/UF events, general dynamic atom growth, non-symbol/warm models, proof
+integration, and the low-load aggregate remain.
+
+ADR-0082 generalizes retained-search growth to pair-generated scalar interface
+equalities. `CdclT` now maps SAT variables explicitly to theory atoms, so an atom
+appended after Tseitin auxiliaries does not renumber existing state. `EufTheory`
+registers equality atoms only over pre-observed terms, the exact BV component
+owns the arena clone needed to intern abstract equalities, and both remain atom-
+index aligned with the driver. Function congruence, explanation-guarded base/
+store-parent select clauses, and bounded array-equality observations now refine
+inside one canonical search; the previous two/three-round mechanism gates pin
+one round. The expanded 2,304-comparison belt, all 809 solver tests, and the 11-
+test differential binary are clean. Array-valued ITE/default/UF and merge-
+triggered events requiring new e-graph nodes, non-symbol/warm models, proof
 integration, and the low-load aggregate remain.
 
 Implementation note: a first infosec-workflow client example landed early

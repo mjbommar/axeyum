@@ -3,6 +3,11 @@
 Status: accepted
 Date: 2026-07-10
 
+Follow-up: [ADR-0082](adr-0082-bounded-dynamic-interface-atoms.md) generalizes
+the retained-search mechanism to pair-generated UF, parent-select, and bounded
+array-equality atoms. This ADR remains the decision and evidence record for the
+earlier bounded-reservation ROW slice.
+
 ## Context
 
 ADR-0072 made read-over-write candidate-guided, but each violated store site

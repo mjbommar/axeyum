@@ -3798,7 +3798,23 @@ Its conclusion, ranked by quality × efficiency:
    events with general dynamic atom insertion, store/ITE/array-valued-UF class
    models, warm reuse, full ROW/diff-witness/equality-chain proof logging,
    opaque-heavy arithmetic model exchange, and the low-load public aggregate
-   remeasure.
+   remeasure. **Twenty-seventh follow-through:** ADR-0082 lands the general
+   bounded scalar-interface insertion required by that next step. `CdclT` now
+   maps appended SAT variables explicitly to theory atoms, so atoms created
+   after Tseitin auxiliaries preserve all existing clause/trail/reason indices.
+   `EufTheory` grows equality atoms only over pre-observed sides, while exact BV
+   owns the arena clone and extends aligned atom state. Candidate-violated
+   function, explanation-guarded base/store-select, and bounded array-equality/
+   extensionality refinements now resume the same canonical search with learned
+   clauses, phases, activities, e-graph state, and warm BV state retained. The
+   former two/three-round controls pin one round; the new 384-comparison dynamic-
+   interface matrix brings the clean total to 2,304, and all 809 solver tests
+   plus the 11-test differential binary pass. Commit `39cc92ce` passed the exact-
+   SHA pre-push gate and is on `origin/main`. Next: array-valued ITE/default/UF
+   and merge-triggered events requiring new e-graph terms, store/ITE/array-valued-
+   UF class models, warm reuse, full ROW/diff-witness/equality-chain proof
+   logging, opaque-heavy arithmetic model exchange, and the low-load public
+   aggregate remeasure.
 2. **Keep a thin measured-leaf-BFS skirt in parallel** — measured-ROI leaves only
    (NRA tail, strings-Nielsen); fold the feature/scale-blocked leaves
    (dense-ILP MILP, large-LP performance) into a funded engine phase rather than

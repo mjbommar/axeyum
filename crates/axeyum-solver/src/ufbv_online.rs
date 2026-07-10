@@ -8,12 +8,12 @@
 //! replaced by fresh
 //! scalar symbols through [`axeyum_rewrite::abstract_functions`], also without
 //! eager Ackermann constraints.
-//! The Boolean structure is Tseitin-encoded once per canonical round. The first
-//! block of Boolean variables denotes every semantic Bool/BV atom plus the
-//! currently materialized pair-generated interface equalities for same-function
-//! application arguments and results. Each store-read site also reserves its three
-//! bounded local read-over-write atoms; newly reserved atoms stay dormant until a
-//! violated site activates them.
+//! The Boolean structure is Tseitin-encoded once. Initial semantic atoms occupy the
+//! first Boolean-variable block and each store-read site reserves its three bounded
+//! local read-over-write atoms. Pair-generated equalities are not precomputed: a
+//! violated candidate appends them after any existing Tseitin variables, and
+//! [`crate::cdclt::CdclT`] maps those SAT variables explicitly to aligned theory
+//! atoms.
 //!
 //! Each canonical CDCL(T) round drives two theories in lockstep:
 //! - [`crate::euf_egraph::EufTheory`] owns congruence over the original terms;
@@ -22,7 +22,7 @@
 //!   back to a sound active theory-literal core whenever that conjunction is
 //!   bit-vector UNSAT.
 //!
-//! The first round is the function-free relaxation. A SAT candidate is scanned for
+//! The initial search is the function-free relaxation. A SAT candidate is scanned for
 //! same-function applications with equal argument values and unequal result values,
 //! plus base- or store-parent selects whose parents share a final e-class and
 //! whose equal indices have unequal results, and store-read sites whose result violates
@@ -31,18 +31,20 @@
 //! equality transitivity and congruence are handled directly by the live
 //! backtrackable e-graph instead of by cross-diff observations. Cross-parent select
 //! lemmas carry the e-graph equality explanation as a Boolean guard, so they remain
-//! valid after another canonical round chooses a different branch.
+//! valid after backtracking chooses a different branch.
 //! A violated store-read site inserts its two read-over-write clauses permanently
 //! into the live [`crate::cdclt::CdclT`] instance, activates the site's reserved
 //! atoms, and resumes with learned clauses, phase state, and activities retained.
 //! Violated function pairs, cross-parent select pairs, and array-extensionality
-//! observations can create atoms not bounded per local site, so those refinements
-//! still materialize argument/index/result equalities for the next canonical round.
-//! Congruent applications use the e-graph; array facts add valid implications
-//! directly to the Boolean skeleton. Exact BV owns every scalar atom.
-//! The loop reaches a replaying model, relaxation UNSAT, or explicit
-//! round/interface/deadline bounds. Eager reductions remain fallbacks and
-//! differential oracles.
+//! observations append only the required argument/index/result equalities to the
+//! same search. The e-graph sides are pre-observed, so dynamic atom registration
+//! adds no e-nodes while decision scopes are open; the exact BV component owns an
+//! arena clone in which it interns the abstract equality and negation. Congruent
+//! applications use e-graph semantics, while array facts add valid permanent
+//! implications directly to the Boolean skeleton. The retained search reaches a
+//! replaying model, relaxation UNSAT, or explicit interface/theory/Boolean/final-
+//! check/deadline bounds. Eager reductions remain fallbacks and differential
+//! oracles.
 //!
 //! Soundness:
 //! - each partial interface set is a relaxation of full UF/array consistency, so
@@ -52,6 +54,9 @@
 //!   literals explaining the parent merge;
 //! - dormant reserved ROW atoms are neither branch candidates nor theory
 //!   propagations until a valid permanent ROW clause activates them;
+//! - dynamically appended atoms are equalities over pre-observed e-graph terms,
+//!   and the explicit SAT-variable/theory-atom map preserves every existing
+//!   trail, clause, and reason index;
 //! - every BV conflict is a re-solved UNSAT conjunction of the reported active
 //!   literals;
 //! - every EUF conflict/propagation is an e-graph explanation;
@@ -87,8 +92,8 @@ const MAX_INPUT_DEPTH: u64 = 4_096;
 const MAX_THEORY_ATOMS: usize = 1_024;
 /// Maximum materialized interface equalities before bounded refinement declines.
 const MAX_INTERFACE_ATOMS: usize = 512;
-/// Maximum canonical-driver rebuilds while materializing violated interface pairs.
-const MAX_INTERFACE_REFINEMENT_ROUNDS: usize = 64;
+/// Maximum retained-search final checks or defensive canonical rebuilds.
+const MAX_INTERFACE_REFINEMENTS: usize = 64;
 /// Maximum Boolean variables after Tseitin encoding.
 const MAX_BOOLEAN_VARIABLES: usize = 8_192;
 /// Maximum Boolean clauses after Tseitin encoding.
@@ -1104,12 +1109,12 @@ fn build_and_solve_with_stats_impl(
                         stats,
                     ));
                 }
-                if stats.rounds >= MAX_INTERFACE_REFINEMENT_ROUNDS {
+                if stats.rounds >= MAX_INTERFACE_REFINEMENTS {
                     return Ok((
                         unknown(
                             UnknownKind::ResourceLimit,
                             format!(
-                                "online UFBV interface refinement exceeded {MAX_INTERFACE_REFINEMENT_ROUNDS} rounds"
+                                "online UFBV interface refinement exceeded {MAX_INTERFACE_REFINEMENTS} steps"
                             ),
                         ),
                         stats,
@@ -1388,12 +1393,12 @@ fn solve_cdclt_round(
                     theory.bv.propagation_candidate_count(),
                 ));
             }
-            if progress.interface_refinements >= MAX_INTERFACE_REFINEMENT_ROUNDS {
+            if progress.interface_refinements >= MAX_INTERFACE_REFINEMENTS {
                 return Ok(progress.finish(
                     RoundOutcome::Unknown(UnknownReason {
                         kind: UnknownKind::ResourceLimit,
                         detail: format!(
-                            "online UFBV in-search interface refinement exceeded {MAX_INTERFACE_REFINEMENT_ROUNDS} final checks"
+                            "online UFBV in-search interface refinement exceeded {MAX_INTERFACE_REFINEMENTS} final checks"
                         ),
                     }),
                     theory.bv.propagation_candidate_count(),
@@ -1438,12 +1443,12 @@ fn solve_cdclt_round(
                     theory.bv.propagation_candidate_count(),
                 ));
             }
-            if progress.interface_refinements >= MAX_INTERFACE_REFINEMENT_ROUNDS {
+            if progress.interface_refinements >= MAX_INTERFACE_REFINEMENTS {
                 return Ok(progress.finish(
                     RoundOutcome::Unknown(UnknownReason {
                         kind: UnknownKind::ResourceLimit,
                         detail: format!(
-                            "online AUFBV in-search interface refinement exceeded {MAX_INTERFACE_REFINEMENT_ROUNDS} final checks"
+                            "online AUFBV in-search interface refinement exceeded {MAX_INTERFACE_REFINEMENTS} final checks"
                         ),
                     }),
                     theory.bv.propagation_candidate_count(),

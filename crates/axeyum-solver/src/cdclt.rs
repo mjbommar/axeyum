@@ -12,13 +12,15 @@
 //! EUF, strings, pure LIA/LRA, and the live EUF+LIA/EUF+LRA combined theories; the
 //! adapters retain responsibility for model construction and original-assertion replay.
 //!
-//! Final-check refinements may reserve Boolean variables without exposing them to
-//! branching or theory propagation. [`CdclT::add_permanent_clause`] activates the
-//! reserved variables named by a valid refinement clause, preserves the current
-//! learned-clause database, phase state, and variable activities, and lets the next
-//! [`CdclT::solve`] call resume from the retained search state. This supports
-//! same-search theory growth when all prospective atoms can be bounded and reserved
-//! before search begins.
+//! Final-check refinements may reserve Boolean variables before search or append
+//! dormant theory variables after search has started. Initial theory atoms occupy
+//! the first SAT-variable slots, but appended atoms can follow Tseitin auxiliaries;
+//! an explicit bidirectional map keeps SAT variables and theory atom indices aligned.
+//! [`CdclT::add_permanent_clause`] activates the variables named by a valid
+//! refinement clause, preserves the current learned-clause database, phase state,
+//! and variable activities, and lets the next [`CdclT::solve`] call resume from the
+//! retained search state. A caller may also activate appended atoms directly when
+//! their semantics are enforced by the theory itself, as with EUF congruence.
 //!
 //! ## Conflict learning — 1-UIP over the mixed implication graph
 //! Both Boolean input clauses and theory clauses (a theory conflict `¬⋀core` or a
@@ -45,8 +47,9 @@
 //!   resolvents are tombstoned. Original clauses, low-LBD glue clauses, and every
 //!   clause currently serving as a trail reason are retained. Dynamically inserted
 //!   permanent clauses are theory-valid constraints and are retained with the input
-//!   clauses; dormant variables cannot affect search until such a clause activates
-//!   them.
+//!   clauses; dormant variables cannot affect search until a valid refinement
+//!   activates them. Appending a mapped theory variable does not renumber any
+//!   existing SAT variable, clause, trail entry, or learned reason.
 //! - Deterministic: conflict-side VSIDS selects the highest-activity unassigned
 //!   variable with lowest-index ties, phase saving reuses its last polarity, Luby
 //!   restarts are a pure function of conflict count, and LBD reduction uses a total
