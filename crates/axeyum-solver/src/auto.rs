@@ -22,7 +22,8 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use axeyum_ir::{
-    Assignment, Op, Rational, Sort, SymbolId, TermArena, TermId, TermNode, Value, eval,
+    ArraySortKey, Assignment, Op, Rational, Sort, SymbolId, TermArena, TermId, TermNode, Value,
+    eval,
 };
 use axeyum_rewrite::{
     DEFAULT_SOLVE_EQS_FUEL, ModelReconstructionTrail, QuantExpandError, build_app,
@@ -1814,10 +1815,10 @@ fn dispatch_ufbv_online(
     rec: &mut Recorder<'_>,
 ) -> Result<Option<CheckResult>, SolverError> {
     if !features.has_function
-        || !features.has_bv_or_float
+        || (!features.has_bv_or_float && !features.has_array)
         || features.has_int
         || features.has_real
-        || features.has_non_bv_array
+        || features.has_non_bool_bv_array
         || features.has_uninterpreted_sort
         || features.has_datatype
     {
@@ -2507,7 +2508,7 @@ fn dispatch_abv_online(
     if features.has_function
         || features.has_int
         || features.has_real
-        || features.has_non_bv_array
+        || features.has_non_bool_bv_array
         || features.has_uninterpreted_sort
         || features.has_datatype
     {
@@ -5648,6 +5649,8 @@ struct Features {
     has_array: bool,
     /// Any array whose index or element sort is not a bit-vector.
     has_non_bv_array: bool,
+    /// Any array whose index or element sort is outside exact Bool/BitVec theory.
+    has_non_bool_bv_array: bool,
 }
 
 impl Features {
@@ -5666,6 +5669,7 @@ impl Features {
             has_uninterpreted_sort: false,
             has_array: false,
             has_non_bv_array: false,
+            has_non_bool_bv_array: false,
         };
         let mut seen = BTreeSet::new();
         let mut stack = assertions.to_vec();
@@ -5715,6 +5719,11 @@ impl Features {
                 self.has_array = true;
                 if sort.array_widths().is_none() {
                     self.has_non_bv_array = true;
+                }
+                if !matches!(index, ArraySortKey::Bool | ArraySortKey::BitVec(_))
+                    || !matches!(element, ArraySortKey::Bool | ArraySortKey::BitVec(_))
+                {
+                    self.has_non_bool_bv_array = true;
                 }
                 self.note_sort(index.to_sort());
                 self.note_sort(element.to_sort());

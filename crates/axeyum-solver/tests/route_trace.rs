@@ -402,6 +402,73 @@ fn qf_abv_front_door_uses_online_combination() {
 }
 
 #[test]
+fn bool_array_public_regression_uses_online_combination() {
+    let cfg = SolverConfig::default();
+    let mut arena = TermArena::new();
+    let array = arena
+        .array_var_with_sorts("a", Sort::Bool, Sort::Bool)
+        .unwrap();
+    let b = arena.bool_var("b").unwrap();
+    let c = arena.bool_var("c").unwrap();
+    let d = arena.bool_var("d").unwrap();
+    let true_term = arena.bool_const(true);
+    let false_term = arena.bool_const(false);
+    let constant_true = arena
+        .const_array_with_index_sort(Sort::Bool, true_term)
+        .unwrap();
+    let first_store = arena.store(constant_true, true_term, false_term).unwrap();
+    let left = arena.store(first_store, false_term, false_term).unwrap();
+    let right = arena.store(array, b, c).unwrap();
+    let arrays_equal = arena.eq(left, right).unwrap();
+    let read = arena.select(array, c).unwrap();
+    let d_is_read = arena.eq(d, read).unwrap();
+
+    let (result, trace) =
+        check_auto_explained(&mut arena, &[arrays_equal, b, d_is_read, d], &cfg).unwrap();
+
+    assert_eq!(result, CheckResult::Unsat);
+    let last = trace.last().expect("non-empty trace");
+    assert_eq!(last.route, "abv-online-cdclt", "trace:\n{trace}");
+    assert!(matches!(
+        last.outcome,
+        RouteOutcome::Decided(Verdict::Unsat)
+    ));
+}
+
+#[test]
+fn bool_only_uf_array_query_uses_online_combination() {
+    let cfg = SolverConfig::default();
+    let mut arena = TermArena::new();
+    let array = arena
+        .array_var_with_sorts("bool_uf_array", Sort::Bool, Sort::Bool)
+        .unwrap();
+    let function = arena
+        .declare_fun("bool_uf", &[Sort::Bool], Sort::Bool)
+        .unwrap();
+    let x = arena.bool_var("bool_uf_x").unwrap();
+    let y = arena.bool_var("bool_uf_y").unwrap();
+    let fx = arena.apply(function, &[x]).unwrap();
+    let fy = arena.apply(function, &[y]).unwrap();
+    let read_fx = arena.select(array, fx).unwrap();
+    let read_fy = arena.select(array, fy).unwrap();
+    let same_arguments = arena.eq(x, y).unwrap();
+    let different_arguments = arena.not(same_arguments).unwrap();
+    let not_read_fy = arena.not(read_fy).unwrap();
+
+    let (result, trace) = check_auto_explained(
+        &mut arena,
+        &[different_arguments, read_fx, not_read_fy],
+        &cfg,
+    )
+    .unwrap();
+
+    assert!(matches!(result, CheckResult::Sat(_)));
+    let last = trace.last().expect("non-empty trace");
+    assert_eq!(last.route, "aufbv-online-cdclt", "trace:\n{trace}");
+    assert!(matches!(last.outcome, RouteOutcome::Decided(Verdict::Sat)));
+}
+
+#[test]
 fn qf_aufbv_front_door_uses_online_combination() {
     let cfg = SolverConfig::default();
     let mut arena = TermArena::new();

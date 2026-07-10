@@ -648,9 +648,9 @@ pub fn check_qf_ufbv_online_cdclt(
     }
 }
 
-/// Decides the admitted bit-vector array slice, optionally combined with scalar
-/// bit-vector uninterpreted functions, through replay-guided canonical `CdclT`
-/// rounds.
+/// Decides the admitted finite scalar array slice (Bool/BitVec components),
+/// optionally combined with scalar Bool/BitVec uninterpreted functions, through
+/// replay-guided canonical `CdclT` rounds.
 ///
 /// Base-array selects and reads through stores start as independent fresh scalar
 /// results. Candidate equal-index/unequal-result pairs materialize select
@@ -663,8 +663,8 @@ pub fn check_qf_ufbv_online_cdclt(
 ///
 /// # Errors
 ///
-/// Returns [`SolverError::Unsupported`] for shapes outside scalar BV arrays and
-/// functions. Budget exhaustion is [`CheckResult::Unknown`].
+/// Returns [`SolverError::Unsupported`] for shapes outside finite Bool/BV arrays
+/// and functions. Budget exhaustion is [`CheckResult::Unknown`].
 pub fn check_qf_aufbv_online_cdclt(
     arena: &mut TermArena,
     assertions: &[TermId],
@@ -1005,7 +1005,7 @@ fn admit_input(
     if !uses_only_bool_bv_and_admitted_arrays(arena, assertions, admit_arrays) {
         return Err(BuildFailure::Error(SolverError::Unsupported(
             if admit_arrays {
-                "online AUFBV combination admits only Bool, BitVec, and BV-indexed/BV-valued array terms"
+                "online AUFBV combination admits only Bool, BitVec, and Bool/BV-component array terms"
             } else {
                 "online UFBV combination admits only Bool and BitVec terms"
             }
@@ -1030,10 +1030,8 @@ fn uses_only_bool_bv_and_admitted_arrays(
             || admit_arrays
                 && matches!(
                     arena.sort_of(term),
-                    Sort::Array {
-                        index: ArraySortKey::BitVec(_),
-                        element: ArraySortKey::BitVec(_)
-                    }
+                    Sort::Array { index, element }
+                        if finite_scalar_array_key(index) && finite_scalar_array_key(element)
                 );
         if !admitted_sort {
             return false;
@@ -1043,6 +1041,10 @@ fn uses_only_bool_bv_and_admitted_arrays(
         }
     }
     true
+}
+
+fn finite_scalar_array_key(key: ArraySortKey) -> bool {
+    matches!(key, ArraySortKey::Bool | ArraySortKey::BitVec(_))
 }
 
 fn contains_array_terms(arena: &TermArena, assertions: &[TermId]) -> bool {
@@ -2115,7 +2117,7 @@ fn unknown(kind: UnknownKind, detail: impl Into<String>) -> CheckResult {
 mod tests {
     use std::time::Duration;
 
-    use axeyum_ir::{Sort, TermArena, TermNode, Value, eval};
+    use axeyum_ir::{Sort, TermArena, TermId, TermNode, Value, eval};
     use axeyum_smtlib::parse_script;
 
     use super::{
@@ -3135,6 +3137,101 @@ mod tests {
                 .iter()
                 .all(|&term| eval(&arena, term, &assignment) == Ok(Value::Bool(true)))
         );
+    }
+
+    fn two_scalar_values(arena: &mut TermArena, sort: Sort) -> (TermId, TermId) {
+        match sort {
+            Sort::Bool => (arena.bool_const(false), arena.bool_const(true)),
+            Sort::BitVec(width) => (
+                arena.bv_const(width, 0).unwrap(),
+                arena.bv_const(width, 1).unwrap(),
+            ),
+            other => panic!("finite scalar test does not admit {other:?}"),
+        }
+    }
+
+    #[test]
+    fn bool_and_bv_array_component_matrix_projects_replayable_models() {
+        for (ordinal, (index_sort, element_sort)) in [
+            (Sort::Bool, Sort::Bool),
+            (Sort::Bool, Sort::BitVec(3)),
+            (Sort::BitVec(3), Sort::Bool),
+            (Sort::BitVec(3), Sort::BitVec(3)),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            let mut arena = TermArena::new();
+            let array = arena
+                .array_var_with_sorts(
+                    &format!("finite_scalar_array_{ordinal}"),
+                    index_sort,
+                    element_sort,
+                )
+                .unwrap();
+            let (first_index, second_index) = two_scalar_values(&mut arena, index_sort);
+            let (first_value, second_value) = two_scalar_values(&mut arena, element_sort);
+            let first_read = arena.select(array, first_index).unwrap();
+            let second_read = arena.select(array, second_index).unwrap();
+            let assertions = [
+                arena.eq(first_read, first_value).unwrap(),
+                arena.eq(second_read, second_value).unwrap(),
+            ];
+
+            let result =
+                check_qf_aufbv_online_cdclt(&mut arena, &assertions, &SolverConfig::default())
+                    .unwrap();
+            let CheckResult::Sat(model) = result else {
+                panic!("expected SAT for {index_sort:?}->{element_sort:?}, got {result:?}");
+            };
+            let assignment = model.to_assignment();
+            assert!(
+                assertions
+                    .iter()
+                    .all(|&term| eval(&arena, term, &assignment) == Ok(Value::Bool(true))),
+                "model did not replay for {index_sort:?}->{element_sort:?}: {model:?}"
+            );
+            let TermNode::Symbol(symbol) = arena.node(array) else {
+                panic!("array variable must remain a symbol")
+            };
+            if (index_sort, element_sort) != (Sort::BitVec(3), Sort::BitVec(3)) {
+                assert!(
+                    matches!(model.get(*symbol), Some(Value::GenericArray(_))),
+                    "mixed array should use the generic model representation: {model:?}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn public_bool_array_issue5925_decides_unsat() {
+        let mut script = parse_script(include_str!(
+            "../../../corpus/public-curated/non-incremental/QF_ABV/cvc5-regress-clean/cli__regress0__arrays__issue5925.smt2"
+        ))
+        .expect("issue5925 parses");
+
+        let result = check_qf_aufbv_online_cdclt(
+            &mut script.arena,
+            &script.assertions,
+            &SolverConfig::default(),
+        )
+        .unwrap();
+
+        assert_eq!(result, CheckResult::Unsat);
+    }
+
+    #[test]
+    fn non_finite_scalar_array_components_remain_outside_admission() {
+        let mut arena = TermArena::new();
+        let array = arena
+            .array_var_with_sorts("int_array", Sort::Int, Sort::Bool)
+            .unwrap();
+        let index = arena.int_var("int_array_index").unwrap();
+        let read = arena.select(array, index).unwrap();
+
+        let result = check_qf_aufbv_online_cdclt(&mut arena, &[read], &SolverConfig::default());
+
+        assert!(matches!(result, Err(crate::SolverError::Unsupported(_))));
     }
 
     #[test]
