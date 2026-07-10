@@ -192,7 +192,10 @@ pub const CAPABILITIES: &[Capability] = &[
         assurance: Assurance::Validated,
         evidence: "reduction to QF_BV; model replay; UNSAT exportable as a re-checkable \
                    DRAT certificate (clausal layer, modulo trusted elimination). The Ackermann-over-select \
-                   read-CONSISTENCY stratum is Carcara-checked (select as a plain UF); and the \
+                   read-CONSISTENCY stratum is Carcara-checked (select as a plain UF); direct equal-array \
+                   same-index read conflicts emit literal SMT-LIB select with eq_reflexive/eq_congruent/\
+                   symm/resolution and check in-tree, in Carcara (including tamper rejection), and in the \
+                   real Lean kernel with no array-elimination trust step; and the \
                    read-over-write-SAME collapse select(store(a,i,v),i)=v now has a Carcara-checked \
                    derivation (prove_qf_abv_row_same_alethe_carcara: eq_simplify/cong/ite_simplify/trans/\
                    resolution, with a tamper-rejection test), and the read-over-write-DIFF collapse \
@@ -201,7 +204,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    tamper-rejection test) — both shrinking the trusted surface to just the \
                    read-over-write rewrite INSTANCE (asserted as a premise; the array axiom is not yet \
                    certified)",
-        reference: "ADR-0010",
+        reference: "ADR-0010/0075",
     },
     Capability {
         area: "QF_ABV",

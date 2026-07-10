@@ -3,9 +3,11 @@
 //! re-checked by the in-tree [`axeyum_cnf::check_alethe`] — the array proof is
 //! validated end to end, not merely shaped.
 
-use axeyum_cnf::{AletheCommand, check_alethe};
+use axeyum_cnf::{AletheCommand, check_alethe, write_alethe};
 use axeyum_ir::{Sort, TermArena, TermId};
-use axeyum_solver::{distinct, prove_qf_abv_unsat_alethe};
+use axeyum_solver::{
+    distinct, prove_qf_abv_select_congruence_alethe_carcara, prove_qf_abv_unsat_alethe,
+};
 
 /// Builds `(select (store a i v) i)` over `a : (Array (BitVec 4) (BitVec 8))` and
 /// returns `(sel, v)`.
@@ -107,12 +109,12 @@ fn plain_bv_disequality_is_none() {
     assert!(prove_qf_abv_unsat_alethe(&arena, &[neq]).is_none());
 }
 
-/// Array extensionality conflict: `a = b ∧ select(a, k) ≠ select(b, k)` is unsat by
-/// congruence over `select` (treated as an uninterpreted function). The array
-/// emitter has no read-over-write-same match here, so it routes to the EUF
-/// congruence emitter — and the result still re-checks in-tree.
+/// Array select-congruence conflict: `a = b ∧ select(a, k) ≠ select(b, k)` is unsat by
+/// congruence over `select`. The array emitter has no read-over-write-same match
+/// here, so it routes to the direct SMT-LIB-head congruence emitter; the result
+/// re-checks in-tree and is suitable for Carcara.
 #[test]
-fn array_extensionality_conflict_is_proved_via_congruence() {
+fn array_select_congruence_conflict_is_proved_directly() {
     let mut arena = TermArena::new();
     let a = arena.array_var("a", 4, 8).unwrap();
     let b = arena.array_var("b", 4, 8).unwrap();
@@ -134,5 +136,49 @@ fn array_extensionality_conflict_is_proved_via_congruence() {
     assert!(
         matches!(proof.last(), Some(AletheCommand::Step { clause, .. }) if clause.is_empty()),
         "proof ends in the empty clause"
+    );
+    let rendered = write_alethe(&proof);
+    assert!(rendered.contains("(select a k)"), "proof={rendered}");
+    assert!(!rendered.contains("Select"), "proof={rendered}");
+}
+
+#[test]
+fn reversed_select_disequality_is_oriented_and_checked() {
+    let mut arena = TermArena::new();
+    let a = arena.array_var("a", 4, 8).unwrap();
+    let b = arena.array_var("b", 4, 8).unwrap();
+    let k = arena.bv_var("k", 4).unwrap();
+    let sa = arena.select(a, k).unwrap();
+    let sb = arena.select(b, k).unwrap();
+    let a_eq_b = arena.eq(a, b).unwrap();
+    let reverse_reads_equal = arena.eq(sb, sa).unwrap();
+    let reverse_reads_differ = arena.not(reverse_reads_equal).unwrap();
+
+    let proof =
+        prove_qf_abv_select_congruence_alethe_carcara(&arena, &[a_eq_b, reverse_reads_differ])
+            .expect("reverse select congruence proof");
+    assert_eq!(check_alethe(&proof), Ok(true));
+    assert!(
+        proof
+            .iter()
+            .any(|command| matches!(command, AletheCommand::Step { rule, .. } if rule == "symm"))
+    );
+}
+
+#[test]
+fn different_select_indices_do_not_claim_direct_congruence() {
+    let mut arena = TermArena::new();
+    let a = arena.array_var("a", 4, 8).unwrap();
+    let b = arena.array_var("b", 4, 8).unwrap();
+    let i = arena.bv_var("i", 4).unwrap();
+    let j = arena.bv_var("j", 4).unwrap();
+    let sa = arena.select(a, i).unwrap();
+    let sb = arena.select(b, j).unwrap();
+    let a_eq_b = arena.eq(a, b).unwrap();
+    let reads_equal = arena.eq(sa, sb).unwrap();
+    let reads_differ = arena.not(reads_equal).unwrap();
+
+    assert!(
+        prove_qf_abv_select_congruence_alethe_carcara(&arena, &[a_eq_b, reads_differ]).is_none()
     );
 }

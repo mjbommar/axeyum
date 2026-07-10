@@ -2516,8 +2516,9 @@ fn direct_structural_unsat_evidence(
 /// Tries each **zero-trust-hole** Alethe certificate emitter in turn, returning the
 /// first that produces a [`check_alethe`]-validated refutation closing to `(cl)`:
 ///
-/// 1. [`crate::prove_qf_abv_unsat_alethe`] — the array read-over-write-same /
-///    extensionality DIRECT cert (proves the conflict via the array axiom);
+/// 1. [`crate::prove_qf_abv_unsat_alethe`] — the array read-over-write-same cert
+///    (internal array rule) or direct equal-array select-congruence cert (standard
+///    equality rules, no array axiom);
 /// 2. [`crate::prove_qf_uf_unsat_alethe`] — the pure EUF congruence cert over
 ///    uninterpreted functions and carrier-sort equalities;
 /// 3. [`crate::prove_qf_ufbv_unsat_alethe`] — the Ackermann (`QF_UFBV`) cert (derives

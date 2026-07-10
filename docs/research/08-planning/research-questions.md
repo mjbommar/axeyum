@@ -225,8 +225,17 @@ Out of scope:
     reduction): the `Real` sort + `Rational` + evaluator are done; the simplex
     procedure is next. See
     [ADR-0015](../09-decisions/adr-0015-linear-real-arithmetic.md).
-- [ ] What proof format covers theory lemmas once proofs extend beyond
+- [x] What proof format covers theory lemmas once proofs extend beyond
       clausal DRAT/LRAT — adopt Alethe/CPC or design Axeyum-native?
+  - Answer: **Alethe is the SMT-level interchange and reconstruction format**;
+    DRAT/LRAT remains the clausal substrate. Emit standard rules where possible,
+    self-check in-tree, cross-check with Carcara, and keep any Axeyum-only rule a
+    narrow, named residual rather than inventing a parallel proof language. The
+    trust ledger records unsupported reductions, while Alethe→Lean reconstructs
+    checked artifacts into kernel terms. ADR-0011 established the format ladder,
+    ADR-0031 made the residual trust countable, and ADR-0075 demonstrates the
+    policy on array `select`: one standard-rule artifact checks in-tree, in
+    Carcara, and in Lean with no array-elimination trust step.
 - [ ] Should the proof-assistant bridge export obligations to Lean, import
       checked rewrite rules from Lean, or both — and how early is a
       Lean-checked rewrite-rule library worth prototyping?

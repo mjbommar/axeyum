@@ -354,6 +354,12 @@ ties and normalized overrides preserve deterministic output. A 16-read model
 compresses to four overrides with replay intact. E-graph-class model ownership
 and warm reuse remain before phase exit.
 
+ADR-0075 advances the parallel proof spine: a direct equal-array/same-index
+select conflict now emits literal SMT-LIB `select` and standard equality rules,
+checking in-tree, in Carcara, and in real Lean with no reduction trust step.
+This is select congruence, not the diff-witness direction of extensionality; ROW,
+diff-witness, equality-chain, and canonical online proof logging remain.
+
 Implementation note: a first infosec-workflow client example landed early
 (2026-06-13), ahead of arrays — a register-VM symbolic executor over
 `IncrementalBvSolver` that forks at branches, prunes infeasible paths, and

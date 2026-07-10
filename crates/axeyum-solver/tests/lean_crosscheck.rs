@@ -121,7 +121,7 @@ const FAMILY_BUILDERS: &[FamilyBuilder] = &[
     forall_refutation_checks_in_real_lean,
     exists_refutation_checks_in_real_lean,
     qf_abv_read_consistency_refutation_checks_in_real_lean,
-    qf_abv_extensionality_refutation_checks_in_real_lean,
+    qf_abv_select_congruence_refutation_checks_in_real_lean,
     array_axiom_lean_entry_normalizes_conjunction_and_double_negation,
     qf_aufbv_finite_array_extensionality_checks_in_real_lean,
     qf_aufbv_array_axiom_refutations_check_in_real_lean,
@@ -1405,7 +1405,7 @@ fn qf_abv_read_consistency_refutation_checks_in_real_lean() {
 /// `select`. This is the corpus `smtextarrayaxiom*uf` shape: evidence already has
 /// a direct Alethe certificate, and the Lean route should reconstruct that direct
 /// EUF proof instead of requiring the array-elimination certificate.
-fn qf_abv_extensionality_refutation_checks_in_real_lean() {
+fn qf_abv_select_congruence_refutation_checks_in_real_lean() {
     let mut arena = TermArena::new();
     let a = arena.array_var("a", 2, 2).unwrap();
     let b = arena.array_var("b", 2, 2).unwrap();
@@ -1416,13 +1416,22 @@ fn qf_abv_extensionality_refutation_checks_in_real_lean() {
     let sa = arena.select(a, i).unwrap();
     let sb = arena.select(b, i).unwrap();
     let a_eq_b = arena.eq(a, b).unwrap();
+    let reversed_reads_ne = {
+        let e = arena.eq(sb, sa).unwrap();
+        arena.not(e).unwrap()
+    };
+    let (_frag, reversed_source) =
+        prove_unsat_to_lean_module(&mut arena, &[a_eq_b, reversed_reads_ne])
+            .expect("reversed QF_ABV select congruence unsat reconstructs");
+    lean_accepts("qf_abv_select_congruence_reversed", &reversed_source);
+
     let reads_ne = {
         let e = arena.eq(sa, sb).unwrap();
         arena.not(e).unwrap()
     };
     let (_frag, source) = prove_unsat_to_lean_module(&mut arena, &[a_eq_b, reads_ne])
-        .expect("QF_ABV extensionality unsat reconstructs");
-    lean_accepts("qf_abv_extensionality", &source);
+        .expect("forward QF_ABV select congruence unsat reconstructs");
+    lean_accepts("qf_abv_select_congruence", &source);
 }
 
 fn array_axiom_lean_entry_normalizes_conjunction_and_double_negation() {

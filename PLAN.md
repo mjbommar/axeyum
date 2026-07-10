@@ -3722,7 +3722,17 @@ Its conclusion, ranked by quality × efficiency:
    187/193 / QF_AUFBV 49/53 with zero disagreement/replay failures. A single
    AUFBV PAR-2 sample moves 221→206 ms but is not a speed claim. Next:
    merge-triggered/cross-atom queue states, e-graph-class/warm model ownership,
-   proof integration, and opaque-heavy arithmetic model exchange.
+   proof integration, and opaque-heavy arithmetic model exchange. **Twentieth
+   follow-through (proof spine):** direct equal-array/select conflicts now emit
+   literal SMT-LIB `select` with `eq_reflexive`/`eq_congruent`, optional `symm`,
+   and resolution (ADR-0075). Forward and reversed artifacts pass the in-tree
+   checker and installed Carcara; deleting the array-equality antecedent is
+   rejected. `produce_evidence` carries no reduction trust step, and the
+   67-family representative real-Lean gate checks the reversed artifact. This is
+   ordinary select congruence, not the disequality/diff-witness direction of
+   array extensionality. Next remains merge-triggered/cross-atom queue states,
+   e-graph-class/warm models, full ROW/diff-witness proof logging, and
+   opaque-heavy arithmetic model exchange.
 2. **Keep a thin measured-leaf-BFS skirt in parallel** — measured-ROI leaves only
    (NRA tail, strings-Nielsen); fold the feature/scale-blocked leaves
    (dense-ILP MILP, large-LP performance) into a funded engine phase rather than

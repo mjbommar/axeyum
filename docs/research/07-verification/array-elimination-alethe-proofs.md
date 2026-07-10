@@ -37,6 +37,14 @@ heavier external dependency than the bitvector path (which uses first-class
 `bitblast_*` rules). This is the array analogue of the `lia_generic` situation
 (Carcara holes it), but more so: arrays have *no* native rules at all.
 
+**2026-07-09 qualification (ADR-0075).** This obstacle applies to array axioms,
+especially ROW and the disequality/diff-witness direction of extensionality. It
+does not apply to ordinary equality congruence. The direct conflict
+`a=b ∧ select(a,i)≠select(b,i)` now renders literal SMT-LIB `select` and is
+accepted by Carcara using only `eq_reflexive`, `eq_congruent`, optional `symm`,
+and resolution. The same artifact checks in-tree and reconstructs in Lean with
+no array-elimination trust step.
+
 ## Recommended path: internal-checker first
 
 Target axeyum's **own `check_alethe`** (which already validates the full QF_BV
@@ -63,14 +71,14 @@ So the bridge inventory is the *same* as QF_BV (cong/trans/resolution + the new
 array-axiom rules); only the array-axiom rules are new, and they are sound
 structural checks our checker can own without Carcara.
 
-## Carcara-validity as a later, optional step
+## Carcara-validity for array axioms as a later step
 
-If external Carcara validation of array proofs is wanted later: emit the ROW
+For external Carcara validation of ROW/extensionality-axiom proofs: emit the ROW
 rewrites as `rare` steps with cvc5 rule names and integrate the cvc5 RARE database
 into the cross-check harness (parallel to building Carcara itself). Until then,
-array proofs are **internally checkable** (`check_alethe` + the new array rules),
-matching the project's "independent checker" rule via the in-tree checker — the
-same standing the `lia_generic`/integer route already has.
+those array-axiom steps are **internally checkable** (`check_alethe` + the new
+array rules), matching the project's "independent checker" rule via the in-tree
+checker. Plain select congruence is already externally checked per ADR-0075.
 
 ## Function elimination (Ackermann, ADR-0013) — same shape
 
@@ -81,9 +89,10 @@ side-conditions into a composed proof, not new checker rules.
 
 ## Bottom line for P3.5
 
-- Arrays: add ~3 `check_alethe` array-axiom rules + compose with the existing
-  QF_BV/EUF proof machinery → **internally-checkable** array `unsat` proofs.
-  Carcara-validity needs the cvc5 RARE DB (deferred).
+- Arrays: direct select congruence is now Carcara- and Lean-checked. Add/compose
+  the remaining `check_alethe` array-axiom rules with the existing QF_BV/EUF
+  proof machinery for broader `unsat` proofs; Carcara-validity of those axiom
+  steps still needs the cvc5 RARE DB (deferred).
 - Functions: compose existing `eq_congruent` Ackermann steps (no new rules).
 - The hard, blocking unknown ("does Alethe have array rules?") is resolved: **no**,
   so do not design around primitive array rules — design around ROW-as-axiom-rule

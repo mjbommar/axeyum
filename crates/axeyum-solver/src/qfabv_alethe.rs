@@ -1,5 +1,5 @@
-//! Alethe proof **emission** for the array (`QF_ABV`) read-over-write-same
-//! disequality fragment (Track 3, phase P3.5) — the producer counterpart to the
+//! Alethe proof **emission** for checked array (`QF_ABV`) congruence and
+//! read-over-write fragments (Track 3, phase P3.5) — the producer counterpart to the
 //! `QF_BV`/EUF/LRA emitters ([`crate::prove_qf_bv_unsat_alethe`] /
 //! [`crate::prove_qf_uf_unsat_alethe`] / [`crate::prove_lra_unsat_alethe`]).
 //!
@@ -39,9 +39,9 @@ use axeyum_cnf::{
 };
 use axeyum_ir::{Op, TermArena, TermId, TermNode};
 
-/// Emits a complete, in-tree-checkable Alethe refutation for a `QF_ABV`
-/// conjunction containing a **read-over-write-same disequality**, or [`None`] when
-/// no assertion matches that fragment (or the built proof fails self-validation).
+/// Emits a complete, in-tree-checkable Alethe refutation for a supported direct
+/// `QF_ABV` conflict. Read-over-write-same is tried first, followed by portable
+/// direct select congruence and then the wider generic congruence fallback.
 ///
 /// An assertion matches when it is `(not (= sel rhs))` or `(not (= rhs sel))` (the
 /// symmetric form), where
@@ -54,13 +54,15 @@ use axeyum_ir::{Op, TermArena, TermId, TermNode};
 /// A binary `(distinct sel rhs)` is also matched: the [`crate::distinct`] builder
 /// lowers it to the very same `(not (= sel rhs))` IR.
 ///
-/// The returned proof is the three-command refutation `assume`/`read_over_write_same`/
-/// `resolution` closing to the empty clause `(cl)`, with deterministic step ids. It is
-/// returned only after [`axeyum_cnf::check_alethe`] accepts it.
+/// The ROW proof is the three-command refutation
+/// `assume`/`read_over_write_same`/`resolution`; the congruence routes use standard
+/// equality steps. Every route closes to the empty clause `(cl)`, uses
+/// deterministic step ids, and returns only after [`axeyum_cnf::check_alethe`]
+/// accepts it.
 ///
-/// Returns [`None`] when no assertion is a read-over-write-same disequality, when the
-/// matched terms render outside the small array fragment (`select`/`store`/symbol/
-/// bit-vector-constant), or — defensively — when self-validation fails.
+/// Returns [`None`] when no supported conflict exists, matched terms render
+/// outside the corresponding small fragment, or — defensively — every attempted
+/// artifact fails self-validation.
 ///
 /// # Panics
 ///
@@ -71,15 +73,15 @@ pub fn prove_qf_abv_unsat_alethe(
     assertions: &[TermId],
 ) -> Option<Vec<AletheCommand>> {
     // Scan for the first assertion that is a read-over-write-same disequality.
-    // If none, fall back to the congruence/extensionality route: `select`/`store`
-    // are treated as uninterpreted functions, so the EUF congruence emitter proves
-    // e.g. `a = b ∧ select(a, k) ≠ select(b, k)` (array extensionality). That
-    // emitter is itself self-validating against `check_alethe`.
+    // If none, prefer the Carcara-checkable select-congruence route, then fall
+    // back to generic congruence closure for wider equality chains. Both routes
+    // self-validate against `check_alethe`.
     let Some((sel, rhs)) = assertions
         .iter()
         .find_map(|&assertion| match_row_same_diseq(arena, assertion))
     else {
-        return crate::prove_qf_uf_unsat_alethe(arena, assertions);
+        return prove_qf_abv_select_congruence_alethe_carcara(arena, assertions)
+            .or_else(|| crate::prove_qf_uf_unsat_alethe(arena, assertions));
     };
 
     // Render `(= sel rhs)` exactly as the `read_over_write_same` rule expects.
@@ -126,8 +128,200 @@ pub fn prove_qf_abv_unsat_alethe(
     // the rendered fragment), still try the congruence/extensionality route.
     match check_alethe(&proof) {
         Ok(true) => Some(proof),
-        _ => crate::prove_qf_uf_unsat_alethe(arena, assertions),
+        _ => prove_qf_abv_select_congruence_alethe_carcara(arena, assertions)
+            .or_else(|| crate::prove_qf_uf_unsat_alethe(arena, assertions)),
     }
+}
+
+/// Emits a Carcara-checkable refutation of direct array select congruence:
+///
+/// ```text
+/// a = b
+/// select(a, i) != select(b, i)
+/// ```
+///
+/// The proof uses no array axiom. Equality congruence alone lifts `a = b` through
+/// the built-in `select` application because the shared index is syntactically
+/// identical. The emitted proof derives the index reflexivity unit, instantiates
+/// `eq_congruent`, and resolves both argument equalities into the read equality;
+/// when the disequality states the reads in the reverse order, a premise-taking
+/// `symm` step orients the derived equality first.
+///
+/// Unlike the generic EUF fallback, this emitter renders the interpreted operator
+/// with SMT-LIB's literal `select` head. The same artifact therefore checks both
+/// in-tree and in Carcara against the original `QF_ABV` problem, without adding a
+/// rewrite premise or a [`crate::TrustId::ArrayElim`] step.
+///
+/// Returns [`None`] unless one asserted array equality directly relates the bases
+/// of one asserted same-index select disequality, every matched term is in the
+/// small array renderer, and [`check_alethe`] accepts the finished proof.
+#[must_use]
+pub fn prove_qf_abv_select_congruence_alethe_carcara(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Option<Vec<AletheCommand>> {
+    let conflict = match_select_congruence_conflict(arena, assertions)?;
+    let lhs = array_term_to_alethe(arena, conflict.lhs)?;
+    let rhs = array_term_to_alethe(arena, conflict.rhs)?;
+    let index = array_term_to_alethe(arena, conflict.index)?;
+    let index_eq = eq(index.clone(), index.clone());
+    let lhs_read = AletheTerm::App("select".to_owned(), vec![lhs.clone(), index.clone()]);
+    let rhs_read = AletheTerm::App("select".to_owned(), vec![rhs.clone(), index]);
+    let array_eq = eq(lhs, rhs);
+    let forward_read_eq = eq(lhs_read.clone(), rhs_read.clone());
+    let diseq_atom = if conflict.disequality_reversed {
+        eq(rhs_read, lhs_read)
+    } else {
+        forward_read_eq.clone()
+    };
+
+    let mut proof = vec![
+        AletheCommand::Assume {
+            id: "h_eq".to_owned(),
+            clause: vec![pos(array_eq.clone())],
+        },
+        AletheCommand::Assume {
+            id: "h_neq".to_owned(),
+            clause: vec![neg(diseq_atom.clone())],
+        },
+        step(
+            "index_refl",
+            vec![pos(index_eq.clone())],
+            "eq_reflexive",
+            &[],
+        ),
+        step(
+            "select_cong",
+            vec![neg(array_eq), neg(index_eq), pos(forward_read_eq.clone())],
+            "eq_congruent",
+            &[],
+        ),
+        step(
+            "cong",
+            vec![pos(forward_read_eq.clone())],
+            "resolution",
+            &["select_cong", "h_eq", "index_refl"],
+        ),
+    ];
+
+    let equality_id = if conflict.disequality_reversed {
+        let reverse_read_eq = diseq_atom;
+        proof.push(step(
+            "orient",
+            vec![pos(reverse_read_eq)],
+            "symm",
+            &["cong"],
+        ));
+        "orient"
+    } else {
+        "cong"
+    };
+    proof.push(step(
+        "done",
+        Vec::new(),
+        "resolution",
+        &[equality_id, "h_neq"],
+    ));
+
+    matches!(check_alethe(&proof), Ok(true)).then_some(proof)
+}
+
+struct SelectCongruenceConflict {
+    lhs: TermId,
+    rhs: TermId,
+    index: TermId,
+    disequality_reversed: bool,
+}
+
+fn match_select_congruence_conflict(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Option<SelectCongruenceConflict> {
+    for &equality in assertions {
+        let TermNode::App {
+            op: Op::Eq,
+            args: equality_args,
+        } = arena.node(equality)
+        else {
+            continue;
+        };
+        let &[lhs, rhs] = &equality_args[..] else {
+            continue;
+        };
+        if !matches!(arena.sort_of(lhs), axeyum_ir::Sort::Array { .. }) {
+            continue;
+        }
+
+        for &disequality in assertions {
+            let Some((left_read, right_read)) = disequality_sides(arena, disequality) else {
+                continue;
+            };
+            let Some((left_array, left_index)) = select_sides(arena, left_read) else {
+                continue;
+            };
+            let Some((right_array, right_index)) = select_sides(arena, right_read) else {
+                continue;
+            };
+            if left_index != right_index {
+                continue;
+            }
+            if left_array == lhs && right_array == rhs {
+                return Some(SelectCongruenceConflict {
+                    lhs,
+                    rhs,
+                    index: left_index,
+                    disequality_reversed: false,
+                });
+            }
+            if left_array == rhs && right_array == lhs {
+                return Some(SelectCongruenceConflict {
+                    lhs,
+                    rhs,
+                    index: left_index,
+                    disequality_reversed: true,
+                });
+            }
+        }
+    }
+    None
+}
+
+fn disequality_sides(arena: &TermArena, term: TermId) -> Option<(TermId, TermId)> {
+    let TermNode::App {
+        op: Op::BoolNot,
+        args,
+    } = arena.node(term)
+    else {
+        return None;
+    };
+    let &[inner] = &args[..] else {
+        return None;
+    };
+    let TermNode::App {
+        op: Op::Eq,
+        args: equality_args,
+    } = arena.node(inner)
+    else {
+        return None;
+    };
+    let &[lhs, rhs] = &equality_args[..] else {
+        return None;
+    };
+    Some((lhs, rhs))
+}
+
+fn select_sides(arena: &TermArena, term: TermId) -> Option<(TermId, TermId)> {
+    let TermNode::App {
+        op: Op::Select,
+        args,
+    } = arena.node(term)
+    else {
+        return None;
+    };
+    let &[array, index] = &args[..] else {
+        return None;
+    };
+    Some((array, index))
 }
 
 /// If `assertion` is `(not (= sel rhs))` or `(not (= rhs sel))` where `sel` is a

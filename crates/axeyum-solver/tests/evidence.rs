@@ -3,6 +3,7 @@
 
 use std::time::Duration;
 
+use axeyum_cnf::AletheCommand;
 use axeyum_ir::{ArraySortKey, Sort, TermArena};
 use axeyum_smtlib::parse_script;
 use axeyum_solver::{
@@ -670,6 +671,40 @@ fn qf_abv_read_consistency_unsat_carries_a_zero_trust_alethe_certificate() {
     assert!(
         report.trusted_steps.is_empty(),
         "expected zero trust holes (read consistency proven via eq_congruent), got {:?}",
+        step_ids(&report)
+    );
+}
+
+#[test]
+fn qf_abv_array_equality_conflict_prefers_zero_trust_select_congruence() {
+    let mut arena = TermArena::new();
+    let a = arena.array_var("a", 4, 8).unwrap();
+    let b = arena.array_var("b", 4, 8).unwrap();
+    let index = arena.bv_var("index", 4).unwrap();
+    let lhs = arena.select(a, index).unwrap();
+    let rhs = arena.select(b, index).unwrap();
+    let arrays_equal = arena.eq(a, b).unwrap();
+    let reads_equal = arena.eq(lhs, rhs).unwrap();
+    let reads_differ = arena.not(reads_equal).unwrap();
+    let assertions = [arrays_equal, reads_differ];
+
+    let report = produce_evidence(&mut arena, &assertions, &config()).unwrap();
+    let Evidence::UnsatAletheProof(proof) = &report.evidence else {
+        panic!(
+            "expected direct select-congruence Alethe evidence, got {:?}",
+            report.evidence
+        );
+    };
+    assert!(
+        proof.iter().any(
+            |command| matches!(command, AletheCommand::Step { rule, .. } if rule == "eq_congruent")
+        ),
+        "proof={proof:?}"
+    );
+    assert!(report.evidence.check(&arena, &assertions).unwrap());
+    assert!(
+        report.trusted_steps.is_empty(),
+        "select congruence must not use array elimination: {:?}",
         step_ids(&report)
     );
 }

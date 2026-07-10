@@ -346,7 +346,7 @@ pub use proof::{
 };
 pub use qfabv_alethe::{
     prove_qf_abv_row_diff_alethe_carcara, prove_qf_abv_row_same_alethe_carcara,
-    prove_qf_abv_unsat_alethe,
+    prove_qf_abv_select_congruence_alethe_carcara, prove_qf_abv_unsat_alethe,
 };
 pub use qfabv_elim_alethe::prove_qf_abv_unsat_alethe_via_elimination;
 pub use qfbv_alethe::{

@@ -21,11 +21,11 @@ use axeyum_smtlib::write_script;
 use axeyum_solver::{
     bitblast_step, lra_interpolant_certified, prove_lra_unsat_alethe,
     prove_qf_abv_row_diff_alethe_carcara, prove_qf_abv_row_same_alethe_carcara,
-    prove_qf_abv_unsat_alethe_via_elimination, prove_qf_bv_unsat_alethe,
-    prove_qf_bv_unsat_alethe_ext_compare, prove_qf_bv_unsat_alethe_route2,
-    prove_qf_dt_unsat_alethe_via_simplification, prove_qf_uf_unsat_alethe,
-    prove_qf_ufbv_unsat_alethe, qf_bv_interpolant_certified, qf_uf_interpolant_certified,
-    uflra_interpolant_certified,
+    prove_qf_abv_select_congruence_alethe_carcara, prove_qf_abv_unsat_alethe_via_elimination,
+    prove_qf_bv_unsat_alethe, prove_qf_bv_unsat_alethe_ext_compare,
+    prove_qf_bv_unsat_alethe_route2, prove_qf_dt_unsat_alethe_via_simplification,
+    prove_qf_uf_unsat_alethe, prove_qf_ufbv_unsat_alethe, qf_bv_interpolant_certified,
+    qf_uf_interpolant_certified, uflra_interpolant_certified,
 };
 
 /// Resolves the Carcara binary: `AXEYUM_CARCARA_BIN` if set, otherwise the
@@ -2133,6 +2133,126 @@ fn driver_bvsge_slt_conflict_is_accepted_by_carcara() {
     let ge = arena.bv_sge(a, b).unwrap();
     let lt = arena.bv_slt(a, b).unwrap();
     assert_ext_compare_accepted("driver_bvsge", &[ge, lt], &mut arena);
+}
+
+// --- QF_ABV select-congruence certificate: ---------------------------------
+// `prove_qf_abv_select_congruence_alethe_carcara`
+//
+// Array equality is ordinary equality, so congruence alone proves
+// `a = b => select(a, i) = select(b, i)`. The proof uses SMT-LIB's literal
+// `select` head and only `eq_reflexive`, `eq_congruent`, equality symmetry, and
+// resolution; no array axiom or reduction premise is needed.
+
+fn select_congruence_conflict(arena: &mut TermArena) -> [TermId; 2] {
+    let a = arena.array_var("a", 4, 8).unwrap();
+    let b = arena.array_var("b", 4, 8).unwrap();
+    let i = bvw(arena, "i", 4);
+    let a_eq_b = arena.eq(a, b).unwrap();
+    let read_a = arena.select(a, i).unwrap();
+    let read_b = arena.select(b, i).unwrap();
+    let reads_equal = arena.eq(read_a, read_b).unwrap();
+    [a_eq_b, arena.not(reads_equal).unwrap()]
+}
+
+fn reversed_select_congruence_conflict(arena: &mut TermArena) -> [TermId; 2] {
+    let a = arena.array_var("a", 4, 8).unwrap();
+    let b = arena.array_var("b", 4, 8).unwrap();
+    let i = bvw(arena, "i", 4);
+    let a_eq_b = arena.eq(a, b).unwrap();
+    let read_a = arena.select(a, i).unwrap();
+    let read_b = arena.select(b, i).unwrap();
+    let reads_equal = arena.eq(read_b, read_a).unwrap();
+    [a_eq_b, arena.not(reads_equal).unwrap()]
+}
+
+const SELECT_CONGRUENCE_SMT2: &str = "\
+(set-logic QF_ABV)
+(declare-const a (Array (_ BitVec 4) (_ BitVec 8)))
+(declare-const b (Array (_ BitVec 4) (_ BitVec 8)))
+(declare-const i (_ BitVec 4))
+(assert (= a b))
+(assert (not (= (select a i) (select b i))))
+(check-sat)
+";
+
+const REVERSED_SELECT_CONGRUENCE_SMT2: &str = "\
+(set-logic QF_ABV)
+(declare-const a (Array (_ BitVec 4) (_ BitVec 8)))
+(declare-const b (Array (_ BitVec 4) (_ BitVec 8)))
+(declare-const i (_ BitVec 4))
+(assert (= a b))
+(assert (not (= (select b i) (select a i))))
+(check-sat)
+";
+
+#[test]
+fn abv_select_congruence_is_accepted_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    let mut arena = TermArena::new();
+    let assertions = select_congruence_conflict(&mut arena);
+    let proof = prove_qf_abv_select_congruence_alethe_carcara(&arena, &assertions)
+        .expect("emit direct QF_ABV select-congruence certificate");
+    let report = carcara_accepts_smt2(
+        &bin,
+        "abv_select_congruence",
+        SELECT_CONGRUENCE_SMT2,
+        &proof,
+    );
+    assert!(report.contains("valid"), "expected 'valid', got:\n{report}");
+}
+
+#[test]
+fn reversed_abv_select_congruence_is_accepted_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    let mut arena = TermArena::new();
+    let assertions = reversed_select_congruence_conflict(&mut arena);
+    let proof = prove_qf_abv_select_congruence_alethe_carcara(&arena, &assertions)
+        .expect("emit reversed QF_ABV select-congruence certificate");
+    let report = carcara_accepts_smt2(
+        &bin,
+        "abv_select_congruence_reversed",
+        REVERSED_SELECT_CONGRUENCE_SMT2,
+        &proof,
+    );
+    assert!(report.contains("valid"), "expected 'valid', got:\n{report}");
+}
+
+#[test]
+fn abv_select_congruence_without_array_antecedent_is_rejected_by_carcara() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    let mut arena = TermArena::new();
+    let assertions = select_congruence_conflict(&mut arena);
+    let mut proof = prove_qf_abv_select_congruence_alethe_carcara(&arena, &assertions)
+        .expect("emit direct QF_ABV select-congruence certificate");
+    let AletheCommand::Step { clause, rule, .. } = &mut proof[3] else {
+        panic!("expected eq_congruent step at index 3");
+    };
+    assert_eq!(rule, "eq_congruent");
+    clause.remove(0);
+
+    let report = carcara_output(
+        &bin,
+        "abv_select_congruence_missing_array_antecedent",
+        SELECT_CONGRUENCE_SMT2,
+        &proof,
+    );
+    assert!(
+        report.contains("invalid") || report.contains("ERROR"),
+        "carcara must reject select congruence without the array antecedent, got:\n{report}"
+    );
+    assert!(
+        !report.lines().any(|line| line.trim() == "valid"),
+        "tampered proof must not be reported valid, got:\n{report}"
+    );
 }
 
 // --- QF_ABV read-over-write-same certificate: -------------------------------
