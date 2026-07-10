@@ -1,7 +1,10 @@
-//! Retained incremental structural-array read gates for ADR-0086.
+//! Candidate-triggered retained structural-array read gates for ADR-0087.
 
 use axeyum_ir::{Sort, TermArena, TermId, Value, eval};
-use axeyum_solver::{CheckResult, IncrementalBvSolver, SolverConfig, check_auto};
+use axeyum_solver::{
+    AssumptionOutcome, CheckResult, IncrementalBvSolver, SolverConfig, check_auto,
+};
+use std::time::Duration;
 #[cfg(feature = "z3")]
 use z3::ast::{Array, BV, Bool};
 #[cfg(feature = "z3")]
@@ -67,12 +70,15 @@ fn structural_store_definition_is_retained_and_scoped_roots_pop() {
         .unwrap();
     assert!(!solver.has_deferred_theory_assertions());
     assert_eq!(solver.retained_warm_structural_read_count(), 1);
-    assert_eq!(solver.retained_warm_structural_definition_count(), 1);
+    assert_eq!(solver.retained_warm_structural_equation_count(), 1);
+    assert_eq!(solver.retained_warm_structural_definition_count(), 0);
     assert!(solver.retained_warm_array_read_count() >= 2);
 
     let first = solver.check(&arena).unwrap();
     assert_eq!(verdict(&first), Verdict::Sat);
     assert_replays(&arena, &[base_is_zero, loaded_is_zero], &first);
+    assert_eq!(solver.retained_warm_structural_definition_count(), 1);
+    assert_eq!(solver.retained_warm_structural_refinement_round_count(), 1);
     let clauses = solver.encoded_clause_count();
     let variables = solver.encoded_variable_count();
     let definitions = solver.retained_warm_structural_definition_count();
@@ -123,20 +129,158 @@ fn opposite_one_shot_branches_reuse_structural_definitions() {
     assert_replays(&arena, &[hit, loaded_is_one], &positive);
     let definitions = solver.retained_warm_structural_definition_count();
     let reads = solver.retained_warm_array_read_count();
-    assert_eq!(definitions, 1);
+    assert_eq!(definitions, 0);
 
+    let negative = solver
+        .check_assuming_core_simplifying_memory(&mut arena, &[loaded_is_not_one])
+        .unwrap();
+    let AssumptionOutcome::Unsat { core } = negative else {
+        panic!("violated hit branch must be unsat");
+    };
+    assert_eq!(core, vec![loaded_is_not_one]);
+    assert_eq!(solver.retained_warm_structural_definition_count(), 1);
+    assert_eq!(solver.retained_warm_structural_refinement_round_count(), 1);
     assert_eq!(
         solver
             .check_assuming_simplifying_memory(&mut arena, &[loaded_is_not_one])
             .unwrap(),
         CheckResult::Unsat
     );
-    assert_eq!(
-        solver.retained_warm_structural_definition_count(),
-        definitions
-    );
+    assert_eq!(solver.retained_warm_structural_definition_count(), 1);
     assert_eq!(solver.retained_warm_array_read_count(), reads);
     assert_eq!(verdict(&solver.check(&arena).unwrap()), Verdict::Sat);
+}
+
+#[test]
+fn satisfied_store_miss_activates_no_definition_and_replays() {
+    let mut arena = TermArena::new();
+    let array = arena
+        .array_var_with_sorts("warm_dormant_a", Sort::BitVec(8), Sort::BitVec(8))
+        .unwrap();
+    let write_index = arena.bv_var("warm_dormant_wi", 8).unwrap();
+    let read_index = arena.bv_var("warm_dormant_ri", 8).unwrap();
+    let zero = arena.bv_const(8, 0).unwrap();
+    let one = arena.bv_const(8, 1).unwrap();
+    let distinct = not_eq(&mut arena, write_index, read_index);
+    let stored = arena.store(array, write_index, one).unwrap();
+    let loaded = arena.select(stored, read_index).unwrap();
+    let loaded_is_zero = arena.eq(loaded, zero).unwrap();
+
+    let mut solver = IncrementalBvSolver::new();
+    solver.assert(&arena, distinct).unwrap();
+    solver
+        .assert_simplifying_memory(&mut arena, loaded_is_zero)
+        .unwrap();
+    assert_eq!(solver.retained_warm_structural_equation_count(), 1);
+    assert_eq!(solver.retained_warm_structural_definition_count(), 0);
+
+    let result = solver.check(&arena).unwrap();
+    assert_eq!(verdict(&result), Verdict::Sat);
+    assert_replays(&arena, &[distinct, loaded_is_zero], &result);
+    assert_eq!(solver.retained_warm_structural_definition_count(), 0);
+    assert_eq!(solver.retained_warm_structural_refinement_round_count(), 0);
+}
+
+#[test]
+fn popped_pending_read_restores_dependency_closure_when_reasserted() {
+    let mut arena = TermArena::new();
+    let array = arena
+        .array_var_with_sorts("warm_reuse_a", Sort::BitVec(4), Sort::BitVec(4))
+        .unwrap();
+    let read_index = arena.bv_var("warm_reuse_read", 4).unwrap();
+    let first_index = arena.bv_const(4, 1).unwrap();
+    let second_index = arena.bv_const(4, 2).unwrap();
+    let two = arena.bv_const(4, 2).unwrap();
+    let three = arena.bv_const(4, 3).unwrap();
+    let base_read = arena.select(array, read_index).unwrap();
+    let first = arena.store(array, first_index, two).unwrap();
+    let second = arena.store(first, second_index, three).unwrap();
+    let loaded = arena.select(second, read_index).unwrap();
+    let loaded_is_two = arena.eq(loaded, two).unwrap();
+    let base_is_two = arena.eq(base_read, two).unwrap();
+    let read_is_first = arena.eq(read_index, first_index).unwrap();
+
+    let mut solver = IncrementalBvSolver::new();
+    solver.push().unwrap();
+    solver
+        .assert_simplifying_memory(&mut arena, loaded_is_two)
+        .unwrap();
+    assert_eq!(solver.retained_warm_structural_equation_count(), 1);
+    assert!(solver.retained_warm_array_read_count() >= 2);
+    assert_eq!(solver.retained_warm_structural_definition_count(), 0);
+    assert!(solver.pop());
+    assert_eq!(verdict(&solver.check(&arena).unwrap()), Verdict::Sat);
+    assert_eq!(solver.retained_warm_structural_definition_count(), 0);
+    assert_eq!(solver.retained_warm_structural_refinement_round_count(), 0);
+
+    solver.assert(&arena, read_is_first).unwrap();
+    solver
+        .assert_simplifying_memory(&mut arena, base_is_two)
+        .unwrap();
+    solver
+        .assert_simplifying_memory(&mut arena, loaded_is_two)
+        .unwrap();
+    let result = solver.check(&arena).unwrap();
+    assert_eq!(verdict(&result), Verdict::Sat);
+    assert_replays(
+        &arena,
+        &[read_is_first, base_is_two, loaded_is_two],
+        &result,
+    );
+    assert_eq!(solver.retained_warm_structural_definition_count(), 0);
+    assert_eq!(solver.retained_warm_structural_refinement_round_count(), 0);
+}
+
+#[test]
+fn transitive_summary_closes_nested_store_chain_in_one_candidate_round() {
+    let mut arena = TermArena::new();
+    let mut array = arena
+        .array_var_with_sorts("warm_round_a", Sort::BitVec(4), Sort::BitVec(4))
+        .unwrap();
+    let one = arena.bv_const(4, 1).unwrap();
+    for index in 0..8 {
+        let index = arena.bv_const(4, index).unwrap();
+        array = arena.store(array, index, one).unwrap();
+    }
+    let zero = arena.bv_const(4, 0).unwrap();
+    let read_index = arena.bv_var("warm_round_read", 4).unwrap();
+    let read_is_zero = arena.eq(read_index, zero).unwrap();
+    let loaded = arena.select(array, read_index).unwrap();
+    let loaded_is_one = arena.eq(loaded, one).unwrap();
+    let loaded_is_not_one = arena.not(loaded_is_one).unwrap();
+
+    let mut solver = IncrementalBvSolver::new();
+    solver.assert(&arena, read_is_zero).unwrap();
+    solver
+        .assert_simplifying_memory(&mut arena, loaded_is_not_one)
+        .unwrap();
+    let result = solver.check(&arena).unwrap();
+    assert_eq!(result, CheckResult::Unsat);
+    assert_eq!(solver.retained_warm_structural_equation_count(), 1);
+    assert_eq!(solver.retained_warm_structural_definition_count(), 1);
+    assert_eq!(solver.retained_warm_structural_refinement_round_count(), 1);
+}
+
+#[test]
+fn shared_zero_timeout_is_classified_before_refinement() {
+    let mut arena = TermArena::new();
+    let array = arena
+        .array_var_with_sorts("warm_timeout_a", Sort::BitVec(8), Sort::BitVec(8))
+        .unwrap();
+    let index = arena.bv_var("warm_timeout_i", 8).unwrap();
+    let one = arena.bv_const(8, 1).unwrap();
+    let stored = arena.store(array, index, one).unwrap();
+    let loaded = arena.select(stored, index).unwrap();
+    let wrong = not_eq(&mut arena, loaded, one);
+
+    let config = SolverConfig::default().with_timeout(Duration::ZERO);
+    let mut solver = IncrementalBvSolver::with_config(config);
+    solver.assert_simplifying_memory(&mut arena, wrong).unwrap();
+    let CheckResult::Unknown(reason) = solver.check(&arena).unwrap() else {
+        panic!("zero-timeout warm query must be unknown");
+    };
+    assert_eq!(reason.kind, axeyum_solver::UnknownKind::Timeout);
+    assert_eq!(solver.retained_warm_structural_definition_count(), 0);
 }
 
 #[test]
@@ -185,7 +329,7 @@ fn constant_ite_nested_and_bool_reads_stay_warm() {
     let result = ite_solver.check(&arena).unwrap();
     assert_eq!(verdict(&result), Verdict::Sat);
     assert_replays(&arena, &[flag, chosen_is_zero], &result);
-    assert!(ite_solver.retained_warm_structural_read_count() >= 3);
+    assert_eq!(ite_solver.retained_warm_structural_read_count(), 1);
 }
 
 fn build_store_depth(arena: &mut TermArena, depth: usize) -> TermId {

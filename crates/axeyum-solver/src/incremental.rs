@@ -16,7 +16,7 @@
 //! terms** with the ground evaluator before being returned.
 
 use axeyum_bv::{BitLowerError, IncrementalLowering, first_unsupported_op};
-use axeyum_cnf::{CnfVar, IncrementalCnf, SatError, SatResult};
+use axeyum_cnf::{CnfVar, IncrementalCnf, SatError, SatResult, SatUnsatEvidence};
 use axeyum_ir::{
     ArraySortKey, ArrayValue, Assignment, FuncId, FuncValue, GenericArrayValue, IrError, Op, Sort,
     SymbolId, TermArena, TermId, TermNode, Value, WideUint, eval, well_founded_default,
@@ -35,6 +35,7 @@ use crate::model::Model;
 
 const MAX_WARM_STRUCTURAL_ARRAY_NODES: usize = 512;
 const MAX_WARM_STRUCTURAL_ARRAY_DEPTH: usize = 256;
+const MAX_WARM_STRUCTURAL_REFINEMENT_ROUNDS: usize = MAX_WARM_STRUCTURAL_ARRAY_NODES;
 
 /// Whether `term` needs the deferred theory path instead of the warm
 /// bit-blaster: arrays (`select`/`store`/array values) or uninterpreted function
@@ -166,7 +167,7 @@ struct WarmArrayEncoding {
     select_terms: Vec<TermId>,
     uf_app_terms: Vec<TermId>,
     congruence_lemmas: Vec<TermId>,
-    permanent_semantics: Vec<(TermId, TermId)>,
+    structural_semantics: Vec<WarmArraySemantic>,
 }
 
 #[derive(Debug, Default)]
@@ -174,7 +175,26 @@ struct WarmAbstractionWork {
     memo: HashMap<TermId, TermId>,
     select_terms: Vec<TermId>,
     uf_app_terms: Vec<TermId>,
-    permanent_semantics: Vec<(TermId, TermId)>,
+    structural_semantics: Vec<WarmArraySemantic>,
+}
+
+#[derive(Debug, Clone)]
+struct WarmArraySemantic {
+    select_term: TermId,
+    definition: TermId,
+    dependencies: Vec<TermId>,
+}
+
+struct WarmOneShotTerms {
+    selects: Vec<TermId>,
+    uf_apps: Vec<TermId>,
+    array_equalities: Vec<WarmArrayEquality>,
+}
+
+enum WarmCandidateCheck {
+    Refine(Vec<WarmArraySemantic>),
+    Sat(Model),
+    Unknown(UnknownReason),
 }
 
 #[derive(Debug, Clone)]
@@ -198,7 +218,9 @@ pub struct IncrementalBvSolver {
     config: SolverConfig,
     frames: Vec<Frame>,
     warm_array_selects: HashMap<TermId, WarmArraySelect>,
+    warm_array_semantics: HashMap<TermId, WarmArraySemantic>,
     warm_array_semantics_encoded: HashSet<TermId>,
+    warm_array_refinement_rounds: usize,
     warm_uf_apps: HashMap<TermId, WarmUfApp>,
     internal_symbols: HashSet<SymbolId>,
 }
@@ -233,7 +255,9 @@ impl IncrementalBvSolver {
                 warm_array_equalities: Vec::new(),
             }],
             warm_array_selects: HashMap::new(),
+            warm_array_semantics: HashMap::new(),
             warm_array_semantics_encoded: HashSet::new(),
+            warm_array_refinement_rounds: 0,
             warm_uf_apps: HashMap::new(),
             internal_symbols: HashSet::new(),
         }
@@ -290,6 +314,20 @@ impl IncrementalBvSolver {
     #[must_use]
     pub fn retained_warm_structural_definition_count(&self) -> usize {
         self.warm_array_semantics_encoded.len()
+    }
+
+    /// Number of exact structural-read equations retained as candidate-check
+    /// metadata, whether dormant or already installed in CNF.
+    #[must_use]
+    pub fn retained_warm_structural_equation_count(&self) -> usize {
+        self.warm_array_semantics.len()
+    }
+
+    /// Number of candidate-activation rounds completed over this solver's
+    /// lifetime. A round may install several violated definitions as one batch.
+    #[must_use]
+    pub fn retained_warm_structural_refinement_round_count(&self) -> usize {
+        self.warm_array_refinement_rounds
     }
 
     /// Whether `term` contains array or uninterpreted-function structure that
@@ -543,7 +581,7 @@ impl IncrementalBvSolver {
             return Ok(encoded.term);
         }
 
-        self.encode_permanent_warm_semantics(arena, &encoded.permanent_semantics)?;
+        self.retain_warm_semantics(&encoded.structural_semantics)?;
 
         let selector = self
             .frames
@@ -594,30 +632,54 @@ impl IncrementalBvSolver {
         term: TermId,
         selector: Option<CnfVar>,
     ) -> Result<(), SolverError> {
+        let encoded = self.encode_warm_root_with_deadline(arena, term, selector, None)?;
+        debug_assert!(encoded, "deadline-free warm root cannot be interrupted");
+        Ok(())
+    }
+
+    fn encode_warm_root_with_deadline(
+        &mut self,
+        arena: &TermArena,
+        term: TermId,
+        selector: Option<CnfVar>,
+        deadline: Option<Instant>,
+    ) -> Result<bool, SolverError> {
         if let Some((unsupported, op)) = first_unsupported_op(arena, &[term]) {
             return Err(SolverError::Unsupported(format!(
                 "term #{} uses unsupported pure-Rust BV operator {op:?}",
                 unsupported.index()
             )));
         }
-        let lowered = self.lowering.lower(arena, term).map_err(map_lower_error)?;
+        let lowered = match self.lowering.lower_with_deadline(arena, term, deadline) {
+            Ok(lowered) => lowered,
+            Err(BitLowerError::DeadlineExceeded) => return Ok(false),
+            Err(error) => return Err(map_lower_error(error)),
+        };
         let root = lowered.bits()[0];
         self.cnf
             .assert_root(self.lowering.aig(), root, selector)
-            .map_err(|error| map_sat_error(&error))
+            .map_err(|error| map_sat_error(&error))?;
+        Ok(true)
     }
 
-    fn encode_permanent_warm_semantics(
+    fn retain_warm_semantics(
         &mut self,
-        arena: &TermArena,
-        semantics: &[(TermId, TermId)],
+        semantics: &[WarmArraySemantic],
     ) -> Result<(), SolverError> {
-        for &(select_term, definition) in semantics {
-            if self.warm_array_semantics_encoded.contains(&select_term) {
-                continue;
+        for semantic in semantics {
+            if let Some(existing) = self.warm_array_semantics.get(&semantic.select_term) {
+                if existing.definition != semantic.definition
+                    || existing.dependencies != semantic.dependencies
+                {
+                    return Err(SolverError::Backend(format!(
+                        "warm structural read #{} was retained with inconsistent semantics",
+                        semantic.select_term.index()
+                    )));
+                }
+            } else {
+                self.warm_array_semantics
+                    .insert(semantic.select_term, semantic.clone());
             }
-            self.encode_warm_root(arena, definition, None)?;
-            self.warm_array_semantics_encoded.insert(select_term);
         }
         Ok(())
     }
@@ -1014,7 +1076,7 @@ impl IncrementalBvSolver {
             select_terms: work.select_terms,
             uf_app_terms: work.uf_app_terms,
             congruence_lemmas,
-            permanent_semantics: work.permanent_semantics,
+            structural_semantics: work.structural_semantics,
         })
     }
 
@@ -1147,28 +1209,83 @@ impl IncrementalBvSolver {
         if !work.select_terms.contains(&term) {
             work.select_terms.push(term);
         }
-        if abstracted.projection_symbol.is_none()
-            && !self.warm_array_semantics_encoded.contains(&term)
-            && !work
-                .permanent_semantics
-                .iter()
-                .any(|(semantic_term, _)| *semantic_term == term)
+        if abstracted.projection_symbol.is_some() {
+            return Ok(abstracted.value_term);
+        }
+        if self.warm_array_semantics.contains_key(&term) {
+            self.extend_warm_array_semantic_dependencies(term, &mut work.select_terms);
+            return Ok(abstracted.value_term);
+        }
+        if !work
+            .structural_semantics
+            .iter()
+            .any(|semantic| semantic.select_term == term)
         {
-            let semantic_rhs =
-                warm_array_select_semantic_rhs(arena, abstracted).ok_or_else(|| {
-                    SolverError::Unsupported(format!(
-                        "warm structural array read #{} has no supported exact definition",
-                        term.index()
-                    ))
-                })?;
+            let semantic_rhs = Self::simplify_memory_for_warm_assertion(arena, term);
+            if semantic_rhs == term {
+                return Err(SolverError::Unsupported(format!(
+                    "warm structural array read #{} has no supported exact summary",
+                    term.index()
+                )));
+            }
             let abstracted_rhs =
                 self.abstract_warm_array_selects_inner(arena, semantic_rhs, work)?;
             let definition = arena
                 .eq(abstracted.value_term, abstracted_rhs)
                 .map_err(|error| map_ir_error(&error))?;
-            work.permanent_semantics.push((term, definition));
+            let dependencies = self.warm_array_select_dependencies(arena, abstracted_rhs);
+            work.structural_semantics.push(WarmArraySemantic {
+                select_term: term,
+                definition,
+                dependencies,
+            });
         }
         Ok(abstracted.value_term)
+    }
+
+    fn extend_warm_array_semantic_dependencies(
+        &self,
+        select_term: TermId,
+        select_terms: &mut Vec<TermId>,
+    ) {
+        let mut stack = vec![select_term];
+        while let Some(term) = stack.pop() {
+            let Some(semantic) = self.warm_array_semantics.get(&term) else {
+                continue;
+            };
+            for &dependency in semantic.dependencies.iter().rev() {
+                if !select_terms.contains(&dependency) {
+                    select_terms.push(dependency);
+                    stack.push(dependency);
+                }
+            }
+        }
+    }
+
+    fn warm_array_select_dependencies(&self, arena: &TermArena, term: TermId) -> Vec<TermId> {
+        let owners = self
+            .warm_array_selects
+            .iter()
+            .map(|(&select_term, select)| (select.value_term, select_term))
+            .collect::<HashMap<_, _>>();
+        let mut dependencies = Vec::new();
+        let mut seen = HashSet::new();
+        let mut stack = vec![term];
+        while let Some(current) = stack.pop() {
+            if !seen.insert(current) {
+                continue;
+            }
+            if let Some(&select_term) = owners.get(&current) {
+                dependencies.push(select_term);
+                continue;
+            }
+            if let TermNode::App { args, .. } = arena.node(current) {
+                stack.extend(args.iter().rev().copied());
+            }
+        }
+        dependencies.sort_by_key(|dependency| dependency.index());
+        dependencies.dedup();
+        dependencies
     }
 
     fn supported_warm_array_equality(arena: &TermArena, term: TermId) -> Option<WarmArrayEquality> {
@@ -1408,7 +1525,7 @@ impl IncrementalBvSolver {
                 &active_uf_apps,
                 &active_equalities,
             )?;
-            self.encode_permanent_warm_semantics(arena, &encoded.permanent_semantics)?;
+            self.retain_warm_semantics(&encoded.structural_semantics)?;
             active_selects.extend(encoded.select_terms.iter().copied());
             active_uf_apps.extend(encoded.uf_app_terms.iter().copied());
             simplified.push(OneShotAssumption {
@@ -1529,90 +1646,233 @@ impl IncrementalBvSolver {
             .collect::<Vec<_>>();
         active.extend_from_slice(&ephemeral);
 
-        let result = self
-            .cnf
-            .solve(&active, self.config.timeout)
-            .map_err(|error| map_sat_error(&error))?;
+        let one_shot = collect_warm_one_shot_terms(assumptions);
+        let active_selects = self.active_warm_array_select_closure(&one_shot.selects);
 
-        match result {
-            SatResult::Sat(cnf_assignment) => {
-                let node_values = self
-                    .cnf
-                    .aig_node_values(self.lowering.aig(), &cnf_assignment);
-                let reconstructed = self
-                    .lowering
-                    .assignment_from_aig_values(&node_values)
-                    .map_err(map_lower_error)?;
-                let one_shot_selects = assumptions
-                    .iter()
-                    .flat_map(|assumption| assumption.warm_array_selects.iter().copied())
-                    .collect::<Vec<_>>();
-                let one_shot_uf_apps = assumptions
-                    .iter()
-                    .flat_map(|assumption| assumption.warm_uf_apps.iter().copied())
-                    .collect::<Vec<_>>();
-                let one_shot_array_equalities = assumptions
-                    .iter()
-                    .flat_map(|assumption| assumption.warm_array_equalities.iter().copied())
-                    .collect::<Vec<_>>();
-                let model = match self.complete_model_with_warm_theories(
-                    arena,
-                    &reconstructed,
-                    &one_shot_selects,
-                    &one_shot_uf_apps,
-                    &one_shot_array_equalities,
-                ) {
-                    Ok(model) => model,
-                    Err(reason) => return Ok(IncrementalSolveOutcome::unknown(reason)),
-                };
-                // Replay is the soundness gate. If the trust-anchor evaluator
-                // cannot evaluate a term (e.g. an arithmetic overflow), the model
-                // is unverifiable: degrade to a graceful `Unknown` rather than
-                // accepting an unchecked sat or crashing.
-                let original_assumptions = original_assumptions(assumptions);
-                if let Some(reason) = self.replay(arena, &original_assumptions, &model)? {
-                    return Ok(IncrementalSolveOutcome::unknown(reason));
-                }
-                Ok(IncrementalSolveOutcome::sat(model))
+        let deadline = self
+            .config
+            .timeout
+            .and_then(|timeout| Instant::now().checked_add(timeout));
+        let mut refinement_rounds = 0usize;
+        loop {
+            if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
+                return Ok(IncrementalSolveOutcome::unknown(UnknownReason {
+                    kind: UnknownKind::Timeout,
+                    detail: "warm structural refinement reached the shared query deadline"
+                        .to_owned(),
+                }));
             }
-            SatResult::Unsat(evidence) => {
-                // Map the solver's failed-assumption selector literals back to the
-                // source assumption terms (ephemeral[i] is the selector for
-                // assumptions[i]). An empty core (e.g. unsat without assumptions,
-                // or an adapter that returns none) is reported as the full set,
-                // which is always a sound core.
-                let mut core = Vec::new();
-                for lit in &evidence.failed_assumptions {
-                    if let Some(i) = assumption_selectors
-                        .iter()
-                        .position(|&sel| sel == lit.var())
-                    {
-                        core.push(assumptions[i].original);
+            let timeout =
+                deadline.map(|deadline| deadline.saturating_duration_since(Instant::now()));
+            let result = self
+                .cnf
+                .solve(&active, timeout)
+                .map_err(|error| map_sat_error(&error))?;
+
+            match result {
+                SatResult::Sat(cnf_assignment) => {
+                    let node_values = self
+                        .cnf
+                        .aig_node_values(self.lowering.aig(), &cnf_assignment);
+                    let reconstructed = self
+                        .lowering
+                        .assignment_from_aig_values(&node_values)
+                        .map_err(map_lower_error)?;
+                    match self.check_warm_candidate(
+                        arena,
+                        &reconstructed,
+                        &active_selects,
+                        &one_shot,
+                        assumptions,
+                        deadline,
+                    )? {
+                        WarmCandidateCheck::Refine(violated) => {
+                            if refinement_rounds >= MAX_WARM_STRUCTURAL_REFINEMENT_ROUNDS {
+                                return Ok(IncrementalSolveOutcome::unknown(UnknownReason {
+                                    kind: UnknownKind::ResourceLimit,
+                                    detail: format!(
+                                        "warm structural refinement exceeded {MAX_WARM_STRUCTURAL_REFINEMENT_ROUNDS} candidate rounds"
+                                    ),
+                                }));
+                            }
+                            if let Some(reason) =
+                                self.activate_warm_array_semantics(arena, violated, deadline)?
+                            {
+                                return Ok(IncrementalSolveOutcome::unknown(reason));
+                            }
+                            refinement_rounds += 1;
+                            self.warm_array_refinement_rounds =
+                                self.warm_array_refinement_rounds.saturating_add(1);
+                        }
+                        WarmCandidateCheck::Sat(model) => {
+                            return Ok(IncrementalSolveOutcome::sat(model));
+                        }
+                        WarmCandidateCheck::Unknown(reason) => {
+                            return Ok(IncrementalSolveOutcome::unknown(reason));
+                        }
                     }
                 }
-                if core.is_empty() && !assumptions.is_empty() {
-                    core.extend(original_assumptions(assumptions));
+                SatResult::Unsat(evidence) => {
+                    return Ok(self.warm_unsat_outcome(
+                        &evidence,
+                        assumptions,
+                        &assumption_selectors,
+                    ));
                 }
-                let active_assertion_core =
-                    self.active_assertion_core(&evidence.failed_assumptions);
-                Ok(IncrementalSolveOutcome {
-                    result: CheckResult::Unsat,
-                    assumption_core: core,
-                    active_assertion_core,
-                })
-            }
-            SatResult::Unknown(reason) => {
-                let kind = if reason.detail.contains("timeout") {
-                    UnknownKind::Timeout
-                } else {
-                    UnknownKind::Other
-                };
-                Ok(IncrementalSolveOutcome::unknown(UnknownReason {
-                    kind,
-                    detail: reason.detail,
-                }))
+                SatResult::Unknown(reason) => {
+                    let kind = if reason.detail.contains("timeout") {
+                        UnknownKind::Timeout
+                    } else {
+                        UnknownKind::Other
+                    };
+                    return Ok(IncrementalSolveOutcome::unknown(UnknownReason {
+                        kind,
+                        detail: reason.detail,
+                    }));
+                }
             }
         }
+    }
+
+    fn active_warm_array_select_closure(&self, one_shot_selects: &[TermId]) -> Vec<TermId> {
+        let mut active = self.active_warm_array_select_terms();
+        active.extend_from_slice(one_shot_selects);
+        for select_term in active.clone() {
+            self.extend_warm_array_semantic_dependencies(select_term, &mut active);
+        }
+        active.sort_by_key(|term| term.index());
+        active.dedup();
+        active
+    }
+
+    fn check_warm_candidate(
+        &self,
+        arena: &TermArena,
+        assignment: &Assignment,
+        active_selects: &[TermId],
+        one_shot: &WarmOneShotTerms,
+        assumptions: &[OneShotAssumption],
+        deadline: Option<Instant>,
+    ) -> Result<WarmCandidateCheck, SolverError> {
+        let violated =
+            match self.violated_warm_array_semantics(arena, assignment, active_selects, deadline) {
+                Ok(violated) => violated,
+                Err(reason) => return Ok(WarmCandidateCheck::Unknown(reason)),
+            };
+        if !violated.is_empty() {
+            return Ok(WarmCandidateCheck::Refine(violated));
+        }
+        let model = match self.complete_model_with_warm_theories(
+            arena,
+            assignment,
+            &one_shot.selects,
+            &one_shot.uf_apps,
+            &one_shot.array_equalities,
+        ) {
+            Ok(model) => model,
+            Err(reason) => return Ok(WarmCandidateCheck::Unknown(reason)),
+        };
+        let original_assumptions = original_assumptions(assumptions);
+        if let Some(reason) = self.replay(arena, &original_assumptions, &model)? {
+            return Ok(WarmCandidateCheck::Unknown(reason));
+        }
+        Ok(WarmCandidateCheck::Sat(model))
+    }
+
+    fn activate_warm_array_semantics(
+        &mut self,
+        arena: &TermArena,
+        violated: Vec<WarmArraySemantic>,
+        deadline: Option<Instant>,
+    ) -> Result<Option<UnknownReason>, SolverError> {
+        for semantic in violated {
+            if !self.encode_warm_root_with_deadline(arena, semantic.definition, None, deadline)? {
+                return Ok(Some(UnknownReason {
+                    kind: UnknownKind::Timeout,
+                    detail: format!(
+                        "warm structural definition for read #{} exceeded the shared query deadline",
+                        semantic.select_term.index()
+                    ),
+                }));
+            }
+            self.warm_array_semantics_encoded
+                .insert(semantic.select_term);
+        }
+        Ok(None)
+    }
+
+    fn warm_unsat_outcome(
+        &self,
+        evidence: &SatUnsatEvidence,
+        assumptions: &[OneShotAssumption],
+        assumption_selectors: &[CnfVar],
+    ) -> IncrementalSolveOutcome {
+        let mut core = Vec::new();
+        for lit in &evidence.failed_assumptions {
+            if let Some(i) = assumption_selectors
+                .iter()
+                .position(|&selector| selector == lit.var())
+            {
+                core.push(assumptions[i].original);
+            }
+        }
+        if core.is_empty() && !assumptions.is_empty() {
+            core.extend(original_assumptions(assumptions));
+        }
+        IncrementalSolveOutcome {
+            result: CheckResult::Unsat,
+            assumption_core: core,
+            active_assertion_core: self.active_assertion_core(&evidence.failed_assumptions),
+        }
+    }
+
+    fn violated_warm_array_semantics(
+        &self,
+        arena: &TermArena,
+        assignment: &Assignment,
+        active_selects: &[TermId],
+        deadline: Option<Instant>,
+    ) -> Result<Vec<WarmArraySemantic>, UnknownReason> {
+        let candidate = complete_warm_candidate_assignment(arena, assignment);
+        let mut violated = Vec::new();
+        for &select_term in active_selects {
+            if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
+                return Err(UnknownReason {
+                    kind: UnknownKind::Timeout,
+                    detail: "warm structural candidate checking reached the shared query deadline"
+                        .to_owned(),
+                });
+            }
+            if self.warm_array_semantics_encoded.contains(&select_term) {
+                continue;
+            }
+            let Some(semantic) = self.warm_array_semantics.get(&select_term) else {
+                continue;
+            };
+            match eval(arena, semantic.definition, &candidate) {
+                Ok(Value::Bool(true)) => {}
+                Ok(Value::Bool(false)) => violated.push(semantic.clone()),
+                Ok(value) => {
+                    return Err(UnknownReason {
+                        kind: UnknownKind::Other,
+                        detail: format!(
+                            "warm structural definition for read #{} evaluated to non-Boolean {value}",
+                            select_term.index()
+                        ),
+                    });
+                }
+                Err(error) => {
+                    return Err(UnknownReason {
+                        kind: UnknownKind::Other,
+                        detail: format!(
+                            "warm structural definition for read #{} could not be evaluated: {error}",
+                            select_term.index()
+                        ),
+                    });
+                }
+            }
+        }
+        Ok(violated)
     }
 
     fn active_assertion_core(&self, failed_assumptions: &[axeyum_cnf::CnfLit]) -> Vec<TermId> {
@@ -2836,42 +3096,6 @@ fn is_supported_warm_array_parent(arena: &TermArena, term: TermId) -> bool {
     )
 }
 
-fn warm_array_select_semantic_rhs(
-    arena: &mut TermArena,
-    select: WarmArraySelect,
-) -> Option<TermId> {
-    let parent = select.array_parent;
-    let node = match arena.node(parent) {
-        TermNode::App { op, args } => (*op, args.to_vec()),
-        _ => return None,
-    };
-    match node {
-        (Op::ConstArray { .. }, args) => {
-            let [value] = args.as_slice() else {
-                return None;
-            };
-            Some(*value)
-        }
-        (Op::Store, args) => {
-            let [base, write_index, value] = args.as_slice() else {
-                return None;
-            };
-            let same_index = arena.eq(*write_index, select.index).ok()?;
-            let base_read = arena.select(*base, select.index).ok()?;
-            arena.ite(same_index, *value, base_read).ok()
-        }
-        (Op::Ite, args) => {
-            let [condition, then_array, else_array] = args.as_slice() else {
-                return None;
-            };
-            let then_read = arena.select(*then_array, select.index).ok()?;
-            let else_read = arena.select(*else_array, select.index).ok()?;
-            arena.ite(*condition, then_read, else_read).ok()
-        }
-        _ => None,
-    }
-}
-
 fn warm_array_parent_covers(
     arena: &TermArena,
     root: TermId,
@@ -3638,11 +3862,40 @@ fn assignment_with_internal(
     merged
 }
 
+fn complete_warm_candidate_assignment(arena: &TermArena, assignment: &Assignment) -> Assignment {
+    let mut completed = assignment.clone();
+    for (symbol, _name, sort) in arena.symbols() {
+        if completed.get(symbol).is_none()
+            && let Some(value) = well_founded_default(arena, sort)
+        {
+            completed.set(symbol, value);
+        }
+    }
+    completed
+}
+
 fn original_assumptions(assumptions: &[OneShotAssumption]) -> Vec<TermId> {
     assumptions
         .iter()
         .map(|assumption| assumption.original)
         .collect()
+}
+
+fn collect_warm_one_shot_terms(assumptions: &[OneShotAssumption]) -> WarmOneShotTerms {
+    WarmOneShotTerms {
+        selects: assumptions
+            .iter()
+            .flat_map(|assumption| assumption.warm_array_selects.iter().copied())
+            .collect(),
+        uf_apps: assumptions
+            .iter()
+            .flat_map(|assumption| assumption.warm_uf_apps.iter().copied())
+            .collect(),
+        array_equalities: assumptions
+            .iter()
+            .flat_map(|assumption| assumption.warm_array_equalities.iter().copied())
+            .collect(),
+    }
 }
 
 fn complete_model_filtered(
