@@ -118,7 +118,7 @@ step. The `axeyum-strings` crate boundary is deferred to when the word-level sol
   `len`; LIA → string length bounds). This is a **direct application of P1.6**;
   closing the BV/String+LIA gap is the headline deliverable.
 
-| exit | the `str.len` **unsat** test that is `unknown` today **decides** (the gap-analysis Gap 10 marker) |
+| exit | **DONE (ADR-0052)** — the formerly-`unknown` `str.len` UNSAT marker decides (gap-analysis Gap 10) |
 
 **LANDED (2026-07-01, ADR-0052).** Three cooperating pieces:
 `bv2nat_blast.rs` (solver) rewrites linear-over-`bv2nat` integer atoms to

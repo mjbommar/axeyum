@@ -1829,7 +1829,8 @@ fn dispatch_ufbv_online(
         "ufbv-online-cdclt"
     };
     let result = if features.has_array {
-        crate::ufbv_online::check_qf_aufbv_online_cdclt(arena, assertions, config)
+        let mut online_arena = arena.clone();
+        crate::ufbv_online::check_qf_aufbv_online_cdclt(&mut online_arena, assertions, config)
     } else {
         crate::ufbv_online::check_qf_ufbv_online_cdclt(arena, assertions, config)
     };
@@ -2512,7 +2513,8 @@ fn dispatch_abv_online(
     {
         return Ok(None);
     }
-    match crate::ufbv_online::check_qf_aufbv_online_cdclt(arena, assertions, config) {
+    let mut online_arena = arena.clone();
+    match crate::ufbv_online::check_qf_aufbv_online_cdclt(&mut online_arena, assertions, config) {
         Ok(result @ (CheckResult::Sat(_) | CheckResult::Unsat)) => {
             with_recorder(rec, |t| t.record_result("abv-online-cdclt", &result));
             Ok(Some(result))
@@ -5732,6 +5734,74 @@ impl Features {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn abv_online_probe_isolated_from_caller_arena() {
+        let mut arena = TermArena::new();
+        let left = arena.array_var("isolated_abv_left", 4, 8).unwrap();
+        let right = arena.array_var("isolated_abv_right", 4, 8).unwrap();
+        let equal = arena.eq(left, right).unwrap();
+        let different = arena.not(equal).unwrap();
+        let assertions = [different];
+        let features = Features::scan_within(&arena, &assertions, None).unwrap();
+        let original_terms = arena.len();
+        let mut recorder = None;
+
+        let result = dispatch_abv_online(
+            &mut arena,
+            &assertions,
+            &SolverConfig::default(),
+            &features,
+            &mut recorder,
+        )
+        .unwrap();
+        let Some(CheckResult::Sat(model)) = result else {
+            panic!("expected the isolated ABV probe to decide SAT");
+        };
+        assert_eq!(arena.len(), original_terms);
+        assert_eq!(
+            eval(&arena, different, &model.to_assignment()),
+            Ok(Value::Bool(true))
+        );
+    }
+
+    #[test]
+    fn aufbv_online_probe_isolated_from_caller_arena() {
+        let mut arena = TermArena::new();
+        let left = arena.array_var("isolated_aufbv_left", 4, 4).unwrap();
+        let right = arena.array_var("isolated_aufbv_right", 4, 4).unwrap();
+        let function = arena
+            .declare_fun("isolated_aufbv_f", &[Sort::BitVec(4)], Sort::BitVec(4))
+            .unwrap();
+        let x = arena.bv_var("isolated_aufbv_x", 4).unwrap();
+        let fx = arena.apply(function, &[x]).unwrap();
+        let function_fixed = arena.eq(fx, x).unwrap();
+        let equal = arena.eq(left, right).unwrap();
+        let different = arena.not(equal).unwrap();
+        let assertions = [function_fixed, different];
+        let features = Features::scan_within(&arena, &assertions, None).unwrap();
+        let original_terms = arena.len();
+        let mut recorder = None;
+
+        let result = dispatch_ufbv_online(
+            &mut arena,
+            &assertions,
+            &SolverConfig::default(),
+            &features,
+            &mut recorder,
+        )
+        .unwrap();
+        let Some(CheckResult::Sat(model)) = result else {
+            panic!("expected the isolated AUFBV probe to decide SAT");
+        };
+        assert_eq!(arena.len(), original_terms);
+        let assignment = model.to_assignment();
+        assert!(
+            assertions
+                .iter()
+                .all(|&assertion| eval(&arena, assertion, &assignment) == Ok(Value::Bool(true)))
+        );
+    }
 
     #[test]
     fn check_auto_uses_term_identity_refuter_before_theory_routes() {

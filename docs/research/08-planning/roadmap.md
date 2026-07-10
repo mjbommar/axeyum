@@ -333,12 +333,20 @@ attempt is written up as an ADR documenting why not.
 - ADR for select/store, extensionality, congruence closure, model replay, and
   proof/evidence commitments before public arrays/EUF surface expands.
 
-Progress update (2026-07-09): ADR-0071 adds a true abstraction-only array
-boundary and replay-guided base-select congruence on canonical `CdclT`, composed
-with dynamic UFBV interfaces and function-then-array model projection. Public
-QF_ABV/QF_AUFBV runs remain DISAGREE=0 with zero replay failures. This is the
-first live-bus slice, not phase exit: lazy store axioms, diff-skolem
-extensionality, scalable array defaults, and the warm memory path remain.
+Progress update (2026-07-09): ADR-0071 adds replay-guided base-select congruence
+on canonical `CdclT`; ADR-0072 reuses the shared ROW abstraction and materializes
+only candidate-violated store hit/miss axioms. Both compose with dynamic UFBV
+interfaces and function-then-array projection. Public QF_ABV/QF_AUFBV runs
+remain DISAGREE=0 with zero replay failures. This is not phase exit:
+merge-triggered queue states, cross-atom extensionality, scalable array
+defaults, and the warm memory path remain.
+
+ADR-0073 adds candidate-guided array equality: one bounded diff witness per
+equality flag plus observed query/store indices, with only violated congruence or
+witness instances materialized. The 768-comparison matrix is now half
+equality-bearing and remains clean. Full phase exit still requires class-merge
+queue scheduling, cross-atom observations, scalable models, warm reuse, and
+proof integration.
 
 Implementation note: a first infosec-workflow client example landed early
 (2026-06-13), ahead of arrays — a register-VM symbolic executor over

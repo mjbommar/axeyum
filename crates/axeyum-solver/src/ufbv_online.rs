@@ -3,7 +3,9 @@
 //!
 //! Array reads are first replaced by the shared lazy-ROW abstraction: base selects
 //! and reads through stores receive fresh scalar results, while store hit/miss
-//! axioms are deferred. Uninterpreted applications are then replaced by fresh
+//! axioms are deferred. Array equality atoms become Boolean flags with bounded
+//! observed-index and diff-witness reads. Uninterpreted applications are then
+//! replaced by fresh
 //! scalar symbols through [`axeyum_rewrite::abstract_functions`], also without
 //! eager Ackermann constraints.
 //! The Boolean structure is Tseitin-encoded once per canonical round. The first
@@ -21,10 +23,11 @@
 //! The first round is the function-free relaxation. A SAT candidate is scanned for
 //! same-function applications with equal argument values and unequal result values,
 //! plus same-array selects with equal indices and unequal results, and store-read
-//! sites whose result violates read-over-write. Only violated pairs/sites
-//! materialize argument/index/result equalities or hit/miss axioms for the next
-//! round. Congruent applications use the e-graph; array facts add valid implications
-//! directly to the Boolean skeleton. Exact BV owns every scalar atom.
+//! sites whose result violates read-over-write, plus equality flags inconsistent
+//! with an observed read or diff witness. Only violated pairs/sites materialize
+//! argument/index/result equalities, hit/miss axioms, or extensionality instances
+//! for the next round. Congruent applications use the e-graph; array facts add valid
+//! implications directly to the Boolean skeleton. Exact BV owns every scalar atom.
 //! The loop reaches a replaying model, relaxation UNSAT, or explicit
 //! round/interface/deadline bounds. Eager reductions remain fallbacks and
 //! differential oracles.
@@ -51,7 +54,9 @@ use axeyum_ir::{
 };
 use axeyum_rewrite::{FuncElimError, FunctionAbstraction, abstract_functions, replace_subterms};
 
-use crate::abv::{RowKind, RowSite, abstract_rows_for_online, project_online_row_assignment};
+use crate::abv::{
+    OnlineArrayEquality, RowKind, RowSite, abstract_rows_for_online, project_online_row_assignment,
+};
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
 use crate::cdclt::{CdclT, Lit as CdcltLit, Outcome};
 use crate::euf_egraph::{Encoder, EufTheory, TheoryLit, TheoryProp, TheorySolver};
@@ -108,6 +113,34 @@ struct CombinedRowStore {
     rewritten_inner: TermId,
 }
 
+#[derive(Debug, Clone)]
+struct CombinedArrayEqualityObservation {
+    original_lhs_read: TermId,
+    original_rhs_read: TermId,
+    rewritten_lhs_read: TermId,
+    rewritten_rhs_read: TermId,
+    is_diff_witness: bool,
+}
+
+#[derive(Debug, Clone)]
+struct CombinedArrayEquality {
+    flag: SymbolId,
+    observations: Vec<CombinedArrayEqualityObservation>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum ArrayEqualityAxiomKind {
+    Equal,
+    Diff,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+struct ArrayEqualityAxiom {
+    equality: usize,
+    observation: usize,
+    kind: ArrayEqualityAxiomKind,
+}
+
 enum WalkError {
     Timeout,
     NonBoolean(TermId),
@@ -130,6 +163,7 @@ struct PreparedAbstraction {
     applications: Vec<CombinedApplication>,
     selects: Vec<CombinedSelect>,
     row_stores: Vec<CombinedRowStore>,
+    array_equalities: Vec<CombinedArrayEquality>,
     replacements: HashMap<TermId, TermId>,
 }
 
@@ -137,6 +171,7 @@ struct PreparedArrayRoots {
     had_arrays: bool,
     semantic_assertions: Vec<TermId>,
     row_sites: Vec<RowSite>,
+    array_equalities: Vec<OnlineArrayEquality>,
     function_roots: Vec<TermId>,
 }
 
@@ -210,6 +245,7 @@ struct InterfaceRefinementStats {
     function_pairs_added: usize,
     array_pairs_added: usize,
     row_axioms_added: usize,
+    array_equality_axioms_added: usize,
     max_interface_atoms: usize,
 }
 
@@ -588,8 +624,10 @@ pub fn check_qf_ufbv_online_cdclt(
 /// Base-array selects and reads through stores start as independent fresh scalar
 /// results. Candidate equal-index/unequal-result pairs materialize select
 /// congruence; violated store reads materialize the exact hit/miss ROW axiom.
-/// Function applications use the same dynamic interface path. SAT is accepted
-/// only after projecting functions, then arrays, and replaying the original query.
+/// Array equality flags materialize only violated observed-index congruence or
+/// diff-witness instances. Function applications use the same dynamic interface
+/// path. SAT is accepted only after projecting functions, then arrays, and
+/// replaying the original query.
 ///
 /// # Errors
 ///
@@ -657,9 +695,11 @@ fn build_and_solve_with_stats_impl(
     let mut function_pairs = Vec::new();
     let mut array_pairs = Vec::new();
     let mut row_axioms = Vec::new();
+    let mut array_equality_axioms = Vec::new();
     let mut materialized_functions = HashSet::new();
     let mut materialized_arrays = HashSet::new();
     let mut materialized_rows = HashSet::new();
+    let mut materialized_array_equalities = HashSet::new();
     let mut interface_count = 0usize;
     let mut stats = InterfaceRefinementStats::default();
 
@@ -674,6 +714,7 @@ fn build_and_solve_with_stats_impl(
             &function_pairs,
             &array_pairs,
             &row_axioms,
+            &array_equality_axioms,
             deadline,
         )?;
         stats.max_interface_atoms = stats.max_interface_atoms.max(
@@ -715,9 +756,17 @@ fn build_and_solve_with_stats_impl(
                     &materialized_rows,
                     deadline,
                 )?;
+                let violated_array_equalities = violated_array_equality_axioms(
+                    arena,
+                    &prepared.array_equalities,
+                    &assignment,
+                    &materialized_array_equalities,
+                    deadline,
+                )?;
                 if violated_functions.is_empty()
                     && violated_arrays.is_empty()
                     && violated_rows.is_empty()
+                    && violated_array_equalities.is_empty()
                 {
                     return Ok((
                         project_replay_composed(arena, &prepared, assertions, &assignment),
@@ -771,6 +820,16 @@ fn build_and_solve_with_stats_impl(
                     if materialized_rows.insert(site) {
                         row_axioms.push(site);
                         stats.row_axioms_added += 1;
+                    }
+                }
+                for axiom in violated_array_equalities {
+                    interface_count = interface_count.saturating_add(1);
+                    if interface_count > MAX_INTERFACE_ATOMS {
+                        return Ok((interface_limit_unknown(true), stats));
+                    }
+                    if materialized_array_equalities.insert(axiom) {
+                        array_equality_axioms.push(axiom);
+                        stats.array_equality_axioms_added += 1;
                     }
                 }
             }
@@ -945,15 +1004,15 @@ fn prepare_array_roots(
             "online UFBV combination does not admit arrays".to_owned(),
         )));
     }
-    let (semantic_assertions, row_sites) = if had_arrays {
+    let (semantic_assertions, row_sites, array_equalities) = if had_arrays {
         let Some(rows) = abstract_rows_for_online(arena, assertions)? else {
             return Err(BuildFailure::Error(SolverError::Unsupported(
                 "online AUFBV lazy-ROW abstraction does not admit this array shape".to_owned(),
             )));
         };
-        (rows.assertions, rows.sites)
+        (rows.assertions, rows.sites, rows.equalities)
     } else {
-        (assertions.to_vec(), Vec::new())
+        (assertions.to_vec(), Vec::new(), Vec::new())
     };
     let mut roots = semantic_assertions.clone();
     for site in &row_sites {
@@ -968,10 +1027,20 @@ fn prepare_array_roots(
             RowKind::Var { .. } => {}
         }
     }
+    for equality in &array_equalities {
+        for observation in &equality.observations {
+            roots.extend([
+                observation.index,
+                observation.lhs_read,
+                observation.rhs_read,
+            ]);
+        }
+    }
     Ok(PreparedArrayRoots {
         had_arrays,
         semantic_assertions,
         row_sites,
+        array_equalities,
         function_roots: roots,
     })
 }
@@ -1015,6 +1084,42 @@ fn combine_row_sites(
     Ok((selects, stores))
 }
 
+fn combine_array_equalities(
+    arena: &mut TermArena,
+    equalities: &[OnlineArrayEquality],
+    replacements: &HashMap<TermId, TermId>,
+) -> BuildResult<Vec<CombinedArrayEquality>> {
+    let mut memo = HashMap::new();
+    let mut combined = Vec::with_capacity(equalities.len());
+    for equality in equalities {
+        let mut observations = Vec::with_capacity(equality.observations.len());
+        for observation in &equality.observations {
+            observations.push(CombinedArrayEqualityObservation {
+                original_lhs_read: observation.lhs_read,
+                original_rhs_read: observation.rhs_read,
+                rewritten_lhs_read: replace_subterms(
+                    arena,
+                    observation.lhs_read,
+                    replacements,
+                    &mut memo,
+                )?,
+                rewritten_rhs_read: replace_subterms(
+                    arena,
+                    observation.rhs_read,
+                    replacements,
+                    &mut memo,
+                )?,
+                is_diff_witness: observation.is_diff_witness,
+            });
+        }
+        combined.push(CombinedArrayEquality {
+            flag: equality.flag,
+            observations,
+        });
+    }
+    Ok(combined)
+}
+
 fn prepare_abstraction(
     arena: &mut TermArena,
     assertions: &[TermId],
@@ -1025,6 +1130,7 @@ fn prepare_abstraction(
         had_arrays,
         semantic_assertions,
         row_sites,
+        array_equalities,
         function_roots,
     } = prepare_array_roots(arena, assertions, admit_arrays)?;
     let semantic_count = semantic_assertions.len();
@@ -1079,6 +1185,7 @@ fn prepare_abstraction(
         });
     }
     let (selects, row_stores) = combine_row_sites(arena, &row_sites, &replacements)?;
+    let array_equalities = combine_array_equalities(arena, &array_equalities, &replacements)?;
     Ok(PreparedAbstraction {
         had_arrays,
         row_sites,
@@ -1088,6 +1195,7 @@ fn prepare_abstraction(
         applications,
         selects,
         row_stores,
+        array_equalities,
         replacements,
     })
 }
@@ -1098,6 +1206,7 @@ fn build_theory_atoms(
     function_pairs: &[(usize, usize)],
     array_pairs: &[(usize, usize)],
     row_axioms: &[usize],
+    array_equality_axioms: &[ArrayEqualityAxiom],
     deadline: Option<Instant>,
 ) -> BuildResult<(TheoryAtoms, Vec<TermId>)> {
     let mut atoms = AtomAccumulator::default();
@@ -1148,6 +1257,14 @@ fn build_theory_atoms(
         arena,
         &prepared.row_stores,
         row_axioms,
+        deadline,
+        &mut atoms,
+        &mut round_assertions,
+    )?;
+    add_array_equality_axiom_atoms(
+        arena,
+        &prepared.array_equalities,
+        array_equality_axioms,
         deadline,
         &mut atoms,
         &mut round_assertions,
@@ -1317,6 +1434,59 @@ fn violated_row_stores(
         };
         if matches!(eval(arena, expected_term, assignment), Ok(expected) if actual != expected) {
             violated.push(index);
+        }
+    }
+    Ok(violated)
+}
+
+fn violated_array_equality_axioms(
+    arena: &TermArena,
+    equalities: &[CombinedArrayEquality],
+    assignment: &Assignment,
+    materialized: &HashSet<ArrayEqualityAxiom>,
+    deadline: Option<Instant>,
+) -> BuildResult<Vec<ArrayEqualityAxiom>> {
+    let mut violated = Vec::new();
+    for (equality_index, equality) in equalities.iter().enumerate() {
+        if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
+            return Err(build_unknown(
+                UnknownKind::Timeout,
+                "online AUFBV deadline elapsed while refining array extensionality",
+            ));
+        }
+        let Some(Value::Bool(flag_true)) = assignment.get(equality.flag) else {
+            continue;
+        };
+        for (observation_index, observation) in equality.observations.iter().enumerate() {
+            let kind = if flag_true {
+                ArrayEqualityAxiomKind::Equal
+            } else if observation.is_diff_witness {
+                ArrayEqualityAxiomKind::Diff
+            } else {
+                continue;
+            };
+            let axiom = ArrayEqualityAxiom {
+                equality: equality_index,
+                observation: observation_index,
+                kind,
+            };
+            if materialized.contains(&axiom) {
+                continue;
+            }
+            let reads_equal = matches!(
+                (
+                    eval(arena, observation.rewritten_lhs_read, assignment),
+                    eval(arena, observation.rewritten_rhs_read, assignment)
+                ),
+                (Ok(lhs), Ok(rhs)) if lhs == rhs
+            );
+            let is_violated = match kind {
+                ArrayEqualityAxiomKind::Equal => !reads_equal,
+                ArrayEqualityAxiomKind::Diff => reads_equal,
+            };
+            if is_violated {
+                violated.push(axiom);
+            }
         }
     }
     Ok(violated)
@@ -1521,6 +1691,45 @@ fn add_row_axiom_atoms(
         let different = arena.not(abstract_same)?;
         let miss = arena.implies(different, abstract_miss)?;
         round_assertions.push(arena.and(hit, miss)?);
+    }
+    Ok(())
+}
+
+fn add_array_equality_axiom_atoms(
+    arena: &mut TermArena,
+    equalities: &[CombinedArrayEquality],
+    axioms: &[ArrayEqualityAxiom],
+    deadline: Option<Instant>,
+    atoms: &mut AtomAccumulator,
+    round_assertions: &mut Vec<TermId>,
+) -> BuildResult<()> {
+    for &axiom in axioms {
+        if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
+            return Err(build_unknown(
+                UnknownKind::Timeout,
+                "online AUFBV deadline elapsed while building array extensionality axioms",
+            ));
+        }
+        let equality = &equalities[axiom.equality];
+        let observation = &equality.observations[axiom.observation];
+        let original_read_eq =
+            arena.eq(observation.original_lhs_read, observation.original_rhs_read)?;
+        let abstract_read_eq = arena.eq(
+            observation.rewritten_lhs_read,
+            observation.rewritten_rhs_read,
+        )?;
+        atoms.register(arena, original_read_eq, abstract_read_eq, true)?;
+
+        let flag = arena.var(equality.flag);
+        let lemma = match axiom.kind {
+            ArrayEqualityAxiomKind::Equal => arena.implies(flag, abstract_read_eq)?,
+            ArrayEqualityAxiomKind::Diff => {
+                let not_flag = arena.not(flag)?;
+                let reads_differ = arena.not(abstract_read_eq)?;
+                arena.implies(not_flag, reads_differ)?
+            }
+        };
+        round_assertions.push(lemma);
     }
     Ok(())
 }
@@ -1745,7 +1954,11 @@ fn project_replay_composed(
 
     let mut model = Model::new();
     for (symbol, name, _sort) in arena.symbols() {
-        if name.starts_with("!row_sel_") || name.starts_with("!fn_app_") {
+        if name.starts_with("!row_sel_")
+            || name.starts_with("!ext_eq_")
+            || name.starts_with("!ext_diff_")
+            || name.starts_with("!fn_app_")
+        {
             continue;
         }
         if let Some(value) = projected.get(symbol) {
@@ -1801,7 +2014,7 @@ mod tests {
         let pairs = relevant_application_pairs(arena, &prepared.applications, &groups, None)
             .expect("bounded UFBV case should select interface pairs");
         let (atoms, round_assertions) =
-            build_theory_atoms(arena, &prepared, &pairs, &[], &[], None)
+            build_theory_atoms(arena, &prepared, &pairs, &[], &[], &[], None)
                 .expect("bounded UFBV case should build theory atoms");
         let skeleton = encode_boolean_skeleton(arena, &round_assertions, &atoms.abstracted, None)
             .expect("bounded UFBV case should encode");
@@ -2197,6 +2410,109 @@ mod tests {
         assert_eq!(stats.array_pairs_added, 1, "stats={stats:?}");
         assert_eq!(stats.function_pairs_added, 1, "stats={stats:?}");
         assert_eq!(stats.pairs_added, 2, "stats={stats:?}");
+    }
+
+    #[test]
+    fn array_equality_refines_observed_reads() {
+        let mut arena = TermArena::new();
+        let left = arena.array_var("dynamic_eq_left", 4, 8).unwrap();
+        let right = arena.array_var("dynamic_eq_right", 4, 8).unwrap();
+        let index = arena.bv_var("dynamic_eq_index", 4).unwrap();
+        let arrays_equal = arena.eq(left, right).unwrap();
+        let left_read = arena.select(left, index).unwrap();
+        let right_read = arena.select(right, index).unwrap();
+        let reads_equal = arena.eq(left_read, right_read).unwrap();
+        let reads_differ = arena.not(reads_equal).unwrap();
+
+        let (result, stats) = dynamic_array_solve_stats(&mut arena, &[arrays_equal, reads_differ]);
+        assert_eq!(result, CheckResult::Unsat);
+        assert_eq!(stats.rounds, 2, "stats={stats:?}");
+        assert_eq!(stats.sat_candidates, 1, "stats={stats:?}");
+        assert_eq!(stats.array_equality_axioms_added, 1, "stats={stats:?}");
+    }
+
+    #[test]
+    fn self_array_disequality_materializes_diff_witness() {
+        let mut arena = TermArena::new();
+        let array = arena.array_var("dynamic_self_diff", 4, 8).unwrap();
+        let self_equal = arena.eq(array, array).unwrap();
+        let self_different = arena.not(self_equal).unwrap();
+
+        let (result, stats) = dynamic_array_solve_stats(&mut arena, &[self_different]);
+        assert_eq!(result, CheckResult::Unsat);
+        assert_eq!(stats.rounds, 2, "stats={stats:?}");
+        assert_eq!(stats.sat_candidates, 1, "stats={stats:?}");
+        assert_eq!(stats.array_equality_axioms_added, 1, "stats={stats:?}");
+    }
+
+    #[test]
+    fn array_disequality_projects_a_diff_witness() {
+        let mut arena = TermArena::new();
+        let left = arena.array_var("dynamic_diff_left", 4, 8).unwrap();
+        let right = arena.array_var("dynamic_diff_right", 4, 8).unwrap();
+        let equal = arena.eq(left, right).unwrap();
+        let different = arena.not(equal).unwrap();
+
+        let (result, stats) = dynamic_array_solve_stats(&mut arena, &[different]);
+        let CheckResult::Sat(model) = result else {
+            panic!("expected replayed SAT, stats={stats:?}");
+        };
+        assert_eq!(
+            eval(&arena, different, &model.to_assignment()),
+            Ok(Value::Bool(true))
+        );
+        assert!(stats.rounds <= 2, "stats={stats:?}");
+        assert!(stats.array_equality_axioms_added <= 1, "stats={stats:?}");
+    }
+
+    #[test]
+    fn store_equality_combines_extensionality_with_row() {
+        let mut arena = TermArena::new();
+        let array = arena.array_var("dynamic_store_eq_array", 4, 8).unwrap();
+        let index = arena.bv_var("dynamic_store_eq_index", 4).unwrap();
+        let value = arena.bv_var("dynamic_store_eq_value", 8).unwrap();
+        let stored = arena.store(array, index, value).unwrap();
+        let arrays_equal = arena.eq(stored, array).unwrap();
+        let base_read = arena.select(array, index).unwrap();
+        let read_equals_value = arena.eq(base_read, value).unwrap();
+        let read_differs = arena.not(read_equals_value).unwrap();
+
+        let (result, stats) = dynamic_array_solve_stats(&mut arena, &[arrays_equal, read_differs]);
+        assert_eq!(result, CheckResult::Unsat);
+        assert!(stats.rounds <= 3, "stats={stats:?}");
+        assert!(stats.array_equality_axioms_added >= 1, "stats={stats:?}");
+        assert!(stats.row_axioms_added >= 1, "stats={stats:?}");
+    }
+
+    #[test]
+    fn array_equality_shares_uf_bearing_observations() {
+        let mut arena = TermArena::new();
+        let left = arena.array_var("dynamic_eq_uf_left", 4, 8).unwrap();
+        let right = arena.array_var("dynamic_eq_uf_right", 4, 8).unwrap();
+        let function = arena
+            .declare_fun("dynamic_eq_index_f", &[Sort::BitVec(4)], Sort::BitVec(4))
+            .unwrap();
+        let x = arena.bv_var("dynamic_eq_uf_x", 4).unwrap();
+        let y = arena.bv_var("dynamic_eq_uf_y", 4).unwrap();
+        let fx = arena.apply(function, &[x]).unwrap();
+        let fy = arena.apply(function, &[y]).unwrap();
+        let same_arguments = arena.eq(x, y).unwrap();
+        let arrays_equal = arena.eq(left, right).unwrap();
+        let left_read = arena.select(left, fx).unwrap();
+        let right_read = arena.select(right, fy).unwrap();
+        let reads_equal = arena.eq(left_read, right_read).unwrap();
+        let reads_differ = arena.not(reads_equal).unwrap();
+        let indices_strict = arena.bv_ult(fx, fy).unwrap();
+        let impossible_choice = arena.or(indices_strict, reads_differ).unwrap();
+
+        let (result, stats) = dynamic_array_solve_stats(
+            &mut arena,
+            &[same_arguments, arrays_equal, impossible_choice],
+        );
+        assert_eq!(result, CheckResult::Unsat);
+        assert!(stats.rounds <= 5, "stats={stats:?}");
+        assert!(stats.function_pairs_added >= 1, "stats={stats:?}");
+        assert!(stats.array_equality_axioms_added >= 1, "stats={stats:?}");
     }
 
     #[test]

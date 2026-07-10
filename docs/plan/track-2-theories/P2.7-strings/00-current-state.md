@@ -50,7 +50,9 @@ adversarial `str_differential_fuzz` vs Z3 is **DISAGREE=0 over 371 instances**.
 - `replace_all` when `max_len² > 16`.
 - Boolean combinators nested in repetitions; non-Thompson regex (lookahead,
   backrefs, advanced anchors).
-- `str.len` **unsat** can be `unknown` — the BV+LIA combination gap (P1.6).
+- The ADR-0052 linear `bv2nat` bridge closes the documented bounded-string
+  `str.len` UNSAT marker. More general content-plus-length shapes can still
+  return `unknown` when the unbounded abstraction cannot prove them.
 
 ## Capability-vs-gap table
 
@@ -58,7 +60,7 @@ adversarial `str_differential_fuzz` vs Z3 is **DISAGREE=0 over 371 instances**.
 |---|---|---|---|
 | Bounded ops | all `str.*` within `max_len ≤ 16` | validated (replay + DRAT) | **unbounded length** |
 | Regex | Thompson NFA; Boolean top-level only | validated | nested Boolean; symbolic-derivative regex; complement under concat |
-| `str.len` unsat | sometimes `unknown` | sound | **BV/String + LIA combination** (P1.6 / Phase A) |
+| `str.len` + LIA | documented linear marker decides (ADR-0052); broader coupled content/length is incomplete | sound | unbounded word/length reasoning in later P2.7 phases |
 | String⇄int | bounded decimal | validated | unbounded; undecidable in full (Ganesh–Berzish 2016) |
 
 ## The one-sentence gap

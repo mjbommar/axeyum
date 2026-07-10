@@ -3679,8 +3679,8 @@ Its conclusion, ranked by quality × efficiency:
    pairs. Ten release samples improve its median 8.88→2.84 ms (~3.12x) and
    six-row mean 2.89→0.647 ms (~4.47x); Z3's row median is 12.5 ms, making this
    narrow row ~4.4x faster. Public 6/6, 1,536 comparisons, replay, and 763 solver
-   tests remain clean. Next bring arrays onto the live bus, then mixed BV+LIA/
-   `str.len`; retain cross-round learned state only if wider telemetry makes
+   tests remain clean. Next bring arrays onto the live bus; retain cross-round
+   learned state only if wider telemetry makes
    rebuild cost dominant. **Sixteenth follow-through:** base-array selects now
    participate in those replay-guided canonical rounds (ADR-0071). A new
    `abstract_arrays` boundary applies exact read-over-write without constructing
@@ -3692,8 +3692,29 @@ Its conclusion, ranked by quality × efficiency:
    768 eager/front-door/Z3 comparisons are clean. Public 1 s runs are QF_ABV
    185/193 and QF_AUFBV 48/53 decided, both DISAGREE=0 with zero replay failures.
    This is base-select congruence after exact eager ROW, not full lazy arrays.
-   Next: mixed BV+LIA/`str.len` on P1.6 while P2.2 deepens the store-axiom queue,
-   extensionality, and scalable array models.
+   **Seventeenth follow-through:** read-over-write is now lazy on that same bus
+   (ADR-0072). The canonical route reuses the existing ROW abstraction and
+   materializes one exact guarded hit/miss axiom only when a candidate violates a
+   store site. UF-bearing ROW metadata stays visible to function abstraction;
+   partial UNSAT transfers and function-then-array replay still gates SAT. Gates
+   pin one-axiom hit/miss conflicts, a UF-index fixpoint, and a 24-write concrete-
+   miss SAT with zero ROW axioms; all 768 differential comparisons remain clean.
+   Public 1 s decisions move QF_ABV 185→187/193 and QF_AUFBV 48→49/53 with zero
+   disagreements/replay failures, though one tight-cap AUFBV SAT row becomes
+   Unknown, so no broad performance claim is made. The recorded P1.6
+   BV+LIA/`str.len` marker was already closed by ADR-0052 and is corrected as
+   DONE/OBE. **Eighteenth follow-through:** array equality and disequality now
+   use the same canonical bus (ADR-0073). Shared `RowCtx` equality flags receive
+   one bounded diff witness plus paired reads at query/store indices; only
+   candidate-violated congruence or witness implications materialize. UF-bearing
+   observations remain function-abstraction roots, and cloned online probes leave
+   every fallback arena pristine. Five focused extensionality mechanisms plus two
+   isolation gates pass. Half of the 768-comparison AUFBV matrix now carries
+   equality-bearing cases and remains clean. Public decisions hold at QF_ABV
+   187/193 and QF_AUFBV 49/53 with zero disagreements/replay failures; PAR-2 means
+   move 77→84 ms and 155→221 ms, so this is not a speed claim. Next:
+   merge-triggered/cross-atom queue states, scalable array models, proof
+   integration, and opaque-heavy arithmetic model exchange.
 2. **Keep a thin measured-leaf-BFS skirt in parallel** — measured-ROI leaves only
    (NRA tail, strings-Nielsen); fold the feature/scale-blocked leaves
    (dense-ILP MILP, large-LP performance) into a funded engine phase rather than

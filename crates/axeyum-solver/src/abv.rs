@@ -2151,6 +2151,25 @@ pub(crate) enum RowKind {
 pub(crate) struct OnlineRowAbstraction {
     pub(crate) assertions: Vec<TermId>,
     pub(crate) sites: Vec<RowSite>,
+    pub(crate) equalities: Vec<OnlineArrayEquality>,
+}
+
+/// One array equality flag plus the finite observations prepared for online
+/// extensionality refinement. Observations are bounded by the existing ROW-site
+/// and diff-skolem caps.
+#[derive(Debug, Clone)]
+pub(crate) struct OnlineArrayEquality {
+    pub(crate) flag: SymbolId,
+    pub(crate) observations: Vec<OnlineArrayEqualityObservation>,
+}
+
+/// Paired reads of an array equality at one shared index.
+#[derive(Debug, Clone)]
+pub(crate) struct OnlineArrayEqualityObservation {
+    pub(crate) index: TermId,
+    pub(crate) lhs_read: TermId,
+    pub(crate) rhs_read: TermId,
+    pub(crate) is_diff_witness: bool,
 }
 
 /// One abstracted array (dis)equality atom `a = b` between two array-sorted
@@ -2159,7 +2178,7 @@ pub(crate) struct OnlineRowAbstraction {
 /// extensionality CEGAR then constrains `flag` against the array operands on
 /// demand (select-congruence when `flag` is true, a diff-skolem witness when
 /// `flag` is false).
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 struct ArrayEqAtom {
     /// The fresh `Bool` variable abstracting this `a = b` atom.
     flag: SymbolId,
@@ -2450,9 +2469,9 @@ impl RowCtx {
     }
 }
 
-/// Builds the existing lazy-ROW scalar abstraction without entering its
-/// one-shot CEGAR loop. `None` means the array shape is outside that exact
-/// store/variable/const/ite fragment.
+/// Builds the shared lazy-ROW and array-equality abstraction without entering a
+/// one-shot CEGAR loop. `None` means the array shape is outside the exact
+/// store/variable/const/ite/equality fragment or exceeds its bounded sites.
 pub(crate) fn abstract_rows_for_online(
     arena: &mut TermArena,
     assertions: &[TermId],
@@ -2460,11 +2479,15 @@ pub(crate) fn abstract_rows_for_online(
     let mut ctx = RowCtx::default();
     let mut abstracted = Vec::with_capacity(assertions.len());
     for &assertion in assertions {
-        let Some(term) = ctx.abstract_term(arena, assertion)? else {
+        let Some(term) = ctx.abstract_with_array_eq(arena, assertion)? else {
             return Ok(None);
         };
         abstracted.push(term);
     }
+
+    let Some(equalities) = prepare_online_array_equalities(arena, &mut ctx)? else {
+        return Ok(None);
+    };
 
     for site in &ctx.sites {
         if let RowKind::Const { value } = &site.kind {
@@ -2477,7 +2500,73 @@ pub(crate) fn abstract_rows_for_online(
     Ok(Some(OnlineRowAbstraction {
         assertions: abstracted,
         sites: ctx.sites,
+        equalities,
     }))
+}
+
+/// Prepares a bounded set of shared-index observations for every abstracted
+/// array equality. Each atom receives one diff witness. Existing query-read and
+/// store indices are also observed so a true equality can refine only the
+/// concrete indices already relevant to the query. Diff indices are not crossed
+/// between equality atoms; merge-triggered cross-atom scheduling remains P2.2.
+fn prepare_online_array_equalities(
+    arena: &mut TermArena,
+    ctx: &mut RowCtx,
+) -> Result<Option<Vec<OnlineArrayEquality>>, SolverError> {
+    let atoms: Vec<(SymbolId, TermId, TermId)> = ctx
+        .eq_atoms
+        .iter()
+        .map(|atom| (atom.flag, atom.lhs, atom.rhs))
+        .collect();
+    if atoms.len() > MAX_DIFF_SKOLEMS {
+        return Ok(None);
+    }
+    let mut observed_indices: Vec<Vec<TermId>> = atoms
+        .iter()
+        .map(|&(_flag, lhs, rhs)| read_indices_for(arena, ctx, lhs, rhs))
+        .collect();
+    let mut diff_indices = Vec::with_capacity(atoms.len());
+    for &(_flag, lhs, _rhs) in &atoms {
+        let Some((index_sort, _)) = arena.sort_of(lhs).array_sorts() else {
+            return Ok(None);
+        };
+        let name = format!("!ext_diff_{}", ctx.fresh_counter);
+        ctx.fresh_counter += 1;
+        let symbol = arena.declare_internal(&name, index_sort).map_err(|error| {
+            SolverError::Backend(format!(
+                "online extensionality diff declare failed: {error}"
+            ))
+        })?;
+        diff_indices.push(arena.var(symbol));
+    }
+
+    let mut equalities = Vec::with_capacity(atoms.len());
+    for (atom_index, &(flag, lhs, rhs)) in atoms.iter().enumerate() {
+        let diff_index = diff_indices[atom_index];
+        let indices = &mut observed_indices[atom_index];
+        if !indices.contains(&diff_index) {
+            indices.push(diff_index);
+        }
+        indices.sort_by_key(|term| term.index());
+
+        let mut observations = Vec::with_capacity(indices.len());
+        for &index in indices.iter() {
+            let Some(lhs_read) = ctx.resolve_select(arena, lhs, index)? else {
+                return Ok(None);
+            };
+            let Some(rhs_read) = ctx.resolve_select(arena, rhs, index)? else {
+                return Ok(None);
+            };
+            observations.push(OnlineArrayEqualityObservation {
+                index,
+                lhs_read,
+                rhs_read,
+                is_diff_witness: index == diff_index,
+            });
+        }
+        equalities.push(OnlineArrayEquality { flag, observations });
+    }
+    Ok(Some(equalities))
 }
 
 /// Reconstructs base-array values from the variable-read sites of a consistent

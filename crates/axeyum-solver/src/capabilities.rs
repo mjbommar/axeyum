@@ -223,6 +223,21 @@ pub const CAPABILITIES: &[Capability] = &[
         reference: "ADR-0010",
     },
     Capability {
+        area: "QF_ABV / QF_AUFBV",
+        feature: "canonical online CDCL(T) arrays: replay-guided base-select congruence, \
+                  candidate-guided lazy read-over-write, and bounded array equality/disequality \
+                  observations with one diff witness per equality atom; scalar UF applications \
+                  in indices/elements share the same exact BV + e-graph bus",
+        assurance: Assurance::Validated,
+        evidence: "every partial round is a relaxation, so UNSAT transfers; SAT requires \
+                   function-then-array projection and original-query replay. 779 solver-lib \
+                   tests plus 768 AUFBV online/eager/front-door/Z3 comparisons are clean; \
+                   384 comparisons carry equality/disequality/store-equality/UF-index shapes. \
+                   Public QF_ABV 187/193 and QF_AUFBV 49/53 at 1 s, DISAGREE=0; online probes \
+                   use cloned arenas so fallback inputs remain pristine",
+        reference: "ADR-0071/0072/0073",
+    },
+    Capability {
         area: "QF_UF",
         feature: "uninterpreted functions: lazy congruence closure on a backtrackable \
                   e-graph (check_qf_uf, the check_auto fast path) with an eager Ackermann \
@@ -851,12 +866,14 @@ pub const CAPABILITIES: &[Capability] = &[
         area: "QF_S (strings)",
         feature: "bounded strings + regex (BV-lowered); SMT-LIB front end wired for \
                   declare/literal/=/distinct + str.prefixof/suffixof/contains + str.at (const idx) \
-                  + str.++ (const fold) + str.len (sat; unsat may be unknown — BV+LIA gap), \
+                  + str.++ (const fold) + str.len (ADR-0052 linear marker decides; broader \
+                  coupled word/length shapes may be unknown), \
                   str.to_code/from_code + substr/indexof/replace/replace_all/lex-compare/\
                   take/drop/to_int/from_int/is_digit + regex membership via API",
         assurance: Assurance::Experimental,
-        evidence: "model replay through BV path; canonical-padding equality; length bound explicit",
-        reference: "ADR-0025/0029",
+        evidence: "model replay through BV path; canonical-padding equality; length bound explicit; \
+                   certified non-arena UNSAT routes follow ADR-0061",
+        reference: "ADR-0025/0029/0052/0061",
     },
     Capability {
         area: "optimization",

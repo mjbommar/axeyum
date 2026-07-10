@@ -37,7 +37,7 @@ Total src ≈ 48k (≈63k with tests); 57 test files. Largest solver modules:
 | QF_FP (F16–F128) | validated | circuit differential vs native + `rustc_apfloat` |
 | Datatypes | validated | replay; folded UNSAT DRAT-exportable |
 | Quantifiers | sound-incomplete | complete on finite domains only |
-| QF_S strings (bounded) | **experimental** | bounded; `str.len` unsat can be `unknown` |
+| QF_S strings (bounded) | **experimental** | ADR-0052 linear `str.len` marker decides; broader coupled word/length shapes can be `unknown` |
 | Optimization (MaxSAT/OMT/MILP) | **experimental** | optimum certified per-step |
 | Incremental / symexec / BMC | validated | replay; SAT conflict-core; bounded-only |
 | Certified k-induction | **checked** | DRAT per obligation, modulo trusted term→CNF |

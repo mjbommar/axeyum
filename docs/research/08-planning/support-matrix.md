@@ -22,7 +22,7 @@ Four **independent** axes per SMT-LIB fragment, so "the parser accepts it" is ne
 
 **solver-decides** (definite `sat`/`unsat` for the core queries?):
 - **decides** — returns both `sat` and `unsat` for the core fragment.
-- **unsat decided; sat→unknown** — `unsat` is decided but a satisfying model is not built, so `sat` degrades to a sound `unknown` (the `str.len` BV+LIA gap). First-class — never a wrong answer.
+- **unsat decided; sat→unknown** — `unsat` is decided but a satisfying model is not built, so `sat` degrades to a sound `unknown` (for example, an incomplete model-lifting route). First-class — never a wrong answer.
 - **sound, incomplete (unknown-safe)** — may return `unknown` in general (nonlinear arithmetic, quantifiers outside finite/guarded domains, optimization).
 - **unsupported** — not decided.
 
@@ -71,6 +71,6 @@ Four **independent** axes per SMT-LIB fragment, so "the parser accepts it" is ne
 - **QF_FP (floating-point)** — FP sorts/ops parsed (some conversions constant-only); FP values are BitVec (no IR sort), lowered to circuits differentially validated vs native/apfloat; unsat DRAT is modulo the trusted FP circuit. ADR-0023/0026/0028
 - **quantifiers (∃/∀, finite-domain + instantiation)** — complete over finite (Bool/BV) domains, guarded-finite Int expansion, and single-variable real Fourier-Motzkin; otherwise sound refutation by e-matching/MBQI instantiation (ground unsat transfers; sat/no-progress is unknown). Checkable Alethe/Lean for the refutation slices. ADR-0016/0032
 - **datatypes (algebraic)** — non-parametric declare-datatype(s) parsed (parametric rejected); structural acyclicity/injectivity + elimination/native expansion decide; unsat DRAT modulo trusted datatype folding (Alethe/Lean too). ADR-0022
-- **strings (bounded)** — no String IR sort — declare-const lowered to a bounded packed BV (len ≤ 16); ops parsed within the bound; sat decided through the BV path but str.len unsat may be unknown (BV+LIA gap). Model replay only, no unsat proof. ADR-0025/0029
+- **strings (bounded)** — no String IR sort — declare-const lowered to a bounded packed BV (len ≤ 16); ops parsed within the bound; ADR-0052 closes the linear `str.len` marker, while broader coupled word/length shapes may remain unknown. Model replay plus the certified string routes recorded in ADR-0061. ADR-0025/0029/0052/0061
 - **optimization (OMT: box/lex/Pareto, MaxSAT, MILP)** — maximize/minimize parsed and acted on; each optimum is certified only by an internal confirmed-unsat domination query (no exported artifact) and degrades to a sound OptOutcome::Unknown when a probe is undecided. ADR-0027
 - **incremental (push/pop, reset-assertions)** — push/pop and reset-assertions parsed (full `reset` is rejected); warm QF_BV/Bool with assumption-core pruning + all-SAT decides; sat replay + a SAT conflict core, but no DRAT/Alethe across push/pop; warm path refuses arrays. ADR-0009
