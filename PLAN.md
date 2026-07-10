@@ -3785,11 +3785,20 @@ Its conclusion, ranked by quality × efficiency:
    pass; the new 384-comparison structural matrix brings the clean total to
    1,536, and all 802 solver tests pass. A fresh load sample still showed four
    blocked tasks and 13-25% I/O wait, so the comparable public aggregate remains
-   ADR-0078's baseline. Next:
-   array-valued ITE/default/UF and merge-triggered ROW events with dynamic
-   in-search insertion, store/ITE/array-valued-UF class models, warm reuse, full
-   ROW/diff-witness/equality-chain proof logging, opaque-heavy arithmetic model
-   exchange, and the low-load public aggregate remeasure.
+   ADR-0078's baseline. **Twenty-sixth follow-through:** ADR-0081 moves bounded
+   local ROW final-check into the live search. Each store site reserves three
+   atoms dormant; a violated candidate inserts two permanent valid ROW clauses
+   and resumes the same `CdclT` instance with learned clauses, phase state, and
+   activities retained. Hit/miss and two nested obligations close in one outer
+   round; a replayable equality branch backtracks safely; a UF-bearing index
+   reuses its aligned e-graph atom; and the shared 512-interface cap remains
+   exact. The new 384-comparison dynamic-ROW matrix brings the clean total to
+   1,920, and all 807 solver tests pass. Commit `07be0883` passed the exact-SHA
+   pre-push gate. Next: array-valued ITE/default/UF and pair-generating merge
+   events with general dynamic atom insertion, store/ITE/array-valued-UF class
+   models, warm reuse, full ROW/diff-witness/equality-chain proof logging,
+   opaque-heavy arithmetic model exchange, and the low-load public aggregate
+   remeasure.
 2. **Keep a thin measured-leaf-BFS skirt in parallel** — measured-ROI leaves only
    (NRA tail, strings-Nielsen); fold the feature/scale-blocked leaves
    (dense-ILP MILP, large-LP performance) into a funded engine phase rather than

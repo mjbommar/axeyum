@@ -31,7 +31,7 @@ Total src ≈ 48k (≈63k with tests); 57 test files. Largest solver modules:
 | QF_BV (full scalar, ≤2¹⁶) | validated | replay + differential vs Z3 |
 | QF_BV UNSAT (DRAT) | **checked** | `check_drat`; `UnsatProof::recheck` |
 | QF_BV end-to-end (miter) | **checked** | exhaustive bit-blast faithfulness miter + DRAT, modulo independent reference |
-| QF_ABV / QF_UF / QF_AUFBV | validated | canonical e-graph/BV refinement + replay, including original array equalities, explanation-guarded base/store-parent select scheduling, shared direct-symbol class models, and Bool/BitVec component combinations (ADR-0071–0080); eager certifying fallback; direct equal-array select congruence checked in-tree/Carcara/Lean (ADR-0075); broader UNSAT DRAT **modulo trusted reduction** |
+| QF_ABV / QF_UF / QF_AUFBV | validated | canonical e-graph/BV refinement + replay, including original array equalities, explanation-guarded base/store-parent select scheduling, same-search local ROW insertion, shared direct-symbol class models, and Bool/BitVec component combinations (ADR-0071–0081); eager certifying fallback; direct equal-array select congruence checked in-tree/Carcara/Lean (ADR-0075); broader UNSAT DRAT **modulo trusted reduction** |
 | QF_LRA (exact-rational) | **checked** | Farkas + exact model |
 | QF_LIA / QF_LIRA | validated | replay; bounded UNSAT DRAT at chosen width |
 | QF_NRA/NIA | sound-incomplete | replay (SAT), relaxation-unsat, else `unknown` |
@@ -63,7 +63,8 @@ retained; BMC/symexec ride it.
 UFBV, and bounded ABV/AUFBV interfaces; arrays over Bool/BitVec components use candidate-guided select,
 ROW, and equality/diff instances, original equality atoms on live `EufTheory`,
 explanation-guarded base/store-parent merge scheduling, and majority-default
-direct-symbol class models (ADR-0071–0080).
+direct-symbol class models, with violated local ROW sites inserted permanently
+inside the same canonical search (ADR-0071–0081).
 `dpll_t.rs`/`dpll_lia.rs` remain arithmetic fallbacks and
 `lazy_bv.rs` drops heavy mul/div gadgets. The warm path admits a narrow symbolic
 array/UF slice but still rebuilds for general deferred theories.

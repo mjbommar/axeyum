@@ -383,8 +383,10 @@ explanation as a guard, so rebuilt rounds and Boolean backtracking remain sound.
 Direct-symbol equality no longer prepares every query index, and an 80-array/read
 gate stays below the previous 4,096-site failure boundary. All 794 solver tests,
 768 comparisons, and public QF_ABV 187/193 / QF_AUFBV 49/53 decisions remain
-clean. Structural store/ITE/default/ROW scheduling, dynamic insertion, warm reuse,
-non-symbol models, and proof integration remain before phase exit.
+clean. ADR-0080 subsequently adds structural store parents and ADR-0081 inserts
+bounded local ROW inside one search. Structural ITE/default/UF events,
+pair-generating dynamic atoms, warm reuse, non-symbol models, and proof
+integration remain before phase exit.
 
 ADR-0079 admits every finite Bool/BitVec array component combination to the same
 canonical route. Generic mixed-component models replay, Bool-only UF+array
@@ -398,8 +400,20 @@ store terms. Store reads now receive explanation-guarded select congruence while
 remaining independently subject to lazy ROW. Same-parent, congruent-parent,
 alternate-branch, unrelated-parent, UF-index, and 80-parent scaling gates pass;
 the expanded 1,536-comparison belt and all 802 solver tests are clean. Dynamic
-in-search insertion, array-valued ITE/default/UF and merge-triggered ROW events,
-non-symbol/warm models, proof integration, and the low-load aggregate remain.
+pair-generating insertion, array-valued ITE/default/UF and merge-triggered ROW
+events, non-symbol/warm models, proof integration, and the low-load aggregate
+remain.
+
+ADR-0081 adds the first same-search array final-check refinement. Each store site
+reserves three local ROW atoms dormant; a violated candidate inserts the two
+valid permanent clauses and resumes the same `CdclT` instance with learned
+clauses, phase state, and activities retained. Hit/miss and two nested ROW sites
+close in one outer round, replayed branch changes and the exact shared cap are
+pinned, and a UF-bearing index reuses the aligned e-graph atom. The expanded
+1,920-comparison belt and all 807 solver tests are clean. Pair-generating
+UF/select/extensionality events still rebuild outer rounds; array-valued
+ITE/default/UF events, general dynamic atom growth, non-symbol/warm models, proof
+integration, and the low-load aggregate remain.
 
 Implementation note: a first infosec-workflow client example landed early
 (2026-06-13), ahead of arrays — a register-VM symbolic executor over
