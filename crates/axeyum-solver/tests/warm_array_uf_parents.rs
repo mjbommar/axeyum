@@ -379,7 +379,7 @@ fn array_application_parent_limit_is_exact_and_one_over_defers() {
 }
 
 #[test]
-fn unsupported_signatures_and_whole_array_equality_defer_without_partial_state() {
+fn unsupported_signatures_defer_without_partial_state() {
     let mut arena = TermArena::new();
     let array_sort = Sort::Array {
         index: ArraySortKey::BitVec(8),
@@ -449,23 +449,6 @@ fn unsupported_signatures_and_whole_array_equality_defer_without_partial_state()
         &int_index_arena,
         root
     ));
-
-    let mut equality_arena = TermArena::new();
-    let function = equality_arena
-        .declare_fun("warm_array_uf_eq_f", &[Sort::BitVec(8)], array_sort)
-        .unwrap();
-    let arg = equality_arena.bv_var("warm_array_uf_eq_x", 8).unwrap();
-    let app = equality_arena.apply(function, &[arg]).unwrap();
-    let array = equality_arena
-        .array_var_with_sorts("warm_array_uf_eq_a", Sort::BitVec(8), Sort::BitVec(8))
-        .unwrap();
-    let equality = equality_arena.eq(app, array).unwrap();
-    let mut equality_solver = IncrementalBvSolver::new();
-    equality_solver
-        .assert_simplifying_memory(&mut equality_arena, equality)
-        .unwrap();
-    assert!(equality_solver.has_deferred_theory_assertions());
-    assert_eq!(equality_solver.retained_warm_array_uf_app_count(), 0);
 }
 
 fn expected(seed: u64) -> Verdict {
