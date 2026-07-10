@@ -73,9 +73,10 @@ use std::time::Instant;
 
 use crate::euf_egraph::{TheoryLit, TheorySolver};
 
-/// A CNF literal in the online skeleton: a variable index and its polarity. The
-/// first `eq_count` variables (see [`CdclT::new`]) are the theory atoms, numbered to
-/// match the [`TheorySolver`]'s atom indices.
+/// A CNF literal in the online skeleton: a variable index and its polarity.
+/// Initial theory atoms occupy the first slots, while dynamically added theory
+/// variables may follow ordinary Tseitin auxiliaries; [`CdclT`] keeps the explicit
+/// atom/variable mapping.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct Lit {
     pub(crate) var: usize,
@@ -184,8 +185,12 @@ enum Learn {
 /// non-chronological backjumping, and deadline-bounded termination.
 pub(crate) struct CdclT {
     var_count: usize,
-    /// The first `eq_count` variables are theory atoms mirrored into the theory.
-    eq_count: usize,
+    /// Per SAT variable, the aligned theory atom when this variable is mirrored
+    /// into the theory. Dynamic theory variables may follow Tseitin auxiliaries.
+    theory_atom_for_var: Vec<Option<usize>>,
+    /// Per theory atom, its SAT variable. This maps theory explanations and
+    /// propagations back into the mixed Boolean implication graph.
+    theory_var_for_atom: Vec<usize>,
     /// Variables currently owned by the search. Reserved theory atoms may remain
     /// inactive until a final-check lemma names them.
     active: Vec<bool>,
@@ -261,19 +266,30 @@ pub(crate) struct CdclT {
 }
 
 impl CdclT {
-    /// Builds a search over `clauses` on `var_count` variables, of which the first
-    /// `eq_count` are theory atoms (their indices align with the [`TheorySolver`]).
+    /// Builds a search over `clauses` on `var_count` variables. The first
+    /// `theory_atom_count` variables are theory atoms aligned by index with the
+    /// [`TheorySolver`]; later dynamic theory variables use an explicit mapping.
     /// `deadline`, when set, bounds the search.
     pub(crate) fn new(
         var_count: usize,
-        eq_count: usize,
+        theory_atom_count: usize,
         clauses: Vec<Vec<Lit>>,
         deadline: Option<Instant>,
     ) -> Self {
+        assert!(theory_atom_count <= var_count);
         let num_original = clauses.len();
+        let mut theory_atom_for_var = vec![None; var_count];
+        for (atom, slot) in theory_atom_for_var
+            .iter_mut()
+            .take(theory_atom_count)
+            .enumerate()
+        {
+            *slot = Some(atom);
+        }
         Self {
             var_count,
-            eq_count,
+            theory_atom_for_var,
+            theory_var_for_atom: (0..theory_atom_count).collect(),
             active: vec![true; var_count],
             clauses,
             value: vec![None; var_count],
@@ -327,23 +343,64 @@ impl CdclT {
         self
     }
 
+    /// Appends one dormant theory variable after every existing SAT variable and
+    /// returns `(variable, atom)`. The explicit mapping lets final-check growth
+    /// preserve existing Tseitin variable numbers and learned clauses.
+    pub(crate) fn add_theory_variable(&mut self) -> (usize, usize) {
+        let variable = self.var_count;
+        let atom = self.theory_var_for_atom.len();
+        self.var_count += 1;
+        self.theory_atom_for_var.push(Some(atom));
+        self.theory_var_for_atom.push(variable);
+        self.active.push(false);
+        self.value.push(None);
+        self.level.push(0);
+        self.reason.push(None);
+        self.reason_theory.push(false);
+        self.reason_clause.push(None);
+        self.activity.push(0.0);
+        self.saved_phase.push(true);
+        (variable, atom)
+    }
+
+    /// Returns the SAT variable aligned with `atom`, when registered.
+    pub(crate) fn theory_variable(&self, atom: usize) -> Option<usize> {
+        self.theory_var_for_atom.get(atom).copied()
+    }
+
+    /// Activates variables previously reserved or appended dormant.
+    pub(crate) fn activate_variables(&mut self, variables: &[usize]) {
+        for &variable in variables {
+            assert!(
+                variable < self.var_count,
+                "activated variable is out of range"
+            );
+            self.active[variable] = true;
+        }
+    }
+
     /// Adds a permanent clause and activates every variable it names. This is the
     /// final-check insertion boundary: the current trail and learned database are
     /// retained, and a subsequent [`Self::solve`] resumes from that state.
     pub(crate) fn add_permanent_clause(&mut self, clause: Vec<Lit>) {
-        for lit in &clause {
-            assert!(
-                lit.var < self.var_count,
-                "inserted clause variable is out of range"
-            );
-            self.active[lit.var] = true;
-        }
+        let variables = clause.iter().map(|lit| lit.var).collect::<Vec<_>>();
+        self.activate_variables(&variables);
         self.clauses.push(clause);
         // LBD zero keeps a post-construction clause out of learned-clause
         // reduction even though it sits beyond `num_original`.
         self.lbd.push(0);
         self.clause_activity.push(0.0);
         self.deleted.push(false);
+    }
+
+    /// Current SAT-variable count, including dynamic theory variables.
+    pub(crate) fn variable_count(&self) -> usize {
+        self.var_count
+    }
+
+    /// Current permanent, input, and learned clause-slot count.
+    pub(crate) fn clause_count(&self) -> usize {
+        self.clauses.len()
     }
 
     /// Overrides the defense-in-depth step budget (see [`DEFAULT_STEP_BUDGET`]).
@@ -455,8 +512,8 @@ impl CdclT {
         self.reason_theory[var] = reason_is_theory;
         self.reason_clause[var] = None;
         self.trail.push((var, value, cause));
-        if var < self.eq_count {
-            theory.assert(var, value)?;
+        if let Some(atom) = self.theory_atom_for_var[var] {
+            theory.assert(atom, value)?;
         }
         Ok(())
     }
@@ -511,7 +568,7 @@ impl CdclT {
                         Ok(()) => self.reason_clause[lit.var] = Some(ci),
                         Err(core) => {
                             return Err(Conflict {
-                                clause: Self::theory_conflict_clause(&core),
+                                clause: self.theory_conflict_clause(&core),
                                 is_theory: true,
                             });
                         }
@@ -530,8 +587,10 @@ impl CdclT {
             let props = theory.propagate();
             let mut progress = false;
             for prop in props {
-                let var = prop.lit.atom;
-                if var >= self.var_count || !self.active[var] {
+                let Some(var) = self.theory_variable(prop.lit.atom) else {
+                    continue;
+                };
+                if !self.active[var] {
                     continue;
                 }
                 match self.value[var] {
@@ -541,16 +600,16 @@ impl CdclT {
                         // ¬(reason ∧ current literal).
                         let mut core = prop.reason.clone();
                         core.push(TheoryLit {
-                            atom: var,
+                            atom: prop.lit.atom,
                             value: !prop.lit.value,
                         });
                         return Err(Conflict {
-                            clause: Self::theory_conflict_clause(&core),
+                            clause: self.theory_conflict_clause(&core),
                             is_theory: true,
                         });
                     }
                     None => {
-                        let reason_clause = Self::theory_reason_clause(&prop.reason, prop.lit);
+                        let reason_clause = self.theory_reason_clause(&prop.reason, prop.lit);
                         if let Err(c) = self.assign(
                             theory,
                             var,
@@ -560,7 +619,7 @@ impl CdclT {
                             true,
                         ) {
                             return Err(Conflict {
-                                clause: Self::theory_conflict_clause(&c),
+                                clause: self.theory_conflict_clause(&c),
                                 is_theory: true,
                             });
                         }
@@ -577,10 +636,10 @@ impl CdclT {
 
     /// Maps a theory conflict core to the learned CNF conflict clause `¬⋀core` (every
     /// literal currently false, so it is the falsified clause to analyse).
-    fn theory_conflict_clause(core: &[TheoryLit]) -> Vec<Lit> {
+    fn theory_conflict_clause(&self, core: &[TheoryLit]) -> Vec<Lit> {
         core.iter()
             .map(|l| Lit {
-                var: l.atom,
+                var: self.theory_var_for_atom[l.atom],
                 positive: !l.value,
             })
             .collect()
@@ -589,16 +648,16 @@ impl CdclT {
     /// The reason clause for a theory propagation `reason ⊨ lit`, namely
     /// `¬(reason) ∨ lit`. Once every reason literal is asserted, this clause is unit
     /// and forces `lit` — the invariant [`Self::analyze_conflict`] relies on.
-    fn theory_reason_clause(reason: &[TheoryLit], lit: TheoryLit) -> Vec<Lit> {
+    fn theory_reason_clause(&self, reason: &[TheoryLit], lit: TheoryLit) -> Vec<Lit> {
         let mut clause: Vec<Lit> = reason
             .iter()
             .map(|l| Lit {
-                var: l.atom,
+                var: self.theory_var_for_atom[l.atom],
                 positive: !l.value,
             })
             .collect();
         clause.push(Lit {
-            var: lit.atom,
+            var: self.theory_var_for_atom[lit.atom],
             positive: lit.value,
         });
         clause
@@ -824,7 +883,7 @@ impl CdclT {
             Err(core) => self.learn_and_backjump(
                 theory,
                 &Conflict {
-                    clause: Self::theory_conflict_clause(&core),
+                    clause: self.theory_conflict_clause(&core),
                     is_theory: true,
                 },
             ),
@@ -935,7 +994,7 @@ impl CdclT {
                         self.assign(theory, var, polarity, Cause::Decision, None, false)
                     {
                         let conflict = Conflict {
-                            clause: Self::theory_conflict_clause(&core),
+                            clause: self.theory_conflict_clause(&core),
                             is_theory: true,
                         };
                         if let Learn::Unsat = self.learn_and_backjump(theory, &conflict) {
@@ -1700,5 +1759,59 @@ mod termination_tests {
             positive: false,
         }]);
         assert_eq!(solver.solve(&mut theory), Outcome::Unsat);
+    }
+
+    #[test]
+    fn dynamic_theory_atom_after_boolean_auxiliary_maps_conflicts() {
+        #[derive(Default)]
+        struct DynamicTheory {
+            assigned: Vec<(usize, bool)>,
+        }
+
+        impl TheorySolver for DynamicTheory {
+            fn assert(&mut self, atom: usize, value: bool) -> Result<(), Vec<TheoryLit>> {
+                self.assigned.push((atom, value));
+                Ok(())
+            }
+
+            fn push(&mut self) {}
+
+            fn pop(&mut self) {}
+
+            fn propagate(&self) -> Vec<TheoryProp> {
+                vec![TheoryProp {
+                    lit: TheoryLit {
+                        atom: 1,
+                        value: true,
+                    },
+                    reason: Vec::new(),
+                }]
+            }
+        }
+
+        let clauses = vec![
+            vec![Lit {
+                var: 0,
+                positive: true,
+            }],
+            vec![Lit {
+                var: 1,
+                positive: true,
+            }],
+        ];
+        let mut solver = CdclT::new(2, 1, clauses, None);
+        let mut theory = DynamicTheory::default();
+        assert_eq!(solver.solve(&mut theory), Outcome::Sat);
+
+        let (variable, atom) = solver.add_theory_variable();
+        assert_eq!((variable, atom), (2, 1));
+        assert_eq!(solver.theory_variable(atom), Some(variable));
+        solver.add_permanent_clause(vec![Lit {
+            var: variable,
+            positive: false,
+        }]);
+
+        assert_eq!(solver.solve(&mut theory), Outcome::Unsat);
+        assert!(theory.assigned.contains(&(1, false)));
     }
 }

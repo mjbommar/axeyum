@@ -165,6 +165,39 @@ impl EufTheory {
         }
     }
 
+    /// Appends an atom whose equality sides were pre-registered as observed
+    /// terms. This is safe while decision scopes are open because it does not add
+    /// e-nodes; the atom remains registered across backtracking while its later
+    /// assignment and any resulting merge are trailed normally.
+    pub(crate) fn add_atom_over_observed_terms(
+        &mut self,
+        arena: &TermArena,
+        atom_term: TermId,
+    ) -> Result<usize, &'static str> {
+        let sides = match arena.node(atom_term) {
+            TermNode::App { op: Op::Eq, args } if args.len() == 2 => {
+                let left = self
+                    .bridge
+                    .term_to_node
+                    .get(&args[0])
+                    .copied()
+                    .ok_or("dynamic EUF atom left side was not pre-observed")?;
+                let right = self
+                    .bridge
+                    .term_to_node
+                    .get(&args[1])
+                    .copied()
+                    .ok_or("dynamic EUF atom right side was not pre-observed")?;
+                Some((left, right))
+            }
+            _ => None,
+        };
+        let atom = self.atoms.len();
+        self.atoms.push(sides);
+        self.assigned.push(None);
+        Ok(atom)
+    }
+
     /// Returns each observed term's current class root plus the asserted equality
     /// atom indices explaining its equality to that class's first observed term.
     /// The explanation is empty for the representative itself.
@@ -2164,6 +2197,28 @@ mod tests {
         theory.pop();
         // a=b is gone; asserting a≠b (atom 0 false) is now consistent.
         assert!(theory.assert(0, false).is_ok());
+    }
+
+    #[test]
+    fn online_euf_dynamic_atom_persists_while_assignment_backtracks() {
+        let mut arena = TermArena::new();
+        let a = arena.bv_var("dynamic_atom_a", 8).unwrap();
+        let b = arena.bv_var("dynamic_atom_b", 8).unwrap();
+        let a_eq_b = arena.eq(a, b).unwrap();
+
+        let mut theory = EufTheory::new_with_observed_terms(&arena, &[], &[a, b]);
+        theory.push();
+        assert_eq!(
+            theory.add_atom_over_observed_terms(&arena, a_eq_b).unwrap(),
+            0
+        );
+        assert!(theory.assert(0, true).is_ok());
+        theory.pop();
+
+        assert!(
+            theory.assert(0, false).is_ok(),
+            "the dynamic atom must survive while its scoped merge is undone"
+        );
     }
 
     #[test]

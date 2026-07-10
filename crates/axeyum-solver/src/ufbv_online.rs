@@ -136,6 +136,12 @@ enum RowAtomRef {
 }
 
 #[derive(Debug, Clone, Copy)]
+enum DynamicAtomRef {
+    Constant(bool),
+    Variable { variable: usize },
+}
+
+#[derive(Debug, Clone, Copy)]
 struct RowAtomIds {
     same_index: RowAtomRef,
     hit: RowAtomRef,
@@ -221,6 +227,7 @@ struct PreparedAbstraction {
     row_stores: Vec<CombinedRowStore>,
     array_equalities: Vec<CombinedArrayEquality>,
     replacements: HashMap<TermId, TermId>,
+    theory_observed_terms: Vec<TermId>,
 }
 
 struct PreparedArrayRoots {
@@ -236,6 +243,7 @@ struct TheoryAtoms {
     abstracted: Vec<TermId>,
     propagation_candidates: Vec<bool>,
     row_atoms: Vec<RowAtomIds>,
+    abstract_index: HashMap<TermId, usize>,
 }
 
 #[derive(Default)]
@@ -291,6 +299,7 @@ impl AtomAccumulator {
             abstracted: self.abstracted,
             propagation_candidates: self.propagation_candidates,
             row_atoms: Vec::new(),
+            abstract_index: self.abstract_index,
         }
     }
 }
@@ -312,28 +321,59 @@ enum RoundOutcome {
 
 struct RoundResult {
     outcome: RoundOutcome,
+    sat_candidates: usize,
     row_axioms: Vec<usize>,
     row_refinements: usize,
+    function_pairs: Vec<(usize, usize)>,
+    array_pairs: Vec<ArraySelectAxiom>,
+    array_equality_axioms: Vec<ArrayEqualityAxiom>,
+    interface_refinements: usize,
+    max_propagation_candidates: usize,
 }
 
-impl RoundResult {
-    fn new(outcome: RoundOutcome, row_axioms: Vec<usize>, row_refinements: usize) -> Self {
-        Self {
+#[derive(Default)]
+struct RoundProgress {
+    sat_candidates: usize,
+    row_axioms: Vec<usize>,
+    row_refinements: usize,
+    function_pairs: Vec<(usize, usize)>,
+    array_pairs: Vec<ArraySelectAxiom>,
+    array_equality_axioms: Vec<ArrayEqualityAxiom>,
+    interface_refinements: usize,
+}
+
+impl RoundProgress {
+    fn finish(self, outcome: RoundOutcome, max_propagation_candidates: usize) -> RoundResult {
+        RoundResult {
             outcome,
-            row_axioms,
-            row_refinements,
+            sat_candidates: self.sat_candidates,
+            row_axioms: self.row_axioms,
+            row_refinements: self.row_refinements,
+            function_pairs: self.function_pairs,
+            array_pairs: self.array_pairs,
+            array_equality_axioms: self.array_equality_axioms,
+            interface_refinements: self.interface_refinements,
+            max_propagation_candidates,
         }
     }
 }
 
-#[derive(Clone, Copy)]
 struct RoundRequest<'a> {
     config: &'a SolverConfig,
     deadline: Option<Instant>,
     assertions: &'a [TermId],
     select_parent_terms: &'a [TermId],
+    theory_observed_terms: &'a [TermId],
     row_stores: &'a [CombinedRowStore],
     materialized_rows: &'a HashSet<usize>,
+    applications: &'a [CombinedApplication],
+    application_groups: &'a [(FuncId, Vec<usize>)],
+    materialized_functions: &'a HashSet<(usize, usize)>,
+    selects: &'a [CombinedSelect],
+    materialized_arrays: &'a HashSet<ArraySelectAxiom>,
+    array_equalities: &'a [CombinedArrayEquality],
+    materialized_array_equalities: &'a HashSet<ArrayEqualityAxiom>,
+    ground_values: &'a mut GroundValueCache,
     interface_count: usize,
 }
 
@@ -348,6 +388,7 @@ struct InterfaceRefinementStats {
     store_parent_select_pairs_added: usize,
     row_axioms_added: usize,
     in_search_row_refinements: usize,
+    in_search_interface_refinements: usize,
     array_equality_axioms_added: usize,
     max_interface_atoms: usize,
 }
@@ -378,8 +419,8 @@ impl GroundValueCache {
 }
 
 /// Exact Bool/BV theory state backed by the persistent incremental bit-blaster.
-struct BvTheory<'a> {
-    arena: &'a TermArena,
+struct BvTheory {
+    arena: TermArena,
     positive: Vec<TermId>,
     negative: Vec<TermId>,
     solver: IncrementalBvSolver,
@@ -397,9 +438,9 @@ struct BvTheory<'a> {
     failure: Option<String>,
 }
 
-impl<'a> BvTheory<'a> {
+impl BvTheory {
     fn new(
-        arena: &'a TermArena,
+        arena: TermArena,
         positive: Vec<TermId>,
         negative: Vec<TermId>,
         propagation_candidates: Vec<bool>,
@@ -425,6 +466,33 @@ impl<'a> BvTheory<'a> {
             last_unknown: None,
             failure: None,
         }
+    }
+
+    fn add_atom(
+        &mut self,
+        positive: TermId,
+        negative: TermId,
+        propagation_candidate: bool,
+    ) -> usize {
+        let atom = self.positive.len();
+        self.positive.push(positive);
+        self.negative.push(negative);
+        self.assigned.push(None);
+        self.propagation_candidates.push(propagation_candidate);
+        self.refresh_propagation();
+        atom
+    }
+
+    fn mark_propagation_candidate(&mut self, atom: usize) {
+        self.propagation_candidates[atom] = true;
+        self.refresh_propagation();
+    }
+
+    fn propagation_candidate_count(&self) -> usize {
+        self.propagation_candidates
+            .iter()
+            .filter(|&&candidate| candidate)
+            .count()
     }
 
     fn assert(&mut self, atom: usize, value: bool) -> Result<(), Vec<TheoryLit>> {
@@ -459,13 +527,13 @@ impl<'a> BvTheory<'a> {
         } else {
             self.negative[atom]
         };
-        if let Err(error) = self.solver.assert(self.arena, literal) {
+        if let Err(error) = self.solver.assert(&self.arena, literal) {
             self.failure = Some(format!("online UFBV BV assertion failed: {error}"));
             self.last_model = None;
             return Ok(());
         }
 
-        match self.solver.check_with_active_assertion_core(self.arena) {
+        match self.solver.check_with_active_assertion_core(&self.arena) {
             Ok((CheckResult::Sat(model), _)) => {
                 self.last_model = Some(model);
                 self.last_unknown = None;
@@ -591,7 +659,7 @@ impl<'a> BvTheory<'a> {
         };
         self.propagation_cursor = (atom + 1) % atom_count;
         let assignment = model.to_assignment();
-        let Ok(Value::Bool(value)) = eval(self.arena, self.positive[atom], &assignment) else {
+        let Ok(Value::Bool(value)) = eval(&self.arena, self.positive[atom], &assignment) else {
             return;
         };
         let opposite = if value {
@@ -607,7 +675,7 @@ impl<'a> BvTheory<'a> {
         }
         self.solver.set_timeout(remaining);
         self.propagation_probes += 1;
-        match self.solver.refute_assumption(self.arena, opposite) {
+        match self.solver.refute_assumption(&self.arena, opposite) {
             Ok(crate::incremental::WarmRefutationProbe::Refuted { active_core }) => {
                 self.propagation_hits += 1;
                 self.pending_propagations.push(TheoryProp {
@@ -652,12 +720,92 @@ impl<'a> BvTheory<'a> {
 }
 
 /// One lockstep theory surface for the canonical driver.
-struct CombinedUfbvTheory<'a> {
+struct CombinedUfbvTheory {
     euf: EufTheory,
-    bv: BvTheory<'a>,
+    bv: BvTheory,
+    abstract_index: HashMap<TermId, usize>,
 }
 
-impl TheorySolver for CombinedUfbvTheory<'_> {
+impl CombinedUfbvTheory {
+    fn atom_ref(
+        &mut self,
+        solver: &CdclT,
+        abstracted: TermId,
+        propagation_candidate: bool,
+    ) -> BuildResult<Option<DynamicAtomRef>> {
+        if let TermNode::BoolConst(value) = self.bv.arena.node(abstracted) {
+            return Ok(Some(DynamicAtomRef::Constant(*value)));
+        }
+        let Some(&atom) = self.abstract_index.get(&abstracted) else {
+            return Ok(None);
+        };
+        if propagation_candidate {
+            self.bv.mark_propagation_candidate(atom);
+        }
+        let Some(variable) = solver.theory_variable(atom) else {
+            return Err(BuildFailure::Error(SolverError::Backend(
+                "dynamic UFBV atom lost its SAT-variable mapping".to_owned(),
+            )));
+        };
+        Ok(Some(DynamicAtomRef::Variable { variable }))
+    }
+
+    fn register_equality(
+        &mut self,
+        solver: &mut CdclT,
+        original_left: TermId,
+        original_right: TermId,
+        abstract_left: TermId,
+        abstract_right: TermId,
+        propagation_candidate: bool,
+    ) -> BuildResult<DynamicAtomRef> {
+        let (original, abstracted, negative) = {
+            let arena = &mut self.bv.arena;
+            let original = arena.eq(original_left, original_right)?;
+            let abstracted = arena.eq(abstract_left, abstract_right)?;
+            let negative = arena.not(abstracted)?;
+            (original, abstracted, negative)
+        };
+        if let Some(existing) = self.atom_ref(solver, abstracted, propagation_candidate)? {
+            return Ok(existing);
+        }
+        if self.bv.positive.len() >= MAX_THEORY_ATOMS {
+            return Err(build_unknown(
+                UnknownKind::ResourceLimit,
+                format!("online UFBV dynamic theory atoms exceed the cap of {MAX_THEORY_ATOMS}"),
+            ));
+        }
+        if solver.variable_count() >= MAX_BOOLEAN_VARIABLES {
+            return Err(build_unknown(
+                UnknownKind::ResourceLimit,
+                format!(
+                    "online UFBV dynamic Boolean variables exceed the cap of {MAX_BOOLEAN_VARIABLES}"
+                ),
+            ));
+        }
+        let euf_atom = self
+            .euf
+            .add_atom_over_observed_terms(&self.bv.arena, original)
+            .map_err(|detail| {
+                BuildFailure::Error(SolverError::Backend(format!(
+                    "online UFBV dynamic EUF registration failed: {detail}"
+                )))
+            })?;
+        let bv_atom = self
+            .bv
+            .add_atom(abstracted, negative, propagation_candidate);
+        let (variable, solver_atom) = solver.add_theory_variable();
+        if euf_atom != bv_atom || bv_atom != solver_atom {
+            return Err(BuildFailure::Error(SolverError::Backend(
+                "online UFBV dynamic theory components lost atom-index alignment".to_owned(),
+            )));
+        }
+        self.abstract_index.insert(abstracted, solver_atom);
+        Ok(DynamicAtomRef::Variable { variable })
+    }
+}
+
+impl TheorySolver for CombinedUfbvTheory {
     fn assert(&mut self, atom: usize, value: bool) -> Result<(), Vec<TheoryLit>> {
         // Both components must observe the assignment even if either one reports
         // a conflict, so their backtrack stacks remain aligned with CdclT.
@@ -840,20 +988,77 @@ fn build_and_solve_with_stats_impl(
                 deadline,
                 assertions: &round_assertions,
                 select_parent_terms: &select_parent_terms,
+                theory_observed_terms: &prepared.theory_observed_terms,
                 row_stores: &prepared.row_stores,
                 materialized_rows: &materialized_rows,
+                applications: &prepared.applications,
+                application_groups: &groups,
+                materialized_functions: &materialized_functions,
+                selects: &prepared.selects,
+                materialized_arrays: &materialized_arrays,
+                array_equalities: &prepared.array_equalities,
+                materialized_array_equalities: &materialized_array_equalities,
+                ground_values: &mut ground_values,
                 interface_count,
             },
         )?;
         stats.in_search_row_refinements = stats
             .in_search_row_refinements
             .saturating_add(round.row_refinements);
-        stats.sat_candidates = stats.sat_candidates.saturating_add(round.row_refinements);
+        stats.in_search_interface_refinements = stats
+            .in_search_interface_refinements
+            .saturating_add(round.interface_refinements);
+        stats.sat_candidates = stats.sat_candidates.saturating_add(round.sat_candidates);
+        stats.max_interface_atoms = stats
+            .max_interface_atoms
+            .max(round.max_propagation_candidates);
         for site in round.row_axioms {
             if materialized_rows.insert(site) {
                 interface_count = interface_count.saturating_add(3);
                 row_axioms.push(site);
                 stats.row_axioms_added += 1;
+            }
+        }
+        for pair @ (left, _right) in round.function_pairs {
+            if materialized_functions.insert(pair) {
+                interface_count = interface_count.saturating_add(
+                    prepared.applications[left]
+                        .original
+                        .args
+                        .len()
+                        .saturating_add(1),
+                );
+                function_pairs.push(pair);
+                stats.pairs_added += 1;
+                stats.function_pairs_added += 1;
+            }
+        }
+        for axiom in round.array_pairs {
+            if materialized_arrays.insert(axiom.clone()) {
+                interface_count = interface_count.saturating_add(2);
+                let pair = (axiom.left, axiom.right);
+                if matches!(
+                    arena.node(prepared.selects[pair.0].array_term),
+                    TermNode::App { op: Op::Store, .. }
+                ) || matches!(
+                    arena.node(prepared.selects[pair.1].array_term),
+                    TermNode::App { op: Op::Store, .. }
+                ) {
+                    stats.store_parent_select_pairs_added += 1;
+                }
+                if prepared.selects[pair.0].array_term != prepared.selects[pair.1].array_term {
+                    stats.parent_select_pairs_added += 1;
+                }
+                array_pairs.push(axiom);
+                stats.pairs_added += 1;
+                stats.array_pairs_added += 1;
+            }
+        }
+        for axiom in round.array_equality_axioms {
+            if materialized_array_equalities.insert(axiom) {
+                interface_count = interface_count.saturating_add(1);
+                array_equality_axioms.push(axiom);
+                stats.array_equality_axioms_added += 1;
             }
         }
         match round.outcome {
@@ -865,7 +1070,6 @@ fn build_and_solve_with_stats_impl(
                 assignment,
                 select_parent_classes,
             } => {
-                stats.sat_candidates += 1;
                 let violated_functions = violated_application_pairs(
                     arena,
                     &prepared.applications,
@@ -1040,6 +1244,7 @@ fn negate_atoms(arena: &mut TermArena, atoms: &[TermId]) -> BuildResult<Vec<Term
         .map_err(BuildFailure::from)
 }
 
+#[allow(clippy::too_many_lines)]
 fn solve_cdclt_round(
     arena: &mut TermArena,
     atoms: TheoryAtoms,
@@ -1050,27 +1255,41 @@ fn solve_cdclt_round(
         deadline,
         assertions,
         select_parent_terms,
+        theory_observed_terms,
         row_stores,
         materialized_rows,
+        applications,
+        application_groups,
+        materialized_functions,
+        selects,
+        materialized_arrays,
+        array_equalities,
+        materialized_array_equalities,
+        ground_values,
         interface_count,
     } = request;
     let skeleton = encode_boolean_skeleton(arena, assertions, &atoms.abstracted, deadline)?;
 
     let negative_atoms = negate_atoms(arena, &atoms.abstracted)?;
     let atom_count = atoms.original.len();
-    let abstract_atoms = atoms.abstracted.clone();
     let row_atoms = atoms.row_atoms;
     debug_assert_eq!(row_atoms.len(), row_stores.len());
-    let euf = EufTheory::new_with_observed_terms(arena, &atoms.original, select_parent_terms);
+    let mut observed_terms = theory_observed_terms.to_vec();
+    observed_terms.extend_from_slice(select_parent_terms);
+    let euf = EufTheory::new_with_observed_terms(arena, &atoms.original, &observed_terms);
     let bv = BvTheory::new(
-        arena,
+        arena.clone(),
         atoms.abstracted,
         negative_atoms,
         atoms.propagation_candidates,
         config,
         deadline,
     );
-    let mut theory = CombinedUfbvTheory { euf, bv };
+    let mut theory = CombinedUfbvTheory {
+        euf,
+        bv,
+        abstract_index: atoms.abstract_index,
+    };
     let inactive_variables =
         inactive_reserved_row_variables(&row_atoms, &skeleton.active_variables);
     let mut solver = CdclT::new(
@@ -1081,23 +1300,23 @@ fn solve_cdclt_round(
     )
     .with_inactive_variables(&inactive_variables);
     let mut active_rows = materialized_rows.clone();
-    let mut added_rows = Vec::new();
-    let mut row_refinements = 0;
+    let mut active_functions = materialized_functions.clone();
+    let mut active_arrays = materialized_arrays.clone();
+    let mut active_array_equalities = materialized_array_equalities.clone();
+    let mut progress = RoundProgress::default();
+    let mut dynamic_interface_count = interface_count;
 
     loop {
         match solver.solve(&mut theory) {
             Outcome::Unsat => {
-                return Ok(RoundResult::new(
-                    RoundOutcome::Unsat,
-                    added_rows,
-                    row_refinements,
-                ));
+                return Ok(
+                    progress.finish(RoundOutcome::Unsat, theory.bv.propagation_candidate_count())
+                );
             }
             Outcome::Unknown => {
-                return Ok(RoundResult::new(
+                return Ok(progress.finish(
                     RoundOutcome::Unknown(round_search_unknown(deadline)),
-                    added_rows,
-                    row_refinements,
+                    theory.bv.propagation_candidate_count(),
                 ));
             }
             Outcome::Sat => {}
@@ -1106,24 +1325,36 @@ fn solve_cdclt_round(
         let assignment = match theory.bv.candidate_assignment() {
             Ok(assignment) => assignment,
             Err(reason) => {
-                return Ok(RoundResult::new(
+                return Ok(progress.finish(
                     RoundOutcome::Unknown(reason),
-                    added_rows,
-                    row_refinements,
+                    theory.bv.propagation_candidate_count(),
                 ));
             }
         };
+        progress.sat_candidates += 1;
         let violated_rows =
             violated_row_stores(arena, row_stores, &assignment, &active_rows, deadline)?;
         if !violated_rows.is_empty() {
-            let materialized_count = added_rows.len().saturating_add(violated_rows.len());
-            if interface_count.saturating_add(materialized_count.saturating_mul(3))
-                > MAX_INTERFACE_ATOMS
-            {
-                return Ok(RoundResult::new(
+            let charge = violated_rows.len().saturating_mul(3);
+            let clause_charge = violated_rows
+                .iter()
+                .map(|&site| row_axiom_clauses(row_atoms[site]).len())
+                .sum::<usize>();
+            if dynamic_interface_count.saturating_add(charge) > MAX_INTERFACE_ATOMS {
+                return Ok(progress.finish(
                     RoundOutcome::Unknown(interface_limit_reason(true)),
-                    added_rows,
-                    row_refinements,
+                    theory.bv.propagation_candidate_count(),
+                ));
+            }
+            if solver.clause_count().saturating_add(clause_charge) > MAX_BOOLEAN_CLAUSES {
+                return Ok(progress.finish(
+                    RoundOutcome::Unknown(UnknownReason {
+                        kind: UnknownKind::ResourceLimit,
+                        detail: format!(
+                            "online AUFBV dynamic Boolean clauses exceed the cap of {MAX_BOOLEAN_CLAUSES}"
+                        ),
+                    }),
+                    theory.bv.propagation_candidate_count(),
                 ));
             }
             for site in violated_rows {
@@ -1131,21 +1362,132 @@ fn solve_cdclt_round(
                     solver.add_permanent_clause(clause);
                 }
                 active_rows.insert(site);
-                added_rows.push(site);
+                progress.row_axioms.push(site);
             }
-            row_refinements += 1;
+            dynamic_interface_count = dynamic_interface_count.saturating_add(charge);
+            progress.row_refinements += 1;
+            continue;
+        }
+
+        let violated_functions = violated_application_pairs(
+            &theory.bv.arena,
+            applications,
+            application_groups,
+            &assignment,
+            &active_functions,
+            ground_values,
+            deadline,
+        )?;
+        if !violated_functions.is_empty() {
+            let charge = violated_functions.iter().fold(0usize, |count, (left, _)| {
+                count.saturating_add(applications[*left].original.args.len().saturating_add(1))
+            });
+            if dynamic_interface_count.saturating_add(charge) > MAX_INTERFACE_ATOMS {
+                return Ok(progress.finish(
+                    RoundOutcome::Unknown(interface_limit_reason(!row_stores.is_empty())),
+                    theory.bv.propagation_candidate_count(),
+                ));
+            }
+            if progress.interface_refinements >= MAX_INTERFACE_REFINEMENT_ROUNDS {
+                return Ok(progress.finish(
+                    RoundOutcome::Unknown(UnknownReason {
+                        kind: UnknownKind::ResourceLimit,
+                        detail: format!(
+                            "online UFBV in-search interface refinement exceeded {MAX_INTERFACE_REFINEMENT_ROUNDS} final checks"
+                        ),
+                    }),
+                    theory.bv.propagation_candidate_count(),
+                ));
+            }
+            for pair in violated_functions {
+                materialize_application_pair(&mut theory, &mut solver, applications, pair)?;
+                active_functions.insert(pair);
+                progress.function_pairs.push(pair);
+            }
+            dynamic_interface_count = dynamic_interface_count.saturating_add(charge);
+            progress.interface_refinements += 1;
             continue;
         }
 
         let select_parent_classes =
-            final_select_parent_classes(&theory.euf, select_parent_terms, &abstract_atoms);
-        return Ok(RoundResult::new(
+            final_select_parent_classes(&theory.euf, select_parent_terms, &theory.bv.positive);
+        let violated_arrays = violated_select_pairs(
+            &theory.bv.arena,
+            selects,
+            &select_parent_classes,
+            &assignment,
+            &active_arrays,
+            ground_values,
+            deadline,
+        )?;
+        let violated_array_equalities = violated_array_equality_axioms(
+            &theory.bv.arena,
+            array_equalities,
+            &assignment,
+            &active_array_equalities,
+            deadline,
+        )?;
+        if !violated_arrays.is_empty() || !violated_array_equalities.is_empty() {
+            let charge = violated_arrays
+                .len()
+                .saturating_mul(2)
+                .saturating_add(violated_array_equalities.len());
+            if dynamic_interface_count.saturating_add(charge) > MAX_INTERFACE_ATOMS {
+                return Ok(progress.finish(
+                    RoundOutcome::Unknown(interface_limit_reason(true)),
+                    theory.bv.propagation_candidate_count(),
+                ));
+            }
+            if progress.interface_refinements >= MAX_INTERFACE_REFINEMENT_ROUNDS {
+                return Ok(progress.finish(
+                    RoundOutcome::Unknown(UnknownReason {
+                        kind: UnknownKind::ResourceLimit,
+                        detail: format!(
+                            "online AUFBV in-search interface refinement exceeded {MAX_INTERFACE_REFINEMENT_ROUNDS} final checks"
+                        ),
+                    }),
+                    theory.bv.propagation_candidate_count(),
+                ));
+            }
+            let clause_charge = violated_arrays
+                .len()
+                .saturating_add(violated_array_equalities.len());
+            if solver.clause_count().saturating_add(clause_charge) > MAX_BOOLEAN_CLAUSES {
+                return Ok(progress.finish(
+                    RoundOutcome::Unknown(UnknownReason {
+                        kind: UnknownKind::ResourceLimit,
+                        detail: format!(
+                            "online AUFBV dynamic Boolean clauses exceed the cap of {MAX_BOOLEAN_CLAUSES}"
+                        ),
+                    }),
+                    theory.bv.propagation_candidate_count(),
+                ));
+            }
+            for axiom in violated_arrays {
+                materialize_array_select_axiom(&mut theory, &mut solver, selects, &axiom)?;
+                active_arrays.insert(axiom.clone());
+                progress.array_pairs.push(axiom);
+            }
+            for axiom in violated_array_equalities {
+                materialize_array_equality_axiom(
+                    &mut theory,
+                    &mut solver,
+                    array_equalities,
+                    axiom,
+                )?;
+                active_array_equalities.insert(axiom);
+                progress.array_equality_axioms.push(axiom);
+            }
+            dynamic_interface_count = dynamic_interface_count.saturating_add(charge);
+            progress.interface_refinements += 1;
+            continue;
+        }
+        return Ok(progress.finish(
             RoundOutcome::Sat {
                 assignment,
                 select_parent_classes,
             },
-            added_rows,
-            row_refinements,
+            theory.bv.propagation_candidate_count(),
         ));
     }
 }
@@ -1408,6 +1750,7 @@ fn prepare_abstraction(
         array_equalities,
         function_roots,
     } = prepare_array_roots(arena, assertions, admit_arrays)?;
+    let theory_observed_terms = function_roots.clone();
     let semantic_count = semantic_assertions.len();
     let original_applications =
         match collect_original_applications(arena, &function_roots, deadline) {
@@ -1472,6 +1815,7 @@ fn prepare_abstraction(
         row_stores,
         array_equalities,
         replacements,
+        theory_observed_terms,
     })
 }
 
@@ -1599,6 +1943,179 @@ fn select_class_groups(classes: &[SelectParentClass]) -> Vec<(ENodeId, Vec<usize
         }
     }
     groups
+}
+
+fn materialize_application_pair(
+    theory: &mut CombinedUfbvTheory,
+    solver: &mut CdclT,
+    applications: &[CombinedApplication],
+    pair: (usize, usize),
+) -> BuildResult<()> {
+    let left = &applications[pair.0];
+    let right = &applications[pair.1];
+    let mut variables = Vec::with_capacity(left.original.args.len().saturating_add(1));
+    for ((&original_left, &original_right), (&abstract_left, &abstract_right)) in left
+        .original
+        .args
+        .iter()
+        .zip(&right.original.args)
+        .zip(left.rewritten_args.iter().zip(&right.rewritten_args))
+    {
+        if let DynamicAtomRef::Variable { variable } = theory.register_equality(
+            solver,
+            original_left,
+            original_right,
+            abstract_left,
+            abstract_right,
+            true,
+        )? {
+            variables.push(variable);
+        }
+    }
+    let (left_result, right_result) = {
+        let arena = &mut theory.bv.arena;
+        (arena.var(left.fresh), arena.var(right.fresh))
+    };
+    if let DynamicAtomRef::Variable { variable } = theory.register_equality(
+        solver,
+        left.original.term,
+        right.original.term,
+        left_result,
+        right_result,
+        true,
+    )? {
+        variables.push(variable);
+    }
+    variables.sort_unstable();
+    variables.dedup();
+    solver.activate_variables(&variables);
+    Ok(())
+}
+
+fn simplified_dynamic_clause(
+    literals: impl IntoIterator<Item = (DynamicAtomRef, bool)>,
+) -> Option<Vec<CdcltLit>> {
+    let mut clause = Vec::new();
+    for (atom, positive) in literals {
+        match atom {
+            DynamicAtomRef::Constant(value) if value == positive => return None,
+            DynamicAtomRef::Constant(_) => {}
+            DynamicAtomRef::Variable { variable } => {
+                let literal = CdcltLit {
+                    var: variable,
+                    positive,
+                };
+                if clause.iter().any(|existing: &CdcltLit| {
+                    existing.var == literal.var && existing.positive != literal.positive
+                }) {
+                    return None;
+                }
+                if !clause.contains(&literal) {
+                    clause.push(literal);
+                }
+            }
+        }
+    }
+    Some(clause)
+}
+
+fn activate_dynamic_atoms(solver: &mut CdclT, atoms: impl IntoIterator<Item = DynamicAtomRef>) {
+    let mut variables = atoms
+        .into_iter()
+        .filter_map(|atom| match atom {
+            DynamicAtomRef::Variable { variable } => Some(variable),
+            DynamicAtomRef::Constant(_) => None,
+        })
+        .collect::<Vec<_>>();
+    variables.sort_unstable();
+    variables.dedup();
+    solver.activate_variables(&variables);
+}
+
+fn required_dynamic_atom(
+    theory: &mut CombinedUfbvTheory,
+    solver: &CdclT,
+    abstracted: TermId,
+) -> BuildResult<DynamicAtomRef> {
+    theory.atom_ref(solver, abstracted, false)?.ok_or_else(|| {
+        BuildFailure::Error(SolverError::Backend(
+            "online AUFBV dynamic clause referenced an unregistered guard atom".to_owned(),
+        ))
+    })
+}
+
+fn materialize_array_select_axiom(
+    theory: &mut CombinedUfbvTheory,
+    solver: &mut CdclT,
+    selects: &[CombinedSelect],
+    axiom: &ArraySelectAxiom,
+) -> BuildResult<()> {
+    let left = &selects[axiom.left];
+    let right = &selects[axiom.right];
+    let index_eq = theory.register_equality(
+        solver,
+        left.original_index,
+        right.original_index,
+        left.rewritten_index,
+        right.rewritten_index,
+        true,
+    )?;
+    let (left_result, right_result) = {
+        let arena = &mut theory.bv.arena;
+        (arena.var(left.fresh), arena.var(right.fresh))
+    };
+    let result_eq = theory.register_equality(
+        solver,
+        left_result,
+        right_result,
+        left_result,
+        right_result,
+        true,
+    )?;
+    let mut literals = Vec::with_capacity(axiom.guard.len().saturating_add(2));
+    let mut atoms = Vec::with_capacity(axiom.guard.len().saturating_add(2));
+    for &guard in &axiom.guard {
+        let guard = required_dynamic_atom(theory, solver, guard)?;
+        literals.push((guard, false));
+        atoms.push(guard);
+    }
+    literals.push((index_eq, false));
+    literals.push((result_eq, true));
+    atoms.extend([index_eq, result_eq]);
+    activate_dynamic_atoms(solver, atoms);
+    if let Some(clause) = simplified_dynamic_clause(literals) {
+        solver.add_permanent_clause(clause);
+    }
+    Ok(())
+}
+
+fn materialize_array_equality_axiom(
+    theory: &mut CombinedUfbvTheory,
+    solver: &mut CdclT,
+    equalities: &[CombinedArrayEquality],
+    axiom: ArrayEqualityAxiom,
+) -> BuildResult<()> {
+    let equality = &equalities[axiom.equality];
+    let observation = &equality.observations[axiom.observation];
+    let read_eq = theory.register_equality(
+        solver,
+        observation.original_lhs_read,
+        observation.original_rhs_read,
+        observation.rewritten_lhs_read,
+        observation.rewritten_rhs_read,
+        true,
+    )?;
+    let flag_term = theory.bv.arena.var(equality.flag);
+    let flag = required_dynamic_atom(theory, solver, flag_term)?;
+    let literals = match axiom.kind {
+        ArrayEqualityAxiomKind::Equal => [(flag, false), (read_eq, true)],
+        ArrayEqualityAxiomKind::Diff => [(flag, true), (read_eq, false)],
+    };
+    activate_dynamic_atoms(solver, [flag, read_eq]);
+    if let Some(clause) = simplified_dynamic_clause(literals) {
+        solver.add_permanent_clause(clause);
+    }
+    Ok(())
 }
 
 fn violated_application_pairs(
@@ -2465,16 +2982,21 @@ mod tests {
             .iter()
             .filter(|&&candidate| candidate)
             .count();
+        let abstract_index = atoms.abstract_index;
         let euf = EufTheory::new(arena, &atoms.original);
         let bv = BvTheory::new(
-            arena,
+            arena.clone(),
             atoms.abstracted,
             negative,
             atoms.propagation_candidates,
             &SolverConfig::default(),
             None,
         );
-        let mut theory = CombinedUfbvTheory { euf, bv };
+        let mut theory = CombinedUfbvTheory {
+            euf,
+            bv,
+            abstract_index,
+        };
         let mut solver = CdclT::new(skeleton.variable_count, atom_count, skeleton.clauses, None);
         let outcome = solver.solve(&mut theory);
         RawSolveStats {
@@ -2518,7 +3040,7 @@ mod tests {
             .map(|&atom| arena.not(atom).unwrap())
             .collect();
         let mut theory = BvTheory::new(
-            &arena,
+            arena.clone(),
             positive,
             negative,
             vec![false; 3],
@@ -2561,7 +3083,7 @@ mod tests {
             .map(|&atom| arena.not(atom).unwrap())
             .collect();
         let mut theory = BvTheory::new(
-            &arena,
+            arena.clone(),
             positive,
             negative,
             vec![false; 2],
@@ -2593,7 +3115,7 @@ mod tests {
             .map(|&atom| arena.not(atom).unwrap())
             .collect();
         let mut theory = BvTheory::new(
-            &arena,
+            arena.clone(),
             positive,
             negative,
             vec![false, true],
@@ -2760,9 +3282,10 @@ mod tests {
 
         let (result, stats) = dynamic_solve_stats(&mut arena, &[same_arg, strict]);
         assert_eq!(result, CheckResult::Unsat);
-        assert_eq!(stats.rounds, 2, "stats={stats:?}");
+        assert_eq!(stats.rounds, 1, "stats={stats:?}");
         assert_eq!(stats.sat_candidates, 1, "stats={stats:?}");
         assert_eq!(stats.pairs_added, 1, "stats={stats:?}");
+        assert_eq!(stats.in_search_interface_refinements, 1, "stats={stats:?}");
         assert_eq!(stats.max_interface_atoms, 2, "stats={stats:?}");
     }
 
@@ -2790,14 +3313,15 @@ mod tests {
         let (result, stats) =
             dynamic_solve_stats(&mut arena, &[same_arg, g_strict_or_fallback, strict]);
         assert_eq!(result, CheckResult::Unsat);
-        assert_eq!(stats.rounds, 3, "stats={stats:?}");
+        assert_eq!(stats.rounds, 1, "stats={stats:?}");
         assert_eq!(stats.sat_candidates, 2, "stats={stats:?}");
         assert_eq!(stats.pairs_added, 2, "stats={stats:?}");
+        assert_eq!(stats.in_search_interface_refinements, 2, "stats={stats:?}");
         assert_eq!(stats.max_interface_atoms, 3, "stats={stats:?}");
     }
 
     #[test]
-    fn array_select_congruence_refines_in_two_rounds() {
+    fn array_select_congruence_refines_inside_one_search() {
         let mut arena = TermArena::new();
         let array = arena.array_var("dynamic_array", 4, 8).unwrap();
         let i = arena.bv_var("dynamic_array_i", 4).unwrap();
@@ -2810,10 +3334,11 @@ mod tests {
 
         let (result, stats) = dynamic_array_solve_stats(&mut arena, &[same_index, different_read]);
         assert_eq!(result, CheckResult::Unsat);
-        assert_eq!(stats.rounds, 2, "stats={stats:?}");
+        assert_eq!(stats.rounds, 1, "stats={stats:?}");
         assert_eq!(stats.sat_candidates, 1, "stats={stats:?}");
         assert_eq!(stats.array_pairs_added, 1, "stats={stats:?}");
         assert_eq!(stats.function_pairs_added, 0, "stats={stats:?}");
+        assert_eq!(stats.in_search_interface_refinements, 1, "stats={stats:?}");
         assert_eq!(stats.max_interface_atoms, 2, "stats={stats:?}");
     }
 
@@ -2841,11 +3366,12 @@ mod tests {
             &[same_index, read_strict_or_fallback, result_strict],
         );
         assert_eq!(result, CheckResult::Unsat);
-        assert_eq!(stats.rounds, 3, "stats={stats:?}");
+        assert_eq!(stats.rounds, 1, "stats={stats:?}");
         assert_eq!(stats.sat_candidates, 2, "stats={stats:?}");
         assert_eq!(stats.array_pairs_added, 1, "stats={stats:?}");
         assert_eq!(stats.function_pairs_added, 1, "stats={stats:?}");
         assert_eq!(stats.pairs_added, 2, "stats={stats:?}");
+        assert_eq!(stats.in_search_interface_refinements, 2, "stats={stats:?}");
     }
 
     #[test]
@@ -2862,10 +3388,11 @@ mod tests {
 
         let (result, stats) = dynamic_array_solve_stats(&mut arena, &[arrays_equal, reads_differ]);
         assert_eq!(result, CheckResult::Unsat);
-        assert_eq!(stats.rounds, 2, "stats={stats:?}");
+        assert_eq!(stats.rounds, 1, "stats={stats:?}");
         assert_eq!(stats.sat_candidates, 1, "stats={stats:?}");
         assert_eq!(stats.parent_select_pairs_added, 1, "stats={stats:?}");
         assert_eq!(stats.array_equality_axioms_added, 0, "stats={stats:?}");
+        assert_eq!(stats.in_search_interface_refinements, 1, "stats={stats:?}");
     }
 
     #[test]
@@ -2899,12 +3426,13 @@ mod tests {
         );
 
         assert_eq!(result, CheckResult::Unsat, "stats={stats:?}");
-        assert_eq!(stats.rounds, 2, "stats={stats:?}");
+        assert_eq!(stats.rounds, 1, "stats={stats:?}");
         assert_eq!(stats.store_parent_select_pairs_added, 1, "stats={stats:?}");
         assert_eq!(stats.parent_select_pairs_added, 2, "stats={stats:?}");
         assert_eq!(stats.array_pairs_added, 2, "stats={stats:?}");
         assert_eq!(stats.row_axioms_added, 2, "stats={stats:?}");
         assert_eq!(stats.in_search_row_refinements, 2, "stats={stats:?}");
+        assert_eq!(stats.in_search_interface_refinements, 1, "stats={stats:?}");
         assert_eq!(stats.array_equality_axioms_added, 0, "stats={stats:?}");
     }
 
@@ -2927,9 +3455,10 @@ mod tests {
             dynamic_array_solve_stats(&mut arena, &[same_indices, different_reads]);
 
         assert_eq!(result, CheckResult::Unsat, "stats={stats:?}");
-        assert_eq!(stats.rounds, 2, "stats={stats:?}");
+        assert_eq!(stats.rounds, 1, "stats={stats:?}");
         assert_eq!(stats.store_parent_select_pairs_added, 1, "stats={stats:?}");
         assert_eq!(stats.parent_select_pairs_added, 0, "stats={stats:?}");
+        assert_eq!(stats.in_search_interface_refinements, 1, "stats={stats:?}");
     }
 
     #[test]
@@ -2966,6 +3495,11 @@ mod tests {
         assert_eq!(eval(&arena, a_eq_c, &assignment), Ok(Value::Bool(true)));
         assert!(
             stats.store_parent_select_pairs_added >= 1,
+            "stats={stats:?}"
+        );
+        assert_eq!(stats.rounds, 1, "stats={stats:?}");
+        assert!(
+            stats.in_search_interface_refinements >= 1,
             "stats={stats:?}"
         );
     }
@@ -3053,9 +3587,10 @@ mod tests {
         let (result, stats) =
             dynamic_array_solve_stats(&mut arena, &[a_eq_b, b_eq_c, reads_differ]);
         assert_eq!(result, CheckResult::Unsat, "stats={stats:?}");
-        assert_eq!(stats.rounds, 2, "stats={stats:?}");
+        assert_eq!(stats.rounds, 1, "stats={stats:?}");
         assert_eq!(stats.parent_select_pairs_added, 1, "stats={stats:?}");
         assert_eq!(stats.array_equality_axioms_added, 0, "stats={stats:?}");
+        assert_eq!(stats.in_search_interface_refinements, 1, "stats={stats:?}");
     }
 
     #[test]
@@ -3175,6 +3710,11 @@ mod tests {
         assert_eq!(eval(&arena, a_eq_b, &assignment), Ok(Value::Bool(false)));
         assert_eq!(eval(&arena, a_eq_c, &assignment), Ok(Value::Bool(true)));
         assert!(stats.parent_select_pairs_added >= 1, "stats={stats:?}");
+        assert_eq!(stats.rounds, 1, "stats={stats:?}");
+        assert!(
+            stats.in_search_interface_refinements >= 1,
+            "stats={stats:?}"
+        );
     }
 
     #[test]
@@ -3200,6 +3740,11 @@ mod tests {
         let (result, stats) = dynamic_array_solve_stats(&mut arena, &[choice, reads_differ]);
         assert_eq!(result, CheckResult::Unsat, "stats={stats:?}");
         assert!(stats.parent_select_pairs_added >= 2, "stats={stats:?}");
+        assert_eq!(stats.rounds, 1, "stats={stats:?}");
+        assert!(
+            stats.in_search_interface_refinements >= 2,
+            "stats={stats:?}"
+        );
     }
 
     #[test]
@@ -3321,7 +3866,7 @@ mod tests {
             eval(&arena, different, &model.to_assignment()),
             Ok(Value::Bool(true))
         );
-        assert!(stats.rounds <= 2, "stats={stats:?}");
+        assert_eq!(stats.rounds, 1, "stats={stats:?}");
         assert!(stats.array_equality_axioms_added <= 1, "stats={stats:?}");
     }
 
@@ -3339,9 +3884,13 @@ mod tests {
 
         let (result, stats) = dynamic_array_solve_stats(&mut arena, &[arrays_equal, read_differs]);
         assert_eq!(result, CheckResult::Unsat);
-        assert!(stats.rounds <= 3, "stats={stats:?}");
+        assert_eq!(stats.rounds, 1, "stats={stats:?}");
         assert!(stats.array_equality_axioms_added >= 1, "stats={stats:?}");
         assert!(stats.row_axioms_added >= 1, "stats={stats:?}");
+        assert!(
+            stats.in_search_interface_refinements >= 1,
+            "stats={stats:?}"
+        );
     }
 
     #[test]
@@ -3665,7 +4214,8 @@ mod tests {
         );
         assert_eq!(stats.rounds, 1, "stats={stats:?}");
         assert_eq!(stats.sat_candidates, 1, "stats={stats:?}");
-        assert_eq!(stats.array_pairs_added, 256, "stats={stats:?}");
+        assert_eq!(stats.array_pairs_added, 0, "stats={stats:?}");
+        assert_eq!(stats.in_search_interface_refinements, 0, "stats={stats:?}");
         assert_eq!(stats.function_pairs_added, 0, "stats={stats:?}");
     }
 
@@ -3930,6 +4480,7 @@ mod tests {
         );
         assert_eq!(stats.rounds, 1, "stats={stats:?}");
         assert_eq!(stats.sat_candidates, 1, "stats={stats:?}");
-        assert_eq!(stats.pairs_added, 256, "stats={stats:?}");
+        assert_eq!(stats.pairs_added, 0, "stats={stats:?}");
+        assert_eq!(stats.in_search_interface_refinements, 0, "stats={stats:?}");
     }
 }

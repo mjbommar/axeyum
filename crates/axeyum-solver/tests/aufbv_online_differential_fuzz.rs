@@ -598,6 +598,78 @@ fn build_dynamic_row_case(seed: u64, arena: &mut TermArena) -> Vec<TermId> {
     }
 }
 
+fn build_dynamic_interface_case(seed: u64, arena: &mut TermArena) -> Vec<TermId> {
+    let width = 3;
+    let array_a = arena.array_var("dynamic_iface_a", width, width).unwrap();
+    let array_b = arena.array_var("dynamic_iface_b", width, width).unwrap();
+    let array_c = arena.array_var("dynamic_iface_c", width, width).unwrap();
+    let function_f = arena
+        .declare_fun(
+            "dynamic_iface_f",
+            &[Sort::BitVec(width)],
+            Sort::BitVec(width),
+        )
+        .unwrap();
+    let function_g = arena
+        .declare_fun(
+            "dynamic_iface_g",
+            &[Sort::BitVec(width)],
+            Sort::BitVec(width),
+        )
+        .unwrap();
+    let x = arena.bv_var("dynamic_iface_x", width).unwrap();
+    let y = arena.bv_var("dynamic_iface_y", width).unwrap();
+    let k = arena.bv_var("dynamic_iface_k", width).unwrap();
+    let value = arena.bv_var("dynamic_iface_v", width).unwrap();
+    let fallback = arena.bool_var("dynamic_iface_guard").unwrap();
+    let fx = arena.apply(function_f, &[x]).unwrap();
+    let fy = arena.apply(function_f, &[y]).unwrap();
+    let gfx = arena.apply(function_g, &[fx]).unwrap();
+    let gfy = arena.apply(function_g, &[fy]).unwrap();
+    let a_at_x = arena.select(array_a, x).unwrap();
+    let a_at_y = arena.select(array_a, y).unwrap();
+    let a_at_k = arena.select(array_a, k).unwrap();
+    let b_at_k = arena.select(array_b, k).unwrap();
+    let store_a = arena.store(array_a, x, value).unwrap();
+    let store_b = arena.store(array_b, y, value).unwrap();
+    let updated_value_at_k = arena.select(store_a, k).unwrap();
+    let peer_value_at_k = arena.select(store_b, k).unwrap();
+    let same_xy = arena.eq(x, y).unwrap();
+    let f_strict = arena.bv_ult(fx, fy).unwrap();
+    let g_strict = arena.bv_ult(gfx, gfy).unwrap();
+    let nested_choice = arena.or(f_strict, fallback).unwrap();
+    let same_base_reads = arena.eq(a_at_x, a_at_y).unwrap();
+    let different_base_reads = arena.not(same_base_reads).unwrap();
+    let a_eq_b = arena.eq(array_a, array_b).unwrap();
+    let a_eq_c = arena.eq(array_a, array_c).unwrap();
+    let parent_choice = arena.or(a_eq_b, a_eq_c).unwrap();
+    let same_parent_reads = arena.eq(a_at_k, b_at_k).unwrap();
+    let different_parent_reads = arena.not(same_parent_reads).unwrap();
+    let same_store_reads = arena.eq(updated_value_at_k, peer_value_at_k).unwrap();
+    let different_store_reads = arena.not(same_store_reads).unwrap();
+    let store_equals_base = arena.eq(store_a, array_a).unwrap();
+    let base_read_at_x = arena.select(array_a, x).unwrap();
+    let base_read_is_value = arena.eq(base_read_at_x, value).unwrap();
+    let base_read_differs = arena.not(base_read_is_value).unwrap();
+    let read_strict = arena.bv_ult(a_at_x, a_at_y).unwrap();
+    let read_choice = arena.or(read_strict, fallback).unwrap();
+    let f_of_a_at_x = arena.apply(function_f, &[a_at_x]).unwrap();
+    let f_of_a_at_y = arena.apply(function_f, &[a_at_y]).unwrap();
+    let f_read_strict = arena.bv_ult(f_of_a_at_x, f_of_a_at_y).unwrap();
+    let replay_choice = arena.or(f_strict, fallback).unwrap();
+
+    match seed % 8 {
+        0 => vec![same_xy, f_strict],
+        1 => vec![same_xy, nested_choice, g_strict],
+        2 => vec![same_xy, different_base_reads],
+        3 => vec![parent_choice, different_parent_reads],
+        4 => vec![a_eq_b, same_xy, different_store_reads],
+        5 => vec![store_equals_base, base_read_differs],
+        6 => vec![same_xy, read_choice, f_read_strict],
+        _ => vec![same_xy, replay_choice],
+    }
+}
+
 #[cfg(feature = "z3")]
 fn z3_verdict(seed: u64) -> Verdict {
     let width = 3 + u32::try_from(seed % 2).unwrap();
@@ -846,6 +918,71 @@ fn z3_dynamic_row_verdict(seed: u64) -> Verdict {
     }
 }
 
+#[cfg(feature = "z3")]
+fn z3_dynamic_interface_verdict(seed: u64) -> Verdict {
+    let width = 3;
+    let bv_sort = Z3Sort::bitvector(width);
+    let array_a = Array::new_const("dynamic_iface_a", &bv_sort, &bv_sort);
+    let array_b = Array::new_const("dynamic_iface_b", &bv_sort, &bv_sort);
+    let array_c = Array::new_const("dynamic_iface_c", &bv_sort, &bv_sort);
+    let function_f = FuncDecl::new("dynamic_iface_f", &[&bv_sort], &bv_sort);
+    let function_g = FuncDecl::new("dynamic_iface_g", &[&bv_sort], &bv_sort);
+    let x = BV::new_const("dynamic_iface_x", width);
+    let y = BV::new_const("dynamic_iface_y", width);
+    let k = BV::new_const("dynamic_iface_k", width);
+    let value = BV::new_const("dynamic_iface_v", width);
+    let fallback = Bool::new_const("dynamic_iface_guard");
+    let fx = function_f.apply(&[&x]).as_bv().unwrap();
+    let fy = function_f.apply(&[&y]).as_bv().unwrap();
+    let gfx = function_g.apply(&[&fx]).as_bv().unwrap();
+    let gfy = function_g.apply(&[&fy]).as_bv().unwrap();
+    let a_at_x = array_a.select(&x).as_bv().unwrap();
+    let a_at_y = array_a.select(&y).as_bv().unwrap();
+    let a_at_k = array_a.select(&k).as_bv().unwrap();
+    let b_at_k = array_b.select(&k).as_bv().unwrap();
+    let store_a = array_a.store(&x, &value);
+    let store_b = array_b.store(&y, &value);
+    let updated_value_at_k = store_a.select(&k).as_bv().unwrap();
+    let peer_value_at_k = store_b.select(&k).as_bv().unwrap();
+    let same_xy = x.eq(&y);
+    let f_strict = fx.bvult(&fy);
+    let g_strict = gfx.bvult(&gfy);
+    let nested_choice = Bool::or(&[f_strict.clone(), fallback.clone()]);
+    let different_base_reads = a_at_x.eq(&a_at_y).not();
+    let a_eq_b = array_a.eq(&array_b);
+    let a_eq_c = array_a.eq(&array_c);
+    let parent_choice = Bool::or(&[a_eq_b.clone(), a_eq_c]);
+    let different_parent_reads = a_at_k.eq(&b_at_k).not();
+    let different_store_reads = updated_value_at_k.eq(&peer_value_at_k).not();
+    let store_equals_base = store_a.eq(&array_a);
+    let base_read_differs = array_a.select(&x).eq(&value).not();
+    let read_choice = Bool::or(&[a_at_x.bvult(&a_at_y), fallback.clone()]);
+    let f_of_a_at_x = function_f.apply(&[&a_at_x]).as_bv().unwrap();
+    let f_of_a_at_y = function_f.apply(&[&a_at_y]).as_bv().unwrap();
+    let f_read_strict = f_of_a_at_x.bvult(&f_of_a_at_y);
+    let replay_choice = Bool::or(&[f_strict.clone(), fallback]);
+
+    let assertions = match seed % 8 {
+        0 => vec![same_xy, f_strict],
+        1 => vec![same_xy, nested_choice, g_strict],
+        2 => vec![same_xy, different_base_reads],
+        3 => vec![parent_choice, different_parent_reads],
+        4 => vec![a_eq_b, same_xy, different_store_reads],
+        5 => vec![store_equals_base, base_read_differs],
+        6 => vec![same_xy, read_choice, f_read_strict],
+        _ => vec![same_xy, replay_choice],
+    };
+    let solver = Solver::new();
+    for assertion in assertions {
+        solver.assert(&assertion);
+    }
+    match solver.check() {
+        SatResult::Sat => Verdict::Sat,
+        SatResult::Unsat => Verdict::Unsat,
+        SatResult::Unknown => Verdict::Unknown,
+    }
+}
+
 #[test]
 fn finite_scalar_arrays_match_analytic_oracle_and_front_door() {
     for seed in 0..128 {
@@ -1044,6 +1181,78 @@ fn dynamic_row_insertion_matches_z3_matrix() {
             verdict(&online),
             z3,
             "online/Z3 dynamic-ROW disagreement at seed {seed}: online={online:?}, z3={z3:?}"
+        );
+    }
+}
+
+#[test]
+fn dynamic_interface_insertion_matches_eager_and_front_door() {
+    for seed in 0..128 {
+        let mut eager_arena = TermArena::new();
+        let eager_assertions = build_dynamic_interface_case(seed, &mut eager_arena);
+        let eager = check_with_arrays_and_functions(
+            &mut SatBvBackend::new(),
+            &mut eager_arena,
+            &eager_assertions,
+            &SolverConfig::default(),
+        )
+        .unwrap();
+        assert_ne!(
+            verdict(&eager),
+            Verdict::Unknown,
+            "eager dynamic-interface seed {seed}: {eager:?}"
+        );
+
+        let mut online_arena = TermArena::new();
+        let online_assertions = build_dynamic_interface_case(seed, &mut online_arena);
+        let online = check_qf_aufbv_online_cdclt(
+            &mut online_arena,
+            &online_assertions,
+            &SolverConfig::default(),
+        )
+        .unwrap();
+        assert_eq!(
+            verdict(&online),
+            verdict(&eager),
+            "online/eager dynamic-interface disagreement at seed {seed}: online={online:?}, eager={eager:?}"
+        );
+        assert_sat_replays(&online_arena, &online_assertions, &online, seed);
+
+        let mut front_arena = TermArena::new();
+        let front_assertions = build_dynamic_interface_case(seed, &mut front_arena);
+        let front = check_auto(
+            &mut front_arena,
+            &front_assertions,
+            &SolverConfig::default(),
+        )
+        .unwrap();
+        assert_eq!(
+            verdict(&front),
+            verdict(&eager),
+            "front-door/eager dynamic-interface disagreement at seed {seed}: front={front:?}, eager={eager:?}"
+        );
+        assert_sat_replays(&front_arena, &front_assertions, &front, seed);
+    }
+}
+
+#[cfg(feature = "z3")]
+#[test]
+fn dynamic_interface_insertion_matches_z3_matrix() {
+    for seed in 0..128 {
+        let mut online_arena = TermArena::new();
+        let online_assertions = build_dynamic_interface_case(seed, &mut online_arena);
+        let online = check_qf_aufbv_online_cdclt(
+            &mut online_arena,
+            &online_assertions,
+            &SolverConfig::default(),
+        )
+        .unwrap();
+        let z3 = z3_dynamic_interface_verdict(seed);
+
+        assert_eq!(
+            verdict(&online),
+            z3,
+            "online/Z3 dynamic-interface disagreement at seed {seed}: online={online:?}, z3={z3:?}"
         );
     }
 }
