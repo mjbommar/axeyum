@@ -307,6 +307,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-09 — exact ground-distinct UFBV interface pruning is live and
+  measured.** Same-function application pairs are omitted only when cached
+  empty-assignment evaluation proves one corresponding Bool/BV argument value
+  differs; equal-valued, symbolic, and failed-evaluation pairs remain. The
+  retained set owns the 512-interface cap. `bug520` drops 50→20 interface atoms
+  and 93/31/46→69/14/16 probes/BV hits/combined propagations. A 24-concrete-key
+  table now solves with zero generated interfaces; its 24-symbolic-key control
+  still returns `ResourceLimit`. Exact release medians: `bug520` 15.32→8.88 ms
+  (~1.72x), six-row PAR-2 mean 3.84→2.89 ms (~1.33x); enabled range
+  8.35-19.19 ms, Z3 8-10 ms. Public 6/6, 1,536 differentials, replay, and 760
+  solver library tests are clean. ADR-0069. Next: dynamic/model-based symbolic
+  interface creation, then arrays on the bus; no general parity claim.
 - **2026-07-09 — bounded exact BV-to-EUF interface propagation is live and
   measured.** One round-robin generated interface equality per theory-state
   change is proved by refuting its opposite polarity in the same warm CNF;
@@ -522,8 +534,9 @@ plan is built and committed on the current branch:
 ### Track 1 — Engine & Performance
 | Phase | Title | Status |
 |---|---|---|
-| P1.6b | Exact BV interface propagation | **DONE (ADR-0068)** — generated argument/result equalities are probed one per state by exact opposite-polarity warm-CNF refutation; failed frames explain propagation; 64-interface/128-probe caps. Same-tree 5-run A/B improves `bug520` 347.10-352.39→149.96-152.79 ms and corpus mean 0.065-0.066→0.034-0.036 s, with 6/6 public agreement and 1,536 clean differential comparisons. Remaining: relevance-driven interface generation, then arrays/mixed theories on the bus |
-| P1.6a | Warm BV conflict-core precision | **DONE (ADR-0067)** — online UFBV maps same-solve failed decision-frame selectors back to theory literals with deterministic full-core fallback. A per-literal selector prototype was reverted after a measured 0.061→0.072 s mean and 0.332→0.382 s `bug520` regression; accepted frame cores are neutral at 0.063 s / 0.332 s. Remaining P1.6 work is within-level precision without repeated-assumption cost, relevant interface generation, and arrays/mixed theories on the bus |
+| P1.6c | Exact ground-distinct interface pruning | **DONE (ADR-0069)** — cached empty-assignment evaluation omits only application pairs with a proved unequal argument value; dynamic/equal-valued pairs remain. `bug520` 50→20 interface atoms and release median 15.32→8.88 ms; a 24-concrete-key table bypasses the prior quadratic cap while the symbolic control still declines. Remaining: dynamic/model-based symbolic interface creation, then arrays/mixed theories on the bus |
+| P1.6b | Exact BV interface propagation | **DONE (ADR-0068)** — generated argument/result equalities are probed one per state by exact opposite-polarity warm-CNF refutation; failed frames explain propagation; 64-interface/128-probe caps. Same-tree 5-run A/B improves `bug520` 347.10-352.39→149.96-152.79 ms and corpus mean 0.065-0.066→0.034-0.036 s, with 6/6 public agreement and 1,536 clean differential comparisons. Remaining: dynamic/model-based interface generation, then arrays/mixed theories on the bus |
+| P1.6a | Warm BV conflict-core precision | **DONE (ADR-0067)** — online UFBV maps same-solve failed decision-frame selectors back to theory literals with deterministic full-core fallback. A per-literal selector prototype was reverted after a measured 0.061→0.072 s mean and 0.332→0.382 s `bug520` regression; accepted frame cores are neutral at 0.063 s / 0.332 s. Remaining P1.6 work is within-level precision without repeated-assumption cost, dynamic/model-based interface generation, and arrays/mixed theories on the bus |
 | P1.1 | SAT inprocessing (subsumption → BVE → vivification → glue tiers) | WIP — subsumption+BVE landed (T1.1.1/2), wired into the solve pipeline (T1.1.3), made occurrence-list near-linear + time-bounded (T1.1.4): safe, no regression, but the curated unknowns are SAT-search-bound (→ P1.3) or BVE-resistant. **CDCL(XOR) foundation landed** (`gf2`/`xor_extract`/`xor_propagate` in `axeyum-cnf`) — the path-2 multiplier-wall attack: a sound GF(2) Gaussian engine + exact XOR-gate extraction + an entailment-checked propagation pass; slice 4 wires it into the live preprocess pipeline (measured). Vivification / glue tiers remain |
 | P1.2 | Preprocessing (word-level rewrite, solve_eqs, bv_slice/bounds/max-sharing, AIG 2-level rewrite) | WIP — T1.2.1 trail + T1.2.2 propagate_values + T1.2.3 solve_eqs landed (model-sound, unit-tested, 36 tests). **T1.2.4 elim_unconstrained landed** (`axeyum-rewrite::elim_unconstrained`): a variable occurring once under an invertible BV op (`bvadd`/`bvsub`/`bvxor`/`bvnot`/`bvneg`) makes that subterm unconstrained → replaced by a fresh var, operator dropped (Z3's `elim_unconstr`); peels nested layers, terminates. Model-sound via the trail (`x := op⁻¹(u,w…)`; orphaned operands defaulted, sound by the inverse identity); wired into `check_with_preprocessing` after solve_eqs (opt-in, default-off per ADR-0034). `bvumulo` now uses the word-width threshold encoding `a > all_ones / b` instead of a doubled-width multiplier, so BV256 overflow checks no longer build BV512 multiplication terms. 6 unit (incl. 300-trial randomized reconstruction) + 2 solver end-to-end plus focused IR overflow/shape coverage. Next: measure on the public p4dfa slice; then max_bv_sharing / bv_slice / AIG 2-level (T1.2.5–T1.2.9) |
 | P1.3 | SAT-core modernization (VSIDS/VMTF modes, EMA/Luby restarts, arena+packed watches, chrono BT) | WIP — the proof-producing core `solve_with_drat_proof` (`proof_sat.rs`) modernized: **VSIDS activity branching** (bump conflict-side vars, MiniSat-style decay, rescale-on-overflow; highest-activity unassigned var, ties to lowest index), **phase saving**, and **Luby restarts**. Sound by construction — every emitted clause is RUP and the proof is DRAT-checked, so a heuristic bug only slows search. All 231 cnf tests pass (incl. the 400-CNF differential vs BatSat + a new pigeonhole-4→3). NB the modern CDCL(XOR) core in `xor_cdcl.rs` already has VSIDS/Luby/LBD. Remaining: arena + packed watches, chronological backtracking; wire a modern core into the default path |
@@ -587,6 +600,13 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-09 — exact ground-distinct UFBV pair pruning landed.** The canonical
+  interface builder proves impossible congruence antecedents with cached ground
+  evaluation before generating atoms or charging the admission cap. Equal
+  denotations and unknown terms stay conservative. Mechanism/equal-value/cap
+  controls, 1,536 differentials, public 6/6, replay, and full solver gates pass;
+  the exact release A/B records the median 1.72x `bug520` win and variance.
+  ADR-0069 records the proof boundary and dynamic-symbolic follow-up.
 - **2026-07-09 — exact warm BV interface propagation landed.** The canonical
   UFBV theory now proves bounded interface consequences with same-CNF
   opposite-polarity probes and failed-frame reasons, then feeds them to

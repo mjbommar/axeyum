@@ -3655,7 +3655,19 @@ Its conclusion, ranked by quality × efficiency:
    347.10-352.39 ms on that row, with corpus mean 0.034-0.036 s versus
    0.065-0.066 s; 1,536 differential comparisons and public 6/6 remain clean.
    Z3 is still ~9-11 ms, so next reduce the interface census by relevance rather
-   than simply raising caps.
+   than simply raising caps. **Fourteenth follow-through:** exact ground-distinct
+   pair pruning now omits a same-function application pair only when cached
+   empty-assignment evaluation proves one argument position unequal (ADR-0069).
+   Equal-valued, symbolic, and failed-evaluation pairs remain. `bug520` falls
+   50→20 interface atoms and 93/31/46→69/14/16 probes/BV hits/combined
+   propagations; a 24-concrete-key table moves from cap-decline to `sat` with
+   zero generated interfaces while the 24-symbolic-key control still declines.
+   Exact release medians improve `bug520` 15.32→8.88 ms (~1.72x) and six-row
+   PAR-2 mean 3.84→2.89 ms (~1.33x), with enabled variance retained and Z3 at
+   8-10 ms on the row. Public 6/6, 1,536 differentials, replay, and the 760-test
+   solver library remain clean. This is narrow row-level parity, not general
+   UFBV parity. Next make symbolic interface creation dynamic/model-based, then
+   bring arrays onto the live bus.
 2. **Keep a thin measured-leaf-BFS skirt in parallel** — measured-ROI leaves only
    (NRA tail, strings-Nielsen); fold the feature/scale-blocked leaves
    (dense-ILP MILP, large-LP performance) into a funded engine phase rather than

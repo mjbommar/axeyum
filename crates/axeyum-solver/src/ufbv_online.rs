@@ -31,7 +31,9 @@
 use std::collections::{HashMap, HashSet};
 use std::time::Instant;
 
-use axeyum_ir::{FuncId, Op, Sort, TermArena, TermId, TermNode, TermStats, Value, eval};
+use axeyum_ir::{
+    Assignment, FuncId, Op, Sort, TermArena, TermId, TermNode, TermStats, Value, eval,
+};
 use axeyum_rewrite::{FuncElimError, FunctionAbstraction, abstract_functions, replace_subterms};
 
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
@@ -145,6 +147,31 @@ impl AtomAccumulator {
 struct BooleanSkeleton {
     variable_count: usize,
     clauses: Vec<Vec<CdcltLit>>,
+}
+
+#[derive(Default)]
+struct GroundValueCache {
+    values: HashMap<TermId, Option<Value>>,
+}
+
+impl GroundValueCache {
+    fn ensure(&mut self, arena: &TermArena, term: TermId) {
+        self.values
+            .entry(term)
+            .or_insert_with(|| eval(arena, term, &Assignment::new()).ok());
+    }
+
+    fn provably_distinct(&mut self, arena: &TermArena, left: TermId, right: TermId) -> bool {
+        if left == right {
+            return false;
+        }
+        self.ensure(arena, left);
+        self.ensure(arena, right);
+        matches!(
+            (self.values.get(&left), self.values.get(&right)),
+            (Some(Some(left)), Some(Some(right))) if left != right
+        )
+    }
 }
 
 /// Exact Bool/BV theory state backed by the persistent incremental bit-blaster.
@@ -701,16 +728,15 @@ fn build_theory_atoms(
     }
 
     let groups = application_groups(&prepared.applications);
-    let interface_count = count_interface_atoms(&prepared.applications, &groups);
-    if interface_count > MAX_INTERFACE_ATOMS {
-        return Err(build_unknown(
-            UnknownKind::ResourceLimit,
-            format!(
-                "online UFBV needs {interface_count} argument/result interface equalities, exceeding the bounded first-slice cap of {MAX_INTERFACE_ATOMS}"
-            ),
-        ));
-    }
-    add_interface_atoms(arena, &prepared.applications, groups, deadline, &mut atoms)?;
+    let relevant_pairs =
+        relevant_application_pairs(arena, &prepared.applications, &groups, deadline)?;
+    add_interface_atoms(
+        arena,
+        &prepared.applications,
+        relevant_pairs,
+        deadline,
+        &mut atoms,
+    )?;
 
     if atoms.original.is_empty() {
         return Err(BuildFailure::Error(SolverError::Unsupported(
@@ -744,58 +770,96 @@ fn application_groups(applications: &[CombinedApplication]) -> Vec<(FuncId, Vec<
     groups
 }
 
-fn count_interface_atoms(
+fn relevant_application_pairs(
+    arena: &TermArena,
     applications: &[CombinedApplication],
     groups: &[(FuncId, Vec<usize>)],
-) -> usize {
-    groups.iter().fold(0usize, |total, (_func, members)| {
-        let arity = members
-            .first()
-            .map_or(0, |&index| applications[index].original.args.len());
-        let pairs = members
-            .len()
-            .saturating_mul(members.len().saturating_sub(1))
-            / 2;
-        total.saturating_add(pairs.saturating_mul(arity.saturating_add(1)))
-    })
-}
-
-fn add_interface_atoms(
-    arena: &mut TermArena,
-    applications: &[CombinedApplication],
-    groups: Vec<(FuncId, Vec<usize>)>,
     deadline: Option<Instant>,
-    atoms: &mut AtomAccumulator,
-) -> BuildResult<()> {
+) -> BuildResult<Vec<(usize, usize)>> {
+    let mut ground_values = GroundValueCache::default();
+    let mut pairs = Vec::new();
+    let mut interface_count = 0usize;
     for (_func, members) in groups {
         for left_pos in 0..members.len() {
             for right_pos in (left_pos + 1)..members.len() {
                 if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
                     return Err(build_unknown(
                         UnknownKind::Timeout,
-                        "online UFBV deadline elapsed while building interface equalities",
+                        "online UFBV deadline elapsed while filtering interface equalities",
                     ));
                 }
-                let left = &applications[members[left_pos]];
-                let right = &applications[members[right_pos]];
-                for ((&original_left, &original_right), (&abstract_left, &abstract_right)) in left
-                    .original
-                    .args
-                    .iter()
-                    .zip(&right.original.args)
-                    .zip(left.rewritten_args.iter().zip(&right.rewritten_args))
-                {
-                    let original_eq = arena.eq(original_left, original_right)?;
-                    let abstract_eq = arena.eq(abstract_left, abstract_right)?;
-                    atoms.register(arena, original_eq, abstract_eq, true)?;
+                let left = members[left_pos];
+                let right = members[right_pos];
+                if applications_may_be_congruent(
+                    arena,
+                    &applications[left],
+                    &applications[right],
+                    &mut ground_values,
+                ) {
+                    interface_count = interface_count
+                        .saturating_add(applications[left].original.args.len().saturating_add(1));
+                    if interface_count > MAX_INTERFACE_ATOMS {
+                        return Err(build_unknown(
+                            UnknownKind::ResourceLimit,
+                            format!(
+                                "online UFBV relevant argument/result interface equalities exceed the bounded first-slice cap of {MAX_INTERFACE_ATOMS}"
+                            ),
+                        ));
+                    }
+                    pairs.push((left, right));
                 }
-                let original_result = arena.eq(left.original.term, right.original.term)?;
-                let left_fresh = arena.var(left.fresh);
-                let right_fresh = arena.var(right.fresh);
-                let abstract_result = arena.eq(left_fresh, right_fresh)?;
-                atoms.register(arena, original_result, abstract_result, true)?;
             }
         }
+    }
+    Ok(pairs)
+}
+
+fn applications_may_be_congruent(
+    arena: &TermArena,
+    left: &CombinedApplication,
+    right: &CombinedApplication,
+    ground_values: &mut GroundValueCache,
+) -> bool {
+    debug_assert_eq!(left.original.args.len(), right.original.args.len());
+    left.original
+        .args
+        .iter()
+        .zip(&right.original.args)
+        .all(|(&left, &right)| !ground_values.provably_distinct(arena, left, right))
+}
+
+fn add_interface_atoms(
+    arena: &mut TermArena,
+    applications: &[CombinedApplication],
+    pairs: Vec<(usize, usize)>,
+    deadline: Option<Instant>,
+    atoms: &mut AtomAccumulator,
+) -> BuildResult<()> {
+    for (left, right) in pairs {
+        if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
+            return Err(build_unknown(
+                UnknownKind::Timeout,
+                "online UFBV deadline elapsed while building interface equalities",
+            ));
+        }
+        let left = &applications[left];
+        let right = &applications[right];
+        for ((&original_left, &original_right), (&abstract_left, &abstract_right)) in left
+            .original
+            .args
+            .iter()
+            .zip(&right.original.args)
+            .zip(left.rewritten_args.iter().zip(&right.rewritten_args))
+        {
+            let original_eq = arena.eq(original_left, original_right)?;
+            let abstract_eq = arena.eq(abstract_left, abstract_right)?;
+            atoms.register(arena, original_eq, abstract_eq, true)?;
+        }
+        let original_result = arena.eq(left.original.term, right.original.term)?;
+        let left_fresh = arena.var(left.fresh);
+        let right_fresh = arena.var(right.fresh);
+        let abstract_result = arena.eq(left_fresh, right_fresh)?;
+        atoms.register(arena, original_result, abstract_result, true)?;
     }
     Ok(())
 }
@@ -1182,10 +1246,54 @@ mod tests {
         let stats = raw_solve_stats(&mut script.arena, &script.assertions);
 
         assert_eq!(stats.outcome, Outcome::Sat);
-        assert_eq!(stats.interface_atoms, 50);
+        assert_eq!(stats.interface_atoms, 20);
         assert!(stats.propagation_probes > 0, "stats={stats:?}");
         assert!(stats.propagation_hits > 0, "stats={stats:?}");
         assert!(stats.driver_propagations > 0, "stats={stats:?}");
+    }
+
+    #[test]
+    fn statically_distinct_ground_keys_prune_impossible_application_pairs() {
+        let mut arena = TermArena::new();
+        let f = arena
+            .declare_fun("relevant_f", &[Sort::BitVec(4)], Sort::BitVec(4))
+            .unwrap();
+        let zero = arena.bv_const(4, 0).unwrap();
+        let one = arena.bv_const(4, 1).unwrap();
+        let two = arena.bv_const(4, 2).unwrap();
+        let x = arena.bv_var("relevant_x", 4).unwrap();
+        let f_zero = arena.apply(f, &[zero]).unwrap();
+        let f_one = arena.apply(f, &[one]).unwrap();
+        let f_x = arena.apply(f, &[x]).unwrap();
+        let assertions = [
+            arena.eq(f_zero, zero).unwrap(),
+            arena.eq(f_one, one).unwrap(),
+            arena.eq(f_x, two).unwrap(),
+        ];
+
+        let stats = raw_solve_stats(&mut arena, &assertions);
+        assert_eq!(stats.outcome, Outcome::Sat);
+        assert_eq!(stats.interface_atoms, 4, "stats={stats:?}");
+    }
+
+    #[test]
+    fn equal_ground_values_keep_their_congruence_pair() {
+        let mut arena = TermArena::new();
+        let f = arena
+            .declare_fun("ground_equal_f", &[Sort::BitVec(4)], Sort::BitVec(4))
+            .unwrap();
+        let one = arena.bv_const(4, 1).unwrap();
+        let two = arena.bv_const(4, 2).unwrap();
+        let computed_two = arena.bv_add(one, one).unwrap();
+        assert_ne!(computed_two, two);
+        let direct = arena.apply(f, &[two]).unwrap();
+        let computed = arena.apply(f, &[computed_two]).unwrap();
+        let same_result = arena.eq(direct, computed).unwrap();
+        let different_result = arena.not(same_result).unwrap();
+
+        let stats = raw_solve_stats(&mut arena, &[different_result]);
+        assert_eq!(stats.outcome, Outcome::Unsat);
+        assert_eq!(stats.interface_atoms, 2, "stats={stats:?}");
     }
 
     #[test]
@@ -1290,7 +1398,7 @@ mod tests {
     }
 
     #[test]
-    fn overbound_interface_bus_is_first_class_unknown() {
+    fn statically_distinct_ground_table_bypasses_quadratic_interface_cap() {
         let mut arena = TermArena::new();
         let f = arena
             .declare_fun("f", &[Sort::BitVec(8)], Sort::BitVec(8))
@@ -1298,6 +1406,34 @@ mod tests {
         let mut assertions = Vec::new();
         for value in 0..24 {
             let argument = arena.bv_const(8, value).unwrap();
+            let application = arena.apply(f, &[argument]).unwrap();
+            assertions.push(arena.eq(application, argument).unwrap());
+        }
+
+        let stats = raw_solve_stats(&mut arena, &assertions);
+        assert_eq!(stats.outcome, Outcome::Sat);
+        assert_eq!(stats.interface_atoms, 0, "stats={stats:?}");
+
+        let CheckResult::Sat(model) =
+            check_qf_ufbv_online_cdclt(&mut arena, &assertions, &SolverConfig::default()).unwrap()
+        else {
+            panic!("expected the concrete-key table to pass the relevant-interface cap");
+        };
+        let assignment = model.to_assignment();
+        assert!(assertions.iter().all(|&assertion| {
+            matches!(eval(&arena, assertion, &assignment), Ok(Value::Bool(true)))
+        }));
+    }
+
+    #[test]
+    fn overbound_dynamic_interface_bus_is_first_class_unknown() {
+        let mut arena = TermArena::new();
+        let f = arena
+            .declare_fun("dynamic_f", &[Sort::BitVec(8)], Sort::BitVec(8))
+            .unwrap();
+        let mut assertions = Vec::new();
+        for index in 0..24 {
+            let argument = arena.bv_var(&format!("dynamic_x_{index}"), 8).unwrap();
             let application = arena.apply(f, &[argument]).unwrap();
             assertions.push(arena.eq(application, argument).unwrap());
         }
