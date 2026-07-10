@@ -3854,6 +3854,20 @@ Its conclusion, ranked by quality × efficiency:
    on `origin/main`. Next: true warm array/UF ownership with learned-clause reuse,
    nested/extended array operators, online ROW/diff-witness/equality-chain proof
    logging, opaque-heavy arithmetic exchange, and the low-load public aggregate.
+   **Thirty-first follow-through:** ADR-0086 advances the deferred half of
+   ADR-0030 with retained warm structural reads. `IncrementalBvSolver` now gives
+   observed store/constant/array-ITE reads private scalar owners and installs
+   their exact definitions once in the persistent CNF; user roots and equality-
+   dependent cross-array lemmas remain scoped, only direct leaf owners project
+   models, and original replay gates SAT. Exact 512-node/256-depth admission
+   limits defer one-over inputs. A 64-seed matrix contributes 192 warm/
+   `check_auto`/Z3 comparisons with zero disagreement; 816 solver units, 77
+   symbolic-execution tests, and the complete EVM suite pass. Design/
+   implementation commits `4caed2ec`/`47c152ec` are on `origin/main`.
+   Measurement is honest: EVM depth 32 is 0.368 ms for frontend ITE folding vs
+   30.933 ms for observation-triggered retained definitions. Next: activate warm
+   ROW definitions only after candidate violation, then warm structural equality/
+   extensionality and array-valued UF parents, memory BMC/k-induction, and proofs.
 2. **Keep a thin measured-leaf-BFS skirt in parallel** — measured-ROI leaves only
    (NRA tail, strings-Nielsen); fold the feature/scale-blocked leaves
    (dense-ILP MILP, large-LP performance) into a funded engine phase rather than
@@ -3962,6 +3976,11 @@ exercises, not an unbounded fold-list.
   `UPSTREAM-FEEDBACK.md` U6: the gap is *incremental-array performance*, not
   capability — a true warm lazy-array engine (retained state across
   `enter`/`backtrack`), not one-shot re-dispatch. `ite`-fold stays the default.
+  **ADR-0086 update (`4caed2ec`/`47c152ec`):** supported store/constant/ITE
+  reads now retain exact private definitions and SAT state instead of taking the
+  one-shot dispatcher. The release rerun still loses at depth 32 (0.368 ms ITE-
+  fold vs 30.933 ms warm), localizing the next lever to candidate-triggered ROW
+  activation rather than more frontend folding.
 
 **Forward backlog (autonomous continuation — pick the top unblocked item).**
 Each is a self-contained increment under the standing discipline below; do them

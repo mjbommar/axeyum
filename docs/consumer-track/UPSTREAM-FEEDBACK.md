@@ -118,26 +118,26 @@ Last reconciled with `main`: 2026-06-27.
 - **Consumer measurement (2026-06-27):** the warm memory work below is now
   *measured* end-to-end by the EVM/symexec capability scoreboard
   ([`evm/SCOREBOARD.md`](evm/SCOREBOARD.md), `cargo run -p axeyum-evm --example
-  measure_evm`): a construction-known corpus decides 6/6 (incl. symbolic-storage
+  measure_evm`): a construction-known corpus decides 18/18 (incl. symbolic-storage
   and keccak-mapping rows) at DISAGREE=0. This scoreboard is the intended
   arbiter of *special-case folding vs the general warm array/UF theory* — grow
   the corpus with the memory shapes real contracts exercise, and let the
   unknown/fallback rows (not an open-ended fold list) drive which general
   capability is worth building next.
-- **Measured perf signal (2026-06-27, I4b):** `axeyum-evm` now decides symbolic
-  storage two ways — frontend `ite`-fold vs real `select`/`store` arrays routed
-  through the warm/memory path (`SymbolicMemory` + `assume_auto`). They agree on
-  every row (DISAGREE=0), but on a store-chain depth sweep the **array path is
-  slower, and the gap grows with depth** (depth 32: `ite`-fold ~3 ms vs
-  warm-array ~14 ms; both prove safe). Root cause: a `select` over a deep
-  `store`-chain falls to the **one-shot memory dispatcher**, which re-processes
-  the chain each check, while `ite`-fold stays on the warm incremental BV path
-  and concrete-key guards constant-fold. **Takeaway for U6:** the missing piece
-  is not more capability but a *truly incremental* lazy-array engine (retained
-  array state across `enter`/`backtrack`, not one-shot re-dispatch); until that
-  exists, the frontend `ite`-fold is the faster encoding for consumer storage and
-  remains the EVM default. Reproduce: `cargo run -p axeyum-evm --example
-  measure_evm` → "Storage-depth scaling" table.
+- **Measured perf signal (updated 2026-07-10, ADR-0086):** `axeyum-evm` decides
+  symbolic storage two ways — frontend `ite`-fold vs real `select`/`store`
+  arrays routed through `SymbolicMemory` + `assume_auto`. They agree on every
+  row (DISAGREE=0). Supported observed store/constant/ITE reads no longer fall
+  to the one-shot dispatcher: exact private definitions and SAT state persist
+  across checks. The depth sweep nevertheless remains slower, and the gap grows
+  (depth 32: `ite`-fold 0.368 ms vs retained warm definitions 30.933 ms; both
+  prove safe). The measured cause has moved: observation-time admission eagerly
+  defines every store parent, adding more SAT structure than the direct scalar
+  fold. **Takeaway for U6:** candidate-triggered ROW activation is now the next
+  performance mechanism, followed by extensionality/equality and broader UF
+  parents. Until that wins the measured gate, frontend `ite`-fold correctly
+  remains the EVM default. Reproduce: `cargo run -p axeyum-evm --release
+  --example measure_evm` → "Storage-depth scaling" table.
 - **What:** the original consumer pain was that `SymbolicExecutor`'s warm path
   refused active array/UF assertions and `Op::Apply` was unsupported by the
   bit-blaster. A usable one-shot route has landed: deferred array/UF assertions
@@ -175,6 +175,10 @@ Last reconciled with `main`: 2026-06-27.
   Selected stores with conditional write indices split the same way before the
   generic symbolic ROW equality, so `select(store(a, ite(c, i, j), v), k)`
   becomes a scalar branch choice over two branch-local store/read terms.
+  ADR-0086 now preserves undecided structural reads instead of flattening them:
+  store/constant/ITE reads get exact private definitions installed once in the
+  persistent CNF, generated reads recurse to direct projected leaves, scoped
+  roots pop normally, and original replay remains mandatory.
   Trivial scalar `ite`s exposed by memory rewrites collapse too, and the scalar
   cleanup now distributes equality over Bool/BV-valued `ite`s plus folds
   literal-distinct constant equalities, Boolean identity `ite`s, Boolean

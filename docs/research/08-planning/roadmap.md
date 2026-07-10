@@ -449,6 +449,15 @@ replay. Leaf/depth/step/deadline caps are explicit. A 16-shape matrix contribute
 units and the prior AUFBV belts remain clean. Warm reuse, nested/extended arrays,
 and online array proof logging remain before phase exit.
 
+ADR-0086 begins the incremental warm-reuse boundary. Supported observed reads
+over stores, constant arrays, and array ITEs now receive exact private scalar
+definitions installed once in `IncrementalBvSolver`'s persistent CNF; scoped
+roots retract, only direct leaves project models, and original replay gates SAT.
+Exact 512-node/256-depth limits and 192 warm/check-auto/Z3 comparisons pass. The
+EVM depth sweep remains slower than frontend ITE folding, so candidate-triggered
+activation, broader warm equality/extensionality/UF, memory BMC, and proofs
+remain before phase exit.
+
 Implementation note: a first infosec-workflow client example landed early
 (2026-06-13), ahead of arrays — a register-VM symbolic executor over
 `IncrementalBvSolver` that forks at branches, prunes infeasible paths, and

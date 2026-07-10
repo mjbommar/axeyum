@@ -1,6 +1,6 @@
 # ADR-0030: Incremental (lazy) arrays for symbolic memory
 
-Status: accepted (eager-route first slice implemented 2026-06-14; warm lazy deferred)
+Status: accepted (eager route plus bounded retained structural-read slices; full warm lazy deferred)
 Date: 2026-06-14
 
 ## Context
@@ -119,6 +119,16 @@ deferred: arbitrary array terms, general extensionality/disequality witnesses,
 ROW instantiation beyond the current simplifier, non-BV indices, non-Bool/BV
 element arrays, non-scalar or infinite-domain UF applications, and learned
 theory-clause reuse across the whole array/UF engine are still open.
+
+2026-07-10 update: ADR-0086 retains the first structural read semantics. Reads
+over supported store, constant-array, and array-ITE parents receive private
+scalar owners whose exact definitions are installed once in the persistent CNF.
+Scoped user roots retract normally, only direct symbol leaves project models,
+and original replay gates SAT. Exact 512-node/256-depth limits and 192 warm/
+check-auto/Z3 comparisons validate the slice. This does not close the deferred
+half: the EVM measurement shows eager observation-time definitions remain slower
+than frontend ITE folding, so candidate-triggered activation, extensionality,
+broader equality/UF parents, memory BMC/k-induction, and proofs remain.
 
 ## Consequences
 

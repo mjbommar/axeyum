@@ -738,10 +738,12 @@ states: branch feasibility, scope management, infeasible pruning, unknown-safe
 traversal, and replay-checked target models.
 `explore_cfg_checked` adds the concrete replay hook: frontend callbacks lift a
 concrete witness from each model and independently accept/reject it, with missing
-witnesses and mismatches bucketed explicitly. This is not the final warm
-lazy-array/UF engine: deferred theory checks still rebuild through `check_auto`;
-retained learned theory clauses plus a real small-target lifter and emulator
-library remain Track 4 work.
+witnesses and mismatches bucketed explicitly. ADR-0086 now retains exact private
+definitions for supported observed store/constant/ITE reads in the incremental
+CNF, with leaf-only projection and original replay. This is not the final warm
+lazy-array/UF engine: deferred theory checks still rebuild through `check_auto`,
+and candidate-triggered ROW/extensionality plus broader UF parents, proofs, a
+real small-target lifter, and an emulator library remain Track 4 work.
 
 The wide-BV overflow path now has a targeted word-level encoding improvement:
 `bvumulo(a,b)` is built as `a > (all_ones / b)` at width `w` instead of by

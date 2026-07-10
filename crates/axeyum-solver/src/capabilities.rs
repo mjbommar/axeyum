@@ -931,19 +931,26 @@ pub const CAPABILITIES: &[Capability] = &[
                   (full dispatcher; syntactic same-index ROW hits, literal-distinct store \
                   misses, constant-array reads, and reducible array-valued ite reads can stay \
                   warm; reducible symbolic-address conditional ROW over store chains can also \
-                  stay warm with original-term replay/core reporting; select reads over \
+                  stay warm with original-term replay/core reporting; observed reads over \
+                  supported store, constant-array, and array-ITE parents now retain private \
+                  scalar owners plus exact permanent definitions in the persistent CNF, reusing \
+                  definitions and SAT state across checks while projecting only direct leaf \
+                  owners; select reads over \
                   BV-indexed Bool/BV array symbols, including wide/BV256 index or element values, \
                   abstract to retained warm scalar variables with scoped select-congruence lemmas \
                   and replay-projected array models; scalar Bool/BV \
                   uninterpreted-function applications, including wide/BV256 argument or result values, \
                   abstract to retained warm variables with scoped congruence lemmas and \
-                  replay-projected function interpretations; warm \
-                  lazy arrays/UF = ADR-0030 future work)",
+                  replay-projected function interpretations; candidate-triggered warm ROW, \
+                  extensionality, structural equality, and array-valued UF parents remain)",
         assurance: Assurance::Validated,
         evidence: "full dispatcher model replay; same-index/literal-distinct/const-array/array-ite/\
-                   symbolic-ROW/select-congruence/scalar-UF assertion and branch warm replay; warm \
-                   path refuses remaining deferred array/UF theories",
-        reference: "ADR-0010/0030",
+                   symbolic-ROW/select-congruence/scalar-UF assertion and branch warm replay; 816 \
+                   solver units, 77 symbolic-execution tests, and 192 warm/check_auto/Z3 structural \
+                   comparisons pass; the EVM scoreboard remains DISAGREE=0 but shows observation-time \
+                   retained definitions still lose to direct ITE folding at depth; warm path refuses \
+                   remaining deferred array/UF theories",
+        reference: "ADR-0010/0030/0086",
     },
     Capability {
         area: "symbolic execution",

@@ -53,7 +53,7 @@ Both storage encodings are denotation-equivalent, so **cross-encoding agreement 
 
 ## Storage-depth scaling (warm-array vs `ite`-fold)
 
-A safe contract that `SSTORE`s `n` distinct concrete slots then `SLOAD`s a symbolic key — the read-over-write depth knob. Both encodings prove it safe at every depth (agreement = soundness); the times show how each encoding's cost grows with chain depth.
+A safe contract that `SSTORE`s `n` distinct concrete slots then `SLOAD`s a symbolic key — the read-over-write depth knob. Both encodings prove it safe at every depth (agreement = soundness); the times show how each encoding's cost grows with chain depth. ADR-0086 retains exact structural read definitions and SAT state across checks; this table therefore measures the current observation-triggered warm definitions, not the old one-shot memory dispatcher. A slower warm column means candidate-triggered ROW activation remains necessary; it is not hidden by changing the EVM default.
 
 | Store-chain depth | `ite`-fold | t µs | warm-array | t µs | agree |
 |---|---|---|---|---|---|

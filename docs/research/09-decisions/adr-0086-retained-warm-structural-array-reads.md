@@ -1,6 +1,6 @@
 # ADR-0086: Retained Warm Structural Array Reads
 
-Status: proposed
+Status: accepted
 Date: 2026-07-10
 
 ## Context
@@ -103,6 +103,33 @@ accepted model.
   the retained route does not yet beat frontend ITE folding.
 - Full solver units, EVM warm-array/fuzz gates, strict clippy, rustdoc, links,
   and the exact-SHA pre-push gate.
+
+## Acceptance Validation
+
+Accepted on 2026-07-10 in `47c152ec` after the required routes passed:
+
+- six all-feature retained-read tests cover permanent-definition reuse,
+  original-model replay, push/pop, opposite one-shot assumptions, nested
+  store/constant/ITE reads, Bool elements, and exact node/depth boundaries;
+- an eight-shape matrix repeated over 64 seeds passes the warm incremental and
+  `check_auto` routes with every warm SAT model replayed, then matches direct Z3
+  under the native feature: 192 comparisons, zero disagreements;
+- all 816 solver library tests and all 77 symbolic-execution integration tests
+  pass, as do the complete EVM all-feature suite, its four differential fuzz
+  gates, and the four focused warm-array tests;
+- strict solver/EVM all-target/all-feature clippy, warning-denied rustdoc,
+  relative-link checks, and the exact-SHA compile/format/corpus/unit pre-push
+  gate pass;
+- the release EVM scoreboard remains DISAGREE=0 over 18 cases and every
+  warm-array/ITE-fold comparison.
+
+The measurement is intentionally not a phase-exit claim. On the regenerated
+depth sweep, frontend ITE folding takes 368 microseconds at depth 32 while the
+retained warm definitions take 30,933 microseconds. The old one-shot-dispatch
+cause is removed for this shape, but eagerly defining every observed store
+parent adds more SAT structure than direct flattening. Candidate-triggered warm
+ROW activation is therefore the next performance increment; the EVM default
+correctly remains ITE folding.
 
 ## Alternatives Considered
 
