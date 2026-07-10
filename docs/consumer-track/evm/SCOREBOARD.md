@@ -47,9 +47,9 @@ Both storage encodings are denotation-equivalent, so **cross-encoding agreement 
 
 | Case | Shape | `ite`-fold | t µs | warm-array | t µs | agree |
 |---|---|---|---|---|---|---|
-| symbolic-storage-roundtrip-revert | symbolic-storage | bug-found | 19301 | bug-found | 20148 | yes |
-| cold-slot-load-safe | symbolic-storage | safe-proved | 833 | safe-proved | 787 | yes |
-| keccak-mapping-alias-revert | keccak-mapping | bug-found | 47326 | bug-found | 46929 | yes |
+| symbolic-storage-roundtrip-revert | symbolic-storage | bug-found | 2346 | bug-found | 3263 | yes |
+| cold-slot-load-safe | symbolic-storage | safe-proved | 128 | safe-proved | 432 | yes |
+| keccak-mapping-alias-revert | keccak-mapping | bug-found | 5150 | bug-found | 6164 | yes |
 
 ## Storage-depth scaling (warm-array vs `ite`-fold)
 
@@ -57,11 +57,11 @@ A safe contract that `SSTORE`s `n` distinct concrete slots then `SLOAD`s a symbo
 
 | Store-chain depth | `ite`-fold | t µs | warm-array | t µs | agree |
 |---|---|---|---|---|---|
-| 2 | safe-proved | 1276 | safe-proved | 1219 | yes |
-| 4 | safe-proved | 1280 | safe-proved | 1446 | yes |
-| 8 | safe-proved | 1561 | safe-proved | 2246 | yes |
-| 16 | safe-proved | 2040 | safe-proved | 4930 | yes |
-| 32 | safe-proved | 3134 | safe-proved | 15015 | yes |
+| 2 | safe-proved | 171 | safe-proved | 2123 | yes |
+| 4 | safe-proved | 179 | safe-proved | 3482 | yes |
+| 8 | safe-proved | 212 | safe-proved | 6360 | yes |
+| 16 | safe-proved | 259 | safe-proved | 13686 | yes |
+| 32 | safe-proved | 368 | safe-proved | 30933 | yes |
 
 ## Multi-transaction invariants (A1)
 

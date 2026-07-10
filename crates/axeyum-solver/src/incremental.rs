@@ -33,6 +33,9 @@ use web_time::Instant;
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
 use crate::model::Model;
 
+const MAX_WARM_STRUCTURAL_ARRAY_NODES: usize = 512;
+const MAX_WARM_STRUCTURAL_ARRAY_DEPTH: usize = 256;
+
 /// Whether `term` needs the deferred theory path instead of the warm
 /// bit-blaster: arrays (`select`/`store`/array values) or uninterpreted function
 /// applications. Such assertions are kept scoped in the incremental frames and
@@ -141,9 +144,10 @@ struct OneShotAssumption {
 
 #[derive(Debug, Clone, Copy)]
 struct WarmArraySelect {
-    array_symbol: SymbolId,
+    array_parent: TermId,
+    projection_symbol: Option<SymbolId>,
     index: TermId,
-    value_symbol: SymbolId,
+    value_symbol: Option<SymbolId>,
     value_term: TermId,
     index_width: u32,
     element: ArraySortKey,
@@ -162,6 +166,15 @@ struct WarmArrayEncoding {
     select_terms: Vec<TermId>,
     uf_app_terms: Vec<TermId>,
     congruence_lemmas: Vec<TermId>,
+    permanent_semantics: Vec<(TermId, TermId)>,
+}
+
+#[derive(Debug, Default)]
+struct WarmAbstractionWork {
+    memo: HashMap<TermId, TermId>,
+    select_terms: Vec<TermId>,
+    uf_app_terms: Vec<TermId>,
+    permanent_semantics: Vec<(TermId, TermId)>,
 }
 
 #[derive(Debug, Clone)]
@@ -185,6 +198,7 @@ pub struct IncrementalBvSolver {
     config: SolverConfig,
     frames: Vec<Frame>,
     warm_array_selects: HashMap<TermId, WarmArraySelect>,
+    warm_array_semantics_encoded: HashSet<TermId>,
     warm_uf_apps: HashMap<TermId, WarmUfApp>,
     internal_symbols: HashSet<SymbolId>,
 }
@@ -219,6 +233,7 @@ impl IncrementalBvSolver {
                 warm_array_equalities: Vec::new(),
             }],
             warm_array_selects: HashMap::new(),
+            warm_array_semantics_encoded: HashSet::new(),
             warm_uf_apps: HashMap::new(),
             internal_symbols: HashSet::new(),
         }
@@ -253,6 +268,30 @@ impl IncrementalBvSolver {
         self.cnf.variable_count()
     }
 
+    /// Number of unique observed array reads represented by retained warm
+    /// scalar owners, including direct symbol reads and structural parents.
+    #[must_use]
+    pub fn retained_warm_array_read_count(&self) -> usize {
+        self.warm_array_selects.len()
+    }
+
+    /// Number of retained reads whose parent is a store, constant array, or
+    /// array-valued ITE rather than a directly projected array symbol.
+    #[must_use]
+    pub fn retained_warm_structural_read_count(&self) -> usize {
+        self.warm_array_selects
+            .values()
+            .filter(|select| select.projection_symbol.is_none())
+            .count()
+    }
+
+    /// Number of exact store/constant/ITE read definitions already installed
+    /// in the persistent CNF. Reusing a structural read does not increase it.
+    #[must_use]
+    pub fn retained_warm_structural_definition_count(&self) -> usize {
+        self.warm_array_semantics_encoded.len()
+    }
+
     /// Whether `term` contains array or uninterpreted-function structure that
     /// the warm BV bit-blaster intentionally defers to the full dispatcher.
     #[must_use]
@@ -272,6 +311,7 @@ impl IncrementalBvSolver {
     pub fn term_supported_by_warm_abstraction(arena: &TermArena, term: TermId) -> bool {
         let mut memo = HashMap::new();
         warm_abstraction_covers_term(arena, term, &mut memo)
+            && warm_structural_array_limits_hold(arena, term)
     }
 
     /// Whether any currently active assertion is being held for the deferred
@@ -300,7 +340,25 @@ impl IncrementalBvSolver {
     #[must_use]
     pub fn simplify_memory_for_warm_assertion(arena: &mut TermArena, term: TermId) -> TermId {
         let mut memo = HashMap::new();
-        simplify_memory_for_warm_assertion_inner(arena, term, &mut memo)
+        simplify_memory_for_warm_assertion_inner(
+            arena,
+            term,
+            &mut memo,
+            WarmSimplificationMode::ExpandStructuralReads,
+        )
+    }
+
+    pub(crate) fn simplify_memory_for_retained_warm_assertion(
+        arena: &mut TermArena,
+        term: TermId,
+    ) -> TermId {
+        let mut memo = HashMap::new();
+        simplify_memory_for_warm_assertion_inner(
+            arena,
+            term,
+            &mut memo,
+            WarmSimplificationMode::RetainStructuralReads,
+        )
     }
 
     /// Asserts `term`, first applying the small warm-safe memory simplifier and
@@ -325,7 +383,7 @@ impl IncrementalBvSolver {
         if arena.sort_of(term) != Sort::Bool {
             return Err(SolverError::NonBooleanAssertion(term));
         }
-        let encoded = Self::simplify_memory_for_warm_assertion(arena, term);
+        let encoded = Self::simplify_memory_for_retained_warm_assertion(arena, term);
         self.assert_encoded_with_warm_array_selects(arena, term, encoded)
     }
 
@@ -461,6 +519,14 @@ impl IncrementalBvSolver {
                 &existing_equalities,
             );
         }
+        if !Self::term_supported_by_warm_abstraction(arena, encoded) {
+            self.frames
+                .last_mut()
+                .expect("base frame always present")
+                .deferred_assertions
+                .push(original);
+            return Ok(encoded);
+        }
         let encoded = self.abstract_warm_array_selects(
             arena,
             encoded,
@@ -476,6 +542,8 @@ impl IncrementalBvSolver {
                 .push(original);
             return Ok(encoded.term);
         }
+
+        self.encode_permanent_warm_semantics(arena, &encoded.permanent_semantics)?;
 
         let selector = self
             .frames
@@ -537,6 +605,21 @@ impl IncrementalBvSolver {
         self.cnf
             .assert_root(self.lowering.aig(), root, selector)
             .map_err(|error| map_sat_error(&error))
+    }
+
+    fn encode_permanent_warm_semantics(
+        &mut self,
+        arena: &TermArena,
+        semantics: &[(TermId, TermId)],
+    ) -> Result<(), SolverError> {
+        for &(select_term, definition) in semantics {
+            if self.warm_array_semantics_encoded.contains(&select_term) {
+                continue;
+            }
+            self.encode_warm_root(arena, definition, None)?;
+            self.warm_array_semantics_encoded.insert(select_term);
+        }
+        Ok(())
     }
 
     /// Opens a new scope; assertions added afterwards are removed by the
@@ -903,19 +986,11 @@ impl IncrementalBvSolver {
         existing_uf_apps: &[TermId],
         existing_equalities: &[WarmArrayEquality],
     ) -> Result<WarmArrayEncoding, SolverError> {
-        let mut memo = HashMap::new();
-        let mut select_terms = Vec::new();
-        let mut uf_app_terms = Vec::new();
-        let term = self.abstract_warm_array_selects_inner(
-            arena,
-            term,
-            &mut memo,
-            &mut select_terms,
-            &mut uf_app_terms,
-        )?;
+        let mut work = WarmAbstractionWork::default();
+        let term = self.abstract_warm_array_selects_inner(arena, term, &mut work)?;
         let mut congruence_lemmas = Vec::new();
         let mut prior = existing_selects.to_vec();
-        for &select in &select_terms {
+        for &select in &work.select_terms {
             for &other in &prior {
                 if let Some(lemma) =
                     self.warm_array_congruence_lemma(arena, other, select, existing_equalities)?
@@ -926,7 +1001,7 @@ impl IncrementalBvSolver {
             prior.push(select);
         }
         let mut prior = existing_uf_apps.to_vec();
-        for &app in &uf_app_terms {
+        for &app in &work.uf_app_terms {
             for &other in &prior {
                 if let Some(lemma) = self.warm_uf_congruence_lemma(arena, other, app)? {
                     congruence_lemmas.push(lemma);
@@ -936,9 +1011,10 @@ impl IncrementalBvSolver {
         }
         Ok(WarmArrayEncoding {
             term,
-            select_terms,
-            uf_app_terms,
+            select_terms: work.select_terms,
+            uf_app_terms: work.uf_app_terms,
             congruence_lemmas,
+            permanent_semantics: work.permanent_semantics,
         })
     }
 
@@ -946,23 +1022,18 @@ impl IncrementalBvSolver {
         &mut self,
         arena: &mut TermArena,
         term: TermId,
-        memo: &mut HashMap<TermId, TermId>,
-        select_terms: &mut Vec<TermId>,
-        uf_app_terms: &mut Vec<TermId>,
+        work: &mut WarmAbstractionWork,
     ) -> Result<TermId, SolverError> {
-        if let Some(&abstracted) = memo.get(&term) {
+        if let Some(&abstracted) = work.memo.get(&term) {
             return Ok(abstracted);
         }
 
         if let Some(select) = Self::supported_warm_array_select(arena, term)
             && !needs_deferred_theory(arena, select.index)
         {
-            let abstracted = self.get_or_create_warm_array_select(arena, term, select)?;
-            if !select_terms.contains(&term) {
-                select_terms.push(term);
-            }
-            memo.insert(term, abstracted.value_term);
-            return Ok(abstracted.value_term);
+            let value_term = self.retain_warm_array_select(arena, term, select, work)?;
+            work.memo.insert(term, value_term);
+            return Ok(value_term);
         }
 
         if let Some(app) = Self::supported_warm_uf_app(arena, term)
@@ -972,29 +1043,23 @@ impl IncrementalBvSolver {
                 .all(|&arg| !needs_deferred_theory(arena, arg))
         {
             let abstracted = self.get_or_create_warm_uf_app(arena, term, app)?;
-            if !uf_app_terms.contains(&term) {
-                uf_app_terms.push(term);
+            if !work.uf_app_terms.contains(&term) {
+                work.uf_app_terms.push(term);
             }
-            memo.insert(term, abstracted.value_term);
+            work.memo.insert(term, abstracted.value_term);
             return Ok(abstracted.value_term);
         }
 
         let original_args = if let TermNode::App { args, .. } = arena.node(term) {
             args.to_vec()
         } else {
-            memo.insert(term, term);
+            work.memo.insert(term, term);
             return Ok(term);
         };
         let mut changed = false;
         let mut abstracted_args = Vec::with_capacity(original_args.len());
         for &arg in &original_args {
-            let abstracted = self.abstract_warm_array_selects_inner(
-                arena,
-                arg,
-                memo,
-                select_terms,
-                uf_app_terms,
-            )?;
+            let abstracted = self.abstract_warm_array_selects_inner(arena, arg, work)?;
             changed |= abstracted != arg;
             abstracted_args.push(abstracted);
         }
@@ -1006,11 +1071,7 @@ impl IncrementalBvSolver {
         let abstracted = if let Some(select) = Self::supported_warm_array_select(arena, rebuilt)
             && !needs_deferred_theory(arena, select.index)
         {
-            let abstracted = self.get_or_create_warm_array_select(arena, rebuilt, select)?;
-            if !select_terms.contains(&rebuilt) {
-                select_terms.push(rebuilt);
-            }
-            abstracted.value_term
+            self.retain_warm_array_select(arena, rebuilt, select, work)?
         } else if let Some(app) = Self::supported_warm_uf_app(arena, rebuilt)
             && app
                 .args
@@ -1018,14 +1079,14 @@ impl IncrementalBvSolver {
                 .all(|&arg| !needs_deferred_theory(arena, arg))
         {
             let abstracted = self.get_or_create_warm_uf_app(arena, rebuilt, app)?;
-            if !uf_app_terms.contains(&rebuilt) {
-                uf_app_terms.push(rebuilt);
+            if !work.uf_app_terms.contains(&rebuilt) {
+                work.uf_app_terms.push(rebuilt);
             }
             abstracted.value_term
         } else {
             rebuilt
         };
-        memo.insert(term, abstracted);
+        work.memo.insert(term, abstracted);
         Ok(abstracted)
     }
 
@@ -1041,9 +1102,9 @@ impl IncrementalBvSolver {
         let [array, index] = args.as_ref() else {
             return None;
         };
-        let TermNode::Symbol(array_symbol) = arena.node(*array) else {
+        if !is_supported_warm_array_parent(arena, *array) {
             return None;
-        };
+        }
         let Sort::Array {
             index: ArraySortKey::BitVec(index_width),
             element,
@@ -1059,15 +1120,55 @@ impl IncrementalBvSolver {
         {
             return None;
         }
+        let projection_symbol = match arena.node(*array) {
+            TermNode::Symbol(symbol) => Some(*symbol),
+            _ => None,
+        };
         Some(WarmArraySelect {
-            array_symbol: *array_symbol,
+            array_parent: *array,
+            projection_symbol,
             index: *index,
-            value_symbol: *array_symbol,
+            value_symbol: None,
             value_term: term,
             index_width,
             element,
             element_sort,
         })
+    }
+
+    fn retain_warm_array_select(
+        &mut self,
+        arena: &mut TermArena,
+        term: TermId,
+        select: WarmArraySelect,
+        work: &mut WarmAbstractionWork,
+    ) -> Result<TermId, SolverError> {
+        let abstracted = self.get_or_create_warm_array_select(arena, term, select)?;
+        if !work.select_terms.contains(&term) {
+            work.select_terms.push(term);
+        }
+        if abstracted.projection_symbol.is_none()
+            && !self.warm_array_semantics_encoded.contains(&term)
+            && !work
+                .permanent_semantics
+                .iter()
+                .any(|(semantic_term, _)| *semantic_term == term)
+        {
+            let semantic_rhs =
+                warm_array_select_semantic_rhs(arena, abstracted).ok_or_else(|| {
+                    SolverError::Unsupported(format!(
+                        "warm structural array read #{} has no supported exact definition",
+                        term.index()
+                    ))
+                })?;
+            let abstracted_rhs =
+                self.abstract_warm_array_selects_inner(arena, semantic_rhs, work)?;
+            let definition = arena
+                .eq(abstracted.value_term, abstracted_rhs)
+                .map_err(|error| map_ir_error(&error))?;
+            work.permanent_semantics.push((term, definition));
+        }
+        Ok(abstracted.value_term)
     }
 
     fn supported_warm_array_equality(arena: &TermArena, term: TermId) -> Option<WarmArrayEquality> {
@@ -1120,7 +1221,7 @@ impl IncrementalBvSolver {
             .map_err(|error| map_ir_error(&error))?;
         let value_term = arena.var(value_symbol);
         self.internal_symbols.insert(value_symbol);
-        select.value_symbol = value_symbol;
+        select.value_symbol = Some(value_symbol);
         select.value_term = value_term;
         self.warm_array_selects.insert(term, select);
         Ok(select)
@@ -1142,7 +1243,12 @@ impl IncrementalBvSolver {
         let Some(right) = self.warm_array_selects.get(&right).copied() else {
             return Ok(None);
         };
-        if !warm_array_symbols_equal(left.array_symbol, right.array_symbol, equalities) {
+        let parents_equal = left.array_parent == right.array_parent
+            || left
+                .projection_symbol
+                .zip(right.projection_symbol)
+                .is_some_and(|(left, right)| warm_array_symbols_equal(left, right, equalities));
+        if !parents_equal {
             return Ok(None);
         }
         let same_index = arena
@@ -1275,7 +1381,7 @@ impl IncrementalBvSolver {
             if arena.sort_of(term) != Sort::Bool {
                 return Err(SolverError::NonBooleanAssertion(term));
             }
-            let encoded = Self::simplify_memory_for_warm_assertion(arena, term);
+            let encoded = Self::simplify_memory_for_retained_warm_assertion(arena, term);
             if let Some(equality) = Self::supported_warm_array_equality(arena, encoded) {
                 let mut equalities = active_equalities.clone();
                 equalities.push(equality);
@@ -1302,6 +1408,7 @@ impl IncrementalBvSolver {
                 &active_uf_apps,
                 &active_equalities,
             )?;
+            self.encode_permanent_warm_semantics(arena, &encoded.permanent_semantics)?;
             active_selects.extend(encoded.select_terms.iter().copied());
             active_uf_apps.extend(encoded.uf_app_terms.iter().copied());
             simplified.push(OneShotAssumption {
@@ -1563,6 +1670,9 @@ impl IncrementalBvSolver {
             let Some(select) = self.warm_array_selects.get(&select_term).copied() else {
                 continue;
             };
+            let Some(array_symbol) = select.projection_symbol else {
+                continue;
+            };
             let select_value =
                 warm_array_select_abstraction_value(arena, assignment, select_term, select)?;
             let model_assignment =
@@ -1571,11 +1681,12 @@ impl IncrementalBvSolver {
             let array_value = warm_array_select_projected_array(
                 select_term,
                 select,
+                array_symbol,
                 &select_value,
                 &index_value,
                 model,
             )?;
-            model.set(select.array_symbol, array_value);
+            model.set(array_symbol, array_value);
         }
         Ok(())
     }
@@ -1784,10 +1895,17 @@ impl IncrementalBvSolver {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum WarmSimplificationMode {
+    ExpandStructuralReads,
+    RetainStructuralReads,
+}
+
 fn simplify_memory_for_warm_assertion_inner(
     arena: &mut TermArena,
     term: TermId,
     memo: &mut HashMap<TermId, TermId>,
+    mode: WarmSimplificationMode,
 ) -> TermId {
     if let Some(&simplified) = memo.get(&term) {
         return simplified;
@@ -1801,7 +1919,7 @@ fn simplify_memory_for_warm_assertion_inner(
     };
     let simplified_args = original_args
         .iter()
-        .map(|&arg| simplify_memory_for_warm_assertion_inner(arena, arg, memo))
+        .map(|&arg| simplify_memory_for_warm_assertion_inner(arena, arg, memo, mode))
         .collect::<Vec<_>>();
     let rebuilt = if simplified_args == original_args {
         term
@@ -1809,10 +1927,10 @@ fn simplify_memory_for_warm_assertion_inner(
         arena.rebuild_with_args(term, &simplified_args)
     };
     let simplified = match collapse_trivial_warm_term(arena, rebuilt)
-        .or_else(|| collapse_read_over_write(arena, rebuilt))
+        .or_else(|| collapse_read_over_write(arena, rebuilt, mode))
     {
         Some(collapsed) if collapsed != rebuilt => {
-            simplify_memory_for_warm_assertion_inner(arena, collapsed, memo)
+            simplify_memory_for_warm_assertion_inner(arena, collapsed, memo, mode)
         }
         _ => rebuilt,
     };
@@ -2482,7 +2600,11 @@ fn ite_parts(arena: &TermArena, term: TermId) -> Option<(TermId, TermId, TermId)
     Some((*condition, *then_term, *else_term))
 }
 
-fn collapse_read_over_write(arena: &mut TermArena, term: TermId) -> Option<TermId> {
+fn collapse_read_over_write(
+    arena: &mut TermArena,
+    term: TermId,
+    mode: WarmSimplificationMode,
+) -> Option<TermId> {
     let (array, read_index) = match arena.node(term) {
         TermNode::App {
             op: Op::Select,
@@ -2496,14 +2618,16 @@ fn collapse_read_over_write(arena: &mut TermArena, term: TermId) -> Option<TermI
         }
         _ => return None,
     };
-    if let Some(value) = const_array_default(arena, array) {
-        return Some(value);
-    }
-    if let Some(distributed) = distribute_select_over_array_ite(arena, array, read_index) {
-        return Some(distributed);
-    }
-    if let Some(distributed) = distribute_select_over_index_ite(arena, array, read_index) {
-        return Some(distributed);
+    if mode == WarmSimplificationMode::ExpandStructuralReads {
+        if let Some(value) = const_array_default(arena, array) {
+            return Some(value);
+        }
+        if let Some(distributed) = distribute_select_over_array_ite(arena, array, read_index) {
+            return Some(distributed);
+        }
+        if let Some(distributed) = distribute_select_over_index_ite(arena, array, read_index) {
+            return Some(distributed);
+        }
     }
     let (base, write_index, value) = match arena.node(array) {
         TermNode::App {
@@ -2518,8 +2642,9 @@ fn collapse_read_over_write(arena: &mut TermArena, term: TermId) -> Option<TermI
         }
         _ => return None,
     };
-    if let Some(distributed) =
-        distribute_select_over_store_index_ite(arena, base, write_index, value, read_index)
+    if mode == WarmSimplificationMode::ExpandStructuralReads
+        && let Some(distributed) =
+            distribute_select_over_store_index_ite(arena, base, write_index, value, read_index)
     {
         return Some(distributed);
     }
@@ -2529,6 +2654,15 @@ fn collapse_read_over_write(arena: &mut TermArena, term: TermId) -> Option<TermI
     }
     if known_literal_distinct(arena, write_index, read_index) {
         return arena.select(base, read_index).ok();
+    }
+    if mode == WarmSimplificationMode::RetainStructuralReads {
+        if let Some((original_base, _, _)) = store_parts(arena, array)
+            && base != original_base
+        {
+            let pruned_store = arena.store(base, write_index, value).ok()?;
+            return arena.select(pruned_store, read_index).ok();
+        }
+        return None;
     }
     let same_index = arena.eq(write_index, read_index).ok()?;
     let base_read = arena.select(base, read_index).ok()?;
@@ -2681,6 +2815,199 @@ fn is_warm_array_element_sort(sort: ArraySortKey) -> bool {
     matches!(sort, ArraySortKey::Bool | ArraySortKey::BitVec(_))
 }
 
+fn is_supported_warm_array_parent(arena: &TermArena, term: TermId) -> bool {
+    let Sort::Array {
+        index: ArraySortKey::BitVec(_),
+        element,
+    } = arena.sort_of(term)
+    else {
+        return false;
+    };
+    if !is_warm_array_element_sort(element) {
+        return false;
+    }
+    matches!(
+        arena.node(term),
+        TermNode::Symbol(_)
+            | TermNode::App {
+                op: Op::Store | Op::Ite | Op::ConstArray { .. },
+                ..
+            }
+    )
+}
+
+fn warm_array_select_semantic_rhs(
+    arena: &mut TermArena,
+    select: WarmArraySelect,
+) -> Option<TermId> {
+    let parent = select.array_parent;
+    let node = match arena.node(parent) {
+        TermNode::App { op, args } => (*op, args.to_vec()),
+        _ => return None,
+    };
+    match node {
+        (Op::ConstArray { .. }, args) => {
+            let [value] = args.as_slice() else {
+                return None;
+            };
+            Some(*value)
+        }
+        (Op::Store, args) => {
+            let [base, write_index, value] = args.as_slice() else {
+                return None;
+            };
+            let same_index = arena.eq(*write_index, select.index).ok()?;
+            let base_read = arena.select(*base, select.index).ok()?;
+            arena.ite(same_index, *value, base_read).ok()
+        }
+        (Op::Ite, args) => {
+            let [condition, then_array, else_array] = args.as_slice() else {
+                return None;
+            };
+            let then_read = arena.select(*then_array, select.index).ok()?;
+            let else_read = arena.select(*else_array, select.index).ok()?;
+            arena.ite(*condition, then_read, else_read).ok()
+        }
+        _ => None,
+    }
+}
+
+fn warm_array_parent_covers(
+    arena: &TermArena,
+    root: TermId,
+    scalar_memo: &mut HashMap<TermId, bool>,
+) -> bool {
+    let mut stack = vec![(root, 0usize)];
+    let mut seen = HashSet::new();
+    let mut structural_nodes = 0usize;
+    while let Some((term, depth)) = stack.pop() {
+        if depth > MAX_WARM_STRUCTURAL_ARRAY_DEPTH {
+            return false;
+        }
+        if !seen.insert(term) {
+            continue;
+        }
+        if !is_supported_warm_array_parent(arena, term) {
+            return false;
+        }
+        if !matches!(arena.node(term), TermNode::Symbol(_)) {
+            structural_nodes += 1;
+            if structural_nodes > MAX_WARM_STRUCTURAL_ARRAY_NODES {
+                return false;
+            }
+        }
+        match arena.node(term) {
+            TermNode::Symbol(_) => {}
+            TermNode::App {
+                op: Op::ConstArray { .. },
+                args,
+            } => {
+                let [value] = args.as_ref() else {
+                    return false;
+                };
+                if !warm_abstraction_covers_term(arena, *value, scalar_memo) {
+                    return false;
+                }
+            }
+            TermNode::App {
+                op: Op::Store,
+                args,
+            } => {
+                let [base, index, value] = args.as_ref() else {
+                    return false;
+                };
+                if !warm_abstraction_covers_term(arena, *index, scalar_memo)
+                    || !warm_abstraction_covers_term(arena, *value, scalar_memo)
+                {
+                    return false;
+                }
+                stack.push((*base, depth + 1));
+            }
+            TermNode::App {
+                op: Op::Ite, args, ..
+            } => {
+                let [condition, then_array, else_array] = args.as_ref() else {
+                    return false;
+                };
+                if !warm_abstraction_covers_term(arena, *condition, scalar_memo) {
+                    return false;
+                }
+                stack.push((*else_array, depth + 1));
+                stack.push((*then_array, depth + 1));
+            }
+            _ => return false,
+        }
+    }
+    true
+}
+
+fn warm_structural_array_limits_hold(arena: &TermArena, root: TermId) -> bool {
+    let mut stack = vec![root];
+    let mut seen = HashSet::new();
+    let mut structural = HashSet::new();
+    while let Some(term) = stack.pop() {
+        if !seen.insert(term) {
+            continue;
+        }
+        if let TermNode::App {
+            op: Op::Select,
+            args,
+        } = arena.node(term)
+        {
+            structural.insert(term);
+            let [array, _index] = args.as_ref() else {
+                return false;
+            };
+            let mut parent_stack = vec![(*array, 0usize)];
+            let mut parent_seen = HashSet::new();
+            while let Some((parent, depth)) = parent_stack.pop() {
+                if depth > MAX_WARM_STRUCTURAL_ARRAY_DEPTH {
+                    return false;
+                }
+                if !parent_seen.insert(parent) {
+                    continue;
+                }
+                if !matches!(arena.node(parent), TermNode::Symbol(_)) {
+                    structural.insert(parent);
+                }
+                if structural.len() > MAX_WARM_STRUCTURAL_ARRAY_NODES {
+                    return false;
+                }
+                match arena.node(parent) {
+                    TermNode::App {
+                        op: Op::Store,
+                        args,
+                    } => {
+                        let [base, _, _] = args.as_ref() else {
+                            return false;
+                        };
+                        parent_stack.push((*base, depth + 1));
+                    }
+                    TermNode::App {
+                        op: Op::Ite, args, ..
+                    } if matches!(arena.sort_of(parent), Sort::Array { .. }) => {
+                        let [_, then_array, else_array] = args.as_ref() else {
+                            return false;
+                        };
+                        parent_stack.push((*else_array, depth + 1));
+                        parent_stack.push((*then_array, depth + 1));
+                    }
+                    TermNode::Symbol(_)
+                    | TermNode::App {
+                        op: Op::ConstArray { .. },
+                        ..
+                    } => {}
+                    _ => return false,
+                }
+            }
+        }
+        if let TermNode::App { args, .. } = arena.node(term) {
+            stack.extend(args.iter().copied());
+        }
+    }
+    true
+}
+
 fn warm_abstraction_covers_term(
     arena: &TermArena,
     term: TermId,
@@ -2702,10 +3029,11 @@ fn warm_abstraction_covers_term_uncached(
     if supported_warm_array_select_shape(arena, term) {
         match arena.node(term) {
             TermNode::App { args, .. } => {
-                let [_array, index] = args.as_ref() else {
+                let [array, index] = args.as_ref() else {
                     return false;
                 };
-                return warm_abstraction_covers_term(arena, *index, memo);
+                return warm_abstraction_covers_term(arena, *index, memo)
+                    && warm_array_parent_covers(arena, *array, memo);
             }
             _ => return false,
         }
@@ -2755,9 +3083,6 @@ fn supported_warm_array_select_shape(arena: &TermArena, term: TermId) -> bool {
     let [array, index] = args.as_ref() else {
         return false;
     };
-    let TermNode::Symbol(_array_symbol) = arena.node(*array) else {
-        return false;
-    };
     let Sort::Array {
         index: ArraySortKey::BitVec(index_width),
         element,
@@ -2765,7 +3090,8 @@ fn supported_warm_array_select_shape(arena: &TermArena, term: TermId) -> bool {
     else {
         return false;
     };
-    is_warm_array_element_sort(element)
+    is_supported_warm_array_parent(arena, *array)
+        && is_warm_array_element_sort(element)
         && arena.sort_of(*index) == Sort::BitVec(index_width)
         && arena.sort_of(term) == element.to_sort()
 }
@@ -3066,8 +3392,17 @@ fn warm_array_select_abstraction_value(
     select_term: TermId,
     select: WarmArraySelect,
 ) -> Result<Value, UnknownReason> {
+    let Some(value_symbol) = select.value_symbol else {
+        return Err(UnknownReason {
+            kind: UnknownKind::Other,
+            detail: format!(
+                "warm array select abstraction #{} had no internal value symbol",
+                select_term.index()
+            ),
+        });
+    };
     let value = assignment
-        .get(select.value_symbol)
+        .get(value_symbol)
         .or_else(|| well_founded_default(arena, select.element_sort))
         .ok_or_else(|| UnknownReason {
             kind: UnknownKind::Other,
@@ -3119,17 +3454,28 @@ fn warm_array_select_index_value(
 fn warm_array_select_projected_array(
     select_term: TermId,
     select: WarmArraySelect,
+    array_symbol: SymbolId,
     select_value: &Value,
     index_value: &Value,
     model: &Model,
 ) -> Result<Value, UnknownReason> {
     match select.element {
-        ArraySortKey::BitVec(_) => {
-            project_warm_bv_array_select(select_term, select, select_value, index_value, model)
-        }
-        ArraySortKey::Bool => {
-            project_warm_bool_array_select(select_term, select, select_value, index_value, model)
-        }
+        ArraySortKey::BitVec(_) => project_warm_bv_array_select(
+            select_term,
+            select,
+            array_symbol,
+            select_value,
+            index_value,
+            model,
+        ),
+        ArraySortKey::Bool => project_warm_bool_array_select(
+            select_term,
+            select,
+            array_symbol,
+            select_value,
+            index_value,
+            model,
+        ),
         other => Err(UnknownReason {
             kind: UnknownKind::Other,
             detail: format!("unsupported warm array element sort {other}"),
@@ -3140,6 +3486,7 @@ fn warm_array_select_projected_array(
 fn project_warm_bv_array_select(
     select_term: TermId,
     select: WarmArraySelect,
+    array_symbol: SymbolId,
     select_value: &Value,
     index_value: &Value,
     model: &Model,
@@ -3165,7 +3512,7 @@ fn project_warm_bv_array_select(
         } = index_value
         && let Value::Bv { value, .. } = select_value
     {
-        let array = match model.get(select.array_symbol) {
+        let array = match model.get(array_symbol) {
             Some(Value::Array(array))
                 if array.index_width() == select.index_width
                     && array.element_width() == element_width =>
@@ -3187,7 +3534,7 @@ fn project_warm_bv_array_select(
             ),
         });
     }
-    let array = match model.get(select.array_symbol) {
+    let array = match model.get(array_symbol) {
         Some(Value::GenericArray(array))
             if array.index_sort() == ArraySortKey::BitVec(select.index_width)
                 && array.element_sort() == ArraySortKey::BitVec(element_width) =>
@@ -3208,6 +3555,7 @@ fn project_warm_bv_array_select(
 fn project_warm_bool_array_select(
     select_term: TermId,
     select: WarmArraySelect,
+    array_symbol: SymbolId,
     select_value: &Value,
     index_value: &Value,
     model: &Model,
@@ -3232,7 +3580,7 @@ fn project_warm_bool_array_select(
             ),
         });
     }
-    let array = match model.get(select.array_symbol) {
+    let array = match model.get(array_symbol) {
         Some(Value::GenericArray(array))
             if array.index_sort() == ArraySortKey::BitVec(select.index_width)
                 && array.element_sort() == ArraySortKey::Bool =>

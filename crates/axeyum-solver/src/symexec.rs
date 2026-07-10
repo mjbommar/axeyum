@@ -771,9 +771,10 @@ impl SymbolicExecutor {
     /// Returns [`SolverError`] if building `¬cond` or a feasibility check fails.
     pub fn branch(&mut self, arena: &mut TermArena, cond: TermId) -> Result<Branch, SolverError> {
         let not_cond = arena.not(cond)?;
-        let encoded_cond = IncrementalBvSolver::simplify_memory_for_warm_assertion(arena, cond);
+        let encoded_cond =
+            IncrementalBvSolver::simplify_memory_for_retained_warm_assertion(arena, cond);
         let encoded_not_cond =
-            IncrementalBvSolver::simplify_memory_for_warm_assertion(arena, not_cond);
+            IncrementalBvSolver::simplify_memory_for_retained_warm_assertion(arena, not_cond);
         if self.needs_memory_route_for_current_path()
             || !IncrementalBvSolver::term_supported_by_warm_abstraction(arena, encoded_cond)
             || !IncrementalBvSolver::term_supported_by_warm_abstraction(arena, encoded_not_cond)
