@@ -72,6 +72,12 @@ UF-bearing array indices evaluable. Original-query ground evaluation is the
 final acceptance gate; failed evaluation, projection, replay, or convergence
 returns Unknown.
 
+## Update (2026-07-10)
+
+ADR-0084 supersedes the original function-first projection order. Canonical
+AUFBV now projects class-owned arrays before function tables so array-valued
+results and array-valued argument keys are both concrete before replay.
+
 ## Evidence
 
 - The abstraction-only rewrite gate builds 24 symbolic reads with 24 rewritten

@@ -37,13 +37,19 @@ parent on the canonical array/e-graph bus.
 - Keep lazy ROW independent. A store read remains a `CombinedRowStore`, so a
   candidate may schedule select congruence, read-over-write, both, or neither.
 - Charge every materialized pair to the existing round, interface-atom, CNF,
-  theory-atom, and deadline bounds. SAT still requires function-then-array model
-  projection followed by evaluation of every original assertion.
+  theory-atom, and deadline bounds. SAT still requires model projection followed
+  by evaluation of every original assertion.
 
 Direct constant-array reads remain folded, and array-valued `ite` reads remain
 scalarized into branch reads. Neither receives a structural parent event in this
 increment. Array-valued UF parents remain outside the admitted structural
 boundary.
+
+## Update (2026-07-10)
+
+ADR-0084 admits array-valued application parents and supersedes the original
+function-first projection order with array-first/function-second projection.
+The store-parent mechanism recorded here is unchanged.
 
 ## Soundness Argument
 

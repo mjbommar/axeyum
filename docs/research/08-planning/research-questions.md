@@ -37,7 +37,7 @@ Out of scope:
     read-over-write evaluator; see
     [ADR-0010](../09-decisions/adr-0010-arrays-via-eager-elimination.md).
 - [x] Should uninterpreted functions be first-class early?
-  - Answer: yes, as a first-class IR construct (declarations with a scalar
+  - Answer: yes, as a first-class IR construct (declarations with a typed
     signature, `Op::Apply`, and a `FuncValue` interpretation in the model that
     the evaluator honors), eliminated to `QF_BV` by Ackermann reduction — the
     same eager strategy as arrays. Sub-increments 1 (IR + evaluator) and 2
@@ -57,10 +57,14 @@ Out of scope:
     activate aligned theory atoms and permanent clauses inside the same retained
     canonical search (ADR-0081/0082). Canonical finite-scalar
     admission now covers Bool or BitVec independently at each component while
-    other component theories still decline (ADR-0079). Array-valued
-    ITE/default/UF events that require new e-graph terms, non-symbol/warm class
-    models, and broader array operators remain. See
-    [ADR-0013](../09-decisions/adr-0013-uninterpreted-functions.md).
+    other component theories still decline (ADR-0079). Array-valued function
+    results now retain their original application parents on the e-graph,
+    project fresh result arrays by final parent class, build function tables
+    after array projection, and replay through `select`, `store`, array `ite`,
+    equality, and nested scalar-UF use (ADR-0084). Structural store/ITE/default
+    class projection, warm ownership, and broader array operators remain. See
+    [ADR-0013](../09-decisions/adr-0013-uninterpreted-functions.md) and
+    [ADR-0084](../09-decisions/adr-0084-array-valued-uf-results-on-the-canonical-array-bus.md).
 - [ ] How should undefined or partial operations be represented?
 - [ ] What public support matrix should define the first release boundary
       across IR, evaluator, SMT-LIB, oracle, pure Rust backend, and evidence?

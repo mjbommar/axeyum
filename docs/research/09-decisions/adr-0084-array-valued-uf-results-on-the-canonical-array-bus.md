@@ -1,6 +1,6 @@
 # ADR-0084: Array-Valued UF Results on the Canonical Array Bus
 
-Status: proposed
+Status: accepted
 Date: 2026-07-10
 
 ## Context
@@ -130,6 +130,26 @@ Costs and limits:
   control.
 - Front-door parity, deterministic analytic differential cases, and direct Z3
   comparison when the native feature is enabled.
+
+## Acceptance Validation
+
+Accepted on 2026-07-10 in `e944f7c1` after all required routes passed:
+
+- IR declaration/evaluation, full-value `FuncValue`, function abstraction,
+  eager-decline, and SMT-LIB parse/write tests;
+- six focused canonical solver tests covering replay, congruent application
+  reads, disjoint-observation projection union, stores, direct equality, and an
+  unsupported Int-component control;
+- a 96-seed semantic matrix run through the direct canonical route and
+  `check_auto`, with every SAT model replayed, plus the same 96 cases compared
+  directly to Z3 under the native feature: 288 comparisons, zero disagreements;
+- the existing 11-test AUFBV all-feature differential binary, the complete 815
+  solver-unit suite, the IR/rewrite/SMT-LIB suites, strict changed-crate
+  all-target/all-feature clippy, and the exact-SHA pre-push gate.
+
+The matrix includes same- and different-argument applications, split
+observations, direct equality/disequality, store and array-ITE reads,
+array-valued results used as scalar-UF keys, and both SAT and UNSAT outcomes.
 
 ## Alternatives Considered
 

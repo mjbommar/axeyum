@@ -31,9 +31,10 @@ Feature discovery keeps two distinct facts:
   `Real`, uninterpreted, datatype, and floating-point components.
 
 The Bool-only UF+array fragment may enter canonical AUFBV even when no bit-vector
-term appears. SAT still requires function-then-array projection and evaluation
-of every original assertion. Non-BV/BV arrays use `GenericArrayValue`; no new
-model representation is introduced.
+term appears. SAT still requires model projection and evaluation of every
+original assertion. ADR-0084 subsequently makes canonical projection array-first
+then function-second. Non-BV/BV arrays use `GenericArrayValue`; no new model
+representation is introduced.
 
 ## Evidence
 

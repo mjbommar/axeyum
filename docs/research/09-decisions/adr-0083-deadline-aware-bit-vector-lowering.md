@@ -118,7 +118,8 @@ with a much smaller trust and implementation surface.
 
 ## Next Work
 
-Resume the canonical array frontier at array-valued UF/select events and their
-function-first/array-second model projection cycle. Extend deadline polling to
-any newly introduced superlinear preprocessing or encoding loop at the time that
-loop is added; do not defer cancellation to a downstream solver.
+ADR-0084 subsequently closed the array-valued UF/select projection target.
+Structural store/ITE/default class ownership, warm reuse, broader measurement,
+and online proof logging remain. Extend deadline polling to any newly introduced
+superlinear preprocessing or encoding loop at the time that loop is added; do
+not defer cancellation to a downstream solver.

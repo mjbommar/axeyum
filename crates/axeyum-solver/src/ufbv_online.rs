@@ -5,9 +5,9 @@
 //! and reads through stores receive fresh scalar results, while store hit/miss
 //! axioms are deferred. Array equality atoms become Boolean flags with bounded
 //! observed-index and diff-witness reads. Uninterpreted applications are then
-//! replaced by fresh
-//! scalar symbols through [`axeyum_rewrite::abstract_functions`], also without
-//! eager Ackermann constraints.
+//! replaced by fresh result-sort symbols through
+//! [`axeyum_rewrite::abstract_functions`], also without eager Ackermann
+//! constraints.
 //! The Boolean structure is Tseitin-encoded once. Initial semantic atoms occupy the
 //! first Boolean-variable block and each store-read site reserves its three bounded
 //! local read-over-write atoms. Pair-generated equalities are not precomputed: a
@@ -947,7 +947,7 @@ pub fn check_qf_ufbv_online_cdclt(
 /// Array equality flags retain the original equality for the canonical e-graph
 /// and materialize only violated observed-index congruence or diff-witness
 /// instances. Function applications use the same dynamic interface path. SAT is
-/// accepted only after projecting functions, then class-owned arrays, and
+/// accepted only after projecting class-owned arrays, then functions, and
 /// replaying the original query.
 ///
 /// # Errors

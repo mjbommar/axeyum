@@ -336,7 +336,7 @@ attempt is written up as an ADR documenting why not.
 Progress update (2026-07-10): ADR-0071 adds replay-guided base-select congruence
 on canonical `CdclT`; ADR-0072 reuses the shared ROW abstraction and materializes
 only candidate-violated store hit/miss axioms. Both compose with dynamic UFBV
-interfaces and function-then-array projection. Public QF_ABV/QF_AUFBV runs
+interfaces and replay-gated projection. Public QF_ABV/QF_AUFBV runs
 remain DISAGREE=0 with zero replay failures. This is not phase exit: structural
 parent/ROW/default scheduling on class merges, non-symbol class models, dynamic
 in-search insertion, and the warm memory path remain.
@@ -428,6 +428,17 @@ one round. The expanded 2,304-comparison belt, all 809 solver tests, and the 11-
 test differential binary are clean. Array-valued ITE/default/UF and merge-
 triggered events requiring new e-graph nodes, non-symbol/warm models, proof
 integration, and the low-load aggregate remain.
+
+ADR-0084 closes the array-valued UF-result event and its cyclic model boundary.
+Finite Bool/BitVec array results are first-class in IR/SMT-LIB and abstraction;
+original applications remain semantic e-graph parents, while observed entries
+project into fresh result arrays grouped by final parent class. Arrays are built
+before function tables, so array results and array-valued function keys are both
+concrete before replay. Same/different arguments, split observations, direct
+equality/disequality, stores, array ITEs, and nested scalar-UF use pass 288
+analytic/front-door/Z3 comparisons with zero disagreement. Structural store/ITE/
+default class ownership, warm reuse, and online proof logging remain before
+phase exit.
 
 Implementation note: a first infosec-workflow client example landed early
 (2026-06-13), ahead of arrays — a register-VM symbolic executor over

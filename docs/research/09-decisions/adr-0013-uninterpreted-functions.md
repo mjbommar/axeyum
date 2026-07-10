@@ -141,9 +141,22 @@ tests pin the absence of appended congruence constraints and projection parity;
 all 22 lazy EUF unit gates, UFBV scenarios, UFLIA 31/31, UFLRA 21/21, and the
 online/eager UF-arithmetic dispatch differential preserve their verdicts.
 
+## Update (2026-07-10): array-valued results on canonical AUFBV
+
+ADR-0084 admits first-class array result sorts in the IR and extends
+`abstract_functions` to preserve them for canonical AUFBV. Original application
+terms remain semantic e-graph parents; observed reads project into the fresh
+array result symbols by final parent class, arrays are reconstructed before
+function tables, and original-query replay remains the SAT gate. Eager
+Ackermann elimination still declines array-valued results because its promised
+scalar target would otherwise retain array equality. The accepted boundary is
+finite Bool/BitVec array components; other component theories remain outside
+canonical admission.
+
 ## Consequences
 
-- The IR can express `QF_UFBV` (and, combined with arrays, `QF_AUFBV`); the
+- The IR can express `QF_UFBV` and finite-scalar array-valued applications (and,
+  combined with arrays, `QF_AUFBV`); the
   evaluator is a complete semantic reference for it, so `sat` models remain
   replayable end to end once elimination and model projection land.
 - The Ackermann machinery is now needed in two places (arrays, UF); a later

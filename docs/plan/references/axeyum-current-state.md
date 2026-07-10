@@ -31,7 +31,7 @@ Total src ≈ 48k (≈63k with tests); 57 test files. Largest solver modules:
 | QF_BV (full scalar, ≤2¹⁶) | validated | replay + differential vs Z3 |
 | QF_BV UNSAT (DRAT) | **checked** | `check_drat`; `UnsatProof::recheck` |
 | QF_BV end-to-end (miter) | **checked** | exhaustive bit-blast faithfulness miter + DRAT, modulo independent reference |
-| QF_ABV / QF_UF / QF_AUFBV | validated | canonical e-graph/BV refinement + replay, including original array equalities, explanation-guarded base/store-parent select scheduling, same-search ROW plus dynamically appended UF/select/extensionality scalar interfaces, shared direct-symbol class models, and Bool/BitVec component combinations (ADR-0071–0082); eager certifying fallback; direct equal-array select congruence checked in-tree/Carcara/Lean (ADR-0075); broader UNSAT DRAT **modulo trusted reduction** |
+| QF_ABV / QF_UF / QF_AUFBV | validated | canonical e-graph/BV refinement + replay, including original array equalities, explanation-guarded base/store-parent select scheduling, same-search ROW plus dynamically appended UF/select/extensionality scalar interfaces, shared direct-symbol class models, Bool/BitVec component combinations, and finite-scalar array-valued UF results with array-first/function-second projection (ADR-0071–0084); eager certifying fallback; direct equal-array select congruence checked in-tree/Carcara/Lean (ADR-0075); broader UNSAT DRAT **modulo trusted reduction** |
 | QF_LRA (exact-rational) | **checked** | Farkas + exact model |
 | QF_LIA / QF_LIRA | validated | replay; bounded UNSAT DRAT at chosen width |
 | QF_NRA/NIA | sound-incomplete | replay (SAT), relaxation-unsat, else `unknown` |

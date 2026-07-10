@@ -3828,6 +3828,19 @@ Its conclusion, ranked by quality × efficiency:
    structural array target: array-valued UF/select events, cyclic function/array
    projection, non-symbol class models, warm reuse, and online proof logging;
    retain a broader low-load ABV/AUFBV aggregate remeasure as the measured skirt.
+   **Twenty-ninth follow-through:** ADR-0084 closes the array-valued UF-result
+   boundary. IR/SMT-LIB and abstraction now admit finite Bool/BitVec array
+   results; original applications remain e-graph parents while their fresh
+   result arrays own projected observations. Final parent classes union split
+   reads across congruent applications, then array-first/function-second
+   projection supplies both array results and array-valued function keys before
+   mandatory replay. Stores, array ITEs, direct equality/disequality, and nested
+   scalar-UF use pass 288 analytic/front-door/Z3 comparisons with zero
+   disagreements; all 815 solver unit tests and the exact-SHA push gate pass.
+   Commits `b1bc1836`/`e944f7c1` are on `origin/main`. Next: structural store/
+   ITE/default class projection, warm reuse, online ROW/extensionality/equality-
+   chain proof logging, opaque-heavy arithmetic exchange, and the low-load
+   public aggregate remeasure.
 2. **Keep a thin measured-leaf-BFS skirt in parallel** — measured-ROI leaves only
    (NRA tail, strings-Nielsen); fold the feature/scale-blocked leaves
    (dense-ILP MILP, large-LP performance) into a funded engine phase rather than

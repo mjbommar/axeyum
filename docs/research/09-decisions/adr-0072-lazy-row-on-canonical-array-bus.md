@@ -114,3 +114,9 @@ general performance claim.
   extensionality, merge-triggered axiom queue state, scalable default/majority
   models, and eventual warm cross-check reuse rather than another `str.len`
   bridge.
+
+## Update (2026-07-10)
+
+ADR-0084 supersedes this decision's original function-first projection order and
+adds array-valued application parents to the online-only ROW boundary. Generic
+lazy ROW remains unchanged.

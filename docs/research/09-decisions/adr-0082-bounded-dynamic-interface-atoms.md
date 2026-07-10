@@ -118,3 +118,10 @@ The next array-engine work is event breadth and ownership rather than dynamic
 scalar equality plumbing: array-valued ITE/default/UF and merge-triggered ROW
 events, non-symbol and warm class models, nested/extended arrays, online proof
 logging, and a comparable low-load public aggregate remeasurement.
+
+## Update (2026-07-10)
+
+ADR-0084 closes the array-valued UF-result event without open-scope term growth:
+application parents are observed before search and their fresh result arrays are
+projection owners. Structural ITE/default and merge-triggered new-term events
+remain.
