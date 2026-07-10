@@ -3767,11 +3767,21 @@ Its conclusion, ranked by quality × efficiency:
    UF-index, and Boolean-backtracking gates pass; structural store equality still
    uses ROW plus its retained observation. All 794 solver tests and 768
    comparisons pass. Public 1 s results remain QF_ABV 187/193 at 84 ms and
-   QF_AUFBV 49/53 at 206 ms, with zero disagreements/replay failures. Next:
+   QF_AUFBV 49/53 at 206 ms, with zero disagreements/replay failures.
+   **Twenty-fourth follow-through (measured-leaf skirt):** ADR-0079 removes the
+   BV/BV-only admission artifact while preserving the finite-scalar boundary.
+   Canonical ABV/AUFBV now accepts Bool or BitVec independently at each array
+   component and projects mixed shapes through the existing generic array model.
+   Exact public rows `issue5925` and `issue4240` move unknown→unsat/sat in 20/5
+   ms. A new 384-comparison Bool/mixed matrix joins the existing 768 comparisons;
+   all 1,152 are clean, all SAT models replay, and 797 solver tests pass. The
+   current host's sustained I/O load pushed four unrelated boundary rows over
+   the 1 s cap, so ADR-0078's 187/193 and 49/53 remain the last comparable
+   aggregate pending a low-load rerun. Next:
    store/ITE/default/ROW parent events with dynamic in-search insertion,
    store/ITE/array-valued-UF class models, warm reuse, full
-   ROW/diff-witness/equality-chain proof logging, and opaque-heavy arithmetic
-   model exchange.
+   ROW/diff-witness/equality-chain proof logging, opaque-heavy arithmetic model
+   exchange, and the low-load public aggregate remeasure.
 2. **Keep a thin measured-leaf-BFS skirt in parallel** — measured-ROI leaves only
    (NRA tail, strings-Nielsen); fold the feature/scale-blocked leaves
    (dense-ILP MILP, large-LP performance) into a funded engine phase rather than

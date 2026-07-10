@@ -52,7 +52,9 @@ Out of scope:
     reads; each flag retains its original equality on live backtrackable
     `EufTheory`, true direct-symbol classes share one replayed model, and
     candidate-violated base reads follow explanation-guarded final e-class merges
-    (ADR-0073/0077/0078). Structural parent/default/ROW scheduling, non-symbol/warm
+    (ADR-0073/0077/0078). Canonical finite-scalar admission now covers Bool or
+    BitVec independently at each component while other component theories still
+    decline (ADR-0079). Structural parent/default/ROW scheduling, non-symbol/warm
     class models, and broader array operators remain. See
     [ADR-0013](../09-decisions/adr-0013-uninterpreted-functions.md).
 - [ ] How should undefined or partial operations be represented?

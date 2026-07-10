@@ -42,7 +42,7 @@ pub enum ParserStatus {
     /// `echo`, `exit`. Some commands also have explicit helper APIs.
     AcceptedIgnored,
     /// Parsed but only over a bounded/restricted shape (e.g. bounded strings,
-    /// arrays restricted to bit-vector index/element sorts, constant-operand-only ops).
+    /// arrays without nested components, constant-operand-only ops).
     AcceptedBounded,
     /// Deliberately refused with `Unsupported` (e.g. full `reset`, parametric
     /// datatypes, the unbounded `String`/`Seq` sort).
@@ -191,9 +191,9 @@ pub const SUPPORT_MATRIX: &[SupportRow] = &[
         ir: IrStatus::Modeled,
         solver: SolverStatus::Decides,
         proof: ProofStatus::PartialTrust,
-        note: "Array sort restricted to bit-vector index/element; eager \
-               read-over-write + Ackermann elimination decides; unsat DRAT is modulo \
-               the trusted (replay-validatable) elimination. ADR-0010",
+        note: "Canonical arrays admit Bool/BitVec index and element components; eager \
+               read-over-write + Ackermann elimination remains the fallback. Unsat DRAT \
+               is modulo the trusted (replay-validatable) elimination. ADR-0010/0079",
     },
     SupportRow {
         fragment: "QF_UF (EUF / congruence)",
@@ -415,7 +415,7 @@ pub fn support_matrix_markdown() -> String {
            `solve_smtlib` facade (e.g. `get-model`, `get-unsat-core`, `get-proof`, \
            `echo`, `exit`); some commands also have explicit helper APIs.\n\
          - **accepted (bounded)** — parsed only over a bounded/restricted shape (bounded \
-           strings; arrays restricted to bit-vector index/element; constant-operand-only ops; \
+           strings; arrays without nested components; constant-operand-only ops; \
            non-parametric datatypes).\n\
          - **rejected** — deliberately refused (full `reset`, parametric datatypes, the \
            unbounded `String`/`Seq` sort).\n\n",

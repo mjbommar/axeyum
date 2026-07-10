@@ -386,6 +386,13 @@ gate stays below the previous 4,096-site failure boundary. All 794 solver tests,
 clean. Structural store/ITE/default/ROW scheduling, dynamic insertion, warm reuse,
 non-symbol models, and proof integration remain before phase exit.
 
+ADR-0079 admits every finite Bool/BitVec array component combination to the same
+canonical route. Generic mixed-component models replay, Bool-only UF+array
+dispatches, and non-finite-scalar components still decline. Public `issue5925`
+and `issue4240` move unknown→unsat/sat; the expanded 1,152-comparison array belt
+is clean. A low-load 1 s aggregate remeasure remains because the current host
+run moved four unrelated boundary rows to timeout under sustained I/O wait.
+
 Implementation note: a first infosec-workflow client example landed early
 (2026-06-13), ahead of arrays — a register-VM symbolic executor over
 `IncrementalBvSolver` that forks at branches, prunes infeasible paths, and

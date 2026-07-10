@@ -234,17 +234,21 @@ pub const CAPABILITIES: &[Capability] = &[
                   classes share one deterministic majority-default model; direct base reads are \
                   grouped by final e-class and candidate-violated cross-parent congruence is guarded \
                   by the merge explanation; scalar UF applications in indices/elements share the \
-                  same exact BV + e-graph bus",
+                  same exact BV + e-graph bus; array index and element components may each be Bool \
+                  or BitVec, with mixed shapes projected through GenericArrayValue",
         assurance: Assurance::Validated,
         evidence: "every partial round is a relaxation, so UNSAT transfers; SAT requires \
-                   function-then-array projection and original-query replay. 794 solver-lib \
-                   tests plus 768 AUFBV online/eager/front-door/Z3 comparisons are clean; \
+                   function-then-array projection and original-query replay. 797 solver-lib \
+                   tests plus 1,152 array comparisons are clean: the existing 768 BV-array \
+                   comparisons and 384 Bool/mixed analytic/front-door/Z3 comparisons; \
                    456 comparisons carry equality/disequality/store-equality/UF-index/transitive \
                    shapes, including disjoint reads over a transitive SAT class. An 80-array/read \
-                   gate avoids the former direct-symbol equality-by-index preparation product. \
-                   Public QF_ABV 187/193 and QF_AUFBV 49/53 at 1 s, DISAGREE=0; online probes \
-                   use cloned arenas so fallback inputs remain pristine",
-        reference: "ADR-0071/0072/0073/0074/0077/0078",
+                   gate avoids the former direct-symbol equality-by-index preparation product. The \
+                   public Bool-component rows issue5925 and issue4240 move unknown→unsat/sat; \
+                   DISAGREE=0 and all SAT models replay. ADR-0078's low-load 1 s aggregate baseline \
+                   remains QF_ABV 187/193 and QF_AUFBV 49/53 pending a comparable remeasure; online \
+                   probes use cloned arenas so fallback inputs remain pristine",
+        reference: "ADR-0071/0072/0073/0074/0077/0078/0079",
     },
     Capability {
         area: "QF_UF",

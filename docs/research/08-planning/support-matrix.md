@@ -11,7 +11,7 @@ Four **independent** axes per SMT-LIB fragment, so "the parser accepts it" is ne
 **parser-accepts** (does `axeyum-smtlib` parse it?):
 - **accepted** — parsed and acted on.
 - **accepted-but-ignored** — parsed but a deliberate no-op in the single-result `solve_smtlib` facade (e.g. `get-model`, `get-unsat-core`, `get-proof`, `echo`, `exit`); some commands also have explicit helper APIs.
-- **accepted (bounded)** — parsed only over a bounded/restricted shape (bounded strings; arrays restricted to bit-vector index/element; constant-operand-only ops; non-parametric datatypes).
+- **accepted (bounded)** — parsed only over a bounded/restricted shape (bounded strings; arrays without nested components; constant-operand-only ops; non-parametric datatypes).
 - **rejected** — deliberately refused (full `reset`, parametric datatypes, the unbounded `String`/`Seq` sort).
 
 **IR-semantics** (does `axeyum-ir` model its semantics?):
@@ -22,7 +22,7 @@ Four **independent** axes per SMT-LIB fragment, so "the parser accepts it" is ne
 
 **solver-decides** (definite `sat`/`unsat` for the core queries?):
 - **decides** — returns both `sat` and `unsat` for the core fragment.
-- **unsat decided; sat→unknown** — `unsat` is decided but a satisfying model is not built, so `sat` degrades to a sound `unknown` (for example, an incomplete model-lifting route). First-class — never a wrong answer.
+- **unsat decided; sat→unknown** — `unsat` is decided but a satisfying model is not built, so `sat` degrades to a sound `unknown` (the `str.len` BV+LIA gap). First-class — never a wrong answer.
 - **sound, incomplete (unknown-safe)** — may return `unknown` in general (nonlinear arithmetic, quantifiers outside finite/guarded domains, optimization).
 - **unsupported** — not decided.
 
@@ -57,7 +57,7 @@ Four **independent** axes per SMT-LIB fragment, so "the parser accepts it" is ne
 ## Notes (per row)
 
 - **QF_BV (scalar bit-vectors)** — full scalar op set parsed and modeled; bit-blast to SAT decides both directions; unsat carries a DRAT proof + an end-to-end faithfulness miter (Alethe/Lean too). ADR-0006/0011/0012
-- **QF_ABV (arrays)** — Array sort restricted to bit-vector index/element; canonical `CdclT` uses replay-guided select congruence, lazy ROW, bounded equality/diff observations, original array equalities on backtrackable `EufTheory`, explanation-guarded base-parent scheduling, and deterministic majority-default models shared by true direct-symbol classes, with eager read-over-write + Ackermann elimination retained for fallback/proofs. Unsat DRAT remains modulo the trusted elimination; the direct equal-array/same-index select-congruence conflict separately has an in-tree/Carcara/Lean-checked zero-trust Alethe route. ADR-0010/0071/0072/0073/0074/0075/0077/0078
+- **QF_ABV (arrays)** — Canonical arrays admit Bool/BitVec index and element components; eager read-over-write + Ackermann elimination remains the fallback. Unsat DRAT is modulo the trusted (replay-validatable) elimination. ADR-0010/0079
 - **QF_UF (EUF / congruence)** — declare-fun + congruence closure on a backtrackable e-graph decides; unsat carries a congruence explanation re-derived by an independent union-find checker (Alethe + Lean too). ADR-0013/0032
 - **QF_LIA (general linear integer)** — Int sort + div/mod/abs eliminated exactly; Diophantine refutation + branch-and-bound simplex + Gomory cuts decide (degrade to unknown on node budget); general-case unsat DRAT is bounded (refutes at the chosen bit-blast width). Checked-proof sub-fragments are listed separately. ADR-0014/0020/0021
 - **QF_LIA · integer infeasibility (Diophantine + interval)** — integer-systems infeasibility (equality systems, e.g. 2x=1; and the single-variable interval c≤k·x≤d) carries an independent integer-Farkas self-check (Evidence::UnsatDiophantine) AND a kernel-checked Lean proof accepted by the real `lean` binary (discreteness via the ℤ prelude). ADR-0042/0043. General integer-cut (Gomory) proof reconstruction is future.
@@ -71,6 +71,6 @@ Four **independent** axes per SMT-LIB fragment, so "the parser accepts it" is ne
 - **QF_FP (floating-point)** — FP sorts/ops parsed (some conversions constant-only); FP values are BitVec (no IR sort), lowered to circuits differentially validated vs native/apfloat; unsat DRAT is modulo the trusted FP circuit. ADR-0023/0026/0028
 - **quantifiers (∃/∀, finite-domain + instantiation)** — complete over finite (Bool/BV) domains, guarded-finite Int expansion, and single-variable real Fourier-Motzkin; otherwise sound refutation by e-matching/MBQI instantiation (ground unsat transfers; sat/no-progress is unknown). Checkable Alethe/Lean for the refutation slices. ADR-0016/0032
 - **datatypes (algebraic)** — non-parametric declare-datatype(s) parsed (parametric rejected); structural acyclicity/injectivity + elimination/native expansion decide; unsat DRAT modulo trusted datatype folding (Alethe/Lean too). ADR-0022
-- **strings (bounded)** — no String IR sort — declare-const lowered to a bounded packed BV (len ≤ 16); ops parsed within the bound; ADR-0052 closes the linear `str.len` marker, while broader coupled word/length shapes may remain unknown. Model replay plus the certified string routes recorded in ADR-0061. ADR-0025/0029/0052/0061
+- **strings (bounded)** — no String IR sort — declare-const lowered to a bounded packed BV (len ≤ 16); ops parsed within the bound; sat decided through the BV path but str.len unsat may be unknown (BV+LIA gap). Model replay only, no unsat proof. ADR-0025/0029
 - **optimization (OMT: box/lex/Pareto, MaxSAT, MILP)** — maximize/minimize parsed and acted on; each optimum is certified only by an internal confirmed-unsat domination query (no exported artifact) and degrades to a sound OptOutcome::Unknown when a probe is undecided. ADR-0027
 - **incremental (push/pop, reset-assertions)** — push/pop and reset-assertions parsed (full `reset` is rejected); warm QF_BV/Bool with assumption-core pruning + all-SAT decides; sat replay + a SAT conflict core, but no DRAT/Alethe across push/pop; warm path refuses arrays. ADR-0009
