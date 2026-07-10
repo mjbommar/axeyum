@@ -63,12 +63,18 @@ Out of scope:
     after array projection, and replay through `select`, `store`, array `ite`,
     equality, and nested scalar-UF use (ADR-0084). Exact array-ITE equality
     decomposition and bounded observed-read-preserving store/ITE/constant class
-    realization now close the structural total-model boundary (ADR-0085). Warm
-    ownership, nested/extended array operators, and proofs remain. See
+    realization now close the structural total-model boundary (ADR-0085).
+    Bounded warm structural ownership is retained by ADR-0086; candidate-
+    triggered activation of those exact definitions is proposed in ADR-0087.
+    Warm equality/extensionality, nested/extended array operators, and proofs
+    remain. See
     [ADR-0013](../09-decisions/adr-0013-uninterpreted-functions.md) and
     [ADR-0084](../09-decisions/adr-0084-array-valued-uf-results-on-the-canonical-array-bus.md),
     followed by
-    [ADR-0085](../09-decisions/adr-0085-bounded-structural-array-class-equations.md).
+    [ADR-0085](../09-decisions/adr-0085-bounded-structural-array-class-equations.md),
+    [ADR-0086](../09-decisions/adr-0086-retained-warm-structural-array-reads.md),
+    and
+    [ADR-0087](../09-decisions/adr-0087-candidate-triggered-retained-warm-row.md).
 - [ ] How should undefined or partial operations be represented?
 - [ ] What public support matrix should define the first release boundary
       across IR, evaluator, SMT-LIB, oracle, pure Rust backend, and evidence?
