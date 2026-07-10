@@ -45,6 +45,7 @@ yield" synthesis.
 | Book | Decidable fragment we touch | Lean-horizon (the bulk) |
 |---|---|---|
 | **[Spivak, *Calculus*](spivak.md)** | Ch.1 order axioms + transitivity (LRA, Farkas); a monotonicity inequality (NRA). The SOS inequalities (`a²+b²≥2ab`, AM–GM₂, Cauchy–Schwarz) are the **NRA frontier** | limits/continuity/derivatives/integrals (ε-δ); Bernoulli ∀n, AM–GM ∀n (induction); + the SOS frontier until SOS/CAD lands |
+| **Rosulek, [*The Joy of Cryptography*](https://joyofcryptography.com/)** | finite games, BV xor algebra, modular arithmetic, finite-field tables, small transcript verification, finite probability tables; see the [provable-security integration note](../../plan/provable-security-integration.md) | asymptotic negligible bounds, reductions under computational assumptions, zero-knowledge simulation/extraction, random-oracle reasoning, and real post-quantum hardness claims |
 | Rudin, *Principles of Mathematical Analysis* | the same algebraic/order core | metric-space topology, convergence, measure — all ε-δ |
 | Apostol, *Calculus* | linear/area axioms; polynomial identities | the integral as a limit; series |
 | Landau, *Foundations of Analysis* | Peano/field defining equations (instances) | the inductive constructions ℕ→ℤ→ℚ→ℝ themselves |

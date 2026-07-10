@@ -488,6 +488,38 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `cargo test -p axeyum-solver --lib lra_theory::tests`, the existing
   `cdclt_lia_online`/`cdclt_lra_online` integration suites, and
   `cargo check -p axeyum-solver --tests`.
+- **2026-07-09 — SEQUENCING PIVOT: the theory-leaf breadth-first pass hit its ROI
+  wall; next move is depth-first on the engine keystone (P1.4/P1.5).** A
+  BFS-vs-DFS traversal analysis over the
+  [dependency DAG](docs/plan/01-dependency-dag.md) is written up in
+  [build-sequencing-bfs-dfs.md](docs/research/08-planning/build-sequencing-bfs-dfs.md)
+  and the ranked conclusion is folded into
+  [PLAN.md § The two engineering keystones](PLAN.md#the-two-engineering-keystones).
+  **Empirical trigger (this session):** the arithmetic/string decide-rate BFS
+  landed **+6 rows, all fuzz-verified DISAGREE=0** — the integer-algebraic
+  identity refutation (`nl-eq-infer`, ADR-0064), the bounded-nonlinear-SAT
+  dispatch fix (4× `nia-pythagorean`), and the finite-domain disjunction split
+  (`rewriting-sums`, ADR-0065) — and then **ran out of tractable leaves**: a full
+  sweep of QF_LIA/LRA/UFLIA/ALIA/AUFLIA (DISAGREE=0 everywhere) showed every
+  remaining unknown is either engine-blocked (eager encodings no longer scale),
+  large-scale (dense-ILP MILP, 200–360 KB LPs — four bounded LIA experiments
+  built/measured/reverted per measure-don't-seed), or a research-grade
+  completeness proof (Nielsen strings, #82). **Ranked next (quality × efficiency):**
+  (1) DFS `P1.4 e-graph → P1.5 CDCL(T)` — the highest-leverage unblock;
+  (2) thin measured-leaf skirt in parallel (NRA tail, strings-Nielsen); defer
+  feature/scale leaves (#85/#89/#90/#91) into a funded engine phase;
+  (3) trust-ledger proof spine (`P3.5 → ledger→0`) in parallel;
+  (4) after P1.5, the categorical gap `P3.8 → P4.6 CHC/Horn`. Disk also cleaned
+  (~265 GB reclaimed from stale `target/`); tree green.
+- **2026-07-08 — Joy of Cryptography / provable-security planning scout
+  recorded.** Added
+  [provable-security-integration.md](docs/plan/provable-security-integration.md)
+  and linked it from the plan + foundational-books index. Verdict: this is a
+  Track 5 / proof-cookbook / scenario-corpus demand-pull lane, not a reason to
+  reorder the active parity queue. Near-term shape: finite game examples
+  (OTP reuse/xor cancellation), game-hop evidence anatomy, constant-time and
+  transcript-verification micro-suites, and finite-field demand packets when
+  P2.10.4 becomes eligible.
 - **2026-07-07 — top-down Z3/cvc5 gap re-audit COMMITTED
   ([gap-analysis-z3-cvc5-2026-07-07.md](docs/plan/gap-analysis-z3-cvc5-2026-07-07.md));
   PLAN.md's leverage order superseded.** The audit (grounded in the scoreboard
@@ -621,7 +653,7 @@ plan is built and committed on the current branch:
 |---|---|---|
 | P5.1 | Reflection front end (crate-ify the MIR+LLVM reflectors, full `.ll` parser, MIR extraction pipeline, loops→`TransitionSystem`, memory beyond byte arrays) | WIP — **T5.1.1 DONE (`cc695925`, ADR-0057)**: the reflectors are now the real library module `axeyum_verify::reflect` (`src/reflect/{mod,mir,llvm}.rs`, submodules `reflect::mir`/`reflect::llvm`), no longer per-test scaffolding — 8 test binaries (62 tests) rewired to `use axeyum_verify::reflect::…` and green, `missing_docs`+`implicit_hasher` API-hardened, clippy/rustdoc `-D warnings` clean; the crate split is deferred (one consumer today). The prototyped *capability* (rounds Q–U, design log `docs/consumer-track/verify/reflect-common-abstraction.md`): CFG symbolic executors for both IRs over one shared op vocabulary; 16 cross-IR equivalence proofs (MIR≡LLVM per function, LLVM O0≡O2, if-conversion/strength-reduction/umin-idiom validated, hypothesis-gated `unreachable`); 5-shape wrong-transform refutation corpus with replay-checked countermodels; exact panic specs from rustc's own checks (overflow, division `b==0` / signed `∨ (a==MIN ∧ b==-1)`, bounds over all 2^64 indices) with `catch_unwind` witness replay; checksum micro-module end-to-end on both platforms. Remaining T5.1.2–6: token-level `.ll` parser for unmodified compiler output, build-time MIR extraction, automatic loop bridging, `gep`/`load`/`store` + array writes, the semantics gate. Individual proofs are milliseconds — the suites already run as ordinary per-commit tests |
 | P5.2 | Contracts & modular verification (`#[requires]`/`#[ensures]`, calls as composition) | TODO — the architectural unlock for cross-function claims; exit: the checksum module re-proves modularly (without the MIR inliner), with a modular-vs-inlined differential gate at DISAGREE=0 |
-| P5.3 | Kernel obligations: bounded memory/page-table math, 2-safety/constant-time via self-composition, protocol-FSM refinement | WIP — **T5.3.1 (branch leakage) DONE (`ac7494f0`)**: `reflect::hyper::control_flow_ct_goal` proves **constant-time** by self-composition — the MIR reflector records `switchInt` scrutinees as control-flow leakage (`reflect_mir_params_with_leaks`), and two runs (shared-public / distinct-secret) must leak identical branch decisions. `constant_time.rs` (4 tests): public-predicated PROVED CT while its output is refuted secret-independent (the crisp distinction), secret-predicated REFUTED with a replay-checked witness, branch-free trivially CT. Residual: memory-index (cache-timing) + LLVM-side leakage; page-table math waits on P5.1 memory (T5.1.5); FSM refinement (T5.3.3) unblocked next |
+| P5.3 | Kernel obligations: bounded memory/page-table math, 2-safety/constant-time via self-composition, protocol-FSM refinement | WIP — **T5.3.1 (branch leakage) DONE (`ac7494f0`)**: `reflect::hyper::control_flow_ct_goal` proves **constant-time** by self-composition — the MIR reflector records `switchInt` scrutinees as control-flow leakage (`reflect_mir_params_with_leaks`), and two runs (shared-public / distinct-secret) must leak identical branch decisions. `constant_time.rs` (4 tests): public-predicated PROVED CT while its output is refuted secret-independent (the crisp distinction), secret-predicated REFUTED with a replay-checked witness, branch-free trivially CT. Residual: memory-index (cache-timing) + LLVM-side leakage; page-table math waits on P5.1 memory (T5.1.5); FSM refinement (T5.3.3) unblocked next. 2026-07-08 provable-security scout adds a future crypto micro-suite demand signal here (constant-time kernels + transcript/protocol examples), after current P5.3/P5.4 obligations stabilize |
 | P5.4 | Fuzz-oracle loop (reflections as differential oracles, countermodels as seed corpora + generated `#[test]`s, honest `unknown`→directed-fuzz handoff) | WIP — **T5.4.1 DONE (`2423eaeb`)**: `reflect::oracle::DiffFuzz` is the reusable differential-fuzz harness (both shapes: reflection≡reflection via `check_agree`, reflection≡real-fn via `check_against`; deterministic LCG+corners; `FuzzReport`/`assert_agreed` for DISAGREE=0). Two suites collapsed onto it (cross-IR differential fuzz, checksum module oracle). Remaining: convert the `llvm_reflection` buffer/mixed-width loops (T5.4.1 residual); countermodels→seed corpora + generated `#[test]`s (T5.4.2); `unknown`→directed-fuzz handoff (T5.4.3); coverage accounting (T5.4.4) |
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
@@ -751,6 +783,18 @@ plan is built and committed on the current branch:
   assignment through propagation. Focused gates passed: fmt check, LIA/LRA
   module tests, `cdclt_lia_online`/`cdclt_lra_online`, and
   `cargo check -p axeyum-solver --tests`.
+- **2026-07-08 — Provable-security roadmap intake from
+  [The Joy of Cryptography](https://joyofcryptography.com/).**
+  Added a docs-only integration note:
+  [docs/plan/provable-security-integration.md](docs/plan/provable-security-integration.md).
+  The note maps game-based proofs into existing lanes: Track 5
+  constant-time/protocol/transcript examples, Track 4 scenario packs,
+  Track 3 game-hop evidence recipes, P2.10 finite-field demand, and the
+  foundational-books decidability lens. Explicit non-goal: no production crypto,
+  no random-oracle trusted core, no solver-priority reorder, and no bounded-SMT
+  claim of computational security. Linked from
+  [docs/plan/README.md](docs/plan/README.md) and
+  [docs/curriculum/foundational-books/README.md](docs/curriculum/foundational-books/README.md).
 - **2026-07-07 — Z3/cvc5 gap re-audit: new dated analysis
   (`docs/plan/gap-analysis-z3-cvc5-2026-07-07.md`) + PLAN.md leverage order
   superseded.** Grounded in the generated scoreboard (992/727≈73%,

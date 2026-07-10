@@ -2121,19 +2121,19 @@ fn rebuild_app(arena: &mut TermArena, op: Op, args: &[TermId]) -> Result<TermId,
 }
 
 /// One materialised `select(base, index)` abstraction site.
-#[derive(Clone)]
-struct RowSite {
+#[derive(Debug, Clone)]
+pub(crate) struct RowSite {
     /// The fresh scalar variable that abstracts this read's result.
-    fresh: SymbolId,
+    pub(crate) fresh: SymbolId,
     /// The (already-rewritten) index term.
-    index: TermId,
+    pub(crate) index: TermId,
     /// How the read resolves: a store (ROW), a variable, or a constant array.
-    kind: RowKind,
+    pub(crate) kind: RowKind,
 }
 
 /// How an abstracted read resolves under the read-over-write axiom.
-#[derive(Clone)]
-enum RowKind {
+#[derive(Debug, Clone)]
+pub(crate) enum RowKind {
     /// `select(store(_, store_index, store_elem), index)`; `inner` is the
     /// already-abstracted scalar expression for `select(base', index)`.
     Store {
@@ -2145,6 +2145,12 @@ enum RowKind {
     Var { array: SymbolId },
     /// `select((as const _) value, index)`.
     Const { value: TermId },
+}
+
+/// Array-read relaxation reused by the canonical online ABV/AUFBV route.
+pub(crate) struct OnlineRowAbstraction {
+    pub(crate) assertions: Vec<TermId>,
+    pub(crate) sites: Vec<RowSite>,
 }
 
 /// One abstracted array (dis)equality atom `a = b` between two array-sorted
@@ -2442,6 +2448,57 @@ impl RowCtx {
         let idx = self.array_eq_atom(arena, lhs, rhs)?;
         Ok(self.eq_atoms[idx].flag)
     }
+}
+
+/// Builds the existing lazy-ROW scalar abstraction without entering its
+/// one-shot CEGAR loop. `None` means the array shape is outside that exact
+/// store/variable/const/ite fragment.
+pub(crate) fn abstract_rows_for_online(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+) -> Result<Option<OnlineRowAbstraction>, SolverError> {
+    let mut ctx = RowCtx::default();
+    let mut abstracted = Vec::with_capacity(assertions.len());
+    for &assertion in assertions {
+        let Some(term) = ctx.abstract_term(arena, assertion)? else {
+            return Ok(None);
+        };
+        abstracted.push(term);
+    }
+
+    for site in &ctx.sites {
+        if let RowKind::Const { value } = &site.kind {
+            let read = arena.var(site.fresh);
+            abstracted.push(arena.eq(read, *value).map_err(|error| {
+                SolverError::Backend(format!("online lazy-ROW const lemma build failed: {error}"))
+            })?);
+        }
+    }
+    Ok(Some(OnlineRowAbstraction {
+        assertions: abstracted,
+        sites: ctx.sites,
+    }))
+}
+
+/// Reconstructs base-array values from the variable-read sites of a consistent
+/// online ROW candidate. Store sites are checked by their materialized ROW
+/// axioms and therefore do not directly define base-array entries.
+pub(crate) fn project_online_row_assignment(
+    arena: &TermArena,
+    sites: &[RowSite],
+    assignment: &Assignment,
+) -> Result<Assignment, SolverError> {
+    let ctx = RowCtx {
+        sites: sites.to_vec(),
+        ..RowCtx::default()
+    };
+    let arrays =
+        collect_base_array_entries(arena, &ctx, assignment, "online ROW projection failed")?;
+    let mut projected = complete_assignment(arena, assignment);
+    for (array, entries) in arrays {
+        projected.set(array, array_value_from_entries(arena, array, &entries)?);
+    }
+    Ok(projected)
 }
 
 /// The lazy-ROW CEGAR loop over `substituted` (array-equality-free) assertions,

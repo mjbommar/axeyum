@@ -1,9 +1,9 @@
 //! Canonical online `QF_UFBV`/base-select `QF_ABV`/`QF_AUFBV` combination over
 //! [`crate::cdclt::CdclT`].
 //!
-//! Arrays are first rewritten through [`axeyum_rewrite::abstract_arrays`], which
-//! applies exact read-over-write and replaces residual base-array selects without
-//! eager pair constraints. Uninterpreted applications are then replaced by fresh
+//! Array reads are first replaced by the shared lazy-ROW abstraction: base selects
+//! and reads through stores receive fresh scalar results, while store hit/miss
+//! axioms are deferred. Uninterpreted applications are then replaced by fresh
 //! scalar symbols through [`axeyum_rewrite::abstract_functions`], also without
 //! eager Ackermann constraints.
 //! The Boolean structure is Tseitin-encoded once per canonical round. The first
@@ -20,10 +20,11 @@
 //!
 //! The first round is the function-free relaxation. A SAT candidate is scanned for
 //! same-function applications with equal argument values and unequal result values,
-//! plus same-array selects with equal indices and unequal results. Only violated
-//! pairs materialize argument/index and result equalities for the next round.
-//! Congruent applications use the e-graph; array pairs add their valid congruence
-//! implication directly to the Boolean skeleton. Exact BV owns every scalar atom.
+//! plus same-array selects with equal indices and unequal results, and store-read
+//! sites whose result violates read-over-write. Only violated pairs/sites
+//! materialize argument/index/result equalities or hit/miss axioms for the next
+//! round. Congruent applications use the e-graph; array facts add valid implications
+//! directly to the Boolean skeleton. Exact BV owns every scalar atom.
 //! The loop reaches a replaying model, relaxation UNSAT, or explicit
 //! round/interface/deadline bounds. Eager reductions remain fallbacks and
 //! differential oracles.
@@ -31,7 +32,8 @@
 //! Soundness:
 //! - each partial interface set is a relaxation of full UF/array consistency, so
 //!   UNSAT from any round implies original-query UNSAT;
-//! - each materialized array implication is a valid select-congruence instance;
+//! - each materialized array implication is a valid select-congruence or
+//!   read-over-write instance;
 //! - every BV conflict is a re-solved UNSAT conjunction of the reported active
 //!   literals;
 //! - every EUF conflict/propagation is an e-graph explanation;
@@ -47,11 +49,9 @@ use axeyum_ir::{
     ArraySortKey, Assignment, FuncId, Op, Sort, SymbolId, TermArena, TermId, TermNode, TermStats,
     Value, eval,
 };
-use axeyum_rewrite::{
-    ArrayAbstraction, ArrayElimError, FuncElimError, FunctionAbstraction, abstract_arrays,
-    abstract_functions, replace_subterms,
-};
+use axeyum_rewrite::{FuncElimError, FunctionAbstraction, abstract_functions, replace_subterms};
 
+use crate::abv::{RowKind, RowSite, abstract_rows_for_online, project_online_row_assignment};
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
 use crate::cdclt::{CdclT, Lit as CdcltLit, Outcome};
 use crate::euf_egraph::{Encoder, EufTheory, TheoryLit, TheoryProp, TheorySolver};
@@ -99,6 +99,15 @@ struct CombinedSelect {
     fresh: SymbolId,
 }
 
+#[derive(Debug, Clone)]
+struct CombinedRowStore {
+    original: RowSite,
+    rewritten_index: TermId,
+    rewritten_store_index: TermId,
+    rewritten_store_elem: TermId,
+    rewritten_inner: TermId,
+}
+
 enum WalkError {
     Timeout,
     NonBoolean(TermId),
@@ -113,12 +122,22 @@ enum BuildFailure {
 type BuildResult<T> = Result<T, BuildFailure>;
 
 struct PreparedAbstraction {
-    arrays: ArrayAbstraction,
+    had_arrays: bool,
+    row_sites: Vec<RowSite>,
     semantic_assertions: Vec<TermId>,
+    abstracted_assertions: Vec<TermId>,
     abstraction: FunctionAbstraction,
     applications: Vec<CombinedApplication>,
     selects: Vec<CombinedSelect>,
+    row_stores: Vec<CombinedRowStore>,
     replacements: HashMap<TermId, TermId>,
+}
+
+struct PreparedArrayRoots {
+    had_arrays: bool,
+    semantic_assertions: Vec<TermId>,
+    row_sites: Vec<RowSite>,
+    function_roots: Vec<TermId>,
 }
 
 struct TheoryAtoms {
@@ -190,6 +209,7 @@ struct InterfaceRefinementStats {
     pairs_added: usize,
     function_pairs_added: usize,
     array_pairs_added: usize,
+    row_axioms_added: usize,
     max_interface_atoms: usize,
 }
 
@@ -565,11 +585,11 @@ pub fn check_qf_ufbv_online_cdclt(
 /// bit-vector uninterpreted functions, through replay-guided canonical `CdclT`
 /// rounds.
 ///
-/// Read-over-write is exact and eager. Base-array selects start as independent
-/// fresh scalar results; only candidate pairs with equal indices and unequal
-/// results materialize a valid select-congruence implication. Function
-/// applications use the same dynamic interface path. SAT is accepted only after
-/// projecting functions, then arrays, and replaying the original query.
+/// Base-array selects and reads through stores start as independent fresh scalar
+/// results. Candidate equal-index/unequal-result pairs materialize select
+/// congruence; violated store reads materialize the exact hit/miss ROW axiom.
+/// Function applications use the same dynamic interface path. SAT is accepted
+/// only after projecting functions, then arrays, and replaying the original query.
 ///
 /// # Errors
 ///
@@ -621,6 +641,7 @@ fn build_and_solve_arrays_with_stats(
     build_and_solve_with_stats_impl(arena, assertions, config, deadline, true)
 }
 
+#[allow(clippy::too_many_lines)]
 fn build_and_solve_with_stats_impl(
     arena: &mut TermArena,
     assertions: &[TermId],
@@ -635,8 +656,10 @@ fn build_and_solve_with_stats_impl(
     let mut ground_values = GroundValueCache::default();
     let mut function_pairs = Vec::new();
     let mut array_pairs = Vec::new();
+    let mut row_axioms = Vec::new();
     let mut materialized_functions = HashSet::new();
     let mut materialized_arrays = HashSet::new();
+    let mut materialized_rows = HashSet::new();
     let mut interface_count = 0usize;
     let mut stats = InterfaceRefinementStats::default();
 
@@ -645,8 +668,14 @@ fn build_and_solve_with_stats_impl(
     // either replay or expose at least one new violated application pair.
     loop {
         stats.rounds += 1;
-        let (atoms, round_assertions) =
-            build_theory_atoms(arena, &prepared, &function_pairs, &array_pairs, deadline)?;
+        let (atoms, round_assertions) = build_theory_atoms(
+            arena,
+            &prepared,
+            &function_pairs,
+            &array_pairs,
+            &row_axioms,
+            deadline,
+        )?;
         stats.max_interface_atoms = stats.max_interface_atoms.max(
             atoms
                 .propagation_candidates
@@ -679,7 +708,17 @@ fn build_and_solve_with_stats_impl(
                     &mut ground_values,
                     deadline,
                 )?;
-                if violated_functions.is_empty() && violated_arrays.is_empty() {
+                let violated_rows = violated_row_stores(
+                    arena,
+                    &prepared.row_stores,
+                    &assignment,
+                    &materialized_rows,
+                    deadline,
+                )?;
+                if violated_functions.is_empty()
+                    && violated_arrays.is_empty()
+                    && violated_rows.is_empty()
+                {
                     return Ok((
                         project_replay_composed(arena, &prepared, assertions, &assignment),
                         stats,
@@ -705,7 +744,7 @@ fn build_and_solve_with_stats_impl(
                             .saturating_add(1),
                     );
                     if interface_count > MAX_INTERFACE_ATOMS {
-                        return Ok((interface_limit_unknown(prepared.arrays.had_arrays()), stats));
+                        return Ok((interface_limit_unknown(prepared.had_arrays), stats));
                     }
                     if materialized_functions.insert(pair) {
                         function_pairs.push(pair);
@@ -722,6 +761,16 @@ fn build_and_solve_with_stats_impl(
                         array_pairs.push(pair);
                         stats.pairs_added += 1;
                         stats.array_pairs_added += 1;
+                    }
+                }
+                for site in violated_rows {
+                    interface_count = interface_count.saturating_add(3);
+                    if interface_count > MAX_INTERFACE_ATOMS {
+                        return Ok((interface_limit_unknown(true), stats));
+                    }
+                    if materialized_rows.insert(site) {
+                        row_axioms.push(site);
+                        stats.row_axioms_added += 1;
                     }
                 }
             }
@@ -868,22 +917,119 @@ fn uses_only_bool_bv_and_admitted_arrays(
     true
 }
 
+fn contains_array_terms(arena: &TermArena, assertions: &[TermId]) -> bool {
+    let mut seen = HashSet::new();
+    let mut stack = assertions.to_vec();
+    while let Some(term) = stack.pop() {
+        if !seen.insert(term) {
+            continue;
+        }
+        if matches!(arena.sort_of(term), Sort::Array { .. }) {
+            return true;
+        }
+        if let TermNode::App { args, .. } = arena.node(term) {
+            stack.extend(args.iter().copied());
+        }
+    }
+    false
+}
+
+fn prepare_array_roots(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    admit_arrays: bool,
+) -> BuildResult<PreparedArrayRoots> {
+    let had_arrays = contains_array_terms(arena, assertions);
+    if had_arrays && !admit_arrays {
+        return Err(BuildFailure::Error(SolverError::Unsupported(
+            "online UFBV combination does not admit arrays".to_owned(),
+        )));
+    }
+    let (semantic_assertions, row_sites) = if had_arrays {
+        let Some(rows) = abstract_rows_for_online(arena, assertions)? else {
+            return Err(BuildFailure::Error(SolverError::Unsupported(
+                "online AUFBV lazy-ROW abstraction does not admit this array shape".to_owned(),
+            )));
+        };
+        (rows.assertions, rows.sites)
+    } else {
+        (assertions.to_vec(), Vec::new())
+    };
+    let mut roots = semantic_assertions.clone();
+    for site in &row_sites {
+        roots.push(site.index);
+        match site.kind {
+            RowKind::Store {
+                store_index,
+                store_elem,
+                inner,
+            } => roots.extend([store_index, store_elem, inner]),
+            RowKind::Const { value } => roots.push(value),
+            RowKind::Var { .. } => {}
+        }
+    }
+    Ok(PreparedArrayRoots {
+        had_arrays,
+        semantic_assertions,
+        row_sites,
+        function_roots: roots,
+    })
+}
+
+fn combine_row_sites(
+    arena: &mut TermArena,
+    row_sites: &[RowSite],
+    replacements: &HashMap<TermId, TermId>,
+) -> BuildResult<(Vec<CombinedSelect>, Vec<CombinedRowStore>)> {
+    let mut memo = HashMap::new();
+    let mut selects = Vec::new();
+    let mut stores = Vec::new();
+    for site in row_sites {
+        let rewritten_index = replace_subterms(arena, site.index, replacements, &mut memo)?;
+        match site.kind {
+            RowKind::Var { array } => selects.push(CombinedSelect {
+                array,
+                original_index: site.index,
+                rewritten_index,
+                fresh: site.fresh,
+            }),
+            RowKind::Store {
+                store_index,
+                store_elem,
+                inner,
+            } => stores.push(CombinedRowStore {
+                original: site.clone(),
+                rewritten_index,
+                rewritten_store_index: replace_subterms(
+                    arena,
+                    store_index,
+                    replacements,
+                    &mut memo,
+                )?,
+                rewritten_store_elem: replace_subterms(arena, store_elem, replacements, &mut memo)?,
+                rewritten_inner: replace_subterms(arena, inner, replacements, &mut memo)?,
+            }),
+            RowKind::Const { .. } => {}
+        }
+    }
+    Ok((selects, stores))
+}
+
 fn prepare_abstraction(
     arena: &mut TermArena,
     assertions: &[TermId],
     deadline: Option<Instant>,
     admit_arrays: bool,
 ) -> BuildResult<PreparedAbstraction> {
-    let arrays = abstract_arrays(arena, assertions).map_err(map_array_elim_error)?;
-    if arrays.had_arrays() && !admit_arrays {
-        return Err(BuildFailure::Error(SolverError::Unsupported(
-            "online UFBV combination does not admit arrays".to_owned(),
-        )));
-    }
-    let semantic_assertions = arrays.assertions().to_vec();
-    let array_selects = arrays.selects();
+    let PreparedArrayRoots {
+        had_arrays,
+        semantic_assertions,
+        row_sites,
+        function_roots,
+    } = prepare_array_roots(arena, assertions, admit_arrays)?;
+    let semantic_count = semantic_assertions.len();
     let original_applications =
-        match collect_original_applications(arena, &semantic_assertions, deadline) {
+        match collect_original_applications(arena, &function_roots, deadline) {
             Ok(applications) => applications,
             Err(WalkError::Timeout) => {
                 return Err(build_unknown(
@@ -895,13 +1041,14 @@ fn prepare_abstraction(
                 return Err(BuildFailure::Error(SolverError::NonBooleanAssertion(term)));
             }
         };
-    if original_applications.is_empty() && array_selects.is_empty() {
+    if original_applications.is_empty() && row_sites.is_empty() {
         return Err(BuildFailure::Error(SolverError::Unsupported(
-            "online UFBV/AUFBV combination requires an applied uninterpreted function or base-array select"
+            "online UFBV/AUFBV combination requires an applied uninterpreted function or abstracted array read"
                 .to_owned(),
         )));
     }
-    let abstraction = abstract_functions(arena, &semantic_assertions).map_err(map_elim_error)?;
+    let abstraction = abstract_functions(arena, &function_roots).map_err(map_elim_error)?;
+    let abstracted_assertions = abstraction.assertions()[..semantic_count].to_vec();
     let rewritten_applications: Vec<(FuncId, Vec<TermId>, axeyum_ir::SymbolId)> = abstraction
         .applications()
         .into_iter()
@@ -931,24 +1078,16 @@ fn prepare_abstraction(
             fresh,
         });
     }
-    let mut select_memo = HashMap::new();
-    let mut selects = Vec::with_capacity(array_selects.len());
-    for (array, original_index, fresh) in array_selects {
-        let rewritten_index =
-            replace_subterms(arena, original_index, &replacements, &mut select_memo)?;
-        selects.push(CombinedSelect {
-            array,
-            original_index,
-            rewritten_index,
-            fresh,
-        });
-    }
+    let (selects, row_stores) = combine_row_sites(arena, &row_sites, &replacements)?;
     Ok(PreparedAbstraction {
-        arrays,
+        had_arrays,
+        row_sites,
         semantic_assertions,
+        abstracted_assertions,
         abstraction,
         applications,
         selects,
+        row_stores,
         replacements,
     })
 }
@@ -958,6 +1097,7 @@ fn build_theory_atoms(
     prepared: &PreparedAbstraction,
     function_pairs: &[(usize, usize)],
     array_pairs: &[(usize, usize)],
+    row_axioms: &[usize],
     deadline: Option<Instant>,
 ) -> BuildResult<(TheoryAtoms, Vec<TermId>)> {
     let mut atoms = AtomAccumulator::default();
@@ -995,11 +1135,19 @@ fn build_theory_atoms(
         deadline,
         &mut atoms,
     )?;
-    let mut round_assertions = prepared.abstraction.assertions().to_vec();
+    let mut round_assertions = prepared.abstracted_assertions.clone();
     add_array_interface_atoms(
         arena,
         &prepared.selects,
         array_pairs,
+        deadline,
+        &mut atoms,
+        &mut round_assertions,
+    )?;
+    add_row_axiom_atoms(
+        arena,
+        &prepared.row_stores,
+        row_axioms,
         deadline,
         &mut atoms,
         &mut round_assertions,
@@ -1130,6 +1278,45 @@ fn violated_select_pairs(
                     violated.push(pair);
                 }
             }
+        }
+    }
+    Ok(violated)
+}
+
+fn violated_row_stores(
+    arena: &TermArena,
+    stores: &[CombinedRowStore],
+    assignment: &Assignment,
+    materialized: &HashSet<usize>,
+    deadline: Option<Instant>,
+) -> BuildResult<Vec<usize>> {
+    let mut violated = Vec::new();
+    for (index, store) in stores.iter().enumerate() {
+        if materialized.contains(&index) {
+            continue;
+        }
+        if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
+            return Err(build_unknown(
+                UnknownKind::Timeout,
+                "online AUFBV deadline elapsed while refining ROW axioms",
+            ));
+        }
+        let Ok(read_index) = eval(arena, store.rewritten_index, assignment) else {
+            continue;
+        };
+        let Ok(store_index) = eval(arena, store.rewritten_store_index, assignment) else {
+            continue;
+        };
+        let Some(actual) = assignment.get(store.original.fresh) else {
+            continue;
+        };
+        let expected_term = if read_index == store_index {
+            store.rewritten_store_elem
+        } else {
+            store.rewritten_inner
+        };
+        if matches!(eval(arena, expected_term, assignment), Ok(expected) if actual != expected) {
+            violated.push(index);
         }
     }
     Ok(violated)
@@ -1292,6 +1479,52 @@ fn add_array_interface_atoms(
     Ok(())
 }
 
+fn add_row_axiom_atoms(
+    arena: &mut TermArena,
+    stores: &[CombinedRowStore],
+    sites: &[usize],
+    deadline: Option<Instant>,
+    atoms: &mut AtomAccumulator,
+    round_assertions: &mut Vec<TermId>,
+) -> BuildResult<()> {
+    for &site in sites {
+        if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
+            return Err(build_unknown(
+                UnknownKind::Timeout,
+                "online AUFBV deadline elapsed while building ROW axioms",
+            ));
+        }
+        let store = &stores[site];
+        let RowKind::Store {
+            store_index,
+            store_elem,
+            inner,
+        } = store.original.kind
+        else {
+            return Err(BuildFailure::Error(SolverError::Backend(
+                "online ROW metadata lost its store kind".to_owned(),
+            )));
+        };
+        let original_same = arena.eq(store.original.index, store_index)?;
+        let abstract_same = arena.eq(store.rewritten_index, store.rewritten_store_index)?;
+        atoms.register(arena, original_same, abstract_same, true)?;
+
+        let result = arena.var(store.original.fresh);
+        let original_hit = arena.eq(result, store_elem)?;
+        let abstract_hit = arena.eq(result, store.rewritten_store_elem)?;
+        atoms.register(arena, original_hit, abstract_hit, true)?;
+        let original_miss = arena.eq(result, inner)?;
+        let abstract_miss = arena.eq(result, store.rewritten_inner)?;
+        atoms.register(arena, original_miss, abstract_miss, true)?;
+
+        let hit = arena.implies(abstract_same, abstract_hit)?;
+        let different = arena.not(abstract_same)?;
+        let miss = arena.implies(different, abstract_miss)?;
+        round_assertions.push(arena.and(hit, miss)?);
+    }
+    Ok(())
+}
+
 fn encode_boolean_skeleton(
     arena: &TermArena,
     assertions: &[TermId],
@@ -1448,13 +1681,6 @@ fn map_elim_error(error: FuncElimError) -> SolverError {
     }
 }
 
-fn map_array_elim_error(error: ArrayElimError) -> SolverError {
-    match error {
-        ArrayElimError::Unsupported(message) => SolverError::Unsupported(message),
-        ArrayElimError::Ir(error) => SolverError::Backend(error.to_string()),
-    }
-}
-
 fn project_replay_composed(
     arena: &TermArena,
     prepared: &PreparedAbstraction,
@@ -1470,14 +1696,18 @@ fn project_replay_composed(
             );
         }
     };
-    let projected = match prepared.arrays.project_model(arena, &with_functions) {
-        Ok(projected) => projected,
-        Err(error) => {
-            return unknown(
-                UnknownKind::Incomplete,
-                format!("online AUFBV array projection failed: {error}"),
-            );
+    let projected = if prepared.had_arrays {
+        match project_online_row_assignment(arena, &prepared.row_sites, &with_functions) {
+            Ok(projected) => projected,
+            Err(error) => {
+                return unknown(
+                    UnknownKind::Incomplete,
+                    format!("online AUFBV array projection failed: {error}"),
+                );
+            }
         }
+    } else {
+        with_functions
     };
 
     for &assertion in assertions {
@@ -1515,7 +1745,7 @@ fn project_replay_composed(
 
     let mut model = Model::new();
     for (symbol, name, _sort) in arena.symbols() {
-        if name.starts_with("!arr_sel_") || name.starts_with("!fn_app_") {
+        if name.starts_with("!row_sel_") || name.starts_with("!fn_app_") {
             continue;
         }
         if let Some(value) = projected.get(symbol) {
@@ -1570,8 +1800,9 @@ mod tests {
         let groups = application_groups(&prepared.applications);
         let pairs = relevant_application_pairs(arena, &prepared.applications, &groups, None)
             .expect("bounded UFBV case should select interface pairs");
-        let (atoms, round_assertions) = build_theory_atoms(arena, &prepared, &pairs, &[], None)
-            .expect("bounded UFBV case should build theory atoms");
+        let (atoms, round_assertions) =
+            build_theory_atoms(arena, &prepared, &pairs, &[], &[], None)
+                .expect("bounded UFBV case should build theory atoms");
         let skeleton = encode_boolean_skeleton(arena, &round_assertions, &atoms.abstracted, None)
             .expect("bounded UFBV case should encode");
         let negative = atoms
@@ -1966,6 +2197,96 @@ mod tests {
         assert_eq!(stats.array_pairs_added, 1, "stats={stats:?}");
         assert_eq!(stats.function_pairs_added, 1, "stats={stats:?}");
         assert_eq!(stats.pairs_added, 2, "stats={stats:?}");
+    }
+
+    #[test]
+    fn row_store_hit_materializes_one_axiom() {
+        let mut arena = TermArena::new();
+        let array = arena.array_var("dynamic_row_hit_array", 4, 8).unwrap();
+        let index = arena.bv_var("dynamic_row_hit_index", 4).unwrap();
+        let value = arena.bv_var("dynamic_row_hit_value", 8).unwrap();
+        let stored = arena.store(array, index, value).unwrap();
+        let read = arena.select(stored, index).unwrap();
+        let same = arena.eq(read, value).unwrap();
+        let different = arena.not(same).unwrap();
+
+        let (result, stats) = dynamic_array_solve_stats(&mut arena, &[different]);
+        assert_eq!(result, CheckResult::Unsat);
+        assert_eq!(stats.rounds, 2, "stats={stats:?}");
+        assert_eq!(stats.sat_candidates, 1, "stats={stats:?}");
+        assert_eq!(stats.row_axioms_added, 1, "stats={stats:?}");
+        assert_eq!(stats.array_pairs_added, 0, "stats={stats:?}");
+    }
+
+    #[test]
+    fn row_store_miss_materializes_one_axiom() {
+        let mut arena = TermArena::new();
+        let array = arena.array_var("dynamic_row_miss_array", 4, 8).unwrap();
+        let stored_index = arena.bv_var("dynamic_row_stored_index", 4).unwrap();
+        let read_index = arena.bv_var("dynamic_row_read_index", 4).unwrap();
+        let value = arena.bv_var("dynamic_row_miss_value", 8).unwrap();
+        let stored = arena.store(array, stored_index, value).unwrap();
+        let stored_read = arena.select(stored, read_index).unwrap();
+        let base_read = arena.select(array, read_index).unwrap();
+        let same_index = arena.eq(stored_index, read_index).unwrap();
+        let different_index = arena.not(same_index).unwrap();
+        let same_read = arena.eq(stored_read, base_read).unwrap();
+        let different_read = arena.not(same_read).unwrap();
+
+        let (result, stats) =
+            dynamic_array_solve_stats(&mut arena, &[different_index, different_read]);
+        assert_eq!(result, CheckResult::Unsat);
+        assert_eq!(stats.rounds, 2, "stats={stats:?}");
+        assert_eq!(stats.row_axioms_added, 1, "stats={stats:?}");
+    }
+
+    #[test]
+    fn row_axiom_shares_uf_bearing_indices_with_euf() {
+        let mut arena = TermArena::new();
+        let array = arena.array_var("dynamic_row_uf_array", 4, 8).unwrap();
+        let function = arena
+            .declare_fun("dynamic_row_index_f", &[Sort::BitVec(4)], Sort::BitVec(4))
+            .unwrap();
+        let x = arena.bv_var("dynamic_row_uf_x", 4).unwrap();
+        let y = arena.bv_var("dynamic_row_uf_y", 4).unwrap();
+        let value = arena.bv_var("dynamic_row_uf_value", 8).unwrap();
+        let fx = arena.apply(function, &[x]).unwrap();
+        let fy = arena.apply(function, &[y]).unwrap();
+        let stored = arena.store(array, fx, value).unwrap();
+        let read = arena.select(stored, fy).unwrap();
+        let same_arg = arena.eq(x, y).unwrap();
+        let same_value = arena.eq(read, value).unwrap();
+        let different_value = arena.not(same_value).unwrap();
+
+        let (result, stats) = dynamic_array_solve_stats(&mut arena, &[same_arg, different_value]);
+        assert_eq!(result, CheckResult::Unsat);
+        assert!(stats.row_axioms_added >= 1, "stats={stats:?}");
+        assert!(stats.rounds <= 3, "stats={stats:?}");
+    }
+
+    #[test]
+    fn concrete_miss_store_chain_replays_without_row_axioms() {
+        let mut arena = TermArena::new();
+        let array = arena.array_var("dynamic_row_chain_array", 8, 8).unwrap();
+        let key = arena.bv_var("dynamic_row_chain_key", 8).unwrap();
+        let base_read = arena.select(array, key).unwrap();
+        let mut memory = array;
+        let mut assertions = Vec::new();
+        for ordinal in 0..24 {
+            let index = arena.bv_const(8, ordinal).unwrap();
+            let value = arena.bv_const(8, ordinal + 1).unwrap();
+            memory = arena.store(memory, index, value).unwrap();
+            let same = arena.eq(key, index).unwrap();
+            assertions.push(arena.not(same).unwrap());
+        }
+        let read = arena.select(memory, key).unwrap();
+        assertions.push(arena.eq(read, base_read).unwrap());
+
+        let (result, stats) = dynamic_array_solve_stats(&mut arena, &assertions);
+        assert!(matches!(result, CheckResult::Sat(_)), "stats={stats:?}");
+        assert_eq!(stats.rounds, 1, "stats={stats:?}");
+        assert_eq!(stats.row_axioms_added, 0, "stats={stats:?}");
+        assert_eq!(stats.array_pairs_added, 0, "stats={stats:?}");
     }
 
     #[test]

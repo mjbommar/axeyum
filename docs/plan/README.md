@@ -17,6 +17,10 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   leverage list toward 100% Pareto dominance
   ([`gap-analysis-z3-cvc5-2026-06-22.md`](gap-analysis-z3-cvc5-2026-06-22.md)
   is the historical baseline it supersedes).
+- [`provable-security-integration.md`](provable-security-integration.md) — how
+  provable-security/game-based cryptography ideas should feed Track 5,
+  proof-cookbook work, scenario corpora, and finite-field demand without
+  reordering the current parity queue.
 - [`track-1-engine/`](track-1-engine/README.md) — Engine & Performance.
 - [`track-2-theories/`](track-2-theories/README.md) — Theories & Breadth.
 - [`track-3-proof-lean/`](track-3-proof-lean/README.md) — Proofs & Lean.
