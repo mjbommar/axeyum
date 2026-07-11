@@ -129,7 +129,8 @@ fn product_within<F: FnMut() -> bool>(
             }
             let guard = g1.and(g2);
             if !guard.is_empty() {
-                out.push((guard, canon(&f(r1, r2))));
+                let residual = canon_within(&f(r1, r2), over)?;
+                out.push((guard, residual));
             }
         }
     }
@@ -206,16 +207,19 @@ fn deriv_raw_within<F: FnMut() -> bool>(r: &Regex, over: &mut F) -> Option<Vec<(
             return product_within(&da, &db, |x, y| Regex::inter(x.clone(), y.clone()), over);
         }
         // ∂(∁R) = ∁∂R (pointwise).
-        Regex::Comp(a) => deriv_raw_within(a, over)?
-            .into_iter()
-            .map(|(g, d)| (g, canon(&Regex::comp(d))))
-            .collect(),
+        Regex::Comp(a) => {
+            let mut out = Vec::new();
+            for (g, d) in deriv_raw_within(a, over)? {
+                out.push((g, canon_within(&Regex::comp(d), over)?));
+            }
+            out
+        }
         // ∂(R · S) = ∂R · S  ∪  (nullable R) ∂S.
         Regex::Concat(a, b) => {
-            let part1: Vec<(CharPred, Regex)> = deriv_raw_within(a, over)?
-                .into_iter()
-                .map(|(g, d)| (g, canon(&Regex::concat(d, (**b).clone()))))
-                .collect();
+            let mut part1: Vec<(CharPred, Regex)> = Vec::new();
+            for (g, d) in deriv_raw_within(a, over)? {
+                part1.push((g, canon_within(&Regex::concat(d, (**b).clone()), over)?));
+            }
             if nullable(a) {
                 let db = deriv_raw_within(b, over)?;
                 return product_within(
@@ -228,10 +232,16 @@ fn deriv_raw_within<F: FnMut() -> bool>(r: &Regex, over: &mut F) -> Option<Vec<(
             part1
         }
         // ∂(R*) = ∂R · R*.
-        Regex::Star(a) => deriv_raw_within(a, over)?
-            .into_iter()
-            .map(|(g, d)| (g, canon(&Regex::concat(d, Regex::star((**a).clone())))))
-            .collect(),
+        Regex::Star(a) => {
+            let mut out = Vec::new();
+            for (g, d) in deriv_raw_within(a, over)? {
+                out.push((
+                    g,
+                    canon_within(&Regex::concat(d, Regex::star((**a).clone())), over)?,
+                ));
+            }
+            out
+        }
         // ∂(R{lo,hi}) — native loop step, never pre-unrolled.
         Regex::Loop { inner, lo, hi } => return deriv_loop_within(inner, *lo, *hi, over),
     })
@@ -255,13 +265,13 @@ fn deriv_loop_within<F: FnMut() -> bool>(
     }
     let lo2 = lo.saturating_sub(1);
     let hi2 = hi.map(|h| h - 1);
-    let rest = canon(&Regex::repeat(inner.clone(), lo2, hi2));
+    let rest = canon_within(&Regex::repeat(inner.clone(), lo2, hi2), over)?;
 
     // ∂(R · rest) with `R = inner`.
-    let part1: Vec<(CharPred, Regex)> = deriv_raw_within(inner, over)?
-        .into_iter()
-        .map(|(g, d)| (g, canon(&Regex::concat(d, rest.clone()))))
-        .collect();
+    let mut part1: Vec<(CharPred, Regex)> = Vec::new();
+    for (g, d) in deriv_raw_within(inner, over)? {
+        part1.push((g, canon_within(&Regex::concat(d, rest.clone()), over)?));
+    }
     if nullable(inner) {
         let drest = deriv_raw_within(&rest, over)?;
         product_within(
@@ -284,79 +294,94 @@ fn deriv_loop_within<F: FnMut() -> bool>(
 /// Every rewrite is a semantic identity, so `L(canon(R)) = L(R)`.
 #[must_use]
 pub fn canon(r: &Regex) -> Regex {
+    canon_within(r, &mut || false).expect("canon_within with a never-tripping budget cannot abort")
+}
+
+/// [`canon`] with a caller **stop poll** (`over`) checked at every recursive
+/// canonicalization node and while flattening/rebuilding associative spines.
+///
+/// Returns [`None`] as soon as `over` trips, letting deadline-bounded derivative
+/// and membership searches decline promptly instead of spending an uninterruptible
+/// interval inside one large similarity-canonicalization step. With a
+/// never-tripping `over`, this is result-identical to [`canon`].
+#[must_use]
+pub fn canon_within<F: FnMut() -> bool>(r: &Regex, over: &mut F) -> Option<Regex> {
+    if over() {
+        return None;
+    }
     match r {
-        Regex::Empty | Regex::None => r.clone(),
+        Regex::Empty | Regex::None => Some(r.clone()),
         Regex::Pred(p) => {
             if p.is_empty() {
-                Regex::None
+                Some(Regex::None)
             } else {
-                r.clone()
+                Some(r.clone())
             }
         }
         Regex::Comp(a) => {
-            let a = canon(a);
+            let a = canon_within(a, over)?;
             match a {
-                Regex::Comp(inner) => *inner,
-                other => Regex::comp(other),
+                Regex::Comp(inner) => Some(*inner),
+                other => Some(Regex::comp(other)),
             }
         }
         Regex::Star(a) => {
-            let a = canon(a);
+            let a = canon_within(a, over)?;
             match a {
                 // (R*)* = R*, and it is already canonical.
-                Regex::Star(_) => a,
+                Regex::Star(_) => Some(a),
                 // ε* = ε, ∅* = ε.
-                Regex::Empty | Regex::None => Regex::Empty,
-                other => Regex::star(other),
+                Regex::Empty | Regex::None => Some(Regex::Empty),
+                other => Some(Regex::star(other)),
             }
         }
         Regex::Concat(x, y) => {
             let mut items = Vec::new();
-            push_concat(canon(x), &mut items);
-            push_concat(canon(y), &mut items);
+            push_concat_within(canon_within(x, over)?, &mut items, over)?;
+            push_concat_within(canon_within(y, over)?, &mut items, over)?;
             if items.contains(&Regex::None) {
-                return Regex::None;
+                return Some(Regex::None);
             }
             items.retain(|i| *i != Regex::Empty);
-            match items.len() {
+            Some(match items.len() {
                 0 => Regex::Empty,
                 1 => items.pop().unwrap_or(Regex::Empty),
-                _ => fold_right(items, Regex::concat),
-            }
+                _ => fold_right_within(items, Regex::concat, over)?,
+            })
         }
         Regex::Union(x, y) => {
             let mut items = Vec::new();
-            push_union(canon(x), &mut items);
-            push_union(canon(y), &mut items);
+            push_union_within(canon_within(x, over)?, &mut items, over)?;
+            push_union_within(canon_within(y, over)?, &mut items, over)?;
             items.retain(|i| *i != Regex::None);
             if items.iter().any(Regex::is_universal) {
-                return Regex::universal();
+                return Some(Regex::universal());
             }
             items.sort();
             items.dedup();
-            match items.len() {
+            Some(match items.len() {
                 0 => Regex::None,
                 1 => items.pop().unwrap_or(Regex::None),
-                _ => fold_right(items, Regex::union),
-            }
+                _ => fold_right_within(items, Regex::union, over)?,
+            })
         }
         Regex::Inter(x, y) => {
             let mut items = Vec::new();
-            push_inter(canon(x), &mut items);
-            push_inter(canon(y), &mut items);
+            push_inter_within(canon_within(x, over)?, &mut items, over)?;
+            push_inter_within(canon_within(y, over)?, &mut items, over)?;
             if items.contains(&Regex::None) {
-                return Regex::None;
+                return Some(Regex::None);
             }
             items.retain(|i| !i.is_universal());
             items.sort();
             items.dedup();
-            match items.len() {
+            Some(match items.len() {
                 0 => Regex::universal(),
                 1 => items.pop().unwrap_or_else(Regex::universal),
-                _ => fold_right(items, Regex::inter),
-            }
+                _ => fold_right_within(items, Regex::inter, over)?,
+            })
         }
-        Regex::Loop { inner, lo, hi } => canon_loop(canon(inner), *lo, *hi),
+        Regex::Loop { inner, lo, hi } => Some(canon_loop(canon_within(inner, over)?, *lo, *hi)),
     }
 }
 
@@ -388,46 +413,77 @@ fn canon_loop(inner: Regex, lo: u32, hi: Option<u32>) -> Regex {
 }
 
 /// Flatten a right-associated concat spine, pushing leaves in order.
-fn push_concat(r: Regex, out: &mut Vec<Regex>) {
+fn push_concat_within<F: FnMut() -> bool>(
+    r: Regex,
+    out: &mut Vec<Regex>,
+    over: &mut F,
+) -> Option<()> {
+    if over() {
+        return None;
+    }
     match r {
         Regex::Concat(a, b) => {
-            push_concat(*a, out);
-            push_concat(*b, out);
+            push_concat_within(*a, out, over)?;
+            push_concat_within(*b, out, over)?;
         }
         other => out.push(other),
     }
+    Some(())
 }
 
 /// Flatten a union tree into its leaf set (order-independent; sorted later).
-fn push_union(r: Regex, out: &mut Vec<Regex>) {
+fn push_union_within<F: FnMut() -> bool>(
+    r: Regex,
+    out: &mut Vec<Regex>,
+    over: &mut F,
+) -> Option<()> {
+    if over() {
+        return None;
+    }
     match r {
         Regex::Union(a, b) => {
-            push_union(*a, out);
-            push_union(*b, out);
+            push_union_within(*a, out, over)?;
+            push_union_within(*b, out, over)?;
         }
         other => out.push(other),
     }
+    Some(())
 }
 
 /// Flatten an intersection tree into its leaf set.
-fn push_inter(r: Regex, out: &mut Vec<Regex>) {
+fn push_inter_within<F: FnMut() -> bool>(
+    r: Regex,
+    out: &mut Vec<Regex>,
+    over: &mut F,
+) -> Option<()> {
+    if over() {
+        return None;
+    }
     match r {
         Regex::Inter(a, b) => {
-            push_inter(*a, out);
-            push_inter(*b, out);
+            push_inter_within(*a, out, over)?;
+            push_inter_within(*b, out, over)?;
         }
         other => out.push(other),
     }
+    Some(())
 }
 
 /// Rebuild a right-associated binary tree from `items` (`len >= 2`) using `f`.
-fn fold_right(items: Vec<Regex>, f: impl Fn(Regex, Regex) -> Regex) -> Regex {
+fn fold_right_within<F: FnMut() -> bool>(
+    items: Vec<Regex>,
+    f: impl Fn(Regex, Regex) -> Regex,
+    over: &mut F,
+) -> Option<Regex> {
     let mut iter = items.into_iter().rev();
     let mut acc = iter.next().expect("fold_right: non-empty");
     for item in iter {
+        if over() {
+            return None;
+        }
         acc = f(item, acc);
     }
-    acc
+    Some(acc)
 }
 
 /// The reachable set of canonical residual regexes under repeated derivatives,
@@ -463,19 +519,21 @@ pub fn derivative_closure(regex: &Regex, max_states: usize) -> Closure {
 /// well past a wall-clock deadline before the `max_states` guard trips. This variant
 /// lets a deadline-bounded caller (the online string route's per-assert emptiness
 /// refuter and its `sat`-branch witnessing) keep the closure a first-class, timely
-/// `unknown`. The poll is honored **both** between nodes and **inside** each
-/// derivative via [`derivative_within`], so even one pathological, `Σ*`-enlarged
-/// derivative cannot run uninterrupted for a whole between-node window. A
-/// `Closure::Budget` is always sound: emptiness reasoning only ever concludes
-/// `unsat` on a **`Complete`** nullable-free closure, so an abandoned closure simply
-/// declines.
+/// `unknown`. The poll is honored **both** between nodes and inside the initial
+/// canonicalization ([`canon_within`]) plus each derivative ([`derivative_within`]),
+/// so even one pathological, `Σ*`-enlarged derivative cannot run uninterrupted
+/// for a whole between-node window. A `Closure::Budget` is always sound: emptiness
+/// reasoning only ever concludes `unsat` on a **`Complete`** nullable-free closure,
+/// so an abandoned closure simply declines.
 #[must_use]
 pub fn derivative_closure_within(
     regex: &Regex,
     max_states: usize,
     mut over_deadline: impl FnMut() -> bool,
 ) -> Closure {
-    let start = canon(regex);
+    let Some(start) = canon_within(regex, &mut over_deadline) else {
+        return Closure::Budget;
+    };
     let mut seen: BTreeSet<Regex> = BTreeSet::new();
     let mut worklist: Vec<Regex> = vec![start.clone()];
     seen.insert(start);
@@ -487,11 +545,12 @@ pub fn derivative_closure_within(
         if steps.is_multiple_of(64) && over_deadline() {
             return Closure::Budget;
         }
-        // Poll the deadline INSIDE the derivative frontier too. The 64-expansion
-        // window above is uninterruptible, so a single derivative over a
-        // `Σ*`-enlarged intersection (whose `product` multiplies branch counts
-        // before `coalesce` prunes them) could grind for the whole window — up to
-        // ~64 × the per-derivative cost — before the next between-node poll. The
+        // Poll the deadline INSIDE the derivative/canonicalization frontier too.
+        // The 64-expansion window above is uninterruptible, so a single derivative
+        // over a `Σ*`-enlarged intersection (whose `product` multiplies branch
+        // counts before `coalesce` prunes them) could grind for the whole window
+        // — up to ~64 × the per-derivative cost — before the next between-node
+        // poll. The
         // frontier poll (checked every 256 guard pairs, `Instant` amortized) bounds
         // that overshoot to a single poll interval; a tripped poll ⇒ `None` ⇒ the
         // same timely `Budget` decline the other bounds produce.

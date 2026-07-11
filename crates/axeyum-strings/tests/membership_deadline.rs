@@ -2,11 +2,12 @@
 //! searches (task #54).
 //!
 //! The membership emptiness closure and witness DFS poll their deadline **inside**
-//! each derivative (via `derivative_within`), not only between nodes. This test
-//! pins a *deliberately pathological* `Σ*`-enlarged intersection — the shape a
-//! `str.in_re` over a `str.++` of free vars produces (`R ∩ shape`, where `shape`
-//! injects `Σ*` runs) — and asserts the solver **declines within the deadline's
-//! wall-clock**, not merely within the state cap.
+//! combined-regex canonicalization and each derivative (`canon_within` /
+//! `derivative_within`), not only between nodes. This test pins a *deliberately
+//! pathological* `Σ*`-enlarged intersection — the shape a `str.in_re` over a
+//! `str.++` of free vars produces (`R ∩ shape`, where `shape` injects `Σ*` runs)
+//! — and asserts the solver **declines within the deadline's wall-clock**, not
+//! merely within the state cap.
 //!
 //! Without the in-derivative poll the closure's between-node poll fires only every
 //! 64 expansions, so a single pathological derivative could grind for a whole
@@ -51,6 +52,28 @@ fn pathological() -> Membership {
 
 fn budget_with_deadline() -> SearchBudget {
     SearchBudget::with_deadline(1_000_000, Instant::now() + DEADLINE)
+}
+
+fn past_deadline_budget() -> SearchBudget {
+    SearchBudget::with_deadline(1_000_000, Instant::now() - Duration::from_millis(1))
+}
+
+#[test]
+fn solve_declines_before_combined_canonicalization_when_deadline_already_passed() {
+    let m = pathological();
+    let t = Instant::now();
+    let outcome = m.solve(&past_deadline_budget());
+    let elapsed = t.elapsed();
+
+    assert_eq!(
+        outcome,
+        MembershipOutcome::Unknown,
+        "a past-deadline membership solve must decline to Unknown"
+    );
+    assert!(
+        elapsed < Duration::from_millis(50),
+        "past-deadline solve did work before declining: {elapsed:?}"
+    );
 }
 
 #[test]

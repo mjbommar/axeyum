@@ -31,8 +31,8 @@ use std::collections::BTreeSet;
 
 use super::ast::Regex;
 use super::derivative::{
-    Closure, canon, derivative, derivative_closure, derivative_closure_within, derivative_within,
-    nullable,
+    Closure, canon, canon_within, derivative, derivative_closure, derivative_closure_within,
+    derivative_within, nullable,
 };
 use super::matcher::matches;
 use crate::arrange::SearchBudget;
@@ -97,6 +97,13 @@ impl Membership {
     /// canonicalized. An empty problem (no atoms, no bounds) is `Σ*`.
     #[must_use]
     fn combined(&self) -> Regex {
+        self.combined_within(&mut || false)
+            .expect("combined_within with a never-tripping budget cannot abort")
+    }
+
+    /// [`combined`](Self::combined) with a caller stop poll threaded through the
+    /// final similarity canonicalization.
+    fn combined_within<F: FnMut() -> bool>(&self, over: &mut F) -> Option<Regex> {
         let mut acc: Option<Regex> = None;
         let mut push = |r: Regex| {
             acc = Some(match acc.take() {
@@ -113,7 +120,7 @@ impl Membership {
         if let Some(shape) = self.length_shape() {
             push(shape);
         }
-        canon(&acc.unwrap_or_else(Regex::universal))
+        canon_within(&acc.unwrap_or_else(Regex::universal), over)
     }
 
     /// The combined canonical regex `⋂ positives ∩ ⋂ ∁negatives ∩ Σ{len_lo,len_hi}`
@@ -148,7 +155,17 @@ impl Membership {
         max_states: usize,
         max_witness_len: usize,
     ) -> MembershipOutcome {
-        let combined = self.combined();
+        if budget.past_deadline() {
+            return MembershipOutcome::Unknown;
+        }
+        let mut ticks: u64 = 0;
+        let mut poll = || {
+            ticks = ticks.wrapping_add(1);
+            ticks.is_multiple_of(256) && budget.past_deadline()
+        };
+        let Some(combined) = self.combined_within(&mut poll) else {
+            return MembershipOutcome::Unknown;
+        };
 
         // (2) Emptiness certificate: a complete, nullable-free, re-checked closure
         // proves the language empty ⇒ `unsat`. The closure is bounded by the deadline
@@ -195,7 +212,15 @@ impl Membership {
         max_states: usize,
         max_witness_len: usize,
     ) -> Option<Vec<u32>> {
-        let combined = self.combined();
+        if budget.past_deadline() {
+            return None;
+        }
+        let mut ticks: u64 = 0;
+        let mut poll = || {
+            ticks = ticks.wrapping_add(1);
+            ticks.is_multiple_of(256) && budget.past_deadline()
+        };
+        let combined = self.combined_within(&mut poll)?;
         match witness_search(&combined, budget, max_states, max_witness_len) {
             Some(w) if self.replay(&w) => Some(w),
             _ => None,
@@ -238,7 +263,17 @@ impl Membership {
     /// conflict (a safe under-approximation), never fabricate one.
     #[must_use]
     pub fn refute_empty_within(&self, max_states: usize, budget: &SearchBudget) -> bool {
-        let combined = self.combined();
+        if budget.past_deadline() {
+            return false;
+        }
+        let mut ticks: u64 = 0;
+        let mut poll = || {
+            ticks = ticks.wrapping_add(1);
+            ticks.is_multiple_of(256) && budget.past_deadline()
+        };
+        let Some(combined) = self.combined_within(&mut poll) else {
+            return false;
+        };
         matches!(
             derivative_closure_within(&combined, max_states, || budget.past_deadline()),
             Closure::Complete(states)
@@ -292,7 +327,15 @@ fn witness_search(
     max_states: usize,
     max_witness_len: usize,
 ) -> Option<Vec<u32>> {
-    let start = canon(combined);
+    if budget.past_deadline() {
+        return None;
+    }
+    let mut canon_ticks: u64 = 0;
+    let mut canon_poll = || {
+        canon_ticks = canon_ticks.wrapping_add(1);
+        canon_ticks.is_multiple_of(256) && budget.past_deadline()
+    };
+    let start = canon_within(combined, &mut canon_poll)?;
     if nullable(&start) {
         return Some(Vec::new());
     }
@@ -395,6 +438,13 @@ mod tests {
         acc.unwrap_or(Regex::Empty)
     }
 
+    fn contains_lit(s: &str) -> Regex {
+        Regex::concat(
+            Regex::star(Regex::any_char()),
+            Regex::concat(lit(s), Regex::star(Regex::any_char())),
+        )
+    }
+
     #[test]
     fn single_membership_sat_replays() {
         // x ∈ (ab)*  with len ≥ 2  ⇒ witness "ab".
@@ -434,6 +484,22 @@ mod tests {
             ..Membership::default()
         };
         assert_eq!(m.solve(&budget()), MembershipOutcome::Unsat);
+    }
+
+    #[test]
+    fn tight_whole_with_concat_shape_witnesses_the_whole_string() {
+        // The concat-membership route witnesses `whole ∈ "AB" ∩ Σ*"B"Σ*` before
+        // asking the word solver to factor `whole = x ++ "B" ++ y`. The pure
+        // membership witness must be the tight whole string, not just the shape's
+        // middle literal.
+        let m = Membership {
+            positives: vec![lit("AB"), contains_lit("B")],
+            ..Membership::default()
+        };
+        assert_eq!(
+            m.witness(&budget(), DEFAULT_MAX_STATES, DEFAULT_MAX_WITNESS_LEN),
+            Some(vec![u32::from(b'A'), u32::from(b'B')])
+        );
     }
 
     #[test]

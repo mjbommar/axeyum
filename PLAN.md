@@ -130,12 +130,13 @@ the concat-UNSAT + joint-product-automaton-sat (norn-*) + norn length-atom slice
 DEFERRED are the next increment (#49-follow, ~4-6 rows); **(1b) the LenAbs length/LIA
 bridge = P2.7 Phase A (task #53)** (the deferred multi-slice keystone, ~13+ QF_SLIA
 rows — the biggest strings unlock, the 11th review's flagship thrust); **(1c)
-quadratic word-equation certified unsat** (~4-5, hardest). **URGENT fast-follow
-before extending #49's concat route:** guard the derivative-closure deadline edge —
-`canon`/`derivative` poll BETWEEN nodes but not INSIDE one expansion, the
-"bounded-but-non-polling loop" anti-pattern that cost two multi-hour sweeps (8h
-`set_cardinality`, 9h `bv2nat`); benign for verdicts (declines to Unknown) but can
-overshoot the timeout — add an in-frontier poll + a pathological-shape regression.
+quadratic word-equation certified unsat** (~4-5, hardest). **Fast-follow closed
+2026-07-11:** the derivative-closure deadline edge now polls inside both
+similarity canonicalization (`canon_within`) and derivative expansion
+(`derivative_within`), including combined-regex canonicalization before the
+membership solver starts. Pathological `Σ*`-enlarged intersection regressions
+pin timely `Unknown` for solve/refute paths. Next string increments can extend
+#49's concat route and the LenAbs bridge without carrying this timeout hazard.
 (2) **#44/#52 regex-emptiness evidence wiring is already live** (verified in code:
 `string_unsat_evidence` produces `Evidence::UnsatRegexEmptiness`, whose checker
 re-runs the Lean-module reconstruction; the stale "wiring pending" note is

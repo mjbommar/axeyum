@@ -16,7 +16,7 @@
 
 use std::time::Duration;
 
-use axeyum_ir::{Sort, Value};
+use axeyum_ir::Value;
 use axeyum_smtlib::parse_script;
 use axeyum_solver::{CheckResult, SolverConfig, decide_word_only_script};
 use axeyum_strings::regex::{Regex, matches};
@@ -34,26 +34,28 @@ fn decide(src: &str) -> Result<CheckResult, String> {
     decide_word_only_script(&mut script, &cfg()).map_err(|e| format!("{e:?}"))
 }
 
-/// The `!weq!<name>` model binding for a declared string variable, as code points,
-/// looked up in the **script's own arena** (its `SymbolId`s are what the model uses).
-fn binding(
-    script: &mut axeyum_smtlib::Script,
-    model: &axeyum_solver::Model,
-    name: &str,
-) -> Vec<u32> {
-    // `TermArena::declare` is idempotent, so re-declaring the shared `!weq!` symbol
-    // returns the same `SymbolId` the route bound.
-    let sym = script
-        .arena
-        .declare(&format!("!weq!{name}"), Sort::string())
-        .expect("declare weq symbol");
-    match model.get(sym) {
-        Some(Value::Seq(elems)) => elems
-            .iter()
-            .map(|v| u32::try_from(v.scalar_code()).unwrap_or(0))
-            .collect(),
-        _ => Vec::new(),
+/// The model binding for a declared string variable, as code points, looked up in
+/// the **script's own arena** (its `SymbolId`s are what the model uses).
+fn binding(script: &axeyum_smtlib::Script, model: &axeyum_solver::Model, name: &str) -> Vec<u32> {
+    // Current front-door models bind the user-declared symbol. Older word-route
+    // internals use internal `!weq!<name>` aliases, so keep that fallback without
+    // crossing the arena's public/internal symbol namespaces.
+    let mut candidates = Vec::new();
+    if let Some(sym) = script.arena.find_symbol(name) {
+        candidates.push(sym);
     }
+    if let Some(sym) = script.arena.find_internal_symbol(&format!("!weq!{name}")) {
+        candidates.push(sym);
+    }
+    for sym in candidates {
+        if let Some(Value::Seq(elems)) = model.get(sym) {
+            return elems
+                .iter()
+                .map(|v| u32::try_from(v.scalar_code()).unwrap_or(0))
+                .collect();
+        }
+    }
+    Vec::new()
 }
 
 fn lit_regex(s: &[u32]) -> Regex {
@@ -88,8 +90,8 @@ fn concat_membership_simple_sat_replays_at_seq_level() {
     };
     // Rebuild the witnessed concatenation and independently re-check it is in L("AB")
     // through the reference matcher — the Seq-level replay the soundness bar demands.
-    let x = binding(&mut script, &model, "x");
-    let y = binding(&mut script, &model, "y");
+    let x = binding(&script, &model, "x");
+    let y = binding(&script, &model, "y");
     let mut concat = x.clone();
     concat.push(u32::from(b'B'));
     concat.extend_from_slice(&y);

@@ -295,8 +295,46 @@ fn transition_guards_partition_alphabet() {
 }
 
 // ---------------------------------------------------------------------------
-// Deadline-poll (task #54): the derivative frontier must be interruptible.
+// Deadline-poll (task #54): canonicalization and the derivative frontier must
+// be interruptible.
 // ---------------------------------------------------------------------------
+
+/// `canon_within` with a never-tripping poll is result-identical to plain
+/// `canon`, so the budgeted path cannot silently change regex semantics.
+#[test]
+fn canon_within_matches_canon_when_poll_never_trips() {
+    use axeyum_strings::regex::derivative::{canon, canon_within};
+
+    let mut rng = Lcg(0xCA11_0F0F_D00D_BAAD);
+    for _ in 0..5_000 {
+        let r = random_regex(&mut rng, 5);
+        let got = canon_within(&r, &mut || false).expect("never-tripping poll cannot abort");
+        assert_eq!(got, canon(&r), "bounded canon diverged for {r:?}");
+    }
+}
+
+/// A poll that trips while flattening/canonicalizing a large associative spine
+/// aborts canonicalization (⇒ `None`). This pins the other half of the deadline
+/// hole: a single `canon` pass must not be an uninterruptible interval.
+#[test]
+fn canon_within_aborts_when_poll_trips() {
+    use axeyum_strings::regex::derivative::canon_within;
+
+    let mut r = Regex::char_range(A, A + 3);
+    for i in 1..96u32 {
+        r = Regex::union(r, Regex::char_range(A + i, A + i + 3));
+    }
+
+    let mut ticks = 0u32;
+    let out = canon_within(&r, &mut || {
+        ticks += 1;
+        ticks > 8
+    });
+    assert!(
+        out.is_none(),
+        "expected an aborted (None) canonicalization under a tight poll"
+    );
+}
 
 /// `derivative_within` with a **never-tripping** poll is result-identical to the
 /// plain `derivative` — the drift guard that keeps the bounded frontier faithful
