@@ -475,9 +475,9 @@ conditional argument/index congruence constrains private read owners; and one
 private array result per concrete argument tuple projects into a full-value
 function table before original replay. Exact 64/65-parent admission, ten focused
 tests, and 192 warm/`check_auto`/Z3 comparisons pass with zero disagreement.
-ADR-0090/0091/0092/0093 subsequently add retained structural equality, Boolean
-relation flags, direct array-valued UF parameters, and supported structural
-array-valued UF parameters. Nested array-valued application keys, nested/
+ADR-0090/0091/0092/0093/0094 subsequently add retained structural equality,
+Boolean relation flags, direct array-valued UF parameters, supported structural
+array-valued UF parameters, and nested array-valued application keys. Nested/
 extended arrays, memory BMC, and proofs remain before phase exit. The EVM corpus
 does not exercise array-valued UFs, so no performance change is claimed here.
 
@@ -487,8 +487,9 @@ disequality over symbol/store/constant/ITE/application parents receives one
 private diff index whose two reads reuse candidate-triggered summaries. Eight
 default/nine all-feature gates and 192 warm/`check_auto`/Z3 comparisons pass.
 Positive structural equality, Boolean relation flags, direct and supported
-structural array-valued parameters now follow in ADR-0090/0091/0092/0093.
-Nested array-valued application keys, memory BMC, and proofs remain. The EVM
+structural array-valued parameters and nested array-valued application keys now
+follow in ADR-0090/0091/0092/0093/0094. Memory BMC, nested/extended arrays, and
+proofs remain. The EVM
 corpus has no whole-array relation root, so this increment makes no timing
 claim.
 

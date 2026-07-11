@@ -371,6 +371,106 @@ fn direct_array_parameters_project_distinct_function_keys() {
 }
 
 #[test]
+fn nested_array_application_parameter_projects_and_replays() {
+    let mut arena = TermArena::new();
+    let array_sort = Sort::Array {
+        index: ArraySortKey::BitVec(4),
+        element: ArraySortKey::BitVec(4),
+    };
+    let key_function = arena
+        .declare_fun("warm_nested_array_param_g", &[array_sort], array_sort)
+        .unwrap();
+    let result_function = arena
+        .declare_fun("warm_nested_array_param_f", &[array_sort], array_sort)
+        .unwrap();
+    let a = arena
+        .array_var_with_sorts(
+            "warm_nested_array_param_a",
+            Sort::BitVec(4),
+            Sort::BitVec(4),
+        )
+        .unwrap();
+    let zero = arena.bv_const(4, 0).unwrap();
+    let three = arena.bv_const(4, 3).unwrap();
+    let nested_key = arena.apply(key_function, &[a]).unwrap();
+    let app = arena.apply(result_function, &[nested_key]).unwrap();
+    let read = arena.select(app, zero).unwrap();
+    let assertion = arena.eq(read, three).unwrap();
+
+    assert!(IncrementalBvSolver::term_supported_by_warm_abstraction(
+        &arena, assertion
+    ));
+    let mut solver = IncrementalBvSolver::new();
+    solver
+        .assert_simplifying_memory(&mut arena, assertion)
+        .unwrap();
+    assert!(!solver.has_deferred_theory_assertions());
+    assert_eq!(solver.retained_warm_array_uf_app_count(), 2);
+
+    let result = solver.check(&arena).unwrap();
+    assert_eq!(verdict(&result), Verdict::Sat, "result={result:?}");
+    assert_replays(&arena, &[assertion], &result);
+    let CheckResult::Sat(model) = result else {
+        unreachable!()
+    };
+    assert!(model.function(key_function).is_some());
+    assert!(model.function(result_function).is_some());
+}
+
+#[test]
+fn nested_array_application_parameter_equality_refutes_conflicting_results() {
+    let mut arena = TermArena::new();
+    let array_sort = Sort::Array {
+        index: ArraySortKey::BitVec(4),
+        element: ArraySortKey::BitVec(4),
+    };
+    let key_function = arena
+        .declare_fun("warm_nested_array_param_cong_g", &[array_sort], array_sort)
+        .unwrap();
+    let result_function = arena
+        .declare_fun("warm_nested_array_param_cong_f", &[array_sort], array_sort)
+        .unwrap();
+    let a = arena
+        .array_var_with_sorts(
+            "warm_nested_array_param_cong_a",
+            Sort::BitVec(4),
+            Sort::BitVec(4),
+        )
+        .unwrap();
+    let b = arena
+        .array_var_with_sorts(
+            "warm_nested_array_param_cong_b",
+            Sort::BitVec(4),
+            Sort::BitVec(4),
+        )
+        .unwrap();
+    let index = arena.bv_var("warm_nested_array_param_cong_i", 4).unwrap();
+    let one = arena.bv_const(4, 1).unwrap();
+    let two = arena.bv_const(4, 2).unwrap();
+    let ga = arena.apply(key_function, &[a]).unwrap();
+    let gb = arena.apply(key_function, &[b]).unwrap();
+    let fga = arena.apply(result_function, &[ga]).unwrap();
+    let fgb = arena.apply(result_function, &[gb]).unwrap();
+    let left = arena.select(fga, index).unwrap();
+    let right = arena.select(fgb, index).unwrap();
+    let assertions = [
+        arena.eq(ga, gb).unwrap(),
+        arena.eq(left, one).unwrap(),
+        arena.eq(right, two).unwrap(),
+    ];
+
+    let mut solver = IncrementalBvSolver::new();
+    for &assertion in &assertions {
+        solver
+            .assert_simplifying_memory(&mut arena, assertion)
+            .unwrap();
+    }
+    assert!(!solver.has_deferred_theory_assertions());
+    assert_eq!(solver.retained_warm_array_uf_app_count(), 4);
+    assert_eq!(solver.check(&arena).unwrap(), CheckResult::Unsat);
+}
+
+#[test]
 fn structural_store_parameter_projects_and_replays() {
     let mut arena = TermArena::new();
     let array_sort = Sort::Array {
@@ -410,6 +510,52 @@ fn structural_store_parameter_projects_and_replays() {
 
     let result = solver.check(&arena).unwrap();
     assert_eq!(verdict(&result), Verdict::Sat);
+    assert_replays(&arena, &[assertion], &result);
+}
+
+#[test]
+fn structural_key_with_nested_application_base_projects_and_replays() {
+    let mut arena = TermArena::new();
+    let array_sort = Sort::Array {
+        index: ArraySortKey::BitVec(4),
+        element: ArraySortKey::BitVec(4),
+    };
+    let key_function = arena
+        .declare_fun("warm_structural_nested_param_g", &[array_sort], array_sort)
+        .unwrap();
+    let result_function = arena
+        .declare_fun("warm_structural_nested_param_f", &[array_sort], array_sort)
+        .unwrap();
+    let base = arena
+        .array_var_with_sorts(
+            "warm_structural_nested_param_a",
+            Sort::BitVec(4),
+            Sort::BitVec(4),
+        )
+        .unwrap();
+    let key_index = arena.bv_var("warm_structural_nested_param_k", 4).unwrap();
+    let read_index = arena.bv_const(4, 0).unwrap();
+    let one = arena.bv_const(4, 1).unwrap();
+    let two = arena.bv_const(4, 2).unwrap();
+    let nested = arena.apply(key_function, &[base]).unwrap();
+    let key = arena.store(nested, key_index, one).unwrap();
+    let app = arena.apply(result_function, &[key]).unwrap();
+    let read = arena.select(app, read_index).unwrap();
+    let assertion = arena.eq(read, two).unwrap();
+
+    assert!(IncrementalBvSolver::term_supported_by_warm_abstraction(
+        &arena, assertion
+    ));
+    let mut solver = IncrementalBvSolver::new();
+    solver
+        .assert_simplifying_memory(&mut arena, assertion)
+        .unwrap();
+    assert!(!solver.has_deferred_theory_assertions());
+    assert_eq!(solver.retained_warm_array_uf_app_count(), 2);
+    assert_eq!(solver.retained_warm_structural_array_owner_count(), 1);
+
+    let result = solver.check(&arena).unwrap();
+    assert_eq!(verdict(&result), Verdict::Sat, "result={result:?}");
     assert_replays(&arena, &[assertion], &result);
 }
 
@@ -627,39 +773,6 @@ fn unsupported_signatures_defer_without_partial_state() {
         .unwrap();
     assert!(solver.has_deferred_theory_assertions());
     assert_eq!(solver.retained_warm_array_uf_app_count(), 0);
-
-    let mut nested_array_key_arena = TermArena::new();
-    let nested_array_key_function = nested_array_key_arena
-        .declare_fun("warm_array_uf_nested_array_key", &[array_sort], array_sort)
-        .unwrap();
-    let key_function = nested_array_key_arena
-        .declare_fun(
-            "warm_array_uf_nested_array_key_g",
-            &[array_sort],
-            array_sort,
-        )
-        .unwrap();
-    let key = nested_array_key_arena
-        .array_var_with_sorts(
-            "warm_array_uf_nested_array_arg",
-            Sort::BitVec(8),
-            Sort::BitVec(8),
-        )
-        .unwrap();
-    let index = nested_array_key_arena
-        .bv_var("warm_array_uf_nested_array_key_i", 8)
-        .unwrap();
-    let zero = nested_array_key_arena.bv_const(8, 0).unwrap();
-    let nested_key = nested_array_key_arena.apply(key_function, &[key]).unwrap();
-    let app = nested_array_key_arena
-        .apply(nested_array_key_function, &[nested_key])
-        .unwrap();
-    let read = nested_array_key_arena.select(app, index).unwrap();
-    let root = nested_array_key_arena.eq(read, zero).unwrap();
-    assert!(!IncrementalBvSolver::term_supported_by_warm_abstraction(
-        &nested_array_key_arena,
-        root
-    ));
 
     let mut int_index_arena = TermArena::new();
     let int_index_sort = Sort::Array {

@@ -3963,8 +3963,19 @@ Its conclusion, ranked by quality × efficiency:
    ADR-0091 relation flags. The focused warm array-UF parent suite covers scalar
    UF dependencies inside a structural key, relation-flag separation of
    independent structural keys, asserted structural-key equality UNSAT, and
-   nested array-valued application-key deferral. Next: nested array-valued
-   application keys, memory BMC/k-induction, online array proofs, and broader
+   the former nested array-valued application-key deferral. ADR-0094
+   subsequently lands supported nested application keys.
+   **Thirty-ninth follow-through:** ADR-0094 lands retained warm nested array-
+   valued UF parameters. Supported array-valued `Apply` terms can now key
+   retained array-valued UF parents directly (`f(g(a))`) and under supported
+   structural keys (`f(store(g(a), k, v))`). Direct nested keys use the inner
+   application's private projection symbol; structural keys use replay-safe
+   rewritten structural terms whose nested applications are projection symbols,
+   preserving array-first/function-second projection order. The focused warm
+   array-UF parent suite covers direct nested-key SAT replay, asserted
+   nested-key equality UNSAT, structural keys with nested application bases, and
+   the existing structural relation-flag separation gate. Next: memory
+   BMC/k-induction, online array proofs, nested/extended arrays, and broader
    low-load aggregate timing.
 2. **Keep a thin measured-leaf-BFS skirt in parallel** — measured-ROI leaves only
    (NRA tail, strings-Nielsen); fold the feature/scale-blocked leaves
