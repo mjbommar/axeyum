@@ -381,9 +381,17 @@ pub const SUPPORT_MATRIX: &[SupportRow] = &[
         solver: SolverStatus::Decides,
         proof: ProofStatus::NoProof,
         note: "push/pop and reset-assertions parsed (full `reset` is rejected); warm \
-               QF_BV/Bool with assumption-core pruning + all-SAT decides; sat replay + \
-               a SAT conflict core, but no DRAT/Alethe across push/pop; warm path \
-               refuses arrays. ADR-0009",
+               QF_BV/Bool with assumption-core pruning + all-SAT decides; supported \
+               BV-indexed Bool/BV array reads, scalar UFs, bounded structural reads, \
+               scalar-keyed array-valued UF parents, projection-owned equality, exact \
+               top-level structural diff witnesses, positive structural equality, Boolean \
+               relation flags, and direct/supported-structural/nested-application \
+               array-valued UF parameters retain private owners in the persistent engine. \
+               Exact transitive ROW summaries stay dormant until candidate violation; \
+               array-result reads/relations/keys use conditional congruence, array-first/\
+               function-second projection, structural owner realization, and replay. \
+               Nested/extended arrays and DRAT/Alethe across push/pop remain deferred. \
+               ADR-0009/0030/0086/0087/0088/0089/0090/0091/0092/0093/0094",
     },
 ];
 

@@ -1006,12 +1006,16 @@ pub const CAPABILITIES: &[Capability] = &[
     },
     Capability {
         area: "reachability",
-        feature: "unbounded safety proving by k-induction (prove_safety_k_induction)",
+        feature: "unbounded safety proving by k-induction (prove_safety_k_induction; \
+                  plus prove_safety_k_induction_with_memory for array/symbolic-memory \
+                  state via eager elimination)",
         assurance: Assurance::SoundIncomplete,
-        evidence: "Safe = base case (BMC) + inductive-step UNSAT (unbounded); Reachable = \
-                   replay-checked counterexample; non-inductive properties return Inconclusive, \
-                   never a wrong Safe",
-        reference: "ADR-0009",
+        evidence: "Safe = base case (BMC, incl. memory BMC for select/store systems) + \
+                   inductive-step UNSAT (unbounded); Reachable = replay-checked \
+                   counterexample; non-inductive properties return Inconclusive, never a \
+                   wrong Safe; focused BMC gates cover an inductive array property and a \
+                   reachable symbolic-memory counterexample",
+        reference: "ADR-0009/0010",
     },
     Capability {
         area: "reachability",

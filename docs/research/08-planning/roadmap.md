@@ -455,8 +455,8 @@ definitions installed once in `IncrementalBvSolver`'s persistent CNF; scoped
 roots retract, only direct leaves project models, and original replay gates SAT.
 Exact 512-node/256-depth limits and 192 warm/check-auto/Z3 comparisons pass. The
 EVM depth sweep remains slower than frontend ITE folding, motivating ADR-0087
-below. Broader warm equality/extensionality/UF, memory BMC, and proofs remain
-before phase exit.
+below. Broader warm equality/extensionality/UF, certified memory reachability,
+and proofs remain before phase exit.
 
 ADR-0087 makes that retained structural boundary candidate-triggered. Each
 observed structural owner keeps one exact transitive scalar summary as dormant
@@ -466,8 +466,8 @@ zero summaries, while nested violated store chains close through one compact
 summary rather than one definition per parent. The 192-comparison matrix and
 all prior replay gates remain clean. Release EVM depth 32 improves from 30.933
 ms to 11.257 ms, but frontend ITE folding remains faster at 0.405 ms. Warm
-equality/extensionality, the remaining performance gap, memory BMC, and proofs
-remain before phase exit.
+equality/extensionality, the remaining performance gap, certified memory
+reachability, and proofs remain before phase exit.
 
 ADR-0088 retains scalar-keyed array-valued UF applications as warm leaves.
 Their finite-scalar arguments and observed indices reuse existing abstraction;
@@ -477,9 +477,11 @@ function table before original replay. Exact 64/65-parent admission, ten focused
 tests, and 192 warm/`check_auto`/Z3 comparisons pass with zero disagreement.
 ADR-0090/0091/0092/0093/0094 subsequently add retained structural equality,
 Boolean relation flags, direct array-valued UF parameters, supported structural
-array-valued UF parameters, and nested array-valued application keys. Nested/
-extended arrays, memory BMC, and proofs remain before phase exit. The EVM corpus
-does not exercise array-valued UFs, so no performance change is claimed here.
+array-valued UF parameters, and nested array-valued application keys; memory-aware
+k-induction subsequently adds array/symbolic-memory safety proving through eager
+memory elimination. Nested/extended arrays, certified memory k-induction, memory
+PDR/IMC, and proofs remain before phase exit. The EVM corpus does not exercise
+array-valued UFs, so no performance change is claimed here.
 
 ADR-0089 adds retained warm array relations. Positive equality merges direct or
 array-result-UF projection owners before function construction; top-level

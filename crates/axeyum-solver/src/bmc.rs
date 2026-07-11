@@ -25,8 +25,9 @@
 //! * [`BmcOutcome::Unknown`] is first-class: a resource limit or an unsupported
 //!   construct at some depth is reported honestly, never as a safe result.
 //!
-//! [`bounded_model_check`] rides the array-free warm path (BV/Bool transition
-//! systems); [`bounded_model_check_with_memory`] adds array/symbolic-memory state
+//! [`bounded_model_check`] and [`prove_safety_k_induction`] ride the array-free
+//! warm path (BV/Bool transition systems). [`bounded_model_check_with_memory`]
+//! and [`prove_safety_k_induction_with_memory`] add array/symbolic-memory state
 //! (`select`/`store`) via the validated eager elimination, one-shot per depth
 //! (warm lazy arrays are the ADR-0030 follow-up).
 
@@ -165,14 +166,11 @@ pub fn bounded_model_check_with_memory(
     run_bounded_model_check(arena, system, bound, config, true)
 }
 
-/// Shared BMC unrolling for [`bounded_model_check`] and
-/// [`bounded_model_check_with_memory`]; `use_memory` selects the array-aware
-/// `check_with_memory` decision procedure for memory-bearing systems.
-/// Maps a backend `Unsupported` (the warm BV solver cannot represent an operator
-/// in the unrolling — e.g. an uninterpreted `Apply` in the transition relation) to
-/// a first-class [`BmcOutcome::Unknown`] at depth `steps`, honoring this module's
-/// contract that an unsupported query "is not an error". Any other [`SolverError`]
-/// (a genuine internal failure) still propagates.
+// Maps a backend `Unsupported` (the warm BV solver cannot represent an operator
+// in the unrolling — e.g. an uninterpreted `Apply` in the transition relation) to
+// a first-class `BmcOutcome::Unknown` at depth `steps`, honoring this module's
+// contract that an unsupported query "is not an error". Any other `SolverError`
+// (a genuine internal failure) still propagates.
 fn unsupported_to_unknown(err: SolverError, steps: usize) -> Result<BmcOutcome, SolverError> {
     match err {
         SolverError::Unsupported(detail) => Ok(BmcOutcome::Unknown {
@@ -186,6 +184,22 @@ fn unsupported_to_unknown(err: SolverError, steps: usize) -> Result<BmcOutcome, 
     }
 }
 
+// Safety-outcome equivalent of `unsupported_to_unknown` for k-induction.
+fn unsupported_to_safety_unknown(err: SolverError) -> Result<SafetyOutcome, SolverError> {
+    match err {
+        SolverError::Unsupported(detail) => Ok(SafetyOutcome::Unknown {
+            reason: UnknownReason {
+                kind: UnknownKind::Incomplete,
+                detail,
+            },
+        }),
+        other => Err(other),
+    }
+}
+
+// Shared BMC unrolling for `bounded_model_check` and
+// `bounded_model_check_with_memory`; `use_memory` selects the array-aware
+// `check_with_memory` decision procedure for memory-bearing systems.
 fn run_bounded_model_check(
     arena: &mut TermArena,
     system: &impl TransitionSystem,
@@ -324,9 +338,47 @@ pub fn prove_safety_k_induction(
     max_k: usize,
     config: &SolverConfig,
 ) -> Result<SafetyOutcome, SolverError> {
+    run_safety_k_induction(arena, system, max_k, config, false)
+}
+
+/// Like [`prove_safety_k_induction`], but for transition systems whose state or
+/// transition relation contains **arrays / symbolic memory** (`select`/`store`).
+///
+/// The base case uses [`bounded_model_check_with_memory`], and each inductive
+/// step query uses [`IncrementalBvSolver::check_with_memory`]. A `Safe` result is
+/// still an unbounded k-induction proof: the base case rules out reachable bad
+/// states through depth `k`, and the inductive step proves that no arbitrary
+/// chain of `k+1` good memory states can transition into a bad memory state.
+///
+/// This is an uncertified, replay/validation-backed route like
+/// [`bounded_model_check_with_memory`]. Certified memory k-induction will need
+/// array-aware proof export; the existing [`certify_safety_k_induction`] remains
+/// array-free.
+///
+/// # Errors
+///
+/// Returns [`SolverError`] if building the system's terms fails or an internal
+/// backend error occurs. Unsupported theory constructs are surfaced as
+/// [`SafetyOutcome::Unknown`], not hard errors.
+pub fn prove_safety_k_induction_with_memory(
+    arena: &mut TermArena,
+    system: &impl TransitionSystem,
+    max_k: usize,
+    config: &SolverConfig,
+) -> Result<SafetyOutcome, SolverError> {
+    run_safety_k_induction(arena, system, max_k, config, true)
+}
+
+fn run_safety_k_induction(
+    arena: &mut TermArena,
+    system: &impl TransitionSystem,
+    max_k: usize,
+    config: &SolverConfig,
+    use_memory: bool,
+) -> Result<SafetyOutcome, SolverError> {
     // Base case: a counterexample within max_k transitions refutes safety
     // outright; otherwise the base obligation holds for every k ≤ max_k.
-    match bounded_model_check(arena, system, max_k, config)? {
+    match run_bounded_model_check(arena, system, max_k, config, use_memory)? {
         BmcOutcome::Reachable { steps, model } => {
             return Ok(SafetyOutcome::Reachable { steps, model });
         }
@@ -339,19 +391,35 @@ pub fn prove_safety_k_induction(
     let mut step = IncrementalBvSolver::with_config(config.clone());
     let mut t: Vec<Vec<SymbolId>> = vec![system.state_vars(arena, 0)?];
     let not_bad0 = negate_bad(arena, system, &t[0])?;
-    step.assert(arena, not_bad0)?;
+    if let Err(e) = step.assert(arena, not_bad0) {
+        return unsupported_to_safety_unknown(e);
+    }
 
     for k in 0..=max_k {
         let next = system.state_vars(arena, k + 1)?;
         let trans = system.trans(arena, &t[k], &next)?;
-        step.assert(arena, trans)?;
+        if let Err(e) = step.assert(arena, trans) {
+            return unsupported_to_safety_unknown(e);
+        }
         t.push(next);
 
         let bad_next = system.bad(arena, &t[k + 1])?;
         step.push()?;
-        step.assert(arena, bad_next)?;
-        let result = step.check(arena)?;
+        let checked = match step.assert(arena, bad_next) {
+            Ok(()) => {
+                if use_memory {
+                    step.check_with_memory(arena)
+                } else {
+                    step.check(arena)
+                }
+            }
+            Err(e) => Err(e),
+        };
         step.pop();
+        let result = match checked {
+            Ok(result) => result,
+            Err(e) => return unsupported_to_safety_unknown(e),
+        };
 
         match result {
             // No P-chain of length k+1 can reach a bad state ⇒ inductive ⇒ safe.
@@ -361,7 +429,9 @@ pub fn prove_safety_k_induction(
             // t_{k+1} (it becomes part of the chain for the next, deeper attempt).
             CheckResult::Sat(_) => {
                 let not_bad_next = negate_bad(arena, system, &t[k + 1])?;
-                step.assert(arena, not_bad_next)?;
+                if let Err(e) = step.assert(arena, not_bad_next) {
+                    return unsupported_to_safety_unknown(e);
+                }
             }
         }
     }
@@ -932,6 +1002,96 @@ mod tests {
         assert!(
             matches!(outcome, BmcOutcome::UnreachableWithinBound { bound: 3 }),
             "mem[3] is untouched within three steps, got {outcome:?}"
+        );
+    }
+
+    /// A memory-bearing system whose safety property is inductive over arbitrary
+    /// memory states: each step writes `1` into cell 0, and `bad` is cell 0
+    /// becoming `2`.
+    struct MemNoTwoAtZero;
+
+    impl MemNoTwoAtZero {
+        fn mem(arena: &mut TermArena, step: usize) -> SymbolId {
+            arena
+                .declare(
+                    &format!("safe_mem@{step}"),
+                    Sort::Array {
+                        index: ArraySortKey::BitVec(2),
+                        element: ArraySortKey::BitVec(8),
+                    },
+                )
+                .unwrap()
+        }
+    }
+
+    impl TransitionSystem for MemNoTwoAtZero {
+        fn state_vars(
+            &self,
+            arena: &mut TermArena,
+            step: usize,
+        ) -> Result<Vec<SymbolId>, SolverError> {
+            Ok(vec![Self::mem(arena, step)])
+        }
+
+        fn init(&self, arena: &mut TermArena, s0: &[SymbolId]) -> Result<TermId, SolverError> {
+            let mem = arena.var(s0[0]);
+            let zero = arena.bv_const(8, 0)?;
+            let all_zero = arena.const_array(2, zero)?;
+            Ok(arena.eq(mem, all_zero)?)
+        }
+
+        fn trans(
+            &self,
+            arena: &mut TermArena,
+            pre: &[SymbolId],
+            post: &[SymbolId],
+        ) -> Result<TermId, SolverError> {
+            let mem = arena.var(pre[0]);
+            let zero = arena.bv_const(2, 0)?;
+            let one = arena.bv_const(8, 1)?;
+            let written = arena.store(mem, zero, one)?;
+            let mem_next = arena.var(post[0]);
+            Ok(arena.eq(mem_next, written)?)
+        }
+
+        fn bad(&self, arena: &mut TermArena, s: &[SymbolId]) -> Result<TermId, SolverError> {
+            let mem = arena.var(s[0]);
+            let zero = arena.bv_const(2, 0)?;
+            let cell0 = arena.select(mem, zero)?;
+            let two = arena.bv_const(8, 2)?;
+            Ok(arena.eq(cell0, two)?)
+        }
+    }
+
+    #[test]
+    fn memory_k_induction_proves_inductive_array_property() {
+        let mut arena = TermArena::new();
+        let outcome = prove_safety_k_induction_with_memory(
+            &mut arena,
+            &MemNoTwoAtZero,
+            3,
+            &SolverConfig::default(),
+        )
+        .unwrap();
+        assert!(
+            matches!(outcome, SafetyOutcome::Safe { k: 0 }),
+            "cell 0 is always written with 1, so cell 0 == 2 is 0-inductively unreachable; got {outcome:?}"
+        );
+    }
+
+    #[test]
+    fn memory_k_induction_surfaces_reachable_counterexample() {
+        let mut arena = TermArena::new();
+        let outcome = prove_safety_k_induction_with_memory(
+            &mut arena,
+            &MemWriter,
+            6,
+            &SolverConfig::default(),
+        )
+        .unwrap();
+        assert!(
+            matches!(outcome, SafetyOutcome::Reachable { steps: 4, .. }),
+            "memory k-induction must return the BMC counterexample from the base case, got {outcome:?}"
         );
     }
 

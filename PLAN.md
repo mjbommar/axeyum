@@ -3974,9 +3974,16 @@ Its conclusion, ranked by quality × efficiency:
    preserving array-first/function-second projection order. The focused warm
    array-UF parent suite covers direct nested-key SAT replay, asserted
    nested-key equality UNSAT, structural keys with nested application bases, and
-   the existing structural relation-flag separation gate. Next: memory
-   BMC/k-induction, online array proofs, nested/extended arrays, and broader
-   low-load aggregate timing.
+   the existing structural relation-flag separation gate. **Fortieth
+   follow-through:** memory-aware k-induction extends the reachability driver to
+   array/symbolic-memory transition systems. `prove_safety_k_induction_with_memory`
+   runs the base case through `bounded_model_check_with_memory`, checks each
+   inductive step with `IncrementalBvSolver::check_with_memory`, maps unsupported
+   theory shapes to `SafetyOutcome::Unknown`, and keeps Safe unbounded but
+   validation-backed until array proof export exists. Focused BMC tests cover an
+   inductive array property and a reachable symbolic-memory counterexample.
+   Next: certified memory k-induction, memory PDR/IMC, online array proofs,
+   nested/extended arrays, and broader low-load aggregate timing.
 2. **Keep a thin measured-leaf-BFS skirt in parallel** — measured-ROI leaves only
    (NRA tail, strings-Nielsen); fold the feature/scale-blocked leaves
    (dense-ILP MILP, large-LP performance) into a funded engine phase rather than

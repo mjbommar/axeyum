@@ -205,7 +205,7 @@ pub use bitblast_miter::{
 pub use bmc::{
     BmcOutcome, CertifiedSafetyOutcome, SafetyCertificate, SafetyOutcome, TransitionSystem,
     bounded_model_check, bounded_model_check_with_memory, certify_safety_k_induction,
-    prove_safety_k_induction,
+    prove_safety_k_induction, prove_safety_k_induction_with_memory,
 };
 pub use bool_euf::{
     BoolEufExhaustiveCertificate, BoolEufOnlineCertificate, bool_euf_exhaustive_refutation,
