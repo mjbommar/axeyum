@@ -1269,6 +1269,25 @@ pub const CAPABILITIES: &[Capability] = &[
     },
     Capability {
         area: "quantifiers",
+        feature: "source-bound paired Bool/BV existential witness transfer",
+        assurance: Assurance::Checked,
+        evidence: "untrusted search alpha-aligns one positive existential tuple with one negated \
+                   existential tuple under exact shared ground premises. A separate checker validates \
+                   both source paths, equal typed prefixes, 128-total-binder/4,096-source-node caps, \
+                   and every target-body conjunct. Non-identical conjuncts require either a regenerated \
+                   source-subset QF_BV DRAT/LRAT implication proof or the exact signed-add lemma \
+                   `x<=s b && x+s<=s k => x+w<=s k`, with `0<=w<=s` and `b<=MAX_SIGNED-s` rechecked \
+                   to exclude modular overflow. `nested9_true-unreach-call` moves unsupported to checked \
+                   UNSAT in median 0.075 ms. The public quantified-BV slice is 32 SAT / 17 UNSAT / \
+                   0 unknown / 5 unsupported with 49/49 checked/certified decisions, zero disagreement, \
+                   error, or replay failure, and an empty target trust ledger. The cumulative direct-Z3 \
+                   suite covers 1,720 cases and controls. Different premises, non-conjunctive polarity, \
+                   unequal prefixes, nested quantifiers, functions, arrays, arithmetic, general QSAT, \
+                   and Lean reconstruction remain open",
+        reference: "ADR-0129",
+    },
+    Capability {
+        area: "quantifiers",
         feature: "checked finite counterexample covers for positive universal Bool/Int UNSAT",
         assurance: Assurance::Checked,
         evidence: "untrusted search weakens positive universals to a ground Boolean skeleton, then \

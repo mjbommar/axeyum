@@ -188,23 +188,14 @@ fn instantiate_fold(
     is_forall: bool,
     values: Vec<TermId>,
 ) -> Result<TermId, QuantExpandError> {
-    let mut acc: Option<TermId> = None;
+    let mut instances = Vec::with_capacity(values.len());
     for value in values {
         let mut subst_memo = HashMap::new();
         let instance = substitute(arena, body, var, value, &mut subst_memo)?;
-        acc = Some(match acc {
-            Some(prev) => {
-                if is_forall {
-                    arena.and(prev, instance)?
-                } else {
-                    arena.or(prev, instance)?
-                }
-            }
-            None => instance,
-        });
+        instances.push(instance);
     }
-    // Bool and BitVec domains are non-empty, so `acc` is always set.
-    Ok(acc.expect("quantifier domain is non-empty"))
+    // Bool and BitVec domains are non-empty, so `instances` is never empty.
+    balanced_boolean_fold(arena, instances, is_forall)
 }
 
 /// The constant terms making up a finite domain for `var`.
@@ -424,14 +415,28 @@ fn instantiate_chain(
 /// the exact conjunction while keeping depth logarithmic.
 fn balanced_conjunction(
     arena: &mut TermArena,
+    terms: Vec<TermId>,
+) -> Result<TermId, QuantExpandError> {
+    balanced_boolean_fold(arena, terms, true)
+}
+
+/// Folds a nonempty list into a deterministic balanced conjunction or
+/// disjunction while preserving operand order.
+fn balanced_boolean_fold(
+    arena: &mut TermArena,
     mut terms: Vec<TermId>,
+    is_conjunction: bool,
 ) -> Result<TermId, QuantExpandError> {
     debug_assert!(!terms.is_empty());
     while terms.len() > 1 {
         let mut next = Vec::with_capacity(terms.len().div_ceil(2));
         let mut pairs = terms.chunks_exact(2);
         for pair in &mut pairs {
-            next.push(arena.and(pair[0], pair[1])?);
+            next.push(if is_conjunction {
+                arena.and(pair[0], pair[1])?
+            } else {
+                arena.or(pair[0], pair[1])?
+            });
         }
         if let [last] = pairs.remainder() {
             next.push(*last);
@@ -1000,6 +1005,7 @@ fn contains_quantifier(arena: &TermArena, term: TermId) -> bool {
 #[cfg(test)]
 mod tests {
     use super::{QuantExpandError, expand_quantifiers, instantiate_with_triggers};
+    use crate::canonicalize_terms;
     use axeyum_ir::{Assignment, Sort, TermArena, TermStats, Value, eval};
 
     #[test]
@@ -1031,6 +1037,35 @@ mod tests {
             eval(&arena, all, &asg).unwrap()
         );
         assert_eq!(eval(&arena, expanded[0], &asg).unwrap(), Value::Bool(true));
+    }
+
+    #[test]
+    fn maximum_width_finite_expansion_stays_balanced() {
+        let mut arena = TermArena::new();
+        let x_sym = arena.declare("x", Sort::BitVec(10)).unwrap();
+        let x = arena.var(x_sym);
+        let zero = arena.bv_const(10, 0).unwrap();
+        let body = arena.eq(x, zero).unwrap();
+        let exists = arena.exists(x_sym, body).unwrap();
+
+        let expanded = expand_quantifiers(&mut arena, &[exists]).unwrap();
+        let stats = TermStats::compute(&arena, &expanded);
+        assert!(
+            stats.max_depth <= 16,
+            "1,024-way finite expansion must have logarithmic depth, got {}",
+            stats.max_depth
+        );
+        let canonical = canonicalize_terms(&mut arena, &expanded).unwrap().terms;
+        let canonical_stats = TermStats::compute(&arena, &canonical);
+        assert!(
+            canonical_stats.max_depth <= 16,
+            "AC canonicalization must preserve logarithmic depth, got {}",
+            canonical_stats.max_depth
+        );
+        assert_eq!(
+            eval(&arena, canonical[0], &Assignment::new()).unwrap(),
+            Value::Bool(true)
+        );
     }
 
     #[test]

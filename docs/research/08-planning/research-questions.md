@@ -263,6 +263,13 @@ Out of scope:
     universal body, validates complete universal values, and directly evaluates
     the untouched body to false. This recovers `issue2031-bv-var-elim` without
     trusting prefix rewriting, inversion search, or general QSAT.
+    [ADR-0129](../09-decisions/adr-0129-checked-paired-existential-witness-transfer.md)
+    adds a premise-aware paired-existential UNSAT class: a checker alpha-aligns
+    equal typed witness tuples under exact shared ground premises and replays
+    every target conjunct by identity, a source-bound `QF_BV` proof, or an exact
+    signed-add lemma with all no-wrap side conditions. This recovers
+    `nested9_true-unreach-call` without trusting existential normalization,
+    model-guided projection, or general QSAT.
     Piecewise/general function interpretations, serialization, and Alethe/Lean
     reconstruction remain implementation tasks, not permission to return an
     unchecked empty model.

@@ -74,6 +74,10 @@ fn checked_quantified_fast_path(
             arena, assertions, config,
         )?
         .is_some()
+        || crate::quant_bv_paired_exists_search::find_bv_paired_existential_transfer(
+            arena, assertions, config,
+        )?
+        .is_some()
         || crate::quant_negated_exists_search::find_negated_existential_witness(
             arena, assertions, config,
         )?

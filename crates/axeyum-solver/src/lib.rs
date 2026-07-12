@@ -120,6 +120,8 @@ mod quant_bv_alternation_cert;
 mod quant_bv_alternation_search;
 mod quant_bv_conjunctive_cert;
 mod quant_bv_conjunctive_search;
+mod quant_bv_paired_exists_cert;
+mod quant_bv_paired_exists_search;
 mod quant_closed_counterexample_cert;
 mod quant_closed_counterexample_search;
 mod quant_counterexample_cover;
@@ -403,6 +405,11 @@ pub use quant_bv_alternation_cert::{
 pub use quant_bv_conjunctive_cert::{
     BV_CONJUNCTIVE_UNIVERSAL_BINDER_CAP, BV_CONJUNCTIVE_UNIVERSAL_NODE_CAP,
     BvConjunctiveUniversalInstanceCertificate, check_bv_conjunctive_universal_instance,
+};
+pub use quant_bv_paired_exists_cert::{
+    BV_PAIRED_EXISTS_BINDER_CAP, BV_PAIRED_EXISTS_NODE_CAP, BvPairedExistentialTransferCertificate,
+    BvPairedExistentialTransferJustification, BvPairedExistentialTransferObligation,
+    check_bv_paired_existential_transfer,
 };
 pub use quant_closed_counterexample_cert::{
     ClosedUniversalCounterexampleCertificate, check_closed_universal_counterexample,

@@ -14,7 +14,7 @@ session state.
 
 > **Current sequencing (2026-07-12).** The P1.4 e-graph → P1.5 CDCL(T)
 > keystone is landed, and the recovery audit has restored P2.6 through the
-> checked ADR-0128 boundary with explicit resource limits. Continue the same
+> checked ADR-0129 boundary with explicit resource limits. Continue the same
 > depth-first spine through broader nested/alternating QSAT, quantified-UF
 > models, and Lean reconstruction, keeping a thin measured-leaf skirt and the
 > trust-ledger proof spine running in parallel. Full BFS-vs-DFS
@@ -748,21 +748,39 @@ agreements, DISAGREE=0, no errors/replay failures, and five-run PAR-2 median
 dominance remains 40/48 and Lean remains 8/16 UNSAT because this new evidence
 correctly has no Lean route. The cumulative direct-Z3 suite covers 1,592 cases
 and controls. **Next action:** attack `nested9_true-unreach-call`, now the
-smallest unsupported row at 32 DAG nodes. Work backwards from cvc5 CEGQI-BV and
-Z3 quantified projection to define a checked paired-existential witness-transfer
-contract for its stronger `v+3 <= k` versus weaker `v+1 <= k` bodies; do not
-trust existential normalization, signed-overflow assumptions, or a shared
-witness without an original-source checker and negative controls. The other
-measured unsupported rows are `smtcomp-qbv-053118`,
+smallest unsupported row at 32 DAG nodes. **That action is now LANDED
+(ADR-0129):** exact shared ground premises and equal typed existential prefixes
+are alpha-aligned, then every target-body conjunct is replayed by identity, a
+source-bound `QF_BV` implication proof, or an exact signed-add lemma with the
+no-wrap margin checked over signed constants. `nested9_true-unreach-call` moves
+**Unsupported→UNSAT** with five-run solve median 0.075 ms and evidence median
+0.039 ms. The fresh cvc5 quantified-BV slice is **32 SAT / 17 UNSAT / 0 unknown
+/ 5 unsupported**, 49 agreements, DISAGREE=0, no errors/replay failures, and
+five-run PAR-2 median 2.065744 s. The audit certifies/checks 49/49 with empty
+target trust; dominance remains 40/49 and Lean remains 8/17 UNSAT. Eight
+focused tests include 64 direct-Z3 safe transfers and 64 genuine signed-wrap
+SAT controls; cumulative quantified-BV direct-Z3 coverage is 1,720 cases and
+controls. The negative sweep also exposed and repaired two linear-depth term
+builders: exact finite expansion and AC canonicalization now preserve
+logarithmic-depth balanced trees through the maximum admitted 1,024-way fold.
+**Next action:** attack `smtcomp-qbv-053118`, now the smallest unsupported row at
+37 DAG nodes. Work backwards from cvc5 CEGQI-BV and Z3 model construction to
+define a checked SAT certificate for the concrete `x=0` parity model: the first
+universal excludes equality between an even left side and odd right side, while
+the negated second universal needs a complete existential witness. Do not
+credit parity normalization, a free BV model, or a nested existential witness
+without independent original-source replay. The other measured unsupported
+rows are
 `intersection-example-onelane`, `gn-wrong-091018`, `psyco-001-bv`, and
-`psyco-107-bv`. Focused ADR-0128 and adjacent ADR-0124/0126/0127 suites, all
+`psyco-107-bv`. Focused ADR-0129 and adjacent ADR-0124/0126/0127/0128 suites, all
 eight quantified-BV direct-Z3 campaigns, solver library 866/866, evidence
 69/69, capability/support golden tests, strict workspace Clippy, warning-denied
 rustdoc, foundational 137/174 resources, rules-as-code, links, formatting, and
-diff checks pass. The full `just check` aggregate again reaches the unrelated
-hardware-relative `frontier_bv_reduction` ratchet at 28/30 and stops there; no
-full-workspace green claim is made, and the generated frontier artifacts remain
-unchanged.
+diff checks pass. The full `just check` aggregate also passes, including every
+workspace test, doctest, warning-denied rustdoc, foundational-resource and
+rules-as-code validator, generated-dashboard check, and documentation link
+check. Hardware-relative frontier run artifacts were deliberately left at the
+committed baselines rather than recording machine-specific timing churn.
 **Process state:** first green CI in 200+ runs held into a green cadence;
 the pre-push hook gates the pushed SHA incl. the ~6s `:status` corpus
 sweep (a wrong verdict must not leave the machine); STATUS truncated

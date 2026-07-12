@@ -619,7 +619,7 @@ fn rewrite_app(
     //   * AC operators (associative *and* commutative — `and`/`or`/`xor`,
     //     `bvadd`/`bvmul`/`bvand`/`bvor`/`bvxor`/`bvxnor`): flatten the whole
     //     nested same-op tree into one operand multiset, sort by ascending
-    //     `TermId`, and rebuild a left-associated tree over the sorted operands.
+    //     `TermId`, and rebuild a balanced tree over the sorted operands.
     //     So `a*(b*c)`, `(a*b)*c`, and `c*(a*b)` all canonicalize to the SAME
     //     term. This is denotation-preserving because the operator is both
     //     associative (regroup freely) and commutative (reorder freely).
@@ -659,13 +659,13 @@ fn rewrite_app(
 
     // AC flattening can yield more than two operands; the op-specific binary
     // rules below all assume exactly two. When the flattened operand list is
-    // wider than binary, skip them and rebuild the canonical left-associated AC
+    // wider than binary, skip them and rebuild the canonical balanced AC
     // tree directly. (The binary const-fold/identity/idempotent rules would not
     // fire on the multiset form anyway: constants are folded bottom-up at each
     // binary node when the AC tree is rebuilt, and duplicates remain explicit.)
     if reordered && args.len() != 2 {
         return Ok(applied(
-            rebuild_left_assoc(arena, op, args)?,
+            rebuild_balanced(arena, op, args)?,
             COMMUTATIVE_ORDER,
         ));
     }
@@ -850,20 +850,28 @@ fn collect_ac_operands(arena: &TermArena, op: Op, term: TermId, out: &mut Vec<Te
     }
 }
 
-/// Rebuilds a left-associated tree `op(…op(op(args[0], args[1]), args[2])…)` over
-/// `args` (length `>= 2`) using the typed arena builders. Used to reassemble the
-/// canonical form of an AC operator from its sorted operand list.
+/// Rebuilds a deterministic balanced tree over `args` (length `>= 2`) using the
+/// typed arena builders. Pairwise rounds preserve sorted operand order while
+/// keeping large AC terms logarithmic-depth for downstream recursive visitors.
 ///
 /// # Errors
 ///
 /// Returns [`IrError`] if a rebuilt node violates the operator's sort contract,
 /// which cannot happen when reassembling operands of a well-formed AC term.
-fn rebuild_left_assoc(arena: &mut TermArena, op: Op, args: &[TermId]) -> Result<TermId, IrError> {
-    let mut acc = args[0];
-    for &arg in &args[1..] {
-        acc = build_app(arena, op, &[acc, arg])?;
+fn rebuild_balanced(arena: &mut TermArena, op: Op, args: &[TermId]) -> Result<TermId, IrError> {
+    let mut terms = args.to_vec();
+    while terms.len() > 1 {
+        let mut next = Vec::with_capacity(terms.len().div_ceil(2));
+        let mut pairs = terms.chunks_exact(2);
+        for pair in &mut pairs {
+            next.push(build_app(arena, op, pair)?);
+        }
+        if let [last] = pairs.remainder() {
+            next.push(*last);
+        }
+        terms = next;
     }
-    Ok(acc)
+    Ok(terms[0])
 }
 
 fn rewrite_bool_not(
