@@ -20,7 +20,7 @@
 //!   equations, now decide `sat` through the fallback — never a bounded parse
 //!   error, never a wrong `unsat` (the word route has no `unsat` capability).
 //! - **Honesty on decline.** A rejected script that is *not* a pure word-equation
-//!   problem (e.g. it mixes in `str.from_int`) reproduces the **original** bounded
+//!   problem (e.g. it mixes in `str.indexof`) reproduces the **original** bounded
 //!   parse error, so a previously-`unsupported` script never silently becomes a
 //!   bare `unknown`/`sat`.
 
@@ -108,8 +108,9 @@ fn wide_variable_concat_decides() {
 }
 
 /// A rejected script that is **not** a pure word-equation problem — it mixes in
-/// `str.from_int`, which the word build cannot represent — must reproduce the
-/// **original** bounded parse error, not fabricate an `unknown`/`sat`. This keeps
+/// `str.indexof`, which none of the unbounded fallback routes represents — must
+/// reproduce the **original** bounded parse error, not fabricate an
+/// `unknown`/`sat`. This keeps
 /// bench/consumer classification identical to the pre-fallback world for anything
 /// the word route cannot legitimately upgrade.
 #[test]
@@ -117,7 +118,7 @@ fn non_word_fragment_reproduces_original_error() {
     let text = "(set-info :status sat)(set-logic QF_SLIA)\
                 (declare-const i0 Int)(declare-const s1 String)(declare-const s2 String)\
                 (assert (= (str.++ s1 \"ijruldtzyp\") s2))\
-                (assert (= (str.++ s1 \"ijruldtzyp\" (str.from_int i0)) s2))(check-sat)";
+                (assert (= (str.indexof s2 \"z\" 0) i0))(check-sat)";
     match solve_smtlib(text, &config()) {
         Err(SolverError::Parse(msg)) => {
             // The *bounded* encoder's original decline — surfaced unchanged.

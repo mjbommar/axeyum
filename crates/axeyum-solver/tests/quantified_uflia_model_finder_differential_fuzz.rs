@@ -41,8 +41,11 @@ use axeyum_solver::{CheckResult, Model, SolverConfig, solve};
 use z3::ast::{Ast, Bool, Int};
 use z3::{FuncDecl, Params, SatResult, Solver, Sort as Z3Sort};
 
-/// Number of instances generated and adjudicated.
-const INSTANCES: u64 = 2000;
+/// Bounded per-commit smoke sweep. The full 2,000-instance campaign is retained
+/// below as an explicit ignored test: putting its multi-minute-to-hour runtime in
+/// `cargo test --workspace` made the canonical gate unable to finish reliably.
+const SMOKE_INSTANCES: u64 = 256;
+const FULL_INSTANCES: u64 = 2000;
 
 /// Per-instance Z3 wall-clock budget.
 const Z3_TIMEOUT: Duration = Duration::from_secs(2);
@@ -513,16 +516,15 @@ struct Tally {
     sat_replayed: u64,
 }
 
-#[test]
-fn quantified_uflia_model_finder_differential_fuzz_disagree_zero() {
+fn run_differential_fuzz(instances: u64, minimum_jointly_decided: u64) {
     let cfg = SolverConfig::new().with_timeout(AXEYUM_TIMEOUT);
     let mut t = Tally::default();
 
-    for seed in 0..INSTANCES {
+    for seed in 0..instances {
         t.total += 1;
         if seed % 250 == 0 {
             eprintln!(
-                "[quant-uflia-mf-fuzz] seed {seed}/{INSTANCES} (joint={}, agree={}, \
+                "[quant-uflia-mf-fuzz] seed {seed}/{instances} (joint={}, agree={}, \
                  ax_sat={}, ax_unsat={}, ax_unknown={})",
                 t.jointly_decided, t.agreements, t.ax_sat, t.ax_unsat, t.ax_unknown
             );
@@ -605,7 +607,7 @@ fn quantified_uflia_model_finder_differential_fuzz_disagree_zero() {
     // The gate is only meaningful if the new sat direction is actually exercised
     // (some `sat`s decided) and enough instances are jointly adjudicated.
     assert!(
-        t.jointly_decided > 100,
+        t.jointly_decided >= minimum_jointly_decided,
         "too few jointly-decided instances ({}); the differential gate is not \
          meaningfully exercised",
         t.jointly_decided
@@ -614,4 +616,15 @@ fn quantified_uflia_model_finder_differential_fuzz_disagree_zero() {
         t.ax_sat > 0,
         "the quantified sat direction was never exercised (ax_sat = 0)"
     );
+}
+
+#[test]
+fn quantified_uflia_model_finder_differential_fuzz_disagree_zero() {
+    run_differential_fuzz(SMOKE_INSTANCES, 100);
+}
+
+#[test]
+#[ignore = "full 2,000-instance quantified-UFLIA differential campaign"]
+fn quantified_uflia_model_finder_differential_fuzz_full() {
+    run_differential_fuzz(FULL_INSTANCES, 100);
 }
