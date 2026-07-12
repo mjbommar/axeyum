@@ -87,6 +87,34 @@ fn small_cover_reconstructs_through_the_lean_kernel() {
 }
 
 #[test]
+fn oversized_cover_witness_declines_before_proof_building() {
+    let (mut arena, assertions) = small_cover_query();
+    let mut certificate =
+        quantified_counterexample_cover_refutation(&mut arena, &assertions, &config(5))
+            .unwrap()
+            .expect("one counterexample cube");
+    let (_, value) = certificate.cases[0]
+        .bindings
+        .iter_mut()
+        .find(|(_, value)| matches!(value, Value::Int(_)))
+        .expect("small cover has one Int witness");
+    *value = Value::Int(5000);
+    assert!(check_quantified_counterexample_cover(
+        &arena,
+        &assertions,
+        &certificate
+    ));
+    assert!(
+        reconstruct_quantified_counterexample_cover_to_lean_module(
+            &arena,
+            &assertions,
+            &certificate,
+        )
+        .is_err()
+    );
+}
+
+#[test]
 fn malformed_source_cases_and_incomplete_covers_are_rejected() {
     let (mut arena, assertions) = small_cover_query();
     let certificate =

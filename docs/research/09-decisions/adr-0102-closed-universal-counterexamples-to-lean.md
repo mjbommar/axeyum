@@ -43,6 +43,11 @@ The public reconstruction entry point first reruns
 5. closes `False` with a kernel-derived equality proof or a literal
    disequality proved from the integer order axioms.
 
+Because the integer prelude encodes literals as repeated signed units, proof
+construction also enforces a 4,096-unit budget over source literals, witnesses,
+evaluated operands, and expanded ground products. Oversized but logically valid
+certificates decline before ring normalization.
+
 The generic `prove_unsat_to_lean_module` router may rediscover a certificate
 under explicit two-second and deterministic resource limits, but it delegates
 acceptance to the same checker and proof builder. Search is not trusted.
@@ -89,4 +94,5 @@ normalization is added; it must not fall back to an opaque refuter axiom.
   and kernel were already trusted. No theorem-specific refuter axiom is added.
 - The other five quantified-LIA UNSAT certificates still need proof-specific or
   composed Alethe reconstruction; they remain honestly uncredited.
-
+- Resource rejection is separate from certificate validity: a checked theorem
+  may remain certified while its unary Lean reconstruction honestly declines.

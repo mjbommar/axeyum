@@ -55,6 +55,11 @@ Signed SMT literals are normalized through the integer ring proof. They are not
 treated as definitionally equal: `(- 4)` translates as `neg(4)`, while a carried
 `-4` witness has the normalizer's repeated-negative-one representation.
 
+The emitted active, passive, nested-pivot, and adjacent-witness literals share a
+4,096-unit proof budget. The generic fragment dispatcher checks this specific
+nested-XOR theorem before the broader equality-partition route so proof labels
+and reconstruction remain stable when the classes overlap.
+
 ## Evidence
 
 - `issue4433-nqe` reconstructs through the public certificate API and generic
@@ -93,4 +98,5 @@ treated as definitionally equal: `(- 4)` translates as `neg(4)`, while a carried
   refuter.
 - Euclidean residue, affine growth, and finite equality partition remain the
   four uncredited quantified-LIA UNSAT rows.
-
+- Oversized pivots remain valid executable evidence but decline unary Lean proof
+  construction before allocating their literal terms.

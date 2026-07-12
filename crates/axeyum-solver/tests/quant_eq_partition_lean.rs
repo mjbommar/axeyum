@@ -102,6 +102,22 @@ fn tampered_case_count_is_rejected_before_proof_building() {
 }
 
 #[test]
+fn oversized_partition_pivot_declines_before_proof_building() {
+    let text = r"(set-logic LIA)
+        (assert (not (forall ((x Int)) (or (= x 5000) (not (= x 5000))))))
+        (check-sat)";
+    let (script, certificate) = checked_certificate(text);
+    assert!(
+        reconstruct_single_pivot_equality_partition_to_lean_module(
+            &script.arena,
+            &script.assertions,
+            &certificate,
+        )
+        .is_err()
+    );
+}
+
+#[test]
 fn broader_multi_pivot_evidence_is_not_silently_credited() {
     let text = r"
         (set-logic LIA)

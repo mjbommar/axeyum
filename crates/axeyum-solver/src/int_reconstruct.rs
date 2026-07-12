@@ -1447,6 +1447,83 @@ fn lin_to_canon_gens(coeffs: &[(usize, i128)], constant: i128) -> Vec<IGen> {
 /// guards against pathological certificates blowing up the kernel term).
 const DIO_UNIT_MAX: i128 = 4096;
 
+fn int_values_fit_proof_unit_budget(values: impl IntoIterator<Item = i128>) -> bool {
+    let mut remaining = DIO_UNIT_MAX as u128;
+    for value in values {
+        let Some(next) = remaining.checked_sub(value.unsigned_abs()) else {
+            return false;
+        };
+        remaining = next;
+    }
+    true
+}
+
+fn source_int_literals_fit_proof_unit_budget(
+    arena: &TermArena,
+    roots: impl IntoIterator<Item = TermId>,
+) -> bool {
+    let mut seen = BTreeSet::new();
+    let mut stack = roots.into_iter().collect::<Vec<_>>();
+    let mut values = Vec::new();
+    while let Some(term) = stack.pop() {
+        if !seen.insert(term) {
+            continue;
+        }
+        match arena.node(term) {
+            TermNode::IntConst(value) => values.push(*value),
+            TermNode::App { args, .. } => stack.extend(args.iter().copied()),
+            _ => {}
+        }
+    }
+    int_values_fit_proof_unit_budget(values)
+}
+
+fn zexpr_fits_proof_unit_budget(expr: &ZExpr) -> bool {
+    fn units(expr: &ZExpr) -> Option<u128> {
+        match expr {
+            ZExpr::Var(_) | ZExpr::One => Some(1),
+            ZExpr::Zero => Some(0),
+            ZExpr::Neg(inner) => units(inner),
+            ZExpr::Add(left, right) => units(left)?.checked_add(units(right)?),
+            ZExpr::Mul(left, right) => units(left)?.checked_mul(units(right)?),
+        }
+    }
+    units(expr).is_some_and(|units| units <= DIO_UNIT_MAX as u128)
+}
+
+fn ground_int_term_fits_proof_unit_budget(
+    arena: &TermArena,
+    term: TermId,
+    assignment: &Assignment,
+) -> bool {
+    fn units(arena: &TermArena, term: TermId, assignment: &Assignment) -> Option<u128> {
+        match arena.node(term) {
+            TermNode::IntConst(value) => Some(value.unsigned_abs()),
+            TermNode::Symbol(symbol) => assignment.get(*symbol)?.as_int().map(i128::unsigned_abs),
+            TermNode::App { op, args } => {
+                match (op, &**args) {
+                    (Op::IntNeg, [argument]) => units(arena, *argument, assignment),
+                    (Op::IntAdd | Op::IntSub, [left, right]) => units(arena, *left, assignment)?
+                        .checked_add(units(arena, *right, assignment)?),
+                    (Op::IntMul, [left, right]) => units(arena, *left, assignment)?
+                        .checked_mul(units(arena, *right, assignment)?),
+                    (Op::Ite, [condition, then_term, else_term]) => {
+                        match eval(arena, *condition, assignment).ok()? {
+                            Value::Bool(true) => units(arena, *then_term, assignment),
+                            Value::Bool(false) => units(arena, *else_term, assignment),
+                            _ => None,
+                        }
+                    }
+                    _ => None,
+                }
+            }
+            _ => None,
+        }
+    }
+
+    units(arena, term, assignment).is_some_and(|units| units <= DIO_UNIT_MAX as u128)
+}
+
 /// Returns whether `assertions` has the canonical ADR-0104 clock spelling.
 /// This router predicate is intentionally narrower than ADR-0095's independent
 /// evidence matcher: the Lean proof currently preserves one exact binder,
@@ -2658,6 +2735,37 @@ fn partition_formula_truth(formula: &PartitionFormula, assignment: &Assignment) 
     }
 }
 
+fn partition_literals_fit_proof_unit_budget(formula: &PartitionFormula) -> bool {
+    fn collect(formula: &PartitionFormula, values: &mut Vec<i128>) {
+        match formula {
+            PartitionFormula::IntAtom(_, value) => {
+                values.push(*value);
+                values.push(
+                    value
+                        .checked_add(1)
+                        .or_else(|| value.checked_sub(1))
+                        .expect("every i128 has an adjacent representable value"),
+                );
+            }
+            PartitionFormula::Forall(_, _, body)
+            | PartitionFormula::Exists(_, _, body)
+            | PartitionFormula::Not(body) => collect(body, values),
+            PartitionFormula::And(left, right)
+            | PartitionFormula::Or(left, right)
+            | PartitionFormula::Implies(left, right)
+            | PartitionFormula::Iff(left, right) => {
+                collect(left, values);
+                collect(right, values);
+            }
+            PartitionFormula::True | PartitionFormula::False | PartitionFormula::BoolAtom(_) => {}
+        }
+    }
+
+    let mut values = Vec::new();
+    collect(formula, &mut values);
+    int_values_fit_proof_unit_budget(values)
+}
+
 #[derive(Debug, Clone, Copy)]
 struct PartitionSignedProof {
     truth: bool,
@@ -3372,6 +3480,11 @@ pub fn reconstruct_single_pivot_equality_partition_to_lean_module(
         return Err(eq_partition_decline("invalid ADR-0101 certificate"));
     }
     let formula = lower_single_pivot_partition(arena, certificate.assertion)?;
+    if !partition_literals_fit_proof_unit_budget(&formula) {
+        return Err(eq_partition_decline(
+            "integer literals exceed proof-size cap",
+        ));
+    }
     if partition_formula_truth(&formula, &Assignment::new()) != Some(false) {
         return Err(eq_partition_decline(
             "lowered formula is not false under its exact partitions",
@@ -3466,7 +3579,12 @@ fn cover_int_term(
     values: Option<&Assignment>,
 ) -> Result<ExprId, ReconstructError> {
     match arena.node(term) {
-        TermNode::IntConst(value) => Ok(ctx.mk_intlit(*value)),
+        TermNode::IntConst(value) => {
+            if !int_values_fit_proof_unit_budget([*value]) {
+                return Err(cover_decline("integer literal exceeds proof-size cap"));
+            }
+            Ok(ctx.mk_intlit(*value))
+        }
         TermNode::Symbol(symbol) => int_env
             .get(symbol)
             .copied()
@@ -3778,6 +3896,11 @@ fn cover_int_value_proof(
     bool_env: &CoverKernelEnv,
     values: &Assignment,
 ) -> Result<(ExprId, i128, ExprId), ReconstructError> {
+    if !ground_int_term_fits_proof_unit_budget(arena, term, values) {
+        return Err(cover_decline(
+            "ground integer normalization exceeds proof-size cap",
+        ));
+    }
     let expression = cover_int_term(ctx, arena, term, int_env, bool_env, Some(values))?;
     let value = eval(arena, term, values)
         .ok()
@@ -4568,6 +4691,9 @@ fn cover_case_contradiction(
         values.set(symbol, value.clone());
         let witness = match value {
             Value::Int(value) => {
+                if !int_values_fit_proof_unit_budget([*value]) {
+                    return Err(cover_decline("integer witness exceeds proof-size cap"));
+                }
                 let witness = ctx.mk_intlit(*value);
                 int_env.insert(symbol, witness);
                 witness
@@ -4775,6 +4901,19 @@ pub fn reconstruct_quantified_counterexample_cover_to_lean_module(
             "case source does not contain admitted universal",
         ));
     }
+    let binding_values = certificate.cases.iter().flat_map(|case| {
+        case.bindings.iter().filter_map(|(_, value)| match value {
+            Value::Int(value) => Some(*value),
+            _ => None,
+        })
+    });
+    if !source_int_literals_fit_proof_unit_budget(arena, assertions.iter().copied())
+        || !int_values_fit_proof_unit_budget(binding_values)
+    {
+        return Err(cover_decline(
+            "integer literals or witnesses exceed proof-size cap",
+        ));
+    }
     let free_symbols = admitted_free_booleans(arena, assertions)
         .ok_or_else(|| cover_decline("source has inadmissible free symbols"))?;
     let mut ctx = IntReconstructCtx::new();
@@ -4889,6 +5028,20 @@ pub fn reconstruct_closed_universal_counterexample_to_lean_module(
             "body is not an integer equality or disequality",
         ));
     };
+    let binding_values = certificate
+        .bindings
+        .iter()
+        .filter_map(|(_, value)| match value {
+            Value::Int(value) => Some(*value),
+            _ => None,
+        });
+    if !source_int_literals_fit_proof_unit_budget(arena, [body])
+        || !int_values_fit_proof_unit_budget(binding_values)
+    {
+        return Err(closed_cex_decline(
+            "integer literals or witnesses exceed proof-size cap",
+        ));
+    }
 
     let mut assignment = Assignment::new();
     for &(binder, ref value) in &certificate.bindings {
@@ -4904,6 +5057,18 @@ pub fn reconstruct_closed_universal_counterexample_to_lean_module(
             "right equality operand did not evaluate to Int",
         ));
     };
+    if !int_values_fit_proof_unit_budget([lhs_value, rhs_value]) {
+        return Err(closed_cex_decline(
+            "evaluated integer operands exceed proof-size cap",
+        ));
+    }
+    if !ground_int_term_fits_proof_unit_budget(arena, lhs, &assignment)
+        || !ground_int_term_fits_proof_unit_budget(arena, rhs, &assignment)
+    {
+        return Err(closed_cex_decline(
+            "ground integer normalization exceeds proof-size cap",
+        ));
+    }
 
     let mut ctx = IntReconstructCtx::new();
     let lhs_bound = ctx.emit_closed_cex_int_term(arena, lhs, &binders)?;
@@ -4933,6 +5098,11 @@ pub fn reconstruct_closed_universal_counterexample_to_lean_module(
 
     let lhs_ground = closed_cex_ground_zexpr(arena, lhs, &assignment)?;
     let rhs_ground = closed_cex_ground_zexpr(arena, rhs, &assignment)?;
+    if !zexpr_fits_proof_unit_budget(&lhs_ground) || !zexpr_fits_proof_unit_budget(&rhs_ground) {
+        return Err(closed_cex_decline(
+            "ground integer normalization exceeds proof-size cap",
+        ));
+    }
     let lhs_expr = ctx.emit_zexpr(&lhs_ground);
     let rhs_expr = ctx.emit_zexpr(&rhs_ground);
 
@@ -5011,6 +5181,13 @@ pub fn reconstruct_int_nested_xor_to_lean_module(
         return Err(ReconstructError::UnsupportedTerm {
             term: "invalid nested-XOR refutation certificate".to_owned(),
         });
+    }
+    if !int_values_fit_proof_unit_budget([
+        certificate.active_pivot,
+        certificate.passive_pivot,
+        certificate.nested_pivot,
+    ]) {
+        return Err(nested_xor_decline("integer literals exceed proof-size cap"));
     }
     let Some((outer_binders, outer_body)) = peel_closed_foralls(arena, certificate.assertion)
     else {
@@ -5137,9 +5314,12 @@ pub fn reconstruct_int_nested_xor_to_lean_module(
         .checked_add(1)
         .or_else(|| certificate.nested_pivot.checked_sub(1))
         .ok_or_else(|| nested_xor_decline("could not choose an adjacent nested witness"))?;
-    if certificate.nested_pivot.unsigned_abs() > DIO_UNIT_MAX as u128
-        || nested_witness.unsigned_abs() > DIO_UNIT_MAX as u128
-    {
+    if !int_values_fit_proof_unit_budget([
+        certificate.active_pivot,
+        certificate.passive_pivot,
+        certificate.nested_pivot,
+        nested_witness,
+    ]) {
         return Err(nested_xor_decline("pivot literal exceeds proof-size cap"));
     }
     let witness_expr = ctx.mk_intlit(nested_witness);
@@ -5371,9 +5551,19 @@ fn closed_cex_ground_zexpr(
     assignment: &Assignment,
 ) -> Result<ZExpr, ReconstructError> {
     match arena.node(term) {
-        TermNode::IntConst(value) => Ok(intlit_zexpr(*value)),
+        TermNode::IntConst(value) => {
+            if !int_values_fit_proof_unit_budget([*value]) {
+                return Err(closed_cex_decline("integer literal exceeds proof-size cap"));
+            }
+            Ok(intlit_zexpr(*value))
+        }
         TermNode::Symbol(symbol) => match assignment.get(*symbol) {
-            Some(Value::Int(value)) => Ok(intlit_zexpr(value)),
+            Some(Value::Int(value)) if int_values_fit_proof_unit_budget([value]) => {
+                Ok(intlit_zexpr(value))
+            }
+            Some(Value::Int(_)) => {
+                Err(closed_cex_decline("integer witness exceeds proof-size cap"))
+            }
             _ => Err(closed_cex_decline(
                 "unassigned non-Int symbol in integer term",
             )),
@@ -5433,7 +5623,12 @@ impl IntReconstructCtx {
         value: &Value,
     ) -> Result<ExprId, ReconstructError> {
         match (sort, value) {
-            (Sort::Int, Value::Int(value)) => Ok(self.mk_intlit(*value)),
+            (Sort::Int, Value::Int(value)) => {
+                if !int_values_fit_proof_unit_budget([*value]) {
+                    return Err(closed_cex_decline("integer witness exceeds proof-size cap"));
+                }
+                Ok(self.mk_intlit(*value))
+            }
             (Sort::Bool, Value::Bool(true)) => {
                 Ok(self.kernel.const_(self.int.logic.bool_true, Vec::new()))
             }
@@ -5483,7 +5678,12 @@ impl IntReconstructCtx {
         binders: &[SymbolId],
     ) -> Result<ExprId, ReconstructError> {
         match arena.node(term) {
-            TermNode::IntConst(value) => Ok(self.mk_intlit(*value)),
+            TermNode::IntConst(value) => {
+                if !int_values_fit_proof_unit_budget([*value]) {
+                    return Err(closed_cex_decline("integer literal exceeds proof-size cap"));
+                }
+                Ok(self.mk_intlit(*value))
+            }
             TermNode::Symbol(symbol) if arena.symbol(*symbol).1 == Sort::Int => {
                 let position = binders
                     .iter()
@@ -5543,6 +5743,11 @@ impl IntReconstructCtx {
         lhs: &ZExpr,
         rhs: &ZExpr,
     ) -> Result<ExprId, ReconstructError> {
+        if !zexpr_fits_proof_unit_budget(lhs) || !zexpr_fits_proof_unit_budget(rhs) {
+            return Err(closed_cex_decline(
+                "integer equality proof exceeds proof-size cap",
+            ));
+        }
         let (lhs_gens, lhs_expr, lhs_proof) = self
             .normalize(lhs)
             .ok_or_else(|| closed_cex_decline("left integer normalization declined"))?;
@@ -5564,6 +5769,11 @@ impl IntReconstructCtx {
         expr: &ZExpr,
         value: i128,
     ) -> Result<ExprId, ReconstructError> {
+        if !int_values_fit_proof_unit_budget([value]) || !zexpr_fits_proof_unit_budget(expr) {
+            return Err(closed_cex_decline(
+                "integer value proof exceeds proof-size cap",
+            ));
+        }
         let (gens, kernel_expr, proof) = self
             .normalize(expr)
             .ok_or_else(|| closed_cex_decline("integer normalization declined"))?;
@@ -5588,6 +5798,11 @@ impl IntReconstructCtx {
         if lhs == rhs {
             return Err(closed_cex_decline(
                 "literal disequality requires distinct values",
+            ));
+        }
+        if !int_values_fit_proof_unit_budget([lhs, rhs]) {
+            return Err(closed_cex_decline(
+                "literal disequality exceeds proof-size cap",
             ));
         }
         let lhs_expr = self.mk_intlit(lhs);

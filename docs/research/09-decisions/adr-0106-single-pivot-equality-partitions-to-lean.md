@@ -58,6 +58,10 @@ The broader multi-constant-per-binder ADR-0101 evidence class remains checked
 but outside this first Lean route. Extending it requires an N-way equality
 split and pairwise literal-disequality proofs; it is not silently credited.
 
+All pivot and adjacent representative literals share the integer reconstructor's
+4,096-unit proof budget. A larger checked partition declines before constructing
+unary integer terms.
+
 ## Acceptance
 
 - `cbqi-sdlx-fixpoint-3-dd` reconstructs through the direct API and generic
@@ -96,6 +100,8 @@ split and pairwise literal-disequality proofs; it is not silently credited.
 - The trusted integer prelude grows by one explicit decidable-equality theorem.
 - Multi-constant equality partitions remain a documented proof-coverage
   extension, not a hidden trust step.
+- More-specific quantified theorem fragments are dispatched before this generic
+  partition route when their accepted source classes overlap.
 
 ## Validation
 

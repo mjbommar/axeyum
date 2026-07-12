@@ -1,9 +1,10 @@
 //! ADR-0102: genuine Lean reconstruction of ADR-0100 counterexamples.
 
-use axeyum_ir::Value;
+use axeyum_ir::{Op, TermNode, Value};
 use axeyum_smtlib::parse_script;
 use axeyum_solver::{
-    Evidence, ProofFragment, SolverConfig, produce_evidence, prove_unsat_to_lean_module,
+    ClosedUniversalCounterexampleCertificate, Evidence, ProofFragment, SolverConfig,
+    check_closed_universal_counterexample, produce_evidence, prove_unsat_to_lean_module,
     reconstruct_closed_universal_counterexample_to_lean_module,
 };
 
@@ -121,4 +122,45 @@ fn tampered_counterexample_is_rejected_before_reconstruction() {
         )
         .is_err()
     );
+}
+
+#[test]
+fn oversized_literals_and_ground_products_decline_before_normalization() {
+    for (text, witness) in [
+        (
+            "(set-logic LIA) (assert (forall ((x Int)) (= x 5000))) (check-sat)",
+            0,
+        ),
+        (
+            "(set-logic LIA) (assert (forall ((x Int)) (= (* x x) 0))) (check-sat)",
+            4096,
+        ),
+    ] {
+        let script = parse_script(text).expect("resource-bound theorem parses");
+        let assertion = script.assertions[0];
+        let TermNode::App {
+            op: Op::Forall(binder),
+            ..
+        } = script.arena.node(assertion)
+        else {
+            panic!("test assertion is a universal");
+        };
+        let certificate = ClosedUniversalCounterexampleCertificate {
+            assertion,
+            bindings: vec![(*binder, Value::Int(witness))],
+        };
+        assert!(check_closed_universal_counterexample(
+            &script.arena,
+            &script.assertions,
+            &certificate
+        ));
+        assert!(
+            reconstruct_closed_universal_counterexample_to_lean_module(
+                &script.arena,
+                &script.assertions,
+                &certificate,
+            )
+            .is_err()
+        );
+    }
 }

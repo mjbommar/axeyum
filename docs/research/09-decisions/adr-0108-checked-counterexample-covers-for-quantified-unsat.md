@@ -132,7 +132,11 @@ definitionally equal to `False` in the in-tree Lean kernel.
   Lean module was about 152 MB and took about 18 seconds to reconstruct.
   ADR-0109 now preserves closed kernel-DAG sharing in source, reducing the
   current artifact to 2.68 MB and reconstruction to about 10.75 seconds. Open
-  binder-context sharing remains a separate proof-export boundary.
+binder-context sharing remains a separate proof-export boundary.
+- Kernel reconstruction separately caps unary source literals, carried integer
+  witnesses, and expanded ground normalization at 4,096 units. This does not
+  weaken executable cover checking; oversized checked covers simply receive no
+  Lean artifact.
 
 ## Validation
 
@@ -151,6 +155,9 @@ definitionally equal to `False` in the in-tree Lean kernel.
   and reordered bindings, duplicate/over-cap covers, dropped closure cases, a
   small kernel reconstruction, rejection of the multiple-universal near miss,
   zero-trust public evidence, and an explicit release-only public kernel test.
+- A valid cover with an oversized integer witness is rejected before proof-term
+  construction, pinning the distinction between evidence validity and bounded
+  reconstruction.
 - Reference-source inspection used Z3's QSAT/model-evaluation paths and cvc5's
   CEGQI arithmetic/instantiation paths. A linked Z3 4.16 diagnostic closed the
   target in roughly 13--22 ms; monolithic Z3 `qe` exceeded 90 seconds. No native

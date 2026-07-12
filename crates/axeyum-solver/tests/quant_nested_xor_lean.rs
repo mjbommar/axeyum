@@ -65,3 +65,22 @@ fn tampered_nested_xor_certificate_is_rejected_before_proof_building() {
             .is_err()
     );
 }
+
+#[test]
+fn oversized_outer_pivot_declines_before_proof_building() {
+    let text = r"
+        (set-logic LIA)
+        (assert (forall ((a Int) (b Int))
+          (xor (xor (= a 5000) (= b 0))
+               (forall ((c Int))
+                 (= (ite (= a 5000) 1 2) (ite (= c 0) 1 2))))))
+        (check-sat)
+    ";
+    let script = parse_script(text).expect("oversized nested-XOR theorem parses");
+    let certificate = int_nested_xor_refutation(&script.arena, &script.assertions)
+        .expect("oversized theorem still has a logical certificate");
+    assert!(
+        reconstruct_int_nested_xor_to_lean_module(&script.arena, &script.assertions, &certificate,)
+            .is_err()
+    );
+}

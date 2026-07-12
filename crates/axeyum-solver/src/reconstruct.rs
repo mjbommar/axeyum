@@ -1787,14 +1787,14 @@ pub fn scan_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> ProofFra
     } else if has_forall && crate::int_reconstruct::int_affine_growth_lean_shape(arena, assertions)
     {
         ProofFragment::IntAffineGrowth
-    } else if (has_forall || has_exists)
-        && crate::int_reconstruct::single_pivot_equality_partition_lean_shape(arena, assertions)
-    {
-        ProofFragment::SinglePivotEqualityPartition
     } else if has_forall
         && crate::quant_nested_xor_cert::int_nested_xor_refutation(arena, assertions).is_some()
     {
         ProofFragment::IntNestedXor
+    } else if (has_forall || has_exists)
+        && crate::int_reconstruct::single_pivot_equality_partition_lean_shape(arena, assertions)
+    {
+        ProofFragment::SinglePivotEqualityPartition
     } else if has_forall
         && crate::int_reconstruct::closed_universal_counterexample_lean_shape(arena, assertions)
     {
