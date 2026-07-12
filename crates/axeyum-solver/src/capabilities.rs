@@ -1225,8 +1225,8 @@ pub const CAPABILITIES: &[Capability] = &[
                    binding IDs/order/sorts, and evaluates the untouched original body directly; only \
                    `Bool(true)` certifies that the negated assertion is false. `NUM878`, `ari-syqi`, \
                    and `ari118-bv-2occ-x` move unsupported to certified UNSAT in median 3/0/3 ms. \
-                   The public quantified-BV slice is 32 SAT / 17 UNSAT / 0 unknown / 5 unsupported \
-                   with 49/49 checked/certified decisions, zero disagreement, error, or replay failure, \
+                   The public quantified-BV slice is 32 SAT / 14 UNSAT / 0 unknown / 8 unsupported \
+                   with 46/46 checked/certified decisions, zero disagreement, error, or replay failure, \
                    and empty target trust ledgers. The complete direct-Z3 suite covers 1,400 cases and \
                    controls. Open bodies, functions, arrays, arithmetic binders, nested quantifiers, \
                    broader QSAT, and Lean reconstruction remain open",
@@ -1242,7 +1242,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    substitution, 128-binder/4,096-node caps, and the DRAT/LRAT proof regenerated for \
                    the entire weakened QF_BV source assertion. `cond-var-elim-binary` moves unsupported \
                    to checked UNSAT in median 0.364 ms. The public quantified-BV slice is 32 SAT / \
-                   17 UNSAT / 0 unknown / 5 unsupported with 49/49 checked/certified decisions, zero \
+                   15 UNSAT / 0 unknown / 7 unsupported with 47/47 checked/certified decisions, zero \
                    disagreement, error, or replay failure, and an empty target trust ledger. The \
                    complete direct-Z3 suite covers 1,464 cases and controls. Non-conjunctive contexts, \
                    multiple selected universals, nested quantifiers, functions, arrays, arithmetic, \

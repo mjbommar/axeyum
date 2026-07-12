@@ -721,26 +721,23 @@ source path, unique prefix, binding IDs/order/sorts, 128-binder/4,096-node caps,
 exact substitution, complete weakened assertion, and its regenerated QF_BV
 DRAT/LRAT proof. Search is untrusted and tries defaults plus deterministic
 same-sort source constants. `cond-var-elim-binary` moves
-**Unsupported→UNSAT** at median 0.364 ms with `x=1,y=0`. `issue2031-bv-var-elim`
-now moves through the checked vacuous-existential-prefix closed-universal route,
-and `nested9_true-unreach-call` closes through the paired-existential implication
-search route, so the cvc5 quantified-BV slice is now **32 SAT / 17 UNSAT / 0
-unknown / 5 unsupported**, 49 agreements, DISAGREE=0, no errors/replay failures,
-and five-run PAR-2 median 3.008263 s. The audit certifies/checks 49/49 with 40/49
-dominant and Lean 8/17 UNSAT; the target uses
+**Unsupported→UNSAT** with `x=1,y=0`. The recovered cvc5 quantified-BV slice is
+**32 SAT / 15 UNSAT / 0 unknown / 7 unsupported**, 47 agreements, DISAGREE=0,
+no errors/replay failures, and five-run PAR-2 median 3.008609 s. The audit
+certifies/checks 47/47 with 40/47 dominant and Lean 8/15 UNSAT; the target uses
 `bv-conjunctive-universal-instance-unsat` with empty trust. All 1,464 direct-Z3
-cases/controls agree; focused tests are 6/6. Solver library 863/863,
-evidence 69/69, capability/support golden matrices,
-default pure-Rust check, workspace Clippy/rustdoc, foundational 137/174, links,
-formatting, and diff checks pass. The independent full-workspace blocker remains
-the two known `bounded_string_replace_membership_deadline` wall caps; the
-unrelated `frontier_bv_reduction` 28/30 ratchet is unchanged. **Next action:** keep the quantified-BV front door honest on the five measured holdouts; the solver backend now drops all five remaining rows (`intersection-example-onelane`, `psyco-001-bv`, `psyco-107-bv`, `smtcomp-qbv-053118`, `gn-wrong-091018`) to `unknown`, the qf trace probes skip quantified inputs instead of surfacing a misleading backend error, the proof-export/lazy-BV/native-CDCL qf retries still leave the same five rows undecided, and the finite-expansion dispatcher now also falls through on `unknown` without yet finding new reach. The BV boundary-neighborhood probes, model-guided conjunctive widening, and wider source/model neighborhoods still leave the same five rows undecided; `psyco-107-bv` now looks like a front-door quantifier-reach gate, not a missing local witness value. The checked vacuous-existential prefix and paired-existential routes are now banked; keep the general alternation and unchecked existential elimination frontiers separate.
-evidence 69/69, capability/support golden matrices,
-default pure-Rust check, workspace Clippy/rustdoc, foundational 137/174, links,
-formatting, and diff checks pass. The independent full-workspace blocker remains
-the two known `bounded_string_replace_membership_deadline` wall caps; the
-unrelated `frontier_bv_reduction` 28/30 ratchet is unchanged. **Next action:** keep the quantified-BV front door honest on the five measured holdouts; the solver backend now drops all five remaining rows (`intersection-example-onelane`, `psyco-001-bv`, `psyco-107-bv`, `smtcomp-qbv-053118`, `gn-wrong-091018`) to `unknown`, the qf trace probes skip quantified inputs instead of surfacing a misleading backend error, the proof-export/lazy-BV/native-CDCL qf retries still leave the same five rows undecided, and the finite-expansion dispatcher now also falls through on `unknown` without yet finding new reach. The BV boundary-neighborhood probes, exact qf-BV witness probe, model-guided conjunctive widening, and wider source/model neighborhoods still leave the same five rows undecided; `psyco-107-bv` still looks like a front-door quantifier-reach gate, not a missing local witness value. The checked vacuous-existential prefix and paired-existential routes are now banked; keep the general alternation and unchecked existential elimination frontiers separate.
-unrelated `frontier_bv_reduction` 28/30 ratchet is unchanged. **Next action:** keep the quantified-BV front door honest on the five measured holdouts; the solver backend now drops all five remaining rows (`intersection-example-onelane`, `psyco-001-bv`, `psyco-107-bv`, `smtcomp-qbv-053118`, `gn-wrong-091018`) to `unknown`, the qf trace probes skip quantified inputs instead of surfacing a misleading backend error, the proof-export/lazy-BV/native-CDCL qf retries still leave the same five rows undecided, and the finite-expansion dispatcher now also falls through on `unknown` without yet finding new reach. The new BV boundary-neighborhood probes in the MBQI / conjunctive / alternation lanes, the exact qf-BV witness probe, the symbolic BV candidate pass, the quantified disjunct split, the quantified existential-branch strengthening probe, and the decision-only conjunctive fallback still leave the same five rows undecided; `gn-wrong-091018` reaches the MBQI round cap, while `psyco-107-bv` now reduces to a qf-sat residual under default bindings, so the remaining gap is candidate selection from the widened model/source pool rather than residual quantifier handling. The checked vacuous-existential prefix and paired-existential routes are now banked; keep the general alternation and unchecked existential elimination frontiers separate.
+cases/controls agree; focused certificate and differential tests pass. Recovery
+also removed quantified preprocessing and search heuristics that lacked checked
+contracts. A memoized quantified fast-path gate plus binder-context memoization
+restore the bounded `str.replace`-membership deadline regressions to 0.67 s
+instead of exceeding both 30 s wall caps. The unrelated
+`frontier_bv_reduction` 28/30 hardware-relative ratchet remains unchanged.
+**Next action:** address the seven measured unsupported rows one checked semantic
+class at a time: `issue2031-bv-var-elim`, `intersection-example-onelane`,
+`nested9_true-unreach-call`, `psyco-001-bv`, `psyco-107-bv`,
+`smtcomp-qbv-053118`, and `gn-wrong-091018`. Do not restore the rejected
+vacuous-prefix, paired-existential, decision-only, or model-guided shortcuts
+without an ADR, independent checker, soundness negatives, and fresh measurement.
 **Process state:** first green CI in 200+ runs held into a green cadence;
 the pre-push hook gates the pushed SHA incl. the ~6s `:status` corpus
 sweep (a wrong verdict must not leave the machine); STATUS truncated

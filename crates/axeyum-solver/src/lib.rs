@@ -134,7 +134,6 @@ mod quant_guarded_int;
 mod quant_negated_exists_cert;
 mod quant_negated_exists_search;
 mod quant_nested_xor_cert;
-mod quant_paired_exists_implication_search;
 mod quant_residue_cert;
 mod quant_sat_cert;
 mod quant_unsat_universal;
@@ -209,8 +208,8 @@ pub use array_xor_swap::{
 pub use aufbv::check_with_arrays_and_functions;
 pub use auto::{
     BoundedIntBlastCertificate, certify_bounded_int_blast, check_auto, check_auto_explained,
-    check_with_quantifiers, normalize_assertions_for_quantifiers, prove_unsat_by_ematching,
-    prove_unsat_by_instantiation, prove_unsat_by_mbqi, solve, unsat_core,
+    check_with_quantifiers, prove_unsat_by_ematching, prove_unsat_by_instantiation,
+    prove_unsat_by_mbqi, solve, unsat_core,
 };
 pub use backend::{
     Capabilities, CheckResult, SolveStats, SolverBackend, SolverConfig, SolverError, UnknownKind,

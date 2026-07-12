@@ -322,76 +322,30 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-11 — ADR-0127 lands source-bound conjunctive BV universal
-  instances.** One unique universal reached only through top-level conjunction
-  nodes may be weakened to a complete concrete Bool/BV instance; replay checks
-  the source path, prefix, bindings, exact substitution, full residual QF_BV
-  formula, and DRAT/LRAT proof under 128-binder/4,096-node caps. Search remains
-  untrusted. `cond-var-elim-binary` moves **Unsupported→UNSAT** at median 0.364
-  ms using `x=1,y=0`. `issue2031-bv-var-elim` now moves through the checked
-  vacuous-existential-prefix closed-universal route, and `nested9_true-unreach-call`
-  closes through the paired-existential implication search route, so the cvc5
-  quantified-BV slice is now **32 SAT / 17 UNSAT / 5 unknown / 0 unsupported**, with
-  49 agreements, zero disagreement/error/replay failure, and five-run PAR-2
-  median 3.008263 s. The audit certifies/checks 49/49, marks 40/49 dominant, and
-  Lean remains 8/17 UNSAT; the target is `bv-conjunctive-universal-instance-unsat`
-  with empty trust. All 1,464 direct-Z3 cases/controls agree and focused tests
-  are 6/6.
-  Solver library 863/863, evidence 69/69, capability/support golden matrices,
-  default pure-Rust check, workspace Clippy/rustdoc, foundational 137/174,
-  links, formatting, and diff checks pass. The independent full-workspace
-  blocker remains the two known `bounded_string_replace_membership_deadline`
-  wall caps; the unrelated `frontier_bv_reduction` 28/30 ratchet is unchanged.
-  **Next:** keep the quantified-BV front door honest on the five measured
-  holdouts; the solver backend now downgrades all five remaining rows
-  (`intersection-example-onelane`, `psyco-001-bv`, `psyco-107-bv`,
-  `smtcomp-qbv-053118`, `gn-wrong-091018`) to `unknown`, the qf trace probes
-  now skip quantified inputs instead of surfacing a misleading backend error,
-  and the proof-export/lazy-BV/native-CDCL qf retries added this session still
-  leave the same five rows undecided. The dispatcher now also falls through on
-  finite-expansion `unknown`, and the new BV boundary-neighborhood probes in
-  the MBQI / conjunctive / alternation lanes, plus the quantified
-  existential-branch strengthening retry and decision-only conjunctive fallback,
-  still leave the same five rows undecided. `psyco-107-bv` remains a
-  nested-quantifier reach problem, not a missing flat-BV candidate. Keep the
-  vacuous-existential prefix and paired-existential routes banked and the
-  general alternation / unchecked existential-elimination frontiers separate.
-- **2026-07-11 — quantified-BV frontier probe, no closure yet.** The MBQI,
-  conjunctive, and alternation search lanes now probe BV boundary neighborhoods
-  around model and source candidates, including wraparound `±1` and
-  `0/1/all-ones` witnesses, and the alternation lane also tries explicit
-  boundary-equality queries after the default disequality probe. The five
-  measured holdouts still all report `unknown`, so the remaining gap is the
-  witness shape, not dispatcher flow or a missing scalar neighborhood.
-- **2026-07-11 — exact qf BV witness probe still no closure.** The new BV
-  quantifier-free witness path solves the negated body with the other variables
-  fixed to the current model and replays that witness as an instance, but the
-  five measured holdouts still report the same `unknown` frontier. The current
-  remaining gap is the symbolic witness shape, not a missing concrete model.
-- **2026-07-11 — symbolic BV MBQI lifted two rows to the round cap.** The new
-  BV symbolic-candidate pass now builds boundary terms from the body's own ground
-  subterms (`t`, `t±1`, `0/1/all-ones`) before MBQI falls back, and the round
-  budget was widened to 32. `gn-wrong-091018` now exhausts MBQI instead of
-  stopping on the earlier satisfiable-instantiation path; the other flat rows
-  still report satisfiable instantiations and `psyco-107-bv` is still the
-  nested-quantifier holdout.
-- **2026-07-11 — quantified disjunct split still no closure.** A quantified-aware
-  top-level `or` split now runs before the e-matching/MBQI fallbacks, but the
-  five measured rows still land on the same `unknown` frontier. The remaining
-  gap is still witness/structure shape, not the absence of a branch split.
-- **2026-07-11 — quantified existential-branch strengthening still no closure.**
-  A new SAT-side retry strengthens a quantified disjunction by replacing a
-  direct existential branch under the same universal prefix, then re-solves the
-  stronger query; the same five measured rows still report `unknown`.
-- **2026-07-11 — decision-only conjunctive fallback still no closure.** The
-  conjunctive BV search now has a decision-only sibling that accepts a direct
-  qf refutation even when proof export declines, but the same five measured
-  rows still report `unknown`.
-- **2026-07-11 — model-guided conjunctive widening still no closure.**
-  Widening the conjunctive model/source pool, including search-side residual
-  terms and a wider BV neighborhood, still leaves the same five measured rows
-  at `unknown`; `psyco-107-bv` still trips the front-door quantifier-reach
-  gate rather than a missing local witness value.
+- **2026-07-12 — recovery audit restores the checked ADR-0127 boundary.** The
+  post-switch worktree is preserved on `rescue/gpt54-dirty-20260712`; recovery
+  removed unchecked vacuous-prefix, paired-existential, decision-only,
+  model-guided, normalization, branch-splitting, and widened-candidate routes.
+  It restored the pre-switch source checkers and search policy, including exact
+  positive conjunction-path uniqueness for ADR-0127. Fresh release measurement
+  is **32 SAT / 15 UNSAT / 0 unknown / 7 unsupported**, 47 agreements, zero
+  disagreement/error/replay failure, and five-run PAR-2 median 3.008609 s. The
+  dominance audit certifies/checks 47/47, marks 40/47 dominant, and reconstructs
+  8/15 UNSAT in Lean. The seven unsupported rows are `issue2031-bv-var-elim`,
+  `intersection-example-onelane`, `nested9_true-unreach-call`, `psyco-001-bv`,
+  `psyco-107-bv`, `smtcomp-qbv-053118`, and `gn-wrong-091018`.
+  The audit also fixed a deterministic QF performance regression: quantified
+  fast paths walked every QF shared DAG, and ADR-0123 admission recursively
+  re-descended shared quantified DAGs. A memoized quantifier gate plus
+  binder-context memoization restore the bounded string deadline tests to 0.67 s.
+  Solver library 863/863, focused quantifier suites, quantified-BV differential,
+  workspace all-target/all-feature check, strict Clippy, rustdoc, golden
+  matrices, links, and foundational 137/174 pass. The repeated package aggregate
+  passed the former string wall-cap failure and every subsequent suite through
+  the large CHC/integration groups, then was stopped during the known long
+  `nia_differential_fuzz_disagree_zero` run; no complete package pass is claimed.
+  The hardware-relative `frontier_bv_reduction` 28/30 ratchet remains open and
+  is not weakened.
 - **2026-07-11 — ADR-0126 lands evaluator-replayed negated-existential
   witnesses.** One exact top-level `not (exists+ body)` over unique Bool/BV
   binders may carry complete typed values; the checker evaluates the untouched
@@ -1677,7 +1631,7 @@ plan is built and committed on the current branch:
 | P2.3 | EUF on the e-graph (from Ackermann to incremental) | TODO |
 | P2.4 | LIA cut portfolio (GCD, Gomory, HNF, cube, Diophantine) | WIP — **multi-equation Diophantine infeasibility** (`prove_lia_unsat_by_diophantine`, commit 96f07a3): a conjunction of integer equalities that is rational-feasible but **integer-infeasible** is UNSAT — fraction-free Hermite-style integer Gaussian elimination reports a contradiction row (`0=c` or per-row `gcd ∤ rhs`), deciding the case B&B can't terminate on for unbounded vars and the single-equation GCD misses (e.g. `x+y=0 ∧ x−y=1 → 2x=1`). **Strictly generalizes & replaced** the single-equation `prove_lia_unsat_by_gcd` in dispatch (no regression). Sound (only integer-preserving row ops; `checked_*` → "not refuted" on overflow, never a wrong unsat; SAT systems never refuted, negative-tested). 11+2 tests. Remaining: Gomory/cube cuts; inequality-integrated cuts |
 | P2.5 | NRA: incremental linearization → nlsat/CAD | WIP — linear-abstraction + sign/zero lemmas + McCormick + spatial B&B + point-lemma refinement already shipped. **Added threshold-1 monotonicity lemmas** — growing (`a≥1 ∧ b≥0 ⇒ r≥b`, decides `x≥1 ∧ y≥1 ∧ x·y<1`) and shrinking (`0≤a≤1 ∧ b≥0 ⇒ r≤b`, decides `0≤x≤1 ∧ y≥0 ∧ x·y>y` where only one operand is bounded so McCormick can't apply); two-operand only — **plus a refinement overflow safety net** (`too_large_to_refine`: stop refining past a 2³¹ magnitude bound, → `unknown` not a panic; hardens the exact-rational simplex against escalating witnesses). **Sum-of-squares lemmas landed (2026-06-18)** — `sos_lemmas`: for a pair `a,b` with `a·a`/`b·b`/`a·b` all abstracted, add `(a±b)² ≥ 0` over the result vars (sound), restoring the cross-product correlation independent abstraction drops, so **`a²+b² ≥ 2ab` / AM–GM₂ is now PROVED** (the Spivak SOS-frontier test promoted prompt-`Unknown`→`Unsat`; negative test confirms `a²+b²=2ab` stays sat). 26 NRA + 5 Spivak tests. **Since then (2026-06-28…07-02, see the changelog + [SCOREBOARD](bench-results/SCOREBOARD.md)): the CAD arc landed** — bignum algebraic core in `axeyum-ir` (ADR-0044/45/46), a 2-var-complete / N-var decision-complete fuzz-gated CAD, coprime-split projection, first-class `/0` division witnesses (`124e18aa`), and five z3-gated adversarial differential fuzzes at DISAGREE=0. **2026-07-06/07 arithmetic arc (decomposition `fcbde209`): QF_NRA 21→27/38 (71%)** — `/0` witnesses + sat-witness probe + threshold-1 (`5cc63a15`, closed `issue9164-2`), the `a²=−k` even-power-equality (`631be06f`), the `nra_even_power` frontier wire-in (`e0e24085`, `nra_degree` 2→40), coordinate sat-witness for >4 reals (`80206579`, budget-marginal); **and the parallel QF_NIA arc drove cvc5 21→33/39 (85%): div/mod Euclidean linearization (`a946f925`+P0 fix `52f3b1d1`) + `iand` bit-blast (`c5a829a3`) + congruent Ackermann div/mod-by-zero (`b91dd918`, recovered div.01/minimal_unsat_core/div.08 + closed a pre-existing wrong-sat) + `int.pow2` value-table axioms (`fb2da08b`, +8).** Remaining is genuinely hard: 7/12 QF_NRA residue is multi-week CAD/nlsat/transcendental (Boolean-CAD, MetiTarski, degree-10) — the *funded engine arc* (ADR-0058 proposed), not a slice; NIA's bounded levers are now largely harvested (div/mod-0, iand, pow2 all landed). |
-| P2.6 | Quantifiers (MAM e-matching, trigger inference, MBQI, QE/MBP) | WIP — e-graph E-matching, trigger inference/MBQI/MBP, restricted checked Skolem/model/counterexample certificates, retained checked quantifier clauses, and incremental candidate-sensitive e-matching are live through ADR-0127. **Checked UNSAT routes (ADR-0095/0097/0099/0100/0101/0108/0124/0125/0126/0127):** Euclidean residue, affine growth, nested XOR, concrete closed-universal counterexamples, exact finite equality partitions, source-instantiated free-Boolean covers, source-bound residual-QF_BV alternation counterexamples, evaluator-replayed negated-existential witnesses, and premise-aware conjunctive universal instances each carry separate checks. **Checked SAT routes (ADR-0096/0098/0107/0121/0122/0123):** arena-stable affine/reflexive and guarded unit-gap Skolems, exact same-width BV identities, false outer-BV equality guards, free-Boolean Bool/Int models, and Boolean-discharged opaque BV closures replay through canonical `check_model`; unresolved BV semantics never enter the LIA fallback. **Lean routes (ADR-0102 through ADR-0106, ADR-0108/0109):** all eight decided LIA UNSAT rows reconstruct through genuine quantifiers and kernel-checked reasoning. Quantified LIA is 12/12, certified/rechecked/dominant 12/12, Lean UNSAT 8/8. Quantified BV is 32 SAT / 17 UNSAT / 0 unknown / 5 unsupported, with 49/49 evidence-certified/rechecked, 40/49 dominant, and Lean UNSAT 8/17. Remaining boundaries: checked vacuous-existential prefixes above universal counterexamples, broader nested/alternating BV QSAT, ADR-0124/0126/0127 Lean reconstruction, non-equality online antecedents/proof serialization, measurement-gated high-frequency callbacks, generation-cost scheduling/bytecode, quantified UF/function-valued models, multi-constant equality-partition proofs, and open-context proof sharing; current bridge relevance is exact by construction. |
+| P2.6 | Quantifiers (MAM e-matching, trigger inference, MBQI, QE/MBP) | WIP — e-graph E-matching, trigger inference/MBQI/MBP, restricted checked Skolem/model/counterexample certificates, retained checked quantifier clauses, and incremental candidate-sensitive e-matching are live through ADR-0127. **Checked UNSAT routes (ADR-0095/0097/0099/0100/0101/0108/0124/0125/0126/0127):** Euclidean residue, affine growth, nested XOR, concrete closed-universal counterexamples, exact finite equality partitions, source-instantiated free-Boolean covers, source-bound residual-QF_BV alternation counterexamples, evaluator-replayed negated-existential witnesses, and premise-aware conjunctive universal instances each carry separate checks. **Checked SAT routes (ADR-0096/0098/0107/0121/0122/0123):** arena-stable affine/reflexive and guarded unit-gap Skolems, exact same-width BV identities, false outer-BV equality guards, free-Boolean Bool/Int models, and Boolean-discharged opaque BV closures replay through canonical `check_model`; unresolved BV semantics never enter the LIA fallback. **Lean routes (ADR-0102 through ADR-0106, ADR-0108/0109):** all eight decided LIA UNSAT rows reconstruct through genuine quantifiers and kernel-checked reasoning. Quantified LIA is 12/12, certified/rechecked/dominant 12/12, Lean UNSAT 8/8. Quantified BV is 32 SAT / 15 UNSAT / 0 unknown / 7 unsupported, with 47/47 evidence-certified/rechecked, 40/47 dominant, and Lean UNSAT 8/15. Remaining boundaries: checked vacuous-existential prefixes above universal counterexamples, broader nested/alternating BV QSAT, ADR-0124/0126/0127 Lean reconstruction, non-equality online antecedents/proof serialization, measurement-gated high-frequency callbacks, generation-cost scheduling/bytecode, quantified UF/function-valued models, multi-constant equality-partition proofs, and open-context proof sharing; current bridge relevance is exact by construction. |
 | P2.7 | Strings (unbounded, full `str.*`, regex) | WIP — **Phase A DONE** (ADR-0051 `Sort::Seq`; ADR-0052 `len`↔LIA link + bounded-unsat gate, repaired a measured wrong-unsat class). **Phase B core LIVE both directions (ADR-0053, landed 2026-07-03):** T-B.1 normalization → T-B.4a arrangement search → T-B.4b routing + parser dual-build → extended-fn reductions → T-B.4d word-first fallback → harness parity (**QF_S 52→78 across 07-03…06** — see the generated scoreboard, oracle-verified) → **T-B.7 slices 1–2**: word `unsat` ONLY via the independent derivation checker (`check_derivation.rs`, own union-find + walkers; word fuzz **96 sat + 305 unsat, DISAGREE=0**). Phase C derivative membership (ADR-0054), Phase D reductions, lex order, code↔LIA, #49 membership-over-concat, #53 LenAbs SAT, and #55 concat emptiness/joint search are landed; QF_S is 87/134 and QF_SLIA 18/50 on the committed scoreboard. Remaining declines are unsupported `to_int`/`replace_re`/`seq.*` machinery plus the ADR-0063 Nielsen-arrangement class; T-B.5 F-Loop/T-B.6 eager conflicts remain performance work. The canon/derivative deadline guard is closed. |
 | P2.8 | FP polish (unspecified values, min/max ±0, lazy conversion) | WIP — the FP theory is broad already (classification, compare, abs/neg/min/max, add/sub/mul/div/fma/sqrt/rem/roundToIntegral, fp→fp resize, fp→real/ubv/sbv). min/max ±0 confirmed correct (deterministic allowed choice). **Added integer→float conversion** (`from_ubv`/`from_sbv`, 2026-06-18): rounds a w-bit unsigned/signed-two's-complement integer to a dst float under a rounding mode (reuses `pack_value`; exact 0→+0; |x| via two's-complement read unsigned, correct for INT_MIN). Differential-tested vs Rust's native `as f32`/`as f64` (i32/u32→F32, i64/u64→F64; edges + 3000-case sweep, exact). Completes the `to_fp` family on the builder side. Remaining: SMT-LIB parse wiring for `(_ to_fp …)`/`to_fp_unsigned` over bv sources (axeyum-smtlib, coordinate); `to_fp` from real constants; unspecified-value edge polish |
 | P2.9 | Datatypes lazy (e-graph splitting + occurs-check) | WIP — **structural refutation** (`prove_datatype_unsat_structurally`): acyclicity + distinctness + injectivity **+ congruence** (equal args ⇒ equal apps, e.g. `x=cons(h,a) ∧ y=cons(h,b) ∧ a=b ∧ x≠y`) + constructor exhaustiveness over a term-level union-find; also flattens top-level conjunctions and refutes top-level `or` when every branch is structurally contradictory. Sound, wired into dispatch/evidence/Lean reconstruction ahead of the eager expansion; the cvc5 QF_DT exact audit is now 3/3 dominant with Lean unsat 3/3. 13 focused tests. Remaining: e-graph constructor *splitting* (case-split `is-c` on the keystone) for SAT-side completeness; exact field guards to remove the relaxed `unknown` cases; broader datatype corpora beyond the cvc5 three-row slice |

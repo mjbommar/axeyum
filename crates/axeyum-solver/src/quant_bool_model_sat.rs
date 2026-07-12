@@ -608,6 +608,7 @@ pub(crate) fn admitted_free_booleans(
     assertions: &[TermId],
 ) -> Option<Vec<SymbolId>> {
     let mut free = BTreeSet::new();
+    let mut seen = BTreeSet::new();
     let mut saw_quantifier = false;
     for &assertion in assertions {
         if arena.sort_of(assertion) != Sort::Bool
@@ -617,6 +618,7 @@ pub(crate) fn admitted_free_booleans(
                 &mut BTreeSet::new(),
                 &mut free,
                 &mut saw_quantifier,
+                &mut seen,
             )
         {
             return None;
@@ -631,7 +633,12 @@ fn collect_admitted(
     bound: &mut BTreeSet<SymbolId>,
     free: &mut BTreeSet<SymbolId>,
     saw_quantifier: &mut bool,
+    seen: &mut BTreeSet<(TermId, Vec<SymbolId>)>,
 ) -> bool {
+    let context = bound.iter().copied().collect();
+    if !seen.insert((term, context)) {
+        return true;
+    }
     if !matches!(
         arena.sort_of(term),
         Sort::Bool | Sort::Int | Sort::BitVec(_)
@@ -663,13 +670,14 @@ fn collect_admitted(
             };
             *saw_quantifier = true;
             let inserted = bound.insert(*symbol);
-            let admitted = inserted && collect_admitted(arena, *body, bound, free, saw_quantifier);
+            let admitted =
+                inserted && collect_admitted(arena, *body, bound, free, saw_quantifier, seen);
             bound.remove(symbol);
             admitted
         }
         TermNode::App { args, .. } => args
             .iter()
-            .all(|&argument| collect_admitted(arena, argument, bound, free, saw_quantifier)),
+            .all(|&argument| collect_admitted(arena, argument, bound, free, saw_quantifier, seen)),
         _ => true,
     }
 }

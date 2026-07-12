@@ -36,23 +36,6 @@ fn verdict(result: &CheckResult) -> &'static str {
     }
 }
 
-fn contains_quantifier(arena: &axeyum_ir::TermArena, assertions: &[axeyum_ir::TermId]) -> bool {
-    let mut seen = std::collections::BTreeSet::new();
-    let mut stack = assertions.to_vec();
-    while let Some(term) = stack.pop() {
-        if !seen.insert(term) {
-            continue;
-        }
-        if let axeyum_ir::TermNode::App { op, args } = arena.node(term) {
-            if matches!(op, axeyum_ir::Op::Forall(_) | axeyum_ir::Op::Exists(_)) {
-                return true;
-            }
-            stack.extend(args.iter().copied());
-        }
-    }
-    false
-}
-
 fn main() {
     let args: Vec<String> = std::env::args().collect();
     let dir = args
@@ -105,24 +88,14 @@ fn main() {
             continue;
         };
         let assertions = assertions.to_vec();
-        if contains_quantifier(&script.arena, &assertions) {
-            match solve_smtlib(&text, &config) {
-                Ok(outcome) => println!(
-                    "{short}: {} (quantified query; trace probe skipped)",
-                    verdict(&outcome.result)
-                ),
-                Err(error) => println!("{short}: error: {error}"),
-            }
-        } else {
-            match check_auto_explained(&mut script.arena, &assertions, &config) {
-                Ok((result, trace)) => {
-                    println!("{short}: {}", verdict(&result));
-                    for attempt in trace.attempts() {
-                        println!("  {attempt}");
-                    }
+        match check_auto_explained(&mut script.arena, &assertions, &config) {
+            Ok((result, trace)) => {
+                println!("{short}: {}", verdict(&result));
+                for attempt in trace.attempts() {
+                    println!("  {attempt}");
                 }
-                Err(error) => println!("{short}: error: {error}"),
             }
+            Err(error) => println!("{short}: error: {error}"),
         }
     }
 }

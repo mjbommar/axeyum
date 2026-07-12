@@ -29,25 +29,19 @@
 //! so the problem is never weakened. Only an otherwise-`unknown` verdict can
 //! become decided.
 //!
-//! *Termination.* The validity sub-check first dispatches to the
-//! quantifier-free decider [`crate::check_auto`] on the (quantifier-free)
-//! negated body. That decider never re-enters the quantifier front door, and
-//! bodies that still contain a nested quantifier are skipped, so there is
-//! exactly one bounded QF solve per candidate universal and no recursion. If
-//! that route returns `unknown`, the proof-producing `QF_BV` exporter gets one
-//! bounded second chance on the same sub-query, then a lazy-BV retry, and
-//! finally a hardened qf-BV retry (native CDCL + CNF inprocessing) gets one
-//! last bounded attempt before the universal is left untouched.
+//! *Termination.* The validity sub-check dispatches to the quantifier-free
+//! decider [`crate::check_auto`] on the (quantifier-free) negated body. That
+//! decider never re-enters the quantifier front door, and bodies that still
+//! contain a nested quantifier are skipped, so there is exactly one bounded QF
+//! solve per candidate universal and no recursion.
 
 use std::collections::HashMap;
-use std::time::Instant;
 
 use axeyum_ir::{Op, TermArena, TermId, TermNode};
 use axeyum_rewrite::replace_subterms;
 
 use crate::auto::check_auto;
 use crate::backend::{CheckResult, SolverConfig, SolverError};
-use crate::proof::{UnsatProofOutcome, export_qf_bv_unsat_proof_within};
 
 /// Rewrites every top-level universal `∀x. body` whose body is quantifier-free
 /// and which this pass can **prove valid** into the trivially-true constant
@@ -156,61 +150,14 @@ fn try_eliminate(
     // Decide `¬body(c⃗)` with the *quantifier-free* dispatch. It carries no
     // quantifier (the body was QF and each `cᵢ` is a plain constant), so
     // `check_auto` cannot re-enter the quantifier front door — guaranteeing
-    // termination with a single bounded QF solve. We pass the sub-query alone
-    // (the only thing whose validity we are testing); other assertions never
-    // constrain the `cᵢ`, so including them could only mask validity, not
-    // create it. If that route declines, the proof-producing `QF_BV` exporter
-    // gets one bounded second chance on the same sub-query, then lazy-BV gets a
-    // bounded attempt, and finally a hardened qf-BV retry (native CDCL + CNF
-    // inprocessing) gets one last bounded attempt.
-    let qf_start = Instant::now();
-    match check_auto(arena, &[negated], config) {
-        Ok(CheckResult::Unsat) => Ok(Some(arena.bool_const(true))),
-        Ok(CheckResult::Sat(_)) => Ok(None),
-        Ok(CheckResult::Unknown(_)) | Err(SolverError::Unsupported(_)) => {
-            let deadline = config
-                .timeout
-                .and_then(|timeout| qf_start.checked_add(timeout));
-            match export_qf_bv_unsat_proof_within(arena, &[negated], deadline) {
-                Ok(UnsatProofOutcome::Proved(_)) => Ok(Some(arena.bool_const(true))),
-                Ok(UnsatProofOutcome::Satisfiable | UnsatProofOutcome::Inconclusive)
-                | Err(SolverError::Unsupported(_)) => {
-                    let Some(remaining) = deadline
-                        .map(|end| end.saturating_duration_since(Instant::now()))
-                        .filter(|remaining| !remaining.is_zero())
-                    else {
-                        return Ok(None);
-                    };
-                    let mut lazy = config.clone().with_timeout(remaining);
-                    lazy = lazy.with_lazy_bv(true).with_lazy_bv_abstract_ite(true);
-                    match check_auto(arena, &[negated], &lazy) {
-                        Ok(CheckResult::Unsat) => return Ok(Some(arena.bool_const(true))),
-                        Ok(CheckResult::Sat(_)) | Ok(CheckResult::Unknown(_)) => {}
-                        Err(SolverError::Unsupported(_)) => {}
-                        Err(error) => return Err(error),
-                    }
-                    let Some(remaining) = deadline
-                        .map(|end| end.saturating_duration_since(Instant::now()))
-                        .filter(|remaining| !remaining.is_zero())
-                    else {
-                        return Ok(None);
-                    };
-                    let mut hardened = config.clone().with_timeout(remaining);
-                    hardened.native_cdcl = true;
-                    hardened.prove_unsat = true;
-                    hardened.cnf_inprocessing = true;
-                    hardened.cnf_vivify = true;
-                    match check_auto(arena, &[negated], &hardened) {
-                        Ok(CheckResult::Unsat) => Ok(Some(arena.bool_const(true))),
-                        Ok(CheckResult::Sat(_)) | Ok(CheckResult::Unknown(_)) => Ok(None),
-                        Err(SolverError::Unsupported(_)) => Ok(None),
-                        Err(error) => Err(error),
-                    }
-                }
-                Err(error) => Err(error),
-            }
-        }
-        Err(error) => Err(error),
+    // termination with a single bounded QF solve. We pass the sub-query alone (the
+    // only thing whose validity we are testing); other assertions never constrain
+    // the `cᵢ`, so including them could only mask validity, not create it.
+    match check_auto(arena, &[negated], config)? {
+        // Definitively UNSAT ⇒ the universal is valid ⇒ replace with `true`.
+        CheckResult::Unsat => Ok(Some(arena.bool_const(true))),
+        // Sat/Unknown ⇒ could not prove validity ⇒ leave the universal untouched.
+        _ => Ok(None),
     }
 }
 

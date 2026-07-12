@@ -45,10 +45,8 @@ pub(crate) fn find_negated_existential_witness(
         let instance = replace_subterms(&mut search_arena, body, &replacements, &mut memo)
             .map_err(|error| SolverError::Backend(error.to_string()))?;
         let result = match check_auto(&mut search_arena, &[instance], config) {
-            Ok(CheckResult::Unknown(_)) | Err(SolverError::Unsupported(_)) => {
-                crate::solve(&mut search_arena, &[instance], config)?
-            }
             Ok(result) => result,
+            Err(SolverError::Unsupported(_)) => continue,
             Err(error) => return Err(error),
         };
         let CheckResult::Sat(model) = result else {
@@ -79,38 +77,6 @@ pub(crate) fn find_negated_existential_witness(
         }
     }
     Ok(None)
-}
-
-#[cfg(test)]
-mod tests {
-    use std::fs;
-
-    use axeyum_smtlib::parse_script;
-
-    use crate::quant_bv_conjunctive_cert::{
-        admitted_conjunctive_universal_loose, conjunctive_universals,
-    };
-
-    #[test]
-    fn psyco_107_bv_admits_relaxed_conjunctive_universal_shape() {
-        let path = concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/../../corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__psyco-107-bv.smt2",
-        );
-        let text = fs::read_to_string(path).expect("read psyco-107-bv");
-        let script = parse_script(&text).expect("parse psyco-107-bv");
-        let admitted = script.assertions.iter().copied().find_map(|assertion| {
-            conjunctive_universals(&script.arena, assertion)
-                .into_iter()
-                .find_map(|universal| {
-                    admitted_conjunctive_universal_loose(&script.arena, assertion, universal)
-                })
-        });
-        assert!(
-            admitted.is_some(),
-            "psyco-107-bv should admit a relaxed conjunctive-universal shape"
-        );
-    }
 }
 
 fn declare_fresh(

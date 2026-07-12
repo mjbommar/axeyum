@@ -78,17 +78,16 @@ pub(crate) fn conjunctive_universals(arena: &TermArena, assertion: TermId) -> Ve
         return Vec::new();
     }
     let mut selected = Vec::new();
-    let mut seen = BTreeSet::new();
     let mut stack = vec![assertion];
     while let Some(term) = stack.pop() {
-        if !seen.insert(term) {
-            continue;
-        }
         match arena.node(term) {
+            TermNode::App {
+                op: Op::BoolAnd,
+                args,
+            } if args.len() == 2 => stack.extend(args.iter().copied()),
             TermNode::App {
                 op: Op::Forall(_), ..
             } => selected.push(term),
-            TermNode::App { args, .. } => stack.extend(args.iter().copied()),
             _ => {}
         }
     }
@@ -106,6 +105,7 @@ pub(crate) fn admitted_conjunctive_universal(
         || universal.index() >= arena.len()
         || arena.sort_of(assertion) != Sort::Bool
         || !assertion_within_cap(arena, assertion)
+        || conjunctive_occurrences(arena, assertion, universal) != 1
         || total_occurrences(arena, assertion, universal) != 1
         || !assertion_is_qf_bv_except(arena, assertion, universal)
     {
@@ -130,49 +130,6 @@ pub(crate) fn admitted_conjunctive_universal(
     }
     let unique = binders.iter().copied().collect::<BTreeSet<_>>();
     if binders.is_empty() || unique.len() != binders.len() || !body_is_qf_bv(arena, term) {
-        return None;
-    }
-    Some(AdmittedConjunctiveUniversal {
-        binders,
-        body: term,
-    })
-}
-
-/// Relaxed admission for decision-only search: it keeps the same universal
-/// chain and source-shape checks, but does not require the innermost body to be
-/// quantifier-free. This is intentionally not used for certificate replay.
-pub(crate) fn admitted_conjunctive_universal_loose(
-    arena: &TermArena,
-    assertion: TermId,
-    universal: TermId,
-) -> Option<AdmittedConjunctiveUniversal> {
-    if assertion.index() >= arena.len()
-        || universal.index() >= arena.len()
-        || arena.sort_of(assertion) != Sort::Bool
-        || !assertion_within_cap(arena, assertion)
-        || total_occurrences(arena, assertion, universal) != 1
-    {
-        return None;
-    }
-
-    let mut term = universal;
-    let mut binders = Vec::new();
-    while let TermNode::App {
-        op: Op::Forall(binder),
-        args,
-    } = arena.node(term)
-    {
-        if args.len() != 1
-            || binders.len() == BV_CONJUNCTIVE_UNIVERSAL_BINDER_CAP
-            || !is_bool_bv(arena.symbol(*binder).1)
-        {
-            return None;
-        }
-        binders.push(*binder);
-        term = args[0];
-    }
-    let unique = binders.iter().copied().collect::<BTreeSet<_>>();
-    if binders.is_empty() || unique.len() != binders.len() || arena.sort_of(term) != Sort::Bool {
         return None;
     }
     Some(AdmittedConjunctiveUniversal {
@@ -224,6 +181,29 @@ pub(crate) fn instantiate_conjunctive_universal(
     )
     .map_err(|error| SolverError::Backend(error.to_string()))?;
     Ok(Some((scratch, residual)))
+}
+
+fn conjunctive_occurrences(arena: &TermArena, assertion: TermId, selected: TermId) -> usize {
+    let mut count = 0usize;
+    let mut stack = vec![assertion];
+    while let Some(term) = stack.pop() {
+        if term == selected {
+            count += 1;
+            if count > 1 {
+                return count;
+            }
+            continue;
+        }
+        if let TermNode::App {
+            op: Op::BoolAnd,
+            args,
+        } = arena.node(term)
+            && args.len() == 2
+        {
+            stack.extend(args.iter().copied());
+        }
+    }
+    count
 }
 
 fn total_occurrences(arena: &TermArena, assertion: TermId, selected: TermId) -> usize {

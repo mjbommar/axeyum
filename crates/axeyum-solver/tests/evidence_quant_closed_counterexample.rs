@@ -12,10 +12,6 @@ const ARI176E1: &str = include_str!(
 const ISSUE_5279: &str = include_str!(
     "../../../corpus/public-curated/quantified/LIA/cvc5-regress-clean/cli__regress1__quantifiers__issue5279-nqe.smt2"
 );
-const ISSUE_2031: &str = include_str!(
-    "../../../corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__issue2031-bv-var-elim.smt2"
-);
-
 #[test]
 fn measured_bare_rows_gain_evaluator_replayed_evidence() {
     for (name, text, expected_bindings) in [("ARI176e1", ARI176E1, 2), ("issue5279", ISSUE_5279, 2)]
@@ -44,36 +40,6 @@ fn measured_bare_rows_gain_evaluator_replayed_evidence() {
         assert!(report.evidence.check(&script.arena, &assertions).unwrap());
         assert!(report.trusted_steps.is_empty());
     }
-}
-
-#[test]
-fn vacuous_existential_prefix_reaches_closed_universal_evidence() {
-    let mut script = parse_script(ISSUE_2031).expect("parse issue2031");
-    let assertions = script.assertions.clone();
-    let report = produce_evidence(
-        &mut script.arena,
-        &assertions,
-        &SolverConfig::new().with_timeout(Duration::from_secs(2)),
-    )
-    .expect("produce issue2031 evidence");
-    let Evidence::UnsatClosedUniversalCounterexample(certificate) = &report.evidence else {
-        panic!(
-            "expected closed-universal evidence for issue2031, got {:?}",
-            report.evidence
-        );
-    };
-    assert_eq!(certificate.assertion, assertions[0]);
-    assert!(report.evidence.is_certified());
-    assert!(report.evidence.check(&script.arena, &assertions).unwrap());
-    assert!(matches!(
-        solve(
-            &mut script.arena,
-            &assertions,
-            &SolverConfig::new().with_timeout(Duration::from_secs(2)),
-        )
-        .unwrap(),
-        CheckResult::Unsat
-    ));
 }
 
 #[test]

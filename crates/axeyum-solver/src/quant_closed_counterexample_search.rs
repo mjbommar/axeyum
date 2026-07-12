@@ -9,7 +9,6 @@ use crate::auto::check_auto;
 use crate::backend::{CheckResult, SolverConfig, SolverError};
 use crate::quant_closed_counterexample_cert::{
     ClosedUniversalCounterexampleCertificate, check_closed_universal_counterexample,
-    peel_exists_foralls,
 };
 
 /// Searches for one concrete falsifying assignment to a top-level closed
@@ -92,29 +91,30 @@ pub(crate) fn find_closed_universal_counterexample(
     Ok(None)
 }
 
-fn admitted_closed_universal(arena: &TermArena, term: TermId) -> Option<(Vec<SymbolId>, TermId)> {
-    let (exists, binders, body) = peel_exists_foralls(arena, term)?;
-    if !exists
-        .iter()
-        .all(|&symbol| is_admitted_scalar(arena.symbol(symbol).1))
-        || binders.is_empty()
+fn admitted_closed_universal(
+    arena: &TermArena,
+    mut term: TermId,
+) -> Option<(Vec<SymbolId>, TermId)> {
+    let mut binders = Vec::new();
+    while let TermNode::App {
+        op: Op::Forall(binder),
+        args,
+    } = arena.node(term)
     {
-        return None;
+        if args.len() != 1 || !is_admitted_scalar(arena.symbol(*binder).1) {
+            return None;
+        }
+        binders.push(*binder);
+        term = args[0];
     }
     let bound: HashSet<SymbolId> = binders.iter().copied().collect();
-    if bound.len() != binders.len() || !body_is_closed_qf(arena, body, &bound, &exists) {
+    if bound.len() != binders.len() || !body_is_closed_qf(arena, term, &bound) {
         return None;
     }
-    Some((binders, body))
+    Some((binders, term))
 }
 
-fn body_is_closed_qf(
-    arena: &TermArena,
-    body: TermId,
-    bound: &HashSet<SymbolId>,
-    vacuous: &[SymbolId],
-) -> bool {
-    let vacuous: HashSet<SymbolId> = vacuous.iter().copied().collect();
+fn body_is_closed_qf(arena: &TermArena, body: TermId, bound: &HashSet<SymbolId>) -> bool {
     if arena.sort_of(body) != Sort::Bool {
         return false;
     }
@@ -125,7 +125,6 @@ fn body_is_closed_qf(
             continue;
         }
         match arena.node(term) {
-            TermNode::Symbol(symbol) if vacuous.contains(symbol) => return false,
             TermNode::Symbol(symbol) if !bound.contains(symbol) => return false,
             TermNode::App { op, args } => {
                 if matches!(op, Op::Forall(_) | Op::Exists(_) | Op::Apply(_)) {

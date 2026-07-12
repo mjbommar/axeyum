@@ -20,9 +20,8 @@ use axeyum_ir::{TermArena, TermId, TermNode, render};
 use axeyum_smtlib::parse_script;
 use axeyum_solver::{
     CheckResult, DeclineReason, Evidence, RouteOutcome, RouteTrace, SolverConfig,
-    UnsatProofOutcome, check_auto_explained, export_qf_aufbv_unsat_proof_within,
-    normalize_assertions_for_quantifiers, produce_evidence, prove_qf_abv_unsat_alethe,
-    prove_qf_abv_unsat_alethe_via_elimination, solve,
+    UnsatProofOutcome, check_auto_explained, export_qf_aufbv_unsat_proof_within, produce_evidence,
+    prove_qf_abv_unsat_alethe, prove_qf_abv_unsat_alethe_via_elimination, solve,
 };
 
 fn elapsed_ms(start: Instant) -> f64 {
@@ -35,23 +34,6 @@ fn verdict(result: &CheckResult) -> &'static str {
         CheckResult::Unsat => "unsat",
         CheckResult::Unknown(_) => "unknown",
     }
-}
-
-fn contains_quantifier(arena: &TermArena, assertions: &[TermId]) -> bool {
-    let mut seen = BTreeSet::new();
-    let mut stack = assertions.to_vec();
-    while let Some(term) = stack.pop() {
-        if !seen.insert(term) {
-            continue;
-        }
-        if let TermNode::App { op, args } = arena.node(term) {
-            if matches!(op, axeyum_ir::Op::Forall(_) | axeyum_ir::Op::Exists(_)) {
-                return true;
-            }
-            stack.extend(args.iter().copied());
-        }
-    }
-    false
 }
 
 fn proof_outcome_label(outcome: &UnsatProofOutcome) -> &'static str {
@@ -365,55 +347,30 @@ fn main() {
         let mut script = parse_script(&text).expect("parse SMT-LIB file");
         let assertions = script.assertions.clone();
         let start = Instant::now();
-        if contains_quantifier(&script.arena, &assertions) {
-            println!(
-                "check_auto_explained: skipped (quantified query) {:.3}ms",
-                elapsed_ms(start)
-            );
-        } else {
-            match check_auto_explained(&mut script.arena, &assertions, &config) {
-                Ok((result, trace)) => {
-                    println!(
-                        "check_auto_explained: {} {:.3}ms",
-                        verdict(&result),
-                        elapsed_ms(start)
-                    );
-                    for attempt in trace.attempts() {
-                        println!("  {attempt}");
-                    }
-                    print_lazy_replay_terms(&script.arena, &assertions, &trace);
-                    print_requested_terms(&script.arena, &assertions, &requested_terms);
-                }
-                Err(error) => println!(
-                    "check_auto_explained: error {error} {:.3}ms",
+        match check_auto_explained(&mut script.arena, &assertions, &config) {
+            Ok((result, trace)) => {
+                println!(
+                    "check_auto_explained: {} {:.3}ms",
+                    verdict(&result),
                     elapsed_ms(start)
-                ),
+                );
+                for attempt in trace.attempts() {
+                    println!("  {attempt}");
+                }
+                print_lazy_replay_terms(&script.arena, &assertions, &trace);
+                print_requested_terms(&script.arena, &assertions, &requested_terms);
             }
+            Err(error) => println!(
+                "check_auto_explained: error {error} {:.3}ms",
+                elapsed_ms(start)
+            ),
         }
 
         let mut script = parse_script(&text).expect("parse SMT-LIB file");
         let assertions = script.assertions.clone();
         let start = Instant::now();
         match solve(&mut script.arena, &assertions, &config) {
-            Ok(result) => {
-                if contains_quantifier(&script.arena, &assertions) {
-                    if let Some(flat) = script.solvable_flat_view() {
-                        let flat = flat.to_vec();
-                        match normalize_assertions_for_quantifiers(&mut script.arena, &flat) {
-                            Ok(normalized) => {
-                                let rendered = normalized
-                                    .iter()
-                                    .map(|term| render(&script.arena, *term))
-                                    .collect::<Vec<_>>()
-                                    .join(" | ");
-                                println!("normalized: {rendered}");
-                            }
-                            Err(error) => println!("normalized: error {error}"),
-                        }
-                    }
-                }
-                println!("solve: {} {:.3}ms", verdict(&result), elapsed_ms(start));
-            }
+            Ok(result) => println!("solve: {} {:.3}ms", verdict(&result), elapsed_ms(start)),
             Err(error) => println!("solve: error {error} {:.3}ms", elapsed_ms(start)),
         }
 
