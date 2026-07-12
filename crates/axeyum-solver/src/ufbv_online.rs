@@ -2117,6 +2117,14 @@ fn build_theory_atoms(
         let original = array_flag_originals.get(&atom).copied().unwrap_or(atom);
         atoms.register(arena, original, rewritten, false)?;
     }
+    // Nested array equalities can guard e-graph explanations without appearing
+    // as top-level Boolean skeleton atoms. Register every flag before dynamic
+    // interface clauses can refer to it.
+    for equality in &prepared.array_equalities {
+        let flag = arena.var(equality.flag);
+        let original = arena.eq(equality.lhs, equality.rhs)?;
+        atoms.register(arena, original, flag, false)?;
+    }
 
     add_interface_atoms(
         arena,
