@@ -227,8 +227,8 @@ fn joint_product_search_tight_whole_loose_parts_sat_replays() {
         panic!("expected sat");
     };
     // Independently re-check the witnessed concatenation against every constraint.
-    let x = binding(&mut script, &model, "x");
-    let y = binding(&mut script, &model, "y");
+    let x = binding(&script, &model, "x");
+    let y = binding(&script, &model, "y");
     let mut whole = x.clone();
     whole.push(u32::from(b'z'));
     whole.extend_from_slice(&y);

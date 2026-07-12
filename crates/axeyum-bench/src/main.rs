@@ -39,7 +39,7 @@ mod run {
     use axeyum_solver::Z3Backend;
     use axeyum_solver::{
         BvLayerStats, Capabilities, CheckResult, LazyBvBackend, Model, SatBvBackend, SolveStats,
-        SolverBackend, SolverConfig, SolverError, UnknownKind, solve,
+        SolverBackend, SolverConfig, SolverError, UnknownKind, check_model_with_assignment, solve,
     };
     use rayon::prelude::*;
     use serde_json::{Value as JsonValue, json};
@@ -2621,19 +2621,11 @@ mod run {
                 .map_err(|e| e.to_string())?,
             None => model.to_assignment(),
         };
-        for &assertion in assertions {
-            match eval(arena, assertion, &assignment) {
-                Ok(Value::Bool(true)) => {}
-                Ok(other) => {
-                    return Err(format!(
-                        "assertion #{} evaluated to {other}",
-                        assertion.index()
-                    ));
-                }
-                Err(e) => return Err(e.to_string()),
-            }
+        match check_model_with_assignment(arena, assertions, model, &assignment) {
+            Ok(true) => Ok(()),
+            Ok(false) => Err("model or quantified-SAT certificate did not replay".to_owned()),
+            Err(error) => Err(error.to_string()),
         }
-        Ok(())
     }
 
     fn render_artifact(

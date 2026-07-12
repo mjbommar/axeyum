@@ -9,7 +9,7 @@
 //! error. The expansion is untrusted — the caller replays the *original*
 //! quantified formula through the enumerating ground evaluator.
 
-use std::collections::HashMap;
+use std::collections::{BTreeSet, HashMap};
 
 use axeyum_ir::{IrError, Op, Sort, SymbolId, TermArena, TermId, TermNode};
 
@@ -388,7 +388,8 @@ fn instantiate_chain(
 
     // Enumerate the cartesian product via a mixed-radix index vector.
     let mut indices = vec![0usize; vars.len()];
-    let mut conjunction: Option<TermId> = None;
+    let mut instances = Vec::with_capacity(total);
+    let mut seen_instances = BTreeSet::new();
     for _ in 0..total {
         let mut instance = body;
         for (slot, &var) in vars.iter().enumerate() {
@@ -396,10 +397,13 @@ fn instantiate_chain(
             let mut memo = HashMap::new();
             instance = substitute(arena, instance, var, replacement, &mut memo)?;
         }
-        conjunction = Some(match conjunction {
-            Some(acc) => arena.and(acc, instance)?,
-            None => instance,
-        });
+        // Unused binders make many cartesian tuples produce the exact same
+        // interned instance. Retaining those duplicates can turn a tiny DAG
+        // into an exponential Boolean tree and overflow downstream recursive
+        // dispatch even when the balanced fold itself is shallow.
+        if seen_instances.insert(instance) {
+            instances.push(instance);
+        }
         // Increment the mixed-radix counter.
         for slot in (0..indices.len()).rev() {
             indices[slot] += 1;
@@ -409,9 +413,32 @@ fn instantiate_chain(
             indices[slot] = 0;
         }
     }
-    Ok(Some(
-        conjunction.expect("total >= 1 so at least one instance"),
-    ))
+    Ok(Some(balanced_conjunction(arena, instances)?))
+}
+
+/// Folds a nonempty list into a deterministic balanced conjunction.
+///
+/// The cartesian expansion permits thousands of instances. A left fold gives
+/// the result linear depth and can overflow downstream recursive DAG visitors
+/// before their resource checks run; pairwise rounds preserve operand order and
+/// the exact conjunction while keeping depth logarithmic.
+fn balanced_conjunction(
+    arena: &mut TermArena,
+    mut terms: Vec<TermId>,
+) -> Result<TermId, QuantExpandError> {
+    debug_assert!(!terms.is_empty());
+    while terms.len() > 1 {
+        let mut next = Vec::with_capacity(terms.len().div_ceil(2));
+        let mut pairs = terms.chunks_exact(2);
+        for pair in &mut pairs {
+            next.push(arena.and(pair[0], pair[1])?);
+        }
+        if let [last] = pairs.remainder() {
+            next.push(*last);
+        }
+        terms = next;
+    }
+    Ok(terms[0])
 }
 
 /// **Trigger-based E-matching instantiation** of top-level universals — a more
@@ -972,8 +999,8 @@ fn contains_quantifier(arena: &TermArena, term: TermId) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{QuantExpandError, expand_quantifiers};
-    use axeyum_ir::{Assignment, Sort, TermArena, Value, eval};
+    use super::{QuantExpandError, expand_quantifiers, instantiate_with_triggers};
+    use axeyum_ir::{Assignment, Sort, TermArena, TermStats, Value, eval};
 
     #[test]
     fn no_quantifiers_passes_through() {
@@ -1041,6 +1068,37 @@ mod tests {
         assert!(
             matches!(result, Err(QuantExpandError::UnsupportedDomain(_))),
             "nested ∀ over the instance budget must decline, got {result:?}",
+        );
+    }
+
+    #[test]
+    fn trigger_chain_deduplicates_unused_binder_instances_and_stays_balanced() {
+        let mut arena = TermArena::new();
+        let p = arena.int_var("p").unwrap();
+        let a = arena.int_var("a").unwrap();
+        let vars: Vec<_> = (0..5)
+            .map(|index| arena.declare(&format!("x{index}"), Sort::Int).unwrap())
+            .collect();
+        let x = arena.var(vars[4]);
+        let two = arena.int_const(2);
+        let pivot = arena.int_add(p, two).unwrap();
+        let condition = arena.eq(x, pivot).unwrap();
+        let one = arena.int_const(1);
+        let then_value = arena.int_add(a, one).unwrap();
+        let piecewise = arena.ite(condition, then_value, x).unwrap();
+        let difference = arena.int_sub(x, piecewise).unwrap();
+        let comparison = arena.int_ge(difference, one).unwrap();
+        let mut assertion = arena.not(comparison).unwrap();
+        for &var in vars.iter().rev() {
+            assertion = arena.forall(var, assertion).unwrap();
+        }
+
+        let instantiated = instantiate_with_triggers(&mut arena, &[assertion]).unwrap();
+        assert!(!instantiated.residual_quantifier);
+        let stats = TermStats::compute(&arena, &instantiated.assertions);
+        assert!(
+            stats.tree_nodes < 128 && stats.max_depth < 16,
+            "unused-binder tuples must deduplicate into a shallow DAG, got {stats:?}"
         );
     }
 

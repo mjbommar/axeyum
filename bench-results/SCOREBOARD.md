@@ -15,7 +15,7 @@ A single-glance, honest view of where the pure-Rust axeyum solver stands against
 ## Headline
 
 - **35 division baselines** measured vs z3 4.13.3, spanning **24 logic fragments** (BV, LIA, QF_ABV, QF_ALIA, QF_AUFBV, QF_AUFLIA, QF_AX, QF_BV, QF_BVFP, QF_DT, QF_FF, QF_FP, QF_LIA, QF_LRA, QF_NIA, QF_NRA, QF_S, QF_SEQ, QF_SLIA, QF_UF, QF_UFBV, QF_UFFF, QF_UFLIA, UF).
-- **DISAGREE = 0 across all baselines** — zero wrong verdicts over 665 oracle-compared instances (992 files total, 731 decided).
+- **DISAGREE = 0 across all baselines** — zero wrong verdicts over 628 oracle-compared instances (992 files total, 748 decided).
 - Decide-rate ranges **0%–100%** across divisions — that spread *is* the capability frontier; DISAGREE = 0 is the soundness floor that holds everywhere.
 
 ## Divisions vs Z3
@@ -24,8 +24,8 @@ Sorted by logic, then by descending decide-rate. Every committed `*solver-vs-z3*
 
 | Division | Slice | Files | Decided | Decide% | Unknown | Unsup | Cmp | DISAGREE | Ground-truth | PAR-2 (s) |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- | ---: |
-| BV | `bv-bitwuzla-regress-clean-quantified` | 5 | 4 | 80% | 1 | 0 | 3 | 0 | z3-binary | 4.000 |
-| BV | `bv-cvc5-regress-clean-quantified` | 54 | 38 | 70% | 5 | 11 | 38 | 0 | z3-binary | 7.470 |
+| BV | `bv-bitwuzla-regress-clean-quantified` | 5 | 5 | 100% | 0 | 0 | 0 | 0 | :status | 0.000 |
+| BV | `bv-cvc5-regress-clean-quantified` | 54 | 49 | 91% | 0 | 5 | 0 | 0 | :status | 3.008 |
 | LIA | `lia-cvc5-regress-clean-quantified` | 12 | 0 | 0% | 8 | 4 | 0 | 0 | :status | 30.000 |
 | QF_ABV | `qf-abv-cvc5-bitwuzla-regress-clean` | 193 | 169 | 88% | 0 | 24 | 165 | 0 | z3-library+binary | 1.666 |
 | QF_ALIA | `qf-alia-cvc5-regress-clean` | 6 | 6 | 100% | 0 | 0 | 5 | 0 | z3-binary | 0.000 |
@@ -60,7 +60,7 @@ Sorted by logic, then by descending decide-rate. Every committed `*solver-vs-z3*
 | QF_UFLIA | `qf-uflia-cvc5-regress-clean-overbound-uninterp-sorts` | 2 | 2 | 100% | 0 | 0 | 2 | 0 | z3-binary | 2.294 |
 | UF | `uf-cvc5-regress-clean-quantified` | 5 | 0 | 0% | 0 | 5 | 0 | 0 | :status | 0.000 |
 
-**Totals:** 992 files, 736 decided, 669 oracle-compared, **0 disagreements.**
+**Totals:** 992 files, 748 decided, 628 oracle-compared, **0 disagreements.**
 
 <!-- NOTES:BEGIN (hand-written attribution notes — preserved by the generator) -->
 ### QF_S row re-measured 2026-07-07 (P2.7 task #49 — `str.in_re` over a symbolic `str.++`, and membership coupled with `str.++` word equations)
@@ -537,7 +537,7 @@ Each frontier tracks how deep a single capability lever reaches: a family is sca
 
 | Lever family | Frontier | Baseline | Δ | Max knob | Budget (s) | Tracks |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| bv_reduction | 32 | 30 | +2 | 36 | 4 | QF_BV word-level reduction depth (unsat at knob N) |
+| bv_reduction | 30 | 30 | 0 | 34 | 4 | QF_BV word-level reduction depth (unsat at knob N) |
 | lia_cuts | 26 | 26 | 0 | 37 | 4 | QF_LIA branch-and-cut depth (sat at knob N) |
 | nia_unsat | 40 | 40 | 0 | 40 | 4 | QF_NIA unsat-proving depth (knob N) |
 | nra_degree | 40 | 40 | 0 | 40 | 4 | QF_NRA polynomial-degree decision depth (knob N) |

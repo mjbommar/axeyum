@@ -13,7 +13,7 @@
 //! `a²+b²+c²−ab−bc−ca < 0` is now decided **Unsat**.
 
 use axeyum_ir::{Rational, Sort, TermArena, TermId};
-use axeyum_solver::{CheckResult, SolverConfig, solve};
+use axeyum_solver::{CheckResult, Evidence, SolverConfig, produce_nra_sos_evidence, solve};
 
 fn real(arena: &mut TermArena, name: &str) -> TermId {
     let s = arena.declare(name, Sort::Real).unwrap();
@@ -218,7 +218,7 @@ fn degree_three_declines() {
 }
 
 #[test]
-fn negated_le_goal_engages_sos_fast() {
+fn negated_le_goal_engages_sos_certificate() {
     // A refutation query as it actually ARRIVES: the goal `2xy ≤ x²+y²` is refuted
     // by asserting `¬(2xy ≤ x²+y²)`. The collector dualizes `¬(a ≤ b)` to `a > b`,
     // so the strict atom `2xy − (x²+y²) > 0` = `−(x−y)² > 0` reaches the SOS/PSD
@@ -236,14 +236,20 @@ fn negated_le_goal_engages_sos_fast() {
     let le = arena.real_le(two_xy, sum).unwrap();
     let goal_refutation = arena.not(le).unwrap();
 
-    let start = std::time::Instant::now();
     let result = run(&mut arena, goal_refutation);
     assert!(
         is_unsat(&result),
         "¬(2xy ≤ x²+y²) is globally unsat (SOS); got {result:?}"
     );
+    let report = produce_nra_sos_evidence(&arena, &[goal_refutation])
+        .expect("SOS evidence production")
+        .expect("the negated comparison must use the SOS certificate route");
+    assert!(matches!(report.evidence, Evidence::UnsatSos { .. }));
     assert!(
-        start.elapsed() < std::time::Duration::from_millis(5),
-        "the SOS certificate must decide this without the abstraction search"
+        report
+            .evidence
+            .check(&arena, &[goal_refutation])
+            .expect("SOS evidence check"),
+        "the route-specific SOS evidence must independently recheck"
     );
 }

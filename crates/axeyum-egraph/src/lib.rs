@@ -29,7 +29,10 @@
 
 #![forbid(unsafe_code)]
 
-use std::collections::HashMap;
+use std::collections::{BTreeSet, HashMap, HashSet};
+use std::sync::atomic::{AtomicU64, Ordering};
+
+static NEXT_EGRAPH_ID: AtomicU64 = AtomicU64::new(1);
 
 /// A lifetime-free `Copy` handle to an e-node.
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Debug)]
@@ -56,7 +59,7 @@ pub struct AppMatch {
 /// An e-matching pattern: a term tree over pattern **variables** and function
 /// applications, matched against the e-graph modulo congruence by
 /// [`EGraph::ematch`]. A leaf constant is an [`Pattern::App`] with no arguments.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Pattern {
     /// A pattern variable (zero-based index) that binds to an e-class.
     Var(u32),
@@ -78,6 +81,33 @@ impl Pattern {
 /// A substitution from an [`EGraph::ematch`]: index `v` maps to the bound e-class
 /// representative, or `None` if the pattern did not constrain variable `v`.
 pub type Substitution = Vec<Option<ENodeId>>;
+
+/// A revision-checked persistent index for repeated e-matching (ADR-0112).
+///
+/// Construct with [`EGraph::new_match_index`] and pass back to
+/// [`EGraph::ematch_many_indexed`]. Its internal root-keyed maps are refreshed
+/// from newly added nodes and union-journal entries when possible, and rebuilt
+/// automatically after scope rollback. Fields are private so stale data cannot
+/// be queried directly.
+#[derive(Debug, Default)]
+pub struct EMatchIndex {
+    initialized: bool,
+    graph_id: u64,
+    node_count: usize,
+    rollback_epoch: u64,
+    merge_event_count: usize,
+    class_index: HashMap<ENodeId, Vec<ENodeId>>,
+    application_nodes: HashMap<u32, Vec<ENodeId>>,
+    full_rebuilds: usize,
+    suffix_extensions: usize,
+    merge_updates: usize,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct MergeEvent {
+    root: ENodeId,
+    child: ENodeId,
+}
 
 /// A hash-cons key: a function symbol applied to the **current class roots** of
 /// its arguments. Two e-nodes are congruent iff they share this key.
@@ -137,6 +167,9 @@ struct ENode {
     size: u32,
     /// Nodes that have this node's class among their arguments (use list).
     parents: Vec<ENodeId>,
+    /// Sorted unique declarations represented in this e-class. Meaningful on
+    /// roots; child copies remain intact for backtracking (ADR-0115).
+    class_declarations: Vec<u32>,
     /// Proof-forest parent (independent of the union-find); `None` at a tree root.
     proof_parent: Option<ENodeId>,
     /// Justification of the edge to [`Self::proof_parent`].
@@ -176,11 +209,15 @@ enum Undo {
     /// `count` theory variables were appended to `node`'s class on a union; undo
     /// truncates them back.
     ThVarsMerged { node: ENodeId, count: usize },
+    /// The root's declaration-label set was replaced during a union.
+    ClassDeclarationsReplaced { node: ENodeId, old: Vec<u32> },
 }
 
 /// An incremental, **backtrackable** congruence-closure e-graph.
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct EGraph {
+    /// Private owner generation used only to reject cross-graph index reuse.
+    graph_id: u64,
     nodes: Vec<ENode>,
     /// Signature table: a canonical signature maps to the node that owns it.
     table: HashMap<Signature, ENodeId>,
@@ -191,6 +228,27 @@ pub struct EGraph {
     trail: Vec<Undo>,
     /// Trail lengths at each `push`; `pop` rewinds to the last.
     scopes: Vec<usize>,
+    /// Scope rollback generation. Unlike ordinary unions, rollback requires a
+    /// complete retained-index rebuild.
+    rollback_epoch: u64,
+    /// Real unions since the last scope rollback, in deterministic processing
+    /// order. Retained indexes consume this as an incremental class-union log.
+    merge_events: Vec<MergeEvent>,
+}
+
+impl Default for EGraph {
+    fn default() -> Self {
+        Self {
+            graph_id: NEXT_EGRAPH_ID.fetch_add(1, Ordering::Relaxed),
+            nodes: Vec::new(),
+            table: HashMap::new(),
+            pending: Vec::new(),
+            trail: Vec::new(),
+            scopes: Vec::new(),
+            rollback_epoch: 0,
+            merge_events: Vec::new(),
+        }
+    }
 }
 
 impl EGraph {
@@ -223,6 +281,37 @@ impl EGraph {
     #[must_use]
     pub fn args(&self, id: ENodeId) -> &[ENodeId] {
         &self.nodes[id.index()].args
+    }
+
+    /// Application nodes that use a member of `node`'s current e-class as an
+    /// argument, in deterministic insertion order.
+    ///
+    /// The same parent may occur more than once when it references the class in
+    /// multiple argument positions. Callers that care about positions should
+    /// inspect [`Self::args`] and compare current [`Self::root`] values. The
+    /// returned slice remains valid until the e-graph is mutated.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `node` was not produced by this e-graph.
+    #[must_use]
+    pub fn parents(&self, node: ENodeId) -> &[ENodeId] {
+        let root = self.root(node);
+        &self.nodes[root.index()].parents
+    }
+
+    /// Whether `node`'s current e-class contains an e-node with `declaration`.
+    ///
+    /// Declaration labels are exact, sorted, backtrackable class metadata used
+    /// by e-matching filters (ADR-0115). They do not participate in equality,
+    /// congruence, explanations, or output.
+    #[must_use]
+    pub fn class_has_declaration(&self, node: ENodeId, declaration: u32) -> bool {
+        let root = self.root(node);
+        self.nodes[root.index()]
+            .class_declarations
+            .binary_search(&declaration)
+            .is_ok()
     }
 
     /// Attaches theory variable `th_var` to the class of `node` (T1.4.6). When two
@@ -283,7 +372,7 @@ impl EGraph {
     /// [`Self::add`] prevents at creation time.
     #[must_use]
     pub fn enumerate_apps(&self, decl: u32) -> Vec<AppMatch> {
-        let mut seen = std::collections::HashSet::new();
+        let mut seen = HashSet::new();
         let mut out = Vec::new();
         for (i, node) in self.nodes.iter().enumerate() {
             if node.decl != decl || node.args.is_empty() {
@@ -311,32 +400,255 @@ impl EGraph {
     /// with trigger `t`, each returned substitution gives a ground instance to add.
     #[must_use]
     pub fn ematch(&self, pattern: &Pattern) -> Vec<Substitution> {
-        let Pattern::App(decl, subs) = pattern else {
+        self.ematch_many(std::slice::from_ref(pattern))
+            .pop()
+            .unwrap_or_default()
+    }
+
+    /// E-matches several compiled patterns against one shared snapshot of the
+    /// e-graph. The result at index `i` is exactly [`Self::ematch`] for
+    /// `patterns[i]`, but the root-class membership index and top-application
+    /// index are built once for the complete batch (ADR-0111).
+    ///
+    /// The indexes are local to this call and cannot outlive an e-graph mutation,
+    /// preventing stale-root use while allowing a quantifier propagation round to
+    /// share the expensive graph walk across all registered patterns. Results are
+    /// deterministic and preserve input-pattern order.
+    #[must_use]
+    pub fn ematch_many(&self, patterns: &[Pattern]) -> Vec<Vec<Substitution>> {
+        let mut index = self.new_match_index();
+        self.ematch_many_indexed(patterns, &mut index)
+    }
+
+    /// Creates a persistent index for repeated calls to
+    /// [`Self::ematch_many_indexed`]. The first indexed call builds it lazily.
+    #[must_use]
+    pub fn new_match_index(&self) -> EMatchIndex {
+        EMatchIndex::default()
+    }
+
+    /// Matches `patterns` through a persistent revision-checked index.
+    ///
+    /// Add-only graph growth extends the index from the new node suffix. Real
+    /// e-class merges apply the retained union journal; scope rollback causes a
+    /// complete rebuild before matching. Results are extensionally identical to
+    /// [`Self::ematch_many`] and remain in input-pattern order.
+    #[must_use]
+    pub fn ematch_many_indexed(
+        &self,
+        patterns: &[Pattern],
+        index: &mut EMatchIndex,
+    ) -> Vec<Vec<Substitution>> {
+        self.refresh_match_index(index);
+        patterns
+            .iter()
+            .map(|pattern| {
+                self.ematch_indexed(pattern, &index.class_index, &index.application_nodes)
+            })
+            .collect()
+    }
+
+    /// Matches each pattern only at its corresponding explicit top-application
+    /// candidates through a persistent index (ADR-0116).
+    ///
+    /// Recursive subpattern matching still ranges over complete current e-class
+    /// membership. Only the initial top-application scan is restricted. Results
+    /// at index `i` are therefore exactly a full indexed match of `patterns[i]`
+    /// filtered to matches witnessed by `candidates[i]`.
+    ///
+    /// # Panics
+    ///
+    /// Panics when the pattern and candidate batches have different lengths or a
+    /// candidate id was not produced by this e-graph.
+    #[must_use]
+    pub fn ematch_many_candidates_indexed(
+        &self,
+        patterns: &[Pattern],
+        candidates: &[Vec<ENodeId>],
+        index: &mut EMatchIndex,
+    ) -> Vec<Vec<Substitution>> {
+        assert_eq!(patterns.len(), candidates.len());
+        self.refresh_match_index(index);
+        patterns
+            .iter()
+            .zip(candidates)
+            .map(|(pattern, candidates)| {
+                self.ematch_candidates(pattern, candidates, &index.class_index)
+            })
+            .collect()
+    }
+
+    /// Distinct declarations of application nodes created at indexes
+    /// `start..self.len()`, in first-creation order. Leaves are omitted.
+    ///
+    /// This is the add-node notification surface used by the quantifier
+    /// candidate queue: a new match for root declaration `f` requires a new
+    /// `f(...)` candidate unless a merge occurred (merges use epoch invalidation).
+    #[must_use]
+    pub fn application_decls_since(&self, start: usize) -> Vec<u32> {
+        let mut seen = HashSet::new();
+        let mut declarations = Vec::new();
+        for node in self.nodes.iter().skip(start.min(self.nodes.len())) {
+            if !node.args.is_empty() && seen.insert(node.decl) {
+                declarations.push(node.decl);
+            }
+        }
+        declarations
+    }
+
+    /// Application nodes created at indexes `start..self.len()`, in creation
+    /// order. Leaves are omitted (ADR-0116).
+    ///
+    /// # Panics
+    ///
+    /// Panics only if the e-graph contains more than `u32::MAX` nodes, which
+    /// [`Self::add`] rejects before creating such a node.
+    #[must_use]
+    pub fn application_nodes_since(&self, start: usize) -> Vec<ENodeId> {
+        self.nodes
+            .iter()
+            .enumerate()
+            .skip(start.min(self.nodes.len()))
+            .filter(|(_, node)| !node.args.is_empty())
+            .map(|(index, _)| ENodeId(u32::try_from(index).expect("e-node index fits in u32")))
+            .collect()
+    }
+
+    /// Returns declarations of applications reachable by following inverted
+    /// e-class parent links transitively from `starts` (ADR-0113).
+    ///
+    /// These are precisely the top declarations that may gain an
+    /// equality-dependent nested, repeated-variable, or ground-subpattern match
+    /// after the classes containing `starts` merge. Results are sorted by
+    /// declaration id and traversal is cycle-safe under recursive equalities.
+    ///
+    /// # Panics
+    ///
+    /// Panics if a start id was not produced by this e-graph.
+    #[must_use]
+    pub fn inverted_parent_declarations(&self, starts: &[ENodeId]) -> Vec<u32> {
+        let mut pending = Vec::new();
+        let mut seen_classes = HashSet::new();
+        for &start in starts {
+            let root = self.root(start);
+            if seen_classes.insert(root) {
+                pending.push(root);
+            }
+        }
+
+        let mut declarations = BTreeSet::new();
+        while let Some(class) = pending.pop() {
+            for &parent in &self.nodes[class.index()].parents {
+                declarations.insert(self.nodes[parent.index()].decl);
+                let parent_root = self.root(parent);
+                if seen_classes.insert(parent_root) {
+                    pending.push(parent_root);
+                }
+            }
+        }
+        declarations.into_iter().collect()
+    }
+
+    fn ematch_indexed(
+        &self,
+        pattern: &Pattern,
+        class_index: &HashMap<ENodeId, Vec<ENodeId>>,
+        application_nodes: &HashMap<u32, Vec<ENodeId>>,
+    ) -> Vec<Substitution> {
+        let Pattern::App(decl, _) = pattern else {
             return Vec::new(); // a bare variable is not a usable trigger
         };
+        self.ematch_candidates(
+            pattern,
+            application_nodes
+                .get(decl)
+                .map(Vec::as_slice)
+                .unwrap_or_default(),
+            class_index,
+        )
+    }
+
+    fn ematch_candidates(
+        &self,
+        pattern: &Pattern,
+        candidates: &[ENodeId],
+        class_index: &HashMap<ENodeId, Vec<ENodeId>>,
+    ) -> Vec<Substitution> {
+        let Pattern::App(decl, subs) = pattern else {
+            return Vec::new();
+        };
         let nvars = pattern.max_var().map_or(0, |v| v as usize + 1);
-        let index = self.class_index();
         let mut results = Vec::new();
-        for app in self.enumerate_apps(*decl) {
-            if app.args.len() != subs.len() {
+        for &app in candidates {
+            let node = &self.nodes[app.index()];
+            if node.decl != *decl || node.args.len() != subs.len() {
                 continue;
             }
+            let args: Vec<ENodeId> = node.args.iter().map(|&arg| self.root(arg)).collect();
             let blank = vec![None; nvars];
-            results.extend(self.match_sequence(subs, &app.args, blank, &index));
+            results.extend(self.match_sequence(subs, &args, blank, class_index));
         }
         results.sort();
         results.dedup();
         results
     }
 
-    /// Groups every node by its current class root (for in-class pattern lookup).
-    fn class_index(&self) -> HashMap<ENodeId, Vec<ENodeId>> {
-        let mut index: HashMap<ENodeId, Vec<ENodeId>> = HashMap::new();
-        for i in 0..self.nodes.len() {
-            let id = ENodeId(u32::try_from(i).expect("node index fits u32"));
-            index.entry(self.root(id)).or_default().push(id);
+    fn refresh_match_index(&self, index: &mut EMatchIndex) {
+        let rebuild = !index.initialized
+            || index.graph_id != self.graph_id
+            || index.rollback_epoch != self.rollback_epoch
+            || index.merge_event_count > self.merge_events.len()
+            || index.node_count > self.nodes.len();
+        let start = if rebuild {
+            index.class_index.clear();
+            index.application_nodes.clear();
+            index.full_rebuilds += 1;
+            0
+        } else {
+            let merge_events = &self.merge_events[index.merge_event_count..];
+            for &event in merge_events {
+                Self::apply_match_index_merge(index, event);
+            }
+            index.merge_updates += merge_events.len();
+            if index.node_count < self.nodes.len() {
+                index.suffix_extensions += 1;
+            }
+            index.node_count
+        };
+
+        for node_index in start..self.nodes.len() {
+            self.index_match_node(index, node_index);
         }
+        index.initialized = true;
+        index.graph_id = self.graph_id;
+        index.node_count = self.nodes.len();
+        index.rollback_epoch = self.rollback_epoch;
+        index.merge_event_count = self.merge_events.len();
+    }
+
+    fn apply_match_index_merge(index: &mut EMatchIndex, event: MergeEvent) {
+        let Some(mut child_members) = index.class_index.remove(&event.child) else {
+            return;
+        };
         index
+            .class_index
+            .entry(event.root)
+            .or_default()
+            .append(&mut child_members);
+    }
+
+    fn index_match_node(&self, index: &mut EMatchIndex, node_index: usize) {
+        let id = ENodeId(u32::try_from(node_index).expect("node index fits u32"));
+        let node = &self.nodes[node_index];
+        let root = self.root(id);
+        index.class_index.entry(root).or_default().push(id);
+        if !node.args.is_empty() {
+            index
+                .application_nodes
+                .entry(node.decl)
+                .or_default()
+                .push(id);
+        }
     }
 
     /// Matches a sequence of subpatterns against the class roots of an
@@ -421,6 +733,7 @@ impl EGraph {
             root: id,
             size: 1,
             parents: Vec::new(),
+            class_declarations: vec![decl],
             proof_parent: None,
             proof_edge: None,
             th_vars: Vec::new(),
@@ -492,6 +805,11 @@ impl EGraph {
                 self.revert(undo);
             }
         }
+        // Root-keyed external indexes cannot distinguish a no-op scope from a
+        // rollback cheaply. Conservative invalidation keeps their contract
+        // simple and cannot affect e-graph semantics or proof state.
+        self.rollback_epoch = self.rollback_epoch.wrapping_add(1);
+        self.merge_events.clear();
     }
 
     /// Reverts a single trailed mutation.
@@ -532,6 +850,9 @@ impl EGraph {
             Undo::ThVarsMerged { node, count } => {
                 let new_len = self.nodes[node.index()].th_vars.len() - count;
                 self.nodes[node.index()].th_vars.truncate(new_len);
+            }
+            Undo::ClassDeclarationsReplaced { node, old } => {
+                self.nodes[node.index()].class_declarations = old;
             }
         }
     }
@@ -595,6 +916,26 @@ impl EGraph {
                 root,
                 child_size,
             });
+            // Record at the actual union point so retained indexes consume both
+            // explicit equalities and every congruence-cascade union.
+            self.merge_events.push(MergeEvent { root, child });
+
+            let child_declarations = self.nodes[child.index()].class_declarations.clone();
+            if child_declarations.iter().any(|declaration| {
+                self.nodes[root.index()]
+                    .class_declarations
+                    .binary_search(declaration)
+                    .is_err()
+            }) {
+                let old = self.nodes[root.index()].class_declarations.clone();
+                self.nodes[root.index()]
+                    .class_declarations
+                    .extend(child_declarations);
+                self.nodes[root.index()].class_declarations.sort_unstable();
+                self.nodes[root.index()].class_declarations.dedup();
+                self.trail
+                    .push(Undo::ClassDeclarationsReplaced { node: root, old });
+            }
 
             // Move the child class's theory variables onto the new root (the child
             // keeps its own copy, restored if this union is backtracked).
@@ -1212,6 +1553,243 @@ mod tests {
         // After a = b, h(a, b) also matches (its arguments share a class).
         g.merge(a, b, 0);
         assert_eq!(g.ematch(&pat).len(), 1, "h(a,b)=h(a,a) now one class");
+    }
+
+    #[test]
+    fn ematch_many_shares_one_snapshot_and_preserves_pattern_order() {
+        let mut g = EGraph::new();
+        let a = g.add(0, &[]);
+        let b = g.add(1, &[]);
+        let ga = g.add(20, &[a]);
+        let gb = g.add(20, &[b]);
+        g.add(10, &[ga]);
+        g.add(10, &[gb]);
+        g.add(30, &[a, a]);
+        g.add(30, &[a, b]);
+
+        let unary = Pattern::App(20, vec![Pattern::Var(0)]);
+        let nested = Pattern::App(10, vec![Pattern::App(20, vec![Pattern::Var(0)])]);
+        let repeated = Pattern::App(30, vec![Pattern::Var(0), Pattern::Var(0)]);
+        let patterns = vec![unary.clone(), nested, repeated, Pattern::Var(0), unary];
+
+        let before = g.ematch_many(&patterns);
+        assert_eq!(before.len(), patterns.len());
+        assert_eq!(before[0].len(), 2);
+        assert_eq!(before[1].len(), 2);
+        assert_eq!(before[2], vec![vec![Some(g.root(a))]]);
+        assert!(before[3].is_empty(), "a bare variable is not a trigger");
+        assert_eq!(before[4], before[0], "duplicate patterns remain identical");
+
+        g.merge(a, b, 7);
+        let after = g.ematch_many(&patterns);
+        assert_eq!(
+            after[0].len(),
+            1,
+            "congruent unary applications deduplicate"
+        );
+        assert_eq!(after[1].len(), 1, "nested matches follow current roots");
+        assert_eq!(after[2].len(), 1, "repeated variables use current roots");
+        assert_eq!(after[4], after[0]);
+        assert_eq!(
+            after,
+            g.ematch_many(&patterns),
+            "batched output is deterministic"
+        );
+    }
+
+    #[test]
+    fn candidate_indexed_ematch_restricts_only_top_applications() {
+        let mut g = EGraph::new();
+        let a = g.add(0, &[]);
+        let b = g.add(1, &[]);
+        let ga = g.add(20, &[a]);
+        let gb = g.add(20, &[b]);
+        let fga = g.add(10, &[ga]);
+        let fgb = g.add(10, &[gb]);
+        let unary = Pattern::App(20, vec![Pattern::Var(0)]);
+        let nested = Pattern::App(10, vec![Pattern::App(20, vec![Pattern::Var(0)])]);
+        let mut index = g.new_match_index();
+
+        let restricted = g.ematch_many_candidates_indexed(
+            &[unary, nested],
+            &[vec![ga, ga, fga], vec![fgb]],
+            &mut index,
+        );
+        assert_eq!(restricted[0], vec![vec![Some(g.root(a))]]);
+        assert_eq!(restricted[1], vec![vec![Some(g.root(b))]]);
+
+        g.merge(a, b, 1);
+        let after = g.ematch_many_candidates_indexed(
+            &[Pattern::App(20, vec![Pattern::Var(0)])],
+            &[vec![ga, gb]],
+            &mut index,
+        );
+        assert_eq!(after, vec![vec![vec![Some(g.root(a))]]]);
+    }
+
+    #[test]
+    fn persistent_ematch_index_extends_suffix_and_applies_merge_journal() {
+        let mut g = EGraph::new();
+        let a = g.add(0, &[]);
+        let b = g.add(1, &[]);
+        g.add(20, &[a]);
+        g.add(20, &[b]);
+        let patterns = vec![Pattern::App(20, vec![Pattern::Var(0)])];
+        let mut index = g.new_match_index();
+
+        assert_eq!(
+            g.ematch_many_indexed(&patterns, &mut index),
+            g.ematch_many(&patterns)
+        );
+        assert_eq!(index.full_rebuilds, 1);
+        assert_eq!(index.suffix_extensions, 0);
+
+        let c = g.add(2, &[]);
+        g.add(20, &[c]);
+        assert_eq!(
+            g.ematch_many_indexed(&patterns, &mut index),
+            g.ematch_many(&patterns)
+        );
+        assert_eq!(index.full_rebuilds, 1, "add-only growth must not rebuild");
+        assert_eq!(index.suffix_extensions, 1);
+
+        g.merge(a, b, 7);
+        assert_eq!(
+            g.ematch_many_indexed(&patterns, &mut index),
+            g.ematch_many(&patterns)
+        );
+        assert_eq!(index.full_rebuilds, 1, "a normal merge stays incremental");
+        assert_eq!(
+            index.merge_updates, 2,
+            "the direct union and f-congruence union are both consumed"
+        );
+        assert_eq!(
+            g.ematch_many_indexed(&patterns, &mut index),
+            g.ematch_many(&patterns),
+            "an unchanged revision remains deterministic"
+        );
+        assert_eq!(index.full_rebuilds, 1);
+        assert_eq!(index.merge_updates, 2);
+    }
+
+    #[test]
+    fn persistent_ematch_index_tracks_nested_merge_cascades_and_pop() {
+        let mut g = EGraph::new();
+        let a = g.add(0, &[]);
+        let b = g.add(1, &[]);
+        let ga = g.add(20, &[a]);
+        g.add(10, &[b]);
+        let nested = vec![Pattern::App(
+            10,
+            vec![Pattern::App(20, vec![Pattern::Var(0)])],
+        )];
+        let mut index = g.new_match_index();
+
+        assert!(g.ematch_many_indexed(&nested, &mut index)[0].is_empty());
+        g.push();
+        g.merge(b, ga, 11);
+        let merged = g.ematch_many_indexed(&nested, &mut index);
+        assert_eq!(merged, g.ematch_many(&nested));
+        assert_eq!(merged, vec![vec![vec![Some(g.root(a))]]]);
+        assert_eq!(index.full_rebuilds, 1);
+        assert_eq!(index.merge_updates, 1);
+
+        g.pop();
+        assert_eq!(
+            g.ematch_many_indexed(&nested, &mut index),
+            g.ematch_many(&nested)
+        );
+        assert!(g.ematch_many_indexed(&nested, &mut index)[0].is_empty());
+        assert_eq!(index.full_rebuilds, 2, "scope rollback invalidates roots");
+    }
+
+    #[test]
+    fn inverted_parent_declarations_follow_transitive_paths_deterministically() {
+        let mut g = EGraph::new();
+        let a = g.add(0, &[]);
+        let b = g.add(1, &[]);
+        let ga = g.add(20, &[a]);
+        g.add(20, &[b]);
+        let fga = g.add(10, &[ga]);
+        g.add(40, &[fga]);
+        let unrelated = g.add(2, &[]);
+        g.add(30, &[unrelated]);
+
+        g.merge(a, b, 7);
+        assert_eq!(g.inverted_parent_declarations(&[a, b]), vec![10, 20, 40]);
+    }
+
+    #[test]
+    fn inverted_parent_declarations_terminate_on_recursive_class_cycles() {
+        let mut g = EGraph::new();
+        let a = g.add(0, &[]);
+        let fa = g.add(50, &[a]);
+        g.merge(a, fa, 9);
+        assert_eq!(g.inverted_parent_declarations(&[a]), vec![50]);
+    }
+
+    #[test]
+    fn class_declaration_labels_merge_exactly_and_backtrack() {
+        let mut g = EGraph::new();
+        let a = g.add(10, &[]);
+        let b = g.add(20, &[]);
+        let fa = g.add(30, &[a]);
+        assert!(g.class_has_declaration(a, 10));
+        assert!(!g.class_has_declaration(a, 20));
+
+        g.push();
+        g.merge(a, b, 1);
+        assert!(g.class_has_declaration(a, 10));
+        assert!(g.class_has_declaration(a, 20));
+        g.merge(a, fa, 2);
+        assert!(g.class_has_declaration(b, 30));
+
+        g.pop();
+        assert!(g.class_has_declaration(a, 10));
+        assert!(!g.class_has_declaration(a, 20));
+        assert!(g.class_has_declaration(b, 20));
+        assert!(!g.class_has_declaration(b, 10));
+        assert!(g.class_has_declaration(fa, 30));
+        assert!(!g.class_has_declaration(fa, 10));
+    }
+
+    #[test]
+    fn persistent_ematch_index_rebuilds_when_reused_with_another_graph() {
+        let mut first = EGraph::new();
+        let a = first.add(0, &[]);
+        first.add(20, &[a]);
+        let pattern = vec![Pattern::App(20, vec![Pattern::Var(0)])];
+        let mut index = first.new_match_index();
+        assert_eq!(first.ematch_many_indexed(&pattern, &mut index)[0].len(), 1);
+
+        let mut second = EGraph::new();
+        let b = second.add(1, &[]);
+        second.add(30, &[b]);
+        assert!(second.ematch_many_indexed(&pattern, &mut index)[0].is_empty());
+        assert_eq!(index.full_rebuilds, 2, "cross-graph reuse must rebuild");
+    }
+
+    #[test]
+    fn ematch_preserves_distinct_substitutions_from_equal_applications() {
+        let mut g = EGraph::new();
+        let a = g.add(0, &[]);
+        let b = g.add(1, &[]);
+        let fa = g.add(20, &[a]);
+        let fb = g.add(20, &[b]);
+        let pattern = Pattern::App(20, vec![Pattern::Var(0)]);
+        assert_eq!(g.ematch(&pattern).len(), 2);
+
+        g.merge(fa, fb, 7);
+        assert_eq!(
+            g.ematch(&pattern),
+            vec![vec![Some(g.root(a))], vec![Some(g.root(b))]],
+            "equal applications with unequal arguments retain both substitutions"
+        );
+        assert_eq!(
+            g.enumerate_apps(20).len(),
+            1,
+            "application-class enumeration remains congruence-deduplicated"
+        );
     }
 
     #[test]

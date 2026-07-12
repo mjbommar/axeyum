@@ -55,7 +55,10 @@ fn budget_with_deadline() -> SearchBudget {
 }
 
 fn past_deadline_budget() -> SearchBudget {
-    SearchBudget::with_deadline(1_000_000, Instant::now() - Duration::from_millis(1))
+    let deadline = Instant::now()
+        .checked_sub(Duration::from_millis(1))
+        .expect("one millisecond is representable before the current instant");
+    SearchBudget::with_deadline(1_000_000, deadline)
 }
 
 #[test]

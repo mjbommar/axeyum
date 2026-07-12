@@ -1384,6 +1384,26 @@ pub enum ProofFragment {
     NraEvenPower,
     /// A top-level universal quantifier.
     Forall,
+    /// A closed universal integer equality/disequality refuted by one evaluator-
+    /// checked concrete binder assignment and reconstructed by genuine `forall`
+    /// elimination over the integer/Bool preludes (ADR-0102).
+    ClosedUniversalCounterexample,
+    /// The checked ADR-0099 nested-XOR integer theorem reconstructed through
+    /// three genuine universal instantiations and propositional case analysis.
+    IntNestedXor,
+    /// The checked ADR-0095 Euclidean-residue universal reconstructed by
+    /// eliminating quotient/remainder witnesses from ADR-0104's general integer
+    /// decomposition theorem.
+    IntEuclideanResidue,
+    /// The checked ADR-0097 positive-slope affine-growth universal reconstructed
+    /// through Euclidean decomposition and two guarded consecutive instances.
+    IntAffineGrowth,
+    /// An ADR-0101 closed Bool/Int equality partition with at most one literal
+    /// pivot per Int binder, reconstructed over genuine quantifiers (ADR-0106).
+    SinglePivotEqualityPartition,
+    /// A finite source-instantiated counterexample cover over free Boolean
+    /// guards, reconstructed by bounded excluded-middle case analysis (ADR-0108).
+    QuantifiedCounterexampleCover,
     /// A top-level existential quantifier (skolemized).
     Exists,
     /// A word-level (string/sequence) refutation: a contradicted disequality or a
@@ -1760,6 +1780,29 @@ pub fn scan_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> ProofFra
         ProofFragment::BvUfLocal
     } else if (has_exists || has_forall) && finite_domain_enum_certifies(arena, assertions) {
         ProofFragment::FiniteDomainEnum
+    } else if has_forall
+        && crate::int_reconstruct::int_euclidean_residue_lean_shape(arena, assertions)
+    {
+        ProofFragment::IntEuclideanResidue
+    } else if has_forall && crate::int_reconstruct::int_affine_growth_lean_shape(arena, assertions)
+    {
+        ProofFragment::IntAffineGrowth
+    } else if (has_forall || has_exists)
+        && crate::int_reconstruct::single_pivot_equality_partition_lean_shape(arena, assertions)
+    {
+        ProofFragment::SinglePivotEqualityPartition
+    } else if has_forall
+        && crate::quant_nested_xor_cert::int_nested_xor_refutation(arena, assertions).is_some()
+    {
+        ProofFragment::IntNestedXor
+    } else if has_forall
+        && crate::int_reconstruct::closed_universal_counterexample_lean_shape(arena, assertions)
+    {
+        ProofFragment::ClosedUniversalCounterexample
+    } else if has_forall
+        && crate::int_reconstruct::quantified_counterexample_cover_lean_shape(arena, assertions)
+    {
+        ProofFragment::QuantifiedCounterexampleCover
     } else if has_exists {
         ProofFragment::Exists
     } else if has_forall {
@@ -3698,6 +3741,81 @@ fn reconstruct_proof_fragment_to_lean_module(
             let t = reconstruct_quant_unsat_proof(&mut ctx, &p)?;
             require_infers_false(&mut ctx, t)?;
             render_ctx_module(&mut ctx, t)
+        }
+        ProofFragment::ClosedUniversalCounterexample => {
+            let config = crate::SolverConfig::default()
+                .with_timeout(std::time::Duration::from_secs(2))
+                .with_resource_limit(1_000_000);
+            let certificate =
+                crate::quant_closed_counterexample_search::find_closed_universal_counterexample(
+                    arena, assertions, &config,
+                )
+                .map_err(|error| ReconstructError::MalformedStep {
+                    rule: "closed_universal_counterexample".to_owned(),
+                    detail: format!("counterexample search failed: {error}"),
+                })?
+                .ok_or_else(declined)?;
+            crate::int_reconstruct::reconstruct_closed_universal_counterexample_to_lean_module(
+                arena,
+                assertions,
+                &certificate,
+            )?
+        }
+        ProofFragment::IntNestedXor => {
+            let certificate =
+                crate::quant_nested_xor_cert::int_nested_xor_refutation(arena, assertions)
+                    .ok_or_else(declined)?;
+            crate::int_reconstruct::reconstruct_int_nested_xor_to_lean_module(
+                arena,
+                assertions,
+                &certificate,
+            )?
+        }
+        ProofFragment::IntEuclideanResidue => {
+            let certificate =
+                crate::quant_residue_cert::int_euclidean_residue_refutation(arena, assertions)
+                    .ok_or_else(declined)?;
+            crate::int_reconstruct::reconstruct_int_euclidean_residue_to_lean_module(
+                arena,
+                assertions,
+                &certificate,
+            )?
+        }
+        ProofFragment::IntAffineGrowth => {
+            let certificate =
+                crate::quant_affine_growth_cert::int_affine_growth_refutation(arena, assertions)
+                    .ok_or_else(declined)?;
+            crate::int_reconstruct::reconstruct_int_affine_growth_to_lean_module(
+                arena,
+                assertions,
+                &certificate,
+            )?
+        }
+        ProofFragment::SinglePivotEqualityPartition => {
+            let certificate =
+                crate::quant_eq_partition_search::equality_partition_refutation(arena, assertions)
+                    .ok_or_else(declined)?;
+            crate::int_reconstruct::reconstruct_single_pivot_equality_partition_to_lean_module(
+                arena,
+                assertions,
+                &certificate,
+            )?
+        }
+        ProofFragment::QuantifiedCounterexampleCover => {
+            let config =
+                crate::SolverConfig::default().with_timeout(std::time::Duration::from_secs(30));
+            let certificate =
+                crate::quantified_counterexample_cover_refutation(arena, assertions, &config)
+                    .map_err(|error| ReconstructError::MalformedStep {
+                        rule: "quantified_counterexample_cover".to_owned(),
+                        detail: format!("counterexample-cover search failed: {error}"),
+                    })?
+                    .ok_or_else(declined)?;
+            crate::int_reconstruct::reconstruct_quantified_counterexample_cover_to_lean_module(
+                arena,
+                assertions,
+                &certificate,
+            )?
         }
         ProofFragment::Exists => {
             let cert = crate::prove_skolem_unsat_alethe(arena, assertions).ok_or_else(declined)?;

@@ -2118,8 +2118,8 @@ fn build_theory_atoms(
         atoms.register(arena, original, rewritten, false)?;
     }
     // Nested array equalities can guard e-graph explanations without appearing
-    // as top-level Boolean skeleton atoms. Register every flag before dynamic
-    // interface clauses can refer to it.
+    // as top-level Boolean skeleton atoms. Register every flag in deterministic
+    // preparation order before dynamic interface clauses can refer to it.
     for equality in &prepared.array_equalities {
         let flag = arena.var(equality.flag);
         let original = arena.eq(equality.lhs, equality.rhs)?;
@@ -2301,8 +2301,14 @@ fn required_dynamic_atom(
     abstracted: TermId,
 ) -> BuildResult<DynamicAtomRef> {
     theory.atom_ref(solver, abstracted, false)?.ok_or_else(|| {
+        let detail = match theory.bv.arena.node(abstracted) {
+            TermNode::Symbol(symbol) => format!("symbol {}", theory.bv.arena.symbol(*symbol).0),
+            node => format!("{node:?}"),
+        };
         BuildFailure::Error(SolverError::Backend(
-            "online AUFBV dynamic clause referenced an unregistered guard atom".to_owned(),
+            format!(
+                "online AUFBV dynamic clause referenced unregistered guard atom {abstracted:?}: {detail}"
+            ),
         ))
     })
 }

@@ -14,8 +14,10 @@ use crate::model::Model;
 /// procedures.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CheckResult {
-    /// The assertions are satisfiable; the model maps every declared symbol
-    /// to a value (backend model completion fills unconstrained symbols).
+    /// The assertions are satisfiable. Ground symbols map to values (backend
+    /// model completion fills unconstrained symbols); restricted
+    /// infinite-domain quantified results additionally carry checked Skolem
+    /// certificates. Use [`crate::check_model`] for canonical replay.
     Sat(Model),
     /// The assertions are unsatisfiable.
     Unsat,

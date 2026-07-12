@@ -15,9 +15,9 @@
 //!
 //! ## The math (sound, ONE-DIRECTIONAL — `sat` only)
 //!
-//! A prenex query `∀x₁…xₙ. ∃z. body(x⃗, z)` — a leading `∀` prefix, then exactly
-//! one inner `∃`, then a quantifier-free `body`, with `z` of sort `Int`/`Real` —
-//! is **satisfiable** if there is a Skolem witness `z = g(x⃗)` (a term over the
+//! A query with a leading `∀` prefix and one supported positive existential —
+//! either prenex `∃z. body` or a direct `guard ∨ ∃z. body` (ADR-0098) — is
+//! **satisfiable** if there is a Skolem witness `z = g(x⃗)` (a term over the
 //! universals only) such that
 //!
 //! ```text
@@ -75,9 +75,11 @@ use axeyum_rewrite::replace_subterms;
 
 use crate::auto::check_auto;
 use crate::backend::{CheckResult, SolverConfig, SolverError};
+use crate::quant_sat_cert::affine_skolem_witness;
+use crate::{Model, QuantifiedSkolemSatCertificate, check_quantified_skolem_sat};
 
-/// Decides a prenex `∀x⃗. ∃z. body` query by synthesizing and validating a Skolem
-/// witness for `z` (see the module docs).
+/// Decides a supported `∀x⃗. ∃z. body` or positive `∀x⃗. guard ∨ ∃z. body`
+/// query by synthesizing and validating a Skolem witness for `z`.
 ///
 /// Returns `Ok(Some(CheckResult::Sat(_)))` when *exactly one* assertion is such a
 /// query and a witness `g(x⃗)` is found whose universal closure `∀x⃗. body[z := g]`
@@ -86,9 +88,9 @@ use crate::backend::{CheckResult, SolverConfig, SolverError};
 /// or no candidate that validates). A decline is sound: the caller proceeds to the
 /// existing quantifier fallbacks. This pass *never* returns `unsat`.
 ///
-/// The returned model is empty (the witness is the decision evidence, not a ground
-/// assignment) — appropriate for a satisfiable quantified query whose models assign
-/// the bound variables, not free symbols.
+/// The returned model carries a typed Skolem certificate. The certificate is
+/// independently checked against the original quantified assertion; a validated
+/// search candidate that the small checker cannot prove is declined.
 ///
 /// # Errors
 ///
@@ -108,12 +110,13 @@ pub fn decide_forall_exists_by_witness(
     decide_single(arena, assertions[0], config)
 }
 
-/// Decides one assertion if it is a prenex `∀x⃗. ∃z. body`; otherwise declines.
+/// Decides one assertion if it has a supported `∀*`/positive-`∃` shape.
 fn decide_single(
     arena: &mut TermArena,
     assertion: TermId,
     config: &SolverConfig,
 ) -> Result<Option<CheckResult>, SolverError> {
+    let original_term_count = arena.len();
     // Peel the leading `∀` prefix.
     let mut universals: Vec<SymbolId> = Vec::new();
     let mut cursor = assertion;
@@ -131,27 +134,55 @@ fn decide_single(
         return Ok(None);
     }
 
-    // Then exactly one inner `∃z`.
-    let TermNode::App {
-        op: Op::Exists(z),
-        args,
-    } = arena.node(cursor)
-    else {
+    // Then either one prenex `∃z.body`, or one direct positive
+    // `guard ∨ ∃z.body` (ADR-0098). The latter is pulled only for untrusted
+    // search; the certificate checker independently re-matches the original.
+    let Some((z, body)) = extract_witness_problem(arena, cursor) else {
         return Ok(None);
     };
-    let z = *z;
-    let body = args[0];
+    if universals.contains(&z) {
+        return Ok(None);
+    }
 
-    // `z` must be `Int`/`Real` — the only sorts the affine witness synthesis
-    // covers (a `Bool`/`BitVec` existential is decided by finite expansion).
+    // Arithmetic synthesis covers `Int`/`Real`; ADR-0121 additionally permits
+    // only a same-width BV identity proposal through the independent checker.
     let z_sort = arena.symbol(z).1;
-    if !matches!(z_sort, Sort::Int | Sort::Real) {
+    if !matches!(z_sort, Sort::Int | Sort::Real | Sort::BitVec(_)) {
         return Ok(None);
     }
 
     // The body must be quantifier-free: a further quantifier would make the
     // validity sub-check itself quantified (and could shadow `z`/`x⃗`).
     if contains_quantifier(arena, body) {
+        return Ok(None);
+    }
+
+    // Identity witnesses are common nested-QE results and may occur below
+    // non-affine syntax such as `ite`. Try each same-sort universal directly;
+    // the separate checker accepts only when substitution makes the body a
+    // reflexive/affine tautology.
+    for &universal in &universals {
+        if arena.symbol(universal).1 != z_sort {
+            continue;
+        }
+        let witness = arena.var(universal);
+        let Some(witness) = affine_skolem_witness(arena, witness, original_term_count) else {
+            continue;
+        };
+        let cert = QuantifiedSkolemSatCertificate {
+            assertion,
+            universals: universals.clone(),
+            existential: z,
+            witness,
+        };
+        if check_quantified_skolem_sat(arena, assertion, &cert) {
+            return Ok(Some(CheckResult::Sat(certified_model(cert))));
+        }
+    }
+
+    // No modular affine interpretation is assigned to the witness recipe. A BV
+    // existential that did not pass the exact identity checker declines here.
+    if matches!(z_sort, Sort::BitVec(_)) {
         return Ok(None);
     }
 
@@ -176,13 +207,92 @@ fn decide_single(
     // Verify each candidate: `∀x⃗. body[z := g]` valid ⇒ original is `sat`.
     for g in candidates {
         if witness_validates(arena, body, z, g, &universals, config)? {
-            // A validated witness: the original `∀x⃗. ∃z. body` is satisfiable.
-            return Ok(Some(CheckResult::Sat(crate::model::Model::new())));
+            let Some(witness) = affine_skolem_witness(arena, g, original_term_count) else {
+                continue;
+            };
+            let cert = QuantifiedSkolemSatCertificate {
+                assertion,
+                universals: universals.clone(),
+                existential: z,
+                witness,
+            };
+            if check_quantified_skolem_sat(arena, assertion, &cert) {
+                return Ok(Some(CheckResult::Sat(certified_model(cert))));
+            }
         }
     }
 
     // No candidate validated: decline (never `unsat`).
     Ok(None)
+}
+
+/// Extracts the quantifier-free body used by witness search.
+///
+/// Pulling `exists z` through `or` is sound only in positive position, when the
+/// other child does not mention `z`, and because the supported Int/Real domains
+/// are nonempty. This helper deliberately recognizes no other Boolean context.
+fn extract_witness_problem(arena: &mut TermArena, term: TermId) -> Option<(SymbolId, TermId)> {
+    if let TermNode::App {
+        op: Op::Exists(z),
+        args,
+    } = arena.node(term)
+    {
+        let [body] = &**args else {
+            return None;
+        };
+        return (!contains_quantifier(arena, *body)).then_some((*z, *body));
+    }
+
+    let TermNode::App {
+        op: Op::BoolOr,
+        args,
+    } = arena.node(term)
+    else {
+        return None;
+    };
+    let [left, right] = &**args else {
+        return None;
+    };
+    let (left, right) = (*left, *right);
+    extract_exists_or_side(arena, left, right, true)
+        .or_else(|| extract_exists_or_side(arena, right, left, false))
+}
+
+fn extract_exists_or_side(
+    arena: &mut TermArena,
+    exists_side: TermId,
+    guard: TermId,
+    exists_first: bool,
+) -> Option<(SymbolId, TermId)> {
+    let TermNode::App {
+        op: Op::Exists(z),
+        args,
+    } = arena.node(exists_side)
+    else {
+        return None;
+    };
+    let [inner] = &**args else {
+        return None;
+    };
+    let (z, inner) = (*z, *inner);
+    if contains_quantifier(arena, guard)
+        || contains_quantifier(arena, inner)
+        || occurs(arena, guard, z)
+    {
+        return None;
+    }
+    let combined = if exists_first {
+        arena.or(inner, guard).ok()?
+    } else {
+        arena.or(guard, inner).ok()?
+    };
+    Some((z, combined))
+}
+
+fn certified_model(cert: QuantifiedSkolemSatCertificate) -> Model {
+    let mut model = Model::new();
+    model.set_quantified_sat_certificate(cert);
+    model
 }
 
 /// A comparison relation between `z` and a `z`-free bound term `t`, as recovered

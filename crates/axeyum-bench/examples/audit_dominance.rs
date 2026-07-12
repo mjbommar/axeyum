@@ -104,12 +104,37 @@ fn ms(duration: Duration) -> f64 {
 
 fn evidence_kind(evidence: &Evidence) -> &'static str {
     match evidence {
+        Evidence::Sat(model) if model.quantified_guard_sat_certificates().next().is_some() => {
+            "quantified-guard-sat"
+        }
+        Evidence::Sat(model) if model.quantified_sat_certificates().next().is_some() => {
+            "quantified-skolem-sat"
+        }
+        Evidence::Sat(model)
+            if model
+                .quantified_bool_model_sat_certificates()
+                .next()
+                .is_some() =>
+        {
+            "quantified-bool-model-sat"
+        }
         Evidence::Sat(_) => "sat-model",
         Evidence::Unsat(Some(_)) => "drat-unsat",
         Evidence::Unsat(None) => "bare-unsat",
         Evidence::UnsatAletheProof(_) => "alethe-unsat",
         Evidence::UnsatArithAletheProof(_) => "arith-alethe-unsat",
         Evidence::UnsatGuardedQuantAletheProof { .. } => "guarded-quant-alethe-unsat",
+        Evidence::UnsatIntEuclideanResidue(_) => "int-euclidean-residue-unsat",
+        Evidence::UnsatIntAffineGrowth(_) => "int-affine-growth-unsat",
+        Evidence::UnsatIntNestedXor(_) => "int-nested-xor-unsat",
+        Evidence::UnsatClosedUniversalCounterexample(_) => "closed-universal-counterexample-unsat",
+        Evidence::UnsatNegatedExistentialWitness(_) => "negated-existential-witness-unsat",
+        Evidence::UnsatBvAlternationCounterexample(_) => "bv-alternation-counterexample-unsat",
+        Evidence::UnsatBvConjunctiveUniversalInstance(_) => {
+            "bv-conjunctive-universal-instance-unsat"
+        }
+        Evidence::UnsatEqualityPartition(_) => "equality-partition-unsat",
+        Evidence::UnsatQuantifiedCounterexampleCover(_) => "quantified-counterexample-cover-unsat",
         Evidence::UnsatTermLevel { .. } => "term-level-unsat",
         Evidence::UnsatFiniteDomainEnum { .. } => "finite-domain-enum-unsat",
         Evidence::UnsatBvDefinedEnum(_) => "bv-defined-enum-unsat",

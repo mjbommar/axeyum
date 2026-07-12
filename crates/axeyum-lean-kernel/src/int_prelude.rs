@@ -36,6 +36,14 @@
 //! - **Linear-order / antisymmetry axioms** (genuine ℤ theorems):
 //!   `le_total : ∀ (a b : Z), Or (le a b) (le b a)` and
 //!   `lt_of_le_of_ne : ∀ (a b : Z), le a b → Not (Eq Z a b) → lt a b`.
+//! - **Euclidean decomposition** (ADR-0104):
+//!   `euclidean_decomposition : ∀ t k, 0 < k → ∃ q r,
+//!   t = k*q+r ∧ 0≤r ∧ r<k`. This states the integer theorem needed by
+//!   quotient/remainder proofs without adding division or modulo operations.
+//! - **Decidable integer equality** (ADR-0106):
+//!   `eq_em : ∀ a b, Or (Eq Z a b) (Not (Eq Z a b))`. This is the
+//!   integer-specific decision theorem needed by equality partitions, not
+//!   unrestricted propositional excluded middle.
 //!
 //! Each axiom's exact type is documented on the corresponding [`IntPrelude`]
 //! field. The propositional connectives (`Not`, `And`, `Eq`, `False`) come from
@@ -156,6 +164,23 @@ pub struct IntPrelude {
     /// theorem of any partial order (`le` antisymmetric); used to strengthen
     /// `m' ≤ 1` to `m' < 1` (and `0 ≤ m'` to `0 < m'`) once equality is excluded.
     pub lt_of_le_of_ne: NameId,
+
+    // --- Euclidean decomposition (ADR-0104) ---------------------------------
+    /// `euclidean_decomposition : ∀ (t k : Z), lt zero k →
+    /// Exists Z (fun q => Exists Z (fun r =>
+    /// And (Eq Z t (add (mul k q) r)) (And (le zero r) (lt r k))))`.
+    ///
+    /// This is the standard Euclidean division theorem for positive integer
+    /// moduli. It deliberately exposes only quotient/remainder existence and
+    /// bounds, not `div` or `mod` operations or their zero-divisor semantics.
+    pub euclidean_decomposition: NameId,
+
+    // --- decidable equality (ADR-0106) --------------------------------------
+    /// `eq_em : ∀ (a b : Z), Or (Eq Z a b) (Not (Eq Z a b))`.
+    ///
+    /// Integer equality is decidable. Keeping this theorem on `Z` avoids adding
+    /// unrestricted classical excluded middle to the logic prelude.
+    pub eq_em: NameId,
 }
 
 /// Declare the axiomatized **discretely-ordered commutative ring** into
@@ -639,6 +664,78 @@ pub fn build_int_prelude(kernel: &mut Kernel) -> IntPrelude {
         declare_axiom(kernel, anon, "lt_of_le_of_ne", ty)
     };
 
+    // --- euclidean_decomposition :
+    //       ∀ t k, lt zero k → ∃ q r, t = k*q+r ∧ 0≤r ∧ r<k ------------
+    // Free variables keep this dependent type readable; `abstract_fvars`
+    // performs the required de-Bruijn shifting under each predicate/telescope.
+    let euclidean_decomposition = {
+        let t_id = 10_000;
+        let k_id = 10_001;
+        let q_id = 10_002;
+        let r_id = 10_003;
+        let t = kernel.fvar(t_id);
+        let k = kernel.fvar(k_id);
+        let q = kernel.fvar(q_id);
+        let r = kernel.fvar(r_id);
+        let kq = app2(kernel, mul, k, q);
+        let kq_r = app2(kernel, add, kq, r);
+        let recomposition = eq_z(kernel, t, kq_r);
+        let zero_c = kernel.const_(zero, vec![]);
+        let nonnegative = app2(kernel, le, zero_c, r);
+        let below_modulus = app2(kernel, lt, r, k);
+        let and_c = kernel.const_(logic.and, vec![]);
+        let bounds = {
+            let e = kernel.app(and_c, nonnegative);
+            kernel.app(e, below_modulus)
+        };
+        let facts = {
+            let and_c = kernel.const_(logic.and, vec![]);
+            let e = kernel.app(and_c, recomposition);
+            kernel.app(e, bounds)
+        };
+
+        let r_body = kernel.abstract_fvars(facts, &[r_id]);
+        let r_pred = kernel.lam(anon, z_ty, r_body, BinderInfo::Default);
+        let one_lvl = {
+            let zero_lvl = kernel.level_zero();
+            kernel.level_succ(zero_lvl)
+        };
+        let exists_c = kernel.const_(logic.exists_, vec![one_lvl]);
+        let exists_r = {
+            let e = kernel.app(exists_c, z_ty);
+            kernel.app(e, r_pred)
+        };
+        let q_body = kernel.abstract_fvars(exists_r, &[q_id]);
+        let q_pred = kernel.lam(anon, z_ty, q_body, BinderInfo::Default);
+        let exists_q = {
+            let exists_c = kernel.const_(logic.exists_, vec![one_lvl]);
+            let e = kernel.app(exists_c, z_ty);
+            kernel.app(e, q_pred)
+        };
+        let zero_c = kernel.const_(zero, vec![]);
+        let positive = app2(kernel, lt, zero_c, k);
+        let after_positive = kernel.pi(anon, positive, exists_q, BinderInfo::Default);
+        let k_body = kernel.abstract_fvars(after_positive, &[k_id]);
+        let after_k = kernel.pi(anon, z_ty, k_body, BinderInfo::Default);
+        let t_body = kernel.abstract_fvars(after_k, &[t_id]);
+        let ty = kernel.pi(anon, z_ty, t_body, BinderInfo::Default);
+        declare_axiom(kernel, anon, "euclidean_decomposition", ty)
+    };
+
+    // --- eq_em : ∀ a b, Or (Eq Z a b) (Not (Eq Z a b)) ---------------------
+    let eq_em = {
+        let a1 = kernel.bvar(1);
+        let b0 = kernel.bvar(0);
+        let equality = eq_z(kernel, a1, b0);
+        let not_c = kernel.const_(logic.not, vec![]);
+        let not_equality = kernel.app(not_c, equality);
+        let or_c = kernel.const_(logic.or, vec![]);
+        let disjunction = kernel.app(or_c, equality);
+        let disjunction = kernel.app(disjunction, not_equality);
+        let ty = telescope_z(kernel, anon, z_ty, 2, disjunction);
+        declare_axiom(kernel, anon, "eq_em", ty)
+    };
+
     IntPrelude {
         logic,
         z,
@@ -673,6 +770,8 @@ pub fn build_int_prelude(kernel: &mut Kernel) -> IntPrelude {
         no_int_between,
         le_total,
         lt_of_le_of_ne,
+        euclidean_decomposition,
+        eq_em,
     }
 }
 

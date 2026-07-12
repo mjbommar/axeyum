@@ -23,7 +23,7 @@ use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use axeyum_ir::{
     ArraySortKey, Assignment, Op, Rational, Sort, SymbolId, TermArena, TermId, TermNode, Value,
-    eval,
+    WideUint, eval,
 };
 use axeyum_rewrite::{
     DEFAULT_SOLVE_EQS_FUEL, ModelReconstructionTrail, QuantExpandError, build_app,
@@ -48,6 +48,47 @@ use std::time::{Duration, Instant};
 #[cfg(target_arch = "wasm32")]
 use web_time::{Duration, Instant};
 
+fn checked_quantified_fast_path(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+) -> Result<Option<CheckResult>, SolverError> {
+    if let Some(result) =
+        crate::quant_guard_vacuity_search::decide_quantified_guard_vacuity_sat(arena, assertions)
+    {
+        return Ok(Some(result));
+    }
+    if let Some(result) =
+        crate::quant_bool_model_sat::decide_quantified_by_bool_model(arena, assertions, config)?
+    {
+        return Ok(Some(result));
+    }
+    if crate::quant_bv_alternation_search::find_bv_alternation_counterexample(
+        arena, assertions, config,
+    )?
+    .is_some()
+        || crate::quant_negated_exists_search::find_negated_existential_witness(
+            arena, assertions, config,
+        )?
+        .is_some()
+        || crate::quant_paired_exists_implication_search::find_paired_existential_implication_refutation(
+            arena, assertions, config,
+        )?
+        .is_some()
+        || crate::quant_bv_conjunctive_search::find_bv_conjunctive_universal_instance(
+            arena, assertions, config,
+        )?
+        .is_some()
+        || crate::quant_bv_conjunctive_search::decide_bv_conjunctive_universal_instance(
+            arena, assertions, config,
+        )?
+        .is_some()
+    {
+        return Ok(Some(CheckResult::Unsat));
+    }
+    Ok(None)
+}
+
 /// The unified front door: decides any supported query — quantifier-free or
 /// quantified, over any combination of the supported theories.
 ///
@@ -67,6 +108,21 @@ pub fn solve(
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> Result<CheckResult, SolverError> {
+    let flattened = flatten_assertions(arena, assertions);
+    if crate::quant_negated_exists_search::find_negated_existential_witness(
+        arena, &flattened, config,
+    )?
+    .is_some()
+    {
+        return Ok(CheckResult::Unsat);
+    }
+    let normalized = normalize_assertions_for_quantifiers(arena, &flattened)?;
+    let flattened = flatten_assertions(arena, &normalized);
+    let assertions = &flattened;
+    if let Some(result) = checked_quantified_fast_path(arena, assertions, config)? {
+        return Ok(result);
+    }
+
     // Skolemize top-level existential assertions: `∃x. body` is equisatisfiable
     // with `body[x := fresh]` (the solver picks the witness), so this is exact and
     // — unlike finite expansion — decides infinite-domain existentials too.
@@ -118,6 +174,15 @@ pub fn solve(
     let assertions: &[TermId] = &vacuous.0;
     if vacuous.1 && !has_quantifier(arena, assertions) {
         return check_auto(arena, assertions, config);
+    }
+
+    // Exact finite equality partition (ADR-0101): a closed Bool/Int formula in
+    // which every Int binder is observed only through equality to explicit
+    // constants has finitely many behavioral cells. Search returns a verdict
+    // only after the independent original-IR checker accepts its certificate.
+    if crate::quant_eq_partition_search::equality_partition_refutation(arena, assertions).is_some()
+    {
+        return Ok(CheckResult::Unsat);
     }
 
     // Unsatisfiable-universal detection: a top-level `∀x. (c·x ⋈ t)` whose body
@@ -215,10 +280,11 @@ pub fn solve(
     // Bounded `∀∃` witness synthesis (sat-side, one-directional): a prenex
     // `∀x⃗. ∃z. body` query whose inner existential `z` (Int/Real) is bounded by
     // clean `±1`-coefficient linear atoms is decided **Sat** by synthesizing a
-    // Skolem witness `z := g(x⃗)` and verifying `∀x⃗. body[z:=g]` is valid via the
-    // quantifier-free validity check. This decides `∀x:Int. ∃z:Int. z > x`
-    // (g = x + 1) and similar shapes the finite-expansion / MBQI / e-matching
-    // fallbacks — which have no sat-side ∀∃ decision — only ever report `unknown`.
+    // Skolem witness `z := g(x⃗)`. The checked identity subclass also admits an
+    // exact same-width BV universal witness. This decides
+    // `∀x:Int. ∃z:Int. z > x` (g = x + 1), `issue4328-nqe` (b = a), and similar
+    // shapes the finite-expansion / MBQI / e-matching fallbacks — which have no
+    // sat-side ∀∃ decision — only ever report `unknown`.
     // Strictly additive and strictly one-directional: it returns `Sat` only for a
     // validated witness and otherwise declines (never `unsat`, never a wrong `sat`),
     // so it is safe to try before the refutation fallbacks. The validity sub-check
@@ -230,14 +296,21 @@ pub fn solve(
     }
 
     match check_with_quantifiers(arena, assertions, config) {
-        // An infinite quantifier domain defeats finite expansion; fall back to
-        // sound refutation. Try congruence-aware e-matching on the e-graph keystone
-        // first (Track 2, P2.6): it instantiates inferred triggers *modulo the
-        // ground congruence*, so equalities the bespoke loop misses fire here. Its
-        // result is only ever `unsat` (sound — instances are implied) or `unknown`;
-        // on `unknown` the model-based instantiation loop (MBQI, which itself defers
-        // to the trigger-based family) takes over.
-        Err(SolverError::Unsupported(_)) => {
+        // A finite-expansion `unknown` or an unsupported domain both leave room
+        // for the sound refutation fallbacks. Try congruence-aware e-matching on
+        // the e-graph keystone first (Track 2, P2.6): it instantiates inferred
+        // triggers *modulo the ground congruence*, so equalities the bespoke loop
+        // misses fire here. Its result is only ever `unsat` (sound — instances are
+        // implied) or `unknown`; on `unknown` the model-based instantiation loop
+        // (MBQI, which itself defers to the trigger-based family) takes over.
+        Ok(CheckResult::Unknown(_)) | Err(SolverError::Unsupported(_)) => {
+            if let Some(result) = try_quantified_disjunct_refutation(arena, assertions, config)? {
+                return Ok(result);
+            }
+            if let Some(result) = try_quantified_existential_branch_sat(arena, assertions, config)?
+            {
+                return Ok(result);
+            }
             match prove_quantified_unsat_via_egraph(arena, assertions, config)? {
                 CheckResult::Unsat => Ok(CheckResult::Unsat),
                 _ => prove_unsat_by_mbqi(arena, assertions, config),
@@ -305,10 +378,11 @@ pub fn unsat_core(
     Ok(Some(core))
 }
 
-/// Skolemizes each top-level existential assertion `∃x. body` to `body[x := s]`
-/// for a fresh constant `s` of `x`'s sort — equisatisfiable, and (unlike finite
-/// expansion) complete for infinite domains. Non-existential assertions and
-/// existentials in non-top-level positions are left unchanged.
+/// Skolemizes each top-level existential prefix `∃x₁. ∃x₂. … ∃xₙ. body` to
+/// `body[x₁ := s₁, x₂ := s₂, …, xₙ := sₙ]` for fresh constants `sᵢ` of the
+/// binders' sorts — equisatisfiable, and (unlike finite expansion) complete for
+/// infinite domains. Non-existential assertions and existentials in non-top-
+/// level positions are left unchanged.
 fn skolemize_top_existentials(
     arena: &mut TermArena,
     assertions: &[TermId],
@@ -317,10 +391,12 @@ fn skolemize_top_existentials(
     let mut out = Vec::with_capacity(assertions.len());
     let mut k = 0u32;
     for &a in assertions {
-        if let TermNode::App {
+        let mut term = a;
+        let mut changed = false;
+        while let TermNode::App {
             op: Op::Exists(sym),
             args,
-        } = arena.node(a)
+        } = arena.node(term)
         {
             let (sym, body) = (*sym, args[0]);
             let sort = arena.symbol(sym).1;
@@ -333,10 +409,10 @@ fn skolemize_top_existentials(
             let mut map: HashMap<TermId, TermId> = HashMap::new();
             map.insert(bound, fresh);
             let mut memo: HashMap<TermId, TermId> = HashMap::new();
-            out.push(replace_subterms(arena, body, &map, &mut memo).map_err(err)?);
-        } else {
-            out.push(a);
+            term = replace_subterms(arena, body, &map, &mut memo).map_err(err)?;
+            changed = true;
         }
+        out.push(if changed { term } else { a });
     }
     Ok(out)
 }
@@ -345,6 +421,23 @@ fn skolemize_top_existentials(
 fn has_quantifier(arena: &TermArena, assertions: &[TermId]) -> bool {
     let mut seen = std::collections::BTreeSet::new();
     let mut stack = assertions.to_vec();
+    while let Some(term) = stack.pop() {
+        if !seen.insert(term) {
+            continue;
+        }
+        if let TermNode::App { op, args } = arena.node(term) {
+            if matches!(op, Op::Forall(_) | Op::Exists(_)) {
+                return true;
+            }
+            stack.extend(args.iter().copied());
+        }
+    }
+    false
+}
+
+fn contains_quantifier(arena: &TermArena, root: TermId) -> bool {
+    let mut seen = std::collections::BTreeSet::new();
+    let mut stack = vec![root];
     while let Some(term) = stack.pop() {
         if !seen.insert(term) {
             continue;
@@ -386,6 +479,9 @@ pub fn check_auto(
             return Ok(CheckResult::Unsat);
         }
         if let Some(unsat) = try_conjunct_refutation(arena, assertions, config)? {
+            return Ok(unsat);
+        }
+        if let Some(unsat) = try_disjunct_refutation(arena, assertions, config)? {
             return Ok(unsat);
         }
         if let Some(verdict) = try_finite_domain_split(arena, assertions, config)? {
@@ -438,9 +534,289 @@ fn try_conjunct_refutation(
     Ok(None)
 }
 
+/// Last-resort refutation for a `unknown` verdict: flatten the top-level
+/// conjuncts and solve each top-level disjunction *alone* with a small budget.
+/// If every branch of every disjunction is unsat, the whole conjunction is unsat.
+fn try_disjunct_refutation(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+) -> Result<Option<CheckResult>, SolverError> {
+    let Some(total) = config.timeout else {
+        return Ok(None); // unbounded ⇒ skip (avoid runaway sub-solves)
+    };
+    let mut conjuncts: Vec<TermId> = Vec::new();
+    for &a in assertions {
+        collect_top_conjuncts(arena, a, &mut conjuncts);
+    }
+    let mut disjunctions: Vec<Vec<TermId>> = Vec::new();
+    let mut rest: Vec<TermId> = Vec::new();
+    for &c in &conjuncts {
+        match as_disjunction(arena, c) {
+            Some(ds) => disjunctions.push(ds),
+            None => rest.push(c),
+        }
+    }
+    if disjunctions.is_empty() {
+        return Ok(None);
+    }
+    let mut branches: u64 = 1;
+    for d in &disjunctions {
+        branches = branches.saturating_mul(d.len() as u64);
+        if branches > MAX_DISJUNCTIVE_BRANCHES {
+            return Ok(None);
+        }
+    }
+    if branches < 2 {
+        return Ok(None);
+    }
+    let n = u32::try_from(branches).unwrap_or(u32::MAX);
+    let per = total / (2 * n);
+    if per.is_zero() {
+        return Ok(None);
+    }
+    let sub = config.clone().with_timeout(per);
+    let mut idx = vec![0usize; disjunctions.len()];
+    let mut all_unsat = true;
+    loop {
+        let mut branch: Vec<TermId> = Vec::with_capacity(disjunctions.len() + rest.len());
+        for (di, d) in disjunctions.iter().enumerate() {
+            branch.push(d[idx[di]]);
+        }
+        branch.extend_from_slice(&rest);
+        match check_auto(arena, &branch, &sub)? {
+            CheckResult::Sat(model) => return Ok(Some(CheckResult::Sat(model))),
+            CheckResult::Unsat => {}
+            CheckResult::Unknown(_) => all_unsat = false,
+        }
+        let mut pos = 0;
+        loop {
+            idx[pos] += 1;
+            if idx[pos] < disjunctions[pos].len() {
+                break;
+            }
+            idx[pos] = 0;
+            pos += 1;
+            if pos == disjunctions.len() {
+                return Ok(if all_unsat {
+                    Some(CheckResult::Unsat)
+                } else {
+                    None
+                });
+            }
+        }
+    }
+}
+
+/// Quantified-query companion to [`try_disjunct_refutation`]: split top-level
+/// disjunctions before the e-matching / MBQI fallbacks. Each branch is solved
+/// with the full front door; a `sat` branch is a real model, and `unsat` across
+/// all branches refutes the original conjunction.
+fn try_quantified_disjunct_refutation(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+) -> Result<Option<CheckResult>, SolverError> {
+    let Some(total) = config.timeout else {
+        return Ok(None);
+    };
+    let mut conjuncts: Vec<TermId> = Vec::new();
+    for &a in assertions {
+        collect_top_conjuncts(arena, a, &mut conjuncts);
+    }
+    let mut disjunctions: Vec<Vec<TermId>> = Vec::new();
+    let mut rest: Vec<TermId> = Vec::new();
+    for &c in &conjuncts {
+        match as_disjunction(arena, c) {
+            Some(ds) => disjunctions.push(ds),
+            None => rest.push(c),
+        }
+    }
+    if disjunctions.is_empty() {
+        return Ok(None);
+    }
+    let mut branches: u64 = 1;
+    for d in &disjunctions {
+        branches = branches.saturating_mul(d.len() as u64);
+        if branches > MAX_DISJUNCTIVE_BRANCHES {
+            return Ok(None);
+        }
+    }
+    if branches < 2 {
+        return Ok(None);
+    }
+    let n = u32::try_from(branches).unwrap_or(u32::MAX);
+    let per = total / (2 * n);
+    if per.is_zero() {
+        return Ok(None);
+    }
+    let sub = config.clone().with_timeout(per);
+    let mut idx = vec![0usize; disjunctions.len()];
+    let mut all_unsat = true;
+    loop {
+        let mut branch: Vec<TermId> = Vec::with_capacity(disjunctions.len() + rest.len());
+        for (di, d) in disjunctions.iter().enumerate() {
+            branch.push(d[idx[di]]);
+        }
+        branch.extend_from_slice(&rest);
+        match solve(arena, &branch, &sub)? {
+            CheckResult::Sat(model) => return Ok(Some(CheckResult::Sat(model))),
+            CheckResult::Unsat => {}
+            CheckResult::Unknown(_) => all_unsat = false,
+        }
+        let mut pos = 0;
+        loop {
+            idx[pos] += 1;
+            if idx[pos] < disjunctions[pos].len() {
+                break;
+            }
+            idx[pos] = 0;
+            pos += 1;
+            if pos == disjunctions.len() {
+                return Ok(if all_unsat {
+                    Some(CheckResult::Unsat)
+                } else {
+                    None
+                });
+            }
+        }
+    }
+}
+
+/// SAT-side strengthening for a quantified disjunction. If a top-level
+/// `forall*` assertion has a body of the form `(or guard (exists* matrix))`,
+/// the whole assertion is strengthened to the existential branch with the same
+/// universal prefix. A `sat` result on the stronger query is sound for the
+/// original query.
+fn try_quantified_existential_branch_sat(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+) -> Result<Option<CheckResult>, SolverError> {
+    let Some(total) = config.timeout else {
+        return Ok(None);
+    };
+    let deadline = Instant::now().checked_add(total);
+    for (index, &assertion) in assertions.iter().enumerate() {
+        let Some((binders, branch)) = quantified_existential_branch(arena, assertion) else {
+            continue;
+        };
+        let mut scratch = arena.clone();
+        let strengthened = wrap_forall_prefix(&mut scratch, &binders, branch)?;
+        let mut candidate = assertions.to_vec();
+        candidate[index] = strengthened;
+        let sub = config_with_remaining_deadline(config, deadline);
+        let result = match solve(&mut scratch, &candidate, &sub) {
+            Ok(result) => result,
+            Err(SolverError::Unsupported(_)) => continue,
+            Err(error) => return Err(error),
+        };
+        if let CheckResult::Sat(model) = result {
+            return Ok(Some(CheckResult::Sat(model)));
+        }
+    }
+    Ok(None)
+}
+
+fn quantified_existential_branch(
+    arena: &TermArena,
+    assertion: TermId,
+) -> Option<(Vec<SymbolId>, TermId)> {
+    let (binders, body) = peel_forall_prefix(arena, assertion)?;
+    let branch = existential_disjunct_branch(arena, body)?;
+    Some((binders, branch))
+}
+
+fn peel_forall_prefix(arena: &TermArena, mut term: TermId) -> Option<(Vec<SymbolId>, TermId)> {
+    let mut binders = Vec::new();
+    while let TermNode::App {
+        op: Op::Forall(var),
+        args,
+    } = arena.node(term)
+    {
+        binders.push(*var);
+        let [body] = &**args else {
+            return None;
+        };
+        term = *body;
+    }
+    if binders.is_empty() {
+        return None;
+    }
+    Some((binders, term))
+}
+
+fn existential_disjunct_branch(arena: &TermArena, term: TermId) -> Option<TermId> {
+    let TermNode::App {
+        op: Op::BoolOr,
+        args,
+    } = arena.node(term)
+    else {
+        return None;
+    };
+    if args.len() < 2 {
+        return None;
+    }
+    args.iter().copied().find(|&branch| {
+        let Some((binders, matrix)) = peel_exists_prefix(arena, branch) else {
+            return false;
+        };
+        !binders.is_empty() && !contains_quantifier(arena, matrix)
+    })
+}
+
+fn peel_exists_prefix(arena: &TermArena, mut term: TermId) -> Option<(Vec<SymbolId>, TermId)> {
+    let mut binders = Vec::new();
+    while let TermNode::App {
+        op: Op::Exists(var),
+        args,
+    } = arena.node(term)
+    {
+        binders.push(*var);
+        let [body] = &**args else {
+            return None;
+        };
+        term = *body;
+    }
+    if binders.is_empty() {
+        return None;
+    }
+    Some((binders, term))
+}
+
+fn wrap_forall_prefix(
+    arena: &mut TermArena,
+    binders: &[SymbolId],
+    body: TermId,
+) -> Result<TermId, SolverError> {
+    let mut term = body;
+    for &binder in binders.iter().rev() {
+        term = arena
+            .forall(binder, term)
+            .map_err(|error| SolverError::Backend(error.to_string()))?;
+    }
+    Ok(term)
+}
+
 /// Upper bound on the cartesian-product branch count of a finite-domain
 /// case-split ([`try_finite_domain_split`]). Past this the fan-out is left to the
 /// (unchanged) width ladder rather than spawning a large sub-solve fleet.
+const MAX_DISJUNCTIVE_BRANCHES: u64 = 32;
+
+fn as_disjunction(arena: &TermArena, term: TermId) -> Option<Vec<TermId>> {
+    let TermNode::App {
+        op: Op::BoolOr,
+        args,
+    } = arena.node(term)
+    else {
+        return None;
+    };
+    if args.len() < 2 {
+        return None;
+    }
+    Some(args.to_vec())
+}
+
 const MAX_FINITE_DOMAIN_BRANCHES: u64 = 64;
 
 /// If `term` is a disjunction `(or d₁ … dₖ)` (k ≥ 2) whose every disjunct is an
@@ -582,6 +958,8 @@ pub fn check_auto_explained(
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> Result<(CheckResult, RouteTrace), SolverError> {
+    let flattened = flatten_assertions(arena, assertions);
+    let assertions = &flattened;
     let mut trace = RouteTrace::new();
     let result = check_auto_with_recorder(arena, assertions, config, &mut Some(&mut trace))?;
     // Conjunct-split refutation fallback (mirrors `check_auto` for verdict
@@ -597,6 +975,11 @@ pub fn check_auto_explained(
         && let Some(unsat) = try_conjunct_refutation(arena, assertions, config)?
     {
         trace.record_decided("conjunct-refutation", Verdict::Unsat);
+        unsat
+    } else if matches!(result, CheckResult::Unknown(_))
+        && let Some(unsat) = try_disjunct_refutation(arena, assertions, config)?
+    {
+        trace.record_decided("disjunct-refutation", Verdict::Unsat);
         unsat
     } else if matches!(result, CheckResult::Unknown(_))
         && let Some(verdict) = try_finite_domain_split(arena, assertions, config)?
@@ -638,6 +1021,8 @@ fn check_auto_with_recorder(
     config: &SolverConfig,
     rec: &mut Recorder<'_>,
 ) -> Result<CheckResult, SolverError> {
+    let flattened = flatten_assertions(arena, assertions);
+    let assertions = &flattened;
     // Probe: classify the quantifier-free fragment and record the planned route
     // ordering as the trace's first entry, so the trail explains the dispatch.
     let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
@@ -3165,6 +3550,134 @@ fn collect_top_conjuncts(arena: &TermArena, term: TermId, out: &mut Vec<TermId>)
     }
 }
 
+fn flatten_assertions(arena: &TermArena, assertions: &[TermId]) -> Vec<TermId> {
+    let mut out = Vec::new();
+    for &assertion in assertions {
+        collect_top_conjuncts(arena, assertion, &mut out);
+    }
+    out
+}
+
+/// Pushes top-level negations inward on the assertion list so quantifier
+/// front-door checks see a normalized outer shape before dispatch.
+pub fn normalize_assertions_for_quantifiers(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+) -> Result<Vec<TermId>, SolverError> {
+    let mut memo = HashMap::new();
+    let mut out = Vec::with_capacity(assertions.len());
+    for &assertion in assertions {
+        out.push(push_negations(arena, assertion, false, &mut memo)?);
+    }
+    Ok(out)
+}
+
+fn push_negations(
+    arena: &mut TermArena,
+    term: TermId,
+    negated: bool,
+    memo: &mut HashMap<(TermId, bool), TermId>,
+) -> Result<TermId, SolverError> {
+    if let Some(&cached) = memo.get(&(term, negated)) {
+        return Ok(cached);
+    }
+    let err = |e: axeyum_ir::IrError| SolverError::Backend(e.to_string());
+    let out = match arena.node(term).clone() {
+        TermNode::BoolConst(value) => {
+            if negated {
+                arena.bool_const(!value)
+            } else {
+                term
+            }
+        }
+        TermNode::App {
+            op: Op::BoolNot,
+            args,
+        } if args.len() == 1 => push_negations(arena, args[0], !negated, memo)?,
+        TermNode::App {
+            op: Op::BoolAnd,
+            args,
+        } => {
+            let mut new_args = Vec::with_capacity(args.len());
+            for &arg in &args {
+                new_args.push(push_negations(arena, arg, negated, memo)?);
+            }
+            let op = if negated { Op::BoolOr } else { Op::BoolAnd };
+            if new_args.len() == 1 {
+                new_args[0]
+            } else {
+                build_app(arena, op, &new_args).map_err(err)?
+            }
+        }
+        TermNode::App {
+            op: Op::BoolOr,
+            args,
+        } => {
+            let mut new_args = Vec::with_capacity(args.len());
+            for &arg in &args {
+                new_args.push(push_negations(arena, arg, negated, memo)?);
+            }
+            let op = if negated { Op::BoolAnd } else { Op::BoolOr };
+            if new_args.len() == 1 {
+                new_args[0]
+            } else {
+                build_app(arena, op, &new_args).map_err(err)?
+            }
+        }
+        TermNode::App {
+            op: Op::Forall(var),
+            args,
+        } if args.len() == 1 => {
+            let body = push_negations(arena, args[0], negated, memo)?;
+            if negated {
+                arena
+                    .exists(var, body)
+                    .map_err(|e| SolverError::Backend(e.to_string()))?
+            } else {
+                arena
+                    .forall(var, body)
+                    .map_err(|e| SolverError::Backend(e.to_string()))?
+            }
+        }
+        TermNode::App {
+            op: Op::Exists(var),
+            args,
+        } if args.len() == 1 => {
+            let body = push_negations(arena, args[0], negated, memo)?;
+            if negated {
+                arena
+                    .forall(var, body)
+                    .map_err(|e| SolverError::Backend(e.to_string()))?
+            } else {
+                arena
+                    .exists(var, body)
+                    .map_err(|e| SolverError::Backend(e.to_string()))?
+            }
+        }
+        TermNode::App { op, args } => {
+            let mut new_args = Vec::with_capacity(args.len());
+            for &arg in &args {
+                new_args.push(push_negations(arena, arg, false, memo)?);
+            }
+            if negated {
+                let wrapped = build_app(arena, op, &new_args).map_err(err)?;
+                arena.not(wrapped).map_err(err)?
+            } else {
+                build_app(arena, op, &new_args).map_err(err)?
+            }
+        }
+        _ => {
+            if negated {
+                arena.not(term).map_err(err)?
+            } else {
+                term
+            }
+        }
+    };
+    memo.insert((term, negated), out);
+    Ok(out)
+}
+
 /// Walks `term` collecting every free `Int` variable symbol that appears.
 fn collect_int_vars(arena: &TermArena, term: TermId, out: &mut BTreeSet<SymbolId>) {
     let mut stack = vec![term];
@@ -4553,7 +5066,7 @@ pub fn check_with_quantifiers(
 }
 
 /// Maximum model-based instantiation rounds before reporting `unknown`.
-const MAX_MBQI_ROUNDS: usize = 16;
+const MAX_MBQI_ROUNDS: usize = 32;
 
 /// Deterministic cap on accumulated MBQI instances: a universal whose instantiation
 /// generates ever-deeper ground terms can grow each round's solve without bound, so
@@ -4567,7 +5080,14 @@ fn value_to_const(arena: &mut TermArena, value: &Value) -> Option<TermId> {
         Value::Int(n) => Some(arena.int_const(*n)),
         Value::Real(r) => Some(arena.real_const(*r)),
         Value::Bv { width, value } => arena.bv_const(*width, *value).ok(),
+        Value::WideBv(value) => Some(arena.wide_bv_const(value.clone())),
         _ => None,
+    }
+}
+
+fn push_unique_candidate(candidates: &mut Vec<Value>, candidate: Value) {
+    if !candidates.contains(&candidate) {
+        candidates.push(candidate);
     }
 }
 
@@ -4774,6 +5294,265 @@ fn mbqi_instance_via_mbp(
     replace_subterms(arena, body, &map, &mut memo).ok()
 }
 
+/// Exact BV witness synthesis for a quantifier-free universal body.
+///
+/// Fixes every other free symbol to the current model, solves `¬body` as a
+/// quantifier-free BV query, and replays the resulting `sym` witness as a
+/// ground instance. This is the BV counterpart to the Int/Real MBP path above.
+fn bv_instance_via_qf_witness(
+    arena: &mut TermArena,
+    sym: SymbolId,
+    body: TermId,
+    model: &Model,
+    config: &SolverConfig,
+) -> Option<TermId> {
+    if has_quantifier(arena, &[body]) {
+        return None;
+    }
+    let sort = arena.symbol(sym).1;
+    if !matches!(sort, Sort::BitVec(_)) {
+        return None;
+    }
+
+    let mut others = BTreeSet::new();
+    collect_term_symbols(arena, body, &mut others);
+    others.remove(&sym);
+
+    let mut query = vec![arena.not(body).ok()?];
+    for other in &others {
+        let value = model.get(*other)?;
+        let var = arena.var(*other);
+        let c = value_to_const(arena, &value)?;
+        query.push(arena.eq(var, c).ok()?);
+    }
+    let CheckResult::Sat(witness_model) = check_auto(arena, &query, config).ok()? else {
+        return None;
+    };
+    let witness_value = witness_model.get(sym)?;
+    let t = value_to_const(arena, &witness_value)?;
+
+    let var = arena.var(sym);
+    let mut map: HashMap<TermId, TermId> = HashMap::new();
+    map.insert(var, t);
+    let mut memo: HashMap<TermId, TermId> = HashMap::new();
+    replace_subterms(arena, body, &map, &mut memo).ok()
+}
+
+/// BV-specific symbolic candidate synthesis from ground subterms in a body.
+///
+/// The candidate set is intentionally tiny and deterministic: each ground BV
+/// subterm not mentioning `sym` contributes the subterm itself plus `±1`
+/// boundary shifts and the literal `0/1/all-ones` constants of the same width.
+fn bv_symbolic_candidates(
+    arena: &mut TermArena,
+    body: TermId,
+    sym: SymbolId,
+) -> Result<Vec<TermId>, SolverError> {
+    let mut out = Vec::new();
+    collect_bv_atom_candidates(arena, body, sym, false, &mut out)?;
+    let mut seen_terms = BTreeSet::new();
+    let mut stack = vec![body];
+    while let Some(term) = stack.pop() {
+        if !seen_terms.insert(term) {
+            continue;
+        }
+        if let TermNode::App { args, .. } = arena.node(term) {
+            let args = args.clone();
+            stack.extend(args);
+        }
+        if arena.sort_of(term) != arena.symbol(sym).1 {
+            continue;
+        }
+        let mut symbols = BTreeSet::new();
+        collect_term_symbols(arena, term, &mut symbols);
+        if symbols.contains(&sym) {
+            continue;
+        }
+        push_unique_candidate_term(&mut out, term);
+        let sort = arena.symbol(sym).1;
+        let Some(one) = value_to_const(arena, &Value::from_scalar_code(sort, 1)) else {
+            continue;
+        };
+        let Some(zero) = value_to_const(arena, &Value::from_scalar_code(sort, 0)) else {
+            continue;
+        };
+        let Some(all_ones) = value_to_const(
+            arena,
+            &match sort {
+                Sort::BitVec(width) => Value::from_scalar_code(Sort::BitVec(width), u128::MAX),
+                _ => Value::from_scalar_code(sort, u128::MAX),
+            },
+        ) else {
+            continue;
+        };
+        if let Ok(plus) = arena.bv_add(term, one) {
+            push_unique_candidate_term(&mut out, plus);
+        }
+        if let Ok(minus) = arena.bv_sub(term, one) {
+            push_unique_candidate_term(&mut out, minus);
+        }
+        push_unique_candidate_term(&mut out, zero);
+        push_unique_candidate_term(&mut out, one);
+        push_unique_candidate_term(&mut out, all_ones);
+        if out.len() >= 16 {
+            break;
+        }
+    }
+    Ok(out)
+}
+
+fn push_unique_candidate_term(out: &mut Vec<TermId>, candidate: TermId) {
+    if !out.contains(&candidate) {
+        out.push(candidate);
+    }
+}
+
+fn collect_bv_atom_candidates(
+    arena: &mut TermArena,
+    term: TermId,
+    sym: SymbolId,
+    want_true: bool,
+    out: &mut Vec<TermId>,
+) -> Result<(), SolverError> {
+    if out.len() >= 16 {
+        return Ok(());
+    }
+    match arena.node(term) {
+        TermNode::App {
+            op: Op::BoolNot,
+            args,
+        } => {
+            collect_bv_atom_candidates(arena, args[0], sym, !want_true, out)?;
+            return Ok(());
+        }
+        TermNode::App { op, args }
+            if matches!(
+                op,
+                Op::BvUlt
+                    | Op::BvUle
+                    | Op::BvUgt
+                    | Op::BvUge
+                    | Op::BvSlt
+                    | Op::BvSle
+                    | Op::BvSgt
+                    | Op::BvSge
+                    | Op::Eq
+            ) && args.len() == 2 =>
+        {
+            let lhs = args[0];
+            let rhs = args[1];
+            let lhs_has = term_contains_symbol(arena, lhs, sym);
+            let rhs_has = term_contains_symbol(arena, rhs, sym);
+            if lhs_has ^ rhs_has {
+                let (bound_term, other_term, sym_on_lhs) = if lhs_has {
+                    (lhs, rhs, true)
+                } else {
+                    (rhs, lhs, false)
+                };
+                for candidate in bv_boundary_terms_for_compare(
+                    arena, *op, bound_term, other_term, sym_on_lhs, want_true,
+                )? {
+                    push_unique_candidate_term(out, candidate);
+                }
+            }
+        }
+        _ => {}
+    }
+    if let TermNode::App { args, .. } = arena.node(term) {
+        let args = args.clone();
+        for arg in args {
+            collect_bv_atom_candidates(arena, arg, sym, want_true, out)?;
+            if out.len() >= 16 {
+                break;
+            }
+        }
+    }
+    Ok(())
+}
+
+fn term_contains_symbol(arena: &TermArena, term: TermId, sym: SymbolId) -> bool {
+    let mut symbols = BTreeSet::new();
+    collect_term_symbols(arena, term, &mut symbols);
+    symbols.contains(&sym)
+}
+
+fn bv_boundary_terms_for_compare(
+    arena: &mut TermArena,
+    op: Op,
+    lhs: TermId,
+    rhs: TermId,
+    sym_on_lhs: bool,
+    want_true: bool,
+) -> Result<Vec<TermId>, SolverError> {
+    let sort = arena.sort_of(lhs);
+    if sort != arena.sort_of(rhs) {
+        return Ok(Vec::new());
+    }
+    let Sort::BitVec(width) = sort else {
+        return Ok(Vec::new());
+    };
+    let Some(one) = value_to_const(arena, &Value::from_scalar_code(Sort::BitVec(width), 1)) else {
+        return Ok(Vec::new());
+    };
+    let mut out = Vec::new();
+    let mut push_term = |term: TermId| {
+        if !out.contains(&term) {
+            out.push(term);
+        }
+    };
+    let other = if sym_on_lhs { rhs } else { lhs };
+    let mut push_shift = |base: TermId, add: bool| {
+        let candidate = if add {
+            arena.bv_add(base, one).ok()
+        } else {
+            arena.bv_sub(base, one).ok()
+        };
+        if let Some(candidate) = candidate {
+            push_term(candidate);
+        }
+    };
+    match op {
+        Op::Eq => {
+            if want_true {
+                push_term(other);
+            } else {
+                push_shift(other, true);
+                push_shift(other, false);
+            }
+        }
+        Op::BvUlt | Op::BvSlt => {
+            if want_true {
+                push_shift(other, !sym_on_lhs);
+            } else {
+                push_term(other);
+            }
+        }
+        Op::BvUle | Op::BvSle => {
+            if want_true {
+                push_term(other);
+            } else {
+                push_shift(other, !sym_on_lhs);
+            }
+        }
+        Op::BvUgt | Op::BvSgt => {
+            if want_true {
+                push_shift(other, sym_on_lhs);
+            } else {
+                push_term(other);
+            }
+        }
+        Op::BvUge | Op::BvSge => {
+            if want_true {
+                push_term(other);
+            } else {
+                push_shift(other, sym_on_lhs);
+            }
+        }
+        _ => {}
+    }
+    Ok(out)
+}
+
 /// Dispatches to the sort-appropriate model-based projection primitive,
 /// returning whether the witness region certified (best-effort; the caller does
 /// not require success).
@@ -4822,7 +5601,8 @@ pub fn prove_unsat_by_mbqi(
             args,
         } = arena.node(a)
         {
-            if has_quantifier(arena, &[args[0]]) {
+            let sort = arena.symbol(*sym).1;
+            if has_quantifier(arena, &[args[0]]) && !matches!(sort, Sort::BitVec(_)) {
                 return prove_unsat_by_ematching(arena, assertions, config);
             }
             universals.push((*sym, args[0]));
@@ -4878,6 +5658,7 @@ pub fn prove_unsat_by_mbqi(
         let mut added = false;
         for &(sym, body) in &universals {
             let sort = arena.symbol(sym).1;
+            let body_has_quantifier = has_quantifier(arena, &[body]);
             let var = arena.var(sym);
             let mut candidates: Vec<Value> = Vec::new();
             for (_, v) in model.iter() {
@@ -4950,28 +5731,125 @@ pub fn prove_unsat_by_mbqi(
                     candidates.push(Value::Bool(false));
                     candidates.push(Value::Bool(true));
                 }
+                Sort::BitVec(width) => {
+                    let mask = if width == 128 {
+                        u128::MAX
+                    } else {
+                        (1u128 << width) - 1
+                    };
+                    let zero = if width > 128 {
+                        Value::WideBv(WideUint::zero(width))
+                    } else {
+                        Value::Bv { width, value: 0 }
+                    };
+                    let one = if width > 128 {
+                        Value::WideBv(WideUint::from_u128(1, width))
+                    } else {
+                        Value::Bv {
+                            width,
+                            value: 1 & mask,
+                        }
+                    };
+                    let all_ones = if width > 128 {
+                        Value::WideBv(WideUint::ones(width))
+                    } else {
+                        Value::Bv { width, value: mask }
+                    };
+                    push_unique_candidate(&mut candidates, zero);
+                    push_unique_candidate(&mut candidates, one);
+                    push_unique_candidate(&mut candidates, all_ones);
+
+                    let neighbourhoods: Vec<Value> = candidates
+                        .iter()
+                        .filter_map(|v| match v {
+                            Value::Bv { width: w, value } if *w == width => {
+                                let plus = value.wrapping_add(1) & mask;
+                                let minus = value.wrapping_sub(1) & mask;
+                                Some(vec![
+                                    Value::Bv { width, value: plus },
+                                    Value::Bv {
+                                        width,
+                                        value: minus,
+                                    },
+                                ])
+                            }
+                            Value::WideBv(value) if value.width() == width => {
+                                let one = WideUint::from_u128(1, width);
+                                Some(vec![
+                                    Value::WideBv(value.add(&one)),
+                                    Value::WideBv(value.sub(&one)),
+                                ])
+                            }
+                            _ => None,
+                        })
+                        .flatten()
+                        .collect();
+                    for candidate in neighbourhoods {
+                        push_unique_candidate(&mut candidates, candidate);
+                    }
+                }
                 _ => {}
             }
             let mut this_added = false;
             for v in candidates {
-                let mut probe = assignment.clone();
-                probe.set(sym, v.clone());
-                if matches!(eval(arena, body, &probe), Ok(Value::Bool(false))) {
-                    // The model falsifies `body[x:=v]`; add it (implied by ∀x.body).
+                let inst = if body_has_quantifier && matches!(sort, Sort::BitVec(_)) {
+                    // Nested quantified BV bodies are not directly evaluable here;
+                    // only keep the candidate if the nested quantifiers can be
+                    // expanded away to a quantifier-free term first.
                     let Some(c) = value_to_const(arena, &v) else {
                         continue;
                     };
-                    let var = arena.var(sym);
                     let mut map: HashMap<TermId, TermId> = HashMap::new();
                     map.insert(var, c);
                     let mut memo: HashMap<TermId, TermId> = HashMap::new();
                     let inst = replace_subterms(arena, body, &map, &mut memo).map_err(err)?;
-                    if !instances.contains(&inst) {
+                    let expanded = match expand_quantifiers(arena, &[inst]) {
+                        Ok(expanded) => expanded,
+                        Err(QuantExpandError::UnsupportedDomain(_)) => continue,
+                        Err(QuantExpandError::Ir(error)) => {
+                            return Err(SolverError::Backend(error.to_string()));
+                        }
+                    };
+                    if has_quantifier(arena, &expanded) {
+                        continue;
+                    }
+                    expanded[0]
+                } else {
+                    let mut probe = assignment.clone();
+                    probe.set(sym, v.clone());
+                    if !matches!(eval(arena, body, &probe), Ok(Value::Bool(false))) {
+                        continue;
+                    }
+                    let Some(c) = value_to_const(arena, &v) else {
+                        continue;
+                    };
+                    let mut map: HashMap<TermId, TermId> = HashMap::new();
+                    map.insert(var, c);
+                    let mut memo: HashMap<TermId, TermId> = HashMap::new();
+                    replace_subterms(arena, body, &map, &mut memo).map_err(err)?
+                };
+                if !instances.contains(&inst) {
+                    instances.push(inst);
+                    added = true;
+                }
+                this_added = true;
+                break;
+            }
+            if !this_added && !body_has_quantifier && matches!(sort, Sort::BitVec(_)) {
+                if let Ok(symbolic_candidates) = bv_symbolic_candidates(arena, body, sym) {
+                    for candidate_term in symbolic_candidates {
+                        let mut map: HashMap<TermId, TermId> = HashMap::new();
+                        map.insert(var, candidate_term);
+                        let mut memo: HashMap<TermId, TermId> = HashMap::new();
+                        let inst = replace_subterms(arena, body, &map, &mut memo).map_err(err)?;
+                        if has_quantifier(arena, &[inst]) || instances.contains(&inst) {
+                            continue;
+                        }
                         instances.push(inst);
                         added = true;
+                        this_added = true;
+                        break;
                     }
-                    this_added = true;
-                    break;
                 }
             }
             // Scalar probing is incomplete: a universal violated only at a witness
@@ -4982,6 +5860,13 @@ pub fn prove_unsat_by_mbqi(
             // the model) to synthesize that witness instance. Additive — it only
             // ever supplies a *true* instance of `∀x. body` (a consequence), never
             // changing the scalar-probe verdict and never an unsound instance.
+            if !this_added
+                && let Some(inst) = bv_instance_via_qf_witness(arena, sym, body, &model, config)
+                && !instances.contains(&inst)
+            {
+                instances.push(inst);
+                added = true;
+            }
             if !this_added
                 && let Some(inst) = mbqi_instance_via_mbp(arena, sym, body, &model, config)
                 && !instances.contains(&inst)
@@ -5097,7 +5982,7 @@ fn decide_instantiation(
 /// An exact, equisatisfiable rewrite that moves arithmetic `ite` out of the
 /// linear-arithmetic terms (which the simplices' linearizers do not accept) into
 /// the propositional structure the lazy-SMT loop handles.
-fn lift_arith_ite(
+pub(crate) fn lift_arith_ite(
     arena: &mut TermArena,
     assertions: &[TermId],
 ) -> Result<Vec<TermId>, SolverError> {

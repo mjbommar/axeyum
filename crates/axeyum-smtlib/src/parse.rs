@@ -508,7 +508,7 @@ pub enum IntBoundKind {
 }
 
 /// A single linear integer bound `sym ⋈ bound` on a `str.from_int` argument
-/// (task #78). Recorded by [`build_word_problem`] for the LIA-coupled word route;
+/// (task #78). Recorded by `build_word_problem` for the LIA-coupled word route;
 /// `sym` is always a [`WordObligation::FromInt`] `int_sym`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct IntBound {

@@ -1,7 +1,7 @@
 # Research Questions
 
 Status: draft
-Last updated: 2026-06-13
+Last updated: 2026-07-11
 
 ## Purpose
 
@@ -191,6 +191,203 @@ Out of scope:
     proof-core path. Making it the *required* high-assurance mode (and wiring it
     into `SatBvBackend` for QF_BV `unsat`) is the remaining step.
 - [ ] How are model-lift maps serialized?
+- [x] How should infinite-domain quantified `sat` witnesses be represented so
+      the public result satisfies the original-term replay invariant?
+  - Finding (2026-07-11): the current `∀∃` Skolem-witness and almost-uninterpreted
+    MBQI checks can validate a quantified sentence mathematically, but return an
+    ordinary `Model` that carries neither the Skolem function nor a replayable
+    quantified certificate. The benchmark correctly rejects such a result when
+    `eval` cannot enumerate `Int`/`Real`. Do not credit additional quantified
+    `sat` rows until an ADR chooses between first-class Skolem/function models,
+    a separately checked quantified-sat evidence artifact, or another route that
+    preserves the hard rule that every public `sat` checks the original query.
+  - Boundary update (2026-07-11): the UNSAT side does not wait on this decision.
+    [ADR-0095](../09-decisions/adr-0095-checked-euclidean-residue-quantifier-evidence.md)
+    establishes the targeted-CEGQI pattern: every accepted schema gets a
+    separate original-IR checker and no search trace is trusted. The open choice
+    here is specifically how a `sat` result discharges infinite-domain replay.
+  - Answer (2026-07-11):
+    [ADR-0096](../09-decisions/adr-0096-quantified-sat-skolem-certificates.md)
+    keeps `CheckResult::Sat(Model)`, stores deterministic typed Skolem
+    certificates in `Model`, and makes `check_model` the canonical replay front
+    door. The certificate owns an affine recipe over original-arena atoms, so a
+    cloned backend cannot leak synthesized `TermId`s. The first checker handles
+    exact `forall* exists` affine/reflexive tautologies; ADR-0098 adds one exact
+    positive-`or` guarded unit-gap theorem and recovers `sygus-infer-nested` with
+    the global successor witness. Neither checker calls the search stack.
+    [ADR-0121](../09-decisions/adr-0121-checked-reflexive-bitvector-skolem-witnesses.md)
+    adds only the exact same-width BV identity encoding and reflexive
+    signed/unsigned non-strict order. It recovers `issue4328-nqe`; all modular
+    affine, offset, composite, and piecewise BV recipes remain rejected.
+    [ADR-0122](../09-decisions/adr-0122-checked-vacuous-bitvector-guard-models.md)
+    adds a separate outer-witness certificate: below one outer BV existential
+    and a nonempty direct Bool/BV quantifier prefix, the checker independently
+    proves an exact binder-to-constant equality antecedent false. It recovers
+    `issue5365-nqe` without inspecting the implication consequent or granting
+    general free-BV model/QE support.
+    [ADR-0123](../09-decisions/adr-0123-checked-boolean-discharge-of-quantified-bv-closures.md)
+    extends ADR-0107's syntax admission to Bool/Int/BV while keeping every
+    non-reflexive BV predicate opaque. A carried complete free-Boolean model may
+    certify the closure only when three-valued original-IR evaluation proves all
+    BV values irrelevant; unresolved BV closures decline before LIA fallback.
+    This recovers `model_6_1_bv` without adding general BV model construction.
+    [ADR-0124](../09-decisions/adr-0124-source-bound-counterexamples-for-bv-quantifier-alternation.md)
+    adds one checked UNSAT alternation class: concrete outer Bool/BV values are
+    substituted into an exact closed `forall+ exists+` source matrix,
+    existential binders are deterministically freshened, and a source-matched
+    residual QF_BV DRAT is rechecked. Search remains untrusted and incomplete;
+    broader QSAT, open formulas, functions, arithmetic, and Lean reconstruction
+    remain open.
+    [ADR-0125](../09-decisions/adr-0125-scaled-source-bound-bv-alternation-counterexamples.md)
+    scales only that certificate's total-binder cap from 128 to 1,024, retaining
+    the 4,096-node matrix cap and all replay conditions. This recovers the
+    530-binder `bug802` hardware fixpoint without adding a new theorem matcher or
+    general QSAT engine.
+    [ADR-0126](../09-decisions/adr-0126-evaluator-replayed-negated-existential-witnesses.md)
+    adds the direct dual source certificate for one exact top-level negated
+    existential over a bounded closed Bool/BV body. Search proposes complete
+    typed values, while the checker independently evaluates the untouched
+    positive body to true. This recovers `NUM878`, `ari-syqi`, and
+    `ari118-bv-2occ-x` without trusting NNF conversion or admitting open/nested
+    formulas, arithmetic binders, functions, or general QSAT.
+    [ADR-0127](../09-decisions/adr-0127-source-bound-conjunctive-bv-universal-instances.md)
+    adds a premise-aware open-formula slice: one unique universal reached only
+    through top-level conjunction nodes is weakened to a complete concrete
+    Bool/BV source instance, and the checker regenerates the whole residual and
+    rechecks its QF_BV DRAT/LRAT proof. This recovers
+    `cond-var-elim-binary` without admitting non-conjunctive polarity contexts,
+    multiple selected universals, functions, or general QSAT.
+    Piecewise/general function interpretations, serialization, and Alethe/Lean
+    reconstruction remain implementation tasks, not permission to return an
+    unchecked empty model.
+- [x] How should targeted infinite-domain quantified `unsat` schemas receive
+      evidence before a general quantifier proof format exists?
+  - Answer (2026-07-11): search may propose only genuine universal instances
+    and a ground refutation, but public certification comes from a separate
+    small checker that independently re-matches an exact theorem over the
+    original IR. [ADR-0095](../09-decisions/adr-0095-checked-euclidean-residue-quantifier-evidence.md)
+    establishes the Euclidean-residue pattern;
+    [ADR-0097](../09-decisions/adr-0097-checked-affine-growth-quantifier-evidence.md)
+    confirms it on a positive-slope piecewise theorem using two consecutive
+    counterexamples; [ADR-0099](../09-decisions/adr-0099-checked-nested-xor-quantifier-refutation.md)
+    extends the pattern to one exact nested Boolean theorem using hierarchical
+    universal instantiation; and
+    [ADR-0100](../09-decisions/adr-0100-evaluator-replayed-closed-universal-counterexamples.md)
+    makes a concrete original-binder assignment the generic certificate for a
+    closed quantifier-free scalar universal, checked only by evaluating the
+    untouched body; and
+    [ADR-0101](../09-decisions/adr-0101-checked-finite-equality-partition-quantifiers.md)
+    certifies closed nested Bool/Int formulas when every Int binder is observable
+    only through finitely many equality-to-constant predicates. None of these
+    checkers calls the search matcher or broad
+    solver; open formulas, broader CEGQI/nested-QE schemas, and function-valued
+    counterexamples need their own checker or a general checked proof calculus.
+    [ADR-0102](../09-decisions/adr-0102-closed-universal-counterexamples-to-lean.md)
+    separately closes the Lean boundary for ADR-0100's two current Int-equality
+    rows by applying the original universal to its checked witnesses and proving
+    the ground arithmetic result in the kernel; it deliberately does not turn
+    the other structural certificates into opaque refuter axioms.
+    [ADR-0103](../09-decisions/adr-0103-nested-xor-quantifiers-to-lean.md)
+    applies the same bar to ADR-0099's complete signed/swapped nested-XOR class:
+    two outer pivot applications plus one adjacent nested application close in
+    the kernel through `Iff`, classical case analysis, and integer normalization.
+    [ADR-0104](../09-decisions/adr-0104-euclidean-decomposition-prelude-and-quantifier-proofs.md)
+    closes ADR-0095's two canonical residue rows by explicitly adding one
+    standard existential Euclidean-decomposition theorem to the trusted integer
+    prelude, then eliminating its quotient/remainder witnesses. This is a
+    documented trusted-base expansion, not a query-specific refuter axiom, and
+    introduces no div/mod proof operations.
+    [ADR-0105](../09-decisions/adr-0105-affine-growth-quantifiers-to-lean.md)
+    reuses that one theorem for ADR-0097's full checked affine-growth class:
+    exact guarded proposition semantics for integer `ite`, two consecutive
+    universal instances, positive-slope monotonicity, and a constructive
+    double-negation argument close without another arithmetic or classical
+    axiom.
+    [ADR-0106](../09-decisions/adr-0106-single-pivot-equality-partitions-to-lean.md)
+    closes the current ADR-0101 proof boundary for one literal per Int binder:
+    genuine Bool/Int quantifiers are recursively eliminated with `Bool.rec` and
+    one explicit standard integer equality-decidability theorem. The executable
+    finite quotient remains untrusted guidance, and multi-constant partitions
+    remain outside Lean proof credit.
+    [ADR-0107](../09-decisions/adr-0107-checked-boolean-guard-models-for-quantified-sat.md)
+    extends checked SAT replay to free-Boolean models of positive Bool/Int
+    universals. Candidate generation may erase quantifiers, but replay rebuilds
+    the exact negated universal closure, lifts integer `ite` with guarded
+    equalities, source-binds LIA-DPLL theory cores, and uses DRAT for large
+    propositional closure. Counterexample cubes affect search only. This closes
+    both measured SAT affine-ITE rows without claiming general MBQI or function
+    model construction.
+    [ADR-0108](../09-decisions/adr-0108-checked-counterexample-covers-for-quantified-unsat.md)
+    gives those sufficient cubes a separate UNSAT contract: each retained cube
+    is independently refuted with an exact source-instantiated universal, and
+    the complete set is accepted only when the weakened original skeleton plus
+    every cube block is source-bound QF-unsatisfiable. The first Lean slice
+    applies the original universal to every carried tuple and closes a bounded
+    excluded-middle tree, so no cover-search result or evaluator fact becomes a
+    refuter axiom. This closes the measured division at 12/12 checked/certified,
+    8/8 kernel-checked UNSAT, and 12/12 dominant. ADR-0109 preserves repeated
+    closed kernel-DAG nodes as deterministic Lean definitions and renders the
+    computational `Bool` as a real inductive; the public module falls from
+    151,845,067 to 2,682,977 bytes without changing evidence or trust. General
+    alternation, functions, and sharing under open binder contexts remain open.
+    [ADR-0110](../09-decisions/adr-0110-justified-lazy-quantifier-clause-scheduling.md)
+    resolves the first lazy-clause soundness boundary: ground unit
+    equality/disequality justifications may suppress a true instance or
+    prioritize an all-false/unit-like one, but the solver still asserts the
+    complete genuine source instance. A bare remaining literal is deferred
+    until the online SAT/e-graph context can replay why every sibling is false.
+    Incremental MAM matching and those detached-literal justifications remain
+    open. [ADR-0111](../09-decisions/adr-0111-shared-incremental-ematching-session.md)
+    resolves the first MAM ownership/performance boundary: compile and intern
+    triggers once, extend one ground bridge monotonically, and share one
+    round-local class/application index across all patterns. Public witness APIs
+    remain complete and evidence still consumes genuine source instances. True
+    [ADR-0112](../09-decisions/adr-0112-revision-checked-ematch-index-and-candidate-queues.md)
+    adds revision-checked persistent class/application indexes plus root-symbol
+    queues: add-only rounds extend from the node suffix and execute only affected
+    patterns, while every real merge conservatively invalidates all patterns.
+    [ADR-0113](../09-decisions/adr-0113-inverted-parent-merge-queues.md)
+    resolves that merge boundary: union journals update retained indexes,
+    transitive e-class parent paths queue only reachable trigger roots, and
+    cached joins compare current roots.
+    [ADR-0114](../09-decisions/adr-0114-compiled-ematch-parent-path-tries.md)
+    compiles every occurrence's exact declaration/argument path into one shared
+    trie and queues reached pattern terminals instead of all patterns sharing a
+    root declaration.
+    [ADR-0115](../09-decisions/adr-0115-eclass-label-and-ground-argument-path-filters.md)
+    maintains exact backtrackable declaration sets on e-class roots, then checks
+    nested occurrence labels and direct nullary ground siblings while traversing
+    those paths.
+    [ADR-0116](../09-decisions/adr-0116-generation-delta-ematch-candidate-queues.md)
+    retains complete match caches but updates them only from newly added or
+    merge-reached top applications. Every current bridge term is active-source
+    relevant, so a relevance bit would be a no-op; generation-cost scheduling
+    and bytecode remain measurement-gated.
+    [ADR-0117](../09-decisions/adr-0117-source-bound-detached-quantifier-literal-propagation.md)
+    closes the first detached-literal boundary: a public certificate reconstructs
+    the exact source instance and replays each false sibling from named original
+    equality/disequality facts before the remaining literal enters QF search.
+    [ADR-0118](../09-decisions/adr-0118-bounded-recursive-quantifier-ground-provenance.md)
+    closes the generated-premise chain: every admitted generated
+    equality/disequality retains an exact-instance or prior-propagation
+    derivation, and a depth/node-bounded checker requires the exact canonical
+    table before that premise can justify a later detached literal.
+    [ADR-0119](../09-decisions/adr-0119-checked-quantifier-clauses-in-retained-cdclt.md)
+    closes direct equality-clause insertion: one retained CDCL(T)+EUF session
+    backtracks each batch to level zero, appends root-stable atoms, and accepts
+    only checked derivations. Online SAT is not a quantified verdict, and online
+    UNSAT requires ordinary QF replay of the exact admitted set. Non-equality
+    antecedents, SAT-trail-driven matching, and serialized online proof forms
+    remain open.
+    [ADR-0120](../09-decisions/adr-0120-scoped-sat-candidate-equality-ematching.md)
+    resolves the measured trail-matching shape at final check rather than on
+    every assignment: true candidate equalities enter one rollback matcher
+    scope, exact merge paths queue only affected patterns/quantifiers, concrete
+    tuples are materialized, and the scope is popped before complete source
+    instances enter the checked retained-clause path. Candidate equalities can
+    neither justify propagation nor enter evidence. High-frequency callbacks
+    remain measurement-gated; non-equality antecedents and serialized online
+    proof forms remain open.
 - [x] What evidence envelope should carry semantics version, rewrite-rule
       version, bit-blaster version, CNF encoder version, SAT backend version,
       seed, resource limits, corpus hash, model replay, lift maps, and future

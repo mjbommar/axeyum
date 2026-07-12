@@ -113,11 +113,30 @@ mod qfdt_simp_alethe;
 mod qfufbv_alethe;
 mod qfuflia_alethe;
 mod qinst_egraph;
+mod quant_affine_growth_cert;
 mod quant_alethe;
+mod quant_bool_model_sat;
+mod quant_bv_alternation_cert;
+mod quant_bv_alternation_search;
+mod quant_bv_conjunctive_cert;
+mod quant_bv_conjunctive_search;
+mod quant_closed_counterexample_cert;
+mod quant_closed_counterexample_search;
+mod quant_counterexample_cover;
+mod quant_eq_partition_cert;
+mod quant_eq_partition_search;
 mod quant_exists_witness;
 mod quant_finite_cert;
 mod quant_fourier_motzkin;
+mod quant_guard_vacuity_cert;
+mod quant_guard_vacuity_search;
 mod quant_guarded_int;
+mod quant_negated_exists_cert;
+mod quant_negated_exists_search;
+mod quant_nested_xor_cert;
+mod quant_paired_exists_implication_search;
+mod quant_residue_cert;
+mod quant_sat_cert;
 mod quant_unsat_universal;
 mod quant_vacuous_universal;
 mod quant_valid_universal;
@@ -190,8 +209,8 @@ pub use array_xor_swap::{
 pub use aufbv::check_with_arrays_and_functions;
 pub use auto::{
     BoundedIntBlastCertificate, certify_bounded_int_blast, check_auto, check_auto_explained,
-    check_with_quantifiers, prove_unsat_by_ematching, prove_unsat_by_instantiation,
-    prove_unsat_by_mbqi, solve, unsat_core,
+    check_with_quantifiers, normalize_assertions_for_quantifiers, prove_unsat_by_ematching,
+    prove_unsat_by_instantiation, prove_unsat_by_mbqi, solve, unsat_core,
 };
 pub use backend::{
     Capabilities, CheckResult, SolveStats, SolverBackend, SolverConfig, SolverError, UnknownKind,
@@ -282,9 +301,13 @@ pub use imc_lia::{ImcLiaOutcome, prove_safety_imc_lia};
 pub use imc_lra::{ImcLraOutcome, prove_safety_imc_lra};
 pub use incremental::{AssumptionOutcome, IncrementalBvSolver};
 pub use int_reconstruct::{
-    IntReconstructCtx, is_int_inequality_refutation, reconstruct_diophantine_proof,
-    reconstruct_diophantine_to_lean_module, reconstruct_int_inequality_proof,
-    reconstruct_int_inequality_to_lean_module,
+    IntReconstructCtx, is_int_inequality_refutation,
+    reconstruct_closed_universal_counterexample_to_lean_module, reconstruct_diophantine_proof,
+    reconstruct_diophantine_to_lean_module, reconstruct_int_affine_growth_to_lean_module,
+    reconstruct_int_euclidean_residue_to_lean_module, reconstruct_int_inequality_proof,
+    reconstruct_int_inequality_to_lean_module, reconstruct_int_nested_xor_to_lean_module,
+    reconstruct_quantified_counterexample_cover_to_lean_module,
+    reconstruct_single_pivot_equality_partition_to_lean_module,
 };
 pub use interpolant::{LraInterpolantCertificate, lra_interpolant, lra_interpolant_certified};
 pub use layers::BvLayerStats;
@@ -360,13 +383,55 @@ pub use qfdt_simp_alethe::{
 pub use qfufbv_alethe::prove_qf_ufbv_unsat_alethe;
 pub use qfuflia_alethe::prove_qf_uflia_unsat_alethe;
 pub use qinst_egraph::{
+    QuantifierClausePropagationCertificate, QuantifierFalseSiblingJustification,
+    QuantifierGroundDerivation, QuantifierInstanceCertificate, check_quantifier_clause_propagation,
+    check_quantifier_clause_propagations, check_quantifier_ground_derivation,
     instantiate_forall_via_egraph, prove_quantified_unsat_via_egraph, witness_tuples_via_egraph,
 };
+pub use quant_affine_growth_cert::{
+    IntAffineGrowthRefutationCertificate, int_affine_growth_refutation,
+};
 pub use quant_alethe::prove_quant_unsat_alethe;
+pub use quant_bool_model_sat::{
+    QuantifiedBoolModelSatCertificate, check_quantified_bool_model_sat,
+};
+pub use quant_bv_alternation_cert::{
+    BV_ALTERNATION_BINDER_CAP, BV_ALTERNATION_NODE_CAP, BvAlternationCounterexampleCertificate,
+    check_bv_alternation_counterexample,
+};
+pub use quant_bv_conjunctive_cert::{
+    BV_CONJUNCTIVE_UNIVERSAL_BINDER_CAP, BV_CONJUNCTIVE_UNIVERSAL_NODE_CAP,
+    BvConjunctiveUniversalInstanceCertificate, check_bv_conjunctive_universal_instance,
+};
+pub use quant_closed_counterexample_cert::{
+    ClosedUniversalCounterexampleCertificate, check_closed_universal_counterexample,
+};
+pub use quant_counterexample_cover::{
+    QUANT_COUNTEREXAMPLE_COVER_CASE_CAP, QuantifiedCounterexampleCoverCase,
+    QuantifiedCounterexampleCoverCertificate, check_quantified_counterexample_cover,
+    quantified_counterexample_cover_refutation,
+};
+pub use quant_eq_partition_cert::{
+    EQ_PARTITION_CASE_CAP, EqualityPartitionRefutationCertificate,
+    check_equality_partition_refutation,
+};
 pub use quant_finite_cert::{
     GuardedUniversalForm, check_alethe_lra_guarded_inst, check_alethe_lra_guarded_inst_against,
     guarded_universal_form_for_test, prove_finite_int_quant_unsat_alethe,
     prove_finite_int_quant_unsat_uf_alethe,
+};
+pub use quant_guard_vacuity_cert::{QuantifiedGuardSatCertificate, check_quantified_guard_sat};
+pub use quant_negated_exists_cert::{
+    NEGATED_EXISTENTIAL_BINDER_CAP, NEGATED_EXISTENTIAL_NODE_CAP,
+    NegatedExistentialWitnessCertificate, check_negated_existential_witness,
+};
+pub use quant_nested_xor_cert::{IntNestedXorRefutationCertificate, int_nested_xor_refutation};
+pub use quant_residue_cert::{
+    IntEuclideanResidueRefutationCertificate, int_euclidean_residue_refutation,
+};
+pub use quant_sat_cert::{
+    AffineSkolemWitness, QuantifiedSkolemSatCertificate, check_model, check_model_with_assignment,
+    check_quantified_skolem_sat,
 };
 pub use reconstruct::{
     LraReconstructCtx, ProofFragment, ReconstructCtx, ReconstructError,

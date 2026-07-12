@@ -38,7 +38,7 @@ use std::collections::BTreeSet;
 use std::time::{Duration, Instant};
 
 use axeyum_cnf::{AletheCommand, check_alethe, check_drat, parse_dimacs, parse_drat};
-use axeyum_ir::{Op, Sort, SymbolId, TermArena, TermId, TermNode, TermStats, Value, eval};
+use axeyum_ir::{Op, Sort, SymbolId, TermArena, TermId, TermNode, TermStats};
 
 use crate::abv::{
     ConstArrayDefaultMismatchCertificate, CrossStoreArrayDisequalityCertificate,
@@ -76,11 +76,20 @@ use crate::model::Model;
 use crate::nra_even_power::NraEvenPowerRefutationCertificate;
 use crate::nra_real_root::{self, SosCertificate};
 use crate::proof::{UnsatProof, UnsatProofOutcome, export_qf_bv_unsat_proof};
+use crate::quant_affine_growth_cert::IntAffineGrowthRefutationCertificate;
+use crate::quant_bv_alternation_cert::BvAlternationCounterexampleCertificate;
+use crate::quant_bv_conjunctive_cert::BvConjunctiveUniversalInstanceCertificate;
+use crate::quant_closed_counterexample_cert::ClosedUniversalCounterexampleCertificate;
+use crate::quant_counterexample_cover::QuantifiedCounterexampleCoverCertificate;
+use crate::quant_eq_partition_cert::EqualityPartitionRefutationCertificate;
 use crate::quant_finite_cert::{
     GuardedUniversalForm, check_alethe_lra_guarded_inst_against, guarded_universal_form,
     guarded_universal_form_uf, prove_finite_int_quant_unsat_alethe,
     prove_finite_int_quant_unsat_uf_alethe,
 };
+use crate::quant_negated_exists_cert::NegatedExistentialWitnessCertificate;
+use crate::quant_nested_xor_cert::IntNestedXorRefutationCertificate;
+use crate::quant_residue_cert::IntEuclideanResidueRefutationCertificate;
 use crate::sat_bv_backend::SatBvBackend;
 use crate::set_cardinality::SetCardinalityRefutationCertificate;
 use crate::term_identity::TermIdentityRefutationCertificate;
@@ -242,7 +251,9 @@ fn with_fpa2bv_step(existing: &[TrustStep], certified: bool) -> Vec<TrustStep> {
 /// A decided (or undecided) result together with its checkable justification.
 #[derive(Debug, Clone)]
 pub enum Evidence {
-    /// Satisfiable: a model whose replay against the query is the evidence.
+    /// Satisfiable: a model whose canonical replay against the query is the
+    /// evidence. Infinite-domain quantified models may carry checked Skolem
+    /// certificates consumed by [`crate::check_model`].
     Sat(Model),
     /// Unsatisfiable: a DRAT certificate over the bit-blasted CNF, or `None`
     /// when only a lower-assurance adapter result is available.
@@ -290,6 +301,48 @@ pub enum Evidence {
         /// consequent, and the `[lo, hi]` range).
         universal: GuardedUniversalForm,
     },
+    /// Unsatisfiable (quantified `LIA`), certified by independently re-matching
+    /// the exact Euclidean quotient/remainder partition
+    /// `forall s m. k*m+s != t or s<0 or s>=k`, with constant `k>0` and a
+    /// dividend independent of both binders. The checker derives the concrete
+    /// counterexample `s=mod(t,k), m=div(t,k)` directly from SMT-LIB integer
+    /// division/modulo semantics; no result from the instantiation search is
+    /// trusted.
+    UnsatIntEuclideanResidue(IntEuclideanResidueRefutationCertificate),
+    /// Unsatisfiable (quantified `LIA`), certified by independently re-matching
+    /// the exact positive-slope piecewise universal from ADR-0097. Two
+    /// consecutive Euclidean-division counterexamples ensure that one selects
+    /// the unbounded else branch; no search-generated instance is trusted.
+    UnsatIntAffineGrowth(IntAffineGrowthRefutationCertificate),
+    /// Unsatisfiable (quantified `LIA`), certified by independently re-matching
+    /// the exact nested-XOR selector theorem from ADR-0099. The checker proves
+    /// that two outer pivot instances expose a nested universal whose off-pivot
+    /// instance equates distinct integer constants.
+    UnsatIntNestedXor(IntNestedXorRefutationCertificate),
+    /// Unsatisfiable because one original top-level closed universal has a
+    /// concrete scalar assignment that makes its quantifier-free body false.
+    /// The checker evaluates that untouched body under the carried original
+    /// binder values; search substitutions and the QF solver are not replayed.
+    UnsatClosedUniversalCounterexample(ClosedUniversalCounterexampleCertificate),
+    /// Unsatisfiable because one original top-level negated existential has a
+    /// concrete complete Bool/BV witness that makes its untouched body true.
+    UnsatNegatedExistentialWitness(NegatedExistentialWitnessCertificate),
+    /// Unsatisfiable because one concrete assignment to a closed Bool/BV
+    /// universal block makes the following existential matrix QF_BV-UNSAT.
+    /// Replay regenerates the exact residual source formula and checks its DRAT.
+    UnsatBvAlternationCounterexample(BvAlternationCounterexampleCertificate),
+    /// Unsatisfiable because replacing one positive universal conjunct by a
+    /// complete concrete source instance yields checked QF_BV-UNSAT.
+    UnsatBvConjunctiveUniversalInstance(BvConjunctiveUniversalInstanceCertificate),
+    /// Unsatisfiable because a closed Bool/Int quantified assertion is false
+    /// over the exact finite quotient induced by binder-to-constant equality
+    /// predicates. The checker recursively evaluates the untouched formula.
+    UnsatEqualityPartition(EqualityPartitionRefutationCertificate),
+    /// Unsatisfiable because finitely many source-instantiated Bool/Int
+    /// counterexamples exclude a cover of every free-Boolean ground model. The
+    /// checker re-proves each sufficient cube against its exact universal
+    /// instance and re-proves closure of the weakened ground skeleton.
+    UnsatQuantifiedCounterexampleCover(QuantifiedCounterexampleCoverCertificate),
     /// Unsatisfiable, certified **at the term level** by exhaustive evaluation
     /// over the finite symbol domain — the strongest `QF_BV` `unsat` evidence,
     /// trusting neither the bit-blaster, CNF encoder, nor SAT solver (only the
@@ -548,6 +601,21 @@ impl Evidence {
             Evidence::UnsatAletheProof(_) => "unsat-alethe",
             Evidence::UnsatArithAletheProof(_) => "unsat-arith-alethe",
             Evidence::UnsatGuardedQuantAletheProof { .. } => "unsat-guarded-quant-alethe",
+            Evidence::UnsatIntEuclideanResidue(_) => "unsat-int-euclidean-residue",
+            Evidence::UnsatIntAffineGrowth(_) => "unsat-int-affine-growth",
+            Evidence::UnsatIntNestedXor(_) => "unsat-int-nested-xor",
+            Evidence::UnsatClosedUniversalCounterexample(_) => {
+                "unsat-closed-universal-counterexample"
+            }
+            Evidence::UnsatNegatedExistentialWitness(_) => "unsat-negated-existential-witness",
+            Evidence::UnsatBvAlternationCounterexample(_) => "unsat-bv-alternation-counterexample",
+            Evidence::UnsatBvConjunctiveUniversalInstance(_) => {
+                "unsat-bv-conjunctive-universal-instance"
+            }
+            Evidence::UnsatEqualityPartition(_) => "unsat-equality-partition",
+            Evidence::UnsatQuantifiedCounterexampleCover(_) => {
+                "unsat-quantified-counterexample-cover"
+            }
             Evidence::UnsatTermLevel { .. } => "unsat-term-level",
             Evidence::UnsatFiniteDomainEnum { .. } => "unsat-finite-domain-enum",
             Evidence::UnsatBvDefinedEnum(_) => "unsat-bv-defined-enum",
@@ -603,28 +671,7 @@ impl Evidence {
     #[allow(clippy::too_many_lines)]
     pub fn check(&self, arena: &TermArena, assertions: &[TermId]) -> Result<bool, SolverError> {
         match self {
-            Evidence::Sat(model) => {
-                let assignment = model.to_assignment();
-                for &assertion in assertions {
-                    match eval(arena, assertion, &assignment) {
-                        Ok(Value::Bool(true)) => {}
-                        Ok(Value::Bool(false)) => return Ok(false),
-                        Ok(value) => {
-                            return Err(SolverError::Backend(format!(
-                                "sat evidence replay: assertion #{} is non-Boolean {value}",
-                                assertion.index()
-                            )));
-                        }
-                        Err(error) => {
-                            return Err(SolverError::Backend(format!(
-                                "sat evidence replay: assertion #{} failed to evaluate: {error}",
-                                assertion.index()
-                            )));
-                        }
-                    }
-                }
-                Ok(true)
-            }
+            Evidence::Sat(model) => crate::check_model(arena, assertions, model),
             Evidence::Unsat(Some(proof)) => {
                 let formula = parse_dimacs(&proof.dimacs).map_err(|error| {
                     SolverError::Backend(format!("unsat evidence DIMACS re-parse failed: {error}"))
@@ -724,6 +771,27 @@ impl Evidence {
                 lean_module.as_ref(),
             )),
             Evidence::UnsatBoundedIntBlast(certificate) => certificate.recheck(arena, assertions),
+            Evidence::UnsatBvAlternationCounterexample(certificate) => {
+                crate::quant_bv_alternation_cert::check_bv_alternation_counterexample(
+                    arena,
+                    assertions,
+                    certificate,
+                )
+            }
+            Evidence::UnsatNegatedExistentialWitness(certificate) => Ok(
+                crate::quant_negated_exists_cert::check_negated_existential_witness(
+                    arena,
+                    assertions,
+                    certificate,
+                ),
+            ),
+            Evidence::UnsatBvConjunctiveUniversalInstance(certificate) => {
+                crate::quant_bv_conjunctive_cert::check_bv_conjunctive_universal_instance(
+                    arena,
+                    assertions,
+                    certificate,
+                )
+            }
             Evidence::UnsatFiniteDomainPigeonhole(_)
             | Evidence::UnsatBoolUfExhaustive(_)
             | Evidence::UnsatBoolEufExhaustive(_)
@@ -735,6 +803,12 @@ impl Evidence {
             | Evidence::UnsatNraEvenPower(_)
             | Evidence::UnsatBvDefinedEnum(_)
             | Evidence::UnsatBvForallNonconstant(_)
+            | Evidence::UnsatIntEuclideanResidue(_)
+            | Evidence::UnsatIntAffineGrowth(_)
+            | Evidence::UnsatIntNestedXor(_)
+            | Evidence::UnsatClosedUniversalCounterexample(_)
+            | Evidence::UnsatEqualityPartition(_)
+            | Evidence::UnsatQuantifiedCounterexampleCover(_)
             | Evidence::UnsatBvUfLocal(_)
             | Evidence::UnsatSetCardinality(_)
             | Evidence::UnsatArrayAxiom(_)
@@ -786,6 +860,15 @@ impl Evidence {
                 | Evidence::UnsatFiniteDomainEnum { .. }
                 | Evidence::UnsatBvDefinedEnum(_)
                 | Evidence::UnsatBvForallNonconstant(_)
+                | Evidence::UnsatIntEuclideanResidue(_)
+                | Evidence::UnsatIntAffineGrowth(_)
+                | Evidence::UnsatIntNestedXor(_)
+                | Evidence::UnsatClosedUniversalCounterexample(_)
+                | Evidence::UnsatNegatedExistentialWitness(_)
+                | Evidence::UnsatBvAlternationCounterexample(_)
+                | Evidence::UnsatBvConjunctiveUniversalInstance(_)
+                | Evidence::UnsatEqualityPartition(_)
+                | Evidence::UnsatQuantifiedCounterexampleCover(_)
                 | Evidence::UnsatBvUfLocal(_)
                 | Evidence::UnsatSetCardinality(_)
                 | Evidence::UnsatFarkas(_)
@@ -860,6 +943,28 @@ fn check_direct_structural_evidence(
         }
         Evidence::UnsatBvForallNonconstant(cert) => {
             check_bv_forall_nonconstant_evidence(arena, assertions, cert)
+        }
+        Evidence::UnsatIntEuclideanResidue(cert) => {
+            check_int_euclidean_residue_evidence(arena, assertions, cert)
+        }
+        Evidence::UnsatIntAffineGrowth(cert) => {
+            check_int_affine_growth_evidence(arena, assertions, cert)
+        }
+        Evidence::UnsatIntNestedXor(cert) => check_int_nested_xor_evidence(arena, assertions, cert),
+        Evidence::UnsatClosedUniversalCounterexample(cert) => {
+            crate::quant_closed_counterexample_cert::check_closed_universal_counterexample(
+                arena, assertions, cert,
+            )
+        }
+        Evidence::UnsatEqualityPartition(cert) => {
+            crate::quant_eq_partition_cert::check_equality_partition_refutation(
+                arena, assertions, cert,
+            )
+        }
+        Evidence::UnsatQuantifiedCounterexampleCover(cert) => {
+            crate::quant_counterexample_cover::check_quantified_counterexample_cover(
+                arena, assertions, cert,
+            )
         }
         Evidence::UnsatBvUfLocal(cert) => check_bv_uf_local_evidence(arena, assertions, cert),
         Evidence::UnsatSetCardinality(cert) => {
@@ -1003,6 +1108,33 @@ fn check_bv_forall_nonconstant_evidence(
     cert: &BvForallNonconstantRefutationCertificate,
 ) -> bool {
     crate::bv_forall_nonconstant::bv_forall_nonconstant_refutation(arena, assertions)
+        .is_some_and(|fresh| fresh == *cert)
+}
+
+fn check_int_euclidean_residue_evidence(
+    arena: &TermArena,
+    assertions: &[TermId],
+    cert: &IntEuclideanResidueRefutationCertificate,
+) -> bool {
+    crate::quant_residue_cert::int_euclidean_residue_refutation(arena, assertions)
+        .is_some_and(|fresh| fresh == *cert)
+}
+
+fn check_int_affine_growth_evidence(
+    arena: &TermArena,
+    assertions: &[TermId],
+    cert: &IntAffineGrowthRefutationCertificate,
+) -> bool {
+    crate::quant_affine_growth_cert::int_affine_growth_refutation(arena, assertions)
+        .is_some_and(|fresh| fresh == *cert)
+}
+
+fn check_int_nested_xor_evidence(
+    arena: &TermArena,
+    assertions: &[TermId],
+    cert: &IntNestedXorRefutationCertificate,
+) -> bool {
+    crate::quant_nested_xor_cert::int_nested_xor_refutation(arena, assertions)
         .is_some_and(|fresh| fresh == *cert)
 }
 
@@ -1566,6 +1698,182 @@ fn assertion_dag_within(arena: &TermArena, assertions: &[TermId], cap: usize) ->
     true
 }
 
+fn residue_evidence(arena: &TermArena, assertions: &[TermId]) -> Option<Evidence> {
+    crate::quant_residue_cert::int_euclidean_residue_refutation(arena, assertions)
+        .map(Evidence::UnsatIntEuclideanResidue)
+}
+
+fn residue_report(
+    arena: &TermArena,
+    assertions: &[TermId],
+    provenance: &Provenance,
+) -> Option<EvidenceReport> {
+    Some(EvidenceReport {
+        evidence: residue_evidence(arena, assertions)?,
+        provenance: provenance.clone(),
+        trusted_steps: Vec::new(),
+    })
+}
+
+fn affine_growth_evidence(arena: &TermArena, assertions: &[TermId]) -> Option<Evidence> {
+    crate::quant_affine_growth_cert::int_affine_growth_refutation(arena, assertions)
+        .map(Evidence::UnsatIntAffineGrowth)
+}
+
+fn nested_xor_evidence(arena: &TermArena, assertions: &[TermId]) -> Option<Evidence> {
+    crate::quant_nested_xor_cert::int_nested_xor_refutation(arena, assertions)
+        .map(Evidence::UnsatIntNestedXor)
+}
+
+fn quantified_structural_unsat_evidence(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Option<Evidence> {
+    residue_evidence(arena, assertions)
+        .or_else(|| affine_growth_evidence(arena, assertions))
+        .or_else(|| nested_xor_evidence(arena, assertions))
+        .or_else(|| {
+            crate::quant_eq_partition_search::equality_partition_refutation(arena, assertions)
+                .map(Evidence::UnsatEqualityPartition)
+        })
+}
+
+fn affine_growth_report(
+    arena: &TermArena,
+    assertions: &[TermId],
+    provenance: &Provenance,
+) -> Option<EvidenceReport> {
+    Some(EvidenceReport {
+        evidence: affine_growth_evidence(arena, assertions)?,
+        provenance: provenance.clone(),
+        trusted_steps: Vec::new(),
+    })
+}
+
+fn nested_xor_report(
+    arena: &TermArena,
+    assertions: &[TermId],
+    provenance: &Provenance,
+) -> Option<EvidenceReport> {
+    Some(EvidenceReport {
+        evidence: nested_xor_evidence(arena, assertions)?,
+        provenance: provenance.clone(),
+        trusted_steps: Vec::new(),
+    })
+}
+
+fn closed_universal_counterexample_report(
+    arena: &TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+    provenance: &Provenance,
+) -> Result<Option<EvidenceReport>, SolverError> {
+    let Some(certificate) =
+        crate::quant_closed_counterexample_search::find_closed_universal_counterexample(
+            arena, assertions, config,
+        )?
+    else {
+        return Ok(None);
+    };
+    Ok(Some(EvidenceReport {
+        evidence: Evidence::UnsatClosedUniversalCounterexample(certificate),
+        provenance: provenance.clone(),
+        trusted_steps: Vec::new(),
+    }))
+}
+
+fn negated_existential_witness_report(
+    arena: &TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+    provenance: &Provenance,
+) -> Result<Option<EvidenceReport>, SolverError> {
+    let Some(certificate) = crate::quant_negated_exists_search::find_negated_existential_witness(
+        arena, assertions, config,
+    )?
+    else {
+        return Ok(None);
+    };
+    Ok(Some(EvidenceReport {
+        evidence: Evidence::UnsatNegatedExistentialWitness(certificate),
+        provenance: provenance.clone(),
+        trusted_steps: Vec::new(),
+    }))
+}
+
+fn bv_alternation_counterexample_report(
+    arena: &TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+    provenance: &Provenance,
+) -> Result<Option<EvidenceReport>, SolverError> {
+    let Some(certificate) = crate::quant_bv_alternation_search::find_bv_alternation_counterexample(
+        arena, assertions, config,
+    )?
+    else {
+        return Ok(None);
+    };
+    Ok(Some(EvidenceReport {
+        evidence: Evidence::UnsatBvAlternationCounterexample(certificate),
+        provenance: provenance.clone(),
+        trusted_steps: Vec::new(),
+    }))
+}
+
+fn bv_conjunctive_universal_instance_report(
+    arena: &TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+    provenance: &Provenance,
+) -> Result<Option<EvidenceReport>, SolverError> {
+    let Some(certificate) =
+        crate::quant_bv_conjunctive_search::find_bv_conjunctive_universal_instance(
+            arena, assertions, config,
+        )?
+    else {
+        return Ok(None);
+    };
+    Ok(Some(EvidenceReport {
+        evidence: Evidence::UnsatBvConjunctiveUniversalInstance(certificate),
+        provenance: provenance.clone(),
+        trusted_steps: Vec::new(),
+    }))
+}
+
+fn equality_partition_report(
+    arena: &TermArena,
+    assertions: &[TermId],
+    provenance: &Provenance,
+) -> Option<EvidenceReport> {
+    Some(EvidenceReport {
+        evidence: Evidence::UnsatEqualityPartition(
+            crate::quant_eq_partition_search::equality_partition_refutation(arena, assertions)?,
+        ),
+        provenance: provenance.clone(),
+        trusted_steps: Vec::new(),
+    })
+}
+
+fn quantified_counterexample_cover_report(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+    provenance: &Provenance,
+) -> Result<Option<EvidenceReport>, SolverError> {
+    let Some(certificate) =
+        crate::quant_counterexample_cover::quantified_counterexample_cover_refutation(
+            arena, assertions, config,
+        )?
+    else {
+        return Ok(None);
+    };
+    Ok(Some(EvidenceReport {
+        evidence: Evidence::UnsatQuantifiedCounterexampleCover(certificate),
+        provenance: provenance.clone(),
+        trusted_steps: Vec::new(),
+    }))
+}
+
 fn direct_pre_solve_structural_report(
     arena: &mut TermArena,
     assertions: &[TermId],
@@ -2011,6 +2319,43 @@ pub fn produce_evidence(
     if let Some(report) = produce_diophantine_evidence(arena, assertions)? {
         return Ok(report);
     }
+    if let Some(report) = residue_report(arena, assertions, &provenance) {
+        return Ok(report);
+    }
+    if let Some(report) = affine_growth_report(arena, assertions, &provenance) {
+        return Ok(report);
+    }
+    if let Some(report) = nested_xor_report(arena, assertions, &provenance) {
+        return Ok(report);
+    }
+    if let Some(report) =
+        closed_universal_counterexample_report(arena, assertions, config, &provenance)?
+    {
+        return Ok(report);
+    }
+    if let Some(report) =
+        negated_existential_witness_report(arena, assertions, config, &provenance)?
+    {
+        return Ok(report);
+    }
+    if let Some(report) =
+        bv_alternation_counterexample_report(arena, assertions, config, &provenance)?
+    {
+        return Ok(report);
+    }
+    if let Some(report) =
+        bv_conjunctive_universal_instance_report(arena, assertions, config, &provenance)?
+    {
+        return Ok(report);
+    }
+    if let Some(report) = equality_partition_report(arena, assertions, &provenance) {
+        return Ok(report);
+    }
+    if let Some(report) =
+        quantified_counterexample_cover_report(arena, assertions, config, &provenance)?
+    {
+        return Ok(report);
+    }
     if let Some(report) = direct_pre_solve_structural_report(arena, assertions, &provenance) {
         return Ok(report);
     }
@@ -2415,6 +2760,9 @@ fn direct_structural_unsat_evidence(
     arena: &TermArena,
     assertions: &[TermId],
 ) -> Option<(Evidence, Vec<TrustStep>)> {
+    if let Some(evidence) = quantified_structural_unsat_evidence(arena, assertions) {
+        return Some((evidence, Vec::new()));
+    }
     if let Some(cert) = crate::ufbv_finite::finite_domain_pigeonhole_refutation(arena, assertions) {
         return Some((Evidence::UnsatFiniteDomainPigeonhole(cert), Vec::new()));
     }
@@ -2876,6 +3224,15 @@ pub fn prove(
         | Evidence::UnsatFiniteDomainEnum { .. }
         | Evidence::UnsatBvDefinedEnum(_)
         | Evidence::UnsatBvForallNonconstant(_)
+        | Evidence::UnsatIntEuclideanResidue(_)
+        | Evidence::UnsatIntAffineGrowth(_)
+        | Evidence::UnsatIntNestedXor(_)
+        | Evidence::UnsatClosedUniversalCounterexample(_)
+        | Evidence::UnsatNegatedExistentialWitness(_)
+        | Evidence::UnsatBvAlternationCounterexample(_)
+        | Evidence::UnsatBvConjunctiveUniversalInstance(_)
+        | Evidence::UnsatEqualityPartition(_)
+        | Evidence::UnsatQuantifiedCounterexampleCover(_)
         | Evidence::UnsatBvUfLocal(_)
         | Evidence::UnsatSetCardinality(_)
         | Evidence::UnsatFarkas(_)

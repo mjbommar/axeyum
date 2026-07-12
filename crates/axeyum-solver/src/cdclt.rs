@@ -396,6 +396,13 @@ impl CdclT {
         self.deleted.push(false);
     }
 
+    /// Backtracks every decision while retaining level-zero assignments, input and
+    /// permanent clauses, learned clauses, activities, and saved phases. Dynamic
+    /// theories may append root-scope terms/atoms after this returns.
+    pub(crate) fn backtrack_to_root<T: TheorySolver>(&mut self, theory: &mut T) {
+        self.backjump_to(theory, 0);
+    }
+
     /// Current SAT-variable count, including dynamic theory variables.
     pub(crate) fn variable_count(&self) -> usize {
         self.var_count
@@ -1722,6 +1729,48 @@ mod termination_tests {
         ]);
         assert_eq!(solver.solve(&mut NoTheory), Outcome::Sat);
         assert_eq!(solver.value(0), Some(false));
+        assert_eq!(solver.value(1), Some(false));
+    }
+
+    #[test]
+    fn root_backtrack_retains_database_and_allows_resumed_insertion() {
+        #[derive(Default)]
+        struct DepthTheory(usize);
+        impl TheorySolver for DepthTheory {
+            fn assert(&mut self, _atom: usize, _value: bool) -> Result<(), Vec<TheoryLit>> {
+                Ok(())
+            }
+
+            fn push(&mut self) {
+                self.0 += 1;
+            }
+
+            fn pop(&mut self) {
+                self.0 -= 1;
+            }
+
+            fn propagate(&self) -> Vec<TheoryProp> {
+                Vec::new()
+            }
+        }
+
+        let mut theory = DepthTheory::default();
+        let mut solver = CdclT::new(2, 0, Vec::new(), None);
+        assert_eq!(solver.solve(&mut theory), Outcome::Sat);
+        assert_eq!(theory.0, 2);
+        assert_eq!(solver.value(0), Some(true));
+        assert_eq!(solver.value(1), Some(true));
+
+        solver.backtrack_to_root(&mut theory);
+        assert_eq!(theory.0, 0);
+        assert_eq!(solver.value(0), None);
+        assert_eq!(solver.value(1), None);
+
+        solver.add_permanent_clause(vec![Lit {
+            var: 1,
+            positive: false,
+        }]);
+        assert_eq!(solver.solve(&mut theory), Outcome::Sat);
         assert_eq!(solver.value(1), Some(false));
     }
 

@@ -123,6 +123,8 @@ fn int_prelude_admits_all_declarations() {
         p.no_int_between,
         p.le_total,
         p.lt_of_le_of_ne,
+        p.euclidean_decomposition,
+        p.eq_em,
     ] {
         assert!(
             k.environment().contains(name),
@@ -178,6 +180,8 @@ fn every_axiom_type_infers_to_a_sort() {
         p.no_int_between,
         p.le_total,
         p.lt_of_le_of_ne,
+        p.euclidean_decomposition,
+        p.eq_em,
     ] {
         let ty = k.environment().get(name).unwrap().ty();
         let inferred = k.infer(ty).unwrap();
@@ -267,6 +271,106 @@ fn discreteness_refutes_zero_lt_x_lt_one() {
     assert!(
         f.k.def_eq(inferred, false_),
         "no_int_between x (And.intro … h0 h1) : False"
+    );
+}
+
+/// ADR-0104's trusted theorem has the exact quotient/remainder proposition:
+/// applying it to `x`, modulus `1`, and `zero_lt_one` produces
+/// `Exists q r, x = 1*q+r ∧ 0≤r ∧ r<1`.
+#[test]
+fn euclidean_decomposition_applied_checks_exact_type() {
+    use crate::BinderInfo;
+
+    let mut f = fixture();
+    let x = f.x_const();
+    let one = f.one();
+    let theorem = f.k.const_(f.p.euclidean_decomposition, vec![]);
+    let proof = f.k.app(theorem, x);
+    let proof = f.k.app(proof, one);
+    let positive = f.k.const_(f.p.zero_lt_one, vec![]);
+    let proof = f.k.app(proof, positive);
+    let inferred = f.k.infer(proof).unwrap();
+
+    let q_id = 20_000;
+    let r_id = 20_001;
+    let q = f.k.fvar(q_id);
+    let r = f.k.fvar(r_id);
+    let mul = f.k.const_(f.p.mul, vec![]);
+    let one = f.one();
+    let one_q = f.k.app(mul, one);
+    let one_q = f.k.app(one_q, q);
+    let add = f.k.const_(f.p.add, vec![]);
+    let sum = f.k.app(add, one_q);
+    let sum = f.k.app(sum, r);
+    let zero_level = f.k.level_zero();
+    let one_level = f.k.level_succ(zero_level);
+    let eq = f.k.const_(f.p.logic.eq, vec![one_level]);
+    let z_ty = f.k.const_(f.p.z, vec![]);
+    let recomposition = f.k.app(eq, z_ty);
+    let x = f.x_const();
+    let recomposition = f.k.app(recomposition, x);
+    let recomposition = f.k.app(recomposition, sum);
+    let le = f.k.const_(f.p.le, vec![]);
+    let zero = f.zero();
+    let nonnegative = f.k.app(le, zero);
+    let nonnegative = f.k.app(nonnegative, r);
+    let r_again = f.k.fvar(r_id);
+    let one = f.one();
+    let below_one = f.lt(r_again, one);
+    let bounds = f.and(nonnegative, below_one);
+    let facts = f.and(recomposition, bounds);
+
+    let anon = f.k.anon();
+    let r_body = f.k.abstract_fvars(facts, &[r_id]);
+    let z_ty = f.k.const_(f.p.z, vec![]);
+    let r_pred = f.k.lam(anon, z_ty, r_body, BinderInfo::Default);
+    let exists = f.k.const_(f.p.logic.exists_, vec![one_level]);
+    let z_ty = f.k.const_(f.p.z, vec![]);
+    let exists_r = f.k.app(exists, z_ty);
+    let exists_r = f.k.app(exists_r, r_pred);
+    let q_body = f.k.abstract_fvars(exists_r, &[q_id]);
+    let z_ty = f.k.const_(f.p.z, vec![]);
+    let q_pred = f.k.lam(anon, z_ty, q_body, BinderInfo::Default);
+    let exists = f.k.const_(f.p.logic.exists_, vec![one_level]);
+    let z_ty = f.k.const_(f.p.z, vec![]);
+    let expected = f.k.app(exists, z_ty);
+    let expected = f.k.app(expected, q_pred);
+
+    assert!(
+        f.k.def_eq(inferred, expected),
+        "euclidean_decomposition x one zero_lt_one has the exact residue type"
+    );
+}
+
+/// ADR-0106 exposes decidability only for integer equality, not unrestricted
+/// propositional excluded middle.
+#[test]
+fn integer_equality_decidability_applied_checks_exact_type() {
+    let mut f = fixture();
+    let x = f.x_const();
+    let zero = f.zero();
+    let theorem = f.k.const_(f.p.eq_em, vec![]);
+    let proof = f.k.app(theorem, x);
+    let proof = f.k.app(proof, zero);
+    let inferred = f.k.infer(proof).unwrap();
+
+    let zero_level = f.k.level_zero();
+    let one_level = f.k.level_succ(zero_level);
+    let eq = f.k.const_(f.p.logic.eq, vec![one_level]);
+    let z_ty = f.k.const_(f.p.z, vec![]);
+    let equality = f.k.app(eq, z_ty);
+    let x = f.x_const();
+    let equality = f.k.app(equality, x);
+    let zero = f.zero();
+    let equality = f.k.app(equality, zero);
+    let not = f.k.const_(f.p.logic.not, vec![]);
+    let not_equality = f.k.app(not, equality);
+    let or = f.k.const_(f.p.logic.or, vec![]);
+    let expected = f.k.app(or, equality);
+    let expected = f.k.app(expected, not_equality);
+    assert!(
+        f.k.def_eq(inferred, expected),
+        "eq_em x zero has exactly Eq-or-Not-Eq type"
     );
 }
 

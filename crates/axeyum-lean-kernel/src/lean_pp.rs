@@ -8,9 +8,19 @@
 //! declaration prelude, a later slice) re-checked by an independent Lean toolchain.
 //! It is pure pretty-printing — it never affects type checking.
 
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;
 
 use crate::{Declaration, ExprId, ExprNode, Kernel, LevelId, LevelNode, Lit, NameId, NameNode};
+
+const COMPACT_SHARE_MIN_TREE_NODES: u64 = 8;
+const COMPACT_SHARE_CAP: usize = 16_384;
+
+#[derive(Debug, Default)]
+struct LeanSharePlan {
+    names: BTreeMap<ExprId, String>,
+    order: Vec<ExprId>,
+}
 
 impl Kernel {
     /// Render `expr` as a Lean 4 source string. De Bruijn variables are resolved to
@@ -119,6 +129,23 @@ impl Kernel {
         self.render_lean_module_with_inductives(theorem_name, goal, proof, &[])
     }
 
+    /// Render a self-contained module while preserving repeated **closed** proof
+    /// DAG nodes as deterministic top-level definitions.
+    ///
+    /// This is semantically equivalent to [`Self::render_lean_module`], but can
+    /// be substantially smaller for hash-consed proofs whose ordinary source
+    /// rendering expands shared subterms as a tree. Expressions containing loose
+    /// de Bruijn variables or free variables are never hoisted.
+    #[must_use]
+    pub fn render_lean_module_compact(
+        &self,
+        theorem_name: &str,
+        goal: ExprId,
+        proof: ExprId,
+    ) -> String {
+        self.render_lean_module_compact_with_inductives(theorem_name, goal, proof, &[])
+    }
+
     /// Like [`Self::render_lean_module`], but renders each inductive named in
     /// `real_inductives` as a **real Lean `inductive` command** (so Lean
     /// regenerates its constructors and recursor, *with* their ι-reduction rules),
@@ -145,6 +172,31 @@ impl Kernel {
         goal: ExprId,
         proof: ExprId,
         real_inductives: &[NameId],
+    ) -> String {
+        self.render_lean_module_impl(theorem_name, goal, proof, real_inductives, false)
+    }
+
+    /// Compact counterpart of [`Self::render_lean_module_with_inductives`].
+    /// Repeated closed proof nodes are hoisted, while listed inductives retain
+    /// Lean-side recursor computation.
+    #[must_use]
+    pub fn render_lean_module_compact_with_inductives(
+        &self,
+        theorem_name: &str,
+        goal: ExprId,
+        proof: ExprId,
+        real_inductives: &[NameId],
+    ) -> String {
+        self.render_lean_module_impl(theorem_name, goal, proof, real_inductives, true)
+    }
+
+    fn render_lean_module_impl(
+        &self,
+        theorem_name: &str,
+        goal: ExprId,
+        proof: ExprId,
+        real_inductives: &[NameId],
+        compact: bool,
     ) -> String {
         let order = self.reachable_decl_order(&[goal, proof]);
         let mut out = String::from(
@@ -186,11 +238,34 @@ impl Kernel {
                 out.push('\n');
             }
         }
+        let shares = if compact {
+            self.compact_share_plan(&[goal, proof], theorem_name)
+        } else {
+            LeanSharePlan::default()
+        };
+        for &expression in &shares.order {
+            let name = &shares.names[&expression];
+            let body = self.render_lean_with_shares(
+                expression,
+                &at_consts,
+                &shares.names,
+                Some(expression),
+            );
+            let _ = write!(out, "\ndef {name} :=\n  {body}\n");
+        }
+        let rendered_goal = if compact {
+            self.render_lean_with_shares(goal, &at_consts, &shares.names, None)
+        } else {
+            self.render_lean_with_at(goal, &at_consts)
+        };
+        let rendered_proof = if compact {
+            self.render_lean_with_shares(proof, &at_consts, &shares.names, None)
+        } else {
+            self.render_lean_with_at(proof, &at_consts)
+        };
         let _ = write!(
             out,
-            "\ntheorem {theorem_name} : {} :=\n  {}\n\n#print axioms {theorem_name}\n",
-            self.render_lean_with_at(goal, &at_consts),
-            self.render_lean_with_at(proof, &at_consts)
+            "\ntheorem {theorem_name} : {rendered_goal} :=\n  {rendered_proof}\n\n#print axioms {theorem_name}\n"
         );
         out
     }
@@ -552,6 +627,270 @@ impl Kernel {
         }
     }
 
+    fn expr_children(&self, id: ExprId) -> Vec<ExprId> {
+        match self.expr_node(id) {
+            ExprNode::App(function, argument) => vec![*function, *argument],
+            ExprNode::Lam(_, ty, body, _) | ExprNode::Pi(_, ty, body, _) => {
+                vec![*ty, *body]
+            }
+            ExprNode::Let(_, ty, value, body) => vec![*ty, *value, *body],
+            ExprNode::BVar(_)
+            | ExprNode::FVar(_)
+            | ExprNode::Sort(_)
+            | ExprNode::Const(_, _)
+            | ExprNode::Lit(_) => Vec::new(),
+        }
+    }
+
+    fn expr_postorder(&self, roots: &[ExprId]) -> Vec<ExprId> {
+        let mut visited = BTreeSet::new();
+        let mut order = Vec::new();
+        let mut stack = roots
+            .iter()
+            .rev()
+            .copied()
+            .map(|root| (root, false))
+            .collect::<Vec<_>>();
+        while let Some((expression, expanded)) = stack.pop() {
+            if expanded {
+                order.push(expression);
+                continue;
+            }
+            if !visited.insert(expression) {
+                continue;
+            }
+            stack.push((expression, true));
+            let children = self.expr_children(expression);
+            for child in children.into_iter().rev() {
+                stack.push((child, false));
+            }
+        }
+        order
+    }
+
+    fn compact_share_plan(&self, roots: &[ExprId], theorem_name: &str) -> LeanSharePlan {
+        let postorder = self.expr_postorder(roots);
+        let mut occurrences = BTreeMap::<ExprId, u64>::new();
+        for &root in roots {
+            *occurrences.entry(root).or_default() = occurrences
+                .get(&root)
+                .copied()
+                .unwrap_or_default()
+                .saturating_add(1);
+        }
+        for &expression in postorder.iter().rev() {
+            let count = occurrences.get(&expression).copied().unwrap_or_default();
+            if count == 0 {
+                continue;
+            }
+            for child in self.expr_children(expression) {
+                let current = occurrences.get(&child).copied().unwrap_or_default();
+                occurrences.insert(child, current.saturating_add(count));
+            }
+        }
+
+        let mut tree_sizes = BTreeMap::<ExprId, u64>::new();
+        for &expression in &postorder {
+            let mut size = 1_u64;
+            for child in self.expr_children(expression) {
+                size = size.saturating_add(tree_sizes.get(&child).copied().unwrap_or(1));
+            }
+            tree_sizes.insert(expression, size);
+        }
+
+        let mut candidates = postorder
+            .iter()
+            .copied()
+            .filter(|&expression| {
+                occurrences.get(&expression).copied().unwrap_or_default() >= 2
+                    && tree_sizes.get(&expression).copied().unwrap_or_default()
+                        >= COMPACT_SHARE_MIN_TREE_NODES
+                    && self.num_loose_bvars(expression) == 0
+                    && !self.has_fvars(expression)
+                    && matches!(
+                        self.expr_node(expression),
+                        ExprNode::App(_, _)
+                            | ExprNode::Lam(..)
+                            | ExprNode::Pi(..)
+                            | ExprNode::Let(..)
+                    )
+            })
+            .collect::<Vec<_>>();
+        candidates.sort_by_key(|expression| {
+            let count = occurrences[expression];
+            let size = tree_sizes[expression];
+            (
+                std::cmp::Reverse(count.saturating_sub(1).saturating_mul(size)),
+                expression.index(),
+            )
+        });
+        candidates.truncate(COMPACT_SHARE_CAP);
+        let selected = candidates.into_iter().collect::<BTreeSet<_>>();
+
+        let mut reserved = self
+            .environment()
+            .iter()
+            .map(|(&name, _)| self.render_name(name))
+            .collect::<BTreeSet<_>>();
+        reserved.insert(theorem_name.to_owned());
+        let mut names = BTreeMap::new();
+        let mut order = Vec::new();
+        let mut suffix = 0_u64;
+        for expression in postorder {
+            if !selected.contains(&expression) {
+                continue;
+            }
+            let name = loop {
+                let candidate = format!("axeyum_proof_share_{suffix}");
+                suffix += 1;
+                if reserved.insert(candidate.clone()) {
+                    break candidate;
+                }
+            };
+            names.insert(expression, name);
+            order.push(expression);
+        }
+        LeanSharePlan { names, order }
+    }
+
+    fn render_lean_with_shares(
+        &self,
+        expression: ExprId,
+        at_consts: &BTreeSet<NameId>,
+        shares: &BTreeMap<ExprId, String>,
+        expand_root: Option<ExprId>,
+    ) -> String {
+        let mut binders = Vec::new();
+        self.render_expr_with_shares(expression, &mut binders, at_consts, shares, expand_root)
+    }
+
+    fn render_expr_with_shares_atom(
+        &self,
+        expression: ExprId,
+        binders: &mut Vec<String>,
+        at_consts: &BTreeSet<NameId>,
+        shares: &BTreeMap<ExprId, String>,
+        expand_root: Option<ExprId>,
+    ) -> String {
+        if expand_root != Some(expression)
+            && let Some(name) = shares.get(&expression)
+        {
+            return name.clone();
+        }
+        match self.expr_node(expression) {
+            ExprNode::BVar(_)
+            | ExprNode::FVar(_)
+            | ExprNode::Const(_, _)
+            | ExprNode::Sort(_)
+            | ExprNode::Lit(_) => {
+                self.render_expr_with_shares(expression, binders, at_consts, shares, expand_root)
+            }
+            ExprNode::App(_, _) | ExprNode::Lam(..) | ExprNode::Pi(..) | ExprNode::Let(..) => {
+                format!(
+                    "({})",
+                    self.render_expr_with_shares(
+                        expression,
+                        binders,
+                        at_consts,
+                        shares,
+                        expand_root,
+                    )
+                )
+            }
+        }
+    }
+
+    fn render_expr_with_shares(
+        &self,
+        expression: ExprId,
+        binders: &mut Vec<String>,
+        at_consts: &BTreeSet<NameId>,
+        shares: &BTreeMap<ExprId, String>,
+        expand_root: Option<ExprId>,
+    ) -> String {
+        if expand_root != Some(expression)
+            && let Some(name) = shares.get(&expression)
+        {
+            return name.clone();
+        }
+        match self.expr_node(expression) {
+            ExprNode::BVar(index) => binders
+                .len()
+                .checked_sub(1 + *index as usize)
+                .map_or_else(|| format!("#{index}"), |position| binders[position].clone()),
+            ExprNode::FVar(id) => format!("_fvar.{id}"),
+            ExprNode::Sort(level) => {
+                let rendered = self.render_level(*level);
+                if rendered == "0" {
+                    "Prop".to_owned()
+                } else {
+                    format!("Sort ({rendered})")
+                }
+            }
+            ExprNode::Const(name, levels) => {
+                let at = if at_consts.contains(name) { "@" } else { "" };
+                let rendered = format!("{at}{}", self.render_name(*name));
+                if levels.is_empty() {
+                    rendered
+                } else {
+                    let levels = levels
+                        .iter()
+                        .map(|level| self.render_level(*level))
+                        .collect::<Vec<_>>();
+                    format!("{rendered}.{{{}}}", levels.join(", "))
+                }
+            }
+            ExprNode::App(function, argument) => {
+                let function = self.render_expr_with_shares_atom(
+                    *function,
+                    binders,
+                    at_consts,
+                    shares,
+                    expand_root,
+                );
+                let argument = self.render_expr_with_shares_atom(
+                    *argument,
+                    binders,
+                    at_consts,
+                    shares,
+                    expand_root,
+                );
+                format!("{function} {argument}")
+            }
+            ExprNode::Lam(name, ty, body, _) => {
+                let binder = self.binder_name(*name, binders.len());
+                let ty = self.render_expr_with_shares(*ty, binders, at_consts, shares, expand_root);
+                binders.push(binder.clone());
+                let body =
+                    self.render_expr_with_shares(*body, binders, at_consts, shares, expand_root);
+                binders.pop();
+                format!("fun ({binder} : {ty}) => {body}")
+            }
+            ExprNode::Pi(name, ty, body, _) => {
+                let binder = self.binder_name(*name, binders.len());
+                let ty = self.render_expr_with_shares(*ty, binders, at_consts, shares, expand_root);
+                binders.push(binder.clone());
+                let body =
+                    self.render_expr_with_shares(*body, binders, at_consts, shares, expand_root);
+                binders.pop();
+                format!("(({binder} : {ty}) -> {body})")
+            }
+            ExprNode::Let(name, ty, value, body) => {
+                let binder = self.binder_name(*name, binders.len());
+                let ty = self.render_expr_with_shares(*ty, binders, at_consts, shares, expand_root);
+                let value =
+                    self.render_expr_with_shares(*value, binders, at_consts, shares, expand_root);
+                binders.push(binder.clone());
+                let body =
+                    self.render_expr_with_shares(*body, binders, at_consts, shares, expand_root);
+                binders.pop();
+                format!("let {binder} : {ty} := {value}; {body}")
+            }
+            ExprNode::Lit(Lit::Nat(value)) => value.to_string(),
+            ExprNode::Lit(Lit::Str(value)) => format!("{value:?}"),
+        }
+    }
+
     /// Render an expression, wrapping it in parentheses when it is a compound form
     /// (so it can sit as a function head or argument without re-association).
     fn render_expr_atom(
@@ -760,5 +1099,104 @@ mod tests {
             false_at < thm_at,
             "False must precede the theorem\n{module}"
         );
+    }
+
+    #[test]
+    fn compact_module_shares_repeated_closed_proof_terms() {
+        use crate::{Declaration, build_logic_prelude};
+
+        let mut k = Kernel::new();
+        let logic = build_logic_prelude(&mut k);
+        let anon = k.anon();
+        let prop = k.sort_zero();
+        let p_name = k.name_str(anon, "P");
+        k.add_declaration(Declaration::Axiom {
+            name: p_name,
+            uparams: Vec::new(),
+            ty: prop,
+        })
+        .unwrap();
+        let p = k.const_(p_name, Vec::new());
+        let h_name = k.name_str(anon, "h");
+        k.add_declaration(Declaration::Axiom {
+            name: h_name,
+            uparams: Vec::new(),
+            ty: p,
+        })
+        .unwrap();
+        let h = k.const_(h_name, Vec::new());
+
+        let and = k.const_(logic.and, Vec::new());
+        let pair_prop = {
+            let expression = k.app(and, p);
+            k.app(expression, p)
+        };
+        let pair = {
+            let intro = k.const_(logic.and_intro, Vec::new());
+            let expression = k.app(intro, p);
+            let expression = k.app(expression, p);
+            let expression = k.app(expression, h);
+            k.app(expression, h)
+        };
+        let goal = {
+            let expression = k.app(and, pair_prop);
+            k.app(expression, pair_prop)
+        };
+        let proof = {
+            let intro = k.const_(logic.and_intro, Vec::new());
+            let expression = k.app(intro, pair_prop);
+            let expression = k.app(expression, pair_prop);
+            let expression = k.app(expression, pair);
+            k.app(expression, pair)
+        };
+        let inferred = k.infer(proof).unwrap();
+        assert!(k.def_eq(inferred, goal));
+
+        let ordinary = k.render_lean_module("closed_pair", goal, proof);
+        let compact = k.render_lean_module_compact("closed_pair", goal, proof);
+        assert!(
+            compact.contains("def axeyum_proof_share_0 :=\n"),
+            "{compact}"
+        );
+        let repeated = "(((And.intro P) P) h) h";
+        assert_eq!(ordinary.matches(repeated).count(), 2, "{ordinary}");
+        assert_eq!(compact.matches(repeated).count(), 1, "{compact}");
+        assert_eq!(
+            compact,
+            k.render_lean_module_compact("closed_pair", goal, proof)
+        );
+        assert_eq!(ordinary, k.render_lean_module("closed_pair", goal, proof));
+    }
+
+    #[test]
+    fn compact_plan_never_hoists_open_binder_dependent_terms() {
+        use crate::{BinderInfo, Declaration, build_logic_prelude};
+
+        let mut k = Kernel::new();
+        let logic = build_logic_prelude(&mut k);
+        let anon = k.anon();
+        let prop = k.sort_zero();
+        let function_ty = k.pi(anon, prop, prop, BinderInfo::Default);
+        let function_name = k.name_str(anon, "F");
+        k.add_declaration(Declaration::Axiom {
+            name: function_name,
+            uparams: Vec::new(),
+            ty: function_ty,
+        })
+        .unwrap();
+        let function = k.const_(function_name, Vec::new());
+        let bound = k.bvar(0);
+        let once = k.app(function, bound);
+        let repeated_open = k.app(function, once);
+        let and = k.const_(logic.and, Vec::new());
+        let body = {
+            let expression = k.app(and, repeated_open);
+            k.app(expression, repeated_open)
+        };
+        let lambda = k.lam(anon, prop, body, BinderInfo::Default);
+        assert_eq!(k.num_loose_bvars(repeated_open), 1);
+
+        let plan = k.compact_share_plan(&[lambda], "open_term");
+        assert!(plan.names.is_empty(), "open terms must not be hoisted");
     }
 }

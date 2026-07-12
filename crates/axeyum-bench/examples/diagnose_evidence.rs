@@ -20,8 +20,9 @@ use axeyum_ir::{TermArena, TermId, TermNode, render};
 use axeyum_smtlib::parse_script;
 use axeyum_solver::{
     CheckResult, DeclineReason, Evidence, RouteOutcome, RouteTrace, SolverConfig,
-    UnsatProofOutcome, check_auto_explained, export_qf_aufbv_unsat_proof_within, produce_evidence,
-    prove_qf_abv_unsat_alethe, prove_qf_abv_unsat_alethe_via_elimination, solve,
+    UnsatProofOutcome, check_auto_explained, export_qf_aufbv_unsat_proof_within,
+    normalize_assertions_for_quantifiers, produce_evidence, prove_qf_abv_unsat_alethe,
+    prove_qf_abv_unsat_alethe_via_elimination, solve,
 };
 
 fn elapsed_ms(start: Instant) -> f64 {
@@ -36,6 +37,23 @@ fn verdict(result: &CheckResult) -> &'static str {
     }
 }
 
+fn contains_quantifier(arena: &TermArena, assertions: &[TermId]) -> bool {
+    let mut seen = BTreeSet::new();
+    let mut stack = assertions.to_vec();
+    while let Some(term) = stack.pop() {
+        if !seen.insert(term) {
+            continue;
+        }
+        if let TermNode::App { op, args } = arena.node(term) {
+            if matches!(op, axeyum_ir::Op::Forall(_) | axeyum_ir::Op::Exists(_)) {
+                return true;
+            }
+            stack.extend(args.iter().copied());
+        }
+    }
+    false
+}
+
 fn proof_outcome_label(outcome: &UnsatProofOutcome) -> &'static str {
     match outcome {
         UnsatProofOutcome::Proved(_) => "proved",
@@ -46,12 +64,37 @@ fn proof_outcome_label(outcome: &UnsatProofOutcome) -> &'static str {
 
 fn evidence_kind(evidence: &Evidence) -> &'static str {
     match evidence {
+        Evidence::Sat(model) if model.quantified_guard_sat_certificates().next().is_some() => {
+            "quantified-guard-sat"
+        }
+        Evidence::Sat(model) if model.quantified_sat_certificates().next().is_some() => {
+            "quantified-skolem-sat"
+        }
+        Evidence::Sat(model)
+            if model
+                .quantified_bool_model_sat_certificates()
+                .next()
+                .is_some() =>
+        {
+            "quantified-bool-model-sat"
+        }
         Evidence::Sat(_) => "sat-model",
         Evidence::Unsat(Some(_)) => "drat-unsat",
         Evidence::Unsat(None) => "bare-unsat",
         Evidence::UnsatAletheProof(_) => "alethe-unsat",
         Evidence::UnsatArithAletheProof(_) => "arith-alethe-unsat",
         Evidence::UnsatGuardedQuantAletheProof { .. } => "guarded-quant-alethe-unsat",
+        Evidence::UnsatIntEuclideanResidue(_) => "int-euclidean-residue-unsat",
+        Evidence::UnsatIntAffineGrowth(_) => "int-affine-growth-unsat",
+        Evidence::UnsatIntNestedXor(_) => "int-nested-xor-unsat",
+        Evidence::UnsatClosedUniversalCounterexample(_) => "closed-universal-counterexample-unsat",
+        Evidence::UnsatNegatedExistentialWitness(_) => "negated-existential-witness-unsat",
+        Evidence::UnsatBvAlternationCounterexample(_) => "bv-alternation-counterexample-unsat",
+        Evidence::UnsatBvConjunctiveUniversalInstance(_) => {
+            "bv-conjunctive-universal-instance-unsat"
+        }
+        Evidence::UnsatEqualityPartition(_) => "equality-partition-unsat",
+        Evidence::UnsatQuantifiedCounterexampleCover(_) => "quantified-counterexample-cover-unsat",
         Evidence::UnsatTermLevel { .. } => "term-level-unsat",
         Evidence::UnsatFiniteDomainEnum { .. } => "finite-domain-enum-unsat",
         Evidence::UnsatBvDefinedEnum(_) => "bv-defined-enum-unsat",
@@ -322,30 +365,55 @@ fn main() {
         let mut script = parse_script(&text).expect("parse SMT-LIB file");
         let assertions = script.assertions.clone();
         let start = Instant::now();
-        match check_auto_explained(&mut script.arena, &assertions, &config) {
-            Ok((result, trace)) => {
-                println!(
-                    "check_auto_explained: {} {:.3}ms",
-                    verdict(&result),
-                    elapsed_ms(start)
-                );
-                for attempt in trace.attempts() {
-                    println!("  {attempt}");
-                }
-                print_lazy_replay_terms(&script.arena, &assertions, &trace);
-                print_requested_terms(&script.arena, &assertions, &requested_terms);
-            }
-            Err(error) => println!(
-                "check_auto_explained: error {error} {:.3}ms",
+        if contains_quantifier(&script.arena, &assertions) {
+            println!(
+                "check_auto_explained: skipped (quantified query) {:.3}ms",
                 elapsed_ms(start)
-            ),
+            );
+        } else {
+            match check_auto_explained(&mut script.arena, &assertions, &config) {
+                Ok((result, trace)) => {
+                    println!(
+                        "check_auto_explained: {} {:.3}ms",
+                        verdict(&result),
+                        elapsed_ms(start)
+                    );
+                    for attempt in trace.attempts() {
+                        println!("  {attempt}");
+                    }
+                    print_lazy_replay_terms(&script.arena, &assertions, &trace);
+                    print_requested_terms(&script.arena, &assertions, &requested_terms);
+                }
+                Err(error) => println!(
+                    "check_auto_explained: error {error} {:.3}ms",
+                    elapsed_ms(start)
+                ),
+            }
         }
 
         let mut script = parse_script(&text).expect("parse SMT-LIB file");
         let assertions = script.assertions.clone();
         let start = Instant::now();
         match solve(&mut script.arena, &assertions, &config) {
-            Ok(result) => println!("solve: {} {:.3}ms", verdict(&result), elapsed_ms(start)),
+            Ok(result) => {
+                if contains_quantifier(&script.arena, &assertions) {
+                    if let Some(flat) = script.solvable_flat_view() {
+                        let flat = flat.to_vec();
+                        match normalize_assertions_for_quantifiers(&mut script.arena, &flat) {
+                            Ok(normalized) => {
+                                let rendered = normalized
+                                    .iter()
+                                    .map(|term| render(&script.arena, *term))
+                                    .collect::<Vec<_>>()
+                                    .join(" | ");
+                                println!("normalized: {rendered}");
+                            }
+                            Err(error) => println!("normalized: error {error}"),
+                        }
+                    }
+                }
+                println!("solve: {} {:.3}ms", verdict(&result), elapsed_ms(start));
+            }
             Err(error) => println!("solve: error {error} {:.3}ms", elapsed_ms(start)),
         }
 

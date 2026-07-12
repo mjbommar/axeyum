@@ -85,6 +85,54 @@ impl UnsatProof {
         Ok(drat_ok)
     }
 
+    /// Rechecks the proof and confirms its DIMACS input is exactly the
+    /// deterministic bit-blast/Tseitin encoding of `assertions`.
+    ///
+    /// This binds an otherwise self-contained clausal proof back to its source
+    /// Boolean terms. The term-to-CNF reduction remains the same explicit
+    /// trusted reduction used by [`export_qf_bv_unsat_proof`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError`] for unsupported terms, encoding failures, or a
+    /// malformed proof.
+    pub fn recheck_for_bool_terms(
+        &self,
+        arena: &TermArena,
+        assertions: &[TermId],
+    ) -> Result<bool, SolverError> {
+        for &term in assertions {
+            if arena.sort_of(term) != Sort::Bool {
+                return Err(SolverError::NonBooleanAssertion(term));
+            }
+        }
+        if let Some((term, op)) = first_unsupported_op(arena, assertions) {
+            return Err(SolverError::Unsupported(format!(
+                "term #{} uses unsupported pure-Rust BV operator {op:?}",
+                term.index()
+            )));
+        }
+        if let Some((term, sort)) = first_unsupported_sort(arena, assertions) {
+            return Err(SolverError::Unsupported(format!(
+                "term #{} has sort {sort} the pure-Rust BV backend cannot bit-blast",
+                term.index()
+            )));
+        }
+        let lowering = lower_terms(arena, assertions)
+            .map_err(|error| SolverError::Backend(format!("bit-blasting failed: {error}")))?;
+        let roots = lowering
+            .roots()
+            .iter()
+            .map(|root| root.bits()[0])
+            .collect::<Vec<_>>();
+        let encoding = tseitin_encode(lowering.aig(), &roots)
+            .map_err(|error| SolverError::Backend(format!("CNF encoding failed: {error}")))?;
+        if encoding.formula().to_dimacs() != self.dimacs {
+            return Ok(false);
+        }
+        self.recheck()
+    }
+
     /// Independently re-checks **only** the LRAT certificate in *linear* time
     /// ([`axeyum_cnf::check_lrat`], following the antecedent hints — no RUP search).
     /// Returns `Ok(None)` when no LRAT certificate is attached.

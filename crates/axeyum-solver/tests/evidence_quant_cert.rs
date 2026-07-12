@@ -1,11 +1,11 @@
-//! Certified-`unsat` evidence for finite-expansion guarded-`Int` universals.
+//! Certified-`unsat` evidence for guarded-`Int` universals.
 //!
 //! A guarded-finite-`Int` universal `∀x:Int. (lo<=x<=hi) => inner` whose finite
-//! expansion is integer-`unsat` now carries an independently checkable Alethe
-//! certificate ([`Evidence::UnsatGuardedQuantAletheProof`]) instead of a bare
-//! `Evidence::Unsat(None)`. These tests assert it certifies, that a tampered proof
-//! is rejected, and that quantifier-free `unsat` certs (and a satisfiable
-//! guarded-`Int` universal) are unaffected.
+//! expansion is integer-`unsat` has an independently checkable Alethe emitter.
+//! ADR-0100's concrete closed-universal counterexample is preferred by
+//! `produce_evidence` when it applies. These tests cover both routes, reject a
+//! tampered Alethe proof, and keep quantifier-free `unsat` certificates and a
+//! satisfiable guarded-`Int` universal unaffected.
 
 use axeyum_cnf::{AletheCommand, AletheLit, AletheTerm};
 use axeyum_ir::{Sort, TermArena};
@@ -61,9 +61,9 @@ fn guarded_int_universal_unsat_certifies() {
     assert!(
         matches!(
             report.evidence,
-            Evidence::UnsatGuardedQuantAletheProof { .. }
+            Evidence::UnsatClosedUniversalCounterexample(_)
         ),
-        "expected a guarded-quantifier Alethe certificate, got {:?}",
+        "expected a checked closed-universal counterexample, got {:?}",
         report.evidence
     );
     assert!(report.evidence.is_certified());
@@ -95,9 +95,9 @@ fn guarded_int_universal_eq_clash_certifies() {
     assert!(
         matches!(
             report.evidence,
-            Evidence::UnsatGuardedQuantAletheProof { .. }
+            Evidence::UnsatClosedUniversalCounterexample(_)
         ),
-        "expected a guarded-quantifier Alethe certificate, got {:?}",
+        "expected a checked closed-universal counterexample, got {:?}",
         report.evidence
     );
     assert_eq!(report.evidence.check(&arena, &[forall]), Ok(true));

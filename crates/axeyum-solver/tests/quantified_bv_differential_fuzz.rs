@@ -31,10 +31,12 @@
     clippy::similar_names
 )]
 
+use std::time::Duration;
+
 use axeyum_ir::{Sort, SymbolId, TermArena, TermId};
-use axeyum_solver::{CheckResult, SolverConfig, solve};
+use axeyum_solver::{CheckResult, Evidence, SolverConfig, produce_evidence, solve};
 use z3::ast::{Ast, BV, Bool};
-use z3::{SatResult, Solver};
+use z3::{FuncDecl, Params, SatResult, Solver, Sort as Z3Sort};
 
 /// Number of closed-universal sentences generated and adjudicated (well past the
 /// ≥300 floor the mandate sets).
@@ -271,6 +273,147 @@ fn quantified_bv_differential_matches_z3() {
     );
 }
 
+/// ADR-0124 alternation controls: half carry a concrete outer value that makes
+/// the existential residual contradictory; half have an immediate witness.
+#[test]
+fn quantified_bv_alternation_counterexamples_match_z3() {
+    let cfg = SolverConfig::new().with_timeout(Duration::from_secs(2));
+    let mut certified_unsat = 0u64;
+    let mut agreed_sat = 0u64;
+
+    for case in 0..64u64 {
+        let pivot = case % (1 << W);
+        let sat_case = case % 2 == 1;
+
+        let mut arena = TermArena::new();
+        let x = arena.declare("alt_x", Sort::BitVec(W)).unwrap();
+        let y = arena.declare("alt_y", Sort::BitVec(W)).unwrap();
+        let x_term = arena.var(x);
+        let y_term = arena.var(y);
+        let pivot_term = arena.bv_const(W, u128::from(pivot)).unwrap();
+        let guard = arena.eq(x_term, pivot_term).unwrap();
+        let consequent = if sat_case {
+            arena.eq(y_term, x_term).unwrap()
+        } else {
+            let reflexive = arena.eq(y_term, y_term).unwrap();
+            arena.not(reflexive).unwrap()
+        };
+        let matrix = arena.implies(guard, consequent).unwrap();
+        let exists = arena.exists(y, matrix).unwrap();
+        let assertion = arena.forall(x, exists).unwrap();
+        let report = produce_evidence(&mut arena, &[assertion], &cfg).unwrap();
+
+        let zx = BV::new_const("alt_x", W);
+        let zy = BV::new_const("alt_y", W);
+        let zpivot = BV::from_u64(pivot, W);
+        let zguard = zx.eq(zpivot);
+        let zconsequent = if sat_case {
+            zy.eq(&zx)
+        } else {
+            zy.eq(&zy).not()
+        };
+        let zmatrix = zguard.implies(&zconsequent);
+        let zexists = z3::ast::exists_const(&[&zy as &dyn Ast], &[], &zmatrix);
+        let zforall = z3::ast::forall_const(&[&zx as &dyn Ast], &[], &zexists);
+        let solver = Solver::new();
+        solver.assert(&zforall);
+        let oracle = solver.check();
+
+        match (&report.evidence, oracle, sat_case) {
+            (Evidence::Sat(_), SatResult::Sat, true) => agreed_sat += 1,
+            (Evidence::UnsatBvAlternationCounterexample(_), SatResult::Unsat, false) => {
+                assert!(report.evidence.check(&arena, &[assertion]).unwrap());
+                certified_unsat += 1;
+            }
+            (evidence, oracle, _) => panic!(
+                "alternation disagreement case={case}: evidence={} oracle={oracle:?}",
+                evidence.kind_label()
+            ),
+        }
+    }
+
+    assert_eq!(certified_unsat, 32);
+    assert_eq!(agreed_sat, 32);
+}
+
+/// ADR-0125 scaling controls deliberately exceed ADR-0124's original
+/// 128-binder cap while remaining semantically trivial enough for an
+/// independent direct-Z3 verdict.
+#[test]
+fn scaled_bv_alternation_prefixes_match_z3() {
+    const OUTER: usize = 160;
+    let cfg = SolverConfig::new().with_timeout(Duration::from_secs(2));
+    let mut certified_unsat = 0;
+    let mut safe_sat = 0;
+
+    for case in 0..16 {
+        let sat_case = case % 2 == 1;
+        let mut arena = TermArena::new();
+        let binders = (0..OUTER)
+            .map(|index| {
+                arena
+                    .declare(&format!("scaled_x_{index}"), Sort::Bool)
+                    .unwrap()
+            })
+            .collect::<Vec<_>>();
+        let y = arena.declare("scaled_y", Sort::Bool).unwrap();
+        let guard = arena.var(binders[0]);
+        let y_term = arena.var(y);
+        let reflexive = arena.eq(y_term, y_term).unwrap();
+        let consequent = if sat_case {
+            reflexive
+        } else {
+            arena.not(reflexive).unwrap()
+        };
+        let matrix = arena.implies(guard, consequent).unwrap();
+        let mut assertion = arena.exists(y, matrix).unwrap();
+        for &binder in binders.iter().rev() {
+            assertion = arena.forall(binder, assertion).unwrap();
+        }
+        let report = produce_evidence(&mut arena, &[assertion], &cfg).unwrap();
+
+        let zouter = (0..OUTER)
+            .map(|index| Bool::new_const(format!("scaled_x_{index}")))
+            .collect::<Vec<_>>();
+        let zy = Bool::new_const("scaled_y");
+        let zconsequent = if sat_case {
+            zy.eq(&zy)
+        } else {
+            zy.eq(&zy).not()
+        };
+        let zmatrix = zouter[0].implies(&zconsequent);
+        let zexists = z3::ast::exists_const(&[&zy as &dyn Ast], &[], &zmatrix);
+        let refs = zouter
+            .iter()
+            .map(|term| term as &dyn Ast)
+            .collect::<Vec<_>>();
+        let zforall = z3::ast::forall_const(&refs, &[], &zexists);
+        let solver = Solver::new();
+        solver.assert(&zforall);
+        let oracle = solver.check();
+
+        if sat_case {
+            assert_eq!(oracle, SatResult::Sat);
+            assert!(!matches!(
+                report.evidence,
+                Evidence::UnsatBvAlternationCounterexample(_)
+            ));
+            safe_sat += 1;
+        } else {
+            assert_eq!(oracle, SatResult::Unsat);
+            assert!(matches!(
+                report.evidence,
+                Evidence::UnsatBvAlternationCounterexample(_)
+            ));
+            assert!(report.evidence.check(&arena, &[assertion]).unwrap());
+            certified_unsat += 1;
+        }
+    }
+
+    assert_eq!(certified_unsat, 8);
+    assert_eq!(safe_sat, 8);
+}
+
 // ===========================================================================
 // Nested-polarity extension (DEBT 3): a closed `∀x y. body` embedded under a
 // top-level `or` / `and` / `not` / `ite` with free ground variables. The
@@ -432,4 +575,422 @@ fn quantified_bv_nested_polarity_matches_z3() {
         compared >= 50,
         "too few adjudicated nested-polarity agreements ({compared}) — degenerate sweep"
     );
+}
+
+#[test]
+fn sat_candidate_nested_trigger_matrix_matches_z3() {
+    const CASES: usize = 64;
+    const WIDTH: u32 = 16;
+
+    let config = SolverConfig::default();
+    let mut recovered_unsat = 0usize;
+    let mut definitive_sat = 0usize;
+    let mut unknown_sat = 0usize;
+    for case in 0..CASES {
+        let mode = case % 4;
+
+        let mut arena = TermArena::new();
+        let sort = Sort::BitVec(WIDTH);
+        let a = arena.bv_var("candidate_matrix_a", WIDTH).unwrap();
+        let b = arena.bv_var("candidate_matrix_b", WIDTH).unwrap();
+        let c = arena.bv_var("candidate_matrix_c", WIDTH).unwrap();
+        let p = arena.bool_var("candidate_matrix_p").unwrap();
+        let f = arena
+            .declare_fun("candidate_matrix_f", &[sort], sort)
+            .unwrap();
+        let g = arena
+            .declare_fun("candidate_matrix_g", &[sort], sort)
+            .unwrap();
+        let gb = arena.apply(g, &[b]).unwrap();
+        let fa = arena.apply(f, &[a]).unwrap();
+        let a_eq_gb = arena.eq(a, gb).unwrap();
+        let branch_literal = if mode == 2 {
+            arena.not(a_eq_gb).unwrap()
+        } else {
+            a_eq_gb
+        };
+        let branch = arena.or(branch_literal, p).unwrap();
+        let not_p = arena.not(p).unwrap();
+        let fa_eq_c = arena.eq(fa, c).unwrap();
+        let x = arena.declare("candidate_matrix_x", sort).unwrap();
+        let xv = arena.var(x);
+        let gx = arena.apply(g, &[xv]).unwrap();
+        let fgx = arena.apply(f, &[gx]).unwrap();
+        let fgx_eq_c = arena.eq(fgx, c).unwrap();
+        let body = if mode == 3 {
+            fgx_eq_c
+        } else {
+            arena.not(fgx_eq_c).unwrap()
+        };
+        let universal = arena.forall(x, body).unwrap();
+        let mut assertions = vec![branch, fa_eq_c, universal];
+        if mode != 1 {
+            assertions.push(not_p);
+        }
+        let axeyum = solve(&mut arena, &assertions, &config).expect("candidate matrix solve");
+
+        let bv_sort = Z3Sort::bitvector(WIDTH);
+        let zf = FuncDecl::new("candidate_matrix_f", &[&bv_sort], &bv_sort);
+        let zg = FuncDecl::new("candidate_matrix_g", &[&bv_sort], &bv_sort);
+        let za = BV::new_const("candidate_matrix_a", WIDTH);
+        let zb = BV::new_const("candidate_matrix_b", WIDTH);
+        let zc = BV::new_const("candidate_matrix_c", WIDTH);
+        let zp = Bool::new_const("candidate_matrix_p");
+        let zgb = zg.apply(&[&zb as &dyn Ast]).as_bv().expect("g returns BV");
+        let zfa = zf.apply(&[&za as &dyn Ast]).as_bv().expect("f returns BV");
+        let za_eq_gb = za.eq(&zgb);
+        let zbranch_literal = if mode == 2 { za_eq_gb.not() } else { za_eq_gb };
+        let zbranch = Bool::or(&[zbranch_literal, zp.clone()]);
+        let zx = BV::new_const("candidate_matrix_x", WIDTH);
+        let zgx = zg.apply(&[&zx as &dyn Ast]).as_bv().expect("g returns BV");
+        let zfgx = zf.apply(&[&zgx as &dyn Ast]).as_bv().expect("f returns BV");
+        let zbody_eq = zfgx.eq(&zc);
+        let zbody = if mode == 3 { zbody_eq } else { zbody_eq.not() };
+        let zforall = z3::ast::forall_const(&[&zx as &dyn Ast], &[], &zbody);
+        let z3 = Solver::new();
+        z3.assert(&zbranch);
+        z3.assert(zfa.eq(&zc));
+        z3.assert(&zforall);
+        if mode != 1 {
+            z3.assert(zp.not());
+        }
+        let oracle = z3.check();
+
+        match (mode, &axeyum, oracle) {
+            (0, CheckResult::Unsat, SatResult::Unsat) => recovered_unsat += 1,
+            (0, _, _) => panic!(
+                "candidate-guided UNSAT case {case} did not agree: axeyum={axeyum:?} z3={oracle:?}"
+            ),
+            (_, CheckResult::Sat(_), SatResult::Sat) => definitive_sat += 1,
+            (_, CheckResult::Unknown(_), SatResult::Sat) => unknown_sat += 1,
+            _ => panic!(
+                "candidate satisfiable control {case} disagreed: axeyum={axeyum:?} z3={oracle:?}"
+            ),
+        }
+    }
+    eprintln!(
+        "SAT-candidate nested-trigger differential: recovered_unsat={recovered_unsat}, definitive_sat={definitive_sat}, unknown_sat={unknown_sat}"
+    );
+    assert_eq!(recovered_unsat, CASES / 4);
+}
+
+#[test]
+fn reflexive_skolem_bv_matrix_matches_z3() {
+    const CASES: usize = 64;
+    const WIDTHS: [u32; 8] = [1, 2, 3, 4, 8, 16, 32, 64];
+
+    let config = SolverConfig::new().with_timeout(Duration::from_millis(100));
+    let mut certified_sat = 0usize;
+    let mut agreed_unsat = 0usize;
+    let mut safe_unknown = 0usize;
+    let mut oracle_unknown = 0usize;
+    for case in 0..CASES {
+        let mode = case % 4;
+        let width = WIDTHS[(case / 4) % WIDTHS.len()];
+
+        let mut arena = TermArena::new();
+        let sort = Sort::BitVec(width);
+        let a = arena.declare("skolem_matrix_a", sort).unwrap();
+        let b = arena.declare("skolem_matrix_b", sort).unwrap();
+        let av = arena.var(a);
+        let bv = arena.var(b);
+        let body = match mode {
+            0 => arena.bv_sle(av, bv).unwrap(),
+            1 => arena.bv_ule(av, bv).unwrap(),
+            2 => arena.bv_slt(av, bv).unwrap(),
+            _ => {
+                let not_a = arena.bv_not(av).unwrap();
+                arena.bv_sle(not_a, bv).unwrap()
+            }
+        };
+        let exists = arena.exists(b, body).unwrap();
+        let assertion = arena.forall(a, exists).unwrap();
+        let axeyum = solve(&mut arena, &[assertion], &config).expect("Skolem matrix solve");
+
+        let za = BV::new_const("skolem_matrix_a", width);
+        let zb = BV::new_const("skolem_matrix_b", width);
+        let zbody = match mode {
+            0 => za.bvsle(&zb),
+            1 => za.bvule(&zb),
+            2 => za.bvslt(&zb),
+            _ => za.bvnot().bvsle(&zb),
+        };
+        let zexists = z3::ast::exists_const(&[&zb as &dyn Ast], &[], &zbody);
+        let zforall = z3::ast::forall_const(&[&za as &dyn Ast], &[], &zexists);
+        let oracle = Solver::new();
+        let mut params = Params::new();
+        params.set_u32("timeout", 100);
+        oracle.set_params(&params);
+        oracle.assert(&zforall);
+        let z3 = oracle.check();
+
+        match (mode, &axeyum, z3) {
+            (0 | 1, CheckResult::Sat(model), SatResult::Sat) => {
+                assert!(
+                    axeyum_solver::check_model(&arena, &[assertion], model)
+                        .expect("Skolem matrix model replay"),
+                    "case {case}, width {width} returned an unreplayable model: {model:?}"
+                );
+                certified_sat += 1;
+            }
+            (0 | 1, _, _) => panic!(
+                "identity Skolem case {case}, width {width} was not jointly Sat: axeyum={axeyum:?}, z3={z3:?}"
+            ),
+            (_, CheckResult::Sat(model), SatResult::Sat) => {
+                assert!(
+                    axeyum_solver::check_model(&arena, &[assertion], model)
+                        .expect("Skolem matrix model replay"),
+                    "case {case}, width {width} returned an unreplayable model: {model:?}"
+                );
+                certified_sat += 1;
+            }
+            (_, CheckResult::Unsat, SatResult::Unsat) => agreed_unsat += 1,
+            (_, CheckResult::Unknown(_), SatResult::Sat | SatResult::Unsat) => safe_unknown += 1,
+            (_, _, SatResult::Unknown) => oracle_unknown += 1,
+            _ => panic!(
+                "reflexive Skolem case {case}, width {width} disagreed: axeyum={axeyum:?}, z3={z3:?}"
+            ),
+        }
+    }
+    eprintln!(
+        "reflexive Skolem differential: certified_sat={certified_sat}, agreed_unsat={agreed_unsat}, safe_unknown={safe_unknown}, oracle_unknown={oracle_unknown}"
+    );
+    assert!(certified_sat >= CASES / 2);
+}
+
+#[test]
+#[allow(clippy::too_many_lines)]
+fn vacuous_outer_guard_matrix_matches_z3() {
+    const CASES: usize = 64;
+    const WIDTHS: [u32; 8] = [1, 2, 8, 16, 32, 64, 129, 257];
+
+    let config = SolverConfig::new().with_timeout(Duration::from_millis(100));
+    let mut certified_guard_sat = 0usize;
+    let mut safe_near_sat = 0usize;
+    let mut agreed_unsat = 0usize;
+    let mut safe_unknown = 0usize;
+    for case in 0..CASES {
+        let mode = case % 4;
+        let width = WIDTHS[(case / 4) % WIDTHS.len()];
+        let raw_constant = u128::try_from(case * 17 + 3).unwrap();
+        let constant = if width < 128 {
+            raw_constant & ((1u128 << width) - 1)
+        } else {
+            raw_constant
+        };
+
+        let mut arena = TermArena::new();
+        let sort = Sort::BitVec(width);
+        let a = arena.declare("guard_matrix_a", sort).unwrap();
+        let b = arena.declare("guard_matrix_b", sort).unwrap();
+        let p = arena.declare("guard_matrix_p", Sort::Bool).unwrap();
+        let av = arena.var(a);
+        let bv = arena.var(b);
+        let kv = arena.bv_const(width, constant).unwrap();
+        let equality = if mode == 1 {
+            arena.eq(av, kv).unwrap()
+        } else if mode == 3 {
+            arena.eq(av, bv).unwrap()
+        } else {
+            arena.eq(kv, av).unwrap()
+        };
+        let antecedent = if mode == 2 {
+            arena.not(equality).unwrap()
+        } else {
+            equality
+        };
+        let falsity = arena.bool_const(false);
+        let matrix = arena.implies(antecedent, falsity).unwrap();
+        let body = if mode == 3 {
+            arena.forall(b, matrix).unwrap()
+        } else {
+            let inner = arena.exists(b, matrix).unwrap();
+            arena.forall(p, inner).unwrap()
+        };
+        let assertion = arena.exists(a, body).unwrap();
+        let axeyum = solve(&mut arena, &[assertion], &config).expect("guard matrix solve");
+
+        let za = BV::new_const("guard_matrix_a", width);
+        let zb = BV::new_const("guard_matrix_b", width);
+        let zp = Bool::new_const("guard_matrix_p");
+        let zk = BV::from_u64(u64::try_from(constant).unwrap(), width);
+        let zequality = if mode == 1 {
+            za.eq(&zk)
+        } else if mode == 3 {
+            za.eq(&zb)
+        } else {
+            zk.eq(&za)
+        };
+        let zantecedent = if mode == 2 {
+            zequality.not()
+        } else {
+            zequality
+        };
+        let zmatrix = zantecedent.implies(Bool::from_bool(false));
+        let zbody = if mode == 3 {
+            z3::ast::forall_const(&[&zb as &dyn Ast], &[], &zmatrix)
+        } else {
+            let inner = z3::ast::exists_const(&[&zb as &dyn Ast], &[], &zmatrix);
+            z3::ast::forall_const(&[&zp as &dyn Ast], &[], &inner)
+        };
+        let zassertion = z3::ast::exists_const(&[&za as &dyn Ast], &[], &zbody);
+        let oracle = Solver::new();
+        let mut params = Params::new();
+        params.set_u32("timeout", 100);
+        oracle.set_params(&params);
+        oracle.assert(&zassertion);
+        let z3 = oracle.check();
+
+        match (mode, &axeyum, z3) {
+            (0 | 1, CheckResult::Sat(model), SatResult::Sat) => {
+                assert_eq!(model.quantified_guard_sat_certificates().count(), 1);
+                assert!(
+                    axeyum_solver::check_model(&arena, &[assertion], model)
+                        .expect("guard matrix replay"),
+                    "supported case {case}, width {width} failed replay"
+                );
+                certified_guard_sat += 1;
+            }
+            (0 | 1, _, _) => panic!(
+                "supported guard case {case}, width {width} was not jointly Sat: axeyum={axeyum:?}, z3={z3:?}"
+            ),
+            (2, CheckResult::Sat(model), SatResult::Sat) => {
+                assert_eq!(model.quantified_guard_sat_certificates().count(), 0);
+                assert!(
+                    axeyum_solver::check_model(&arena, &[assertion], model)
+                        .expect("near-Sat replay")
+                );
+                safe_near_sat += 1;
+            }
+            (2, CheckResult::Unknown(_), SatResult::Sat)
+            | (3, CheckResult::Unknown(_), SatResult::Unsat)
+            | (_, _, SatResult::Unknown) => safe_unknown += 1,
+            (3, CheckResult::Unsat, SatResult::Unsat) => agreed_unsat += 1,
+            _ => panic!(
+                "vacuous guard case {case}, width {width} disagreed: axeyum={axeyum:?}, z3={z3:?}"
+            ),
+        }
+    }
+    eprintln!(
+        "vacuous guard differential: certified_guard_sat={certified_guard_sat}, safe_near_sat={safe_near_sat}, agreed_unsat={agreed_unsat}, safe_unknown={safe_unknown}"
+    );
+    assert_eq!(certified_guard_sat, CASES / 2);
+}
+
+#[test]
+#[allow(clippy::too_many_lines)]
+fn boolean_discharge_of_opaque_bv_closures_matches_z3() {
+    const CASES: usize = 64;
+    const WIDTHS: [u32; 8] = [1, 2, 8, 16, 32, 64, 129, 257];
+
+    let config = SolverConfig::new().with_timeout(Duration::from_millis(100));
+    let mut certified_sat = 0usize;
+    let mut agreed_unsat = 0usize;
+    let mut safe_unknown_sat = 0usize;
+    for case in 0..CASES {
+        let mode = case % 4;
+        let width = WIDTHS[(case / 4) % WIDTHS.len()];
+
+        let mut arena = TermArena::new();
+        let sort = Sort::BitVec(width);
+        let p = arena.declare("bool_discharge_p", Sort::Bool).unwrap();
+        let x = arena.declare("bool_discharge_x", sort).unwrap();
+        let y = arena.declare("bool_discharge_y", sort).unwrap();
+        let z = arena.declare("bool_discharge_z", sort).unwrap();
+        let pv = arena.var(p);
+        let xv = arena.var(x);
+        let yv = arena.var(y);
+        let zv = arena.var(z);
+        let opaque_xy = arena.bv_ult(xv, yv).unwrap();
+        let assertion = match mode {
+            0 => {
+                let body = arena.or(opaque_xy, pv).unwrap();
+                arena.forall(x, body).unwrap()
+            }
+            1 => {
+                let opaque_xz = arena.bv_ult(xv, zv).unwrap();
+                let inner = arena.exists(z, opaque_xz).unwrap();
+                let body = arena.or(inner, pv).unwrap();
+                arena.forall(x, body).unwrap()
+            }
+            2 => {
+                let reflexive = arena.eq(xv, xv).unwrap();
+                let falsity = arena.not(reflexive).unwrap();
+                let body = arena.and(pv, falsity).unwrap();
+                arena.forall(x, body).unwrap()
+            }
+            _ => {
+                let body = arena.or(pv, opaque_xy).unwrap();
+                let universal = arena.forall(x, body).unwrap();
+                arena.not(universal).unwrap()
+            }
+        };
+        let axeyum = solve(&mut arena, &[assertion], &config);
+
+        let zp = Bool::new_const("bool_discharge_p");
+        let zx = BV::new_const("bool_discharge_x", width);
+        let zy = BV::new_const("bool_discharge_y", width);
+        let zz = BV::new_const("bool_discharge_z", width);
+        let zopaque_xy = zx.bvult(&zy);
+        let zassertion = match mode {
+            0 => {
+                let body = Bool::or(&[zopaque_xy, zp.clone()]);
+                z3::ast::forall_const(&[&zx as &dyn Ast], &[], &body)
+            }
+            1 => {
+                let inner = z3::ast::exists_const(&[&zz as &dyn Ast], &[], &zx.bvult(&zz));
+                let body = Bool::or(&[inner, zp.clone()]);
+                z3::ast::forall_const(&[&zx as &dyn Ast], &[], &body)
+            }
+            2 => {
+                let body = Bool::and(&[zp.clone(), zx.eq(&zx).not()]);
+                z3::ast::forall_const(&[&zx as &dyn Ast], &[], &body)
+            }
+            _ => {
+                let body = Bool::or(&[zp.clone(), zopaque_xy]);
+                z3::ast::forall_const(&[&zx as &dyn Ast], &[], &body).not()
+            }
+        };
+        let oracle = Solver::new();
+        let mut params = Params::new();
+        params.set_u32("timeout", 100);
+        oracle.set_params(&params);
+        oracle.assert(&zassertion);
+        let z3 = oracle.check();
+
+        match (mode, &axeyum, z3) {
+            (0 | 1, Ok(CheckResult::Sat(model)), SatResult::Sat) => {
+                assert_eq!(model.quantified_bool_model_sat_certificates().count(), 1);
+                assert!(
+                    axeyum_solver::check_model(&arena, &[assertion], model)
+                        .expect("Boolean discharge replay"),
+                    "supported case {case}, width {width} failed replay"
+                );
+                certified_sat += 1;
+            }
+            (0 | 1, _, _) => panic!(
+                "supported Boolean discharge case {case}, width {width} was not jointly Sat: axeyum={axeyum:?}, z3={z3:?}"
+            ),
+            (2, Ok(CheckResult::Unsat), SatResult::Unsat) => agreed_unsat += 1,
+            (2, Ok(CheckResult::Unknown(_)) | Err(_), SatResult::Unsat)
+            | (3, Ok(CheckResult::Unknown(_)) | Err(_), SatResult::Sat) => {
+                safe_unknown_sat += 1;
+            }
+            (3, Ok(CheckResult::Sat(model)), SatResult::Sat) => {
+                assert!(
+                    axeyum_solver::check_model(&arena, &[assertion], model)
+                        .expect("negative control replay")
+                );
+                safe_unknown_sat += 1;
+            }
+            (_, _, SatResult::Unknown) => safe_unknown_sat += 1,
+            _ => panic!(
+                "Boolean discharge control {case}, width {width} disagreed: axeyum={axeyum:?}, z3={z3:?}"
+            ),
+        }
+    }
+    eprintln!(
+        "Boolean BV-discharge differential: certified_sat={certified_sat}, agreed_unsat={agreed_unsat}, safe_controls={safe_unknown_sat}"
+    );
+    assert_eq!(certified_sat, CASES / 2);
 }

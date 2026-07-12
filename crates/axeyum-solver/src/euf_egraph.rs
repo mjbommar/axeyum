@@ -198,6 +198,32 @@ impl EufTheory {
         Ok(atom)
     }
 
+    /// Appends a dynamic equality atom while the theory is at its root scope.
+    /// Unlike [`Self::add_atom_over_observed_terms`], this may register previously
+    /// unseen term structure, so decision scopes must be closed to keep the new
+    /// e-node ids stable across later backtracking.
+    pub(crate) fn add_atom_at_root(
+        &mut self,
+        arena: &TermArena,
+        atom_term: TermId,
+    ) -> Result<usize, &'static str> {
+        if !self.trail.is_empty() {
+            return Err("dynamic EUF atom insertion requires the root scope");
+        }
+        let sides = match arena.node(atom_term) {
+            TermNode::App { op: Op::Eq, args } if args.len() == 2 => {
+                let left = self.bridge.node(arena, args[0]);
+                let right = self.bridge.node(arena, args[1]);
+                Some((left, right))
+            }
+            _ => return Err("dynamic EUF atom is not a binary equality"),
+        };
+        let atom = self.atoms.len();
+        self.atoms.push(sides);
+        self.assigned.push(None);
+        Ok(atom)
+    }
+
     /// Returns each observed term's current class root plus the asserted equality
     /// atom indices explaining its equality to that class's first observed term.
     /// The explanation is empty for the representative itself.
@@ -2218,6 +2244,28 @@ mod tests {
         assert!(
             theory.assert(0, false).is_ok(),
             "the dynamic atom must survive while its scoped merge is undone"
+        );
+    }
+
+    #[test]
+    fn online_euf_root_atom_rejects_scopes_and_survives_later_backtracking() {
+        let mut arena = TermArena::new();
+        let a = arena.bv_var("root_dynamic_atom_a", 8).unwrap();
+        let b = arena.bv_var("root_dynamic_atom_b", 8).unwrap();
+        let a_eq_b = arena.eq(a, b).unwrap();
+        let mut theory = EufTheory::new(&arena, &[]);
+
+        theory.push();
+        assert!(theory.add_atom_at_root(&arena, a_eq_b).is_err());
+        theory.pop();
+        assert_eq!(theory.add_atom_at_root(&arena, a_eq_b).unwrap(), 0);
+
+        theory.push();
+        assert!(theory.assert(0, true).is_ok());
+        theory.pop();
+        assert!(
+            theory.assert(0, false).is_ok(),
+            "root-appended atom must survive while its scoped merge rolls back"
         );
     }
 

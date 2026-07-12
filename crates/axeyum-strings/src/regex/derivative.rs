@@ -292,6 +292,11 @@ fn deriv_loop_within<F: FnMut() -> bool>(
 /// closure of typical regexes finite and small (Brzozowski 1964).
 ///
 /// Every rewrite is a semantic identity, so `L(canon(R)) = L(R)`.
+///
+/// # Panics
+///
+/// Panics only if [`canon_within`] aborts despite receiving the never-tripping
+/// stop poll, which would violate that function's contract.
 #[must_use]
 pub fn canon(r: &Regex) -> Regex {
     canon_within(r, &mut || false).expect("canon_within with a never-tripping budget cannot abort")

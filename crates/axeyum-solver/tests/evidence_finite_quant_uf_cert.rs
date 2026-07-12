@@ -340,12 +340,14 @@ fn guarded_int_universal_uf_consistent_side_fact_sat() {
     );
 }
 
-// --- Regressions: the pure-LIA finite-`∀` cert and the QF_UFLIA ground cert. ---
+// --- Regressions: pure-LIA quantified evidence and the QF_UFLIA ground cert. ---
 
 #[test]
-fn pure_lia_finite_forall_cert_unchanged() {
-    // `∀x.(0<=x<=2) => x>=5` — the pure-LIA finite-`∀` cert must still certify
-    // (the UF route must not shadow or break it).
+fn pure_lia_finite_forall_remains_checked() {
+    // `∀x.(0<=x<=2) => x>=5` — pure-LIA quantified evidence must still certify
+    // (the UF route must not shadow or break it). ADR-0100's independently
+    // replayed concrete counterexample now intentionally precedes the older
+    // guarded finite-expansion emitter in `produce_evidence`.
     let mut arena = TermArena::new();
     let x = arena.declare("x", Sort::Int).unwrap();
     let xv = arena.var(x);
@@ -370,9 +372,9 @@ fn pure_lia_finite_forall_cert_unchanged() {
     assert!(
         matches!(
             report.evidence,
-            Evidence::UnsatGuardedQuantAletheProof { .. }
+            Evidence::UnsatClosedUniversalCounterexample(_)
         ),
-        "pure-LIA finite-`∀` cert must be unchanged, got {:?}",
+        "pure-LIA finite-`∀` must use checked quantified evidence, got {:?}",
         report.evidence
     );
     assert_eq!(report.evidence.check(&arena, &[forall]), Ok(true));

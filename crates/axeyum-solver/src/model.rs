@@ -2,12 +2,20 @@
 
 use axeyum_ir::{Assignment, FuncId, FuncValue, Rational, SymbolId, Value};
 
+use crate::{
+    QuantifiedBoolModelSatCertificate, QuantifiedGuardSatCertificate,
+    QuantifiedSkolemSatCertificate,
+};
+
 /// A satisfying assignment produced by a backend, keyed by Axeyum
 /// [`SymbolId`]s — never by backend AST handles (backend-model note).
 ///
 /// Entries are kept sorted by symbol ID so iteration order is deterministic.
 /// Uninterpreted-function interpretations (ADR-0013), when present, are kept in
-/// a separate list sorted by [`FuncId`].
+/// a separate list sorted by [`FuncId`]. Restricted quantified results may
+/// additionally carry checked Skolem certificates (ADR-0096/0121) or checked
+/// free-Boolean universal models (ADR-0107); use [`crate::check_model`] rather
+/// than evaluator-only replay when quantifiers are possible.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Model {
     entries: Vec<(SymbolId, Value)>,
@@ -20,6 +28,13 @@ pub struct Model {
     /// deterministic iteration; an empty map is exactly the total `x/0 = 0`
     /// evaluator convention. Mirrors [`Assignment::set_real_div_zero`].
     real_div_zero: Vec<(Rational, Rational)>,
+    /// Checked witnesses for supported quantified assertions, sorted by
+    /// original assertion ID. See ADR-0096/0121 and [`crate::check_model`].
+    quantified_sat: Option<Box<[QuantifiedSkolemSatCertificate]>>,
+    /// Checked free-Boolean models for quantified assertions (ADR-0107).
+    quantified_bool_sat: Option<Box<[QuantifiedBoolModelSatCertificate]>>,
+    /// Checked outer-BV guard witnesses for quantified assertions (ADR-0122).
+    quantified_guard_sat: Option<Box<[QuantifiedGuardSatCertificate]>>,
 }
 
 impl Model {
@@ -99,6 +114,106 @@ impl Model {
     /// (`numerator -> quotient`) in the deterministic key order.
     pub fn real_div_zeros(&self) -> impl Iterator<Item = (Rational, Rational)> + '_ {
         self.real_div_zero.iter().copied()
+    }
+
+    /// Inserts or replaces the checked Skolem certificate for its original
+    /// quantified assertion. Entries stay in assertion-ID order.
+    pub fn set_quantified_sat_certificate(&mut self, cert: QuantifiedSkolemSatCertificate) {
+        let mut certificates = self
+            .quantified_sat
+            .take()
+            .map_or_else(Vec::new, <[QuantifiedSkolemSatCertificate]>::into_vec);
+        match certificates.binary_search_by_key(&cert.assertion, |candidate| candidate.assertion) {
+            Ok(index) => certificates[index] = cert,
+            Err(index) => certificates.insert(index, cert),
+        }
+        self.quantified_sat = Some(certificates.into_boxed_slice());
+    }
+
+    /// The quantified-SAT certificate for `assertion`, if present.
+    pub fn quantified_sat_certificate(
+        &self,
+        assertion: axeyum_ir::TermId,
+    ) -> Option<&QuantifiedSkolemSatCertificate> {
+        let certificates = self.quantified_sat.as_deref().unwrap_or(&[]);
+        certificates
+            .binary_search_by_key(&assertion, |candidate| candidate.assertion)
+            .ok()
+            .map(|index| &certificates[index])
+    }
+
+    /// Iterates over quantified-SAT certificates in original assertion order.
+    pub fn quantified_sat_certificates(
+        &self,
+    ) -> impl Iterator<Item = &QuantifiedSkolemSatCertificate> {
+        self.quantified_sat.as_deref().into_iter().flatten()
+    }
+
+    /// Inserts or replaces a checked free-Boolean certificate.
+    pub fn set_quantified_bool_model_sat_certificate(
+        &mut self,
+        cert: QuantifiedBoolModelSatCertificate,
+    ) {
+        let mut certificates = self
+            .quantified_bool_sat
+            .take()
+            .map_or_else(Vec::new, <[QuantifiedBoolModelSatCertificate]>::into_vec);
+        match certificates.binary_search_by_key(&cert.assertion, |candidate| candidate.assertion) {
+            Ok(index) => certificates[index] = cert,
+            Err(index) => certificates.insert(index, cert),
+        }
+        self.quantified_bool_sat = Some(certificates.into_boxed_slice());
+    }
+
+    /// Returns the checked free-Boolean certificate for `assertion`.
+    pub fn quantified_bool_model_sat_certificate(
+        &self,
+        assertion: axeyum_ir::TermId,
+    ) -> Option<&QuantifiedBoolModelSatCertificate> {
+        let certificates = self.quantified_bool_sat.as_deref().unwrap_or(&[]);
+        certificates
+            .binary_search_by_key(&assertion, |candidate| candidate.assertion)
+            .ok()
+            .map(|index| &certificates[index])
+    }
+
+    /// Iterates over checked free-Boolean certificates in assertion order.
+    pub fn quantified_bool_model_sat_certificates(
+        &self,
+    ) -> impl Iterator<Item = &QuantifiedBoolModelSatCertificate> {
+        self.quantified_bool_sat.as_deref().into_iter().flatten()
+    }
+
+    /// Inserts or replaces a checked outer-BV guard certificate.
+    pub fn set_quantified_guard_sat_certificate(&mut self, cert: QuantifiedGuardSatCertificate) {
+        let mut certificates = self
+            .quantified_guard_sat
+            .take()
+            .map_or_else(Vec::new, <[QuantifiedGuardSatCertificate]>::into_vec);
+        match certificates.binary_search_by_key(&cert.assertion, |candidate| candidate.assertion) {
+            Ok(index) => certificates[index] = cert,
+            Err(index) => certificates.insert(index, cert),
+        }
+        self.quantified_guard_sat = Some(certificates.into_boxed_slice());
+    }
+
+    /// Returns the checked outer-BV guard certificate for `assertion`.
+    pub fn quantified_guard_sat_certificate(
+        &self,
+        assertion: axeyum_ir::TermId,
+    ) -> Option<&QuantifiedGuardSatCertificate> {
+        let certificates = self.quantified_guard_sat.as_deref().unwrap_or(&[]);
+        certificates
+            .binary_search_by_key(&assertion, |candidate| candidate.assertion)
+            .ok()
+            .map(|index| &certificates[index])
+    }
+
+    /// Iterates over checked outer-BV guard certificates in assertion order.
+    pub fn quantified_guard_sat_certificates(
+        &self,
+    ) -> impl Iterator<Item = &QuantifiedGuardSatCertificate> {
+        self.quantified_guard_sat.as_deref().into_iter().flatten()
     }
 
     /// Number of assigned symbols.

@@ -37,6 +37,7 @@ use crate::lra::{
     lia_lp_relaxation_unsat_core,
 };
 use crate::model::Model;
+use crate::proof::{UnsatProof, UnsatProofOutcome, export_qf_bv_unsat_proof};
 
 const ATOM_PREFIX: &str = "!arith_atom_";
 const MAX_DPLL_ROUNDS: usize = 10_000;
@@ -63,7 +64,7 @@ const MAX_CERTIFIABLE_BOOLS: usize = 22;
 /// One literal of a learned theory lemma: the atom's proposition, the truth it
 /// took in the conflict, the arithmetic literal (atom or its negation) used to
 /// re-check the lemma, and the theory that decides it.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ArithLemmaLiteral {
     /// The fresh Boolean proposition standing for the atom.
     pub prop: SymbolId,
@@ -79,13 +80,16 @@ pub struct ArithLemmaLiteral {
 /// [`Self::verify`] re-checks it independently of the search: every lemma core is
 /// re-decided `unsat` by its theory's exact procedure, and the skeleton with all
 /// lemma clauses is shown propositionally unsatisfiable by enumeration.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ArithDpllRefutation {
     /// The Boolean skeleton (one term per assertion, arithmetic atoms as props).
     pub skeleton: Vec<TermId>,
     /// The learned theory lemmas; each is an infeasible core of arithmetic
     /// literals from a single theory.
     pub lemmas: Vec<Vec<ArithLemmaLiteral>>,
+    /// DRAT proof for the propositional closure when exhaustive checking would
+    /// exceed the verifier's bounded-enumeration threshold.
+    pub propositional_proof: Option<UnsatProof>,
 }
 
 /// The outcome of [`certify_arith_dpll_unsat`].
@@ -118,11 +122,13 @@ pub fn certify_arith_dpll_unsat(
         CheckResult::Sat(model) => Ok(ArithDpllOutcome::Sat(model)),
         CheckResult::Unknown(reason) => Ok(ArithDpllOutcome::Unknown(reason)),
         CheckResult::Unsat => {
-            let refutation = ArithDpllRefutation {
+            let mut refutation = ArithDpllRefutation {
                 skeleton: run.skeleton,
                 lemmas: run.lemmas,
+                propositional_proof: None,
             };
-            if refutation.verify(arena)? {
+            refutation.attach_large_propositional_proof(arena)?;
+            if refutation.verify_for(arena, assertions)? {
                 Ok(ArithDpllOutcome::Unsat(refutation))
             } else {
                 Err(SolverError::Backend(
@@ -134,6 +140,77 @@ pub fn certify_arith_dpll_unsat(
 }
 
 impl ArithDpllRefutation {
+    fn propositional_assertions(&self, arena: &mut TermArena) -> Result<Vec<TermId>, SolverError> {
+        let mut assertions = self.skeleton.clone();
+        for lemma in &self.lemmas {
+            let mut clause = None;
+            for literal in lemma {
+                let prop = arena.var(literal.prop);
+                let term = if literal.truth {
+                    arena.not(prop)?
+                } else {
+                    prop
+                };
+                clause = Some(match clause {
+                    None => term,
+                    Some(previous) => arena.or(previous, term)?,
+                });
+            }
+            assertions.push(clause.ok_or_else(|| {
+                SolverError::Backend("arith-dpll refutation has an empty lemma".to_owned())
+            })?);
+        }
+        Ok(assertions)
+    }
+
+    fn attach_large_propositional_proof(
+        &mut self,
+        arena: &mut TermArena,
+    ) -> Result<(), SolverError> {
+        if self.bool_symbols(arena).len() <= MAX_CERTIFIABLE_BOOLS {
+            return Ok(());
+        }
+        let assertions = self.propositional_assertions(arena)?;
+        self.propositional_proof = match export_qf_bv_unsat_proof(arena, &assertions)? {
+            UnsatProofOutcome::Proved(proof) => Some(proof),
+            UnsatProofOutcome::Satisfiable => {
+                return Err(SolverError::Backend(
+                    "arith-dpll propositional closure unexpectedly satisfiable".to_owned(),
+                ));
+            }
+            UnsatProofOutcome::Inconclusive => {
+                return Err(SolverError::Unsupported(
+                    "arith-dpll propositional proof search exhausted its budget".to_owned(),
+                ));
+            }
+        };
+        Ok(())
+    }
+
+    /// Verifies this refutation and binds its propositional skeleton to the
+    /// exact source assertions by independently rebuilding the abstraction.
+    ///
+    /// # Errors
+    ///
+    /// Returns the same errors as [`Self::verify`], plus abstraction errors for
+    /// unsupported source assertions.
+    pub fn verify_for(
+        &self,
+        arena: &TermArena,
+        assertions: &[TermId],
+    ) -> Result<bool, SolverError> {
+        let mut scratch = arena.clone();
+        let mut abstractor = ArithAbstractor::default();
+        let expected = assertions
+            .iter()
+            .map(|&assertion| abstractor.abstract_term(&mut scratch, assertion))
+            .collect::<Result<Vec<_>, _>>()?;
+        if expected != self.skeleton {
+            return Ok(false);
+        }
+        self.verify(arena)
+    }
+
     /// The Boolean symbols (atom props and original Boolean variables) the
     /// refutation ranges over, in deterministic order.
     fn bool_symbols(&self, arena: &TermArena) -> Vec<SymbolId> {
@@ -191,10 +268,12 @@ impl ArithDpllRefutation {
         // (2) skeleton AND every lemma clause is propositionally unsatisfiable.
         let bools = self.bool_symbols(arena);
         if bools.len() > MAX_CERTIFIABLE_BOOLS {
-            return Err(SolverError::Unsupported(format!(
-                "arith-dpll refutation has {} Boolean symbols, too many to verify by enumeration",
-                bools.len()
-            )));
+            let Some(proof) = &self.propositional_proof else {
+                return Ok(false);
+            };
+            let mut scratch = arena.clone();
+            let assertions = self.propositional_assertions(&mut scratch)?;
+            return proof.recheck_for_bool_terms(&scratch, &assertions);
         }
         let index_of: HashMap<SymbolId, usize> =
             bools.iter().enumerate().map(|(i, &s)| (s, i)).collect();
@@ -3498,6 +3577,7 @@ mod tests {
         let refutation = ArithDpllRefutation {
             skeleton: run.skeleton,
             lemmas: run.lemmas,
+            propositional_proof: None,
         };
         assert!(
             refutation.verify(&arena).unwrap(),

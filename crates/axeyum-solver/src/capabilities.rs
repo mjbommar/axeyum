@@ -873,6 +873,407 @@ pub const CAPABILITIES: &[Capability] = &[
     },
     Capability {
         area: "quantifiers",
+        feature: "justified lazy equality-clause scheduling over e-matched instances",
+        assurance: Assurance::SoundIncomplete,
+        evidence: "disjunctions of equality/disequality literals are evaluated against direct \
+                   ground unit facts, recorded disequalities, and congruence closure. Any-true \
+                   instances are suppressed; all-false and one-undetermined complete source \
+                   instances are scheduled before unresolved/non-clausal fallback. No detached \
+                   literal is asserted: the QF solver still receives only a genuine full universal \
+                   instance, preserving evidence replay. A 256-match target schedules one instance \
+                   and improves median optimized batch-plus-QF time 40.4%; the 54-row quantified-BV \
+                   division is decision-identical to baseline. ADR-0117 adds source-bound checked \
+                   detached units and ADR-0118 composes them across generated premises; direct \
+                   online-SAT justifications remain open",
+        reference: "ADR-0110",
+    },
+    Capability {
+        area: "quantifiers",
+        feature: "source-bound checked detached equality-clause propagation",
+        assurance: Assurance::Checked,
+        evidence: "a public arena-bound certificate carries the untouched universal, ordered \
+                   binding tuple, exact complete source instance, detached equality/disequality \
+                   literal, and every false sibling with sorted original-ground reasons. A fresh \
+                   checker reconstructs the instance, verifies the unique unit shape, and replays \
+                   each sibling from only its named equality/disequality facts. Search explanations \
+                   are untrusted; generated-premise reasons without checked provenance decline to \
+                   the complete source instance. \
+                   On 128 matches with six false siblings, detached units reduce reachable DAG \
+                   nodes 4,230 to 2,438 and tree nodes 10,121 to 4,745; optimized median QF time \
+                   improves 8.250 to 3.226 ms and checked end-to-end time 11.301 to 9.886 ms. \
+                   Non-equality theory literals, proof serialization, and direct online SAT \
+                   insertion remain open",
+        reference: "ADR-0117",
+    },
+    Capability {
+        area: "quantifiers",
+        feature: "bounded recursive provenance for generated quantifier ground premises",
+        assurance: Assurance::Checked,
+        evidence: "public exact-instance and recursive ground-derivation artifacts retain one \
+                   derivation with every admitted generated equality/disequality. A fresh checker \
+                   reconstructs every source substitution, requires an exact sorted table for all \
+                   non-source named reasons, recursively checks prior detached implications, and \
+                   replays each false sibling plus the complete unit clause. Missing, duplicate, \
+                   unused, reordered, wrong-variant/conclusion, nested tampering, depth over 16, \
+                   and node-budget exhaustion reject to complete-instance fallback. A six-stage \
+                   target preserves UNSAT while reducing reachable query DAG nodes 54 to 17 and \
+                   tree nodes 117 to 33. Direct online SAT insertion, non-equality antecedents, and \
+                   serialized proof forms remain open",
+        reference: "ADR-0118",
+    },
+    Capability {
+        area: "quantifiers",
+        feature: "checked equality clauses in a retained CDCL(T) quantifier session",
+        assurance: Assurance::Checked,
+        evidence: "the original ground Boolean/equality skeleton is encoded once. Before every \
+                   generated batch, CDCL(T) and EUF backtrack to level zero while preserving \
+                   permanent and learned clauses, activities, and phases. Exact-instance or \
+                   recursively propagated ground derivations are independently rechecked before \
+                   complete equality clauses or detached units enter the live database; new atoms \
+                   are appended in root scope with matching SAT/theory indexes. Online SAT only \
+                   resumes matching, and online UNSAT becomes a product verdict only after the \
+                   ordinary QF solver refutes the exact admitted ground set. Unsupported, tampered, \
+                   mismapped, or over-budget sessions fall back. A six-stage target cuts QF rebuilds \
+                   from 7 to 2 and improves optimized median end-to-end time from 0.560 to 0.351 ms \
+                   (1.60x), with public quantified-BV/LIA decisions unchanged. Non-equality \
+                   antecedents, online proof serialization, and SAT-trail-driven matching remain open",
+        reference: "ADR-0119",
+    },
+    Capability {
+        area: "quantifiers",
+        feature: "scoped SAT-candidate equality guidance for nested e-matching",
+        assurance: Assurance::Checked,
+        evidence: "when ordinary source matching reaches a fixpoint, true equality atoms from the \
+                   retained SAT candidate are merged only inside one matching-e-graph scope. Existing \
+                   exact declaration/argument paths queue affected top applications and a reverse \
+                   pattern-to-quantifier index joins only impacted quantifiers. Concrete binding \
+                   tuples are materialized before pop; candidate equalities never enter explanation \
+                   maps, detached-literal reasons, evidence, or another branch. Only complete exact \
+                   source instances leave the scope, are independently rechecked, and enter ADR-0119's \
+                   retained clause gate; product UNSAT still requires ordinary QF replay. A nested-\
+                   trigger target moves Unknown to UNSAT and improves optimized median time from 0.573 \
+                   to 0.148 ms (3.87x). A 64-pattern target scans 1 pattern/application, agrees with \
+                   full matching, and improves median 5.478 to 4.329 ms (1.27x). Equality/work caps \
+                   decline safely. High-frequency assignment callbacks, non-equality antecedents, and \
+                   online proof serialization remain open",
+        reference: "ADR-0120",
+    },
+    Capability {
+        area: "quantifiers",
+        feature: "shared incremental e-matching session with interned trigger patterns and batched \
+                  graph indexes",
+        assurance: Assurance::SoundIncomplete,
+        evidence: "one quantified refutation attempt infers and translates every trigger once, \
+                   interns structurally identical patterns, incrementally registers only appended \
+                   ground assertions/equalities in one retained e-graph, and executes all unique \
+                   patterns against one round-local class/application index. Public one-shot witness \
+                   APIs remain complete, and only genuine full source instances reach the QF replay \
+                   gate. A 32-quantifier/256-term target returns the identical 8,192 tuples and \
+                   improves median optimized matching 17.477 to 0.974 ms (17.9x); the 54-row \
+                   quantified-BV division is decision-identical. Bytecode, inverted parent paths, \
+                   relevance/generation filters, and direct on-merge delta propagation remain open",
+        reference: "ADR-0111",
+    },
+    Capability {
+        area: "quantifiers",
+        feature: "revision-checked persistent e-match indexes and root-symbol candidate queues",
+        assurance: Assurance::SoundIncomplete,
+        evidence: "add-only e-graph growth extends retained class/application indexes from the new \
+                   node suffix and dirties only patterns whose root declaration gained an \
+                   application. Real merges and scope rollback revision-invalidate root-keyed \
+                   indexes; quantifier sessions conservatively rematch every pattern after a merge. \
+                   Fresh/indexed matching is exact across growth, nested congruence, and rollback. \
+                   A 64-root/4,096-term target returns identical complete tuples while executing 1 \
+                   instead of 64 patterns and improves optimized median second-round matching from \
+                   2.555 to 0.311 ms (8.2x). Public quantified-BV/LIA decisions and replay are \
+                   unchanged. ADR-0113 adds selective on-merge inverted paths; exact path-shape and \
+                   relevance/generation filters remain open",
+        reference: "ADR-0112",
+    },
+    Capability {
+        area: "quantifiers",
+        feature: "merge-incremental e-match indexes and inverted-parent trigger queues",
+        assurance: Assurance::SoundIncomplete,
+        evidence: "every real e-class union, including congruence cascades, enters a deterministic \
+                   journal consumed by retained matching indexes without a graph rebuild. Raw \
+                   applications remain operator-indexed and are canonicalized only for selected \
+                   roots. Quantifier sessions walk transitive e-class parent links from changed \
+                   equality endpoints and rematch only reached trigger declarations; cached and \
+                   multi-pattern substitutions join through current roots. Matching preserves \
+                   distinct substitutions from explicitly equal applications with unequal \
+                   arguments. Direct, nested, repeated-variable, ground-subpattern, add-plus-merge, \
+                   recursive-cycle, rollback, and full-rematch parity gates pass. A 64-root/4,096-\
+                   term complete-round target executes 1 instead of 64 patterns and improves \
+                   optimized median merge-round time from 2.231 to 0.151 ms (14.8x). Public \
+                   quantified-BV/LIA decisions and replay are unchanged. ADR-0114 adds exact \
+                   declaration/argument path tries; class-label and relevance/generation filters \
+                   remain open",
+        reference: "ADR-0113",
+    },
+    Capability {
+        area: "quantifiers",
+        feature: "compiled shared e-match parent-path tries",
+        assurance: Assurance::SoundIncomplete,
+        evidence: "every interned pattern occurrence contributes its outward (parent declaration, \
+                   argument index) path to one deterministic flat trie with shared prefixes and \
+                   deduplicated terminals. Merge lookup pairs e-class roots with trie states and \
+                   follows only compatible parent arguments, remaining cycle-safe while selecting \
+                   exact path terminals. Add-node root queues and current-root cached joins remain \
+                   unchanged. Direct/nested/repeated/ground/add-plus-merge/equal-application parity, \
+                   divergent declarations and argument positions, duplicate paths, multiple starts, \
+                   cycles, and declaration/full-rematch comparisons pass. A 64-pattern/4,096-term \
+                   target with one shared trigger root executes 1 rather than 64 patterns and \
+                   improves optimized median complete-round time from 12.777 to 0.386 ms (33.1x). \
+                   Public quantified-BV/LIA decisions and replay are unchanged. ADR-0115 adds \
+                   exact class-label and nullary ground-argument filters; relevance and generation \
+                   filters remain open",
+        reference: "ADR-0114",
+    },
+    Capability {
+        area: "quantifiers",
+        feature: "exact e-class label and nullary ground-argument path filters",
+        assurance: Assurance::SoundIncomplete,
+        evidence: "e-class roots retain backtrackable sorted declaration sets. Path terminals \
+                   require the changed start class to contain a non-variable occurrence's top \
+                   declaration, while transitions may require a candidate parent's direct nullary \
+                   ground sibling class to contain that constant declaration. Compound ground \
+                   siblings remain deliberately unfiltered. Unfiltered, class-only, ground-only, \
+                   and combined modes return identical complete tuples. On 64 same-shape patterns \
+                   over 4,096 applications, the filters reduce reached terminals from 64 to 8, 8, \
+                   and 1 respectively; optimized medians are 13.453, 2.314, 1.991, and 0.404 ms, \
+                   making the combined route 33.3x faster than unfiltered lookup. Public \
+                   quantified-BV/LIA decisions, replay, and evidence APIs are unchanged. Relevance \
+                   and generation-cost scheduling remain open; ADR-0116 adds exact top-application \
+                   delta queues",
+        reference: "ADR-0115",
+    },
+    Capability {
+        area: "quantifiers",
+        feature: "generation-delta top-application e-match queues",
+        assurance: Assurance::SoundIncomplete,
+        evidence: "initial matching scans complete root-declaration application sets, then \
+                   retained sessions append matches only from newly created or filtered \
+                   merge-reached top applications. Candidate-restricted matching uses the same \
+                   recursive class matcher; prior substitutions remain valid under monotonic \
+                   unions and joins canonicalize current roots. Every bridge term is active-source \
+                   relevant by construction, so a separate relevance bit would currently filter \
+                   nothing. On one affected pattern over 4,096 outer applications, full and delta \
+                   routes return identical tuples while scanning 4,096 and 1 top applications; \
+                   optimized medians improve from 0.370 to 0.122 ms (3.03x). Public quantified-BV/\
+                   LIA decisions, replay, and evidence APIs are unchanged. Generation-cost \
+                   scheduling remains separate",
+        reference: "ADR-0116",
+    },
+    Capability {
+        area: "quantifiers",
+        feature: "evaluator-replayed scalar counterexamples for closed quantifier-free universals",
+        assurance: Assurance::Checked,
+        evidence: "untrusted search replaces the universal binders with fresh constants and solves \
+                   the negated body, but the certificate carries only original binder IDs and typed \
+                   values. The independent checker rejects open/nested/UF/non-scalar forms and \
+                   evaluates the untouched original body, accepting only Bool(false). This upgrades \
+                   ARI176e1 and issue5279-nqe from bare UNSAT; ADR-0102 additionally reconstructs \
+                   both by genuine dependent-product elimination over the Int/Bool preludes and \
+                   kernel-checked integer normalization, with no theorem-specific refuter axiom. \
+                   The quantified-LIA audit is checked/certified 11/11, Lean-checked 7/7 UNSAT, and \
+                   has eleven dominant candidates with empty trust ledgers and DISAGREE=0. Open \
+                   formulas, general QE, function counterexamples, and broader Lean reconstruction \
+                   remain open",
+        reference: "ADR-0100/0102",
+    },
+    Capability {
+        area: "quantifiers",
+        feature: "checked finite equality partitions for closed nested Bool/Int quantifiers",
+        assurance: Assurance::Checked,
+        evidence: "each Int binder is admitted only when every occurrence is a direct equality \
+                   against an explicit constant; those constants plus one deterministic other value \
+                   are a complete behavioral quotient. Search expands in a clone, while the checker \
+                   independently recursively evaluates the untouched original formula under a hard \
+                   representative-case cap. ADR-0106 reconstructs the one-literal-per-Int-binder \
+                   subclass with genuine Bool/Int quantifiers, Bool.rec, and explicit integer \
+                   equality decidability; finite evaluation guides proof search but is not admitted. \
+                   This certifies and Lean-checks cbqi-sdlx-fixpoint-3-dd. The current quantified-LIA \
+                   audit is 11/12 decided, checked/certified 11/11, Lean-checked 7/7 UNSAT, with \
+                   eleven dominant candidates, DISAGREE=0, and zero trust holes. Multi-constant \
+                   partitions, affine uses, free symbols, and all three large mixed-binder ITE rows \
+                   remain outside this equality-partition route; ADR-0107 separately decides the \
+                   two SAT rows",
+        reference: "ADR-0101/0106",
+    },
+    Capability {
+        area: "quantifiers",
+        feature: "checked targeted Presburger CEGQI UNSAT: exact Euclidean-residue and \
+                  positive-slope piecewise affine-growth universals",
+        assurance: Assurance::Checked,
+        evidence: "search only proposes genuine universal instances and requires an ordinary QF \
+                   refutation; separate original-IR checkers re-match the complete theorem and \
+                   compare typed certificates without calling search or the broad solver. \
+                   Euclidean div/mod witnesses certify clock-3/clock-10; two consecutive \
+                   div-derived affine-growth witnesses certify repair-const-nterm. ADR-0104 adds \
+                   one explicit standard Euclidean-decomposition theorem to the trusted Int prelude, \
+                   then eliminates its existential witnesses to reconstruct both clock rows without \
+                   div/mod proof operations or query-specific axioms. The quantified-LIA audit is \
+                   checked/certified 11/11, Lean-checked 7/7 UNSAT, and has eleven dominant candidates \
+                   with DISAGREE=0 and no trust holes. ADR-0105 reconstructs the full checked \
+                   affine-growth class constructively through guarded exact ite semantics, two \
+                   consecutive instances, and positive-slope monotonicity, adding no new axiom. \
+                   Broad arithmetic CEGQI remains",
+        reference: "ADR-0095/0097/0104/0105",
+    },
+    Capability {
+        area: "quantifiers",
+        feature: "checked nested-XOR integer universal refutation by hierarchical instantiation",
+        assurance: Assurance::Checked,
+        evidence: "untrusted search instantiates two outer pivots, uses the resulting false XOR \
+                   operand to expose one positive nested universal, and proposes one off-pivot \
+                   ground instance; the QF solver must refute it. A separate original-IR checker \
+                   re-matches the exact two-outer/one-inner Int theorem with distinct constant \
+                   selector branches. This certifies issue4433-nqe; the current quantified-LIA \
+                   audit is 12/12 decided and checked/certified 12/12, with DISAGREE=0 and no \
+                   incomplete rows. \
+                   ADR-0103 rechecks that certificate and reconstructs the complete signed/swapped \
+                   class through three genuine universal applications, kernel-checked Iff/XOR \
+                   reasoning, and integer normalization. With ADR-0104's separate residue route, the \
+                   current audit is Lean-checked 8/8 UNSAT with twelve dominant candidates. General \
+                   polarity-aware nested QE/QSAT remains open",
+        reference: "ADR-0099/0103",
+    },
+    Capability {
+        area: "quantifiers",
+        feature: "checked affine and reflexive scalar Skolem SAT witnesses: deterministic typed \
+                  certificates in Model, with canonical original-assertion replay for prenex \
+                  `forall* exists`, exact BV identities, and one positive-`or` guarded unit-gap schema",
+        assurance: Assurance::Checked,
+        evidence: "witness search is untrusted; certificates own an arena-stable affine recipe over \
+                   validated original-arena atoms. `check_model` independently re-matches binder \
+                   IDs/sorts and witness vocabulary, materializes only in a private clone, and accepts \
+                   Boolean affine/reflexive tautologies (ADR-0096), the exact guarded unit-gap theorem \
+                   (ADR-0098), or one same-width BV universal variable with coefficient one and zero \
+                   offset (ADR-0121). BV replay recognizes only reflexive `bvsle`/`bvule` (plus equality); \
+                   modular affine recipes and composite witnesses decline. `issue4328-nqe` moves the \
+                   public quantified-BV slice to 30 SAT / 9 UNSAT / 4 unknown / 11 unsupported, with \
+                   zero errors, disagreement, or replay failures. Its evidence is independently checked, \
+                   has no trust holes, and is a dominant candidate. Piecewise/general Skolem functions \
+                   remain open",
+        reference: "ADR-0096/0098/0121",
+    },
+    Capability {
+        area: "quantifiers",
+        feature: "checked vacuous BV equality-guard models below direct Bool/BV alternation",
+        assurance: Assurance::Checked,
+        evidence: "untrusted search proposes an exact-width witness for one outer BV existential. \
+                   A separate original-IR checker requires a direct nonempty unique Bool/BV quantifier \
+                   prefix, a root implication, and an antecedent equating that exact outer binder to \
+                   one same-width constant; SAT is credited only when the witness differs from the \
+                   constant. The consequent remains opaque because the false antecedent proves the \
+                   implication for every nested assignment. `issue5365-nqe` moves the public \
+                   quantified-BV slice to 31 SAT / 9 UNSAT / 3 unknown / 11 unsupported with 40/40 \
+                   decisions evidence-certified and checked, no trust holes on the target, and zero \
+                   disagreement, error, or replay failure. General free-BV models and QE/QSAT remain open",
+        reference: "ADR-0122",
+    },
+    Capability {
+        area: "quantifiers",
+        feature: "checked free-Boolean models for positive universal Bool/Int assertions and \
+                  Boolean-discharged opaque BV closures",
+        assurance: Assurance::Checked,
+        evidence: "untrusted search erases quantifiers to propose a complete free-Boolean model. \
+                   The independent checker retains untouched original assertions, exhaustively \
+                   handles bound Booleans or drops only positive universal binders, substitutes the \
+                   carried original-symbol values, exactly lifts integer ite, and requires a \
+                   source-bound LIA-DPLL refutation of the negated closure. Arithmetic cores are \
+                   rechecked exactly; large propositional closures carry source-matched DIMACS/DRAT. \
+                   Concrete counterexamples generalize only search blocking cubes and cannot grant \
+                   SAT. This replay-checks 015-psyco-pp and psyco-196, moving quantified LIA to \
+                   11/12 with checked/certified and dominant 11/11, DISAGREE=0, and no trust holes. \
+                   ADR-0123 additionally admits Bool/Int/BV syntax but keeps every non-reflexive BV \
+                   predicate opaque; only a decisive carried Boolean branch can prove the original \
+                   closure true, and unresolved BV closures decline before the LIA fallback. This \
+                   recovers `model_6_1_bv`, moving quantified BV to 32 SAT / 9 UNSAT / 2 unknown / \
+                   11 unsupported with 41/41 checked/certified decisions and zero disagreement, \
+                   error, or replay failure. Negative quantifier contexts, relevant free BV values, \
+                   functions, and general QSAT remain outside the route",
+        reference: "ADR-0107/0123",
+    },
+    Capability {
+        area: "quantifiers",
+        feature: "source-bound counterexamples for closed Bool/BV `forall+ exists+` alternation",
+        assurance: Assurance::Checked,
+        evidence: "untrusted search solves an outer-only implication antecedent and deterministic \
+                   one-binder perturbations. A certificate is admitted only when the independent \
+                   checker validates one closed unique Bool/BV `forall+ exists+` prefix, substitutes \
+                   every carried outer value into the exact source matrix, deterministically freshens \
+                   the existential binders, regenerates the residual QF_BV CNF, and rechecks its \
+                   source-bound DRAT/LRAT proof. ADR-0125 scales only the total-binder cap from 128 to \
+                   1,024 while retaining the 4,096-node matrix cap. `small-pipeline-fixpoint-3` and \
+                   `bug802` move unknown to certified UNSAT in medians 63.692 and 19.804 ms. The public \
+                   quantified-BV slice is 32 SAT / 11 UNSAT / 0 unknown / 11 unsupported with 43/43 \
+                   checked/certified decisions, zero disagreement, error, or replay failure, and empty \
+                   target trust ledgers. The direct-Z3 alternation matrices cover 80 cases, including \
+                   16 controls whose 160 outer binders exceed ADR-0124's original cap. The QF_BV \
+                   term-to-CNF reduction keeps its established explicit trust boundary; general QSAT, \
+                   open formulas, functions, arrays, arithmetic, and Lean reconstruction remain open",
+        reference: "ADR-0124/0125",
+    },
+    Capability {
+        area: "quantifiers",
+        feature: "evaluator-replayed witnesses for closed Bool/BV negated existentials",
+        assurance: Assurance::Checked,
+        evidence: "untrusted search freshens one exact top-level `not (exists+ body)` and solves \
+                   the positive QF body. A separate checker admits at most 128 unique Bool/BV \
+                   binders and a 4,096-node closed quantifier-free Bool/BV body, validates complete \
+                   binding IDs/order/sorts, and evaluates the untouched original body directly; only \
+                   `Bool(true)` certifies that the negated assertion is false. `NUM878`, `ari-syqi`, \
+                   and `ari118-bv-2occ-x` move unsupported to certified UNSAT in median 3/0/3 ms. \
+                   The public quantified-BV slice is 32 SAT / 17 UNSAT / 0 unknown / 5 unsupported \
+                   with 49/49 checked/certified decisions, zero disagreement, error, or replay failure, \
+                   and empty target trust ledgers. The complete direct-Z3 suite covers 1,400 cases and \
+                   controls. Open bodies, functions, arrays, arithmetic binders, nested quantifiers, \
+                   broader QSAT, and Lean reconstruction remain open",
+        reference: "ADR-0126",
+    },
+    Capability {
+        area: "quantifiers",
+        feature: "source-bound conjunctive Bool/BV universal instances",
+        assurance: Assurance::Checked,
+        evidence: "untrusted search tries defaults and deterministic same-sort source constants \
+                   for one unique universal reached only through top-level conjunction nodes. The \
+                   checker validates the source path, unique prefix, complete typed bindings, exact \
+                   substitution, 128-binder/4,096-node caps, and the DRAT/LRAT proof regenerated for \
+                   the entire weakened QF_BV source assertion. `cond-var-elim-binary` moves unsupported \
+                   to checked UNSAT in median 0.364 ms. The public quantified-BV slice is 32 SAT / \
+                   17 UNSAT / 0 unknown / 5 unsupported with 49/49 checked/certified decisions, zero \
+                   disagreement, error, or replay failure, and an empty target trust ledger. The \
+                   complete direct-Z3 suite covers 1,464 cases and controls. Non-conjunctive contexts, \
+                   multiple selected universals, nested quantifiers, functions, arrays, arithmetic, \
+                   general QSAT, and Lean reconstruction remain open",
+        reference: "ADR-0127",
+    },
+    Capability {
+        area: "quantifiers",
+        feature: "checked finite counterexample covers for positive universal Bool/Int UNSAT",
+        assurance: Assurance::Checked,
+        evidence: "untrusted search weakens positive universals to a ground Boolean skeleton, then \
+                   generalizes concrete falsifying bound models to sufficient free-Boolean cubes. \
+                   The independent checker regenerates every exact source instance from the original \
+                   assertion and binder values, source-bound-refutes cube plus instance through \
+                   LIA-DPLL/DRAT, and separately refutes the weakened skeleton plus every cube block. \
+                   Certificates are bounded to 256 cases, 128 binders per case, 64 free Booleans, and \
+                   one shared deadline; malformed, duplicate, incomplete, or tampered covers decline. \
+                   The first Lean slice flattens original conjunctions, retains one genuine positive \
+                   universal, applies each carried witness tuple, and closes a bounded excluded-middle \
+                   tree with signed Boolean and normalized integer proofs. This decides 006-cbqi-ite \
+                   and moves quantified LIA to 12/12 decided, certified, rechecked, and dominant, with \
+                   Lean 8/8 UNSAT, DISAGREE=0, and no trust holes. ADR-0109 renders computational Bool \
+                   as a real Lean inductive and deterministically hoists only repeated closed proof-DAG \
+                   nodes; the target module shrinks from 151,845,067 to 2,682,977 bytes and reconstruction \
+                   from 17.74 to 10.75 seconds without changing verdict or trust. Open-context sharing, \
+                   general projection, alternation, functions, and multiple independent universal \
+                   conjuncts remain open",
+        reference: "ADR-0108/0109",
+    },
+    Capability {
+        area: "quantifiers",
         feature: "model-based projection for LRA (mbp_lra): model-guided existential elimination of \
                   one real variable (Loos–Weispfenning) — the QE primitive Spacer/PDR uses for \
                   predecessor generalization",

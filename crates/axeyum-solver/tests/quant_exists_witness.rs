@@ -9,7 +9,7 @@
 use std::time::Duration;
 
 use axeyum_ir::{Sort, TermArena, TermId};
-use axeyum_solver::{CheckResult, SolverConfig, solve};
+use axeyum_solver::{CheckResult, SolverConfig, check_model, solve};
 
 fn config() -> SolverConfig {
     // A tight timeout so any accidental non-termination surfaces as a test hang
@@ -19,6 +19,16 @@ fn config() -> SolverConfig {
 
 fn decide(arena: &mut TermArena, assertions: &[TermId]) -> CheckResult {
     solve(arena, assertions, &config()).expect("query decides without error")
+}
+
+fn assert_sat_replays(arena: &mut TermArena, assertion: TermId, message: &str) {
+    let CheckResult::Sat(model) = decide(arena, &[assertion]) else {
+        panic!("{message}");
+    };
+    assert!(
+        check_model(arena, &[assertion], &model).expect("quantified model check"),
+        "returned quantified Sat must replay through its Skolem certificate"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -36,9 +46,10 @@ fn forall_exists_int_strictly_greater_is_sat() {
     let gt = arena.int_gt(zv, xv).unwrap();
     let exists = arena.exists(z, gt).unwrap();
     let all = arena.forall(x, exists).unwrap();
-    assert!(
-        matches!(decide(&mut arena, &[all]), CheckResult::Sat(_)),
-        "∀x:Int.∃z:Int. z>x must be Sat (witness x+1)"
+    assert_sat_replays(
+        &mut arena,
+        all,
+        "forall x:Int. exists z:Int. z>x must be Sat (witness x+1)",
     );
 }
 
@@ -55,9 +66,10 @@ fn forall_exists_int_equality_successor_is_sat() {
     let eq = arena.eq(zv, xp1).unwrap();
     let exists = arena.exists(z, eq).unwrap();
     let all = arena.forall(x, exists).unwrap();
-    assert!(
-        matches!(decide(&mut arena, &[all]), CheckResult::Sat(_)),
-        "∀x:Int.∃z:Int. z=x+1 must be Sat"
+    assert_sat_replays(
+        &mut arena,
+        all,
+        "forall x:Int. exists z:Int. z=x+1 must be Sat",
     );
 }
 
@@ -72,9 +84,10 @@ fn forall_exists_real_strictly_greater_is_sat() {
     let gt = arena.real_gt(zv, xv).unwrap();
     let exists = arena.exists(z, gt).unwrap();
     let all = arena.forall(x, exists).unwrap();
-    assert!(
-        matches!(decide(&mut arena, &[all]), CheckResult::Sat(_)),
-        "∀x:Real.∃z:Real. z>x must be Sat (witness x+1)"
+    assert_sat_replays(
+        &mut arena,
+        all,
+        "forall x:Real. exists z:Real. z>x must be Sat (witness x+1)",
     );
 }
 
@@ -91,9 +104,10 @@ fn forall_exists_int_two_sided_pinned_is_sat() {
     let body = arena.and(ge, le).unwrap();
     let exists = arena.exists(z, body).unwrap();
     let all = arena.forall(x, exists).unwrap();
-    assert!(
-        matches!(decide(&mut arena, &[all]), CheckResult::Sat(_)),
-        "∀x:Int.∃z:Int. z>=x ∧ z<=x must be Sat (witness x)"
+    assert_sat_replays(
+        &mut arena,
+        all,
+        "forall x:Int. exists z:Int. z>=x and z<=x must be Sat (witness x)",
     );
 }
 
@@ -112,9 +126,44 @@ fn forall_exists_int_lower_bound_on_parameter_sum_is_sat() {
     let exists = arena.exists(z, gt).unwrap();
     let inner = arena.forall(y, exists).unwrap();
     let all = arena.forall(x, inner).unwrap();
-    assert!(
-        matches!(decide(&mut arena, &[all]), CheckResult::Sat(_)),
-        "∀x,y:Int.∃z:Int. z>x+y must be Sat"
+    assert_sat_replays(
+        &mut arena,
+        all,
+        "forall x,y:Int. exists z:Int. z>x+y must be Sat",
+    );
+}
+
+#[test]
+fn forall_exists_bv_signed_identity_is_sat() {
+    let mut arena = TermArena::new();
+    let a = arena.declare("a", Sort::BitVec(32)).unwrap();
+    let b = arena.declare("b", Sort::BitVec(32)).unwrap();
+    let av = arena.var(a);
+    let bv = arena.var(b);
+    let body = arena.bv_sle(av, bv).unwrap();
+    let exists = arena.exists(b, body).unwrap();
+    let theorem = arena.forall(a, exists).unwrap();
+    assert_sat_replays(
+        &mut arena,
+        theorem,
+        "forall a:BV32. exists b:BV32. bvsle a b must be Sat by b:=a",
+    );
+}
+
+#[test]
+fn forall_exists_bv_unsigned_identity_is_sat() {
+    let mut arena = TermArena::new();
+    let a = arena.declare("a", Sort::BitVec(16)).unwrap();
+    let b = arena.declare("b", Sort::BitVec(16)).unwrap();
+    let av = arena.var(a);
+    let bv = arena.var(b);
+    let body = arena.bv_ule(av, bv).unwrap();
+    let exists = arena.exists(b, body).unwrap();
+    let theorem = arena.forall(a, exists).unwrap();
+    assert_sat_replays(
+        &mut arena,
+        theorem,
+        "forall a:BV16. exists b:BV16. bvule a b must be Sat by b:=a",
     );
 }
 
@@ -189,6 +238,39 @@ fn forall_exists_nonunit_coefficient_declines_no_wrong_sat() {
     assert!(
         !matches!(decide(&mut arena, &[all]), CheckResult::Unsat),
         "∀x:Int.∃z:Int. 2z>x must never be decided Unsat (it is satisfiable)"
+    );
+}
+
+#[test]
+fn forall_exists_bv_strict_identity_is_not_sat() {
+    let mut arena = TermArena::new();
+    let a = arena.declare("a", Sort::BitVec(8)).unwrap();
+    let b = arena.declare("b", Sort::BitVec(8)).unwrap();
+    let av = arena.var(a);
+    let bv = arena.var(b);
+    let body = arena.bv_slt(av, bv).unwrap();
+    let exists = arena.exists(b, body).unwrap();
+    let theorem = arena.forall(a, exists).unwrap();
+    assert!(
+        !matches!(decide(&mut arena, &[theorem]), CheckResult::Sat(_)),
+        "strict signed order has a maximum element and must not receive identity Sat credit"
+    );
+}
+
+#[test]
+fn forall_exists_bv_nonreflexive_identity_declines_soundly() {
+    let mut arena = TermArena::new();
+    let a = arena.declare("a", Sort::BitVec(8)).unwrap();
+    let b = arena.declare("b", Sort::BitVec(8)).unwrap();
+    let av = arena.var(a);
+    let bv = arena.var(b);
+    let not_a = arena.bv_not(av).unwrap();
+    let body = arena.bv_sle(not_a, bv).unwrap();
+    let exists = arena.exists(b, body).unwrap();
+    let theorem = arena.forall(a, exists).unwrap();
+    assert!(
+        !matches!(decide(&mut arena, &[theorem]), CheckResult::Unsat),
+        "the nonreflexive theorem is satisfiable and must never be refuted"
     );
 }
 
