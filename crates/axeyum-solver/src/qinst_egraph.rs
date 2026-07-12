@@ -56,6 +56,11 @@ const MAX_INSTANTIATION_ROUNDS: usize = 8;
 /// many ground terms even with no wall-clock budget (the "never hang" rule).
 const MAX_GROUND_TERMS: usize = 8192;
 
+/// Internal tuple-join cap per retained matching round. This prevents a
+/// multi-pattern Cartesian product from allocating beyond the solver's own
+/// accumulated-ground budget. The public one-shot witness API remains complete.
+const MAX_JOINED_SUBSTITUTIONS_PER_ROUND: usize = MAX_GROUND_TERMS;
+
 /// Deterministic retained-CDCL(T) admission caps (ADR-0119). Exceeding one
 /// disables only the accelerator; the established fresh-QF route remains live.
 const ONLINE_QUANTIFIER_LIMITS: OnlineQuantifierLimits = OnlineQuantifierLimits {
@@ -460,6 +465,9 @@ fn admit_generated_ground(
 ) -> Vec<TermId> {
     let mut added = Vec::new();
     for term in terms {
+        if ground.len() >= MAX_GROUND_TERMS {
+            break;
+        }
         let Some(derivation) = candidates.get(&term) else {
             continue;
         };
@@ -1859,19 +1867,21 @@ impl IncrementalEmatchSession {
                 }
             }
         }
-        let tuple_batches: Vec<(usize, Option<Vec<Vec<TermId>>>)> = impacted_quantifiers
-            .into_iter()
-            .map(|index| {
-                (
-                    index,
-                    self.witness_tuples_with_overrides(
-                        &self.quantifiers[index],
-                        &self.pattern_matches,
-                        Some(&scoped_matches),
-                    ),
-                )
-            })
-            .collect();
+        let mut remaining = MAX_JOINED_SUBSTITUTIONS_PER_ROUND;
+        let mut tuple_batches = Vec::with_capacity(impacted_quantifiers.len());
+        for index in impacted_quantifiers {
+            let joined = self.witness_tuples_with_overrides(
+                &self.quantifiers[index],
+                &self.pattern_matches,
+                Some(&scoped_matches),
+                remaining,
+            );
+            let tuples = joined.map(|(tuples, consumed)| {
+                remaining = remaining.saturating_sub(consumed);
+                tuples
+            });
+            tuple_batches.push((index, tuples));
+        }
         self.bridge.egraph.pop();
         Some(ScopedCandidateBatch {
             batch: self.materialize_candidate_instances(arena, tuple_batches),
@@ -2179,18 +2189,37 @@ impl IncrementalEmatchSession {
             self.candidate_applications_scanned += candidates.iter().map(Vec::len).sum::<usize>();
         }
         self.match_rounds += 1;
-        self.quantifiers
-            .iter()
-            .map(|quantifier| self.witness_tuples(quantifier, &self.pattern_matches))
-            .collect()
+        let mut remaining = MAX_JOINED_SUBSTITUTIONS_PER_ROUND;
+        let mut batches = Vec::with_capacity(self.quantifiers.len());
+        for quantifier in &self.quantifiers {
+            let joined = self.witness_tuples_with_overrides(
+                quantifier,
+                &self.pattern_matches,
+                None,
+                remaining,
+            );
+            let tuples = joined.map(|(tuples, consumed)| {
+                remaining = remaining.saturating_sub(consumed);
+                tuples
+            });
+            batches.push(tuples);
+        }
+        batches
     }
 
+    #[cfg(test)]
     fn witness_tuples(
         &self,
         quantifier: &CompiledUniversal,
         pattern_matches: &[Vec<Vec<Option<ENodeId>>>],
     ) -> Option<Vec<Vec<TermId>>> {
-        self.witness_tuples_with_overrides(quantifier, pattern_matches, None)
+        self.witness_tuples_with_overrides(
+            quantifier,
+            pattern_matches,
+            None,
+            MAX_JOINED_SUBSTITUTIONS_PER_ROUND,
+        )
+        .map(|(tuples, _)| tuples)
     }
 
     fn witness_tuples_with_overrides(
@@ -2198,12 +2227,14 @@ impl IncrementalEmatchSession {
         quantifier: &CompiledUniversal,
         pattern_matches: &[Vec<Substitution>],
         overrides: Option<&BTreeMap<usize, Vec<Substitution>>>,
-    ) -> Option<Vec<Vec<TermId>>> {
-        if quantifier.vars.is_empty() || quantifier.pattern_indices.is_empty() {
+        join_budget: usize,
+    ) -> Option<(Vec<Vec<TermId>>, usize)> {
+        if join_budget == 0 || quantifier.vars.is_empty() || quantifier.pattern_indices.is_empty() {
             return None;
         }
         let nvars = quantifier.vars.len();
         let mut joined: Vec<Vec<Option<ENodeId>>> = vec![vec![None; nvars]];
+        let mut remaining = join_budget;
         for &pattern_index in &quantifier.pattern_indices {
             let matches = overrides
                 .and_then(|matches| matches.get(&pattern_index))
@@ -2214,6 +2245,8 @@ impl IncrementalEmatchSession {
                     if let Some(merged) =
                         merge_substitutions_modulo(&self.bridge.egraph, partial, matched)
                     {
+                        let updated = remaining.checked_sub(1)?;
+                        remaining = updated;
                         next.push(merged);
                     }
                 }
@@ -2251,7 +2284,7 @@ impl IncrementalEmatchSession {
                 .cmp(right.iter().map(|term| term.index()))
         });
         tuples.dedup();
-        Some(tuples)
+        Some((tuples, join_budget - remaining))
     }
 
     /// Conservative equality lookup over terms already registered from the
@@ -4004,6 +4037,23 @@ mod tests {
             legacy_elapsed.as_micros(),
             shared_elapsed.as_micros()
         );
+    }
+
+    #[test]
+    fn internal_session_declines_tuple_join_above_ground_budget() {
+        let matches = MAX_JOINED_SUBSTITUTIONS_PER_ROUND + 1;
+        let (mut arena, ground, foralls) = shared_match_stress(matches, 1);
+        assert_eq!(
+            witness_tuples_via_egraph(&mut arena, &ground, foralls[0])
+                .expect("the public complete matcher must still return its witnesses")
+                .2
+                .len(),
+            matches
+        );
+
+        let mut session = IncrementalEmatchSession::new(&mut arena, &foralls);
+        session.extend_ground(&arena, &ground);
+        assert_eq!(session.match_witness_tuples(), vec![None]);
     }
 
     #[test]

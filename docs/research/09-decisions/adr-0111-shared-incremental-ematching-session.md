@@ -41,13 +41,17 @@ The session:
    unique compiled pattern against it;
 6. joins cached per-pattern substitutions for each quantifier and retains the
    existing deterministic source-term tuple order; and
-7. feeds ADR-0110's classifier exactly the same complete instantiated bodies.
+7. bounds solver-internal substitution-join work to 8,192 successful merges per
+   round across all quantifiers, declining over-budget quantifiers before
+   instance materialization; and
+8. feeds ADR-0110's classifier the admitted complete instantiated bodies.
 
 The public `witness_tuples_via_egraph` and
 `instantiate_forall_via_egraph` remain complete one-shot APIs for evidence and
-external callers. The session is search-only and internal. `Unsat` still
-requires a QF refutation of original ground assertions plus genuine complete
-universal instances.
+external callers; the 8,192-tuple cap applies only to the search-only internal
+session. `Unsat` still requires a QF refutation of original ground assertions
+plus genuine complete universal instances. An over-budget join therefore loses
+only search completeness and eventually returns `unknown`.
 
 This is T2.6.1's shared-state/compiler slice, not the full MAM exit. The recursive
 pattern representation remains the first compiled form, and each propagation
@@ -91,6 +95,10 @@ remain follow-ups whose value must be measured against this baseline.
 
 - The solver loop gains retained, monotone search state without exposing it as a
   public solver lifetime or weakening replay.
+- Solver-internal multi-pattern joins cannot allocate an unbounded Cartesian
+  product before the accumulated-ground cap is observed. Every successful
+  intermediate substitution merge, including duplicates later removed, charges
+  the deterministic shared budget; the first over-budget merge declines.
 - Shared pattern interning provides the first code-tree analogue and a natural
   insertion point for later bytecode compilation.
 - A round-local index is invalid after e-graph mutation by construction; the
@@ -107,6 +115,9 @@ remain follow-ups whose value must be measured against this baseline.
   session return exactly the same 8,192 ordered witness tuples; the session
   compiles one unique pattern, performs one ground extension, and executes one
   batched match round.
+- A complementary 8,193-match regression confirms that the public one-shot API
+  remains complete while the internal session declines before materializing an
+  over-budget round.
 - Five optimized repetitions measured one-shot matching at
   17.119/17.466/17.477/17.530/18.874 ms and shared matching at
   0.943/0.957/0.974/0.986/0.989 ms. Medians improve 17.477→0.974 ms, a 94.4%
