@@ -13,6 +13,8 @@
 //! and a large-coefficient shape that must decline without panicking. The
 //! cardinal rule holds throughout: never a wrong sat/unsat.
 
+use std::time::{Duration, Instant};
+
 use axeyum_ir::{Rational, Sort, SymbolId, TermArena, TermId, Value, eval};
 use axeyum_solver::{CheckResult, SolverConfig, solve};
 
@@ -237,18 +239,35 @@ fn sturm_overflow_declines_gracefully() {
     poly[0] = -((1i128 << 60) - 7);
     poly[20] = (1i128 << 55) + 3;
     poly[39] = (1i128 << 50) - 1;
+    let started = Instant::now();
     let (result, arena, assertion, xs) = {
         let r = poly_eq_zero(&poly);
         (r.0, r.1, r.2, r.3)
     };
+    assert!(
+        started.elapsed() < Duration::from_secs(5),
+        "oversized exact polynomial must decline before nonlinear abstraction"
+    );
     match result {
         CheckResult::Sat(model) => {
-            assert!(
-                replays(&arena, assertion, xs, model.get(xs)),
-                "any Sat must replay (soundness)",
-            );
+            let value = model.get(xs).expect("Sat model must bind x");
+            if let Value::RealAlgebraic(algebraic) = &value {
+                assert_eq!(
+                    algebraic.sign_at(&poly),
+                    Some(axeyum_ir::Sign::Zero),
+                    "algebraic Sat witness must be an exact root",
+                );
+            } else {
+                assert!(
+                    replays(&arena, assertion, xs, Some(value)),
+                    "rational Sat witness must replay",
+                );
+            }
         }
-        CheckResult::Unsat | CheckResult::Unknown(_) => { /* sound: no panic/OOM */ }
+        CheckResult::Unsat => {
+            panic!("odd-degree polynomial must have a real root; Unsat is unsound")
+        }
+        CheckResult::Unknown(_) => { /* expected bounded decline */ }
     }
 }
 

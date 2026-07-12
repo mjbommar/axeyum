@@ -1683,6 +1683,36 @@ fn collect_conjuncts_unguarded(
     collect_conjuncts_inner(arena, assertion, var, atoms, false)
 }
 
+/// Whether a structurally valid single-variable polynomial conjunction exceeds
+/// the coefficient budget of the exact root-isolation engine.
+///
+/// Callers use this only after [`decide_real_poly_constraint`] has exhausted its
+/// exact and bignum-anchor routes. Falling through to nonlinear abstraction for
+/// this shape defeats the coefficient guard and can spend unbounded time
+/// expanding a high-degree product tower. Structural/non-polynomial and
+/// genuinely multivariate queries return `false` and retain their existing
+/// fallbacks.
+pub(crate) fn single_var_poly_exceeds_coefficient_cap(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> bool {
+    let mut atoms = Vec::new();
+    let mut var = None;
+    if assertions.is_empty()
+        || assertions.iter().any(|&assertion| {
+            collect_conjuncts_unguarded(arena, assertion, &mut var, &mut atoms).is_none()
+        })
+        || atoms.is_empty()
+    {
+        return false;
+    }
+    atoms.iter().any(|atom| {
+        atom.poly
+            .iter()
+            .any(|coefficient| coefficient.checked_abs().is_none_or(|c| c >= MAX_ABS_COEFF))
+    })
+}
+
 fn collect_conjuncts_inner(
     arena: &TermArena,
     assertion: TermId,

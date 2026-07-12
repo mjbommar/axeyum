@@ -201,13 +201,25 @@ fn check_with_nra_impl(
     // auto-path runs *before* falling here; hooking it at the top of the NRA engine
     // means DIRECT `check_with_nra` callers (examples, downstream consumers) get the
     // same completeness instead of grinding the abstraction search to a timeout. It
-    // returns `None` (declines) on anything it cannot decide exactly, so it never
-    // weakens the search below or risks an unsound verdict.
-    if !nonlinear_products(arena, assertions).is_empty()
-        && let Some(result) =
+    // returns `None` (declines) on anything it cannot decide exactly. A recognized
+    // single-variable polynomial above the exact engine's coefficient cap is a
+    // terminal resource decline: sending that same term into nonlinear abstraction
+    // defeats the cap and can expand indefinitely. Other declined shapes retain the
+    // existing search below.
+    if !nonlinear_products(arena, assertions).is_empty() {
+        if let Some(result) =
             crate::nra_real_root::decide_real_poly_constraint(arena, assertions, deadline)?
-    {
-        return Ok(result);
+        {
+            return Ok(result);
+        }
+        if crate::nra_real_root::single_var_poly_exceeds_coefficient_cap(arena, assertions) {
+            return Ok(CheckResult::Unknown(UnknownReason {
+                kind: UnknownKind::ResourceLimit,
+                detail:
+                    "single-variable polynomial exceeds the exact root-isolation coefficient cap"
+                        .to_owned(),
+            }));
+        }
     }
 
     // The TRUE original assertions (with real division intact) — the replay target
