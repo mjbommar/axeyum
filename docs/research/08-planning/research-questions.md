@@ -257,6 +257,12 @@ Out of scope:
     rechecks its QF_BV DRAT/LRAT proof. This recovers
     `cond-var-elim-binary` without admitting non-conjunctive polarity contexts,
     multiple selected universals, functions, or general QSAT.
+    [ADR-0128](../09-decisions/adr-0128-checked-vacuous-existential-prefix-counterexamples.md)
+    adds a distinct closed-source UNSAT class: a checker proves a nonempty
+    leading Bool/BV existential block absent from the following closed
+    universal body, validates complete universal values, and directly evaluates
+    the untouched body to false. This recovers `issue2031-bv-var-elim` without
+    trusting prefix rewriting, inversion search, or general QSAT.
     Piecewise/general function interpretations, serialization, and Alethe/Lean
     reconstruction remain implementation tasks, not permission to return an
     unchecked empty model.

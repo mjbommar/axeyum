@@ -385,7 +385,10 @@ pub const SUPPORT_MATRIX: &[SupportRow] = &[
                are independently replayed. Large hardware tuples admit at most 1,024 total binders \
                while retaining the 4,096-node matrix cap (ADR-0124/0125). A unique positive universal \
                conjunct may carry a source-bound Bool/BV instance when the whole weakened assertion \
-               has a rechecked QF_BV proof (ADR-0127). Positive universal UNSAT with only free Booleans can carry a \
+               has a rechecked QF_BV proof (ADR-0127). A nonempty leading existential block may be \
+               erased only when a separate checker proves every existential binder absent from the \
+               closed Bool/BV universal body and directly evaluates a complete universal assignment \
+               to false under 128-binder/4,096-source-node caps (ADR-0128). Positive universal UNSAT with only free Booleans can carry a \
                checked finite counterexample cover: every concrete source instance excludes one \
                sufficient cube and the independently refuted weakened skeleton proves coverage. The \
                one-universal-conjunct slice reconstructs those covers through genuine quantifier \
@@ -394,7 +397,7 @@ pub const SUPPORT_MATRIX: &[SupportRow] = &[
                non-equality online antecedents, direct online proof serialization, high-frequency \
                assignment callbacks, negative quantifier contexts, broader alternation/functions, \
                general nested QE/QSAT, and broad proof reconstruction remain incomplete. \
-               ADR-0016/0032/0095/0096/0097/0098/0099/0100/0101/0107/0108/0109/0110/0111/0112/0113/0114/0115/0116/0117/0118/0119/0120/0121/0122/0123/0124/0125/0126/0127",
+               ADR-0016/0032/0095/0096/0097/0098/0099/0100/0101/0107/0108/0109/0110/0111/0112/0113/0114/0115/0116/0117/0118/0119/0120/0121/0122/0123/0124/0125/0126/0127/0128",
     },
     SupportRow {
         fragment: "datatypes (algebraic)",

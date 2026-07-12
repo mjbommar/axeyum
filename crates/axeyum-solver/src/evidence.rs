@@ -90,6 +90,7 @@ use crate::quant_finite_cert::{
 use crate::quant_negated_exists_cert::NegatedExistentialWitnessCertificate;
 use crate::quant_nested_xor_cert::IntNestedXorRefutationCertificate;
 use crate::quant_residue_cert::IntEuclideanResidueRefutationCertificate;
+use crate::quant_vacuous_exists_counterexample_cert::VacuousExistsUniversalCounterexampleCertificate;
 use crate::sat_bv_backend::SatBvBackend;
 use crate::set_cardinality::SetCardinalityRefutationCertificate;
 use crate::term_identity::TermIdentityRefutationCertificate;
@@ -324,6 +325,11 @@ pub enum Evidence {
     /// The checker evaluates that untouched body under the carried original
     /// binder values; search substitutions and the QF solver are not replayed.
     UnsatClosedUniversalCounterexample(ClosedUniversalCounterexampleCertificate),
+    /// Unsatisfiable because a leading nonempty existential block is
+    /// syntactically vacuous and one complete assignment falsifies the closed
+    /// Bool/BV universal body beneath it. The checker revalidates vacuity and
+    /// evaluates the untouched body under the carried universal values.
+    UnsatVacuousExistsUniversalCounterexample(VacuousExistsUniversalCounterexampleCertificate),
     /// Unsatisfiable because one original top-level negated existential has a
     /// concrete complete Bool/BV witness that makes its untouched body true.
     UnsatNegatedExistentialWitness(NegatedExistentialWitnessCertificate),
@@ -607,6 +613,9 @@ impl Evidence {
             Evidence::UnsatClosedUniversalCounterexample(_) => {
                 "unsat-closed-universal-counterexample"
             }
+            Evidence::UnsatVacuousExistsUniversalCounterexample(_) => {
+                "unsat-vacuous-exists-universal-counterexample"
+            }
             Evidence::UnsatNegatedExistentialWitness(_) => "unsat-negated-existential-witness",
             Evidence::UnsatBvAlternationCounterexample(_) => "unsat-bv-alternation-counterexample",
             Evidence::UnsatBvConjunctiveUniversalInstance(_) => {
@@ -785,6 +794,13 @@ impl Evidence {
                     certificate,
                 ),
             ),
+            Evidence::UnsatVacuousExistsUniversalCounterexample(certificate) => Ok(
+                crate::quant_vacuous_exists_counterexample_cert::check_vacuous_exists_universal_counterexample(
+                    arena,
+                    assertions,
+                    certificate,
+                ),
+            ),
             Evidence::UnsatBvConjunctiveUniversalInstance(certificate) => {
                 crate::quant_bv_conjunctive_cert::check_bv_conjunctive_universal_instance(
                     arena,
@@ -864,6 +880,7 @@ impl Evidence {
                 | Evidence::UnsatIntAffineGrowth(_)
                 | Evidence::UnsatIntNestedXor(_)
                 | Evidence::UnsatClosedUniversalCounterexample(_)
+                | Evidence::UnsatVacuousExistsUniversalCounterexample(_)
                 | Evidence::UnsatNegatedExistentialWitness(_)
                 | Evidence::UnsatBvAlternationCounterexample(_)
                 | Evidence::UnsatBvConjunctiveUniversalInstance(_)
@@ -1782,6 +1799,24 @@ fn closed_universal_counterexample_report(
     }))
 }
 
+fn vacuous_exists_universal_counterexample_report(
+    arena: &TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+    provenance: &Provenance,
+) -> Result<Option<EvidenceReport>, SolverError> {
+    let Some(certificate) = crate::quant_vacuous_exists_counterexample_search::find_vacuous_exists_universal_counterexample(
+        arena, assertions, config,
+    )? else {
+        return Ok(None);
+    };
+    Ok(Some(EvidenceReport {
+        evidence: Evidence::UnsatVacuousExistsUniversalCounterexample(certificate),
+        provenance: provenance.clone(),
+        trusted_steps: Vec::new(),
+    }))
+}
+
 fn negated_existential_witness_report(
     arena: &TermArena,
     assertions: &[TermId],
@@ -2330,6 +2365,11 @@ pub fn produce_evidence(
     }
     if let Some(report) =
         closed_universal_counterexample_report(arena, assertions, config, &provenance)?
+    {
+        return Ok(report);
+    }
+    if let Some(report) =
+        vacuous_exists_universal_counterexample_report(arena, assertions, config, &provenance)?
     {
         return Ok(report);
     }
@@ -3228,6 +3268,7 @@ pub fn prove(
         | Evidence::UnsatIntAffineGrowth(_)
         | Evidence::UnsatIntNestedXor(_)
         | Evidence::UnsatClosedUniversalCounterexample(_)
+        | Evidence::UnsatVacuousExistsUniversalCounterexample(_)
         | Evidence::UnsatNegatedExistentialWitness(_)
         | Evidence::UnsatBvAlternationCounterexample(_)
         | Evidence::UnsatBvConjunctiveUniversalInstance(_)

@@ -70,6 +70,9 @@ fn evidence_kind(evidence: &Evidence) -> &'static str {
         Evidence::UnsatIntAffineGrowth(_) => "int-affine-growth-unsat",
         Evidence::UnsatIntNestedXor(_) => "int-nested-xor-unsat",
         Evidence::UnsatClosedUniversalCounterexample(_) => "closed-universal-counterexample-unsat",
+        Evidence::UnsatVacuousExistsUniversalCounterexample(_) => {
+            "vacuous-exists-universal-counterexample-unsat"
+        }
         Evidence::UnsatNegatedExistentialWitness(_) => "negated-existential-witness-unsat",
         Evidence::UnsatBvAlternationCounterexample(_) => "bv-alternation-counterexample-unsat",
         Evidence::UnsatBvConjunctiveUniversalInstance(_) => {

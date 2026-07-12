@@ -1251,6 +1251,24 @@ pub const CAPABILITIES: &[Capability] = &[
     },
     Capability {
         area: "quantifiers",
+        feature: "evaluator-replayed universal counterexamples below vacuous Bool/BV existentials",
+        assurance: Assurance::Checked,
+        evidence: "untrusted search freshens only the universal binders and solves the negated QF_BV \
+                   body. A separate original-IR checker requires an exact nonempty `exists+ forall+` \
+                   prefix with at most 128 unique Bool/BV binders and 4,096 source DAG nodes, proves \
+                   the existential binders absent by admitting no body symbols except the universal \
+                   binders, validates complete typed universal bindings, and evaluates the untouched \
+                   body directly to false. `issue2031-bv-var-elim` moves unsupported to checked UNSAT \
+                   in median 0.129 ms. The public quantified-BV slice is 32 SAT / 16 UNSAT / 0 unknown / \
+                   6 unsupported with 48/48 checked/certified decisions, zero disagreement, error, or \
+                   replay failure, and an empty target trust ledger. The cumulative direct-Z3 suite \
+                   covers 1,592 cases and controls. Nonvacuous/open bodies, reversed or broader \
+                   alternation, functions, arrays, arithmetic binders, general QSAT, and Lean \
+                   reconstruction remain open",
+        reference: "ADR-0128",
+    },
+    Capability {
+        area: "quantifiers",
         feature: "checked finite counterexample covers for positive universal Bool/Int UNSAT",
         assurance: Assurance::Checked,
         evidence: "untrusted search weakens positive universals to a ground Boolean skeleton, then \

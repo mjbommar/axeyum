@@ -14,7 +14,7 @@ session state.
 
 > **Current sequencing (2026-07-12).** The P1.4 e-graph → P1.5 CDCL(T)
 > keystone is landed, and the recovery audit has restored P2.6 through the
-> checked ADR-0127 boundary with explicit resource limits. Continue the same
+> checked ADR-0128 boundary with explicit resource limits. Continue the same
 > depth-first spine through broader nested/alternating QSAT, quantified-UF
 > models, and Lean reconstruction, keeping a thin measured-leaf skirt and the
 > trust-ledger proof spine running in parallel. Full BFS-vs-DFS
@@ -734,12 +734,35 @@ contracts. A memoized quantified fast-path gate plus binder-context memoization
 restore the bounded `str.replace`-membership deadline regressions to 0.67 s
 instead of exceeding both 30 s wall caps. The unrelated
 `frontier_bv_reduction` 28/30 hardware-relative ratchet remains unchanged.
-**Next action:** address the seven measured unsupported rows one checked semantic
-class at a time: `issue2031-bv-var-elim`, `intersection-example-onelane`,
-`nested9_true-unreach-call`, `psyco-001-bv`, `psyco-107-bv`,
-`smtcomp-qbv-053118`, and `gn-wrong-091018`. Do not restore the rejected
-vacuous-prefix, paired-existential, decision-only, or model-guided shortcuts
-without an ADR, independent checker, soundness negatives, and fresh measurement.
+**Checked vacuous-existential-prefix counterexamples are now LANDED
+(ADR-0128):** one exact nonempty `exists+ forall+` Bool/BV assertion may carry a
+complete universal counterexample only when a separate checker proves all
+leading existential binders absent from the closed QF body. It validates unique
+typed binder IDs/order, 128-binder/4,096-source-node caps, and evaluates the
+untouched body directly to `Bool(false)`. Untrusted search freshens only the
+universal block and must pass that checker. `issue2031-bv-var-elim` moves
+**Unsupported→UNSAT** with five-run target median 0.129 ms. The fresh cvc5
+quantified-BV slice is **32 SAT / 16 UNSAT / 0 unknown / 6 unsupported**, 48
+agreements, DISAGREE=0, no errors/replay failures, and five-run PAR-2 median
+2.529213 s. The audit certifies/checks 48/48 with empty target trust, while
+dominance remains 40/48 and Lean remains 8/16 UNSAT because this new evidence
+correctly has no Lean route. The cumulative direct-Z3 suite covers 1,592 cases
+and controls. **Next action:** attack `nested9_true-unreach-call`, now the
+smallest unsupported row at 32 DAG nodes. Work backwards from cvc5 CEGQI-BV and
+Z3 quantified projection to define a checked paired-existential witness-transfer
+contract for its stronger `v+3 <= k` versus weaker `v+1 <= k` bodies; do not
+trust existential normalization, signed-overflow assumptions, or a shared
+witness without an original-source checker and negative controls. The other
+measured unsupported rows are `smtcomp-qbv-053118`,
+`intersection-example-onelane`, `gn-wrong-091018`, `psyco-001-bv`, and
+`psyco-107-bv`. Focused ADR-0128 and adjacent ADR-0124/0126/0127 suites, all
+eight quantified-BV direct-Z3 campaigns, solver library 866/866, evidence
+69/69, capability/support golden tests, strict workspace Clippy, warning-denied
+rustdoc, foundational 137/174 resources, rules-as-code, links, formatting, and
+diff checks pass. The full `just check` aggregate again reaches the unrelated
+hardware-relative `frontier_bv_reduction` ratchet at 28/30 and stops there; no
+full-workspace green claim is made, and the generated frontier artifacts remain
+unchanged.
 **Process state:** first green CI in 200+ runs held into a green cadence;
 the pre-push hook gates the pushed SHA incl. the ~6s `:status` corpus
 sweep (a wrong verdict must not leave the machine); STATUS truncated

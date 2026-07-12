@@ -46,7 +46,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 0.415966
+        "solve_ms": 0.225425
       },
       "dag_nodes": 6,
       "distinct_symbols": 1,
@@ -114,7 +114,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 0.756633
+        "solve_ms": 0.448015
       },
       "dag_nodes": 19,
       "distinct_symbols": 4,
@@ -182,10 +182,9 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 0.029745
+        "solve_ms": 0.12880699999999998
       },
       "dag_nodes": 20,
-      "detail": "term #20 uses unsupported pure-Rust BV operator Exists(SymbolId(1))",
       "distinct_symbols": 2,
       "expected": "unsat",
       "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__issue2031-bv-var-elim.smt2",
@@ -193,10 +192,17 @@
       "model_lift_ms": 0,
       "oracle": {
         "backend_kind": "z3",
+        "backend_stats": {},
+        "decision_agrees": null,
+        "decision_compared": false,
         "enabled": true,
-        "skipped": "primary-outcome-unsupported"
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, floating point, or sequences yet",
+        "model_lift_ms": 0,
+        "outcome": "unsupported",
+        "solve_ms": 0,
+        "translate_ms": 0
       },
-      "outcome": "unsupported",
+      "outcome": "unsat",
       "query_plan": {
         "cache_key": {
           "assertions": 1,
@@ -234,7 +240,7 @@
         "output_distinct_symbols": 2,
         "output_max_depth": 13,
         "output_tree_nodes": 22,
-        "rewritten_outcome": "unsupported",
+        "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
       "solve_ms": 0,
@@ -244,7 +250,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 9.748868000000002
+        "solve_ms": 10.194965999999999
       },
       "dag_nodes": 8,
       "distinct_symbols": 3,
@@ -305,14 +311,14 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 9,
+      "solve_ms": 10,
       "translate_ms": 0,
       "tree_nodes": 10
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 0.410545
+        "solve_ms": 0.444227
       },
       "dag_nodes": 10,
       "distinct_symbols": 4,
@@ -380,7 +386,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 185.699646
+        "solve_ms": 185.251361
       },
       "dag_nodes": 15,
       "distinct_symbols": 4,
@@ -448,7 +454,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 8.668890000000001
+        "solve_ms": 8.954333
       },
       "dag_nodes": 6,
       "distinct_symbols": 3,
@@ -516,7 +522,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 7.678438
+        "solve_ms": 7.38167
       },
       "dag_nodes": 6,
       "distinct_symbols": 3,
@@ -584,7 +590,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 8.405645999999999
+        "solve_ms": 8.569234
       },
       "dag_nodes": 7,
       "distinct_symbols": 3,
@@ -652,7 +658,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 8.299641
+        "solve_ms": 8.695928
       },
       "dag_nodes": 6,
       "distinct_symbols": 3,
@@ -720,7 +726,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 7.419772
+        "solve_ms": 7.096164
       },
       "dag_nodes": 6,
       "distinct_symbols": 3,
@@ -788,7 +794,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 9.615051
+        "solve_ms": 8.719561
       },
       "dag_nodes": 6,
       "distinct_symbols": 3,
@@ -849,14 +855,14 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 9,
+      "solve_ms": 8,
       "translate_ms": 0,
       "tree_nodes": 6
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 10.060661
+        "solve_ms": 10.563483
       },
       "dag_nodes": 7,
       "distinct_symbols": 3,
@@ -924,7 +930,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 7.629497
+        "solve_ms": 7.181400999999999
       },
       "dag_nodes": 6,
       "distinct_symbols": 3,
@@ -992,7 +998,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 7.414382
+        "solve_ms": 7.456778
       },
       "dag_nodes": 6,
       "distinct_symbols": 3,
@@ -1060,7 +1066,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 8.482487
+        "solve_ms": 8.169399
       },
       "dag_nodes": 7,
       "distinct_symbols": 3,
@@ -1128,7 +1134,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 8.686563
+        "solve_ms": 8.65931
       },
       "dag_nodes": 6,
       "distinct_symbols": 3,
@@ -1196,7 +1202,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 10.546876000000001
+        "solve_ms": 10.216265
       },
       "dag_nodes": 7,
       "distinct_symbols": 3,
@@ -1264,7 +1270,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 7.365282
+        "solve_ms": 8.448633000000001
       },
       "dag_nodes": 5,
       "distinct_symbols": 2,
@@ -1325,14 +1331,14 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 7,
+      "solve_ms": 8,
       "translate_ms": 0,
       "tree_nodes": 5
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 8.837059
+        "solve_ms": 8.298376999999999
       },
       "dag_nodes": 7,
       "distinct_symbols": 2,
@@ -1400,7 +1406,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 7.620260999999999
+        "solve_ms": 8.075316
       },
       "dag_nodes": 6,
       "distinct_symbols": 3,
@@ -1461,14 +1467,14 @@
         "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
-      "solve_ms": 7,
+      "solve_ms": 8,
       "translate_ms": 0,
       "tree_nodes": 6
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 8.392111
+        "solve_ms": 8.986953000000002
       },
       "dag_nodes": 7,
       "distinct_symbols": 3,
@@ -1536,7 +1542,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 7.173088
+        "solve_ms": 7.097397
       },
       "dag_nodes": 6,
       "distinct_symbols": 3,
@@ -1604,7 +1610,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 9.797147
+        "solve_ms": 9.563824
       },
       "dag_nodes": 7,
       "distinct_symbols": 3,
@@ -1672,7 +1678,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 8.598911000000001
+        "solve_ms": 8.630417
       },
       "dag_nodes": 6,
       "distinct_symbols": 2,
@@ -1740,7 +1746,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 3.819097
+        "solve_ms": 2.78348
       },
       "dag_nodes": 5,
       "distinct_symbols": 1,
@@ -1801,14 +1807,14 @@
         "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
-      "solve_ms": 3,
+      "solve_ms": 2,
       "translate_ms": 0,
       "tree_nodes": 7
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 2.783602
+        "solve_ms": 2.777209
       },
       "dag_nodes": 7,
       "distinct_symbols": 2,
@@ -1876,7 +1882,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 30.933295
+        "solve_ms": 29.286768000000002
       },
       "dag_nodes": 3317,
       "distinct_symbols": 530,
@@ -1937,14 +1943,14 @@
         "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
-      "solve_ms": 30,
+      "solve_ms": 29,
       "translate_ms": 0,
       "tree_nodes": 5760
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 0.174231
+        "solve_ms": 0.107718
       },
       "dag_nodes": 70,
       "detail": "term #68 uses unsupported pure-Rust BV operator Exists(SymbolId(13))",
@@ -2006,7 +2012,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 0.019074999999999998
+        "solve_ms": 0.022001000000000003
       },
       "dag_nodes": 5,
       "distinct_symbols": 2,
@@ -2074,7 +2080,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 0.006873
+        "solve_ms": 0.008646
       },
       "dag_nodes": 24,
       "distinct_symbols": 7,
@@ -2142,7 +2148,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 0.110554
+        "solve_ms": 0.10535399999999999
       },
       "dag_nodes": 66,
       "distinct_symbols": 8,
@@ -2210,7 +2216,7 @@
     {
       "assertions": 2,
       "backend_stats": {
-        "solve_ms": 0.049831
+        "solve_ms": 0.059329
       },
       "dag_nodes": 32,
       "detail": "term #17 uses unsupported pure-Rust BV operator Exists(SymbolId(3))",
@@ -2272,7 +2278,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 1139.639264
+        "solve_ms": 1147.533415
       },
       "dag_nodes": 147,
       "detail": "term #121 uses unsupported pure-Rust BV operator Forall(SymbolId(14))",
@@ -2327,14 +2333,14 @@
         "rewritten_outcome": "unsupported",
         "rule_counts": {}
       },
-      "solve_ms": 1139,
+      "solve_ms": 1147,
       "translate_ms": 0,
       "tree_nodes": 249
     },
     {
       "assertions": 2,
       "backend_stats": {
-        "solve_ms": 2873.986244
+        "solve_ms": 2882.559514
       },
       "dag_nodes": 217,
       "detail": "term #155 uses unsupported pure-Rust BV operator Forall(SymbolId(27))",
@@ -2389,14 +2395,14 @@
         "rewritten_outcome": "unsupported",
         "rule_counts": {}
       },
-      "solve_ms": 2873,
+      "solve_ms": 2882,
       "translate_ms": 0,
       "tree_nodes": 328
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 17.302215
+        "solve_ms": 18.913194
       },
       "dag_nodes": 7,
       "distinct_symbols": 3,
@@ -2457,14 +2463,14 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 17,
+      "solve_ms": 18,
       "translate_ms": 0,
       "tree_nodes": 8
     },
     {
       "assertions": 2,
       "backend_stats": {
-        "solve_ms": 667.551462
+        "solve_ms": 669.030637
       },
       "dag_nodes": 17,
       "distinct_symbols": 3,
@@ -2525,14 +2531,14 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 667,
+      "solve_ms": 669,
       "translate_ms": 0,
       "tree_nodes": 19
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 1.295163
+        "solve_ms": 1.347449
       },
       "dag_nodes": 43,
       "distinct_symbols": 5,
@@ -2600,7 +2606,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 10.381981999999999
+        "solve_ms": 10.464512000000001
       },
       "dag_nodes": 7,
       "distinct_symbols": 3,
@@ -2668,7 +2674,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 8.004698
+        "solve_ms": 8.101935
       },
       "dag_nodes": 7,
       "distinct_symbols": 3,
@@ -2736,7 +2742,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 7.824216
+        "solve_ms": 7.90342
       },
       "dag_nodes": 7,
       "distinct_symbols": 3,
@@ -2804,7 +2810,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 9.894676
+        "solve_ms": 10.311099
       },
       "dag_nodes": 6,
       "distinct_symbols": 3,
@@ -2865,14 +2871,14 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 9,
+      "solve_ms": 10,
       "translate_ms": 0,
       "tree_nodes": 6
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 18.688475999999998
+        "solve_ms": 20.097693
       },
       "dag_nodes": 7,
       "distinct_symbols": 3,
@@ -2933,14 +2939,14 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 18,
+      "solve_ms": 20,
       "translate_ms": 0,
       "tree_nodes": 7
     },
     {
       "assertions": 2,
       "backend_stats": {
-        "solve_ms": 52.571257
+        "solve_ms": 53.318359
       },
       "dag_nodes": 15,
       "distinct_symbols": 3,
@@ -3001,14 +3007,14 @@
         "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
-      "solve_ms": 52,
+      "solve_ms": 53,
       "translate_ms": 0,
       "tree_nodes": 20
     },
     {
       "assertions": 2,
       "backend_stats": {
-        "solve_ms": 50.417815
+        "solve_ms": 48.452957
       },
       "dag_nodes": 16,
       "distinct_symbols": 3,
@@ -3069,14 +3075,14 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 50,
+      "solve_ms": 48,
       "translate_ms": 0,
       "tree_nodes": 21
     },
     {
       "assertions": 2,
       "backend_stats": {
-        "solve_ms": 15.900706000000001
+        "solve_ms": 15.158226
       },
       "dag_nodes": 15,
       "distinct_symbols": 3,
@@ -3144,7 +3150,7 @@
     {
       "assertions": 2,
       "backend_stats": {
-        "solve_ms": 18.834384
+        "solve_ms": 18.164988
       },
       "dag_nodes": 16,
       "distinct_symbols": 3,
@@ -3212,7 +3218,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 24.584063999999998
+        "solve_ms": 26.447244
       },
       "dag_nodes": 6,
       "distinct_symbols": 3,
@@ -3273,14 +3279,14 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 24,
+      "solve_ms": 26,
       "translate_ms": 0,
       "tree_nodes": 6
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 27.469562999999997
+        "solve_ms": 27.24936
       },
       "dag_nodes": 7,
       "distinct_symbols": 3,
@@ -3348,7 +3354,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 1.607538
+        "solve_ms": 1.5143559999999998
       },
       "dag_nodes": 7,
       "distinct_symbols": 3,
@@ -3416,7 +3422,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 63.65939900000001
+        "solve_ms": 64.623987
       },
       "dag_nodes": 235,
       "distinct_symbols": 55,
@@ -3477,14 +3483,14 @@
         "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
-      "solve_ms": 63,
+      "solve_ms": 64,
       "translate_ms": 0,
       "tree_nodes": 304
     },
     {
       "assertions": 2,
       "backend_stats": {
-        "solve_ms": 2.7198740000000003
+        "solve_ms": 2.688146
       },
       "dag_nodes": 37,
       "detail": "term #35 uses unsupported pure-Rust BV operator Forall(SymbolId(6))",
@@ -3546,7 +3552,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 2.3804600000000002
+        "solve_ms": 2.385318
       },
       "dag_nodes": 11,
       "distinct_symbols": 3,
@@ -3614,7 +3620,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 0.2175
+        "solve_ms": 0.10009399999999999
       },
       "dag_nodes": 88,
       "detail": "term #86 uses unsupported pure-Rust BV operator Exists(SymbolId(11))",
@@ -3675,9 +3681,9 @@
     }
   ],
   "summary": {
-    "agree": 47,
+    "agree": 48,
     "blocker_buckets": {
-      "unsupported": 7
+      "unsupported": 6
     },
     "disagree": 0,
     "errors": 0,
@@ -3692,7 +3698,7 @@
       "enabled": true,
       "skipped": 54
     },
-    "par2_mean_s": 3.008377957255319,
+    "par2_mean_s": 2.5290817799166665,
     "query_plan": {
       "original_dag_nodes": 4642,
       "original_tree_nodes": 7651,
@@ -3715,8 +3721,8 @@
     },
     "sat": 32,
     "unknown": 0,
-    "unsat": 15,
-    "unsupported": 7
+    "unsat": 16,
+    "unsupported": 6
   },
   "triage": {
     "errors": [],
@@ -3728,11 +3734,6 @@
       "status_disagreements": 0
     },
     "unsupported": [
-      {
-        "detail": "term #20 uses unsupported pure-Rust BV operator Exists(SymbolId(1))",
-        "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__issue2031-bv-var-elim.smt2",
-        "outcome": "unsupported"
-      },
       {
         "detail": "term #68 uses unsupported pure-Rust BV operator Exists(SymbolId(13))",
         "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__intersection-example-onelane.proof-node22337.smt2",

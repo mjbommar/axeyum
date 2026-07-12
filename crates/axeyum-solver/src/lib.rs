@@ -137,6 +137,8 @@ mod quant_nested_xor_cert;
 mod quant_residue_cert;
 mod quant_sat_cert;
 mod quant_unsat_universal;
+mod quant_vacuous_exists_counterexample_cert;
+mod quant_vacuous_exists_counterexample_search;
 mod quant_vacuous_universal;
 mod quant_valid_universal;
 mod reconstruct;
@@ -431,6 +433,10 @@ pub use quant_residue_cert::{
 pub use quant_sat_cert::{
     AffineSkolemWitness, QuantifiedSkolemSatCertificate, check_model, check_model_with_assignment,
     check_quantified_skolem_sat,
+};
+pub use quant_vacuous_exists_counterexample_cert::{
+    VACUOUS_EXISTS_COUNTEREXAMPLE_BINDER_CAP, VACUOUS_EXISTS_COUNTEREXAMPLE_NODE_CAP,
+    VacuousExistsUniversalCounterexampleCertificate, check_vacuous_exists_universal_counterexample,
 };
 pub use reconstruct::{
     LraReconstructCtx, ProofFragment, ReconstructCtx, ReconstructError,

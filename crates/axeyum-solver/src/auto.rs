@@ -70,6 +70,10 @@ fn checked_quantified_fast_path(
         arena, assertions, config,
     )?
     .is_some()
+        || crate::quant_vacuous_exists_counterexample_search::find_vacuous_exists_universal_counterexample(
+            arena, assertions, config,
+        )?
+        .is_some()
         || crate::quant_negated_exists_search::find_negated_existential_witness(
             arena, assertions, config,
         )?
