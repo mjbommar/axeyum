@@ -3,8 +3,8 @@
 //! Candidate search is deliberately outside this module. The checker below
 //! proves an untouched assertion under a complete free-BV assignment by either
 //! an affine least-significant-bit invariant, a concrete counterexample to a
-//! directly negated universal, or exact signed-interval containment below a
-//! directly negated existential implication.
+//! directly negated universal, exact signed-interval containment, or exact
+//! zero-product annihilation below a directly negated existential implication.
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -36,6 +36,13 @@ pub enum QuantifiedBvModelSatProof {
     /// value because its ground facts hold, its ground conclusion is false,
     /// and its sole binder-dependent interval implication is contained.
     NegatedExistentialIntervalImplication {
+        /// The single existential binder named by the untouched source.
+        binder: SymbolId,
+    },
+    /// A directly negated existential implication is false at every binder
+    /// value because an exact ground-zero signed-division factor annihilates
+    /// the sole binder-dependent product obligation.
+    NegatedExistentialZeroProductImplication {
         /// The single existential binder named by the untouched source.
         binder: SymbolId,
     },
@@ -77,6 +84,15 @@ pub fn check_quantified_bv_model_sat(
         }
         QuantifiedBvModelSatProof::NegatedExistentialIntervalImplication { binder } => {
             check_negated_existential_interval_implication(
+                arena,
+                assertion,
+                &shape,
+                &free_values,
+                *binder,
+            )
+        }
+        QuantifiedBvModelSatProof::NegatedExistentialZeroProductImplication { binder } => {
+            check_negated_existential_zero_product_implication(
                 arena,
                 assertion,
                 &shape,
@@ -264,6 +280,37 @@ fn check_negated_existential_interval_implication(
     signed_le(&lower, &upper) && signed_le(&upper, &cap)
 }
 
+fn check_negated_existential_zero_product_implication(
+    arena: &TermArena,
+    assertion: TermId,
+    source: &SourceShape,
+    free: &BTreeMap<SymbolId, Value>,
+    claimed_binder: SymbolId,
+) -> bool {
+    let Some(shape) = negated_existential_zero_product_shape(arena, assertion) else {
+        return false;
+    };
+    let mut assignment = Assignment::new();
+    for (&symbol, value) in free {
+        assignment.set(symbol, value.clone());
+    }
+    if shape.binder != claimed_binder
+        || source.binders != BTreeSet::from([shape.binder])
+        || shape
+            .ground_true
+            .iter()
+            .any(|&term| !eval_bool(arena, term, &assignment, true))
+        || !eval_bool(arena, shape.ground_false, &assignment, false)
+    {
+        return false;
+    }
+    eval_bv(arena, shape.zero_factor, &assignment).is_some_and(|value| match value {
+        Value::Bv { value, .. } => value == 0,
+        Value::WideBv(value) => value.is_zero(),
+        _ => false,
+    })
+}
+
 fn eval_bool(arena: &TermArena, term: TermId, assignment: &Assignment, expected: bool) -> bool {
     matches!(eval(arena, term, assignment), Ok(Value::Bool(value)) if value == expected)
 }
@@ -301,6 +348,70 @@ pub(crate) fn negated_existential_interval_shape(
     arena: &TermArena,
     assertion: TermId,
 ) -> Option<NegatedExistentialIntervalShape> {
+    let (binder, conjuncts, ground_false) =
+        direct_negated_existential_implication(arena, assertion)?;
+    let mut ground_true = Vec::new();
+    let mut interval = None;
+    for conjunct in conjuncts {
+        if contains_symbol(arena, conjunct, binder) {
+            if interval.is_some() {
+                return None;
+            }
+            interval = Some(parse_interval_implication(arena, conjunct, binder)?);
+        } else {
+            ground_true.push(conjunct);
+        }
+    }
+    let (lower, upper, cap, mut interval_ground) = interval?;
+    ground_true.append(&mut interval_ground);
+    Some(NegatedExistentialIntervalShape {
+        binder,
+        ground_true,
+        lower,
+        upper,
+        cap,
+        ground_false,
+    })
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct NegatedExistentialZeroProductShape {
+    pub binder: SymbolId,
+    pub ground_true: Vec<TermId>,
+    pub zero_factor: TermId,
+    pub ground_false: TermId,
+}
+
+pub(crate) fn negated_existential_zero_product_shape(
+    arena: &TermArena,
+    assertion: TermId,
+) -> Option<NegatedExistentialZeroProductShape> {
+    let (binder, conjuncts, ground_false) =
+        direct_negated_existential_implication(arena, assertion)?;
+    let mut ground_true = Vec::new();
+    let mut zero_factor = None;
+    for conjunct in conjuncts {
+        if contains_symbol(arena, conjunct, binder) {
+            if zero_factor.is_some() {
+                return None;
+            }
+            zero_factor = Some(parse_zero_product_implication(arena, conjunct, binder)?);
+        } else {
+            ground_true.push(conjunct);
+        }
+    }
+    Some(NegatedExistentialZeroProductShape {
+        binder,
+        ground_true,
+        zero_factor: zero_factor?,
+        ground_false,
+    })
+}
+
+fn direct_negated_existential_implication(
+    arena: &TermArena,
+    assertion: TermId,
+) -> Option<(SymbolId, Vec<TermId>, TermId)> {
     let TermNode::App {
         op: Op::BoolNot,
         args,
@@ -326,31 +437,77 @@ pub(crate) fn negated_existential_interval_shape(
     if contains_symbol(arena, *ground_false, *binder) {
         return None;
     }
-
     let mut conjuncts = Vec::new();
     flatten_and(arena, *antecedent, &mut conjuncts);
-    let mut ground_true = Vec::new();
-    let mut interval = None;
-    for conjunct in conjuncts {
-        if contains_symbol(arena, conjunct, *binder) {
-            if interval.is_some() {
-                return None;
-            }
-            interval = Some(parse_interval_implication(arena, conjunct, *binder)?);
-        } else {
-            ground_true.push(conjunct);
-        }
+    Some((*binder, conjuncts, *ground_false))
+}
+
+fn parse_zero_product_implication(
+    arena: &TermArena,
+    term: TermId,
+    binder: SymbolId,
+) -> Option<TermId> {
+    let TermNode::App {
+        op: Op::BoolImplies,
+        args,
+    } = arena.node(term)
+    else {
+        return None;
+    };
+    let [_premise, conclusion] = &**args else {
+        return None;
+    };
+    let TermNode::App {
+        op: Op::BvSge,
+        args,
+    } = arena.node(*conclusion)
+    else {
+        return None;
+    };
+    let [product, zero] = &**args else {
+        return None;
+    };
+    let TermNode::App {
+        op: Op::BvMul,
+        args,
+    } = arena.node(*product)
+    else {
+        return None;
+    };
+    let [left, right] = &**args else { return None };
+    let zero_factor = if is_direct_ground_sdiv(arena, *left, binder)
+        && contains_symbol(arena, *right, binder)
+    {
+        *left
+    } else if is_direct_ground_sdiv(arena, *right, binder) && contains_symbol(arena, *left, binder)
+    {
+        *right
+    } else {
+        return None;
+    };
+    let binder_sort = arena.symbol(binder).1;
+    (matches!(binder_sort, Sort::BitVec(_))
+        && arena.sort_of(zero_factor) == binder_sort
+        && arena.sort_of(*product) == binder_sort
+        && arena.sort_of(*zero) == binder_sort
+        && is_bv_zero_literal(arena, *zero))
+    .then_some(zero_factor)
+}
+
+fn is_direct_ground_sdiv(arena: &TermArena, term: TermId, binder: SymbolId) -> bool {
+    matches!(
+        arena.node(term),
+        TermNode::App { op: Op::BvSdiv, args }
+            if args.len() == 2 && !contains_symbol(arena, term, binder)
+    )
+}
+
+fn is_bv_zero_literal(arena: &TermArena, term: TermId) -> bool {
+    match arena.node(term) {
+        TermNode::BvConst { value, .. } => *value == 0,
+        TermNode::WideBvConst(value) => value.is_zero(),
+        _ => false,
     }
-    let (lower, upper, cap, mut interval_ground) = interval?;
-    ground_true.append(&mut interval_ground);
-    Some(NegatedExistentialIntervalShape {
-        binder: *binder,
-        ground_true,
-        lower,
-        upper,
-        cap,
-        ground_false: *ground_false,
-    })
 }
 
 fn parse_interval_implication(

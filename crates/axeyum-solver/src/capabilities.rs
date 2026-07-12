@@ -1236,6 +1236,28 @@ pub const CAPABILITIES: &[Capability] = &[
     },
     Capability {
         area: "quantifiers",
+        feature: "checked complete free-BV models for directly negated zero-product existential \
+                  implications",
+        assurance: Assurance::Checked,
+        evidence: "untrusted search asks QF_BV only for a complete free-symbol candidate satisfying \
+                   extracted ground obligations. A separate original-IR checker requires one direct \
+                   negated existential implication, exactly one binder-dependent antecedent \
+                   conjunct, and an inner implication whose conclusion is signed nonnegativity of \
+                   a binary product. One direct binder-free signed-division factor must \
+                   evaluator-replay to exact zero, the other factor must contain the unique binder, \
+                   and the comparison bound must be a same-width literal zero. The nonlinear factor \
+                   and inner premise are never interpreted; every other antecedent leaf and the \
+                   untouched false conclusion replay under the complete model. `gn-wrong-091018` \
+                   moves unsupported to replayed SAT. The public quantified-BV slice is 35 SAT / 17 \
+                   UNSAT / 0 unknown / 2 unsupported with 52/52 evidence-certified/rechecked \
+                   decisions, 43 dominant candidates, zero disagreement/error/replay failure, and \
+                   an empty target trust ledger. General nonlinear reasoning, arbitrary zero \
+                   expressions/comparisons, alternation, functions/arrays, broad BV model \
+                   construction, and Lean SAT reconstruction remain open",
+        reference: "ADR-0132",
+    },
+    Capability {
+        area: "quantifiers",
         feature: "source-bound counterexamples for closed Bool/BV `forall+ exists+` alternation",
         assurance: Assurance::Checked,
         evidence: "untrusted search solves an outer-only implication antecedent and deterministic \

@@ -1,4 +1,4 @@
-//! Untrusted candidate search for ADR-0130/0131 quantified-BV model certificates.
+//! Untrusted candidate search for ADR-0130/0131/0132 quantified-BV model certificates.
 
 use std::collections::BTreeSet;
 
@@ -12,6 +12,7 @@ use web_time::Instant;
 use crate::quant_bv_model_sat_cert::{
     QuantifiedBvModelSatCertificate, QuantifiedBvModelSatProof, admitted_free_bv_symbols,
     check_quantified_bv_model_sat, direct_negated_universal, negated_existential_interval_shape,
+    negated_existential_zero_product_shape,
 };
 use crate::{CheckResult, Model, SolverConfig, SolverError};
 
@@ -57,12 +58,27 @@ pub(crate) fn decide_quantified_bv_model_sat(
         .timeout
         .and_then(|timeout| Instant::now().checked_add(timeout));
 
-    if let [assertion] = assertions
-        && let Some(candidate_config) = config_with_deadline(config, deadline)
-        && let Some(model) =
-            find_negated_existential_interval_model(arena, *assertion, &free, &candidate_config)?
-    {
-        return Ok(Some(CheckResult::Sat(model)));
+    if let [assertion] = assertions {
+        if let Some(candidate_config) = config_with_deadline(config, deadline)
+            && let Some(model) = find_negated_existential_interval_model(
+                arena,
+                *assertion,
+                &free,
+                &candidate_config,
+            )?
+        {
+            return Ok(Some(CheckResult::Sat(model)));
+        }
+        if let Some(candidate_config) = config_with_deadline(config, deadline)
+            && let Some(model) = find_negated_existential_zero_product_model(
+                arena,
+                *assertion,
+                &free,
+                &candidate_config,
+            )?
+        {
+            return Ok(Some(CheckResult::Sat(model)));
+        }
     }
     if free.len() > FREE_BV_CANDIDATE_BITS {
         return Ok(None);
@@ -90,6 +106,74 @@ pub(crate) fn decide_quantified_bv_model_sat(
         }
     }
     Ok(None)
+}
+
+fn find_negated_existential_zero_product_model(
+    arena: &TermArena,
+    assertion: TermId,
+    free: &[SymbolId],
+    config: &SolverConfig,
+) -> Result<Option<Model>, SolverError> {
+    let Some(shape) = negated_existential_zero_product_shape(arena, assertion) else {
+        return Ok(None);
+    };
+    let mut scratch = arena.clone();
+    let Sort::BitVec(width) = scratch.sort_of(shape.zero_factor) else {
+        return Ok(None);
+    };
+    let zero = scratch
+        .bv_const(width, 0)
+        .map_err(|error| SolverError::Backend(error.to_string()))?;
+    let zero_factor = scratch
+        .eq(shape.zero_factor, zero)
+        .map_err(|error| SolverError::Backend(error.to_string()))?;
+    let false_conclusion = scratch
+        .not(shape.ground_false)
+        .map_err(|error| SolverError::Backend(error.to_string()))?;
+    let mut query = shape.ground_true;
+    query.extend([zero_factor, false_conclusion]);
+    let outcome = match crate::auto::check_auto(&mut scratch, &query, config) {
+        Ok(outcome) => outcome,
+        Err(SolverError::Unsupported(_)) => return Ok(None),
+        Err(error) => return Err(error),
+    };
+    let CheckResult::Sat(candidate) = outcome else {
+        return Ok(None);
+    };
+    let free_values = free
+        .iter()
+        .map(|&symbol| {
+            (
+                symbol,
+                candidate
+                    .get(symbol)
+                    .unwrap_or_else(|| zero_value(scratch.symbol(symbol).1)),
+            )
+        })
+        .collect::<Vec<_>>();
+    let certificate = QuantifiedBvModelSatCertificate {
+        assertion,
+        free_values: free_values.clone(),
+        proof: QuantifiedBvModelSatProof::NegatedExistentialZeroProductImplication {
+            binder: shape.binder,
+        },
+    };
+    if !check_quantified_bv_model_sat(arena, assertion, &certificate) {
+        return Ok(None);
+    }
+    let mut model = Model::new();
+    for (symbol, value) in free_values {
+        model.set(symbol, value);
+    }
+    model.set_quantified_bv_model_sat_certificate(certificate);
+    if crate::check_model(arena, &[assertion], &model)? {
+        Ok(Some(model))
+    } else {
+        Err(SolverError::Backend(
+            "generated zero-product-certified quantified-BV model failed canonical source replay"
+                .to_owned(),
+        ))
+    }
 }
 
 fn find_negated_existential_interval_model(

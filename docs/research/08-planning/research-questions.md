@@ -282,10 +282,17 @@ Out of scope:
     interval proof establishes `lower <= upper <= cap`. This recovers
     `intersection-example-onelane` without trusting QF candidate obligations,
     division normalization, or implication vacuity.
+    [ADR-0132](../09-decisions/adr-0132-checked-zero-product-quantified-bv-models.md)
+    adds another separate directly negated existential class: a direct
+    binder-free signed-division factor must evaluator-replay to zero before an
+    exact source matcher annihilates its binder-bearing product and proves the
+    signed nonnegativity leaf. This recovers `gn-wrong-091018` without
+    interpreting its nonlinear binder polynomial or trusting a candidate
+    rewrite.
     Piecewise/general function interpretations, free-BV models beyond these
-    affine-LSB/direct-witness/signed-interval classes, serialization, and Alethe/Lean
-    reconstruction remain implementation tasks, not permission to return an
-    unchecked empty model.
+    affine-LSB/direct-witness/signed-interval/zero-product classes,
+    serialization, and Alethe/Lean reconstruction remain implementation tasks,
+    not permission to return an unchecked empty model.
 - [x] How should targeted infinite-domain quantified `unsat` schemas receive
       evidence before a general quantifier proof format exists?
   - Answer (2026-07-11): search may propose only genuine universal instances

@@ -794,13 +794,31 @@ new certified SAT cases and 16 direct-Z3 UNSAT controls; cumulative
 quantified-BV direct-Z3 coverage is 1,816. The complete workspace `just check`
 (format, strict Clippy, tests, warning-denied rustdoc, foundational resources,
 generated-document consistency, and links) passes. **Next action:** characterize
-`gn-wrong-091018`, now the smallest unsupported row at 88 DAG nodes. Its similar
-negated existential has a nonlinear binder polynomial under a binder-free
-zero-producing signed-division multiplier; work backwards from cvc5's guarded
-linearization and Z3 model checking to prove exact source annihilation and the
-remaining inequality. Do not infer rational division, accept a candidate
-rewrite as evidence, or broaden ADR-0131's interval matcher. The other measured
-unsupported rows are `psyco-001-bv` and `psyco-107-bv`.
+`gn-wrong-091018`, now the smallest unsupported row at 88 DAG nodes. **That
+action is now LANDED (ADR-0132):** a separate directly negated existential
+model checker requires exactly one binder-dependent inner implication whose
+conclusion is signed nonnegativity of a binary product. One direct binder-free
+`bvsdiv` factor must evaluator-replay to zero, the other factor must contain the
+unique binder, and the comparison bound must be a same-width literal zero. The
+nonlinear factor is never interpreted; every other ground fact replays and
+QF_BV remains candidate-only. `gn-wrong-091018` moves **Unsupported→SAT** with
+five-run corpus solve median 88.677335 ms and evidence median 70.981 ms. The
+fresh cvc5 quantified-BV slice is **35 SAT / 17 UNSAT / 0 unknown / 2
+unsupported**, 52 agreements, DISAGREE=0, no errors/replay failures, and
+five-run PAR-2 median 0.794198 s. The audit certifies/checks 52/52 with 43/52
+dominant, Lean 8/17 UNSAT, and empty target trust. Thirteen focused tests include
+16 new certified SAT cases and 16 direct-Z3 nonzero-factor UNSAT controls;
+cumulative quantified-BV direct-Z3 coverage is 1,848. The complete workspace
+`just check` (format, strict Clippy, tests, warning-denied rustdoc,
+foundational resources, generated-document consistency, and links) passes.
+**Next action:**
+characterize `psyco-001-bv`, now the smallest unsupported row at 147 DAG nodes.
+It is a positive universal over mixed Bool/BV binders below free-Boolean facts;
+work backwards from cvc5/Z3 quantified model checking and Boolean-discharge
+machinery to isolate the exact guarded ITE/equality implication that a complete
+free-Boolean model makes universal. Do not enumerate the 32-bit binders, trust
+candidate Boolean simplification as evidence, or broaden ADR-0132's unrelated
+zero-product matcher. `psyco-107-bv` is the final measured unsupported row.
 **Process state:** first green CI in 200+ runs held into a green cadence;
 the pre-push hook gates the pushed SHA incl. the ~6s `:status` corpus
 sweep (a wrong verdict must not leave the machine); STATUS truncated
