@@ -12,7 +12,7 @@ The current benchmark JSONs record decide-rate, disagreement, and PAR-2, but the
 
 ## Headline
 
-- 35 measured division rows, 992 files, 749 decided, 628 oracle-compared.
+- 35 measured division rows, 992 files, 750 decided, 628 oracle-compared.
 - 35/35 rows have DISAGREE = 0; any nonzero row must preempt dominance work.
 - 25 rows are decide-strong (Decide% >= 80). 21 have a current Lean route worth auditing now; the others need proof-route work before dominance measurement is meaningful.
 - Complete committed dominance audits with exact audited `dominant%(D)`: 35. Remaining rows are readiness or partial-audit entries.
@@ -34,7 +34,7 @@ Complete audit rows have one audit record for every baseline-decided instance in
 | Division | Slice | Decided | Dominant% | Lean unsat | Gaps | Artifact |
 | --- | --- | ---: | ---: | ---: | --- | --- |
 | BV | `bv-bitwuzla-regress-clean-quantified` | 5 | 80% (4/5) | 75% (3/4) | Lean unsat 3/4 | `bench-results/dominance/bv-bitwuzla-regress-clean-quantified-dominance-audit.json` |
-| BV | `bv-cvc5-regress-clean-quantified` | 50 | 82% (41/50) | 47% (8/17) | Lean unsat 8/17 | `bench-results/dominance/bv-cvc5-regress-clean-quantified-dominance-audit.json` |
+| BV | `bv-cvc5-regress-clean-quantified` | 51 | 82% (42/51) | 47% (8/17) | Lean unsat 8/17 | `bench-results/dominance/bv-cvc5-regress-clean-quantified-dominance-audit.json` |
 | LIA | `lia-cvc5-regress-clean-quantified` | 0 | 0% (0/0) | 100% (0/0) | none | `bench-results/dominance/lia-cvc5-regress-clean-quantified-dominance-audit.json` |
 | QF_ABV | `qf-abv-cvc5-bitwuzla-regress-clean` | 169 | 100% (169/169) | 100% (85/85) | none | `bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json` |
 | QF_ALIA | `qf-alia-cvc5-regress-clean` | 6 | 100% (6/6) | 100% (5/5) | none | `bench-results/dominance/qf-alia-cvc5-regress-clean-dominance-audit.json` |
@@ -84,7 +84,7 @@ These rows are the best immediate candidates: they are already decide-strong and
 | Division | Slice | Files | Decided | Decide% | Band | DISAGREE | Audit | Dominant% | Lean unsat | Dominance action | Next action |
 | --- | --- | ---: | ---: | ---: | --- | ---: | --- | ---: | ---: | --- | --- |
 | BV | `bv-bitwuzla-regress-clean-quantified` | 5 | 5 | 100% | strong | 0 | complete | 80% (4/5) | 75% (3/4) | close Lean unsat gaps | audit quantified-BV rows with per-instance Lean reconstruction |
-| BV | `bv-cvc5-regress-clean-quantified` | 54 | 50 | 93% | strong | 0 | complete | 82% (41/50) | 47% (8/17) | close Lean unsat gaps | audit quantified-BV rows with per-instance Lean reconstruction |
+| BV | `bv-cvc5-regress-clean-quantified` | 54 | 51 | 94% | strong | 0 | complete | 82% (42/51) | 47% (8/17) | close Lean unsat gaps | audit quantified-BV rows with per-instance Lean reconstruction |
 | LIA | `lia-cvc5-regress-clean-quantified` | 12 | 0 | 0% | weak | 0 | complete | 0% (0/0) | 100% (0/0) | dominant on audited row | separate guarded finite-Int unsats from unsupported infinite-domain cases |
 | QF_ABV | `qf-abv-cvc5-bitwuzla-regress-clean` | 193 | 169 | 88% | strong | 0 | complete | 100% (169/169) | 100% (85/85) | dominant on audited row | classify array unsats by ROW/congruence vs general ArrayElim |
 | QF_ALIA | `qf-alia-cvc5-regress-clean` | 6 | 6 | 100% | strong | 0 | complete | 100% (6/6) | 100% (5/5) | dominant on audited row | move solve frontier to AUFLIA scalar search depth |

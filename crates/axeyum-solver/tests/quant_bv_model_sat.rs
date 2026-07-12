@@ -1,4 +1,5 @@
-//! ADR-0130 checked free-BV models with affine-LSB and witness replay.
+//! ADR-0130/0131 checked free-BV models with affine-LSB, witness replay, and
+//! signed-interval containment.
 
 use std::time::Duration;
 
@@ -12,6 +13,9 @@ use axeyum_solver::{
 
 const TARGET: &str = include_str!(
     "../../../corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__smtcomp-qbv-053118.smt2"
+);
+const INTERVAL_TARGET: &str = include_str!(
+    "../../../corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__intersection-example-onelane.proof-node22337.smt2"
 );
 
 fn config() -> SolverConfig {
@@ -32,6 +36,133 @@ fn target_model() -> (
     assert_eq!(model.quantified_bv_model_sat_certificates().count(), 2);
     assert!(check_model(&script.arena, &assertions, &model).expect("target model replays"));
     (script, assertions, model)
+}
+
+fn interval_target_model() -> (
+    axeyum_smtlib::Script,
+    Vec<axeyum_ir::TermId>,
+    axeyum_solver::Model,
+) {
+    let mut script = parse_script(INTERVAL_TARGET).expect("interval target parses");
+    let assertions = script.assertions.clone();
+    let result = solve(&mut script.arena, &assertions, &config()).expect("interval target solves");
+    let CheckResult::Sat(model) = result else {
+        panic!("interval target must be Sat, got {result:?}");
+    };
+    assert_eq!(model.quantified_bv_model_sat_certificates().count(), 1);
+    assert!(check_model(&script.arena, &assertions, &model).expect("interval model replays"));
+    (script, assertions, model)
+}
+
+#[test]
+fn public_intersection_row_has_checked_interval_model_evidence() {
+    let (mut script, assertions, model) = interval_target_model();
+    let certificate = model
+        .quantified_bv_model_sat_certificate(assertions[0])
+        .expect("interval certificate");
+    assert!(matches!(
+        certificate.proof,
+        QuantifiedBvModelSatProof::NegatedExistentialIntervalImplication { .. }
+    ));
+    assert_eq!(certificate.free_values.len(), 12);
+    assert!(check_quantified_bv_model_sat(
+        &script.arena,
+        assertions[0],
+        certificate
+    ));
+
+    let report = produce_evidence(&mut script.arena, &assertions, &config())
+        .expect("interval evidence production");
+    assert!(matches!(report.evidence, Evidence::Sat(_)));
+    assert!(report.evidence.is_certified());
+    assert!(report.evidence.check(&script.arena, &assertions).unwrap());
+    assert!(report.trusted_steps.is_empty());
+}
+
+#[test]
+fn interval_model_tampering_fails_closed() {
+    let (script, assertions, model) = interval_target_model();
+    let certificate = model
+        .quantified_bv_model_sat_certificate(assertions[0])
+        .expect("interval certificate")
+        .clone();
+
+    let mut wrong_binder = certificate.clone();
+    let QuantifiedBvModelSatProof::NegatedExistentialIntervalImplication { binder } =
+        &mut wrong_binder.proof
+    else {
+        panic!("expected interval proof")
+    };
+    *binder = certificate.free_values[0].0;
+    assert!(!check_quantified_bv_model_sat(
+        &script.arena,
+        assertions[0],
+        &wrong_binder
+    ));
+
+    let mut all_zero = certificate.clone();
+    for (_, value) in &mut all_zero.free_values {
+        *value = Value::Bv {
+            width: 32,
+            value: 0,
+        };
+    }
+    assert!(!check_quantified_bv_model_sat(
+        &script.arena,
+        assertions[0],
+        &all_zero
+    ));
+
+    let mut missing = certificate;
+    missing.free_values.pop();
+    assert!(!check_quantified_bv_model_sat(
+        &script.arena,
+        assertions[0],
+        &missing
+    ));
+}
+
+#[test]
+fn empty_interval_vacuity_and_binder_leakage_are_not_credited() {
+    let mut arena = TermArena::new();
+    let sort = Sort::BitVec(8);
+    let binder = arena.declare("interval_binder", sort).unwrap();
+    let bound = arena.var(binder);
+    let zero = arena.bv_const(8, 0).unwrap();
+    let one = arena.bv_const(8, 1).unwrap();
+    let lower = arena.bv_sle(one, bound).unwrap();
+    let upper = arena.bv_sle(bound, zero).unwrap();
+    let range = arena.and(lower, upper).unwrap();
+    let contained = arena.bv_sle(bound, one).unwrap();
+    let interval = arena.implies(range, contained).unwrap();
+    let false_term = arena.bool_const(false);
+    let body = arena.implies(interval, false_term).unwrap();
+    let exists = arena.exists(binder, body).unwrap();
+    let assertion = arena.not(exists).unwrap();
+    let certificate = QuantifiedBvModelSatCertificate {
+        assertion,
+        free_values: Vec::new(),
+        proof: QuantifiedBvModelSatProof::NegatedExistentialIntervalImplication { binder },
+    };
+    assert!(!check_quantified_bv_model_sat(
+        &arena,
+        assertion,
+        &certificate
+    ));
+
+    let leaked_conclusion = arena.eq(bound, bound).unwrap();
+    let leaked_body = arena.implies(interval, leaked_conclusion).unwrap();
+    let leaked_exists = arena.exists(binder, leaked_body).unwrap();
+    let leaked = arena.not(leaked_exists).unwrap();
+    let leaked_certificate = QuantifiedBvModelSatCertificate {
+        assertion: leaked,
+        ..certificate
+    };
+    assert!(!check_quantified_bv_model_sat(
+        &arena,
+        leaked,
+        &leaked_certificate
+    ));
 }
 
 #[test]
@@ -336,6 +467,91 @@ fn generated_affine_lsb_models_and_unsat_controls_match_z3() {
             | (_, _, SatResult::Unknown) => safe_decline += 1,
             (mode, result, oracle) => panic!(
                 "generated case {case} (unsat={mode}) disagreed: axeyum={result:?}, z3={oracle:?}"
+            ),
+        }
+    }
+    assert_eq!(certified_sat, CASES / 2);
+    assert_eq!(certified_sat + agreed_unsat + safe_decline, CASES);
+}
+
+#[cfg(feature = "z3")]
+#[test]
+fn generated_interval_models_and_false_conclusion_controls_match_z3() {
+    use z3::ast::{Ast, BV, Bool};
+    use z3::{Params, SatResult, Solver};
+
+    const CASES: usize = 32;
+    const WIDTHS: [u32; 4] = [2, 4, 8, 16];
+    let mut certified_sat = 0usize;
+    let mut agreed_unsat = 0usize;
+    let mut safe_decline = 0usize;
+    for case in 0..CASES {
+        let width = WIDTHS[(case / 2) % WIDTHS.len()];
+        let unsat_control = case % 2 == 1;
+        let mut arena = TermArena::new();
+        let sort = Sort::BitVec(width);
+        let lower_symbol = arena.declare("generated_interval_lower", sort).unwrap();
+        let upper_symbol = arena.declare("generated_interval_upper", sort).unwrap();
+        let cap_symbol = arena.declare("generated_interval_cap", sort).unwrap();
+        let guard_symbol = arena.declare("generated_interval_guard", sort).unwrap();
+        let binder = arena.declare("generated_interval_binder", sort).unwrap();
+        let lower_value = arena.var(lower_symbol);
+        let upper_value = arena.var(upper_symbol);
+        let cap_value = arena.var(cap_symbol);
+        let guard_value = arena.var(guard_symbol);
+        let bound = arena.var(binder);
+        let lower_bound = arena.bv_sle(lower_value, bound).unwrap();
+        let upper_bound = arena.bv_sle(bound, upper_value).unwrap();
+        let range = arena.and(lower_bound, upper_bound).unwrap();
+        let contained = arena.bv_sle(bound, cap_value).unwrap();
+        let interval = arena.implies(range, contained).unwrap();
+        let ground = arena.eq(guard_value, guard_value).unwrap();
+        let antecedent = arena.and(ground, interval).unwrap();
+        let conclusion = arena.bool_const(unsat_control);
+        let body = arena.implies(antecedent, conclusion).unwrap();
+        let quantified = arena.exists(binder, body).unwrap();
+        let assertion = arena.not(quantified).unwrap();
+        let assertions = [assertion];
+        let axeyum = solve(
+            &mut arena,
+            &assertions,
+            &SolverConfig::new().with_timeout(Duration::from_millis(500)),
+        );
+
+        let zlower = BV::new_const("generated_interval_lower", width);
+        let zupper = BV::new_const("generated_interval_upper", width);
+        let zcap = BV::new_const("generated_interval_cap", width);
+        let zguard = BV::new_const("generated_interval_guard", width);
+        let zbound = BV::new_const("generated_interval_binder", width);
+        let zrange = Bool::and(&[zlower.bvsle(&zbound), zbound.bvsle(&zupper)]);
+        let zinterval = zrange.implies(zbound.bvsle(&zcap));
+        let zground = zguard.eq(&zguard);
+        let zantecedent = Bool::and(&[zground, zinterval]);
+        let zbody = zantecedent.implies(Bool::from_bool(unsat_control));
+        let zquantified = z3::ast::exists_const(&[&zbound as &dyn Ast], &[], &zbody);
+        let oracle = Solver::new();
+        let mut params = Params::new();
+        params.set_u32("timeout", 500);
+        oracle.set_params(&params);
+        oracle.assert(zquantified.not());
+        let z3 = oracle.check();
+
+        match (unsat_control, axeyum, z3) {
+            (false, Ok(CheckResult::Sat(model)), SatResult::Sat) => {
+                let certificate = model
+                    .quantified_bv_model_sat_certificate(assertion)
+                    .expect("generated interval certificate");
+                assert!(matches!(
+                    certificate.proof,
+                    QuantifiedBvModelSatProof::NegatedExistentialIntervalImplication { .. }
+                ));
+                assert!(check_model(&arena, &assertions, &model).unwrap());
+                certified_sat += 1;
+            }
+            (true, Ok(CheckResult::Unsat), SatResult::Unsat) => agreed_unsat += 1,
+            (true, Ok(CheckResult::Unknown(_)) | Err(_), SatResult::Unsat) => safe_decline += 1,
+            (mode, result, oracle) => panic!(
+                "generated interval case {case} (unsat={mode}) disagreed: axeyum={result:?}, z3={oracle:?}"
             ),
         }
     }

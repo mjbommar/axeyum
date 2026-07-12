@@ -14,7 +14,7 @@ session state.
 
 > **Current sequencing (2026-07-12).** The P1.4 e-graph → P1.5 CDCL(T)
 > keystone is landed, and the recovery audit has restored P2.6 through the
-> checked ADR-0130 boundary with explicit resource limits. Continue the same
+> checked ADR-0131 boundary with explicit resource limits. Continue the same
 > depth-first spine through broader nested/alternating QSAT, quantified-UF
 > models, and Lean reconstruction, keeping a thin measured-leaf skirt and the
 > trust-ledger proof spine running in parallel. Full BFS-vs-DFS
@@ -778,14 +778,29 @@ and 32 UNSAT controls; cumulative quantified-BV direct-Z3 coverage is 1,784
 cases and controls. Strict all-target solver Clippy and all adjacent quantified
 certificate/differential suites pass; the complete workspace `just check`
 (format, strict Clippy, tests, warning-denied rustdoc, foundational resources,
-generated-document consistency, and links) also passes. **Next action:** characterize
-`intersection-example-onelane`, now the smallest unsupported row at 70 DAG
-nodes. Work backwards from cvc5 BV inversion/linearization and Z3 quantified
-model checking to define a separate checked SAT contract for its negated
-existential implication with free BV facts and signed division. Do not treat
-division normalization, implication vacuity, or a solver candidate as source
-evidence. The other measured unsupported rows are `gn-wrong-091018`,
-`psyco-001-bv`, and `psyco-107-bv`.
+generated-document consistency, and links) also passes. **That action is now
+LANDED (ADR-0131):** one directly negated existential implication may carry a
+complete free-BV model only when the checker re-extracts exactly one
+binder-dependent signed interval implication, evaluator-replays every ground
+antecedent to true and the untouched division-bearing outer conclusion to
+false, rejects empty intervals, and proves signed `lower <= upper <= cap`.
+QF_BV generates candidates only. `intersection-example-onelane` moves
+**Unsupported→SAT** with five-run corpus solve median 37.681117 ms and evidence
+median 33.267 ms. The fresh cvc5 quantified-BV slice is **34 SAT / 17 UNSAT / 0
+unknown / 3 unsupported**, 51 agreements, DISAGREE=0, no errors/replay failures,
+and five-run PAR-2 median 1.200617 s. The audit certifies/checks 51/51 with 42/51
+dominant, Lean 8/17 UNSAT, and empty target trust. Nine focused tests include 16
+new certified SAT cases and 16 direct-Z3 UNSAT controls; cumulative
+quantified-BV direct-Z3 coverage is 1,816. The complete workspace `just check`
+(format, strict Clippy, tests, warning-denied rustdoc, foundational resources,
+generated-document consistency, and links) passes. **Next action:** characterize
+`gn-wrong-091018`, now the smallest unsupported row at 88 DAG nodes. Its similar
+negated existential has a nonlinear binder polynomial under a binder-free
+zero-producing signed-division multiplier; work backwards from cvc5's guarded
+linearization and Z3 model checking to prove exact source annihilation and the
+remaining inequality. Do not infer rational division, accept a candidate
+rewrite as evidence, or broaden ADR-0131's interval matcher. The other measured
+unsupported rows are `psyco-001-bv` and `psyco-107-bv`.
 **Process state:** first green CI in 200+ runs held into a green cadence;
 the pre-push hook gates the pushed SHA incl. the ~6s `:status` corpus
 sweep (a wrong verdict must not leave the machine); STATUS truncated

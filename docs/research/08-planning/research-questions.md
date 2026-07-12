@@ -276,8 +276,14 @@ Out of scope:
     evaluator-replay directly negated universals. This recovers
     `smtcomp-qbv-053118` without trusting quantifier erasure, MBQI candidates,
     parity normalization, or a solver-only witness.
-    Piecewise/general function interpretations, free-BV models beyond this
-    affine-LSB/direct-witness class, serialization, and Alethe/Lean
+    [ADR-0131](../09-decisions/adr-0131-checked-signed-interval-quantified-bv-models.md)
+    adds a separate directly negated existential class: exact ground replay
+    validates all division-bearing free-model facts and a nonempty signed
+    interval proof establishes `lower <= upper <= cap`. This recovers
+    `intersection-example-onelane` without trusting QF candidate obligations,
+    division normalization, or implication vacuity.
+    Piecewise/general function interpretations, free-BV models beyond these
+    affine-LSB/direct-witness/signed-interval classes, serialization, and Alethe/Lean
     reconstruction remain implementation tasks, not permission to return an
     unchecked empty model.
 - [x] How should targeted infinite-domain quantified `unsat` schemas receive

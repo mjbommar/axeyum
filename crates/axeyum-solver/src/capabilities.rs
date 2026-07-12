@@ -1216,6 +1216,26 @@ pub const CAPABILITIES: &[Capability] = &[
     },
     Capability {
         area: "quantifiers",
+        feature: "checked complete free-BV models for directly negated signed-interval existential \
+                  implications",
+        assurance: Assurance::Checked,
+        evidence: "untrusted search asks QF_BV only for a complete free-symbol candidate satisfying \
+                   extracted sufficient ground obligations. A separate original-IR checker requires \
+                   one directly negated existential implication, exactly one binder-dependent \
+                   antecedent conjunct, exact signed lower/upper bounds, and exactly one signed cap \
+                   leaf. It evaluator-replays every other antecedent leaf to true and the untouched \
+                   division-bearing conclusion to false, rejects empty intervals, and proves signed \
+                   lower <= upper <= cap with arbitrary-width two's-complement comparison. \
+                   `intersection-example-onelane` moves unsupported to replayed SAT. The public \
+                   quantified-BV slice is 34 SAT / 17 UNSAT / 0 unknown / 3 unsupported with 51/51 \
+                   evidence-certified/rechecked decisions, 42 dominant candidates, zero \
+                   disagreement/error/replay failure, and an empty target trust ledger. Arbitrary \
+                   binder arithmetic, implication shapes, alternation, functions/arrays, broad BV \
+                   model construction, and Lean SAT reconstruction remain open",
+        reference: "ADR-0131",
+    },
+    Capability {
+        area: "quantifiers",
         feature: "source-bound counterexamples for closed Bool/BV `forall+ exists+` alternation",
         assurance: Assurance::Checked,
         evidence: "untrusted search solves an outer-only implication antecedent and deterministic \

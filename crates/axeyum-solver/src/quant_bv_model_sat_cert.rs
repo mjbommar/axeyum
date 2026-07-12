@@ -1,13 +1,16 @@
-//! Source-bound quantified-BV model certificates (ADR-0130).
+//! Source-bound quantified-BV model certificates (ADR-0130/0131).
 //!
 //! Candidate search is deliberately outside this module. The checker below
 //! proves an untouched assertion under a complete free-BV assignment by either
-//! an affine least-significant-bit invariant or a concrete counterexample to a
-//! directly negated universal.
+//! an affine least-significant-bit invariant, a concrete counterexample to a
+//! directly negated universal, or exact signed-interval containment below a
+//! directly negated existential implication.
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use axeyum_ir::{Assignment, Op, Sort, SymbolId, TermArena, TermId, TermNode, Value, eval};
+use axeyum_ir::{
+    Assignment, Op, Sort, SymbolId, TermArena, TermId, TermNode, Value, WideUint, eval,
+};
 
 /// Maximum total quantifier binders admitted by one certificate.
 pub const QUANT_BV_MODEL_BINDER_CAP: usize = 128;
@@ -28,6 +31,13 @@ pub enum QuantifiedBvModelSatProof {
         binders: Vec<SymbolId>,
         /// One exact Bool/BV value for every binder.
         values: Vec<Value>,
+    },
+    /// A directly negated existential implication is false at every binder
+    /// value because its ground facts hold, its ground conclusion is false,
+    /// and its sole binder-dependent interval implication is contained.
+    NegatedExistentialIntervalImplication {
+        /// The single existential binder named by the untouched source.
+        binder: SymbolId,
     },
 }
 
@@ -64,6 +74,15 @@ pub fn check_quantified_bv_model_sat(
         }
         QuantifiedBvModelSatProof::NegatedUniversalWitness { binders, values } => {
             check_negated_universal_witness(arena, assertion, &shape, &free_values, binders, values)
+        }
+        QuantifiedBvModelSatProof::NegatedExistentialIntervalImplication { binder } => {
+            check_negated_existential_interval_implication(
+                arena,
+                assertion,
+                &shape,
+                &free_values,
+                *binder,
+            )
         }
     }
 }
@@ -203,6 +222,249 @@ fn check_negated_universal_witness(
         assignment.set(binder, value.clone());
     }
     matches!(eval(arena, body, &assignment), Ok(Value::Bool(false)))
+}
+
+fn check_negated_existential_interval_implication(
+    arena: &TermArena,
+    assertion: TermId,
+    source: &SourceShape,
+    free: &BTreeMap<SymbolId, Value>,
+    claimed_binder: SymbolId,
+) -> bool {
+    let Some(shape) = negated_existential_interval_shape(arena, assertion) else {
+        return false;
+    };
+    let mut assignment = Assignment::new();
+    for (&symbol, value) in free {
+        assignment.set(symbol, value.clone());
+    }
+    if shape.binder != claimed_binder
+        || source.binders != BTreeSet::from([shape.binder])
+        || shape
+            .ground_true
+            .iter()
+            .any(|&term| !eval_bool(arena, term, &assignment, true))
+        || !eval_bool(arena, shape.ground_false, &assignment, false)
+    {
+        return false;
+    }
+    let Some(lower) = eval_bv(arena, shape.lower, &assignment) else {
+        return false;
+    };
+    let Some(upper) = eval_bv(arena, shape.upper, &assignment) else {
+        return false;
+    };
+    let Some(cap) = eval_bv(arena, shape.cap, &assignment) else {
+        return false;
+    };
+
+    // Deliberately reject empty intervals: vacuity is not evidence for this
+    // certificate. The two comparisons prove [lower, upper] is nonempty and
+    // contained in (-infinity, cap] in signed two's-complement order.
+    signed_le(&lower, &upper) && signed_le(&upper, &cap)
+}
+
+fn eval_bool(arena: &TermArena, term: TermId, assignment: &Assignment, expected: bool) -> bool {
+    matches!(eval(arena, term, assignment), Ok(Value::Bool(value)) if value == expected)
+}
+
+fn eval_bv(arena: &TermArena, term: TermId, assignment: &Assignment) -> Option<Value> {
+    match eval(arena, term, assignment).ok()? {
+        value @ (Value::Bv { .. } | Value::WideBv(_)) => Some(value),
+        _ => None,
+    }
+}
+
+fn signed_le(left: &Value, right: &Value) -> bool {
+    let widen = |value: &Value| match value {
+        Value::Bv { width, value } => Some(WideUint::from_u128(*value, *width)),
+        Value::WideBv(value) => Some(value.clone()),
+        _ => None,
+    };
+    let (Some(left), Some(right)) = (widen(left), widen(right)) else {
+        return false;
+    };
+    left.width() == right.width() && left.sle(&right)
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct NegatedExistentialIntervalShape {
+    pub binder: SymbolId,
+    pub ground_true: Vec<TermId>,
+    pub lower: TermId,
+    pub upper: TermId,
+    pub cap: TermId,
+    pub ground_false: TermId,
+}
+
+pub(crate) fn negated_existential_interval_shape(
+    arena: &TermArena,
+    assertion: TermId,
+) -> Option<NegatedExistentialIntervalShape> {
+    let TermNode::App {
+        op: Op::BoolNot,
+        args,
+    } = arena.node(assertion)
+    else {
+        return None;
+    };
+    let [inner] = &**args else { return None };
+    let (binders, body) = peel_prefix(arena, *inner, false)?;
+    let [binder] = binders.as_slice() else {
+        return None;
+    };
+    let TermNode::App {
+        op: Op::BoolImplies,
+        args,
+    } = arena.node(body)
+    else {
+        return None;
+    };
+    let [antecedent, ground_false] = &**args else {
+        return None;
+    };
+    if contains_symbol(arena, *ground_false, *binder) {
+        return None;
+    }
+
+    let mut conjuncts = Vec::new();
+    flatten_and(arena, *antecedent, &mut conjuncts);
+    let mut ground_true = Vec::new();
+    let mut interval = None;
+    for conjunct in conjuncts {
+        if contains_symbol(arena, conjunct, *binder) {
+            if interval.is_some() {
+                return None;
+            }
+            interval = Some(parse_interval_implication(arena, conjunct, *binder)?);
+        } else {
+            ground_true.push(conjunct);
+        }
+    }
+    let (lower, upper, cap, mut interval_ground) = interval?;
+    ground_true.append(&mut interval_ground);
+    Some(NegatedExistentialIntervalShape {
+        binder: *binder,
+        ground_true,
+        lower,
+        upper,
+        cap,
+        ground_false: *ground_false,
+    })
+}
+
+fn parse_interval_implication(
+    arena: &TermArena,
+    term: TermId,
+    binder: SymbolId,
+) -> Option<(TermId, TermId, TermId, Vec<TermId>)> {
+    let TermNode::App {
+        op: Op::BoolImplies,
+        args,
+    } = arena.node(term)
+    else {
+        return None;
+    };
+    let [range, conclusion] = &**args else {
+        return None;
+    };
+    let mut bounds = Vec::new();
+    flatten_and(arena, *range, &mut bounds);
+    if bounds.len() != 2 {
+        return None;
+    }
+    let mut lower = None;
+    let mut upper = None;
+    for bound in bounds {
+        let TermNode::App {
+            op: Op::BvSle,
+            args,
+        } = arena.node(bound)
+        else {
+            return None;
+        };
+        let [left, right] = &**args else { return None };
+        if is_symbol(arena, *right, binder) && !contains_symbol(arena, *left, binder) {
+            if lower.replace(*left).is_some() {
+                return None;
+            }
+        } else if is_symbol(arena, *left, binder) && !contains_symbol(arena, *right, binder) {
+            if upper.replace(*right).is_some() {
+                return None;
+            }
+        } else {
+            return None;
+        }
+    }
+
+    let mut conclusion_terms = Vec::new();
+    flatten_and(arena, *conclusion, &mut conclusion_terms);
+    let mut cap = None;
+    let mut ground = Vec::new();
+    for item in conclusion_terms {
+        if contains_symbol(arena, item, binder) {
+            let TermNode::App {
+                op: Op::BvSle,
+                args,
+            } = arena.node(item)
+            else {
+                return None;
+            };
+            let [left, right] = &**args else { return None };
+            if !is_symbol(arena, *left, binder)
+                || contains_symbol(arena, *right, binder)
+                || cap.replace(*right).is_some()
+            {
+                return None;
+            }
+        } else {
+            ground.push(item);
+        }
+    }
+    let (lower, upper, cap) = (lower?, upper?, cap?);
+    let sort = arena.symbol(binder).1;
+    if !matches!(sort, Sort::BitVec(_))
+        || arena.sort_of(lower) != sort
+        || arena.sort_of(upper) != sort
+        || arena.sort_of(cap) != sort
+    {
+        return None;
+    }
+    Some((lower, upper, cap, ground))
+}
+
+fn flatten_and(arena: &TermArena, term: TermId, out: &mut Vec<TermId>) {
+    if let TermNode::App {
+        op: Op::BoolAnd,
+        args,
+    } = arena.node(term)
+        && let [left, right] = &**args
+    {
+        flatten_and(arena, *left, out);
+        flatten_and(arena, *right, out);
+    } else {
+        out.push(term);
+    }
+}
+
+fn is_symbol(arena: &TermArena, term: TermId, symbol: SymbolId) -> bool {
+    matches!(arena.node(term), TermNode::Symbol(actual) if *actual == symbol)
+}
+
+fn contains_symbol(arena: &TermArena, root: TermId, symbol: SymbolId) -> bool {
+    let mut seen = BTreeSet::new();
+    let mut stack = vec![root];
+    while let Some(term) = stack.pop() {
+        if !seen.insert(term) {
+            continue;
+        }
+        match arena.node(term) {
+            TermNode::Symbol(actual) if *actual == symbol => return true,
+            TermNode::App { args, .. } => stack.extend(args.iter().copied()),
+            _ => {}
+        }
+    }
+    false
 }
 
 fn peel_prefix(arena: &TermArena, root: TermId, forall: bool) -> Option<(Vec<SymbolId>, TermId)> {

@@ -395,17 +395,21 @@ pub const SUPPORT_MATRIX: &[SupportRow] = &[
                require source-bound QF_BV DRAT/LRAT implications (ADR-0129). A complete free-BV \
                model can certify direct positive universals through exact affine-LSB invariants and \
                direct negated universals through evaluator-replayed complete binder witnesses under \
-               explicit source caps (ADR-0130). Positive universal UNSAT with only free Booleans can carry a \
+               explicit source caps (ADR-0130). A directly negated existential implication may carry \
+               a complete free-BV model only when exact ground replay proves every binder-free \
+               antecedent and falsifies the untouched conclusion, while a separate nonempty signed \
+               interval check proves lower <= upper <= cap for its sole binder-dependent clause \
+               (ADR-0131). Positive universal UNSAT with only free Booleans can carry a \
                checked finite counterexample cover: every concrete source instance excludes one \
                sufficient cube and the independently refuted weakened skeleton proves coverage. The \
                one-universal-conjunct slice reconstructs those covers through genuine quantifier \
                applications and bounded kernel case analysis; repeated closed proof-DAG nodes export \
                once through binder-safe Lean definitions. General free-BV models beyond the \
-               ADR-0130 affine-LSB/witness class, piecewise/general Skolem functions, \
+               ADR-0130/0131 affine-LSB, witness, and signed-interval classes, piecewise/general Skolem functions, \
                non-equality online antecedents, direct online proof serialization, high-frequency \
                assignment callbacks, negative quantifier contexts, broader alternation/functions, \
                general nested QE/QSAT, and broad proof reconstruction remain incomplete. \
-               ADR-0016/0032/0095/0096/0097/0098/0099/0100/0101/0107/0108/0109/0110/0111/0112/0113/0114/0115/0116/0117/0118/0119/0120/0121/0122/0123/0124/0125/0126/0127/0128/0129/0130",
+               ADR-0016/0032/0095/0096/0097/0098/0099/0100/0101/0107/0108/0109/0110/0111/0112/0113/0114/0115/0116/0117/0118/0119/0120/0121/0122/0123/0124/0125/0126/0127/0128/0129/0130/0131",
     },
     SupportRow {
         fragment: "datatypes (algebraic)",
