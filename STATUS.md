@@ -322,30 +322,39 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-12 — recovery audit restores the checked ADR-0127 boundary.** The
-  post-switch worktree is preserved on `rescue/gpt54-dirty-20260712`; recovery
-  removed unchecked vacuous-prefix, paired-existential, decision-only,
-  model-guided, normalization, branch-splitting, and widened-candidate routes.
-  It restored the pre-switch source checkers and search policy, including exact
-  positive conjunction-path uniqueness for ADR-0127. Fresh release measurement
-  is **32 SAT / 15 UNSAT / 0 unknown / 7 unsupported**, 47 agreements, zero
-  disagreement/error/replay failure, and five-run PAR-2 median 3.008609 s. The
-  dominance audit certifies/checks 47/47, marks 40/47 dominant, and reconstructs
-  8/15 UNSAT in Lean. The seven unsupported rows are `issue2031-bv-var-elim`,
-  `intersection-example-onelane`, `nested9_true-unreach-call`, `psyco-001-bv`,
-  `psyco-107-bv`, `smtcomp-qbv-053118`, and `gn-wrong-091018`.
-  The audit also fixed a deterministic QF performance regression: quantified
-  fast paths walked every QF shared DAG, and ADR-0123 admission recursively
-  re-descended shared quantified DAGs. A memoized quantifier gate plus
-  binder-context memoization restore the bounded string deadline tests to 0.67 s.
-  Solver library 863/863, focused quantifier suites, quantified-BV differential,
-  workspace all-target/all-feature check, strict Clippy, rustdoc, golden
-  matrices, links, and foundational 137/174 pass. The repeated package aggregate
-  passed the former string wall-cap failure and every subsequent suite through
-  the large CHC/integration groups, then was stopped during the known long
-  `nia_differential_fuzz_disagree_zero` run; no complete package pass is claimed.
-  The hardware-relative `frontier_bv_reduction` 28/30 ratchet remains open and
-  is not weakened.
+- **2026-07-12 — recovery audit restores and bounds the checked ADR-0127
+  boundary.** The post-switch worktree is preserved on
+  `rescue/gpt54-dirty-20260712` and in an external bundle. Recovery removed
+  unchecked vacuous-prefix, paired-existential, decision-only, model-guided,
+  normalization, branch-splitting, and widened-candidate routes. Generated
+  instances now require source provenance; targeted refutations require an
+  independent original-IR theorem checker; every admitted SAT model replays
+  against the untouched assertions. Global retained tuple joins are capped at
+  8,192 per round, quantified Lean construction rejects oversized unary integer
+  terms before allocation, and exact single-variable NRA coefficient overflow
+  terminates as `ResourceLimit` instead of falling into unbounded abstraction.
+  The stale word-fallback negative now uses a genuinely unsupported
+  `str.indexof` mix; supported `str.from_int` coupling remains replay-checked.
+  Fresh quantified-BV release measurement is **32 SAT / 15 UNSAT / 0 unknown /
+  7 unsupported**, 47 agreements, zero disagreement/error/replay failure, and
+  five-run PAR-2 median 3.008609 s. The dominance audit certifies/checks 47/47,
+  marks 40/47 dominant, and reconstructs 8/15 UNSAT in Lean.
+  Validation is green across solver library 866/866, Lean kernel 154/154,
+  focused quantifier/e-graph/reconstruction suites, long NIA/NRA/UFLIA
+  differentials, strict workspace Clippy, warning-denied rustdoc, foundational
+  137/174 resources, rules-as-code, links, and all `axeyum-verify` tests and
+  doctests. The explicit 2,000-instance quantified-UFLIA campaign completed in
+  1,375.06 s: 1,052/1,052 jointly-decided agreements, 800 replayed SAT models,
+  297 UNSAT, zero disagreement, and zero Axeyum errors. Its 256-instance smoke
+  sweep remains in the default gate; the full campaign is retained as an
+  explicit ignored test. A serialized workspace aggregate exceeded its outer
+  wall cap only after reaching `axeyum-verify`; that package then passed in
+  isolation, so no single-command aggregate pass is claimed. The
+  hardware-relative `frontier_bv_reduction` remains 28/30 on both untouched
+  `main` and recovery and is not weakened. **Next:** broaden checked
+  nested/alternating BV QSAT and quantified-UF/function-valued models, then add
+  Lean reconstruction for ADR-0124/0126/0127; preserve source-bound evidence,
+  replay gates, and explicit resource limits in every increment.
 - **2026-07-11 — ADR-0126 lands evaluator-replayed negated-existential
   witnesses.** One exact top-level `not (exists+ body)` over unique Bool/BV
   binders may carry complete typed values; the checker evaluates the untouched
@@ -1686,6 +1695,14 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-12 — quantified-stack recovery audit completed.** Preserved the raw
+  worktree, removed unchecked verdict shortcuts, restored source-bound evidence
+  admission, added bounded tuple-join/Lean/NRA failure paths, repaired a stale
+  word-fallback test, and split the quantified-UFLIA differential into a bounded
+  default smoke test plus an explicit full campaign. The full 2,000-instance
+  campaign passed with 1,052 agreements, 800 replayed SAT models, 297 UNSAT,
+  zero disagreement, and zero Axeyum errors. Rebased onto the nested-array guard
+  registration from `main`; focused warm array/UF matrices remain green.
 - **2026-07-11 — ADR-0111 accepts shared incremental e-matching state.** Added
   `EGraph::ematch_many`, one round-local class/application index, interned
   recursive trigger patterns, and a retained solver session that extends only

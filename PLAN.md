@@ -12,10 +12,12 @@ session state.
 > without ever losing the thread. **We do not stop and we do not hand-wave; we
 > advance the next task and record it.**
 
-> **Current sequencing (2026-07-11).** The P1.4 e-graph → P1.5 CDCL(T)
-> keystone is landed. Continue the same depth-first spine through lazy theory
-> integration and **P2.6 quantifier maturity**, keeping a thin measured-leaf
-> skirt and the trust-ledger proof spine running in parallel. Full BFS-vs-DFS
+> **Current sequencing (2026-07-12).** The P1.4 e-graph → P1.5 CDCL(T)
+> keystone is landed, and the recovery audit has restored P2.6 through the
+> checked ADR-0127 boundary with explicit resource limits. Continue the same
+> depth-first spine through broader nested/alternating QSAT, quantified-UF
+> models, and Lean reconstruction, keeping a thin measured-leaf skirt and the
+> trust-ledger proof spine running in parallel. Full BFS-vs-DFS
 > traversal analysis + post-keystone ranking:
 > [build-sequencing-bfs-dfs.md](docs/research/08-planning/build-sequencing-bfs-dfs.md);
 > the ranked steps live in [§ The two engineering keystones](#the-two-engineering-keystones).
