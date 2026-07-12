@@ -3,9 +3,17 @@
 use axeyum_ir::{Assignment, FuncId, FuncValue, Rational, SymbolId, Value};
 
 use crate::{
-    QuantifiedBoolModelSatCertificate, QuantifiedGuardSatCertificate,
-    QuantifiedSkolemSatCertificate,
+    QuantifiedBoolModelSatCertificate, QuantifiedBvModelSatCertificate,
+    QuantifiedGuardSatCertificate, QuantifiedSkolemSatCertificate,
 };
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+struct QuantifiedSatCertificates {
+    skolem: Vec<QuantifiedSkolemSatCertificate>,
+    bool_model: Vec<QuantifiedBoolModelSatCertificate>,
+    guard: Vec<QuantifiedGuardSatCertificate>,
+    bv_model: Vec<QuantifiedBvModelSatCertificate>,
+}
 
 /// A satisfying assignment produced by a backend, keyed by Axeyum
 /// [`SymbolId`]s — never by backend AST handles (backend-model note).
@@ -28,13 +36,9 @@ pub struct Model {
     /// deterministic iteration; an empty map is exactly the total `x/0 = 0`
     /// evaluator convention. Mirrors [`Assignment::set_real_div_zero`].
     real_div_zero: Vec<(Rational, Rational)>,
-    /// Checked witnesses for supported quantified assertions, sorted by
-    /// original assertion ID. See ADR-0096/0121 and [`crate::check_model`].
-    quantified_sat: Option<Box<[QuantifiedSkolemSatCertificate]>>,
-    /// Checked free-Boolean models for quantified assertions (ADR-0107).
-    quantified_bool_sat: Option<Box<[QuantifiedBoolModelSatCertificate]>>,
-    /// Checked outer-BV guard witnesses for quantified assertions (ADR-0122).
-    quantified_guard_sat: Option<Box<[QuantifiedGuardSatCertificate]>>,
+    /// Lazily allocated checked quantified certificates, grouped behind one
+    /// pointer so adding a certificate family does not inflate every model.
+    quantified: Option<Box<QuantifiedSatCertificates>>,
 }
 
 impl Model {
@@ -119,15 +123,11 @@ impl Model {
     /// Inserts or replaces the checked Skolem certificate for its original
     /// quantified assertion. Entries stay in assertion-ID order.
     pub fn set_quantified_sat_certificate(&mut self, cert: QuantifiedSkolemSatCertificate) {
-        let mut certificates = self
-            .quantified_sat
-            .take()
-            .map_or_else(Vec::new, <[QuantifiedSkolemSatCertificate]>::into_vec);
+        let certificates = &mut self.quantified.get_or_insert_with(Default::default).skolem;
         match certificates.binary_search_by_key(&cert.assertion, |candidate| candidate.assertion) {
             Ok(index) => certificates[index] = cert,
             Err(index) => certificates.insert(index, cert),
         }
-        self.quantified_sat = Some(certificates.into_boxed_slice());
     }
 
     /// The quantified-SAT certificate for `assertion`, if present.
@@ -135,7 +135,10 @@ impl Model {
         &self,
         assertion: axeyum_ir::TermId,
     ) -> Option<&QuantifiedSkolemSatCertificate> {
-        let certificates = self.quantified_sat.as_deref().unwrap_or(&[]);
+        let certificates = self
+            .quantified
+            .as_deref()
+            .map_or(&[][..], |certificates| certificates.skolem.as_slice());
         certificates
             .binary_search_by_key(&assertion, |candidate| candidate.assertion)
             .ok()
@@ -146,7 +149,10 @@ impl Model {
     pub fn quantified_sat_certificates(
         &self,
     ) -> impl Iterator<Item = &QuantifiedSkolemSatCertificate> {
-        self.quantified_sat.as_deref().into_iter().flatten()
+        self.quantified
+            .as_deref()
+            .into_iter()
+            .flat_map(|certificates| &certificates.skolem)
     }
 
     /// Inserts or replaces a checked free-Boolean certificate.
@@ -154,15 +160,14 @@ impl Model {
         &mut self,
         cert: QuantifiedBoolModelSatCertificate,
     ) {
-        let mut certificates = self
-            .quantified_bool_sat
-            .take()
-            .map_or_else(Vec::new, <[QuantifiedBoolModelSatCertificate]>::into_vec);
+        let certificates = &mut self
+            .quantified
+            .get_or_insert_with(Default::default)
+            .bool_model;
         match certificates.binary_search_by_key(&cert.assertion, |candidate| candidate.assertion) {
             Ok(index) => certificates[index] = cert,
             Err(index) => certificates.insert(index, cert),
         }
-        self.quantified_bool_sat = Some(certificates.into_boxed_slice());
     }
 
     /// Returns the checked free-Boolean certificate for `assertion`.
@@ -170,7 +175,10 @@ impl Model {
         &self,
         assertion: axeyum_ir::TermId,
     ) -> Option<&QuantifiedBoolModelSatCertificate> {
-        let certificates = self.quantified_bool_sat.as_deref().unwrap_or(&[]);
+        let certificates = self
+            .quantified
+            .as_deref()
+            .map_or(&[][..], |certificates| certificates.bool_model.as_slice());
         certificates
             .binary_search_by_key(&assertion, |candidate| candidate.assertion)
             .ok()
@@ -181,20 +189,19 @@ impl Model {
     pub fn quantified_bool_model_sat_certificates(
         &self,
     ) -> impl Iterator<Item = &QuantifiedBoolModelSatCertificate> {
-        self.quantified_bool_sat.as_deref().into_iter().flatten()
+        self.quantified
+            .as_deref()
+            .into_iter()
+            .flat_map(|certificates| &certificates.bool_model)
     }
 
     /// Inserts or replaces a checked outer-BV guard certificate.
     pub fn set_quantified_guard_sat_certificate(&mut self, cert: QuantifiedGuardSatCertificate) {
-        let mut certificates = self
-            .quantified_guard_sat
-            .take()
-            .map_or_else(Vec::new, <[QuantifiedGuardSatCertificate]>::into_vec);
+        let certificates = &mut self.quantified.get_or_insert_with(Default::default).guard;
         match certificates.binary_search_by_key(&cert.assertion, |candidate| candidate.assertion) {
             Ok(index) => certificates[index] = cert,
             Err(index) => certificates.insert(index, cert),
         }
-        self.quantified_guard_sat = Some(certificates.into_boxed_slice());
     }
 
     /// Returns the checked outer-BV guard certificate for `assertion`.
@@ -202,7 +209,10 @@ impl Model {
         &self,
         assertion: axeyum_ir::TermId,
     ) -> Option<&QuantifiedGuardSatCertificate> {
-        let certificates = self.quantified_guard_sat.as_deref().unwrap_or(&[]);
+        let certificates = self
+            .quantified
+            .as_deref()
+            .map_or(&[][..], |certificates| certificates.guard.as_slice());
         certificates
             .binary_search_by_key(&assertion, |candidate| candidate.assertion)
             .ok()
@@ -213,7 +223,50 @@ impl Model {
     pub fn quantified_guard_sat_certificates(
         &self,
     ) -> impl Iterator<Item = &QuantifiedGuardSatCertificate> {
-        self.quantified_guard_sat.as_deref().into_iter().flatten()
+        self.quantified
+            .as_deref()
+            .into_iter()
+            .flat_map(|certificates| &certificates.guard)
+    }
+
+    /// Inserts or replaces a checked quantified-BV model certificate.
+    pub fn set_quantified_bv_model_sat_certificate(
+        &mut self,
+        cert: QuantifiedBvModelSatCertificate,
+    ) {
+        let certificates = &mut self
+            .quantified
+            .get_or_insert_with(Default::default)
+            .bv_model;
+        match certificates.binary_search_by_key(&cert.assertion, |candidate| candidate.assertion) {
+            Ok(index) => certificates[index] = cert,
+            Err(index) => certificates.insert(index, cert),
+        }
+    }
+
+    /// Returns the checked quantified-BV model certificate for `assertion`.
+    pub fn quantified_bv_model_sat_certificate(
+        &self,
+        assertion: axeyum_ir::TermId,
+    ) -> Option<&QuantifiedBvModelSatCertificate> {
+        let certificates = self
+            .quantified
+            .as_deref()
+            .map_or(&[][..], |certificates| certificates.bv_model.as_slice());
+        certificates
+            .binary_search_by_key(&assertion, |candidate| candidate.assertion)
+            .ok()
+            .map(|index| &certificates[index])
+    }
+
+    /// Iterates over checked quantified-BV model certificates in assertion order.
+    pub fn quantified_bv_model_sat_certificates(
+        &self,
+    ) -> impl Iterator<Item = &QuantifiedBvModelSatCertificate> {
+        self.quantified
+            .as_deref()
+            .into_iter()
+            .flat_map(|certificates| &certificates.bv_model)
     }
 
     /// Number of assigned symbols.
@@ -252,4 +305,17 @@ impl Model {
 /// values a model may assign.
 fn div_zero_key(r: Rational) -> (i128, i128) {
     (r.numerator(), r.denominator())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Model;
+
+    #[test]
+    fn quantified_certificate_families_do_not_bloat_every_model() {
+        assert!(
+            std::mem::size_of::<Model>() <= 128,
+            "Model grew beyond the result-size lint boundary"
+        );
+    }
 }

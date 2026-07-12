@@ -270,7 +270,14 @@ Out of scope:
     signed-add lemma with all no-wrap side conditions. This recovers
     `nested9_true-unreach-call` without trusting existential normalization,
     model-guided projection, or general QSAT.
-    Piecewise/general function interpretations, serialization, and Alethe/Lean
+    [ADR-0130](../09-decisions/adr-0130-checked-affine-lsb-quantified-bv-models.md)
+    adds the first relevant free-BV model class: exact affine GF(2) LSB
+    invariants prove direct positive universals, while complete typed values
+    evaluator-replay directly negated universals. This recovers
+    `smtcomp-qbv-053118` without trusting quantifier erasure, MBQI candidates,
+    parity normalization, or a solver-only witness.
+    Piecewise/general function interpretations, free-BV models beyond this
+    affine-LSB/direct-witness class, serialization, and Alethe/Lean
     reconstruction remain implementation tasks, not permission to return an
     unchecked empty model.
 - [x] How should targeted infinite-domain quantified `unsat` schemas receive

@@ -14,7 +14,7 @@ session state.
 
 > **Current sequencing (2026-07-12).** The P1.4 e-graph → P1.5 CDCL(T)
 > keystone is landed, and the recovery audit has restored P2.6 through the
-> checked ADR-0129 boundary with explicit resource limits. Continue the same
+> checked ADR-0130 boundary with explicit resource limits. Continue the same
 > depth-first spine through broader nested/alternating QSAT, quantified-UF
 > models, and Lean reconstruction, keeping a thin measured-leaf skirt and the
 > trust-ledger proof spine running in parallel. Full BFS-vs-DFS
@@ -632,7 +632,8 @@ workspace run retains one independent open performance ratchet:
 isolation; do not lower that baseline without understanding the regression.
 **Next action:** attack `model_6_1_bv` by extending checked free-Boolean model
 replay to the exact Boolean branch that makes its untouched quantified-BV body
-globally true. General free-BV models and QE/QSAT remain later frontiers.
+globally true. General free-BV models and QE/QSAT were later frontiers at this
+checkpoint; ADR-0130 subsequently closes the affine-LSB/direct-witness slice.
 **Checked Boolean discharge of quantified BV closures is now LANDED
 (ADR-0123):** ADR-0107's independent three-valued checker now admits
 Bool/Int/BV syntax while keeping non-reflexive BV predicates opaque. A complete
@@ -763,24 +764,28 @@ SAT controls; cumulative quantified-BV direct-Z3 coverage is 1,720 cases and
 controls. The negative sweep also exposed and repaired two linear-depth term
 builders: exact finite expansion and AC canonicalization now preserve
 logarithmic-depth balanced trees through the maximum admitted 1,024-way fold.
-**Next action:** attack `smtcomp-qbv-053118`, now the smallest unsupported row at
-37 DAG nodes. Work backwards from cvc5 CEGQI-BV and Z3 model construction to
-define a checked SAT certificate for the concrete `x=0` parity model: the first
-universal excludes equality between an even left side and odd right side, while
-the negated second universal needs a complete existential witness. Do not
-credit parity normalization, a free BV model, or a nested existential witness
-without independent original-source replay. The other measured unsupported
-rows are
-`intersection-example-onelane`, `gn-wrong-091018`, `psyco-001-bv`, and
-`psyco-107-bv`. Focused ADR-0129 and adjacent ADR-0124/0126/0127/0128 suites, all
-eight quantified-BV direct-Z3 campaigns, solver library 866/866, evidence
-69/69, capability/support golden tests, strict workspace Clippy, warning-denied
-rustdoc, foundational 137/174 resources, rules-as-code, links, formatting, and
-diff checks pass. The full `just check` aggregate also passes, including every
-workspace test, doctest, warning-denied rustdoc, foundational-resource and
-rules-as-code validator, generated-dashboard check, and documentation link
-check. Hardware-relative frontier run artifacts were deliberately left at the
-committed baselines rather than recording machine-specific timing churn.
+**That action is now LANDED (ADR-0130):** each quantified source assertion
+carries exact sorted values for all free BV symbols. Direct positive universals
+are proved by a small affine GF(2) LSB interpreter; directly negated universals
+carry complete typed binder values evaluated against the untouched body.
+`smtcomp-qbv-053118` moves **Unsupported→SAT** with five-run target solve median
+0.195489 ms and evidence median 3.287 ms. The fresh cvc5 quantified-BV slice is
+**33 SAT / 17 UNSAT / 0 unknown / 4 unsupported**, 50 agreements, DISAGREE=0,
+no errors/replay failures, and five-run PAR-2 median 1.623998 s. The audit
+certifies/checks 50/50 with empty target trust; dominance is 41/50 and Lean
+remains 8/17 UNSAT. Five focused tests include 32 direct-Z3 certified SAT models
+and 32 UNSAT controls; cumulative quantified-BV direct-Z3 coverage is 1,784
+cases and controls. Strict all-target solver Clippy and all adjacent quantified
+certificate/differential suites pass; the complete workspace `just check`
+(format, strict Clippy, tests, warning-denied rustdoc, foundational resources,
+generated-document consistency, and links) also passes. **Next action:** characterize
+`intersection-example-onelane`, now the smallest unsupported row at 70 DAG
+nodes. Work backwards from cvc5 BV inversion/linearization and Z3 quantified
+model checking to define a separate checked SAT contract for its negated
+existential implication with free BV facts and signed division. Do not treat
+division normalization, implication vacuity, or a solver candidate as source
+evidence. The other measured unsupported rows are `gn-wrong-091018`,
+`psyco-001-bv`, and `psyco-107-bv`.
 **Process state:** first green CI in 200+ runs held into a green cadence;
 the pre-push hook gates the pushed SHA incl. the ~6s `:status` corpus
 sweep (a wrong verdict must not leave the machine); STATUS truncated

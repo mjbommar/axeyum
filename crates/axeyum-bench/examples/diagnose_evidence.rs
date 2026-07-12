@@ -46,6 +46,14 @@ fn proof_outcome_label(outcome: &UnsatProofOutcome) -> &'static str {
 
 fn evidence_kind(evidence: &Evidence) -> &'static str {
     match evidence {
+        Evidence::Sat(model)
+            if model
+                .quantified_bv_model_sat_certificates()
+                .next()
+                .is_some() =>
+        {
+            "quantified-bv-model-sat"
+        }
         Evidence::Sat(model) if model.quantified_guard_sat_certificates().next().is_some() => {
             "quantified-guard-sat"
         }

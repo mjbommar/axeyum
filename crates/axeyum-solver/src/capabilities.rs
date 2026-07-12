@@ -1197,6 +1197,25 @@ pub const CAPABILITIES: &[Capability] = &[
     },
     Capability {
         area: "quantifiers",
+        feature: "checked complete free-BV models for affine-LSB universals and directly negated \
+                  universal witnesses",
+        assurance: Assurance::Checked,
+        evidence: "untrusted search enumerates all low-bit assignments for at most eight free BV \
+                   symbols and uses the QF_BV solver only to propose complete witnesses. A separate \
+                   original-IR checker requires exact sorted free-symbol coverage, unique direct \
+                   Bool/BV prefixes, 128-binder/4,096-node/256-depth caps, and no functions or \
+                   non-Bool/BV terms. Positive universals are proved by exact affine GF(2) LSB \
+                   interpretation; directly negated universals replay complete typed binder values \
+                   through the ground evaluator. `smtcomp-qbv-053118` moves unsupported to replayed \
+                   SAT. The public quantified-BV slice is 33 SAT / 17 UNSAT / 0 unknown / 4 \
+                   unsupported with 50/50 evidence-certified/rechecked decisions, 41 dominant \
+                   candidates, zero disagreement/error/replay failure, and an empty target trust \
+                   ledger. Nonlinear low-bit products, nested alternation, functions, arrays, \
+                   arithmetic, broad BV model construction, and Lean SAT reconstruction remain open",
+        reference: "ADR-0130",
+    },
+    Capability {
+        area: "quantifiers",
         feature: "source-bound counterexamples for closed Bool/BV `forall+ exists+` alternation",
         assurance: Assurance::Checked,
         evidence: "untrusted search solves an outer-only implication antecedent and deterministic \

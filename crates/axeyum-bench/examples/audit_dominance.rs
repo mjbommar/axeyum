@@ -104,6 +104,14 @@ fn ms(duration: Duration) -> f64 {
 
 fn evidence_kind(evidence: &Evidence) -> &'static str {
     match evidence {
+        Evidence::Sat(model)
+            if model
+                .quantified_bv_model_sat_certificates()
+                .next()
+                .is_some() =>
+        {
+            "quantified-bv-model-sat"
+        }
         Evidence::Sat(model) if model.quantified_guard_sat_certificates().next().is_some() => {
             "quantified-guard-sat"
         }

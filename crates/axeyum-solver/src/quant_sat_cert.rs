@@ -450,7 +450,8 @@ pub fn check_model_with_assignment(
     let assertion_set: BTreeSet<_> = assertions.iter().copied().collect();
     let certificate_count = model.quantified_sat_certificates().count()
         + model.quantified_bool_model_sat_certificates().count()
-        + model.quantified_guard_sat_certificates().count();
+        + model.quantified_guard_sat_certificates().count()
+        + model.quantified_bv_model_sat_certificates().count();
     if model
         .quantified_sat_certificates()
         .any(|cert| !assertion_set.contains(&cert.assertion))
@@ -465,6 +466,12 @@ pub fn check_model_with_assignment(
     }
     if model
         .quantified_guard_sat_certificates()
+        .any(|cert| !assertion_set.contains(&cert.assertion))
+    {
+        return Ok(false);
+    }
+    if model
+        .quantified_bv_model_sat_certificates()
         .any(|cert| !assertion_set.contains(&cert.assertion))
     {
         return Ok(false);
@@ -493,6 +500,18 @@ pub fn check_model_with_assignment(
         }
         if let Some(cert) = model.quantified_guard_sat_certificate(assertion) {
             if !crate::check_quantified_guard_sat(arena, assertion, cert) {
+                return Ok(false);
+            }
+            checked_certificates.insert(assertion);
+            continue;
+        }
+        if let Some(cert) = model.quantified_bv_model_sat_certificate(assertion) {
+            if cert
+                .free_values
+                .iter()
+                .any(|(symbol, value)| assignment.get(*symbol) != Some(value.clone()))
+                || !crate::check_quantified_bv_model_sat(arena, assertion, cert)
+            {
                 return Ok(false);
             }
             checked_certificates.insert(assertion);

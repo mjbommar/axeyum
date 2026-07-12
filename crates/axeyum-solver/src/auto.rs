@@ -62,6 +62,11 @@ fn checked_quantified_fast_path(
         return Ok(Some(result));
     }
     if let Some(result) =
+        crate::quant_bv_model_sat_search::decide_quantified_bv_model_sat(arena, assertions, config)?
+    {
+        return Ok(Some(result));
+    }
+    if let Some(result) =
         crate::quant_bool_model_sat::decide_quantified_by_bool_model(arena, assertions, config)?
     {
         return Ok(Some(result));
