@@ -438,8 +438,8 @@ pub fn check_auto(
         if let Some(unsat) = try_conjunct_refutation(arena, assertions, config)? {
             return Ok(unsat);
         }
-        if let Some(unsat) = try_disjunct_refutation(arena, assertions, config)? {
-            return Ok(unsat);
+        if let Some(verdict) = try_disjunct_refutation(arena, assertions, config)? {
+            return Ok(verdict);
         }
         if let Some(verdict) = try_finite_domain_split(arena, assertions, config)? {
             return Ok(verdict);
@@ -494,6 +494,8 @@ fn try_conjunct_refutation(
 /// Last-resort refutation for a `unknown` verdict: flatten the top-level
 /// conjuncts and solve each top-level disjunction *alone* with a small budget.
 /// If every branch of every disjunction is unsat, the whole conjunction is unsat.
+/// A satisfiable branch is returned only when its model canonically replays against
+/// the untouched original assertions.
 fn try_disjunct_refutation(
     arena: &mut TermArena,
     assertions: &[TermId],
@@ -542,7 +544,12 @@ fn try_disjunct_refutation(
         }
         branch.extend_from_slice(&rest);
         match check_auto(arena, &branch, &sub)? {
-            CheckResult::Sat(model) => return Ok(Some(CheckResult::Sat(model))),
+            CheckResult::Sat(model) => {
+                if matches!(crate::check_model(arena, assertions, &model), Ok(true)) {
+                    return Ok(Some(CheckResult::Sat(model)));
+                }
+                all_unsat = false;
+            }
             CheckResult::Unsat => {}
             CheckResult::Unknown(_) => all_unsat = false,
         }
@@ -686,7 +693,12 @@ fn try_finite_domain_split(
         }
         branch.extend_from_slice(&rest);
         match check_auto(arena, &branch, &sub)? {
-            CheckResult::Sat(model) => return Ok(Some(CheckResult::Sat(model))),
+            CheckResult::Sat(model) => {
+                if matches!(crate::check_model(arena, assertions, &model), Ok(true)) {
+                    return Ok(Some(CheckResult::Sat(model)));
+                }
+                all_unsat = false;
+            }
             CheckResult::Unsat => {}
             CheckResult::Unknown(_) => all_unsat = false,
         }
@@ -742,10 +754,15 @@ pub fn check_auto_explained(
         trace.record_decided("conjunct-refutation", Verdict::Unsat);
         unsat
     } else if matches!(result, CheckResult::Unknown(_))
-        && let Some(unsat) = try_disjunct_refutation(arena, assertions, config)?
+        && let Some(verdict) = try_disjunct_refutation(arena, assertions, config)?
     {
-        trace.record_decided("disjunct-refutation", Verdict::Unsat);
-        unsat
+        let recorded = if matches!(verdict, CheckResult::Sat(_)) {
+            Verdict::Sat
+        } else {
+            Verdict::Unsat
+        };
+        trace.record_decided("disjunct-refutation", recorded);
+        verdict
     } else if matches!(result, CheckResult::Unknown(_))
         && let Some(verdict) = try_finite_domain_split(arena, assertions, config)?
     {
@@ -6389,6 +6406,23 @@ mod tests {
             matches!(result, CheckResult::Unsat),
             "bounded linear x>0 ∧ x<1 must be unsat, got {result:?}"
         );
+    }
+
+    #[test]
+    fn disjunctive_branch_sat_model_replays_original_query() {
+        let mut arena = TermArena::new();
+        let p = arena.bool_var("disjunct_replay_p").unwrap();
+        let q = arena.bool_var("disjunct_replay_q").unwrap();
+        let disjunction = arena.or(p, q).unwrap();
+        let assertions = [disjunction];
+        let config = SolverConfig::default().with_timeout(Duration::from_secs(1));
+
+        let Some(CheckResult::Sat(model)) =
+            try_disjunct_refutation(&mut arena, &assertions, &config).unwrap()
+        else {
+            panic!("a satisfiable disjunctive branch should produce a replayed model");
+        };
+        assert!(crate::check_model(&arena, &assertions, &model).unwrap());
     }
 
     // -----------------------------------------------------------------------

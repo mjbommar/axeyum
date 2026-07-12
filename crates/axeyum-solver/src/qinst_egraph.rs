@@ -186,6 +186,7 @@ fn prove_quantified_unsat_via_egraph_impl(
         if admitted.is_empty() && candidate_equalities_enabled {
             match scoped_candidate_fixpoint_step(
                 arena,
+                assertions,
                 &mut ground,
                 config,
                 &mut matcher,
@@ -236,6 +237,7 @@ enum CandidateFixpointStep {
 #[allow(clippy::too_many_arguments)]
 fn scoped_candidate_fixpoint_step(
     arena: &mut TermArena,
+    assertions: &[TermId],
     ground: &mut Vec<TermId>,
     config: &SolverConfig,
     matcher: &mut IncrementalEmatchSession,
@@ -284,6 +286,8 @@ fn scoped_candidate_fixpoint_step(
                 ..
             } = candidate.batch;
             Ok(CandidateFixpointStep::Added(admit_generated_ground(
+                arena,
+                assertions,
                 urgent,
                 seen,
                 ground,
@@ -332,8 +336,11 @@ fn try_closed_universal_refutations(
     Ok(false)
 }
 
-/// Runs the narrow ADR-0095/0097/0099 instance proposers. Each proposal remains
-/// untrusted until the ordinary QF solver refutes the resulting ground query.
+/// Runs the narrow ADR-0095/0097/0099 instance proposers. The independent
+/// original-IR theorem checker must recognize the source universal before a
+/// proposal is tested, and the ordinary QF solver must then refute the resulting
+/// ground query. Neither the search matcher nor its synthesized probe is trusted
+/// on its own.
 fn try_targeted_quantifier_refutations(
     arena: &mut TermArena,
     ground: &[TermId],
@@ -342,7 +349,9 @@ fn try_targeted_quantifier_refutations(
     stats: &mut QuantifierLoopStats,
 ) -> Result<bool, SolverError> {
     for &quantifier in foralls {
-        if let Some(instance) = nested_xor_discriminator_instance(arena, quantifier)? {
+        if crate::quant_nested_xor_cert::int_nested_xor_refutation(arena, &[quantifier]).is_some()
+            && let Some(instance) = nested_xor_discriminator_instance(arena, quantifier)?
+        {
             let mut probe = ground.to_vec();
             probe.push(instance);
             if matches!(
@@ -354,7 +363,10 @@ fn try_targeted_quantifier_refutations(
         }
     }
     for &quantifier in foralls {
-        if let Some(instance) = euclidean_residue_instance(arena, quantifier)? {
+        if crate::quant_residue_cert::int_euclidean_residue_refutation(arena, &[quantifier])
+            .is_some()
+            && let Some(instance) = euclidean_residue_instance(arena, quantifier)?
+        {
             let mut probe = ground.to_vec();
             probe.push(instance);
             if matches!(
@@ -366,7 +378,10 @@ fn try_targeted_quantifier_refutations(
         }
     }
     for &quantifier in foralls {
-        if let Some(instances) = affine_growth_instances(arena, quantifier)? {
+        if crate::quant_affine_growth_cert::int_affine_growth_refutation(arena, &[quantifier])
+            .is_some()
+            && let Some(instances) = affine_growth_instances(arena, quantifier)?
+        {
             let mut probe = ground.to_vec();
             probe.extend(instances);
             if matches!(
@@ -409,16 +424,34 @@ fn admit_next_source_batch(
     deferred.sort_by_key(|term| term.index());
     deferred.dedup();
 
-    let mut admitted = admit_generated_ground(urgent, seen, ground, retained, &derivations);
+    let mut admitted = admit_generated_ground(
+        arena,
+        assertions,
+        urgent,
+        seen,
+        ground,
+        retained,
+        &derivations,
+    );
     // Once urgent traffic is exhausted, release unresolved clauses so mutually
     // constraining instances preserve the legacy loop's reach.
     if admitted.is_empty() {
-        admitted = admit_generated_ground(deferred, seen, ground, retained, &derivations);
+        admitted = admit_generated_ground(
+            arena,
+            assertions,
+            deferred,
+            seen,
+            ground,
+            retained,
+            &derivations,
+        );
     }
     admitted
 }
 
 fn admit_generated_ground(
+    arena: &mut TermArena,
+    assertions: &[TermId],
     terms: Vec<TermId>,
     seen: &mut HashSet<TermId>,
     ground: &mut Vec<TermId>,
@@ -427,10 +460,14 @@ fn admit_generated_ground(
 ) -> Vec<TermId> {
     let mut added = Vec::new();
     for term in terms {
+        let Some(derivation) = candidates.get(&term) else {
+            continue;
+        };
+        if !check_quantifier_ground_derivation(arena, assertions, derivation) {
+            continue;
+        }
         if seen.insert(term) {
-            if let Some(derivation) = candidates.get(&term) {
-                retained.insert(term, derivation.clone());
-            }
+            retained.insert(term, derivation.clone());
             ground.push(term);
             added.push(term);
         }
@@ -5054,6 +5091,56 @@ mod tests {
                 .unwrap(),
             CheckResult::Unsat
         );
+    }
+
+    #[test]
+    fn generated_ground_admission_requires_checked_source_provenance() {
+        let mut arena = TermArena::new();
+        let sort = Sort::BitVec(8);
+        let zero = arena.bv_const(8, 0).unwrap();
+        let one = arena.bv_const(8, 1).unwrap();
+        let two = arena.bv_const(8, 2).unwrap();
+        let three = arena.bv_const(8, 3).unwrap();
+        let x = arena.declare("checked_admission_x", sort).unwrap();
+        let x_term = arena.var(x);
+        let body = arena.eq(x_term, zero).unwrap();
+        let forall = arena.forall(x, body).unwrap();
+        let assertions = vec![forall];
+
+        let instance_one = arena.eq(one, zero).unwrap();
+        let instance_two = arena.eq(two, zero).unwrap();
+        let instance_three = arena.eq(three, zero).unwrap();
+        let valid = QuantifierGroundDerivation::Instance(QuantifierInstanceCertificate {
+            assertion: forall,
+            bindings: vec![one],
+            instance: instance_one,
+        });
+        let tampered = QuantifierGroundDerivation::Instance(QuantifierInstanceCertificate {
+            assertion: forall,
+            bindings: vec![two],
+            instance: instance_one,
+        });
+        let candidates = HashMap::from([(instance_one, valid), (instance_two, tampered)]);
+        let mut seen = HashSet::new();
+        let mut ground = Vec::new();
+        let mut retained = HashMap::new();
+
+        assert_eq!(
+            admit_generated_ground(
+                &mut arena,
+                &assertions,
+                vec![instance_one, instance_two, instance_three],
+                &mut seen,
+                &mut ground,
+                &mut retained,
+                &candidates,
+            ),
+            vec![instance_one]
+        );
+        assert_eq!(ground, vec![instance_one]);
+        assert_eq!(seen, HashSet::from([instance_one]));
+        assert_eq!(retained.len(), 1);
+        assert!(retained.contains_key(&instance_one));
     }
 
     #[test]

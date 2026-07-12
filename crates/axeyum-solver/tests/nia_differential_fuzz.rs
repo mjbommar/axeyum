@@ -53,12 +53,15 @@ const INSTANCES: u64 = 2500;
 /// only bounds the rare pathological shape so the test never hangs.
 const Z3_TIMEOUT: Duration = Duration::from_secs(2);
 
-/// Per-instance hard wall-clock cap on the axeyum `solve`. A slow NIA shape is
-/// run on a worker thread and joined with this cap; a solve that overruns is
-/// recorded as a timeout (adjudication-neutral, exactly like `Unknown`) and the
-/// sweep moves on. This is sound — a timeout is never a sat/unsat verdict — and
-/// bounds total runtime.
-const AXEYUM_TIMEOUT: Duration = Duration::from_secs(4);
+/// Per-instance solver deadline. Most generated cases decide in milliseconds;
+/// expensive cases must return first-class `Unknown` instead of consuming the
+/// whole differential gate.
+const AXEYUM_SOLVER_TIMEOUT: Duration = Duration::from_millis(250);
+
+/// Outer watchdog for deadline-honoring regressions. This is deliberately
+/// larger than [`AXEYUM_SOLVER_TIMEOUT`], but small enough that a missed poll
+/// cannot turn 2,500 deterministic seeds into a multi-hour test.
+const AXEYUM_WALL_TIMEOUT: Duration = Duration::from_secs(1);
 
 /// A deterministic linear-congruential PRNG (the MMIX multiplier/increment).
 /// No clock, no OS entropy: the whole sweep is reproducible from the seed.
@@ -436,7 +439,8 @@ fn solve_axeyum_bounded(inst: Instance) -> Option<AxeyumOutcome> {
     let (tx, rx) = mpsc::channel();
     std::thread::spawn(move || {
         let (mut a, syms, assertions) = inst.build();
-        let result = solve(&mut a, &assertions, &SolverConfig::default());
+        let config = SolverConfig::default().with_timeout(AXEYUM_SOLVER_TIMEOUT);
+        let result = solve(&mut a, &assertions, &config);
         let outcome = match result {
             Err(_) => None, // solve must not error; surface as a worker failure
             Ok(ax) => {
@@ -485,7 +489,7 @@ fn solve_axeyum_bounded(inst: Instance) -> Option<AxeyumOutcome> {
         let _ = tx.send(outcome);
     });
 
-    match rx.recv_timeout(AXEYUM_TIMEOUT) {
+    match rx.recv_timeout(AXEYUM_WALL_TIMEOUT) {
         Ok(Some(outcome)) => Some(outcome),
         Ok(None) => {
             panic!("axeyum solve returned an error (Unknown must be a result, not an error)")
