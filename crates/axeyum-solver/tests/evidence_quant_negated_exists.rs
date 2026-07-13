@@ -6,8 +6,9 @@ use axeyum_ir::{Sort, TermArena, Value};
 use axeyum_smtlib::parse_script;
 use axeyum_solver::{
     CheckResult, Evidence, NEGATED_EXISTENTIAL_BINDER_CAP, NEGATED_EXISTENTIAL_NODE_CAP,
-    NegatedExistentialWitnessCertificate, SolverConfig, check_negated_existential_witness,
-    produce_evidence, solve,
+    NegatedExistentialWitnessCertificate, ProofFragment, SolverConfig,
+    check_negated_existential_witness, produce_evidence, prove_unsat_to_lean_module,
+    reconstruct_negated_existential_witness_to_lean_module, scan_proof_fragment, solve,
 };
 
 const NUM878: &str = include_str!(
@@ -73,6 +74,76 @@ fn three_minimal_public_rows_gain_checked_evidence() {
             CheckResult::Unsat
         ));
     }
+}
+
+#[test]
+fn small_nested_bool_bv_witness_reconstructs_and_routes_deterministically() {
+    let text = "(set-logic BV)
+        (assert (not (exists ((b Bool) (x (_ BitVec 21)))
+          (and b (= x x)))))
+        (check-sat)";
+    let (mut script, assertions, certificate) = target_certificate(text);
+    let direct = reconstruct_negated_existential_witness_to_lean_module(
+        &script.arena,
+        &assertions,
+        &certificate,
+    )
+    .expect("small typed witness reconstructs");
+    assert!(direct.contains("theorem axeyum_refutation : False"));
+    assert!(!direct.contains("sorryAx"));
+    assert_eq!(
+        scan_proof_fragment(&script.arena, &assertions),
+        ProofFragment::NegatedExistentialWitness
+    );
+    let (fragment, routed) = prove_unsat_to_lean_module(&mut script.arena, &assertions)
+        .expect("small typed witness routes");
+    assert_eq!(fragment, ProofFragment::NegatedExistentialWitness);
+    assert_eq!(routed, direct);
+}
+
+#[test]
+#[ignore = "release-only public-corpus Lean reconstruction stress gate"]
+fn three_public_rows_gain_genuine_typed_lean_reconstruction() {
+    for (name, text) in [
+        ("NUM878", NUM878),
+        ("ari-syqi", ARI_SYQI),
+        ("ari118-bv-2occ-x", ARI118),
+    ] {
+        let (script, assertions, certificate) = target_certificate(text);
+        let direct = reconstruct_negated_existential_witness_to_lean_module(
+            &script.arena,
+            &assertions,
+            &certificate,
+        )
+        .unwrap_or_else(|error| panic!("{name}: direct reconstruction failed: {error}"));
+        assert!(
+            direct.contains("theorem axeyum_refutation : False"),
+            "{name}"
+        );
+        assert!(!direct.contains("sorryAx"), "{name}");
+        assert_eq!(
+            scan_proof_fragment(&script.arena, &assertions),
+            ProofFragment::NegatedExistentialWitness,
+            "{name}"
+        );
+    }
+}
+
+#[test]
+fn tampered_witness_never_reconstructs_to_false() {
+    let (script, assertions, mut certificate) = target_certificate(ARI_SYQI);
+    certificate.bindings[0].1 = Value::Bv {
+        width: 32,
+        value: 12,
+    };
+    assert!(
+        reconstruct_negated_existential_witness_to_lean_module(
+            &script.arena,
+            &assertions,
+            &certificate,
+        )
+        .is_err()
+    );
 }
 
 #[test]

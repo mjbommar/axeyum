@@ -98,6 +98,10 @@ pub struct Kernel {
     /// independent of the local context, so sharing this cache across recursive
     /// checks avoids exponential re-walks of hash-consed proof DAGs.
     infer_closed_cache: HashMap<ExprId, ExprId>,
+    /// Weak-head normal forms keyed by the declaration-environment size. The
+    /// revision key prevents a result cached before a definition/recursor is
+    /// admitted from suppressing a later valid reduction.
+    whnf_cache: HashMap<(ExprId, usize), ExprId>,
 
     /// The global declaration environment (ADR-0036, slice 3). Declarations are
     /// admitted only through the type-checked [`Kernel::add_declaration`] gate.
@@ -409,7 +413,20 @@ impl Kernel {
     /// declaration's `uparams` with `level_args` by substituting in the
     /// declaration's type (and, when δ-unfolding, its value).
     pub fn substitute_expr_levels(&mut self, e: ExprId, subst: &[(NameId, LevelId)]) -> ExprId {
-        match self.expr_node(e).clone() {
+        let mut memo = HashMap::new();
+        self.substitute_expr_levels_aux(e, subst, &mut memo)
+    }
+
+    fn substitute_expr_levels_aux(
+        &mut self,
+        e: ExprId,
+        subst: &[(NameId, LevelId)],
+        memo: &mut HashMap<ExprId, ExprId>,
+    ) -> ExprId {
+        if let Some(&substituted) = memo.get(&e) {
+            return substituted;
+        }
+        let substituted = match self.expr_node(e).clone() {
             ExprNode::BVar(_) | ExprNode::FVar(_) | ExprNode::Lit(_) => e,
             ExprNode::Sort(level) => {
                 let level = self.substitute_level(level, subst);
@@ -423,27 +440,29 @@ impl Kernel {
                 self.const_(name, levels)
             }
             ExprNode::App(f, a) => {
-                let f = self.substitute_expr_levels(f, subst);
-                let a = self.substitute_expr_levels(a, subst);
+                let f = self.substitute_expr_levels_aux(f, subst, memo);
+                let a = self.substitute_expr_levels_aux(a, subst, memo);
                 self.app(f, a)
             }
             ExprNode::Lam(name, ty, body, info) => {
-                let ty = self.substitute_expr_levels(ty, subst);
-                let body = self.substitute_expr_levels(body, subst);
+                let ty = self.substitute_expr_levels_aux(ty, subst, memo);
+                let body = self.substitute_expr_levels_aux(body, subst, memo);
                 self.lam(name, ty, body, info)
             }
             ExprNode::Pi(name, ty, body, info) => {
-                let ty = self.substitute_expr_levels(ty, subst);
-                let body = self.substitute_expr_levels(body, subst);
+                let ty = self.substitute_expr_levels_aux(ty, subst, memo);
+                let body = self.substitute_expr_levels_aux(body, subst, memo);
                 self.pi(name, ty, body, info)
             }
             ExprNode::Let(name, ty, val, body) => {
-                let ty = self.substitute_expr_levels(ty, subst);
-                let val = self.substitute_expr_levels(val, subst);
-                let body = self.substitute_expr_levels(body, subst);
+                let ty = self.substitute_expr_levels_aux(ty, subst, memo);
+                let val = self.substitute_expr_levels_aux(val, subst, memo);
+                let body = self.substitute_expr_levels_aux(body, subst, memo);
                 self.let_(name, ty, val, body)
             }
-        }
+        };
+        memo.insert(e, substituted);
+        substituted
     }
 
     /// `subst` then `simplify` — the substitution used by `leq_imax_by_cases`.
@@ -745,14 +764,24 @@ impl Kernel {
     ///
     /// On a closed expression this is the identity.
     pub fn instantiate(&mut self, e: ExprId, subst: &[ExprId]) -> ExprId {
-        self.instantiate_aux(e, subst, 0)
+        let mut memo = HashMap::new();
+        self.instantiate_aux(e, subst, 0, &mut memo)
     }
 
-    fn instantiate_aux(&mut self, e: ExprId, subst: &[ExprId], offset: u32) -> ExprId {
+    fn instantiate_aux(
+        &mut self,
+        e: ExprId,
+        subst: &[ExprId],
+        offset: u32,
+        memo: &mut HashMap<(ExprId, u32), ExprId>,
+    ) -> ExprId {
         if self.num_loose_bvars(e) <= offset {
             return e;
         }
-        match self.expr_node(e).clone() {
+        if let Some(&instantiated) = memo.get(&(e, offset)) {
+            return instantiated;
+        }
+        let instantiated = match self.expr_node(e).clone() {
             ExprNode::Sort(_) | ExprNode::Const(..) | ExprNode::FVar(_) | ExprNode::Lit(_) => e,
             ExprNode::BVar(idx) => {
                 debug_assert!(idx >= offset);
@@ -760,27 +789,29 @@ impl Kernel {
                 subst.iter().rev().nth(i).copied().unwrap_or(e)
             }
             ExprNode::App(f, a) => {
-                let f = self.instantiate_aux(f, subst, offset);
-                let a = self.instantiate_aux(a, subst, offset);
+                let f = self.instantiate_aux(f, subst, offset, memo);
+                let a = self.instantiate_aux(a, subst, offset, memo);
                 self.app(f, a)
             }
             ExprNode::Lam(name, ty, body, info) => {
-                let ty = self.instantiate_aux(ty, subst, offset);
-                let body = self.instantiate_aux(body, subst, offset + 1);
+                let ty = self.instantiate_aux(ty, subst, offset, memo);
+                let body = self.instantiate_aux(body, subst, offset + 1, memo);
                 self.lam(name, ty, body, info)
             }
             ExprNode::Pi(name, ty, body, info) => {
-                let ty = self.instantiate_aux(ty, subst, offset);
-                let body = self.instantiate_aux(body, subst, offset + 1);
+                let ty = self.instantiate_aux(ty, subst, offset, memo);
+                let body = self.instantiate_aux(body, subst, offset + 1, memo);
                 self.pi(name, ty, body, info)
             }
             ExprNode::Let(name, ty, val, body) => {
-                let ty = self.instantiate_aux(ty, subst, offset);
-                let val = self.instantiate_aux(val, subst, offset);
-                let body = self.instantiate_aux(body, subst, offset + 1);
+                let ty = self.instantiate_aux(ty, subst, offset, memo);
+                let val = self.instantiate_aux(val, subst, offset, memo);
+                let body = self.instantiate_aux(body, subst, offset + 1, memo);
                 self.let_(name, ty, val, body)
             }
-        }
+        };
+        memo.insert((e, offset), instantiated);
+        instantiated
     }
 
     /// Replace the free variables in `fvars` with loose bound variables.
@@ -790,41 +821,53 @@ impl Kernel {
     /// last entry of `fvars` (the innermost binder) maps to the lowest index.
     /// This matches nanoda's `abstr`: `locals.iter().rev().position(..)`.
     pub fn abstract_fvars(&mut self, e: ExprId, fvars: &[u64]) -> ExprId {
-        self.abstract_aux(e, fvars, 0)
+        let mut memo = HashMap::new();
+        self.abstract_aux(e, fvars, 0, &mut memo)
     }
 
-    fn abstract_aux(&mut self, e: ExprId, fvars: &[u64], offset: u32) -> ExprId {
+    fn abstract_aux(
+        &mut self,
+        e: ExprId,
+        fvars: &[u64],
+        offset: u32,
+        memo: &mut HashMap<(ExprId, u32), ExprId>,
+    ) -> ExprId {
         if !self.has_fvars(e) {
             return e;
         }
-        match self.expr_node(e).clone() {
+        if let Some(&abstracted) = memo.get(&(e, offset)) {
+            return abstracted;
+        }
+        let abstracted = match self.expr_node(e).clone() {
             ExprNode::FVar(id) => match fvars.iter().rev().position(|&x| x == id) {
                 Some(pos) => self.bvar(u32::try_from(pos).expect("fvar count fits u32") + offset),
                 None => e,
             },
             ExprNode::BVar(_) | ExprNode::Sort(_) | ExprNode::Const(..) | ExprNode::Lit(_) => e,
             ExprNode::App(f, a) => {
-                let f = self.abstract_aux(f, fvars, offset);
-                let a = self.abstract_aux(a, fvars, offset);
+                let f = self.abstract_aux(f, fvars, offset, memo);
+                let a = self.abstract_aux(a, fvars, offset, memo);
                 self.app(f, a)
             }
             ExprNode::Lam(name, ty, body, info) => {
-                let ty = self.abstract_aux(ty, fvars, offset);
-                let body = self.abstract_aux(body, fvars, offset + 1);
+                let ty = self.abstract_aux(ty, fvars, offset, memo);
+                let body = self.abstract_aux(body, fvars, offset + 1, memo);
                 self.lam(name, ty, body, info)
             }
             ExprNode::Pi(name, ty, body, info) => {
-                let ty = self.abstract_aux(ty, fvars, offset);
-                let body = self.abstract_aux(body, fvars, offset + 1);
+                let ty = self.abstract_aux(ty, fvars, offset, memo);
+                let body = self.abstract_aux(body, fvars, offset + 1, memo);
                 self.pi(name, ty, body, info)
             }
             ExprNode::Let(name, ty, val, body) => {
-                let ty = self.abstract_aux(ty, fvars, offset);
-                let val = self.abstract_aux(val, fvars, offset);
-                let body = self.abstract_aux(body, fvars, offset + 1);
+                let ty = self.abstract_aux(ty, fvars, offset, memo);
+                let val = self.abstract_aux(val, fvars, offset, memo);
+                let body = self.abstract_aux(body, fvars, offset + 1, memo);
                 self.let_(name, ty, val, body)
             }
-        }
+        };
+        memo.insert((e, offset), abstracted);
+        abstracted
     }
 
     /// Shift loose bound variables in `e` by `amount`, only those whose index is

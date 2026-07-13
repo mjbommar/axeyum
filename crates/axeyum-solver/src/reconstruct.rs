@@ -48,7 +48,10 @@
 
 mod quant_bv_instance_set_lean;
 
-pub use quant_bv_instance_set_lean::reconstruct_bv_positive_universal_instance_set_to_lean_module;
+pub use quant_bv_instance_set_lean::{
+    reconstruct_bv_positive_universal_instance_set_to_lean_module,
+    reconstruct_negated_existential_witness_to_lean_module,
+};
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -214,6 +217,11 @@ pub struct ReconstructCtx {
     bv_widths: BTreeMap<String, usize>,
     /// Kernel `BitVec w` models used by quantified-BV source reconstruction.
     bv_value_types: BTreeMap<usize, DatatypeInductive>,
+    /// Computational-`Bool` bit-vector models for concrete witness reduction.
+    computational_bv_value_types: BTreeMap<usize, DatatypeInductive>,
+    /// Shared reducible computational Bool operators used by AIG source terms.
+    computational_bool_not: Option<NameId>,
+    computational_bool_and: Option<NameId>,
     /// Free bit-vector symbol → `(width, kernel constant)` in the typed bit model.
     bv_value_symbols: BTreeMap<String, (usize, NameId)>,
     /// Scoped Bool binder names and their kernel values while translating a source
@@ -309,6 +317,9 @@ impl ReconstructCtx {
             next_id: 0,
             bv_widths: BTreeMap::new(),
             bv_value_types: BTreeMap::new(),
+            computational_bv_value_types: BTreeMap::new(),
+            computational_bool_not: None,
+            computational_bool_and: None,
             bv_value_symbols: BTreeMap::new(),
             gate_bound_bools: BTreeMap::new(),
             gate_bound_bvs: BTreeMap::new(),
@@ -1430,6 +1441,9 @@ pub enum ProofFragment {
     /// residual bit-level refutation is reconstructed from genuine source
     /// instantiations (ADR-0135).
     BvPositiveUniversalInstanceSet,
+    /// A concrete evaluator-replayed witness closes a directly negated typed
+    /// Bool/BV existential through genuine `Exists.intro` (ADR-0138).
+    NegatedExistentialWitness,
     /// A top-level existential quantifier (skolemized).
     Exists,
     /// A word-level (string/sequence) refutation: a contradicted disequality or a
@@ -1835,6 +1849,10 @@ pub fn scan_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> ProofFra
         )
     {
         ProofFragment::BvPositiveUniversalInstanceSet
+    } else if has_exists
+        && quant_bv_instance_set_lean::negated_existential_witness_lean_shape(arena, assertions)
+    {
+        ProofFragment::NegatedExistentialWitness
     } else if has_exists {
         ProofFragment::Exists
     } else if has_forall {
@@ -3861,6 +3879,23 @@ fn reconstruct_proof_fragment_to_lean_module(
             })?
             .ok_or_else(declined)?;
             quant_bv_instance_set_lean::reconstruct_bv_positive_universal_instance_set_to_lean_module(
+                arena,
+                assertions,
+                &certificate,
+            )?
+        }
+        ProofFragment::NegatedExistentialWitness => {
+            let config =
+                crate::SolverConfig::default().with_timeout(std::time::Duration::from_secs(30));
+            let certificate = crate::quant_negated_exists_search::find_negated_existential_witness(
+                arena, assertions, &config,
+            )
+            .map_err(|error| ReconstructError::MalformedStep {
+                rule: "negated_existential_witness".to_owned(),
+                detail: format!("witness search failed: {error}"),
+            })?
+            .ok_or_else(declined)?;
+            quant_bv_instance_set_lean::reconstruct_negated_existential_witness_to_lean_module(
                 arena,
                 assertions,
                 &certificate,

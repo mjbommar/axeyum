@@ -1346,8 +1346,13 @@ pub const CAPABILITIES: &[Capability] = &[
                    with 46/46 checked/certified decisions, zero disagreement, error, or replay failure, \
                    and empty target trust ledgers. The complete direct-Z3 suite covers 1,400 cases and \
                    controls. Open bodies, functions, arrays, arithmetic binders, nested quantifiers, \
-                   broader QSAT, and Lean reconstruction remain open",
-        reference: "ADR-0126",
+                   and broader QSAT remain open. ADR-0138 rechecks the certificate and constructs \
+                   genuine typed `Exists.intro` witnesses against the untouched negated source \
+                   axiom. Small bodies carry logical gate proofs; large bodies use shared \
+                   computational Bool definitions and local AIG lets, all reduced by the kernel. \
+                   The three-row release gate completes in 12.43 seconds under 4 GiB, raising the \
+                   exact public audit to 48/54 dominant and Lean UNSAT 12/18",
+        reference: "ADR-0126/0138",
     },
     Capability {
         area: "quantifiers",

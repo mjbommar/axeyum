@@ -11,19 +11,21 @@ use axeyum_aig::{AigLit, AigNode};
 use axeyum_bv::{BitLowering, lower_terms};
 use axeyum_cnf::{AletheCommand, AletheTerm};
 use axeyum_ir::{Op, Sort, SymbolId, TermArena, TermId, TermNode, Value};
-use axeyum_lean_kernel::{BinderInfo, Declaration};
+use axeyum_lean_kernel::{BinderInfo, Declaration, ReducibilityHint};
 
 use super::{
     Clause, DatatypeInductive, ExprId, LEAN_MODULE_THEOREM, ReconstructCtx, ReconstructError,
     and_project, check_against, check_false_prop, fresh_axiom, fresh_fvar_id,
-    reconstruct_bitwise_step, require_infers_false,
+    reconstruct_bitwise_step, render_ctx_module, require_infers_false,
 };
 use crate::{
     BvPositiveUniversalInstanceSetCertificate, BvPositiveUniversalSourceInstance,
-    check_bv_positive_universal_instance_set,
+    NegatedExistentialWitnessCertificate, check_bv_positive_universal_instance_set,
+    check_negated_existential_witness,
 };
 
 const MAX_LEAN_BV_WIDTH: u32 = 64;
+const COMPUTATIONAL_WITNESS_AIG_THRESHOLD: usize = 512;
 
 type CarriedBindings = Vec<(SymbolId, Value)>;
 type SourceAssumption = (TermId, ExprId, Option<CarriedBindings>);
@@ -453,6 +455,102 @@ impl ReconstructCtx {
         }
         Ok(result)
     }
+
+    fn computational_bv_type(&mut self, width: usize) -> Result<DatatypeInductive, ReconstructError> {
+        if let Some(&datatype) = self.computational_bv_value_types.get(&width) {
+            return Ok(datatype);
+        }
+        let name = self.fresh_name(&format!("computational_bv{width}"));
+        let bool_ty = self.kernel.const_(self.prelude.bool_, vec![]);
+        let datatype = self.kernel.add_datatype_inductive(name, bool_ty, self.one, width)
+            .map_err(|error| ReconstructError::KernelRejected {
+                rule: "computational_quantified_bv_type".to_owned(),
+                detail: format!("finite computational-bit datatype did not admit: {error:?}"),
+            })?;
+        self.computational_bv_value_types.insert(width, datatype);
+        Ok(datatype)
+    }
+
+    fn computational_bv_literal(&mut self, width: usize, value: u128) -> Result<ExprId, ReconstructError> {
+        let datatype = self.computational_bv_type(width)?;
+        let mut result = self.kernel.const_(datatype.ctor, vec![]);
+        for index in 0..width {
+            let bit = self.kernel.const_(
+                if (value >> index) & 1 == 1 { self.prelude.bool_true } else { self.prelude.bool_false },
+                vec![],
+            );
+            result = self.kernel.app(result, bit);
+        }
+        Ok(result)
+    }
+
+    fn ensure_computational_bool_ops(
+        &mut self,
+    ) -> Result<(axeyum_lean_kernel::NameId, axeyum_lean_kernel::NameId), ReconstructError> {
+        if let (Some(not), Some(and)) = (self.computational_bool_not, self.computational_bool_and) {
+            return Ok((not, and));
+        }
+        let bool_ty = self.kernel.const_(self.prelude.bool_, vec![]);
+        let anon = self.kernel.anon();
+
+        let not_name = self.fresh_name("computational_bool_not");
+        let not_ty = self.kernel.pi(anon, bool_ty, bool_ty, BinderInfo::Default);
+        let not_arg = self.kernel.bvar(0);
+        let not_body = computational_bool_not_value(self, not_arg);
+        let not_value = self.kernel.lam(anon, bool_ty, not_body, BinderInfo::Default);
+        self.kernel.add_declaration(Declaration::Definition {
+            name: not_name,
+            uparams: vec![],
+            ty: not_ty,
+            value: not_value,
+            hint: ReducibilityHint::Regular(0),
+        }).map_err(|error| ReconstructError::KernelRejected {
+            rule: "computational_bool_not".to_owned(),
+            detail: format!("computational Bool not did not admit: {error:?}"),
+        })?;
+
+        let and_name = self.fresh_name("computational_bool_and");
+        let inner_ty = self.kernel.pi(anon, bool_ty, bool_ty, BinderInfo::Default);
+        let and_ty = self.kernel.pi(anon, bool_ty, inner_ty, BinderInfo::Default);
+        let left = self.kernel.bvar(1);
+        let right = self.kernel.bvar(0);
+        let and_body = computational_bool_and_value(self, left, right);
+        let and_inner = self.kernel.lam(anon, bool_ty, and_body, BinderInfo::Default);
+        let and_value = self.kernel.lam(anon, bool_ty, and_inner, BinderInfo::Default);
+        self.kernel.add_declaration(Declaration::Definition {
+            name: and_name,
+            uparams: vec![],
+            ty: and_ty,
+            value: and_value,
+            hint: ReducibilityHint::Regular(0),
+        }).map_err(|error| ReconstructError::KernelRejected {
+            rule: "computational_bool_and".to_owned(),
+            detail: format!("computational Bool and did not admit: {error:?}"),
+        })?;
+        self.computational_bool_not = Some(not_name);
+        self.computational_bool_and = Some(and_name);
+        Ok((not_name, and_name))
+    }
+
+}
+
+fn computational_bv_projection(
+    ctx: &mut ReconstructCtx,
+    symbol: SymbolId,
+    width: u32,
+    index: usize,
+) -> Result<ExprId, ReconstructError> {
+    let width_usize = usize::try_from(width).expect("u32 fits usize");
+    let &(bound_width, value) = ctx.gate_bound_bvs
+        .get(&symbol_key(symbol, Sort::BitVec(width)))
+        .ok_or_else(|| decline("computational BV binder is unbound"))?;
+    if bound_width != width_usize || index >= width_usize {
+        return Err(decline("computational BV projection width mismatch"));
+    }
+    let datatype = ctx.computational_bv_type(width_usize)?;
+    let bool_ty = ctx.kernel.const_(ctx.prelude.bool_, vec![]);
+    let selector = ctx.kernel.datatype_selector(datatype, bool_ty, ctx.one, index);
+    Ok(ctx.kernel.app(selector, value))
 }
 
 fn register_bv_widths(ctx: &mut ReconstructCtx, arena: &TermArena, root: TermId) {
@@ -486,6 +584,258 @@ fn direct_ground_prop(
     let lowering = lower_terms(arena, &[term])
         .map_err(|error| decline(format!("AIG source lowering failed: {error}")))?;
     aig_root_prop(ctx, &lowering)
+}
+
+#[derive(Clone, Copy)]
+struct EvaluatedProp {
+    proposition: ExprId,
+    proof: ExprId,
+    value: bool,
+}
+
+fn false_elim_identity(ctx: &mut ReconstructCtx) -> ExprId {
+    let false_ = ctx.kernel.const_(ctx.prelude.false_, vec![]);
+    let body = ctx.kernel.bvar(0);
+    let anon = ctx.kernel.anon();
+    ctx.kernel.lam(anon, false_, body, BinderInfo::Default)
+}
+
+fn refute_and(ctx: &mut ReconstructCtx, left: EvaluatedProp, right: EvaluatedProp) -> ExprId {
+    let conjunction = ctx.mk_and(left.proposition, right.proposition);
+    let hypothesis_id = fresh_fvar_id(ctx);
+    let hypothesis = ctx.kernel.fvar(hypothesis_id);
+    let (negative, projected) = if left.value {
+        (
+            right.proof,
+            and_project(ctx, left.proposition, right.proposition, hypothesis, false),
+        )
+    } else {
+        (
+            left.proof,
+            and_project(ctx, left.proposition, right.proposition, hypothesis, true),
+        )
+    };
+    let contradiction = ctx.kernel.app(negative, projected);
+    let body = ctx.kernel.abstract_fvars(contradiction, &[hypothesis_id]);
+    let anon = ctx.kernel.anon();
+    ctx.kernel.lam(anon, conjunction, body, BinderInfo::Default)
+}
+
+fn invert_evaluated_prop(ctx: &mut ReconstructCtx, value: EvaluatedProp) -> EvaluatedProp {
+    let proposition = ctx.mk_not(value.proposition);
+    if value.value {
+        let hypothesis_id = fresh_fvar_id(ctx);
+        let hypothesis = ctx.kernel.fvar(hypothesis_id);
+        let contradiction = ctx.kernel.app(hypothesis, value.proof);
+        let body = ctx.kernel.abstract_fvars(contradiction, &[hypothesis_id]);
+        let anon = ctx.kernel.anon();
+        let proof = ctx.kernel.lam(anon, proposition, body, BinderInfo::Default);
+        EvaluatedProp { proposition, proof, value: false }
+    } else {
+        EvaluatedProp { proposition, proof: value.proof, value: true }
+    }
+}
+
+fn evaluated_lit(
+    ctx: &mut ReconstructCtx,
+    nodes: &[EvaluatedProp],
+    literal: AigLit,
+) -> Result<EvaluatedProp, ReconstructError> {
+    let value = *nodes
+        .get(literal.node().index())
+        .ok_or_else(|| decline("AIG literal references a future evaluated node"))?;
+    Ok(if literal.is_inverted() { invert_evaluated_prop(ctx, value) } else { value })
+}
+
+fn input_value(
+    binding: &axeyum_bv::SymbolBitInput,
+    bindings: &BTreeMap<SymbolId, &Value>,
+) -> Result<bool, ReconstructError> {
+    match bindings.get(&binding.symbol) {
+        Some(Value::Bool(value)) if binding.bit_index == 0 => Ok(*value),
+        Some(Value::Bv { width, value }) if binding.sort == Sort::BitVec(*width) => {
+            Ok((*value >> binding.bit_index) & 1 == 1)
+        }
+        _ => Err(decline("ground witness AIG input sort mismatch")),
+    }
+}
+
+fn prove_ground_true(
+    ctx: &mut ReconstructCtx,
+    arena: &TermArena,
+    term: TermId,
+    bindings: &[(SymbolId, Value)],
+) -> Result<ExprId, ReconstructError> {
+    register_bv_widths(ctx, arena, term);
+    let lowering = lower_terms(arena, &[term])
+        .map_err(|error| decline(format!("AIG witness lowering failed: {error}")))?;
+    let bindings = bindings.iter().map(|(s, v)| (*s, v)).collect();
+    let mut nodes = Vec::with_capacity(lowering.aig().node_count());
+    for (node_id, node) in lowering.aig().nodes() {
+        let evaluated = match node {
+            AigNode::ConstFalse => EvaluatedProp {
+                proposition: ctx.kernel.const_(ctx.prelude.false_, vec![]),
+                proof: false_elim_identity(ctx),
+                value: false,
+            },
+            AigNode::Input(input) => {
+                let binding = lowering.symbol_inputs().get(input.index())
+                    .ok_or_else(|| decline("AIG input lacks a source binding"))?;
+                let value = input_value(binding, &bindings)?;
+                let proposition = match binding.sort {
+                    Sort::Bool => {
+                        let witness = *ctx.gate_bound_bools
+                            .get(&symbol_key(binding.symbol, Sort::Bool))
+                            .ok_or_else(|| decline("Bool witness environment is incomplete"))?;
+                        ctx.typed_bool_value_prop(witness)
+                    }
+                    Sort::BitVec(width) => ctx.typed_bv_projection(
+                        &c(symbol_key(binding.symbol, Sort::BitVec(width))),
+                        usize::try_from(binding.bit_index).expect("u32 fits usize"),
+                    ).ok_or_else(|| decline("typed witness BV projection failed"))?,
+                    sort => return Err(decline(format!("unsupported witness AIG input sort {sort:?}"))),
+                };
+                EvaluatedProp {
+                    proposition,
+                    proof: if value { ctx.kernel.const_(ctx.prelude.true_intro, vec![]) } else { false_elim_identity(ctx) },
+                    value,
+                }
+            }
+            AigNode::And(left, right) => {
+                let left = evaluated_lit(ctx, &nodes, left)?;
+                let right = evaluated_lit(ctx, &nodes, right)?;
+                let proposition = ctx.mk_and(left.proposition, right.proposition);
+                let value = left.value && right.value;
+                let proof = if value {
+                    super::and_intro(ctx, left.proposition, right.proposition, left.proof, right.proof)
+                } else {
+                    refute_and(ctx, left, right)
+                };
+                EvaluatedProp { proposition, proof, value }
+            }
+        };
+        debug_assert_eq!(node_id.index(), nodes.len());
+        nodes.push(evaluated);
+    }
+    let root = lowering.roots().first().and_then(|root| root.bits().first()).copied()
+        .ok_or_else(|| decline("AIG witness lowering lacks a Boolean root"))?;
+    let evaluated = evaluated_lit(ctx, &nodes, root)?;
+    if !evaluated.value {
+        return Err(decline("certificate witness body evaluates false in Lean lowering"));
+    }
+    Ok(evaluated.proof)
+}
+
+fn computational_bool_not_value(ctx: &mut ReconstructCtx, value: ExprId) -> ExprId {
+    let bool_ty = ctx.kernel.const_(ctx.prelude.bool_, vec![]);
+    let anon = ctx.kernel.anon();
+    let motive = ctx.kernel.lam(anon, bool_ty, bool_ty, BinderInfo::Default);
+    let rec = ctx.kernel.const_(ctx.prelude.bool_rec, vec![ctx.one]);
+    let rec = ctx.kernel.app(rec, motive);
+    let false_ = ctx.kernel.const_(ctx.prelude.bool_false, vec![]);
+    let rec = ctx.kernel.app(rec, false_);
+    let true_ = ctx.kernel.const_(ctx.prelude.bool_true, vec![]);
+    let rec = ctx.kernel.app(rec, true_);
+    ctx.kernel.app(rec, value)
+}
+
+fn computational_bool_and_value(ctx: &mut ReconstructCtx, left: ExprId, right: ExprId) -> ExprId {
+    let bool_ty = ctx.kernel.const_(ctx.prelude.bool_, vec![]);
+    let anon = ctx.kernel.anon();
+    let motive = ctx.kernel.lam(anon, bool_ty, bool_ty, BinderInfo::Default);
+    let rec = ctx.kernel.const_(ctx.prelude.bool_rec, vec![ctx.one]);
+    let rec = ctx.kernel.app(rec, motive);
+    let rec = ctx.kernel.app(rec, right);
+    let false_ = ctx.kernel.const_(ctx.prelude.bool_false, vec![]);
+    let rec = ctx.kernel.app(rec, false_);
+    ctx.kernel.app(rec, left)
+}
+
+fn computational_bool_not(
+    ctx: &mut ReconstructCtx,
+    value: ExprId,
+) -> Result<ExprId, ReconstructError> {
+    let (not, _) = ctx.ensure_computational_bool_ops()?;
+    let function = ctx.kernel.const_(not, vec![]);
+    Ok(ctx.kernel.app(function, value))
+}
+
+fn computational_bool_and(
+    ctx: &mut ReconstructCtx,
+    left: ExprId,
+    right: ExprId,
+) -> Result<ExprId, ReconstructError> {
+    let (_, and) = ctx.ensure_computational_bool_ops()?;
+    let function = ctx.kernel.const_(and, vec![]);
+    let function = ctx.kernel.app(function, left);
+    Ok(ctx.kernel.app(function, right))
+}
+
+fn computational_aig_lit(
+    ctx: &mut ReconstructCtx,
+    nodes: &[ExprId],
+    literal: AigLit,
+) -> Result<ExprId, ReconstructError> {
+    let value = *nodes.get(literal.node().index())
+        .ok_or_else(|| decline("computational AIG literal references a future node"))?;
+    Ok(if literal.is_inverted() {
+        computational_bool_not(ctx, value)?
+    } else {
+        value
+    })
+}
+
+fn computational_ground_prop(
+    ctx: &mut ReconstructCtx,
+    arena: &TermArena,
+    term: TermId,
+) -> Result<ExprId, ReconstructError> {
+    let lowering = lower_terms(arena, &[term])
+        .map_err(|error| decline(format!("computational AIG lowering failed: {error}")))?;
+    let mut nodes = Vec::with_capacity(lowering.aig().node_count());
+    let mut gate_lets = Vec::new();
+    for (node_id, node) in lowering.aig().nodes() {
+        let value = match node {
+            AigNode::ConstFalse => ctx.kernel.const_(ctx.prelude.bool_false, vec![]),
+            AigNode::Input(input) => {
+                let binding = lowering.symbol_inputs().get(input.index())
+                    .ok_or_else(|| decline("computational AIG input lacks a source binding"))?;
+                match binding.sort {
+                    Sort::Bool => *ctx.gate_bound_bools
+                        .get(&symbol_key(binding.symbol, Sort::Bool))
+                        .ok_or_else(|| decline("computational Bool binder is unbound"))?,
+                    Sort::BitVec(width) => computational_bv_projection(
+                        ctx,
+                        binding.symbol,
+                        width,
+                        usize::try_from(binding.bit_index).expect("u32 fits usize"),
+                    )?,
+                    sort => return Err(decline(format!("unsupported computational AIG input sort {sort:?}"))),
+                }
+            }
+            AigNode::And(left, right) => {
+                let left = computational_aig_lit(ctx, &nodes, left)?;
+                let right = computational_aig_lit(ctx, &nodes, right)?;
+                let value = computational_bool_and(ctx, left, right)?;
+                let fvar = fresh_fvar_id(ctx);
+                let name = ctx.fresh_name("computational_aig_gate");
+                gate_lets.push((fvar, name, value));
+                ctx.kernel.fvar(fvar)
+            }
+        };
+        debug_assert_eq!(node_id.index(), nodes.len());
+        nodes.push(value);
+    }
+    let root = lowering.roots().first().and_then(|root| root.bits().first()).copied()
+        .ok_or_else(|| decline("computational AIG lowering lacks a Boolean root"))?;
+    let value = computational_aig_lit(ctx, &nodes, root)?;
+    let mut proposition = ctx.typed_bool_value_prop(value);
+    let bool_ty = ctx.kernel.const_(ctx.prelude.bool_, vec![]);
+    for (fvar, name, value) in gate_lets.into_iter().rev() {
+        let body = ctx.kernel.abstract_fvars(proposition, &[fvar]);
+        proposition = ctx.kernel.let_(name, bool_ty, value, body);
+    }
+    Ok(proposition)
 }
 
 fn aig_root_prop(
@@ -802,6 +1152,184 @@ fn install_binding_environment(
     Ok(())
 }
 
+#[derive(Clone, Copy)]
+enum WitnessLeanEncoding {
+    Logical,
+    Computational,
+}
+
+fn binder_domain(
+    ctx: &mut ReconstructCtx,
+    sort: Sort,
+    encoding: WitnessLeanEncoding,
+) -> Result<ExprId, ReconstructError> {
+    match sort {
+        Sort::Bool => Ok(ctx.kernel.const_(ctx.prelude.bool_, vec![])),
+        Sort::BitVec(width @ 1..=MAX_LEAN_BV_WIDTH) => {
+            let width = usize::try_from(width).expect("u32 fits usize");
+            let datatype = match encoding {
+                WitnessLeanEncoding::Logical => ctx.typed_bv_type(width)?,
+                WitnessLeanEncoding::Computational => ctx.computational_bv_type(width)?,
+            };
+            Ok(ctx.kernel.const_(datatype.ind, vec![]))
+        }
+        _ => Err(decline(format!(
+            "unsupported negated-existential binder sort {sort:?}"
+        ))),
+    }
+}
+
+fn binder_witness(
+    ctx: &mut ReconstructCtx,
+    sort: Sort,
+    value: &Value,
+    encoding: WitnessLeanEncoding,
+) -> Result<ExprId, ReconstructError> {
+    match (sort, value) {
+        (Sort::Bool, Value::Bool(value)) => Ok(ctx.kernel.const_(
+            if *value {
+                ctx.prelude.bool_true
+            } else {
+                ctx.prelude.bool_false
+            },
+            vec![],
+        )),
+        (
+            Sort::BitVec(width @ 1..=MAX_LEAN_BV_WIDTH),
+            Value::Bv {
+                width: carried,
+                value,
+            },
+        ) if width == *carried => {
+            let width = usize::try_from(width).expect("u32 fits usize");
+            match encoding {
+                WitnessLeanEncoding::Logical => ctx.typed_bv_literal(width, *value),
+                WitnessLeanEncoding::Computational => ctx.computational_bv_literal(width, *value),
+            }
+        }
+        _ => Err(decline("negated-existential witness sort mismatch")),
+    }
+}
+
+fn bind_symbol(ctx: &mut ReconstructCtx, symbol: SymbolId, sort: Sort, value: ExprId) {
+    match sort {
+        Sort::Bool => {
+            ctx.gate_bound_bools
+                .insert(symbol_key(symbol, Sort::Bool), value);
+        }
+        Sort::BitVec(width) => {
+            ctx.gate_bound_bvs.insert(
+                symbol_key(symbol, Sort::BitVec(width)),
+                (usize::try_from(width).expect("u32 fits usize"), value),
+            );
+        }
+        _ => unreachable!("binder sort is checked before installation"),
+    }
+}
+
+fn unbind_symbol(ctx: &mut ReconstructCtx, symbol: SymbolId, sort: Sort) {
+    match sort {
+        Sort::Bool => {
+            ctx.gate_bound_bools
+                .remove(&symbol_key(symbol, Sort::Bool));
+        }
+        Sort::BitVec(width) => {
+            ctx.gate_bound_bvs
+                .remove(&symbol_key(symbol, Sort::BitVec(width)));
+        }
+        _ => unreachable!("binder sort is checked before removal"),
+    }
+}
+
+fn exists_suffix_prop(
+    ctx: &mut ReconstructCtx,
+    arena: &TermArena,
+    binders: &[SymbolId],
+    body: TermId,
+    index: usize,
+    encoding: WitnessLeanEncoding,
+) -> Result<ExprId, ReconstructError> {
+    let Some(&binder) = binders.get(index) else {
+        return match encoding {
+            WitnessLeanEncoding::Logical => direct_ground_prop(ctx, arena, body),
+            WitnessLeanEncoding::Computational => computational_ground_prop(ctx, arena, body),
+        };
+    };
+    let sort = arena.symbol(binder).1;
+    let domain = binder_domain(ctx, sort, encoding)?;
+    let binder_id = fresh_fvar_id(ctx);
+    let binder_variable = ctx.kernel.fvar(binder_id);
+    bind_symbol(ctx, binder, sort, binder_variable);
+    let suffix = exists_suffix_prop(ctx, arena, binders, body, index + 1, encoding)?;
+    unbind_symbol(ctx, binder, sort);
+    let predicate_body = ctx.kernel.abstract_fvars(suffix, &[binder_id]);
+    let anon = ctx.kernel.anon();
+    let predicate = ctx
+        .kernel
+        .lam(anon, domain, predicate_body, BinderInfo::Default);
+    let exists = ctx.kernel.const_(ctx.prelude.exists_, vec![ctx.one]);
+    let exists = ctx.kernel.app(exists, domain);
+    Ok(ctx.kernel.app(exists, predicate))
+}
+
+fn prove_exists_suffix(
+    ctx: &mut ReconstructCtx,
+    arena: &TermArena,
+    binders: &[SymbolId],
+    body: TermId,
+    bindings: &[(SymbolId, Value)],
+    index: usize,
+    encoding: WitnessLeanEncoding,
+) -> Result<ExprId, ReconstructError> {
+    let Some(&binder) = binders.get(index) else {
+        return match encoding {
+            WitnessLeanEncoding::Logical => prove_ground_true(ctx, arena, body, bindings),
+            WitnessLeanEncoding::Computational => {
+                Ok(ctx.kernel.const_(ctx.prelude.true_intro, vec![]))
+            }
+        };
+    };
+    let sort = arena.symbol(binder).1;
+    let domain = binder_domain(ctx, sort, encoding)?;
+    let binder_id = fresh_fvar_id(ctx);
+    let binder_variable = ctx.kernel.fvar(binder_id);
+    bind_symbol(ctx, binder, sort, binder_variable);
+    let suffix = exists_suffix_prop(ctx, arena, binders, body, index + 1, encoding)?;
+    unbind_symbol(ctx, binder, sort);
+    let predicate_body = ctx.kernel.abstract_fvars(suffix, &[binder_id]);
+    let anon = ctx.kernel.anon();
+    let predicate = ctx
+        .kernel
+        .lam(anon, domain, predicate_body, BinderInfo::Default);
+
+    let (carried_binder, value) = bindings
+        .get(index)
+        .ok_or_else(|| decline("negated-existential witness omits a binder"))?;
+    if *carried_binder != binder {
+        return Err(decline("negated-existential witness binder order mismatch"));
+    }
+    let witness = binder_witness(ctx, sort, value, encoding)?;
+    bind_symbol(ctx, binder, sort, witness);
+    let suffix_proof = prove_exists_suffix(
+        ctx,
+        arena,
+        binders,
+        body,
+        bindings,
+        index + 1,
+        encoding,
+    )?;
+    unbind_symbol(ctx, binder, sort);
+
+    let intro = ctx
+        .kernel
+        .const_(ctx.prelude.exists_intro, vec![ctx.one]);
+    let intro = ctx.kernel.app(intro, domain);
+    let intro = ctx.kernel.app(intro, predicate);
+    let intro = ctx.kernel.app(intro, witness);
+    Ok(ctx.kernel.app(intro, suffix_proof))
+}
+
 fn apply_instance(
     ctx: &mut ReconstructCtx,
     arena: &TermArena,
@@ -1003,6 +1531,83 @@ fn source_shape(arena: &TermArena, term: TermId) -> bool {
         _ if !contains_quantifier(arena, term) => qf_bool_formula(arena, term).is_ok(),
         _ => false,
     }
+}
+
+/// Cheap structural classification for ADR-0126's genuine typed Lean route.
+pub(crate) fn negated_existential_witness_lean_shape(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> bool {
+    assertions.iter().any(|&assertion| {
+        crate::quant_negated_exists_cert::admitted_negated_existential(arena, assertion)
+            .is_some_and(|(binders, _)| {
+                binders.iter().all(|&binder| {
+                    matches!(
+                        arena.symbol(binder).1,
+                        Sort::Bool | Sort::BitVec(1..=MAX_LEAN_BV_WIDTH)
+                    )
+                })
+            })
+    })
+}
+
+/// Reconstructs an evaluator-replayed negated-existential witness as a genuine
+/// typed `Exists.intro` proof, then closes it against the untouched source
+/// assertion `Not (Exists ...)`.
+///
+/// # Errors
+///
+/// Returns [`ReconstructError`] when replay fails, the source is outside the
+/// Bool/BV Lean encoding, AIG lowering/evaluation diverges from the carried
+/// witness, or the final proof does not kernel-check to `False`.
+pub fn reconstruct_negated_existential_witness_to_lean_module(
+    arena: &TermArena,
+    assertions: &[TermId],
+    certificate: &NegatedExistentialWitnessCertificate,
+) -> Result<String, ReconstructError> {
+    if !check_negated_existential_witness(arena, assertions, certificate) {
+        return Err(decline("invalid ADR-0126 certificate"));
+    }
+    let (binders, body) =
+        crate::quant_negated_exists_cert::admitted_negated_existential(
+            arena,
+            certificate.assertion,
+        )
+        .ok_or_else(|| decline("certificate assertion lost its negated existential shape"))?;
+    if binders.iter().any(|&binder| {
+        !matches!(
+            arena.symbol(binder).1,
+            Sort::Bool | Sort::BitVec(1..=MAX_LEAN_BV_WIDTH)
+        )
+    }) {
+        return Err(decline("existential binder exceeds the Lean BV width cap"));
+    }
+
+    let witness_lowering = lower_terms(arena, &[body])
+        .map_err(|error| decline(format!("witness encoding selection failed: {error}")))?;
+    let encoding = if witness_lowering.aig().node_count() > COMPUTATIONAL_WITNESS_AIG_THRESHOLD {
+        WitnessLeanEncoding::Computational
+    } else {
+        WitnessLeanEncoding::Logical
+    };
+    let mut ctx = ReconstructCtx::new();
+    ctx.typed_bv_gates = true;
+    register_bv_widths(&mut ctx, arena, body);
+    let existential = exists_suffix_prop(&mut ctx, arena, &binders, body, 0, encoding)?;
+    let negated = ctx.mk_not(existential);
+    let source = fresh_axiom(&mut ctx, negated, "negated-existential-source")?;
+    let witness = prove_exists_suffix(
+        &mut ctx,
+        arena,
+        &binders,
+        body,
+        &certificate.bindings,
+        0,
+        encoding,
+    )?;
+    let proof = ctx.kernel.app(source, witness);
+    require_infers_false(&mut ctx, proof)?;
+    Ok(render_ctx_module(&mut ctx, proof))
 }
 
 /// Reconstructs an ADR-0134 instance-set certificate to a kernel-checked Lean

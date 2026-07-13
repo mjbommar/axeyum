@@ -96,6 +96,7 @@ const FAMILY_BUILDERS: &[FamilyBuilder] = &[
     qf_ufbv_finite_domain_pigeonhole_checks_in_real_lean,
     quantified_bv_finite_domain_enum_rows_check_in_real_lean,
     quantified_bv_source_instance_set_checks_in_real_lean,
+    quantified_bv_negated_existential_witness_checks_in_real_lean,
     cvc5_quantified_bv_inversion_rows_check_in_real_lean,
     qf_ufff_bv_uf_local_rows_check_in_real_lean,
     qf_ff_term_level_enum_rows_check_in_real_lean,
@@ -656,6 +657,24 @@ fn quantified_bv_source_instance_set_checks_in_real_lean() {
     assert_eq!(fragment, ProofFragment::BvPositiveUniversalInstanceSet);
     assert!(!source.contains("sorryAx"));
     lean_accepts("quant_bv_source_instance_set", &source);
+}
+
+/// A concrete Bool/BV witness proves the existential body and closes against
+/// its untouched negation through genuine typed `Exists.intro`.
+fn quantified_bv_negated_existential_witness_checks_in_real_lean() {
+    let mut script = parse_script(
+        "(set-logic BV)
+         (assert (not (exists ((b Bool) (x (_ BitVec 21)))
+           (and b (= x x)))))
+         (check-sat)",
+    )
+    .expect("negated-existential witness case parses");
+    let assertions = script.assertions.clone();
+    let (fragment, source) = prove_unsat_to_lean_module(&mut script.arena, &assertions)
+        .expect("negated-existential witness reconstructs");
+    assert_eq!(fragment, ProofFragment::NegatedExistentialWitness);
+    assert!(!source.contains("sorryAx"));
+    lean_accepts("quant_bv_negated_existential_witness", &source);
 }
 
 /// The remaining cvc5 quantified-BV inversion audit rows are closed by a checked

@@ -29,6 +29,12 @@ test-guarded:
 test-quant-bv-lean-stress:
     MEM_LIMIT_GB=4 ./scripts/mem-run.sh cargo test --release -p axeyum-solver --features z3 --test evidence_quant_bv_instance_set public_psyco_107_bv_routes_through_source_instance_lean_reconstruction -- --ignored --exact
 
+# Genuine typed ADR-0126 existential witnesses for all three public rows. The
+# reference-host test takes 12.43 seconds; the 4 GiB envelope covers its roughly
+# 1.9 GiB cold build-and-test peak.
+test-quant-negated-exists-lean-stress:
+    MEM_LIMIT_GB=4 ./scripts/mem-run.sh cargo test --release -p axeyum-solver --test evidence_quant_negated_exists three_public_rows_gain_genuine_typed_lean_reconstruction -- --ignored --exact
+
 doc:
     RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features --no-deps
 

@@ -44,6 +44,8 @@
 //! `replace_dbj_level` exactly, with the side table standing in for the type
 //! that nanoda packs into its `Local` node.
 
+use std::collections::HashMap;
+
 use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::{ExprId, ExprNode};
 use crate::level::LevelId;
@@ -232,6 +234,14 @@ pub struct LocalDecl {
 pub struct LocalContext {
     decls: Vec<LocalDecl>,
     next_fvar: u64,
+    /// Type-inference results valid for exactly the current local declaration
+    /// stack. Push/pop clear this cache, so open expression DAGs are shared
+    /// without ever reusing a type across binder contexts.
+    infer_cache: HashMap<ExprId, ExprId>,
+    /// Definitional-equality results valid for the current local stack. This is
+    /// the local-context analogue of nanoda's equality cache and prevents the
+    /// same shared proof/type pair from being compared as an exponential tree.
+    def_eq_cache: HashMap<(ExprId, ExprId), bool>,
 }
 
 impl LocalContext {
@@ -259,18 +269,40 @@ impl LocalContext {
 
     /// Push a local declaration onto the stack.
     pub fn push(&mut self, decl: LocalDecl) {
+        self.infer_cache.clear();
+        self.def_eq_cache.clear();
         self.decls.push(decl);
     }
 
     /// Pop the most recently pushed local declaration (LIFO).
     pub fn pop(&mut self) -> Option<LocalDecl> {
-        self.decls.pop()
+        let popped = self.decls.pop();
+        self.infer_cache.clear();
+        self.def_eq_cache.clear();
+        popped
     }
 
     /// Look up the type recorded for free variable `id`, if any.
     #[must_use]
     pub fn type_of(&self, id: u64) -> Option<ExprId> {
         self.decls.iter().rev().find(|d| d.fvar == id).map(|d| d.ty)
+    }
+
+    fn inferred(&self, expression: ExprId) -> Option<ExprId> {
+        self.infer_cache.get(&expression).copied()
+    }
+
+    fn remember_inferred(&mut self, expression: ExprId, ty: ExprId) {
+        self.infer_cache.insert(expression, ty);
+    }
+
+    fn def_eq_result(&self, left: ExprId, right: ExprId) -> Option<bool> {
+        self.def_eq_cache.get(&(left, right)).copied()
+    }
+
+    fn remember_def_eq(&mut self, left: ExprId, right: ExprId, result: bool) {
+        self.def_eq_cache.insert((left, right), result);
+        self.def_eq_cache.insert((right, left), result);
     }
 
     /// Look up the full declaration recorded for free variable `id`, if any.
@@ -314,6 +346,16 @@ impl Kernel {
     /// `whnf_no_unfolding`. A head `Const`/`FVar`/`Sort`/`Pi` or `Lam` with no
     /// further arguments is already weak-head-normal here.
     fn whnf_no_unfolding(&mut self, e: ExprId) -> ExprId {
+        let revision = self.env.len();
+        if let Some(&normalized) = self.whnf_cache.get(&(e, revision)) {
+            return normalized;
+        }
+        let normalized = self.whnf_no_unfolding_uncached(e);
+        self.whnf_cache.insert((e, revision), normalized);
+        normalized
+    }
+
+    fn whnf_no_unfolding_uncached(&mut self, e: ExprId) -> ExprId {
         let mut cursor = e;
         loop {
             let (head, args) = self.unfold_apps(cursor);
@@ -823,6 +865,18 @@ impl Kernel {
         if let Some(quick) = self.def_eq_quick(x, y, ctx) {
             return quick;
         }
+        if let Some(result) = ctx.def_eq_result(x, y) {
+            return result;
+        }
+        let result = self.def_eq_core_uncached(x, y, ctx);
+        ctx.remember_def_eq(x, y, result);
+        result
+    }
+
+    fn def_eq_core_uncached(&mut self, x: ExprId, y: ExprId, ctx: &mut LocalContext) -> bool {
+        if let Some(quick) = self.def_eq_quick(x, y, ctx) {
+            return quick;
+        }
 
         // WHNF without δ — δ is handled lazily by `lazy_delta_step` below so
         // that we unfold only as far as needed (matching nanoda).
@@ -919,6 +973,9 @@ impl Kernel {
         if closed && let Some(&ty) = self.infer_closed_cache.get(&e) {
             return Ok(ty);
         }
+        if !closed && let Some(ty) = ctx.inferred(e) {
+            return Ok(ty);
+        }
         let inferred = match self.expr_node(e).clone() {
             ExprNode::BVar(index) => Err(KernelError::LooseBVar { index }),
             ExprNode::FVar(id) => ctx.type_of(id).ok_or(KernelError::UnboundFVar { id }),
@@ -936,6 +993,8 @@ impl Kernel {
         }?;
         if closed {
             self.infer_closed_cache.insert(e, inferred);
+        } else {
+            ctx.remember_inferred(e, inferred);
         }
         Ok(inferred)
     }

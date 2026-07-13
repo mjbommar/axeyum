@@ -444,6 +444,81 @@ fn abstract_under_binder_uses_offset() {
 }
 
 #[test]
+fn abstract_fvars_visits_shared_expression_dag_once() {
+    let mut k = Kernel::new();
+    let fvar_id = 19u64;
+    let mut shared = k.fvar(fvar_id);
+    for _ in 0..30 {
+        shared = k.app(shared, shared);
+    }
+    let abstracted = k.abstract_fvars(shared, &[fvar_id]);
+
+    let mut expected = k.bvar(0);
+    for _ in 0..30 {
+        expected = k.app(expected, expected);
+    }
+    assert_eq!(abstracted, expected);
+}
+
+#[test]
+fn instantiate_visits_shared_expression_dag_once() {
+    let mut k = Kernel::new();
+    let mut shared = k.bvar(0);
+    for _ in 0..30 {
+        shared = k.app(shared, shared);
+    }
+    let replacement = k.fvar(31);
+    let instantiated = k.instantiate(shared, &[replacement]);
+
+    let mut expected = replacement;
+    for _ in 0..30 {
+        expected = k.app(expected, expected);
+    }
+    assert_eq!(instantiated, expected);
+}
+
+#[test]
+fn substitute_expr_levels_visits_shared_dag_once() {
+    let mut k = Kernel::new();
+    let anon = k.anon();
+    let universe_name = k.name_str(anon, "u_shared");
+    let universe = k.level_param(universe_name);
+    let constant_name = k.name_str(anon, "shared_constant");
+    let mut shared = k.const_(constant_name, vec![universe]);
+    for _ in 0..30 {
+        shared = k.app(shared, shared);
+    }
+    let zero = k.level_zero();
+    let substituted = k.substitute_expr_levels(shared, &[(universe_name, zero)]);
+
+    let mut expected = k.const_(constant_name, vec![zero]);
+    for _ in 0..30 {
+        expected = k.app(expected, expected);
+    }
+    assert_eq!(substituted, expected);
+}
+
+#[test]
+fn infer_open_shared_expression_dag_once_per_local_context() {
+    let mut k = Kernel::new();
+    let prelude = crate::build_logic_prelude(&mut k);
+    let prop = k.sort_zero();
+    let fvar_id = 23u64;
+    let mut shared = k.fvar(fvar_id);
+    for _ in 0..24 {
+        let and = k.const_(prelude.and, vec![]);
+        let and = k.app(and, shared);
+        shared = k.app(and, shared);
+    }
+    let body = k.abstract_fvars(shared, &[fvar_id]);
+    let anon = k.anon();
+    let function = k.lam(anon, prop, body, BinderInfo::Default);
+    let inferred = k.infer(function).expect("shared open DAG infers");
+    let result = k.pi(anon, prop, prop, BinderInfo::Default);
+    assert!(k.def_eq(inferred, result));
+}
+
+#[test]
 fn loose_bvar_range_through_binders() {
     let mut k = Kernel::new();
     let anon = k.anon();

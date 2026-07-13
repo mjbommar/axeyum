@@ -887,6 +887,20 @@ Lean UNSAT 9/18, DISAGREE=0, with no error/replay failure/audit error/timeout.
 source-proof reuse and measured reconstruction cost, implement the smallest
 genuine Lean proof family next, and continue reducing the guarded 2.7 GiB export
 peak before broadening nested/alternating QSAT or quantified-UF models.
+**That action is now LANDED (ADR-0138):** ADR-0126's concrete Bool/BV witnesses
+become genuine typed nested `Exists.intro` proofs against the sole untouched
+negated source axiom. Small bodies carry explicit logical AIG gate proofs; large
+bodies use shared reducible computational-Bool operators and local gate `let`s,
+with kernel reduction checking the concrete root. Kernel abstraction,
+instantiation, universe substitution, open inference, definitional equality,
+and weak-head normalization now preserve expression-DAG sharing with
+context-valid caches. The three public rows pass in 12.43 seconds under the 4
+GiB gate; the refreshed exact audit is 54/54 evidence-certified/rechecked,
+48/54 dominant, Lean UNSAT 12/18, DISAGREE=0, and has no audit error or timeout.
+**Next action:** rank ADR-0124/0127/0128/0129 by source-proof reuse and guarded
+reconstruction cost, implement the smallest remaining genuine Lean proof
+family, and continue reducing large-proof memory before broader
+nested/alternating QSAT or quantified-UF models.
 **Process state:** first green CI in 200+ runs held into a green cadence;
 the pre-push hook gates the pushed SHA incl. the ~6s `:status` corpus
 sweep (a wrong verdict must not leave the machine); STATUS truncated
