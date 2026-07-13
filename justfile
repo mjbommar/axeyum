@@ -22,6 +22,13 @@ test:
 test-guarded:
     MEM_LIMIT_GB=64 ./scripts/mem-run.sh cargo test --workspace --all-features
 
+# Corpus-scale ADR-0134/0135 Lean reconstruction.  This is deliberately a
+# release-only scheduled stress gate: on the current reference host it takes
+# about 105 seconds and peaks below 3 GiB; the 4 GiB envelope also accommodates
+# a cold optimized solver build.
+test-quant-bv-lean-stress:
+    MEM_LIMIT_GB=4 ./scripts/mem-run.sh cargo test --release -p axeyum-solver --features z3 --test evidence_quant_bv_instance_set public_psyco_107_bv_routes_through_source_instance_lean_reconstruction -- --ignored --exact
+
 doc:
     RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features --no-deps
 

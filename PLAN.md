@@ -873,6 +873,20 @@ the corpus-scale resolution proof so the ADR-0134 target completes under a
 bounded Lean gate, then rank ADR-0124/0126/0127/0128/0129 source-bound UNSAT
 families for reconstruction before broadening nested/alternating QSAT or
 quantified-UF models.
+**That action is now LANDED (ADR-0137):** declaration dependency discovery
+visits the kernel expression DAG once, compact export no longer caps repeated
+closed shares, single-use closed regions receive deterministic 512-node chunks,
+and declaration types/values retain those chunks through capture-safe scoped
+`let` aliases. A timed one-pass `psyco-107-bv` release stress gate completes in
+102.19 seconds at 2,697,384 KiB max RSS under a 3 GiB test-process cap; the final
+cold-build `just test-quant-bv-lean-stress` rerun passes in 106.51 seconds inside
+4 GiB. Refreshed public
+measurement is 54/54 decided and evidence-certified/rechecked, 45/54 dominant,
+Lean UNSAT 9/18, DISAGREE=0, with no error/replay failure/audit error/timeout.
+**Next action:** rank ADR-0124/0126/0127/0128/0129/0130/0131/0132/0133 by
+source-proof reuse and measured reconstruction cost, implement the smallest
+genuine Lean proof family next, and continue reducing the guarded 2.7 GiB export
+peak before broadening nested/alternating QSAT or quantified-UF models.
 **Process state:** first green CI in 200+ runs held into a green cadence;
 the pre-push hook gates the pushed SHA incl. the ~6s `:status` corpus
 sweep (a wrong verdict must not leave the machine); STATUS truncated

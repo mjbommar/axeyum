@@ -14,7 +14,7 @@ use std::fmt::Write as _;
 use crate::{Declaration, ExprId, ExprNode, Kernel, LevelId, LevelNode, Lit, NameId, NameNode};
 
 const COMPACT_SHARE_MIN_TREE_NODES: u64 = 8;
-const COMPACT_SHARE_CAP: usize = 16_384;
+const COMPACT_CHUNK_TREE_NODES: u64 = 512;
 
 #[derive(Debug, Default)]
 struct LeanSharePlan {
@@ -130,7 +130,8 @@ impl Kernel {
     }
 
     /// Render a self-contained module while preserving repeated **closed** proof
-    /// DAG nodes as deterministic top-level definitions.
+    /// DAG nodes as deterministic top-level definitions and bounding single-use
+    /// closed regions with serialization chunks.
     ///
     /// This is semantically equivalent to [`Self::render_lean_module`], but can
     /// be substantially smaller for hash-consed proofs whose ordinary source
@@ -177,8 +178,9 @@ impl Kernel {
     }
 
     /// Compact counterpart of [`Self::render_lean_module_with_inductives`].
-    /// Repeated closed proof nodes are hoisted, while listed inductives retain
-    /// Lean-side recursor computation.
+    /// Repeated closed proof nodes and large single-use closed regions are
+    /// hoisted, while declaration expressions receive scoped local chunks and
+    /// listed inductives retain Lean-side recursor computation.
     #[must_use]
     pub fn render_lean_module_compact_with_inductives(
         &self,
@@ -234,7 +236,7 @@ impl Kernel {
                 continue;
             }
             if let Some(decl) = self.environment().get(*name) {
-                out.push_str(&self.render_decl_command_with_at(decl, &at_consts));
+                out.push_str(&self.render_decl_command_with_at(decl, &at_consts, compact));
                 out.push('\n');
             }
         }
@@ -375,8 +377,9 @@ impl Kernel {
         &self,
         decl: &Declaration,
         at_consts: &std::collections::BTreeSet<NameId>,
+        compact: bool,
     ) -> String {
-        if at_consts.is_empty() {
+        if at_consts.is_empty() && !compact {
             return self.render_decl_command(decl);
         }
         match decl {
@@ -396,7 +399,7 @@ impl Kernel {
                 "axiom {}{} : {}",
                 self.render_name(*name),
                 self.render_uparams(uparams),
-                self.render_lean_with_at(*ty, at_consts)
+                self.render_lean_for_module(*ty, at_consts, compact)
             ),
             Declaration::Definition {
                 name,
@@ -408,8 +411,8 @@ impl Kernel {
                 "def {}{} : {} :=\n  {}",
                 self.render_name(*name),
                 self.render_uparams(uparams),
-                self.render_lean_with_at(*ty, at_consts),
-                self.render_lean_with_at(*value, at_consts)
+                self.render_lean_for_module(*ty, at_consts, compact),
+                self.render_lean_for_module(*value, at_consts, compact)
             ),
             Declaration::Theorem {
                 name,
@@ -432,10 +435,23 @@ impl Kernel {
                     "{kw} {}{} : {} :=\n  {}",
                     self.render_name(*name),
                     self.render_uparams(uparams),
-                    self.render_lean_with_at(*ty, at_consts),
-                    self.render_lean_with_at(*value, at_consts)
+                    self.render_lean_for_module(*ty, at_consts, compact),
+                    self.render_lean_for_module(*value, at_consts, compact)
                 )
             }
+        }
+    }
+
+    fn render_lean_for_module(
+        &self,
+        expression: ExprId,
+        at_consts: &BTreeSet<NameId>,
+        compact: bool,
+    ) -> String {
+        if compact {
+            self.render_lean_with_local_shares(expression, at_consts)
+        } else {
+            self.render_lean_with_at(expression, at_consts)
         }
     }
 
@@ -511,8 +527,12 @@ impl Kernel {
     /// Collect (iteratively, to avoid deep recursion on large proof terms) every
     /// `Const` name referenced anywhere inside `root`.
     fn collect_const_deps(&self, root: ExprId, out: &mut Vec<NameId>) {
+        let mut visited = BTreeSet::new();
         let mut stack = vec![root];
         while let Some(e) = stack.pop() {
+            if !visited.insert(e) {
+                continue;
+            }
             match self.expr_node(e) {
                 ExprNode::Const(n, _) => out.push(*n),
                 ExprNode::App(f, a) => {
@@ -698,7 +718,7 @@ impl Kernel {
             tree_sizes.insert(expression, size);
         }
 
-        let mut candidates = postorder
+        let candidates = postorder
             .iter()
             .copied()
             .filter(|&expression| {
@@ -716,22 +736,50 @@ impl Kernel {
                     )
             })
             .collect::<Vec<_>>();
-        candidates.sort_by_key(|expression| {
-            let count = occurrences[expression];
-            let size = tree_sizes[expression];
-            (
-                std::cmp::Reverse(count.saturating_sub(1).saturating_mul(size)),
-                expression.index(),
-            )
-        });
-        candidates.truncate(COMPACT_SHARE_CAP);
-        let selected = candidates.into_iter().collect::<BTreeSet<_>>();
+        let mut selected = candidates.into_iter().collect::<BTreeSet<_>>();
+
+        // Repetition is not the only way a proof term can become impractical to
+        // render.  Resolution commonly produces a long, single-use closed chain;
+        // recursively formatting that chain as one surface term creates enormous
+        // intermediate strings even though the kernel representation is linear.
+        // Add deterministic cut points so every closed region between selected
+        // definitions remains bounded.  Open subterms still cannot escape their
+        // binder and are therefore never selected here.
+        let mut chunk_sizes = BTreeMap::<ExprId, u64>::new();
+        for &expression in &postorder {
+            let mut size = 1_u64;
+            for child in self.expr_children(expression) {
+                size = size.saturating_add(chunk_sizes.get(&child).copied().unwrap_or(1));
+            }
+            let shareable = self.num_loose_bvars(expression) == 0
+                && !self.has_fvars(expression)
+                && matches!(
+                    self.expr_node(expression),
+                    ExprNode::App(_, _) | ExprNode::Lam(..) | ExprNode::Pi(..) | ExprNode::Let(..)
+                );
+            if selected.contains(&expression) || (shareable && size >= COMPACT_CHUNK_TREE_NODES) {
+                selected.insert(expression);
+                size = 1;
+            }
+            chunk_sizes.insert(expression, size);
+        }
 
         let mut reserved = self
             .environment()
             .iter()
             .map(|(&name, _)| self.render_name(name))
             .collect::<BTreeSet<_>>();
+        for &expression in &postorder {
+            let binder = match self.expr_node(expression) {
+                ExprNode::Lam(name, ..) | ExprNode::Pi(name, ..) | ExprNode::Let(name, ..) => {
+                    self.render_name(*name)
+                }
+                _ => continue,
+            };
+            if !binder.is_empty() {
+                reserved.insert(binder);
+            }
+        }
         reserved.insert(theorem_name.to_owned());
         let mut names = BTreeMap::new();
         let mut order = Vec::new();
@@ -762,6 +810,30 @@ impl Kernel {
     ) -> String {
         let mut binders = Vec::new();
         self.render_expr_with_shares(expression, &mut binders, at_consts, shares, expand_root)
+    }
+
+    fn render_lean_with_local_shares(
+        &self,
+        expression: ExprId,
+        at_consts: &BTreeSet<NameId>,
+    ) -> String {
+        let shares = self.compact_share_plan(&[expression], "axeyum_local_expression");
+        if shares.order.is_empty() {
+            return self.render_lean_with_at(expression, at_consts);
+        }
+        let mut rendered = String::new();
+        for &shared in &shares.order {
+            let name = &shares.names[&shared];
+            let body = self.render_lean_with_shares(shared, at_consts, &shares.names, Some(shared));
+            let _ = write!(rendered, "let {name} :=\n  {body};\n");
+        }
+        rendered.push_str(&self.render_lean_with_shares(
+            expression,
+            at_consts,
+            &shares.names,
+            None,
+        ));
+        rendered
     }
 
     fn render_expr_with_shares_atom(
@@ -1169,6 +1241,49 @@ mod tests {
     }
 
     #[test]
+    fn compact_module_chunks_large_declaration_types_locally() {
+        use crate::{Declaration, build_logic_prelude};
+
+        let mut k = Kernel::new();
+        let logic = build_logic_prelude(&mut k);
+        let anon = k.anon();
+        let prop = k.sort_zero();
+        let p_name = k.name_str(anon, "P");
+        k.add_declaration(Declaration::Axiom {
+            name: p_name,
+            uparams: Vec::new(),
+            ty: prop,
+        })
+        .unwrap();
+        let p = k.const_(p_name, Vec::new());
+        let and = k.const_(logic.and, Vec::new());
+        let mut goal = p;
+        for _ in 0..300 {
+            let applied = k.app(and, p);
+            goal = k.app(applied, goal);
+        }
+        let h_name = k.name_str(anon, "h");
+        k.add_declaration(Declaration::Axiom {
+            name: h_name,
+            uparams: Vec::new(),
+            ty: goal,
+        })
+        .unwrap();
+        let proof = k.const_(h_name, Vec::new());
+
+        let module = k.render_lean_module_compact("large_axiom", goal, proof);
+        assert!(
+            module.contains("axiom h : let axeyum_proof_share_"),
+            "large declaration types must retain DAG chunks in their own scope"
+        );
+        assert!(module.contains("theorem large_axiom"));
+        assert_eq!(
+            module,
+            k.render_lean_module_compact("large_axiom", goal, proof)
+        );
+    }
+
+    #[test]
     fn compact_plan_never_hoists_open_binder_dependent_terms() {
         use crate::{BinderInfo, Declaration, build_logic_prelude};
 
@@ -1198,5 +1313,96 @@ mod tests {
 
         let plan = k.compact_share_plan(&[lambda], "open_term");
         assert!(plan.names.is_empty(), "open terms must not be hoisted");
+    }
+
+    #[test]
+    fn compact_local_share_names_do_not_collide_with_binders() {
+        let mut k = Kernel::new();
+        let anon = k.anon();
+        let binder = k.name_str(anon, "axeyum_proof_share_0");
+        let prop = k.sort_zero();
+        let mut closed = prop;
+        for value in 0..600_u128 {
+            let argument = k.lit(crate::Lit::Nat(value));
+            closed = k.app(closed, argument);
+        }
+        let body = k.app(closed, closed);
+        let lambda = k.lam(binder, prop, body, crate::BinderInfo::Default);
+
+        let plan = k.compact_share_plan(&[lambda], "binder_collision");
+        assert!(!plan.names.is_empty());
+        assert!(
+            plan.names
+                .values()
+                .all(|name| name != "axeyum_proof_share_0"),
+            "a local share must not be captured by a source binder"
+        );
+    }
+
+    #[test]
+    fn compact_plan_does_not_drop_large_closed_dags() {
+        let mut k = Kernel::new();
+        let mut chain = k.sort_zero();
+        // This deliberately exceeds the former 16,384-share ceiling.  The
+        // expression need not be well typed: the sharing planner is a pure
+        // serializer pass and must preserve every repeated closed DAG node
+        // regardless of the source proof's size.
+        for value in 0..16_500_u128 {
+            let argument = k.lit(crate::Lit::Nat(value));
+            chain = k.app(chain, argument);
+        }
+        let root = k.app(chain, chain);
+
+        let plan = k.compact_share_plan(&[root], "large_closed_dag");
+        assert!(
+            plan.names.len() > 16_384,
+            "large proof DAGs must not fall back to tree expansion: {} shares",
+            plan.names.len()
+        );
+        assert_eq!(plan.names.len(), plan.order.len());
+    }
+
+    #[test]
+    fn declaration_dependency_walk_visits_shared_dags_once() {
+        use crate::Declaration;
+
+        let mut k = Kernel::new();
+        let anon = k.anon();
+        let prop = k.sort_zero();
+        let p_name = k.name_str(anon, "P");
+        k.add_declaration(Declaration::Axiom {
+            name: p_name,
+            uparams: Vec::new(),
+            ty: prop,
+        })
+        .unwrap();
+        let mut shared = k.const_(p_name, Vec::new());
+        // Tree walking this 20-level DAG reaches the same leaf 2^20 times.
+        // Dependency discovery only needs each interned expression once.
+        for _ in 0..20 {
+            shared = k.app(shared, shared);
+        }
+
+        let mut dependencies = Vec::new();
+        k.collect_const_deps(shared, &mut dependencies);
+        assert_eq!(dependencies, vec![p_name]);
+    }
+
+    #[test]
+    fn compact_plan_chunks_single_use_closed_chains() {
+        let mut k = Kernel::new();
+        let mut chain = k.sort_zero();
+        for value in 0..20_000_u128 {
+            let argument = k.lit(crate::Lit::Nat(value));
+            chain = k.app(chain, argument);
+        }
+
+        let plan = k.compact_share_plan(&[chain], "single_use_chain");
+        assert!(
+            plan.names.len() >= 4,
+            "single-use proof chains need bounded serialization chunks: {} shares",
+            plan.names.len()
+        );
+        assert_eq!(plan.names.len(), plan.order.len());
     }
 }

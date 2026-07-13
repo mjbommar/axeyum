@@ -1288,10 +1288,10 @@ pub const CAPABILITIES: &[Capability] = &[
                    Any heuristic candidate block disables certification. `psyco-107-bv` moves \
                    unsupported to certified UNSAT. The public quantified-BV slice is 36 SAT / 18 \
                    UNSAT / 0 unknown / 0 unsupported with 54/54 evidence-certified/rechecked \
-                   decisions, 44 dominant candidates, zero disagreement/error/replay failure, and \
+                   decisions, 45 dominant candidates, zero disagreement/error/replay failure, and \
                    an empty target trust ledger. General QSAT, negative quantifier contexts, \
                    existentials, functions/arrays, free BVs in quantified assertions, mixed \
-                   arithmetic, wasm proof export, and corpus-scale Lean reconstruction remain open",
+                   arithmetic, wasm proof export, and broader Lean reconstruction remain open",
         reference: "ADR-0134",
     },
     Capability {
@@ -1304,13 +1304,13 @@ pub const CAPABILITIES: &[Capability] = &[
                    AIG lowering, and a compact named-gate Alethe refutation. Classical \
                    double-negation normalization is explicit and kernel-checked. A two-instance \
                    theorem passes the in-tree kernel and is registered in the external-Lean \
-                   representative (the current host has no `lean` binary); the duplicate \
-                   `psyco-107-bv` stress reconstruction exceeds three minutes and roughly 2.3 GiB \
-                   in debug, so the public Lean count remains 8/18 pending proof-tail sharing or \
-                   serialization. Negative contexts, existentials, functions/arrays, free BVs in \
+                   representative (the current host has no `lean` binary). ADR-0137's DAG-linear \
+                   dependency walk and bounded closed serializer chunks let the release-only \
+                   `psyco-107-bv` stress gate finish in 102--107 seconds below a 3 GiB process limit, \
+                   raising public Lean coverage to 9/18. Negative contexts, existentials, functions/arrays, free BVs in \
                    quantified assertions, mixed arithmetic, general QSAT, and Lean SAT \
                    reconstruction remain open",
-        reference: "ADR-0135",
+        reference: "ADR-0135/0137",
     },
     Capability {
         area: "quantifiers",
