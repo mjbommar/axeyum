@@ -521,6 +521,20 @@ pub fn solve_with_rustsat_batsat_timeout(
     }
 }
 
+#[derive(Default)]
+struct DeadlineCallbacks {
+    deadline: Option<Instant>,
+}
+
+impl batsat::Callbacks for DeadlineCallbacks {
+    fn stop(&self) -> bool {
+        self.deadline
+            .is_some_and(|deadline| Instant::now() >= deadline)
+    }
+}
+
+type IncrementalBatSat = rustsat_batsat::Solver<DeadlineCallbacks>;
+
 /// A warm, incremental CNF SAT solver over the pure-Rust `BatSat` adapter
 /// (ADR-0009, stage 1).
 ///
@@ -538,14 +552,14 @@ pub fn solve_with_rustsat_batsat_timeout(
 /// matching the one-shot adapter (ADR-0007).
 #[derive(Default)]
 pub struct IncrementalSat {
-    solver: rustsat_batsat::BasicSolver,
+    solver: IncrementalBatSat,
     clauses: Vec<CnfClause>,
     variable_count: usize,
 }
 
 impl core::fmt::Debug for IncrementalSat {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        // The `BasicSolver` handle is opaque (not `Debug`); show the database
+        // The BatSat handle is opaque here; show the database
         // shape instead.
         f.debug_struct("IncrementalSat")
             .field("clauses", &self.clauses.len())
@@ -636,16 +650,10 @@ impl IncrementalSat {
         timeout: Option<Duration>,
     ) -> Result<SatResult, SatError> {
         let timeout_deadline = timeout.and_then(|duration| Instant::now().checked_add(duration));
-        // The stop callback is (re)installed every solve so a stale deadline
-        // from a previous timed solve never aborts an untimed one.
-        match timeout_deadline {
-            Some(deadline) => self
-                .solver
-                .batsat_mut()
-                .cb_mut()
-                .set_stop(move || Instant::now() >= deadline),
-            None => self.solver.batsat_mut().cb_mut().set_stop(|| false),
-        }
+        // Store the deadline as data instead of BatSat's `Box<dyn Fn()>`. The
+        // latter is not `Send`; an `Instant` is, so a warm solver can move to a
+        // worker thread without unsafe code or a shared global context.
+        self.solver.batsat_mut().cb_mut().deadline = timeout_deadline;
 
         let result = if assumptions.is_empty() {
             self.solver.solve()
@@ -2376,8 +2384,8 @@ fn eval_lit(lit: CnfLit, assignment: &[bool]) -> bool {
     assignment[lit.var().index()] ^ lit.is_negated()
 }
 
-fn reserve_rustsat_variables(
-    solver: &mut rustsat_batsat::BasicSolver,
+fn reserve_rustsat_variables<Cb: batsat::Callbacks>(
+    solver: &mut rustsat_batsat::Solver<Cb>,
     variable_count: usize,
 ) -> Result<(), SatError> {
     if variable_count == 0 {
@@ -2429,8 +2437,8 @@ fn rustsat_lit(lit: CnfLit) -> Result<RustSatLit, SatError> {
     Ok(RustSatVar::new(index).lit(lit.is_negated()))
 }
 
-fn rustsat_assignment(
-    solver: &rustsat_batsat::BasicSolver,
+fn rustsat_assignment<Cb: batsat::Callbacks>(
+    solver: &rustsat_batsat::Solver<Cb>,
     variable_count: usize,
 ) -> Result<CnfAssignment, SatError> {
     if variable_count == 0 {
@@ -3336,6 +3344,24 @@ p cnf 1 2
         ));
         // Without the assumptions the formula is satisfiable again.
         assert!(matches!(sat.solve(None).unwrap(), SatResult::Sat(_)));
+    }
+
+    #[test]
+    fn incremental_solver_is_send_and_timeout_state_is_per_solve() {
+        fn assert_send<T: Send>() {}
+        assert_send::<IncrementalSat>();
+
+        let mut sat = IncrementalSat::new();
+        sat.add_clause(CnfClause::new(vec![pos(0), pos(1)]))
+            .unwrap();
+        assert!(matches!(
+            sat.solve(Some(std::time::Duration::ZERO)).unwrap(),
+            SatResult::Unknown(_)
+        ));
+        assert!(
+            matches!(sat.solve(None).unwrap(), SatResult::Sat(_)),
+            "an untimed solve must clear the preceding deadline"
+        );
     }
 
     #[test]

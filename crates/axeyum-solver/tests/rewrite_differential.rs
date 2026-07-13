@@ -79,6 +79,42 @@ fn handcrafted_sat_and_unsat_queries_match_after_rewrite() {
 }
 
 #[test]
+fn lifter_shaped_extract_distribution_matches_oracle() {
+    let mut arena = TermArena::new();
+    let x = arena.bv_var("x", 64).unwrap();
+    let y = arena.bv_var("y", 64).unwrap();
+    let p = arena.bool_var("p").unwrap();
+
+    let wide_and = arena.bv_and(x, y).unwrap();
+    let sliced_and = arena.extract(15, 8, wide_and).unwrap();
+    let x_slice = arena.extract(15, 8, x).unwrap();
+    let y_slice = arena.extract(15, 8, y).unwrap();
+    let narrow_and = arena.bv_and(x_slice, y_slice).unwrap();
+    let bitwise_identity = arena.eq(sliced_and, narrow_and).unwrap();
+
+    let wide_ite = arena.ite(p, x, y).unwrap();
+    let sliced_ite = arena.extract(15, 8, wide_ite).unwrap();
+    let narrow_ite = arena.ite(p, x_slice, y_slice).unwrap();
+    let ite_identity = arena.eq(sliced_ite, narrow_ite).unwrap();
+    let identities = arena.and(bitwise_identity, ite_identity).unwrap();
+
+    assert_rewrite_oracle_equivalent(
+        &mut arena,
+        &[identities],
+        "lifter extract distribution sat",
+        true,
+    );
+
+    let contradiction = arena.not(identities).unwrap();
+    assert_rewrite_oracle_equivalent(
+        &mut arena,
+        &[contradiction],
+        "lifter extract distribution unsat",
+        true,
+    );
+}
+
+#[test]
 fn micro_corpus_matches_after_rewrite() {
     for (label, text) in [
         (

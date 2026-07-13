@@ -73,6 +73,7 @@ dependencies = [
  "axeyum-aig",
  "axeyum-bv",
  "axeyum-ir",
+ "batsat",
  "rustsat",
  "rustsat-batsat",
  "web-time",

@@ -6,7 +6,7 @@
 use axeyum_ir::{
     ArraySortKey, ArrayValue, Assignment, BIT_VECTOR_WIRE_ORDER, BitOrder, FuncValue,
     GenericArrayValue, IrError, Op, Rational, Sort, TermArena, TermNode, TermStats, Value,
-    WideUint, bv_value_to_lsb_bits, eval, lsb_bits_to_bv_value, lsb_bits_to_value,
+    WideUint, bv_value_to_lsb_bits, eval, lsb_bits_to_bv_value, lsb_bits_to_value, render,
     value_to_lsb_bits,
 };
 
@@ -223,6 +223,59 @@ fn extract_and_concat_bounds_are_static_errors() {
         a.sign_ext(u32::MAX, x),
         Err(IrError::ConcatTooWide(u32::MAX))
     ));
+}
+
+#[test]
+fn explicit_unsigned_width_coercion_extends_truncates_and_preserves_identity() {
+    let mut a = TermArena::new();
+    let x = a.bv_var("coerce_x", 8).unwrap();
+    let wider = a.coerce_to(x, 16).unwrap();
+    let narrower = a.coerce_to(x, 4).unwrap();
+    let unchanged = a.coerce_to(x, 8).unwrap();
+
+    assert_eq!(a.sort_of(wider), Sort::BitVec(16));
+    assert_eq!(a.sort_of(narrower), Sort::BitVec(4));
+    assert_eq!(unchanged, x);
+    assert_eq!(render(&a, wider), "((_ zero_extend 8) coerce_x)");
+    assert_eq!(render(&a, narrower), "((_ extract 3 0) coerce_x)");
+
+    let mut assignment = Assignment::new();
+    let TermNode::Symbol(symbol) = a.node(x) else {
+        unreachable!()
+    };
+    assignment.set(
+        *symbol,
+        Value::Bv {
+            width: 8,
+            value: 0xab,
+        },
+    );
+    assert_eq!(
+        eval(&a, wider, &assignment),
+        Ok(Value::Bv {
+            width: 16,
+            value: 0x00ab,
+        })
+    );
+    assert_eq!(
+        eval(&a, narrower, &assignment),
+        Ok(Value::Bv {
+            width: 4,
+            value: 0x0b,
+        })
+    );
+}
+
+#[test]
+fn explicit_unsigned_width_coercion_rejects_invalid_inputs() {
+    let mut a = TermArena::new();
+    let p = a.bool_var("coerce_p").unwrap();
+    let x = a.bv_var("coerce_x", 8).unwrap();
+    assert!(matches!(
+        a.coerce_to(p, 8),
+        Err(IrError::SortMismatch { .. })
+    ));
+    assert_eq!(a.coerce_to(x, 0), Err(IrError::InvalidWidth(0)));
 }
 
 #[test]

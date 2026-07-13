@@ -16,8 +16,10 @@ use std::time::Instant;
 #[cfg(target_arch = "wasm32")]
 use web_time::Instant;
 
+#[cfg(feature = "full")]
+use axeyum_bv::lower_terms;
 use axeyum_bv::{
-    BitLowerError, BitLowering, first_unsupported_op, first_unsupported_sort, lower_terms,
+    BitLowerError, BitLowering, first_unsupported_op, first_unsupported_sort,
     lower_terms_with_deadline,
 };
 use axeyum_cnf::{
@@ -785,6 +787,7 @@ pub(crate) fn pure_gauss_xor_unsat_certificate(formula: &CnfFormula) -> Option<U
 /// re-validated certificate. The CNF is the un-inprocessed Tseitin encoding; the
 /// pure-Gauss inconsistency of the recovered XOR system is a property of that
 /// formula, and the certificate is `check_drat`-validated before being returned.
+#[cfg(feature = "full")]
 pub(crate) fn pure_gauss_xor_unsat_certificate_for_query(
     arena: &TermArena,
     assertions: &[TermId],

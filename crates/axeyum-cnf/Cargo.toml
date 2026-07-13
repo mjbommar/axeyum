@@ -13,6 +13,7 @@ publish = false
 
 [dependencies]
 axeyum-aig.workspace = true
+batsat.workspace = true
 rustsat.workspace = true
 rustsat-batsat.workspace = true
 

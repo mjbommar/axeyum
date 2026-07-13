@@ -621,6 +621,29 @@ mod tests {
             let zext = a.zero_ext(4, x4).unwrap();
             (a.extract(2, 0, zext).unwrap(), a.extract(2, 0, x4).unwrap())
         });
+        assert_rule_fires(&mut covered, "bv.extract_bitwise.v1", |a| {
+            let x = a.bv_var("extract_bitwise_x", 8).unwrap();
+            let y = a.bv_var("extract_bitwise_y", 8).unwrap();
+            let wide = a.bv_and(x, y).unwrap();
+            let x_slice = a.extract(2, 1, x).unwrap();
+            let y_slice = a.extract(2, 1, y).unwrap();
+            (
+                a.extract(2, 1, wide).unwrap(),
+                a.bv_and(x_slice, y_slice).unwrap(),
+            )
+        });
+        assert_rule_fires(&mut covered, "bv.extract_ite.v1", |a| {
+            let p = a.bool_var("extract_ite_p").unwrap();
+            let x = a.bv_var("extract_ite_x", 8).unwrap();
+            let y = a.bv_var("extract_ite_y", 8).unwrap();
+            let wide = a.ite(p, x, y).unwrap();
+            let x_slice = a.extract(2, 1, x).unwrap();
+            let y_slice = a.extract(2, 1, y).unwrap();
+            (
+                a.extract(2, 1, wide).unwrap(),
+                a.ite(p, x_slice, y_slice).unwrap(),
+            )
+        });
         assert_rule_fires(&mut covered, "bv.concat_extract.v1", |a| {
             // concat(extract(5,3,x6), extract(2,0,x6)) — adjacent slices of the
             // same term (lo1=3 == hi2+1) — reassemble to extract(5, 0, x6).

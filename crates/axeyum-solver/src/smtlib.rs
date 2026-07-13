@@ -2151,7 +2151,36 @@ pub fn solve_smtlib_get_model(
     if !script.get_model {
         return Ok(None);
     }
-    let query = smtlib_single_query(&script)?;
+    solve_parsed_smtlib_model(&mut script, config)
+}
+
+/// Solves an SMT-LIB script and returns its declaration-ordered model on `sat`.
+///
+/// Unlike [`solve_smtlib_get_model`], this Rust convenience accessor does not
+/// require the input text to contain `(get-model)`. It is the appropriate API for
+/// embedders that want the model of a complete script regardless of whether the
+/// producer emitted `(get-model)`, `(get-value ...)`, or no model-query command.
+/// The script must still contain exactly one effective check query; `unsat` and
+/// `unknown` return `Ok(None)`.
+///
+/// # Errors
+///
+/// [`SolverError::Parse`] for malformed/unsupported text, any [`SolverError`]
+/// from [`crate::solve`], or [`SolverError::Backend`] if a sat model omits a
+/// declared constant whose sort has no well-founded default.
+pub fn solve_smtlib_model(
+    input: &str,
+    config: &SolverConfig,
+) -> Result<Option<SmtLibModel>, SolverError> {
+    let mut script = parse_script(input).map_err(|error| SolverError::Parse(error.to_string()))?;
+    solve_parsed_smtlib_model(&mut script, config)
+}
+
+fn solve_parsed_smtlib_model(
+    script: &mut Script,
+    config: &SolverConfig,
+) -> Result<Option<SmtLibModel>, SolverError> {
+    let query = smtlib_single_query(script)?;
     let CheckResult::Sat(model) = solve(&mut script.arena, &query.assertions, config)? else {
         return Ok(None);
     };

@@ -2,11 +2,13 @@
 
 use axeyum_ir::{Assignment, FuncId, FuncValue, Rational, SymbolId, Value};
 
+#[cfg(feature = "full")]
 use crate::{
     QuantifiedBoolModelSatCertificate, QuantifiedBvModelSatCertificate,
     QuantifiedGuardSatCertificate, QuantifiedSkolemSatCertificate,
 };
 
+#[cfg(feature = "full")]
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 struct QuantifiedSatCertificates {
     skolem: Vec<QuantifiedSkolemSatCertificate>,
@@ -38,6 +40,7 @@ pub struct Model {
     real_div_zero: Vec<(Rational, Rational)>,
     /// Lazily allocated checked quantified certificates, grouped behind one
     /// pointer so adding a certificate family does not inflate every model.
+    #[cfg(feature = "full")]
     quantified: Option<Box<QuantifiedSatCertificates>>,
 }
 
@@ -122,6 +125,7 @@ impl Model {
 
     /// Inserts or replaces the checked Skolem certificate for its original
     /// quantified assertion. Entries stay in assertion-ID order.
+    #[cfg(feature = "full")]
     pub fn set_quantified_sat_certificate(&mut self, cert: QuantifiedSkolemSatCertificate) {
         let certificates = &mut self.quantified.get_or_insert_with(Default::default).skolem;
         match certificates.binary_search_by_key(&cert.assertion, |candidate| candidate.assertion) {
@@ -131,6 +135,7 @@ impl Model {
     }
 
     /// The quantified-SAT certificate for `assertion`, if present.
+    #[cfg(feature = "full")]
     pub fn quantified_sat_certificate(
         &self,
         assertion: axeyum_ir::TermId,
@@ -146,6 +151,7 @@ impl Model {
     }
 
     /// Iterates over quantified-SAT certificates in original assertion order.
+    #[cfg(feature = "full")]
     pub fn quantified_sat_certificates(
         &self,
     ) -> impl Iterator<Item = &QuantifiedSkolemSatCertificate> {
@@ -156,6 +162,7 @@ impl Model {
     }
 
     /// Inserts or replaces a checked free-Boolean certificate.
+    #[cfg(feature = "full")]
     pub fn set_quantified_bool_model_sat_certificate(
         &mut self,
         cert: QuantifiedBoolModelSatCertificate,
@@ -171,6 +178,7 @@ impl Model {
     }
 
     /// Returns the checked free-Boolean certificate for `assertion`.
+    #[cfg(feature = "full")]
     pub fn quantified_bool_model_sat_certificate(
         &self,
         assertion: axeyum_ir::TermId,
@@ -186,6 +194,7 @@ impl Model {
     }
 
     /// Iterates over checked free-Boolean certificates in assertion order.
+    #[cfg(feature = "full")]
     pub fn quantified_bool_model_sat_certificates(
         &self,
     ) -> impl Iterator<Item = &QuantifiedBoolModelSatCertificate> {
@@ -196,6 +205,7 @@ impl Model {
     }
 
     /// Inserts or replaces a checked outer-BV guard certificate.
+    #[cfg(feature = "full")]
     pub fn set_quantified_guard_sat_certificate(&mut self, cert: QuantifiedGuardSatCertificate) {
         let certificates = &mut self.quantified.get_or_insert_with(Default::default).guard;
         match certificates.binary_search_by_key(&cert.assertion, |candidate| candidate.assertion) {
@@ -205,6 +215,7 @@ impl Model {
     }
 
     /// Returns the checked outer-BV guard certificate for `assertion`.
+    #[cfg(feature = "full")]
     pub fn quantified_guard_sat_certificate(
         &self,
         assertion: axeyum_ir::TermId,
@@ -220,6 +231,7 @@ impl Model {
     }
 
     /// Iterates over checked outer-BV guard certificates in assertion order.
+    #[cfg(feature = "full")]
     pub fn quantified_guard_sat_certificates(
         &self,
     ) -> impl Iterator<Item = &QuantifiedGuardSatCertificate> {
@@ -230,6 +242,7 @@ impl Model {
     }
 
     /// Inserts or replaces a checked quantified-BV model certificate.
+    #[cfg(feature = "full")]
     pub fn set_quantified_bv_model_sat_certificate(
         &mut self,
         cert: QuantifiedBvModelSatCertificate,
@@ -245,6 +258,7 @@ impl Model {
     }
 
     /// Returns the checked quantified-BV model certificate for `assertion`.
+    #[cfg(feature = "full")]
     pub fn quantified_bv_model_sat_certificate(
         &self,
         assertion: axeyum_ir::TermId,
@@ -260,6 +274,7 @@ impl Model {
     }
 
     /// Iterates over checked quantified-BV model certificates in assertion order.
+    #[cfg(feature = "full")]
     pub fn quantified_bv_model_sat_certificates(
         &self,
     ) -> impl Iterator<Item = &QuantifiedBvModelSatCertificate> {

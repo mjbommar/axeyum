@@ -1243,6 +1243,29 @@ impl TermArena {
         Ok(self.app(Op::SignExt { by }, &[a], Sort::BitVec(out)))
     }
 
+    /// Coerces a bit-vector to `width` using unsigned machine-word semantics.
+    ///
+    /// A narrower operand is zero-extended in the high bits; a wider operand is
+    /// truncated to its low `width` bits; an already-matching operand is returned
+    /// unchanged. This is an explicit convenience for lifters and other embedders:
+    /// ordinary binary builders remain strictly sorted and never coerce operands
+    /// implicitly.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError::SortMismatch`] unless `a` is a bit-vector,
+    /// [`IrError::InvalidWidth`] unless `width` is in `1..=MAX_BV_WIDTH`, or
+    /// [`IrError::ConcatTooWide`] if zero extension would exceed the width cap.
+    pub fn coerce_to(&mut self, a: TermId, width: u32) -> Result<TermId, IrError> {
+        check_width(width)?;
+        let source_width = self.expect_bv(a)?;
+        match source_width.cmp(&width) {
+            core::cmp::Ordering::Less => self.zero_ext(width - source_width, a),
+            core::cmp::Ordering::Equal => Ok(a),
+            core::cmp::Ordering::Greater => self.extract(width - 1, 0, a),
+        }
+    }
+
     /// Rotate left by a constant; the amount is normalized modulo width at
     /// build time so equivalent rotations intern to the same term.
     ///

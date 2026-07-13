@@ -55,6 +55,9 @@ records the contract and the first measured baselines.
 ## Metrics
 
 - Wall time, PAR-2 over corpus, timeout count.
+- Decided count/rate and operational-error count. Every performance comparison
+  declares a minimum decided percentage; a fast error/unsupported path is not a
+  timing sample.
 - Layer attribution: time in rewriting, bit-blasting, CNF encoding, SAT, model
   lifting.
 - Encoding size: term nodes in/out of rewriter, AIG nodes, CNF vars/clauses.
@@ -168,6 +171,20 @@ records the contract and the first measured baselines.
   `scenario_pipeline_report` and `scenario_scaling` `axeyum-bench` examples
   report it across the scenario tier so an optimization's effect on encoding
   size and SAT cost is measured before it is committed to.
+- Artifact version 15 adds explicit `decided` and `decided_percent` summary
+  fields plus the hashed `--min-decided-percent` gate. Operational errors now
+  fail the harness. This closes the fast-failure trap observed in the first
+  Glaurung integration measurement, where a nominal 12–34x speedup was actually
+  a 98% construction/error rate. Client-tier timing is publishable only after
+  its decided-rate gate passes.
+- **Primary client QF_BV target (2026-07-13): Glaurung binary analysis.** Capture
+  and minimize the real lifter-produced path conditions, preserving their
+  extract/concat, mixed machine-width, and memory-derived shape. This client
+  corpus outranks synthetic well-typed formulas for QF_BV preprocessing work:
+  the consumer reports full correctness and robustness across roughly 180k
+  queries but Axeyum is 1.7–3.2x slower than in-process Z3 on the real formulas.
+  No optimization claim is accepted from a synthetic replacement when it does
+  not also improve the captured client corpus at the same decided rate.
 - Fixed seeds and pinned solver versions everywhere; repeated runs with
   variance reported for anything under a few seconds.
 - Timeout regressions must pin the exact pathological public or minimized query

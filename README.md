@@ -61,6 +61,12 @@ proofs — `Safe`, a counterexample, or an honest `Inconclusive` (never a wrong
 `Safe`) — and `certify_safety_k_induction` returns a `Safe` verdict with a
 `drat-trim`-checkable DRAT certificate for **each** induction obligation.
 
+The pure-Rust incremental solver owns its state, implements `Send`, and uses no
+shared global solver context. Create one `TermArena` + `IncrementalBvSolver` per
+worker to scan independent queries in parallel. See the
+[Rust embedding guide](docs/user-guide/rust-embedding.md) for width coercion,
+builder conventions, warm solving, model access, and threading examples.
+
 Everything routes through a few consumer entry points (`axeyum-solver`):
 
 | Call | Purpose |

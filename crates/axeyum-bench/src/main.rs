@@ -13,7 +13,7 @@
 //!   `[--refine-rounds N] [--refine-batch N] [--refine-adaptive-batch]`
 //!   `[--refine-select first|smallest-dag|smallest-plan-dag|smallest-plan-greedy]`
 //!   `[--node-budget N] [--cnf-var-budget N] [--cnf-clause-budget N]`
-//!   `[--compare-z3] [--jobs N]`
+//!   `[--compare-z3] [--min-decided-percent P] [--jobs N]`
 //! The default build can run the pure Rust `sat-bv` backend. Build with
 //! `--features z3` (or `z3-static`) to enable the Z3 oracle backend.
 
@@ -44,7 +44,7 @@ mod run {
     use rayon::prelude::*;
     use serde_json::{Value as JsonValue, json};
 
-    const ARTIFACT_VERSION: u32 = 14;
+    const ARTIFACT_VERSION: u32 = 15;
     /// Corpus SAT-share threshold above which SAT solve time is reported as
     /// dominating end-to-end time — gate (a) for prioritizing the custom CDCL
     /// core (benchmarking-and-performance-methodology.md, "Decision Gates").
@@ -198,6 +198,7 @@ mod run {
         native_cdcl: bool,
         preprocess: bool,
         compare_z3: bool,
+        min_decided_percent: Option<f64>,
         jobs: usize,
     }
 
@@ -228,6 +229,7 @@ mod run {
             native_cdcl: false,
             preprocess: false,
             compare_z3: false,
+            min_decided_percent: None,
             jobs: 1,
         };
         while let Some(flag) = args.next() {
@@ -237,6 +239,7 @@ mod run {
         Ok(parsed)
     }
 
+    #[allow(clippy::too_many_lines)]
     fn parse_option(
         parsed: &mut Args,
         flag: &str,
@@ -329,6 +332,9 @@ mod run {
                     );
                 }
             }
+            "--min-decided-percent" => {
+                parsed.min_decided_percent = Some(parse_decided_percent(&next_value(args, flag)?)?);
+            }
             "--jobs" => {
                 parsed.jobs = next_value(args, flag)?
                     .parse()
@@ -340,6 +346,14 @@ mod run {
             other => return Err(format!("unknown flag `{other}`")),
         }
         Ok(())
+    }
+
+    fn parse_decided_percent(value: &str) -> Result<f64, String> {
+        let percent = value.parse::<f64>().map_err(|error| error.to_string())?;
+        if !percent.is_finite() || !(0.0..=100.0).contains(&percent) {
+            return Err("`--min-decided-percent` must be between 0 and 100".to_owned());
+        }
+        Ok(percent)
     }
 
     fn next_value(args: &mut impl Iterator<Item = String>, flag: &str) -> Result<String, String> {
@@ -539,20 +553,20 @@ mod run {
         } else {
             println!("{artifact}");
         }
-        report_summary(&summary)
+        report_summary(&summary, args.min_decided_percent)
     }
 
     /// Prints the one-line corpus summary + the root-cause blocker leaderboard, then
     /// returns the process exit code — `FAILURE` (after a printed `SOUNDNESS ALARM`)
     /// if any soundness invariant tripped (oracle/ground-truth disagreement, a sat
     /// model that did not replay, a rewrite that flipped a decision), else `SUCCESS`.
-    fn report_summary(summary: &Summary) -> ExitCode {
+    fn report_summary(summary: &Summary, min_decided_percent: Option<f64>) -> ExitCode {
         eprintln!(
             "files={} sat={} unsat={} unknown={} unsupported={} errors={} \
              agree={} DISAGREE={} model_replay_failures={} \
              rewrite_changed={} rewrite_apps={} rewrite_decision_changes={} \
              rewrite_sat_unsat_conflicts={} query_sliced={} query_dropped={} \
-             par2_mean_s={:.3}",
+             decided_percent={:.2} par2_mean_s={:.3}",
             summary.files,
             summary.sat,
             summary.unsat,
@@ -568,6 +582,7 @@ mod run {
             summary.rewrite_sat_unsat_conflicts,
             summary.query_slice_changed_instances,
             summary.query_slice_dropped_terms,
+            decided_percent(summary),
             summary.par2_seconds / decided_denominator(summary)
         );
         if !summary.blocker_buckets.is_empty() {
@@ -590,6 +605,23 @@ mod run {
         }
         if summary.oracle_disagree > 0 {
             eprintln!("SOUNDNESS ALARM: primary backend disagrees with Z3 oracle");
+            return ExitCode::FAILURE;
+        }
+        if summary.errors > 0 {
+            eprintln!(
+                "BENCHMARK INTEGRITY ALARM: {} operational errors cannot count as fast results",
+                summary.errors
+            );
+            return ExitCode::FAILURE;
+        }
+        if let Some(required) = min_decided_percent
+            && decided_percent(summary) + f64::EPSILON < required
+        {
+            eprintln!(
+                "BENCHMARK INTEGRITY ALARM: decided {:.2}% is below required {:.2}%",
+                decided_percent(summary),
+                required
+            );
             return ExitCode::FAILURE;
         }
         ExitCode::SUCCESS
@@ -763,6 +795,15 @@ mod run {
         #[allow(clippy::cast_precision_loss)]
         let n = (s.sat + s.unsat + s.unknown + s.errors).max(1) as f64;
         n
+    }
+
+    #[allow(clippy::cast_precision_loss)]
+    fn decided_percent(s: &Summary) -> f64 {
+        if s.files == 0 {
+            0.0
+        } else {
+            100.0 * (s.sat + s.unsat) as f64 / s.files as f64
+        }
     }
 
     /// The `rewrite` sub-block of the summary artifact.
@@ -2671,6 +2712,7 @@ mod run {
                 "backend_kind": args.backend.as_str(),
                 "compare_backend": compare_backend_name,
                 "compare_z3": args.compare_z3,
+                "min_decided_percent": args.min_decided_percent,
                 "query_plan": {
                     "mode": args.query_plan.as_str(),
                     "sat_replay_failure_policy": sat_replay_policy_name(args.query_plan),
@@ -2691,6 +2733,8 @@ mod run {
                 "unknown": s.unknown,
                 "unsupported": s.unsupported,
                 "errors": s.errors,
+                "decided": s.sat + s.unsat,
+                "decided_percent": decided_percent(s),
                 "agree": s.agree,
                 "disagree": s.disagree,
                 "model_replay_failures": s.model_replay_failures,
@@ -2980,6 +3024,13 @@ mod run {
         update_hash(&mut hash, &[u8::from(args.native_cdcl)]);
         update_hash(&mut hash, &[u8::from(args.preprocess)]);
         update_hash(&mut hash, &[u8::from(args.compare_z3)]);
+        update_hash(
+            &mut hash,
+            &args
+                .min_decided_percent
+                .map_or_else(|| "none".to_owned(), |percent| percent.to_string())
+                .into_bytes(),
+        );
         update_hash(&mut hash, backend_name.as_bytes());
         update_hash(&mut hash, corpus_hash.as_bytes());
         hex_u64(hash)
@@ -3067,6 +3118,44 @@ mod run {
                 blocker_leaderboard(&s.blocker_buckets),
                 "unknown:Timeout=2 unknown:EncodingBudget=1 unsupported=1"
             );
+        }
+
+        #[test]
+        fn decided_rate_and_operational_errors_are_benchmark_gates() {
+            let mostly_failed = Summary {
+                files: 100,
+                sat: 1,
+                unsat: 1,
+                errors: 98,
+                ..Summary::default()
+            };
+            assert!((decided_percent(&mostly_failed) - 2.0).abs() < f64::EPSILON);
+            assert_eq!(
+                report_summary(&mostly_failed, None),
+                ExitCode::FAILURE,
+                "fast operational failure must never pass as a benchmark result"
+            );
+
+            let incomplete = Summary {
+                files: 10,
+                sat: 4,
+                unsat: 4,
+                unknown: 2,
+                ..Summary::default()
+            };
+            assert_eq!(report_summary(&incomplete, Some(80.0)), ExitCode::SUCCESS);
+            assert_eq!(report_summary(&incomplete, Some(80.1)), ExitCode::FAILURE);
+        }
+
+        #[test]
+        fn decided_rate_threshold_parser_rejects_non_percentages() {
+            assert_eq!(parse_decided_percent("80").unwrap(), 80.0);
+            for invalid in ["-0.1", "100.1", "NaN", "inf", "not-a-number"] {
+                assert!(
+                    parse_decided_percent(invalid).is_err(),
+                    "invalid decided-rate threshold must be rejected: {invalid}"
+                );
+            }
         }
 
         #[test]

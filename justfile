@@ -4,7 +4,7 @@ default:
     @just --list
 
 # Run every check CI runs (except cargo-deny, which needs the tool installed).
-check: fmt clippy test doc foundational-resources rules-as-code links
+check: fmt clippy test doc qfbv-profile foundational-resources rules-as-code links
 
 fmt:
     cargo fmt --all --check
@@ -24,6 +24,9 @@ test-guarded:
 
 doc:
     RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features --no-deps
+
+qfbv-profile:
+    ./scripts/check-qfbv-profile.sh
 
 foundational-resources:
     ./scripts/check-foundational-resources.sh
@@ -66,6 +69,15 @@ bench-micro:
 # Run the committed micro corpus through the Z3 oracle backend.
 bench-micro-z3:
     cargo run --release -p axeyum-bench --features z3 -- corpus/micro --backend z3 --timeout-ms 1000 --out /tmp/axeyum-bench-micro-z3.json
+
+# Primary client-tier QF_BV gate. `corpus_dir` is an externally captured,
+# redistributable Glaurung SMT-LIB query directory; the repository deliberately
+# does not pretend that a synthetic substitute is the client workload. Every
+# file must produce a decision, operational errors fail the harness, verdicts
+# are checked against Z3, and the versioned artifact records decided rate.
+bench-glaurung-qfbv corpus_dir out="bench-results/glaurung-qfbv-sat-bv-vs-z3.json":
+    mkdir -p "$(dirname '{{out}}')"
+    cargo run --release -p axeyum-bench --features z3 -- "{{corpus_dir}}" --backend sat-bv --preprocess --compare-z3 --timeout-ms 10000 --jobs 2 --min-decided-percent 100 --logic QF_BV --corpus-source 'Glaurung binary-analysis SMT-LIB capture (external client corpus)' --out "{{out}}"
 
 # P4.5: the committed curated QF_BV slice, sat-bv vs Z3 (oracle-enabled). The
 # measured head-to-head gate for Track 1. Encoding budgets bound the bit-blast so

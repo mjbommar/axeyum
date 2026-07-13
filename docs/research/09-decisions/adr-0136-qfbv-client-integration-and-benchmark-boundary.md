@@ -1,0 +1,99 @@
+# ADR-0136: QF_BV client integration and benchmark boundary
+
+Status: accepted
+Date: 2026-07-13
+
+## Context
+
+A real binary-analysis integration exercised roughly 180,000 formulas without
+a crash or hang and reported correct decisions, replay-safe `Unknown`, honored
+warm timeouts, and independently recheckable UNSAT proofs. It also exposed
+integration friction and a performance result that synthetic, uniformly typed
+QF_BV formulas had hidden: Axeyum was about 1.7--3.2x slower than in-process Z3
+on width-mixed, extract/concat, and memory-derived Glaurung path conditions.
+
+The same integration found a benchmark soundness trap. A nominal 12--34x
+speedup was actually the client returning construction errors for about 98% of
+queries. Verdict agreement alone cannot make such a run comparable; the
+decided rate and operational-error count are part of benchmark validity.
+
+## Decision
+
+Adopt the following QF_BV client boundary:
+
+- IR builders remain strictly sorted. There is no implicit arithmetic coercion.
+  `TermArena::coerce_to` is the explicit unsigned machine-width helper:
+  zero-extend, identity, or low-bit truncate. Signed widening remains an
+  explicit `sign_ext` operation.
+- `axeyum-solver` re-exports `Value`. The command-faithful
+  `solve_smtlib_get_model` remains unchanged, while `solve_smtlib_model`
+  retrieves a declaration-ordered model from any satisfiable single-query
+  script independently of `(get-model)` or `(get-value)` commands.
+- `default-features = false, features = ["qfbv"]` is the minimal pure-Rust
+  scalar QF_BV profile. A repository gate rejects accidental dependencies on
+  the e-graph, floating-point, Lean-kernel, SMT-LIB, or string crates.
+- The warm solver exposes `assert_preprocessed` and `assert_configured`.
+  Preprocessing is exact and the original assertion remains the model-replay
+  obligation. Narrow extracts distribute through pointwise bit-vector
+  operations and bit-vector `ite`, preventing discarded wide-register bits from
+  becoming AIG gates.
+- The pure-Rust incremental solver is documented and compile-checked as `Send`.
+  Its BatSat stop policy stores a per-solve `Instant` rather than a non-`Send`
+  callback closure. Parallel consumers use one arena and solver per worker; no
+  shared global native-solver context is implied.
+- Benchmark artifacts record `decided` and `decided_percent`. Any operational
+  error makes the run fail, and `--min-decided-percent` is an enforceable gate.
+  The primary client recipe requires 100% decisions and Z3 comparison on an
+  externally captured Glaurung SMT-LIB corpus.
+
+Extract bounds are inclusive and `concat(high, low)` ordering is part of the
+public embedding documentation. Precise construction errors remain a product
+contract, not an implementation detail.
+
+## Evidence
+
+The accepted implementation is covered by:
+
+- IR construction, rendering, evaluation, invalid-sort, and invalid-width
+  tests for explicit coercion;
+- command-faithful and command-independent SMT-LIB model-access tests;
+- a no-default-features QF_BV compile, strict-Clippy, runtime model/proof/warm
+  smoke test, and dependency-tree firewall;
+- exhaustive small-width evaluator checks for extract distribution across
+  `bvnot`, six binary bitwise operations, and bit-vector `ite`;
+- Z3 differential SAT and UNSAT checks for the same lifter-shaped identities;
+- a warm-path structural test showing that an 8-bit slice of a 64-bit bitwise
+  assertion removes most discarded AIG gates while preserving replayed SAT;
+  and
+- benchmark-harness tests where 2 decisions plus 98 errors fail comparability,
+  including exact decided-rate threshold behavior.
+
+The local Glaurung reference checkout contains source but no captured SMT-LIB
+query corpus. Therefore this ADR records no new end-to-end 1.7--3.2x ratio and
+makes no parity claim. The external capture is required for that measurement.
+
+## Alternatives
+
+- **Implicitly widen or truncate binary operands.** Rejected: it masks client
+  bugs and makes signedness policy invisible.
+- **Change `solve_smtlib_get_model` to ignore script commands.** Rejected: it
+  would silently break the command-faithful contract; a separate accessor is
+  unambiguous.
+- **Make every warm `assert` mutate the arena.** Rejected: the raw immutable
+  assertion path is useful and source compatibility matters. Explicit and
+  config-driven mutable methods add preprocessing without removing it.
+- **Claim the synthetic QF_BV corpus represents binary lifting.** Rejected:
+  the observed performance gap is shape-specific and must be measured on the
+  client capture.
+- **Score timing when most files error or remain undecided.** Rejected: early
+  failure is not solver performance.
+
+## Consequences
+
+QF_BV embedders get a smaller dependency surface and less glue while strict
+typing, original-term replay, deterministic state, and proof checking remain
+intact. Warm preprocessing now has a targeted structural optimization for the
+reported formula shape. Future performance changes are accepted only if the
+Glaurung client artifact preserves the declared decided rate, has zero
+operational errors/disagreements/replay failures, and improves comparable
+end-to-end timing; synthetic wins alone are diagnostic, not dispositive.

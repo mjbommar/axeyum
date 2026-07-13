@@ -5,6 +5,12 @@ assert.** Every number here comes from a committed artifact under
 [`bench-results/`](../../bench-results/), with `DISAGREE=0` and zero replay
 failures (a wrong answer would fail the harness, not just score badly).
 
+For consumer comparisons, timing is valid only when the decided-rate gate also
+passes. Operational errors make `axeyum-bench` exit nonzero, and
+`--min-decided-percent P` rejects a run whose `(sat + unsat) / files` falls below
+`P`. This prevents a backend that fails quickly on most inputs from appearing
+faster than a backend that actually solves them.
+
 ## The measured Z3 head-to-head (public QF_BV)
 
 On the public `QF_BV` slice `20221214-p4dfa-XiaoqiChen` (113 files, SMT-LIB 2024,
@@ -72,6 +78,21 @@ just bench-public-qfbv-sat-bv-replay-refine      # replay-checked query refineme
 ## Reading an artifact
 
 Each JSON records the corpus + config hash, per-instance outcome, budgets,
-backend stats, PAR-2, **disagreements**, and **model-replay failures**. The two
-numbers that gate correctness are always `disagree = 0` and
-`model_replay_failures = 0`; the decided count is the *performance* signal.
+backend stats, PAR-2, explicit `decided`/`decided_percent`, **disagreements**,
+and **model-replay failures**. A comparable run requires zero errors, zero
+disagreements, zero replay failures, and the declared decided-rate threshold;
+only then is timing a performance signal.
+
+## Binary-analysis client gate
+
+The primary client target accepts an external Glaurung query capture (the
+client corpus is not redistributed by this repository):
+
+```sh
+just bench-glaurung-qfbv /path/to/glaurung-smt2-capture
+```
+
+This enables word-level preprocessing, compares every result with Z3, requires
+a 100% decided rate, and emits a versioned artifact. Synthetic QF_BV corpora
+remain useful lower-level diagnostics, but do not replace the
+extract/concat/mixed-width/memory-derived client shape.

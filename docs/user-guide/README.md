@@ -18,7 +18,7 @@ flowchart LR
 |---|---|
 | installation.md *(planned)* | toolchain, `just check`, optional `z3` feature |
 | [First SMT-LIB query](first-smtlib-query.md) | run a query from SMT-LIB text |
-| first-rust-query.md *(planned)* | build a query with the typed IR |
+| [Rust embedding](rust-embedding.md) | typed builders, explicit width coercion, warm solving, models, and threads |
 | models-and-replay.md *(planned)* | read a model; what replay guarantees |
 | unsat-evidence.md *(planned)* | DRAT/LRAT/Alethe and `recheck` |
 | [Limitations](limitations.md) | what's experimental/incomplete — read before trusting support |

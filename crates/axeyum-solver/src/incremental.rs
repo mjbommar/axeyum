@@ -23,6 +23,7 @@ use axeyum_ir::{
 };
 
 use std::collections::{BTreeMap, HashMap, HashSet};
+#[cfg(feature = "full")]
 use std::time::Duration;
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -83,6 +84,7 @@ pub enum AssumptionOutcome {
 struct IncrementalSolveOutcome {
     result: CheckResult,
     assumption_core: Vec<TermId>,
+    #[cfg_attr(not(feature = "full"), allow(dead_code))]
     active_assertion_core: Vec<TermId>,
 }
 
@@ -104,6 +106,7 @@ impl IncrementalSolveOutcome {
     }
 }
 
+#[cfg(feature = "full")]
 pub(crate) enum WarmRefutationProbe {
     Refuted { active_core: Vec<TermId> },
     Satisfiable,
@@ -357,8 +360,9 @@ impl IncrementalBvSolver {
 
     /// Creates an empty incremental solver with an explicit configuration.
     ///
-    /// Only the `timeout` field is consulted by this solver today; admission
-    /// budgets are a one-shot-backend concern.
+    /// The `timeout` field governs checks. [`SolverConfig::preprocess`] is
+    /// consulted by [`Self::assert_configured`]; admission budgets remain a
+    /// one-shot-backend concern.
     pub fn with_config(config: SolverConfig) -> Self {
         Self {
             lowering: IncrementalLowering::new(),
@@ -393,6 +397,7 @@ impl IncrementalBvSolver {
     /// Internal online-theory adapters use this to pass an absolute query
     /// deadline as a shrinking per-check timeout instead of accidentally granting
     /// the full user budget to every trail assignment.
+    #[cfg(feature = "full")]
     pub(crate) fn set_timeout(&mut self, timeout: Option<Duration>) {
         self.config.timeout = timeout;
     }
@@ -415,6 +420,16 @@ impl IncrementalBvSolver {
     /// Total CNF variables (AIG nodes plus scope selectors) encoded so far.
     pub fn encoded_variable_count(&self) -> usize {
         self.cnf.variable_count()
+    }
+
+    /// Total AIG nodes lowered so far, including nodes not reachable from the
+    /// final asserted slice.
+    ///
+    /// This is useful for measuring word-level preprocessing: for example,
+    /// pushing an 8-bit extract through a 64-bit bitwise operation avoids
+    /// constructing the discarded 56 pointwise gates before CNF encoding.
+    pub fn lowered_aig_node_count(&self) -> usize {
+        self.lowering.node_count()
     }
 
     /// Number of unique observed array reads represented by retained warm
@@ -606,12 +621,63 @@ impl IncrementalBvSolver {
         self.assert_encoded(arena, term, term)
     }
 
+    /// Canonicalizes and then asserts `term`, retaining the original assertion
+    /// for model replay.
+    ///
+    /// This is the warm-path counterpart of one-shot word-level preprocessing.
+    /// It is especially useful for lifter-shaped formulas where narrow extracts
+    /// consume wide register operations: exact rewrites move the extract inward
+    /// so discarded bits never become AIG gates. The returned [`TermId`] is the
+    /// canonical term actually lowered.
+    ///
+    /// # Errors
+    ///
+    /// Returns the same errors as [`Self::assert`], or
+    /// [`SolverError::Backend`] if canonicalization fails.
+    pub fn assert_preprocessed(
+        &mut self,
+        arena: &mut TermArena,
+        term: TermId,
+    ) -> Result<TermId, SolverError> {
+        if arena.sort_of(term) != Sort::Bool {
+            return Err(SolverError::NonBooleanAssertion(term));
+        }
+        let canonical = axeyum_rewrite::canonicalize(arena, term)
+            .map_err(|error| SolverError::Backend(error.to_string()))?
+            .term;
+        self.assert_encoded(arena, term, canonical)?;
+        Ok(canonical)
+    }
+
+    /// Asserts through the preprocessing policy in this solver's configuration.
+    ///
+    /// With [`SolverConfig::preprocess`] enabled this delegates to
+    /// [`Self::assert_preprocessed`]; otherwise it preserves the raw assertion
+    /// shape used by [`Self::assert`]. The returned term is the one lowered.
+    ///
+    /// # Errors
+    ///
+    /// Returns the same errors as [`Self::assert_preprocessed`].
+    pub fn assert_configured(
+        &mut self,
+        arena: &mut TermArena,
+        term: TermId,
+    ) -> Result<TermId, SolverError> {
+        if self.config.preprocess {
+            self.assert_preprocessed(arena, term)
+        } else {
+            self.assert(arena, term)?;
+            Ok(term)
+        }
+    }
+
     /// Asserts `term` while honoring an absolute lowering deadline.
     ///
     /// Returns `false` only when bit-vector lowering reaches `deadline`; no CNF
     /// root or frame assertion is installed for the interrupted term. This is
     /// crate-private because online theory combinations translate the outcome
     /// into their shared query's [`UnknownKind::Timeout`].
+    #[cfg(feature = "full")]
     pub(crate) fn assert_with_deadline(
         &mut self,
         arena: &TermArena,
@@ -997,8 +1063,18 @@ impl IncrementalBvSolver {
     ///
     /// Returns [`SolverError`] from the selected dispatcher route.
     pub fn check_with_memory(&mut self, arena: &mut TermArena) -> Result<CheckResult, SolverError> {
-        let active = self.active_assertions();
-        crate::check_auto(arena, &active, &self.config)
+        #[cfg(feature = "full")]
+        {
+            let active = self.active_assertions();
+            crate::check_auto(arena, &active, &self.config)
+        }
+        #[cfg(not(feature = "full"))]
+        {
+            let _ = arena;
+            Err(SolverError::Unsupported(
+                "array/UF solving requires axeyum-solver's `full` feature".to_owned(),
+            ))
+        }
     }
 
     /// Checks the active assertions together with one-shot assumptions through
@@ -1016,8 +1092,18 @@ impl IncrementalBvSolver {
         arena: &mut TermArena,
         assumptions: &[TermId],
     ) -> Result<CheckResult, SolverError> {
-        let active = self.active_assertions_with_assumptions(arena, assumptions)?;
-        crate::check_auto(arena, &active, &self.config)
+        #[cfg(feature = "full")]
+        {
+            let active = self.active_assertions_with_assumptions(arena, assumptions)?;
+            crate::check_auto(arena, &active, &self.config)
+        }
+        #[cfg(not(feature = "full"))]
+        {
+            let _ = (arena, assumptions);
+            Err(SolverError::Unsupported(
+                "array/UF solving requires axeyum-solver's `full` feature".to_owned(),
+            ))
+        }
     }
 
     /// Like [`Self::check_assuming_with_memory`], but returns a sound assumption
@@ -1063,6 +1149,7 @@ impl IncrementalBvSolver {
     /// contains every base-frame assertion plus assertions from the failed frame
     /// selectors. Callers that need literal-granular cores should place one
     /// assertion in each frame.
+    #[cfg(feature = "full")]
     pub(crate) fn check_with_active_assertion_core(
         &mut self,
         arena: &TermArena,
@@ -1077,6 +1164,7 @@ impl IncrementalBvSolver {
     /// On refutation, the returned active-frame assertion core is a reason for
     /// the negation of `assumption`. This is the exact implication primitive used
     /// by bounded online BV theory propagation.
+    #[cfg(feature = "full")]
     pub(crate) fn refute_assumption(
         &mut self,
         arena: &TermArena,
@@ -3987,6 +4075,7 @@ impl IncrementalBvSolver {
         Ok(None)
     }
 
+    #[cfg(feature = "full")]
     fn active_assertions(&self) -> Vec<TermId> {
         self.frames
             .iter()
@@ -4000,6 +4089,7 @@ impl IncrementalBvSolver {
             .collect()
     }
 
+    #[cfg(feature = "full")]
     fn active_assertions_with_assumptions(
         &self,
         arena: &TermArena,
@@ -6704,6 +6794,16 @@ fn map_sat_error(error: &SatError) -> SolverError {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn incremental_solver_is_send_and_owns_no_shared_global_context() {
+        fn assert_send<T: Send>() {}
+        assert_send::<IncrementalBvSolver>();
+
+        let handle = std::thread::spawn(IncrementalBvSolver::new);
+        let solver = handle.join().expect("fresh per-thread solver constructs");
+        assert_eq!(solver.scope_depth(), 0);
+    }
 
     fn structural_observation_root(arena: &mut TermArena, count: u128) -> TermId {
         let array = arena

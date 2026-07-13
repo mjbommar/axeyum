@@ -798,6 +798,37 @@ fn get_model_is_none_without_request_or_without_sat_model() {
 }
 
 #[test]
+fn model_accessor_does_not_require_get_model_and_coexists_with_get_value() {
+    use axeyum_solver::{Value, solve_smtlib_get_model, solve_smtlib_model};
+    let text = "\
+(set-logic QF_BV)
+(declare-const x (_ BitVec 8))
+(assert (= x #x2a))
+(check-sat)
+(get-value (x))
+";
+
+    assert_eq!(
+        solve_smtlib_get_model(text, &config()).expect("command helper succeeds"),
+        None,
+        "the command-faithful helper still requires (get-model)"
+    );
+    let model = solve_smtlib_model(text, &config())
+        .expect("unified model accessor succeeds")
+        .expect("the script is sat");
+    assert_eq!(
+        model.constants,
+        vec![(
+            "x".to_owned(),
+            Value::Bv {
+                width: 8,
+                value: 0x2a,
+            },
+        )]
+    );
+}
+
+#[test]
 fn get_assertions_returns_scoped_snapshots() {
     use axeyum_solver::solve_smtlib_get_assertions;
     let text = "\

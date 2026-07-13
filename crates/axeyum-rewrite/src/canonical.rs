@@ -58,6 +58,8 @@ const BV_SHIFT_ZERO: &str = "bv.shift_zero.v1";
 const BV_EXTRACT_WHOLE: &str = "bv.extract_whole.v1";
 const BV_EXTRACT_CONCAT: &str = "bv.extract_concat.v1";
 const BV_EXTRACT_EXTEND: &str = "bv.extract_extend.v1";
+const BV_EXTRACT_BITWISE: &str = "bv.extract_bitwise.v1";
+const BV_EXTRACT_ITE: &str = "bv.extract_ite.v1";
 const BV_CONCAT_EXTRACT: &str = "bv.concat_extract.v1";
 const BV_EXTEND_ZERO: &str = "bv.extend_zero.v1";
 const BV_ROTATE_ZERO: &str = "bv.rotate_zero.v1";
@@ -492,6 +494,16 @@ fn default_rules() -> Vec<RewriteRule> {
             BV_EXTRACT_EXTEND,
             "Extract within the original bits of an extend",
             "`extract` over a `zero_extend`/`sign_extend` whose high index lies below the original width",
+        ),
+        rule(
+            BV_EXTRACT_BITWISE,
+            "Extract distributes through bitwise operators",
+            "`extract` of `bvnot` or a binary bitwise operator (`bvand`/`bvor`/`bvxor`/`bvnand`/`bvnor`/`bvxnor`)",
+        ),
+        rule(
+            BV_EXTRACT_ITE,
+            "Extract distributes through bit-vector ite",
+            "`extract` of a bit-vector `ite`, slicing both value branches while retaining the condition",
         ),
         rule(
             BV_CONCAT_EXTRACT,
@@ -1390,6 +1402,12 @@ fn rewrite_ite(
 ///
 /// This selects exactly the same bits, so it is exact-denotation with identity
 /// model projection.
+///
+/// `BV_EXTRACT_BITWISE` and `BV_EXTRACT_ITE` push a narrow slice through a wide
+/// pointwise operation. Besides preserving denotation exactly, this keeps the
+/// discarded high bits out of later AIG/CNF construction -- an important shape
+/// for machine-code lifters that operate on wide registers and then consume a
+/// byte or word slice.
 fn rewrite_extract(
     arena: &mut TermArena,
     hi: u32,
@@ -1447,7 +1465,46 @@ fn rewrite_extract(
             return Ok(Some(applied(arena.extract(hi, lo, x)?, BV_EXTRACT_EXTEND)));
         }
     }
+    if enabled.contains(BV_EXTRACT_BITWISE) {
+        let bitwise = match arena.node(args[0]) {
+            TermNode::App { op, args } if is_extract_distributive_bitwise(*op) => {
+                Some((*op, args.clone()))
+            }
+            _ => None,
+        };
+        if let Some((op, inner_args)) = bitwise {
+            let sliced_args = inner_args
+                .iter()
+                .map(|&arg| arena.extract(hi, lo, arg))
+                .collect::<Result<Vec<_>, _>>()?;
+            return Ok(Some(applied(
+                build_app(arena, op, &sliced_args)?,
+                BV_EXTRACT_BITWISE,
+            )));
+        }
+    }
+    if enabled.contains(BV_EXTRACT_ITE) {
+        let ite_args = match arena.node(args[0]) {
+            TermNode::App { op: Op::Ite, args } => Some(args.clone()),
+            _ => None,
+        };
+        if let Some(ite_args) = ite_args {
+            let then_slice = arena.extract(hi, lo, ite_args[1])?;
+            let else_slice = arena.extract(hi, lo, ite_args[2])?;
+            return Ok(Some(applied(
+                arena.ite(ite_args[0], then_slice, else_slice)?,
+                BV_EXTRACT_ITE,
+            )));
+        }
+    }
     Ok(None)
+}
+
+fn is_extract_distributive_bitwise(op: Op) -> bool {
+    matches!(
+        op,
+        Op::BvNot | Op::BvAnd | Op::BvOr | Op::BvXor | Op::BvNand | Op::BvNor | Op::BvXnor
+    )
 }
 
 /// `(select (store a i v) i)` → `v` (read-over-write, same index) and
@@ -1799,7 +1856,9 @@ fn mask(width: u32) -> u128 {
 mod commutative_tests {
     use axeyum_ir::{Assignment, Op, Sort, TermArena, TermId, TermNode, Value, eval};
 
-    use super::canonicalize;
+    use super::{
+        BV_EXTRACT_BITWISE, BV_EXTRACT_ITE, canonicalize, is_extract_distributive_bitwise,
+    };
 
     /// Each pair of binary commutative builders must canonicalize to the same
     /// term regardless of operand order.
@@ -2954,6 +3013,130 @@ mod commutative_tests {
                 eval(&a, canon_sext, &asg).unwrap(),
                 "extract-within-sign_extend changed denotation at x={xv}",
             );
+        }
+    }
+
+    /// Narrow slices are pushed through wide pointwise operators so downstream
+    /// bit-blasting never constructs gates for bits the consumer discarded.
+    #[test]
+    #[allow(clippy::many_single_char_names)]
+    fn extract_distributes_through_bitwise_ops_and_ite() {
+        let mut a = TermArena::new();
+        let x = a.bv_var("x", 8).unwrap();
+        let y = a.bv_var("y", 8).unwrap();
+        let p = a.bool_var("p").unwrap();
+
+        let bitwise_cases: [fn(&mut TermArena, TermId, TermId) -> TermId; 6] = [
+            |a, l, r| a.bv_and(l, r).unwrap(),
+            |a, l, r| a.bv_or(l, r).unwrap(),
+            |a, l, r| a.bv_xor(l, r).unwrap(),
+            |a, l, r| a.bv_nand(l, r).unwrap(),
+            |a, l, r| a.bv_nor(l, r).unwrap(),
+            |a, l, r| a.bv_xnor(l, r).unwrap(),
+        ];
+        for build in bitwise_cases {
+            let wide = build(&mut a, x, y);
+            let narrow = a.extract(2, 1, wide).unwrap();
+            let canonical = canonicalize(&mut a, narrow).unwrap();
+            assert!(
+                canonical
+                    .report
+                    .applications()
+                    .iter()
+                    .any(|application| application.rule_id.as_str() == BV_EXTRACT_BITWISE)
+            );
+            assert_eq!(a.sort_of(canonical.term), Sort::BitVec(2));
+            assert!(
+                matches!(a.node(canonical.term), TermNode::App { op, .. } if is_extract_distributive_bitwise(*op))
+            );
+        }
+
+        let wide_not = a.bv_not(x).unwrap();
+        let narrow_not = a.extract(2, 1, wide_not).unwrap();
+        let canonical_not = canonicalize(&mut a, narrow_not).unwrap().term;
+        assert!(matches!(
+            a.node(canonical_not),
+            TermNode::App { op: Op::BvNot, .. }
+        ));
+
+        let wide_ite = a.ite(p, x, y).unwrap();
+        let narrow_ite = a.extract(2, 1, wide_ite).unwrap();
+        let canonical_ite = canonicalize(&mut a, narrow_ite).unwrap();
+        assert!(
+            canonical_ite
+                .report
+                .applications()
+                .iter()
+                .any(|application| application.rule_id.as_str() == BV_EXTRACT_ITE)
+        );
+        assert!(matches!(
+            a.node(canonical_ite.term),
+            TermNode::App { op: Op::Ite, .. }
+        ));
+    }
+
+    /// Exhaustive small-width route for every new distribution rule.
+    #[test]
+    #[allow(clippy::many_single_char_names)]
+    fn extract_distribution_preserves_denotation_exhaustively() {
+        let mut a = TermArena::new();
+        let x_sym = a.declare("x", Sort::BitVec(4)).unwrap();
+        let y_sym = a.declare("y", Sort::BitVec(4)).unwrap();
+        let p_sym = a.declare("p", Sort::Bool).unwrap();
+        let x = a.var(x_sym);
+        let y = a.var(y_sym);
+        let p = a.var(p_sym);
+
+        let bitwise_cases: [fn(&mut TermArena, TermId, TermId) -> TermId; 6] = [
+            |a, l, r| a.bv_and(l, r).unwrap(),
+            |a, l, r| a.bv_or(l, r).unwrap(),
+            |a, l, r| a.bv_xor(l, r).unwrap(),
+            |a, l, r| a.bv_nand(l, r).unwrap(),
+            |a, l, r| a.bv_nor(l, r).unwrap(),
+            |a, l, r| a.bv_xnor(l, r).unwrap(),
+        ];
+        let mut original = Vec::new();
+        for build in bitwise_cases {
+            let wide = build(&mut a, x, y);
+            original.push(a.extract(2, 1, wide).unwrap());
+        }
+        let wide_not = a.bv_not(x).unwrap();
+        original.push(a.extract(2, 1, wide_not).unwrap());
+        let wide_ite = a.ite(p, x, y).unwrap();
+        original.push(a.extract(2, 1, wide_ite).unwrap());
+        let canonical = original
+            .iter()
+            .map(|&term| canonicalize(&mut a, term).unwrap().term)
+            .collect::<Vec<_>>();
+
+        for xv in 0..16u128 {
+            for yv in 0..16u128 {
+                for pv in [false, true] {
+                    let mut assignment = Assignment::new();
+                    assignment.set(
+                        x_sym,
+                        Value::Bv {
+                            width: 4,
+                            value: xv,
+                        },
+                    );
+                    assignment.set(
+                        y_sym,
+                        Value::Bv {
+                            width: 4,
+                            value: yv,
+                        },
+                    );
+                    assignment.set(p_sym, Value::Bool(pv));
+                    for (&before, &after) in original.iter().zip(&canonical) {
+                        assert_eq!(
+                            eval(&a, before, &assignment).unwrap(),
+                            eval(&a, after, &assignment).unwrap(),
+                            "extract distribution changed denotation at x={xv}, y={yv}, p={pv}",
+                        );
+                    }
+                }
+            }
         }
     }
 
