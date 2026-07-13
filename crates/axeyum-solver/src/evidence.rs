@@ -79,6 +79,7 @@ use crate::proof::{UnsatProof, UnsatProofOutcome, export_qf_bv_unsat_proof};
 use crate::quant_affine_growth_cert::IntAffineGrowthRefutationCertificate;
 use crate::quant_bv_alternation_cert::BvAlternationCounterexampleCertificate;
 use crate::quant_bv_conjunctive_cert::BvConjunctiveUniversalInstanceCertificate;
+use crate::quant_bv_instance_set_cert::BvPositiveUniversalInstanceSetCertificate;
 use crate::quant_bv_paired_exists_cert::BvPairedExistentialTransferCertificate;
 use crate::quant_closed_counterexample_cert::ClosedUniversalCounterexampleCertificate;
 use crate::quant_counterexample_cover::QuantifiedCounterexampleCoverCertificate;
@@ -341,6 +342,10 @@ pub enum Evidence {
     /// Unsatisfiable because replacing one positive universal conjunct by a
     /// complete concrete source instance yields checked QF_BV-UNSAT.
     UnsatBvConjunctiveUniversalInstance(BvConjunctiveUniversalInstanceCertificate),
+    /// Unsatisfiable because a query-scoped set of complete concrete instances
+    /// of admitted positive Bool/BV universals makes the rebuilt ground query
+    /// QF_BV-UNSAT. Replay regenerates every instance and checks its DRAT/LRAT.
+    UnsatBvPositiveUniversalInstanceSet(BvPositiveUniversalInstanceSetCertificate),
     /// Unsatisfiable because a positive existential assertion and the negation
     /// of a second existential assertion have identical ground premises, and
     /// the first body transfers its complete witness tuple to the second.
@@ -628,6 +633,9 @@ impl Evidence {
             Evidence::UnsatBvConjunctiveUniversalInstance(_) => {
                 "unsat-bv-conjunctive-universal-instance"
             }
+            Evidence::UnsatBvPositiveUniversalInstanceSet(_) => {
+                "unsat-bv-positive-universal-instance-set"
+            }
             Evidence::UnsatBvPairedExistentialTransfer(_) => "unsat-bv-paired-existential-transfer",
             Evidence::UnsatEqualityPartition(_) => "unsat-equality-partition",
             Evidence::UnsatQuantifiedCounterexampleCover(_) => {
@@ -816,6 +824,13 @@ impl Evidence {
                     certificate,
                 )
             }
+            Evidence::UnsatBvPositiveUniversalInstanceSet(certificate) => {
+                crate::quant_bv_instance_set_cert::check_bv_positive_universal_instance_set(
+                    arena,
+                    assertions,
+                    certificate,
+                )
+            }
             Evidence::UnsatBvPairedExistentialTransfer(certificate) => {
                 crate::quant_bv_paired_exists_cert::check_bv_paired_existential_transfer(
                     arena,
@@ -899,6 +914,7 @@ impl Evidence {
                 | Evidence::UnsatNegatedExistentialWitness(_)
                 | Evidence::UnsatBvAlternationCounterexample(_)
                 | Evidence::UnsatBvConjunctiveUniversalInstance(_)
+                | Evidence::UnsatBvPositiveUniversalInstanceSet(_)
                 | Evidence::UnsatBvPairedExistentialTransfer(_)
                 | Evidence::UnsatEqualityPartition(_)
                 | Evidence::UnsatQuantifiedCounterexampleCover(_)
@@ -1911,6 +1927,25 @@ fn bv_conjunctive_universal_instance_report(
     }))
 }
 
+fn bv_positive_universal_instance_set_report(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+    provenance: &Provenance,
+) -> Result<Option<EvidenceReport>, SolverError> {
+    let Some(certificate) = crate::quant_bool_model_sat::find_bv_positive_universal_instance_set(
+        arena, assertions, config,
+    )?
+    else {
+        return Ok(None);
+    };
+    Ok(Some(EvidenceReport {
+        evidence: Evidence::UnsatBvPositiveUniversalInstanceSet(certificate),
+        provenance: provenance.clone(),
+        trusted_steps: Vec::new(),
+    }))
+}
+
 fn equality_partition_report(
     arena: &TermArena,
     assertions: &[TermId],
@@ -2426,6 +2461,11 @@ pub fn produce_evidence(
     }
     if let Some(report) =
         bv_conjunctive_universal_instance_report(arena, assertions, config, &provenance)?
+    {
+        return Ok(report);
+    }
+    if let Some(report) =
+        bv_positive_universal_instance_set_report(arena, assertions, config, &provenance)?
     {
         return Ok(report);
     }
@@ -3313,6 +3353,7 @@ pub fn prove(
         | Evidence::UnsatNegatedExistentialWitness(_)
         | Evidence::UnsatBvAlternationCounterexample(_)
         | Evidence::UnsatBvConjunctiveUniversalInstance(_)
+        | Evidence::UnsatBvPositiveUniversalInstanceSet(_)
         | Evidence::UnsatBvPairedExistentialTransfer(_)
         | Evidence::UnsatEqualityPartition(_)
         | Evidence::UnsatQuantifiedCounterexampleCover(_)

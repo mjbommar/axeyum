@@ -144,6 +144,9 @@ fn evidence_kind(evidence: &Evidence) -> &'static str {
         Evidence::UnsatBvConjunctiveUniversalInstance(_) => {
             "bv-conjunctive-universal-instance-unsat"
         }
+        Evidence::UnsatBvPositiveUniversalInstanceSet(_) => {
+            "bv-positive-universal-instance-set-unsat"
+        }
         Evidence::UnsatBvPairedExistentialTransfer(_) => "bv-paired-existential-transfer-unsat",
         Evidence::UnsatEqualityPartition(_) => "equality-partition-unsat",
         Evidence::UnsatQuantifiedCounterexampleCover(_) => "quantified-counterexample-cover-unsat",

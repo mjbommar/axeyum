@@ -384,6 +384,16 @@ negated `QF_BV` residual. Unique binders, no applications or free BVs, and
 closes `psyco-001-bv` without trusting candidate simplification, quantifier
 erasure, accumulated instances, or a solver-only UNSAT result.
 
+ADR-0134 admits a bounded query-scoped set of complete source instances for
+those positive Bool/BV universals. The checker binds the exact ordered query,
+revalidates ADR-0133 admission, checks 1 through 256 unique complete typed
+binder tuples, rebuilds the ground positive-universal weakening and every
+source instance, and replays DRAT/LRAT against exactly that QF_BV conjunction.
+Candidate models, quantifier erasure, instance choice, and heuristic candidate
+blocks remain search-only. This closes `psyco-107-bv` without broadening to
+negative quantifiers, existentials, functions, mixed arithmetic, or general
+QSAT.
+
 ## Web And Reference Refresh Gates
 
 Use web search or refreshed local references at design gates, not constantly.

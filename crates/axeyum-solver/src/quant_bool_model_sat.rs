@@ -19,6 +19,10 @@ use crate::auto::check_auto;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::proof::export_qf_bv_unsat_proof_within;
 use crate::proof::{UnsatProof, UnsatProofOutcome};
+use crate::quant_bv_instance_set_cert::{
+    BvPositiveUniversalInstanceSetCertificate, BvPositiveUniversalSourceInstance,
+    check_bv_positive_universal_instance_set,
+};
 use crate::quant_counterexample_cover::{
     QuantifiedCounterexampleCoverCertificate, case_from_counterexample,
     check_quantified_counterexample_cover_with_config,
@@ -173,7 +177,9 @@ pub(crate) fn decide_quantified_by_bool_model(
     Ok(
         match search_quantified_bool_model(arena, assertions, config)? {
             QuantifiedBoolSearch::Sat(model) => Some(CheckResult::Sat(model)),
-            QuantifiedBoolSearch::Unsat(_) => Some(CheckResult::Unsat),
+            QuantifiedBoolSearch::UnsatCover(_) | QuantifiedBoolSearch::UnsatBvInstances(_) => {
+                Some(CheckResult::Unsat)
+            }
             QuantifiedBoolSearch::Declined => None,
         },
     )
@@ -186,15 +192,33 @@ pub(crate) fn find_quantified_counterexample_cover(
 ) -> Result<Option<QuantifiedCounterexampleCoverCertificate>, SolverError> {
     Ok(
         match search_quantified_bool_model(arena, assertions, config)? {
-            QuantifiedBoolSearch::Unsat(certificate) => Some(certificate),
-            QuantifiedBoolSearch::Sat(_) | QuantifiedBoolSearch::Declined => None,
+            QuantifiedBoolSearch::UnsatCover(certificate) => Some(certificate),
+            QuantifiedBoolSearch::Sat(_)
+            | QuantifiedBoolSearch::UnsatBvInstances(_)
+            | QuantifiedBoolSearch::Declined => None,
+        },
+    )
+}
+
+pub(crate) fn find_bv_positive_universal_instance_set(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+) -> Result<Option<BvPositiveUniversalInstanceSetCertificate>, SolverError> {
+    Ok(
+        match search_quantified_bool_model(arena, assertions, config)? {
+            QuantifiedBoolSearch::UnsatBvInstances(certificate) => Some(certificate),
+            QuantifiedBoolSearch::Sat(_)
+            | QuantifiedBoolSearch::UnsatCover(_)
+            | QuantifiedBoolSearch::Declined => None,
         },
     )
 }
 
 enum QuantifiedBoolSearch {
     Sat(Model),
-    Unsat(QuantifiedCounterexampleCoverCertificate),
+    UnsatCover(QuantifiedCounterexampleCoverCertificate),
+    UnsatBvInstances(BvPositiveUniversalInstanceSetCertificate),
     Declined,
 }
 
@@ -220,6 +244,8 @@ fn search_quantified_bool_model(
         .and_then(|timeout| Instant::now().checked_add(timeout));
     let mut cases = Vec::new();
     let mut refinements = BTreeSet::new();
+    let mut source_instances = Vec::new();
+    let mut has_unproved_blocks = false;
 
     for _ in 0..MAX_CANDIDATES {
         let Some(candidate_config) = config_with_deadline(config, deadline) else {
@@ -227,7 +253,9 @@ fn search_quantified_bool_model(
         };
         let mut model = match check_auto(arena, &skeleton, &candidate_config)? {
             CheckResult::Sat(model) => model,
-            CheckResult::Unsat if !cases.is_empty() => {
+            CheckResult::Unsat
+                if !cases.is_empty() && source_instances.is_empty() && !has_unproved_blocks =>
+            {
                 let certificate = QuantifiedCounterexampleCoverCertificate { cases };
                 return Ok(
                     if check_quantified_counterexample_cover_with_config(
@@ -236,10 +264,21 @@ fn search_quantified_bool_model(
                         &certificate,
                         &candidate_config,
                     ) {
-                        QuantifiedBoolSearch::Unsat(certificate)
+                        QuantifiedBoolSearch::UnsatCover(certificate)
                     } else {
                         QuantifiedBoolSearch::Declined
                     },
+                );
+            }
+            CheckResult::Unsat
+                if cases.is_empty() && !source_instances.is_empty() && !has_unproved_blocks =>
+            {
+                return finish_bv_instance_set_refutation(
+                    arena,
+                    assertions,
+                    &skeleton,
+                    source_instances,
+                    deadline,
                 );
             }
             CheckResult::Unsat | CheckResult::Unknown(_) => {
@@ -255,19 +294,51 @@ fn search_quantified_bool_model(
                         return Ok(QuantifiedBoolSearch::Declined);
                     }
                     cases.push(case);
+                } else {
+                    has_unproved_blocks = true;
                 }
                 skeleton.push(block_values(arena, &cube)?);
             }
-            CandidateAssessment::Refine { instance, cube } => {
+            CandidateAssessment::Refine {
+                instance,
+                source,
+                cube,
+            } => {
                 if refinements.insert(instance) {
                     skeleton.push(instance);
+                    source_instances.push(source);
                 } else {
                     skeleton.push(block_values(arena, &cube)?);
+                    has_unproved_blocks = true;
                 }
             }
         }
     }
     Ok(QuantifiedBoolSearch::Declined)
+}
+
+fn finish_bv_instance_set_refutation(
+    arena: &TermArena,
+    assertions: &[TermId],
+    skeleton: &[TermId],
+    instances: Vec<BvPositiveUniversalSourceInstance>,
+    deadline: Option<Instant>,
+) -> Result<QuantifiedBoolSearch, SolverError> {
+    let proof = match export_positive_universal_bv_instance_set_proof(arena, skeleton, deadline)? {
+        UnsatProofOutcome::Proved(proof) => proof,
+        UnsatProofOutcome::Satisfiable | UnsatProofOutcome::Inconclusive => {
+            return Ok(QuantifiedBoolSearch::Declined);
+        }
+    };
+    let certificate = BvPositiveUniversalInstanceSetCertificate {
+        assertions: assertions.to_vec(),
+        instances,
+        residual_proof: proof,
+    };
+    if !check_bv_positive_universal_instance_set(arena, assertions, &certificate)? {
+        return Ok(QuantifiedBoolSearch::Declined);
+    }
+    Ok(QuantifiedBoolSearch::UnsatBvInstances(certificate))
 }
 
 fn config_with_deadline(config: &SolverConfig, deadline: Option<Instant>) -> Option<SolverConfig> {
@@ -298,6 +369,7 @@ enum CandidateAssessment {
     },
     Refine {
         instance: TermId,
+        source: BvPositiveUniversalSourceInstance,
         cube: Vec<(SymbolId, bool)>,
     },
 }
@@ -354,9 +426,10 @@ fn assess_candidate(
                         deadline,
                     )? {
                         PositiveUniversalBvAssessment::Valid(cert) => certificates.push(cert),
-                        PositiveUniversalBvAssessment::Counterexample(instance) => {
+                        PositiveUniversalBvAssessment::Counterexample { instance, source } => {
                             return Ok(CandidateAssessment::Refine {
                                 instance,
+                                source,
                                 cube: cert.values,
                             });
                         }
@@ -387,7 +460,10 @@ fn assess_candidate(
 
 enum PositiveUniversalBvAssessment {
     Valid(QuantifiedBoolModelSatCertificate),
-    Counterexample(TermId),
+    Counterexample {
+        instance: TermId,
+        source: BvPositiveUniversalSourceInstance,
+    },
     Declined,
 }
 
@@ -413,7 +489,7 @@ fn assess_positive_universal_bv_candidate(
     };
     match outcome {
         CheckResult::Sat(counterexample) => {
-            let Some(instance) = instantiate_positive_universal_bv_counterexample(
+            let Some((instance, source)) = instantiate_positive_universal_bv_counterexample(
                 arena,
                 assertion,
                 &admitted,
@@ -428,7 +504,7 @@ fn assess_positive_universal_bv_candidate(
             ) {
                 return Ok(PositiveUniversalBvAssessment::Declined);
             }
-            Ok(PositiveUniversalBvAssessment::Counterexample(instance))
+            Ok(PositiveUniversalBvAssessment::Counterexample { instance, source })
         }
         CheckResult::Unsat => {
             let proof = match export_positive_universal_bv_proof(&scratch, residual, deadline)? {
@@ -469,6 +545,24 @@ fn export_positive_universal_bv_proof(
     export_qf_bv_unsat_proof_within(arena, &[residual], deadline)
 }
 
+#[cfg(not(target_arch = "wasm32"))]
+fn export_positive_universal_bv_instance_set_proof(
+    arena: &TermArena,
+    residual: &[TermId],
+    deadline: Option<Instant>,
+) -> Result<UnsatProofOutcome, SolverError> {
+    export_qf_bv_unsat_proof_within(arena, residual, deadline)
+}
+
+#[cfg(target_arch = "wasm32")]
+fn export_positive_universal_bv_instance_set_proof(
+    _arena: &TermArena,
+    _residual: &[TermId],
+    _deadline: Option<Instant>,
+) -> Result<UnsatProofOutcome, SolverError> {
+    Ok(UnsatProofOutcome::Inconclusive)
+}
+
 #[cfg(target_arch = "wasm32")]
 fn export_positive_universal_bv_proof(
     _arena: &TermArena,
@@ -481,8 +575,8 @@ fn export_positive_universal_bv_proof(
 }
 
 #[derive(Debug, Clone)]
-struct AdmittedPositiveUniversalBv {
-    binders: Vec<SymbolId>,
+pub(crate) struct AdmittedPositiveUniversalBv {
+    pub(crate) binders: Vec<SymbolId>,
     free: Vec<SymbolId>,
 }
 
@@ -530,8 +624,9 @@ fn instantiate_positive_universal_bv_counterexample(
     assertion: TermId,
     admitted: &AdmittedPositiveUniversalBv,
     counterexample: &Model,
-) -> Result<Option<TermId>, SolverError> {
+) -> Result<Option<(TermId, BvPositiveUniversalSourceInstance)>, SolverError> {
     let mut replacements = HashMap::new();
+    let mut bindings = Vec::with_capacity(admitted.binders.len());
     for &binder in &admitted.binders {
         let sort = arena.symbol(binder).1;
         let Some(value) = counterexample
@@ -545,16 +640,26 @@ fn instantiate_positive_universal_bv_counterexample(
         }
         let constant = bool_bv_value_to_const(arena, &value)?;
         replacements.insert(arena.var(binder), constant);
+        bindings.push((binder, value));
     }
     let Some(instance) =
         rewrite_positive_universals(arena, assertion, true, &replacements, &mut HashMap::new())
     else {
         return Ok(None);
     };
-    Ok((!contains_quantifier(arena, instance)).then_some(instance))
+    Ok((!contains_quantifier(arena, instance)).then_some((
+        instance,
+        BvPositiveUniversalSourceInstance {
+            assertion,
+            bindings,
+        },
+    )))
 }
 
-fn bool_bv_value_to_const(arena: &mut TermArena, value: &Value) -> Result<TermId, SolverError> {
+pub(crate) fn bool_bv_value_to_const(
+    arena: &mut TermArena,
+    value: &Value,
+) -> Result<TermId, SolverError> {
     match value {
         Value::Bool(value) => Ok(arena.bool_const(*value)),
         Value::Bv { width, value } => arena
@@ -567,7 +672,7 @@ fn bool_bv_value_to_const(arena: &mut TermArena, value: &Value) -> Result<TermId
     }
 }
 
-fn admitted_positive_universal_bv(
+pub(crate) fn admitted_positive_universal_bv(
     arena: &TermArena,
     assertion: TermId,
 ) -> Option<AdmittedPositiveUniversalBv> {
@@ -1045,7 +1150,7 @@ fn collect_admitted(
     }
 }
 
-fn contains_quantifier(arena: &TermArena, term: TermId) -> bool {
+pub(crate) fn contains_quantifier(arena: &TermArena, term: TermId) -> bool {
     let mut seen = BTreeSet::new();
     let mut stack = vec![term];
     while let Some(current) = stack.pop() {

@@ -120,6 +120,7 @@ mod quant_bv_alternation_cert;
 mod quant_bv_alternation_search;
 mod quant_bv_conjunctive_cert;
 mod quant_bv_conjunctive_search;
+mod quant_bv_instance_set_cert;
 mod quant_bv_model_sat_cert;
 mod quant_bv_model_sat_search;
 mod quant_bv_paired_exists_cert;
@@ -409,6 +410,10 @@ pub use quant_bv_alternation_cert::{
 pub use quant_bv_conjunctive_cert::{
     BV_CONJUNCTIVE_UNIVERSAL_BINDER_CAP, BV_CONJUNCTIVE_UNIVERSAL_NODE_CAP,
     BvConjunctiveUniversalInstanceCertificate, check_bv_conjunctive_universal_instance,
+};
+pub use quant_bv_instance_set_cert::{
+    BV_POSITIVE_INSTANCE_SET_CAP, BvPositiveUniversalInstanceSetCertificate,
+    BvPositiveUniversalSourceInstance, check_bv_positive_universal_instance_set,
 };
 pub use quant_bv_model_sat_cert::{
     QUANT_BV_MODEL_BINDER_CAP, QUANT_BV_MODEL_DEPTH_CAP, QUANT_BV_MODEL_NODE_CAP,

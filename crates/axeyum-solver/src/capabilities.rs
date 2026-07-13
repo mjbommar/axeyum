@@ -1277,6 +1277,25 @@ pub const CAPABILITIES: &[Capability] = &[
     },
     Capability {
         area: "quantifiers",
+        feature: "checked query-scoped QF_BV positive-universal instance sets",
+        assurance: Assurance::Checked,
+        evidence: "bounded CEGIS may select complete positive-universal Bool/BV source instances, \
+                   but candidate models, quantifier erasure, and instance selection remain \
+                   search-only. A separate checker binds the exact ordered query, re-admits every \
+                   quantified assertion under ADR-0133's source contract, validates 1 through 256 \
+                   unique complete typed binding tuples, rebuilds each source instance, and \
+                   rechecks DRAT/LRAT for exactly the ground QF_BV weakening plus those instances. \
+                   Any heuristic candidate block disables certification. `psyco-107-bv` moves \
+                   unsupported to certified UNSAT. The public quantified-BV slice is 36 SAT / 18 \
+                   UNSAT / 0 unknown / 0 unsupported with 54/54 evidence-certified/rechecked \
+                   decisions, 44 dominant candidates, zero disagreement/error/replay failure, and \
+                   an empty target trust ledger. General QSAT, negative quantifier contexts, \
+                   existentials, functions/arrays, free BVs in quantified assertions, mixed \
+                   arithmetic, wasm proof export, and Lean reconstruction remain open",
+        reference: "ADR-0134",
+    },
+    Capability {
+        area: "quantifiers",
         feature: "source-bound counterexamples for closed Bool/BV `forall+ exists+` alternation",
         assurance: Assurance::Checked,
         evidence: "untrusted search solves an outer-only implication antecedent and deterministic \

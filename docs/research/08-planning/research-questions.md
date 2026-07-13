@@ -295,9 +295,16 @@ Out of scope:
     exact negated `QF_BV` residual under the complete model and rechecks its
     source-bound DRAT/LRAT proof. This recovers `psyco-001-bv` without trusting
     quantifier erasure, candidate simplification, or accumulated instances.
+    [ADR-0134](../09-decisions/adr-0134-checked-query-scoped-qfbv-universal-instances.md)
+    gives accumulated instances a separate UNSAT contract: the checker binds
+    the exact query, validates complete typed source tuples, rebuilds the
+    positive-universal weakening and every instance, and rechecks the final
+    QF_BV DRAT/LRAT proof. This recovers `psyco-107-bv` without trusting CEGIS
+    candidate models, quantifier erasure, instance selection, or heuristic
+    candidate blocks.
     Piecewise/general function interpretations, free-BV models beyond these
     affine-LSB/direct-witness/signed-interval/zero-product classes, broader
-    free-Boolean residual proofs,
+    free-Boolean residual proofs and general nested/alternating QSAT,
     serialization, and Alethe/Lean reconstruction remain implementation tasks,
     not permission to return an unchecked empty model.
 - [x] How should targeted infinite-domain quantified `unsat` schemas receive

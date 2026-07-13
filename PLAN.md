@@ -839,6 +839,25 @@ documentation checks, and link validation. **Next action:** characterize
 quantifier/model-checking machinery. Preserve
 the residual-proof contract: do not broaden positive-universal opening to
 negative contexts, existentials, free BVs, functions, or mixed arithmetic.
+**That action is now LANDED (ADR-0134):** bounded CEGIS may select complete
+positive-universal Bool/BV source instances, while a separate checker binds the
+exact ordered query, revalidates the source fragment, regenerates 1 through 256
+unique complete typed instances, and rechecks DRAT/LRAT for exactly the ground
+weakening plus those instances. Heuristic candidate blocks cannot enter the
+artifact. `psyco-107-bv` moves **Unsupported→UNSAT** with five-run corpus solve
+median 108.817031 ms and evidence median 103.525 ms. The public slice is now
+**36 SAT / 18 UNSAT / 0 unknown / 0 unsupported**, 54 agreements,
+DISAGREE=0, no errors/replay failures, and five-run PAR-2 median 0.0330305167
+seconds. The audit certifies/checks 54/54 with 44/54 dominant, Lean 8/18 UNSAT,
+and empty target trust. Seven focused tests include a two-instance necessity gate,
+adversarial source/binding/proof/capture checks, unsupported-sibling decline,
+and 32 direct-Z3 comparisons;
+cumulative quantified-BV direct-Z3 coverage is 1,912. **Next action:** preserve
+this full public-slice ratchet while moving from corpus completion to depth:
+characterize Lean reconstruction for the ADR-0134 source-instance theorem and
+its residual QF_BV proof, then use that boundary to rank the remaining checked
+quantified-BV UNSAT certificates before broadening nested/alternating QSAT or
+quantified-UF models.
 **Process state:** first green CI in 200+ runs held into a green cadence;
 the pre-push hook gates the pushed SHA incl. the ~6s `:status` corpus
 sweep (a wrong verdict must not leave the machine); STATUS truncated
