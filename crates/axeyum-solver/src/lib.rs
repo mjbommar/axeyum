@@ -398,7 +398,9 @@ pub use quant_affine_growth_cert::{
 };
 pub use quant_alethe::prove_quant_unsat_alethe;
 pub use quant_bool_model_sat::{
-    QuantifiedBoolModelSatCertificate, check_quantified_bool_model_sat,
+    QUANT_BOOL_BV_MODEL_BINDER_CAP, QUANT_BOOL_BV_MODEL_DEPTH_CAP, QUANT_BOOL_BV_MODEL_NODE_CAP,
+    QuantifiedBoolModelSatCertificate, QuantifiedBoolModelSatProof,
+    check_quantified_bool_model_sat,
 };
 pub use quant_bv_alternation_cert::{
     BV_ALTERNATION_BINDER_CAP, BV_ALTERNATION_NODE_CAP, BvAlternationCounterexampleCertificate,

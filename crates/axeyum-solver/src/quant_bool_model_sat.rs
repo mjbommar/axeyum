@@ -1,16 +1,24 @@
-//! Checked free-Boolean models for quantified Bool/Int assertions (ADR-0107).
+//! Checked free-Boolean models for quantified Bool/Int/BV assertions
+//! (ADR-0107/0123/0133).
 //!
 //! Search erases quantifiers to obtain a ground Boolean candidate, but that
 //! erasure has no proof status. A result is returned only when the independent
 //! checker below proves every untouched original assertion under the candidate
 //! free-Boolean assignment. Bound Booleans are enumerated; bound integers stay
-//! symbolic and are compared only by checked affine normalization.
+//! symbolic and are compared only by checked affine normalization. Admitted
+//! positive Bool/BV universals may instead carry a source-bound proof of their
+//! exact negated quantifier-free residual.
 
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
-use axeyum_ir::{Assignment, Op, Sort, SymbolId, TermArena, TermId, TermNode, Value, eval};
+use axeyum_ir::{
+    Assignment, Op, Sort, SymbolId, TermArena, TermId, TermNode, Value, eval, well_founded_default,
+};
 
 use crate::auto::check_auto;
+#[cfg(not(target_arch = "wasm32"))]
+use crate::proof::export_qf_bv_unsat_proof_within;
+use crate::proof::{UnsatProof, UnsatProofOutcome};
 use crate::quant_counterexample_cover::{
     QuantifiedCounterexampleCoverCertificate, case_from_counterexample,
     check_quantified_counterexample_cover_with_config,
@@ -20,9 +28,7 @@ use crate::{
 };
 
 #[cfg(not(target_arch = "wasm32"))]
-use std::time::Duration;
-#[cfg(not(target_arch = "wasm32"))]
-use std::time::Instant;
+use std::time::{Duration, Instant};
 #[cfg(target_arch = "wasm32")]
 use web_time::{Duration, Instant};
 
@@ -30,6 +36,27 @@ const MAX_FREE_BOOLEANS: usize = 64;
 const MAX_CANDIDATES: usize = 256;
 const MAX_BOUND_BOOL_BRANCHES: u64 = 131_072;
 const MAX_CHECK_NODES: u64 = 100_000;
+/// Maximum binders admitted by a residual-QF_BV model proof.
+pub const QUANT_BOOL_BV_MODEL_BINDER_CAP: usize = 128;
+/// Maximum distinct source nodes admitted by a residual-QF_BV model proof.
+pub const QUANT_BOOL_BV_MODEL_NODE_CAP: usize = 4_096;
+/// Maximum source depth admitted before recursive residual reconstruction.
+pub const QUANT_BOOL_BV_MODEL_DEPTH_CAP: usize = 256;
+
+/// Independently checked reason that a complete free-Boolean model satisfies
+/// one quantified assertion.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum QuantifiedBoolModelSatProof {
+    /// Boolean structure, bounded Boolean enumeration, and affine integer
+    /// normalization prove the untouched assertion directly (ADR-0107/0123).
+    Structural,
+    /// Opening admitted positive universals under the complete free-Boolean
+    /// model leaves a `QF_BV` validity whose negation has this checked proof.
+    PositiveUniversalQfBv {
+        /// Source-bound refutation of the deterministically rebuilt residual.
+        residual_proof: UnsatProof,
+    },
+}
 
 /// A checked free-Boolean interpretation for one original quantified assertion.
 ///
@@ -42,6 +69,8 @@ pub struct QuantifiedBoolModelSatCertificate {
     pub assertion: TermId,
     /// Complete free-Boolean interpretation for that assertion.
     pub values: Vec<(SymbolId, bool)>,
+    /// Independently checked source-level proof mode.
+    pub proof: QuantifiedBoolModelSatProof,
 }
 
 /// Independently checks a Boolean-guard SAT certificate against original IR.
@@ -91,26 +120,43 @@ pub(crate) fn check_quantified_bool_model_sat_internal(
             return CertificateCheck::Declined;
         }
     }
-    let mut budget = CheckBudget::default();
-    let truth = eval_truth(arena, assertion, &mut environment, &mut budget);
-    if truth == Truth::True {
-        return CertificateCheck::Valid;
-    }
-    if contains_bv_syntax(arena, assertion) {
-        return CertificateCheck::Declined;
-    }
-    let mut scratch = arena.clone();
-    let Some(counterexample) = quantified_counterexample(&mut scratch, assertion, &cert.values)
-    else {
-        return CertificateCheck::Declined;
-    };
-    let Ok(outcome) = certify_arith_dpll_unsat(&mut scratch, &counterexample, config) else {
-        return CertificateCheck::Declined;
-    };
-    match outcome {
-        ArithDpllOutcome::Unsat(_) => CertificateCheck::Valid,
-        ArithDpllOutcome::Sat(model) => CertificateCheck::Counterexample(model),
-        ArithDpllOutcome::Unknown(_) => CertificateCheck::Declined,
+    match &cert.proof {
+        QuantifiedBoolModelSatProof::Structural => {
+            let mut budget = CheckBudget::default();
+            let truth = eval_truth(arena, assertion, &mut environment, &mut budget);
+            if truth == Truth::True {
+                return CertificateCheck::Valid;
+            }
+            if contains_bv_syntax(arena, assertion) {
+                return CertificateCheck::Declined;
+            }
+            let mut scratch = arena.clone();
+            let Some(counterexample) =
+                quantified_counterexample(&mut scratch, assertion, &cert.values)
+            else {
+                return CertificateCheck::Declined;
+            };
+            let Ok(outcome) = certify_arith_dpll_unsat(&mut scratch, &counterexample, config)
+            else {
+                return CertificateCheck::Declined;
+            };
+            match outcome {
+                ArithDpllOutcome::Unsat(_) => CertificateCheck::Valid,
+                ArithDpllOutcome::Sat(model) => CertificateCheck::Counterexample(model),
+                ArithDpllOutcome::Unknown(_) => CertificateCheck::Declined,
+            }
+        }
+        QuantifiedBoolModelSatProof::PositiveUniversalQfBv { residual_proof } => {
+            let Ok(Some((scratch, residual, _))) =
+                positive_universal_bv_residual(arena, assertion, &cert.values)
+            else {
+                return CertificateCheck::Declined;
+            };
+            match residual_proof.recheck_for_bool_terms(&scratch, &[residual]) {
+                Ok(true) => CertificateCheck::Valid,
+                Ok(false) | Err(_) => CertificateCheck::Declined,
+            }
+        }
     }
 }
 
@@ -173,6 +219,7 @@ fn search_quantified_bool_model(
         .timeout
         .and_then(|timeout| Instant::now().checked_add(timeout));
     let mut cases = Vec::new();
+    let mut refinements = BTreeSet::new();
 
     for _ in 0..MAX_CANDIDATES {
         let Some(candidate_config) = config_with_deadline(config, deadline) else {
@@ -200,7 +247,7 @@ fn search_quantified_bool_model(
             }
         };
         complete_free_booleans(&mut model, &free);
-        match assess_candidate(arena, assertions, &mut model, &candidate_config) {
+        match assess_candidate(arena, assertions, &mut model, &candidate_config, deadline)? {
             CandidateAssessment::Valid => return Ok(QuantifiedBoolSearch::Sat(model)),
             CandidateAssessment::Block { cube, case } => {
                 if let Some(case) = case {
@@ -210,6 +257,13 @@ fn search_quantified_bool_model(
                     cases.push(case);
                 }
                 skeleton.push(block_values(arena, &cube)?);
+            }
+            CandidateAssessment::Refine { instance, cube } => {
+                if refinements.insert(instance) {
+                    skeleton.push(instance);
+                } else {
+                    skeleton.push(block_values(arena, &cube)?);
+                }
             }
         }
     }
@@ -242,6 +296,10 @@ enum CandidateAssessment {
         cube: Vec<(SymbolId, bool)>,
         case: Option<crate::QuantifiedCounterexampleCoverCase>,
     },
+    Refine {
+        instance: TermId,
+        cube: Vec<(SymbolId, bool)>,
+    },
 }
 
 fn assess_candidate(
@@ -249,29 +307,34 @@ fn assess_candidate(
     assertions: &[TermId],
     model: &mut Model,
     config: &SolverConfig,
-) -> CandidateAssessment {
+    deadline: Option<Instant>,
+) -> Result<CandidateAssessment, SolverError> {
     let assignment = model.to_assignment();
     let all_free = admitted_free_booleans(arena, assertions).unwrap_or_default();
     let mut certificates = Vec::new();
     for &assertion in assertions {
         if contains_quantifier(arena, assertion) {
             let Some(free) = admitted_free_booleans(arena, &[assertion]) else {
-                return CandidateAssessment::Block {
+                return Ok(CandidateAssessment::Block {
                     cube: model_values(model, &all_free),
                     case: None,
-                };
+                });
             };
             let mut values = Vec::with_capacity(free.len());
             for &symbol in &free {
                 let Some(Value::Bool(value)) = model.get(symbol) else {
-                    return CandidateAssessment::Block {
+                    return Ok(CandidateAssessment::Block {
                         cube: model_values(model, &free),
                         case: None,
-                    };
+                    });
                 };
                 values.push((symbol, value));
             }
-            let cert = QuantifiedBoolModelSatCertificate { assertion, values };
+            let cert = QuantifiedBoolModelSatCertificate {
+                assertion,
+                values,
+                proof: QuantifiedBoolModelSatProof::Structural,
+            };
             match check_quantified_bool_model_sat_internal(arena, assertion, &cert, config) {
                 CertificateCheck::Valid => certificates.push(cert),
                 CertificateCheck::Counterexample(counterexample) => {
@@ -279,29 +342,329 @@ fn assess_candidate(
                         .unwrap_or_else(|| cert.values.clone());
                     let case =
                         case_from_counterexample(arena, assertion, cube.clone(), &counterexample);
-                    return CandidateAssessment::Block { cube, case };
+                    return Ok(CandidateAssessment::Block { cube, case });
                 }
                 CertificateCheck::Declined => {
-                    return CandidateAssessment::Block {
-                        cube: cert.values,
-                        case: None,
-                    };
+                    match assess_positive_universal_bv_candidate(
+                        arena,
+                        assertion,
+                        &cert.values,
+                        model,
+                        config,
+                        deadline,
+                    )? {
+                        PositiveUniversalBvAssessment::Valid(cert) => certificates.push(cert),
+                        PositiveUniversalBvAssessment::Counterexample(instance) => {
+                            return Ok(CandidateAssessment::Refine {
+                                instance,
+                                cube: cert.values,
+                            });
+                        }
+                        PositiveUniversalBvAssessment::Declined => {
+                            return Ok(CandidateAssessment::Block {
+                                cube: cert.values,
+                                case: None,
+                            });
+                        }
+                    }
                 }
             }
         } else if !matches!(eval(arena, assertion, &assignment), Ok(Value::Bool(true))) {
-            return CandidateAssessment::Block {
+            return Ok(CandidateAssessment::Block {
                 cube: model_values(
                     model,
                     &admitted_free_booleans(arena, assertions).unwrap_or_default(),
                 ),
                 case: None,
-            };
+            });
         }
     }
     for cert in certificates {
         model.set_quantified_bool_model_sat_certificate(cert);
     }
-    CandidateAssessment::Valid
+    Ok(CandidateAssessment::Valid)
+}
+
+enum PositiveUniversalBvAssessment {
+    Valid(QuantifiedBoolModelSatCertificate),
+    Counterexample(TermId),
+    Declined,
+}
+
+fn assess_positive_universal_bv_candidate(
+    arena: &mut TermArena,
+    assertion: TermId,
+    values: &[(SymbolId, bool)],
+    model: &Model,
+    config: &SolverConfig,
+    deadline: Option<Instant>,
+) -> Result<PositiveUniversalBvAssessment, SolverError> {
+    let Some((mut scratch, residual, admitted)) =
+        positive_universal_bv_residual(arena, assertion, values)?
+    else {
+        return Ok(PositiveUniversalBvAssessment::Declined);
+    };
+    let outcome = match check_auto(&mut scratch, &[residual], config) {
+        Ok(outcome) => outcome,
+        Err(SolverError::Unsupported(_)) => {
+            return Ok(PositiveUniversalBvAssessment::Declined);
+        }
+        Err(error) => return Err(error),
+    };
+    match outcome {
+        CheckResult::Sat(counterexample) => {
+            let Some(instance) = instantiate_positive_universal_bv_counterexample(
+                arena,
+                assertion,
+                &admitted,
+                &counterexample,
+            )?
+            else {
+                return Ok(PositiveUniversalBvAssessment::Declined);
+            };
+            if !matches!(
+                eval(arena, instance, &model.to_assignment()),
+                Ok(Value::Bool(false))
+            ) {
+                return Ok(PositiveUniversalBvAssessment::Declined);
+            }
+            Ok(PositiveUniversalBvAssessment::Counterexample(instance))
+        }
+        CheckResult::Unsat => {
+            let proof = match export_positive_universal_bv_proof(&scratch, residual, deadline)? {
+                UnsatProofOutcome::Proved(proof) => proof,
+                UnsatProofOutcome::Satisfiable | UnsatProofOutcome::Inconclusive => {
+                    return Ok(PositiveUniversalBvAssessment::Declined);
+                }
+            };
+            let cert = QuantifiedBoolModelSatCertificate {
+                assertion,
+                values: values.to_vec(),
+                proof: QuantifiedBoolModelSatProof::PositiveUniversalQfBv {
+                    residual_proof: proof,
+                },
+            };
+            if matches!(
+                check_quantified_bool_model_sat_internal(arena, assertion, &cert, config),
+                CertificateCheck::Valid
+            ) {
+                Ok(PositiveUniversalBvAssessment::Valid(cert))
+            } else {
+                Err(SolverError::Backend(
+                    "generated residual-QF_BV free-Boolean model proof failed independent replay"
+                        .to_owned(),
+                ))
+            }
+        }
+        CheckResult::Unknown(_) => Ok(PositiveUniversalBvAssessment::Declined),
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn export_positive_universal_bv_proof(
+    arena: &TermArena,
+    residual: TermId,
+    deadline: Option<Instant>,
+) -> Result<UnsatProofOutcome, SolverError> {
+    export_qf_bv_unsat_proof_within(arena, &[residual], deadline)
+}
+
+#[cfg(target_arch = "wasm32")]
+fn export_positive_universal_bv_proof(
+    _arena: &TermArena,
+    _residual: TermId,
+    _deadline: Option<Instant>,
+) -> Result<UnsatProofOutcome, SolverError> {
+    // The proof exporter currently uses `std::time::Instant`; preserve the
+    // existing browser-safe search clock and decline this new route instead.
+    Ok(UnsatProofOutcome::Inconclusive)
+}
+
+#[derive(Debug, Clone)]
+struct AdmittedPositiveUniversalBv {
+    binders: Vec<SymbolId>,
+    free: Vec<SymbolId>,
+}
+
+fn positive_universal_bv_residual(
+    arena: &TermArena,
+    assertion: TermId,
+    values: &[(SymbolId, bool)],
+) -> Result<Option<(TermArena, TermId, AdmittedPositiveUniversalBv)>, SolverError> {
+    let Some(admitted) = admitted_positive_universal_bv(arena, assertion) else {
+        return Ok(None);
+    };
+    if values.len() != admitted.free.len()
+        || values
+            .iter()
+            .zip(&admitted.free)
+            .any(|(&(symbol, _), expected)| symbol != *expected)
+    {
+        return Ok(None);
+    }
+    let mut scratch = arena.clone();
+    let replacements = values
+        .iter()
+        .map(|&(symbol, value)| (scratch.var(symbol), scratch.bool_const(value)))
+        .collect::<HashMap<_, _>>();
+    let Some(opened) = rewrite_positive_universals(
+        &mut scratch,
+        assertion,
+        true,
+        &replacements,
+        &mut HashMap::new(),
+    ) else {
+        return Ok(None);
+    };
+    if contains_quantifier(&scratch, opened) {
+        return Ok(None);
+    }
+    let residual = scratch
+        .not(opened)
+        .map_err(|error| SolverError::Backend(error.to_string()))?;
+    Ok(Some((scratch, residual, admitted)))
+}
+
+fn instantiate_positive_universal_bv_counterexample(
+    arena: &mut TermArena,
+    assertion: TermId,
+    admitted: &AdmittedPositiveUniversalBv,
+    counterexample: &Model,
+) -> Result<Option<TermId>, SolverError> {
+    let mut replacements = HashMap::new();
+    for &binder in &admitted.binders {
+        let sort = arena.symbol(binder).1;
+        let Some(value) = counterexample
+            .get(binder)
+            .or_else(|| well_founded_default(arena, sort))
+        else {
+            return Ok(None);
+        };
+        if value.sort() != sort {
+            return Ok(None);
+        }
+        let constant = bool_bv_value_to_const(arena, &value)?;
+        replacements.insert(arena.var(binder), constant);
+    }
+    let Some(instance) =
+        rewrite_positive_universals(arena, assertion, true, &replacements, &mut HashMap::new())
+    else {
+        return Ok(None);
+    };
+    Ok((!contains_quantifier(arena, instance)).then_some(instance))
+}
+
+fn bool_bv_value_to_const(arena: &mut TermArena, value: &Value) -> Result<TermId, SolverError> {
+    match value {
+        Value::Bool(value) => Ok(arena.bool_const(*value)),
+        Value::Bv { width, value } => arena
+            .bv_const(*width, *value)
+            .map_err(|error| SolverError::Backend(error.to_string())),
+        Value::WideBv(value) => Ok(arena.wide_bv_const(value.clone())),
+        _ => Err(SolverError::Backend(
+            "positive-universal BV counterexample carried a non-Bool/BV value".to_owned(),
+        )),
+    }
+}
+
+fn admitted_positive_universal_bv(
+    arena: &TermArena,
+    assertion: TermId,
+) -> Option<AdmittedPositiveUniversalBv> {
+    let mut source_nodes = BTreeSet::new();
+    let mut visited = BTreeSet::new();
+    let mut binders = BTreeSet::new();
+    let mut binder_order = Vec::new();
+    let mut free = BTreeSet::new();
+    let mut stack = vec![(assertion, true, 1usize, BTreeSet::new())];
+    while let Some((term, positive, depth, bound)) = stack.pop() {
+        if depth > QUANT_BOOL_BV_MODEL_DEPTH_CAP
+            || !matches!(arena.sort_of(term), Sort::Bool | Sort::BitVec(_))
+        {
+            return None;
+        }
+        source_nodes.insert(term);
+        if source_nodes.len() > QUANT_BOOL_BV_MODEL_NODE_CAP {
+            return None;
+        }
+        let context = bound.iter().copied().collect::<Vec<_>>();
+        if !visited.insert((term, positive, context)) {
+            continue;
+        }
+        if visited.len() > QUANT_BOOL_BV_MODEL_NODE_CAP {
+            return None;
+        }
+        match arena.node(term) {
+            TermNode::Symbol(symbol) => {
+                if !bound.contains(symbol) {
+                    if binders.contains(symbol) || arena.symbol(*symbol).1 != Sort::Bool {
+                        return None;
+                    }
+                    free.insert(*symbol);
+                }
+            }
+            TermNode::App {
+                op: Op::Apply(_) | Op::Exists(_),
+                ..
+            }
+            | TermNode::IntConst(_)
+            | TermNode::RealConst(_) => return None,
+            TermNode::App {
+                op: Op::Forall(binder),
+                args,
+            } => {
+                let [body] = &**args else { return None };
+                if !positive
+                    || !matches!(arena.symbol(*binder).1, Sort::Bool | Sort::BitVec(_))
+                    || free.contains(binder)
+                    || !binders.insert(*binder)
+                    || binders.len() > QUANT_BOOL_BV_MODEL_BINDER_CAP
+                {
+                    return None;
+                }
+                binder_order.push(*binder);
+                let mut nested = bound;
+                if !nested.insert(*binder) {
+                    return None;
+                }
+                stack.push((*body, positive, depth + 1, nested));
+            }
+            TermNode::App { op, args } => {
+                let quantified_args = args
+                    .iter()
+                    .map(|&argument| contains_quantifier(arena, argument))
+                    .collect::<Vec<_>>();
+                let has_quantified_arg = quantified_args.iter().any(|&found| found);
+                if has_quantified_arg
+                    && !matches!(
+                        op,
+                        Op::BoolNot | Op::BoolAnd | Op::BoolOr | Op::BoolImplies | Op::Ite
+                    )
+                {
+                    return None;
+                }
+                if *op == Op::Ite && quantified_args.first() == Some(&true) {
+                    return None;
+                }
+                for (index, &argument) in args.iter().enumerate().rev() {
+                    let argument_positive = match op {
+                        Op::BoolNot => !positive,
+                        Op::BoolImplies if index == 0 => !positive,
+                        _ => positive,
+                    };
+                    stack.push((argument, argument_positive, depth + 1, bound.clone()));
+                }
+            }
+            TermNode::BoolConst(_) | TermNode::BvConst { .. } | TermNode::WideBvConst(_) => {}
+        }
+    }
+    if binder_order.is_empty() || free.is_empty() || free.len() > MAX_FREE_BOOLEANS {
+        return None;
+    }
+    Some(AdmittedPositiveUniversalBv {
+        binders: binder_order,
+        free: free.into_iter().collect(),
+    })
 }
 
 fn model_values(model: &Model, symbols: &[SymbolId]) -> Vec<(SymbolId, bool)> {

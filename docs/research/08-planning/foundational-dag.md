@@ -374,6 +374,16 @@ a same-width literal zero. This closes `gn-wrong-091018` without interpreting
 its nonlinear binder polynomial, trusting a QF candidate rewrite, or extending
 the unrelated ADR-0131 interval theorem.
 
+ADR-0133 admits positive Bool/BV universals with only free Boolean symbols
+under a distinct proof mode. Counterexample models and concrete source
+instances may refine bounded CEGIS, but SAT credit comes only from cloning the
+untouched source, substituting the exact complete sorted free-Boolean model,
+opening positive universals, and rechecking a DRAT/LRAT refutation of the exact
+negated `QF_BV` residual. Unique binders, no applications or free BVs, and
+128-binder/4,096-node/256-depth caps preserve the bounded source contract. This
+closes `psyco-001-bv` without trusting candidate simplification, quantifier
+erasure, accumulated instances, or a solver-only UNSAT result.
+
 ## Web And Reference Refresh Gates
 
 Use web search or refreshed local references at design gates, not constantly.

@@ -1258,6 +1258,25 @@ pub const CAPABILITIES: &[Capability] = &[
     },
     Capability {
         area: "quantifiers",
+        feature: "checked residual-QF_BV positive-universal models with complete free-Booleans",
+        assurance: Assurance::Checked,
+        evidence: "bounded CEGIS may add concrete source instances from QF_BV counterexamples, \
+                   but they remain search-only. A separate checker admits only positive Bool/BV \
+                   universals with unique binders disjoint from free symbols, no applications or \
+                   free BVs, and exact sorted \
+                   coverage of every free Boolean under 128-binder/4,096-node/256-depth caps. It \
+                   substitutes the complete free-Boolean model into a clone of the untouched \
+                   source, opens the universals, negates the exact residual, and rechecks its \
+                   source-bound DRAT/LRAT proof. `psyco-001-bv` moves unsupported to replayed SAT. \
+                   The public quantified-BV slice is 36 SAT / 17 UNSAT / 0 unknown / 1 unsupported \
+                   with 53/53 evidence-certified/rechecked decisions, 44 dominant candidates, zero \
+                   disagreement/error/replay failure, and an empty target trust ledger. Negative \
+                   quantifiers, existentials, functions/arrays, free BVs, mixed arithmetic, general \
+                   QSAT, and Lean SAT reconstruction remain open",
+        reference: "ADR-0133",
+    },
+    Capability {
+        area: "quantifiers",
         feature: "source-bound counterexamples for closed Bool/BV `forall+ exists+` alternation",
         assurance: Assurance::Checked,
         evidence: "untrusted search solves an outer-only implication antecedent and deterministic \

@@ -403,17 +403,22 @@ pub const SUPPORT_MATRIX: &[SupportRow] = &[
                signed-nonnegative product leaf whose direct binder-free signed-division factor \
                evaluator-replays to zero; source matching proves the other factor contains the \
                binder, while all remaining ground facts replay independently (ADR-0132). Positive \
+               Bool/BV universals with only free Booleans may carry a proof of the exact negated \
+               quantifier-free residual rebuilt from the untouched source and complete sorted \
+               free-Boolean model; binder IDs must be unique and disjoint from free symbols, and \
+               bounded counterexample instances guide search only \
+               (ADR-0133). Positive \
                universal UNSAT with only free Booleans can carry a \
                checked finite counterexample cover: every concrete source instance excludes one \
                sufficient cube and the independently refuted weakened skeleton proves coverage. The \
                one-universal-conjunct slice reconstructs those covers through genuine quantifier \
                applications and bounded kernel case analysis; repeated closed proof-DAG nodes export \
                once through binder-safe Lean definitions. General free-BV models beyond the \
-               ADR-0130/0131/0132 affine-LSB, witness, signed-interval, and zero-product classes, piecewise/general Skolem functions, \
+               ADR-0130/0131/0132/0133 affine-LSB, witness, signed-interval, zero-product, and residual-QF_BV classes, piecewise/general Skolem functions, \
                non-equality online antecedents, direct online proof serialization, high-frequency \
                assignment callbacks, negative quantifier contexts, broader alternation/functions, \
                general nested QE/QSAT, and broad proof reconstruction remain incomplete. \
-               ADR-0016/0032/0095/0096/0097/0098/0099/0100/0101/0107/0108/0109/0110/0111/0112/0113/0114/0115/0116/0117/0118/0119/0120/0121/0122/0123/0124/0125/0126/0127/0128/0129/0130/0131/0132",
+               ADR-0016/0032/0095/0096/0097/0098/0099/0100/0101/0107/0108/0109/0110/0111/0112/0113/0114/0115/0116/0117/0118/0119/0120/0121/0122/0123/0124/0125/0126/0127/0128/0129/0130/0131/0132/0133",
     },
     SupportRow {
         fragment: "datatypes (algebraic)",

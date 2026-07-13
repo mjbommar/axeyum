@@ -818,7 +818,27 @@ work backwards from cvc5/Z3 quantified model checking and Boolean-discharge
 machinery to isolate the exact guarded ITE/equality implication that a complete
 free-Boolean model makes universal. Do not enumerate the 32-bit binders, trust
 candidate Boolean simplification as evidence, or broaden ADR-0132's unrelated
-zero-product matcher. `psyco-107-bv` is the final measured unsupported row.
+zero-product matcher. **That action is now LANDED (ADR-0133):** bounded CEGIS
+may refine complete free-Boolean candidates with concrete source instances,
+but a separate checker accepts only positive Bool/BV universals with binder IDs
+disjoint from free symbols and rebuilds the exact negated `QF_BV` residual
+under the complete model before rechecking its DRAT/LRAT proof. Quantifier
+erasure and instances remain search-only.
+`psyco-001-bv` moves **Unsupported→SAT** with five-run corpus solve median
+339.928031 ms and evidence median 761.351 ms. The fresh cvc5 quantified-BV
+slice is **36 SAT / 17 UNSAT / 0 unknown / 1 unsupported**, 53 agreements,
+DISAGREE=0, no errors/replay failures, and five-run PAR-2 median 0.408282 s. The
+audit certifies/checks 53/53 with 44/53 dominant, Lean 8/17 UNSAT, and empty
+target trust. Sixteen focused tests include 16 new certified SAT cases, 16
+direct-Z3 UNSAT controls, and binder/free capture rejection; cumulative
+quantified-BV direct-Z3 coverage is 1,880. The complete workspace `just check`
+gate passes, including strict
+Clippy, all tests, warning-denied rustdoc, foundational resources, generated
+documentation checks, and link validation. **Next action:** characterize
+`psyco-107-bv`, the sole remaining row, from its source shape and cvc5/Z3
+quantifier/model-checking machinery. Preserve
+the residual-proof contract: do not broaden positive-universal opening to
+negative contexts, existentials, free BVs, functions, or mixed arithmetic.
 **Process state:** first green CI in 200+ runs held into a green cadence;
 the pre-push hook gates the pushed SHA incl. the ~6s `:status` corpus
 sweep (a wrong verdict must not leave the machine); STATUS truncated
