@@ -858,6 +858,21 @@ characterize Lean reconstruction for the ADR-0134 source-instance theorem and
 its residual QF_BV proof, then use that boundary to rank the remaining checked
 quantified-BV UNSAT certificates before broadening nested/alternating QSAT or
 quantified-UF models.
+**That action is now LANDED (ADR-0135):** the admitted source shape reconstructs
+as genuine typed Bool/BV universal theorems; each carried tuple is introduced
+only by applying its untouched source axiom to exact constructor witnesses; and
+an independently AIG-lowered, compact named-gate Alethe tail closes the derived
+ground assumptions. Classical double-negation normalization now carries an
+explicit kernel-checked proof instead of reusing a proof at a non-definitionally
+equal type. The two-instance theorem is registered in the real-Lean
+representative harness (this host has no `lean` binary), while
+the duplicate `psyco-107-bv` Lean stress route remains outside the default gate
+after debug measurements exceeded three minutes at roughly 2.3 GiB RSS; the
+public Lean count therefore remains 8/18. **Next action:** compact or serialize
+the corpus-scale resolution proof so the ADR-0134 target completes under a
+bounded Lean gate, then rank ADR-0124/0126/0127/0128/0129 source-bound UNSAT
+families for reconstruction before broadening nested/alternating QSAT or
+quantified-UF models.
 **Process state:** first green CI in 200+ runs held into a green cadence;
 the pre-push hook gates the pushed SHA incl. the ~6s `:status` corpus
 sweep (a wrong verdict must not leave the machine); STATUS truncated

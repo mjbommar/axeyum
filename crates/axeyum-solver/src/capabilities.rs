@@ -1291,8 +1291,26 @@ pub const CAPABILITIES: &[Capability] = &[
                    decisions, 44 dominant candidates, zero disagreement/error/replay failure, and \
                    an empty target trust ledger. General QSAT, negative quantifier contexts, \
                    existentials, functions/arrays, free BVs in quantified assertions, mixed \
-                   arithmetic, wasm proof export, and Lean reconstruction remain open",
+                   arithmetic, wasm proof export, and corpus-scale Lean reconstruction remain open",
         reference: "ADR-0134",
+    },
+    Capability {
+        area: "quantifiers",
+        feature: "kernel-checked query-scoped Bool/BV source instances",
+        assurance: Assurance::Checked,
+        evidence: "ADR-0134's admitted top-level conjunction shape reconstructs with untouched \
+                   source axioms, typed Bool/BV universal binders, exact constructor-witness \
+                   applications, independently checked source assumptions, structurally shared \
+                   AIG lowering, and a compact named-gate Alethe refutation. Classical \
+                   double-negation normalization is explicit and kernel-checked. A two-instance \
+                   theorem passes the in-tree kernel and is registered in the external-Lean \
+                   representative (the current host has no `lean` binary); the duplicate \
+                   `psyco-107-bv` stress reconstruction exceeds three minutes and roughly 2.3 GiB \
+                   in debug, so the public Lean count remains 8/18 pending proof-tail sharing or \
+                   serialization. Negative contexts, existentials, functions/arrays, free BVs in \
+                   quantified assertions, mixed arithmetic, general QSAT, and Lean SAT \
+                   reconstruction remain open",
+        reference: "ADR-0135",
     },
     Capability {
         area: "quantifiers",

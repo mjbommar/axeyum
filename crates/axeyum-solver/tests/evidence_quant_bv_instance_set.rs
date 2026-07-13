@@ -6,9 +6,10 @@ use axeyum_ir::{Sort, TermArena, Value};
 use axeyum_smtlib::parse_script;
 use axeyum_solver::{
     BV_POSITIVE_INSTANCE_SET_CAP, BvPositiveUniversalInstanceSetCertificate,
-    BvPositiveUniversalSourceInstance, CheckResult, Evidence, SolverConfig, SolverError,
-    UnsatProofOutcome, check_bv_positive_universal_instance_set, export_qf_bv_unsat_proof,
-    produce_evidence, solve,
+    BvPositiveUniversalSourceInstance, CheckResult, Evidence, ProofFragment, SolverConfig,
+    SolverError, UnsatProofOutcome, check_bv_positive_universal_instance_set,
+    export_qf_bv_unsat_proof, produce_evidence, prove_unsat_to_lean_module,
+    reconstruct_bv_positive_universal_instance_set_to_lean_module, scan_proof_fragment, solve,
 };
 
 const TARGET: &str = include_str!(
@@ -208,7 +209,7 @@ fn free_bound_capture_and_out_of_fragment_sources_fail_closed() {
 
 #[test]
 fn two_distinct_source_instances_are_required_and_checked() {
-    let text = two_instance_formula(8, true);
+    let text = two_instance_formula(32, true);
     let mut script = parse_script(&text).unwrap();
     let assertions = script.assertions.clone();
     let report = produce_evidence(&mut script.arena, &assertions, &config(5)).unwrap();
@@ -232,6 +233,100 @@ fn two_distinct_source_instances_are_required_and_checked() {
                 .unwrap_or(false)
         );
     }
+}
+
+#[test]
+fn two_source_instances_reconstruct_from_the_original_universal() {
+    let text = two_instance_formula(32, true);
+    let mut script = parse_script(&text).unwrap();
+    let assertions = script.assertions.clone();
+    let report = produce_evidence(&mut script.arena, &assertions, &config(5)).unwrap();
+    let Evidence::UnsatBvPositiveUniversalInstanceSet(certificate) = report.evidence else {
+        panic!("expected query-scoped instance set");
+    };
+
+    let direct = reconstruct_bv_positive_universal_instance_set_to_lean_module(
+        &script.arena,
+        &assertions,
+        &certificate,
+    )
+    .expect("source instances reconstruct");
+    assert!(direct.contains("theorem axeyum_refutation : False"));
+    assert!(direct.contains("inductive "));
+    let (fragment, routed) = prove_unsat_to_lean_module(&mut script.arena, &assertions)
+        .expect("source-instance router reconstructs");
+    assert_eq!(fragment, ProofFragment::BvPositiveUniversalInstanceSet);
+    assert_eq!(routed, direct);
+
+    let mut tampered = certificate;
+    tampered.instances[0].bindings[0].1 = Value::Bv {
+        width: 32,
+        value: 3,
+    };
+    assert!(
+        reconstruct_bv_positive_universal_instance_set_to_lean_module(
+            &script.arena,
+            &assertions,
+            &tampered,
+        )
+        .is_err()
+    );
+}
+
+#[test]
+fn bool_and_bv_source_witnesses_reconstruct() {
+    let mut script = parse_script(
+        "(set-logic BV)
+         (declare-fun p () Bool)
+         (declare-fun q () Bool)
+         (assert (forall ((b Bool) (x (_ BitVec 32)))
+           (and (or b (not b))
+                (and (=> (= x (_ bv0 32)) p)
+                     (=> (= x (_ bv1 32)) q)))))
+         (assert (not (and p q)))
+         (check-sat)",
+    )
+    .unwrap();
+    let assertions = script.assertions.clone();
+    let report = produce_evidence(&mut script.arena, &assertions, &config(5)).unwrap();
+    let Evidence::UnsatBvPositiveUniversalInstanceSet(certificate) = report.evidence else {
+        panic!("expected query-scoped mixed Bool/BV instance set");
+    };
+    assert!(certificate.instances.iter().all(|instance| {
+        instance
+            .bindings
+            .iter()
+            .any(|(_, value)| matches!(value, Value::Bool(_)))
+    }));
+    let source = reconstruct_bv_positive_universal_instance_set_to_lean_module(
+        &script.arena,
+        &assertions,
+        &certificate,
+    )
+    .expect("mixed Bool/BV source instances reconstruct");
+    assert!(source.contains("theorem axeyum_refutation : False"));
+}
+
+#[test]
+#[ignore = "corpus-scale reconstruction exceeds 3 minutes and 2 GiB in debug builds"]
+fn public_psyco_107_bv_routes_through_source_instance_lean_reconstruction() {
+    let (mut script, assertions, certificate) = target_certificate();
+    assert_eq!(
+        scan_proof_fragment(&script.arena, &assertions),
+        ProofFragment::BvPositiveUniversalInstanceSet
+    );
+    let direct = reconstruct_bv_positive_universal_instance_set_to_lean_module(
+        &script.arena,
+        &assertions,
+        &certificate,
+    )
+    .expect("public source instances reconstruct");
+    assert!(direct.contains("theorem axeyum_refutation : False"));
+
+    let (fragment, routed) = prove_unsat_to_lean_module(&mut script.arena, &assertions)
+        .expect("public router reconstructs source instances");
+    assert_eq!(fragment, ProofFragment::BvPositiveUniversalInstanceSet);
+    assert_eq!(routed, direct);
 }
 
 #[test]

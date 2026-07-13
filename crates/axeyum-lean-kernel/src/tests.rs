@@ -14,6 +14,23 @@ use crate::{BinderInfo, Kernel, Lit};
 // ---------------------------------------------------------------------------
 
 #[test]
+fn inference_caches_only_closed_successes() {
+    let mut k = Kernel::new();
+    let sort = k.sort_zero();
+    let inferred = k.infer(sort).expect("closed sort infers");
+    assert_eq!(k.infer_closed_cache.get(&sort), Some(&inferred));
+    assert_eq!(k.infer(sort).unwrap(), inferred);
+
+    let free = k.fvar(17);
+    assert!(k.infer(free).is_err());
+    assert!(!k.infer_closed_cache.contains_key(&free));
+
+    let loose = k.bvar(0);
+    assert!(k.infer(loose).is_err());
+    assert!(!k.infer_closed_cache.contains_key(&loose));
+}
+
+#[test]
 fn names_intern_structurally() {
     let mut k = Kernel::new();
     let anon = k.anon();

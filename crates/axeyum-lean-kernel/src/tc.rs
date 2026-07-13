@@ -915,7 +915,11 @@ impl Kernel {
         e: ExprId,
         ctx: &mut LocalContext,
     ) -> Result<ExprId, KernelError> {
-        match self.expr_node(e).clone() {
+        let closed = self.num_loose_bvars(e) == 0 && !self.has_fvars(e);
+        if closed && let Some(&ty) = self.infer_closed_cache.get(&e) {
+            return Ok(ty);
+        }
+        let inferred = match self.expr_node(e).clone() {
             ExprNode::BVar(index) => Err(KernelError::LooseBVar { index }),
             ExprNode::FVar(id) => ctx.type_of(id).ok_or(KernelError::UnboundFVar { id }),
             ExprNode::Sort(level) => {
@@ -929,7 +933,11 @@ impl Kernel {
             ExprNode::Lam(name, dom, body, info) => self.infer_lambda(name, dom, body, info, ctx),
             ExprNode::Pi(name, dom, body, info) => self.infer_pi(name, dom, body, info, ctx),
             ExprNode::Let(name, ty, val, body) => self.infer_let(name, ty, val, body, ctx),
+        }?;
+        if closed {
+            self.infer_closed_cache.insert(e, inferred);
         }
+        Ok(inferred)
     }
 
     /// `App(f, a)`: infer `f`, WHNF to a `Pi(_, dom, body, _)`, require

@@ -46,6 +46,10 @@
 // that without improving clarity here.
 #![allow(clippy::similar_names, clippy::many_single_char_names)]
 
+mod quant_bv_instance_set_lean;
+
+pub use quant_bv_instance_set_lean::reconstruct_bv_positive_universal_instance_set_to_lean_module;
+
 use std::collections::{BTreeMap, BTreeSet};
 
 use axeyum_cnf::{AletheCommand, AletheLit, AletheTerm};
@@ -208,6 +212,19 @@ pub struct ReconstructCtx {
     /// Bit-blasting is bottom-up, so a structural consumer (`concat`) sees its
     /// operands' widths recorded by the time its own step is reconstructed.
     bv_widths: BTreeMap<String, usize>,
+    /// Kernel `BitVec w` models used by quantified-BV source reconstruction.
+    bv_value_types: BTreeMap<usize, DatatypeInductive>,
+    /// Free bit-vector symbol → `(width, kernel constant)` in the typed bit model.
+    bv_value_symbols: BTreeMap<String, (usize, NameId)>,
+    /// Scoped Bool binder names and their kernel values while translating a source
+    /// quantifier body.
+    gate_bound_bools: BTreeMap<String, ExprId>,
+    /// Scoped BV binder names and their `(width, kernel value)` while translating a
+    /// source quantifier body.
+    gate_bound_bvs: BTreeMap<String, (usize, ExprId)>,
+    /// Whether bare BV projections use the typed finite-bit model instead of opaque
+    /// propositional atoms.
+    typed_bv_gates: bool,
     /// Memoization for [`ReconstructCtx::gate_term_to_prop`]: `AletheTerm` key → its
     /// `Prop` `ExprId`. The bit-blast gates (esp. lowered multipliers/dividers) repeat
     /// shared subterms heavily; without this the CNF-intro rules rebuild them every
@@ -291,6 +308,11 @@ impl ReconstructCtx {
             axiom_roles: BTreeMap::new(),
             next_id: 0,
             bv_widths: BTreeMap::new(),
+            bv_value_types: BTreeMap::new(),
+            bv_value_symbols: BTreeMap::new(),
+            gate_bound_bools: BTreeMap::new(),
+            gate_bound_bvs: BTreeMap::new(),
+            typed_bv_gates: false,
             gate_memo: BTreeMap::new(),
             datatypes: BTreeMap::new(),
             datatype_families: BTreeMap::new(),
@@ -1404,6 +1426,10 @@ pub enum ProofFragment {
     /// A finite source-instantiated counterexample cover over free Boolean
     /// guards, reconstructed by bounded excluded-middle case analysis (ADR-0108).
     QuantifiedCounterexampleCover,
+    /// A query-scoped set of concrete positive-universal Bool/BV instances whose
+    /// residual bit-level refutation is reconstructed from genuine source
+    /// instantiations (ADR-0135).
+    BvPositiveUniversalInstanceSet,
     /// A top-level existential quantifier (skolemized).
     Exists,
     /// A word-level (string/sequence) refutation: a contradicted disequality or a
@@ -1803,6 +1829,12 @@ pub fn scan_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> ProofFra
         && crate::int_reconstruct::quantified_counterexample_cover_lean_shape(arena, assertions)
     {
         ProofFragment::QuantifiedCounterexampleCover
+    } else if has_forall
+        && quant_bv_instance_set_lean::bv_positive_universal_instance_set_lean_shape(
+            arena, assertions,
+        )
+    {
+        ProofFragment::BvPositiveUniversalInstanceSet
     } else if has_exists {
         ProofFragment::Exists
     } else if has_forall {
@@ -3812,6 +3844,23 @@ fn reconstruct_proof_fragment_to_lean_module(
                     })?
                     .ok_or_else(declined)?;
             crate::int_reconstruct::reconstruct_quantified_counterexample_cover_to_lean_module(
+                arena,
+                assertions,
+                &certificate,
+            )?
+        }
+        ProofFragment::BvPositiveUniversalInstanceSet => {
+            let config =
+                crate::SolverConfig::default().with_timeout(std::time::Duration::from_secs(30));
+            let certificate = crate::quant_bool_model_sat::find_bv_positive_universal_instance_set(
+                arena, assertions, &config,
+            )
+            .map_err(|error| ReconstructError::MalformedStep {
+                rule: "bv_positive_universal_instance_set".to_owned(),
+                detail: format!("instance-set search failed: {error}"),
+            })?
+            .ok_or_else(declined)?;
+            quant_bv_instance_set_lean::reconstruct_bv_positive_universal_instance_set_to_lean_module(
                 arena,
                 assertions,
                 &certificate,
@@ -7967,15 +8016,10 @@ fn reconstruct_resolution_step(
             detail: "resolution step has no premises".to_owned(),
         });
     };
-    // Polarity-normalize every clause first so a `+(not X)` literal and a `-X`
-    // literal — the same `Not ⟦X⟧` Prop, spelled inconsistently by the upstream CNF
-    // — match as complementary pivots in `find_pivot`. Soundness is unchanged:
-    // normalization preserves `clause_to_prop`, so each clause `proof` stays
-    // well-typed, and every `binary_resolve` below is kernel-checked.
-    let normalized = |c: &Clause| Clause {
-        lits: c.lits.iter().map(normalize_lit_polarity).collect(),
-        proof: c.proof,
-    };
+    // Polarity-normalize every clause first so syntactic `not` atoms and literal
+    // flags match as pivots. Moving a positive `not` is definitional; cancelling
+    // double negation is classical, so `normalize_clause` explicitly rebuilds
+    // and kernel-checks the clause proof through the declared `em` axiom.
     // **Davis–Putnam resolution.** The refutation is a resolution DAG, not a chain
     // (a pivot from one premise cancels against another, not a running
     // accumulator), so any accumulator/greedy/pool fold dead-ends by consuming a
@@ -7989,8 +8033,11 @@ fn reconstruct_resolution_step(
         .map(|l| normalize_lit_polarity(l).atom.key())
         .collect();
 
-    let mut pool: Vec<Clause> = std::iter::once(Ok(normalized(lookup(env, first)?)))
-        .chain(rest.iter().map(|p| Ok(normalized(lookup(env, p)?))))
+    let mut pool: Vec<Clause> = std::iter::once(normalize_clause(ctx, lookup(env, first)?))
+        .chain(
+            rest.iter()
+                .map(|p| lookup(env, p).and_then(|clause| normalize_clause(ctx, clause))),
+        )
         .collect::<Result<_, ReconstructError>>()?;
 
     loop {
@@ -8087,11 +8134,9 @@ fn normalize_clause_key(lits: &[AletheLit]) -> String {
 }
 
 /// Canonicalize a literal's polarity by peeling leading `(not …)` atoms into the
-/// `negated` flag: `+(not X)` becomes `-X`, `-(not X)` becomes `+X`. The upstream
-/// CNF spells some negations as the flag and some as a `(not …)` atom; a positive
-/// `(not X)` literal and a negative `X` literal denote the same Prop (`Not ⟦X⟧`),
-/// so this leaves [`ReconstructCtx::clause_to_prop`] (and the clause `proof` type)
-/// unchanged while letting complementary literals match in [`find_pivot`].
+/// `negated` flag. [`normalize_clause`] separately derives a proof of the
+/// normalized clause because a negative `(not X)` requires classical
+/// double-negation elimination before it can become a positive `X`.
 fn normalize_lit_polarity(lit: &AletheLit) -> AletheLit {
     let mut atom = lit.atom.clone();
     let mut negated = lit.negated;
@@ -8105,6 +8150,107 @@ fn normalize_lit_polarity(lit: &AletheLit) -> AletheLit {
         }
     }
     AletheLit { atom, negated }
+}
+
+fn normalize_clause(ctx: &mut ReconstructCtx, clause: &Clause) -> Result<Clause, ReconstructError> {
+    let normalized = clause
+        .lits
+        .iter()
+        .map(normalize_lit_polarity)
+        .collect::<Vec<_>>();
+    if normalized == clause.lits {
+        return Ok(clause.clone());
+    }
+    let target = ctx.clause_to_prop(&normalized);
+    let proof = clause_elim(
+        ctx,
+        clause,
+        target,
+        &normalized,
+        &|ctx, literal, literal_proof, normalized| {
+            let normalized_literal = normalize_lit_polarity(literal);
+            let normalized_proof =
+                normalize_lit_proof(ctx, literal, literal_proof, &normalized_literal)?;
+            inject_lit(ctx, &normalized_literal, normalized_proof, normalized)
+        },
+    )?;
+    let proof = check_against(ctx, "resolution_normalize", proof, target)?;
+    Ok(Clause {
+        lits: normalized,
+        proof,
+    })
+}
+
+fn normalize_lit_proof(
+    ctx: &mut ReconstructCtx,
+    source: &AletheLit,
+    source_proof: ExprId,
+    target: &AletheLit,
+) -> Result<ExprId, ReconstructError> {
+    let source_prop = ctx.lit_to_prop(source);
+    let target_prop = ctx.lit_to_prop(target);
+    if ctx.kernel.def_eq(source_prop, target_prop) {
+        return Ok(source_proof);
+    }
+
+    let mut current = source.clone();
+    let mut proof = source_proof;
+    while current != *target {
+        let AletheTerm::App(head, args) = &current.atom else {
+            return Err(ReconstructError::UnsupportedResolution {
+                detail: "polarity normalization changed a non-negation literal".to_owned(),
+            });
+        };
+        if head != "not" || args.len() != 1 {
+            return Err(ReconstructError::UnsupportedResolution {
+                detail: "polarity normalization changed a non-negation literal".to_owned(),
+            });
+        }
+        let next = AletheLit {
+            atom: args[0].clone(),
+            negated: !current.negated,
+        };
+        if current.negated {
+            let next_prop = ctx.lit_to_prop(&next);
+            proof = double_negation_elim(ctx, next_prop, proof);
+        }
+        current = next;
+    }
+    Ok(proof)
+}
+
+fn double_negation_elim(ctx: &mut ReconstructCtx, proposition: ExprId, proof: ExprId) -> ExprId {
+    let not_proposition = ctx.mk_not(proposition);
+    let disjunction = ctx.mk_or(proposition, not_proposition);
+    let anon = ctx.kernel.anon();
+
+    let positive = {
+        let body = ctx.kernel.bvar(0);
+        ctx.kernel.lam(anon, proposition, body, BinderInfo::Default)
+    };
+    let negative = {
+        let fvar = fresh_fvar_id(ctx);
+        let not_proof = ctx.kernel.fvar(fvar);
+        let contradiction = ctx.kernel.app(proof, not_proof);
+        let body = ex_falso(ctx, proposition, contradiction);
+        let body = ctx.kernel.abstract_fvars(body, &[fvar]);
+        ctx.kernel
+            .lam(anon, not_proposition, body, BinderInfo::Default)
+    };
+    let motive = ctx
+        .kernel
+        .lam(anon, disjunction, proposition, BinderInfo::Default);
+    let em_name = ctx.em_axiom();
+    let em = ctx.kernel.const_(em_name, vec![]);
+    let em_proposition = ctx.kernel.app(em, proposition);
+    let zero = ctx.kernel.level_zero();
+    let rec = ctx.kernel.const_(ctx.prelude.or_rec, vec![zero]);
+    let result = ctx.kernel.app(rec, proposition);
+    let result = ctx.kernel.app(result, not_proposition);
+    let result = ctx.kernel.app(result, motive);
+    let result = ctx.kernel.app(result, positive);
+    let result = ctx.kernel.app(result, negative);
+    ctx.kernel.app(result, em_proposition)
 }
 
 /// Push `lit` onto `out` unless a literal of the same atom key and polarity is
@@ -8490,6 +8636,10 @@ impl ReconstructCtx {
             return self.gate_term_to_prop(&b_form);
         }
         match term {
+            AletheTerm::Const(symbol) if self.gate_bound_bools.contains_key(symbol) => {
+                let value = self.gate_bound_bools[symbol];
+                self.typed_bool_value_prop(value)
+            }
             AletheTerm::App(head, args) if head == "not" && args.len() == 1 => {
                 let inner = self.gate_term_to_prop(&args[0]);
                 self.mk_not(inner)
@@ -8517,6 +8667,20 @@ impl ReconstructCtx {
             // directly or embedded in a gate.
             AletheTerm::Const(s) if s == "true" => self.kernel.const_(self.prelude.true_, vec![]),
             AletheTerm::Const(s) if s == "false" => self.kernel.const_(self.prelude.false_, vec![]),
+            AletheTerm::Indexed { op, indices, args }
+                if self.typed_bv_gates
+                    && op == "@bit_of"
+                    && indices.len() == 1
+                    && args.len() == 1 =>
+            {
+                if let Ok(index) = usize::try_from(indices[0])
+                    && let Some(prop) = self.typed_bv_projection(&args[0], index)
+                {
+                    return prop;
+                }
+                let name = self.prop_atom_const(&term.key());
+                self.kernel.const_(name, vec![])
+            }
             // A bit projection `((_ @bit_of i) operand)`. When `operand` is a COMPOUND
             // bit-vector term (the projection-based emission's gadget bits, e.g.
             // `((_ @bit_of i) (bvor a b))`), resolve it through the faithful bit model
@@ -9098,19 +9262,37 @@ pub fn reconstruct_cnf_intro_rule(
     // Ensure `em` is available for the classical case-split.
     let _ = ctx.em_axiom();
 
+    // Private source-instance tails carry short gate names with exact definitions
+    // in `bridge`. Expand them before proving the clause tautology; the original
+    // target reaches the same propositions through `gate_term_to_prop`.
+    let expanded = conclusion
+        .iter()
+        .enumerate()
+        .map(|(index, literal)| AletheLit {
+            // Every CNF-introduction rule places its defined gate first. Expand
+            // that gate one level, while retaining operand names so the clause
+            // is the expected `op(args) ∨ ...args...` tautology.
+            atom: if index == 0 {
+                ctx.bridge_substitute(&literal.atom)
+            } else {
+                literal.atom.clone()
+            },
+            negated: literal.negated,
+        })
+        .collect::<Vec<_>>();
+
     // Collect the distinct operand atoms (the case-split variables) in a stable
     // order (s-expression key order via the BTreeSet-like collection below).
     let mut atom_keys: Vec<(String, AletheTerm)> = Vec::new();
-    for lit in conclusion {
+    for lit in &expanded {
         collect_atoms(&lit.atom, &mut atom_keys);
     }
 
     let target = ctx.gate_clause_to_prop(conclusion);
-    let conclusion = conclusion.to_vec();
 
     // Recursively case-split on each atom; at the leaf, inject the satisfied lit.
     let mut assignment = Assignment::new();
-    let proof = prove_clause_by_cases(ctx, &atom_keys, 0, &mut assignment, &conclusion, target)?;
+    let proof = prove_clause_by_cases(ctx, &atom_keys, 0, &mut assignment, &expanded, target)?;
 
     check_against(ctx, rule_name, proof, target)
 }
@@ -11571,7 +11753,18 @@ impl ReconstructCtx {
         {
             return b_form.clone();
         }
-        term.clone()
+        match term {
+            AletheTerm::App(head, args) => AletheTerm::App(
+                head.clone(),
+                args.iter().map(|arg| self.bridge_substitute(arg)).collect(),
+            ),
+            AletheTerm::Indexed { op, indices, args } => AletheTerm::Indexed {
+                op: op.clone(),
+                indices: indices.clone(),
+                args: args.iter().map(|arg| self.bridge_substitute(arg)).collect(),
+            },
+            AletheTerm::Const(_) => term.clone(),
+        }
     }
 }
 

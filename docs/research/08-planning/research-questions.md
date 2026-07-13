@@ -302,6 +302,12 @@ Out of scope:
     QF_BV DRAT/LRAT proof. This recovers `psyco-107-bv` without trusting CEGIS
     candidate models, quantifier erasure, instance selection, or heuristic
     candidate blocks.
+    [ADR-0135](../09-decisions/adr-0135-kernel-checked-query-scoped-bv-instances.md)
+    reconstructs that bounded source shape with genuine typed universals:
+    carried bindings become constructor witnesses, every residual assumption
+    is derived from an untouched query axiom, and a compact named-gate Alethe
+    tail is kernel-checked. Corpus-scale proof sharing remains a performance
+    task rather than permission to weaken the source boundary.
     Piecewise/general function interpretations, free-BV models beyond these
     affine-LSB/direct-witness/signed-interval/zero-product classes, broader
     free-Boolean residual proofs and general nested/alternating QSAT,

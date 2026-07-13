@@ -80,7 +80,9 @@ The complete dominance audit checks and certifies 54/54 decisions, reports
 zero mismatches, audit errors, and timeouts, and retains 44/54 dominant
 candidates. The new target is not marked dominant: evidence production is
 about 101 ms while the measured Z3 solve is about 33 ms. Lean reconstruction
-remains 8/18 UNSAT.
+remains 8/18 UNSAT. ADR-0135 subsequently adds a genuine source-instantiation
+route for the bounded shape, while retaining this count until the corpus-scale
+target proof meets a bounded gate.
 
 Seven focused tests cover the public target; exact query, source, binding, proof,
 duplicate, and cap tampering; free/bound capture and negative-quantifier,
@@ -113,5 +115,6 @@ The committed public cvc5 quantified-BV slice is fully decided and every
 decision is independently checked, but this is corpus completion rather than
 general quantified-BV completeness. The remaining depth work is broader
 nested/alternating QSAT, functions and quantified UF, nonvacuous existential
-relations, performance of proof-producing instance search, and Lean
-reconstruction of the source-instantiation plus QF_BV refutation.
+relations, performance of proof-producing instance search, and corpus-scale
+Lean proof sharing for the source-instantiation plus QF_BV refutation. ADR-0135
+accepts the bounded source theorem and small external-Lean route.

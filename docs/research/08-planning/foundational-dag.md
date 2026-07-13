@@ -394,6 +394,16 @@ blocks remain search-only. This closes `psyco-107-bv` without broadening to
 negative quantifiers, existentials, functions, mixed arithmetic, or general
 QSAT.
 
+ADR-0135 reconstructs this admitted query shape as typed Bool/BV universal
+theorems. Every ground instance is an application of an untouched source axiom
+to exact constructor witnesses, source/residual formulas share structurally
+hashed AIG lowering, and a compact named-gate Alethe tail proves `False`.
+Double-negation normalization carries an explicit classical proof. The small
+two-instance theorem is registered in the external-Lean representative; this
+host has no `lean` binary, so the in-tree kernel is the completed local gate.
+Corpus-scale resolution sharing for `psyco-107-bv` remains a measured
+performance boundary.
+
 ## Web And Reference Refresh Gates
 
 Use web search or refreshed local references at design gates, not constantly.

@@ -94,6 +94,10 @@ pub struct Kernel {
     exprs: Vec<ExprNode>,
     expr_meta: Vec<ExprMeta>,
     expr_intern: HashMap<ExprNode, ExprId>,
+    /// Successful inferred types for closed expressions. Closed terms are
+    /// independent of the local context, so sharing this cache across recursive
+    /// checks avoids exponential re-walks of hash-consed proof DAGs.
+    infer_closed_cache: HashMap<ExprId, ExprId>,
 
     /// The global declaration environment (ADR-0036, slice 3). Declarations are
     /// admitted only through the type-checked [`Kernel::add_declaration`] gate.

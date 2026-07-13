@@ -421,6 +421,47 @@ fn prove_with_rewrites(
     refute(&mut builder, &tseitin, &input_clause_ids, &pins)
 }
 
+/// Emits a propositional Alethe refutation for already bit-level Boolean formulas.
+///
+/// This is the clausal tail used when an outer theory reconstruction has already
+/// proved the formulas (for example, concrete instances derived from a quantified
+/// source assertion). Each formula is introduced as one unit assumption, Tseitin
+/// encoded, and closed by the same LRAT-to-Alethe resolution path as the ordinary
+/// `QF_BV` emitter. The caller must replace those assumptions with independently
+/// checked proof terms during reconstruction; this helper does not claim that the
+/// formulas came from any particular source term.
+pub(crate) fn prove_bit_gate_unsat_alethe(
+    formulas: &[AletheTerm],
+    definitions: BTreeMap<String, AletheTerm>,
+) -> Option<(Vec<AletheCommand>, BTreeMap<String, AletheTerm>)> {
+    if formulas.is_empty() {
+        return None;
+    }
+    let mut builder = Builder::new();
+    let mut tseitin = Tseitin::compact(definitions);
+    let roots = formulas
+        .iter()
+        .map(|formula| tseitin.encode(&mut builder, formula))
+        .collect::<Option<Vec<_>>>()?;
+    let assume_ids = roots
+        .iter()
+        .map(|root| builder.assume(vec![root.lit_view()]))
+        .collect::<Vec<_>>();
+    let mut input_clause_ids = Vec::new();
+    for (root, assume_id) in roots.iter().zip(assume_ids) {
+        input_clause_ids.push((vec![root.to_cnf(&tseitin)], assume_id));
+    }
+    for gate in &tseitin.gate_clauses {
+        input_clause_ids.push((
+            gate.lits.iter().map(|lit| lit.to_cnf(&tseitin)).collect(),
+            gate.step_id.clone(),
+        ));
+    }
+    let pins = tseitin.boolean_const_pins();
+    let commands = refute(&mut builder, &tseitin, &input_clause_ids, &pins)?;
+    Some((commands, tseitin.gate_defs))
+}
+
 /// Like [`prove_qf_bv_unsat_alethe`], but first lowers any **derived** bit-vector
 /// operators — `bvsub`, `bvnand`/`bvnor`, and the six non-core comparisons
 /// (`bvugt`/`bvule`/`bvuge`/`bvsgt`/`bvsle`/`bvsge`) — to the bitblast core via
@@ -1091,6 +1132,8 @@ struct Tseitin {
     memo: BTreeMap<String, PLit>,
     /// Emitted defining clauses.
     gate_clauses: Vec<GateClause>,
+    /// Private Lean-tail definitions for short, already named AIG gates.
+    gate_defs: BTreeMap<String, AletheTerm>,
 }
 
 impl Tseitin {
@@ -1100,6 +1143,14 @@ impl Tseitin {
             atom_terms: Vec::new(),
             memo: BTreeMap::new(),
             gate_clauses: Vec::new(),
+            gate_defs: BTreeMap::new(),
+        }
+    }
+
+    fn compact(gate_defs: BTreeMap<String, AletheTerm>) -> Self {
+        Self {
+            gate_defs,
+            ..Self::new()
         }
     }
 
@@ -1161,6 +1212,38 @@ impl Tseitin {
     /// term as a variable and emit the defining clauses.
     fn encode(&mut self, builder: &mut Builder, term: &AletheTerm) -> Option<PLit> {
         match term {
+            AletheTerm::Const(name) if self.gate_defs.contains_key(name) => {
+                let key = term.key();
+                if let Some(lit) = self.memo.get(&key) {
+                    return Some(lit.clone());
+                }
+                let definition = self.gate_defs.get(name)?.clone();
+                let AletheTerm::App(head, args) = definition else {
+                    return None;
+                };
+                let kind = match (head.as_str(), args.len()) {
+                    ("and", _) => GateKind::And,
+                    ("or", _) => GateKind::Or,
+                    ("=", 2) => GateKind::Equiv,
+                    ("xor", 2) => GateKind::Xor,
+                    _ => return None,
+                };
+                let operands = args
+                    .iter()
+                    .map(|arg| self.encode(builder, arg))
+                    .collect::<Option<Vec<_>>>()?;
+                self.register(term);
+                let gate = PLit::positive(term.clone());
+                match kind {
+                    GateKind::And => self.encode_and(builder, &gate, &operands),
+                    GateKind::Or => self.encode_or(builder, &gate, &operands),
+                    GateKind::Equiv | GateKind::Xor => {
+                        self.encode_binary(builder, &gate, &operands, kind)?;
+                    }
+                }
+                self.memo.insert(key, gate.clone());
+                Some(gate)
+            }
             AletheTerm::Indexed { .. } | AletheTerm::Const(_) => {
                 self.register(term);
                 Some(PLit::positive(term.clone()))

@@ -95,6 +95,7 @@ const FAMILY_BUILDERS: &[FamilyBuilder] = &[
     qf_ufbv_lean_entry_normalizes_conjunction_and_double_negation,
     qf_ufbv_finite_domain_pigeonhole_checks_in_real_lean,
     quantified_bv_finite_domain_enum_rows_check_in_real_lean,
+    quantified_bv_source_instance_set_checks_in_real_lean,
     cvc5_quantified_bv_inversion_rows_check_in_real_lean,
     qf_ufff_bv_uf_local_rows_check_in_real_lean,
     qf_ff_term_level_enum_rows_check_in_real_lean,
@@ -629,6 +630,32 @@ fn quantified_bv_finite_domain_enum_rows_check_in_real_lean() {
         );
         lean_accepts(tag, &source);
     }
+}
+
+/// Two distinct applications of one untouched universal source assertion imply
+/// `p` and `q`; the ground assertion `not (p and q)` closes the source-derived
+/// `QF_BV` residual. Both the in-tree kernel and real Lean check the resulting
+/// quantified theorem.
+fn quantified_bv_source_instance_set_checks_in_real_lean() {
+    let mut script = parse_script(
+        r"
+        (set-logic BV)
+        (declare-fun p () Bool)
+        (declare-fun q () Bool)
+        (assert (forall ((x (_ BitVec 32)))
+          (and (=> (= x (_ bv0 32)) p)
+               (=> (= x (_ bv1 32)) q))))
+        (assert (not (and p q)))
+        (check-sat)
+        ",
+    )
+    .expect("quantified source-instance case parses");
+    let assertions = script.assertions.clone();
+    let (fragment, source) = prove_unsat_to_lean_module(&mut script.arena, &assertions)
+        .expect("quantified source instances reconstruct");
+    assert_eq!(fragment, ProofFragment::BvPositiveUniversalInstanceSet);
+    assert!(!source.contains("sorryAx"));
+    lean_accepts("quant_bv_source_instance_set", &source);
 }
 
 /// The remaining cvc5 quantified-BV inversion audit rows are closed by a checked

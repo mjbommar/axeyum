@@ -188,3 +188,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0132](adr-0132-checked-zero-product-quantified-bv-models.md) | Checked zero-product quantified-BV models: complete free-BV assignments with exact signed-division-to-zero replay and binder-product annihilation | accepted |
 | [0133](adr-0133-checked-residual-qfbv-free-boolean-models.md) | Checked residual-QF_BV free-Boolean models: bounded counterexample refinement plus source-rebuilt proof of the exact negated positive-universal residual | accepted |
 | [0134](adr-0134-checked-query-scoped-qfbv-universal-instances.md) | Checked query-scoped QF_BV universal instances: complete source bindings plus an exact proof of the rebuilt ground query | accepted |
+| [0135](adr-0135-kernel-checked-query-scoped-bv-instances.md) | Kernel-checked query-scoped BV instances: genuine typed universal applications plus a compact source-bound QF_BV refutation | accepted |
