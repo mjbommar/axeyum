@@ -419,7 +419,9 @@ pub const SUPPORT_MATRIX: &[SupportRow] = &[
                concrete ADR-0126 negated-existential \
                witnesses, proves their untouched Bool/BV bodies through logical or \
                computational AIG reduction, and closes genuine typed `Exists.intro` terms \
-               against the original negated source axiom. Positive \
+               against the original negated source axiom. ADR-0139 likewise applies a concrete \
+               Bool/BV assignment to an untouched closed universal and refutes the exact body \
+               with an evaluated-AIG proof. Positive \
                universal UNSAT with only free Booleans can carry a \
                checked finite counterexample cover: every concrete source instance excludes one \
                sufficient cube and the independently refuted weakened skeleton proves coverage. The \
@@ -430,7 +432,7 @@ pub const SUPPORT_MATRIX: &[SupportRow] = &[
                non-equality online antecedents, direct online proof serialization, high-frequency \
                assignment callbacks, negative quantifier contexts, broader alternation/functions, \
                general nested QE/QSAT, and broad proof reconstruction remain incomplete. \
-               ADR-0016/0032/0095/0096/0097/0098/0099/0100/0101/0107/0108/0109/0110/0111/0112/0113/0114/0115/0116/0117/0118/0119/0120/0121/0122/0123/0124/0125/0126/0127/0128/0129/0130/0131/0132/0133/0134/0135/0138",
+               ADR-0016/0032/0095/0096/0097/0098/0099/0100/0101/0107/0108/0109/0110/0111/0112/0113/0114/0115/0116/0117/0118/0119/0120/0121/0122/0123/0124/0125/0126/0127/0128/0129/0130/0131/0132/0133/0134/0135/0138/0139",
     },
     SupportRow {
         fragment: "datatypes (algebraic)",

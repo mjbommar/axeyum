@@ -901,6 +901,16 @@ GiB gate; the refreshed exact audit is 54/54 evidence-certified/rechecked,
 reconstruction cost, implement the smallest remaining genuine Lean proof
 family, and continue reducing large-proof memory before broader
 nested/alternating QSAT or quantified-UF models.
+**That ranking is now LANDED (ADR-0139):** the adjacent ADR-0127 experiment
+exposed 15,705 proof commands with repeated 4,700--5,000-premise RUP chains and
+failed safely at a 2.18 GiB allocation inside the 4 GiB guard, so it is now
+explicitly gated on compact reflected-RUP checking. The smaller evaluator-proof
+reuse slice closes `qbv-simp`: typed constructor values instantiate its
+untouched universal, and an explicit evaluated AIG proof refutes the body in
+0.08 seconds. Exact audit is 49/54 dominant and Lean UNSAT 13/18, with all 54
+decisions checked/certified and zero mismatch/error/timeout. **Next action:**
+implement ADR-0128's vacuous-existential elimination over the same evaluated-AIG
+counterexample spine, then return to ADR-0124/0129 and the ADR-0127 RUP reflector.
 **Process state:** first green CI in 200+ runs held into a green cadence;
 the pre-push hook gates the pushed SHA incl. the ~6s `:status` corpus
 sweep (a wrong verdict must not leave the machine); STATUS truncated

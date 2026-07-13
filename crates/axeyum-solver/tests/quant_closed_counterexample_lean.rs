@@ -5,6 +5,7 @@ use axeyum_smtlib::parse_script;
 use axeyum_solver::{
     ClosedUniversalCounterexampleCertificate, Evidence, ProofFragment, SolverConfig,
     check_closed_universal_counterexample, produce_evidence, prove_unsat_to_lean_module,
+    reconstruct_bv_closed_universal_counterexample_to_lean_module,
     reconstruct_closed_universal_counterexample_to_lean_module,
 };
 
@@ -46,6 +47,12 @@ const ISSUE5279: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/../../corpus/public-curated/quantified/LIA/cvc5-regress-clean/",
     "cli__regress1__quantifiers__issue5279-nqe.smt2"
+));
+
+const QBV_SIMP: &str = include_str!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../../corpus/public-curated/quantified/BV/cvc5-regress-clean/",
+    "cli__regress0__quantifiers__qbv-simp.smt2"
 ));
 
 fn checked_certificate(
@@ -107,6 +114,39 @@ fn issue5279_reconstructs_bool_ite_at_false_witness() {
     let (fragment, _) =
         prove_unsat_to_lean_module(&mut script.arena, &assertions).expect("router reconstructs");
     assert_eq!(fragment, ProofFragment::ClosedUniversalCounterexample);
+}
+
+#[test]
+fn qbv_simp_reconstructs_by_typed_source_application_and_aig_evaluation() {
+    let (mut script, certificate) = checked_certificate(QBV_SIMP);
+    let assertions = script.assertions.clone();
+    let direct = reconstruct_bv_closed_universal_counterexample_to_lean_module(
+        &script.arena,
+        &assertions,
+        &certificate,
+    )
+    .expect("Bool/BV counterexample reconstructs");
+    assert!(direct.contains("theorem axeyum_refutation : False"));
+    assert!(!direct.contains("sorryAx"));
+
+    let (fragment, routed) =
+        prove_unsat_to_lean_module(&mut script.arena, &assertions).expect("router reconstructs");
+    assert_eq!(fragment, ProofFragment::BvClosedUniversalCounterexample);
+    assert_eq!(routed, direct);
+}
+
+#[test]
+fn tampered_qbv_counterexample_never_reconstructs_to_false() {
+    let (script, mut certificate) = checked_certificate(QBV_SIMP);
+    certificate.bindings[0].1 = Value::Bool(false);
+    assert!(
+        reconstruct_bv_closed_universal_counterexample_to_lean_module(
+            &script.arena,
+            &script.assertions,
+            &certificate,
+        )
+        .is_err()
+    );
 }
 
 #[test]

@@ -499,6 +499,7 @@ macro_rules! full_exports {
             LraReconstructCtx, ProofFragment, ReconstructCtx, ReconstructError,
             prove_const_shift_lowering_to_lean_module, prove_unsat_to_lean,
             prove_unsat_to_lean_module, reconstruct_bitblast_step,
+            reconstruct_bv_closed_universal_counterexample_to_lean_module,
             reconstruct_bv_positive_universal_instance_set_to_lean_module,
             reconstruct_cnf_intro_rule, reconstruct_const_shift_lowering, reconstruct_eq_step,
             reconstruct_lra_proof, reconstruct_negated_existential_witness_to_lean_module,

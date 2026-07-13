@@ -97,6 +97,7 @@ const FAMILY_BUILDERS: &[FamilyBuilder] = &[
     quantified_bv_finite_domain_enum_rows_check_in_real_lean,
     quantified_bv_source_instance_set_checks_in_real_lean,
     quantified_bv_negated_existential_witness_checks_in_real_lean,
+    quantified_bv_closed_universal_counterexample_checks_in_real_lean,
     cvc5_quantified_bv_inversion_rows_check_in_real_lean,
     qf_ufff_bv_uf_local_rows_check_in_real_lean,
     qf_ff_term_level_enum_rows_check_in_real_lean,
@@ -675,6 +676,21 @@ fn quantified_bv_negated_existential_witness_checks_in_real_lean() {
     assert_eq!(fragment, ProofFragment::NegatedExistentialWitness);
     assert!(!source.contains("sorryAx"));
     lean_accepts("quant_bv_negated_existential_witness", &source);
+}
+
+/// A concrete typed assignment falsifies the untouched closed Bool/BV
+/// universal through an explicit evaluated AIG proof.
+fn quantified_bv_closed_universal_counterexample_checks_in_real_lean() {
+    let mut script = parse_script(include_str!(
+        "../../../corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__qbv-simp.smt2"
+    ))
+    .expect("closed Bool/BV universal row parses");
+    let assertions = script.assertions.clone();
+    let (fragment, source) = prove_unsat_to_lean_module(&mut script.arena, &assertions)
+        .expect("closed Bool/BV universal reconstructs");
+    assert_eq!(fragment, ProofFragment::BvClosedUniversalCounterexample);
+    assert!(!source.contains("sorryAx"));
+    lean_accepts("quant_bv_closed_universal_counterexample", &source);
 }
 
 /// The remaining cvc5 quantified-BV inversion audit rows are closed by a checked

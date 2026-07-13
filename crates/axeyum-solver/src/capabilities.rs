@@ -1075,11 +1075,15 @@ pub const CAPABILITIES: &[Capability] = &[
                    ARI176e1 and issue5279-nqe from bare UNSAT; ADR-0102 additionally reconstructs \
                    both by genuine dependent-product elimination over the Int/Bool preludes and \
                    kernel-checked integer normalization, with no theorem-specific refuter axiom. \
+                   ADR-0139 applies the same checked certificate boundary to closed Bool/BV \
+                   universals: exact typed constructor values instantiate the untouched theorem, \
+                   and an explicit evaluated-AIG proof refutes its body. `qbv-simp` raises the \
+                   exact public quantified-BV audit to 49/54 dominant and Lean UNSAT 13/18. \
                    The quantified-LIA audit is checked/certified 11/11, Lean-checked 7/7 UNSAT, and \
                    has eleven dominant candidates with empty trust ledgers and DISAGREE=0. Open \
                    formulas, general QE, function counterexamples, and broader Lean reconstruction \
                    remain open",
-        reference: "ADR-0100/0102",
+        reference: "ADR-0100/0102/0139",
     },
     Capability {
         area: "quantifiers",

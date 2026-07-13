@@ -20,7 +20,8 @@ use super::{
 };
 use crate::{
     BvPositiveUniversalInstanceSetCertificate, BvPositiveUniversalSourceInstance,
-    NegatedExistentialWitnessCertificate, check_bv_positive_universal_instance_set,
+    ClosedUniversalCounterexampleCertificate, NegatedExistentialWitnessCertificate,
+    check_bv_positive_universal_instance_set, check_closed_universal_counterexample,
     check_negated_existential_witness,
 };
 
@@ -660,12 +661,12 @@ fn input_value(
     }
 }
 
-fn prove_ground_true(
+fn evaluate_ground_prop(
     ctx: &mut ReconstructCtx,
     arena: &TermArena,
     term: TermId,
     bindings: &[(SymbolId, Value)],
-) -> Result<ExprId, ReconstructError> {
+) -> Result<EvaluatedProp, ReconstructError> {
     register_bv_widths(ctx, arena, term);
     let lowering = lower_terms(arena, &[term])
         .map_err(|error| decline(format!("AIG witness lowering failed: {error}")))?;
@@ -719,7 +720,16 @@ fn prove_ground_true(
     }
     let root = lowering.roots().first().and_then(|root| root.bits().first()).copied()
         .ok_or_else(|| decline("AIG witness lowering lacks a Boolean root"))?;
-    let evaluated = evaluated_lit(ctx, &nodes, root)?;
+    evaluated_lit(ctx, &nodes, root)
+}
+
+fn prove_ground_true(
+    ctx: &mut ReconstructCtx,
+    arena: &TermArena,
+    term: TermId,
+    bindings: &[(SymbolId, Value)],
+) -> Result<ExprId, ReconstructError> {
+    let evaluated = evaluate_ground_prop(ctx, arena, term, bindings)?;
     if !evaluated.value {
         return Err(decline("certificate witness body evaluates false in Lean lowering"));
     }
@@ -1549,6 +1559,87 @@ pub(crate) fn negated_existential_witness_lean_shape(
                 })
             })
     })
+}
+
+/// Cheap structural classification for an evaluator-replayed closed Bool/BV
+/// universal counterexample.
+pub(crate) fn bv_closed_universal_counterexample_lean_shape(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> bool {
+    assertions.iter().any(|&assertion| {
+        collect_forall_chain(arena, assertion)
+            .is_ok_and(|(binders, body)| {
+                let bound = binders.into_iter().collect::<BTreeSet<_>>();
+                let mut seen = BTreeSet::new();
+                let mut stack = vec![body];
+                while let Some(term) = stack.pop() {
+                    if !seen.insert(term) {
+                        continue;
+                    }
+                    match arena.node(term) {
+                        TermNode::Symbol(symbol) if !bound.contains(symbol) => return false,
+                        TermNode::App { args, .. } => stack.extend(args.iter().copied()),
+                        _ => {}
+                    }
+                }
+                true
+            })
+    })
+}
+
+/// Reconstructs a concrete Bool/BV counterexample to one closed universal as a
+/// genuine typed source application followed by a kernel-checked AIG refutation.
+///
+/// # Errors
+///
+/// Returns [`ReconstructError`] when certificate replay fails, the source leaves
+/// the Bool/BV typed encoding, or the carried body does not reduce to false.
+pub fn reconstruct_bv_closed_universal_counterexample_to_lean_module(
+    arena: &TermArena,
+    assertions: &[TermId],
+    certificate: &ClosedUniversalCounterexampleCertificate,
+) -> Result<String, ReconstructError> {
+    if !check_closed_universal_counterexample(arena, assertions, certificate) {
+        return Err(decline("invalid closed-universal counterexample certificate"));
+    }
+    let (binders, body) = collect_forall_chain(arena, certificate.assertion)?;
+    if binders.len() != certificate.bindings.len() {
+        return Err(decline("closed-universal counterexample omits a binder"));
+    }
+
+    let mut ctx = ReconstructCtx::new();
+    ctx.typed_bv_gates = true;
+    register_bv_widths(&mut ctx, arena, body);
+    let proposition = universal_prop(&mut ctx, arena, certificate.assertion)?;
+    let source = fresh_axiom(&mut ctx, proposition, "closed-bv-universal-source")?;
+    let instance = BvPositiveUniversalSourceInstance {
+        assertion: certificate.assertion,
+        bindings: certificate.bindings.clone(),
+    };
+    let positive = apply_instance(
+        &mut ctx,
+        arena,
+        certificate.assertion,
+        source,
+        &instance,
+    )?;
+    install_binding_environment(&mut ctx, arena, &certificate.bindings)?;
+    let evaluated = evaluate_ground_prop(&mut ctx, arena, body, &certificate.bindings)?;
+    ctx.gate_bound_bools.clear();
+    ctx.gate_bound_bvs.clear();
+    if evaluated.value {
+        return Err(decline("counterexample body evaluates true in Lean lowering"));
+    }
+    let positive = check_against(
+        &mut ctx,
+        "closed_bv_universal_instance",
+        positive,
+        evaluated.proposition,
+    )?;
+    let proof = ctx.kernel.app(evaluated.proof, positive);
+    require_infers_false(&mut ctx, proof)?;
+    Ok(render_ctx_module(&mut ctx, proof))
 }
 
 /// Reconstructs an evaluator-replayed negated-existential witness as a genuine
