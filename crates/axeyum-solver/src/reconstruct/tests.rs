@@ -1106,6 +1106,87 @@ fn three_clause_refutation_reconstructs() {
     assert_infers_false(&mut ctx, term);
 }
 
+/// The native LRAT emitter orders RUP hints by forward unit propagation. A
+/// substantial implication chain must reconstruct by replaying those pivots and
+/// resolving backwards, without a Davis–Putnam search over the whole premise set.
+#[test]
+fn ordered_rup_implication_chain_reconstructs() {
+    const LINKS: usize = 128;
+
+    let mut commands = Vec::with_capacity(LINKS + 2);
+    commands.push(assume("h0", vec![p_lit("x0")]));
+    for index in 1..LINKS {
+        commands.push(assume(
+            &format!("h{index}"),
+            vec![
+                n_lit(&format!("x{}", index - 1)),
+                p_lit(&format!("x{index}")),
+            ],
+        ));
+    }
+    commands.push(assume(
+        &format!("h{LINKS}"),
+        vec![n_lit(&format!("x{}", LINKS - 1))],
+    ));
+    let premise_ids = (0..=LINKS)
+        .map(|index| format!("h{index}"))
+        .collect::<Vec<_>>();
+    commands.push(AletheCommand::Step {
+        id: "empty".to_owned(),
+        clause: vec![],
+        rule: "resolution".to_owned(),
+        premises: premise_ids,
+        args: Vec::new(),
+    });
+
+    let mut ctx = ReconstructCtx::new();
+    let term = reconstruct_resolution_proof(&mut ctx, &commands)
+        .expect("the ordered RUP implication chain reconstructs");
+    assert_infers_false(&mut ctx, term);
+}
+
+/// Alethe gate clauses can preserve LRAT entailment while changing the recorded
+/// unit order. Deterministic unit closure must recover the implication graph from
+/// the premise set when the first premise is initially unresolved.
+#[test]
+fn reordered_rup_premises_reconstruct_by_unit_closure() {
+    let commands = vec![
+        assume("link", vec![n_lit("x0"), p_lit("x1")]),
+        assume("seed", vec![p_lit("x0")]),
+        assume("conflict", vec![n_lit("x1")]),
+        res_step("empty", vec![], &["link", "seed", "conflict"]),
+    ];
+
+    let mut ctx = ReconstructCtx::new();
+    let term = reconstruct_resolution_proof(&mut ctx, &commands)
+        .expect("unit closure recovers a reordered RUP chain");
+    assert_infers_false(&mut ctx, term);
+}
+
+/// RUP can derive a strict subclause of the stated conclusion. The direct path
+/// must constructively weaken that proof to the exact conclusion shape before it
+/// enters a later resolution step.
+#[test]
+fn ordered_rup_subclause_weakens_to_stated_conclusion() {
+    let commands = vec![
+        assume("reason", vec![p_lit("a"), p_lit("x")]),
+        assume("conflict", vec![n_lit("x")]),
+        res_step(
+            "weakened",
+            vec![p_lit("a"), p_lit("b")],
+            &["reason", "conflict"],
+        ),
+        assume("not_a", vec![n_lit("a")]),
+        assume("not_b", vec![n_lit("b")]),
+        res_step("empty", vec![], &["not_a", "not_b", "weakened"]),
+    ];
+
+    let mut ctx = ReconstructCtx::new();
+    let term = reconstruct_resolution_proof(&mut ctx, &commands)
+        .expect("the derived subclause is weakened and then refuted");
+    assert_infers_false(&mut ctx, term);
+}
+
 /// A larger refutation exercising an intermediate **two-literal resolvent**:
 /// `(a ∨ b)`, `(¬a ∨ c)`, `(¬b)`, `(¬c)`. Resolve clause 1 and 2 on `a` to get
 /// `(b ∨ c)`, then peel `b` (¬b) → `(c)`, then `c` (¬c) → `(cl)`.

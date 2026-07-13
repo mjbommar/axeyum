@@ -1111,7 +1111,7 @@ pub fn reconstruct_bv_positive_universal_instance_set_to_lean_module(
     // Bool.rec computes bound Bool witnesses; external Lean must retain the same
     // iota behavior as the in-tree kernel.
     inductives.push(ctx.prelude.bool_);
-    Ok(ctx.kernel.render_lean_module_with_inductives(
+    Ok(ctx.kernel.render_lean_module_compact_with_inductives(
         LEAN_MODULE_THEOREM,
         false_,
         proof,

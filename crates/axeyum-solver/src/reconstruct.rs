@@ -7986,19 +7986,16 @@ fn lookup<'a>(env: &'a BTreeMap<String, Clause>, id: &str) -> Result<&'a Clause,
         .ok_or_else(|| ReconstructError::UnknownPremise { id: id.to_owned() })
 }
 
-/// Reconstruct one `resolution`/`th_resolution` step by folding **binary
-/// resolution** across its premises.
+/// Reconstruct one `resolution`/`th_resolution` step from its premise clauses.
 ///
-/// A single premise passes through. For ≥2 premises the running accumulator is
-/// resolved against the premises one at a time — but **not** strictly in premise
-/// order: Alethe/LRAT resolution chains (the real emitter's RUP-hint order) do not
-/// guarantee that consecutive premises share a pivot. So at each step we pick, from
-/// the remaining premises, one that *is* complementary-resolvable with the current
-/// accumulator (a greedy unit-propagation-style schedule). This reorders the chain
-/// into a resolvable sequence without changing the constructive binary core; if no
-/// remaining premise resolves with the accumulator, the step is rejected.
+/// The native emitter supplies LRAT's exact RUP hint order. Replay that order first:
+/// falsify the conclusion, propagate every non-final unit hint, require a final
+/// conflict, then resolve the chain backwards on the recorded pivots. This is linear
+/// in the hint count and mirrors the independent LRAT checker. General Alethe inputs
+/// that are not ordered RUP chains retain the complete Davis–Putnam fallback.
 ///
-/// The returned [`Clause`] carries the resolvent literals and its kernel proof term.
+/// The returned [`Clause`] carries the stated conclusion literals and its
+/// kernel-checked proof term.
 ///
 /// Pool-size budget for the Davis–Putnam working set: DP is worst-case exponential,
 /// so cap the pool and degrade to a clean error rather than hang/OOM on a
@@ -8011,15 +8008,334 @@ fn reconstruct_resolution_step(
     premises: &[String],
     env: &BTreeMap<String, Clause>,
 ) -> Result<Clause, ReconstructError> {
-    let Some((first, rest)) = premises.split_first() else {
+    if premises.is_empty() {
         return Err(ReconstructError::UnsupportedResolution {
             detail: "resolution step has no premises".to_owned(),
         });
-    };
+    }
     // Polarity-normalize every clause first so syntactic `not` atoms and literal
     // flags match as pivots. Moving a positive `not` is definitional; cancelling
     // double negation is classical, so `normalize_clause` explicitly rebuilds
     // and kernel-checks the clause proof through the declared `em` axiom.
+    let raw_pool = premises
+        .iter()
+        .map(|premise| lookup(env, premise).cloned())
+        .collect::<Result<Vec<_>, _>>()?;
+
+    if let Some(resolved) = reconstruct_ordered_rup_step(ctx, conclusion, &raw_pool)? {
+        return Ok(resolved);
+    }
+
+    let pool = raw_pool
+        .iter()
+        .map(|clause| normalize_clause(ctx, clause))
+        .collect::<Result<Vec<_>, _>>()?;
+    if let Some(resolved) = reconstruct_rup_closure_step(ctx, conclusion, &pool)? {
+        return Ok(resolved);
+    }
+    reconstruct_resolution_step_dp(ctx, conclusion, pool)
+}
+
+/// Replay an exact LRAT/RUP hint chain and construct its resolution proof.
+///
+/// `None` means the premises are not in exact RUP order; callers may use a more
+/// general reconstruction. Once a valid chain has been recognized, construction or
+/// kernel failures are returned rather than hidden behind the fallback.
+fn reconstruct_ordered_rup_step(
+    ctx: &mut ReconstructCtx,
+    conclusion: &[AletheLit],
+    premises: &[Clause],
+) -> Result<Option<Clause>, ReconstructError> {
+    let Some((final_hint, unit_hints)) = premises.split_last() else {
+        return Ok(None);
+    };
+
+    // Seed the assignment with the negation of the claimed clause, exactly as the
+    // LRAT verifier does. A tautological conclusion needs no hint chain and is left
+    // to the general fallback.
+    let mut assignment: BTreeMap<String, bool> = BTreeMap::new();
+    for literal in conclusion {
+        let key = literal.atom.key();
+        let falsifying_value = literal.negated;
+        if assignment
+            .insert(key, falsifying_value)
+            .is_some_and(|previous| previous != falsifying_value)
+        {
+            return Ok(None);
+        }
+    }
+
+    // Forward unit propagation records the pivot literal forced by every hint.
+    let mut pivots = Vec::with_capacity(unit_hints.len());
+    for hint in unit_hints {
+        let status = classify_rup_clause(&hint.lits, &assignment);
+        let RupClauseStatus::Unit(literal) = status else {
+            return Ok(None);
+        };
+        assignment.insert(literal.atom.key(), !literal.negated);
+        pivots.push(literal);
+    }
+    if !matches!(
+        classify_rup_clause(&final_hint.lits, &assignment),
+        RupClauseStatus::Conflict
+    ) {
+        return Ok(None);
+    }
+
+    // Reverse resolution is the proof-producing counterpart of forward unit
+    // propagation. Each reason owns the propagated literal; the current conflict
+    // must own its complement. This is the same chain extraction used by the CNF
+    // interpolant builder and by cvc5's explicit chain-resolution utility.
+    // Unit propagation must use the emitter's original CNF-variable identity.
+    // Only after validating that chain do we polarity-normalize proof clauses:
+    // Alethe atoms can themselves be `(not p)`, and collapsing those before replay
+    // can merge distinct Tseitin variables and destroy the recorded unit order.
+    let normalized_hints = premises
+        .iter()
+        .map(|clause| normalize_clause(ctx, clause))
+        .collect::<Result<Vec<_>, _>>()?;
+    let (final_hint, unit_hints) = normalized_hints
+        .split_last()
+        .expect("non-empty premises established above");
+    let mut current = final_hint.clone();
+    for (reason, pivot) in unit_hints.iter().zip(pivots.iter()).rev() {
+        let pivot = normalize_lit_polarity(pivot);
+        let key = pivot.atom.key();
+        let reason_has_pivot = reason
+            .lits
+            .iter()
+            .any(|literal| literal.atom.key() == key && literal.negated == pivot.negated);
+        let current_has_complement = current
+            .lits
+            .iter()
+            .any(|literal| literal.atom.key() == key && literal.negated != pivot.negated);
+        if !reason_has_pivot || !current_has_complement {
+            // A redundant propagation or crowding-literal chain is valid RUP but
+            // not this direct binary fold. Preserve completeness via DP.
+            return Ok(None);
+        }
+        let current_has_positive = current
+            .lits
+            .iter()
+            .any(|literal| literal.atom.key() == key && !literal.negated);
+        let Some(resolvent) = binary_resolve_on(ctx, &current, reason, &key, current_has_positive)?
+        else {
+            return Ok(None);
+        };
+        current = resolvent;
+    }
+
+    weaken_clause_to_conclusion(ctx, &current, conclusion)
+}
+
+enum RupClauseStatus {
+    Satisfied,
+    Conflict,
+    Unit(AletheLit),
+    Unresolved,
+}
+
+/// Classify a normalized Alethe clause under an atom assignment. Duplicate
+/// literals are factored so they do not turn a genuine unit into `Unresolved`.
+fn classify_rup_clause(
+    clause: &[AletheLit],
+    assignment: &BTreeMap<String, bool>,
+) -> RupClauseStatus {
+    let mut unassigned: BTreeMap<String, AletheLit> = BTreeMap::new();
+    for literal in clause {
+        let key = literal.atom.key();
+        if let Some(&value) = assignment.get(&key) {
+            if value != literal.negated {
+                return RupClauseStatus::Satisfied;
+            }
+            continue;
+        }
+        match unassigned.get(&key) {
+            Some(previous) if previous.negated != literal.negated => {
+                return RupClauseStatus::Unresolved;
+            }
+            Some(_) => {}
+            None => {
+                unassigned.insert(key, literal.clone());
+            }
+        }
+    }
+    match unassigned.len() {
+        0 => RupClauseStatus::Conflict,
+        1 => RupClauseStatus::Unit(
+            unassigned
+                .into_values()
+                .next()
+                .expect("one unassigned literal"),
+        ),
+        _ => RupClauseStatus::Unresolved,
+    }
+}
+
+/// Reconstruct RUP after Alethe polarity normalization, allowing the premise
+/// order to differ from the LRAT variable-level unit order.
+///
+/// Gate-introduction clauses can spell a Boolean atom differently from learned
+/// clauses while remaining classically equivalent. Normalization merges those
+/// spellings, so the original hint order may no longer be unit at every position.
+/// An occurrence index drives deterministic unit closure over the same premise
+/// set, recording one reason per propagation. The backward pass skips irrelevant
+/// reasons and resolves only the implication graph that reaches the conflict.
+fn reconstruct_rup_closure_step(
+    ctx: &mut ReconstructCtx,
+    conclusion: &[AletheLit],
+    premises: &[Clause],
+) -> Result<Option<Clause>, ReconstructError> {
+    let mut assignment: BTreeMap<String, bool> = BTreeMap::new();
+    for literal in conclusion.iter().map(normalize_lit_polarity) {
+        let key = literal.atom.key();
+        let falsifying_value = literal.negated;
+        if assignment
+            .insert(key, falsifying_value)
+            .is_some_and(|previous| previous != falsifying_value)
+        {
+            return Ok(None);
+        }
+    }
+
+    let mut occurrences: BTreeMap<String, Vec<usize>> = BTreeMap::new();
+    for (index, clause) in premises.iter().enumerate() {
+        let mut seen = BTreeSet::new();
+        for literal in &clause.lits {
+            let key = literal.atom.key();
+            if seen.insert(key.clone()) {
+                occurrences.entry(key).or_default().push(index);
+            }
+        }
+    }
+
+    let mut units = BTreeSet::new();
+    let mut conflict = None;
+    for (index, clause) in premises.iter().enumerate() {
+        match classify_rup_clause(&clause.lits, &assignment) {
+            RupClauseStatus::Conflict => {
+                conflict = Some(index);
+                break;
+            }
+            RupClauseStatus::Unit(_) => {
+                units.insert(index);
+            }
+            RupClauseStatus::Satisfied | RupClauseStatus::Unresolved => {}
+        }
+    }
+
+    let mut propagations = Vec::new();
+    while conflict.is_none() {
+        let Some(index) = units.pop_first() else {
+            return Ok(None);
+        };
+        let RupClauseStatus::Unit(literal) =
+            classify_rup_clause(&premises[index].lits, &assignment)
+        else {
+            continue;
+        };
+        let key = literal.atom.key();
+        assignment.insert(key.clone(), !literal.negated);
+        propagations.push((index, literal));
+
+        for &affected in occurrences
+            .get(&key)
+            .expect("the propagated atom occurs in its reason")
+        {
+            match classify_rup_clause(&premises[affected].lits, &assignment) {
+                RupClauseStatus::Conflict => {
+                    conflict = Some(affected);
+                    break;
+                }
+                RupClauseStatus::Unit(_) => {
+                    units.insert(affected);
+                }
+                RupClauseStatus::Satisfied | RupClauseStatus::Unresolved => {
+                    units.remove(&affected);
+                }
+            }
+        }
+    }
+
+    let mut current = premises[conflict.expect("loop exits only with a conflict")].clone();
+    for (reason_index, pivot) in propagations.into_iter().rev() {
+        let key = pivot.atom.key();
+        let current_has_complement = current
+            .lits
+            .iter()
+            .any(|literal| literal.atom.key() == key && literal.negated != pivot.negated);
+        if !current_has_complement {
+            continue;
+        }
+        let current_has_positive = current
+            .lits
+            .iter()
+            .any(|literal| literal.atom.key() == key && !literal.negated);
+        let Some(resolvent) = binary_resolve_on(
+            ctx,
+            &current,
+            &premises[reason_index],
+            &key,
+            current_has_positive,
+        )?
+        else {
+            return Ok(None);
+        };
+        current = resolvent;
+    }
+
+    weaken_clause_to_conclusion(ctx, &current, conclusion)
+}
+
+/// Weaken a derived subclause to the exact stated conclusion, preserving its
+/// literal order and duplicate shape for the outer kernel check.
+fn weaken_clause_to_conclusion(
+    ctx: &mut ReconstructCtx,
+    derived: &Clause,
+    conclusion: &[AletheLit],
+) -> Result<Option<Clause>, ReconstructError> {
+    let normalized = conclusion
+        .iter()
+        .map(normalize_lit_polarity)
+        .collect::<Vec<_>>();
+    if derived.lits.iter().any(|literal| {
+        !normalized.iter().any(|target| {
+            target.atom.key() == literal.atom.key() && target.negated == literal.negated
+        })
+    }) {
+        return Ok(None);
+    }
+
+    let target = ctx.clause_to_prop(&normalized);
+    let proof = if derived.lits.is_empty() {
+        if normalized.is_empty() {
+            derived.proof
+        } else {
+            ex_falso(ctx, target, derived.proof)
+        }
+    } else {
+        clause_elim(
+            ctx,
+            derived,
+            target,
+            &normalized,
+            &|ctx, literal, literal_proof, normalized| {
+                inject_lit(ctx, literal, literal_proof, normalized)
+            },
+        )?
+    };
+    let proof = check_against(ctx, "resolution_rup", proof, target)?;
+    Ok(Some(Clause {
+        lits: normalized,
+        proof,
+    }))
+}
+
+fn reconstruct_resolution_step_dp(
+    ctx: &mut ReconstructCtx,
+    conclusion: &[AletheLit],
+    mut pool: Vec<Clause>,
+) -> Result<Clause, ReconstructError> {
     // **Davis–Putnam resolution.** The refutation is a resolution DAG, not a chain
     // (a pivot from one premise cancels against another, not a running
     // accumulator), so any accumulator/greedy/pool fold dead-ends by consuming a
@@ -8032,13 +8348,6 @@ fn reconstruct_resolution_step(
         .iter()
         .map(|l| normalize_lit_polarity(l).atom.key())
         .collect();
-
-    let mut pool: Vec<Clause> = std::iter::once(normalize_clause(ctx, lookup(env, first)?))
-        .chain(
-            rest.iter()
-                .map(|p| lookup(env, p).and_then(|clause| normalize_clause(ctx, clause))),
-        )
-        .collect::<Result<_, ReconstructError>>()?;
 
     loop {
         // Count, for each non-conclusion variable, how many pool clauses hold it
