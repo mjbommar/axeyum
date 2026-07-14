@@ -438,7 +438,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   binding vector. `register-slice` plus `slice-partial` contribute 22,797,529
   records (99.0%). Replace the redundant ordered map with a dense per-term
   `(start, length)` range, preserving public lookup, deterministic order,
-  incremental arena growth, and all replay/lift contracts.
+  incremental arena growth, and all replay/lift contracts. The implementation
+  passes 20 BV tests (including lookup boundaries and incremental growth), 10 BV
+  interpolant tests, 31 SAT-BV tests, strict Clippy, formatting, and link checks.
+  Performance gates remain pending, so ADR-0151 is still proposed.
 
 - **Historical Glaurung build-up through 2026-07-14 (superseded by the measured
   result above).** The ten-item Glaurung QF_BV performance roadmap is an
@@ -609,16 +612,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   | **GQ2 cheap cold tier** | **WIP candidate validated.** Canonical v2 cuts corrected representative/full Axeyum total 17.4%/13.3% and bit blast 37.3%/44.4% | Keep canonical as the candidate; add another word rule only if it reduces downstream AIG/CNF and end-to-end time |
   | **GQ3 coercion peepholes** | **WIP with a corrected production win.** ADR-0142 removes 1,315/1,435 representative opportunities and cuts term bits 57% representative / 72% full; full AIG/CNF size remains roughly flat | Demonstrate circuit-size improvement from any next exact word tranche or narrow the exit criterion explicitly |
   | **GQ4 cold relevant bits** | **WIP but re-ranked.** ADR-0143 separates the diagnostic; post-canonical full demand is 98.16% of term bits and 91.51% of symbol bits | Pursue partial lowering only if family-specific evidence shows a material cone and preserve original replay/model projection |
-  | **GQ5 AIG/CNF construction** | **ACTIVE with three accepted wins and four restored/rejected experiments.** ADR-0150 removes the per-fingerprint heap vector and second common-case map probe; representative total/CNF improve 13.0%/29.0%, full total/CNF improve 11.5%/28.4% to 16.54/5.18 s with identical content/replay | Bit blast is now largest at 5.88 s; re-attribute residual operator lowering/AIG construction by family before another exact GQ3/GQ5 slice |
+  | **GQ5 AIG/CNF construction** | **ACTIVE with three accepted wins, four restored/rejected experiments, and one lowering-ownership candidate.** ADR-0150 cuts full total/CNF 11.5%/28.4% to 16.54/5.18 s. Proposed ADR-0151 replaces 23.03M ordered term-bit map inserts with dense ranges; semantic suites are green | Run ADR-0151's five-process representative gate; require bit-blast and total wins with identical AIG/CNF/content/replay before full confirmation |
   | **GQ6 cold SAT/CDCL** | **WIP foundation, attribution-gated**; subsumption/BVE, XOR/GF(2), VSIDS, phase saving, Luby, and LBD foundations exist | Exact-CNF backend attribution first; tune/default a stronger path only where SAT dominates and proof replay stays green |
   | **GQ7 warm delta entry** | **WIP foundation**; retained CNF/search state exists, but the deduplicated cold corpus cannot measure prefix reuse and Glaurung still creates a fresh solver for every check | Capture an ordered scope/path trace, preprocess only new/affected terms, wire persistent per-worker/path push/assert/check/pop, control concretization, and publish real-driver per-check cost plus warm break-even depth |
   | **GQ8 verdict/CNF cache** | **TODO, ordered-trace-gated** | Measure duplicates/prefixes first; prefer retained warm state, then add versioned exact-query reuse only where justified, with deterministic bounds and mandatory original replay |
   | **GQ9 auto cost model/docs** | **TODO**; P1.8 shape/resource probes are only the general foundation | Telemetry-visible raw/cheap/configured/warm choice that beats or matches fixed policies and documents embedder guidance |
   | **GQ10 real-lifter regression tier** | **WIP; access-controlled representative and well-typed full tiers validate.** Artifact v27 baseline repetitions/full trials and ADR-0144/0145 accepted full confirmations are complete; 2,225 malformed dumps are isolated | Add a data-availability-aware regular gate, establish repeated full-tier variance thresholds, and fix producer validation/dedup before calling the raw capture authoritative |
 
-  **Next actions:** (1) implement ADR-0151's dense term-bit range index with
-  lookup-boundary and incremental-growth coverage; (2) require five clean
-  representative processes to improve bit blast and end-to-end time with
+  **Next actions:** (1) run five clean representative processes for ADR-0151,
+  requiring bit blast and end-to-end improvements with
   identical AIG/CNF/decision/replay shape before a full confirmation; keep
   broad GQ4 and SAT work gated;
   (3) add the data-availability-aware GQ10 regular gate and define repeated

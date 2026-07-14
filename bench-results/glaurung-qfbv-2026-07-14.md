@@ -323,5 +323,6 @@ term's bindings are already contiguous in the authoritative vector, and the
 map's only read surface is point lookup; interpolation iterates the vector and
 model replay uses symbol inputs. Proposed ADR-0151 replaces the redundant map
 with per-term ranges while preserving public lookup, binding order, incremental
-growth, and replay. No performance claim is admitted before representative/full
-gates.
+growth, and replay. All 20 BV, 10 BV interpolant, and 31 SAT-BV tests plus
+strict Clippy pass. No performance claim is admitted before
+representative/full gates.

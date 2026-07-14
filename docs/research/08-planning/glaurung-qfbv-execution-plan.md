@@ -362,8 +362,9 @@ Bit blast is now the largest measured stage; re-attribute residual operator
 lowering and AIG request/hash/allocation work by family before selecting the
 next exact GQ3/GQ5 slice. The first audit result is proposed ADR-0151: replace
 23,029,676 ordered term-bit lookup insertions with dense per-term ranges into
-the existing authoritative binding vector. SAT and broad GQ4 remain gated by
-measured opportunity.
+the existing authoritative binding vector. Its BV, interpolation, and SAT-BV
+suites plus strict Clippy pass; representative/full timing gates remain. SAT
+and broad GQ4 remain gated by measured opportunity.
 
 ### G6 — SAT work remains conditional (GQ6)
 

@@ -62,6 +62,8 @@ session state.
 > term-bit records inserted into an ordered lookup map despite dense term IDs
 > and contiguous existing bindings. Proposed ADR-0151 replaces only that
 > redundant map with per-term ranges into the authoritative binding vector.
+> The implementation, lookup/growth boundaries, interpolation consumers, and
+> solver integration are green; representative/full timing gates remain.
 > The capture and
 > implementation audit has been expanded into the dependency-ordered
 > [Glaurung QF_BV execution plan](docs/research/08-planning/glaurung-qfbv-execution-plan.md):
@@ -135,7 +137,9 @@ side table. It cuts representative total/CNF 13.0%/29.0% and full total/CNF
 AIG construction by family before selecting the next exact circuit-producing
 slice. ADR-0151 is the first isolated candidate: remove 23.03 million ordered
 term-bit lookup insertions via dense ranges while preserving binding order,
-public lookup, incremental arena growth, and replay.
+public lookup, incremental arena growth, and replay. Its 20 BV, 10 BV
+interpolant, and 31 SAT-BV tests plus strict Clippy pass; run the representative
+gate next.
 Affine word work must still show a downstream circuit/CNF win before outranking
 it.
 Broad GQ4 partial lowering follows its small post-canonical full-tier

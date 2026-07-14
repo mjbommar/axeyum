@@ -171,6 +171,12 @@ pub struct TermBitBinding {
     pub literal: AigLit,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct TermBitRange {
+    start: usize,
+    len: usize,
+}
+
 /// Mapping from one source symbol bit to one AIG input.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SymbolBitInput {
@@ -228,7 +234,7 @@ pub struct BitLowering {
     aig: Aig,
     roots: Vec<LoweredTerm>,
     term_bits: Vec<TermBitBinding>,
-    term_bit_lookup: BTreeMap<(TermId, u32), AigLit>,
+    term_bit_ranges: Vec<Option<TermBitRange>>,
     symbol_inputs: Vec<SymbolBitInput>,
     demand_stats: BitDemandStats,
 }
@@ -261,7 +267,15 @@ impl BitLowering {
 
     /// Looks up the AIG literal for one original term bit.
     pub fn literal_for_term_bit(&self, term: TermId, bit_index: u32) -> Option<AigLit> {
-        self.term_bit_lookup.get(&(term, bit_index)).copied()
+        let range = self.term_bit_ranges.get(term.index()).copied().flatten()?;
+        let offset = usize::try_from(bit_index).ok()?;
+        if offset >= range.len {
+            return None;
+        }
+        let binding = self.term_bits.get(range.start.checked_add(offset)?)?;
+        debug_assert_eq!(binding.term, term);
+        debug_assert_eq!(binding.bit_index, bit_index);
+        Some(binding.literal)
     }
 
     /// Converts an Axeyum assignment into AIG input values in creation order.
@@ -494,7 +508,7 @@ pub struct IncrementalLowering {
     aig: Aig,
     memo: BTreeMap<TermId, Vec<AigLit>>,
     term_bits: Vec<TermBitBinding>,
-    term_bit_lookup: BTreeMap<(TermId, u32), AigLit>,
+    term_bit_ranges: Vec<Option<TermBitRange>>,
     symbol_inputs: Vec<SymbolBitInput>,
 }
 
@@ -552,6 +566,9 @@ impl IncrementalLowering {
         root: TermId,
         deadline: Option<Instant>,
     ) -> Result<LoweredTerm, BitLowerError> {
+        if self.term_bit_ranges.len() < arena.len() {
+            self.term_bit_ranges.resize(arena.len(), None);
+        }
         // Move the persistent accumulators into a one-shot builder, reuse the
         // existing lowering logic, then move the grown state back. The memo
         // makes shared subterms (and symbols) lower once across calls.
@@ -561,14 +578,14 @@ impl IncrementalLowering {
             aig: core::mem::take(&mut self.aig),
             memo: core::mem::take(&mut self.memo),
             term_bits: core::mem::take(&mut self.term_bits),
-            term_bit_lookup: core::mem::take(&mut self.term_bit_lookup),
+            term_bit_ranges: core::mem::take(&mut self.term_bit_ranges),
             symbol_inputs: core::mem::take(&mut self.symbol_inputs),
         };
         let result = builder.lower_term(root);
         self.aig = builder.aig;
         self.memo = builder.memo;
         self.term_bits = builder.term_bits;
-        self.term_bit_lookup = builder.term_bit_lookup;
+        self.term_bit_ranges = builder.term_bit_ranges;
         self.symbol_inputs = builder.symbol_inputs;
         let bits = result?;
         Ok(LoweredTerm {
@@ -740,7 +757,7 @@ struct LoweringBuilder<'a> {
     aig: Aig,
     memo: BTreeMap<TermId, Vec<AigLit>>,
     term_bits: Vec<TermBitBinding>,
-    term_bit_lookup: BTreeMap<(TermId, u32), AigLit>,
+    term_bit_ranges: Vec<Option<TermBitRange>>,
     symbol_inputs: Vec<SymbolBitInput>,
 }
 
@@ -773,7 +790,7 @@ impl<'a> LoweringBuilder<'a> {
             aig: Aig::new(),
             memo: BTreeMap::new(),
             term_bits: Vec::new(),
-            term_bit_lookup: BTreeMap::new(),
+            term_bit_ranges: vec![None; arena.len()],
             symbol_inputs: Vec::new(),
         }
     }
@@ -815,7 +832,7 @@ impl<'a> LoweringBuilder<'a> {
             aig: self.aig,
             roots: lowered_roots,
             term_bits: self.term_bits,
-            term_bit_lookup: self.term_bit_lookup,
+            term_bit_ranges: self.term_bit_ranges,
             symbol_inputs: self.symbol_inputs,
             demand_stats,
         })
@@ -1864,6 +1881,7 @@ impl<'a> LoweringBuilder<'a> {
 
     fn record(&mut self, term: TermId, bits: Vec<AigLit>) -> Result<(), BitLowerError> {
         self.check_width(term, &bits)?;
+        let start = self.term_bits.len();
         for (index, &literal) in bits.iter().enumerate() {
             let bit_index = u32::try_from(index).expect("bit index fits u32");
             let binding = TermBitBinding {
@@ -1872,8 +1890,16 @@ impl<'a> LoweringBuilder<'a> {
                 literal,
             };
             self.term_bits.push(binding);
-            self.term_bit_lookup.insert((term, bit_index), literal);
         }
+        let range = self
+            .term_bit_ranges
+            .get_mut(term.index())
+            .expect("term range index fits the source arena");
+        debug_assert!(range.is_none(), "term is recorded at most once");
+        *range = Some(TermBitRange {
+            start,
+            len: bits.len(),
+        });
         self.memo.insert(term, bits);
         Ok(())
     }
@@ -2274,6 +2300,7 @@ mod tests {
         let mut arena = TermArena::new();
         let bool_true = arena.bool_const(true);
         let bv_value = arena.bv_const(4, 0b1010).unwrap();
+        let unlowered = arena.bv_const(3, 0b101).unwrap();
         let lowering = lower_terms(&arena, &[bool_true, bv_value]).unwrap();
 
         assert_eq!(lowering.roots()[0].bits(), &[AigLit::TRUE]);
@@ -2289,6 +2316,8 @@ mod tests {
             lowering.literal_for_term_bit(bv_value, 1),
             Some(AigLit::TRUE)
         );
+        assert_eq!(lowering.literal_for_term_bit(bv_value, 4), None);
+        assert_eq!(lowering.literal_for_term_bit(unlowered, 0), None);
         assert_eq!(lowering.term_bits().len(), 5);
         assert!(lowering.symbol_inputs().is_empty());
     }
@@ -2693,6 +2722,28 @@ mod tests {
             before,
             "shared subterms must not be re-lowered"
         );
+    }
+
+    #[test]
+    fn incremental_term_bit_ranges_grow_with_the_arena() {
+        let mut arena = TermArena::new();
+        let x = arena.bv_var("x", 8).unwrap();
+        let mut incremental = IncrementalLowering::new();
+        incremental.lower(&arena, x).unwrap();
+
+        let x_range = incremental.term_bit_ranges[x.index()].unwrap();
+        let first_arena_len = arena.len();
+        assert_eq!(incremental.term_bit_ranges.len(), first_arena_len);
+
+        let one = arena.bv_const(8, 1).unwrap();
+        let sum = arena.bv_add(x, one).unwrap();
+        assert!(arena.len() > first_arena_len);
+        incremental.lower(&arena, sum).unwrap();
+
+        assert_eq!(incremental.term_bit_ranges.len(), arena.len());
+        assert_eq!(incremental.term_bit_ranges[x.index()], Some(x_range));
+        assert!(incremental.term_bit_ranges[one.index()].is_some());
+        assert!(incremental.term_bit_ranges[sum.index()].is_some());
     }
 
     #[test]

@@ -43,8 +43,12 @@ ordered map and defer this ADR.
 
 ## Evidence
 
-The artifact-v27 counts and consumer audit above select the experiment.
-Implementation and performance evidence are pending.
+The artifact-v27 counts and consumer audit above select the experiment. The
+implementation passes all 20 `axeyum-bv` tests, including explicit unlowered
+term/out-of-range lookup and incremental arena-growth coverage; all 10 BV
+interpolant tests; 31 SAT-BV integration tests; strict Clippy; formatting; and
+documentation-link checks under the 4 GiB cap. Performance evidence remains
+pending the representative/full gates.
 
 ## Alternatives
 
