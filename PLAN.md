@@ -55,7 +55,7 @@ traces; GQ8 follows the exact cache/replay contract rather than treating a
 prefix as an identical query. Re-run the GQ10 baseline after every accepted
 slice and record the result in `STATUS.md` and `bench-results/`.
 
-**GQ1/GQ10 readiness landed (2026-07-13, artifact v21).** The client recipe is
+**GQ1/GQ10 readiness landed (2026-07-13, artifact v22).** The client recipe is
 now a single-worker cold run. Its artifact separates word preprocessing,
 bit-blast, CNF encoding, optional CNF inprocessing, SAT, model lift, and
 original-query model replay; reports aggregate and exact p50/p95 timing; and
@@ -90,8 +90,19 @@ frequency `0`, random polarity off, and random initial activity off), an
 explicit Z3 `random_seed=0`, and deterministic corpus ordering. Runtime tests
 pin the reviewed BatSat values, while repetition ingestion fails closed on any
 profile drift. This proves solver seed/configuration identity, not stable wall
-time; independent-process variance remains mandatory, and deterministic
-resource bounds remain a separate acceptance condition.
+time; independent-process variance remains mandatory.
+Artifact v22 closes the separate deterministic-resource boundary for the cold
+client lane. `--require-deterministic-resources` fails before parsing the corpus
+unless positive term-DAG, CNF-variable, CNF-clause, and backend-search limits
+are all present. The default BatSat path now consumes `resource_limit` as a
+deterministic `within_budget` progress-check cap; the proof-producing core uses
+it as a conflict cap; and Z3 continues to use it as `rlimit`. Artifacts record
+these backend-specific units and explicitly state that equal numbers are not
+cross-backend work-equivalent. The provisional `axeyum-qfbv-cold-bounded-v1`
+recipe uses 300k DAG nodes, 3M CNF variables, 8M CNF clauses, and 2M search
+units. Wall-clock timeout remains a non-deterministic safety backstop, and the
+profile must be versioned—not silently relaxed—if the real capture cannot meet
+the 100%-decided gate.
 The remaining shadow-diff handoff is also executable: a versioned capture index
 contains the producer-owned ordered path, trusted verdict, family, and tier
 facts, while `--generate-corpus-manifest` checks exact directory membership,
@@ -115,7 +126,7 @@ manifest, solver config, environment/toolchain/hardware, and backends, and
 permits only the clean source revision to differ. It reports raw Axeyum and Z3
 controls beside the ratio and stage deltas; optional regression/drift thresholds
 are explicit caller policy rather than synthetic defaults.
-A committed artifact-v21 cross-commit micro smoke exercises the boundary
+A committed artifact-v22 cross-commit micro smoke exercises the boundary
 between clean revisions `d39dc6ac` and `00a745c0` with matching
 corpus/config/environment and three trials each. Its ratio mean moved -13.55%,
 but the candidate ratio CV is 31.35% and the descriptive standardized delta is

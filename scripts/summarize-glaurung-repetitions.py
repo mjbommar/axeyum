@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Validate and summarize repeated Glaurung QF_BV benchmark artifacts.
 
-Each input must be an independently launched artifact-v21 run from the strict
+Each input must be an independently launched artifact-v22 run from the strict
 single-worker Glaurung recipe. The script fails closed on identity drift or any
 acceptance-gate failure, then reports whole-corpus variance. It intentionally
 does not merge per-query records: keeping repetitions as separate processes and
@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Any, NoReturn, Sequence
 
 
-SOURCE_ARTIFACT_VERSION = 21
+SOURCE_ARTIFACT_VERSION = 22
 REPETITION_SUMMARY_VERSION = 1
 STAGE_KEYS = (
     "word_preprocess_s",
@@ -120,6 +120,12 @@ def validate_identity(config: dict[str, Any], path: Path) -> dict[str, str]:
     ):
         fail(f"{prefix}.require_in_process_z3 must be true")
     validate_determinism(config.get("determinism"), f"{prefix}.determinism")
+    if not require_bool(
+        config.get("require_deterministic_resources"),
+        f"{prefix}.require_deterministic_resources",
+    ):
+        fail(f"{prefix}.require_deterministic_resources must be true")
+    validate_resource_profile(config.get("resources"), config, f"{prefix}.resources")
 
     experiment = require_mapping(config.get("experiment"), f"{prefix}.experiment")
     source = require_mapping(experiment.get("source"), f"{prefix}.experiment.source")
@@ -186,6 +192,56 @@ def validate_determinism(value: Any, location: str) -> None:
         fail(f"{location}.z3.parameter must be `random_seed`")
     if not require_bool(z3.get("set_explicitly"), f"{location}.z3.set_explicitly"):
         fail(f"{location}.z3.set_explicitly must be true")
+
+
+def validate_resource_profile(
+    value: Any, config: dict[str, Any], location: str
+) -> None:
+    profile = require_mapping(value, location)
+    if profile.get("profile") != "axeyum-qfbv-cold-bounded-v1":
+        fail(f"{location}.profile must be `axeyum-qfbv-cold-bounded-v1`")
+    if not require_bool(profile.get("required"), f"{location}.required"):
+        fail(f"{location}.required must be true")
+    limits = require_mapping(profile.get("limits"), f"{location}.limits")
+    mappings = {
+        "search": "resource_limit",
+        "dag_nodes": "node_budget",
+        "cnf_variables": "cnf_variable_budget",
+        "cnf_clauses": "cnf_clause_budget",
+    }
+    for profile_key, config_key in mappings.items():
+        limit = require_int(limits.get(profile_key), f"{location}.limits.{profile_key}")
+        if limit <= 0:
+            fail(f"{location}.limits.{profile_key} must be positive")
+        if require_int(config.get(config_key), f"config.{config_key}") != limit:
+            fail(f"{location}.limits.{profile_key} must match config.{config_key}")
+    units = require_mapping(profile.get("units"), f"{location}.units")
+    if units.get("primary_search") != "rustsat-batsat within_budget progress checks":
+        fail(f"{location}.units.primary_search does not match the v1 profile")
+    if units.get("z3_oracle_search") != "Z3 rlimit units":
+        fail(f"{location}.units.z3_oracle_search does not match the v1 profile")
+    timeout = require_int(
+        profile.get("wall_clock_safety_timeout_ms"),
+        f"{location}.wall_clock_safety_timeout_ms",
+    )
+    if timeout <= 0 or timeout != require_int(
+        config.get("timeout_ms"), "config.timeout_ms"
+    ):
+        fail(
+            f"{location}.wall_clock_safety_timeout_ms must be positive and match config"
+        )
+    if require_bool(
+        profile.get("wall_clock_is_deterministic"),
+        f"{location}.wall_clock_is_deterministic",
+    ):
+        fail(f"{location}.wall_clock_is_deterministic must be false")
+    if require_bool(
+        profile.get("cross_backend_numeric_limits_are_work_equivalent"),
+        f"{location}.cross_backend_numeric_limits_are_work_equivalent",
+    ):
+        fail(
+            f"{location}.cross_backend_numeric_limits_are_work_equivalent must be false"
+        )
 
 
 def validate_summary(

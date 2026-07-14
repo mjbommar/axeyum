@@ -6,6 +6,7 @@
 //! path for CNF formulas.
 
 use axeyum_aig::{Aig, AigLit, AigNode, AigNodeId};
+use std::cell::Cell;
 use std::collections::BTreeSet;
 use std::time::Duration;
 
@@ -47,7 +48,10 @@ pub use drat::{DratError, DratStep, check_drat, parse_drat, write_drat};
 pub use gf2::{Gf2Outcome, Gf2Solution, Gf2System};
 pub use interpolant::{BoolExpr, propositional_interpolant};
 pub use lrat::{LratError, LratStep, check_lrat, elaborate_drat_to_lrat, parse_lrat, write_lrat};
-pub use proof_sat::{ProofSolveOutcome, solve_with_drat_proof, solve_with_drat_proof_within};
+pub use proof_sat::{
+    DEFAULT_PROOF_SAT_CONFLICT_LIMIT, ProofSolveOutcome, solve_with_drat_proof,
+    solve_with_drat_proof_with_limits, solve_with_drat_proof_within,
+};
 pub use simplify::{SubsumeStats, simplify, simplify_within};
 pub use vivify::{VivifyOptions, VivifyOutcome, VivifyStats, vivify, vivify_within};
 pub use xor_cdcl::{XorCdclResult, solve_with_xor_cdcl};
@@ -514,13 +518,79 @@ pub fn solve_with_rustsat_batsat_timeout(
     formula: &CnfFormula,
     timeout: Option<Duration>,
 ) -> Result<SatResult, SatError> {
-    let mut solver = rustsat_batsat::BasicSolver::default();
+    solve_with_rustsat_batsat_limits(formula, timeout, None)
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum BatSatStopReason {
+    ResourceLimit,
+    Timeout,
+}
+
+#[derive(Default)]
+struct BatSatLimitCallbacks {
+    deadline: Option<Instant>,
+    progress_check_limit: Option<u64>,
+    progress_checks: Cell<u64>,
+    stop_reason: Cell<Option<BatSatStopReason>>,
+}
+
+impl batsat::Callbacks for BatSatLimitCallbacks {
+    fn on_start(&mut self) {
+        self.progress_checks.set(0);
+        self.stop_reason.set(None);
+    }
+
+    fn stop(&self) -> bool {
+        if let Some(limit) = self.progress_check_limit {
+            let checks = self.progress_checks.get();
+            if checks >= limit {
+                self.stop_reason.set(Some(BatSatStopReason::ResourceLimit));
+                return true;
+            }
+            self.progress_checks.set(checks.saturating_add(1));
+        }
+        if self
+            .deadline
+            .is_some_and(|deadline| Instant::now() >= deadline)
+        {
+            self.stop_reason.set(Some(BatSatStopReason::Timeout));
+            return true;
+        }
+        false
+    }
+}
+
+type LimitedBatSat = rustsat_batsat::Solver<BatSatLimitCallbacks>;
+
+/// Solves `formula` with optional wall-clock and deterministic search limits.
+///
+/// `progress_check_limit` bounds the number of successful `BatSat`
+/// `within_budget` callback polls. Those polls occur at deterministic solver
+/// progress points for a fixed formula, solver version, options, and seed. The
+/// unit is deliberately named rather than presented as a cross-solver conflict
+/// count: `BatSat` does not expose its private conflict/propagation budget
+/// setters through the `RustSAT` adapter.
+///
+/// A zero limit is useful for tests and causes the first budget poll to stop the
+/// search. Reaching either limit returns [`SatResult::Unknown`], never a guessed
+/// verdict.
+///
+/// # Errors
+///
+/// Returns [`SatError`] for adapter failures or invalid models returned by the
+/// underlying solver.
+pub fn solve_with_rustsat_batsat_limits(
+    formula: &CnfFormula,
+    timeout: Option<Duration>,
+    progress_check_limit: Option<u64>,
+) -> Result<SatResult, SatError> {
+    let mut solver = LimitedBatSat::default();
     let timeout_deadline = timeout.and_then(|duration| Instant::now().checked_add(duration));
-    if let Some(deadline) = timeout_deadline {
-        solver
-            .batsat_mut()
-            .cb_mut()
-            .set_stop(move || Instant::now() >= deadline);
+    {
+        let callbacks = solver.batsat_mut().cb_mut();
+        callbacks.deadline = timeout_deadline;
+        callbacks.progress_check_limit = progress_check_limit;
     }
     reserve_rustsat_variables(&mut solver, formula.variable_count())?;
     for clause in formula.clauses() {
@@ -546,10 +616,14 @@ pub fn solve_with_rustsat_batsat_timeout(
             failed_assumptions: Vec::new(), // one-shot solve has no assumptions
         })),
         RustSatSolverResult::Interrupted => {
-            let detail = if timeout_deadline.is_some() {
-                "rustsat-batsat timeout".to_owned()
-            } else {
-                "rustsat-batsat interrupted".to_owned()
+            let callbacks = solver.batsat_ref().cb();
+            let detail = match callbacks.stop_reason.get() {
+                Some(BatSatStopReason::ResourceLimit) => format!(
+                    "rustsat-batsat deterministic progress-check budget {} exhausted",
+                    progress_check_limit.unwrap_or(0)
+                ),
+                Some(BatSatStopReason::Timeout) => "rustsat-batsat timeout".to_owned(),
+                None => "rustsat-batsat interrupted".to_owned(),
             };
             Ok(SatResult::Unknown(SatUnknownReason { detail }))
         }
@@ -2596,7 +2670,8 @@ mod tests {
     use super::{
         CnfClause, CnfError, CnfLit, CnfVar, EncodedLit, IncrementalCnf, IncrementalSat,
         RustSatBatsatSolver, SatProofStatus, SatResult, SatSolver, aig_lit_value, parse_dimacs,
-        rustsat_batsat_determinism, solve_with_rustsat_batsat, tseitin_encode,
+        rustsat_batsat_determinism, solve_with_rustsat_batsat, solve_with_rustsat_batsat_limits,
+        tseitin_encode,
     };
 
     #[test]
@@ -3238,6 +3313,30 @@ p cnf 2 2
         assert_eq!(profile.random_var_freq.to_bits(), 0.0_f64.to_bits());
         assert!(!profile.random_polarity);
         assert!(!profile.random_initial_activity);
+    }
+
+    #[test]
+    fn rustsat_batsat_deterministic_resource_limit_is_an_unknown_not_a_verdict() {
+        let formula = parse_dimacs(
+            "\
+p cnf 2 1
+1 2 0
+",
+        )
+        .unwrap();
+
+        for _ in 0..2 {
+            assert!(matches!(
+                solve_with_rustsat_batsat_limits(&formula, None, Some(0)).unwrap(),
+                SatResult::Unknown(reason)
+                    if reason.detail
+                        == "rustsat-batsat deterministic progress-check budget 0 exhausted"
+            ));
+        }
+        assert!(matches!(
+            solve_with_rustsat_batsat_limits(&formula, None, Some(100)).unwrap(),
+            SatResult::Sat(assignment) if assignment.satisfies(&formula).unwrap()
+        ));
     }
 
     #[test]

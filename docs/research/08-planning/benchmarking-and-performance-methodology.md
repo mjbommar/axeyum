@@ -236,6 +236,17 @@ records the contract and the first measured baselines.
   reviewed BatSat defaults, and the repetition validator fails closed on profile
   drift. This establishes configuration identity only; time variance and
   deterministic resource bounds remain separate acceptance gates.
+- Artifact version 22 makes that resource gate executable for the cold QF_BV
+  lane. `--require-deterministic-resources` fails before corpus work unless
+  positive term-DAG, CNF-variable, CNF-clause, and search limits are present.
+  The search limit is consumed as deterministic `BatSat` `within_budget`
+  progress checks, proof-CDCL conflicts, or Z3 `rlimit` units according to the
+  selected engine. Artifacts state those units and that identical numbers are
+  not work-equivalent across backends. The provisional named client profile is
+  300k DAG nodes / 3M CNF variables / 8M CNF clauses / 2M search units. It may
+  be replaced by a versioned profile after real-capture admission measurement,
+  but never silently loosened to preserve a timing result. Wall timeout remains
+  a non-deterministic safety backstop.
 - **Primary client QF_BV target (2026-07-13): Glaurung binary analysis.** Capture
   and minimize the real lifter-produced path conditions, preserving their
   extract/concat, mixed machine-width, and memory-derived shape. This client

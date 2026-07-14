@@ -84,7 +84,7 @@ just compare-glaurung-qfbv-repeated BASE CAND OUT # controlled cross-commit delt
 
 Each JSON records the corpus + config hash, per-instance outcome, budgets,
 backend stats, PAR-2, explicit `decided`/`decided_percent`, **disagreements**,
-and **model-replay failures**. Artifact version 21 retains version 16's exact
+and **model-replay failures**. Artifact version 22 retains version 16's exact
 floating-point millisecond values for each instance's word-level preprocessing,
 bit-blast, CNF encode/inprocess, SAT, model lift, and cold total, plus corpus
 totals and p50/p95 distributions. Its `client_comparison` block reports the
@@ -124,6 +124,19 @@ repetition validator rejects missing or drifting values. The BatSat seed is
 still recorded even though all reviewed randomization switches are off. This
 fixes configuration identity, not wall-clock noise, so repeated trials remain
 required.
+Version 22 makes the cold QF_BV resource boundary executable.
+`--require-deterministic-resources` rejects a run unless positive
+`--resource-limit`, `--node-budget`, `--cnf-var-budget`, and
+`--cnf-clause-budget` values are all supplied. `resource_limit` now reaches the
+actual search engine: it counts deterministic `BatSat` `within_budget` progress
+checks on the default path, native proof-CDCL conflicts under `--prove-unsat`,
+and Z3 `rlimit` units in the oracle. Artifact `config.resources` records those
+units, all four limits, and the fact that equal numeric limits are not
+cross-backend work-equivalent. The Glaurung recipes require the named
+`axeyum-qfbv-cold-bounded-v1` profile: 300,000 term-DAG nodes, 3,000,000 CNF
+variables, 8,000,000 CNF clauses, and 2,000,000 backend search units. Timeout is
+retained as a non-deterministic safety backstop, not counted as proof of the
+deterministic bound.
 A comparable run requires zero errors, zero disagreements, zero replay failures,
 and the declared decided-rate threshold; only then is timing a performance
 signal.

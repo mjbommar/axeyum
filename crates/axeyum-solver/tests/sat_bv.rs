@@ -50,6 +50,24 @@ fn supported_bv_formula_solves_and_replays() {
 }
 
 #[test]
+fn deterministic_sat_resource_limit_is_classified_unknown() {
+    let mut arena = TermArena::new();
+    let x = arena.bv_var("x", 8).unwrap();
+    let target = arena.bv_const(8, 0xa5).unwrap();
+    let assertion = arena.eq(x, target).unwrap();
+    let config = SolverConfig::default().with_resource_limit(0);
+
+    assert!(matches!(
+        SatBvBackend::new()
+            .check(&arena, &[assertion], &config)
+            .unwrap(),
+        CheckResult::Unknown(reason)
+            if reason.kind == UnknownKind::ResourceLimit
+                && reason.detail.contains("progress-check budget 0 exhausted")
+    ));
+}
+
+#[test]
 fn unsat_is_drat_proof_checked_when_requested() {
     // `x != x` is unsatisfiable; with `prove_unsat`, the backend now uses the
     // native proof-producing core as the primary engine and verifies its INLINE

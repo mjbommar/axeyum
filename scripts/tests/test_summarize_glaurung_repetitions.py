@@ -25,7 +25,7 @@ def artifact(axeyum_seconds: float, z3_seconds: float) -> dict:
         "model_replay_s": axeyum_seconds * 0.05,
     }
     return {
-        "version": 21,
+        "version": 22,
         "config": {
             "backend": "axeyum-sat-bv rustsat-batsat",
             "compare_backend": "z3 4.13.3.0",
@@ -58,8 +58,34 @@ def artifact(axeyum_seconds: float, z3_seconds: float) -> dict:
                 "source": {"dirty": False, "revision": "revision"},
             },
             "jobs": 1,
+            "timeout_ms": 10_000,
+            "resource_limit": 2_000_000,
+            "node_budget": 300_000,
+            "cnf_variable_budget": 3_000_000,
+            "cnf_clause_budget": 8_000_000,
+            "resources": {
+                "profile": "axeyum-qfbv-cold-bounded-v1",
+                "required": True,
+                "limits": {
+                    "search": 2_000_000,
+                    "dag_nodes": 300_000,
+                    "cnf_variables": 3_000_000,
+                    "cnf_clauses": 8_000_000,
+                },
+                "units": {
+                    "primary_search": "rustsat-batsat within_budget progress checks",
+                    "z3_oracle_search": "Z3 rlimit units",
+                    "dag_nodes": "unique reachable term DAG nodes before lowering",
+                    "cnf_variables": "variables in the formula submitted to SAT",
+                    "cnf_clauses": "clauses in the formula submitted to SAT",
+                },
+                "wall_clock_safety_timeout_ms": 10_000,
+                "wall_clock_is_deterministic": False,
+                "cross_backend_numeric_limits_are_work_equivalent": False,
+            },
             "require_in_process_z3": True,
             "require_reproducible_run": True,
+            "require_deterministic_resources": True,
         },
         "summary": {
             "files": 2,
@@ -150,6 +176,19 @@ class RepetitionSummaryTests(unittest.TestCase):
             second = self.write_artifact(root, "run-002.json", changed)
             with self.assertRaisesRegex(
                 MODULE.SummaryError, "sat_bv.random_seed must be 91648253"
+            ):
+                MODULE.summarize([first, second])
+
+    def test_rejects_missing_or_decorative_resource_profile(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            changed = artifact(1.0, 0.5)
+            changed["config"]["resources"]["limits"]["search"] = 1
+            first = self.write_artifact(root, "run-001.json", changed)
+            second = self.write_artifact(root, "run-002.json", changed)
+            with self.assertRaisesRegex(
+                MODULE.SummaryError,
+                "limits.search must match config.resource_limit",
             ):
                 MODULE.summarize([first, second])
 

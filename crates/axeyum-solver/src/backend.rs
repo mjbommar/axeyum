@@ -111,8 +111,13 @@ impl From<axeyum_ir::IrError> for SolverError {
 pub struct SolverConfig {
     /// Wall-clock budget for the check; `None` means no limit.
     pub timeout: Option<Duration>,
-    /// Deterministic resource budget (maps to Z3 `rlimit`); reproducible
-    /// across machines, preferred for bisecting blowups.
+    /// Deterministic backend search budget; reproducible across machines and
+    /// preferred for bisecting blowups.
+    ///
+    /// Units are backend-specific: Z3 `rlimit` units, `BatSat`
+    /// `within_budget` progress checks on the cold SAT-BV path, or conflicts in
+    /// the proof-producing native CDCL core. Artifacts must record the backend
+    /// and unit; numeric values are not cross-backend work-equivalent.
     pub resource_limit: Option<u64>,
     /// Memory budget in megabytes. Caveat: Z3 applies this process-wide.
     pub memory_limit_mb: Option<u64>,
@@ -262,7 +267,9 @@ impl SolverConfig {
         self
     }
 
-    /// Sets the deterministic resource budget (maps to Z3 `rlimit`).
+    /// Sets the deterministic backend search budget.
+    ///
+    /// See [`SolverConfig::resource_limit`] for backend-specific units.
     #[must_use]
     pub fn with_resource_limit(mut self, limit: u64) -> Self {
         self.resource_limit = Some(limit);

@@ -23,8 +23,8 @@ use web_time::Instant;
 use crate::drat::DratStep;
 use crate::{CnfAssignment, CnfFormula, CnfLit, CnfVar};
 
-/// Maximum conflicts before the core gives up (safety valve).
-const MAX_CONFLICTS: usize = 2_000_000;
+/// Default maximum conflicts before the proof-producing core gives up.
+pub const DEFAULT_PROOF_SAT_CONFLICT_LIMIT: usize = 2_000_000;
 
 /// How many conflicts elapse between wall-clock deadline checks. A fixed
 /// conflict cadence (not a per-decision clock read) keeps the deadline test
@@ -140,7 +140,21 @@ pub fn solve_with_drat_proof_within(
     formula: &CnfFormula,
     deadline: Option<Instant>,
 ) -> ProofSolveOutcome {
-    Cdcl::new(formula).solve(deadline)
+    solve_with_drat_proof_with_limits(formula, deadline, DEFAULT_PROOF_SAT_CONFLICT_LIMIT)
+}
+
+/// Solves `formula` with explicit wall-clock and conflict limits.
+///
+/// `max_conflicts` is deterministic for a fixed formula and solver build.
+/// Exceeding it returns [`ProofSolveOutcome::ResourceOut`], never a guessed
+/// verdict. A level-zero contradiction may still be decided without consuming a
+/// conflict from this budget.
+pub fn solve_with_drat_proof_with_limits(
+    formula: &CnfFormula,
+    deadline: Option<Instant>,
+    max_conflicts: usize,
+) -> ProofSolveOutcome {
+    Cdcl::new(formula).solve(deadline, max_conflicts)
 }
 
 fn lit_code(lit: CnfLit) -> usize {
@@ -657,7 +671,7 @@ impl Cdcl {
         self.trail.push(var);
     }
 
-    fn solve(mut self, deadline: Option<Instant>) -> ProofSolveOutcome {
+    fn solve(mut self, deadline: Option<Instant>, max_conflicts: usize) -> ProofSolveOutcome {
         if self.has_empty_clause {
             self.proof.push(DratStep::Add(Vec::new()));
             return ProofSolveOutcome::Unsat(self.proof);
@@ -680,7 +694,7 @@ impl Cdcl {
                     return ProofSolveOutcome::Unsat(self.proof);
                 }
                 self.conflicts += 1;
-                if self.conflicts > MAX_CONFLICTS {
+                if self.conflicts > max_conflicts {
                     return ProofSolveOutcome::ResourceOut;
                 }
                 // Deterministic deadline cadence: only read the clock once every
@@ -1256,8 +1270,8 @@ impl Cdcl {
 #[cfg(test)]
 mod tests {
     use super::{
-        Cdcl, Instant, ProofSolveOutcome, Watch, lit_code, solve_with_drat_proof,
-        solve_with_drat_proof_within,
+        Cdcl, DEFAULT_PROOF_SAT_CONFLICT_LIMIT, Instant, ProofSolveOutcome, Watch, lit_code,
+        solve_with_drat_proof, solve_with_drat_proof_with_limits, solve_with_drat_proof_within,
     };
     use crate::{
         CnfClause, CnfFormula, CnfLit, CnfVar, SatResult, check_drat, solve_with_rustsat_batsat,
@@ -1351,6 +1365,15 @@ mod tests {
             ProofSolveOutcome::Sat(model) => assert!(model.satisfies(&f).unwrap()),
             other => panic!("expected sat, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn explicit_zero_conflict_limit_returns_resource_out() {
+        let f = formula(2, &[&[1, 2], &[1, -2], &[-1, 2], &[-1, -2]]);
+        assert_eq!(
+            solve_with_drat_proof_with_limits(&f, None, 0),
+            ProofSolveOutcome::ResourceOut
+        );
     }
 
     /// Strong validation of the watched-literal core: on many random CNFs, the
@@ -1683,7 +1706,7 @@ mod tests {
             // Drive the solver with the EMA restart schedule enabled.
             let mut cdcl = Cdcl::new(&f);
             cdcl.use_ema_restart = true;
-            match (cdcl.solve(None), batsat) {
+            match (cdcl.solve(None, DEFAULT_PROOF_SAT_CONFLICT_LIMIT), batsat) {
                 (ProofSolveOutcome::Sat(model), SatResult::Sat(_)) => {
                     assert!(model.satisfies(&f).unwrap(), "EMA sat model must satisfy");
                 }

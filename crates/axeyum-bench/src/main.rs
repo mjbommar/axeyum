@@ -14,7 +14,8 @@
 //!   `[--query-plan full|first-assertion-support|replay-refine|replay-refine-exact]`
 //!   `[--refine-rounds N] [--refine-batch N] [--refine-adaptive-batch]`
 //!   `[--refine-select first|smallest-dag|smallest-plan-dag|smallest-plan-greedy]`
-//!   `[--node-budget N] [--cnf-var-budget N] [--cnf-clause-budget N]`
+//!   `[--resource-limit N] [--node-budget N] [--cnf-var-budget N]`
+//!   `[--cnf-clause-budget N] [--require-deterministic-resources]`
 //!   `[--prove-unsat]`
 //!   `[--require-reproducible-run]`
 //!   `[--compare-z3] [--require-in-process-z3] [--min-decided-percent P] [--jobs N]`
@@ -50,10 +51,11 @@ mod run {
     use serde_json::{Value as JsonValue, json};
     use sha2::{Digest, Sha256};
 
-    const ARTIFACT_VERSION: u32 = 21;
+    const ARTIFACT_VERSION: u32 = 22;
     const CORPUS_MANIFEST_VERSION: u64 = 1;
     const CONTENT_HASH_PREFIX: &str = "sha256:";
     const DETERMINISM_PROFILE: &str = "axeyum-bench-fixed-seeds-v1";
+    const RESOURCE_PROFILE: &str = "axeyum-qfbv-cold-bounded-v1";
     /// Corpus SAT-share threshold above which SAT solve time is reported as
     /// dominating end-to-end time — gate (a) for prioritizing the custom CDCL
     /// core (benchmarking-and-performance-methodology.md, "Decision Gates").
@@ -201,6 +203,7 @@ mod run {
         refine_batch: usize,
         refine_adaptive_batch: bool,
         refine_select: RefineSelectMode,
+        resource_limit: Option<u64>,
         node_budget: Option<u64>,
         cnf_variable_budget: Option<u64>,
         cnf_clause_budget: Option<u64>,
@@ -212,6 +215,7 @@ mod run {
         compare_z3: bool,
         require_in_process_z3: bool,
         require_reproducible_run: bool,
+        require_deterministic_resources: bool,
         min_decided_percent: Option<f64>,
         jobs: usize,
     }
@@ -237,6 +241,7 @@ mod run {
             refine_batch: 1,
             refine_adaptive_batch: false,
             refine_select: RefineSelectMode::First,
+            resource_limit: None,
             node_budget: None,
             cnf_variable_budget: None,
             cnf_clause_budget: None,
@@ -248,6 +253,7 @@ mod run {
             compare_z3: false,
             require_in_process_z3: false,
             require_reproducible_run: false,
+            require_deterministic_resources: false,
             min_decided_percent: None,
             jobs: 1,
         };
@@ -319,6 +325,13 @@ mod run {
             "--refine-select" => {
                 parsed.refine_select = parse_refine_select(&next_value(args, flag)?)?;
             }
+            "--resource-limit" => {
+                parsed.resource_limit = Some(
+                    next_value(args, flag)?
+                        .parse()
+                        .map_err(|e| format!("{e}"))?,
+                );
+            }
             "--node-budget" => {
                 parsed.node_budget = Some(
                     next_value(args, flag)?
@@ -373,6 +386,9 @@ mod run {
                 }
             }
             "--require-reproducible-run" => parsed.require_reproducible_run = true,
+            "--require-deterministic-resources" => {
+                parsed.require_deterministic_resources = true;
+            }
             "--min-decided-percent" => {
                 parsed.min_decided_percent = Some(parse_decided_percent(&next_value(args, flag)?)?);
             }
@@ -447,6 +463,26 @@ mod run {
         if args.prove_unsat && !matches!(args.backend, BackendKind::SatBv) {
             return Err("`--prove-unsat` requires `--backend sat-bv`".to_owned());
         }
+        if args.require_deterministic_resources {
+            if !matches!(args.backend, BackendKind::SatBv) {
+                return Err(
+                    "`--require-deterministic-resources` currently requires `--backend sat-bv`"
+                        .to_owned(),
+                );
+            }
+            let missing = missing_deterministic_resource_limits(
+                args.resource_limit,
+                args.node_budget,
+                args.cnf_variable_budget,
+                args.cnf_clause_budget,
+            );
+            if !missing.is_empty() {
+                return Err(format!(
+                    "`--require-deterministic-resources` requires positive {}",
+                    missing.join(", ")
+                ));
+            }
+        }
         if args.corpus_tier.is_some() && args.corpus_manifest.is_none() {
             return Err("`--corpus-tier` requires `--corpus-manifest`".to_owned());
         }
@@ -457,6 +493,23 @@ mod run {
             );
         }
         Ok(())
+    }
+
+    fn missing_deterministic_resource_limits(
+        resource_limit: Option<u64>,
+        node_budget: Option<u64>,
+        cnf_variable_budget: Option<u64>,
+        cnf_clause_budget: Option<u64>,
+    ) -> Vec<&'static str> {
+        [
+            ("--resource-limit", resource_limit),
+            ("--node-budget", node_budget),
+            ("--cnf-var-budget", cnf_variable_budget),
+            ("--cnf-clause-budget", cnf_clause_budget),
+        ]
+        .into_iter()
+        .filter_map(|(name, value)| value.is_none_or(|limit| limit == 0).then_some(name))
+        .collect()
     }
 
     #[cfg(feature = "z3")]
@@ -2049,6 +2102,7 @@ mod run {
     fn solver_config(args: &Args, timeout: Duration) -> SolverConfig {
         SolverConfig {
             timeout: Some(timeout),
+            resource_limit: args.resource_limit,
             node_budget: args.node_budget,
             cnf_variable_budget: args.cnf_variable_budget,
             cnf_clause_budget: args.cnf_clause_budget,
@@ -3609,6 +3663,7 @@ mod run {
             "selected_families": optional_strings(&args.families),
             "timeout_ms": args.timeout_ms,
             "jobs": usize_to_u64(args.jobs),
+            "resource_limit": optional_u64(args.resource_limit),
             "node_budget": optional_u64(args.node_budget),
             "cnf_variable_budget": optional_u64(args.cnf_variable_budget),
             "cnf_clause_budget": optional_u64(args.cnf_clause_budget),
@@ -3624,6 +3679,7 @@ mod run {
             "compare_z3": args.compare_z3,
             "require_in_process_z3": args.require_in_process_z3,
             "require_reproducible_run": args.require_reproducible_run,
+            "require_deterministic_resources": args.require_deterministic_resources,
             "min_decided_percent": args.min_decided_percent,
             "query_plan": {
                 "mode": args.query_plan.as_str(),
@@ -3635,6 +3691,7 @@ mod run {
             },
             "harness": format!("axeyum-bench {}", env!("CARGO_PKG_VERSION")),
             "determinism": determinism_record(),
+            "resources": resource_profile_record(args),
             "rewrite": rewrite_config(args.rewrite),
             "experiment": experiment_identity_record(identity.experiment),
         })
@@ -3805,6 +3862,34 @@ mod run {
                 "random_initial_activity": batsat.random_initial_activity,
             },
             "z3": z3_determinism_record(),
+        })
+    }
+
+    fn resource_profile_record(args: &Args) -> JsonValue {
+        let primary_search_unit = if args.native_cdcl || args.prove_unsat {
+            "native proof-CDCL conflicts"
+        } else {
+            "rustsat-batsat within_budget progress checks"
+        };
+        json!({
+            "profile": args.require_deterministic_resources.then_some(RESOURCE_PROFILE),
+            "required": args.require_deterministic_resources,
+            "limits": {
+                "search": optional_u64(args.resource_limit),
+                "dag_nodes": optional_u64(args.node_budget),
+                "cnf_variables": optional_u64(args.cnf_variable_budget),
+                "cnf_clauses": optional_u64(args.cnf_clause_budget),
+            },
+            "units": {
+                "primary_search": primary_search_unit,
+                "z3_oracle_search": args.compare_z3.then_some("Z3 rlimit units"),
+                "dag_nodes": "unique reachable term DAG nodes before lowering",
+                "cnf_variables": "variables in the formula submitted to SAT",
+                "cnf_clauses": "clauses in the formula submitted to SAT",
+            },
+            "wall_clock_safety_timeout_ms": args.timeout_ms,
+            "wall_clock_is_deterministic": false,
+            "cross_backend_numeric_limits_are_work_equivalent": false,
         })
     }
 
@@ -4253,6 +4338,10 @@ mod run {
         update_hash(&mut hash, args.refine_select.as_str().as_bytes());
         update_hash(
             &mut hash,
+            &args.resource_limit.unwrap_or(u64::MAX).to_le_bytes(),
+        );
+        update_hash(
+            &mut hash,
             &args.node_budget.unwrap_or(u64::MAX).to_le_bytes(),
         );
         update_hash(
@@ -4270,6 +4359,7 @@ mod run {
         update_hash(&mut hash, &[u8::from(args.compare_z3)]);
         update_hash(&mut hash, &[u8::from(args.require_in_process_z3)]);
         update_hash(&mut hash, &[u8::from(args.require_reproducible_run)]);
+        update_hash(&mut hash, &[u8::from(args.require_deterministic_resources)]);
         update_hash(
             &mut hash,
             &args
@@ -5288,6 +5378,23 @@ mod run {
             }
             #[cfg(not(feature = "z3"))]
             assert!(record["z3"].is_null());
+        }
+
+        #[test]
+        fn deterministic_resource_gate_requires_every_positive_limit() {
+            assert!(
+                missing_deterministic_resource_limits(
+                    Some(2_000_000),
+                    Some(300_000),
+                    Some(3_000_000),
+                    Some(8_000_000),
+                )
+                .is_empty()
+            );
+            assert_eq!(
+                missing_deterministic_resource_limits(Some(0), None, Some(1), Some(0)),
+                vec!["--resource-limit", "--node-budget", "--cnf-clause-budget"]
+            );
         }
 
         fn complete_experiment_identity() -> ExperimentIdentity {

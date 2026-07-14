@@ -137,6 +137,18 @@ This decision establishes solver-configuration identity; it does not turn
 wall-clock measurements into deterministic values or replace bounded-resource
 gates.
 
+Artifact version 22 closes the remaining deterministic-resource gap for the
+cold client lane. `--require-deterministic-resources` rejects missing or zero
+term-DAG, CNF-variable, CNF-clause, or backend-search bounds before corpus work.
+The existing `SolverConfig::resource_limit` now reaches every search engine used
+by these recipes: deterministic `BatSat` `within_budget` progress checks, native
+proof-CDCL conflicts, and Z3 `rlimit` units. Artifacts record the selected unit
+and explicitly deny cross-backend numeric work equivalence. The first named
+profile, `axeyum-qfbv-cold-bounded-v1`, sets 300k DAG nodes, 3M CNF variables,
+8M CNF clauses, and 2M search units. The real capture may justify a new
+versioned profile; it may not cause a silent relaxation. Wall-clock timeout is a
+separate non-deterministic safety valve.
+
 The capture-ingestion follow-up defines a versioned shadow-diff capture index
 that contains only the producer-owned semantic facts: stable query path/order,
 trusted expected verdict, workload family, and representative/full tier
@@ -152,7 +164,7 @@ The repeated-run follow-up makes the methodology's short-run variance rule
 executable without weakening the cold boundary. The repeated Glaurung recipe
 launches a fresh `axeyum-bench` process per whole-corpus trial and retains each
 artifact independently. A streaming, fail-closed summarizer accepts only
-artifact-v21 trials with byte-identical configuration, clean reproducible
+artifact-v22 trials with byte-identical configuration, clean reproducible
 source/tool/hardware identity, one worker, complete manifest and in-process Z3
 agreement, 100% decisions, and zero operational or replay failures. It reports
 sample standard deviation and coefficient of variation alongside p50/p95 for

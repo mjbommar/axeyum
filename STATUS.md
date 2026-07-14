@@ -331,7 +331,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   preprocessing cost policy are separately tracked rather than being implied by
   the existing incremental API.
 
-  **GQ1/GQ10 readiness increment:** artifact v21 charges Axeyum for word
+  **GQ1/GQ10 readiness increment:** artifact v22 charges Axeyum for word
   preprocessing, separates it from term→AIG, AIG→CNF, optional CNF
   inprocessing, SAT, model lift, and original-query model replay, and records
   exact p50/p95 distributions.
@@ -362,7 +362,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   initial activity both off), explicitly sets and records Z3 `random_seed=0`,
   and records deterministic corpus ordering. Rust and repetition-validator
   tests fail on drift. This closes seed/configuration identity only; measured
-  variance and deterministic resource limits remain independent gates.
+  variance remains an independent gate.
+  The deterministic resource gate is now executable as well. A required v22
+  cold-client run fails before corpus work unless positive term-DAG,
+  CNF-variable, CNF-clause, and backend-search limits are present. The search
+  limit reaches the real engine as `BatSat` `within_budget` progress checks,
+  native proof-CDCL conflicts, or Z3 `rlimit` units; artifacts name the unit and
+  deny cross-backend numeric work equivalence. The provisional
+  `axeyum-qfbv-cold-bounded-v1` recipe is 300k DAG nodes / 3M CNF variables / 8M
+  CNF clauses / 2M search units. Timeout remains a non-deterministic safety
+  backstop, and any real-corpus limit change requires a new named profile.
   The capture boundary now has a deterministic producer/consumer handshake:
   the shadow-diff side emits a versioned index of ordered paths, trusted
   verdicts, families, and tiers; Axeyum checks exact `.smt2` membership, hashes
@@ -379,7 +388,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   memory.
   The committed
   [`glaurung-repetition-smoke`](bench-results/glaurung-repetition-smoke/summary.json)
-  exercises three independent artifact-v21 trials from clean revision
+  exercises three independent artifact-v22 trials from clean revision
   `d39dc6ac`: every run
   is 2/2 decided, manifest-agreed, and Z3-agreed with zero errors or replay
   failures. The summary records Axeyum-total CV 3.66%, Z3-total CV 2.36%, and
@@ -393,7 +402,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   Z3-drift gates are caller-supplied; the micro fixture sets no threshold.
   The committed
   [`glaurung-cross-commit-smoke`](bench-results/glaurung-cross-commit-smoke.json)
-  validates artifact-v21 baseline `d39dc6ac` against candidate `00a745c0` with
+  validates artifact-v22 baseline `d39dc6ac` against candidate `00a745c0` with
   three trials each and matching `config_hash`, `environment_hash`,
   corpus/manifest hashes, determinism profile, and backends. The candidate ratio
   mean is 13.55% lower while its CV is 31.35% and descriptive standardized
@@ -403,7 +412,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
   | ID | Live status | Next acceptance boundary |
   |---|---|---|
-  | **GQ1 real-query profile** | **WIP; external capture is the remaining data dependency.** Artifact v21, executable solver-determinism identity, capture-index→manifest generation, manifest-v1 ingestion, untouched-DAG formula/width/operator/opportunity profiling, typed AIG/CNF/inprocess stats with size distributions, separately charged SAT model replay, an optional fail-closed proof-check companion, complete clean source/tool/hardware identity, single-worker client recipe, whole-corpus process-level repetition/variance summary, p50/p95, original-query in-process Z3 ratio, complete manifest/oracle/decided-rate gates, and zero-error policy are landed | Obtain the representative Glaurung query pack plus trusted capture index, generate/validate its manifest, confirm its lifter-shape distributions, and publish the first valid same-environment repeated client attribution/ratio plus separate proof-check result; the micro smokes validate plumbing only |
+  | **GQ1 real-query profile** | **WIP; external capture is the remaining data dependency.** Artifact v22, executable solver-determinism and bounded-resource identity, capture-index→manifest generation, manifest-v1 ingestion, untouched-DAG formula/width/operator/opportunity profiling, typed AIG/CNF/inprocess stats with size distributions, separately charged SAT model replay, an optional fail-closed proof-check companion, complete clean source/tool/hardware identity, single-worker client recipe, whole-corpus process-level repetition/variance summary, p50/p95, original-query in-process Z3 ratio, complete manifest/oracle/decided-rate gates, and zero-error policy are landed | Obtain the representative Glaurung query pack plus trusted capture index, generate/validate its manifest, confirm its lifter-shape distributions, and publish the first valid same-environment repeated client attribution/ratio plus separate proof-check result; the micro smokes validate plumbing only |
   | **GQ2 cheap cold tier** | **TODO**, profile-gated; existing full preprocessing is opt-in and warm-oriented | Bounded constant/identity tier with non-worse cold aggregate time and an explicit cold/warm/size policy |
   | **GQ3 coercion peepholes** | **TODO**; only narrower extract-through-bitwise/ITE rules are landed | Exact extract/concat, nested-extract, zero/sign-extension cancellation with exhaustive and differential semantics gates |
   | **GQ4 cold relevant bits** | **WIP foundation**; warm 8-of-64 slicing is landed, cold demand propagation is not | Backward live-bit pass, original replay, counters, and measured target-corpus AIG/CNF reduction |
@@ -412,12 +421,12 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   | **GQ7 warm delta entry** | **WIP foundation**; retained CNF/search state exists, but `assert_configured` delta-only preprocessing is not complete | Preprocess only new/affected terms and publish per-check cost plus warm break-even sequence length |
   | **GQ8 verdict/CNF cache** | **TODO** | Versioned canonical keys, exact duplicate verdict reuse, sound prefix-state reuse, deterministic bounds, and mandatory original replay |
   | **GQ9 auto cost model/docs** | **TODO**; P1.8 shape/resource probes are only the general foundation | Telemetry-visible raw/cheap/configured/warm choice that beats or matches fixed policies and documents embedder guidance |
-  | **GQ10 real-lifter regression tier** | **BLOCKED on the external capture**; artifact-v21 validity/attribution/shape/replay/experiment/determinism-identity gates, a strict versioned capture-index generator, manifest-v1 exact membership/SHA-256/expected-verdict/family/tier contract, independent-process repetition/variance summarization, fail-closed same-environment cross-commit comparison, and separate performance/proof recipes are landed | Export the real capture plus trusted index, generate its manifest, then land its regular representative gate, repeated scheduled full run, proof companion, cross-commit baseline, and corpus-grounded regression thresholds |
+  | **GQ10 real-lifter regression tier** | **BLOCKED on the external capture**; artifact-v22 validity/attribution/shape/replay/experiment/determinism/bounded-resource gates, a strict versioned capture-index generator, manifest-v1 exact membership/SHA-256/expected-verdict/family/tier contract, independent-process repetition/variance summarization, fail-closed same-environment cross-commit comparison, and separate performance/proof recipes are landed | Export the real capture plus trusted index, generate its manifest, then land its regular representative gate, repeated scheduled full run, proof companion, cross-commit baseline, and corpus-grounded regression thresholds |
 
   **Next actions:** (1) receive the Glaurung `.smt2` capture plus versioned
   trusted index without normalizing away its width-mixed/extract/concat/memory
   shape, generate the strict manifest, and verify that distribution in the
-  artifact-v21 shape profile; (2) establish the repeated GQ1/GQ10 baseline at
+  artifact-v22 shape/profile gate; (2) establish the repeated GQ1/GQ10 baseline at
   100% decided, zero errors/disagreements/replay failures with reported
   whole-corpus variance, then compare subsequent clean revisions under the same
   environment before setting any regression threshold; (3) select the first
@@ -2103,6 +2112,20 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-13 — GQ1/GQ10 artifact-v22 deterministic resource profile
+  implemented.** `SolverConfig::resource_limit` now bounds the default cold
+  BatSat path through deterministic `within_budget` progress checks and the
+  proof-producing native core through an explicit conflict cap; Z3 retains its
+  `rlimit` mapping. Exhaustion is classified `Unknown(ResourceLimit)`, never a
+  verdict. The benchmark exposes and hashes `--resource-limit`, records
+  backend-specific units, and `--require-deterministic-resources` rejects a
+  missing/zero search, DAG-node, CNF-variable, or CNF-clause limit before corpus
+  work. Every Glaurung recipe now selects the provisional named
+  `axeyum-qfbv-cold-bounded-v1` profile (2M search / 300k DAG / 3M CNF variables
+  / 8M CNF clauses); wall timeout remains explicitly non-deterministic. Rust
+  tests force both BatSat and proof-CDCL resource exhaustion, an end-to-end
+  SAT-BV test checks `UnknownKind::ResourceLimit`, and repetition fixtures reject
+  decorative/mismatched resource records.
 - **2026-07-13 — GQ1/GQ10 artifact-v21 executable determinism identity
   implemented.** The audit found that the former benchmark `--seed` option only
   changed artifact identity and did not configure either backend. That option is

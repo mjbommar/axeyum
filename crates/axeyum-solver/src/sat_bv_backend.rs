@@ -23,12 +23,13 @@ use axeyum_bv::{
     lower_terms_with_deadline,
 };
 use axeyum_cnf::{
-    BveOptions, CnfAssignment, CnfEncoding, CnfError, CnfFormula, CompactMap, ProofSolveOutcome,
-    Reconstruction, SatError, SatProofStatus, SatResult, SatUnknownReason, SatUnsatEvidence,
-    VivifyOptions, XorCdclResult, XorPropagation, check_drat, compact, eliminate_variables_within,
-    extract_xors, simplify_within, solve_with_drat_proof, solve_with_drat_proof_within,
-    solve_with_rustsat_batsat_timeout, solve_with_xor_cdcl, tseitin_encode, vivify_within,
-    write_drat, xor_gauss_drat_refutation, xor_propagate,
+    BveOptions, CnfAssignment, CnfEncoding, CnfError, CnfFormula, CompactMap,
+    DEFAULT_PROOF_SAT_CONFLICT_LIMIT, ProofSolveOutcome, Reconstruction, SatError, SatProofStatus,
+    SatResult, SatUnknownReason, SatUnsatEvidence, VivifyOptions, XorCdclResult, XorPropagation,
+    check_drat, compact, eliminate_variables_within, extract_xors, simplify_within,
+    solve_with_drat_proof, solve_with_drat_proof_with_limits, solve_with_rustsat_batsat_limits,
+    solve_with_xor_cdcl, tseitin_encode, vivify_within, write_drat, xor_gauss_drat_refutation,
+    xor_propagate,
 };
 use axeyum_ir::{
     Assignment, IrError, Sort, SortId, TermArena, TermId, TermStats, Value, eval,
@@ -896,6 +897,8 @@ fn handle_sat_result(
         SatResult::Unknown(reason) => {
             let kind = if reason.detail.contains("timeout") {
                 UnknownKind::Timeout
+            } else if reason.detail.contains("resource") || reason.detail.contains("budget") {
+                UnknownKind::ResourceLimit
             } else {
                 UnknownKind::Other
             };
@@ -1137,13 +1140,14 @@ fn primary_sat_search(
     stats: &mut SolveStats,
 ) -> Result<SatResult, SolverError> {
     if config.native_cdcl || config.prove_unsat {
-        let outcome = solve_with_native_cdcl(formula, deadline, config.prove_unsat);
+        let outcome =
+            solve_with_native_cdcl(formula, deadline, config.resource_limit, config.prove_unsat);
         if let Some(duration) = outcome.proof_replay {
             push_duration_ms(stats, "unsat_proof_replay_ms", duration);
         }
         Ok(outcome.result)
     } else {
-        solve_with_rustsat_batsat_timeout(formula, sat_timeout)
+        solve_with_rustsat_batsat_limits(formula, sat_timeout, config.resource_limit)
             .map_err(|error| map_sat_error(&error))
     }
 }
@@ -1174,9 +1178,13 @@ struct NativeCdclOutcome {
 fn solve_with_native_cdcl(
     formula: &CnfFormula,
     deadline: Option<Instant>,
+    resource_limit: Option<u64>,
     check_proof: bool,
 ) -> NativeCdclOutcome {
-    match solve_with_drat_proof_within(formula, deadline) {
+    let max_conflicts = resource_limit.map_or(DEFAULT_PROOF_SAT_CONFLICT_LIMIT, |limit| {
+        usize::try_from(limit).unwrap_or(usize::MAX)
+    });
+    match solve_with_drat_proof_with_limits(formula, deadline, max_conflicts) {
         ProofSolveOutcome::Sat(assignment) => NativeCdclOutcome {
             result: SatResult::Sat(assignment),
             proof_replay: None,
@@ -1649,7 +1657,7 @@ mod tests {
     fn native_cdcl_checks_inline_proof_for_unsat() {
         // `x ∧ ¬x` is unsat.
         let f = formula(1, &[&[(0, false)], &[(0, true)]]);
-        let result = solve_with_native_cdcl(&f, None, true);
+        let result = solve_with_native_cdcl(&f, None, None, true);
         assert_eq!(
             result.result,
             SatResult::Unsat(SatUnsatEvidence {
@@ -1666,7 +1674,7 @@ mod tests {
     #[test]
     fn native_cdcl_skips_inline_check_when_not_requested() {
         let f = formula(1, &[&[(0, false)], &[(0, true)]]);
-        let result = solve_with_native_cdcl(&f, None, false);
+        let result = solve_with_native_cdcl(&f, None, None, false);
         assert_eq!(
             result.result,
             SatResult::Unsat(SatUnsatEvidence {
