@@ -46,6 +46,23 @@ def source_artifact(
             "content_hash": MANIFEST_HASH,
             "selected_entries": 2,
         },
+        "determinism": {
+            "profile": "axeyum-bench-fixed-seeds-v1",
+            "corpus_order": "stable manifest order (or deterministic lexical path order without a manifest)",
+            "sat_bv": {
+                "adapter": "rustsat-batsat",
+                "option_source": "batsat::SolverOpts::default from the Cargo.lock-pinned dependency",
+                "random_seed": 91_648_253.0,
+                "random_var_freq": 0.0,
+                "random_polarity": False,
+                "random_initial_activity": False,
+            },
+            "z3": {
+                "random_seed": 0,
+                "parameter": "random_seed",
+                "set_explicitly": True,
+            },
+        },
         "experiment": {
             "environment_hash": environment_hash,
             "source": {"dirty": False, "revision": revision},
@@ -59,7 +76,7 @@ def source_artifact(
         "require_reproducible_run": True,
     }
     return {
-        "version": 20,
+        "version": 21,
         "config": config,
         "summary": {
             "files": 2,

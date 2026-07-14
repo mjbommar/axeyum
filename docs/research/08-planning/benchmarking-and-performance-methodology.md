@@ -227,6 +227,15 @@ records the contract and the first measured baselines.
   environment. `--require-reproducible-run` fails before solving when source
   changes (excluding generated `bench-results/**`) or any required identity is
   missing, and every Glaurung recipe enables it.
+- Artifact version 21 makes the fixed-seed requirement executable. It removes
+  the old benchmark `--seed` label because that value was not consumed by a
+  solver. Each run now records and hashes the actual Cargo.lock-pinned BatSat
+  defaults (seed `91648253`, random-variable frequency `0`, randomized polarity
+  off, and randomized initial activity off), explicitly sets and records Z3
+  `random_seed=0`, and records deterministic corpus ordering. Unit tests pin the
+  reviewed BatSat defaults, and the repetition validator fails closed on profile
+  drift. This establishes configuration identity only; time variance and
+  deterministic resource bounds remain separate acceptance gates.
 - **Primary client QF_BV target (2026-07-13): Glaurung binary analysis.** Capture
   and minimize the real lifter-produced path conditions, preserving their
   extract/concat, mixed machine-width, and memory-derived shape. This client

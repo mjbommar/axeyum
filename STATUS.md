@@ -331,7 +331,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   preprocessing cost policy are separately tracked rather than being implied by
   the existing incremental API.
 
-  **GQ1/GQ10 readiness increment:** artifact v20 charges Axeyum for word
+  **GQ1/GQ10 readiness increment:** artifact v21 charges Axeyum for word
   preprocessing, separates it from term→AIG, AIG→CNF, optional CNF
   inprocessing, SAT, model lift, and original-query model replay, and records
   exact p50/p95 distributions.
@@ -356,6 +356,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   rustc/cargo/build profile, exact backends, CPU, kernel, parallelism, and
   memory. Glaurung recipes fail before solving unless that identity is complete and clean;
   matching `config_hash + environment_hash` is the per-commit comparison key.
+  The fixed-seed gate is now executable too: v21 removes the unused decorative
+  `--seed` label, records and hashes the actual Cargo.lock-pinned BatSat defaults
+  (seed `91648253`, random-variable frequency `0`, randomized polarity and
+  initial activity both off), explicitly sets and records Z3 `random_seed=0`,
+  and records deterministic corpus ordering. Rust and repetition-validator
+  tests fail on drift. This closes seed/configuration identity only; measured
+  variance and deterministic resource limits remain independent gates.
   The capture boundary now has a deterministic producer/consumer handshake:
   the shadow-diff side emits a versioned index of ordered paths, trusted
   verdicts, families, and tiers; Axeyum checks exact `.smt2` membership, hashes
@@ -394,7 +401,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
   | ID | Live status | Next acceptance boundary |
   |---|---|---|
-  | **GQ1 real-query profile** | **WIP; external capture is the remaining data dependency.** Artifact v20, capture-index→manifest generation, manifest-v1 ingestion, untouched-DAG formula/width/operator/opportunity profiling, typed AIG/CNF/inprocess stats with size distributions, separately charged SAT model replay, an optional fail-closed proof-check companion, complete clean source/tool/hardware identity, single-worker client recipe, whole-corpus process-level repetition/variance summary, p50/p95, original-query in-process Z3 ratio, complete manifest/oracle/decided-rate gates, and zero-error policy are landed | Obtain the representative Glaurung query pack plus trusted capture index, generate/validate its manifest, confirm its lifter-shape distributions, and publish the first valid same-environment repeated client attribution/ratio plus separate proof-check result; the micro smokes validate plumbing only |
+  | **GQ1 real-query profile** | **WIP; external capture is the remaining data dependency.** Artifact v21, executable solver-determinism identity, capture-index→manifest generation, manifest-v1 ingestion, untouched-DAG formula/width/operator/opportunity profiling, typed AIG/CNF/inprocess stats with size distributions, separately charged SAT model replay, an optional fail-closed proof-check companion, complete clean source/tool/hardware identity, single-worker client recipe, whole-corpus process-level repetition/variance summary, p50/p95, original-query in-process Z3 ratio, complete manifest/oracle/decided-rate gates, and zero-error policy are landed | Obtain the representative Glaurung query pack plus trusted capture index, generate/validate its manifest, confirm its lifter-shape distributions, and publish the first valid same-environment repeated client attribution/ratio plus separate proof-check result; the micro smokes validate plumbing only |
   | **GQ2 cheap cold tier** | **TODO**, profile-gated; existing full preprocessing is opt-in and warm-oriented | Bounded constant/identity tier with non-worse cold aggregate time and an explicit cold/warm/size policy |
   | **GQ3 coercion peepholes** | **TODO**; only narrower extract-through-bitwise/ITE rules are landed | Exact extract/concat, nested-extract, zero/sign-extension cancellation with exhaustive and differential semantics gates |
   | **GQ4 cold relevant bits** | **WIP foundation**; warm 8-of-64 slicing is landed, cold demand propagation is not | Backward live-bit pass, original replay, counters, and measured target-corpus AIG/CNF reduction |
@@ -403,12 +410,12 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   | **GQ7 warm delta entry** | **WIP foundation**; retained CNF/search state exists, but `assert_configured` delta-only preprocessing is not complete | Preprocess only new/affected terms and publish per-check cost plus warm break-even sequence length |
   | **GQ8 verdict/CNF cache** | **TODO** | Versioned canonical keys, exact duplicate verdict reuse, sound prefix-state reuse, deterministic bounds, and mandatory original replay |
   | **GQ9 auto cost model/docs** | **TODO**; P1.8 shape/resource probes are only the general foundation | Telemetry-visible raw/cheap/configured/warm choice that beats or matches fixed policies and documents embedder guidance |
-  | **GQ10 real-lifter regression tier** | **BLOCKED on the external capture**; artifact-v20 validity/attribution/shape/replay/experiment-identity gates, a strict versioned capture-index generator, manifest-v1 exact membership/SHA-256/expected-verdict/family/tier contract, independent-process repetition/variance summarization, fail-closed same-environment cross-commit comparison, and separate performance/proof recipes are landed | Export the real capture plus trusted index, generate its manifest, then land its regular representative gate, repeated scheduled full run, proof companion, cross-commit baseline, and corpus-grounded regression thresholds |
+  | **GQ10 real-lifter regression tier** | **BLOCKED on the external capture**; artifact-v21 validity/attribution/shape/replay/experiment/determinism-identity gates, a strict versioned capture-index generator, manifest-v1 exact membership/SHA-256/expected-verdict/family/tier contract, independent-process repetition/variance summarization, fail-closed same-environment cross-commit comparison, and separate performance/proof recipes are landed | Export the real capture plus trusted index, generate its manifest, then land its regular representative gate, repeated scheduled full run, proof companion, cross-commit baseline, and corpus-grounded regression thresholds |
 
   **Next actions:** (1) receive the Glaurung `.smt2` capture plus versioned
   trusted index without normalizing away its width-mixed/extract/concat/memory
   shape, generate the strict manifest, and verify that distribution in the
-  artifact-v20 shape profile; (2) establish the repeated GQ1/GQ10 baseline at
+  artifact-v21 shape profile; (2) establish the repeated GQ1/GQ10 baseline at
   100% decided, zero errors/disagreements/replay failures with reported
   whole-corpus variance, then compare subsequent clean revisions under the same
   environment before setting any regression threshold; (3) select the first
@@ -2094,6 +2101,17 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-13 — GQ1/GQ10 artifact-v21 executable determinism identity
+  implemented.** The audit found that the former benchmark `--seed` option only
+  changed artifact identity and did not configure either backend. That option is
+  removed. `config.determinism` and `config_hash` now bind the actual
+  Cargo.lock-pinned BatSat defaults (seed `91648253`, random-variable frequency
+  `0`, randomized polarity off, randomized initial activity off), explicit Z3
+  `random_seed=0`, and deterministic corpus order. The BatSat values are read
+  from the same option constructor the wrapper uses and pinned by a Rust test;
+  the repeated-run validator fails closed on profile drift. This fixes the
+  fixed-seed acceptance gate without claiming deterministic wall time or
+  discharging the separate deterministic-resource-limit requirement.
 - **2026-07-13 — GQ1/GQ10 artifact-v20 reproducible experiment identity
   implemented.** Artifacts now distinguish source revision from execution
   environment: Git revision/cleanliness, Cargo.lock SHA-256, rustc/cargo, exact

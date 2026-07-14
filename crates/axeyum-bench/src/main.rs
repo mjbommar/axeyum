@@ -9,7 +9,7 @@
 //! Usage: `axeyum-bench <dir> [--timeout-ms N] [--limit N] [--out FILE]`
 //!   `[--corpus-source TEXT] [--corpus-manifest FILE] [--corpus-tier NAME]`
 //!   `[--generate-corpus-manifest CAPTURE_INDEX]`
-//!   `[--logic LOGIC] [--families CSV] [--seed TEXT]`
+//!   `[--logic LOGIC] [--families CSV]`
 //!   `[--rewrite off|default] [--backend sat-bv|z3]`
 //!   `[--query-plan full|first-assertion-support|replay-refine|replay-refine-exact]`
 //!   `[--refine-rounds N] [--refine-batch N] [--refine-adaptive-batch]`
@@ -32,6 +32,7 @@ mod run {
     use std::process::{Command, ExitCode};
     use std::time::{Duration, Instant};
 
+    use axeyum_cnf::rustsat_batsat_determinism;
     use axeyum_ir::{Op, TermArena, TermId, TermNode, TermStats, Value, eval};
     use axeyum_query::{Query, QueryPlan, StructuralCacheKey};
     use axeyum_rewrite::{
@@ -39,19 +40,20 @@ mod run {
         default_manifest, propagate_values, solve_eqs_bounded,
     };
     use axeyum_smtlib::{Script, ScriptCommand, SmtError, parse_script};
-    #[cfg(feature = "z3")]
-    use axeyum_solver::Z3Backend;
     use axeyum_solver::{
         BvLayerStats, Capabilities, CheckResult, LazyBvBackend, Model, SatBvBackend, SolveStats,
         SolverBackend, SolverConfig, SolverError, UnknownKind, check_model_with_assignment, solve,
     };
+    #[cfg(feature = "z3")]
+    use axeyum_solver::{DETERMINISTIC_Z3_RANDOM_SEED, Z3Backend};
     use rayon::prelude::*;
     use serde_json::{Value as JsonValue, json};
     use sha2::{Digest, Sha256};
 
-    const ARTIFACT_VERSION: u32 = 20;
+    const ARTIFACT_VERSION: u32 = 21;
     const CORPUS_MANIFEST_VERSION: u64 = 1;
     const CONTENT_HASH_PREFIX: &str = "sha256:";
+    const DETERMINISM_PROFILE: &str = "axeyum-bench-fixed-seeds-v1";
     /// Corpus SAT-share threshold above which SAT solve time is reported as
     /// dominating end-to-end time — gate (a) for prioritizing the custom CDCL
     /// core (benchmarking-and-performance-methodology.md, "Decision Gates").
@@ -192,7 +194,6 @@ mod run {
         generate_corpus_manifest: Option<PathBuf>,
         logic: Option<String>,
         families: Vec<String>,
-        seed: String,
         rewrite: RewriteMode,
         backend: BackendKind,
         query_plan: QueryPlanMode,
@@ -229,7 +230,6 @@ mod run {
             generate_corpus_manifest: None,
             logic: None,
             families: Vec::new(),
-            seed: "none".to_owned(),
             rewrite: RewriteMode::Off,
             backend: default_backend_kind(),
             query_plan: QueryPlanMode::Full,
@@ -293,7 +293,6 @@ mod run {
                     .map(ToOwned::to_owned)
                     .collect();
             }
-            "--seed" => parsed.seed = next_value(args, flag)?,
             "--rewrite" => {
                 parsed.rewrite = match next_value(args, flag)?.as_str() {
                     "off" => RewriteMode::Off,
@@ -3635,7 +3634,7 @@ mod run {
                 "refine_select": args.refine_select.as_str(),
             },
             "harness": format!("axeyum-bench {}", env!("CARGO_PKG_VERSION")),
-            "seed": args.seed,
+            "determinism": determinism_record(),
             "rewrite": rewrite_config(args.rewrite),
             "experiment": experiment_identity_record(identity.experiment),
         })
@@ -3790,6 +3789,37 @@ mod run {
                 "membership": "exact: every .smt2 file under the corpus root is manifested",
             })
         })
+    }
+
+    fn determinism_record() -> JsonValue {
+        let batsat = rustsat_batsat_determinism();
+        json!({
+            "profile": DETERMINISM_PROFILE,
+            "corpus_order": "stable manifest order (or deterministic lexical path order without a manifest)",
+            "sat_bv": {
+                "adapter": "rustsat-batsat",
+                "option_source": "batsat::SolverOpts::default from the Cargo.lock-pinned dependency",
+                "random_seed": batsat.random_seed,
+                "random_var_freq": batsat.random_var_freq,
+                "random_polarity": batsat.random_polarity,
+                "random_initial_activity": batsat.random_initial_activity,
+            },
+            "z3": z3_determinism_record(),
+        })
+    }
+
+    #[cfg(feature = "z3")]
+    fn z3_determinism_record() -> JsonValue {
+        json!({
+            "random_seed": DETERMINISTIC_Z3_RANDOM_SEED,
+            "parameter": "random_seed",
+            "set_explicitly": true,
+        })
+    }
+
+    #[cfg(not(feature = "z3"))]
+    fn z3_determinism_record() -> JsonValue {
+        JsonValue::Null
     }
 
     fn manifest_family_counts(entries: &[CorpusManifestEntry]) -> BTreeMap<String, u64> {
@@ -4206,7 +4236,14 @@ mod run {
             update_hash(&mut hash, family.as_bytes());
             update_hash(&mut hash, &[0]);
         }
-        update_hash(&mut hash, args.seed.as_bytes());
+        let batsat = rustsat_batsat_determinism();
+        update_hash(&mut hash, DETERMINISM_PROFILE.as_bytes());
+        update_hash(&mut hash, &batsat.random_seed.to_bits().to_le_bytes());
+        update_hash(&mut hash, &batsat.random_var_freq.to_bits().to_le_bytes());
+        update_hash(&mut hash, &[u8::from(batsat.random_polarity)]);
+        update_hash(&mut hash, &[u8::from(batsat.random_initial_activity)]);
+        #[cfg(feature = "z3")]
+        update_hash(&mut hash, &DETERMINISTIC_Z3_RANDOM_SEED.to_le_bytes());
         update_hash(&mut hash, args.rewrite.as_str().as_bytes());
         update_hash(&mut hash, args.backend.as_str().as_bytes());
         update_hash(&mut hash, args.query_plan.as_str().as_bytes());
@@ -5231,6 +5268,26 @@ mod run {
             assert_eq!(checked.unsat_proof_replay_checked, 1);
             assert_eq!(checked.unsat_proof_replay_missing, 0);
             assert_eq!(checked.unsat_proof_replay_sample, Some(0.00025));
+        }
+
+        #[test]
+        fn determinism_profile_reports_the_options_backends_actually_consume() {
+            let record = determinism_record();
+            assert_eq!(record["profile"], json!(DETERMINISM_PROFILE));
+            assert_eq!(record["sat_bv"]["random_seed"], json!(91_648_253.0));
+            assert_eq!(record["sat_bv"]["random_var_freq"], json!(0.0));
+            assert_eq!(record["sat_bv"]["random_polarity"], json!(false));
+            assert_eq!(record["sat_bv"]["random_initial_activity"], json!(false));
+            #[cfg(feature = "z3")]
+            {
+                assert_eq!(
+                    record["z3"]["random_seed"],
+                    json!(DETERMINISTIC_Z3_RANDOM_SEED)
+                );
+                assert_eq!(record["z3"]["set_explicitly"], json!(true));
+            }
+            #[cfg(not(feature = "z3"))]
+            assert!(record["z3"].is_null());
         }
 
         fn complete_experiment_identity() -> ExperimentIdentity {

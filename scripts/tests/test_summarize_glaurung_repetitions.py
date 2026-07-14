@@ -25,7 +25,7 @@ def artifact(axeyum_seconds: float, z3_seconds: float) -> dict:
         "model_replay_s": axeyum_seconds * 0.05,
     }
     return {
-        "version": 20,
+        "version": 21,
         "config": {
             "backend": "axeyum-sat-bv rustsat-batsat",
             "compare_backend": "z3 4.13.3.0",
@@ -35,6 +35,23 @@ def artifact(axeyum_seconds: float, z3_seconds: float) -> dict:
             "corpus_manifest": {
                 "content_hash": "sha256:manifest",
                 "selected_entries": 2,
+            },
+            "determinism": {
+                "profile": "axeyum-bench-fixed-seeds-v1",
+                "corpus_order": "stable manifest order (or deterministic lexical path order without a manifest)",
+                "sat_bv": {
+                    "adapter": "rustsat-batsat",
+                    "option_source": "batsat::SolverOpts::default from the Cargo.lock-pinned dependency",
+                    "random_seed": 91_648_253.0,
+                    "random_var_freq": 0.0,
+                    "random_polarity": False,
+                    "random_initial_activity": False,
+                },
+                "z3": {
+                    "random_seed": 0,
+                    "parameter": "random_seed",
+                    "set_explicitly": True,
+                },
             },
             "experiment": {
                 "environment_hash": "sha256:environment",
@@ -122,6 +139,18 @@ class RepetitionSummaryTests(unittest.TestCase):
             changed["config"]["experiment"]["environment_hash"] = "sha256:other"
             second = self.write_artifact(root, "run-002.json", changed)
             with self.assertRaisesRegex(MODULE.SummaryError, "config differs"):
+                MODULE.summarize([first, second])
+
+    def test_rejects_decorative_or_drifting_solver_seed(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            changed = artifact(1.0, 0.5)
+            changed["config"]["determinism"]["sat_bv"]["random_seed"] = 1.0
+            first = self.write_artifact(root, "run-001.json", changed)
+            second = self.write_artifact(root, "run-002.json", changed)
+            with self.assertRaisesRegex(
+                MODULE.SummaryError, "sat_bv.random_seed must be 91648253"
+            ):
                 MODULE.summarize([first, second])
 
     def test_requires_multiple_unique_trials(self) -> None:

@@ -84,7 +84,7 @@ just compare-glaurung-qfbv-repeated BASE CAND OUT # controlled cross-commit delt
 
 Each JSON records the corpus + config hash, per-instance outcome, budgets,
 backend stats, PAR-2, explicit `decided`/`decided_percent`, **disagreements**,
-and **model-replay failures**. Artifact version 20 retains version 16's exact
+and **model-replay failures**. Artifact version 21 retains version 16's exact
 floating-point millisecond values for each instance's word-level preprocessing,
 bit-blast, CNF encode/inprocess, SAT, model lift, and cold total, plus corpus
 totals and p50/p95 distributions. Its `client_comparison` block reports the
@@ -114,6 +114,16 @@ excludes the source revision. Compare artifacts only when both `config_hash` and
 compared. `--require-reproducible-run` fails before solving if the source tree is
 dirty (excluding generated `bench-results/**`) or a required identity field is
 unavailable. The Glaurung recipes enable this gate by default.
+Version 21 removes the old `--seed` label, which did not configure either
+backend, and records an executable `config.determinism` profile instead. That
+profile binds the actual Cargo.lock-pinned BatSat defaults (seed `91648253`,
+random branching frequency `0`, random polarity disabled, and random initial
+activity disabled), explicitly sets and records Z3 `random_seed=0`, and states
+the deterministic corpus-order rule. These values enter `config_hash`; the
+repetition validator rejects missing or drifting values. The BatSat seed is
+still recorded even though all reviewed randomization switches are off. This
+fixes configuration identity, not wall-clock noise, so repeated trials remain
+required.
 A comparable run requires zero errors, zero disagreements, zero replay failures,
 and the declared decided-rate threshold; only then is timing a performance
 signal.

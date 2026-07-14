@@ -125,6 +125,18 @@ query is timed. Generated `bench-results/**` are excluded from the dirty check s
 performance and proof companions can be emitted sequentially from one clean
 source checkout without weakening the source-integrity gate.
 
+Artifact version 21 closes a defect in the fixed-seed boundary. The prior
+benchmark `--seed` option was only an artifact label and did not configure
+BatSat or Z3. It is removed. Artifacts and `config_hash` now bind an executable
+determinism profile: the actual Cargo.lock-pinned BatSat defaults read from
+`batsat::SolverOpts::default` (seed `91648253`, random-variable frequency `0`,
+random polarity disabled, random initial activity disabled), explicit Z3
+`random_seed=0`, and deterministic corpus order. A Rust regression pins the
+reviewed BatSat defaults and the repeated-run validator rejects profile drift.
+This decision establishes solver-configuration identity; it does not turn
+wall-clock measurements into deterministic values or replace bounded-resource
+gates.
+
 The capture-ingestion follow-up defines a versioned shadow-diff capture index
 that contains only the producer-owned semantic facts: stable query path/order,
 trusted expected verdict, workload family, and representative/full tier
@@ -140,7 +152,7 @@ The repeated-run follow-up makes the methodology's short-run variance rule
 executable without weakening the cold boundary. The repeated Glaurung recipe
 launches a fresh `axeyum-bench` process per whole-corpus trial and retains each
 artifact independently. A streaming, fail-closed summarizer accepts only
-artifact-v20 trials with byte-identical configuration, clean reproducible
+artifact-v21 trials with byte-identical configuration, clean reproducible
 source/tool/hardware identity, one worker, complete manifest and in-process Z3
 agreement, 100% decisions, and zero operational or replay failures. It reports
 sample standard deviation and coefficient of variation alongside p50/p95 for

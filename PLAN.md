@@ -55,7 +55,7 @@ traces; GQ8 follows the exact cache/replay contract rather than treating a
 prefix as an identical query. Re-run the GQ10 baseline after every accepted
 slice and record the result in `STATUS.md` and `bench-results/`.
 
-**GQ1/GQ10 readiness landed (2026-07-13, artifact v20).** The client recipe is
+**GQ1/GQ10 readiness landed (2026-07-13, artifact v21).** The client recipe is
 now a single-worker cold run. Its artifact separates word preprocessing,
 bit-blast, CNF encoding, optional CNF inprocessing, SAT, model lift, and
 original-query model replay; reports aggregate and exact p50/p95 timing; and
@@ -83,6 +83,15 @@ the source revision, so `config_hash + environment_hash` compares consecutive
 commits and the revision identifies which commit produced each result.
 `--require-reproducible-run` fails before solving if any identity field is
 missing or source changes are present; all Glaurung recipes require it.
+Artifact v21 replaces the former decorative benchmark `--seed` label with an
+executable determinism profile. The artifact and `config_hash` now bind the
+actual Cargo.lock-pinned BatSat defaults (seed `91648253`, random branching
+frequency `0`, random polarity off, and random initial activity off), an
+explicit Z3 `random_seed=0`, and deterministic corpus ordering. Runtime tests
+pin the reviewed BatSat values, while repetition ingestion fails closed on any
+profile drift. This proves solver seed/configuration identity, not stable wall
+time; independent-process variance remains mandatory, and deterministic
+resource bounds remain a separate acceptance condition.
 The remaining shadow-diff handoff is also executable: a versioned capture index
 contains the producer-owned ordered path, trusted verdict, family, and tier
 facts, while `--generate-corpus-manifest` checks exact directory membership,

@@ -579,7 +579,7 @@ macro_rules! full_exports {
             WORD_CLASH_RULE, WordAletheError, WordClashCertificate, word_conflict_alethe,
         };
         #[cfg(feature = "z3")]
-        pub use z3_backend::Z3Backend;
+        pub use z3_backend::{DETERMINISTIC_Z3_RANDOM_SEED, Z3Backend};
     };
 }
 

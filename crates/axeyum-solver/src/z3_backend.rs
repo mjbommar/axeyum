@@ -50,6 +50,13 @@ use crate::backend::{
     Capabilities, CheckResult, SolveStats, SolverBackend, SolverConfig, SolverError, UnknownKind,
     UnknownReason,
 };
+
+/// Fixed Z3 seed used by the oracle backend for deterministic comparisons.
+///
+/// Benchmark artifacts record this value as part of their configuration
+/// identity. Setting it explicitly avoids treating Z3's current default as an
+/// undocumented, potentially drifting implementation detail.
+pub const DETERMINISTIC_Z3_RANDOM_SEED: u32 = 0;
 use crate::model::Model;
 
 /// Z3 oracle backend. Stateless across queries except for the telemetry of
@@ -192,6 +199,7 @@ fn run_check(
     let mut cache: HashMap<TermId, Z3Term> = HashMap::new();
     let solver = Solver::new();
     let mut params = Params::new();
+    params.set_u32("random_seed", DETERMINISTIC_Z3_RANDOM_SEED);
     if let Some(timeout) = config.timeout {
         params.set_u32(
             "timeout",

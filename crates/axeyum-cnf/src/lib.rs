@@ -428,6 +428,41 @@ impl core::error::Error for SatError {}
 #[derive(Debug, Default, Clone, Copy)]
 pub struct RustSatBatsatSolver;
 
+/// The randomness-related options used by the pinned `BatSat` adapter.
+///
+/// Axeyum currently constructs `rustsat-batsat` through its default solver
+/// constructor, whose internal `BatSat` options are not mutable through the
+/// wrapper API. Exposing the values read from [`batsat::SolverOpts::default`]
+/// lets benchmark artifacts bind themselves to the *actual* options instead of
+/// recording a decorative seed that the backend never consumed.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct BatSatDeterminism {
+    /// `BatSat`'s floating-point pseudorandom generator seed.
+    pub random_seed: f64,
+    /// Probability of choosing a random branching variable.
+    pub random_var_freq: f64,
+    /// Whether branching polarities are randomized.
+    pub random_polarity: bool,
+    /// Whether initial variable activities are randomized.
+    pub random_initial_activity: bool,
+}
+
+/// Returns the randomness-related defaults used by [`RustSatBatsatSolver`].
+///
+/// This reads the pinned dependency's option object at runtime, so a future
+/// dependency update changes the benchmark configuration identity rather than
+/// silently reusing an old, hand-copied seed label.
+#[must_use]
+pub fn rustsat_batsat_determinism() -> BatSatDeterminism {
+    let options = batsat::SolverOpts::default();
+    BatSatDeterminism {
+        random_seed: options.random_seed,
+        random_var_freq: options.random_var_freq,
+        random_polarity: options.rnd_pol,
+        random_initial_activity: options.rnd_init_act,
+    }
+}
+
 impl RustSatBatsatSolver {
     /// Creates a BatSat-backed CNF solver.
     pub fn new() -> Self {
@@ -2561,7 +2596,7 @@ mod tests {
     use super::{
         CnfClause, CnfError, CnfLit, CnfVar, EncodedLit, IncrementalCnf, IncrementalSat,
         RustSatBatsatSolver, SatProofStatus, SatResult, SatSolver, aig_lit_value, parse_dimacs,
-        solve_with_rustsat_batsat, tseitin_encode,
+        rustsat_batsat_determinism, solve_with_rustsat_batsat, tseitin_encode,
     };
 
     #[test]
@@ -3194,6 +3229,15 @@ p cnf 2 2
         assert!(assignment.satisfies(&formula).unwrap());
         assert_eq!(assignment.values().len(), 2);
         assert!(assignment.values()[1], "second variable is forced true");
+    }
+
+    #[test]
+    fn rustsat_batsat_determinism_matches_the_reviewed_pinned_defaults() {
+        let profile = rustsat_batsat_determinism();
+        assert_eq!(profile.random_seed.to_bits(), 91_648_253.0_f64.to_bits());
+        assert_eq!(profile.random_var_freq.to_bits(), 0.0_f64.to_bits());
+        assert!(!profile.random_polarity);
+        assert!(!profile.random_initial_activity);
     }
 
     #[test]

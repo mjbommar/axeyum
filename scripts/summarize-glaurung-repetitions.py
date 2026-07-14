@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Validate and summarize repeated Glaurung QF_BV benchmark artifacts.
 
-Each input must be an independently launched artifact-v20 run from the strict
+Each input must be an independently launched artifact-v21 run from the strict
 single-worker Glaurung recipe. The script fails closed on identity drift or any
 acceptance-gate failure, then reports whole-corpus variance. It intentionally
 does not merge per-query records: keeping repetitions as separate processes and
@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Any, NoReturn, Sequence
 
 
-SOURCE_ARTIFACT_VERSION = 20
+SOURCE_ARTIFACT_VERSION = 21
 REPETITION_SUMMARY_VERSION = 1
 STAGE_KEYS = (
     "word_preprocess_s",
@@ -119,6 +119,7 @@ def validate_identity(config: dict[str, Any], path: Path) -> dict[str, str]:
         config.get("require_in_process_z3"), f"{prefix}.require_in_process_z3"
     ):
         fail(f"{prefix}.require_in_process_z3 must be true")
+    validate_determinism(config.get("determinism"), f"{prefix}.determinism")
 
     experiment = require_mapping(config.get("experiment"), f"{prefix}.experiment")
     source = require_mapping(experiment.get("source"), f"{prefix}.experiment.source")
@@ -148,6 +149,43 @@ def validate_identity(config: dict[str, Any], path: Path) -> dict[str, str]:
             config.get("compare_backend"), f"{prefix}.compare_backend"
         ),
     }
+
+
+def validate_determinism(value: Any, location: str) -> None:
+    profile = require_mapping(value, location)
+    if profile.get("profile") != "axeyum-bench-fixed-seeds-v1":
+        fail(f"{location}.profile must be `axeyum-bench-fixed-seeds-v1`")
+    expected_order = (
+        "stable manifest order (or deterministic lexical path order without a manifest)"
+    )
+    if profile.get("corpus_order") != expected_order:
+        fail(f"{location}.corpus_order does not match the v1 profile")
+    sat_bv = require_mapping(profile.get("sat_bv"), f"{location}.sat_bv")
+    if sat_bv.get("adapter") != "rustsat-batsat":
+        fail(f"{location}.sat_bv.adapter must be `rustsat-batsat`")
+    expected_source = (
+        "batsat::SolverOpts::default from the Cargo.lock-pinned dependency"
+    )
+    if sat_bv.get("option_source") != expected_source:
+        fail(f"{location}.sat_bv.option_source does not match the v1 profile")
+    expected_numbers = {
+        "random_seed": 91_648_253.0,
+        "random_var_freq": 0.0,
+    }
+    for key, expected in expected_numbers.items():
+        actual = require_number(sat_bv.get(key), f"{location}.sat_bv.{key}")
+        if actual != expected:
+            fail(f"{location}.sat_bv.{key} must be {expected}")
+    for key in ("random_polarity", "random_initial_activity"):
+        if require_bool(sat_bv.get(key), f"{location}.sat_bv.{key}"):
+            fail(f"{location}.sat_bv.{key} must be false")
+    z3 = require_mapping(profile.get("z3"), f"{location}.z3")
+    if require_int(z3.get("random_seed"), f"{location}.z3.random_seed") != 0:
+        fail(f"{location}.z3.random_seed must be 0")
+    if z3.get("parameter") != "random_seed":
+        fail(f"{location}.z3.parameter must be `random_seed`")
+    if not require_bool(z3.get("set_explicitly"), f"{location}.z3.set_explicitly"):
+        fail(f"{location}.z3.set_explicitly must be true")
 
 
 def validate_summary(
