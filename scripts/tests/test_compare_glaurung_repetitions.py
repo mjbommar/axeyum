@@ -27,6 +27,8 @@ def source_artifact(
     environment_hash: str = ENVIRONMENT_HASH,
     preprocess: bool = False,
     rewrite_mode: str = "default",
+    rewrite_rule_set: str = "axeyum-rewrite-default-v2",
+    rewrite_rule_ids: list[str] | None = None,
 ) -> dict:
     stages = {
         "word_preprocess_s": axeyum_seconds * 0.1,
@@ -102,7 +104,17 @@ def source_artifact(
         "require_in_process_z3": True,
         "require_reproducible_run": True,
         "require_deterministic_resources": True,
-        "rewrite": {"mode": rewrite_mode},
+        "rewrite": {
+            "mode": rewrite_mode,
+            "rule_set": rewrite_rule_set if rewrite_mode == "default" else None,
+            "enabled_rule_ids": (
+                rewrite_rule_ids
+                if rewrite_rule_ids is not None
+                else ["bv.add_zero.v1", "commutative.operand_order.v1"]
+            )
+            if rewrite_mode == "default"
+            else [],
+        },
     }
     return {
         "version": 27,
@@ -148,6 +160,8 @@ def write_repetition_summary(
     environment_hash: str = ENVIRONMENT_HASH,
     preprocess: bool = False,
     rewrite_mode: str = "default",
+    rewrite_rule_set: str = "axeyum-rewrite-default-v2",
+    rewrite_rule_ids: list[str] | None = None,
 ) -> Path:
     directory = root / name
     directory.mkdir()
@@ -165,6 +179,8 @@ def write_repetition_summary(
                     environment_hash=environment_hash,
                     preprocess=preprocess,
                     rewrite_mode=rewrite_mode,
+                    rewrite_rule_set=rewrite_rule_set,
+                    rewrite_rule_ids=rewrite_rule_ids,
                 )
             ),
             encoding="utf-8",
@@ -281,6 +297,68 @@ class RepetitionComparisonTests(unittest.TestCase):
             )
             with self.assertRaisesRegex(MODULE.ComparisonError, "differ beyond"):
                 MODULE.compare(baseline, drifted)
+
+    def test_accepts_only_the_explicit_additive_rewrite_transition(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            baseline_ids = ["bv.add_zero.v1", "commutative.operand_order.v1"]
+            candidate_ids = [
+                "bv.add_zero.v1",
+                "bv.add_constant_chain.v1",
+                "commutative.operand_order.v1",
+            ]
+            baseline = write_repetition_summary(
+                root,
+                "baseline",
+                BASELINE_REVISION,
+                [1.0, 1.1],
+                [0.5, 0.55],
+                rewrite_rule_set="axeyum-rewrite-default-v2",
+                rewrite_rule_ids=baseline_ids,
+            )
+            candidate = write_repetition_summary(
+                root,
+                "candidate",
+                CANDIDATE_REVISION,
+                [0.8, 0.88],
+                [0.5, 0.55],
+                rewrite_rule_set="axeyum-rewrite-default-v3",
+                rewrite_rule_ids=candidate_ids,
+            )
+
+            result = MODULE.compare(
+                baseline,
+                candidate,
+                expected_baseline_rule_set="axeyum-rewrite-default-v2",
+                expected_candidate_rule_set="axeyum-rewrite-default-v3",
+                expected_added_rewrite_rules=["bv.add_constant_chain.v1"],
+            )
+
+            self.assertEqual(
+                result["rewrite_transition"]["added_rule_ids"],
+                ["bv.add_constant_chain.v1"],
+            )
+            self.assertFalse(result["rewrite_transition"]["unlisted_changes"])
+
+            hidden = write_repetition_summary(
+                root,
+                "hidden",
+                "6" * 40,
+                [0.8, 0.88],
+                [0.5, 0.55],
+                rewrite_rule_set="axeyum-rewrite-default-v3",
+                rewrite_rule_ids=[*candidate_ids, "bv.hidden.v1"],
+            )
+            with self.assertRaisesRegex(
+                MODULE.ComparisonError, "unlisted addition"
+            ):
+                MODULE.compare(
+                    baseline,
+                    hidden,
+                    expected_baseline_rule_set="axeyum-rewrite-default-v2",
+                    expected_candidate_rule_set="axeyum-rewrite-default-v3",
+                    expected_added_rewrite_rules=["bv.add_constant_chain.v1"],
+                )
 
     def test_rejects_tampered_summary_or_missing_source_artifact(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

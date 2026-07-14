@@ -272,7 +272,13 @@ records the contract and the first measured baselines.
   changes alongside the ratio and per-stage deltas, so an apparent ratio win
   caused by Z3 control drift is visible. Optional ratio/Axeyum regression and
   absolute Z3-drift thresholds are explicit caller policy; no threshold is
-  inferred from the synthetic micro smoke.
+  inferred from the synthetic micro smoke. The strict comparator rejects a
+  changed rewrite manifest by default. A deliberate rewrite experiment uses
+  `compare-glaurung-qfbv-repeated-rewrite-guarded` and must name the exact
+  baseline/candidate rule-set identities plus the added rule ID. The comparator
+  removes only those two manifest fields after verifying that the candidate is
+  the baseline's ordered rule list plus exactly that addition; any removal,
+  reorder, hidden addition, or other configuration drift still fails closed.
 - The regular `just check` lane runs the access-controlled Glaurung
   representative tier when its pinned NAS pack or an explicit
   `AXEYUM_GLAURUNG_QFBV_REPRESENTATIVE_DIR` is available. Absence is an

@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 """Compare two validated Glaurung repetition summaries across source commits.
 
-The corpus, solver settings, toolchain, and hardware must be identical. The
-only permitted configuration difference is the clean Axeyum source revision.
-The output reports raw Axeyum and Z3 changes, their ratio change, per-stage
-changes, and optional explicit regression gates.
+The corpus, solver settings, toolchain, and hardware must be identical. By
+default, the only permitted configuration difference is the clean Axeyum
+source revision. A caller may explicitly authorize one exact default-rewrite
+manifest transition by naming both rule-set identities and every added rule;
+no removal, reorder, or unlisted addition is accepted. The output reports raw
+Axeyum and Z3 changes, their ratio change, per-stage changes, and optional
+explicit regression gates.
 """
 
 from __future__ import annotations
@@ -386,7 +389,9 @@ def validate_repetition_summary(
     return config, identity, runs
 
 
-def normalized_config(config: dict[str, Any]) -> dict[str, Any]:
+def normalized_config(
+    config: dict[str, Any], *, permit_rewrite_transition: bool = False
+) -> dict[str, Any]:
     normalized = copy.deepcopy(config)
     require_mapping(
         require_mapping(normalized.get("experiment"), "config.experiment").get(
@@ -394,7 +399,92 @@ def normalized_config(config: dict[str, Any]) -> dict[str, Any]:
         ),
         "config.experiment.source",
     ).pop("revision", None)
+    if permit_rewrite_transition:
+        rewrite = require_mapping(normalized.get("rewrite"), "config.rewrite")
+        rewrite.pop("rule_set", None)
+        rewrite.pop("enabled_rule_ids", None)
     return normalized
+
+
+def rewrite_rule_ids(rewrite: dict[str, Any], location: str) -> list[str]:
+    raw_ids = require_list(rewrite.get("enabled_rule_ids"), f"{location}.enabled_rule_ids")
+    rule_ids = [
+        require_string(rule_id, f"{location}.enabled_rule_ids[{index}]")
+        for index, rule_id in enumerate(raw_ids)
+    ]
+    if len(set(rule_ids)) != len(rule_ids):
+        fail(f"{location}.enabled_rule_ids must not contain duplicates")
+    return rule_ids
+
+
+def validate_rewrite_transition(
+    baseline_config: dict[str, Any],
+    candidate_config: dict[str, Any],
+    *,
+    expected_baseline_rule_set: str | None,
+    expected_candidate_rule_set: str | None,
+    expected_added_rewrite_rules: Sequence[str],
+) -> dict[str, Any] | None:
+    requested = bool(
+        expected_baseline_rule_set
+        or expected_candidate_rule_set
+        or expected_added_rewrite_rules
+    )
+    if not requested:
+        return None
+    if (
+        expected_baseline_rule_set is None
+        or expected_candidate_rule_set is None
+        or not expected_added_rewrite_rules
+    ):
+        fail(
+            "rewrite transition requires baseline/candidate rule-set identities "
+            "and at least one expected added rule"
+        )
+    if len(set(expected_added_rewrite_rules)) != len(expected_added_rewrite_rules):
+        fail("expected added rewrite rules must not contain duplicates")
+
+    baseline = require_mapping(baseline_config.get("rewrite"), "baseline config.rewrite")
+    candidate = require_mapping(candidate_config.get("rewrite"), "candidate config.rewrite")
+    if require_string(baseline.get("mode"), "baseline config.rewrite.mode") != "default":
+        fail("rewrite transition requires baseline rewrite mode `default`")
+    if require_string(candidate.get("mode"), "candidate config.rewrite.mode") != "default":
+        fail("rewrite transition requires candidate rewrite mode `default`")
+    actual_baseline_rule_set = require_string(
+        baseline.get("rule_set"), "baseline config.rewrite.rule_set"
+    )
+    actual_candidate_rule_set = require_string(
+        candidate.get("rule_set"), "candidate config.rewrite.rule_set"
+    )
+    if actual_baseline_rule_set != expected_baseline_rule_set:
+        fail("baseline rewrite rule-set identity does not match the expected transition")
+    if actual_candidate_rule_set != expected_candidate_rule_set:
+        fail("candidate rewrite rule-set identity does not match the expected transition")
+    if actual_baseline_rule_set == actual_candidate_rule_set:
+        fail("rewrite transition must name distinct rule-set identities")
+
+    baseline_ids = rewrite_rule_ids(baseline, "baseline config.rewrite")
+    candidate_ids = rewrite_rule_ids(candidate, "candidate config.rewrite")
+    expected_added = set(expected_added_rewrite_rules)
+    if expected_added.intersection(baseline_ids):
+        fail("an expected added rewrite rule is already enabled in the baseline")
+    filtered_candidate = [
+        rule_id for rule_id in candidate_ids if rule_id not in expected_added
+    ]
+    if filtered_candidate != baseline_ids:
+        fail(
+            "candidate rewrite rules contain a removal, reorder, or unlisted addition"
+        )
+    missing = expected_added.difference(candidate_ids)
+    if missing:
+        fail(f"candidate is missing expected added rewrite rules: {sorted(missing)}")
+    return {
+        "baseline_rule_set": actual_baseline_rule_set,
+        "candidate_rule_set": actual_candidate_rule_set,
+        "added_rule_ids": list(expected_added_rewrite_rules),
+        "removed_rule_ids": [],
+        "unlisted_changes": False,
+    }
 
 
 def metric_comparison(
@@ -484,6 +574,9 @@ def compare(
     max_ratio_regression_percent: float | None = None,
     max_axeyum_regression_percent: float | None = None,
     max_z3_drift_percent: float | None = None,
+    expected_baseline_rule_set: str | None = None,
+    expected_candidate_rule_set: str | None = None,
+    expected_added_rewrite_rules: Sequence[str] = (),
 ) -> dict[str, Any]:
     baseline_path = baseline_path.resolve()
     candidate_path = candidate_path.resolve()
@@ -499,9 +592,22 @@ def compare(
     )
     if baseline_identity["source_revision"] == candidate_identity["source_revision"]:
         fail("baseline and candidate must identify different clean source revisions")
-    if normalized_config(baseline_config) != normalized_config(candidate_config):
+    rewrite_transition = validate_rewrite_transition(
+        baseline_config,
+        candidate_config,
+        expected_baseline_rule_set=expected_baseline_rule_set,
+        expected_candidate_rule_set=expected_candidate_rule_set,
+        expected_added_rewrite_rules=expected_added_rewrite_rules,
+    )
+    permit_rewrite_transition = rewrite_transition is not None
+    if normalized_config(
+        baseline_config, permit_rewrite_transition=permit_rewrite_transition
+    ) != normalized_config(
+        candidate_config, permit_rewrite_transition=permit_rewrite_transition
+    ):
         fail(
-            "baseline and candidate configurations differ beyond the permitted source revision"
+            "baseline and candidate configurations differ beyond the permitted "
+            "source revision/rewrite transition"
         )
 
     common_parent = Path(
@@ -535,10 +641,11 @@ def compare(
         "repetition_summary_version": REPETITION_SUMMARY_VERSION,
         "source_artifact_version": SOURCE_ARTIFACT_VERSION,
         "contract": {
-            "identity": "same corpus/config/toolchain/hardware/backends; only clean source revision may differ",
+            "identity": "same corpus/config/toolchain/hardware/backends; only clean source revision and an explicitly checked additive rewrite transition may differ",
             "interpretation": "raw Axeyum and Z3 controls accompany the ratio; standardized_delta is descriptive, not a significance claim",
             "gate": "thresholds are explicit caller policy; no synthetic default is promoted",
         },
+        "rewrite_transition": rewrite_transition,
         "comparison_identity": {
             key: baseline_identity[key]
             for key in (
@@ -623,6 +730,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-ratio-regression-percent", type=non_negative_float)
     parser.add_argument("--max-axeyum-regression-percent", type=non_negative_float)
     parser.add_argument("--max-z3-drift-percent", type=non_negative_float)
+    parser.add_argument("--expected-baseline-rule-set")
+    parser.add_argument("--expected-candidate-rule-set")
+    parser.add_argument(
+        "--expected-added-rewrite-rule",
+        action="append",
+        default=[],
+        dest="expected_added_rewrite_rules",
+    )
     return parser.parse_args()
 
 
@@ -642,6 +757,9 @@ def main() -> int:
             max_ratio_regression_percent=args.max_ratio_regression_percent,
             max_axeyum_regression_percent=args.max_axeyum_regression_percent,
             max_z3_drift_percent=args.max_z3_drift_percent,
+            expected_baseline_rule_set=args.expected_baseline_rule_set,
+            expected_candidate_rule_set=args.expected_candidate_rule_set,
+            expected_added_rewrite_rules=args.expected_added_rewrite_rules,
         )
         write_json_atomic(output, result)
     except ComparisonError as error:

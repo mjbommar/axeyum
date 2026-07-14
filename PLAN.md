@@ -90,11 +90,15 @@ session state.
 > Z3, and creates 16.91 million AIG nodes plus 22.87 million clauses. Its
 > 377,320 lexical `bvadd` occurrences expose a precise canonicalizer gap:
 > associative flattening sorts mixed symbol/constant chains but does not
-> combine their constant leaves. Proposed ADR-0153 therefore tests exact
-> modular `bv.add_constant_chain.v1` folding before any SAT or broad GQ4 work.
+> combine their constant leaves. ADR-0153's exact modular
+> `bv.add_constant_chain.v1` is now accepted: five full processes improve mean
+> total 9.80% to 14.11 seconds, ratio 8.37% to 1.85x Z3, AIG requests 12.13%,
+> clauses 17.23%, and `slice-partial` time 24.4%, with every validity gate
+> green. SAT and broad GQ4 remain behind fresh post-v3 attribution.
 > The ordered warm trace remains the next functionality-enabling Glaurung
 > handoff; cold deduplication cannot validate scopes, prefix reuse, or model
-> choice.
+> choice. Its concrete producer/consumer contract is now
+> [ordered warm-trace v1](docs/research/08-planning/glaurung-ordered-trace-v1.md).
 > The capture and
 > implementation audit has been expanded into the dependency-ordered
 > [Glaurung QF_BV execution plan](docs/research/08-planning/glaurung-qfbv-execution-plan.md):
@@ -129,7 +133,7 @@ decisions or speedups.
 | **GQ4** | **Cold relevant-bit / bit-slice reduction** | Generalize the landed warm narrow-extract rule into a cold structural demand pass that propagates live output-bit ranges backward and bit-blasts only the demanded slice. Preserve exact SMT-LIB total semantics and original-term model replay. Exit with per-query live-bit/AIG/CNF counters and a measured client win. |
 | **GQ5** | **Faster AIG→CNF and stronger sharing** | If GQ1 attributes material time to lowering/encoding, first profile the existing deterministic structural hash and reachable-only, polarity-aware, gate-recognizing CNF encoder by subphase. Then improve lookup/allocation/deduplication or only the measured mux/comparator/adder patterns. Each slice must reduce gates/clauses and end-to-end client time; size-only wins do not suffice. |
 | **GQ6** | **Cold SAT/CDCL tuning** | If GQ1 shows SAT search dominates, compare the exact emitted CNF across BatSat, the proof-producing core, and pinned CaDiCaL/Kissat references; then tune phase saving/rephasing, VSIDS/VMTF, restarts, clause tiers, propagation, subsumption/BVE/vivification, and extracted XOR/GF(2) reasoning. UNSAT proof rechecking and deterministic resource limits remain mandatory. Do not prioritize this over GQ2--GQ5 when encoding dominates. |
-| **GQ7** | **Cheaper warm entry and delta preprocessing** | Make `assert_configured` preprocess only the newly asserted/pushed term plus affected retained summaries, rather than recanonicalizing the active stack. Retain AIG/CNF/learned state across push/pop and measure fixed per-check cost plus the sequence length at which warm solving beats cold Axeyum and Z3. |
+| **GQ7** | **Cheaper warm entry and delta preprocessing** | Use the defined ordered warm-trace v1 contract to capture real worker/path lineage, push/assert/check/pop deltas, repeated checks, unknown/errors, and exploration-driving model reads. Then make `assert_configured` preprocess only the newly asserted/pushed term plus affected retained summaries, retain AIG/CNF/learned state across push/pop, and measure fixed per-check cost plus the sequence length at which warm solving beats cold Axeyum and Z3. |
 | **GQ8** | **Verdict and CNF reuse for duplicate/prefix queries** | Add a deterministic, resource-bounded memoizing layer keyed by canonical hash, solver/config semantics, and assertion-scope identity. Exact duplicate queries may reuse replayable verdict/model/proof artifacts; extending-prefix queries may reuse only sound retained preprocessing/CNF/search state. Cache hits must still pass original-term model or proof replay, and invalidation/versioning must be explicit. |
 | **GQ9** | **Published preprocessing cost model and API guidance** | Expose an `auto` policy based on measured formula size/shape and cold/warm context, with telemetry explaining the selected tier. Document when raw, cheap, configured, and warm-incremental entry points are appropriate. Exit when the default policy is benchmarked against every fixed alternative and avoids the known one-shot preprocessing loss. |
 | **GQ10** | **First-class real-lifter regression corpus** | Adopt the minimized Glaurung SMT-LIB pack, manifest, and expected outcomes as a versioned benchmark tier. Run a small representative subset in the regular regression gate and the full tier on the scheduled performance gate; track per-commit decided/error/replay status, stage counters, and Z3-relative ratio. The item is not `DONE` until the actual lifter distribution—not a synthetic proxy—is reproducibly exercised. |
@@ -182,21 +186,25 @@ available and passes all 128 rows. Five clean full-tier canonical trials now
 put total/ratio/Z3 CV at 0.51%/0.51%/0.31% and establish provisional 3%/3%/2%
 same-environment alarms. Re-attribute the close bit-blast/CNF stages by family
 before another larger measured optimization. That attribution is complete:
-`slice-partial` is 11.8% of queries but 39.7% of Axeyum time, runs 3.82x behind
-Z3, and creates about 10,677 new AIG nodes/query. Proposed ADR-0153 is the next
-bounded GQ2/GQ3 experiment because the current AC `bvadd` path retains every
-constant leaf in mixed affine chains. Add `bv.add_constant_chain.v1`, support
-scalar and wide constants, advance the rewrite identity to v3, and require a
-target-family AIG/CNF/time win in five representative processes before the
-guarded five-process full comparison. Restore v2 if that gate fails.
+`slice-partial` was 11.8% of queries but 39.7% of Axeyum time and 3.82x behind
+Z3. Accepted ADR-0153 combines scalar and wide constant leaves in mixed affine
+`bvadd` chains under rewrite identity v3. Five full processes improve total
+15.644 → 14.111 seconds (-9.80%), ratio 2.022x → 1.852x (-8.37%), AIG requests
+12.13%, clauses 17.23%, and `slice-partial` time 24.4%; all 13,462 decisions and
+replay gates remain green. The rewrite-aware guarded comparator verifies that
+v3 is exactly v2 plus `bv.add_constant_chain.v1` before applying the 3%/3%/2%
+alarms. Re-attribute the v3 residual before another cold change.
 Broad GQ4 partial lowering follows its small post-canonical full-tier
 opportunity (1.84% term bits) unless family-specific evidence reverses the
 rank. Admit GQ6
-SAT-core work only if search becomes material. GQ7--GQ9 require a separate
-ordered path trace because the deduplicated cold corpus erases prefix/frequency
-information; GQ8 follows the exact cache/replay contract rather than treating a
-prefix as an identical query. Re-run the GQ10 baseline after every accepted
-slice and record the result in `STATUS.md` and `bench-results/`.
+SAT-core work only if search becomes material. GQ7--GQ9 require the separate
+[ordered warm-trace v1](docs/research/08-planning/glaurung-ordered-trace-v1.md)
+because the deduplicated cold corpus erases prefix/frequency information. The
+schema is defined; the next gate is a small producer sample that validates
+hashes, sorts, scopes, lineage, and exploration-driving values. GQ8 follows the
+exact cache/replay contract rather than treating a prefix as an identical
+query. Re-run the GQ10 baseline after every accepted slice and record the result
+in `STATUS.md` and `bench-results/`.
 
 **GQ1/GQ10 readiness landed (2026-07-13/14, artifact v26).** The client recipe is
 now a single-worker cold run. Its artifact separates word preprocessing,

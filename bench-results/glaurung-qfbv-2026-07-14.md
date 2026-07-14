@@ -446,3 +446,49 @@ constraint/query IDs, push/assert/check/pop order, expected verdict, model
 choice or controlled-concretization metadata, and timing. Without it, the
 deduplicated cold pack cannot establish warm break-even, prefix reuse, or cache
 value.
+
+## ADR-0153 accepted result
+
+Revision `83a808a9` implements `bv.add_constant_chain.v1` for scalar and wide
+constants and advances the default rewrite identity from v2 to v3. The rule
+combines at least two constant leaves modulo width in the already-flattened
+`bvadd` list, omits a zero sum when symbolic leaves remain, and reuses the
+deterministic balanced rebuild. Exhaustive small-width evaluation, 129-bit
+wrap, manifest coverage, lifter-shaped Z3 SAT/UNSAT replay, and strict Clippy
+are green.
+
+Five representative processes fire the rule 771 times (736 in
+`slice-partial`) and pass every 128-query validity gate. Against the accepted
+v2 representative series, total/bit/CNF/SAT p50 improve 12.67%/9.96%/13.09%/
+20.78%. Matched `slice-partial` AIG requests/new nodes/clauses fall 23.1%/19.4%/
+34.3%, and its total falls 20.3%. This clears the predeclared full-run gate.
+
+Five full processes then decide all 13,462 rows with zero errors, unknowns,
+disagreements, or replay failures. Mean results are:
+
+| Measure | v2 | v3 | Delta |
+|---|---:|---:|---:|
+| Axeyum total | 15.6441 s | 14.1105 s | -9.80% |
+| Z3 control | 7.7383 s | 7.6174 s | -1.56% |
+| ratio | 2.0217x | 1.8524x | -8.37% |
+| word policy | 1.7691 s | 1.7916 s | +1.27% |
+| bit blast | 4.9717 s | 4.5854 s | -7.77% |
+| CNF | 5.2047 s | 4.6523 s | -10.61% |
+| SAT | 3.5161 s | 2.8997 s | -17.53% |
+
+The rule fires 52,858 times, 49,627 in `slice-partial`. Full post-word DAG,
+term-bit, AIG-request, new-node, and clause counts improve 7.61%/9.98%/12.13%/
+9.13%/17.23%. `slice-partial` total improves 24.4%, its ratio 3.82x → 2.94x,
+and its clauses 22,872,958 → 14,810,143 (-35.3%), while `register-slice` total
+is flat (-0.14%). The word scan costs 1.27% globally, but construction/search
+reductions dominate it.
+
+Because a changed manifest is intentionally not the same benchmark
+configuration, the new rewrite-aware guarded comparator requires the exact
+v2 → v3 identities and exact `bv.add_constant_chain.v1` addition. It rejects
+removals, reordering, hidden additions, and every other configuration drift.
+The comparison passes the 3% ratio / 3% Axeyum / 2% absolute-Z3 alarms; Z3 drift
+is 1.56%. Candidate-summary SHA-256:
+`c4ca7612ddc0544cfaacac9cf2dcd5549460fe0e1e06ee0df6df0de56b207fab`.
+Comparison SHA-256:
+`2d42ecb2e1c6eceaf8821fec745f2379816890bad1c60d8580e8b1ca07f33106`.

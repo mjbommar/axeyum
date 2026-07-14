@@ -394,13 +394,15 @@ and 31 SAT-BV tests plus strict Clippy pass. Five representative processes
 preserve structure, but bit blast improves only 0.57% while total mean/CNF p50
 regress 0.38%/0.88%. It is restored/deferred without a full run. Close memo
 micro-work and advance the data-availability-aware GQ10 representative gate.
-The subsequent family attribution selects proposed ADR-0153: `slice-partial`
+The subsequent family attribution selects ADR-0153: `slice-partial`
 is only 1,584/13,462 queries but owns 39.7% of Axeyum time, runs 3.82x behind
 Z3, and creates 16.91 million AIG nodes plus 22.87 million clauses. Its source
 scripts contain 377,320 `bvadd` occurrences, while the current AC canonicalizer
 sorts mixed symbol/constant chains without combining their constant leaves.
-Test exact modular add-chain folding next; SAT and broad GQ4 remain gated by
-measured opportunity.
+Exact modular add-chain folding is accepted: full total improves 9.80% to
+14.11 seconds / 1.85x Z3, clauses fall 17.23%, and `slice-partial` improves
+24.4% with every semantic gate green. SAT and broad GQ4 remain gated by fresh
+post-v3 opportunity.
 
 ### G6 — SAT work remains conditional (GQ6)
 
@@ -412,6 +414,12 @@ XOR work from that evidence. Deterministic resource limits, assignment replay,
 and UNSAT proof recheck remain mandatory.
 
 ### G7 — capture and implement the real warm shape (GQ7)
+
+The concrete producer/consumer event contract is
+[Glaurung ordered warm-trace v1](glaurung-ordered-trace-v1.md). It is derived
+from the reviewed `GLAURUNG_DUMP_QUERIES` capture seam and keeps content-addressed
+query bytes while restoring occurrences, scopes, path/worker lineage,
+unknown/error events, and model choices.
 
 The deduplicated cold corpus cannot validate incremental reuse because it loses
 query frequency, order, path-prefix relationships, push/pop scopes, and model
@@ -457,25 +465,29 @@ validity gates.
 | M0 byte-complete capture | GQ1, GQ10 | **Axeyum side done:** representative and well-typed full manifests validate; producer still must prevent 2,225 malformed dumps and atomically deduplicate |
 | M1 raw v27 baseline | GQ1, GQ10 | **Done:** representative raw/canonical and five canonical full-tier processes pass every gate; full Axeyum/ratio/Z3 CV is 0.51%/0.51%/0.31% and guarded comparisons use provisional 3%/3%/2% alarms |
 | M2 diagnostic attribution | GQ1, GQ3--GQ5 | **Done for current boundary:** ADR-0143 removes the 29.57 s observational pass from production and marks diagnostic completeness explicitly |
-| M3 cheap exact rewriting | GQ2, GQ3 | **Measured production win plus next candidate:** canonical cuts Axeyum total 17.4% representative median / 13.3% full and bit blast 37.3% / 44.4%; proposed ADR-0153 targets the measured `slice-partial` affine-add residue, with circuit/time admission still required |
+| M3 cheap exact rewriting | GQ2, GQ3 | **Two measured production tranches:** canonical v2 cuts corrected full total 13.3%; accepted ADR-0153 then cuts v3 full total 9.80%, AIG requests 12.13%, clauses 17.23%, and `slice-partial` time 24.4% |
 | M4 demand lowering | GQ4 | Continue only with replay-safe real AIG/CNF and wall-time reductions |
-| M5 AIG/CNF optimization | GQ5 | **Four wins accepted:** ADR-0144/0145 reduce clause ownership/emission; ADR-0150/0151 then reach 15.60 s / 1.99x through fingerprint and dense lift indexes. ADR-0153 now tests the measured word-level cause before more construction work |
+| M5 AIG/CNF optimization | GQ5 | **Four direct construction wins plus one upstream reduction accepted:** ADR-0144/0145/0150/0151 reach 15.60 s / 1.99x; ADR-0153's word reduction lowers downstream clauses 17.23% and reaches 14.11 s / 1.85x. Re-attribute v3 before another cold experiment |
 | M6 SAT re-attribution | GQ6 | Start SAT work only if search becomes material/dominant |
-| M7 ordered warm trace | GQ7, GQ8 | Decide incremental API shape and whether a cache is worthwhile |
+| M7 ordered warm trace | GQ7, GQ8 | **Consumer contract defined:** obtain and validate a producer sample, then measure incremental API shape and duplicate/prefix frequency before deciding whether a cache is worthwhile |
 | M8 Glaurung warm integration | GQ7 | Require real same-stream functionality and performance, not the synthetic result |
 | M9 auto policy and regression lane | GQ8--GQ10 | **Cold regression lane done:** raw + canonical representative checks are availability-aware and canonical full-tier 3%/3%/2% alarms are executable; ordered-trace validation remains mandatory before changing defaults |
 
 ## Immediate next actions
 
-1. Implement and semantically validate proposed ADR-0153's exact
-   `bv.add_constant_chain.v1` rule. Five representative processes must show
-   target-family rule applications plus post-word/AIG/CNF and end-to-end gains
-   before spending the guarded five-process full comparison. Restore v2 if it
-   fails; broad GQ4 and SAT work remain behind measured opportunity.
-2. On the Glaurung side, fix explicit width coercion plus strict dump validation
-   and cross-process dedup/conflict handling. Define the ordered warm-trace and
-   controlled-concretization schema before GQ7/GQ8 cache or auto-policy work.
-3. Run every accepted cold candidate through the guarded five-process full
+1. Hand off the defined GQ7
+   [ordered warm-trace v1 contract](glaurung-ordered-trace-v1.md) and obtain a
+   small producer sample covering a root/fork, repeated check, nested push/pop,
+   SAT model-driven choice, and UNSAT prune. Validate hashes, sorts, scope
+   reconstruction, lineage, and consumed model values before scaling. The cold
+   deduplicated pack cannot substitute for it.
+2. Re-attribute the accepted v3 residual by family/operator/construction shape
+   before proposing another GQ2--GQ6 cold change. Broad GQ4 and SAT remain
+   behind measured post-v3 opportunity.
+3. On the Glaurung side, fix explicit width coercion plus strict dump validation
+   and cross-process dedup/conflict handling so future cold and ordered captures
+   are authoritative before GQ7/GQ8 cache or auto-policy work.
+4. Run every accepted cold candidate through the guarded five-process full
    comparison. A threshold violation is a regression alarm to investigate, not
    permission to ignore raw controls or semantic gates.
 

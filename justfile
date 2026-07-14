@@ -210,6 +210,13 @@ compare-glaurung-qfbv-repeated-guarded baseline candidate out:
     mkdir -p "$(dirname '{{ out }}')"
     python3 scripts/compare-glaurung-repetitions.py "{{ baseline }}" "{{ candidate }}" --max-ratio-regression-percent 3 --max-axeyum-regression-percent 3 --max-z3-drift-percent 2 --out "{{ out }}"
 
+# The same variance alarms for a deliberately changed default rewrite manifest.
+# This stays fail-closed: both manifest identities and the one additive rule
+# must match exactly; removals, reordering, or hidden additions are rejected.
+compare-glaurung-qfbv-repeated-rewrite-guarded baseline candidate baseline_rule_set candidate_rule_set added_rule_id out:
+    mkdir -p "$(dirname '{{ out }}')"
+    python3 scripts/compare-glaurung-repetitions.py "{{ baseline }}" "{{ candidate }}" --expected-baseline-rule-set "{{ baseline_rule_set }}" --expected-candidate-rule-set "{{ candidate_rule_set }}" --expected-added-rewrite-rule "{{ added_rule_id }}" --max-ratio-regression-percent 3 --max-axeyum-regression-percent 3 --max-z3-drift-percent 2 --out "{{ out }}"
+
 # High-assurance companion to the performance run. This switches to the slower
 # proof-producing native core and fails closed unless every UNSAT has an inline
 # checked DRAT proof. Its timings are proof-validation costs, not the batsat/Z3

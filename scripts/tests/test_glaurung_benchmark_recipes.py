@@ -83,6 +83,21 @@ class GlaurungBenchmarkRecipeTests(unittest.TestCase):
         self.assertIn("--max-axeyum-regression-percent 3", output)
         self.assertIn("--max-z3-drift-percent 2", output)
 
+    def test_rewrite_guard_requires_the_exact_manifest_delta(self) -> None:
+        output = dry_run(
+            "compare-glaurung-qfbv-repeated-rewrite-guarded",
+            "baseline.json",
+            "candidate.json",
+            "axeyum-rewrite-default-v2",
+            "axeyum-rewrite-default-v3",
+            "bv.add_constant_chain.v1",
+            "comparison.json",
+        )
+        self.assertIn("--expected-baseline-rule-set", output)
+        self.assertIn("--expected-candidate-rule-set", output)
+        self.assertIn("--expected-added-rewrite-rule", output)
+        self.assertIn("--max-ratio-regression-percent 3", output)
+
 
 if __name__ == "__main__":
     unittest.main()
