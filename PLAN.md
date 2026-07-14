@@ -48,7 +48,11 @@ session state.
 > median/mean regress 0.83%/0.67%, while the 0.16% total-median change is noise
 > contradicted by a 0.07% mean regression. Ordinary vector growth is restored
 > without a full run. Close the capacity-hint lane and re-attribute the shared
-> clause-normalization/ownership path before selecting a larger GQ5 slice.
+> clause-normalization/ownership path before selecting a larger GQ5 slice. The
+> audit identifies that slice: the accepted index stores a heap-backed
+> `Vec<usize>` and performs separate lookup/insertion probes for almost every
+> unique fingerprint. Proposed ADR-0150 will retain one inline primary formula
+> index per fingerprint and allocate a side bucket only on a genuine collision.
 > The capture and
 > implementation audit has been expanded into the dependency-ordered
 > [Glaurung QF_BV execution plan](docs/research/08-planning/glaurung-qfbv-execution-plan.md):
@@ -114,8 +118,10 @@ normalization/allocation before selecting another bounded GQ5 slice. ADR-0148's
 combined capacity hint regresses total/CNF 2.5%/10.0% and is restored as
 negative evidence. ADR-0149's formula-header-only isolation also regresses CNF
 median/mean 0.83%/0.67% and is restored. Capacity hints are exhausted; next
-measure shared clause normalization/ownership and select a larger attributed
-GQ5 slice instead of another allocation micro-experiment.
+test ADR-0150's larger ownership slice: replace the per-fingerprint heap vector
+and double common-case map probe with an inline primary index plus a
+collision-only side table. `register-slice` and `slice-partial` contribute
+99.1% of full clause attempts, so this directly targets the client hotspot.
 Affine word work must still show a downstream circuit/CNF win before outranking
 it.
 Broad GQ4 partial lowering follows its small post-canonical full-tier

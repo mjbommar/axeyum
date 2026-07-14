@@ -284,3 +284,15 @@ CNF p50 changes 0.072978 → 0.073583 s (+0.83%) and mean changes 0.073648 →
 gate, so ordinary vector growth is restored, no full run is spent, and
 ADR-0149 is deferred. Capacity-hint micro-work is exhausted; the next GQ5 step
 must re-attribute shared clause normalization/ownership.
+
+## ADR-0150 inline primary fingerprint-index candidate
+
+The ownership audit finds that accepted ADR-0144's
+`HashMap<u64, Vec<usize>>` performs separate membership/insertion probes and
+allocates on the first index push for each distinct fingerprint. The full tier
+emits 49,199,541 clauses; `register-slice` plus `slice-partial` contribute
+53,247,640/53,748,044 attempts (99.1%) and 48,702,009/49,199,541 emitted clauses
+(99.0%). Proposed ADR-0150 will retain the first formula index inline and use a
+secondary vector only for genuine fingerprint collisions. Exact equality,
+formula ownership, clause order, decisions, and replay remain acceptance
+invariants; no performance claim is admitted before representative/full gates.

@@ -445,7 +445,13 @@ validity gates.
    by a 0.07% mean regression and higher variance. It is restored/deferred
    without a full run. Close capacity micro-work and attribute shared clause
    normalization, fingerprinting, exact duplicate checks, and insertion before
-   choosing a larger GQ5 slice.
+   choosing a larger GQ5 slice. That audit selects ADR-0150: the accepted
+   fingerprint map stores a heap-backed index vector and performs separate
+   lookup/insertion probes for the common unique-clause case. Retain one inline
+   primary formula index and allocate a secondary bucket only for genuine
+   fingerprint collisions; preserve exact equality, formula ownership, clause
+   order, and replay. Forced-collision tests and the usual representative/full
+   gates remain mandatory.
 3. Keep the next exact word tranche around affine BV add/sub constant-chain
    normalization and cheap duplicate-root handling behind evidence that it
    reduces downstream AIG/CNF for the

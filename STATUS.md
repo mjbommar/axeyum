@@ -406,6 +406,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   run variance. Ordinary vector growth is restored, no full run is warranted,
   and the capacity-hint lane is closed.
 
+  The follow-up ownership audit selects proposed ADR-0150 as the next bounded
+  GQ5 experiment. The accepted `HashMap<u64, Vec<usize>>` performs a membership
+  lookup and then a second entry lookup for a unique clause, while the first
+  push allocates a tiny vector for each distinct fingerprint. The full stream
+  emits 49,199,541 clauses; `register-slice` plus `slice-partial` account for
+  53,247,640/53,748,044 attempts (99.1%) and 48,702,009/49,199,541 emitted
+  clauses (99.0%). ADR-0150 retains the common formula index inline and uses a
+  secondary vector only for a genuine fingerprint collision, preserving exact
+  equality and formula ownership.
+
 - **Historical Glaurung build-up through 2026-07-14 (superseded by the measured
   result above).** The ten-item Glaurung QF_BV performance roadmap is an
   explicit Track 1/4 lane (`PLAN.md` GQ1--GQ10). The ordering is
@@ -575,17 +585,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   | **GQ2 cheap cold tier** | **WIP candidate validated.** Canonical v2 cuts corrected representative/full Axeyum total 17.4%/13.3% and bit blast 37.3%/44.4% | Keep canonical as the candidate; add another word rule only if it reduces downstream AIG/CNF and end-to-end time |
   | **GQ3 coercion peepholes** | **WIP with a corrected production win.** ADR-0142 removes 1,315/1,435 representative opportunities and cuts term bits 57% representative / 72% full; full AIG/CNF size remains roughly flat | Demonstrate circuit-size improvement from any next exact word tranche or narrow the exit criterion explicitly |
   | **GQ4 cold relevant bits** | **WIP but re-ranked.** ADR-0143 separates the diagnostic; post-canonical full demand is 98.16% of term bits and 91.51% of symbol bits | Pursue partial lowering only if family-specific evidence shows a material cone and preserve original replay/model projection |
-  | **GQ5 AIG/CNF construction** | **ACTIVE with two accepted wins and four restored/rejected experiments.** ADR-0148's combined capacity hint regresses total/CNF 2.5%/10.0%; ADR-0149's formula-header-only isolation still regresses CNF median/mean 0.83%/0.67%. Remaining gate/root/planning are 3.19/1.39/1.21 s | Close capacity micro-work; re-attribute shared clause normalization/ownership and select a larger measured slice with identical content/replay |
+  | **GQ5 AIG/CNF construction** | **ACTIVE with two accepted wins, four restored/rejected experiments, and one larger ownership candidate.** ADR-0148/0149 close capacity hints. Proposed ADR-0150 removes the per-fingerprint heap vector and second common-case map probe while preserving collision-safe exact equality; remaining gate/root/planning are 3.19/1.39/1.21 s | Implement ADR-0150 with forced-collision/equivalence tests, then require representative CNF and total wins with identical content/replay before full confirmation |
   | **GQ6 cold SAT/CDCL** | **WIP foundation, attribution-gated**; subsumption/BVE, XOR/GF(2), VSIDS, phase saving, Luby, and LBD foundations exist | Exact-CNF backend attribution first; tune/default a stronger path only where SAT dominates and proof replay stays green |
   | **GQ7 warm delta entry** | **WIP foundation**; retained CNF/search state exists, but the deduplicated cold corpus cannot measure prefix reuse and Glaurung still creates a fresh solver for every check | Capture an ordered scope/path trace, preprocess only new/affected terms, wire persistent per-worker/path push/assert/check/pop, control concretization, and publish real-driver per-check cost plus warm break-even depth |
   | **GQ8 verdict/CNF cache** | **TODO, ordered-trace-gated** | Measure duplicates/prefixes first; prefer retained warm state, then add versioned exact-query reuse only where justified, with deterministic bounds and mandatory original replay |
   | **GQ9 auto cost model/docs** | **TODO**; P1.8 shape/resource probes are only the general foundation | Telemetry-visible raw/cheap/configured/warm choice that beats or matches fixed policies and documents embedder guidance |
   | **GQ10 real-lifter regression tier** | **WIP; access-controlled representative and well-typed full tiers validate.** Artifact v27 baseline repetitions/full trials and ADR-0144/0145 accepted full confirmations are complete; 2,225 malformed dumps are isolated | Add a data-availability-aware regular gate, establish repeated full-tier variance thresholds, and fix producer validation/dedup before calling the raw capture authoritative |
 
-  **Next actions:** (1) add low-overhead attribution around shared clause
-  normalization, fingerprinting, exact duplicate checks, and formula insertion;
-  (2) select one larger GQ5 slice only from those measurements and require an
-  end-to-end/CNF win with bounded memory and identical content before a full
+  **Next actions:** (1) implement ADR-0150's inline primary fingerprint index
+  plus collision-only side table and forced-collision coverage; (2) validate
+  exact CNF equivalence and run five clean representative processes, requiring
+  an end-to-end/CNF win with bounded memory and identical content before a full
   confirmation; (3) keep affine
   BV add/sub normalization behind evidence that it reduces AIG/CNF, and keep SAT
   work gated;
