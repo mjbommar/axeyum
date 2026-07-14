@@ -7,7 +7,8 @@
 
 use axeyum_aig::{Aig, AigLit, AigNode, AigNodeId};
 use std::cell::Cell;
-use std::collections::BTreeMap;
+use std::collections::HashMap;
+use std::hash::{BuildHasherDefault, Hasher};
 use std::time::Duration;
 
 // Monotonic clock: the browser has no `std` clock, so on wasm32 use `web-time`'s
@@ -1477,7 +1478,7 @@ struct TseitinEncoder<'a> {
     not_ite_gates: Vec<Option<NotIteGate>>,
     not_and_gates: Vec<Option<NotAndGate>>,
     and_tree_gates: Vec<Option<AndTreeGate>>,
-    clause_index: BTreeMap<u64, Vec<usize>>,
+    clause_index: ClauseIndex,
     variable_bindings: Vec<CnfVarBinding>,
     clause_attempts: u64,
     tautological_clauses_skipped: u64,
@@ -1498,7 +1499,7 @@ impl<'a> TseitinEncoder<'a> {
             not_ite_gates: vec![None; aig.node_count()],
             not_and_gates: vec![None; aig.node_count()],
             and_tree_gates: vec![None; aig.node_count()],
-            clause_index: BTreeMap::new(),
+            clause_index: ClauseIndex::default(),
             variable_bindings: Vec::new(),
             clause_attempts: 0,
             tautological_clauses_skipped: 0,
@@ -2115,6 +2116,36 @@ impl<'a> TseitinEncoder<'a> {
             .or_default()
             .push(index);
         Ok(())
+    }
+}
+
+type ClauseIndex = HashMap<u64, Vec<usize>, BuildHasherDefault<FingerprintHasher>>;
+
+/// The clause key is already a mixed 64-bit fingerprint. Preserve it as the
+/// table hash so lookup has no second hashing pass. The fallback `write` keeps
+/// this a total `Hasher` implementation even though `u64::hash` uses
+/// `write_u64`.
+#[derive(Default)]
+struct FingerprintHasher(u64);
+
+impl Hasher for FingerprintHasher {
+    fn finish(&self) -> u64 {
+        self.0
+    }
+
+    fn write(&mut self, bytes: &[u8]) {
+        const FNV_OFFSET: u64 = 0xcbf2_9ce4_8422_2325;
+        const FNV_PRIME: u64 = 0x0000_0100_0000_01b3;
+        let mut hash = FNV_OFFSET;
+        for &byte in bytes {
+            hash ^= u64::from(byte);
+            hash = hash.wrapping_mul(FNV_PRIME);
+        }
+        self.0 = hash;
+    }
+
+    fn write_u64(&mut self, value: u64) {
+        self.0 = value;
     }
 }
 
