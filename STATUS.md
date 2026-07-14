@@ -2296,7 +2296,12 @@ plan is built and committed on the current branch:
   as nested inside total encode time. Repetition/comparison tools are
   version-locked to v24. AIG/CNF/solver/benchmark tests and strict Clippy pass
   under the 4 GiB cap; the real Glaurung payload remains required before these
-  counters can authorize a GQ5 optimization.
+  counters can authorize a GQ5 optimization. From clean commit `e17069f2`, the
+  raw/canonical/configured client recipes each emitted v24 and passed 2/2
+  decided, manifest/Z3 agreement, zero-error/disagreement/replay gates, and
+  both construction partitions on the committed micro tier. Raw reported 53
+  primitive AIG requests (18 trivial, 35 new nodes) and 37 emitted CNF clauses;
+  these tiny values validate schema/recipe plumbing only, not client timing.
 
 - **2026-07-14 — artifact v23 measures the residual GQ3 opportunity set.** The
   benchmark now profiles both the untouched query and the exact assertion DAG
