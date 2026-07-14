@@ -264,6 +264,23 @@ fn identity_and_generic_transfers_reconstruct_from_exact_sources() {
          (assert (exists ((x (_ BitVec 4))) (= x (_ bv0 4)))) \
          (assert (not (exists ((y (_ BitVec 4))) (bvule y (_ bv0 4))))) \
          (check-sat)",
+        "(set-logic BV) (declare-fun k () (_ BitVec 4)) (declare-fun p () Bool) \
+         (assert (and p (exists ((x (_ BitVec 4))) \
+           (and (bvsle (bvadd x (_ bv3 4)) k) (bvsle x (_ bv4 4)))))) \
+         (assert (not (and p (exists ((y (_ BitVec 4))) \
+           (and (bvsle (bvadd y (_ bv1 4)) k) (bvsle y (_ bv4 4))))))) \
+         (check-sat)",
+        "(set-logic BV) (declare-fun i () (_ BitVec 4)) \
+         (declare-fun j () (_ BitVec 4)) (declare-fun k () (_ BitVec 4)) \
+         (assert (and (bvsle i (_ bv3 4)) (bvsle i (_ bv2 4)) \
+           (exists ((x (_ BitVec 4))) \
+             (and (bvsle (bvadd x (_ bv3 4)) k) (bvsle x (_ bv3 4)) \
+                  (bvsle j (bvadd (bvmul (_ bv2 4) x) (_ bv1 4))))))) \
+         (assert (not (and (bvsle i (_ bv3 4)) (bvsle i (_ bv2 4)) \
+           (exists ((y (_ BitVec 4))) \
+             (and (bvsle (bvadd y (_ bv1 4)) k) (bvsle y (_ bv3 4)) \
+                  (bvsle j (bvadd (bvmul (_ bv2 4) y) (_ bv1 4)))))))) \
+         (check-sat)",
     ] {
         let mut script = parse_script(text).expect("paired source parses");
         let assertions = script.assertions.clone();
@@ -290,15 +307,15 @@ fn identity_and_generic_transfers_reconstruct_from_exact_sources() {
 }
 
 #[test]
-fn public_nested_unreachable_call_declines_at_compact_rup_scoping_gate() {
+fn public_nested_unreachable_call_declines_at_compact_rup_export_gate() {
     let (script, assertions, certificate) = target_certificate();
     let error = reconstruct_bv_paired_existential_transfer_to_lean_module(
         &script.arena,
         &assertions,
         &certificate,
     )
-    .expect_err("public paired row remains behind the scoped compact-RUP gate");
-    assert!(error.to_string().contains("compact-RUP scoping gate"));
+    .expect_err("public paired row remains behind the compact-RUP export gate");
+    assert!(error.to_string().contains("compact-RUP export gate"));
 }
 
 #[test]

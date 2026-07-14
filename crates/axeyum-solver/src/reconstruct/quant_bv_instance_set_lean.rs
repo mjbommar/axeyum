@@ -2147,13 +2147,83 @@ struct PairedExistsLayer {
     positive_predicate: ExprId,
     positive_proposition: ExprId,
     negative_predicate: ExprId,
+    negative_proposition: ExprId,
 }
 
-fn project_source_conjunction(
+fn paired_ground_conjunction_prop(
+    ctx: &mut ReconstructCtx,
+    arena: &TermArena,
+    term: TermId,
+) -> Result<ExprId, ReconstructError> {
+    if let TermNode::App {
+        op: Op::BoolAnd,
+        args,
+    } = arena.node(term)
+        && let [left, right] = &**args
+    {
+        let left = paired_ground_conjunction_prop(ctx, arena, *left)?;
+        let right = paired_ground_conjunction_prop(ctx, arena, *right)?;
+        return Ok(ctx.mk_and(left, right));
+    }
+    direct_ground_prop(ctx, arena, term)
+}
+
+fn paired_source_prop(
+    ctx: &mut ReconstructCtx,
+    arena: &TermArena,
+    term: TermId,
+    existential: TermId,
+    existential_prop: ExprId,
+) -> Result<ExprId, ReconstructError> {
+    if term == existential {
+        return Ok(existential_prop);
+    }
+    match arena.node(term) {
+        TermNode::App {
+            op: Op::BoolAnd,
+            args,
+        } if args.len() == 2 && contains_quantifier(arena, term) => {
+            let left = paired_source_prop(
+                ctx,
+                arena,
+                args[0],
+                existential,
+                existential_prop,
+            )?;
+            let right = paired_source_prop(
+                ctx,
+                arena,
+                args[1],
+                existential,
+                existential_prop,
+            )?;
+            Ok(ctx.mk_and(left, right))
+        }
+        TermNode::App {
+            op: Op::BoolNot,
+            args,
+        } if args.len() == 1 && contains_quantifier(arena, args[0]) => {
+            let inner = paired_source_prop(
+                ctx,
+                arena,
+                args[0],
+                existential,
+                existential_prop,
+            )?;
+            Ok(ctx.mk_not(inner))
+        }
+        _ => source_prop(ctx, arena, term),
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn project_paired_source_conjunction(
     ctx: &mut ReconstructCtx,
     arena: &TermArena,
     term: TermId,
     proof: ExprId,
+    existential: TermId,
+    existential_prop: ExprId,
     out: &mut BTreeMap<TermId, ExprId>,
 ) -> Result<(), ReconstructError> {
     if let TermNode::App {
@@ -2162,12 +2232,30 @@ fn project_source_conjunction(
     } = arena.node(term)
         && let [left, right] = &**args
     {
-        let left_prop = source_prop(ctx, arena, *left)?;
-        let right_prop = source_prop(ctx, arena, *right)?;
+        let left_prop =
+            paired_source_prop(ctx, arena, *left, existential, existential_prop)?;
+        let right_prop =
+            paired_source_prop(ctx, arena, *right, existential, existential_prop)?;
         let left_proof = and_project(ctx, left_prop, right_prop, proof, true);
         let right_proof = and_project(ctx, left_prop, right_prop, proof, false);
-        project_source_conjunction(ctx, arena, *left, left_proof, out)?;
-        return project_source_conjunction(ctx, arena, *right, right_proof, out);
+        project_paired_source_conjunction(
+            ctx,
+            arena,
+            *left,
+            left_proof,
+            existential,
+            existential_prop,
+            out,
+        )?;
+        return project_paired_source_conjunction(
+            ctx,
+            arena,
+            *right,
+            right_proof,
+            existential,
+            existential_prop,
+            out,
+        );
     }
     out.insert(term, proof);
     Ok(())
@@ -2197,11 +2285,13 @@ fn project_ground_conjunction(
     Ok(())
 }
 
-fn rebuild_source_conjunction(
+fn rebuild_paired_source_conjunction(
     ctx: &mut ReconstructCtx,
     arena: &TermArena,
     term: TermId,
     proofs: &BTreeMap<TermId, ExprId>,
+    existential: TermId,
+    existential_prop: ExprId,
 ) -> Result<ExprId, ReconstructError> {
     if let TermNode::App {
         op: Op::BoolAnd,
@@ -2209,10 +2299,26 @@ fn rebuild_source_conjunction(
     } = arena.node(term)
         && let [left, right] = &**args
     {
-        let left_prop = source_prop(ctx, arena, *left)?;
-        let right_prop = source_prop(ctx, arena, *right)?;
-        let left_proof = rebuild_source_conjunction(ctx, arena, *left, proofs)?;
-        let right_proof = rebuild_source_conjunction(ctx, arena, *right, proofs)?;
+        let left_prop =
+            paired_source_prop(ctx, arena, *left, existential, existential_prop)?;
+        let right_prop =
+            paired_source_prop(ctx, arena, *right, existential, existential_prop)?;
+        let left_proof = rebuild_paired_source_conjunction(
+            ctx,
+            arena,
+            *left,
+            proofs,
+            existential,
+            existential_prop,
+        )?;
+        let right_proof = rebuild_paired_source_conjunction(
+            ctx,
+            arena,
+            *right,
+            proofs,
+            existential,
+            existential_prop,
+        )?;
         return Ok(and_intro(
             ctx,
             left_prop,
@@ -2290,8 +2396,10 @@ fn build_paired_exists_layers(
         pending.push((positive, negative, aligned, sort, witness_id, domain));
     }
 
-    let mut positive_suffix = direct_ground_prop(ctx, arena, admitted.positive_body)?;
-    let mut negative_suffix = direct_ground_prop(ctx, arena, admitted.negative_body)?;
+    let mut positive_suffix =
+        paired_ground_conjunction_prop(ctx, arena, admitted.positive_body)?;
+    let mut negative_suffix =
+        paired_ground_conjunction_prop(ctx, arena, admitted.negative_body)?;
     let mut layers = Vec::with_capacity(pending.len());
     for &(positive, negative, aligned, sort, witness_id, domain) in pending.iter().rev() {
         let anon = ctx.kernel.anon();
@@ -2320,6 +2428,7 @@ fn build_paired_exists_layers(
             positive_predicate,
             positive_proposition,
             negative_predicate,
+            negative_proposition,
         });
         positive_suffix = positive_proposition;
         negative_suffix = negative_proposition;
@@ -2415,7 +2524,7 @@ fn prove_paired_consequent(
     });
     if requires_compact_rup {
         return Err(decline(
-            "paired-existential implication exceeds the public compact-RUP scoping gate",
+            "paired-existential implication exceeds the public compact-RUP export gate",
         ));
     }
     ctx.bridge = Some(gate_defs);
@@ -2483,11 +2592,17 @@ fn refute_paired_exists_suffix(
         let negative_exists = introduce_paired_negative_exists(ctx, layers, negative_body);
         let mut negative_inner_proofs = premise_proofs.clone();
         negative_inner_proofs.insert(certificate.negative_existential, negative_exists);
-        let negative_inner_proof = rebuild_source_conjunction(
+        let negative_existential_prop = layers
+            .first()
+            .map(|layer| layer.negative_proposition)
+            .ok_or_else(|| decline("paired-existential layer stack is empty"))?;
+        let negative_inner_proof = rebuild_paired_source_conjunction(
             ctx,
             arena,
             negative_inner,
             &negative_inner_proofs,
+            certificate.negative_existential,
+            negative_existential_prop,
         )?;
         return Ok(ctx.kernel.app(negative_source, negative_inner_proof));
     };
@@ -2735,17 +2850,41 @@ pub fn reconstruct_bv_paired_existential_transfer_to_lean_module(
     ctx.typed_bv_gates = true;
     register_bv_widths(&mut ctx, arena, certificate.positive_assertion);
     register_bv_widths(&mut ctx, arena, certificate.negative_assertion);
-    let positive_prop = source_prop(&mut ctx, arena, certificate.positive_assertion)?;
-    let negative_prop = source_prop(&mut ctx, arena, certificate.negative_assertion)?;
+    let layers = build_paired_exists_layers(
+        &mut ctx,
+        arena,
+        &replay.arena,
+        &admitted,
+        &replay.aligned_binders,
+    )?;
+    let outer_layer = layers
+        .first()
+        .ok_or_else(|| decline("paired-existential layer stack is empty"))?;
+    let positive_prop = paired_source_prop(
+        &mut ctx,
+        arena,
+        certificate.positive_assertion,
+        certificate.positive_existential,
+        outer_layer.positive_proposition,
+    )?;
+    let negative_prop = paired_source_prop(
+        &mut ctx,
+        arena,
+        certificate.negative_assertion,
+        certificate.negative_existential,
+        outer_layer.negative_proposition,
+    )?;
     let positive_source = fresh_axiom(&mut ctx, positive_prop, "bv-paired-exists-positive")?;
     let negative_source = fresh_axiom(&mut ctx, negative_prop, "bv-paired-exists-negative")?;
 
     let mut positive_leaves = BTreeMap::new();
-    project_source_conjunction(
+    project_paired_source_conjunction(
         &mut ctx,
         arena,
         certificate.positive_assertion,
         positive_source,
+        certificate.positive_existential,
+        outer_layer.positive_proposition,
         &mut positive_leaves,
     )?;
     let positive_exists = positive_leaves
@@ -2764,13 +2903,6 @@ pub fn reconstruct_bv_paired_existential_transfer_to_lean_module(
         })
         .collect::<Result<BTreeMap<_, _>, _>>()?;
 
-    let layers = build_paired_exists_layers(
-        &mut ctx,
-        arena,
-        &replay.arena,
-        &admitted,
-        &replay.aligned_binders,
-    )?;
     ctx.defer_open_step_checks = true;
     let mut scoped_binders = Vec::with_capacity(layers.len() * 2);
     let open_proof = refute_paired_exists_suffix(

@@ -457,7 +457,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   Quantified-BV Lean UNSAT rises **14→16/18**. Next: ADR-0129 source
   elimination/introduction, then ADR-0127's compact reflected-RUP boundary.
 
-- **2026-07-14 — ADR-0129 source reconstruction is WIP at the measured compact-RUP boundary.**
+- **2026-07-14 — ADR-0129 source reconstruction is WIP at the measured compact-RUP export boundary.**
   The bounded route now rechecks the exact certificate, represents both
   untouched paired assertions, eliminates the positive witness with genuine
   `Exists.rec`, shares typed locals across positive/negative/alpha-aligned
@@ -475,11 +475,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   closure, and constructs one locally shared falsified-literal continuation per
   propagation—no intermediate resolvent clauses. Wide-chain success and
   corrupted-conflict rejection both kernel-check, including deferred alias
-  closure. Normalized clauses are cached at insertion. The public row now builds
-  its open proof in about 30 seconds instead of OOMing, but the authoritative
-  scoped close rejects a predicate/body `TypeMismatch`; the 64/256 release gate
-  remains. **Lean remains 16/18. Next:** fix that nested witness scoping mismatch,
-  pass ADR-0129 under 4 GiB, then route ADR-0127 through the compact boundary.
+  closure. Normalized clauses are cached at insertion. A minimized 4-bit version
+  of the public three-conjunct/multiplication shape exposed the former scoped
+  `TypeMismatch`: the route lowered the complete body as one shared AIG but
+  projected it as the `And` of separately lowered leaves. Paired reconstruction
+  now uses one structural conjunction proposition consistently from source axiom
+  through `Exists.rec`, leaf transfer, and `Exists.intro`; the regression and
+  authoritative scoped close pass. With the cap experimentally removed, the
+  public release proof reaches module streaming in 211.18 s at 2,062,692 KiB
+  peak under 4 GiB, but textual export exceeds the 14 GiB temporary filesystem.
+  The 64/256 gate is therefore restored as an **export** bound, not a scoping
+  workaround. **Lean remains 16/18. Next:** preserve the open gate-proposition
+  DAG with scoped aliases/definitions so the public module exports under 4 GiB,
+  then route ADR-0127 through the compact boundary.
 
 - **2026-07-13 — ADR-0140 reconstructs vacuous BV existential prefixes.**
   The ADR-0128 checker still proves the complete leading existential block
@@ -2143,6 +2151,17 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-14 — repair ADR-0129 paired-body scoping; localize the remaining
+  export blow-up.** A public-shaped 4-bit regression proved that whole-body AIG
+  lowering was not definitionally identical to independently lowered
+  conjunction leaves. The paired source, elimination, projection, rebuilding,
+  and introduction path now shares one structural conjunction encoding; small
+  identity, generic, signed, and multiplication cases kernel-check. Removing the
+  64/256 cap lets the real public proof pass scoped closure and reach export in
+  211.18 s at 2,062,692 KiB peak, where its expanded open gate propositions
+  exceed 14 GiB of temporary storage. The cap returns as a fail-closed export
+  gate pending scoped gate-proposition sharing; coverage stays 16/18.
 
 - **2026-07-14 — compact RUP construction lands behind the ADR-0129 public
   scoping gate.** CPS clauses and direct unit-propagation continuations replace

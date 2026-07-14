@@ -170,9 +170,21 @@ deferred local aliases, and a corrupted-conflict mutation gate all pass the
 trusted kernel; normalized clauses are cached at environment insertion.
 
 This removes the public row's construction OOM: its open proof builds in about
-30 seconds under the 4 GiB guard. The final scope-aware kernel close then rejects
-a `TypeMismatch` between the nested witness predicate application and expected
-instantiated body. That is a separate source-binder alignment defect exposed by
-the smaller proof, not accepted evidence. The 64-literal/256-premise public gate
-therefore remains until the mismatch is repaired and the complete module passes
-the guarded kernel/export test.
+30 seconds under the 4 GiB guard. A minimized 4-bit instance with the public
+row's three-conjunct body and multiplication localized the subsequent
+scope-aware `TypeMismatch`. The source predicate had lowered the complete
+conjunction as one structurally shared AIG, while elimination projected it as
+the `And` of independently lowered leaves; those equivalent propositions are
+not definitionally identical proof types. Paired reconstruction now builds one
+structural conjunction proposition and reuses it across the untouched source
+axiom, `Exists.rec` hypothesis, leaf projections, negative-body rebuilding, and
+`Exists.intro`. The minimized regression and final scoped close pass.
+
+The next guarded public experiment removed the 64-literal/256-premise cap. It
+reached compact Lean module streaming in 211.18 seconds at 2,062,692 KiB peak
+RSS under the 4 GiB limit, then failed closed because expanded open
+gate-proposition types exceeded the 14 GiB temporary filesystem. This is now an
+export-size boundary, not a scoping mismatch or an OOM. The 64/256 gate remains
+until those witness-scoped gate propositions are preserved as explicit local
+aliases or parameterized definitions and the complete public module passes the
+guarded kernel/export test.

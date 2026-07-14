@@ -820,15 +820,22 @@ under the guarded 4 GiB release envelope and with no `sorryAx`. Quantified-BV
 Lean UNSAT coverage rises **14→16/18**. ADR-0129 source
 elimination/introduction is now implemented and kernel-checked for identity and
 generic bounded QF transfers, but its public 32-bit row exposes an 86-literal,
-411-premise resolution step and safely declines at an explicit 64/256 cap
-rather than exceeding 4 GiB. A continuation-coded clause boundary and direct
+411-premise resolution step and safely declines at an explicit 64/256 cap. A
+continuation-coded clause boundary and direct
 unit-propagation proof now avoid materializing intermediate resolvents, cache
 normalized clauses once, and pass wide-chain positive plus corrupted-conflict
 kernel gates. On the public row this cuts open-proof construction from the
-prior guarded OOM to about 30 seconds, but the final scoped closure correctly
-rejects a predicate/body `TypeMismatch`; the 64/256 public gate therefore stays
-in place. Next: repair that nested witness scoping mismatch, pass ADR-0129 under
-4 GiB, then reuse the compact boundary for ADR-0127; Lean coverage remains
+prior guarded OOM to about 30 seconds. A minimized public-shaped 4-bit case then
+localized the final scoped `TypeMismatch`: whole-body AIG lowering was being
+projected as if it were definitionally the `And` of independently lowered
+leaves. The paired route now carries one structural conjunction proposition
+from the untouched source axiom through elimination and reintroduction, and the
+scoped close passes. With the 64/256 cap removed experimentally, the public
+release proof reaches module streaming in 211.18 s at 2,062,692 KiB peak under
+4 GiB, but expanded open gate propositions exceed the 14 GiB temporary
+filesystem. The cap remains as an export gate. Next: introduce scope-preserving
+aliases/definitions for the open gate-proposition DAG, export the public module
+under 4 GiB, then reuse the compact boundary for ADR-0127; Lean coverage remains
 16/18.
 **Scaled source-bound BV alternation is now LANDED (ADR-0125):** only the
 ADR-0124 total-binder cap rises 128→1,024; the 4,096-node matrix cap and exact
