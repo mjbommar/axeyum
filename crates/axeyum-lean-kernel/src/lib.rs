@@ -89,36 +89,58 @@ const EXPR_INTERN_SHARDS: usize = 64;
 /// complete interner. The stable shard hash is not observable in output.
 #[derive(Debug)]
 struct ExprInterner {
-    shards: Vec<HashMap<ExprNode, ExprId>>,
+    shards: Vec<HashMap<u64, ExprId>>,
+    collisions: HashMap<u64, Vec<ExprId>>,
 }
 
 impl Default for ExprInterner {
     fn default() -> Self {
         Self {
             shards: (0..EXPR_INTERN_SHARDS).map(|_| HashMap::new()).collect(),
+            collisions: HashMap::new(),
         }
     }
 }
 
 impl ExprInterner {
-    fn shard(node: &ExprNode) -> usize {
+    fn hash(node: &ExprNode) -> u64 {
         let mut hasher = DefaultHasher::new();
         node.hash(&mut hasher);
-        usize::try_from(hasher.finish() % EXPR_INTERN_SHARDS as u64)
+        hasher.finish()
+    }
+
+    fn shard(hash: u64) -> usize {
+        usize::try_from(hash % EXPR_INTERN_SHARDS as u64)
             .expect("expression shard index fits usize")
     }
 
-    fn get(&self, node: &ExprNode) -> Option<ExprId> {
-        self.shards[Self::shard(node)].get(node).copied()
+    fn get(&self, node: &ExprNode, arena: &[ExprNode]) -> Option<ExprId> {
+        let hash = Self::hash(node);
+        let primary = self.shards[Self::shard(hash)].get(&hash).copied()?;
+        if arena.get(primary.index()) == Some(node) {
+            return Some(primary);
+        }
+        self.collisions.get(&hash).and_then(|ids| {
+            ids.iter()
+                .copied()
+                .find(|id| arena.get(id.index()) == Some(node))
+        })
     }
 
-    fn insert(&mut self, node: ExprNode, id: ExprId) {
-        self.shards[Self::shard(&node)].insert(node, id);
+    fn insert_hash(&mut self, hash: u64, id: ExprId) {
+        match self.shards[Self::shard(hash)].entry(hash) {
+            std::collections::hash_map::Entry::Vacant(entry) => {
+                entry.insert(id);
+            }
+            std::collections::hash_map::Entry::Occupied(_) => {
+                self.collisions.entry(hash).or_default().push(id);
+            }
+        }
     }
 
     #[cfg(test)]
     fn is_empty(&self) -> bool {
-        self.shards.iter().all(HashMap::is_empty)
+        self.shards.iter().all(HashMap::is_empty) && self.collisions.is_empty()
     }
 }
 
@@ -221,14 +243,15 @@ impl Kernel {
             !self.export_only,
             "kernel was finalized for read-only export"
         );
-        if let Some(id) = self.expr_intern.get(&node) {
+        if let Some(id) = self.expr_intern.get(&node, &self.exprs) {
             return id;
         }
         let meta = self.compute_expr_meta(&node);
+        let hash = ExprInterner::hash(&node);
         let id = ExprId(u32::try_from(self.exprs.len()).expect("expr count fits u32"));
-        self.exprs.push(node.clone());
+        self.exprs.push(node);
         self.expr_meta.push(meta);
-        self.expr_intern.insert(node, id);
+        self.expr_intern.insert_hash(hash, id);
         id
     }
 
