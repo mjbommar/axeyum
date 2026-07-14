@@ -43,8 +43,12 @@ and defer this ADR.
 
 ## Evidence
 
-The artifact-v27 counts and ownership audit above select the experiment.
-Implementation and performance evidence are pending.
+The artifact-v27 counts and ownership audit above select the experiment. The
+implementation passes all 21 `axeyum-bv` tests, including batch/incremental
+sharing, repeated-root reuse, incremental arena growth, and interrupted-root
+retry; all 10 BV interpolant tests; 31 SAT-BV integration tests; strict Clippy;
+formatting; and documentation-link checks under the 4 GiB cap. Performance
+evidence remains pending the representative/full gates.
 
 ## Alternatives
 

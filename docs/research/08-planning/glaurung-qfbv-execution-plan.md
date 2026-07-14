@@ -370,8 +370,9 @@ replay. CNF and bit blast are now 5.18/4.94 seconds; audit the remaining dense-I
 memo and shared normalization before another bounded slice. That audit selects
 proposed ADR-0152: use ADR-0151 range presence as the completion memo and remove
 the ordered map's duplicate ownership of 23,029,676 literals across 982,044
-terms, while leaving operand cloning unchanged. SAT and broad GQ4 remain gated
-by measured opportunity.
+terms, while leaving operand cloning unchanged. Its 21 BV, 10 interpolation,
+and 31 SAT-BV tests plus strict Clippy pass; representative/full timing gates
+remain. SAT and broad GQ4 remain gated by measured opportunity.
 
 ### G6 — SAT work remains conditional (GQ6)
 

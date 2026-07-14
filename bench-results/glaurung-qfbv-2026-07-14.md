@@ -350,4 +350,5 @@ same ordered literals from authoritative bindings. `register-slice` plus
 `slice-partial` contribute 973,313 terms (99.1%). Proposed ADR-0152 removes only
 the ordered duplicate owner and reconstructs the same owned child vectors;
 operand cloning, AIG/CNF structure, decisions, and replay remain unchanged. No
-performance claim is admitted before representative/full gates.
+performance claim is admitted before representative/full gates. All 21 BV, 10
+BV interpolant, and 31 SAT-BV tests plus strict Clippy pass.

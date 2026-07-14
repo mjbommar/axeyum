@@ -457,7 +457,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `register-slice` plus `slice-partial` contribute 973,313 terms (99.1%). Use
   range presence as the dense completion memo and reconstruct the same owned
   child vectors from bindings; deliberately leave operand cloning and lowering
-  algorithms unchanged for an attributable experiment.
+  algorithms unchanged for an attributable experiment. The implementation
+  passes 21 BV tests (including interrupted-root retry), 10 BV interpolant
+  tests, 31 SAT-BV tests, strict Clippy, formatting, and link checks. ADR-0152
+  remains proposed pending representative/full performance gates.
 
 - **Historical Glaurung build-up through 2026-07-14 (superseded by the measured
   result above).** The ten-item Glaurung QF_BV performance roadmap is an
@@ -628,16 +631,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   | **GQ2 cheap cold tier** | **WIP candidate validated.** Canonical v2 cuts corrected representative/full Axeyum total 17.4%/13.3% and bit blast 37.3%/44.4% | Keep canonical as the candidate; add another word rule only if it reduces downstream AIG/CNF and end-to-end time |
   | **GQ3 coercion peepholes** | **WIP with a corrected production win.** ADR-0142 removes 1,315/1,435 representative opportunities and cuts term bits 57% representative / 72% full; full AIG/CNF size remains roughly flat | Demonstrate circuit-size improvement from any next exact word tranche or narrow the exit criterion explicitly |
   | **GQ4 cold relevant bits** | **WIP but re-ranked.** ADR-0143 separates the diagnostic; post-canonical full demand is 98.16% of term bits and 91.51% of symbol bits | Pursue partial lowering only if family-specific evidence shows a material cone and preserve original replay/model projection |
-  | **GQ5 AIG/CNF construction** | **ACTIVE with four accepted wins, four restored/rejected experiments, and one memo-ownership candidate.** Current canonical is 15.60 s / 1.99x Z3. Proposed ADR-0152 removes the ordered per-term memo's duplicate ownership of 23.03M literals while preserving operand cloning and all structure | Implement range-backed completion/lookup tests, then require representative bit-blast/total wins with identical AIG/CNF/content/replay before full confirmation |
+  | **GQ5 AIG/CNF construction** | **ACTIVE with four accepted wins, four restored/rejected experiments, and one memo-ownership candidate.** Current canonical is 15.60 s / 1.99x Z3. Proposed ADR-0152 removes the ordered per-term memo's duplicate ownership of 23.03M literals while preserving operand cloning and all structure; semantic gates pass | Run five representative processes; require bit-blast/total wins with identical AIG/CNF/content/replay before full confirmation |
   | **GQ6 cold SAT/CDCL** | **WIP foundation, attribution-gated**; subsumption/BVE, XOR/GF(2), VSIDS, phase saving, Luby, and LBD foundations exist | Exact-CNF backend attribution first; tune/default a stronger path only where SAT dominates and proof replay stays green |
   | **GQ7 warm delta entry** | **WIP foundation**; retained CNF/search state exists, but the deduplicated cold corpus cannot measure prefix reuse and Glaurung still creates a fresh solver for every check | Capture an ordered scope/path trace, preprocess only new/affected terms, wire persistent per-worker/path push/assert/check/pop, control concretization, and publish real-driver per-check cost plus warm break-even depth |
   | **GQ8 verdict/CNF cache** | **TODO, ordered-trace-gated** | Measure duplicates/prefixes first; prefer retained warm state, then add versioned exact-query reuse only where justified, with deterministic bounds and mandatory original replay |
   | **GQ9 auto cost model/docs** | **TODO**; P1.8 shape/resource probes are only the general foundation | Telemetry-visible raw/cheap/configured/warm choice that beats or matches fixed policies and documents embedder guidance |
   | **GQ10 real-lifter regression tier** | **WIP; access-controlled representative and well-typed full tiers validate.** Artifact v27 baseline repetitions/full trials and ADR-0144/0145/0150/0151 accepted full confirmations are complete; 2,225 malformed dumps are isolated | Add a data-availability-aware regular gate, establish repeated full-tier variance thresholds, and fix producer validation/dedup before calling the raw capture authoritative |
 
-  **Next actions:** (1) implement ADR-0152 using ADR-0151 range presence and
-  binding slices as the term memo, with batch/incremental reuse coverage; (2)
-  keep operand cloning unchanged and require representative bit-blast/total
+  **Next actions:** (1) run five clean representative processes for ADR-0152;
+  (2) keep operand cloning unchanged and require bit-blast/total
   wins with identical AIG/CNF/decision/replay shape before full confirmation;
   keep broad GQ4 and SAT work gated;
   (3) add the data-availability-aware GQ10 regular gate and define repeated

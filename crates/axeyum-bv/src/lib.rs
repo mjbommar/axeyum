@@ -506,7 +506,6 @@ fn assignment_from_aig_node_values(
 #[derive(Debug, Default)]
 pub struct IncrementalLowering {
     aig: Aig,
-    memo: BTreeMap<TermId, Vec<AigLit>>,
     term_bits: Vec<TermBitBinding>,
     term_bit_ranges: Vec<Option<TermBitRange>>,
     symbol_inputs: Vec<SymbolBitInput>,
@@ -576,14 +575,12 @@ impl IncrementalLowering {
             arena,
             deadline,
             aig: core::mem::take(&mut self.aig),
-            memo: core::mem::take(&mut self.memo),
             term_bits: core::mem::take(&mut self.term_bits),
             term_bit_ranges: core::mem::take(&mut self.term_bit_ranges),
             symbol_inputs: core::mem::take(&mut self.symbol_inputs),
         };
         let result = builder.lower_term(root);
         self.aig = builder.aig;
-        self.memo = builder.memo;
         self.term_bits = builder.term_bits;
         self.term_bit_ranges = builder.term_bit_ranges;
         self.symbol_inputs = builder.symbol_inputs;
@@ -755,7 +752,6 @@ struct LoweringBuilder<'a> {
     arena: &'a TermArena,
     deadline: Option<Instant>,
     aig: Aig,
-    memo: BTreeMap<TermId, Vec<AigLit>>,
     term_bits: Vec<TermBitBinding>,
     term_bit_ranges: Vec<Option<TermBitRange>>,
     symbol_inputs: Vec<SymbolBitInput>,
@@ -788,7 +784,6 @@ impl<'a> LoweringBuilder<'a> {
             arena,
             deadline,
             aig: Aig::new(),
-            memo: BTreeMap::new(),
             term_bits: Vec::new(),
             term_bit_ranges: vec![None; arena.len()],
             symbol_inputs: Vec::new(),
@@ -842,7 +837,7 @@ impl<'a> LoweringBuilder<'a> {
         let mut stack = vec![(root, false)];
         while let Some((term, children_ready)) = stack.pop() {
             self.poll_deadline()?;
-            if self.memo.contains_key(&term) {
+            if self.term_is_lowered(term) {
                 continue;
             }
             match self.arena.node(term) {
@@ -883,10 +878,8 @@ impl<'a> LoweringBuilder<'a> {
                 TermNode::App { op, args } if children_ready => {
                     let operand_bits = args
                         .iter()
-                        .map(|arg| {
-                            self.memo
-                                .get(arg)
-                                .cloned()
+                        .map(|&arg| {
+                            self.bits_for_term(arg)
                                 .expect("children are lowered before parent")
                         })
                         .collect::<Vec<_>>();
@@ -901,11 +894,21 @@ impl<'a> LoweringBuilder<'a> {
                 }
             }
         }
-        Ok(self
-            .memo
-            .get(&root)
-            .cloned()
-            .expect("root has been lowered"))
+        Ok(self.bits_for_term(root).expect("root has been lowered"))
+    }
+
+    fn term_is_lowered(&self, term: TermId) -> bool {
+        self.term_bit_ranges
+            .get(term.index())
+            .is_some_and(Option::is_some)
+    }
+
+    fn bits_for_term(&self, term: TermId) -> Option<Vec<AigLit>> {
+        let range = self.term_bit_ranges.get(term.index()).copied().flatten()?;
+        let end = range.start.checked_add(range.len)?;
+        let bindings = self.term_bits.get(range.start..end)?;
+        debug_assert!(bindings.iter().all(|binding| binding.term == term));
+        Some(bindings.iter().map(|binding| binding.literal).collect())
     }
 
     fn lower_symbol(&mut self, symbol: SymbolId) -> Vec<AigLit> {
@@ -1882,7 +1885,8 @@ impl<'a> LoweringBuilder<'a> {
     fn record(&mut self, term: TermId, bits: Vec<AigLit>) -> Result<(), BitLowerError> {
         self.check_width(term, &bits)?;
         let start = self.term_bits.len();
-        for (index, &literal) in bits.iter().enumerate() {
+        let len = bits.len();
+        for (index, literal) in bits.into_iter().enumerate() {
             let bit_index = u32::try_from(index).expect("bit index fits u32");
             let binding = TermBitBinding {
                 term,
@@ -1896,11 +1900,7 @@ impl<'a> LoweringBuilder<'a> {
             .get_mut(term.index())
             .expect("term range index fits the source arena");
         debug_assert!(range.is_none(), "term is recorded at most once");
-        *range = Some(TermBitRange {
-            start,
-            len: bits.len(),
-        });
-        self.memo.insert(term, bits);
+        *range = Some(TermBitRange { start, len });
         Ok(())
     }
 
@@ -2293,6 +2293,26 @@ mod tests {
             elapsed < Duration::from_secs(5),
             "wide division lowering ignored its deadline for {elapsed:?}"
         );
+    }
+
+    #[test]
+    fn incremental_range_memo_retries_an_interrupted_root() {
+        let mut arena = TermArena::new();
+        let x = arena.bv_var("x", 8).unwrap();
+        let y = arena.bv_var("y", 8).unwrap();
+        let quotient = arena.bv_udiv(x, y).unwrap();
+        let batch = lower_terms(&arena, &[quotient]).unwrap();
+
+        let mut incremental = IncrementalLowering::new();
+        assert_eq!(
+            incremental.lower_with_deadline(&arena, quotient, Some(Instant::now())),
+            Err(BitLowerError::DeadlineExceeded)
+        );
+        assert!(incremental.term_bit_ranges[quotient.index()].is_none());
+
+        let resumed = incremental.lower(&arena, quotient).unwrap();
+        assert_eq!(resumed.bits(), batch.roots()[0].bits());
+        assert!(incremental.term_bit_ranges[quotient.index()].is_some());
     }
 
     #[test]
