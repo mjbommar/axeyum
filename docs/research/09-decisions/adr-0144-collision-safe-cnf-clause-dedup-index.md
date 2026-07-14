@@ -1,6 +1,6 @@
 # ADR-0144: Collision-safe CNF clause deduplication index
 
-Status: proposed
+Status: accepted
 Date: 2026-07-14
 
 ## Context
@@ -38,7 +38,7 @@ index, subject to the Glaurung acceptance benchmark.
 - Do not expose or iterate the index. DIMACS, solver submission, lift maps, and
   artifact order remain byte-deterministic.
 
-The decision becomes accepted only if focused encoding equivalence tests pass
+The decision is accepted because focused encoding equivalence tests pass
 and clean artifact-v27 representative repetitions improve end-to-end canonical
 time without changing variable/clause counts, decisions, or replay. A full-tier
 confirmation is then required. Otherwise this ADR is deferred and the ordered
@@ -46,8 +46,29 @@ set remains.
 
 ## Evidence
 
-Pending implementation measurement. The motivating artifact is recorded in
-`bench-results/glaurung-qfbv-2026-07-14.md`.
+The collision-safe implementation passes all 282 `axeyum-cnf` unit tests,
+including an explicit forced-bucket test showing that a distinct full clause is
+not suppressed, plus the SAT-BV and benchmark integration suites and strict
+Clippy under the 4 GiB cap.
+
+The first ordered scalar-index experiment was rejected: representative
+canonical median total rose from 0.2069 to 0.2450 seconds and CNF encoding from
+0.0922 to 0.1286 seconds. Replacing that ordered map with the deterministic
+membership-only hash table passed the same five-process gate:
+
+- representative canonical median total: 0.2069 → 0.1938 seconds (-6.31%);
+- representative median CNF: 0.0922 → 0.0781 seconds (-15.29%);
+- full canonical total: 21.070 → 19.217 seconds (-8.79%);
+- full CNF: 9.397 → 7.659 seconds (-18.49%); and
+- full Axeyum/Z3 ratio: 2.715x → 2.470x.
+
+Every run is 100% decided with zero errors, manifest/oracle disagreements, or
+model-replay failures. The full before/after artifacts emit the same 49,199,541
+clauses and have identical CNF-variable distributions. The accepted full
+artifact SHA-256 is
+`0b1a956a5d92171fa9b822a93006517f2f251aafb46e2c5663d12adfa7087523`;
+raw artifacts remain beside the access-controlled capture. The compact result
+is recorded in `bench-results/glaurung-qfbv-2026-07-14.md`.
 
 ## Alternatives
 

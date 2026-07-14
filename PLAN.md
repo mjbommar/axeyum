@@ -26,9 +26,11 @@ session state.
 > walk from production: representative raw/canonical medians are 1.65x/1.37x
 > Z3, while full raw/canonical single trials are 3.17x/2.71x. Canonical v2 is a
 > valid 13.3% full-tier production win, but CNF encoding is now the largest
-> stage at 9.40/21.07 s. The next action is not SAT tuning or broad partial
-> lowering: optimize the measured CNF gate/root-emission and duplicate-filtering
-> path for the `register-slice` and `slice-partial` families. The capture and
+> stage. ADR-0144's collision-safe ownership index then cuts canonical full CNF
+> 18.5% and total time 8.8%, reaching 19.22 s / 2.47x Z3 without changing a
+> clause or decision. The next action is not SAT tuning or broad partial
+> lowering: continue the measured CNF gate/root-emission allocation path, then
+> planning, for the `register-slice` and `slice-partial` families. The capture and
 > implementation audit has been expanded into the dependency-ordered
 > [Glaurung QF_BV execution plan](docs/research/08-planning/glaurung-qfbv-execution-plan.md):
 > reproduce the current raw one-shot path first, then compare canonical-only
@@ -79,8 +81,11 @@ remove the observational demand profiler from production while retaining an
 explicit complete diagnostic mode. Corrected full raw/canonical trials are
 24.30/21.07 s versus Z3's 7.66/7.76 s; canonical's 13.3% total win comes from a
 44.4% bit-blast reduction, while CNF remains 9.40 s and now dominates. Take the
-measured GQ5 gate/root-emission and duplicate-handling slice next; bounded
-affine word work must show a downstream circuit/CNF win before outranking it.
+measured GQ5 gate/root-emission and duplicate-handling slice next. ADR-0144's
+formula-owned collision-safe dedup index lands the first such win: canonical
+full CNF falls 9.40 → 7.66 s and total 21.07 → 19.22 s with identical counts.
+Continue emission allocation/duplicate generation, then planning; bounded
+affine word work must show a downstream circuit/CNF win before outranking them.
 Broad GQ4 partial lowering follows its small post-canonical full-tier
 opportunity (1.84% term bits) unless family-specific evidence reverses the
 rank. Admit GQ6
@@ -176,6 +181,11 @@ profile cost. Five representative raw/canonical production trials have median
 ratios 1.65x/1.37x. Full single trials are 3.17x/2.71x, with every validity gate
 green. Canonical reduces full production time 13.3% and bit blast 44.4%, but
 CNF encoding is now the largest stage at 9.40 s (44.6% of total).
+ADR-0144 then removes the duplicate clause copy/ordered-vector lookup without
+changing encoding order or content. Five representative canonical trials
+improve median CNF 15.3% and total 6.3%; the full confirmation improves CNF
+18.5%, total 8.8%, and ratio 2.71x → 2.47x with all 13,462 validity gates green.
+Post-change CNF remains the largest stage at 7.66/19.22 s.
 **GQ3 exact semantic tranche landed (2026-07-14, ADR-0142).** The default
 manifest now composes nested extracts, splits concat-boundary straddles, returns
 whole concat operands directly, and reduces low/high/straddling zero/sign
@@ -246,9 +256,10 @@ Artifact v27/ADR-0143 resolves the measurement blocker: structural demand is
 opt-in, production records explicit incomplete-profile provenance, and the
 corrected representative/full results are valid. The full canonical pipeline
 is now 1.84 s word rewrite, 5.85 s bit blast, 9.40 s CNF, and 3.78 s SAT.
-`register-slice` and `slice-partial` contribute 20.86/21.07 s total; CNF gate
-emission (4.79 s), root emission (1.91 s), and planning (1.22 s) dominate the
-next actionable tranche. After canonicalization, 98.16% of term bits are
+`register-slice` and `slice-partial` contributed 20.86/21.07 s before the first
+GQ5 slice. ADR-0144 now reduces total to 19.22 s with identical CNF content;
+remaining CNF gate emission (3.56 s), root emission (1.40 s), and planning
+(1.21 s) dominate the next actionable tranche. After canonicalization, 98.16% of term bits are
 already demanded, moving broad GQ4 behind measured GQ5 work unless a separate
 family-specific profile reverses the rank.
 The performance command also exposed a mode mismatch: the producer's v17 result

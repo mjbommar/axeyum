@@ -151,3 +151,27 @@ million duplicates. GQ5 gate/root emission and duplicate handling therefore
 precede SAT tuning. The bounded affine-word hypothesis remains secondary until
 it demonstrates a circuit/CNF reduction on `slice-partial` rather than only a
 word-DAG reduction.
+
+## ADR-0144 CNF deduplication ownership win
+
+Revision `f6c4b5755a75129ec1c7a31be69eaac8d34ea5da` replaces the
+`BTreeSet<Vec<CnfLit>>` dedup copy with a deterministic fingerprint table that
+references formula-owned clauses and requires exact equality before suppressing
+a duplicate. A scalar ordered-index prototype regressed representative CNF by
+39.4% and was rejected. The accepted deterministic hash table improves the
+five-process representative canonical median from 0.2069 to 0.1938 seconds
+(-6.31%) and CNF from 0.0922 to 0.0781 seconds (-15.29%).
+
+The full confirmation decides and replays all 13,462 queries with zero errors
+or disagreements. Axeyum falls 21.070 → 19.217 seconds (-8.79%), CNF falls
+9.397 → 7.659 seconds (-18.49%), and the ratio falls 2.715x → 2.470x while Z3
+remains 7.76/7.78 seconds. Both versions emit exactly 49,199,541 clauses with
+identical CNF-variable distributions. The accepted full artifact digest is
+`0b1a956a5d92171fa9b822a93006517f2f251aafb46e2c5663d12adfa7087523`.
+
+Post-change CNF subphases are 3.56 seconds gate emission, 1.40 seconds root
+emission, 1.21 seconds planning, and 0.067 seconds allocation. CNF remains the
+largest stage (39.9%), followed by bit blast (31.0%), SAT (18.6%), and word
+rewrite (9.5%). The next GQ5 slice should target clause-emission allocation or
+duplicate generation inside gate/root encoding, then planning; SAT tuning and
+broad GQ4 remain gated.

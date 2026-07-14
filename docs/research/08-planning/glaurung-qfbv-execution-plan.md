@@ -27,6 +27,8 @@ both earlier proof companions recheck all 64 UNSAT rows. The well-typed
 13,462-query full tier is 3.17x raw and 2.71x canonical in one scheduled trial.
 ADR-0143 removes the artifact-v25 structural demand diagnostic from production
 and proves CNF construction, not SAT, is now the dominant measured stage.
+ADR-0144's first GQ5 slice then reduces full canonical CNF 18.5% and total time
+8.8%, reaching 19.22 seconds / 2.47x Z3 without changing CNF content.
 
 This note expands `PLAN.md` items GQ1--GQ10 into an executable sequence. It does
 not authorize changes to the Glaurung repository; producer-side and explorer
@@ -410,7 +412,7 @@ validity gates.
 | M2 diagnostic attribution | GQ1, GQ3--GQ5 | **Done for current boundary:** ADR-0143 removes the 29.57 s observational pass from production and marks diagnostic completeness explicitly |
 | M3 cheap exact rewriting | GQ2, GQ3 | **Measured production win:** canonical cuts Axeyum total 17.4% representative median / 13.3% full and bit blast 37.3% / 44.4%; circuit-size exit remains |
 | M4 demand lowering | GQ4 | Continue only with replay-safe real AIG/CNF and wall-time reductions |
-| M5 AIG/CNF optimization | GQ5 | Take only measured subphase wins; otherwise move to warm integration |
+| M5 AIG/CNF optimization | GQ5 | **First win accepted:** ADR-0144 cuts full canonical CNF 18.5% and total 8.8% with identical content; continue only measured emission/planning slices |
 | M6 SAT re-attribution | GQ6 | Start SAT work only if search becomes material/dominant |
 | M7 ordered warm trace | GQ7, GQ8 | Decide incremental API shape and whether a cache is worthwhile |
 | M8 Glaurung warm integration | GQ7 | Require real same-stream functionality and performance, not the synthetic result |
@@ -418,10 +420,9 @@ validity gates.
 
 ## Immediate next actions
 
-1. Inspect CNF gate/root clause construction and duplicate filtering on the
-   measured `register-slice` and `slice-partial` families. Gate emission is
-   4.79 s, root emission 1.91 s, planning 1.22 s, and 4.25M duplicate attempts
-   are discarded on the full canonical tier.
+1. Measure clause-emission allocation and duplicate generation inside CNF
+   gate/root encoding on `register-slice` and `slice-partial`. After ADR-0144,
+   gate emission is 3.56 s, root emission 1.40 s, and planning 1.21 s.
 2. Implement one bounded deterministic GQ5 slice, then rerun five-process
    representative production timing and accept it only on an end-to-end win
    before confirming on the full tier.
