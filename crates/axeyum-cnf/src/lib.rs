@@ -1480,7 +1480,6 @@ struct TseitinEncoder<'a> {
     and_tree_gates: Vec<Option<AndTreeGate>>,
     clause_index: ClauseIndex,
     variable_bindings: Vec<CnfVarBinding>,
-    direct_root_or_leaves: Vec<AigLit>,
     clause_attempts: u64,
     tautological_clauses_skipped: u64,
     duplicate_clauses_skipped: u64,
@@ -1502,7 +1501,6 @@ impl<'a> TseitinEncoder<'a> {
             and_tree_gates: vec![None; aig.node_count()],
             clause_index: ClauseIndex::default(),
             variable_bindings: Vec::new(),
-            direct_root_or_leaves: Vec::new(),
             clause_attempts: 0,
             tautological_clauses_skipped: 0,
             duplicate_clauses_skipped: 0,
@@ -2028,17 +2026,12 @@ impl<'a> TseitinEncoder<'a> {
             unreachable!("direct root nodes are planned only for AND nodes");
         };
         if root.is_inverted()
-            && let Some(other) = distributable_negative_and_encoding(
-                self.aig,
-                lhs,
-                rhs,
-                &self.skip_nodes,
-                &mut self.direct_root_or_leaves,
-            )
+            && let Some(plan) =
+                distributable_negative_and_encoding(self.aig, lhs, rhs, &self.skip_nodes)
         {
-            let other = self.encode_lit(other).negated();
-            for index in 0..self.direct_root_or_leaves.len() {
-                let leaf = self.encode_lit(self.direct_root_or_leaves[index]).negated();
+            let other = self.encode_lit(plan.other).negated();
+            for leaf in plan.or_leaves {
+                let leaf = self.encode_lit(leaf).negated();
                 self.add_encoded_clause(&[other, leaf])?;
             }
             return Ok(());
@@ -2425,6 +2418,7 @@ fn lit_has_cnf_var_or_const(lit: AigLit, skip_nodes: &[bool]) -> bool {
 }
 
 struct DistributableNegativeAnd {
+    other: AigLit,
     or_leaves: Vec<AigLit>,
     helper_nodes: Vec<AigNodeId>,
 }
@@ -2438,6 +2432,7 @@ fn distributable_negative_and_plan(
         && let Some(or_tree) = collect_private_or_tree_plan(context, lhs)
     {
         return Some(DistributableNegativeAnd {
+            other: rhs,
             or_leaves: or_tree.or_leaves,
             helper_nodes: or_tree.helper_nodes,
         });
@@ -2446,6 +2441,7 @@ fn distributable_negative_and_plan(
         && let Some(or_tree) = collect_private_or_tree_plan(context, rhs)
     {
         return Some(DistributableNegativeAnd {
+            other: lhs,
             or_leaves: or_tree.or_leaves,
             helper_nodes: or_tree.helper_nodes,
         });
@@ -2458,28 +2454,26 @@ fn distributable_negative_and_encoding(
     lhs: AigLit,
     rhs: AigLit,
     skip_nodes: &[bool],
-    or_leaves: &mut Vec<AigLit>,
-) -> Option<AigLit> {
-    or_leaves.clear();
+) -> Option<DistributableNegativeAnd> {
     if lit_has_cnf_var_or_const(rhs, skip_nodes)
-        && is_skipped_or_root(lhs, skip_nodes)
-        && collect_skipped_or_tree_leaves(aig, lhs, skip_nodes, or_leaves).is_some()
+        && let Some(or_tree) = collect_skipped_or_tree(aig, lhs, skip_nodes)
     {
-        return Some(rhs);
+        return Some(DistributableNegativeAnd {
+            other: rhs,
+            or_leaves: or_tree.or_leaves,
+            helper_nodes: or_tree.helper_nodes,
+        });
     }
-    or_leaves.clear();
     if lit_has_cnf_var_or_const(lhs, skip_nodes)
-        && is_skipped_or_root(rhs, skip_nodes)
-        && collect_skipped_or_tree_leaves(aig, rhs, skip_nodes, or_leaves).is_some()
+        && let Some(or_tree) = collect_skipped_or_tree(aig, rhs, skip_nodes)
     {
-        return Some(lhs);
+        return Some(DistributableNegativeAnd {
+            other: lhs,
+            or_leaves: or_tree.or_leaves,
+            helper_nodes: or_tree.helper_nodes,
+        });
     }
-    or_leaves.clear();
     None
-}
-
-fn is_skipped_or_root(lit: AigLit, skip_nodes: &[bool]) -> bool {
-    lit.is_inverted() && lit.node().index() != 0 && skip_nodes[lit.node().index()]
 }
 
 fn collect_private_or_tree_plan(
@@ -2487,6 +2481,7 @@ fn collect_private_or_tree_plan(
     lit: AigLit,
 ) -> Option<DistributableNegativeAnd> {
     let mut tree = DistributableNegativeAnd {
+        other: AigLit::FALSE,
         or_leaves: Vec::new(),
         helper_nodes: Vec::new(),
     };
@@ -2522,11 +2517,25 @@ fn collect_private_or_tree_plan_lit(
     }
 }
 
-fn collect_skipped_or_tree_leaves(
+fn collect_skipped_or_tree(
     aig: &Aig,
     lit: AigLit,
     skip_nodes: &[bool],
-    or_leaves: &mut Vec<AigLit>,
+) -> Option<DistributableNegativeAnd> {
+    let mut tree = DistributableNegativeAnd {
+        other: AigLit::FALSE,
+        or_leaves: Vec::new(),
+        helper_nodes: Vec::new(),
+    };
+    collect_skipped_or_tree_lit(aig, lit, skip_nodes, &mut tree)?;
+    (!tree.helper_nodes.is_empty()).then_some(tree)
+}
+
+fn collect_skipped_or_tree_lit(
+    aig: &Aig,
+    lit: AigLit,
+    skip_nodes: &[bool],
+    tree: &mut DistributableNegativeAnd,
 ) -> Option<()> {
     let node = lit.node();
     if lit.is_inverted()
@@ -2534,12 +2543,13 @@ fn collect_skipped_or_tree_leaves(
         && skip_nodes[node.index()]
         && let Some(AigNode::And(lhs, rhs)) = aig.node(node)
     {
-        collect_skipped_or_tree_leaves(aig, lhs.negated(), skip_nodes, or_leaves)?;
-        collect_skipped_or_tree_leaves(aig, rhs.negated(), skip_nodes, or_leaves)?;
+        tree.helper_nodes.push(node);
+        collect_skipped_or_tree_lit(aig, lhs.negated(), skip_nodes, tree)?;
+        collect_skipped_or_tree_lit(aig, rhs.negated(), skip_nodes, tree)?;
         return Some(());
     }
     if lit_has_cnf_var_or_const(lit, skip_nodes) {
-        or_leaves.push(lit);
+        tree.or_leaves.push(lit);
         Some(())
     } else {
         None
@@ -3270,60 +3280,6 @@ mod tests {
                     }
                 }
             }
-        }
-    }
-
-    #[test]
-    fn tseitin_reuses_negative_root_or_leaf_scratch_without_cross_root_leakage() {
-        let mut aig = Aig::new();
-        let left_first = aig.input("left_first");
-        let left_second = aig.input("left_second");
-        let left_other = aig.input("left_other");
-        let right_first = aig.input("right_first");
-        let right_second = aig.input("right_second");
-        let right_third = aig.input("right_third");
-        let right_other = aig.input("right_other");
-        let left_or = aig.or(left_first, left_second);
-        let right_tail = aig.or(right_second, right_third);
-        let right_or = aig.or(right_first, right_tail);
-        let roots = [
-            aig.and(left_or, left_other).negated(),
-            aig.and(right_or, right_other).negated(),
-        ];
-        let encoding = tseitin_encode(&aig, &roots).unwrap();
-
-        assert_eq!(encoding.stats().direct_root_nodes, 2);
-        assert_eq!(
-            encoding.formula().clauses().len(),
-            7,
-            "scratch reuse must preserve the current nested-root clause shape"
-        );
-        assert!(
-            encoding
-                .variable_bindings()
-                .iter()
-                .all(|binding| binding.aig_literal.node() != left_or.node()),
-            "the first private OR root should remain skipped"
-        );
-        assert!(
-            encoding
-                .variable_bindings()
-                .iter()
-                .all(|binding| binding.aig_literal.node() != right_or.node()),
-            "the second private OR root should remain skipped"
-        );
-
-        for mask in 0_u8..128 {
-            let inputs: [bool; 7] = core::array::from_fn(|index| mask & (1 << index) != 0);
-            let expected = roots.iter().all(|root| aig.eval(*root, &inputs).unwrap());
-            let cnf_assignment = encoding
-                .cnf_assignment_from_aig_inputs(&aig, &inputs)
-                .unwrap();
-            assert_eq!(
-                cnf_assignment.satisfies(encoding.formula()).unwrap(),
-                expected,
-                "mask={mask:07b}"
-            );
         }
     }
 

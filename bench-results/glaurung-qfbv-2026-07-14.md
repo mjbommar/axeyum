@@ -203,7 +203,7 @@ largest stage (38.7%), followed by bit blast (31.6%), SAT (19.1%), and word
 rewrite (9.7%). The next bounded GQ5 investigation is root-emission allocation
 and planning; SAT tuning remains attribution-gated.
 
-## ADR-0146 direct-root scratch candidate
+## ADR-0146 direct-root scratch rejection
 
 Per-instance artifact-v27 attribution after ADR-0145 correlates root-emission
 time with direct-root count at 0.920 and reachable AIG nodes at 0.953. The
@@ -211,5 +211,14 @@ time with direct-root count at 0.920 and reachable AIG nodes at 0.953. The
 seconds and 169,758 direct roots. Source inspection identifies one exact waste:
 emission retraverses a planned private OR tree and allocates fresh leaf/helper
 vectors even though it never consumes the helper list. Proposed ADR-0146 reuses
-one cleared encoder-local leaf buffer for that second traversal. No performance
-claim is admitted until the clean representative/full gate completes.
+one cleared encoder-local leaf buffer for that second traversal.
+
+The hypothesis fails the five-process representative gate. Against accepted
+ADR-0145, median total regresses 0.18985 → 0.19187 seconds (+1.06%), mean
+total regresses 0.18970 → 0.19242 seconds (+1.43%), median CNF regresses
+0.07298 → 0.07656 seconds (+4.91%), and the matched third run's root subphase
+regresses 0.01427 → 0.01456 seconds (+2.05%). Every run is still 128/128
+decided with zero errors, disagreements, or replay failures, and emits the same
+507,195 clauses with 1,911 direct roots. Revision `6ccc8984` is therefore
+reverted without a full-tier run and ADR-0146 is deferred. Planning attribution,
+not another root scratch, is next.

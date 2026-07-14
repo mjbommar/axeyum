@@ -369,13 +369,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   validation, and atomic cross-process deduplication. Full evidence and digests:
   [`bench-results/glaurung-qfbv-2026-07-14.md`](bench-results/glaurung-qfbv-2026-07-14.md).
 
-  Source/corpus attribution selects ADR-0146 as that bounded slice. Negative
-  direct-root emission currently retraverses each planned private OR tree and
-  allocates fresh leaf/helper vectors even though emission never reads the
-  helper list. The proposed encoder-local scratch retains only leaves and is
-  cleared between candidates/roots. A 128-row two-root regression, all 284 CNF
-  tests, 30 SAT-BV tests, and strict Clippy pass; representative/full timing is
-  still required before acceptance.
+  ADR-0146 tests and rejects the first residual root-emission hypothesis.
+  Reusing one cleared OR-leaf scratch passes a 128-row two-root regression, all
+  284 CNF tests, 30 SAT-BV tests, and strict Clippy, but five clean
+  representative processes regress median total 1.1%, CNF 4.9%, and the matched
+  root subphase 2.0% with identical content. The accepted owned-vector path is
+  restored; no full run is warranted. Profile planning next, and revisit direct
+  roots only with a design that eliminates the second traversal entirely.
 
 - **Historical Glaurung build-up through 2026-07-14 (superseded by the measured
   result above).** The ten-item Glaurung QF_BV performance roadmap is an
@@ -546,16 +546,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   | **GQ2 cheap cold tier** | **WIP candidate validated.** Canonical v2 cuts corrected representative/full Axeyum total 17.4%/13.3% and bit blast 37.3%/44.4% | Keep canonical as the candidate; add another word rule only if it reduces downstream AIG/CNF and end-to-end time |
   | **GQ3 coercion peepholes** | **WIP with a corrected production win.** ADR-0142 removes 1,315/1,435 representative opportunities and cuts term bits 57% representative / 72% full; full AIG/CNF size remains roughly flat | Demonstrate circuit-size improvement from any next exact word tranche or narrow the exit criterion explicitly |
   | **GQ4 cold relevant bits** | **WIP but re-ranked.** ADR-0143 separates the diagnostic; post-canonical full demand is 98.16% of term bits and 91.51% of symbol bits | Pursue partial lowering only if family-specific evidence shows a material cone and preserve original replay/model projection |
-  | **GQ5 AIG/CNF construction** | **ACTIVE with two accepted wins and one measured candidate.** ADR-0144 cuts full CNF 18.5% / total 8.8%; ADR-0145 then cuts CNF 5.6% / gate emission 10.5% / total 2.7%, with identical content. Proposed ADR-0146 reuses direct-root OR-leaf scratch; remaining gate/root/planning are 3.19/1.39/1.21 s | Run the representative gate for ADR-0146, accept only an end-to-end win, then confirm full or revert; profile planning next |
+  | **GQ5 AIG/CNF construction** | **ACTIVE with two accepted wins and one rejected experiment.** ADR-0144 cuts full CNF 18.5% / total 8.8%; ADR-0145 then cuts CNF 5.6% / gate emission 10.5% / total 2.7%, with identical content. ADR-0146 root scratch regresses representative total/CNF 1.1%/4.9% and is reverted/deferred; remaining gate/root/planning are 3.19/1.39/1.21 s | Profile planning next; revisit roots only with a no-second-traversal design, and require representative/full end-to-end wins |
   | **GQ6 cold SAT/CDCL** | **WIP foundation, attribution-gated**; subsumption/BVE, XOR/GF(2), VSIDS, phase saving, Luby, and LBD foundations exist | Exact-CNF backend attribution first; tune/default a stronger path only where SAT dominates and proof replay stays green |
   | **GQ7 warm delta entry** | **WIP foundation**; retained CNF/search state exists, but the deduplicated cold corpus cannot measure prefix reuse and Glaurung still creates a fresh solver for every check | Capture an ordered scope/path trace, preprocess only new/affected terms, wire persistent per-worker/path push/assert/check/pop, control concretization, and publish real-driver per-check cost plus warm break-even depth |
   | **GQ8 verdict/CNF cache** | **TODO, ordered-trace-gated** | Measure duplicates/prefixes first; prefer retained warm state, then add versioned exact-query reuse only where justified, with deterministic bounds and mandatory original replay |
   | **GQ9 auto cost model/docs** | **TODO**; P1.8 shape/resource probes are only the general foundation | Telemetry-visible raw/cheap/configured/warm choice that beats or matches fixed policies and documents embedder guidance |
   | **GQ10 real-lifter regression tier** | **WIP; access-controlled representative and well-typed full tiers validate.** Artifact v27 baseline repetitions/full trials and ADR-0144/0145 accepted full confirmations are complete; 2,225 malformed dumps are isolated | Add a data-availability-aware regular gate, establish repeated full-tier variance thresholds, and fix producer validation/dedup before calling the raw capture authoritative |
 
-  **Next actions:** (1) run five representative production repetitions for
-  ADR-0146's direct-root scratch and accept only an end-to-end win before a
-  full-tier confirmation; (2) profile CNF planning after that decision;
+  **Next actions:** (1) profile the 1.21-second CNF planning path by its
+  reachability/use-count, gate-detection, tree-collection, and direct-root
+  components without adding always-on observational work; (2) take one bounded
+  planning change only if attribution identifies it;
   (3) keep affine
   BV add/sub normalization behind evidence that it reduces AIG/CNF, and keep SAT
   work gated;
@@ -2345,6 +2346,15 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-14 — ADR-0146 direct-root scratch is rejected by the client gate.**
+  An encoder-local reusable OR-leaf buffer removed unused helper ownership from
+  the second negative-direct-root traversal and passed exhaustive two-root
+  semantics, all 284 CNF tests, 30 SAT-BV tests, and strict Clippy. Five clean
+  representative processes retained identical CNF/verdict/replay shape but
+  regressed median total 1.1%, median CNF 4.9%, and the matched root subphase
+  2.0%. The implementation is restored, ADR-0146 is deferred, and no full-tier
+  run is spent on it. Planning attribution is next.
 
 - **2026-07-14 — ADR-0145 removes not-AND clause temporaries.** The sparse
   encoder now emits the bounded two-factor not-AND forward/reverse clauses from

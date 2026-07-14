@@ -1,6 +1,6 @@
 # ADR-0146: Reusable direct-root OR-leaf scratch
 
-Status: proposed
+Status: deferred
 Date: 2026-07-14
 
 ## Context
@@ -32,17 +32,32 @@ subject to the Glaurung acceptance benchmark.
 - Keep clause construction, normalization, exact deduplication, order, variable
   allocation, lift maps, and replay unchanged.
 
-The decision becomes accepted only if a multi-root exhaustive regression proves
+The experiment was admitted only if a multi-root exhaustive regression proved
 that scratch contents never leak between roots, the CNF/SAT suites pass, and
 five clean representative canonical processes improve end-to-end time with
 identical clauses, variables, decisions, and replay. A full-tier confirmation
-is then required; otherwise the ADR is deferred and the owned second-traversal
-vectors are restored.
+would then be required. The representative performance gate failed, so the
+owned second-traversal vectors are restored and no full run is authorized.
 
 ## Evidence
 
-Pending implementation measurement. The source and corpus attribution are
-recorded in `bench-results/glaurung-qfbv-2026-07-14.md`.
+The implementation passed the exhaustive 128-row two-root isolation regression,
+all 284 `axeyum-cnf` tests, all 30 SAT-BV integration tests, and strict Clippy
+under the 4 GiB cap. All five representative processes were 100% decided with
+zero errors, manifest/oracle disagreements, or model-replay failures, and CNF
+content stayed identical.
+
+Performance nevertheless regressed against accepted ADR-0145:
+
+- representative median total: 0.18985 → 0.19187 seconds (+1.06%);
+- representative mean total: 0.18970 → 0.19242 seconds (+1.43%);
+- representative median CNF: 0.07298 → 0.07656 seconds (+4.91%); and
+- the matched third run's root subphase: 0.01427 → 0.01456 seconds (+2.05%).
+
+The candidate therefore failed before full-tier admission. Its clean revision
+is `6ccc8984`, and the artifacts remain beside the access-controlled capture.
+The compact negative result is recorded in
+`bench-results/glaurung-qfbv-2026-07-14.md`.
 
 ## Alternatives
 
@@ -58,7 +73,8 @@ recorded in `bench-results/glaurung-qfbv-2026-07-14.md`.
 
 ## Consequences
 
-The encoder retains capacity equal to the largest private OR tree in one query
-instead of allocating two vectors per distributable root. The tree is still
-traversed twice, keeping planning and emission ownership simple. The real-corpus
-gate decides whether the saved allocation is material.
+The candidate is not retained. Reusable leaf capacity plus the revised second
+traversal did not compensate for its overhead on the real corpus. Future direct
+root work must avoid the second traversal entirely or target common clause
+normalization with a separately measured ownership design; it should not retry
+this scratch shape without new evidence.

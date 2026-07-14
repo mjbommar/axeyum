@@ -426,10 +426,13 @@ validity gates.
 1. Profile the residual root-emission allocation/copy path and CNF planning on
    `register-slice` and `slice-partial`. After ADR-0145, gate emission is 3.19
    s, root emission 1.39 s, and planning 1.21 s; gate work is no longer the
-   automatic first target. ADR-0146 is the proposed root-allocation candidate.
-2. Run five-process representative production timing for ADR-0146 and accept it
-   only on an end-to-end win before confirming on the full tier; otherwise
-   restore the owned second-traversal vectors and retain the negative result.
+   automatic first target. ADR-0146's reusable root scratch regresses
+   representative total/CNF 1.1%/4.9% and is restored/deferred without a full
+   run.
+2. Attribute the 1.21-second planning path by reachability/use-count, gate
+   detection, private-tree collection, and direct-root work without repeating
+   the always-on observational-profiler mistake. Implement one bounded change
+   only where that attribution identifies avoidable work.
 3. Keep the next exact word tranche around affine BV add/sub constant-chain
    normalization and cheap duplicate-root handling behind evidence that it
    reduces downstream AIG/CNF for the
