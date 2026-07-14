@@ -470,8 +470,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   allocation near the 4 GiB envelope. The route now declines before expansion
   above 64 literals or 256 premises. DAG-marked conjunction traversal,
   empty-clause backward slicing, and cached clause suffix propositions are
-  landed. **Lean remains 16/18. Next:** ADR-0127 compact reflected RUP, then
-  remove the cap and pass the public ADR-0129 source gate under 4 GiB.
+  landed. A continuation-coded clause proposition now converts each source/gate
+  clause once, validates exact-order RUP or deterministic normalized unit
+  closure, and constructs one locally shared falsified-literal continuation per
+  propagation—no intermediate resolvent clauses. Wide-chain success and
+  corrupted-conflict rejection both kernel-check, including deferred alias
+  closure. Normalized clauses are cached at insertion. The public row now builds
+  its open proof in about 30 seconds instead of OOMing, but the authoritative
+  scoped close rejects a predicate/body `TypeMismatch`; the 64/256 release gate
+  remains. **Lean remains 16/18. Next:** fix that nested witness scoping mismatch,
+  pass ADR-0129 under 4 GiB, then route ADR-0127 through the compact boundary.
 
 - **2026-07-13 — ADR-0140 reconstructs vacuous BV existential prefixes.**
   The ADR-0128 checker still proves the complete leading existential block
@@ -2135,6 +2143,14 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-14 — compact RUP construction lands behind the ADR-0129 public
+  scoping gate.** CPS clauses and direct unit-propagation continuations replace
+  growing binary resolvents; normalized forms are cached once; wide/deferred
+  positive and corrupted-conflict mutation gates kernel-check. The public row's
+  open proof now builds in about 30 seconds under 4 GiB, exposing a fail-closed
+  nested predicate/body `TypeMismatch` at scoped closure. The 64/256 cap remains
+  until that source-binder mismatch is repaired; coverage stays 16/18.
 
 - **2026-07-14 — ADR-0129 bounded source reconstruction checkpoint.** Exact
   paired existential elimination/transfer/introduction kernel-checks for the

@@ -290,16 +290,15 @@ fn identity_and_generic_transfers_reconstruct_from_exact_sources() {
 }
 
 #[test]
-fn public_nested_unreachable_call_declines_before_wide_rup_expansion() {
-    let mut script = parse_script(TARGET).expect("fresh target source parses");
-    let assertions = script.assertions.clone();
-    assert_eq!(
-        axeyum_solver::scan_proof_fragment(&script.arena, &assertions),
-        ProofFragment::BvPairedExistentialTransfer
-    );
-    let error = prove_unsat_to_lean_module(&mut script.arena, &assertions)
-        .expect_err("wide RUP source must decline until the compact checker lands");
-    assert!(error.to_string().contains("emitter declined"));
+fn public_nested_unreachable_call_declines_at_compact_rup_scoping_gate() {
+    let (script, assertions, certificate) = target_certificate();
+    let error = reconstruct_bv_paired_existential_transfer_to_lean_module(
+        &script.arena,
+        &assertions,
+        &certificate,
+    )
+    .expect_err("public paired row remains behind the scoped compact-RUP gate");
+    assert!(error.to_string().contains("compact-RUP scoping gate"));
 }
 
 #[test]

@@ -156,3 +156,23 @@ The acceptance boundary is now exact: land ADR-0127's compact reflected-RUP
 checker (or an equivalently small kernel-checked clause checker), remove the
 explicit-resolution cap for this route, and pass `nested9_true-unreach-call`
 under 4 GiB with genuine `Exists.rec`/`Exists.intro` and no `sorryAx`.
+
+### Compact RUP implementation checkpoint
+
+A continuation-coded clause proposition is now implemented behind that public
+cap. Source and gate clauses cross from right-nested `Or` once; learned clauses
+remain CPS. Exact LRAT order is validated when available, otherwise the existing
+polarity-normalized deterministic unit closure selects the implication graph.
+The proof builder aliases one continuation for each propagated literal's false
+polarity and applies those handlers directly to the final conflict, so it never
+materializes the sequence of growing resolvents. A wide synthetic chain,
+deferred local aliases, and a corrupted-conflict mutation gate all pass the
+trusted kernel; normalized clauses are cached at environment insertion.
+
+This removes the public row's construction OOM: its open proof builds in about
+30 seconds under the 4 GiB guard. The final scope-aware kernel close then rejects
+a `TypeMismatch` between the nested witness predicate application and expected
+instantiated body. That is a separate source-binder alignment defect exposed by
+the smaller proof, not accepted evidence. The 64-literal/256-premise public gate
+therefore remains until the mismatch is repaired and the complete module passes
+the guarded kernel/export test.

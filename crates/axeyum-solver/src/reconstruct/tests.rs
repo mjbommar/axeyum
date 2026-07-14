@@ -1145,6 +1145,154 @@ fn ordered_rup_implication_chain_reconstructs() {
     assert_infers_false(&mut ctx, term);
 }
 
+/// A wide learned RUP clause is produced by resolving one growing conflict
+/// clause against many binary reasons. This is the shape emitted by the public
+/// ADR-0127/0129 BV residuals and must stay linear in the growing clause rather
+/// than rebuilding every survivor injection quadratically.
+#[test]
+fn ordered_rup_wide_growing_clause_reconstructs() {
+    const WIDTH: usize = 32;
+    const LINKS: usize = 64;
+
+    let conclusion = (0..WIDTH)
+        .map(|index| p_lit(&format!("a{index}")))
+        .collect::<Vec<_>>();
+    let mut commands = Vec::new();
+    commands.push(assume("seed", vec![p_lit("x0")]));
+    for index in 1..=LINKS {
+        commands.push(assume(
+            &format!("link{index}"),
+            vec![
+                n_lit(&format!("x{}", index - 1)),
+                p_lit(&format!("x{index}")),
+            ],
+        ));
+    }
+    let mut conflict = vec![n_lit(&format!("x{LINKS}"))];
+    conflict.extend(conclusion.iter().cloned());
+    commands.push(assume("conflict", conflict));
+    let mut wide_premises = vec!["seed".to_owned()];
+    wide_premises.extend((1..=LINKS).map(|index| format!("link{index}")));
+    wide_premises.push("conflict".to_owned());
+    commands.push(AletheCommand::Step {
+        id: "wide".to_owned(),
+        clause: conclusion.clone(),
+        rule: "resolution".to_owned(),
+        premises: wide_premises,
+        args: Vec::new(),
+    });
+    for index in 0..WIDTH {
+        commands.push(assume(&format!("not_a{index}"), vec![n_lit(&format!("a{index}"))]));
+    }
+    let mut close = (0..WIDTH)
+        .map(|index| format!("not_a{index}"))
+        .collect::<Vec<_>>();
+    close.push("wide".to_owned());
+    commands.push(AletheCommand::Step {
+        id: "empty".to_owned(),
+        clause: vec![],
+        rule: "resolution".to_owned(),
+        premises: close,
+        args: Vec::new(),
+    });
+
+    let mut ctx = ReconstructCtx::new();
+    let term = reconstruct_resolution_proof(&mut ctx, &commands)
+        .expect("the growing wide RUP clause reconstructs compactly");
+    assert_infers_false(&mut ctx, term);
+}
+
+fn reconstruct_cps_test_commands(
+    ctx: &mut ReconstructCtx,
+    commands: &[AletheCommand],
+) -> Result<super::ExprId, ReconstructError> {
+    let mut assumptions = Vec::new();
+    for command in commands {
+        if let AletheCommand::Assume { clause, .. } = command {
+            let proposition = ctx.clause_to_prop(clause);
+            assumptions.push(super::fresh_axiom(ctx, proposition, "cps_test_assume")?);
+        }
+    }
+    super::reconstruct_bitwise_cps_tail(ctx, commands, &assumptions)
+}
+
+#[test]
+fn cps_rup_wide_growing_clause_reconstructs_and_checks() {
+    const WIDTH: usize = 32;
+    const LINKS: usize = 64;
+
+    let conclusion = (0..WIDTH)
+        .map(|index| p_lit(&format!("a{index}")))
+        .collect::<Vec<_>>();
+    let mut commands = vec![assume("seed", vec![p_lit("x0")])];
+    for index in 1..=LINKS {
+        commands.push(assume(
+            &format!("link{index}"),
+            vec![
+                n_lit(&format!("x{}", index - 1)),
+                p_lit(&format!("x{index}")),
+            ],
+        ));
+    }
+    let mut conflict = vec![n_lit(&format!("x{LINKS}"))];
+    conflict.extend(conclusion.iter().cloned());
+    commands.push(assume("conflict", conflict));
+    let mut wide_premises = vec!["seed".to_owned()];
+    wide_premises.extend((1..=LINKS).map(|index| format!("link{index}")));
+    wide_premises.push("conflict".to_owned());
+    commands.push(AletheCommand::Step {
+        id: "wide".to_owned(),
+        clause: conclusion.clone(),
+        rule: "resolution".to_owned(),
+        premises: wide_premises,
+        args: Vec::new(),
+    });
+    for index in 0..WIDTH {
+        commands.push(assume(
+            &format!("not_a{index}"),
+            vec![n_lit(&format!("a{index}"))],
+        ));
+    }
+    let mut close = (0..WIDTH)
+        .map(|index| format!("not_a{index}"))
+        .collect::<Vec<_>>();
+    close.push("wide".to_owned());
+    commands.push(res_step(
+        "empty",
+        vec![],
+        &close.iter().map(String::as_str).collect::<Vec<_>>(),
+    ));
+
+    let mut ctx = ReconstructCtx::new();
+    let term = reconstruct_cps_test_commands(&mut ctx, &commands)
+        .expect("the CPS growing-clause route reconstructs");
+    assert_infers_false(&mut ctx, term);
+
+    let mut deferred_ctx = ReconstructCtx::new();
+    deferred_ctx.defer_open_step_checks = true;
+    let deferred = reconstruct_cps_test_commands(&mut deferred_ctx, &commands)
+        .expect("the deferred CPS growing-clause route reconstructs");
+    deferred_ctx.defer_open_step_checks = false;
+    assert_infers_false(&mut deferred_ctx, deferred);
+}
+
+#[test]
+fn cps_rup_rejects_a_corrupted_conflict() {
+    let commands = vec![
+        assume("link", vec![n_lit("x0"), p_lit("x1")]),
+        assume("seed", vec![p_lit("x0")]),
+        assume("conflict", vec![p_lit("x1")]),
+        res_step("empty", vec![], &["link", "seed", "conflict"]),
+    ];
+    let mut ctx = ReconstructCtx::new();
+    let error = reconstruct_cps_test_commands(&mut ctx, &commands)
+        .expect_err("the compact route must reject a non-conflicting RUP chain");
+    assert!(
+        matches!(error, ReconstructError::UnsupportedResolution { .. }),
+        "unexpected error: {error}"
+    );
+}
+
 /// Alethe gate clauses can preserve LRAT entailment while changing the recorded
 /// unit order. Deterministic unit closure must recover the implication graph from
 /// the premise set when the first premise is initially unresolved.

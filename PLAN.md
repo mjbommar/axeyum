@@ -821,8 +821,15 @@ Lean UNSAT coverage rises **14→16/18**. ADR-0129 source
 elimination/introduction is now implemented and kernel-checked for identity and
 generic bounded QF transfers, but its public 32-bit row exposes an 86-literal,
 411-premise resolution step and safely declines at an explicit 64/256 cap
-rather than exceeding 4 GiB. Next: land ADR-0127's compact reflected-RUP
-boundary, then close the public ADR-0129 gate; Lean coverage remains 16/18.
+rather than exceeding 4 GiB. A continuation-coded clause boundary and direct
+unit-propagation proof now avoid materializing intermediate resolvents, cache
+normalized clauses once, and pass wide-chain positive plus corrupted-conflict
+kernel gates. On the public row this cuts open-proof construction from the
+prior guarded OOM to about 30 seconds, but the final scoped closure correctly
+rejects a predicate/body `TypeMismatch`; the 64/256 public gate therefore stays
+in place. Next: repair that nested witness scoping mismatch, pass ADR-0129 under
+4 GiB, then reuse the compact boundary for ADR-0127; Lean coverage remains
+16/18.
 **Scaled source-bound BV alternation is now LANDED (ADR-0125):** only the
 ADR-0124 total-binder cap rises 128→1,024; the 4,096-node matrix cap and exact
 source/proof replay contract are unchanged. `bug802` has 318 universal plus 212

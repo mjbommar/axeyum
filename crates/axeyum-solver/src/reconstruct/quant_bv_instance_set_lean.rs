@@ -19,8 +19,8 @@ use axeyum_lean_kernel::{BinderInfo, Declaration, NameId, ReducibilityHint};
 use super::{
     Clause, DatatypeInductive, ExprId, LEAN_MODULE_THEOREM, ReconstructCtx, ReconstructError,
     LocalDecl, and_intro, and_project, check_against, check_false_prop, double_negation_elim,
-    fresh_axiom, fresh_fvar_id, reconstruct_bitwise_step, render_ctx_module,
-    require_infers_false,
+    fresh_axiom, fresh_fvar_id, reconstruct_bitwise_cps_tail, reconstruct_bitwise_step,
+    render_ctx_module, require_infers_false,
 };
 use crate::{
     BvAlternationCounterexampleCertificate, BvPairedExistentialTransferCertificate,
@@ -2415,17 +2415,12 @@ fn prove_paired_consequent(
     });
     if requires_compact_rup {
         return Err(decline(
-            "paired-existential implication exceeds the explicit-resolution cap; compact reflected RUP is required",
+            "paired-existential implication exceeds the public compact-RUP scoping gate",
         ));
     }
     ctx.bridge = Some(gate_defs);
     ctx.gate_memo.clear();
-    let contradiction = reconstruct_gate_tail_with_chunked_local_lets(
-        ctx,
-        &commands,
-        &assumption_proofs,
-        4,
-    )?;
+    let contradiction = reconstruct_bitwise_cps_tail(ctx, &commands, &assumption_proofs)?;
     let body = ctx.kernel.abstract_fvars(contradiction, &[not_target_id]);
     let anon = ctx.kernel.anon();
     let double_negation = ctx
