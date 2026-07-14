@@ -49,6 +49,7 @@
 mod quant_bv_instance_set_lean;
 
 pub use quant_bv_instance_set_lean::{
+    reconstruct_bv_alternation_counterexample_to_lean_module,
     reconstruct_bv_closed_universal_counterexample_to_lean_module,
     reconstruct_bv_positive_universal_instance_set_to_lean_module,
     reconstruct_bv_vacuous_exists_universal_counterexample_to_lean_module,
@@ -64,7 +65,8 @@ use axeyum_ir::{
 };
 use axeyum_lean_kernel::{
     BinderInfo, DatatypeFamily, DatatypeInductive, Declaration, ExprId, ExprNode, Kernel, LevelId,
-    LogicPrelude, NameId, RecField, RecursiveDatatypeFamily, build_logic_prelude,
+    LocalContext, LocalDecl, LogicPrelude, NameId, RecField, RecursiveDatatypeFamily,
+    build_logic_prelude,
 };
 
 /// An error from Alethe → Lean reconstruction. Every out-of-scope shape, unknown
@@ -164,6 +166,13 @@ impl core::error::Error for ReconstructError {}
 /// lazily, the first time an atom/function name is seen.
 pub struct ReconstructCtx {
     kernel: Kernel,
+    /// Locals in scope while reconstructing proof steps underneath genuine
+    /// quantifier eliminators. Empty for the ordinary closed Alethe routes.
+    local_ctx: LocalContext,
+    /// Build open proof terms without re-inferring every intermediate Alethe
+    /// command. The completed closed term still passes the authoritative kernel
+    /// gate; this avoids quadratic checking below large quantifier prefixes.
+    defer_open_step_checks: bool,
     prelude: LogicPrelude,
     /// The universe level `1` (so the carrier `α : Sort 1 = Type`).
     one: LevelId,
@@ -307,6 +316,8 @@ impl ReconstructCtx {
 
         Self {
             kernel,
+            local_ctx: LocalContext::new(),
+            defer_open_step_checks: false,
             prelude,
             one,
             alpha,
@@ -1028,14 +1039,20 @@ fn check_against(
     proof: ExprId,
     expected: ExprId,
 ) -> Result<ExprId, ReconstructError> {
+    if ctx.defer_open_step_checks {
+        return Ok(proof);
+    }
     let inferred = ctx
         .kernel
-        .infer(proof)
+        .infer_in(proof, &mut ctx.local_ctx)
         .map_err(|e| ReconstructError::KernelRejected {
             rule: rule.to_owned(),
             detail: format!("infer failed: {e:?}"),
         })?;
-    if ctx.kernel.def_eq(inferred, expected) {
+    if ctx
+        .kernel
+        .def_eq_in(inferred, expected, &mut ctx.local_ctx)
+    {
         Ok(proof)
     } else {
         Err(ReconstructError::KernelRejected {
@@ -1429,6 +1446,9 @@ pub enum ProofFragment {
     /// A closed universal Bool/BV theorem below syntactically vacuous leading
     /// existentials, refuted through `Exists.rec` and a typed counterexample.
     BvVacuousExistsUniversalCounterexample,
+    /// A closed Bool/BV `forall+ exists+` theorem refuted by a checked outer
+    /// counterexample and genuine elimination of the existential suffix.
+    BvAlternationCounterexample,
     /// The checked ADR-0099 nested-XOR integer theorem reconstructed through
     /// three genuine universal instantiations and propositional case analysis.
     IntNestedXor,
@@ -1826,6 +1846,11 @@ pub fn scan_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> ProofFra
         ProofFragment::BvForallNonconstant
     } else if crate::bv_uf_local::bv_uf_local_refutation(arena, assertions).is_some() {
         ProofFragment::BvUfLocal
+    } else if has_exists
+        && has_forall
+        && quant_bv_instance_set_lean::bv_alternation_counterexample_lean_shape(arena, assertions)
+    {
+        ProofFragment::BvAlternationCounterexample
     } else if (has_exists || has_forall) && finite_domain_enum_certifies(arena, assertions) {
         ProofFragment::FiniteDomainEnum
     } else if has_forall
@@ -3866,6 +3891,25 @@ fn reconstruct_proof_fragment_to_lean_module(
             })?
             .ok_or_else(declined)?;
             quant_bv_instance_set_lean::reconstruct_bv_vacuous_exists_universal_counterexample_to_lean_module(
+                arena,
+                assertions,
+                &certificate,
+            )?
+        }
+        ProofFragment::BvAlternationCounterexample => {
+            let config = crate::SolverConfig::default()
+                .with_timeout(std::time::Duration::from_secs(30))
+                .with_resource_limit(10_000_000);
+            let certificate =
+                crate::quant_bv_alternation_search::find_bv_alternation_counterexample(
+                    arena, assertions, &config,
+                )
+                .map_err(|error| ReconstructError::MalformedStep {
+                    rule: "bv_alternation_counterexample".to_owned(),
+                    detail: format!("counterexample search failed: {error}"),
+                })?
+                .ok_or_else(declined)?;
+            quant_bv_instance_set_lean::reconstruct_bv_alternation_counterexample_to_lean_module(
                 arena,
                 assertions,
                 &certificate,

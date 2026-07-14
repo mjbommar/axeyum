@@ -5,8 +5,9 @@ use std::time::Duration;
 use axeyum_ir::{Sort, TermArena, Value};
 use axeyum_smtlib::{ScriptCommand, parse_script};
 use axeyum_solver::{
-    BvAlternationCounterexampleCertificate, Evidence, SolverConfig,
-    check_bv_alternation_counterexample, produce_evidence,
+    BvAlternationCounterexampleCertificate, Evidence, ProofFragment, SolverConfig,
+    check_bv_alternation_counterexample, produce_evidence, prove_unsat_to_lean_module,
+    reconstruct_bv_alternation_counterexample_to_lean_module,
 };
 
 const PIPELINE: &str = include_str!(
@@ -63,6 +64,73 @@ fn public_pipeline_has_source_bound_checked_evidence() {
     let (script, assertions, certificate) = pipeline_certificate();
     assert_eq!(certificate.outer_bindings.len(), 32);
     assert!(check_bv_alternation_counterexample(&script.arena, &assertions, &certificate).unwrap());
+}
+
+#[test]
+fn small_alternation_counterexample_reconstructs_and_routes() {
+    let text = "(set-logic BV)
+        (assert (forall ((x (_ BitVec 2))) (exists ((y (_ BitVec 2)))
+          (=> (= x (_ bv3 2)) (not (= y y))))))
+        (check-sat)";
+    let mut script = parse_script(text).expect("small alternation parses");
+    let assertions = assertions(&script);
+    let report = produce_evidence(&mut script.arena, &assertions, &config())
+        .expect("small alternation has evidence");
+    let Evidence::UnsatBvAlternationCounterexample(certificate) = report.evidence else {
+        panic!("small alternation must use ADR-0124 evidence")
+    };
+    let direct = reconstruct_bv_alternation_counterexample_to_lean_module(
+        &script.arena,
+        &assertions,
+        &certificate,
+    )
+    .expect("small alternation reconstructs");
+    assert!(direct.contains("Exists.rec"));
+    assert!(direct.contains("theorem axeyum_refutation : False"));
+    assert!(!direct.contains("sorryAx"));
+
+    let (fragment, routed) = prove_unsat_to_lean_module(&mut script.arena, &assertions)
+        .expect("small alternation routes");
+    assert_eq!(fragment, ProofFragment::BvAlternationCounterexample);
+    assert_eq!(routed, direct);
+}
+
+#[test]
+#[ignore = "release-only public-corpus ADR-0124 Lean reconstruction stress gate"]
+fn public_pipeline_reconstructs_from_the_full_alternating_source() {
+    let (mut script, assertions, certificate) = pipeline_certificate();
+    let direct = reconstruct_bv_alternation_counterexample_to_lean_module(
+        &script.arena,
+        &assertions,
+        &certificate,
+    )
+    .expect("public pipeline alternation reconstructs");
+    assert!(direct.contains("Exists.rec"));
+    assert!(!direct.contains("sorryAx"));
+    let (fragment, routed) =
+        prove_unsat_to_lean_module(&mut script.arena, &assertions).expect("public pipeline routes");
+    assert_eq!(fragment, ProofFragment::BvAlternationCounterexample);
+    assert_eq!(routed, direct);
+}
+
+#[test]
+#[ignore = "release-only public-corpus ADR-0125 Lean reconstruction stress gate"]
+fn bug802_reconstructs_all_530_quantified_binders() {
+    let mut script = parse_script(BUG802).expect("bug802 parses");
+    let assertions = assertions(&script);
+    let report =
+        produce_evidence(&mut script.arena, &assertions, &config()).expect("bug802 has evidence");
+    let Evidence::UnsatBvAlternationCounterexample(certificate) = report.evidence else {
+        panic!("bug802 must use ADR-0125 evidence")
+    };
+    let direct = reconstruct_bv_alternation_counterexample_to_lean_module(
+        &script.arena,
+        &assertions,
+        &certificate,
+    )
+    .expect("bug802 alternation reconstructs");
+    assert!(direct.contains("Exists.rec"));
+    assert!(!direct.contains("sorryAx"));
 }
 
 #[test]
