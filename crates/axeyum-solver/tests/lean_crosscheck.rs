@@ -98,6 +98,7 @@ const FAMILY_BUILDERS: &[FamilyBuilder] = &[
     quantified_bv_source_instance_set_checks_in_real_lean,
     quantified_bv_negated_existential_witness_checks_in_real_lean,
     quantified_bv_closed_universal_counterexample_checks_in_real_lean,
+    quantified_bv_vacuous_exists_counterexample_checks_in_real_lean,
     cvc5_quantified_bv_inversion_rows_check_in_real_lean,
     qf_ufff_bv_uf_local_rows_check_in_real_lean,
     qf_ff_term_level_enum_rows_check_in_real_lean,
@@ -691,6 +692,27 @@ fn quantified_bv_closed_universal_counterexample_checks_in_real_lean() {
     assert_eq!(fragment, ProofFragment::BvClosedUniversalCounterexample);
     assert!(!source.contains("sorryAx"));
     lean_accepts("quant_bv_closed_universal_counterexample", &source);
+}
+
+/// Syntactically vacuous leading existentials are eliminated by genuine
+/// `Exists.rec` before the surviving universal counterexample closes `False`.
+fn quantified_bv_vacuous_exists_counterexample_checks_in_real_lean() {
+    let mut script = parse_script(
+        "(set-logic BV)
+         (assert (exists ((e (_ BitVec 21))) (forall ((u Bool)) u)))
+         (check-sat)",
+    )
+    .expect("vacuous-existential representative parses");
+    let assertions = script.assertions.clone();
+    let (fragment, source) = prove_unsat_to_lean_module(&mut script.arena, &assertions)
+        .expect("vacuous-existential representative reconstructs");
+    assert_eq!(
+        fragment,
+        ProofFragment::BvVacuousExistsUniversalCounterexample
+    );
+    assert!(source.contains("Exists.rec"));
+    assert!(!source.contains("sorryAx"));
+    lean_accepts("quant_bv_vacuous_exists_counterexample", &source);
 }
 
 /// The remaining cvc5 quantified-BV inversion audit rows are closed by a checked

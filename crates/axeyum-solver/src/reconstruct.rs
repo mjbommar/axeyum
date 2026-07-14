@@ -51,6 +51,7 @@ mod quant_bv_instance_set_lean;
 pub use quant_bv_instance_set_lean::{
     reconstruct_bv_closed_universal_counterexample_to_lean_module,
     reconstruct_bv_positive_universal_instance_set_to_lean_module,
+    reconstruct_bv_vacuous_exists_universal_counterexample_to_lean_module,
     reconstruct_negated_existential_witness_to_lean_module,
 };
 
@@ -1425,6 +1426,9 @@ pub enum ProofFragment {
     /// A closed universal Bool/BV theorem refuted by a concrete typed binder
     /// assignment and an explicit evaluated AIG proof (ADR-0139).
     BvClosedUniversalCounterexample,
+    /// A closed universal Bool/BV theorem below syntactically vacuous leading
+    /// existentials, refuted through `Exists.rec` and a typed counterexample.
+    BvVacuousExistsUniversalCounterexample,
     /// The checked ADR-0099 nested-XOR integer theorem reconstructed through
     /// three genuine universal instantiations and propositional case analysis.
     IntNestedXor,
@@ -1839,6 +1843,13 @@ pub fn scan_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> ProofFra
         && crate::int_reconstruct::single_pivot_equality_partition_lean_shape(arena, assertions)
     {
         ProofFragment::SinglePivotEqualityPartition
+    } else if has_exists
+        && has_forall
+        && quant_bv_instance_set_lean::bv_vacuous_exists_universal_counterexample_lean_shape(
+            arena, assertions,
+        )
+    {
+        ProofFragment::BvVacuousExistsUniversalCounterexample
     } else if has_forall
         && quant_bv_instance_set_lean::bv_closed_universal_counterexample_lean_shape(
             arena, assertions,
@@ -3835,6 +3846,26 @@ fn reconstruct_proof_fragment_to_lean_module(
                 })?
                 .ok_or_else(declined)?;
             quant_bv_instance_set_lean::reconstruct_bv_closed_universal_counterexample_to_lean_module(
+                arena,
+                assertions,
+                &certificate,
+            )?
+        }
+        ProofFragment::BvVacuousExistsUniversalCounterexample => {
+            let config = crate::SolverConfig::default()
+                .with_timeout(std::time::Duration::from_secs(2))
+                .with_resource_limit(1_000_000);
+            let certificate = crate::quant_vacuous_exists_counterexample_search::find_vacuous_exists_universal_counterexample(
+                arena,
+                assertions,
+                &config,
+            )
+            .map_err(|error| ReconstructError::MalformedStep {
+                rule: "bv_vacuous_exists_universal_counterexample".to_owned(),
+                detail: format!("counterexample search failed: {error}"),
+            })?
+            .ok_or_else(declined)?;
+            quant_bv_instance_set_lean::reconstruct_bv_vacuous_exists_universal_counterexample_to_lean_module(
                 arena,
                 assertions,
                 &certificate,

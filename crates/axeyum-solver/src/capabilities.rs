@@ -1388,10 +1388,13 @@ pub const CAPABILITIES: &[Capability] = &[
                    in median 0.129 ms. The public quantified-BV slice is 32 SAT / 16 UNSAT / 0 unknown / \
                    6 unsupported with 48/48 checked/certified decisions, zero disagreement, error, or \
                    replay failure, and an empty target trust ledger. The cumulative direct-Z3 suite \
-                   covers 1,592 cases and controls. Nonvacuous/open bodies, reversed or broader \
-                   alternation, functions, arrays, arithmetic binders, general QSAT, and Lean \
-                   reconstruction remain open",
-        reference: "ADR-0128",
+                   covers 1,592 cases and controls. ADR-0140 reconstructs the untouched source by \
+                   eliminating every vacuous existential with genuine `Exists.rec`, applying the \
+                   surviving universal to exact typed values, and kernel-reducing its computational \
+                   AIG body. The exact public audit is 50/54 dominant and Lean UNSAT 14/18. \
+                   Nonvacuous/open bodies, reversed or broader alternation, functions, arrays, \
+                   arithmetic binders, and general QSAT remain open",
+        reference: "ADR-0128/0140",
     },
     Capability {
         area: "quantifiers",

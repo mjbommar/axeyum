@@ -911,6 +911,18 @@ untouched universal, and an explicit evaluated AIG proof refutes the body in
 decisions checked/certified and zero mismatch/error/timeout. **Next action:**
 implement ADR-0128's vacuous-existential elimination over the same evaluated-AIG
 counterexample spine, then return to ADR-0124/0129 and the ADR-0127 RUP reflector.
+**That action is now LANDED (ADR-0140):** the untouched `exists+ forall+`
+source is encoded directly, every checker-proved-vacuous existential is
+eliminated by genuine `Exists.rec`, and exact typed values instantiate the
+surviving universal before computational AIG reduction closes `False`. The
+explicit gate proof failed safely at a 1.42 GiB allocation; the accepted compact
+route owns a scoped 64 MiB proof-worker stack and passes the public optimized
+stress gate twice in 16.54 seconds (38.04 seconds cold, 1,975,764 KiB peak under
+4 GiB). Exact audit is 50/54 dominant and Lean UNSAT 14/18, with 54/54 checked
+and certified and zero mismatch/error/timeout. **Next action:** characterize
+ADR-0129's paired-existential transfer for genuine source elimination and
+introduction, then rank it against ADR-0124 before returning to ADR-0127's
+compact reflected-RUP requirement.
 **Process state:** first green CI in 200+ runs held into a green cadence;
 the pre-push hook gates the pushed SHA incl. the ~6s `:status` corpus
 sweep (a wrong verdict must not leave the machine); STATUS truncated

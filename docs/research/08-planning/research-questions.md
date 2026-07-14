@@ -263,6 +263,9 @@ Out of scope:
     universal body, validates complete universal values, and directly evaluates
     the untouched body to false. This recovers `issue2031-bv-var-elim` without
     trusting prefix rewriting, inversion search, or general QSAT.
+    [ADR-0140](../09-decisions/adr-0140-kernel-checked-vacuous-bv-existential-prefixes.md)
+    closes its proof boundary with genuine `Exists.rec`, typed universal
+    application, and kernel-checked computational AIG reduction.
     [ADR-0129](../09-decisions/adr-0129-checked-paired-existential-witness-transfer.md)
     adds a premise-aware paired-existential UNSAT class: a checker alpha-aligns
     equal typed witness tuples under exact shared ground premises and replays

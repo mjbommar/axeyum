@@ -35,6 +35,11 @@ test-quant-bv-lean-stress:
 test-quant-negated-exists-lean-stress:
     MEM_LIMIT_GB=4 ./scripts/mem-run.sh cargo test --release -p axeyum-solver --test evidence_quant_negated_exists three_public_rows_gain_genuine_typed_lean_reconstruction -- --ignored --exact
 
+# Genuine `Exists.rec` elimination plus typed ADR-0128 universal
+# counterexample for the public 32-bit multiplier row.
+test-quant-vacuous-exists-lean-stress:
+    MEM_LIMIT_GB=4 ./scripts/mem-run.sh cargo test --release -p axeyum-solver --test quant_closed_counterexample_lean issue2031_eliminates_vacuous_existentials_before_typed_counterexample -- --ignored --exact
+
 doc:
     RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features --no-deps
 

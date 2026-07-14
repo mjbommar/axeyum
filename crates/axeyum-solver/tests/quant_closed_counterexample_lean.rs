@@ -6,6 +6,7 @@ use axeyum_solver::{
     ClosedUniversalCounterexampleCertificate, Evidence, ProofFragment, SolverConfig,
     check_closed_universal_counterexample, produce_evidence, prove_unsat_to_lean_module,
     reconstruct_bv_closed_universal_counterexample_to_lean_module,
+    reconstruct_bv_vacuous_exists_universal_counterexample_to_lean_module,
     reconstruct_closed_universal_counterexample_to_lean_module,
 };
 
@@ -55,6 +56,12 @@ const QBV_SIMP: &str = include_str!(concat!(
     "cli__regress0__quantifiers__qbv-simp.smt2"
 ));
 
+const ISSUE2031: &str = include_str!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../../corpus/public-curated/quantified/BV/cvc5-regress-clean/",
+    "cli__regress0__quantifiers__issue2031-bv-var-elim.smt2"
+));
+
 fn checked_certificate(
     text: &str,
 ) -> (
@@ -75,6 +82,30 @@ fn checked_certificate(
         Evidence::UnsatClosedUniversalCounterexample(certificate.clone())
             .check(&script.arena, &assertions)
             .expect("certificate check runs")
+    );
+    (script, certificate)
+}
+
+fn checked_vacuous_exists_certificate(
+    text: &str,
+) -> (
+    axeyum_smtlib::Script,
+    axeyum_solver::VacuousExistsUniversalCounterexampleCertificate,
+) {
+    let mut script = parse_script(text).expect("ADR-0128 target parses");
+    let assertions = script.assertions.clone();
+    let report = produce_evidence(&mut script.arena, &assertions, &SolverConfig::default())
+        .expect("ADR-0128 target has evidence");
+    let Evidence::UnsatVacuousExistsUniversalCounterexample(certificate) = report.evidence else {
+        panic!(
+            "expected ADR-0128 evidence, got {}",
+            report.evidence.kind_label()
+        );
+    };
+    assert!(
+        Evidence::UnsatVacuousExistsUniversalCounterexample(certificate.clone())
+            .check(&script.arena, &assertions)
+            .expect("ADR-0128 certificate check runs")
     );
     (script, certificate)
 }
@@ -141,6 +172,70 @@ fn tampered_qbv_counterexample_never_reconstructs_to_false() {
     certificate.bindings[0].1 = Value::Bool(false);
     assert!(
         reconstruct_bv_closed_universal_counterexample_to_lean_module(
+            &script.arena,
+            &script.assertions,
+            &certificate,
+        )
+        .is_err()
+    );
+}
+
+#[test]
+fn small_vacuous_existential_prefix_reconstructs_and_routes() {
+    let text = "(set-logic BV)
+        (assert (exists ((e (_ BitVec 21))) (forall ((u Bool)) u)))
+        (check-sat)";
+    let (mut script, certificate) = checked_vacuous_exists_certificate(text);
+    let assertions = script.assertions.clone();
+    let direct = reconstruct_bv_vacuous_exists_universal_counterexample_to_lean_module(
+        &script.arena,
+        &assertions,
+        &certificate,
+    )
+    .expect("ADR-0128 counterexample reconstructs");
+    assert!(direct.contains("Exists.rec"));
+    assert!(direct.contains("theorem axeyum_refutation : False"));
+    assert!(!direct.contains("sorryAx"));
+
+    let (fragment, routed) =
+        prove_unsat_to_lean_module(&mut script.arena, &assertions).expect("router reconstructs");
+    assert_eq!(
+        fragment,
+        ProofFragment::BvVacuousExistsUniversalCounterexample
+    );
+    assert_eq!(routed, direct);
+}
+
+#[test]
+#[ignore = "release-only public-corpus ADR-0128 Lean reconstruction stress gate"]
+fn issue2031_eliminates_vacuous_existentials_before_typed_counterexample() {
+    let (mut script, certificate) = checked_vacuous_exists_certificate(ISSUE2031);
+    let assertions = script.assertions.clone();
+    let direct = reconstruct_bv_vacuous_exists_universal_counterexample_to_lean_module(
+        &script.arena,
+        &assertions,
+        &certificate,
+    )
+    .expect("public ADR-0128 counterexample reconstructs");
+    assert!(direct.contains("Exists.rec"));
+    assert!(direct.contains("theorem axeyum_refutation : False"));
+    assert!(!direct.contains("sorryAx"));
+
+    let (fragment, routed) =
+        prove_unsat_to_lean_module(&mut script.arena, &assertions).expect("router reconstructs");
+    assert_eq!(
+        fragment,
+        ProofFragment::BvVacuousExistsUniversalCounterexample
+    );
+    assert_eq!(routed, direct);
+}
+
+#[test]
+fn tampered_vacuous_exists_counterexample_never_reconstructs_to_false() {
+    let (script, mut certificate) = checked_vacuous_exists_certificate(ISSUE2031);
+    certificate.bindings[0].1 = Value::Bool(false);
+    assert!(
+        reconstruct_bv_vacuous_exists_universal_counterexample_to_lean_module(
             &script.arena,
             &script.assertions,
             &certificate,

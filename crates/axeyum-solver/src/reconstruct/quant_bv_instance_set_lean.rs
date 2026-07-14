@@ -21,8 +21,9 @@ use super::{
 use crate::{
     BvPositiveUniversalInstanceSetCertificate, BvPositiveUniversalSourceInstance,
     ClosedUniversalCounterexampleCertificate, NegatedExistentialWitnessCertificate,
+    VacuousExistsUniversalCounterexampleCertificate,
     check_bv_positive_universal_instance_set, check_closed_universal_counterexample,
-    check_negated_existential_witness,
+    check_negated_existential_witness, check_vacuous_exists_universal_counterexample,
 };
 
 const MAX_LEAN_BV_WIDTH: u32 = 64;
@@ -957,10 +958,55 @@ fn collect_forall_chain(
     Ok((binders, term))
 }
 
+fn collect_vacuous_exists_forall_chain(
+    arena: &TermArena,
+    mut term: TermId,
+) -> Result<(Vec<SymbolId>, TermId, Vec<SymbolId>, TermId), ReconstructError> {
+    let mut existential_binders = Vec::new();
+    loop {
+        match arena.node(term) {
+            TermNode::App {
+                op: Op::Exists(symbol),
+                args,
+            } if args.len() == 1 => {
+                let sort = arena.symbol(*symbol).1;
+                if !matches!(sort, Sort::Bool | Sort::BitVec(1..=MAX_LEAN_BV_WIDTH)) {
+                    return Err(decline(format!(
+                        "unsupported existential binder sort {sort:?}"
+                    )));
+                }
+                existential_binders.push(*symbol);
+                term = args[0];
+            }
+            _ => break,
+        }
+    }
+    if existential_binders.is_empty() {
+        return Err(decline("expected a nonempty leading existential block"));
+    }
+    let universal_term = term;
+    let (universal_binders, body) = collect_forall_chain(arena, universal_term)?;
+    Ok((
+        existential_binders,
+        universal_term,
+        universal_binders,
+        body,
+    ))
+}
+
 fn universal_prop(
     ctx: &mut ReconstructCtx,
     arena: &TermArena,
     term: TermId,
+) -> Result<ExprId, ReconstructError> {
+    universal_prop_with_encoding(ctx, arena, term, WitnessLeanEncoding::Logical)
+}
+
+fn universal_prop_with_encoding(
+    ctx: &mut ReconstructCtx,
+    arena: &TermArena,
+    term: TermId,
+    encoding: WitnessLeanEncoding,
 ) -> Result<ExprId, ReconstructError> {
     let (binders, body) = collect_forall_chain(arena, term)?;
     register_bv_widths(ctx, arena, body);
@@ -969,26 +1015,15 @@ fn universal_prop(
     for &binder in &binders {
         let id = fresh_fvar_id(ctx);
         let value = ctx.kernel.fvar(id);
-        match arena.symbol(binder).1 {
-            Sort::Bool => {
-                ctx.gate_bound_bools
-                    .insert(symbol_key(binder, Sort::Bool), value);
-                domains.push(ctx.kernel.const_(ctx.prelude.bool_, vec![]));
-            }
-            Sort::BitVec(width) => {
-                let width_usize = usize::try_from(width).expect("u32 width fits usize");
-                ctx.gate_bound_bvs.insert(
-                    symbol_key(binder, Sort::BitVec(width)),
-                    (width_usize, value),
-                );
-                let datatype = ctx.typed_bv_type(width_usize)?;
-                domains.push(ctx.kernel.const_(datatype.ind, vec![]));
-            }
-            _ => return Err(decline("non-Bool/BV universal binder")),
-        }
+        let sort = arena.symbol(binder).1;
+        bind_symbol(ctx, binder, sort, value);
+        domains.push(binder_domain(ctx, sort, encoding)?);
         fvars.push(id);
     }
-    let proposition = direct_ground_prop(ctx, arena, body)?;
+    let proposition = match encoding {
+        WitnessLeanEncoding::Logical => direct_ground_prop(ctx, arena, body)?,
+        WitnessLeanEncoding::Computational => computational_ground_prop(ctx, arena, body)?,
+    };
     ctx.gate_bound_bools.clear();
     ctx.gate_bound_bvs.clear();
     let mut proposition = ctx.kernel.abstract_fvars(proposition, &fvars);
@@ -999,6 +1034,115 @@ fn universal_prop(
             .pi(anon, domain, proposition, BinderInfo::Default);
     }
     Ok(proposition)
+}
+
+#[derive(Clone, Copy)]
+struct VacuousExistsLayer {
+    domain: ExprId,
+    predicate: ExprId,
+    proposition: ExprId,
+}
+
+fn wrap_vacuous_exists_prefix(
+    ctx: &mut ReconstructCtx,
+    arena: &TermArena,
+    binders: &[SymbolId],
+    universal: ExprId,
+    encoding: WitnessLeanEncoding,
+) -> Result<(ExprId, Vec<VacuousExistsLayer>), ReconstructError> {
+    let mut proposition = universal;
+    let mut layers = Vec::with_capacity(binders.len());
+    for &binder in binders.iter().rev() {
+        let domain = binder_domain(ctx, arena.symbol(binder).1, encoding)?;
+        let anon = ctx.kernel.anon();
+        let predicate =
+            ctx.kernel
+                .lam(anon, domain, proposition, BinderInfo::Default);
+        let exists = ctx.kernel.const_(ctx.prelude.exists_, vec![ctx.one]);
+        let exists = ctx.kernel.app(exists, domain);
+        let exists = ctx.kernel.app(exists, predicate);
+        layers.push(VacuousExistsLayer {
+            domain,
+            predicate,
+            proposition: exists,
+        });
+        proposition = exists;
+    }
+    layers.reverse();
+    Ok((proposition, layers))
+}
+
+fn exists_elim_false(
+    ctx: &mut ReconstructCtx,
+    layer: VacuousExistsLayer,
+    minor: ExprId,
+    major: ExprId,
+) -> ExprId {
+    let zero = ctx.kernel.level_zero();
+    let false_ = ctx.kernel.const_(ctx.prelude.false_, vec![]);
+    let anon = ctx.kernel.anon();
+    let motive =
+        ctx.kernel
+            .lam(anon, layer.proposition, false_, BinderInfo::Default);
+    let rec = ctx
+        .kernel
+        .const_(ctx.prelude.exists_rec, vec![zero, ctx.one]);
+    let rec = ctx.kernel.app(rec, layer.domain);
+    let rec = ctx.kernel.app(rec, layer.predicate);
+    let rec = ctx.kernel.app(rec, motive);
+    let rec = ctx.kernel.app(rec, minor);
+    ctx.kernel.app(rec, major)
+}
+
+#[allow(clippy::too_many_arguments)]
+fn refute_vacuous_exists_suffix(
+    ctx: &mut ReconstructCtx,
+    arena: &TermArena,
+    universal_term: TermId,
+    bindings: &[(SymbolId, Value)],
+    negative: ExprId,
+    encoding: WitnessLeanEncoding,
+    layers: &[VacuousExistsLayer],
+    index: usize,
+    major: ExprId,
+) -> Result<ExprId, ReconstructError> {
+    let Some(&layer) = layers.get(index) else {
+        let source = BvPositiveUniversalSourceInstance {
+            assertion: universal_term,
+            bindings: bindings.to_vec(),
+        };
+        let positive =
+            apply_instance_with_encoding(ctx, arena, universal_term, major, &source, encoding)?;
+        return Ok(ctx.kernel.app(negative, positive));
+    };
+
+    let witness_id = fresh_fvar_id(ctx);
+    let hypothesis_id = fresh_fvar_id(ctx);
+    let hypothesis = ctx.kernel.fvar(hypothesis_id);
+    let contradiction = refute_vacuous_exists_suffix(
+        ctx,
+        arena,
+        universal_term,
+        bindings,
+        negative,
+        encoding,
+        layers,
+        index + 1,
+        hypothesis,
+    )?;
+    let body = ctx
+        .kernel
+        .abstract_fvars(contradiction, &[witness_id, hypothesis_id]);
+    let witness = ctx.kernel.bvar(0);
+    let hypothesis_type = ctx.kernel.app(layer.predicate, witness);
+    let anon = ctx.kernel.anon();
+    let minor = ctx
+        .kernel
+        .lam(anon, hypothesis_type, body, BinderInfo::Default);
+    let minor = ctx
+        .kernel
+        .lam(anon, layer.domain, minor, BinderInfo::Default);
+    Ok(exists_elim_false(ctx, layer, minor, major))
 }
 
 fn source_prop(
@@ -1129,35 +1273,26 @@ fn install_binding_environment(
     arena: &TermArena,
     bindings: &[(SymbolId, Value)],
 ) -> Result<(), ReconstructError> {
+    install_binding_environment_with_encoding(
+        ctx,
+        arena,
+        bindings,
+        WitnessLeanEncoding::Logical,
+    )
+}
+
+fn install_binding_environment_with_encoding(
+    ctx: &mut ReconstructCtx,
+    arena: &TermArena,
+    bindings: &[(SymbolId, Value)],
+    encoding: WitnessLeanEncoding,
+) -> Result<(), ReconstructError> {
     ctx.gate_bound_bools.clear();
     ctx.gate_bound_bvs.clear();
     for (symbol, value) in bindings {
-        match value {
-            Value::Bool(value) => {
-                let witness = ctx.kernel.const_(
-                    if *value {
-                        ctx.prelude.bool_true
-                    } else {
-                        ctx.prelude.bool_false
-                    },
-                    vec![],
-                );
-                ctx.gate_bound_bools
-                    .insert(symbol_key(*symbol, Sort::Bool), witness);
-            }
-            Value::Bv { width, value } => {
-                if arena.symbol(*symbol).1 != Sort::BitVec(*width) {
-                    return Err(decline("carried BV binding sort mismatch"));
-                }
-                let width_usize = usize::try_from(*width).expect("u32 width fits usize");
-                let witness = ctx.typed_bv_literal(width_usize, *value)?;
-                ctx.gate_bound_bvs.insert(
-                    symbol_key(*symbol, Sort::BitVec(*width)),
-                    (width_usize, witness),
-                );
-            }
-            _ => return Err(decline("non-Bool/BV carried binding")),
-        }
+        let sort = arena.symbol(*symbol).1;
+        let witness = binder_witness(ctx, sort, value, encoding)?;
+        bind_symbol(ctx, *symbol, sort, witness);
     }
     Ok(())
 }
@@ -1344,8 +1479,26 @@ fn apply_instance(
     ctx: &mut ReconstructCtx,
     arena: &TermArena,
     term: TermId,
+    proof: ExprId,
+    source: &BvPositiveUniversalSourceInstance,
+) -> Result<ExprId, ReconstructError> {
+    apply_instance_with_encoding(
+        ctx,
+        arena,
+        term,
+        proof,
+        source,
+        WitnessLeanEncoding::Logical,
+    )
+}
+
+fn apply_instance_with_encoding(
+    ctx: &mut ReconstructCtx,
+    arena: &TermArena,
+    term: TermId,
     mut proof: ExprId,
     source: &BvPositiveUniversalSourceInstance,
+    encoding: WitnessLeanEncoding,
 ) -> Result<ExprId, ReconstructError> {
     let (binders, _) = collect_forall_chain(arena, term)?;
     let bindings = binding_map(source);
@@ -1353,27 +1506,7 @@ fn apply_instance(
         let value = bindings
             .get(&binder)
             .ok_or_else(|| decline("instance omits a universal binder"))?;
-        let witness = match (arena.symbol(binder).1, *value) {
-            (Sort::Bool, Value::Bool(value)) => ctx.kernel.const_(
-                if *value {
-                    ctx.prelude.bool_true
-                } else {
-                    ctx.prelude.bool_false
-                },
-                vec![],
-            ),
-            (
-                Sort::BitVec(width),
-                Value::Bv {
-                    width: carried,
-                    value,
-                },
-            ) if width == *carried => ctx.typed_bv_literal(
-                usize::try_from(width).expect("u32 width fits usize"),
-                *value,
-            )?,
-            _ => return Err(decline("instance witness sort does not match binder")),
-        };
+        let witness = binder_witness(ctx, arena.symbol(binder).1, value, encoding)?;
         proof = ctx.kernel.app(proof, witness);
     }
     Ok(proof)
@@ -1588,6 +1721,21 @@ pub(crate) fn bv_closed_universal_counterexample_lean_shape(
     })
 }
 
+/// Cheap structural classification for an ADR-0128 closed Bool/BV universal
+/// counterexample below a syntactically vacuous existential prefix.
+pub(crate) fn bv_vacuous_exists_universal_counterexample_lean_shape(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> bool {
+    assertions.iter().any(|&assertion| {
+        crate::quant_vacuous_exists_counterexample_cert::admitted_vacuous_exists_universal(
+            arena, assertion,
+        )
+        .is_some()
+            && collect_vacuous_exists_forall_chain(arena, assertion).is_ok()
+    })
+}
+
 /// Reconstructs a concrete Bool/BV counterexample to one closed universal as a
 /// genuine typed source application followed by a kernel-checked AIG refutation.
 ///
@@ -1638,6 +1786,125 @@ pub fn reconstruct_bv_closed_universal_counterexample_to_lean_module(
         evaluated.proposition,
     )?;
     let proof = ctx.kernel.app(evaluated.proof, positive);
+    require_infers_false(&mut ctx, proof)?;
+    Ok(render_ctx_module(&mut ctx, proof))
+}
+
+/// Reconstructs an ADR-0128 Bool/BV universal counterexample below a vacuous
+/// existential prefix by eliminating the untouched source existentials and
+/// applying the surviving universal to the exact carried values.
+///
+/// # Errors
+///
+/// Returns [`ReconstructError`] when certificate replay fails, the source leaves
+/// the typed Bool/BV encoding, existential vacuity is lost, or the final
+/// `Exists.rec`/universal application does not kernel-check to `False`.
+pub fn reconstruct_bv_vacuous_exists_universal_counterexample_to_lean_module(
+    arena: &TermArena,
+    assertions: &[TermId],
+    certificate: &VacuousExistsUniversalCounterexampleCertificate,
+) -> Result<String, ReconstructError> {
+    const RECONSTRUCTION_STACK_BYTES: usize = 64 * 1024 * 1024;
+    std::thread::scope(|scope| {
+        let worker = std::thread::Builder::new()
+            .name("axeyum-adr0128-lean".to_owned())
+            .stack_size(RECONSTRUCTION_STACK_BYTES)
+            .spawn_scoped(scope, || {
+                reconstruct_bv_vacuous_exists_universal_counterexample_to_lean_module_impl(
+                    arena,
+                    assertions,
+                    certificate,
+                )
+            })
+            .map_err(|error| decline(format!("failed to start reconstruction worker: {error}")))?;
+        worker
+            .join()
+            .map_err(|_| decline("vacuous-existential reconstruction worker panicked"))?
+    })
+}
+
+fn reconstruct_bv_vacuous_exists_universal_counterexample_to_lean_module_impl(
+    arena: &TermArena,
+    assertions: &[TermId],
+    certificate: &VacuousExistsUniversalCounterexampleCertificate,
+) -> Result<String, ReconstructError> {
+    if !check_vacuous_exists_universal_counterexample(arena, assertions, certificate) {
+        return Err(decline(
+            "invalid vacuous-existential universal counterexample certificate",
+        ));
+    }
+    let (existential_binders, universal_term, universal_binders, body) =
+        collect_vacuous_exists_forall_chain(arena, certificate.assertion)?;
+    if universal_binders.len() != certificate.bindings.len() {
+        return Err(decline(
+            "vacuous-existential counterexample omits a universal binder",
+        ));
+    }
+
+    let body_lowering = lower_terms(arena, &[body])
+        .map_err(|error| decline(format!("counterexample encoding selection failed: {error}")))?;
+    let encoding = if body_lowering.aig().node_count() > COMPUTATIONAL_WITNESS_AIG_THRESHOLD {
+        WitnessLeanEncoding::Computational
+    } else {
+        WitnessLeanEncoding::Logical
+    };
+
+    let mut ctx = ReconstructCtx::new();
+    ctx.typed_bv_gates = true;
+    register_bv_widths(&mut ctx, arena, body);
+    let universal = universal_prop_with_encoding(&mut ctx, arena, universal_term, encoding)?;
+    let (source_prop, layers) = wrap_vacuous_exists_prefix(
+        &mut ctx,
+        arena,
+        &existential_binders,
+        universal,
+        encoding,
+    )?;
+    let source = fresh_axiom(
+        &mut ctx,
+        source_prop,
+        "vacuous-exists-bv-universal-source",
+    )?;
+
+    install_binding_environment_with_encoding(
+        &mut ctx,
+        arena,
+        &certificate.bindings,
+        encoding,
+    )?;
+    let negative = match encoding {
+        WitnessLeanEncoding::Logical => {
+            let evaluated =
+                evaluate_ground_prop(&mut ctx, arena, body, &certificate.bindings)?;
+            if evaluated.value {
+                return Err(decline(
+                    "vacuous-existential counterexample body evaluates true in Lean lowering",
+                ));
+            }
+            evaluated.proof
+        }
+        WitnessLeanEncoding::Computational => {
+            // The independent ADR-0128 checker already evaluated the exact
+            // source body to false.  The final kernel application reduces the
+            // source-instantiated computational proposition itself to `False`;
+            // rebuilding a second alpha-equivalent gate-let chain here would
+            // force an unnecessary quadratic definitional-equality walk.
+            false_elim_identity(&mut ctx)
+        }
+    };
+    ctx.gate_bound_bools.clear();
+    ctx.gate_bound_bvs.clear();
+    let proof = refute_vacuous_exists_suffix(
+        &mut ctx,
+        arena,
+        universal_term,
+        &certificate.bindings,
+        negative,
+        encoding,
+        &layers,
+        0,
+        source,
+    )?;
     require_infers_false(&mut ctx, proof)?;
     Ok(render_ctx_module(&mut ctx, proof))
 }
