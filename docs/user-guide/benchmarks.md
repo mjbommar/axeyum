@@ -70,6 +70,7 @@ just bench-public-qfbv-sat-bv-replay-refine      # replay-checked query refineme
 just bench-glaurung-manifest-smoke               # client manifest/timing plumbing
 just bench-glaurung-manifest-proof-smoke         # fail-closed DRAT-check plumbing
 just generate-glaurung-manifest CORPUS INDEX OUT # bind capture facts to exact bytes
+just glaurung-qfbv-regular                        # real capture when locally available
 just bench-glaurung-qfbv-repeated CORPUS MANIFEST # raw process-level variance (5 trials)
 just compare-glaurung-qfbv-repeated BASE CAND OUT # controlled cross-commit delta
 ```
@@ -215,6 +216,26 @@ current backend use raw assertions, while configured preprocessing has measured
 as a cold loss in that integration. Never compare artifacts from different
 policies as consecutive revisions of one experiment; their configuration hashes
 also differ.
+
+`just check` includes an availability-aware semantic regression over the real
+128-query capture. `just glaurung-qfbv-regular` runs it directly. The gate uses
+`AXEYUM_GLAURUNG_QFBV_REPRESENTATIVE_DIR` when set, otherwise auto-discovers
+the pinned 2026-07-14 NAS pack. If neither is available it prints an explicit
+`SKIP` and succeeds, so ordinary CI does not pretend to own access-controlled
+data. An explicitly configured missing directory or manifest fails. Set
+`AXEYUM_GLAURUNG_QFBV_AUTO_DISCOVER=0` to disable NAS discovery and
+`AXEYUM_GLAURUNG_QFBV_REPRESENTATIVE_MANIFEST` only when the manifest is not
+`manifest-v1.json` inside the corpus root.
+
+The regular gate runs both raw and canonical policies with the named
+representative tier, in-process Z3, the fixed deterministic resource profile,
+100% decided coverage, and zero manifest/oracle/error/model-replay failures.
+It writes the latest raw and canonical artifacts under
+`target/glaurung-qfbv-regular/` (override with
+`AXEYUM_GLAURUNG_QFBV_REGRESSION_OUT_DIR`) and prints their stage totals and
+Axeyum/Z3 ratios. These single, potentially dirty-worktree runs are semantic
+and attribution diagnostics; publishable performance still requires the clean,
+fresh-process repeated/full recipes below.
 
 Run the current-integration control with:
 

@@ -4,7 +4,7 @@ default:
     @just --list
 
 # Run every check CI runs (except cargo-deny, which needs the tool installed).
-check: fmt clippy test doc qfbv-profile benchmark-repetition-tests foundational-resources rules-as-code links
+check: fmt clippy test doc qfbv-profile benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code links
 
 fmt:
     cargo fmt --all --check
@@ -55,7 +55,14 @@ qfbv-profile:
     ./scripts/check-qfbv-profile.sh
 
 benchmark-repetition-tests:
-    python3 -m unittest scripts/tests/test_glaurung_benchmark_recipes.py scripts/tests/test_summarize_glaurung_repetitions.py scripts/tests/test_compare_glaurung_repetitions.py
+    python3 -m unittest scripts/tests/test_glaurung_benchmark_recipes.py scripts/tests/test_glaurung_regular_gate.py scripts/tests/test_summarize_glaurung_repetitions.py scripts/tests/test_compare_glaurung_repetitions.py
+
+# Exercise the actual Glaurung lifter distribution when its access-controlled
+# representative pack is available. The script auto-discovers the pinned NAS
+# capture or accepts an explicit directory, and reports an explicit skip when
+# neither is present. Explicitly configured but incomplete data fails closed.
+glaurung-qfbv-regular:
+    ./scripts/check-glaurung-qfbv-regular.sh
 
 foundational-resources:
     ./scripts/check-foundational-resources.sh

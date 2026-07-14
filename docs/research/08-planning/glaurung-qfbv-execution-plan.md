@@ -228,6 +228,17 @@ full trial per raw/canonical policy decides all 13,462 well-typed rows and
 records 3.17x versus 2.71x; canonical is 13.3% faster. The full tier still needs
 repeated trials before setting a regression threshold.
 
+Regular-lane checkpoint (2026-07-14): `just check` now invokes an
+availability-aware real-capture gate. It uses an explicit representative path
+or the pinned NAS pack, reports a visible skip only when neither exists, and
+fails if explicitly configured data is incomplete. It runs both the raw
+current-integration and canonical candidate under manifest, in-process Z3,
+deterministic-resource, 100%-decided, zero-error/disagreement/replay gates.
+Artifacts stay under ignored `target/` state because the regular lane permits a
+dirty worktree and makes no release-performance claim. The first real run
+decides and agrees on all 128 rows for both policies; its diagnostic totals are
+0.184/0.149 seconds (1.23x) raw and 0.157/0.150 seconds (1.04x) canonical.
+
 ### G2 — add attribution needed for the first optimization
 
 Extend the artifact without changing solver behavior:
@@ -438,62 +449,18 @@ validity gates.
 | M6 SAT re-attribution | GQ6 | Start SAT work only if search becomes material/dominant |
 | M7 ordered warm trace | GQ7, GQ8 | Decide incremental API shape and whether a cache is worthwhile |
 | M8 Glaurung warm integration | GQ7 | Require real same-stream functionality and performance, not the synthetic result |
-| M9 auto policy and regression lane | GQ8--GQ10 | Change defaults only after representative/full/trace validation |
+| M9 auto policy and regression lane | GQ8--GQ10 | **Regular semantic lane done:** raw + canonical real representative checks are availability-aware in `just check`; establish full-tier variance thresholds and ordered-trace validation before changing defaults |
 
 ## Immediate next actions
 
-1. Profile the residual root-emission allocation/copy path and CNF planning on
-   `register-slice` and `slice-partial`. After ADR-0145, gate emission is 3.19
-   s, root emission 1.39 s, and planning 1.21 s; gate work is no longer the
-   automatic first target. ADR-0146's reusable root scratch regresses
-   representative total/CNF 1.1%/4.9% and is restored/deferred without a full
-   run.
-2. Attribute the 1.21-second planning path by reachability/use-count, gate
-   detection, private-tree collection, and direct-root work without repeating
-   the always-on observational-profiler mistake. ADR-0147 removes private-tree
-   planning's full-node reverse-iteration copy and improves planning 2.5%, but
-   regresses total/CNF 0.5%/3.6%; it is restored/deferred without a full run.
-   Deprioritize planning micro-work and re-attribute shared gate/root clause
-   normalization, formula growth, and index rehash next. ADR-0148 is the first
-   candidate: a capped no-pass variable/root hint pre-sizes formula headers and
-   the exact-dedup index, but regresses representative total/CNF 2.5%/10.0%
-   because gate lookup rises 23.5%. It is restored/deferred. Any capacity
-   follow-up must isolate formula-header storage and leave index growth intact.
-   ADR-0149 performs that isolation, but still regresses representative CNF
-   median/mean 0.83%/0.67%; its 0.16% total-median improvement is contradicted
-   by a 0.07% mean regression and higher variance. It is restored/deferred
-   without a full run. Close capacity micro-work and attribute shared clause
-   normalization, fingerprinting, exact duplicate checks, and insertion before
-   choosing a larger GQ5 slice. That audit selects ADR-0150: the accepted
-   fingerprint map stores a heap-backed index vector and performs separate
-   lookup/insertion probes for the common unique-clause case. Retain one inline
-   primary formula index and allocate a secondary bucket only for genuine
-   fingerprint collisions; preserve exact equality, formula ownership, clause
-   order, and replay. Forced-collision tests and the usual representative/full
-   gates remain mandatory. The candidate implementation passes all 283 CNF
-   tests, 31 SAT-BV tests, strict Clippy, and forced-collision coverage. It is
-   accepted after representative total/CNF improve 13.0%/29.0% and full
-   total/CNF improve 11.5%/28.4%, with identical content and replay. Re-attribute
-   the now-largest bit-blast stage before selecting another exact slice.
-3. Keep the next exact word tranche around affine BV add/sub constant-chain
-   normalization and cheap duplicate-root handling behind evidence that it
-   reduces downstream AIG/CNF for the
-   `slice-partial` hotspot; require proof/model replay and real total-time wins.
-4. Re-attribute CNF after steps 1--3, then choose only the measured GQ5
-   subphase. Keep SAT-core work gated and broad GQ4 behind its small measured
-   post-canonical demand residual unless family data reverses the ranking.
-   After ADR-0150 makes bit blast largest, ADR-0151 is the next isolated
-   ownership candidate: dense `TermId` plus contiguous bit bindings can replace
-   the redundant ordered term-bit lookup map without changing lookup, order,
-   incremental growth, or replay. It is accepted after the full client gate
-   cuts total 5.71% and bit blast 16.05% with identical AIG/CNF structure.
-   ADR-0152 then isolates the remaining memo ownership: range presence replaces
-   ordered completion lookup, and child bits are reconstructed from the same
-   authoritative bindings without changing operand cloning or AIG algorithms.
-   It fails the representative total gate and is restored; do not pursue another
-   memo representation without new attribution and a materially different
-   design.
-5. On the Glaurung side, fix explicit width coercion plus strict dump validation
+1. Establish independent-process full-tier variance for the accepted
+   ADR-0151/canonical boundary, then record provisional ratio, raw-Axeyum, and
+   Z3-control drift thresholds. Do not derive release thresholds from the
+   single-process regular gate.
+2. Re-attribute the now-close bit-blast/CNF stages by Glaurung family before
+   selecting another larger GQ3/GQ5 slice. ADR-0152 closes the memo-ownership
+   micro-lane; broad GQ4 and SAT work remain behind measured opportunity.
+3. On the Glaurung side, fix explicit width coercion plus strict dump validation
    and cross-process dedup/conflict handling. Define the ordered warm-trace and
    controlled-concretization schema before GQ7/GQ8 cache or auto-policy work.
 

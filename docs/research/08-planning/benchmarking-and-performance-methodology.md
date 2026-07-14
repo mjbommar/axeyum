@@ -273,6 +273,16 @@ records the contract and the first measured baselines.
   caused by Z3 control drift is visible. Optional ratio/Axeyum regression and
   absolute Z3-drift thresholds are explicit caller policy; no threshold is
   inferred from the synthetic micro smoke.
+- The regular `just check` lane runs the access-controlled Glaurung
+  representative tier when its pinned NAS pack or an explicit
+  `AXEYUM_GLAURUNG_QFBV_REPRESENTATIVE_DIR` is available. Absence is an
+  explicit skip; an explicitly configured incomplete pack is an error. Both
+  raw/current-integration and canonical-candidate policies require complete
+  manifest and in-process Z3 agreement, 100% decisions, deterministic resource
+  bounds, and zero operational/model-replay failures. Artifacts live under
+  ignored `target/` state because a regular dirty-worktree semantic check is
+  not a publishable timing trial. Clean revision identity, independent-process
+  repetitions, and full-tier thresholds remain the scheduled performance lane.
 - Timeout regressions must pin the exact pathological public or minimized query
   and exercise both admission outcomes: deterministic oversized refusal before
   allocation and cooperative expiry inside admitted superlinear work. Every

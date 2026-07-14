@@ -73,8 +73,15 @@ session state.
 > ADR-0152's range-backed experiment preserves structure and improves bit blast
 > only 0.57%, while total p50/mean regress 0.02%/0.38%, CNF p50 regresses 0.88%,
 > and variance triples. The ordered memo is restored and ADR-0152 is deferred
-> without a full run. Close memo-ownership micro-work; advance GQ10's
-> data-availability-aware representative regression gate next.
+> without a full run. Close memo-ownership micro-work. GQ10's
+> data-availability-aware representative regression gate is now in
+> `just check`: it auto-discovers the pinned access-controlled pack or accepts an
+> explicit path, skips visibly only when data is absent, fails incomplete
+> configuration, and runs both raw and canonical against the manifest and
+> in-process Z3. The first real run is 128/128 decided and agreed under both
+> policies with zero errors/replay failures. Establish repeated full-tier
+> variance and provisional release thresholds next; the regular dirty-worktree
+> run is not timing evidence.
 > The capture and
 > implementation audit has been expanded into the dependency-ordered
 > [Glaurung QF_BV execution plan](docs/research/08-planning/glaurung-qfbv-execution-plan.md):
@@ -156,8 +163,10 @@ normalization before choosing the next measured slice. ADR-0152 removes
 only the redundant ordered memo ownership while keeping operand-vector cloning
 unchanged, but fails the representative gate: bit blast improves 0.57% while
 total p50/mean regress 0.02%/0.38% and CNF p50 regresses 0.88%. Restore the
-ordered memo, close this micro-lane, and implement the access-controlled GQ10
-regular representative gate before another larger measured optimization.
+ordered memo and close this micro-lane. The access-controlled GQ10 regular
+representative gate now runs raw and canonical automatically when data is
+available and passes all 128 rows. Establish repeated full-tier variance and
+thresholds before another larger measured optimization.
 Affine word work must still show a downstream circuit/CNF win before outranking
 it.
 Broad GQ4 partial lowering follows its small post-canonical full-tier
