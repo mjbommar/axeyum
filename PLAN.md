@@ -43,10 +43,12 @@ session state.
 > normalization and allocation, where 53.75 million attempts provide leverage.
 > ADR-0148's bounded formula+index capacity hint fails (+2.5% total / +10.0%
 > CNF) because sparse pre-sizing slows gate lookup 23.5%; it is
-> reverted/deferred. If capacity work continues, isolate the contiguous formula
-> header vector and leave the exact-dedup table's cache-friendly growth intact.
-> ADR-0149 is that isolated candidate and remains proposed until it passes the
-> same representative/full time, memory, content, and replay gates.
+> reverted/deferred. ADR-0149 isolates the contiguous formula-header vector and
+> leaves exact-dedup growth unchanged, but it also fails: representative CNF
+> median/mean regress 0.83%/0.67%, while the 0.16% total-median change is noise
+> contradicted by a 0.07% mean regression. Ordinary vector growth is restored
+> without a full run. Close the capacity-hint lane and re-attribute the shared
+> clause-normalization/ownership path before selecting a larger GQ5 slice.
 > The capture and
 > implementation audit has been expanded into the dependency-ordered
 > [Glaurung QF_BV execution plan](docs/research/08-planning/glaurung-qfbv-execution-plan.md):
@@ -110,8 +112,10 @@ ADR-0147 then improves planning 2.5% but regresses whole-pipeline total/CNF
 0.5%/3.6% and is likewise restored. Re-attribute shared clause
 normalization/allocation before selecting another bounded GQ5 slice. ADR-0148's
 combined capacity hint regresses total/CNF 2.5%/10.0% and is restored as
-negative evidence. A formula-header-only experiment is the only admissible
-capacity follow-up; ADR-0149 now implements it without touching index growth.
+negative evidence. ADR-0149's formula-header-only isolation also regresses CNF
+median/mean 0.83%/0.67% and is restored. Capacity hints are exhausted; next
+measure shared clause normalization/ownership and select a larger attributed
+GQ5 slice instead of another allocation micro-experiment.
 Affine word work must still show a downstream circuit/CNF win before outranking
 it.
 Broad GQ4 partial lowering follows its small post-canonical full-tier

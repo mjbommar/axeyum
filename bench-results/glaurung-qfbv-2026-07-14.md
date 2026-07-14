@@ -265,10 +265,22 @@ errors, disagreements, or replay failures. Revision `2527741b` is reverted
 without a full run and ADR-0148 is deferred. A formula-header-only experiment,
 with ordinary index growth retained, is the only admissible capacity follow-up.
 
-## ADR-0149 formula-header-only capacity candidate
+## ADR-0149 formula-header-only capacity rejection
 
 ADR-0149 isolates the unresolved half of ADR-0148: the same capped no-pass hint
 pre-sizes only contiguous `CnfClause` headers, while the collision-safe
 fingerprint table starts empty and grows exactly as in accepted ADR-0145. This
-preserves lookup locality and tests only avoided header moves. No performance or
-memory claim is admitted before the clean representative/full gate.
+preserves lookup locality and tests only avoided header moves. Revision
+`84b39844` passes 284 CNF tests, 30 SAT-BV tests, strict Clippy, and five clean
+representative processes under the 4 GiB cap. All runs remain 128/128 decided,
+emit 507,195 clauses, identify 1,911 direct roots, and have zero errors,
+disagreements, or replay failures.
+
+Against accepted `c139d73b`, total p50 changes 0.189851 → 0.189539 s (-0.16%)
+but mean changes 0.189702 → 0.189841 s (+0.07%) and CV rises 0.570% → 0.852%.
+CNF p50 changes 0.072978 → 0.073583 s (+0.83%) and mean changes 0.073648 →
+0.074138 s (+0.67%). Matched allocation/gate/root/planning medians change
++0.94%/+0.68%/+2.09%/-0.45%. The candidate fails the predeclared CNF-and-total
+gate, so ordinary vector growth is restored, no full run is spent, and
+ADR-0149 is deferred. Capacity-hint micro-work is exhausted; the next GQ5 step
+must re-attribute shared clause normalization/ownership.

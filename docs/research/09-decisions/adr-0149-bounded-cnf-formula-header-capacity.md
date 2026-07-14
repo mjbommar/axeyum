@@ -1,6 +1,6 @@
 # ADR-0149: Bounded CNF formula-header capacity
 
-Status: proposed
+Status: deferred
 Date: 2026-07-14
 
 ## Context
@@ -41,8 +41,27 @@ restored and the ADR is deferred.
 
 ## Evidence
 
-Pending implementation measurement. ADR-0148's combined-container rejection is
-recorded in `bench-results/glaurung-qfbv-2026-07-14.md`.
+Revision `84b39844` implements the isolated candidate. All 284 `axeyum-cnf`
+tests, 30 SAT-BV tests, strict Clippy, formatting, and documentation-link checks
+pass. Five clean artifact-v27 representative processes under the 4 GiB memory
+cap remain 128/128 decided (64 SAT / 64 UNSAT), with zero errors,
+disagreements, or model-replay failures. Every process emits the accepted
+507,195 clauses and identifies 1,911 direct roots.
+
+Against accepted ADR-0145 revision `c139d73b`, medians/means are:
+
+| Measure | Accepted | Candidate | Delta |
+|---|---:|---:|---:|
+| Axeyum total p50 | 0.189851 s | 0.189539 s | -0.16% |
+| Axeyum total mean | 0.189702 s | 0.189841 s | +0.07% |
+| CNF p50 | 0.072978 s | 0.073583 s | +0.83% |
+| CNF mean | 0.073648 s | 0.074138 s | +0.67% |
+| total CV | 0.570% | 0.852% | +0.282 pp |
+
+The matched subphase medians move +0.94% allocation, +0.68% gate encoding,
++2.09% root encoding, and -0.45% planning. Avoided formula-header growth does
+not produce a stable CNF or end-to-end win. The predeclared gate requires both
+median CNF and total improvement, so no full-tier run is warranted.
 
 ## Alternatives
 
@@ -56,7 +75,9 @@ recorded in `bench-results/glaurung-qfbv-2026-07-14.md`.
 
 ## Consequences
 
-The formula vector allocates expected header storage once for measured client
-queries; the fingerprint table retains its accepted cache/growth behavior.
-Underestimates grow normally, and the cap bounds eager memory. The real-corpus
-time and memory gates decide whether header movement is material.
+Restore ordinary formula-vector growth exactly. Combined and isolated capacity
+hints have now both failed the real-client gate, so close this micro-optimization
+lane. Revisit allocation only with new attribution and a materially different
+ownership design; next measure the shared normalization, fingerprinting, exact
+duplicate-check, and formula-insertion path before selecting a larger GQ5
+slice.

@@ -398,11 +398,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   accepted empty-growth path is restored and no full run is warranted. Any
   follow-up must isolate the contiguous formula-header vector.
 
-  ADR-0149 is that isolated candidate. It applies the same capped no-pass hint
-  only to `Vec<CnfClause>` header storage and leaves the fingerprint table
-  byte-for-byte unchanged. The estimate still covers every measured formula
-  with lower aggregate final header capacity than ordinary growth. All 284 CNF
-  tests pass; SAT/Clippy and representative/full timing/memory gates remain.
+  ADR-0149 isolates exactly that vector and leaves the fingerprint table
+  byte-for-byte unchanged. All 284 CNF tests, 30 SAT-BV tests, and strict Clippy
+  pass, and five representative processes preserve all 507,195 clauses,
+  128/128 decisions, and replay. It nevertheless regresses CNF median/mean
+  0.83%/0.67%; total median moves -0.16% but mean regresses 0.07%, with higher
+  run variance. Ordinary vector growth is restored, no full run is warranted,
+  and the capacity-hint lane is closed.
 
 - **Historical Glaurung build-up through 2026-07-14 (superseded by the measured
   result above).** The ten-item Glaurung QF_BV performance roadmap is an
@@ -573,17 +575,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   | **GQ2 cheap cold tier** | **WIP candidate validated.** Canonical v2 cuts corrected representative/full Axeyum total 17.4%/13.3% and bit blast 37.3%/44.4% | Keep canonical as the candidate; add another word rule only if it reduces downstream AIG/CNF and end-to-end time |
   | **GQ3 coercion peepholes** | **WIP with a corrected production win.** ADR-0142 removes 1,315/1,435 representative opportunities and cuts term bits 57% representative / 72% full; full AIG/CNF size remains roughly flat | Demonstrate circuit-size improvement from any next exact word tranche or narrow the exit criterion explicitly |
   | **GQ4 cold relevant bits** | **WIP but re-ranked.** ADR-0143 separates the diagnostic; post-canonical full demand is 98.16% of term bits and 91.51% of symbol bits | Pursue partial lowering only if family-specific evidence shows a material cone and preserve original replay/model projection |
-  | **GQ5 AIG/CNF construction** | **ACTIVE with two accepted wins, three rejected experiments, and one isolated candidate.** ADR-0148's combined capacity hint regresses total/CNF 2.5%/10.0% and is restored. Proposed ADR-0149 reserves only formula headers and preserves index growth; remaining gate/root/planning are 3.19/1.39/1.21 s | Complete SAT/Clippy and representative gates for ADR-0149, then full-confirm or revert with identical content/replay |
+  | **GQ5 AIG/CNF construction** | **ACTIVE with two accepted wins and four restored/rejected experiments.** ADR-0148's combined capacity hint regresses total/CNF 2.5%/10.0%; ADR-0149's formula-header-only isolation still regresses CNF median/mean 0.83%/0.67%. Remaining gate/root/planning are 3.19/1.39/1.21 s | Close capacity micro-work; re-attribute shared clause normalization/ownership and select a larger measured slice with identical content/replay |
   | **GQ6 cold SAT/CDCL** | **WIP foundation, attribution-gated**; subsumption/BVE, XOR/GF(2), VSIDS, phase saving, Luby, and LBD foundations exist | Exact-CNF backend attribution first; tune/default a stronger path only where SAT dominates and proof replay stays green |
   | **GQ7 warm delta entry** | **WIP foundation**; retained CNF/search state exists, but the deduplicated cold corpus cannot measure prefix reuse and Glaurung still creates a fresh solver for every check | Capture an ordered scope/path trace, preprocess only new/affected terms, wire persistent per-worker/path push/assert/check/pop, control concretization, and publish real-driver per-check cost plus warm break-even depth |
   | **GQ8 verdict/CNF cache** | **TODO, ordered-trace-gated** | Measure duplicates/prefixes first; prefer retained warm state, then add versioned exact-query reuse only where justified, with deterministic bounds and mandatory original replay |
   | **GQ9 auto cost model/docs** | **TODO**; P1.8 shape/resource probes are only the general foundation | Telemetry-visible raw/cheap/configured/warm choice that beats or matches fixed policies and documents embedder guidance |
   | **GQ10 real-lifter regression tier** | **WIP; access-controlled representative and well-typed full tiers validate.** Artifact v27 baseline repetitions/full trials and ADR-0144/0145 accepted full confirmations are complete; 2,225 malformed dumps are isolated | Add a data-availability-aware regular gate, establish repeated full-tier variance thresholds, and fix producer validation/dedup before calling the raw capture authoritative |
 
-  **Next actions:** (1) complete SAT/Clippy validation and five representative
-  processes for ADR-0149; (2) accept only an end-to-end/CNF win with bounded
-  memory and identical content before any full-tier confirmation;
-  (3) keep affine
+  **Next actions:** (1) add low-overhead attribution around shared clause
+  normalization, fingerprinting, exact duplicate checks, and formula insertion;
+  (2) select one larger GQ5 slice only from those measurements and require an
+  end-to-end/CNF win with bounded memory and identical content before a full
+  confirmation; (3) keep affine
   BV add/sub normalization behind evidence that it reduces AIG/CNF, and keep SAT
   work gated;
   (4) fix Glaurung's explicit width coercion, strict dump validation, and atomic
@@ -2372,6 +2375,16 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-14 — ADR-0149 formula-header pre-sizing is rejected.** Isolating
+  the bounded hint to `Vec<CnfClause>` leaves the exact-dedup table unchanged
+  and passes 284 CNF tests, 30 SAT-BV tests, strict Clippy, and every semantic
+  gate. Across five clean representative processes it preserves 507,195
+  clauses and all decisions/replay, but CNF median/mean regress 0.83%/0.67%.
+  Total median improves only 0.16% while mean regresses 0.07% and variance
+  rises. Ordinary vector growth is restored, ADR-0149 is deferred without a
+  full run, and capacity micro-work yields to shared normalization/ownership
+  attribution.
 
 - **2026-07-14 — ADR-0148 bounded CNF container pre-sizing is rejected.** A
   capped no-pass variable/root hint covers every full-tier formula and passes

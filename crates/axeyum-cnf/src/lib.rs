@@ -180,13 +180,9 @@ pub struct CnfFormula {
 impl CnfFormula {
     /// Creates an empty formula over `variable_count` variables.
     pub fn new(variable_count: usize) -> Self {
-        Self::with_clause_capacity(variable_count, 0)
-    }
-
-    fn with_clause_capacity(variable_count: usize, clause_capacity: usize) -> Self {
         Self {
             variable_count,
-            clauses: Vec::with_capacity(clause_capacity),
+            clauses: Vec::new(),
         }
     }
 
@@ -1516,7 +1512,7 @@ impl<'a> TseitinEncoder<'a> {
         self.plan_sparse_encoding(roots);
         let planning = planning_start.elapsed();
         let allocation_start = Instant::now();
-        self.allocate_variables(roots.len());
+        self.allocate_variables();
         let variable_allocation = allocation_start.elapsed();
         let gate_start = Instant::now();
         self.encode_gates()?;
@@ -1745,7 +1741,7 @@ impl<'a> TseitinEncoder<'a> {
         }
     }
 
-    fn allocate_variables(&mut self, root_count: usize) {
+    fn allocate_variables(&mut self) {
         for (node_id, node) in self.aig.nodes() {
             if !self.reachable_nodes[node_id.index()]
                 || matches!(node, AigNode::ConstFalse)
@@ -1763,9 +1759,7 @@ impl<'a> TseitinEncoder<'a> {
                 aig_literal: AigLit::positive(node_id),
             });
         }
-        let clause_capacity = clause_capacity_hint(self.variable_bindings.len(), root_count);
-        self.formula =
-            CnfFormula::with_clause_capacity(self.variable_bindings.len(), clause_capacity);
+        self.formula = CnfFormula::new(self.variable_bindings.len());
     }
 
     fn encode_gates(&mut self) -> Result<(), CnfError> {
@@ -2131,20 +2125,6 @@ impl<'a> TseitinEncoder<'a> {
 }
 
 type ClauseIndex = HashMap<u64, Vec<usize>, BuildHasherDefault<FingerprintHasher>>;
-
-const CLAUSE_CAPACITY_PER_VARIABLE: usize = 5;
-const MAX_ROOT_CAPACITY_HINT: usize = 1_024;
-const MAX_CLAUSE_CAPACITY_HINT: usize = 65_536;
-
-fn clause_capacity_hint(variable_count: usize, root_count: usize) -> usize {
-    if variable_count == 0 {
-        return 0;
-    }
-    variable_count
-        .saturating_mul(CLAUSE_CAPACITY_PER_VARIABLE)
-        .saturating_add(root_count.min(MAX_ROOT_CAPACITY_HINT))
-        .min(MAX_CLAUSE_CAPACITY_HINT)
-}
 
 /// The clause key is already a mixed 64-bit fingerprint. Preserve it as the
 /// table hash so lookup has no second hashing pass. The fallback `write` keeps
@@ -2880,18 +2860,9 @@ mod tests {
     use super::{
         CnfClause, CnfError, CnfLit, CnfVar, EncodedLit, IncrementalCnf, IncrementalSat,
         RustSatBatsatSolver, SatProofStatus, SatResult, SatSolver, aig_lit_value,
-        bucket_contains_clause, clause_capacity_hint, parse_dimacs, rustsat_batsat_determinism,
+        bucket_contains_clause, parse_dimacs, rustsat_batsat_determinism,
         solve_with_rustsat_batsat, solve_with_rustsat_batsat_limits, tseitin_encode,
     };
-
-    #[test]
-    fn formula_clause_capacity_hint_is_zero_saturating_and_bounded() {
-        assert_eq!(clause_capacity_hint(0, usize::MAX), 0);
-        assert_eq!(clause_capacity_hint(1, 2), 7);
-        assert_eq!(clause_capacity_hint(1, usize::MAX), 1_029);
-        assert_eq!(clause_capacity_hint(20_000, 0), 65_536);
-        assert_eq!(clause_capacity_hint(usize::MAX, usize::MAX), 65_536);
-    }
 
     #[test]
     fn clause_fingerprint_bucket_requires_exact_equality() {
