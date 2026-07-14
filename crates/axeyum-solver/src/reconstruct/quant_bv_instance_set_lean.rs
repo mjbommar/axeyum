@@ -926,6 +926,7 @@ fn aig_root_prop(
     lowering: &BitLowering,
 ) -> Result<ExprId, ReconstructError> {
     let mut nodes = Vec::with_capacity(lowering.aig().node_count());
+    let mut gate_lets = Vec::new();
     for (node_id, node) in lowering.aig().nodes() {
         let proposition = match node {
             AigNode::ConstFalse => ctx.kernel.const_(ctx.prelude.false_, vec![]),
@@ -958,7 +959,11 @@ fn aig_root_prop(
             AigNode::And(left, right) => {
                 let left = aig_lit_prop(ctx, &nodes, left)?;
                 let right = aig_lit_prop(ctx, &nodes, right)?;
-                ctx.mk_and(left, right)
+                let value = ctx.mk_and(left, right);
+                let fvar = fresh_fvar_id(ctx);
+                let name = ctx.fresh_name("logical_aig_gate");
+                gate_lets.push((fvar, name, value));
+                ctx.kernel.fvar(fvar)
             }
         };
         debug_assert_eq!(node_id.index(), nodes.len());
@@ -970,7 +975,13 @@ fn aig_root_prop(
         .and_then(|root| root.bits().first())
         .copied()
         .ok_or_else(|| decline("AIG lowering lacks a Boolean root"))?;
-    aig_lit_prop(ctx, &nodes, root)
+    let mut proposition = aig_lit_prop(ctx, &nodes, root)?;
+    let prop = ctx.kernel.sort_zero();
+    for (fvar, name, value) in gate_lets.into_iter().rev() {
+        let body = ctx.kernel.abstract_fvars(proposition, &[fvar]);
+        proposition = ctx.kernel.let_(name, prop, value, body);
+    }
+    Ok(proposition)
 }
 
 fn aig_lit_prop(
@@ -2705,17 +2716,18 @@ pub(crate) fn bv_conjunctive_universal_instance_lean_shape(
         crate::quant_bv_conjunctive_cert::conjunctive_universals(arena, assertion)
             .into_iter()
             .any(|universal| {
-                crate::quant_bv_conjunctive_cert::admitted_conjunctive_universal(
-                    arena, assertion, universal,
-                )
-                .is_some_and(|admitted| {
-                    admitted.binders.iter().all(|&binder| {
-                        matches!(
-                            arena.symbol(binder).1,
-                            Sort::Bool | Sort::BitVec(1..=MAX_LEAN_BV_WIDTH)
-                        )
+                universal != assertion
+                    && crate::quant_bv_conjunctive_cert::admitted_conjunctive_universal(
+                        arena, assertion, universal,
+                    )
+                    .is_some_and(|admitted| {
+                        admitted.binders.iter().all(|&binder| {
+                            matches!(
+                                arena.symbol(binder).1,
+                                Sort::Bool | Sort::BitVec(1..=MAX_LEAN_BV_WIDTH)
+                            )
+                        })
                     })
-                })
             })
     })
 }
