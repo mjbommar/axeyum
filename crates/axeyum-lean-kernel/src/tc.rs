@@ -242,6 +242,8 @@ pub struct LocalContext {
     /// the local-context analogue of nanoda's equality cache and prevents the
     /// same shared proof/type pair from being compared as an exponential tree.
     def_eq_cache: HashMap<(ExprId, ExprId), bool>,
+    /// Definitional values for the subset of locals introduced by `let`.
+    let_values: HashMap<u64, ExprId>,
     /// Lambda nodes in a scoped open skeleton whose bodies already refer to the
     /// associated binder as a free variable.
     scoped_fvars: HashMap<ExprId, u64>,
@@ -277,9 +279,20 @@ impl LocalContext {
         self.decls.push(decl);
     }
 
+    fn push_let(&mut self, decl: LocalDecl, value: ExprId) {
+        assert!(
+            self.let_values.insert(decl.fvar, value).is_none(),
+            "fresh let local must not already have a value"
+        );
+        self.push(decl);
+    }
+
     /// Pop the most recently pushed local declaration (LIFO).
     pub fn pop(&mut self) -> Option<LocalDecl> {
         let popped = self.decls.pop();
+        if let Some(decl) = popped {
+            self.let_values.remove(&decl.fvar);
+        }
         self.infer_cache.clear();
         self.def_eq_cache.clear();
         popped
@@ -289,6 +302,10 @@ impl LocalContext {
     #[must_use]
     pub fn type_of(&self, id: u64) -> Option<ExprId> {
         self.decls.iter().rev().find(|d| d.fvar == id).map(|d| d.ty)
+    }
+
+    fn value_of(&self, id: u64) -> Option<ExprId> {
+        self.let_values.get(&id).copied()
     }
 
     fn inferred(&self, expression: ExprId) -> Option<ExprId> {
@@ -696,7 +713,7 @@ impl Kernel {
         let Ok(y_ty) = self.infer_core(y, ctx) else {
             return false;
         };
-        let y_ty = self.whnf(y_ty);
+        let y_ty = self.whnf_in(y_ty, ctx);
         let ExprNode::Pi(name, dom, _, info) = self.expr_node(y_ty).clone() else {
             return false;
         };
@@ -732,7 +749,7 @@ impl Kernel {
     fn proof_type(&mut self, e: ExprId, ctx: &mut LocalContext) -> Option<ExprId> {
         let ty = self.infer_core(e, ctx).ok()?;
         let sort = self.infer_core(ty, ctx).ok()?;
-        let sort = self.whnf(sort);
+        let sort = self.whnf_in(sort, ctx);
         match self.expr_node(sort) {
             ExprNode::Sort(level) => {
                 let l = *level;
@@ -888,7 +905,9 @@ impl Kernel {
         // WHNF without δ — δ is handled lazily by `lazy_delta_step` below so
         // that we unfold only as far as needed (matching nanoda).
         let x_n = self.whnf_no_unfolding(x);
+        let x_n = self.whnf_local_value(x_n, ctx);
         let y_n = self.whnf_no_unfolding(y);
+        let y_n = self.whnf_local_value(y_n, ctx);
 
         if let Some(quick) = self.def_eq_quick(x_n, y_n, ctx) {
             return quick;
@@ -912,6 +931,31 @@ impl Kernel {
                 }
                 false
             }
+        }
+    }
+
+    fn whnf_local_value(&mut self, mut expression: ExprId, ctx: &LocalContext) -> ExprId {
+        loop {
+            let (head, args) = self.unfold_apps(expression);
+            let ExprNode::FVar(fvar) = self.expr_node(head) else {
+                return expression;
+            };
+            let Some(value) = ctx.value_of(*fvar) else {
+                return expression;
+            };
+            expression = self.foldl_apps(value, args);
+            expression = self.whnf_no_unfolding(expression);
+        }
+    }
+
+    fn whnf_in(&mut self, mut expression: ExprId, ctx: &LocalContext) -> ExprId {
+        loop {
+            expression = self.whnf(expression);
+            let reduced = self.whnf_local_value(expression, ctx);
+            if reduced == expression {
+                return expression;
+            }
+            expression = reduced;
         }
     }
 }
@@ -1007,7 +1051,7 @@ impl Kernel {
     /// level. (nanoda's `infer_sort_of` / `ensure_sort`.)
     fn infer_sort_of(&mut self, e: ExprId, ctx: &mut LocalContext) -> Result<LevelId, KernelError> {
         let ty = self.infer_core(e, ctx)?;
-        let ty = self.whnf(ty);
+        let ty = self.whnf_in(ty, ctx);
         match self.expr_node(ty) {
             ExprNode::Sort(level) => Ok(*level),
             _ => Err(KernelError::NotASort { got: ty }),
@@ -1027,7 +1071,7 @@ impl Kernel {
         expected: ExprId,
         ctx: &mut LocalContext,
     ) -> Result<(), KernelError> {
-        let expected = self.whnf(expected);
+        let expected = self.whnf_in(expected, ctx);
         if let ExprNode::Lam(name, domain, body, info) = self.expr_node(expression).clone()
             && let ExprNode::Pi(_, expected_domain, expected_body, _) =
                 self.expr_node(expected).clone()
@@ -1129,7 +1173,7 @@ impl Kernel {
             if !matches!(self.expr_node(cursor), ExprNode::Pi(..)) {
                 cursor = self.instantiate(cursor, &prior);
                 prior.clear();
-                cursor = self.whnf(cursor);
+                cursor = self.whnf_in(cursor, ctx);
             }
             let ExprNode::Pi(_, domain, body, _) = self.expr_node(cursor).clone() else {
                 return Err(KernelError::NotAPi { got: cursor });
@@ -1250,12 +1294,15 @@ impl Kernel {
 
                 let fvar = ctx.fresh_fvar();
                 let value = self.fvar(fvar);
-                ctx.push(LocalDecl {
-                    fvar,
-                    name,
-                    ty: opened_ty,
-                    info: BinderInfo::Default,
-                });
+                ctx.push_let(
+                    LocalDecl {
+                        fvar,
+                        name,
+                        ty: opened_ty,
+                        info: BinderInfo::Default,
+                    },
+                    opened_val,
+                );
                 fvar_ids.push(fvar);
                 fvar_values.push(value);
             }

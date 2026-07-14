@@ -817,10 +817,10 @@ stream-compared so the test does not retain both large strings. The public
 `small-pipeline-fixpoint-3` gate passes in **81.57 s at 3,756,104 KiB peak**;
 the 530-binder `bug802` gate passes in **45.28 s at 2,186,192 KiB peak**, both
 under the guarded 4 GiB release envelope and with no `sorryAx`. Quantified-BV
-Lean UNSAT coverage rises **14→16/18**. ADR-0129 source
-elimination/introduction is now implemented and kernel-checked for identity and
-generic bounded QF transfers, but its public 32-bit row exposes an 86-literal,
-411-premise resolution step and safely declines at an explicit 64/256 cap. A
+Lean UNSAT coverage first rose **14→16/18**. ADR-0129 source
+elimination/introduction is implemented and kernel-checked for identity and
+generic bounded QF transfers; its public 32-bit row exposes an 86-literal,
+411-premise resolution step. A
 continuation-coded clause boundary and direct
 unit-propagation proof now avoid materializing intermediate resolvents, cache
 normalized clauses once, and pass wide-chain positive plus corrupted-conflict
@@ -833,10 +833,15 @@ from the untouched source axiom through elimination and reintroduction, and the
 scoped close passes. With the 64/256 cap removed experimentally, the public
 release proof reaches module streaming in 211.18 s at 2,062,692 KiB peak under
 4 GiB, but expanded open gate propositions exceed the 14 GiB temporary
-filesystem. The cap remains as an export gate. Next: introduce scope-preserving
-aliases/definitions for the open gate-proposition DAG, export the public module
-under 4 GiB, then reuse the compact boundary for ADR-0127; Lean coverage remains
-16/18.
+filesystem. Scope-preserving gate proposition aliases now close as explicit
+dependent `let`s inside the witness scope. The trusted kernel retains each
+let-bound value for zeta equality without substituting it through the full proof,
+so application/type checks preserve the open DAG. The 64/256 cap is removed.
+The public row exports a **106,809,049-byte** self-contained module and passes in
+**19.69 s at 2,078,224 KiB peak** under 4 GiB, with genuine
+`Exists.rec`/`Exists.intro` and no `sorryAx`. Quantified-BV Lean UNSAT coverage
+rises **16→17/18**. Next: reuse the compact reflected-RUP and scoped-alias
+boundary for ADR-0127.
 **Scaled source-bound BV alternation is now LANDED (ADR-0125):** only the
 ADR-0124 total-binder cap rises 128→1,024; the 4,096-node matrix cap and exact
 source/proof replay contract are unchanged. `bug802` has 318 universal plus 212

@@ -127,10 +127,10 @@ One positive existential witness can now refute a paired negated existential
 under exact shared ground context, including the checked signed-offset class and
 generic source-bound `QF_BV` consequences. Different premises, unequal prefixes,
 non-conjunctive polarity, nested quantifiers, functions, arrays, arithmetic,
-general existential normalization, proof serialization, Lean reconstruction,
-and general QSAT remain unsupported by this route.
+general existential normalization, other proof formats, and general QSAT remain
+unsupported by this route.
 
-## Lean reconstruction checkpoint (2026-07-14)
+## Lean reconstruction (accepted 2026-07-14)
 
 The source-bound proof shape is now implemented for bounded residuals. It
 rechecks the ADR-0129 certificate, translates both untouched assertions,
@@ -142,25 +142,19 @@ closes the result against the untouched negative source. Identity transfer and
 the generic QF-proof case pass kernel checking with byte-identical direct/router
 modules and no `sorryAx`.
 
-This checkpoint does **not** raise quantified-BV Lean coverage. The public
-32-bit signed-monotonicity row emits 2,430 Alethe commands; one live resolution
-step has an 86-literal conclusion and 411 RUP premises. Explicit resolution
-requests a 2.18 GiB allocation after the process already approaches the 4 GiB
-envelope. Reconstruction therefore declines before expansion when a residual
-step exceeds 64 literals or 256 premises. Shared conjunction traversal now
-marks DAG nodes before expansion, live proof steps are backward-sliced from the
-empty clause, and repeated resolvent suffix propositions are cached; these are
-sound bounded improvements but do not replace the missing compact proof.
-
-The acceptance boundary is now exact: land ADR-0127's compact reflected-RUP
-checker (or an equivalently small kernel-checked clause checker), remove the
-explicit-resolution cap for this route, and pass `nested9_true-unreach-call`
-under 4 GiB with genuine `Exists.rec`/`Exists.intro` and no `sorryAx`.
+The initial bounded implementation did not raise coverage. The public 32-bit
+signed-monotonicity row emits 2,430 Alethe commands; one live resolution step
+has an 86-literal conclusion and 411 RUP premises. Explicit resolution requested
+a 2.18 GiB allocation near the 4 GiB envelope, so the first checkpoint declined
+above 64 literals or 256 premises. Shared conjunction traversal, empty-clause
+backward slicing, and cached clause suffix propositions established the bounded
+foundation. The compact construction and scoped open-DAG representation below
+remove that cap and satisfy the public acceptance gate.
 
 ### Compact RUP implementation checkpoint
 
-A continuation-coded clause proposition is now implemented behind that public
-cap. Source and gate clauses cross from right-nested `Or` once; learned clauses
+A continuation-coded clause proposition was initially implemented behind that
+public cap. Source and gate clauses cross from right-nested `Or` once; learned clauses
 remain CPS. Exact LRAT order is validated when available, otherwise the existing
 polarity-normalized deterministic unit closure selects the implication graph.
 The proof builder aliases one continuation for each propagated literal's false
@@ -183,8 +177,25 @@ axiom, `Exists.rec` hypothesis, leaf projections, negative-body rebuilding, and
 The next guarded public experiment removed the 64-literal/256-premise cap. It
 reached compact Lean module streaming in 211.18 seconds at 2,062,692 KiB peak
 RSS under the 4 GiB limit, then failed closed because expanded open
-gate-proposition types exceeded the 14 GiB temporary filesystem. This is now an
-export-size boundary, not a scoping mismatch or an OOM. The 64/256 gate remains
-until those witness-scoped gate propositions are preserved as explicit local
-aliases or parameterized definitions and the complete public module passes the
-guarded kernel/export test.
+gate-proposition types exceeded the 14 GiB temporary filesystem. Lambda-lifted
+global definitions passed small cases but made the public kernel comparison
+delta-expand the gate tree and reproduced the guarded 2.18 GiB allocation
+failure, so they were rejected.
+
+The accepted representation records every witness-dependent compound gate
+proposition as a scoped local `let`. Clause types and proofs then reference the
+same local, preserving the open AIG DAG through CPS construction and module
+serialization. The trusted kernel's local context records definitional values
+separately for let-bound locals. Context-aware WHNF uses those values while checking
+application spines, expected types, sorts, proof irrelevance, and general
+definitional equality; it does not substitute the value through the complete
+telescope body. Paired positive/negative tests require a let-local type to be
+definitionally equal to its value at an application boundary without masking an
+unrelated argument mismatch; all 174 kernel tests plus the kernel doctest pass.
+
+The 64/256 gate is removed. The public `nested9_true-unreach-call` row emits a
+106,809,049-byte self-contained Lean module and passes the guarded release test
+in 19.69 seconds at 2,078,224 KiB peak RSS, with genuine `Exists.rec`, genuine
+`Exists.intro`, and no `sorryAx`. All ten paired-transfer tests pass. This closes
+ADR-0129's Lean reconstruction boundary and raises quantified-BV Lean UNSAT
+coverage from 16/18 to 17/18; ADR-0127 is the remaining public UNSAT family.

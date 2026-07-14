@@ -158,6 +158,12 @@ impl core::fmt::Display for ReconstructError {
 
 impl core::error::Error for ReconstructError {}
 
+struct GatePropAlias {
+    fvar: u64,
+    name: NameId,
+    value: ExprId,
+}
+
 /// The reconstruction context: a [`Kernel`] seeded with the logical prelude, the
 /// EUF carrier sort `α : Type`, and a deterministic map from Alethe atom/function
 /// names to their interned constant [`NameId`].
@@ -250,6 +256,10 @@ pub struct ReconstructCtx {
     /// shared subterms heavily; without this the CNF-intro rules rebuild them every
     /// time. **Cleared on any `bridge` change** (the result depends on the bridge).
     gate_memo: BTreeMap<String, ExprId>,
+    /// Scope-preserving aliases for witness-dependent gate propositions. These
+    /// open DAG nodes cannot be hoisted as closed module definitions, so compact
+    /// quantified reconstruction records them as explicit local `let`s.
+    gate_prop_aliases: Option<Vec<GatePropAlias>>,
     /// **Route-A datatype registry.** Maps a datatype constructor key
     /// `"<arity>_<ctorname>"` (parsed from the reserved `!dtcon_n_c` /
     /// `!dtsel_n_i_c` heads the datatype-elim emitter renders) to the kernel
@@ -339,6 +349,7 @@ impl ReconstructCtx {
             gate_bound_bvs: BTreeMap::new(),
             typed_bv_gates: false,
             gate_memo: BTreeMap::new(),
+            gate_prop_aliases: None,
             datatypes: BTreeMap::new(),
             datatype_families: BTreeMap::new(),
         }
@@ -10083,12 +10094,58 @@ impl ReconstructCtx {
     /// *is* its bit form. The substitution fires before the structural match, so
     /// e.g. `(= (bvand a b) a)` becomes `B`'s `And`/`Iff` tree, not an `Iff` over
     /// the opaque bit-vector terms.
+    fn begin_gate_prop_aliases(&mut self) {
+        assert!(
+            self.gate_prop_aliases.is_none(),
+            "gate proposition alias scope must not be nested"
+        );
+        self.gate_memo.clear();
+        self.gate_prop_aliases = Some(Vec::new());
+    }
+
+    fn finish_gate_prop_aliases(&mut self, mut proof: ExprId) -> ExprId {
+        let aliases = self
+            .gate_prop_aliases
+            .take()
+            .expect("gate proposition alias scope must be active");
+        self.gate_memo.clear();
+        let fvars = aliases.iter().map(|alias| alias.fvar).collect::<Vec<_>>();
+        proof = self.kernel.abstract_fvars(proof, &fvars);
+        let prop = self.kernel.sort_zero();
+        for index in (0..aliases.len()).rev() {
+            let alias = &aliases[index];
+            let value = self
+                .kernel
+                .abstract_fvars(alias.value, &fvars[..index]);
+            proof = self.kernel.let_(alias.name, prop, value, proof);
+        }
+        proof
+    }
+
     fn gate_term_to_prop(&mut self, term: &AletheTerm) -> ExprId {
         let key = term.key();
         if let Some(&cached) = self.gate_memo.get(&key) {
             return cached;
         }
-        let result = self.gate_term_to_prop_inner(term);
+        let mut result = self.gate_term_to_prop_inner(term);
+        let should_alias = self.gate_prop_aliases.is_some()
+            && matches!(
+                self.kernel.expr_node(result),
+                ExprNode::App(..) | ExprNode::Lam(..) | ExprNode::Pi(..) | ExprNode::Let(..)
+            );
+        if should_alias {
+            let fvar = fresh_fvar_id(self);
+            let name = self.fresh_name("gate_prop");
+            self.gate_prop_aliases
+                .as_mut()
+                .expect("gate proposition alias scope is active")
+                .push(GatePropAlias {
+                    fvar,
+                    name,
+                    value: result,
+                });
+            result = self.kernel.fvar(fvar);
+        }
         self.gate_memo.insert(key, result);
         result
     }

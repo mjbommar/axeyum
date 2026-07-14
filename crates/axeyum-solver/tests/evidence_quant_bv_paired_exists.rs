@@ -255,7 +255,7 @@ fn alpha_identity_and_generic_qf_transfer_are_independently_checked() {
 
 #[test]
 fn identity_and_generic_transfers_reconstruct_from_exact_sources() {
-    for text in [
+    for (index, text) in [
         "(set-logic BV) \
          (assert (exists ((x (_ BitVec 4))) (= x (_ bv0 4)))) \
          (assert (not (exists ((y (_ BitVec 4))) (= y (_ bv0 4))))) \
@@ -281,7 +281,10 @@ fn identity_and_generic_transfers_reconstruct_from_exact_sources() {
              (and (bvsle (bvadd y (_ bv1 4)) k) (bvsle y (_ bv3 4)) \
                   (bvsle j (bvadd (bvmul (_ bv2 4) y) (_ bv1 4)))))))) \
          (check-sat)",
-    ] {
+    ]
+    .into_iter()
+    .enumerate()
+    {
         let mut script = parse_script(text).expect("paired source parses");
         let assertions = script.assertions.clone();
         let report = produce_evidence(&mut script.arena, &assertions, &config()).unwrap();
@@ -297,6 +300,10 @@ fn identity_and_generic_transfers_reconstruct_from_exact_sources() {
         assert!(direct.contains("Exists.rec"));
         assert!(direct.contains("Exists.intro"));
         assert!(!direct.contains("sorryAx"));
+        if index > 0 {
+            assert!(direct.contains("let axeyum.reconstruct.gate_prop"));
+        }
+        assert!(direct.len() < 10_000_000, "small paired module expanded");
 
         let fragment = assert_routed_module_equals("small", direct, || {
             prove_unsat_to_lean_module(&mut script.arena, &assertions)
@@ -307,15 +314,23 @@ fn identity_and_generic_transfers_reconstruct_from_exact_sources() {
 }
 
 #[test]
-fn public_nested_unreachable_call_declines_at_compact_rup_export_gate() {
+fn public_nested_unreachable_call_reconstructs_paired_witness_transfer() {
     let (script, assertions, certificate) = target_certificate();
-    let error = reconstruct_bv_paired_existential_transfer_to_lean_module(
+    let module = reconstruct_bv_paired_existential_transfer_to_lean_module(
         &script.arena,
         &assertions,
         &certificate,
     )
-    .expect_err("public paired row remains behind the compact-RUP export gate");
-    assert!(error.to_string().contains("compact-RUP export gate"));
+    .expect("public paired row reconstructs through compact RUP");
+    assert!(module.contains("Exists.rec"));
+    assert!(module.contains("Exists.intro"));
+    assert!(module.contains("let axeyum.reconstruct.gate_prop"));
+    assert!(!module.contains("sorryAx"));
+    eprintln!("public paired Lean module bytes={}", module.len());
+    assert!(
+        module.len() < 512 * 1024 * 1024,
+        "public paired Lean module expanded beyond its guarded export envelope"
+    );
 }
 
 #[test]

@@ -13,7 +13,7 @@
 use crate::expr::ExprNode;
 use crate::level::LevelNode;
 use crate::tc::KernelError;
-use crate::{BinderInfo, Kernel, Lit};
+use crate::{BinderInfo, Kernel, Lit, build_logic_prelude};
 
 /// `Sort 0 : Sort 1`.
 #[test]
@@ -447,6 +447,47 @@ fn dependent_let_telescope_infers() {
     let beta = k.let_(anon, s1, outer_alpha, inner_beta);
     let telescope = k.let_(anon, s1, s0, beta);
     assert_eq!(k.infer(telescope).unwrap(), s1);
+}
+
+/// A let-bound local is definitionally equal to its value while checking the
+/// telescope body, without substituting that value through the complete body.
+#[test]
+fn let_local_value_participates_in_definitional_equality() {
+    let mut k = Kernel::new();
+    let prelude = build_logic_prelude(&mut k);
+    let anon = k.anon();
+    let zero = k.level_zero();
+    let one = k.level_succ(zero);
+    let type_ = k.sort(one);
+    let prop = k.sort_zero();
+    let alias = k.bvar(0);
+    let identity_body = k.bvar(0);
+    let identity = k.lam(anon, alias, identity_body, BinderInfo::Default);
+    let false_ = k.const_(prelude.false_, vec![]);
+    let application = k.app(identity, false_);
+    let term = k.let_(anon, type_, prop, application);
+    assert_eq!(k.infer(term).unwrap(), prop);
+}
+
+/// Zeta equality exposes only the recorded let value; it does not make an
+/// unrelated argument type equal to the let-bound type.
+#[test]
+fn let_local_value_does_not_mask_argument_mismatch() {
+    let mut k = Kernel::new();
+    let anon = k.anon();
+    let zero = k.level_zero();
+    let one = k.level_succ(zero);
+    let type_ = k.sort(one);
+    let prop = k.sort_zero();
+    let alias = k.bvar(0);
+    let identity_body = k.bvar(0);
+    let identity = k.lam(anon, alias, identity_body, BinderInfo::Default);
+    let application = k.app(identity, prop);
+    let term = k.let_(anon, type_, prop, application);
+    assert!(matches!(
+        k.infer(term),
+        Err(KernelError::TypeMismatch { .. })
+    ));
 }
 
 /// A long independent let telescope remains linear enough for proof-export

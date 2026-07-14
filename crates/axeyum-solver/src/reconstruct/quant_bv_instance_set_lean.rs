@@ -2516,20 +2516,11 @@ fn prove_paired_consequent(
     let (commands, gate_defs) =
         crate::qfbv_alethe::prove_bit_gate_unsat_alethe(&formulas, definitions)
             .ok_or_else(|| decline("paired-existential implication emitter declined"))?;
-    let requires_compact_rup = commands.iter().any(|command| match command {
-        AletheCommand::Step {
-            clause, premises, ..
-        } => clause.len() > 64 || premises.len() > 256,
-        AletheCommand::Assume { .. } => false,
-    });
-    if requires_compact_rup {
-        return Err(decline(
-            "paired-existential implication exceeds the public compact-RUP export gate",
-        ));
-    }
     ctx.bridge = Some(gate_defs);
     ctx.gate_memo.clear();
+    ctx.begin_gate_prop_aliases();
     let contradiction = reconstruct_bitwise_cps_tail(ctx, &commands, &assumption_proofs)?;
+    let contradiction = ctx.finish_gate_prop_aliases(contradiction);
     let body = ctx.kernel.abstract_fvars(contradiction, &[not_target_id]);
     let anon = ctx.kernel.anon();
     let double_negation = ctx
