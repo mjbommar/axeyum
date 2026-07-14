@@ -1,0 +1,259 @@
+{
+  "config": {
+    "backend": "axeyum-sat-bv rustsat-batsat",
+    "backend_kind": "sat-bv",
+    "cnf_clause_budget": null,
+    "cnf_inprocessing": false,
+    "cnf_variable_budget": null,
+    "cnf_vivify": false,
+    "compare_backend": "z3 4.13.3.0",
+    "compare_z3": true,
+    "config_hash": "382e4f39d1e74e27",
+    "corpus": "corpus/micro",
+    "corpus_hash": "bf5568e9dc4ac850",
+    "corpus_manifest": {
+      "content_hash": "sha256:a9bc590391f47b326ab94263071cb8e73a7df7230d88e6aceb16eefa83c2402e",
+      "logic": "QF_BV",
+      "membership": "exact: every .smt2 file under the corpus root is manifested",
+      "name": "axeyum-micro-v1",
+      "path": "corpus/micro/manifest-v1.json",
+      "schema_version": 1,
+      "selected_entries": 2,
+      "selected_family_counts": {
+        "arithmetic": 1,
+        "comparison": 1
+      },
+      "selected_tier": "representative",
+      "selected_tier_counts": {
+        "full": 2,
+        "representative": 2
+      },
+      "source": "committed Axeyum micro corpus; ingestion smoke only, not client performance data",
+      "total_entries": 3
+    },
+    "corpus_source": "committed Axeyum micro corpus; ingestion smoke only, not client performance data",
+    "experiment": {
+      "comparison_contract": "compare config_hash + environment_hash; source revision identifies the tested commit and may differ",
+      "environment_hash": "sha256:b0f5781b8c70707448fec92aba7d68bdb8fed9b245c55926b1156bc038e7aa7a",
+      "hardware": {
+        "arch": "x86_64",
+        "cpu_model": "AMD Ryzen 7 7840HS w/ Radeon 780M Graphics",
+        "kernel": "Linux 7.0.0-22-generic x86_64 GNU/Linux",
+        "os": "linux",
+        "parallelism": 16,
+        "total_memory_bytes": 29715697664
+      },
+      "solvers": {
+        "backend": "axeyum-sat-bv rustsat-batsat",
+        "compare_backend": "z3 4.13.3.0"
+      },
+      "source": {
+        "dirty": false,
+        "dirty_scope": "repository excluding bench-results/**",
+        "revision": "319a166bfbd09e4fc1abc7c0e2a06b7c5fcdc49e"
+      },
+      "toolchain": {
+        "build_profile": "release",
+        "cargo": "cargo 1.96.0-nightly (888f67534 2026-03-30)",
+        "cargo_lock_hash": "sha256:9e39d695f4e9ec195999ffc85bc4d30185fc732345d44324ea32e4a21d0767b9",
+        "rustc": "rustc 1.96.0-nightly (48cc71ee8 2026-03-31)\nbinary: rustc\ncommit-hash: 48cc71ee88cd0f11217eced958b9930970da998b\ncommit-date: 2026-03-31\nhost: x86_64-unknown-linux-gnu\nrelease: 1.96.0-nightly\nLLVM version: 22.1.2"
+      }
+    },
+    "harness": "axeyum-bench 0.1.0",
+    "jobs": 1,
+    "limit": null,
+    "logic": "QF_BV",
+    "min_decided_percent": 100.0,
+    "native_cdcl": false,
+    "node_budget": null,
+    "preprocess": true,
+    "prove_unsat": false,
+    "query_plan": {
+      "mode": "full",
+      "refine_adaptive_batch": false,
+      "refine_batch": 1,
+      "refine_rounds": 16,
+      "refine_select": "first",
+      "sat_replay_failure_policy": "soundness-alarm"
+    },
+    "require_in_process_z3": true,
+    "require_reproducible_run": true,
+    "rewrite": {
+      "enabled_rule_ids": [],
+      "mode": "off",
+      "rule_set": null
+    },
+    "seed": "none",
+    "selected_families": null,
+    "timeout_ms": 10000
+  },
+  "contract": {
+    "acceptance": "every trial is 100% decided with zero errors, disagreements, oracle gaps, and replay failures",
+    "artifact_paths": "relative to the common source-artifact directory",
+    "identity": "every source artifact has byte-identical config and a clean reproducible-run identity",
+    "run_boundary": "independent process per whole-corpus cold trial",
+    "statistics": "nearest-rank p50/p95 and sample standard deviation across whole-corpus trials"
+  },
+  "identity": {
+    "backend": "axeyum-sat-bv rustsat-batsat",
+    "compare_backend": "z3 4.13.3.0",
+    "config_hash": "382e4f39d1e74e27",
+    "corpus_hash": "bf5568e9dc4ac850",
+    "environment_hash": "sha256:b0f5781b8c70707448fec92aba7d68bdb8fed9b245c55926b1156bc038e7aa7a",
+    "manifest_hash": "sha256:a9bc590391f47b326ab94263071cb8e73a7df7230d88e6aceb16eefa83c2402e",
+    "source_revision": "319a166bfbd09e4fc1abc7c0e2a06b7c5fcdc49e"
+  },
+  "repetitions": 3,
+  "runs": [
+    {
+      "artifact": "run-001.json",
+      "artifact_content_hash": "sha256:0a729f525cf25d47cb3231e0c91e94a2c6f7ad7423690c90f91c11acc1fd1729",
+      "axeyum_over_z3_ratio": 0.23772575456575157,
+      "axeyum_total_s": 0.000262783,
+      "files": 2,
+      "repetition": 1,
+      "stages": {
+        "bit_blast_s": 2.6398e-05,
+        "cnf_encode_s": 5.2175999999999996e-05,
+        "cnf_inprocess_s": 0.0,
+        "model_lift_s": 2.8052e-05,
+        "model_replay_s": 5.36e-06,
+        "solve_s": 6.0371e-05,
+        "word_preprocess_s": 9.0426e-05
+      },
+      "z3_total_s": 0.0011054039999999997
+    },
+    {
+      "artifact": "run-002.json",
+      "artifact_content_hash": "sha256:0ac679cc02ee3a9a5fd0f4deec49c32c8681b514b4f1796ff2f8569597ddd8f8",
+      "axeyum_over_z3_ratio": 0.2593321097886159,
+      "axeyum_total_s": 0.00030139500000000004,
+      "files": 2,
+      "repetition": 2,
+      "stages": {
+        "bit_blast_s": 3.0335e-05,
+        "cnf_encode_s": 5.3578999999999996e-05,
+        "cnf_inprocess_s": 0.0,
+        "model_lift_s": 2.5407e-05,
+        "model_replay_s": 1.1181e-05,
+        "solve_s": 8.373400000000001e-05,
+        "word_preprocess_s": 9.715900000000001e-05
+      },
+      "z3_total_s": 0.001162197
+    },
+    {
+      "artifact": "run-003.json",
+      "artifact_content_hash": "sha256:d00582c013fb5c46aa6c067d20226ba38b1bead8699fa7170143006d915be56c",
+      "axeyum_over_z3_ratio": 0.24929631058244633,
+      "axeyum_total_s": 0.000286959,
+      "files": 2,
+      "repetition": 3,
+      "stages": {
+        "bit_blast_s": 2.8862999999999998e-05,
+        "cnf_encode_s": 4.9531000000000004e-05,
+        "cnf_inprocess_s": 0.0,
+        "model_lift_s": 2.4065e-05,
+        "model_replay_s": 1.086e-05,
+        "solve_s": 8.2432e-05,
+        "word_preprocess_s": 9.120800000000001e-05
+      },
+      "z3_total_s": 0.001151076
+    }
+  ],
+  "source_artifact_version": 20,
+  "variance": {
+    "axeyum_over_z3_ratio": {
+      "coefficient_of_variation_percent": 4.346029932820248,
+      "max": 0.2593321097886159,
+      "mean": 0.24878472497893797,
+      "min": 0.23772575456575157,
+      "p50": 0.24929631058244633,
+      "p95": 0.2593321097886159,
+      "sample_standard_deviation": 0.010812258615869179
+    },
+    "axeyum_total_s": {
+      "coefficient_of_variation_percent": 6.8765678760539375,
+      "max": 0.00030139500000000004,
+      "mean": 0.00028371233333333336,
+      "min": 0.000262783,
+      "p50": 0.000286959,
+      "p95": 0.00030139500000000004,
+      "sample_standard_deviation": 1.950967117440307e-05
+    },
+    "stages_s": {
+      "bit_blast_s": {
+        "coefficient_of_variation_percent": 6.972038144637188,
+        "max": 3.0335e-05,
+        "mean": 2.8532e-05,
+        "min": 2.6398e-05,
+        "p50": 2.8862999999999998e-05,
+        "p95": 3.0335e-05,
+        "sample_standard_deviation": 1.9892619234278827e-06
+      },
+      "cnf_encode_s": {
+        "coefficient_of_variation_percent": 3.971079940696635,
+        "max": 5.3578999999999996e-05,
+        "mean": 5.1762000000000003e-05,
+        "min": 4.9531000000000004e-05,
+        "p50": 5.2175999999999996e-05,
+        "p95": 5.3578999999999996e-05,
+        "sample_standard_deviation": 2.0555103989033923e-06
+      },
+      "cnf_inprocess_s": {
+        "coefficient_of_variation_percent": 0.0,
+        "max": 0.0,
+        "mean": 0.0,
+        "min": 0.0,
+        "p50": 0.0,
+        "p95": 0.0,
+        "sample_standard_deviation": 0.0
+      },
+      "model_lift_s": {
+        "coefficient_of_variation_percent": 7.850508249125662,
+        "max": 2.8052e-05,
+        "mean": 2.5841333333333333e-05,
+        "min": 2.4065e-05,
+        "p50": 2.5407e-05,
+        "p95": 2.8052e-05,
+        "sample_standard_deviation": 2.028676005017393e-06
+      },
+      "model_replay_s": {
+        "coefficient_of_variation_percent": 35.82383856683999,
+        "max": 1.1181e-05,
+        "mean": 9.133666666666667e-06,
+        "min": 5.36e-06,
+        "p50": 1.086e-05,
+        "p95": 1.1181e-05,
+        "sample_standard_deviation": 3.2720300018999417e-06
+      },
+      "solve_s": {
+        "coefficient_of_variation_percent": 17.38647004467148,
+        "max": 8.373400000000001e-05,
+        "mean": 7.551233333333334e-05,
+        "min": 6.0371e-05,
+        "p50": 8.2432e-05,
+        "p95": 8.373400000000001e-05,
+        "sample_standard_deviation": 1.312892921503248e-05
+      },
+      "word_preprocess_s": {
+        "coefficient_of_variation_percent": 3.96248048606284,
+        "max": 9.715900000000001e-05,
+        "mean": 9.293100000000002e-05,
+        "min": 9.0426e-05,
+        "p50": 9.120800000000001e-05,
+        "p95": 9.715900000000001e-05,
+        "sample_standard_deviation": 3.6823727405030587e-06
+      }
+    },
+    "z3_total_s": {
+      "coefficient_of_variation_percent": 2.641128028179549,
+      "max": 0.001162197,
+      "mean": 0.0011395589999999998,
+      "min": 0.0011054039999999997,
+      "p50": 0.001151076,
+      "p95": 0.001162197,
+      "sample_standard_deviation": 3.0097212146642586e-05
+    }
+  },
+  "version": 1
+}

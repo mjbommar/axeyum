@@ -1,0 +1,707 @@
+{
+  "config": {
+    "backend": "axeyum-sat-bv rustsat-batsat",
+    "backend_kind": "sat-bv",
+    "cnf_clause_budget": null,
+    "cnf_inprocessing": false,
+    "cnf_variable_budget": null,
+    "cnf_vivify": false,
+    "compare_backend": "z3 4.13.3.0",
+    "compare_z3": true,
+    "config_hash": "382e4f39d1e74e27",
+    "corpus": "corpus/micro",
+    "corpus_hash": "bf5568e9dc4ac850",
+    "corpus_manifest": {
+      "content_hash": "sha256:a9bc590391f47b326ab94263071cb8e73a7df7230d88e6aceb16eefa83c2402e",
+      "logic": "QF_BV",
+      "membership": "exact: every .smt2 file under the corpus root is manifested",
+      "name": "axeyum-micro-v1",
+      "path": "corpus/micro/manifest-v1.json",
+      "schema_version": 1,
+      "selected_entries": 2,
+      "selected_family_counts": {
+        "arithmetic": 1,
+        "comparison": 1
+      },
+      "selected_tier": "representative",
+      "selected_tier_counts": {
+        "full": 2,
+        "representative": 2
+      },
+      "source": "committed Axeyum micro corpus; ingestion smoke only, not client performance data",
+      "total_entries": 3
+    },
+    "corpus_source": "committed Axeyum micro corpus; ingestion smoke only, not client performance data",
+    "experiment": {
+      "comparison_contract": "compare config_hash + environment_hash; source revision identifies the tested commit and may differ",
+      "environment_hash": "sha256:b0f5781b8c70707448fec92aba7d68bdb8fed9b245c55926b1156bc038e7aa7a",
+      "hardware": {
+        "arch": "x86_64",
+        "cpu_model": "AMD Ryzen 7 7840HS w/ Radeon 780M Graphics",
+        "kernel": "Linux 7.0.0-22-generic x86_64 GNU/Linux",
+        "os": "linux",
+        "parallelism": 16,
+        "total_memory_bytes": 29715697664
+      },
+      "solvers": {
+        "backend": "axeyum-sat-bv rustsat-batsat",
+        "compare_backend": "z3 4.13.3.0"
+      },
+      "source": {
+        "dirty": false,
+        "dirty_scope": "repository excluding bench-results/**",
+        "revision": "319a166bfbd09e4fc1abc7c0e2a06b7c5fcdc49e"
+      },
+      "toolchain": {
+        "build_profile": "release",
+        "cargo": "cargo 1.96.0-nightly (888f67534 2026-03-30)",
+        "cargo_lock_hash": "sha256:9e39d695f4e9ec195999ffc85bc4d30185fc732345d44324ea32e4a21d0767b9",
+        "rustc": "rustc 1.96.0-nightly (48cc71ee8 2026-03-31)\nbinary: rustc\ncommit-hash: 48cc71ee88cd0f11217eced958b9930970da998b\ncommit-date: 2026-03-31\nhost: x86_64-unknown-linux-gnu\nrelease: 1.96.0-nightly\nLLVM version: 22.1.2"
+      }
+    },
+    "harness": "axeyum-bench 0.1.0",
+    "jobs": 1,
+    "limit": null,
+    "logic": "QF_BV",
+    "min_decided_percent": 100.0,
+    "native_cdcl": false,
+    "node_budget": null,
+    "preprocess": true,
+    "prove_unsat": false,
+    "query_plan": {
+      "mode": "full",
+      "refine_adaptive_batch": false,
+      "refine_batch": 1,
+      "refine_rounds": 16,
+      "refine_select": "first",
+      "sat_replay_failure_policy": "soundness-alarm"
+    },
+    "require_in_process_z3": true,
+    "require_reproducible_run": true,
+    "rewrite": {
+      "enabled_rule_ids": [],
+      "mode": "off",
+      "rule_set": null
+    },
+    "seed": "none",
+    "selected_families": null,
+    "timeout_ms": 10000
+  },
+  "instances": [
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "aig_inputs": 8.0,
+        "aig_nodes": 44.0,
+        "bit_blast_ms": 0.026428,
+        "cnf_clauses": 36.0,
+        "cnf_encode_ms": 0.045163,
+        "cnf_variables": 15.0
+      },
+      "cold_total_ms": 0.245231,
+      "corpus_manifest": {
+        "content_hash": "sha256:9f19b538d7d38c0862edfc28d2f29893093c2aa966f1b178dd968a255df12ec3",
+        "decision_agrees": true,
+        "decision_compared": true,
+        "expected": "sat",
+        "family": "arithmetic",
+        "path": "sat-add.smt2",
+        "tiers": [
+          "representative",
+          "full"
+        ]
+      },
+      "dag_nodes": 5,
+      "distinct_symbols": 1,
+      "expected": "sat",
+      "file": "corpus/micro/sat-add.smt2",
+      "layer_attribution": {
+        "aig_inputs": 8,
+        "aig_nodes": 44,
+        "bit_blast_ms": 0.026428,
+        "cnf_clauses": 36,
+        "cnf_encode_ms": 0.045163,
+        "cnf_inprocess_ms": 0.0,
+        "cnf_variables": 15,
+        "model_lift_ms": 0.024065,
+        "model_replay_ms": 0.01086,
+        "solve_ms": 0.07088,
+        "total_ms": 0.245231,
+        "word_preprocess_ms": 0.067835
+      },
+      "max_depth": 3,
+      "model_lift_ms": 0,
+      "model_replay_ms": 0.01086,
+      "oracle": {
+        "backend_kind": "z3",
+        "backend_stats": {
+          "max memory": 33.67,
+          "memory": 33.67,
+          "num allocs": 18464.0,
+          "rlimit count": 30.0,
+          "solve-eqs-elim-vars": 1.0,
+          "solve-eqs-steps": 1.0
+        },
+        "cold_total_ms": 0.966827,
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "model_lift_ms": 0,
+        "model_replay_ms": 0.009075999999999999,
+        "outcome": "sat",
+        "query_boundary": "original parsed assertions",
+        "solve_ms": 0,
+        "translate_ms": 0
+      },
+      "outcome": "sat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 5,
+          "digest": "f205f8f09e73185e",
+          "tree_nodes": 5
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 5,
+            "digest": "f205f8f09e73185e",
+            "tree_nodes": 5
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "query_shape": {
+        "coercion_cancellation_opportunities": {
+          "exact_low_extract_over_zero_extend": 0,
+          "extract_over_concat": 0,
+          "extract_over_extract": 0,
+          "extract_over_sign_extend": 0,
+          "extract_over_zero_extend": 0,
+          "total": 0
+        },
+        "counting_unit": "unique original-query DAG nodes",
+        "extract_demand": {
+          "narrow_extracts": 0,
+          "result_bits": 0,
+          "source_bits": 0
+        },
+        "formula": {
+          "assertions": 1,
+          "dag_nodes": 5,
+          "distinct_symbols": 1,
+          "max_depth": 3,
+          "tree_nodes": 5
+        },
+        "operators": {
+          "concat": 0,
+          "extract": 0,
+          "select": 0,
+          "sign_extend": 0,
+          "store": 0,
+          "zero_extend": 0
+        },
+        "widths": {
+          "bitvec_nodes": 4,
+          "distinct_bitvec_widths": 1,
+          "max_bitvec_width": 8
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 5,
+        "input_tree_nodes": 5,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 5,
+        "output_distinct_symbols": 1,
+        "output_max_depth": 3,
+        "output_tree_nodes": 5,
+        "rewritten_outcome": "sat",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 5,
+      "unsat_proof_replay": "not-applicable",
+      "unsat_proof_replay_ms": null
+    },
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "aig_inputs": 0.0,
+        "aig_nodes": 1.0,
+        "bit_blast_ms": 0.002435,
+        "cnf_clauses": 1.0,
+        "cnf_encode_ms": 0.004368,
+        "cnf_variables": 0.0
+      },
+      "cold_total_ms": 0.041727999999999994,
+      "corpus_manifest": {
+        "content_hash": "sha256:b56d9c3d68dafa535fac7e69936f97d5270765e122c3c388d256391ec0e9f524",
+        "decision_agrees": true,
+        "decision_compared": true,
+        "expected": "unsat",
+        "family": "comparison",
+        "path": "unsat-ult-zero.smt2",
+        "tiers": [
+          "representative",
+          "full"
+        ]
+      },
+      "dag_nodes": 3,
+      "distinct_symbols": 1,
+      "expected": "unsat",
+      "file": "corpus/micro/unsat-ult-zero.smt2",
+      "layer_attribution": {
+        "aig_inputs": 0,
+        "aig_nodes": 1,
+        "bit_blast_ms": 0.002435,
+        "cnf_clauses": 1,
+        "cnf_encode_ms": 0.004368,
+        "cnf_inprocess_ms": 0.0,
+        "cnf_variables": 0,
+        "model_lift_ms": 0.0,
+        "model_replay_ms": 0.0,
+        "solve_ms": 0.011552,
+        "total_ms": 0.041728,
+        "word_preprocess_ms": 0.023373
+      },
+      "max_depth": 2,
+      "model_lift_ms": 0,
+      "model_replay_ms": 0.0,
+      "oracle": {
+        "backend_kind": "z3",
+        "backend_stats": {
+          "max memory": 33.67,
+          "memory": 33.48,
+          "num allocs": 78116.0,
+          "rlimit count": 14.0
+        },
+        "cold_total_ms": 0.184249,
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "model_lift_ms": 0,
+        "model_replay_ms": 0.0,
+        "outcome": "unsat",
+        "query_boundary": "original parsed assertions",
+        "solve_ms": 0,
+        "translate_ms": 0
+      },
+      "outcome": "unsat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 1,
+          "digest": "b9343eee40e5be74",
+          "tree_nodes": 1
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 1,
+            "digest": "b9343eee40e5be74",
+            "tree_nodes": 1
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "query_shape": {
+        "coercion_cancellation_opportunities": {
+          "exact_low_extract_over_zero_extend": 0,
+          "extract_over_concat": 0,
+          "extract_over_extract": 0,
+          "extract_over_sign_extend": 0,
+          "extract_over_zero_extend": 0,
+          "total": 0
+        },
+        "counting_unit": "unique original-query DAG nodes",
+        "extract_demand": {
+          "narrow_extracts": 0,
+          "result_bits": 0,
+          "source_bits": 0
+        },
+        "formula": {
+          "assertions": 1,
+          "dag_nodes": 3,
+          "distinct_symbols": 1,
+          "max_depth": 2,
+          "tree_nodes": 3
+        },
+        "operators": {
+          "concat": 0,
+          "extract": 0,
+          "select": 0,
+          "sign_extend": 0,
+          "store": 0,
+          "zero_extend": 0
+        },
+        "widths": {
+          "bitvec_nodes": 2,
+          "distinct_bitvec_widths": 1,
+          "max_bitvec_width": 8
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 3,
+        "input_tree_nodes": 3,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 1,
+        "output_distinct_symbols": 0,
+        "output_max_depth": 1,
+        "output_tree_nodes": 1,
+        "rewritten_outcome": "unsat",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 3,
+      "unsat_proof_replay": "not-requested",
+      "unsat_proof_replay_ms": null
+    }
+  ],
+  "summary": {
+    "agree": 2,
+    "blocker_buckets": {},
+    "client_comparison": {
+      "axeyum": {
+        "max_ms": 0.245231,
+        "mean_ms": 0.14347949999999998,
+        "min_ms": 0.041728,
+        "p50_ms": 0.041728,
+        "p95_ms": 0.245231
+      },
+      "axeyum_over_z3_ratio": 0.24929631058244633,
+      "axeyum_total_s": 0.000286959,
+      "instances": 2,
+      "query_boundary": "original parsed assertions for both solvers",
+      "z3": {
+        "max_ms": 0.966827,
+        "mean_ms": 0.575538,
+        "min_ms": 0.184249,
+        "p50_ms": 0.184249,
+        "p95_ms": 0.966827
+      },
+      "z3_total_s": 0.001151076
+    },
+    "decided": 2,
+    "decided_percent": 100.0,
+    "disagree": 0,
+    "errors": 0,
+    "files": 2,
+    "layer_attribution": {
+      "bit_blast_s": 0.000028862999999999998,
+      "bit_blast_share": 0.10058231315275004,
+      "cnf_encode_s": 0.000049531000000000004,
+      "cnf_encode_share": 0.17260653961018824,
+      "cnf_inprocess_s": 0.0,
+      "cnf_inprocess_share": 0.0,
+      "distributions": {
+        "bit_blast": {
+          "max_ms": 0.026428,
+          "mean_ms": 0.014431499999999998,
+          "min_ms": 0.002435,
+          "p50_ms": 0.002435,
+          "p95_ms": 0.026428
+        },
+        "cnf_encode": {
+          "max_ms": 0.045163,
+          "mean_ms": 0.024765500000000003,
+          "min_ms": 0.004368,
+          "p50_ms": 0.004368,
+          "p95_ms": 0.045163
+        },
+        "cnf_inprocess": {
+          "max_ms": 0.0,
+          "mean_ms": 0.0,
+          "min_ms": 0.0,
+          "p50_ms": 0.0,
+          "p95_ms": 0.0
+        },
+        "model_lift": {
+          "max_ms": 0.024065,
+          "mean_ms": 0.0120325,
+          "min_ms": 0.0,
+          "p50_ms": 0.0,
+          "p95_ms": 0.024065
+        },
+        "model_replay": {
+          "max_ms": 0.01086,
+          "mean_ms": 0.00543,
+          "min_ms": 0.0,
+          "p50_ms": 0.0,
+          "p95_ms": 0.01086
+        },
+        "solve": {
+          "max_ms": 0.07088,
+          "mean_ms": 0.041216,
+          "min_ms": 0.011552,
+          "p50_ms": 0.011552,
+          "p95_ms": 0.07088
+        },
+        "total": {
+          "max_ms": 0.245231,
+          "mean_ms": 0.14347949999999998,
+          "min_ms": 0.041728,
+          "p50_ms": 0.041728,
+          "p95_ms": 0.245231
+        },
+        "word_preprocess": {
+          "max_ms": 0.067835,
+          "mean_ms": 0.045604000000000006,
+          "min_ms": 0.023373,
+          "p50_ms": 0.023373,
+          "p95_ms": 0.067835
+        }
+      },
+      "instances": 2,
+      "model_lift_s": 0.000024065,
+      "model_lift_share": 0.083862154523817,
+      "model_replay_instances": 1,
+      "model_replay_s": 0.00001086,
+      "model_replay_share": 0.03784512770116985,
+      "sat_dominates": false,
+      "sat_dominates_threshold": 0.5,
+      "size_distributions": {
+        "aig_inputs": {
+          "max": 8,
+          "mean": 4.0,
+          "min": 0,
+          "p50": 0,
+          "p95": 8
+        },
+        "aig_nodes": {
+          "max": 44,
+          "mean": 22.5,
+          "min": 1,
+          "p50": 1,
+          "p95": 44
+        },
+        "cnf_clauses": {
+          "max": 36,
+          "mean": 18.5,
+          "min": 1,
+          "p50": 1,
+          "p95": 36
+        },
+        "cnf_variables": {
+          "max": 15,
+          "mean": 7.5,
+          "min": 0,
+          "p50": 0,
+          "p95": 15
+        }
+      },
+      "solve_s": 0.000082432,
+      "solve_share": 0.28726054941646717,
+      "total_pipeline_s": 0.000286959,
+      "word_preprocess_s": 0.00009120800000000001,
+      "word_preprocess_share": 0.3178433155956078
+    },
+    "manifest": {
+      "agree": 2,
+      "compared": 2,
+      "disagree": 0,
+      "expected": 2
+    },
+    "model_replay_failures": 0,
+    "oracle": {
+      "agree": 2,
+      "backend": "z3 4.13.3.0",
+      "compared": 2,
+      "disagree": 0,
+      "enabled": true,
+      "skipped": 0
+    },
+    "par2_mean_s": 0.0001434795,
+    "query_plan": {
+      "original_dag_nodes": 6,
+      "original_tree_nodes": 6,
+      "slice_changed_instances": 0,
+      "slice_dag_nodes": 6,
+      "slice_dropped_terms": 0,
+      "slice_tree_nodes": 6
+    },
+    "query_shape": {
+      "coercion_cancellation_opportunities": {
+        "exact_low_extract_over_zero_extend": 0,
+        "extract_over_concat": 0,
+        "extract_over_extract": 0,
+        "extract_over_sign_extend": 0,
+        "extract_over_zero_extend": 0,
+        "total": 0
+      },
+      "counting_unit": "unique original-query DAG nodes",
+      "extract_demand": {
+        "narrow_extracts": 0,
+        "result_bits": 0,
+        "result_over_source_ratio": null,
+        "source_bits": 0
+      },
+      "formula_distributions": {
+        "assertions": {
+          "max": 1,
+          "mean": 1.0,
+          "min": 1,
+          "p50": 1,
+          "p95": 1
+        },
+        "dag_nodes": {
+          "max": 5,
+          "mean": 4.0,
+          "min": 3,
+          "p50": 3,
+          "p95": 5
+        },
+        "distinct_symbols": {
+          "max": 1,
+          "mean": 1.0,
+          "min": 1,
+          "p50": 1,
+          "p95": 1
+        },
+        "max_depth": {
+          "max": 3,
+          "mean": 2.5,
+          "min": 2,
+          "p50": 2,
+          "p95": 3
+        },
+        "tree_nodes": {
+          "max": 5,
+          "mean": 4.0,
+          "min": 3,
+          "p50": 3,
+          "p95": 5
+        }
+      },
+      "memory_provenance": {
+        "limitation": "memory-derived provenance flattened to BV terms is not inferable; retain it in manifest family/source metadata",
+        "surviving_select_store_ops": 0
+      },
+      "operator_distributions": {
+        "array_select_store": {
+          "max": 0,
+          "mean": 0.0,
+          "min": 0,
+          "p50": 0,
+          "p95": 0
+        },
+        "concat": {
+          "max": 0,
+          "mean": 0.0,
+          "min": 0,
+          "p50": 0,
+          "p95": 0
+        },
+        "extensions": {
+          "max": 0,
+          "mean": 0.0,
+          "min": 0,
+          "p50": 0,
+          "p95": 0
+        },
+        "extract": {
+          "max": 0,
+          "mean": 0.0,
+          "min": 0,
+          "p50": 0,
+          "p95": 0
+        }
+      },
+      "operator_totals": {
+        "concat": 0,
+        "extract": 0,
+        "select": 0,
+        "sign_extend": 0,
+        "store": 0,
+        "zero_extend": 0
+      },
+      "profiled_instances": 2,
+      "width_distributions": {
+        "bitvec_nodes": {
+          "max": 4,
+          "mean": 3.0,
+          "min": 2,
+          "p50": 2,
+          "p95": 4
+        },
+        "distinct_bitvec_widths": {
+          "max": 1,
+          "mean": 1.0,
+          "min": 1,
+          "p50": 1,
+          "p95": 1
+        },
+        "max_bitvec_width": {
+          "max": 8,
+          "mean": 8.0,
+          "min": 8,
+          "p50": 8,
+          "p95": 8
+        }
+      }
+    },
+    "rewrite": {
+      "applications": 0,
+      "changed_instances": 0,
+      "decision_changes": 0,
+      "decision_matches": 0,
+      "input_dag_nodes": 0,
+      "input_tree_nodes": 0,
+      "mode": "off",
+      "output_dag_nodes": 0,
+      "output_tree_nodes": 0,
+      "sat_unsat_conflicts": 0
+    },
+    "sat": 1,
+    "unknown": 0,
+    "unsat": 1,
+    "unsat_proof_replay": {
+      "check_time": null,
+      "check_time_s": 0.0,
+      "checked": 0,
+      "missing": 0,
+      "requested": false,
+      "timing_accounting": "nested within SAT solve time; not added again to cold total"
+    },
+    "unsupported": 0
+  },
+  "triage": {
+    "errors": [],
+    "rewrite_decision_changes": [],
+    "soundness": {
+      "manifest_disagreements": 0,
+      "model_replay_failures": 0,
+      "oracle_disagreements": 0,
+      "rewrite_sat_unsat_conflicts": 0,
+      "status_disagreements": 0,
+      "unsat_proof_replay_missing": 0
+    },
+    "unsupported": []
+  },
+  "version": 20
+}

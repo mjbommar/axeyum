@@ -280,6 +280,9 @@ def summarize(paths: Sequence[Path]) -> dict[str, Any]:
         )
     if len(set(ordered_paths)) != len(ordered_paths):
         fail("input artifact paths must be unique")
+    common_parent = Path(
+        os.path.commonpath([str(path.parent) for path in ordered_paths])
+    )
 
     expected_config: dict[str, Any] | None = None
     identity: dict[str, str] | None = None
@@ -305,7 +308,7 @@ def summarize(paths: Sequence[Path]) -> dict[str, Any]:
         runs.append(
             {
                 "repetition": index,
-                "artifact": str(path),
+                "artifact": path.relative_to(common_parent).as_posix(),
                 "artifact_content_hash": artifact_hash,
                 **summary,
             }
@@ -320,6 +323,7 @@ def summarize(paths: Sequence[Path]) -> dict[str, Any]:
             "identity": "every source artifact has byte-identical config and a clean reproducible-run identity",
             "acceptance": "every trial is 100% decided with zero errors, disagreements, oracle gaps, and replay failures",
             "statistics": "nearest-rank p50/p95 and sample standard deviation across whole-corpus trials",
+            "artifact_paths": "relative to the common source-artifact directory",
         },
         "identity": identity,
         "config": expected_config,

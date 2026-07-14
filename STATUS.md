@@ -370,6 +370,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   This closes the methodology gap between per-query shape distributions and
   actual run-to-run variance without retaining multiple large artifacts in
   memory.
+  The committed
+  [`glaurung-repetition-smoke`](bench-results/glaurung-repetition-smoke/summary.json)
+  exercises three independent trials from clean revision `319a166b`: every run
+  is 2/2 decided, manifest-agreed, and Z3-agreed with zero errors or replay
+  failures. The summary records Axeyum-total CV 6.88%, Z3-total CV 2.64%, and
+  ratio CV 4.35%, plus every stage distribution. Those sub-millisecond micro
+  values validate variance plumbing only and carry no Glaurung performance
+  claim.
 
   | ID | Live status | Next acceptance boundary |
   |---|---|---|

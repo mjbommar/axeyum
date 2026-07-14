@@ -126,6 +126,10 @@ deviation, and coefficient of variation for Axeyum and Z3 corpus totals, their
 ratio, and every attributed Axeyum stage. The summarizer holds only one source
 artifact at a time, so repetitions do not multiply the large corpus artifact's
 memory footprint.
+The committed
+[`glaurung-repetition-smoke`](../../bench-results/glaurung-repetition-smoke/summary.json)
+exercises this plumbing on the two-query micro tier; its sub-millisecond
+variance is not client performance evidence.
 
 ## Binary-analysis client gate
 

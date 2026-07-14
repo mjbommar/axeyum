@@ -96,6 +96,10 @@ identity plus every validity gate in every trial, then reports p50/p95, sample
 standard deviation, and coefficient of variation for corpus-level Axeyum/Z3
 totals, their ratio, and each attributed Axeyum stage. This is run-to-run
 variance; the per-query distributions remain shape distributions.
+A committed three-trial micro repetition smoke exercises this contract from a
+clean source revision: every trial is 2/2 decided/manifest-agreed/Z3-agreed,
+and the summary reports finite whole-corpus and per-stage variance. Its tiny
+timings are plumbing evidence only, not a client ratio.
 GQ1/GQ10 remain open until the actual Glaurung capture is ingested.
 
 **Non-negotiable acceptance gate.** Comparable runs require 100% decided on the

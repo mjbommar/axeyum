@@ -91,6 +91,10 @@ class RepetitionSummaryTests(unittest.TestCase):
             ]
             result = MODULE.summarize(paths)
             self.assertEqual(result["repetitions"], 3)
+            self.assertEqual(
+                [run["artifact"] for run in result["runs"]],
+                ["run-001.json", "run-002.json", "run-003.json"],
+            )
             self.assertAlmostEqual(result["variance"]["axeyum_total_s"]["mean"], 1.0)
             self.assertAlmostEqual(
                 result["variance"]["axeyum_total_s"]["sample_standard_deviation"], 0.2
