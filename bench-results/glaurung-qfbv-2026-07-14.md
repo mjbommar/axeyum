@@ -313,3 +313,15 @@ make 53,748,044 attempts, skip 4,248,964 duplicates, and emit exactly
 `43ff5944eacd8e511a0c4656b3cdd99f0794ba376f6580a9883527684618075e`.
 ADR-0150 is accepted. Bit blast is now the largest stage at 5.88 s, ahead of
 CNF at 5.18 s, so the next slice must re-attribute residual lowering/AIG work.
+
+## ADR-0151 dense term-bit lift-index candidate
+
+The accepted full artifact materializes 23,029,676 term-bit bindings, including
+22,797,529 (99.0%) in `register-slice` and `slice-partial`, and inserts every
+binding into an ordered `(TermId, bit) -> AigLit` map. Term IDs are dense, each
+term's bindings are already contiguous in the authoritative vector, and the
+map's only read surface is point lookup; interpolation iterates the vector and
+model replay uses symbol inputs. Proposed ADR-0151 replaces the redundant map
+with per-term ranges while preserving public lookup, binding order, incremental
+growth, and replay. No performance claim is admitted before representative/full
+gates.

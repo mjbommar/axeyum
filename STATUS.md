@@ -430,6 +430,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   49,199,541 emitted clauses. Bit blast at 5.884 s is now the largest stage,
   narrowly ahead of CNF at 5.177 s; SAT remains 3.496 s.
 
+  The cold-lowering ownership audit selects proposed ADR-0151. Full canonical
+  lowering appends 23,029,676 `TermBitBinding`s and also inserts every binding
+  into `BTreeMap<(TermId, u32), AigLit>`. `TermId`s are dense, every term's
+  bindings are contiguous, and the only lookup consumer is
+  `literal_for_term_bit`; interpolation already iterates the authoritative
+  binding vector. `register-slice` plus `slice-partial` contribute 22,797,529
+  records (99.0%). Replace the redundant ordered map with a dense per-term
+  `(start, length)` range, preserving public lookup, deterministic order,
+  incremental arena growth, and all replay/lift contracts.
+
 - **Historical Glaurung build-up through 2026-07-14 (superseded by the measured
   result above).** The ten-item Glaurung QF_BV performance roadmap is an
   explicit Track 1/4 lane (`PLAN.md` GQ1--GQ10). The ordering is
@@ -606,10 +616,11 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   | **GQ9 auto cost model/docs** | **TODO**; P1.8 shape/resource probes are only the general foundation | Telemetry-visible raw/cheap/configured/warm choice that beats or matches fixed policies and documents embedder guidance |
   | **GQ10 real-lifter regression tier** | **WIP; access-controlled representative and well-typed full tiers validate.** Artifact v27 baseline repetitions/full trials and ADR-0144/0145 accepted full confirmations are complete; 2,225 malformed dumps are isolated | Add a data-availability-aware regular gate, establish repeated full-tier variance thresholds, and fix producer validation/dedup before calling the raw capture authoritative |
 
-  **Next actions:** (1) re-attribute the now-largest 5.88-second bit-blast stage
-  by Glaurung family, residual operator, and AIG request/hash/allocation outcome;
-  (2) select one exact GQ3/GQ5 slice only if it reduces downstream AIG/CNF and
-  end-to-end time; keep broad GQ4 and SAT work gated;
+  **Next actions:** (1) implement ADR-0151's dense term-bit range index with
+  lookup-boundary and incremental-growth coverage; (2) require five clean
+  representative processes to improve bit blast and end-to-end time with
+  identical AIG/CNF/decision/replay shape before a full confirmation; keep
+  broad GQ4 and SAT work gated;
   (3) add the data-availability-aware GQ10 regular gate and define repeated
   full-tier variance thresholds;
   (4) fix Glaurung's explicit width coercion, strict dump validation, and atomic

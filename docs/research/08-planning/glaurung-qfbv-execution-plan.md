@@ -360,7 +360,10 @@ word policy, 5.88 seconds bit blast, 5.18 seconds CNF, and 3.50 seconds SAT.
 Within CNF, gate/root/planning/allocation cost 2.40/1.08/1.20/0.066 seconds.
 Bit blast is now the largest measured stage; re-attribute residual operator
 lowering and AIG request/hash/allocation work by family before selecting the
-next exact GQ3/GQ5 slice. SAT and broad GQ4 remain gated by measured opportunity.
+next exact GQ3/GQ5 slice. The first audit result is proposed ADR-0151: replace
+23,029,676 ordered term-bit lookup insertions with dense per-term ranges into
+the existing authoritative binding vector. SAT and broad GQ4 remain gated by
+measured opportunity.
 
 ### G6 — SAT work remains conditional (GQ6)
 
@@ -467,6 +470,10 @@ validity gates.
 4. Re-attribute CNF after steps 1--3, then choose only the measured GQ5
    subphase. Keep SAT-core work gated and broad GQ4 behind its small measured
    post-canonical demand residual unless family data reverses the ranking.
+   After ADR-0150 makes bit blast largest, ADR-0151 is the next isolated
+   ownership candidate: dense `TermId` plus contiguous bit bindings can replace
+   the redundant ordered term-bit lookup map without changing lookup, order,
+   incremental growth, or replay.
 5. On the Glaurung side, fix explicit width coercion plus strict dump validation
    and cross-process dedup/conflict handling. Define the ordered warm-trace and
    controlled-concretization schema before GQ7/GQ8 cache or auto-policy work.
