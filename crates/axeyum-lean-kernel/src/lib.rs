@@ -60,6 +60,7 @@ mod tc;
 
 use std::collections::HashMap;
 use std::fmt;
+use std::hash::{DefaultHasher, Hash, Hasher};
 
 pub use arith_prelude::{ArithPrelude, build_arith_prelude};
 pub use env::{Declaration, Environment, RecRule, ReducibilityHint};
@@ -75,6 +76,51 @@ pub use string_prelude::{StringPrelude, build_string_prelude};
 pub use tc::{KernelError, LocalContext, LocalDecl};
 
 use expr::ExprMeta;
+
+const EXPR_INTERN_SHARDS: usize = 64;
+
+/// Hash-consing lookup split into independently growing tables.
+///
+/// Large generated proofs can carry tens of millions of expression nodes. A
+/// single `HashMap` then needs an old+new multi-gigabyte bucket allocation while
+/// growing, even though the steady-state table fits the configured memory cap.
+/// Sharding preserves the same insertion-ordered `ExprId` assignment while
+/// bounding any one table growth to roughly `1 / EXPR_INTERN_SHARDS` of the
+/// complete interner. The stable shard hash is not observable in output.
+#[derive(Debug)]
+struct ExprInterner {
+    shards: Vec<HashMap<ExprNode, ExprId>>,
+}
+
+impl Default for ExprInterner {
+    fn default() -> Self {
+        Self {
+            shards: (0..EXPR_INTERN_SHARDS).map(|_| HashMap::new()).collect(),
+        }
+    }
+}
+
+impl ExprInterner {
+    fn shard(node: &ExprNode) -> usize {
+        let mut hasher = DefaultHasher::new();
+        node.hash(&mut hasher);
+        usize::try_from(hasher.finish() % EXPR_INTERN_SHARDS as u64)
+            .expect("expression shard index fits usize")
+    }
+
+    fn get(&self, node: &ExprNode) -> Option<ExprId> {
+        self.shards[Self::shard(node)].get(node).copied()
+    }
+
+    fn insert(&mut self, node: ExprNode, id: ExprId) {
+        self.shards[Self::shard(&node)].insert(node, id);
+    }
+
+    #[cfg(test)]
+    fn is_empty(&self) -> bool {
+        self.shards.iter().all(HashMap::is_empty)
+    }
+}
 
 /// The interning arena and term builder for the Lean kernel.
 ///
@@ -93,7 +139,7 @@ pub struct Kernel {
 
     exprs: Vec<ExprNode>,
     expr_meta: Vec<ExprMeta>,
-    expr_intern: HashMap<ExprNode, ExprId>,
+    expr_intern: ExprInterner,
     /// Successful inferred types for closed expressions. Closed terms are
     /// independent of the local context, so sharing this cache across recursive
     /// checks avoids exponential re-walks of hash-consed proof DAGs.
@@ -136,7 +182,7 @@ impl Kernel {
     pub fn release_transient_tables_for_export(&mut self) {
         self.name_intern = HashMap::new();
         self.level_intern = HashMap::new();
-        self.expr_intern = HashMap::new();
+        self.expr_intern = ExprInterner::default();
         self.infer_closed_cache = HashMap::new();
         self.whnf_cache = HashMap::new();
         self.export_only = true;
@@ -175,7 +221,7 @@ impl Kernel {
             !self.export_only,
             "kernel was finalized for read-only export"
         );
-        if let Some(&id) = self.expr_intern.get(&node) {
+        if let Some(id) = self.expr_intern.get(&node) {
             return id;
         }
         let meta = self.compute_expr_meta(&node);

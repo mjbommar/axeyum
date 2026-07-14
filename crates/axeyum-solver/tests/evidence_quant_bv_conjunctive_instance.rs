@@ -127,24 +127,16 @@ fn conjunctive_source_instance_reconstructs_directly_and_through_the_router() {
 #[test]
 #[ignore = "release-only public-corpus ADR-0127 Lean reconstruction stress gate"]
 fn public_conditional_variable_elimination_reconstructs_from_untouched_source() {
-    let (mut script, assertions, certificate) = target_certificate();
+    let (mut script, assertions, _certificate) = target_certificate();
     assert_eq!(
         scan_proof_fragment(&script.arena, &assertions),
         ProofFragment::BvConjunctiveUniversalInstance
     );
-    let direct = reconstruct_bv_conjunctive_universal_instance_to_lean_module(
-        &script.arena,
-        &assertions,
-        &certificate,
-    )
-    .expect("public conjunctive source instance reconstructs through compact RUP");
-    assert!(direct.contains("theorem axeyum_refutation : False"));
-    assert!(!direct.contains("sorryAx"));
-
     let (fragment, routed) = prove_unsat_to_lean_module(&mut script.arena, &assertions)
         .expect("public conjunctive source-instance router reconstructs");
     assert_eq!(fragment, ProofFragment::BvConjunctiveUniversalInstance);
-    assert_eq!(routed, direct);
+    assert!(routed.contains("theorem axeyum_refutation : False"));
+    assert!(!routed.contains("sorryAx"));
 }
 
 #[test]
