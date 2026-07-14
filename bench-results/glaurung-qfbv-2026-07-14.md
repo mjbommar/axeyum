@@ -339,3 +339,15 @@ nodes, and 49,199,541 clauses. Artifact SHA-256:
 `b346394c5a727da6c58ae15b013f837f703ad7dd03268cedf3f98a6989712c3c`.
 ADR-0151 is accepted; CNF and bit blast now cost 5.18/4.94 s, so the next audit
 compares remaining dense-ID memo work with shared normalization.
+
+## ADR-0152 range-backed term-lowering memo candidate
+
+The accepted full artifact has 982,044 unique post-word DAG terms and
+23,029,676 term-bit bindings. The remaining
+`BTreeMap<TermId, Vec<AigLit>>` owns a second vector for each completed term,
+although ADR-0151 range presence already records completion and recovers the
+same ordered literals from authoritative bindings. `register-slice` plus
+`slice-partial` contribute 973,313 terms (99.1%). Proposed ADR-0152 removes only
+the ordered duplicate owner and reconstructs the same owned child vectors;
+operand cloning, AIG/CNF structure, decisions, and replay remain unchanged. No
+performance claim is admitted before representative/full gates.

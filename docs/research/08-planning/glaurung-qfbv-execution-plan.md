@@ -367,8 +367,11 @@ suites plus strict Clippy pass. ADR-0151 is accepted after representative
 total/bit blast improve 5.59%/15.51% and full total/bit blast improve
 5.71%/16.05%, reaching 15.60 seconds / 1.99x Z3 with identical structure and
 replay. CNF and bit blast are now 5.18/4.94 seconds; audit the remaining dense-ID
-memo and shared normalization before another bounded slice. SAT and broad GQ4
-remain gated by measured opportunity.
+memo and shared normalization before another bounded slice. That audit selects
+proposed ADR-0152: use ADR-0151 range presence as the completion memo and remove
+the ordered map's duplicate ownership of 23,029,676 literals across 982,044
+terms, while leaving operand cloning unchanged. SAT and broad GQ4 remain gated
+by measured opportunity.
 
 ### G6 — SAT work remains conditional (GQ6)
 
@@ -480,6 +483,9 @@ validity gates.
    the redundant ordered term-bit lookup map without changing lookup, order,
    incremental growth, or replay. It is accepted after the full client gate
    cuts total 5.71% and bit blast 16.05% with identical AIG/CNF structure.
+   ADR-0152 then isolates the remaining memo ownership: range presence replaces
+   ordered completion lookup, and child bits are reconstructed from the same
+   authoritative bindings without changing operand cloning or AIG algorithms.
 5. On the Glaurung side, fix explicit width coercion plus strict dump validation
    and cross-process dedup/conflict handling. Define the ordered warm-trace and
    controlled-concretization schema before GQ7/GQ8 cache or auto-policy work.

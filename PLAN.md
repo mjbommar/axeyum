@@ -66,7 +66,10 @@ session state.
 > blast improve 5.71%/16.05% to 15.60/4.94 s, and the full ratio reaches 1.99x
 > with identical AIG/CNF structure and replay. CNF is again narrowly largest at
 > 5.18 s; audit the remaining dense-ID term memo and shared normalization before
-> choosing another bounded ownership slice.
+> choosing another bounded ownership slice. The memo audit selects proposed
+> ADR-0152: 982,044 completed terms retain a second set of 23,029,676 AIG
+> literals in `BTreeMap<TermId, Vec<AigLit>>`, although ADR-0151's ranges and
+> authoritative bindings already encode completion and the same literals.
 > The capture and
 > implementation audit has been expanded into the dependency-ordered
 > [Glaurung QF_BV execution plan](docs/research/08-planning/glaurung-qfbv-execution-plan.md):
@@ -144,7 +147,9 @@ public lookup, incremental arena growth, and replay. It cuts representative
 total/bit blast 5.59%/15.51% and full total/bit blast 5.71%/16.05%, reaching
 15.60 s / 1.99x Z3 with identical structure. CNF (5.18 s) and bit blast
 (4.94 s) are now close; audit the remaining dense-ID memo and shared clause
-normalization before choosing the next measured slice.
+normalization before choosing the next measured slice. Proposed ADR-0152 removes
+only the redundant ordered memo ownership while keeping operand-vector cloning
+unchanged, so its client gate can attribute the representation independently.
 Affine word work must still show a downstream circuit/CNF win before outranking
 it.
 Broad GQ4 partial lowering follows its small post-canonical full-tier

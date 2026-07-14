@@ -205,3 +205,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0149](adr-0149-bounded-cnf-formula-header-capacity.md) | Bounded CNF formula-header capacity: reserve only contiguous clause headers while preserving the exact-dedup index's accepted growth behavior | deferred |
 | [0150](adr-0150-inline-primary-cnf-fingerprint-index.md) | Inline primary CNF fingerprint index: retain the common formula index directly and allocate a side bucket only for genuine fingerprint collisions | accepted |
 | [0151](adr-0151-dense-term-bit-lift-index.md) | Dense term-bit lift index: map each dense term ID to its contiguous range in the authoritative binding vector instead of inserting every bit into an ordered map | accepted |
+| [0152](adr-0152-range-backed-term-lowering-memo.md) | Range-backed term-lowering memo: use dense completed-term ranges and authoritative bindings instead of retaining a second ordered map of per-term bit vectors | proposed |
