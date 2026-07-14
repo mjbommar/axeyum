@@ -2302,7 +2302,12 @@ plan is built and committed on the current branch:
   64/64, turning GQ4's hypothesis into a falsifiable baseline without changing
   lowering or model semantics. Repetition/comparison tooling is version-locked
   to v25. Focused BV/solver/benchmark tests and strict Clippy pass under the
-  4 GiB cap; the real payload remains the optimization admission gate.
+  4 GiB cap. From clean commit `b69b9480`, raw/canonical/configured recipes each
+  emitted v25 and passed 2/2 decisions, manifest/Z3 agreement, zero errors/
+  disagreements/replay failures, and every AIG/CNF/bit-demand invariant. The
+  generic micro tier demanded all of its bits, as expected; it validates schema
+  plumbing and makes no relevant-bit or client-performance claim. The real
+  payload remains the optimization admission gate.
 
 - **2026-07-14 — artifact v24 attributes AIG and CNF construction.** The AIG
   now counts primitive AND requests and classifies each as a trivial identity/
