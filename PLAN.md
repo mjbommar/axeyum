@@ -14,10 +14,11 @@ session state.
 
 > **Current sequencing (2026-07-14).** The P1.4 e-graph → P1.5 CDCL(T)
 > keystone is landed, and the recovery audit has restored P2.6 through the
-> checked ADR-0131 boundary with explicit resource limits. Continue the same
-> depth-first spine through broader nested/alternating QSAT, quantified-UF
-> models, and Lean reconstruction, while running the Glaurung QF_BV performance
-> lane below as a client-driven measured leaf. Its first action is corpus capture
+> checked ADR-0131 boundary with explicit resource limits. The bounded public
+> quantified-BV UNSAT slice now reconstructs **18/18** rows in Lean; continue
+> the depth-first spine through broader nested/alternating QSAT and quantified-UF
+> models while running the Glaurung QF_BV performance lane below as the next
+> client-driven measured leaf. Its first action is corpus capture
 > and layer attribution; do not tune a hypothesized bottleneck before that gate.
 > Keep the trust-ledger proof spine running in parallel. Full BFS-vs-DFS
 > traversal analysis + post-keystone ranking:
@@ -842,6 +843,23 @@ The public row exports a **106,809,049-byte** self-contained module and passes i
 `Exists.rec`/`Exists.intro` and no `sorryAx`. Quantified-BV Lean UNSAT coverage
 rises **16→17/18**. Next: reuse the compact reflected-RUP and scoped-alias
 boundary for ADR-0127.
+**ADR-0127 Lean reconstruction is now LANDED:** the dispatcher owns one strict
+conjunctive universal instance as a distinct proof fragment, rechecks its exact
+source-bound certificate, projects the untouched conjunction, applies every
+typed universal witness, and closes the regenerated residual with the compact
+CPS Alethe boundary. Conflict-graph LRAT trimming, checked closed-clause
+declarations, deferred clause aliases, and explicit logical-AIG gate `let`s keep
+the proof DAG linear without turning learned clauses into axioms. The trusted
+kernel's exact expression interner is compact, sharded, collision-checked, and
+segmented so large proofs avoid monolithic arena reallocations. The public
+`cond-var-elim-binary` release gate passes in **198.35 s** (**3:40.24 cold**) at
+**2,026,616 KiB peak** under the 4 GiB cap, emits a self-contained module below
+the 128 MiB regression bound, contains no `sorryAx`, and matches the direct
+route. Quantified-BV Lean UNSAT coverage rises **17→18/18**. The same logical
+AIG sharing reduces ADR-0129's module to **18,576,938 bytes**, with its release
+gate passing in **4.10 s at 419,460 KiB peak**. **Next:** ingest the real
+Glaurung capture and execute GQ1/GQ10 before choosing a cold-path optimization;
+in the depth lane, broaden nested/alternating QSAT and quantified-UF models.
 **Scaled source-bound BV alternation is now LANDED (ADR-0125):** only the
 ADR-0124 total-binder cap rises 128→1,024; the 4,096-node matrix cap and exact
 source/proof replay contract are unchanged. `bug802` has 318 universal plus 212

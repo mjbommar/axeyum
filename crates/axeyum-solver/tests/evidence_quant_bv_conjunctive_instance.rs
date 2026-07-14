@@ -137,6 +137,11 @@ fn public_conditional_variable_elimination_reconstructs_from_untouched_source() 
     assert_eq!(fragment, ProofFragment::BvConjunctiveUniversalInstance);
     assert!(routed.contains("theorem axeyum_refutation : False"));
     assert!(!routed.contains("sorryAx"));
+    assert!(
+        routed.len() < 128 * 1024 * 1024,
+        "public ADR-0127 module regressed above 128 MiB: {} bytes",
+        routed.len()
+    );
 }
 
 #[test]

@@ -61,6 +61,32 @@ QF_BV proof and pass the independent checker before solver or evidence dispatch
 returns UNSAT. The evidence has an empty trust ledger; Lean reconstruction is a
 separate boundary.
 
+## Lean reconstruction acceptance (2026-07-14)
+
+The separate boundary is now accepted for the strict-conjunct route. Evidence
+dispatch classifies a unique universal strictly below the source conjunction as
+`BvConjunctiveUniversalInstance`; root universals remain owned by ADR-0135's
+query-scoped route. Reconstruction rechecks the exact certificate, represents
+the untouched assertion as the sole source axiom, projects the selected
+conjunct, and applies the complete typed binding tuple before proving the exact
+weakened QF_BV residual.
+
+The residual proof uses the compact continuation-coded Alethe/RUP boundary.
+LRAT hints are backward-trimmed to the conflict graph. Closed gate and clause
+shares become transparent, kernel-checked definitions or theorem declarations;
+open logical AIG gates remain explicit scoped `let`s. Deferred clauses are
+aliases, and learned clauses never become axioms. The trusted kernel's
+expression interner stores compact stable hashes across 64 shards, resolves
+collisions by exact structural comparison, and allocates expressions and
+metadata in fixed-size segments.
+
+The ignored release-only `cond-var-elim-binary` stress gate checks routing,
+self-contained theorem output, absence of `sorryAx`, and a module-size ceiling
+of 128 MiB. Under `ulimit -v 4194304`, the authoritative test body passes in
+198.35 seconds; the cold command takes 3:40.24 and peaks at 2,026,616 KiB RSS.
+This raises the bounded public quantified-BV Lean UNSAT audit from 17/18 to
+18/18.
+
 ## Evidence
 
 The target instance `x := 1, y := 0` makes the weakened source formula
@@ -73,9 +99,9 @@ unsupported, with 47 expected-status agreements, no disagreement, error, or
 model-replay failure. Five PAR-2 samples are 3.007967, 3.008263, 3.008571,
 3.008363, and 3.008062 seconds (median 3.008263 seconds). The dominance audit
 certifies and checks all 47 decisions. The target has taxonomy
-`bv-conjunctive-universal-instance-unsat`, an empty trust ledger, and correctly
-declines Lean reconstruction; total dominance remains 40/47 and Lean coverage
-is 8/15 UNSAT.
+`bv-conjunctive-universal-instance-unsat` and an empty trust ledger. At the
+original certificate checkpoint, total dominance was 40/47 and Lean coverage
+was 8/15 UNSAT; the later acceptance section records the reconstruction result.
 
 Six focused tests cover the public target, source/binding/proof mutation,
 non-conjunctive polarity and forbidden source contexts, duplicate occurrences,
@@ -104,6 +130,7 @@ controls agree with no disagreement.
 Open Bool/BV universal contradictions under explicit conjunctive premises can
 receive source-bound checked evidence. The route remains intentionally
 incomplete for universals under other Boolean contexts, multiple selected
-universals, nested quantifiers, functions, arrays, arithmetic binders, and Lean
-reconstruction. Those cases require distinct polarity, combination, or proof
-contracts rather than silent broadening.
+universals, nested quantifiers, functions, arrays, and arithmetic binders. The
+strict-conjunct certificate now reconstructs to Lean under the bounded
+acceptance gate above; broader cases require distinct polarity, combination, or
+proof contracts rather than silent broadening.
