@@ -84,7 +84,7 @@ just compare-glaurung-qfbv-repeated BASE CAND OUT # controlled cross-commit delt
 
 Each JSON records the corpus + config hash, per-instance outcome, budgets,
 backend stats, PAR-2, explicit `decided`/`decided_percent`, **disagreements**,
-and **model-replay failures**. Artifact version 22 retains version 16's exact
+and **model-replay failures**. Artifact version 23 retains version 16's exact
 floating-point millisecond values for each instance's word-level preprocessing,
 bit-blast, CNF encode/inprocess, SAT, model lift, and cold total, plus corpus
 totals and p50/p95 distributions. Its `client_comparison` block reports the
@@ -137,6 +137,14 @@ cross-backend work-equivalent. The Glaurung recipes require the named
 variables, 8,000,000 CNF clauses, and 2,000,000 backend search units. Timeout is
 retained as a non-deterministic safety backstop, not counted as proof of the
 deterministic bound.
+Version 23 adds paired shape telemetry without changing the solve path. Every
+successfully parsed query records its untouched original snapshot and its
+post-selected-word-policy snapshot, plus before/after/removed/added counts for
+extract-over-concat, nested extract, zero/sign extension, same-side versus
+straddling concat slices, whole-operand slices, low/high/straddling extension
+regions, exact low-extension cancellation, and maximum nested-extract depth.
+Raw runs should report no transition; canonical/configured runs reveal the
+residual GQ3 opportunity set that would still reach bit lowering.
 A comparable run requires zero errors, zero disagreements, zero replay failures,
 and the declared decided-rate threshold; only then is timing a performance
 signal.

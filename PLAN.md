@@ -21,7 +21,7 @@ session state.
 > models while running the Glaurung QF_BV performance lane below as the next
 > client-driven measured leaf. The producer-side capture and an artifact-v17
 > attribution are now available; the next action is to receive the referenced
-> query bytes and reproduce the result through Axeyum's current artifact-v22
+> query bytes and reproduce the result through Axeyum's current artifact-v23
 > gate before tuning the measured lowering/encoding bottleneck. The capture and
 > implementation audit has been expanded into the dependency-ordered
 > [Glaurung QF_BV execution plan](docs/research/08-planning/glaurung-qfbv-execution-plan.md):
@@ -75,7 +75,7 @@ information; GQ8 follows the exact cache/replay contract rather than treating a
 prefix as an identical query. Re-run the GQ10 baseline after every accepted
 slice and record the result in `STATUS.md` and `bench-results/`.
 
-**GQ1/GQ10 readiness landed (2026-07-13, artifact v22).** The client recipe is
+**GQ1/GQ10 readiness landed (2026-07-13/14, artifact v23).** The client recipe is
 now a single-worker cold run. Its artifact separates word preprocessing,
 bit-blast, CNF encoding, optional CNF inprocessing, SAT, model lift, and
 original-query model replay; reports aggregate and exact p50/p95 timing; and
@@ -123,6 +123,15 @@ recipe uses 300k DAG nodes, 3M CNF variables, 8M CNF clauses, and 2M search
 units. Wall-clock timeout remains a non-deterministic safety backstop, and the
 profile must be versioned—not silently relaxed—if the real capture cannot meet
 the 100%-decided gate.
+Artifact v23 adds a behavior-preserving before/after shape boundary. Every
+parsed query now records the untouched original DAG and the DAG submitted after
+the selected raw/canonical/configured word policy. Per-instance and corpus
+records classify extract-over-concat into low-side, high-side, straddling, and
+whole-operand cases; classify zero/sign-extension extracts into low, high, and
+straddling regions; record exact low cancellations and maximum nested-extract
+depth; and report before/after/removed/added counts for every GQ3 class. Raw is
+therefore expected to prove a zero transition, while canonical/configured runs
+show the exact residual opportunity set reaching bit lowering.
 The remaining shadow-diff handoff is also executable: a versioned capture index
 contains the producer-owned ordered path, trusted verdict, family, and tier
 facts, while `--generate-corpus-manifest` checks exact directory membership,
@@ -169,7 +178,7 @@ gates. Before publishing the baseline, reconcile the capture README's
 full-corpus count (`15,687`) with its SAT+UNSAT subtotal (`15,710`), deduplicate
 the 17-row/11-unique exclusion list, and make the generated full manifest
 self-contained (the current builder copies only representative query files).
-Then rerun the representative bytes under v22 and retain the full tier in the
+Then rerun the representative bytes under v23 and retain the full tier in the
 access-controlled scheduled lane.
 The current best explanation for the 23-row total/subtotal discrepancy is
 cross-process duplication, not 23 missing query files: the documented capture
@@ -181,7 +190,7 @@ hash-free `capture-index-v1.json`, reject verdict conflicts, and let Axeyum
 compute manifest hashes from a self-contained root.
 The performance command also exposed a mode mismatch: the producer's v17 result
 and Glaurung's current one-shot backend are raw (rewrite off, preprocessing off),
-while the former Axeyum recipe forced `--preprocess`. The artifact-v22 recipes
+while the former Axeyum recipe forced `--preprocess`. The artifact-v23 recipes
 now split raw, canonical-only, and configured policies for single, repeated,
 and proof-companion runs; the unsuffixed compatibility entries select raw as the
 current-integration baseline. Dry-run regression tests pin every recipe's flags
@@ -922,7 +931,7 @@ gate passing in **4.10--4.21 s** (the measured no-rebuild peak is **419,460
 KiB**); a scoped 64 MiB reconstruction
 worker also makes its full debug file pass 9/9 without relying on the harness
 stack. **Next:** ingest the manifest-bound Glaurung query payload and reproduce
-GQ1/GQ10 under artifact v22 before choosing a cold-path optimization;
+GQ1/GQ10 under artifact v23 before choosing a cold-path optimization;
 in the depth lane, broaden nested/alternating QSAT and quantified-UF models.
 **Exact source-term BV Skolems are now LANDED (ADR-0141):** the existing
 `forall+ exists` certificate may carry one exact source-reachable, same-width,

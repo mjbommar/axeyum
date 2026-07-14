@@ -7,7 +7,7 @@ Last updated: 2026-07-14
 
 The shortest evidence-backed path to useful Glaurung functionality is:
 
-1. repair and ingest the real capture through Axeyum's artifact-v22 contract;
+1. repair and ingest the real capture through Axeyum's artifact-v23 contract;
 2. reproduce the current **raw one-shot** integration before comparing any
    preprocessing policy;
 3. add observability at the two measured dominant stages;
@@ -116,7 +116,7 @@ The implementation audit narrows the first optimization slices:
   profile its planning, allocation, and emission subphases before replacing
   encodings or data structures.
 - The producer attribution assigns only 15% to SAT. GQ6 stays gated until the
-  artifact-v22 reproduction or a later optimization makes SAT dominant.
+  artifact-v23 reproduction or a later optimization makes SAT dominant.
 
 These conclusions are consistent with the official [Z3 BV rewriter], which
 collapses nested extracts and distributes general slices over concatenations,
@@ -210,8 +210,9 @@ the corpus-adoption foundation of GQ10.
 
 Extend the artifact without changing solver behavior:
 
-- before/after/residual counts per GQ3 rule class, including same-side versus
-  straddling concat slices, extension regions, and nested-extract depth;
+- **Landed in artifact v23:** before/after/residual counts per GQ3 rule class,
+  including same-side versus straddling concat slices, whole operands, extension
+  regions, exact low cancellation, and nested-extract depth;
 - requested, unique-demanded, and actually lowered bits per term and symbol;
 - AIG unique-table hits/misses, new nodes, and simplification counts by rule;
 - CNF timing for reachability/use counts, gate recognition, variable allocation,
@@ -347,7 +348,7 @@ validity gates.
 | Milestone | Roadmap coverage | Stop/go decision |
 |---|---|---|
 | M0 byte-complete capture | GQ1, GQ10 | No performance implementation without the representative bytes and strict manifest |
-| M1 raw v22 baseline | GQ1, GQ10 | Confirm or revise the 84% construction attribution and per-family ranking |
+| M1 raw v23 baseline | GQ1, GQ10 | Confirm or revise the 84% construction attribution and per-family ranking |
 | M2 diagnostic attribution | GQ1, GQ3--GQ5 | Choose rewrites, demand lowering, or data-structure work from counters |
 | M3 cheap exact rewriting | GQ2, GQ3 | Continue only if real total time is non-worse and structure falls |
 | M4 demand lowering | GQ4 | Continue only with replay-safe real AIG/CNF and wall-time reductions |
@@ -361,7 +362,7 @@ validity gates.
 
 1. Obtain or regenerate the 128 query bytes and strict capture index; run the
    Axeyum manifest generator and document the count reconciliation.
-2. Reproduce raw artifact v22 first with five fresh processes and its raw proof
+2. Reproduce raw artifact v23 first with five fresh processes and its raw proof
    companion, then run the canonical-only and configured diagnostics.
 3. Add the G2 AIG/CNF and residual-rewrite counters while byte transfer is
    pending; this is behavior-preserving and will make the first real run

@@ -51,7 +51,7 @@ mod run {
     use serde_json::{Value as JsonValue, json};
     use sha2::{Digest, Sha256};
 
-    const ARTIFACT_VERSION: u32 = 22;
+    const ARTIFACT_VERSION: u32 = 23;
     const CORPUS_MANIFEST_VERSION: u64 = 1;
     const CONTENT_HASH_PREFIX: &str = "sha256:";
     const DETERMINISM_PROFILE: &str = "axeyum-bench-fixed-seeds-v1";
@@ -605,6 +605,19 @@ mod run {
         extract_over_zero_ext: u64,
         extract_over_sign_ext: u64,
         low_extract_over_zero_ext: u64,
+        low_extract_over_sign_ext: u64,
+        extract_concat_low_side: u64,
+        extract_concat_high_side: u64,
+        extract_concat_straddling: u64,
+        extract_concat_whole_low: u64,
+        extract_concat_whole_high: u64,
+        extract_zero_ext_low_region: u64,
+        extract_zero_ext_high_region: u64,
+        extract_zero_ext_straddling: u64,
+        extract_sign_ext_low_region: u64,
+        extract_sign_ext_high_region: u64,
+        extract_sign_ext_straddling: u64,
+        max_nested_extract_depth: u64,
     }
 
     impl QueryShapeSample {
@@ -634,32 +647,7 @@ mod run {
                 };
                 stack.extend(args.iter().copied());
                 match *op {
-                    Op::Extract { hi, lo } => {
-                        sample.extracts += 1;
-                        sample.extract_result_bits += u64::from(hi - lo + 1);
-                        let source_width = arena.sort_of(args[0]).bv_width().unwrap_or(0);
-                        sample.extract_source_bits += u64::from(source_width);
-                        sample.narrow_extracts += u64::from(hi - lo + 1 < source_width);
-                        if let TermNode::App {
-                            op: child_op,
-                            args: child_args,
-                        } = arena.node(args[0])
-                        {
-                            match child_op {
-                                Op::Concat => sample.extract_over_concat += 1,
-                                Op::Extract { .. } => sample.extract_over_extract += 1,
-                                Op::ZeroExt { .. } => {
-                                    sample.extract_over_zero_ext += 1;
-                                    let original_width =
-                                        arena.sort_of(child_args[0]).bv_width().unwrap_or(0);
-                                    sample.low_extract_over_zero_ext +=
-                                        u64::from(lo == 0 && hi + 1 == original_width);
-                                }
-                                Op::SignExt { .. } => sample.extract_over_sign_ext += 1,
-                                _ => {}
-                            }
-                        }
-                    }
+                    Op::Extract { hi, lo } => sample.record_extract(arena, args[0], hi, lo),
                     Op::Concat => sample.concats += 1,
                     Op::ZeroExt { .. } => sample.zero_exts += 1,
                     Op::SignExt { .. } => sample.sign_exts += 1,
@@ -672,12 +660,99 @@ mod run {
             sample
         }
 
-        fn cancellation_opportunities(self) -> u64 {
+        fn record_extract(&mut self, arena: &TermArena, source: TermId, hi: u32, lo: u32) {
+            self.extracts += 1;
+            let result_width = hi - lo + 1;
+            self.extract_result_bits += u64::from(result_width);
+            let source_width = arena.sort_of(source).bv_width().unwrap_or(0);
+            self.extract_source_bits += u64::from(source_width);
+            self.narrow_extracts += u64::from(result_width < source_width);
+            let TermNode::App {
+                op: child_op,
+                args: child_args,
+            } = arena.node(source)
+            else {
+                return;
+            };
+            match child_op {
+                Op::Concat => {
+                    self.extract_over_concat += 1;
+                    let low_width = arena.sort_of(child_args[1]).bv_width().unwrap_or(0);
+                    if hi < low_width {
+                        self.extract_concat_low_side += 1;
+                        self.extract_concat_whole_low +=
+                            u64::from(lo == 0 && hi == low_width.saturating_sub(1));
+                    } else if lo >= low_width {
+                        self.extract_concat_high_side += 1;
+                        self.extract_concat_whole_high +=
+                            u64::from(lo == low_width && hi == source_width.saturating_sub(1));
+                    } else {
+                        self.extract_concat_straddling += 1;
+                    }
+                }
+                Op::Extract { .. } => {
+                    self.extract_over_extract += 1;
+                    self.max_nested_extract_depth = self
+                        .max_nested_extract_depth
+                        .max(nested_extract_depth(arena, source));
+                }
+                Op::ZeroExt { .. } => {
+                    let original_width = arena.sort_of(child_args[0]).bv_width().unwrap_or(0);
+                    self.record_zero_extension_extract(original_width, hi, lo);
+                }
+                Op::SignExt { .. } => {
+                    let original_width = arena.sort_of(child_args[0]).bv_width().unwrap_or(0);
+                    self.record_sign_extension_extract(original_width, hi, lo);
+                }
+                _ => {}
+            }
+        }
+
+        fn record_zero_extension_extract(&mut self, original_width: u32, hi: u32, lo: u32) {
+            self.extract_over_zero_ext += 1;
+            self.low_extract_over_zero_ext +=
+                u64::from(lo == 0 && hi == original_width.saturating_sub(1));
+            if hi < original_width {
+                self.extract_zero_ext_low_region += 1;
+            } else if lo >= original_width {
+                self.extract_zero_ext_high_region += 1;
+            } else {
+                self.extract_zero_ext_straddling += 1;
+            }
+        }
+
+        fn record_sign_extension_extract(&mut self, original_width: u32, hi: u32, lo: u32) {
+            self.extract_over_sign_ext += 1;
+            self.low_extract_over_sign_ext +=
+                u64::from(lo == 0 && hi == original_width.saturating_sub(1));
+            if hi < original_width {
+                self.extract_sign_ext_low_region += 1;
+            } else if lo >= original_width {
+                self.extract_sign_ext_high_region += 1;
+            } else {
+                self.extract_sign_ext_straddling += 1;
+            }
+        }
+
+        fn cancellation_opportunities(&self) -> u64 {
             self.extract_over_concat
                 + self.extract_over_extract
                 + self.extract_over_zero_ext
                 + self.extract_over_sign_ext
         }
+    }
+
+    fn nested_extract_depth(arena: &TermArena, mut term: TermId) -> u64 {
+        let mut depth = 0_u64;
+        while let TermNode::App {
+            op: Op::Extract { .. },
+            args,
+        } = arena.node(term)
+        {
+            depth += 1;
+            term = args[0];
+        }
+        depth
     }
 
     impl LayerSample {
@@ -798,6 +873,8 @@ mod run {
         query_shape_files: u64,
         query_shape_sample: Option<QueryShapeSample>,
         query_shape_samples: Vec<QueryShapeSample>,
+        post_word_query_shape_sample: Option<QueryShapeSample>,
+        post_word_query_shape_samples: Vec<QueryShapeSample>,
         /// Fair in-process comparison over the original query: Axeyum includes
         /// its selected word preprocessing, while Z3 receives the untouched
         /// parsed assertions. Binary-fallback timings are deliberately excluded.
@@ -1307,17 +1384,13 @@ mod run {
         })
     }
 
-    fn sum_shape(samples: &[QueryShapeSample], select: impl Fn(QueryShapeSample) -> u64) -> u64 {
-        samples
-            .iter()
-            .copied()
-            .map(select)
-            .fold(0, u64::saturating_add)
+    fn sum_shape(samples: &[QueryShapeSample], select: impl Fn(&QueryShapeSample) -> u64) -> u64 {
+        samples.iter().map(select).fold(0, u64::saturating_add)
     }
 
-    fn query_shape_record(sample: QueryShapeSample) -> JsonValue {
+    fn query_shape_snapshot_record(sample: &QueryShapeSample, counting_unit: &str) -> JsonValue {
         json!({
-            "counting_unit": "unique original-query DAG nodes",
+            "counting_unit": counting_unit,
             "formula": {
                 "assertions": sample.assertions,
                 "dag_nodes": sample.dag_nodes,
@@ -1350,12 +1423,159 @@ mod run {
                 "extract_over_zero_extend": sample.extract_over_zero_ext,
                 "extract_over_sign_extend": sample.extract_over_sign_ext,
                 "exact_low_extract_over_zero_extend": sample.low_extract_over_zero_ext,
+                "exact_low_extract_over_sign_extend": sample.low_extract_over_sign_ext,
+                "concat_regions": {
+                    "low_side": sample.extract_concat_low_side,
+                    "high_side": sample.extract_concat_high_side,
+                    "straddling": sample.extract_concat_straddling,
+                    "whole_low_operand": sample.extract_concat_whole_low,
+                    "whole_high_operand": sample.extract_concat_whole_high,
+                },
+                "zero_extend_regions": {
+                    "low": sample.extract_zero_ext_low_region,
+                    "high": sample.extract_zero_ext_high_region,
+                    "straddling": sample.extract_zero_ext_straddling,
+                },
+                "sign_extend_regions": {
+                    "low": sample.extract_sign_ext_low_region,
+                    "high": sample.extract_sign_ext_high_region,
+                    "straddling": sample.extract_sign_ext_straddling,
+                },
+                "max_nested_extract_depth": sample.max_nested_extract_depth,
             },
         })
     }
 
-    fn query_shape_summary_record(s: &Summary) -> JsonValue {
-        let samples = &s.query_shape_samples;
+    fn opportunity_change(before: u64, after: u64) -> JsonValue {
+        json!({
+            "before": before,
+            "after": after,
+            "removed": before.saturating_sub(after),
+            "added": after.saturating_sub(before),
+        })
+    }
+
+    fn opportunity_transition_record(
+        before: &[QueryShapeSample],
+        after: &[QueryShapeSample],
+    ) -> JsonValue {
+        let transition = |select: fn(&QueryShapeSample) -> u64| {
+            opportunity_change(sum_shape(before, select), sum_shape(after, select))
+        };
+        json!({
+            "counting_unit": "unique reachable DAG opportunities before and after the selected word policy",
+            "total": transition(QueryShapeSample::cancellation_opportunities),
+            "extract_over_concat": transition(|sample| sample.extract_over_concat),
+            "extract_over_extract": transition(|sample| sample.extract_over_extract),
+            "extract_over_zero_extend": transition(|sample| sample.extract_over_zero_ext),
+            "extract_over_sign_extend": transition(|sample| sample.extract_over_sign_ext),
+            "exact_low_extract_over_zero_extend": transition(
+                |sample| sample.low_extract_over_zero_ext,
+            ),
+            "exact_low_extract_over_sign_extend": transition(
+                |sample| sample.low_extract_over_sign_ext,
+            ),
+            "concat_regions": {
+                "low_side": transition(|sample| sample.extract_concat_low_side),
+                "high_side": transition(|sample| sample.extract_concat_high_side),
+                "straddling": transition(|sample| sample.extract_concat_straddling),
+                "whole_low_operand": transition(|sample| sample.extract_concat_whole_low),
+                "whole_high_operand": transition(|sample| sample.extract_concat_whole_high),
+            },
+            "zero_extend_regions": {
+                "low": transition(|sample| sample.extract_zero_ext_low_region),
+                "high": transition(|sample| sample.extract_zero_ext_high_region),
+                "straddling": transition(|sample| sample.extract_zero_ext_straddling),
+            },
+            "sign_extend_regions": {
+                "low": transition(|sample| sample.extract_sign_ext_low_region),
+                "high": transition(|sample| sample.extract_sign_ext_high_region),
+                "straddling": transition(|sample| sample.extract_sign_ext_straddling),
+            },
+        })
+    }
+
+    fn query_shape_record(original: &QueryShapeSample, post_word: &QueryShapeSample) -> JsonValue {
+        let mut record = query_shape_snapshot_record(original, "unique original-query DAG nodes");
+        if let JsonValue::Object(object) = &mut record {
+            object.insert(
+                "post_word_policy".to_owned(),
+                query_shape_snapshot_record(post_word, "unique post-word-policy DAG nodes"),
+            );
+            object.insert(
+                "opportunity_transition".to_owned(),
+                opportunity_transition_record(
+                    std::slice::from_ref(original),
+                    std::slice::from_ref(post_word),
+                ),
+            );
+        }
+        record
+    }
+
+    fn coercion_opportunity_totals_record(samples: &[QueryShapeSample]) -> JsonValue {
+        json!({
+            "total": sum_shape(samples, QueryShapeSample::cancellation_opportunities),
+            "extract_over_concat": sum_shape(samples, |sample| sample.extract_over_concat),
+            "extract_over_extract": sum_shape(samples, |sample| sample.extract_over_extract),
+            "extract_over_zero_extend": sum_shape(
+                samples,
+                |sample| sample.extract_over_zero_ext,
+            ),
+            "extract_over_sign_extend": sum_shape(
+                samples,
+                |sample| sample.extract_over_sign_ext,
+            ),
+            "exact_low_extract_over_zero_extend": sum_shape(
+                samples,
+                |sample| sample.low_extract_over_zero_ext,
+            ),
+            "exact_low_extract_over_sign_extend": sum_shape(
+                samples,
+                |sample| sample.low_extract_over_sign_ext,
+            ),
+            "concat_regions": {
+                "low_side": sum_shape(samples, |sample| sample.extract_concat_low_side),
+                "high_side": sum_shape(samples, |sample| sample.extract_concat_high_side),
+                "straddling": sum_shape(samples, |sample| sample.extract_concat_straddling),
+                "whole_low_operand": sum_shape(
+                    samples,
+                    |sample| sample.extract_concat_whole_low,
+                ),
+                "whole_high_operand": sum_shape(
+                    samples,
+                    |sample| sample.extract_concat_whole_high,
+                ),
+            },
+            "zero_extend_regions": {
+                "low": sum_shape(samples, |sample| sample.extract_zero_ext_low_region),
+                "high": sum_shape(samples, |sample| sample.extract_zero_ext_high_region),
+                "straddling": sum_shape(
+                    samples,
+                    |sample| sample.extract_zero_ext_straddling,
+                ),
+            },
+            "sign_extend_regions": {
+                "low": sum_shape(samples, |sample| sample.extract_sign_ext_low_region),
+                "high": sum_shape(samples, |sample| sample.extract_sign_ext_high_region),
+                "straddling": sum_shape(
+                    samples,
+                    |sample| sample.extract_sign_ext_straddling,
+                ),
+            },
+            "max_nested_extract_depth": samples
+                .iter()
+                .map(|sample| sample.max_nested_extract_depth)
+                .max()
+                .unwrap_or(0),
+        })
+    }
+
+    fn query_shape_aggregate_record(
+        samples: &[QueryShapeSample],
+        profiled_instances: u64,
+        counting_unit: &str,
+    ) -> JsonValue {
         if samples.is_empty() {
             return JsonValue::Null;
         }
@@ -1368,8 +1588,8 @@ mod run {
             JsonValue::from(extract_result_bits as f64 / extract_source_bits as f64)
         };
         json!({
-            "profiled_instances": s.query_shape_files,
-            "counting_unit": "unique original-query DAG nodes",
+            "profiled_instances": profiled_instances,
+            "counting_unit": counting_unit,
             "formula_distributions": {
                 "assertions": count_distribution_record(samples, |sample| sample.assertions),
                 "dag_nodes": count_distribution_record(samples, |sample| sample.dag_nodes),
@@ -1417,23 +1637,7 @@ mod run {
                 "result_over_source_ratio": demand_ratio,
                 "narrow_extracts": sum_shape(samples, |sample| sample.narrow_extracts),
             },
-            "coercion_cancellation_opportunities": {
-                "total": sum_shape(samples, QueryShapeSample::cancellation_opportunities),
-                "extract_over_concat": sum_shape(samples, |sample| sample.extract_over_concat),
-                "extract_over_extract": sum_shape(samples, |sample| sample.extract_over_extract),
-                "extract_over_zero_extend": sum_shape(
-                    samples,
-                    |sample| sample.extract_over_zero_ext,
-                ),
-                "extract_over_sign_extend": sum_shape(
-                    samples,
-                    |sample| sample.extract_over_sign_ext,
-                ),
-                "exact_low_extract_over_zero_extend": sum_shape(
-                    samples,
-                    |sample| sample.low_extract_over_zero_ext,
-                ),
-            },
+            "coercion_cancellation_opportunities": coercion_opportunity_totals_record(samples),
             "memory_provenance": {
                 "surviving_select_store_ops": sum_shape(
                     samples,
@@ -1442,6 +1646,44 @@ mod run {
                 "limitation": "memory-derived provenance flattened to BV terms is not inferable; retain it in manifest family/source metadata",
             },
         })
+    }
+
+    fn query_shape_summary_record(s: &Summary) -> JsonValue {
+        let original = &s.query_shape_samples;
+        if original.is_empty() {
+            return JsonValue::Null;
+        }
+        let post_word = &s.post_word_query_shape_samples;
+        let mut record = query_shape_aggregate_record(
+            original,
+            s.query_shape_files,
+            "unique original-query DAG nodes",
+        );
+        if let JsonValue::Object(object) = &mut record {
+            let complete = post_word.len() == original.len();
+            object.insert("post_word_profile_complete".to_owned(), json!(complete));
+            object.insert(
+                "post_word_policy".to_owned(),
+                if complete {
+                    query_shape_aggregate_record(
+                        post_word,
+                        usize_to_u64(post_word.len()),
+                        "unique post-word-policy DAG nodes",
+                    )
+                } else {
+                    JsonValue::Null
+                },
+            );
+            object.insert(
+                "opportunity_transition".to_owned(),
+                if complete {
+                    opportunity_transition_record(original, post_word)
+                } else {
+                    JsonValue::Null
+                },
+            );
+        }
+        record
     }
 
     /// Corpus layer attribution: per-stage seconds, p50/p95 distributions, each
@@ -1939,8 +2181,6 @@ mod run {
         let input_shape = TermStats::compute(&script.arena, &script.assertions);
         let query_shape =
             QueryShapeSample::compute(&script.arena, &script.assertions, &input_shape);
-        summary.query_shape_files += 1;
-        summary.query_shape_sample = Some(query_shape);
         let mut rewrite = apply_rewrite(&mut script, args.rewrite);
         // Word-level preprocessing (P1.2): shrink the post-rewrite assertions and
         // keep a reconstruction trail so the sat model still replays against the
@@ -1959,6 +2199,11 @@ mod run {
             Duration::ZERO
         };
         let output_shape = TermStats::compute(&script.arena, &rewrite.assertions);
+        let post_word_query_shape =
+            QueryShapeSample::compute(&script.arena, &rewrite.assertions, &output_shape);
+        summary.query_shape_files += 1;
+        summary.query_shape_sample = Some(query_shape);
+        summary.post_word_query_shape_sample = Some(post_word_query_shape);
         accumulate_rewrite(summary, args.rewrite, &rewrite, &input_shape, &output_shape);
         let config = solver_config(args, timeout);
         let plan_config = PlanSolveConfig::from_args(args);
@@ -2071,7 +2316,7 @@ mod run {
             "max_depth": input_shape.max_depth,
             "distinct_symbols": input_shape.distinct_symbols,
             "assertions": usize_to_u64(script.assertions.len()),
-            "query_shape": query_shape_record(query_shape),
+            "query_shape": query_shape_record(&query_shape, &post_word_query_shape),
             "query_plan": query_plan_record(
                 &primary_solve.plan,
                 args.query_plan,
@@ -3324,6 +3569,9 @@ mod run {
         total.query_shape_files += next.query_shape_files;
         if let Some(sample) = next.query_shape_sample {
             total.query_shape_samples.push(sample);
+        }
+        if let Some(sample) = next.post_word_query_shape_sample {
+            total.post_word_query_shape_samples.push(sample);
         }
         total.client_comparison_files += next.client_comparison_files;
         total.client_axeyum_s += next.client_axeyum_s;
@@ -5488,6 +5736,13 @@ mod run {
             assert_eq!(shape.extract_over_zero_ext, 1);
             assert_eq!(shape.extract_over_sign_ext, 1);
             assert_eq!(shape.low_extract_over_zero_ext, 1);
+            assert_eq!(shape.low_extract_over_sign_ext, 1);
+            assert_eq!(shape.extract_concat_straddling, 1);
+            assert_eq!(shape.extract_concat_low_side, 0);
+            assert_eq!(shape.extract_concat_high_side, 0);
+            assert_eq!(shape.extract_zero_ext_low_region, 1);
+            assert_eq!(shape.extract_sign_ext_low_region, 1);
+            assert_eq!(shape.max_nested_extract_depth, 1);
             assert_eq!(shape.cancellation_opportunities(), 4);
             assert_eq!((shape.selects, shape.stores), (1, 1));
             assert!(shape.distinct_bitvec_widths >= 3);
@@ -5495,6 +5750,7 @@ mod run {
             let summary = Summary {
                 query_shape_files: 1,
                 query_shape_samples: vec![shape],
+                post_word_query_shape_samples: vec![shape],
                 ..Summary::default()
             };
             let record = query_shape_summary_record(&summary);
@@ -5503,12 +5759,105 @@ mod run {
                 json!(4)
             );
             assert_eq!(
+                record["coercion_cancellation_opportunities"]["concat_regions"]["straddling"],
+                json!(1)
+            );
+            assert_eq!(
+                record["opportunity_transition"]["total"]["removed"],
+                json!(0)
+            );
+            assert_eq!(record["post_word_profile_complete"], json!(true));
+            assert_eq!(
                 record["memory_provenance"]["surviving_select_store_ops"],
                 json!(2)
             );
             assert_eq!(
                 record["formula_distributions"]["dag_nodes"]["p50"],
                 json!(shape.dag_nodes)
+            );
+        }
+
+        #[test]
+        fn query_shape_classifies_concat_extension_regions_and_nested_depth() {
+            let text = "\
+                (set-logic QF_BV)\n\
+                (declare-const x (_ BitVec 8))\n\
+                (declare-const y (_ BitVec 8))\n\
+                (assert (= ((_ extract 7 0) (concat x y)) ((_ extract 7 0) (concat x y))))\n\
+                (assert (= ((_ extract 15 8) (concat x y)) ((_ extract 15 8) (concat x y))))\n\
+                (assert (= ((_ extract 10 6) (concat x y)) ((_ extract 10 6) (concat x y))))\n\
+                (assert (= ((_ extract 7 0) ((_ zero_extend 8) x)) ((_ extract 7 0) ((_ zero_extend 8) x))))\n\
+                (assert (= ((_ extract 15 8) ((_ zero_extend 8) x)) ((_ extract 15 8) ((_ zero_extend 8) x))))\n\
+                (assert (= ((_ extract 10 6) ((_ zero_extend 8) x)) ((_ extract 10 6) ((_ zero_extend 8) x))))\n\
+                (assert (= ((_ extract 7 0) ((_ sign_extend 8) x)) ((_ extract 7 0) ((_ sign_extend 8) x))))\n\
+                (assert (= ((_ extract 15 8) ((_ sign_extend 8) x)) ((_ extract 15 8) ((_ sign_extend 8) x))))\n\
+                (assert (= ((_ extract 10 6) ((_ sign_extend 8) x)) ((_ extract 10 6) ((_ sign_extend 8) x))))\n\
+                (assert (= ((_ extract 3 0) ((_ extract 5 0) ((_ extract 7 0) x)))\n\
+                           ((_ extract 3 0) ((_ extract 5 0) ((_ extract 7 0) x)))))\n\
+                (check-sat)\n";
+            let script = parse_script(text).expect("region fixture parses");
+            let stats = TermStats::compute(&script.arena, &script.assertions);
+            let shape = QueryShapeSample::compute(&script.arena, &script.assertions, &stats);
+
+            assert_eq!(shape.extract_over_concat, 3);
+            assert_eq!(shape.extract_concat_low_side, 1);
+            assert_eq!(shape.extract_concat_high_side, 1);
+            assert_eq!(shape.extract_concat_straddling, 1);
+            assert_eq!(shape.extract_concat_whole_low, 1);
+            assert_eq!(shape.extract_concat_whole_high, 1);
+
+            assert_eq!(shape.extract_over_zero_ext, 3);
+            assert_eq!(shape.extract_zero_ext_low_region, 1);
+            assert_eq!(shape.extract_zero_ext_high_region, 1);
+            assert_eq!(shape.extract_zero_ext_straddling, 1);
+            assert_eq!(shape.low_extract_over_zero_ext, 1);
+
+            assert_eq!(shape.extract_over_sign_ext, 3);
+            assert_eq!(shape.extract_sign_ext_low_region, 1);
+            assert_eq!(shape.extract_sign_ext_high_region, 1);
+            assert_eq!(shape.extract_sign_ext_straddling, 1);
+            assert_eq!(shape.low_extract_over_sign_ext, 1);
+
+            assert_eq!(shape.extract_over_extract, 2);
+            assert_eq!(shape.max_nested_extract_depth, 2);
+        }
+
+        #[test]
+        fn query_shape_reports_opportunities_removed_by_the_selected_word_policy() {
+            let text = "\
+                (set-logic QF_BV)\n\
+                (declare-const x (_ BitVec 8))\n\
+                (declare-const y (_ BitVec 8))\n\
+                (assert (= ((_ extract 7 0) (concat x y)) y))\n\
+                (check-sat)\n";
+            let mut script = parse_script(text).expect("transition fixture parses");
+            let before_stats = TermStats::compute(&script.arena, &script.assertions);
+            let before =
+                QueryShapeSample::compute(&script.arena, &script.assertions, &before_stats);
+            assert_eq!(before.extract_concat_low_side, 1);
+            assert_eq!(before.extract_concat_whole_low, 1);
+
+            let rewrite = apply_rewrite(&mut script, RewriteMode::Default);
+            let after_stats = TermStats::compute(&script.arena, &rewrite.assertions);
+            let after = QueryShapeSample::compute(&script.arena, &rewrite.assertions, &after_stats);
+            let record = query_shape_record(&before, &after);
+            assert_eq!(
+                record["opportunity_transition"]["extract_over_concat"]["before"],
+                json!(1)
+            );
+            assert_eq!(
+                record["opportunity_transition"]["extract_over_concat"]["after"],
+                json!(0)
+            );
+            assert_eq!(
+                record["opportunity_transition"]["concat_regions"]["whole_low_operand"]["removed"],
+                json!(1)
+            );
+            assert!(
+                record["post_word_policy"]["formula"]["dag_nodes"]
+                    .as_u64()
+                    .unwrap()
+                    < record["formula"]["dag_nodes"].as_u64().unwrap()
             );
         }
 
@@ -5565,6 +5914,10 @@ mod run {
                     dag_nodes: 42,
                     ..QueryShapeSample::default()
                 }),
+                post_word_query_shape_sample: Some(QueryShapeSample {
+                    dag_nodes: 24,
+                    ..QueryShapeSample::default()
+                }),
                 client_comparison_files: 1,
                 client_comparison_sample: Some(comparison),
                 ..Summary::default()
@@ -5574,6 +5927,8 @@ mod run {
             assert_eq!(total.layer_samples.len(), 1);
             assert_eq!(total.query_shape_samples.len(), 1);
             assert_eq!(total.query_shape_samples[0].dag_nodes, 42);
+            assert_eq!(total.post_word_query_shape_samples.len(), 1);
+            assert_eq!(total.post_word_query_shape_samples[0].dag_nodes, 24);
             assert_eq!(total.client_comparison_samples.len(), 1);
             assert!((total.layer_samples[0].total_s() - layer.total_s()).abs() < f64::EPSILON);
             assert!(
