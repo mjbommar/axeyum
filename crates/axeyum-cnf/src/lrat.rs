@@ -12,7 +12,7 @@
 //! (negative hints) are out of scope, both in the checker and the elaborator;
 //! an elaborator input that would require RAT is rejected.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use crate::drat::{DratStep, literal_from_dimacs, sorted};
 use crate::{CnfFormula, CnfLit};
@@ -362,24 +362,69 @@ pub fn parse_lrat(text: &str) -> Result<Vec<LratStep>, LratError> {
 /// Returns `None` when the clause is not RUP (would need RAT). A tautological
 /// clause is RUP with an empty hint chain handled by the caller.
 fn rup_hints(active: &BTreeMap<u64, Vec<CnfLit>>, clause: &[CnfLit]) -> Option<Vec<u64>> {
+    struct Propagation {
+        clause_id: u64,
+        dependencies: Vec<usize>,
+    }
+
+    fn needed_hints(
+        propagations: &[Propagation],
+        conflict_id: u64,
+        conflict_dependencies: impl IntoIterator<Item = usize>,
+    ) -> Vec<u64> {
+        let mut needed = BTreeSet::new();
+        let mut stack = conflict_dependencies.into_iter().collect::<Vec<_>>();
+        while let Some(index) = stack.pop() {
+            if needed.insert(index) {
+                stack.extend(propagations[index].dependencies.iter().copied());
+            }
+        }
+        let mut hints = propagations
+            .iter()
+            .enumerate()
+            .filter(|(index, _)| needed.contains(index))
+            .map(|(_, propagation)| propagation.clause_id)
+            .collect::<Vec<_>>();
+        hints.push(conflict_id);
+        hints
+    }
+
     let mut assign: BTreeMap<usize, bool> = BTreeMap::new();
     if !assign_clause_false(clause, &mut assign) {
         // Tautology: trivially refuted with no antecedents.
         return Some(Vec::new());
     }
-    let mut hints = Vec::new();
+    let mut reason_for_variable = BTreeMap::<usize, usize>::new();
+    let mut propagations = Vec::<Propagation>::new();
     loop {
         let mut changed = false;
         for (&id, candidate) in active {
             match classify(candidate, &assign) {
                 ClauseStatus::Conflict => {
-                    hints.push(id);
-                    return Some(hints);
+                    let dependencies = candidate.iter().filter_map(|literal| {
+                        reason_for_variable.get(&literal.var().index()).copied()
+                    });
+                    return Some(needed_hints(&propagations, id, dependencies));
                 }
                 ClauseStatus::Unit(lit) => {
+                    let variable = lit.var().index();
+                    let dependencies = candidate
+                        .iter()
+                        .filter(|literal| literal.var().index() != variable)
+                        .filter_map(|literal| {
+                            reason_for_variable.get(&literal.var().index()).copied()
+                        })
+                        .collect::<BTreeSet<_>>()
+                        .into_iter()
+                        .collect();
                     // Unit propagation: assign so `lit` becomes true.
-                    assign.insert(lit.var().index(), !lit.is_negated());
-                    hints.push(id);
+                    assign.insert(variable, !lit.is_negated());
+                    let index = propagations.len();
+                    propagations.push(Propagation {
+                        clause_id: id,
+                        dependencies,
+                    });
+                    reason_for_variable.insert(variable, index);
                     changed = true;
                 }
                 ClauseStatus::Satisfied | ClauseStatus::Unresolved => {}
@@ -453,7 +498,11 @@ fn find_active_id(active: &BTreeMap<u64, Vec<CnfLit>>, clause: &[CnfLit]) -> Opt
 
 #[cfg(test)]
 mod tests {
-    use super::{LratError, LratStep, check_lrat, elaborate_drat_to_lrat, parse_lrat, write_lrat};
+    use std::collections::BTreeMap;
+
+    use super::{
+        LratError, LratStep, check_lrat, elaborate_drat_to_lrat, parse_lrat, rup_hints, write_lrat,
+    };
     use crate::{
         CnfClause, CnfFormula, CnfLit, CnfVar, ProofSolveOutcome, check_drat, solve_with_drat_proof,
     };
@@ -484,6 +533,18 @@ mod tests {
             }
             other => panic!("expected unsat, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn rup_hint_elaboration_trims_irrelevant_unit_propagations() {
+        // Proving (z): under ¬z, unit b and (¬b ∨ z) conflict. Unit a is
+        // encountered first but does not participate in that implication graph.
+        let active = BTreeMap::from([
+            (1, vec![lit(1)]),
+            (2, vec![lit(2)]),
+            (3, vec![lit(-2), lit(3)]),
+        ]);
+        assert_eq!(rup_hints(&active, &[lit(3)]), Some(vec![2, 3]));
     }
 
     #[test]
