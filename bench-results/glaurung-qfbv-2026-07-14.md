@@ -202,3 +202,14 @@ emission, 1.21 seconds planning, and 0.067 seconds allocation. CNF remains the
 largest stage (38.7%), followed by bit blast (31.6%), SAT (19.1%), and word
 rewrite (9.7%). The next bounded GQ5 investigation is root-emission allocation
 and planning; SAT tuning remains attribution-gated.
+
+## ADR-0146 direct-root scratch candidate
+
+Per-instance artifact-v27 attribution after ADR-0145 correlates root-emission
+time with direct-root count at 0.920 and reachable AIG nodes at 0.953. The
+`register-slice` and `slice-partial` families account for 1.379 of 1.391 root
+seconds and 169,758 direct roots. Source inspection identifies one exact waste:
+emission retraverses a planned private OR tree and allocates fresh leaf/helper
+vectors even though it never consumes the helper list. Proposed ADR-0146 reuses
+one cleared encoder-local leaf buffer for that second traversal. No performance
+claim is admitted until the clean representative/full gate completes.
