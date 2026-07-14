@@ -21,7 +21,7 @@ session state.
 > models while running the Glaurung QF_BV performance lane below as the next
 > client-driven measured leaf. The producer-side capture and an artifact-v17
 > attribution are now available; the next action is to receive the referenced
-> query bytes and reproduce the result through Axeyum's current artifact-v24
+> query bytes and reproduce the result through Axeyum's current artifact-v25
 > gate before tuning the measured lowering/encoding bottleneck. The capture and
 > implementation audit has been expanded into the dependency-ordered
 > [Glaurung QF_BV execution plan](docs/research/08-planning/glaurung-qfbv-execution-plan.md):
@@ -66,9 +66,9 @@ live in the
 First repair the byte-complete capture contract and reproduce the **raw**
 current-Glaurung one-shot path under GQ1/GQ10. Compare it explicitly with a
 canonical-only policy and the full configured preprocessing diagnostic; never
-silently substitute one for another. Next add demanded-bit telemetry (the
-residual-rewrite, AIG-hash/rule, and CNF-subphase counters are landed), then
-take GQ3 exact rewrites and GQ4
+silently substitute one for another. Residual-rewrite, demanded-bit,
+AIG-hash/rule, and CNF-subphase counters are now landed; next take GQ3 exact
+rewrites and GQ4
 demand-driven lowering before GQ5 data-structure/encoding changes. Admit GQ6
 SAT-core work only if search becomes material. GQ7--GQ9 require a separate
 ordered path trace because the deduplicated cold corpus erases prefix/frequency
@@ -76,7 +76,7 @@ information; GQ8 follows the exact cache/replay contract rather than treating a
 prefix as an identical query. Re-run the GQ10 baseline after every accepted
 slice and record the result in `STATUS.md` and `bench-results/`.
 
-**GQ1/GQ10 readiness landed (2026-07-13/14, artifact v24).** The client recipe is
+**GQ1/GQ10 readiness landed (2026-07-13/14, artifact v25).** The client recipe is
 now a single-worker cold run. Its artifact separates word preprocessing,
 bit-blast, CNF encoding, optional CNF inprocessing, SAT, model lift, and
 original-query model replay; reports aggregate and exact p50/p95 timing; and
@@ -142,6 +142,16 @@ counts; and attempted, tautological, duplicate, and emitted clauses. Instance
 and corpus records carry explicit partition invariants, and mark CNF subphase
 timers as nested within total CNF encode time. These counters identify a GQ5
 target; they do not themselves justify changing the AIG table or encoding.
+Artifact v25 adds a conservative structural demand profile before changing the
+lowering contract. Demand propagates exactly through extract, concat,
+zero/sign extension, pointwise BV operations, `ite`, rotations, and FP bit
+reinterpretation; unclassified operators conservatively request every operand
+bit. Instance and corpus records compare request, unique-demanded, available,
+and actually lowered term/symbol bits, publish coverage invariants and ratios,
+and separately time the analysis nested within bit-blast. A focused 8-of-64
+regression records 25/81 demanded term bits and 8/64 demanded symbol bits while
+the current full-child lowerer materializes 81/81 and 64/64. This measures the
+GQ4 opportunity without yet changing semantics or model projection.
 The remaining shadow-diff handoff is also executable: a versioned capture index
 contains the producer-owned ordered path, trusted verdict, family, and tier
 facts, while `--generate-corpus-manifest` checks exact directory membership,
@@ -188,7 +198,7 @@ gates. Before publishing the baseline, reconcile the capture README's
 full-corpus count (`15,687`) with its SAT+UNSAT subtotal (`15,710`), deduplicate
 the 17-row/11-unique exclusion list, and make the generated full manifest
 self-contained (the current builder copies only representative query files).
-Then rerun the representative bytes under v24 and retain the full tier in the
+Then rerun the representative bytes under v25 and retain the full tier in the
 access-controlled scheduled lane.
 The current best explanation for the 23-row total/subtotal discrepancy is
 cross-process duplication, not 23 missing query files: the documented capture
@@ -200,7 +210,7 @@ hash-free `capture-index-v1.json`, reject verdict conflicts, and let Axeyum
 compute manifest hashes from a self-contained root.
 The performance command also exposed a mode mismatch: the producer's v17 result
 and Glaurung's current one-shot backend are raw (rewrite off, preprocessing off),
-while the former Axeyum recipe forced `--preprocess`. The artifact-v24 recipes
+while the former Axeyum recipe forced `--preprocess`. The artifact-v25 recipes
 now split raw, canonical-only, and configured policies for single, repeated,
 and proof-companion runs; the unsuffixed compatibility entries select raw as the
 current-integration baseline. Dry-run regression tests pin every recipe's flags
@@ -941,7 +951,7 @@ gate passing in **4.10--4.21 s** (the measured no-rebuild peak is **419,460
 KiB**); a scoped 64 MiB reconstruction
 worker also makes its full debug file pass 9/9 without relying on the harness
 stack. **Next:** ingest the manifest-bound Glaurung query payload and reproduce
-GQ1/GQ10 under artifact v24 before choosing a cold-path optimization;
+GQ1/GQ10 under artifact v25 before choosing a cold-path optimization;
 in the depth lane, broaden nested/alternating QSAT and quantified-UF models.
 **Exact source-term BV Skolems are now LANDED (ADR-0141):** the existing
 `forall+ exists` certificate may carry one exact source-reachable, same-width,

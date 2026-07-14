@@ -41,6 +41,24 @@ pub struct BvLayerStats {
     pub aig_and_structural_hash_hits: u64,
     /// Primitive AND requests that allocated a new node.
     pub aig_and_nodes_created: u64,
+    /// Time spent computing conservative structural bit demand (nested in bit blast).
+    pub bit_demand_analysis: Duration,
+    /// Term-bit demand requests before unioning.
+    pub term_bit_requests: u64,
+    /// Bits in reachable terms before demand reduction.
+    pub term_bits_available: u64,
+    /// Unique term bits required by conservative structural propagation.
+    pub term_bits_demanded: u64,
+    /// Term bits materialized by the current lowerer.
+    pub term_bits_lowered: u64,
+    /// Symbol-bit demand requests before unioning.
+    pub symbol_bit_requests: u64,
+    /// Bits in reachable symbols before demand reduction.
+    pub symbol_bits_available: u64,
+    /// Unique symbol bits required by conservative structural propagation.
+    pub symbol_bits_demanded: u64,
+    /// Symbol bits materialized as AIG inputs by the current lowerer.
+    pub symbol_bits_lowered: u64,
     /// CNF variables submitted to the SAT adapter.
     pub cnf_variables: u64,
     /// CNF clauses submitted to the SAT adapter.
@@ -102,6 +120,16 @@ impl BvLayerStats {
             aig_and_structural_hash_hits: lookup(stats, "aig_and_structural_hash_hits")
                 .map_or(0, count_to_u64),
             aig_and_nodes_created: lookup(stats, "aig_and_nodes_created").map_or(0, count_to_u64),
+            bit_demand_analysis: lookup(stats, "bit_demand_analysis_ms")
+                .map_or(Duration::ZERO, ms_to_duration),
+            term_bit_requests: lookup(stats, "term_bit_requests").map_or(0, count_to_u64),
+            term_bits_available: lookup(stats, "term_bits_available").map_or(0, count_to_u64),
+            term_bits_demanded: lookup(stats, "term_bits_demanded").map_or(0, count_to_u64),
+            term_bits_lowered: lookup(stats, "term_bits_lowered").map_or(0, count_to_u64),
+            symbol_bit_requests: lookup(stats, "symbol_bit_requests").map_or(0, count_to_u64),
+            symbol_bits_available: lookup(stats, "symbol_bits_available").map_or(0, count_to_u64),
+            symbol_bits_demanded: lookup(stats, "symbol_bits_demanded").map_or(0, count_to_u64),
+            symbol_bits_lowered: lookup(stats, "symbol_bits_lowered").map_or(0, count_to_u64),
             cnf_variables: count_to_u64(cnf_variables),
             cnf_clauses: lookup(stats, "cnf_clauses").map_or(0, count_to_u64),
             cnf_planning: lookup(stats, "cnf_plan_ms").map_or(Duration::ZERO, ms_to_duration),

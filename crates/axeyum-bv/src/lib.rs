@@ -7,7 +7,10 @@
 //! lift assignments back to original terms instead of trusting the lowered
 //! form.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    time::Duration,
+};
 
 #[cfg(not(target_arch = "wasm32"))]
 use std::time::Instant;
@@ -151,6 +154,34 @@ pub struct SymbolBitInput {
     pub literal: AigLit,
 }
 
+/// Conservative structural bit-demand diagnostics for one batch lowering.
+///
+/// Demand starts at every root bit and propagates exactly through extracts,
+/// concatenation, extensions, pointwise BV operators, and `ite`. Operators
+/// without a bit-local rule conservatively demand every operand bit. This is a
+/// diagnostic upper bound, not a semantic cone-of-influence proof.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct BitDemandStats {
+    /// Time spent computing this structural demand profile.
+    pub analysis: Duration,
+    /// Term-bit requests before unioning repeated demands.
+    pub term_bit_requests: u64,
+    /// Bits in all unique terms reachable from the roots.
+    pub term_bits_available: u64,
+    /// Unique reachable term bits demanded by the structural analysis.
+    pub term_bits_demanded: u64,
+    /// Term bits materialized by the current lowerer.
+    pub term_bits_lowered: u64,
+    /// Symbol-bit requests before unioning repeated demands.
+    pub symbol_bit_requests: u64,
+    /// Bits in all unique symbols reachable from the roots.
+    pub symbol_bits_available: u64,
+    /// Unique symbol bits demanded by the structural analysis.
+    pub symbol_bits_demanded: u64,
+    /// Symbol bits materialized as AIG inputs by the current lowerer.
+    pub symbol_bits_lowered: u64,
+}
+
 /// AIG plus lift-map metadata for lowered roots.
 #[derive(Debug, Clone)]
 pub struct BitLowering {
@@ -159,6 +190,7 @@ pub struct BitLowering {
     term_bits: Vec<TermBitBinding>,
     term_bit_lookup: BTreeMap<(TermId, u32), AigLit>,
     symbol_inputs: Vec<SymbolBitInput>,
+    demand_stats: BitDemandStats,
 }
 
 impl BitLowering {
@@ -180,6 +212,11 @@ impl BitLowering {
     /// Symbol-bit to AIG-input map entries in AIG input order.
     pub fn symbol_inputs(&self) -> &[SymbolBitInput] {
         &self.symbol_inputs
+    }
+
+    /// Returns structural demand and actual-lowering counts for this batch.
+    pub fn demand_stats(&self) -> BitDemandStats {
+        self.demand_stats
     }
 
     /// Looks up the AIG literal for one original term bit.
@@ -723,12 +760,16 @@ impl<'a> LoweringBuilder<'a> {
                 bits,
             });
         }
+        let mut demand_stats = structural_bit_demand(self.arena, roots, self.deadline)?;
+        demand_stats.term_bits_lowered = usize_to_u64_saturating(self.term_bits.len());
+        demand_stats.symbol_bits_lowered = usize_to_u64_saturating(self.symbol_inputs.len());
         Ok(BitLowering {
             aig: self.aig,
             roots: lowered_roots,
             term_bits: self.term_bits,
             term_bit_lookup: self.term_bit_lookup,
             symbol_inputs: self.symbol_inputs,
+            demand_stats,
         })
     }
 
@@ -1862,6 +1903,148 @@ fn constant_bits_value(bits: &[AigLit]) -> Option<u128> {
     Some(value)
 }
 
+fn structural_bit_demand(
+    arena: &TermArena,
+    roots: &[TermId],
+    deadline: Option<Instant>,
+) -> Result<BitDemandStats, BitLowerError> {
+    let start = Instant::now();
+    let mut stats = BitDemandStats::default();
+    let mut reachable_terms = BTreeSet::new();
+    let mut reachable_symbols = BTreeSet::new();
+    let mut reachable_stack = roots.to_vec();
+    while let Some(term) = reachable_stack.pop() {
+        poll_analysis_deadline(deadline)?;
+        if !reachable_terms.insert(term) {
+            continue;
+        }
+        stats.term_bits_available = stats
+            .term_bits_available
+            .saturating_add(usize_to_u64_saturating(sort_width(arena.sort_of(term))));
+        match arena.node(term) {
+            TermNode::Symbol(symbol) => {
+                if reachable_symbols.insert(*symbol) {
+                    stats.symbol_bits_available =
+                        stats
+                            .symbol_bits_available
+                            .saturating_add(usize_to_u64_saturating(sort_width(
+                                arena.symbol(*symbol).1,
+                            )));
+                }
+            }
+            TermNode::App { args, .. } => reachable_stack.extend(args.iter().copied()),
+            TermNode::BoolConst(_)
+            | TermNode::BvConst { .. }
+            | TermNode::WideBvConst(_)
+            | TermNode::IntConst(_)
+            | TermNode::RealConst(_) => {}
+        }
+    }
+
+    let mut demanded_term_bits = BTreeSet::new();
+    let mut demanded_symbol_bits = BTreeSet::new();
+    let mut demand_stack = Vec::new();
+    for &root in roots {
+        push_all_term_bits(arena, root, &mut demand_stack);
+    }
+    while let Some((term, bit)) = demand_stack.pop() {
+        poll_analysis_deadline(deadline)?;
+        stats.term_bit_requests = stats.term_bit_requests.saturating_add(1);
+        if let TermNode::Symbol(symbol) = arena.node(term) {
+            stats.symbol_bit_requests = stats.symbol_bit_requests.saturating_add(1);
+            demanded_symbol_bits.insert((*symbol, bit));
+        }
+        if !demanded_term_bits.insert((term, bit)) {
+            continue;
+        }
+        propagate_bit_demand(arena, term, bit, &mut demand_stack);
+    }
+    stats.term_bits_demanded = usize_to_u64_saturating(demanded_term_bits.len());
+    stats.symbol_bits_demanded = usize_to_u64_saturating(demanded_symbol_bits.len());
+    stats.analysis = start.elapsed();
+    Ok(stats)
+}
+
+fn poll_analysis_deadline(deadline: Option<Instant>) -> Result<(), BitLowerError> {
+    if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
+        Err(BitLowerError::DeadlineExceeded)
+    } else {
+        Ok(())
+    }
+}
+
+fn propagate_bit_demand(arena: &TermArena, term: TermId, bit: u32, stack: &mut Vec<(TermId, u32)>) {
+    let TermNode::App { op, args } = arena.node(term) else {
+        return;
+    };
+    match *op {
+        Op::Extract { lo, .. } => stack.push((args[0], bit + lo)),
+        Op::Concat => {
+            let low_width = u32::try_from(sort_width(arena.sort_of(args[1])))
+                .expect("lowerable term width fits u32");
+            if bit < low_width {
+                stack.push((args[1], bit));
+            } else {
+                stack.push((args[0], bit - low_width));
+            }
+        }
+        Op::ZeroExt { .. } => {
+            let source_width = u32::try_from(sort_width(arena.sort_of(args[0])))
+                .expect("lowerable term width fits u32");
+            if bit < source_width {
+                stack.push((args[0], bit));
+            }
+        }
+        Op::SignExt { .. } => {
+            let source_width = u32::try_from(sort_width(arena.sort_of(args[0])))
+                .expect("lowerable term width fits u32");
+            stack.push((args[0], bit.min(source_width - 1)));
+        }
+        Op::BvNot
+        | Op::BvAnd
+        | Op::BvOr
+        | Op::BvXor
+        | Op::BvNand
+        | Op::BvNor
+        | Op::BvXnor
+        | Op::FpFromBits { .. } => {
+            stack.extend(args.iter().map(|arg| (*arg, bit)));
+        }
+        Op::Ite => {
+            stack.push((args[0], 0));
+            stack.push((args[1], bit));
+            stack.push((args[2], bit));
+        }
+        Op::RotateLeft { by } => {
+            let width = u32::try_from(sort_width(arena.sort_of(args[0])))
+                .expect("lowerable term width fits u32");
+            let shift = by % width;
+            stack.push((args[0], (bit + width - shift) % width));
+        }
+        Op::RotateRight { by } => {
+            let width = u32::try_from(sort_width(arena.sort_of(args[0])))
+                .expect("lowerable term width fits u32");
+            let shift = by % width;
+            stack.push((args[0], (bit + shift) % width));
+        }
+        _ => {
+            for &arg in args {
+                push_all_term_bits(arena, arg, stack);
+            }
+        }
+    }
+}
+
+fn push_all_term_bits(arena: &TermArena, term: TermId, stack: &mut Vec<(TermId, u32)>) {
+    let width =
+        u32::try_from(sort_width(arena.sort_of(term))).expect("lowerable term width fits u32");
+    stack.extend((0..width).map(|bit| (term, bit)));
+}
+
+fn usize_to_u64_saturating(value: usize) -> u64 {
+    u64::try_from(value).unwrap_or(u64::MAX)
+}
+
 fn sort_width(sort: Sort) -> usize {
     match sort {
         Sort::Bool => 1,
@@ -2376,6 +2559,27 @@ mod tests {
             lowering.literal_for_term_bit(high, 1),
             "concat bit 3 comes from the high operand bit 1"
         );
+    }
+
+    #[test]
+    fn structural_demand_exposes_full_child_lowering_for_narrow_extract() {
+        let mut arena = TermArena::new();
+        let x_symbol = arena.declare("x", Sort::BitVec(64)).unwrap();
+        let x = arena.var(x_symbol);
+        let low_byte = arena.extract(7, 0, x).unwrap();
+        let expected = arena.bv_const(8, 0x5a).unwrap();
+        let root = arena.eq(low_byte, expected).unwrap();
+
+        let lowering = lower_terms(&arena, &[root]).unwrap();
+        let stats = lowering.demand_stats();
+        assert_eq!(stats.term_bit_requests, 25);
+        assert_eq!(stats.term_bits_available, 81);
+        assert_eq!(stats.term_bits_demanded, 25);
+        assert_eq!(stats.term_bits_lowered, 81);
+        assert_eq!(stats.symbol_bit_requests, 8);
+        assert_eq!(stats.symbol_bits_available, 64);
+        assert_eq!(stats.symbol_bits_demanded, 8);
+        assert_eq!(stats.symbol_bits_lowered, 64);
     }
 
     #[test]

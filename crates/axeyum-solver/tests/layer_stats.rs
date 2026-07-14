@@ -50,6 +50,12 @@ fn sat_bv_run_exposes_typed_layer_stats() {
         "each clause attempt is emitted or skipped"
     );
     assert!(layers.cnf_reachable_nodes > 0);
+    assert!(layers.term_bit_requests >= layers.term_bits_demanded);
+    assert!(layers.term_bits_demanded <= layers.term_bits_available);
+    assert_eq!(layers.term_bits_lowered, layers.term_bits_available);
+    assert!(layers.symbol_bit_requests >= layers.symbol_bits_demanded);
+    assert!(layers.symbol_bits_demanded <= layers.symbol_bits_available);
+    assert_eq!(layers.symbol_bits_lowered, layers.symbol_bits_available);
     assert_eq!(layers.cnf_inprocess, std::time::Duration::ZERO);
     assert!(layers.clause_density() > 0.0, "density is positive");
     // total() is the sum of all stage durations and is well-defined.

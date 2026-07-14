@@ -84,7 +84,7 @@ just compare-glaurung-qfbv-repeated BASE CAND OUT # controlled cross-commit delt
 
 Each JSON records the corpus + config hash, per-instance outcome, budgets,
 backend stats, PAR-2, explicit `decided`/`decided_percent`, **disagreements**,
-and **model-replay failures**. Artifact version 24 retains version 16's exact
+and **model-replay failures**. Artifact version 25 retains version 16's exact
 floating-point millisecond values for each instance's word-level preprocessing,
 bit-blast, CNF encode/inprocess, SAT, model lift, and cold total, plus corpus
 totals and p50/p95 distributions. Its `client_comparison` block reports the
@@ -154,6 +154,15 @@ direct-root nodes and recognized XOR/mux/not-AND/private-tree/binary-AND gates;
 and partition clause attempts into tautological skips, duplicate skips, and
 emitted clauses. The artifact reports both partition invariants. CNF subphase
 timers are nested within `cnf_encode`, so do not add them to cold total again.
+Version 25 adds a conservative bit-demand profile. It reports term/symbol bit
+requests, unique demanded bits, all reachable available bits, and bits actually
+materialized by the lowerer, with demanded/available and lowered/demanded
+ratios. Extract, concat, extension, pointwise BV, `ite`, rotation, and FP-bit
+reinterpretation propagation is exact; unclassified operators conservatively
+demand every operand bit. The analysis time is reported and is already nested
+within `bit_blast`. Coverage invariants must remain true. These counts expose a
+potential GQ4 reduction; they do not claim that omitted bits are already safe or
+that the current lowerer avoids them.
 A comparable run requires zero errors, zero disagreements, zero replay failures,
 and the declared decided-rate threshold; only then is timing a performance
 signal.

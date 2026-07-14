@@ -315,6 +315,17 @@ fn record_encoding_stats(stats: &mut SolveStats, lowering: &BitLowering, encodin
     );
     push_count(stats, "aig_and_nodes_created", aig.and_nodes_created);
 
+    let demand = lowering.demand_stats();
+    push_duration_ms(stats, "bit_demand_analysis_ms", demand.analysis);
+    push_count(stats, "term_bit_requests", demand.term_bit_requests);
+    push_count(stats, "term_bits_available", demand.term_bits_available);
+    push_count(stats, "term_bits_demanded", demand.term_bits_demanded);
+    push_count(stats, "term_bits_lowered", demand.term_bits_lowered);
+    push_count(stats, "symbol_bit_requests", demand.symbol_bit_requests);
+    push_count(stats, "symbol_bits_available", demand.symbol_bits_available);
+    push_count(stats, "symbol_bits_demanded", demand.symbol_bits_demanded);
+    push_count(stats, "symbol_bits_lowered", demand.symbol_bits_lowered);
+
     let cnf = encoding.stats();
     push_duration_ms(stats, "cnf_plan_ms", cnf.planning);
     push_duration_ms(stats, "cnf_allocate_ms", cnf.variable_allocation);

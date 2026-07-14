@@ -102,7 +102,7 @@ def source_artifact(
         "require_deterministic_resources": True,
     }
     return {
-        "version": 24,
+        "version": 25,
         "config": config,
         "summary": {
             "files": 2,

@@ -205,7 +205,20 @@ publish the two partition invariants. CNF subphase timings are explicitly nested
 inside the existing CNF-encode duration and never added to cold total twice.
 The diagnostics identify where GQ5 engineering should occur; they do not make a
 data-structure or encoding change acceptable without a valid real-corpus
-end-to-end improvement. The repetition and comparison tools now require v24.
+end-to-end improvement. The repetition and comparison schema advanced with v24.
+
+Artifact version 25 adds the corresponding pre-optimization relevant-bit
+boundary. A conservative structural analysis begins with all root bits,
+propagates exact demands through extract, concat, zero/sign extension,
+pointwise BV operations, `ite`, rotations, and FP bit reinterpretation, and
+falls back to every operand bit for operators without a bit-local rule. It
+reports request counts, unioned demanded bits, all reachable available bits,
+and actually materialized term/symbol bits. Coverage invariants reject an
+analysis that demands unavailable bits or a lowering that fails to cover the
+reported demand. Analysis duration is measured and explicitly nested in
+bit-blast time. This is diagnostic only: v25 does not omit bits, change model
+projection, or relax original-query replay. Repetition and comparison tools
+advance to v25 so this cost/schema cannot mix with earlier trials.
 
 ## Alternatives
 

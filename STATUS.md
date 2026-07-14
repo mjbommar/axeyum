@@ -372,7 +372,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   real warm integration needs a controlled concretization policy or an
   equivalent-choice-aware finding comparison.
 
-  **GQ1/GQ10 readiness increment:** artifact v24 retains v23's word-policy
+  **GQ1/GQ10 readiness increment:** artifact v25 retains v23's word-policy
   boundary and charges Axeyum for word
   preprocessing, separates it from term→AIG, AIG→CNF, optional CNF
   inprocessing, SAT, model lift, and original-query model replay, and records
@@ -467,20 +467,26 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   reachable/helper/direct-root counts, recognized gate families, and clause
   attempt/tautology/duplicate/emitted outcomes are exposed with explicit
   partition invariants. CNF subphase time is marked nested inside encode time.
-  Repetition ingestion is now version-locked to v24.
+  Artifact v25 adds request/unique-demanded/available/actually-lowered term and
+  symbol bit counts, ratios, coverage invariants, and nested analysis time. Its
+  conservative structural propagation is exact across extract/concat/
+  extension/pointwise/ITE/rotation cases and full-operand elsewhere. A focused
+  narrow-extract regression measures 25/81 demanded term bits and 8/64 demanded
+  symbol bits while the current lowerer still materializes all 81 and 64.
+  Repetition ingestion is now version-locked to v25.
 
   | ID | Live status | Next acceptance boundary |
   |---|---|---|
-  | **GQ1 real-query profile** | **WIP; producer-side artifact-v17 evidence is available, but the query payload is still the local data dependency.** Glaurung reports 128/128 decided/agreed, 2.10x Axeyum/Z3, and 84% in bit-blast+CNF encode. Axeyum artifact v24 includes executable solver-determinism and bounded-resource identity, capture-index→manifest generation, manifest-v1 ingestion, paired original/post-word-policy shape and residual GQ3 telemetry, AIG request/hash/allocation and CNF subphase/gate/clause attribution, typed layer stats with size distributions, separately charged SAT model replay, complete clean source/tool/hardware identity, process-level repetition/variance summary, p50/p95, original-query in-process Z3 ratio, complete manifest/oracle/decided-rate gates, and zero-error policy. Raw/canonical/configured single/repeated/proof recipes preserve distinct policy identities, with raw as the compatibility/current-integration control | Obtain the 128 referenced `.smt2` bytes plus strict hash-free trusted index, reconcile producer count/exclusion/full-pack inconsistencies, rerun raw first under v24, and publish same-environment repetition plus the matching raw proof-check result |
+  | **GQ1 real-query profile** | **WIP; producer-side artifact-v17 evidence is available, but the query payload is still the local data dependency.** Glaurung reports 128/128 decided/agreed, 2.10x Axeyum/Z3, and 84% in bit-blast+CNF encode. Axeyum artifact v25 includes executable solver-determinism and bounded-resource identity, capture-index→manifest generation, manifest-v1 ingestion, paired original/post-word-policy shape and residual GQ3 telemetry, term/symbol bit demand versus actual lowering, AIG request/hash/allocation and CNF subphase/gate/clause attribution, typed layer stats with size distributions, separately charged SAT model replay, complete clean source/tool/hardware identity, process-level repetition/variance summary, p50/p95, original-query in-process Z3 ratio, complete manifest/oracle/decided-rate gates, and zero-error policy. Raw/canonical/configured single/repeated/proof recipes preserve distinct policy identities, with raw as the compatibility/current-integration control | Obtain the 128 referenced `.smt2` bytes plus strict hash-free trusted index, reconcile producer count/exclusion/full-pack inconsistencies, rerun raw first under v25, and publish same-environment repetition plus the matching raw proof-check result |
   | **GQ2 cheap cold tier** | **TODO**, profile-gated; existing full preprocessing is opt-in and warm-oriented | Bounded constant/identity tier with non-worse cold aggregate time and an explicit cold/warm/size policy |
   | **GQ3 coercion peepholes** | **WIP partial foundation**; whole/same-side concat extracts, low extension slices, extract-through-bitwise/ITE, and adjacent-slice reassembly are landed. Artifact v23 now measures every before/post/residual region and nesting class. Nested extracts, concat straddles, extension high/straddle cases, and bounded replacement reprocessing are missing | ADR-led exact completion with growth/fuel control, exhaustive/differential semantics, and measured real-tier AIG/CNF/time reduction using the landed residual telemetry |
-  | **GQ4 cold relevant bits** | **WIP foundation**; warm preprocessing can rewrite an 8-of-64 slice, but raw lowering still constructs every child bit before slicing it | Partial-bit demand memo, deterministic demand union, extract/concat/extension/pointwise propagation, explicit omitted-bit model projection, original replay, counters, and measured target-corpus AIG/CNF reduction |
-  | **GQ5 AIG/CNF construction** | **WIP advanced foundation, real-payload-gated**; deterministic AIG structural hashing/identities and reachable-only polarity-aware CNF with direct-root/XOR/mux/private-tree recognition already exist. Artifact v24 now exposes AIG request outcomes and CNF planning/allocation/gate/root, reachability, gate-family, and clause-filter attribution with completeness invariants | Run the real v24 capture and change only the measured lookup/allocation/gate family; require lower construction cost and an end-to-end real-corpus win, not counters or size alone |
+  | **GQ4 cold relevant bits** | **WIP measured foundation**; artifact v25 now performs deterministic conservative demand union with exact extract/concat/extension/pointwise/ITE/rotation propagation and records request/demanded/available/lowered term/symbol bits plus analysis cost. It confirms on an 8-of-64 case that raw lowering still constructs every child bit | Convert the diagnostic demand map into a partial-bit lowering memo, retain explicit omitted-bit model projection and original replay, then require real-corpus AIG/CNF and end-to-end reduction |
+  | **GQ5 AIG/CNF construction** | **WIP advanced foundation, real-payload-gated**; deterministic AIG structural hashing/identities and reachable-only polarity-aware CNF with direct-root/XOR/mux/private-tree recognition already exist. Artifact v25 retains v24's AIG request outcomes and CNF planning/allocation/gate/root, reachability, gate-family, and clause-filter attribution with completeness invariants | Run the real v25 capture and change only the measured lookup/allocation/gate family; require lower construction cost and an end-to-end real-corpus win, not counters or size alone |
   | **GQ6 cold SAT/CDCL** | **WIP foundation, attribution-gated**; subsumption/BVE, XOR/GF(2), VSIDS, phase saving, Luby, and LBD foundations exist | Exact-CNF backend attribution first; tune/default a stronger path only where SAT dominates and proof replay stays green |
   | **GQ7 warm delta entry** | **WIP foundation**; retained CNF/search state exists, but the deduplicated cold corpus cannot measure prefix reuse and Glaurung still creates a fresh solver for every check | Capture an ordered scope/path trace, preprocess only new/affected terms, wire persistent per-worker/path push/assert/check/pop, control concretization, and publish real-driver per-check cost plus warm break-even depth |
   | **GQ8 verdict/CNF cache** | **TODO, ordered-trace-gated** | Measure duplicates/prefixes first; prefer retained warm state, then add versioned exact-query reuse only where justified, with deterministic bounds and mandatory original replay |
   | **GQ9 auto cost model/docs** | **TODO**; P1.8 shape/resource probes are only the general foundation | Telemetry-visible raw/cheap/configured/warm choice that beats or matches fixed policies and documents embedder guidance |
-  | **GQ10 real-lifter regression tier** | **BLOCKED on payload transfer, not capture design**; the producer committed the 128-entry manifest and capture recipe, while artifact-v24 validity/attribution/paired-shape/AIG-CNF-construction/replay/experiment/determinism/bounded-resource gates, a strict versioned capture-index generator, manifest-v1 exact membership/SHA-256/expected-verdict/family/tier contract, independent-process repetition/variance summarization, fail-closed same-environment cross-commit comparison, and separate performance/proof recipes are landed | Transfer the hash-bound real query bytes, repair/validate the self-contained full pack, then land the regular representative gate, repeated scheduled full run, proof companion, cross-commit baseline, and corpus-grounded regression thresholds |
+  | **GQ10 real-lifter regression tier** | **BLOCKED on payload transfer, not capture design**; the producer committed the 128-entry manifest and capture recipe, while artifact-v25 validity/attribution/paired-shape/bit-demand/AIG-CNF-construction/replay/experiment/determinism/bounded-resource gates, a strict versioned capture-index generator, manifest-v1 exact membership/SHA-256/expected-verdict/family/tier contract, independent-process repetition/variance summarization, fail-closed same-environment cross-commit comparison, and separate performance/proof recipes are landed | Transfer the hash-bound real query bytes, repair/validate the self-contained full pack, then land the regular representative gate, repeated scheduled full run, proof companion, cross-commit baseline, and corpus-grounded regression thresholds |
 
   **Next actions:** (1) receive or regenerate the 128 Glaurung `.smt2` files
   plus strict hash-free capture index without normalizing away their
@@ -488,14 +494,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   duplicate exclusions, and byte-complete representative/full roots; (2)
   establish the five-process raw GQ1/GQ10 baseline plus matching proof companion
   at 100% decided and zero errors/disagreements/replay failures using the landed
-  policy-specific recipes; (3) add demanded/actually-lowered bit telemetry to
-  complement the landed residual-GQ3 and AIG/CNF construction attribution so
-  the real run selects a measured slice; (4) draft the exact-extract rewrite ADR and
+  policy-specific recipes; (3) use the landed residual-GQ3, bit-demand, and
+  AIG/CNF construction attribution to select the measured slice; partition by
+  family/verdict only if per-instance evidence is insufficient; (4) draft the exact-extract rewrite ADR and
   tests, then implement GQ3
   before the larger GQ4 demand-lowering contract only if the counters confirm
   the ranking; (5) define an ordered Glaurung path/scope trace and controlled
   concretization boundary before GQ7/GQ8 warm integration or caching.
-  Until the manifest-bound payload is transferred and reproduced under v24,
+  Until the manifest-bound payload is transferred and reproduced under v25,
   instrumentation/ingestion work may proceed and the quantified Lean lane may
   continue, but neither the producer's older artifact nor a synthetic-only
   performance win closes a GQ item.
@@ -516,7 +522,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   separate 12-case quantified-UF matrix is jointly SAT/replayed at widths
   1--257. **Next:** extend the checked SAT boundary beyond one direct source
   term—piecewise or multiple dependent Skolems, or a separate function-model
-  contract—while the real Glaurung payload and artifact-v24 reproduction remain
+  contract—while the real Glaurung payload and artifact-v25 reproduction remain
   the mandatory GQ1/GQ10 gate.
 
 - **2026-07-14 — ADR-0124/0125 Lean alternation reconstruction is DONE under
@@ -692,7 +698,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   external Glaurung capture is the primary 100%-decided client gate. Its
   producer-side manifest and artifact-v17 result are now visible, but the query
   bytes are not present in this checkout, so the 2.10x result has not yet been
-  reproduced under artifact v24 and no parity claim is made. Next: obtain the
+  reproduced under artifact v25 and no parity claim is made. Next: obtain the
   manifest-bound payload, run `just bench-glaurung-qfbv`, and profile only
   comparable zero-error/zero-disagreement runs.
 
@@ -2283,6 +2289,21 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-14 — artifact v25 measures the GQ4 relevant-bit opportunity.** A
+  public `BitDemandStats` profile now propagates conservative structural demand
+  from roots, exactly through extract, concat, zero/sign extension, pointwise
+  BV operations, `ite`, rotations, and FP bit reinterpretation, with a
+  full-operand fallback elsewhere. It records request, unique-demanded,
+  available, and actually lowered term/symbol bits plus nested analysis time.
+  Typed solver stats and per-instance/corpus artifacts expose the counts,
+  demanded/available and lowered/demanded ratios, and coverage invariants. The
+  focused `extract(7,0,x64) == c8` regression measures 25/81 demanded term bits
+  and 8/64 demanded symbol bits while current lowering materializes 81/81 and
+  64/64, turning GQ4's hypothesis into a falsifiable baseline without changing
+  lowering or model semantics. Repetition/comparison tooling is version-locked
+  to v25. Focused BV/solver/benchmark tests and strict Clippy pass under the
+  4 GiB cap; the real payload remains the optimization admission gate.
+
 - **2026-07-14 — artifact v24 attributes AIG and CNF construction.** The AIG
   now counts primitive AND requests and classifies each as a trivial identity/
   complement simplification, absorption/consensus simplification, structural-
@@ -2556,7 +2577,7 @@ plan is built and committed on the current branch:
   removes most discarded AIG gates on an 8-bit slice of a 64-bit operation;
   exhaustive evaluator and Z3 differential routes preserve denotation. The
   reproducible Glaurung recipe requires the external query payload; the visible
-  producer-side artifact-v17 result does not replace an artifact-v24 rerun and
+  producer-side artifact-v17 result does not replace an artifact-v25 rerun and
   therefore carries no current parity claim.
 - **2026-07-13 — ADR-0134 accepts checked query-scoped QF_BV universal
   instances.** Added exact query/source binding, complete typed instance
