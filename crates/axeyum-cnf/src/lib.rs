@@ -1848,57 +1848,62 @@ impl<'a> TseitinEncoder<'a> {
     ) -> Result<(), CnfError> {
         if encode_forward {
             for factor in &gate.factors {
-                let mut clause = vec![out.negated()];
                 match factor {
-                    AndFactor::Lit(lit) => clause.push(self.encode_lit(*lit)),
+                    AndFactor::Lit(lit) => {
+                        self.add_encoded_clause(&[out.negated(), self.encode_lit(*lit)])?;
+                    }
                     AndFactor::NotAnd(lhs, rhs) => {
-                        clause.push(self.encode_lit(*lhs).negated());
-                        clause.push(self.encode_lit(*rhs).negated());
+                        self.add_encoded_clause(&[
+                            out.negated(),
+                            self.encode_lit(*lhs).negated(),
+                            self.encode_lit(*rhs).negated(),
+                        ])?;
                     }
                 }
-                self.add_encoded_clause(&clause)?;
             }
         }
 
         if encode_reverse {
-            for clause in self.not_and_reverse_clauses(out, &gate.factors) {
-                self.add_encoded_clause(&clause)?;
-            }
+            self.encode_not_and_reverse(out, gate.factors)?;
         }
         Ok(())
     }
 
-    fn not_and_reverse_clauses(
-        &self,
+    fn encode_not_and_reverse(
+        &mut self,
         out: EncodedLit,
-        factors: &[AndFactor; 2],
-    ) -> Vec<Vec<EncodedLit>> {
-        let mut reverse_clauses = vec![vec![out]];
-        for factor in factors {
-            match factor {
-                AndFactor::Lit(lit) => {
-                    let lit = self.encode_lit(*lit).negated();
-                    for clause in &mut reverse_clauses {
-                        clause.push(lit);
-                    }
-                }
-                AndFactor::NotAnd(lhs, rhs) => {
-                    let lhs = self.encode_lit(*lhs);
-                    let rhs = self.encode_lit(*rhs);
-                    let mut expanded = Vec::with_capacity(reverse_clauses.len() * 2);
-                    for clause in reverse_clauses {
-                        let mut lhs_clause = clause.clone();
-                        lhs_clause.push(lhs);
-                        expanded.push(lhs_clause);
-                        let mut rhs_clause = clause;
-                        rhs_clause.push(rhs);
-                        expanded.push(rhs_clause);
-                    }
-                    reverse_clauses = expanded;
-                }
+        factors: [AndFactor; 2],
+    ) -> Result<(), CnfError> {
+        match factors {
+            [AndFactor::Lit(lhs), AndFactor::Lit(rhs)] => self.add_encoded_clause(&[
+                out,
+                self.encode_lit(lhs).negated(),
+                self.encode_lit(rhs).negated(),
+            ]),
+            [AndFactor::Lit(lit), AndFactor::NotAnd(lhs, rhs)] => {
+                let lit = self.encode_lit(lit).negated();
+                self.add_encoded_clause(&[out, lit, self.encode_lit(lhs)])?;
+                self.add_encoded_clause(&[out, lit, self.encode_lit(rhs)])
+            }
+            [AndFactor::NotAnd(lhs, rhs), AndFactor::Lit(lit)] => {
+                let lit = self.encode_lit(lit).negated();
+                self.add_encoded_clause(&[out, self.encode_lit(lhs), lit])?;
+                self.add_encoded_clause(&[out, self.encode_lit(rhs), lit])
+            }
+            [
+                AndFactor::NotAnd(lhs_a, lhs_b),
+                AndFactor::NotAnd(rhs_a, rhs_b),
+            ] => {
+                let lhs_a = self.encode_lit(lhs_a);
+                let lhs_b = self.encode_lit(lhs_b);
+                let rhs_a = self.encode_lit(rhs_a);
+                let rhs_b = self.encode_lit(rhs_b);
+                self.add_encoded_clause(&[out, lhs_a, rhs_a])?;
+                self.add_encoded_clause(&[out, lhs_a, rhs_b])?;
+                self.add_encoded_clause(&[out, lhs_b, rhs_a])?;
+                self.add_encoded_clause(&[out, lhs_b, rhs_b])
             }
         }
-        reverse_clauses
     }
 
     fn encode_and_tree_gate(
@@ -3176,6 +3181,52 @@ mod tests {
                         }
                     }
                 }
+            }
+        }
+    }
+
+    #[test]
+    fn tseitin_internal_not_and_gate_matches_truth_table_in_both_directions() {
+        let mut aig = Aig::new();
+        let left_a = aig.input("p");
+        let left_b = aig.input("q");
+        let right_a = aig.input("r");
+        let right_b = aig.input("s");
+        let pivot = aig.input("t");
+        let left_or = aig.or(left_a, left_b);
+        let right_or = aig.or(right_a, right_b);
+        let not_and_gate = aig.and(left_or, right_or);
+        let root = aig.xor(not_and_gate, pivot);
+        let encoding = tseitin_encode(&aig, &[root]).unwrap();
+
+        assert_eq!(
+            encoding.stats().not_and_gates,
+            1,
+            "the internal gate should exercise the two-private-factor not-AND encoder"
+        );
+
+        for mask in 0_u8..32 {
+            let inputs = [
+                mask & 1 != 0,
+                mask & 2 != 0,
+                mask & 4 != 0,
+                mask & 8 != 0,
+                mask & 16 != 0,
+            ];
+            let expected_root = aig.eval(root, &inputs).unwrap();
+            let cnf_assignment = encoding
+                .cnf_assignment_from_aig_inputs(&aig, &inputs)
+                .unwrap();
+            assert_eq!(
+                cnf_assignment.satisfies(encoding.formula()).unwrap(),
+                expected_root,
+                "mask={mask:05b}"
+            );
+            if expected_root {
+                let aig_values = encoding
+                    .aig_node_values_from_assignment(&aig, &cnf_assignment)
+                    .unwrap();
+                assert_eq!(aig_lit_value(root, &aig_values).unwrap(), expected_root);
             }
         }
     }
