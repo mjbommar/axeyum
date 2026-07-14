@@ -414,7 +414,11 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   53,247,640/53,748,044 attempts (99.1%) and 48,702,009/49,199,541 emitted
   clauses (99.0%). ADR-0150 retains the common formula index inline and uses a
   secondary vector only for a genuine fingerprint collision, preserving exact
-  equality and formula ownership.
+  equality and formula ownership. The implementation is now green across all
+  283 CNF tests, 31 SAT-BV tests, strict Clippy, formatting, and link checks. A
+  forced-collision test retains two distinct same-fingerprint clauses and
+  suppresses exact repeats of both. Representative/full performance gates are
+  still pending, so ADR-0150 remains proposed.
 
 - **Historical Glaurung build-up through 2026-07-14 (superseded by the measured
   result above).** The ten-item Glaurung QF_BV performance roadmap is an
@@ -585,18 +589,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   | **GQ2 cheap cold tier** | **WIP candidate validated.** Canonical v2 cuts corrected representative/full Axeyum total 17.4%/13.3% and bit blast 37.3%/44.4% | Keep canonical as the candidate; add another word rule only if it reduces downstream AIG/CNF and end-to-end time |
   | **GQ3 coercion peepholes** | **WIP with a corrected production win.** ADR-0142 removes 1,315/1,435 representative opportunities and cuts term bits 57% representative / 72% full; full AIG/CNF size remains roughly flat | Demonstrate circuit-size improvement from any next exact word tranche or narrow the exit criterion explicitly |
   | **GQ4 cold relevant bits** | **WIP but re-ranked.** ADR-0143 separates the diagnostic; post-canonical full demand is 98.16% of term bits and 91.51% of symbol bits | Pursue partial lowering only if family-specific evidence shows a material cone and preserve original replay/model projection |
-  | **GQ5 AIG/CNF construction** | **ACTIVE with two accepted wins, four restored/rejected experiments, and one larger ownership candidate.** ADR-0148/0149 close capacity hints. Proposed ADR-0150 removes the per-fingerprint heap vector and second common-case map probe while preserving collision-safe exact equality; remaining gate/root/planning are 3.19/1.39/1.21 s | Implement ADR-0150 with forced-collision/equivalence tests, then require representative CNF and total wins with identical content/replay before full confirmation |
+  | **GQ5 AIG/CNF construction** | **ACTIVE with two accepted wins, four restored/rejected experiments, and one larger ownership candidate.** ADR-0148/0149 close capacity hints. Proposed ADR-0150 removes the per-fingerprint heap vector and second common-case map probe while preserving collision-safe exact equality; 283 CNF and 31 SAT-BV tests pass | Run the five-process representative gate; require CNF and total wins with identical content/replay before full confirmation |
   | **GQ6 cold SAT/CDCL** | **WIP foundation, attribution-gated**; subsumption/BVE, XOR/GF(2), VSIDS, phase saving, Luby, and LBD foundations exist | Exact-CNF backend attribution first; tune/default a stronger path only where SAT dominates and proof replay stays green |
   | **GQ7 warm delta entry** | **WIP foundation**; retained CNF/search state exists, but the deduplicated cold corpus cannot measure prefix reuse and Glaurung still creates a fresh solver for every check | Capture an ordered scope/path trace, preprocess only new/affected terms, wire persistent per-worker/path push/assert/check/pop, control concretization, and publish real-driver per-check cost plus warm break-even depth |
   | **GQ8 verdict/CNF cache** | **TODO, ordered-trace-gated** | Measure duplicates/prefixes first; prefer retained warm state, then add versioned exact-query reuse only where justified, with deterministic bounds and mandatory original replay |
   | **GQ9 auto cost model/docs** | **TODO**; P1.8 shape/resource probes are only the general foundation | Telemetry-visible raw/cheap/configured/warm choice that beats or matches fixed policies and documents embedder guidance |
   | **GQ10 real-lifter regression tier** | **WIP; access-controlled representative and well-typed full tiers validate.** Artifact v27 baseline repetitions/full trials and ADR-0144/0145 accepted full confirmations are complete; 2,225 malformed dumps are isolated | Add a data-availability-aware regular gate, establish repeated full-tier variance thresholds, and fix producer validation/dedup before calling the raw capture authoritative |
 
-  **Next actions:** (1) implement ADR-0150's inline primary fingerprint index
-  plus collision-only side table and forced-collision coverage; (2) validate
-  exact CNF equivalence and run five clean representative processes, requiring
+  **Next actions:** (1) run five clean representative processes for ADR-0150,
+  validating exact CNF equivalence and requiring
   an end-to-end/CNF win with bounded memory and identical content before a full
-  confirmation; (3) keep affine
+  confirmation; (2) if that gate passes, run the 13,462-query full tier and
+  accept only a stable real-client win; (3) keep affine
   BV add/sub normalization behind evidence that it reduces AIG/CNF, and keep SAT
   work gated;
   (4) fix Glaurung's explicit width coercion, strict dump validation, and atomic

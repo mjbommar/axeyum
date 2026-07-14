@@ -43,9 +43,13 @@ then required; otherwise restore the ADR-0145 representation and defer this ADR.
 
 ## Evidence
 
-The structural and corpus attribution above selects the experiment. Performance
-evidence is pending implementation and the predeclared representative/full
-gates.
+The structural and corpus attribution above selects the experiment. The
+implementation passes all 283 `axeyum-cnf` tests, 31 SAT-BV integration tests,
+strict Clippy, formatting, and documentation-link checks under the 4 GiB cap.
+Its forced-collision regression inserts two distinct clauses under the same
+fingerprint, retains both in formula order, and suppresses exact repeats of
+both. Performance evidence remains pending the predeclared
+representative/full gates.
 
 ## Alternatives
 

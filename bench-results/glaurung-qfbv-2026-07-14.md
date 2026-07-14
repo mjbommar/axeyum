@@ -295,4 +295,6 @@ emits 49,199,541 clauses; `register-slice` plus `slice-partial` contribute
 (99.0%). Proposed ADR-0150 will retain the first formula index inline and use a
 secondary vector only for genuine fingerprint collisions. Exact equality,
 formula ownership, clause order, decisions, and replay remain acceptance
-invariants; no performance claim is admitted before representative/full gates.
+invariants. The implementation passes 283 CNF tests, 31 SAT-BV tests, strict
+Clippy, and forced-collision coverage; no performance claim is admitted before
+representative/full gates.

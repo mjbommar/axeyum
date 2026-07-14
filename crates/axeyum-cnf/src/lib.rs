@@ -2106,25 +2106,49 @@ impl<'a> TseitinEncoder<'a> {
         }
         clause.sort_unstable();
         let fingerprint = clause_fingerprint(&clause);
-        let duplicate = self
-            .clause_index
-            .get(&fingerprint)
-            .is_some_and(|indices| bucket_contains_clause(&self.formula, indices, &clause));
-        if duplicate {
-            self.duplicate_clauses_skipped = self.duplicate_clauses_skipped.saturating_add(1);
-            return Ok(());
+        self.insert_canonical_clause(clause, fingerprint)
+    }
+
+    fn insert_canonical_clause(
+        &mut self,
+        clause: Vec<CnfLit>,
+        fingerprint: u64,
+    ) -> Result<(), CnfError> {
+        let primary = &mut self.clause_index.primary;
+        let collisions = &mut self.clause_index.collisions;
+        match primary.entry(fingerprint) {
+            std::collections::hash_map::Entry::Vacant(entry) => {
+                let index = self.formula.clauses().len();
+                self.formula.add_clause(CnfClause::new(clause))?;
+                entry.insert(index);
+            }
+            std::collections::hash_map::Entry::Occupied(entry) => {
+                let duplicate = self.formula.clauses()[*entry.get()].lits() == clause.as_slice()
+                    || collisions.get(&fingerprint).is_some_and(|indices| {
+                        clause_indices_contain(&self.formula, indices, &clause)
+                    });
+                if duplicate {
+                    self.duplicate_clauses_skipped =
+                        self.duplicate_clauses_skipped.saturating_add(1);
+                    return Ok(());
+                }
+
+                let index = self.formula.clauses().len();
+                self.formula.add_clause(CnfClause::new(clause))?;
+                collisions.entry(fingerprint).or_default().push(index);
+            }
         }
-        let index = self.formula.clauses().len();
-        self.formula.add_clause(CnfClause::new(clause))?;
-        self.clause_index
-            .entry(fingerprint)
-            .or_default()
-            .push(index);
         Ok(())
     }
 }
 
-type ClauseIndex = HashMap<u64, Vec<usize>, BuildHasherDefault<FingerprintHasher>>;
+type FingerprintMap<T> = HashMap<u64, T, BuildHasherDefault<FingerprintHasher>>;
+
+#[derive(Default)]
+struct ClauseIndex {
+    primary: FingerprintMap<usize>,
+    collisions: FingerprintMap<Vec<usize>>,
+}
 
 /// The clause key is already a mixed 64-bit fingerprint. Preserve it as the
 /// table hash so lookup has no second hashing pass. The fallback `write` keeps
@@ -2154,7 +2178,7 @@ impl Hasher for FingerprintHasher {
     }
 }
 
-fn bucket_contains_clause(formula: &CnfFormula, indices: &[usize], clause: &[CnfLit]) -> bool {
+fn clause_indices_contain(formula: &CnfFormula, indices: &[usize], clause: &[CnfLit]) -> bool {
     indices
         .iter()
         .any(|&index| formula.clauses()[index].lits() == clause)
@@ -2859,22 +2883,44 @@ mod tests {
 
     use super::{
         CnfClause, CnfError, CnfLit, CnfVar, EncodedLit, IncrementalCnf, IncrementalSat,
-        RustSatBatsatSolver, SatProofStatus, SatResult, SatSolver, aig_lit_value,
-        bucket_contains_clause, parse_dimacs, rustsat_batsat_determinism,
-        solve_with_rustsat_batsat, solve_with_rustsat_batsat_limits, tseitin_encode,
+        RustSatBatsatSolver, SatProofStatus, SatResult, SatSolver, aig_lit_value, parse_dimacs,
+        rustsat_batsat_determinism, solve_with_rustsat_batsat, solve_with_rustsat_batsat_limits,
+        tseitin_encode,
     };
 
     #[test]
-    fn clause_fingerprint_bucket_requires_exact_equality() {
+    fn clause_fingerprint_collision_requires_exact_equality() {
         let p = CnfLit::positive(CnfVar::new(0).unwrap());
         let q = CnfLit::positive(CnfVar::new(1).unwrap());
-        let mut formula = super::CnfFormula::new(2);
-        formula.add_clause(CnfClause::new(vec![p])).unwrap();
+        let aig = Aig::new();
+        let mut encoder = super::TseitinEncoder::new(&aig);
+        encoder.formula = super::CnfFormula::new(2);
 
-        assert!(bucket_contains_clause(&formula, &[0], &[p]));
-        assert!(
-            !bucket_contains_clause(&formula, &[0], &[q]),
-            "a fingerprint collision must not suppress a distinct clause"
+        let forced_fingerprint = 7;
+        encoder
+            .insert_canonical_clause(vec![p], forced_fingerprint)
+            .unwrap();
+        encoder
+            .insert_canonical_clause(vec![q], forced_fingerprint)
+            .unwrap();
+        encoder
+            .insert_canonical_clause(vec![p], forced_fingerprint)
+            .unwrap();
+        encoder
+            .insert_canonical_clause(vec![q], forced_fingerprint)
+            .unwrap();
+
+        assert_eq!(
+            encoder.formula.clauses(),
+            &[CnfClause::new(vec![p]), CnfClause::new(vec![q])],
+            "a fingerprint collision must retain both distinct clauses"
+        );
+        assert_eq!(encoder.duplicate_clauses_skipped, 2);
+        assert_eq!(encoder.clause_index.primary.len(), 1);
+        assert_eq!(encoder.clause_index.collisions.len(), 1);
+        assert_eq!(
+            encoder.clause_index.collisions[&forced_fingerprint],
+            vec![1]
         );
     }
 

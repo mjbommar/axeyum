@@ -451,7 +451,9 @@ validity gates.
    primary formula index and allocate a secondary bucket only for genuine
    fingerprint collisions; preserve exact equality, formula ownership, clause
    order, and replay. Forced-collision tests and the usual representative/full
-   gates remain mandatory.
+   gates remain mandatory. The candidate implementation passes all 283 CNF
+   tests, 31 SAT-BV tests, strict Clippy, and forced-collision coverage; run the
+   representative gate next.
 3. Keep the next exact word tranche around affine BV add/sub constant-chain
    normalization and cheap duplicate-root handling behind evidence that it
    reduces downstream AIG/CNF for the

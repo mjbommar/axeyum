@@ -53,6 +53,8 @@ session state.
 > `Vec<usize>` and performs separate lookup/insertion probes for almost every
 > unique fingerprint. Proposed ADR-0150 will retain one inline primary formula
 > index per fingerprint and allocate a side bucket only on a genuine collision.
+> The candidate implementation and forced-collision semantics are green; it
+> remains proposed until the representative/full client gates decide it.
 > The capture and
 > implementation audit has been expanded into the dependency-ordered
 > [Glaurung QF_BV execution plan](docs/research/08-planning/glaurung-qfbv-execution-plan.md):
@@ -121,7 +123,9 @@ median/mean 0.83%/0.67% and is restored. Capacity hints are exhausted; next
 test ADR-0150's larger ownership slice: replace the per-fingerprint heap vector
 and double common-case map probe with an inline primary index plus a
 collision-only side table. `register-slice` and `slice-partial` contribute
-99.1% of full clause attempts, so this directly targets the client hotspot.
+99.1% of full clause attempts, so this directly targets the client hotspot. The
+implementation passes all 283 CNF tests, 31 SAT-BV tests, and strict Clippy;
+run the representative acceptance gate next.
 Affine word work must still show a downstream circuit/CNF win before outranking
 it.
 Broad GQ4 partial lowering follows its small post-canonical full-tier
