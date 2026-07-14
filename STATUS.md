@@ -379,10 +379,11 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   memory.
   The committed
   [`glaurung-repetition-smoke`](bench-results/glaurung-repetition-smoke/summary.json)
-  exercises three independent trials from clean revision `319a166b`: every run
+  exercises three independent artifact-v21 trials from clean revision
+  `d39dc6ac`: every run
   is 2/2 decided, manifest-agreed, and Z3-agreed with zero errors or replay
-  failures. The summary records Axeyum-total CV 6.88%, Z3-total CV 2.64%, and
-  ratio CV 4.35%, plus every stage distribution. Those sub-millisecond micro
+  failures. The summary records Axeyum-total CV 3.66%, Z3-total CV 2.36%, and
+  ratio CV 6.06%, plus every stage distribution. Those sub-millisecond micro
   values validate variance plumbing only and carry no Glaurung performance
   claim.
   Cross-commit comparison now revalidates both repetition summaries from their
@@ -2111,7 +2112,13 @@ plan is built and committed on the current branch:
   from the same option constructor the wrapper uses and pinned by a Rust test;
   the repeated-run validator fails closed on profile drift. This fixes the
   fixed-seed acceptance gate without claiming deterministic wall time or
-  discharging the separate deterministic-resource-limit requirement.
+  discharging the separate deterministic-resource-limit requirement. Clean
+  revision `d39dc6ac` produced the v21 performance and proof smokes plus a
+  three-trial repeated baseline: both direct smokes are 2/2
+  decided/manifest-agreed/Z3-agreed with zero errors, disagreements, or model
+  replay failures; the proof companion checks its 1/1 UNSAT with none missing;
+  and the repeated baseline reports Axeyum/Z3/ratio CVs of 3.66%/2.36%/6.06%.
+  These remain micro plumbing results, not Glaurung performance evidence.
 - **2026-07-13 — GQ1/GQ10 artifact-v20 reproducible experiment identity
   implemented.** Artifacts now distinguish source revision from execution
   environment: Git revision/cleanliness, Cargo.lock SHA-256, rustc/cargo, exact
