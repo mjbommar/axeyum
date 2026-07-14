@@ -241,3 +241,16 @@ identical CNF/verdict/replay shape. The projected full planning saving is only
 about 0.03 seconds, so revision `99e93a08` is reverted without a full run and
 ADR-0147 is deferred. Shared gate/root clause normalization and allocation,
 not another planning micro-slice, is next.
+
+## ADR-0148 bounded CNF capacity candidate
+
+Both the outer formula clause vector and collision-safe fingerprint index start
+empty and grow during 53.75 million clause attempts. Existing variable/root
+counts support a no-pass hint:
+`min(5 * cnf_variables + min(roots, 1,024), 65,536)`, with zero reserved for a
+zero-variable encoding. On the full tier it covers all 13,462 final clause
+counts, reserves 69,225,859 aggregate slots for 49,199,541 emitted (1.407x),
+and stays below the approximately 71,566,146 final slots (1.455x) implied by
+ordinary power-of-two vector growth. Proposed ADR-0148 applies the private hint
+to both containers without changing clause content. No performance or memory
+claim is admitted before the clean representative/full gate.

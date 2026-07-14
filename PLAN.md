@@ -41,6 +41,9 @@ session state.
 > regresses total 0.5% / CNF 3.6%, so it too is reverted/deferred. Do not spend
 > another slice on planning's micro-cost; return to shared gate/root clause
 > normalization and allocation, where 53.75 million attempts provide leverage.
+> ADR-0148 is the bounded candidate: pre-size formula headers and the exact
+> dedup index from existing variable/root counts, capped at 65,536 entries and
+> with no new pass. It remains proposed until representative/full acceptance.
 > The capture and
 > implementation audit has been expanded into the dependency-ordered
 > [Glaurung QF_BV execution plan](docs/research/08-planning/glaurung-qfbv-execution-plan.md):
@@ -102,8 +105,10 @@ ADR-0146's reusable direct-root leaf scratch regresses representative median
 total/CNF 1.1%/4.9% and is restored as negative evidence without a full run.
 ADR-0147 then improves planning 2.5% but regresses whole-pipeline total/CNF
 0.5%/3.6% and is likewise restored. Re-attribute shared clause
-normalization/allocation before selecting another bounded GQ5 slice. Bounded
-affine word work must show a downstream circuit/CNF win before outranking it.
+normalization/allocation before selecting another bounded GQ5 slice. ADR-0148's
+bounded container-capacity hint is the first candidate and must pass
+the unchanged performance/memory gate. Affine word work must show a downstream
+circuit/CNF win before outranking it.
 Broad GQ4 partial lowering follows its small post-canonical full-tier
 opportunity (1.84% term bits) unless family-specific evidence reverses the
 rank. Admit GQ6

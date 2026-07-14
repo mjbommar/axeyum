@@ -435,7 +435,9 @@ validity gates.
    planning's full-node reverse-iteration copy and improves planning 2.5%, but
    regresses total/CNF 0.5%/3.6%; it is restored/deferred without a full run.
    Deprioritize planning micro-work and re-attribute shared gate/root clause
-   normalization, formula growth, and index rehash next.
+   normalization, formula growth, and index rehash next. ADR-0148 is the first
+   candidate: a capped no-pass variable/root hint pre-sizes formula headers and
+   the exact-dedup index, subject to representative/full time and memory gates.
 3. Keep the next exact word tranche around affine BV add/sub constant-chain
    normalization and cheap duplicate-root handling behind evidence that it
    reduces downstream AIG/CNF for the
