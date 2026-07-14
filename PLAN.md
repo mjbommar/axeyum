@@ -22,12 +22,13 @@ session state.
 > client-driven measured leaf. The byte-complete Glaurung capture is now
 > regenerated and strictly ingested: 128 representative queries plus a 13,462-
 > query well-typed full tier both decide at 100% with zero disagreements or
-> replay failures. Artifact v26 charges canonical rewrite cost and shows
-> canonical v2 cutting Axeyum time by 48.5% on five representative trials and
-> 57.1% on one full trial. The next action is not SAT tuning or blind partial
-> lowering: make the always-on observational bit-demand pass opt-in (it consumes
-> 29.57/50.75 s of canonical full-tier time), rerun production timing, then take
-> the measured affine-word/CNF residual. The capture and
+> replay failures. Artifact v27 removes the accidental observational bit-demand
+> walk from production: representative raw/canonical medians are 1.65x/1.37x
+> Z3, while full raw/canonical single trials are 3.17x/2.71x. Canonical v2 is a
+> valid 13.3% full-tier production win, but CNF encoding is now the largest
+> stage at 9.40/21.07 s. The next action is not SAT tuning or broad partial
+> lowering: optimize the measured CNF gate/root-emission and duplicate-filtering
+> path for the `register-slice` and `slice-partial` families. The capture and
 > implementation audit has been expanded into the dependency-ordered
 > [Glaurung QF_BV execution plan](docs/research/08-planning/glaurung-qfbv-execution-plan.md):
 > reproduce the current raw one-shot path first, then compare canonical-only
@@ -73,13 +74,16 @@ The byte-complete representative and well-typed full capture contracts and the
 **raw** current-Glaurung one-shot baseline now exist under GQ1/GQ10. Raw,
 canonical-only, and configured policies remain explicitly separate; never
 silently substitute one for another. Residual-rewrite, demanded-bit,
-AIG-hash/rule, and CNF-subphase counters are landed, and ADR-0142 canonical v2
-is a large real-corpus word-DAG/time win. Artifact v26 also exposed that the
-observational demand profiler is accidentally always-on and dominates current
-timing. Make that profiler opt-in and rerun before choosing between a bounded
-affine word tranche and measured CNF construction. Broad GQ4 partial lowering
-now follows its small post-canonical full-tier opportunity (1.84% term bits)
-unless family-specific evidence reverses the rank. Admit GQ6
+AIG-hash/rule, and CNF-subphase counters are landed. ADR-0143 and artifact v27
+remove the observational demand profiler from production while retaining an
+explicit complete diagnostic mode. Corrected full raw/canonical trials are
+24.30/21.07 s versus Z3's 7.66/7.76 s; canonical's 13.3% total win comes from a
+44.4% bit-blast reduction, while CNF remains 9.40 s and now dominates. Take the
+measured GQ5 gate/root-emission and duplicate-handling slice next; bounded
+affine word work must show a downstream circuit/CNF win before outranking it.
+Broad GQ4 partial lowering follows its small post-canonical full-tier
+opportunity (1.84% term bits) unless family-specific evidence reverses the
+rank. Admit GQ6
 SAT-core work only if search becomes material. GQ7--GQ9 require a separate
 ordered path trace because the deduplicated cold corpus erases prefix/frequency
 information; GQ8 follows the exact cache/replay contract rather than treating a
@@ -165,6 +169,13 @@ GQ4 opportunity without yet changing semantics or model projection.
 Artifact v26 charges canonical-only rewrite elapsed to the word-policy stage,
 PAR-2, cold total, and Axeyum/Z3 ratio. Artifact-v25 canonical ratios omitted
 that cost and are diagnostic-only.
+Artifact v27 implements ADR-0143: production lowering skips the observational
+demand walk, retains actual lowered-bit counts, and marks structural demand
+fields unavailable; separately named diagnostic recipes opt in and include the
+profile cost. Five representative raw/canonical production trials have median
+ratios 1.65x/1.37x. Full single trials are 3.17x/2.71x, with every validity gate
+green. Canonical reduces full production time 13.3% and bit blast 44.4%, but
+CNF encoding is now the largest stage at 9.40 s (44.6% of total).
 **GQ3 exact semantic tranche landed (2026-07-14, ADR-0142).** The default
 manifest now composes nested extracts, splits concat-boundary straddles, returns
 whole concat operands directly, and reduces low/high/straddling zero/sign
@@ -175,11 +186,12 @@ has a stable manifest ID, identity model projection, fixed fresh-node bound,
 exhaustive small-width and seeded wider evaluator evidence, and lifter-shaped
 Z3 SAT/UNSAT differential replay. The expanded default benchmark identity is
 `axeyum-rewrite-default-v2`. The real capture now validates the semantic tranche
-as a word-DAG/time win: 1,315/1,435 representative opportunities disappear,
-materialized term bits fall 57% representative / 72% full, and Axeyum total
-falls 48.5% / 57.1% with all validity gates green. GQ3 remains open because
-full-tier AIG/CNF size rises slightly and corrected production timing must first
-remove the observational demand-profiler overhead.
+as a word-DAG/time win: 1,315/1,435 representative opportunities disappear and
+materialized term bits fall 57% representative / 72% full. Corrected v27
+production timing shows a 17.4% representative median / 13.3% full single-trial
+total reduction with all validity gates green. GQ3 remains open because
+full-tier AIG/CNF size rises slightly; another word rule must demonstrate a
+downstream circuit/CNF benefit, not merely remove word-DAG traversal.
 The remaining shadow-diff handoff is also executable: a versioned capture index
 contains the producer-owned ordered path, trusted verdict, family, and tier
 facts, while `--generate-corpus-manifest` checks exact directory membership,
@@ -230,13 +242,15 @@ each recheck all 64 UNSAT rows. Same-revision full raw/canonical trials are
 result summary is
 [`glaurung-qfbv-2026-07-14.md`](bench-results/glaurung-qfbv-2026-07-14.md).
 
-The measurement also found the next blocker: artifact v25's conservative
-bit-demand pass is observational but runs inside every lowering. It costs
-29.57 s of the canonical full tier's 50.75 s. Artifact v27 must make it opt-in
-or fuse it into actual partial lowering and mark profile completeness before a
-new client ratio is accepted. After canonicalization, 98.16% of term bits are
-already demanded, moving broad GQ4 behind the profiler repair and targeted
-affine-word/CNF work unless family data reverses the rank.
+Artifact v27/ADR-0143 resolves the measurement blocker: structural demand is
+opt-in, production records explicit incomplete-profile provenance, and the
+corrected representative/full results are valid. The full canonical pipeline
+is now 1.84 s word rewrite, 5.85 s bit blast, 9.40 s CNF, and 3.78 s SAT.
+`register-slice` and `slice-partial` contribute 20.86/21.07 s total; CNF gate
+emission (4.79 s), root emission (1.91 s), and planning (1.22 s) dominate the
+next actionable tranche. After canonicalization, 98.16% of term bits are
+already demanded, moving broad GQ4 behind measured GQ5 work unless a separate
+family-specific profile reverses the rank.
 The performance command also exposed a mode mismatch: the producer's v17 result
 and Glaurung's current one-shot backend are raw (rewrite off, preprocessing off),
 while the former Axeyum recipe forced `--preprocess`. The artifact-v25 recipes
@@ -978,8 +992,8 @@ AIG sharing reduces ADR-0129's module to **18,576,938 bytes**, with its release
 gate passing in **4.10--4.21 s** (the measured no-rebuild peak is **419,460
 KiB**); a scoped 64 MiB reconstruction
 worker also makes its full debug file pass 9/9 without relying on the harness
-stack. **Next:** repair the Glaurung demand-profiler production boundary and
-rerun artifact-v26 raw/canonical timing before the next affine-word/CNF slice;
+stack. **Next:** take the measured Glaurung CNF gate/root-emission and
+duplicate-filtering slice under artifact v27's corrected production boundary;
 in the depth lane, broaden nested/alternating QSAT and quantified-UF models.
 **Exact source-term BV Skolems are now LANDED (ADR-0141):** the existing
 `forall+ exists` certificate may carry one exact source-reachable, same-width,

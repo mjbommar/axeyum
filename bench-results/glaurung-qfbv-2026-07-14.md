@@ -1,7 +1,8 @@
-# Glaurung QF_BV capture and artifact-v26 baseline
+# Glaurung QF_BV capture and artifact-v26/v27 baseline
 
 Date: 2026-07-14  
 Axeyum measurement revision: `f1e02094d2e150db4f46e5725868f55d6a5f4d65`  
+Axeyum production rerun revision: `5bd9b9658034fc123af57656d8c030c84071da1e`
 Glaurung capture revision: `286f7445142347f6beb46ca18f2ebbd48b9c21d1`  
 Data location: access-controlled; query bytes are not committed here.
 
@@ -75,7 +76,7 @@ Canonical reduces full-tier Axeyum time by 57.1% and materialized term bits by
 72.0% (82.36M to 23.03M). It does not reduce final circuit size: AIG nodes rise
 3.0% and CNF clauses rise 1.2%. The speedup is primarily less word-DAG traversal.
 
-## Measurement finding and next order
+## Artifact-v26 measurement finding (superseded by v27 below)
 
 Artifact v25's conservative bit-demand diagnostic currently runs inside every
 production lowering. On the canonical full tier it costs 29.57 s, 83.0% of
@@ -90,7 +91,7 @@ of symbol bits are live on the full tier. That moves broad GQ4 partial-bit
 lowering behind the measurement repair and targeted word/CNF work unless a
 family-specific profile shows a larger cone reduction.
 
-The next implementation order is:
+The implementation order inferred before the production correction was:
 
 1. make demand profiling opt-in and rerun representative/full raw and canonical
    v2 at one clean revision;
@@ -104,3 +105,49 @@ The next implementation order is:
    deduplication; and
 6. capture an ordered path/scope trace before warm integration or caching.
 
+## Artifact-v27 production correction
+
+ADR-0143 makes the structural demand walk opt-in. Normal lowering still
+materializes the complete circuit and retains actual term/symbol-bit counts,
+but does not pay for observational request/availability analysis. Artifact v27
+marks structural demand fields unavailable rather than encoding “not measured”
+as zero. All raw artifacts are retained beside the access-controlled capture at
+`axeyum-results/5bd9b965-v27/`; the two full artifacts have SHA-256 digests
+`7339841054356719ca0d22fa8c66eb382e707231c55b3055c1c7a0c3f68970b5`
+(raw) and
+`b6f462958d9dcfb2a1bf528ae85b12c0ade24a661b4fbc3f26963cddcbb61cdd`
+(canonical).
+
+Every v27 trial is 100% decided and manifest/Z3 agreed with zero operational
+errors or model-replay failures.
+
+| Tier/policy | Axeyum | Z3 | ratio | word | bit-blast | CNF | SAT |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| representative raw, p50 of 5 | 0.2505 s | 0.1517 s | 1.65x | 0 | 0.0950 s | 0.1075 s | 0.0424 s |
+| representative canonical, p50 of 5 | 0.2069 s | 0.1505 s | 1.37x | 0.0119 s | 0.0595 s | 0.0922 s | 0.0383 s |
+| full raw, one trial | 24.30 s | 7.66 s | 3.17x | 0 | 10.52 s | 9.83 s | 3.68 s |
+| full canonical, one trial | 21.07 s | 7.76 s | 2.71x | 1.84 s | 5.85 s | 9.40 s | 3.78 s |
+
+The representative Axeyum totals are stable (raw/canonical CV 0.55%/0.51%).
+One canonical Z3 control trial ran in 0.103 seconds rather than roughly
+0.146--0.151 seconds, inflating ratio CV; the reported ratio is therefore the
+five-trial median.
+
+Removing the diagnostic cuts the comparable full raw/canonical totals by
+79.4%/58.5% relative to v26. On the corrected production path, canonical v2
+reduces full Axeyum time by 13.3% and bit-blast time by 44.4%; the earlier 57.1%
+total reduction was dominated by avoiding work in the observational profiler.
+CNF size remains roughly flat and CNF encoding is now the largest canonical
+stage: 9.40 seconds (44.6%), versus 5.85 seconds bit blast (27.8%), 3.78 seconds
+SAT (18.0%), and 1.84 seconds rewriting (8.7%).
+
+Family aggregation makes the next target precise. `register-slice` contributes
+12.08 seconds and `slice-partial` 8.78 seconds of the 21.07-second canonical
+total. Their CNF costs are 4.94 and 4.36 seconds respectively. Across the full
+tier, CNF gate emission costs 4.79 seconds, root emission 1.91 seconds,
+reachability/planning 1.22 seconds, and variable allocation 0.069 seconds;
+53.75 million clause attempts emit 49.20 million clauses and discard 4.25
+million duplicates. GQ5 gate/root emission and duplicate handling therefore
+precede SAT tuning. The bounded affine-word hypothesis remains secondary until
+it demonstrates a circuit/CNF reduction on `slice-partial` rather than only a
+word-DAG reduction.

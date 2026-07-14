@@ -20,14 +20,13 @@ The shortest evidence-backed path to useful Glaurung functionality is:
 7. derive caching and an automatic preprocessing policy from the cold corpus
    and warm trace rather than from synthetic formulas.
 
-The byte-complete 2026-07-14 capture and artifact-v26 results now supersede the
-producer's artifact-v17 estimate. Five representative trials put raw at 6.53x
-Z3 and canonical v2 at 3.42x including rewrite cost; both proof companions
-recheck all 64 UNSAT rows. The well-typed 13,462-query full tier is 15.19x raw
-and 6.32x canonical in one scheduled trial. These high ratios exposed that the
-artifact-v25 structural demand diagnostic itself consumes 58% of canonical
-full-tier Axeyum time. Correcting that production/measurement boundary is the
-next gate; SAT search remains non-dominant.
+The byte-complete 2026-07-14 capture and artifact-v27 results now supersede the
+producer's artifact-v17 estimate and the profiler-confounded v26 timing. Five
+representative production trials put raw at 1.65x Z3 and canonical v2 at 1.37x;
+both earlier proof companions recheck all 64 UNSAT rows. The well-typed
+13,462-query full tier is 3.17x raw and 2.71x canonical in one scheduled trial.
+ADR-0143 removes the artifact-v25 structural demand diagnostic from production
+and proves CNF construction, not SAT, is now the dominant measured stage.
 
 This note expands `PLAN.md` items GQ1--GQ10 into an executable sequence. It does
 not authorize changes to the Glaurung repository; producer-side and explorer
@@ -213,13 +212,13 @@ zero replay/proof failures. Regression thresholds are set only after stable
 same-environment variance exists. This closes the measurement part of GQ1 and
 the corpus-adoption foundation of GQ10.
 
-Measured checkpoint (artifact v26): five representative raw/canonical/
-configured trials all pass the validity gates. Median aggregate ratios are
-6.53x, 3.42x, and 3.54x respectively; canonical's Axeyum total is 48.5% below
-raw. Raw and canonical proof companions each check all 64 UNSAT proofs. One
-scheduled full trial per raw/canonical policy decides all 13,462 well-typed
-rows and records 15.19x versus 6.32x. The full tier still needs repeated trials,
-and no ratio is accepted until the demand-profiler boundary below is repaired.
+Measured checkpoint (artifact v27): five representative raw/canonical trials
+all pass the validity gates. Median aggregate ratios are 1.65x and 1.37x;
+canonical's Axeyum total is 17.4% below raw. Raw and canonical proof companions
+from the same semantic tranche each check all 64 UNSAT proofs. One scheduled
+full trial per raw/canonical policy decides all 13,462 well-typed rows and
+records 3.17x versus 2.71x; canonical is 13.3% faster. The full tier still needs
+repeated trials before setting a regression threshold.
 
 ### G2 — add attribution needed for the first optimization
 
@@ -250,7 +249,11 @@ an always-on observational pass inside `lower_terms`, costing 29.57 s of the
 canonical full tier's 50.75 s. Make it opt-in (or fuse it into actual partial
 lowering), mark profile completeness explicitly, and keep production
 performance artifacts free of observational overhead. Diagnostic artifacts
-remain separate and must not be cited as client ratios.
+remain separate and must not be cited as client ratios. ADR-0143/artifact v27
+now enforce that boundary: production reports structural demand as unavailable
+while retaining actual lowered counts; explicit demand recipes run the complete
+diagnostic. Corrected full raw/canonical totals are 24.30/21.07 s versus Z3
+7.66/7.76 s, and CNF encoding is the largest canonical stage at 9.40 s.
 
 Exit: the counters explain where the measured bit-blast and CNF time goes, and
 their diagnostic overhead is absent from production timing or measured in a
@@ -322,8 +325,8 @@ the real tier without a validity regression.
 
 Current ranking: after canonicalization the full tier demands 98.16% of term
 bits and 91.51% of symbol bits under the conservative analysis. Broad partial
-lowering therefore follows the demand-profiler repair and targeted word/CNF
-work unless family-specific evidence identifies a substantially narrower cone.
+lowering therefore follows measured GQ5 CNF work unless family-specific
+evidence identifies a substantially narrower cone.
 
 ### G5 — measured AIG/CNF engineering (GQ5)
 
@@ -403,9 +406,9 @@ validity gates.
 | Milestone | Roadmap coverage | Stop/go decision |
 |---|---|---|
 | M0 byte-complete capture | GQ1, GQ10 | **Axeyum side done:** representative and well-typed full manifests validate; producer still must prevent 2,225 malformed dumps and atomically deduplicate |
-| M1 raw v26 baseline | GQ1, GQ10 | **Done for representative repetitions and one full trial;** repeat full after profiler repair |
-| M2 diagnostic attribution | GQ1, GQ3--GQ5 | **WIP:** counters localized an observational 29.57 s demand pass that must leave production timing |
-| M3 cheap exact rewriting | GQ2, GQ3 | **Measured win:** canonical cuts Axeyum total 48.5% representative / 57.1% full; corrected production timing and circuit-size exit remain |
+| M1 raw v27 baseline | GQ1, GQ10 | **Done:** five representative raw/canonical production trials plus one full trial each pass every gate; repeat full for accepted changes |
+| M2 diagnostic attribution | GQ1, GQ3--GQ5 | **Done for current boundary:** ADR-0143 removes the 29.57 s observational pass from production and marks diagnostic completeness explicitly |
+| M3 cheap exact rewriting | GQ2, GQ3 | **Measured production win:** canonical cuts Axeyum total 17.4% representative median / 13.3% full and bit blast 37.3% / 44.4%; circuit-size exit remains |
 | M4 demand lowering | GQ4 | Continue only with replay-safe real AIG/CNF and wall-time reductions |
 | M5 AIG/CNF optimization | GQ5 | Take only measured subphase wins; otherwise move to warm integration |
 | M6 SAT re-attribution | GQ6 | Start SAT work only if search becomes material/dominant |
@@ -415,14 +418,16 @@ validity gates.
 
 ## Immediate next actions
 
-1. Make structural bit-demand profiling opt-in (or fuse it into real demand
-   lowering), record profile completeness, and separate diagnostic artifacts
-   from production client ratios.
-2. Rerun five-process representative and scheduled full raw/canonical v2 at one
-   clean revision; retain canonical as the cheap cold candidate only if the
-   corrected end-to-end gate remains non-worse.
-3. Measure and implement the next exact word tranche around affine BV add/sub
-   constant-chain normalization and cheap duplicate-root handling for the
+1. Inspect CNF gate/root clause construction and duplicate filtering on the
+   measured `register-slice` and `slice-partial` families. Gate emission is
+   4.79 s, root emission 1.91 s, planning 1.22 s, and 4.25M duplicate attempts
+   are discarded on the full canonical tier.
+2. Implement one bounded deterministic GQ5 slice, then rerun five-process
+   representative production timing and accept it only on an end-to-end win
+   before confirming on the full tier.
+3. Keep the next exact word tranche around affine BV add/sub constant-chain
+   normalization and cheap duplicate-root handling behind evidence that it
+   reduces downstream AIG/CNF for the
    `slice-partial` hotspot; require proof/model replay and real total-time wins.
 4. Re-attribute CNF after steps 1--3, then choose only the measured GQ5
    subphase. Keep SAT-core work gated and broad GQ4 behind its small measured

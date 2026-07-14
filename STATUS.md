@@ -322,8 +322,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-14 — Glaurung's real capture is ingested; fix observational demand
-  profiling before the next optimization.** Sequential capture at Glaurung
+- **2026-07-14 — Glaurung production profiling is corrected; CNF construction
+  is the next measured optimization.** Sequential capture at Glaurung
   `286f744` produced 15,710 rows / 15,687 unique hashes / 23 duplicate rows /
   zero verdict conflicts. Strict validation rejects 2,225 genuinely ill-sorted
   dumps and binds separate 128-query representative and 13,462-query well-typed
@@ -334,15 +334,23 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   zero errors/disagreements/replay failures and measure 15.19x/6.32x; canonical
   cuts Axeyum total 57.1% and term bits 72%.
 
-  Artifact v26 fixed the canonical timing omission by charging its 12 ms
-  representative / 2.10 s full rewrite cost. The run then exposed artifact
-  v25's demand analysis as an accidental production pass: it costs 29.57 s of
-  canonical full's 50.75 s while changing no lowering decision. Immediate next:
-  make that profiler opt-in or fuse it into actual partial lowering, mark
-  profile completeness, and rerun raw/canonical production timing. The current
-  post-canonical profile demands 98.16% of term bits, so broad GQ4 moves behind
-  this repair and targeted affine add/sub normalization plus corrected CNF
-  attribution. Glaurung must separately fix explicit width coercion, strict dump
+  ADR-0143 and artifact v27 now make structural demand profiling opt-in and
+  distinguish unprofiled production from complete diagnostics. Five-process
+  representative raw/canonical medians are 0.2505/0.2069 s versus Z3
+  0.1517/0.1505 s (1.65x/1.37x). Full raw/canonical single trials are
+  24.30/21.07 s versus Z3 7.66/7.76 s (3.17x/2.71x). All 10 representative
+  trials and both full trials are 100% decided with zero errors,
+  disagreements, or replay failures. Corrected canonical is a 13.3% full-tier
+  win, not v26's profiler-inflated 57.1%.
+
+  Full canonical attribution is now decisive: word rewrite 1.84 s, bit blast
+  5.85 s, CNF 9.40 s, SAT 3.78 s. CNF gate/root emission costs 4.79/1.91 s,
+  planning 1.22 s, and 4.25M of 53.75M clause attempts are duplicates.
+  `register-slice` plus `slice-partial` account for 20.86/21.07 s. Immediate
+  next: inspect and optimize that deterministic CNF emission/dedup path under
+  the same end-to-end gate. Broad GQ4 remains behind it because the complete
+  canonical diagnostic demands 98.16% of term bits. Glaurung must separately
+  fix explicit width coercion, strict dump
   validation, and atomic cross-process deduplication. Full evidence and digests:
   [`bench-results/glaurung-qfbv-2026-07-14.md`](bench-results/glaurung-qfbv-2026-07-14.md).
 
@@ -511,22 +519,23 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
   | ID | Live status | Next acceptance boundary |
   |---|---|---|
-  | **GQ1 real-query profile** | **WIP; representative/full capture and v26 baselines are real and valid.** Representative raw/canonical/configured p50 ratios are 6.53x/3.42x/3.54x across five processes; full raw/canonical single trials are 15.19x/6.32x. All validity gates pass | Make demand profiling opt-in, rerun production artifacts, then repeat the full tier before setting thresholds |
-  | **GQ2 cheap cold tier** | **WIP candidate measured.** Canonical v2 cuts representative/full Axeyum total 48.5%/57.1%, but current timing includes observational profiling | Confirm after profiler repair; then add only measured affine add/sub constant-chain and cheap duplicate-root rules under a new ADR/manifest version |
-  | **GQ3 coercion peepholes** | **WIP with real win.** ADR-0142 removes 1,315/1,435 representative opportunities and cuts term bits 57% representative / 72% full with all replay/proof gates green; full AIG/CNF size rises slightly | Correct production timing and either demonstrate circuit-size improvement from the next exact word tranche or narrow the exit criterion explicitly |
-  | **GQ4 cold relevant bits** | **WIP but re-ranked.** The always-on diagnostic is itself the dominant regression; post-canonical full demand is 98.16% of term bits and 91.51% of symbol bits | First separate profiling from production; pursue partial lowering only if family-specific evidence shows a material cone and preserve original replay/model projection |
-  | **GQ5 AIG/CNF construction** | **WIP, real attribution available but profiler-confounded.** Post-canonical full CNF is 9.20 s and likely the largest construction stage after diagnostic removal | Re-profile production, then change only the measured CNF/AIG subphase and require end-to-end win |
+  | **GQ1 real-query profile** | **DONE for the current cold attribution boundary.** Artifact v27 representative raw/canonical p50 ratios are 1.65x/1.37x; full single trials are 3.17x/2.71x. All validity gates pass and profiler provenance is explicit | Repeat full trials when accepting an optimization; thresholds require more full-tier repetitions |
+  | **GQ2 cheap cold tier** | **WIP candidate validated.** Canonical v2 cuts corrected representative/full Axeyum total 17.4%/13.3% and bit blast 37.3%/44.4% | Keep canonical as the candidate; add another word rule only if it reduces downstream AIG/CNF and end-to-end time |
+  | **GQ3 coercion peepholes** | **WIP with a corrected production win.** ADR-0142 removes 1,315/1,435 representative opportunities and cuts term bits 57% representative / 72% full; full AIG/CNF size remains roughly flat | Demonstrate circuit-size improvement from any next exact word tranche or narrow the exit criterion explicitly |
+  | **GQ4 cold relevant bits** | **WIP but re-ranked.** ADR-0143 separates the diagnostic; post-canonical full demand is 98.16% of term bits and 91.51% of symbol bits | Pursue partial lowering only if family-specific evidence shows a material cone and preserve original replay/model projection |
+  | **GQ5 AIG/CNF construction** | **ACTIVE, production-attributed.** Full canonical CNF is 9.40/21.07 s; gate/root/planning are 4.79/1.91/1.22 s and duplicate filtering sees 4.25M duplicate attempts | Inspect clause construction/dedup ownership, take one bounded deterministic slice, and require representative then full end-to-end wins |
   | **GQ6 cold SAT/CDCL** | **WIP foundation, attribution-gated**; subsumption/BVE, XOR/GF(2), VSIDS, phase saving, Luby, and LBD foundations exist | Exact-CNF backend attribution first; tune/default a stronger path only where SAT dominates and proof replay stays green |
   | **GQ7 warm delta entry** | **WIP foundation**; retained CNF/search state exists, but the deduplicated cold corpus cannot measure prefix reuse and Glaurung still creates a fresh solver for every check | Capture an ordered scope/path trace, preprocess only new/affected terms, wire persistent per-worker/path push/assert/check/pop, control concretization, and publish real-driver per-check cost plus warm break-even depth |
   | **GQ8 verdict/CNF cache** | **TODO, ordered-trace-gated** | Measure duplicates/prefixes first; prefer retained warm state, then add versioned exact-query reuse only where justified, with deterministic bounds and mandatory original replay |
   | **GQ9 auto cost model/docs** | **TODO**; P1.8 shape/resource probes are only the general foundation | Telemetry-visible raw/cheap/configured/warm choice that beats or matches fixed policies and documents embedder guidance |
-  | **GQ10 real-lifter regression tier** | **WIP; access-controlled representative and well-typed full tiers validate.** The representative repetition/proof lane and one full raw/canonical trial are complete; 2,225 malformed dumps are isolated | Add a data-availability-aware regular gate, repeat full after profiler repair, and fix producer validation/dedup before calling the raw capture authoritative |
+  | **GQ10 real-lifter regression tier** | **WIP; access-controlled representative and well-typed full tiers validate.** Artifact v27 representative repetitions and one full raw/canonical production trial are complete; 2,225 malformed dumps are isolated | Add a data-availability-aware regular gate, repeat full for accepted optimizations, and fix producer validation/dedup before calling the raw capture authoritative |
 
-  **Next actions:** (1) make structural demand profiling opt-in or part of real
-  partial lowering, expose profile completeness, and rerun v26+ production raw/
-  canonical repetitions; (2) add a bounded exact affine BV add/sub constant-
-  chain normalization tranche for the measured `slice-partial` residual; (3)
-  re-attribute and select the concrete CNF/AIG subphase, keeping SAT work gated;
+  **Next actions:** (1) inspect CNF gate/root clause construction and duplicate
+  filtering on `register-slice`/`slice-partial`, then implement one bounded
+  deterministic GQ5 slice; (2) rerun representative production repetitions and
+  accept only an end-to-end win before a full-tier confirmation; (3) keep affine
+  BV add/sub normalization behind evidence that it reduces AIG/CNF, and keep SAT
+  work gated;
   (4) fix Glaurung's explicit width coercion, strict dump validation, and atomic
   cross-process dedup/conflict handling; (5) define the ordered path/scope trace
   and controlled concretization boundary before warm reuse or caching.
