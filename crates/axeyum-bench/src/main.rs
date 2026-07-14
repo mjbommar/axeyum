@@ -51,7 +51,7 @@ mod run {
     use serde_json::{Value as JsonValue, json};
     use sha2::{Digest, Sha256};
 
-    const ARTIFACT_VERSION: u32 = 25;
+    const ARTIFACT_VERSION: u32 = 26;
     const CORPUS_MANIFEST_VERSION: u64 = 1;
     const CONTENT_HASH_PREFIX: &str = "sha256:";
     const DETERMINISM_PROFILE: &str = "axeyum-bench-fixed-seeds-v1";
@@ -2484,11 +2484,16 @@ mod run {
         } else {
             None
         };
-        let word_preprocess = if args.preprocess {
+        let configured_preprocess = if args.preprocess {
             preprocess_start.elapsed()
         } else {
             Duration::ZERO
         };
+        // Charge every selected word policy to the Axeyum side of the cold
+        // comparison. Before artifact v26 the canonical-only harness rewrite
+        // happened before this timer and made its Axeyum/Z3 ratio omit the
+        // optimization's own cost.
+        let word_preprocess = rewrite.elapsed + configured_preprocess;
         let output_shape = TermStats::compute(&script.arena, &rewrite.assertions);
         let post_word_query_shape =
             QueryShapeSample::compute(&script.arena, &rewrite.assertions, &output_shape);
@@ -2778,6 +2783,7 @@ mod run {
     struct RewriteRun {
         assertions: Vec<axeyum_ir::TermId>,
         report: RewriteReport,
+        elapsed: Duration,
     }
 
     /// Runs the model-sound word-level passes (`propagate_values` then
@@ -2815,13 +2821,16 @@ mod run {
             RewriteMode::Off => RewriteRun {
                 assertions: script.assertions.clone(),
                 report: RewriteReport::default(),
+                elapsed: Duration::ZERO,
             },
             RewriteMode::Default => {
+                let start = Instant::now();
                 let outcome = canonicalize_terms(&mut script.arena, &script.assertions)
                     .expect("default rewrite preserves IR well-formedness");
                 RewriteRun {
                     assertions: outcome.terms,
                     report: outcome.report,
+                    elapsed: start.elapsed(),
                 }
             }
         }
@@ -4490,6 +4499,7 @@ mod run {
             .map_or(JsonValue::Null, |changed| json!(changed));
         json!({
             "mode": mode.as_str(),
+            "elapsed_ms": duration_ms_f64(rewrite.elapsed),
             "changed": rewrite.report.changed(),
             "applications": usize_to_u64(rewrite.report.applications().len()),
             "rule_counts": rule_counts,

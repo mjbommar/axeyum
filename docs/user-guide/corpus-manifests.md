@@ -1,6 +1,6 @@
 # Versioned corpus manifests
 
-`axeyum-bench` artifact version 25 can bind a run to a versioned corpus
+`axeyum-bench` artifact version 26 can bind a run to a versioned corpus
 manifest. This is the ingestion boundary for the Glaurung QF_BV client tier:
 timing does not begin until the harness proves that the directory contains
 exactly the declared queries and that every query still has its declared
