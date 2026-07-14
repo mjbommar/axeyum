@@ -7,7 +7,7 @@
 
 use axeyum_aig::{Aig, AigLit, AigNode, AigNodeId};
 use std::cell::Cell;
-use std::collections::BTreeSet;
+use std::collections::BTreeMap;
 use std::time::Duration;
 
 // Monotonic clock: the browser has no `std` clock, so on wasm32 use `web-time`'s
@@ -1477,7 +1477,7 @@ struct TseitinEncoder<'a> {
     not_ite_gates: Vec<Option<NotIteGate>>,
     not_and_gates: Vec<Option<NotAndGate>>,
     and_tree_gates: Vec<Option<AndTreeGate>>,
-    clause_keys: BTreeSet<Vec<CnfLit>>,
+    clause_index: BTreeMap<u64, Vec<usize>>,
     variable_bindings: Vec<CnfVarBinding>,
     clause_attempts: u64,
     tautological_clauses_skipped: u64,
@@ -1498,7 +1498,7 @@ impl<'a> TseitinEncoder<'a> {
             not_ite_gates: vec![None; aig.node_count()],
             not_and_gates: vec![None; aig.node_count()],
             and_tree_gates: vec![None; aig.node_count()],
-            clause_keys: BTreeSet::new(),
+            clause_index: BTreeMap::new(),
             variable_bindings: Vec::new(),
             clause_attempts: 0,
             tautological_clauses_skipped: 0,
@@ -2099,12 +2099,43 @@ impl<'a> TseitinEncoder<'a> {
             }
         }
         clause.sort_unstable();
-        if !self.clause_keys.insert(clause.clone()) {
+        let fingerprint = clause_fingerprint(&clause);
+        let duplicate = self
+            .clause_index
+            .get(&fingerprint)
+            .is_some_and(|indices| bucket_contains_clause(&self.formula, indices, &clause));
+        if duplicate {
             self.duplicate_clauses_skipped = self.duplicate_clauses_skipped.saturating_add(1);
             return Ok(());
         }
-        self.formula.add_clause(CnfClause::new(clause))
+        let index = self.formula.clauses().len();
+        self.formula.add_clause(CnfClause::new(clause))?;
+        self.clause_index
+            .entry(fingerprint)
+            .or_default()
+            .push(index);
+        Ok(())
     }
+}
+
+fn bucket_contains_clause(formula: &CnfFormula, indices: &[usize], clause: &[CnfLit]) -> bool {
+    indices
+        .iter()
+        .any(|&index| formula.clauses()[index].lits() == clause)
+}
+
+fn clause_fingerprint(clause: &[CnfLit]) -> u64 {
+    const FNV_OFFSET: u64 = 0xcbf2_9ce4_8422_2325;
+    const FNV_PRIME: u64 = 0x0000_0100_0000_01b3;
+    let mut hash = FNV_OFFSET;
+    for lit in clause {
+        let signed_var = (u64::from(lit.var.0) << 1) | u64::from(lit.negated);
+        for byte in signed_var.to_le_bytes() {
+            hash ^= u64::from(byte);
+            hash = hash.wrapping_mul(FNV_PRIME);
+        }
+    }
+    hash
 }
 
 fn count_true(values: &[bool]) -> u64 {
@@ -2792,10 +2823,24 @@ mod tests {
 
     use super::{
         CnfClause, CnfError, CnfLit, CnfVar, EncodedLit, IncrementalCnf, IncrementalSat,
-        RustSatBatsatSolver, SatProofStatus, SatResult, SatSolver, aig_lit_value, parse_dimacs,
-        rustsat_batsat_determinism, solve_with_rustsat_batsat, solve_with_rustsat_batsat_limits,
-        tseitin_encode,
+        RustSatBatsatSolver, SatProofStatus, SatResult, SatSolver, aig_lit_value,
+        bucket_contains_clause, parse_dimacs, rustsat_batsat_determinism,
+        solve_with_rustsat_batsat, solve_with_rustsat_batsat_limits, tseitin_encode,
     };
+
+    #[test]
+    fn clause_fingerprint_bucket_requires_exact_equality() {
+        let p = CnfLit::positive(CnfVar::new(0).unwrap());
+        let q = CnfLit::positive(CnfVar::new(1).unwrap());
+        let mut formula = super::CnfFormula::new(2);
+        formula.add_clause(CnfClause::new(vec![p])).unwrap();
+
+        assert!(bucket_contains_clause(&formula, &[0], &[p]));
+        assert!(
+            !bucket_contains_clause(&formula, &[0], &[q]),
+            "a fingerprint collision must not suppress a distinct clause"
+        );
+    }
 
     #[test]
     fn tseitin_formula_tracks_aig_root_truth() {

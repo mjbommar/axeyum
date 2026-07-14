@@ -1957,8 +1957,10 @@ fn structural_bit_demand(
     deadline: Option<Instant>,
 ) -> Result<BitDemandStats, BitLowerError> {
     let start = Instant::now();
-    let mut stats = BitDemandStats::default();
-    stats.profile_complete = true;
+    let mut stats = BitDemandStats {
+        profile_complete: true,
+        ..BitDemandStats::default()
+    };
     let mut reachable_terms = BTreeSet::new();
     let mut reachable_symbols = BTreeSet::new();
     let mut reachable_stack = roots.to_vec();
