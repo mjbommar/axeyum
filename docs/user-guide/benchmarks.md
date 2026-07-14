@@ -213,6 +213,10 @@ The example thresholds illustrate the CLI only; they are not an accepted
 Glaurung policy. A configured gate writes the comparison for diagnosis and
 exits nonzero when exceeded. Invalid or incomparable inputs remove any stale
 output and fail before producing a report.
+The committed
+[`glaurung-cross-commit-smoke`](../../bench-results/glaurung-cross-commit-smoke.json)
+exercises this path across two clean revisions. Its high candidate variance
+makes the result diagnostic plumbing only, not a speedup or threshold decision.
 
 Run the separate proof-validation companion on the same immutable manifest:
 

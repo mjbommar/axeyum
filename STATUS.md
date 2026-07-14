@@ -383,6 +383,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   with distinct clean source revisions, and reports raw Axeyum, raw Z3 control,
   ratio, and per-stage deltas. Optional ratio/raw-Axeyum regression and absolute
   Z3-drift gates are caller-supplied; the micro fixture sets no threshold.
+  The committed
+  [`glaurung-cross-commit-smoke`](bench-results/glaurung-cross-commit-smoke.json)
+  validates baseline `319a166b` against candidate `023496a2` with three trials
+  each and matching `config_hash`, `environment_hash`, corpus/manifest hashes,
+  and backends. The candidate ratio mean is 26.21% lower while its CV is 37.32%
+  and descriptive standardized delta is -1.63; raw Z3 control drift is -0.78%.
+  These sub-millisecond micro results demonstrate identity/noise accounting and
+  explicitly do not establish a speedup or product threshold.
 
   | ID | Live status | Next acceptance boundary |
   |---|---|---|

@@ -9,6 +9,8 @@
 .DS_Store
 .idea/
 .vscode/
+__pycache__/
+*.py[cod]
 
 # Benchmark scratch output
 /bench-results/local/
