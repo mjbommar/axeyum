@@ -83,7 +83,7 @@ metadata in fixed-size segments.
 The ignored release-only `cond-var-elim-binary` stress gate checks routing,
 self-contained theorem output, absence of `sorryAx`, and a module-size ceiling
 of 128 MiB. Under `ulimit -v 4194304`, the authoritative test body passes in
-198.35 seconds; the cold command takes 3:40.24 and peaks at 2,026,616 KiB RSS.
+196.98 seconds; the command takes 3:17.54 and peaks at 1,039,568 KiB RSS.
 This raises the bounded public quantified-BV Lean UNSAT audit from 17/18 to
 18/18.
 

@@ -166,6 +166,12 @@ struct GatePropAlias {
     value: ExprId,
 }
 
+#[derive(Default)]
+struct ClosedAliasMode {
+    gate_props: bool,
+    cps_clauses: bool,
+}
+
 /// The reconstruction context: a [`Kernel`] seeded with the logical prelude, the
 /// EUF carrier sort `α : Type`, and a deterministic map from Alethe atom/function
 /// names to their interned constant [`NameId`].
@@ -262,16 +268,14 @@ pub struct ReconstructCtx {
     /// open DAG nodes cannot be hoisted as closed module definitions, so compact
     /// quantified reconstruction records them as explicit local `let`s.
     gate_prop_aliases: Option<Vec<GatePropAlias>>,
-    /// Closed-route gate propositions are admitted as transparent checked
+    /// Closed-route gate propositions may be admitted as transparent checked
     /// definitions, allowing later proof declarations to reference constants
-    /// instead of remaining underneath one enormous local-let telescope.
-    global_gate_prop_aliases: bool,
+    /// instead of remaining underneath one enormous local-let telescope. In the
+    /// same mode, nonempty CPS clauses may become checked theorem declarations.
+    closed_aliases: ClosedAliasMode,
     /// First checked-definition admission failure recorded by the infallible
     /// gate translator and surfaced at the enclosing reconstruction boundary.
     global_gate_prop_alias_error: Option<String>,
-    /// Admit every nonempty CPS clause as a checked theorem declaration. This is
-    /// valid only for closed routes whose gate propositions are global aliases.
-    global_cps_clause_aliases: bool,
     /// **Route-A datatype registry.** Maps a datatype constructor key
     /// `"<arity>_<ctorname>"` (parsed from the reserved `!dtcon_n_c` /
     /// `!dtsel_n_i_c` heads the datatype-elim emitter renders) to the kernel
@@ -362,9 +366,8 @@ impl ReconstructCtx {
             typed_bv_gates: false,
             gate_memo: BTreeMap::new(),
             gate_prop_aliases: None,
-            global_gate_prop_aliases: false,
+            closed_aliases: ClosedAliasMode::default(),
             global_gate_prop_alias_error: None,
-            global_cps_clause_aliases: false,
             datatypes: BTreeMap::new(),
             datatype_families: BTreeMap::new(),
         }
@@ -10167,16 +10170,16 @@ impl ReconstructCtx {
 
     fn begin_global_gate_prop_aliases(&mut self) {
         assert!(
-            self.gate_prop_aliases.is_none() && !self.global_gate_prop_aliases,
+            self.gate_prop_aliases.is_none() && !self.closed_aliases.gate_props,
             "gate proposition alias scopes must not be nested"
         );
         self.gate_memo.clear();
         self.global_gate_prop_alias_error = None;
-        self.global_gate_prop_aliases = true;
+        self.closed_aliases.gate_props = true;
     }
 
     fn finish_global_gate_prop_aliases(&mut self) -> Result<(), ReconstructError> {
-        self.global_gate_prop_aliases = false;
+        self.closed_aliases.gate_props = false;
         self.gate_memo.clear();
         match self.global_gate_prop_alias_error.take() {
             Some(detail) => Err(ReconstructError::KernelRejected {
@@ -10210,7 +10213,7 @@ impl ReconstructCtx {
                     value: result,
                 });
             result = self.kernel.fvar(fvar);
-        } else if self.global_gate_prop_aliases
+        } else if self.closed_aliases.gate_props
             && matches!(
                 self.kernel.expr_node(result),
                 ExprNode::App(..) | ExprNode::Lam(..) | ExprNode::Pi(..) | ExprNode::Let(..)
@@ -13235,7 +13238,7 @@ pub(super) fn reconstruct_bitwise_cps_tail(
         let should_alias = ctx.defer_open_step_checks;
         if should_alias {
             let ty = cps_clause_prop(ctx, &recovered.lits);
-            if ctx.global_cps_clause_aliases {
+            if ctx.closed_aliases.cps_clauses {
                 if ctx.kernel.has_fvars(ty)
                     || ctx.kernel.num_loose_bvars(ty) != 0
                     || ctx.kernel.has_fvars(recovered.proof)

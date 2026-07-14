@@ -852,12 +852,13 @@ declarations, deferred clause aliases, and explicit logical-AIG gate `let`s keep
 the proof DAG linear without turning learned clauses into axioms. The trusted
 kernel's exact expression interner is compact, sharded, collision-checked, and
 segmented so large proofs avoid monolithic arena reallocations. The public
-`cond-var-elim-binary` release gate passes in **198.35 s** (**3:40.24 cold**) at
-**2,026,616 KiB peak** under the 4 GiB cap, emits a self-contained module below
+`cond-var-elim-binary` release gate passes in **196.98 s** (**3:17.54 command**) at
+**1,039,568 KiB peak** under the 4 GiB cap, emits a self-contained module below
 the 128 MiB regression bound, contains no `sorryAx`, and matches the direct
 route. Quantified-BV Lean UNSAT coverage rises **17→18/18**. The same logical
 AIG sharing reduces ADR-0129's module to **18,576,938 bytes**, with its release
-gate passing in **4.10 s at 419,460 KiB peak**; a scoped 64 MiB reconstruction
+gate passing in **4.10--4.21 s** (the measured no-rebuild peak is **419,460
+KiB**); a scoped 64 MiB reconstruction
 worker also makes its full debug file pass 9/9 without relying on the harness
 stack. **Next:** ingest the real
 Glaurung capture and execute GQ1/GQ10 before choosing a cold-path optimization;

@@ -509,13 +509,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   interner now uses compact stable hashes, 64 shards, exact collision checks,
   and segmented arenas to avoid large contiguous reallocations. Focused routing,
   mutation, LRAT, ADR-0135, kernel, and Clippy gates pass. The authoritative
-  `cond-var-elim-binary` release test finishes in **198.35 s** (**3:40.24** for
-  the cold command) at **2,026,616 KiB max RSS** under the hard 4 GiB cap; its
+  `cond-var-elim-binary` release test finishes in **196.98 s** (**3:17.54** for
+  the command) at **1,039,568 KiB max RSS** under the hard 4 GiB cap; its
   direct/router output agrees, is self-contained, contains no `sorryAx`, and is
   guarded below 128 MiB. Public quantified-BV Lean coverage rises
   **17→18/18**. The shared logical-AIG improvement also shrinks ADR-0129's
   module from 106,809,049 to **18,576,938 bytes** and its release gate to
-  **4.10 s at 419,460 KiB peak**. ADR-0129 reconstruction now also owns a
+  **4.10--4.21 s** (the measured no-rebuild peak is **419,460 KiB**). ADR-0129
+  reconstruction now also owns a
   scoped 64 MiB worker stack; its complete debug file passes 9/9 instead of
   overflowing the test harness stack. **Next:** obtain and ingest the real Glaurung
   capture, establish the GQ1/GQ10 attribution baseline, and choose the first
