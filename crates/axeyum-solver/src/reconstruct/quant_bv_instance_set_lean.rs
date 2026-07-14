@@ -3499,6 +3499,31 @@ pub fn reconstruct_bv_conjunctive_universal_instance_to_lean_module(
     assertions: &[TermId],
     certificate: &BvConjunctiveUniversalInstanceCertificate,
 ) -> Result<String, ReconstructError> {
+    const RECONSTRUCTION_STACK_BYTES: usize = 64 * 1024 * 1024;
+    std::thread::scope(|scope| {
+        let worker = std::thread::Builder::new()
+            .name("axeyum-adr0127-lean".to_owned())
+            .stack_size(RECONSTRUCTION_STACK_BYTES)
+            .spawn_scoped(scope, || {
+                reconstruct_bv_conjunctive_universal_instance_to_lean_module_impl(
+                    arena,
+                    assertions,
+                    certificate,
+                )
+            })
+            .map_err(|error| decline(format!("failed to start reconstruction worker: {error}")))?;
+        worker
+            .join()
+            .map_err(|_| decline("conjunctive-instance reconstruction worker panicked"))?
+    })
+}
+
+#[allow(clippy::too_many_lines)]
+fn reconstruct_bv_conjunctive_universal_instance_to_lean_module_impl(
+    arena: &TermArena,
+    assertions: &[TermId],
+    certificate: &BvConjunctiveUniversalInstanceCertificate,
+) -> Result<String, ReconstructError> {
     if !check_bv_conjunctive_universal_instance(arena, assertions, certificate)
         .map_err(|error| decline(format!("certificate replay failed: {error}")))?
     {
