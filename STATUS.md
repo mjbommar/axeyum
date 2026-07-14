@@ -402,11 +402,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   Z3-drift gates are caller-supplied; the micro fixture sets no threshold.
   The committed
   [`glaurung-cross-commit-smoke`](bench-results/glaurung-cross-commit-smoke.json)
-  still records the prior artifact-v21 boundary between `d39dc6ac` and
-  `00a745c0`. The v22 bounded-resource baseline is `fe65b076`; its clean
-  distinct-revision candidate is the next artifact checkpoint. These
-  sub-millisecond micro results demonstrate identity/noise accounting and
-  explicitly do not establish a speedup or product threshold.
+  now records the artifact-v22 bounded-resource boundary between clean revisions
+  `fe65b076` and `01c2441a`, with matching corpus, manifest, config,
+  environment, backends, and resource profile. The candidate/baseline ratio
+  mean is +21.78%, candidate ratio CV is 20.40%, the descriptive standardized
+  delta is +0.97, and the raw Z3 control is +2.65%. These sub-millisecond micro
+  results demonstrate identity/noise accounting and explicitly do not establish
+  a performance regression, speedup, or product threshold.
 
   | ID | Live status | Next acceptance boundary |
   |---|---|---|
@@ -2128,7 +2130,12 @@ plan is built and committed on the current branch:
   trial is 2/2 decided/manifest-agreed/Z3-agreed with zero errors,
   disagreements, or replay failures; the proof companion checks its 1/1 UNSAT
   with none missing; and the baseline Axeyum/Z3/ratio CVs are
-  32.63%/2.59%/29.92%. These are bounded-profile plumbing results only.
+  32.63%/2.59%/29.92%. Clean candidate revision `01c2441a` completes the v22
+  cross-commit smoke with identical corpus/manifest/config/environment/backend/
+  resource identity. Its ratio mean moves +21.78%, candidate ratio CV is
+  20.40%, the descriptive standardized delta is +0.97, and raw Z3 moves +2.65%.
+  These are bounded-profile, sub-millisecond plumbing results only and support
+  no performance regression or speedup claim.
 - **2026-07-13 — GQ1/GQ10 artifact-v21 executable determinism identity
   implemented.** The audit found that the former benchmark `--seed` option only
   changed artifact identity and did not configure either backend. That option is
