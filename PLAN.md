@@ -45,6 +45,8 @@ session state.
 > CNF) because sparse pre-sizing slows gate lookup 23.5%; it is
 > reverted/deferred. If capacity work continues, isolate the contiguous formula
 > header vector and leave the exact-dedup table's cache-friendly growth intact.
+> ADR-0149 is that isolated candidate and remains proposed until it passes the
+> same representative/full time, memory, content, and replay gates.
 > The capture and
 > implementation audit has been expanded into the dependency-ordered
 > [Glaurung QF_BV execution plan](docs/research/08-planning/glaurung-qfbv-execution-plan.md):
@@ -109,8 +111,9 @@ ADR-0147 then improves planning 2.5% but regresses whole-pipeline total/CNF
 normalization/allocation before selecting another bounded GQ5 slice. ADR-0148's
 combined capacity hint regresses total/CNF 2.5%/10.0% and is restored as
 negative evidence. A formula-header-only experiment is the only admissible
-capacity follow-up; affine word work must still show a downstream circuit/CNF
-win before outranking it.
+capacity follow-up; ADR-0149 now implements it without touching index growth.
+Affine word work must still show a downstream circuit/CNF win before outranking
+it.
 Broad GQ4 partial lowering follows its small post-canonical full-tier
 opportunity (1.84% term bits) unless family-specific evidence reverses the
 rank. Admit GQ6

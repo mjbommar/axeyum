@@ -264,3 +264,11 @@ costlier. All runs remain 128/128 decided with the same 507,195 clauses and zero
 errors, disagreements, or replay failures. Revision `2527741b` is reverted
 without a full run and ADR-0148 is deferred. A formula-header-only experiment,
 with ordinary index growth retained, is the only admissible capacity follow-up.
+
+## ADR-0149 formula-header-only capacity candidate
+
+ADR-0149 isolates the unresolved half of ADR-0148: the same capped no-pass hint
+pre-sizes only contiguous `CnfClause` headers, while the collision-safe
+fingerprint table starts empty and grows exactly as in accepted ADR-0145. This
+preserves lookup locality and tests only avoided header moves. No performance or
+memory claim is admitted before the clean representative/full gate.

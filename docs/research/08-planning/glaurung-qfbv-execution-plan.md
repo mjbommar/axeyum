@@ -440,6 +440,7 @@ validity gates.
    the exact-dedup index, but regresses representative total/CNF 2.5%/10.0%
    because gate lookup rises 23.5%. It is restored/deferred. Any capacity
    follow-up must isolate formula-header storage and leave index growth intact.
+   ADR-0149 is that isolated candidate and retains the same acceptance gates.
 3. Keep the next exact word tranche around affine BV add/sub constant-chain
    normalization and cheap duplicate-root handling behind evidence that it
    reduces downstream AIG/CNF for the
