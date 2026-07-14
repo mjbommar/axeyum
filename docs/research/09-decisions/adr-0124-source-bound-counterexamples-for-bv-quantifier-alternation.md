@@ -59,7 +59,7 @@ bindings, changed proof text, stale assertions, free symbols, Int binders,
 reversed prefixes, non-implication matrices, and existential symbols in the
 antecedent. The workspace Clippy gate is clean.
 
-### Lean reconstruction follow-up (WIP, 2026-07-13)
+### Lean reconstruction follow-up (WIP, updated 2026-07-14)
 
 The in-progress Lean route now represents the exact implication below the
 `forall+ exists+` prefix, evaluator-proves the chosen outer antecedent, and
@@ -69,11 +69,20 @@ sharing maps before deterministic naming, and can release hash-consing and
 typechecking lookup tables behind a one-way read-only export guard. Kernel
 167/167, seven non-stress alternation tests, and focused Clippy pass.
 
-This is a checkpoint, not accepted Lean coverage: both public release stress
-tests remain ignored, and the latest guarded 4 GiB attempt still failed on
-allocation. The audit therefore remains at Lean UNSAT 14/18. Acceptance requires
-measured peak reduction plus restoration of the full public direct/router module
-equality gate.
+Compact source emission now has a byte-identical streaming writer and the
+solver spools the module before final inference, avoiding coexistence of the
+arena and a second 89 MiB source string. Requested-local abstraction skips
+unrelated DAGs, and nested eliminator locals close in one scope-aware traversal
+instead of copying the remaining proof once per binder. The public
+`small-pipeline-fixpoint-3` direct/router pipeline consequently passes the
+guarded 4 GiB release gate in 106.62 s at 3,692,844 KiB peak.
+
+This remains a checkpoint, not accepted Lean coverage. `bug802` now completes
+reconstruction in 2.984 s and streaming export in 10.506 s, but generic kernel
+inference over its 530-binder `Exists.rec` chain still requests a
+2,181,038,096-byte allocation. The audit therefore remains at Lean UNSAT 14/18.
+Acceptance requires a bounded trusted type check plus both public direct/router
+module-equality stress gates under the 4 GiB envelope.
 
 ## Alternatives
 

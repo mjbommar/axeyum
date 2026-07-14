@@ -6,12 +6,15 @@
 //! concrete values, and only then is the propositional Alethe tail reconstructed.
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::io::Write as _;
+use std::path::PathBuf;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use axeyum_aig::{AigLit, AigNode};
 use axeyum_bv::{BitLowering, lower_terms};
 use axeyum_cnf::{AletheCommand, AletheTerm};
 use axeyum_ir::{Op, Sort, SymbolId, TermArena, TermId, TermNode, Value};
-use axeyum_lean_kernel::{BinderInfo, Declaration, ReducibilityHint};
+use axeyum_lean_kernel::{BinderInfo, Declaration, NameId, ReducibilityHint};
 
 use super::{
     Clause, DatatypeInductive, ExprId, LEAN_MODULE_THEOREM, ReconstructCtx, ReconstructError,
@@ -30,9 +33,73 @@ use crate::{
 
 const MAX_LEAN_BV_WIDTH: u32 = 64;
 const COMPUTATIONAL_WITNESS_AIG_THRESHOLD: usize = 512;
+static NEXT_LEAN_MODULE_SPOOL: AtomicU64 = AtomicU64::new(0);
 
 type CarriedBindings = Vec<(SymbolId, Value)>;
 type SourceAssumption = (TermId, ExprId, Option<CarriedBindings>);
+
+struct LeanModuleSpool {
+    path: PathBuf,
+}
+
+impl LeanModuleSpool {
+    fn create() -> std::io::Result<(Self, std::fs::File)> {
+        for _ in 0..1024 {
+            let suffix = NEXT_LEAN_MODULE_SPOOL.fetch_add(1, Ordering::Relaxed);
+            let path = std::env::temp_dir().join(format!(
+                "axeyum-lean-module-{}-{suffix}.lean",
+                std::process::id()
+            ));
+            match std::fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&path)
+            {
+                Ok(file) => return Ok((Self { path }, file)),
+                Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {}
+                Err(error) => return Err(error),
+            }
+        }
+        Err(std::io::Error::new(
+            std::io::ErrorKind::AlreadyExists,
+            "could not allocate a unique Lean module spool",
+        ))
+    }
+
+    fn read_to_string(&self) -> std::io::Result<String> {
+        std::fs::read_to_string(&self.path)
+    }
+}
+
+impl Drop for LeanModuleSpool {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_file(&self.path);
+    }
+}
+
+fn spool_compact_lean_module(
+    ctx: &ReconstructCtx,
+    goal: ExprId,
+    proof: ExprId,
+    inductives: &[NameId],
+) -> Result<LeanModuleSpool, ReconstructError> {
+    let (spool, file) = LeanModuleSpool::create()
+        .map_err(|error| decline(format!("failed to create Lean module spool: {error}")))?;
+    let mut writer = std::io::BufWriter::new(file);
+    ctx.kernel
+        .write_lean_module_compact_with_inductives(
+            &mut writer,
+            LEAN_MODULE_THEOREM,
+            goal,
+            proof,
+            inductives,
+        )
+        .map_err(|error| decline(format!("failed to stream Lean module: {error}")))?;
+    writer
+        .flush()
+        .map_err(|error| decline(format!("failed to flush Lean module spool: {error}")))?;
+    Ok(spool)
+}
 
 fn decline(detail: impl Into<String>) -> ReconstructError {
     ReconstructError::MalformedStep {
@@ -1127,6 +1194,68 @@ struct VacuousExistsLayer {
     proposition: ExprId,
 }
 
+#[derive(Clone, Copy)]
+struct AlternationExistsLayer {
+    binder: SymbolId,
+    sort: Sort,
+    witness_id: u64,
+    domain: ExprId,
+    suffix: ExprId,
+    predicate: ExprId,
+    proposition: ExprId,
+}
+
+fn build_alternation_exists_layers(
+    ctx: &mut ReconstructCtx,
+    arena: &TermArena,
+    binders: &[SymbolId],
+    antecedent: TermId,
+    consequent: TermId,
+) -> Result<(ExprId, Vec<AlternationExistsLayer>), ReconstructError> {
+    let mut pending = Vec::with_capacity(binders.len());
+    for &binder in binders {
+        let sort = arena.symbol(binder).1;
+        let domain = binder_domain(ctx, sort, WitnessLeanEncoding::Logical)?;
+        let witness_id = fresh_fvar_id(ctx);
+        let witness = ctx.kernel.fvar(witness_id);
+        bind_symbol(ctx, binder, sort, witness);
+        pending.push((binder, sort, witness_id, domain));
+    }
+
+    let premise = direct_ground_prop(ctx, arena, antecedent)?;
+    let conclusion = direct_ground_prop(ctx, arena, consequent)?;
+    let anon = ctx.kernel.anon();
+    let mut suffix = ctx
+        .kernel
+        .pi(anon, premise, conclusion, BinderInfo::Default);
+    let mut layers = Vec::with_capacity(pending.len());
+    for &(binder, sort, witness_id, domain) in pending.iter().rev() {
+        let predicate_body = ctx.kernel.abstract_fvars(suffix, &[witness_id]);
+        let anon = ctx.kernel.anon();
+        let predicate = ctx
+            .kernel
+            .lam(anon, domain, predicate_body, BinderInfo::Default);
+        let exists = ctx.kernel.const_(ctx.prelude.exists_, vec![ctx.one]);
+        let exists = ctx.kernel.app(exists, domain);
+        let proposition = ctx.kernel.app(exists, predicate);
+        layers.push(AlternationExistsLayer {
+            binder,
+            sort,
+            witness_id,
+            domain,
+            suffix,
+            predicate,
+            proposition,
+        });
+        suffix = proposition;
+    }
+    layers.reverse();
+    for &(binder, sort, _, _) in pending.iter().rev() {
+        unbind_symbol(ctx, binder, sort);
+    }
+    Ok((suffix, layers))
+}
+
 fn wrap_vacuous_exists_prefix(
     ctx: &mut ReconstructCtx,
     arena: &TermArena,
@@ -1233,14 +1362,15 @@ fn refute_vacuous_exists_suffix(
 fn refute_alternation_exists_suffix(
     ctx: &mut ReconstructCtx,
     arena: &TermArena,
-    binders: &[SymbolId],
+    layers: &[AlternationExistsLayer],
     antecedent: TermId,
     consequent: TermId,
     outer_bindings: &[(SymbolId, Value)],
+    scoped_binders: &mut Vec<(ExprId, u64)>,
     index: usize,
     major: ExprId,
 ) -> Result<ExprId, ReconstructError> {
-    let Some(&binder) = binders.get(index) else {
+    let Some(&layer) = layers.get(index) else {
         let evaluated = evaluate_ground_prop(ctx, arena, antecedent, outer_bindings)?;
         if !evaluated.value {
             return Err(decline("alternation outer tuple falsifies its antecedent"));
@@ -1261,9 +1391,10 @@ fn refute_alternation_exists_suffix(
         eprintln!("alternation tail end {:?}", started.elapsed());
         return proof;
     };
-    let sort = arena.symbol(binder).1;
-    let domain = binder_domain(ctx, sort, WitnessLeanEncoding::Logical)?;
-    let witness_id = fresh_fvar_id(ctx);
+    let binder = layer.binder;
+    let sort = layer.sort;
+    let domain = layer.domain;
+    let witness_id = layer.witness_id;
     let witness = ctx.kernel.fvar(witness_id);
     let witness_name = ctx.kernel.anon();
     ctx.local_ctx.push(LocalDecl {
@@ -1273,25 +1404,8 @@ fn refute_alternation_exists_suffix(
         info: BinderInfo::Default,
     });
     bind_symbol(ctx, binder, sort, witness);
-    let suffix = alternation_exists_suffix_prop(
-        ctx,
-        arena,
-        binders,
-        antecedent,
-        consequent,
-        index + 1,
-    )?;
-    unbind_symbol(ctx, binder, sort);
-    let predicate_body = ctx.kernel.abstract_fvars(suffix, &[witness_id]);
-    let anon = ctx.kernel.anon();
-    let predicate = ctx
-        .kernel
-        .lam(anon, domain, predicate_body, BinderInfo::Default);
-    let exists = ctx.kernel.const_(ctx.prelude.exists_, vec![ctx.one]);
-    let exists = ctx.kernel.app(exists, domain);
-    let proposition = ctx.kernel.app(exists, predicate);
+    let suffix = layer.suffix;
 
-    bind_symbol(ctx, binder, sort, witness);
     let hypothesis_id = fresh_fvar_id(ctx);
     let hypothesis = ctx.kernel.fvar(hypothesis_id);
     let hypothesis_name = ctx.kernel.anon();
@@ -1304,10 +1418,11 @@ fn refute_alternation_exists_suffix(
     let contradiction = refute_alternation_exists_suffix(
         ctx,
         arena,
-        binders,
+        layers,
         antecedent,
         consequent,
         outer_bindings,
+        scoped_binders,
         index + 1,
         hypothesis,
     )?;
@@ -1317,24 +1432,23 @@ fn refute_alternation_exists_suffix(
     debug_assert_eq!(popped_hypothesis.map(|decl| decl.fvar), Some(hypothesis_id));
     debug_assert_eq!(popped_witness.map(|decl| decl.fvar), Some(witness_id));
 
-    let body = ctx
-        .kernel
-        .abstract_fvars(contradiction, &[witness_id, hypothesis_id]);
     let witness = ctx.kernel.bvar(0);
-    let hypothesis_type = ctx.kernel.app(predicate, witness);
+    let hypothesis_type = ctx.kernel.app(layer.predicate, witness);
     let anon = ctx.kernel.anon();
     let minor = ctx
         .kernel
-        .lam(anon, hypothesis_type, body, BinderInfo::Default);
+        .lam(anon, hypothesis_type, contradiction, BinderInfo::Default);
+    scoped_binders.push((minor, hypothesis_id));
     let minor = ctx
         .kernel
         .lam(anon, domain, minor, BinderInfo::Default);
+    scoped_binders.push((minor, witness_id));
     Ok(exists_elim_false(
         ctx,
         VacuousExistsLayer {
             domain,
-            predicate,
-            proposition,
+            predicate: layer.predicate,
+            proposition: layer.proposition,
         },
         minor,
         major,
@@ -2306,23 +2420,41 @@ fn reconstruct_bv_alternation_counterexample_to_lean_module_impl(
         instantiated = ctx.kernel.app(instantiated, witness);
     }
     install_binding_environment(&mut ctx, arena, &certificate.outer_bindings)?;
-    ctx.defer_open_step_checks = true;
-    let proof = refute_alternation_exists_suffix(
+    let (_instantiated_suffix, layers) = build_alternation_exists_layers(
         &mut ctx,
         arena,
         &admitted.inner,
         *antecedent,
         *consequent,
+    )?;
+    ctx.defer_open_step_checks = true;
+    let mut scoped_binders = Vec::with_capacity(layers.len() * 2);
+    let open_proof = refute_alternation_exists_suffix(
+        &mut ctx,
+        arena,
+        &layers,
+        *antecedent,
+        *consequent,
         &certificate.outer_bindings,
+        &mut scoped_binders,
         0,
         instantiated,
     )?;
+    let proof = ctx
+        .kernel
+        .close_scoped_fvars(open_proof, &scoped_binders);
     ctx.defer_open_step_checks = false;
     eprintln!("alternation stage reconstruct {:?}", started.elapsed());
+    finish_bv_alternation_module(ctx, proof, started)
+}
+
+fn finish_bv_alternation_module(
+    mut ctx: ReconstructCtx,
+    proof: ExprId,
+    started: std::time::Instant,
+) -> Result<String, ReconstructError> {
     ctx.gate_bound_bools.clear();
     ctx.gate_bound_bvs.clear();
-    require_infers_false(&mut ctx, proof)?;
-    eprintln!("alternation stage infer {:?}", started.elapsed());
     let false_ = ctx.kernel.const_(ctx.prelude.false_, vec![]);
     let mut inductives = ctx
         .bv_value_types
@@ -2330,13 +2462,17 @@ fn reconstruct_bv_alternation_counterexample_to_lean_module_impl(
         .map(|datatype| datatype.ind)
         .collect::<Vec<_>>();
     inductives.push(ctx.prelude.bool_);
+
+    let spool = spool_compact_lean_module(&ctx, false_, proof, &inductives)?;
+    eprintln!("alternation stage spool {:?}", started.elapsed());
+
+    require_infers_false(&mut ctx, proof)?;
+    eprintln!("alternation stage infer {:?}", started.elapsed());
     ctx.kernel.release_transient_tables_for_export();
-    let module = ctx.kernel.render_lean_module_compact_with_inductives(
-        LEAN_MODULE_THEOREM,
-        false_,
-        proof,
-        &inductives,
-    );
+    drop(ctx);
+    let module = spool
+        .read_to_string()
+        .map_err(|error| decline(format!("failed to read Lean module spool: {error}")))?;
     eprintln!("alternation stage render {:?}", started.elapsed());
     Ok(module)
 }

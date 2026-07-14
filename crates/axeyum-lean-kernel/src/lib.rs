@@ -856,8 +856,68 @@ impl Kernel {
     /// last entry of `fvars` (the innermost binder) maps to the lowest index.
     /// This matches nanoda's `abstr`: `locals.iter().rev().position(..)`.
     pub fn abstract_fvars(&mut self, e: ExprId, fvars: &[u64]) -> ExprId {
+        if fvars.is_empty() {
+            return e;
+        }
+        let target_presence = self.fvar_target_presence(e, fvars);
         let mut memo = HashMap::new();
-        self.abstract_aux(e, fvars, 0, &mut memo)
+        self.abstract_aux(e, fvars, 0, &target_presence, &mut memo)
+    }
+
+    fn fvar_target_presence(&self, root: ExprId, targets: &[u64]) -> Vec<u8> {
+        const ABSENT: u8 = 1;
+        const PRESENT: u8 = 2;
+
+        let mut presence = vec![0_u8; root.index() + 1];
+        let mut stack = vec![(root, false)];
+        while let Some((expression, visited)) = stack.pop() {
+            if presence[expression.index()] != 0 {
+                continue;
+            }
+            if !visited {
+                stack.push((expression, true));
+                match self.expr_node(expression) {
+                    ExprNode::App(function, argument) => {
+                        stack.push((*function, false));
+                        stack.push((*argument, false));
+                    }
+                    ExprNode::Lam(_, ty, body, _) | ExprNode::Pi(_, ty, body, _) => {
+                        stack.push((*ty, false));
+                        stack.push((*body, false));
+                    }
+                    ExprNode::Let(_, ty, value, body) => {
+                        stack.push((*ty, false));
+                        stack.push((*value, false));
+                        stack.push((*body, false));
+                    }
+                    ExprNode::BVar(_)
+                    | ExprNode::FVar(_)
+                    | ExprNode::Sort(_)
+                    | ExprNode::Const(..)
+                    | ExprNode::Lit(_) => {}
+                }
+                continue;
+            }
+
+            let child_present = |child: ExprId| presence[child.index()] == PRESENT;
+            let found = match self.expr_node(expression) {
+                ExprNode::FVar(id) => targets.contains(id),
+                ExprNode::App(function, argument) => {
+                    child_present(*function) || child_present(*argument)
+                }
+                ExprNode::Lam(_, ty, body, _) | ExprNode::Pi(_, ty, body, _) => {
+                    child_present(*ty) || child_present(*body)
+                }
+                ExprNode::Let(_, ty, value, body) => {
+                    child_present(*ty) || child_present(*value) || child_present(*body)
+                }
+                ExprNode::BVar(_) | ExprNode::Sort(_) | ExprNode::Const(..) | ExprNode::Lit(_) => {
+                    false
+                }
+            };
+            presence[expression.index()] = if found { PRESENT } else { ABSENT };
+        }
+        presence
     }
 
     fn abstract_aux(
@@ -865,9 +925,10 @@ impl Kernel {
         e: ExprId,
         fvars: &[u64],
         offset: u32,
+        target_presence: &[u8],
         memo: &mut HashMap<(ExprId, u32), ExprId>,
     ) -> ExprId {
-        if !self.has_fvars(e) {
+        if target_presence[e.index()] != 2 {
             return e;
         }
         if let Some(&abstracted) = memo.get(&(e, offset)) {
@@ -880,29 +941,179 @@ impl Kernel {
             },
             ExprNode::BVar(_) | ExprNode::Sort(_) | ExprNode::Const(..) | ExprNode::Lit(_) => e,
             ExprNode::App(f, a) => {
-                let f = self.abstract_aux(f, fvars, offset, memo);
-                let a = self.abstract_aux(a, fvars, offset, memo);
+                let f = self.abstract_aux(f, fvars, offset, target_presence, memo);
+                let a = self.abstract_aux(a, fvars, offset, target_presence, memo);
                 self.app(f, a)
             }
             ExprNode::Lam(name, ty, body, info) => {
-                let ty = self.abstract_aux(ty, fvars, offset, memo);
-                let body = self.abstract_aux(body, fvars, offset + 1, memo);
+                let ty = self.abstract_aux(ty, fvars, offset, target_presence, memo);
+                let body = self.abstract_aux(body, fvars, offset + 1, target_presence, memo);
                 self.lam(name, ty, body, info)
             }
             ExprNode::Pi(name, ty, body, info) => {
-                let ty = self.abstract_aux(ty, fvars, offset, memo);
-                let body = self.abstract_aux(body, fvars, offset + 1, memo);
+                let ty = self.abstract_aux(ty, fvars, offset, target_presence, memo);
+                let body = self.abstract_aux(body, fvars, offset + 1, target_presence, memo);
                 self.pi(name, ty, body, info)
             }
             ExprNode::Let(name, ty, val, body) => {
-                let ty = self.abstract_aux(ty, fvars, offset, memo);
-                let val = self.abstract_aux(val, fvars, offset, memo);
-                let body = self.abstract_aux(body, fvars, offset + 1, memo);
+                let ty = self.abstract_aux(ty, fvars, offset, target_presence, memo);
+                let val = self.abstract_aux(val, fvars, offset, target_presence, memo);
+                let body = self.abstract_aux(body, fvars, offset + 1, target_presence, memo);
                 self.let_(name, ty, val, body)
             }
         };
         memo.insert((e, offset), abstracted);
         abstracted
+    }
+
+    /// Closes free variables at their explicitly associated lambda nodes in one
+    /// shared-DAG traversal.
+    ///
+    /// Each `(lambda, fvar)` marker says that `fvar` is the local represented by
+    /// that lambda. The input may be an open skeleton whose marked lambda bodies
+    /// still reference those locals as [`ExprNode::FVar`] nodes. The result
+    /// replaces each in-scope marked free variable by the correct de Bruijn index,
+    /// including shifts below ordinary unmarked lambdas, pis, and lets. Unmarked
+    /// free variables remain free.
+    ///
+    /// This is equivalent to closing each marked lambda separately with
+    /// [`Self::abstract_fvars`], but avoids repeatedly copying a large nested proof
+    /// tail once per binder.
+    ///
+    /// # Panics
+    ///
+    /// Panics when a marker does not name a lambda, one lambda appears more than
+    /// once, or the same free variable is marked in overlapping scopes.
+    pub fn close_scoped_fvars(&mut self, e: ExprId, binders: &[(ExprId, u64)]) -> ExprId {
+        let mut markers = HashMap::with_capacity(binders.len());
+        for &(lambda, fvar) in binders {
+            assert!(
+                matches!(self.expr_node(lambda), ExprNode::Lam(..)),
+                "scoped free-variable marker must name a lambda"
+            );
+            assert!(
+                markers.insert(lambda, fvar).is_none(),
+                "a lambda cannot bind two scoped free variables"
+            );
+        }
+        let mut memo = HashMap::new();
+        let mut active = HashMap::with_capacity(binders.len());
+        let mut scopes = HashMap::with_capacity(binders.len());
+        let mut next_scope = 1_usize;
+        self.close_scoped_fvars_aux(
+            e,
+            0,
+            0,
+            &markers,
+            &mut active,
+            &mut scopes,
+            &mut next_scope,
+            &mut memo,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn close_scoped_fvars_aux(
+        &mut self,
+        e: ExprId,
+        depth: u32,
+        scope: usize,
+        markers: &HashMap<ExprId, u64>,
+        active: &mut HashMap<u64, u32>,
+        scopes: &mut HashMap<(usize, ExprId), usize>,
+        next_scope: &mut usize,
+        memo: &mut HashMap<(ExprId, u32, usize), ExprId>,
+    ) -> ExprId {
+        if !self.has_fvars(e) {
+            return e;
+        }
+        if let Some(&closed) = memo.get(&(e, depth, scope)) {
+            return closed;
+        }
+        let closed = match self.expr_node(e).clone() {
+            ExprNode::FVar(id) => active
+                .get(&id)
+                .map_or(e, |&binder_depth| self.bvar(depth - binder_depth - 1)),
+            ExprNode::BVar(_) | ExprNode::Sort(_) | ExprNode::Const(..) | ExprNode::Lit(_) => e,
+            ExprNode::App(function, argument) => {
+                let function = self.close_scoped_fvars_aux(
+                    function, depth, scope, markers, active, scopes, next_scope, memo,
+                );
+                let argument = self.close_scoped_fvars_aux(
+                    argument, depth, scope, markers, active, scopes, next_scope, memo,
+                );
+                self.app(function, argument)
+            }
+            ExprNode::Lam(name, ty, body, info) => {
+                let ty = self.close_scoped_fvars_aux(
+                    ty, depth, scope, markers, active, scopes, next_scope, memo,
+                );
+                let marker = markers.get(&e).copied();
+                let body_scope = if marker.is_some() {
+                    *scopes.entry((scope, e)).or_insert_with(|| {
+                        let allocated = *next_scope;
+                        *next_scope += 1;
+                        allocated
+                    })
+                } else {
+                    scope
+                };
+                if let Some(fvar) = marker {
+                    assert!(active.insert(fvar, depth).is_none());
+                }
+                let body = self.close_scoped_fvars_aux(
+                    body,
+                    depth + 1,
+                    body_scope,
+                    markers,
+                    active,
+                    scopes,
+                    next_scope,
+                    memo,
+                );
+                if let Some(fvar) = marker {
+                    assert_eq!(active.remove(&fvar), Some(depth));
+                }
+                self.lam(name, ty, body, info)
+            }
+            ExprNode::Pi(name, ty, body, info) => {
+                let ty = self.close_scoped_fvars_aux(
+                    ty, depth, scope, markers, active, scopes, next_scope, memo,
+                );
+                let body = self.close_scoped_fvars_aux(
+                    body,
+                    depth + 1,
+                    scope,
+                    markers,
+                    active,
+                    scopes,
+                    next_scope,
+                    memo,
+                );
+                self.pi(name, ty, body, info)
+            }
+            ExprNode::Let(name, ty, value, body) => {
+                let ty = self.close_scoped_fvars_aux(
+                    ty, depth, scope, markers, active, scopes, next_scope, memo,
+                );
+                let value = self.close_scoped_fvars_aux(
+                    value, depth, scope, markers, active, scopes, next_scope, memo,
+                );
+                let body = self.close_scoped_fvars_aux(
+                    body,
+                    depth + 1,
+                    scope,
+                    markers,
+                    active,
+                    scopes,
+                    next_scope,
+                    memo,
+                );
+                self.let_(name, ty, value, body)
+            }
+        };
+        memo.insert((e, depth, scope), closed);
+        closed
     }
 
     /// Shift loose bound variables in `e` by `amount`, only those whose index is

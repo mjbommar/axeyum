@@ -461,6 +461,46 @@ fn abstract_fvars_visits_shared_expression_dag_once() {
 }
 
 #[test]
+fn scoped_fvar_closure_binds_nested_marked_lambdas_once() {
+    let mut k = Kernel::new();
+    let anon = k.anon();
+    let ty = k.sort_zero();
+    let outer_id = 71_u64;
+    let inner_id = 72_u64;
+    let outer = k.fvar(outer_id);
+    let inner = k.fvar(inner_id);
+    let body = k.app(outer, inner);
+    let inner_lam = k.lam(anon, ty, body, BinderInfo::Default);
+    let outer_lam = k.lam(anon, ty, inner_lam, BinderInfo::Default);
+
+    let closed = k.close_scoped_fvars(outer_lam, &[(outer_lam, outer_id), (inner_lam, inner_id)]);
+    let outer_bvar = k.bvar(1);
+    let inner_bvar = k.bvar(0);
+    let expected_body = k.app(outer_bvar, inner_bvar);
+    let expected_inner = k.lam(anon, ty, expected_body, BinderInfo::Default);
+    let expected = k.lam(anon, ty, expected_inner, BinderInfo::Default);
+    assert_eq!(closed, expected);
+    assert!(!k.has_fvars(closed));
+}
+
+#[test]
+fn scoped_fvar_closure_accounts_for_unmarked_binders() {
+    let mut k = Kernel::new();
+    let anon = k.anon();
+    let ty = k.sort_zero();
+    let local_id = 81_u64;
+    let local = k.fvar(local_id);
+    let ordinary = k.lam(anon, ty, local, BinderInfo::Default);
+    let marked = k.lam(anon, ty, ordinary, BinderInfo::Default);
+
+    let closed = k.close_scoped_fvars(marked, &[(marked, local_id)]);
+    let shifted = k.bvar(1);
+    let expected_ordinary = k.lam(anon, ty, shifted, BinderInfo::Default);
+    let expected = k.lam(anon, ty, expected_ordinary, BinderInfo::Default);
+    assert_eq!(closed, expected);
+}
+
+#[test]
 fn instantiate_visits_shared_expression_dag_once() {
     let mut k = Kernel::new();
     let mut shared = k.bvar(0);

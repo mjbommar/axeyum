@@ -436,18 +436,23 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   quantified Lean lane may continue, but no synthetic-only performance win
   closes a GQ item.
 
-- **2026-07-13 — ADR-0124 Lean reconstruction/export checkpoint remains WIP.**
+- **2026-07-14 — ADR-0124 construction/export are now bounded; final deep
+  kernel inference remains WIP.**
   Reconstruction now preserves the exact `forall+ exists+ (antecedent ->
   consequent)` source proposition, discharges the antecedent by evaluation, and
-  feeds the consequent into a local-let Alethe tail. The kernel checks long
-  consecutive lets as one dependent telescope, compact sharing uses reclaimable
-  transient hash tables, and final read-only export can release interning and
-  typechecking caches without allowing duplicate handles. Kernel 167/167,
-  alternation 7/7 non-stress, and focused Clippy pass. The two public release
-  stress tests remain ignored; the latest guarded 4 GiB attempt still failed on
-  allocation, so Lean UNSAT remains 14/18 and no reconstruction claim is added.
-  Next: profile/reduce the remaining peak and restore the direct/router equality
-  stress gate.
+  feeds the consequent into a local-let Alethe tail. Compact module emission now
+  streams byte-identically to a temporary file before inference; scoped free
+  variables close at their associated lambdas in one shared-DAG traversal; and
+  ordinary free-variable abstraction skips subgraphs without a requested local.
+  The public `small-pipeline-fixpoint-3` direct/router pipeline passes under the
+  guarded 4 GiB release envelope in 106.62 s at 3,692,844 KiB peak. `bug802` now
+  finishes source reconstruction in 2.984 s and streaming export in 10.506 s,
+  then the final generic inference of its 530-binder `Exists.rec` chain fails
+  safely on a 2,181,038,096-byte allocation at roughly 2.0 GiB RSS. Kernel
+  170/170 plus its doctest and the non-stress alternation gate pass. Lean UNSAT
+  therefore remains 14/18. Next: bound the trusted nested-recursor type check
+  itself, rerun both 4 GiB public direct/router equality gates, and only then
+  claim coverage.
 
 - **2026-07-13 — ADR-0140 reconstructs vacuous BV existential prefixes.**
   The ADR-0128 checker still proves the complete leading existential block
@@ -2111,6 +2116,16 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-14 — checkpoint bounded ADR-0124 proof construction and streaming
+  Lean export.** Compact module output has a byte-identical streaming writer,
+  solver reconstruction spools before final inference, requested-local
+  abstraction prunes unrelated DAGs, and a new scope-aware closing traversal
+  binds the full nested eliminator skeleton once. The public
+  `small-pipeline-fixpoint-3` pipeline passes at 3,692,844 KiB under 4 GiB;
+  `bug802` reaches the final kernel check before its remaining 2.18 GiB
+  allocation. Coverage stays 14/18 until that trusted inference boundary and
+  both ignored release equality gates pass.
 
 - **2026-07-13 — GQ1/GQ10 artifact-v22 deterministic resource profile
   implemented.** `SolverConfig::resource_limit` now bounds the default cold

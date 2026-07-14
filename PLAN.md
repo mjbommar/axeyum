@@ -12,7 +12,7 @@ session state.
 > without ever losing the thread. **We do not stop and we do not hand-wave; we
 > advance the next task and record it.**
 
-> **Current sequencing (2026-07-13).** The P1.4 e-graph → P1.5 CDCL(T)
+> **Current sequencing (2026-07-14).** The P1.4 e-graph → P1.5 CDCL(T)
 > keystone is landed, and the recovery audit has restored P2.6 through the
 > checked ADR-0131 boundary with explicit resource limits. Continue the same
 > depth-first spine through broader nested/alternating QSAT, quantified-UF
@@ -802,6 +802,19 @@ remain ignored and the latest 4 GiB run still allocation-failed. Therefore this
 does **not** raise Lean coverage or close ADR-0124 reconstruction. Next: attribute
 and reduce the remaining public export peak, then restore the full direct/router
 stress equality gate before acceptance.
+**ADR-0124 bounded-memory follow-up (2026-07-14):** compact Lean output now
+streams through an `io::Write` sink before final inference, so the proof arena
+and the 89 MiB source module no longer require a second in-memory copy. Free
+variables associated with nested eliminator lambdas are closed in one
+scope-aware shared-DAG traversal, while ordinary abstraction skips subgraphs
+that do not contain a requested local. The public `small-pipeline-fixpoint-3`
+direct/router pipeline now passes the guarded 4 GiB release gate in 106.62 s at
+3,692,844 KiB peak. On `bug802`, reconstruction reaches 2.984 s and streaming
+export 10.506 s before the remaining generic kernel-inference gate requests a
+2,181,038,096-byte allocation. This checkpoint therefore proves the construction
+and export fixes but does not yet raise Lean coverage: next make deeply nested
+`Exists.rec` checking bounded without weakening the trusted type check, then
+rerun both public equality gates.
 **Scaled source-bound BV alternation is now LANDED (ADR-0125):** only the
 ADR-0124 total-binder cap rises 128→1,024; the 4,096-node matrix cap and exact
 source/proof replay contract are unchanged. `bug802` has 318 universal plus 212
