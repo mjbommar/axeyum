@@ -126,12 +126,11 @@ manifest, solver config, environment/toolchain/hardware, and backends, and
 permits only the clean source revision to differ. It reports raw Axeyum and Z3
 controls beside the ratio and stage deltas; optional regression/drift thresholds
 are explicit caller policy rather than synthetic defaults.
-A committed artifact-v22 cross-commit micro smoke exercises the boundary
-between clean revisions `d39dc6ac` and `00a745c0` with matching
-corpus/config/environment and three trials each. Its ratio mean moved -13.55%,
-but the candidate ratio CV is 31.35% and the descriptive standardized delta is
-only -0.85; raw Z3 moved +1.83%. This demonstrates the noise reporting and
-supports no performance claim.
+The prior artifact-v21 cross-commit micro smoke exercises the comparison
+boundary between clean revisions `d39dc6ac` and `00a745c0`. Artifact v22 has a
+new clean bounded-resource baseline at `fe65b076`; its distinct-revision
+candidate/comparison is the next artifact checkpoint. These micro runs
+demonstrate identity/noise reporting and support no performance claim.
 GQ1/GQ10 remain open until the actual Glaurung capture is ingested.
 
 **Non-negotiable acceptance gate.** Comparable runs require 100% decided on the

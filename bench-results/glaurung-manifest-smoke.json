@@ -2,13 +2,13 @@
   "config": {
     "backend": "axeyum-sat-bv rustsat-batsat",
     "backend_kind": "sat-bv",
-    "cnf_clause_budget": null,
+    "cnf_clause_budget": 8000000,
     "cnf_inprocessing": false,
-    "cnf_variable_budget": null,
+    "cnf_variable_budget": 3000000,
     "cnf_vivify": false,
     "compare_backend": "z3 4.13.3.0",
     "compare_z3": true,
-    "config_hash": "4eb5f2edfd872408",
+    "config_hash": "8215deba5a6a43e0",
     "corpus": "corpus/micro",
     "corpus_hash": "bf5568e9dc4ac850",
     "corpus_manifest": {
@@ -67,7 +67,7 @@
       "source": {
         "dirty": false,
         "dirty_scope": "repository excluding bench-results/**",
-        "revision": "d39dc6ac701b65a2c4bb0412fdaa59bd0fa9e87c"
+        "revision": "fe65b07636e4f3c071b0dc5676f1da8679a1a664"
       },
       "toolchain": {
         "build_profile": "release",
@@ -82,7 +82,7 @@
     "logic": "QF_BV",
     "min_decided_percent": 100.0,
     "native_cdcl": false,
-    "node_budget": null,
+    "node_budget": 300000,
     "preprocess": true,
     "prove_unsat": false,
     "query_plan": {
@@ -93,8 +93,30 @@
       "refine_select": "first",
       "sat_replay_failure_policy": "soundness-alarm"
     },
+    "require_deterministic_resources": true,
     "require_in_process_z3": true,
     "require_reproducible_run": true,
+    "resource_limit": 2000000,
+    "resources": {
+      "cross_backend_numeric_limits_are_work_equivalent": false,
+      "limits": {
+        "cnf_clauses": 8000000,
+        "cnf_variables": 3000000,
+        "dag_nodes": 300000,
+        "search": 2000000
+      },
+      "profile": "axeyum-qfbv-cold-bounded-v1",
+      "required": true,
+      "units": {
+        "cnf_clauses": "clauses in the formula submitted to SAT",
+        "cnf_variables": "variables in the formula submitted to SAT",
+        "dag_nodes": "unique reachable term DAG nodes before lowering",
+        "primary_search": "rustsat-batsat within_budget progress checks",
+        "z3_oracle_search": "Z3 rlimit units"
+      },
+      "wall_clock_is_deterministic": false,
+      "wall_clock_safety_timeout_ms": 1000
+    },
     "rewrite": {
       "enabled_rule_ids": [],
       "mode": "off",
@@ -109,12 +131,12 @@
       "backend_stats": {
         "aig_inputs": 8.0,
         "aig_nodes": 44.0,
-        "bit_blast_ms": 0.027120000000000002,
+        "bit_blast_ms": 0.024105,
         "cnf_clauses": 36.0,
-        "cnf_encode_ms": 0.041736999999999996,
+        "cnf_encode_ms": 0.044842999999999994,
         "cnf_variables": 15.0
       },
-      "cold_total_ms": 0.22241,
+      "cold_total_ms": 0.246985,
       "corpus_manifest": {
         "content_hash": "sha256:9f19b538d7d38c0862edfc28d2f29893093c2aa966f1b178dd968a255df12ec3",
         "decision_agrees": true,
@@ -134,36 +156,36 @@
       "layer_attribution": {
         "aig_inputs": 8,
         "aig_nodes": 44,
-        "bit_blast_ms": 0.027120000000000002,
+        "bit_blast_ms": 0.024105,
         "cnf_clauses": 36,
-        "cnf_encode_ms": 0.041736999999999996,
+        "cnf_encode_ms": 0.044842999999999994,
         "cnf_inprocess_ms": 0.0,
         "cnf_variables": 15,
-        "model_lift_ms": 0.023183000000000002,
-        "model_replay_ms": 0.01073,
-        "solve_ms": 0.045784,
-        "total_ms": 0.22240999999999997,
-        "word_preprocess_ms": 0.073856
+        "model_lift_ms": 0.02225,
+        "model_replay_ms": 0.011571,
+        "solve_ms": 0.075219,
+        "total_ms": 0.246985,
+        "word_preprocess_ms": 0.068997
       },
       "max_depth": 3,
       "model_lift_ms": 0,
-      "model_replay_ms": 0.01073,
+      "model_replay_ms": 0.011571,
       "oracle": {
         "backend_kind": "z3",
         "backend_stats": {
           "max memory": 33.67,
           "memory": 33.67,
-          "num allocs": 18480.0,
+          "num allocs": 18508.0,
           "rlimit count": 30.0,
           "solve-eqs-elim-vars": 1.0,
           "solve-eqs-steps": 1.0
         },
-        "cold_total_ms": 0.973544,
+        "cold_total_ms": 0.9631219999999999,
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
         "model_lift_ms": 0,
-        "model_replay_ms": 0.009047,
+        "model_replay_ms": 0.009117,
         "outcome": "sat",
         "query_boundary": "original parsed assertions",
         "solve_ms": 0,
@@ -257,12 +279,12 @@
       "backend_stats": {
         "aig_inputs": 0.0,
         "aig_nodes": 1.0,
-        "bit_blast_ms": 0.002124,
+        "bit_blast_ms": 0.002164,
         "cnf_clauses": 1.0,
-        "cnf_encode_ms": 0.004058,
+        "cnf_encode_ms": 0.004328,
         "cnf_variables": 0.0
       },
-      "cold_total_ms": 0.040045,
+      "cold_total_ms": 0.041206,
       "corpus_manifest": {
         "content_hash": "sha256:b56d9c3d68dafa535fac7e69936f97d5270765e122c3c388d256391ec0e9f524",
         "decision_agrees": true,
@@ -282,16 +304,16 @@
       "layer_attribution": {
         "aig_inputs": 0,
         "aig_nodes": 1,
-        "bit_blast_ms": 0.002124,
+        "bit_blast_ms": 0.002164,
         "cnf_clauses": 1,
-        "cnf_encode_ms": 0.004058,
+        "cnf_encode_ms": 0.004328,
         "cnf_inprocess_ms": 0.0,
         "cnf_variables": 0,
         "model_lift_ms": 0.0,
         "model_replay_ms": 0.0,
-        "solve_ms": 0.01076,
-        "total_ms": 0.040045,
-        "word_preprocess_ms": 0.023103
+        "solve_ms": 0.010910000000000001,
+        "total_ms": 0.041206,
+        "word_preprocess_ms": 0.023804000000000002
       },
       "max_depth": 2,
       "model_lift_ms": 0,
@@ -301,10 +323,10 @@
         "backend_stats": {
           "max memory": 33.67,
           "memory": 33.48,
-          "num allocs": 78192.0,
+          "num allocs": 78435.0,
           "rlimit count": 14.0
         },
-        "cold_total_ms": 0.182888,
+        "cold_total_ms": 0.170805,
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
@@ -404,24 +426,24 @@
     "blocker_buckets": {},
     "client_comparison": {
       "axeyum": {
-        "max_ms": 0.22240999999999997,
-        "mean_ms": 0.1312275,
-        "min_ms": 0.040045,
-        "p50_ms": 0.040045,
-        "p95_ms": 0.22240999999999997
+        "max_ms": 0.246985,
+        "mean_ms": 0.14409550000000002,
+        "min_ms": 0.041206000000000007,
+        "p50_ms": 0.041206000000000007,
+        "p95_ms": 0.246985
       },
-      "axeyum_over_z3_ratio": 0.2269523845760062,
-      "axeyum_total_s": 0.000262455,
+      "axeyum_over_z3_ratio": 0.25415304512547987,
+      "axeyum_total_s": 0.00028819100000000003,
       "instances": 2,
       "query_boundary": "original parsed assertions for both solvers",
       "z3": {
-        "max_ms": 0.973544,
-        "mean_ms": 0.578216,
-        "min_ms": 0.18288799999999997,
-        "p50_ms": 0.18288799999999997,
-        "p95_ms": 0.973544
+        "max_ms": 0.963122,
+        "mean_ms": 0.5669635000000001,
+        "min_ms": 0.170805,
+        "p50_ms": 0.170805,
+        "p95_ms": 0.963122
       },
-      "z3_total_s": 0.001156432
+      "z3_total_s": 0.001133927
     },
     "decided": 2,
     "decided_percent": 100.0,
@@ -429,26 +451,26 @@
     "errors": 0,
     "files": 2,
     "layer_attribution": {
-      "bit_blast_s": 0.000029244,
-      "bit_blast_share": 0.11142481568268847,
-      "cnf_encode_s": 0.000045795,
-      "cnf_encode_share": 0.1744870549237012,
+      "bit_blast_s": 0.000026269000000000002,
+      "bit_blast_share": 0.09115135448365842,
+      "cnf_encode_s": 0.000049170999999999994,
+      "cnf_encode_share": 0.17061948499432666,
       "cnf_inprocess_s": 0.0,
       "cnf_inprocess_share": 0.0,
       "distributions": {
         "bit_blast": {
-          "max_ms": 0.027120000000000002,
-          "mean_ms": 0.014622,
-          "min_ms": 0.002124,
-          "p50_ms": 0.002124,
-          "p95_ms": 0.027120000000000002
+          "max_ms": 0.024105,
+          "mean_ms": 0.0131345,
+          "min_ms": 0.002164,
+          "p50_ms": 0.002164,
+          "p95_ms": 0.024105
         },
         "cnf_encode": {
-          "max_ms": 0.041736999999999996,
-          "mean_ms": 0.022897499999999998,
-          "min_ms": 0.004058,
-          "p50_ms": 0.004058,
-          "p95_ms": 0.041736999999999996
+          "max_ms": 0.044842999999999994,
+          "mean_ms": 0.024585499999999996,
+          "min_ms": 0.004328,
+          "p50_ms": 0.004328,
+          "p95_ms": 0.044842999999999994
         },
         "cnf_inprocess": {
           "max_ms": 0.0,
@@ -458,47 +480,47 @@
           "p95_ms": 0.0
         },
         "model_lift": {
-          "max_ms": 0.023183000000000002,
-          "mean_ms": 0.011591500000000001,
+          "max_ms": 0.02225,
+          "mean_ms": 0.011125,
           "min_ms": 0.0,
           "p50_ms": 0.0,
-          "p95_ms": 0.023183000000000002
+          "p95_ms": 0.02225
         },
         "model_replay": {
-          "max_ms": 0.01073,
-          "mean_ms": 0.005365,
+          "max_ms": 0.011571,
+          "mean_ms": 0.0057855,
           "min_ms": 0.0,
           "p50_ms": 0.0,
-          "p95_ms": 0.01073
+          "p95_ms": 0.011571
         },
         "solve": {
-          "max_ms": 0.045784,
-          "mean_ms": 0.028272,
-          "min_ms": 0.01076,
-          "p50_ms": 0.01076,
-          "p95_ms": 0.045784
+          "max_ms": 0.075219,
+          "mean_ms": 0.0430645,
+          "min_ms": 0.010910000000000001,
+          "p50_ms": 0.010910000000000001,
+          "p95_ms": 0.075219
         },
         "total": {
-          "max_ms": 0.22240999999999997,
-          "mean_ms": 0.1312275,
-          "min_ms": 0.040045,
-          "p50_ms": 0.040045,
-          "p95_ms": 0.22240999999999997
+          "max_ms": 0.246985,
+          "mean_ms": 0.14409550000000002,
+          "min_ms": 0.041206,
+          "p50_ms": 0.041206,
+          "p95_ms": 0.246985
         },
         "word_preprocess": {
-          "max_ms": 0.073856,
-          "mean_ms": 0.0484795,
-          "min_ms": 0.023103,
-          "p50_ms": 0.023103,
-          "p95_ms": 0.073856
+          "max_ms": 0.068997,
+          "mean_ms": 0.046400500000000004,
+          "min_ms": 0.023804000000000002,
+          "p50_ms": 0.023804000000000002,
+          "p95_ms": 0.068997
         }
       },
       "instances": 2,
-      "model_lift_s": 0.000023183,
-      "model_lift_share": 0.08833133299041741,
+      "model_lift_s": 0.00002225,
+      "model_lift_share": 0.07720574202525408,
       "model_replay_instances": 1,
-      "model_replay_s": 0.00001073,
-      "model_replay_share": 0.040883199024594696,
+      "model_replay_s": 0.000011571,
+      "model_replay_share": 0.040150455774122025,
       "sat_dominates": false,
       "sat_dominates_threshold": 0.5,
       "size_distributions": {
@@ -531,11 +553,11 @@
           "p95": 15
         }
       },
-      "solve_s": 0.000056544,
-      "solve_share": 0.2154426473109676,
-      "total_pipeline_s": 0.000262455,
-      "word_preprocess_s": 0.000096959,
-      "word_preprocess_share": 0.3694309500676307
+      "solve_s": 0.000086129,
+      "solve_share": 0.29886082493901617,
+      "total_pipeline_s": 0.000288191,
+      "word_preprocess_s": 0.00009280100000000001,
+      "word_preprocess_share": 0.3220121377836227
     },
     "manifest": {
       "agree": 2,
@@ -552,7 +574,7 @@
       "enabled": true,
       "skipped": 0
     },
-    "par2_mean_s": 0.0001312275,
+    "par2_mean_s": 0.00014409550000000002,
     "query_plan": {
       "original_dag_nodes": 6,
       "original_tree_nodes": 6,
@@ -719,5 +741,5 @@
     },
     "unsupported": []
   },
-  "version": 21
+  "version": 22
 }

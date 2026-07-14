@@ -2,13 +2,13 @@
   "config": {
     "backend": "axeyum-sat-bv rustsat-batsat",
     "backend_kind": "sat-bv",
-    "cnf_clause_budget": null,
+    "cnf_clause_budget": 8000000,
     "cnf_inprocessing": false,
-    "cnf_variable_budget": null,
+    "cnf_variable_budget": 3000000,
     "cnf_vivify": false,
     "compare_backend": "z3 4.13.3.0",
     "compare_z3": true,
-    "config_hash": "a0fe396a82fb32e4",
+    "config_hash": "dcf65e26d39aa65c",
     "corpus": "corpus/micro",
     "corpus_hash": "bf5568e9dc4ac850",
     "corpus_manifest": {
@@ -67,7 +67,7 @@
       "source": {
         "dirty": false,
         "dirty_scope": "repository excluding bench-results/**",
-        "revision": "d39dc6ac701b65a2c4bb0412fdaa59bd0fa9e87c"
+        "revision": "fe65b07636e4f3c071b0dc5676f1da8679a1a664"
       },
       "toolchain": {
         "build_profile": "release",
@@ -82,7 +82,7 @@
     "logic": "QF_BV",
     "min_decided_percent": 100.0,
     "native_cdcl": false,
-    "node_budget": null,
+    "node_budget": 300000,
     "preprocess": true,
     "prove_unsat": false,
     "query_plan": {
@@ -93,8 +93,30 @@
       "refine_select": "first",
       "sat_replay_failure_policy": "soundness-alarm"
     },
+    "require_deterministic_resources": true,
     "require_in_process_z3": true,
     "require_reproducible_run": true,
+    "resource_limit": 2000000,
+    "resources": {
+      "cross_backend_numeric_limits_are_work_equivalent": false,
+      "limits": {
+        "cnf_clauses": 8000000,
+        "cnf_variables": 3000000,
+        "dag_nodes": 300000,
+        "search": 2000000
+      },
+      "profile": "axeyum-qfbv-cold-bounded-v1",
+      "required": true,
+      "units": {
+        "cnf_clauses": "clauses in the formula submitted to SAT",
+        "cnf_variables": "variables in the formula submitted to SAT",
+        "dag_nodes": "unique reachable term DAG nodes before lowering",
+        "primary_search": "rustsat-batsat within_budget progress checks",
+        "z3_oracle_search": "Z3 rlimit units"
+      },
+      "wall_clock_is_deterministic": false,
+      "wall_clock_safety_timeout_ms": 10000
+    },
     "rewrite": {
       "enabled_rule_ids": [],
       "mode": "off",
@@ -109,12 +131,12 @@
       "backend_stats": {
         "aig_inputs": 8.0,
         "aig_nodes": 44.0,
-        "bit_blast_ms": 0.028272,
+        "bit_blast_ms": 0.013185,
         "cnf_clauses": 36.0,
-        "cnf_encode_ms": 0.044402,
+        "cnf_encode_ms": 0.024344,
         "cnf_variables": 15.0
       },
-      "cold_total_ms": 0.237159,
+      "cold_total_ms": 0.1202,
       "corpus_manifest": {
         "content_hash": "sha256:9f19b538d7d38c0862edfc28d2f29893093c2aa966f1b178dd968a255df12ec3",
         "decision_agrees": true,
@@ -134,36 +156,36 @@
       "layer_attribution": {
         "aig_inputs": 8,
         "aig_nodes": 44,
-        "bit_blast_ms": 0.028272,
+        "bit_blast_ms": 0.013185,
         "cnf_clauses": 36,
-        "cnf_encode_ms": 0.044402,
+        "cnf_encode_ms": 0.024344,
         "cnf_inprocess_ms": 0.0,
         "cnf_variables": 15,
-        "model_lift_ms": 0.022051,
-        "model_replay_ms": 0.010951,
-        "solve_ms": 0.058408,
-        "total_ms": 0.23715900000000004,
-        "word_preprocess_ms": 0.073075
+        "model_lift_ms": 0.011871,
+        "model_replay_ms": 0.006873,
+        "solve_ms": 0.026278000000000003,
+        "total_ms": 0.12019999999999999,
+        "word_preprocess_ms": 0.037648999999999995
       },
       "max_depth": 3,
       "model_lift_ms": 0,
-      "model_replay_ms": 0.010951,
+      "model_replay_ms": 0.006873,
       "oracle": {
         "backend_kind": "z3",
         "backend_stats": {
           "max memory": 33.67,
           "memory": 33.67,
-          "num allocs": 18480.0,
+          "num allocs": 18508.0,
           "rlimit count": 30.0,
           "solve-eqs-elim-vars": 1.0,
           "solve-eqs-steps": 1.0
         },
-        "cold_total_ms": 1.0063559999999998,
+        "cold_total_ms": 0.980224,
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
         "model_lift_ms": 0,
-        "model_replay_ms": 0.012683,
+        "model_replay_ms": 0.009217,
         "outcome": "sat",
         "query_boundary": "original parsed assertions",
         "solve_ms": 0,
@@ -257,12 +279,12 @@
       "backend_stats": {
         "aig_inputs": 0.0,
         "aig_nodes": 1.0,
-        "bit_blast_ms": 0.002114,
+        "bit_blast_ms": 0.0024040000000000003,
         "cnf_clauses": 1.0,
-        "cnf_encode_ms": 0.004008,
+        "cnf_encode_ms": 0.004288,
         "cnf_variables": 0.0
       },
-      "cold_total_ms": 0.040494999999999996,
+      "cold_total_ms": 0.042707999999999996,
       "corpus_manifest": {
         "content_hash": "sha256:b56d9c3d68dafa535fac7e69936f97d5270765e122c3c388d256391ec0e9f524",
         "decision_agrees": true,
@@ -282,16 +304,16 @@
       "layer_attribution": {
         "aig_inputs": 0,
         "aig_nodes": 1,
-        "bit_blast_ms": 0.002114,
+        "bit_blast_ms": 0.0024040000000000003,
         "cnf_clauses": 1,
-        "cnf_encode_ms": 0.004008,
+        "cnf_encode_ms": 0.004288,
         "cnf_inprocess_ms": 0.0,
         "cnf_variables": 0,
         "model_lift_ms": 0.0,
         "model_replay_ms": 0.0,
-        "solve_ms": 0.011111,
-        "total_ms": 0.040494999999999996,
-        "word_preprocess_ms": 0.023261999999999998
+        "solve_ms": 0.011471,
+        "total_ms": 0.042707999999999996,
+        "word_preprocess_ms": 0.024545
       },
       "max_depth": 2,
       "model_lift_ms": 0,
@@ -301,10 +323,10 @@
         "backend_stats": {
           "max memory": 33.67,
           "memory": 33.48,
-          "num allocs": 78192.0,
+          "num allocs": 78435.0,
           "rlimit count": 14.0
         },
-        "cold_total_ms": 0.178309,
+        "cold_total_ms": 0.17967999999999998,
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
@@ -404,24 +426,24 @@
     "blocker_buckets": {},
     "client_comparison": {
       "axeyum": {
-        "max_ms": 0.23715900000000004,
-        "mean_ms": 0.138827,
-        "min_ms": 0.040494999999999996,
-        "p50_ms": 0.040494999999999996,
-        "p95_ms": 0.23715900000000004
+        "max_ms": 0.12019999999999999,
+        "mean_ms": 0.08145399999999998,
+        "min_ms": 0.042707999999999996,
+        "p50_ms": 0.042707999999999996,
+        "p95_ms": 0.12019999999999999
       },
-      "axeyum_over_z3_ratio": 0.23437343046346434,
-      "axeyum_total_s": 0.000277654,
+      "axeyum_over_z3_ratio": 0.14044955444588514,
+      "axeyum_total_s": 0.00016290799999999997,
       "instances": 2,
       "query_boundary": "original parsed assertions for both solvers",
       "z3": {
-        "max_ms": 1.006356,
-        "mean_ms": 0.5923325,
-        "min_ms": 0.178309,
-        "p50_ms": 0.178309,
-        "p95_ms": 1.006356
+        "max_ms": 0.980224,
+        "mean_ms": 0.579952,
+        "min_ms": 0.17967999999999998,
+        "p50_ms": 0.17967999999999998,
+        "p95_ms": 0.980224
       },
-      "z3_total_s": 0.0011846650000000001
+      "z3_total_s": 0.001159904
     },
     "decided": 2,
     "decided_percent": 100.0,
@@ -429,26 +451,26 @@
     "errors": 0,
     "files": 2,
     "layer_attribution": {
-      "bit_blast_s": 0.000030386,
-      "bit_blast_share": 0.10943836573577188,
-      "cnf_encode_s": 0.00004841,
-      "cnf_encode_share": 0.17435369200515752,
+      "bit_blast_s": 0.000015589,
+      "bit_blast_share": 0.09569204704495787,
+      "cnf_encode_s": 0.000028632,
+      "cnf_encode_share": 0.17575564122081172,
       "cnf_inprocess_s": 0.0,
       "cnf_inprocess_share": 0.0,
       "distributions": {
         "bit_blast": {
-          "max_ms": 0.028272,
-          "mean_ms": 0.015193,
-          "min_ms": 0.002114,
-          "p50_ms": 0.002114,
-          "p95_ms": 0.028272
+          "max_ms": 0.013185,
+          "mean_ms": 0.007794499999999999,
+          "min_ms": 0.0024040000000000003,
+          "p50_ms": 0.0024040000000000003,
+          "p95_ms": 0.013185
         },
         "cnf_encode": {
-          "max_ms": 0.044402,
-          "mean_ms": 0.024205,
-          "min_ms": 0.004008,
-          "p50_ms": 0.004008,
-          "p95_ms": 0.044402
+          "max_ms": 0.024344,
+          "mean_ms": 0.014316,
+          "min_ms": 0.004288,
+          "p50_ms": 0.004288,
+          "p95_ms": 0.024344
         },
         "cnf_inprocess": {
           "max_ms": 0.0,
@@ -458,47 +480,47 @@
           "p95_ms": 0.0
         },
         "model_lift": {
-          "max_ms": 0.022051,
-          "mean_ms": 0.0110255,
+          "max_ms": 0.011871,
+          "mean_ms": 0.0059355,
           "min_ms": 0.0,
           "p50_ms": 0.0,
-          "p95_ms": 0.022051
+          "p95_ms": 0.011871
         },
         "model_replay": {
-          "max_ms": 0.010951,
-          "mean_ms": 0.0054755,
+          "max_ms": 0.006873,
+          "mean_ms": 0.0034365,
           "min_ms": 0.0,
           "p50_ms": 0.0,
-          "p95_ms": 0.010951
+          "p95_ms": 0.006873
         },
         "solve": {
-          "max_ms": 0.058408,
-          "mean_ms": 0.0347595,
-          "min_ms": 0.011111,
-          "p50_ms": 0.011111,
-          "p95_ms": 0.058408
+          "max_ms": 0.026278000000000003,
+          "mean_ms": 0.0188745,
+          "min_ms": 0.011471,
+          "p50_ms": 0.011471,
+          "p95_ms": 0.026278000000000003
         },
         "total": {
-          "max_ms": 0.23715900000000004,
-          "mean_ms": 0.138827,
-          "min_ms": 0.040494999999999996,
-          "p50_ms": 0.040494999999999996,
-          "p95_ms": 0.23715900000000004
+          "max_ms": 0.12019999999999999,
+          "mean_ms": 0.08145399999999998,
+          "min_ms": 0.042707999999999996,
+          "p50_ms": 0.042707999999999996,
+          "p95_ms": 0.12019999999999999
         },
         "word_preprocess": {
-          "max_ms": 0.073075,
-          "mean_ms": 0.048168499999999996,
-          "min_ms": 0.023261999999999998,
-          "p50_ms": 0.023261999999999998,
-          "p95_ms": 0.073075
+          "max_ms": 0.037648999999999995,
+          "mean_ms": 0.031096999999999996,
+          "min_ms": 0.024545,
+          "p50_ms": 0.024545,
+          "p95_ms": 0.037648999999999995
         }
       },
       "instances": 2,
-      "model_lift_s": 0.000022051,
-      "model_lift_share": 0.07941898910154366,
+      "model_lift_s": 0.000011871,
+      "model_lift_share": 0.0728693495715373,
       "model_replay_instances": 1,
-      "model_replay_s": 0.000010951,
-      "model_replay_share": 0.03944117498757447,
+      "model_replay_s": 6.873e-6,
+      "model_replay_share": 0.042189456625825614,
       "sat_dominates": false,
       "sat_dominates_threshold": 0.5,
       "size_distributions": {
@@ -531,11 +553,11 @@
           "p95": 15
         }
       },
-      "solve_s": 0.000069519,
-      "solve_share": 0.2503799693143265,
-      "total_pipeline_s": 0.00027765399999999995,
-      "word_preprocess_s": 0.000096337,
-      "word_preprocess_share": 0.3469678088556261
+      "solve_s": 0.000037749,
+      "solve_share": 0.2317197436589977,
+      "total_pipeline_s": 0.00016290800000000002,
+      "word_preprocess_s": 0.000062194,
+      "word_preprocess_share": 0.38177376187786966
     },
     "manifest": {
       "agree": 2,
@@ -552,7 +574,7 @@
       "enabled": true,
       "skipped": 0
     },
-    "par2_mean_s": 0.000138827,
+    "par2_mean_s": 0.00008145399999999998,
     "query_plan": {
       "original_dag_nodes": 6,
       "original_tree_nodes": 6,
@@ -719,5 +741,5 @@
     },
     "unsupported": []
   },
-  "version": 21
+  "version": 22
 }

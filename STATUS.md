@@ -389,10 +389,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   The committed
   [`glaurung-repetition-smoke`](bench-results/glaurung-repetition-smoke/summary.json)
   exercises three independent artifact-v22 trials from clean revision
-  `d39dc6ac`: every run
+  `fe65b076`: every run
   is 2/2 decided, manifest-agreed, and Z3-agreed with zero errors or replay
-  failures. The summary records Axeyum-total CV 3.66%, Z3-total CV 2.36%, and
-  ratio CV 6.06%, plus every stage distribution. Those sub-millisecond micro
+  failures. The summary records Axeyum-total CV 32.63%, Z3-total CV 2.59%, and
+  ratio CV 29.92%, plus every stage distribution. Those sub-millisecond micro
   values validate variance plumbing only and carry no Glaurung performance
   claim.
   Cross-commit comparison now revalidates both repetition summaries from their
@@ -402,12 +402,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   Z3-drift gates are caller-supplied; the micro fixture sets no threshold.
   The committed
   [`glaurung-cross-commit-smoke`](bench-results/glaurung-cross-commit-smoke.json)
-  validates artifact-v22 baseline `d39dc6ac` against candidate `00a745c0` with
-  three trials each and matching `config_hash`, `environment_hash`,
-  corpus/manifest hashes, determinism profile, and backends. The candidate ratio
-  mean is 13.55% lower while its CV is 31.35% and descriptive standardized
-  delta is -0.85; raw Z3 control drift is +1.83%.
-  These sub-millisecond micro results demonstrate identity/noise accounting and
+  still records the prior artifact-v21 boundary between `d39dc6ac` and
+  `00a745c0`. The v22 bounded-resource baseline is `fe65b076`; its clean
+  distinct-revision candidate is the next artifact checkpoint. These
+  sub-millisecond micro results demonstrate identity/noise accounting and
   explicitly do not establish a speedup or product threshold.
 
   | ID | Live status | Next acceptance boundary |
@@ -2125,7 +2123,12 @@ plan is built and committed on the current branch:
   / 8M CNF clauses); wall timeout remains explicitly non-deterministic. Rust
   tests force both BatSat and proof-CDCL resource exhaustion, an end-to-end
   SAT-BV test checks `UnknownKind::ResourceLimit`, and repetition fixtures reject
-  decorative/mismatched resource records.
+  decorative/mismatched resource records. Clean revision `fe65b076` produced
+  the v22 performance/proof smokes and three-trial baseline: each performance
+  trial is 2/2 decided/manifest-agreed/Z3-agreed with zero errors,
+  disagreements, or replay failures; the proof companion checks its 1/1 UNSAT
+  with none missing; and the baseline Axeyum/Z3/ratio CVs are
+  32.63%/2.59%/29.92%. These are bounded-profile plumbing results only.
 - **2026-07-13 — GQ1/GQ10 artifact-v21 executable determinism identity
   implemented.** The audit found that the former benchmark `--seed` option only
   changed artifact identity and did not configure either backend. That option is
