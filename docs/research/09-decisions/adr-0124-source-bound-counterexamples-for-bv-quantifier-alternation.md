@@ -59,6 +59,22 @@ bindings, changed proof text, stale assertions, free symbols, Int binders,
 reversed prefixes, non-implication matrices, and existential symbols in the
 antecedent. The workspace Clippy gate is clean.
 
+### Lean reconstruction follow-up (WIP, 2026-07-13)
+
+The in-progress Lean route now represents the exact implication below the
+`forall+ exists+` prefix, evaluator-proves the chosen outer antecedent, and
+reconstructs the consequent refutation with bounded local lets. Kernel support
+checks consecutive lets as one dependent telescope, reclaims transient compact
+sharing maps before deterministic naming, and can release hash-consing and
+typechecking lookup tables behind a one-way read-only export guard. Kernel
+167/167, seven non-stress alternation tests, and focused Clippy pass.
+
+This is a checkpoint, not accepted Lean coverage: both public release stress
+tests remain ignored, and the latest guarded 4 GiB attempt still failed on
+allocation. The audit therefore remains at Lean UNSAT 14/18. Acceptance requires
+measured peak reduction plus restoration of the full public direct/router module
+equality gate.
+
 ## Alternatives
 
 - **General QSAT or BV quantifier elimination.** Deferred: it is a much larger

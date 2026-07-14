@@ -723,6 +723,17 @@ remaining cvc5 quantified-BV unknown (3,317 DAG / 5,760 tree nodes), and choose
 between extending source-bound alternation search, a checked transition
 invariant, or a bounded proof-producing QSAT decomposition. Keep general QSAT
 and ADR-0124 Lean reconstruction explicit separate boundaries.
+**ADR-0124 Lean reconstruction remains a WIP checkpoint (2026-07-13):** the
+source proposition now preserves the exact outer/inner implication, the
+residual Alethe tail consumes an evaluator-checked antecedent and introduces
+bounded local lets, and compact export releases transient kernel lookup tables
+behind a one-way read-only guard. Consecutive Lean lets are checked as one
+dependent telescope to avoid quadratic zeta expansion. Kernel 167/167 and the
+seven non-stress alternation tests pass, but the two public release stress tests
+remain ignored and the latest 4 GiB run still allocation-failed. Therefore this
+does **not** raise Lean coverage or close ADR-0124 reconstruction. Next: attribute
+and reduce the remaining public export peak, then restore the full direct/router
+stress equality gate before acceptance.
 **Scaled source-bound BV alternation is now LANDED (ADR-0125):** only the
 ADR-0124 total-binder cap rises 128→1,024; the 4,096-node matrix cap and exact
 source/proof replay contract are unchanged. `bug802` has 318 universal plus 212

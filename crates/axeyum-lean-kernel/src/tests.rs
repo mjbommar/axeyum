@@ -588,3 +588,12 @@ fn lit_nodes_are_closed() {
     assert_eq!(n, n2);
     assert_ne!(n, s);
 }
+
+#[test]
+#[should_panic(expected = "kernel was finalized for read-only export")]
+fn export_finalization_rejects_further_construction() {
+    let mut k = Kernel::new();
+    let _ = k.sort_zero();
+    k.release_transient_tables_for_export();
+    let _ = k.sort_zero();
+}

@@ -8,7 +8,7 @@
 //! declaration prelude, a later slice) re-checked by an independent Lean toolchain.
 //! It is pure pretty-printing — it never affects type checking.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::fmt::Write as _;
 
 use crate::{Declaration, ExprId, ExprNode, Kernel, LevelId, LevelNode, Lit, NameId, NameNode};
@@ -527,7 +527,7 @@ impl Kernel {
     /// Collect (iteratively, to avoid deep recursion on large proof terms) every
     /// `Const` name referenced anywhere inside `root`.
     fn collect_const_deps(&self, root: ExprId, out: &mut Vec<NameId>) {
-        let mut visited = BTreeSet::new();
+        let mut visited = HashSet::new();
         let mut stack = vec![root];
         while let Some(e) = stack.pop() {
             if !visited.insert(e) {
@@ -663,7 +663,7 @@ impl Kernel {
     }
 
     fn expr_postorder(&self, roots: &[ExprId]) -> Vec<ExprId> {
-        let mut visited = BTreeSet::new();
+        let mut visited = HashSet::new();
         let mut order = Vec::new();
         let mut stack = roots
             .iter()
@@ -688,9 +688,8 @@ impl Kernel {
         order
     }
 
-    fn compact_share_plan(&self, roots: &[ExprId], theorem_name: &str) -> LeanSharePlan {
-        let postorder = self.expr_postorder(roots);
-        let mut occurrences = BTreeMap::<ExprId, u64>::new();
+    fn compact_share_candidates(&self, postorder: &[ExprId], roots: &[ExprId]) -> HashSet<ExprId> {
+        let mut occurrences = HashMap::<ExprId, u64>::with_capacity(postorder.len());
         for &root in roots {
             *occurrences.entry(root).or_default() = occurrences
                 .get(&root)
@@ -709,8 +708,8 @@ impl Kernel {
             }
         }
 
-        let mut tree_sizes = BTreeMap::<ExprId, u64>::new();
-        for &expression in &postorder {
+        let mut tree_sizes = HashMap::<ExprId, u64>::with_capacity(postorder.len());
+        for &expression in postorder {
             let mut size = 1_u64;
             for child in self.expr_children(expression) {
                 size = size.saturating_add(tree_sizes.get(&child).copied().unwrap_or(1));
@@ -736,7 +735,13 @@ impl Kernel {
                     )
             })
             .collect::<Vec<_>>();
-        let mut selected = candidates.into_iter().collect::<BTreeSet<_>>();
+        let mut selected = candidates.into_iter().collect::<HashSet<_>>();
+        // The occurrence and expanded-tree tables are no longer needed once the
+        // repeated-node candidates are selected. Corpus-scale proofs contain
+        // millions of expressions, so retaining both while allocating the chunk
+        // table needlessly doubles peak serialization memory.
+        drop(occurrences);
+        drop(tree_sizes);
 
         // Repetition is not the only way a proof term can become impractical to
         // render.  Resolution commonly produces a long, single-use closed chain;
@@ -745,8 +750,8 @@ impl Kernel {
         // Add deterministic cut points so every closed region between selected
         // definitions remains bounded.  Open subterms still cannot escape their
         // binder and are therefore never selected here.
-        let mut chunk_sizes = BTreeMap::<ExprId, u64>::new();
-        for &expression in &postorder {
+        let mut chunk_sizes = HashMap::<ExprId, u64>::with_capacity(postorder.len());
+        for &expression in postorder {
             let mut size = 1_u64;
             for child in self.expr_children(expression) {
                 size = size.saturating_add(chunk_sizes.get(&child).copied().unwrap_or(1));
@@ -763,6 +768,13 @@ impl Kernel {
             }
             chunk_sizes.insert(expression, size);
         }
+        drop(chunk_sizes);
+        selected
+    }
+
+    fn compact_share_plan(&self, roots: &[ExprId], theorem_name: &str) -> LeanSharePlan {
+        let postorder = self.expr_postorder(roots);
+        let selected = self.compact_share_candidates(&postorder, roots);
 
         let mut reserved = self
             .environment()
@@ -1238,6 +1250,25 @@ mod tests {
             k.render_lean_module_compact("closed_pair", goal, proof)
         );
         assert_eq!(ordinary, k.render_lean_module("closed_pair", goal, proof));
+
+        let arena_lengths = (k.names.len(), k.levels.len(), k.exprs.len());
+        assert!(!k.name_intern.is_empty());
+        assert!(!k.level_intern.is_empty());
+        assert!(!k.expr_intern.is_empty());
+        k.release_transient_tables_for_export();
+        assert_eq!(
+            arena_lengths,
+            (k.names.len(), k.levels.len(), k.exprs.len())
+        );
+        assert!(k.name_intern.is_empty());
+        assert!(k.level_intern.is_empty());
+        assert!(k.expr_intern.is_empty());
+        assert!(k.infer_closed_cache.is_empty());
+        assert!(k.whnf_cache.is_empty());
+        assert_eq!(
+            compact,
+            k.render_lean_module_compact("closed_pair", goal, proof)
+        );
     }
 
     #[test]

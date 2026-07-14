@@ -102,6 +102,8 @@ pub struct Kernel {
     /// revision key prevents a result cached before a definition/recursor is
     /// admitted from suppressing a later valid reduction.
     whnf_cache: HashMap<(ExprId, usize), ExprId>,
+    /// One-way guard set after transient tables are released for serialization.
+    export_only: bool,
 
     /// The global declaration environment (ADR-0036, slice 3). Declarations are
     /// admitted only through the type-checked [`Kernel::add_declaration`] gate.
@@ -119,7 +121,32 @@ impl Kernel {
         Self::default()
     }
 
+    /// Release hash-consing and typechecking lookup tables before a final,
+    /// read-only export of a large checked proof.
+    ///
+    /// The dense name/level/expression arenas and declaration environment remain
+    /// intact, so renderers observe exactly the same kernel term. Construction or
+    /// typechecking that tries to intern a node afterward panics instead of
+    /// assigning a duplicate handle.
+    ///
+    /// # Panics
+    ///
+    /// After this method, any operation that needs to intern a name, level, or
+    /// expression panics. Rendering the retained proof remains valid.
+    pub fn release_transient_tables_for_export(&mut self) {
+        self.name_intern = HashMap::new();
+        self.level_intern = HashMap::new();
+        self.expr_intern = HashMap::new();
+        self.infer_closed_cache = HashMap::new();
+        self.whnf_cache = HashMap::new();
+        self.export_only = true;
+    }
+
     fn intern_name(&mut self, node: NameNode) -> NameId {
+        assert!(
+            !self.export_only,
+            "kernel was finalized for read-only export"
+        );
         if let Some(&id) = self.name_intern.get(&node) {
             return id;
         }
@@ -130,6 +157,10 @@ impl Kernel {
     }
 
     fn intern_level(&mut self, node: LevelNode) -> LevelId {
+        assert!(
+            !self.export_only,
+            "kernel was finalized for read-only export"
+        );
         if let Some(&id) = self.level_intern.get(&node) {
             return id;
         }
@@ -140,6 +171,10 @@ impl Kernel {
     }
 
     fn intern_expr(&mut self, node: ExprNode) -> ExprId {
+        assert!(
+            !self.export_only,
+            "kernel was finalized for read-only export"
+        );
         if let Some(&id) = self.expr_intern.get(&node) {
             return id;
         }

@@ -1079,29 +1079,70 @@ impl Kernel {
     }
 
     /// `Let(n, ty, val, body)`: check `ty` is a type, check `infer(val)` def-eq
-    /// `ty`, then infer `body` with `val` instantiated (nanoda's `infer_let`).
+    /// `ty`, then infer `body` under a typed local and substitute `val` only in
+    /// the resulting type.
     fn infer_let(
         &mut self,
-        _name: crate::name::NameId,
+        name: crate::name::NameId,
         ty: ExprId,
         val: ExprId,
         body: ExprId,
         ctx: &mut LocalContext,
     ) -> Result<ExprId, KernelError> {
-        // The annotation must be a type.
-        self.infer_sort_of(ty, ctx)?;
-        // The value's type must match the annotation.
-        let val_ty = self.infer_core(val, ctx)?;
-        if !self.def_eq_core(val_ty, ty, ctx) {
-            return Err(KernelError::TypeMismatch {
-                expected: ty,
-                got: val_ty,
-            });
+        // Gather one consecutive telescope so the remaining body is opened
+        // exactly once. Repeatedly instantiating the tail of a 10k-let proof DAG
+        // is quadratic and destroys the sharing the lets were introduced to keep.
+        let mut telescope = vec![(name, ty, val)];
+        let mut final_body = body;
+        while let ExprNode::Let(next_name, next_ty, next_val, next_body) =
+            self.expr_node(final_body).clone()
+        {
+            telescope.push((next_name, next_ty, next_val));
+            final_body = next_body;
         }
-        // Substitute the value into the body and infer that (zeta), matching
-        // nanoda: `let` is reduced rather than opened as a local.
-        let instd = self.instantiate(body, &[val]);
-        self.infer_core(instd, ctx)
+        let mut fvar_ids = Vec::with_capacity(telescope.len());
+        let mut fvar_values = Vec::with_capacity(telescope.len());
+        let checked = (|| -> Result<ExprId, KernelError> {
+            for &(name, raw_ty, raw_val) in &telescope {
+                let opened_ty = self.instantiate(raw_ty, &fvar_values);
+                self.infer_sort_of(opened_ty, ctx)?;
+                let opened_val = self.instantiate(raw_val, &fvar_values);
+                let val_ty = self.infer_core(opened_val, ctx)?;
+                if !self.def_eq_core(val_ty, opened_ty, ctx) {
+                    return Err(KernelError::TypeMismatch {
+                        expected: opened_ty,
+                        got: val_ty,
+                    });
+                }
+
+                let fvar = ctx.fresh_fvar();
+                let value = self.fvar(fvar);
+                ctx.push(LocalDecl {
+                    fvar,
+                    name,
+                    ty: opened_ty,
+                    info: BinderInfo::Default,
+                });
+                fvar_ids.push(fvar);
+                fvar_values.push(value);
+            }
+            let opened = self.instantiate(final_body, &fvar_values);
+            self.infer_core(opened, ctx)
+        })();
+        for _ in 0..fvar_ids.len() {
+            ctx.pop();
+        }
+        let body_ty = checked?;
+        let abstracted = self.abstract_fvars(body_ty, &fvar_ids);
+        if abstracted == body_ty {
+            return Ok(body_ty);
+        }
+        let mut closed_values = Vec::with_capacity(telescope.len());
+        for &(_, _, raw_val) in &telescope {
+            let closed_val = self.instantiate(raw_val, &closed_values);
+            closed_values.push(closed_val);
+        }
+        Ok(self.instantiate(abstracted, &closed_values))
     }
 
     /// Infer the type of `Const(name, level_args)`: look up the declaration,

@@ -15,8 +15,8 @@ use axeyum_lean_kernel::{BinderInfo, Declaration, ReducibilityHint};
 
 use super::{
     Clause, DatatypeInductive, ExprId, LEAN_MODULE_THEOREM, ReconstructCtx, ReconstructError,
-    LocalDecl, and_intro, and_project, check_against, check_false_prop, ex_falso, fresh_axiom,
-    fresh_fvar_id, reconstruct_bitwise_step, render_ctx_module, require_infers_false,
+    LocalDecl, and_project, check_against, check_false_prop, fresh_axiom, fresh_fvar_id,
+    reconstruct_bitwise_step, render_ctx_module, require_infers_false,
 };
 use crate::{
     BvAlternationCounterexampleCertificate, BvPositiveUniversalInstanceSetCertificate,
@@ -1043,9 +1043,11 @@ fn forall_exists_prop(
     arena: &TermArena,
     outer: &[SymbolId],
     inner: &[SymbolId],
-    body: TermId,
+    antecedent: TermId,
+    consequent: TermId,
 ) -> Result<ExprId, ReconstructError> {
-    register_bv_widths(ctx, arena, body);
+    register_bv_widths(ctx, arena, antecedent);
+    register_bv_widths(ctx, arena, consequent);
     let mut fvars = Vec::with_capacity(outer.len());
     let mut domains = Vec::with_capacity(outer.len());
     for &binder in outer {
@@ -1057,13 +1059,13 @@ fn forall_exists_prop(
         fvars.push(id);
         domains.push(domain);
     }
-    let mut proposition = exists_suffix_prop(
+    let mut proposition = alternation_exists_suffix_prop(
         ctx,
         arena,
         inner,
-        body,
+        antecedent,
+        consequent,
         0,
-        WitnessLeanEncoding::Logical,
     )?;
     for &binder in outer.iter().rev() {
         unbind_symbol(ctx, binder, arena.symbol(binder).1);
@@ -1076,6 +1078,46 @@ fn forall_exists_prop(
             .pi(anon, domain, proposition, BinderInfo::Default);
     }
     Ok(proposition)
+}
+
+fn alternation_exists_suffix_prop(
+    ctx: &mut ReconstructCtx,
+    arena: &TermArena,
+    binders: &[SymbolId],
+    antecedent: TermId,
+    consequent: TermId,
+    index: usize,
+) -> Result<ExprId, ReconstructError> {
+    let Some(&binder) = binders.get(index) else {
+        let premise = direct_ground_prop(ctx, arena, antecedent)?;
+        let conclusion = direct_ground_prop(ctx, arena, consequent)?;
+        let anon = ctx.kernel.anon();
+        return Ok(ctx
+            .kernel
+            .pi(anon, premise, conclusion, BinderInfo::Default));
+    };
+    let sort = arena.symbol(binder).1;
+    let domain = binder_domain(ctx, sort, WitnessLeanEncoding::Logical)?;
+    let binder_id = fresh_fvar_id(ctx);
+    let binder_variable = ctx.kernel.fvar(binder_id);
+    bind_symbol(ctx, binder, sort, binder_variable);
+    let suffix = alternation_exists_suffix_prop(
+        ctx,
+        arena,
+        binders,
+        antecedent,
+        consequent,
+        index + 1,
+    )?;
+    unbind_symbol(ctx, binder, sort);
+    let predicate_body = ctx.kernel.abstract_fvars(suffix, &[binder_id]);
+    let anon = ctx.kernel.anon();
+    let predicate = ctx
+        .kernel
+        .lam(anon, domain, predicate_body, BinderInfo::Default);
+    let exists = ctx.kernel.const_(ctx.prelude.exists_, vec![ctx.one]);
+    let exists = ctx.kernel.app(exists, domain);
+    Ok(ctx.kernel.app(exists, predicate))
 }
 
 #[derive(Clone, Copy)]
@@ -1192,24 +1234,30 @@ fn refute_alternation_exists_suffix(
     ctx: &mut ReconstructCtx,
     arena: &TermArena,
     binders: &[SymbolId],
-    body: TermId,
+    antecedent: TermId,
+    consequent: TermId,
     outer_bindings: &[(SymbolId, Value)],
     index: usize,
     major: ExprId,
 ) -> Result<ExprId, ReconstructError> {
     let Some(&binder) = binders.get(index) else {
-        let (simplified, definitions) = simplify_source_aig(ctx, arena, body, outer_bindings)?;
-        let (commands, gate_defs) = crate::qfbv_alethe::prove_bit_gate_unsat_alethe(
-            &[simplified.formula],
-            definitions,
-        )
-        .ok_or_else(|| decline("alternation residual emitter declined"))?;
+        let evaluated = evaluate_ground_prop(ctx, arena, antecedent, outer_bindings)?;
+        if !evaluated.value {
+            return Err(decline("alternation outer tuple falsifies its antecedent"));
+        }
+        let consequent_proof = ctx.kernel.app(major, evaluated.proof);
+        let (formulas, definitions) = aig_gate_tail(
+            arena,
+            &[(consequent, Some(outer_bindings.to_vec()))],
+        )?;
+        let (commands, gate_defs) =
+            crate::qfbv_alethe::prove_bit_gate_unsat_alethe(&formulas, definitions)
+                .ok_or_else(|| decline("alternation residual emitter declined"))?;
         ctx.bridge = Some(gate_defs);
         ctx.gate_memo.clear();
-        let major = apply_implication(ctx, simplified.forward, major);
         eprintln!("alternation tail start {} commands", commands.len());
         let started = std::time::Instant::now();
-        let proof = reconstruct_gate_tail(ctx, &commands, &[major]);
+        let proof = reconstruct_gate_tail_with_local_lets(ctx, &commands, &[consequent_proof]);
         eprintln!("alternation tail end {:?}", started.elapsed());
         return proof;
     };
@@ -1225,13 +1273,13 @@ fn refute_alternation_exists_suffix(
         info: BinderInfo::Default,
     });
     bind_symbol(ctx, binder, sort, witness);
-    let suffix = exists_suffix_prop(
+    let suffix = alternation_exists_suffix_prop(
         ctx,
         arena,
         binders,
-        body,
+        antecedent,
+        consequent,
         index + 1,
-        WitnessLeanEncoding::Logical,
     )?;
     unbind_symbol(ctx, binder, sort);
     let predicate_body = ctx.kernel.abstract_fvars(suffix, &[witness_id]);
@@ -1257,7 +1305,8 @@ fn refute_alternation_exists_suffix(
         ctx,
         arena,
         binders,
-        body,
+        antecedent,
+        consequent,
         outer_bindings,
         index + 1,
         hypothesis,
@@ -1707,6 +1756,87 @@ fn reconstruct_gate_tail(
     Err(ReconstructError::NoEmptyClause)
 }
 
+fn reconstruct_gate_tail_with_local_lets(
+    ctx: &mut ReconstructCtx,
+    commands: &[AletheCommand],
+    assumption_proofs: &[ExprId],
+) -> Result<ExprId, ReconstructError> {
+    const LOCAL_LET_CHUNK: usize = 4;
+    let _ = ctx.em_axiom();
+    let mut premise_uses = BTreeMap::<String, usize>::new();
+    for command in commands {
+        if let AletheCommand::Step { premises, .. } = command {
+            for premise in premises {
+                *premise_uses.entry(premise.clone()).or_default() += 1;
+            }
+        }
+    }
+    let mut proofs = assumption_proofs.iter();
+    let mut env = BTreeMap::new();
+    let mut lets = Vec::new();
+    let mut reconstructed_steps = 0_usize;
+    for command in commands {
+        match command {
+            AletheCommand::Assume { id, clause } => {
+                let proof = *proofs
+                    .next()
+                    .ok_or_else(|| decline("Alethe tail has too many assumptions"))?;
+                let proposition = ctx.clause_to_prop(clause);
+                let proof = check_against(ctx, "source_instance_assume", proof, proposition)?;
+                env.insert(
+                    id.clone(),
+                    Clause {
+                        lits: clause.clone(),
+                        proof,
+                    },
+                );
+            }
+            AletheCommand::Step {
+                id,
+                clause,
+                rule,
+                premises,
+                ..
+            } => {
+                let Some(mut recovered) =
+                    reconstruct_bitwise_step(ctx, rule, clause, premises, &env)?
+                else {
+                    continue;
+                };
+                if clause.is_empty() {
+                    if proofs.next().is_some() {
+                        return Err(decline("unused source-derived assumptions"));
+                    }
+                    let proof = check_false_prop(ctx, recovered.proof)?;
+                    let fvars = lets
+                        .iter()
+                        .map(|(fvar, _, _, _)| *fvar)
+                        .collect::<Vec<_>>();
+                    let mut proof = ctx.kernel.abstract_fvars(proof, &fvars);
+                    for (index, (_, name, ty, value)) in lets.into_iter().enumerate().rev() {
+                        let ty = ctx.kernel.abstract_fvars(ty, &fvars[..index]);
+                        let value = ctx.kernel.abstract_fvars(value, &fvars[..index]);
+                        proof = ctx.kernel.let_(name, ty, value, proof);
+                    }
+                    return Ok(proof);
+                }
+                let should_alias = premise_uses.get(id).copied().unwrap_or_default() > 1
+                    || reconstructed_steps.is_multiple_of(LOCAL_LET_CHUNK);
+                reconstructed_steps += 1;
+                if should_alias {
+                    let ty = ctx.clause_to_prop(clause);
+                    let fvar = fresh_fvar_id(ctx);
+                    let name = ctx.fresh_name("alternation_clause");
+                    lets.push((fvar, name, ty, recovered.proof));
+                    recovered.proof = ctx.kernel.fvar(fvar);
+                }
+                env.insert(id.clone(), recovered);
+            }
+        }
+    }
+    Err(ReconstructError::NoEmptyClause)
+}
+
 fn aig_gate_tail(
     arena: &TermArena,
     residual: &[(TermId, Option<CarriedBindings>)],
@@ -1793,431 +1923,6 @@ fn aig_lit_gate(nodes: &[AletheTerm], literal: AigLit) -> Result<AletheTerm, Rec
     })
 }
 
-#[derive(Clone)]
-struct SimplifiedAigProp {
-    original: ExprId,
-    simplified: ExprId,
-    forward: ExprId,
-    backward: ExprId,
-    formula: AletheTerm,
-    /// A proof of `simplified` when true, or `Not simplified` when false.
-    known: Option<(bool, ExprId)>,
-}
-
-fn identity_implication(ctx: &mut ReconstructCtx, proposition: ExprId) -> ExprId {
-    let hypothesis_id = fresh_fvar_id(ctx);
-    let hypothesis = ctx.kernel.fvar(hypothesis_id);
-    let body = ctx.kernel.abstract_fvars(hypothesis, &[hypothesis_id]);
-    let anon = ctx.kernel.anon();
-    ctx.kernel
-        .lam(anon, proposition, body, BinderInfo::Default)
-}
-
-fn apply_implication(ctx: &mut ReconstructCtx, implication: ExprId, proof: ExprId) -> ExprId {
-    ctx.kernel.app(implication, proof)
-}
-
-fn invert_simplified_aig_prop(
-    ctx: &mut ReconstructCtx,
-    value: &SimplifiedAigProp,
-) -> SimplifiedAigProp {
-    let original = ctx.mk_not(value.original);
-    let simplified = ctx.mk_not(value.simplified);
-
-    let outer_id = fresh_fvar_id(ctx);
-    let outer = ctx.kernel.fvar(outer_id);
-    let inner_id = fresh_fvar_id(ctx);
-    let inner = ctx.kernel.fvar(inner_id);
-    let recovered = apply_implication(ctx, value.backward, inner);
-    let contradiction = ctx.kernel.app(outer, recovered);
-    let body = ctx.kernel.abstract_fvars(contradiction, &[inner_id]);
-    let anon = ctx.kernel.anon();
-    let inner = ctx
-        .kernel
-        .lam(anon, value.simplified, body, BinderInfo::Default);
-    let body = ctx.kernel.abstract_fvars(inner, &[outer_id]);
-    let anon = ctx.kernel.anon();
-    let forward = ctx
-        .kernel
-        .lam(anon, original, body, BinderInfo::Default);
-
-    let outer_id = fresh_fvar_id(ctx);
-    let outer = ctx.kernel.fvar(outer_id);
-    let inner_id = fresh_fvar_id(ctx);
-    let inner = ctx.kernel.fvar(inner_id);
-    let recovered = apply_implication(ctx, value.forward, inner);
-    let contradiction = ctx.kernel.app(outer, recovered);
-    let body = ctx.kernel.abstract_fvars(contradiction, &[inner_id]);
-    let anon = ctx.kernel.anon();
-    let inner = ctx
-        .kernel
-        .lam(anon, value.original, body, BinderInfo::Default);
-    let body = ctx.kernel.abstract_fvars(inner, &[outer_id]);
-    let anon = ctx.kernel.anon();
-    let backward = ctx
-        .kernel
-        .lam(anon, simplified, body, BinderInfo::Default);
-
-    let known = value.known.map(|(truth, proof)| {
-        if truth {
-            let hypothesis_id = fresh_fvar_id(ctx);
-            let hypothesis = ctx.kernel.fvar(hypothesis_id);
-            let contradiction = ctx.kernel.app(hypothesis, proof);
-            let body = ctx
-                .kernel
-                .abstract_fvars(contradiction, &[hypothesis_id]);
-            let anon = ctx.kernel.anon();
-            let proof = ctx
-                .kernel
-                .lam(anon, simplified, body, BinderInfo::Default);
-            (false, proof)
-        } else {
-            (true, proof)
-        }
-    });
-    SimplifiedAigProp {
-        original,
-        simplified,
-        forward,
-        backward,
-        formula: not(value.formula.clone()),
-        known,
-    }
-}
-
-fn simplified_aig_lit(
-    ctx: &mut ReconstructCtx,
-    nodes: &[SimplifiedAigProp],
-    literal: AigLit,
-) -> Result<SimplifiedAigProp, ReconstructError> {
-    let value = nodes
-        .get(literal.node().index())
-        .ok_or_else(|| decline("simplified AIG literal references a future node"))?;
-    Ok(if literal.is_inverted() {
-        invert_simplified_aig_prop(ctx, value)
-    } else {
-        value.clone()
-    })
-}
-
-fn simplify_aig_and(
-    ctx: &mut ReconstructCtx,
-    left: SimplifiedAigProp,
-    right: SimplifiedAigProp,
-    name: String,
-    definitions: &mut BTreeMap<String, AletheTerm>,
-) -> SimplifiedAigProp {
-    let original = ctx.mk_and(left.original, right.original);
-    let left_known = left.known.as_ref().map(|(truth, _)| *truth);
-    let right_known = right.known.as_ref().map(|(truth, _)| *truth);
-
-    if left_known == Some(false) {
-        let hypothesis_id = fresh_fvar_id(ctx);
-        let hypothesis = ctx.kernel.fvar(hypothesis_id);
-        let projected = and_project(ctx, left.original, right.original, hypothesis, true);
-        let reduced = apply_implication(ctx, left.forward, projected);
-        let body = ctx.kernel.abstract_fvars(reduced, &[hypothesis_id]);
-        let anon = ctx.kernel.anon();
-        let forward = ctx
-            .kernel
-            .lam(anon, original, body, BinderInfo::Default);
-
-        let hypothesis_id = fresh_fvar_id(ctx);
-        let hypothesis = ctx.kernel.fvar(hypothesis_id);
-        let negative = left.known.as_ref().expect("known false").1;
-        let contradiction = ctx.kernel.app(negative, hypothesis);
-        let recovered = ex_falso(ctx, original, contradiction);
-        let body = ctx.kernel.abstract_fvars(recovered, &[hypothesis_id]);
-        let anon = ctx.kernel.anon();
-        let backward = ctx
-            .kernel
-            .lam(anon, left.simplified, body, BinderInfo::Default);
-        return SimplifiedAigProp {
-            original,
-            simplified: left.simplified,
-            forward,
-            backward,
-            formula: left.formula,
-            known: left.known,
-        };
-    }
-    if right_known == Some(false) {
-        let hypothesis_id = fresh_fvar_id(ctx);
-        let hypothesis = ctx.kernel.fvar(hypothesis_id);
-        let projected = and_project(ctx, left.original, right.original, hypothesis, false);
-        let reduced = apply_implication(ctx, right.forward, projected);
-        let body = ctx.kernel.abstract_fvars(reduced, &[hypothesis_id]);
-        let anon = ctx.kernel.anon();
-        let forward = ctx
-            .kernel
-            .lam(anon, original, body, BinderInfo::Default);
-
-        let hypothesis_id = fresh_fvar_id(ctx);
-        let hypothesis = ctx.kernel.fvar(hypothesis_id);
-        let negative = right.known.as_ref().expect("known false").1;
-        let contradiction = ctx.kernel.app(negative, hypothesis);
-        let recovered = ex_falso(ctx, original, contradiction);
-        let body = ctx.kernel.abstract_fvars(recovered, &[hypothesis_id]);
-        let anon = ctx.kernel.anon();
-        let backward = ctx
-            .kernel
-            .lam(anon, right.simplified, body, BinderInfo::Default);
-        return SimplifiedAigProp {
-            original,
-            simplified: right.simplified,
-            forward,
-            backward,
-            formula: right.formula,
-            known: right.known,
-        };
-    }
-    if left_known == Some(true) {
-        let hypothesis_id = fresh_fvar_id(ctx);
-        let hypothesis = ctx.kernel.fvar(hypothesis_id);
-        let projected = and_project(ctx, left.original, right.original, hypothesis, false);
-        let reduced = apply_implication(ctx, right.forward, projected);
-        let body = ctx.kernel.abstract_fvars(reduced, &[hypothesis_id]);
-        let anon = ctx.kernel.anon();
-        let forward = ctx
-            .kernel
-            .lam(anon, original, body, BinderInfo::Default);
-
-        let hypothesis_id = fresh_fvar_id(ctx);
-        let hypothesis = ctx.kernel.fvar(hypothesis_id);
-        let left_true = left.known.as_ref().expect("known true").1;
-        let left_original = apply_implication(ctx, left.backward, left_true);
-        let right_original = apply_implication(ctx, right.backward, hypothesis);
-        let recovered = and_intro(
-            ctx,
-            left.original,
-            right.original,
-            left_original,
-            right_original,
-        );
-        let body = ctx.kernel.abstract_fvars(recovered, &[hypothesis_id]);
-        let anon = ctx.kernel.anon();
-        let backward = ctx
-            .kernel
-            .lam(anon, right.simplified, body, BinderInfo::Default);
-        return SimplifiedAigProp {
-            original,
-            simplified: right.simplified,
-            forward,
-            backward,
-            formula: right.formula,
-            known: right.known,
-        };
-    }
-    if right_known == Some(true) {
-        let hypothesis_id = fresh_fvar_id(ctx);
-        let hypothesis = ctx.kernel.fvar(hypothesis_id);
-        let projected = and_project(ctx, left.original, right.original, hypothesis, true);
-        let reduced = apply_implication(ctx, left.forward, projected);
-        let body = ctx.kernel.abstract_fvars(reduced, &[hypothesis_id]);
-        let anon = ctx.kernel.anon();
-        let forward = ctx
-            .kernel
-            .lam(anon, original, body, BinderInfo::Default);
-
-        let hypothesis_id = fresh_fvar_id(ctx);
-        let hypothesis = ctx.kernel.fvar(hypothesis_id);
-        let left_original = apply_implication(ctx, left.backward, hypothesis);
-        let right_true = right.known.as_ref().expect("known true").1;
-        let right_original = apply_implication(ctx, right.backward, right_true);
-        let recovered = and_intro(
-            ctx,
-            left.original,
-            right.original,
-            left_original,
-            right_original,
-        );
-        let body = ctx.kernel.abstract_fvars(recovered, &[hypothesis_id]);
-        let anon = ctx.kernel.anon();
-        let backward = ctx
-            .kernel
-            .lam(anon, left.simplified, body, BinderInfo::Default);
-        return SimplifiedAigProp {
-            original,
-            simplified: left.simplified,
-            forward,
-            backward,
-            formula: left.formula,
-            known: left.known,
-        };
-    }
-
-    let simplified = ctx.mk_and(left.simplified, right.simplified);
-    let hypothesis_id = fresh_fvar_id(ctx);
-    let hypothesis = ctx.kernel.fvar(hypothesis_id);
-    let left_original = and_project(ctx, left.original, right.original, hypothesis, true);
-    let right_original = and_project(ctx, left.original, right.original, hypothesis, false);
-    let left_proof = apply_implication(ctx, left.forward, left_original);
-    let right_proof = apply_implication(ctx, right.forward, right_original);
-    let recovered = and_intro(
-        ctx,
-        left.simplified,
-        right.simplified,
-        left_proof,
-        right_proof,
-    );
-    let body = ctx.kernel.abstract_fvars(recovered, &[hypothesis_id]);
-    let anon = ctx.kernel.anon();
-    let forward = ctx
-        .kernel
-        .lam(anon, original, body, BinderInfo::Default);
-
-    let hypothesis_id = fresh_fvar_id(ctx);
-    let hypothesis = ctx.kernel.fvar(hypothesis_id);
-    let left_reduced = and_project(
-        ctx,
-        left.simplified,
-        right.simplified,
-        hypothesis,
-        true,
-    );
-    let right_reduced = and_project(
-        ctx,
-        left.simplified,
-        right.simplified,
-        hypothesis,
-        false,
-    );
-    let left_proof = apply_implication(ctx, left.backward, left_reduced);
-    let right_proof = apply_implication(ctx, right.backward, right_reduced);
-    let recovered = and_intro(
-        ctx,
-        left.original,
-        right.original,
-        left_proof,
-        right_proof,
-    );
-    let body = ctx.kernel.abstract_fvars(recovered, &[hypothesis_id]);
-    let anon = ctx.kernel.anon();
-    let backward = ctx
-        .kernel
-        .lam(anon, simplified, body, BinderInfo::Default);
-
-    definitions.insert(
-        name.clone(),
-        and(left.formula.clone(), right.formula.clone()),
-    );
-    SimplifiedAigProp {
-        original,
-        simplified,
-        forward,
-        backward,
-        formula: c(name),
-        known: None,
-    }
-}
-
-fn simplify_source_aig(
-    ctx: &mut ReconstructCtx,
-    arena: &TermArena,
-    body: TermId,
-    outer_bindings: &[(SymbolId, Value)],
-) -> Result<(SimplifiedAigProp, BTreeMap<String, AletheTerm>), ReconstructError> {
-    let lowering = lower_terms(arena, &[body])
-        .map_err(|error| decline(format!("alternation AIG lowering failed: {error}")))?;
-    let carried = binding_map_owned(outer_bindings);
-    let mut definitions = BTreeMap::new();
-    let mut nodes = Vec::with_capacity(lowering.aig().node_count());
-    for (node_id, node) in lowering.aig().nodes() {
-        let value = match node {
-            AigNode::ConstFalse => {
-                let proposition = ctx.kernel.const_(ctx.prelude.false_, vec![]);
-                let identity = identity_implication(ctx, proposition);
-                SimplifiedAigProp {
-                    original: proposition,
-                    simplified: proposition,
-                    forward: identity,
-                    backward: identity,
-                    formula: c("false"),
-                    known: Some((false, false_elim_identity(ctx))),
-                }
-            }
-            AigNode::Input(input) => {
-                let binding = lowering
-                    .symbol_inputs()
-                    .get(input.index())
-                    .ok_or_else(|| decline("simplified AIG input lacks a source binding"))?;
-                let proposition = match binding.sort {
-                    Sort::Bool => {
-                        let key = symbol_key(binding.symbol, Sort::Bool);
-                        let value = *ctx
-                            .gate_bound_bools
-                            .get(&key)
-                            .ok_or_else(|| decline("alternation Bool binder is unbound"))?;
-                        ctx.typed_bool_value_prop(value)
-                    }
-                    Sort::BitVec(width) => ctx
-                        .typed_bv_projection(
-                            &c(symbol_key(binding.symbol, Sort::BitVec(width))),
-                            usize::try_from(binding.bit_index).expect("u32 bit index fits usize"),
-                        )
-                        .ok_or_else(|| decline("alternation BV projection failed"))?,
-                    sort => {
-                        return Err(decline(format!(
-                            "unsupported alternation AIG input sort {sort:?}"
-                        )));
-                    }
-                };
-                let identity = identity_implication(ctx, proposition);
-                let (formula, known) = if let Some(value) = carried.get(&binding.symbol) {
-                    let bit = match value {
-                        Value::Bool(value) if binding.bit_index == 0 => *value,
-                        Value::Bv { value, .. } => (value >> binding.bit_index) & 1 == 1,
-                        _ => return Err(decline("alternation outer input value mismatch")),
-                    };
-                    let proof = if bit {
-                        ctx.kernel.const_(ctx.prelude.true_intro, vec![])
-                    } else {
-                        false_elim_identity(ctx)
-                    };
-                    (c(if bit { "true" } else { "false" }), Some((bit, proof)))
-                } else {
-                    let formula = match binding.sort {
-                        Sort::Bool => c(symbol_key(binding.symbol, Sort::Bool)),
-                        Sort::BitVec(width) => bit_of(
-                            c(symbol_key(binding.symbol, Sort::BitVec(width))),
-                            usize::try_from(binding.bit_index).expect("u32 bit index fits usize"),
-                        ),
-                        _ => unreachable!("input sort checked above"),
-                    };
-                    (formula, None)
-                };
-                SimplifiedAigProp {
-                    original: proposition,
-                    simplified: proposition,
-                    forward: identity,
-                    backward: identity,
-                    formula,
-                    known,
-                }
-            }
-            AigNode::And(left, right) => {
-                let left = simplified_aig_lit(ctx, &nodes, left)?;
-                let right = simplified_aig_lit(ctx, &nodes, right)?;
-                simplify_aig_and(
-                    ctx,
-                    left,
-                    right,
-                    format!("!quant_bv_simplified_aig_{}", node_id.index()),
-                    &mut definitions,
-                )
-            }
-        };
-        debug_assert_eq!(node_id.index(), nodes.len());
-        nodes.push(value);
-    }
-    let root = lowering
-        .roots()
-        .first()
-        .and_then(|root| root.bits().first())
-        .copied()
-        .ok_or_else(|| decline("alternation AIG root is empty"))?;
-    Ok((simplified_aig_lit(ctx, &nodes, root)?, definitions))
-}
 
 /// Cheap structural classification used by the public proof-fragment scanner.
 pub(crate) fn bv_positive_universal_instance_set_lean_shape(
@@ -2560,6 +2265,19 @@ fn reconstruct_bv_alternation_counterexample_to_lean_module_impl(
     }) {
         return Err(decline("alternation binder exceeds the Lean BV width cap"));
     }
+    let TermNode::App {
+        op: Op::BoolImplies,
+        args,
+    } = arena.node(admitted.body)
+    else {
+        return Err(decline("alternation body lost its implication shape"));
+    };
+    let [antecedent, consequent] = &**args else {
+        return Err(decline("malformed alternation implication"));
+    };
+    if *antecedent != admitted.antecedent {
+        return Err(decline("alternation antecedent changed after admission"));
+    }
 
     let mut ctx = ReconstructCtx::new();
     ctx.typed_bv_gates = true;
@@ -2569,7 +2287,8 @@ fn reconstruct_bv_alternation_counterexample_to_lean_module_impl(
         arena,
         &admitted.outer,
         &admitted.inner,
-        admitted.body,
+        *antecedent,
+        *consequent,
     )?;
     eprintln!("alternation stage source {:?}", started.elapsed());
     let source = fresh_axiom(&mut ctx, proposition, "bv-alternation-source")?;
@@ -2592,7 +2311,8 @@ fn reconstruct_bv_alternation_counterexample_to_lean_module_impl(
         &mut ctx,
         arena,
         &admitted.inner,
-        admitted.body,
+        *antecedent,
+        *consequent,
         &certificate.outer_bindings,
         0,
         instantiated,
@@ -2603,7 +2323,20 @@ fn reconstruct_bv_alternation_counterexample_to_lean_module_impl(
     ctx.gate_bound_bvs.clear();
     require_infers_false(&mut ctx, proof)?;
     eprintln!("alternation stage infer {:?}", started.elapsed());
-    let module = render_ctx_module(&mut ctx, proof);
+    let false_ = ctx.kernel.const_(ctx.prelude.false_, vec![]);
+    let mut inductives = ctx
+        .bv_value_types
+        .values()
+        .map(|datatype| datatype.ind)
+        .collect::<Vec<_>>();
+    inductives.push(ctx.prelude.bool_);
+    ctx.kernel.release_transient_tables_for_export();
+    let module = ctx.kernel.render_lean_module_compact_with_inductives(
+        LEAN_MODULE_THEOREM,
+        false_,
+        proof,
+        &inductives,
+    );
     eprintln!("alternation stage render {:?}", started.elapsed());
     Ok(module)
 }

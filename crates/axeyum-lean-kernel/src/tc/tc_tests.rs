@@ -428,6 +428,44 @@ fn let_infers_body_type() {
     assert_eq!(ty, s1);
 }
 
+/// Consecutive lets are opened as one telescope without changing dependent
+/// de Bruijn substitution order.
+#[test]
+fn dependent_let_telescope_infers() {
+    let mut k = Kernel::new();
+    let anon = k.anon();
+    let zero = k.level_zero();
+    let one = k.level_succ(zero);
+    let s1 = k.sort(one);
+    let s0 = k.sort_zero();
+
+    // let α : Sort 1 := Sort 0
+    // let β : Sort 1 := α
+    // β
+    let outer_alpha = k.bvar(0);
+    let inner_beta = k.bvar(0);
+    let beta = k.let_(anon, s1, outer_alpha, inner_beta);
+    let telescope = k.let_(anon, s1, s0, beta);
+    assert_eq!(k.infer(telescope).unwrap(), s1);
+}
+
+/// A long independent let telescope remains linear enough for proof-export
+/// terms while preserving the ordinary zeta-reduced result type.
+#[test]
+fn long_let_telescope_infers() {
+    let mut k = Kernel::new();
+    let anon = k.anon();
+    let zero = k.level_zero();
+    let one = k.level_succ(zero);
+    let s1 = k.sort(one);
+    let s0 = k.sort_zero();
+    let mut term = k.bvar(0);
+    for _ in 0..2_048 {
+        term = k.let_(anon, s1, s0, term);
+    }
+    assert_eq!(k.infer(term).unwrap(), s1);
+}
+
 /// `Let` rejects a value whose type mismatches the annotation.
 #[test]
 fn let_value_type_mismatch() {

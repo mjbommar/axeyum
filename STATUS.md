@@ -366,6 +366,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   quantified Lean lane may continue, but no synthetic-only performance win
   closes a GQ item.
 
+- **2026-07-13 — ADR-0124 Lean reconstruction/export checkpoint remains WIP.**
+  Reconstruction now preserves the exact `forall+ exists+ (antecedent ->
+  consequent)` source proposition, discharges the antecedent by evaluation, and
+  feeds the consequent into a local-let Alethe tail. The kernel checks long
+  consecutive lets as one dependent telescope, compact sharing uses reclaimable
+  transient hash tables, and final read-only export can release interning and
+  typechecking caches without allowing duplicate handles. Kernel 167/167,
+  alternation 7/7 non-stress, and focused Clippy pass. The two public release
+  stress tests remain ignored; the latest guarded 4 GiB attempt still failed on
+  allocation, so Lean UNSAT remains 14/18 and no reconstruction claim is added.
+  Next: profile/reduce the remaining peak and restore the direct/router equality
+  stress gate.
+
 - **2026-07-13 — ADR-0140 reconstructs vacuous BV existential prefixes.**
   The ADR-0128 checker still proves the complete leading existential block
   absent and evaluator-replays the exact universal values against the untouched
@@ -2029,6 +2042,15 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-13 — checkpoint ADR-0124 Lean alternation export work without
+  claiming coverage.** Exact implication-shaped source reconstruction,
+  evaluator-proved antecedent application, local-let Alethe tails, linear
+  dependent-let telescope checking, transient compact-share maps, and guarded
+  cache release for final serialization are committed. Kernel 167/167,
+  alternation 7/7 non-stress, and focused Clippy pass. Both release-only public
+  stress tests remain ignored and the last 4 GiB attempt allocation-failed;
+  coverage stays 14/18 pending a measured peak reduction and restored
+  direct/router stress equality.
 - **2026-07-13 — GQ1/GQ10 artifact-v17 corpus manifest contract landed.**
   Manifest v1 binds an external run to source/logic, exact normalized `.smt2`
   membership, per-query SHA-256, expected verdict, family, stable order, and
