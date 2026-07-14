@@ -14,6 +14,7 @@
 //!   `[--refine-rounds N] [--refine-batch N] [--refine-adaptive-batch]`
 //!   `[--refine-select first|smallest-dag|smallest-plan-dag|smallest-plan-greedy]`
 //!   `[--node-budget N] [--cnf-var-budget N] [--cnf-clause-budget N]`
+//!   `[--prove-unsat]`
 //!   `[--compare-z3] [--require-in-process-z3] [--min-decided-percent P] [--jobs N]`
 //! The default build can run the pure Rust `sat-bv` backend. Build with
 //! `--features z3` (or `z3-static`) to enable the Z3 oracle backend.
@@ -46,7 +47,7 @@ mod run {
     use serde_json::{Value as JsonValue, json};
     use sha2::{Digest, Sha256};
 
-    const ARTIFACT_VERSION: u32 = 18;
+    const ARTIFACT_VERSION: u32 = 19;
     const CORPUS_MANIFEST_VERSION: u64 = 1;
     const CONTENT_HASH_PREFIX: &str = "sha256:";
     /// Corpus SAT-share threshold above which SAT solve time is reported as
@@ -202,6 +203,7 @@ mod run {
         cnf_inprocessing: bool,
         cnf_vivify: bool,
         native_cdcl: bool,
+        prove_unsat: bool,
         preprocess: bool,
         compare_z3: bool,
         require_in_process_z3: bool,
@@ -236,6 +238,7 @@ mod run {
             cnf_inprocessing: false,
             cnf_vivify: false,
             native_cdcl: false,
+            prove_unsat: false,
             preprocess: false,
             compare_z3: false,
             require_in_process_z3: false,
@@ -332,6 +335,7 @@ mod run {
             "--inprocess" => parsed.cnf_inprocessing = true,
             "--vivify" => parsed.cnf_vivify = true,
             "--native-cdcl" => parsed.native_cdcl = true,
+            "--prove-unsat" => parsed.prove_unsat = true,
             "--preprocess" => parsed.preprocess = true,
             "--compare-z3" => {
                 #[cfg(feature = "z3")]
@@ -414,6 +418,9 @@ mod run {
         if args.require_in_process_z3 && !args.compare_z3 {
             return Err("`--require-in-process-z3` requires `--compare-z3`".to_owned());
         }
+        if args.prove_unsat && !matches!(args.backend, BackendKind::SatBv) {
+            return Err("`--prove-unsat` requires `--backend sat-bv`".to_owned());
+        }
         if args.corpus_tier.is_some() && args.corpus_manifest.is_none() {
             return Err("`--corpus-tier` requires `--corpus-manifest`".to_owned());
         }
@@ -484,6 +491,7 @@ mod run {
         cnf_inprocess: f64,
         solve: f64,
         model_lift: f64,
+        model_replay: f64,
         aig_inputs: u64,
         aig_nodes: u64,
         cnf_variables: u64,
@@ -601,6 +609,7 @@ mod run {
                 + self.cnf_inprocess
                 + self.solve
                 + self.model_lift
+                + self.model_replay
         }
     }
 
@@ -650,6 +659,11 @@ mod run {
         agree: u64,
         disagree: u64,
         model_replay_failures: u64,
+        unsat_proof_replay_checked: u64,
+        unsat_proof_replay_missing: u64,
+        unsat_proof_replay_s: f64,
+        unsat_proof_replay_sample: Option<f64>,
+        unsat_proof_replay_samples: Vec<f64>,
         /// Root-cause "leaderboard of blockers": for every non-decided instance
         /// (`unknown`/`unsupported`/error), a count keyed by the precise reason —
         /// `unknown:Timeout`, `unknown:EncodingBudget`, `unknown:NodeBudget`,
@@ -692,6 +706,8 @@ mod run {
         layer_cnf_inprocess_s: f64,
         layer_solve_s: f64,
         layer_model_lift_s: f64,
+        layer_model_replay_s: f64,
+        layer_model_replay_files: u64,
         /// One fixed-size sample on per-file summaries; the merged corpus keeps
         /// the samples in one allocation for exact deterministic p50/p95 values.
         layer_sample: Option<LayerSample>,
@@ -823,6 +839,7 @@ mod run {
         eprintln!(
             "files={} sat={} unsat={} unknown={} unsupported={} errors={} \
              agree={} DISAGREE={} model_replay_failures={} \
+             proof_replay_checked={} proof_replay_missing={} \
              manifest_agree={} MANIFEST_DISAGREE={} \
              rewrite_changed={} rewrite_apps={} rewrite_decision_changes={} \
              rewrite_sat_unsat_conflicts={} query_sliced={} query_dropped={} \
@@ -836,6 +853,8 @@ mod run {
             summary.agree,
             summary.disagree,
             summary.model_replay_failures,
+            summary.unsat_proof_replay_checked,
+            summary.unsat_proof_replay_missing,
             summary.manifest_agree,
             summary.manifest_disagree,
             summary.rewrite_changed_instances,
@@ -859,6 +878,10 @@ mod run {
         }
         if summary.model_replay_failures > 0 {
             eprintln!("SOUNDNESS ALARM: sat model replay failed");
+            return ExitCode::FAILURE;
+        }
+        if summary.unsat_proof_replay_missing > 0 {
+            eprintln!("SOUNDNESS ALARM: requested unsat proof replay was not checked");
             return ExitCode::FAILURE;
         }
         if summary.rewrite_sat_unsat_conflicts > 0 {
@@ -1309,7 +1332,8 @@ mod run {
             + s.layer_cnf_encode_s
             + s.layer_cnf_inprocess_s
             + s.layer_solve_s
-            + s.layer_model_lift_s;
+            + s.layer_model_lift_s
+            + s.layer_model_replay_s;
         let share = |stage: f64| if total > 0.0 { stage / total } else { 0.0 };
         let sat_share = share(s.layer_solve_s);
         json!({
@@ -1321,12 +1345,15 @@ mod run {
             "cnf_inprocess_s": s.layer_cnf_inprocess_s,
             "solve_s": s.layer_solve_s,
             "model_lift_s": s.layer_model_lift_s,
+            "model_replay_s": s.layer_model_replay_s,
+            "model_replay_instances": s.layer_model_replay_files,
             "word_preprocess_share": share(s.layer_word_preprocess_s),
             "bit_blast_share": share(s.layer_bit_blast_s),
             "cnf_encode_share": share(s.layer_cnf_encode_s),
             "cnf_inprocess_share": share(s.layer_cnf_inprocess_s),
             "solve_share": sat_share,
             "model_lift_share": share(s.layer_model_lift_s),
+            "model_replay_share": share(s.layer_model_replay_s),
             "distributions": {
                 "total": timing_distribution_record(&s.layer_samples, LayerSample::total_s),
                 "word_preprocess": timing_distribution_record(
@@ -1349,6 +1376,10 @@ mod run {
                 "model_lift": timing_distribution_record(
                     &s.layer_samples,
                     |sample| sample.model_lift,
+                ),
+                "model_replay": timing_distribution_record(
+                    &s.layer_samples,
+                    |sample| sample.model_replay,
                 ),
             },
             "size_distributions": {
@@ -1423,6 +1454,7 @@ mod run {
             cnf_inprocess: layers.cnf_inprocess.as_secs_f64(),
             solve: layers.solve.as_secs_f64(),
             model_lift: layers.model_lift.as_secs_f64(),
+            model_replay: record.model_replay.as_secs_f64(),
             aig_inputs: layers.aig_inputs,
             aig_nodes: layers.aig_nodes,
             cnf_variables: layers.cnf_variables,
@@ -1435,6 +1467,7 @@ mod run {
             "cnf_inprocess_ms": sample.cnf_inprocess * 1000.0,
             "solve_ms": sample.solve * 1000.0,
             "model_lift_ms": sample.model_lift * 1000.0,
+            "model_replay_ms": sample.model_replay * 1000.0,
             "total_ms": sample.total_s() * 1000.0,
             "aig_inputs": layers.aig_inputs,
             "aig_nodes": layers.aig_nodes,
@@ -1882,6 +1915,7 @@ mod run {
         });
         accumulate_query_plan(summary, &primary_solve.plan);
         accumulate_primary(&primary_solve.solve, summary);
+        accumulate_proof_replay(&primary_solve.solve, args.prove_unsat, summary);
         accumulate_par2(summary, &primary_solve.solve, word_preprocess, timeout);
         accumulate_layers(summary, &primary_solve.solve, word_preprocess);
         accumulate_expected_agreement(summary, script.status.as_deref(), &primary_solve.solve);
@@ -1895,10 +1929,15 @@ mod run {
                     + stats.translate
                     + stats.solve
                     + stats.model_lift
+                    + primary_solve.solve.model_replay
             ),
             "translate_ms": duration_ms(stats.translate),
             "solve_ms": duration_ms(stats.solve),
             "model_lift_ms": duration_ms(stats.model_lift),
+            "model_replay_ms": duration_ms_f64(primary_solve.solve.model_replay),
+            "unsat_proof_replay": proof_replay_status(&primary_solve.solve, args.prove_unsat),
+            "unsat_proof_replay_ms": proof_replay_duration(&primary_solve.solve)
+                .map(duration_ms_f64),
             "backend_stats": backend_stats_record(stats),
             "layer_attribution": instance_layer_record(&primary_solve.solve, word_preprocess),
             "dag_nodes": input_shape.dag_nodes,
@@ -1943,6 +1982,7 @@ mod run {
             cnf_inprocessing: args.cnf_inprocessing,
             cnf_vivify: args.cnf_vivify,
             native_cdcl: args.native_cdcl,
+            prove_unsat: args.prove_unsat,
             ..SolverConfig::default()
         }
     }
@@ -2128,6 +2168,7 @@ mod run {
         outcome: &'static str,
         detail: Option<String>,
         stats: SolveStats,
+        model_replay: Duration,
         model_replay_failure: bool,
     }
 
@@ -2150,6 +2191,7 @@ mod run {
     struct RefinementState {
         target_terms: Vec<TermId>,
         total_stats: SolveStats,
+        total_model_replay: Duration,
         replay_failures: u64,
         max_rounds: usize,
         current_batch_size: usize,
@@ -2181,6 +2223,7 @@ mod run {
             Self {
                 target_terms: vec![first_target],
                 total_stats: SolveStats::default(),
+                total_model_replay: Duration::ZERO,
                 replay_failures: 0,
                 max_rounds,
                 current_batch_size: batch_size,
@@ -2214,7 +2257,13 @@ mod run {
             match result {
                 Ok(CheckResult::Sat(model)) => {
                     merge_stats(&mut self.total_stats, &stats);
-                    self.handle_sat_model(problem, plan, &model, round)
+                    let replay_start = Instant::now();
+                    let mut finished = self.handle_sat_model(problem, plan, &model, round);
+                    self.total_model_replay += replay_start.elapsed();
+                    if let Some(result) = &mut finished {
+                        result.solve.model_replay = self.total_model_replay;
+                    }
+                    finished
                 }
                 Ok(CheckResult::Unsat) => {
                     merge_stats(&mut self.total_stats, &stats);
@@ -2357,6 +2406,7 @@ mod run {
                 detail,
                 model_replay_failure,
                 self.total_stats.clone(),
+                self.total_model_replay,
                 plan,
                 refinement_record(
                     round,
@@ -2395,7 +2445,7 @@ mod run {
     ) -> SolveRecord {
         let result = backend.check(arena, solver_assertions, config);
         let stats = backend.last_stats().cloned().unwrap_or_default();
-        let (outcome, detail, model_replay_failure) = classify_result(
+        let (outcome, detail, model_replay_failure, model_replay) = classify_result(
             result,
             arena,
             replay_assertions,
@@ -2406,6 +2456,7 @@ mod run {
             outcome,
             detail,
             stats,
+            model_replay,
             model_replay_failure,
         }
     }
@@ -2534,6 +2585,7 @@ mod run {
         detail: Option<String>,
         model_replay_failure: bool,
         stats: SolveStats,
+        model_replay: Duration,
         plan: QueryPlan,
         refinement: RefinementRecord,
     ) -> PlannedSolve {
@@ -2542,6 +2594,7 @@ mod run {
                 outcome,
                 detail,
                 stats,
+                model_replay,
                 model_replay_failure,
             },
             plan,
@@ -2841,29 +2894,34 @@ mod run {
         replay_assertions: &[axeyum_ir::TermId],
         replay_failure_policy: ReplayFailurePolicy,
         reconstruct: Option<&ModelReconstructionTrail>,
-    ) -> (&'static str, Option<String>, bool) {
+    ) -> (&'static str, Option<String>, bool, Duration) {
         match result {
             Ok(CheckResult::Sat(model)) => {
+                let replay_start = Instant::now();
                 match replay_model(arena, replay_assertions, &model, reconstruct) {
-                    Ok(()) => ("sat", None, false),
+                    Ok(()) => ("sat", None, false, replay_start.elapsed()),
                     Err(e) if replay_failure_policy == ReplayFailurePolicy::DowngradeToUnknown => (
                         "unknown",
                         Some(format!(
                             "Incomplete: sliced sat model did not replay original query: {e}"
                         )),
                         false,
+                        replay_start.elapsed(),
                     ),
-                    Err(e) => ("model-replay-error", Some(e), true),
+                    Err(e) => ("model-replay-error", Some(e), true, replay_start.elapsed()),
                 }
             }
-            Ok(CheckResult::Unsat) => ("unsat", None, false),
+            Ok(CheckResult::Unsat) => ("unsat", None, false, Duration::ZERO),
             Ok(CheckResult::Unknown(r)) => (
                 "unknown",
                 Some(format!("{:?}: {}", r.kind, r.detail)),
                 false,
+                Duration::ZERO,
             ),
-            Err(SolverError::Unsupported(detail)) => ("unsupported", Some(detail), false),
-            Err(e) => ("solver-error", Some(e.to_string()), false),
+            Err(SolverError::Unsupported(detail)) => {
+                ("unsupported", Some(detail), false, Duration::ZERO)
+            }
+            Err(e) => ("solver-error", Some(e.to_string()), false, Duration::ZERO),
         }
     }
 
@@ -2902,6 +2960,53 @@ mod run {
         }
     }
 
+    fn proof_replay_status(record: &SolveRecord, requested: bool) -> &'static str {
+        if record.outcome != "unsat" {
+            return "not-applicable";
+        }
+        if !requested {
+            return "not-requested";
+        }
+        let checked = record.stats.backend.iter().any(|(name, value)| {
+            matches!(
+                name.as_str(),
+                "unsat_proof_checked" | "unsat_proof_checked_inline"
+            ) && *value > 0.0
+        });
+        if checked && proof_replay_duration(record).is_some() {
+            "checked"
+        } else {
+            "missing"
+        }
+    }
+
+    fn proof_replay_duration(record: &SolveRecord) -> Option<Duration> {
+        record
+            .stats
+            .backend
+            .iter()
+            .find(|(name, _)| name == "unsat_proof_replay_ms")
+            .and_then(|(_, milliseconds)| {
+                let seconds = milliseconds / 1000.0;
+                (seconds.is_finite() && seconds >= 0.0).then(|| Duration::from_secs_f64(seconds))
+            })
+    }
+
+    fn accumulate_proof_replay(record: &SolveRecord, requested: bool, summary: &mut Summary) {
+        match proof_replay_status(record, requested) {
+            "checked" => {
+                let duration = proof_replay_duration(record)
+                    .expect("checked proof replay status carries a duration");
+                summary.unsat_proof_replay_checked += 1;
+                summary.unsat_proof_replay_s += duration.as_secs_f64();
+                summary.unsat_proof_replay_sample = Some(duration.as_secs_f64());
+            }
+            "missing" => summary.unsat_proof_replay_missing += 1,
+            "not-applicable" | "not-requested" => {}
+            _ => unreachable!("proof replay status is closed"),
+        }
+    }
+
     /// Formats the blocker buckets most-frequent-first (ties broken by key) into a
     /// compact `key=count …` leaderboard line.
     fn blocker_leaderboard(buckets: &BTreeMap<String, u64>) -> String {
@@ -2934,6 +3039,7 @@ mod run {
             cnf_inprocess: layers.cnf_inprocess.as_secs_f64(),
             solve: layers.solve.as_secs_f64(),
             model_lift: layers.model_lift.as_secs_f64(),
+            model_replay: record.model_replay.as_secs_f64(),
             aig_inputs: layers.aig_inputs,
             aig_nodes: layers.aig_nodes,
             cnf_variables: layers.cnf_variables,
@@ -2946,6 +3052,8 @@ mod run {
         summary.layer_cnf_inprocess_s += layers.cnf_inprocess.as_secs_f64();
         summary.layer_solve_s += layers.solve.as_secs_f64();
         summary.layer_model_lift_s += layers.model_lift.as_secs_f64();
+        summary.layer_model_replay_s += record.model_replay.as_secs_f64();
+        summary.layer_model_replay_files += u64::from(record.outcome == "sat");
         summary.layer_sample = Some(sample);
     }
 
@@ -2959,7 +3067,8 @@ mod run {
             summary.par2_seconds += word_preprocess.as_secs_f64()
                 + record.stats.translate.as_secs_f64()
                 + record.stats.solve.as_secs_f64()
-                + record.stats.model_lift.as_secs_f64();
+                + record.stats.model_lift.as_secs_f64()
+                + record.model_replay.as_secs_f64();
         } else {
             summary.par2_seconds += 2.0 * timeout.as_secs_f64();
         }
@@ -3036,6 +3145,12 @@ mod run {
         total.agree += next.agree;
         total.disagree += next.disagree;
         total.model_replay_failures += next.model_replay_failures;
+        total.unsat_proof_replay_checked += next.unsat_proof_replay_checked;
+        total.unsat_proof_replay_missing += next.unsat_proof_replay_missing;
+        total.unsat_proof_replay_s += next.unsat_proof_replay_s;
+        if let Some(sample) = next.unsat_proof_replay_sample {
+            total.unsat_proof_replay_samples.push(sample);
+        }
         for (key, count) in &next.blocker_buckets {
             *total.blocker_buckets.entry(key.clone()).or_insert(0) += count;
         }
@@ -3074,6 +3189,8 @@ mod run {
         total.layer_cnf_inprocess_s += next.layer_cnf_inprocess_s;
         total.layer_solve_s += next.layer_solve_s;
         total.layer_model_lift_s += next.layer_model_lift_s;
+        total.layer_model_replay_s += next.layer_model_replay_s;
+        total.layer_model_replay_files += next.layer_model_replay_files;
         if let Some(sample) = next.layer_sample {
             total.layer_samples.push(sample);
         }
@@ -3167,10 +3284,12 @@ mod run {
                 axeyum_s: word_preprocess.as_secs_f64()
                     + primary.stats.translate.as_secs_f64()
                     + primary.stats.solve.as_secs_f64()
-                    + primary.stats.model_lift.as_secs_f64(),
+                    + primary.stats.model_lift.as_secs_f64()
+                    + primary.model_replay.as_secs_f64(),
                 z3_s: oracle_solve.stats.translate.as_secs_f64()
                     + oracle_solve.stats.solve.as_secs_f64()
-                    + oracle_solve.stats.model_lift.as_secs_f64(),
+                    + oracle_solve.stats.model_lift.as_secs_f64()
+                    + oracle_solve.model_replay.as_secs_f64(),
             };
             summary.client_comparison_files += 1;
             summary.client_axeyum_s += sample.axeyum_s;
@@ -3188,10 +3307,12 @@ mod run {
             "translate_ms": duration_ms(oracle_solve.stats.translate),
             "solve_ms": duration_ms(oracle_solve.stats.solve),
             "model_lift_ms": duration_ms(oracle_solve.stats.model_lift),
+            "model_replay_ms": duration_ms_f64(oracle_solve.model_replay),
             "cold_total_ms": duration_ms_f64(
                 oracle_solve.stats.translate
                     + oracle_solve.stats.solve
                     + oracle_solve.stats.model_lift
+                    + oracle_solve.model_replay
             ),
             "backend_stats": backend_stats_record(&oracle_solve.stats),
         });
@@ -3421,6 +3542,7 @@ mod run {
             "cnf_inprocessing": args.cnf_inprocessing,
             "cnf_vivify": args.cnf_vivify,
             "native_cdcl": args.native_cdcl,
+            "prove_unsat": args.prove_unsat,
             "preprocess": args.preprocess,
             "limit": optional_limit(args.limit),
             "backend": identity.backend_name,
@@ -3461,6 +3583,17 @@ mod run {
             "agree": s.agree,
             "disagree": s.disagree,
             "model_replay_failures": s.model_replay_failures,
+            "unsat_proof_replay": {
+                "requested": args.prove_unsat,
+                "checked": s.unsat_proof_replay_checked,
+                "missing": s.unsat_proof_replay_missing,
+                "check_time_s": s.unsat_proof_replay_s,
+                "check_time": timing_distribution_record(
+                    &s.unsat_proof_replay_samples,
+                    |seconds| seconds,
+                ),
+                "timing_accounting": "nested within SAT solve time; not added again to cold total",
+            },
             "manifest": {
                 "expected": s.manifest_expected,
                 "compared": s.manifest_compared,
@@ -3503,6 +3636,7 @@ mod run {
             "soundness": {
                 "status_disagreements": s.disagree,
                 "model_replay_failures": s.model_replay_failures,
+                "unsat_proof_replay_missing": s.unsat_proof_replay_missing,
                 "rewrite_sat_unsat_conflicts": s.rewrite_sat_unsat_conflicts,
                 "oracle_disagreements": s.oracle_disagree,
                 "manifest_disagreements": s.manifest_disagree,
@@ -3817,6 +3951,7 @@ mod run {
         );
         update_hash(&mut hash, &[u8::from(args.cnf_inprocessing)]);
         update_hash(&mut hash, &[u8::from(args.native_cdcl)]);
+        update_hash(&mut hash, &[u8::from(args.prove_unsat)]);
         update_hash(&mut hash, &[u8::from(args.preprocess)]);
         update_hash(&mut hash, &[u8::from(args.compare_z3)]);
         update_hash(&mut hash, &[u8::from(args.require_in_process_z3)]);
@@ -4271,6 +4406,7 @@ mod run {
                     outcome,
                     detail: detail.map(str::to_owned),
                     stats: SolveStats::default(),
+                    model_replay: Duration::ZERO,
                     model_replay_failure: false,
                 }
             }
@@ -4483,6 +4619,7 @@ mod run {
                     cnf_inprocess: 0.004,
                     solve: 0.005,
                     model_lift: 0.001,
+                    model_replay: 0.0005,
                     aig_inputs: 8,
                     aig_nodes: 16,
                     cnf_variables: 24,
@@ -4495,6 +4632,7 @@ mod run {
                     cnf_inprocess: 0.040,
                     solve: 0.050,
                     model_lift: 0.010,
+                    model_replay: 0.005,
                     aig_inputs: 80,
                     aig_nodes: 160,
                     cnf_variables: 240,
@@ -4509,11 +4647,13 @@ mod run {
                 layer_cnf_inprocess_s: 0.044,
                 layer_solve_s: 0.055,
                 layer_model_lift_s: 0.011,
+                layer_model_replay_s: 0.0055,
+                layer_model_replay_files: 1,
                 layer_samples: samples,
                 ..Summary::default()
             };
             let record = layer_attribution_record(&summary);
-            assert!((record["total_pipeline_s"].as_f64().unwrap() - 0.176).abs() < f64::EPSILON);
+            assert!((record["total_pipeline_s"].as_f64().unwrap() - 0.1815).abs() < f64::EPSILON);
             assert_eq!(
                 record["distributions"]["word_preprocess"]["p50_ms"],
                 json!(1.0)
@@ -4522,16 +4662,54 @@ mod run {
                 record["distributions"]["word_preprocess"]["p95_ms"],
                 json!(10.0)
             );
-            assert_eq!(record["distributions"]["total"]["p50_ms"], json!(16.0));
+            assert_eq!(record["distributions"]["total"]["p50_ms"], json!(16.5));
             assert!(
-                (record["distributions"]["total"]["p95_ms"].as_f64().unwrap() - 160.0).abs() < 1e-9
+                (record["distributions"]["total"]["p95_ms"].as_f64().unwrap() - 165.0).abs() < 1e-9
             );
+            assert_eq!(
+                record["distributions"]["model_replay"]["p50_ms"],
+                json!(0.5)
+            );
+            assert_eq!(record["model_replay_instances"], json!(1));
             assert_eq!(record["sat_dominates"], json!(false));
             assert_eq!(record["size_distributions"]["aig_nodes"]["p50"], json!(16));
             assert_eq!(
                 record["size_distributions"]["cnf_clauses"]["p95"],
                 json!(320)
             );
+        }
+
+        #[test]
+        fn requested_unsat_proof_replay_is_an_independent_gate() {
+            let mut record = SolveRecord {
+                outcome: "unsat",
+                detail: None,
+                stats: SolveStats::default(),
+                model_replay: Duration::ZERO,
+                model_replay_failure: false,
+            };
+            assert_eq!(proof_replay_status(&record, false), "not-requested");
+            assert_eq!(proof_replay_status(&record, true), "missing");
+
+            let mut missing = Summary::default();
+            accumulate_proof_replay(&record, true, &mut missing);
+            assert_eq!(missing.unsat_proof_replay_missing, 1);
+            assert_eq!(report_summary(&missing, None, false), ExitCode::FAILURE);
+
+            record
+                .stats
+                .backend
+                .push(("unsat_proof_checked_inline".to_owned(), 1.0));
+            record
+                .stats
+                .backend
+                .push(("unsat_proof_replay_ms".to_owned(), 0.25));
+            assert_eq!(proof_replay_status(&record, true), "checked");
+            let mut checked = Summary::default();
+            accumulate_proof_replay(&record, true, &mut checked);
+            assert_eq!(checked.unsat_proof_replay_checked, 1);
+            assert_eq!(checked.unsat_proof_replay_missing, 0);
+            assert_eq!(checked.unsat_proof_replay_sample, Some(0.00025));
         }
 
         #[test]
@@ -4616,6 +4794,7 @@ mod run {
                 cnf_inprocess: 0.0,
                 solve: 0.004,
                 model_lift: 0.001,
+                model_replay: 0.0005,
                 aig_inputs: 8,
                 aig_nodes: 16,
                 cnf_variables: 24,

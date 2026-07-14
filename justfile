@@ -102,11 +102,24 @@ bench-glaurung-qfbv corpus_dir manifest tier="full" out="bench-results/glaurung-
     mkdir -p "$(dirname '{{ out }}')"
     cargo run --release -p axeyum-bench --features z3 -- "{{ corpus_dir }}" --corpus-manifest "{{ manifest }}" --corpus-tier "{{ tier }}" --backend sat-bv --preprocess --compare-z3 --require-in-process-z3 --timeout-ms 10000 --jobs 1 --min-decided-percent 100 --logic QF_BV --out "{{ out }}"
 
+# High-assurance companion to the performance run. This switches to the slower
+# proof-producing native core and fails closed unless every UNSAT has an inline
+# checked DRAT proof. Its timings are proof-validation costs, not the batsat/Z3
+# client ratio, so keep its artifact separate from `bench-glaurung-qfbv`.
+bench-glaurung-qfbv-proof-check corpus_dir manifest tier="representative" out="bench-results/glaurung-qfbv-proof-check.json":
+    mkdir -p "$(dirname '{{ out }}')"
+    cargo run --release -p axeyum-bench --features z3 -- "{{ corpus_dir }}" --corpus-manifest "{{ manifest }}" --corpus-tier "{{ tier }}" --backend sat-bv --preprocess --prove-unsat --compare-z3 --require-in-process-z3 --timeout-ms 30000 --jobs 1 --min-decided-percent 100 --logic QF_BV --out "{{ out }}"
+
 # GQ1/GQ10 ingestion-contract smoke only; never cite this micro tier as a client
 # performance result.
 bench-glaurung-manifest-smoke out="bench-results/glaurung-manifest-smoke.json":
     mkdir -p "$(dirname '{{ out }}')"
     cargo run --release -p axeyum-bench --features z3 -- corpus/micro --corpus-manifest corpus/micro/manifest-v1.json --corpus-tier representative --backend sat-bv --preprocess --compare-z3 --require-in-process-z3 --timeout-ms 1000 --jobs 1 --min-decided-percent 100 --logic QF_BV --out "{{ out }}"
+
+# Proof-gate plumbing smoke; still not client performance evidence.
+bench-glaurung-manifest-proof-smoke out="bench-results/glaurung-manifest-proof-smoke.json":
+    mkdir -p "$(dirname '{{ out }}')"
+    cargo run --release -p axeyum-bench --features z3 -- corpus/micro --corpus-manifest corpus/micro/manifest-v1.json --corpus-tier representative --backend sat-bv --preprocess --prove-unsat --compare-z3 --require-in-process-z3 --timeout-ms 1000 --jobs 1 --min-decided-percent 100 --logic QF_BV --out "{{ out }}"
 
 # P4.5: the committed curated QF_BV slice, sat-bv vs Z3 (oracle-enabled). The
 # measured head-to-head gate for Track 1. Encoding budgets bound the bit-blast so

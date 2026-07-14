@@ -184,7 +184,8 @@ impl SatBvBackend {
         // Primary SAT search: the deadline-bounded native CDCL core when
         // `native_cdcl` is set, else the default `rustsat-batsat` adapter. Both
         // feed the same reconstruction + replay below (see `solve_with_native_cdcl`).
-        let mut sat_result = primary_sat_search(config, solve_formula, deadline, sat_timeout)?;
+        let mut sat_result =
+            primary_sat_search(config, solve_formula, deadline, sat_timeout, &mut stats)?;
         stats.solve = solve_start.elapsed();
         if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
             self.stats = Some(stats);
@@ -1133,13 +1134,14 @@ fn primary_sat_search(
     formula: &CnfFormula,
     deadline: Option<Instant>,
     sat_timeout: Option<Duration>,
+    stats: &mut SolveStats,
 ) -> Result<SatResult, SolverError> {
     if config.native_cdcl || config.prove_unsat {
-        Ok(solve_with_native_cdcl(
-            formula,
-            deadline,
-            config.prove_unsat,
-        ))
+        let outcome = solve_with_native_cdcl(formula, deadline, config.prove_unsat);
+        if let Some(duration) = outcome.proof_replay {
+            push_duration_ms(stats, "unsat_proof_replay_ms", duration);
+        }
+        Ok(outcome.result)
     } else {
         solve_with_rustsat_batsat_timeout(formula, sat_timeout)
             .map_err(|error| map_sat_error(&error))
@@ -1162,24 +1164,40 @@ fn primary_sat_search(
 ///   the prior behaviour.
 /// - `ResourceOut`/`Interrupted` → [`SatResult::Unknown`]; an undecided verdict
 ///   is never reported as `sat`/`unsat`.
+struct NativeCdclOutcome {
+    result: SatResult,
+    /// Time spent independently checking the emitted DRAT proof. This is nested
+    /// within SAT search time, not an additional sequential pipeline stage.
+    proof_replay: Option<Duration>,
+}
+
 fn solve_with_native_cdcl(
     formula: &CnfFormula,
     deadline: Option<Instant>,
     check_proof: bool,
-) -> SatResult {
+) -> NativeCdclOutcome {
     match solve_with_drat_proof_within(formula, deadline) {
-        ProofSolveOutcome::Sat(assignment) => SatResult::Sat(assignment),
+        ProofSolveOutcome::Sat(assignment) => NativeCdclOutcome {
+            result: SatResult::Sat(assignment),
+            proof_replay: None,
+        },
         ProofSolveOutcome::Unsat(proof) => {
             if !check_proof {
-                return SatResult::Unsat(SatUnsatEvidence {
-                    proof: SatProofStatus::Unchecked,
-                    failed_assumptions: Vec::new(),
-                });
+                return NativeCdclOutcome {
+                    result: SatResult::Unsat(SatUnsatEvidence {
+                        proof: SatProofStatus::Unchecked,
+                        failed_assumptions: Vec::new(),
+                    }),
+                    proof_replay: None,
+                };
             }
             // Verify the inline proof in place. Only a checked proof yields an
             // accepted `unsat`; anything else is a conservative downgrade — we
             // never pass off an unverified `unsat` as checked.
-            match check_drat(formula, &proof) {
+            let replay_start = Instant::now();
+            let checked = check_drat(formula, &proof);
+            let proof_replay = Some(replay_start.elapsed());
+            let result = match checked {
                 Ok(true) => SatResult::Unsat(SatUnsatEvidence {
                     proof: SatProofStatus::Checked,
                     failed_assumptions: Vec::new(),
@@ -1191,14 +1209,24 @@ fn solve_with_native_cdcl(
                 Err(error) => SatResult::Unknown(SatUnknownReason {
                     detail: format!("native unsat proof failed to check: {error}"),
                 }),
+            };
+            NativeCdclOutcome {
+                result,
+                proof_replay,
             }
         }
-        ProofSolveOutcome::ResourceOut => SatResult::Unknown(SatUnknownReason {
-            detail: "native CDCL core exhausted its conflict budget".to_owned(),
-        }),
-        ProofSolveOutcome::Interrupted => SatResult::Unknown(SatUnknownReason {
-            detail: "native CDCL core timeout".to_owned(),
-        }),
+        ProofSolveOutcome::ResourceOut => NativeCdclOutcome {
+            result: SatResult::Unknown(SatUnknownReason {
+                detail: "native CDCL core exhausted its conflict budget".to_owned(),
+            }),
+            proof_replay: None,
+        },
+        ProofSolveOutcome::Interrupted => NativeCdclOutcome {
+            result: SatResult::Unknown(SatUnknownReason {
+                detail: "native CDCL core timeout".to_owned(),
+            }),
+            proof_replay: None,
+        },
     }
 }
 
@@ -1623,13 +1651,14 @@ mod tests {
         let f = formula(1, &[&[(0, false)], &[(0, true)]]);
         let result = solve_with_native_cdcl(&f, None, true);
         assert_eq!(
-            result,
+            result.result,
             SatResult::Unsat(SatUnsatEvidence {
                 proof: SatProofStatus::Checked,
                 failed_assumptions: Vec::new(),
             }),
             "native unsat with check_proof must be Checked"
         );
+        assert!(result.proof_replay.is_some());
     }
 
     /// Without `check_proof`, the native core stamps `Unchecked` (no verification
@@ -1639,12 +1668,13 @@ mod tests {
         let f = formula(1, &[&[(0, false)], &[(0, true)]]);
         let result = solve_with_native_cdcl(&f, None, false);
         assert_eq!(
-            result,
+            result.result,
             SatResult::Unsat(SatUnsatEvidence {
                 proof: SatProofStatus::Unchecked,
                 failed_assumptions: Vec::new(),
             })
         );
+        assert_eq!(result.proof_replay, None);
     }
 
     /// A `Checked` unsat is accepted with no re-derivation: `ensure_unsat_proof_checked`

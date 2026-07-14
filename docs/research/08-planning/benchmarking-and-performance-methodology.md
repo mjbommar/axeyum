@@ -205,6 +205,14 @@ records the contract and the first measured baselines.
   while the layer profile adds AIG/CNF size distributions. Memory provenance
   erased by lifter flattening is explicitly left to manifest family/source
   metadata rather than guessed from the lowered formula.
+- Artifact version 19 closes the replay-attribution boundary. SAT model replay
+  against untouched assertions is timed separately, included in the cold total,
+  and charged symmetrically in the embedded Axeyum/Z3 comparison. An optional
+  `--prove-unsat` companion uses the proof-producing core and fails closed unless
+  every UNSAT carries an inline-checked DRAT proof. Its proof-check time and
+  p50/p95 are nested diagnostics within SAT time, never a seventh additive stage;
+  this high-assurance run is kept separate from the default batsat performance
+  artifact because changing the SAT engine would invalidate that comparison.
 - **Primary client QF_BV target (2026-07-13): Glaurung binary analysis.** Capture
   and minimize the real lifter-produced path conditions, preserving their
   extract/concat, mixed machine-width, and memory-derived shape. This client

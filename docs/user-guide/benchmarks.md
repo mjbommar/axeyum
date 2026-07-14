@@ -67,6 +67,8 @@ just bench-micro                                 # committed SMT-LIB micro corpu
 just bench-public-qfbv-sat-bv-compare            # public sat-bv vs Z3 slice
 just bench-public-qfbv-sat-bv-guarded            # node/CNF guarded run
 just bench-public-qfbv-sat-bv-replay-refine      # replay-checked query refinement
+just bench-glaurung-manifest-smoke               # client manifest/timing plumbing
+just bench-glaurung-manifest-proof-smoke         # fail-closed DRAT-check plumbing
 ```
 
 **Resource rules** (this matters — the harness can OOM a small host otherwise):
@@ -79,7 +81,7 @@ just bench-public-qfbv-sat-bv-replay-refine      # replay-checked query refineme
 
 Each JSON records the corpus + config hash, per-instance outcome, budgets,
 backend stats, PAR-2, explicit `decided`/`decided_percent`, **disagreements**,
-and **model-replay failures**. Artifact version 18 retains version 16's exact
+and **model-replay failures**. Artifact version 19 retains version 16's exact
 floating-point millisecond values for each instance's word-level preprocessing,
 bit-blast, CNF encode/inprocess, SAT, model lift, and cold total, plus corpus
 totals and p50/p95 distributions. Its `client_comparison` block reports the
@@ -93,6 +95,13 @@ exact extract-over-concat/extract/extension cancellation opportunities. The
 layer block now includes AIG-input/node and CNF-variable/clause p50/p95 sizes.
 Counts use unique nodes in the untouched parsed DAG; they are not distorted by
 preprocessing or repeated expansion of shared terms.
+Version 19 separately times original-query SAT model replay and charges it to
+the cold total and Axeyum/Z3 comparison. `--prove-unsat` selects the
+proof-producing native core and makes every UNSAT fail closed unless its DRAT
+proof checks; the artifact records checked/missing counts and proof-check
+p50/p95. Proof-check time is already inside SAT time and is marked as nested, so
+it is never added twice. Keep this high-assurance artifact separate from the
+default batsat performance run because it intentionally changes the SAT engine.
 A comparable run requires zero errors, zero disagreements, zero replay failures,
 and the declared decided-rate threshold; only then is timing a performance
 signal.
@@ -121,3 +130,16 @@ but do not replace the extract/concat/mixed-width/memory-derived client shape.
 The shape block can count `select`/`store` operations that survive parsing, but
 cannot infer memory provenance after a lifter has flattened memory into BV
 terms; preserve that provenance in the manifest `family` and `source` fields.
+
+Run the separate proof-validation companion on the same immutable manifest:
+
+```sh
+just bench-glaurung-qfbv-proof-check \
+  /path/to/glaurung-smt2-capture \
+  /path/to/glaurung-manifest-v1.json \
+  representative
+```
+
+It retains the decided/error/oracle/manifest gates, adds the checked-proof gate,
+and writes a separate artifact. Its native-CDCL timings are assurance overhead,
+not a replacement for the default client performance ratio.

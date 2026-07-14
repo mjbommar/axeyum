@@ -331,9 +331,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   preprocessing cost policy are separately tracked rather than being implied by
   the existing incremental API.
 
-  **GQ1/GQ10 readiness increment:** artifact v18 charges Axeyum for word
+  **GQ1/GQ10 readiness increment:** artifact v19 charges Axeyum for word
   preprocessing, separates it from term→AIG, AIG→CNF, optional CNF
-  inprocessing, SAT, and model lift, and records exact p50/p95 distributions.
+  inprocessing, SAT, model lift, and original-query model replay, and records
+  exact p50/p95 distributions.
   The aggregate client ratio compares against in-process Z3 on the untouched
   parsed assertions, not Axeyum's reduced terms; binary fallbacks are
   verdict-only. `bench-glaurung-qfbv` is single-worker and requires in-process
@@ -347,11 +348,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   distributions, extract/concat/extension and surviving array-op counts,
   demanded-vs-source extract bits, exact GQ3 cancellation opportunities, and
   AIG/CNF p50/p95 sizes. Flattened memory provenance is intentionally supplied
-  by manifest family/source metadata rather than inferred.
+  by manifest family/source metadata rather than inferred. A separate
+  `--prove-unsat` companion now fails closed unless every UNSAT carries an
+  inline-checked DRAT proof and reports proof-check p50/p95 nested within SAT
+  time; it is not mixed into the default batsat performance artifact.
 
   | ID | Live status | Next acceptance boundary |
   |---|---|---|
-  | **GQ1 real-query profile** | **WIP; external capture is the remaining data dependency.** Artifact v18, manifest-v1 ingestion, untouched-DAG formula/width/operator/opportunity profiling, typed AIG/CNF/inprocess stats with size distributions, single-worker client recipe, p50/p95, original-query in-process Z3 ratio, complete manifest/oracle/decided-rate gates, and zero-error policy are landed | Obtain the representative Glaurung query pack plus manifest, confirm its lifter-shape distributions, and publish the first valid client attribution/ratio; the micro smoke validates plumbing only |
+  | **GQ1 real-query profile** | **WIP; external capture is the remaining data dependency.** Artifact v19, manifest-v1 ingestion, untouched-DAG formula/width/operator/opportunity profiling, typed AIG/CNF/inprocess stats with size distributions, separately charged SAT model replay, an optional fail-closed proof-check companion, single-worker client recipe, p50/p95, original-query in-process Z3 ratio, complete manifest/oracle/decided-rate gates, and zero-error policy are landed | Obtain the representative Glaurung query pack plus manifest, confirm its lifter-shape distributions, and publish the first valid client attribution/ratio plus separate proof-check result; the micro smokes validate plumbing only |
   | **GQ2 cheap cold tier** | **TODO**, profile-gated; existing full preprocessing is opt-in and warm-oriented | Bounded constant/identity tier with non-worse cold aggregate time and an explicit cold/warm/size policy |
   | **GQ3 coercion peepholes** | **TODO**; only narrower extract-through-bitwise/ITE rules are landed | Exact extract/concat, nested-extract, zero/sign-extension cancellation with exhaustive and differential semantics gates |
   | **GQ4 cold relevant bits** | **WIP foundation**; warm 8-of-64 slicing is landed, cold demand propagation is not | Backward live-bit pass, original replay, counters, and measured target-corpus AIG/CNF reduction |
@@ -360,11 +364,11 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   | **GQ7 warm delta entry** | **WIP foundation**; retained CNF/search state exists, but `assert_configured` delta-only preprocessing is not complete | Preprocess only new/affected terms and publish per-check cost plus warm break-even sequence length |
   | **GQ8 verdict/CNF cache** | **TODO** | Versioned canonical keys, exact duplicate verdict reuse, sound prefix-state reuse, deterministic bounds, and mandatory original replay |
   | **GQ9 auto cost model/docs** | **TODO**; P1.8 shape/resource probes are only the general foundation | Telemetry-visible raw/cheap/configured/warm choice that beats or matches fixed policies and documents embedder guidance |
-  | **GQ10 real-lifter regression tier** | **BLOCKED on the external capture**; artifact-v18 validity/attribution/shape gates, manifest-v1 exact membership/SHA-256/expected-verdict/family/tier contract, and the single-worker `just bench-glaurung-qfbv` recipe are landed | Populate the manifest from the real capture, then land its regular representative gate, scheduled full run, and per-commit Z3-relative tracking |
+  | **GQ10 real-lifter regression tier** | **BLOCKED on the external capture**; artifact-v19 validity/attribution/shape/replay gates, manifest-v1 exact membership/SHA-256/expected-verdict/family/tier contract, and separate performance/proof recipes are landed | Populate the manifest from the real capture, then land its regular representative gate, scheduled full run, proof companion, and per-commit Z3-relative tracking |
 
   **Next actions:** (1) ingest the Glaurung capture without normalizing away its
   width-mixed/extract/concat/memory shape and verify that distribution in the
-  artifact-v18 shape profile; (2) establish the GQ1/GQ10 baseline at
+  artifact-v19 shape profile; (2) establish the GQ1/GQ10 baseline at
   100% decided, zero errors/disagreements/replay failures; (3) select the first
   implementation slice from the largest measured cold stage, with GQ2/GQ3/GQ4
   preferred only if word construction or bit-blast attribution supports them.
@@ -2048,6 +2052,18 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-13 — GQ1 artifact-v19 replay attribution and proof companion
+  landed.** SAT model reconstruction/replay against untouched assertions is now
+  a separately timed stage included in each cold total, PAR-2, layer p50/p95,
+  and both sides of the embedded Axeyum/Z3 comparison. `--prove-unsat` selects
+  the proof-producing native core; any UNSAT without an inline-checked DRAT proof
+  or checker timing fails the harness. Proof-check time is exposed separately as
+  a nested part of SAT time, and dedicated Glaurung proof recipes keep that
+  assurance cost out of the default batsat performance artifact. Both release
+  micro smokes are 2/2 decided/manifest-agreed/Z3-agreed with zero errors or
+  replay failures; the proof smoke checks 1/1 UNSAT with zero missing proofs.
+  This closes another GQ1 instrumentation/validity gap but the external lifter
+  capture still gates the actual profile and every optimization choice.
 - **2026-07-13 — GQ1 artifact-v18 original-query shape profiling landed.** The
   harness now profiles unique nodes in every untouched parsed query DAG before
   rewriting: formula size/depth/sharing, BV width diversity,

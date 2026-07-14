@@ -102,6 +102,17 @@ and AIG/CNF sizes. This instrumentation ranks GQ3/GQ4 without changing terms or
 claiming that a synthetic fixture represents Glaurung; memory provenance erased
 by BV flattening remains an explicit manifest-family responsibility.
 
+Artifact version 19 makes replay cost and availability explicit. SAT model
+reconstruction/checking against the untouched assertions is a separately timed
+additive stage and is included on both sides of the in-process Axeyum/Z3
+comparison. `--prove-unsat` provides a distinct high-assurance run: the native
+proof-producing core must report an inline-checked DRAT proof for every UNSAT or
+the harness fails closed, and the checker duration receives its own p50/p95.
+That duration is nested within SAT search and is not added twice. The primary
+Glaurung performance recipe remains on the default batsat path; a separate
+proof-check artifact prevents assurance overhead from masquerading as the client
+performance ratio.
+
 ## Alternatives
 
 - **Implicitly widen or truncate binary operands.** Rejected: it masks client
