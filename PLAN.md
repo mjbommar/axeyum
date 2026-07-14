@@ -36,7 +36,10 @@ session state.
 > `register-slice` and `slice-partial` families. ADR-0146's reusable direct-root
 > leaf scratch failed the representative gate (+1.1% total / +4.9% CNF) and is
 > reverted/deferred. Profile planning next; do not retry root scratch without a
-> design that avoids the second traversal entirely. The capture and
+> design that avoids the second traversal entirely. ADR-0147 is the first
+> planning candidate: expose the AIG iterator's existing double-ended contract
+> and remove the full-node temporary copy used only for reverse traversal. It
+> remains proposed until the representative/full gate accepts it. The capture and
 > implementation audit has been expanded into the dependency-ordered
 > [Glaurung QF_BV execution plan](docs/research/08-planning/glaurung-qfbv-execution-plan.md):
 > reproduce the current raw one-shot path first, then compare canonical-only
@@ -96,7 +99,8 @@ same 49,199,541 clauses. Inspect root-emission allocation and planning next;
 ADR-0146's reusable direct-root leaf scratch regresses representative median
 total/CNF 1.1%/4.9% and is restored as negative evidence without a full run.
 Profile planning next. Bounded affine word work must show a downstream
-circuit/CNF win before outranking it.
+circuit/CNF win before outranking it. ADR-0147's zero-copy reverse node iterator
+is the first bounded planning candidate and must pass the unchanged gate.
 Broad GQ4 partial lowering follows its small post-canonical full-tier
 opportunity (1.84% term bits) unless family-specific evidence reverses the
 rank. Admit GQ6

@@ -222,3 +222,14 @@ decided with zero errors, disagreements, or replay failures, and emits the same
 507,195 clauses with 1,911 direct roots. Revision `6ccc8984` is therefore
 reverted without a full-tier run and ADR-0146 is deferred. Planning attribution,
 not another root scratch, is next.
+
+## ADR-0147 zero-copy reverse-node candidate
+
+Private AND-tree planning visits nodes in descending dense-ID order so a parent
+claims eligible helpers first. The backing `Aig::nodes()` slice iterator is
+already exact-size and double-ended, but its opaque return type exposed only
+`Iterator`; planning therefore copied every `(id,node)` into a temporary vector
+solely to reverse it. Proposed ADR-0147 exposes the existing standard iterator
+traits and iterates directly in the same order. With roughly 43 million AIG
+nodes visited on the full tier, this is the first bounded 1.21-second planning
+candidate. No performance claim is admitted before the clean gate.

@@ -377,6 +377,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   restored; no full run is warranted. Profile planning next, and revisit direct
   roots only with a design that eliminates the second traversal entirely.
 
+  ADR-0147 is the first bounded planning candidate. `Aig::nodes()` is already
+  backed by an exact-size double-ended slice iterator, but its opaque public
+  type hid those traits, forcing private AND-tree planning to copy every node
+  into a temporary vector solely to reverse it. The candidate exposes the
+  existing iterator capabilities and preserves exact descending dense-ID order.
+  Nine AIG tests plus all 283 CNF tests pass; representative/full timing is the
+  remaining acceptance boundary.
+
 - **Historical Glaurung build-up through 2026-07-14 (superseded by the measured
   result above).** The ten-item Glaurung QF_BV performance roadmap is an
   explicit Track 1/4 lane (`PLAN.md` GQ1--GQ10). The ordering is
@@ -546,17 +554,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   | **GQ2 cheap cold tier** | **WIP candidate validated.** Canonical v2 cuts corrected representative/full Axeyum total 17.4%/13.3% and bit blast 37.3%/44.4% | Keep canonical as the candidate; add another word rule only if it reduces downstream AIG/CNF and end-to-end time |
   | **GQ3 coercion peepholes** | **WIP with a corrected production win.** ADR-0142 removes 1,315/1,435 representative opportunities and cuts term bits 57% representative / 72% full; full AIG/CNF size remains roughly flat | Demonstrate circuit-size improvement from any next exact word tranche or narrow the exit criterion explicitly |
   | **GQ4 cold relevant bits** | **WIP but re-ranked.** ADR-0143 separates the diagnostic; post-canonical full demand is 98.16% of term bits and 91.51% of symbol bits | Pursue partial lowering only if family-specific evidence shows a material cone and preserve original replay/model projection |
-  | **GQ5 AIG/CNF construction** | **ACTIVE with two accepted wins and one rejected experiment.** ADR-0144 cuts full CNF 18.5% / total 8.8%; ADR-0145 then cuts CNF 5.6% / gate emission 10.5% / total 2.7%, with identical content. ADR-0146 root scratch regresses representative total/CNF 1.1%/4.9% and is reverted/deferred; remaining gate/root/planning are 3.19/1.39/1.21 s | Profile planning next; revisit roots only with a no-second-traversal design, and require representative/full end-to-end wins |
+  | **GQ5 AIG/CNF construction** | **ACTIVE with two accepted wins, one rejected experiment, and one planning candidate.** ADR-0144/0145 reduce full total 8.8%/2.7%; ADR-0146 root scratch regresses representative total/CNF 1.1%/4.9% and is reverted/deferred. Proposed ADR-0147 removes planning's full-node reverse-iteration copy; remaining gate/root/planning are 3.19/1.39/1.21 s | Run ADR-0147 through the representative gate, then full-confirm or revert; revisit roots only with a no-second-traversal design |
   | **GQ6 cold SAT/CDCL** | **WIP foundation, attribution-gated**; subsumption/BVE, XOR/GF(2), VSIDS, phase saving, Luby, and LBD foundations exist | Exact-CNF backend attribution first; tune/default a stronger path only where SAT dominates and proof replay stays green |
   | **GQ7 warm delta entry** | **WIP foundation**; retained CNF/search state exists, but the deduplicated cold corpus cannot measure prefix reuse and Glaurung still creates a fresh solver for every check | Capture an ordered scope/path trace, preprocess only new/affected terms, wire persistent per-worker/path push/assert/check/pop, control concretization, and publish real-driver per-check cost plus warm break-even depth |
   | **GQ8 verdict/CNF cache** | **TODO, ordered-trace-gated** | Measure duplicates/prefixes first; prefer retained warm state, then add versioned exact-query reuse only where justified, with deterministic bounds and mandatory original replay |
   | **GQ9 auto cost model/docs** | **TODO**; P1.8 shape/resource probes are only the general foundation | Telemetry-visible raw/cheap/configured/warm choice that beats or matches fixed policies and documents embedder guidance |
   | **GQ10 real-lifter regression tier** | **WIP; access-controlled representative and well-typed full tiers validate.** Artifact v27 baseline repetitions/full trials and ADR-0144/0145 accepted full confirmations are complete; 2,225 malformed dumps are isolated | Add a data-availability-aware regular gate, establish repeated full-tier variance thresholds, and fix producer validation/dedup before calling the raw capture authoritative |
 
-  **Next actions:** (1) profile the 1.21-second CNF planning path by its
-  reachability/use-count, gate-detection, tree-collection, and direct-root
-  components without adding always-on observational work; (2) take one bounded
-  planning change only if attribution identifies it;
+  **Next actions:** (1) run five representative production repetitions for
+  ADR-0147's zero-copy reverse AIG iteration and accept only an end-to-end plus
+  planning win before full confirmation; (2) if rejected, continue planning
+  attribution without adding always-on observational work;
   (3) keep affine
   BV add/sub normalization behind evidence that it reduces AIG/CNF, and keep SAT
   work gated;
