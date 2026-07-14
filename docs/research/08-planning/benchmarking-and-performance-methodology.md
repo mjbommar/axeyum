@@ -197,6 +197,14 @@ records the contract and the first measured baselines.
   independently of SMT-LIB `:status`, and includes the manifest digest and tier
   in the experiment identity. The committed micro manifest is only a plumbing
   smoke; it does not satisfy the Glaurung representativeness requirement.
+- Artifact version 18 makes client-shape representativeness inspectable rather
+  than anecdotal. It profiles unique nodes in each untouched original-query DAG:
+  formula shape, BV width diversity, extract/concat/extension and surviving
+  array operations, extract demanded/source bits, and the exact nested shapes
+  targeted by GQ3. Corpus summaries carry deterministic p50/p95 distributions,
+  while the layer profile adds AIG/CNF size distributions. Memory provenance
+  erased by lifter flattening is explicitly left to manifest family/source
+  metadata rather than guessed from the lowered formula.
 - **Primary client QF_BV target (2026-07-13): Glaurung binary analysis.** Capture
   and minimize the real lifter-produced path conditions, preserving their
   extract/concat, mixed machine-width, and memory-derived shape. This client

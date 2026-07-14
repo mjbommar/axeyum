@@ -79,14 +79,20 @@ just bench-public-qfbv-sat-bv-replay-refine      # replay-checked query refineme
 
 Each JSON records the corpus + config hash, per-instance outcome, budgets,
 backend stats, PAR-2, explicit `decided`/`decided_percent`, **disagreements**,
-and **model-replay failures**. Artifact version 17 retains version 16's exact
+and **model-replay failures**. Artifact version 18 retains version 16's exact
 floating-point millisecond values for each instance's word-level preprocessing,
 bit-blast, CNF encode/inprocess, SAT, model lift, and cold total, plus corpus
 totals and p50/p95 distributions. Its `client_comparison` block reports the
 aggregate Axeyum/Z3 ratio plus each solver's p50/p95 over the same decided
 queries. Version 17 additionally binds a run to an optional
 [versioned corpus manifest](corpus-manifests.md), with exact membership,
-per-query SHA-256, expected-verdict, and named-tier gates.
+per-query SHA-256, expected-verdict, and named-tier gates. Version 18 adds an
+original-query `query_shape` block: formula and BV-width distributions,
+extract/concat/extension/array-op counts, extract demanded-vs-source bits, and
+exact extract-over-concat/extract/extension cancellation opportunities. The
+layer block now includes AIG-input/node and CNF-variable/clause p50/p95 sizes.
+Counts use unique nodes in the untouched parsed DAG; they are not distorted by
+preprocessing or repeated expansion of shared terms.
 A comparable run requires zero errors, zero disagreements, zero replay failures,
 and the declared decided-rate threshold; only then is timing a performance
 signal.
@@ -112,3 +118,6 @@ every selected file, and emits a versioned artifact. Axeyum's comparison time
 includes its selected word preprocessing; Z3 never receives Axeyum's reduced
 assertion set. Synthetic QF_BV corpora remain useful lower-level diagnostics,
 but do not replace the extract/concat/mixed-width/memory-derived client shape.
+The shape block can count `select`/`store` operations that survive parsing, but
+cannot infer memory provenance after a lifter has flattened memory into BV
+terms; preserve that provenance in the manifest `family` and `source` fields.

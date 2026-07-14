@@ -55,16 +55,21 @@ traces; GQ8 follows the exact cache/replay contract rather than treating a
 prefix as an identical query. Re-run the GQ10 baseline after every accepted
 slice and record the result in `STATUS.md` and `bench-results/`.
 
-**GQ1/GQ10 readiness landed (2026-07-13, artifact v17).** The client recipe is
+**GQ1/GQ10 readiness landed (2026-07-13, artifact v18).** The client recipe is
 now a single-worker cold run. Its artifact separates word preprocessing,
 bit-blast, CNF encoding, optional CNF inprocessing, SAT, and model lift; reports
 aggregate and exact p50/p95 timing; and computes the Axeyum/Z3 ratio with
 in-process Z3 solving the untouched parsed assertions. Manifest v1 additionally
 pins the capture source/logic, exact directory membership, per-query SHA-256,
 expected verdict, family, stable order, and named representative/full tiers;
-all bytes are validated before timing and every selected verdict is gated. A
-micro-corpus smoke proves the measurement and ingestion plumbing, including
-mandatory in-process Z3 coverage, not the client performance hypothesis.
+all bytes are validated before timing and every selected verdict is gated.
+Artifact v18 profiles the untouched original DAG before rewriting: formula
+p50/p95, BV width diversity, extract/concat/extension and surviving array-op
+density, demanded-vs-source extract bits, exact GQ3 cancellation opportunities,
+and AIG/CNF p50/p95 sizes. Flattened memory provenance remains manifest metadata,
+because it cannot be recovered from an already-lowered BV term. A micro-corpus
+smoke proves the measurement and ingestion plumbing, including mandatory
+in-process Z3 coverage, not the client performance hypothesis.
 GQ1/GQ10 remain open until the actual Glaurung capture is ingested.
 
 **Non-negotiable acceptance gate.** Comparable runs require 100% decided on the

@@ -95,9 +95,9 @@ bench-micro-z3:
 # expected verdicts, families, and named representative/full tiers. Every
 # selected file must produce a decision, operational errors fail the harness,
 # verdicts are checked against in-process Z3 on the original query, and the
-# versioned artifact records decided rate, cold-stage p50/p95, and the
-# Axeyum/Z3 ratio. One worker avoids cross-query contention corrupting the layer
-# attribution.
+# versioned artifact records decided rate, original-query shape, formula/AIG/CNF
+# p50/p95, cold-stage p50/p95, and the Axeyum/Z3 ratio. One worker avoids
+# cross-query contention corrupting the layer attribution.
 bench-glaurung-qfbv corpus_dir manifest tier="full" out="bench-results/glaurung-qfbv-sat-bv-vs-z3.json":
     mkdir -p "$(dirname '{{ out }}')"
     cargo run --release -p axeyum-bench --features z3 -- "{{ corpus_dir }}" --corpus-manifest "{{ manifest }}" --corpus-tier "{{ tier }}" --backend sat-bv --preprocess --compare-z3 --require-in-process-z3 --timeout-ms 10000 --jobs 1 --min-decided-percent 100 --logic QF_BV --out "{{ out }}"

@@ -29,7 +29,7 @@ mod run {
     use std::process::ExitCode;
     use std::time::{Duration, Instant};
 
-    use axeyum_ir::{TermArena, TermId, TermStats, Value, eval};
+    use axeyum_ir::{Op, TermArena, TermId, TermNode, TermStats, Value, eval};
     use axeyum_query::{Query, QueryPlan, StructuralCacheKey};
     use axeyum_rewrite::{
         DEFAULT_SOLVE_EQS_FUEL, ModelReconstructionTrail, RewriteReport, canonicalize_terms,
@@ -46,7 +46,7 @@ mod run {
     use serde_json::{Value as JsonValue, json};
     use sha2::{Digest, Sha256};
 
-    const ARTIFACT_VERSION: u32 = 17;
+    const ARTIFACT_VERSION: u32 = 18;
     const CORPUS_MANIFEST_VERSION: u64 = 1;
     const CONTENT_HASH_PREFIX: &str = "sha256:";
     /// Corpus SAT-share threshold above which SAT solve time is reported as
@@ -484,6 +484,113 @@ mod run {
         cnf_inprocess: f64,
         solve: f64,
         model_lift: f64,
+        aig_inputs: u64,
+        aig_nodes: u64,
+        cnf_variables: u64,
+        cnf_clauses: u64,
+    }
+
+    /// Original-query structural profile used to verify that an external `QF_BV`
+    /// tier actually has the binary-lifter shape it claims to represent. Counts
+    /// are over unique reachable DAG nodes, so parser-preserved sharing cannot
+    /// inflate an operator family by repeated tree expansion.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+    struct QueryShapeSample {
+        dag_nodes: u64,
+        tree_nodes: u64,
+        max_depth: u64,
+        distinct_symbols: u64,
+        assertions: u64,
+        bitvec_nodes: u64,
+        distinct_bitvec_widths: u64,
+        max_bitvec_width: u64,
+        extracts: u64,
+        extract_result_bits: u64,
+        extract_source_bits: u64,
+        narrow_extracts: u64,
+        concats: u64,
+        zero_exts: u64,
+        sign_exts: u64,
+        selects: u64,
+        stores: u64,
+        extract_over_concat: u64,
+        extract_over_extract: u64,
+        extract_over_zero_ext: u64,
+        extract_over_sign_ext: u64,
+        low_extract_over_zero_ext: u64,
+    }
+
+    impl QueryShapeSample {
+        fn compute(arena: &TermArena, roots: &[TermId], base: &TermStats) -> Self {
+            let mut sample = Self {
+                dag_nodes: base.dag_nodes,
+                tree_nodes: base.tree_nodes,
+                max_depth: base.max_depth,
+                distinct_symbols: base.distinct_symbols,
+                assertions: usize_to_u64(roots.len()),
+                ..Self::default()
+            };
+            let mut seen = BTreeSet::new();
+            let mut widths = BTreeSet::new();
+            let mut stack = roots.to_vec();
+            while let Some(term) = stack.pop() {
+                if !seen.insert(term) {
+                    continue;
+                }
+                if let Some(width) = arena.sort_of(term).bv_width() {
+                    sample.bitvec_nodes += 1;
+                    sample.max_bitvec_width = sample.max_bitvec_width.max(u64::from(width));
+                    widths.insert(width);
+                }
+                let TermNode::App { op, args } = arena.node(term) else {
+                    continue;
+                };
+                stack.extend(args.iter().copied());
+                match *op {
+                    Op::Extract { hi, lo } => {
+                        sample.extracts += 1;
+                        sample.extract_result_bits += u64::from(hi - lo + 1);
+                        let source_width = arena.sort_of(args[0]).bv_width().unwrap_or(0);
+                        sample.extract_source_bits += u64::from(source_width);
+                        sample.narrow_extracts += u64::from(hi - lo + 1 < source_width);
+                        if let TermNode::App {
+                            op: child_op,
+                            args: child_args,
+                        } = arena.node(args[0])
+                        {
+                            match child_op {
+                                Op::Concat => sample.extract_over_concat += 1,
+                                Op::Extract { .. } => sample.extract_over_extract += 1,
+                                Op::ZeroExt { .. } => {
+                                    sample.extract_over_zero_ext += 1;
+                                    let original_width =
+                                        arena.sort_of(child_args[0]).bv_width().unwrap_or(0);
+                                    sample.low_extract_over_zero_ext +=
+                                        u64::from(lo == 0 && hi + 1 == original_width);
+                                }
+                                Op::SignExt { .. } => sample.extract_over_sign_ext += 1,
+                                _ => {}
+                            }
+                        }
+                    }
+                    Op::Concat => sample.concats += 1,
+                    Op::ZeroExt { .. } => sample.zero_exts += 1,
+                    Op::SignExt { .. } => sample.sign_exts += 1,
+                    Op::Select => sample.selects += 1,
+                    Op::Store => sample.stores += 1,
+                    _ => {}
+                }
+            }
+            sample.distinct_bitvec_widths = usize_to_u64(widths.len());
+            sample
+        }
+
+        fn cancellation_opportunities(self) -> u64 {
+            self.extract_over_concat
+                + self.extract_over_extract
+                + self.extract_over_zero_ext
+                + self.extract_over_sign_ext
+        }
     }
 
     impl LayerSample {
@@ -589,6 +696,13 @@ mod run {
         /// the samples in one allocation for exact deterministic p50/p95 values.
         layer_sample: Option<LayerSample>,
         layer_samples: Vec<LayerSample>,
+        /// Structural samples from the untouched parsed assertions. Unlike
+        /// layer samples these include every successfully parsed flat query,
+        /// regardless of verdict, so a fast failure cannot erase evidence that
+        /// the selected corpus has (or lacks) the target lifter shape.
+        query_shape_files: u64,
+        query_shape_sample: Option<QueryShapeSample>,
+        query_shape_samples: Vec<QueryShapeSample>,
         /// Fair in-process comparison over the original query: Axeyum includes
         /// its selected word preprocessing, while Z3 receives the untouched
         /// parsed assertions. Binary-fallback timings are deliberately excluded.
@@ -1018,6 +1132,169 @@ mod run {
         })
     }
 
+    #[allow(clippy::cast_precision_loss)]
+    fn count_distribution_record<T: Copy>(samples: &[T], select: impl Fn(T) -> u64) -> JsonValue {
+        if samples.is_empty() {
+            return JsonValue::Null;
+        }
+        let mut values = samples.iter().copied().map(select).collect::<Vec<_>>();
+        values.sort_unstable();
+        let percentile = |percent: usize| {
+            let rank = percent
+                .saturating_mul(values.len())
+                .div_ceil(100)
+                .saturating_sub(1);
+            values[rank.min(values.len() - 1)]
+        };
+        let total = values
+            .iter()
+            .fold(0_u128, |sum, &value| sum + u128::from(value));
+        json!({
+            "min": values[0],
+            "p50": percentile(50),
+            "p95": percentile(95),
+            "max": values[values.len() - 1],
+            "mean": total as f64 / values.len() as f64,
+        })
+    }
+
+    fn sum_shape(samples: &[QueryShapeSample], select: impl Fn(QueryShapeSample) -> u64) -> u64 {
+        samples
+            .iter()
+            .copied()
+            .map(select)
+            .fold(0, u64::saturating_add)
+    }
+
+    fn query_shape_record(sample: QueryShapeSample) -> JsonValue {
+        json!({
+            "counting_unit": "unique original-query DAG nodes",
+            "formula": {
+                "assertions": sample.assertions,
+                "dag_nodes": sample.dag_nodes,
+                "tree_nodes": sample.tree_nodes,
+                "max_depth": sample.max_depth,
+                "distinct_symbols": sample.distinct_symbols,
+            },
+            "widths": {
+                "bitvec_nodes": sample.bitvec_nodes,
+                "distinct_bitvec_widths": sample.distinct_bitvec_widths,
+                "max_bitvec_width": sample.max_bitvec_width,
+            },
+            "operators": {
+                "extract": sample.extracts,
+                "concat": sample.concats,
+                "zero_extend": sample.zero_exts,
+                "sign_extend": sample.sign_exts,
+                "select": sample.selects,
+                "store": sample.stores,
+            },
+            "extract_demand": {
+                "result_bits": sample.extract_result_bits,
+                "source_bits": sample.extract_source_bits,
+                "narrow_extracts": sample.narrow_extracts,
+            },
+            "coercion_cancellation_opportunities": {
+                "total": sample.cancellation_opportunities(),
+                "extract_over_concat": sample.extract_over_concat,
+                "extract_over_extract": sample.extract_over_extract,
+                "extract_over_zero_extend": sample.extract_over_zero_ext,
+                "extract_over_sign_extend": sample.extract_over_sign_ext,
+                "exact_low_extract_over_zero_extend": sample.low_extract_over_zero_ext,
+            },
+        })
+    }
+
+    fn query_shape_summary_record(s: &Summary) -> JsonValue {
+        let samples = &s.query_shape_samples;
+        if samples.is_empty() {
+            return JsonValue::Null;
+        }
+        let extract_result_bits = sum_shape(samples, |sample| sample.extract_result_bits);
+        let extract_source_bits = sum_shape(samples, |sample| sample.extract_source_bits);
+        let demand_ratio = if extract_source_bits == 0 {
+            JsonValue::Null
+        } else {
+            #[allow(clippy::cast_precision_loss)]
+            JsonValue::from(extract_result_bits as f64 / extract_source_bits as f64)
+        };
+        json!({
+            "profiled_instances": s.query_shape_files,
+            "counting_unit": "unique original-query DAG nodes",
+            "formula_distributions": {
+                "assertions": count_distribution_record(samples, |sample| sample.assertions),
+                "dag_nodes": count_distribution_record(samples, |sample| sample.dag_nodes),
+                "tree_nodes": count_distribution_record(samples, |sample| sample.tree_nodes),
+                "max_depth": count_distribution_record(samples, |sample| sample.max_depth),
+                "distinct_symbols": count_distribution_record(
+                    samples,
+                    |sample| sample.distinct_symbols,
+                ),
+            },
+            "width_distributions": {
+                "bitvec_nodes": count_distribution_record(samples, |sample| sample.bitvec_nodes),
+                "distinct_bitvec_widths": count_distribution_record(
+                    samples,
+                    |sample| sample.distinct_bitvec_widths,
+                ),
+                "max_bitvec_width": count_distribution_record(
+                    samples,
+                    |sample| sample.max_bitvec_width,
+                ),
+            },
+            "operator_totals": {
+                "extract": sum_shape(samples, |sample| sample.extracts),
+                "concat": sum_shape(samples, |sample| sample.concats),
+                "zero_extend": sum_shape(samples, |sample| sample.zero_exts),
+                "sign_extend": sum_shape(samples, |sample| sample.sign_exts),
+                "select": sum_shape(samples, |sample| sample.selects),
+                "store": sum_shape(samples, |sample| sample.stores),
+            },
+            "operator_distributions": {
+                "extract": count_distribution_record(samples, |sample| sample.extracts),
+                "concat": count_distribution_record(samples, |sample| sample.concats),
+                "extensions": count_distribution_record(
+                    samples,
+                    |sample| sample.zero_exts + sample.sign_exts,
+                ),
+                "array_select_store": count_distribution_record(
+                    samples,
+                    |sample| sample.selects + sample.stores,
+                ),
+            },
+            "extract_demand": {
+                "result_bits": extract_result_bits,
+                "source_bits": extract_source_bits,
+                "result_over_source_ratio": demand_ratio,
+                "narrow_extracts": sum_shape(samples, |sample| sample.narrow_extracts),
+            },
+            "coercion_cancellation_opportunities": {
+                "total": sum_shape(samples, QueryShapeSample::cancellation_opportunities),
+                "extract_over_concat": sum_shape(samples, |sample| sample.extract_over_concat),
+                "extract_over_extract": sum_shape(samples, |sample| sample.extract_over_extract),
+                "extract_over_zero_extend": sum_shape(
+                    samples,
+                    |sample| sample.extract_over_zero_ext,
+                ),
+                "extract_over_sign_extend": sum_shape(
+                    samples,
+                    |sample| sample.extract_over_sign_ext,
+                ),
+                "exact_low_extract_over_zero_extend": sum_shape(
+                    samples,
+                    |sample| sample.low_extract_over_zero_ext,
+                ),
+            },
+            "memory_provenance": {
+                "surviving_select_store_ops": sum_shape(
+                    samples,
+                    |sample| sample.selects + sample.stores,
+                ),
+                "limitation": "memory-derived provenance flattened to BV terms is not inferable; retain it in manifest family/source metadata",
+            },
+        })
+    }
+
     /// Corpus layer attribution: per-stage seconds, p50/p95 distributions, each
     /// stage's share of the pure-Rust cold pipeline, and the gate (a) verdict on
     /// whether SAT solve time dominates. `null` when no `sat-bv` instance was
@@ -1074,6 +1351,24 @@ mod run {
                     |sample| sample.model_lift,
                 ),
             },
+            "size_distributions": {
+                "aig_inputs": count_distribution_record(
+                    &s.layer_samples,
+                    |sample| sample.aig_inputs,
+                ),
+                "aig_nodes": count_distribution_record(
+                    &s.layer_samples,
+                    |sample| sample.aig_nodes,
+                ),
+                "cnf_variables": count_distribution_record(
+                    &s.layer_samples,
+                    |sample| sample.cnf_variables,
+                ),
+                "cnf_clauses": count_distribution_record(
+                    &s.layer_samples,
+                    |sample| sample.cnf_clauses,
+                ),
+            },
             // Gate (a): does SAT solve time dominate end-to-end? The CDCL-core
             // priority gate needs this and a CaDiCaL/Kissat gap before it jumps
             // the queue ahead of encoding work.
@@ -1128,6 +1423,10 @@ mod run {
             cnf_inprocess: layers.cnf_inprocess.as_secs_f64(),
             solve: layers.solve.as_secs_f64(),
             model_lift: layers.model_lift.as_secs_f64(),
+            aig_inputs: layers.aig_inputs,
+            aig_nodes: layers.aig_nodes,
+            cnf_variables: layers.cnf_variables,
+            cnf_clauses: layers.cnf_clauses,
         };
         json!({
             "word_preprocess_ms": sample.word_preprocess * 1000.0,
@@ -1479,6 +1778,10 @@ mod run {
             return run_word_only(file, &name, &mut script, timeout, args, summary);
         }
         let input_shape = TermStats::compute(&script.arena, &script.assertions);
+        let query_shape =
+            QueryShapeSample::compute(&script.arena, &script.assertions, &input_shape);
+        summary.query_shape_files += 1;
+        summary.query_shape_sample = Some(query_shape);
         let mut rewrite = apply_rewrite(&mut script, args.rewrite);
         // Word-level preprocessing (P1.2): shrink the post-rewrite assertions and
         // keep a reconstruction trail so the sat model still replays against the
@@ -1603,6 +1906,7 @@ mod run {
             "max_depth": input_shape.max_depth,
             "distinct_symbols": input_shape.distinct_symbols,
             "assertions": usize_to_u64(script.assertions.len()),
+            "query_shape": query_shape_record(query_shape),
             "query_plan": query_plan_record(
                 &primary_solve.plan,
                 args.query_plan,
@@ -2630,6 +2934,10 @@ mod run {
             cnf_inprocess: layers.cnf_inprocess.as_secs_f64(),
             solve: layers.solve.as_secs_f64(),
             model_lift: layers.model_lift.as_secs_f64(),
+            aig_inputs: layers.aig_inputs,
+            aig_nodes: layers.aig_nodes,
+            cnf_variables: layers.cnf_variables,
+            cnf_clauses: layers.cnf_clauses,
         };
         summary.layer_files += 1;
         summary.layer_word_preprocess_s += sample.word_preprocess;
@@ -2768,6 +3076,10 @@ mod run {
         total.layer_model_lift_s += next.layer_model_lift_s;
         if let Some(sample) = next.layer_sample {
             total.layer_samples.push(sample);
+        }
+        total.query_shape_files += next.query_shape_files;
+        if let Some(sample) = next.query_shape_sample {
+            total.query_shape_samples.push(sample);
         }
         total.client_comparison_files += next.client_comparison_files;
         total.client_axeyum_s += next.client_axeyum_s;
@@ -3175,6 +3487,7 @@ mod run {
                 "skipped": s.oracle_skipped,
             },
             "layer_attribution": layer_attribution_record(s),
+            "query_shape": query_shape_summary_record(s),
             "client_comparison": client_comparison_record(s),
         })
     }
@@ -4040,7 +4353,7 @@ mod run {
 
         #[test]
         fn decided_rate_threshold_parser_rejects_non_percentages() {
-            assert_eq!(parse_decided_percent("80").unwrap(), 80.0);
+            assert!((parse_decided_percent("80").unwrap() - 80.0).abs() < f64::EPSILON);
             for invalid in ["-0.1", "100.1", "NaN", "inf", "not-a-number"] {
                 assert!(
                     parse_decided_percent(invalid).is_err(),
@@ -4170,6 +4483,10 @@ mod run {
                     cnf_inprocess: 0.004,
                     solve: 0.005,
                     model_lift: 0.001,
+                    aig_inputs: 8,
+                    aig_nodes: 16,
+                    cnf_variables: 24,
+                    cnf_clauses: 32,
                 },
                 LayerSample {
                     word_preprocess: 0.010,
@@ -4178,6 +4495,10 @@ mod run {
                     cnf_inprocess: 0.040,
                     solve: 0.050,
                     model_lift: 0.010,
+                    aig_inputs: 80,
+                    aig_nodes: 160,
+                    cnf_variables: 240,
+                    cnf_clauses: 320,
                 },
             ];
             let summary = Summary {
@@ -4206,6 +4527,58 @@ mod run {
                 (record["distributions"]["total"]["p95_ms"].as_f64().unwrap() - 160.0).abs() < 1e-9
             );
             assert_eq!(record["sat_dominates"], json!(false));
+            assert_eq!(record["size_distributions"]["aig_nodes"]["p50"], json!(16));
+            assert_eq!(
+                record["size_distributions"]["cnf_clauses"]["p95"],
+                json!(320)
+            );
+        }
+
+        #[test]
+        fn query_shape_profiles_lifter_ops_and_rewrite_opportunities() {
+            let text = "\
+                (set-logic QF_ABV)\n\
+                (declare-const x (_ BitVec 8))\n\
+                (declare-const y (_ BitVec 8))\n\
+                (declare-const a (Array (_ BitVec 8) (_ BitVec 16)))\n\
+                (assert (= ((_ extract 7 0) ((_ zero_extend 8) x)) x))\n\
+                (assert (= ((_ extract 6 1) ((_ extract 7 0) ((_ sign_extend 8) y)))\n\
+                           ((_ extract 6 1) y)))\n\
+                (assert (= ((_ extract 11 4) (concat x y))\n\
+                           ((_ extract 11 4) (concat x y))))\n\
+                (assert (= (select (store a x ((_ zero_extend 8) y)) x)\n\
+                           ((_ zero_extend 8) y)))\n\
+                (check-sat)\n";
+            let script = parse_script(text).expect("shape fixture parses");
+            let stats = TermStats::compute(&script.arena, &script.assertions);
+            let shape = QueryShapeSample::compute(&script.arena, &script.assertions, &stats);
+            assert_eq!(shape.extract_over_concat, 1);
+            assert_eq!(shape.extract_over_extract, 1);
+            assert_eq!(shape.extract_over_zero_ext, 1);
+            assert_eq!(shape.extract_over_sign_ext, 1);
+            assert_eq!(shape.low_extract_over_zero_ext, 1);
+            assert_eq!(shape.cancellation_opportunities(), 4);
+            assert_eq!((shape.selects, shape.stores), (1, 1));
+            assert!(shape.distinct_bitvec_widths >= 3);
+
+            let summary = Summary {
+                query_shape_files: 1,
+                query_shape_samples: vec![shape],
+                ..Summary::default()
+            };
+            let record = query_shape_summary_record(&summary);
+            assert_eq!(
+                record["coercion_cancellation_opportunities"]["total"],
+                json!(4)
+            );
+            assert_eq!(
+                record["memory_provenance"]["surviving_select_store_ops"],
+                json!(2)
+            );
+            assert_eq!(
+                record["formula_distributions"]["dag_nodes"]["p50"],
+                json!(shape.dag_nodes)
+            );
         }
 
         #[test]
@@ -4243,6 +4616,10 @@ mod run {
                 cnf_inprocess: 0.0,
                 solve: 0.004,
                 model_lift: 0.001,
+                aig_inputs: 8,
+                aig_nodes: 16,
+                cnf_variables: 24,
+                cnf_clauses: 32,
             };
             let comparison = ClientComparisonSample {
                 axeyum_s: 0.011,
@@ -4251,6 +4628,11 @@ mod run {
             let next = Summary {
                 layer_files: 1,
                 layer_sample: Some(layer),
+                query_shape_files: 1,
+                query_shape_sample: Some(QueryShapeSample {
+                    dag_nodes: 42,
+                    ..QueryShapeSample::default()
+                }),
                 client_comparison_files: 1,
                 client_comparison_sample: Some(comparison),
                 ..Summary::default()
@@ -4258,9 +4640,13 @@ mod run {
             let mut total = Summary::default();
             merge_summary(&mut total, &next);
             assert_eq!(total.layer_samples.len(), 1);
+            assert_eq!(total.query_shape_samples.len(), 1);
+            assert_eq!(total.query_shape_samples[0].dag_nodes, 42);
             assert_eq!(total.client_comparison_samples.len(), 1);
-            assert_eq!(total.layer_samples[0].total_s(), layer.total_s());
-            assert_eq!(total.client_comparison_samples[0].z3_s, comparison.z3_s);
+            assert!((total.layer_samples[0].total_s() - layer.total_s()).abs() < f64::EPSILON);
+            assert!(
+                (total.client_comparison_samples[0].z3_s - comparison.z3_s).abs() < f64::EPSILON
+            );
         }
 
         #[test]

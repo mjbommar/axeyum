@@ -92,6 +92,16 @@ verdict agrees with the manifest independently of SMT-LIB `:status`. The
 manifest digest and tier enter the config identity. A committed micro manifest
 tests this boundary without claiming to represent the missing client capture.
 
+Artifact version 18 then makes the corpus-shape part of that boundary
+machine-readable. Each instance profiles unique nodes in the untouched parsed
+DAG, including formula size/depth/sharing, BV width diversity,
+extract/concat/extension and surviving array operations, demanded-vs-source
+extract bits, and exact extract-over-concat/nested-extract/extension
+cancellation opportunities. Corpus summaries add deterministic p50/p95 formula
+and AIG/CNF sizes. This instrumentation ranks GQ3/GQ4 without changing terms or
+claiming that a synthetic fixture represents Glaurung; memory provenance erased
+by BV flattening remains an explicit manifest-family responsibility.
+
 ## Alternatives
 
 - **Implicitly widen or truncate binary operands.** Rejected: it masks client
