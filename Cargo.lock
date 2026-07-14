@@ -55,6 +55,7 @@ dependencies = [
  "axeyum-solver",
  "rayon",
  "serde_json",
+ "sha2",
 ]
 
 [[package]]

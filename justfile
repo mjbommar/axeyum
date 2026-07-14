@@ -89,15 +89,24 @@ bench-micro-z3:
     cargo run --release -p axeyum-bench --features z3 -- corpus/micro --backend z3 --timeout-ms 1000 --out /tmp/axeyum-bench-micro-z3.json
 
 # Primary client-tier QF_BV gate. `corpus_dir` is an externally captured,
-# redistributable Glaurung SMT-LIB query directory; the repository deliberately
-# does not pretend that a synthetic substitute is the client workload. Every
-# file must produce a decision, operational errors fail the harness, verdicts
-# are checked against in-process Z3 on the original query, and the versioned
-# artifact records decided rate, cold-stage p50/p95, and the Axeyum/Z3 ratio.
-# One worker avoids cross-query contention corrupting the layer attribution.
-bench-glaurung-qfbv corpus_dir out="bench-results/glaurung-qfbv-sat-bv-vs-z3.json":
-    mkdir -p "$(dirname '{{out}}')"
-    cargo run --release -p axeyum-bench --features z3 -- "{{corpus_dir}}" --backend sat-bv --preprocess --compare-z3 --require-in-process-z3 --timeout-ms 10000 --jobs 1 --min-decided-percent 100 --logic QF_BV --corpus-source 'Glaurung binary-analysis SMT-LIB capture (external client corpus)' --out "{{out}}"
+# redistributable Glaurung SMT-LIB query directory and its v1 manifest; the
+# repository deliberately does not pretend that a synthetic substitute is the
+# client workload. The manifest fixes exact membership, per-file content hashes,
+# expected verdicts, families, and named representative/full tiers. Every
+# selected file must produce a decision, operational errors fail the harness,
+# verdicts are checked against in-process Z3 on the original query, and the
+# versioned artifact records decided rate, cold-stage p50/p95, and the
+# Axeyum/Z3 ratio. One worker avoids cross-query contention corrupting the layer
+# attribution.
+bench-glaurung-qfbv corpus_dir manifest tier="full" out="bench-results/glaurung-qfbv-sat-bv-vs-z3.json":
+    mkdir -p "$(dirname '{{ out }}')"
+    cargo run --release -p axeyum-bench --features z3 -- "{{ corpus_dir }}" --corpus-manifest "{{ manifest }}" --corpus-tier "{{ tier }}" --backend sat-bv --preprocess --compare-z3 --require-in-process-z3 --timeout-ms 10000 --jobs 1 --min-decided-percent 100 --logic QF_BV --out "{{ out }}"
+
+# GQ1/GQ10 ingestion-contract smoke only; never cite this micro tier as a client
+# performance result.
+bench-glaurung-manifest-smoke out="bench-results/glaurung-manifest-smoke.json":
+    mkdir -p "$(dirname '{{ out }}')"
+    cargo run --release -p axeyum-bench --features z3 -- corpus/micro --corpus-manifest corpus/micro/manifest-v1.json --corpus-tier representative --backend sat-bv --preprocess --compare-z3 --require-in-process-z3 --timeout-ms 1000 --jobs 1 --min-decided-percent 100 --logic QF_BV --out "{{ out }}"
 
 # P4.5: the committed curated QF_BV slice, sat-bv vs Z3 (oracle-enabled). The
 # measured head-to-head gate for Track 1. Encoding budgets bound the bit-blast so

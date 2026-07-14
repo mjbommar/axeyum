@@ -23,6 +23,7 @@ flowchart LR
 | unsat-evidence.md *(planned)* | DRAT/LRAT/Alethe and `recheck` |
 | [Limitations](limitations.md) | what's experimental/incomplete — read before trusting support |
 | [Benchmarks](benchmarks.md) | the measured Z3 head-to-head + how to reproduce |
+| [Versioned corpus manifests](corpus-manifests.md) | pin exact query bytes, expected verdicts, families, and representative/full tiers |
 | wasm.md *(planned)* | the browser build and the [playground](../playground/README.md) |
 
 **Golden rule for users:** read [Limitations](limitations.md) and the

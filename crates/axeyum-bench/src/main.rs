@@ -7,7 +7,8 @@
 //! the run exit nonzero.
 //!
 //! Usage: `axeyum-bench <dir> [--timeout-ms N] [--limit N] [--out FILE]`
-//!   `[--corpus-source TEXT] [--logic LOGIC] [--families CSV] [--seed TEXT]`
+//!   `[--corpus-source TEXT] [--corpus-manifest FILE] [--corpus-tier NAME]`
+//!   `[--logic LOGIC] [--families CSV] [--seed TEXT]`
 //!   `[--rewrite off|default] [--backend sat-bv|z3]`
 //!   `[--query-plan full|first-assertion-support|replay-refine|replay-refine-exact]`
 //!   `[--refine-rounds N] [--refine-batch N] [--refine-adaptive-batch]`
@@ -22,7 +23,7 @@ fn main() -> std::process::ExitCode {
 }
 
 mod run {
-    use std::collections::BTreeMap;
+    use std::collections::{BTreeMap, BTreeSet};
     use std::fs;
     use std::path::{Path, PathBuf};
     use std::process::ExitCode;
@@ -43,8 +44,11 @@ mod run {
     };
     use rayon::prelude::*;
     use serde_json::{Value as JsonValue, json};
+    use sha2::{Digest, Sha256};
 
-    const ARTIFACT_VERSION: u32 = 16;
+    const ARTIFACT_VERSION: u32 = 17;
+    const CORPUS_MANIFEST_VERSION: u64 = 1;
+    const CONTENT_HASH_PREFIX: &str = "sha256:";
     /// Corpus SAT-share threshold above which SAT solve time is reported as
     /// dominating end-to-end time — gate (a) for prioritizing the custom CDCL
     /// core (benchmarking-and-performance-methodology.md, "Decision Gates").
@@ -180,6 +184,8 @@ mod run {
         limit: usize,
         out: Option<PathBuf>,
         corpus_source: Option<String>,
+        corpus_manifest: Option<PathBuf>,
+        corpus_tier: Option<String>,
         logic: Option<String>,
         families: Vec<String>,
         seed: String,
@@ -212,6 +218,8 @@ mod run {
             limit: usize::MAX,
             out: None,
             corpus_source: None,
+            corpus_manifest: None,
+            corpus_tier: None,
             logic: None,
             families: Vec::new(),
             seed: "none".to_owned(),
@@ -260,6 +268,10 @@ mod run {
             }
             "--out" => parsed.out = Some(PathBuf::from(next_value(args, flag)?)),
             "--corpus-source" => parsed.corpus_source = Some(next_value(args, flag)?),
+            "--corpus-manifest" => {
+                parsed.corpus_manifest = Some(PathBuf::from(next_value(args, flag)?));
+            }
+            "--corpus-tier" => parsed.corpus_tier = Some(next_value(args, flag)?),
             "--logic" => parsed.logic = Some(next_value(args, flag)?),
             "--families" => {
                 parsed.families = next_value(args, flag)?
@@ -402,6 +414,15 @@ mod run {
         if args.require_in_process_z3 && !args.compare_z3 {
             return Err("`--require-in-process-z3` requires `--compare-z3`".to_owned());
         }
+        if args.corpus_tier.is_some() && args.corpus_manifest.is_none() {
+            return Err("`--corpus-tier` requires `--corpus-manifest`".to_owned());
+        }
+        if args.corpus_manifest.is_some() && args.limit != usize::MAX {
+            return Err(
+                "`--limit` cannot be combined with `--corpus-manifest`; use a named manifest tier"
+                    .to_owned(),
+            );
+        }
         Ok(())
     }
 
@@ -482,6 +503,35 @@ mod run {
         z3_s: f64,
     }
 
+    /// One immutable query identity in a versioned external-corpus manifest.
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    struct CorpusManifestEntry {
+        path: String,
+        content_hash: String,
+        expected: String,
+        family: String,
+        tiers: Vec<String>,
+    }
+
+    /// Validated manifest metadata plus the entries selected for this run.
+    #[derive(Debug)]
+    struct CorpusManifestSelection {
+        manifest_path: PathBuf,
+        manifest_hash: String,
+        name: String,
+        source: String,
+        logic: String,
+        total_entries: usize,
+        selected_tier: Option<String>,
+        entries: Vec<CorpusManifestEntry>,
+    }
+
+    /// The exact ordered set of files a run is allowed to consume.
+    struct CorpusSelection {
+        files: Vec<PathBuf>,
+        manifest: Option<CorpusManifestSelection>,
+    }
+
     #[derive(Default)]
     struct Summary {
         files: u64,
@@ -524,7 +574,7 @@ mod run {
         // Corpus layer attribution over decided pure-Rust (`sat-bv`) instances
         // only, so gate (a) — "does SAT solve time dominate?" — is falsifiable
         // from one summary. Other backends are excluded (their stage breakdown
-        // is not the pure-Rust pipeline the CDCL gate is about). The four stages
+        // is not the pure-Rust pipeline the CDCL gate is about). The six stages
         // are non-overlapping and sum to the cold pipeline wall time. Word-level
         // preprocessing runs in the harness before the backend; `translate`
         // equals bit-blast + CNF encode + optional CNF inprocessing for this path.
@@ -547,12 +597,26 @@ mod run {
         client_z3_s: f64,
         client_comparison_sample: Option<ClientComparisonSample>,
         client_comparison_samples: Vec<ClientComparisonSample>,
+        /// Expected-verdict gate supplied by a versioned corpus manifest. This is
+        /// deliberately separate from optional SMT-LIB `:status` metadata.
+        manifest_expected: u64,
+        manifest_compared: u64,
+        manifest_agree: u64,
+        manifest_disagree: u64,
     }
 
     struct InstanceRun {
         index: usize,
         record: JsonValue,
         summary: Summary,
+    }
+
+    struct ArtifactIdentity<'a> {
+        backend_name: &'a str,
+        compare_backend_name: Option<&'a str>,
+        corpus_hash: &'a str,
+        config_hash: &'a str,
+        corpus_manifest: Option<&'a CorpusManifestSelection>,
     }
 
     pub fn main() -> ExitCode {
@@ -563,8 +627,14 @@ mod run {
                 return ExitCode::FAILURE;
             }
         };
-        let files = collect_smt2(&args.dir, args.limit);
-        if files.is_empty() {
+        let corpus = match load_corpus(&args) {
+            Ok(corpus) => corpus,
+            Err(error) => {
+                eprintln!("{error}");
+                return ExitCode::FAILURE;
+            }
+        };
+        if corpus.files.is_empty() {
             eprintln!("no .smt2 files under {}", args.dir.display());
             return ExitCode::FAILURE;
         }
@@ -574,10 +644,11 @@ mod run {
         let backend_name = make_backend(args.backend).capabilities().name;
         let compare_backend_name =
             make_compare_backend(args.compare_z3).map(|backend| backend.capabilities().name);
-        let corpus_hash = fingerprint_corpus(&files, &args.dir);
-        let config_hash = fingerprint_config(&args, &backend_name, &corpus_hash);
+        let corpus_hash = fingerprint_corpus(&corpus.files, &args.dir);
+        let config_hash =
+            fingerprint_config(&args, &backend_name, &corpus_hash, corpus.manifest.as_ref());
 
-        let mut runs = match run_instances(&files, timeout, &args) {
+        let mut runs = match run_instances(&corpus.files, timeout, &args) {
             Ok(runs) => runs,
             Err(e) => {
                 eprintln!("{e}");
@@ -585,20 +656,26 @@ mod run {
             }
         };
         runs.sort_by_key(|run| run.index);
-        for run in runs {
+        for mut run in runs {
             merge_summary(&mut summary, &run.summary);
+            if let Some(manifest) = &corpus.manifest {
+                annotate_manifest_result(
+                    &mut run.record,
+                    &manifest.entries[run.index],
+                    &mut summary,
+                );
+            }
             instances.push(run.record);
         }
 
-        let artifact = match render_artifact(
-            &args,
-            &summary,
-            &instances,
-            &backend_name,
-            compare_backend_name.as_deref(),
-            &corpus_hash,
-            &config_hash,
-        ) {
+        let identity = ArtifactIdentity {
+            backend_name: &backend_name,
+            compare_backend_name: compare_backend_name.as_deref(),
+            corpus_hash: &corpus_hash,
+            config_hash: &config_hash,
+            corpus_manifest: corpus.manifest.as_ref(),
+        };
+        let artifact = match render_artifact(&args, &summary, &instances, &identity) {
             Ok(a) => a,
             Err(e) => {
                 eprintln!("{e}");
@@ -632,6 +709,7 @@ mod run {
         eprintln!(
             "files={} sat={} unsat={} unknown={} unsupported={} errors={} \
              agree={} DISAGREE={} model_replay_failures={} \
+             manifest_agree={} MANIFEST_DISAGREE={} \
              rewrite_changed={} rewrite_apps={} rewrite_decision_changes={} \
              rewrite_sat_unsat_conflicts={} query_sliced={} query_dropped={} \
              decided_percent={:.2} par2_mean_s={:.3}",
@@ -644,6 +722,8 @@ mod run {
             summary.agree,
             summary.disagree,
             summary.model_replay_failures,
+            summary.manifest_agree,
+            summary.manifest_disagree,
             summary.rewrite_changed_instances,
             summary.rewrite_applications,
             summary.rewrite_decision_changes,
@@ -679,6 +759,16 @@ mod run {
             eprintln!(
                 "BENCHMARK INTEGRITY ALARM: {} operational errors cannot count as fast results",
                 summary.errors
+            );
+            return ExitCode::FAILURE;
+        }
+        if summary.manifest_expected > 0
+            && (summary.manifest_compared != summary.manifest_expected
+                || summary.manifest_disagree > 0)
+        {
+            eprintln!(
+                "BENCHMARK INTEGRITY ALARM: manifest compared {}/{} expected verdicts with {} disagreements",
+                summary.manifest_compared, summary.manifest_expected, summary.manifest_disagree
             );
             return ExitCode::FAILURE;
         }
@@ -2585,6 +2675,49 @@ mod run {
         }
     }
 
+    fn annotate_manifest_result(
+        record: &mut JsonValue,
+        entry: &CorpusManifestEntry,
+        summary: &mut Summary,
+    ) {
+        summary.manifest_expected += 1;
+        let outcome = record
+            .get("outcome")
+            .and_then(JsonValue::as_str)
+            .map(str::to_owned);
+        let agrees = match outcome.as_deref() {
+            Some("sat" | "unsat") => {
+                summary.manifest_compared += 1;
+                if outcome.as_deref() == Some(entry.expected.as_str()) {
+                    summary.manifest_agree += 1;
+                    true
+                } else {
+                    summary.manifest_disagree += 1;
+                    false
+                }
+            }
+            _ => false,
+        };
+        if let JsonValue::Object(object) = record {
+            object.insert(
+                "corpus_manifest".to_owned(),
+                json!({
+                    "path": entry.path,
+                    "content_hash": entry.content_hash,
+                    "expected": entry.expected,
+                    "family": entry.family,
+                    "tiers": entry.tiers,
+                    "decision_compared": matches!(outcome.as_deref(), Some("sat" | "unsat")),
+                    "decision_agrees": if matches!(outcome.as_deref(), Some("sat" | "unsat")) {
+                        JsonValue::Bool(agrees)
+                    } else {
+                        JsonValue::Null
+                    },
+                }),
+            );
+        }
+    }
+
     fn merge_summary(total: &mut Summary, next: &Summary) {
         total.files += next.files;
         total.unsupported += next.unsupported;
@@ -2642,6 +2775,10 @@ mod run {
         if let Some(sample) = next.client_comparison_sample {
             total.client_comparison_samples.push(sample);
         }
+        total.manifest_expected += next.manifest_expected;
+        total.manifest_compared += next.manifest_compared;
+        total.manifest_agree += next.manifest_agree;
+        total.manifest_disagree += next.manifest_disagree;
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -2938,111 +3075,126 @@ mod run {
         args: &Args,
         s: &Summary,
         instances: &[JsonValue],
-        backend_name: &str,
-        compare_backend_name: Option<&str>,
-        corpus_hash: &str,
-        config_hash: &str,
+        identity: &ArtifactIdentity<'_>,
     ) -> Result<String, String> {
-        let limit = optional_limit(args.limit);
-        let families = optional_strings(&args.families);
-        let node_budget = args
-            .node_budget
-            .map_or(JsonValue::Null, |budget| json!(budget));
-        let cnf_variable_budget = args
-            .cnf_variable_budget
-            .map_or(JsonValue::Null, |budget| json!(budget));
-        let cnf_clause_budget = args
-            .cnf_clause_budget
-            .map_or(JsonValue::Null, |budget| json!(budget));
         let artifact = json!({
             "version": ARTIFACT_VERSION,
-            "config": {
-                "corpus": args.dir.display().to_string(),
-                "corpus_source": args.corpus_source,
-                "corpus_hash": corpus_hash,
-                "config_hash": config_hash,
-                "logic": args.logic,
-                "selected_families": families,
-                "timeout_ms": args.timeout_ms,
-                "jobs": usize_to_u64(args.jobs),
-                "node_budget": node_budget,
-                "cnf_variable_budget": cnf_variable_budget,
-                "cnf_clause_budget": cnf_clause_budget,
-                "cnf_inprocessing": args.cnf_inprocessing,
-                "cnf_vivify": args.cnf_vivify,
-                "native_cdcl": args.native_cdcl,
-                "preprocess": args.preprocess,
-                "limit": limit,
-                "backend": backend_name,
-                "backend_kind": args.backend.as_str(),
-                "compare_backend": compare_backend_name,
-                "compare_z3": args.compare_z3,
-                "require_in_process_z3": args.require_in_process_z3,
-                "min_decided_percent": args.min_decided_percent,
-                "query_plan": {
-                    "mode": args.query_plan.as_str(),
-                    "sat_replay_failure_policy": sat_replay_policy_name(args.query_plan),
-                    "refine_rounds": usize_to_u64(args.refine_rounds),
-                    "refine_batch": usize_to_u64(args.refine_batch),
-                    "refine_adaptive_batch": args.refine_adaptive_batch,
-                    "refine_select": args.refine_select.as_str(),
-                },
-                "harness": format!("axeyum-bench {}", env!("CARGO_PKG_VERSION")),
-                "seed": args.seed,
-                "rewrite": rewrite_config(args.rewrite),
-                "hardware": hardware_note(),
-            },
-            "summary": {
-                "files": s.files,
-                "sat": s.sat,
-                "unsat": s.unsat,
-                "unknown": s.unknown,
-                "unsupported": s.unsupported,
-                "errors": s.errors,
-                "decided": s.sat + s.unsat,
-                "decided_percent": decided_percent(s),
-                "agree": s.agree,
-                "disagree": s.disagree,
-                "model_replay_failures": s.model_replay_failures,
-                "par2_mean_s": s.par2_seconds / decided_denominator(s),
-                "blocker_buckets": s.blocker_buckets,
-                "rewrite": rewrite_summary_record(s, args),
-                "query_plan": {
-                    "slice_changed_instances": s.query_slice_changed_instances,
-                    "slice_dropped_terms": s.query_slice_dropped_terms,
-                    "original_dag_nodes": s.query_original_dag_nodes,
-                    "slice_dag_nodes": s.query_slice_dag_nodes,
-                    "original_tree_nodes": s.query_original_tree_nodes,
-                    "slice_tree_nodes": s.query_slice_tree_nodes,
-                },
-                "oracle": {
-                    "enabled": args.compare_z3,
-                    "backend": compare_backend_name,
-                    "compared": s.oracle_compared,
-                    "agree": s.oracle_agree,
-                    "disagree": s.oracle_disagree,
-                    "skipped": s.oracle_skipped,
-                },
-                "layer_attribution": layer_attribution_record(s),
-                "client_comparison": client_comparison_record(s),
-            },
-            "triage": {
-                "unsupported": triage(instances, &["unsupported"]),
-                "errors": triage(
-                    instances,
-                    &["read-error", "parse-error", "solver-error", "model-replay-error"]
-                ),
-                "rewrite_decision_changes": rewrite_decision_changes(instances),
-                "soundness": {
-                    "status_disagreements": s.disagree,
-                    "model_replay_failures": s.model_replay_failures,
-                    "rewrite_sat_unsat_conflicts": s.rewrite_sat_unsat_conflicts,
-                    "oracle_disagreements": s.oracle_disagree,
-                },
-            },
+            "config": artifact_config_record(args, identity),
+            "summary": artifact_summary_record(args, s, identity.compare_backend_name),
+            "triage": artifact_triage_record(s, instances),
             "instances": instances,
         });
         serde_json::to_string_pretty(&artifact).map_err(|e| format!("render artifact: {e}"))
+    }
+
+    fn artifact_config_record(args: &Args, identity: &ArtifactIdentity<'_>) -> JsonValue {
+        let manifest = identity.corpus_manifest;
+        json!({
+            "corpus": args.dir.display().to_string(),
+            "corpus_source": args.corpus_source.as_deref().or_else(|| {
+                manifest.map(|value| value.source.as_str())
+            }),
+            "corpus_hash": identity.corpus_hash,
+            "corpus_manifest": corpus_manifest_record(manifest),
+            "config_hash": identity.config_hash,
+            "logic": args.logic.as_deref().or_else(|| {
+                manifest.map(|value| value.logic.as_str())
+            }),
+            "selected_families": optional_strings(&args.families),
+            "timeout_ms": args.timeout_ms,
+            "jobs": usize_to_u64(args.jobs),
+            "node_budget": optional_u64(args.node_budget),
+            "cnf_variable_budget": optional_u64(args.cnf_variable_budget),
+            "cnf_clause_budget": optional_u64(args.cnf_clause_budget),
+            "cnf_inprocessing": args.cnf_inprocessing,
+            "cnf_vivify": args.cnf_vivify,
+            "native_cdcl": args.native_cdcl,
+            "preprocess": args.preprocess,
+            "limit": optional_limit(args.limit),
+            "backend": identity.backend_name,
+            "backend_kind": args.backend.as_str(),
+            "compare_backend": identity.compare_backend_name,
+            "compare_z3": args.compare_z3,
+            "require_in_process_z3": args.require_in_process_z3,
+            "min_decided_percent": args.min_decided_percent,
+            "query_plan": {
+                "mode": args.query_plan.as_str(),
+                "sat_replay_failure_policy": sat_replay_policy_name(args.query_plan),
+                "refine_rounds": usize_to_u64(args.refine_rounds),
+                "refine_batch": usize_to_u64(args.refine_batch),
+                "refine_adaptive_batch": args.refine_adaptive_batch,
+                "refine_select": args.refine_select.as_str(),
+            },
+            "harness": format!("axeyum-bench {}", env!("CARGO_PKG_VERSION")),
+            "seed": args.seed,
+            "rewrite": rewrite_config(args.rewrite),
+            "hardware": hardware_note(),
+        })
+    }
+
+    fn artifact_summary_record(
+        args: &Args,
+        s: &Summary,
+        compare_backend_name: Option<&str>,
+    ) -> JsonValue {
+        json!({
+            "files": s.files,
+            "sat": s.sat,
+            "unsat": s.unsat,
+            "unknown": s.unknown,
+            "unsupported": s.unsupported,
+            "errors": s.errors,
+            "decided": s.sat + s.unsat,
+            "decided_percent": decided_percent(s),
+            "agree": s.agree,
+            "disagree": s.disagree,
+            "model_replay_failures": s.model_replay_failures,
+            "manifest": {
+                "expected": s.manifest_expected,
+                "compared": s.manifest_compared,
+                "agree": s.manifest_agree,
+                "disagree": s.manifest_disagree,
+            },
+            "par2_mean_s": s.par2_seconds / decided_denominator(s),
+            "blocker_buckets": s.blocker_buckets,
+            "rewrite": rewrite_summary_record(s, args),
+            "query_plan": {
+                "slice_changed_instances": s.query_slice_changed_instances,
+                "slice_dropped_terms": s.query_slice_dropped_terms,
+                "original_dag_nodes": s.query_original_dag_nodes,
+                "slice_dag_nodes": s.query_slice_dag_nodes,
+                "original_tree_nodes": s.query_original_tree_nodes,
+                "slice_tree_nodes": s.query_slice_tree_nodes,
+            },
+            "oracle": {
+                "enabled": args.compare_z3,
+                "backend": compare_backend_name,
+                "compared": s.oracle_compared,
+                "agree": s.oracle_agree,
+                "disagree": s.oracle_disagree,
+                "skipped": s.oracle_skipped,
+            },
+            "layer_attribution": layer_attribution_record(s),
+            "client_comparison": client_comparison_record(s),
+        })
+    }
+
+    fn artifact_triage_record(s: &Summary, instances: &[JsonValue]) -> JsonValue {
+        json!({
+            "unsupported": triage(instances, &["unsupported"]),
+            "errors": triage(
+                instances,
+                &["read-error", "parse-error", "solver-error", "model-replay-error"]
+            ),
+            "rewrite_decision_changes": rewrite_decision_changes(instances),
+            "soundness": {
+                "status_disagreements": s.disagree,
+                "model_replay_failures": s.model_replay_failures,
+                "rewrite_sat_unsat_conflicts": s.rewrite_sat_unsat_conflicts,
+                "oracle_disagreements": s.oracle_disagree,
+                "manifest_disagreements": s.manifest_disagree,
+            },
+        })
     }
 
     fn query_plan_record(
@@ -3097,6 +3249,43 @@ mod run {
             "dag_nodes": key.dag_nodes,
             "tree_nodes": key.tree_nodes,
         })
+    }
+
+    fn corpus_manifest_record(manifest: Option<&CorpusManifestSelection>) -> JsonValue {
+        manifest.map_or(JsonValue::Null, |manifest| {
+            json!({
+                "schema_version": CORPUS_MANIFEST_VERSION,
+                "path": manifest.manifest_path.display().to_string(),
+                "content_hash": manifest.manifest_hash,
+                "name": manifest.name,
+                "source": manifest.source,
+                "logic": manifest.logic,
+                "total_entries": manifest.total_entries,
+                "selected_tier": manifest.selected_tier,
+                "selected_entries": manifest.entries.len(),
+                "selected_family_counts": manifest_family_counts(&manifest.entries),
+                "selected_tier_counts": manifest_tier_counts(&manifest.entries),
+                "membership": "exact: every .smt2 file under the corpus root is manifested",
+            })
+        })
+    }
+
+    fn manifest_family_counts(entries: &[CorpusManifestEntry]) -> BTreeMap<String, u64> {
+        let mut counts = BTreeMap::new();
+        for entry in entries {
+            *counts.entry(entry.family.clone()).or_insert(0) += 1;
+        }
+        counts
+    }
+
+    fn manifest_tier_counts(entries: &[CorpusManifestEntry]) -> BTreeMap<String, u64> {
+        let mut counts = BTreeMap::new();
+        for entry in entries {
+            for tier in &entry.tiers {
+                *counts.entry(tier.clone()).or_insert(0) += 1;
+            }
+        }
+        counts
     }
 
     fn rewrite_config(mode: RewriteMode) -> JsonValue {
@@ -3170,6 +3359,10 @@ mod run {
         } else {
             json!(usize_to_u64(limit))
         }
+    }
+
+    fn optional_u64(value: Option<u64>) -> JsonValue {
+        value.map_or(JsonValue::Null, |value| json!(value))
     }
 
     fn optional_strings(values: &[String]) -> JsonValue {
@@ -3256,18 +3449,35 @@ mod run {
         })
     }
 
-    fn fingerprint_config(args: &Args, backend_name: &str, corpus_hash: &str) -> String {
+    fn fingerprint_config(
+        args: &Args,
+        backend_name: &str,
+        corpus_hash: &str,
+        corpus_manifest: Option<&CorpusManifestSelection>,
+    ) -> String {
         let mut hash = FNV_OFFSET;
         update_hash(&mut hash, &ARTIFACT_VERSION.to_le_bytes());
         update_hash(&mut hash, args.dir.display().to_string().as_bytes());
         update_hash(&mut hash, &args.timeout_ms.to_le_bytes());
         update_hash(&mut hash, &usize_to_u64(args.jobs).to_le_bytes());
         update_hash(&mut hash, &usize_to_u64(args.limit).to_le_bytes());
+        let effective_source = args
+            .corpus_source
+            .as_deref()
+            .or_else(|| corpus_manifest.map(|manifest| manifest.source.as_str()));
+        update_hash(&mut hash, effective_source.unwrap_or("").as_bytes());
+        if let Some(manifest) = corpus_manifest {
+            update_hash(&mut hash, manifest.manifest_hash.as_bytes());
+        }
         update_hash(
             &mut hash,
-            args.corpus_source.as_deref().unwrap_or("").as_bytes(),
+            args.corpus_tier.as_deref().unwrap_or("").as_bytes(),
         );
-        update_hash(&mut hash, args.logic.as_deref().unwrap_or("").as_bytes());
+        let effective_logic = args
+            .logic
+            .as_deref()
+            .or_else(|| corpus_manifest.map(|manifest| manifest.logic.as_str()));
+        update_hash(&mut hash, effective_logic.unwrap_or("").as_bytes());
         for family in &args.families {
             update_hash(&mut hash, family.as_bytes());
             update_hash(&mut hash, &[0]);
@@ -3335,6 +3545,344 @@ mod run {
         format!("{hash:016x}")
     }
 
+    fn content_hash(bytes: &[u8]) -> String {
+        const HEX: &[u8; 16] = b"0123456789abcdef";
+        let digest = Sha256::digest(bytes);
+        let mut encoded = String::with_capacity(CONTENT_HASH_PREFIX.len() + digest.len() * 2);
+        encoded.push_str(CONTENT_HASH_PREFIX);
+        for byte in digest {
+            encoded.push(char::from(HEX[usize::from(byte >> 4)]));
+            encoded.push(char::from(HEX[usize::from(byte & 0x0f)]));
+        }
+        encoded
+    }
+
+    fn load_corpus(args: &Args) -> Result<CorpusSelection, String> {
+        let Some(manifest_path) = &args.corpus_manifest else {
+            return Ok(CorpusSelection {
+                files: collect_smt2(&args.dir, args.limit),
+                manifest: None,
+            });
+        };
+        let bytes = fs::read(manifest_path).map_err(|error| {
+            format!("read corpus manifest {}: {error}", manifest_path.display())
+        })?;
+        let manifest = parse_corpus_manifest(
+            &args.dir,
+            manifest_path,
+            &bytes,
+            args.corpus_tier.as_deref(),
+        )?;
+        if let Some(source) = &args.corpus_source
+            && source != &manifest.source
+        {
+            return Err(format!(
+                "corpus source `{source}` conflicts with manifest source `{}`",
+                manifest.source
+            ));
+        }
+        if let Some(logic) = &args.logic
+            && logic != &manifest.logic
+        {
+            return Err(format!(
+                "logic `{logic}` conflicts with manifest logic `{}`",
+                manifest.logic
+            ));
+        }
+        let files = manifest
+            .entries
+            .iter()
+            .map(|entry| args.dir.join(&entry.path))
+            .collect();
+        Ok(CorpusSelection {
+            files,
+            manifest: Some(manifest),
+        })
+    }
+
+    fn parse_corpus_manifest(
+        root: &Path,
+        manifest_path: &Path,
+        bytes: &[u8],
+        selected_tier: Option<&str>,
+    ) -> Result<CorpusManifestSelection, String> {
+        if let Some(tier) = selected_tier {
+            validate_manifest_label(tier, "selected tier")?;
+        }
+        let value: JsonValue = serde_json::from_slice(bytes).map_err(|error| {
+            format!("parse corpus manifest {}: {error}", manifest_path.display())
+        })?;
+        let object = value
+            .as_object()
+            .ok_or_else(|| "corpus manifest root must be a JSON object".to_owned())?;
+        let version = object
+            .get("version")
+            .and_then(JsonValue::as_u64)
+            .ok_or_else(|| "corpus manifest `version` must be an unsigned integer".to_owned())?;
+        if version != CORPUS_MANIFEST_VERSION {
+            return Err(format!(
+                "unsupported corpus manifest version {version}; expected {CORPUS_MANIFEST_VERSION}"
+            ));
+        }
+        let name = required_manifest_string(object, "name")?;
+        let source = required_manifest_string(object, "source")?;
+        let logic = required_manifest_string(object, "logic")?;
+        let file_values = object
+            .get("files")
+            .and_then(JsonValue::as_array)
+            .ok_or_else(|| "corpus manifest `files` must be an array".to_owned())?;
+        if file_values.is_empty() {
+            return Err("corpus manifest `files` must not be empty".to_owned());
+        }
+
+        let all_entries = parse_manifest_entries(root, file_values)?;
+        validate_manifest_membership(root, &all_entries)?;
+
+        let entries = all_entries
+            .iter()
+            .filter(|entry| {
+                selected_tier
+                    .is_none_or(|tier| entry.tiers.iter().any(|entry_tier| entry_tier == tier))
+            })
+            .cloned()
+            .collect::<Vec<_>>();
+        if entries.is_empty() {
+            return Err(format!(
+                "corpus manifest tier `{}` selects no files",
+                selected_tier.unwrap_or("all")
+            ));
+        }
+        Ok(CorpusManifestSelection {
+            manifest_path: manifest_path.to_path_buf(),
+            manifest_hash: content_hash(bytes),
+            name,
+            source,
+            logic,
+            total_entries: all_entries.len(),
+            selected_tier: selected_tier.map(str::to_owned),
+            entries,
+        })
+    }
+
+    fn parse_manifest_entries(
+        root: &Path,
+        values: &[JsonValue],
+    ) -> Result<Vec<CorpusManifestEntry>, String> {
+        let mut entries = Vec::with_capacity(values.len());
+        let mut paths = BTreeSet::new();
+        for (index, value) in values.iter().enumerate() {
+            let entry = parse_manifest_entry(root, index, value)?;
+            if !paths.insert(entry.path.clone()) {
+                return Err(format!("duplicate corpus manifest path `{}`", entry.path));
+            }
+            entries.push(entry);
+        }
+        Ok(entries)
+    }
+
+    fn parse_manifest_entry(
+        root: &Path,
+        index: usize,
+        value: &JsonValue,
+    ) -> Result<CorpusManifestEntry, String> {
+        let object = value
+            .as_object()
+            .ok_or_else(|| format!("corpus manifest files[{index}] must be an object"))?;
+        let path = required_manifest_string(object, "path")?;
+        validate_manifest_path(&path)?;
+        let expected = required_manifest_string(object, "expected")?;
+        if !matches!(expected.as_str(), "sat" | "unsat") {
+            return Err(format!(
+                "corpus manifest `{path}` expected verdict must be `sat` or `unsat`"
+            ));
+        }
+        let family = required_manifest_string(object, "family")?;
+        validate_manifest_label(&family, &format!("family for `{path}`"))?;
+        let tiers = required_manifest_string_array(object, "tiers")?;
+        validate_manifest_tiers(&path, &tiers)?;
+        let declared_hash = required_manifest_string(object, "content_hash")?;
+        validate_declared_content_hash(&declared_hash, &path)?;
+        let file_path = root.join(&path);
+        let file_bytes = fs::read(&file_path)
+            .map_err(|error| format!("read manifested query {}: {error}", file_path.display()))?;
+        let actual_hash = content_hash(&file_bytes);
+        if declared_hash != actual_hash {
+            return Err(format!(
+                "corpus manifest hash mismatch for `{path}`: declared `{declared_hash}`, actual `{actual_hash}`"
+            ));
+        }
+        Ok(CorpusManifestEntry {
+            path,
+            content_hash: declared_hash,
+            expected,
+            family,
+            tiers,
+        })
+    }
+
+    fn validate_manifest_tiers(path: &str, tiers: &[String]) -> Result<(), String> {
+        if tiers.is_empty() {
+            return Err(format!(
+                "corpus manifest `{path}` must name at least one tier"
+            ));
+        }
+        let mut unique = BTreeSet::new();
+        for tier in tiers {
+            validate_manifest_label(tier, &format!("tier for `{path}`"))?;
+            if !unique.insert(tier) {
+                return Err(format!("corpus manifest `{path}` repeats tier `{tier}`"));
+            }
+        }
+        Ok(())
+    }
+
+    fn validate_manifest_membership(
+        root: &Path,
+        entries: &[CorpusManifestEntry],
+    ) -> Result<(), String> {
+        let manifested = entries
+            .iter()
+            .map(|entry| entry.path.clone())
+            .collect::<BTreeSet<_>>();
+        let disk = collect_smt2_checked(root)?
+            .iter()
+            .map(|path| manifest_relative_path(root, path))
+            .collect::<Result<BTreeSet<_>, _>>()?;
+        if disk == manifested {
+            return Ok(());
+        }
+        let missing = manifested.difference(&disk).cloned().collect::<Vec<_>>();
+        let unlisted = disk.difference(&manifested).cloned().collect::<Vec<_>>();
+        Err(format!(
+            "corpus manifest membership mismatch: missing={missing:?}, unlisted={unlisted:?}"
+        ))
+    }
+
+    fn required_manifest_string(
+        object: &serde_json::Map<String, JsonValue>,
+        field: &str,
+    ) -> Result<String, String> {
+        let value = object
+            .get(field)
+            .and_then(JsonValue::as_str)
+            .ok_or_else(|| format!("corpus manifest `{field}` must be a string"))?;
+        if value.is_empty() {
+            return Err(format!("corpus manifest `{field}` must not be empty"));
+        }
+        Ok(value.to_owned())
+    }
+
+    fn required_manifest_string_array(
+        object: &serde_json::Map<String, JsonValue>,
+        field: &str,
+    ) -> Result<Vec<String>, String> {
+        object
+            .get(field)
+            .and_then(JsonValue::as_array)
+            .ok_or_else(|| format!("corpus manifest `{field}` must be an array"))?
+            .iter()
+            .enumerate()
+            .map(|(index, value)| {
+                value
+                    .as_str()
+                    .map(str::to_owned)
+                    .ok_or_else(|| format!("corpus manifest `{field}`[{index}] must be a string"))
+            })
+            .collect()
+    }
+
+    fn validate_manifest_path(path: &str) -> Result<(), String> {
+        let valid_segments = !path.is_empty()
+            && !path.contains('\\')
+            && path
+                .split('/')
+                .all(|segment| !segment.is_empty() && segment != "." && segment != "..");
+        if !valid_segments || Path::new(path).is_absolute() {
+            return Err(format!(
+                "corpus manifest path `{path}` must be a normalized relative `/`-separated path"
+            ));
+        }
+        if Path::new(path)
+            .extension()
+            .is_none_or(|extension| extension != "smt2")
+        {
+            return Err(format!("corpus manifest path `{path}` must end in `.smt2`"));
+        }
+        Ok(())
+    }
+
+    fn validate_manifest_label(value: &str, what: &str) -> Result<(), String> {
+        if value.is_empty()
+            || !value
+                .bytes()
+                .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.'))
+        {
+            return Err(format!(
+                "corpus manifest {what} `{value}` must use only ASCII letters, digits, `.`, `_`, or `-`"
+            ));
+        }
+        Ok(())
+    }
+
+    fn validate_declared_content_hash(hash: &str, path: &str) -> Result<(), String> {
+        let Some(digest) = hash.strip_prefix(CONTENT_HASH_PREFIX) else {
+            return Err(format!(
+                "corpus manifest `{path}` content_hash must start with `{CONTENT_HASH_PREFIX}`"
+            ));
+        };
+        if digest.len() != 64
+            || !digest
+                .bytes()
+                .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+        {
+            return Err(format!(
+                "corpus manifest `{path}` content_hash must contain exactly 64 lowercase hexadecimal digits"
+            ));
+        }
+        Ok(())
+    }
+
+    fn manifest_relative_path(root: &Path, path: &Path) -> Result<String, String> {
+        let relative = path.strip_prefix(root).map_err(|error| {
+            format!(
+                "query path {} is not below corpus root {}: {error}",
+                path.display(),
+                root.display()
+            )
+        })?;
+        let value = relative.to_string_lossy().replace('\\', "/");
+        validate_manifest_path(&value)?;
+        Ok(value)
+    }
+
+    fn collect_smt2_checked(dir: &Path) -> Result<Vec<PathBuf>, String> {
+        let mut files = Vec::new();
+        let mut dirs = vec![dir.to_path_buf()];
+        while let Some(current) = dirs.pop() {
+            let entries = fs::read_dir(&current)
+                .map_err(|error| format!("read corpus directory {}: {error}", current.display()))?;
+            for entry in entries {
+                let entry = entry.map_err(|error| {
+                    format!(
+                        "read corpus directory entry in {}: {error}",
+                        current.display()
+                    )
+                })?;
+                let path = entry.path();
+                if path.is_dir() {
+                    dirs.push(path);
+                } else if path
+                    .extension()
+                    .is_some_and(|extension| extension == "smt2")
+                {
+                    files.push(path);
+                }
+            }
+        }
+        files.sort();
+        Ok(files)
+    }
+
     fn collect_smt2(dir: &Path, limit: usize) -> Vec<PathBuf> {
         let mut files = Vec::new();
         let mut dirs = vec![dir.to_path_buf()];
@@ -3362,6 +3910,46 @@ mod run {
         use axeyum_ir::{Sort, Value};
 
         use super::*;
+
+        fn micro_corpus_root() -> PathBuf {
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../corpus/micro")
+        }
+
+        fn micro_manifest_value() -> JsonValue {
+            let root = micro_corpus_root();
+            let entries = [
+                (
+                    "sat-add.smt2",
+                    "sat",
+                    "arithmetic",
+                    vec!["representative", "full"],
+                ),
+                ("sat-quoted-symbol.smt2", "sat", "symbols", vec!["full"]),
+                (
+                    "unsat-ult-zero.smt2",
+                    "unsat",
+                    "comparison",
+                    vec!["representative", "full"],
+                ),
+            ]
+            .map(|(path, expected, family, tiers)| {
+                let bytes = fs::read(root.join(path)).unwrap();
+                json!({
+                    "path": path,
+                    "content_hash": content_hash(&bytes),
+                    "expected": expected,
+                    "family": family,
+                    "tiers": tiers,
+                })
+            });
+            json!({
+                "version": CORPUS_MANIFEST_VERSION,
+                "name": "micro-manifest-test",
+                "source": "committed micro corpus; ingestion contract test only",
+                "logic": "QF_BV",
+                "files": entries,
+            })
+        }
 
         #[test]
         fn blocker_buckets_categorize_undecided_by_root_cause() {
@@ -3459,6 +4047,117 @@ mod run {
                     "invalid decided-rate threshold must be rejected: {invalid}"
                 );
             }
+        }
+
+        #[test]
+        fn corpus_manifest_validates_membership_hashes_and_named_tier() {
+            let bytes = serde_json::to_vec(&micro_manifest_value()).unwrap();
+            let selection = parse_corpus_manifest(
+                &micro_corpus_root(),
+                Path::new("micro-manifest.json"),
+                &bytes,
+                Some("representative"),
+            )
+            .unwrap();
+            assert_eq!(selection.total_entries, 3);
+            assert_eq!(selection.entries.len(), 2);
+            assert_eq!(selection.entries[0].path, "sat-add.smt2");
+            assert_eq!(selection.entries[1].path, "unsat-ult-zero.smt2");
+            assert_eq!(selection.selected_tier.as_deref(), Some("representative"));
+            assert_eq!(selection.manifest_hash, content_hash(&bytes));
+        }
+
+        #[test]
+        fn corpus_manifest_rejects_content_drift_and_unlisted_queries() {
+            let mut drifted = micro_manifest_value();
+            drifted["files"][0]["content_hash"] =
+                json!("sha256:0000000000000000000000000000000000000000000000000000000000000000");
+            let error = parse_corpus_manifest(
+                &micro_corpus_root(),
+                Path::new("micro-manifest.json"),
+                &serde_json::to_vec(&drifted).unwrap(),
+                None,
+            )
+            .unwrap_err();
+            assert!(error.contains("hash mismatch"), "{error}");
+
+            let mut incomplete = micro_manifest_value();
+            incomplete["files"].as_array_mut().unwrap().pop();
+            let error = parse_corpus_manifest(
+                &micro_corpus_root(),
+                Path::new("micro-manifest.json"),
+                &serde_json::to_vec(&incomplete).unwrap(),
+                None,
+            )
+            .unwrap_err();
+            assert!(error.contains("membership mismatch"), "{error}");
+            assert!(error.contains("unsat-ult-zero.smt2"), "{error}");
+        }
+
+        #[test]
+        fn corpus_manifest_rejects_unsafe_duplicates_and_empty_tiers() {
+            let mut unsafe_path = micro_manifest_value();
+            unsafe_path["files"][0]["path"] = json!("../sat-add.smt2");
+            let error = parse_corpus_manifest(
+                &micro_corpus_root(),
+                Path::new("micro-manifest.json"),
+                &serde_json::to_vec(&unsafe_path).unwrap(),
+                None,
+            )
+            .unwrap_err();
+            assert!(error.contains("normalized relative"), "{error}");
+
+            let mut duplicate = micro_manifest_value();
+            duplicate["files"][1]["path"] = duplicate["files"][0]["path"].clone();
+            duplicate["files"][1]["content_hash"] = duplicate["files"][0]["content_hash"].clone();
+            let error = parse_corpus_manifest(
+                &micro_corpus_root(),
+                Path::new("micro-manifest.json"),
+                &serde_json::to_vec(&duplicate).unwrap(),
+                None,
+            )
+            .unwrap_err();
+            assert!(error.contains("duplicate corpus manifest path"), "{error}");
+
+            let error = parse_corpus_manifest(
+                &micro_corpus_root(),
+                Path::new("micro-manifest.json"),
+                &serde_json::to_vec(&micro_manifest_value()).unwrap(),
+                Some("nightly"),
+            )
+            .unwrap_err();
+            assert!(error.contains("selects no files"), "{error}");
+        }
+
+        #[test]
+        fn corpus_manifest_expected_verdict_is_an_independent_integrity_gate() {
+            let entry = CorpusManifestEntry {
+                path: "query.smt2".to_owned(),
+                content_hash:
+                    "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+                        .to_owned(),
+                expected: "unsat".to_owned(),
+                family: "comparison".to_owned(),
+                tiers: vec!["representative".to_owned()],
+            };
+            let mut record = json!({"outcome": "sat"});
+            let mut summary = Summary {
+                files: 1,
+                sat: 1,
+                ..Summary::default()
+            };
+            annotate_manifest_result(&mut record, &entry, &mut summary);
+            assert_eq!(summary.manifest_expected, 1);
+            assert_eq!(summary.manifest_compared, 1);
+            assert_eq!(summary.manifest_disagree, 1);
+            assert_eq!(
+                record["corpus_manifest"]["decision_agrees"],
+                JsonValue::Bool(false)
+            );
+            assert_eq!(
+                report_summary(&summary, Some(100.0), false),
+                ExitCode::FAILURE
+            );
         }
 
         #[test]

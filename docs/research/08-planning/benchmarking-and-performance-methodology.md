@@ -189,6 +189,14 @@ records the contract and the first measured baselines.
   The Glaurung recipe uses one worker so cross-query contention cannot masquerade
   as a layer cost, and `--require-in-process-z3` fails the run unless every file
   contributes to the embedded comparison.
+- Artifact version 17 makes the external-corpus identity executable. A manifest
+  v1 fixes the source and logic, exact relative-path membership, per-query
+  SHA-256, expected verdict, family, stable order, and named tiers. The harness
+  validates the entire pack before selecting a tier, rejects anonymous
+  `--limit` prefixes, gates every selected decision against the manifest
+  independently of SMT-LIB `:status`, and includes the manifest digest and tier
+  in the experiment identity. The committed micro manifest is only a plumbing
+  smoke; it does not satisfy the Glaurung representativeness requirement.
 - **Primary client QF_BV target (2026-07-13): Glaurung binary analysis.** Capture
   and minimize the real lifter-produced path conditions, preserving their
   extract/concat, mixed machine-width, and memory-derived shape. This client

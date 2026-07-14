@@ -82,6 +82,16 @@ ratio. A three-query micro run validates the plumbing at 100% decided,
 `DISAGREE=0`, and zero replay failures, but is explicitly not a client performance
 result and does not substitute for the external capture.
 
+The following GQ1/GQ10 ingestion increment advances the artifact to version 17
+and makes corpus identity a hard pre-solve contract. Manifest v1 declares the
+capture source and logic plus every query's normalized relative path, SHA-256,
+expected verdict, family, stable order, and named tiers. The harness validates
+exact directory membership and every digest before selecting a tier, rejects
+anonymous manifest-backed limits, and exits nonzero unless every selected
+verdict agrees with the manifest independently of SMT-LIB `:status`. The
+manifest digest and tier enter the config identity. A committed micro manifest
+tests this boundary without claiming to represent the missing client capture.
+
 ## Alternatives
 
 - **Implicitly widen or truncate binary operands.** Rejected: it masks client

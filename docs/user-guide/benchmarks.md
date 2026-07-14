@@ -79,12 +79,14 @@ just bench-public-qfbv-sat-bv-replay-refine      # replay-checked query refineme
 
 Each JSON records the corpus + config hash, per-instance outcome, budgets,
 backend stats, PAR-2, explicit `decided`/`decided_percent`, **disagreements**,
-and **model-replay failures**. Artifact version 16 also records exact
+and **model-replay failures**. Artifact version 17 retains version 16's exact
 floating-point millisecond values for each instance's word-level preprocessing,
 bit-blast, CNF encode/inprocess, SAT, model lift, and cold total, plus corpus
 totals and p50/p95 distributions. Its `client_comparison` block reports the
 aggregate Axeyum/Z3 ratio plus each solver's p50/p95 over the same decided
-queries.
+queries. Version 17 additionally binds a run to an optional
+[versioned corpus manifest](corpus-manifests.md), with exact membership,
+per-query SHA-256, expected-verdict, and named-tier gates.
 A comparable run requires zero errors, zero disagreements, zero replay failures,
 and the declared decided-rate threshold; only then is timing a performance
 signal.
@@ -95,13 +97,18 @@ The primary client target accepts an external Glaurung query capture (the
 client corpus is not redistributed by this repository):
 
 ```sh
-just bench-glaurung-qfbv /path/to/glaurung-smt2-capture
+just bench-glaurung-qfbv \
+  /path/to/glaurung-smt2-capture \
+  /path/to/glaurung-manifest-v1.json \
+  representative
 ```
 
-This runs one query at a time, enables word-level preprocessing, compares every
-result with in-process Z3 on the **original parsed assertions**, requires a 100%
-decided rate, requires in-process Z3 coverage for every file, and emits a
-versioned artifact. Axeyum's comparison time includes its selected word
-preprocessing; Z3 never receives Axeyum's reduced assertion set. Synthetic QF_BV
-corpora remain useful lower-level diagnostics, but do not replace the
-extract/concat/mixed-width/memory-derived client shape.
+This first validates every file and SHA-256 declared by the manifest, selects
+the named tier in manifest order, and gates each result against the capture's
+expected verdict. It then runs one query at a time, enables word-level
+preprocessing, compares every result with in-process Z3 on the **original parsed
+assertions**, requires a 100% decided rate, requires in-process Z3 coverage for
+every selected file, and emits a versioned artifact. Axeyum's comparison time
+includes its selected word preprocessing; Z3 never receives Axeyum's reduced
+assertion set. Synthetic QF_BV corpora remain useful lower-level diagnostics,
+but do not replace the extract/concat/mixed-width/memory-derived client shape.

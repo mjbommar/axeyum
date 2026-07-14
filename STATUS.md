@@ -331,19 +331,22 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   preprocessing cost policy are separately tracked rather than being implied by
   the existing incremental API.
 
-  **GQ1 readiness increment:** artifact v16 now charges Axeyum for word
+  **GQ1/GQ10 readiness increment:** artifact v17 charges Axeyum for word
   preprocessing, separates it from term→AIG, AIG→CNF, optional CNF
   inprocessing, SAT, and model lift, and records exact p50/p95 distributions.
   The aggregate client ratio compares against in-process Z3 on the untouched
   parsed assertions, not Axeyum's reduced terms; binary fallbacks are
   verdict-only. `bench-glaurung-qfbv` is single-worker and requires in-process
-  Z3 coverage for every file. The three-query micro plumbing smoke is 3/3
-  decided/agreed with zero errors or replay failures, but carries no Glaurung
-  speed claim.
+  Z3 coverage for every file. Manifest v1 now also fixes exact corpus membership,
+  per-query SHA-256, expected verdicts, families, stable order, and named tiers;
+  all entries are validated before tier selection and every selected verdict is
+  independently gated. The two-query representative micro plumbing smoke is
+  2/2 decided/manifest-agreed/Z3-agreed with zero errors or replay failures, but
+  carries no Glaurung speed claim.
 
   | ID | Live status | Next acceptance boundary |
   |---|---|---|
-  | **GQ1 real-query profile** | **WIP; external capture is the remaining data dependency.** Artifact v16, typed AIG/CNF/inprocess stats, single-worker client recipe, p50/p95, original-query in-process Z3 ratio, complete-oracle/decided-rate gates, and zero-error policy are landed | Obtain the representative Glaurung query pack and publish the first valid client attribution/ratio; the micro smoke validates plumbing only |
+  | **GQ1 real-query profile** | **WIP; external capture is the remaining data dependency.** Artifact v17, manifest-v1 ingestion, typed AIG/CNF/inprocess stats, single-worker client recipe, p50/p95, original-query in-process Z3 ratio, complete manifest/oracle/decided-rate gates, and zero-error policy are landed | Obtain the representative Glaurung query pack plus manifest and publish the first valid client attribution/ratio; the micro smoke validates plumbing only |
   | **GQ2 cheap cold tier** | **TODO**, profile-gated; existing full preprocessing is opt-in and warm-oriented | Bounded constant/identity tier with non-worse cold aggregate time and an explicit cold/warm/size policy |
   | **GQ3 coercion peepholes** | **TODO**; only narrower extract-through-bitwise/ITE rules are landed | Exact extract/concat, nested-extract, zero/sign-extension cancellation with exhaustive and differential semantics gates |
   | **GQ4 cold relevant bits** | **WIP foundation**; warm 8-of-64 slicing is landed, cold demand propagation is not | Backward live-bit pass, original replay, counters, and measured target-corpus AIG/CNF reduction |
@@ -352,7 +355,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   | **GQ7 warm delta entry** | **WIP foundation**; retained CNF/search state exists, but `assert_configured` delta-only preprocessing is not complete | Preprocess only new/affected terms and publish per-check cost plus warm break-even sequence length |
   | **GQ8 verdict/CNF cache** | **TODO** | Versioned canonical keys, exact duplicate verdict reuse, sound prefix-state reuse, deterministic bounds, and mandatory original replay |
   | **GQ9 auto cost model/docs** | **TODO**; P1.8 shape/resource probes are only the general foundation | Telemetry-visible raw/cheap/configured/warm choice that beats or matches fixed policies and documents embedder guidance |
-  | **GQ10 real-lifter regression tier** | **BLOCKED on the external capture**; artifact-v16 validity/attribution gates and the single-worker `just bench-glaurung-qfbv` recipe are landed | Versioned minimized corpus/manifest, regular representative gate, scheduled full run, and per-commit Z3-relative tracking |
+  | **GQ10 real-lifter regression tier** | **BLOCKED on the external capture**; artifact-v17 validity/attribution gates, manifest-v1 exact membership/SHA-256/expected-verdict/family/tier contract, and the single-worker `just bench-glaurung-qfbv` recipe are landed | Populate the manifest from the real capture, then land its regular representative gate, scheduled full run, and per-commit Z3-relative tracking |
 
   **Next actions:** (1) ingest the Glaurung capture without normalizing away its
   width-mixed/extract/concat/memory shape; (2) establish the GQ1/GQ10 baseline at
@@ -2026,6 +2029,16 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-13 — GQ1/GQ10 artifact-v17 corpus manifest contract landed.**
+  Manifest v1 binds an external run to source/logic, exact normalized `.smt2`
+  membership, per-query SHA-256, expected verdict, family, stable order, and
+  named tiers. The harness validates the entire pack before selecting a tier,
+  rejects drift/unlisted queries and anonymous `--limit` prefixes, includes the
+  manifest digest/tier in the config identity, annotates every instance, and
+  fails unless every selected verdict agrees independently of SMT-LIB `:status`.
+  The updated Glaurung recipe requires the manifest; a committed representative
+  micro smoke is 2/2 decided/manifest-agreed/Z3-agreed with zero errors or replay
+  failures and is explicitly not client performance evidence.
 - **2026-07-13 — GQ1 artifact-v16 cold attribution landed.** The benchmark now
   measures word preprocessing, bit-blast, CNF encode/inprocess, SAT, and model
   lift separately with aggregate and exact p50/p95 output. Its embedded-client
