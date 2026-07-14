@@ -61,6 +61,7 @@ mod tc;
 use std::collections::HashMap;
 use std::fmt;
 use std::hash::{DefaultHasher, Hash, Hasher};
+use std::ops::Index;
 
 pub use arith_prelude::{ArithPrelude, build_arith_prelude};
 pub use env::{Declaration, Environment, RecRule, ReducibilityHint};
@@ -78,6 +79,63 @@ pub use tc::{KernelError, LocalContext, LocalDecl};
 use expr::ExprMeta;
 
 const EXPR_INTERN_SHARDS: usize = 64;
+const EXPR_ARENA_CHUNK_CAPACITY: usize = 1 << 18;
+
+/// Dense, index-addressable storage that grows without relocating old entries.
+///
+/// `ExprId` remains a single monotonically assigned integer; segmentation is an
+/// internal allocation detail. Fixed chunks prevent a large proof arena from
+/// needing both the old and doubled `Vec` buffers live during growth.
+#[derive(Debug)]
+struct SegmentedVec<T> {
+    chunks: Vec<Vec<T>>,
+    len: usize,
+}
+
+impl<T> Default for SegmentedVec<T> {
+    fn default() -> Self {
+        Self {
+            chunks: Vec::new(),
+            len: 0,
+        }
+    }
+}
+
+impl<T> SegmentedVec<T> {
+    fn len(&self) -> usize {
+        self.len
+    }
+
+    fn push(&mut self, value: T) {
+        if self.len.is_multiple_of(EXPR_ARENA_CHUNK_CAPACITY) {
+            self.chunks
+                .push(Vec::with_capacity(EXPR_ARENA_CHUNK_CAPACITY));
+        }
+        self.chunks
+            .last_mut()
+            .expect("an arena chunk exists after allocation")
+            .push(value);
+        self.len += 1;
+    }
+
+    fn get(&self, index: usize) -> Option<&T> {
+        if index >= self.len {
+            return None;
+        }
+        self.chunks
+            .get(index / EXPR_ARENA_CHUNK_CAPACITY)
+            .and_then(|chunk| chunk.get(index % EXPR_ARENA_CHUNK_CAPACITY))
+    }
+}
+
+impl<T> Index<usize> for SegmentedVec<T> {
+    type Output = T;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        self.get(index)
+            .expect("segmented arena index out of bounds")
+    }
+}
 
 /// Hash-consing lookup split into independently growing tables.
 ///
@@ -114,7 +172,7 @@ impl ExprInterner {
             .expect("expression shard index fits usize")
     }
 
-    fn get(&self, node: &ExprNode, arena: &[ExprNode]) -> Option<ExprId> {
+    fn get(&self, node: &ExprNode, arena: &SegmentedVec<ExprNode>) -> Option<ExprId> {
         let hash = Self::hash(node);
         let primary = self.shards[Self::shard(hash)].get(&hash).copied()?;
         if arena.get(primary.index()) == Some(node) {
@@ -159,8 +217,8 @@ pub struct Kernel {
     levels: Vec<LevelNode>,
     level_intern: HashMap<LevelNode, LevelId>,
 
-    exprs: Vec<ExprNode>,
-    expr_meta: Vec<ExprMeta>,
+    exprs: SegmentedVec<ExprNode>,
+    expr_meta: SegmentedVec<ExprMeta>,
     expr_intern: ExprInterner,
     /// Successful inferred types for closed expressions. Closed terms are
     /// independent of the local context, so sharing this cache across recursive
