@@ -12,15 +12,56 @@ session state.
 > without ever losing the thread. **We do not stop and we do not hand-wave; we
 > advance the next task and record it.**
 
-> **Current sequencing (2026-07-12).** The P1.4 e-graph → P1.5 CDCL(T)
+> **Current sequencing (2026-07-13).** The P1.4 e-graph → P1.5 CDCL(T)
 > keystone is landed, and the recovery audit has restored P2.6 through the
 > checked ADR-0131 boundary with explicit resource limits. Continue the same
 > depth-first spine through broader nested/alternating QSAT, quantified-UF
-> models, and Lean reconstruction, keeping a thin measured-leaf skirt and the
-> trust-ledger proof spine running in parallel. Full BFS-vs-DFS
+> models, and Lean reconstruction, while running the Glaurung QF_BV performance
+> lane below as a client-driven measured leaf. Its first action is corpus capture
+> and layer attribution; do not tune a hypothesized bottleneck before that gate.
+> Keep the trust-ledger proof spine running in parallel. Full BFS-vs-DFS
 > traversal analysis + post-keystone ranking:
 > [build-sequencing-bfs-dfs.md](docs/research/08-planning/build-sequencing-bfs-dfs.md);
 > the ranked steps live in [§ The two engineering keystones](#the-two-engineering-keystones).
+
+## Glaurung QF_BV performance roadmap (2026-07-13)
+
+This is the first-class client performance lane created from ADR-0136 and the
+reported **1.7--3.2x Axeyum/Z3 gap** on real binary-analysis formulas. The
+target distribution is the lifter's width-mixed, extract/concat-heavy,
+memory-derived path conditions, not a synthetic uniformly typed substitute.
+The externally captured SMT-LIB query pack is the enabling artifact. Until it
+is available, work may improve instrumentation and corpus ingestion, but no
+Glaurung performance hypothesis is promoted on synthetic timing alone.
+
+| ID | Roadmap item | Scope and exit criterion |
+|---|---|---|
+| **GQ1** | **Capture and profile real queries first** | Ingest a representative, redistributable or access-controlled sample from Glaurung's shadow-diff harness, preserve the original lifter shape, and record cold one-shot attribution for word-level construction/simplification, term→AIG lowering, AIG→CNF encoding, SAT search, and model/proof lifting/replay. Report formula/AIG/CNF sizes, p50/p95 and aggregate Axeyum/Z3 ratios, fixed hardware/tool versions, 100% decided, zero operational errors, `DISAGREE=0`, and zero replay failures. This profile ranks GQ2--GQ9; it is not optional. |
+| **GQ2** | **Cheap always-on cold simplification tier** | Add a bounded, denotation-preserving one-shot tier for constant folding and trivial identities whose own cost is measured. Add a size/shape and cold-vs-warm policy that selects cheap, configured, or no preprocessing. Exit only when cold end-to-end time is non-worse in aggregate and improves the target class at the GQ1 validity gates. |
+| **GQ3** | **Coercion-cancellation peepholes** | Add exact, model-sound rewrites for `extract(concat(a,b))`, `extract(extract(x))`, `extract(zero_ext(x))`, `extract(sign_ext(x))`, and the common low-slice coercion cancellation `extract(k-1,0,zero_ext(k,x)) = x`, including partial-slice cases. Exhaustive small-width evaluation, Z3 differential tests, and target-corpus AIG/CNF reductions are required. |
+| **GQ4** | **Cold relevant-bit / bit-slice reduction** | Generalize the landed warm narrow-extract rule into a cold structural demand pass that propagates live output-bit ranges backward and bit-blasts only the demanded slice. Preserve exact SMT-LIB total semantics and original-term model replay. Exit with per-query live-bit/AIG/CNF counters and a measured client win. |
+| **GQ5** | **Faster AIG→CNF and stronger sharing** | If GQ1 attributes material time to lowering/encoding, improve deterministic structural hashing, constant/identity propagation during AIG construction, two-level AIG rewriting, maximum BV sharing, and clause-efficient encodings for measured mux/comparator/adder patterns. Each slice must reduce gates/clauses and end-to-end client time; size-only wins do not suffice. |
+| **GQ6** | **Cold SAT/CDCL tuning** | If GQ1 shows SAT search dominates, compare the exact emitted CNF across BatSat, the proof-producing core, and pinned CaDiCaL/Kissat references; then tune phase saving/rephasing, VSIDS/VMTF, restarts, clause tiers, propagation, subsumption/BVE/vivification, and extracted XOR/GF(2) reasoning. UNSAT proof rechecking and deterministic resource limits remain mandatory. Do not prioritize this over GQ2--GQ5 when encoding dominates. |
+| **GQ7** | **Cheaper warm entry and delta preprocessing** | Make `assert_configured` preprocess only the newly asserted/pushed term plus affected retained summaries, rather than recanonicalizing the active stack. Retain AIG/CNF/learned state across push/pop and measure fixed per-check cost plus the sequence length at which warm solving beats cold Axeyum and Z3. |
+| **GQ8** | **Verdict and CNF reuse for duplicate/prefix queries** | Add a deterministic, resource-bounded memoizing layer keyed by canonical hash, solver/config semantics, and assertion-scope identity. Exact duplicate queries may reuse replayable verdict/model/proof artifacts; extending-prefix queries may reuse only sound retained preprocessing/CNF/search state. Cache hits must still pass original-term model or proof replay, and invalidation/versioning must be explicit. |
+| **GQ9** | **Published preprocessing cost model and API guidance** | Expose an `auto` policy based on measured formula size/shape and cold/warm context, with telemetry explaining the selected tier. Document when raw, cheap, configured, and warm-incremental entry points are appropriate. Exit when the default policy is benchmarked against every fixed alternative and avoids the known one-shot preprocessing loss. |
+| **GQ10** | **First-class real-lifter regression corpus** | Adopt the minimized Glaurung SMT-LIB pack, manifest, and expected outcomes as a versioned benchmark tier. Run a small representative subset in the regular regression gate and the full tier on the scheduled performance gate; track per-commit decided/error/replay status, stage counters, and Z3-relative ratio. The item is not `DONE` until the actual lifter distribution—not a synthetic proxy—is reproducibly exercised. |
+
+**Execution order.** First land the GQ1 capture/profile and GQ10 baseline. Then
+rank GQ2--GQ6 from measured stage attribution: start with the cheapest
+word-level/slicing slice that attacks the dominant cost, and admit SAT-core work
+only if SAT time dominates. Run GQ7--GQ9 against both cold and extending-path
+traces; GQ8 follows the exact cache/replay contract rather than treating a
+prefix as an identical query. Re-run the GQ10 baseline after every accepted
+slice and record the result in `STATUS.md` and `bench-results/`.
+
+**Non-negotiable acceptance gate.** Comparable runs require 100% decided on the
+declared client tier, zero operational errors, `DISAGREE=0`, zero model/proof
+replay failures, fixed seeds and solver versions, and bounded deterministic
+resources. A faster error, `Unknown`, replay failure, or changed query
+distribution is not a speedup. The benchmark methodology and layer counters are
+defined in
+[benchmarking-and-performance-methodology.md](docs/research/08-planning/benchmarking-and-performance-methodology.md).
 
 ## Where we are vs the north star — measured reality check (2026-06-28)
 
