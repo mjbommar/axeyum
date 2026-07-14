@@ -69,9 +69,12 @@ session state.
 > choosing another bounded ownership slice. The memo audit selects proposed
 > ADR-0152: 982,044 completed terms retain a second set of 23,029,676 AIG
 > literals in `BTreeMap<TermId, Vec<AigLit>>`, although ADR-0151's ranges and
-> authoritative bindings already encode completion and the same literals. The
-> range-backed implementation and batch/incremental/interpolation/SAT semantic
-> gates are green; representative/full timing gates remain.
+> authoritative bindings already encode completion and the same literals.
+> ADR-0152's range-backed experiment preserves structure and improves bit blast
+> only 0.57%, while total p50/mean regress 0.02%/0.38%, CNF p50 regresses 0.88%,
+> and variance triples. The ordered memo is restored and ADR-0152 is deferred
+> without a full run. Close memo-ownership micro-work; advance GQ10's
+> data-availability-aware representative regression gate next.
 > The capture and
 > implementation audit has been expanded into the dependency-ordered
 > [Glaurung QF_BV execution plan](docs/research/08-planning/glaurung-qfbv-execution-plan.md):
@@ -149,11 +152,12 @@ public lookup, incremental arena growth, and replay. It cuts representative
 total/bit blast 5.59%/15.51% and full total/bit blast 5.71%/16.05%, reaching
 15.60 s / 1.99x Z3 with identical structure. CNF (5.18 s) and bit blast
 (4.94 s) are now close; audit the remaining dense-ID memo and shared clause
-normalization before choosing the next measured slice. Proposed ADR-0152 removes
+normalization before choosing the next measured slice. ADR-0152 removes
 only the redundant ordered memo ownership while keeping operand-vector cloning
-unchanged, so its client gate can attribute the representation independently.
-All 21 BV, 10 BV interpolant, and 31 SAT-BV tests plus strict Clippy pass; run
-the representative gate next.
+unchanged, but fails the representative gate: bit blast improves 0.57% while
+total p50/mean regress 0.02%/0.38% and CNF p50 regresses 0.88%. Restore the
+ordered memo, close this micro-lane, and implement the access-controlled GQ10
+regular representative gate before another larger measured optimization.
 Affine word work must still show a downstream circuit/CNF win before outranking
 it.
 Broad GQ4 partial lowering follows its small post-canonical full-tier

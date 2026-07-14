@@ -1,6 +1,6 @@
 # ADR-0152: Range-backed term-lowering memo
 
-Status: proposed
+Status: deferred
 Date: 2026-07-14
 
 ## Context
@@ -48,7 +48,23 @@ implementation passes all 21 `axeyum-bv` tests, including batch/incremental
 sharing, repeated-root reuse, incremental arena growth, and interrupted-root
 retry; all 10 BV interpolant tests; 31 SAT-BV integration tests; strict Clippy;
 formatting; and documentation-link checks under the 4 GiB cap. Performance
-evidence remains pending the representative/full gates.
+evidence comes from five artifact-v27 representative processes at candidate
+revision `c65c4aef`, compared with accepted ADR-0151 revision `1c5dce97`:
+
+| Measure | Accepted | Candidate | Delta |
+|---|---:|---:|---:|
+| total p50 | 0.155940 s | 0.155975 s | +0.02% |
+| total mean | 0.155751 s | 0.156343 s | +0.38% |
+| bit-blast p50 | 0.051270 s | 0.050979 s | -0.57% |
+| bit-blast mean | 0.051258 s | 0.050994 s | -0.51% |
+| CNF p50 | 0.051945 s | 0.052404 s | +0.88% |
+| total CV | 0.231% | 0.712% | +0.481 pp |
+
+Every run remains 128/128 decided (64 SAT / 64 UNSAT), with zero errors,
+disagreements, or replay failures and identical 746,716 AIG requests, 410,719
+created nodes, 549,350 clause attempts, 40,998 duplicates, and 507,195 emitted
+clauses. The predeclared gate requires bit-blast and total improvements; the
+candidate fails, so no full-tier run is warranted.
 
 ## Alternatives
 
@@ -67,6 +83,7 @@ evidence remains pending the representative/full gates.
 
 Completed-term state and bit ownership have one dense representation. Operand
 and root reads still allocate the same owned vectors, so the experiment does
-not claim to solve clone cost. Incremental reuse remains keyed by stable dense
-term IDs and grows with the arena; the real corpus decides whether removing the
-ordered duplicate owner is material end to end.
+not solve clone cost. Reconstructing from strided binding records offsets the
+small lookup/ownership saving, and unrelated stages move within short-run noise.
+Restore ADR-0151's ordered memo exactly. Revisit only after new profiling
+supports a materially different borrowing/locality design.

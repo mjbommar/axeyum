@@ -340,7 +340,7 @@ nodes, and 49,199,541 clauses. Artifact SHA-256:
 ADR-0151 is accepted; CNF and bit blast now cost 5.18/4.94 s, so the next audit
 compares remaining dense-ID memo work with shared normalization.
 
-## ADR-0152 range-backed term-lowering memo candidate
+## ADR-0152 range-backed term-lowering memo rejection
 
 The accepted full artifact has 982,044 unique post-word DAG terms and
 23,029,676 term-bit bindings. The remaining
@@ -352,3 +352,12 @@ the ordered duplicate owner and reconstructs the same owned child vectors;
 operand cloning, AIG/CNF structure, decisions, and replay remain unchanged. No
 performance claim is admitted before representative/full gates. All 21 BV, 10
 BV interpolant, and 31 SAT-BV tests plus strict Clippy pass.
+
+Against accepted `1c5dce97`, five representative processes improve bit-blast
+p50/mean 0.051270/0.051258 → 0.050979/0.050994 s (-0.57%/-0.51%), but total
+p50/mean regress 0.155940/0.155751 → 0.155975/0.156343 s (+0.02%/+0.38%), CNF
+p50 regresses 0.88%, and total CV rises 0.231% → 0.712%. All trials retain
+identical 746,716 AIG requests, 410,719 created nodes, and 507,195 clauses, with
+every decision/replay gate green. The candidate fails the required bit-blast
+and total gate; ADR-0151's code is restored exactly, no full run is spent, and
+ADR-0152 is deferred.

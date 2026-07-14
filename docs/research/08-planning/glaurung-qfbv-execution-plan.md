@@ -371,8 +371,11 @@ memo and shared normalization before another bounded slice. That audit selects
 proposed ADR-0152: use ADR-0151 range presence as the completion memo and remove
 the ordered map's duplicate ownership of 23,029,676 literals across 982,044
 terms, while leaving operand cloning unchanged. Its 21 BV, 10 interpolation,
-and 31 SAT-BV tests plus strict Clippy pass; representative/full timing gates
-remain. SAT and broad GQ4 remain gated by measured opportunity.
+and 31 SAT-BV tests plus strict Clippy pass. Five representative processes
+preserve structure, but bit blast improves only 0.57% while total mean/CNF p50
+regress 0.38%/0.88%. It is restored/deferred without a full run. Close memo
+micro-work and advance the data-availability-aware GQ10 representative gate.
+SAT and broad GQ4 remain gated by measured opportunity.
 
 ### G6 — SAT work remains conditional (GQ6)
 
@@ -487,6 +490,9 @@ validity gates.
    ADR-0152 then isolates the remaining memo ownership: range presence replaces
    ordered completion lookup, and child bits are reconstructed from the same
    authoritative bindings without changing operand cloning or AIG algorithms.
+   It fails the representative total gate and is restored; do not pursue another
+   memo representation without new attribution and a materially different
+   design.
 5. On the Glaurung side, fix explicit width coercion plus strict dump validation
    and cross-process dedup/conflict handling. Define the ordered warm-trace and
    controlled-concretization schema before GQ7/GQ8 cache or auto-policy work.
