@@ -1,6 +1,6 @@
 # ADR-0151: Dense term-bit lift index
 
-Status: proposed
+Status: accepted
 Date: 2026-07-14
 
 ## Context
@@ -47,8 +47,29 @@ The artifact-v27 counts and consumer audit above select the experiment. The
 implementation passes all 20 `axeyum-bv` tests, including explicit unlowered
 term/out-of-range lookup and incremental arena-growth coverage; all 10 BV
 interpolant tests; 31 SAT-BV integration tests; strict Clippy; formatting; and
-documentation-link checks under the 4 GiB cap. Performance evidence remains
-pending the representative/full gates.
+documentation-link checks under the 4 GiB cap.
+
+Against accepted ADR-0150 revision `4d66fc0e`, five representative processes
+report:
+
+- total p50 0.165169 → 0.155940 s (-5.59%) and mean 0.165105 → 0.155751 s
+  (-5.67%);
+- bit-blast p50 0.060683 → 0.051270 s (-15.51%) and mean 0.060721 → 0.051258 s
+  (-15.58%); and
+- identical 746,716 AIG requests, 410,719 created nodes, 549,350 clause
+  attempts, and 507,195 emitted clauses.
+
+All five runs remain 128/128 decided with zero errors, disagreements, or replay
+failures. CNF p50 moves only +0.19%, consistent with noise outside the changed
+stage.
+
+The full 4 GiB confirmation at revision `1c5dce97` remains 13,462/13,462
+decided (1,774 SAT / 11,688 UNSAT), with zero errors, disagreements, or replay
+failures. Total falls 16.5397 → 15.5961 s (-5.71%), bit blast falls 5.8839 →
+4.9393 s (-16.05%), and Axeyum/Z3 falls 2.136x → 1.992x. CNF and SAT remain
+flat (+0.02%/-0.01%). Both artifacts retain exactly 76,493,904 AIG requests,
+40,063,239 created nodes, and 49,199,541 clauses. The accepted artifact SHA-256
+is `b346394c5a727da6c58ae15b013f837f703ad7dd03268cedf3f98a6989712c3c`.
 
 ## Alternatives
 
@@ -68,5 +89,7 @@ pending the representative/full gates.
 One range entry replaces all ordered-map nodes for a term while the existing
 binding vector remains authoritative. Lookup becomes two bounds checks and one
 direct index. Memory scales with arena terms plus required bindings rather than
-with a tree node per materialized bit; the real corpus decides whether this is
-material end to end.
+with a tree node per materialized bit; the real corpus confirms this is material
+end to end. CNF is now narrowly largest at 5.18 seconds, with bit blast close at
+4.94 seconds; future work compares the remaining dense-ID memo opportunity with
+shared clause normalization rather than assuming either dominates.

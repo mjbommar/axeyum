@@ -314,7 +314,7 @@ make 53,748,044 attempts, skip 4,248,964 duplicates, and emit exactly
 ADR-0150 is accepted. Bit blast is now the largest stage at 5.88 s, ahead of
 CNF at 5.18 s, so the next slice must re-attribute residual lowering/AIG work.
 
-## ADR-0151 dense term-bit lift-index candidate
+## ADR-0151 dense term-bit lift-index acceptance
 
 The accepted full artifact materializes 23,029,676 term-bit bindings, including
 22,797,529 (99.0%) in `register-slice` and `slice-partial`, and inserts every
@@ -324,5 +324,18 @@ map's only read surface is point lookup; interpolation iterates the vector and
 model replay uses symbol inputs. Proposed ADR-0151 replaces the redundant map
 with per-term ranges while preserving public lookup, binding order, incremental
 growth, and replay. All 20 BV, 10 BV interpolant, and 31 SAT-BV tests plus
-strict Clippy pass. No performance claim is admitted before
-representative/full gates.
+strict Clippy pass.
+
+Against accepted `4d66fc0e`, five representative processes improve total
+p50/mean 0.165169/0.165105 → 0.155940/0.155751 s (-5.59%/-5.67%) and bit-blast
+p50/mean 0.060683/0.060721 → 0.051270/0.051258 s (-15.51%/-15.58%). All runs
+retain identical 746,716 AIG requests, 410,719 created nodes, and 507,195
+clauses, with every decision/replay gate green.
+
+The full 13,462-query run improves total 16.5397 → 15.5961 s (-5.71%), bit
+blast 5.8839 → 4.9393 s (-16.05%), and ratio 2.136x → 1.992x. CNF/SAT remain
+flat, while both artifacts retain 76,493,904 AIG requests, 40,063,239 created
+nodes, and 49,199,541 clauses. Artifact SHA-256:
+`b346394c5a727da6c58ae15b013f837f703ad7dd03268cedf3f98a6989712c3c`.
+ADR-0151 is accepted; CNF and bit blast now cost 5.18/4.94 s, so the next audit
+compares remaining dense-ID memo work with shared normalization.

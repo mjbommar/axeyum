@@ -60,10 +60,13 @@ session state.
 > work by family before choosing the next exact GQ3/GQ5 slice; broad GQ4 and SAT
 > remain behind their measured opportunity. That audit finds 23,029,676 cold
 > term-bit records inserted into an ordered lookup map despite dense term IDs
-> and contiguous existing bindings. Proposed ADR-0151 replaces only that
-> redundant map with per-term ranges into the authoritative binding vector.
-> The implementation, lookup/growth boundaries, interpolation consumers, and
-> solver integration are green; representative/full timing gates remain.
+> and contiguous existing bindings. ADR-0151 replaces only that redundant map
+> with per-term ranges into the authoritative binding vector. It is accepted:
+> representative total/bit-blast medians improve 5.59%/15.51%, full total/bit
+> blast improve 5.71%/16.05% to 15.60/4.94 s, and the full ratio reaches 1.99x
+> with identical AIG/CNF structure and replay. CNF is again narrowly largest at
+> 5.18 s; audit the remaining dense-ID term memo and shared normalization before
+> choosing another bounded ownership slice.
 > The capture and
 > implementation audit has been expanded into the dependency-ordered
 > [Glaurung QF_BV execution plan](docs/research/08-planning/glaurung-qfbv-execution-plan.md):
@@ -135,11 +138,13 @@ side table. It cuts representative total/CNF 13.0%/29.0% and full total/CNF
 11.5%/28.4%, reaching 16.54 s / 2.14x Z3 with identical content. CNF is now
 5.18 s versus bit blast's 5.88 s; re-attribute residual operator lowering and
 AIG construction by family before selecting the next exact circuit-producing
-slice. ADR-0151 is the first isolated candidate: remove 23.03 million ordered
+slice. ADR-0151 removes 23.03 million ordered
 term-bit lookup insertions via dense ranges while preserving binding order,
-public lookup, incremental arena growth, and replay. Its 20 BV, 10 BV
-interpolant, and 31 SAT-BV tests plus strict Clippy pass; run the representative
-gate next.
+public lookup, incremental arena growth, and replay. It cuts representative
+total/bit blast 5.59%/15.51% and full total/bit blast 5.71%/16.05%, reaching
+15.60 s / 1.99x Z3 with identical structure. CNF (5.18 s) and bit blast
+(4.94 s) are now close; audit the remaining dense-ID memo and shared clause
+normalization before choosing the next measured slice.
 Affine word work must still show a downstream circuit/CNF win before outranking
 it.
 Broad GQ4 partial lowering follows its small post-canonical full-tier

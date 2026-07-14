@@ -363,8 +363,12 @@ lowering and AIG request/hash/allocation work by family before selecting the
 next exact GQ3/GQ5 slice. The first audit result is proposed ADR-0151: replace
 23,029,676 ordered term-bit lookup insertions with dense per-term ranges into
 the existing authoritative binding vector. Its BV, interpolation, and SAT-BV
-suites plus strict Clippy pass; representative/full timing gates remain. SAT
-and broad GQ4 remain gated by measured opportunity.
+suites plus strict Clippy pass. ADR-0151 is accepted after representative
+total/bit blast improve 5.59%/15.51% and full total/bit blast improve
+5.71%/16.05%, reaching 15.60 seconds / 1.99x Z3 with identical structure and
+replay. CNF and bit blast are now 5.18/4.94 seconds; audit the remaining dense-ID
+memo and shared normalization before another bounded slice. SAT and broad GQ4
+remain gated by measured opportunity.
 
 ### G6 — SAT work remains conditional (GQ6)
 
@@ -474,7 +478,8 @@ validity gates.
    After ADR-0150 makes bit blast largest, ADR-0151 is the next isolated
    ownership candidate: dense `TermId` plus contiguous bit bindings can replace
    the redundant ordered term-bit lookup map without changing lookup, order,
-   incremental growth, or replay.
+   incremental growth, or replay. It is accepted after the full client gate
+   cuts total 5.71% and bit blast 16.05% with identical AIG/CNF structure.
 5. On the Glaurung side, fix explicit width coercion plus strict dump validation
    and cross-process dedup/conflict handling. Define the ordered warm-trace and
    controlled-concretization schema before GQ7/GQ8 cache or auto-policy work.
