@@ -1132,6 +1132,44 @@ impl EncodedLit {
     }
 }
 
+/// Diagnostics for one AIG-to-CNF encoding.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct CnfEncodingStats {
+    /// Time spent computing reachability, polarity, and compound-gate plans.
+    pub planning: Duration,
+    /// Time spent assigning CNF variables to retained AIG nodes.
+    pub variable_allocation: Duration,
+    /// Time spent emitting clauses for planned non-root gates.
+    pub gate_encoding: Duration,
+    /// Time spent encoding and asserting roots.
+    pub root_encoding: Duration,
+    /// AIG nodes reachable from at least one requested root.
+    pub reachable_nodes: u64,
+    /// Private helper nodes subsumed by a recognized compound gate.
+    pub skipped_helper_nodes: u64,
+    /// Assertion-only roots encoded without dedicated CNF variables.
+    pub direct_root_nodes: u64,
+    /// Recognized XOR gates.
+    pub xor_gates: u64,
+    /// Recognized complemented ITE/mux gates.
+    pub not_ite_gates: u64,
+    /// Recognized complemented-AND gates.
+    pub not_and_gates: u64,
+    /// Recognized private AND trees.
+    pub and_tree_gates: u64,
+    /// Remaining primitive binary AND gates.
+    pub binary_and_gates: u64,
+    /// Clause-emission attempts before tautology and duplicate filtering.
+    pub clause_attempts: u64,
+    /// Clause attempts discarded because a constant-true or complementary pair
+    /// made the clause tautological.
+    pub tautological_clauses_skipped: u64,
+    /// Canonical clauses discarded because an identical clause was emitted.
+    pub duplicate_clauses_skipped: u64,
+    /// Clauses retained in the final formula.
+    pub clauses_emitted: u64,
+}
+
 /// Result of Tseitin encoding AIG roots.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CnfEncoding {
@@ -1139,6 +1177,7 @@ pub struct CnfEncoding {
     roots: Vec<CnfRoot>,
     reachable_nodes: Vec<bool>,
     variable_bindings: Vec<CnfVarBinding>,
+    stats: CnfEncodingStats,
 }
 
 impl CnfEncoding {
@@ -1155,6 +1194,11 @@ impl CnfEncoding {
     /// Variable-to-AIG lift-map entries in CNF variable order.
     pub fn variable_bindings(&self) -> &[CnfVarBinding] {
         &self.variable_bindings
+    }
+
+    /// Returns deterministic structure counters and measured encoder subphases.
+    pub fn stats(&self) -> CnfEncodingStats {
+        self.stats
     }
 
     /// Builds a full CNF variable assignment from AIG input values.
@@ -1435,6 +1479,9 @@ struct TseitinEncoder<'a> {
     and_tree_gates: Vec<Option<AndTreeGate>>,
     clause_keys: BTreeSet<Vec<CnfLit>>,
     variable_bindings: Vec<CnfVarBinding>,
+    clause_attempts: u64,
+    tautological_clauses_skipped: u64,
+    duplicate_clauses_skipped: u64,
 }
 
 impl<'a> TseitinEncoder<'a> {
@@ -1453,13 +1500,23 @@ impl<'a> TseitinEncoder<'a> {
             and_tree_gates: vec![None; aig.node_count()],
             clause_keys: BTreeSet::new(),
             variable_bindings: Vec::new(),
+            clause_attempts: 0,
+            tautological_clauses_skipped: 0,
+            duplicate_clauses_skipped: 0,
         }
     }
 
     fn encode(mut self, roots: &[AigLit]) -> Result<CnfEncoding, CnfError> {
+        let planning_start = Instant::now();
         self.plan_sparse_encoding(roots);
+        let planning = planning_start.elapsed();
+        let allocation_start = Instant::now();
         self.allocate_variables();
+        let variable_allocation = allocation_start.elapsed();
+        let gate_start = Instant::now();
         self.encode_gates()?;
+        let gate_encoding = gate_start.elapsed();
+        let root_start = Instant::now();
         let roots = roots
             .iter()
             .copied()
@@ -1471,12 +1528,58 @@ impl<'a> TseitinEncoder<'a> {
                 })
             })
             .collect::<Result<Vec<_>, CnfError>>()?;
+        let root_encoding = root_start.elapsed();
+        let stats =
+            self.encoding_stats(planning, variable_allocation, gate_encoding, root_encoding);
         Ok(CnfEncoding {
             formula: self.formula,
             roots,
             reachable_nodes: self.reachable_nodes,
             variable_bindings: self.variable_bindings,
+            stats,
         })
+    }
+
+    fn encoding_stats(
+        &self,
+        planning: Duration,
+        variable_allocation: Duration,
+        gate_encoding: Duration,
+        root_encoding: Duration,
+    ) -> CnfEncodingStats {
+        let binary_and_gates = self
+            .aig
+            .nodes()
+            .filter(|(node_id, node)| {
+                let index = node_id.index();
+                self.reachable_nodes[index]
+                    && !self.skip_nodes[index]
+                    && !self.direct_root_nodes[index]
+                    && matches!(node, AigNode::And(_, _))
+                    && self.xor_gates[index].is_none()
+                    && self.not_ite_gates[index].is_none()
+                    && self.not_and_gates[index].is_none()
+                    && self.and_tree_gates[index].is_none()
+            })
+            .count();
+        CnfEncodingStats {
+            planning,
+            variable_allocation,
+            gate_encoding,
+            root_encoding,
+            reachable_nodes: count_true(&self.reachable_nodes),
+            skipped_helper_nodes: count_true(&self.skip_nodes),
+            direct_root_nodes: count_true(&self.direct_root_nodes),
+            xor_gates: count_some(&self.xor_gates),
+            not_ite_gates: count_some(&self.not_ite_gates),
+            not_and_gates: count_some(&self.not_and_gates),
+            and_tree_gates: count_some(&self.and_tree_gates),
+            binary_and_gates: usize_to_u64_saturating(binary_and_gates),
+            clause_attempts: self.clause_attempts,
+            tautological_clauses_skipped: self.tautological_clauses_skipped,
+            duplicate_clauses_skipped: self.duplicate_clauses_skipped,
+            clauses_emitted: usize_to_u64_saturating(self.formula.clauses().len()),
+        }
     }
 
     fn plan_sparse_encoding(&mut self, roots: &[AigLit]) {
@@ -1973,13 +2076,20 @@ impl<'a> TseitinEncoder<'a> {
     }
 
     fn add_encoded_clause(&mut self, lits: &[EncodedLit]) -> Result<(), CnfError> {
+        self.clause_attempts = self.clause_attempts.saturating_add(1);
         let mut clause = Vec::new();
         for lit in lits {
             match lit {
-                EncodedLit::Const(true) => return Ok(()),
+                EncodedLit::Const(true) => {
+                    self.tautological_clauses_skipped =
+                        self.tautological_clauses_skipped.saturating_add(1);
+                    return Ok(());
+                }
                 EncodedLit::Const(false) => {}
                 EncodedLit::Lit(cnf_lit) => {
                     if clause.iter().any(|lit| *lit == cnf_lit.negated()) {
+                        self.tautological_clauses_skipped =
+                            self.tautological_clauses_skipped.saturating_add(1);
                         return Ok(());
                     }
                     if !clause.contains(cnf_lit) {
@@ -1990,10 +2100,23 @@ impl<'a> TseitinEncoder<'a> {
         }
         clause.sort_unstable();
         if !self.clause_keys.insert(clause.clone()) {
+            self.duplicate_clauses_skipped = self.duplicate_clauses_skipped.saturating_add(1);
             return Ok(());
         }
         self.formula.add_clause(CnfClause::new(clause))
     }
+}
+
+fn count_true(values: &[bool]) -> u64 {
+    usize_to_u64_saturating(values.iter().filter(|value| **value).count())
+}
+
+fn count_some<T>(values: &[Option<T>]) -> u64 {
+    usize_to_u64_saturating(values.iter().filter(|value| value.is_some()).count())
+}
+
+fn usize_to_u64_saturating(value: usize) -> u64 {
+    u64::try_from(value).unwrap_or(u64::MAX)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -2690,6 +2813,22 @@ mod tests {
         assert!(
             encoding.variable_bindings().len() < aig.node_count() - 1,
             "sparse encoding should be smaller than one variable per AIG node"
+        );
+        let stats = encoding.stats();
+        assert_eq!(stats.xor_gates, 1);
+        assert_eq!(stats.skipped_helper_nodes, 2);
+        assert_eq!(stats.direct_root_nodes, 1);
+        assert_eq!(
+            stats.clauses_emitted,
+            encoding.formula().clauses().len() as u64
+        );
+        assert!(stats.clause_attempts >= stats.clauses_emitted);
+        assert_eq!(
+            stats.clause_attempts,
+            stats.clauses_emitted
+                + stats.tautological_clauses_skipped
+                + stats.duplicate_clauses_skipped,
+            "every clause attempt is emitted or skipped for one recorded reason"
         );
 
         for p_value in [false, true] {

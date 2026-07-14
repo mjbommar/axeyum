@@ -7,7 +7,7 @@ Last updated: 2026-07-14
 
 The shortest evidence-backed path to useful Glaurung functionality is:
 
-1. repair and ingest the real capture through Axeyum's artifact-v23 contract;
+1. repair and ingest the real capture through Axeyum's artifact-v24 contract;
 2. reproduce the current **raw one-shot** integration before comparing any
    preprocessing policy;
 3. add observability at the two measured dominant stages;
@@ -109,14 +109,17 @@ The implementation audit narrows the first optimization slices:
   discarded source bits. GQ4 must change the lowering demand contract, not just
   add another post-hoc slice.
 - `axeyum-aig` already has deterministic structural hashing plus substantial
-  constant, identity, XOR, and mux simplification. Its unique table is a
-  `BTreeMap`, but no hit/miss/rule counters yet show that lookup is the cost.
+  constant, identity, XOR, and mux simplification. Artifact v24 now partitions
+  primitive AND requests into trivial simplification, absorption, unique-table
+  hit, and new-node outcomes; its `BTreeMap` is not an optimization target until
+  the real capture shows that construction dominates.
 - `axeyum-cnf` is already reachable-only and polarity-aware, with direct roots,
-  XOR/mux/not-AND/private-tree recognition, and clause deduplication. GQ5 must
-  profile its planning, allocation, and emission subphases before replacing
-  encodings or data structures.
+  XOR/mux/not-AND/private-tree recognition, and clause deduplication. Artifact
+  v24 times its planning, allocation, gate-emission, and root-emission
+  subphases and counts recognized gates and filtered clauses; GQ5 must consume
+  that evidence before replacing encodings or data structures.
 - The producer attribution assigns only 15% to SAT. GQ6 stays gated until the
-  artifact-v23 reproduction or a later optimization makes SAT dominant.
+  artifact-v24 reproduction or a later optimization makes SAT dominant.
 
 These conclusions are consistent with the official [Z3 BV rewriter], which
 collapses nested extracts and distributes general slices over concatenations,
@@ -213,12 +216,16 @@ Extend the artifact without changing solver behavior:
 - **Landed in artifact v23:** before/after/residual counts per GQ3 rule class,
   including same-side versus straddling concat slices, whole operands, extension
   regions, exact low cancellation, and nested-extract depth;
-- requested, unique-demanded, and actually lowered bits per term and symbol;
-- AIG unique-table hits/misses, new nodes, and simplification counts by rule;
-- CNF timing for reachability/use counts, gate recognition, variable allocation,
-  clause construction, and deduplication;
-- emitted variables, clauses, literals, direct roots, and each recognized/fused
-  gate family; and
+- still needed: requested, unique-demanded, and actually lowered bits per term
+  and symbol;
+- **Landed in artifact v24:** AIG unique-table hits/new nodes and primitive AND
+  simplification counts; CNF planning/allocation/gate/root timing; reachable,
+  skipped-helper, direct-root, and recognized/fused gate-family counts; and
+  attempted, tautological, duplicate, and emitted clause counts. Explicit
+  partition invariants catch incomplete instrumentation, and the CNF timers are
+  marked as nested in total encode time;
+- still needed: emitted and skipped literal counts, plus any finer
+  subphase split justified by the real run; and
 - metrics partitioned by Glaurung family and verdict.
 
 Exit: the counters explain where the measured bit-blast and CNF time goes, and
@@ -348,7 +355,7 @@ validity gates.
 | Milestone | Roadmap coverage | Stop/go decision |
 |---|---|---|
 | M0 byte-complete capture | GQ1, GQ10 | No performance implementation without the representative bytes and strict manifest |
-| M1 raw v23 baseline | GQ1, GQ10 | Confirm or revise the 84% construction attribution and per-family ranking |
+| M1 raw v24 baseline | GQ1, GQ10 | Confirm or revise the 84% construction attribution and per-family ranking |
 | M2 diagnostic attribution | GQ1, GQ3--GQ5 | Choose rewrites, demand lowering, or data-structure work from counters |
 | M3 cheap exact rewriting | GQ2, GQ3 | Continue only if real total time is non-worse and structure falls |
 | M4 demand lowering | GQ4 | Continue only with replay-safe real AIG/CNF and wall-time reductions |
@@ -362,11 +369,11 @@ validity gates.
 
 1. Obtain or regenerate the 128 query bytes and strict capture index; run the
    Axeyum manifest generator and document the count reconciliation.
-2. Reproduce raw artifact v23 first with five fresh processes and its raw proof
+2. Reproduce raw artifact v24 first with five fresh processes and its raw proof
    companion, then run the canonical-only and configured diagnostics.
-3. Add the G2 AIG/CNF and residual-rewrite counters while byte transfer is
-   pending; this is behavior-preserving and will make the first real run
-   actionable.
+3. Add demanded/actually-lowered bit telemetry while byte transfer is pending;
+   the G2 residual-rewrite and AIG/CNF construction counters are landed in
+   artifacts v23/v24 and make the first real run substantially actionable.
 4. Draft the exact-extract rewrite ADR and tests, but do not promote the rules
    based only on synthetic timing.
 5. Define the ordered warm-trace schema with Glaurung before implementing cache

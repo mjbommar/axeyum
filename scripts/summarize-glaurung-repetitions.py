@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Any, NoReturn, Sequence
 
 
-SOURCE_ARTIFACT_VERSION = 23
+SOURCE_ARTIFACT_VERSION = 24
 REPETITION_SUMMARY_VERSION = 1
 STAGE_KEYS = (
     "word_preprocess_s",

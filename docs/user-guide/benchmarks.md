@@ -84,7 +84,7 @@ just compare-glaurung-qfbv-repeated BASE CAND OUT # controlled cross-commit delt
 
 Each JSON records the corpus + config hash, per-instance outcome, budgets,
 backend stats, PAR-2, explicit `decided`/`decided_percent`, **disagreements**,
-and **model-replay failures**. Artifact version 23 retains version 16's exact
+and **model-replay failures**. Artifact version 24 retains version 16's exact
 floating-point millisecond values for each instance's word-level preprocessing,
 bit-blast, CNF encode/inprocess, SAT, model lift, and cold total, plus corpus
 totals and p50/p95 distributions. Its `client_comparison` block reports the
@@ -145,6 +145,15 @@ straddling concat slices, whole-operand slices, low/high/straddling extension
 regions, exact low-extension cancellation, and maximum nested-extract depth.
 Raw runs should report no transition; canonical/configured runs reveal the
 residual GQ3 opportunity set that would still reach bit lowering.
+Version 24 adds construction attribution without changing the solve path. Each
+instance and the corpus summary partition primitive AIG AND requests into
+trivial simplifications, absorption simplifications, structural-hash hits, and
+new nodes. CNF diagnostics time planning, retained-variable allocation,
+non-root gate encoding, and root encoding; count reachable/skipped-helper/
+direct-root nodes and recognized XOR/mux/not-AND/private-tree/binary-AND gates;
+and partition clause attempts into tautological skips, duplicate skips, and
+emitted clauses. The artifact reports both partition invariants. CNF subphase
+timers are nested within `cnf_encode`, so do not add them to cold total again.
 A comparable run requires zero errors, zero disagreements, zero replay failures,
 and the declared decided-rate threshold; only then is timing a performance
 signal.

@@ -33,6 +33,23 @@ fn sat_bv_run_exposes_typed_layer_stats() {
     );
     assert!(layers.cnf_variables > 0, "expected CNF variables");
     assert!(layers.cnf_clauses > 0, "expected CNF clauses");
+    assert!(layers.aig_and_requests > 0, "AIG requests are counted");
+    assert_eq!(
+        layers.aig_and_requests,
+        layers.aig_and_trivial_simplifications
+            + layers.aig_and_absorption_simplifications
+            + layers.aig_and_structural_hash_hits
+            + layers.aig_and_nodes_created,
+        "each primitive AND request has one outcome"
+    );
+    assert_eq!(
+        layers.cnf_clause_attempts,
+        layers.cnf_clauses
+            + layers.cnf_tautological_clauses_skipped
+            + layers.cnf_duplicate_clauses_skipped,
+        "each clause attempt is emitted or skipped"
+    );
+    assert!(layers.cnf_reachable_nodes > 0);
     assert_eq!(layers.cnf_inprocess, std::time::Duration::ZERO);
     assert!(layers.clause_density() > 0.0, "density is positive");
     // total() is the sum of all stage durations and is well-defined.

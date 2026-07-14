@@ -146,7 +146,7 @@ impl SatBvBackend {
         stats.translate = bit_blast + cnf_encode;
         push_duration_ms(&mut stats, "bit_blast_ms", bit_blast);
         push_duration_ms(&mut stats, "cnf_encode_ms", cnf_encode);
-        record_encoding_stats(&mut stats, &lowering, encoding.formula());
+        record_encoding_stats(&mut stats, &lowering, &encoding);
 
         // Optional CNF inprocessing (subsumption + bounded variable elimination)
         // on the Tseitin formula. Subsumption is model-preserving and BVE is
@@ -278,7 +278,8 @@ impl SolverBackend for SatBvBackend {
 
 /// Records the AIG and (un-inprocessed) CNF size counters for the most recent
 /// encoding into `stats.backend`.
-fn record_encoding_stats(stats: &mut SolveStats, lowering: &BitLowering, formula: &CnfFormula) {
+fn record_encoding_stats(stats: &mut SolveStats, lowering: &BitLowering, encoding: &CnfEncoding) {
+    let formula = encoding.formula();
     stats.backend.push((
         "aig_nodes".to_owned(),
         usize_to_f64(lowering.aig().node_count()),
@@ -295,6 +296,50 @@ fn record_encoding_stats(stats: &mut SolveStats, lowering: &BitLowering, formula
         "cnf_clauses".to_owned(),
         usize_to_f64(formula.clauses().len()),
     ));
+    let aig = lowering.aig().construction_stats();
+    push_count(stats, "aig_and_requests", aig.and_requests);
+    push_count(
+        stats,
+        "aig_and_trivial_simplifications",
+        aig.and_trivial_simplifications,
+    );
+    push_count(
+        stats,
+        "aig_and_absorption_simplifications",
+        aig.and_absorption_simplifications,
+    );
+    push_count(
+        stats,
+        "aig_and_structural_hash_hits",
+        aig.and_structural_hash_hits,
+    );
+    push_count(stats, "aig_and_nodes_created", aig.and_nodes_created);
+
+    let cnf = encoding.stats();
+    push_duration_ms(stats, "cnf_plan_ms", cnf.planning);
+    push_duration_ms(stats, "cnf_allocate_ms", cnf.variable_allocation);
+    push_duration_ms(stats, "cnf_gate_encode_ms", cnf.gate_encoding);
+    push_duration_ms(stats, "cnf_root_encode_ms", cnf.root_encoding);
+    push_count(stats, "cnf_reachable_nodes", cnf.reachable_nodes);
+    push_count(stats, "cnf_skipped_helper_nodes", cnf.skipped_helper_nodes);
+    push_count(stats, "cnf_direct_root_nodes", cnf.direct_root_nodes);
+    push_count(stats, "cnf_xor_gates", cnf.xor_gates);
+    push_count(stats, "cnf_not_ite_gates", cnf.not_ite_gates);
+    push_count(stats, "cnf_not_and_gates", cnf.not_and_gates);
+    push_count(stats, "cnf_and_tree_gates", cnf.and_tree_gates);
+    push_count(stats, "cnf_binary_and_gates", cnf.binary_and_gates);
+    push_count(stats, "cnf_clause_attempts", cnf.clause_attempts);
+    push_count(
+        stats,
+        "cnf_tautological_clauses_skipped",
+        cnf.tautological_clauses_skipped,
+    );
+    push_count(
+        stats,
+        "cnf_duplicate_clauses_skipped",
+        cnf.duplicate_clauses_skipped,
+    );
+    push_count(stats, "cnf_clauses_emitted", cnf.clauses_emitted);
 }
 
 /// A Tseitin formula after CNF inprocessing, plus the maps that lift a model of
@@ -1326,6 +1371,11 @@ fn push_duration_ms(stats: &mut SolveStats, name: &str, duration: Duration) {
     stats
         .backend
         .push((name.to_owned(), duration.as_secs_f64() * 1000.0));
+}
+
+#[allow(clippy::cast_precision_loss)]
+fn push_count(stats: &mut SolveStats, name: &str, value: u64) {
+    stats.backend.push((name.to_owned(), value as f64));
 }
 
 #[allow(clippy::cast_precision_loss)]

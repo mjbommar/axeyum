@@ -183,6 +183,30 @@ Z3-drift gates take explicit thresholds; the micro corpus does not set product
 policy. Invalid identity/variance removes stale output, while a valid comparison
 that exceeds a configured gate remains written for diagnosis and exits nonzero.
 
+Artifact version 23 adds a paired structural boundary without changing the
+solver. Every successfully parsed query is profiled both before and after its
+explicit raw, canonical, or configured word policy. The artifact classifies
+concat extracts by low/high/straddling region and exact whole operand,
+extension extracts by low/high/straddling region, exact low-extension
+cancellations, and nested-extract depth. Before/after/removed/added transitions
+therefore distinguish opportunities eliminated at word level from those that
+actually reach bit lowering. Repetition ingestion advances with the artifact
+version so policies and shape contracts cannot be silently mixed.
+
+Artifact version 24 adds bounded AIG/CNF construction attribution, again
+without changing construction semantics. Every primitive AIG AND request is
+classified exactly once as a trivial simplification, absorption simplification,
+structural unique-table hit, or newly allocated node. CNF encoding separately
+times reachability/use planning, retained-variable allocation, non-root gate
+encoding, and root encoding; counts reachable nodes, skipped private helpers,
+direct roots, and each recognized gate family; and classifies every clause
+attempt as tautological, duplicate, or emitted. Per-instance and corpus records
+publish the two partition invariants. CNF subphase timings are explicitly nested
+inside the existing CNF-encode duration and never added to cold total twice.
+The diagnostics identify where GQ5 engineering should occur; they do not make a
+data-structure or encoding change acceptable without a valid real-corpus
+end-to-end improvement. The repetition and comparison tools now require v24.
+
 ## Alternatives
 
 - **Implicitly widen or truncate binary operands.** Rejected: it masks client

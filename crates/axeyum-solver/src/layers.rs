@@ -31,10 +31,50 @@ pub struct BvLayerStats {
     pub aig_inputs: u64,
     /// AIG nodes after lowering.
     pub aig_nodes: u64,
+    /// Primitive AIG AND construction requests.
+    pub aig_and_requests: u64,
+    /// Primitive AND requests removed by constants/identities/complements.
+    pub aig_and_trivial_simplifications: u64,
+    /// Primitive AND requests removed by absorption/consensus.
+    pub aig_and_absorption_simplifications: u64,
+    /// Primitive AND requests served by the structural unique table.
+    pub aig_and_structural_hash_hits: u64,
+    /// Primitive AND requests that allocated a new node.
+    pub aig_and_nodes_created: u64,
     /// CNF variables submitted to the SAT adapter.
     pub cnf_variables: u64,
     /// CNF clauses submitted to the SAT adapter.
     pub cnf_clauses: u64,
+    /// CNF time spent planning reachability, polarity, and compound gates.
+    pub cnf_planning: Duration,
+    /// CNF time spent allocating retained node variables.
+    pub cnf_variable_allocation: Duration,
+    /// CNF time spent emitting non-root gate clauses.
+    pub cnf_gate_encoding: Duration,
+    /// CNF time spent encoding/asserting roots.
+    pub cnf_root_encoding: Duration,
+    /// Reachable AIG nodes considered by the sparse encoder.
+    pub cnf_reachable_nodes: u64,
+    /// Private helper nodes subsumed by recognized compound gates.
+    pub cnf_skipped_helper_nodes: u64,
+    /// Assertion-only roots encoded without dedicated variables.
+    pub cnf_direct_root_nodes: u64,
+    /// Recognized XOR gates.
+    pub cnf_xor_gates: u64,
+    /// Recognized complemented ITE/mux gates.
+    pub cnf_not_ite_gates: u64,
+    /// Recognized complemented-AND gates.
+    pub cnf_not_and_gates: u64,
+    /// Recognized private AND trees.
+    pub cnf_and_tree_gates: u64,
+    /// Remaining primitive binary AND gates.
+    pub cnf_binary_and_gates: u64,
+    /// Clause attempts before filtering.
+    pub cnf_clause_attempts: u64,
+    /// Tautological clause attempts skipped.
+    pub cnf_tautological_clauses_skipped: u64,
+    /// Duplicate canonical clauses skipped.
+    pub cnf_duplicate_clauses_skipped: u64,
 }
 
 impl BvLayerStats {
@@ -54,8 +94,37 @@ impl BvLayerStats {
             model_lift: stats.model_lift,
             aig_inputs: lookup(stats, "aig_inputs").map_or(0, count_to_u64),
             aig_nodes: count_to_u64(aig_nodes),
+            aig_and_requests: lookup(stats, "aig_and_requests").map_or(0, count_to_u64),
+            aig_and_trivial_simplifications: lookup(stats, "aig_and_trivial_simplifications")
+                .map_or(0, count_to_u64),
+            aig_and_absorption_simplifications: lookup(stats, "aig_and_absorption_simplifications")
+                .map_or(0, count_to_u64),
+            aig_and_structural_hash_hits: lookup(stats, "aig_and_structural_hash_hits")
+                .map_or(0, count_to_u64),
+            aig_and_nodes_created: lookup(stats, "aig_and_nodes_created").map_or(0, count_to_u64),
             cnf_variables: count_to_u64(cnf_variables),
             cnf_clauses: lookup(stats, "cnf_clauses").map_or(0, count_to_u64),
+            cnf_planning: lookup(stats, "cnf_plan_ms").map_or(Duration::ZERO, ms_to_duration),
+            cnf_variable_allocation: lookup(stats, "cnf_allocate_ms")
+                .map_or(Duration::ZERO, ms_to_duration),
+            cnf_gate_encoding: lookup(stats, "cnf_gate_encode_ms")
+                .map_or(Duration::ZERO, ms_to_duration),
+            cnf_root_encoding: lookup(stats, "cnf_root_encode_ms")
+                .map_or(Duration::ZERO, ms_to_duration),
+            cnf_reachable_nodes: lookup(stats, "cnf_reachable_nodes").map_or(0, count_to_u64),
+            cnf_skipped_helper_nodes: lookup(stats, "cnf_skipped_helper_nodes")
+                .map_or(0, count_to_u64),
+            cnf_direct_root_nodes: lookup(stats, "cnf_direct_root_nodes").map_or(0, count_to_u64),
+            cnf_xor_gates: lookup(stats, "cnf_xor_gates").map_or(0, count_to_u64),
+            cnf_not_ite_gates: lookup(stats, "cnf_not_ite_gates").map_or(0, count_to_u64),
+            cnf_not_and_gates: lookup(stats, "cnf_not_and_gates").map_or(0, count_to_u64),
+            cnf_and_tree_gates: lookup(stats, "cnf_and_tree_gates").map_or(0, count_to_u64),
+            cnf_binary_and_gates: lookup(stats, "cnf_binary_and_gates").map_or(0, count_to_u64),
+            cnf_clause_attempts: lookup(stats, "cnf_clause_attempts").map_or(0, count_to_u64),
+            cnf_tautological_clauses_skipped: lookup(stats, "cnf_tautological_clauses_skipped")
+                .map_or(0, count_to_u64),
+            cnf_duplicate_clauses_skipped: lookup(stats, "cnf_duplicate_clauses_skipped")
+                .map_or(0, count_to_u64),
         })
     }
 

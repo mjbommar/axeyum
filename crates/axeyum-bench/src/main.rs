@@ -51,7 +51,7 @@ mod run {
     use serde_json::{Value as JsonValue, json};
     use sha2::{Digest, Sha256};
 
-    const ARTIFACT_VERSION: u32 = 23;
+    const ARTIFACT_VERSION: u32 = 24;
     const CORPUS_MANIFEST_VERSION: u64 = 1;
     const CONTENT_HASH_PREFIX: &str = "sha256:";
     const DETERMINISM_PROFILE: &str = "axeyum-bench-fixed-seeds-v1";
@@ -562,7 +562,7 @@ mod run {
         }
     }
 
-    #[derive(Debug, Clone, Copy)]
+    #[derive(Debug, Clone, Copy, Default)]
     struct LayerSample {
         word_preprocess: f64,
         bit_blast: f64,
@@ -573,8 +573,28 @@ mod run {
         model_replay: f64,
         aig_inputs: u64,
         aig_nodes: u64,
+        aig_and_requests: u64,
+        aig_and_trivial_simplifications: u64,
+        aig_and_absorption_simplifications: u64,
+        aig_and_structural_hash_hits: u64,
+        aig_and_nodes_created: u64,
         cnf_variables: u64,
         cnf_clauses: u64,
+        cnf_planning: f64,
+        cnf_variable_allocation: f64,
+        cnf_gate_encoding: f64,
+        cnf_root_encoding: f64,
+        cnf_reachable_nodes: u64,
+        cnf_skipped_helper_nodes: u64,
+        cnf_direct_root_nodes: u64,
+        cnf_xor_gates: u64,
+        cnf_not_ite_gates: u64,
+        cnf_not_and_gates: u64,
+        cnf_and_tree_gates: u64,
+        cnf_binary_and_gates: u64,
+        cnf_clause_attempts: u64,
+        cnf_tautological_clauses_skipped: u64,
+        cnf_duplicate_clauses_skipped: u64,
     }
 
     /// Original-query structural profile used to verify that an external `QF_BV`
@@ -756,6 +776,46 @@ mod run {
     }
 
     impl LayerSample {
+        fn from_layers(
+            layers: &BvLayerStats,
+            word_preprocess: Duration,
+            model_replay: Duration,
+        ) -> Self {
+            Self {
+                word_preprocess: word_preprocess.as_secs_f64(),
+                bit_blast: layers.bit_blast.as_secs_f64(),
+                cnf_encode: layers.cnf_encode.as_secs_f64(),
+                cnf_inprocess: layers.cnf_inprocess.as_secs_f64(),
+                solve: layers.solve.as_secs_f64(),
+                model_lift: layers.model_lift.as_secs_f64(),
+                model_replay: model_replay.as_secs_f64(),
+                aig_inputs: layers.aig_inputs,
+                aig_nodes: layers.aig_nodes,
+                aig_and_requests: layers.aig_and_requests,
+                aig_and_trivial_simplifications: layers.aig_and_trivial_simplifications,
+                aig_and_absorption_simplifications: layers.aig_and_absorption_simplifications,
+                aig_and_structural_hash_hits: layers.aig_and_structural_hash_hits,
+                aig_and_nodes_created: layers.aig_and_nodes_created,
+                cnf_variables: layers.cnf_variables,
+                cnf_clauses: layers.cnf_clauses,
+                cnf_planning: layers.cnf_planning.as_secs_f64(),
+                cnf_variable_allocation: layers.cnf_variable_allocation.as_secs_f64(),
+                cnf_gate_encoding: layers.cnf_gate_encoding.as_secs_f64(),
+                cnf_root_encoding: layers.cnf_root_encoding.as_secs_f64(),
+                cnf_reachable_nodes: layers.cnf_reachable_nodes,
+                cnf_skipped_helper_nodes: layers.cnf_skipped_helper_nodes,
+                cnf_direct_root_nodes: layers.cnf_direct_root_nodes,
+                cnf_xor_gates: layers.cnf_xor_gates,
+                cnf_not_ite_gates: layers.cnf_not_ite_gates,
+                cnf_not_and_gates: layers.cnf_not_and_gates,
+                cnf_and_tree_gates: layers.cnf_and_tree_gates,
+                cnf_binary_and_gates: layers.cnf_binary_and_gates,
+                cnf_clause_attempts: layers.cnf_clause_attempts,
+                cnf_tautological_clauses_skipped: layers.cnf_tautological_clauses_skipped,
+                cnf_duplicate_clauses_skipped: layers.cnf_duplicate_clauses_skipped,
+            }
+        }
+
         fn total_s(self) -> f64 {
             self.word_preprocess
                 + self.bit_blast
@@ -764,6 +824,19 @@ mod run {
                 + self.solve
                 + self.model_lift
                 + self.model_replay
+        }
+
+        fn aig_outcomes(self) -> u64 {
+            self.aig_and_trivial_simplifications
+                + self.aig_and_absorption_simplifications
+                + self.aig_and_structural_hash_hits
+                + self.aig_and_nodes_created
+        }
+
+        fn cnf_clause_outcomes(self) -> u64 {
+            self.cnf_clauses
+                + self.cnf_tautological_clauses_skipped
+                + self.cnf_duplicate_clauses_skipped
         }
     }
 
@@ -1686,6 +1759,87 @@ mod run {
         record
     }
 
+    fn construction_attribution_record(samples: &[LayerSample]) -> JsonValue {
+        let count = |select: fn(LayerSample) -> u64| {
+            samples
+                .iter()
+                .copied()
+                .map(select)
+                .fold(0_u64, u64::saturating_add)
+        };
+        let seconds =
+            |select: fn(LayerSample) -> f64| samples.iter().copied().map(select).sum::<f64>();
+
+        let aig_requests = count(|sample| sample.aig_and_requests);
+        let aig_outcomes = count(LayerSample::aig_outcomes);
+        let cnf_attempts = count(|sample| sample.cnf_clause_attempts);
+        let cnf_clause_outcomes = count(LayerSample::cnf_clause_outcomes);
+        json!({
+            "cnf_subphases_are_nested_in_cnf_encode": true,
+            "aig": {
+                "and_requests": aig_requests,
+                "trivial_simplifications": count(
+                    |sample| sample.aig_and_trivial_simplifications,
+                ),
+                "absorption_simplifications": count(
+                    |sample| sample.aig_and_absorption_simplifications,
+                ),
+                "structural_hash_hits": count(
+                    |sample| sample.aig_and_structural_hash_hits,
+                ),
+                "nodes_created": count(|sample| sample.aig_and_nodes_created),
+                "request_outcomes_partition_requests": aig_outcomes == aig_requests,
+            },
+            "cnf": {
+                "subphase_s": {
+                    "planning": seconds(|sample| sample.cnf_planning),
+                    "variable_allocation": seconds(
+                        |sample| sample.cnf_variable_allocation,
+                    ),
+                    "gate_encoding": seconds(|sample| sample.cnf_gate_encoding),
+                    "root_encoding": seconds(|sample| sample.cnf_root_encoding),
+                },
+                "subphase_distributions": {
+                    "planning": timing_distribution_record(
+                        samples,
+                        |sample| sample.cnf_planning,
+                    ),
+                    "variable_allocation": timing_distribution_record(
+                        samples,
+                        |sample| sample.cnf_variable_allocation,
+                    ),
+                    "gate_encoding": timing_distribution_record(
+                        samples,
+                        |sample| sample.cnf_gate_encoding,
+                    ),
+                    "root_encoding": timing_distribution_record(
+                        samples,
+                        |sample| sample.cnf_root_encoding,
+                    ),
+                },
+                "reachable_nodes": count(|sample| sample.cnf_reachable_nodes),
+                "skipped_helper_nodes": count(|sample| sample.cnf_skipped_helper_nodes),
+                "direct_root_nodes": count(|sample| sample.cnf_direct_root_nodes),
+                "gate_families": {
+                    "xor": count(|sample| sample.cnf_xor_gates),
+                    "not_ite": count(|sample| sample.cnf_not_ite_gates),
+                    "not_and": count(|sample| sample.cnf_not_and_gates),
+                    "and_tree": count(|sample| sample.cnf_and_tree_gates),
+                    "binary_and": count(|sample| sample.cnf_binary_and_gates),
+                },
+                "clause_attempts": cnf_attempts,
+                "tautological_clauses_skipped": count(
+                    |sample| sample.cnf_tautological_clauses_skipped,
+                ),
+                "duplicate_clauses_skipped": count(
+                    |sample| sample.cnf_duplicate_clauses_skipped,
+                ),
+                "clauses_emitted": count(|sample| sample.cnf_clauses),
+                "clause_outcomes_partition_attempts": cnf_clause_outcomes == cnf_attempts,
+            },
+        })
+    }
+
     /// Corpus layer attribution: per-stage seconds, p50/p95 distributions, each
     /// stage's share of the pure-Rust cold pipeline, and the gate (a) verdict on
     /// whether SAT solve time dominates. `null` when no `sat-bv` instance was
@@ -1768,6 +1922,7 @@ mod run {
                     |sample| sample.cnf_clauses,
                 ),
             },
+            "construction": construction_attribution_record(&s.layer_samples),
             // Gate (a): does SAT solve time dominate end-to-end? The CDCL-core
             // priority gate needs this and a CaDiCaL/Kissat gap before it jumps
             // the queue ahead of encoding work.
@@ -1815,19 +1970,7 @@ mod run {
         let Some(layers) = BvLayerStats::from_solve_stats(&record.stats) else {
             return JsonValue::Null;
         };
-        let sample = LayerSample {
-            word_preprocess: word_preprocess.as_secs_f64(),
-            bit_blast: layers.bit_blast.as_secs_f64(),
-            cnf_encode: layers.cnf_encode.as_secs_f64(),
-            cnf_inprocess: layers.cnf_inprocess.as_secs_f64(),
-            solve: layers.solve.as_secs_f64(),
-            model_lift: layers.model_lift.as_secs_f64(),
-            model_replay: record.model_replay.as_secs_f64(),
-            aig_inputs: layers.aig_inputs,
-            aig_nodes: layers.aig_nodes,
-            cnf_variables: layers.cnf_variables,
-            cnf_clauses: layers.cnf_clauses,
-        };
+        let sample = LayerSample::from_layers(&layers, word_preprocess, record.model_replay);
         json!({
             "word_preprocess_ms": sample.word_preprocess * 1000.0,
             "bit_blast_ms": sample.bit_blast * 1000.0,
@@ -1841,6 +1984,43 @@ mod run {
             "aig_nodes": layers.aig_nodes,
             "cnf_variables": layers.cnf_variables,
             "cnf_clauses": layers.cnf_clauses,
+            "construction": {
+                "cnf_subphases_are_nested_in_cnf_encode": true,
+                "aig": {
+                    "and_requests": layers.aig_and_requests,
+                    "trivial_simplifications": layers.aig_and_trivial_simplifications,
+                    "absorption_simplifications": layers.aig_and_absorption_simplifications,
+                    "structural_hash_hits": layers.aig_and_structural_hash_hits,
+                    "nodes_created": layers.aig_and_nodes_created,
+                    "request_outcomes_partition_requests":
+                        sample.aig_outcomes() == sample.aig_and_requests,
+                },
+                "cnf": {
+                    "subphase_ms": {
+                        "planning": sample.cnf_planning * 1000.0,
+                        "variable_allocation": sample.cnf_variable_allocation * 1000.0,
+                        "gate_encoding": sample.cnf_gate_encoding * 1000.0,
+                        "root_encoding": sample.cnf_root_encoding * 1000.0,
+                    },
+                    "reachable_nodes": layers.cnf_reachable_nodes,
+                    "skipped_helper_nodes": layers.cnf_skipped_helper_nodes,
+                    "direct_root_nodes": layers.cnf_direct_root_nodes,
+                    "gate_families": {
+                        "xor": layers.cnf_xor_gates,
+                        "not_ite": layers.cnf_not_ite_gates,
+                        "not_and": layers.cnf_not_and_gates,
+                        "and_tree": layers.cnf_and_tree_gates,
+                        "binary_and": layers.cnf_binary_and_gates,
+                    },
+                    "clause_attempts": layers.cnf_clause_attempts,
+                    "tautological_clauses_skipped":
+                        layers.cnf_tautological_clauses_skipped,
+                    "duplicate_clauses_skipped": layers.cnf_duplicate_clauses_skipped,
+                    "clauses_emitted": layers.cnf_clauses,
+                    "clause_outcomes_partition_attempts":
+                        sample.cnf_clause_outcomes() == sample.cnf_clause_attempts,
+                },
+            },
         })
     }
 
@@ -3404,19 +3584,7 @@ mod run {
         let Some(layers) = BvLayerStats::from_solve_stats(&record.stats) else {
             return;
         };
-        let sample = LayerSample {
-            word_preprocess: word_preprocess.as_secs_f64(),
-            bit_blast: layers.bit_blast.as_secs_f64(),
-            cnf_encode: layers.cnf_encode.as_secs_f64(),
-            cnf_inprocess: layers.cnf_inprocess.as_secs_f64(),
-            solve: layers.solve.as_secs_f64(),
-            model_lift: layers.model_lift.as_secs_f64(),
-            model_replay: record.model_replay.as_secs_f64(),
-            aig_inputs: layers.aig_inputs,
-            aig_nodes: layers.aig_nodes,
-            cnf_variables: layers.cnf_variables,
-            cnf_clauses: layers.cnf_clauses,
-        };
+        let sample = LayerSample::from_layers(&layers, word_preprocess, record.model_replay);
         summary.layer_files += 1;
         summary.layer_word_preprocess_s += sample.word_preprocess;
         summary.layer_bit_blast_s += layers.bit_blast.as_secs_f64();
@@ -5520,6 +5688,7 @@ mod run {
                     aig_nodes: 16,
                     cnf_variables: 24,
                     cnf_clauses: 32,
+                    ..LayerSample::default()
                 },
                 LayerSample {
                     word_preprocess: 0.010,
@@ -5533,6 +5702,7 @@ mod run {
                     aig_nodes: 160,
                     cnf_variables: 240,
                     cnf_clauses: 320,
+                    ..LayerSample::default()
                 },
             ];
             let summary = Summary {
@@ -5572,6 +5742,53 @@ mod run {
             assert_eq!(
                 record["size_distributions"]["cnf_clauses"]["p95"],
                 json!(320)
+            );
+        }
+
+        #[test]
+        fn construction_attribution_partitions_requests_and_clause_attempts() {
+            let samples = [
+                LayerSample {
+                    aig_and_requests: 10,
+                    aig_and_trivial_simplifications: 1,
+                    aig_and_absorption_simplifications: 2,
+                    aig_and_structural_hash_hits: 3,
+                    aig_and_nodes_created: 4,
+                    cnf_clauses: 32,
+                    cnf_planning: 0.0001,
+                    cnf_clause_attempts: 35,
+                    cnf_tautological_clauses_skipped: 1,
+                    cnf_duplicate_clauses_skipped: 2,
+                    ..LayerSample::default()
+                },
+                LayerSample {
+                    aig_and_requests: 100,
+                    aig_and_trivial_simplifications: 10,
+                    aig_and_absorption_simplifications: 20,
+                    aig_and_structural_hash_hits: 30,
+                    aig_and_nodes_created: 40,
+                    cnf_clauses: 320,
+                    cnf_planning: 0.001,
+                    cnf_clause_attempts: 325,
+                    cnf_tautological_clauses_skipped: 2,
+                    cnf_duplicate_clauses_skipped: 3,
+                    ..LayerSample::default()
+                },
+            ];
+            let record = construction_attribution_record(&samples);
+            assert_eq!(record["aig"]["and_requests"], json!(110));
+            assert_eq!(
+                record["aig"]["request_outcomes_partition_requests"],
+                json!(true)
+            );
+            assert_eq!(
+                record["cnf"]["subphase_distributions"]["planning"]["p95_ms"],
+                json!(1.0)
+            );
+            assert_eq!(record["cnf"]["clause_attempts"], json!(360));
+            assert_eq!(
+                record["cnf"]["clause_outcomes_partition_attempts"],
+                json!(true)
             );
         }
 
@@ -5901,6 +6118,7 @@ mod run {
                 aig_nodes: 16,
                 cnf_variables: 24,
                 cnf_clauses: 32,
+                ..LayerSample::default()
             };
             let comparison = ClientComparisonSample {
                 axeyum_s: 0.011,

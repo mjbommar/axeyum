@@ -98,12 +98,33 @@ pub enum AigNode {
     And(AigLit, AigLit),
 }
 
+/// Deterministic construction counters for the primitive AND unique table.
+///
+/// Every call to [`Aig::and`] is classified exactly once as a trivial Boolean
+/// simplification, a local absorption/consensus simplification, a structural
+/// hash hit, or a newly allocated AND node. The counters are diagnostic only;
+/// they do not affect construction order or graph semantics.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct AigConstructionStats {
+    /// Total primitive AND requests, including requests made by OR/XOR/mux helpers.
+    pub and_requests: u64,
+    /// Requests eliminated by constant, identity, idempotence, or complement rules.
+    pub and_trivial_simplifications: u64,
+    /// Requests eliminated by absorption or consensus rules over existing nodes.
+    pub and_absorption_simplifications: u64,
+    /// Requests reusing an existing canonical AND node.
+    pub and_structural_hash_hits: u64,
+    /// Requests allocating a new canonical AND node.
+    pub and_nodes_created: u64,
+}
+
 /// A deterministic structurally hashed AIG.
 #[derive(Debug, Clone)]
 pub struct Aig {
     nodes: Vec<AigNode>,
     inputs: Vec<AigInput>,
     and_table: BTreeMap<(AigLit, AigLit), AigNodeId>,
+    construction_stats: AigConstructionStats,
 }
 
 impl Aig {
@@ -113,6 +134,7 @@ impl Aig {
             nodes: vec![AigNode::ConstFalse],
             inputs: Vec::new(),
             and_table: BTreeMap::new(),
+            construction_stats: AigConstructionStats::default(),
         }
     }
 
@@ -124,6 +146,11 @@ impl Aig {
     /// Returns the number of primary inputs.
     pub fn input_count(&self) -> usize {
         self.inputs.len()
+    }
+
+    /// Returns primitive AND construction counters accumulated by this graph.
+    pub fn construction_stats(&self) -> AigConstructionStats {
+        self.construction_stats
     }
 
     /// Returns input metadata in deterministic creation order.
@@ -169,21 +196,39 @@ impl Aig {
 
     /// Builds a structurally hashed AND of two literals.
     pub fn and(&mut self, lhs: AigLit, rhs: AigLit) -> AigLit {
+        self.construction_stats.and_requests =
+            self.construction_stats.and_requests.saturating_add(1);
         match simplify_and(lhs, rhs) {
-            SimplifiedAnd::Literal(lit) => lit,
+            SimplifiedAnd::Literal(lit) => {
+                self.construction_stats.and_trivial_simplifications = self
+                    .construction_stats
+                    .and_trivial_simplifications
+                    .saturating_add(1);
+                lit
+            }
             SimplifiedAnd::Node(mut a, mut b) => {
                 if b < a {
                     std::mem::swap(&mut a, &mut b);
                 }
                 if let Some(lit) = self.simplify_and_by_absorption(a, b) {
+                    self.construction_stats.and_absorption_simplifications = self
+                        .construction_stats
+                        .and_absorption_simplifications
+                        .saturating_add(1);
                     return lit;
                 }
                 let key = (a, b);
                 if let Some(node) = self.and_table.get(&key) {
+                    self.construction_stats.and_structural_hash_hits = self
+                        .construction_stats
+                        .and_structural_hash_hits
+                        .saturating_add(1);
                     return AigLit::positive(*node);
                 }
                 let node = self.push_node(AigNode::And(a, b));
                 self.and_table.insert(key, node);
+                self.construction_stats.and_nodes_created =
+                    self.construction_stats.and_nodes_created.saturating_add(1);
                 AigLit::positive(node)
             }
         }
@@ -627,6 +672,34 @@ mod tests {
         let p_or_not_q = aig.or(p, q.negated());
         assert_eq!(aig.and(p_or_q, p_or_not_q), p);
         assert_eq!(aig.and(p_or_not_q, p_or_q), p);
+    }
+
+    #[test]
+    fn construction_stats_classify_every_primitive_and_request() {
+        let mut aig = Aig::new();
+        let p = aig.input("p");
+        let q = aig.input("q");
+
+        assert_eq!(aig.and(p, p), p); // trivial
+        let p_and_q = aig.and(p, q); // new node
+        assert_eq!(aig.and(q, p), p_and_q); // structural-hash hit
+        let p_or_q = aig.or(p, q); // one new primitive AND
+        assert_eq!(aig.and(p, p_or_q), p); // absorption
+
+        let stats = aig.construction_stats();
+        assert_eq!(stats.and_requests, 5);
+        assert_eq!(stats.and_trivial_simplifications, 1);
+        assert_eq!(stats.and_absorption_simplifications, 1);
+        assert_eq!(stats.and_structural_hash_hits, 1);
+        assert_eq!(stats.and_nodes_created, 2);
+        assert_eq!(
+            stats.and_requests,
+            stats.and_trivial_simplifications
+                + stats.and_absorption_simplifications
+                + stats.and_structural_hash_hits
+                + stats.and_nodes_created,
+            "every primitive AND request has exactly one outcome"
+        );
     }
 
     #[test]
