@@ -2067,7 +2067,11 @@ plan is built and committed on the current branch:
   pin hardware parsing, completeness, dirty rejection, source-hash exclusion,
   and hardware-hash sensitivity; a live dirty-tree negative run fails as
   intended. Clean v20 smoke artifacts are the immediate post-source-commit
-  checkpoint; no client performance conclusion is added.
+  checkpoint: both release smokes name clean source `f1ed213e`, use the same
+  environment hash, and are 2/2 decided/manifest-agreed/Z3-agreed with zero
+  errors/disagreements/model-replay failures; the proof companion checks its
+  1/1 UNSAT with zero missing proofs. These are identity/plumbing results only;
+  no client performance conclusion is added.
 - **2026-07-13 — GQ1 artifact-v19 replay attribution and proof companion
   landed.** SAT model reconstruction/replay against untouched assertions is now
   a separately timed stage included in each cold total, PAR-2, layer p50/p95,
