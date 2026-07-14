@@ -69,6 +69,7 @@ just bench-public-qfbv-sat-bv-guarded            # node/CNF guarded run
 just bench-public-qfbv-sat-bv-replay-refine      # replay-checked query refinement
 just bench-glaurung-manifest-smoke               # client manifest/timing plumbing
 just bench-glaurung-manifest-proof-smoke         # fail-closed DRAT-check plumbing
+just generate-glaurung-manifest CORPUS INDEX OUT # bind capture facts to exact bytes
 ```
 
 **Resource rules** (this matters — the harness can OOM a small host otherwise):

@@ -8,6 +8,7 @@
 //!
 //! Usage: `axeyum-bench <dir> [--timeout-ms N] [--limit N] [--out FILE]`
 //!   `[--corpus-source TEXT] [--corpus-manifest FILE] [--corpus-tier NAME]`
+//!   `[--generate-corpus-manifest CAPTURE_INDEX]`
 //!   `[--logic LOGIC] [--families CSV] [--seed TEXT]`
 //!   `[--rewrite off|default] [--backend sat-bv|z3]`
 //!   `[--query-plan full|first-assertion-support|replay-refine|replay-refine-exact]`
@@ -188,6 +189,7 @@ mod run {
         corpus_source: Option<String>,
         corpus_manifest: Option<PathBuf>,
         corpus_tier: Option<String>,
+        generate_corpus_manifest: Option<PathBuf>,
         logic: Option<String>,
         families: Vec<String>,
         seed: String,
@@ -224,6 +226,7 @@ mod run {
             corpus_source: None,
             corpus_manifest: None,
             corpus_tier: None,
+            generate_corpus_manifest: None,
             logic: None,
             families: Vec::new(),
             seed: "none".to_owned(),
@@ -278,6 +281,9 @@ mod run {
                 parsed.corpus_manifest = Some(PathBuf::from(next_value(args, flag)?));
             }
             "--corpus-tier" => parsed.corpus_tier = Some(next_value(args, flag)?),
+            "--generate-corpus-manifest" => {
+                parsed.generate_corpus_manifest = Some(PathBuf::from(next_value(args, flag)?));
+            }
             "--logic" => parsed.logic = Some(next_value(args, flag)?),
             "--families" => {
                 parsed.families = next_value(args, flag)?
@@ -397,6 +403,23 @@ mod run {
     }
 
     fn validate_args(args: &Args) -> Result<(), String> {
+        if args.generate_corpus_manifest.is_some() {
+            if args.out.is_none() {
+                return Err("`--generate-corpus-manifest` requires `--out`".to_owned());
+            }
+            if args.corpus_manifest.is_some() || args.corpus_tier.is_some() {
+                return Err(
+                    "`--generate-corpus-manifest` cannot be combined with `--corpus-manifest` or `--corpus-tier`"
+                        .to_owned(),
+                );
+            }
+            if args.limit != usize::MAX {
+                return Err(
+                    "`--generate-corpus-manifest` cannot be combined with `--limit`; capture indexes must cover the exact corpus"
+                        .to_owned(),
+                );
+            }
+        }
         if args.refine_adaptive_batch
             && !matches!(
                 args.query_plan,
@@ -786,6 +809,19 @@ mod run {
                 return ExitCode::FAILURE;
             }
         };
+        if let Some(index_path) = &args.generate_corpus_manifest {
+            let out = args
+                .out
+                .as_deref()
+                .expect("generation mode was validated to require --out");
+            return match generate_corpus_manifest(&args.dir, index_path, out) {
+                Ok(()) => ExitCode::SUCCESS,
+                Err(error) => {
+                    eprintln!("{error}");
+                    ExitCode::FAILURE
+                }
+            };
+        }
         let corpus = match load_corpus(&args) {
             Ok(corpus) => corpus,
             Err(error) => {
@@ -4247,6 +4283,176 @@ mod run {
         encoded
     }
 
+    /// Turn the shadow-diff exporter's small metadata index into the immutable
+    /// manifest consumed by benchmark runs. The producer owns semantic facts
+    /// (`expected`, `family`, and tier membership); this side owns byte identity
+    /// and exact-directory validation, so a capture cannot accidentally ship a
+    /// stale digest or omit a query that is present on disk.
+    fn generate_corpus_manifest(
+        root: &Path,
+        index_path: &Path,
+        output_path: &Path,
+    ) -> Result<(), String> {
+        if index_path == output_path {
+            return Err(
+                "capture index and generated corpus manifest must use different paths".to_owned(),
+            );
+        }
+        let index_bytes = fs::read(index_path)
+            .map_err(|error| format!("read capture index {}: {error}", index_path.display()))?;
+        let manifest_bytes =
+            render_corpus_manifest_from_capture_index(root, index_path, &index_bytes, output_path)?;
+        fs::write(output_path, manifest_bytes).map_err(|error| {
+            format!(
+                "write generated corpus manifest {}: {error}",
+                output_path.display()
+            )
+        })
+    }
+
+    fn render_corpus_manifest_from_capture_index(
+        root: &Path,
+        index_path: &Path,
+        bytes: &[u8],
+        generated_path: &Path,
+    ) -> Result<Vec<u8>, String> {
+        let value: JsonValue = serde_json::from_slice(bytes)
+            .map_err(|error| format!("parse capture index {}: {error}", index_path.display()))?;
+        let object = value
+            .as_object()
+            .ok_or_else(|| "capture index root must be a JSON object".to_owned())?;
+        validate_capture_index_keys(
+            object,
+            &["version", "name", "source", "logic", "files"],
+            "root",
+        )?;
+        let version = object
+            .get("version")
+            .and_then(JsonValue::as_u64)
+            .ok_or_else(|| "capture index `version` must be an unsigned integer".to_owned())?;
+        if version != CORPUS_MANIFEST_VERSION {
+            return Err(format!(
+                "unsupported capture index version {version}; expected {CORPUS_MANIFEST_VERSION}"
+            ));
+        }
+        let name = required_capture_index_string(object, "name")?;
+        let source = required_capture_index_string(object, "source")?;
+        let logic = required_capture_index_string(object, "logic")?;
+        let file_values = object
+            .get("files")
+            .and_then(JsonValue::as_array)
+            .ok_or_else(|| "capture index `files` must be an array".to_owned())?;
+        if file_values.is_empty() {
+            return Err("capture index `files` must not be empty".to_owned());
+        }
+
+        let mut paths = BTreeSet::new();
+        let mut entries = Vec::with_capacity(file_values.len());
+        for (index, value) in file_values.iter().enumerate() {
+            let entry = parse_capture_index_entry(root, index, value)?;
+            if !paths.insert(entry.path.clone()) {
+                return Err(format!("duplicate capture index path `{}`", entry.path));
+            }
+            entries.push(entry);
+        }
+        validate_manifest_membership(root, &entries)
+            .map_err(|error| error.replacen("corpus manifest", "capture index", 1))?;
+
+        let files = entries
+            .iter()
+            .map(|entry| {
+                json!({
+                    "path": entry.path,
+                    "content_hash": entry.content_hash,
+                    "expected": entry.expected,
+                    "family": entry.family,
+                    "tiers": entry.tiers,
+                })
+            })
+            .collect::<Vec<_>>();
+        let manifest = json!({
+            "version": CORPUS_MANIFEST_VERSION,
+            "name": name,
+            "source": source,
+            "logic": logic,
+            "files": files,
+        });
+        let mut rendered = serde_json::to_vec_pretty(&manifest)
+            .map_err(|error| format!("serialize generated corpus manifest: {error}"))?;
+        rendered.push(b'\n');
+
+        // Exercise the exact benchmark ingestion path before writing anything.
+        // This also protects the generator and consumer from schema drift.
+        parse_corpus_manifest(root, generated_path, &rendered, None)?;
+        Ok(rendered)
+    }
+
+    fn parse_capture_index_entry(
+        root: &Path,
+        index: usize,
+        value: &JsonValue,
+    ) -> Result<CorpusManifestEntry, String> {
+        let object = value
+            .as_object()
+            .ok_or_else(|| format!("capture index files[{index}] must be an object"))?;
+        validate_capture_index_keys(
+            object,
+            &["path", "expected", "family", "tiers"],
+            &format!("files[{index}]"),
+        )?;
+        let path = required_capture_index_string(object, "path")?;
+        validate_manifest_path(&path)?;
+        let expected = required_capture_index_string(object, "expected")?;
+        if !matches!(expected.as_str(), "sat" | "unsat") {
+            return Err(format!(
+                "capture index `{path}` expected verdict must be `sat` or `unsat`"
+            ));
+        }
+        let family = required_capture_index_string(object, "family")?;
+        validate_manifest_label(&family, &format!("family for `{path}`"))?;
+        let tiers = required_capture_index_string_array(object, "tiers")?;
+        validate_manifest_tiers(&path, &tiers)?;
+        let file_path = root.join(&path);
+        let file_bytes = fs::read(&file_path)
+            .map_err(|error| format!("read captured query {}: {error}", file_path.display()))?;
+        Ok(CorpusManifestEntry {
+            path,
+            content_hash: content_hash(&file_bytes),
+            expected,
+            family,
+            tiers,
+        })
+    }
+
+    fn validate_capture_index_keys(
+        object: &serde_json::Map<String, JsonValue>,
+        allowed: &[&str],
+        location: &str,
+    ) -> Result<(), String> {
+        if let Some(key) = object.keys().find(|key| !allowed.contains(&key.as_str())) {
+            return Err(format!(
+                "capture index {location} contains unknown field `{key}`"
+            ));
+        }
+        Ok(())
+    }
+
+    fn required_capture_index_string(
+        object: &serde_json::Map<String, JsonValue>,
+        field: &str,
+    ) -> Result<String, String> {
+        required_manifest_string(object, field)
+            .map_err(|error| error.replacen("corpus manifest", "capture index", 1))
+    }
+
+    fn required_capture_index_string_array(
+        object: &serde_json::Map<String, JsonValue>,
+        field: &str,
+    ) -> Result<Vec<String>, String> {
+        required_manifest_string_array(object, field)
+            .map_err(|error| error.replacen("corpus manifest", "capture index", 1))
+    }
+
     fn load_corpus(args: &Args) -> Result<CorpusSelection, String> {
         let Some(manifest_path) = &args.corpus_manifest else {
             return Ok(CorpusSelection {
@@ -4641,6 +4847,14 @@ mod run {
             })
         }
 
+        fn micro_capture_index_value() -> JsonValue {
+            let mut value = micro_manifest_value();
+            for entry in value["files"].as_array_mut().unwrap() {
+                entry.as_object_mut().unwrap().remove("content_hash");
+            }
+            value
+        }
+
         #[test]
         fn blocker_buckets_categorize_undecided_by_root_cause() {
             fn rec(outcome: &'static str, detail: Option<&str>) -> SolveRecord {
@@ -4756,6 +4970,71 @@ mod run {
             assert_eq!(selection.entries[1].path, "unsat-ult-zero.smt2");
             assert_eq!(selection.selected_tier.as_deref(), Some("representative"));
             assert_eq!(selection.manifest_hash, content_hash(&bytes));
+        }
+
+        #[test]
+        fn capture_index_generates_deterministic_self_validating_manifest() {
+            let index = serde_json::to_vec(&micro_capture_index_value()).unwrap();
+            let first = render_corpus_manifest_from_capture_index(
+                &micro_corpus_root(),
+                Path::new("capture-index.json"),
+                &index,
+                Path::new("generated-manifest.json"),
+            )
+            .unwrap();
+            let second = render_corpus_manifest_from_capture_index(
+                &micro_corpus_root(),
+                Path::new("capture-index.json"),
+                &index,
+                Path::new("generated-manifest.json"),
+            )
+            .unwrap();
+            assert_eq!(first, second);
+            assert_eq!(first.last(), Some(&b'\n'));
+
+            let selection = parse_corpus_manifest(
+                &micro_corpus_root(),
+                Path::new("generated-manifest.json"),
+                &first,
+                Some("representative"),
+            )
+            .unwrap();
+            assert_eq!(selection.total_entries, 3);
+            assert_eq!(selection.entries.len(), 2);
+            assert_eq!(
+                selection.entries[0].content_hash,
+                content_hash(&fs::read(micro_corpus_root().join("sat-add.smt2")).unwrap())
+            );
+        }
+
+        #[test]
+        fn capture_index_rejects_stale_hashes_and_incomplete_membership() {
+            let mut stale_hash = micro_capture_index_value();
+            stale_hash["files"][0]["content_hash"] =
+                json!("sha256:0000000000000000000000000000000000000000000000000000000000000000");
+            let error = render_corpus_manifest_from_capture_index(
+                &micro_corpus_root(),
+                Path::new("capture-index.json"),
+                &serde_json::to_vec(&stale_hash).unwrap(),
+                Path::new("generated-manifest.json"),
+            )
+            .unwrap_err();
+            assert!(error.contains("unknown field `content_hash`"), "{error}");
+
+            let mut incomplete = micro_capture_index_value();
+            incomplete["files"].as_array_mut().unwrap().pop();
+            let error = render_corpus_manifest_from_capture_index(
+                &micro_corpus_root(),
+                Path::new("capture-index.json"),
+                &serde_json::to_vec(&incomplete).unwrap(),
+                Path::new("generated-manifest.json"),
+            )
+            .unwrap_err();
+            assert!(
+                error.contains("capture index membership mismatch"),
+                "{error}"
+            );
+            assert!(error.contains("unsat-ult-zero.smt2"), "{error}");
         }
 
         #[test]

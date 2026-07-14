@@ -125,6 +125,17 @@ query is timed. Generated `bench-results/**` are excluded from the dirty check s
 performance and proof companions can be emitted sequentially from one clean
 source checkout without weakening the source-integrity gate.
 
+The capture-ingestion follow-up defines a versioned shadow-diff capture index
+that contains only the producer-owned semantic facts: stable query path/order,
+trusted expected verdict, workload family, and representative/full tier
+membership. `axeyum-bench --generate-corpus-manifest` rejects unknown fields
+and incomplete directory membership, computes every SHA-256 from the captured
+query bytes, and re-parses its deterministic output through the ordinary
+manifest-v1 validator before writing it. In particular, the index may not carry
+a `content_hash`; this prevents stale exporter bookkeeping from being promoted
+to corpus identity. The committed micro index tests the handshake but remains
+non-client evidence.
+
 ## Alternatives
 
 - **Implicitly widen or truncate binary operands.** Rejected: it masks client

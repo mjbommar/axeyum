@@ -197,6 +197,11 @@ records the contract and the first measured baselines.
   independently of SMT-LIB `:status`, and includes the manifest digest and tier
   in the experiment identity. The committed micro manifest is only a plumbing
   smoke; it does not satisfy the Glaurung representativeness requirement.
+  A versioned capture-index generator now supplies the producer/consumer
+  handshake: the shadow-diff exporter declares ordered paths, trusted verdicts,
+  families, and tiers, while Axeyum requires exact `.smt2` membership, computes
+  hashes from disk, and validates the generated manifest through the same run
+  ingestion path. Exporter-provided hashes and unknown fields are rejected.
 - Artifact version 18 makes client-shape representativeness inspectable rather
   than anecdotal. It profiles unique nodes in each untouched original-query DAG:
   formula shape, BV width diversity, extract/concat/extension and surviving

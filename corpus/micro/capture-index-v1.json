@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "name": "axeyum-micro-v1",
+  "source": "committed Axeyum micro corpus; ingestion smoke only, not client performance data",
+  "logic": "QF_BV",
+  "files": [
+    {
+      "path": "sat-add.smt2",
+      "expected": "sat",
+      "family": "arithmetic",
+      "tiers": ["representative", "full"]
+    },
+    {
+      "path": "sat-quoted-symbol.smt2",
+      "expected": "sat",
+      "family": "symbols",
+      "tiers": ["full"]
+    },
+    {
+      "path": "unsat-ult-zero.smt2",
+      "expected": "unsat",
+      "family": "comparison",
+      "tiers": ["representative", "full"]
+    }
+  ]
+}

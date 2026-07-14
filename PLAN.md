@@ -83,6 +83,12 @@ the source revision, so `config_hash + environment_hash` compares consecutive
 commits and the revision identifies which commit produced each result.
 `--require-reproducible-run` fails before solving if any identity field is
 missing or source changes are present; all Glaurung recipes require it.
+The remaining shadow-diff handoff is also executable: a versioned capture index
+contains the producer-owned ordered path, trusted verdict, family, and tier
+facts, while `--generate-corpus-manifest` checks exact directory membership,
+computes every query digest from disk, rejects exporter-supplied hashes/unknown
+fields, and re-validates the deterministic manifest through the ordinary run
+ingestion path. The committed micro index proves this handshake only.
 GQ1/GQ10 remain open until the actual Glaurung capture is ingested.
 
 **Non-negotiable acceptance gate.** Comparable runs require 100% decided on the
