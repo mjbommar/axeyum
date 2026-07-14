@@ -857,7 +857,9 @@ segmented so large proofs avoid monolithic arena reallocations. The public
 the 128 MiB regression bound, contains no `sorryAx`, and matches the direct
 route. Quantified-BV Lean UNSAT coverage rises **17→18/18**. The same logical
 AIG sharing reduces ADR-0129's module to **18,576,938 bytes**, with its release
-gate passing in **4.10 s at 419,460 KiB peak**. **Next:** ingest the real
+gate passing in **4.10 s at 419,460 KiB peak**; a scoped 64 MiB reconstruction
+worker also makes its full debug file pass 9/9 without relying on the harness
+stack. **Next:** ingest the real
 Glaurung capture and execute GQ1/GQ10 before choosing a cold-path optimization;
 in the depth lane, broaden nested/alternating QSAT and quantified-UF models.
 **Scaled source-bound BV alternation is now LANDED (ADR-0125):** only the

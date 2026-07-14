@@ -2841,8 +2841,32 @@ pub(crate) fn bv_alternation_counterexample_lean_shape(
 /// Returns [`ReconstructError`] if certificate replay fails, the admitted
 /// source shape exceeds the typed Lean boundary, an implication proof cannot be
 /// regenerated, or the scoped final proof does not kernel-check to `False`.
-#[allow(clippy::too_many_lines)]
 pub fn reconstruct_bv_paired_existential_transfer_to_lean_module(
+    arena: &TermArena,
+    assertions: &[TermId],
+    certificate: &BvPairedExistentialTransferCertificate,
+) -> Result<String, ReconstructError> {
+    const RECONSTRUCTION_STACK_BYTES: usize = 64 * 1024 * 1024;
+    std::thread::scope(|scope| {
+        let worker = std::thread::Builder::new()
+            .name("axeyum-adr0129-lean".to_owned())
+            .stack_size(RECONSTRUCTION_STACK_BYTES)
+            .spawn_scoped(scope, || {
+                reconstruct_bv_paired_existential_transfer_to_lean_module_impl(
+                    arena,
+                    assertions,
+                    certificate,
+                )
+            })
+            .map_err(|error| decline(format!("failed to start reconstruction worker: {error}")))?;
+        worker
+            .join()
+            .map_err(|_| decline("paired-existential reconstruction worker panicked"))?
+    })
+}
+
+#[allow(clippy::too_many_lines)]
+fn reconstruct_bv_paired_existential_transfer_to_lean_module_impl(
     arena: &TermArena,
     assertions: &[TermId],
     certificate: &BvPairedExistentialTransferCertificate,
