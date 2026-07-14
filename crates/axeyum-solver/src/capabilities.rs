@@ -1370,9 +1370,12 @@ pub const CAPABILITIES: &[Capability] = &[
                    to checked UNSAT in median 0.364 ms. The public quantified-BV slice is 32 SAT / \
                    15 UNSAT / 0 unknown / 7 unsupported with 47/47 checked/certified decisions, zero \
                    disagreement, error, or replay failure, and an empty target trust ledger. The \
-                   complete direct-Z3 suite covers 1,464 cases and controls. Non-conjunctive contexts, \
-                   multiple selected universals, nested quantifiers, functions, arrays, arithmetic, \
-                   general QSAT, and Lean reconstruction remain open",
+                   complete direct-Z3 suite covers 1,464 cases and controls. The strict-conjunct \
+                   route now reconstructs the untouched source through typed universal application \
+                   and a compact kernel-checked CPS Alethe/RUP tail; its release gate passes under \
+                   4 GiB and closes public quantified-BV Lean UNSAT at 18/18. Non-conjunctive \
+                   contexts, multiple selected universals, nested quantifiers, functions, arrays, \
+                   arithmetic, and general QSAT remain open",
         reference: "ADR-0127",
     },
     Capability {
