@@ -89,6 +89,13 @@ facts, while `--generate-corpus-manifest` checks exact directory membership,
 computes every query digest from disk, rejects exporter-supplied hashes/unknown
 fields, and re-validates the deterministic manifest through the ordinary run
 ingestion path. The committed micro index proves this handshake only.
+For short client runs, `bench-glaurung-qfbv-repeated` now preserves the cold
+boundary with a fresh process and artifact per whole-corpus trial. Its
+fail-closed summary requires identical configuration and clean experiment
+identity plus every validity gate in every trial, then reports p50/p95, sample
+standard deviation, and coefficient of variation for corpus-level Axeyum/Z3
+totals, their ratio, and each attributed Axeyum stage. This is run-to-run
+variance; the per-query distributions remain shape distributions.
 GQ1/GQ10 remain open until the actual Glaurung capture is ingested.
 
 **Non-negotiable acceptance gate.** Comparable runs require 100% decided on the

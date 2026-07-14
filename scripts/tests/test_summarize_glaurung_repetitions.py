@@ -1,0 +1,133 @@
+from __future__ import annotations
+
+import importlib.util
+import json
+import tempfile
+import unittest
+from pathlib import Path
+
+
+SCRIPT = Path(__file__).parents[1] / "summarize-glaurung-repetitions.py"
+SPEC = importlib.util.spec_from_file_location("summarize_glaurung_repetitions", SCRIPT)
+assert SPEC is not None and SPEC.loader is not None
+MODULE = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(MODULE)
+
+
+def artifact(axeyum_seconds: float, z3_seconds: float) -> dict:
+    stages = {
+        "word_preprocess_s": axeyum_seconds * 0.1,
+        "bit_blast_s": axeyum_seconds * 0.2,
+        "cnf_encode_s": axeyum_seconds * 0.2,
+        "cnf_inprocess_s": 0.0,
+        "solve_s": axeyum_seconds * 0.4,
+        "model_lift_s": axeyum_seconds * 0.05,
+        "model_replay_s": axeyum_seconds * 0.05,
+    }
+    return {
+        "version": 20,
+        "config": {
+            "backend": "axeyum-sat-bv rustsat-batsat",
+            "compare_backend": "z3 4.13.3.0",
+            "compare_z3": True,
+            "config_hash": "cfg",
+            "corpus_hash": "corpus",
+            "corpus_manifest": {
+                "content_hash": "sha256:manifest",
+                "selected_entries": 2,
+            },
+            "experiment": {
+                "environment_hash": "sha256:environment",
+                "source": {"dirty": False, "revision": "revision"},
+            },
+            "jobs": 1,
+            "require_in_process_z3": True,
+            "require_reproducible_run": True,
+        },
+        "summary": {
+            "files": 2,
+            "decided": 2,
+            "decided_percent": 100.0,
+            "errors": 0,
+            "disagree": 0,
+            "model_replay_failures": 0,
+            "manifest": {"expected": 2, "compared": 2, "agree": 2, "disagree": 0},
+            "oracle": {
+                "enabled": True,
+                "compared": 2,
+                "agree": 2,
+                "disagree": 0,
+                "skipped": 0,
+            },
+            "unsat_proof_replay": {"requested": False, "missing": 0},
+            "layer_attribution": {
+                "instances": 2,
+                "total_pipeline_s": axeyum_seconds,
+                **stages,
+            },
+            "client_comparison": {
+                "instances": 2,
+                "axeyum_total_s": axeyum_seconds,
+                "z3_total_s": z3_seconds,
+                "axeyum_over_z3_ratio": axeyum_seconds / z3_seconds,
+            },
+        },
+    }
+
+
+class RepetitionSummaryTests(unittest.TestCase):
+    def write_artifact(self, root: Path, name: str, value: dict) -> Path:
+        path = root / name
+        path.write_text(json.dumps(value), encoding="utf-8")
+        return path
+
+    def test_reports_whole_corpus_sample_variance(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            paths = [
+                self.write_artifact(root, "run-001.json", artifact(1.0, 0.5)),
+                self.write_artifact(root, "run-002.json", artifact(1.2, 0.5)),
+                self.write_artifact(root, "run-003.json", artifact(0.8, 0.5)),
+            ]
+            result = MODULE.summarize(paths)
+            self.assertEqual(result["repetitions"], 3)
+            self.assertAlmostEqual(result["variance"]["axeyum_total_s"]["mean"], 1.0)
+            self.assertAlmostEqual(
+                result["variance"]["axeyum_total_s"]["sample_standard_deviation"], 0.2
+            )
+            self.assertEqual(result["variance"]["axeyum_total_s"]["p50"], 1.0)
+            self.assertEqual(result["variance"]["axeyum_over_z3_ratio"]["p95"], 2.4)
+
+    def test_rejects_acceptance_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            good = self.write_artifact(root, "run-001.json", artifact(1.0, 0.5))
+            bad_value = artifact(1.0, 0.5)
+            bad_value["summary"]["oracle"]["disagree"] = 1
+            bad = self.write_artifact(root, "run-002.json", bad_value)
+            with self.assertRaisesRegex(
+                MODULE.SummaryError, "oracle.disagree must be zero"
+            ):
+                MODULE.summarize([good, bad])
+
+    def test_rejects_identity_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            first = self.write_artifact(root, "run-001.json", artifact(1.0, 0.5))
+            changed = artifact(1.0, 0.5)
+            changed["config"]["experiment"]["environment_hash"] = "sha256:other"
+            second = self.write_artifact(root, "run-002.json", changed)
+            with self.assertRaisesRegex(MODULE.SummaryError, "config differs"):
+                MODULE.summarize([first, second])
+
+    def test_requires_multiple_unique_trials(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = self.write_artifact(Path(directory), "run.json", artifact(1.0, 0.5))
+            with self.assertRaisesRegex(MODULE.SummaryError, "at least two"):
+                MODULE.summarize([path])
+            with self.assertRaisesRegex(MODULE.SummaryError, "paths must be unique"):
+                MODULE.summarize([path, path])
+
+
+if __name__ == "__main__":
+    unittest.main()

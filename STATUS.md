@@ -362,10 +362,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   the bytes, rejects stale exporter-supplied hashes/unknown fields, emits
   manifest v1, and immediately re-ingests it through the normal validator.
   The committed micro index exercises this path without implying client data.
+  A repeated-run recipe now launches independent whole-corpus processes and a
+  streaming fail-closed summarizer verifies byte-identical configuration,
+  clean experiment identity, 100% decisions, and every manifest/oracle/replay
+  gate before reporting p50/p95, sample standard deviation, and coefficient of
+  variation for Axeyum/Z3 corpus totals, their ratio, and all attributed stages.
+  This closes the methodology gap between per-query shape distributions and
+  actual run-to-run variance without retaining multiple large artifacts in
+  memory.
 
   | ID | Live status | Next acceptance boundary |
   |---|---|---|
-  | **GQ1 real-query profile** | **WIP; external capture is the remaining data dependency.** Artifact v20, capture-index→manifest generation, manifest-v1 ingestion, untouched-DAG formula/width/operator/opportunity profiling, typed AIG/CNF/inprocess stats with size distributions, separately charged SAT model replay, an optional fail-closed proof-check companion, complete clean source/tool/hardware identity, single-worker client recipe, p50/p95, original-query in-process Z3 ratio, complete manifest/oracle/decided-rate gates, and zero-error policy are landed | Obtain the representative Glaurung query pack plus trusted capture index, generate/validate its manifest, confirm its lifter-shape distributions, and publish the first valid same-environment client attribution/ratio plus separate proof-check result; the micro smokes validate plumbing only |
+  | **GQ1 real-query profile** | **WIP; external capture is the remaining data dependency.** Artifact v20, capture-index→manifest generation, manifest-v1 ingestion, untouched-DAG formula/width/operator/opportunity profiling, typed AIG/CNF/inprocess stats with size distributions, separately charged SAT model replay, an optional fail-closed proof-check companion, complete clean source/tool/hardware identity, single-worker client recipe, whole-corpus process-level repetition/variance summary, p50/p95, original-query in-process Z3 ratio, complete manifest/oracle/decided-rate gates, and zero-error policy are landed | Obtain the representative Glaurung query pack plus trusted capture index, generate/validate its manifest, confirm its lifter-shape distributions, and publish the first valid same-environment repeated client attribution/ratio plus separate proof-check result; the micro smokes validate plumbing only |
   | **GQ2 cheap cold tier** | **TODO**, profile-gated; existing full preprocessing is opt-in and warm-oriented | Bounded constant/identity tier with non-worse cold aggregate time and an explicit cold/warm/size policy |
   | **GQ3 coercion peepholes** | **TODO**; only narrower extract-through-bitwise/ITE rules are landed | Exact extract/concat, nested-extract, zero/sign-extension cancellation with exhaustive and differential semantics gates |
   | **GQ4 cold relevant bits** | **WIP foundation**; warm 8-of-64 slicing is landed, cold demand propagation is not | Backward live-bit pass, original replay, counters, and measured target-corpus AIG/CNF reduction |
@@ -374,13 +382,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   | **GQ7 warm delta entry** | **WIP foundation**; retained CNF/search state exists, but `assert_configured` delta-only preprocessing is not complete | Preprocess only new/affected terms and publish per-check cost plus warm break-even sequence length |
   | **GQ8 verdict/CNF cache** | **TODO** | Versioned canonical keys, exact duplicate verdict reuse, sound prefix-state reuse, deterministic bounds, and mandatory original replay |
   | **GQ9 auto cost model/docs** | **TODO**; P1.8 shape/resource probes are only the general foundation | Telemetry-visible raw/cheap/configured/warm choice that beats or matches fixed policies and documents embedder guidance |
-  | **GQ10 real-lifter regression tier** | **BLOCKED on the external capture**; artifact-v20 validity/attribution/shape/replay/experiment-identity gates, a strict versioned capture-index generator, manifest-v1 exact membership/SHA-256/expected-verdict/family/tier contract, and separate performance/proof recipes are landed | Export the real capture plus trusted index, generate its manifest, then land its regular representative gate, scheduled full run, proof companion, and same-environment per-commit Z3-relative tracking |
+  | **GQ10 real-lifter regression tier** | **BLOCKED on the external capture**; artifact-v20 validity/attribution/shape/replay/experiment-identity gates, a strict versioned capture-index generator, manifest-v1 exact membership/SHA-256/expected-verdict/family/tier contract, independent-process repetition/variance summarization, and separate performance/proof recipes are landed | Export the real capture plus trusted index, generate its manifest, then land its regular representative gate, repeated scheduled full run, proof companion, and same-environment per-commit Z3-relative tracking |
 
   **Next actions:** (1) receive the Glaurung `.smt2` capture plus versioned
   trusted index without normalizing away its width-mixed/extract/concat/memory
   shape, generate the strict manifest, and verify that distribution in the
-  artifact-v20 shape profile; (2) establish the GQ1/GQ10 baseline at
-  100% decided, zero errors/disagreements/replay failures; (3) select the first
+  artifact-v20 shape profile; (2) establish the repeated GQ1/GQ10 baseline at
+  100% decided, zero errors/disagreements/replay failures with reported
+  whole-corpus variance; (3) select the first
   implementation slice from the largest measured cold stage, with GQ2/GQ3/GQ4
   preferred only if word construction or bit-blast attribution supports them.
   Until the capture arrives, instrumentation/ingestion work may proceed and the

@@ -236,7 +236,15 @@ records the contract and the first measured baselines.
   No optimization claim is accepted from a synthetic replacement when it does
   not also improve the captured client corpus at the same decided rate.
 - Fixed seeds and pinned solver versions everywhere; repeated runs with
-  variance reported for anything under a few seconds.
+  variance reported for anything under a few seconds. For the Glaurung client
+  lane, `bench-glaurung-qfbv-repeated` launches each whole-corpus trial in a
+  fresh process. Its fail-closed summary requires byte-identical artifact
+  configuration, clean source/tool/hardware identity, one worker, 100% decided,
+  complete manifest and in-process Z3 agreement, and zero operational or replay
+  failures in every trial. It reports nearest-rank p50/p95, sample standard
+  deviation, and coefficient of variation across corpus totals for Axeyum, Z3,
+  their ratio, and each Axeyum stage. Per-query p50/p95 within one trial is not
+  misreported as run-to-run variance.
 - Timeout regressions must pin the exact pathological public or minimized query
   and exercise both admission outcomes: deterministic oversized refusal before
   allocation and cooperative expiry inside admitted superlinear work. Every

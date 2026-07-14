@@ -4,7 +4,7 @@ default:
     @just --list
 
 # Run every check CI runs (except cargo-deny, which needs the tool installed).
-check: fmt clippy test doc qfbv-profile foundational-resources rules-as-code links
+check: fmt clippy test doc qfbv-profile benchmark-repetition-tests foundational-resources rules-as-code links
 
 fmt:
     cargo fmt --all --check
@@ -45,6 +45,9 @@ doc:
 
 qfbv-profile:
     ./scripts/check-qfbv-profile.sh
+
+benchmark-repetition-tests:
+    python3 -m unittest scripts/tests/test_summarize_glaurung_repetitions.py
 
 foundational-resources:
     ./scripts/check-foundational-resources.sh
@@ -109,6 +112,27 @@ generate-glaurung-manifest corpus_dir capture_index out:
 bench-glaurung-qfbv corpus_dir manifest tier="full" out="bench-results/glaurung-qfbv-sat-bv-vs-z3.json":
     mkdir -p "$(dirname '{{ out }}')"
     cargo run --release -p axeyum-bench --features z3 -- "{{ corpus_dir }}" --corpus-manifest "{{ manifest }}" --corpus-tier "{{ tier }}" --backend sat-bv --preprocess --compare-z3 --require-in-process-z3 --require-reproducible-run --timeout-ms 10000 --jobs 1 --min-decided-percent 100 --logic QF_BV --out "{{ out }}"
+
+# Publishable short-run evidence requires process-level repetitions. Each trial
+# gets a fresh process and independent artifact; the summarizer fails closed on
+# config/environment/source drift or any decided/error/oracle/manifest/replay
+# gate, then reports whole-corpus stage and Axeyum/Z3-ratio variance.
+bench-glaurung-qfbv-repeated corpus_dir manifest tier="full" out_dir="bench-results/glaurung-qfbv-repeated" repetitions="5":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [[ ! "{{ repetitions }}" =~ ^[0-9]+$ ]] || (( {{ repetitions }} < 2 )); then
+        echo "repetitions must be an integer >= 2" >&2
+        exit 2
+    fi
+    mkdir -p "{{ out_dir }}"
+    rm -f "{{ out_dir }}/summary.json"
+    artifacts=()
+    for (( repetition = 1; repetition <= {{ repetitions }}; repetition++ )); do
+        artifact="{{ out_dir }}/run-$(printf '%03d' "$repetition").json"
+        cargo run --release -p axeyum-bench --features z3 -- "{{ corpus_dir }}" --corpus-manifest "{{ manifest }}" --corpus-tier "{{ tier }}" --backend sat-bv --preprocess --compare-z3 --require-in-process-z3 --require-reproducible-run --timeout-ms 10000 --jobs 1 --min-decided-percent 100 --logic QF_BV --out "$artifact"
+        artifacts+=("$artifact")
+    done
+    python3 scripts/summarize-glaurung-repetitions.py "${artifacts[@]}" --out "{{ out_dir }}/summary.json"
 
 # High-assurance companion to the performance run. This switches to the slower
 # proof-producing native core and fails closed unless every UNSAT has an inline

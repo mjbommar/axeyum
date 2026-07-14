@@ -70,6 +70,7 @@ just bench-public-qfbv-sat-bv-replay-refine      # replay-checked query refineme
 just bench-glaurung-manifest-smoke               # client manifest/timing plumbing
 just bench-glaurung-manifest-proof-smoke         # fail-closed DRAT-check plumbing
 just generate-glaurung-manifest CORPUS INDEX OUT # bind capture facts to exact bytes
+just bench-glaurung-qfbv-repeated CORPUS MANIFEST # process-level variance (5 trials)
 ```
 
 **Resource rules** (this matters — the harness can OOM a small host otherwise):
@@ -116,6 +117,16 @@ A comparable run requires zero errors, zero disagreements, zero replay failures,
 and the declared decided-rate threshold; only then is timing a performance
 signal.
 
+Short whole-corpus measurements also require repeated independent trials. The
+single-run p50/p95 values describe variation **between queries of different
+shapes**; they do not measure run-to-run noise. The repeated client recipe below
+launches a fresh process for every trial, keeps each artifact intact, and writes
+a small `summary.json` containing nearest-rank p50/p95, sample standard
+deviation, and coefficient of variation for Axeyum and Z3 corpus totals, their
+ratio, and every attributed Axeyum stage. The summarizer holds only one source
+artifact at a time, so repetitions do not multiply the large corpus artifact's
+memory footprint.
+
 ## Binary-analysis client gate
 
 The primary client target accepts an external Glaurung query capture (the
@@ -140,6 +151,25 @@ but do not replace the extract/concat/mixed-width/memory-derived client shape.
 The shape block can count `select`/`store` operations that survive parsing, but
 cannot infer memory provenance after a lifter has flattened memory into BV
 terms; preserve that provenance in the manifest `family` and `source` fields.
+
+For the publishable repeated measurement (five trials by default):
+
+```sh
+just bench-glaurung-qfbv-repeated \
+  /path/to/glaurung-smt2-capture \
+  /path/to/glaurung-manifest-v1.json \
+  representative \
+  bench-results/glaurung-qfbv-repeated \
+  5
+```
+
+Every source artifact must have byte-identical configuration, a clean
+reproducible-run identity, one worker, complete in-process Z3 coverage, 100%
+decisions, and zero operational errors, manifest/oracle disagreements, or
+model/proof replay failures. Any violation prevents `summary.json` from being
+written. The summary records each source artifact's SHA-256 and the exact
+configuration/experiment identity, so trials cannot be silently mixed across
+commits, hardware, toolchains, corpus bytes, or solver settings.
 
 Run the separate proof-validation companion on the same immutable manifest:
 

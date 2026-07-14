@@ -136,6 +136,18 @@ a `content_hash`; this prevents stale exporter bookkeeping from being promoted
 to corpus identity. The committed micro index tests the handshake but remains
 non-client evidence.
 
+The repeated-run follow-up makes the methodology's short-run variance rule
+executable without weakening the cold boundary. The repeated Glaurung recipe
+launches a fresh `axeyum-bench` process per whole-corpus trial and retains each
+artifact independently. A streaming, fail-closed summarizer accepts only
+artifact-v20 trials with byte-identical configuration, clean reproducible
+source/tool/hardware identity, one worker, complete manifest and in-process Z3
+agreement, 100% decisions, and zero operational or replay failures. It reports
+sample standard deviation and coefficient of variation alongside p50/p95 for
+whole-corpus Axeyum/Z3 totals, their ratio, and every attributed Axeyum stage.
+This distinguishes between-query shape distributions from genuine run-to-run
+noise and avoids multiplying the large artifact's in-memory footprint.
+
 ## Alternatives
 
 - **Implicitly widen or truncate binary operands.** Rejected: it masks client
