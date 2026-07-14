@@ -13077,22 +13077,10 @@ pub(super) fn reconstruct_bitwise_cps_tail(
     if live.is_empty() {
         return Err(ReconstructError::NoEmptyClause);
     }
-    let mut premise_uses = BTreeMap::<String, usize>::new();
-    for command in commands {
-        if let AletheCommand::Step { id, premises, .. } = command
-            && live.contains(id)
-        {
-            for premise in premises {
-                *premise_uses.entry(premise.clone()).or_default() += 1;
-            }
-        }
-    }
-
     let mut source_proofs = assumption_proofs.iter();
     let mut or_env = BTreeMap::<String, Clause>::new();
     let mut cps_env = BTreeMap::<String, CpsClause>::new();
     let mut lets = Vec::new();
-    let mut reconstructed_steps = 0_usize;
 
     for command in commands {
         let (id, mut recovered, or_clause) = match command {
@@ -13177,10 +13165,14 @@ pub(super) fn reconstruct_bitwise_cps_tail(
             return check_false_prop(ctx, proof);
         }
 
-        let should_alias = ctx.defer_open_step_checks
-            && (premise_uses.get(id).copied().unwrap_or_default() > 1
-                || reconstructed_steps.is_multiple_of(4));
-        reconstructed_steps += 1;
+        // Deferred checking closes the complete proof after local aliases have
+        // been abstracted. Alias every live clause in that mode: a later wide
+        // RUP step may mention thousands of nominally single-use clauses, and
+        // leaving even three out of four proofs inline re-expands their complete
+        // derivations inside every handler. The one-let-per-clause overhead is
+        // linear and keeps both the kernel DAG and exported module linear in the
+        // LRAT dependency graph.
+        let should_alias = ctx.defer_open_step_checks;
         if should_alias {
             let ty = cps_clause_prop(ctx, &recovered.lits);
             let fvar = fresh_fvar_id(ctx);
