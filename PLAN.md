@@ -136,6 +136,15 @@ These sub-millisecond values demonstrate identity/noise reporting and support no
 performance or regression claim.
 GQ1/GQ10 remain open until the actual Glaurung capture is ingested.
 
+**Validation checkpoint (2026-07-14).** The all-feature solver library and
+integration suite passes serially under the hard 4 GiB virtual-memory cap, as
+do the remaining strings/verify crates and their doctests. The default-parallel
+workspace run exceeded that deliberately low cap while multiple FP tests were
+resident; the complete 55-test FP library passes serially under the same cap.
+This validates the current implementation without changing the GQ ordering:
+the real capture and GQ1/GQ10 attribution gate still precede performance
+tuning.
+
 **Non-negotiable acceptance gate.** Comparable runs require 100% decided on the
 declared client tier, zero operational errors, `DISAGREE=0`, zero model/proof
 replay failures, fixed seeds and solver versions, and bounded deterministic

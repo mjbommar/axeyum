@@ -523,6 +523,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   optimization only from that profile; continue broader nested/alternating QSAT
   and quantified-UF depth work independently.
 
+  **Validation sweep:** the all-feature solver library/integration suite passes
+  in full with one serial test thread under the hard 4 GiB cap, including all
+  differential campaigns and the ADR-0127/0129 public routes. The remaining
+  strings/verify crates and doctests also pass serially. A default-parallel
+  workspace attempt exceeded the intentionally low cap in the FP harness; all
+  55 FP library tests pass serially under that cap. Clippy across all targets
+  and features and warning-denied rustdoc are green. The sweep regenerated the
+  five tracked frontier curves: BV reduction advances **30→40** at the 4 s
+  budget; LIA cuts 26, NIA UNSAT 40, NRA degree 40, and string bound 8 retain
+  their declared frontiers. These host-local frontier timings are regression
+  artifacts, not Glaurung performance evidence.
+
 - **2026-07-13 — ADR-0140 reconstructs vacuous BV existential prefixes.**
   The ADR-0128 checker still proves the complete leading existential block
   absent and evaluator-replays the exact universal values against the untouched
