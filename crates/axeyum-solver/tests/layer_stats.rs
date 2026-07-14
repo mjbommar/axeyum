@@ -16,10 +16,9 @@ fn sat_bv_run_exposes_typed_layer_stats() {
     let target = arena.bv_const(8, 100).unwrap();
     let goal = arena.eq(sum, target).unwrap();
 
+    let config = SolverConfig::default().with_bit_demand_profile(true);
     let mut backend = SatBvBackend::new();
-    let result = backend
-        .check(&arena, &[goal], &SolverConfig::default())
-        .unwrap();
+    let result = backend.check(&arena, &[goal], &config).unwrap();
     assert!(matches!(result, CheckResult::Sat(_)));
 
     let stats = backend.last_stats().expect("sat-bv records stats");
@@ -50,6 +49,7 @@ fn sat_bv_run_exposes_typed_layer_stats() {
         "each clause attempt is emitted or skipped"
     );
     assert!(layers.cnf_reachable_nodes > 0);
+    assert!(layers.bit_demand_profile_complete);
     assert!(layers.term_bit_requests >= layers.term_bits_demanded);
     assert!(layers.term_bits_demanded <= layers.term_bits_available);
     assert_eq!(layers.term_bits_lowered, layers.term_bits_available);
