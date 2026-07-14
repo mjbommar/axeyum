@@ -8,7 +8,7 @@
     "cnf_vivify": false,
     "compare_backend": "z3 4.13.3.0",
     "compare_z3": true,
-    "config_hash": "382e4f39d1e74e27",
+    "config_hash": "a0fe396a82fb32e4",
     "corpus": "corpus/micro",
     "corpus_hash": "bf5568e9dc4ac850",
     "corpus_manifest": {
@@ -32,6 +32,23 @@
       "total_entries": 3
     },
     "corpus_source": "committed Axeyum micro corpus; ingestion smoke only, not client performance data",
+    "determinism": {
+      "corpus_order": "stable manifest order (or deterministic lexical path order without a manifest)",
+      "profile": "axeyum-bench-fixed-seeds-v1",
+      "sat_bv": {
+        "adapter": "rustsat-batsat",
+        "option_source": "batsat::SolverOpts::default from the Cargo.lock-pinned dependency",
+        "random_initial_activity": false,
+        "random_polarity": false,
+        "random_seed": 91648253.0,
+        "random_var_freq": 0.0
+      },
+      "z3": {
+        "parameter": "random_seed",
+        "random_seed": 0,
+        "set_explicitly": true
+      }
+    },
     "experiment": {
       "comparison_contract": "compare config_hash + environment_hash; source revision identifies the tested commit and may differ",
       "environment_hash": "sha256:b0f5781b8c70707448fec92aba7d68bdb8fed9b245c55926b1156bc038e7aa7a",
@@ -50,7 +67,7 @@
       "source": {
         "dirty": false,
         "dirty_scope": "repository excluding bench-results/**",
-        "revision": "023496a2f2357c657204ef01f22b206da5cd3151"
+        "revision": "00a745c075055096a636827453e2ed154520fea4"
       },
       "toolchain": {
         "build_profile": "release",
@@ -83,7 +100,6 @@
       "mode": "off",
       "rule_set": null
     },
-    "seed": "none",
     "selected_families": null,
     "timeout_ms": 10000
   },
@@ -93,12 +109,12 @@
       "backend_stats": {
         "aig_inputs": 8.0,
         "aig_nodes": 44.0,
-        "bit_blast_ms": 0.014036000000000002,
+        "bit_blast_ms": 0.029976,
         "cnf_clauses": 36.0,
-        "cnf_encode_ms": 0.024085000000000002,
+        "cnf_encode_ms": 0.048389,
         "cnf_variables": 15.0
       },
-      "cold_total_ms": 0.119861,
+      "cold_total_ms": 0.256465,
       "corpus_manifest": {
         "content_hash": "sha256:9f19b538d7d38c0862edfc28d2f29893093c2aa966f1b178dd968a255df12ec3",
         "decision_agrees": true,
@@ -118,36 +134,36 @@
       "layer_attribution": {
         "aig_inputs": 8,
         "aig_nodes": 44,
-        "bit_blast_ms": 0.014036000000000002,
+        "bit_blast_ms": 0.029976,
         "cnf_clauses": 36,
-        "cnf_encode_ms": 0.024085000000000002,
+        "cnf_encode_ms": 0.048389,
         "cnf_inprocess_ms": 0.0,
         "cnf_variables": 15,
-        "model_lift_ms": 0.013946,
-        "model_replay_ms": 0.006271,
-        "solve_ms": 0.026298000000000002,
-        "total_ms": 0.119861,
-        "word_preprocess_ms": 0.035225
+        "model_lift_ms": 0.024475,
+        "model_replay_ms": 0.011562000000000001,
+        "solve_ms": 0.049392,
+        "total_ms": 0.256465,
+        "word_preprocess_ms": 0.09267099999999999
       },
       "max_depth": 3,
       "model_lift_ms": 0,
-      "model_replay_ms": 0.006271,
+      "model_replay_ms": 0.011562000000000001,
       "oracle": {
         "backend_kind": "z3",
         "backend_stats": {
           "max memory": 33.67,
           "memory": 33.67,
-          "num allocs": 18464.0,
+          "num allocs": 18480.0,
           "rlimit count": 30.0,
           "solve-eqs-elim-vars": 1.0,
           "solve-eqs-steps": 1.0
         },
-        "cold_total_ms": 0.935852,
+        "cold_total_ms": 1.009452,
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
         "model_lift_ms": 0,
-        "model_replay_ms": 0.008867,
+        "model_replay_ms": 0.009648,
         "outcome": "sat",
         "query_boundary": "original parsed assertions",
         "solve_ms": 0,
@@ -241,12 +257,12 @@
       "backend_stats": {
         "aig_inputs": 0.0,
         "aig_nodes": 1.0,
-        "bit_blast_ms": 0.002274,
+        "bit_blast_ms": 0.001953,
         "cnf_clauses": 1.0,
-        "cnf_encode_ms": 0.004138,
+        "cnf_encode_ms": 0.004508,
         "cnf_variables": 0.0
       },
-      "cold_total_ms": 0.04362,
+      "cold_total_ms": 0.041305,
       "corpus_manifest": {
         "content_hash": "sha256:b56d9c3d68dafa535fac7e69936f97d5270765e122c3c388d256391ec0e9f524",
         "decision_agrees": true,
@@ -266,16 +282,16 @@
       "layer_attribution": {
         "aig_inputs": 0,
         "aig_nodes": 1,
-        "bit_blast_ms": 0.002274,
+        "bit_blast_ms": 0.001953,
         "cnf_clauses": 1,
-        "cnf_encode_ms": 0.004138,
+        "cnf_encode_ms": 0.004508,
         "cnf_inprocess_ms": 0.0,
         "cnf_variables": 0,
         "model_lift_ms": 0.0,
         "model_replay_ms": 0.0,
-        "solve_ms": 0.011501,
-        "total_ms": 0.04361999999999999,
-        "word_preprocess_ms": 0.025707
+        "solve_ms": 0.01103,
+        "total_ms": 0.041305,
+        "word_preprocess_ms": 0.023814
       },
       "max_depth": 2,
       "model_lift_ms": 0,
@@ -285,10 +301,10 @@
         "backend_stats": {
           "max memory": 33.67,
           "memory": 33.48,
-          "num allocs": 78116.0,
+          "num allocs": 78192.0,
           "rlimit count": 14.0
         },
-        "cold_total_ms": 0.157009,
+        "cold_total_ms": 0.179471,
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
@@ -388,24 +404,24 @@
     "blocker_buckets": {},
     "client_comparison": {
       "axeyum": {
-        "max_ms": 0.11986100000000001,
-        "mean_ms": 0.08174050000000001,
-        "min_ms": 0.043620000000000006,
-        "p50_ms": 0.043620000000000006,
-        "p95_ms": 0.11986100000000001
+        "max_ms": 0.256465,
+        "mean_ms": 0.148885,
+        "min_ms": 0.041305,
+        "p50_ms": 0.041305,
+        "p95_ms": 0.256465
       },
-      "axeyum_over_z3_ratio": 0.14958992955188263,
-      "axeyum_total_s": 0.00016348100000000002,
+      "axeyum_over_z3_ratio": 0.25045356175294786,
+      "axeyum_total_s": 0.00029777,
       "instances": 2,
       "query_boundary": "original parsed assertions for both solvers",
       "z3": {
-        "max_ms": 0.935852,
-        "mean_ms": 0.5464305,
-        "min_ms": 0.157009,
-        "p50_ms": 0.157009,
-        "p95_ms": 0.935852
+        "max_ms": 1.0094519999999998,
+        "mean_ms": 0.5944615,
+        "min_ms": 0.179471,
+        "p50_ms": 0.179471,
+        "p95_ms": 1.0094519999999998
       },
-      "z3_total_s": 0.001092861
+      "z3_total_s": 0.001188923
     },
     "decided": 2,
     "decided_percent": 100.0,
@@ -413,26 +429,26 @@
     "errors": 0,
     "files": 2,
     "layer_attribution": {
-      "bit_blast_s": 0.00001631,
-      "bit_blast_share": 0.099766945394266,
-      "cnf_encode_s": 0.000028223,
-      "cnf_encode_share": 0.17263779888794414,
+      "bit_blast_s": 0.000031929,
+      "bit_blast_share": 0.10722705443798905,
+      "cnf_encode_s": 0.000052897,
+      "cnf_encode_share": 0.1776438190549753,
       "cnf_inprocess_s": 0.0,
       "cnf_inprocess_share": 0.0,
       "distributions": {
         "bit_blast": {
-          "max_ms": 0.014036000000000002,
-          "mean_ms": 0.008155,
-          "min_ms": 0.002274,
-          "p50_ms": 0.002274,
-          "p95_ms": 0.014036000000000002
+          "max_ms": 0.029976,
+          "mean_ms": 0.0159645,
+          "min_ms": 0.001953,
+          "p50_ms": 0.001953,
+          "p95_ms": 0.029976
         },
         "cnf_encode": {
-          "max_ms": 0.024085000000000002,
-          "mean_ms": 0.0141115,
-          "min_ms": 0.004138,
-          "p50_ms": 0.004138,
-          "p95_ms": 0.024085000000000002
+          "max_ms": 0.048389,
+          "mean_ms": 0.0264485,
+          "min_ms": 0.004508,
+          "p50_ms": 0.004508,
+          "p95_ms": 0.048389
         },
         "cnf_inprocess": {
           "max_ms": 0.0,
@@ -442,47 +458,47 @@
           "p95_ms": 0.0
         },
         "model_lift": {
-          "max_ms": 0.013946,
-          "mean_ms": 0.006973,
+          "max_ms": 0.024475,
+          "mean_ms": 0.0122375,
           "min_ms": 0.0,
           "p50_ms": 0.0,
-          "p95_ms": 0.013946
+          "p95_ms": 0.024475
         },
         "model_replay": {
-          "max_ms": 0.006271,
-          "mean_ms": 0.0031355,
+          "max_ms": 0.011562000000000001,
+          "mean_ms": 0.0057810000000000005,
           "min_ms": 0.0,
           "p50_ms": 0.0,
-          "p95_ms": 0.006271
+          "p95_ms": 0.011562000000000001
         },
         "solve": {
-          "max_ms": 0.026298000000000002,
-          "mean_ms": 0.0188995,
-          "min_ms": 0.011501,
-          "p50_ms": 0.011501,
-          "p95_ms": 0.026298000000000002
+          "max_ms": 0.049392,
+          "mean_ms": 0.030211,
+          "min_ms": 0.01103,
+          "p50_ms": 0.01103,
+          "p95_ms": 0.049392
         },
         "total": {
-          "max_ms": 0.119861,
-          "mean_ms": 0.0817405,
-          "min_ms": 0.04361999999999999,
-          "p50_ms": 0.04361999999999999,
-          "p95_ms": 0.119861
+          "max_ms": 0.256465,
+          "mean_ms": 0.148885,
+          "min_ms": 0.041305,
+          "p50_ms": 0.041305,
+          "p95_ms": 0.256465
         },
         "word_preprocess": {
-          "max_ms": 0.035225,
-          "mean_ms": 0.030466000000000003,
-          "min_ms": 0.025707,
-          "p50_ms": 0.025707,
-          "p95_ms": 0.035225
+          "max_ms": 0.09267099999999999,
+          "mean_ms": 0.058242499999999996,
+          "min_ms": 0.023814,
+          "p50_ms": 0.023814,
+          "p95_ms": 0.09267099999999999
         }
       },
       "instances": 2,
-      "model_lift_s": 0.000013946,
-      "model_lift_share": 0.08530654938494381,
+      "model_lift_s": 0.000024475,
+      "model_lift_share": 0.08219431104543776,
       "model_replay_instances": 1,
-      "model_replay_s": 6.271e-6,
-      "model_replay_share": 0.03835919770493207,
+      "model_replay_s": 0.000011562,
+      "model_replay_share": 0.038828626120831516,
       "sat_dominates": false,
       "sat_dominates_threshold": 0.5,
       "size_distributions": {
@@ -515,11 +531,11 @@
           "p95": 15
         }
       },
-      "solve_s": 0.000037799,
-      "solve_share": 0.23121341317951322,
-      "total_pipeline_s": 0.00016348100000000002,
-      "word_preprocess_s": 0.000060932000000000005,
-      "word_preprocess_share": 0.37271609544840073
+      "solve_s": 0.000060422,
+      "solve_share": 0.2029150015112335,
+      "total_pipeline_s": 0.00029777,
+      "word_preprocess_s": 0.000116485,
+      "word_preprocess_share": 0.3911911878295328
     },
     "manifest": {
       "agree": 2,
@@ -536,7 +552,7 @@
       "enabled": true,
       "skipped": 0
     },
-    "par2_mean_s": 0.00008174050000000001,
+    "par2_mean_s": 0.000148885,
     "query_plan": {
       "original_dag_nodes": 6,
       "original_tree_nodes": 6,
@@ -703,5 +719,5 @@
     },
     "unsupported": []
   },
-  "version": 20
+  "version": 21
 }

@@ -393,10 +393,11 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   Z3-drift gates are caller-supplied; the micro fixture sets no threshold.
   The committed
   [`glaurung-cross-commit-smoke`](bench-results/glaurung-cross-commit-smoke.json)
-  validates baseline `319a166b` against candidate `023496a2` with three trials
-  each and matching `config_hash`, `environment_hash`, corpus/manifest hashes,
-  and backends. The candidate ratio mean is 26.21% lower while its CV is 37.32%
-  and descriptive standardized delta is -1.63; raw Z3 control drift is -0.78%.
+  validates artifact-v21 baseline `d39dc6ac` against candidate `00a745c0` with
+  three trials each and matching `config_hash`, `environment_hash`,
+  corpus/manifest hashes, determinism profile, and backends. The candidate ratio
+  mean is 13.55% lower while its CV is 31.35% and descriptive standardized
+  delta is -0.85; raw Z3 control drift is +1.83%.
   These sub-millisecond micro results demonstrate identity/noise accounting and
   explicitly do not establish a speedup or product threshold.
 
@@ -2118,7 +2119,11 @@ plan is built and committed on the current branch:
   decided/manifest-agreed/Z3-agreed with zero errors, disagreements, or model
   replay failures; the proof companion checks its 1/1 UNSAT with none missing;
   and the repeated baseline reports Axeyum/Z3/ratio CVs of 3.66%/2.36%/6.06%.
-  These remain micro plumbing results, not Glaurung performance evidence.
+  A distinct clean candidate at `00a745c0` completes the v21 cross-commit smoke
+  against that baseline with matching corpus/config/environment/backend
+  identity. Its ratio mean moves -13.55%, but candidate ratio CV is 31.35%, the
+  descriptive standardized delta is -0.85, and raw Z3 moves +1.83%; these remain
+  micro plumbing results, not Glaurung performance evidence or a speedup claim.
 - **2026-07-13 — GQ1/GQ10 artifact-v20 reproducible experiment identity
   implemented.** Artifacts now distinguish source revision from execution
   environment: Git revision/cleanliness, Cargo.lock SHA-256, rustc/cargo, exact
