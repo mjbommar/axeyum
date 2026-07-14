@@ -6,8 +6,10 @@ use axeyum_ir::{Sort, TermArena, Value};
 use axeyum_smtlib::parse_script;
 use axeyum_solver::{
     BV_CONJUNCTIVE_UNIVERSAL_BINDER_CAP, BV_CONJUNCTIVE_UNIVERSAL_NODE_CAP,
-    BvConjunctiveUniversalInstanceCertificate, CheckResult, Evidence, SolverConfig, SolverError,
-    check_bv_conjunctive_universal_instance, produce_evidence, solve,
+    BvConjunctiveUniversalInstanceCertificate, CheckResult, Evidence, ProofFragment, SolverConfig,
+    SolverError, check_bv_conjunctive_universal_instance, produce_evidence,
+    prove_unsat_to_lean_module, reconstruct_bv_conjunctive_universal_instance_to_lean_module,
+    scan_proof_fragment, solve,
 };
 
 const TARGET: &str = include_str!(
@@ -72,6 +74,77 @@ fn public_conditional_variable_elimination_row_has_checked_evidence() {
         solve(&mut script.arena, &assertions, &config()).unwrap(),
         CheckResult::Unsat
     ));
+}
+
+#[test]
+fn conjunctive_source_instance_reconstructs_directly_and_through_the_router() {
+    let mut script = parse_script(
+        "(set-logic BV)
+         (declare-fun a () (_ BitVec 32))
+         (assert (and (= a (_ bv0 32))
+           (forall ((x (_ BitVec 32))) (not (= x a)))))
+         (check-sat)",
+    )
+    .unwrap();
+    let assertions = script.assertions.clone();
+    let report = produce_evidence(&mut script.arena, &assertions, &config()).unwrap();
+    let Evidence::UnsatBvConjunctiveUniversalInstance(certificate) = report.evidence else {
+        panic!("expected ADR-0127 source instance");
+    };
+
+    let direct = reconstruct_bv_conjunctive_universal_instance_to_lean_module(
+        &script.arena,
+        &assertions,
+        &certificate,
+    )
+    .expect("conjunctive source instance reconstructs");
+    assert!(direct.contains("theorem axeyum_refutation : False"));
+    assert!(!direct.contains("sorryAx"));
+    assert_eq!(
+        scan_proof_fragment(&script.arena, &assertions),
+        ProofFragment::BvConjunctiveUniversalInstance
+    );
+    let (fragment, routed) = prove_unsat_to_lean_module(&mut script.arena, &assertions)
+        .expect("conjunctive source-instance router reconstructs");
+    assert_eq!(fragment, ProofFragment::BvConjunctiveUniversalInstance);
+    assert_eq!(routed, direct);
+
+    let mut tampered = certificate;
+    tampered.bindings[0].1 = Value::Bv {
+        width: 32,
+        value: 1,
+    };
+    assert!(
+        reconstruct_bv_conjunctive_universal_instance_to_lean_module(
+            &script.arena,
+            &assertions,
+            &tampered,
+        )
+        .is_err()
+    );
+}
+
+#[test]
+#[ignore = "release-only public-corpus ADR-0127 Lean reconstruction stress gate"]
+fn public_conditional_variable_elimination_reconstructs_from_untouched_source() {
+    let (mut script, assertions, certificate) = target_certificate();
+    assert_eq!(
+        scan_proof_fragment(&script.arena, &assertions),
+        ProofFragment::BvConjunctiveUniversalInstance
+    );
+    let direct = reconstruct_bv_conjunctive_universal_instance_to_lean_module(
+        &script.arena,
+        &assertions,
+        &certificate,
+    )
+    .expect("public conjunctive source instance reconstructs through compact RUP");
+    assert!(direct.contains("theorem axeyum_refutation : False"));
+    assert!(!direct.contains("sorryAx"));
+
+    let (fragment, routed) = prove_unsat_to_lean_module(&mut script.arena, &assertions)
+        .expect("public conjunctive source-instance router reconstructs");
+    assert_eq!(fragment, ProofFragment::BvConjunctiveUniversalInstance);
+    assert_eq!(routed, direct);
 }
 
 #[test]

@@ -24,13 +24,14 @@ use super::{
 };
 use crate::{
     BvAlternationCounterexampleCertificate, BvPairedExistentialTransferCertificate,
-    BvPairedExistentialTransferJustification, BvPositiveUniversalInstanceSetCertificate,
-    BvPositiveUniversalSourceInstance,
+    BvConjunctiveUniversalInstanceCertificate, BvPairedExistentialTransferJustification,
+    BvPositiveUniversalInstanceSetCertificate, BvPositiveUniversalSourceInstance,
     ClosedUniversalCounterexampleCertificate, NegatedExistentialWitnessCertificate,
     VacuousExistsUniversalCounterexampleCertificate,
-    check_bv_alternation_counterexample, check_bv_paired_existential_transfer,
-    check_bv_positive_universal_instance_set, check_closed_universal_counterexample,
-    check_negated_existential_witness, check_vacuous_exists_universal_counterexample,
+    check_bv_alternation_counterexample, check_bv_conjunctive_universal_instance,
+    check_bv_paired_existential_transfer, check_bv_positive_universal_instance_set,
+    check_closed_universal_counterexample, check_negated_existential_witness,
+    check_vacuous_exists_universal_counterexample,
 };
 
 const MAX_LEAN_BV_WIDTH: u32 = 64;
@@ -2694,6 +2695,31 @@ pub(crate) fn bv_positive_universal_instance_set_lean_shape(
         && assertions.iter().all(|&term| source_shape(arena, term))
 }
 
+/// Cheap structural classification for ADR-0127's source-bound conjunctive
+/// universal-instance route.
+pub(crate) fn bv_conjunctive_universal_instance_lean_shape(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> bool {
+    assertions.iter().any(|&assertion| {
+        crate::quant_bv_conjunctive_cert::conjunctive_universals(arena, assertion)
+            .into_iter()
+            .any(|universal| {
+                crate::quant_bv_conjunctive_cert::admitted_conjunctive_universal(
+                    arena, assertion, universal,
+                )
+                .is_some_and(|admitted| {
+                    admitted.binders.iter().all(|&binder| {
+                        matches!(
+                            arena.symbol(binder).1,
+                            Sort::Bool | Sort::BitVec(1..=MAX_LEAN_BV_WIDTH)
+                        )
+                    })
+                })
+            })
+    })
+}
+
 fn source_shape(arena: &TermArena, term: TermId) -> bool {
     match arena.node(term) {
         TermNode::App {
@@ -3451,4 +3477,127 @@ pub fn reconstruct_bv_positive_universal_instance_set_to_lean_module(
         proof,
         &inductives,
     ))
+}
+
+/// Reconstructs an ADR-0127 source-bound conjunctive universal instance to a
+/// kernel-checked Lean module whose only hypothesis is the untouched source
+/// assertion.
+///
+/// The source conjunction is projected structurally, the selected universal is
+/// applied to the certificate's concrete Bool/BV values, and the resulting
+/// ground assumptions enter the compact CPS RUP boundary. The residual proof is
+/// rechecked before this independent proof reconstruction begins.
+///
+/// # Errors
+///
+/// Returns [`ReconstructError`] when certificate replay fails, the source no
+/// longer has the admitted conjunctive shape, a typed source instance cannot be
+/// derived, or the compact bit-level proof is rejected by the kernel.
+#[allow(clippy::too_many_lines)]
+pub fn reconstruct_bv_conjunctive_universal_instance_to_lean_module(
+    arena: &TermArena,
+    assertions: &[TermId],
+    certificate: &BvConjunctiveUniversalInstanceCertificate,
+) -> Result<String, ReconstructError> {
+    if !check_bv_conjunctive_universal_instance(arena, assertions, certificate)
+        .map_err(|error| decline(format!("certificate replay failed: {error}")))?
+    {
+        return Err(decline("invalid ADR-0127 certificate"));
+    }
+    let admitted = crate::quant_bv_conjunctive_cert::admitted_conjunctive_universal(
+        arena,
+        certificate.assertion,
+        certificate.universal,
+    )
+    .ok_or_else(|| decline("certificate source lost its conjunctive universal"))?;
+    if admitted.binders.iter().any(|&binder| {
+        !matches!(
+            arena.symbol(binder).1,
+            Sort::Bool | Sort::BitVec(1..=MAX_LEAN_BV_WIDTH)
+        )
+    }) {
+        return Err(decline("universal binder exceeds the Lean BV width cap"));
+    }
+    let Some((scratch, residual)) =
+        crate::quant_bv_conjunctive_cert::instantiate_conjunctive_universal(
+            arena,
+            certificate.assertion,
+            certificate.universal,
+            &admitted,
+            &certificate.bindings,
+        )
+        .map_err(|error| decline(format!("residual rebuild failed: {error}")))?
+    else {
+        return Err(decline("certificate does not rebuild"));
+    };
+
+    let mut ctx = ReconstructCtx::new();
+    ctx.bridge = Some(BTreeMap::new());
+    ctx.typed_bv_gates = true;
+    let proposition = source_prop(&mut ctx, &scratch, certificate.assertion)?;
+    let source_proof = fresh_axiom(&mut ctx, proposition, "quant-bv-conjunctive-source")?;
+    let source = BvPositiveUniversalSourceInstance {
+        assertion: certificate.assertion,
+        bindings: certificate.bindings.clone(),
+    };
+    let mut source_assumptions = Vec::new();
+    collect_instance_assumptions(
+        &mut ctx,
+        &scratch,
+        certificate.assertion,
+        residual,
+        source_proof,
+        &source,
+        &mut source_assumptions,
+    )?;
+
+    let mut assumptions = Vec::with_capacity(source_assumptions.len());
+    let mut tail_terms = Vec::with_capacity(source_assumptions.len());
+    for (term, proof, bindings) in source_assumptions {
+        if let Some(bindings) = &bindings {
+            install_binding_environment(&mut ctx, &scratch, bindings)?;
+        } else {
+            ctx.gate_bound_bools.clear();
+            ctx.gate_bound_bvs.clear();
+        }
+        let expected = ground_prop(&mut ctx, &scratch, term)?;
+        ctx.gate_bound_bools.clear();
+        ctx.gate_bound_bvs.clear();
+        assumptions.push(check_against(
+            &mut ctx,
+            "quant_bv_conjunctive_source_instance",
+            proof,
+            expected,
+        )?);
+        tail_terms.push((term, bindings));
+    }
+
+    let (formulas, definitions) = aig_gate_tail(&scratch, &tail_terms)?;
+    let (commands, gate_defs) =
+        crate::qfbv_alethe::prove_bit_gate_unsat_alethe(&formulas, definitions)
+            .ok_or_else(|| decline("propositional residual emitter declined"))?;
+    ctx.bridge = Some(gate_defs);
+    ctx.gate_memo.clear();
+    ctx.defer_open_step_checks = true;
+    ctx.begin_gate_prop_aliases();
+    let proof = reconstruct_bitwise_cps_tail(&mut ctx, &commands, &assumptions)?;
+    let proof = ctx.finish_gate_prop_aliases(proof);
+    ctx.defer_open_step_checks = false;
+    require_infers_false(&mut ctx, proof)?;
+
+    let false_ = ctx.kernel.const_(ctx.prelude.false_, vec![]);
+    let mut inductives = ctx
+        .bv_value_types
+        .values()
+        .map(|datatype| datatype.ind)
+        .collect::<Vec<_>>();
+    inductives.push(ctx.prelude.bool_);
+    let spool = spool_compact_lean_module(&ctx, false_, proof, &inductives)?;
+    ctx.kernel.release_transient_tables_for_export();
+    drop(ctx);
+    spool.read_to_string().map_err(|error| {
+        decline(format!(
+            "failed to read conjunctive-instance Lean module spool: {error}"
+        ))
+    })
 }

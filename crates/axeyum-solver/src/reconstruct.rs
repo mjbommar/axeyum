@@ -51,6 +51,7 @@ mod quant_bv_instance_set_lean;
 pub use quant_bv_instance_set_lean::{
     reconstruct_bv_alternation_counterexample_to_lean_module,
     reconstruct_bv_closed_universal_counterexample_to_lean_module,
+    reconstruct_bv_conjunctive_universal_instance_to_lean_module,
     reconstruct_bv_paired_existential_transfer_to_lean_module,
     reconstruct_bv_positive_universal_instance_set_to_lean_module,
     reconstruct_bv_vacuous_exists_universal_counterexample_to_lean_module,
@@ -1484,6 +1485,10 @@ pub enum ProofFragment {
     /// residual bit-level refutation is reconstructed from genuine source
     /// instantiations (ADR-0135).
     BvPositiveUniversalInstanceSet,
+    /// One concrete instance of a universal reached through a conjunctive
+    /// source context, with the residual bit-level refutation reconstructed from
+    /// the untouched assertion (ADR-0127).
+    BvConjunctiveUniversalInstance,
     /// A concrete evaluator-replayed witness closes a directly negated typed
     /// Bool/BV existential through genuine `Exists.intro` (ADR-0138).
     NegatedExistentialWitness,
@@ -1908,6 +1913,12 @@ pub fn scan_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> ProofFra
         && crate::int_reconstruct::quantified_counterexample_cover_lean_shape(arena, assertions)
     {
         ProofFragment::QuantifiedCounterexampleCover
+    } else if has_forall
+        && quant_bv_instance_set_lean::bv_conjunctive_universal_instance_lean_shape(
+            arena, assertions,
+        )
+    {
+        ProofFragment::BvConjunctiveUniversalInstance
     } else if has_forall
         && quant_bv_instance_set_lean::bv_positive_universal_instance_set_lean_shape(
             arena, assertions,
@@ -4021,6 +4032,24 @@ fn reconstruct_proof_fragment_to_lean_module(
             })?
             .ok_or_else(declined)?;
             quant_bv_instance_set_lean::reconstruct_bv_positive_universal_instance_set_to_lean_module(
+                arena,
+                assertions,
+                &certificate,
+            )?
+        }
+        ProofFragment::BvConjunctiveUniversalInstance => {
+            let config =
+                crate::SolverConfig::default().with_timeout(std::time::Duration::from_secs(30));
+            let certificate =
+                crate::quant_bv_conjunctive_search::find_bv_conjunctive_universal_instance(
+                    arena, assertions, &config,
+                )
+                .map_err(|error| ReconstructError::MalformedStep {
+                    rule: "bv_conjunctive_universal_instance".to_owned(),
+                    detail: format!("conjunctive-instance search failed: {error}"),
+                })?
+                .ok_or_else(declined)?;
+            quant_bv_instance_set_lean::reconstruct_bv_conjunctive_universal_instance_to_lean_module(
                 arena,
                 assertions,
                 &certificate,
