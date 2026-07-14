@@ -322,8 +322,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-14 — Glaurung production profiling is corrected; CNF construction
-  is the next measured optimization.** Sequential capture at Glaurung
+- **2026-07-14 — Glaurung production profiling is corrected; the
+  `slice-partial` affine-add residue is the next measured optimization.**
+  Sequential capture at Glaurung
   `286f744` produced 15,710 rows / 15,687 unique hashes / 23 duplicate rows /
   zero verdict conflicts. Strict validation rejects 2,225 genuinely ill-sorted
   dumps and binds separate 128-query representative and 13,462-query well-typed
@@ -361,11 +362,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
   After ADR-0150, full canonical stages are word rewrite 1.80 s, bit blast
   5.88 s, CNF 5.18 s, and SAT 3.50 s. CNF gate/root emission costs 2.40/1.08 s
-  and planning 1.20 s. Immediate next: re-attribute residual operator lowering
-  and AIG construction by family, then take only a measured circuit-producing
-  slice under the same end-to-end gate. Broad GQ4 remains behind it because the
-  complete canonical diagnostic demands 98.16% of term bits. Glaurung must separately
-  fix explicit width coercion, strict dump
+  and planning 1.20 s. The residual family attribution is now complete and
+  selects ADR-0153's `slice-partial` add-chain experiment below. Broad GQ4
+  remains behind it because the complete canonical diagnostic demands 98.16%
+  of term bits. Glaurung must separately fix explicit width coercion, strict dump
   validation, and atomic cross-process deduplication. Full evidence and digests:
   [`bench-results/glaurung-qfbv-2026-07-14.md`](bench-results/glaurung-qfbv-2026-07-14.md).
 
@@ -486,6 +486,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   comparator's stale `preprocess=true` requirement was found to reject raw and
   canonical artifacts; it now validates explicit rewrite mode and accepts all
   three named policies without allowing baseline/candidate policy drift.
+
+  The full family attribution now selects proposed ADR-0153. In canonical run
+  003, `slice-partial` is 1,584/13,462 queries (11.8%) but consumes 6.207/15.627
+  seconds (39.7%), runs 3.82x behind Z3, creates 16.91 million AIG nodes, and
+  emits 22.87 million clauses. Bit blast plus CNF own 70.6% of its time. Its
+  original scripts contain 377,320 `bvadd` occurrences, and the code audit
+  confirms that current AC flattening sorts mixed symbol/constant chains but
+  rebuilds lists wider than two before binary constant folding. Next: add the
+  exact, wide-safe `bv.add_constant_chain.v1` rule under rewrite identity v3,
+  prove evaluator/Z3 equivalence, and require target-family AIG/CNF/time gains
+  in five representative processes before a guarded full run. The ordered
+  worker/path/scope trace remains the next Glaurung functionality artifact;
+  the cold pack cannot validate warm reuse, caching, or model-choice effects.
 
 - **Historical Glaurung build-up through 2026-07-14 (superseded by the measured
   result above).** The ten-item Glaurung QF_BV performance roadmap is an
@@ -653,19 +666,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   | ID | Live status | Next acceptance boundary |
   |---|---|---|
   | **GQ1 real-query profile** | **DONE for the current cold attribution boundary.** Artifact v27 representative raw/canonical p50 ratios are 1.65x/1.37x; full single trials are 3.17x/2.71x. All validity gates pass and profiler provenance is explicit | Repeat full trials when accepting an optimization; thresholds require more full-tier repetitions |
-  | **GQ2 cheap cold tier** | **WIP candidate validated.** Canonical v2 cuts corrected representative/full Axeyum total 17.4%/13.3% and bit blast 37.3%/44.4% | Keep canonical as the candidate; add another word rule only if it reduces downstream AIG/CNF and end-to-end time |
-  | **GQ3 coercion peepholes** | **WIP with a corrected production win.** ADR-0142 removes 1,315/1,435 representative opportunities and cuts term bits 57% representative / 72% full; full AIG/CNF size remains roughly flat | Demonstrate circuit-size improvement from any next exact word tranche or narrow the exit criterion explicitly |
+  | **GQ2 cheap cold tier** | **WIP with proposed ADR-0153 selected.** Canonical v2 cuts corrected representative/full Axeyum total 17.4%/13.3% and bit blast 37.3%/44.4%; `slice-partial` now identifies a mixed `bvadd` constant-chain residue | Implement exact v3 add-chain folding; require target-family AIG/CNF and end-to-end gains before acceptance |
+  | **GQ3 coercion/affine peepholes** | **WIP with a corrected production win.** ADR-0142 removes 1,315/1,435 representative opportunities and cuts term bits 57% representative / 72% full; proposed ADR-0153 has a measured 3.82x target family | Prove exact modular/wide semantics, then demonstrate circuit-size and time improvement under the real-corpus gate |
   | **GQ4 cold relevant bits** | **WIP but re-ranked.** ADR-0143 separates the diagnostic; post-canonical full demand is 98.16% of term bits and 91.51% of symbol bits | Pursue partial lowering only if family-specific evidence shows a material cone and preserve original replay/model projection |
-  | **GQ5 AIG/CNF construction** | **ACTIVE with four accepted wins and five restored/rejected experiments.** Current canonical is 15.60 s / 1.99x Z3. ADR-0152's range-backed memo improves bit blast only 0.57% while total mean/CNF p50 regress 0.38%/0.88%; ADR-0151's ordered memo is restored | Close memo micro-work; require fresh attribution and a larger design before another GQ5 experiment |
+  | **GQ5 AIG/CNF construction** | **ACTIVE with four accepted wins and five restored/rejected experiments.** Current canonical is 15.60 s / 1.99x Z3. Family attribution assigns 39.7% of time and 22.87M clauses to `slice-partial` | Test the selected word-level add-chain reduction first; re-attribute construction only after its accept/reject result |
   | **GQ6 cold SAT/CDCL** | **WIP foundation, attribution-gated**; subsumption/BVE, XOR/GF(2), VSIDS, phase saving, Luby, and LBD foundations exist | Exact-CNF backend attribution first; tune/default a stronger path only where SAT dominates and proof replay stays green |
   | **GQ7 warm delta entry** | **WIP foundation**; retained CNF/search state exists, but the deduplicated cold corpus cannot measure prefix reuse and Glaurung still creates a fresh solver for every check | Capture an ordered scope/path trace, preprocess only new/affected terms, wire persistent per-worker/path push/assert/check/pop, control concretization, and publish real-driver per-check cost plus warm break-even depth |
   | **GQ8 verdict/CNF cache** | **TODO, ordered-trace-gated** | Measure duplicates/prefixes first; prefer retained warm state, then add versioned exact-query reuse only where justified, with deterministic bounds and mandatory original replay |
   | **GQ9 auto cost model/docs** | **TODO**; P1.8 shape/resource probes are only the general foundation | Telemetry-visible raw/cheap/configured/warm choice that beats or matches fixed policies and documents embedder guidance |
   | **GQ10 real-lifter regression tier** | **WIP; cold regression automation landed.** `just check` runs raw + canonical over all 128 representative rows when data is available; five clean canonical full-tier trials establish 0.51% total/ratio CV and executable 3%/3%/2% Axeyum/ratio/Z3 alarms. All semantic gates pass; 2,225 malformed dumps are isolated | Use the guarded full comparison for accepted changes and fix producer validation/dedup before calling the raw capture authoritative |
 
-  **Next actions:** (1) re-attribute the now-close bit-blast/CNF stages by
-  Glaurung family before selecting another larger GQ3/GQ5 slice; (2) keep broad
-  GQ4, SAT, and further memo work gated pending larger measured opportunity;
+  **Next actions:** (1) implement and semantically gate proposed ADR-0153, then
+  run five representative processes; only a target-family construction/time
+  win earns the guarded full comparison; (2) keep broad GQ4, SAT, and further
+  memo work gated pending larger measured opportunity;
   (3) fix Glaurung's explicit width
   coercion, strict dump validation, and atomic cross-process dedup/conflict
   handling; (4) define the ordered path/scope trace
@@ -2453,6 +2467,15 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-14 — full family attribution selects proposed ADR-0153.** Canonical
+  run 003 shows `slice-partial` is 11.8% of rows but 39.7% of Axeyum time and
+  3.82x behind Z3; it creates 16.91M AIG nodes and 22.87M clauses. A source and
+  canonicalizer audit localizes the next experiment to mixed `bvadd` chains:
+  AC sorting currently preserves every constant leaf. ADR-0153 specifies exact
+  modular/wide constant combination, stable rule telemetry, rewrite identity
+  v3, semantic gates, and representative/full stop-go gates. Ordered
+  worker/path/scope capture remains the separate GQ7 functionality prerequisite.
 
 - **2026-07-14 — GQ10 full-tier variance and guarded comparison land.** Five
   clean canonical processes decide and agree on 13,462/13,462 rows each. Mean

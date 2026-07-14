@@ -85,8 +85,16 @@ session state.
 > same-environment regression alarms are 3% ratio, 3% Axeyum total, and 2%
 > absolute Z3 drift; the guarded comparator applies them. Re-attribute the
 > now-close bit-blast/CNF stages by Glaurung family before choosing another
-> larger optimization, while the ordered warm trace remains the next
-> functionality-enabling Glaurung handoff.
+> larger optimization. That attribution is now decisive: `slice-partial` is
+> only 1,584/13,462 queries but owns 39.7% of Axeyum time, runs 3.82x behind
+> Z3, and creates 16.91 million AIG nodes plus 22.87 million clauses. Its
+> 377,320 lexical `bvadd` occurrences expose a precise canonicalizer gap:
+> associative flattening sorts mixed symbol/constant chains but does not
+> combine their constant leaves. Proposed ADR-0153 therefore tests exact
+> modular `bv.add_constant_chain.v1` folding before any SAT or broad GQ4 work.
+> The ordered warm trace remains the next functionality-enabling Glaurung
+> handoff; cold deduplication cannot validate scopes, prefix reuse, or model
+> choice.
 > The capture and
 > implementation audit has been expanded into the dependency-ordered
 > [Glaurung QF_BV execution plan](docs/research/08-planning/glaurung-qfbv-execution-plan.md):
@@ -173,9 +181,14 @@ representative gate now runs raw and canonical automatically when data is
 available and passes all 128 rows. Five clean full-tier canonical trials now
 put total/ratio/Z3 CV at 0.51%/0.51%/0.31% and establish provisional 3%/3%/2%
 same-environment alarms. Re-attribute the close bit-blast/CNF stages by family
-before another larger measured optimization.
-Affine word work must still show a downstream circuit/CNF win before outranking
-it.
+before another larger measured optimization. That attribution is complete:
+`slice-partial` is 11.8% of queries but 39.7% of Axeyum time, runs 3.82x behind
+Z3, and creates about 10,677 new AIG nodes/query. Proposed ADR-0153 is the next
+bounded GQ2/GQ3 experiment because the current AC `bvadd` path retains every
+constant leaf in mixed affine chains. Add `bv.add_constant_chain.v1`, support
+scalar and wide constants, advance the rewrite identity to v3, and require a
+target-family AIG/CNF/time win in five representative processes before the
+guarded five-process full comparison. Restore v2 if that gate fails.
 Broad GQ4 partial lowering follows its small post-canonical full-tier
 opportunity (1.84% term bits) unless family-specific evidence reverses the
 rank. Admit GQ6

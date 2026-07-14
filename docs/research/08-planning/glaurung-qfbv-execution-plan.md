@@ -394,7 +394,13 @@ and 31 SAT-BV tests plus strict Clippy pass. Five representative processes
 preserve structure, but bit blast improves only 0.57% while total mean/CNF p50
 regress 0.38%/0.88%. It is restored/deferred without a full run. Close memo
 micro-work and advance the data-availability-aware GQ10 representative gate.
-SAT and broad GQ4 remain gated by measured opportunity.
+The subsequent family attribution selects proposed ADR-0153: `slice-partial`
+is only 1,584/13,462 queries but owns 39.7% of Axeyum time, runs 3.82x behind
+Z3, and creates 16.91 million AIG nodes plus 22.87 million clauses. Its source
+scripts contain 377,320 `bvadd` occurrences, while the current AC canonicalizer
+sorts mixed symbol/constant chains without combining their constant leaves.
+Test exact modular add-chain folding next; SAT and broad GQ4 remain gated by
+measured opportunity.
 
 ### G6 — SAT work remains conditional (GQ6)
 
@@ -451,9 +457,9 @@ validity gates.
 | M0 byte-complete capture | GQ1, GQ10 | **Axeyum side done:** representative and well-typed full manifests validate; producer still must prevent 2,225 malformed dumps and atomically deduplicate |
 | M1 raw v27 baseline | GQ1, GQ10 | **Done:** representative raw/canonical and five canonical full-tier processes pass every gate; full Axeyum/ratio/Z3 CV is 0.51%/0.51%/0.31% and guarded comparisons use provisional 3%/3%/2% alarms |
 | M2 diagnostic attribution | GQ1, GQ3--GQ5 | **Done for current boundary:** ADR-0143 removes the 29.57 s observational pass from production and marks diagnostic completeness explicitly |
-| M3 cheap exact rewriting | GQ2, GQ3 | **Measured production win:** canonical cuts Axeyum total 17.4% representative median / 13.3% full and bit blast 37.3% / 44.4%; circuit-size exit remains |
+| M3 cheap exact rewriting | GQ2, GQ3 | **Measured production win plus next candidate:** canonical cuts Axeyum total 17.4% representative median / 13.3% full and bit blast 37.3% / 44.4%; proposed ADR-0153 targets the measured `slice-partial` affine-add residue, with circuit/time admission still required |
 | M4 demand lowering | GQ4 | Continue only with replay-safe real AIG/CNF and wall-time reductions |
-| M5 AIG/CNF optimization | GQ5 | **Two wins accepted:** ADR-0144 cuts full canonical CNF 18.5% / total 8.8%; ADR-0145 then cuts CNF 5.6% / gate emission 10.5% / total 2.7%, all with identical content; continue only measured root/planning slices |
+| M5 AIG/CNF optimization | GQ5 | **Four wins accepted:** ADR-0144/0145 reduce clause ownership/emission; ADR-0150/0151 then reach 15.60 s / 1.99x through fingerprint and dense lift indexes. ADR-0153 now tests the measured word-level cause before more construction work |
 | M6 SAT re-attribution | GQ6 | Start SAT work only if search becomes material/dominant |
 | M7 ordered warm trace | GQ7, GQ8 | Decide incremental API shape and whether a cache is worthwhile |
 | M8 Glaurung warm integration | GQ7 | Require real same-stream functionality and performance, not the synthetic result |
@@ -461,9 +467,11 @@ validity gates.
 
 ## Immediate next actions
 
-1. Re-attribute the now-close bit-blast/CNF stages by Glaurung family before
-   selecting another larger GQ3/GQ5 slice. ADR-0152 closes the memo-ownership
-   micro-lane; broad GQ4 and SAT work remain behind measured opportunity.
+1. Implement and semantically validate proposed ADR-0153's exact
+   `bv.add_constant_chain.v1` rule. Five representative processes must show
+   target-family rule applications plus post-word/AIG/CNF and end-to-end gains
+   before spending the guarded five-process full comparison. Restore v2 if it
+   fails; broad GQ4 and SAT work remain behind measured opportunity.
 2. On the Glaurung side, fix explicit width coercion plus strict dump validation
    and cross-process dedup/conflict handling. Define the ordered warm-trace and
    controlled-concretization schema before GQ7/GQ8 cache or auto-policy work.

@@ -403,3 +403,46 @@ cross-commit comparator required `preprocess=true`, which rejected the raw and
 canonical series emitted by the documented recipes. It now validates the
 explicit rewrite mode and accepts all three named cold policies while retaining
 exact baseline/candidate configuration equality.
+
+## Family attribution and ADR-0153 selection
+
+Canonical full run 003 at clean revision `0cfd6cdc` has SHA-256
+`32ceead9d38095e7fc54f3bb430b103cdb67c80c4a3362420f61b46e28b0fb8f`.
+Grouping its per-instance production counters by manifest family gives:
+
+| Family | Queries | Axeyum | Share | Z3 | Ratio | Word | Bit blast | CNF | SAT | New AIG nodes | Clauses |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `register-slice` | 11,606 | 9.267 s | 59.3% | 5.862 s | 1.58x | 1.515 s | 2.807 s | 2.880 s | 1.934 s | 22,744,762 | 25,829,051 |
+| `slice-partial` | 1,584 | 6.207 s | 39.7% | 1.626 s | 3.82x | 0.235 s | 2.105 s | 2.274 s | 1.544 s | 16,911,901 | 22,872,958 |
+| `arithmetic` | 251 | 0.152 s | 1.0% | 0.202 s | 0.75x | 0.010 s | 0.047 s | 0.052 s | 0.041 s | 403,662 | 496,373 |
+
+The remaining families together consume less than 0.002 seconds. Thus
+`slice-partial` is the gap concentration: 11.8% of rows consume 39.7% of
+Axeyum time, and bit blast plus CNF own 70.6% of that family. It creates about
+10,677 new AIG nodes/query versus 1,960 for `register-slice`.
+
+A manifest-selected lexical inventory of the original `slice-partial` SMT-LIB
+scripts finds 377,320 `bvadd` and 11,417 `bvsub` occurrences. The largest
+instances repeatedly add one 64-bit symbol and many constants before equality
+and `ite` Booleanization. The post-word telemetry records 178,325 commutative
+ordering applications but only 46,402 BV constant folds. Source inspection of
+`canonical.rs` supplies the missing causal link: AC `bvadd` is flattened and
+sorted, but a list wider than two operands is immediately rebuilt, bypassing
+the binary constant folder. Constants separated by a symbolic leaf therefore
+remain separate ripple adders.
+
+Proposed ADR-0153 is the next bounded GQ2/GQ3 experiment: combine every
+constant leaf in an AC `bvadd` chain modulo its width, omit a zero sum when
+symbolic leaves remain, preserve deterministic balanced rebuilding, and report
+the transformation under `bv.add_constant_chain.v1`. It must support wide BV
+constants, retain identity projection/original replay, and advance the rule-set
+identity to v3. Semantic suites precede five representative processes; only a
+measured target-family AIG/CNF/time win earns the guarded five-process full run.
+This ranking keeps SAT tuning and broad GQ4 behind measured construction work.
+
+The cold result does not replace GQ7's functionality gate. The next required
+Glaurung-side artifact is an ordered trace with worker/path identity, stable
+constraint/query IDs, push/assert/check/pop order, expected verdict, model
+choice or controlled-concretization metadata, and timing. Without it, the
+deduplicated cold pack cannot establish warm break-even, prefix reuse, or cache
+value.
