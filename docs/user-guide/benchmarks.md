@@ -79,9 +79,15 @@ just bench-public-qfbv-sat-bv-replay-refine      # replay-checked query refineme
 
 Each JSON records the corpus + config hash, per-instance outcome, budgets,
 backend stats, PAR-2, explicit `decided`/`decided_percent`, **disagreements**,
-and **model-replay failures**. A comparable run requires zero errors, zero
-disagreements, zero replay failures, and the declared decided-rate threshold;
-only then is timing a performance signal.
+and **model-replay failures**. Artifact version 16 also records exact
+floating-point millisecond values for each instance's word-level preprocessing,
+bit-blast, CNF encode/inprocess, SAT, model lift, and cold total, plus corpus
+totals and p50/p95 distributions. Its `client_comparison` block reports the
+aggregate Axeyum/Z3 ratio plus each solver's p50/p95 over the same decided
+queries.
+A comparable run requires zero errors, zero disagreements, zero replay failures,
+and the declared decided-rate threshold; only then is timing a performance
+signal.
 
 ## Binary-analysis client gate
 
@@ -92,7 +98,10 @@ client corpus is not redistributed by this repository):
 just bench-glaurung-qfbv /path/to/glaurung-smt2-capture
 ```
 
-This enables word-level preprocessing, compares every result with Z3, requires
-a 100% decided rate, and emits a versioned artifact. Synthetic QF_BV corpora
-remain useful lower-level diagnostics, but do not replace the
+This runs one query at a time, enables word-level preprocessing, compares every
+result with in-process Z3 on the **original parsed assertions**, requires a 100%
+decided rate, requires in-process Z3 coverage for every file, and emits a
+versioned artifact. Axeyum's comparison time includes its selected word
+preprocessing; Z3 never receives Axeyum's reduced assertion set. Synthetic QF_BV
+corpora remain useful lower-level diagnostics, but do not replace the
 extract/concat/mixed-width/memory-derived client shape.

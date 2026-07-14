@@ -331,9 +331,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   preprocessing cost policy are separately tracked rather than being implied by
   the existing incremental API.
 
+  **GQ1 readiness increment:** artifact v16 now charges Axeyum for word
+  preprocessing, separates it from term→AIG, AIG→CNF, optional CNF
+  inprocessing, SAT, and model lift, and records exact p50/p95 distributions.
+  The aggregate client ratio compares against in-process Z3 on the untouched
+  parsed assertions, not Axeyum's reduced terms; binary fallbacks are
+  verdict-only. `bench-glaurung-qfbv` is single-worker and requires in-process
+  Z3 coverage for every file. The three-query micro plumbing smoke is 3/3
+  decided/agreed with zero errors or replay failures, but carries no Glaurung
+  speed claim.
+
   | ID | Live status | Next acceptance boundary |
   |---|---|---|
-  | **GQ1 real-query profile** | **BLOCKED on external capture**; `BvLayerStats`, the client recipe, decided-rate gate, and zero-error policy are landed | Obtain the representative Glaurung query pack; record word simplify, AIG, CNF, SAT, and lift/replay attribution plus comparable Axeyum/Z3 timing |
+  | **GQ1 real-query profile** | **WIP; external capture is the remaining data dependency.** Artifact v16, typed AIG/CNF/inprocess stats, single-worker client recipe, p50/p95, original-query in-process Z3 ratio, complete-oracle/decided-rate gates, and zero-error policy are landed | Obtain the representative Glaurung query pack and publish the first valid client attribution/ratio; the micro smoke validates plumbing only |
   | **GQ2 cheap cold tier** | **TODO**, profile-gated; existing full preprocessing is opt-in and warm-oriented | Bounded constant/identity tier with non-worse cold aggregate time and an explicit cold/warm/size policy |
   | **GQ3 coercion peepholes** | **TODO**; only narrower extract-through-bitwise/ITE rules are landed | Exact extract/concat, nested-extract, zero/sign-extension cancellation with exhaustive and differential semantics gates |
   | **GQ4 cold relevant bits** | **WIP foundation**; warm 8-of-64 slicing is landed, cold demand propagation is not | Backward live-bit pass, original replay, counters, and measured target-corpus AIG/CNF reduction |
@@ -342,7 +352,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   | **GQ7 warm delta entry** | **WIP foundation**; retained CNF/search state exists, but `assert_configured` delta-only preprocessing is not complete | Preprocess only new/affected terms and publish per-check cost plus warm break-even sequence length |
   | **GQ8 verdict/CNF cache** | **TODO** | Versioned canonical keys, exact duplicate verdict reuse, sound prefix-state reuse, deterministic bounds, and mandatory original replay |
   | **GQ9 auto cost model/docs** | **TODO**; P1.8 shape/resource probes are only the general foundation | Telemetry-visible raw/cheap/configured/warm choice that beats or matches fixed policies and documents embedder guidance |
-  | **GQ10 real-lifter regression tier** | **BLOCKED on the same external capture**; artifact-v15 validity gates and `just bench-glaurung-qfbv` recipe are landed | Versioned minimized corpus/manifest, regular representative gate, scheduled full run, and per-commit Z3-relative tracking |
+  | **GQ10 real-lifter regression tier** | **BLOCKED on the external capture**; artifact-v16 validity/attribution gates and the single-worker `just bench-glaurung-qfbv` recipe are landed | Versioned minimized corpus/manifest, regular representative gate, scheduled full run, and per-commit Z3-relative tracking |
 
   **Next actions:** (1) ingest the Glaurung capture without normalizing away its
   width-mixed/extract/concat/memory shape; (2) establish the GQ1/GQ10 baseline at
@@ -2016,6 +2026,15 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-13 — GQ1 artifact-v16 cold attribution landed.** The benchmark now
+  measures word preprocessing, bit-blast, CNF encode/inprocess, SAT, and model
+  lift separately with aggregate and exact p50/p95 output. Its embedded-client
+  ratio compares Axeyum (including preprocessing) with in-process Z3 on the
+  original parsed assertions; binary fallbacks are excluded. The Glaurung recipe
+  is single-worker and requires embedded-Z3 coverage for every file. A
+  three-query micro smoke is 100% decided/agreed with zero errors/replay failures
+  and validates only the plumbing; the real capture still gates any optimization
+  conclusion and GQ10 adoption.
 - **2026-07-13 — all ten Glaurung QF_BV performance items are explicit in
   PLAN/STATUS as GQ1--GQ10.** The client lane now orders real-query capture and
   cold layer attribution before cheap simplification, coercion cancellation,

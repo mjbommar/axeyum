@@ -12,15 +12,17 @@ use crate::backend::SolveStats;
 
 /// The named stages of the `sat-bv` pipeline for one check.
 ///
-/// Durations cover bit-blasting (term → AIG), CNF encoding (AIG → CNF),
-/// SAT solving, and model lifting (assignment → Axeyum model). Sizes describe
-/// the AIG and CNF the encoder produced.
+/// Durations cover bit-blasting (term → AIG), CNF encoding (AIG → CNF), optional
+/// CNF inprocessing, SAT solving, and model lifting (assignment → Axeyum model).
+/// Sizes describe the AIG and CNF the encoder produced.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct BvLayerStats {
     /// Time lowering terms to the AIG.
     pub bit_blast: Duration,
     /// Time encoding the AIG to CNF.
     pub cnf_encode: Duration,
+    /// Time simplifying the CNF before search (zero when disabled or skipped).
+    pub cnf_inprocess: Duration,
     /// Time inside the SAT adapter.
     pub solve: Duration,
     /// Time lifting a satisfying assignment into an Axeyum model.
@@ -47,6 +49,7 @@ impl BvLayerStats {
         Some(Self {
             bit_blast: lookup(stats, "bit_blast_ms").map_or(Duration::ZERO, ms_to_duration),
             cnf_encode: lookup(stats, "cnf_encode_ms").map_or(Duration::ZERO, ms_to_duration),
+            cnf_inprocess: lookup(stats, "inprocess_ms").map_or(Duration::ZERO, ms_to_duration),
             solve: stats.solve,
             model_lift: stats.model_lift,
             aig_inputs: lookup(stats, "aig_inputs").map_or(0, count_to_u64),
@@ -58,7 +61,7 @@ impl BvLayerStats {
 
     /// Total wall-clock time across all pipeline stages.
     pub fn total(&self) -> Duration {
-        self.bit_blast + self.cnf_encode + self.solve + self.model_lift
+        self.bit_blast + self.cnf_encode + self.cnf_inprocess + self.solve + self.model_lift
     }
 
     /// Clauses per CNF variable, a coarse encoding-density indicator

@@ -33,6 +33,7 @@ fn sat_bv_run_exposes_typed_layer_stats() {
     );
     assert!(layers.cnf_variables > 0, "expected CNF variables");
     assert!(layers.cnf_clauses > 0, "expected CNF clauses");
+    assert_eq!(layers.cnf_inprocess, std::time::Duration::ZERO);
     assert!(layers.clause_density() > 0.0, "density is positive");
     // total() is the sum of all stage durations and is well-defined.
     let _ = layers.total();
@@ -42,4 +43,21 @@ fn sat_bv_run_exposes_typed_layer_stats() {
 fn empty_stats_are_not_misread_as_sat_bv() {
     // A SolveStats with no backend counters is not a sat-bv run.
     assert!(BvLayerStats::from_solve_stats(&SolveStats::default()).is_none());
+}
+
+#[test]
+fn typed_layers_include_optional_cnf_inprocessing() {
+    let mut stats = SolveStats::default();
+    stats.solve = std::time::Duration::from_millis(5);
+    stats.model_lift = std::time::Duration::from_millis(7);
+    stats.backend = vec![
+        ("aig_nodes".to_owned(), 10.0),
+        ("cnf_variables".to_owned(), 12.0),
+        ("bit_blast_ms".to_owned(), 1.0),
+        ("cnf_encode_ms".to_owned(), 2.0),
+        ("inprocess_ms".to_owned(), 3.0),
+    ];
+    let layers = BvLayerStats::from_solve_stats(&stats).unwrap();
+    assert_eq!(layers.cnf_inprocess, std::time::Duration::from_millis(3));
+    assert_eq!(layers.total(), std::time::Duration::from_millis(18));
 }

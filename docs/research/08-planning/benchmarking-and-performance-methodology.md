@@ -166,7 +166,7 @@ records the contract and the first measured baselines.
   26 GB host). Broad attribution runs should keep moderate budgets and choose
   small-instance families rather than forcing large instances through.
 - Layer attribution is also available off-corpus: `axeyum_solver::BvLayerStats`
-  lifts the per-stage counters (bit-blast, CNF encode, solve, model lift; AIG
+  lifts the per-stage counters (bit-blast, CNF encode/inprocess, solve, model lift; AIG
   and CNF sizes; clause density) into a typed view, and the
   `scenario_pipeline_report` and `scenario_scaling` `axeyum-bench` examples
   report it across the scenario tier so an optimization's effect on encoding
@@ -177,6 +177,18 @@ records the contract and the first measured baselines.
   Glaurung integration measurement, where a nominal 12–34x speedup was actually
   a 98% construction/error rate. Client-tier timing is publishable only after
   its decided-rate gate passes.
+- Artifact version 16 makes the Glaurung attribution boundary executable:
+  word-level preprocessing, bit-blast, CNF encode, optional CNF inprocessing,
+  SAT search, and model lift each carry exact per-instance millisecond values,
+  aggregate time, and deterministic p50/p95 distributions. The client comparison
+  sends the untouched parsed assertions to in-process Z3 while charging Axeyum
+  for its selected word preprocessing, then reports the aggregate Axeyum/Z3
+  ratio and both timing distributions. Binary-Z3 fallbacks remain verdict-only
+  and are excluded from that ratio because process startup is not comparable to
+  the embedded target.
+  The Glaurung recipe uses one worker so cross-query contention cannot masquerade
+  as a layer cost, and `--require-in-process-z3` fails the run unless every file
+  contributes to the embedded comparison.
 - **Primary client QF_BV target (2026-07-13): Glaurung binary analysis.** Capture
   and minimize the real lifter-produced path conditions, preserving their
   extract/concat, mixed machine-width, and memory-derived shape. This client

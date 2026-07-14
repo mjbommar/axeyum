@@ -55,6 +55,15 @@ traces; GQ8 follows the exact cache/replay contract rather than treating a
 prefix as an identical query. Re-run the GQ10 baseline after every accepted
 slice and record the result in `STATUS.md` and `bench-results/`.
 
+**GQ1 readiness landed (2026-07-13, artifact v16).** The client recipe is now a
+single-worker cold run. Its artifact separates word preprocessing, bit-blast,
+CNF encoding, optional CNF inprocessing, SAT, and model lift; reports aggregate
+and exact p50/p95 timing; and computes the Axeyum/Z3 ratio with in-process Z3
+solving the untouched parsed assertions. A micro-corpus smoke proves the
+measurement plumbing and integrity gates, including mandatory in-process Z3
+coverage for every file, not the client performance hypothesis. GQ1/GQ10 remain
+open until the actual Glaurung capture is ingested.
+
 **Non-negotiable acceptance gate.** Comparable runs require 100% decided on the
 declared client tier, zero operational errors, `DISAGREE=0`, zero model/proof
 replay failures, fixed seeds and solver versions, and bounded deterministic

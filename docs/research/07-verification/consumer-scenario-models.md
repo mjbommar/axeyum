@@ -78,7 +78,7 @@ implement, test, document):
    whole catalog through the façade.
 3. **Abstraction and optimization architecture (done, 2026-06-13).** Typed
    `BvLayerStats` lifts the stringly-typed per-stage counters into a first-class
-   view (bit-blast, cnf-encode, solve, model-lift; AIG/CNF sizes; clause
+   view (bit-blast, CNF encode/inprocess, solve, model-lift; AIG/CNF sizes; clause
    density). The `scenario_pipeline_report` bench example gives a deterministic
    per-stage, per-family measurement over the corpus.
 4. **Integrate and iterate (done, 2026-06-13).** The `scenario_scaling` bench

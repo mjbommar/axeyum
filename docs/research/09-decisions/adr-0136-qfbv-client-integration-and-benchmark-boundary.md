@@ -72,6 +72,16 @@ The local Glaurung reference checkout contains source but no captured SMT-LIB
 query corpus. Therefore this ADR records no new end-to-end 1.7--3.2x ratio and
 makes no parity claim. The external capture is required for that measurement.
 
+The 2026-07-13 GQ1 readiness follow-up advances the artifact to version 16. It
+times word preprocessing separately from term→AIG, AIG→CNF, optional CNF
+inprocessing, SAT, and model lift; records exact p50/p95 distributions; and
+compares against in-process Z3 on the original parsed assertions rather than
+Axeyum's reduced terms. The client recipe also requires every file to receive an
+in-process Z3 comparison; subprocess fallback cannot silently populate a partial
+ratio. A three-query micro run validates the plumbing at 100% decided,
+`DISAGREE=0`, and zero replay failures, but is explicitly not a client performance
+result and does not substitute for the external capture.
+
 ## Alternatives
 
 - **Implicitly widen or truncate binary operands.** Rejected: it masks client

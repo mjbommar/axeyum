@@ -13,7 +13,7 @@
 //!   `[--refine-rounds N] [--refine-batch N] [--refine-adaptive-batch]`
 //!   `[--refine-select first|smallest-dag|smallest-plan-dag|smallest-plan-greedy]`
 //!   `[--node-budget N] [--cnf-var-budget N] [--cnf-clause-budget N]`
-//!   `[--compare-z3] [--min-decided-percent P] [--jobs N]`
+//!   `[--compare-z3] [--require-in-process-z3] [--min-decided-percent P] [--jobs N]`
 //! The default build can run the pure Rust `sat-bv` backend. Build with
 //! `--features z3` (or `z3-static`) to enable the Z3 oracle backend.
 
@@ -44,7 +44,7 @@ mod run {
     use rayon::prelude::*;
     use serde_json::{Value as JsonValue, json};
 
-    const ARTIFACT_VERSION: u32 = 15;
+    const ARTIFACT_VERSION: u32 = 16;
     /// Corpus SAT-share threshold above which SAT solve time is reported as
     /// dominating end-to-end time — gate (a) for prioritizing the custom CDCL
     /// core (benchmarking-and-performance-methodology.md, "Decision Gates").
@@ -198,6 +198,7 @@ mod run {
         native_cdcl: bool,
         preprocess: bool,
         compare_z3: bool,
+        require_in_process_z3: bool,
         min_decided_percent: Option<f64>,
         jobs: usize,
     }
@@ -229,6 +230,7 @@ mod run {
             native_cdcl: false,
             preprocess: false,
             compare_z3: false,
+            require_in_process_z3: false,
             min_decided_percent: None,
             jobs: 1,
         };
@@ -332,6 +334,20 @@ mod run {
                     );
                 }
             }
+            "--require-in-process-z3" => {
+                #[cfg(feature = "z3")]
+                {
+                    parsed.require_in_process_z3 = true;
+                }
+                #[cfg(not(feature = "z3"))]
+                {
+                    return Err(
+                        "`--require-in-process-z3` requires building axeyum-bench with \
+                         --features z3"
+                            .to_owned(),
+                    );
+                }
+            }
             "--min-decided-percent" => {
                 parsed.min_decided_percent = Some(parse_decided_percent(&next_value(args, flag)?)?);
             }
@@ -382,6 +398,9 @@ mod run {
                 "`--preprocess` is not yet supported with the replay-refinement query plans"
                     .to_owned(),
             );
+        }
+        if args.require_in_process_z3 && !args.compare_z3 {
+            return Err("`--require-in-process-z3` requires `--compare-z3`".to_owned());
         }
         Ok(())
     }
@@ -436,6 +455,33 @@ mod run {
         }
     }
 
+    #[derive(Debug, Clone, Copy)]
+    struct LayerSample {
+        word_preprocess: f64,
+        bit_blast: f64,
+        cnf_encode: f64,
+        cnf_inprocess: f64,
+        solve: f64,
+        model_lift: f64,
+    }
+
+    impl LayerSample {
+        fn total_s(self) -> f64 {
+            self.word_preprocess
+                + self.bit_blast
+                + self.cnf_encode
+                + self.cnf_inprocess
+                + self.solve
+                + self.model_lift
+        }
+    }
+
+    #[derive(Debug, Clone, Copy)]
+    struct ClientComparisonSample {
+        axeyum_s: f64,
+        z3_s: f64,
+    }
+
     #[derive(Default)]
     struct Summary {
         files: u64,
@@ -479,14 +525,28 @@ mod run {
         // only, so gate (a) — "does SAT solve time dominate?" — is falsifiable
         // from one summary. Other backends are excluded (their stage breakdown
         // is not the pure-Rust pipeline the CDCL gate is about). The four stages
-        // are non-overlapping and sum to the pipeline wall time (`translate`
-        // equals `bit_blast + cnf_encode` for this path, so it is not a separate
-        // slice).
+        // are non-overlapping and sum to the cold pipeline wall time. Word-level
+        // preprocessing runs in the harness before the backend; `translate`
+        // equals bit-blast + CNF encode + optional CNF inprocessing for this path.
         layer_files: u64,
+        layer_word_preprocess_s: f64,
         layer_bit_blast_s: f64,
         layer_cnf_encode_s: f64,
+        layer_cnf_inprocess_s: f64,
         layer_solve_s: f64,
         layer_model_lift_s: f64,
+        /// One fixed-size sample on per-file summaries; the merged corpus keeps
+        /// the samples in one allocation for exact deterministic p50/p95 values.
+        layer_sample: Option<LayerSample>,
+        layer_samples: Vec<LayerSample>,
+        /// Fair in-process comparison over the original query: Axeyum includes
+        /// its selected word preprocessing, while Z3 receives the untouched
+        /// parsed assertions. Binary-fallback timings are deliberately excluded.
+        client_comparison_files: u64,
+        client_axeyum_s: f64,
+        client_z3_s: f64,
+        client_comparison_sample: Option<ClientComparisonSample>,
+        client_comparison_samples: Vec<ClientComparisonSample>,
     }
 
     struct InstanceRun {
@@ -553,14 +613,22 @@ mod run {
         } else {
             println!("{artifact}");
         }
-        report_summary(&summary, args.min_decided_percent)
+        report_summary(
+            &summary,
+            args.min_decided_percent,
+            args.require_in_process_z3,
+        )
     }
 
     /// Prints the one-line corpus summary + the root-cause blocker leaderboard, then
     /// returns the process exit code — `FAILURE` (after a printed `SOUNDNESS ALARM`)
     /// if any soundness invariant tripped (oracle/ground-truth disagreement, a sat
     /// model that did not replay, a rewrite that flipped a decision), else `SUCCESS`.
-    fn report_summary(summary: &Summary, min_decided_percent: Option<f64>) -> ExitCode {
+    fn report_summary(
+        summary: &Summary,
+        min_decided_percent: Option<f64>,
+        require_in_process_z3: bool,
+    ) -> ExitCode {
         eprintln!(
             "files={} sat={} unsat={} unknown={} unsupported={} errors={} \
              agree={} DISAGREE={} model_replay_failures={} \
@@ -621,6 +689,13 @@ mod run {
                 "BENCHMARK INTEGRITY ALARM: decided {:.2}% is below required {:.2}%",
                 decided_percent(summary),
                 required
+            );
+            return ExitCode::FAILURE;
+        }
+        if require_in_process_z3 && summary.client_comparison_files != summary.files {
+            eprintln!(
+                "BENCHMARK INTEGRITY ALARM: in-process Z3 compared {} of {} files",
+                summary.client_comparison_files, summary.files
             );
             return ExitCode::FAILURE;
         }
@@ -822,35 +897,160 @@ mod run {
         })
     }
 
-    /// Corpus layer attribution: per-stage seconds, each stage's share of the
-    /// pure-Rust pipeline wall time, and the gate (a) verdict on whether SAT
-    /// solve time dominates. `null` when no `sat-bv` instance was decided (the
-    /// breakdown would be vacuous and a fabricated `0` share could be misread as
-    /// "SAT does not dominate").
+    #[allow(clippy::cast_precision_loss)]
+    fn timing_distribution_record<T: Copy>(
+        samples: &[T],
+        select_seconds: impl Fn(T) -> f64,
+    ) -> JsonValue {
+        if samples.is_empty() {
+            return JsonValue::Null;
+        }
+        let mut values = samples
+            .iter()
+            .copied()
+            .map(select_seconds)
+            .collect::<Vec<_>>();
+        values.sort_by(f64::total_cmp);
+        let percentile = |percent: usize| {
+            let rank = percent
+                .saturating_mul(values.len())
+                .div_ceil(100)
+                .saturating_sub(1);
+            values[rank.min(values.len() - 1)] * 1000.0
+        };
+        let mean_ms = values.iter().sum::<f64>() * 1000.0 / values.len() as f64;
+        json!({
+            "min_ms": values[0] * 1000.0,
+            "p50_ms": percentile(50),
+            "p95_ms": percentile(95),
+            "max_ms": values[values.len() - 1] * 1000.0,
+            "mean_ms": mean_ms,
+        })
+    }
+
+    /// Corpus layer attribution: per-stage seconds, p50/p95 distributions, each
+    /// stage's share of the pure-Rust cold pipeline, and the gate (a) verdict on
+    /// whether SAT solve time dominates. `null` when no `sat-bv` instance was
+    /// decided (the breakdown would be vacuous and a fabricated `0` share could
+    /// be misread as "SAT does not dominate").
     fn layer_attribution_record(s: &Summary) -> JsonValue {
         if s.layer_files == 0 {
             return JsonValue::Null;
         }
-        let total =
-            s.layer_bit_blast_s + s.layer_cnf_encode_s + s.layer_solve_s + s.layer_model_lift_s;
+        let total = s.layer_word_preprocess_s
+            + s.layer_bit_blast_s
+            + s.layer_cnf_encode_s
+            + s.layer_cnf_inprocess_s
+            + s.layer_solve_s
+            + s.layer_model_lift_s;
         let share = |stage: f64| if total > 0.0 { stage / total } else { 0.0 };
         let sat_share = share(s.layer_solve_s);
         json!({
             "instances": s.layer_files,
             "total_pipeline_s": total,
+            "word_preprocess_s": s.layer_word_preprocess_s,
             "bit_blast_s": s.layer_bit_blast_s,
             "cnf_encode_s": s.layer_cnf_encode_s,
+            "cnf_inprocess_s": s.layer_cnf_inprocess_s,
             "solve_s": s.layer_solve_s,
             "model_lift_s": s.layer_model_lift_s,
+            "word_preprocess_share": share(s.layer_word_preprocess_s),
             "bit_blast_share": share(s.layer_bit_blast_s),
             "cnf_encode_share": share(s.layer_cnf_encode_s),
+            "cnf_inprocess_share": share(s.layer_cnf_inprocess_s),
             "solve_share": sat_share,
             "model_lift_share": share(s.layer_model_lift_s),
+            "distributions": {
+                "total": timing_distribution_record(&s.layer_samples, LayerSample::total_s),
+                "word_preprocess": timing_distribution_record(
+                    &s.layer_samples,
+                    |sample| sample.word_preprocess,
+                ),
+                "bit_blast": timing_distribution_record(
+                    &s.layer_samples,
+                    |sample| sample.bit_blast,
+                ),
+                "cnf_encode": timing_distribution_record(
+                    &s.layer_samples,
+                    |sample| sample.cnf_encode,
+                ),
+                "cnf_inprocess": timing_distribution_record(
+                    &s.layer_samples,
+                    |sample| sample.cnf_inprocess,
+                ),
+                "solve": timing_distribution_record(&s.layer_samples, |sample| sample.solve),
+                "model_lift": timing_distribution_record(
+                    &s.layer_samples,
+                    |sample| sample.model_lift,
+                ),
+            },
             // Gate (a): does SAT solve time dominate end-to-end? The CDCL-core
             // priority gate needs this and a CaDiCaL/Kissat gap before it jumps
             // the queue ahead of encoding work.
             "sat_dominates": sat_share > SAT_DOMINATES_SHARE,
             "sat_dominates_threshold": SAT_DOMINATES_SHARE,
+        })
+    }
+
+    /// Fair cold comparison over the original query. Axeyum's side includes its
+    /// selected word preprocessing; the in-process Z3 side receives the untouched
+    /// assertions and includes its IR translation, solve, and model lift. This is
+    /// separate from verdict-only binary fallbacks, whose process startup would
+    /// make the ratio incomparable to the embedded-client target.
+    fn client_comparison_record(s: &Summary) -> JsonValue {
+        if s.client_comparison_files == 0 {
+            return JsonValue::Null;
+        }
+        let ratio = if s.client_z3_s > 0.0 {
+            s.client_axeyum_s / s.client_z3_s
+        } else {
+            f64::INFINITY
+        };
+        json!({
+            "instances": s.client_comparison_files,
+            "query_boundary": "original parsed assertions for both solvers",
+            "axeyum_total_s": s.client_axeyum_s,
+            "z3_total_s": s.client_z3_s,
+            "axeyum_over_z3_ratio": if ratio.is_finite() {
+                JsonValue::from(ratio)
+            } else {
+                JsonValue::Null
+            },
+            "axeyum": timing_distribution_record(
+                &s.client_comparison_samples,
+                |sample| sample.axeyum_s,
+            ),
+            "z3": timing_distribution_record(
+                &s.client_comparison_samples,
+                |sample| sample.z3_s,
+            ),
+        })
+    }
+
+    fn instance_layer_record(record: &SolveRecord, word_preprocess: Duration) -> JsonValue {
+        let Some(layers) = BvLayerStats::from_solve_stats(&record.stats) else {
+            return JsonValue::Null;
+        };
+        let sample = LayerSample {
+            word_preprocess: word_preprocess.as_secs_f64(),
+            bit_blast: layers.bit_blast.as_secs_f64(),
+            cnf_encode: layers.cnf_encode.as_secs_f64(),
+            cnf_inprocess: layers.cnf_inprocess.as_secs_f64(),
+            solve: layers.solve.as_secs_f64(),
+            model_lift: layers.model_lift.as_secs_f64(),
+        };
+        json!({
+            "word_preprocess_ms": sample.word_preprocess * 1000.0,
+            "bit_blast_ms": sample.bit_blast * 1000.0,
+            "cnf_encode_ms": sample.cnf_encode * 1000.0,
+            "cnf_inprocess_ms": sample.cnf_inprocess * 1000.0,
+            "solve_ms": sample.solve * 1000.0,
+            "model_lift_ms": sample.model_lift * 1000.0,
+            "total_ms": sample.total_s() * 1000.0,
+            "aig_inputs": layers.aig_inputs,
+            "aig_nodes": layers.aig_nodes,
+            "cnf_variables": layers.cnf_variables,
+            "cnf_clauses": layers.cnf_clauses,
         })
     }
 
@@ -1193,12 +1393,18 @@ mod run {
         // Word-level preprocessing (P1.2): shrink the post-rewrite assertions and
         // keep a reconstruction trail so the sat model still replays against the
         // original query. The reduced set replaces what the backend solves.
+        let preprocess_start = Instant::now();
         let preprocess_trail = if args.preprocess {
             let (reduced, trail) = apply_preprocess(&mut script.arena, &rewrite.assertions);
             rewrite.assertions = reduced;
             Some(trail)
         } else {
             None
+        };
+        let word_preprocess = if args.preprocess {
+            preprocess_start.elapsed()
+        } else {
+            Duration::ZERO
         };
         let output_shape = TermStats::compute(&script.arena, &rewrite.assertions);
         accumulate_rewrite(summary, args.rewrite, &rewrite, &input_shape, &output_shape);
@@ -1275,27 +1481,33 @@ mod run {
                 backend,
                 file,
                 &script,
-                &rewrite,
                 &primary_solve.solve,
                 &config,
                 summary,
-                preprocess_trail.as_ref(),
+                word_preprocess,
             )
         });
         accumulate_query_plan(summary, &primary_solve.plan);
         accumulate_primary(&primary_solve.solve, summary);
-        accumulate_par2(summary, &primary_solve.solve, timeout);
-        accumulate_layers(summary, &primary_solve.solve);
+        accumulate_par2(summary, &primary_solve.solve, word_preprocess, timeout);
+        accumulate_layers(summary, &primary_solve.solve, word_preprocess);
         accumulate_expected_agreement(summary, script.status.as_deref(), &primary_solve.solve);
         let stats = &primary_solve.solve.stats;
         let mut record = json!({
             "file": name,
             "outcome": primary_solve.solve.outcome,
             "expected": script.status.as_deref().unwrap_or("unknown"),
+            "cold_total_ms": duration_ms_f64(
+                word_preprocess
+                    + stats.translate
+                    + stats.solve
+                    + stats.model_lift
+            ),
             "translate_ms": duration_ms(stats.translate),
             "solve_ms": duration_ms(stats.solve),
             "model_lift_ms": duration_ms(stats.model_lift),
             "backend_stats": backend_stats_record(stats),
+            "layer_attribution": instance_layer_record(&primary_solve.solve, word_preprocess),
             "dag_nodes": input_shape.dag_nodes,
             "tree_nodes": input_shape.tree_nodes,
             "max_depth": input_shape.max_depth,
@@ -2314,23 +2526,40 @@ mod run {
     /// [`BvLayerStats::from_solve_stats`] returns `None` for any other backend,
     /// so this never fabricates a stage breakdown for, e.g., the Z3 oracle. The
     /// `translate` stage comes straight from [`SolveStats`].
-    fn accumulate_layers(summary: &mut Summary, record: &SolveRecord) {
+    fn accumulate_layers(summary: &mut Summary, record: &SolveRecord, word_preprocess: Duration) {
         if !matches!(record.outcome, "sat" | "unsat") {
             return;
         }
         let Some(layers) = BvLayerStats::from_solve_stats(&record.stats) else {
             return;
         };
+        let sample = LayerSample {
+            word_preprocess: word_preprocess.as_secs_f64(),
+            bit_blast: layers.bit_blast.as_secs_f64(),
+            cnf_encode: layers.cnf_encode.as_secs_f64(),
+            cnf_inprocess: layers.cnf_inprocess.as_secs_f64(),
+            solve: layers.solve.as_secs_f64(),
+            model_lift: layers.model_lift.as_secs_f64(),
+        };
         summary.layer_files += 1;
+        summary.layer_word_preprocess_s += sample.word_preprocess;
         summary.layer_bit_blast_s += layers.bit_blast.as_secs_f64();
         summary.layer_cnf_encode_s += layers.cnf_encode.as_secs_f64();
+        summary.layer_cnf_inprocess_s += layers.cnf_inprocess.as_secs_f64();
         summary.layer_solve_s += layers.solve.as_secs_f64();
         summary.layer_model_lift_s += layers.model_lift.as_secs_f64();
+        summary.layer_sample = Some(sample);
     }
 
-    fn accumulate_par2(summary: &mut Summary, record: &SolveRecord, timeout: Duration) {
+    fn accumulate_par2(
+        summary: &mut Summary,
+        record: &SolveRecord,
+        word_preprocess: Duration,
+        timeout: Duration,
+    ) {
         if matches!(record.outcome, "sat" | "unsat") {
-            summary.par2_seconds += record.stats.translate.as_secs_f64()
+            summary.par2_seconds += word_preprocess.as_secs_f64()
+                + record.stats.translate.as_secs_f64()
                 + record.stats.solve.as_secs_f64()
                 + record.stats.model_lift.as_secs_f64();
         } else {
@@ -2398,10 +2627,21 @@ mod run {
         total.oracle_skipped += next.oracle_skipped;
         total.par2_seconds += next.par2_seconds;
         total.layer_files += next.layer_files;
+        total.layer_word_preprocess_s += next.layer_word_preprocess_s;
         total.layer_bit_blast_s += next.layer_bit_blast_s;
         total.layer_cnf_encode_s += next.layer_cnf_encode_s;
+        total.layer_cnf_inprocess_s += next.layer_cnf_inprocess_s;
         total.layer_solve_s += next.layer_solve_s;
         total.layer_model_lift_s += next.layer_model_lift_s;
+        if let Some(sample) = next.layer_sample {
+            total.layer_samples.push(sample);
+        }
+        total.client_comparison_files += next.client_comparison_files;
+        total.client_axeyum_s += next.client_axeyum_s;
+        total.client_z3_s += next.client_z3_s;
+        if let Some(sample) = next.client_comparison_sample {
+            total.client_comparison_samples.push(sample);
+        }
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -2409,11 +2649,10 @@ mod run {
         oracle: &mut dyn SolverBackend,
         file: &Path,
         script: &Script,
-        rewrite: &RewriteRun,
         primary: &SolveRecord,
         config: &SolverConfig,
         summary: &mut Summary,
-        reconstruct: Option<&ModelReconstructionTrail>,
+        word_preprocess: Duration,
     ) -> JsonValue {
         if !matches!(primary.outcome, "sat" | "unsat") {
             summary.oracle_skipped += 1;
@@ -2433,11 +2672,11 @@ mod run {
         let oracle_solve = solve_one(
             oracle,
             &script.arena,
-            &rewrite.assertions,
+            &script.assertions,
             &script.assertions,
             &oracle_config,
             ReplayFailurePolicy::SoundnessAlarm,
-            reconstruct,
+            None,
         );
         let mut compared = matches!(oracle_solve.outcome, "sat" | "unsat");
         // The in-repo `Z3Backend` oracle only supports `QF_BV` (it returns
@@ -2470,15 +2709,41 @@ mod run {
             summary.oracle_skipped += 1;
         }
 
+        // The client target is embedded libz3, not a subprocess. Record a timing
+        // comparison only when the in-repo Z3 backend decided the untouched
+        // query; a binary fallback remains a verdict cross-check but its process
+        // startup would corrupt the performance ratio.
+        if compared && z3_binary.is_none() {
+            let sample = ClientComparisonSample {
+                axeyum_s: word_preprocess.as_secs_f64()
+                    + primary.stats.translate.as_secs_f64()
+                    + primary.stats.solve.as_secs_f64()
+                    + primary.stats.model_lift.as_secs_f64(),
+                z3_s: oracle_solve.stats.translate.as_secs_f64()
+                    + oracle_solve.stats.solve.as_secs_f64()
+                    + oracle_solve.stats.model_lift.as_secs_f64(),
+            };
+            summary.client_comparison_files += 1;
+            summary.client_axeyum_s += sample.axeyum_s;
+            summary.client_z3_s += sample.z3_s;
+            summary.client_comparison_sample = Some(sample);
+        }
+
         let mut record = json!({
             "enabled": true,
             "backend_kind": if z3_binary.is_some() { "z3-binary" } else { "z3" },
+            "query_boundary": "original parsed assertions",
             "outcome": oracle_outcome,
             "decision_compared": compared,
             "decision_agrees": if compared { JsonValue::Bool(agrees) } else { JsonValue::Null },
             "translate_ms": duration_ms(oracle_solve.stats.translate),
             "solve_ms": duration_ms(oracle_solve.stats.solve),
             "model_lift_ms": duration_ms(oracle_solve.stats.model_lift),
+            "cold_total_ms": duration_ms_f64(
+                oracle_solve.stats.translate
+                    + oracle_solve.stats.solve
+                    + oracle_solve.stats.model_lift
+            ),
             "backend_stats": backend_stats_record(&oracle_solve.stats),
         });
         if let JsonValue::Object(obj) = &mut record {
@@ -2712,6 +2977,7 @@ mod run {
                 "backend_kind": args.backend.as_str(),
                 "compare_backend": compare_backend_name,
                 "compare_z3": args.compare_z3,
+                "require_in_process_z3": args.require_in_process_z3,
                 "min_decided_percent": args.min_decided_percent,
                 "query_plan": {
                     "mode": args.query_plan.as_str(),
@@ -2758,6 +3024,7 @@ mod run {
                     "skipped": s.oracle_skipped,
                 },
                 "layer_attribution": layer_attribution_record(s),
+                "client_comparison": client_comparison_record(s),
             },
             "triage": {
                 "unsupported": triage(instances, &["unsupported"]),
@@ -2963,6 +3230,10 @@ mod run {
         u64::try_from(duration.as_millis()).unwrap_or(u64::MAX)
     }
 
+    fn duration_ms_f64(duration: Duration) -> f64 {
+        duration.as_secs_f64() * 1000.0
+    }
+
     fn backend_stats_record(stats: &SolveStats) -> JsonValue {
         let mut values = BTreeMap::new();
         for (name, value) in &stats.backend {
@@ -2987,6 +3258,7 @@ mod run {
 
     fn fingerprint_config(args: &Args, backend_name: &str, corpus_hash: &str) -> String {
         let mut hash = FNV_OFFSET;
+        update_hash(&mut hash, &ARTIFACT_VERSION.to_le_bytes());
         update_hash(&mut hash, args.dir.display().to_string().as_bytes());
         update_hash(&mut hash, &args.timeout_ms.to_le_bytes());
         update_hash(&mut hash, &usize_to_u64(args.jobs).to_le_bytes());
@@ -3024,6 +3296,7 @@ mod run {
         update_hash(&mut hash, &[u8::from(args.native_cdcl)]);
         update_hash(&mut hash, &[u8::from(args.preprocess)]);
         update_hash(&mut hash, &[u8::from(args.compare_z3)]);
+        update_hash(&mut hash, &[u8::from(args.require_in_process_z3)]);
         update_hash(
             &mut hash,
             &args
@@ -3131,7 +3404,7 @@ mod run {
             };
             assert!((decided_percent(&mostly_failed) - 2.0).abs() < f64::EPSILON);
             assert_eq!(
-                report_summary(&mostly_failed, None),
+                report_summary(&mostly_failed, None, false),
                 ExitCode::FAILURE,
                 "fast operational failure must never pass as a benchmark result"
             );
@@ -3143,8 +3416,38 @@ mod run {
                 unknown: 2,
                 ..Summary::default()
             };
-            assert_eq!(report_summary(&incomplete, Some(80.0)), ExitCode::SUCCESS);
-            assert_eq!(report_summary(&incomplete, Some(80.1)), ExitCode::FAILURE);
+            assert_eq!(
+                report_summary(&incomplete, Some(80.0), false),
+                ExitCode::SUCCESS
+            );
+            assert_eq!(
+                report_summary(&incomplete, Some(80.1), false),
+                ExitCode::FAILURE
+            );
+        }
+
+        #[test]
+        fn complete_in_process_z3_comparison_is_a_client_gate() {
+            let complete = Summary {
+                files: 2,
+                sat: 1,
+                unsat: 1,
+                client_comparison_files: 2,
+                ..Summary::default()
+            };
+            assert_eq!(
+                report_summary(&complete, Some(100.0), true),
+                ExitCode::SUCCESS
+            );
+
+            let partial = Summary {
+                client_comparison_files: 1,
+                ..complete
+            };
+            assert_eq!(
+                report_summary(&partial, Some(100.0), true),
+                ExitCode::FAILURE
+            );
         }
 
         #[test]
@@ -3156,6 +3459,109 @@ mod run {
                     "invalid decided-rate threshold must be rejected: {invalid}"
                 );
             }
+        }
+
+        #[test]
+        fn layer_attribution_reports_cold_stages_and_exact_percentiles() {
+            let samples = vec![
+                LayerSample {
+                    word_preprocess: 0.001,
+                    bit_blast: 0.002,
+                    cnf_encode: 0.003,
+                    cnf_inprocess: 0.004,
+                    solve: 0.005,
+                    model_lift: 0.001,
+                },
+                LayerSample {
+                    word_preprocess: 0.010,
+                    bit_blast: 0.020,
+                    cnf_encode: 0.030,
+                    cnf_inprocess: 0.040,
+                    solve: 0.050,
+                    model_lift: 0.010,
+                },
+            ];
+            let summary = Summary {
+                layer_files: 2,
+                layer_word_preprocess_s: 0.011,
+                layer_bit_blast_s: 0.022,
+                layer_cnf_encode_s: 0.033,
+                layer_cnf_inprocess_s: 0.044,
+                layer_solve_s: 0.055,
+                layer_model_lift_s: 0.011,
+                layer_samples: samples,
+                ..Summary::default()
+            };
+            let record = layer_attribution_record(&summary);
+            assert!((record["total_pipeline_s"].as_f64().unwrap() - 0.176).abs() < f64::EPSILON);
+            assert_eq!(
+                record["distributions"]["word_preprocess"]["p50_ms"],
+                json!(1.0)
+            );
+            assert_eq!(
+                record["distributions"]["word_preprocess"]["p95_ms"],
+                json!(10.0)
+            );
+            assert_eq!(record["distributions"]["total"]["p50_ms"], json!(16.0));
+            assert!(
+                (record["distributions"]["total"]["p95_ms"].as_f64().unwrap() - 160.0).abs() < 1e-9
+            );
+            assert_eq!(record["sat_dominates"], json!(false));
+        }
+
+        #[test]
+        fn client_comparison_uses_aggregate_ratio_and_distributions() {
+            let summary = Summary {
+                client_comparison_files: 2,
+                client_axeyum_s: 0.040,
+                client_z3_s: 0.020,
+                client_comparison_samples: vec![
+                    ClientComparisonSample {
+                        axeyum_s: 0.010,
+                        z3_s: 0.005,
+                    },
+                    ClientComparisonSample {
+                        axeyum_s: 0.030,
+                        z3_s: 0.015,
+                    },
+                ],
+                ..Summary::default()
+            };
+            let record = client_comparison_record(&summary);
+            assert_eq!(record["axeyum_over_z3_ratio"], json!(2.0));
+            assert_eq!(record["axeyum"]["p50_ms"], json!(10.0));
+            assert_eq!(record["axeyum"]["p95_ms"], json!(30.0));
+            assert_eq!(record["z3"]["p50_ms"], json!(5.0));
+            assert_eq!(record["z3"]["p95_ms"], json!(15.0));
+        }
+
+        #[test]
+        fn corpus_merge_retains_one_profile_sample_per_instance() {
+            let layer = LayerSample {
+                word_preprocess: 0.001,
+                bit_blast: 0.002,
+                cnf_encode: 0.003,
+                cnf_inprocess: 0.0,
+                solve: 0.004,
+                model_lift: 0.001,
+            };
+            let comparison = ClientComparisonSample {
+                axeyum_s: 0.011,
+                z3_s: 0.007,
+            };
+            let next = Summary {
+                layer_files: 1,
+                layer_sample: Some(layer),
+                client_comparison_files: 1,
+                client_comparison_sample: Some(comparison),
+                ..Summary::default()
+            };
+            let mut total = Summary::default();
+            merge_summary(&mut total, &next);
+            assert_eq!(total.layer_samples.len(), 1);
+            assert_eq!(total.client_comparison_samples.len(), 1);
+            assert_eq!(total.layer_samples[0].total_s(), layer.total_s());
+            assert_eq!(total.client_comparison_samples[0].z3_s, comparison.z3_s);
         }
 
         #[test]
