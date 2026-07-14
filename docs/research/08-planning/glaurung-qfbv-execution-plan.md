@@ -225,8 +225,7 @@ all pass the validity gates. Median aggregate ratios are 1.65x and 1.37x;
 canonical's Axeyum total is 17.4% below raw. Raw and canonical proof companions
 from the same semantic tranche each check all 64 UNSAT proofs. One scheduled
 full trial per raw/canonical policy decides all 13,462 well-typed rows and
-records 3.17x versus 2.71x; canonical is 13.3% faster. The full tier still needs
-repeated trials before setting a regression threshold.
+records 3.17x versus 2.71x; canonical is 13.3% faster.
 
 Regular-lane checkpoint (2026-07-14): `just check` now invokes an
 availability-aware real-capture gate. It uses an explicit representative path
@@ -238,6 +237,15 @@ Artifacts stay under ignored `target/` state because the regular lane permits a
 dirty worktree and makes no release-performance claim. The first real run
 decides and agrees on all 128 rows for both policies; its diagnostic totals are
 0.184/0.149 seconds (1.23x) raw and 0.157/0.150 seconds (1.04x) canonical.
+
+Scheduled variance checkpoint (2026-07-14): five independent clean-revision
+canonical full-tier processes all decide and agree on 13,462/13,462 rows. Mean
+Axeyum/Z3/ratio are 15.644/7.738 seconds/2.0217x with CV
+0.514%/0.310%/0.510%; every attributed stage is below 1% CV. The provisional
+same-environment comparator alarms are 3% maximum ratio regression, 3% maximum
+Axeyum-total regression, and 2% maximum absolute Z3 drift. The guarded recipe
+applies them, while retaining exact corpus/config/environment/backend identity
+and distinct clean source revisions.
 
 ### G2 — add attribution needed for the first optimization
 
@@ -441,7 +449,7 @@ validity gates.
 | Milestone | Roadmap coverage | Stop/go decision |
 |---|---|---|
 | M0 byte-complete capture | GQ1, GQ10 | **Axeyum side done:** representative and well-typed full manifests validate; producer still must prevent 2,225 malformed dumps and atomically deduplicate |
-| M1 raw v27 baseline | GQ1, GQ10 | **Done:** five representative raw/canonical production trials plus one full trial each pass every gate; repeat full for accepted changes |
+| M1 raw v27 baseline | GQ1, GQ10 | **Done:** representative raw/canonical and five canonical full-tier processes pass every gate; full Axeyum/ratio/Z3 CV is 0.51%/0.51%/0.31% and guarded comparisons use provisional 3%/3%/2% alarms |
 | M2 diagnostic attribution | GQ1, GQ3--GQ5 | **Done for current boundary:** ADR-0143 removes the 29.57 s observational pass from production and marks diagnostic completeness explicitly |
 | M3 cheap exact rewriting | GQ2, GQ3 | **Measured production win:** canonical cuts Axeyum total 17.4% representative median / 13.3% full and bit blast 37.3% / 44.4%; circuit-size exit remains |
 | M4 demand lowering | GQ4 | Continue only with replay-safe real AIG/CNF and wall-time reductions |
@@ -449,20 +457,19 @@ validity gates.
 | M6 SAT re-attribution | GQ6 | Start SAT work only if search becomes material/dominant |
 | M7 ordered warm trace | GQ7, GQ8 | Decide incremental API shape and whether a cache is worthwhile |
 | M8 Glaurung warm integration | GQ7 | Require real same-stream functionality and performance, not the synthetic result |
-| M9 auto policy and regression lane | GQ8--GQ10 | **Regular semantic lane done:** raw + canonical real representative checks are availability-aware in `just check`; establish full-tier variance thresholds and ordered-trace validation before changing defaults |
+| M9 auto policy and regression lane | GQ8--GQ10 | **Cold regression lane done:** raw + canonical representative checks are availability-aware and canonical full-tier 3%/3%/2% alarms are executable; ordered-trace validation remains mandatory before changing defaults |
 
 ## Immediate next actions
 
-1. Establish independent-process full-tier variance for the accepted
-   ADR-0151/canonical boundary, then record provisional ratio, raw-Axeyum, and
-   Z3-control drift thresholds. Do not derive release thresholds from the
-   single-process regular gate.
-2. Re-attribute the now-close bit-blast/CNF stages by Glaurung family before
+1. Re-attribute the now-close bit-blast/CNF stages by Glaurung family before
    selecting another larger GQ3/GQ5 slice. ADR-0152 closes the memo-ownership
    micro-lane; broad GQ4 and SAT work remain behind measured opportunity.
-3. On the Glaurung side, fix explicit width coercion plus strict dump validation
+2. On the Glaurung side, fix explicit width coercion plus strict dump validation
    and cross-process dedup/conflict handling. Define the ordered warm-trace and
    controlled-concretization schema before GQ7/GQ8 cache or auto-policy work.
+3. Run every accepted cold candidate through the guarded five-process full
+   comparison. A threshold violation is a regression alarm to investigate, not
+   permission to ignore raw controls or semantic gates.
 
 All heavy Rust validation and benchmark commands remain subject to the local
 4 GiB virtual-memory cap and should use serial execution where parallel test

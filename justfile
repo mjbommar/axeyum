@@ -203,6 +203,13 @@ compare-glaurung-qfbv-repeated baseline candidate out:
     mkdir -p "$(dirname '{{ out }}')"
     python3 scripts/compare-glaurung-repetitions.py "{{ baseline }}" "{{ candidate }}" --out "{{ out }}"
 
+# Provisional full-tier GQ10 thresholds established from five clean canonical
+# trials at 0cfd6cdc (Axeyum/ratio CV ~0.51%, Z3 CV ~0.31%). These are same-
+# environment regression alarms, not universal timing promises.
+compare-glaurung-qfbv-repeated-guarded baseline candidate out:
+    mkdir -p "$(dirname '{{ out }}')"
+    python3 scripts/compare-glaurung-repetitions.py "{{ baseline }}" "{{ candidate }}" --max-ratio-regression-percent 3 --max-axeyum-regression-percent 3 --max-z3-drift-percent 2 --out "{{ out }}"
+
 # High-assurance companion to the performance run. This switches to the slower
 # proof-producing native core and fails closed unless every UNSAT has an inline
 # checked DRAT proof. Its timings are proof-validation costs, not the batsat/Z3

@@ -194,8 +194,11 @@ def validate_config_identity(
         fail(f"{path}: config.backend_kind must be `sat-bv`")
     if require_string(config.get("logic"), f"{path}: config.logic") != "QF_BV":
         fail(f"{path}: config.logic must be `QF_BV`")
-    if not require_bool(config.get("preprocess"), f"{path}: config.preprocess"):
-        fail(f"{path}: config.preprocess must be true")
+    require_bool(config.get("preprocess"), f"{path}: config.preprocess")
+    rewrite = require_mapping(config.get("rewrite"), f"{path}: config.rewrite")
+    rewrite_mode = require_string(rewrite.get("mode"), f"{path}: config.rewrite.mode")
+    if rewrite_mode not in {"off", "default"}:
+        fail(f"{path}: config.rewrite.mode must be `off` or `default`")
     if not math.isclose(
         require_number(
             config.get("min_decided_percent"), f"{path}: config.min_decided_percent"

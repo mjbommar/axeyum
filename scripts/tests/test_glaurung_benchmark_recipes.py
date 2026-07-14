@@ -72,6 +72,17 @@ class GlaurungBenchmarkRecipeTests(unittest.TestCase):
         self.assertIn("bench-glaurung-qfbv-raw-repeated", repeated)
         self.assertIn("bench-glaurung-qfbv-raw-proof-check", proof)
 
+    def test_guarded_comparison_pins_full_tier_thresholds(self) -> None:
+        output = dry_run(
+            "compare-glaurung-qfbv-repeated-guarded",
+            "baseline.json",
+            "candidate.json",
+            "comparison.json",
+        )
+        self.assertIn("--max-ratio-regression-percent 3", output)
+        self.assertIn("--max-axeyum-regression-percent 3", output)
+        self.assertIn("--max-z3-drift-percent 2", output)
+
 
 if __name__ == "__main__":
     unittest.main()

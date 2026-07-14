@@ -25,6 +25,8 @@ def source_artifact(
     z3_seconds: float,
     *,
     environment_hash: str = ENVIRONMENT_HASH,
+    preprocess: bool = False,
+    rewrite_mode: str = "default",
 ) -> dict:
     stages = {
         "word_preprocess_s": axeyum_seconds * 0.1,
@@ -95,11 +97,12 @@ def source_artifact(
         },
         "logic": "QF_BV",
         "min_decided_percent": 100.0,
-        "preprocess": True,
+        "preprocess": preprocess,
         "prove_unsat": False,
         "require_in_process_z3": True,
         "require_reproducible_run": True,
         "require_deterministic_resources": True,
+        "rewrite": {"mode": rewrite_mode},
     }
     return {
         "version": 27,
@@ -143,6 +146,8 @@ def write_repetition_summary(
     z3_values: list[float],
     *,
     environment_hash: str = ENVIRONMENT_HASH,
+    preprocess: bool = False,
+    rewrite_mode: str = "default",
 ) -> Path:
     directory = root / name
     directory.mkdir()
@@ -158,6 +163,8 @@ def write_repetition_summary(
                     axeyum,
                     z3,
                     environment_hash=environment_hash,
+                    preprocess=preprocess,
+                    rewrite_mode=rewrite_mode,
                 )
             ),
             encoding="utf-8",
@@ -209,6 +216,46 @@ class RepetitionComparisonTests(unittest.TestCase):
             )
             self.assertTrue(result["gate"]["passed"])
             self.assertFalse(result["gate"]["configured"])
+
+    def test_accepts_each_named_cold_policy(self) -> None:
+        policies = (
+            ("raw", False, "off"),
+            ("canonical", False, "default"),
+            ("configured", True, "off"),
+        )
+        for name, preprocess, rewrite_mode in policies:
+            with self.subTest(policy=name), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                baseline = write_repetition_summary(
+                    root,
+                    "baseline",
+                    BASELINE_REVISION,
+                    [1.0, 1.1],
+                    [0.5, 0.55],
+                    preprocess=preprocess,
+                    rewrite_mode=rewrite_mode,
+                )
+                candidate = write_repetition_summary(
+                    root,
+                    "candidate",
+                    CANDIDATE_REVISION,
+                    [0.9, 0.99],
+                    [0.5, 0.55],
+                    preprocess=preprocess,
+                    rewrite_mode=rewrite_mode,
+                )
+
+                result = MODULE.compare(baseline, candidate)
+
+                self.assertEqual(
+                    result["baseline"]["source_revision"], BASELINE_REVISION
+                )
+                self.assertAlmostEqual(
+                    result["metrics"]["axeyum_total_s"][
+                        "candidate_minus_baseline_percent"
+                    ],
+                    -10.0,
+                )
 
     def test_rejects_same_revision_and_environment_drift(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

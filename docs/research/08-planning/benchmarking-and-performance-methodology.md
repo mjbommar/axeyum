@@ -283,6 +283,15 @@ records the contract and the first measured baselines.
   ignored `target/` state because a regular dirty-worktree semantic check is
   not a publishable timing trial. Clean revision identity, independent-process
   repetitions, and full-tier thresholds remain the scheduled performance lane.
+- Five clean canonical full-tier processes at revision `0cfd6cdc` establish the
+  first scheduled variance boundary: Axeyum total, Z3 total, and their ratio
+  have 0.514%, 0.310%, and 0.510% CV respectively; every attributed stage is
+  below 1% CV. The provisional same-environment alarms are 3% maximum ratio
+  regression, 3% maximum Axeyum-total regression, and 2% maximum absolute Z3
+  control drift. `compare-glaurung-qfbv-repeated-guarded` applies them. They are
+  deliberately conservative regression alarms, not hardware-independent
+  guarantees or significance claims, and may be revised only with another
+  recorded full-tier variance tranche.
 - Timeout regressions must pin the exact pathological public or minimized query
   and exercise both admission outcomes: deterministic oversized refusal before
   allocation and cooperative expiry inside admitted superlinear work. Every

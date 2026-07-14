@@ -361,3 +361,45 @@ identical 746,716 AIG requests, 410,719 created nodes, and 507,195 clauses, with
 every decision/replay gate green. The candidate fails the required bit-blast
 and total gate; ADR-0151's code is restored exactly, no full run is spent, and
 ADR-0152 is deferred.
+
+## Full-tier repeated canonical boundary and provisional gates
+
+Clean revision `0cfd6cdc946db5a2c0fcb3310ea6964797fb3cf5` ran the
+13,462-query canonical full tier in five independent processes. Every trial is
+1,774 SAT / 11,688 UNSAT, 100% decided, agrees fully with the manifest and
+in-process Z3, and has zero operational errors, unknowns, or model-replay
+failures.
+The summary binds config hash `e3c7fe2b055c3b3d`, environment hash
+`sha256:b0f5781b8c70707448fec92aba7d68bdb8fed9b245c55926b1156bc038e7aa7a`,
+and manifest hash
+`sha256:5d2f74c2977f734c477a1a7835b03e17bd96a6b13a1ef17293bf1e6e6775ee9b`.
+Its SHA-256 is
+`e2bc7b1bea7d65a4354ab3e9c7ab6c93d686ac0b90e571c29afbb1d2bb288448`;
+the access-controlled source artifacts remain in ignored local storage and the
+summary records each one's digest.
+
+| Metric | mean | p50 | min--max | CV |
+|---|---:|---:|---:|---:|
+| Axeyum total | 15.6441 s | 15.6272 s | 15.5730--15.7804 s | 0.514% |
+| Z3 total | 7.7383 s | 7.7442 s | 7.7083--7.7622 s | 0.310% |
+| Axeyum/Z3 | 2.0217x | 2.0247x | 2.0107--2.0330x | 0.510% |
+| word policy | 1.7691 s | 1.7670 s | 1.7604--1.7891 s | 0.658% |
+| bit blast | 4.9717 s | 4.9601 s | 4.9526--5.0214 s | 0.566% |
+| CNF | 5.2047 s | 5.2060 s | 5.1732--5.2468 s | 0.528% |
+| SAT | 3.5161 s | 3.5188 s | 3.4916--3.5377 s | 0.541% |
+
+The same-environment provisional cross-commit alarms are therefore 3% maximum
+Axeyum/Z3-ratio regression, 3% maximum Axeyum-total regression, and 2%
+maximum absolute Z3-control drift. Those ceilings are about 5.8x, 5.8x, and
+6.4x the observed within-series CVs respectively: conservative enough to avoid
+promoting sub-percent timing noise, while still catching a material regression.
+They are not universal hardware promises or statistical-significance claims.
+`compare-glaurung-qfbv-repeated-guarded` supplies the exact policy, and still
+requires identical corpus/config/toolchain/hardware/backend identity plus a
+different clean source revision.
+
+The variance audit also found and repaired a tooling contradiction: the
+cross-commit comparator required `preprocess=true`, which rejected the raw and
+canonical series emitted by the documented recipes. It now validates the
+explicit rewrite mode and accepts all three named cold policies while retaining
+exact baseline/candidate configuration equality.

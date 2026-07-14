@@ -79,9 +79,14 @@ session state.
 > explicit path, skips visibly only when data is absent, fails incomplete
 > configuration, and runs both raw and canonical against the manifest and
 > in-process Z3. The first real run is 128/128 decided and agreed under both
-> policies with zero errors/replay failures. Establish repeated full-tier
-> variance and provisional release thresholds next; the regular dirty-worktree
-> run is not timing evidence.
+> policies with zero errors/replay failures. Five clean canonical full-tier
+> processes now establish the scheduled variance boundary: Axeyum/ratio CV are
+> both about 0.51%, Z3 CV is 0.31%, and every stage is below 1%. Provisional
+> same-environment regression alarms are 3% ratio, 3% Axeyum total, and 2%
+> absolute Z3 drift; the guarded comparator applies them. Re-attribute the
+> now-close bit-blast/CNF stages by Glaurung family before choosing another
+> larger optimization, while the ordered warm trace remains the next
+> functionality-enabling Glaurung handoff.
 > The capture and
 > implementation audit has been expanded into the dependency-ordered
 > [Glaurung QF_BV execution plan](docs/research/08-planning/glaurung-qfbv-execution-plan.md):
@@ -165,8 +170,10 @@ unchanged, but fails the representative gate: bit blast improves 0.57% while
 total p50/mean regress 0.02%/0.38% and CNF p50 regresses 0.88%. Restore the
 ordered memo and close this micro-lane. The access-controlled GQ10 regular
 representative gate now runs raw and canonical automatically when data is
-available and passes all 128 rows. Establish repeated full-tier variance and
-thresholds before another larger measured optimization.
+available and passes all 128 rows. Five clean full-tier canonical trials now
+put total/ratio/Z3 CV at 0.51%/0.51%/0.31% and establish provisional 3%/3%/2%
+same-environment alarms. Re-attribute the close bit-blast/CNF stages by family
+before another larger measured optimization.
 Affine word work must still show a downstream circuit/CNF win before outranking
 it.
 Broad GQ4 partial lowering follows its small post-canonical full-tier

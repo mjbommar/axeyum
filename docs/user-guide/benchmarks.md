@@ -324,10 +324,25 @@ python3 scripts/compare-glaurung-repetitions.py \
   --out bench-results/comparison.json
 ```
 
-The example thresholds illustrate the CLI only; they are not an accepted
-Glaurung policy. A configured gate writes the comparison for diagnosis and
-exits nonzero when exceeded. Invalid or incomparable inputs remove any stale
-output and fail before producing a report.
+The generic command above illustrates the CLI. For the current full-tier
+canonical boundary, five clean trials measured about 0.51% CV for Axeyum total
+and the ratio, and 0.31% for Z3. The provisional same-environment policy is 3%
+maximum ratio regression, 3% maximum Axeyum-total regression, and 2% maximum
+absolute Z3-control drift:
+
+```sh
+just compare-glaurung-qfbv-repeated-guarded \
+  bench-results/baseline/summary.json \
+  bench-results/candidate/summary.json \
+  bench-results/comparison.json
+```
+
+These are regression alarms, not universal hardware promises. A configured
+gate writes the comparison for diagnosis and exits nonzero when exceeded.
+Invalid or incomparable inputs remove any stale output and fail before
+producing a report. The comparator accepts raw, canonical, and configured
+series, but baseline and candidate must use the exact same policy and all other
+configuration; it never compares one policy against another as a code delta.
 The committed
 [`glaurung-cross-commit-smoke`](../../bench-results/glaurung-cross-commit-smoke.json)
 exercises this path across two clean revisions. Its high candidate variance
