@@ -19,10 +19,15 @@ session state.
 > quantified-BV UNSAT slice now reconstructs **18/18** rows in Lean; continue
 > the depth-first spine through broader nested/alternating QSAT and quantified-UF
 > models while running the Glaurung QF_BV performance lane below as the next
-> client-driven measured leaf. The producer-side capture and an artifact-v17
-> attribution are now available; the next action is to receive the referenced
-> query bytes and reproduce the result through Axeyum's current artifact-v25
-> gate before tuning the measured lowering/encoding bottleneck. The capture and
+> client-driven measured leaf. The byte-complete Glaurung capture is now
+> regenerated and strictly ingested: 128 representative queries plus a 13,462-
+> query well-typed full tier both decide at 100% with zero disagreements or
+> replay failures. Artifact v26 charges canonical rewrite cost and shows
+> canonical v2 cutting Axeyum time by 48.5% on five representative trials and
+> 57.1% on one full trial. The next action is not SAT tuning or blind partial
+> lowering: make the always-on observational bit-demand pass opt-in (it consumes
+> 29.57/50.75 s of canonical full-tier time), rerun production timing, then take
+> the measured affine-word/CNF residual. The capture and
 > implementation audit has been expanded into the dependency-ordered
 > [Glaurung QF_BV execution plan](docs/research/08-planning/glaurung-qfbv-execution-plan.md):
 > reproduce the current raw one-shot path first, then compare canonical-only
@@ -40,12 +45,13 @@ This is the first-class client performance lane created from ADR-0136 and the
 reported **1.7--3.2x Axeyum/Z3 gap** on real binary-analysis formulas. The
 target distribution is the lifter's width-mixed, extract/concat-heavy,
 memory-derived path conditions, not a synthetic uniformly typed substitute.
-The externally captured SMT-LIB query pack is the enabling artifact. Its
-producer manifest and first attribution are available, but the hash-bound query
-payload is not yet present on this host. Until that payload is reproduced
-through the current gate, work may improve instrumentation and corpus
-ingestion, but no Glaurung performance hypothesis is promoted on synthetic
-timing alone.
+The access-controlled SMT-LIB query pack is now present and strictly ingested.
+The 15,710 producer index rows reconcile to 15,687 unique hashes plus 23
+duplicate rows and zero verdict conflicts. Strict validation identifies 2,225
+genuinely ill-sorted producer dumps, leaving a 128-query representative tier
+and a 13,462-query well-typed full tier. Both have Axeyum-generated manifests;
+synthetic timing remains insufficient, and malformed scripts never count as
+decisions or speedups.
 
 | ID | Roadmap item | Scope and exit criterion |
 |---|---|---|
@@ -63,21 +69,24 @@ timing alone.
 **Execution order.** The detailed task graph and functional acceptance boundary
 live in the
 [Glaurung QF_BV execution plan](docs/research/08-planning/glaurung-qfbv-execution-plan.md).
-First repair the byte-complete capture contract and reproduce the **raw**
-current-Glaurung one-shot path under GQ1/GQ10. Compare it explicitly with a
-canonical-only policy and the full configured preprocessing diagnostic; never
+The byte-complete representative and well-typed full capture contracts and the
+**raw** current-Glaurung one-shot baseline now exist under GQ1/GQ10. Raw,
+canonical-only, and configured policies remain explicitly separate; never
 silently substitute one for another. Residual-rewrite, demanded-bit,
-AIG-hash/rule, and CNF-subphase counters are now landed. The ADR-0142 GQ3 exact
-rewrite implementation is also landed; next measure it on the transferred raw
-capture, then take GQ4 demand-driven lowering before GQ5 data-structure/encoding
-changes. Admit GQ6
+AIG-hash/rule, and CNF-subphase counters are landed, and ADR-0142 canonical v2
+is a large real-corpus word-DAG/time win. Artifact v26 also exposed that the
+observational demand profiler is accidentally always-on and dominates current
+timing. Make that profiler opt-in and rerun before choosing between a bounded
+affine word tranche and measured CNF construction. Broad GQ4 partial lowering
+now follows its small post-canonical full-tier opportunity (1.84% term bits)
+unless family-specific evidence reverses the rank. Admit GQ6
 SAT-core work only if search becomes material. GQ7--GQ9 require a separate
 ordered path trace because the deduplicated cold corpus erases prefix/frequency
 information; GQ8 follows the exact cache/replay contract rather than treating a
 prefix as an identical query. Re-run the GQ10 baseline after every accepted
 slice and record the result in `STATUS.md` and `bench-results/`.
 
-**GQ1/GQ10 readiness landed (2026-07-13/14, artifact v25).** The client recipe is
+**GQ1/GQ10 readiness landed (2026-07-13/14, artifact v26).** The client recipe is
 now a single-worker cold run. Its artifact separates word preprocessing,
 bit-blast, CNF encoding, optional CNF inprocessing, SAT, model lift, and
 original-query model replay; reports aggregate and exact p50/p95 timing; and
@@ -153,6 +162,9 @@ and separately time the analysis nested within bit-blast. A focused 8-of-64
 regression records 25/81 demanded term bits and 8/64 demanded symbol bits while
 the current full-child lowerer materializes 81/81 and 64/64. This measures the
 GQ4 opportunity without yet changing semantics or model projection.
+Artifact v26 charges canonical-only rewrite elapsed to the word-policy stage,
+PAR-2, cold total, and Axeyum/Z3 ratio. Artifact-v25 canonical ratios omitted
+that cost and are diagnostic-only.
 **GQ3 exact semantic tranche landed (2026-07-14, ADR-0142).** The default
 manifest now composes nested extracts, splits concat-boundary straddles, returns
 whole concat operands directly, and reduces low/high/straddling zero/sign
@@ -162,10 +174,12 @@ exhaustion while returning the denotation-equivalent partial term. Each rule
 has a stable manifest ID, identity model projection, fixed fresh-node bound,
 exhaustive small-width and seeded wider evaluator evidence, and lifter-shaped
 Z3 SAT/UNSAT differential replay. The expanded default benchmark identity is
-`axeyum-rewrite-default-v2`. This completes GQ3's rule/fuel/test implementation,
-not its performance exit: the missing capture must still show lower residual
-opportunities, AIG/CNF construction, and valid end-to-end cold time before the
-tranche is promoted as a Glaurung win or as GQ2's always-on cold tier.
+`axeyum-rewrite-default-v2`. The real capture now validates the semantic tranche
+as a word-DAG/time win: 1,315/1,435 representative opportunities disappear,
+materialized term bits fall 57% representative / 72% full, and Axeyum total
+falls 48.5% / 57.1% with all validity gates green. GQ3 remains open because
+full-tier AIG/CNF size rises slightly and corrected production timing must first
+remove the observational demand-profiler overhead.
 The remaining shadow-diff handoff is also executable: a versioned capture index
 contains the producer-owned ordered path, trusted verdict, family, and tier
 facts, while `--generate-corpus-manifest` checks exact directory membership,
@@ -196,40 +210,40 @@ Its candidate/baseline ratio mean is +21.78%, but candidate ratio CV is 20.40%,
 the descriptive standardized delta is +0.97, and the raw Z3 control is +2.65%.
 These sub-millisecond values demonstrate identity/noise reporting and support no
 performance or regression claim.
-**Producer capture handoff inspected (2026-07-14).** Glaurung commit `7cab030`
-documents a 2026-07-13 Z3-oracle capture from three real Windows-driver
-families and commits a 128-query representative manifest: 64 SAT / 64 UNSAT,
-42 `register-slice`, 48 `slice-partial`, 23 `arithmetic`, 12 `comparison`, 2
-`mixed`, and 1 `trivial`. Its producer-side artifact-v17 run reports 128/128
-decided and manifest/Z3-agreed, zero unsupported/disagreements, a 2.10x
-Axeyum/Z3 aggregate ratio (272 ms / 130 ms), and 84% of Axeyum cold time in
-bit-blast plus CNF encoding (42% each), versus 15% SAT and 1% model lift. This
-attributes the first implementation ranking toward GQ3--GQ5 and away from GQ6.
-It does not close GQ1/GQ10 yet: the committed handoff contains the manifest but
-not its `.smt2` payload, the documented local Axeyum pack is absent on this
-host, and the result predates artifact v22's identity/resource/repetition/proof
-gates. Before publishing the baseline, reconcile the capture README's
-full-corpus count (`15,687`) with its SAT+UNSAT subtotal (`15,710`), deduplicate
-the 17-row/11-unique exclusion list, and make the generated full manifest
-self-contained (the current builder copies only representative query files).
-Then rerun the representative bytes under v25 and retain the full tier in the
-access-controlled scheduled lane.
-The current best explanation for the 23-row total/subtotal discrepancy is
-cross-process duplication, not 23 missing query files: the documented capture
-runs three processes, while its `SEEN` hash set is process-local and all
-processes append to one TSV. This is an inference to verify against the raw
-directory; the builder currently collapses duplicate hash rows without checking
-for conflicting verdicts. The handoff should therefore emit Axeyum's strict
-hash-free `capture-index-v1.json`, reject verdict conflicts, and let Axeyum
-compute manifest hashes from a self-contained root.
+**Real capture ingested and measured (2026-07-14).** Glaurung commit `286f744`
+was captured sequentially on the three pinned Windows drivers. The raw audit is
+15,710 index rows, 15,687 unique hashes, 23 duplicate rows, and zero verdict
+conflicts. Strict parsing found 2,225 genuinely ill-sorted producer dumps
+(1,429 120-vs-64, 795 96-vs-64, one 160-vs-128); Z3's CLI independently emits
+sort errors for them, so their internal capture verdicts do not describe the
+dumped scripts. They are excluded from performance without weakening Axeyum's
+sort checker. Axeyum-generated hash-free-index manifests bind a 128-query
+representative tier (64 SAT / 64 UNSAT) and a 13,462-query well-typed full tier
+(1,774 SAT / 11,688 UNSAT). Both are byte-complete and access-controlled.
+
+Artifact v26 charges canonical rewrite cost. Five representative trials give
+median raw/canonical/configured ratios of 6.53x/3.42x/3.54x; canonical cuts
+Axeyum total 48.5%. Every one of the 15 trials is 100% decided and manifest/Z3
+agreed with zero errors or replay failures; raw and canonical proof companions
+each recheck all 64 UNSAT rows. Same-revision full raw/canonical trials are
+15.19x/6.32x and valid on all 13,462 rows. The committed access-controlled
+result summary is
+[`glaurung-qfbv-2026-07-14.md`](bench-results/glaurung-qfbv-2026-07-14.md).
+
+The measurement also found the next blocker: artifact v25's conservative
+bit-demand pass is observational but runs inside every lowering. It costs
+29.57 s of the canonical full tier's 50.75 s. Artifact v27 must make it opt-in
+or fuse it into actual partial lowering and mark profile completeness before a
+new client ratio is accepted. After canonicalization, 98.16% of term bits are
+already demanded, moving broad GQ4 behind the profiler repair and targeted
+affine-word/CNF work unless family data reverses the rank.
 The performance command also exposed a mode mismatch: the producer's v17 result
 and Glaurung's current one-shot backend are raw (rewrite off, preprocessing off),
 while the former Axeyum recipe forced `--preprocess`. The artifact-v25 recipes
 now split raw, canonical-only, and configured policies for single, repeated,
 and proof-companion runs; the unsuffixed compatibility entries select raw as the
 current-integration baseline. Dry-run regression tests pin every recipe's flags
-and prevent the three artifact series from silently converging. The query bytes
-are still required before any policy receives a Glaurung performance result.
+and prevent the three artifact series from silently converging.
 
 **Validation checkpoint (2026-07-14).** The all-feature solver library and
 integration suite passes serially under the hard 4 GiB virtual-memory cap, as
@@ -964,8 +978,8 @@ AIG sharing reduces ADR-0129's module to **18,576,938 bytes**, with its release
 gate passing in **4.10--4.21 s** (the measured no-rebuild peak is **419,460
 KiB**); a scoped 64 MiB reconstruction
 worker also makes its full debug file pass 9/9 without relying on the harness
-stack. **Next:** ingest the manifest-bound Glaurung query payload and reproduce
-GQ1/GQ10 under artifact v25 before choosing a cold-path optimization;
+stack. **Next:** repair the Glaurung demand-profiler production boundary and
+rerun artifact-v26 raw/canonical timing before the next affine-word/CNF slice;
 in the depth lane, broaden nested/alternating QSAT and quantified-UF models.
 **Exact source-term BV Skolems are now LANDED (ADR-0141):** the existing
 `forall+ exists` certificate may carry one exact source-reachable, same-width,

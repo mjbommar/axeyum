@@ -162,7 +162,11 @@ reinterpretation propagation is exact; unclassified operators conservatively
 demand every operand bit. The analysis time is reported and is already nested
 within `bit_blast`. Coverage invariants must remain true. These counts expose a
 potential GQ4 reduction; they do not claim that omitted bits are already safe or
-that the current lowerer avoids them.
+that the current lowerer avoids them. In artifact v25/v26 this observational
+pass is still always-on inside `lower_terms`; the real full Glaurung run found
+it consuming 29.57 of 50.75 Axeyum seconds after canonicalization. Treat those
+client ratios as diagnostic until a later artifact makes profiling opt-in (or
+uses the demand result to drive actual lowering) and reruns the production path.
 Version 26 closes the canonical-only timing boundary: the elapsed default
 rewrite is now charged to `word_preprocess`, the instance cold total, PAR-2,
 and the Axeyum side of `client_comparison`, and is also exposed as
