@@ -346,6 +346,29 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   its reported 15,687 total conflicts with the 15,710 SAT+UNSAT subtotal, its
   exclusion file has 17 rows but only 11 unique hashes, and its builder emits a
   full manifest while copying only representative query files.
+  The likely explanation for the 23-row total/subtotal discrepancy is now
+  localized but remains to be verified from the raw directory: capture
+  deduplication is process-local, the documented command launches three
+  processes into one directory, and the builder silently overwrites duplicate
+  TSV hash rows without checking verdict consistency. The producer handoff also
+  bypasses artifact v22's strict hash-free capture-index generator by authoring
+  a hash-bearing manifest directly. The repaired handoff must report row and
+  unique counts separately, reject conflicting duplicate verdicts, and let
+  Axeyum compute hashes from a byte-complete root.
+
+  **2026-07-14 execution-plan audit:** the producer's artifact-v17 command and
+  Glaurung's current one-shot backend both use raw assertions (rewrite off,
+  preprocessing off). Axeyum's current `bench-glaurung-qfbv` recipe instead
+  forces `--preprocess`, even though Glaurung measured configured preprocessing
+  as a 1.3--2x cold loss. The first v22 result must therefore be a named policy
+  matrix: raw/current-integration control, canonical-only cheap tier, and full
+  configured diagnostic. The complete capture, implementation, functional, and
+  warm-integration task graph is now recorded in the
+  [Glaurung QF_BV execution plan](docs/research/08-planning/glaurung-qfbv-execution-plan.md).
+  It also records the non-performance acceptance requirement that model-choice
+  divergence can steer Glaurung findings even under perfect verdict agreement;
+  real warm integration needs a controlled concretization policy or an
+  equivalent-choice-aware finding comparison.
 
   **GQ1/GQ10 readiness increment:** artifact v22 charges Axeyum for word
   preprocessing, separates it from term→AIG, AIG→CNF, optional CNF
@@ -428,28 +451,30 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
   | ID | Live status | Next acceptance boundary |
   |---|---|---|
-  | **GQ1 real-query profile** | **WIP; producer-side artifact-v17 evidence is available, but the query payload is still the local data dependency.** Glaurung reports 128/128 decided/agreed, 2.10x Axeyum/Z3, and 84% in bit-blast+CNF encode. Axeyum artifact v22, executable solver-determinism and bounded-resource identity, capture-index→manifest generation, manifest-v1 ingestion, untouched-DAG formula/width/operator/opportunity profiling, typed AIG/CNF/inprocess stats with size distributions, separately charged SAT model replay, an optional fail-closed proof-check companion, complete clean source/tool/hardware identity, single-worker client recipe, whole-corpus process-level repetition/variance summary, p50/p95, original-query in-process Z3 ratio, complete manifest/oracle/decided-rate gates, and zero-error policy are landed | Obtain the 128 referenced `.smt2` bytes plus trusted index, reconcile producer count/exclusion/full-pack inconsistencies, rerun the representative tier under v22, and publish same-environment repetition plus the separate proof-check result |
+  | **GQ1 real-query profile** | **WIP; producer-side artifact-v17 evidence is available, but the query payload is still the local data dependency.** Glaurung reports 128/128 decided/agreed, 2.10x Axeyum/Z3, and 84% in bit-blast+CNF encode. Axeyum artifact v22, executable solver-determinism and bounded-resource identity, capture-index→manifest generation, manifest-v1 ingestion, untouched-DAG formula/width/operator/opportunity profiling, typed AIG/CNF/inprocess stats with size distributions, separately charged SAT model replay, an optional fail-closed proof-check companion, complete clean source/tool/hardware identity, process-level repetition/variance summary, p50/p95, original-query in-process Z3 ratio, complete manifest/oracle/decided-rate gates, and zero-error policy are landed. The current recipe's forced preprocessing does not reproduce the raw producer/current-integration mode | Obtain the 128 referenced `.smt2` bytes plus strict hash-free trusted index, reconcile producer count/exclusion/full-pack inconsistencies, split raw/canonical/configured recipes, rerun raw first under v22, and publish same-environment repetition plus the matching proof-check result |
   | **GQ2 cheap cold tier** | **TODO**, profile-gated; existing full preprocessing is opt-in and warm-oriented | Bounded constant/identity tier with non-worse cold aggregate time and an explicit cold/warm/size policy |
-  | **GQ3 coercion peepholes** | **TODO**; only narrower extract-through-bitwise/ITE rules are landed | Exact extract/concat, nested-extract, zero/sign-extension cancellation with exhaustive and differential semantics gates |
-  | **GQ4 cold relevant bits** | **WIP foundation**; warm 8-of-64 slicing is landed, cold demand propagation is not | Backward live-bit pass, original replay, counters, and measured target-corpus AIG/CNF reduction |
-  | **GQ5 AIG/CNF construction** | **TODO, attribution-gated**; structural hashing exists and max-sharing/two-level rewriting remain P1.2 work | Measured gate/clause and end-to-end reduction on the real corpus, including only the gate families the profile identifies |
+  | **GQ3 coercion peepholes** | **WIP partial foundation**; whole/same-side concat extracts, low extension slices, extract-through-bitwise/ITE, and adjacent-slice reassembly are landed. Nested extracts, concat straddles, extension high/straddle cases, and bounded replacement reprocessing are missing | ADR-led exact completion with growth/fuel control, exhaustive/differential semantics, residual-opportunity telemetry, and measured real-tier AIG/CNF/time reduction |
+  | **GQ4 cold relevant bits** | **WIP foundation**; warm preprocessing can rewrite an 8-of-64 slice, but raw lowering still constructs every child bit before slicing it | Partial-bit demand memo, deterministic demand union, extract/concat/extension/pointwise propagation, explicit omitted-bit model projection, original replay, counters, and measured target-corpus AIG/CNF reduction |
+  | **GQ5 AIG/CNF construction** | **WIP advanced foundation, attribution-gated**; deterministic AIG structural hashing/identities and reachable-only polarity-aware CNF with direct-root/XOR/mux/private-tree recognition already exist, but subphase/hash counters do not | Profile AIG unique-table and CNF planning/allocation/emission/dedup first; change only the measured lookup/allocation/gate family and require an end-to-end real-corpus win |
   | **GQ6 cold SAT/CDCL** | **WIP foundation, attribution-gated**; subsumption/BVE, XOR/GF(2), VSIDS, phase saving, Luby, and LBD foundations exist | Exact-CNF backend attribution first; tune/default a stronger path only where SAT dominates and proof replay stays green |
-  | **GQ7 warm delta entry** | **WIP foundation**; retained CNF/search state exists, but `assert_configured` delta-only preprocessing is not complete | Preprocess only new/affected terms and publish per-check cost plus warm break-even sequence length |
-  | **GQ8 verdict/CNF cache** | **TODO** | Versioned canonical keys, exact duplicate verdict reuse, sound prefix-state reuse, deterministic bounds, and mandatory original replay |
+  | **GQ7 warm delta entry** | **WIP foundation**; retained CNF/search state exists, but the deduplicated cold corpus cannot measure prefix reuse and Glaurung still creates a fresh solver for every check | Capture an ordered scope/path trace, preprocess only new/affected terms, wire persistent per-worker/path push/assert/check/pop, control concretization, and publish real-driver per-check cost plus warm break-even depth |
+  | **GQ8 verdict/CNF cache** | **TODO, ordered-trace-gated** | Measure duplicates/prefixes first; prefer retained warm state, then add versioned exact-query reuse only where justified, with deterministic bounds and mandatory original replay |
   | **GQ9 auto cost model/docs** | **TODO**; P1.8 shape/resource probes are only the general foundation | Telemetry-visible raw/cheap/configured/warm choice that beats or matches fixed policies and documents embedder guidance |
   | **GQ10 real-lifter regression tier** | **BLOCKED on payload transfer, not capture design**; the producer committed the 128-entry manifest and capture recipe, while artifact-v22 validity/attribution/shape/replay/experiment/determinism/bounded-resource gates, a strict versioned capture-index generator, manifest-v1 exact membership/SHA-256/expected-verdict/family/tier contract, independent-process repetition/variance summarization, fail-closed same-environment cross-commit comparison, and separate performance/proof recipes are landed | Transfer the hash-bound real query bytes, repair/validate the self-contained full pack, then land the regular representative gate, repeated scheduled full run, proof companion, cross-commit baseline, and corpus-grounded regression thresholds |
 
-  **Next actions:** (1) receive the 128 manifest-bound Glaurung `.smt2` files
-  plus versioned trusted index without normalizing away their
-  width-mixed/extract/concat/memory shape, reconcile the documented aggregate
-  counts and exclusions, generate the strict self-contained representative/full
-  manifests, and verify the distribution in the artifact-v22 shape/profile
-  gate; (2) establish the repeated GQ1/GQ10 baseline at
-  100% decided, zero errors/disagreements/replay failures with reported
-  whole-corpus variance, then compare subsequent clean revisions under the same
-  environment before setting any regression threshold; (3) select the first
-  implementation slice from the largest measured cold stage, with GQ2/GQ3/GQ4
-  preferred only if word construction or bit-blast attribution supports them.
+  **Next actions:** (1) receive or regenerate the 128 Glaurung `.smt2` files
+  plus strict hash-free capture index without normalizing away their
+  width-mixed/extract/concat/memory shape; reconcile row/unique/verdict counts,
+  duplicate exclusions, and byte-complete representative/full roots; (2) split
+  the benchmark recipes into raw, canonical-only, and configured policies and
+  establish the five-process raw GQ1/GQ10 baseline plus matching proof companion
+  at 100% decided and zero errors/disagreements/replay failures; (3) add
+  before/after/residual GQ3, demanded/actually-lowered bit, AIG hash/rule, and
+  CNF planning/allocation/emission counters so the real run selects a measured
+  slice; (4) draft the exact-extract rewrite ADR and tests, then implement GQ3
+  before the larger GQ4 demand-lowering contract only if the counters confirm
+  the ranking; (5) define an ordered Glaurung path/scope trace and controlled
+  concretization boundary before GQ7/GQ8 warm integration or caching.
   Until the manifest-bound payload is transferred and reproduced under v22,
   instrumentation/ingestion work may proceed and the quantified Lean lane may
   continue, but neither the producer's older artifact nor a synthetic-only
@@ -2216,7 +2241,7 @@ plan is built and committed on the current branch:
 ### Track 4 — Use Cases & Frontend
 | Phase | Title | Status |
 |---|---|---|
-| P4.1j | Glaurung warm delta and duplicate/prefix reuse (GQ7/GQ8) | WIP — retained CNF, learned state, and push/pop are foundations; remaining work is affected-term-only `assert_configured` preprocessing, measured warm break-even, versioned canonical query keys, exact-duplicate verdict/model/proof reuse, sound extending-prefix CNF/search reuse, deterministic cache bounds, and mandatory original-term replay |
+| P4.1j | Glaurung warm delta and duplicate/prefix reuse (GQ7/GQ8) | WIP — retained CNF, learned state, and push/pop are foundations; remaining work starts with an ordered real path/scope trace because the deduplicated cold corpus erases frequency and prefix structure, then persistent per-worker/path integration, affected-term-only preprocessing, controlled model-based concretization, and measured warm break-even. Exact-query caching follows only if measured duplicate rates justify versioned canonical keys; sound extending prefixes reuse retained state rather than cached verdicts, with deterministic bounds and mandatory original-term replay |
 | P4.1e | Retained warm Boolean array relation flags | **DONE (ADR-0091)** — symbolic-memory path conditions can keep nested supported array equality atoms warm through private candidate-sensitive relation flags, guarded equality/diff observations, projection filtering, and replay |
 | P4.1h | Retained warm nested array-valued UF parameters | **DONE (ADR-0094)** — nested supported array-valued memory/function parameters can stay warm as full-value UF keys through private projection keys or rewritten structural keys, with relation-flag guarded congruence, private filtering, and replay |
 | P4.1g | Retained warm structural array-valued UF parameters | **DONE (ADR-0093)** — supported store/constant/array-ITE memory/function parameters can stay warm as full-value UF keys with scalar dependency retention, structural owner realization, relation-flag guarded congruence, private filtering, and replay; ADR-0094 subsequently lands nested application keys |
@@ -2237,6 +2262,22 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-14 — Glaurung capture and execution-plan audit.** Inspected the
+  committed producer capture, current one-shot backend, Axeyum rewrite/lowering/
+  AIG/CNF implementations, and the official Z3/Bitwuzla counterparts. Recorded
+  the dependency-ordered
+  [Glaurung QF_BV execution plan](docs/research/08-planning/glaurung-qfbv-execution-plan.md).
+  The audit localizes a likely cross-process duplicate explanation for the
+  producer's 23-row count discrepancy, requires conflict-checking and a strict
+  hash-free capture index, and identifies a benchmark-mode mismatch: the
+  producer/current Glaurung path is raw while Axeyum's recipe forces full
+  preprocessing. The baseline is now explicitly raw vs canonical-only vs
+  configured. GQ3 is reclassified as a partial foundation, GQ4 as a true
+  demand-lowering contract because raw extracts lower full children, and GQ5 as
+  profile-first work over an already sophisticated AIG/CNF stack. The warm lane
+  now requires an ordered trace and controlled model-based concretization before
+  caching or performance claims.
 
 - **2026-07-14 — close ADR-0129 Lean reconstruction under 4 GiB.** Open AIG
   gate propositions are now explicit witness-scoped lets consumed directly by
