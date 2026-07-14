@@ -71,6 +71,7 @@ just bench-glaurung-manifest-smoke               # client manifest/timing plumbi
 just bench-glaurung-manifest-proof-smoke         # fail-closed DRAT-check plumbing
 just generate-glaurung-manifest CORPUS INDEX OUT # bind capture facts to exact bytes
 just bench-glaurung-qfbv-repeated CORPUS MANIFEST # process-level variance (5 trials)
+just compare-glaurung-qfbv-repeated BASE CAND OUT # controlled cross-commit delta
 ```
 
 **Resource rules** (this matters — the harness can OOM a small host otherwise):
@@ -173,7 +174,45 @@ decisions, and zero operational errors, manifest/oracle disagreements, or
 model/proof replay failures. Any violation prevents `summary.json` from being
 written. The summary records each source artifact's SHA-256 and the exact
 configuration/experiment identity, so trials cannot be silently mixed across
-commits, hardware, toolchains, corpus bytes, or solver settings.
+commits, hardware, toolchains, corpus bytes, or solver settings. `summary.json`
+must remain in the common source-artifact directory; its portable relative
+paths let the cross-commit comparator reopen and revalidate every trial.
+
+Compare two repeated summaries from distinct clean source revisions with:
+
+```sh
+just compare-glaurung-qfbv-repeated \
+  bench-results/baseline/summary.json \
+  bench-results/candidate/summary.json \
+  bench-results/comparison.json
+```
+
+The comparator independently revalidates both summaries and recomputes their
+variance blocks from the source-trial records. It requires identical corpus and
+manifest hashes, solver configuration, toolchain, hardware, and backend
+versions; only `config.experiment.source.revision` may differ, and both sources
+must be clean. The report shows candidate-minus-baseline changes for raw Axeyum
+time, raw Z3 control time, the Axeyum/Z3 ratio, and every attributed Axeyum
+stage. `standardized_delta` is a descriptive change divided by the combined
+standard error, not a statistical-significance claim.
+
+Once the real corpus establishes an accepted regression policy, explicit gates
+can be applied without changing the evidence format:
+
+```sh
+python3 scripts/compare-glaurung-repetitions.py \
+  bench-results/baseline/summary.json \
+  bench-results/candidate/summary.json \
+  --max-ratio-regression-percent 5 \
+  --max-axeyum-regression-percent 5 \
+  --max-z3-drift-percent 10 \
+  --out bench-results/comparison.json
+```
+
+The example thresholds illustrate the CLI only; they are not an accepted
+Glaurung policy. A configured gate writes the comparison for diagnosis and
+exits nonzero when exceeded. Invalid or incomparable inputs remove any stale
+output and fail before producing a report.
 
 Run the separate proof-validation companion on the same immutable manifest:
 

@@ -245,6 +245,14 @@ records the contract and the first measured baselines.
   deviation, and coefficient of variation across corpus totals for Axeyum, Z3,
   their ratio, and each Axeyum stage. Per-query p50/p95 within one trial is not
   misreported as run-to-run variance.
+  Cross-commit tracking uses `compare-glaurung-qfbv-repeated`: both repetition
+  summaries are revalidated from their trial records and must match in corpus,
+  manifest, configuration, environment/toolchain/hardware, and backends while
+  naming distinct clean source revisions. Reports keep raw Axeyum and raw Z3
+  changes alongside the ratio and per-stage deltas, so an apparent ratio win
+  caused by Z3 control drift is visible. Optional ratio/Axeyum regression and
+  absolute Z3-drift thresholds are explicit caller policy; no threshold is
+  inferred from the synthetic micro smoke.
 - Timeout regressions must pin the exact pathological public or minimized query
   and exercise both admission outcomes: deterministic oversized refusal before
   allocation and cooperative expiry inside admitted superlinear work. Every

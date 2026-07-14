@@ -132,6 +132,16 @@ class RepetitionSummaryTests(unittest.TestCase):
             with self.assertRaisesRegex(MODULE.SummaryError, "paths must be unique"):
                 MODULE.summarize([path, path])
 
+    def test_output_must_share_the_source_artifact_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            inputs = [root / "runs" / "run-001.json", root / "runs" / "run-002.json"]
+            with self.assertRaisesRegex(MODULE.SummaryError, "common source-artifact"):
+                MODULE.validate_output_location(
+                    root / "elsewhere" / "summary.json", inputs
+                )
+            MODULE.validate_output_location(root / "runs" / "summary.json", inputs)
+
 
 if __name__ == "__main__":
     unittest.main()

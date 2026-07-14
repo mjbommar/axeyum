@@ -47,7 +47,7 @@ qfbv-profile:
     ./scripts/check-qfbv-profile.sh
 
 benchmark-repetition-tests:
-    python3 -m unittest scripts/tests/test_summarize_glaurung_repetitions.py
+    python3 -m unittest scripts/tests/test_summarize_glaurung_repetitions.py scripts/tests/test_compare_glaurung_repetitions.py
 
 foundational-resources:
     ./scripts/check-foundational-resources.sh
@@ -133,6 +133,14 @@ bench-glaurung-qfbv-repeated corpus_dir manifest tier="full" out_dir="bench-resu
         artifacts+=("$artifact")
     done
     python3 scripts/summarize-glaurung-repetitions.py "${artifacts[@]}" --out "{{ out_dir }}/summary.json"
+
+# Compare repeated summaries from two distinct clean source revisions. Corpus,
+# config, toolchain, hardware, and backends must match exactly; the report keeps
+# raw Axeyum/Z3 controls next to the ratio and does not impose an unmeasured
+# synthetic threshold.
+compare-glaurung-qfbv-repeated baseline candidate out:
+    mkdir -p "$(dirname '{{ out }}')"
+    python3 scripts/compare-glaurung-repetitions.py "{{ baseline }}" "{{ candidate }}" --out "{{ out }}"
 
 # High-assurance companion to the performance run. This switches to the slower
 # proof-producing native core and fails closed unless every UNSAT has an inline

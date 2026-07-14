@@ -148,6 +148,17 @@ whole-corpus Axeyum/Z3 totals, their ratio, and every attributed Axeyum stage.
 This distinguishes between-query shape distributions from genuine run-to-run
 noise and avoids multiplying the large artifact's in-memory footprint.
 
+The cross-commit follow-up makes `config_hash + environment_hash` operational
+rather than advisory. A comparator revalidates each repetition summary from its
+trial records, requires identical corpus/manifest bytes, solver settings,
+toolchain, hardware, and backend versions, and permits only the clean source
+revision to differ. It reports candidate-minus-baseline raw Axeyum time, raw Z3
+control time, Axeyum/Z3 ratio, and every stage, including sample distributions
+and a descriptive standardized delta. Optional ratio, raw-Axeyum, and absolute
+Z3-drift gates take explicit thresholds; the micro corpus does not set product
+policy. Invalid identity/variance removes stale output, while a valid comparison
+that exceeds a configured gate remains written for diagnosis and exits nonzero.
+
 ## Alternatives
 
 - **Implicitly widen or truncate binary operands.** Rejected: it masks client

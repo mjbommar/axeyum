@@ -323,7 +323,7 @@ def summarize(paths: Sequence[Path]) -> dict[str, Any]:
             "identity": "every source artifact has byte-identical config and a clean reproducible-run identity",
             "acceptance": "every trial is 100% decided with zero errors, disagreements, oracle gaps, and replay failures",
             "statistics": "nearest-rank p50/p95 and sample standard deviation across whole-corpus trials",
-            "artifact_paths": "relative to the common source-artifact directory",
+            "artifact_paths": "relative to the directory shared by summary.json and all source artifacts",
         },
         "identity": identity,
         "config": expected_config,
@@ -376,6 +376,16 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def validate_output_location(output: Path, inputs: Sequence[Path]) -> None:
+    input_parents = [path.parent.resolve() for path in inputs]
+    common_parent = Path(os.path.commonpath([str(parent) for parent in input_parents]))
+    if output.parent.resolve() != common_parent:
+        fail(
+            "repetition summary output must be in the common source-artifact directory "
+            "so recorded relative paths remain self-contained"
+        )
+
+
 def main() -> int:
     args = parse_args()
     output = args.out.resolve()
@@ -387,6 +397,7 @@ def main() -> int:
         )
         return 1
     try:
+        validate_output_location(output, inputs)
         write_json_atomic(output, summarize(inputs))
     except SummaryError as error:
         # A failed refresh must not leave a previously valid-looking summary at

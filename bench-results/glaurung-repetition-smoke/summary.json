@@ -89,7 +89,7 @@
   },
   "contract": {
     "acceptance": "every trial is 100% decided with zero errors, disagreements, oracle gaps, and replay failures",
-    "artifact_paths": "relative to the common source-artifact directory",
+    "artifact_paths": "relative to the directory shared by summary.json and all source artifacts",
     "identity": "every source artifact has byte-identical config and a clean reproducible-run identity",
     "run_boundary": "independent process per whole-corpus cold trial",
     "statistics": "nearest-rank p50/p95 and sample standard deviation across whole-corpus trials"

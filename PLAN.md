@@ -100,6 +100,12 @@ A committed three-trial micro repetition smoke exercises this contract from a
 clean source revision: every trial is 2/2 decided/manifest-agreed/Z3-agreed,
 and the summary reports finite whole-corpus and per-stage variance. Its tiny
 timings are plumbing evidence only, not a client ratio.
+Cross-commit tracking is likewise fail-closed: the repetition-summary comparator
+recomputes both inputs from their trial records, requires the same corpus,
+manifest, solver config, environment/toolchain/hardware, and backends, and
+permits only the clean source revision to differ. It reports raw Axeyum and Z3
+controls beside the ratio and stage deltas; optional regression/drift thresholds
+are explicit caller policy rather than synthetic defaults.
 GQ1/GQ10 remain open until the actual Glaurung capture is ingested.
 
 **Non-negotiable acceptance gate.** Comparable runs require 100% decided on the

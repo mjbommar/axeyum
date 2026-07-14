@@ -378,6 +378,11 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   ratio CV 4.35%, plus every stage distribution. Those sub-millisecond micro
   values validate variance plumbing only and carry no Glaurung performance
   claim.
+  Cross-commit comparison now revalidates both repetition summaries from their
+  trial records, requires identical corpus/manifest/config/environment/backends
+  with distinct clean source revisions, and reports raw Axeyum, raw Z3 control,
+  ratio, and per-stage deltas. Optional ratio/raw-Axeyum regression and absolute
+  Z3-drift gates are caller-supplied; the micro fixture sets no threshold.
 
   | ID | Live status | Next acceptance boundary |
   |---|---|---|
@@ -390,14 +395,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   | **GQ7 warm delta entry** | **WIP foundation**; retained CNF/search state exists, but `assert_configured` delta-only preprocessing is not complete | Preprocess only new/affected terms and publish per-check cost plus warm break-even sequence length |
   | **GQ8 verdict/CNF cache** | **TODO** | Versioned canonical keys, exact duplicate verdict reuse, sound prefix-state reuse, deterministic bounds, and mandatory original replay |
   | **GQ9 auto cost model/docs** | **TODO**; P1.8 shape/resource probes are only the general foundation | Telemetry-visible raw/cheap/configured/warm choice that beats or matches fixed policies and documents embedder guidance |
-  | **GQ10 real-lifter regression tier** | **BLOCKED on the external capture**; artifact-v20 validity/attribution/shape/replay/experiment-identity gates, a strict versioned capture-index generator, manifest-v1 exact membership/SHA-256/expected-verdict/family/tier contract, independent-process repetition/variance summarization, and separate performance/proof recipes are landed | Export the real capture plus trusted index, generate its manifest, then land its regular representative gate, repeated scheduled full run, proof companion, and same-environment per-commit Z3-relative tracking |
+  | **GQ10 real-lifter regression tier** | **BLOCKED on the external capture**; artifact-v20 validity/attribution/shape/replay/experiment-identity gates, a strict versioned capture-index generator, manifest-v1 exact membership/SHA-256/expected-verdict/family/tier contract, independent-process repetition/variance summarization, fail-closed same-environment cross-commit comparison, and separate performance/proof recipes are landed | Export the real capture plus trusted index, generate its manifest, then land its regular representative gate, repeated scheduled full run, proof companion, cross-commit baseline, and corpus-grounded regression thresholds |
 
   **Next actions:** (1) receive the Glaurung `.smt2` capture plus versioned
   trusted index without normalizing away its width-mixed/extract/concat/memory
   shape, generate the strict manifest, and verify that distribution in the
   artifact-v20 shape profile; (2) establish the repeated GQ1/GQ10 baseline at
   100% decided, zero errors/disagreements/replay failures with reported
-  whole-corpus variance; (3) select the first
+  whole-corpus variance, then compare subsequent clean revisions under the same
+  environment before setting any regression threshold; (3) select the first
   implementation slice from the largest measured cold stage, with GQ2/GQ3/GQ4
   preferred only if word construction or bit-blast attribution supports them.
   Until the capture arrives, instrumentation/ingestion work may proceed and the
