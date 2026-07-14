@@ -1,6 +1,6 @@
 # ADR-0147: Zero-copy reverse AIG node iteration
 
-Status: proposed
+Status: deferred
 Date: 2026-07-14
 
 ## Context
@@ -31,16 +31,32 @@ acceptance benchmark.
 - Preserve AIG evaluation, CNF content/order, variable/lift maps, and original
   model replay.
 
-The decision becomes accepted only if the AIG/CNF/SAT suites and strict Clippy
+The experiment was admitted only if the AIG/CNF/SAT suites and strict Clippy
 pass and five clean representative canonical processes improve planning and
 end-to-end time with identical formula and verdict shape. A full-tier
-confirmation is then required; otherwise the temporary vector is restored and
-the ADR is deferred.
+confirmation would then be required. Planning improved, but end-to-end time did
+not, so the temporary vector and narrower iterator contract are restored and no
+full run is authorized.
 
 ## Evidence
 
-Pending implementation measurement. The accepted pre-change baseline is
-recorded in `bench-results/glaurung-qfbv-2026-07-14.md`.
+The implementation passed all nine `axeyum-aig` tests, all 283 `axeyum-cnf`
+tests, and strict Clippy under the 4 GiB cap. All five representative processes
+were 100% decided with zero errors, manifest/oracle disagreements, or replay
+failures, and formula shape stayed identical.
+
+Against accepted ADR-0145:
+
+- median planning improves 0.01207 → 0.01177 seconds (-2.49%);
+- median total regresses 0.18985 → 0.19083 seconds (+0.51%);
+- mean total regresses 0.18970 → 0.19122 seconds (+0.80%); and
+- median CNF regresses 0.07298 → 0.07557 seconds (+3.55%).
+
+The isolated planning saving projects to roughly 0.03 seconds on the 1.21-second
+full planning stage and does not satisfy the end-to-end acceptance rule. The
+candidate revision is `99e93a08`; artifacts remain beside the access-controlled
+capture. The compact negative result is recorded in
+`bench-results/glaurung-qfbv-2026-07-14.md`.
 
 ## Alternatives
 
@@ -55,6 +71,7 @@ recorded in `bench-results/glaurung-qfbv-2026-07-14.md`.
 
 ## Consequences
 
-The public iterator contract becomes more specific but remains backward
-compatible. The planner performs the same reverse pass without per-query node
-copying. The real-corpus gate decides whether that copy was material.
+The candidate is not retained. Although removing the copy measurably improves
+planning, the saving is too small and did not improve the whole pipeline.
+Further planning work should require a larger structural reduction or wait
+until later changes make planning material; a local subphase win is not enough.

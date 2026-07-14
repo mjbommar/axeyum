@@ -1679,7 +1679,8 @@ impl<'a> TseitinEncoder<'a> {
     }
 
     fn plan_and_tree_gates(&mut self, use_counts: &[u32]) {
-        for (node_id, node) in self.aig.nodes().rev() {
+        let nodes = self.aig.nodes().collect::<Vec<_>>();
+        for (node_id, node) in nodes.into_iter().rev() {
             if !self.reachable_nodes[node_id.index()]
                 || self.skip_nodes[node_id.index()]
                 || self.xor_gates[node_id.index()].is_some()

@@ -223,13 +223,21 @@ decided with zero errors, disagreements, or replay failures, and emits the same
 reverted without a full-tier run and ADR-0146 is deferred. Planning attribution,
 not another root scratch, is next.
 
-## ADR-0147 zero-copy reverse-node candidate
+## ADR-0147 zero-copy reverse-node rejection
 
 Private AND-tree planning visits nodes in descending dense-ID order so a parent
 claims eligible helpers first. The backing `Aig::nodes()` slice iterator is
 already exact-size and double-ended, but its opaque return type exposed only
 `Iterator`; planning therefore copied every `(id,node)` into a temporary vector
-solely to reverse it. Proposed ADR-0147 exposes the existing standard iterator
-traits and iterates directly in the same order. With roughly 43 million AIG
-nodes visited on the full tier, this is the first bounded 1.21-second planning
-candidate. No performance claim is admitted before the clean gate.
+solely to reverse it. The tested ADR-0147 exposes the existing standard iterator
+traits and iterates directly in the same order.
+
+The five-process gate shows the local optimization but rejects the whole-pipeline
+result. Median planning improves 0.01207 → 0.01177 seconds (-2.49%), while
+median total regresses 0.18985 → 0.19083 seconds (+0.51%), mean total
+regresses 0.18970 → 0.19122 seconds (+0.80%), and median CNF regresses
+0.07298 → 0.07557 seconds (+3.55%). All runs remain 128/128 decided with
+identical CNF/verdict/replay shape. The projected full planning saving is only
+about 0.03 seconds, so revision `99e93a08` is reverted without a full run and
+ADR-0147 is deferred. Shared gate/root clause normalization and allocation,
+not another planning micro-slice, is next.

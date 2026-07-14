@@ -431,10 +431,11 @@ validity gates.
    run.
 2. Attribute the 1.21-second planning path by reachability/use-count, gate
    detection, private-tree collection, and direct-root work without repeating
-   the always-on observational-profiler mistake. ADR-0147 is the first bounded
-   candidate: remove private-tree planning's full-node copy used only for
-   reverse iteration, then accept only on representative/full planning and
-   end-to-end wins.
+   the always-on observational-profiler mistake. ADR-0147 removes private-tree
+   planning's full-node reverse-iteration copy and improves planning 2.5%, but
+   regresses total/CNF 0.5%/3.6%; it is restored/deferred without a full run.
+   Deprioritize planning micro-work and re-attribute shared gate/root clause
+   normalization, formula growth, and index rehash next.
 3. Keep the next exact word tranche around affine BV add/sub constant-chain
    normalization and cheap duplicate-root handling behind evidence that it
    reduces downstream AIG/CNF for the

@@ -160,16 +160,11 @@ impl Aig {
 
     /// Iterates over nodes in dense ID order.
     ///
-    /// The iterator is exact-size and double-ended, so consumers that need
-    /// reverse dense-ID order do not have to materialize a temporary copy.
-    ///
     /// # Panics
     ///
     /// Panics only if the internal node vector exceeds `u32::MAX` entries,
     /// which construction already prevents.
-    pub fn nodes(
-        &self,
-    ) -> impl DoubleEndedIterator<Item = (AigNodeId, AigNode)> + ExactSizeIterator + '_ {
+    pub fn nodes(&self) -> impl Iterator<Item = (AigNodeId, AigNode)> + '_ {
         self.nodes.iter().copied().enumerate().map(|(index, node)| {
             (
                 AigNodeId(u32::try_from(index).expect("node index fits u32")),
@@ -643,28 +638,6 @@ mod tests {
         assert!(aig.eval(AigLit::TRUE, &[true, false]).unwrap());
         assert!(aig.eval(p, &[true, false]).unwrap());
         assert!(!aig.eval(q, &[true, false]).unwrap());
-    }
-
-    #[test]
-    fn nodes_iterate_in_dense_order_from_either_end() {
-        let mut aig = Aig::new();
-        let first = aig.input("first");
-        let second = aig.input("second");
-        let _root = aig.and(first, second);
-
-        assert_eq!(
-            aig.nodes()
-                .map(|(node_id, _)| node_id.index())
-                .collect::<Vec<_>>(),
-            vec![0, 1, 2, 3]
-        );
-        assert_eq!(
-            aig.nodes()
-                .rev()
-                .map(|(node_id, _)| node_id.index())
-                .collect::<Vec<_>>(),
-            vec![3, 2, 1, 0]
-        );
     }
 
     #[test]
