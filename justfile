@@ -40,6 +40,14 @@ test-quant-negated-exists-lean-stress:
 test-quant-vacuous-exists-lean-stress:
     MEM_LIMIT_GB=4 ./scripts/mem-run.sh cargo test --release -p axeyum-solver --test quant_closed_counterexample_lean issue2031_eliminates_vacuous_existentials_before_typed_counterexample -- --ignored --exact
 
+# Source-bound ADR-0124/0125 alternation reconstruction, including exact
+# direct-vs-router Lean module equality. The two public rows run separately so
+# their peak arenas do not coexist; the reference host measures about 3.6 GiB
+# for small-pipeline-fixpoint-3 and 2.1 GiB for bug802 under the 4 GiB envelope.
+test-quant-bv-alternation-lean-stress:
+    MEM_LIMIT_GB=4 ./scripts/mem-run.sh cargo test --release -p axeyum-solver --test quant_bv_alternation_counterexample public_pipeline_reconstructs_from_the_full_alternating_source -- --ignored --exact
+    MEM_LIMIT_GB=4 ./scripts/mem-run.sh cargo test --release -p axeyum-solver --test quant_bv_alternation_counterexample bug802_reconstructs_all_530_quantified_binders -- --ignored --exact
+
 doc:
     RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features --no-deps
 

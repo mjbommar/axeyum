@@ -59,9 +59,9 @@ bindings, changed proof text, stale assertions, free symbols, Int binders,
 reversed prefixes, non-implication matrices, and existential symbols in the
 antecedent. The workspace Clippy gate is clean.
 
-### Lean reconstruction follow-up (WIP, updated 2026-07-14)
+### Lean reconstruction follow-up (accepted, 2026-07-14)
 
-The in-progress Lean route now represents the exact implication below the
+The Lean route represents the exact implication below the
 `forall+ exists+` prefix, evaluator-proves the chosen outer antecedent, and
 reconstructs the consequent refutation with bounded local lets. Kernel support
 checks consecutive lets as one dependent telescope, reclaims transient compact
@@ -77,12 +77,20 @@ instead of copying the remaining proof once per binder. The public
 `small-pipeline-fixpoint-3` direct/router pipeline consequently passes the
 guarded 4 GiB release gate in 106.62 s at 3,692,844 KiB peak.
 
-This remains a checkpoint, not accepted Lean coverage. `bug802` now completes
-reconstruction in 2.984 s and streaming export in 10.506 s, but generic kernel
-inference over its 530-binder `Exists.rec` chain still requests a
-2,181,038,096-byte allocation. The audit therefore remains at Lean UNSAT 14/18.
-Acceptance requires a bounded trusted type check plus both public direct/router
-module-equality stress gates under the 4 GiB envelope.
+The final trusted check operates on the open skeleton: each marked free local is
+available only inside its owning lambda, scope escape is rejected as unbound,
+and the kernel returns the mechanically closed term from one shared-DAG pass.
+Complete application spines and lambda expected types avoid materializing
+quadratic intermediate dependent telescopes. This is a checking strategy, not a
+trusted theorem shortcut: the ordinary Pi domains, bodies, applications, and
+definitional equalities are all checked.
+
+Exact direct/router module equality is compared through a spool so the two
+large source strings do not coexist. `small-pipeline-fixpoint-3` passes in
+81.57 s at 3,756,104 KiB peak; the ADR-0125 530-binder `bug802` route passes in
+45.28 s at 2,186,192 KiB peak. Both are inside the guarded 4 GiB release
+envelope, use genuine `Exists.rec`, and emit no `sorryAx`. Quantified-BV Lean
+UNSAT coverage rises from 14/18 to 16/18.
 
 ## Alternatives
 

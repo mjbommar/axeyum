@@ -242,6 +242,9 @@ pub struct LocalContext {
     /// the local-context analogue of nanoda's equality cache and prevents the
     /// same shared proof/type pair from being compared as an exponential tree.
     def_eq_cache: HashMap<(ExprId, ExprId), bool>,
+    /// Lambda nodes in a scoped open skeleton whose bodies already refer to the
+    /// associated binder as a free variable.
+    scoped_fvars: HashMap<ExprId, u64>,
 }
 
 impl LocalContext {
@@ -303,6 +306,10 @@ impl LocalContext {
     fn remember_def_eq(&mut self, left: ExprId, right: ExprId, result: bool) {
         self.def_eq_cache.insert((left, right), result);
         self.def_eq_cache.insert((right, left), result);
+    }
+
+    fn scoped_fvar(&self, lambda: ExprId) -> Option<u64> {
+        self.scoped_fvars.get(&lambda).copied()
     }
 
     /// Look up the full declaration recorded for free variable `id`, if any.
@@ -944,6 +951,49 @@ impl Kernel {
         self.infer_core(e, &mut ctx)
     }
 
+    /// Infer a proof skeleton whose selected lambda bodies already use their
+    /// binders as free variables, then close those binders in one shared-DAG
+    /// traversal.
+    ///
+    /// Each `(lambda, fvar)` marker gives `fvar` scope only inside that lambda's
+    /// body. An occurrence outside its marked scope remains unbound and is
+    /// rejected. The returned expression is produced by
+    /// [`Kernel::close_scoped_fvars`], making this the bounded-memory equivalent
+    /// of closing every lambda separately and then calling [`Kernel::infer`].
+    ///
+    /// # Errors
+    ///
+    /// Returns the ordinary [`KernelError`] when the scoped skeleton is
+    /// ill-typed or a marked free variable escapes its owning lambda.
+    ///
+    /// # Panics
+    ///
+    /// Panics under the marker-contract violations documented by
+    /// [`Kernel::close_scoped_fvars`], or when the same free variable is assigned
+    /// to more than one lambda.
+    pub fn infer_and_close_scoped_fvars(
+        &mut self,
+        expression: ExprId,
+        binders: &[(ExprId, u64)],
+    ) -> Result<(ExprId, ExprId), KernelError> {
+        let mut ctx = LocalContext::new();
+        for &(lambda, fvar) in binders {
+            assert!(
+                !ctx.scoped_fvars
+                    .values()
+                    .any(|&registered| registered == fvar),
+                "a scoped free variable cannot belong to two lambdas"
+            );
+            assert!(
+                ctx.scoped_fvars.insert(lambda, fvar).is_none(),
+                "a lambda cannot bind two scoped free variables"
+            );
+        }
+        let inferred = self.infer_core(expression, &mut ctx)?;
+        let closed = self.close_scoped_fvars(expression, binders);
+        Ok((closed, inferred))
+    }
+
     /// Infer the type of `e` in an existing local context.
     ///
     /// # Errors
@@ -961,6 +1011,62 @@ impl Kernel {
         match self.expr_node(ty) {
             ExprNode::Sort(level) => Ok(*level),
             _ => Err(KernelError::NotASort { got: ty }),
+        }
+    }
+
+    /// Check `expression` against an already known expected type.
+    ///
+    /// Lambda checking is bidirectional: compare its annotation with the
+    /// expected `Pi`, open both bodies with one local, and check recursively.
+    /// The fallback is the ordinary infer-then-definitional-equality rule. This
+    /// is extensionally the same judgment, but it avoids constructing a second
+    /// copy of a large dependent lambda telescope solely to compare it.
+    fn check_core(
+        &mut self,
+        expression: ExprId,
+        expected: ExprId,
+        ctx: &mut LocalContext,
+    ) -> Result<(), KernelError> {
+        let expected = self.whnf(expected);
+        if let ExprNode::Lam(name, domain, body, info) = self.expr_node(expression).clone()
+            && let ExprNode::Pi(_, expected_domain, expected_body, _) =
+                self.expr_node(expected).clone()
+        {
+            if !self.def_eq_core(domain, expected_domain, ctx) {
+                return Err(KernelError::TypeMismatch {
+                    expected: expected_domain,
+                    got: domain,
+                });
+            }
+            let scoped = ctx.scoped_fvar(expression);
+            let fvar = scoped.unwrap_or_else(|| ctx.fresh_fvar());
+            ctx.bump_fresh_above(fvar);
+            let local = self.fvar(fvar);
+            ctx.push(LocalDecl {
+                fvar,
+                name,
+                ty: expected_domain,
+                info,
+            });
+            let body = if scoped.is_some() {
+                body
+            } else {
+                self.instantiate(body, &[local])
+            };
+            let expected_body = self.instantiate(expected_body, &[local]);
+            let result = self.check_core(body, expected_body, ctx);
+            ctx.pop();
+            return result;
+        }
+
+        let inferred = self.infer_core(expression, ctx)?;
+        if self.def_eq_core(inferred, expected, ctx) {
+            Ok(())
+        } else {
+            Err(KernelError::TypeMismatch {
+                expected,
+                got: inferred,
+            })
         }
     }
 
@@ -987,7 +1093,9 @@ impl Kernel {
             ExprNode::Const(name, levels) => self.infer_const(name, &levels),
             ExprNode::Lit(_) => Err(KernelError::UnsupportedLit),
             ExprNode::App(..) => self.infer_app(e, ctx),
-            ExprNode::Lam(name, dom, body, info) => self.infer_lambda(name, dom, body, info, ctx),
+            ExprNode::Lam(name, dom, body, info) => {
+                self.infer_lambda(e, name, dom, body, info, ctx)
+            }
             ExprNode::Pi(name, dom, body, info) => self.infer_pi(name, dom, body, info, ctx),
             ExprNode::Let(name, ty, val, body) => self.infer_let(name, ty, val, body, ctx),
         }?;
@@ -999,25 +1107,43 @@ impl Kernel {
         Ok(inferred)
     }
 
-    /// `App(f, a)`: infer `f`, WHNF to a `Pi(_, dom, body, _)`, require
-    /// `infer(a)` def-eq `dom`, result `instantiate(body, [a])`.
+    /// Infer a complete application spine in one dependent-telescope pass.
+    ///
+    /// The ordinary one-argument rule repeatedly instantiates the entire
+    /// remaining function type for `f a₁ … aₙ`. That is semantically harmless
+    /// but quadratic for large dependent recursor types. Here `cursor` retains
+    /// the unopened telescope, each argument is checked against its domain with
+    /// the preceding substitutions, and the result body is instantiated once.
+    /// If reduction is required to expose another `Pi`, the accumulated
+    /// substitutions are committed before WHNF and traversal resumes.
     fn infer_app(&mut self, e: ExprId, ctx: &mut LocalContext) -> Result<ExprId, KernelError> {
-        let ExprNode::App(f, a) = self.expr_node(e).clone() else {
+        let ExprNode::App(..) = self.expr_node(e) else {
             unreachable!("infer_app called on non-App")
         };
-        let f_ty = self.infer_core(f, ctx)?;
-        let f_ty = self.whnf(f_ty);
-        let ExprNode::Pi(_, dom, body, _) = self.expr_node(f_ty).clone() else {
-            return Err(KernelError::NotAPi { got: f_ty });
-        };
-        let a_ty = self.infer_core(a, ctx)?;
-        if !self.def_eq_core(a_ty, dom, ctx) {
-            return Err(KernelError::TypeMismatch {
-                expected: dom,
-                got: a_ty,
-            });
+        let (head, args) = self.unfold_apps(e);
+        let mut cursor = self.infer_core(head, ctx)?;
+        let mut prior = Vec::with_capacity(args.len());
+        let mut domains = Vec::with_capacity(args.len());
+
+        for &argument in &args {
+            if !matches!(self.expr_node(cursor), ExprNode::Pi(..)) {
+                cursor = self.instantiate(cursor, &prior);
+                prior.clear();
+                cursor = self.whnf(cursor);
+            }
+            let ExprNode::Pi(_, domain, body, _) = self.expr_node(cursor).clone() else {
+                return Err(KernelError::NotAPi { got: cursor });
+            };
+            let domain = self.instantiate(domain, &prior);
+            domains.push(domain);
+            prior.push(argument);
+            cursor = body;
         }
-        Ok(self.instantiate(body, &[a]))
+
+        for (argument, domain) in args.iter().zip(domains) {
+            self.check_core(*argument, domain, ctx)?;
+        }
+        Ok(self.instantiate(cursor, &prior))
     }
 
     /// `Lam(n, dom, body, bi)`: check `dom` is a type, open `body` under a
@@ -1025,6 +1151,7 @@ impl Kernel {
     /// `Pi(n, dom, abstract(B, fvar), bi)`.
     fn infer_lambda(
         &mut self,
+        expression: ExprId,
         name: crate::name::NameId,
         dom: ExprId,
         body: ExprId,
@@ -1034,7 +1161,9 @@ impl Kernel {
         // The domain must be a type.
         self.infer_sort_of(dom, ctx)?;
         // Open the body.
-        let fvar = ctx.fresh_fvar();
+        let scoped = ctx.scoped_fvar(expression);
+        let fvar = scoped.unwrap_or_else(|| ctx.fresh_fvar());
+        ctx.bump_fresh_above(fvar);
         let fv = self.fvar(fvar);
         ctx.push(LocalDecl {
             fvar,
@@ -1042,7 +1171,11 @@ impl Kernel {
             ty: dom,
             info,
         });
-        let opened = self.instantiate(body, &[fv]);
+        let opened = if scoped.is_some() {
+            body
+        } else {
+            self.instantiate(body, &[fv])
+        };
         let b_ty = self.infer_core(opened, ctx);
         ctx.pop();
         let b_ty = b_ty?;

@@ -1,5 +1,7 @@
 //! ADR-0124/0125 source-bound counterexamples for alternating Bool/BV formulas.
 
+use std::io::{Read as _, Write as _};
+use std::path::PathBuf;
 use std::time::Duration;
 
 use axeyum_ir::{Sort, TermArena, Value};
@@ -30,6 +32,56 @@ fn assertions(script: &axeyum_smtlib::Script) -> Vec<axeyum_ir::TermId> {
 
 fn config() -> SolverConfig {
     SolverConfig::new().with_timeout(Duration::from_secs(10))
+}
+
+struct ModuleSpool(PathBuf);
+
+impl Drop for ModuleSpool {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_file(&self.0);
+    }
+}
+
+fn assert_routed_module_equals(
+    label: &str,
+    direct: String,
+    route: impl FnOnce() -> (ProofFragment, String),
+) -> ProofFragment {
+    let path = std::env::temp_dir().join(format!(
+        "axeyum-alternation-equality-{}-{label}.lean",
+        std::process::id()
+    ));
+    let spool = ModuleSpool(path);
+    let mut output = std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&spool.0)
+        .expect("create direct-module equality spool");
+    output
+        .write_all(direct.as_bytes())
+        .expect("spool direct Lean module");
+    drop(output);
+    drop(direct);
+
+    let (fragment, routed) = route();
+    let mut input = std::fs::File::open(&spool.0).expect("open direct-module equality spool");
+    let direct_len = input
+        .metadata()
+        .expect("read direct-module equality metadata")
+        .len();
+    assert_eq!(u64::try_from(routed.len()).unwrap(), direct_len);
+    let mut offset = 0_usize;
+    let mut buffer = vec![0_u8; 1024 * 1024];
+    loop {
+        let read = input.read(&mut buffer).expect("read direct Lean module");
+        if read == 0 {
+            break;
+        }
+        assert_eq!(&routed.as_bytes()[offset..offset + read], &buffer[..read]);
+        offset += read;
+    }
+    assert_eq!(offset, routed.len());
+    fragment
 }
 
 fn assert_replacement_rejected(
@@ -98,7 +150,7 @@ fn small_alternation_counterexample_reconstructs_and_routes() {
 #[test]
 #[ignore = "release-only public-corpus ADR-0124 Lean reconstruction stress gate"]
 fn public_pipeline_reconstructs_from_the_full_alternating_source() {
-    let (script, assertions, certificate) = pipeline_certificate();
+    let (mut script, assertions, certificate) = pipeline_certificate();
     let direct = reconstruct_bv_alternation_counterexample_to_lean_module(
         &script.arena,
         &assertions,
@@ -107,6 +159,11 @@ fn public_pipeline_reconstructs_from_the_full_alternating_source() {
     .expect("public pipeline alternation reconstructs");
     assert!(direct.contains("Exists.rec"));
     assert!(!direct.contains("sorryAx"));
+    let fragment = assert_routed_module_equals("pipeline", direct, || {
+        prove_unsat_to_lean_module(&mut script.arena, &assertions)
+            .expect("public pipeline alternation routes")
+    });
+    assert_eq!(fragment, ProofFragment::BvAlternationCounterexample);
 }
 
 #[test]
@@ -127,6 +184,11 @@ fn bug802_reconstructs_all_530_quantified_binders() {
     .expect("bug802 alternation reconstructs");
     assert!(direct.contains("Exists.rec"));
     assert!(!direct.contains("sorryAx"));
+    let fragment = assert_routed_module_equals("bug802", direct, || {
+        prove_unsat_to_lean_module(&mut script.arena, &assertions)
+            .expect("bug802 alternation routes")
+    });
+    assert_eq!(fragment, ProofFragment::BvAlternationCounterexample);
 }
 
 #[test]

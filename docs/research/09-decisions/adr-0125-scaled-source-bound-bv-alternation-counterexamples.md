@@ -41,14 +41,22 @@ unsupported, with 43 expected-status agreements, no disagreement, error, or
 replay failure, and five-run PAR-2 samples 5.148479, 5.148264, 5.149056,
 5.148897, and 5.148639 seconds (median 5.148639 seconds).
 
-The dominance audit independently certifies and checks all 43 decisions. The
-target is `bv-alternation-counterexample-unsat`, has an empty trust ledger, and
-correctly declines Lean reconstruction; total Lean coverage is 8/11 UNSAT and
+The dominance audit independently certifies and checks all 43 decisions. At
+initial acceptance the target was `bv-alternation-counterexample-unsat`, had an
+empty trust ledger, and correctly declined Lean reconstruction; total Lean
+coverage was 8/11 UNSAT and
 dominance is 40/43. The direct-Z3 quantified-BV suite covers 1,336 cases and
 controls with zero disagreement. Six focused certificate tests include the
 318-outer-binder public target and an explicit 1,025-total-binder rejection;
 the 16 new direct-Z3 scaling controls use 160 outer binders, certify all eight
 UNSAT formulas, and safely handle all eight SAT formulas.
+
+The accepted 2026-07-14 Lean follow-up reconstructs all 318 universal and 212
+existential binders from the untouched source, checks the arbitrary-inner-value
+refutation under genuine `Exists.rec` scopes, and emits no `sorryAx`. Its exact
+direct/router module-equality gate passes in 45.28 seconds at 2,186,192 KiB peak
+under the 4 GiB release envelope. The later 54-row quantified-BV audit therefore
+counts this route in its 16/18 Lean UNSAT coverage.
 
 ## Alternatives
 
@@ -68,4 +76,5 @@ UNSAT formulas, and safely handle all eight SAT formulas.
 Large finite-state tuples can use the same checked counterexample contract as
 small ones. Worst-case candidate search grows linearly with the admitted outer
 prefix and remains deadline-bounded. General alternation, open formulas,
-functions, arrays, arithmetic, and Lean reconstruction remain open.
+functions, arrays, and arithmetic remain open; the admitted Bool/BV shape now
+has bounded Lean reconstruction.

@@ -1432,7 +1432,6 @@ fn refute_alternation_exists_suffix(
     debug_assert_eq!(popped_hypothesis.map(|decl| decl.fvar), Some(hypothesis_id));
     debug_assert_eq!(popped_witness.map(|decl| decl.fvar), Some(witness_id));
 
-    let witness = ctx.kernel.bvar(0);
     let hypothesis_type = ctx.kernel.app(layer.predicate, witness);
     let anon = ctx.kernel.anon();
     let minor = ctx
@@ -2440,10 +2439,21 @@ fn reconstruct_bv_alternation_counterexample_to_lean_module_impl(
         0,
         instantiated,
     )?;
-    let proof = ctx
+    let (proof, inferred) = ctx
         .kernel
-        .close_scoped_fvars(open_proof, &scoped_binders);
+        .infer_and_close_scoped_fvars(open_proof, &scoped_binders)
+        .map_err(|error| ReconstructError::KernelRejected {
+            rule: "bv_alternation_scoped_closure".to_owned(),
+            detail: format!("infer failed: {error:?}"),
+        })?;
     ctx.defer_open_step_checks = false;
+    let false_ = ctx.kernel.const_(ctx.prelude.false_, vec![]);
+    if !ctx.kernel.def_eq(inferred, false_) {
+        return Err(ReconstructError::KernelRejected {
+            rule: "bv_alternation_scoped_closure".to_owned(),
+            detail: "scoped reconstruction did not infer to False".to_owned(),
+        });
+    }
     eprintln!("alternation stage reconstruct {:?}", started.elapsed());
     finish_bv_alternation_module(ctx, proof, started)
 }
@@ -2466,8 +2476,6 @@ fn finish_bv_alternation_module(
     let spool = spool_compact_lean_module(&ctx, false_, proof, &inductives)?;
     eprintln!("alternation stage spool {:?}", started.elapsed());
 
-    require_infers_false(&mut ctx, proof)?;
-    eprintln!("alternation stage infer {:?}", started.elapsed());
     ctx.kernel.release_transient_tables_for_export();
     drop(ctx);
     let module = spool

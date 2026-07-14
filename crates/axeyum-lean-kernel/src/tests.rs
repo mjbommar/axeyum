@@ -501,6 +501,42 @@ fn scoped_fvar_closure_accounts_for_unmarked_binders() {
 }
 
 #[test]
+fn scoped_fvar_inference_checks_and_closes_the_same_lambda() {
+    let mut k = Kernel::new();
+    let anon = k.anon();
+    let prop = k.sort_zero();
+    let local_id = 91_u64;
+    let local = k.fvar(local_id);
+    let open = k.lam(anon, prop, local, BinderInfo::Default);
+
+    let (closed, inferred) = k
+        .infer_and_close_scoped_fvars(open, &[(open, local_id)])
+        .expect("scoped identity should infer");
+    let body = k.bvar(0);
+    let expected_closed = k.lam(anon, prop, body, BinderInfo::Default);
+    let expected_type = k.pi(anon, prop, prop, BinderInfo::Default);
+    assert_eq!(closed, expected_closed);
+    assert!(k.def_eq(inferred, expected_type));
+    assert_eq!(k.infer(closed).unwrap(), expected_type);
+}
+
+#[test]
+fn scoped_fvar_inference_rejects_an_escape_outside_its_lambda() {
+    let mut k = Kernel::new();
+    let anon = k.anon();
+    let prop = k.sort_zero();
+    let local_id = 92_u64;
+    let local = k.fvar(local_id);
+    let open = k.lam(anon, prop, local, BinderInfo::Default);
+    let escaped = k.app(open, local);
+
+    assert!(
+        k.infer_and_close_scoped_fvars(escaped, &[(open, local_id)])
+            .is_err()
+    );
+}
+
+#[test]
 fn instantiate_visits_shared_expression_dag_once() {
     let mut k = Kernel::new();
     let mut shared = k.bvar(0);

@@ -802,19 +802,23 @@ remain ignored and the latest 4 GiB run still allocation-failed. Therefore this
 does **not** raise Lean coverage or close ADR-0124 reconstruction. Next: attribute
 and reduce the remaining public export peak, then restore the full direct/router
 stress equality gate before acceptance.
-**ADR-0124 bounded-memory follow-up (2026-07-14):** compact Lean output now
+**ADR-0124/0125 bounded-memory Lean reconstruction is now LANDED
+(2026-07-14):** compact Lean output now
 streams through an `io::Write` sink before final inference, so the proof arena
 and the 89 MiB source module no longer require a second in-memory copy. Free
 variables associated with nested eliminator lambdas are closed in one
 scope-aware shared-DAG traversal, while ordinary abstraction skips subgraphs
-that do not contain a requested local. The public `small-pipeline-fixpoint-3`
-direct/router pipeline now passes the guarded 4 GiB release gate in 106.62 s at
-3,692,844 KiB peak. On `bug802`, reconstruction reaches 2.984 s and streaming
-export 10.506 s before the remaining generic kernel-inference gate requests a
-2,181,038,096-byte allocation. This checkpoint therefore proves the construction
-and export fixes but does not yet raise Lean coverage: next make deeply nested
-`Exists.rec` checking bounded without weakening the trusted type check, then
-rerun both public equality gates.
+that do not contain a requested local. The trusted kernel now checks the open
+skeleton with each marked local available only inside its owning lambda, rejects
+scope escape as unbound, and returns the mechanically closed proof; complete
+application spines and expected lambda types are checked without materializing
+quadratic intermediate telescopes. Exact direct/router module equality is
+stream-compared so the test does not retain both large strings. The public
+`small-pipeline-fixpoint-3` gate passes in **81.57 s at 3,756,104 KiB peak**;
+the 530-binder `bug802` gate passes in **45.28 s at 2,186,192 KiB peak**, both
+under the guarded 4 GiB release envelope and with no `sorryAx`. Quantified-BV
+Lean UNSAT coverage rises **14→16/18**. Next: ADR-0129 source
+elimination/introduction, then ADR-0127's compact reflected-RUP boundary.
 **Scaled source-bound BV alternation is now LANDED (ADR-0125):** only the
 ADR-0124 total-binder cap rises 128→1,024; the 4,096-node matrix cap and exact
 source/proof replay contract are unchanged. `bug802` has 318 universal plus 212
