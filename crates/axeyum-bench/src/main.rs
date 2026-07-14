@@ -15,6 +15,7 @@
 //!   `[--refine-select first|smallest-dag|smallest-plan-dag|smallest-plan-greedy]`
 //!   `[--node-budget N] [--cnf-var-budget N] [--cnf-clause-budget N]`
 //!   `[--prove-unsat]`
+//!   `[--require-reproducible-run]`
 //!   `[--compare-z3] [--require-in-process-z3] [--min-decided-percent P] [--jobs N]`
 //! The default build can run the pure Rust `sat-bv` backend. Build with
 //! `--features z3` (or `z3-static`) to enable the Z3 oracle backend.
@@ -27,7 +28,7 @@ mod run {
     use std::collections::{BTreeMap, BTreeSet};
     use std::fs;
     use std::path::{Path, PathBuf};
-    use std::process::ExitCode;
+    use std::process::{Command, ExitCode};
     use std::time::{Duration, Instant};
 
     use axeyum_ir::{Op, TermArena, TermId, TermNode, TermStats, Value, eval};
@@ -47,7 +48,7 @@ mod run {
     use serde_json::{Value as JsonValue, json};
     use sha2::{Digest, Sha256};
 
-    const ARTIFACT_VERSION: u32 = 19;
+    const ARTIFACT_VERSION: u32 = 20;
     const CORPUS_MANIFEST_VERSION: u64 = 1;
     const CONTENT_HASH_PREFIX: &str = "sha256:";
     /// Corpus SAT-share threshold above which SAT solve time is reported as
@@ -207,6 +208,7 @@ mod run {
         preprocess: bool,
         compare_z3: bool,
         require_in_process_z3: bool,
+        require_reproducible_run: bool,
         min_decided_percent: Option<f64>,
         jobs: usize,
     }
@@ -242,6 +244,7 @@ mod run {
             preprocess: false,
             compare_z3: false,
             require_in_process_z3: false,
+            require_reproducible_run: false,
             min_decided_percent: None,
             jobs: 1,
         };
@@ -364,6 +367,7 @@ mod run {
                     );
                 }
             }
+            "--require-reproducible-run" => parsed.require_reproducible_run = true,
             "--min-decided-percent" => {
                 parsed.min_decided_percent = Some(parse_decided_percent(&next_value(args, flag)?)?);
             }
@@ -747,6 +751,31 @@ mod run {
         corpus_hash: &'a str,
         config_hash: &'a str,
         corpus_manifest: Option<&'a CorpusManifestSelection>,
+        experiment: &'a ExperimentIdentity,
+    }
+
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    struct HardwareIdentity {
+        os: String,
+        arch: String,
+        parallelism: u64,
+        cpu_model: Option<String>,
+        kernel: Option<String>,
+        total_memory_bytes: Option<u64>,
+    }
+
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    struct ExperimentIdentity {
+        source_revision: Option<String>,
+        source_dirty: Option<bool>,
+        cargo_lock_hash: Option<String>,
+        rustc: Option<String>,
+        cargo: Option<String>,
+        build_profile: String,
+        backend: String,
+        compare_backend: Option<String>,
+        hardware: HardwareIdentity,
+        environment_hash: String,
     }
 
     pub fn main() -> ExitCode {
@@ -774,6 +803,14 @@ mod run {
         let backend_name = make_backend(args.backend).capabilities().name;
         let compare_backend_name =
             make_compare_backend(args.compare_z3).map(|backend| backend.capabilities().name);
+        let experiment =
+            ExperimentIdentity::collect(&backend_name, compare_backend_name.as_deref());
+        if args.require_reproducible_run
+            && let Err(error) = experiment.require_reproducible()
+        {
+            eprintln!("{error}");
+            return ExitCode::FAILURE;
+        }
         let corpus_hash = fingerprint_corpus(&corpus.files, &args.dir);
         let config_hash =
             fingerprint_config(&args, &backend_name, &corpus_hash, corpus.manifest.as_ref());
@@ -804,6 +841,7 @@ mod run {
             corpus_hash: &corpus_hash,
             config_hash: &config_hash,
             corpus_manifest: corpus.manifest.as_ref(),
+            experiment: &experiment,
         };
         let artifact = match render_artifact(&args, &summary, &instances, &identity) {
             Ok(a) => a,
@@ -3550,6 +3588,7 @@ mod run {
             "compare_backend": identity.compare_backend_name,
             "compare_z3": args.compare_z3,
             "require_in_process_z3": args.require_in_process_z3,
+            "require_reproducible_run": args.require_reproducible_run,
             "min_decided_percent": args.min_decided_percent,
             "query_plan": {
                 "mode": args.query_plan.as_str(),
@@ -3562,7 +3601,7 @@ mod run {
             "harness": format!("axeyum-bench {}", env!("CARGO_PKG_VERSION")),
             "seed": args.seed,
             "rewrite": rewrite_config(args.rewrite),
-            "hardware": hardware_note(),
+            "experiment": experiment_identity_record(identity.experiment),
         })
     }
 
@@ -3886,13 +3925,215 @@ mod run {
         u64::try_from(n).unwrap_or(u64::MAX)
     }
 
-    fn hardware_note() -> JsonValue {
-        let parallelism = std::thread::available_parallelism().map_or(1, std::num::NonZero::get);
+    impl ExperimentIdentity {
+        fn collect(backend: &str, compare_backend: Option<&str>) -> Self {
+            let root = repository_root();
+            let source_revision = command_output("git", &["rev-parse", "HEAD"], &root);
+            let source_dirty = command_output(
+                "git",
+                &[
+                    "status",
+                    "--porcelain=v1",
+                    "--untracked-files=all",
+                    "--",
+                    ".",
+                    ":(exclude)bench-results/**",
+                ],
+                &root,
+            )
+            .map(|output| !output.is_empty());
+            let cargo_lock_hash = fs::read(root.join("Cargo.lock"))
+                .ok()
+                .map(|bytes| content_hash(&bytes));
+            let rustc_program = std::env::var("RUSTC").unwrap_or_else(|_| "rustc".to_owned());
+            let cargo_program = std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_owned());
+            let rustc = command_output(&rustc_program, &["--version", "--verbose"], &root);
+            let cargo = command_output(&cargo_program, &["--version"], &root);
+            let hardware = HardwareIdentity::collect();
+            let mut identity = Self {
+                source_revision,
+                source_dirty,
+                cargo_lock_hash,
+                rustc,
+                cargo,
+                build_profile: if cfg!(debug_assertions) {
+                    "debug".to_owned()
+                } else {
+                    "release".to_owned()
+                },
+                backend: backend.to_owned(),
+                compare_backend: compare_backend.map(str::to_owned),
+                hardware,
+                environment_hash: String::new(),
+            };
+            identity.environment_hash = identity.compute_environment_hash();
+            identity
+        }
+
+        fn compute_environment_hash(&self) -> String {
+            let mut fields = vec![
+                self.cargo_lock_hash.as_deref().unwrap_or("missing"),
+                self.rustc.as_deref().unwrap_or("missing"),
+                self.cargo.as_deref().unwrap_or("missing"),
+                self.build_profile.as_str(),
+                self.backend.as_str(),
+                self.compare_backend.as_deref().unwrap_or("none"),
+                self.hardware.os.as_str(),
+                self.hardware.arch.as_str(),
+                self.hardware.cpu_model.as_deref().unwrap_or("missing"),
+                self.hardware.kernel.as_deref().unwrap_or("missing"),
+            ];
+            let parallelism = self.hardware.parallelism.to_string();
+            let memory = self
+                .hardware
+                .total_memory_bytes
+                .map_or_else(|| "missing".to_owned(), |bytes| bytes.to_string());
+            fields.push(&parallelism);
+            fields.push(&memory);
+            content_hash(fields.join("\0").as_bytes())
+        }
+
+        fn require_reproducible(&self) -> Result<(), String> {
+            let mut missing = Vec::new();
+            if self.source_revision.is_none() {
+                missing.push("source revision");
+            }
+            match self.source_dirty {
+                Some(false) => {}
+                Some(true) => missing.push("clean source tree (source changes are present)"),
+                None => missing.push("clean source tree status"),
+            }
+            if self.cargo_lock_hash.is_none() {
+                missing.push("Cargo.lock hash");
+            }
+            if self.rustc.is_none() {
+                missing.push("rustc version");
+            }
+            if self.cargo.is_none() {
+                missing.push("cargo version");
+            }
+            if self.hardware.cpu_model.is_none() {
+                missing.push("CPU model");
+            }
+            if self.hardware.kernel.is_none() {
+                missing.push("kernel version");
+            }
+            if self.hardware.total_memory_bytes.is_none() {
+                missing.push("total memory");
+            }
+            if missing.is_empty() {
+                Ok(())
+            } else {
+                Err(format!(
+                    "`--require-reproducible-run` identity gate failed: {}",
+                    missing.join(", ")
+                ))
+            }
+        }
+    }
+
+    impl HardwareIdentity {
+        fn collect() -> Self {
+            let parallelism =
+                std::thread::available_parallelism().map_or(1, std::num::NonZero::get);
+            let cpuinfo = fs::read_to_string("/proc/cpuinfo").ok();
+            let meminfo = fs::read_to_string("/proc/meminfo").ok();
+            let cpu_model = cpuinfo
+                .as_deref()
+                .and_then(parse_cpu_model)
+                .or_else(|| {
+                    command_output(
+                        "sysctl",
+                        &["-n", "machdep.cpu.brand_string"],
+                        Path::new("."),
+                    )
+                })
+                .or_else(|| command_output("sysctl", &["-n", "hw.model"], Path::new(".")));
+            let total_memory_bytes = meminfo
+                .as_deref()
+                .and_then(parse_total_memory_bytes)
+                .or_else(|| {
+                    command_output("sysctl", &["-n", "hw.memsize"], Path::new("."))
+                        .and_then(|value| value.parse().ok())
+                });
+            Self {
+                os: std::env::consts::OS.to_owned(),
+                arch: std::env::consts::ARCH.to_owned(),
+                parallelism: usize_to_u64(parallelism),
+                cpu_model,
+                kernel: command_output("uname", &["-srmo"], Path::new(".")),
+                total_memory_bytes,
+            }
+        }
+    }
+
+    fn repository_root() -> PathBuf {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")
+    }
+
+    fn command_output(program: &str, args: &[&str], cwd: &Path) -> Option<String> {
+        let output = Command::new(program)
+            .args(args)
+            .current_dir(cwd)
+            .output()
+            .ok()?;
+        if !output.status.success() {
+            return None;
+        }
+        let value = String::from_utf8(output.stdout).ok()?;
+        Some(value.trim().to_owned())
+    }
+
+    fn parse_cpu_model(cpuinfo: &str) -> Option<String> {
+        for key in ["model name", "Hardware", "Processor"] {
+            if let Some(value) = cpuinfo.lines().find_map(|line| {
+                let (name, value) = line.split_once(':')?;
+                (name.trim() == key)
+                    .then(|| value.trim())
+                    .filter(|value| !value.is_empty())
+            }) {
+                return Some(value.to_owned());
+            }
+        }
+        None
+    }
+
+    fn parse_total_memory_bytes(meminfo: &str) -> Option<u64> {
+        let line = meminfo.lines().find(|line| line.starts_with("MemTotal:"))?;
+        let mut fields = line.split_ascii_whitespace();
+        (fields.next()? == "MemTotal:").then_some(())?;
+        let kib = fields.next()?.parse::<u64>().ok()?;
+        (fields.next()? == "kB").then_some(())?;
+        kib.checked_mul(1024)
+    }
+
+    fn experiment_identity_record(identity: &ExperimentIdentity) -> JsonValue {
         json!({
-            "os": std::env::consts::OS,
-            "arch": std::env::consts::ARCH,
-            "parallelism": usize_to_u64(parallelism),
-            "hostname": std::env::var("HOSTNAME").ok(),
+            "source": {
+                "revision": identity.source_revision,
+                "dirty": identity.source_dirty,
+                "dirty_scope": "repository excluding bench-results/**",
+            },
+            "toolchain": {
+                "rustc": identity.rustc,
+                "cargo": identity.cargo,
+                "build_profile": identity.build_profile,
+                "cargo_lock_hash": identity.cargo_lock_hash,
+            },
+            "solvers": {
+                "backend": identity.backend,
+                "compare_backend": identity.compare_backend,
+            },
+            "hardware": {
+                "os": identity.hardware.os,
+                "arch": identity.hardware.arch,
+                "parallelism": identity.hardware.parallelism,
+                "cpu_model": identity.hardware.cpu_model,
+                "kernel": identity.hardware.kernel,
+                "total_memory_bytes": identity.hardware.total_memory_bytes,
+            },
+            "environment_hash": identity.environment_hash,
+            "comparison_contract": "compare config_hash + environment_hash; source revision identifies the tested commit and may differ",
         })
     }
 
@@ -3955,6 +4196,7 @@ mod run {
         update_hash(&mut hash, &[u8::from(args.preprocess)]);
         update_hash(&mut hash, &[u8::from(args.compare_z3)]);
         update_hash(&mut hash, &[u8::from(args.require_in_process_z3)]);
+        update_hash(&mut hash, &[u8::from(args.require_reproducible_run)]);
         update_hash(
             &mut hash,
             &args
@@ -4710,6 +4952,74 @@ mod run {
             assert_eq!(checked.unsat_proof_replay_checked, 1);
             assert_eq!(checked.unsat_proof_replay_missing, 0);
             assert_eq!(checked.unsat_proof_replay_sample, Some(0.00025));
+        }
+
+        fn complete_experiment_identity() -> ExperimentIdentity {
+            let mut identity = ExperimentIdentity {
+                source_revision: Some("0123456789abcdef".to_owned()),
+                source_dirty: Some(false),
+                cargo_lock_hash: Some("sha256:lock".to_owned()),
+                rustc: Some("rustc 1.88.0\nhost: x86_64-unknown-linux-gnu".to_owned()),
+                cargo: Some("cargo 1.88.0".to_owned()),
+                build_profile: "release".to_owned(),
+                backend: "axeyum-sat-bv rustsat-batsat".to_owned(),
+                compare_backend: Some("z3 4.13.3.0".to_owned()),
+                hardware: HardwareIdentity {
+                    os: "linux".to_owned(),
+                    arch: "x86_64".to_owned(),
+                    parallelism: 16,
+                    cpu_model: Some("Test CPU".to_owned()),
+                    kernel: Some("Linux 6.8 x86_64 GNU/Linux".to_owned()),
+                    total_memory_bytes: Some(64 * 1024 * 1024 * 1024),
+                },
+                environment_hash: String::new(),
+            };
+            identity.environment_hash = identity.compute_environment_hash();
+            identity
+        }
+
+        #[test]
+        fn reproducible_run_identity_is_complete_and_source_revision_is_not_environment() {
+            let identity = complete_experiment_identity();
+            assert_eq!(identity.require_reproducible(), Ok(()));
+
+            let mut next_commit = identity.clone();
+            next_commit.source_revision = Some("fedcba9876543210".to_owned());
+            assert_eq!(
+                next_commit.compute_environment_hash(),
+                identity.environment_hash,
+                "per-commit comparison keeps the environment key stable"
+            );
+
+            let mut dirty = identity.clone();
+            dirty.source_dirty = Some(true);
+            let error = dirty.require_reproducible().unwrap_err();
+            assert!(error.contains("clean source tree"), "{error}");
+
+            let mut changed_cpu = identity.clone();
+            changed_cpu.hardware.cpu_model = Some("Different CPU".to_owned());
+            assert_ne!(
+                changed_cpu.compute_environment_hash(),
+                identity.environment_hash
+            );
+        }
+
+        #[test]
+        fn linux_hardware_identity_parsers_are_strict() {
+            assert_eq!(
+                parse_cpu_model("processor : 0\nmodel name : Axeyum Test CPU\n"),
+                Some("Axeyum Test CPU".to_owned())
+            );
+            assert_eq!(
+                parse_cpu_model("Processor : Cortex-A76\n"),
+                Some("Cortex-A76".to_owned())
+            );
+            assert_eq!(parse_cpu_model("processor : 0\n"), None);
+            assert_eq!(
+                parse_total_memory_bytes("MemTotal:       65536 kB\nMemFree: 1 kB\n"),
+                Some(67_108_864)
+            );
+            assert_eq!(parse_total_memory_bytes("MemTotal: 1 MB\n"), None);
         }
 
         #[test]

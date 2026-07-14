@@ -113,6 +113,18 @@ Glaurung performance recipe remains on the default batsat path; a separate
 proof-check artifact prevents assurance overhead from masquerading as the client
 performance ratio.
 
+Artifact version 20 separates *what changed* from *where it ran*. The experiment
+identity records the Axeyum Git revision and clean-tree state, Cargo.lock hash,
+rustc/cargo and build profile, exact backend names, CPU, OS/kernel, parallelism,
+and memory. The existing `config_hash` continues to name corpus and solver settings; a new
+`environment_hash` covers locked tools and hardware but deliberately omits the
+source revision, so per-commit regression comparisons require matching config
+and environment hashes while retaining distinct tested revisions.
+`--require-reproducible-run` rejects dirty or incomplete identities before any
+query is timed. Generated `bench-results/**` are excluded from the dirty check so
+performance and proof companions can be emitted sequentially from one clean
+source checkout without weakening the source-integrity gate.
+
 ## Alternatives
 
 - **Implicitly widen or truncate binary operands.** Rejected: it masks client

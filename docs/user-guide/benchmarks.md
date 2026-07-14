@@ -81,7 +81,7 @@ just bench-glaurung-manifest-proof-smoke         # fail-closed DRAT-check plumbi
 
 Each JSON records the corpus + config hash, per-instance outcome, budgets,
 backend stats, PAR-2, explicit `decided`/`decided_percent`, **disagreements**,
-and **model-replay failures**. Artifact version 19 retains version 16's exact
+and **model-replay failures**. Artifact version 20 retains version 16's exact
 floating-point millisecond values for each instance's word-level preprocessing,
 bit-blast, CNF encode/inprocess, SAT, model lift, and cold total, plus corpus
 totals and p50/p95 distributions. Its `client_comparison` block reports the
@@ -102,6 +102,15 @@ proof checks; the artifact records checked/missing counts and proof-check
 p50/p95. Proof-check time is already inside SAT time and is marked as nested, so
 it is never added twice. Keep this high-assurance artifact separate from the
 default batsat performance run because it intentionally changes the SAT engine.
+Version 20 adds `config.experiment`: the Axeyum source revision and source-tree
+cleanliness, Cargo.lock SHA-256, rustc/cargo versions, build profile, exact
+solver backend names, CPU model, OS/kernel, logical parallelism, and total memory. Its
+`environment_hash` covers the locked toolchain/solvers/hardware but deliberately
+excludes the source revision. Compare artifacts only when both `config_hash` and
+`environment_hash` match; the differing source revisions are the commits being
+compared. `--require-reproducible-run` fails before solving if the source tree is
+dirty (excluding generated `bench-results/**`) or a required identity field is
+unavailable. The Glaurung recipes enable this gate by default.
 A comparable run requires zero errors, zero disagreements, zero replay failures,
 and the declared decided-rate threshold; only then is timing a performance
 signal.

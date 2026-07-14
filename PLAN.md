@@ -55,7 +55,7 @@ traces; GQ8 follows the exact cache/replay contract rather than treating a
 prefix as an identical query. Re-run the GQ10 baseline after every accepted
 slice and record the result in `STATUS.md` and `bench-results/`.
 
-**GQ1/GQ10 readiness landed (2026-07-13, artifact v19).** The client recipe is
+**GQ1/GQ10 readiness landed (2026-07-13, artifact v20).** The client recipe is
 now a single-worker cold run. Its artifact separates word preprocessing,
 bit-blast, CNF encoding, optional CNF inprocessing, SAT, model lift, and
 original-query model replay; reports aggregate and exact p50/p95 timing; and
@@ -74,7 +74,15 @@ proof-producing core, fails closed unless each UNSAT's DRAT proof checks, and
 reports proof-check p50/p95 nested within SAT time rather than double-counting
 it. Micro-corpus performance/proof smokes prove the measurement and ingestion
 plumbing, including mandatory in-process Z3 coverage, not the client performance
-hypothesis.
+hypothesis. Artifact v20 adds a reproducible-run identity: Axeyum source
+revision and clean-tree status, Cargo.lock SHA-256, rustc/cargo versions, build
+profile, exact backend names, CPU model, kernel, logical parallelism, and total
+memory. A
+separate environment hash covers tools/hardware while intentionally excluding
+the source revision, so `config_hash + environment_hash` compares consecutive
+commits and the revision identifies which commit produced each result.
+`--require-reproducible-run` fails before solving if any identity field is
+missing or source changes are present; all Glaurung recipes require it.
 GQ1/GQ10 remain open until the actual Glaurung capture is ingested.
 
 **Non-negotiable acceptance gate.** Comparable runs require 100% decided on the

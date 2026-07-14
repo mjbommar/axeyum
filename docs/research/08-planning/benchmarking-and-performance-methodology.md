@@ -213,6 +213,15 @@ records the contract and the first measured baselines.
   p50/p95 are nested diagnostics within SAT time, never a seventh additive stage;
   this high-assurance run is kept separate from the default batsat performance
   artifact because changing the SAT engine would invalidate that comparison.
+- Artifact version 20 makes the fixed-environment requirement executable. Every
+  run records the Axeyum Git revision/cleanliness, Cargo.lock SHA-256,
+  rustc/cargo and build profile, exact solver backend names, CPU model,
+  OS/kernel, logical parallelism, and total memory. `config_hash` remains the corpus/settings key;
+  `environment_hash` covers locked tools and hardware but excludes the source
+  revision, allowing consecutive commits to be compared only under the same
+  environment. `--require-reproducible-run` fails before solving when source
+  changes (excluding generated `bench-results/**`) or any required identity is
+  missing, and every Glaurung recipe enables it.
 - **Primary client QF_BV target (2026-07-13): Glaurung binary analysis.** Capture
   and minimize the real lifter-produced path conditions, preserving their
   extract/concat, mixed machine-width, and memory-derived shape. This client
