@@ -474,12 +474,21 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   narrow-extract regression measures 25/81 demanded term bits and 8/64 demanded
   symbol bits while the current lowerer still materializes all 81 and 64.
   Repetition ingestion is now version-locked to v25.
+  ADR-0142 completes the exact GQ3 implementation surface. The default
+  canonicalizer now handles nested extracts, concat-boundary straddles and
+  whole-side returns, plus low/high/straddling zero/sign-extension slices.
+  Replacement roots are reconsidered under an eight-application local budget;
+  exhaustion is observable and returns an exact partial result. Stable rule
+  IDs, fixed local fresh-node bounds, exhaustive small-width evaluation, 96
+  seeded wider cases, and lifter-shaped Z3 SAT/UNSAT differential replay are
+  green. The default benchmark identity advances to
+  `axeyum-rewrite-default-v2`. No real-payload AIG/CNF/time claim is made.
 
   | ID | Live status | Next acceptance boundary |
   |---|---|---|
   | **GQ1 real-query profile** | **WIP; producer-side artifact-v17 evidence is available, but the query payload is still the local data dependency.** Glaurung reports 128/128 decided/agreed, 2.10x Axeyum/Z3, and 84% in bit-blast+CNF encode. Axeyum artifact v25 includes executable solver-determinism and bounded-resource identity, capture-index→manifest generation, manifest-v1 ingestion, paired original/post-word-policy shape and residual GQ3 telemetry, term/symbol bit demand versus actual lowering, AIG request/hash/allocation and CNF subphase/gate/clause attribution, typed layer stats with size distributions, separately charged SAT model replay, complete clean source/tool/hardware identity, process-level repetition/variance summary, p50/p95, original-query in-process Z3 ratio, complete manifest/oracle/decided-rate gates, and zero-error policy. Raw/canonical/configured single/repeated/proof recipes preserve distinct policy identities, with raw as the compatibility/current-integration control | Obtain the 128 referenced `.smt2` bytes plus strict hash-free trusted index, reconcile producer count/exclusion/full-pack inconsistencies, rerun raw first under v25, and publish same-environment repetition plus the matching raw proof-check result |
   | **GQ2 cheap cold tier** | **TODO**, profile-gated; existing full preprocessing is opt-in and warm-oriented | Bounded constant/identity tier with non-worse cold aggregate time and an explicit cold/warm/size policy |
-  | **GQ3 coercion peepholes** | **WIP partial foundation**; whole/same-side concat extracts, low extension slices, extract-through-bitwise/ITE, and adjacent-slice reassembly are landed. Artifact v23 now measures every before/post/residual region and nesting class. Nested extracts, concat straddles, extension high/straddle cases, and bounded replacement reprocessing are missing | ADR-led exact completion with growth/fuel control, exhaustive/differential semantics, and measured real-tier AIG/CNF/time reduction using the landed residual telemetry |
+  | **GQ3 coercion peepholes** | **WIP; exact implementation complete, real-corpus performance exit pending.** ADR-0142 adds nested extracts, concat straddles/direct whole sides, every zero/sign-extension region, and bounded replacement-root reprocessing with observable fuel and fixed growth. Manifest/exhaustive/seeded/Z3 SAT+UNSAT replay evidence is green; artifact v23 already measures the affected before/post/residual classes. Default benchmark identity is `axeyum-rewrite-default-v2` | Run raw then canonical v2 on the transferred real tier; require fewer residual opportunities, AIG nodes/CNF clauses, and non-worse aggregate cold time with 100% decisions and zero errors/disagreements/replay failures before calling GQ3 a client win or selecting it for GQ2 |
   | **GQ4 cold relevant bits** | **WIP measured foundation**; artifact v25 now performs deterministic conservative demand union with exact extract/concat/extension/pointwise/ITE/rotation propagation and records request/demanded/available/lowered term/symbol bits plus analysis cost. It confirms on an 8-of-64 case that raw lowering still constructs every child bit | Convert the diagnostic demand map into a partial-bit lowering memo, retain explicit omitted-bit model projection and original replay, then require real-corpus AIG/CNF and end-to-end reduction |
   | **GQ5 AIG/CNF construction** | **WIP advanced foundation, real-payload-gated**; deterministic AIG structural hashing/identities and reachable-only polarity-aware CNF with direct-root/XOR/mux/private-tree recognition already exist. Artifact v25 retains v24's AIG request outcomes and CNF planning/allocation/gate/root, reachability, gate-family, and clause-filter attribution with completeness invariants | Run the real v25 capture and change only the measured lookup/allocation/gate family; require lower construction cost and an end-to-end real-corpus win, not counters or size alone |
   | **GQ6 cold SAT/CDCL** | **WIP foundation, attribution-gated**; subsumption/BVE, XOR/GF(2), VSIDS, phase saving, Luby, and LBD foundations exist | Exact-CNF backend attribution first; tune/default a stronger path only where SAT dominates and proof replay stays green |
@@ -495,11 +504,12 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   establish the five-process raw GQ1/GQ10 baseline plus matching proof companion
   at 100% decided and zero errors/disagreements/replay failures using the landed
   policy-specific recipes; (3) use the landed residual-GQ3, bit-demand, and
-  AIG/CNF construction attribution to select the measured slice; partition by
-  family/verdict only if per-instance evidence is insufficient; (4) draft the exact-extract rewrite ADR and
-  tests, then implement GQ3
-  before the larger GQ4 demand-lowering contract only if the counters confirm
-  the ranking; (5) define an ordered Glaurung path/scope trace and controlled
+  AIG/CNF construction attribution to measure ADR-0142 canonical v2 against raw;
+  partition by family/verdict only if per-instance evidence is insufficient;
+  retain, narrow, or disable individual rule classes according to that evidence;
+  (4) after the real GQ3 comparison, implement the larger GQ4 partial-bit
+  lowering/projection contract only if the counters confirm the ranking; (5)
+  define an ordered Glaurung path/scope trace and controlled
   concretization boundary before GQ7/GQ8 warm integration or caching.
   Until the manifest-bound payload is transferred and reproduced under v25,
   instrumentation/ingestion work may proceed and the quantified Lean lane may
@@ -2288,6 +2298,20 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-14 — ADR-0142 completes the exact GQ3 rewrite implementation.**
+  The default manifest now composes nested extracts, splits straddling concat
+  slices, returns exact whole concat operands, and reduces low/high/straddling
+  regions of zero and sign extension. Replacement roots receive a bounded
+  eight-application exact reprocessing loop; `RewriteReport` exposes actual
+  local fuel exhaustion and returns a safe partial result. New stable rule IDs
+  retain per-class attribution, fixed local fresh-node tests bound growth, and
+  the benchmark rule-set identity advances to `axeyum-rewrite-default-v2`.
+  Exhaustive small-width cases, 96 seeded wider cases, manifest fixtures, a
+  forced one-step fuel test, and lifter-shaped Z3 SAT/UNSAT original/rewritten
+  model replay pass under the 4 GiB cap. GQ3 remains WIP only at its real-corpus
+  performance exit: no AIG/CNF or cold-time win is claimed without the missing
+  Glaurung payload.
 
 - **2026-07-14 — artifact v25 measures the GQ4 relevant-bit opportunity.** A
   public `BitDemandStats` profile now propagates conservative structural demand

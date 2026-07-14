@@ -115,6 +115,65 @@ fn lifter_shaped_extract_distribution_matches_oracle() {
 }
 
 #[test]
+fn lifter_shaped_slice_cancellation_matches_oracle() {
+    let mut arena = TermArena::new();
+    let x = arena.bv_var("x", 64).unwrap();
+    let high = arena.bv_var("high", 32).unwrap();
+    let low = arena.bv_var("low", 32).unwrap();
+
+    let inner = arena.extract(55, 8, x).unwrap();
+    let nested = arena.extract(23, 8, inner).unwrap();
+    let nested_expected = arena.extract(31, 16, x).unwrap();
+    let nested_identity = arena.eq(nested, nested_expected).unwrap();
+
+    let joined = arena.concat(high, low).unwrap();
+    let straddling = arena.extract(39, 24, joined).unwrap();
+    let high_slice = arena.extract(7, 0, high).unwrap();
+    let low_slice = arena.extract(31, 24, low).unwrap();
+    let straddling_expected = arena.concat(high_slice, low_slice).unwrap();
+    let concat_identity = arena.eq(straddling, straddling_expected).unwrap();
+
+    let zext = arena.zero_ext(32, low).unwrap();
+    let zext_high = arena.extract(47, 40, zext).unwrap();
+    let zero8 = arena.bv_const(8, 0).unwrap();
+    let zext_high_identity = arena.eq(zext_high, zero8).unwrap();
+    let zext_cross = arena.extract(39, 24, zext).unwrap();
+    let low_high_byte = arena.extract(31, 24, low).unwrap();
+    let zext_cross_expected = arena.zero_ext(8, low_high_byte).unwrap();
+    let zext_cross_identity = arena.eq(zext_cross, zext_cross_expected).unwrap();
+
+    let sext = arena.sign_ext(32, low).unwrap();
+    let sext_high = arena.extract(47, 40, sext).unwrap();
+    let sign = arena.extract(31, 31, low).unwrap();
+    let repeated_sign = arena.sign_ext(7, sign).unwrap();
+    let sext_high_identity = arena.eq(sext_high, repeated_sign).unwrap();
+    let sext_cross = arena.extract(39, 24, sext).unwrap();
+    let sext_cross_expected = arena.sign_ext(8, low_high_byte).unwrap();
+    let sext_cross_identity = arena.eq(sext_cross, sext_cross_expected).unwrap();
+
+    let left = arena.and(nested_identity, concat_identity).unwrap();
+    let middle = arena.and(zext_high_identity, zext_cross_identity).unwrap();
+    let right = arena.and(sext_high_identity, sext_cross_identity).unwrap();
+    let extensions = arena.and(middle, right).unwrap();
+    let identities = arena.and(left, extensions).unwrap();
+
+    assert_rewrite_oracle_equivalent(
+        &mut arena,
+        &[identities],
+        "lifter slice cancellation sat",
+        true,
+    );
+
+    let contradiction = arena.not(identities).unwrap();
+    assert_rewrite_oracle_equivalent(
+        &mut arena,
+        &[contradiction],
+        "lifter slice cancellation unsat",
+        true,
+    );
+}
+
+#[test]
 fn micro_corpus_matches_after_rewrite() {
     for (label, text) in [
         (

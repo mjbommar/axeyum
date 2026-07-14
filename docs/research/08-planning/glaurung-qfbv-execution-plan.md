@@ -94,16 +94,16 @@ under an existing regression series.
 
 The implementation audit narrows the first optimization slices:
 
-- `axeyum-rewrite` already simplifies whole extracts, same-side extracts over
-  concat, low-region extracts over zero/sign extension, extracts over bitwise
-  operators and BV `ite`, and adjacent extract reassembly. GQ3 is therefore a
-  **partial foundation**, not a blank TODO. Missing high-value cases include
-  nested extract collapse, concat-boundary straddles, extension high/straddle
-  regions, direct full-side returns, and bounded reprocessing of newly created
-  terms.
-- The canonicalizer is bottom-up but applies one local rule to the rebuilt
-  parent; a replacement term is not recursively canonicalized in the same
-  pass. A bounded fixpoint/fuel policy is necessary for composed lifter shapes.
+- ADR-0142 completes GQ3's exact implementation tranche: `axeyum-rewrite`
+  composes nested extracts, selects same-side or straddling concat ranges with
+  direct whole-side returns, handles low/high/straddling zero/sign-extension
+  regions, distributes extracts over bitwise operators and BV `ite`, and
+  reassembles adjacent extracts. Stable per-class IDs preserve attribution.
+- The bottom-up canonicalizer now reconsiders a replacement root for at most
+  eight exact applications. A public report counter records actual remaining
+  opportunities at exhaustion, and every expansion has a fixed per-rule fresh-
+  node bound. This completes the semantic/fuel boundary; only the real-corpus
+  AIG/CNF/time exit remains open.
 - `axeyum-bv` currently lowers every child to a full `Vec<AigLit>` before an
   extract slices it. Raw `extract` therefore does not avoid constructing the
   discarded source bits. GQ4 must change the lowering demand contract, not just
@@ -257,6 +257,14 @@ Exit: residual targeted opportunities and total AIG/CNF construction fall on
 the real tier; total cold time is non-worse in aggregate; all validity gates
 remain green. The measured bounded subset becomes GQ2's cheap tier rather than
 making full preprocessing always-on.
+
+Implementation checkpoint (2026-07-14): ADR-0142 and
+`axeyum-rewrite-default-v2` land items 1--5 with stable rule IDs, fixed
+fresh-node bounds, eight-step local replacement fuel, exhaustive small-width
+evaluation, seeded wider evaluation, and Z3 SAT/UNSAT differential replay.
+The exit remains WIP until the transferred manifest-bound capture demonstrates
+the required residual/AIG/CNF/end-to-end reduction; micro timing cannot promote
+the tranche.
 
 ### G4 — demand-driven cold bit lowering (GQ4)
 

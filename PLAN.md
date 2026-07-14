@@ -67,9 +67,10 @@ First repair the byte-complete capture contract and reproduce the **raw**
 current-Glaurung one-shot path under GQ1/GQ10. Compare it explicitly with a
 canonical-only policy and the full configured preprocessing diagnostic; never
 silently substitute one for another. Residual-rewrite, demanded-bit,
-AIG-hash/rule, and CNF-subphase counters are now landed; next take GQ3 exact
-rewrites and GQ4
-demand-driven lowering before GQ5 data-structure/encoding changes. Admit GQ6
+AIG-hash/rule, and CNF-subphase counters are now landed. The ADR-0142 GQ3 exact
+rewrite implementation is also landed; next measure it on the transferred raw
+capture, then take GQ4 demand-driven lowering before GQ5 data-structure/encoding
+changes. Admit GQ6
 SAT-core work only if search becomes material. GQ7--GQ9 require a separate
 ordered path trace because the deduplicated cold corpus erases prefix/frequency
 information; GQ8 follows the exact cache/replay contract rather than treating a
@@ -152,6 +153,19 @@ and separately time the analysis nested within bit-blast. A focused 8-of-64
 regression records 25/81 demanded term bits and 8/64 demanded symbol bits while
 the current full-child lowerer materializes 81/81 and 64/64. This measures the
 GQ4 opportunity without yet changing semantics or model projection.
+**GQ3 exact semantic tranche landed (2026-07-14, ADR-0142).** The default
+manifest now composes nested extracts, splits concat-boundary straddles, returns
+whole concat operands directly, and reduces low/high/straddling zero/sign
+extension slices. Replacement roots receive at most eight exact local rule
+applications; a public report counter records a remaining opportunity at fuel
+exhaustion while returning the denotation-equivalent partial term. Each rule
+has a stable manifest ID, identity model projection, fixed fresh-node bound,
+exhaustive small-width and seeded wider evaluator evidence, and lifter-shaped
+Z3 SAT/UNSAT differential replay. The expanded default benchmark identity is
+`axeyum-rewrite-default-v2`. This completes GQ3's rule/fuel/test implementation,
+not its performance exit: the missing capture must still show lower residual
+opportunities, AIG/CNF construction, and valid end-to-end cold time before the
+tranche is promoted as a Glaurung win or as GQ2's always-on cold tier.
 The remaining shadow-diff handoff is also executable: a versioned capture index
 contains the producer-owned ordered path, trusted verdict, family, and tier
 facts, while `--generate-corpus-manifest` checks exact directory membership,

@@ -4464,7 +4464,7 @@ mod run {
         json!({
             "mode": mode.as_str(),
             "rule_set": if mode == RewriteMode::Default {
-                JsonValue::String("axeyum-rewrite-default-v1".to_owned())
+                JsonValue::String("axeyum-rewrite-default-v2".to_owned())
             } else {
                 JsonValue::Null
             },

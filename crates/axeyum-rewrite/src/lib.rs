@@ -25,9 +25,9 @@ pub use arrays::{
     ArrayAbstraction, ArrayElimError, ArrayElimination, abstract_arrays, eliminate_arrays,
 };
 pub use canonical::{
-    CanonicalizeOutcome, CanonicalizeTermsOutcome, Canonicalizer, RewriteError, RewriteReport,
-    RuleApplication, build_app, canonicalize, canonicalize_terms, default_manifest,
-    replace_subterms,
+    CanonicalizeOutcome, CanonicalizeTermsOutcome, Canonicalizer, DEFAULT_LOCAL_REWRITE_FUEL,
+    RewriteError, RewriteReport, RuleApplication, build_app, canonicalize, canonicalize_terms,
+    default_manifest, replace_subterms,
 };
 pub use datatypes::simplify_datatypes;
 pub use elim_unconstrained::{UnconstrainedElimination, elim_unconstrained};
@@ -603,6 +603,11 @@ mod tests {
             let x = a.bv_var("x", 4).unwrap();
             (a.extract(3, 0, x).unwrap(), x)
         });
+        assert_rule_fires(&mut covered, "bv.extract_nested.v1", |a| {
+            let x = a.bv_var("extract_nested_x", 8).unwrap();
+            let inner = a.extract(6, 1, x).unwrap();
+            (a.extract(3, 1, inner).unwrap(), a.extract(4, 2, x).unwrap())
+        });
         assert_rule_fires(&mut covered, "bv.extract_concat.v1", |a| {
             // extract(2, 0, concat(a4, b4)) selects bits within the low part b4,
             // so it rewrites to extract(2, 0, b4).
@@ -614,12 +619,34 @@ mod tests {
                 a.extract(2, 0, b4).unwrap(),
             )
         });
+        assert_rule_fires(&mut covered, "bv.extract_concat_straddle.v1", |a| {
+            let high = a.bv_var("extract_concat_straddle_high", 4).unwrap();
+            let low = a.bv_var("extract_concat_straddle_low", 4).unwrap();
+            let joined = a.concat(high, low).unwrap();
+            let high_slice = a.extract(1, 0, high).unwrap();
+            let low_slice = a.extract(3, 2, low).unwrap();
+            (
+                a.extract(5, 2, joined).unwrap(),
+                a.concat(high_slice, low_slice).unwrap(),
+            )
+        });
         assert_rule_fires(&mut covered, "bv.extract_extend.v1", |a| {
             // extract(2, 0, zero_extend(4, x4)) lies in the original 4 bits
             // (hi=2 < 4), so it rewrites to extract(2, 0, x4).
             let x4 = a.bv_var("x4", 4).unwrap();
             let zext = a.zero_ext(4, x4).unwrap();
             (a.extract(2, 0, zext).unwrap(), a.extract(2, 0, x4).unwrap())
+        });
+        assert_rule_fires(&mut covered, "bv.extract_extend_high.v1", |a| {
+            let x = a.bv_var("extract_extend_high_x", 4).unwrap();
+            let zext = a.zero_ext(4, x).unwrap();
+            (a.extract(6, 5, zext).unwrap(), a.bv_const(2, 0).unwrap())
+        });
+        assert_rule_fires(&mut covered, "bv.extract_extend_straddle.v1", |a| {
+            let x = a.bv_var("extract_extend_straddle_x", 4).unwrap();
+            let zext = a.zero_ext(4, x).unwrap();
+            let low = a.extract(3, 2, x).unwrap();
+            (a.extract(5, 2, zext).unwrap(), a.zero_ext(2, low).unwrap())
         });
         assert_rule_fires(&mut covered, "bv.extract_bitwise.v1", |a| {
             let x = a.bv_var("extract_bitwise_x", 8).unwrap();
@@ -646,11 +673,12 @@ mod tests {
         });
         assert_rule_fires(&mut covered, "bv.concat_extract.v1", |a| {
             // concat(extract(5,3,x6), extract(2,0,x6)) — adjacent slices of the
-            // same term (lo1=3 == hi2+1) — reassemble to extract(5, 0, x6).
+            // same term (lo1=3 == hi2+1) — reassemble to extract(5, 0, x6),
+            // then local replacement reprocessing removes the whole extract.
             let x6 = a.bv_var("x6", 6).unwrap();
             let high = a.extract(5, 3, x6).unwrap();
             let low = a.extract(2, 0, x6).unwrap();
-            (a.concat(high, low).unwrap(), a.extract(5, 0, x6).unwrap())
+            (a.concat(high, low).unwrap(), x6)
         });
         assert_rule_fires(&mut covered, "bv.extend_zero.v1", |a| {
             let x = a.bv_var("x", 4).unwrap();

@@ -56,14 +56,25 @@ const BV_XOR_IDENTITY: &str = "bv.xor_identity.v1";
 const BV_XOR_SELF: &str = "bv.xor_self.v1";
 const BV_SHIFT_ZERO: &str = "bv.shift_zero.v1";
 const BV_EXTRACT_WHOLE: &str = "bv.extract_whole.v1";
+const BV_EXTRACT_NESTED: &str = "bv.extract_nested.v1";
 const BV_EXTRACT_CONCAT: &str = "bv.extract_concat.v1";
+const BV_EXTRACT_CONCAT_STRADDLE: &str = "bv.extract_concat_straddle.v1";
 const BV_EXTRACT_EXTEND: &str = "bv.extract_extend.v1";
+const BV_EXTRACT_EXTEND_HIGH: &str = "bv.extract_extend_high.v1";
+const BV_EXTRACT_EXTEND_STRADDLE: &str = "bv.extract_extend_straddle.v1";
 const BV_EXTRACT_BITWISE: &str = "bv.extract_bitwise.v1";
 const BV_EXTRACT_ITE: &str = "bv.extract_ite.v1";
 const BV_CONCAT_EXTRACT: &str = "bv.concat_extract.v1";
 const BV_EXTEND_ZERO: &str = "bv.extend_zero.v1";
 const BV_ROTATE_ZERO: &str = "bv.rotate_zero.v1";
 const COMMUTATIVE_ORDER: &str = "commutative.operand_order.v1";
+
+/// Maximum number of exact local rule applications reconsidered at one
+/// original DAG node.
+///
+/// Exhausting this budget returns the exact partially canonicalized term and
+/// increments [`RewriteReport::local_fuel_exhaustions`].
+pub const DEFAULT_LOCAL_REWRITE_FUEL: usize = 8;
 
 /// A canonicalizer configured by a validated rewrite manifest.
 #[derive(Debug, Clone)]
@@ -177,6 +188,7 @@ impl CanonicalizeTermsOutcome {
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct RewriteReport {
     applications: Vec<RuleApplication>,
+    local_fuel_exhaustions: u64,
 }
 
 impl RewriteReport {
@@ -190,12 +202,25 @@ impl RewriteReport {
         !self.applications.is_empty()
     }
 
+    /// Returns how many original DAG nodes still admitted a local rewrite
+    /// after [`DEFAULT_LOCAL_REWRITE_FUEL`] applications.
+    ///
+    /// Exhaustion is an optimization diagnostic, not an error: the returned
+    /// term remains exactly denotation-preserving.
+    pub fn local_fuel_exhaustions(&self) -> u64 {
+        self.local_fuel_exhaustions
+    }
+
     fn record(&mut self, rule_id: &'static str, before: TermId, after: TermId) {
         self.applications.push(RuleApplication {
             rule_id: rewrite_id(rule_id),
             before,
             after,
         });
+    }
+
+    fn record_local_fuel_exhaustion(&mut self) {
+        self.local_fuel_exhaustions += 1;
     }
 }
 
@@ -486,14 +511,34 @@ fn default_rules() -> Vec<RewriteRule> {
             "`extract` over the full input width",
         ),
         rule(
+            BV_EXTRACT_NESTED,
+            "Nested bit-vector extract composition",
+            "`extract` of an `extract`, with the outer inclusive indices translated by the inner low index",
+        ),
+        rule(
             BV_EXTRACT_CONCAT,
             "Extract of concat slice selection",
             "`extract` whose range lies entirely within one side of a `concat`",
         ),
         rule(
+            BV_EXTRACT_CONCAT_STRADDLE,
+            "Extract straddling a concat boundary",
+            "`extract(hi, lo, concat(high, low))` where `lo < width(low) <= hi`",
+        ),
+        rule(
             BV_EXTRACT_EXTEND,
             "Extract within the original bits of an extend",
             "`extract` over a `zero_extend`/`sign_extend` whose high index lies below the original width",
+        ),
+        rule(
+            BV_EXTRACT_EXTEND_HIGH,
+            "Extract within added extension bits",
+            "`extract` over a `zero_extend`/`sign_extend` whose low index is at least the original width",
+        ),
+        rule(
+            BV_EXTRACT_EXTEND_STRADDLE,
+            "Extract straddling an extension boundary",
+            "`extract` over a `zero_extend`/`sign_extend` where `lo < original width <= hi`",
         ),
         rule(
             BV_EXTRACT_BITWISE,
@@ -554,6 +599,25 @@ fn canonicalize_root(
     memo: &mut HashMap<TermId, TermId>,
     report: &mut RewriteReport,
 ) -> Result<TermId, RewriteError> {
+    canonicalize_root_bounded(
+        arena,
+        root,
+        enabled,
+        memo,
+        report,
+        DEFAULT_LOCAL_REWRITE_FUEL,
+    )
+}
+
+fn canonicalize_root_bounded(
+    arena: &mut TermArena,
+    root: TermId,
+    enabled: &BTreeSet<&str>,
+    memo: &mut HashMap<TermId, TermId>,
+    report: &mut RewriteReport,
+    local_fuel: usize,
+) -> Result<TermId, RewriteError> {
+    assert!(local_fuel > 0, "local rewrite fuel must be positive");
     let mut stack = vec![(root, false)];
 
     while let Some((term, children_ready)) = stack.pop() {
@@ -574,9 +638,44 @@ fn canonicalize_root(
             TermNode::App { op, args } if children_ready => {
                 let rewritten_args = args.iter().map(|arg| memo[arg]).collect::<Vec<_>>();
                 let application = rewrite_app(arena, op, &rewritten_args, enabled)?;
-                let rewritten = application.term;
+                let mut rewritten = application.term;
+                let mut local_applications = 0;
                 if let Some(rule_id) = application.rule_id {
                     report.record(rule_id, term, rewritten);
+                    local_applications = 1;
+                }
+
+                // A replacement root can expose another exact rule (for
+                // example nested extraction followed by whole-slice removal).
+                // Reconsider only the root and cap the chain so future rule
+                // interactions cannot create an unbounded cold-path fixpoint.
+                while local_applications > 0 && local_applications < local_fuel {
+                    let TermNode::App { op, args } = arena.node(rewritten).clone() else {
+                        break;
+                    };
+                    let next = rewrite_app(arena, op, &args, enabled)?;
+                    let Some(rule_id) = next.rule_id else {
+                        break;
+                    };
+                    if next.term == rewritten {
+                        break;
+                    }
+                    report.record(rule_id, rewritten, next.term);
+                    rewritten = next.term;
+                    local_applications += 1;
+                }
+
+                if local_applications == local_fuel
+                    && let TermNode::App { op, args } = arena.node(rewritten).clone()
+                {
+                    // Probe once to distinguish a consumed budget from an
+                    // actual remaining rewrite. The probe may intern an
+                    // unreachable exact term, but the returned root stays at
+                    // the budget boundary.
+                    let next = rewrite_app(arena, op, &args, enabled)?;
+                    if next.rule_id.is_some() && next.term != rewritten {
+                        report.record_local_fuel_exhaustion();
+                    }
                 }
                 memo.insert(term, rewritten);
             }
@@ -1390,15 +1489,18 @@ fn rewrite_ite(
 /// `BV_EXTRACT_WHOLE`: `((_ extract (w-1) 0) x)` over the full input width `w`
 /// is `x` itself.
 ///
-/// `BV_EXTRACT_CONCAT`: when the inner term is a binary `(concat a b)` (with `a`
-/// the high bits, `b` the low bits) and the `[hi:lo]` range lies entirely within
-/// one side, drop the concat and extract directly from that side. SMT-LIB places
-/// `b` in bits `0..wb` and `a` in bits `wb..`, so with `wb = width(b)`:
+/// `BV_EXTRACT_NESTED` composes the inclusive offsets of two extracts.
 ///
-/// * `hi < wb` — range entirely in the low part `b`: `((_ extract hi lo) b)`;
+/// `BV_EXTRACT_CONCAT` and `BV_EXTRACT_CONCAT_STRADDLE`: when the inner term is
+/// a binary `(concat a b)` (with `a` the high bits, `b` the low bits), select
+/// directly from the affected operand(s). SMT-LIB places `b` in bits `0..wb`
+/// and `a` in bits `wb..`, so with `wb = width(b)`:
+///
+/// * `hi < wb` — range entirely in the low part `b`: `slice(hi, lo, b)`;
 /// * `lo >= wb` — range entirely in the high part `a`: subtract `wb` from both
-///   indices, `((_ extract (hi - wb) (lo - wb)) a)`;
-/// * otherwise the range straddles the boundary and is left unchanged.
+///   indices, `slice(hi - wb, lo - wb, a)`;
+/// * otherwise the range straddles the boundary and becomes
+///   `concat(slice(hi - wb, 0, a), slice(wb - 1, lo, b))`.
 ///
 /// This selects exactly the same bits, so it is exact-denotation with identity
 /// model projection.
@@ -1421,49 +1523,33 @@ fn rewrite_extract(
     {
         return Ok(Some(applied(args[0], BV_EXTRACT_WHOLE)));
     }
-    if enabled.contains(BV_EXTRACT_CONCAT)
+    if enabled.contains(BV_EXTRACT_NESTED)
         && let TermNode::App {
-            op: Op::Concat,
-            args: concat_args,
-        } = arena.node(args[0])
+            op:
+                Op::Extract {
+                    hi: inner_hi,
+                    lo: inner_lo,
+                },
+            args: inner_args,
+        } = arena.node(args[0]).clone()
     {
-        let a = concat_args[0];
-        let b = concat_args[1];
-        let wb = arena
-            .sort_of(b)
-            .bv_width()
-            .expect("concat low operand has BV sort");
-        if hi < wb {
-            return Ok(Some(applied(arena.extract(hi, lo, b)?, BV_EXTRACT_CONCAT)));
-        } else if lo >= wb {
-            return Ok(Some(applied(
-                arena.extract(hi - wb, lo - wb, a)?,
-                BV_EXTRACT_CONCAT,
-            )));
-        }
+        let translated_hi = inner_lo
+            .checked_add(hi)
+            .expect("valid nested extract high index cannot overflow");
+        let translated_lo = inner_lo
+            .checked_add(lo)
+            .expect("valid nested extract low index cannot overflow");
+        debug_assert!(translated_hi <= inner_hi);
+        return Ok(Some(applied(
+            slice_or_identity(arena, translated_hi, translated_lo, inner_args[0])?,
+            BV_EXTRACT_NESTED,
+        )));
     }
-    // `extract within the original bits of an extend`: both `zero_extend` and
-    // `sign_extend` keep the low `width(x)` bits exactly equal to `x`'s bits and
-    // only differ in the appended high bits. When the whole extract range lies
-    // strictly below the original width (`hi < width(x)`), it touches only those
-    // unchanged low bits, so `((_ extract hi lo) (extend x)) ≡ ((_ extract hi lo)
-    // x)` regardless of which extend — exact-denotation, identity projection. When
-    // `hi >= width(x)` the range reaches the appended bits (which differ between
-    // zero/sign extend and may straddle the boundary), so the rule is skipped.
-    if enabled.contains(BV_EXTRACT_EXTEND)
-        && let TermNode::App {
-            op: Op::ZeroExt { .. } | Op::SignExt { .. },
-            args: inner,
-        } = arena.node(args[0])
-    {
-        let x = inner[0];
-        let xw = arena
-            .sort_of(x)
-            .bv_width()
-            .expect("extend operand has BV sort");
-        if hi < xw {
-            return Ok(Some(applied(arena.extract(hi, lo, x)?, BV_EXTRACT_EXTEND)));
-        }
+    if let Some(rewrite) = rewrite_extract_concat(arena, hi, lo, args[0], enabled)? {
+        return Ok(Some(rewrite));
+    }
+    if let Some(rewrite) = rewrite_extract_extend(arena, hi, lo, args[0], enabled)? {
+        return Ok(Some(rewrite));
     }
     if enabled.contains(BV_EXTRACT_BITWISE) {
         let bitwise = match arena.node(args[0]) {
@@ -1498,6 +1584,121 @@ fn rewrite_extract(
         }
     }
     Ok(None)
+}
+
+fn rewrite_extract_concat(
+    arena: &mut TermArena,
+    hi: u32,
+    lo: u32,
+    term: TermId,
+    enabled: &BTreeSet<&str>,
+) -> Result<Option<LocalRewrite>, IrError> {
+    let TermNode::App {
+        op: Op::Concat,
+        args,
+    } = arena.node(term).clone()
+    else {
+        return Ok(None);
+    };
+    let high_term = args[0];
+    let low_term = args[1];
+    let low_width = arena
+        .sort_of(low_term)
+        .bv_width()
+        .expect("concat low operand has BV sort");
+
+    if enabled.contains(BV_EXTRACT_CONCAT) && hi < low_width {
+        Ok(Some(applied(
+            slice_or_identity(arena, hi, lo, low_term)?,
+            BV_EXTRACT_CONCAT,
+        )))
+    } else if enabled.contains(BV_EXTRACT_CONCAT) && lo >= low_width {
+        Ok(Some(applied(
+            slice_or_identity(arena, hi - low_width, lo - low_width, high_term)?,
+            BV_EXTRACT_CONCAT,
+        )))
+    } else if enabled.contains(BV_EXTRACT_CONCAT_STRADDLE) && lo < low_width && low_width <= hi {
+        let high = slice_or_identity(arena, hi - low_width, 0, high_term)?;
+        let low = slice_or_identity(arena, low_width - 1, lo, low_term)?;
+        Ok(Some(applied(
+            arena.concat(high, low)?,
+            BV_EXTRACT_CONCAT_STRADDLE,
+        )))
+    } else {
+        Ok(None)
+    }
+}
+
+// Extension slices partition into original-low, added-high, and boundary-
+// straddling regions. Zero extension supplies zeros; sign extension repeats
+// the original sign bit. Each replacement preserves the selected bit sequence.
+fn rewrite_extract_extend(
+    arena: &mut TermArena,
+    hi: u32,
+    lo: u32,
+    term: TermId,
+    enabled: &BTreeSet<&str>,
+) -> Result<Option<LocalRewrite>, IrError> {
+    let TermNode::App { op, args } = arena.node(term).clone() else {
+        return Ok(None);
+    };
+    if !matches!(op, Op::ZeroExt { .. } | Op::SignExt { .. }) {
+        return Ok(None);
+    }
+    let x = args[0];
+    let xw = arena
+        .sort_of(x)
+        .bv_width()
+        .expect("extend operand has BV sort");
+
+    if enabled.contains(BV_EXTRACT_EXTEND) && hi < xw {
+        return Ok(Some(applied(
+            slice_or_identity(arena, hi, lo, x)?,
+            BV_EXTRACT_EXTEND,
+        )));
+    }
+    if enabled.contains(BV_EXTRACT_EXTEND_HIGH) && lo >= xw {
+        let width = hi - lo + 1;
+        let replacement = match op {
+            Op::ZeroExt { .. } => arena.bv_const(width, 0)?,
+            Op::SignExt { .. } => {
+                let sign = slice_or_identity(arena, xw - 1, xw - 1, x)?;
+                if width == 1 {
+                    sign
+                } else {
+                    arena.sign_ext(width - 1, sign)?
+                }
+            }
+            _ => unreachable!("extension shape checked above"),
+        };
+        return Ok(Some(applied(replacement, BV_EXTRACT_EXTEND_HIGH)));
+    }
+    if enabled.contains(BV_EXTRACT_EXTEND_STRADDLE) && lo < xw && xw <= hi {
+        let low = slice_or_identity(arena, xw - 1, lo, x)?;
+        let by = hi - xw + 1;
+        let replacement = match op {
+            Op::ZeroExt { .. } => arena.zero_ext(by, low)?,
+            Op::SignExt { .. } => arena.sign_ext(by, low)?,
+            _ => unreachable!("extension shape checked above"),
+        };
+        return Ok(Some(applied(replacement, BV_EXTRACT_EXTEND_STRADDLE)));
+    }
+    Ok(None)
+}
+
+/// Builds an inclusive bit-vector slice, returning `term` directly when the
+/// requested range covers its whole width.
+fn slice_or_identity(
+    arena: &mut TermArena,
+    hi: u32,
+    lo: u32,
+    term: TermId,
+) -> Result<TermId, IrError> {
+    if lo == 0 && arena.sort_of(term).bv_width() == Some(hi + 1) {
+        Ok(term)
+    } else {
+        arena.extract(hi, lo, term)
+    }
 }
 
 fn is_extract_distributive_bitwise(op: Op) -> bool {
@@ -1854,10 +2055,14 @@ fn mask(width: u32) -> u128 {
 
 #[cfg(test)]
 mod commutative_tests {
+    use std::collections::HashMap;
+
     use axeyum_ir::{Assignment, Op, Sort, TermArena, TermId, TermNode, Value, eval};
 
     use super::{
-        BV_EXTRACT_BITWISE, BV_EXTRACT_ITE, canonicalize, is_extract_distributive_bitwise,
+        BV_CONCAT_EXTRACT, BV_EXTRACT_BITWISE, BV_EXTRACT_ITE, BV_EXTRACT_NESTED, Canonicalizer,
+        RewriteReport, canonicalize, canonicalize_root_bounded, is_extract_distributive_bitwise,
+        mask,
     };
 
     /// Each pair of binary commutative builders must canonicalize to the same
@@ -2849,10 +3054,72 @@ mod commutative_tests {
         ));
     }
 
+    #[test]
+    fn nested_extracts_compose_and_cancel_whole_slices() {
+        let mut arena = TermArena::new();
+        let x = arena.bv_var("nested_x", 8).unwrap();
+        let inner = arena.extract(6, 1, x).unwrap();
+        let outer = arena.extract(3, 1, inner).unwrap();
+        let expected = arena.extract(4, 2, x).unwrap();
+        let outcome = canonicalize(&mut arena, outer).unwrap();
+        assert_eq!(outcome.term, expected);
+        assert!(
+            outcome
+                .report
+                .applications()
+                .iter()
+                .any(|application| { application.rule_id.as_str() == BV_EXTRACT_NESTED })
+        );
+
+        let whole_inner = arena.extract(5, 2, x).unwrap();
+        let whole_outer = arena.extract(3, 0, whole_inner).unwrap();
+        let expected_whole = arena.extract(5, 2, x).unwrap();
+        assert_eq!(
+            canonicalize(&mut arena, whole_outer).unwrap().term,
+            expected_whole
+        );
+    }
+
+    #[test]
+    fn nested_extracts_preserve_denotation_exhaustively() {
+        let mut arena = TermArena::new();
+        let x_sym = arena
+            .declare("nested_exhaustive_x", Sort::BitVec(4))
+            .unwrap();
+        let x = arena.var(x_sym);
+        let mut cases = Vec::new();
+
+        for inner_hi in 0..4 {
+            for inner_lo in 0..=inner_hi {
+                let inner = arena.extract(inner_hi, inner_lo, x).unwrap();
+                let inner_width = inner_hi - inner_lo + 1;
+                for outer_hi in 0..inner_width {
+                    for outer_lo in 0..=outer_hi {
+                        let original = arena.extract(outer_hi, outer_lo, inner).unwrap();
+                        let rewritten = canonicalize(&mut arena, original).unwrap().term;
+                        cases.push((original, rewritten));
+                    }
+                }
+            }
+        }
+
+        for value in 0..16u128 {
+            let mut assignment = Assignment::new();
+            assignment.set(x_sym, Value::Bv { width: 4, value });
+            for &(original, rewritten) in &cases {
+                assert_eq!(
+                    eval(&arena, original, &assignment).unwrap(),
+                    eval(&arena, rewritten, &assignment).unwrap(),
+                    "nested extract changed denotation at x={value}"
+                );
+            }
+        }
+    }
+
     /// `extract` whose range lies entirely in the low part `b` of `(concat a b)`
     /// rewrites to `extract` of `b` directly; entirely in the high part `a`
     /// rewrites to `extract` of `a` with both indices shifted down by `width(b)`;
-    /// a straddling range is left unchanged.
+    /// a straddling range becomes a concat of the affected slices.
     #[test]
     #[allow(clippy::many_single_char_names)]
     fn extract_of_concat_slice_selection() {
@@ -2872,22 +3139,52 @@ mod commutative_tests {
         let expected_high = a.extract(2, 0, hi_term).unwrap();
         assert_eq!(canonicalize(&mut a, high).unwrap().term, expected_high);
 
-        // Straddle: extract(5, 2, concat) crosses bit 4 and is NOT rewritten.
+        // Straddle: extract(5, 2, concat) crosses bit 4 and joins a[1:0], b[3:2].
         let straddle = a.extract(5, 2, concat).unwrap();
-        let canon = canonicalize(&mut a, straddle).unwrap().term;
-        assert!(matches!(
-            a.node(canon),
-            TermNode::App {
-                op: Op::Extract { hi: 5, lo: 2 },
-                ..
-            }
-        ));
+        let high_slice = a.extract(1, 0, hi_term).unwrap();
+        let low_slice = a.extract(3, 2, lo_term).unwrap();
+        let expected_straddle = a.concat(high_slice, low_slice).unwrap();
+        assert_eq!(
+            canonicalize(&mut a, straddle).unwrap().term,
+            expected_straddle
+        );
+
+        // Exact whole-side selections avoid rebuilding redundant extracts.
+        let whole_low = a.extract(3, 0, concat).unwrap();
+        let whole_high = a.extract(7, 4, concat).unwrap();
+        assert_eq!(canonicalize(&mut a, whole_low).unwrap().term, lo_term);
+        assert_eq!(canonicalize(&mut a, whole_high).unwrap().term, hi_term);
+    }
+
+    #[test]
+    fn slice_rewrites_obey_local_fresh_node_bounds() {
+        let mut concat_arena = TermArena::new();
+        let high = concat_arena.bv_var("growth_high", 4).unwrap();
+        let low = concat_arena.bv_var("growth_low", 4).unwrap();
+        let joined = concat_arena.concat(high, low).unwrap();
+        let straddling = concat_arena.extract(5, 2, joined).unwrap();
+        let before = concat_arena.len();
+        canonicalize(&mut concat_arena, straddling).unwrap();
+        assert!(concat_arena.len() - before <= 3);
+
+        let mut extension_arena = TermArena::new();
+        let x = extension_arena.bv_var("growth_x", 4).unwrap();
+        let zext = extension_arena.zero_ext(4, x).unwrap();
+        let zext_straddling = extension_arena.extract(5, 2, zext).unwrap();
+        let before = extension_arena.len();
+        canonicalize(&mut extension_arena, zext_straddling).unwrap();
+        assert!(extension_arena.len() - before <= 2);
+
+        let sext = extension_arena.sign_ext(4, x).unwrap();
+        let sext_high = extension_arena.extract(6, 5, sext).unwrap();
+        let before = extension_arena.len();
+        canonicalize(&mut extension_arena, sext_high).unwrap();
+        assert!(extension_arena.len() - before <= 2);
     }
 
     /// Exhaustive denotation check: for width-3 `a` and `b` (concat width 6),
     /// `extract(hi, lo, concat(a, b))` equals its rewritten form over ALL 64
-    /// assignments of `(a, b)`. Covers a low-part range (in `b`) and a high-part
-    /// range (in `a`, where the `- wb` index subtraction matters).
+    /// assignments of `(a, b)` and every valid inclusive slice.
     #[test]
     #[allow(clippy::many_single_char_names)]
     fn extract_of_concat_preserves_denotation() {
@@ -2898,18 +3195,14 @@ mod commutative_tests {
         let b_term = a.var(b_sym);
         let concat = a.concat(a_term, b_term).unwrap();
 
-        // Low-part range entirely in `b` (bits 0..3): extract(2, 1, concat).
-        let low = a.extract(2, 1, concat).unwrap();
-        let canon_low = canonicalize(&mut a, low).unwrap().term;
-        let expected_low = a.extract(2, 1, b_term).unwrap();
-        assert_eq!(canon_low, expected_low);
-
-        // High-part range entirely in `a` (bits 3..6): extract(5, 4, concat).
-        // The rewrite subtracts wb = 3 from both indices -> extract(2, 1, a).
-        let high = a.extract(5, 4, concat).unwrap();
-        let canon_high = canonicalize(&mut a, high).unwrap().term;
-        let expected_high = a.extract(2, 1, a_term).unwrap();
-        assert_eq!(canon_high, expected_high);
+        let mut cases = Vec::new();
+        for hi in 0..6 {
+            for lo in 0..=hi {
+                let original = a.extract(hi, lo, concat).unwrap();
+                let rewritten = canonicalize(&mut a, original).unwrap().term;
+                cases.push((original, rewritten));
+            }
+        }
 
         for av in 0..8u128 {
             for bv in 0..8u128 {
@@ -2928,23 +3221,19 @@ mod commutative_tests {
                         value: bv,
                     },
                 );
-                assert_eq!(
-                    eval(&a, low, &asg).unwrap(),
-                    eval(&a, canon_low, &asg).unwrap(),
-                    "extract-of-concat (low part) changed denotation at a={av}, b={bv}",
-                );
-                assert_eq!(
-                    eval(&a, high, &asg).unwrap(),
-                    eval(&a, canon_high, &asg).unwrap(),
-                    "extract-of-concat (high part) changed denotation at a={av}, b={bv}",
-                );
+                for &(original, rewritten) in &cases {
+                    assert_eq!(
+                        eval(&a, original, &asg).unwrap(),
+                        eval(&a, rewritten, &asg).unwrap(),
+                        "extract-of-concat changed denotation at a={av}, b={bv}",
+                    );
+                }
             }
         }
     }
 
-    /// `extract` whose high index lies strictly below the original width of a
-    /// `zero_extend`/`sign_extend` rewrites to the same `extract` over the
-    /// pre-extension term; a range reaching the extended bits is left unchanged.
+    /// Extension slices are reduced in the original-low, added-high, and
+    /// boundary-straddling regions.
     #[test]
     #[allow(clippy::many_single_char_names, clippy::similar_names)]
     fn extract_within_extend_original_bits() {
@@ -2962,58 +3251,162 @@ mod commutative_tests {
         let from_sext = a.extract(2, 0, sext).unwrap();
         assert_eq!(canonicalize(&mut a, from_sext).unwrap().term, expected);
 
-        // hi = 5 >= width(x) = 4: range touches the extended bits, NOT rewritten.
-        let touches_ext = a.extract(5, 0, zext).unwrap();
-        let canon = canonicalize(&mut a, touches_ext).unwrap().term;
-        assert!(matches!(
-            a.node(canon),
-            TermNode::App {
-                op: Op::Extract { hi: 5, lo: 0 },
-                ..
-            }
-        ));
+        let zext_high = a.extract(6, 5, zext).unwrap();
+        let zero2 = a.bv_const(2, 0).unwrap();
+        assert_eq!(canonicalize(&mut a, zext_high).unwrap().term, zero2);
+
+        let sext_high = a.extract(6, 5, sext).unwrap();
+        let sign = a.extract(3, 3, x).unwrap();
+        let repeated_sign = a.sign_ext(1, sign).unwrap();
+        assert_eq!(canonicalize(&mut a, sext_high).unwrap().term, repeated_sign);
+
+        let zext_straddle = a.extract(5, 2, zext).unwrap();
+        let x_high = a.extract(3, 2, x).unwrap();
+        let expected_zext_straddle = a.zero_ext(2, x_high).unwrap();
+        assert_eq!(
+            canonicalize(&mut a, zext_straddle).unwrap().term,
+            expected_zext_straddle
+        );
+
+        let sext_straddle = a.extract(5, 2, sext).unwrap();
+        let expected_sext_straddle = a.sign_ext(2, x_high).unwrap();
+        assert_eq!(
+            canonicalize(&mut a, sext_straddle).unwrap().term,
+            expected_sext_straddle
+        );
     }
 
-    /// Exhaustive denotation check: over all 16 values of a 4-bit `x`,
-    /// `extract(2, 0, zero_extend(4, x))` and `extract(2, 0, sign_extend(4, x))`
-    /// both equal `extract(2, 0, x)`.
+    /// Exhaustive denotation check over every valid slice of small zero/sign
+    /// extensions.
     #[test]
     #[allow(clippy::many_single_char_names, clippy::similar_names)]
     fn extract_within_extend_preserves_denotation() {
         let mut a = TermArena::new();
-        let x_sym = a.declare("x", Sort::BitVec(4)).unwrap();
+        let x_sym = a.declare("x", Sort::BitVec(3)).unwrap();
         let x = a.var(x_sym);
-        let zext = a.zero_ext(4, x).unwrap();
-        let sext = a.sign_ext(4, x).unwrap();
+        let zext = a.zero_ext(3, x).unwrap();
+        let sext = a.sign_ext(3, x).unwrap();
+        let mut cases = Vec::new();
+        for extended in [zext, sext] {
+            for hi in 0..6 {
+                for lo in 0..=hi {
+                    let original = a.extract(hi, lo, extended).unwrap();
+                    let rewritten = canonicalize(&mut a, original).unwrap().term;
+                    cases.push((original, rewritten));
+                }
+            }
+        }
 
-        let from_zext = a.extract(2, 0, zext).unwrap();
-        let from_sext = a.extract(2, 0, sext).unwrap();
-        let canon_zext = canonicalize(&mut a, from_zext).unwrap().term;
-        let canon_sext = canonicalize(&mut a, from_sext).unwrap().term;
-        let expected = a.extract(2, 0, x).unwrap();
-        assert_eq!(canon_zext, expected);
-        assert_eq!(canon_sext, expected);
-
-        for xv in 0..16u128 {
+        for xv in 0..8u128 {
             let mut asg = Assignment::new();
             asg.set(
                 x_sym,
                 Value::Bv {
-                    width: 4,
+                    width: 3,
                     value: xv,
                 },
             );
-            assert_eq!(
-                eval(&a, from_zext, &asg).unwrap(),
-                eval(&a, canon_zext, &asg).unwrap(),
-                "extract-within-zero_extend changed denotation at x={xv}",
-            );
-            assert_eq!(
-                eval(&a, from_sext, &asg).unwrap(),
-                eval(&a, canon_sext, &asg).unwrap(),
-                "extract-within-sign_extend changed denotation at x={xv}",
-            );
+            for &(original, rewritten) in &cases {
+                assert_eq!(
+                    eval(&a, original, &asg).unwrap(),
+                    eval(&a, rewritten, &asg).unwrap(),
+                    "extract-of-extend changed denotation at x={xv}",
+                );
+            }
         }
+    }
+
+    #[test]
+    fn slice_rewrites_preserve_denotation_on_seeded_wide_cases() {
+        let mut seed = 0x5a17_c0e5_10ce_f00du64;
+        for _ in 0..96 {
+            let mut arena = TermArena::new();
+            let high_width = 1 + u32::try_from(next_random(&mut seed) % 12).unwrap();
+            let low_width = 1 + u32::try_from(next_random(&mut seed) % 12).unwrap();
+            let high_sym = arena
+                .declare("random_high", Sort::BitVec(high_width))
+                .unwrap();
+            let low_sym = arena
+                .declare("random_low", Sort::BitVec(low_width))
+                .unwrap();
+            let high_term = arena.var(high_sym);
+            let low_term = arena.var(low_sym);
+            let joined = arena.concat(high_term, low_term).unwrap();
+            let joined_width = high_width + low_width;
+            let hi = u32::try_from(next_random(&mut seed) % u64::from(joined_width)).unwrap();
+            let lo = u32::try_from(next_random(&mut seed) % u64::from(hi + 1)).unwrap();
+            let concat_original = arena.extract(hi, lo, joined).unwrap();
+            let concat_rewritten = canonicalize(&mut arena, concat_original).unwrap().term;
+
+            let base_width = 2 + u32::try_from(next_random(&mut seed) % 11).unwrap();
+            let base_sym = arena
+                .declare("random_base", Sort::BitVec(base_width))
+                .unwrap();
+            let base = arena.var(base_sym);
+            let inner_lo = u32::try_from(next_random(&mut seed) % u64::from(base_width)).unwrap();
+            let inner_span = base_width - inner_lo;
+            let inner_hi =
+                inner_lo + u32::try_from(next_random(&mut seed) % u64::from(inner_span)).unwrap();
+            let inner = arena.extract(inner_hi, inner_lo, base).unwrap();
+            let inner_width = inner_hi - inner_lo + 1;
+            let outer_hi = u32::try_from(next_random(&mut seed) % u64::from(inner_width)).unwrap();
+            let outer_lo = u32::try_from(next_random(&mut seed) % u64::from(outer_hi + 1)).unwrap();
+            let nested_original = arena.extract(outer_hi, outer_lo, inner).unwrap();
+            let nested_rewritten = canonicalize(&mut arena, nested_original).unwrap().term;
+
+            let by = 1 + u32::try_from(next_random(&mut seed) % 12).unwrap();
+            let extended = if next_random(&mut seed) & 1 == 0 {
+                arena.zero_ext(by, base).unwrap()
+            } else {
+                arena.sign_ext(by, base).unwrap()
+            };
+            let extended_width = base_width + by;
+            let ext_hi = u32::try_from(next_random(&mut seed) % u64::from(extended_width)).unwrap();
+            let ext_lo = u32::try_from(next_random(&mut seed) % u64::from(ext_hi + 1)).unwrap();
+            let extend_original = arena.extract(ext_hi, ext_lo, extended).unwrap();
+            let extend_rewritten = canonicalize(&mut arena, extend_original).unwrap().term;
+
+            let mut assignment = Assignment::new();
+            assignment.set(
+                high_sym,
+                Value::Bv {
+                    width: high_width,
+                    value: u128::from(next_random(&mut seed)) & mask(high_width),
+                },
+            );
+            assignment.set(
+                low_sym,
+                Value::Bv {
+                    width: low_width,
+                    value: u128::from(next_random(&mut seed)) & mask(low_width),
+                },
+            );
+            assignment.set(
+                base_sym,
+                Value::Bv {
+                    width: base_width,
+                    value: u128::from(next_random(&mut seed)) & mask(base_width),
+                },
+            );
+
+            for (original, rewritten) in [
+                (concat_original, concat_rewritten),
+                (nested_original, nested_rewritten),
+                (extend_original, extend_rewritten),
+            ] {
+                assert_eq!(
+                    eval(&arena, original, &assignment).unwrap(),
+                    eval(&arena, rewritten, &assignment).unwrap()
+                );
+            }
+        }
+    }
+
+    fn next_random(state: &mut u64) -> u64 {
+        *state = state
+            .wrapping_mul(6_364_136_223_846_793_005)
+            .wrapping_add(1_442_695_040_888_963_407);
+        *state
     }
 
     /// Narrow slices are pushed through wide pointwise operators so downstream
@@ -3141,8 +3534,9 @@ mod commutative_tests {
     }
 
     /// `concat` of two adjacent extracts (`lo1 == hi2 + 1`) of the same term
-    /// reassembles into one `extract`; a gap, or different inner terms, is left
-    /// unchanged.
+    /// reassembles into one `extract` and local replacement reprocessing removes
+    /// that extract when it covers the whole term; a gap, or different inner
+    /// terms, is left unchanged.
     #[test]
     #[allow(clippy::many_single_char_names)]
     fn concat_of_adjacent_extracts_reassembled() {
@@ -3154,8 +3548,7 @@ mod commutative_tests {
         let high = a.extract(5, 3, x).unwrap();
         let low = a.extract(2, 0, x).unwrap();
         let concat = a.concat(high, low).unwrap();
-        let expected = a.extract(5, 0, x).unwrap();
-        assert_eq!(canonicalize(&mut a, concat).unwrap().term, expected);
+        assert_eq!(canonicalize(&mut a, concat).unwrap().term, x);
 
         // Gap: extract(5,4,x) over extract(2,0,x), lo1=4 != hi2+1=3. NOT rewritten.
         let high_gap = a.extract(5, 4, x).unwrap();
@@ -3176,9 +3569,41 @@ mod commutative_tests {
         ));
     }
 
+    #[test]
+    fn local_rewrite_fuel_returns_an_exact_partial_result_and_reports_exhaustion() {
+        let mut arena = TermArena::new();
+        let x_sym = arena.declare("fuel_x", Sort::BitVec(6)).unwrap();
+        let x = arena.var(x_sym);
+        let high = arena.extract(5, 3, x).unwrap();
+        let low = arena.extract(2, 0, x).unwrap();
+        let original = arena.concat(high, low).unwrap();
+        let canonicalizer = Canonicalizer::default();
+        let enabled = canonicalizer.enabled_rule_set();
+        let mut memo = HashMap::new();
+        let mut report = RewriteReport::default();
+
+        let partial =
+            canonicalize_root_bounded(&mut arena, original, &enabled, &mut memo, &mut report, 1)
+                .unwrap();
+        let expected_partial = arena.extract(5, 0, x).unwrap();
+        assert_eq!(partial, expected_partial);
+        assert_eq!(report.applications().len(), 1);
+        assert_eq!(report.applications()[0].rule_id.as_str(), BV_CONCAT_EXTRACT);
+        assert_eq!(report.local_fuel_exhaustions(), 1);
+
+        for value in 0..64u128 {
+            let mut assignment = Assignment::new();
+            assignment.set(x_sym, Value::Bv { width: 6, value });
+            assert_eq!(
+                eval(&arena, original, &assignment).unwrap(),
+                eval(&arena, partial, &assignment).unwrap()
+            );
+        }
+    }
+
     /// Exhaustive denotation check: over all 64 values of a 6-bit `x`,
     /// `concat(extract(5,3,x), extract(2,0,x))` equals its reassembled form
-    /// `extract(5,0,x)` (which is the whole `x`).
+    /// `extract(5,0,x)`, which local replacement reprocessing reduces to `x`.
     #[test]
     #[allow(clippy::many_single_char_names)]
     fn concat_of_adjacent_extracts_preserves_denotation() {
@@ -3189,8 +3614,7 @@ mod commutative_tests {
         let low = a.extract(2, 0, x).unwrap();
         let concat = a.concat(high, low).unwrap();
         let canon = canonicalize(&mut a, concat).unwrap().term;
-        let expected = a.extract(5, 0, x).unwrap();
-        assert_eq!(canon, expected);
+        assert_eq!(canon, x);
 
         for xv in 0..64u128 {
             let mut asg = Assignment::new();
