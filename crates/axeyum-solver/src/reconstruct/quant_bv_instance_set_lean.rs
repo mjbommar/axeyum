@@ -18,16 +18,18 @@ use axeyum_lean_kernel::{BinderInfo, Declaration, NameId, ReducibilityHint};
 
 use super::{
     Clause, DatatypeInductive, ExprId, LEAN_MODULE_THEOREM, ReconstructCtx, ReconstructError,
-    LocalDecl, and_project, check_against, check_false_prop, fresh_axiom, fresh_fvar_id,
-    reconstruct_bitwise_step, render_ctx_module, require_infers_false,
+    LocalDecl, and_intro, and_project, check_against, check_false_prop, double_negation_elim,
+    fresh_axiom, fresh_fvar_id, reconstruct_bitwise_step, render_ctx_module,
+    require_infers_false,
 };
 use crate::{
-    BvAlternationCounterexampleCertificate, BvPositiveUniversalInstanceSetCertificate,
+    BvAlternationCounterexampleCertificate, BvPairedExistentialTransferCertificate,
+    BvPairedExistentialTransferJustification, BvPositiveUniversalInstanceSetCertificate,
     BvPositiveUniversalSourceInstance,
     ClosedUniversalCounterexampleCertificate, NegatedExistentialWitnessCertificate,
     VacuousExistsUniversalCounterexampleCertificate,
-    check_bv_alternation_counterexample, check_bv_positive_universal_instance_set,
-    check_closed_universal_counterexample,
+    check_bv_alternation_counterexample, check_bv_paired_existential_transfer,
+    check_bv_positive_universal_instance_set, check_closed_universal_counterexample,
     check_negated_existential_witness, check_vacuous_exists_universal_counterexample,
 };
 
@@ -1027,6 +1029,37 @@ fn collect_forall_chain(
     Ok((binders, term))
 }
 
+fn collect_exists_chain(
+    arena: &TermArena,
+    mut term: TermId,
+) -> Result<(Vec<SymbolId>, TermId), ReconstructError> {
+    let mut binders = Vec::new();
+    loop {
+        match arena.node(term) {
+            TermNode::App {
+                op: Op::Exists(symbol),
+                args,
+            } if args.len() == 1 => {
+                let sort = arena.symbol(*symbol).1;
+                if !matches!(sort, Sort::Bool | Sort::BitVec(1..=MAX_LEAN_BV_WIDTH)) {
+                    return Err(decline(format!(
+                        "unsupported existential binder sort {sort:?}"
+                    )));
+                }
+                binders.push(*symbol);
+                term = args[0];
+            }
+            _ => break,
+        }
+    }
+    if binders.is_empty() || contains_quantifier(arena, term) {
+        return Err(decline(
+            "existentials must form a direct chain with a quantifier-free body",
+        ));
+    }
+    Ok((binders, term))
+}
+
 fn collect_vacuous_exists_forall_chain(
     arena: &TermArena,
     mut term: TermId,
@@ -1471,6 +1504,26 @@ fn source_prop(
         TermNode::App {
             op: Op::Forall(_), ..
         } => universal_prop(ctx, arena, term),
+        TermNode::App {
+            op: Op::Exists(_), ..
+        } => {
+            let (binders, body) = collect_exists_chain(arena, term)?;
+            exists_suffix_prop(
+                ctx,
+                arena,
+                &binders,
+                body,
+                0,
+                WitnessLeanEncoding::Logical,
+            )
+        }
+        TermNode::App {
+            op: Op::BoolNot,
+            args,
+        } if args.len() == 1 && contains_quantifier(arena, args[0]) => {
+            let inner = source_prop(ctx, arena, args[0])?;
+            Ok(ctx.mk_not(inner))
+        }
         _ if !contains_quantifier(arena, term) => ground_prop(ctx, arena, term),
         _ => Err(decline("quantifier is not a top-level conjunction leaf")),
     }
@@ -1874,11 +1927,52 @@ fn reconstruct_gate_tail_with_local_lets(
     commands: &[AletheCommand],
     assumption_proofs: &[ExprId],
 ) -> Result<ExprId, ReconstructError> {
-    const LOCAL_LET_CHUNK: usize = 4;
+    reconstruct_gate_tail_with_chunked_local_lets(ctx, commands, assumption_proofs, 4)
+}
+
+#[allow(clippy::too_many_lines)]
+fn reconstruct_gate_tail_with_chunked_local_lets(
+    ctx: &mut ReconstructCtx,
+    commands: &[AletheCommand],
+    assumption_proofs: &[ExprId],
+    local_let_chunk: usize,
+) -> Result<ExprId, ReconstructError> {
+    debug_assert!(local_let_chunk > 0);
     let _ = ctx.em_axiom();
+    let mut dependencies = BTreeMap::<String, Vec<String>>::new();
+    let mut empty_step = None;
+    for command in commands {
+        if let AletheCommand::Step {
+            id,
+            clause,
+            premises,
+            ..
+        } = command
+        {
+            dependencies.insert(id.clone(), premises.clone());
+            if clause.is_empty() {
+                empty_step = Some(id.clone());
+            }
+        }
+    }
+    let mut live_steps = BTreeSet::new();
+    let mut live_stack = empty_step.into_iter().collect::<Vec<_>>();
+    while let Some(id) = live_stack.pop() {
+        if !live_steps.insert(id.clone()) {
+            continue;
+        }
+        if let Some(premises) = dependencies.get(&id) {
+            live_stack.extend(premises.iter().cloned());
+        }
+    }
+    if live_steps.is_empty() {
+        return Err(ReconstructError::NoEmptyClause);
+    }
     let mut premise_uses = BTreeMap::<String, usize>::new();
     for command in commands {
-        if let AletheCommand::Step { premises, .. } = command {
+        if let AletheCommand::Step { id, premises, .. } = command
+            && live_steps.contains(id)
+        {
             for premise in premises {
                 *premise_uses.entry(premise.clone()).or_default() += 1;
             }
@@ -1894,6 +1988,9 @@ fn reconstruct_gate_tail_with_local_lets(
                 let proof = *proofs
                     .next()
                     .ok_or_else(|| decline("Alethe tail has too many assumptions"))?;
+                if !live_steps.contains(id) {
+                    continue;
+                }
                 let proposition = ctx.clause_to_prop(clause);
                 let proof = check_against(ctx, "source_instance_assume", proof, proposition)?;
                 env.insert(
@@ -1911,6 +2008,9 @@ fn reconstruct_gate_tail_with_local_lets(
                 premises,
                 ..
             } => {
+                if !live_steps.contains(id) {
+                    continue;
+                }
                 let Some(mut recovered) =
                     reconstruct_bitwise_step(ctx, rule, clause, premises, &env)?
                 else {
@@ -1934,7 +2034,7 @@ fn reconstruct_gate_tail_with_local_lets(
                     return Ok(proof);
                 }
                 let should_alias = premise_uses.get(id).copied().unwrap_or_default() > 1
-                    || reconstructed_steps.is_multiple_of(LOCAL_LET_CHUNK);
+                    || reconstructed_steps.is_multiple_of(local_let_chunk);
                 reconstructed_steps += 1;
                 if should_alias {
                     let ty = ctx.clause_to_prop(clause);
@@ -2036,6 +2136,450 @@ fn aig_lit_gate(nodes: &[AletheTerm], literal: AigLit) -> Result<AletheTerm, Rec
     })
 }
 
+#[derive(Clone, Copy)]
+struct PairedExistsLayer {
+    positive_binder: SymbolId,
+    negative_binder: SymbolId,
+    aligned_binder: SymbolId,
+    sort: Sort,
+    witness_id: u64,
+    domain: ExprId,
+    positive_predicate: ExprId,
+    positive_proposition: ExprId,
+    negative_predicate: ExprId,
+}
+
+fn project_source_conjunction(
+    ctx: &mut ReconstructCtx,
+    arena: &TermArena,
+    term: TermId,
+    proof: ExprId,
+    out: &mut BTreeMap<TermId, ExprId>,
+) -> Result<(), ReconstructError> {
+    if let TermNode::App {
+        op: Op::BoolAnd,
+        args,
+    } = arena.node(term)
+        && let [left, right] = &**args
+    {
+        let left_prop = source_prop(ctx, arena, *left)?;
+        let right_prop = source_prop(ctx, arena, *right)?;
+        let left_proof = and_project(ctx, left_prop, right_prop, proof, true);
+        let right_proof = and_project(ctx, left_prop, right_prop, proof, false);
+        project_source_conjunction(ctx, arena, *left, left_proof, out)?;
+        return project_source_conjunction(ctx, arena, *right, right_proof, out);
+    }
+    out.insert(term, proof);
+    Ok(())
+}
+
+fn project_ground_conjunction(
+    ctx: &mut ReconstructCtx,
+    arena: &TermArena,
+    term: TermId,
+    proof: ExprId,
+    out: &mut BTreeMap<TermId, ExprId>,
+) -> Result<(), ReconstructError> {
+    if let TermNode::App {
+        op: Op::BoolAnd,
+        args,
+    } = arena.node(term)
+        && let [left, right] = &**args
+    {
+        let left_prop = direct_ground_prop(ctx, arena, *left)?;
+        let right_prop = direct_ground_prop(ctx, arena, *right)?;
+        let left_proof = and_project(ctx, left_prop, right_prop, proof, true);
+        let right_proof = and_project(ctx, left_prop, right_prop, proof, false);
+        project_ground_conjunction(ctx, arena, *left, left_proof, out)?;
+        return project_ground_conjunction(ctx, arena, *right, right_proof, out);
+    }
+    out.insert(term, proof);
+    Ok(())
+}
+
+fn rebuild_source_conjunction(
+    ctx: &mut ReconstructCtx,
+    arena: &TermArena,
+    term: TermId,
+    proofs: &BTreeMap<TermId, ExprId>,
+) -> Result<ExprId, ReconstructError> {
+    if let TermNode::App {
+        op: Op::BoolAnd,
+        args,
+    } = arena.node(term)
+        && let [left, right] = &**args
+    {
+        let left_prop = source_prop(ctx, arena, *left)?;
+        let right_prop = source_prop(ctx, arena, *right)?;
+        let left_proof = rebuild_source_conjunction(ctx, arena, *left, proofs)?;
+        let right_proof = rebuild_source_conjunction(ctx, arena, *right, proofs)?;
+        return Ok(and_intro(
+            ctx,
+            left_prop,
+            right_prop,
+            left_proof,
+            right_proof,
+        ));
+    }
+    proofs
+        .get(&term)
+        .copied()
+        .ok_or_else(|| decline("paired-existential conjunction proof is missing a source leaf"))
+}
+
+fn rebuild_ground_conjunction(
+    ctx: &mut ReconstructCtx,
+    arena: &TermArena,
+    term: TermId,
+    proofs: &BTreeMap<TermId, ExprId>,
+) -> Result<ExprId, ReconstructError> {
+    if let TermNode::App {
+        op: Op::BoolAnd,
+        args,
+    } = arena.node(term)
+        && let [left, right] = &**args
+    {
+        let left_prop = direct_ground_prop(ctx, arena, *left)?;
+        let right_prop = direct_ground_prop(ctx, arena, *right)?;
+        let left_proof = rebuild_ground_conjunction(ctx, arena, *left, proofs)?;
+        let right_proof = rebuild_ground_conjunction(ctx, arena, *right, proofs)?;
+        return Ok(and_intro(
+            ctx,
+            left_prop,
+            right_prop,
+            left_proof,
+            right_proof,
+        ));
+    }
+    proofs
+        .get(&term)
+        .copied()
+        .ok_or_else(|| decline("paired-existential body proof is missing a conjunct"))
+}
+
+fn build_paired_exists_layers(
+    ctx: &mut ReconstructCtx,
+    arena: &TermArena,
+    scratch: &TermArena,
+    admitted: &crate::quant_bv_paired_exists_cert::AdmittedPairedExistentials,
+    aligned_binders: &[(SymbolId, Sort)],
+) -> Result<Vec<PairedExistsLayer>, ReconstructError> {
+    if admitted.positive_binders.len() != aligned_binders.len() {
+        return Err(decline("paired-existential alpha alignment length changed"));
+    }
+    let mut pending = Vec::with_capacity(aligned_binders.len());
+    for (((&positive, &negative), &(aligned, aligned_sort)), index) in admitted
+        .positive_binders
+        .iter()
+        .zip(&admitted.negative_binders)
+        .zip(aligned_binders)
+        .zip(0..)
+    {
+        let sort = arena.symbol(positive).1;
+        if sort != arena.symbol(negative).1 || sort != aligned_sort {
+            return Err(decline(format!(
+                "paired-existential alpha alignment sort changed at binder {index}"
+            )));
+        }
+        let domain = binder_domain(ctx, sort, WitnessLeanEncoding::Logical)?;
+        let witness_id = fresh_fvar_id(ctx);
+        let witness = ctx.kernel.fvar(witness_id);
+        bind_symbol(ctx, positive, sort, witness);
+        bind_symbol(ctx, negative, sort, witness);
+        bind_symbol(ctx, aligned, sort, witness);
+        pending.push((positive, negative, aligned, sort, witness_id, domain));
+    }
+
+    let mut positive_suffix = direct_ground_prop(ctx, arena, admitted.positive_body)?;
+    let mut negative_suffix = direct_ground_prop(ctx, arena, admitted.negative_body)?;
+    let mut layers = Vec::with_capacity(pending.len());
+    for &(positive, negative, aligned, sort, witness_id, domain) in pending.iter().rev() {
+        let anon = ctx.kernel.anon();
+        let positive_body = ctx.kernel.abstract_fvars(positive_suffix, &[witness_id]);
+        let positive_predicate =
+            ctx.kernel
+                .lam(anon, domain, positive_body, BinderInfo::Default);
+        let exists = ctx.kernel.const_(ctx.prelude.exists_, vec![ctx.one]);
+        let exists = ctx.kernel.app(exists, domain);
+        let positive_proposition = ctx.kernel.app(exists, positive_predicate);
+
+        let negative_body = ctx.kernel.abstract_fvars(negative_suffix, &[witness_id]);
+        let negative_predicate =
+            ctx.kernel
+                .lam(anon, domain, negative_body, BinderInfo::Default);
+        let exists = ctx.kernel.const_(ctx.prelude.exists_, vec![ctx.one]);
+        let exists = ctx.kernel.app(exists, domain);
+        let negative_proposition = ctx.kernel.app(exists, negative_predicate);
+        layers.push(PairedExistsLayer {
+            positive_binder: positive,
+            negative_binder: negative,
+            aligned_binder: aligned,
+            sort,
+            witness_id,
+            domain,
+            positive_predicate,
+            positive_proposition,
+            negative_predicate,
+        });
+        positive_suffix = positive_proposition;
+        negative_suffix = negative_proposition;
+    }
+    layers.reverse();
+    for &(positive, negative, aligned, sort, _, _) in pending.iter().rev() {
+        unbind_symbol(ctx, aligned, sort);
+        unbind_symbol(ctx, negative, sort);
+        unbind_symbol(ctx, positive, sort);
+    }
+    register_bv_widths(ctx, scratch, admitted.positive_body);
+    register_bv_widths(ctx, scratch, admitted.negative_body);
+    Ok(layers)
+}
+
+fn introduce_paired_negative_exists(
+    ctx: &mut ReconstructCtx,
+    layers: &[PairedExistsLayer],
+    mut proof: ExprId,
+) -> ExprId {
+    for layer in layers.iter().rev() {
+        let intro = ctx
+            .kernel
+            .const_(ctx.prelude.exists_intro, vec![ctx.one]);
+        let intro = ctx.kernel.app(intro, layer.domain);
+        let intro = ctx.kernel.app(intro, layer.negative_predicate);
+        let witness = ctx.kernel.fvar(layer.witness_id);
+        let intro = ctx.kernel.app(intro, witness);
+        proof = ctx.kernel.app(intro, proof);
+    }
+    proof
+}
+
+fn prove_paired_consequent(
+    ctx: &mut ReconstructCtx,
+    replay: &mut crate::quant_bv_paired_exists_cert::InstantiatedPairedTransfer,
+    certificate: &BvPairedExistentialTransferCertificate,
+    consequent_source: TermId,
+    available_proofs: &BTreeMap<TermId, ExprId>,
+) -> Result<ExprId, ReconstructError> {
+    let obligation = certificate
+        .obligations
+        .iter()
+        .find(|obligation| obligation.consequent == consequent_source)
+        .ok_or_else(|| decline("paired-existential transfer obligation is missing"))?;
+    let assumption_sources = match &obligation.justification {
+        BvPairedExistentialTransferJustification::SignedAddMonotonicity { strong, bound } => {
+            vec![*strong, *bound]
+        }
+        BvPairedExistentialTransferJustification::QfProof { assumptions, .. } => {
+            assumptions.clone()
+        }
+    };
+    let consequent = *replay
+        .consequents
+        .get(&consequent_source)
+        .ok_or_else(|| decline("paired-existential consequent lost its alpha instance"))?;
+    let target = direct_ground_prop(ctx, &replay.arena, consequent)?;
+    let not_consequent = replay
+        .arena
+        .not(consequent)
+        .map_err(|error| decline(format!("failed to negate paired consequent: {error}")))?;
+
+    let mut tail = Vec::with_capacity(assumption_sources.len() + 1);
+    let mut assumption_proofs = Vec::with_capacity(assumption_sources.len() + 1);
+    for source in assumption_sources {
+        let instantiated = *replay
+            .available
+            .get(&source)
+            .ok_or_else(|| decline("paired-existential assumption lost its alpha instance"))?;
+        tail.push((instantiated, None));
+        assumption_proofs.push(
+            available_proofs
+                .get(&source)
+                .copied()
+                .ok_or_else(|| decline("paired-existential assumption lacks a source proof"))?,
+        );
+    }
+    tail.push((not_consequent, None));
+    let not_target = ctx.mk_not(target);
+    let not_target_id = fresh_fvar_id(ctx);
+    assumption_proofs.push(ctx.kernel.fvar(not_target_id));
+
+    let (formulas, definitions) = aig_gate_tail(&replay.arena, &tail)?;
+    let (commands, gate_defs) =
+        crate::qfbv_alethe::prove_bit_gate_unsat_alethe(&formulas, definitions)
+            .ok_or_else(|| decline("paired-existential implication emitter declined"))?;
+    let requires_compact_rup = commands.iter().any(|command| match command {
+        AletheCommand::Step {
+            clause, premises, ..
+        } => clause.len() > 64 || premises.len() > 256,
+        AletheCommand::Assume { .. } => false,
+    });
+    if requires_compact_rup {
+        return Err(decline(
+            "paired-existential implication exceeds the explicit-resolution cap; compact reflected RUP is required",
+        ));
+    }
+    ctx.bridge = Some(gate_defs);
+    ctx.gate_memo.clear();
+    let contradiction = reconstruct_gate_tail_with_chunked_local_lets(
+        ctx,
+        &commands,
+        &assumption_proofs,
+        4,
+    )?;
+    let body = ctx.kernel.abstract_fvars(contradiction, &[not_target_id]);
+    let anon = ctx.kernel.anon();
+    let double_negation = ctx
+        .kernel
+        .lam(anon, not_target, body, BinderInfo::Default);
+    Ok(double_negation_elim(ctx, target, double_negation))
+}
+
+#[allow(clippy::too_many_arguments)]
+fn refute_paired_exists_suffix(
+    ctx: &mut ReconstructCtx,
+    arena: &TermArena,
+    replay: &mut crate::quant_bv_paired_exists_cert::InstantiatedPairedTransfer,
+    admitted: &crate::quant_bv_paired_exists_cert::AdmittedPairedExistentials,
+    certificate: &BvPairedExistentialTransferCertificate,
+    layers: &[PairedExistsLayer],
+    premise_proofs: &BTreeMap<TermId, ExprId>,
+    negative_source: ExprId,
+    negative_inner: TermId,
+    scoped_binders: &mut Vec<(ExprId, u64)>,
+    index: usize,
+    major: ExprId,
+) -> Result<ExprId, ReconstructError> {
+    let Some(&layer) = layers.get(index) else {
+        let mut available_proofs = premise_proofs.clone();
+        project_ground_conjunction(
+            ctx,
+            arena,
+            admitted.positive_body,
+            major,
+            &mut available_proofs,
+        )?;
+        let available_instances = replay
+            .available
+            .iter()
+            .map(|(&source, &instantiated)| (instantiated, source))
+            .collect::<BTreeMap<_, _>>();
+        let mut consequent_proofs = BTreeMap::new();
+        for &source in &admitted.negative_conjuncts {
+            let instantiated = replay.consequents[&source];
+            let proof = if let Some(available_source) = available_instances.get(&instantiated) {
+                available_proofs[available_source]
+            } else {
+                prove_paired_consequent(
+                    ctx,
+                    replay,
+                    certificate,
+                    source,
+                    &available_proofs,
+                )?
+            };
+            consequent_proofs.insert(source, proof);
+        }
+        let negative_body = rebuild_ground_conjunction(
+            ctx,
+            arena,
+            admitted.negative_body,
+            &consequent_proofs,
+        )?;
+        let negative_exists = introduce_paired_negative_exists(ctx, layers, negative_body);
+        let mut negative_inner_proofs = premise_proofs.clone();
+        negative_inner_proofs.insert(certificate.negative_existential, negative_exists);
+        let negative_inner_proof = rebuild_source_conjunction(
+            ctx,
+            arena,
+            negative_inner,
+            &negative_inner_proofs,
+        )?;
+        return Ok(ctx.kernel.app(negative_source, negative_inner_proof));
+    };
+
+    let witness = ctx.kernel.fvar(layer.witness_id);
+    bind_symbol(ctx, layer.positive_binder, layer.sort, witness);
+    bind_symbol(ctx, layer.negative_binder, layer.sort, witness);
+    bind_symbol(ctx, layer.aligned_binder, layer.sort, witness);
+    let hypothesis_id = fresh_fvar_id(ctx);
+    let hypothesis = ctx.kernel.fvar(hypothesis_id);
+    let contradiction = refute_paired_exists_suffix(
+        ctx,
+        arena,
+        replay,
+        admitted,
+        certificate,
+        layers,
+        premise_proofs,
+        negative_source,
+        negative_inner,
+        scoped_binders,
+        index + 1,
+        hypothesis,
+    )?;
+    unbind_symbol(ctx, layer.aligned_binder, layer.sort);
+    unbind_symbol(ctx, layer.negative_binder, layer.sort);
+    unbind_symbol(ctx, layer.positive_binder, layer.sort);
+
+    let hypothesis_type = ctx.kernel.app(layer.positive_predicate, witness);
+    let anon = ctx.kernel.anon();
+    let minor = ctx
+        .kernel
+        .lam(anon, hypothesis_type, contradiction, BinderInfo::Default);
+    scoped_binders.push((minor, hypothesis_id));
+    let minor = ctx
+        .kernel
+        .lam(anon, layer.domain, minor, BinderInfo::Default);
+    scoped_binders.push((minor, layer.witness_id));
+    Ok(exists_elim_false(
+        ctx,
+        VacuousExistsLayer {
+            domain: layer.domain,
+            predicate: layer.positive_predicate,
+            proposition: layer.positive_proposition,
+        },
+        minor,
+        major,
+    ))
+}
+
+
+/// Cheap structural classification used by the public proof-fragment scanner.
+pub(crate) fn bv_paired_existential_transfer_lean_shape(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> bool {
+    assertions.iter().copied().any(|positive| {
+        assertions.iter().copied().any(|negative| {
+            let Some((positive_exists, negative_exists)) =
+                crate::quant_bv_paired_exists_cert::paired_existential_terms(
+                    arena, positive, negative,
+                )
+            else {
+                return false;
+            };
+            crate::quant_bv_paired_exists_cert::admitted_paired_existentials(
+                arena,
+                positive,
+                negative,
+                positive_exists,
+                negative_exists,
+            )
+            .is_some_and(|admitted| {
+                admitted
+                    .positive_binders
+                    .iter()
+                    .chain(&admitted.negative_binders)
+                    .all(|&binder| {
+                        matches!(
+                            arena.symbol(binder).1,
+                            Sort::Bool | Sort::BitVec(1..=MAX_LEAN_BV_WIDTH)
+                        )
+                    })
+            })
+        })
+    })
+}
 
 /// Cheap structural classification used by the public proof-fragment scanner.
 pub(crate) fn bv_positive_universal_instance_set_lean_shape(
@@ -2145,6 +2689,139 @@ pub(crate) fn bv_alternation_counterexample_lean_shape(
             },
         )
     })
+}
+
+/// Reconstructs ADR-0129 paired-existential witness transfer from the two
+/// untouched source assertions. The positive witness is eliminated with
+/// genuine `Exists.rec`, every transferred `QF_BV` consequence is regenerated as
+/// a bit-level proof, and the same typed witness is introduced into the
+/// negative existential with `Exists.intro`.
+///
+/// # Errors
+///
+/// Returns [`ReconstructError`] if certificate replay fails, the admitted
+/// source shape exceeds the typed Lean boundary, an implication proof cannot be
+/// regenerated, or the scoped final proof does not kernel-check to `False`.
+#[allow(clippy::too_many_lines)]
+pub fn reconstruct_bv_paired_existential_transfer_to_lean_module(
+    arena: &TermArena,
+    assertions: &[TermId],
+    certificate: &BvPairedExistentialTransferCertificate,
+) -> Result<String, ReconstructError> {
+    if !check_bv_paired_existential_transfer(arena, assertions, certificate)
+        .map_err(|error| decline(format!("certificate replay failed: {error}")))?
+    {
+        return Err(decline("invalid ADR-0129 certificate"));
+    }
+    let admitted = crate::quant_bv_paired_exists_cert::admitted_paired_existentials(
+        arena,
+        certificate.positive_assertion,
+        certificate.negative_assertion,
+        certificate.positive_existential,
+        certificate.negative_existential,
+    )
+    .ok_or_else(|| decline("certificate assertions lost their paired-existential shape"))?;
+    let mut replay = crate::quant_bv_paired_exists_cert::instantiate_transfer_terms(
+        arena,
+        certificate.positive_assertion,
+        certificate.negative_assertion,
+        &admitted,
+    )
+    .map_err(|error| decline(format!("alpha-aligned replay failed: {error}")))?;
+    let negative_inner = match arena.node(certificate.negative_assertion) {
+        TermNode::App {
+            op: Op::BoolNot,
+            args,
+        } if args.len() == 1 => args[0],
+        _ => return Err(decline("negative source lost its outer negation")),
+    };
+
+    let mut ctx = ReconstructCtx::new();
+    ctx.typed_bv_gates = true;
+    register_bv_widths(&mut ctx, arena, certificate.positive_assertion);
+    register_bv_widths(&mut ctx, arena, certificate.negative_assertion);
+    let positive_prop = source_prop(&mut ctx, arena, certificate.positive_assertion)?;
+    let negative_prop = source_prop(&mut ctx, arena, certificate.negative_assertion)?;
+    let positive_source = fresh_axiom(&mut ctx, positive_prop, "bv-paired-exists-positive")?;
+    let negative_source = fresh_axiom(&mut ctx, negative_prop, "bv-paired-exists-negative")?;
+
+    let mut positive_leaves = BTreeMap::new();
+    project_source_conjunction(
+        &mut ctx,
+        arena,
+        certificate.positive_assertion,
+        positive_source,
+        &mut positive_leaves,
+    )?;
+    let positive_exists = positive_leaves
+        .get(&certificate.positive_existential)
+        .copied()
+        .ok_or_else(|| decline("positive source projection lost its existential leaf"))?;
+    let premise_proofs = admitted
+        .premises
+        .iter()
+        .map(|&premise| {
+            positive_leaves
+                .get(&premise)
+                .copied()
+                .map(|proof| (premise, proof))
+                .ok_or_else(|| decline("positive source projection lost a shared premise"))
+        })
+        .collect::<Result<BTreeMap<_, _>, _>>()?;
+
+    let layers = build_paired_exists_layers(
+        &mut ctx,
+        arena,
+        &replay.arena,
+        &admitted,
+        &replay.aligned_binders,
+    )?;
+    ctx.defer_open_step_checks = true;
+    let mut scoped_binders = Vec::with_capacity(layers.len() * 2);
+    let open_proof = refute_paired_exists_suffix(
+        &mut ctx,
+        arena,
+        &mut replay,
+        &admitted,
+        certificate,
+        &layers,
+        &premise_proofs,
+        negative_source,
+        negative_inner,
+        &mut scoped_binders,
+        0,
+        positive_exists,
+    )?;
+    let (proof, inferred) = ctx
+        .kernel
+        .infer_and_close_scoped_fvars(open_proof, &scoped_binders)
+        .map_err(|error| ReconstructError::KernelRejected {
+            rule: "bv_paired_exists_scoped_closure".to_owned(),
+            detail: format!("infer failed: {error:?}"),
+        })?;
+    ctx.defer_open_step_checks = false;
+    let false_ = ctx.kernel.const_(ctx.prelude.false_, vec![]);
+    if !ctx.kernel.def_eq(inferred, false_) {
+        return Err(ReconstructError::KernelRejected {
+            rule: "bv_paired_exists_scoped_closure".to_owned(),
+            detail: "scoped paired-existential proof did not infer to False".to_owned(),
+        });
+    }
+    ctx.gate_bound_bools.clear();
+    ctx.gate_bound_bvs.clear();
+    let mut inductives = ctx
+        .bv_value_types
+        .values()
+        .map(|datatype| datatype.ind)
+        .collect::<Vec<_>>();
+    inductives.push(ctx.prelude.bool_);
+    let spool = spool_compact_lean_module(&ctx, false_, proof, &inductives)?;
+    ctx.kernel.release_transient_tables_for_export();
+    drop(ctx);
+    let module = spool
+        .read_to_string()
+        .map_err(|error| decline(format!("failed to read paired Lean module spool: {error}")))?;
+    Ok(module)
 }
 
 /// Reconstructs a concrete Bool/BV counterexample to one closed universal as a

@@ -1,13 +1,16 @@
 //! ADR-0129 source-bound paired-existential witness transfer.
 
+use std::io::{Read as _, Write as _};
+use std::path::PathBuf;
 use std::time::Duration;
 
 use axeyum_ir::{Sort, TermArena};
 use axeyum_smtlib::parse_script;
 use axeyum_solver::{
     BV_PAIRED_EXISTS_BINDER_CAP, BV_PAIRED_EXISTS_NODE_CAP, BvPairedExistentialTransferCertificate,
-    BvPairedExistentialTransferJustification, CheckResult, Evidence, SolverConfig, SolverError,
-    check_bv_paired_existential_transfer, produce_evidence, solve,
+    BvPairedExistentialTransferJustification, CheckResult, Evidence, ProofFragment, SolverConfig,
+    SolverError, check_bv_paired_existential_transfer, produce_evidence,
+    prove_unsat_to_lean_module, reconstruct_bv_paired_existential_transfer_to_lean_module, solve,
 };
 
 const TARGET: &str = include_str!(
@@ -16,6 +19,53 @@ const TARGET: &str = include_str!(
 
 fn config() -> SolverConfig {
     SolverConfig::new().with_timeout(Duration::from_secs(2))
+}
+
+struct ModuleSpool(PathBuf);
+
+impl Drop for ModuleSpool {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_file(&self.0);
+    }
+}
+
+fn assert_routed_module_equals(
+    label: &str,
+    direct: String,
+    route: impl FnOnce() -> (ProofFragment, String),
+) -> ProofFragment {
+    let path = std::env::temp_dir().join(format!(
+        "axeyum-paired-exists-equality-{}-{label}.lean",
+        std::process::id()
+    ));
+    let spool = ModuleSpool(path);
+    let mut output = std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&spool.0)
+        .expect("create direct paired-module equality spool");
+    output
+        .write_all(direct.as_bytes())
+        .expect("spool direct paired Lean module");
+    drop(output);
+    drop(direct);
+
+    let (fragment, routed) = route();
+    let mut input = std::fs::File::open(&spool.0).expect("open direct paired-module spool");
+    let direct_len = input.metadata().expect("read paired spool metadata").len();
+    assert_eq!(u64::try_from(routed.len()).unwrap(), direct_len);
+    let mut offset = 0_usize;
+    let mut buffer = vec![0_u8; 1024 * 1024];
+    loop {
+        let read = input.read(&mut buffer).expect("read direct paired module");
+        if read == 0 {
+            break;
+        }
+        assert_eq!(&routed.as_bytes()[offset..offset + read], &buffer[..read]);
+        offset += read;
+    }
+    assert_eq!(offset, routed.len());
+    fragment
 }
 
 fn target_certificate() -> (
@@ -201,6 +251,55 @@ fn alpha_identity_and_generic_qf_transfer_are_independently_checked() {
         !check_bv_paired_existential_transfer(&script.arena, &assertions, &missing_assumption)
             .unwrap_or(false)
     );
+}
+
+#[test]
+fn identity_and_generic_transfers_reconstruct_from_exact_sources() {
+    for text in [
+        "(set-logic BV) \
+         (assert (exists ((x (_ BitVec 4))) (= x (_ bv0 4)))) \
+         (assert (not (exists ((y (_ BitVec 4))) (= y (_ bv0 4))))) \
+         (check-sat)",
+        "(set-logic BV) \
+         (assert (exists ((x (_ BitVec 4))) (= x (_ bv0 4)))) \
+         (assert (not (exists ((y (_ BitVec 4))) (bvule y (_ bv0 4))))) \
+         (check-sat)",
+    ] {
+        let mut script = parse_script(text).expect("paired source parses");
+        let assertions = script.assertions.clone();
+        let report = produce_evidence(&mut script.arena, &assertions, &config()).unwrap();
+        let Evidence::UnsatBvPairedExistentialTransfer(certificate) = report.evidence else {
+            panic!("paired source should use ADR-0129")
+        };
+        let direct = reconstruct_bv_paired_existential_transfer_to_lean_module(
+            &script.arena,
+            &assertions,
+            &certificate,
+        )
+        .expect("direct paired reconstruction succeeds");
+        assert!(direct.contains("Exists.rec"));
+        assert!(direct.contains("Exists.intro"));
+        assert!(!direct.contains("sorryAx"));
+
+        let fragment = assert_routed_module_equals("small", direct, || {
+            prove_unsat_to_lean_module(&mut script.arena, &assertions)
+                .expect("public paired route succeeds")
+        });
+        assert_eq!(fragment, ProofFragment::BvPairedExistentialTransfer);
+    }
+}
+
+#[test]
+fn public_nested_unreachable_call_declines_before_wide_rup_expansion() {
+    let mut script = parse_script(TARGET).expect("fresh target source parses");
+    let assertions = script.assertions.clone();
+    assert_eq!(
+        axeyum_solver::scan_proof_fragment(&script.arena, &assertions),
+        ProofFragment::BvPairedExistentialTransfer
+    );
+    let error = prove_unsat_to_lean_module(&mut script.arena, &assertions)
+        .expect_err("wide RUP source must decline until the compact checker lands");
+    assert!(error.to_string().contains("emitter declined"));
 }
 
 #[test]

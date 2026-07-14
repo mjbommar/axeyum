@@ -457,6 +457,22 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   Quantified-BV Lean UNSAT rises **14→16/18**. Next: ADR-0129 source
   elimination/introduction, then ADR-0127's compact reflected-RUP boundary.
 
+- **2026-07-14 — ADR-0129 source reconstruction is WIP at the measured compact-RUP boundary.**
+  The bounded route now rechecks the exact certificate, represents both
+  untouched paired assertions, eliminates the positive witness with genuine
+  `Exists.rec`, shares typed locals across positive/negative/alpha-aligned
+  binders, regenerates unmatched QF_BV consequences, introduces the transferred
+  witness with genuine `Exists.intro`, and closes against the untouched negative
+  source. Identity and generic QF-proof cases kernel-check with exact
+  direct/router module equality and no `sorryAx`. The public
+  `nested9_true-unreach-call` residual has 2,430 commands and a live
+  86-literal/411-premise RUP step; explicit resolution safely hit a 2.18 GiB
+  allocation near the 4 GiB envelope. The route now declines before expansion
+  above 64 literals or 256 premises. DAG-marked conjunction traversal,
+  empty-clause backward slicing, and cached clause suffix propositions are
+  landed. **Lean remains 16/18. Next:** ADR-0127 compact reflected RUP, then
+  remove the cap and pass the public ADR-0129 source gate under 4 GiB.
+
 - **2026-07-13 — ADR-0140 reconstructs vacuous BV existential prefixes.**
   The ADR-0128 checker still proves the complete leading existential block
   absent and evaluator-replays the exact universal values against the untouched
@@ -2119,6 +2135,15 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-14 — ADR-0129 bounded source reconstruction checkpoint.** Exact
+  paired existential elimination/transfer/introduction kernel-checks for the
+  identity and generic QF-proof cases, with direct/router equality and no
+  `sorryAx`. The public signed row is measured at 2,430 commands with one
+  86-literal/411-premise RUP step; a fail-closed 64/256 cap replaces the prior
+  guarded 2.18 GiB allocation failure. DAG-aware conjunction leaves,
+  empty-clause backward slicing, and cached clause suffixes land as bounded
+  foundations. Coverage stays 16/18 pending compact reflected RUP.
 
 - **2026-07-14 — ADR-0124/0125 Lean alternation reconstruction closes.** The
   kernel now type-checks marked open lambda skeletons with exact lexical scope

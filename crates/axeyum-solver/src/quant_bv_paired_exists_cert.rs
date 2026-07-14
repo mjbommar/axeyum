@@ -64,13 +64,16 @@ pub struct BvPairedExistentialTransferCertificate {
 pub(crate) struct AdmittedPairedExistentials {
     pub premises: Vec<TermId>,
     pub positive_binders: Vec<SymbolId>,
+    pub positive_body: TermId,
     pub positive_conjuncts: Vec<TermId>,
     pub negative_binders: Vec<SymbolId>,
+    pub negative_body: TermId,
     pub negative_conjuncts: Vec<TermId>,
 }
 
 pub(crate) struct InstantiatedPairedTransfer {
     pub arena: TermArena,
+    pub aligned_binders: Vec<(SymbolId, Sort)>,
     pub available: BTreeMap<TermId, TermId>,
     pub consequents: BTreeMap<TermId, TermId>,
 }
@@ -338,8 +341,10 @@ pub(crate) fn admitted_paired_existentials(
     Some(AdmittedPairedExistentials {
         premises: positive_premises,
         positive_binders,
+        positive_body,
         positive_conjuncts,
         negative_binders,
+        negative_body,
         negative_conjuncts,
     })
 }
@@ -353,6 +358,7 @@ pub(crate) fn instantiate_transfer_terms(
     let mut scratch = arena.clone();
     let mut positive_replacements = HashMap::new();
     let mut negative_replacements = HashMap::new();
+    let mut aligned_binders = Vec::with_capacity(admitted.positive_binders.len());
     let mut nonce = scratch.symbols().count();
     for (&positive, &negative) in admitted
         .positive_binders
@@ -376,6 +382,7 @@ pub(crate) fn instantiate_transfer_terms(
                     .map_err(|error| SolverError::Backend(error.to_string()))?;
             }
         };
+        aligned_binders.push((fresh, sort));
         let fresh_term = scratch.var(fresh);
         let positive_term = scratch.var(positive);
         let negative_term = scratch.var(negative);
@@ -412,6 +419,7 @@ pub(crate) fn instantiate_transfer_terms(
     }
     Ok(InstantiatedPairedTransfer {
         arena: scratch,
+        aligned_binders,
         available,
         consequents,
     })
@@ -455,8 +463,12 @@ fn negated_body(arena: &TermArena, term: TermId) -> Option<TermId> {
 
 fn conjunction_leaves(arena: &TermArena, root: TermId) -> Vec<TermId> {
     let mut leaves = Vec::new();
+    let mut seen = BTreeSet::new();
     let mut stack = vec![root];
     while let Some(term) = stack.pop() {
+        if !seen.insert(term) {
+            continue;
+        }
         match arena.node(term) {
             TermNode::App {
                 op: Op::BoolAnd,

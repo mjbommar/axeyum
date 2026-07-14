@@ -70,7 +70,7 @@ tries the exact word-level lemma, then asks the ordinary proof-producing
 `QF_BV` route for a sufficient implication subset. Solver and evidence dispatch
 return UNSAT only after the public checker accepts the generated certificate.
 The evidence has an empty trust ledger. Lean reconstruction is a separate
-future boundary.
+boundary; the first source-bound reconstruction increment is recorded below.
 
 ## Evidence
 
@@ -129,3 +129,30 @@ generic source-bound `QF_BV` consequences. Different premises, unequal prefixes,
 non-conjunctive polarity, nested quantifiers, functions, arrays, arithmetic,
 general existential normalization, proof serialization, Lean reconstruction,
 and general QSAT remain unsupported by this route.
+
+## Lean reconstruction checkpoint (2026-07-14)
+
+The source-bound proof shape is now implemented for bounded residuals. It
+rechecks the ADR-0129 certificate, translates both untouched assertions,
+eliminates the positive existential through genuine `Exists.rec`, binds each
+positive/negative/alpha-aligned binder to the same typed local, regenerates
+each unmatched QF_BV implication, rebuilds the exact negative body and shared
+premises, introduces the transferred tuple through genuine `Exists.intro`, and
+closes the result against the untouched negative source. Identity transfer and
+the generic QF-proof case pass kernel checking with byte-identical direct/router
+modules and no `sorryAx`.
+
+This checkpoint does **not** raise quantified-BV Lean coverage. The public
+32-bit signed-monotonicity row emits 2,430 Alethe commands; one live resolution
+step has an 86-literal conclusion and 411 RUP premises. Explicit resolution
+requests a 2.18 GiB allocation after the process already approaches the 4 GiB
+envelope. Reconstruction therefore declines before expansion when a residual
+step exceeds 64 literals or 256 premises. Shared conjunction traversal now
+marks DAG nodes before expansion, live proof steps are backward-sliced from the
+empty clause, and repeated resolvent suffix propositions are cached; these are
+sound bounded improvements but do not replace the missing compact proof.
+
+The acceptance boundary is now exact: land ADR-0127's compact reflected-RUP
+checker (or an equivalently small kernel-checked clause checker), remove the
+explicit-resolution cap for this route, and pass `nested9_true-unreach-call`
+under 4 GiB with genuine `Exists.rec`/`Exists.intro` and no `sorryAx`.

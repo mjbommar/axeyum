@@ -51,6 +51,7 @@ mod quant_bv_instance_set_lean;
 pub use quant_bv_instance_set_lean::{
     reconstruct_bv_alternation_counterexample_to_lean_module,
     reconstruct_bv_closed_universal_counterexample_to_lean_module,
+    reconstruct_bv_paired_existential_transfer_to_lean_module,
     reconstruct_bv_positive_universal_instance_set_to_lean_module,
     reconstruct_bv_vacuous_exists_universal_counterexample_to_lean_module,
     reconstruct_negated_existential_witness_to_lean_module,
@@ -1449,6 +1450,9 @@ pub enum ProofFragment {
     /// A closed Bool/BV `forall+ exists+` theorem refuted by a checked outer
     /// counterexample and genuine elimination of the existential suffix.
     BvAlternationCounterexample,
+    /// A positive existential witness is transferred through checked `QF_BV`
+    /// implications and introduced into a contradicted paired existential.
+    BvPairedExistentialTransfer,
     /// The checked ADR-0099 nested-XOR integer theorem reconstructed through
     /// three genuine universal instantiations and propositional case analysis.
     IntNestedXor,
@@ -1834,7 +1838,11 @@ pub fn scan_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> ProofFra
             stack.extend(args.iter().copied());
         }
     }
-    if crate::word_reconstruct::is_word_equation_shape(arena, assertions) {
+    if has_exists
+        && quant_bv_instance_set_lean::bv_paired_existential_transfer_lean_shape(arena, assertions)
+    {
+        ProofFragment::BvPairedExistentialTransfer
+    } else if crate::word_reconstruct::is_word_equation_shape(arena, assertions) {
         // A pure word (string/sequence) equality/disequality system. The real
         // `unsat` gate + class selection runs in the reconstructor (it needs a
         // mutable arena for the independent refuter); this cheap structural check
@@ -3910,6 +3918,25 @@ fn reconstruct_proof_fragment_to_lean_module(
                 })?
                 .ok_or_else(declined)?;
             quant_bv_instance_set_lean::reconstruct_bv_alternation_counterexample_to_lean_module(
+                arena,
+                assertions,
+                &certificate,
+            )?
+        }
+        ProofFragment::BvPairedExistentialTransfer => {
+            let config = crate::SolverConfig::default()
+                .with_timeout(std::time::Duration::from_secs(30))
+                .with_resource_limit(10_000_000);
+            let certificate =
+                crate::quant_bv_paired_exists_search::find_bv_paired_existential_transfer(
+                    arena, assertions, &config,
+                )
+                .map_err(|error| ReconstructError::MalformedStep {
+                    rule: "bv_paired_existential_transfer".to_owned(),
+                    detail: format!("paired-existential search failed: {error}"),
+                })?
+                .ok_or_else(declined)?;
+            quant_bv_instance_set_lean::reconstruct_bv_paired_existential_transfer_to_lean_module(
                 arena,
                 assertions,
                 &certificate,
@@ -8758,8 +8785,12 @@ fn binary_resolve_on(
         return Ok(None);
     }
 
-    // The target Prop `Enc(R)`.
+    // The target Prop `Enc(R)`. Cache every right-nested suffix once: all
+    // literal handlers inject into the same resolvent, and rebuilding suffixes
+    // per handler makes wide RUP clauses cubic in expression construction.
     let r_prop = ctx.clause_to_prop(&resolvent);
+
+    let resolvent_suffixes = clause_suffix_props(ctx, &resolvent);
 
     // `neg`-handler: a proof of the pivot `hp : pivot` produces a proof of
     // `Enc(R)` from `neg`'s proof, by case-splitting on `Enc(neg)`. For neg's
@@ -8780,7 +8811,13 @@ fn binary_resolve_on(
                     let false_app = ctx.kernel.app(lit_proof, hp);
                     Ok(ex_falso(ctx, r_prop, false_app))
                 } else {
-                    inject_lit(ctx, lit, lit_proof, resolvent)
+                    inject_lit_with_suffixes(
+                        ctx,
+                        lit,
+                        lit_proof,
+                        resolvent,
+                        &resolvent_suffixes,
+                    )
                 }
             },
         )
@@ -8797,7 +8834,13 @@ fn binary_resolve_on(
             if lit.atom.key() == pivot_key && !lit.negated {
                 neg_to_r(ctx, lit_proof)
             } else {
-                inject_lit(ctx, lit, lit_proof, resolvent)
+                inject_lit_with_suffixes(
+                    ctx,
+                    lit,
+                    lit_proof,
+                    resolvent,
+                    &resolvent_suffixes,
+                )
             }
         },
     )?;
@@ -8833,6 +8876,33 @@ fn inject_lit(
     lit_proof: ExprId,
     resolvent: &[AletheLit],
 ) -> Result<ExprId, ReconstructError> {
+    let suffixes = clause_suffix_props(ctx, resolvent);
+    inject_lit_with_suffixes(ctx, lit, lit_proof, resolvent, &suffixes)
+}
+
+fn clause_suffix_props(ctx: &mut ReconstructCtx, clause: &[AletheLit]) -> Vec<ExprId> {
+    let mut suffixes = Vec::with_capacity(clause.len());
+    let Some(last) = clause.last() else {
+        return suffixes;
+    };
+    let mut suffix = ctx.lit_to_prop(last);
+    suffixes.push(suffix);
+    for literal in clause[..clause.len() - 1].iter().rev() {
+        let head = ctx.lit_to_prop(literal);
+        suffix = ctx.mk_or(head, suffix);
+        suffixes.push(suffix);
+    }
+    suffixes.reverse();
+    suffixes
+}
+
+fn inject_lit_with_suffixes(
+    ctx: &mut ReconstructCtx,
+    lit: &AletheLit,
+    lit_proof: ExprId,
+    resolvent: &[AletheLit],
+    suffixes: &[ExprId],
+) -> Result<ExprId, ReconstructError> {
     let want = (lit.atom.key(), lit.negated);
     let idx = resolvent
         .iter()
@@ -8846,6 +8916,7 @@ fn inject_lit(
     // then (if `idx` is not the last literal) a final `Or.inl` carries `lit`.
     let n = resolvent.len();
     debug_assert!(n >= 1);
+    debug_assert_eq!(suffixes.len(), n);
 
     // Build the proof bottom-up over the tail suffixes. We need, for each suffix
     // starting at `i`, the Props of `head_i = Enc(resolvent[i])` and
@@ -8861,14 +8932,14 @@ fn inject_lit(
             } else {
                 // `Enc(resolvent[idx..]) = head_idx ∨ tail_{idx+1}`; use `Or.inl`.
                 let a = ctx.lit_to_prop(&resolvent[idx]);
-                let b = ctx.clause_to_prop(&resolvent[idx + 1..]);
+                let b = suffixes[idx + 1];
                 proof = or_inl(ctx, a, b, proof);
             }
         } else {
             // Wrap: `Enc(resolvent[i..]) = head_i ∨ tail_{i+1}`; we have a proof of
             // `tail_{i+1}` (the running `proof`); use `Or.inr`.
             let a = ctx.lit_to_prop(&resolvent[i]);
-            let b = ctx.clause_to_prop(&resolvent[i + 1..]);
+            let b = suffixes[i + 1];
             proof = or_inr(ctx, a, b, proof);
         }
     }

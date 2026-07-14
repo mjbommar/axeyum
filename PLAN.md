@@ -817,8 +817,12 @@ stream-compared so the test does not retain both large strings. The public
 `small-pipeline-fixpoint-3` gate passes in **81.57 s at 3,756,104 KiB peak**;
 the 530-binder `bug802` gate passes in **45.28 s at 2,186,192 KiB peak**, both
 under the guarded 4 GiB release envelope and with no `sorryAx`. Quantified-BV
-Lean UNSAT coverage rises **14→16/18**. Next: ADR-0129 source
-elimination/introduction, then ADR-0127's compact reflected-RUP boundary.
+Lean UNSAT coverage rises **14→16/18**. ADR-0129 source
+elimination/introduction is now implemented and kernel-checked for identity and
+generic bounded QF transfers, but its public 32-bit row exposes an 86-literal,
+411-premise resolution step and safely declines at an explicit 64/256 cap
+rather than exceeding 4 GiB. Next: land ADR-0127's compact reflected-RUP
+boundary, then close the public ADR-0129 gate; Lean coverage remains 16/18.
 **Scaled source-bound BV alternation is now LANDED (ADR-0125):** only the
 ADR-0124 total-binder cap rises 128→1,024; the 4,096-node matrix cap and exact
 source/proof replay contract are unchanged. `bug802` has 318 universal plus 212
