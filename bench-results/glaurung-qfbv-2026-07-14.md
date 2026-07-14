@@ -242,7 +242,7 @@ about 0.03 seconds, so revision `99e93a08` is reverted without a full run and
 ADR-0147 is deferred. Shared gate/root clause normalization and allocation,
 not another planning micro-slice, is next.
 
-## ADR-0148 bounded CNF capacity candidate
+## ADR-0148 bounded CNF capacity rejection
 
 Both the outer formula clause vector and collision-safe fingerprint index start
 empty and grow during 53.75 million clause attempts. Existing variable/root
@@ -252,5 +252,15 @@ zero-variable encoding. On the full tier it covers all 13,462 final clause
 counts, reserves 69,225,859 aggregate slots for 49,199,541 emitted (1.407x),
 and stays below the approximately 71,566,146 final slots (1.455x) implied by
 ordinary power-of-two vector growth. Proposed ADR-0148 applies the private hint
-to both containers without changing clause content. No performance or memory
-claim is admitted before the clean representative/full gate.
+to both containers without changing clause content.
+
+The five-process representative gate rejects the combined hint. Median total
+regresses 0.18985 → 0.19465 seconds (+2.53%), mean total regresses 0.18970
+→ 0.19442 seconds (+2.49%), median CNF regresses 0.07298 → 0.08030
+seconds (+10.04%), median gate emission regresses 0.03211 → 0.03965 seconds
+(+23.49%), and median allocation regresses about 12.2%. Root emission improves
+about 4.9%, but the sparse pre-sized fingerprint table makes common lookups
+costlier. All runs remain 128/128 decided with the same 507,195 clauses and zero
+errors, disagreements, or replay failures. Revision `2527741b` is reverted
+without a full run and ADR-0148 is deferred. A formula-header-only experiment,
+with ordinary index growth retained, is the only admissible capacity follow-up.

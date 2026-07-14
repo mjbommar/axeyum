@@ -437,7 +437,9 @@ validity gates.
    Deprioritize planning micro-work and re-attribute shared gate/root clause
    normalization, formula growth, and index rehash next. ADR-0148 is the first
    candidate: a capped no-pass variable/root hint pre-sizes formula headers and
-   the exact-dedup index, subject to representative/full time and memory gates.
+   the exact-dedup index, but regresses representative total/CNF 2.5%/10.0%
+   because gate lookup rises 23.5%. It is restored/deferred. Any capacity
+   follow-up must isolate formula-header storage and leave index growth intact.
 3. Keep the next exact word tranche around affine BV add/sub constant-chain
    normalization and cheap duplicate-root handling behind evidence that it
    reduces downstream AIG/CNF for the

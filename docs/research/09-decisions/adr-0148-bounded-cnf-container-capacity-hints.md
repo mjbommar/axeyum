@@ -1,6 +1,6 @@
 # ADR-0148: Bounded CNF container capacity hints
 
-Status: proposed
+Status: deferred
 Date: 2026-07-14
 
 ## Context
@@ -37,16 +37,33 @@ bounded hint, subject to the Glaurung acceptance benchmark.
 - Keep the hint private and non-semantic. It is neither a resource limit nor a
   public API promise.
 
-The decision becomes accepted only if boundary tests prove zero/saturation/cap
+The experiment was admitted only if boundary tests proved zero/saturation/cap
 behavior, the CNF/SAT suites and strict Clippy pass, and five clean
 representative canonical processes improve end-to-end and CNF time with
 identical content and replay. A full-tier confirmation under 4 GiB is then
-required; otherwise empty-container growth is restored and the ADR is deferred.
+required. The representative performance gate failed, so empty-container growth
+is restored and no full run is authorized.
 
 ## Evidence
 
-Pending implementation measurement. The accepted ADR-0145 baseline and the
-rejected ADR-0146/0147 experiments are recorded in
+The implementation passed all 284 `axeyum-cnf` tests, including
+zero/saturation/cap boundaries, all 30 SAT-BV integration tests, and strict
+Clippy under the 4 GiB cap. All five representative processes were 128/128
+decided with zero errors, manifest/oracle disagreements, or model-replay
+failures and the same 507,195 clauses.
+
+Against accepted ADR-0145, performance regressed:
+
+- median total: 0.18985 → 0.19465 seconds (+2.53%);
+- mean total: 0.18970 → 0.19442 seconds (+2.49%);
+- median CNF: 0.07298 → 0.08030 seconds (+10.04%);
+- median gate emission: 0.03211 → 0.03965 seconds (+23.49%); and
+- median allocation: 0.00066 → 0.00074 seconds (+12.17%).
+
+Median root emission improves about 4.9%, but the sparse pre-sized fingerprint
+table makes the common gate lookup path substantially slower. The candidate
+revision is `2527741b`; artifacts remain beside the access-controlled capture.
+The compact negative result is recorded in
 `bench-results/glaurung-qfbv-2026-07-14.md`.
 
 ## Alternatives
@@ -64,7 +81,8 @@ rejected ADR-0146/0147 experiments are recorded in
 
 ## Consequences
 
-Typical client formulas allocate their expected final containers once, while
-large or unusual formulas retain ordinary growth after the bounded hint. The
-hint may reserve unused capacity, so both performance and the 4 GiB full-tier
-memory gate are acceptance requirements.
+The candidate is not retained. Pre-sizing both containers couples two different
+cache behaviors: avoiding header-vector movement may help, but sparsifying the
+fingerprint table clearly harms its lookup-heavy gate path. Any follow-up must
+isolate formula-header capacity while leaving exact-index growth untouched; it
+must not silently salvage this combined decision.
