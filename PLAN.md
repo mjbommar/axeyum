@@ -28,9 +28,12 @@ session state.
 > valid 13.3% full-tier production win, but CNF encoding is now the largest
 > stage. ADR-0144's collision-safe ownership index then cuts canonical full CNF
 > 18.5% and total time 8.8%, reaching 19.22 s / 2.47x Z3 without changing a
-> clause or decision. The next action is not SAT tuning or broad partial
-> lowering: continue the measured CNF gate/root-emission allocation path, then
-> planning, for the `register-slice` and `slice-partial` families. The capture and
+> clause or decision. ADR-0145 then removes temporary-vector expansion from
+> 2.23 million recognized not-AND gates: full CNF falls another 5.6%, total
+> falls 2.7% to 18.69 s, and the ratio reaches 2.40x with identical CNF content.
+> The next action is not SAT tuning or broad partial lowering: inspect the
+> remaining CNF root-emission allocation and planning work for the
+> `register-slice` and `slice-partial` families. The capture and
 > implementation audit has been expanded into the dependency-ordered
 > [Glaurung QF_BV execution plan](docs/research/08-planning/glaurung-qfbv-execution-plan.md):
 > reproduce the current raw one-shot path first, then compare canonical-only
@@ -84,8 +87,11 @@ explicit complete diagnostic mode. Corrected full raw/canonical trials are
 measured GQ5 gate/root-emission and duplicate-handling slice next. ADR-0144's
 formula-owned collision-safe dedup index lands the first such win: canonical
 full CNF falls 9.40 → 7.66 s and total 21.07 → 19.22 s with identical counts.
-Continue emission allocation/duplicate generation, then planning; bounded
-affine word work must show a downstream circuit/CNF win before outranking them.
+ADR-0145 removes not-AND emitter temporaries and further reduces CNF 7.66 →
+7.23 s, gate emission 3.56 → 3.19 s, and total 19.22 → 18.69 s with the
+same 49,199,541 clauses. Inspect root-emission allocation and planning next;
+bounded affine word work must show a downstream circuit/CNF win before
+outranking them.
 Broad GQ4 partial lowering follows its small post-canonical full-tier
 opportunity (1.84% term bits) unless family-specific evidence reverses the
 rank. Admit GQ6

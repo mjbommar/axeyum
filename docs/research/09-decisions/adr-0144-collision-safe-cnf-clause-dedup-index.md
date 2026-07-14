@@ -84,7 +84,7 @@ is recorded in `bench-results/glaurung-qfbv-2026-07-14.md`.
 ## Consequences
 
 Successful lookup still performs exact equality, but the common non-collision
-case compares one scalar tree key and retains only an index. The formula should
-use less memory and avoid one allocation/copy per attempted unique clause.
+case uses one scalar fingerprint lookup and retains only an index. The formula
+uses less memory and avoids one allocation/copy per attempted unique clause.
 Fingerprint computation adds linear work over each short normalized clause;
-the real-corpus benchmark decides whether that trade is worthwhile.
+the real-corpus benchmark demonstrates that this trade is worthwhile.

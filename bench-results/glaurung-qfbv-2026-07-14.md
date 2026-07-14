@@ -175,3 +175,30 @@ largest stage (39.9%), followed by bit blast (31.0%), SAT (18.6%), and word
 rewrite (9.5%). The next GQ5 slice should target clause-emission allocation or
 duplicate generation inside gate/root encoding, then planning; SAT tuning and
 broad GQ4 remain gated.
+
+## ADR-0145 stack-emitted not-AND clauses
+
+Revision `c139d73bfe8e08c0db5beba0ea302bd1afec499f` replaces the
+encoder-local forward `Vec` and reverse `Vec<Vec<EncodedLit>>` Cartesian
+expansion for the bounded two-factor not-AND family with fixed stack arrays and
+four exact shape matches. Every clause still crosses the ordinary normalization
+and collision-safe exact-dedup boundary.
+
+Five clean representative canonical processes improve median total from
+0.19380 to 0.18985 seconds (-2.04%) and median CNF from 0.07813 to 0.07298
+seconds (-6.60%). The full confirmation decides all 13,462 queries (1,774 SAT /
+11,688 UNSAT) with zero errors, disagreements, or replay failures. Against
+ADR-0144, Axeyum total falls 19.2172 → 18.6909 seconds (-2.74%), CNF falls
+7.6588 → 7.2313 seconds (-5.58%), gate emission falls 3.5579 → 3.1861
+seconds (-10.45%), and the ratio falls 2.470x → 2.399x while Z3 remains
+7.78/7.79 seconds.
+
+The before/after artifacts both emit exactly 49,199,541 clauses and retain the
+same variable and gate counts, including 2,232,632 recognized not-AND gates.
+The accepted full artifact digest is
+`d2920cbf660564333d2b0b2bb7fcb5128f2d6c3416491b9ec220752417285a63`.
+Post-change CNF subphases are 3.19 seconds gate emission, 1.39 seconds root
+emission, 1.21 seconds planning, and 0.067 seconds allocation. CNF remains the
+largest stage (38.7%), followed by bit blast (31.6%), SAT (19.1%), and word
+rewrite (9.7%). The next bounded GQ5 investigation is root-emission allocation
+and planning; SAT tuning remains attribution-gated.

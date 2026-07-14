@@ -29,6 +29,9 @@ ADR-0143 removes the artifact-v25 structural demand diagnostic from production
 and proves CNF construction, not SAT, is now the dominant measured stage.
 ADR-0144's first GQ5 slice then reduces full canonical CNF 18.5% and total time
 8.8%, reaching 19.22 seconds / 2.47x Z3 without changing CNF content.
+ADR-0145's bounded not-AND emitter removes temporary-vector expansion for 2.23
+million recognized gates and further reduces full CNF 5.6%, gate emission
+10.5%, and total 2.7%, reaching 18.69 seconds / 2.40x Z3 with the same clauses.
 
 This note expands `PLAN.md` items GQ1--GQ10 into an executable sequence. It does
 not authorize changes to the Glaurung repository; producer-side and explorer
@@ -349,11 +352,11 @@ Each commit must preserve AIG evaluation, CNF assignment replay, model lift, and
 the proof-check route. A smaller CNF is insufficient without an end-to-end real
 corpus win.
 
-Post-canonical full attribution (still including the diagnostic pass) is
-2.10 s word policy, 35.63 s bit-blast, 9.20 s CNF, and 3.64 s SAT. Removing the
-separately timed 29.57 s diagnostic would make CNF the largest construction
-stage, but that is an inference, not an accepted ratio. Re-run after opt-in
-profiling before selecting a GQ5 implementation.
+Corrected artifact-v27 production attribution after ADR-0145 is 1.81 seconds
+word policy, 5.90 seconds bit blast, 7.23 seconds CNF, and 3.56 seconds SAT.
+Within CNF, gate/root/planning/allocation cost 3.19/1.39/1.21/0.067 seconds.
+CNF is therefore still the largest measured stage; SAT work remains gated while
+the next root/planning slice is profiled.
 
 ### G6 — SAT work remains conditional (GQ6)
 
@@ -412,7 +415,7 @@ validity gates.
 | M2 diagnostic attribution | GQ1, GQ3--GQ5 | **Done for current boundary:** ADR-0143 removes the 29.57 s observational pass from production and marks diagnostic completeness explicitly |
 | M3 cheap exact rewriting | GQ2, GQ3 | **Measured production win:** canonical cuts Axeyum total 17.4% representative median / 13.3% full and bit blast 37.3% / 44.4%; circuit-size exit remains |
 | M4 demand lowering | GQ4 | Continue only with replay-safe real AIG/CNF and wall-time reductions |
-| M5 AIG/CNF optimization | GQ5 | **First win accepted:** ADR-0144 cuts full canonical CNF 18.5% and total 8.8% with identical content; continue only measured emission/planning slices |
+| M5 AIG/CNF optimization | GQ5 | **Two wins accepted:** ADR-0144 cuts full canonical CNF 18.5% / total 8.8%; ADR-0145 then cuts CNF 5.6% / gate emission 10.5% / total 2.7%, all with identical content; continue only measured root/planning slices |
 | M6 SAT re-attribution | GQ6 | Start SAT work only if search becomes material/dominant |
 | M7 ordered warm trace | GQ7, GQ8 | Decide incremental API shape and whether a cache is worthwhile |
 | M8 Glaurung warm integration | GQ7 | Require real same-stream functionality and performance, not the synthetic result |
@@ -420,12 +423,14 @@ validity gates.
 
 ## Immediate next actions
 
-1. Measure clause-emission allocation and duplicate generation inside CNF
-   gate/root encoding on `register-slice` and `slice-partial`. After ADR-0144,
-   gate emission is 3.56 s, root emission 1.40 s, and planning 1.21 s.
-2. Implement one bounded deterministic GQ5 slice, then rerun five-process
-   representative production timing and accept it only on an end-to-end win
-   before confirming on the full tier.
+1. Profile the residual root-emission allocation/copy path and CNF planning on
+   `register-slice` and `slice-partial`. After ADR-0145, gate emission is 3.19
+   s, root emission 1.39 s, and planning 1.21 s; gate work is no longer the
+   automatic first target.
+2. Implement one bounded deterministic root/planning GQ5 slice only when the
+   profile identifies its cost, then rerun five-process representative
+   production timing and accept it only on an end-to-end win before confirming
+   on the full tier.
 3. Keep the next exact word tranche around affine BV add/sub constant-chain
    normalization and cheap duplicate-root handling behind evidence that it
    reduces downstream AIG/CNF for the
