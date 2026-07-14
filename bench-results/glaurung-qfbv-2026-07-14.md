@@ -285,16 +285,31 @@ gate, so ordinary vector growth is restored, no full run is spent, and
 ADR-0149 is deferred. Capacity-hint micro-work is exhausted; the next GQ5 step
 must re-attribute shared clause normalization/ownership.
 
-## ADR-0150 inline primary fingerprint-index candidate
+## ADR-0150 inline primary fingerprint-index acceptance
 
 The ownership audit finds that accepted ADR-0144's
 `HashMap<u64, Vec<usize>>` performs separate membership/insertion probes and
 allocates on the first index push for each distinct fingerprint. The full tier
 emits 49,199,541 clauses; `register-slice` plus `slice-partial` contribute
 53,247,640/53,748,044 attempts (99.1%) and 48,702,009/49,199,541 emitted clauses
-(99.0%). Proposed ADR-0150 will retain the first formula index inline and use a
+(99.0%). ADR-0150 retains the first formula index inline and uses a
 secondary vector only for genuine fingerprint collisions. Exact equality,
 formula ownership, clause order, decisions, and replay remain acceptance
 invariants. The implementation passes 283 CNF tests, 31 SAT-BV tests, strict
-Clippy, and forced-collision coverage; no performance claim is admitted before
-representative/full gates.
+Clippy, and forced-collision coverage.
+
+Against accepted `c139d73b`, five representative processes improve total
+p50/mean 0.189851/0.189702 → 0.165169/0.165105 s (-13.00%/-12.97%) and CNF
+p50/mean 0.072978/0.073648 → 0.051845/0.051885 s (-28.96%/-29.55%). Gate/root
+medians improve 24.94%/23.07%, and total CV falls 0.570% → 0.212%. All trials
+remain 128/128 decided with identical 507,195 clauses and zero errors,
+disagreements, or replay failures.
+
+The full 13,462-query run improves total 18.6909 → 16.5397 s (-11.51%), CNF
+7.2313 → 5.1768 s (-28.41%), gate/root emission 3.1861/1.3910 →
+2.3999/1.0835 s (-24.68%/-22.11%), and ratio 2.399x → 2.136x. Both revisions
+make 53,748,044 attempts, skip 4,248,964 duplicates, and emit exactly
+49,199,541 clauses; every decision/oracle/replay gate passes. Artifact SHA-256:
+`43ff5944eacd8e511a0c4656b3cdd99f0794ba376f6580a9883527684618075e`.
+ADR-0150 is accepted. Bit blast is now the largest stage at 5.88 s, ahead of
+CNF at 5.18 s, so the next slice must re-attribute residual lowering/AIG work.

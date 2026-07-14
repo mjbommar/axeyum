@@ -359,12 +359,12 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   → 2.40x. Both full artifacts emit exactly 49,199,541 clauses and all
   verdict/replay gates remain green.
 
-  Post-change full canonical stages are word rewrite 1.81 s, bit blast 5.90 s,
-  CNF 7.23 s, and SAT 3.56 s. CNF gate/root emission costs 3.19/1.39 s and
-  planning 1.21 s. Immediate next: profile the remaining root-emission
-  allocation/copy path and planning, then take only the measured bounded slice
-  under the same end-to-end gate. Broad GQ4 remains behind it because the complete
-  canonical diagnostic demands 98.16% of term bits. Glaurung must separately
+  After ADR-0150, full canonical stages are word rewrite 1.80 s, bit blast
+  5.88 s, CNF 5.18 s, and SAT 3.50 s. CNF gate/root emission costs 2.40/1.08 s
+  and planning 1.20 s. Immediate next: re-attribute residual operator lowering
+  and AIG construction by family, then take only a measured circuit-producing
+  slice under the same end-to-end gate. Broad GQ4 remains behind it because the
+  complete canonical diagnostic demands 98.16% of term bits. Glaurung must separately
   fix explicit width coercion, strict dump
   validation, and atomic cross-process deduplication. Full evidence and digests:
   [`bench-results/glaurung-qfbv-2026-07-14.md`](bench-results/glaurung-qfbv-2026-07-14.md).
@@ -406,8 +406,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   run variance. Ordinary vector growth is restored, no full run is warranted,
   and the capacity-hint lane is closed.
 
-  The follow-up ownership audit selects proposed ADR-0150 as the next bounded
-  GQ5 experiment. The accepted `HashMap<u64, Vec<usize>>` performs a membership
+  The follow-up ownership audit selects ADR-0150 as the next bounded GQ5
+  experiment. The accepted `HashMap<u64, Vec<usize>>` performs a membership
   lookup and then a second entry lookup for a unique clause, while the first
   push allocates a tiny vector for each distinct fingerprint. The full stream
   emits 49,199,541 clauses; `register-slice` plus `slice-partial` account for
@@ -417,8 +417,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   equality and formula ownership. The implementation is now green across all
   283 CNF tests, 31 SAT-BV tests, strict Clippy, formatting, and link checks. A
   forced-collision test retains two distinct same-fingerprint clauses and
-  suppresses exact repeats of both. Representative/full performance gates are
-  still pending, so ADR-0150 remains proposed.
+  suppresses exact repeats of both.
+
+  ADR-0150 passes both client gates and is accepted. Against `c139d73b`, five
+  representative processes improve total p50/mean 13.00%/12.97% and CNF
+  p50/mean 28.96%/29.55%; gate/root medians improve 24.94%/23.07%, and total CV
+  falls 0.570% → 0.212%. The full 13,462-query confirmation improves total
+  18.691 → 16.540 s (-11.51%), CNF 7.231 → 5.177 s (-28.41%), gate/root
+  3.186/1.391 → 2.400/1.083 s (-24.68%/-22.11%), and the ratio 2.399x →
+  2.136x. Every run retains 100% decisions, zero errors/disagreements/replay
+  failures, and exactly 53,748,044 attempts, 4,248,964 duplicates, and
+  49,199,541 emitted clauses. Bit blast at 5.884 s is now the largest stage,
+  narrowly ahead of CNF at 5.177 s; SAT remains 3.496 s.
 
 - **Historical Glaurung build-up through 2026-07-14 (superseded by the measured
   result above).** The ten-item Glaurung QF_BV performance roadmap is an
@@ -589,20 +599,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   | **GQ2 cheap cold tier** | **WIP candidate validated.** Canonical v2 cuts corrected representative/full Axeyum total 17.4%/13.3% and bit blast 37.3%/44.4% | Keep canonical as the candidate; add another word rule only if it reduces downstream AIG/CNF and end-to-end time |
   | **GQ3 coercion peepholes** | **WIP with a corrected production win.** ADR-0142 removes 1,315/1,435 representative opportunities and cuts term bits 57% representative / 72% full; full AIG/CNF size remains roughly flat | Demonstrate circuit-size improvement from any next exact word tranche or narrow the exit criterion explicitly |
   | **GQ4 cold relevant bits** | **WIP but re-ranked.** ADR-0143 separates the diagnostic; post-canonical full demand is 98.16% of term bits and 91.51% of symbol bits | Pursue partial lowering only if family-specific evidence shows a material cone and preserve original replay/model projection |
-  | **GQ5 AIG/CNF construction** | **ACTIVE with two accepted wins, four restored/rejected experiments, and one larger ownership candidate.** ADR-0148/0149 close capacity hints. Proposed ADR-0150 removes the per-fingerprint heap vector and second common-case map probe while preserving collision-safe exact equality; 283 CNF and 31 SAT-BV tests pass | Run the five-process representative gate; require CNF and total wins with identical content/replay before full confirmation |
+  | **GQ5 AIG/CNF construction** | **ACTIVE with three accepted wins and four restored/rejected experiments.** ADR-0150 removes the per-fingerprint heap vector and second common-case map probe; representative total/CNF improve 13.0%/29.0%, full total/CNF improve 11.5%/28.4% to 16.54/5.18 s with identical content/replay | Bit blast is now largest at 5.88 s; re-attribute residual operator lowering/AIG construction by family before another exact GQ3/GQ5 slice |
   | **GQ6 cold SAT/CDCL** | **WIP foundation, attribution-gated**; subsumption/BVE, XOR/GF(2), VSIDS, phase saving, Luby, and LBD foundations exist | Exact-CNF backend attribution first; tune/default a stronger path only where SAT dominates and proof replay stays green |
   | **GQ7 warm delta entry** | **WIP foundation**; retained CNF/search state exists, but the deduplicated cold corpus cannot measure prefix reuse and Glaurung still creates a fresh solver for every check | Capture an ordered scope/path trace, preprocess only new/affected terms, wire persistent per-worker/path push/assert/check/pop, control concretization, and publish real-driver per-check cost plus warm break-even depth |
   | **GQ8 verdict/CNF cache** | **TODO, ordered-trace-gated** | Measure duplicates/prefixes first; prefer retained warm state, then add versioned exact-query reuse only where justified, with deterministic bounds and mandatory original replay |
   | **GQ9 auto cost model/docs** | **TODO**; P1.8 shape/resource probes are only the general foundation | Telemetry-visible raw/cheap/configured/warm choice that beats or matches fixed policies and documents embedder guidance |
   | **GQ10 real-lifter regression tier** | **WIP; access-controlled representative and well-typed full tiers validate.** Artifact v27 baseline repetitions/full trials and ADR-0144/0145 accepted full confirmations are complete; 2,225 malformed dumps are isolated | Add a data-availability-aware regular gate, establish repeated full-tier variance thresholds, and fix producer validation/dedup before calling the raw capture authoritative |
 
-  **Next actions:** (1) run five clean representative processes for ADR-0150,
-  validating exact CNF equivalence and requiring
-  an end-to-end/CNF win with bounded memory and identical content before a full
-  confirmation; (2) if that gate passes, run the 13,462-query full tier and
-  accept only a stable real-client win; (3) keep affine
-  BV add/sub normalization behind evidence that it reduces AIG/CNF, and keep SAT
-  work gated;
+  **Next actions:** (1) re-attribute the now-largest 5.88-second bit-blast stage
+  by Glaurung family, residual operator, and AIG request/hash/allocation outcome;
+  (2) select one exact GQ3/GQ5 slice only if it reduces downstream AIG/CNF and
+  end-to-end time; keep broad GQ4 and SAT work gated;
+  (3) add the data-availability-aware GQ10 regular gate and define repeated
+  full-tier variance thresholds;
   (4) fix Glaurung's explicit width coercion, strict dump validation, and atomic
   cross-process dedup/conflict handling; (5) define the ordered path/scope trace
   and controlled concretization boundary before warm reuse or caching.
@@ -2377,7 +2386,7 @@ plan is built and committed on the current branch:
 | P4.2 | Symbolic-execution CFG frontend (angr/unicorn-class) | WIP — first frontend-facing primitives landed: `SymbolicMemory` wraps an SMT array memory state, builds `select`/`store`, routes load-equality branch/assume queries through `SymbolicExecutor`'s automatic warm/memory feasibility APIs, and now exposes conservative write-log normalization / compact read-specific read-over-write `ite` construction for frontend memory logs that skips literal-distinct writes, elides exact-hit guards, preserves later symbolic aliases, and uses the auto route; `SymbolicExecutor::assume_auto` and `SymbolicExecutor::branch` keep same-index store/read-back constraints, literal-distinct concrete-address store-chain misses, zero-initialized constant-array reads, simple array-ITE state-merge reads including same-readback merge-guard and tautology pruning, reducible conditional read/write-index paths with scalar equality-over-`ite` cleanup, symbolic Bool readback equality/connective/xor/implication cleanup, BV bitwise/arithmetic/comparison/slice-extension/shift/div-rem readback cleanup, reducible symbolic-address ROW over store chains with same-index shadowed-store pruning, plain symbolic-base Bool/BV array loads via retained select-congruence abstraction including wide/BV256 index or element projection, direct equal-array symbol assumptions/assertions via retained cross-array select congruence and equal-array model projection, scalar Bool/BV UF applications via retained congruence abstraction including wide/BV256 argument or result projection, helper-level load/write-log queries, and default `explore_cfg` branch/assume/status/model queries on the warm BV path when they reduce or abstract, with original-term replay, while remaining general memory/UF still auto-promotes to the memory/theory-aware route; `SymbolicExecutor::explore_cfg` provides a reusable DFS harness over frontend-supplied CFG states, with solver-scope management, infeasible pruning, unknown-safe traversal, and model-witnessed targets; `explore_cfg_checked` adds frontend-supplied concrete witness extraction + replay callbacks and buckets targets into verified/missing-witness/mismatch cases; `TinyBvProgram` is the first reusable small-target frontend, with a validated BV register/memory IR, label-aware line-oriented assembly import with retained label/source metadata, deterministic PC-to-label lookup, typed static CFG edges and basic blocks, deterministic Graphviz DOT export for the basic-block CFG plus trace-highlighted, block-coverage-highlighted, and edge-coverage-highlighted DOT overlays, block-level trace paths, taken-edge trace reports, source-aware trace rows, consolidated witness trace reports, replay-checked test-case generation reports, block-coverage and edge-coverage test-suite reports, register-register equality branches, symbolic instruction lifting, zero-initialized SMT array memory for `Load`/`Store`, model-witness extraction, independent concrete replay, concrete execution traces, and bounded PC/label reachability/safety reports. Remaining: byte-level/binary broader target work, unbounded/certified safety wrappers over richer CFGs, and eventually general warm memory reuse from P4.1 |
 | P4.3 | Optimization: OMT lexicographic/Pareto + MILP hardening | WIP — single-objective `maximize/minimize_lia` + `_bv`/`_bv_signed` already shipped (exponential+binary bound search, Boolean-structured oracle). **Lexicographic multi-objective landed** (`optimize_lia_lexicographic`, 2026-06-18): optimize objectives in order, pinning each at its optimum (`obj≥v`/`obj≤v`) before the next so later ones range over the optimal face — z3's default lex combination. Sound + terminating (bounded composition of the checked single-objective optimizer); `LexOutcome::Stopped` at the first unbounded/infeasible/unknown objective. **BV lexicographic also landed** (`optimize_bv_lexicographic`, signed/unsigned, `bv_uge/ule/sge/sle` pinning) — lexicographic OMT now covers both LIA and BV. **Box** (`optimize_lia_box` / `optimize_bv_box`, independent) **and Pareto** (`optimize_lia_pareto` / `optimize_bv_pareto`, guided-improvement front enumeration, deterministic point/push caps, each point verified Pareto-optimal) modes also landed — **axeyum now has all 3 of z3's OMT modes (box, lexicographic, pareto) across LIA+BV**. BV Pareto covers unsigned and signed objective values, max/min directions, and graceful `Unknown` for out-of-fragment objective values. MaxSAT returns the witnessing model (`max_satisfiable_model`). `minimize_model` / `Solver::minimize_model` provide replay-checked lexicographic counterexample minimization over selected Bool, unsigned-BV<=127, and Int symbols, and the metadata-aware `minimize_model_objectives` / `Solver::minimize_model_objectives` route adds signed two's-complement BV objective order for signed SDK inputs. `produce_evidence_minimized` / `prove_minimized` preserve the default surface, while `_with_objectives` variants expose signed-objective metadata to frontends. `axeyum-property` v0 is now the first typed SDK consumer of that surface: Bool/BV/Int handles, assumptions, proof calls, minimized countermodel lifting, checked `EvidenceReport` exposure plus best-effort standalone Lean modules and stable evidence/trust/Lean summaries through `ProofCertificate`, typed BV overflow predicates, `.equals()` equality aliases, property-owned Bool/BV/Int builder aliases, `Property::all` / `Property::any` Boolean folds, deterministic native-scalar counterexample-to-`#[test]` rendering with caller-owned prelude/setup snippets, helper-rendered Boolean / `Result<(), E>` / `Result<bool, E>` replay adapters, deterministic `#[cfg(test)]` module assembly, deterministic multi-case fixture file assembly, direct named/tuple aggregate initializer snippets, and explicit nested aggregate field composition, scalar/tuple/derived-struct `Symbolic` declarations/lifting including signed-order two's-complement fixed-width Rust integers, named-field `symbolic_struct` bundles, and the generated SDK corpus/scoreboard gate with 16 graduated workflows, deterministic executable baseline comparisons for scalar counterexamples, an actual fixed-seed proptest shrunk counterexample, struct and replay counterexamples, proved assertions, assumption-backed proved assertions, and a Kani-style assume/assert counterexample baseline, machine-readable `corpus.json`, DISAGREE=0, and 1/1 Lean-required coverage. Remaining: MILP hardening; broader objective support for minimized counterexamples beyond Bool/BV/Int native scalars; property SDK ergonomics (operator traits, richer replay bodies); richer proptest families and real Kani CLI-backed property corpus comparison; differential validation vs Z3 `opt` |
 | P4.4 | SMT-LIB command-surface completeness (declare-sort, reset, get-proof, …) | WIP — broad command surface already parsed (declare-const/fun/datatype(s), define-fun/sort, push/pop, reset(-assertions), check-sat(-assuming), get-proof/model/value/unsat-core/assignment/assertions, set-option/info, get-option, echo/exit); term forms let/forall/exists/`!`/`as` handled. `reset-assertions` is represented and honored by scoped incremental solving; full `(reset)` is explicitly rejected in the shared-arena parse/solve model. The single-result front-door helpers (`solve_smtlib`, OMT, `get-value`, `get-unsat-core`, `get-proof`, `get-assignment`) now replay the command stream for zero-or-one-query scripts, honoring `push`/`pop`, `check-sat-assuming`, and `reset-assertions` instead of flattening scoped scripts; multi-query scripts are rejected there and routed to `solve_smtlib_incremental`. `solve_smtlib_get_model` returns user-declared constants/functions for sat `(get-model)` scripts as Rust IR values, `solve_smtlib_get_assignment` returns active top-level named assertion assignments for sat scripts while filtering popped/reset assertions, and `solve_smtlib_get_assertions` returns exact command-point assertion-stack snapshots rendered from IR while excluding one-shot `check-sat-assuming` literals. The parser records `set-info`, `set-option`, requested `get-info`, and requested `get-option` commands; `solve_smtlib_get_info` returns recorded metadata, axeyum defaults for `:name`/`:version`, computed `:reason-unknown`, and explicit unsupported markers, while `solve_smtlib_get_option` returns recorded/default option values and explicit unsupported markers. **`match` datatype pattern-matching added** (commit d404794, P4.4): parse-time desugaring to nested `ite`/`DtTest`/`DtSelect`, exhaustiveness + arity checked, 11 tests. Remaining: parametric `declare-sort`/`define-sort`, `define-fun-rec`, full `match` for parametric datatypes, full option-driven solver semantics, and textual interactive command output |
-| P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | **DONE for the generic gate; WIP for the scheduled GQ10 regression lane.** Artifact v27 gives the real access-controlled 128-query representative and 13,462-query full tiers a corrected production boundary, explicit profiling provenance, fixed identities/resources, in-process Z3, decided-rate gates, and original replay. Raw/canonical baselines plus ADR-0144/0145 accepted full confirmations are complete; current canonical reaches 18.69 s / 2.40x Z3. Remaining: data-availability-aware regular automation, repeated full-tier variance thresholds, and producer-side malformed-dump/dedup repair. Synthetic tiers still cannot substitute for the real-lifter gate |
+| P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | **DONE for the generic gate; WIP for the scheduled GQ10 regression lane.** Artifact v27 gives the real access-controlled 128-query representative and 13,462-query full tiers a corrected production boundary, explicit profiling provenance, fixed identities/resources, in-process Z3, decided-rate gates, and original replay. Raw/canonical baselines plus ADR-0144/0145/0150 accepted full confirmations are complete; current canonical reaches 16.54 s / 2.14x Z3. Remaining: data-availability-aware regular automation, repeated full-tier variance thresholds, and producer-side malformed-dump/dedup repair. Synthetic tiers still cannot substitute for the real-lifter gate |
 
 ### Track 5 — Verified Systems (IR reflection) — ADR-0056, adopted 2026-07-06
 | Phase | Title | Status |
@@ -2389,6 +2398,16 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-14 — ADR-0150 removes common fingerprint-bucket allocations and is
+  accepted.** The CNF index now stores the first formula index inline, uses one
+  entry probe for a new fingerprint, and allocates a side vector only for a
+  genuine collision; exact equality remains mandatory. Five representative
+  processes improve total/CNF p50 13.0%/29.0%. The 13,462-query full run
+  improves total 18.691→16.540 s, CNF 7.231→5.177 s, gate/root emission
+  3.186/1.391→2.400/1.083 s, and ratio 2.399x→2.136x. All runs preserve the
+  exact 49,199,541 clauses and every decision/replay gate. Bit blast becomes
+  the largest residual stage.
 
 - **2026-07-14 — ADR-0149 formula-header pre-sizing is rejected.** Isolating
   the bounded hint to `Vec<CnfClause>` leaves the exact-dedup table unchanged

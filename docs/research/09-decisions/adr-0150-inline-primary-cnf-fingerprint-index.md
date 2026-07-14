@@ -1,6 +1,6 @@
 # ADR-0150: Inline primary CNF fingerprint index
 
-Status: proposed
+Status: accepted
 Date: 2026-07-14
 
 ## Context
@@ -48,8 +48,35 @@ implementation passes all 283 `axeyum-cnf` tests, 31 SAT-BV integration tests,
 strict Clippy, formatting, and documentation-link checks under the 4 GiB cap.
 Its forced-collision regression inserts two distinct clauses under the same
 fingerprint, retains both in formula order, and suppresses exact repeats of
-both. Performance evidence remains pending the predeclared
-representative/full gates.
+both.
+
+The five-process representative gate against accepted revision `c139d73b`
+reports:
+
+- total p50 0.189851 → 0.165169 s (-13.00%) and mean 0.189702 → 0.165105 s
+  (-12.97%);
+- CNF p50 0.072978 → 0.051845 s (-28.96%) and mean 0.073648 → 0.051885 s
+  (-29.55%);
+- gate/root p50 improve 24.94%/23.07%; and
+- total CV falls 0.570% → 0.212%.
+
+All five trials remain 128/128 decided (64 SAT / 64 UNSAT), with zero errors,
+disagreements, or replay failures and the exact same 549,350 attempts, 40,998
+duplicates, 507,195 clauses, and 1,911 direct roots.
+
+The 4 GiB full-tier confirmation at revision `4d66fc0e` remains 13,462/13,462
+decided (1,774 SAT / 11,688 UNSAT), with zero errors, disagreements, or replay
+failures. Against `c139d73b`:
+
+- total falls 18.6909 → 16.5397 s (-11.51%);
+- CNF falls 7.2313 → 5.1768 s (-28.41%);
+- gate/root emission falls 3.1861/1.3910 → 2.3999/1.0835 s
+  (-24.68%/-22.11%); and
+- Axeyum/Z3 falls 2.399x → 2.136x while Z3 is stable at 7.79/7.74 s.
+
+Both full artifacts make 53,748,044 attempts, skip 4,248,964 duplicates, and
+emit exactly 49,199,541 clauses. The accepted artifact SHA-256 is
+`43ff5944eacd8e511a0c4656b3cdd99f0794ba376f6580a9883527684618075e`.
 
 ## Alternatives
 
@@ -66,5 +93,8 @@ representative/full gates.
 
 The common distinct fingerprint retains one scalar index with no per-bucket
 heap allocation and one map entry probe. True collisions pay a second lookup
-and side-vector allocation while remaining exact. The real corpus decides
-whether the reduced allocator and hash-table work is material end to end.
+and side-vector allocation while remaining exact. The real corpus confirms the
+reduced allocator and hash-table work is material end to end. Bit blast is now
+the largest full stage at 5.88 seconds, narrowly ahead of CNF at 5.18 seconds;
+future work returns to measured residual lowering/AIG construction rather than
+more capacity micro-tuning.

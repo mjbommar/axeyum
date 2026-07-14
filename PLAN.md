@@ -51,10 +51,14 @@ session state.
 > clause-normalization/ownership path before selecting a larger GQ5 slice. The
 > audit identifies that slice: the accepted index stores a heap-backed
 > `Vec<usize>` and performs separate lookup/insertion probes for almost every
-> unique fingerprint. Proposed ADR-0150 will retain one inline primary formula
-> index per fingerprint and allocate a side bucket only on a genuine collision.
-> The candidate implementation and forced-collision semantics are green; it
-> remains proposed until the representative/full client gates decide it.
+> unique fingerprint. ADR-0150 retains one inline primary formula index per
+> fingerprint and allocates a side bucket only on a genuine collision. It is
+> accepted: representative total/CNF medians improve 13.0%/29.0%; full total/CNF
+> improve 11.5%/28.4% to 16.54/5.18 s; and the ratio reaches 2.14x with the exact
+> same 49,199,541 clauses and all decisions/replay green. Bit blast is now the
+> largest stage at 5.88 s. Re-attribute its residual operator/AIG-construction
+> work by family before choosing the next exact GQ3/GQ5 slice; broad GQ4 and SAT
+> remain behind their measured opportunity.
 > The capture and
 > implementation audit has been expanded into the dependency-ordered
 > [Glaurung QF_BV execution plan](docs/research/08-planning/glaurung-qfbv-execution-plan.md):
@@ -120,12 +124,13 @@ normalization/allocation before selecting another bounded GQ5 slice. ADR-0148's
 combined capacity hint regresses total/CNF 2.5%/10.0% and is restored as
 negative evidence. ADR-0149's formula-header-only isolation also regresses CNF
 median/mean 0.83%/0.67% and is restored. Capacity hints are exhausted; next
-test ADR-0150's larger ownership slice: replace the per-fingerprint heap vector
-and double common-case map probe with an inline primary index plus a
-collision-only side table. `register-slice` and `slice-partial` contribute
-99.1% of full clause attempts, so this directly targets the client hotspot. The
-implementation passes all 283 CNF tests, 31 SAT-BV tests, and strict Clippy;
-run the representative acceptance gate next.
+ADR-0150's larger ownership slice replaces the per-fingerprint heap vector and
+double common-case map probe with an inline primary index plus a collision-only
+side table. It cuts representative total/CNF 13.0%/29.0% and full total/CNF
+11.5%/28.4%, reaching 16.54 s / 2.14x Z3 with identical content. CNF is now
+5.18 s versus bit blast's 5.88 s; re-attribute residual operator lowering and
+AIG construction by family before selecting the next exact circuit-producing
+slice.
 Affine word work must still show a downstream circuit/CNF win before outranking
 it.
 Broad GQ4 partial lowering follows its small post-canonical full-tier

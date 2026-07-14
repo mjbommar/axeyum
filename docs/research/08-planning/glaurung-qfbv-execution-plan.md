@@ -32,6 +32,9 @@ ADR-0144's first GQ5 slice then reduces full canonical CNF 18.5% and total time
 ADR-0145's bounded not-AND emitter removes temporary-vector expansion for 2.23
 million recognized gates and further reduces full CNF 5.6%, gate emission
 10.5%, and total 2.7%, reaching 18.69 seconds / 2.40x Z3 with the same clauses.
+ADR-0150 then removes the common per-fingerprint index-vector allocation and
+second map probe: full CNF falls 28.4%, total falls 11.5% to 16.54 seconds, and
+the ratio reaches 2.14x with the same 49,199,541 clauses.
 
 This note expands `PLAN.md` items GQ1--GQ10 into an executable sequence. It does
 not authorize changes to the Glaurung repository; producer-side and explorer
@@ -352,11 +355,12 @@ Each commit must preserve AIG evaluation, CNF assignment replay, model lift, and
 the proof-check route. A smaller CNF is insufficient without an end-to-end real
 corpus win.
 
-Corrected artifact-v27 production attribution after ADR-0145 is 1.81 seconds
-word policy, 5.90 seconds bit blast, 7.23 seconds CNF, and 3.56 seconds SAT.
-Within CNF, gate/root/planning/allocation cost 3.19/1.39/1.21/0.067 seconds.
-CNF is therefore still the largest measured stage; SAT work remains gated while
-the next root/planning slice is profiled.
+Corrected artifact-v27 production attribution after ADR-0150 is 1.80 seconds
+word policy, 5.88 seconds bit blast, 5.18 seconds CNF, and 3.50 seconds SAT.
+Within CNF, gate/root/planning/allocation cost 2.40/1.08/1.20/0.066 seconds.
+Bit blast is now the largest measured stage; re-attribute residual operator
+lowering and AIG request/hash/allocation work by family before selecting the
+next exact GQ3/GQ5 slice. SAT and broad GQ4 remain gated by measured opportunity.
 
 ### G6 — SAT work remains conditional (GQ6)
 
@@ -452,8 +456,10 @@ validity gates.
    fingerprint collisions; preserve exact equality, formula ownership, clause
    order, and replay. Forced-collision tests and the usual representative/full
    gates remain mandatory. The candidate implementation passes all 283 CNF
-   tests, 31 SAT-BV tests, strict Clippy, and forced-collision coverage; run the
-   representative gate next.
+   tests, 31 SAT-BV tests, strict Clippy, and forced-collision coverage. It is
+   accepted after representative total/CNF improve 13.0%/29.0% and full
+   total/CNF improve 11.5%/28.4%, with identical content and replay. Re-attribute
+   the now-largest bit-blast stage before selecting another exact slice.
 3. Keep the next exact word tranche around affine BV add/sub constant-chain
    normalization and cheap duplicate-root handling behind evidence that it
    reduces downstream AIG/CNF for the
