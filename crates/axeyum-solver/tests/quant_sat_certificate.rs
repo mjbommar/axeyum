@@ -199,6 +199,21 @@ fn bv_source_term_skolem_certificate_is_exact_and_source_bound() {
     );
     assert!(certificate.witness.constant.is_zero());
     assert!(check_quantified_skolem_sat(&arena, assertion, &certificate));
+    let report = produce_evidence(
+        &mut arena,
+        &[assertion],
+        &SolverConfig::new().with_timeout(Duration::from_secs(2)),
+    )
+    .expect("produce source-term evidence");
+    assert!(matches!(report.evidence, Evidence::Sat(_)));
+    assert!(report.evidence.is_certified());
+    assert!(
+        report
+            .evidence
+            .check(&arena, &[assertion])
+            .expect("source-term evidence replay")
+    );
+    assert!(report.trusted_steps.is_empty());
 
     // Even a well-sorted term over the right universal is not an admissible
     // recipe unless it is literally reachable from the untouched assertion.

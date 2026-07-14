@@ -406,6 +406,18 @@ host has no `lean` binary, so the in-tree kernel is the completed local gate.
 Corpus-scale resolution sharing for `psyco-107-bv` remains a measured
 performance boundary.
 
+ADR-0141 advances the quantifier row's SAT boundary from an identity-only BV
+Skolem to one exact source-reachable term over the leading universal binders.
+The rational recipe fields remain coefficient one and constant zero; the BV
+branch denotes the carried source term rather than modular affine arithmetic.
+Independent replay checks source reachability, arena identity, width, binder
+scope, and quantifier freedom, then substitutes into the untouched assertion
+and requires equality or non-strict BV order to become reflexive. Constants,
+bitwise/modular operators, and total UF applications over the universals are
+therefore sound, while detached terms, free symbols, strict comparisons,
+nested quantifiers, multiple dependent existentials, and function-valued
+models remain outside the contract.
+
 ## Web And Reference Refresh Gates
 
 Use web search or refreshed local references at design gates, not constantly.

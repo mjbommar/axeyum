@@ -19,8 +19,10 @@ session state.
 > quantified-BV UNSAT slice now reconstructs **18/18** rows in Lean; continue
 > the depth-first spine through broader nested/alternating QSAT and quantified-UF
 > models while running the Glaurung QF_BV performance lane below as the next
-> client-driven measured leaf. Its first action is corpus capture
-> and layer attribution; do not tune a hypothesized bottleneck before that gate.
+> client-driven measured leaf. The producer-side capture and an artifact-v17
+> attribution are now available; the next action is to receive the referenced
+> query bytes and reproduce the result through Axeyum's current artifact-v22
+> gate before tuning the measured lowering/encoding bottleneck.
 > Keep the trust-ledger proof spine running in parallel. Full BFS-vs-DFS
 > traversal analysis + post-keystone ranking:
 > [build-sequencing-bfs-dfs.md](docs/research/08-planning/build-sequencing-bfs-dfs.md);
@@ -32,9 +34,12 @@ This is the first-class client performance lane created from ADR-0136 and the
 reported **1.7--3.2x Axeyum/Z3 gap** on real binary-analysis formulas. The
 target distribution is the lifter's width-mixed, extract/concat-heavy,
 memory-derived path conditions, not a synthetic uniformly typed substitute.
-The externally captured SMT-LIB query pack is the enabling artifact. Until it
-is available, work may improve instrumentation and corpus ingestion, but no
-Glaurung performance hypothesis is promoted on synthetic timing alone.
+The externally captured SMT-LIB query pack is the enabling artifact. Its
+producer manifest and first attribution are available, but the hash-bound query
+payload is not yet present on this host. Until that payload is reproduced
+through the current gate, work may improve instrumentation and corpus
+ingestion, but no Glaurung performance hypothesis is promoted on synthetic
+timing alone.
 
 | ID | Roadmap item | Scope and exit criterion |
 |---|---|---|
@@ -135,7 +140,24 @@ Its candidate/baseline ratio mean is +21.78%, but candidate ratio CV is 20.40%,
 the descriptive standardized delta is +0.97, and the raw Z3 control is +2.65%.
 These sub-millisecond values demonstrate identity/noise reporting and support no
 performance or regression claim.
-GQ1/GQ10 remain open until the actual Glaurung capture is ingested.
+**Producer capture handoff inspected (2026-07-14).** Glaurung commit `7cab030`
+documents a 2026-07-13 Z3-oracle capture from three real Windows-driver
+families and commits a 128-query representative manifest: 64 SAT / 64 UNSAT,
+42 `register-slice`, 48 `slice-partial`, 23 `arithmetic`, 12 `comparison`, 2
+`mixed`, and 1 `trivial`. Its producer-side artifact-v17 run reports 128/128
+decided and manifest/Z3-agreed, zero unsupported/disagreements, a 2.10x
+Axeyum/Z3 aggregate ratio (272 ms / 130 ms), and 84% of Axeyum cold time in
+bit-blast plus CNF encoding (42% each), versus 15% SAT and 1% model lift. This
+attributes the first implementation ranking toward GQ3--GQ5 and away from GQ6.
+It does not close GQ1/GQ10 yet: the committed handoff contains the manifest but
+not its `.smt2` payload, the documented local Axeyum pack is absent on this
+host, and the result predates artifact v22's identity/resource/repetition/proof
+gates. Before publishing the baseline, reconcile the capture README's
+full-corpus count (`15,687`) with its SAT+UNSAT subtotal (`15,710`), deduplicate
+the 17-row/11-unique exclusion list, and make the generated full manifest
+self-contained (the current builder copies only representative query files).
+Then rerun the representative bytes under v22 and retain the full tier in the
+access-controlled scheduled lane.
 
 **Validation checkpoint (2026-07-14).** The all-feature solver library and
 integration suite passes serially under the hard 4 GiB virtual-memory cap, as
@@ -870,8 +892,8 @@ AIG sharing reduces ADR-0129's module to **18,576,938 bytes**, with its release
 gate passing in **4.10--4.21 s** (the measured no-rebuild peak is **419,460
 KiB**); a scoped 64 MiB reconstruction
 worker also makes its full debug file pass 9/9 without relying on the harness
-stack. **Next:** ingest the real
-Glaurung capture and execute GQ1/GQ10 before choosing a cold-path optimization;
+stack. **Next:** ingest the manifest-bound Glaurung query payload and reproduce
+GQ1/GQ10 under artifact v22 before choosing a cold-path optimization;
 in the depth lane, broaden nested/alternating QSAT and quantified-UF models.
 **Exact source-term BV Skolems are now LANDED (ADR-0141):** the existing
 `forall+ exists` certificate may carry one exact source-reachable, same-width,
