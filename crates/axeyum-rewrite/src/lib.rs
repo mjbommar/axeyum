@@ -515,6 +515,15 @@ mod tests {
             let zero = a.bv_const(4, 0).unwrap();
             (a.bv_add(x, zero).unwrap(), x)
         });
+        assert_rule_fires(&mut covered, "bv.add_constant_chain.v1", |a| {
+            let x = a.bv_var("add_chain_x", 4).unwrap();
+            let one = a.bv_const(4, 1).unwrap();
+            let two = a.bv_const(4, 2).unwrap();
+            let three = a.bv_const(4, 3).unwrap();
+            let x_plus_one = a.bv_add(x, one).unwrap();
+            let root = a.bv_add(x_plus_one, two).unwrap();
+            (root, a.bv_add(x, three).unwrap())
+        });
         assert_rule_fires(&mut covered, "bv.sub_zero.v1", |a| {
             let x = a.bv_var("x", 4).unwrap();
             let zero = a.bv_const(4, 0).unwrap();

@@ -174,6 +174,26 @@ fn lifter_shaped_slice_cancellation_matches_oracle() {
 }
 
 #[test]
+fn lifter_shaped_affine_add_chain_matches_oracle() {
+    let mut arena = TermArena::new();
+    let x = arena.bv_var("x", 64).unwrap();
+    let target = arena.bv_const(64, 0x1234_5678_9abc_def0).unwrap();
+    let c1 = arena.bv_const(64, 63).unwrap();
+    let c2 = arena.bv_const(64, u128::from(u64::MAX) - 7).unwrap();
+    let c3 = arena.bv_const(64, 8).unwrap();
+    let add1 = arena.bv_add(x, c1).unwrap();
+    let add2 = arena.bv_add(c2, add1).unwrap();
+    let affine = arena.bv_add(add2, c3).unwrap();
+    let equality = arena.eq(affine, target).unwrap();
+
+    assert_rewrite_oracle_equivalent(&mut arena, &[equality], "lifter affine add-chain sat", true);
+
+    let contradiction = arena.not(equality).unwrap();
+    let both = arena.and(equality, contradiction).unwrap();
+    assert_rewrite_oracle_equivalent(&mut arena, &[both], "lifter affine add-chain unsat", true);
+}
+
+#[test]
 fn micro_corpus_matches_after_rewrite() {
     for (label, text) in [
         (

@@ -39,6 +39,7 @@ const BV_CONST_FOLD: &str = "bv.const_fold.v1";
 const BV_DOUBLE_NOT: &str = "bv.double_not.v1";
 const BV_DOUBLE_NEG: &str = "bv.double_neg.v1";
 const BV_ADD_ZERO: &str = "bv.add_zero.v1";
+const BV_ADD_CONSTANT_CHAIN: &str = "bv.add_constant_chain.v1";
 const BV_SUB_ZERO: &str = "bv.sub_zero.v1";
 const BV_SUB_SELF: &str = "bv.sub_self.v1";
 const BV_MUL_ONE: &str = "bv.mul_one.v1";
@@ -426,6 +427,11 @@ fn default_rules() -> Vec<RewriteRule> {
             "`bvadd` with one operand equal to zero",
         ),
         rule(
+            BV_ADD_CONSTANT_CHAIN,
+            "Bit-vector addition constant-chain fold",
+            "an associative `bvadd` tree with at least two constant leaves; constants are summed modulo the common width",
+        ),
+        rule(
             BV_SUB_ZERO,
             "Bit-vector subtraction identity",
             "`bvsub` with the right operand equal to zero",
@@ -744,12 +750,25 @@ fn rewrite_app(
     // and the rebuilt term actually differs from the input application.
     let mut reordered = false;
     let normalized_args;
-    let args = if is_ac(op) && enabled.contains(COMMUTATIVE_ORDER) {
-        let flat = flatten_ac(arena, op, args);
+    let add_chain_enabled = op == Op::BvAdd && enabled.contains(BV_ADD_CONSTANT_CHAIN);
+    let args = if is_ac(op) && (enabled.contains(COMMUTATIVE_ORDER) || add_chain_enabled) {
+        let mut flat = flatten_ac(arena, op, args);
+        if add_chain_enabled {
+            let (normalized, folded) = fold_bv_add_constant_chain(arena, flat)?;
+            flat = normalized;
+            if folded {
+                let term = if flat.len() == 1 {
+                    flat[0]
+                } else {
+                    rebuild_balanced(arena, op, &flat)?
+                };
+                return Ok(applied(term, BV_ADD_CONSTANT_CHAIN));
+            }
+        }
         // A single operand or already-sorted flat list of the same length is a
         // no-op; only treat as a rewrite when the flattened/sorted operands
         // differ from the raw `args`.
-        if flat.as_slice() == args {
+        if !enabled.contains(COMMUTATIVE_ORDER) || flat.as_slice() == args {
             args
         } else {
             normalized_args = flat;
@@ -943,6 +962,73 @@ fn flatten_ac(arena: &TermArena, op: Op, args: &[TermId]) -> Vec<TermId> {
     }
     operands.sort_unstable();
     operands
+}
+
+/// Combines the constant leaves of one flattened `bvadd` tree modulo its
+/// common width. Returns `false` unless at least two constants are present, so a
+/// single ordinary binary add does not pay for a replacement tree or claim the
+/// chain rule. The already-owned flattened list is retained unchanged in that
+/// common case. Symbolic leaves retain their multiplicity, and a changed result
+/// is sorted for the same deterministic balanced rebuild used by AC ordering.
+fn fold_bv_add_constant_chain(
+    arena: &mut TermArena,
+    mut args: Vec<TermId>,
+) -> Result<(Vec<TermId>, bool), IrError> {
+    let mut constants = 0usize;
+    let mut scalar_sum: Option<(u32, u128)> = None;
+    let mut wide_sum: Option<axeyum_ir::WideUint> = None;
+
+    for &arg in &args {
+        match arena.node(arg) {
+            TermNode::BvConst { width, value } => {
+                constants += 1;
+                let sum = scalar_sum.get_or_insert((*width, 0));
+                debug_assert_eq!(sum.0, *width, "well-typed bvadd has one width");
+                sum.1 = sum.1.wrapping_add(*value) & mask(*width);
+            }
+            TermNode::WideBvConst(value) => {
+                constants += 1;
+                wide_sum = Some(wide_sum.map_or_else(|| value.clone(), |sum| sum.add(value)));
+            }
+            TermNode::BoolConst(_)
+            | TermNode::IntConst(_)
+            | TermNode::RealConst(_)
+            | TermNode::Symbol(_)
+            | TermNode::App { .. } => {}
+        }
+    }
+
+    if constants < 2 {
+        return Ok((args, false));
+    }
+
+    let has_nonconstant = constants < args.len();
+    args.retain(|&arg| {
+        !matches!(
+            arena.node(arg),
+            TermNode::BvConst { .. } | TermNode::WideBvConst(_)
+        )
+    });
+    let constant = if let Some((width, sum)) = scalar_sum {
+        if has_nonconstant && sum == 0 {
+            None
+        } else {
+            Some(arena.bv_const(width, sum)?)
+        }
+    } else if let Some(sum) = wide_sum {
+        if has_nonconstant && sum.is_zero() {
+            None
+        } else {
+            Some(arena.wide_bv_const(sum))
+        }
+    } else {
+        unreachable!("two counted constants have a scalar or wide sum")
+    };
+    if let Some(constant) = constant {
+        args.push(constant);
+    }
+    args.sort_unstable();
+    Ok((args, true))
 }
 
 /// Appends the flattened operands of `term` for AC operator `op` into `out`: if
@@ -2057,13 +2143,99 @@ fn mask(width: u32) -> u128 {
 mod commutative_tests {
     use std::collections::HashMap;
 
-    use axeyum_ir::{Assignment, Op, Sort, TermArena, TermId, TermNode, Value, eval};
+    use axeyum_ir::{Assignment, Op, Sort, TermArena, TermId, TermNode, Value, WideUint, eval};
 
     use super::{
-        BV_CONCAT_EXTRACT, BV_EXTRACT_BITWISE, BV_EXTRACT_ITE, BV_EXTRACT_NESTED, Canonicalizer,
-        RewriteReport, canonicalize, canonicalize_root_bounded, is_extract_distributive_bitwise,
-        mask,
+        BV_ADD_CONSTANT_CHAIN, BV_CONCAT_EXTRACT, BV_EXTRACT_BITWISE, BV_EXTRACT_ITE,
+        BV_EXTRACT_NESTED, Canonicalizer, RewriteReport, canonicalize, canonicalize_root_bounded,
+        is_extract_distributive_bitwise, mask,
     };
+
+    #[test]
+    fn bvadd_constant_chain_combines_and_wraps_constants() {
+        let mut arena = TermArena::new();
+        let x = arena.bv_var("x", 8).unwrap();
+        let one = arena.bv_const(8, 1).unwrap();
+        let two = arena.bv_const(8, 2).unwrap();
+        let three = arena.bv_const(8, 3).unwrap();
+        let inner = arena.bv_add(x, one).unwrap();
+        let root = arena.bv_add(two, inner).unwrap();
+        let expected = arena.bv_add(x, three).unwrap();
+
+        let outcome = canonicalize(&mut arena, root).unwrap();
+        assert_eq!(outcome.term, expected);
+        assert!(
+            outcome
+                .report
+                .applications()
+                .iter()
+                .any(|application| { application.rule_id.as_str() == BV_ADD_CONSTANT_CHAIN })
+        );
+
+        let two_hundred_fifty = arena.bv_const(8, 250).unwrap();
+        let six = arena.bv_const(8, 6).unwrap();
+        let wrapping_inner = arena.bv_add(x, two_hundred_fifty).unwrap();
+        let wrapping = arena.bv_add(wrapping_inner, six).unwrap();
+        assert_eq!(canonicalize(&mut arena, wrapping).unwrap().term, x);
+    }
+
+    #[test]
+    fn bvadd_constant_chain_preserves_symbol_multiplicity() {
+        let mut arena = TermArena::new();
+        let x = arena.bv_var("x", 8).unwrap();
+        let one = arena.bv_const(8, 1).unwrap();
+        let two = arena.bv_const(8, 2).unwrap();
+        let left = arena.bv_add(x, one).unwrap();
+        let right = arena.bv_add(x, two).unwrap();
+        let root = arena.bv_add(left, right).unwrap();
+        let three = arena.bv_const(8, 3).unwrap();
+        let xx = arena.bv_add(x, x).unwrap();
+        let expected_root = arena.bv_add(xx, three).unwrap();
+        let expected = canonicalize(&mut arena, expected_root).unwrap().term;
+
+        assert_eq!(canonicalize(&mut arena, root).unwrap().term, expected);
+    }
+
+    #[test]
+    fn bvadd_constant_chain_supports_wide_modular_wrap() {
+        let mut arena = TermArena::new();
+        let x = arena.bv_var("x", 129).unwrap();
+        let high_bit = WideUint::from_u128(1, 129).shl(128);
+        let high_a = arena.wide_bv_const(high_bit.clone());
+        let high_b = arena.wide_bv_const(high_bit);
+        let inner = arena.bv_add(x, high_a).unwrap();
+        let root = arena.bv_add(inner, high_b).unwrap();
+
+        assert_eq!(canonicalize(&mut arena, root).unwrap().term, x);
+    }
+
+    #[test]
+    fn bvadd_constant_chain_is_exhaustively_equivalent_at_small_widths() {
+        for width in 1..=5 {
+            let limit = 1u128 << width;
+            let mut arena = TermArena::new();
+            let symbol = arena.declare("x", Sort::BitVec(width)).unwrap();
+            let x = arena.var(symbol);
+            for a in 0..limit {
+                for b in 0..limit {
+                    let ca = arena.bv_const(width, a).unwrap();
+                    let cb = arena.bv_const(width, b).unwrap();
+                    let inner = arena.bv_add(x, ca).unwrap();
+                    let original = arena.bv_add(inner, cb).unwrap();
+                    let rewritten = canonicalize(&mut arena, original).unwrap().term;
+                    for xv in 0..limit {
+                        let mut assignment = Assignment::new();
+                        assignment.set(symbol, Value::Bv { width, value: xv });
+                        assert_eq!(
+                            eval(&arena, original, &assignment).unwrap(),
+                            eval(&arena, rewritten, &assignment).unwrap(),
+                            "width={width}, x={xv}, a={a}, b={b}"
+                        );
+                    }
+                }
+            }
+        }
+    }
 
     /// Each pair of binary commutative builders must canonicalize to the same
     /// term regardless of operand order.
