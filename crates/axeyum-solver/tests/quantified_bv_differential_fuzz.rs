@@ -675,7 +675,7 @@ fn sat_candidate_nested_trigger_matrix_matches_z3() {
 }
 
 #[test]
-fn reflexive_skolem_bv_matrix_matches_z3() {
+fn source_term_skolem_bv_matrix_matches_z3() {
     const CASES: usize = 64;
     const WIDTHS: [u32; 8] = [1, 2, 3, 4, 8, 16, 32, 64];
 
@@ -725,7 +725,7 @@ fn reflexive_skolem_bv_matrix_matches_z3() {
         let z3 = oracle.check();
 
         match (mode, &axeyum, z3) {
-            (0 | 1, CheckResult::Sat(model), SatResult::Sat) => {
+            (0 | 1 | 3, CheckResult::Sat(model), SatResult::Sat) => {
                 assert!(
                     axeyum_solver::check_model(&arena, &[assertion], model)
                         .expect("Skolem matrix model replay"),
@@ -733,8 +733,8 @@ fn reflexive_skolem_bv_matrix_matches_z3() {
                 );
                 certified_sat += 1;
             }
-            (0 | 1, _, _) => panic!(
-                "identity Skolem case {case}, width {width} was not jointly Sat: axeyum={axeyum:?}, z3={z3:?}"
+            (0 | 1 | 3, _, _) => panic!(
+                "source-term Skolem case {case}, width {width} was not jointly Sat: axeyum={axeyum:?}, z3={z3:?}"
             ),
             (_, CheckResult::Sat(model), SatResult::Sat) => {
                 assert!(
@@ -753,9 +753,66 @@ fn reflexive_skolem_bv_matrix_matches_z3() {
         }
     }
     eprintln!(
-        "reflexive Skolem differential: certified_sat={certified_sat}, agreed_unsat={agreed_unsat}, safe_unknown={safe_unknown}, oracle_unknown={oracle_unknown}"
+        "source-term Skolem differential: certified_sat={certified_sat}, agreed_unsat={agreed_unsat}, safe_unknown={safe_unknown}, oracle_unknown={oracle_unknown}"
     );
-    assert!(certified_sat >= CASES / 2);
+    assert_eq!(certified_sat, CASES * 3 / 4);
+}
+
+#[test]
+fn source_term_skolem_uf_matrix_matches_z3() {
+    const WIDTHS: [u32; 6] = [1, 2, 8, 32, 129, 257];
+    let config = SolverConfig::new().with_timeout(Duration::from_secs(1));
+
+    for width in WIDTHS {
+        for mode in 0..2 {
+            let sort = Sort::BitVec(width);
+            let mut arena = TermArena::new();
+            let function = arena
+                .declare_fun("source_term_uf_f", &[sort], sort)
+                .unwrap();
+            let a = arena.declare("source_term_uf_a", sort).unwrap();
+            let b = arena.declare("source_term_uf_b", sort).unwrap();
+            let av = arena.var(a);
+            let bv = arena.var(b);
+            let fa = arena.apply(function, &[av]).unwrap();
+            let body = if mode == 0 {
+                arena.eq(bv, fa).unwrap()
+            } else {
+                arena.bv_ule(fa, bv).unwrap()
+            };
+            let exists = arena.exists(b, body).unwrap();
+            let assertion = arena.forall(a, exists).unwrap();
+            let CheckResult::Sat(model) =
+                solve(&mut arena, &[assertion], &config).expect("source-term UF solve")
+            else {
+                panic!("source-term UF theorem width={width} mode={mode} was not Sat")
+            };
+            assert!(
+                axeyum_solver::check_model(&arena, &[assertion], &model)
+                    .expect("source-term UF model replay")
+            );
+
+            let bv_sort = Z3Sort::bitvector(width);
+            let zf = FuncDecl::new("source_term_uf_f", &[&bv_sort], &bv_sort);
+            let za = BV::new_const("source_term_uf_a", width);
+            let zb = BV::new_const("source_term_uf_b", width);
+            let zfa = zf.apply(&[&za as &dyn Ast]).as_bv().expect("UF returns BV");
+            let zbody = if mode == 0 {
+                zb.eq(&zfa)
+            } else {
+                zfa.bvule(&zb)
+            };
+            let zexists = z3::ast::exists_const(&[&zb as &dyn Ast], &[], &zbody);
+            let zforall = z3::ast::forall_const(&[&za as &dyn Ast], &[], &zexists);
+            let oracle = Solver::new();
+            oracle.assert(&zforall);
+            assert_eq!(
+                oracle.check(),
+                SatResult::Sat,
+                "Z3 disagreed on source-term UF theorem width={width} mode={mode}"
+            );
+        }
+    }
 }
 
 #[test]

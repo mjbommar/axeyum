@@ -14,7 +14,8 @@ session state.
 
 > **Current sequencing (2026-07-14).** The P1.4 e-graph → P1.5 CDCL(T)
 > keystone is landed, and the recovery audit has restored P2.6 through the
-> checked ADR-0131 boundary with explicit resource limits. The bounded public
+> checked ADR-0141 source-term Skolem boundary with explicit resource limits.
+> The bounded public
 > quantified-BV UNSAT slice now reconstructs **18/18** rows in Lean; continue
 > the depth-first spine through broader nested/alternating QSAT and quantified-UF
 > models while running the Glaurung QF_BV performance lane below as the next
@@ -872,6 +873,22 @@ worker also makes its full debug file pass 9/9 without relying on the harness
 stack. **Next:** ingest the real
 Glaurung capture and execute GQ1/GQ10 before choosing a cold-path optimization;
 in the depth lane, broaden nested/alternating QSAT and quantified-UF models.
+**Exact source-term BV Skolems are now LANDED (ADR-0141):** the existing
+`forall+ exists` certificate may carry one exact source-reachable, same-width,
+quantifier-free BV term over the leading universals with coefficient one and
+zero rational offset. Search proposes only the opposite source operand of
+equality or non-strict BV order; the independent checker revalidates arena
+membership, source reachability, sort, scope, and the untouched prefix before
+substitution must make the complete body reflexive. This admits modular and
+bitwise expressions plus total UF applications such as `b := f(a)` without
+inventing a function table or assigning modular meaning to the affine fields.
+Focused witness/certificate suites pass 17/17 and 14/14; a 64-case BV matrix
+certifies all 48 intended SAT cases with no Z3 disagreement, and a 12-case
+wide-BV quantified-UF matrix is jointly SAT/replayed through width 257. Strict,
+detached, free-symbol, nested, and non-reflexive shapes still decline. **Next:**
+broaden beyond one direct source-term existential (piecewise/multiple-dependent
+Skolems or a separately checked function model) while GQ1/GQ10 still wait for
+the real capture; SAT-side Lean theorem/model export remains separate.
 **Scaled source-bound BV alternation is now LANDED (ADR-0125):** only the
 ADR-0124 total-binder cap rises 128→1,024; the 4,096-node matrix cap and exact
 source/proof replay contract are unchanged. `bug802` has 318 universal plus 212

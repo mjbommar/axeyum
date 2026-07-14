@@ -167,6 +167,63 @@ fn forall_exists_bv_unsigned_identity_is_sat() {
     );
 }
 
+#[test]
+fn forall_exists_bv_modular_source_term_is_sat() {
+    let mut arena = TermArena::new();
+    let a = arena.declare("a", Sort::BitVec(32)).unwrap();
+    let b = arena.declare("b", Sort::BitVec(32)).unwrap();
+    let av = arena.var(a);
+    let bv = arena.var(b);
+    let seven = arena.bv_const(32, 7).unwrap();
+    let source_term = arena.bv_add(av, seven).unwrap();
+    let body = arena.eq(bv, source_term).unwrap();
+    let exists = arena.exists(b, body).unwrap();
+    let theorem = arena.forall(a, exists).unwrap();
+    assert_sat_replays(
+        &mut arena,
+        theorem,
+        "forall a:BV32. exists b:BV32. b=a+7 must be Sat by the exact source term",
+    );
+}
+
+#[test]
+fn forall_exists_bv_bitwise_source_term_is_sat() {
+    let mut arena = TermArena::new();
+    let a = arena.declare("a", Sort::BitVec(129)).unwrap();
+    let b = arena.declare("b", Sort::BitVec(129)).unwrap();
+    let av = arena.var(a);
+    let bv = arena.var(b);
+    let source_term = arena.bv_not(av).unwrap();
+    let body = arena.bv_ule(source_term, bv).unwrap();
+    let exists = arena.exists(b, body).unwrap();
+    let theorem = arena.forall(a, exists).unwrap();
+    assert_sat_replays(
+        &mut arena,
+        theorem,
+        "forall a:BV129. exists b:BV129. bvule (~a) b must be Sat by b:=~a",
+    );
+}
+
+#[test]
+fn forall_exists_bv_uf_application_source_term_is_sat() {
+    let mut arena = TermArena::new();
+    let sort = Sort::BitVec(32);
+    let function = arena.declare_fun("f", &[sort], sort).unwrap();
+    let a = arena.declare("a", sort).unwrap();
+    let b = arena.declare("b", sort).unwrap();
+    let av = arena.var(a);
+    let bv = arena.var(b);
+    let source_term = arena.apply(function, &[av]).unwrap();
+    let body = arena.eq(bv, source_term).unwrap();
+    let exists = arena.exists(b, body).unwrap();
+    let theorem = arena.forall(a, exists).unwrap();
+    assert_sat_replays(
+        &mut arena,
+        theorem,
+        "forall a:BV32. exists b:BV32. b=f(a) must be Sat by the total UF application",
+    );
+}
+
 // ---------------------------------------------------------------------------
 // SOUNDNESS NEGATIVES — must NOT be (mis-)decided. The witness pass declines;
 // the result must be neither a wrong `Sat` *from a bogus witness* nor an

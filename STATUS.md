@@ -436,6 +436,24 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   quantified Lean lane may continue, but no synthetic-only performance win
   closes a GQ item.
 
+- **2026-07-14 — ADR-0141 lands exact source-term BV Skolem witnesses.** The
+  checked `forall+ exists` SAT route now accepts one source-reachable,
+  quantifier-free, same-width BV term over only the leading universals, encoded
+  as one coefficient-one term with zero rational constant. Search proposes only
+  an operand already opposite the existential in equality, `bvule`, or
+  `bvsle`; the checker independently requires exact assertion reachability,
+  arena identity, sort, binder scope, and untouched-source substitution to a
+  reflexive complete body. Modular/bitwise terms and total UF applications such
+  as `b := f(a)` therefore replay without a function table or a modular
+  interpretation of rational coefficients. Detached, free-symbol, strict,
+  nested, and non-reflexive recipes fail closed. Witness/certificate tests pass
+  17/17 and 14/14. The 64-case Z3 BV matrix certifies all 48 intended SAT cases
+  (eight agreed strict UNSAT, two safe Axeyum unknowns, six Z3 timeouts), and a
+  separate 12-case quantified-UF matrix is jointly SAT/replayed at widths
+  1--257. **Next:** extend the checked SAT boundary beyond one direct source
+  term—piecewise or multiple dependent Skolems, or a separate function-model
+  contract—while the real Glaurung capture remains the mandatory GQ1/GQ10 gate.
+
 - **2026-07-14 — ADR-0124/0125 Lean alternation reconstruction is DONE under
   the 4 GiB release gate.**
   Reconstruction now preserves the exact `forall+ exists+ (antecedent ->
@@ -2086,6 +2104,7 @@ plan is built and committed on the current branch:
 ### Track 1 — Engine & Performance
 | Phase | Title | Status |
 |---|---|---|
+| P2.6a | Exact source-term BV Skolem depth | **DONE for the ADR-0141 slice:** a single direct BV existential may use one exact source-reachable QF term over leading universals; modular/bitwise/total-UF terms replay only after untouched-source reflexivity. General multiple/piecewise Skolems, free parameters, function-valued models, and SAT Lean export remain P2.6 work |
 | P1.6w | Retained warm nested array-valued UF parameters | **DONE (ADR-0094)** — supported array-valued `Apply` terms can key retained array-valued UF parents directly or under supported structural keys. Direct nested keys encode by the inner application's private projection symbol; structural nested keys encode by replay-safe rewritten structural terms, with private projection/owner symbols excluded from public array-key synthesis. The focused warm array-UF parent suite covers direct nested-key SAT replay, asserted nested-key equality UNSAT, and structural keys with nested application bases. Nested/extended arrays, proofs, and low-load aggregate timing remain |
 | P1.6v | Retained warm structural array-valued UF parameters | **DONE (ADR-0093)** — supported store/constant/array-ITE expressions can key retained array-valued UF parents. The warm path retains scalar dependencies inside structural keys, realizes private key owners against the original structural terms before full-value function projection, uses active equality classes or ADR-0091 relation flags for key congruence, filters private owners/flags/witnesses, and replays originals. The focused warm array-UF parent suite covers scalar UF dependencies inside keys, independent structural-key SAT via relation flags, asserted structural-key equality UNSAT, and the former nested array-valued application-key deferral. ADR-0094 subsequently lands supported nested application keys; proofs and low-load aggregate timing remain |
 | P1.6u | Retained warm direct array-valued UF parameters | **DONE (ADR-0092)** — direct finite-array symbols can key retained array-valued UF parents. Array-key congruence uses active retained equality classes or private ADR-0091 relation flags; projection separates non-equal key classes with deterministic full array values before `FuncValue` construction, preserves user-visible select constraints, filters private guarded reads, and replays originals. The focused warm array-UF parent suite covers independent-key SAT, asserted-equality UNSAT, private relation-flag use, and the former structural array-key deferral. ADR-0093 subsequently lands supported structural array-valued parameter expressions, and ADR-0094 lands nested application keys; proofs and low-load aggregate timing remain |

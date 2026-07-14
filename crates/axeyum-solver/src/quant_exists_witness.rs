@@ -68,7 +68,7 @@
 //! (not `unsat`) is *not* a witness; the pass tries the next candidate and then
 //! declines. It never concludes `unsat` and never produces a wrong `sat`.
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use axeyum_ir::{Op, Rational, Sort, SymbolId, TermArena, TermId, TermNode};
 use axeyum_rewrite::replace_subterms;
@@ -144,8 +144,8 @@ fn decide_single(
         return Ok(None);
     }
 
-    // Arithmetic synthesis covers `Int`/`Real`; ADR-0121 additionally permits
-    // only a same-width BV identity proposal through the independent checker.
+    // Arithmetic synthesis covers `Int`/`Real`; ADR-0141 additionally permits
+    // an exact same-width source term over only the leading BV universals.
     let z_sort = arena.symbol(z).1;
     if !matches!(z_sort, Sort::Int | Sort::Real | Sort::BitVec(_)) {
         return Ok(None);
@@ -157,10 +157,9 @@ fn decide_single(
         return Ok(None);
     }
 
-    // Identity witnesses are common nested-QE results and may occur below
-    // non-affine syntax such as `ite`. Try each same-sort universal directly;
-    // the separate checker accepts only when substitution makes the body a
-    // reflexive/affine tautology.
+    // Identity witnesses are common nested-QE results. Try each same-sort
+    // universal directly; the separate checker accepts only when substitution
+    // makes the body a reflexive/affine tautology.
     for &universal in &universals {
         if arena.symbol(universal).1 != z_sort {
             continue;
@@ -180,9 +179,27 @@ fn decide_single(
         }
     }
 
-    // No modular affine interpretation is assigned to the witness recipe. A BV
-    // existential that did not pass the exact identity checker declines here.
+    // ADR-0141 source-term witnesses are extracted only from the opposite side
+    // of an exact equality or non-strict BV order atom that directly names the
+    // existential. Search merely proposes the existing term. The certificate
+    // checker independently enforces original-arena membership, sort, binder
+    // scope, and exact-source substitution before reflexivity can grant SAT.
     if matches!(z_sort, Sort::BitVec(_)) {
+        for candidate in bv_source_term_candidates(arena, body, z, z_sort) {
+            let Some(witness) = affine_skolem_witness(arena, candidate, original_term_count)
+            else {
+                continue;
+            };
+            let cert = QuantifiedSkolemSatCertificate {
+                assertion,
+                universals: universals.clone(),
+                existential: z,
+                witness,
+            };
+            if check_quantified_skolem_sat(arena, assertion, &cert) {
+                return Ok(Some(CheckResult::Sat(certified_model(cert))));
+            }
+        }
         return Ok(None);
     }
 
@@ -224,6 +241,45 @@ fn decide_single(
 
     // No candidate validated: decline (never `unsat`).
     Ok(None)
+}
+
+/// Returns deterministic exact-source BV witness candidates.
+///
+/// Only a direct occurrence of the existential as one operand of equality or
+/// non-strict signed/unsigned order contributes the opposite operand. The
+/// independent certificate checker owns all semantic admission; in particular,
+/// candidates containing the existential, a free symbol, a nested quantifier,
+/// or the wrong sort fail closed there.
+fn bv_source_term_candidates(
+    arena: &mut TermArena,
+    body: TermId,
+    existential: SymbolId,
+    sort: Sort,
+) -> Vec<TermId> {
+    let existential_term = arena.var(existential);
+    let mut candidates = BTreeSet::new();
+    let mut seen = BTreeSet::new();
+    let mut stack = vec![body];
+    while let Some(term) = stack.pop() {
+        if !seen.insert(term) {
+            continue;
+        }
+        let TermNode::App { op, args } = arena.node(term) else {
+            continue;
+        };
+        if matches!(op, Op::Eq | Op::BvSle | Op::BvUle)
+            && let [left, right] = &**args
+        {
+            if *left == existential_term && arena.sort_of(*right) == sort {
+                candidates.insert(*right);
+            }
+            if *right == existential_term && arena.sort_of(*left) == sort {
+                candidates.insert(*left);
+            }
+        }
+        stack.extend(args.iter().copied());
+    }
+    candidates.into_iter().collect()
 }
 
 /// Extracts the quantifier-free body used by witness search.

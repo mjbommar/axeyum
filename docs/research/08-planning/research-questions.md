@@ -311,6 +311,12 @@ Out of scope:
     is derived from an untouched query axiom, and a compact named-gate Alethe
     tail is kernel-checked. Corpus-scale proof sharing remains a performance
     task rather than permission to weaken the source boundary.
+    [ADR-0141](../09-decisions/adr-0141-checked-source-term-bitvector-skolem-witnesses.md)
+    advances the nested-SAT boundary beyond the ADR-0121 identity: one exact
+    source-reachable BV term over the universal binders, including a total UF
+    application, may witness the existential only when independent substitution
+    makes the untouched equality or non-strict order reflexive. Search cannot
+    synthesize a detached recipe or grant SAT.
     Piecewise/general function interpretations, free-BV models beyond these
     affine-LSB/direct-witness/signed-interval/zero-product classes, broader
     free-Boolean residual proofs and general nested/alternating QSAT,

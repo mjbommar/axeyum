@@ -16,9 +16,10 @@ use crate::{Model, SolverError};
 /// A checked Skolem witness for one supported universally closed assertion.
 ///
 /// The IDs refer only to atoms in the caller's original arena. The synthesized
-/// affine expression is owned by the certificate, so it remains replayable when
-/// solving occurred on an arena clone. [`check_quantified_skolem_sat`] re-derives
-/// every structural fact from `assertion`; no field is trusted.
+/// affine/source expression is owned by the certificate, so it remains
+/// replayable when solving occurred on an arena clone.
+/// [`check_quantified_skolem_sat`] re-derives every structural fact from
+/// `assertion`; no field is trusted.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct QuantifiedSkolemSatCertificate {
     /// The exact original quantified assertion covered by this certificate.
@@ -27,19 +28,25 @@ pub struct QuantifiedSkolemSatCertificate {
     pub universals: Vec<SymbolId>,
     /// The single existential binder witnessed by `witness`.
     pub existential: SymbolId,
-    /// An owned affine expression over original-arena atoms that witnesses the
-    /// existential. For bit-vectors, only the exact identity encoding documented
-    /// by [`AffineSkolemWitness`] is supported.
+    /// An owned expression recipe over original-arena terms that witnesses the
+    /// existential. Arithmetic recipes are affine. For bit-vectors, the exact
+    /// source-term encoding documented by [`AffineSkolemWitness`] is supported.
     pub witness: AffineSkolemWitness,
 }
 
-/// Arena-stable affine Skolem witness `sum(coeff_i * atom_i) + constant`.
+/// Arena-stable arithmetic-affine or exact bit-vector source-term witness.
 ///
+/// For `Int`/`Real`, this represents `sum(coeff_i * atom_i) + constant`.
 /// `terms` must be strictly ordered by `TermId`, contain no zero coefficient,
 /// and refer only to quantifier-free, same-sort atoms over the universal binders.
-/// The checker validates those invariants before materializing the expression in
-/// a private arena clone. For a bit-vector existential, the only defined recipe
-/// is one same-width universal variable with coefficient one and constant zero.
+///
+/// For a bit-vector existential, ADR-0141 defines one deliberately different,
+/// exact-source recipe: `terms` contains exactly one original-arena,
+/// quantifier-free, same-width term over only the universal binders, its
+/// coefficient is one, and `constant` is zero. The checker does not interpret
+/// rational arithmetic modulo the BV width. It substitutes that exact term into
+/// the untouched source and grants SAT only when the small checker proves the
+/// resulting equality or non-strict order by reflexivity.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AffineSkolemWitness {
     /// Deterministically ordered `(atom, coefficient)` pairs.
@@ -53,7 +60,7 @@ pub struct AffineSkolemWitness {
 /// The checker clones the arena before substitution, so checking cannot mutate
 /// caller state and original term IDs remain stable. It is intentionally partial:
 /// prenex witnesses use syntactic reflexivity and Boolean combinations of
-/// affine `Int`/`Real` tautologies and exact reflexive BV identity witnesses;
+/// affine `Int`/`Real` tautologies and exact reflexive BV source-term witnesses;
 /// ADR-0098 additionally admits one exact guarded unit-gap theorem with a
 /// positive nested existential.
 #[must_use]
@@ -93,6 +100,12 @@ pub fn check_quantified_skolem_sat(
         if contains_quantifier(arena, *body)
             || *existential != cert.existential
             || universals.contains(existential)
+            || (matches!(arena.symbol(*existential).1, axeyum_ir::Sort::BitVec(_))
+                && cert
+                    .witness
+                    .terms
+                    .iter()
+                    .any(|(term, _)| !contains_term(arena, assertion, *term)))
         {
             return false;
         }
@@ -405,10 +418,12 @@ fn affine_witness_to_term(
             if *coefficient != Rational::integer(1) || !witness.constant.is_zero() {
                 return None;
             }
-            match arena.node(*term) {
-                TermNode::Symbol(symbol) if arena.symbol(*symbol).1 == sort => Some(*term),
-                _ => None,
-            }
+            // `materialize_checked_witness` already proved that this is an
+            // original-arena, quantifier-free, same-width term whose symbols
+            // are all leading universals. Returning the exact interned term
+            // preserves source sharing and assigns no modular meaning to the
+            // rational fields.
+            Some(*term)
         }
         _ => None,
     }
@@ -578,6 +593,23 @@ fn contains_quantifier(arena: &TermArena, root: TermId) -> bool {
             if matches!(op, Op::Forall(_) | Op::Exists(_)) {
                 return true;
             }
+            stack.extend(args.iter().copied());
+        }
+    }
+    false
+}
+
+fn contains_term(arena: &TermArena, root: TermId, needle: TermId) -> bool {
+    let mut seen = BTreeSet::new();
+    let mut stack = vec![root];
+    while let Some(term) = stack.pop() {
+        if term == needle {
+            return true;
+        }
+        if !seen.insert(term) {
+            continue;
+        }
+        if let TermNode::App { args, .. } = arena.node(term) {
             stack.extend(args.iter().copied());
         }
     }

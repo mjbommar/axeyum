@@ -169,6 +169,56 @@ fn tampered_bv_identity_recipes_are_rejected() {
 }
 
 #[test]
+fn bv_source_term_skolem_certificate_is_exact_and_source_bound() {
+    let mut arena = TermArena::new();
+    let a = arena.declare("source_a", Sort::BitVec(32)).unwrap();
+    let b = arena.declare("source_b", Sort::BitVec(32)).unwrap();
+    let av = arena.var(a);
+    let bv = arena.var(b);
+    let seven = arena.bv_const(32, 7).unwrap();
+    let source_term = arena.bv_add(av, seven).unwrap();
+    let body = arena.eq(bv, source_term).unwrap();
+    let exists = arena.exists(b, body).unwrap();
+    let assertion = arena.forall(a, exists).unwrap();
+
+    let CheckResult::Sat(model) = solve(
+        &mut arena,
+        &[assertion],
+        &SolverConfig::new().with_timeout(Duration::from_secs(2)),
+    )
+    .expect("solve source-term theorem") else {
+        panic!("source-term theorem should be Sat")
+    };
+    let certificate = model
+        .quantified_sat_certificate(assertion)
+        .expect("source-term certificate")
+        .clone();
+    assert_eq!(
+        certificate.witness.terms,
+        vec![(source_term, Rational::integer(1))]
+    );
+    assert!(certificate.witness.constant.is_zero());
+    assert!(check_quantified_skolem_sat(&arena, assertion, &certificate));
+
+    // Even a well-sorted term over the right universal is not an admissible
+    // recipe unless it is literally reachable from the untouched assertion.
+    let non_source = arena.bv_not(av).unwrap();
+    let mut detached = certificate.clone();
+    detached.witness.terms = vec![(non_source, Rational::integer(1))];
+    assert!(!check_quantified_skolem_sat(&arena, assertion, &detached));
+
+    // A source-shaped term with an out-of-scope free symbol also fails closed.
+    let free = arena
+        .declare("source_free", Sort::BitVec(32))
+        .expect("declare free symbol");
+    let free_term = arena.var(free);
+    let out_of_scope = arena.bv_add(av, free_term).unwrap();
+    let mut foreign = certificate;
+    foreign.witness.terms = vec![(out_of_scope, Rational::integer(1))];
+    assert!(!check_quantified_skolem_sat(&arena, assertion, &foreign));
+}
+
+#[test]
 fn sygus_infer_nested_successor_skolem_is_sat_and_replays() {
     let mut script = parse_script(SYGUS_INFER_NESTED).expect("parse sygus-infer-nested");
     let assertions = assertions(&script);
