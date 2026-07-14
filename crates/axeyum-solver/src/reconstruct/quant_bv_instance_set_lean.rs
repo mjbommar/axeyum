@@ -3604,9 +3604,11 @@ fn reconstruct_bv_conjunctive_universal_instance_to_lean_module_impl(
     ctx.bridge = Some(gate_defs);
     ctx.gate_memo.clear();
     ctx.defer_open_step_checks = true;
-    ctx.begin_gate_prop_aliases();
+    ctx.global_cps_clause_aliases = true;
+    ctx.begin_global_gate_prop_aliases();
     let proof = reconstruct_bitwise_cps_tail(&mut ctx, &commands, &assumptions)?;
-    let proof = ctx.finish_gate_prop_aliases(proof);
+    ctx.finish_global_gate_prop_aliases()?;
+    ctx.global_cps_clause_aliases = false;
     ctx.defer_open_step_checks = false;
     require_infers_false(&mut ctx, proof)?;
 
