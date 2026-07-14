@@ -84,7 +84,7 @@ just compare-glaurung-qfbv-repeated BASE CAND OUT # controlled cross-commit delt
 
 Each JSON records the corpus + config hash, per-instance outcome, budgets,
 backend stats, PAR-2, explicit `decided`/`decided_percent`, **disagreements**,
-and **model-replay failures**. Artifact version 26 retains version 16's exact
+and **model-replay failures**. Artifact version 27 retains version 16's exact
 floating-point millisecond values for each instance's word-level preprocessing,
 bit-blast, CNF encode/inprocess, SAT, model lift, and cold total, plus corpus
 totals and p50/p95 distributions. Its `client_comparison` block reports the
@@ -163,16 +163,22 @@ demand every operand bit. The analysis time is reported and is already nested
 within `bit_blast`. Coverage invariants must remain true. These counts expose a
 potential GQ4 reduction; they do not claim that omitted bits are already safe or
 that the current lowerer avoids them. In artifact v25/v26 this observational
-pass is still always-on inside `lower_terms`; the real full Glaurung run found
-it consuming 29.57 of 50.75 Axeyum seconds after canonicalization. Treat those
-client ratios as diagnostic until a later artifact makes profiling opt-in (or
-uses the demand result to drive actual lowering) and reruns the production path.
+pass was always-on inside `lower_terms`; the real full Glaurung run found it
+consuming 29.57 of 50.75 Axeyum seconds after canonicalization. Artifact v27
+makes it opt-in through `--profile-bit-demand`. Production artifacts set
+`profile_complete: false`, publish request/available/demand/ratio/coverage
+fields as `null`, and retain actual lowered counts. Separately named demand
+profile recipes set `profile_complete: true`; their timing includes the
+diagnostic and must not be cited as the client ratio.
 Version 26 closes the canonical-only timing boundary: the elapsed default
 rewrite is now charged to `word_preprocess`, the instance cold total, PAR-2,
 and the Axeyum side of `client_comparison`, and is also exposed as
 `instances[].rewrite.elapsed_ms`. Artifact v25 canonical ratios omitted this
 cost and are therefore diagnostic structure/solver-time evidence only, not
 publishable end-to-end client ratios.
+Version 27 enforces ADR-0143's production/diagnostic boundary, records the
+profiling flag in configuration identity, and prevents repetition summaries
+from mixing v26's accidental diagnostic overhead with production timings.
 A comparable run requires zero errors, zero disagreements, zero replay failures,
 and the declared decided-rate threshold; only then is timing a performance
 signal.

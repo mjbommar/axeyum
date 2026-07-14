@@ -31,7 +31,24 @@ use axeyum_ir::{
 /// Phase 4 lowering subset, an assignment is missing during replay, or an
 /// internal lowering invariant is violated.
 pub fn lower_terms(arena: &TermArena, roots: &[TermId]) -> Result<BitLowering, BitLowerError> {
-    LoweringBuilder::new(arena).lower_roots(roots)
+    LoweringBuilder::new(arena).lower_roots(roots, false)
+}
+
+/// Lowers roots into an AIG and also computes the observational structural
+/// bit-demand profile.
+///
+/// Profiling can be substantially more expensive than lowering. It does not
+/// change the generated AIG or lift maps; use [`lower_terms`] for production
+/// solving and this entry point only when demand diagnostics are required.
+///
+/// # Errors
+///
+/// Returns the same errors as [`lower_terms`].
+pub fn lower_terms_profiled(
+    arena: &TermArena,
+    roots: &[TermId],
+) -> Result<BitLowering, BitLowerError> {
+    LoweringBuilder::new(arena).lower_roots(roots, true)
 }
 
 /// Lowers one or more root terms into an AIG while honoring an absolute
@@ -51,7 +68,24 @@ pub fn lower_terms_with_deadline(
     roots: &[TermId],
     deadline: Option<Instant>,
 ) -> Result<BitLowering, BitLowerError> {
-    LoweringBuilder::with_deadline(arena, deadline).lower_roots(roots)
+    LoweringBuilder::with_deadline(arena, deadline).lower_roots(roots, false)
+}
+
+/// Lowers roots under an absolute deadline and also computes the observational
+/// structural bit-demand profile under that same deadline.
+///
+/// Profiling does not change the generated AIG or lift maps. Use
+/// [`lower_terms_with_deadline`] for production solving.
+///
+/// # Errors
+///
+/// Returns the same errors as [`lower_terms_with_deadline`].
+pub fn lower_terms_with_deadline_profiled(
+    arena: &TermArena,
+    roots: &[TermId],
+    deadline: Option<Instant>,
+) -> Result<BitLowering, BitLowerError> {
+    LoweringBuilder::with_deadline(arena, deadline).lower_roots(roots, true)
 }
 
 /// Returns the first operator outside the current bit-lowering subset.
@@ -162,6 +196,12 @@ pub struct SymbolBitInput {
 /// diagnostic upper bound, not a semantic cone-of-influence proof.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct BitDemandStats {
+    /// Whether the structural request/available/demanded fields were computed.
+    ///
+    /// Actual lowered counts are populated in both modes. When this is false,
+    /// all other profile-only counts and [`Self::analysis`] are zero and must
+    /// not be interpreted as a complete zero-demand result.
+    pub profile_complete: bool,
     /// Time spent computing this structural demand profile.
     pub analysis: Duration,
     /// Term-bit requests before unioning repeated demands.
@@ -749,7 +789,11 @@ impl<'a> LoweringBuilder<'a> {
         }
     }
 
-    fn lower_roots(mut self, roots: &[TermId]) -> Result<BitLowering, BitLowerError> {
+    fn lower_roots(
+        mut self,
+        roots: &[TermId],
+        profile_bit_demand: bool,
+    ) -> Result<BitLowering, BitLowerError> {
         let mut lowered_roots = Vec::with_capacity(roots.len());
         for &root in roots {
             self.poll_deadline()?;
@@ -760,7 +804,11 @@ impl<'a> LoweringBuilder<'a> {
                 bits,
             });
         }
-        let mut demand_stats = structural_bit_demand(self.arena, roots, self.deadline)?;
+        let mut demand_stats = if profile_bit_demand {
+            structural_bit_demand(self.arena, roots, self.deadline)?
+        } else {
+            BitDemandStats::default()
+        };
         demand_stats.term_bits_lowered = usize_to_u64_saturating(self.term_bits.len());
         demand_stats.symbol_bits_lowered = usize_to_u64_saturating(self.symbol_inputs.len());
         Ok(BitLowering {
@@ -1910,6 +1958,7 @@ fn structural_bit_demand(
 ) -> Result<BitDemandStats, BitLowerError> {
     let start = Instant::now();
     let mut stats = BitDemandStats::default();
+    stats.profile_complete = true;
     let mut reachable_terms = BTreeSet::new();
     let mut reachable_symbols = BTreeSet::new();
     let mut reachable_stack = roots.to_vec();
@@ -2185,7 +2234,9 @@ mod tests {
     use axeyum_aig::AigLit;
     use axeyum_ir::{Assignment, IrError, Sort, TermArena, Value, eval};
 
-    use super::{BitLowerError, IncrementalLowering, eval_lowered_once, lower_terms};
+    use super::{
+        BitLowerError, IncrementalLowering, eval_lowered_once, lower_terms, lower_terms_profiled,
+    };
 
     fn bv(width: u32, value: u128) -> Value {
         Value::Bv { width, value }
@@ -2570,8 +2621,9 @@ mod tests {
         let expected = arena.bv_const(8, 0x5a).unwrap();
         let root = arena.eq(low_byte, expected).unwrap();
 
-        let lowering = lower_terms(&arena, &[root]).unwrap();
+        let lowering = lower_terms_profiled(&arena, &[root]).unwrap();
         let stats = lowering.demand_stats();
+        assert!(stats.profile_complete);
         assert_eq!(stats.term_bit_requests, 25);
         assert_eq!(stats.term_bits_available, 81);
         assert_eq!(stats.term_bits_demanded, 25);
@@ -2579,6 +2631,29 @@ mod tests {
         assert_eq!(stats.symbol_bit_requests, 8);
         assert_eq!(stats.symbol_bits_available, 64);
         assert_eq!(stats.symbol_bits_demanded, 8);
+        assert_eq!(stats.symbol_bits_lowered, 64);
+    }
+
+    #[test]
+    fn production_lowering_skips_structural_demand_profile() {
+        let mut arena = TermArena::new();
+        let x_symbol = arena.declare("x", Sort::BitVec(64)).unwrap();
+        let x = arena.var(x_symbol);
+        let low_byte = arena.extract(7, 0, x).unwrap();
+        let expected = arena.bv_const(8, 0x5a).unwrap();
+        let root = arena.eq(low_byte, expected).unwrap();
+
+        let lowering = lower_terms(&arena, &[root]).unwrap();
+        let stats = lowering.demand_stats();
+        assert!(!stats.profile_complete);
+        assert_eq!(stats.analysis, Duration::ZERO);
+        assert_eq!(stats.term_bit_requests, 0);
+        assert_eq!(stats.term_bits_available, 0);
+        assert_eq!(stats.term_bits_demanded, 0);
+        assert_eq!(stats.term_bits_lowered, 81);
+        assert_eq!(stats.symbol_bit_requests, 0);
+        assert_eq!(stats.symbol_bits_available, 0);
+        assert_eq!(stats.symbol_bits_demanded, 0);
         assert_eq!(stats.symbol_bits_lowered, 64);
     }
 

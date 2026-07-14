@@ -20,7 +20,7 @@ use web_time::Instant;
 use axeyum_bv::lower_terms;
 use axeyum_bv::{
     BitLowerError, BitLowering, first_unsupported_op, first_unsupported_sort,
-    lower_terms_with_deadline,
+    lower_terms_with_deadline, lower_terms_with_deadline_profiled,
 };
 use axeyum_cnf::{
     BveOptions, CnfAssignment, CnfEncoding, CnfError, CnfFormula, CompactMap,
@@ -116,7 +116,12 @@ impl SatBvBackend {
         };
 
         let bit_blast_start = Instant::now();
-        let lowering = match lower_terms_with_deadline(arena, assertions, deadline) {
+        let lowering_result = if config.profile_bit_demand {
+            lower_terms_with_deadline_profiled(arena, assertions, deadline)
+        } else {
+            lower_terms_with_deadline(arena, assertions, deadline)
+        };
+        let lowering = match lowering_result {
             Ok(lowering) => lowering,
             Err(BitLowerError::DeadlineExceeded) => {
                 let bit_blast = bit_blast_start.elapsed();
@@ -316,6 +321,11 @@ fn record_encoding_stats(stats: &mut SolveStats, lowering: &BitLowering, encodin
     push_count(stats, "aig_and_nodes_created", aig.and_nodes_created);
 
     let demand = lowering.demand_stats();
+    push_count(
+        stats,
+        "bit_demand_profile_complete",
+        u64::from(demand.profile_complete),
+    );
     push_duration_ms(stats, "bit_demand_analysis_ms", demand.analysis);
     push_count(stats, "term_bit_requests", demand.term_bit_requests);
     push_count(stats, "term_bits_available", demand.term_bits_available);

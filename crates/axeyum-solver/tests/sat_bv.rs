@@ -8,7 +8,9 @@ use std::time::Duration;
 
 use axeyum_ir::{Sort, TermArena, TermId, Value, eval};
 use axeyum_query::Query;
-use axeyum_solver::{CheckResult, SatBvBackend, SolverBackend, SolverConfig, UnknownKind};
+use axeyum_solver::{
+    BvLayerStats, CheckResult, SatBvBackend, SolverBackend, SolverConfig, UnknownKind,
+};
 
 fn check(arena: &TermArena, assertions: &[TermId]) -> CheckResult {
     SatBvBackend::new()
@@ -391,6 +393,7 @@ fn stats_report_phase5_layer_counts() {
         "aig_and_absorption_simplifications",
         "aig_and_structural_hash_hits",
         "aig_and_nodes_created",
+        "bit_demand_profile_complete",
         "bit_demand_analysis_ms",
         "term_bit_requests",
         "term_bits_available",
@@ -417,6 +420,31 @@ fn stats_report_phase5_layer_counts() {
             "missing backend stat {key}"
         );
     }
+    let layers = BvLayerStats::from_solve_stats(stats).expect("typed layer stats");
+    assert!(!layers.bit_demand_profile_complete);
+    assert_eq!(layers.bit_demand_analysis, Duration::ZERO);
+    assert!(layers.term_bits_lowered > 0);
+}
+
+#[test]
+fn structural_bit_demand_profile_is_explicitly_opt_in() {
+    let mut arena = TermArena::new();
+    let x = arena.bv_var("x", 64).unwrap();
+    let low = arena.extract(7, 0, x).unwrap();
+    let value = arena.bv_const(8, 0x5a).unwrap();
+    let formula = arena.eq(low, value).unwrap();
+    let config = SolverConfig::default().with_bit_demand_profile(true);
+    let mut backend = SatBvBackend::new();
+
+    let result = backend.check(&arena, &[formula], &config).unwrap();
+    assert!(matches!(result, CheckResult::Sat(_)));
+    let stats = backend.last_stats().expect("stats recorded");
+    let layers = BvLayerStats::from_solve_stats(stats).expect("typed layer stats");
+    assert!(layers.bit_demand_profile_complete);
+    assert_eq!(layers.term_bits_demanded, 25);
+    assert_eq!(layers.term_bits_lowered, 81);
+    assert_eq!(layers.symbol_bits_demanded, 8);
+    assert_eq!(layers.symbol_bits_lowered, 64);
 }
 
 #[cfg(feature = "z3")]

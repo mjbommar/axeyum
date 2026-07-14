@@ -51,7 +51,7 @@ mod run {
     use serde_json::{Value as JsonValue, json};
     use sha2::{Digest, Sha256};
 
-    const ARTIFACT_VERSION: u32 = 26;
+    const ARTIFACT_VERSION: u32 = 27;
     const CORPUS_MANIFEST_VERSION: u64 = 1;
     const CONTENT_HASH_PREFIX: &str = "sha256:";
     const DETERMINISM_PROFILE: &str = "axeyum-bench-fixed-seeds-v1";
@@ -212,6 +212,7 @@ mod run {
         native_cdcl: bool,
         prove_unsat: bool,
         preprocess: bool,
+        profile_bit_demand: bool,
         compare_z3: bool,
         require_in_process_z3: bool,
         require_reproducible_run: bool,
@@ -250,6 +251,7 @@ mod run {
             native_cdcl: false,
             prove_unsat: false,
             preprocess: false,
+            profile_bit_demand: false,
             compare_z3: false,
             require_in_process_z3: false,
             require_reproducible_run: false,
@@ -358,6 +360,7 @@ mod run {
             "--native-cdcl" => parsed.native_cdcl = true,
             "--prove-unsat" => parsed.prove_unsat = true,
             "--preprocess" => parsed.preprocess = true,
+            "--profile-bit-demand" => parsed.profile_bit_demand = true,
             "--compare-z3" => {
                 #[cfg(feature = "z3")]
                 {
@@ -462,6 +465,9 @@ mod run {
         }
         if args.prove_unsat && !matches!(args.backend, BackendKind::SatBv) {
             return Err("`--prove-unsat` requires `--backend sat-bv`".to_owned());
+        }
+        if args.profile_bit_demand && !matches!(args.backend, BackendKind::SatBv) {
+            return Err("`--profile-bit-demand` requires `--backend sat-bv`".to_owned());
         }
         if args.require_deterministic_resources {
             if !matches!(args.backend, BackendKind::SatBv) {
@@ -579,6 +585,7 @@ mod run {
         aig_and_structural_hash_hits: u64,
         aig_and_nodes_created: u64,
         bit_demand_analysis: f64,
+        bit_demand_profile_complete: bool,
         term_bit_requests: u64,
         term_bits_available: u64,
         term_bits_demanded: u64,
@@ -806,6 +813,7 @@ mod run {
                 aig_and_structural_hash_hits: layers.aig_and_structural_hash_hits,
                 aig_and_nodes_created: layers.aig_and_nodes_created,
                 bit_demand_analysis: layers.bit_demand_analysis.as_secs_f64(),
+                bit_demand_profile_complete: layers.bit_demand_profile_complete,
                 term_bit_requests: layers.term_bit_requests,
                 term_bits_available: layers.term_bits_available,
                 term_bits_demanded: layers.term_bits_demanded,
@@ -1861,7 +1869,50 @@ mod run {
         let symbol_available = count(|sample| sample.symbol_bits_available);
         let symbol_demanded = count(|sample| sample.symbol_bits_demanded);
         let symbol_lowered = count(|sample| sample.symbol_bits_lowered);
+        let complete_samples = samples
+            .iter()
+            .filter(|sample| sample.bit_demand_profile_complete)
+            .count();
+        let profile_complete = !samples.is_empty() && complete_samples == samples.len();
+        if !profile_complete {
+            let profile_mode = if complete_samples == 0 {
+                "off"
+            } else {
+                "mixed"
+            };
+            return json!({
+                "profile_complete": false,
+                "profile_mode": profile_mode,
+                "analysis_is_nested_in_bit_blast": true,
+                "analysis_s": samples.iter().map(|sample| sample.bit_demand_analysis).sum::<f64>(),
+                "analysis_distribution": JsonValue::Null,
+                "term": {
+                    "requests": JsonValue::Null,
+                    "available": JsonValue::Null,
+                    "demanded": JsonValue::Null,
+                    "lowered": term_lowered,
+                    "demanded_over_available": JsonValue::Null,
+                    "lowered_over_demanded": JsonValue::Null,
+                    "requests_cover_demanded": JsonValue::Null,
+                    "demanded_within_available": JsonValue::Null,
+                    "lowering_covers_demanded": JsonValue::Null,
+                },
+                "symbol": {
+                    "requests": JsonValue::Null,
+                    "available": JsonValue::Null,
+                    "demanded": JsonValue::Null,
+                    "lowered": symbol_lowered,
+                    "demanded_over_available": JsonValue::Null,
+                    "lowered_over_demanded": JsonValue::Null,
+                    "requests_cover_demanded": JsonValue::Null,
+                    "demanded_within_available": JsonValue::Null,
+                    "lowering_covers_demanded": JsonValue::Null,
+                },
+            });
+        }
         json!({
+            "profile_complete": true,
+            "profile_mode": "structural",
             "analysis_is_nested_in_bit_blast": true,
             "analysis_s": samples.iter().map(|sample| sample.bit_demand_analysis).sum::<f64>(),
             "analysis_distribution": timing_distribution_record(
@@ -1903,7 +1954,39 @@ mod run {
     }
 
     fn instance_bit_demand_record(sample: &LayerSample) -> JsonValue {
+        if !sample.bit_demand_profile_complete {
+            return json!({
+                "profile_complete": false,
+                "profile_mode": "off",
+                "analysis_is_nested_in_bit_blast": true,
+                "analysis_ms": sample.bit_demand_analysis * 1000.0,
+                "term": {
+                    "requests": JsonValue::Null,
+                    "available": JsonValue::Null,
+                    "demanded": JsonValue::Null,
+                    "lowered": sample.term_bits_lowered,
+                    "demanded_over_available": JsonValue::Null,
+                    "lowered_over_demanded": JsonValue::Null,
+                    "requests_cover_demanded": JsonValue::Null,
+                    "demanded_within_available": JsonValue::Null,
+                    "lowering_covers_demanded": JsonValue::Null,
+                },
+                "symbol": {
+                    "requests": JsonValue::Null,
+                    "available": JsonValue::Null,
+                    "demanded": JsonValue::Null,
+                    "lowered": sample.symbol_bits_lowered,
+                    "demanded_over_available": JsonValue::Null,
+                    "lowered_over_demanded": JsonValue::Null,
+                    "requests_cover_demanded": JsonValue::Null,
+                    "demanded_within_available": JsonValue::Null,
+                    "lowering_covers_demanded": JsonValue::Null,
+                },
+            });
+        }
         json!({
+            "profile_complete": true,
+            "profile_mode": "structural",
             "analysis_is_nested_in_bit_blast": true,
             "analysis_ms": sample.bit_demand_analysis * 1000.0,
             "term": {
@@ -2651,6 +2734,7 @@ mod run {
             cnf_vivify: args.cnf_vivify,
             native_cdcl: args.native_cdcl,
             prove_unsat: args.prove_unsat,
+            profile_bit_demand: args.profile_bit_demand,
             ..SolverConfig::default()
         }
     }
@@ -4208,6 +4292,7 @@ mod run {
             "native_cdcl": args.native_cdcl,
             "prove_unsat": args.prove_unsat,
             "preprocess": args.preprocess,
+            "profile_bit_demand": args.profile_bit_demand,
             "limit": optional_limit(args.limit),
             "backend": identity.backend_name,
             "backend_kind": args.backend.as_str(),
@@ -4893,6 +4978,7 @@ mod run {
         update_hash(&mut hash, &[u8::from(args.native_cdcl)]);
         update_hash(&mut hash, &[u8::from(args.prove_unsat)]);
         update_hash(&mut hash, &[u8::from(args.preprocess)]);
+        update_hash(&mut hash, &[u8::from(args.profile_bit_demand)]);
         update_hash(&mut hash, &[u8::from(args.compare_z3)]);
         update_hash(&mut hash, &[u8::from(args.require_in_process_z3)]);
         update_hash(&mut hash, &[u8::from(args.require_reproducible_run)]);
@@ -5917,6 +6003,7 @@ mod run {
         fn bit_demand_attribution_exposes_current_over_lowering() {
             let samples = [LayerSample {
                 bit_demand_analysis: 0.0005,
+                bit_demand_profile_complete: true,
                 term_bit_requests: 25,
                 term_bits_available: 81,
                 term_bits_demanded: 25,
@@ -5937,6 +6024,26 @@ mod run {
             assert_eq!(record["term"]["lowering_covers_demanded"], json!(true));
             assert_eq!(record["symbol"]["demanded_over_available"], json!(0.125));
             assert_eq!(record["symbol"]["lowered_over_demanded"], json!(8.0));
+        }
+
+        #[test]
+        fn unprofiled_bit_demand_is_explicitly_unavailable() {
+            let sample = LayerSample {
+                term_bits_lowered: 81,
+                symbol_bits_lowered: 64,
+                ..LayerSample::default()
+            };
+            let corpus = bit_demand_attribution_record(&[sample]);
+            assert_eq!(corpus["profile_complete"], json!(false));
+            assert_eq!(corpus["profile_mode"], json!("off"));
+            assert!(corpus["term"]["demanded"].is_null());
+            assert_eq!(corpus["term"]["lowered"], json!(81));
+            assert!(corpus["term"]["lowering_covers_demanded"].is_null());
+
+            let instance = instance_bit_demand_record(&sample);
+            assert_eq!(instance["profile_complete"], json!(false));
+            assert!(instance["symbol"]["available"].is_null());
+            assert_eq!(instance["symbol"]["lowered"], json!(64));
         }
 
         #[test]

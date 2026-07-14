@@ -180,6 +180,13 @@ pub struct SolverConfig {
     /// bit-blasting) and applies the identity/constant-fold rules. Off by default
     /// so recorded baselines reflect the un-preprocessed path.
     pub preprocess: bool,
+    /// Computes the observational structural bit-demand profile during
+    /// SAT-BV lowering.
+    ///
+    /// This can cost more than the production lowering itself on real lifter
+    /// formulas. It never changes the circuit or verdict and is off by default;
+    /// enable it only for relevant-bit diagnostics (ADR-0143).
+    pub profile_bit_demand: bool,
     /// When set, the bit-blasting BV backend may fall back to the CDCL(XOR)
     /// search core ([`axeyum_cnf::solve_with_xor_cdcl`]) after the batsat solve
     /// returns `unknown` (timeout/budget) on an XOR-structured formula
@@ -246,6 +253,7 @@ impl Default for SolverConfig {
             cnf_inprocessing: false,
             cnf_vivify: false,
             preprocess: true,
+            profile_bit_demand: false,
             xor_cdcl_fallback: false,
             lazy_bv: false,
             lazy_bv_abstract_ite: false,
@@ -333,6 +341,14 @@ impl SolverConfig {
     #[must_use]
     pub fn with_preprocess(mut self, preprocess: bool) -> Self {
         self.preprocess = preprocess;
+        self
+    }
+
+    /// Enables observational structural bit-demand profiling in the SAT-BV
+    /// lowerer. See [`SolverConfig::profile_bit_demand`].
+    #[must_use]
+    pub fn with_bit_demand_profile(mut self, profile: bool) -> Self {
+        self.profile_bit_demand = profile;
         self
     }
 
