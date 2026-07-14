@@ -1,0 +1,77 @@
+import subprocess
+import unittest
+from pathlib import Path
+
+
+ROOT = Path(__file__).parents[2]
+
+
+def dry_run(recipe: str, *args: str) -> str:
+    completed = subprocess.run(
+        ["just", "--dry-run", recipe, *args],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return completed.stdout + completed.stderr
+
+
+class GlaurungBenchmarkRecipeTests(unittest.TestCase):
+    def assert_policy(self, recipe: str, expected: str) -> None:
+        output = dry_run(recipe, "corpus", "manifest", "representative")
+        self.assertIn("--backend sat-bv", output)
+        self.assertIn("--require-in-process-z3", output)
+        self.assertIn("--require-reproducible-run", output)
+        self.assertIn("--require-deterministic-resources", output)
+        self.assertIn("--min-decided-percent 100", output)
+        if expected == "raw":
+            self.assertIn("--rewrite off", output)
+            self.assertNotIn("--preprocess", output)
+        elif expected == "canonical":
+            self.assertIn("--rewrite default", output)
+            self.assertNotIn("--preprocess", output)
+        elif expected == "configured":
+            self.assertIn("--rewrite off --preprocess", output)
+        else:
+            self.fail(f"unknown expected policy {expected}")
+
+    def test_single_run_policies_are_distinct(self) -> None:
+        self.assert_policy("bench-glaurung-qfbv-raw", "raw")
+        self.assert_policy("bench-glaurung-qfbv-canonical", "canonical")
+        self.assert_policy("bench-glaurung-qfbv-configured", "configured")
+
+    def test_proof_companions_preserve_the_word_policy(self) -> None:
+        self.assert_policy("bench-glaurung-qfbv-raw-proof-check", "raw")
+        self.assert_policy("bench-glaurung-qfbv-canonical-proof-check", "canonical")
+        self.assert_policy("bench-glaurung-qfbv-configured-proof-check", "configured")
+        for recipe in [
+            "bench-glaurung-qfbv-raw-proof-check",
+            "bench-glaurung-qfbv-canonical-proof-check",
+            "bench-glaurung-qfbv-configured-proof-check",
+        ]:
+            self.assertIn("--prove-unsat", dry_run(recipe, "corpus", "manifest"))
+
+    def test_repeated_wrappers_select_separate_policy_series(self) -> None:
+        expected = {
+            "bench-glaurung-qfbv-raw-repeated": "raw",
+            "bench-glaurung-qfbv-canonical-repeated": "canonical",
+            "bench-glaurung-qfbv-configured-repeated": "configured",
+        }
+        for recipe, policy in expected.items():
+            output = dry_run(recipe, "corpus", "manifest", "representative")
+            self.assertIn("_bench-glaurung-qfbv-repeated", output)
+            self.assertTrue(output.rstrip().endswith(policy), output)
+            self.assertIn(f"glaurung-qfbv-{policy}-repeated", output)
+
+    def test_unsuffixed_compatibility_entries_follow_raw(self) -> None:
+        single = dry_run("bench-glaurung-qfbv", "corpus", "manifest")
+        repeated = dry_run("bench-glaurung-qfbv-repeated", "corpus", "manifest")
+        proof = dry_run("bench-glaurung-qfbv-proof-check", "corpus", "manifest")
+        self.assertIn("bench-glaurung-qfbv-raw", single)
+        self.assertIn("bench-glaurung-qfbv-raw-repeated", repeated)
+        self.assertIn("bench-glaurung-qfbv-raw-proof-check", proof)
+
+
+if __name__ == "__main__":
+    unittest.main()

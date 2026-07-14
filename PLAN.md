@@ -179,12 +179,14 @@ directory; the builder currently collapses duplicate hash rows without checking
 for conflicting verdicts. The handoff should therefore emit Axeyum's strict
 hash-free `capture-index-v1.json`, reject verdict conflicts, and let Axeyum
 compute manifest hashes from a self-contained root.
-The performance command also exposes a mode mismatch: the producer's v17 result
+The performance command also exposed a mode mismatch: the producer's v17 result
 and Glaurung's current one-shot backend are raw (rewrite off, preprocessing off),
-but Axeyum's current `bench-glaurung-qfbv` recipe forces `--preprocess`.
-Artifact-v22 reproduction must split raw, canonical-only, and configured
-policies and use raw as the current-integration baseline before changing any
-default.
+while the former Axeyum recipe forced `--preprocess`. The artifact-v22 recipes
+now split raw, canonical-only, and configured policies for single, repeated,
+and proof-companion runs; the unsuffixed compatibility entries select raw as the
+current-integration baseline. Dry-run regression tests pin every recipe's flags
+and prevent the three artifact series from silently converging. The query bytes
+are still required before any policy receives a Glaurung performance result.
 
 **Validation checkpoint (2026-07-14).** The all-feature solver library and
 integration suite passes serially under the hard 4 GiB virtual-memory cap, as

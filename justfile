@@ -55,7 +55,7 @@ qfbv-profile:
     ./scripts/check-qfbv-profile.sh
 
 benchmark-repetition-tests:
-    python3 -m unittest scripts/tests/test_summarize_glaurung_repetitions.py scripts/tests/test_compare_glaurung_repetitions.py
+    python3 -m unittest scripts/tests/test_glaurung_benchmark_recipes.py scripts/tests/test_summarize_glaurung_repetitions.py scripts/tests/test_compare_glaurung_repetitions.py
 
 foundational-resources:
     ./scripts/check-foundational-resources.sh
@@ -106,7 +106,7 @@ generate-glaurung-manifest corpus_dir capture_index out:
     mkdir -p "$(dirname '{{ out }}')"
     cargo run --release -p axeyum-bench -- "{{ corpus_dir }}" --generate-corpus-manifest "{{ capture_index }}" --out "{{ out }}"
 
-# Primary client-tier QF_BV gate. `corpus_dir` is an externally captured,
+# Primary client-tier QF_BV gates. `corpus_dir` is an externally captured,
 # redistributable Glaurung SMT-LIB query directory and its v1 manifest; the
 # repository deliberately does not pretend that a synthetic substitute is the
 # client workload. The manifest fixes exact membership, per-file content hashes,
@@ -117,27 +117,61 @@ generate-glaurung-manifest corpus_dir capture_index out:
 # p50/p95, cold-stage p50/p95, and the Axeyum/Z3 ratio. One worker avoids
 # cross-query contention corrupting the layer attribution. The reproducible-run
 # gate requires a clean source revision plus complete tool/hardware identity.
-bench-glaurung-qfbv corpus_dir manifest tier="full" out="bench-results/glaurung-qfbv-sat-bv-vs-z3.json":
+#
+# Raw is the current Glaurung one-shot integration and the primary control.
+# Canonical enables only the exact default rewriter. Configured enables the
+# broader warm-oriented preprocessing pipeline. These are distinct experiment
+# policies and must never share an artifact series.
+bench-glaurung-qfbv corpus_dir manifest tier="full" out="bench-results/glaurung-qfbv-raw-sat-bv-vs-z3.json":
+    just bench-glaurung-qfbv-raw "{{ corpus_dir }}" "{{ manifest }}" "{{ tier }}" "{{ out }}"
+
+bench-glaurung-qfbv-raw corpus_dir manifest tier="full" out="bench-results/glaurung-qfbv-raw-sat-bv-vs-z3.json":
     mkdir -p "$(dirname '{{ out }}')"
-    cargo run --release -p axeyum-bench --features z3 -- "{{ corpus_dir }}" --corpus-manifest "{{ manifest }}" --corpus-tier "{{ tier }}" --backend sat-bv --preprocess --compare-z3 --require-in-process-z3 --require-reproducible-run --require-deterministic-resources --timeout-ms 10000 --resource-limit 2000000 --node-budget 300000 --cnf-var-budget 3000000 --cnf-clause-budget 8000000 --jobs 1 --min-decided-percent 100 --logic QF_BV --out "{{ out }}"
+    cargo run --release -p axeyum-bench --features z3 -- "{{ corpus_dir }}" --corpus-manifest "{{ manifest }}" --corpus-tier "{{ tier }}" --backend sat-bv --rewrite off --compare-z3 --require-in-process-z3 --require-reproducible-run --require-deterministic-resources --timeout-ms 10000 --resource-limit 2000000 --node-budget 300000 --cnf-var-budget 3000000 --cnf-clause-budget 8000000 --jobs 1 --min-decided-percent 100 --logic QF_BV --out "{{ out }}"
+
+bench-glaurung-qfbv-canonical corpus_dir manifest tier="full" out="bench-results/glaurung-qfbv-canonical-sat-bv-vs-z3.json":
+    mkdir -p "$(dirname '{{ out }}')"
+    cargo run --release -p axeyum-bench --features z3 -- "{{ corpus_dir }}" --corpus-manifest "{{ manifest }}" --corpus-tier "{{ tier }}" --backend sat-bv --rewrite default --compare-z3 --require-in-process-z3 --require-reproducible-run --require-deterministic-resources --timeout-ms 10000 --resource-limit 2000000 --node-budget 300000 --cnf-var-budget 3000000 --cnf-clause-budget 8000000 --jobs 1 --min-decided-percent 100 --logic QF_BV --out "{{ out }}"
+
+bench-glaurung-qfbv-configured corpus_dir manifest tier="full" out="bench-results/glaurung-qfbv-configured-sat-bv-vs-z3.json":
+    mkdir -p "$(dirname '{{ out }}')"
+    cargo run --release -p axeyum-bench --features z3 -- "{{ corpus_dir }}" --corpus-manifest "{{ manifest }}" --corpus-tier "{{ tier }}" --backend sat-bv --rewrite off --preprocess --compare-z3 --require-in-process-z3 --require-reproducible-run --require-deterministic-resources --timeout-ms 10000 --resource-limit 2000000 --node-budget 300000 --cnf-var-budget 3000000 --cnf-clause-budget 8000000 --jobs 1 --min-decided-percent 100 --logic QF_BV --out "{{ out }}"
 
 # Publishable short-run evidence requires process-level repetitions. Each trial
 # gets a fresh process and independent artifact; the summarizer fails closed on
 # config/environment/source drift or any decided/error/oracle/manifest/replay
 # gate, then reports whole-corpus stage and Axeyum/Z3-ratio variance.
-bench-glaurung-qfbv-repeated corpus_dir manifest tier="full" out_dir="bench-results/glaurung-qfbv-repeated" repetitions="5":
+bench-glaurung-qfbv-repeated corpus_dir manifest tier="full" out_dir="bench-results/glaurung-qfbv-raw-repeated" repetitions="5":
+    just bench-glaurung-qfbv-raw-repeated "{{ corpus_dir }}" "{{ manifest }}" "{{ tier }}" "{{ out_dir }}" "{{ repetitions }}"
+
+bench-glaurung-qfbv-raw-repeated corpus_dir manifest tier="full" out_dir="bench-results/glaurung-qfbv-raw-repeated" repetitions="5":
+    just _bench-glaurung-qfbv-repeated "{{ corpus_dir }}" "{{ manifest }}" "{{ tier }}" "{{ out_dir }}" "{{ repetitions }}" raw
+
+bench-glaurung-qfbv-canonical-repeated corpus_dir manifest tier="full" out_dir="bench-results/glaurung-qfbv-canonical-repeated" repetitions="5":
+    just _bench-glaurung-qfbv-repeated "{{ corpus_dir }}" "{{ manifest }}" "{{ tier }}" "{{ out_dir }}" "{{ repetitions }}" canonical
+
+bench-glaurung-qfbv-configured-repeated corpus_dir manifest tier="full" out_dir="bench-results/glaurung-qfbv-configured-repeated" repetitions="5":
+    just _bench-glaurung-qfbv-repeated "{{ corpus_dir }}" "{{ manifest }}" "{{ tier }}" "{{ out_dir }}" "{{ repetitions }}" configured
+
+_bench-glaurung-qfbv-repeated corpus_dir manifest tier out_dir repetitions policy:
     #!/usr/bin/env bash
     set -euo pipefail
     if [[ ! "{{ repetitions }}" =~ ^[0-9]+$ ]] || (( {{ repetitions }} < 2 )); then
         echo "repetitions must be an integer >= 2" >&2
         exit 2
     fi
+    case "{{ policy }}" in
+        raw) policy_args=(--rewrite off) ;;
+        canonical) policy_args=(--rewrite default) ;;
+        configured) policy_args=(--rewrite off --preprocess) ;;
+        *) echo "unknown Glaurung benchmark policy: {{ policy }}" >&2; exit 2 ;;
+    esac
     mkdir -p "{{ out_dir }}"
     rm -f "{{ out_dir }}/summary.json"
     artifacts=()
     for (( repetition = 1; repetition <= {{ repetitions }}; repetition++ )); do
         artifact="{{ out_dir }}/run-$(printf '%03d' "$repetition").json"
-        cargo run --release -p axeyum-bench --features z3 -- "{{ corpus_dir }}" --corpus-manifest "{{ manifest }}" --corpus-tier "{{ tier }}" --backend sat-bv --preprocess --compare-z3 --require-in-process-z3 --require-reproducible-run --require-deterministic-resources --timeout-ms 10000 --resource-limit 2000000 --node-budget 300000 --cnf-var-budget 3000000 --cnf-clause-budget 8000000 --jobs 1 --min-decided-percent 100 --logic QF_BV --out "$artifact"
+        cargo run --release -p axeyum-bench --features z3 -- "{{ corpus_dir }}" --corpus-manifest "{{ manifest }}" --corpus-tier "{{ tier }}" --backend sat-bv "${policy_args[@]}" --compare-z3 --require-in-process-z3 --require-reproducible-run --require-deterministic-resources --timeout-ms 10000 --resource-limit 2000000 --node-budget 300000 --cnf-var-budget 3000000 --cnf-clause-budget 8000000 --jobs 1 --min-decided-percent 100 --logic QF_BV --out "$artifact"
         artifacts+=("$artifact")
     done
     python3 scripts/summarize-glaurung-repetitions.py "${artifacts[@]}" --out "{{ out_dir }}/summary.json"
@@ -153,10 +187,22 @@ compare-glaurung-qfbv-repeated baseline candidate out:
 # High-assurance companion to the performance run. This switches to the slower
 # proof-producing native core and fails closed unless every UNSAT has an inline
 # checked DRAT proof. Its timings are proof-validation costs, not the batsat/Z3
-# client ratio, so keep its artifact separate from `bench-glaurung-qfbv`.
-bench-glaurung-qfbv-proof-check corpus_dir manifest tier="representative" out="bench-results/glaurung-qfbv-proof-check.json":
+# client ratio, so keep its artifact separate from the performance artifacts.
+# The unsuffixed compatibility entry point follows the raw control.
+bench-glaurung-qfbv-proof-check corpus_dir manifest tier="representative" out="bench-results/glaurung-qfbv-raw-proof-check.json":
+    just bench-glaurung-qfbv-raw-proof-check "{{ corpus_dir }}" "{{ manifest }}" "{{ tier }}" "{{ out }}"
+
+bench-glaurung-qfbv-raw-proof-check corpus_dir manifest tier="representative" out="bench-results/glaurung-qfbv-raw-proof-check.json":
     mkdir -p "$(dirname '{{ out }}')"
-    cargo run --release -p axeyum-bench --features z3 -- "{{ corpus_dir }}" --corpus-manifest "{{ manifest }}" --corpus-tier "{{ tier }}" --backend sat-bv --preprocess --prove-unsat --compare-z3 --require-in-process-z3 --require-reproducible-run --require-deterministic-resources --timeout-ms 30000 --resource-limit 2000000 --node-budget 300000 --cnf-var-budget 3000000 --cnf-clause-budget 8000000 --jobs 1 --min-decided-percent 100 --logic QF_BV --out "{{ out }}"
+    cargo run --release -p axeyum-bench --features z3 -- "{{ corpus_dir }}" --corpus-manifest "{{ manifest }}" --corpus-tier "{{ tier }}" --backend sat-bv --rewrite off --prove-unsat --compare-z3 --require-in-process-z3 --require-reproducible-run --require-deterministic-resources --timeout-ms 30000 --resource-limit 2000000 --node-budget 300000 --cnf-var-budget 3000000 --cnf-clause-budget 8000000 --jobs 1 --min-decided-percent 100 --logic QF_BV --out "{{ out }}"
+
+bench-glaurung-qfbv-canonical-proof-check corpus_dir manifest tier="representative" out="bench-results/glaurung-qfbv-canonical-proof-check.json":
+    mkdir -p "$(dirname '{{ out }}')"
+    cargo run --release -p axeyum-bench --features z3 -- "{{ corpus_dir }}" --corpus-manifest "{{ manifest }}" --corpus-tier "{{ tier }}" --backend sat-bv --rewrite default --prove-unsat --compare-z3 --require-in-process-z3 --require-reproducible-run --require-deterministic-resources --timeout-ms 30000 --resource-limit 2000000 --node-budget 300000 --cnf-var-budget 3000000 --cnf-clause-budget 8000000 --jobs 1 --min-decided-percent 100 --logic QF_BV --out "{{ out }}"
+
+bench-glaurung-qfbv-configured-proof-check corpus_dir manifest tier="representative" out="bench-results/glaurung-qfbv-configured-proof-check.json":
+    mkdir -p "$(dirname '{{ out }}')"
+    cargo run --release -p axeyum-bench --features z3 -- "{{ corpus_dir }}" --corpus-manifest "{{ manifest }}" --corpus-tier "{{ tier }}" --backend sat-bv --rewrite off --preprocess --prove-unsat --compare-z3 --require-in-process-z3 --require-reproducible-run --require-deterministic-resources --timeout-ms 30000 --resource-limit 2000000 --node-budget 300000 --cnf-var-budget 3000000 --cnf-clause-budget 8000000 --jobs 1 --min-decided-percent 100 --logic QF_BV --out "{{ out }}"
 
 # GQ1/GQ10 ingestion-contract smoke only; never cite this micro tier as a client
 # performance result.

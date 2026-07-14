@@ -86,6 +86,11 @@ retains the original term for model replay. Use `assert_preprocessed` to request
 that behavior explicitly, or `assert` when measuring the raw, un-preprocessed
 path. Narrow extracts are pushed through wide bitwise operations and
 bit-vector `ite`s, avoiding AIG construction for discarded register bits.
+Configured preprocessing is intended to amortize across a reused warm solver;
+it is not automatically a cold-path win. On Glaurung's current fresh-solver-per-
+query integration it measured about 1.3--2x slower than raw `assert`. Use raw
+`assert` for a one-shot control, then measure both policies on the actual
+workload before changing the entry point.
 
 Use `with_config` to set a timeout. Budget exhaustion is
 `CheckResult::Unknown`, never `Unsat` and never an operational error.

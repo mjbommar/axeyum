@@ -70,7 +70,7 @@ just bench-public-qfbv-sat-bv-replay-refine      # replay-checked query refineme
 just bench-glaurung-manifest-smoke               # client manifest/timing plumbing
 just bench-glaurung-manifest-proof-smoke         # fail-closed DRAT-check plumbing
 just generate-glaurung-manifest CORPUS INDEX OUT # bind capture facts to exact bytes
-just bench-glaurung-qfbv-repeated CORPUS MANIFEST # process-level variance (5 trials)
+just bench-glaurung-qfbv-repeated CORPUS MANIFEST # raw process-level variance (5 trials)
 just compare-glaurung-qfbv-repeated BASE CAND OUT # controlled cross-commit delta
 ```
 
@@ -157,8 +157,24 @@ variance is not client performance evidence.
 
 ## Binary-analysis client gate
 
-The primary client target accepts an external Glaurung query capture (the
-client corpus is not redistributed by this repository):
+The client target accepts an external Glaurung query capture (the client corpus
+is not redistributed by this repository). Three policies are intentionally
+separate:
+
+| Policy | Recipe | Harness configuration | Use |
+|---|---|---|---|
+| `raw` | `bench-glaurung-qfbv-raw` | `--rewrite off`, preprocessing off | Current Glaurung one-shot integration and primary cold control |
+| `canonical` | `bench-glaurung-qfbv-canonical` | `--rewrite default`, preprocessing off | Cheap exact word-level rewrite candidate |
+| `configured` | `bench-glaurung-qfbv-configured` | `--rewrite off --preprocess` | Broader warm-oriented preprocessing diagnostic |
+
+The unsuffixed `bench-glaurung-qfbv` compatibility recipe is the **raw**
+control. This matters because the original producer profile and Glaurung's
+current backend use raw assertions, while configured preprocessing has measured
+as a cold loss in that integration. Never compare artifacts from different
+policies as consecutive revisions of one experiment; their configuration hashes
+also differ.
+
+Run the current-integration control with:
 
 ```sh
 just bench-glaurung-qfbv \
@@ -169,27 +185,40 @@ just bench-glaurung-qfbv \
 
 This first validates every file and SHA-256 declared by the manifest, selects
 the named tier in manifest order, and gates each result against the capture's
-expected verdict. It then runs one query at a time, enables word-level
-preprocessing, compares every result with in-process Z3 on the **original parsed
-assertions**, requires a 100% decided rate, requires in-process Z3 coverage for
-every selected file, and emits a versioned artifact. Axeyum's comparison time
-includes its selected word preprocessing; Z3 never receives Axeyum's reduced
-assertion set. Synthetic QF_BV corpora remain useful lower-level diagnostics,
-but do not replace the extract/concat/mixed-width/memory-derived client shape.
-The shape block can count `select`/`store` operations that survive parsing, but
-cannot infer memory provenance after a lifter has flattened memory into BV
-terms; preserve that provenance in the manifest `family` and `source` fields.
+expected verdict. It runs one query at a time, compares every result with
+in-process Z3 on the **original parsed assertions**, requires a 100% decided
+rate, requires in-process Z3 coverage for every selected file, and emits a
+versioned artifact. Axeyum's comparison time includes whichever word policy the
+named recipe selected; Z3 never receives Axeyum's rewritten or reduced assertion
+set. Synthetic QF_BV corpora remain useful lower-level diagnostics, but do not
+replace the extract/concat/mixed-width/memory-derived client shape. The shape
+block can count `select`/`store` operations that survive parsing, but cannot
+infer memory provenance after a lifter has flattened memory into BV terms;
+preserve that provenance in the manifest `family` and `source` fields.
+
+Run the two diagnostics explicitly rather than editing the raw recipe:
+
+```sh
+just bench-glaurung-qfbv-canonical CORPUS MANIFEST representative
+just bench-glaurung-qfbv-configured CORPUS MANIFEST representative
+```
 
 For the publishable repeated measurement (five trials by default):
 
 ```sh
-just bench-glaurung-qfbv-repeated \
+just bench-glaurung-qfbv-raw-repeated \
   /path/to/glaurung-smt2-capture \
   /path/to/glaurung-manifest-v1.json \
   representative \
-  bench-results/glaurung-qfbv-repeated \
+  bench-results/glaurung-qfbv-raw-repeated \
   5
 ```
+
+The unsuffixed repeated recipe is also a raw alias. Use
+`bench-glaurung-qfbv-canonical-repeated` or
+`bench-glaurung-qfbv-configured-repeated` for the other policies. Each has a
+policy-specific default output directory so summaries cannot be mixed by
+accident.
 
 Every source artifact must have byte-identical configuration, a clean
 reproducible-run identity, one worker, complete in-process Z3 coverage, 100%
@@ -244,7 +273,7 @@ makes the result diagnostic plumbing only, not a speedup or threshold decision.
 Run the separate proof-validation companion on the same immutable manifest:
 
 ```sh
-just bench-glaurung-qfbv-proof-check \
+just bench-glaurung-qfbv-raw-proof-check \
   /path/to/glaurung-smt2-capture \
   /path/to/glaurung-manifest-v1.json \
   representative
@@ -252,4 +281,7 @@ just bench-glaurung-qfbv-proof-check \
 
 It retains the decided/error/oracle/manifest gates, adds the checked-proof gate,
 and writes a separate artifact. Its native-CDCL timings are assurance overhead,
-not a replacement for the default client performance ratio.
+not a replacement for the default client performance ratio. The unsuffixed
+proof recipe is a raw alias; canonical and configured proof companions are
+available under the corresponding suffixed recipe names. Pair a performance
+artifact only with the proof companion using the same word policy.

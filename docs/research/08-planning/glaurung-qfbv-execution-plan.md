@@ -186,9 +186,12 @@ machine-enforced; no query shape is normalized during handoff.
 
 ### G1 — establish the cold truth (GQ1 + GQ10)
 
-1. Add explicit raw, canonical-only, and configured recipes. Make raw the
-   current-integration control and remove the ambiguous meaning of the existing
-   recipe.
+Preparation landed 2026-07-14: explicit raw, canonical-only, and configured
+recipes now cover single, repeated, and proof-companion runs. Raw is the
+unsuffixed current-integration control; policy-specific output defaults and
+dry-run regression tests prevent accidental series mixing.
+
+1. Use the landed policy recipes without editing their flags.
 2. Run raw first for five fresh-process repetitions on the representative tier,
    plus its separate proof-check companion.
 3. Run the same repetition matrix for canonical-only and configured policies.
@@ -358,9 +361,8 @@ validity gates.
 
 1. Obtain or regenerate the 128 query bytes and strict capture index; run the
    Axeyum manifest generator and document the count reconciliation.
-2. Split the Glaurung recipes into raw, canonical-only, and configured modes;
-   reproduce raw artifact v22 first with five fresh processes and a proof
-   companion.
+2. Reproduce raw artifact v22 first with five fresh processes and its raw proof
+   companion, then run the canonical-only and configured diagnostics.
 3. Add the G2 AIG/CNF and residual-rewrite counters while byte transfer is
    pending; this is behavior-preserving and will make the first real run
    actionable.
