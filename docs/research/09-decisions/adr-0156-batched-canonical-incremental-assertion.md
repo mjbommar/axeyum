@@ -1,6 +1,6 @@
 # ADR-0156: Batched canonical assertion for cold incremental clients
 
-Status: proposed
+Status: deferred
 Date: 2026-07-14
 
 ## Context
@@ -60,3 +60,29 @@ the consumer's incremental solver surface without conflating cheap exact
 canonicalization with the larger configured reduction pipeline. It does not
 replace GQ7: ordered warm traces and delta assertion remain required for true
 cross-check reuse.
+
+## Measured disposition
+
+The API and focused semantic gates land as explicit plumbing, but the cold
+recommendation is deferred. Five clean 128-query representative trials decide
+and replay all 640 executions with no errors or disagreements. An interleaved
+same-binary/same-revision comparison measures:
+
+- fresh incremental canonical batch: 0.060969 seconds mean Axeyum time;
+- one-shot `sat-bv` plus canonical v4: 0.051301 seconds mean Axeyum time; and
+- an 18.8% incremental-path overhead, including a 26.4% overhead in the
+  `register-slice` family.
+
+Both routes construct the same 566,695 AIG nodes over five trials (113,339 per
+trial), but the incremental route emits 850,510 clauses versus 470,215 for
+one-shot (170,102 versus 94,043 per trial, +80.9%). `IncrementalCnf` has lazy polarity encoding
+but deliberately lacks the one-shot encoder's global gate fusion. That is a
+measured explanation for part of Glaurung's real-client/bench discrepancy.
+The runs pin clean source/toolchain/corpus identity and use the same 10-second
+safety timeout, but do not claim deterministic-resource equivalence because the
+incremental benchmark route does not yet expose the cold backend's numeric
+admission budgets. The exact AIG/clause comparison is deterministic; the
+wall-time comparison is the five-pair local measurement.
+Do not recommend the batch incremental route for cold Glaurung checks until a
+follow-up closes this clause/entry-cost gap or a purpose-built one-shot client
+API preserves the original-root replay boundary.

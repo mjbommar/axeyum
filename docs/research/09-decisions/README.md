@@ -209,4 +209,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0153](adr-0153-fold-bvadd-constant-chains.md) | Fold constants across associative bit-vector additions: combine mixed-chain constant leaves modulo width before rebuilding the canonical AC tree | accepted |
 | [0154](adr-0154-post-word-qfbv-operator-inventory.md) | Post-word QF_BV operator inventory: count every scalar Bool/BV operator over unique original and rewritten DAGs before selecting the next Glaurung optimization | accepted |
 | [0155](adr-0155-cancel-bvadd-constants-across-equality.md) | Cancel BV-add constants across equality: move the modular constant sum to the constant side and remove one wide adder before lowering | accepted |
-| [0156](adr-0156-batched-canonical-incremental-assertion.md) | Batched canonical assertion: share one rewrite memo across a cold client's top-level roots while retaining original assertions for replay | proposed |
+| [0156](adr-0156-batched-canonical-incremental-assertion.md) | Batched canonical assertion: share one rewrite memo across a cold client's top-level roots while retaining original assertions for replay | deferred |

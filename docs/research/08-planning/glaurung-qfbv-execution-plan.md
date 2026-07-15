@@ -40,12 +40,14 @@ ADR-0153's modular add-chain folding reaches 14.11 seconds / 1.85x Z3.
 ADR-0155 then cancels the remaining constant across equality: five clean full
 processes improve mean time 59.7% to 5.625 seconds and ratio 60.1% to 0.730x
 Z3, while new AIG nodes and clauses fall 76.7%/75.4%. The cold real-lifter gap
-is closed under the canonical v4 policy; wiring that policy into Glaurung and
-validating ordered warm behavior are now the functionality priorities.
-Proposed ADR-0156 adds the missing matching solver surface: one batch admission
+is closed at the one-shot canonical-v4 benchmark boundary. The native driver
+still needs an exact entry-path attribution, and the newest client profile
+re-prioritizes production GQ4 demand slicing plus rewrite-impact telemetry.
+ADR-0156 adds the missing matching solver surface: one batch admission
 shares the canonicalizer memo across all roots while retaining originals for
-replay. Its representative fresh-incremental gate precedes any recommendation
-to change Glaurung's adapter.
+replay. Its representative fresh-incremental gate is replay-clean but 18.8%
+slower than one-shot and emits 80.9% more clauses with the same AIG, so the API
+remains explicit plumbing and its cold Glaurung recommendation is deferred.
 
 This note expands `PLAN.md` items GQ1--GQ10 into an executable sequence. It does
 not authorize changes to the Glaurung repository; producer-side and explorer
@@ -371,10 +373,28 @@ Exit: demanded/available and actually-lowered bit ratios, AIG nodes, CNF
 variables/clauses, bit-blast time, CNF time, and end-to-end ratio all improve on
 the real tier without a validity regression.
 
-Current ranking: after canonicalization the full tier demands 98.16% of term
-bits and 91.51% of symbol bits under the conservative analysis. Broad partial
-lowering therefore follows measured GQ5 CNF work unless family-specific
-evidence identifies a substantially narrower cone.
+Historical aggregate ranking: before canonical v4, the conservative full-tier
+diagnostic demanded 98.16% of term bits and 91.51% of symbol bits. That result
+does not veto the production pass: it mixes families, counts narrow
+intermediates alongside wide discarded register inputs, and predates the new
+client profile reporting bit blast at about 45% and register-slice shapes at
+about 88% of the real stream. GQ4 is now the first implementation priority.
+
+Implement it as an additive cold lowering route first. Roots demand their full
+Boolean result. A deterministic worklist unions per-term bit ranges and exact
+rules propagate through extract, concat, extensions, pointwise operators, and
+ITE; unsupported operators request the conservative full operand. Store
+partial results as per-term optional literals so disjoint later demands extend
+the memo without rebuilding already-materialized bits. Omitted symbol bits use
+a documented deterministic value during lift, and a candidate is accepted only
+after the resulting full-width model evaluates every original assertion.
+
+Gate the first slice on `register-slice` separately: demanded/lowered source
+bits, AIG requests/new nodes, clauses, bit-blast/CNF/SAT/end-to-end time, and Z3
+ratio must all be reported for that family and the full corpus. The existing
+observational `structural_bit_demand` pass is scaffolding and an oracle for
+counters; calling its `BTreeSet` walk before ordinary full lowering is not the
+production implementation.
 
 ### G5 — measured AIG/CNF engineering (GQ5)
 
@@ -430,6 +450,18 @@ and SAT to 0.929 seconds. Direct construction and SAT work are no longer the
 Glaurung cold blocker; the bounded word pass at 1.832 seconds is now the largest
 stage, and any further cold change requires a fresh post-v4 profile.
 
+The fresh-client experiment adds a distinct GQ5 boundary. ADR-0156's batch API
+is semantically clean but misses its cold performance gate. In five interleaved
+representative comparisons, fresh incremental canonical assertion takes
+0.060969 seconds versus one-shot canonical `sat-bv` at 0.051301 seconds
+(+18.8%; `register-slice` +26.4%). Both paths construct exactly the same AIG,
+but incremental CNF emits 170,102 clauses per trial versus 94,043 (+80.9%).
+The incremental encoder already performs lazy polarity propagation; its
+documented missing one-shot gate fusion is the measured delta to investigate.
+Keep ADR-0156's API as plumbing, but do not recommend it for cold Glaurung
+until this gap closes or a purpose-built one-shot client API supplies the same
+original-root replay contract.
+
 ### G6 — SAT work remains conditional (GQ6)
 
 Do not tune the SAT core while construction owns most wall time. Re-evaluate
@@ -484,6 +516,25 @@ Document that full `assert_configured` preprocessing is currently a cold loss
 and a warm candidate. Do not change the default until auto is non-worse at all
 validity gates.
 
+## Post-capture ten-item work order
+
+The latest Glaurung feedback is integrated as the following concrete order.
+Consumer-reported percentages and ratios remain reproduction targets until a
+clean artifact pins the exact Glaurung/Axeyum revisions and policy.
+
+| Priority | Requirement | Next executable gate |
+|---|---|---|
+| 1 | Land GQ4 demand-driven slicing | Add a replay-safe partial lowerer; run five representative and full trials with a separate `register-slice` report. |
+| 2 | Make rewrite effort fire-rate driven | Preserve stable rule fire counts, add affected-query/family counts, then run default-minus-rule ablations for causal AIG/CNF/time savings. |
+| 3 | Close native-driver versus bench delta | Add Glaurung phase timers for translation/interning, batch word policy, lower/encode, SAT, model extraction, and replay keyed by query hash; compare the same bytes in `axeyum-bench`. |
+| 4 | Strengthen AIG sharing | Verify Glaurung `ExprId` sharing survives translation and AIG memoization; measure hash requests/hits/new nodes by family before two-level rewrites. |
+| 5 | Reduce CNF for measured gates | Profile comparator/mux/adder and structural-wiring patterns; separately close the measured incremental-versus-one-shot gate-fusion gap. |
+| 6 | Make warm entry delta-only | Capture ordered events, retain arena/AIG/CNF/learned state per path/worker, and preprocess only new assertions plus affected summaries. |
+| 7 | Reuse duplicates and prefixes soundly | Measure exact duplicates/prefixes first; cache exact queries with replay, but reuse retained state rather than verdicts for strict prefixes. |
+| 8 | Add the register-slice fast path | Treat this as the first specialized GQ4 policy only if the generic exact range propagation leaves measurable avoidable work. |
+| 9 | Queue SAT tuning | Re-profile after items 1--5; compare identical CNF with BatSat/CaDiCaL/Kissat and tune only if search is then dominant. |
+| 10 | Expand and trend real capture | Add drivers, retain cold deduped and ordered-prefix tiers separately, and publish per-commit family/stage/Axeyum÷Z3 trends. |
+
 ## Milestones and stop/go gates
 
 | Milestone | Roadmap coverage | Stop/go decision |
@@ -492,7 +543,7 @@ validity gates.
 | M1 raw v27 baseline | GQ1, GQ10 | **Done:** representative raw/canonical and five canonical full-tier processes pass every gate; full Axeyum/ratio/Z3 CV is 0.51%/0.51%/0.31% and guarded comparisons use provisional 3%/3%/2% alarms |
 | M2 diagnostic attribution | GQ1, GQ3--GQ5 | **Done for current boundary:** ADR-0143 removes the 29.57 s observational pass from production and marks diagnostic completeness explicitly |
 | M3 cheap exact rewriting | GQ2, GQ3 | **Measured implementation done; integration publication remains:** canonical v2 cuts corrected full total 13.3%, ADR-0153 cuts another 9.80%, and accepted ADR-0155 reaches 5.625 s / 0.730x Z3 with AIG nodes/clauses down 76.7%/75.4% versus v3 |
-| M4 demand lowering | GQ4 | Continue only with replay-safe real AIG/CNF and wall-time reductions |
+| M4 demand lowering | GQ4 | **Immediate implementation priority:** land replay-safe partial lowering and require a `register-slice` plus whole-corpus AIG/CNF/wall-time win |
 | M5 AIG/CNF optimization | GQ5 | **Cold client blocker closed:** ADR-0144/0145/0150/0151 direct wins plus ADR-0153/0155 upstream reductions reach 5.625 s / 0.730x Z3 and 10.03M clauses. Reopen only from a measured post-v4 excess |
 | M6 SAT re-attribution | GQ6 | Start SAT work only if search becomes material/dominant |
 | M7 ordered warm trace | GQ7, GQ8 | **Consumer contract defined:** obtain and validate a producer sample, then measure incremental API shape and duplicate/prefix frequency before deciding whether a cache is worthwhile |
@@ -501,22 +552,30 @@ validity gates.
 
 ## Immediate next actions
 
-1. Hand off the defined GQ7
+1. Draft the GQ4 ADR and implement the first additive cold partial-lowering
+   route for extract/concat/extension/pointwise/ITE demand. Validate exhaustive
+   small widths, disjoint shared demands, deterministic omitted-bit model lift,
+   original-query replay, and the real `register-slice` family before enabling
+   it by policy.
+2. Extend rewrite telemetry from the already-landed stable `rule_counts` to
+   affected-query/family counts and a deterministic default-minus-rule ablation
+   report. Use it to decide whether any residual extract/coercion rule remains
+   worth implementing after canonical v4.
+3. Treat ADR-0156 as deferred for cold recommendation. Its paired gate is
+   replay-clean but 18.8% slower than one-shot and emits 80.9% more clauses with
+   the same AIG. Instrument the remaining native Glaurung translation,
+   interning, model-extraction, and caller costs by query hash; then choose
+   incremental gate-fusion work or a purpose-built cold one-shot API from the
+   complete attribution.
+4. Hand off the defined GQ7
    [ordered warm-trace v1 contract](glaurung-ordered-trace-v1.md) and obtain a
    small producer sample covering a root/fork, repeated check, nested push/pop,
-   SAT model-driven choice, and UNSAT prune. Validate hashes, sorts, scope
-   reconstruction, lineage, and consumed model values before scaling. The cold
-   deduplicated pack cannot substitute for it.
-2. Run proposed ADR-0156's fresh-`IncrementalBvSolver` batch backend over the
-   representative capture. If it is non-worse and replay-clean, accept and
-   document canonical v4 as the cheap cold solver policy, then wire Glaurung's
-   one-shot backend to select it explicitly and shadow-diff the
-   end-to-end finding stream. Re-attribute the now-smaller v4 residual before
-   proposing another GQ2--GQ6 change; broad GQ4 and SAT remain gated.
-3. On the Glaurung side, fix explicit width coercion plus strict dump validation
-   and cross-process dedup/conflict handling so future cold and ordered captures
-   are authoritative before GQ7/GQ8 cache or auto-policy work.
-4. Run every accepted cold candidate through the guarded five-process full
+   SAT model-driven choice, and UNSAT prune. Expand the cold capture across more
+   drivers separately; the deduplicated pack cannot substitute for event order.
+5. On the Glaurung side, retain explicit width coercion and fix strict dump
+   validation plus cross-process dedup/conflict handling so future cold and
+   ordered captures are authoritative before GQ7/GQ8 cache or auto-policy work.
+6. Run every accepted cold candidate through the guarded five-process full
    comparison. A threshold violation is a regression alarm to investigate, not
    permission to ignore raw controls or semantic gates.
 
