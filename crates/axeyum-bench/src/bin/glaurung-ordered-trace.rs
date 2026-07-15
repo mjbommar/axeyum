@@ -292,6 +292,7 @@ struct CheckRecord {
     path_id: String,
     query_hash: String,
     outcome: String,
+    z3_nanos: Option<u64>,
 }
 
 struct ModelRead {
@@ -652,6 +653,7 @@ impl Trace {
                                 path_id: path_id.clone(),
                                 query_hash: query_hash.clone(),
                                 outcome: outcome.clone(),
+                                z3_nanos,
                             },
                         )
                         .is_some()
@@ -1010,6 +1012,7 @@ fn replay_cold_occurrences(trace: &Trace, config: &SolverConfig) -> Result<Value
         }
     }
     latencies.sort_unstable();
+    let replay_nanos = nanos(replay_started.elapsed());
     Ok(json!({
         "policy": {
             "entry": "exact occurrence SMT-LIB bytes",
@@ -1023,7 +1026,8 @@ fn replay_cold_occurrences(trace: &Trace, config: &SolverConfig) -> Result<Value
         "outcomes": outcomes,
         "occurrence_latency_p50_nanos": percentile(&latencies, 50),
         "occurrence_latency_p95_nanos": percentile(&latencies, 95),
-        "replay_nanos": nanos(replay_started.elapsed()),
+        "replay_nanos": replay_nanos,
+        "ratio_to_recorded_z3_ppm": same_stream_z3_ratio_ppm(trace, replay_nanos),
         "process_peak_rss_bytes_before": peak_rss_before,
         "process_peak_rss_bytes_after": process_peak_rss_bytes(),
     }))
@@ -1045,6 +1049,15 @@ struct SnapshotReplayStats {
     occurrence_latencies_nanos: Vec<u64>,
     check_latencies_nanos: Vec<u64>,
     outcomes: BTreeMap<String, u64>,
+    depth: BTreeMap<usize, DepthReplayStats>,
+}
+
+#[derive(Default)]
+struct DepthReplayStats {
+    checks: u64,
+    occurrence_nanos: u64,
+    recorded_z3_nanos: u64,
+    recorded_z3_checks: u64,
 }
 
 // Snapshot replay is deliberately one ordered state machine: the consecutive
@@ -1114,9 +1127,8 @@ fn replay_snapshot_trace(trace: &Trace, config: &SolverConfig) -> Result<Value, 
                 stats
                     .check_latencies_nanos
                     .push(nanos(check_started.elapsed()));
-                stats
-                    .occurrence_latencies_nanos
-                    .push(nanos(occurrence_started.elapsed()));
+                let occurrence_nanos = nanos(occurrence_started.elapsed());
+                stats.occurrence_latencies_nanos.push(occurrence_nanos);
                 stats.checks = stats.checks.saturating_add(1);
                 let (outcome, model) = split_result(result);
                 *stats.outcomes.entry(outcome.to_string()).or_default() += 1;
@@ -1126,6 +1138,13 @@ fn replay_snapshot_trace(trace: &Trace, config: &SolverConfig) -> Result<Value, 
                          {outcome}",
                         check.outcome
                     ));
+                }
+                let depth = stats.depth.entry(constraints.len()).or_default();
+                depth.checks = depth.checks.saturating_add(1);
+                depth.occurrence_nanos = depth.occurrence_nanos.saturating_add(occurrence_nanos);
+                if let Some(z3_nanos) = check.z3_nanos {
+                    depth.recorded_z3_nanos = depth.recorded_z3_nanos.saturating_add(z3_nanos);
+                    depth.recorded_z3_checks = depth.recorded_z3_checks.saturating_add(1);
                 }
                 pending_model = model.map(|model| (check_id.clone(), model));
                 let retained = solver.stats();
@@ -1173,6 +1192,41 @@ fn replay_snapshot_trace(trace: &Trace, config: &SolverConfig) -> Result<Value, 
     stats.occurrence_latencies_nanos.sort_unstable();
     stats.check_latencies_nanos.sort_unstable();
     let solver_stats = solver.stats();
+    let replay_nanos = nanos(replay_started.elapsed());
+    let measured_nanos = build_nanos.saturating_add(replay_nanos);
+    let depth_buckets = depth_json(&stats.depth);
+    let first_observed_faster_depth = stats.depth.iter().find_map(|(depth, stats)| {
+        (stats.recorded_z3_checks == stats.checks
+            && stats.occurrence_nanos < stats.recorded_z3_nanos)
+            .then_some(*depth)
+    });
+    let observed_faster_depths = stats
+        .depth
+        .values()
+        .filter(|stats| {
+            stats.recorded_z3_checks == stats.checks
+                && stats.occurrence_nanos < stats.recorded_z3_nanos
+        })
+        .count();
+    let observed_slower_depths = stats
+        .depth
+        .values()
+        .filter(|stats| {
+            stats.recorded_z3_checks == stats.checks
+                && stats.occurrence_nanos >= stats.recorded_z3_nanos
+        })
+        .count();
+    let observed_unavailable_depths = stats
+        .depth
+        .values()
+        .filter(|stats| stats.recorded_z3_checks != stats.checks)
+        .count();
+    let monotone_observed_break_even_depth = stats.depth.keys().find(|candidate| {
+        stats.depth.range(**candidate..).all(|(_, stats)| {
+            stats.recorded_z3_checks == stats.checks
+                && stats.occurrence_nanos < stats.recorded_z3_nanos
+        })
+    });
     Ok(json!({
         "policy": {
             "entry": "consecutive complete snapshots reconstructed from ordered checks",
@@ -1184,7 +1238,9 @@ fn replay_snapshot_trace(trace: &Trace, config: &SolverConfig) -> Result<Value, 
             "sat_model_replay": "IncrementalBvSolver original-assertion replay",
         },
         "shared_arena_build_nanos": build_nanos,
-        "replay_nanos": nanos(replay_started.elapsed()),
+        "replay_nanos": replay_nanos,
+        "ratio_to_recorded_z3_ppm_including_arena_build":
+            same_stream_z3_ratio_ppm(trace, measured_nanos),
         "checks": stats.checks,
         "outcomes": stats.outcomes,
         "unchanged_snapshots": stats.unchanged_snapshots,
@@ -1198,6 +1254,12 @@ fn replay_snapshot_trace(trace: &Trace, config: &SolverConfig) -> Result<Value, 
         "model_read_matches": stats.model_read_matches,
         "model_read_divergences": stats.model_read_divergences,
         "model_reads_not_evaluable": stats.model_reads_not_evaluable,
+        "scope_depth_buckets": depth_buckets,
+        "first_observed_scope_depth_faster_than_recorded_z3": first_observed_faster_depth,
+        "observed_scope_depths_faster_than_recorded_z3": observed_faster_depths,
+        "observed_scope_depths_slower_than_recorded_z3": observed_slower_depths,
+        "observed_scope_depths_without_recorded_z3": observed_unavailable_depths,
+        "monotone_observed_break_even_scope_depth": monotone_observed_break_even_depth,
         "peak_retained_structure": {
             "aig_nodes": stats.peak_aig_nodes,
             "cnf_variables": stats.peak_cnf_variables,
@@ -1481,6 +1543,8 @@ fn replay_warm_trace(trace: &Trace, config: &SolverConfig) -> Result<Value, Stri
     }
 
     stats.check_latencies_nanos.sort_unstable();
+    let replay_nanos = nanos(replay_started.elapsed());
+    let measured_nanos = build_nanos.saturating_add(replay_nanos);
     Ok(json!({
         "policy": {
             "preprocess": config.preprocess,
@@ -1490,7 +1554,9 @@ fn replay_warm_trace(trace: &Trace, config: &SolverConfig) -> Result<Value, Stri
             "sat_model_replay": "IncrementalBvSolver original-assertion replay",
         },
         "shared_arena_build_nanos": build_nanos,
-        "replay_nanos": nanos(replay_started.elapsed()),
+        "replay_nanos": replay_nanos,
+        "ratio_to_recorded_z3_ppm_including_arena_build":
+            same_stream_z3_ratio_ppm(trace, measured_nanos),
         "path_states_created": stats.path_states_created,
         "fork_states_created": stats.fork_states_created,
         "fork_prefix_roots_replayed": stats.fork_prefix_roots_replayed,
@@ -1685,6 +1751,38 @@ fn percentile(sorted: &[u64], percent: usize) -> u64 {
     }
     let index = (sorted.len() - 1).saturating_mul(percent).div_ceil(100);
     sorted[index.min(sorted.len() - 1)]
+}
+
+fn same_stream_z3_ratio_ppm(trace: &Trace, axeyum_nanos: u64) -> Option<u64> {
+    (trace.backend_timing.z3_timed_checks == usize_to_u64(trace.checks.len())
+        && trace.backend_timing.z3_nanos > 0)
+        .then(|| ratio_ppm(axeyum_nanos, trace.backend_timing.z3_nanos))
+}
+
+fn depth_json(depth: &BTreeMap<usize, DepthReplayStats>) -> Vec<Value> {
+    depth
+        .iter()
+        .map(|(scope_depth, stats)| {
+            let ratio = (stats.recorded_z3_checks == stats.checks && stats.recorded_z3_nanos > 0)
+                .then(|| ratio_ppm(stats.occurrence_nanos, stats.recorded_z3_nanos));
+            json!({
+                "scope_depth": scope_depth,
+                "checks": stats.checks,
+                "snapshot_occurrence_nanos": stats.occurrence_nanos,
+                "recorded_z3_nanos": stats.recorded_z3_nanos,
+                "recorded_z3_checks": stats.recorded_z3_checks,
+                "ratio_to_recorded_z3_ppm": ratio,
+            })
+        })
+        .collect()
+}
+
+fn ratio_ppm(numerator: u64, denominator: u64) -> u64 {
+    if denominator == 0 {
+        return 0;
+    }
+    let scaled = u128::from(numerator).saturating_mul(1_000_000) / u128::from(denominator);
+    u64::try_from(scaled).unwrap_or(u64::MAX)
 }
 
 fn usize_to_u64(value: usize) -> u64 {
@@ -2143,6 +2241,7 @@ mod tests {
                     path_id: "parent".into(),
                     query_hash: query_hash.clone(),
                     outcome: "sat".into(),
+                    z3_nanos: None,
                 },
             ),
             (
@@ -2152,6 +2251,7 @@ mod tests {
                     path_id: "child".into(),
                     query_hash,
                     outcome: "sat".into(),
+                    z3_nanos: None,
                 },
             ),
         ]);
@@ -2232,6 +2332,7 @@ mod tests {
                 path_id: "path".into(),
                 query_hash,
                 outcome: "sat".into(),
+                z3_nanos: None,
             },
         )]);
         let missing = "missing-constraint".to_string();
