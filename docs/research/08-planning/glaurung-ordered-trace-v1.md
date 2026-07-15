@@ -1,6 +1,6 @@
 # Glaurung ordered warm-trace v1 handoff
 
-Status: proposed producer/consumer contract
+Status: T1 producer and T2 independent replay accepted in ADR-0166; T3--T5 open
 Date: 2026-07-14
 
 ## Purpose
@@ -217,3 +217,27 @@ required to validate worker/path ownership, non-consecutive forks, explicit
 push/pop events, model reads/choices, unknown/error classification, memory,
 per-check latency, and true per-lineage break-even. Keep the bridge opt-in until
 that trace and multi-driver repetitions support a GQ9 production policy.
+
+## 2026-07-15 T1/T2 result
+
+Glaurung commits `7a11c29` and `32cabb0` implement the opt-in producer and its
+external fail-closed validator. Axeyum's independent consumer is:
+
+```sh
+cargo run --release -p axeyum-bench --bin glaurung-ordered-trace -- \
+  TRACE_DIR --timeout-ms 1000 --out axeyum-replay-v1.json
+```
+
+The consumer does not trust producer validation. It verifies artifact hashes,
+reconstructs lineage and scope state, strictly parses every unique QF_BV query,
+re-solves each query with original-assertion model replay, reconciles all
+occurrences/outcomes, and independently checks the satisfiability of every
+unique exploration-driving expression/value constraint.
+
+ADR-0166 records the bounded real acceptance result: 3,309 events, 235 paths,
+784 checks, and 508 unique queries, all decided with no recorded disagreement;
+243 model choices reduce to 158 unique exact constraints and all remain SAT.
+The stream contains 276 duplicate occurrences (35.2%), 271 prefix extensions,
+and maximum scope depth 45. This establishes the functionality and reuse
+opportunity needed for T3. It is not a clean multi-driver publication, warm
+performance result, or reason to make reuse automatic.

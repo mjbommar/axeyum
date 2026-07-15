@@ -251,14 +251,19 @@ session state.
 > 1.4x. The two next credible routes are a much cheaper admitted slice under
 > ADR-0158 and persistent warm reuse under GQ7. ADR-0156 alone cannot test the
 > latter through Glaurung because its current `Solver` trait is one-shot.
-> The ordered warm trace remains the next warm-functionality Glaurung
-> handoff; cold deduplication cannot validate scopes, prefix reuse, or model
-> choice. Its concrete producer/consumer contract is now
+> ADR-0166 now accepts the ordered warm-trace T1 producer and independent T2
+> Axeyum replay boundary. The bounded real sample reconstructs 235 paths and
+> 784 checks, strictly re-solves all 508 unique QF_BV scripts with original-model
+> replay, and proves all 158 unique constraints behind 243 exploration-driving
+> choices SAT. It measures 276 duplicate occurrences (35.2%) and 271 prefix
+> extensions. This is opt-in downstream corpus evidence, not an Axeyum product
+> dependency or warm speed claim. Its concrete producer/consumer contract is
 > [ordered warm-trace v1](docs/research/08-planning/glaurung-ordered-trace-v1.md).
-> The immediate GQ7 action is to hand that contract to Glaurung and validate a
-> small producer sample covering root/fork lineage, repeated checks, nested
-> push/pop, a SAT model-driven choice, and an UNSAT prune before scaling or
-> changing Axeyum's warm implementation.
+> The immediate GQ7 action is T3: map explicit lineages/scopes to retained
+> Axeyum solver state, replay a validated prefix at forks, and compare it with
+> ADR-0164 snapshot inference on identical occurrences. Then publish clean
+> multi-driver ordered traces with p50/p95, peak memory, and break-even before
+> GQ8 caching or GQ9 admission.
 > The capture and
 > implementation audit has been expanded into the dependency-ordered
 > [Glaurung QF_BV execution plan](docs/research/08-planning/glaurung-qfbv-execution-plan.md):
@@ -293,10 +298,10 @@ decisions or speedups.
 | **GQ4** | **Cold demand-driven bit-slice reduction** | **Out of the active queue.** ADR-0157 v1 is correct but regresses the real ratio about 1.42x→4.49x; ADR-0158's conservative admission is a safe no-op but does not improve the required family. Both remain explicit/off. Do not tune thresholds further on this corpus; only a qualitatively different constant-cost admission proof and a fresh client gate can reopen GQ4. |
 | **GQ5** | **Cheaper AIG construction and measured CNF encoding** | **Large incremental clause residual closed; per-node construction remains open.** ADR-0162/0163 cut incremental clauses 782,716→558,787 and pass native gates; only 12,882 clauses (+2.36%) remain over one-shot, while a stronger per-clause index regresses native time. Next attribute bit-blast cost as node count versus construction overhead, verify Glaurung sharing survives term→AIG, and measure bounded structural hashing/two-level rewrites/copy removal. Continue comparator/concat/extract/root CNF work only from measured gate/attempt profiles and require lower native time, not merely fewer clauses. |
 | **GQ6** | **Cold SAT/CDCL tuning** | **Relevant but ranked seventh.** The reported native share is now about 20%, so compare the exact emitted CNF across BatSat, the proof-producing core, and pinned CaDiCaL/Kissat, then measure existing subsumption/vivification/inprocessing plus phase saving, VSIDS/VMTF, and restarts. UNSAT proof rechecking and deterministic resource limits remain mandatory. Do not outrank GQ7, client-boundary attribution, or the dual baseline. |
-| **GQ7** | **Cheaper warm entry and delta preprocessing** | **Highest-leverage active item; first bridge accepted in ADR-0164.** Opt-in structural snapshot-LCP reuse now retains one arena/AIG/CNF/SAT session per explorer thread and cuts the single-driver median client ratio 2.648x→1.462x with 13,126/13,126 agreement, zero unknown splits/resets, and unchanged findings. It reuses 679,870 roots and adds only 8,027. Next obtain the ordered producer capture with worker/path lineage, explicit scopes, repeated checks, unknown/errors, and exploration-driving model reads; compare explicit per-lineage state against snapshot inference, add p50/p95/memory/break-even and multi-driver gates, then decide GQ9 admission. GQ7 is not complete and warm stays opt-in. |
-| **GQ8** | **Verdict and CNF reuse for duplicate/prefix queries** | Build on the ordered capture with a deterministic, bounded cache keyed by canonical content, solver/config semantics, and scope/lineage identity. Exact duplicates may reuse replayable verdict/model/proof artifacts; prefixes reuse only retained preprocessing/CNF/search state. Every hit still passes original-term model or proof replay, and invalidation/versioning is explicit. Measure exact-repeat and prefix hit rates before choosing capacity. |
+| **GQ7** | **Cheaper warm entry and delta preprocessing** | **Highest-leverage active item; ADR-0164 bridge plus ADR-0166 ordered T1/T2 accepted.** Snapshot-LCP reuse cuts the single-driver median ratio 2.648x→1.462x. Independent ordered replay now validates 235 paths, 784 checks, explicit scopes, and 243 choices; all 508 unique scripts decide and replay. Next implement T3 explicit per-lineage retained state and validated fork-prefix replay, compare it against snapshot inference on identical occurrences, and add clean multi-driver p50/p95/memory/break-even gates. GQ7 is not complete and warm stays opt-in. |
+| **GQ8** | **Verdict and CNF reuse for duplicate/prefix queries** | ADR-0166 measures 276/784 exact duplicate occurrences (35.2%), 156 same-lineage repeats, and 271 prefix extensions, but does not authorize a cache. Complete GQ7 retained per-lineage state first. Then evaluate a deterministic, bounded cache keyed by canonical content, solver/config semantics, and scope/lineage identity; every hit still passes original-term model or proof replay and invalidation/versioning is explicit. |
 | **GQ9** | **Auto production policy and API guidance** | Ship a conservative auto policy only after fixed-policy comparison on the real corpus: GQ4 remains off/no-op unless its wide savings gate clears, accepted CNF fusion/context dedup stay on, rewrite tiers follow causal reach/cost, and warm mode activates only when an ordered reuse stream is present. Export the reason for every choice. Exit requires non-regression against every fixed alternative plus documented raw/cheap/configured/warm guidance. |
-| **GQ10** | **Ordered, wider real-lifter regression corpus** | Retain the deduplicated representative/full cold tiers, add the ordered non-deduplicated stream with exact-repeat/prefix frequency and path lineage, widen beyond the current three drivers, and run the full-tier variance gate. Track per-commit decided/error/replay status, stage/family counters, and both Axeyum/Z3 baselines: pre-parsed in-process Z3 and Glaurung's actual Z3 backend. The item is not done until GQ7/GQ8 reuse and the user-visible client ratio are reproducibly exercised. |
+| **GQ10** | **Ordered, wider real-lifter regression corpus** | Retain the deduplicated representative/full cold tiers and ADR-0166's bounded ordered functionality sample. Next publish clean non-deduplicated traces across the driver set with exact-repeat/prefix frequency, path lineage, deterministic resources, and peak memory; run the full-tier variance gate. Track per-commit decided/error/replay status, stage/family counters, and both Axeyum/Z3 baselines: pre-parsed in-process Z3 and Glaurung's actual Z3 backend. The item is not done until GQ7/GQ8 reuse and the user-visible client ratio are reproducibly exercised. |
 
 **Latest Glaurung execution order (2026-07-15; supersedes the earlier cold-path
 priority reset).** The client reports an approximately 1.34x gated-bench ratio
@@ -304,9 +309,10 @@ but roughly 2.5x on the actual `IncrementalBvSolver` same-stream path, with
 bit-blast/CNF/SAT near 45%/32%/20%. Treat those as distinct bars until the same
 revision and queries reconcile them. The ranked work is:
 
-1. **GQ7 warm end to end:** build on ADR-0164's measured snapshot-LCP bridge;
-   ingest the ordered/prefix capture and compare explicit per-lineage retained
-   preprocessing, AIG, CNF, learned state, push/pop, models, and replay;
+1. **GQ7 warm end to end:** build on ADR-0164's measured snapshot-LCP bridge
+   and ADR-0166's accepted ordered T1/T2 boundary; implement explicit
+   per-lineage retained preprocessing, AIG, CNF, learned state, push/pop,
+   models, validated fork replay, and compare it on identical occurrences;
 2. **GQ1 client overhead:** use `check_profiled` to partition and remove the
    reported approximately 1.8x real-client/bench entry factor;
 3. **AIG cost per bit:** separate node count from construction cost, preserve
@@ -323,8 +329,9 @@ revision and queries reconcile them. The ranked work is:
    CNF across cores and measure inprocessing/heuristic changes;
 8. **GQ9 non-regressing auto mode:** accepted CNF defaults, conservative/off
    GQ4, causal rewrite selection, and warm activation only on detected reuse;
-9. **GQ10 deeper capture:** ordered occurrences plus lineage, more drivers,
-   full-tier variance, and per-commit ratios; and
+9. **GQ10 deeper capture:** promote the bounded development trace to clean
+   ordered occurrences plus lineage across more drivers, deterministic
+   resource/memory identity, full-tier variance, and per-commit ratios; and
 10. **Dual gap baseline:** report both pre-parsed in-process Z3 and Glaurung's
     actual Z3 AST/context backend, with the user-visible Glaurung-vs-Glaurung
     comparison controlling product claims.
@@ -332,8 +339,9 @@ revision and queries reconcile them. The ranked work is:
 The highest-leverage trio is 1, 2, and 10. GQ4 is not an active optimization;
 ADR-0157/0158 remain explicit/off. Cold rewrite or CNF work may continue only
 when causal/native profiles select it. ADR-0164 permits opt-in consecutive
-snapshot reuse now; the ordered warm capture remains the enabling artifact for
-GQ7 completion/GQ8 and must precede cache capacity or auto-policy choices.
+snapshot reuse now; ADR-0166 supplies the bounded ordered T1/T2 evidence.
+Explicit per-lineage T3 solving and clean multi-driver publication must precede
+cache capacity or auto-policy choices.
 
 **Recorded cold-path sequence.** The detailed task graph and functional acceptance boundary
 live in the
@@ -395,12 +403,12 @@ GQ4 is now closed/off for this distribution after both measured candidates
 failed to improve it. GQ6 is relevant at the reported 20% share but remains
 ranked after warm/client-boundary work. GQ7--GQ9 require the separate
 [ordered warm-trace v1](docs/research/08-planning/glaurung-ordered-trace-v1.md)
-because the deduplicated cold corpus erases prefix/frequency information. The
-schema is defined; the next gate is a small producer sample that validates
-hashes, sorts, scopes, lineage, and exploration-driving values. GQ8 follows the
-exact cache/replay contract rather than treating a prefix as an identical
-query. Re-run the GQ10 baseline after every accepted slice and record the result
-in `STATUS.md` and `bench-results/`.
+because the deduplicated cold corpus erases prefix/frequency information.
+ADR-0166 accepts the bounded producer and independent replay gate; next map its
+validated lineages to retained solver state and promote capture to a clean
+multi-driver publication. GQ8 follows the exact cache/replay contract rather
+than treating a prefix as an identical query. Re-run the GQ10 baseline after
+every accepted slice and record the result in `STATUS.md` and `bench-results/`.
 
 **GQ1/GQ10 readiness landed (2026-07-13/14, artifact v26).** The client recipe is
 now a single-worker cold run. Its artifact separates word preprocessing,
@@ -590,7 +598,8 @@ errors, or replay failures: raw/current integration is 0.181498 s versus Z3's
 structure-only comparison confirms their frontiers, decisions, and statuses
 are unchanged. This validates the current implementation without changing the
 GQ ordering: clean multi-driver GQ1/GQ10 publication, the measured GQ5
-incremental gate-fusion slice, and the GQ7 ordered-lineage handoff remain next.
+residual only if new attribution selects it, and GQ7 explicit-lineage warm
+solving remain next.
 
 **Non-negotiable acceptance gate.** Comparable runs require 100% decided on the
 declared client tier, zero operational errors, `DISAGREE=0`, zero model/proof
