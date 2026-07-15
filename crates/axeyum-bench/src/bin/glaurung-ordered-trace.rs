@@ -147,6 +147,13 @@ fn run() -> Result<Value, String> {
         "model_choices": trace.model_choice_count,
         "unique_model_choices_replayed": unique_choices.len(),
         "recorded_outcomes": trace.recorded_outcomes,
+        "recorded_backend_timing": {
+            "total_nanos": trace.backend_timing.total_nanos,
+            "z3_nanos": trace.backend_timing.z3_nanos,
+            "z3_timed_checks": trace.backend_timing.z3_timed_checks,
+            "axeyum_nanos": trace.backend_timing.axeyum_nanos,
+            "axeyum_timed_checks": trace.backend_timing.axeyum_timed_checks,
+        },
         "axeyum_unique_query_outcomes": outcome_counts,
         "solver_policy": {
             "preprocess": false,
@@ -250,10 +257,12 @@ struct Trace {
     event_count: usize,
     path_count: usize,
     queries: BTreeMap<String, QueryRecord>,
+    assertions: BTreeMap<String, Vec<u8>>,
     checks: BTreeMap<String, CheckRecord>,
     model_reads: BTreeMap<String, ModelRead>,
     model_choice_count: usize,
     recorded_outcomes: BTreeMap<String, u64>,
+    backend_timing: BackendTimingStats,
     reuse: ReuseStats,
     warm_events: Vec<WarmEvent>,
 }
@@ -293,6 +302,15 @@ struct ModelRead {
     symbols: Vec<(String, u64)>,
     width: u64,
     returned_value: u128,
+}
+
+#[derive(Default)]
+struct BackendTimingStats {
+    total_nanos: u64,
+    z3_nanos: u64,
+    z3_timed_checks: u64,
+    axeyum_nanos: u64,
+    axeyum_timed_checks: u64,
 }
 
 #[derive(Default)]
@@ -380,11 +398,14 @@ impl Trace {
         let index: Value = serde_json::from_slice(&index_bytes)
             .map_err(|error| format!("parse query-index-v1.json: {error}"))?;
         let queries = load_queries(root, &index)?;
+        let assertions = load_assertions(root, &manifest)?;
 
         let mut paths = BTreeMap::from([("analysis".to_string(), PathState::default())]);
         let mut checks = BTreeMap::new();
         let mut model_reads = BTreeMap::new();
         let mut recorded_outcomes = BTreeMap::<String, u64>::new();
+        let mut backend_timing = BackendTimingStats::default();
+        let mut observed_assertions = BTreeSet::new();
         let mut observed_occurrences = BTreeMap::<String, Vec<(String, String, u64)>>::new();
         let mut reuse = ReuseStats::default();
         let mut expected_event_seq = 0_u64;
@@ -520,6 +541,15 @@ impl Trace {
                     if string(&event, "assertion_sha256")? != constraint {
                         return Err(format!("assertion hash mismatch on {path_id}"));
                     }
+                    if manifest.get("assertion_count").is_some() {
+                        let relative = string(&event, "assertion_path")?;
+                        if relative != format!("assertions/{constraint}.smt2")
+                            || !assertions.contains_key(&constraint)
+                        {
+                            return Err(format!("assertion store mismatch on {path_id}"));
+                        }
+                    }
+                    observed_assertions.insert(constraint.clone());
                     scope.constraint_id = Some(constraint.clone());
                     if string(&event, "scope_digest")? != scope_digest(&state.scopes)? {
                         return Err(format!("assert scope digest mismatch on {path_id}"));
@@ -573,6 +603,31 @@ impl Trace {
                     let outcome = string(&event, "outcome")?.to_string();
                     if !matches!(outcome.as_str(), "sat" | "unsat" | "unknown" | "error") {
                         return Err(format!("invalid outcome on {check_id}: {outcome}"));
+                    }
+                    let total_nanos = integer(&event, "backend_nanos")?;
+                    let z3_nanos = optional_integer(&event, "z3_nanos")?;
+                    let axeyum_nanos = optional_integer(&event, "axeyum_nanos")?;
+                    if z3_nanos
+                        .unwrap_or_default()
+                        .saturating_add(axeyum_nanos.unwrap_or_default())
+                        > total_nanos
+                    {
+                        return Err(format!(
+                            "per-backend timing exceeds total on check {check_id}"
+                        ));
+                    }
+                    backend_timing.total_nanos =
+                        backend_timing.total_nanos.saturating_add(total_nanos);
+                    if let Some(nanos) = z3_nanos {
+                        backend_timing.z3_nanos = backend_timing.z3_nanos.saturating_add(nanos);
+                        backend_timing.z3_timed_checks =
+                            backend_timing.z3_timed_checks.saturating_add(1);
+                    }
+                    if let Some(nanos) = axeyum_nanos {
+                        backend_timing.axeyum_nanos =
+                            backend_timing.axeyum_nanos.saturating_add(nanos);
+                        backend_timing.axeyum_timed_checks =
+                            backend_timing.axeyum_timed_checks.saturating_add(1);
                     }
                     if checks
                         .insert(
@@ -759,6 +814,12 @@ impl Trace {
         if choice_reads != recorded_reads {
             return Err("model reads and model-choice consumption differ".into());
         }
+        if let Some(expected) = manifest.get("assertion_count").and_then(Value::as_u64)
+            && (usize_to_u64(assertions.len()) != expected
+                || observed_assertions != assertions.keys().cloned().collect())
+        {
+            return Err("assertion store membership/count differs from events".into());
+        }
 
         Ok(Self {
             analysis_id,
@@ -768,10 +829,12 @@ impl Trace {
             event_count,
             path_count,
             queries,
+            assertions,
             checks,
             model_reads,
             model_choice_count: choice_ids.len(),
             recorded_outcomes,
+            backend_timing,
             reuse,
             warm_events,
         })
@@ -849,6 +912,48 @@ fn load_queries(root: &Path, index: &Value) -> Result<BTreeMap<String, QueryReco
         return Err("query store membership differs from query index".into());
     }
     Ok(queries)
+}
+
+fn load_assertions(root: &Path, manifest: &Value) -> Result<BTreeMap<String, Vec<u8>>, String> {
+    let Some(expected_count) = manifest.get("assertion_count").and_then(Value::as_u64) else {
+        if root.join("assertions").exists() {
+            return Err("assertion store exists without manifest assertion_count".into());
+        }
+        return Ok(BTreeMap::new());
+    };
+    let mut assertions = BTreeMap::new();
+    for entry in fs::read_dir(root.join("assertions"))
+        .map_err(|error| format!("read assertion store: {error}"))?
+    {
+        let entry = entry.map_err(|error| format!("read assertion-store entry: {error}"))?;
+        let path = entry.path();
+        if path.extension().is_none_or(|extension| extension != "smt2") {
+            return Err(format!(
+                "non-SMT2 file in assertion store: {}",
+                path.display()
+            ));
+        }
+        let constraint_id = path
+            .file_stem()
+            .and_then(|stem| stem.to_str())
+            .ok_or_else(|| format!("invalid assertion filename: {}", path.display()))?
+            .to_string();
+        if constraint_id.len() != 64 || !constraint_id.bytes().all(|byte| byte.is_ascii_hexdigit())
+        {
+            return Err(format!("invalid assertion content hash: {constraint_id}"));
+        }
+        let bytes = read(&path)?;
+        if sha256(&bytes) != constraint_id || !bytes.starts_with(b"(assert ") {
+            return Err(format!("assertion bytes do not match {constraint_id}"));
+        }
+        if assertions.insert(constraint_id.clone(), bytes).is_some() {
+            return Err(format!("duplicate assertion content hash: {constraint_id}"));
+        }
+    }
+    if usize_to_u64(assertions.len()) != expected_count {
+        return Err("manifest assertion count differs from assertion store".into());
+    }
+    Ok(assertions)
 }
 
 fn replay_cold_occurrences(trace: &Trace, config: &SolverConfig) -> Result<Value, String> {
@@ -1410,6 +1515,11 @@ fn replay_warm_trace(trace: &Trace, config: &SolverConfig) -> Result<Value, Stri
 fn build_warm_program(trace: &Trace) -> Result<WarmProgram, String> {
     let mut declarations = BTreeSet::<String>::new();
     let mut constraint_text = BTreeMap::<String, String>::new();
+    for (constraint_id, bytes) in &trace.assertions {
+        let assertion = std::str::from_utf8(bytes)
+            .map_err(|error| format!("assertion {constraint_id} is non-UTF-8: {error}"))?;
+        constraint_text.insert(constraint_id.clone(), assertion.to_string());
+    }
     for (query_hash, query) in &trace.queries {
         let text = std::str::from_utf8(&query.bytes)
             .map_err(|error| format!("query {query_hash} is non-UTF-8: {error}"))?;
@@ -1826,6 +1936,16 @@ fn integer(value: &Value, field: &str) -> Result<u64, String> {
         .ok_or_else(|| format!("missing/non-integer field {field}"))
 }
 
+fn optional_integer(value: &Value, field: &str) -> Result<Option<u64>, String> {
+    match value.get(field) {
+        None | Some(Value::Null) => Ok(None),
+        Some(value) => value
+            .as_u64()
+            .map(Some)
+            .ok_or_else(|| format!("non-integer field {field}")),
+    }
+}
+
 fn usize_integer(value: &Value, field: &str) -> Result<usize, String> {
     usize::try_from(integer(value, field)?).map_err(|_| format!("field {field} does not fit usize"))
 }
@@ -1892,10 +2012,12 @@ mod tests {
             event_count: warm_events.len(),
             path_count: 2,
             queries,
+            assertions: BTreeMap::new(),
             checks,
             model_reads: BTreeMap::new(),
             model_choice_count: 0,
             recorded_outcomes: BTreeMap::new(),
+            backend_timing: BackendTimingStats::default(),
             reuse: ReuseStats::default(),
             warm_events,
         }
@@ -1934,6 +2056,30 @@ mod tests {
             constraint_id: Some("constraint-1".into()),
         }];
         assert_ne!(digest, scope_digest(&changed).unwrap());
+    }
+
+    #[test]
+    fn assertion_store_is_content_addressed_and_manifest_complete() {
+        let root = env::temp_dir().join(format!(
+            "axeyum-ordered-assertion-test-{}-{}",
+            std::process::id(),
+            nanos(Instant::now().elapsed())
+        ));
+        fs::create_dir_all(root.join("assertions")).unwrap();
+        let bytes = b"(assert true)\n";
+        let constraint_id = sha256(bytes);
+        fs::write(
+            root.join("assertions")
+                .join(format!("{constraint_id}.smt2")),
+            bytes,
+        )
+        .unwrap();
+        let loaded = load_assertions(&root, &json!({"assertion_count": 1})).unwrap();
+        assert_eq!(
+            loaded.get(&constraint_id).map(Vec::as_slice),
+            Some(&bytes[..])
+        );
+        fs::remove_dir_all(root).unwrap();
     }
 
     #[test]
