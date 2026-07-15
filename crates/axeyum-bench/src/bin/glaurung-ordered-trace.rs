@@ -14,8 +14,9 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::time::{Duration, Instant};
 
+use axeyum_ir::{TermArena, TermId, Value as IrValue, eval};
 use axeyum_smtlib::{ScriptCommand, parse_script};
-use axeyum_solver::{CheckResult, SolverConfig, solve_smtlib};
+use axeyum_solver::{CheckResult, IncrementalBvSolver, Model, SolverConfig, solve_smtlib};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 
@@ -44,6 +45,9 @@ fn main() -> ExitCode {
     }
 }
 
+// Keeping the three independently checked replay phases together makes it hard
+// to accidentally publish a warm result without the cold-query/choice checks.
+#[allow(clippy::too_many_lines)]
 fn run() -> Result<Value, String> {
     let options = Options::parse(env::args().skip(1))?;
     let started = Instant::now();
@@ -106,6 +110,10 @@ fn run() -> Result<Value, String> {
         }
     }
     let choice_replay_nanos = nanos(choice_started.elapsed());
+    let warm_replay = options
+        .warm
+        .then(|| replay_warm_trace(&trace, &config))
+        .transpose()?;
 
     let summary = json!({
         "schema": REPLAY_SCHEMA,
@@ -139,6 +147,7 @@ fn run() -> Result<Value, String> {
         },
         "query_replay_nanos": query_replay_nanos,
         "choice_replay_nanos": choice_replay_nanos,
+        "warm_replay": warm_replay,
         "total_nanos": nanos(started.elapsed()),
     });
     if let Some(output) = options.output {
@@ -150,6 +159,7 @@ fn run() -> Result<Value, String> {
 struct Options {
     trace: PathBuf,
     timeout_ms: u64,
+    warm: bool,
     output: Option<PathBuf>,
 }
 
@@ -157,6 +167,7 @@ impl Options {
     fn parse(args: impl Iterator<Item = String>) -> Result<Self, String> {
         let mut trace = None;
         let mut timeout_ms = 1_000;
+        let mut warm = false;
         let mut output = None;
         let mut args = args.peekable();
         while let Some(argument) = args.next() {
@@ -178,9 +189,11 @@ impl Options {
                             .ok_or_else(|| "--out requires a path".to_string())?,
                     ));
                 }
+                "--warm" => warm = true,
                 "-h" | "--help" => {
                     return Err(
-                        "usage: glaurung-ordered-trace TRACE_DIR [--timeout-ms N] [--out FILE]"
+                        "usage: glaurung-ordered-trace TRACE_DIR [--timeout-ms N] [--warm] \
+                         [--out FILE]"
                             .into(),
                     );
                 }
@@ -194,9 +207,11 @@ impl Options {
         }
         Ok(Self {
             trace: trace.ok_or_else(|| {
-                "usage: glaurung-ordered-trace TRACE_DIR [--timeout-ms N] [--out FILE]".to_string()
+                "usage: glaurung-ordered-trace TRACE_DIR [--timeout-ms N] [--warm] [--out FILE]"
+                    .to_string()
             })?,
             timeout_ms,
+            warm,
             output,
         })
     }
@@ -214,6 +229,7 @@ struct Trace {
     model_choice_count: usize,
     recorded_outcomes: BTreeMap<String, u64>,
     reuse: ReuseStats,
+    warm_events: Vec<WarmEvent>,
 }
 
 struct QueryRecord {
@@ -277,6 +293,41 @@ struct ScopeState {
     constraint_id: Option<String>,
 }
 
+#[derive(Clone)]
+enum WarmEvent {
+    PathStart {
+        path_id: String,
+        parent_path_id: Option<String>,
+        inherited_constraints: Vec<String>,
+    },
+    Push {
+        path_id: String,
+    },
+    Assert {
+        path_id: String,
+        constraint_id: String,
+    },
+    Pop {
+        path_id: String,
+    },
+    Check {
+        path_id: String,
+        check_id: String,
+        constraints: Vec<String>,
+    },
+    ModelRead {
+        path_id: String,
+        read_id: String,
+    },
+    ModelChoice {
+        path_id: String,
+    },
+    PathEnd {
+        path_id: String,
+        constraints: Vec<String>,
+    },
+}
+
 impl Trace {
     // Keeping the ordered validation state in one pass makes sequence, lineage,
     // scope, check, and model-choice ownership invariants directly auditable.
@@ -313,6 +364,7 @@ impl Trace {
         let mut event_kinds = Vec::new();
         let mut choice_ids = BTreeSet::new();
         let mut choice_reads = BTreeSet::new();
+        let mut warm_events = Vec::new();
 
         for (line_index, line) in events_bytes.split(|byte| *byte == b'\n').enumerate() {
             if line.is_empty() {
@@ -346,10 +398,17 @@ impl Trace {
                 if paths.contains_key(&path_id) {
                     return Err(format!("duplicate path start: {path_id}"));
                 }
-                let state = if event.get("parent_path_id").is_none_or(Value::is_null) {
-                    PathState::default()
-                } else {
-                    let parent_id = string(&event, "parent_path_id")?;
+                let parent_path_id = event
+                    .get("parent_path_id")
+                    .filter(|value| !value.is_null())
+                    .map(|value| {
+                        value
+                            .as_str()
+                            .map(str::to_string)
+                            .ok_or_else(|| "parent_path_id is not a string".to_string())
+                    })
+                    .transpose()?;
+                let state = if let Some(parent_id) = &parent_path_id {
                     let parent = paths
                         .get(parent_id)
                         .ok_or_else(|| format!("path {path_id} has missing parent {parent_id}"))?;
@@ -357,6 +416,8 @@ impl Trace {
                         return Err(format!("path {path_id} has ended parent {parent_id}"));
                     }
                     parent.clone()
+                } else {
+                    PathState::default()
                 };
                 if usize_integer(&event, "inherited_scope_depth")? != state.scopes.len()
                     || string(&event, "scope_digest")? != scope_digest(&state.scopes)?
@@ -372,6 +433,17 @@ impl Trace {
                         ..state
                     },
                 );
+                let inherited_constraints = complete_constraints(
+                    paths
+                        .get(&path_id)
+                        .expect("path was inserted immediately above"),
+                    &path_id,
+                )?;
+                warm_events.push(WarmEvent::PathStart {
+                    path_id: path_id.clone(),
+                    parent_path_id,
+                    inherited_constraints,
+                });
             }
             let state = paths
                 .get_mut(&path_id)
@@ -397,6 +469,9 @@ impl Trace {
                     if usize_integer(&event, "resulting_depth")? != state.scopes.len() {
                         return Err(format!("push resulting depth mismatch on {path_id}"));
                     }
+                    warm_events.push(WarmEvent::Push {
+                        path_id: path_id.clone(),
+                    });
                 }
                 "assert" => {
                     state.pending_sat_check = None;
@@ -416,10 +491,14 @@ impl Trace {
                     if string(&event, "assertion_sha256")? != constraint {
                         return Err(format!("assertion hash mismatch on {path_id}"));
                     }
-                    scope.constraint_id = Some(constraint);
+                    scope.constraint_id = Some(constraint.clone());
                     if string(&event, "scope_digest")? != scope_digest(&state.scopes)? {
                         return Err(format!("assert scope digest mismatch on {path_id}"));
                     }
+                    warm_events.push(WarmEvent::Assert {
+                        path_id: path_id.clone(),
+                        constraint_id: constraint,
+                    });
                 }
                 "pop" => {
                     state.pending_sat_check = None;
@@ -438,6 +517,9 @@ impl Trace {
                     {
                         return Err(format!("pop resulting scope mismatch on {path_id}"));
                     }
+                    warm_events.push(WarmEvent::Pop {
+                        path_id: path_id.clone(),
+                    });
                 }
                 "check" => {
                     let constraints = complete_constraints(state, &path_id)?;
@@ -487,10 +569,16 @@ impl Trace {
                     reuse.maximum_scope_depth = reuse.maximum_scope_depth.max(constraints.len());
                     state.last_checked_constraints = constraints;
                     state.pending_sat_check =
-                        (checks[&check_id].outcome == "sat").then_some(check_id);
+                        (checks[&check_id].outcome == "sat").then_some(check_id.clone());
+                    warm_events.push(WarmEvent::Check {
+                        path_id: path_id.clone(),
+                        check_id,
+                        constraints: state.last_checked_constraints.clone(),
+                    });
                 }
                 "model_read" => {
                     let read = parse_model_read(&event, &path_id)?;
+                    let read_id = read.read_id.clone();
                     let check = checks.get(&read.check_id).ok_or_else(|| {
                         format!("model read {} references missing check", read.read_id)
                     })?;
@@ -506,6 +594,10 @@ impl Trace {
                     if model_reads.insert(read.read_id.clone(), read).is_some() {
                         return Err("duplicate model-read ID".into());
                     }
+                    warm_events.push(WarmEvent::ModelRead {
+                        path_id: path_id.clone(),
+                        read_id,
+                    });
                 }
                 "model_choice" => {
                     let choice_id = string(&event, "model_choice_id")?.to_string();
@@ -562,6 +654,9 @@ impl Trace {
                         }
                     }
                     state.pending_sat_check = None;
+                    warm_events.push(WarmEvent::ModelChoice {
+                        path_id: path_id.clone(),
+                    });
                 }
                 "path_end" => {
                     state.pending_sat_check = None;
@@ -570,6 +665,10 @@ impl Trace {
                     {
                         return Err(format!("path_end scope digest mismatch on {path_id}"));
                     }
+                    warm_events.push(WarmEvent::PathEnd {
+                        path_id: path_id.clone(),
+                        constraints: complete_constraints(state, &path_id)?,
+                    });
                     state.ended = true;
                 }
                 "analysis_start" | "analysis_end" | "path_start" => {}
@@ -644,6 +743,7 @@ impl Trace {
             model_choice_count: choice_ids.len(),
             recorded_outcomes,
             reuse,
+            warm_events,
         })
     }
 }
@@ -719,6 +819,473 @@ fn load_queries(root: &Path, index: &Value) -> Result<BTreeMap<String, QueryReco
         return Err("query store membership differs from query index".into());
     }
     Ok(queries)
+}
+
+struct WarmProgram {
+    arena: TermArena,
+    constraints: BTreeMap<String, TermId>,
+    model_read_equalities: BTreeMap<String, TermId>,
+}
+
+struct WarmPath {
+    solver: IncrementalBvSolver,
+    scopes: Vec<Option<String>>,
+    materialized: Vec<bool>,
+    pending_model: Option<(String, Model)>,
+}
+
+#[derive(Default)]
+struct WarmReplayStats {
+    path_states_created: u64,
+    fork_states_created: u64,
+    fork_prefix_roots_replayed: u64,
+    fork_prefix_replay_nanos: u64,
+    pushes: u64,
+    assertions: u64,
+    unmaterialized_assertions: u64,
+    unmaterialized_fork_prefix_roots: u64,
+    pops: u64,
+    checks: u64,
+    model_read_matches: u64,
+    model_read_divergences: u64,
+    model_reads_not_evaluable: u64,
+    peak_live_paths: usize,
+    peak_live_aig_nodes: u64,
+    peak_live_cnf_variables: u64,
+    peak_live_cnf_clauses: u64,
+    total_word_rewrite_nanos: u64,
+    total_bit_blast_nanos: u64,
+    total_cnf_encode_nanos: u64,
+    total_sat_nanos: u64,
+    total_model_lift_nanos: u64,
+    total_model_replay_nanos: u64,
+    total_aig_nodes_by_path: u64,
+    total_cnf_variables_by_path: u64,
+    total_cnf_clauses_by_path: u64,
+    check_latencies_nanos: Vec<u64>,
+    outcomes: BTreeMap<String, u64>,
+}
+
+// One ordered state machine owns the fork/scope/model invariants. Splitting the
+// event handlers across independent passes would weaken their auditable order.
+#[allow(clippy::too_many_lines)]
+fn replay_warm_trace(trace: &Trace, config: &SolverConfig) -> Result<Value, String> {
+    let build_started = Instant::now();
+    let program = build_warm_program(trace)?;
+    let build_nanos = nanos(build_started.elapsed());
+    let mut paths = BTreeMap::<String, WarmPath>::new();
+    let mut stats = WarmReplayStats::default();
+    let replay_started = Instant::now();
+
+    for event in &trace.warm_events {
+        match event {
+            WarmEvent::PathStart {
+                path_id,
+                parent_path_id,
+                inherited_constraints,
+            } => {
+                if paths.contains_key(path_id) {
+                    return Err(format!("warm replay duplicates path {path_id}"));
+                }
+                if let Some(parent_path_id) = parent_path_id {
+                    let parent = paths.get(parent_path_id).ok_or_else(|| {
+                        format!("warm fork {path_id} has no live parent {parent_path_id}")
+                    })?;
+                    let parent_constraints = warm_constraints(parent, parent_path_id)?;
+                    if &parent_constraints != inherited_constraints {
+                        return Err(format!(
+                            "warm fork {path_id} inherited a different prefix from {parent_path_id}"
+                        ));
+                    }
+                    stats.fork_states_created = stats.fork_states_created.saturating_add(1);
+                } else if !inherited_constraints.is_empty() {
+                    return Err(format!("warm root path {path_id} inherits constraints"));
+                }
+
+                let fork_started = Instant::now();
+                let mut solver = IncrementalBvSolver::with_config_and_profiling(config.clone());
+                let mut scopes = Vec::with_capacity(inherited_constraints.len());
+                let mut materialized = Vec::with_capacity(inherited_constraints.len());
+                for constraint_id in inherited_constraints {
+                    solver
+                        .push()
+                        .map_err(|error| format!("warm fork {path_id} push: {error}"))?;
+                    let available = if let Some(term) = program.constraints.get(constraint_id) {
+                        solver.assert(&program.arena, *term).map_err(|error| {
+                            format!("warm fork {path_id} assert {constraint_id}: {error}")
+                        })?;
+                        true
+                    } else {
+                        stats.unmaterialized_fork_prefix_roots =
+                            stats.unmaterialized_fork_prefix_roots.saturating_add(1);
+                        false
+                    };
+                    scopes.push(Some(constraint_id.clone()));
+                    materialized.push(available);
+                }
+                if parent_path_id.is_some() {
+                    stats.fork_prefix_roots_replayed = stats
+                        .fork_prefix_roots_replayed
+                        .saturating_add(usize_to_u64(inherited_constraints.len()));
+                    stats.fork_prefix_replay_nanos = stats
+                        .fork_prefix_replay_nanos
+                        .saturating_add(nanos(fork_started.elapsed()));
+                }
+                paths.insert(
+                    path_id.clone(),
+                    WarmPath {
+                        solver,
+                        scopes,
+                        materialized,
+                        pending_model: None,
+                    },
+                );
+                stats.path_states_created = stats.path_states_created.saturating_add(1);
+                refresh_warm_peaks(&paths, &mut stats);
+            }
+            WarmEvent::Push { path_id } => {
+                let path = warm_path_mut(&mut paths, path_id)?;
+                path.pending_model = None;
+                path.solver
+                    .push()
+                    .map_err(|error| format!("warm path {path_id} push: {error}"))?;
+                path.scopes.push(None);
+                path.materialized.push(false);
+                stats.pushes = stats.pushes.saturating_add(1);
+                refresh_warm_peaks(&paths, &mut stats);
+            }
+            WarmEvent::Assert {
+                path_id,
+                constraint_id,
+            } => {
+                let path = warm_path_mut(&mut paths, path_id)?;
+                path.pending_model = None;
+                if path.scopes.last().is_none() {
+                    return Err(format!("warm assert without push on {path_id}"));
+                }
+                if path.scopes.last().is_some_and(Option::is_some) {
+                    return Err(format!("warm path {path_id} asserts twice in one scope"));
+                }
+                if let Some(term) = program.constraints.get(constraint_id) {
+                    path.solver.assert(&program.arena, *term).map_err(|error| {
+                        format!("warm path {path_id} assert {constraint_id}: {error}")
+                    })?;
+                    *path
+                        .materialized
+                        .last_mut()
+                        .expect("scope and materialization stacks are parallel") = true;
+                } else {
+                    stats.unmaterialized_assertions =
+                        stats.unmaterialized_assertions.saturating_add(1);
+                }
+                *path
+                    .scopes
+                    .last_mut()
+                    .expect("scope presence checked above") = Some(constraint_id.clone());
+                stats.assertions = stats.assertions.saturating_add(1);
+                refresh_warm_peaks(&paths, &mut stats);
+            }
+            WarmEvent::Pop { path_id } => {
+                let path = warm_path_mut(&mut paths, path_id)?;
+                path.pending_model = None;
+                if path.scopes.pop().is_none()
+                    || path.materialized.pop().is_none()
+                    || !path.solver.pop()
+                {
+                    return Err(format!("warm scope underflow on {path_id}"));
+                }
+                stats.pops = stats.pops.saturating_add(1);
+            }
+            WarmEvent::Check {
+                path_id,
+                check_id,
+                constraints,
+            } => {
+                let check = trace
+                    .checks
+                    .get(check_id)
+                    .ok_or_else(|| format!("warm replay references missing check {check_id}"))?;
+                let path = warm_path_mut(&mut paths, path_id)?;
+                if warm_constraints(path, path_id)? != *constraints {
+                    return Err(format!("warm active scopes differ on check {check_id}"));
+                }
+                if path.solver.scope_depth() != constraints.len() {
+                    return Err(format!("warm solver depth differs on check {check_id}"));
+                }
+                if path.materialized.iter().any(|available| !available) {
+                    return Err(format!(
+                        "warm check {check_id} reaches an assertion absent from the query store"
+                    ));
+                }
+                let check_started = Instant::now();
+                let result = path
+                    .solver
+                    .check(&program.arena)
+                    .map_err(|error| format!("warm check {check_id}: {error}"))?;
+                stats
+                    .check_latencies_nanos
+                    .push(nanos(check_started.elapsed()));
+                stats.checks = stats.checks.saturating_add(1);
+                let (outcome, model) = match result {
+                    CheckResult::Sat(model) => ("sat", Some(model)),
+                    CheckResult::Unsat => ("unsat", None),
+                    CheckResult::Unknown(_) => ("unknown", None),
+                };
+                *stats.outcomes.entry(outcome.to_string()).or_default() += 1;
+                if check.outcome != outcome {
+                    return Err(format!(
+                        "warm check {check_id} verdict disagreement: recorded {}, Axeyum {outcome}",
+                        check.outcome
+                    ));
+                }
+                path.pending_model = model.map(|model| (check_id.clone(), model));
+            }
+            WarmEvent::ModelRead { path_id, read_id } => {
+                let term = program.model_read_equalities.get(read_id).ok_or_else(|| {
+                    format!("warm replay has no expression equality for model read {read_id}")
+                })?;
+                let read = trace
+                    .model_reads
+                    .get(read_id)
+                    .ok_or_else(|| format!("warm replay has no model read {read_id}"))?;
+                let path = warm_path_mut(&mut paths, path_id)?;
+                let (check_id, model) = path
+                    .pending_model
+                    .as_ref()
+                    .ok_or_else(|| format!("warm model read {read_id} has no pending SAT model"))?;
+                if check_id != &read.check_id {
+                    return Err(format!("warm model read {read_id} follows the wrong check"));
+                }
+                match eval(&program.arena, *term, &model.to_assignment()) {
+                    Ok(IrValue::Bool(true)) => {
+                        stats.model_read_matches = stats.model_read_matches.saturating_add(1);
+                    }
+                    Ok(IrValue::Bool(false)) => {
+                        stats.model_read_divergences =
+                            stats.model_read_divergences.saturating_add(1);
+                    }
+                    Ok(_) | Err(_) => {
+                        stats.model_reads_not_evaluable =
+                            stats.model_reads_not_evaluable.saturating_add(1);
+                    }
+                }
+            }
+            WarmEvent::ModelChoice { path_id } => {
+                warm_path_mut(&mut paths, path_id)?.pending_model = None;
+            }
+            WarmEvent::PathEnd {
+                path_id,
+                constraints,
+            } => {
+                let path = paths
+                    .remove(path_id)
+                    .ok_or_else(|| format!("warm replay ends missing path {path_id}"))?;
+                if warm_constraints(&path, path_id)? != *constraints {
+                    return Err(format!("warm terminal scopes differ on path {path_id}"));
+                }
+                accumulate_warm_path_stats(&path.solver.stats(), &mut stats);
+            }
+        }
+    }
+    if !paths.is_empty() {
+        return Err("warm replay retains unterminated paths".into());
+    }
+
+    stats.check_latencies_nanos.sort_unstable();
+    Ok(json!({
+        "policy": {
+            "preprocess": config.preprocess,
+            "timeout_ms_per_check": config.timeout.map(|timeout| timeout.as_millis()),
+            "fork_behavior": "fresh child solver plus validated inherited-prefix replay",
+            "mutable_solver_state_shared_across_paths": false,
+            "sat_model_replay": "IncrementalBvSolver original-assertion replay",
+        },
+        "shared_arena_build_nanos": build_nanos,
+        "replay_nanos": nanos(replay_started.elapsed()),
+        "path_states_created": stats.path_states_created,
+        "fork_states_created": stats.fork_states_created,
+        "fork_prefix_roots_replayed": stats.fork_prefix_roots_replayed,
+        "fork_prefix_replay_nanos": stats.fork_prefix_replay_nanos,
+        "pushes": stats.pushes,
+        "assertions": stats.assertions,
+        "unmaterialized_assertions": stats.unmaterialized_assertions,
+        "unmaterialized_fork_prefix_roots": stats.unmaterialized_fork_prefix_roots,
+        "pops": stats.pops,
+        "checks": stats.checks,
+        "outcomes": stats.outcomes,
+        "check_latency_p50_nanos": percentile(&stats.check_latencies_nanos, 50),
+        "check_latency_p95_nanos": percentile(&stats.check_latencies_nanos, 95),
+        "model_read_matches": stats.model_read_matches,
+        "model_read_divergences": stats.model_read_divergences,
+        "model_reads_not_evaluable": stats.model_reads_not_evaluable,
+        "peak_live_paths": stats.peak_live_paths,
+        "peak_live_aig_nodes": stats.peak_live_aig_nodes,
+        "peak_live_cnf_variables": stats.peak_live_cnf_variables,
+        "peak_live_cnf_clauses": stats.peak_live_cnf_clauses,
+        "phase_nanos": {
+            "word_rewrite": stats.total_word_rewrite_nanos,
+            "bit_blast": stats.total_bit_blast_nanos,
+            "cnf_encode": stats.total_cnf_encode_nanos,
+            "sat": stats.total_sat_nanos,
+            "model_lift": stats.total_model_lift_nanos,
+            "model_replay": stats.total_model_replay_nanos,
+        },
+        "total_retained_structure_by_path": {
+            "aig_nodes": stats.total_aig_nodes_by_path,
+            "cnf_variables": stats.total_cnf_variables_by_path,
+            "cnf_clauses": stats.total_cnf_clauses_by_path,
+        },
+    }))
+}
+
+fn build_warm_program(trace: &Trace) -> Result<WarmProgram, String> {
+    let mut declarations = BTreeSet::<String>::new();
+    let mut constraint_text = BTreeMap::<String, String>::new();
+    for (query_hash, query) in &trace.queries {
+        let text = std::str::from_utf8(&query.bytes)
+            .map_err(|error| format!("query {query_hash} is non-UTF-8: {error}"))?;
+        for line in text.split_inclusive('\n') {
+            if line.starts_with("(declare-const ") || line.starts_with("(declare-fun ") {
+                declarations.insert(line.to_string());
+            } else if line.starts_with("(assert ") {
+                let constraint_id = sha256(line.as_bytes());
+                if let Some(previous) = constraint_text.insert(constraint_id.clone(), line.into())
+                    && previous != line
+                {
+                    return Err(format!("constraint SHA-256 collision at {constraint_id}"));
+                }
+            }
+        }
+    }
+    for read in trace.model_reads.values() {
+        for (name, width) in &read.symbols {
+            declarations.insert(format!("(declare-const {name} (_ BitVec {width}))\n"));
+        }
+    }
+
+    let mut source = String::from("(set-logic QF_BV)\n");
+    for declaration in declarations {
+        source.push_str(&declaration);
+        if !declaration.ends_with('\n') {
+            source.push('\n');
+        }
+    }
+    let constraint_ids = constraint_text.keys().cloned().collect::<Vec<_>>();
+    for assertion in constraint_text.values() {
+        source.push_str(assertion);
+        if !assertion.ends_with('\n') {
+            source.push('\n');
+        }
+    }
+    let read_ids = trace.model_reads.keys().cloned().collect::<Vec<_>>();
+    for read in trace.model_reads.values() {
+        writeln!(
+            source,
+            "(assert (= {} (_ bv{} {})))",
+            read.expression, read.returned_value, read.width
+        )
+        .map_err(|error| format!("render warm model-read equality: {error}"))?;
+    }
+    source.push_str("(check-sat)\n");
+    let script = parse_script(&source).map_err(|error| format!("warm shared parse: {error}"))?;
+    if script.logic.as_deref() != Some("QF_BV") || script.solvable_flat_view().is_none() {
+        return Err("warm shared script is not a flat QF_BV problem".into());
+    }
+    if script.assertions.len() != constraint_ids.len() + read_ids.len() {
+        return Err("warm shared parse changed the assertion count".into());
+    }
+    let constraints = constraint_ids
+        .into_iter()
+        .zip(script.assertions.iter().copied())
+        .collect();
+    let model_read_equalities = read_ids
+        .into_iter()
+        .zip(script.assertions[constraint_text.len()..].iter().copied())
+        .collect();
+    Ok(WarmProgram {
+        arena: script.arena,
+        constraints,
+        model_read_equalities,
+    })
+}
+
+fn warm_path_mut<'a>(
+    paths: &'a mut BTreeMap<String, WarmPath>,
+    path_id: &str,
+) -> Result<&'a mut WarmPath, String> {
+    paths
+        .get_mut(path_id)
+        .ok_or_else(|| format!("warm event references missing path {path_id}"))
+}
+
+fn warm_constraints(path: &WarmPath, path_id: &str) -> Result<Vec<String>, String> {
+    path.scopes
+        .iter()
+        .map(|constraint| {
+            constraint
+                .clone()
+                .ok_or_else(|| format!("warm path {path_id} has an unasserted scope"))
+        })
+        .collect()
+}
+
+fn refresh_warm_peaks(paths: &BTreeMap<String, WarmPath>, stats: &mut WarmReplayStats) {
+    stats.peak_live_paths = stats.peak_live_paths.max(paths.len());
+    let (aig_nodes, cnf_variables, cnf_clauses) = paths.values().fold(
+        (0_u64, 0_u64, 0_u64),
+        |(aig_nodes, cnf_variables, cnf_clauses), path| {
+            let path_stats = path.solver.stats();
+            (
+                aig_nodes.saturating_add(path_stats.aig_nodes),
+                cnf_variables.saturating_add(path_stats.cnf_variables),
+                cnf_clauses.saturating_add(path_stats.cnf_clauses),
+            )
+        },
+    );
+    stats.peak_live_aig_nodes = stats.peak_live_aig_nodes.max(aig_nodes);
+    stats.peak_live_cnf_variables = stats.peak_live_cnf_variables.max(cnf_variables);
+    stats.peak_live_cnf_clauses = stats.peak_live_cnf_clauses.max(cnf_clauses);
+}
+
+fn accumulate_warm_path_stats(
+    path: &axeyum_solver::IncrementalBvStats,
+    stats: &mut WarmReplayStats,
+) {
+    stats.total_word_rewrite_nanos = stats
+        .total_word_rewrite_nanos
+        .saturating_add(nanos(path.word_rewrite));
+    stats.total_bit_blast_nanos = stats
+        .total_bit_blast_nanos
+        .saturating_add(nanos(path.bit_blast));
+    stats.total_cnf_encode_nanos = stats
+        .total_cnf_encode_nanos
+        .saturating_add(nanos(path.cnf_encode));
+    stats.total_sat_nanos = stats.total_sat_nanos.saturating_add(nanos(path.solve));
+    stats.total_model_lift_nanos = stats
+        .total_model_lift_nanos
+        .saturating_add(nanos(path.model_lift));
+    stats.total_model_replay_nanos = stats
+        .total_model_replay_nanos
+        .saturating_add(nanos(path.replay));
+    stats.total_aig_nodes_by_path = stats.total_aig_nodes_by_path.saturating_add(path.aig_nodes);
+    stats.total_cnf_variables_by_path = stats
+        .total_cnf_variables_by_path
+        .saturating_add(path.cnf_variables);
+    stats.total_cnf_clauses_by_path = stats
+        .total_cnf_clauses_by_path
+        .saturating_add(path.cnf_clauses);
+}
+
+fn percentile(sorted: &[u64], percent: usize) -> u64 {
+    if sorted.is_empty() {
+        return 0;
+    }
+    let index = (sorted.len() - 1).saturating_mul(percent).div_ceil(100);
+    sorted[index.min(sorted.len() - 1)]
+}
+
+fn usize_to_u64(value: usize) -> u64 {
+    u64::try_from(value).unwrap_or(u64::MAX)
 }
 
 fn parse_model_read(event: &Value, path_id: &str) -> Result<ModelRead, String> {
@@ -1012,6 +1579,27 @@ fn write_json_atomic(path: &Path, value: &Value) -> Result<(), String> {
 mod tests {
     use super::*;
 
+    fn warm_test_trace(
+        queries: BTreeMap<String, QueryRecord>,
+        checks: BTreeMap<String, CheckRecord>,
+        warm_events: Vec<WarmEvent>,
+    ) -> Trace {
+        Trace {
+            analysis_id: "analysis-test".into(),
+            process_id: "process-test".into(),
+            events_hash: "events-test".into(),
+            event_count: warm_events.len(),
+            path_count: 2,
+            queries,
+            checks,
+            model_reads: BTreeMap::new(),
+            model_choice_count: 0,
+            recorded_outcomes: BTreeMap::new(),
+            reuse: ReuseStats::default(),
+            warm_events,
+        }
+    }
+
     #[test]
     fn choice_assertion_declares_missing_symbols_before_check() {
         let read = ModelRead {
@@ -1045,5 +1633,135 @@ mod tests {
             constraint_id: Some("constraint-1".into()),
         }];
         assert_ne!(digest, scope_digest(&changed).unwrap());
+    }
+
+    #[test]
+    fn warm_fork_replays_a_validated_parent_prefix_without_sharing_solver_state() {
+        let assertion = "(assert (= x (_ bv1 8)))\n";
+        let constraint_id = sha256(assertion);
+        let query =
+            format!("(set-logic QF_BV)\n(declare-const x (_ BitVec 8))\n{assertion}(check-sat)\n");
+        let query_hash = sha256(query.as_bytes());
+        let queries = BTreeMap::from([(
+            query_hash.clone(),
+            QueryRecord {
+                bytes: query.into_bytes(),
+                outcomes: BTreeSet::from(["sat".into()]),
+                occurrences: Vec::new(),
+            },
+        )]);
+        let checks = BTreeMap::from([
+            (
+                "check-parent".into(),
+                CheckRecord {
+                    check_id: "check-parent".into(),
+                    path_id: "parent".into(),
+                    query_hash: query_hash.clone(),
+                    outcome: "sat".into(),
+                },
+            ),
+            (
+                "check-child".into(),
+                CheckRecord {
+                    check_id: "check-child".into(),
+                    path_id: "child".into(),
+                    query_hash,
+                    outcome: "sat".into(),
+                },
+            ),
+        ]);
+        let events = vec![
+            WarmEvent::PathStart {
+                path_id: "parent".into(),
+                parent_path_id: None,
+                inherited_constraints: Vec::new(),
+            },
+            WarmEvent::Push {
+                path_id: "parent".into(),
+            },
+            WarmEvent::Assert {
+                path_id: "parent".into(),
+                constraint_id: constraint_id.clone(),
+            },
+            WarmEvent::Check {
+                path_id: "parent".into(),
+                check_id: "check-parent".into(),
+                constraints: vec![constraint_id.clone()],
+            },
+            WarmEvent::PathStart {
+                path_id: "child".into(),
+                parent_path_id: Some("parent".into()),
+                inherited_constraints: vec![constraint_id.clone()],
+            },
+            WarmEvent::Check {
+                path_id: "child".into(),
+                check_id: "check-child".into(),
+                constraints: vec![constraint_id.clone()],
+            },
+            WarmEvent::PathEnd {
+                path_id: "child".into(),
+                constraints: vec![constraint_id.clone()],
+            },
+            WarmEvent::PathEnd {
+                path_id: "parent".into(),
+                constraints: vec![constraint_id],
+            },
+        ];
+        let trace = warm_test_trace(queries, checks, events);
+        let summary = replay_warm_trace(&trace, &SolverConfig::new()).unwrap();
+        assert_eq!(summary["checks"], 2);
+        assert_eq!(summary["fork_states_created"], 1);
+        assert_eq!(summary["fork_prefix_roots_replayed"], 1);
+        assert_eq!(summary["outcomes"]["sat"], 2);
+        assert_eq!(
+            summary["policy"]["mutable_solver_state_shared_across_paths"],
+            false
+        );
+    }
+
+    #[test]
+    fn warm_check_rejects_an_active_constraint_missing_from_the_query_store() {
+        let query = b"(set-logic QF_BV)\n(check-sat)\n".to_vec();
+        let query_hash = sha256(&query);
+        let queries = BTreeMap::from([(
+            query_hash.clone(),
+            QueryRecord {
+                bytes: query,
+                outcomes: BTreeSet::from(["sat".into()]),
+                occurrences: Vec::new(),
+            },
+        )]);
+        let checks = BTreeMap::from([(
+            "check-missing".into(),
+            CheckRecord {
+                check_id: "check-missing".into(),
+                path_id: "path".into(),
+                query_hash,
+                outcome: "sat".into(),
+            },
+        )]);
+        let missing = "missing-constraint".to_string();
+        let events = vec![
+            WarmEvent::PathStart {
+                path_id: "path".into(),
+                parent_path_id: None,
+                inherited_constraints: Vec::new(),
+            },
+            WarmEvent::Push {
+                path_id: "path".into(),
+            },
+            WarmEvent::Assert {
+                path_id: "path".into(),
+                constraint_id: missing.clone(),
+            },
+            WarmEvent::Check {
+                path_id: "path".into(),
+                check_id: "check-missing".into(),
+                constraints: vec![missing],
+            },
+        ];
+        let trace = warm_test_trace(queries, checks, events);
+        let error = replay_warm_trace(&trace, &SolverConfig::new()).unwrap_err();
+        assert!(error.contains("absent from the query store"));
     }
 }
