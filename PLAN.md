@@ -601,6 +601,22 @@ GQ ordering: clean multi-driver GQ1/GQ10 publication, the measured GQ5
 residual only if new attribution selects it, and GQ7 explicit-lineage warm
 solving remain next.
 
+The post-ADR-0166 aggregate gate then exercised the new ordered-trace binary
+against the same full verification surface. Formatting, strict workspace
+Clippy, every workspace test and doctest, warning-denied documentation, the
+QF_BV feature profile, and all 31 Glaurung harness tests passed under the 4 GiB
+cap. The run correctly exposed one packaging regression before the pinned
+corpus could start: `axeyum-bench` now had two binaries, so legacy unqualified
+`cargo run -p axeyum-bench` recipes were ambiguous. Commit `f6fcd81f` restores
+the established CLI by declaring `axeyum-bench` as the package default binary.
+After that fix, the pinned 128-query raw and canonical policies both decide
+128/128 with zero errors, disagreements, or replay failures; this run measures
+raw at 0.186834 s versus Z3's 0.152914 s (1.222x) and canonical at 0.051122 s
+versus 0.153682 s (0.333x). Foundational resources, generated rules-as-code
+drift checks, and link validation also pass. This split rerun closes the exact
+failure without pretending it is a fresh single-command performance baseline;
+T3 explicit-lineage warm solving remains the next GQ7 action.
+
 **Non-negotiable acceptance gate.** Comparable runs require 100% decided on the
 declared client tier, zero operational errors, `DISAGREE=0`, zero model/proof
 replay failures, fixed seeds and solver versions, and bounded deterministic

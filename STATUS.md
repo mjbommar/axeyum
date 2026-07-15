@@ -345,6 +345,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   p50/p95 latency, peak memory, replay, and break-even. GQ8 caching and GQ9
   admission stay downstream.
 
+  The post-T2 4 GiB aggregate gate passed formatting, strict all-feature/
+  all-target Clippy, every workspace test and doctest, warning-denied docs, the
+  QF_BV profile, and all 31 Glaurung harness tests. It then found a packaging
+  regression rather than a solver failure: the added trace replayer made
+  unqualified `cargo run -p axeyum-bench` ambiguous. Commit `f6fcd81f` declares
+  the established harness the package default binary. The repaired pinned gate
+  is 128/128 decided under both policies with zero errors, disagreements, or
+  replay failures (raw 1.222x and canonical 0.333x versus in-process Z3 in this
+  run); foundational resources, generated rules-as-code drift, and links also
+  pass. Keep these as semantic/regression evidence, not a replacement for the
+  clean ordered multi-driver timing gate.
+
 - **2026-07-15 — ADR-0165 contains the Lean-kernel P0.** Historical commit
   `2cb298e2` preserved a complete derivation that the trusted gate admitted as
   `theorem bad : False`. Commit `d26ad887` now implements Lean's exact
@@ -1091,6 +1103,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   (1.069x); canonical v4 is 0.050672 s versus 0.150092 s (0.338x). The gate
   refreshed five tracked frontier `solve_ms` curves; an ignored-timing
   comparison confirms their frontiers, decisions, and statuses are unchanged.
+
+  A later post-T2 aggregate run passed the full format/Clippy/test/doctest/doc/
+  QF_BV-profile/harness-test prefix under the same 4 GiB cap, then stopped at
+  the real-corpus recipe because the new second package binary made its legacy
+  `cargo run` ambiguous. `f6fcd81f` fixes that public-package integration with
+  `default-run = "axeyum-bench"`. The exact failed stage and remaining tail
+  were rerun successfully: both 128-query policies are fully decided and
+  replay-clean (raw 1.222x, canonical 0.333x), followed by foundational,
+  generated-resource, rules-as-code, and link gates. Five frontier artifacts
+  changed only in measured `solve_ms`; frontier/decision/status structure is
+  unchanged.
 
 - **2026-07-14 — ADR-0141 lands exact source-term BV Skolem witnesses.** The
   checked `forall+ exists` SAT route now accepts one source-reachable,
@@ -2875,6 +2898,16 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-15 — the post-ordered-trace aggregate gate finds and closes a
+  package-entry regression.** The 4 GiB run passes the complete workspace
+  verification/test/doc prefix, but the pinned Glaurung recipe initially cannot
+  select between the established harness and the new ordered-trace replayer.
+  `f6fcd81f` restores all unqualified harness recipes with an explicit package
+  default. The repaired 128-query raw/canonical gates are 100% decided with zero
+  errors, disagreements, or replay failures; foundational resources,
+  rules-as-code generation/drift, and links pass. The refreshed frontier files
+  contain timing-only changes. This does not alter the GQ7-first roadmap.
 
 - **2026-07-15 — ADR-0166 accepts bounded ordered-trace T1/T2 functionality.**
   Glaurung's opt-in producer and external validator are pushed at `7a11c29` and
