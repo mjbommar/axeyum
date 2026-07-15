@@ -259,11 +259,16 @@ session state.
 > extensions. This is opt-in downstream corpus evidence, not an Axeyum product
 > dependency or warm speed claim. Its concrete producer/consumer contract is
 > [ordered warm-trace v1](docs/research/08-planning/glaurung-ordered-trace-v1.md).
-> The immediate GQ7 action is T3: map explicit lineages/scopes to retained
-> Axeyum solver state, replay a validated prefix at forks, and compare it with
-> ADR-0164 snapshot inference on identical occurrences. Then publish clean
-> multi-driver ordered traces with p50/p95, peak memory, and break-even before
-> GQ8 caching or GQ9 admission.
+> ADR-0167 now accepts the opt-in T3 functionality boundary. One shared parsed
+> arena feeds a distinct retained solver per live lineage; forks validate the
+> exact parent prefix and replay it into a fresh child, never sharing mutable
+> SAT state. The bounded trace remains 784/784 agreed with replay, and all 243
+> model reads evaluate (242 recorded-value matches, one legitimate alternative
+> model). The naive child strategy replays 7,378 roots across 232 forks and
+> spends about 813 ms there, selecting T4 rather than a default. Next compare
+> cold occurrence replay, ADR-0164 snapshot inference, and explicit lineage on
+> identical bytes; capture all assertion bytes plus peak RSS/resource identity;
+> then publish clean multi-driver p50/p95/break-even evidence before GQ8/GQ9.
 > The capture and
 > implementation audit has been expanded into the dependency-ordered
 > [Glaurung QF_BV execution plan](docs/research/08-planning/glaurung-qfbv-execution-plan.md):
@@ -298,7 +303,7 @@ decisions or speedups.
 | **GQ4** | **Cold demand-driven bit-slice reduction** | **Out of the active queue.** ADR-0157 v1 is correct but regresses the real ratio about 1.42x→4.49x; ADR-0158's conservative admission is a safe no-op but does not improve the required family. Both remain explicit/off. Do not tune thresholds further on this corpus; only a qualitatively different constant-cost admission proof and a fresh client gate can reopen GQ4. |
 | **GQ5** | **Cheaper AIG construction and measured CNF encoding** | **Large incremental clause residual closed; per-node construction remains open.** ADR-0162/0163 cut incremental clauses 782,716→558,787 and pass native gates; only 12,882 clauses (+2.36%) remain over one-shot, while a stronger per-clause index regresses native time. Next attribute bit-blast cost as node count versus construction overhead, verify Glaurung sharing survives term→AIG, and measure bounded structural hashing/two-level rewrites/copy removal. Continue comparator/concat/extract/root CNF work only from measured gate/attempt profiles and require lower native time, not merely fewer clauses. |
 | **GQ6** | **Cold SAT/CDCL tuning** | **Relevant but ranked seventh.** The reported native share is now about 20%, so compare the exact emitted CNF across BatSat, the proof-producing core, and pinned CaDiCaL/Kissat, then measure existing subsumption/vivification/inprocessing plus phase saving, VSIDS/VMTF, and restarts. UNSAT proof rechecking and deterministic resource limits remain mandatory. Do not outrank GQ7, client-boundary attribution, or the dual baseline. |
-| **GQ7** | **Cheaper warm entry and delta preprocessing** | **Highest-leverage active item; ADR-0164 bridge plus ADR-0166 ordered T1/T2 accepted.** Snapshot-LCP reuse cuts the single-driver median ratio 2.648x→1.462x. Independent ordered replay now validates 235 paths, 784 checks, explicit scopes, and 243 choices; all 508 unique scripts decide and replay. Next implement T3 explicit per-lineage retained state and validated fork-prefix replay, compare it against snapshot inference on identical occurrences, and add clean multi-driver p50/p95/memory/break-even gates. GQ7 is not complete and warm stays opt-in. |
+| **GQ7** | **Cheaper warm entry and delta preprocessing** | **Highest-leverage active item; ADR-0164 bridge, ADR-0166 T1/T2, and ADR-0167 opt-in T3 functionality accepted.** Explicit lineage replay creates 235 path states and agrees on all 784 checks with original-model replay; all 243 choices evaluate. Fresh child solvers replay 7,378 inherited roots and spend about 813 ms there, so T4 must compare cold occurrences, snapshot inference, and explicit lineage on identical bytes, with actual RSS/resource identity and clean multi-driver p50/p95/break-even. GQ7 is not complete and warm stays opt-in. |
 | **GQ8** | **Verdict and CNF reuse for duplicate/prefix queries** | ADR-0166 measures 276/784 exact duplicate occurrences (35.2%), 156 same-lineage repeats, and 271 prefix extensions, but does not authorize a cache. Complete GQ7 retained per-lineage state first. Then evaluate a deterministic, bounded cache keyed by canonical content, solver/config semantics, and scope/lineage identity; every hit still passes original-term model or proof replay and invalidation/versioning is explicit. |
 | **GQ9** | **Auto production policy and API guidance** | Ship a conservative auto policy only after fixed-policy comparison on the real corpus: GQ4 remains off/no-op unless its wide savings gate clears, accepted CNF fusion/context dedup stay on, rewrite tiers follow causal reach/cost, and warm mode activates only when an ordered reuse stream is present. Export the reason for every choice. Exit requires non-regression against every fixed alternative plus documented raw/cheap/configured/warm guidance. |
 | **GQ10** | **Ordered, wider real-lifter regression corpus** | Retain the deduplicated representative/full cold tiers and ADR-0166's bounded ordered functionality sample. Next publish clean non-deduplicated traces across the driver set with exact-repeat/prefix frequency, path lineage, deterministic resources, and peak memory; run the full-tier variance gate. Track per-commit decided/error/replay status, stage/family counters, and both Axeyum/Z3 baselines: pre-parsed in-process Z3 and Glaurung's actual Z3 backend. The item is not done until GQ7/GQ8 reuse and the user-visible client ratio are reproducibly exercised. |
@@ -309,10 +314,11 @@ but roughly 2.5x on the actual `IncrementalBvSolver` same-stream path, with
 bit-blast/CNF/SAT near 45%/32%/20%. Treat those as distinct bars until the same
 revision and queries reconcile them. The ranked work is:
 
-1. **GQ7 warm end to end:** build on ADR-0164's measured snapshot-LCP bridge
-   and ADR-0166's accepted ordered T1/T2 boundary; implement explicit
-   per-lineage retained preprocessing, AIG, CNF, learned state, push/pop,
-   models, validated fork replay, and compare it on identical occurrences;
+1. **GQ7 warm end to end:** build on ADR-0164's measured snapshot-LCP bridge,
+   ADR-0166's ordered T1/T2 boundary, and ADR-0167's per-lineage T3 path;
+   compare cold occurrences, snapshot inference, and explicit lineage on
+   identical bytes, then reduce measured fork-prefix replay cost without
+   weakening push/pop, model, original-query replay, or ownership semantics;
 2. **GQ1 client overhead:** use `check_profiled` to partition and remove the
    reported approximately 1.8x real-client/bench entry factor;
 3. **AIG cost per bit:** separate node count from construction cost, preserve
@@ -339,9 +345,10 @@ revision and queries reconcile them. The ranked work is:
 The highest-leverage trio is 1, 2, and 10. GQ4 is not an active optimization;
 ADR-0157/0158 remain explicit/off. Cold rewrite or CNF work may continue only
 when causal/native profiles select it. ADR-0164 permits opt-in consecutive
-snapshot reuse now; ADR-0166 supplies the bounded ordered T1/T2 evidence.
-Explicit per-lineage T3 solving and clean multi-driver publication must precede
-cache capacity or auto-policy choices.
+snapshot reuse now; ADR-0166 supplies the bounded ordered T1/T2 evidence;
+ADR-0167 supplies opt-in per-lineage T3 replay. T4 identical-occurrence
+controls and clean multi-driver publication must precede cache capacity or
+auto-policy choices.
 
 **Recorded cold-path sequence.** The detailed task graph and functional acceptance boundary
 live in the
@@ -615,7 +622,7 @@ raw at 0.186834 s versus Z3's 0.152914 s (1.222x) and canonical at 0.051122 s
 versus 0.153682 s (0.333x). Foundational resources, generated rules-as-code
 drift checks, and link validation also pass. This split rerun closes the exact
 failure without pretending it is a fresh single-command performance baseline;
-T3 explicit-lineage warm solving remains the next GQ7 action.
+T4 identical-occurrence warm controls remain the next GQ7 action.
 
 **Non-negotiable acceptance gate.** Comparable runs require 100% decided on the
 declared client tier, zero operational errors, `DISAGREE=0`, zero model/proof

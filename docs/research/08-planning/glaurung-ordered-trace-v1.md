@@ -1,6 +1,7 @@
 # Glaurung ordered warm-trace v1 handoff
 
-Status: T1 producer and T2 independent replay accepted in ADR-0166; T3--T5 open
+Status: T1/T2 accepted in ADR-0166; opt-in T3 per-lineage replay accepted in
+ADR-0167; T4--T5 open
 Date: 2026-07-14
 
 ## Purpose
@@ -228,6 +229,9 @@ cargo run --release -p axeyum-bench --bin glaurung-ordered-trace -- \
   TRACE_DIR --timeout-ms 1000 --out axeyum-replay-v1.json
 ```
 
+Add `--warm` to run ADR-0167's explicit per-lineage retained solver replay
+after the independent T2 checks.
+
 The consumer does not trust producer validation. It verifies artifact hashes,
 reconstructs lineage and scope state, strictly parses every unique QF_BV query,
 re-solves each query with original-assertion model replay, reconciles all
@@ -241,3 +245,28 @@ The stream contains 276 duplicate occurrences (35.2%), 271 prefix extensions,
 and maximum scope depth 45. This establishes the functionality and reuse
 opportunity needed for T3. It is not a clean multi-driver publication, warm
 performance result, or reason to make reuse automatic.
+
+## 2026-07-15 T3 result
+
+ADR-0167 adds opt-in ordered warm replay without importing Glaurung into the
+solver architecture. One shared parsed arena supplies stable term identity;
+each live path owns a distinct `IncrementalBvSolver`. A fork must match its
+parent's active constraint sequence and then replays that validated prefix into
+a fresh child solver. No mutable SAT state is shared or cloned.
+
+The bounded development trace remains 784/784 verdict-agreed (473 SAT, 311
+UNSAT), with original-assertion replay on every warm SAT candidate. All 243
+model reads evaluate: 242 match the recorded exploration value and one exposes
+a legitimate alternative-model choice. The current producer stores exact
+assertion bytes only through checked queries; 13 assertions on never-checked
+terminal branches therefore remain explicitly unmaterialized. A check or
+inheriting checked fork that reaches one fails closed.
+
+The initial strategy creates 232 fork solvers and replays 7,378 inherited
+roots. That prefix replay costs about 813 ms of the 1.249 s warm pass; check
+latency is about 0.322/0.672 ms p50/p95. Peak live structural gauges are 20
+paths, 109,056 AIG nodes, and 143,041 clauses. These single-run development
+numbers select T4 work; they are not a warm-vs-cold, memory, multi-driver, or
+default-policy claim. Next run cold occurrence and ADR-0164 snapshot controls
+on identical bytes, capture every asserted term, add peak RSS/resource identity,
+and establish the actual break-even before considering GQ8/GQ9.
