@@ -527,7 +527,7 @@ extracts, 16,806 zero extensions, 15,791 subtractions, and 15,218 `bvult`s.
 
 For `slice-partial`, post-word add count correlates 0.988 with
 bit-blast-plus-CNF time. The highest-excess rows repeatedly compare a symbolic
-modular add-chain plus one constant with another constant. Proposed ADR-0155
+modular add-chain plus one constant with another constant. ADR-0155
 tests exact cancellation across equality before any broader affine, lowering,
 or SAT work.
 
@@ -559,3 +559,52 @@ This dirty-worktree single run establishes semantic safety and a large enough
 structural signal to proceed. It is not acceptance or a stable timing claim;
 five clean representative processes must pass before the guarded five-process
 full tier is spent.
+
+## ADR-0155 accepted result
+
+Clean artifact-v28 baselines were regenerated at v3 revision `37ebcd47` so the
+fail-closed comparator did not need to weaken its version contract. Candidate
+revision `5c89a25d` was built in an isolated target directory to prevent final-
+binary collisions with that detached baseline. Both five-process series bind
+the same corpus, manifest, configuration, hardware, toolchain, and backends;
+the comparator verifies that v4 is exactly v3 plus
+`bv.eq_add_constant_cancel.v1`.
+
+The representative comparison passes all gates. Mean total falls 0.134733 →
+0.051541 seconds (-61.75%), ratio falls 0.9087x → 0.3514x (-61.33%), and bit
+blast/CNF/SAT fall 71.16%/71.77%/66.74%. The word pass increases 7.09%, but
+construction and search savings dominate. Candidate total CV is 0.98%.
+
+Five full candidate processes each decide 1,774 SAT and 11,688 UNSAT queries,
+match the manifest and in-process Z3, and have zero unknowns, operational
+errors, disagreements, or model-replay failures. Mean results are:
+
+| Measure | v3 | v4 | Delta |
+|---|---:|---:|---:|
+| Axeyum total | 13.9462 s | 5.6250 s | -59.67% |
+| Z3 control | 7.6273 s | 7.7088 s | +1.07% |
+| ratio | 1.8286x | 0.7297x | -60.09% |
+| word policy | 1.7807 s | 1.8318 s | +2.87% |
+| bit blast | 4.4372 s | 1.3103 s | -70.47% |
+| CNF | 4.6416 s | 1.3958 s | -69.93% |
+| SAT | 2.9033 s | 0.9286 s | -68.02% |
+
+The full rule fires 104,465 times: 53,557 in `register-slice`, 50,122 in
+`slice-partial`, and 786 in `arithmetic`. Post-word DAG nodes fall 907,263 →
+494,977 (-45.4%), AIG requests 67.22M → 24.83M (-63.1%), new AIG nodes
+36.41M → 8.47M (-76.7%), and clauses 40.72M → 10.03M (-75.4%).
+
+| Family | v3 Axeyum | v4 Axeyum | Delta | v4 Z3 | v4 ratio | v3 → v4 clauses |
+|---|---:|---:|---:|---:|---:|---:|
+| `register-slice` | 9.227 s | 4.721 s | -48.8% | 5.904 s | 0.80x | 25.45M → 8.80M |
+| `slice-partial` | 4.641 s | 0.797 s | -82.8% | 1.601 s | 0.50x | 14.81M → 0.93M |
+| `arithmetic` | 0.146 s | 0.104 s | -28.9% | 0.211 s | 0.49x | 0.46M → 0.30M |
+
+The guarded comparison passes the 3% ratio, 3% Axeyum-total, and 2% absolute-
+Z3-drift alarms; observed Z3 drift is 1.07%. Candidate summary SHA-256:
+`7d7700c23fb3c361e3719b4b5296a105d88bf7bc1d3ba6da4dacc588053a6d57`.
+Comparison SHA-256:
+`619079beb9871391138854a946a0ee43a678a6116626d0588b2201bc87cb940c`.
+ADR-0155 is accepted. Axeyum is faster than Z3 on this full cold real-lifter
+distribution; the next Glaurung work is to expose/wire canonical v4 as the
+cheap cold integration policy and validate the separate ordered warm trace.

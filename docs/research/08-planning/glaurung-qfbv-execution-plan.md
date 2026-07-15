@@ -7,13 +7,14 @@ Last updated: 2026-07-14
 
 The shortest evidence-backed path to useful Glaurung functionality is:
 
-1. repair and ingest the real capture through Axeyum's artifact-v26 contract;
+1. repair and ingest the real capture through Axeyum's artifact-v28 contract;
 2. reproduce the current **raw one-shot** integration before comparing any
    preprocessing policy (complete for the representative and well-typed full
    tiers);
 3. remove the always-on observational bit-demand pass from production timing;
-4. retain exact extract/coercion cancellation as the cheap cold candidate and
-   extend word simplification only from the measured residual;
+4. retain accepted exact extract/coercion/additive cancellation as the cheap
+   cold policy, expose it to embedders, and extend it only from a new measured
+   residual;
 5. optimize AIG/CNF construction only where corrected counters attribute cost;
 6. capture an ordered extending-path trace and validate warm push/pop reuse in
    the Glaurung explorer; and
@@ -35,6 +36,12 @@ million recognized gates and further reduces full CNF 5.6%, gate emission
 ADR-0150 then removes the common per-fingerprint index-vector allocation and
 second map probe: full CNF falls 28.4%, total falls 11.5% to 16.54 seconds, and
 the ratio reaches 2.14x with the same 49,199,541 clauses.
+ADR-0153's modular add-chain folding reaches 14.11 seconds / 1.85x Z3.
+ADR-0155 then cancels the remaining constant across equality: five clean full
+processes improve mean time 59.7% to 5.625 seconds and ratio 60.1% to 0.730x
+Z3, while new AIG nodes and clauses fall 76.7%/75.4%. The cold real-lifter gap
+is closed under the canonical v4 policy; wiring that policy into Glaurung and
+validating ordered warm behavior are now the functionality priorities.
 
 This note expands `PLAN.md` items GQ1--GQ10 into an executable sequence. It does
 not authorize changes to the Glaurung repository; producer-side and explorer
@@ -84,15 +91,15 @@ each check and calls raw `assert`. Its own measurements say
 artifact-v17 command likewise used neither `--rewrite default` nor
 `--preprocess`.
 
-Axeyum's current `bench-glaurung-qfbv` recipe does pass `--preprocess`.
-Consequently, that recipe does **not** reproduce either the reported 2.10x
-profile or Glaurung's current API behavior. The initial baseline must preserve
-three separately named policies:
+Axeyum's original `bench-glaurung-qfbv` recipe passed `--preprocess` and did
+not reproduce either the reported profile or Glaurung's current API behavior.
+That mismatch is repaired: current recipes preserve three separately named
+policies, and the unsuffixed compatibility route remains the raw control:
 
 | Policy | Harness flags | Purpose |
 |---|---|---|
 | `raw` | rewrite off, preprocess off | Current Glaurung one-shot and artifact-v17 reproduction; primary cold control |
-| `canonical` | `--rewrite default`, preprocess off | Cheap exact rewrite candidate |
+| `canonical` | `--rewrite default`, preprocess off | Accepted cheap exact v4 policy; not yet wired into Glaurung's raw one-shot path |
 | `configured` | `--preprocess` | Full warm-oriented preprocessing diagnostic; not the cold default |
 
 The proof companion must use the same term policy as the performance artifact
@@ -284,7 +291,8 @@ diagnostic. Corrected full raw/canonical totals are 24.30/21.07 s versus Z3
 
 Exit: the counters explain where the measured bit-blast and CNF time goes, and
 their diagnostic overhead is absent from production timing or measured in a
-separately named diagnostic artifact. This exit is currently open.
+separately named diagnostic artifact. This exit is complete for the current
+boundary; add finer counters only when a fresh post-v4 residual justifies them.
 
 ### G3 — exact cheap rewrite tranche (GQ2 + GQ3)
 
@@ -321,6 +329,15 @@ gate green. It does not reduce full-tier AIG/CNF size (nodes +3.0%, clauses
 +1.2%), and the ratio still includes the always-on demand diagnostic. GQ3 is a
 validated client time/term-DAG win but remains WIP on its circuit-size and
 corrected-production-timing exit.
+
+Accepted completion checkpoint: ADR-0153 adds exact scalar/wide modular
+constant-chain folding. ADR-0155 then adds only exact constant cancellation
+across equality and advances the default identity to v4. Five clean full v4
+processes decide and replay every query, improve mean total 13.946 → 5.625
+seconds, and improve ratio 1.829x → 0.730x Z3. Output DAG nodes fall 45.4%,
+new AIG nodes 76.7%, and clauses 75.4%; both excess-owning families become
+faster than Z3. GQ3 is complete for the measured workload. Broader affine
+normalization remains deferred unless a fresh v4 residual reopens it.
 
 ### G4 — demand-driven cold bit lowering (GQ4)
 
@@ -402,7 +419,12 @@ sorts mixed symbol/constant chains without combining their constant leaves.
 Exact modular add-chain folding is accepted: full total improves 9.80% to
 14.11 seconds / 1.85x Z3, clauses fall 17.23%, and `slice-partial` improves
 24.4% with every semantic gate green. SAT and broad GQ4 remain gated by fresh
-post-v3 opportunity.
+post-v3 opportunity. Accepted ADR-0155 supplies that next attribution and
+eliminates the remaining constant adder across equality. Full mean total falls
+to 5.625 seconds / 0.730x Z3, CNF to 1.396 seconds, bit blast to 1.310 seconds,
+and SAT to 0.929 seconds. Direct construction and SAT work are no longer the
+Glaurung cold blocker; the bounded word pass at 1.832 seconds is now the largest
+stage, and any further cold change requires a fresh post-v4 profile.
 
 ### G6 — SAT work remains conditional (GQ6)
 
@@ -465,13 +487,13 @@ validity gates.
 | M0 byte-complete capture | GQ1, GQ10 | **Axeyum side done:** representative and well-typed full manifests validate; producer still must prevent 2,225 malformed dumps and atomically deduplicate |
 | M1 raw v27 baseline | GQ1, GQ10 | **Done:** representative raw/canonical and five canonical full-tier processes pass every gate; full Axeyum/ratio/Z3 CV is 0.51%/0.51%/0.31% and guarded comparisons use provisional 3%/3%/2% alarms |
 | M2 diagnostic attribution | GQ1, GQ3--GQ5 | **Done for current boundary:** ADR-0143 removes the 29.57 s observational pass from production and marks diagnostic completeness explicitly |
-| M3 cheap exact rewriting | GQ2, GQ3 | **Two measured production tranches:** canonical v2 cuts corrected full total 13.3%; accepted ADR-0153 then cuts v3 full total 9.80%, AIG requests 12.13%, clauses 17.23%, and `slice-partial` time 24.4% |
+| M3 cheap exact rewriting | GQ2, GQ3 | **Measured implementation done; integration publication remains:** canonical v2 cuts corrected full total 13.3%, ADR-0153 cuts another 9.80%, and accepted ADR-0155 reaches 5.625 s / 0.730x Z3 with AIG nodes/clauses down 76.7%/75.4% versus v3 |
 | M4 demand lowering | GQ4 | Continue only with replay-safe real AIG/CNF and wall-time reductions |
-| M5 AIG/CNF optimization | GQ5 | **Four direct construction wins plus one upstream reduction accepted:** ADR-0144/0145/0150/0151 reach 15.60 s / 1.99x; ADR-0153's word reduction lowers downstream clauses 17.23% and reaches 14.11 s / 1.85x. Re-attribute v3 before another cold experiment |
+| M5 AIG/CNF optimization | GQ5 | **Cold client blocker closed:** ADR-0144/0145/0150/0151 direct wins plus ADR-0153/0155 upstream reductions reach 5.625 s / 0.730x Z3 and 10.03M clauses. Reopen only from a measured post-v4 excess |
 | M6 SAT re-attribution | GQ6 | Start SAT work only if search becomes material/dominant |
 | M7 ordered warm trace | GQ7, GQ8 | **Consumer contract defined:** obtain and validate a producer sample, then measure incremental API shape and duplicate/prefix frequency before deciding whether a cache is worthwhile |
 | M8 Glaurung warm integration | GQ7 | Require real same-stream functionality and performance, not the synthetic result |
-| M9 auto policy and regression lane | GQ8--GQ10 | **Cold regression lane done:** raw + canonical representative checks are availability-aware and canonical full-tier 3%/3%/2% alarms are executable; ordered-trace validation remains mandatory before changing defaults |
+| M9 auto policy and regression lane | GQ8--GQ10 | **Cold regression lane done; policy publication WIP:** raw + canonical representative checks are availability-aware, canonical v4 is accepted at 0.730x Z3, and full-tier 3%/3%/2% alarms are executable. Expose the cheap policy explicitly; ordered-trace validation remains mandatory before changing broader defaults |
 
 ## Immediate next actions
 
@@ -481,9 +503,10 @@ validity gates.
    SAT model-driven choice, and UNSAT prune. Validate hashes, sorts, scope
    reconstruction, lineage, and consumed model values before scaling. The cold
    deduplicated pack cannot substitute for it.
-2. Re-attribute the accepted v3 residual by family/operator/construction shape
-   before proposing another GQ2--GQ6 cold change. Broad GQ4 and SAT remain
-   behind measured post-v3 opportunity.
+2. Expose and document canonical v4 as the cheap cold solver policy, then wire
+   Glaurung's one-shot backend to select it explicitly and shadow-diff the
+   end-to-end finding stream. Re-attribute the now-smaller v4 residual before
+   proposing another GQ2--GQ6 change; broad GQ4 and SAT remain gated.
 3. On the Glaurung side, fix explicit width coercion plus strict dump validation
    and cross-process dedup/conflict handling so future cold and ordered captures
    are authoritative before GQ7/GQ8 cache or auto-policy work.

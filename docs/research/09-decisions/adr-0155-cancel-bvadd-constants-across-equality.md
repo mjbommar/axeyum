@@ -1,6 +1,6 @@
 # ADR-0155: Cancel additive bit-vector constants across equality
 
-Status: proposed
+Status: accepted
 Date: 2026-07-14
 
 ## Context
@@ -26,10 +26,9 @@ This is a narrower hypothesis than subtraction normalization, general affine
 normalization, equality solving, or AIG adder redesign. It is selected from the
 post-v3 DAG rather than lexical source frequency.
 
-## Proposed decision
+## Decision
 
-Add exact rule `bv.eq_add_constant_cancel.v1`, subject to the Glaurung
-acceptance gate.
+Add exact rule `bv.eq_add_constant_cancel.v1`.
 
 - Match an equality over same-width bit-vectors where one operand is a constant
   `k` and the other is a flattened `bvadd` with at least one nonconstant leaf
@@ -80,7 +79,7 @@ be re-attributed on the real capture. It does not authorize cancellation across
 ordered comparisons, arithmetic overflow predicates, or any non-equality
 context. GQ7 ordered-trace handoff remains the parallel functionality priority.
 
-## Candidate checkpoint
+## Accepted evidence
 
 The v4 implementation passes manifest coverage, exhaustive evaluator
 equivalence through width 3, scalar modular wrap, symbolic multiplicity,
@@ -90,6 +89,22 @@ required lifter-shaped differential route: the rule fires 1,094 times across 34
 SAT and 34 UNSAT rows, all decisions agree with in-process Z3, and every SAT
 model replays against the original assertions. The single semantic run measures
 0.051248 seconds versus Z3's 0.149495 seconds (0.343x), with 5,159 post-word DAG
-nodes, 86,123 new AIG nodes, and 94,043 clauses. This is a stop/go signal, not
-acceptance; five clean representative processes and the guarded full comparison
-remain mandatory.
+nodes, 86,123 new AIG nodes, and 94,043 clauses.
+
+Five clean representative processes improve mean Axeyum total from 0.134733 to
+0.051541 seconds (-61.7%) and mean ratio from 0.909x to 0.351x (-61.3%). Five
+clean full processes then improve mean Axeyum total from 13.9462 to 5.6250
+seconds (-59.7%) and mean ratio from 1.8286x to 0.7297x (-60.1%). Bit blast,
+CNF, and SAT improve 70.5%, 69.9%, and 68.0%; the bounded word pass increases
+2.9%. The rule fires 104,465 times in a full run. Output DAG nodes fall 45.4%,
+AIG requests 63.1%, new AIG nodes 76.7%, and clauses 75.4%.
+
+Every full process decides 13,462/13,462 queries with zero errors, unknowns,
+disagreements, or replay failures. `register-slice` time improves 48.8% and
+`slice-partial` 82.8%; both become faster than Z3. The fail-closed comparator
+verifies that v4 is exactly v3 plus this rule and passes the 3% ratio, 3%
+Axeyum-total, and 2% Z3-drift gates; observed Z3 drift is 1.07%. The candidate
+summary SHA-256 is
+`7d7700c23fb3c361e3719b4b5296a105d88bf7bc1d3ba6da4dacc588053a6d57`;
+the guarded comparison SHA-256 is
+`619079beb9871391138854a946a0ee43a678a6116626d0588b2201bc87cb940c`.

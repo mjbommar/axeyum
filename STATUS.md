@@ -322,7 +322,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-14 — Glaurung's `slice-partial` affine-add reduction is accepted;
+- **2026-07-14 — Glaurung's equality cancellation is accepted at 0.73x Z3;
   the ordered warm trace is the next functionality artifact.**
   Sequential capture at Glaurung
   `286f744` produced 15,710 rows / 15,687 unique hashes / 23 duplicate rows /
@@ -524,18 +524,21 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `register-slice` (+3.441 s) and `slice-partial` (+3.142 s); the latter's
   44,668 additions correlate 0.988 with bit-blast-plus-CNF time.
 
-  ADR-0155 therefore selects exact modular constant cancellation
+  ADR-0155 now accepts exact modular constant cancellation
   across equality: `sum(symbolic) + c = k` becomes
   `sum(symbolic) = k - c`. It removes one wide adder and exposes hash sharing
   across offset variants without changing symbols or model projection. The v4
-  candidate passes exhaustive evaluation through width 3, modular wrap,
+  rule passes exhaustive evaluation through width 3, modular wrap,
   129-bit, both-orientation, multiplicity, and non-match tests plus strict
-  Clippy. On the pinned 128-query capture it fires 1,094 times across 34 SAT
-  and 34 UNSAT rows; all 128 decisions agree with the manifest and in-process
-  Z3 and all SAT models replay. The single semantic run is 0.0512 s versus
-  Z3's 0.1495 s (0.343x), with 5,159 post-word DAG nodes, 86,123 new AIG nodes,
-  and 94,043 clauses. The rule remains unaccepted until five clean
-  representative processes and the guarded five-process full comparison pass.
+  Clippy. Five representative processes improve mean total 61.7% to 0.0515 s
+  and ratio 61.3% to 0.351x Z3. Five full processes then improve mean total
+  13.946 → 5.625 s (-59.7%) and ratio 1.829x → 0.730x (-60.1%); bit
+  blast/CNF/SAT improve 70.5%/69.9%/68.0%, while word rewrite costs 2.9% more.
+  The rule fires 104,465 times, output DAG nodes fall 45.4%, AIG requests/new
+  nodes fall 63.1%/76.7%, and clauses fall 75.4%. All five runs decide and
+  replay 13,462/13,462 with no errors or disagreements. `register-slice` and
+  `slice-partial` improve 48.8%/82.8% and both are now faster than Z3. The exact
+  v3→v4 comparator passes every 3%/3%/2% gate with 1.07% Z3 drift.
 
 - **Historical Glaurung build-up through 2026-07-14 (superseded by the measured
   result above).** The ten-item Glaurung QF_BV performance roadmap is an
@@ -703,10 +706,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   | ID | Live status | Next acceptance boundary |
   |---|---|---|
   | **GQ1 real-query profile** | **DONE for the current cold timing and post-word operator boundaries.** Artifact v28's clean full process is 14.215/7.718 s (1.842x), 13,462/13,462 valid, with complete original/post-word operator inventories | Repeat full trials when accepting an optimization; thresholds require multiple full-tier processes |
-  | **GQ2 cheap cold tier** | **WIP with two accepted tranches and one gated candidate.** Canonical v2 cuts corrected full total 13.3%; ADR-0153's v3 add-chain fold cuts another 9.80%. ADR-0155's v4 equality cancellation passes semantic and single-run real-capture gates | Run five clean representative processes, then the guarded full tier only if the structural/time win is stable |
-  | **GQ3 coercion/affine peepholes** | **WIP with two production wins and one exact candidate.** ADR-0142 lands slice/coercion rules; ADR-0153 lands scalar/wide modular add-chain folding; ADR-0155's cancellation passes exhaustive/wide/non-match and real Z3/replay gates | Keep ADR-0155 exact/wide/bounded; broader affine normalization remains deferred pending its repeated/full result |
+  | **GQ2 cheap cold tier** | **WIP with three accepted tranches.** Canonical v2 cuts corrected full total 13.3%; ADR-0153's v3 add-chain fold cuts another 9.80%; ADR-0155's v4 equality cancellation reaches 5.625 s / 0.730x Z3 | Publish/wire the cheap canonical policy for embedders and re-attribute its now-largest 1.832 s word cost before any further cold rewrite |
+  | **GQ3 coercion/affine peepholes** | **DONE for the measured Glaurung shapes.** ADR-0142 lands slice/coercion rules, ADR-0153 scalar/wide modular add-chain folding, and accepted ADR-0155 equality cancellation; v4 is faster than Z3 and sheds 75.4% of clauses | Keep broader affine normalization deferred; reopen only from a new post-v4 real-corpus residual |
   | **GQ4 cold relevant bits** | **WIP but re-ranked.** ADR-0143 separates the diagnostic; post-canonical full demand is 98.16% of term bits and 91.51% of symbol bits | Pursue partial lowering only if family-specific evidence shows a material cone and preserve original replay/model projection |
-  | **GQ5 AIG/CNF construction** | **ACTIVE with four direct wins plus ADR-0153's upstream reduction.** Clean v28 is 14.215 s / 1.842x; `register-slice` and `slice-partial` own 3.441/3.142 s excess | Test ADR-0155's upstream adder elimination first; resume direct construction work only if the post-candidate residual selects it |
+  | **GQ5 AIG/CNF construction** | **WIP, no longer the client blocker.** Direct ownership wins plus v3/v4 word reductions reach 1.396 s CNF and 1.310 s bit blast; full cold v4 is 0.730x Z3 | Re-attribute post-v4 only; do not resume construction micro-work without a new measured excess |
   | **GQ6 cold SAT/CDCL** | **WIP foundation, attribution-gated**; subsumption/BVE, XOR/GF(2), VSIDS, phase saving, Luby, and LBD foundations exist | Exact-CNF backend attribution first; tune/default a stronger path only where SAT dominates and proof replay stays green |
   | **GQ7 warm delta entry** | **WIP; producer/consumer contract defined.** Retained CNF/search state exists, but the deduplicated cold corpus cannot measure prefix reuse and Glaurung still creates a fresh solver for every check | Obtain and validate a small producer trace under `glaurung-ordered-trace-v1.md`, then preprocess only new/affected terms, wire persistent per-worker/path push/assert/check/pop, control concretization, and publish real-driver per-check cost plus warm break-even depth |
   | **GQ8 verdict/CNF cache** | **TODO, ordered-trace-gated** | Measure duplicates/prefixes first; prefer retained warm state, then add versioned exact-query reuse only where justified, with deterministic bounds and mandatory original replay |
@@ -716,9 +719,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   **Next actions:** (1) hand the ordered worker/path/scope trace v1 and
   controlled-concretization contract to Glaurung, then validate a small
   producer sample covering root/fork lineage, repeated checks, nested push/pop,
-  a SAT model-driven choice, and an UNSAT prune; (2) re-attribute the v3
-  run ADR-0155 through five clean representative structural/timing gates and
-  then the guarded full experiment if stable, keeping broad
+  a SAT model-driven choice, and an UNSAT prune; (2) publish and wire accepted
+  canonical v4 as the cheap cold integration path,
+  then re-attribute its smaller residual while keeping broad
   GQ4, SAT, and further memo work gated pending measured opportunity; (3) fix Glaurung's explicit width
   coercion, strict dump validation, and atomic cross-process dedup/conflict
   handling; (4) add the Axeyum trace validator/replayer before persistent warm
@@ -2501,7 +2504,7 @@ plan is built and committed on the current branch:
 | P4.2 | Symbolic-execution CFG frontend (angr/unicorn-class) | WIP — first frontend-facing primitives landed: `SymbolicMemory` wraps an SMT array memory state, builds `select`/`store`, routes load-equality branch/assume queries through `SymbolicExecutor`'s automatic warm/memory feasibility APIs, and now exposes conservative write-log normalization / compact read-specific read-over-write `ite` construction for frontend memory logs that skips literal-distinct writes, elides exact-hit guards, preserves later symbolic aliases, and uses the auto route; `SymbolicExecutor::assume_auto` and `SymbolicExecutor::branch` keep same-index store/read-back constraints, literal-distinct concrete-address store-chain misses, zero-initialized constant-array reads, simple array-ITE state-merge reads including same-readback merge-guard and tautology pruning, reducible conditional read/write-index paths with scalar equality-over-`ite` cleanup, symbolic Bool readback equality/connective/xor/implication cleanup, BV bitwise/arithmetic/comparison/slice-extension/shift/div-rem readback cleanup, reducible symbolic-address ROW over store chains with same-index shadowed-store pruning, plain symbolic-base Bool/BV array loads via retained select-congruence abstraction including wide/BV256 index or element projection, direct equal-array symbol assumptions/assertions via retained cross-array select congruence and equal-array model projection, scalar Bool/BV UF applications via retained congruence abstraction including wide/BV256 argument or result projection, helper-level load/write-log queries, and default `explore_cfg` branch/assume/status/model queries on the warm BV path when they reduce or abstract, with original-term replay, while remaining general memory/UF still auto-promotes to the memory/theory-aware route; `SymbolicExecutor::explore_cfg` provides a reusable DFS harness over frontend-supplied CFG states, with solver-scope management, infeasible pruning, unknown-safe traversal, and model-witnessed targets; `explore_cfg_checked` adds frontend-supplied concrete witness extraction + replay callbacks and buckets targets into verified/missing-witness/mismatch cases; `TinyBvProgram` is the first reusable small-target frontend, with a validated BV register/memory IR, label-aware line-oriented assembly import with retained label/source metadata, deterministic PC-to-label lookup, typed static CFG edges and basic blocks, deterministic Graphviz DOT export for the basic-block CFG plus trace-highlighted, block-coverage-highlighted, and edge-coverage-highlighted DOT overlays, block-level trace paths, taken-edge trace reports, source-aware trace rows, consolidated witness trace reports, replay-checked test-case generation reports, block-coverage and edge-coverage test-suite reports, register-register equality branches, symbolic instruction lifting, zero-initialized SMT array memory for `Load`/`Store`, model-witness extraction, independent concrete replay, concrete execution traces, and bounded PC/label reachability/safety reports. Remaining: byte-level/binary broader target work, unbounded/certified safety wrappers over richer CFGs, and eventually general warm memory reuse from P4.1 |
 | P4.3 | Optimization: OMT lexicographic/Pareto + MILP hardening | WIP — single-objective `maximize/minimize_lia` + `_bv`/`_bv_signed` already shipped (exponential+binary bound search, Boolean-structured oracle). **Lexicographic multi-objective landed** (`optimize_lia_lexicographic`, 2026-06-18): optimize objectives in order, pinning each at its optimum (`obj≥v`/`obj≤v`) before the next so later ones range over the optimal face — z3's default lex combination. Sound + terminating (bounded composition of the checked single-objective optimizer); `LexOutcome::Stopped` at the first unbounded/infeasible/unknown objective. **BV lexicographic also landed** (`optimize_bv_lexicographic`, signed/unsigned, `bv_uge/ule/sge/sle` pinning) — lexicographic OMT now covers both LIA and BV. **Box** (`optimize_lia_box` / `optimize_bv_box`, independent) **and Pareto** (`optimize_lia_pareto` / `optimize_bv_pareto`, guided-improvement front enumeration, deterministic point/push caps, each point verified Pareto-optimal) modes also landed — **axeyum now has all 3 of z3's OMT modes (box, lexicographic, pareto) across LIA+BV**. BV Pareto covers unsigned and signed objective values, max/min directions, and graceful `Unknown` for out-of-fragment objective values. MaxSAT returns the witnessing model (`max_satisfiable_model`). `minimize_model` / `Solver::minimize_model` provide replay-checked lexicographic counterexample minimization over selected Bool, unsigned-BV<=127, and Int symbols, and the metadata-aware `minimize_model_objectives` / `Solver::minimize_model_objectives` route adds signed two's-complement BV objective order for signed SDK inputs. `produce_evidence_minimized` / `prove_minimized` preserve the default surface, while `_with_objectives` variants expose signed-objective metadata to frontends. `axeyum-property` v0 is now the first typed SDK consumer of that surface: Bool/BV/Int handles, assumptions, proof calls, minimized countermodel lifting, checked `EvidenceReport` exposure plus best-effort standalone Lean modules and stable evidence/trust/Lean summaries through `ProofCertificate`, typed BV overflow predicates, `.equals()` equality aliases, property-owned Bool/BV/Int builder aliases, `Property::all` / `Property::any` Boolean folds, deterministic native-scalar counterexample-to-`#[test]` rendering with caller-owned prelude/setup snippets, helper-rendered Boolean / `Result<(), E>` / `Result<bool, E>` replay adapters, deterministic `#[cfg(test)]` module assembly, deterministic multi-case fixture file assembly, direct named/tuple aggregate initializer snippets, and explicit nested aggregate field composition, scalar/tuple/derived-struct `Symbolic` declarations/lifting including signed-order two's-complement fixed-width Rust integers, named-field `symbolic_struct` bundles, and the generated SDK corpus/scoreboard gate with 16 graduated workflows, deterministic executable baseline comparisons for scalar counterexamples, an actual fixed-seed proptest shrunk counterexample, struct and replay counterexamples, proved assertions, assumption-backed proved assertions, and a Kani-style assume/assert counterexample baseline, machine-readable `corpus.json`, DISAGREE=0, and 1/1 Lean-required coverage. Remaining: MILP hardening; broader objective support for minimized counterexamples beyond Bool/BV/Int native scalars; property SDK ergonomics (operator traits, richer replay bodies); richer proptest families and real Kani CLI-backed property corpus comparison; differential validation vs Z3 `opt` |
 | P4.4 | SMT-LIB command-surface completeness (declare-sort, reset, get-proof, …) | WIP — broad command surface already parsed (declare-const/fun/datatype(s), define-fun/sort, push/pop, reset(-assertions), check-sat(-assuming), get-proof/model/value/unsat-core/assignment/assertions, set-option/info, get-option, echo/exit); term forms let/forall/exists/`!`/`as` handled. `reset-assertions` is represented and honored by scoped incremental solving; full `(reset)` is explicitly rejected in the shared-arena parse/solve model. The single-result front-door helpers (`solve_smtlib`, OMT, `get-value`, `get-unsat-core`, `get-proof`, `get-assignment`) now replay the command stream for zero-or-one-query scripts, honoring `push`/`pop`, `check-sat-assuming`, and `reset-assertions` instead of flattening scoped scripts; multi-query scripts are rejected there and routed to `solve_smtlib_incremental`. `solve_smtlib_get_model` returns user-declared constants/functions for sat `(get-model)` scripts as Rust IR values, `solve_smtlib_get_assignment` returns active top-level named assertion assignments for sat scripts while filtering popped/reset assertions, and `solve_smtlib_get_assertions` returns exact command-point assertion-stack snapshots rendered from IR while excluding one-shot `check-sat-assuming` literals. The parser records `set-info`, `set-option`, requested `get-info`, and requested `get-option` commands; `solve_smtlib_get_info` returns recorded metadata, axeyum defaults for `:name`/`:version`, computed `:reason-unknown`, and explicit unsupported markers, while `solve_smtlib_get_option` returns recorded/default option values and explicit unsupported markers. **`match` datatype pattern-matching added** (commit d404794, P4.4): parse-time desugaring to nested `ite`/`DtTest`/`DtSelect`, exhaustiveness + arity checked, 11 tests. Remaining: parametric `declare-sort`/`define-sort`, `define-fun-rec`, full `match` for parametric datatypes, full option-driven solver semantics, and textual interactive command output |
-| P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | **DONE for the generic/cold GQ10 gates, first rewrite-transition comparison, and post-v3 attribution; WIP for ADR-0155 and producer repair.** Artifact v27 provides fixed identities/resources and scheduled tiers; artifact v28 adds complete original/post-word scalar QF_BV inventories. ADR-0155's v4 candidate passes semantic and single-run 128-query real-capture gates at 0.343x Z3. Five baseline full trials establish 0.51% total/ratio CV and 3%/3%/2% alarms; ADR-0153's exact v2→v3 comparator passes them and reaches 14.11 s / 1.85x. Remaining: repeated/full ADR-0155 evidence, malformed-dump/dedup repair, and an ordered trace gate. Synthetic tiers cannot substitute for the real lifter |
+| P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | **DONE for the cold GQ10 gate and exact v2→v3→v4 rewrite transitions; WIP for producer repair and ordered traces.** Artifact v28 records complete original/post-word scalar QF_BV inventories. Accepted ADR-0155 passes five representative and five full processes plus the exact guarded transition: mean full Axeyum/Z3 is 5.625/7.709 s (0.730x), with all 67,310 executions valid. Remaining: publish the cold policy, malformed-dump/dedup repair, and an ordered trace gate. Synthetic tiers cannot substitute for the real lifter |
 
 ### Track 5 — Verified Systems (IR reflection) — ADR-0056, adopted 2026-07-06
 | Phase | Title | Status |
@@ -2514,15 +2517,17 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
-- **2026-07-14 — ADR-0155 equality-cancellation candidate clears its semantic
-  and first real-capture gate.** Default rewrite identity v4 adds only
+- **2026-07-14 — ADR-0155 equality cancellation is accepted and makes Axeyum
+  faster than Z3 on the full cold Glaurung corpus.** Default rewrite identity v4 adds only
   `bv.eq_add_constant_cancel.v1`: `s + c = k` becomes `s = k - c` modulo width,
   for either equality orientation and scalar or arbitrary-width constants.
   Exhaustive evaluation through width 3, wrap/129-bit/multiplicity/non-match
   fixtures, 110 rewrite tests, 31 benchmark tests, and strict Clippy pass under
-  4 GiB. The pinned 128-query run fires 1,094 times across equal numbers of SAT
-  and UNSAT rows, decides/replays all 128 with Z3 agreement, and measures
-  0.0512 s versus Z3's 0.1495 s. Repeated clean evidence precedes any full run.
+  4 GiB. Five clean representative runs improve mean total/ratio 61.7%/61.3%.
+  Five full runs improve mean Axeyum total 13.946 → 5.625 s and ratio
+  1.829x → 0.730x Z3, with AIG nodes/clauses down 76.7%/75.4%. Every one of
+  67,310 full-run executions decides and replays cleanly; the exact v3→v4
+  guarded comparator passes with 1.07% Z3 drift.
 
 - **2026-07-14 — the Glaurung ordered warm-trace v1 handoff is defined.** The
   contract preserves exact content-addressed query bytes while adding every
