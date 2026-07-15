@@ -12,15 +12,21 @@ session state.
 > without ever losing the thread. **We do not stop and we do not hand-wave; we
 > advance the next task and record it.**
 
-> **P0 soundness stop (2026-07-15).** Commit `2cb298e2` reproduces unrestricted
-> large elimination from a two-constructor `Prop` combining with proof
-> irrelevance to make the trusted `add_declaration` gate accept
-> `theorem bad : False`. Pause every new kernel/proof-assurance claim and fix
-> `Prop` elimination first: implement Lean's subsingleton criterion, invert the
-> exploit into a negative regression, retain positive large elimination for
-> `False`/`True`/`And`/`Eq`/`Iff`/`Acc`, broaden adversarial universe tests, and
-> make the real-Lean inductive cross-check non-vacuous. Glaurung GQ7 remains the
-> leading solver-performance lane after this trusted-core P0 is contained.
+> **P0 soundness stop contained (2026-07-15, ADR-0165).** Historical commit
+> `2cb298e2` reproduced unrestricted large elimination from a two-constructor
+> `Prop` combining with proof irrelevance to make the trusted
+> `add_declaration` gate accept `theorem bad : False`. Commit `d26ad887`
+> implements Lean's exact syntactic-subsingleton criterion, restricts every
+> other potentially-`Prop` recursor to `Sort 0`, inverts the complete exploit,
+> and adds positive/negative universe/field coverage. Commit `a10c8cde` pins
+> Lean 4.30.0 and makes a real flat-inductive/iota compatibility test mandatory
+> in CI rather than skip-as-success. The positive profile covers
+> `False`/`True`/`And`/`Eq`/`Iff`, exact exposed indices, and an
+> accessibility-style recursive proof field; full `Acc` remains behind the
+> existing recursive-indexed deferral. Do not inflate this repaired class into
+> a complete kernel-equivalence claim. After the full workspace gate, resume
+> Glaurung GQ7 as the leading solver-performance lane while continuing broader
+> parametric/indexed external-kernel hardening as a proof-assurance task.
 
 > **Current sequencing (2026-07-15).** The P1.4 e-graph → P1.5 CDCL(T)
 > keystone is landed, and the recovery audit has restored P2.6 through the

@@ -1,10 +1,12 @@
-# P0 — `axeyum-lean-kernel` admits a proof of `False`
+# P0 — historical: `axeyum-lean-kernel` admitted a proof of `False`
 
-**Status: OPEN, reproduced, exploit committed.**
-**Severity: P0.** The trusted admission gate accepts `theorem bad : False`.
+**Status: CONTAINED by `d26ad887` / ADR-0165; external gate added in
+`a10c8cde`.**
+**Severity: P0.** At the incident revision, the trusted admission gate accepted
+`theorem bad : False`.
 **Found: 2026-07-15**, incidentally, while auditing the kernel for the prover track.
 
-Reproduce:
+Historical reproduction (checkout `2cb298e2`):
 
 ```sh
 cargo test -p axeyum-lean-kernel --test prop_large_elim_derives_false -- --ignored --nocapture
@@ -16,8 +18,15 @@ inferred type of the transported term: Const(NameId(20), [])   def_eq(.., False)
 add_declaration(theorem bad : False) => Ok(())
 ```
 
-The `#[ignore]` exists only so the exploit does not break other lanes' `just check`
-in this shared checkout. It is not a judgement about importance.
+Current regression:
+
+```sh
+cargo test -p axeyum-lean-kernel --test prop_large_elim_derives_false
+```
+
+The complete former exploit is now active, fails inference at the separating
+`Two.rec` function, and is rejected by `add_declaration`. The ignored scratch
+probe was removed after its behavior became permanent regression coverage.
 
 ## This is not a Lean-compatibility complaint
 
@@ -36,14 +45,14 @@ change must be deliberate and the two features must be re-examined together. Wha
 is not available is keeping proof irrelevance, keeping impredicative `Prop`, and
 keeping unrestricted large elimination.
 
-## The defect
+## The defect (historical)
 
 `inductive.rs:36-37`:
 
 > **Deferred** ... and the `Prop`-subsingleton large-elimination subtleties.
 > The motive is always allowed to eliminate into an arbitrary `Sort v` here.
 
-`build_recursor` mints a fresh elimination universe unconditionally
+The former `mk_recursor` minted a fresh elimination universe unconditionally
 (`inductive.rs:589-595`):
 
 ```rust
@@ -53,8 +62,8 @@ let elim_level = self.level_param(elim_param);
 let elim_sort = self.sort(elim_level);
 ```
 
-There is no check on the inductive's own sort. A `Prop`-valued inductive with two
-constructors therefore receives a recursor that eliminates into `Type`.
+There was no check on the inductive's own sort. A `Prop`-valued inductive with
+two constructors therefore received a recursor that eliminated into `Type`.
 
 The deferral was recorded as a *completeness* gap — a subtlety not yet handled.
 It is a **soundness** gap. Everything else on the deferred list at
@@ -82,7 +91,7 @@ Note that steps 1, 3, 4, 5 are all *correct*. `Eq` is a genuine subsingleton (on
 constructor, no non-parameter fields), so its own large elimination is legitimate
 and the exploit does not depend on the bug twice. The single illegal step is (2).
 
-## Why nothing caught it
+## Why nothing caught it (incident analysis)
 
 Three independent gates should each have caught this, and each was blind for a
 different reason. That is the more alarming finding.
@@ -93,13 +102,12 @@ different reason. That is the more alarming finding.
    — the only one with a restriction — is untested. The test suite is dense
    exactly where the theory is unconstrained and absent exactly where it is not.
 
-2. **The real-Lean cross-check does not run in CI**, and would not have caught it
-   anyway. There is no `lean` on PATH and no `elan` in `.github/`; the
-   `AXEYUM_LEAN_BIN` tests skip-and-pass, which is indistinguishable from passing.
-   And even with Lean present, `lean_pp.rs:139-144` emits inductives,
-   constructors, and **recursors as axioms** — so Lean re-checks *our generated
-   recursor's use*, never its *generation*. The one gate positioned to catch a
-   bad recursor is the one that takes the recursor on trust.
+2. **The real-Lean cross-check did not run in CI**, and the original default
+   exporter represented inductives, constructors, and recursors as axioms. The
+   later `render_lean_module_with_inductives` path could emit flat real
+   inductives, but no mandatory job exercised the relevant `Prop` recursor. The
+   optional harness therefore skipped on CI and could not distinguish absence
+   from success.
 
 3. **The certificate/reconstruction discipline** is orthogonal. It ensures a
    proof term is checked *by this kernel*. If the kernel is unsound, the
@@ -113,24 +121,24 @@ that this core accepts exactly what Lean's kernel does" — and ADR-0036:62-65
 names the risk precisely: "a wrong type-checker would wrongly accept proofs."
 The obligation was stated and then never tested negatively.
 
-## Blast radius
+## Blast radius at discovery
 
-- **Every `Lean unsat` claim** in `bench-results/DOMINANCE.md` rests on this gate,
+- **Every `Lean unsat` claim** in `bench-results/DOMINANCE.md` rested on this gate,
   including QF_ABV's 85/85 and the datatype chain's "axiom-free, `#print axioms`
   clean" claim in `docs/PARITY-STATUS-AND-PATH.md:56-61`.
-- **In practice, probably no wrong result has shipped.** The exploit needs a
+- **No wrong solver result was found.** The exploit needs a
   non-subsingleton `Prop` inductive, and reconstruction builds a fixed vocabulary
   (`reconstruct.rs:10-21` — one carrier sort, atoms as axioms). It very likely
   never constructs one. **This is luck, not defense in depth** — nothing in the
   design prevents a future reconstruction route from declaring `Or`-shaped or
   `Exists`-shaped `Prop` inductives, which are precisely the non-subsingletons.
-- **The claim that must be withdrawn is the strong one**: axeyum's kernel does
-  *not* currently "accept exactly what Lean's kernel does." It accepts strictly
-  more, including `False`.
+- **The strong fidelity claim was invalid during the affected revisions.** The
+  contained boundary now agrees with Lean on this class; that does not turn one
+  repaired bug into proof of complete kernel equivalence.
 
-## The fix
+## The fix (landed as ADR-0165)
 
-Restrict the elimination universe in `build_recursor` when the inductive lands in
+Restrict the elimination universe in `mk_recursor` when the inductive lands in
 `Prop`. Lean's criterion (a `Prop` inductive may eliminate into an arbitrary
 `Sort v` iff it is a subsingleton):
 
@@ -140,35 +148,35 @@ Restrict the elimination universe in `build_recursor` when the inductive lands i
   result type (a parameter or index) — allowed;
 - **otherwise** — the motive must be `Sort 0`, not a fresh `Sort v`.
 
-This correctly permits `True`, `And`, `Eq`, `Iff`, `Acc` and correctly refuses
-`Or`, `Exists`, and our `Two`.
+This correctly permits `True`, `And`, `Eq`, `Iff`, and the syntactic shape of
+`Acc`, and correctly refuses `Or`, `Exists`, and our `Two`. Full `Acc` admission
+still awaits the separately deferred recursive-indexed fragment.
 
-Sizing: **S/M.** The criterion is local to recursor generation; the universe-level
-plumbing (`fresh_elim_param`, `level_zero`) already exists. The hard part is not
-the code, it is the test posture.
+Implementation commit `d26ad887` classifies every opened non-parameter field in
+its real local context, compares non-proof values against the exact constructor
+result arguments, and uses `level_is_nonzero` for conservative polymorphic
+result handling. Restricted recursors fix their motive at `Sort 0` and omit the
+fresh leading universe parameter; the inductive itself remains admitted.
 
-### The test posture is the real deliverable
+### Test posture delivered
 
-The fix is small; the reason it was needed is not. Minimum bar:
+The fix is small; the reason it was needed is not. The delivered gates are:
 
-1. Invert `prop_large_elim_derives_false.rs` into a negative test: `Two.rec` must
-   not admit at `Sort 1`.
-2. Parameterize the enum test helper over the sort level and run the entire
-   existing inductive suite at `Prop` as well as `Type`.
-3. Positive tests that the legitimate subsingletons (`True`, `False`, `And`, `Eq`,
-   `Acc`) *retain* large elimination — a fix that over-restricts silently breaks
-   the existing `Eq`-based reconstruction routes.
-4. A standing **"kernel accepts `False`" fuzz/negative class**, in the spirit of
-   the existing hard rule that partial operators carry a fuzz seed-class
-   generating the degenerate argument. The kernel's degenerate arguments are
-   `Prop` inductives, universe edge cases, and `Sort 0`/`Sort 1` boundaries.
-5. Make the real-Lean cross-check a *gate* rather than a skip-and-pass, and
-   extend `lean_pp` to emit inductives via Lean's `inductive` command rather than
-   as axioms (`lean_pp.rs:125-128` already tags this "export slice TODO"), so
-   Lean actually re-checks generation.
-
-Without (4) and (5), the next kernel gap is found the same way this one was: by
-someone deciding to look.
+1. `prop_large_elim_derives_false.rs` retains the complete derivation and asserts
+   both inference and trusted admission reject it.
+2. Enum coverage spans both `Prop` and `Type`; computational polymorphic test
+   datatypes now use a provably nonzero result instead of accidentally becoming
+   propositions at universe zero.
+3. Positive profiles cover `True`, `False`, `And`, `Eq`, `Iff`, exact exposed
+   indices, and an accessibility-style direct-recursive proof field. `Or`,
+   `Exists`, hidden data, nested-only index occurrences, and polymorphic
+   multi-constructor results are negative profiles. Full Lean `Acc` remains
+   outside the already-deferred recursive-indexed fragment.
+4. A generated boundary matrix varies constructor count and proof/data field
+   count, so the degenerate class is standing coverage rather than one witness.
+5. `a10c8cde` pins Lean 4.30.0 and adds a mandatory CI test that renders real
+   flat `inductive` commands, applies Lean's regenerated restricted recursor,
+   and depends on its iota rule. `AXEYUM_REQUIRE_LEAN=1` makes absence fail.
 
 ## Relationship to the prover track
 
@@ -182,8 +190,7 @@ than reconstruction does — arbitrary user- and agent-authored inductives, whic
 is exactly the surface this bug lives on. Reconstruction's fixed vocabulary is
 what has been accidentally protecting us.
 
-So: kernel hardening is P0 and precedes any prover phase. It is also *cheap*
-relative to the prover, and it is valuable **whether or not the prover is ever
-built** — P3.6/P3.7 need it regardless. That makes it the rare item that is
-unconditionally worth doing, and the plan should treat it that way rather than as
-prover-track scope.
+The immediate P0 stop is cleared only for this defect. Kernel hardening remains
+ahead of new assurance claims: broaden external checking beyond flat inductives,
+add recursive-indexed coverage when that fragment lands, and continue treating
+negative universe/inductive tests as part of the trusted-core acceptance bar.

@@ -322,20 +322,29 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-15 — P0: the trusted Lean kernel accepts a proof of `False`.**
-  Commit `2cb298e2` preserves the independent ingredient probe, a direct
-  ignored exploit, the temporary scratch evidence requested by the concurrent
-  worktree, and the full research note. Running the exploit explicitly confirms
-  proof irrelevance equates the two proofs, unrestricted `Prop` large
-  elimination separates them in `Type`, transport produces `False`, and
-  `add_declaration(theorem bad : False)` returns `Ok(())`; its final panic is
-  intentional evidence. Ordinary probes pass. This invalidates the strong
-  claim that the embedded checker currently accepts exactly Lean's theory,
-  though the fixed reconstruction vocabulary probably avoids the exploit in
-  existing solver routes. Immediate next action: restrict large elimination to
-  Lean's `Prop`-subsingleton cases, invert the exploit, add positive/negative
-  inductive-universe coverage, and make real-Lean inductive checking a gate.
-  No new kernel-backed assurance claim outranks this fix.
+- **2026-07-15 — ADR-0165 contains the Lean-kernel P0.** Historical commit
+  `2cb298e2` preserved a complete derivation that the trusted gate admitted as
+  `theorem bad : False`. Commit `d26ad887` now implements Lean's exact
+  syntactic-subsingleton criterion: provably non-`Prop`, empty, and valid
+  singleton families retain a fresh motive universe; every other
+  potentially-`Prop` recursor fixes its motive to `Sort 0` and omits that
+  universe parameter. The complete old exploit is active and rejected by both
+  inference and `add_declaration`; proof irrelevance remains intentional.
+
+  The focused suite is 177 unit tests plus four active integration tests and
+  doctests. It covers `False`/`True`/`And`/`Iff`/`Eq`, an exact exposed data
+  index, and an accessibility-style recursive proof field positively; and
+  `Or`/`Exists`, hidden data, nested-only index occurrence, multi-constructor
+  `Prop`, and sort-polymorphic potentially-`Prop` families negatively. A
+  generated 36-cell constructor/proof-field/data-field matrix guards the class.
+  Commit `a10c8cde` pins Lean 4.30.0 and adds a mandatory CI job that renders
+  real `True`/`Two` inductives, applies Lean's regenerated restricted recursor,
+  and needs iota to check; the same command passes locally against the pinned
+  binary. Full `Acc` is still outside the recursive-indexed fragment, so its
+  direct-recursive proof-field boundary is tested without claiming that
+  deferred capability. Immediate next action: finish the full workspace gate,
+  then return the solver lane to Glaurung GQ7 ordered/multi-driver reuse while
+  retaining broader external kernel differential work in the assurance queue.
 
 - **2026-07-15 — ADR-0164 accepts the first real GQ7 retained-state bridge,
   opt-in.** Glaurung commits `016935d`/`b09ec6b` adapt its complete one-shot
@@ -2785,7 +2794,7 @@ plan is built and committed on the current branch:
 ### Track 3 — Proofs & Lean
 | Phase | Title | Status |
 |---|---|---|
-| P3.6p | `Prop` large-elimination soundness incident | **P0 OPEN — commit `2cb298e2` reproduces `add_declaration(theorem bad : False) -> Ok(())`.** Unrestricted large elimination for a two-constructor `Prop` is inconsistent with the kernel's proof irrelevance/impredicative `Prop`. Before any new proof-assurance work: implement the subsingleton criterion, invert the exploit, retain valid large elimination for subsingletons, broaden adversarial universe tests, and gate real-Lean inductive generation. |
+| P3.6p | `Prop` large-elimination soundness incident | **DONE / contained (ADR-0165, `d26ad887`, `a10c8cde`)** — exact Lean syntactic-subsingleton test; restricted motive universe and arity for other potentially-`Prop` families; complete exploit inverted; positive/negative/exact-index/polymorphic/generated-matrix coverage; pinned mandatory real-Lean flat-inductive/iota CI gate. Full recursive-indexed `Acc` remains an honest pre-existing fragment deferral, not a soundness exception |
 | P4.1d | Retained warm array relations | **DONE, literal relation slice (ADR-0089)** — projection-owned positive equality merges before function construction; exact private diff witnesses cover top-level disequality across supported structural parents. Scope/core/filter/replay, Bool/BV256, exact depth, 192 clean comparisons, 816 solver units, 77 symexec tests, and complete EVM gates pass; EVM has no whole-array relation case, so no timing claim |
 | P4.1c | Retained warm array-valued UF parents | **DONE, scalar-keyed slice (ADR-0088)** — finite-scalar applications retain private array owners and conditional read congruence; concrete-equal tuples merge observations into full-value function results before owner filtering and replay. Exact 64/65 admission, ten focused tests, 192 clean comparisons, 816 solver units, 77 symexec tests, and complete EVM gates pass; EVM has no array-result UF case, so no timing claim |
 | P4.1b | Candidate-triggered retained warm ROW | **DONE, bounded transitive-summary slice (ADR-0087)** — one exact scalar summary per observed structural read stays dormant until candidate violation, then becomes a permanent root in the same CNF/SAT instance under one shared deadline. Zero-activation replay, scope/core/reuse, exact caps, 192 clean comparisons, 816 solver units, 77 symexec tests, and complete EVM gates pass. Depth 32 improves 30.933→11.257 ms; ITE-fold remains faster at 0.405 ms, so broader warm models and the performance exit remain open |
@@ -2833,6 +2842,16 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-15 — ADR-0165 contains the Lean-kernel large-elimination P0.**
+  `d26ad887` implements Lean's exact syntactic-subsingleton boundary and turns
+  the full former proof-of-`False` into an active trusted-gate rejection. The
+  positive/negative suite includes exact versus nested index exposure,
+  potentially-Prop universe polymorphism, prelude recursor arities, and a
+  generated constructor/proof/data-field matrix. `a10c8cde` pins Lean 4.30.0
+  and makes a real-inductive/iota cross-check mandatory in CI; the pinned local
+  run passes. This repairs one demonstrated class, not a blanket claim of full
+  Lean-kernel equivalence.
 
 - **2026-07-15 — the Lean-kernel large-elimination incident is a P0 soundness
   stop.** Concurrent commit `2cb298e2` records a direct derivation admitted as

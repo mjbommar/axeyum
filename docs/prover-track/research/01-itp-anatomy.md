@@ -290,19 +290,19 @@ Gabriel Ebner had to write a checker for the Lean 3 HoTT library that *rejects*
 uses of singleton elimination, since it is also what breaks univalence — see
 [Zulip/HoTT discussion](https://groups.google.com/g/homotopytypetheory/c/RxXqHX8W6Dw).)
 
-**The finding.** In `crates/axeyum-lean-kernel/src/inductive.rs`, the module
-docs state, at line 37, that among the deferred items are
-"the `Prop`-subsingleton large-elimination subtleties", and then:
+**The historical finding (contained by ADR-0165).** At commit `2cb298e2`,
+`crates/axeyum-lean-kernel/src/inductive.rs` stated that among the deferred items
+were "the `Prop`-subsingleton large-elimination subtleties", and then:
 
 > `//! The motive is always allowed to eliminate into an arbitrary `Sort v` here.`
 
-Meanwhile `crates/axeyum-lean-kernel/src/tc.rs:735` implements
+Meanwhile `crates/axeyum-lean-kernel/src/tc.rs` implements
 `proof_irrel_eq` (modelled on nanoda's `proof_irrel_eq`) and it is wired into the
 defeq path at `tc.rs:916`.
 
-**Those two facts together are the classical unsoundness.** The kernel has
+**Those two facts together were the classical unsoundness.** The kernel had
 (a) definitional proof irrelevance and (b) unrestricted large elimination for
-`Prop`-valued inductives. The standard exploit shape:
+`Prop`-valued inductives. The standard exploit shape was:
 
 ```lean
 inductive B : Prop where | t : B | f : B
@@ -312,17 +312,16 @@ def d (b : B) : Bool := B.rec true false b
 -- but B.t ≡ B.f by proof irrelevance ⇒ true ≡ false ⇒ False
 ```
 
-**This is not a hypothetical.** It is the exact bug class the user suspected, the
-docs explicitly acknowledge it as unhandled, and the enabling half (proof
-irrelevance) is implemented. The remaining question is only *reachability*: can a
-user-facing declaration path admit a two-constructor `Prop` inductive and its
-recursor? Given `check_inductive` accepts a `Sort`-tailed type and the motive is
-unrestricted, it very likely can.
+**This was not hypothetical.** Commit `2cb298e2` preserved a complete term that
+the trusted gate admitted as `theorem bad : False`. Commit `d26ad887` now applies
+Lean's exact syntactic-subsingleton criterion, and the same complete exploit is
+an active negative regression. The pinned real-Lean gate in `a10c8cde` checks a
+regenerated restricted `Prop` recursor and its iota behavior.
 
-**Recommended action (P0, ahead of any prover-layer work):**
-1. Write a **soundness-negative test** that attempts exactly the `B : Prop` /
-   `Bool` extraction above and asserts the kernel **rejects** it. Per CLAUDE.md's
-   hard rules, this is the "test it harder" response, not a defer.
+**Resolution:** [ADR-0165](../../research/09-decisions/adr-0165-lean-compatible-prop-large-elimination.md)
+records the rule, adversarial universe/field matrix, former-exploit inversion,
+and mandatory external compatibility gate. This closes the immediate P0; it
+does not by itself prove complete equivalence with Lean's kernel.
 2. Implement the two-clause syntactic criterion in recursor generation: compute
    an `elim_level` for the inductive — if the inductive's sort is `Prop` and it
    fails the criterion, the motive must be constrained to `Prop`.

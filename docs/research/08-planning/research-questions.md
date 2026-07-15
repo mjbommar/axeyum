@@ -537,6 +537,15 @@ Out of scope:
     ADR-0031 made the residual trust countable, and ADR-0075 demonstrates the
     policy on array `select`: one standard-rule artifact checks in-tree, in
     Carcara, and in Lean with no array-elimination trust step.
+- [x] How must the embedded Lean kernel combine proof irrelevance with
+      elimination from potentially-`Prop` inductives?
+  - Answer (2026-07-15): use Lean's syntactic-subsingleton criterion. A
+    provably non-`Prop` result, an empty proposition, or a sole constructor whose
+    non-proof fields are exact result arguments receives a fresh elimination
+    universe; every other potentially-`Prop` family keeps a recursor fixed to
+    `Sort 0`. A generated adversarial matrix and a mandatory real-Lean
+    flat-inductive/iota CI test guard the boundary. See
+    [ADR-0165](../09-decisions/adr-0165-lean-compatible-prop-large-elimination.md).
 - [ ] Should the proof-assistant bridge export obligations to Lean, import
       checked rewrite rules from Lean, or both — and how early is a
       Lean-checked rewrite-rule library worth prototyping?

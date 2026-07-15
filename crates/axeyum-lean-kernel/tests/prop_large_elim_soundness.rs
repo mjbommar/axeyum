@@ -91,3 +91,63 @@ fn non_subsingleton_prop_eliminates_only_into_prop() {
     assert!(matches!(k.expr_node(legal_ty), ExprNode::Const(n, _) if *n == true_name));
     assert_eq!(k.whnf(legal_a), trivial);
 }
+
+/// Generated boundary matrix: vary constructor count and both proof/data field
+/// counts. This guards the degenerate `Prop`/universe class as a family instead
+/// of preserving only the historical `Two` witness.
+#[test]
+fn generated_prop_elimination_boundary_matrix() {
+    for constructor_count in 0..=3 {
+        for data_fields in 0..=2 {
+            for proof_fields in 0..=2 {
+                let mut k = Kernel::new();
+                let anon = k.anon();
+                let (_atom, atom_ctors) = declare_enum_at(&mut k, "Atom", &["unit"], 1);
+                let atom_value = k.const_(atom_ctors[0], vec![]);
+                let atom_type = k.infer(atom_value).expect("Atom.unit should infer");
+
+                let premise_name = k.name_str(anon, "Premise");
+                let prop = k.sort_zero();
+                k.add_declaration(Declaration::Axiom {
+                    name: premise_name,
+                    uparams: vec![],
+                    ty: prop,
+                })
+                .unwrap();
+                let premise = k.const_(premise_name, vec![]);
+
+                let family = k.name_str(anon, "GeneratedProp");
+                let family_type = k.const_(family, vec![]);
+                let mut ctors = Vec::new();
+                for index in 0..constructor_count {
+                    let ctor = k.name_str(family, format!("c{index}"));
+                    let mut ctor_type = family_type;
+                    for _ in 0..proof_fields {
+                        ctor_type = k.pi(anon, premise, ctor_type, BinderInfo::Default);
+                    }
+                    for _ in 0..data_fields {
+                        ctor_type = k.pi(anon, atom_type, ctor_type, BinderInfo::Default);
+                    }
+                    ctors.push((ctor, ctor_type));
+                }
+                k.add_inductive(family, &[], 0, prop, &ctors)
+                    .expect("generated Prop family should admit");
+
+                let rec = k.name_str(family, "rec");
+                let Declaration::Recursor { uparams, .. } =
+                    k.environment().get(rec).expect("generated recursor")
+                else {
+                    panic!("expected recursor");
+                };
+                let should_large_eliminate =
+                    constructor_count == 0 || (constructor_count == 1 && data_fields == 0);
+                assert_eq!(
+                    uparams.len(),
+                    usize::from(should_large_eliminate),
+                    "constructors={constructor_count}, data_fields={data_fields}, \
+                     proof_fields={proof_fields}"
+                );
+            }
+        }
+    }
+}
