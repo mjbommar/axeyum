@@ -34,6 +34,28 @@ pub fn lower_terms(arena: &TermArena, roots: &[TermId]) -> Result<BitLowering, B
     LoweringBuilder::new(arena).lower_roots(roots, false)
 }
 
+/// Lowers roots with exact structural bit demand (ADR-0157).
+///
+/// Every root remains complete, but only demanded child bits are materialized
+/// through extract, concat, extensions, pointwise Bool/BV operators, `ite`,
+/// constant rotations, and bit reinterpretation. All other operators are
+/// conservative barriers that retain the existing full-width lowering. The
+/// returned term-bit map is therefore intentionally sparse, and omitted symbol
+/// bits are completed deterministically with `false` during model lift.
+///
+/// This is an additive experimental entry point. [`lower_terms`] remains the
+/// production default until the ADR-0157 real-corpus gate is accepted.
+///
+/// # Errors
+///
+/// Returns the same errors as [`lower_terms`].
+pub fn lower_terms_demanded(
+    arena: &TermArena,
+    roots: &[TermId],
+) -> Result<BitLowering, BitLowerError> {
+    LoweringBuilder::new(arena).lower_demanded_roots(roots)
+}
+
 /// Lowers roots into an AIG and also computes the observational structural
 /// bit-demand profile.
 ///
@@ -69,6 +91,24 @@ pub fn lower_terms_with_deadline(
     deadline: Option<Instant>,
 ) -> Result<BitLowering, BitLowerError> {
     LoweringBuilder::with_deadline(arena, deadline).lower_roots(roots, false)
+}
+
+/// Demand-driven counterpart of [`lower_terms_with_deadline`].
+///
+/// Demand planning and AIG construction share the supplied absolute deadline.
+/// The sparse lift-map and deterministic omitted-bit completion contract are
+/// the same as [`lower_terms_demanded`].
+///
+/// # Errors
+///
+/// Returns the same errors as [`lower_terms_demanded`], plus
+/// [`BitLowerError::DeadlineExceeded`] when `deadline` passes.
+pub fn lower_terms_demanded_with_deadline(
+    arena: &TermArena,
+    roots: &[TermId],
+    deadline: Option<Instant>,
+) -> Result<BitLowering, BitLowerError> {
+    LoweringBuilder::with_deadline(arena, deadline).lower_demanded_roots(roots)
 }
 
 /// Lowers roots under an absolute deadline and also computes the observational
@@ -208,6 +248,9 @@ pub struct BitDemandStats {
     /// all other profile-only counts and [`Self::analysis`] are zero and must
     /// not be interpreted as a complete zero-demand result.
     pub profile_complete: bool,
+    /// Whether demand changed production materialization rather than only
+    /// observing the ordinary full lowerer.
+    pub lowering_applied: bool,
     /// Time spent computing this structural demand profile.
     pub analysis: Duration,
     /// Term-bit requests before unioning repeated demands.
@@ -237,6 +280,7 @@ pub struct BitLowering {
     term_bit_ranges: Vec<Option<TermBitRange>>,
     symbol_inputs: Vec<SymbolBitInput>,
     demand_stats: BitDemandStats,
+    complete_omitted_symbol_bits: bool,
 }
 
 impl BitLowering {
@@ -268,11 +312,12 @@ impl BitLowering {
     /// Looks up the AIG literal for one original term bit.
     pub fn literal_for_term_bit(&self, term: TermId, bit_index: u32) -> Option<AigLit> {
         let range = self.term_bit_ranges.get(term.index()).copied().flatten()?;
-        let offset = usize::try_from(bit_index).ok()?;
-        if offset >= range.len {
-            return None;
-        }
-        let binding = self.term_bits.get(range.start.checked_add(offset)?)?;
+        let end = range.start.checked_add(range.len)?;
+        let bindings = self.term_bits.get(range.start..end)?;
+        let offset = bindings
+            .binary_search_by_key(&bit_index, |binding| binding.bit_index)
+            .ok()?;
+        let binding = bindings.get(offset)?;
         debug_assert_eq!(binding.term, term);
         debug_assert_eq!(binding.bit_index, bit_index);
         Some(binding.literal)
@@ -357,7 +402,12 @@ impl BitLowering {
         &self,
         node_values: &[bool],
     ) -> Result<Assignment, BitLowerError> {
-        assignment_from_aig_node_values(&self.aig, &self.symbol_inputs, node_values)
+        assignment_from_aig_node_values(
+            &self.aig,
+            &self.symbol_inputs,
+            node_values,
+            self.complete_omitted_symbol_bits,
+        )
     }
 
     /// Reconstructs one lowered root value from replayed AIG node values.
@@ -462,6 +512,7 @@ fn assignment_from_aig_node_values(
     aig: &Aig,
     symbol_inputs: &[SymbolBitInput],
     node_values: &[bool],
+    complete_omitted_bits: bool,
 ) -> Result<Assignment, BitLowerError> {
     validate_aig_node_values(aig, node_values)?;
 
@@ -483,9 +534,11 @@ fn assignment_from_aig_node_values(
 
     let mut assignment = Assignment::new();
     for (symbol, bits) in symbol_bits {
-        for (bit_index, seen) in (0u32..).zip(bits.seen.iter().copied()) {
-            if !seen {
-                return Err(BitLowerError::MissingModelBit { symbol, bit_index });
+        if !complete_omitted_bits {
+            for (bit_index, seen) in (0u32..).zip(bits.seen.iter().copied()) {
+                if !seen {
+                    return Err(BitLowerError::MissingModelBit { symbol, bit_index });
+                }
             }
         }
         assignment.set(symbol, lsb_bits_to_value(bits.sort, &bits.bits)?);
@@ -605,7 +658,7 @@ impl IncrementalLowering {
         &self,
         node_values: &[bool],
     ) -> Result<Assignment, BitLowerError> {
-        assignment_from_aig_node_values(&self.aig, &self.symbol_inputs, node_values)
+        assignment_from_aig_node_values(&self.aig, &self.symbol_inputs, node_values, false)
     }
 }
 
@@ -676,6 +729,14 @@ pub enum BitLowerError {
         /// Missing bit index.
         bit_index: u32,
     },
+    /// Demand propagation promised a child bit that was not materialized
+    /// before its parent.
+    MissingDemandedBit {
+        /// Source term whose bit is missing.
+        term: TermId,
+        /// Missing LSB-first bit index.
+        bit_index: u32,
+    },
 }
 
 impl From<IrError> for BitLowerError {
@@ -744,6 +805,11 @@ impl core::fmt::Display for BitLowerError {
                 f,
                 "symbol #{} reconstructed model is missing bit {bit_index}",
                 symbol.index()
+            ),
+            BitLowerError::MissingDemandedBit { term, bit_index } => write!(
+                f,
+                "demanded term #{} bit {bit_index} was not materialized",
+                term.index()
             ),
         }
     }
@@ -835,7 +901,246 @@ impl<'a> LoweringBuilder<'a> {
             term_bit_ranges: self.term_bit_ranges,
             symbol_inputs: self.symbol_inputs,
             demand_stats,
+            complete_omitted_symbol_bits: false,
         })
+    }
+
+    fn lower_demanded_roots(mut self, roots: &[TermId]) -> Result<BitLowering, BitLowerError> {
+        let mut demand = DenseBitDemand::compute(self.arena, roots, self.deadline)?;
+        let mut materialized = vec![Vec::new(); self.arena.len()];
+
+        for term_index in 0..self.arena.len() {
+            self.poll_deadline()?;
+            let term = self
+                .arena
+                .term_by_index(term_index)
+                .expect("dense term index belongs to the arena");
+            let requested = demand.term_bits(term);
+            if requested.is_empty() {
+                continue;
+            }
+            let bits = self.lower_demanded_term(term, requested, &materialized)?;
+            self.record_sparse(term, &bits)?;
+            materialized[term_index] = bits;
+        }
+
+        let mut lowered_roots = Vec::with_capacity(roots.len());
+        for &root in roots {
+            lowered_roots.push(LoweredTerm {
+                term: root,
+                sort: self.arena.sort_of(root),
+                bits: Self::complete_materialized_bits(root, &materialized)?,
+            });
+        }
+        demand.stats.lowering_applied = true;
+        demand.stats.term_bits_lowered = usize_to_u64_saturating(self.term_bits.len());
+        demand.stats.symbol_bits_lowered = usize_to_u64_saturating(self.symbol_inputs.len());
+        Ok(BitLowering {
+            aig: self.aig,
+            roots: lowered_roots,
+            term_bits: self.term_bits,
+            term_bit_ranges: self.term_bit_ranges,
+            symbol_inputs: self.symbol_inputs,
+            demand_stats: demand.stats,
+            complete_omitted_symbol_bits: true,
+        })
+    }
+
+    fn lower_demanded_term(
+        &mut self,
+        term: TermId,
+        requested: &[bool],
+        materialized: &[Vec<Option<AigLit>>],
+    ) -> Result<Vec<Option<AigLit>>, BitLowerError> {
+        let width = sort_width(self.arena.sort_of(term));
+        let bits = match self.arena.node(term).clone() {
+            TermNode::BoolConst(value) => vec![Some(const_lit(value))],
+            TermNode::BvConst { value, .. } => requested
+                .iter()
+                .copied()
+                .enumerate()
+                .map(|(bit, demanded)| demanded.then(|| const_lit(((value >> bit) & 1) != 0)))
+                .collect(),
+            TermNode::WideBvConst(value) => requested
+                .iter()
+                .copied()
+                .enumerate()
+                .map(|(bit, demanded)| {
+                    demanded.then(|| {
+                        const_lit(
+                            value.bit(u32::try_from(bit).expect("wide constant bit fits u32")),
+                        )
+                    })
+                })
+                .collect(),
+            TermNode::IntConst(_) => {
+                unreachable!("integer terms are rejected before bit lowering (ADR-0014)")
+            }
+            TermNode::RealConst(_) => {
+                unreachable!("real terms are rejected before bit lowering (ADR-0015)")
+            }
+            TermNode::Symbol(symbol) => self.lower_demanded_symbol(symbol, requested),
+            TermNode::App { op, args } if is_demand_local_op(op) => {
+                let mut bits = vec![None; width];
+                for (bit, demanded) in requested.iter().copied().enumerate() {
+                    if demanded {
+                        bits[bit] = Some(self.lower_demanded_local_bit(
+                            term,
+                            op,
+                            &args,
+                            u32::try_from(bit).expect("term bit fits u32"),
+                            materialized,
+                        )?);
+                    }
+                }
+                bits
+            }
+            TermNode::App { op, args } => {
+                let operands = args
+                    .iter()
+                    .map(|&arg| Self::complete_materialized_bits(arg, materialized))
+                    .collect::<Result<Vec<_>, _>>()?;
+                self.lower_app(term, op, &operands)?
+                    .into_iter()
+                    .map(Some)
+                    .collect()
+            }
+        };
+        if bits.len() != width {
+            return Err(BitLowerError::BitWidthMismatch {
+                term,
+                expected: u32::try_from(width).unwrap_or(u32::MAX),
+                found: bits.len(),
+            });
+        }
+        Ok(bits)
+    }
+
+    fn lower_demanded_symbol(
+        &mut self,
+        symbol: SymbolId,
+        requested: &[bool],
+    ) -> Vec<Option<AigLit>> {
+        let (name, sort) = self.arena.symbol(symbol);
+        requested
+            .iter()
+            .copied()
+            .enumerate()
+            .map(|(bit, demanded)| {
+                demanded.then(|| {
+                    self.symbol_input(
+                        symbol,
+                        name,
+                        sort,
+                        u32::try_from(bit).expect("symbol bit fits u32"),
+                    )
+                })
+            })
+            .collect()
+    }
+
+    fn complete_materialized_bits(
+        term: TermId,
+        materialized: &[Vec<Option<AigLit>>],
+    ) -> Result<Vec<AigLit>, BitLowerError> {
+        let bits = &materialized[term.index()];
+        bits.iter()
+            .copied()
+            .enumerate()
+            .map(|(bit, literal)| {
+                literal.ok_or(BitLowerError::MissingDemandedBit {
+                    term,
+                    bit_index: u32::try_from(bit).expect("term bit fits u32"),
+                })
+            })
+            .collect()
+    }
+
+    fn demanded_materialized_bit(
+        term: TermId,
+        bit_index: u32,
+        materialized: &[Vec<Option<AigLit>>],
+    ) -> Result<AigLit, BitLowerError> {
+        materialized
+            .get(term.index())
+            .and_then(|bits| bits.get(bit_index as usize))
+            .copied()
+            .flatten()
+            .ok_or(BitLowerError::MissingDemandedBit { term, bit_index })
+    }
+
+    fn lower_demanded_local_bit(
+        &mut self,
+        term: TermId,
+        op: Op,
+        args: &[TermId],
+        bit: u32,
+        materialized: &[Vec<Option<AigLit>>],
+    ) -> Result<AigLit, BitLowerError> {
+        let get = |term, bit| Self::demanded_materialized_bit(term, bit, materialized);
+        let literal = match op {
+            Op::BoolNot | Op::BvNot => get(args[0], bit)?.negated(),
+            Op::BoolAnd | Op::BvAnd => self.aig.and(get(args[0], bit)?, get(args[1], bit)?),
+            Op::BoolOr | Op::BvOr => self.aig.or(get(args[0], bit)?, get(args[1], bit)?),
+            Op::BoolXor | Op::BvXor => self.aig.xor(get(args[0], bit)?, get(args[1], bit)?),
+            Op::BoolImplies => self.aig.or(get(args[0], 0)?.negated(), get(args[1], 0)?),
+            Op::BvNand => self
+                .aig
+                .and(get(args[0], bit)?, get(args[1], bit)?)
+                .negated(),
+            Op::BvNor => self
+                .aig
+                .or(get(args[0], bit)?, get(args[1], bit)?)
+                .negated(),
+            Op::BvXnor => self
+                .aig
+                .xor(get(args[0], bit)?, get(args[1], bit)?)
+                .negated(),
+            Op::Ite => self
+                .aig
+                .mux(get(args[0], 0)?, get(args[1], bit)?, get(args[2], bit)?),
+            Op::Extract { lo, .. } => get(args[0], bit + lo)?,
+            Op::Concat => {
+                let low_width = u32::try_from(sort_width(self.arena.sort_of(args[1])))
+                    .expect("lowerable term width fits u32");
+                if bit < low_width {
+                    get(args[1], bit)?
+                } else {
+                    get(args[0], bit - low_width)?
+                }
+            }
+            Op::ZeroExt { .. } => {
+                let source_width = u32::try_from(sort_width(self.arena.sort_of(args[0])))
+                    .expect("lowerable term width fits u32");
+                if bit < source_width {
+                    get(args[0], bit)?
+                } else {
+                    AigLit::FALSE
+                }
+            }
+            Op::SignExt { .. } => {
+                let source_width = u32::try_from(sort_width(self.arena.sort_of(args[0])))
+                    .expect("lowerable term width fits u32");
+                get(args[0], bit.min(source_width - 1))?
+            }
+            Op::RotateLeft { by } => {
+                let width = u32::try_from(sort_width(self.arena.sort_of(args[0])))
+                    .expect("lowerable term width fits u32");
+                let shift = by % width;
+                get(args[0], (bit + width - shift) % width)?
+            }
+            Op::RotateRight { by } => {
+                let width = u32::try_from(sort_width(self.arena.sort_of(args[0])))
+                    .expect("lowerable term width fits u32");
+                let shift = by % width;
+                get(args[0], (bit + shift) % width)?
+            }
+            Op::FpFromBits { .. } => get(args[0], bit)?,
+            _ => {
+                return Err(BitLowerError::UnsupportedOp { term, op });
+            }
+        };
+        Ok(literal)
     }
 
     fn lower_term(&mut self, root: TermId) -> Result<Vec<AigLit>, BitLowerError> {
@@ -1904,6 +2209,40 @@ impl<'a> LoweringBuilder<'a> {
         Ok(())
     }
 
+    fn record_sparse(
+        &mut self,
+        term: TermId,
+        bits: &[Option<AigLit>],
+    ) -> Result<(), BitLowerError> {
+        let expected = self.expected_width(term);
+        if bits.len() != expected as usize {
+            return Err(BitLowerError::BitWidthMismatch {
+                term,
+                expected,
+                found: bits.len(),
+            });
+        }
+        let start = self.term_bits.len();
+        for (index, literal) in bits.iter().copied().enumerate() {
+            let Some(literal) = literal else {
+                continue;
+            };
+            self.term_bits.push(TermBitBinding {
+                term,
+                bit_index: u32::try_from(index).expect("bit index fits u32"),
+                literal,
+            });
+        }
+        let len = self.term_bits.len() - start;
+        let range = self
+            .term_bit_ranges
+            .get_mut(term.index())
+            .expect("term range index fits the source arena");
+        debug_assert!(range.is_none(), "term is recorded at most once");
+        *range = Some(TermBitRange { start, len });
+        Ok(())
+    }
+
     fn check_width(&self, term: TermId, bits: &[AigLit]) -> Result<(), BitLowerError> {
         let expected = self.expected_width(term);
         if bits.len() == expected as usize {
@@ -1982,64 +2321,105 @@ fn structural_bit_demand(
     roots: &[TermId],
     deadline: Option<Instant>,
 ) -> Result<BitDemandStats, BitLowerError> {
-    let start = Instant::now();
-    let mut stats = BitDemandStats {
-        profile_complete: true,
-        ..BitDemandStats::default()
-    };
-    let mut reachable_terms = BTreeSet::new();
-    let mut reachable_symbols = BTreeSet::new();
-    let mut reachable_stack = roots.to_vec();
-    while let Some(term) = reachable_stack.pop() {
-        poll_analysis_deadline(deadline)?;
-        if !reachable_terms.insert(term) {
-            continue;
+    Ok(DenseBitDemand::compute(arena, roots, deadline)?.stats)
+}
+
+struct DenseBitDemand {
+    term_bits: Vec<Vec<bool>>,
+    stats: BitDemandStats,
+}
+
+impl DenseBitDemand {
+    fn compute(
+        arena: &TermArena,
+        roots: &[TermId],
+        deadline: Option<Instant>,
+    ) -> Result<Self, BitLowerError> {
+        let start = Instant::now();
+        let mut stats = BitDemandStats {
+            profile_complete: true,
+            ..BitDemandStats::default()
+        };
+        let symbol_count = arena.symbols().count();
+        let mut reachable_terms = vec![false; arena.len()];
+        let mut reachable_symbols = vec![false; symbol_count];
+        let mut reachable_stack = roots.to_vec();
+        while let Some(term) = reachable_stack.pop() {
+            poll_analysis_deadline(deadline)?;
+            if reachable_terms[term.index()] {
+                continue;
+            }
+            reachable_terms[term.index()] = true;
+            stats.term_bits_available = stats
+                .term_bits_available
+                .saturating_add(usize_to_u64_saturating(sort_width(arena.sort_of(term))));
+            match arena.node(term) {
+                TermNode::Symbol(symbol) => {
+                    if !reachable_symbols[symbol.index()] {
+                        reachable_symbols[symbol.index()] = true;
+                        stats.symbol_bits_available =
+                            stats
+                                .symbol_bits_available
+                                .saturating_add(usize_to_u64_saturating(sort_width(
+                                    arena.symbol(*symbol).1,
+                                )));
+                    }
+                }
+                TermNode::App { args, .. } => reachable_stack.extend(args.iter().copied()),
+                TermNode::BoolConst(_)
+                | TermNode::BvConst { .. }
+                | TermNode::WideBvConst(_)
+                | TermNode::IntConst(_)
+                | TermNode::RealConst(_) => {}
+            }
         }
-        stats.term_bits_available = stats
-            .term_bits_available
-            .saturating_add(usize_to_u64_saturating(sort_width(arena.sort_of(term))));
-        match arena.node(term) {
-            TermNode::Symbol(symbol) => {
-                if reachable_symbols.insert(*symbol) {
-                    stats.symbol_bits_available =
-                        stats
-                            .symbol_bits_available
-                            .saturating_add(usize_to_u64_saturating(sort_width(
-                                arena.symbol(*symbol).1,
-                            )));
+
+        let mut demanded_term_bits = vec![Vec::new(); arena.len()];
+        let mut demanded_symbol_bits = vec![Vec::new(); symbol_count];
+        let mut demand_stack = Vec::new();
+        for &root in roots {
+            push_all_term_bits(arena, root, &mut demand_stack);
+        }
+        while let Some((term, bit)) = demand_stack.pop() {
+            poll_analysis_deadline(deadline)?;
+            stats.term_bit_requests = stats.term_bit_requests.saturating_add(1);
+            if matches!(arena.node(term), TermNode::Symbol(_)) {
+                stats.symbol_bit_requests = stats.symbol_bit_requests.saturating_add(1);
+            }
+            let width = sort_width(arena.sort_of(term));
+            let term_bits = &mut demanded_term_bits[term.index()];
+            if term_bits.is_empty() {
+                *term_bits = vec![false; width];
+            }
+            let bit_index = usize::try_from(bit).expect("lowerable bit index fits usize");
+            if term_bits[bit_index] {
+                continue;
+            }
+            term_bits[bit_index] = true;
+            stats.term_bits_demanded = stats.term_bits_demanded.saturating_add(1);
+            if let TermNode::Symbol(symbol) = arena.node(term) {
+                let symbol_width = sort_width(arena.symbol(*symbol).1);
+                let symbol_bits = &mut demanded_symbol_bits[symbol.index()];
+                if symbol_bits.is_empty() {
+                    *symbol_bits = vec![false; symbol_width];
+                }
+                if !symbol_bits[bit_index] {
+                    symbol_bits[bit_index] = true;
+                    stats.symbol_bits_demanded = stats.symbol_bits_demanded.saturating_add(1);
                 }
             }
-            TermNode::App { args, .. } => reachable_stack.extend(args.iter().copied()),
-            TermNode::BoolConst(_)
-            | TermNode::BvConst { .. }
-            | TermNode::WideBvConst(_)
-            | TermNode::IntConst(_)
-            | TermNode::RealConst(_) => {}
+            propagate_bit_demand(arena, term, bit, &mut demand_stack);
         }
+        stats.analysis = start.elapsed();
+        Ok(Self {
+            term_bits: demanded_term_bits,
+            stats,
+        })
     }
 
-    let mut demanded_term_bits = BTreeSet::new();
-    let mut demanded_symbol_bits = BTreeSet::new();
-    let mut demand_stack = Vec::new();
-    for &root in roots {
-        push_all_term_bits(arena, root, &mut demand_stack);
+    fn term_bits(&self, term: TermId) -> &[bool] {
+        &self.term_bits[term.index()]
     }
-    while let Some((term, bit)) = demand_stack.pop() {
-        poll_analysis_deadline(deadline)?;
-        stats.term_bit_requests = stats.term_bit_requests.saturating_add(1);
-        if let TermNode::Symbol(symbol) = arena.node(term) {
-            stats.symbol_bit_requests = stats.symbol_bit_requests.saturating_add(1);
-            demanded_symbol_bits.insert((*symbol, bit));
-        }
-        if !demanded_term_bits.insert((term, bit)) {
-            continue;
-        }
-        propagate_bit_demand(arena, term, bit, &mut demand_stack);
-    }
-    stats.term_bits_demanded = usize_to_u64_saturating(demanded_term_bits.len());
-    stats.symbol_bits_demanded = usize_to_u64_saturating(demanded_symbol_bits.len());
-    stats.analysis = start.elapsed();
-    Ok(stats)
 }
 
 fn poll_analysis_deadline(deadline: Option<Instant>) -> Result<(), BitLowerError> {
@@ -2048,6 +2428,32 @@ fn poll_analysis_deadline(deadline: Option<Instant>) -> Result<(), BitLowerError
     } else {
         Ok(())
     }
+}
+
+fn is_demand_local_op(op: Op) -> bool {
+    matches!(
+        op,
+        Op::BoolNot
+            | Op::BoolAnd
+            | Op::BoolOr
+            | Op::BoolXor
+            | Op::BoolImplies
+            | Op::BvNot
+            | Op::BvAnd
+            | Op::BvOr
+            | Op::BvXor
+            | Op::BvNand
+            | Op::BvNor
+            | Op::BvXnor
+            | Op::Ite
+            | Op::Extract { .. }
+            | Op::Concat
+            | Op::ZeroExt { .. }
+            | Op::SignExt { .. }
+            | Op::RotateLeft { .. }
+            | Op::RotateRight { .. }
+            | Op::FpFromBits { .. }
+    )
 }
 
 fn propagate_bit_demand(arena: &TermArena, term: TermId, bit: u32, stack: &mut Vec<(TermId, u32)>) {
@@ -2077,7 +2483,12 @@ fn propagate_bit_demand(arena: &TermArena, term: TermId, bit: u32, stack: &mut V
                 .expect("lowerable term width fits u32");
             stack.push((args[0], bit.min(source_width - 1)));
         }
-        Op::BvNot
+        Op::BoolNot
+        | Op::BoolAnd
+        | Op::BoolOr
+        | Op::BoolXor
+        | Op::BoolImplies
+        | Op::BvNot
         | Op::BvAnd
         | Op::BvOr
         | Op::BvXor
@@ -2259,15 +2670,33 @@ pub fn eval_lowered_once(
 mod tests {
     use std::time::{Duration, Instant};
 
-    use axeyum_aig::AigLit;
+    use axeyum_aig::{AigLit, AigNode};
     use axeyum_ir::{Assignment, IrError, Sort, TermArena, Value, eval};
 
     use super::{
-        BitLowerError, IncrementalLowering, eval_lowered_once, lower_terms, lower_terms_profiled,
+        BitLowerError, BitLowering, IncrementalLowering, eval_lowered_once, lower_terms,
+        lower_terms_demanded, lower_terms_demanded_with_deadline, lower_terms_profiled,
     };
 
     fn bv(width: u32, value: u128) -> Value {
         Value::Bv { width, value }
+    }
+
+    fn evaluated_aig_nodes(lowering: &BitLowering, assignment: &Assignment) -> Vec<bool> {
+        let inputs = lowering.input_values(assignment).unwrap();
+        let mut values = vec![false; lowering.aig().node_count()];
+        for (node_id, node) in lowering.aig().nodes() {
+            values[node_id.index()] = match node {
+                AigNode::ConstFalse => false,
+                AigNode::Input(input) => inputs[input.index()],
+                AigNode::And(lhs, rhs) => {
+                    let value =
+                        |literal: AigLit| values[literal.node().index()] ^ literal.is_inverted();
+                    value(lhs) && value(rhs)
+                }
+            };
+        }
+        values
     }
 
     #[test]
@@ -2663,6 +3092,184 @@ mod tests {
         assert_eq!(stats.symbol_bits_available, 64);
         assert_eq!(stats.symbol_bits_demanded, 8);
         assert_eq!(stats.symbol_bits_lowered, 64);
+    }
+
+    #[test]
+    fn demanded_lowering_materializes_only_narrow_extract_cone() {
+        let mut arena = TermArena::new();
+        let x_symbol = arena.declare("x", Sort::BitVec(64)).unwrap();
+        let x = arena.var(x_symbol);
+        let low_byte = arena.extract(7, 0, x).unwrap();
+        let expected = arena.bv_const(8, 0x5a).unwrap();
+        let root = arena.eq(low_byte, expected).unwrap();
+
+        let lowering = lower_terms_demanded(&arena, &[root]).unwrap();
+        let stats = lowering.demand_stats();
+        assert!(stats.profile_complete);
+        assert!(stats.lowering_applied);
+        assert_eq!(stats.term_bit_requests, 25);
+        assert_eq!(stats.term_bits_available, 81);
+        assert_eq!(stats.term_bits_demanded, 25);
+        assert_eq!(stats.term_bits_lowered, 25);
+        assert_eq!(stats.symbol_bit_requests, 8);
+        assert_eq!(stats.symbol_bits_available, 64);
+        assert_eq!(stats.symbol_bits_demanded, 8);
+        assert_eq!(stats.symbol_bits_lowered, 8);
+        assert!(lowering.literal_for_term_bit(x, 0).is_some());
+        assert!(lowering.literal_for_term_bit(x, 7).is_some());
+        assert_eq!(lowering.literal_for_term_bit(x, 8), None);
+        assert_eq!(lowering.symbol_inputs().len(), 8);
+
+        for value in [0u128, 0x5a, 0x15a, u128::from(u64::MAX)] {
+            let mut assignment = Assignment::new();
+            assignment.set(x_symbol, bv(64, value));
+            assert_eq!(
+                lowering.evaluate_root(0, &assignment).unwrap(),
+                eval(&arena, root, &assignment).unwrap()
+            );
+        }
+    }
+
+    #[test]
+    fn demanded_structural_ops_match_evaluator_exhaustively() {
+        let mut arena = TermArena::new();
+        let x_symbol = arena.declare("x", Sort::BitVec(4)).unwrap();
+        let y_symbol = arena.declare("y", Sort::BitVec(4)).unwrap();
+        let p_symbol = arena.declare("p", Sort::Bool).unwrap();
+        let x = arena.var(x_symbol);
+        let y = arena.var(y_symbol);
+        let p = arena.var(p_symbol);
+        let joined = arena.concat(x, y).unwrap();
+        let middle = arena.extract(5, 2, joined).unwrap();
+        let rotated = arena.rotate_left(1, middle).unwrap();
+        let inverted = arena.bv_not(rotated).unwrap();
+        let selected = arena.ite(p, rotated, inverted).unwrap();
+        let target = arena.bv_const(4, 0b1010).unwrap();
+        let root = arena.eq(selected, target).unwrap();
+        let lowering = lower_terms_demanded(&arena, &[root]).unwrap();
+
+        for x_value in 0..16 {
+            for y_value in 0..16 {
+                for p_value in [false, true] {
+                    let mut assignment = Assignment::new();
+                    assignment.set(x_symbol, bv(4, x_value));
+                    assignment.set(y_symbol, bv(4, y_value));
+                    assignment.set(p_symbol, Value::Bool(p_value));
+                    assert_eq!(
+                        lowering.evaluate_root(0, &assignment).unwrap(),
+                        eval(&arena, root, &assignment).unwrap(),
+                        "x={x_value} y={y_value} p={p_value}"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn demanded_lowering_unions_disjoint_shared_slices_and_completes_model_bits() {
+        let mut arena = TermArena::new();
+        let x_symbol = arena.declare("x", Sort::BitVec(8)).unwrap();
+        let x = arena.var(x_symbol);
+        let low = arena.extract(1, 0, x).unwrap();
+        let high = arena.extract(7, 6, x).unwrap();
+        let low_value = arena.bv_const(2, 0b11).unwrap();
+        let high_value = arena.bv_const(2, 0b11).unwrap();
+        let roots = [
+            arena.eq(low, low_value).unwrap(),
+            arena.eq(high, high_value).unwrap(),
+        ];
+        let lowering = lower_terms_demanded(&arena, &roots).unwrap();
+
+        assert_eq!(lowering.symbol_inputs().len(), 4);
+        for bit in [0, 1, 6, 7] {
+            assert!(lowering.literal_for_term_bit(x, bit).is_some());
+        }
+        for bit in 2..6 {
+            assert_eq!(lowering.literal_for_term_bit(x, bit), None);
+        }
+
+        let mut assignment = Assignment::new();
+        assignment.set(x_symbol, bv(8, 0xff));
+        let node_values = evaluated_aig_nodes(&lowering, &assignment);
+        let reconstructed = lowering.assignment_from_aig_values(&node_values).unwrap();
+        assert_eq!(reconstructed.get(x_symbol), Some(bv(8, 0b1100_0011)));
+        assert_eq!(
+            lowering.evaluate_roots(&assignment).unwrap(),
+            vec![Value::Bool(true), Value::Bool(true)]
+        );
+    }
+
+    #[test]
+    fn demanded_lowering_uses_conservative_full_arithmetic_barrier() {
+        let mut arena = TermArena::new();
+        let x_symbol = arena.declare("x", Sort::BitVec(4)).unwrap();
+        let y_symbol = arena.declare("y", Sort::BitVec(4)).unwrap();
+        let x = arena.var(x_symbol);
+        let y = arena.var(y_symbol);
+        let sum = arena.bv_add(x, y).unwrap();
+        let low_bit = arena.extract(0, 0, sum).unwrap();
+        let one = arena.bv_const(1, 1).unwrap();
+        let root = arena.eq(low_bit, one).unwrap();
+        let lowering = lower_terms_demanded(&arena, &[root]).unwrap();
+
+        assert!(
+            lowering.demand_stats().term_bits_lowered > lowering.demand_stats().term_bits_demanded
+        );
+        for bit in 0..4 {
+            assert!(lowering.literal_for_term_bit(sum, bit).is_some());
+        }
+        for x_value in 0..16 {
+            for y_value in 0..16 {
+                let mut assignment = Assignment::new();
+                assignment.set(x_symbol, bv(4, x_value));
+                assignment.set(y_symbol, bv(4, y_value));
+                assert_eq!(
+                    lowering.evaluate_root(0, &assignment).unwrap(),
+                    eval(&arena, root, &assignment).unwrap(),
+                    "x={x_value} y={y_value}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn demanded_lowering_skips_irrelevant_zero_extension_source() {
+        let mut arena = TermArena::new();
+        let x_symbol = arena.declare("x", Sort::BitVec(8)).unwrap();
+        let x = arena.var(x_symbol);
+        let extended = arena.zero_ext(8, x).unwrap();
+        let high = arena.extract(15, 8, extended).unwrap();
+        let zero = arena.bv_const(8, 0).unwrap();
+        let root = arena.eq(high, zero).unwrap();
+        let lowering = lower_terms_demanded(&arena, &[root]).unwrap();
+
+        assert!(lowering.symbol_inputs().is_empty());
+        assert_eq!(lowering.literal_for_term_bit(x, 0), None);
+        let assignment = Assignment::new();
+        let node_values = evaluated_aig_nodes(&lowering, &assignment);
+        assert!(
+            lowering
+                .assignment_from_aig_values(&node_values)
+                .unwrap()
+                .is_empty()
+        );
+        assert_eq!(
+            lowering
+                .root_value_from_aig_values(0, &node_values)
+                .unwrap(),
+            Value::Bool(true)
+        );
+    }
+
+    #[test]
+    fn demanded_lowering_honors_expired_deadline() {
+        let mut arena = TermArena::new();
+        let x = arena.bv_var("x", 64).unwrap();
+        let root = arena.eq(x, x).unwrap();
+        assert!(matches!(
+            lower_terms_demanded_with_deadline(&arena, &[root], Some(Instant::now())),
+            Err(BitLowerError::DeadlineExceeded)
+        ));
     }
 
     #[test]
