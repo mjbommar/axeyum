@@ -510,14 +510,19 @@ and proof-companion runs; the unsuffixed compatibility entries select raw as the
 current-integration baseline. Dry-run regression tests pin every recipe's flags
 and prevent the three artifact series from silently converging.
 
-**Validation checkpoint (2026-07-14).** The all-feature solver library and
-integration suite passes serially under the hard 4 GiB virtual-memory cap, as
-do the remaining strings/verify crates and their doctests. The default-parallel
-workspace run exceeded that deliberately low cap while multiple FP tests were
-resident; the complete 55-test FP library passes serially under the same cap.
-This validates the current implementation without changing the GQ ordering:
-the real capture and GQ1/GQ10 attribution gate still precede performance
-tuning.
+**Validation checkpoint (2026-07-15).** A complete serialized `just check` at
+`623cae4c` passes under the hard 4 GiB virtual-memory cap with formatting,
+strict all-target/all-feature Clippy, every workspace and doc-test suite,
+warning-denied docs, the lean QF_BV profile, all 31 Glaurung recipe/profile
+tests, foundational resources, generated-resource drift, and link checks. The
+pinned 128-query real Glaurung gate decides every query with zero disagreements,
+errors, or replay failures: raw/current integration is 0.181498 s versus Z3's
+0.169850 s (1.069x), while canonical v4 is 0.050672 s versus 0.150092 s
+(0.338x). The gate refreshed five tracked frontier timing curves, but a
+structure-only comparison confirms their frontiers, decisions, and statuses
+are unchanged. This validates the current implementation without changing the
+GQ ordering: clean multi-driver GQ1/GQ10 publication, the measured GQ5
+incremental gate-fusion slice, and the GQ7 ordered-lineage handoff remain next.
 
 **Non-negotiable acceptance gate.** Comparable runs require 100% decided on the
 declared client tier, zero operational errors, `DISAGREE=0`, zero model/proof

@@ -896,12 +896,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   (4) expand the cold driver capture separately and retain strict coercion,
   dump validation, and atomic dedup/conflict handling.
 
-  **Validation:** a clean, serialized `just check` completed under the 4 GiB
-  memory cap with formatting, strict all-feature Clippy, the full workspace and
-  doc-test suites, strict docs, the lean QF_BV profile, all Glaurung recipe/gate
+  **Validation (2026-07-15):** a clean, serialized `just check` at `623cae4c`
+  completed under the 4 GiB memory cap with formatting, strict
+  all-target/all-feature Clippy, the full workspace and doc-test suites,
+  warning-denied docs, the lean QF_BV profile, all 31 Glaurung recipe/profile
   tests, the pinned 128-query representative Glaurung gate, foundational
   resources, generated-resource drift, and link checks green. The representative
-  gate decided 128/128 with zero disagreements, errors, or replay failures.
+  gate decided 128/128 with zero disagreements, errors, or replay failures. Its
+  raw/current-integration result is Axeyum 0.181498 s versus Z3 0.169850 s
+  (1.069x); canonical v4 is 0.050672 s versus 0.150092 s (0.338x). The gate
+  refreshed five tracked frontier `solve_ms` curves; an ignored-timing
+  comparison confirms their frontiers, decisions, and statuses are unchanged.
 
 - **2026-07-14 — ADR-0141 lands exact source-term BV Skolem witnesses.** The
   checked `forall+ exists` SAT route now accepts one source-reachable,
