@@ -100,10 +100,13 @@ session state.
 > explicit `other` bucket. The clean full v28 process decides 13,462/13,462 at
 > 14.215 seconds versus Z3's 7.718 (1.842x). Residual excess is split between
 > `register-slice` (+3.441 s) and `slice-partial` (+3.142 s); `slice-partial`
-> construction correlates 0.988 with its 44,668 surviving additions. Proposed
-> ADR-0155 is the next bounded experiment: cancel a constant leaf from a modular
-> add-chain across equality against a constant, then require representative and
-> guarded full evidence before acceptance.
+> construction correlates 0.988 with its 44,668 surviving additions. ADR-0155's
+> bounded candidate now cancels a constant leaf from a modular add-chain across
+> equality against a constant. Exhaustive through-width-3, modular-wrap,
+> 129-bit, non-match, strict-Clippy, and real 128-query Z3/replay gates pass; the
+> rule fires 1,094 times and cuts the single representative canonical run to
+> 0.051 s versus Z3's 0.149 s. Five clean representative processes and the
+> guarded full comparison remain required before acceptance.
 > The ordered warm trace remains the next functionality-enabling Glaurung
 > handoff; cold deduplication cannot validate scopes, prefix reuse, or model
 > choice. Its concrete producer/consumer contract is now

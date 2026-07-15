@@ -79,3 +79,17 @@ If accepted, this becomes the third exact GQ2/GQ3 production tranche and must
 be re-attributed on the real capture. It does not authorize cancellation across
 ordered comparisons, arithmetic overflow predicates, or any non-equality
 context. GQ7 ordered-trace handoff remains the parallel functionality priority.
+
+## Candidate checkpoint
+
+The v4 implementation passes manifest coverage, exhaustive evaluator
+equivalence through width 3, scalar modular wrap, symbolic multiplicity,
+129-bit constants, both equality orientations, deliberate non-matches,
+formatting, and strict Clippy. The pinned 128-query capture provides the
+required lifter-shaped differential route: the rule fires 1,094 times across 34
+SAT and 34 UNSAT rows, all decisions agree with in-process Z3, and every SAT
+model replays against the original assertions. The single semantic run measures
+0.051248 seconds versus Z3's 0.149495 seconds (0.343x), with 5,159 post-word DAG
+nodes, 86,123 new AIG nodes, and 94,043 clauses. This is a stop/go signal, not
+acceptance; five clean representative processes and the guarded full comparison
+remain mandatory.

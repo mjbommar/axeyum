@@ -530,3 +530,32 @@ bit-blast-plus-CNF time. The highest-excess rows repeatedly compare a symbolic
 modular add-chain plus one constant with another constant. Proposed ADR-0155
 tests exact cancellation across equality before any broader affine, lowering,
 or SAT work.
+
+## ADR-0155 candidate semantic checkpoint
+
+The default rewrite identity v4 adds only
+`bv.eq_add_constant_cancel.v1`. It flattens a same-width modular `bvadd` when
+the opposite equality operand is constant, sums and removes constant leaves,
+and shifts their value to the peer with modular subtraction. Symbolic leaves
+retain multiplicity and deterministic sorted/balanced rebuilding. Scalar and
+arbitrary-width constants share the exact rule.
+
+Exhaustive evaluation through width 3, modular wrap, 129-bit, both-orientation,
+multiplicity, non-match, manifest-coverage, formatting, and strict-Clippy gates
+pass. A pinned 128-query canonical semantic run fires the rule 1,094 times on
+68 rows: 34 SAT and 34 UNSAT, all agreed with the manifest and in-process Z3,
+with zero errors, unknowns, disagreements, or model-replay failures.
+
+| Metric | v4 candidate single run |
+|---|---:|
+| Axeyum / Z3 | 0.051248 / 0.149495 s |
+| ratio | 0.343x |
+| word / bit blast / CNF / SAT | 0.012490 / 0.012782 / 0.012866 / 0.009492 s |
+| post-word DAG nodes | 5,159 |
+| new AIG nodes | 86,123 |
+| emitted clauses | 94,043 |
+
+This dirty-worktree single run establishes semantic safety and a large enough
+structural signal to proceed. It is not acceptance or a stable timing claim;
+five clean representative processes must pass before the guarded five-process
+full tier is spent.

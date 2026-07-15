@@ -452,6 +452,14 @@ mod tests {
             // `(= p true)` ≡ `p`.
             (a.eq(p, t).unwrap(), p)
         });
+        assert_rule_fires(&mut covered, "bv.eq_add_constant_cancel.v1", |a| {
+            let x = a.bv_var("eq_add_constant_x", 8).unwrap();
+            let five = a.bv_const(8, 5).unwrap();
+            let twelve = a.bv_const(8, 12).unwrap();
+            let seven = a.bv_const(8, 7).unwrap();
+            let sum = a.bv_add(x, five).unwrap();
+            (a.eq(sum, twelve).unwrap(), a.eq(x, seven).unwrap())
+        });
         assert_rule_fires(&mut covered, "array.select_store_same.v1", |a| {
             let arr = a.array_var("arr", 4, 8).unwrap();
             let i = a.bv_var("i", 4).unwrap();

@@ -28,6 +28,7 @@ const BOOL_IMPLIES_CONST: &str = "bool.implies_const.v1";
 const BOOL_IMPLIES_REFLEXIVE: &str = "bool.implies_reflexive.v1";
 const EQ_REFLEXIVE: &str = "eq.reflexive.v1";
 const EQ_BOOL_CONST: &str = "eq.bool_const.v1";
+const BV_EQ_ADD_CONSTANT_CANCEL: &str = "bv.eq_add_constant_cancel.v1";
 const SELECT_STORE_SAME: &str = "array.select_store_same.v1";
 const SELECT_CONST_ARRAY: &str = "array.select_const.v1";
 const BV_COMPARE_REFLEXIVE: &str = "bv.compare_reflexive.v1";
@@ -370,6 +371,11 @@ fn default_rules() -> Vec<RewriteRule> {
             EQ_BOOL_CONST,
             "Boolean equality with a constant",
             "`=` of a Boolean term with a Boolean constant (`true`/`false`)",
+        ),
+        rule(
+            BV_EQ_ADD_CONSTANT_CANCEL,
+            "Bit-vector additive constant cancellation across equality",
+            "a same-width bit-vector equality between a constant and an associative `bvadd` containing at least one constant and one symbolic leaf",
         ),
         rule(
             SELECT_STORE_SAME,
@@ -817,7 +823,7 @@ fn rewrite_app(
         Op::BvUrem => rewrite_bv_urem(arena, args, enabled)?,
         Op::BvNot => rewrite_bv_not(arena, args, enabled),
         Op::BvNeg => rewrite_bv_neg(arena, args, enabled),
-        Op::Eq => rewrite_eq(arena, args, enabled),
+        Op::Eq => rewrite_eq(arena, args, enabled)?,
         Op::BvUlt
         | Op::BvUgt
         | Op::BvSlt
@@ -1468,9 +1474,9 @@ fn rewrite_eq(
     arena: &mut TermArena,
     args: &[TermId],
     enabled: &BTreeSet<&str>,
-) -> Option<LocalRewrite> {
+) -> Result<Option<LocalRewrite>, IrError> {
     if enabled.contains(EQ_REFLEXIVE) && args[0] == args[1] {
-        return Some(applied(arena.bool_const(true), EQ_REFLEXIVE));
+        return Ok(Some(applied(arena.bool_const(true), EQ_REFLEXIVE)));
     }
     // Boolean equality with a Boolean constant: `(= p true)` ≡ `p`, `(= p false)` ≡
     // `(not p)` (and symmetric). A Boolean constant operand forces the other to be
@@ -1480,14 +1486,85 @@ fn rewrite_eq(
         for (const_arg, other) in [(args[0], args[1]), (args[1], args[0])] {
             if let Some(value) = bool_const(arena, const_arg) {
                 return if value {
-                    Some(applied(other, EQ_BOOL_CONST))
+                    Ok(Some(applied(other, EQ_BOOL_CONST)))
                 } else {
-                    Some(applied(arena.not(other).ok()?, EQ_BOOL_CONST))
+                    Ok(Some(applied(arena.not(other)?, EQ_BOOL_CONST)))
                 };
             }
         }
     }
-    None
+    if enabled.contains(BV_EQ_ADD_CONSTANT_CANCEL) {
+        for (sum, constant) in [(args[0], args[1]), (args[1], args[0])] {
+            if let Some(replacement) = cancel_bv_add_constant_across_eq(arena, sum, constant)? {
+                return Ok(Some(applied(replacement, BV_EQ_ADD_CONSTANT_CANCEL)));
+            }
+        }
+    }
+    Ok(None)
+}
+
+/// Cancels the constant part of `sum` across equality with `constant`.
+///
+/// For same-width bit-vectors, `s + c = k` iff `s = k - c` modulo `2^width`.
+/// `sum` may be any associative `bvadd` tree. Symbolic leaves retain their
+/// multiplicity and deterministic sorted/balanced rebuild; all constant leaves
+/// are combined so the rule remains exact even when used without the preceding
+/// constant-chain rule.
+fn cancel_bv_add_constant_across_eq(
+    arena: &mut TermArena,
+    sum: TermId,
+    constant: TermId,
+) -> Result<Option<TermId>, IrError> {
+    let TermNode::App {
+        op: Op::BvAdd,
+        args,
+    } = arena.node(sum).clone()
+    else {
+        return Ok(None);
+    };
+    let mut symbolic = Vec::new();
+    let mut scalar_sum: Option<(u32, u128)> = None;
+    let mut wide_sum: Option<axeyum_ir::WideUint> = None;
+    for arg in flatten_ac(arena, Op::BvAdd, &args) {
+        match arena.node(arg) {
+            TermNode::BvConst { width, value } => {
+                let accumulated = scalar_sum.get_or_insert((*width, 0));
+                debug_assert_eq!(accumulated.0, *width, "well-typed bvadd has one width");
+                accumulated.1 = accumulated.1.wrapping_add(*value) & mask(*width);
+            }
+            TermNode::WideBvConst(value) => {
+                wide_sum = Some(wide_sum.map_or_else(|| value.clone(), |sum| sum.add(value)));
+            }
+            TermNode::BoolConst(_)
+            | TermNode::IntConst(_)
+            | TermNode::RealConst(_)
+            | TermNode::Symbol(_)
+            | TermNode::App { .. } => symbolic.push(arg),
+        }
+    }
+    if symbolic.is_empty() || (scalar_sum.is_none() && wide_sum.is_none()) {
+        return Ok(None);
+    }
+
+    let adjusted = match (arena.node(constant).clone(), scalar_sum, wide_sum) {
+        (TermNode::BvConst { width, value }, Some((sum_width, constant_sum)), None)
+            if width == sum_width =>
+        {
+            arena.bv_const(width, value.wrapping_sub(constant_sum) & mask(width))?
+        }
+        (TermNode::WideBvConst(value), None, Some(constant_sum))
+            if value.width() == constant_sum.width() =>
+        {
+            arena.wide_bv_const(value.sub(&constant_sum))
+        }
+        _ => return Ok(None),
+    };
+    let symbolic_sum = if symbolic.len() == 1 {
+        symbolic[0]
+    } else {
+        rebuild_balanced(arena, Op::BvAdd, &symbolic)?
+    };
+    Ok(Some(arena.eq(symbolic_sum, adjusted)?))
 }
 
 /// Bit-vector comparison reflexivity: `op x x` folds to a Boolean constant.
@@ -2146,9 +2223,9 @@ mod commutative_tests {
     use axeyum_ir::{Assignment, Op, Sort, TermArena, TermId, TermNode, Value, WideUint, eval};
 
     use super::{
-        BV_ADD_CONSTANT_CHAIN, BV_CONCAT_EXTRACT, BV_EXTRACT_BITWISE, BV_EXTRACT_ITE,
-        BV_EXTRACT_NESTED, Canonicalizer, RewriteReport, canonicalize, canonicalize_root_bounded,
-        is_extract_distributive_bitwise, mask,
+        BV_ADD_CONSTANT_CHAIN, BV_CONCAT_EXTRACT, BV_EQ_ADD_CONSTANT_CANCEL, BV_EXTRACT_BITWISE,
+        BV_EXTRACT_ITE, BV_EXTRACT_NESTED, Canonicalizer, RewriteReport, canonicalize,
+        canonicalize_root_bounded, is_extract_distributive_bitwise, mask,
     };
 
     #[test]
@@ -2231,6 +2308,132 @@ mod commutative_tests {
                             eval(&arena, rewritten, &assignment).unwrap(),
                             "width={width}, x={xv}, a={a}, b={b}"
                         );
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn bvadd_constant_cancels_across_equality_in_both_orientations() {
+        let mut arena = TermArena::new();
+        let x = arena.bv_var("x", 8).unwrap();
+        let y = arena.bv_var("y", 8).unwrap();
+        let five = arena.bv_const(8, 5).unwrap();
+        let twelve = arena.bv_const(8, 12).unwrap();
+        let seven = arena.bv_const(8, 7).unwrap();
+        let xy = arena.bv_add(x, y).unwrap();
+        let sum = arena.bv_add(xy, five).unwrap();
+        let expected_root = arena.eq(xy, seven).unwrap();
+        let expected = canonicalize(&mut arena, expected_root).unwrap().term;
+
+        for root in [
+            arena.eq(sum, twelve).unwrap(),
+            arena.eq(twelve, sum).unwrap(),
+        ] {
+            let outcome = canonicalize(&mut arena, root).unwrap();
+            assert_eq!(outcome.term, expected);
+            assert!(
+                outcome.report.applications().iter().any(|application| {
+                    application.rule_id.as_str() == BV_EQ_ADD_CONSTANT_CANCEL
+                })
+            );
+        }
+    }
+
+    #[test]
+    fn bvadd_constant_equality_cancellation_wraps_and_preserves_multiplicity() {
+        let mut arena = TermArena::new();
+        let x = arena.bv_var("x", 8).unwrap();
+        let max = arena.bv_const(8, 255).unwrap();
+        let one = arena.bv_const(8, 1).unwrap();
+        let two = arena.bv_const(8, 2).unwrap();
+        let xx = arena.bv_add(x, x).unwrap();
+        let sum = arena.bv_add(xx, max).unwrap();
+        let root = arena.eq(sum, one).unwrap();
+        let expected_root = arena.eq(xx, two).unwrap();
+        let expected = canonicalize(&mut arena, expected_root).unwrap().term;
+
+        assert_eq!(canonicalize(&mut arena, root).unwrap().term, expected);
+    }
+
+    #[test]
+    fn bvadd_constant_equality_cancellation_supports_wide_values() {
+        let mut arena = TermArena::new();
+        let x = arena.bv_var("x", 129).unwrap();
+        let offset = WideUint::from_u128(1, 129).shl(128);
+        let target = offset.add(&WideUint::from_u128(7, 129));
+        let adjusted = target.sub(&offset);
+        let offset_term = arena.wide_bv_const(offset);
+        let target_term = arena.wide_bv_const(target);
+        let adjusted_term = arena.wide_bv_const(adjusted);
+        let sum = arena.bv_add(x, offset_term).unwrap();
+        let root = arena.eq(sum, target_term).unwrap();
+        let expected_root = arena.eq(x, adjusted_term).unwrap();
+        let expected = canonicalize(&mut arena, expected_root).unwrap().term;
+
+        let outcome = canonicalize(&mut arena, root).unwrap();
+        assert_eq!(outcome.term, expected);
+        assert!(
+            outcome
+                .report
+                .applications()
+                .iter()
+                .any(|application| { application.rule_id.as_str() == BV_EQ_ADD_CONSTANT_CANCEL })
+        );
+    }
+
+    #[test]
+    fn bvadd_constant_equality_cancellation_rejects_nonconstant_peers() {
+        let mut arena = TermArena::new();
+        let x = arena.bv_var("x", 8).unwrap();
+        let y = arena.bv_var("y", 8).unwrap();
+        let z = arena.bv_var("z", 8).unwrap();
+        let one = arena.bv_const(8, 1).unwrap();
+        let xy = arena.bv_add(x, y).unwrap();
+        let x_plus_one = arena.bv_add(x, one).unwrap();
+        let no_constant_peer = arena.eq(x_plus_one, z).unwrap();
+        let no_constant_addend = arena.eq(xy, one).unwrap();
+
+        for root in [no_constant_peer, no_constant_addend] {
+            let outcome = canonicalize(&mut arena, root).unwrap();
+            assert!(
+                !outcome.report.applications().iter().any(|application| {
+                    application.rule_id.as_str() == BV_EQ_ADD_CONSTANT_CANCEL
+                })
+            );
+        }
+    }
+
+    #[test]
+    #[allow(clippy::many_single_char_names)]
+    fn bvadd_constant_equality_cancellation_is_exhaustive_through_width_three() {
+        for width in 1..=3 {
+            let limit = 1u128 << width;
+            let mut arena = TermArena::new();
+            let x_symbol = arena.declare("x", Sort::BitVec(width)).unwrap();
+            let y_symbol = arena.declare("y", Sort::BitVec(width)).unwrap();
+            let x = arena.var(x_symbol);
+            let y = arena.var(y_symbol);
+            let xy = arena.bv_add(x, y).unwrap();
+            for c in 0..limit {
+                for k in 0..limit {
+                    let constant = arena.bv_const(width, c).unwrap();
+                    let target = arena.bv_const(width, k).unwrap();
+                    let sum = arena.bv_add(xy, constant).unwrap();
+                    let original = arena.eq(sum, target).unwrap();
+                    let rewritten = canonicalize(&mut arena, original).unwrap().term;
+                    for xv in 0..limit {
+                        for yv in 0..limit {
+                            let mut assignment = Assignment::new();
+                            assignment.set(x_symbol, Value::Bv { width, value: xv });
+                            assignment.set(y_symbol, Value::Bv { width, value: yv });
+                            assert_eq!(
+                                eval(&arena, original, &assignment).unwrap(),
+                                eval(&arena, rewritten, &assignment).unwrap(),
+                                "width={width}, x={xv}, y={yv}, c={c}, k={k}"
+                            );
+                        }
                     }
                 }
             }
