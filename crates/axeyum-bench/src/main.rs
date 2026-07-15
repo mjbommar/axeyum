@@ -1740,7 +1740,7 @@ mod run {
 
     fn incremental_gate_mix_backend_stats(profile: &IncrementalBvStats) -> Vec<(String, f64)> {
         let gate_mix = profile.cnf_gate_mix;
-        vec![
+        let mut stats = vec![
             (
                 "incremental_aig_nodes".to_owned(),
                 u64_to_f64(profile.aig_nodes),
@@ -1832,6 +1832,87 @@ mod run {
             (
                 "incremental_cnf_fused_xor_leaves".to_owned(),
                 u64_to_f64(gate_mix.fused_xor_leaves),
+            ),
+        ];
+        stats.extend(incremental_root_residual_backend_stats(&gate_mix));
+        stats
+    }
+
+    fn incremental_root_residual_backend_stats(
+        gate_mix: &axeyum_solver::IncrementalCnfStats,
+    ) -> Vec<(String, f64)> {
+        vec![
+            (
+                "incremental_cnf_root_assertions".to_owned(),
+                u64_to_f64(gate_mix.root_assertions),
+            ),
+            (
+                "incremental_cnf_guarded_root_assertions".to_owned(),
+                u64_to_f64(gate_mix.guarded_root_assertions),
+            ),
+            (
+                "incremental_cnf_repeated_same_context_roots".to_owned(),
+                u64_to_f64(gate_mix.repeated_same_context_roots),
+            ),
+            (
+                "incremental_cnf_deduplicated_root_assertions".to_owned(),
+                u64_to_f64(gate_mix.deduplicated_root_assertions),
+            ),
+            (
+                "incremental_cnf_reused_cross_context_roots".to_owned(),
+                u64_to_f64(gate_mix.reused_cross_context_roots),
+            ),
+            (
+                "incremental_cnf_guarded_root_clauses".to_owned(),
+                u64_to_f64(gate_mix.guarded_root_clauses),
+            ),
+            (
+                "incremental_cnf_root_clause_attempts".to_owned(),
+                u64_to_f64(gate_mix.root_clause_attempts),
+            ),
+            (
+                "incremental_cnf_unit_payload_root_clauses".to_owned(),
+                u64_to_f64(gate_mix.unit_payload_root_clauses),
+            ),
+            (
+                "incremental_cnf_binary_payload_root_clauses".to_owned(),
+                u64_to_f64(gate_mix.binary_payload_root_clauses),
+            ),
+            (
+                "incremental_cnf_wide_payload_root_clauses".to_owned(),
+                u64_to_f64(gate_mix.wide_payload_root_clauses),
+            ),
+            (
+                "incremental_cnf_duplicate_definition_clauses".to_owned(),
+                u64_to_f64(gate_mix.duplicate_definition_clauses),
+            ),
+            (
+                "incremental_cnf_duplicate_root_clauses".to_owned(),
+                u64_to_f64(gate_mix.duplicate_root_clauses),
+            ),
+            (
+                "incremental_cnf_duplicate_prior_root_clauses".to_owned(),
+                u64_to_f64(gate_mix.duplicate_prior_root_clauses),
+            ),
+            (
+                "incremental_cnf_root_clauses_duplicate_non_root".to_owned(),
+                u64_to_f64(gate_mix.root_clauses_duplicate_non_root),
+            ),
+            (
+                "incremental_cnf_tautological_definition_clauses".to_owned(),
+                u64_to_f64(gate_mix.tautological_definition_clauses),
+            ),
+            (
+                "incremental_cnf_tautological_root_clauses".to_owned(),
+                u64_to_f64(gate_mix.tautological_root_clauses),
+            ),
+            (
+                "incremental_cnf_fresh_negative_root_definitions".to_owned(),
+                u64_to_f64(gate_mix.fresh_negative_root_definitions),
+            ),
+            (
+                "incremental_cnf_reused_negative_root_definitions".to_owned(),
+                u64_to_f64(gate_mix.reused_negative_root_definitions),
             ),
         ]
     }
@@ -6586,6 +6667,16 @@ mod run {
             );
             assert!((value("incremental_cnf_fused_positive_and_roots") - 1.0).abs() < f64::EPSILON);
             assert!((value("incremental_cnf_fused_positive_and_nodes") - 1.0).abs() < f64::EPSILON);
+            assert!((value("incremental_cnf_root_assertions") - 1.0).abs() < f64::EPSILON);
+            assert!(value("incremental_cnf_guarded_root_assertions").abs() < f64::EPSILON);
+            assert!(value("incremental_cnf_duplicate_root_clauses").abs() < f64::EPSILON);
+            assert!(value("incremental_cnf_duplicate_prior_root_clauses").abs() < f64::EPSILON);
+            assert!(value("incremental_cnf_root_clauses_duplicate_non_root").abs() < f64::EPSILON);
+            assert!(value("incremental_cnf_deduplicated_root_assertions").abs() < f64::EPSILON);
+            assert!((value("incremental_cnf_root_clause_attempts") - 2.0).abs() < f64::EPSILON);
+            assert!(
+                (value("incremental_cnf_unit_payload_root_clauses") - 2.0).abs() < f64::EPSILON
+            );
         }
 
         #[test]

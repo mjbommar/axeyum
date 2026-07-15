@@ -889,12 +889,49 @@ pub struct IncrementalCnfStats {
     pub fused_positive_and_nodes: u64,
     /// Structural XOR leaves encoded directly without their outer/helper nodes.
     pub fused_xor_leaves: u64,
+    /// Root assertions presented to the incremental encoder.
+    pub root_assertions: u64,
+    /// Root assertions protected by a scope selector.
+    pub guarded_root_assertions: u64,
+    /// Root assertions repeated with the same literal and selector context.
+    pub repeated_same_context_roots: u64,
+    /// Repeated same-context root assertions skipped by the production path.
+    pub deduplicated_root_assertions: u64,
+    /// Root literals reused under a different selector context.
+    pub reused_cross_context_roots: u64,
+    /// Root-derived clauses protected by a scope selector.
+    pub guarded_root_clauses: u64,
+    /// Root-derived clauses attempted by non-deduplicated root contexts.
+    pub root_clause_attempts: u64,
+    /// Root clauses whose assertion payload contains one literal.
+    pub unit_payload_root_clauses: u64,
+    /// Root clauses whose assertion payload contains two literals.
+    pub binary_payload_root_clauses: u64,
+    /// Root clauses whose assertion payload contains at least three literals.
+    pub wide_payload_root_clauses: u64,
+    /// Definition clauses exactly duplicating an earlier emitted clause.
+    pub duplicate_definition_clauses: u64,
+    /// Root clauses exactly duplicating an earlier emitted clause.
+    pub duplicate_root_clauses: u64,
+    /// Root clauses exactly duplicating an earlier root clause.
+    pub duplicate_prior_root_clauses: u64,
+    /// Root clauses duplicating an earlier constant or definition clause.
+    pub root_clauses_duplicate_non_root: u64,
+    /// Tautological definition clauses emitted by the primitive path.
+    pub tautological_definition_clauses: u64,
+    /// Tautological root clauses emitted by the assertion path.
+    pub tautological_root_clauses: u64,
+    /// Negative AND roots whose down half was not already present.
+    pub fresh_negative_root_definitions: u64,
+    /// Negative AND roots whose down half was already present.
+    pub reused_negative_root_definitions: u64,
 }
 
 impl IncrementalCnfStats {
     /// Returns the saturating component-wise delta from `earlier` to `self`.
     #[must_use]
     pub fn delta_since(self, earlier: Self) -> Self {
+        let root_residual = Self::root_residual_delta(&self, &earlier);
         Self {
             and_nodes_synced: self
                 .and_nodes_synced
@@ -954,6 +991,67 @@ impl IncrementalCnfStats {
             fused_xor_leaves: self
                 .fused_xor_leaves
                 .saturating_sub(earlier.fused_xor_leaves),
+            ..root_residual
+        }
+    }
+
+    fn root_residual_delta(current: &Self, earlier: &Self) -> Self {
+        Self {
+            root_assertions: current
+                .root_assertions
+                .saturating_sub(earlier.root_assertions),
+            guarded_root_assertions: current
+                .guarded_root_assertions
+                .saturating_sub(earlier.guarded_root_assertions),
+            repeated_same_context_roots: current
+                .repeated_same_context_roots
+                .saturating_sub(earlier.repeated_same_context_roots),
+            deduplicated_root_assertions: current
+                .deduplicated_root_assertions
+                .saturating_sub(earlier.deduplicated_root_assertions),
+            reused_cross_context_roots: current
+                .reused_cross_context_roots
+                .saturating_sub(earlier.reused_cross_context_roots),
+            guarded_root_clauses: current
+                .guarded_root_clauses
+                .saturating_sub(earlier.guarded_root_clauses),
+            root_clause_attempts: current
+                .root_clause_attempts
+                .saturating_sub(earlier.root_clause_attempts),
+            unit_payload_root_clauses: current
+                .unit_payload_root_clauses
+                .saturating_sub(earlier.unit_payload_root_clauses),
+            binary_payload_root_clauses: current
+                .binary_payload_root_clauses
+                .saturating_sub(earlier.binary_payload_root_clauses),
+            wide_payload_root_clauses: current
+                .wide_payload_root_clauses
+                .saturating_sub(earlier.wide_payload_root_clauses),
+            duplicate_definition_clauses: current
+                .duplicate_definition_clauses
+                .saturating_sub(earlier.duplicate_definition_clauses),
+            duplicate_root_clauses: current
+                .duplicate_root_clauses
+                .saturating_sub(earlier.duplicate_root_clauses),
+            duplicate_prior_root_clauses: current
+                .duplicate_prior_root_clauses
+                .saturating_sub(earlier.duplicate_prior_root_clauses),
+            root_clauses_duplicate_non_root: current
+                .root_clauses_duplicate_non_root
+                .saturating_sub(earlier.root_clauses_duplicate_non_root),
+            tautological_definition_clauses: current
+                .tautological_definition_clauses
+                .saturating_sub(earlier.tautological_definition_clauses),
+            tautological_root_clauses: current
+                .tautological_root_clauses
+                .saturating_sub(earlier.tautological_root_clauses),
+            fresh_negative_root_definitions: current
+                .fresh_negative_root_definitions
+                .saturating_sub(earlier.fresh_negative_root_definitions),
+            reused_negative_root_definitions: current
+                .reused_negative_root_definitions
+                .saturating_sub(earlier.reused_negative_root_definitions),
+            ..Self::default()
         }
     }
 }
@@ -992,6 +1090,11 @@ impl IncrementalCnfStats {
 /// or differently scoped occurrence can still trigger the ordinary lazy
 /// definition. Other [`tseitin_encode`] gate fusions remain unported because
 /// their global single-use plans are not stable as the AIG grows.
+///
+/// An already-installed `(root literal, selector)` assertion is not expanded a
+/// second time. The exact context key keeps different scope selectors distinct,
+/// while repeated assertions in one permanent or scoped frame reuse the clauses
+/// already retained by the monotone SAT database.
 #[derive(Debug, Default)]
 pub struct IncrementalCnf {
     sat: IncrementalSat,
@@ -1005,6 +1108,23 @@ pub struct IncrementalCnf {
     emitted_down: Vec<bool>,
     profiling_enabled: bool,
     stats: IncrementalCnfStats,
+    /// Canonical clauses seen by the opt-in diagnostic path only.
+    profiled_clauses: BTreeSet<Vec<CnfLit>>,
+    /// Canonical root clauses seen by the opt-in diagnostic path only.
+    profiled_root_clauses: BTreeSet<Vec<CnfLit>>,
+    /// `(node, inversion, selector)` root contexts seen by profiling.
+    profiled_root_contexts: BTreeSet<(usize, bool, Option<usize>)>,
+    /// Root literals seen under any selector context by profiling.
+    profiled_root_literals: BTreeSet<(usize, bool)>,
+    /// Root/selector contexts already installed in the persistent CNF.
+    asserted_root_contexts: BTreeSet<(usize, bool, Option<usize>)>,
+}
+
+#[derive(Debug, Clone, Copy)]
+enum IncrementalClauseKind {
+    Constant,
+    Definition,
+    Root,
 }
 
 impl IncrementalCnf {
@@ -1069,6 +1189,78 @@ impl IncrementalCnf {
         }
     }
 
+    fn record_profile_clause(&mut self, clause: &CnfClause, kind: IncrementalClauseKind) {
+        let mut canonical = clause.lits().to_vec();
+        canonical.sort_unstable();
+        canonical.dedup();
+        let tautological = canonical
+            .windows(2)
+            .any(|pair| pair[0].var() == pair[1].var());
+        if tautological {
+            match kind {
+                IncrementalClauseKind::Definition => {
+                    self.stats.tautological_definition_clauses =
+                        self.stats.tautological_definition_clauses.saturating_add(1);
+                }
+                IncrementalClauseKind::Root => {
+                    self.stats.tautological_root_clauses =
+                        self.stats.tautological_root_clauses.saturating_add(1);
+                }
+                IncrementalClauseKind::Constant => {}
+            }
+            return;
+        }
+
+        let duplicate_root = matches!(kind, IncrementalClauseKind::Root)
+            && !self.profiled_root_clauses.insert(canonical.clone());
+        let duplicate_any = !self.profiled_clauses.insert(canonical);
+        if duplicate_any {
+            match kind {
+                IncrementalClauseKind::Definition => {
+                    self.stats.duplicate_definition_clauses =
+                        self.stats.duplicate_definition_clauses.saturating_add(1);
+                }
+                IncrementalClauseKind::Root => {
+                    self.stats.duplicate_root_clauses =
+                        self.stats.duplicate_root_clauses.saturating_add(1);
+                    if duplicate_root {
+                        self.stats.duplicate_prior_root_clauses =
+                            self.stats.duplicate_prior_root_clauses.saturating_add(1);
+                    } else {
+                        self.stats.root_clauses_duplicate_non_root =
+                            self.stats.root_clauses_duplicate_non_root.saturating_add(1);
+                    }
+                }
+                IncrementalClauseKind::Constant => {}
+            }
+        }
+    }
+
+    fn add_incremental_clause(
+        &mut self,
+        clause: CnfClause,
+        kind: IncrementalClauseKind,
+    ) -> Result<(), SatError> {
+        if self.profiling_enabled {
+            self.record_profile_clause(&clause, kind);
+        }
+        self.sat.add_clause(clause)?;
+        if self.profiling_enabled {
+            match kind {
+                IncrementalClauseKind::Constant => {
+                    self.stats.constant_clauses = self.stats.constant_clauses.saturating_add(1);
+                }
+                IncrementalClauseKind::Definition => {
+                    self.stats.definition_clauses = self.stats.definition_clauses.saturating_add(1);
+                }
+                IncrementalClauseKind::Root => {
+                    self.stats.root_clauses = self.stats.root_clauses.saturating_add(1);
+                }
+            }
+        }
+        Ok(())
+    }
+
     /// Allocates a CNF variable for every new AIG node. AND-gate defining
     /// clauses are *not* emitted here; they are added lazily, in the needed
     /// polarity only, by [`IncrementalCnf::require`].
@@ -1082,11 +1274,10 @@ impl IncrementalCnf {
             let children = match node {
                 AigNode::ConstFalse => {
                     // Force the constant-false node's variable to false.
-                    self.sat
-                        .add_clause(CnfClause::new(vec![CnfLit::positive(var).negated()]))?;
-                    if self.profiling_enabled {
-                        self.stats.constant_clauses = self.stats.constant_clauses.saturating_add(1);
-                    }
+                    self.add_incremental_clause(
+                        CnfClause::new(vec![CnfLit::positive(var).negated()]),
+                        IncrementalClauseKind::Constant,
+                    )?;
                     None
                 }
                 AigNode::Input(_) => {
@@ -1139,14 +1330,17 @@ impl IncrementalCnf {
                 }
                 self.emitted_up[idx] = true;
                 // v -> (lhs & rhs): (¬v ∨ lhs)(¬v ∨ rhs).
-                self.sat
-                    .add_clause(CnfClause::new(vec![var.negated(), lhs_lit]))?;
-                self.sat
-                    .add_clause(CnfClause::new(vec![var.negated(), rhs_lit]))?;
+                self.add_incremental_clause(
+                    CnfClause::new(vec![var.negated(), lhs_lit]),
+                    IncrementalClauseKind::Definition,
+                )?;
+                self.add_incremental_clause(
+                    CnfClause::new(vec![var.negated(), rhs_lit]),
+                    IncrementalClauseKind::Definition,
+                )?;
                 if self.profiling_enabled {
                     self.stats.up_half_definitions =
                         self.stats.up_half_definitions.saturating_add(1);
-                    self.stats.definition_clauses = self.stats.definition_clauses.saturating_add(2);
                     self.record_half_family(aig, node_id);
                 }
                 // Children occur with their own literal polarity: positive
@@ -1159,15 +1353,13 @@ impl IncrementalCnf {
                 }
                 self.emitted_down[idx] = true;
                 // (lhs & rhs) -> v: (v ∨ ¬lhs ∨ ¬rhs).
-                self.sat.add_clause(CnfClause::new(vec![
-                    var,
-                    lhs_lit.negated(),
-                    rhs_lit.negated(),
-                ]))?;
+                self.add_incremental_clause(
+                    CnfClause::new(vec![var, lhs_lit.negated(), rhs_lit.negated()]),
+                    IncrementalClauseKind::Definition,
+                )?;
                 if self.profiling_enabled {
                     self.stats.down_half_definitions =
                         self.stats.down_half_definitions.saturating_add(1);
-                    self.stats.definition_clauses = self.stats.definition_clauses.saturating_add(1);
                     self.record_half_family(aig, node_id);
                 }
                 // Children appear negated here, flipping the required polarity:
@@ -1209,6 +1401,33 @@ impl IncrementalCnf {
         }
     }
 
+    fn root_context(root: AigLit, selector: Option<CnfVar>) -> (usize, bool, Option<usize>) {
+        (
+            root.node().index(),
+            root.is_inverted(),
+            selector.map(CnfVar::index),
+        )
+    }
+
+    fn record_root_assertion(&mut self, root: AigLit, selector: Option<CnfVar>) {
+        self.stats.root_assertions = self.stats.root_assertions.saturating_add(1);
+        if selector.is_some() {
+            self.stats.guarded_root_assertions =
+                self.stats.guarded_root_assertions.saturating_add(1);
+        }
+
+        let literal = (root.node().index(), root.is_inverted());
+        let context = Self::root_context(root, selector);
+        let seen_literal = !self.profiled_root_literals.insert(literal);
+        if !self.profiled_root_contexts.insert(context) {
+            self.stats.repeated_same_context_roots =
+                self.stats.repeated_same_context_roots.saturating_add(1);
+        } else if seen_literal {
+            self.stats.reused_cross_context_roots =
+                self.stats.reused_cross_context_roots.saturating_add(1);
+        }
+    }
+
     fn record_direct_root_opportunity(&mut self, aig: &Aig, root: AigLit) {
         let Some(AigNode::And(_, _)) = aig.node(root.node()) else {
             return;
@@ -1216,6 +1435,15 @@ impl IncrementalCnf {
         if root.is_inverted() {
             self.stats.direct_negative_and_roots =
                 self.stats.direct_negative_and_roots.saturating_add(1);
+            if self.emitted_down[root.node().index()] {
+                self.stats.reused_negative_root_definitions = self
+                    .stats
+                    .reused_negative_root_definitions
+                    .saturating_add(1);
+            } else {
+                self.stats.fresh_negative_root_definitions =
+                    self.stats.fresh_negative_root_definitions.saturating_add(1);
+            }
             return;
         }
 
@@ -1302,7 +1530,29 @@ impl IncrementalCnf {
             lits.push(CnfLit::positive(selector).negated());
         }
         lits.extend(aig_lits.iter().copied().map(|lit| self.lit(lit)));
-        self.sat.add_clause(CnfClause::new(lits))?;
+        let clause = CnfClause::new(lits);
+        if self.profiling_enabled {
+            self.stats.root_clause_attempts = self.stats.root_clause_attempts.saturating_add(1);
+            if selector.is_some() {
+                self.stats.guarded_root_clauses = self.stats.guarded_root_clauses.saturating_add(1);
+            }
+            match aig_lits.len() {
+                0 | 1 => {
+                    self.stats.unit_payload_root_clauses =
+                        self.stats.unit_payload_root_clauses.saturating_add(1);
+                }
+                2 => {
+                    self.stats.binary_payload_root_clauses =
+                        self.stats.binary_payload_root_clauses.saturating_add(1);
+                }
+                _ => {
+                    self.stats.wide_payload_root_clauses =
+                        self.stats.wide_payload_root_clauses.saturating_add(1);
+                }
+            }
+            self.record_profile_clause(&clause, IncrementalClauseKind::Root);
+        }
+        self.sat.add_clause(clause)?;
         if self.profiling_enabled {
             self.stats.root_clauses = self.stats.root_clauses.saturating_add(1);
         }
@@ -1389,15 +1639,26 @@ impl IncrementalCnf {
     ) -> Result<(), SatError> {
         self.sync(aig)?;
         if self.profiling_enabled {
+            self.record_root_assertion(root, selector);
             self.record_direct_root_opportunity(aig, root);
         }
+        let context = Self::root_context(root, selector);
+        if self.asserted_root_contexts.contains(&context) {
+            if self.profiling_enabled {
+                self.stats.deduplicated_root_assertions =
+                    self.stats.deduplicated_root_assertions.saturating_add(1);
+            }
+            return Ok(());
+        }
         if self.assert_direct_positive_root(aig, root, selector)? {
+            self.asserted_root_contexts.insert(context);
             return Ok(());
         }
         // The asserted clause contains `root` positively, so the root node
         // occurs positively iff it is not inverted: emit that polarity half.
         self.require(aig, root.node(), !root.is_inverted())?;
         self.add_root_clause(selector, &[root])?;
+        self.asserted_root_contexts.insert(context);
         Ok(())
     }
 
@@ -4265,6 +4526,19 @@ p cnf 1 2
         assert_eq!(stats.fused_positive_and_roots, 1);
         assert_eq!(stats.fused_positive_and_nodes, 3);
         assert_eq!(stats.fused_xor_leaves, 0);
+        assert_eq!(stats.root_assertions, 1);
+        assert_eq!(stats.guarded_root_assertions, 0);
+        assert_eq!(stats.repeated_same_context_roots, 0);
+        assert_eq!(stats.deduplicated_root_assertions, 0);
+        assert_eq!(stats.reused_cross_context_roots, 0);
+        assert_eq!(stats.root_clause_attempts, 4);
+        assert_eq!(stats.unit_payload_root_clauses, 4);
+        assert_eq!(stats.binary_payload_root_clauses, 0);
+        assert_eq!(stats.wide_payload_root_clauses, 0);
+        assert_eq!(stats.duplicate_definition_clauses, 0);
+        assert_eq!(stats.duplicate_root_clauses, 0);
+        assert_eq!(stats.duplicate_prior_root_clauses, 0);
+        assert_eq!(stats.root_clauses_duplicate_non_root, 0);
         assert_eq!(
             stats.xor_half_definitions
                 + stats.not_ite_half_definitions
@@ -4287,6 +4561,8 @@ p cnf 1 2
         assert_eq!(negative.definition_clauses, 3);
         assert_eq!(negative.root_clauses, 1);
         assert_eq!(negative.direct_negative_and_roots, 1);
+        assert_eq!(negative.fresh_negative_root_definitions, 1);
+        assert_eq!(negative.reused_negative_root_definitions, 0);
     }
 
     #[test]
@@ -4375,6 +4651,82 @@ p cnf 1 2
     }
 
     #[test]
+    fn incremental_cnf_profile_attributes_same_context_root_duplicates() {
+        let mut aig = Aig::new();
+        let a = aig.input("a");
+        let b = aig.input("b");
+        let root = aig.and(a, b);
+        let mut cnf = IncrementalCnf::with_profiling();
+
+        cnf.assert_root(&aig, root, None).unwrap();
+        cnf.assert_root(&aig, root, None).unwrap();
+        let stats = cnf.stats();
+
+        assert_eq!(stats.root_assertions, 2);
+        assert_eq!(stats.repeated_same_context_roots, 1);
+        assert_eq!(stats.deduplicated_root_assertions, 1);
+        assert_eq!(stats.reused_cross_context_roots, 0);
+        assert_eq!(stats.root_clause_attempts, 2);
+        assert_eq!(stats.root_clauses, 2);
+        assert_eq!(stats.duplicate_root_clauses, 0);
+        assert_eq!(stats.duplicate_prior_root_clauses, 0);
+        assert_eq!(stats.root_clauses_duplicate_non_root, 0);
+        assert_eq!(stats.duplicate_definition_clauses, 0);
+        assert_eq!(stats.tautological_root_clauses, 0);
+        assert_eq!(stats.unit_payload_root_clauses, 2);
+    }
+
+    #[test]
+    fn incremental_cnf_profile_keeps_cross_scope_roots_distinct() {
+        let mut aig = Aig::new();
+        let a = aig.input("a");
+        let b = aig.input("b");
+        let root = aig.and(a, b);
+        let mut cnf = IncrementalCnf::with_profiling();
+        let first = cnf.fresh_selector().unwrap();
+        let second = cnf.fresh_selector().unwrap();
+
+        cnf.assert_root(&aig, root, Some(first)).unwrap();
+        cnf.assert_root(&aig, root, Some(second)).unwrap();
+        let stats = cnf.stats();
+
+        assert_eq!(stats.root_assertions, 2);
+        assert_eq!(stats.guarded_root_assertions, 2);
+        assert_eq!(stats.repeated_same_context_roots, 0);
+        assert_eq!(stats.deduplicated_root_assertions, 0);
+        assert_eq!(stats.reused_cross_context_roots, 1);
+        assert_eq!(stats.guarded_root_clauses, 4);
+        assert_eq!(stats.root_clause_attempts, 4);
+        assert_eq!(stats.root_clauses, 4);
+        assert_eq!(stats.duplicate_root_clauses, 0);
+    }
+
+    #[test]
+    fn incremental_cnf_profile_separates_fresh_and_reused_negative_roots() {
+        let mut aig = Aig::new();
+        let a = aig.input("a");
+        let b = aig.input("b");
+        let root = aig.and(a, b).negated();
+        let mut cnf = IncrementalCnf::with_profiling();
+
+        cnf.assert_root(&aig, root, None).unwrap();
+        cnf.assert_root(&aig, root, None).unwrap();
+        let stats = cnf.stats();
+
+        assert_eq!(stats.direct_negative_and_roots, 2);
+        assert_eq!(stats.fresh_negative_root_definitions, 1);
+        assert_eq!(stats.reused_negative_root_definitions, 1);
+        assert_eq!(stats.definition_clauses, 1);
+        assert_eq!(stats.root_clause_attempts, 1);
+        assert_eq!(stats.root_clauses, 1);
+        assert_eq!(stats.duplicate_root_clauses, 0);
+        assert_eq!(stats.duplicate_prior_root_clauses, 0);
+        assert_eq!(stats.root_clauses_duplicate_non_root, 0);
+        assert_eq!(stats.repeated_same_context_roots, 1);
+        assert_eq!(stats.deduplicated_root_assertions, 1);
+    }
+
+    #[test]
     fn incremental_cnf_ordinary_constructor_keeps_profile_counters_zero() {
         let mut aig = Aig::new();
         let a = aig.input("a");
@@ -4405,6 +4757,30 @@ p cnf 1 2
             SatResult::Unsat(_)
         ));
         // Scope popped (selector not assumed) -> satisfiable again.
+        assert!(matches!(cnf.solve(&[], None).unwrap(), SatResult::Sat(_)));
+    }
+
+    #[test]
+    fn incremental_cnf_deduplicates_only_within_one_selector_context() {
+        let mut aig = Aig::new();
+        let p = aig.input("p");
+
+        let mut cnf = IncrementalCnf::new();
+        let selector = cnf.fresh_selector().unwrap();
+        cnf.assert_root(&aig, p.negated(), Some(selector)).unwrap();
+        let clauses_after_first_assertion = cnf.clause_count();
+
+        // The SAT database retains the first guarded clause, so repeating the
+        // same root in the same scope must not install it again.
+        cnf.assert_root(&aig, p.negated(), Some(selector)).unwrap();
+        assert_eq!(cnf.clause_count(), clauses_after_first_assertion);
+
+        // A permanent assertion is a different context and remains distinct.
+        cnf.assert_root(&aig, p, None).unwrap();
+        assert!(matches!(
+            cnf.solve(&[selector], None).unwrap(),
+            SatResult::Unsat(_)
+        ));
         assert!(matches!(cnf.solve(&[], None).unwrap(), SatResult::Sat(_)));
     }
 
