@@ -23,7 +23,6 @@ use axeyum_ir::{
 };
 
 use std::collections::{BTreeMap, HashMap, HashSet};
-#[cfg(feature = "full")]
 use std::time::Duration;
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -38,6 +37,80 @@ const MAX_WARM_STRUCTURAL_ARRAY_NODES: usize = 512;
 const MAX_WARM_STRUCTURAL_ARRAY_DEPTH: usize = 256;
 const MAX_WARM_STRUCTURAL_REFINEMENT_ROUNDS: usize = MAX_WARM_STRUCTURAL_ARRAY_NODES;
 const MAX_WARM_ARRAY_UF_APPS_PER_ROOT: usize = 64;
+
+/// Monotone phase attribution for one incremental bit-vector solver.
+///
+/// When constructed with
+/// [`IncrementalBvSolver::with_config_and_profiling`], durations and operation
+/// counts accumulate for the lifetime of the solver. A caller can snapshot
+/// [`IncrementalBvSolver::stats`] before and after a query (or a whole retained
+/// path) and use [`Self::delta_since`] to isolate the work performed in that
+/// interval. Ordinary constructors leave those fields at zero. AIG/CNF fields
+/// are always current structural gauges; their delta is the number of newly
+/// retained objects since the earlier snapshot.
+///
+/// The timers are observational only: enabling this surface does not select a
+/// preprocessing policy, add an extra traversal, or change solver semantics.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct IncrementalBvStats {
+    /// Time spent in configured word-level canonicalization.
+    pub word_rewrite: Duration,
+    /// Time spent lowering Axeyum terms into the retained AIG.
+    pub bit_blast: Duration,
+    /// Time spent extending the retained CNF and asserting roots.
+    pub cnf_encode: Duration,
+    /// Time spent inside the retained SAT adapter.
+    pub solve: Duration,
+    /// Time spent reconstructing an Axeyum model from the SAT/AIG assignment.
+    pub model_lift: Duration,
+    /// Time spent replaying SAT candidates against original assertions.
+    pub replay: Duration,
+    /// Number of roots successfully encoded into the retained CNF.
+    pub root_encodings: u64,
+    /// Number of warm checks attempted through the retained scalar-BV path.
+    pub checks: u64,
+    /// Current retained AIG node count.
+    pub aig_nodes: u64,
+    /// Current retained CNF variable count, including selectors.
+    pub cnf_variables: u64,
+    /// Current retained CNF clause count.
+    pub cnf_clauses: u64,
+}
+
+impl IncrementalBvStats {
+    /// Returns the saturating component-wise delta from `earlier` to `self`.
+    ///
+    /// Saturation makes snapshots robust to accidental cross-solver use while
+    /// preserving exact deltas for the intended monotone same-solver case.
+    #[must_use]
+    pub fn delta_since(self, earlier: Self) -> Self {
+        Self {
+            word_rewrite: self.word_rewrite.saturating_sub(earlier.word_rewrite),
+            bit_blast: self.bit_blast.saturating_sub(earlier.bit_blast),
+            cnf_encode: self.cnf_encode.saturating_sub(earlier.cnf_encode),
+            solve: self.solve.saturating_sub(earlier.solve),
+            model_lift: self.model_lift.saturating_sub(earlier.model_lift),
+            replay: self.replay.saturating_sub(earlier.replay),
+            root_encodings: self.root_encodings.saturating_sub(earlier.root_encodings),
+            checks: self.checks.saturating_sub(earlier.checks),
+            aig_nodes: self.aig_nodes.saturating_sub(earlier.aig_nodes),
+            cnf_variables: self.cnf_variables.saturating_sub(earlier.cnf_variables),
+            cnf_clauses: self.cnf_clauses.saturating_sub(earlier.cnf_clauses),
+        }
+    }
+
+    /// Sum of the measured phase durations.
+    #[must_use]
+    pub fn total_time(self) -> Duration {
+        self.word_rewrite
+            + self.bit_blast
+            + self.cnf_encode
+            + self.solve
+            + self.model_lift
+            + self.replay
+    }
+}
 
 /// Whether `term` needs the deferred theory path instead of the warm
 /// bit-blaster: arrays (`select`/`store`/array values) or uninterpreted function
@@ -344,6 +417,8 @@ pub struct IncrementalBvSolver {
     warm_array_diff_symbols: HashMap<TermId, SymbolId>,
     warm_array_relation_flag_symbols: HashMap<TermId, SymbolId>,
     internal_symbols: HashSet<SymbolId>,
+    profiling_enabled: bool,
+    stats: IncrementalBvStats,
 }
 
 impl Default for IncrementalBvSolver {
@@ -389,7 +464,21 @@ impl IncrementalBvSolver {
             warm_array_diff_symbols: HashMap::new(),
             warm_array_relation_flag_symbols: HashMap::new(),
             internal_symbols: HashSet::new(),
+            profiling_enabled: false,
+            stats: IncrementalBvStats::default(),
         }
+    }
+
+    /// Creates an empty incremental solver with opt-in phase profiling.
+    ///
+    /// The solving policy is exactly `config`; profiling only records clock
+    /// and structural deltas exposed by [`Self::stats`]. The ordinary
+    /// constructors keep profiling disabled so production clients do not pay
+    /// repeated wall-clock reads merely to make diagnostics available.
+    pub fn with_config_and_profiling(config: SolverConfig) -> Self {
+        let mut solver = Self::with_config(config);
+        solver.profiling_enabled = true;
+        solver
     }
 
     /// Replaces the wall-clock allowance used by the next warm SAT check.
@@ -430,6 +519,21 @@ impl IncrementalBvSolver {
     /// constructing the discarded 56 pointwise gates before CNF encoding.
     pub fn lowered_aig_node_count(&self) -> usize {
         self.lowering.node_count()
+    }
+
+    /// Returns a monotone snapshot of retained scalar-BV work and structure.
+    ///
+    /// See [`IncrementalBvStats::delta_since`] for isolating one query or
+    /// retained path segment. Checks routed through the full array/UF
+    /// dispatcher are outside this warm scalar-BV profile.
+    #[must_use]
+    pub fn stats(&self) -> IncrementalBvStats {
+        IncrementalBvStats {
+            aig_nodes: usize_to_u64(self.lowering.node_count()),
+            cnf_variables: usize_to_u64(self.cnf.variable_count()),
+            cnf_clauses: usize_to_u64(self.cnf.clause_count()),
+            ..self.stats
+        }
     }
 
     /// Number of unique observed array reads represented by retained warm
@@ -642,7 +746,12 @@ impl IncrementalBvSolver {
         if arena.sort_of(term) != Sort::Bool {
             return Err(SolverError::NonBooleanAssertion(term));
         }
-        let canonical = axeyum_rewrite::canonicalize(arena, term)
+        let started = self.profiling_enabled.then(Instant::now);
+        let canonical = axeyum_rewrite::canonicalize(arena, term);
+        if let Some(started) = started {
+            self.stats.word_rewrite += started.elapsed();
+        }
+        let canonical = canonical
             .map_err(|error| SolverError::Backend(error.to_string()))?
             .term;
         self.assert_encoded(arena, term, canonical)?;
@@ -678,7 +787,12 @@ impl IncrementalBvSolver {
                 return Err(SolverError::NonBooleanAssertion(term));
             }
         }
-        let canonical = axeyum_rewrite::canonicalize_terms(arena, terms)
+        let started = self.profiling_enabled.then(Instant::now);
+        let canonical = axeyum_rewrite::canonicalize_terms(arena, terms);
+        if let Some(started) = started {
+            self.stats.word_rewrite += started.elapsed();
+        }
+        let canonical = canonical
             .map_err(|error| SolverError::Backend(error.to_string()))?
             .terms;
         for (&original, &encoded) in terms.iter().zip(&canonical) {
@@ -802,7 +916,12 @@ impl IncrementalBvSolver {
                 unsupported.index()
             )));
         }
-        let lowered = match self.lowering.lower_with_deadline(arena, encoded, deadline) {
+        let started = self.profiling_enabled.then(Instant::now);
+        let lowered = self.lowering.lower_with_deadline(arena, encoded, deadline);
+        if let Some(started) = started {
+            self.stats.bit_blast += started.elapsed();
+        }
+        let lowered = match lowered {
             Ok(lowered) => lowered,
             Err(BitLowerError::DeadlineExceeded) => return Ok(false),
             Err(error) => return Err(map_lower_error(error)),
@@ -813,9 +932,15 @@ impl IncrementalBvSolver {
             .last()
             .expect("base frame always present")
             .selector;
-        self.cnf
-            .assert_root(self.lowering.aig(), root, selector)
-            .map_err(|error| map_sat_error(&error))?;
+        let started = self.profiling_enabled.then(Instant::now);
+        let encoded = self.cnf.assert_root(self.lowering.aig(), root, selector);
+        if let Some(started) = started {
+            self.stats.cnf_encode += started.elapsed();
+        }
+        encoded.map_err(|error| map_sat_error(&error))?;
+        if self.profiling_enabled {
+            self.stats.root_encodings = self.stats.root_encodings.saturating_add(1);
+        }
         self.frames
             .last_mut()
             .expect("base frame always present")
@@ -1043,15 +1168,26 @@ impl IncrementalBvSolver {
                 unsupported.index()
             )));
         }
-        let lowered = match self.lowering.lower_with_deadline(arena, term, deadline) {
+        let started = self.profiling_enabled.then(Instant::now);
+        let lowered = self.lowering.lower_with_deadline(arena, term, deadline);
+        if let Some(started) = started {
+            self.stats.bit_blast += started.elapsed();
+        }
+        let lowered = match lowered {
             Ok(lowered) => lowered,
             Err(BitLowerError::DeadlineExceeded) => return Ok(false),
             Err(error) => return Err(map_lower_error(error)),
         };
         let root = lowered.bits()[0];
-        self.cnf
-            .assert_root(self.lowering.aig(), root, selector)
-            .map_err(|error| map_sat_error(&error))?;
+        let started = self.profiling_enabled.then(Instant::now);
+        let encoded = self.cnf.assert_root(self.lowering.aig(), root, selector);
+        if let Some(started) = started {
+            self.stats.cnf_encode += started.elapsed();
+        }
+        encoded.map_err(|error| map_sat_error(&error))?;
+        if self.profiling_enabled {
+            self.stats.root_encodings = self.stats.root_encodings.saturating_add(1);
+        }
         Ok(true)
     }
 
@@ -3022,11 +3158,31 @@ impl IncrementalBvSolver {
         Ok((ephemeral, assumption_selectors))
     }
 
+    fn solve_cnf_profiled(
+        &mut self,
+        active: &[CnfVar],
+        timeout: Option<Duration>,
+    ) -> Result<SatResult, SolverError> {
+        let started = self.profiling_enabled.then(Instant::now);
+        let result = self.cnf.solve(active, timeout);
+        if let Some(started) = started {
+            self.stats.solve += started.elapsed();
+        }
+        result.map_err(|error| map_sat_error(&error))
+    }
+
+    fn record_profiled_check(&mut self) {
+        if self.profiling_enabled {
+            self.stats.checks = self.stats.checks.saturating_add(1);
+        }
+    }
+
     fn solve_with_encoded_extra(
         &mut self,
         arena: &TermArena,
         assumptions: &[OneShotAssumption],
     ) -> Result<IncrementalSolveOutcome, SolverError> {
+        self.record_profiled_check();
         // The warm path does not bit-blast arrays or UFs; if any deferred theory
         // assertion is active, refuse rather than silently ignore it (which would
         // risk a wrong result). Callers use `check_with_memory` for those
@@ -3066,20 +3222,19 @@ impl IncrementalBvSolver {
             }
             let timeout =
                 deadline.map(|deadline| deadline.saturating_duration_since(Instant::now()));
-            let result = self
-                .cnf
-                .solve(&active, timeout)
-                .map_err(|error| map_sat_error(&error))?;
+            let result = self.solve_cnf_profiled(&active, timeout)?;
 
             match result {
                 SatResult::Sat(cnf_assignment) => {
+                    let started = self.profiling_enabled.then(Instant::now);
                     let node_values = self
                         .cnf
                         .aig_node_values(self.lowering.aig(), &cnf_assignment);
-                    let reconstructed = self
-                        .lowering
-                        .assignment_from_aig_values(&node_values)
-                        .map_err(map_lower_error)?;
+                    let reconstructed = self.lowering.assignment_from_aig_values(&node_values);
+                    if let Some(started) = started {
+                        self.stats.model_lift += started.elapsed();
+                    }
+                    let reconstructed = reconstructed.map_err(map_lower_error)?;
                     match self.check_warm_candidate(
                         arena,
                         &reconstructed,
@@ -3148,7 +3303,7 @@ impl IncrementalBvSolver {
     }
 
     fn check_warm_candidate(
-        &self,
+        &mut self,
         arena: &TermArena,
         assignment: &Assignment,
         active_selects: &[TermId],
@@ -3164,18 +3319,28 @@ impl IncrementalBvSolver {
         if !violated.is_empty() {
             return Ok(WarmCandidateCheck::Refine(violated));
         }
-        let model = match self.complete_model_with_warm_theories(
+        let started = self.profiling_enabled.then(Instant::now);
+        let model = self.complete_model_with_warm_theories(
             arena,
             assignment,
             one_shot,
             assumptions,
             deadline,
-        ) {
+        );
+        if let Some(started) = started {
+            self.stats.model_lift += started.elapsed();
+        }
+        let model = match model {
             Ok(model) => model,
             Err(reason) => return Ok(WarmCandidateCheck::Unknown(reason)),
         };
         let original_assumptions = original_assumptions(assumptions);
-        if let Some(reason) = self.replay(arena, &original_assumptions, &model)? {
+        let started = self.profiling_enabled.then(Instant::now);
+        let replay = self.replay(arena, &original_assumptions, &model);
+        if let Some(started) = started {
+            self.stats.replay += started.elapsed();
+        }
+        if let Some(reason) = replay? {
             return Ok(WarmCandidateCheck::Unknown(reason));
         }
         Ok(WarmCandidateCheck::Sat(model))
@@ -6858,6 +7023,10 @@ fn map_lower_error(error: BitLowerError) -> SolverError {
 
 fn map_sat_error(error: &SatError) -> SolverError {
     SolverError::Backend(error.to_string())
+}
+
+fn usize_to_u64(value: usize) -> u64 {
+    u64::try_from(value).unwrap_or(u64::MAX)
 }
 
 #[cfg(test)]
