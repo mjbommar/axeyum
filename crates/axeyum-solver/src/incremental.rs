@@ -16,7 +16,9 @@
 //! terms** with the ground evaluator before being returned.
 
 use axeyum_bv::{BitLowerError, IncrementalLowering, first_unsupported_op};
-use axeyum_cnf::{CnfVar, IncrementalCnf, SatError, SatResult, SatUnsatEvidence};
+use axeyum_cnf::{
+    CnfVar, IncrementalCnf, IncrementalCnfStats, SatError, SatResult, SatUnsatEvidence,
+};
 use axeyum_ir::{
     ArraySortKey, ArrayValue, Assignment, FuncId, FuncValue, GenericArrayValue, IrError, Op, Sort,
     SymbolId, TermArena, TermId, TermNode, Value, WideUint, eval, well_founded_default,
@@ -76,6 +78,8 @@ pub struct IncrementalBvStats {
     pub cnf_variables: u64,
     /// Current retained CNF clause count.
     pub cnf_clauses: u64,
+    /// Opt-in incremental CNF gate-family and direct-root attribution.
+    pub cnf_gate_mix: IncrementalCnfStats,
 }
 
 impl IncrementalBvStats {
@@ -97,6 +101,7 @@ impl IncrementalBvStats {
             aig_nodes: self.aig_nodes.saturating_sub(earlier.aig_nodes),
             cnf_variables: self.cnf_variables.saturating_sub(earlier.cnf_variables),
             cnf_clauses: self.cnf_clauses.saturating_sub(earlier.cnf_clauses),
+            cnf_gate_mix: self.cnf_gate_mix.delta_since(earlier.cnf_gate_mix),
         }
     }
 
@@ -478,6 +483,7 @@ impl IncrementalBvSolver {
     pub fn with_config_and_profiling(config: SolverConfig) -> Self {
         let mut solver = Self::with_config(config);
         solver.profiling_enabled = true;
+        solver.cnf = IncrementalCnf::with_profiling();
         solver
     }
 
@@ -532,6 +538,7 @@ impl IncrementalBvSolver {
             aig_nodes: usize_to_u64(self.lowering.node_count()),
             cnf_variables: usize_to_u64(self.cnf.variable_count()),
             cnf_clauses: usize_to_u64(self.cnf.clause_count()),
+            cnf_gate_mix: self.cnf.stats(),
             ..self.stats
         }
     }

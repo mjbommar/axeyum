@@ -7,7 +7,7 @@
 
 use axeyum_aig::{Aig, AigLit, AigNode, AigNodeId};
 use std::cell::Cell;
-use std::collections::HashMap;
+use std::collections::{BTreeSet, HashMap};
 use std::hash::{BuildHasherDefault, Hasher};
 use std::time::Duration;
 
@@ -834,6 +834,115 @@ impl IncrementalSat {
     }
 }
 
+/// Opt-in structural attribution for [`IncrementalCnf`].
+///
+/// Every field is monotone for the lifetime of one encoder. Ordinary
+/// [`IncrementalCnf::new`] construction leaves the counters at zero and does
+/// not run the local gate-shape or direct-root opportunity scans; use
+/// [`IncrementalCnf::with_profiling`] when collecting diagnostics.
+///
+/// The five `*_half_definitions` fields form a partition of
+/// `up_half_definitions + down_half_definitions`. They classify the local AIG
+/// shape at the moment a primitive implication half is emitted. A shape hit is
+/// an opportunity measurement, not evidence that the corresponding one-shot
+/// fusion is incrementally admissible.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct IncrementalCnfStats {
+    /// AND nodes discovered while synchronizing the growing AIG.
+    pub and_nodes_synced: u64,
+    /// Positive-use `v -> (lhs & rhs)` halves emitted.
+    pub up_half_definitions: u64,
+    /// Negative-use `(lhs & rhs) -> v` halves emitted.
+    pub down_half_definitions: u64,
+    /// Emitted half-definitions whose local AIG shape is XOR/XNOR-like.
+    pub xor_half_definitions: u64,
+    /// Emitted half-definitions whose local AIG shape is mux/ITE-like.
+    pub not_ite_half_definitions: u64,
+    /// Emitted half-definitions with at least one complemented AND child.
+    pub not_and_half_definitions: u64,
+    /// Emitted half-definitions with at least one positive AND child.
+    pub and_tree_half_definitions: u64,
+    /// Remaining primitive binary-AND half-definitions.
+    pub binary_and_half_definitions: u64,
+    /// Constant-node clauses emitted while synchronizing the AIG.
+    pub constant_clauses: u64,
+    /// Primitive AND implication clauses emitted by `require`.
+    pub definition_clauses: u64,
+    /// Unit or selector-guarded assertion clauses emitted for roots.
+    pub root_clauses: u64,
+    /// Asserted roots that are positive AND nodes and can be flattened safely.
+    pub direct_positive_and_roots: u64,
+    /// Unique positive AND nodes below those roots.
+    pub direct_positive_and_nodes: u64,
+    /// Unique non-positive-AND leaves below those roots.
+    pub direct_positive_and_leaves: u64,
+    /// Direct-root leaves whose local shape is XOR/XNOR-like.
+    pub direct_xor_leaves: u64,
+    /// Direct-root leaves whose local shape is mux/ITE-like.
+    pub direct_not_ite_leaves: u64,
+    /// Asserted roots that are complemented AND nodes.
+    pub direct_negative_and_roots: u64,
+}
+
+impl IncrementalCnfStats {
+    /// Returns the saturating component-wise delta from `earlier` to `self`.
+    #[must_use]
+    pub fn delta_since(self, earlier: Self) -> Self {
+        Self {
+            and_nodes_synced: self
+                .and_nodes_synced
+                .saturating_sub(earlier.and_nodes_synced),
+            up_half_definitions: self
+                .up_half_definitions
+                .saturating_sub(earlier.up_half_definitions),
+            down_half_definitions: self
+                .down_half_definitions
+                .saturating_sub(earlier.down_half_definitions),
+            xor_half_definitions: self
+                .xor_half_definitions
+                .saturating_sub(earlier.xor_half_definitions),
+            not_ite_half_definitions: self
+                .not_ite_half_definitions
+                .saturating_sub(earlier.not_ite_half_definitions),
+            not_and_half_definitions: self
+                .not_and_half_definitions
+                .saturating_sub(earlier.not_and_half_definitions),
+            and_tree_half_definitions: self
+                .and_tree_half_definitions
+                .saturating_sub(earlier.and_tree_half_definitions),
+            binary_and_half_definitions: self
+                .binary_and_half_definitions
+                .saturating_sub(earlier.binary_and_half_definitions),
+            constant_clauses: self
+                .constant_clauses
+                .saturating_sub(earlier.constant_clauses),
+            definition_clauses: self
+                .definition_clauses
+                .saturating_sub(earlier.definition_clauses),
+            root_clauses: self.root_clauses.saturating_sub(earlier.root_clauses),
+            direct_positive_and_roots: self
+                .direct_positive_and_roots
+                .saturating_sub(earlier.direct_positive_and_roots),
+            direct_positive_and_nodes: self
+                .direct_positive_and_nodes
+                .saturating_sub(earlier.direct_positive_and_nodes),
+            direct_positive_and_leaves: self
+                .direct_positive_and_leaves
+                .saturating_sub(earlier.direct_positive_and_leaves),
+            direct_xor_leaves: self
+                .direct_xor_leaves
+                .saturating_sub(earlier.direct_xor_leaves),
+            direct_not_ite_leaves: self
+                .direct_not_ite_leaves
+                .saturating_sub(earlier.direct_not_ite_leaves),
+            direct_negative_and_roots: self
+                .direct_negative_and_roots
+                .saturating_sub(earlier.direct_negative_and_roots),
+        }
+    }
+}
+
 /// Incremental Tseitin encoder over a warm [`IncrementalSat`] (ADR-0009 stage 2).
 ///
 /// Encodes AIG nodes into CNF on demand as the AIG grows — one CNF variable per
@@ -876,12 +985,32 @@ pub struct IncrementalCnf {
     emitted_up: Vec<bool>,
     /// Whether the `(lhs & rhs) -> v` half has been emitted, parallel to `node_var`.
     emitted_down: Vec<bool>,
+    profiling_enabled: bool,
+    stats: IncrementalCnfStats,
 }
 
 impl IncrementalCnf {
     /// Creates an empty incremental encoder.
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Creates an empty incremental encoder with structural attribution.
+    ///
+    /// Encoding semantics are unchanged. This opt-in constructor additionally
+    /// counts emitted implication families and scans asserted roots for
+    /// direct-root fusion opportunities.
+    pub fn with_profiling() -> Self {
+        Self {
+            profiling_enabled: true,
+            ..Self::default()
+        }
+    }
+
+    /// Returns the monotone opt-in structural counters.
+    #[must_use]
+    pub fn stats(&self) -> IncrementalCnfStats {
+        self.stats
     }
 
     /// Number of CNF variables allocated so far (nodes plus selectors).
@@ -937,6 +1066,9 @@ impl IncrementalCnf {
                     // Force the constant-false node's variable to false.
                     self.sat
                         .add_clause(CnfClause::new(vec![CnfLit::positive(var).negated()]))?;
+                    if self.profiling_enabled {
+                        self.stats.constant_clauses = self.stats.constant_clauses.saturating_add(1);
+                    }
                     None
                 }
                 AigNode::Input(_) => {
@@ -945,7 +1077,12 @@ impl IncrementalCnf {
                 }
                 // Defer the `var <-> (lhs & rhs)` clauses to `require`, which
                 // emits only the polarity halves that are actually used.
-                AigNode::And(lhs, rhs) => Some((lhs, rhs)),
+                AigNode::And(lhs, rhs) => {
+                    if self.profiling_enabled {
+                        self.stats.and_nodes_synced = self.stats.and_nodes_synced.saturating_add(1);
+                    }
+                    Some((lhs, rhs))
+                }
             };
             self.and_children.push(children);
             self.emitted_up.push(false);
@@ -966,9 +1103,10 @@ impl IncrementalCnf {
     /// occurrences whose polarities are propagated recursively. Each
     /// `(node, direction)` is emitted at most once, so the propagation is finite
     /// and monotone. An explicit work-stack avoids deep recursion on tall AIGs.
-    fn require(&mut self, start: usize, want_up: bool) -> Result<(), SatError> {
+    fn require(&mut self, aig: &Aig, start: AigNodeId, want_up: bool) -> Result<(), SatError> {
         let mut stack = vec![(start, want_up)];
-        while let Some((idx, up)) = stack.pop() {
+        while let Some((node_id, up)) = stack.pop() {
+            let idx = node_id.index();
             // Only AND nodes carry a defining implication; inputs and the
             // constant are already fully determined.
             let Some((lhs, rhs)) = self.and_children[idx] else {
@@ -987,10 +1125,16 @@ impl IncrementalCnf {
                     .add_clause(CnfClause::new(vec![var.negated(), lhs_lit]))?;
                 self.sat
                     .add_clause(CnfClause::new(vec![var.negated(), rhs_lit]))?;
+                if self.profiling_enabled {
+                    self.stats.up_half_definitions =
+                        self.stats.up_half_definitions.saturating_add(1);
+                    self.stats.definition_clauses = self.stats.definition_clauses.saturating_add(2);
+                    self.record_half_family(aig, node_id);
+                }
                 // Children occur with their own literal polarity: positive
                 // occurrence needs `up`, negated occurrence needs `down`.
-                stack.push((lhs.node().index(), !lhs.is_inverted()));
-                stack.push((rhs.node().index(), !rhs.is_inverted()));
+                stack.push((lhs.node(), !lhs.is_inverted()));
+                stack.push((rhs.node(), !rhs.is_inverted()));
             } else {
                 if self.emitted_down[idx] {
                     continue;
@@ -1002,14 +1146,100 @@ impl IncrementalCnf {
                     lhs_lit.negated(),
                     rhs_lit.negated(),
                 ]))?;
+                if self.profiling_enabled {
+                    self.stats.down_half_definitions =
+                        self.stats.down_half_definitions.saturating_add(1);
+                    self.stats.definition_clauses = self.stats.definition_clauses.saturating_add(1);
+                    self.record_half_family(aig, node_id);
+                }
                 // Children appear negated here, flipping the required polarity:
                 // a non-inverted child occurs negatively (needs `down`); an
                 // inverted child occurs positively (needs `up`).
-                stack.push((lhs.node().index(), lhs.is_inverted()));
-                stack.push((rhs.node().index(), rhs.is_inverted()));
+                stack.push((lhs.node(), lhs.is_inverted()));
+                stack.push((rhs.node(), rhs.is_inverted()));
             }
         }
         Ok(())
+    }
+
+    fn record_half_family(&mut self, aig: &Aig, node_id: AigNodeId) {
+        let Some(node @ AigNode::And(lhs, rhs)) = aig.node(node_id) else {
+            unreachable!("only synchronized AND nodes receive half-definitions");
+        };
+        if detect_xor_gate(aig, node).is_some() {
+            self.stats.xor_half_definitions = self.stats.xor_half_definitions.saturating_add(1);
+        } else if detect_not_ite_gate(aig, node).is_some() {
+            self.stats.not_ite_half_definitions =
+                self.stats.not_ite_half_definitions.saturating_add(1);
+        } else if [lhs, rhs].iter().any(|lit| {
+            lit.is_inverted()
+                && lit.node().index() != 0
+                && matches!(aig.node(lit.node()), Some(AigNode::And(_, _)))
+        }) {
+            self.stats.not_and_half_definitions =
+                self.stats.not_and_half_definitions.saturating_add(1);
+        } else if [lhs, rhs].iter().any(|lit| {
+            !lit.is_inverted()
+                && lit.node().index() != 0
+                && matches!(aig.node(lit.node()), Some(AigNode::And(_, _)))
+        }) {
+            self.stats.and_tree_half_definitions =
+                self.stats.and_tree_half_definitions.saturating_add(1);
+        } else {
+            self.stats.binary_and_half_definitions =
+                self.stats.binary_and_half_definitions.saturating_add(1);
+        }
+    }
+
+    fn record_direct_root_opportunity(&mut self, aig: &Aig, root: AigLit) {
+        let Some(AigNode::And(_, _)) = aig.node(root.node()) else {
+            return;
+        };
+        if root.is_inverted() {
+            self.stats.direct_negative_and_roots =
+                self.stats.direct_negative_and_roots.saturating_add(1);
+            return;
+        }
+
+        self.stats.direct_positive_and_roots =
+            self.stats.direct_positive_and_roots.saturating_add(1);
+        let mut stack = vec![root];
+        let mut and_nodes = BTreeSet::new();
+        let mut leaves = BTreeSet::new();
+        while let Some(lit) = stack.pop() {
+            if !lit.is_inverted()
+                && let Some(node @ AigNode::And(lhs, rhs)) = aig.node(lit.node())
+            {
+                if detect_xor_gate(aig, node).is_some() || detect_not_ite_gate(aig, node).is_some()
+                {
+                    leaves.insert(lit);
+                } else if and_nodes.insert(lit.node()) {
+                    stack.push(lhs);
+                    stack.push(rhs);
+                }
+            } else {
+                leaves.insert(lit);
+            }
+        }
+        self.stats.direct_positive_and_nodes = self
+            .stats
+            .direct_positive_and_nodes
+            .saturating_add(usize_to_u64_saturating(and_nodes.len()));
+        self.stats.direct_positive_and_leaves = self
+            .stats
+            .direct_positive_and_leaves
+            .saturating_add(usize_to_u64_saturating(leaves.len()));
+        for leaf in leaves {
+            let Some(node @ AigNode::And(_, _)) = aig.node(leaf.node()) else {
+                continue;
+            };
+            if detect_xor_gate(aig, node).is_some() {
+                self.stats.direct_xor_leaves = self.stats.direct_xor_leaves.saturating_add(1);
+            } else if detect_not_ite_gate(aig, node).is_some() {
+                self.stats.direct_not_ite_leaves =
+                    self.stats.direct_not_ite_leaves.saturating_add(1);
+            }
+        }
     }
 
     /// Encodes any new AIG nodes, then asserts `root`.
@@ -1029,15 +1259,22 @@ impl IncrementalCnf {
         selector: Option<CnfVar>,
     ) -> Result<(), SatError> {
         self.sync(aig)?;
+        if self.profiling_enabled {
+            self.record_direct_root_opportunity(aig, root);
+        }
         // The asserted clause contains `root` positively, so the root node
         // occurs positively iff it is not inverted: emit that polarity half.
-        self.require(root.node().index(), !root.is_inverted())?;
+        self.require(aig, root.node(), !root.is_inverted())?;
         let root_lit = self.lit(root);
         let clause = match selector {
             None => CnfClause::new(vec![root_lit]),
             Some(sel) => CnfClause::new(vec![CnfLit::positive(sel).negated(), root_lit]),
         };
-        self.sat.add_clause(clause)
+        self.sat.add_clause(clause)?;
+        if self.profiling_enabled {
+            self.stats.root_clauses = self.stats.root_clauses.saturating_add(1);
+        }
+        Ok(())
     }
 
     /// Solves with the given scope selectors assumed active (true).
@@ -2882,10 +3119,10 @@ mod tests {
     use axeyum_ir::{Sort, TermArena, Value, eval};
 
     use super::{
-        CnfClause, CnfError, CnfLit, CnfVar, EncodedLit, IncrementalCnf, IncrementalSat,
-        RustSatBatsatSolver, SatProofStatus, SatResult, SatSolver, aig_lit_value, parse_dimacs,
-        rustsat_batsat_determinism, solve_with_rustsat_batsat, solve_with_rustsat_batsat_limits,
-        tseitin_encode,
+        CnfClause, CnfError, CnfLit, CnfVar, EncodedLit, IncrementalCnf, IncrementalCnfStats,
+        IncrementalSat, RustSatBatsatSolver, SatProofStatus, SatResult, SatSolver, aig_lit_value,
+        parse_dimacs, rustsat_batsat_determinism, solve_with_rustsat_batsat,
+        solve_with_rustsat_batsat_limits, tseitin_encode,
     };
 
     #[test]
@@ -3868,6 +4105,93 @@ p cnf 1 2
             contradiction.solve(&[], None).unwrap(),
             SatResult::Unsat(_)
         ));
+    }
+
+    #[test]
+    fn incremental_cnf_profile_partitions_halves_and_direct_root_opportunities() {
+        let mut aig = Aig::new();
+        let a = aig.input("a");
+        let b = aig.input("b");
+        let c = aig.input("c");
+        let d = aig.input("d");
+        let ab = aig.and(a, b);
+        let cd = aig.and(c, d);
+        let root = aig.and(ab, cd);
+
+        let mut cnf = IncrementalCnf::with_profiling();
+        let before = cnf.stats();
+        cnf.assert_root(&aig, root, None).unwrap();
+        let stats = cnf.stats().delta_since(before);
+
+        assert_eq!(stats.and_nodes_synced, 3);
+        assert_eq!(stats.up_half_definitions, 3);
+        assert_eq!(stats.down_half_definitions, 0);
+        assert_eq!(stats.and_tree_half_definitions, 1);
+        assert_eq!(stats.binary_and_half_definitions, 2);
+        assert_eq!(stats.xor_half_definitions, 0);
+        assert_eq!(stats.not_ite_half_definitions, 0);
+        assert_eq!(stats.not_and_half_definitions, 0);
+        assert_eq!(stats.constant_clauses, 1);
+        assert_eq!(stats.definition_clauses, 6);
+        assert_eq!(stats.root_clauses, 1);
+        assert_eq!(stats.direct_positive_and_roots, 1);
+        assert_eq!(stats.direct_positive_and_nodes, 3);
+        assert_eq!(stats.direct_positive_and_leaves, 4);
+        assert_eq!(stats.direct_negative_and_roots, 0);
+        assert_eq!(
+            stats.xor_half_definitions
+                + stats.not_ite_half_definitions
+                + stats.not_and_half_definitions
+                + stats.and_tree_half_definitions
+                + stats.binary_and_half_definitions,
+            stats.up_half_definitions + stats.down_half_definitions
+        );
+        assert_eq!(
+            stats.constant_clauses + stats.definition_clauses + stats.root_clauses,
+            u64::try_from(cnf.clause_count()).unwrap()
+        );
+
+        let before_negative = cnf.stats();
+        cnf.assert_root(&aig, root.negated(), None).unwrap();
+        let negative = cnf.stats().delta_since(before_negative);
+        assert_eq!(negative.down_half_definitions, 3);
+        assert_eq!(negative.and_tree_half_definitions, 1);
+        assert_eq!(negative.binary_and_half_definitions, 2);
+        assert_eq!(negative.definition_clauses, 3);
+        assert_eq!(negative.root_clauses, 1);
+        assert_eq!(negative.direct_negative_and_roots, 1);
+    }
+
+    #[test]
+    fn incremental_cnf_profile_finds_direct_parity_leaf_without_flattening_it() {
+        let mut aig = Aig::new();
+        let a = aig.input("a");
+        let b = aig.input("b");
+        let xnor = xor_lit(&mut aig, a, b).negated();
+        let mut cnf = IncrementalCnf::with_profiling();
+
+        cnf.assert_root(&aig, xnor, None).unwrap();
+        let stats = cnf.stats();
+
+        assert_eq!(stats.direct_positive_and_roots, 1);
+        assert_eq!(stats.direct_positive_and_nodes, 0);
+        assert_eq!(stats.direct_positive_and_leaves, 1);
+        assert_eq!(stats.direct_xor_leaves, 1);
+        assert_eq!(stats.direct_not_ite_leaves, 0);
+        assert!(stats.xor_half_definitions > 0);
+    }
+
+    #[test]
+    fn incremental_cnf_ordinary_constructor_keeps_profile_counters_zero() {
+        let mut aig = Aig::new();
+        let a = aig.input("a");
+        let b = aig.input("b");
+        let root = aig.and(a, b);
+        let mut cnf = IncrementalCnf::new();
+
+        cnf.assert_root(&aig, root, None).unwrap();
+
+        assert_eq!(cnf.stats(), IncrementalCnfStats::default());
     }
 
     #[test]

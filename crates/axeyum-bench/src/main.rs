@@ -10,7 +10,7 @@
 //!   `[--corpus-source TEXT] [--corpus-manifest FILE] [--corpus-tier NAME]`
 //!   `[--generate-corpus-manifest CAPTURE_INDEX]`
 //!   `[--logic LOGIC] [--families CSV]`
-//!   `[--rewrite off|default] [--backend sat-bv|incremental-bv-batch|z3]`
+//!   `[--rewrite off|default] [--backend sat-bv|incremental-bv-batch|incremental-bv-raw-profile|z3]`
 //!   `[--query-plan full|first-assertion-support|replay-refine|replay-refine-exact]`
 //!   `[--refine-rounds N] [--refine-batch N] [--refine-adaptive-batch]`
 //!   `[--refine-select first|smallest-dag|smallest-plan-dag|smallest-plan-greedy]`
@@ -42,9 +42,9 @@ mod run {
     };
     use axeyum_smtlib::{Script, ScriptCommand, SmtError, parse_script};
     use axeyum_solver::{
-        BvLayerStats, Capabilities, CheckResult, IncrementalBvSolver, LazyBvBackend, Model,
-        RangeDemandDecision, RangeDemandPolicy, SatBvBackend, SolveStats, SolverBackend,
-        SolverConfig, SolverError, UnknownKind, check_model_with_assignment, solve,
+        BvLayerStats, Capabilities, CheckResult, IncrementalBvSolver, IncrementalBvStats,
+        LazyBvBackend, Model, RangeDemandDecision, RangeDemandPolicy, SatBvBackend, SolveStats,
+        SolverBackend, SolverConfig, SolverError, UnknownKind, check_model_with_assignment, solve,
     };
     #[cfg(feature = "z3")]
     use axeyum_solver::{DETERMINISTIC_Z3_RANDOM_SEED, Z3Backend};
@@ -86,6 +86,9 @@ mod run {
         /// A fresh [`IncrementalBvSolver`] per query with all roots admitted by
         /// one shared-memo canonical batch, matching Glaurung's cold embedding.
         IncrementalBvBatch,
+        /// Attribution-only fresh raw incremental path. It enables the opt-in
+        /// phase/gate counters and therefore is not a performance baseline.
+        IncrementalBvRawProfile,
         /// P2.1 lazy abstraction-refinement (CEGAR) bit-blasting (ADR-0019).
         LazyBv,
         /// Lazy bit-blasting that also abstracts `ite` (P2.1 lever #3).
@@ -107,6 +110,7 @@ mod run {
             match self {
                 BackendKind::SatBv => "sat-bv",
                 BackendKind::IncrementalBvBatch => "incremental-bv-batch",
+                BackendKind::IncrementalBvRawProfile => "incremental-bv-raw-profile",
                 BackendKind::LazyBv => "lazy-bv",
                 BackendKind::LazyBvIte => "lazy-bv-ite",
                 BackendKind::Solver => "solver",
@@ -628,6 +632,7 @@ mod run {
         match value {
             "sat-bv" => Ok(BackendKind::SatBv),
             "incremental-bv-batch" => Ok(BackendKind::IncrementalBvBatch),
+            "incremental-bv-raw-profile" => Ok(BackendKind::IncrementalBvRawProfile),
             "lazy-bv" => Ok(BackendKind::LazyBv),
             "lazy-bv-ite" => Ok(BackendKind::LazyBvIte),
             "solver" | "auto" => Ok(BackendKind::Solver),
@@ -1601,6 +1606,7 @@ mod run {
         match kind {
             BackendKind::SatBv => Box::new(SatBvBackend::new()),
             BackendKind::IncrementalBvBatch => Box::new(IncrementalBvBatchBackend::new()),
+            BackendKind::IncrementalBvRawProfile => Box::new(IncrementalBvRawProfileBackend::new()),
             BackendKind::LazyBv => Box::new(LazyBvBackend::new()),
             BackendKind::LazyBvIte => Box::new(LazyBvBackend::new().with_abstract_ite(true)),
             BackendKind::Solver => Box::new(CheckAutoBackend::new()),
@@ -1674,6 +1680,148 @@ mod run {
         fn last_stats(&self) -> Option<&SolveStats> {
             self.stats.as_ref()
         }
+    }
+
+    /// Diagnostic adapter matching Glaurung's fresh raw arena/solver/assertion
+    /// policy while exposing the opt-in incremental gate mix. The shape scan is
+    /// intentionally charged to this backend, so its timing is attribution-only
+    /// and must not be compared with ordinary `incremental-bv-batch` timing.
+    struct IncrementalBvRawProfileBackend {
+        stats: Option<SolveStats>,
+    }
+
+    impl IncrementalBvRawProfileBackend {
+        fn new() -> Self {
+            Self { stats: None }
+        }
+    }
+
+    impl SolverBackend for IncrementalBvRawProfileBackend {
+        fn capabilities(&self) -> Capabilities {
+            Capabilities {
+                name: "axeyum-incremental-bv raw-profile-v1".to_owned(),
+                produces_models: true,
+                complete: true,
+            }
+        }
+
+        fn check(
+            &mut self,
+            arena: &TermArena,
+            assertions: &[TermId],
+            config: &SolverConfig,
+        ) -> Result<CheckResult, SolverError> {
+            let mut raw_config = config.clone();
+            raw_config.preprocess = false;
+            let mut solver = IncrementalBvSolver::with_config_and_profiling(raw_config);
+            let translate_start = Instant::now();
+            for &assertion in assertions {
+                solver.assert(arena, assertion)?;
+            }
+            let translate = translate_start.elapsed();
+            let solve_start = Instant::now();
+            let result = solver.check(arena);
+            let solve = solve_start.elapsed();
+            let profile = solver.stats();
+            let mut stats = SolveStats::default();
+            stats.translate = translate;
+            stats.solve = solve;
+            stats.assertion_count = usize_to_u64(assertions.len());
+            stats.terms_translated = TermStats::compute(arena, assertions).dag_nodes;
+            stats.backend = incremental_gate_mix_backend_stats(&profile);
+            self.stats = Some(stats);
+            result
+        }
+
+        fn last_stats(&self) -> Option<&SolveStats> {
+            self.stats.as_ref()
+        }
+    }
+
+    fn incremental_gate_mix_backend_stats(profile: &IncrementalBvStats) -> Vec<(String, f64)> {
+        let gate_mix = profile.cnf_gate_mix;
+        vec![
+            (
+                "incremental_aig_nodes".to_owned(),
+                u64_to_f64(profile.aig_nodes),
+            ),
+            (
+                "incremental_cnf_variables".to_owned(),
+                u64_to_f64(profile.cnf_variables),
+            ),
+            (
+                "incremental_cnf_clauses".to_owned(),
+                u64_to_f64(profile.cnf_clauses),
+            ),
+            (
+                "incremental_cnf_and_nodes_synced".to_owned(),
+                u64_to_f64(gate_mix.and_nodes_synced),
+            ),
+            (
+                "incremental_cnf_up_half_definitions".to_owned(),
+                u64_to_f64(gate_mix.up_half_definitions),
+            ),
+            (
+                "incremental_cnf_down_half_definitions".to_owned(),
+                u64_to_f64(gate_mix.down_half_definitions),
+            ),
+            (
+                "incremental_cnf_xor_half_definitions".to_owned(),
+                u64_to_f64(gate_mix.xor_half_definitions),
+            ),
+            (
+                "incremental_cnf_not_ite_half_definitions".to_owned(),
+                u64_to_f64(gate_mix.not_ite_half_definitions),
+            ),
+            (
+                "incremental_cnf_not_and_half_definitions".to_owned(),
+                u64_to_f64(gate_mix.not_and_half_definitions),
+            ),
+            (
+                "incremental_cnf_and_tree_half_definitions".to_owned(),
+                u64_to_f64(gate_mix.and_tree_half_definitions),
+            ),
+            (
+                "incremental_cnf_binary_and_half_definitions".to_owned(),
+                u64_to_f64(gate_mix.binary_and_half_definitions),
+            ),
+            (
+                "incremental_cnf_constant_clauses".to_owned(),
+                u64_to_f64(gate_mix.constant_clauses),
+            ),
+            (
+                "incremental_cnf_definition_clauses".to_owned(),
+                u64_to_f64(gate_mix.definition_clauses),
+            ),
+            (
+                "incremental_cnf_root_clauses".to_owned(),
+                u64_to_f64(gate_mix.root_clauses),
+            ),
+            (
+                "incremental_cnf_direct_positive_and_roots".to_owned(),
+                u64_to_f64(gate_mix.direct_positive_and_roots),
+            ),
+            (
+                "incremental_cnf_direct_positive_and_nodes".to_owned(),
+                u64_to_f64(gate_mix.direct_positive_and_nodes),
+            ),
+            (
+                "incremental_cnf_direct_positive_and_leaves".to_owned(),
+                u64_to_f64(gate_mix.direct_positive_and_leaves),
+            ),
+            (
+                "incremental_cnf_direct_xor_leaves".to_owned(),
+                u64_to_f64(gate_mix.direct_xor_leaves),
+            ),
+            (
+                "incremental_cnf_direct_not_ite_leaves".to_owned(),
+                u64_to_f64(gate_mix.direct_not_ite_leaves),
+            ),
+            (
+                "incremental_cnf_direct_negative_and_roots".to_owned(),
+                u64_to_f64(gate_mix.direct_negative_and_roots),
+            ),
+        ]
     }
 
     /// A [`SolverBackend`] adapter over the unified division-general front door
@@ -5438,6 +5586,11 @@ mod run {
         usize_to_u64(n) as f64
     }
 
+    #[allow(clippy::cast_precision_loss)]
+    fn u64_to_f64(n: u64) -> f64 {
+        n as f64
+    }
+
     impl ExperimentIdentity {
         fn collect(backend: &str, compare_backend: Option<&str>) -> Self {
             let root = repository_root();
@@ -6386,6 +6539,38 @@ mod run {
                     .backend
                     .iter()
                     .any(|(name, value)| { name == "incremental_cnf_clauses" && *value > 0.0 })
+            );
+        }
+
+        #[test]
+        fn incremental_raw_profile_backend_exposes_gate_mix_without_reusing_batch_policy() {
+            assert_eq!(
+                parse_backend("incremental-bv-raw-profile").unwrap(),
+                BackendKind::IncrementalBvRawProfile
+            );
+            let mut arena = TermArena::new();
+            let a = arena.bool_var("a").unwrap();
+            let b = arena.bool_var("b").unwrap();
+            let assertion = arena.and(a, b).unwrap();
+            let mut backend = IncrementalBvRawProfileBackend::new();
+
+            assert!(matches!(
+                backend.check(&arena, &[assertion], &SolverConfig::default()),
+                Ok(CheckResult::Sat(_))
+            ));
+            let stats = backend.last_stats().unwrap();
+            let value = |name: &str| {
+                stats
+                    .backend
+                    .iter()
+                    .find_map(|(candidate, value)| (candidate == name).then_some(*value))
+                    .unwrap()
+            };
+            assert!(value("incremental_cnf_and_nodes_synced") > 0.0);
+            assert!(value("incremental_cnf_definition_clauses") > 0.0);
+            assert!((value("incremental_cnf_root_clauses") - 1.0).abs() < f64::EPSILON);
+            assert!(
+                (value("incremental_cnf_direct_positive_and_roots") - 1.0).abs() < f64::EPSILON
             );
         }
 

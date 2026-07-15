@@ -190,6 +190,7 @@ full_modules!();
 #[cfg(feature = "full")]
 pub use axeyum_fp as fp;
 
+pub use axeyum_cnf::IncrementalCnfStats;
 pub use backend::{
     Capabilities, CheckResult, SolveStats, SolverBackend, SolverConfig, SolverError, UnknownKind,
     UnknownReason,

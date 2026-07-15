@@ -1,7 +1,7 @@
 //! Public incremental phase-attribution contract.
 
 use axeyum_ir::TermArena;
-use axeyum_solver::{CheckResult, IncrementalBvSolver, SolverConfig};
+use axeyum_solver::{CheckResult, IncrementalBvSolver, IncrementalCnfStats, SolverConfig};
 
 #[test]
 fn incremental_stats_snapshot_and_delta_cover_the_client_pipeline() {
@@ -32,6 +32,15 @@ fn incremental_stats_snapshot_and_delta_cover_the_client_pipeline() {
     assert!(assertion_delta.aig_nodes > 0);
     assert!(assertion_delta.cnf_variables > 0);
     assert!(assertion_delta.cnf_clauses > 0);
+    assert!(assertion_delta.cnf_gate_mix.and_nodes_synced > 0);
+    assert!(assertion_delta.cnf_gate_mix.definition_clauses > 0);
+    assert_eq!(assertion_delta.cnf_gate_mix.root_clauses, 1);
+    assert_eq!(
+        assertion_delta.cnf_gate_mix.constant_clauses
+            + assertion_delta.cnf_gate_mix.definition_clauses
+            + assertion_delta.cnf_gate_mix.root_clauses,
+        assertion_delta.cnf_clauses
+    );
     assert_eq!(assertion_delta.word_rewrite, std::time::Duration::ZERO);
 
     assert!(matches!(solver.check(&arena).unwrap(), CheckResult::Sat(_)));
@@ -62,6 +71,7 @@ fn incremental_stats_snapshot_and_delta_cover_the_client_pipeline() {
     assert_eq!(repeated.aig_nodes, 0);
     assert_eq!(repeated.cnf_variables, 0);
     assert_eq!(repeated.cnf_clauses, 0);
+    assert_eq!(repeated.cnf_gate_mix, IncrementalCnfStats::default());
 }
 
 #[test]
@@ -107,6 +117,7 @@ fn ordinary_constructor_keeps_phase_profiling_disabled() {
     assert_eq!(stats.root_encodings, 0);
     assert_eq!(stats.checks, 0);
     assert_eq!(stats.total_time(), std::time::Duration::ZERO);
+    assert_eq!(stats.cnf_gate_mix, IncrementalCnfStats::default());
     assert!(stats.aig_nodes > 0);
     assert!(stats.cnf_variables > 0);
     assert!(stats.cnf_clauses > 0);

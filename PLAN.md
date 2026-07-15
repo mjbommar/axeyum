@@ -184,6 +184,15 @@ session state.
 > translation and that GQ5 gate fusion—not SAT tuning—is the next bounded cold
 > implementation target. The run is exploratory/single-driver; clean
 > multi-driver repetition remains the GQ1/GQ10 publication gate.
+> ADR-0161 now closes the next GQ5 attribution question without taxing ordinary
+> solvers. On the pinned 128-query representative corpus, the profiled
+> incremental encoder emits 782,716 clauses versus 545,905 one-shot clauses
+> over the same 450,498 AIG nodes (+43.38%). Its 508,729 lazy definition halves
+> are 49.79% positive-AND-tree, 27.85% inverted-AND, and 18.83% XOR. Direct
+> positive roots expose 109,358 AND nodes and 90,149 structural XOR leaves.
+> This selects one bounded, selector-guarded direct positive-AND/XOR root
+> fusion next; accept it only on fewer clauses plus lower unprofiled native
+> Glaurung time with unchanged AIG, scopes, and replay.
 > The current-client trajectory is consequently explicit: the shipped default
 > remains on a roughly 1.42x plateau; the earlier arithmetic rewrites do not fire
 > materially on this register-slice-heavy distribution; and the demonstrated
@@ -231,7 +240,7 @@ decisions or speedups.
 | **GQ2** | **Cheap always-on cold simplification tier** | Add a bounded, denotation-preserving one-shot tier for constant folding and trivial identities whose own cost is measured. Add a size/shape and cold-vs-warm policy that selects cheap, configured, or no preprocessing. Exit only when cold end-to-end time is non-worse in aggregate and improves the target class at the GQ1 validity gates. |
 | **GQ3** | **Coercion-cancellation peepholes and causal telemetry** | **Current measured tranche complete.** Exact nested/concat/extension/coercion rules, affected-query/family counts, and ADR-0159's deterministic repeated default-minus-one-rule comparator are landed. The clean four-rule ablation finds a material lowering-only win for `extract_extend`, small nested/concat effects, and zero AIG-node/CNF-clause changes for all four. Keep them enabled; reopen with exhaustive evaluation, Z3 differential tests, and the same causal gate only when a new residual shape has a specific downstream gate-cone hypothesis. |
 | **GQ4** | **Cold demand-driven bit-slice reduction** | **v1 deferred after a failed real gate.** ADR-0157's opt-in route is correct (100% decided, zero disagreements) but unconditional analysis regresses Axeyum/Z3 about 1.42x→4.49x and bit-blast share 47%→83%. Keep it off by default. Proposed ADR-0158 makes v2 a cheap-admission + bounded range-demand design: reject non-profitable shapes, admit only above a wide predicted-savings threshold, and fall back before full analysis cost. Re-run `register-slice` and whole-corpus gates; add low-prefix arithmetic only if the admitted residual demands it. |
-| **GQ5** | **Faster AIG→CNF and stronger sharing** | ADR-0160 confirms on exact native/manifest-overlap hashes that Glaurung sharing survives into the AIG while incremental CNF remains inflated. Profile the incremental gate mix, then port one measured one-shot gate-fusion pattern without weakening retained scopes/selectors. Treat one-shot and incremental encoders separately; each slice must reduce clauses and end-to-end native client time with unchanged AIG/model replay. Size-only wins do not suffice. |
+| **GQ5** | **Faster AIG→CNF and stronger sharing** | **Gate-mix attribution DONE; bounded fusion implementation next.** ADR-0161 measures 782,716 incremental versus 545,905 one-shot clauses over the same 450,498 AIG nodes. Positive-AND-tree and XOR own 49.79% and 18.83% of lazy definition halves, while 1,789 direct positive roots expose 109,358 tree nodes and 90,149 XOR leaves. Implement one selector-guarded direct positive-AND/XOR root slice without global single-use assumptions. Accept only on fewer clauses and lower unprofiled native client time with unchanged AIG/scopes/model replay; size-only wins do not suffice. |
 | **GQ6** | **Cold SAT/CDCL tuning** | If GQ1 shows SAT search dominates, compare the exact emitted CNF across BatSat, the proof-producing core, and pinned CaDiCaL/Kissat references; then tune phase saving/rephasing, VSIDS/VMTF, restarts, clause tiers, propagation, subsumption/BVE/vivification, and extracted XOR/GF(2) reasoning. UNSAT proof rechecking and deterministic resource limits remain mandatory. Do not prioritize this over GQ2--GQ5 when encoding dominates. |
 | **GQ7** | **Cheaper warm entry and delta preprocessing** | ADR-0160's first ordered driver stream contains 6,061/13,126 duplicate occurrences, but lacks worker/path/scope lineage. Use the defined ordered warm-trace v1 contract to capture lineage, push/assert/check/pop deltas, repeated checks, unknown/errors, and exploration-driving model reads. Then preprocess only newly asserted/pushed terms plus affected retained summaries, retain AIG/CNF/learned state across scopes, and measure fixed per-check cost plus the warm break-even depth. |
 | **GQ8** | **Verdict and CNF reuse for duplicate/prefix queries** | Add a deterministic, resource-bounded memoizing layer keyed by canonical hash, solver/config semantics, and assertion-scope identity. Exact duplicate queries may reuse replayable verdict/model/proof artifacts; extending-prefix queries may reuse only sound retained preprocessing/CNF/search state. Cache hits must still pass original-term model or proof replay, and invalidation/versioning must be explicit. |
@@ -250,10 +259,10 @@ different revisions/policies. The immediate dependency order is therefore:
    first ordered real-driver run. Repeat it cleanly across the multi-driver set
    and pair same-revision overlap with `axeyum-bench`; do not promote the
    exploratory single-driver ratio to the GQ10 baseline;
-2. **GQ5 client encoding boundary:** profile the incremental gate mix and close
-   one measured fusion gap. Exact native overlap preserves AIG sharing while
-   incremental CNF remains inflated, selecting gate-fusion work ahead of a
-   purpose-built one-shot client API; and
+2. **GQ5 client encoding boundary:** ADR-0161's opt-in gate-mix profile selects
+   direct positive-AND-tree flattening with structural XOR leaves. Implement
+   that bounded selector-guarded slice, then require lower clauses and lower
+   unprofiled native client time with unchanged AIG/scopes/replay; and
 3. **GQ7 ordered warm boundary:** obtain the producer trace that can measure
    delta preprocessing, retained CNF/search, and duplicate/prefix reuse.
 

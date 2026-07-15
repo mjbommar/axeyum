@@ -322,6 +322,31 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-15 — ADR-0161 measures the incremental CNF gate mix and selects a
+  bounded positive-AND/XOR fusion.** The explicit
+  `incremental-bv-raw-profile` backend keeps production constructors unchanged
+  while partitioning polarity-specific lazy definitions and scanning direct
+  root opportunities only when profiling. Focused CNF/solver/benchmark tests
+  and strict all-feature Clippy are green under the 4 GiB cap.
+
+  The pinned 128-query representative Glaurung run is 100% decided and agrees
+  with both manifest and in-process Z3 on every query, with zero errors,
+  disagreements, or replay failures. It records the same 450,498 AIG nodes as
+  the standalone raw artifact, but incremental CNF emits 782,716 clauses versus
+  545,905 one-shot (+43.38%). Of 508,729 lazy definition halves, positive
+  AND-tree owns 253,274 (49.79%), inverted-AND 141,670 (27.85%), XOR 95,780
+  (18.83%), binary AND 18,003 (3.54%), and negated ITE only two. The 1,789
+  direct positive roots traverse 109,358 AND nodes and expose 90,149 structural
+  XOR leaves.
+
+  The next bounded GQ5 implementation is therefore selector-guarded direct
+  encoding of asserted positive AND trees and their XOR leaves. It may not
+  assume global single use: ordinary definitions must remain available for
+  later opposite-polarity/scope reuse. Acceptance requires fewer clauses and
+  lower **unprofiled native Glaurung time**, with identical AIG, SAT/UNSAT
+  outcomes, scopes, model lift, and original-root replay. The profiled 1.272x
+  ratio is diagnostic overhead and is not a GQ10 baseline.
+
 - **2026-07-15 — ADR-0160 lands exact native Glaurung attribution and selects
   incremental gate fusion.** `IncrementalBvSolver` now has an explicit
   profiling constructor plus monotone phase/structure snapshots; ordinary
@@ -880,18 +905,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   | **GQ2 cheap cold tier** | **WIP with three accepted rewrite tranches; batch integration deferred.** Canonical v4 reaches 5.625 s / 0.730x Z3; ADR-0156 preserves replay but is 18.8% slower than one-shot | Keep canonical v4 as the measured one-shot policy; do not recommend fresh incremental batch until its clause/entry overhead closes |
   | **GQ3 coercion/affine peepholes** | **DONE for current measured shapes (ADR-0159).** Clean repeated path-paired ablations are fail-closed; `extract_extend` is a material lowering-only win, while all four measured structural rules change zero AIG nodes/clauses | Keep rules enabled. Reopen only for a new residual shape with a specific downstream hypothesis and the same causal ablation gate |
   | **GQ4 cold relevant bits** | **v1 and v2 DEFERRED after failed real gates.** v1 regresses ~1.42x→4.49x. V2 rejection overhead is bounded, but defaults admit 0/128 and +0.62% total; a 33-query moderate policy removes 632 AIG nodes/zero clauses and regresses bit blast 3.14% | Keep both explicit/off. Reopen only with an AIG/CNF-cone estimator or after word rewrites materially change the residual; do not tune thresholds further |
-  | **GQ5 AIG/CNF construction** | **WIP; selected next cold slice.** ADR-0160 exact overlap confirms Glaurung sharing survives into the same AIG while incremental clauses remain inflated | Profile the incremental gate mix; port one measured one-shot fusion pattern with unchanged selectors/scopes, AIG, replay, and lower native end-to-end time |
+  | **GQ5 AIG/CNF construction** | **WIP; gate-mix attribution DONE (ADR-0161).** Same-AIG incremental clauses are +43.38%; positive-AND-tree and XOR dominate lazy definition halves, and direct roots expose 90,149 XOR leaves | Implement bounded selector-guarded direct positive-AND/XOR root encoding without global single-use assumptions; require fewer clauses plus lower unprofiled native time with unchanged AIG/scopes/replay |
   | **GQ6 cold SAT/CDCL** | **WIP foundation, attribution-gated**; subsumption/BVE, XOR/GF(2), VSIDS, phase saving, Luby, and LBD foundations exist | Exact-CNF backend attribution first; tune/default a stronger path only where SAT dominates and proof replay stays green |
   | **GQ7 warm delta entry** | **WIP; high-value and Glaurung-lineage gated.** The first ordered driver profile finds 6,061/13,126 duplicate occurrences, but the one-shot trait exposes no path/scope ownership | Obtain ordered worker/path/scope trace v1; then retain per-lineage arena/AIG/CNF/search state, preprocess deltas, and publish per-check cost plus warm break-even depth |
   | **GQ8 verdict/CNF cache** | **TODO, ordered-trace-gated; duplicate opportunity measured.** Exact occurrences are 46.18% in the first driver stream, but sound prefix/scope identity is absent | Measure duplicates/prefixes by lineage; prefer retained warm state, then add bounded versioned exact-query reuse with mandatory replay |
   | **GQ9 auto cost model/docs** | **TODO**; P1.8 shape/resource probes are only the general foundation | Telemetry-visible raw/cheap/configured/warm choice that beats or matches fixed policies and documents embedder guidance |
   | **GQ10 real-lifter regression tier** | **WIP; cold regression automation landed.** The representative/full deduped tiers are valid and guarded, but cover only the current drivers and erase occurrence/prefix order | Expand drivers, fix producer validation/dedup, add a separate ordered-prefix tier, and publish per-commit family/stage/Axeyum÷Z3 trends |
 
-  **Next actions:** (1) repeat ADR-0160's ordered native profile cleanly across
+  **Next actions:** (1) implement ADR-0161's bounded direct positive-AND/XOR
+  root fusion and gate it on clauses plus unprofiled native client time; (2)
+  repeat ADR-0160's ordered native profile cleanly across
   the multi-driver set and pair same-revision exact hashes with raw
-  `axeyum-bench`; (2) profile incremental gate families and implement one
-  clause-fusion slice, accepting it only on fewer clauses plus lower native
-  end-to-end time with unchanged AIG/scopes/replay; (3) hand off and validate the
+  `axeyum-bench`; (3) hand off and validate the
   ordered worker/path/scope trace v1 before persistent warm reuse or caching;
   (4) expand the cold driver capture separately and retain strict coercion,
   dump validation, and atomic dedup/conflict handling.
