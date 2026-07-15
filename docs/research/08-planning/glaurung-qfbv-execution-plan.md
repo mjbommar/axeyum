@@ -524,9 +524,9 @@ clean artifact pins the exact Glaurung/Axeyum revisions and policy.
 
 | Priority | Requirement | Next executable gate |
 |---|---|---|
-| 1 | Land GQ4 demand-driven slicing | Add a replay-safe partial lowerer; run five representative and full trials with a separate `register-slice` report. |
-| 2 | Make rewrite effort fire-rate driven | Preserve stable rule fire counts, add affected-query/family counts, then run default-minus-rule ablations for causal AIG/CNF/time savings. |
-| 3 | Close native-driver versus bench delta | Add Glaurung phase timers for translation/interning, batch word policy, lower/encode, SAT, model extraction, and replay keyed by query hash; compare the same bytes in `axeyum-bench`. |
+| 1 | Land GQ4 demand-driven slicing | **Deferred after both real gates failed.** V1 regresses about 3x; v2 admits little useful gate work and is also slower. Reopen only with a gate-cone estimator or a qualitatively different specialization. |
+| 2 | Make rewrite effort fire-rate driven | **Done for the current structural tranche (ADR-0159).** Clean repeated ablations show `extract_extend` saves lowering materialization/time, but the four measured rules remove zero AIG nodes and zero clauses. |
+| 3 | Close native-driver versus bench delta | **Immediate priority.** Add Glaurung phase timers for translation/interning, batch word policy, lower/encode, SAT, model extraction, and replay keyed by query hash; compare the same bytes in `axeyum-bench`. |
 | 4 | Strengthen AIG sharing | Verify Glaurung `ExprId` sharing survives translation and AIG memoization; measure hash requests/hits/new nodes by family before two-level rewrites. |
 | 5 | Reduce CNF for measured gates | Profile comparator/mux/adder and structural-wiring patterns; separately close the measured incremental-versus-one-shot gate-fusion gap. |
 | 6 | Make warm entry delta-only | Capture ordered events, retain arena/AIG/CNF/learned state per path/worker, and preprocess only new assertions plus affected summaries. |
@@ -542,8 +542,8 @@ clean artifact pins the exact Glaurung/Axeyum revisions and policy.
 | M0 byte-complete capture | GQ1, GQ10 | **Axeyum side done:** representative and well-typed full manifests validate; producer still must prevent 2,225 malformed dumps and atomically deduplicate |
 | M1 raw v27 baseline | GQ1, GQ10 | **Done:** representative raw/canonical and five canonical full-tier processes pass every gate; full Axeyum/ratio/Z3 CV is 0.51%/0.51%/0.31% and guarded comparisons use provisional 3%/3%/2% alarms |
 | M2 diagnostic attribution | GQ1, GQ3--GQ5 | **Done for current boundary:** ADR-0143 removes the 29.57 s observational pass from production and marks diagnostic completeness explicitly |
-| M3 cheap exact rewriting | GQ2, GQ3 | **Measured implementation done; integration publication remains:** canonical v2 cuts corrected full total 13.3%, ADR-0153 cuts another 9.80%, and accepted ADR-0155 reaches 5.625 s / 0.730x Z3 with AIG nodes/clauses down 76.7%/75.4% versus v3 |
-| M4 demand lowering | GQ4 | **Immediate implementation priority:** land replay-safe partial lowering and require a `register-slice` plus whole-corpus AIG/CNF/wall-time win |
+| M3 cheap exact rewriting | GQ2, GQ3 | **Done for the measured current shapes:** canonical v2 cuts corrected full total 13.3%, ADR-0153 cuts another 9.80%, accepted ADR-0155 reaches 5.625 s / 0.730x Z3, and ADR-0159 causally closes the current extract tranche without finding another AIG/CNF lever |
+| M4 demand lowering | GQ4 | **Deferred:** both v1 and admission-controlled v2 fail the representative performance gate while preserving correctness; keep explicit/off and reopen only from a different gate-cone hypothesis |
 | M5 AIG/CNF optimization | GQ5 | **Cold client blocker closed:** ADR-0144/0145/0150/0151 direct wins plus ADR-0153/0155 upstream reductions reach 5.625 s / 0.730x Z3 and 10.03M clauses. Reopen only from a measured post-v4 excess |
 | M6 SAT re-attribution | GQ6 | Start SAT work only if search becomes material/dominant |
 | M7 ordered warm trace | GQ7, GQ8 | **Consumer contract defined:** obtain and validate a producer sample, then measure incremental API shape and duplicate/prefix frequency before deciding whether a cache is worthwhile |
@@ -552,21 +552,20 @@ clean artifact pins the exact Glaurung/Axeyum revisions and policy.
 
 ## Immediate next actions
 
-1. Draft the GQ4 ADR and implement the first additive cold partial-lowering
-   route for extract/concat/extension/pointwise/ITE demand. Validate exhaustive
-   small widths, disjoint shared demands, deterministic omitted-bit model lift,
-   original-query replay, and the real `register-slice` family before enabling
-   it by policy.
-2. Extend rewrite telemetry from the already-landed stable `rule_counts` to
-   affected-query/family counts and a deterministic default-minus-rule ablation
-   report. Use it to decide whether any residual extract/coercion rule remains
-   worth implementing after canonical v4.
-3. Treat ADR-0156 as deferred for cold recommendation. Its paired gate is
+1. Instrument the native Glaurung path by the exact captured query hash: arena
+   allocation, `ExprPool` translation/interning, batch word policy, lower/
+   encode, SAT, model lift/extraction, replay, and caller overhead. Compare the
+   same query bytes and policy in `axeyum-bench` before selecting another solver
+   optimization.
+2. Treat ADR-0156 as deferred for cold recommendation. Its paired gate is
    replay-clean but 18.8% slower than one-shot and emits 80.9% more clauses with
-   the same AIG. Instrument the remaining native Glaurung translation,
-   interning, model-extraction, and caller costs by query hash; then choose
-   incremental gate-fusion work or a purpose-built cold one-shot API from the
-   complete attribution.
+   the same AIG. From the native attribution, choose incremental gate-fusion
+   work or a purpose-built cold one-shot API; do not infer the choice from the
+   standalone benchmark.
+3. Keep ADR-0157/0158 explicit and off. ADR-0159 closes the current structural
+   rewrite tranche: `extract_extend` is a real lowering win, but none of the
+   four ablated rules changes AIG/CNF. Reopen GQ3/GQ4 only for a specific new
+   downstream gate-cone hypothesis.
 4. Hand off the defined GQ7
    [ordered warm-trace v1 contract](glaurung-ordered-trace-v1.md) and obtain a
    small producer sample covering a root/fork, repeated check, nested push/pop,

@@ -212,3 +212,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0156](adr-0156-batched-canonical-incremental-assertion.md) | Batched canonical assertion: share one rewrite memo across a cold client's top-level roots while retaining original assertions for replay | deferred |
 | [0157](adr-0157-demand-driven-cold-bit-lowering.md) | Demand-driven cold bit lowering: semantically correct but deferred after unconditional analysis regressed the real Glaurung gate | deferred |
 | [0158](adr-0158-admission-controlled-range-demand-lowering.md) | Admission-controlled range demand: cheap structural screen, deterministic bounded range propagation, early full-lowerer fallback, and replay-safe sparse materialization | deferred |
+| [0159](adr-0159-paired-rewrite-ablation-attribution.md) | Paired rewrite ablation: same-revision path pairing, exact one-rule manifest delta, strict correctness/configuration gates, and separate structural/timing attribution | accepted |

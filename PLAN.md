@@ -166,7 +166,15 @@ session state.
 > tests and all-feature Clippy are green. The dirty exploratory capture ranks
 > the structural rules by reach (`extract_extend` 45/128, `extract_bitwise`
 > 12/128, `extract_nested` 9/128, `extract_concat` 4/128); rerun clean base and
-> ablations before making any performance claim.
+> ablations before making any performance claim. ADR-0159 now completes that
+> causal boundary with a fail-closed repeated comparator. Five clean paired
+> rounds keep all 128 queries decided/agreed/replay-clean. Disabling
+> `extract_extend` adds 6,259 lowered term bits and 1.657 ms mean cold time on
+> its 45 affected queries; nested/concat effects are small and bitwise is
+> timing-neutral. Crucially, all four ablations change zero AIG nodes and zero
+> CNF clauses. Keep the exact rules, but close broad extract-rewrite expansion
+> on this capture: fire count is not another lowering/encoding lever. Move the
+> immediate performance focus to GQ1's native Glaurung entry-path attribution.
 > The current-client trajectory is consequently explicit: the shipped default
 > remains on a roughly 1.42x plateau; the earlier arithmetic rewrites do not fire
 > materially on this register-slice-heavy distribution; and the demonstrated
@@ -212,7 +220,7 @@ decisions or speedups.
 |---|---|---|
 | **GQ1** | **Capture and profile real queries first** | Ingest a representative, redistributable or access-controlled sample from Glaurung's shadow-diff harness, preserve the original lifter shape, and record cold one-shot attribution for Glaurung `ExprPool`→Axeyum translation/interning, word simplification, term→AIG lowering, AIG→CNF encoding, SAT search, model extraction, and replay. Pair each native-driver query hash with the same SMT-LIB query in `axeyum-bench` so the reported ~2.5x real-driver versus ~1.37x bench discrepancy is decomposed instead of averaged away. Report formula/AIG/CNF sizes, p50/p95 and aggregate Axeyum/Z3 ratios, fixed hardware/tool versions, 100% decided, zero operational errors, `DISAGREE=0`, and zero replay failures. This profile ranks GQ2--GQ9; it is not optional. |
 | **GQ2** | **Cheap always-on cold simplification tier** | Add a bounded, denotation-preserving one-shot tier for constant folding and trivial identities whose own cost is measured. Add a size/shape and cold-vs-warm policy that selects cheap, configured, or no preprocessing. Exit only when cold end-to-end time is non-worse in aggregate and improves the target class at the GQ1 validity gates. |
-| **GQ3** | **Coercion-cancellation peepholes and causal telemetry** | Complete the partial landed foundation with exact, model-sound rewrites for nested extract, general/straddling `extract(concat(a,b))`, low/high/straddling extension slices, direct whole-side returns, and the common low-slice coercion cancellation `extract(k-1,0,zero_ext(k,x)) = x`. Stable per-rule fire counts already exist; add affected-query/family counts and deterministic default-minus-one-rule ablations so AIG/CNF/time savings are attributed causally rather than guessed from local DAG deltas. Do not prioritize another arithmetic rule when it does not fire on the target family. Exhaustive small-width evaluation, Z3 differential tests, and target-corpus AIG/CNF reductions are required. |
+| **GQ3** | **Coercion-cancellation peepholes and causal telemetry** | **Current measured tranche complete.** Exact nested/concat/extension/coercion rules, affected-query/family counts, and ADR-0159's deterministic repeated default-minus-one-rule comparator are landed. The clean four-rule ablation finds a material lowering-only win for `extract_extend`, small nested/concat effects, and zero AIG-node/CNF-clause changes for all four. Keep them enabled; reopen with exhaustive evaluation, Z3 differential tests, and the same causal gate only when a new residual shape has a specific downstream gate-cone hypothesis. |
 | **GQ4** | **Cold demand-driven bit-slice reduction** | **v1 deferred after a failed real gate.** ADR-0157's opt-in route is correct (100% decided, zero disagreements) but unconditional analysis regresses Axeyum/Z3 about 1.42x→4.49x and bit-blast share 47%→83%. Keep it off by default. Proposed ADR-0158 makes v2 a cheap-admission + bounded range-demand design: reject non-profitable shapes, admit only above a wide predicted-savings threshold, and fall back before full analysis cost. Re-run `register-slice` and whole-corpus gates; add low-prefix arithmetic only if the admitted residual demands it. |
 | **GQ5** | **Faster AIG→CNF and stronger sharing** | Profile deterministic AIG structural hashing, term-sharing survival, and the measured gate mix before changing construction. Then improve only the dominant comparator/mux/adder or concat/extract-wiring patterns. Treat one-shot and incremental encoders separately: the fresh incremental path currently builds the same AIG but emits 80.9% more representative clauses because it lacks the one-shot encoder's gate fusion. Each slice must reduce gates/clauses and end-to-end client time; size-only wins do not suffice. |
 | **GQ6** | **Cold SAT/CDCL tuning** | If GQ1 shows SAT search dominates, compare the exact emitted CNF across BatSat, the proof-producing core, and pinned CaDiCaL/Kissat references; then tune phase saving/rephasing, VSIDS/VMTF, restarts, clause tiers, propagation, subsumption/BVE/vivification, and extracted XOR/GF(2) reasoning. UNSAT proof rechecking and deterministic resource limits remain mandatory. Do not prioritize this over GQ2--GQ5 when encoding dominates. |
@@ -229,21 +237,22 @@ reproduction target, not a replacement for the clean artifact-v28 v4 result at
 0.730x Z3: the two measurements have different entry points and possibly
 different revisions/policies. The immediate dependency order is therefore:
 
-1. **GQ4-v2:** replace unconditional demand analysis with cheap syntactic
-   admission plus a bounded/memoized exact pass and wide savings threshold;
-   keep v1 explicit/off and re-score `register-slice` separately from the whole
-   representative/full tiers;
-2. **GQ3 telemetry:** retain the landed stable fire counts, add per-family
-   impact and counterfactual AIG/CNF/time ablation, and pursue only rules that
-   fire on the residual; and
-3. **GQ1 client boundary:** reproduce the exact fresh-arena/fresh-solver/model
+1. **GQ1 client boundary:** reproduce the exact fresh-arena/fresh-solver/model
    path and partition translation, lowering, incremental CNF, SAT, and model
-   extraction.
+   extraction. This is now immediate: both GQ4 candidates failed their real
+   gate and ADR-0159 closes the current structural rewrite tranche;
+2. **GQ5 client encoding boundary:** use that attribution to decide whether the
+   measured 80.9% fresh-incremental clause excess needs gate-fusion work or a
+   purpose-built one-shot client API; and
+3. **GQ7 ordered warm boundary:** obtain the producer trace that can measure
+   delta preprocessing, retained CNF/search, and duplicate/prefix reuse.
 
-GQ5 structural sharing and measured gate encodings follow those three. GQ7
-delta preprocessing/state retention and GQ8 duplicate/prefix reuse remain the
-route below 1x on ordered streams. GQ6 SAT tuning stays queued until the
-post-GQ4/GQ5 profile makes search dominant. GQ10 must retain both the cold
+ADR-0157/0158 remain explicit/off; reopen GQ4 only with a qualitatively
+different gate-cone estimator/specialization. GQ3 reopens only for a new
+causally testable residual. GQ7 delta preprocessing/state retention and GQ8
+duplicate/prefix reuse remain the route below 1x on ordered streams. GQ6 SAT
+tuning stays queued until the post-client/GQ5 profile makes search dominant.
+GQ10 must retain both the cold
 deduplicated pack and a separate ordered capture; neither can substitute for
 the other.
 

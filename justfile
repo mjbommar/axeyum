@@ -55,7 +55,7 @@ qfbv-profile:
     ./scripts/check-qfbv-profile.sh
 
 benchmark-repetition-tests:
-    python3 -m unittest scripts/tests/test_glaurung_benchmark_recipes.py scripts/tests/test_glaurung_regular_gate.py scripts/tests/test_summarize_glaurung_repetitions.py scripts/tests/test_compare_glaurung_repetitions.py
+    python3 -m unittest scripts/tests/test_glaurung_benchmark_recipes.py scripts/tests/test_glaurung_regular_gate.py scripts/tests/test_summarize_glaurung_repetitions.py scripts/tests/test_compare_glaurung_repetitions.py scripts/tests/test_compare_glaurung_rewrite_ablation.py
 
 # Exercise the actual Glaurung lifter distribution when its access-controlled
 # representative pack is available. The script auto-discovers the pinned NAS
@@ -192,6 +192,30 @@ bench-glaurung-qfbv-canonical-repeated corpus_dir manifest tier="full" out_dir="
 
 bench-glaurung-qfbv-configured-repeated corpus_dir manifest tier="full" out_dir="bench-results/glaurung-qfbv-configured-repeated" repetitions="5":
     just _bench-glaurung-qfbv-repeated "{{ corpus_dir }}" "{{ manifest }}" "{{ tier }}" "{{ out_dir }}" "{{ repetitions }}" configured
+
+# GQ3 causal rewrite measurement alternates the unchanged default manifest and
+# exact default-minus-one-rule ablation in fresh processes. The comparator
+# pairs by manifest path and rejects every non-rewrite configuration drift.
+bench-glaurung-qfbv-rewrite-ablation-repeated corpus_dir manifest rule tier="representative" out_dir="bench-results/glaurung-qfbv-rewrite-ablation" repetitions="5":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [[ ! "{{ repetitions }}" =~ ^[0-9]+$ ]] || (( {{ repetitions }} < 2 )); then
+        echo "repetitions must be an integer >= 2" >&2
+        exit 2
+    fi
+    mkdir -p "{{ out_dir }}"
+    rm -f "{{ out_dir }}/comparison.json"
+    bases=()
+    ablations=()
+    for (( repetition = 1; repetition <= {{ repetitions }}; repetition++ )); do
+        base="{{ out_dir }}/base-$(printf '%03d' "$repetition").json"
+        ablation="{{ out_dir }}/ablation-$(printf '%03d' "$repetition").json"
+        cargo run --release -p axeyum-bench --features z3 -- "{{ corpus_dir }}" --corpus-manifest "{{ manifest }}" --corpus-tier "{{ tier }}" --backend sat-bv --rewrite default --compare-z3 --require-in-process-z3 --require-reproducible-run --require-deterministic-resources --timeout-ms 10000 --resource-limit 2000000 --node-budget 300000 --cnf-var-budget 3000000 --cnf-clause-budget 8000000 --jobs 1 --min-decided-percent 100 --logic QF_BV --out "$base"
+        cargo run --release -p axeyum-bench --features z3 -- "{{ corpus_dir }}" --corpus-manifest "{{ manifest }}" --corpus-tier "{{ tier }}" --backend sat-bv --rewrite default --rewrite-disable-rule "{{ rule }}" --compare-z3 --require-in-process-z3 --require-reproducible-run --require-deterministic-resources --timeout-ms 10000 --resource-limit 2000000 --node-budget 300000 --cnf-var-budget 3000000 --cnf-clause-budget 8000000 --jobs 1 --min-decided-percent 100 --logic QF_BV --out "$ablation"
+        bases+=("$base")
+        ablations+=("$ablation")
+    done
+    python3 scripts/compare-glaurung-rewrite-ablation.py --base "${bases[@]}" --ablation "${ablations[@]}" --out "{{ out_dir }}/comparison.json"
 
 _bench-glaurung-qfbv-repeated corpus_dir manifest tier out_dir repetitions policy:
     #!/usr/bin/env bash

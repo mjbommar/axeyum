@@ -120,6 +120,13 @@ work. Repeatable `--rewrite-disable-rule <id>` flags (valid only with
 IDs and the resulting enabled rule list enter artifact identity. Pair the base
 and ablated artifacts by manifest path to measure actual per-rule AIG/CNF/time
 deltas before investing in a rewrite family.
+ADR-0159 makes that pairing executable and fail-closed. The repeated ablation
+recipe alternates an unchanged default run with the exact default-minus-rule
+run in fresh processes. `compare-glaurung-rewrite-ablation.py` rejects any
+non-rewrite configuration, source, environment, corpus, correctness, outcome,
+or instance-set drift; it reports `ablation - base` deltas on the queries where
+the rule fired, with exact structural values kept separate from repeated timing
+samples and whole-corpus timing controls.
 Version 19 separately times original-query SAT model replay and charges it to
 the cold total and Axeyum/Z3 comparison. `--prove-unsat` selects the
 proof-producing native core and makes every UNSAT fail closed unless its DRAT
@@ -309,6 +316,23 @@ The unsuffixed repeated recipe is also a raw alias. Use
 `bench-glaurung-qfbv-configured-repeated` for the other policies. Each has a
 policy-specific default output directory so summaries cannot be mixed by
 accident.
+
+Measure one default rewrite causally with:
+
+```sh
+just bench-glaurung-qfbv-rewrite-ablation-repeated \
+  /path/to/glaurung-smt2-capture \
+  /path/to/glaurung-manifest-v1.json \
+  bv.extract_extend.v1 \
+  representative \
+  bench-results/glaurung-extract-extend-ablation \
+  5
+```
+
+The output directory contains paired `base-*`/`ablation-*` artifact-v31 files
+and `comparison.json`. Positive deltas mean the enabled base rule avoided that
+work or time. Fire counts and selected-policy output sizes remain targeting
+telemetry, not causal savings.
 
 Every source artifact must have byte-identical configuration, a clean
 reproducible-run identity, one worker, complete in-process Z3 coverage, 100%

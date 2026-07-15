@@ -322,6 +322,35 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-14 — ADR-0159 closes the current GQ3 structural rewrite tranche;
+  native Glaurung entry attribution is next.** Artifact v31's affected-family
+  counts and default-minus-rule manifests now have a fail-closed repeated
+  comparator and one-command recipe. It requires clean same-revision artifact
+  v31 pairs, identical environment/corpus/non-rewrite policy, exact one-rule
+  removal, identical manifest paths/outcomes, 100% decisions and oracle/
+  manifest agreement, and zero errors/disagreements/replay failures. Deltas
+  pair by path and use `ablation - base`; deterministic structure is reported
+  separately from every fresh-process timing sample.
+
+  Five clean rounds at `06750219` validate all 25 base/ablation artifacts over
+  the pinned 128-query representative capture. `bv.extract_extend.v1` reaches
+  45 queries (25 register-slice, 20 slice-partial); disabling it adds exactly
+  6,259 term-bit materializations and averages +1.657 ms cold / +0.907 ms bit
+  blast on those queries. `extract_nested` and `extract_concat` add 4,140 and
+  635 term bits with small +0.106/+0.074 ms mean cold effects. `extract_bitwise`
+  changes materialization in the opposite direction and is timing-neutral at
+  this scale (mixed signs, +0.026 ms median cold). Every one of the four
+  ablations changes **zero AIG nodes and zero CNF clauses**. Keep the exact
+  rules enabled, but stop treating lexical opportunities or fire counts as an
+  AIG/CNF optimization hypothesis on this capture.
+
+  GQ3 is complete for the currently measured structural shapes, and both GQ4
+  designs remain deferred/off after failed real gates. The immediate client
+  task is GQ1: key native Glaurung arena allocation, `ExprPool` translation/
+  interning, word policy, lower/encode, SAT, model extraction, replay, and
+  caller overhead to the exact captured query hash. That measurement decides
+  between GQ5 incremental gate fusion and a purpose-built one-shot client API.
+
 - **2026-07-14 — ADR-0157 v1 fails the real Glaurung performance gate and is
   deferred off by default.** The cold SAT-BV backend
   now selects demand-driven lowering only through
@@ -816,7 +845,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   |---|---|---|
   | **GQ1 real-query profile** | **DONE for standalone cold timing; WIP for native-driver attribution.** Artifact v28's full process is valid with complete operator inventories, but the reported ~2.5x driver versus ~1.37x bench gap crosses different entry paths | Key identical query hashes across Glaurung and `axeyum-bench`; time translation/interning, word policy, lower/encode, SAT, model extraction, and replay separately |
   | **GQ2 cheap cold tier** | **WIP with three accepted rewrite tranches; batch integration deferred.** Canonical v4 reaches 5.625 s / 0.730x Z3; ADR-0156 preserves replay but is 18.8% slower than one-shot | Keep canonical v4 as the measured one-shot policy; do not recommend fresh incremental batch until its clause/entry overhead closes |
-  | **GQ3 coercion/affine peepholes** | **Implementation complete for measured shapes; artifact-v31 causal telemetry landed.** Per-rule affected query/family buckets and validated repeatable default-minus-rule manifests are now measurable | Run clean paired base/ablations for the structural rules that actually reach this capture; accept value only from per-path AIG/CNF/time deltas |
+  | **GQ3 coercion/affine peepholes** | **DONE for current measured shapes (ADR-0159).** Clean repeated path-paired ablations are fail-closed; `extract_extend` is a material lowering-only win, while all four measured structural rules change zero AIG nodes/clauses | Keep rules enabled. Reopen only for a new residual shape with a specific downstream hypothesis and the same causal ablation gate |
   | **GQ4 cold relevant bits** | **v1 and v2 DEFERRED after failed real gates.** v1 regresses ~1.42x→4.49x. V2 rejection overhead is bounded, but defaults admit 0/128 and +0.62% total; a 33-query moderate policy removes 632 AIG nodes/zero clauses and regresses bit blast 3.14% | Keep both explicit/off. Reopen only with an AIG/CNF-cone estimator or after word rewrites materially change the residual; do not tune thresholds further |
   | **GQ5 AIG/CNF construction** | **WIP at the client boundary.** One-shot v4 is fast, but fresh incremental assertion emits 80.9% more clauses with the same AIG | Verify Glaurung sharing survives translation; profile measured gate patterns and close incremental gate fusion only after GQ4/client attribution |
   | **GQ6 cold SAT/CDCL** | **WIP foundation, attribution-gated**; subsumption/BVE, XOR/GF(2), VSIDS, phase saving, Luby, and LBD foundations exist | Exact-CNF backend attribution first; tune/default a stronger path only where SAT dominates and proof replay stays green |
@@ -825,11 +854,11 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   | **GQ9 auto cost model/docs** | **TODO**; P1.8 shape/resource probes are only the general foundation | Telemetry-visible raw/cheap/configured/warm choice that beats or matches fixed policies and documents embedder guidance |
   | **GQ10 real-lifter regression tier** | **WIP; cold regression automation landed.** The representative/full deduped tiers are valid and guarded, but cover only the current drivers and erase occurrence/prefix order | Expand drivers, fix producer validation/dedup, add a separate ordered-prefix tier, and publish per-commit family/stage/Axeyum÷Z3 trends |
 
-  **Next actions:** (1) run clean paired artifact-v31 base/ablations for
-  `bv.extract_extend.v1`, `bv.extract_bitwise.v1`, `bv.extract_nested.v1`, and
-  `bv.extract_concat.v1`, then rank causal AIG/CNF/time value; (2) instrument the
-  native Glaurung path by query hash and decide between incremental gate-fusion
-  work and a purpose-built one-shot client API; (3) hand off and validate the
+  **Next actions:** (1) instrument the native Glaurung path by exact captured
+  query hash, separating arena allocation, translation/interning, word policy,
+  lower/encode, SAT, model extraction, replay, and caller overhead; (2) use
+  that complete attribution to decide between incremental gate-fusion work and
+  a purpose-built one-shot client API; (3) hand off and validate the
   ordered worker/path/scope trace v1 before persistent warm reuse or caching;
   (4) expand the cold driver capture separately and retain strict coercion,
   dump validation, and atomic dedup/conflict handling.
@@ -2536,7 +2565,7 @@ plan is built and committed on the current branch:
 | P1.6b | Exact BV interface propagation | **DONE (ADR-0068)** — generated argument/result equalities are probed one per state by exact opposite-polarity warm-CNF refutation; failed frames explain propagation; 64-interface/128-probe caps. Same-tree 5-run A/B improves `bug520` 347.10-352.39→149.96-152.79 ms and corpus mean 0.065-0.066→0.034-0.036 s, with 6/6 public agreement and 1,536 clean differential comparisons. Arrays followed in ADR-0071/72/73 |
 | P1.6a | Warm BV conflict-core precision | **DONE (ADR-0067)** — online UFBV maps same-solve failed decision-frame selectors back to theory literals with deterministic full-core fallback. A per-literal selector prototype was reverted after a measured 0.061→0.072 s mean and 0.332→0.382 s `bug520` regression; accepted frame cores are neutral at 0.063 s / 0.332 s. Remaining core work is within-level precision only if it avoids repeated-assumption cost |
 | P1.1 | SAT inprocessing (subsumption → BVE → vivification → glue tiers) | WIP — subsumption+BVE landed (T1.1.1/2), wired into the solve pipeline (T1.1.3), made occurrence-list near-linear + time-bounded (T1.1.4): safe, no regression, but the curated unknowns are SAT-search-bound (→ P1.3) or BVE-resistant. **CDCL(XOR) foundation landed** (`gf2`/`xor_extract`/`xor_propagate` in `axeyum-cnf`) — the path-2 multiplier-wall attack: a sound GF(2) Gaussian engine + exact XOR-gate extraction + an entailment-checked propagation pass; slice 4 wires it into the live preprocess pipeline (measured). Vivification / glue tiers remain. **GQ6** makes further cold inprocessing conditional on the Glaurung exact-CNF profile showing that SAT search, rather than word/AIG/CNF construction, dominates |
-| P1.2 | Preprocessing (word-level rewrite, solve_eqs, bv_slice/bounds/max-sharing, AIG 2-level rewrite) | WIP — T1.2.1 trail + T1.2.2 propagate_values + T1.2.3 solve_eqs landed (model-sound, unit-tested, 36 tests). **T1.2.4 elim_unconstrained landed** (`axeyum-rewrite::elim_unconstrained`): a variable occurring once under an invertible BV op (`bvadd`/`bvsub`/`bvxor`/`bvnot`/`bvneg`) makes that subterm unconstrained → replaced by a fresh var, operator dropped (Z3's `elim_unconstr`); peels nested layers, terminates. Model-sound via the trail (`x := op⁻¹(u,w…)`; orphaned operands defaulted, sound by the inverse identity); wired into `check_with_preprocessing` after solve_eqs (opt-in, default-off per ADR-0034). `bvumulo` now uses the word-width threshold encoding `a > all_ones / b` instead of a doubled-width multiplier, so BV256 overflow checks no longer build BV512 multiplication terms. **ADR-0136 adds the first Glaurung-shaped BV-slice rule:** narrow extracts distribute exactly through pointwise bitwise operations and BV `ite`, and the warm solver exposes config-driven preprocessing while retaining original-term replay. Exhaustive evaluation, Z3 differential, and an 8-of-64-bit AIG-reduction gate pass. **GQ2--GQ5** now explicitly require the cheap cold tier, coercion-cancellation identities, cold relevant-bit propagation, and profile-gated AIG/CNF sharing/encoding work. Next: run GQ1 on the external 100%-decided Glaurung capture, then rank these slices by its measured profile rather than the synthetic corpus alone |
+| P1.2 | Preprocessing (word-level rewrite, solve_eqs, bv_slice/bounds/max-sharing, AIG 2-level rewrite) | WIP — the general opt-in preprocessing foundation and model trail are landed; exact Glaurung canonical v4 reaches 0.730x Z3 on the standalone full capture. ADR-0157/0158 demand slicing are semantically green but deferred after real performance failures. ADR-0159 completes causal attribution for the current structural extract tranche: `extract_extend` saves lowering work/time, while four measured rules remove zero AIG nodes/clauses. Keep the rules, stop fire-count-driven expansion, and next complete GQ1's same-query native Glaurung translation/interning/model/caller attribution before selecting GQ5 client encoding work or another preprocessing hypothesis |
 | P1.3 | SAT-core modernization (VSIDS/VMTF modes, EMA/Luby restarts, arena+packed watches, chrono BT) | WIP — the proof-producing core `solve_with_drat_proof` (`proof_sat.rs`) modernized: **VSIDS activity branching** (bump conflict-side vars, MiniSat-style decay, rescale-on-overflow; highest-activity unassigned var, ties to lowest index), **phase saving**, and **Luby restarts**. Sound by construction — every emitted clause is RUP and the proof is DRAT-checked, so a heuristic bug only slows search. All 231 cnf tests pass (incl. the 400-CNF differential vs BatSat + a new pigeonhole-4→3). NB the modern CDCL(XOR) core in `xor_cdcl.rs` already has VSIDS/Luby/LBD. Remaining: arena + packed watches, chronological backtracking, and wiring a modern core into the default path only where **GQ6** exact-CNF/backend attribution demonstrates a client win |
 | P1.4 | Incremental e-graph (congruence + explanation + checker) **[keystone]** | **DONE** — `axeyum-egraph` (ADR-0032): hash-cons + union-find + congruence cascade (T1.4.1/2), proof-forest `explain` (T1.4.3), backtrackable push/pop (T1.4.4), independent `check_congruence` (T1.4.5), per-class theory-var lists (T1.4.6). 17 tests incl. brute-force + backtracking property tests |
 | P1.5 | CDCL(T) loop (theory-as-extension, final-check, theory propagation) **[keystone]** | WIP — EUF on the e-graph: `prove_unsat_by_congruence` (conjunctive), `prove_unsat_lazy` (offline DPLL(T)), and `check_qf_uf` (full decision with **replay-checked sat models** from e-graph classes + function interps). Conflicts independently checked; **differentially validated vs Ackermann**. T1.5.5 met for the equality/UF fragment. **Online `TheorySolver` trait + `EufTheory` landed** (one backtrackable e-graph, explained conflict cores, lockstep push/pop) — the online theory side of the loop. **Slices a+b LANDED 2026-07-03** (`a3460101`,`c9d332c1`): the generic online `CdclT<T: TheorySolver>` driver (1-UIP over the mixed implication graph, lockstep theory push/pop, deadline in the loop; EufTheory parity 2500/2500 vs offline, z3 QF_UF fuzz unchanged) + the StringTheory adapter (per-assert certified refutations, premise-index→trail-literal explanations, replay-gated sat; census disjunctive shapes decide; 1500-case fuzz DISAGREE=0; found+fixed a real 1-UIP underflow on non-current-level theory cores). Front-door QF_S wiring landed same day (`c924fcb0`). **2026-07-09/10 DFS slices:** generic LIA/LRA propagation, conservative StringTheory equality consequences, canonical QF_UF/LIA/LRA/UFLIA/UFLRA dispatch, deterministic VSIDS/phase/Luby/LBD search, bounded warm EUF+BV, aligned array-equality atoms, explanation-guarded base/store/application-parent readout, finite Bool/BV array admission, retained-search ROW, ADR-0082's explicit mapped dynamic theory-variable growth, ADR-0083's deadline-aware wide BV construction, ADR-0084's array-result projection, ADR-0085's structural ITE equality/class realization, ADR-0086's retained structural-read owners, ADR-0087's candidate-triggered transitive warm ROW summaries, ADR-0088's retained scalar-keyed array-valued UF parents, ADR-0089's projection equality/exact structural diff witnesses, ADR-0090's retained positive structural equality, and ADR-0091's nested Boolean relation flags are live. Remaining: broader corpus timing, within-level BV core precision when measurement justifies it, proof integration, and opaque-heavy arithmetic participation |
@@ -2623,6 +2652,16 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-14 — ADR-0159 accepts fail-closed paired rewrite ablation and
+  closes the current GQ3 tranche.** A new comparator and repeated recipe reject
+  any source/environment/corpus/non-rewrite/configuration/correctness drift,
+  pair by manifest path, and separate exact structural deltas from timing
+  samples. Five clean rounds over four rules keep all 3,200 executions valid.
+  Disabling `extract_extend` adds 6,259 term bits and 1.657 ms mean affected
+  cold time, but none of the four rules changes an AIG node or CNF clause.
+  Keep the rules; move optimization effort to native Glaurung entry-path
+  attribution instead of adding more fire-count-driven extract rewrites.
 
 - **2026-07-14 — ADR-0155 equality cancellation is accepted and makes Axeyum
   faster than Z3 on the full cold Glaurung corpus.** Default rewrite identity v4 adds only

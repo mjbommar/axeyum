@@ -277,6 +277,17 @@ records the contract and the first measured baselines.
   manifest and enters every disabled/enabled ID into configuration identity.
   Actual rule value is the paired per-path delta between base and ablated
   artifacts; aggregate fire count alone is never an optimization claim.
+- ADR-0159 accepts the strict repeated comparison boundary for those artifacts.
+  `bench-glaurung-qfbv-rewrite-ablation-repeated` alternates fresh-process base
+  and exact one-rule ablation runs; its comparator rejects source, environment,
+  corpus, non-rewrite configuration, instance-set, verdict, oracle/manifest, or
+  replay drift. It reports `ablation - base` on the base rule's affected paths,
+  keeps deterministic structure separate from repeated timing samples, and
+  retains whole-corpus timing as a drift control. The first four-rule tranche
+  finds `bv.extract_extend.v1` avoids 6,259 term-bit materializations and 1.657
+  ms mean affected cold time, but none of the four rules changes an AIG node or
+  CNF clause on the representative capture. Further extract work therefore
+  requires a new downstream gate-cone hypothesis, not just lexical reach.
 - **Primary client QF_BV target (2026-07-13): Glaurung binary analysis.** Capture
   and minimize the real lifter-produced path conditions, preserving their
   extract/concat, mixed machine-width, and memory-derived shape. This client

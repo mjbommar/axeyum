@@ -79,6 +79,23 @@ class GlaurungBenchmarkRecipeTests(unittest.TestCase):
             self.assertTrue(output.rstrip().endswith(policy), output)
             self.assertIn(f"glaurung-qfbv-{policy}-repeated", output)
 
+    def test_rewrite_ablation_recipe_pairs_strict_fresh_processes(self) -> None:
+        output = dry_run(
+            "bench-glaurung-qfbv-rewrite-ablation-repeated",
+            "/capture",
+            "/capture/manifest.json",
+            "bv.extract_extend.v1",
+            "representative",
+            "/tmp/ablation",
+            "3",
+        )
+        self.assertEqual(output.count("cargo run --release -p axeyum-bench"), 2)
+        self.assertIn('--rewrite-disable-rule "bv.extract_extend.v1"', output)
+        self.assertIn("--require-reproducible-run", output)
+        self.assertIn("--require-in-process-z3", output)
+        self.assertIn("--min-decided-percent 100", output)
+        self.assertIn("compare-glaurung-rewrite-ablation.py", output)
+
     def test_range_demand_recipes_pin_distinct_policy_and_thresholds(self) -> None:
         for recipe in [
             "bench-glaurung-qfbv-range-demand",
