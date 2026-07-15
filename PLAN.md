@@ -150,8 +150,14 @@ session state.
 > thresholds and the work budget enter `config_hash`, and typed/per-instance/
 > aggregate telemetry partitions every admission and fallback result. The
 > strict whole-tier and `register-slice` recipes expose explicit calibration
-> parameters. Next run the capture gate; do not infer a speedup from the green
-> micro smoke (2/2 decided/agreed, both correctly rejected as no-candidate).
+> parameters. The clean pinned representative gate now rejects v2 as well.
+> Conservative defaults admit 0/128 and add 0.62% total across five processes;
+> a moderate exact policy admits 33/128, removes only 632 AIG nodes and zero CNF
+> clauses, and adds 0.61% total / 3.14% bit-blast time. All executions remain
+> decided/agreed/replay-clean, and declined admission overhead meets its <2%
+> target, but the mandatory `register-slice` improvement does not. ADR-0158 is
+> deferred and remains explicit/off. Stop threshold tuning; move next to GQ3's
+> affected-family/ablation telemetry and GQ1's native client-path attribution.
 > The current-client trajectory is consequently explicit: the shipped default
 > remains on a roughly 1.42x plateau; the earlier arithmetic rewrites do not fire
 > materially on this register-slice-heavy distribution; and the demonstrated

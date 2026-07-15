@@ -372,9 +372,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   whole-tier and `register-slice` recipes take explicit calibration parameters.
   The CLI micro smoke is 2/2 decided/agreed with zero errors, disagreements, or
   replay failures; both queries correctly report `no-candidate`, so it is
-  plumbing evidence only. This is not acceptance or a speed claim: thresholds
-  still come from the real `register-slice` family and whole corpus. Separately,
-  ADR-0156's
+  plumbing evidence only. The subsequent clean pinned-capture measurement
+  defers v2. Five default processes average 183.551 ms total / 75.617 ms bit
+  blast. Conservative v2 admits 0/128 (50 no-candidate, 78 insufficient
+  estimate), costs 1.234 ms admission, and averages 184.683/77.168 ms
+  (+0.62%/+2.05%). A moderate 128-bit/5% exact policy admits 33/128 but removes
+  only 632 AIG nodes and zero CNF clauses; five processes average 184.670/77.994
+  ms (+0.61%/+3.14%). Every process is 128/128 decided with zero errors,
+  disagreements, or replay failures. Rejection overhead meets the <2% target,
+  but the required family improvement fails. ADR-0158 is deferred and remains
+  explicit/off; stop threshold tuning. Separately, ADR-0156's
   batched assertion API cannot validate the structural warm win through
   Glaurung today: Glaurung's `Solver` trait remains one-shot. GQ7/P5 must first
   expose persistent worker/path solver ownership and ordered push/assert/check/
@@ -810,7 +817,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   | **GQ1 real-query profile** | **DONE for standalone cold timing; WIP for native-driver attribution.** Artifact v28's full process is valid with complete operator inventories, but the reported ~2.5x driver versus ~1.37x bench gap crosses different entry paths | Key identical query hashes across Glaurung and `axeyum-bench`; time translation/interning, word policy, lower/encode, SAT, model extraction, and replay separately |
   | **GQ2 cheap cold tier** | **WIP with three accepted rewrite tranches; batch integration deferred.** Canonical v4 reaches 5.625 s / 0.730x Z3; ADR-0156 preserves replay but is 18.8% slower than one-shot | Keep canonical v4 as the measured one-shot policy; do not recommend fresh incremental batch until its clause/entry overhead closes |
   | **GQ3 coercion/affine peepholes** | **Implementation complete for measured shapes; telemetry WIP.** ADR-0142/0153/0155 land the exact rules and stable fire counts | Add affected-query/family counts and default-minus-rule AIG/CNF/time ablations; only reopen rules that fire on the new residual |
-  | **GQ4 cold relevant bits** | **v1 DEFERRED; v2 measurement-ready and still non-default.** ADR-0158 now has cheap admission, bounded inline ranges, exact fallback, sparse materialization, SAT-BV policy, artifact-v30 identity, telemetry, and executable recipes | Calibrate explicit thresholds on `register-slice`; then require whole-corpus no-regression and 100% agreement/replay before any default |
+  | **GQ4 cold relevant bits** | **v1 and v2 DEFERRED after failed real gates.** v1 regresses ~1.42x→4.49x. V2 rejection overhead is bounded, but defaults admit 0/128 and +0.62% total; a 33-query moderate policy removes 632 AIG nodes/zero clauses and regresses bit blast 3.14% | Keep both explicit/off. Reopen only with an AIG/CNF-cone estimator or after word rewrites materially change the residual; do not tune thresholds further |
   | **GQ5 AIG/CNF construction** | **WIP at the client boundary.** One-shot v4 is fast, but fresh incremental assertion emits 80.9% more clauses with the same AIG | Verify Glaurung sharing survives translation; profile measured gate patterns and close incremental gate fusion only after GQ4/client attribution |
   | **GQ6 cold SAT/CDCL** | **WIP foundation, attribution-gated**; subsumption/BVE, XOR/GF(2), VSIDS, phase saving, Luby, and LBD foundations exist | Exact-CNF backend attribution first; tune/default a stronger path only where SAT dominates and proof replay stays green |
   | **GQ7 warm delta entry** | **WIP; blocked at the Glaurung API boundary, not Axeyum batch syntax.** ADR-0156's batch API exists, but Glaurung's `Solver` trait is one-shot; the deduplicated cold corpus cannot measure prefix reuse | Add persistent per-worker/path solver ownership and obtain an ordered trace under `glaurung-ordered-trace-v1.md`; then preprocess only new/affected terms, retain CNF/search state across scopes, control concretization, and publish per-check cost plus warm break-even depth |
@@ -818,15 +825,12 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   | **GQ9 auto cost model/docs** | **TODO**; P1.8 shape/resource probes are only the general foundation | Telemetry-visible raw/cheap/configured/warm choice that beats or matches fixed policies and documents embedder guidance |
   | **GQ10 real-lifter regression tier** | **WIP; cold regression automation landed.** The representative/full deduped tiers are valid and guarded, but cover only the current drivers and erase occurrence/prefix order | Expand drivers, fix producer validation/dedup, add a separate ordered-prefix tier, and publish per-commit family/stage/Axeyum÷Z3 trends |
 
-  **Next actions:** (1) run artifact-v30 GQ4-v2 calibration on
-  `register-slice`, select thresholds from admission/savings/work telemetry,
-  and require a whole-tier no-regression result before any acceptance; (2) add
-  affected-family rewrite
-  counts plus default-minus-rule AIG/CNF/time ablation; (3) instrument the
+  **Next actions:** (1) add affected-family rewrite
+  counts plus default-minus-rule AIG/CNF/time ablation; (2) instrument the
   native Glaurung path by query hash and decide between incremental gate-fusion
-  work and a purpose-built one-shot client API; (4) hand off and validate the
+  work and a purpose-built one-shot client API; (3) hand off and validate the
   ordered worker/path/scope trace v1 before persistent warm reuse or caching;
-  (5) expand the cold driver capture separately and retain strict coercion,
+  (4) expand the cold driver capture separately and retain strict coercion,
   dump validation, and atomic dedup/conflict handling.
 
   **Validation:** a clean, serialized `just check` completed under the 4 GiB

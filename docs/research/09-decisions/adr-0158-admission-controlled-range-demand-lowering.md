@@ -1,6 +1,6 @@
 # ADR-0158: Admission-controlled range demand lowering
 
-Status: proposed
+Status: deferred
 Date: 2026-07-14
 
 ## Context
@@ -170,6 +170,40 @@ threshold explicitly. A committed-corpus CLI smoke decides/agrees 2/2 with zero
 errors or replay failures and correctly rejects both non-slice queries as
 `no-candidate`.
 
-This checkpoint still does not accept the ADR. The real `register-slice`
-calibration and whole-corpus timing gates remain outstanding. The default and
-ADR-0157 force-on behavior are unchanged.
+At this implementation checkpoint the ADR was not yet accepted: the real
+`register-slice` calibration still controlled disposition. The default and
+ADR-0157 force-on behavior remained unchanged.
+
+## Representative Glaurung disposition (2026-07-14)
+
+The clean artifact-v30 gate was run on the pinned producer-faithful 128-query
+representative pack. All 128 rows are classified `register-slice`, so the
+family selection is also the whole representative tier. Every run remained
+128/128 decided with zero errors, oracle/manifest disagreements, or model
+replay failures.
+
+Five fresh default processes establish 183.551 ms mean Axeyum total and 75.617
+ms mean bit blast (0.39% total CV). Five processes with the conservative
+ADR-0158 defaults admit no queries: 50 are `no-candidate` and 78 are
+`insufficient-estimate`. Admission costs 1.234 ms mean, 0.67% of default total,
+so the declined-overhead target is met. Nevertheless total rises to 184.683 ms
+(+0.62%) and bit blast to 77.168 ms (+2.05%); a rejection-only policy supplies
+no client win.
+
+Opening only the admission screen shows why. Exact range demand over the 78
+candidates retains 489,215/556,330 term bits (87.9%) and 22,656/28,336 symbol
+bits (80.0%); no query meets the 50% exact-savings floor, and the maximum exact
+term-bit saving is 48.9%. A moderate 128-bit/5% exact policy applies 33 queries.
+It removes 17,848 term bindings and 632 symbol inputs, but only 632 AIG nodes
+across the tier (mean 3,519.516 to 3,514.578) and zero CNF clauses. Across five
+fresh processes, total is 184.670 ms (+0.61%) and bit blast 77.994 ms (+3.14%).
+The omitted bits are predominantly cheap wiring/lift-map material, not the gate
+cones that dominate CNF or search.
+
+ADR-0158 therefore fails the required `register-slice` improvement gate and is
+deferred. Its code remains an explicit off-by-default diagnostic experiment;
+neither it nor ADR-0157 may be auto-selected. Do not spend another slice tuning
+range thresholds on this capture. Reopen GQ4 only with a qualitatively different
+gate-cone estimator/specialized lowering that predicts AIG/CNF removal, or after
+word-level cancellation changes the residual DAG. The 13k full tier was not run
+because the representative acceptance boundary already failed.
