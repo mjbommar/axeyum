@@ -137,6 +137,13 @@ session state.
 > syntactic admission precheck, bounded/memoized range demand, and a wide
 > predicted-savings threshold with immediate fallback to the full lowerer;
 > proposed ADR-0158 defines that contract.
+> The current-client trajectory is consequently explicit: the shipped default
+> remains on a roughly 1.42x plateau; the earlier arithmetic rewrites do not fire
+> materially on this register-slice-heavy distribution; and the demonstrated
+> cold win is the CNF-encoding work that moved the gap from roughly 2.0x to
+> 1.4x. The two next credible routes are a much cheaper admitted slice under
+> ADR-0158 and persistent warm reuse under GQ7. ADR-0156 alone cannot test the
+> latter through Glaurung because its current `Solver` trait is one-shot.
 > The ordered warm trace remains the next warm-functionality Glaurung
 > handoff; cold deduplication cannot validate scopes, prefix reuse, or model
 > choice. Its concrete producer/consumer contract is now

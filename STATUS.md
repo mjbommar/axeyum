@@ -347,6 +347,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   therefore deferred, not accepted; v1 remains explicit and must not become a
   default or automatic choice.
 
+  The client trajectory is now a plateau rather than a sequence of wins: the
+  shipped default stays around 1.42x; the earlier arithmetic rewrites do not
+  materially fire on this register-slice-heavy corpus; and the demonstrated
+  cold improvement remains the CNF work that moved roughly 2.0x to 1.4x. Do not
+  attribute progress to a semantically green experiment that increases client
+  time.
+
   Proposed ADR-0158 defines GQ4-v2: a cheap syntactic admission precheck before
   per-term bitset allocation, a memoized and bounded range-demand pass, a deliberately wide
   predicted-savings threshold, and early fallback to ordinary full lowering.
