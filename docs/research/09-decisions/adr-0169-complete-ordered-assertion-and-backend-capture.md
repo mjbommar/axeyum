@@ -43,7 +43,10 @@ artifacts that have neither extension. When `assertion_count` is present it
 requires the complete store, exact event membership, and consistent symbol
 declarations. It builds the shared arena from producer-declared symbols rather
 than guessing. It also aggregates the two per-backend timers and rejects a sum
-that exceeds the recorded total.
+that exceeds the recorded total. Snapshot control output includes deterministic
+scope-depth buckets with check count, Axeyum occurrence time, recorded Z3 time,
+and ratio, plus an observed monotone threshold. The threshold is descriptive
+for one trace, not a formula-size cost model.
 
 ## Evidence
 
@@ -79,6 +82,14 @@ high-water RSS is 38.1 MB. Naive lineage again replays 7,378 roots, takes about
 recorded-value matches / two valid divergences / zero unevaluable; lineage is
 240 / one / zero.
 
+A repeated snapshot process reports a 0.589x ratio to recorded Z3 including the
+shared-arena build. Snapshot occurrence time is below Z3 in 45 of 46 observed
+scope-depth buckets. Depth 12 is the only slower bucket and contains two
+checks; every observed bucket at depth 13 or greater is faster, so the
+machine-readable monotone observed threshold is 13. This is not evidence that
+depth alone causes break-even, and the sparse exception reinforces the need for
+multi-driver repetition.
+
 This is one clean bounded driver run. Snapshot's sub-Z3 replay ratio is real for
 the independent same-occurrence control, but it excludes Glaurung's native
 translation/integration work and is not a production backend claim.
@@ -102,7 +113,7 @@ this stream, while the retained snapshot control has structural headroom below
 Z3 if integrated without reintroducing client overhead.
 
 T4 is functionally complete for one clean driver but not published across the
-driver set. Repeat clean processes and drivers, add depth/bucketed break-even
-telemetry, and then integrate the selected snapshot policy through Glaurung's
-client boundary. GQ8 caching and GQ9 automatic activation remain downstream of
-that multi-driver and native-integration gate.
+driver set. Repeat clean processes and drivers, then integrate the selected
+snapshot policy through Glaurung's client boundary. GQ8 caching and GQ9
+automatic activation remain downstream of that multi-driver and
+native-integration gate.

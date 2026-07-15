@@ -568,7 +568,7 @@ clean artifact pins the exact Glaurung/Axeyum revisions and policy.
 | 3 | Close native-driver versus bench delta | **One clean separated baseline landed (ADR-0169); multi-driver pairing WIP.** The exact stream records native Axeyum/Z3 at 2.095/0.808 s (2.593x), versus 2.631 s for exact-byte cold replay. Repeat across drivers and same-revision bench artifacts with `check_profiled`. |
 | 4 | Strengthen AIG sharing | **Current hypothesis closed:** exact native/manifest overlap preserves AIG size, so Glaurung `ExprId` sharing survives. Reopen only if gate-request/hash telemetry identifies a distinct residual. |
 | 5 | Reduce CNF for measured gates | **Large residual closed (ADR-0162/0163).** Incremental clauses fall to +2.36% over one-shot; reopen only from a measured native gate pattern because a stronger index regressed. |
-| 6 | Make warm entry delta-only | **T4 control selects snapshot reuse (ADR-0169).** Repeat across drivers, add depth break-even, and integrate the retained snapshot through Glaurung's native client boundary; naive fork-prefix lineage remains too expensive. |
+| 6 | Make warm entry delta-only | **T4 control selects snapshot reuse (ADR-0169).** Scope-depth output is 45/46 buckets faster than Z3 with a descriptive monotone observed threshold of 13. Repeat across drivers and integrate the retained snapshot through Glaurung's native client boundary; naive fork-prefix lineage remains too expensive. |
 | 7 | Reuse duplicates and prefixes soundly | Measure exact duplicates/prefixes first; cache exact queries with replay, but reuse retained state rather than verdicts for strict prefixes. |
 | 8 | Add the register-slice fast path | Treat this as the first specialized GQ4 policy only if the generic exact range propagation leaves measurable avoidable work. |
 | 9 | Queue SAT tuning | Re-profile after items 1--5; compare identical CNF with BatSat/CaDiCaL/Kissat and tune only if search is then dominant. |
@@ -591,8 +591,8 @@ clean artifact pins the exact Glaurung/Axeyum revisions and policy.
 
 ## Immediate next actions
 
-1. Repeat ADR-0169's exact-byte cold/snapshot/lineage controls across the clean
-   multi-driver set. Add scope-depth break-even buckets and retain p50/p95,
+1. Repeat ADR-0169's exact-byte cold/snapshot/lineage controls and scope-depth
+   buckets across the clean multi-driver set. Retain p50/p95,
    high-water RSS, complete revision/tool/hardware identity, 100% decisions,
    and zero disagreements or replay failures.
 2. Carry the selected snapshot/LCP state through Glaurung's native translation

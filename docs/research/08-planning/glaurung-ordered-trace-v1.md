@@ -333,6 +333,9 @@ lineage replays 7,378 fork roots and reaches 88.7 MB.
 This establishes bounded same-stream structural headroom below Z3 and explains
 the real native client bar without claiming integration parity: the snapshot
 control is an independent replayer and does not include Glaurung translation.
-Repeat cleanly across drivers, add scope-depth break-even buckets, and carry the
-selected retained-snapshot policy through the actual client boundary before a
-default or user-visible performance claim.
+Scope-depth telemetry is now executable: a repeated process is faster than Z3
+in 45/46 observed depth buckets, with only the two-check depth-12 bucket slower;
+all observed depths from 13 onward are faster. Treat that threshold as
+descriptive, not causal. Repeat cleanly across drivers and carry the selected
+retained-snapshot policy through the actual client boundary before a default or
+user-visible performance claim.
