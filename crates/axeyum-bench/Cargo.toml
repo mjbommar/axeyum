@@ -10,6 +10,7 @@ authors.workspace = true
 keywords.workspace = true
 categories.workspace = true
 publish = false
+default-run = "axeyum-bench"
 
 [dependencies]
 axeyum-cnf = { path = "../axeyum-cnf" }
