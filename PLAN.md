@@ -211,6 +211,17 @@ session state.
 > regressed native Axeyum 2.16%, so it was removed. Treat the remaining GQ5
 > clause gap as too small for another unmeasured default structure; shift the
 > primary client lane to GQ1 multi-driver publication and GQ7 ordered warm reuse.
+> ADR-0164 now lands the first real GQ7 end-to-end bridge without pretending the
+> missing lineage exists. Glaurung opt-in snapshot reuse translates complete
+> assertion sets into one retained structural arena, maps their longest common
+> `TermId` prefix to per-root scopes, and retains AIG/CNF/SAT state across exact,
+> extending, shrinking, and sibling snapshots. Three alternating
+> `win10-vwififlt.sys` pairs remain 13,126/13,126 agreed with zero unknown splits,
+> warm resets, or finding changes. Median Axeyum time falls 17.784→9.426 seconds
+> (-47.0%) and the paired ratio 2.648x→1.462x (-44.8%); 679,870 prefix roots are
+> retained while only 8,027 are added. Keep it opt-in: the ordered trace is still
+> required for worker/path ownership, non-consecutive forks, explicit scopes,
+> controlled model choices, multi-driver variance, and a GQ9 default decision.
 > The current-client trajectory is consequently explicit: the standalone
 > shipped default had remained on a roughly 1.42x plateau; the earlier
 > arithmetic rewrites do not fire
@@ -261,7 +272,7 @@ decisions or speedups.
 | **GQ4** | **Cold demand-driven bit-slice reduction** | **Out of the active queue.** ADR-0157 v1 is correct but regresses the real ratio about 1.42x→4.49x; ADR-0158's conservative admission is a safe no-op but does not improve the required family. Both remain explicit/off. Do not tune thresholds further on this corpus; only a qualitatively different constant-cost admission proof and a fresh client gate can reopen GQ4. |
 | **GQ5** | **Cheaper AIG construction and measured CNF encoding** | **Large incremental clause residual closed; per-node construction remains open.** ADR-0162/0163 cut incremental clauses 782,716→558,787 and pass native gates; only 12,882 clauses (+2.36%) remain over one-shot, while a stronger per-clause index regresses native time. Next attribute bit-blast cost as node count versus construction overhead, verify Glaurung sharing survives term→AIG, and measure bounded structural hashing/two-level rewrites/copy removal. Continue comparator/concat/extract/root CNF work only from measured gate/attempt profiles and require lower native time, not merely fewer clauses. |
 | **GQ6** | **Cold SAT/CDCL tuning** | **Relevant but ranked seventh.** The reported native share is now about 20%, so compare the exact emitted CNF across BatSat, the proof-producing core, and pinned CaDiCaL/Kissat, then measure existing subsumption/vivification/inprocessing plus phase saving, VSIDS/VMTF, and restarts. UNSAT proof rechecking and deterministic resource limits remain mandatory. Do not outrank GQ7, client-boundary attribution, or the dual baseline. |
-| **GQ7** | **Cheaper warm entry and delta preprocessing** | **Highest-leverage active item.** The cold path is near its measured floor and ADR-0160 sees 6,061/13,126 duplicate occurrences. Obtain the ordered/prefix producer capture with worker/path lineage, scopes, repeated checks, unknown/errors, and exploration-driving model reads; wire ADR-0156 batch preprocessing plus retained AIG/CNF/learned state through a real extending path; preprocess only deltas; measure break-even and require end-to-end Glaurung correctness/replay. This is the primary route below 1x because the current Z3 crate path cannot reuse across fresh calls. |
+| **GQ7** | **Cheaper warm entry and delta preprocessing** | **Highest-leverage active item; first bridge accepted in ADR-0164.** Opt-in structural snapshot-LCP reuse now retains one arena/AIG/CNF/SAT session per explorer thread and cuts the single-driver median client ratio 2.648x→1.462x with 13,126/13,126 agreement, zero unknown splits/resets, and unchanged findings. It reuses 679,870 roots and adds only 8,027. Next obtain the ordered producer capture with worker/path lineage, explicit scopes, repeated checks, unknown/errors, and exploration-driving model reads; compare explicit per-lineage state against snapshot inference, add p50/p95/memory/break-even and multi-driver gates, then decide GQ9 admission. GQ7 is not complete and warm stays opt-in. |
 | **GQ8** | **Verdict and CNF reuse for duplicate/prefix queries** | Build on the ordered capture with a deterministic, bounded cache keyed by canonical content, solver/config semantics, and scope/lineage identity. Exact duplicates may reuse replayable verdict/model/proof artifacts; prefixes reuse only retained preprocessing/CNF/search state. Every hit still passes original-term model or proof replay, and invalidation/versioning is explicit. Measure exact-repeat and prefix hit rates before choosing capacity. |
 | **GQ9** | **Auto production policy and API guidance** | Ship a conservative auto policy only after fixed-policy comparison on the real corpus: GQ4 remains off/no-op unless its wide savings gate clears, accepted CNF fusion/context dedup stay on, rewrite tiers follow causal reach/cost, and warm mode activates only when an ordered reuse stream is present. Export the reason for every choice. Exit requires non-regression against every fixed alternative plus documented raw/cheap/configured/warm guidance. |
 | **GQ10** | **Ordered, wider real-lifter regression corpus** | Retain the deduplicated representative/full cold tiers, add the ordered non-deduplicated stream with exact-repeat/prefix frequency and path lineage, widen beyond the current three drivers, and run the full-tier variance gate. Track per-commit decided/error/replay status, stage/family counters, and both Axeyum/Z3 baselines: pre-parsed in-process Z3 and Glaurung's actual Z3 backend. The item is not done until GQ7/GQ8 reuse and the user-visible client ratio are reproducibly exercised. |
@@ -272,8 +283,9 @@ but roughly 2.5x on the actual `IncrementalBvSolver` same-stream path, with
 bit-blast/CNF/SAT near 45%/32%/20%. Treat those as distinct bars until the same
 revision and queries reconcile them. The ranked work is:
 
-1. **GQ7 warm end to end:** ingest the ordered/prefix capture and drive retained
-   batch preprocessing, AIG, CNF, learned state, push/pop, models, and replay;
+1. **GQ7 warm end to end:** build on ADR-0164's measured snapshot-LCP bridge;
+   ingest the ordered/prefix capture and compare explicit per-lineage retained
+   preprocessing, AIG, CNF, learned state, push/pop, models, and replay;
 2. **GQ1 client overhead:** use `check_profiled` to partition and remove the
    reported approximately 1.8x real-client/bench entry factor;
 3. **AIG cost per bit:** separate node count from construction cost, preserve
@@ -298,8 +310,9 @@ revision and queries reconcile them. The ranked work is:
 
 The highest-leverage trio is 1, 2, and 10. GQ4 is not an active optimization;
 ADR-0157/0158 remain explicit/off. Cold rewrite or CNF work may continue only
-when causal/native profiles select it. The ordered warm capture is the enabling
-artifact for GQ7/GQ8 and must precede cache capacity or auto-policy choices.
+when causal/native profiles select it. ADR-0164 permits opt-in consecutive
+snapshot reuse now; the ordered warm capture remains the enabling artifact for
+GQ7 completion/GQ8 and must precede cache capacity or auto-policy choices.
 
 **Recorded cold-path sequence.** The detailed task graph and functional acceptance boundary
 live in the

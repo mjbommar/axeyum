@@ -194,3 +194,26 @@ verdict disagreements, zero original-query replay failures, explicit
 model-choice divergences, deterministic resource bounds, and a measured warm
 break-even. The synthetic 7.5x result and the deduplicated 13,462-query pack do
 not satisfy that exit criterion.
+
+## 2026-07-15 snapshot bridge result
+
+ADR-0164 lands a sound pre-lineage bridge in Glaurung commits `016935d` and
+`b09ec6b`. With `GLAURUNG_AXEYUM_WARM_REUSE` set, one adapter per explorer
+thread translates each complete assertion snapshot into a retained Axeyum
+arena, compares structurally interned assertion roots, pops the divergent
+suffix, and asserts only the new suffix. Numeric Glaurung expression IDs are
+never compared across cloned pools. This implements real retained
+arena/AIG/CNF/SAT reuse through the current one-shot trait; it does not invent
+path or scope lineage that the producer has not supplied.
+
+Three alternating `win10-vwififlt.sys` shadow pairs preserve 13,126/13,126
+agreements, zero unknown splits, zero warm resets, and identical findings.
+Median Axeyum time falls 17.784 to 9.426 seconds (-47.0%), and the median paired
+Axeyum/Z3 ratio falls 2.648x to 1.462x. Each warm run observes 5,609 consecutive
+exact snapshots, retains 679,870 prefix roots, adds 8,027 roots, and pops 8,026.
+
+This advances T3 but does not satisfy its exit. T1/T2's versioned trace remains
+required to validate worker/path ownership, non-consecutive forks, explicit
+push/pop events, model reads/choices, unknown/error classification, memory,
+per-check latency, and true per-lineage break-even. Keep the bridge opt-in until
+that trace and multi-driver repetitions support a GQ9 production policy.
