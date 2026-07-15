@@ -5915,7 +5915,7 @@ impl IntReconstructCtx {
         let one = self.kernel.level_succ(zero);
         let rec = self
             .kernel
-            .const_(self.int.logic.exists_rec, vec![zero, one]);
+            .const_(self.int.logic.exists_rec, vec![one]);
         let rec = self.kernel.app(rec, carrier);
         let rec = self.kernel.app(rec, predicate);
         let rec = self.kernel.app(rec, motive);
@@ -6255,8 +6255,7 @@ impl IntReconstructCtx {
         let motive = self
             .kernel
             .lam(anon, disjunction, target, BinderInfo::Default);
-        let zero = self.kernel.level_zero();
-        let rec = self.kernel.const_(self.int.logic.or_rec, vec![zero]);
+        let rec = self.kernel.const_(self.int.logic.or_rec, vec![]);
         let rec = self.kernel.app(rec, left);
         let rec = self.kernel.app(rec, right);
         let rec = self.kernel.app(rec, motive);
@@ -7208,7 +7207,7 @@ impl IntReconstructCtx {
             let anon = self.kernel.anon();
             self.kernel.lam(anon, b_prop, body, BinderInfo::Default)
         };
-        // Or.rec.{0} A B (fun _ => target) minor_inl minor_inr or_proof : le m' one.
+        // Or.rec A B (fun _ => target) minor_inl minor_inr or_proof : le m' one.
         let le_mp_one = {
             let anon = self.kernel.anon();
             let or_ab = {
@@ -7217,8 +7216,7 @@ impl IntReconstructCtx {
                 self.kernel.app(e, b_prop)
             };
             let motive = self.kernel.lam(anon, or_ab, target, BinderInfo::Default);
-            let zlvl = self.kernel.level_zero();
-            let rec = self.kernel.const_(self.int.logic.or_rec, vec![zlvl]);
+            let rec = self.kernel.const_(self.int.logic.or_rec, vec![]);
             let e = self.kernel.app(rec, a_prop);
             let e = self.kernel.app(e, b_prop);
             let e = self.kernel.app(e, motive);
@@ -7317,8 +7315,7 @@ impl IntReconstructCtx {
                 self.kernel.app(e, b_prop)
             };
             let motive = self.kernel.lam(anon, or_ab, target, BinderInfo::Default);
-            let zlvl = self.kernel.level_zero();
-            let rec = self.kernel.const_(self.int.logic.or_rec, vec![zlvl]);
+            let rec = self.kernel.const_(self.int.logic.or_rec, vec![]);
             let e = self.kernel.app(rec, a_prop);
             let e = self.kernel.app(e, b_prop);
             let e = self.kernel.app(e, motive);
@@ -8638,7 +8635,7 @@ impl IntReconstructCtx {
         self.lt_of_le_of_ne_app(xe, m1_lit, le_x_m1, not_eq)
     }
 
-    /// `Or.rec.{0}` over `le`-valued props: from `minor_inl : a → target`,
+    /// `Or.rec` over `le`-valued props: from `minor_inl : a → target`,
     /// `minor_inr : b → target`, and `or_proof : Or a b`, build `target`.
     fn or_rec_le(
         &mut self,
@@ -8656,8 +8653,7 @@ impl IntReconstructCtx {
             self.kernel.app(e, b_prop)
         };
         let motive = self.kernel.lam(anon, or_ab, target, BinderInfo::Default);
-        let zlvl = self.kernel.level_zero();
-        let rec = self.kernel.const_(self.int.logic.or_rec, vec![zlvl]);
+        let rec = self.kernel.const_(self.int.logic.or_rec, vec![]);
         let e = self.kernel.app(rec, a_prop);
         let e = self.kernel.app(e, b_prop);
         let e = self.kernel.app(e, motive);

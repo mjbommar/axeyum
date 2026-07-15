@@ -7572,7 +7572,7 @@ fn ground_view(env: &BTreeMap<String, QuantProof>) -> BTreeMap<String, ClausePro
 // replacing each `Const(sk_k) ↦ w_k` and `Const(hyp_k) ↦ hw_k` turns `R` into
 // the minor premise `fun (w_k : α) (hw_k : p_k w_k) => R'` and
 //
-//     Exists.rec.{0,1} α p_k (fun _ => False) (fun w_k hw_k => R') h_∃_k : False
+//     Exists.rec.{1} α p_k (fun _ => False) (fun w_k hw_k => R') h_∃_k : False
 //
 // is the `Exists.elim`. Several existentials nest (innermost-out). The skolem
 // atom and assumption are turned into fresh **fvars** first, then the standard
@@ -7663,7 +7663,7 @@ impl ReconstructCtx {
         Ok((p, exists_ap))
     }
 
-    /// `Exists.rec.{0,1} α p (fun _ => False) minor major : False` — the
+    /// `Exists.rec.{1} α p (fun _ => False) minor major : False` — the
     /// `Exists.elim` at a constant `False` motive.
     fn mk_exists_elim_false(
         &mut self,
@@ -7672,7 +7672,6 @@ impl ReconstructCtx {
         minor: ExprId,
         major: ExprId,
     ) -> ExprId {
-        let z = self.kernel.level_zero();
         let anon = self.kernel.anon();
         let false_ = self.kernel.const_(self.prelude.false_, vec![]);
         // motive := fun (_ : Exists α p) => False.
@@ -7681,7 +7680,7 @@ impl ReconstructCtx {
             .lam(anon, exists_ap, false_, BinderInfo::Default);
         let rec = self
             .kernel
-            .const_(self.prelude.exists_rec, vec![z, self.one]);
+            .const_(self.prelude.exists_rec, vec![self.one]);
         let e = self.kernel.app(rec, self.alpha);
         let e = self.kernel.app(e, p);
         let e = self.kernel.app(e, motive);
@@ -9375,8 +9374,7 @@ fn double_negation_elim(ctx: &mut ReconstructCtx, proposition: ExprId, proof: Ex
     let em_name = ctx.em_axiom();
     let em = ctx.kernel.const_(em_name, vec![]);
     let em_proposition = ctx.kernel.app(em, proposition);
-    let zero = ctx.kernel.level_zero();
-    let rec = ctx.kernel.const_(ctx.prelude.or_rec, vec![zero]);
+    let rec = ctx.kernel.const_(ctx.prelude.or_rec, vec![]);
     let result = ctx.kernel.app(rec, proposition);
     let result = ctx.kernel.app(result, not_proposition);
     let result = ctx.kernel.app(result, motive);
@@ -9633,8 +9631,7 @@ fn binary_resolve_wide_on(
         let motive = ctx
             .kernel
             .lam(anon, source_prop, target_prop, BinderInfo::Default);
-        let zero = ctx.kernel.level_zero();
-        let rec = ctx.kernel.const_(ctx.prelude.or_rec, vec![zero]);
+        let rec = ctx.kernel.const_(ctx.prelude.or_rec, vec![]);
         let rec = ctx.kernel.app(rec, pivot_prop);
         let rec = ctx.kernel.app(rec, survivors_prop);
         let rec = ctx.kernel.app(rec, motive);
@@ -9732,8 +9729,7 @@ fn move_clause_pivot_suffix_to_front(
     let motive = ctx
         .kernel
         .lam(anon, source_prop, target_prop, BinderInfo::Default);
-    let zero = ctx.kernel.level_zero();
-    let rec = ctx.kernel.const_(ctx.prelude.or_rec, vec![zero]);
+    let rec = ctx.kernel.const_(ctx.prelude.or_rec, vec![]);
     let rec = ctx.kernel.app(rec, head_prop);
     let rec = ctx.kernel.app(rec, rest_prop);
     let rec = ctx.kernel.app(rec, motive);
@@ -9776,8 +9772,7 @@ fn insert_survivor_after_pivot(
     let motive = ctx
         .kernel
         .lam(anon, source_prop, target_prop, BinderInfo::Default);
-    let zero = ctx.kernel.level_zero();
-    let rec = ctx.kernel.const_(ctx.prelude.or_rec, vec![zero]);
+    let rec = ctx.kernel.const_(ctx.prelude.or_rec, vec![]);
     let rec = ctx.kernel.app(rec, pivot_prop);
     let rec = ctx.kernel.app(rec, rest_prop);
     let rec = ctx.kernel.app(rec, motive);
@@ -9844,8 +9839,7 @@ fn append_clause_suffix(
     let motive = ctx
         .kernel
         .lam(anon, source_prop, target_prop, BinderInfo::Default);
-    let zero = ctx.kernel.level_zero();
-    let rec = ctx.kernel.const_(ctx.prelude.or_rec, vec![zero]);
+    let rec = ctx.kernel.const_(ctx.prelude.or_rec, vec![]);
     let rec = ctx.kernel.app(rec, head_prop);
     let rec = ctx.kernel.app(rec, rest_prop);
     let rec = ctx.kernel.app(rec, motive);
@@ -9970,7 +9964,7 @@ fn or_inr(ctx: &mut ReconstructCtx, a: ExprId, b: ExprId, h: ExprId) -> ExprId {
 /// of `target`, threaded through the right-nested `Or` via `Or.rec`.
 ///
 /// For a unit clause this is `per_lit(l0, clause.proof)`. For `l0 ∨ rest`, it is
-/// `Or.rec.{0} A B (fun _ => target) (fun (h0 : A) => per_lit(l0, h0))
+/// `Or.rec A B (fun _ => target) (fun (h0 : A) => per_lit(l0, h0))
 ///   (fun (hr : B) => <recurse on rest>) clause.proof`, where the minor premises
 /// are built as closed lambdas (so the hypothesis flows in as `BVar 0`, then is
 /// instantiated through `per_lit`/recursion as an `fvar`-free term).
@@ -10035,9 +10029,8 @@ fn clause_elim_inner(
             let or_ab = ctx.mk_or(a, b);
             let motive = ctx.kernel.lam(anon, or_ab, target, BinderInfo::Default);
 
-            // Or.rec.{0} A B motive minor_inl minor_inr proof : target.
-            let z = ctx.kernel.level_zero();
-            let rec = ctx.kernel.const_(ctx.prelude.or_rec, vec![z]);
+            // Or.rec A B motive minor_inl minor_inr proof : target.
+            let rec = ctx.kernel.const_(ctx.prelude.or_rec, vec![]);
             let e = ctx.kernel.app(rec, a);
             let e = ctx.kernel.app(e, b);
             let e = ctx.kernel.app(e, motive);
@@ -10475,14 +10468,13 @@ fn try_and_pos(
     let inr_body = ctx.kernel.abstract_fvars(inr_body, &[fvar_ng]);
     let minor_inr = ctx.kernel.lam(anon, not_g, inr_body, BinderInfo::Default);
 
-    // Or.rec.{0} ⟦G⟧ (Not ⟦G⟧) (fun _ => target) minor_inl minor_inr (em ⟦G⟧).
+    // Or.rec ⟦G⟧ (Not ⟦G⟧) (fun _ => target) minor_inl minor_inr (em ⟦G⟧).
     let or_g = ctx.mk_or(g_prop, not_g);
     let motive = ctx.kernel.lam(anon, or_g, target, BinderInfo::Default);
     let em_name = ctx.em_axiom();
     let em = ctx.kernel.const_(em_name, vec![]);
     let em_g = ctx.kernel.app(em, g_prop);
-    let z = ctx.kernel.level_zero();
-    let rec = ctx.kernel.const_(ctx.prelude.or_rec, vec![z]);
+    let rec = ctx.kernel.const_(ctx.prelude.or_rec, vec![]);
     let e = ctx.kernel.app(rec, g_prop);
     let e = ctx.kernel.app(e, not_g);
     let e = ctx.kernel.app(e, motive);
@@ -10547,8 +10539,7 @@ fn build_and_neg(
     let em_name = ctx.em_axiom();
     let em = ctx.kernel.const_(em_name, vec![]);
     let em_p = ctx.kernel.app(em, p);
-    let z = ctx.kernel.level_zero();
-    let rec = ctx.kernel.const_(ctx.prelude.or_rec, vec![z]);
+    let rec = ctx.kernel.const_(ctx.prelude.or_rec, vec![]);
     let e = ctx.kernel.app(rec, p);
     let e = ctx.kernel.app(e, not_p);
     let e = ctx.kernel.app(e, motive);
@@ -10654,8 +10645,7 @@ fn try_or_pos(
     let em_name = ctx.em_axiom();
     let em = ctx.kernel.const_(em_name, vec![]);
     let em_g = ctx.kernel.app(em, tail_prop);
-    let z = ctx.kernel.level_zero();
-    let rec = ctx.kernel.const_(ctx.prelude.or_rec, vec![z]);
+    let rec = ctx.kernel.const_(ctx.prelude.or_rec, vec![]);
     let e = ctx.kernel.app(rec, tail_prop);
     let e = ctx.kernel.app(e, not_g);
     let e = ctx.kernel.app(e, motive);
@@ -10732,8 +10722,7 @@ fn try_or_neg(
     let em_name = ctx.em_axiom();
     let em = ctx.kernel.const_(em_name, vec![]);
     let em_phi = ctx.kernel.app(em, phi_prop);
-    let z = ctx.kernel.level_zero();
-    let rec = ctx.kernel.const_(ctx.prelude.or_rec, vec![z]);
+    let rec = ctx.kernel.const_(ctx.prelude.or_rec, vec![]);
     let e = ctx.kernel.app(rec, phi_prop);
     let e = ctx.kernel.app(e, not_phi);
     let e = ctx.kernel.app(e, motive);
@@ -10986,9 +10975,8 @@ fn prove_clause_by_cases(
     let or_p_notp = ctx.mk_or(p, not_p);
     let motive = ctx.kernel.lam(anon, or_p_notp, target, BinderInfo::Default);
 
-    // Or.rec.{0} p (Not p) motive minor_inl minor_inr (em p) : target.
-    let z = ctx.kernel.level_zero();
-    let rec = ctx.kernel.const_(ctx.prelude.or_rec, vec![z]);
+    // Or.rec p (Not p) motive minor_inl minor_inr (em p) : target.
+    let rec = ctx.kernel.const_(ctx.prelude.or_rec, vec![]);
     let e = ctx.kernel.app(rec, p);
     let e = ctx.kernel.app(e, not_p);
     let e = ctx.kernel.app(e, motive);
@@ -11405,9 +11393,8 @@ fn or_chain_to_false(
             let body_r = or_chain_to_false(ctx, rest, hr, &neg_proofs[1..], false_const);
             let body_r = ctx.kernel.abstract_fvars(body_r, &[fvr]);
             let minor_inr = ctx.kernel.lam(anon, b, body_r, BinderInfo::Default);
-            // Or.rec.{0} a b motive minor_inl minor_inr h : False.
-            let z = ctx.kernel.level_zero();
-            let rec = ctx.kernel.const_(ctx.prelude.or_rec, vec![z]);
+            // Or.rec a b motive minor_inl minor_inr h : False.
+            let rec = ctx.kernel.const_(ctx.prelude.or_rec, vec![]);
             let e = ctx.kernel.app(rec, a);
             let e = ctx.kernel.app(e, b);
             let e = ctx.kernel.app(e, motive);
@@ -17933,10 +17920,9 @@ fn reconstruct_disjunctive_lra_proof(
         let anon = ctx.kernel.anon();
         ctx.kernel.lam(anon, or_prop, false_, BinderInfo::Default)
     };
-    // Or.rec.{0} enc1 enc2 motive minor1 minor2 hor : False.
+    // Or.rec enc1 enc2 motive minor1 minor2 hor : False.
     let proof = {
-        let z = ctx.kernel.level_zero();
-        let rec = ctx.kernel.const_(ctx.arith.logic.or_rec, vec![z]);
+        let rec = ctx.kernel.const_(ctx.arith.logic.or_rec, vec![]);
         let e = ctx.kernel.app(rec, enc1);
         let e = ctx.kernel.app(e, enc2);
         let e = ctx.kernel.app(e, motive);

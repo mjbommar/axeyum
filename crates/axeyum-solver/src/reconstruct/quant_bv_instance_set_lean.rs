@@ -1336,7 +1336,6 @@ fn exists_elim_false(
     minor: ExprId,
     major: ExprId,
 ) -> ExprId {
-    let zero = ctx.kernel.level_zero();
     let false_ = ctx.kernel.const_(ctx.prelude.false_, vec![]);
     let anon = ctx.kernel.anon();
     let motive =
@@ -1344,7 +1343,7 @@ fn exists_elim_false(
             .lam(anon, layer.proposition, false_, BinderInfo::Default);
     let rec = ctx
         .kernel
-        .const_(ctx.prelude.exists_rec, vec![zero, ctx.one]);
+        .const_(ctx.prelude.exists_rec, vec![ctx.one]);
     let rec = ctx.kernel.app(rec, layer.domain);
     let rec = ctx.kernel.app(rec, layer.predicate);
     let rec = ctx.kernel.app(rec, motive);
