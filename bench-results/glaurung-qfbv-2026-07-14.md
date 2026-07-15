@@ -492,3 +492,21 @@ is 1.56%. Candidate-summary SHA-256:
 `c4ca7612ddc0544cfaacac9cf2dcd5549460fe0e1e06ee0df6df0de56b207fab`.
 Comparison SHA-256:
 `2d42ecb2e1c6eceaf8821fec745f2379816890bad1c60d8580e8b1ca07f33106`.
+
+## Artifact-v28 post-word operator attribution
+
+ADR-0154 advances the harness from artifact v27 to v28 without changing solver
+behavior. Original and post-word query-shape snapshots now count every scalar
+Bool/QF_BV operator over unique reachable DAG nodes, group those counts by
+semantic family, and retain an explicit `other` bucket. Per-instance records
+make it possible to correlate the residual operator mix with manifest family,
+AIG/CNF construction, SAT, and slow outliers. Repetition and regular-gate
+consumers are version-locked to v28.
+
+The first 128-query canonical semantic run has 7,019 post-word applications and
+zero `other` operators. Its largest surviving classes are 3,326 equalities,
+1,788 `ite`s, 1,008 `bvadd`s, 245 `bvult`s, 222 extracts, and 193 zero
+extensions. The run decides and manifest/Z3-agrees on 128/128 rows with zero
+errors, disagreements, or replay failures. This is schema/semantic evidence,
+not a full-distribution ranking. One clean 13,462-query v28 process is required
+before the next rewrite, lowering, CNF, or SAT experiment is selected.

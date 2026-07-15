@@ -95,6 +95,11 @@ session state.
 > total 9.80% to 14.11 seconds, ratio 8.37% to 1.85x Z3, AIG requests 12.13%,
 > clauses 17.23%, and `slice-partial` time 24.4%, with every validity gate
 > green. SAT and broad GQ4 remain behind fresh post-v3 attribution.
+> ADR-0154 advances the harness to artifact v28 and records every scalar
+> Bool/QF_BV operator over both original and post-word unique DAGs, including an
+> explicit `other` bucket. The 128-query semantic gate validates the schema and
+> remains fully green; run one clean full v28 process and aggregate its
+> post-word operators by family before selecting another cold optimization.
 > The ordered warm trace remains the next functionality-enabling Glaurung
 > handoff; cold deduplication cannot validate scopes, prefix reuse, or model
 > choice. Its concrete producer/consumer contract is now

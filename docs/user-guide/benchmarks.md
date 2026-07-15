@@ -85,7 +85,7 @@ just compare-glaurung-qfbv-repeated BASE CAND OUT # controlled cross-commit delt
 
 Each JSON records the corpus + config hash, per-instance outcome, budgets,
 backend stats, PAR-2, explicit `decided`/`decided_percent`, **disagreements**,
-and **model-replay failures**. Artifact version 27 retains version 16's exact
+and **model-replay failures**. Artifact version 28 retains version 16's exact
 floating-point millisecond values for each instance's word-level preprocessing,
 bit-blast, CNF encode/inprocess, SAT, model lift, and cold total, plus corpus
 totals and p50/p95 distributions. Its `client_comparison` block reports the
@@ -180,6 +180,12 @@ publishable end-to-end client ratios.
 Version 27 enforces ADR-0143's production/diagnostic boundary, records the
 profiling flag in configuration identity, and prevents repetition summaries
 from mixing v26's accidental diagnostic overhead with production timings.
+Version 28 adds a complete sharing-aware scalar Bool/QF_BV operator inventory
+to both the original and post-word query-shape snapshots. It classifies
+arithmetic, bitwise, shifts, comparisons, structural operators, equality, and
+`ite` individually, retains an explicit `other` bucket, and publishes
+per-instance plus corpus totals. Use the post-word inventory—not lexical source
+counts—to select a rewrite or lowering experiment.
 A comparable run requires zero errors, zero disagreements, zero replay failures,
 and the declared decided-rate threshold; only then is timing a performance
 signal.

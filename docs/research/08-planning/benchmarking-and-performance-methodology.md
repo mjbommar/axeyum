@@ -247,6 +247,14 @@ records the contract and the first measured baselines.
   be replaced by a versioned profile after real-capture admission measurement,
   but never silently loosened to preserve a timing result. Wall timeout remains
   a non-deterministic safety backstop.
+- Artifact version 28 closes the post-word operator-attribution gap exposed by
+  the accepted Glaurung v3 rewrite. Both untouched and selected-policy DAGs now
+  carry a complete unique-node inventory for scalar Bool/QF_BV arithmetic,
+  bitwise, shifts, comparisons, structural operators, equality, and `ite`, plus
+  an explicit `other` bucket. Per-instance inventories allow family and outlier
+  correlation with measured AIG/CNF/SAT costs. This inventory is observational
+  and outside the additive client timing boundary; a new optimization must be
+  selected from the post-word counts rather than lexical source frequency.
 - **Primary client QF_BV target (2026-07-13): Glaurung binary analysis.** Capture
   and minimize the real lifter-produced path conditions, preserving their
   extract/concat, mixed machine-width, and memory-derived shape. This client

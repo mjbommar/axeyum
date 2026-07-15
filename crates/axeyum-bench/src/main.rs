@@ -51,7 +51,7 @@ mod run {
     use serde_json::{Value as JsonValue, json};
     use sha2::{Digest, Sha256};
 
-    const ARTIFACT_VERSION: u32 = 27;
+    const ARTIFACT_VERSION: u32 = 28;
     const CORPUS_MANIFEST_VERSION: u64 = 1;
     const CONTENT_HASH_PREFIX: &str = "sha256:";
     const DETERMINISM_PROFILE: &str = "axeyum-bench-fixed-seeds-v1";
@@ -618,6 +618,203 @@ mod run {
     /// are over unique reachable DAG nodes, so parser-preserved sharing cannot
     /// inflate an operator family by repeated tree expansion.
     #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+    struct QfBvOperatorCounts {
+        bool_not: u64,
+        bool_and: u64,
+        bool_or: u64,
+        bool_xor: u64,
+        bool_implies: u64,
+        bv_not: u64,
+        bv_and: u64,
+        bv_or: u64,
+        bv_xor: u64,
+        bv_nand: u64,
+        bv_nor: u64,
+        bv_xnor: u64,
+        bv_neg: u64,
+        bv_add: u64,
+        bv_sub: u64,
+        bv_mul: u64,
+        bv_udiv: u64,
+        bv_urem: u64,
+        bv_sdiv: u64,
+        bv_srem: u64,
+        bv_smod: u64,
+        bv_shl: u64,
+        bv_lshr: u64,
+        bv_ashr: u64,
+        bv_ult: u64,
+        bv_ule: u64,
+        bv_ugt: u64,
+        bv_uge: u64,
+        bv_slt: u64,
+        bv_sle: u64,
+        bv_sgt: u64,
+        bv_sge: u64,
+        eq: u64,
+        ite: u64,
+        bv_comp: u64,
+        extract: u64,
+        concat: u64,
+        zero_extend: u64,
+        sign_extend: u64,
+        rotate_left: u64,
+        rotate_right: u64,
+        other: u64,
+    }
+
+    impl QfBvOperatorCounts {
+        fn record(&mut self, op: Op) {
+            let counter = match op {
+                Op::BoolNot => &mut self.bool_not,
+                Op::BoolAnd => &mut self.bool_and,
+                Op::BoolOr => &mut self.bool_or,
+                Op::BoolXor => &mut self.bool_xor,
+                Op::BoolImplies => &mut self.bool_implies,
+                Op::BvNot => &mut self.bv_not,
+                Op::BvAnd => &mut self.bv_and,
+                Op::BvOr => &mut self.bv_or,
+                Op::BvXor => &mut self.bv_xor,
+                Op::BvNand => &mut self.bv_nand,
+                Op::BvNor => &mut self.bv_nor,
+                Op::BvXnor => &mut self.bv_xnor,
+                Op::BvNeg => &mut self.bv_neg,
+                Op::BvAdd => &mut self.bv_add,
+                Op::BvSub => &mut self.bv_sub,
+                Op::BvMul => &mut self.bv_mul,
+                Op::BvUdiv => &mut self.bv_udiv,
+                Op::BvUrem => &mut self.bv_urem,
+                Op::BvSdiv => &mut self.bv_sdiv,
+                Op::BvSrem => &mut self.bv_srem,
+                Op::BvSmod => &mut self.bv_smod,
+                Op::BvShl => &mut self.bv_shl,
+                Op::BvLshr => &mut self.bv_lshr,
+                Op::BvAshr => &mut self.bv_ashr,
+                Op::BvUlt => &mut self.bv_ult,
+                Op::BvUle => &mut self.bv_ule,
+                Op::BvUgt => &mut self.bv_ugt,
+                Op::BvUge => &mut self.bv_uge,
+                Op::BvSlt => &mut self.bv_slt,
+                Op::BvSle => &mut self.bv_sle,
+                Op::BvSgt => &mut self.bv_sgt,
+                Op::BvSge => &mut self.bv_sge,
+                Op::Eq => &mut self.eq,
+                Op::Ite => &mut self.ite,
+                Op::BvComp => &mut self.bv_comp,
+                Op::Extract { .. } => &mut self.extract,
+                Op::Concat => &mut self.concat,
+                Op::ZeroExt { .. } => &mut self.zero_extend,
+                Op::SignExt { .. } => &mut self.sign_extend,
+                Op::RotateLeft { .. } => &mut self.rotate_left,
+                Op::RotateRight { .. } => &mut self.rotate_right,
+                _ => &mut self.other,
+            };
+            *counter = counter.saturating_add(1);
+        }
+
+        fn applications(&self) -> u64 {
+            [
+                self.bool_not,
+                self.bool_and,
+                self.bool_or,
+                self.bool_xor,
+                self.bool_implies,
+                self.bv_not,
+                self.bv_and,
+                self.bv_or,
+                self.bv_xor,
+                self.bv_nand,
+                self.bv_nor,
+                self.bv_xnor,
+                self.bv_neg,
+                self.bv_add,
+                self.bv_sub,
+                self.bv_mul,
+                self.bv_udiv,
+                self.bv_urem,
+                self.bv_sdiv,
+                self.bv_srem,
+                self.bv_smod,
+                self.bv_shl,
+                self.bv_lshr,
+                self.bv_ashr,
+                self.bv_ult,
+                self.bv_ule,
+                self.bv_ugt,
+                self.bv_uge,
+                self.bv_slt,
+                self.bv_sle,
+                self.bv_sgt,
+                self.bv_sge,
+                self.eq,
+                self.ite,
+                self.bv_comp,
+                self.extract,
+                self.concat,
+                self.zero_extend,
+                self.sign_extend,
+                self.rotate_left,
+                self.rotate_right,
+                self.other,
+            ]
+            .into_iter()
+            .fold(0, u64::saturating_add)
+        }
+
+        fn merge(&mut self, other: Self) {
+            macro_rules! merge_fields {
+                ($($field:ident),+ $(,)?) => {
+                    $(self.$field = self.$field.saturating_add(other.$field);)+
+                };
+            }
+            merge_fields!(
+                bool_not,
+                bool_and,
+                bool_or,
+                bool_xor,
+                bool_implies,
+                bv_not,
+                bv_and,
+                bv_or,
+                bv_xor,
+                bv_nand,
+                bv_nor,
+                bv_xnor,
+                bv_neg,
+                bv_add,
+                bv_sub,
+                bv_mul,
+                bv_udiv,
+                bv_urem,
+                bv_sdiv,
+                bv_srem,
+                bv_smod,
+                bv_shl,
+                bv_lshr,
+                bv_ashr,
+                bv_ult,
+                bv_ule,
+                bv_ugt,
+                bv_uge,
+                bv_slt,
+                bv_sle,
+                bv_sgt,
+                bv_sge,
+                eq,
+                ite,
+                bv_comp,
+                extract,
+                concat,
+                zero_extend,
+                sign_extend,
+                rotate_left,
+                rotate_right,
+                other,
+            );
+        }
+    }
+
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
     struct QueryShapeSample {
         dag_nodes: u64,
         tree_nodes: u64,
@@ -654,6 +851,7 @@ mod run {
         extract_sign_ext_high_region: u64,
         extract_sign_ext_straddling: u64,
         max_nested_extract_depth: u64,
+        qfbv_operators: QfBvOperatorCounts,
     }
 
     impl QueryShapeSample {
@@ -682,6 +880,7 @@ mod run {
                     continue;
                 };
                 stack.extend(args.iter().copied());
+                sample.qfbv_operators.record(*op);
                 match *op {
                     Op::Extract { hi, lo } => sample.record_extract(arena, args[0], hi, lo),
                     Op::Concat => sample.concats += 1,
@@ -1483,6 +1682,78 @@ mod run {
         samples.iter().map(select).fold(0, u64::saturating_add)
     }
 
+    fn qfbv_operator_record(counts: &QfBvOperatorCounts) -> JsonValue {
+        json!({
+            "applications": counts.applications(),
+            "boolean": {
+                "not": counts.bool_not,
+                "and": counts.bool_and,
+                "or": counts.bool_or,
+                "xor": counts.bool_xor,
+                "implies": counts.bool_implies,
+            },
+            "bit_vector": {
+                "bitwise": {
+                    "not": counts.bv_not,
+                    "and": counts.bv_and,
+                    "or": counts.bv_or,
+                    "xor": counts.bv_xor,
+                    "nand": counts.bv_nand,
+                    "nor": counts.bv_nor,
+                    "xnor": counts.bv_xnor,
+                },
+                "arithmetic": {
+                    "neg": counts.bv_neg,
+                    "add": counts.bv_add,
+                    "sub": counts.bv_sub,
+                    "mul": counts.bv_mul,
+                    "udiv": counts.bv_udiv,
+                    "urem": counts.bv_urem,
+                    "sdiv": counts.bv_sdiv,
+                    "srem": counts.bv_srem,
+                    "smod": counts.bv_smod,
+                },
+                "shifts": {
+                    "shl": counts.bv_shl,
+                    "lshr": counts.bv_lshr,
+                    "ashr": counts.bv_ashr,
+                },
+                "comparisons": {
+                    "ult": counts.bv_ult,
+                    "ule": counts.bv_ule,
+                    "ugt": counts.bv_ugt,
+                    "uge": counts.bv_uge,
+                    "slt": counts.bv_slt,
+                    "sle": counts.bv_sle,
+                    "sgt": counts.bv_sgt,
+                    "sge": counts.bv_sge,
+                },
+                "structural": {
+                    "comp": counts.bv_comp,
+                    "extract": counts.extract,
+                    "concat": counts.concat,
+                    "zero_extend": counts.zero_extend,
+                    "sign_extend": counts.sign_extend,
+                    "rotate_left": counts.rotate_left,
+                    "rotate_right": counts.rotate_right,
+                },
+            },
+            "polymorphic": {
+                "eq": counts.eq,
+                "ite": counts.ite,
+            },
+            "other": counts.other,
+        })
+    }
+
+    fn qfbv_operator_totals(samples: &[QueryShapeSample]) -> QfBvOperatorCounts {
+        let mut totals = QfBvOperatorCounts::default();
+        for sample in samples {
+            totals.merge(sample.qfbv_operators);
+        }
+        totals
+    }
+
     fn query_shape_snapshot_record(sample: &QueryShapeSample, counting_unit: &str) -> JsonValue {
         json!({
             "counting_unit": counting_unit,
@@ -1506,6 +1777,7 @@ mod run {
                 "select": sample.selects,
                 "store": sample.stores,
             },
+            "qfbv_operator_inventory": qfbv_operator_record(&sample.qfbv_operators),
             "extract_demand": {
                 "result_bits": sample.extract_result_bits,
                 "source_bits": sample.extract_source_bits,
@@ -1714,6 +1986,7 @@ mod run {
                 "select": sum_shape(samples, |sample| sample.selects),
                 "store": sum_shape(samples, |sample| sample.stores),
             },
+            "qfbv_operator_totals": qfbv_operator_record(&qfbv_operator_totals(samples)),
             "operator_distributions": {
                 "extract": count_distribution_record(samples, |sample| sample.extracts),
                 "concat": count_distribution_record(samples, |sample| sample.concats),
@@ -1725,6 +1998,34 @@ mod run {
                     samples,
                     |sample| sample.selects + sample.stores,
                 ),
+                "bv_add_sub": count_distribution_record(
+                    samples,
+                    |sample| sample.qfbv_operators.bv_add + sample.qfbv_operators.bv_sub,
+                ),
+                "bv_bitwise": count_distribution_record(samples, |sample| {
+                    let counts = sample.qfbv_operators;
+                    counts.bv_not
+                        + counts.bv_and
+                        + counts.bv_or
+                        + counts.bv_xor
+                        + counts.bv_nand
+                        + counts.bv_nor
+                        + counts.bv_xnor
+                }),
+                "bv_comparisons": count_distribution_record(samples, |sample| {
+                    let counts = sample.qfbv_operators;
+                    counts.bv_ult
+                        + counts.bv_ule
+                        + counts.bv_ugt
+                        + counts.bv_uge
+                        + counts.bv_slt
+                        + counts.bv_sle
+                        + counts.bv_sgt
+                        + counts.bv_sge
+                }),
+                "ite": count_distribution_record(samples, |sample| {
+                    sample.qfbv_operators.ite
+                }),
             },
             "extract_demand": {
                 "result_bits": extract_result_bits,
@@ -6246,6 +6547,75 @@ mod run {
                 record["formula_distributions"]["dag_nodes"]["p50"],
                 json!(shape.dag_nodes)
             );
+            assert_eq!(
+                record["qfbv_operator_totals"]["bit_vector"]["structural"]["extract"],
+                json!(shape.extracts)
+            );
+            assert_eq!(
+                record["qfbv_operator_totals"]["other"],
+                json!(shape.selects + shape.stores)
+            );
+        }
+
+        #[test]
+        fn qfbv_operator_inventory_classifies_every_scalar_operator() {
+            let operators = [
+                Op::BoolNot,
+                Op::BoolAnd,
+                Op::BoolOr,
+                Op::BoolXor,
+                Op::BoolImplies,
+                Op::BvNot,
+                Op::BvAnd,
+                Op::BvOr,
+                Op::BvXor,
+                Op::BvNand,
+                Op::BvNor,
+                Op::BvXnor,
+                Op::BvNeg,
+                Op::BvAdd,
+                Op::BvSub,
+                Op::BvMul,
+                Op::BvUdiv,
+                Op::BvUrem,
+                Op::BvSdiv,
+                Op::BvSrem,
+                Op::BvSmod,
+                Op::BvShl,
+                Op::BvLshr,
+                Op::BvAshr,
+                Op::BvUlt,
+                Op::BvUle,
+                Op::BvUgt,
+                Op::BvUge,
+                Op::BvSlt,
+                Op::BvSle,
+                Op::BvSgt,
+                Op::BvSge,
+                Op::Eq,
+                Op::Ite,
+                Op::BvComp,
+                Op::Extract { hi: 7, lo: 0 },
+                Op::Concat,
+                Op::ZeroExt { by: 8 },
+                Op::SignExt { by: 8 },
+                Op::RotateLeft { by: 1 },
+                Op::RotateRight { by: 1 },
+            ];
+            let mut counts = QfBvOperatorCounts::default();
+            for op in operators {
+                counts.record(op);
+            }
+            assert_eq!(counts.applications(), usize_to_u64(operators.len()));
+            assert_eq!(counts.other, 0);
+
+            counts.record(Op::Select);
+            let record = qfbv_operator_record(&counts);
+            assert_eq!(record["applications"], json!(operators.len() + 1));
+            assert_eq!(record["bit_vector"]["arithmetic"]["add"], json!(1));
+            assert_eq!(record["bit_vector"]["comparisons"]["sge"], json!(1));
+            assert_eq!(record["polymorphic"]["ite"], json!(1));
+            assert_eq!(record["other"], json!(1));
         }
 
         #[test]

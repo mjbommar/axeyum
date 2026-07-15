@@ -207,3 +207,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0151](adr-0151-dense-term-bit-lift-index.md) | Dense term-bit lift index: map each dense term ID to its contiguous range in the authoritative binding vector instead of inserting every bit into an ordered map | accepted |
 | [0152](adr-0152-range-backed-term-lowering-memo.md) | Range-backed term-lowering memo: use dense completed-term ranges and authoritative bindings instead of retaining a second ordered map of per-term bit vectors | deferred |
 | [0153](adr-0153-fold-bvadd-constant-chains.md) | Fold constants across associative bit-vector additions: combine mixed-chain constant leaves modulo width before rebuilding the canonical AC tree | accepted |
+| [0154](adr-0154-post-word-qfbv-operator-inventory.md) | Post-word QF_BV operator inventory: count every scalar Bool/BV operator over unique original and rewritten DAGs before selecting the next Glaurung optimization | accepted |

@@ -90,9 +90,9 @@ artifact_path, policy = sys.argv[1:]
 with open(artifact_path, encoding="utf-8") as handle:
     artifact = json.load(handle)
 
-if artifact.get("version") != 27:
+if artifact.get("version") != 28:
     raise SystemExit(
-        f"glaurung-qfbv-regular: expected artifact v27, got {artifact.get('version')!r}"
+        f"glaurung-qfbv-regular: expected artifact v28, got {artifact.get('version')!r}"
     )
 
 summary = artifact["summary"]
