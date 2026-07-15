@@ -33,8 +33,10 @@ fn incremental_stats_snapshot_and_delta_cover_the_client_pipeline() {
     assert!(assertion_delta.cnf_variables > 0);
     assert!(assertion_delta.cnf_clauses > 0);
     assert!(assertion_delta.cnf_gate_mix.and_nodes_synced > 0);
-    assert!(assertion_delta.cnf_gate_mix.definition_clauses > 0);
-    assert_eq!(assertion_delta.cnf_gate_mix.root_clauses, 1);
+    assert_eq!(assertion_delta.cnf_gate_mix.definition_clauses, 0);
+    assert_eq!(assertion_delta.cnf_gate_mix.root_clauses, 8);
+    assert_eq!(assertion_delta.cnf_gate_mix.fused_positive_and_roots, 1);
+    assert!(assertion_delta.cnf_gate_mix.fused_positive_and_nodes > 0);
     assert_eq!(
         assertion_delta.cnf_gate_mix.constant_clauses
             + assertion_delta.cnf_gate_mix.definition_clauses

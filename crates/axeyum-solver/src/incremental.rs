@@ -52,7 +52,9 @@ const MAX_WARM_ARRAY_UF_APPS_PER_ROOT: usize = 64;
 /// retained objects since the earlier snapshot.
 ///
 /// The timers are observational only: enabling this surface does not select a
-/// preprocessing policy, add an extra traversal, or change solver semantics.
+/// preprocessing policy or change solver semantics. Gate-mix profiling does
+/// perform diagnostic shape scans; ordinary constructors do not pay for those
+/// counters or opportunity traversals.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct IncrementalBvStats {

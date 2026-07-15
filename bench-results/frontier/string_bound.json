@@ -4,16 +4,16 @@
   "frontier": 8,
   "budget_ms": 4000,
   "curve": [
-    { "n": 2, "decided": true, "status": "sat", "solve_ms": 13.7 },
-    { "n": 3, "decided": true, "status": "sat", "solve_ms": 6.7 },
+    { "n": 2, "decided": true, "status": "sat", "solve_ms": 6.6 },
+    { "n": 3, "decided": true, "status": "sat", "solve_ms": 6.6 },
     { "n": 4, "decided": true, "status": "sat", "solve_ms": 6.9 },
-    { "n": 5, "decided": true, "status": "sat", "solve_ms": 7.1 },
-    { "n": 6, "decided": true, "status": "sat", "solve_ms": 6.5 },
-    { "n": 7, "decided": true, "status": "sat", "solve_ms": 6.8 },
-    { "n": 8, "decided": true, "status": "sat", "solve_ms": 7.1 },
-    { "n": 9, "decided": false, "status": "unknown", "solve_ms": 8.9 },
-    { "n": 10, "decided": false, "status": "unknown", "solve_ms": 10.4 },
-    { "n": 11, "decided": false, "status": "unknown", "solve_ms": 11.4 },
-    { "n": 12, "decided": false, "status": "unknown", "solve_ms": 10.7 }
+    { "n": 5, "decided": true, "status": "sat", "solve_ms": 8.1 },
+    { "n": 6, "decided": true, "status": "sat", "solve_ms": 6.6 },
+    { "n": 7, "decided": true, "status": "sat", "solve_ms": 7.7 },
+    { "n": 8, "decided": true, "status": "sat", "solve_ms": 7.7 },
+    { "n": 9, "decided": false, "status": "unknown", "solve_ms": 9.9 },
+    { "n": 10, "decided": false, "status": "unknown", "solve_ms": 10.8 },
+    { "n": 11, "decided": false, "status": "unknown", "solve_ms": 9.7 },
+    { "n": 12, "decided": false, "status": "unknown", "solve_ms": 9.6 }
   ]
 }

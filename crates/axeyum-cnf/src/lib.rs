@@ -883,6 +883,12 @@ pub struct IncrementalCnfStats {
     pub direct_not_ite_leaves: u64,
     /// Asserted roots that are complemented AND nodes.
     pub direct_negative_and_roots: u64,
+    /// Positive AND roots actually encoded through the direct assertion path.
+    pub fused_positive_and_roots: u64,
+    /// Positive AND nodes bypassed by direct root-tree flattening.
+    pub fused_positive_and_nodes: u64,
+    /// Structural XOR leaves encoded directly without their outer/helper nodes.
+    pub fused_xor_leaves: u64,
 }
 
 impl IncrementalCnfStats {
@@ -939,6 +945,15 @@ impl IncrementalCnfStats {
             direct_negative_and_roots: self
                 .direct_negative_and_roots
                 .saturating_sub(earlier.direct_negative_and_roots),
+            fused_positive_and_roots: self
+                .fused_positive_and_roots
+                .saturating_sub(earlier.fused_positive_and_roots),
+            fused_positive_and_nodes: self
+                .fused_positive_and_nodes
+                .saturating_sub(earlier.fused_positive_and_nodes),
+            fused_xor_leaves: self
+                .fused_xor_leaves
+                .saturating_sub(earlier.fused_xor_leaves),
         }
     }
 }
@@ -970,10 +985,13 @@ impl IncrementalCnfStats {
 /// evaluation from the input bits rather than reading internal node variables —
 /// the same recompute-from-inputs discipline the one-shot sparse path uses.
 ///
-/// The gate-fusion optimizations of [`tseitin_encode`] (XOR/mux/and-tree
-/// detection) are deliberately *not* ported: they rely on global single-use
-/// counts that are not stable as the AIG grows, so they are not sound to apply
-/// incrementally.
+/// Asserted positive AND roots are flattened directly into selector-guarded
+/// conjunct clauses. Structural XOR leaves are likewise asserted with their two
+/// truth clauses. These root-only transformations are sound under future reuse:
+/// they do not mark any node definition as emitted, so a later opposite-polarity
+/// or differently scoped occurrence can still trigger the ordinary lazy
+/// definition. Other [`tseitin_encode`] gate fusions remain unported because
+/// their global single-use plans are not stable as the AIG grows.
 #[derive(Debug, Default)]
 pub struct IncrementalCnf {
     sat: IncrementalSat,
@@ -1242,6 +1260,117 @@ impl IncrementalCnf {
         }
     }
 
+    fn direct_positive_root_leaves(
+        aig: &Aig,
+        root: AigLit,
+    ) -> Option<(BTreeSet<AigNodeId>, BTreeSet<AigLit>)> {
+        if root.is_inverted() || !matches!(aig.node(root.node()), Some(AigNode::And(_, _))) {
+            return None;
+        }
+
+        let mut stack = vec![root];
+        let mut and_nodes = BTreeSet::new();
+        let mut leaves = BTreeSet::new();
+        while let Some(lit) = stack.pop() {
+            if !lit.is_inverted()
+                && let Some(node @ AigNode::And(lhs, rhs)) = aig.node(lit.node())
+            {
+                // Preserve the XOR helper shape as one logical leaf. Unlike
+                // global one-shot planning, this recognition does not depend
+                // on current use counts.
+                if detect_xor_gate(aig, node).is_some() || detect_not_ite_gate(aig, node).is_some()
+                {
+                    leaves.insert(lit);
+                } else if and_nodes.insert(lit.node()) {
+                    stack.push(lhs);
+                    stack.push(rhs);
+                }
+            } else {
+                leaves.insert(lit);
+            }
+        }
+        Some((and_nodes, leaves))
+    }
+
+    fn add_root_clause(
+        &mut self,
+        selector: Option<CnfVar>,
+        aig_lits: &[AigLit],
+    ) -> Result<(), SatError> {
+        let mut lits = Vec::with_capacity(aig_lits.len() + usize::from(selector.is_some()));
+        if let Some(selector) = selector {
+            lits.push(CnfLit::positive(selector).negated());
+        }
+        lits.extend(aig_lits.iter().copied().map(|lit| self.lit(lit)));
+        self.sat.add_clause(CnfClause::new(lits))?;
+        if self.profiling_enabled {
+            self.stats.root_clauses = self.stats.root_clauses.saturating_add(1);
+        }
+        Ok(())
+    }
+
+    fn assert_direct_xor_leaf(
+        &mut self,
+        aig: &Aig,
+        leaf: AigLit,
+        gate: XorGate,
+        selector: Option<CnfVar>,
+    ) -> Result<(), SatError> {
+        let clauses = if leaf.is_inverted() {
+            [
+                [gate.lhs.negated(), gate.rhs],
+                [gate.lhs, gate.rhs.negated()],
+            ]
+        } else {
+            [
+                [gate.lhs, gate.rhs],
+                [gate.lhs.negated(), gate.rhs.negated()],
+            ]
+        };
+        for clause in clauses {
+            for lit in clause {
+                self.require(aig, lit.node(), !lit.is_inverted())?;
+            }
+            self.add_root_clause(selector, &clause)?;
+        }
+        if self.profiling_enabled {
+            self.stats.fused_xor_leaves = self.stats.fused_xor_leaves.saturating_add(1);
+        }
+        Ok(())
+    }
+
+    fn assert_direct_positive_root(
+        &mut self,
+        aig: &Aig,
+        root: AigLit,
+        selector: Option<CnfVar>,
+    ) -> Result<bool, SatError> {
+        let Some((and_nodes, leaves)) = Self::direct_positive_root_leaves(aig, root) else {
+            return Ok(false);
+        };
+        if self.profiling_enabled {
+            self.stats.fused_positive_and_roots =
+                self.stats.fused_positive_and_roots.saturating_add(1);
+            self.stats.fused_positive_and_nodes = self
+                .stats
+                .fused_positive_and_nodes
+                .saturating_add(usize_to_u64_saturating(and_nodes.len()));
+        }
+
+        for leaf in leaves {
+            let xor_gate = aig
+                .node(leaf.node())
+                .and_then(|node| detect_xor_gate(aig, node));
+            if let Some(gate) = xor_gate {
+                self.assert_direct_xor_leaf(aig, leaf, gate, selector)?;
+            } else {
+                self.require(aig, leaf.node(), !leaf.is_inverted())?;
+                self.add_root_clause(selector, &[leaf])?;
+            }
+        }
+        Ok(true)
+    }
+
     /// Encodes any new AIG nodes, then asserts `root`.
     ///
     /// When `selector` is `Some`, the assertion is guarded so it holds only
@@ -1262,18 +1391,13 @@ impl IncrementalCnf {
         if self.profiling_enabled {
             self.record_direct_root_opportunity(aig, root);
         }
+        if self.assert_direct_positive_root(aig, root, selector)? {
+            return Ok(());
+        }
         // The asserted clause contains `root` positively, so the root node
         // occurs positively iff it is not inverted: emit that polarity half.
         self.require(aig, root.node(), !root.is_inverted())?;
-        let root_lit = self.lit(root);
-        let clause = match selector {
-            None => CnfClause::new(vec![root_lit]),
-            Some(sel) => CnfClause::new(vec![CnfLit::positive(sel).negated(), root_lit]),
-        };
-        self.sat.add_clause(clause)?;
-        if self.profiling_enabled {
-            self.stats.root_clauses = self.stats.root_clauses.saturating_add(1);
-        }
+        self.add_root_clause(selector, &[root])?;
         Ok(())
     }
 
@@ -4124,20 +4248,23 @@ p cnf 1 2
         let stats = cnf.stats().delta_since(before);
 
         assert_eq!(stats.and_nodes_synced, 3);
-        assert_eq!(stats.up_half_definitions, 3);
+        assert_eq!(stats.up_half_definitions, 0);
         assert_eq!(stats.down_half_definitions, 0);
-        assert_eq!(stats.and_tree_half_definitions, 1);
-        assert_eq!(stats.binary_and_half_definitions, 2);
+        assert_eq!(stats.and_tree_half_definitions, 0);
+        assert_eq!(stats.binary_and_half_definitions, 0);
         assert_eq!(stats.xor_half_definitions, 0);
         assert_eq!(stats.not_ite_half_definitions, 0);
         assert_eq!(stats.not_and_half_definitions, 0);
         assert_eq!(stats.constant_clauses, 1);
-        assert_eq!(stats.definition_clauses, 6);
-        assert_eq!(stats.root_clauses, 1);
+        assert_eq!(stats.definition_clauses, 0);
+        assert_eq!(stats.root_clauses, 4);
         assert_eq!(stats.direct_positive_and_roots, 1);
         assert_eq!(stats.direct_positive_and_nodes, 3);
         assert_eq!(stats.direct_positive_and_leaves, 4);
         assert_eq!(stats.direct_negative_and_roots, 0);
+        assert_eq!(stats.fused_positive_and_roots, 1);
+        assert_eq!(stats.fused_positive_and_nodes, 3);
+        assert_eq!(stats.fused_xor_leaves, 0);
         assert_eq!(
             stats.xor_half_definitions
                 + stats.not_ite_half_definitions
@@ -4178,7 +4305,73 @@ p cnf 1 2
         assert_eq!(stats.direct_positive_and_leaves, 1);
         assert_eq!(stats.direct_xor_leaves, 1);
         assert_eq!(stats.direct_not_ite_leaves, 0);
-        assert!(stats.xor_half_definitions > 0);
+        assert_eq!(stats.xor_half_definitions, 0);
+        assert_eq!(stats.definition_clauses, 0);
+        assert_eq!(stats.root_clauses, 2);
+        assert_eq!(stats.fused_positive_and_roots, 1);
+        assert_eq!(stats.fused_positive_and_nodes, 0);
+        assert_eq!(stats.fused_xor_leaves, 1);
+    }
+
+    #[test]
+    fn incremental_cnf_direct_positive_tree_reduces_clauses() {
+        let mut aig = Aig::new();
+        let a = aig.input("a");
+        let b = aig.input("b");
+        let c = aig.input("c");
+        let d = aig.input("d");
+        let ab = aig.and(a, b);
+        let cd = aig.and(c, d);
+        let root = aig.and(ab, cd);
+        let mut cnf = IncrementalCnf::new();
+
+        cnf.assert_root(&aig, root, None).unwrap();
+
+        // One constant clause plus one direct assertion per unique leaf. The
+        // primitive incremental encoding used seven non-constant clauses here.
+        assert_eq!(cnf.clause_count(), 5);
+        assert!(matches!(cnf.solve(&[], None).unwrap(), SatResult::Sat(_)));
+    }
+
+    #[test]
+    fn incremental_cnf_direct_root_remains_sound_under_opposite_reuse() {
+        let mut aig = Aig::new();
+        let a = aig.input("a");
+        let b = aig.input("b");
+        let root = aig.and(a, b);
+        let mut cnf = IncrementalCnf::new();
+        let selector = cnf.fresh_selector().unwrap();
+
+        // The positive root is direct and scoped. Its ordinary node definition
+        // must remain available when the opposite polarity is added later.
+        cnf.assert_root(&aig, root, Some(selector)).unwrap();
+        cnf.assert_root(&aig, root.negated(), None).unwrap();
+
+        assert!(matches!(
+            cnf.solve(&[selector], None).unwrap(),
+            SatResult::Unsat(_)
+        ));
+        assert!(matches!(cnf.solve(&[], None).unwrap(), SatResult::Sat(_)));
+    }
+
+    #[test]
+    fn incremental_cnf_direct_xnor_clauses_are_scope_guarded() {
+        let mut aig = Aig::new();
+        let a = aig.input("a");
+        let b = aig.input("b");
+        let xnor = xor_lit(&mut aig, a, b).negated();
+        let mut cnf = IncrementalCnf::new();
+        let selector = cnf.fresh_selector().unwrap();
+
+        cnf.assert_root(&aig, xnor, Some(selector)).unwrap();
+        cnf.assert_root(&aig, a, None).unwrap();
+        cnf.assert_root(&aig, b.negated(), None).unwrap();
+
+        assert!(matches!(
+            cnf.solve(&[selector], None).unwrap(),
+            SatResult::Unsat(_)
+        ));
+        assert!(matches!(cnf.solve(&[], None).unwrap(), SatResult::Sat(_)));
     }
 
     #[test]
@@ -4344,10 +4537,10 @@ p cnf 1 2
     }
 
     #[test]
-    fn incremental_pg_emits_fewer_clauses_than_full_tseitin() {
-        // A positive AND chain uses every gate in one (positive) polarity, so
-        // lazy Plaisted–Greenbaum emits only the `v -> lhs & rhs` half — two
-        // clauses per AND instead of the full three — proving the polarity win.
+    fn incremental_direct_root_emits_fewer_clauses_than_full_tseitin() {
+        // A positive AND chain is asserted as one clause per unique leaf. No
+        // gate definition is needed unless a later assertion reuses a bypassed
+        // node in another polarity.
         let mut aig = Aig::new();
         let mut acc = aig.input("x0");
         let n_ands = 8usize;
@@ -4358,14 +4551,14 @@ p cnf 1 2
         let mut cnf = IncrementalCnf::new();
         cnf.assert_root(&aig, acc, None).expect("assert root");
 
-        // 1 const-false unit + 2 clauses per AND (up half only) + 1 root unit.
-        let lazy_pg = cnf.clause_count();
-        assert_eq!(lazy_pg, 1 + 2 * n_ands + 1);
+        // 1 const-false unit + one clause for each of n_ands + 1 inputs.
+        let direct = cnf.clause_count();
+        assert_eq!(direct, 1 + n_ands + 1);
         // Full both-polarity Tseitin would emit three clauses per AND.
         let full_tseitin = 1 + 3 * n_ands + 1;
         assert!(
-            lazy_pg < full_tseitin,
-            "lazy PG {lazy_pg} should beat full Tseitin {full_tseitin}"
+            direct < full_tseitin,
+            "direct root {direct} should beat full Tseitin {full_tseitin}"
         );
         assert!(matches!(
             cnf.solve(&[], None).expect("solve"),

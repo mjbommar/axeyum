@@ -1821,6 +1821,18 @@ mod run {
                 "incremental_cnf_direct_negative_and_roots".to_owned(),
                 u64_to_f64(gate_mix.direct_negative_and_roots),
             ),
+            (
+                "incremental_cnf_fused_positive_and_roots".to_owned(),
+                u64_to_f64(gate_mix.fused_positive_and_roots),
+            ),
+            (
+                "incremental_cnf_fused_positive_and_nodes".to_owned(),
+                u64_to_f64(gate_mix.fused_positive_and_nodes),
+            ),
+            (
+                "incremental_cnf_fused_xor_leaves".to_owned(),
+                u64_to_f64(gate_mix.fused_xor_leaves),
+            ),
         ]
     }
 
@@ -6567,11 +6579,13 @@ mod run {
                     .unwrap()
             };
             assert!(value("incremental_cnf_and_nodes_synced") > 0.0);
-            assert!(value("incremental_cnf_definition_clauses") > 0.0);
-            assert!((value("incremental_cnf_root_clauses") - 1.0).abs() < f64::EPSILON);
+            assert!(value("incremental_cnf_definition_clauses").abs() < f64::EPSILON);
+            assert!((value("incremental_cnf_root_clauses") - 2.0).abs() < f64::EPSILON);
             assert!(
                 (value("incremental_cnf_direct_positive_and_roots") - 1.0).abs() < f64::EPSILON
             );
+            assert!((value("incremental_cnf_fused_positive_and_roots") - 1.0).abs() < f64::EPSILON);
+            assert!((value("incremental_cnf_fused_positive_and_nodes") - 1.0).abs() < f64::EPSILON);
         }
 
         #[test]
