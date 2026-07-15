@@ -52,7 +52,7 @@ mod run {
     use serde_json::{Value as JsonValue, json};
     use sha2::{Digest, Sha256};
 
-    const ARTIFACT_VERSION: u32 = 28;
+    const ARTIFACT_VERSION: u32 = 29;
     const CORPUS_MANIFEST_VERSION: u64 = 1;
     const CONTENT_HASH_PREFIX: &str = "sha256:";
     const DETERMINISM_PROFILE: &str = "axeyum-bench-fixed-seeds-v1";
@@ -218,6 +218,7 @@ mod run {
         prove_unsat: bool,
         preprocess: bool,
         profile_bit_demand: bool,
+        demand_bit_slicing: bool,
         compare_z3: bool,
         require_in_process_z3: bool,
         require_reproducible_run: bool,
@@ -257,6 +258,7 @@ mod run {
             prove_unsat: false,
             preprocess: false,
             profile_bit_demand: false,
+            demand_bit_slicing: false,
             compare_z3: false,
             require_in_process_z3: false,
             require_reproducible_run: false,
@@ -366,6 +368,7 @@ mod run {
             "--prove-unsat" => parsed.prove_unsat = true,
             "--preprocess" => parsed.preprocess = true,
             "--profile-bit-demand" => parsed.profile_bit_demand = true,
+            "--demand-bit-slicing" => parsed.demand_bit_slicing = true,
             "--compare-z3" => {
                 #[cfg(feature = "z3")]
                 {
@@ -473,6 +476,9 @@ mod run {
         }
         if args.profile_bit_demand && !matches!(args.backend, BackendKind::SatBv) {
             return Err("`--profile-bit-demand` requires `--backend sat-bv`".to_owned());
+        }
+        if args.demand_bit_slicing && !matches!(args.backend, BackendKind::SatBv) {
+            return Err("`--demand-bit-slicing` requires `--backend sat-bv`".to_owned());
         }
         if args.require_deterministic_resources {
             if !matches!(args.backend, BackendKind::SatBv) {
@@ -592,6 +598,7 @@ mod run {
         aig_and_nodes_created: u64,
         bit_demand_analysis: f64,
         bit_demand_profile_complete: bool,
+        bit_demand_lowering_applied: bool,
         term_bit_requests: u64,
         term_bits_available: u64,
         term_bits_demanded: u64,
@@ -1019,6 +1026,7 @@ mod run {
                 aig_and_nodes_created: layers.aig_and_nodes_created,
                 bit_demand_analysis: layers.bit_demand_analysis.as_secs_f64(),
                 bit_demand_profile_complete: layers.bit_demand_profile_complete,
+                bit_demand_lowering_applied: layers.bit_demand_lowering_applied,
                 term_bit_requests: layers.term_bit_requests,
                 term_bits_available: layers.term_bits_available,
                 term_bits_demanded: layers.term_bits_demanded,
@@ -2248,6 +2256,10 @@ mod run {
             .iter()
             .filter(|sample| sample.bit_demand_profile_complete)
             .count();
+        let lowering_samples = samples
+            .iter()
+            .filter(|sample| sample.bit_demand_lowering_applied)
+            .count();
         let profile_complete = !samples.is_empty() && complete_samples == samples.len();
         if !profile_complete {
             let profile_mode = if complete_samples == 0 {
@@ -2258,6 +2270,8 @@ mod run {
             return json!({
                 "profile_complete": false,
                 "profile_mode": profile_mode,
+                "lowering_applied": false,
+                "lowering_applied_samples": lowering_samples,
                 "analysis_is_nested_in_bit_blast": true,
                 "analysis_s": samples.iter().map(|sample| sample.bit_demand_analysis).sum::<f64>(),
                 "analysis_distribution": JsonValue::Null,
@@ -2285,9 +2299,19 @@ mod run {
                 },
             });
         }
+        let lowering_applied = lowering_samples == samples.len();
+        let profile_mode = if lowering_applied {
+            "structural-lowering"
+        } else if lowering_samples == 0 {
+            "structural-observational"
+        } else {
+            "mixed"
+        };
         json!({
             "profile_complete": true,
-            "profile_mode": "structural",
+            "profile_mode": profile_mode,
+            "lowering_applied": lowering_applied,
+            "lowering_applied_samples": lowering_samples,
             "analysis_is_nested_in_bit_blast": true,
             "analysis_s": samples.iter().map(|sample| sample.bit_demand_analysis).sum::<f64>(),
             "analysis_distribution": timing_distribution_record(
@@ -2333,6 +2357,7 @@ mod run {
             return json!({
                 "profile_complete": false,
                 "profile_mode": "off",
+                "lowering_applied": false,
                 "analysis_is_nested_in_bit_blast": true,
                 "analysis_ms": sample.bit_demand_analysis * 1000.0,
                 "term": {
@@ -2361,7 +2386,12 @@ mod run {
         }
         json!({
             "profile_complete": true,
-            "profile_mode": "structural",
+            "profile_mode": if sample.bit_demand_lowering_applied {
+                "structural-lowering"
+            } else {
+                "structural-observational"
+            },
+            "lowering_applied": sample.bit_demand_lowering_applied,
             "analysis_is_nested_in_bit_blast": true,
             "analysis_ms": sample.bit_demand_analysis * 1000.0,
             "term": {
@@ -3110,6 +3140,7 @@ mod run {
             native_cdcl: args.native_cdcl,
             prove_unsat: args.prove_unsat,
             profile_bit_demand: args.profile_bit_demand,
+            demand_bit_slicing: args.demand_bit_slicing,
             ..SolverConfig::default()
         }
     }
@@ -4668,6 +4699,7 @@ mod run {
             "prove_unsat": args.prove_unsat,
             "preprocess": args.preprocess,
             "profile_bit_demand": args.profile_bit_demand,
+            "demand_bit_slicing": args.demand_bit_slicing,
             "limit": optional_limit(args.limit),
             "backend": identity.backend_name,
             "backend_kind": args.backend.as_str(),
@@ -5359,6 +5391,7 @@ mod run {
         update_hash(&mut hash, &[u8::from(args.prove_unsat)]);
         update_hash(&mut hash, &[u8::from(args.preprocess)]);
         update_hash(&mut hash, &[u8::from(args.profile_bit_demand)]);
+        update_hash(&mut hash, &[u8::from(args.demand_bit_slicing)]);
         update_hash(&mut hash, &[u8::from(args.compare_z3)]);
         update_hash(&mut hash, &[u8::from(args.require_in_process_z3)]);
         update_hash(&mut hash, &[u8::from(args.require_reproducible_run)]);
@@ -6424,6 +6457,8 @@ mod run {
                 ..LayerSample::default()
             }];
             let record = bit_demand_attribution_record(&samples);
+            assert_eq!(record["profile_mode"], json!("structural-observational"));
+            assert_eq!(record["lowering_applied"], json!(false));
             assert_eq!(record["analysis_distribution"]["p50_ms"], json!(0.5));
             assert_eq!(
                 record["term"]["demanded_over_available"],
@@ -6433,6 +6468,31 @@ mod run {
             assert_eq!(record["term"]["lowering_covers_demanded"], json!(true));
             assert_eq!(record["symbol"]["demanded_over_available"], json!(0.125));
             assert_eq!(record["symbol"]["lowered_over_demanded"], json!(8.0));
+        }
+
+        #[test]
+        fn bit_demand_attribution_distinguishes_production_slicing() {
+            let samples = [LayerSample {
+                bit_demand_profile_complete: true,
+                bit_demand_lowering_applied: true,
+                term_bit_requests: 25,
+                term_bits_available: 81,
+                term_bits_demanded: 25,
+                term_bits_lowered: 25,
+                symbol_bit_requests: 8,
+                symbol_bits_available: 64,
+                symbol_bits_demanded: 8,
+                symbol_bits_lowered: 8,
+                ..LayerSample::default()
+            }];
+            let corpus = bit_demand_attribution_record(&samples);
+            let instance = instance_bit_demand_record(&samples[0]);
+            assert_eq!(corpus["profile_mode"], json!("structural-lowering"));
+            assert_eq!(corpus["lowering_applied"], json!(true));
+            assert_eq!(corpus["lowering_applied_samples"], json!(1));
+            assert_eq!(corpus["term"]["lowered_over_demanded"], json!(1.0));
+            assert_eq!(instance["profile_mode"], json!("structural-lowering"));
+            assert_eq!(instance["lowering_applied"], json!(true));
         }
 
         #[test]

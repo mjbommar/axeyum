@@ -50,6 +50,7 @@ fn sat_bv_run_exposes_typed_layer_stats() {
     );
     assert!(layers.cnf_reachable_nodes > 0);
     assert!(layers.bit_demand_profile_complete);
+    assert!(!layers.bit_demand_lowering_applied);
     assert!(layers.term_bit_requests >= layers.term_bits_demanded);
     assert!(layers.term_bits_demanded <= layers.term_bits_available);
     assert_eq!(layers.term_bits_lowered, layers.term_bits_available);

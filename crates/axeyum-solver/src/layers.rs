@@ -45,6 +45,9 @@ pub struct BvLayerStats {
     pub bit_demand_analysis: Duration,
     /// Whether structural request/available/demanded statistics were computed.
     pub bit_demand_profile_complete: bool,
+    /// Whether demand-driven lowering, rather than observational profiling,
+    /// controlled which term and symbol bits were materialized.
+    pub bit_demand_lowering_applied: bool,
     /// Term-bit demand requests before unioning.
     pub term_bit_requests: u64,
     /// Bits in reachable terms before demand reduction.
@@ -125,6 +128,8 @@ impl BvLayerStats {
             bit_demand_analysis: lookup(stats, "bit_demand_analysis_ms")
                 .map_or(Duration::ZERO, ms_to_duration),
             bit_demand_profile_complete: lookup(stats, "bit_demand_profile_complete")
+                .is_some_and(|value| value >= 1.0),
+            bit_demand_lowering_applied: lookup(stats, "bit_demand_lowering_applied")
                 .is_some_and(|value| value >= 1.0),
             term_bit_requests: lookup(stats, "term_bit_requests").map_or(0, count_to_u64),
             term_bits_available: lookup(stats, "term_bits_available").map_or(0, count_to_u64),

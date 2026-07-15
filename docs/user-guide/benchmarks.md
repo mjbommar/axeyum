@@ -85,7 +85,7 @@ just compare-glaurung-qfbv-repeated BASE CAND OUT # controlled cross-commit delt
 
 Each JSON records the corpus + config hash, per-instance outcome, budgets,
 backend stats, PAR-2, explicit `decided`/`decided_percent`, **disagreements**,
-and **model-replay failures**. Artifact version 28 retains version 16's exact
+and **model-replay failures**. Artifact version 29 retains version 16's exact
 floating-point millisecond values for each instance's word-level preprocessing,
 bit-blast, CNF encode/inprocess, SAT, model lift, and cold total, plus corpus
 totals and p50/p95 distributions. Its `client_comparison` block reports the
@@ -99,6 +99,11 @@ exact extract-over-concat/extract/extension cancellation opportunities. The
 layer block now includes AIG-input/node and CNF-variable/clause p50/p95 sizes.
 Counts use unique nodes in the untouched parsed DAG; they are not distorted by
 preprocessing or repeated expansion of shared terms.
+Version 29 adds an explicit `demand_bit_slicing` configuration identity and
+distinguishes observational bit-demand profiles from production demand-driven
+lowering in both per-instance and aggregate attribution. Use
+`--demand-bit-slicing` only with `--backend sat-bv`; the policy remains
+off-by-default and every SAT result still replays against the original query.
 Version 19 separately times original-query SAT model replay and charges it to
 the cold total and Axeyum/Z3 comparison. `--prove-unsat` selects the
 proof-producing native core and makes every UNSAT fail closed unless its DRAT

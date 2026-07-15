@@ -88,6 +88,8 @@ default path until the real-corpus acceptance gate passes.
 - The benchmark artifact records whether production slicing was applied and
   reports demanded/lowered bits, AIG nodes, CNF variables/clauses, stage times,
   decisions, disagreements, and replay failures by Glaurung family.
+- Artifact v29 and its configuration hash distinguish this production policy
+  from the unchanged full lowerer and the observational demand profiler.
 - Five representative and full comparisons are 100% decided with zero errors,
   disagreements, or replay failures. `register-slice` and the whole corpus must
   improve AIG/CNF size and end-to-end time before the policy is accepted or

@@ -20,7 +20,8 @@ use web_time::Instant;
 use axeyum_bv::lower_terms;
 use axeyum_bv::{
     BitLowerError, BitLowering, first_unsupported_op, first_unsupported_sort,
-    lower_terms_with_deadline, lower_terms_with_deadline_profiled,
+    lower_terms_demanded_with_deadline, lower_terms_with_deadline,
+    lower_terms_with_deadline_profiled,
 };
 use axeyum_cnf::{
     BveOptions, CnfAssignment, CnfEncoding, CnfError, CnfFormula, CompactMap,
@@ -116,7 +117,9 @@ impl SatBvBackend {
         };
 
         let bit_blast_start = Instant::now();
-        let lowering_result = if config.profile_bit_demand {
+        let lowering_result = if config.demand_bit_slicing {
+            lower_terms_demanded_with_deadline(arena, assertions, deadline)
+        } else if config.profile_bit_demand {
             lower_terms_with_deadline_profiled(arena, assertions, deadline)
         } else {
             lower_terms_with_deadline(arena, assertions, deadline)
@@ -325,6 +328,11 @@ fn record_encoding_stats(stats: &mut SolveStats, lowering: &BitLowering, encodin
         stats,
         "bit_demand_profile_complete",
         u64::from(demand.profile_complete),
+    );
+    push_count(
+        stats,
+        "bit_demand_lowering_applied",
+        u64::from(demand.lowering_applied),
     );
     push_duration_ms(stats, "bit_demand_analysis_ms", demand.analysis);
     push_count(stats, "term_bit_requests", demand.term_bit_requests);

@@ -394,6 +394,7 @@ fn stats_report_phase5_layer_counts() {
         "aig_and_structural_hash_hits",
         "aig_and_nodes_created",
         "bit_demand_profile_complete",
+        "bit_demand_lowering_applied",
         "bit_demand_analysis_ms",
         "term_bit_requests",
         "term_bits_available",
@@ -422,6 +423,7 @@ fn stats_report_phase5_layer_counts() {
     }
     let layers = BvLayerStats::from_solve_stats(stats).expect("typed layer stats");
     assert!(!layers.bit_demand_profile_complete);
+    assert!(!layers.bit_demand_lowering_applied);
     assert_eq!(layers.bit_demand_analysis, Duration::ZERO);
     assert!(layers.term_bits_lowered > 0);
 }
@@ -441,10 +443,58 @@ fn structural_bit_demand_profile_is_explicitly_opt_in() {
     let stats = backend.last_stats().expect("stats recorded");
     let layers = BvLayerStats::from_solve_stats(stats).expect("typed layer stats");
     assert!(layers.bit_demand_profile_complete);
+    assert!(!layers.bit_demand_lowering_applied);
     assert_eq!(layers.term_bits_demanded, 25);
     assert_eq!(layers.term_bits_lowered, 81);
     assert_eq!(layers.symbol_bits_demanded, 8);
     assert_eq!(layers.symbol_bits_lowered, 64);
+}
+
+#[test]
+fn demand_driven_lowering_is_opt_in_replay_checked_and_decides_both_verdicts() {
+    let mut arena = TermArena::new();
+    let x_symbol = arena.declare("x", Sort::BitVec(64)).unwrap();
+    let x = arena.var(x_symbol);
+    let low = arena.extract(7, 0, x).unwrap();
+    let value = arena.bv_const(8, 0x5a).unwrap();
+    let equal = arena.eq(low, value).unwrap();
+    let config = SolverConfig::default()
+        .with_bit_demand_profile(true)
+        .with_demand_bit_slicing(true);
+    let mut backend = SatBvBackend::new();
+
+    let CheckResult::Sat(model) = backend.check(&arena, &[equal], &config).unwrap() else {
+        panic!("expected demand-lowered formula to be sat");
+    };
+    assert_eq!(
+        eval(&arena, equal, &model.to_assignment()).unwrap(),
+        Value::Bool(true),
+        "the sparse lifted model must replay against the original assertion"
+    );
+    assert_eq!(
+        model.get(x_symbol),
+        Some(Value::Bv {
+            width: 64,
+            value: 0x5a,
+        }),
+        "omitted high symbol bits are deterministically zero-completed"
+    );
+    let layers = BvLayerStats::from_solve_stats(backend.last_stats().unwrap()).unwrap();
+    assert!(layers.bit_demand_profile_complete);
+    assert!(layers.bit_demand_lowering_applied);
+    assert_eq!(layers.term_bits_demanded, 25);
+    assert_eq!(layers.term_bits_lowered, 25);
+    assert_eq!(layers.symbol_bits_demanded, 8);
+    assert_eq!(layers.symbol_bits_lowered, 8);
+
+    let other = arena.bv_const(8, 0xa5).unwrap();
+    let unequal_constraint = arena.eq(low, other).unwrap();
+    assert!(matches!(
+        backend
+            .check(&arena, &[equal, unequal_constraint], &config)
+            .unwrap(),
+        CheckResult::Unsat
+    ));
 }
 
 #[cfg(feature = "z3")]

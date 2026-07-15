@@ -187,6 +187,16 @@ pub struct SolverConfig {
     /// formulas. It never changes the circuit or verdict and is off by default;
     /// enable it only for relevant-bit diagnostics (ADR-0143).
     pub profile_bit_demand: bool,
+    /// Enables demand-driven cold-path bit lowering for the structurally local
+    /// operator subset defined by ADR-0157.
+    ///
+    /// The lowerer propagates live output-bit demand backward and materializes
+    /// only demanded term and symbol bits. Non-local operators remain explicit
+    /// conservative barriers, omitted model bits receive deterministic zero
+    /// completion, and every `sat` model is replayed against the original terms.
+    /// This experimental GQ4 lever is off by default. When enabled, its complete
+    /// structural-demand telemetry supersedes [`Self::profile_bit_demand`].
+    pub demand_bit_slicing: bool,
     /// When set, the bit-blasting BV backend may fall back to the CDCL(XOR)
     /// search core ([`axeyum_cnf::solve_with_xor_cdcl`]) after the batsat solve
     /// returns `unknown` (timeout/budget) on an XOR-structured formula
@@ -254,6 +264,7 @@ impl Default for SolverConfig {
             cnf_vivify: false,
             preprocess: true,
             profile_bit_demand: false,
+            demand_bit_slicing: false,
             xor_cdcl_fallback: false,
             lazy_bv: false,
             lazy_bv_abstract_ite: false,
@@ -349,6 +360,14 @@ impl SolverConfig {
     #[must_use]
     pub fn with_bit_demand_profile(mut self, profile: bool) -> Self {
         self.profile_bit_demand = profile;
+        self
+    }
+
+    /// Enables demand-driven cold-path bit lowering (GQ4, ADR-0157).
+    /// See [`SolverConfig::demand_bit_slicing`].
+    #[must_use]
+    pub fn with_demand_bit_slicing(mut self, enabled: bool) -> Self {
+        self.demand_bit_slicing = enabled;
         self
     }
 

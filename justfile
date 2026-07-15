@@ -146,7 +146,7 @@ bench-glaurung-qfbv-configured corpus_dir manifest tier="full" out="bench-result
 
 # Structural demand diagnostics are intentionally separate from client timing:
 # the observational analysis is nested in bit blast and can dominate a run.
-# Artifact v28 marks these profiles complete; production recipes above leave
+# Artifact v29 marks these profiles complete; production recipes above leave
 # the diagnostic off and publish structural demand fields as unavailable.
 bench-glaurung-qfbv-raw-demand-profile corpus_dir manifest tier="representative" out="bench-results/glaurung-qfbv-raw-demand-profile.json":
     mkdir -p "$(dirname '{{ out }}')"
@@ -155,6 +155,17 @@ bench-glaurung-qfbv-raw-demand-profile corpus_dir manifest tier="representative"
 bench-glaurung-qfbv-canonical-demand-profile corpus_dir manifest tier="representative" out="bench-results/glaurung-qfbv-canonical-demand-profile.json":
     mkdir -p "$(dirname '{{ out }}')"
     cargo run --release -p axeyum-bench --features z3 -- "{{ corpus_dir }}" --corpus-manifest "{{ manifest }}" --corpus-tier "{{ tier }}" --backend sat-bv --rewrite default --profile-bit-demand --compare-z3 --require-in-process-z3 --require-reproducible-run --require-deterministic-resources --timeout-ms 10000 --resource-limit 2000000 --node-budget 300000 --cnf-var-budget 3000000 --cnf-clause-budget 8000000 --jobs 1 --min-decided-percent 100 --logic QF_BV --out "{{ out }}"
+
+# GQ4's production experiment is a distinct policy from observational demand
+# profiling. The first recipe measures the whole selected tier; the second
+# isolates the capture's dominant register-slice family.
+bench-glaurung-qfbv-demand corpus_dir manifest tier="representative" out="bench-results/glaurung-qfbv-demand.json":
+    mkdir -p "$(dirname '{{ out }}')"
+    cargo run --release -p axeyum-bench --features z3 -- "{{ corpus_dir }}" --corpus-manifest "{{ manifest }}" --corpus-tier "{{ tier }}" --backend sat-bv --rewrite off --demand-bit-slicing --compare-z3 --require-in-process-z3 --require-reproducible-run --require-deterministic-resources --timeout-ms 10000 --resource-limit 2000000 --node-budget 300000 --cnf-var-budget 3000000 --cnf-clause-budget 8000000 --jobs 1 --min-decided-percent 100 --logic QF_BV --out "{{ out }}"
+
+bench-glaurung-qfbv-demand-register-slice corpus_dir manifest tier="representative" out="bench-results/glaurung-qfbv-demand-register-slice.json":
+    mkdir -p "$(dirname '{{ out }}')"
+    cargo run --release -p axeyum-bench --features z3 -- "{{ corpus_dir }}" --corpus-manifest "{{ manifest }}" --corpus-tier "{{ tier }}" --families register-slice --backend sat-bv --rewrite off --demand-bit-slicing --compare-z3 --require-in-process-z3 --require-reproducible-run --require-deterministic-resources --timeout-ms 10000 --resource-limit 2000000 --node-budget 300000 --cnf-var-budget 3000000 --cnf-clause-budget 8000000 --jobs 1 --min-decided-percent 100 --logic QF_BV --out "{{ out }}"
 
 # Publishable short-run evidence requires process-level repetitions. Each trial
 # gets a fresh process and independent artifact; the summarizer fails closed on

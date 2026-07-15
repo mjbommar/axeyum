@@ -255,6 +255,12 @@ records the contract and the first measured baselines.
   correlation with measured AIG/CNF/SAT costs. This inventory is observational
   and outside the additive client timing boundary; a new optimization must be
   selected from the post-word counts rather than lexical source frequency.
+- Artifact version 29 makes GQ4's demand-driven cold lowering a separately
+  identified experiment. Config hashes include the policy bit; aggregate and
+  per-instance demand records state whether lowering was actually applied;
+  and strict Glaurung recipes separately measure the whole tier and the
+  `register-slice` family. This production route must not be conflated with
+  artifact v28's observational demand profile.
 - **Primary client QF_BV target (2026-07-13): Glaurung binary analysis.** Capture
   and minimize the real lifter-produced path conditions, preserving their
   extract/concat, mixed machine-width, and memory-derived shape. This client
