@@ -110,8 +110,16 @@ fn run() -> Result<Value, String> {
         }
     }
     let choice_replay_nanos = nanos(choice_started.elapsed());
+    let cold_occurrence_replay = options
+        .cold_occurrences
+        .then(|| replay_cold_occurrences(&trace, &config))
+        .transpose()?;
+    let snapshot_replay = options
+        .snapshot
+        .then(|| replay_snapshot_trace(&trace, &config))
+        .transpose()?;
     let warm_replay = options
-        .warm
+        .lineage
         .then(|| replay_warm_trace(&trace, &config))
         .transpose()?;
 
@@ -147,6 +155,16 @@ fn run() -> Result<Value, String> {
         },
         "query_replay_nanos": query_replay_nanos,
         "choice_replay_nanos": choice_replay_nanos,
+        "resource_identity": {
+            "trace_manifest_sha256": trace.manifest_hash,
+            "axeyum_package_version": env!("CARGO_PKG_VERSION"),
+            "target_arch": env::consts::ARCH,
+            "target_os": env::consts::OS,
+            "timeout_ms_per_check": options.timeout_ms,
+            "preprocess": false,
+        },
+        "cold_occurrence_replay": cold_occurrence_replay,
+        "snapshot_replay": snapshot_replay,
         "warm_replay": warm_replay,
         "total_nanos": nanos(started.elapsed()),
     });
@@ -159,7 +177,9 @@ fn run() -> Result<Value, String> {
 struct Options {
     trace: PathBuf,
     timeout_ms: u64,
-    warm: bool,
+    cold_occurrences: bool,
+    snapshot: bool,
+    lineage: bool,
     output: Option<PathBuf>,
 }
 
@@ -167,7 +187,9 @@ impl Options {
     fn parse(args: impl Iterator<Item = String>) -> Result<Self, String> {
         let mut trace = None;
         let mut timeout_ms = 1_000;
-        let mut warm = false;
+        let mut cold_occurrences = false;
+        let mut snapshot = false;
+        let mut lineage = false;
         let mut output = None;
         let mut args = args.peekable();
         while let Some(argument) = args.next() {
@@ -189,13 +211,13 @@ impl Options {
                             .ok_or_else(|| "--out requires a path".to_string())?,
                     ));
                 }
-                "--warm" => warm = true,
+                "--cold-occurrences" => cold_occurrences = true,
+                "--snapshot" => snapshot = true,
+                "--warm" | "--lineage" => lineage = true,
                 "-h" | "--help" => {
-                    return Err(
-                        "usage: glaurung-ordered-trace TRACE_DIR [--timeout-ms N] [--warm] \
-                         [--out FILE]"
-                            .into(),
-                    );
+                    return Err("usage: glaurung-ordered-trace TRACE_DIR [--timeout-ms N] \
+                         [--cold-occurrences] [--snapshot] [--lineage] [--out FILE]"
+                        .into());
                 }
                 value if value.starts_with('-') => return Err(format!("unknown option: {value}")),
                 value => {
@@ -207,11 +229,14 @@ impl Options {
         }
         Ok(Self {
             trace: trace.ok_or_else(|| {
-                "usage: glaurung-ordered-trace TRACE_DIR [--timeout-ms N] [--warm] [--out FILE]"
+                "usage: glaurung-ordered-trace TRACE_DIR [--timeout-ms N] \
+                 [--cold-occurrences] [--snapshot] [--lineage] [--out FILE]"
                     .to_string()
             })?,
             timeout_ms,
-            warm,
+            cold_occurrences,
+            snapshot,
+            lineage,
             output,
         })
     }
@@ -220,6 +245,7 @@ impl Options {
 struct Trace {
     analysis_id: String,
     process_id: String,
+    manifest_hash: String,
     events_hash: String,
     event_count: usize,
     path_count: usize,
@@ -333,7 +359,10 @@ impl Trace {
     // scope, check, and model-choice ownership invariants directly auditable.
     #[allow(clippy::too_many_lines)]
     fn load(root: &Path) -> Result<Self, String> {
-        let manifest = read_json(&root.join("trace-manifest-v1.json"))?;
+        let manifest_bytes = read(&root.join("trace-manifest-v1.json"))?;
+        let manifest_hash = sha256(&manifest_bytes);
+        let manifest: Value = serde_json::from_slice(&manifest_bytes)
+            .map_err(|error| format!("parse trace-manifest-v1.json: {error}"))?;
         if string(&manifest, "schema")? != TRACE_SCHEMA || integer(&manifest, "version")? != 1 {
             return Err("unsupported trace manifest schema/version".into());
         }
@@ -734,6 +763,7 @@ impl Trace {
         Ok(Self {
             analysis_id,
             process_id,
+            manifest_hash,
             events_hash,
             event_count,
             path_count,
@@ -821,6 +851,242 @@ fn load_queries(root: &Path, index: &Value) -> Result<BTreeMap<String, QueryReco
     Ok(queries)
 }
 
+fn replay_cold_occurrences(trace: &Trace, config: &SolverConfig) -> Result<Value, String> {
+    let replay_started = Instant::now();
+    let peak_rss_before = process_peak_rss_bytes();
+    let mut latencies = Vec::with_capacity(trace.checks.len());
+    let mut outcomes = BTreeMap::<String, u64>::new();
+    let mut checks = 0_u64;
+    for event in &trace.warm_events {
+        let WarmEvent::Check { check_id, .. } = event else {
+            continue;
+        };
+        let check = trace
+            .checks
+            .get(check_id)
+            .ok_or_else(|| format!("cold occurrence references missing check {check_id}"))?;
+        let query = trace
+            .queries
+            .get(&check.query_hash)
+            .ok_or_else(|| format!("cold occurrence {check_id} references a missing query"))?;
+        let started = Instant::now();
+        let result = solve_smtlib(
+            std::str::from_utf8(&query.bytes)
+                .map_err(|error| format!("cold occurrence {check_id}: non-UTF-8: {error}"))?,
+            config,
+        )
+        .map_err(|error| format!("cold occurrence {check_id}: {error}"))?;
+        latencies.push(nanos(started.elapsed()));
+        let outcome = result_name(&result.result);
+        *outcomes.entry(outcome.to_string()).or_default() += 1;
+        checks = checks.saturating_add(1);
+        if check.outcome != outcome {
+            return Err(format!(
+                "cold occurrence {check_id} verdict disagreement: recorded {}, Axeyum {outcome}",
+                check.outcome
+            ));
+        }
+    }
+    latencies.sort_unstable();
+    Ok(json!({
+        "policy": {
+            "entry": "exact occurrence SMT-LIB bytes",
+            "arena": "fresh parse and arena per occurrence",
+            "solver": "fresh one-shot solver per occurrence",
+            "preprocess": config.preprocess,
+            "timeout_ms_per_check": config.timeout.map(|timeout| timeout.as_millis()),
+            "sat_model_replay": "solve_smtlib original-assertion replay",
+        },
+        "checks": checks,
+        "outcomes": outcomes,
+        "occurrence_latency_p50_nanos": percentile(&latencies, 50),
+        "occurrence_latency_p95_nanos": percentile(&latencies, 95),
+        "replay_nanos": nanos(replay_started.elapsed()),
+        "process_peak_rss_bytes_before": peak_rss_before,
+        "process_peak_rss_bytes_after": process_peak_rss_bytes(),
+    }))
+}
+
+#[derive(Default)]
+struct SnapshotReplayStats {
+    checks: u64,
+    unchanged_snapshots: u64,
+    roots_retained: u64,
+    roots_added: u64,
+    roots_popped: u64,
+    model_read_matches: u64,
+    model_read_divergences: u64,
+    model_reads_not_evaluable: u64,
+    peak_aig_nodes: u64,
+    peak_cnf_variables: u64,
+    peak_cnf_clauses: u64,
+    occurrence_latencies_nanos: Vec<u64>,
+    check_latencies_nanos: Vec<u64>,
+    outcomes: BTreeMap<String, u64>,
+}
+
+// Snapshot replay is deliberately one ordered state machine: the consecutive
+// LCP policy, pending model, and exact occurrence verdict stay visibly coupled.
+#[allow(clippy::too_many_lines)]
+fn replay_snapshot_trace(trace: &Trace, config: &SolverConfig) -> Result<Value, String> {
+    let build_started = Instant::now();
+    let program = build_warm_program(trace)?;
+    let build_nanos = nanos(build_started.elapsed());
+    let peak_rss_before = process_peak_rss_bytes();
+    let replay_started = Instant::now();
+    let mut solver = IncrementalBvSolver::with_config_and_profiling(config.clone());
+    let mut active = Vec::<String>::new();
+    let mut pending_model = None::<(String, Model)>;
+    let mut stats = SnapshotReplayStats::default();
+
+    for event in &trace.warm_events {
+        match event {
+            WarmEvent::Check {
+                check_id,
+                constraints,
+                ..
+            } => {
+                let occurrence_started = Instant::now();
+                let lcp = active
+                    .iter()
+                    .zip(constraints)
+                    .take_while(|(left, right)| left == right)
+                    .count();
+                stats.roots_retained = stats.roots_retained.saturating_add(usize_to_u64(lcp));
+                if active == *constraints {
+                    stats.unchanged_snapshots = stats.unchanged_snapshots.saturating_add(1);
+                }
+                for _ in lcp..active.len() {
+                    if !solver.pop() {
+                        return Err(format!("snapshot scope underflow on check {check_id}"));
+                    }
+                    stats.roots_popped = stats.roots_popped.saturating_add(1);
+                }
+                active.truncate(lcp);
+                for constraint_id in &constraints[lcp..] {
+                    let term = program.constraints.get(constraint_id).ok_or_else(|| {
+                        format!(
+                            "snapshot check {check_id} reaches assertion {constraint_id} absent \
+                             from the query store"
+                        )
+                    })?;
+                    solver
+                        .push()
+                        .map_err(|error| format!("snapshot check {check_id} push: {error}"))?;
+                    solver.assert(&program.arena, *term).map_err(|error| {
+                        format!("snapshot check {check_id} assert {constraint_id}: {error}")
+                    })?;
+                    active.push(constraint_id.clone());
+                    stats.roots_added = stats.roots_added.saturating_add(1);
+                }
+                if solver.scope_depth() != constraints.len() || active != *constraints {
+                    return Err(format!("snapshot scope differs on check {check_id}"));
+                }
+                let check = trace.checks.get(check_id).ok_or_else(|| {
+                    format!("snapshot replay references missing check {check_id}")
+                })?;
+                let check_started = Instant::now();
+                let result = solver
+                    .check(&program.arena)
+                    .map_err(|error| format!("snapshot check {check_id}: {error}"))?;
+                stats
+                    .check_latencies_nanos
+                    .push(nanos(check_started.elapsed()));
+                stats
+                    .occurrence_latencies_nanos
+                    .push(nanos(occurrence_started.elapsed()));
+                stats.checks = stats.checks.saturating_add(1);
+                let (outcome, model) = split_result(result);
+                *stats.outcomes.entry(outcome.to_string()).or_default() += 1;
+                if check.outcome != outcome {
+                    return Err(format!(
+                        "snapshot check {check_id} verdict disagreement: recorded {}, Axeyum \
+                         {outcome}",
+                        check.outcome
+                    ));
+                }
+                pending_model = model.map(|model| (check_id.clone(), model));
+                let retained = solver.stats();
+                stats.peak_aig_nodes = stats.peak_aig_nodes.max(retained.aig_nodes);
+                stats.peak_cnf_variables = stats.peak_cnf_variables.max(retained.cnf_variables);
+                stats.peak_cnf_clauses = stats.peak_cnf_clauses.max(retained.cnf_clauses);
+            }
+            WarmEvent::ModelRead { read_id, .. } => {
+                let read = trace
+                    .model_reads
+                    .get(read_id)
+                    .ok_or_else(|| format!("snapshot replay has no model read {read_id}"))?;
+                let term = program.model_read_equalities.get(read_id).ok_or_else(|| {
+                    format!("snapshot replay has no expression equality for read {read_id}")
+                })?;
+                let (check_id, model) = pending_model.as_ref().ok_or_else(|| {
+                    format!("snapshot model read {read_id} has no pending SAT model")
+                })?;
+                if check_id != &read.check_id {
+                    return Err(format!("snapshot model read {read_id} follows wrong check"));
+                }
+                match eval(&program.arena, *term, &model.to_assignment()) {
+                    Ok(IrValue::Bool(true)) => {
+                        stats.model_read_matches = stats.model_read_matches.saturating_add(1);
+                    }
+                    Ok(IrValue::Bool(false)) => {
+                        stats.model_read_divergences =
+                            stats.model_read_divergences.saturating_add(1);
+                    }
+                    Ok(_) | Err(_) => {
+                        stats.model_reads_not_evaluable =
+                            stats.model_reads_not_evaluable.saturating_add(1);
+                    }
+                }
+            }
+            WarmEvent::ModelChoice { .. } => pending_model = None,
+            WarmEvent::PathStart { .. }
+            | WarmEvent::Push { .. }
+            | WarmEvent::Assert { .. }
+            | WarmEvent::Pop { .. }
+            | WarmEvent::PathEnd { .. } => {}
+        }
+    }
+
+    stats.occurrence_latencies_nanos.sort_unstable();
+    stats.check_latencies_nanos.sort_unstable();
+    let solver_stats = solver.stats();
+    Ok(json!({
+        "policy": {
+            "entry": "consecutive complete snapshots reconstructed from ordered checks",
+            "arena": "one shared parsed arena",
+            "solver": "one retained solver with longest-common-prefix pop/push",
+            "lineage_used": false,
+            "preprocess": config.preprocess,
+            "timeout_ms_per_check": config.timeout.map(|timeout| timeout.as_millis()),
+            "sat_model_replay": "IncrementalBvSolver original-assertion replay",
+        },
+        "shared_arena_build_nanos": build_nanos,
+        "replay_nanos": nanos(replay_started.elapsed()),
+        "checks": stats.checks,
+        "outcomes": stats.outcomes,
+        "unchanged_snapshots": stats.unchanged_snapshots,
+        "roots_retained": stats.roots_retained,
+        "roots_added": stats.roots_added,
+        "roots_popped": stats.roots_popped,
+        "occurrence_latency_p50_nanos": percentile(&stats.occurrence_latencies_nanos, 50),
+        "occurrence_latency_p95_nanos": percentile(&stats.occurrence_latencies_nanos, 95),
+        "check_latency_p50_nanos": percentile(&stats.check_latencies_nanos, 50),
+        "check_latency_p95_nanos": percentile(&stats.check_latencies_nanos, 95),
+        "model_read_matches": stats.model_read_matches,
+        "model_read_divergences": stats.model_read_divergences,
+        "model_reads_not_evaluable": stats.model_reads_not_evaluable,
+        "peak_retained_structure": {
+            "aig_nodes": stats.peak_aig_nodes,
+            "cnf_variables": stats.peak_cnf_variables,
+            "cnf_clauses": stats.peak_cnf_clauses,
+        },
+        "phase_nanos": phase_json(&solver_stats),
+        "process_peak_rss_bytes_before": peak_rss_before,
+        "process_peak_rss_bytes_after": process_peak_rss_bytes(),
+    }))
+}
+
 struct WarmProgram {
     arena: TermArena,
     constraints: BTreeMap<String, TermId>,
@@ -873,6 +1139,7 @@ fn replay_warm_trace(trace: &Trace, config: &SolverConfig) -> Result<Value, Stri
     let build_started = Instant::now();
     let program = build_warm_program(trace)?;
     let build_nanos = nanos(build_started.elapsed());
+    let peak_rss_before = process_peak_rss_bytes();
     let mut paths = BTreeMap::<String, WarmPath>::new();
     let mut stats = WarmReplayStats::default();
     let replay_started = Instant::now();
@@ -1135,6 +1402,8 @@ fn replay_warm_trace(trace: &Trace, config: &SolverConfig) -> Result<Value, Stri
             "cnf_variables": stats.total_cnf_variables_by_path,
             "cnf_clauses": stats.total_cnf_clauses_by_path,
         },
+        "process_peak_rss_bytes_before": peak_rss_before,
+        "process_peak_rss_bytes_after": process_peak_rss_bytes(),
     }))
 }
 
@@ -1376,6 +1645,33 @@ fn solve_text(bytes: &[u8], config: &SolverConfig) -> Result<String, String> {
     })
 }
 
+fn result_name(result: &CheckResult) -> &'static str {
+    match result {
+        CheckResult::Sat(_) => "sat",
+        CheckResult::Unsat => "unsat",
+        CheckResult::Unknown(_) => "unknown",
+    }
+}
+
+fn split_result(result: CheckResult) -> (&'static str, Option<Model>) {
+    match result {
+        CheckResult::Sat(model) => ("sat", Some(model)),
+        CheckResult::Unsat => ("unsat", None),
+        CheckResult::Unknown(_) => ("unknown", None),
+    }
+}
+
+fn phase_json(stats: &axeyum_solver::IncrementalBvStats) -> Value {
+    json!({
+        "word_rewrite": nanos(stats.word_rewrite),
+        "bit_blast": nanos(stats.bit_blast),
+        "cnf_encode": nanos(stats.cnf_encode),
+        "sat": nanos(stats.solve),
+        "model_lift": nanos(stats.model_lift),
+        "model_replay": nanos(stats.replay),
+    })
+}
+
 fn append_choice_assertion(query: &[u8], read: &ModelRead) -> Result<String, String> {
     let text = std::str::from_utf8(query).map_err(|error| format!("non-UTF-8 query: {error}"))?;
     let marker = "(check-sat)";
@@ -1516,11 +1812,6 @@ fn read(path: &Path) -> Result<Vec<u8>, String> {
     fs::read(path).map_err(|error| format!("read {}: {error}", path.display()))
 }
 
-fn read_json(path: &Path) -> Result<Value, String> {
-    serde_json::from_slice(&read(path)?)
-        .map_err(|error| format!("parse {}: {error}", path.display()))
-}
-
 fn string<'a>(value: &'a Value, field: &str) -> Result<&'a str, String> {
     value
         .get(field)
@@ -1560,6 +1851,15 @@ fn nanos(duration: Duration) -> u64 {
     u64::try_from(duration.as_nanos()).unwrap_or(u64::MAX)
 }
 
+fn process_peak_rss_bytes() -> Option<u64> {
+    let status = fs::read_to_string("/proc/self/status").ok()?;
+    let kibibytes = status.lines().find_map(|line| {
+        let value = line.strip_prefix("VmHWM:")?;
+        value.split_whitespace().next()?.parse::<u64>().ok()
+    })?;
+    kibibytes.checked_mul(1024)
+}
+
 fn write_json_atomic(path: &Path, value: &Value) -> Result<(), String> {
     let mut bytes = serde_json::to_vec_pretty(value)
         .map_err(|error| format!("serialize replay summary: {error}"))?;
@@ -1587,6 +1887,7 @@ mod tests {
         Trace {
             analysis_id: "analysis-test".into(),
             process_id: "process-test".into(),
+            manifest_hash: "manifest-test".into(),
             events_hash: "events-test".into(),
             event_count: warm_events.len(),
             path_count: 2,
@@ -1717,6 +2018,15 @@ mod tests {
             summary["policy"]["mutable_solver_state_shared_across_paths"],
             false
         );
+
+        let cold = replay_cold_occurrences(&trace, &SolverConfig::new()).unwrap();
+        assert_eq!(cold["checks"], 2);
+        assert_eq!(cold["outcomes"]["sat"], 2);
+        let snapshot = replay_snapshot_trace(&trace, &SolverConfig::new()).unwrap();
+        assert_eq!(snapshot["checks"], 2);
+        assert_eq!(snapshot["roots_added"], 1);
+        assert_eq!(snapshot["unchanged_snapshots"], 1);
+        assert_eq!(snapshot["outcomes"]["sat"], 2);
     }
 
     #[test]
@@ -1762,6 +2072,8 @@ mod tests {
         ];
         let trace = warm_test_trace(queries, checks, events);
         let error = replay_warm_trace(&trace, &SolverConfig::new()).unwrap_err();
+        assert!(error.contains("absent from the query store"));
+        let error = replay_snapshot_trace(&trace, &SolverConfig::new()).unwrap_err();
         assert!(error.contains("absent from the query store"));
     }
 }
