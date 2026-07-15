@@ -50,6 +50,15 @@ deduplication, cross-selector separation, scoped activation/pop behavior,
 negative-root attribution, monotone deltas, and zero ordinary diagnostic
 counters.
 
+The complete 4 GiB-capped `just check` gate is green: formatting, strict
+workspace all-target/all-feature Clippy, all-feature tests and doctests,
+warning-denied Rustdoc, the QF_BV feature profile, 31 Glaurung harness tests,
+the pinned regular capture gate, foundational resources, generated-artifact
+drift, and documentation links. The regular gate decides and manifest-matches
+all 128 queries under raw and canonical policies with zero errors,
+disagreements, or replay failures; this run's Axeyum/Z3 ratios are
+1.222x/0.342x.
+
 On the pinned 128-query representative corpus, all queries decide and agree
 with both the manifest and in-process Z3, with zero errors, disagreements, or
 model-replay failures. The AIG remains 450,498 nodes. Exact root-context

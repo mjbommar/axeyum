@@ -337,7 +337,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   GQ4 is out/off for this distribution. Highest leverage is GQ7, client entry
   attribution, and the dual real-client baseline. The immediate external input
   is the offered ordered/prefix capture; validate its small lineage/scope/model
-  sample before scaling or designing cache capacity.
+  sample before scaling or designing cache capacity. The complete 4 GiB-capped
+  `just check` gate is green without reproducing the prior OOM: workspace
+  format/Clippy/tests/doctests/Rustdoc, QF_BV profile, 31 Glaurung harness tests,
+  pinned capture, foundational resources, generated drift, and links all pass.
+  The regular capture remains 128/128 decided and manifest/Z3-agreed with zero
+  errors/disagreements/replay failures; this run measures raw/canonical at
+  1.222x/0.342x.
 
 - **2026-07-15 — ADR-0163 accepts exact incremental root-context
   deduplication and closes the large GQ5 clause residual.** New opt-in
