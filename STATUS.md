@@ -322,6 +322,29 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-14 — ADR-0157 lands the opt-in GQ4 production candidate; real
+  capture timing remains the acceptance boundary.** The cold SAT-BV backend
+  now selects demand-driven lowering only through
+  `SolverConfig::demand_bit_slicing`; the full and incremental defaults are
+  unchanged. Dense backward propagation is exact for the first structural
+  class and every other operator is a conservative full-width barrier. Sparse
+  term-bit lookup and deterministic zero completion support partial symbol
+  models, while mandatory original-assertion replay remains the SAT soundness
+  gate. The focused 8-of-64 equality materializes 25/25 term bits and 8/8
+  symbol bits instead of 81/64; SAT and UNSAT variants pass replay.
+
+  Artifact v29 records the policy in configuration identity and distinguishes
+  `structural-lowering` from observational demand. Dedicated whole-tier and
+  `register-slice` recipes are present. All 26 BV tests, 31 SAT-BV tests, three
+  typed-layer tests, 33 benchmark tests, and strict focused Clippy pass under
+  the 4 GiB cap. A clean committed micro smoke decides/agrees 2/2 with zero
+  errors, disagreements, or replay failures and records lowering on both
+  instances; it demands every bit and makes no client-performance claim. The
+  inspected Glaurung capture directory currently contains the procedure and
+  manifest but no `.smt2` pack, so ADR-0157 stays proposed and off by default
+  until the access-controlled bytes are restored/regenerated for the required
+  repeated register-slice and whole-corpus gate.
+
 - **2026-07-14 — Glaurung post-capture priorities reset to demand slicing,
   rewrite impact telemetry, and exact client-path attribution.** The newest
   consumer profile reports bit blast/CNF/SAT at roughly 45%/32%/20%, about 88%
@@ -752,7 +775,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   | **GQ1 real-query profile** | **DONE for standalone cold timing; WIP for native-driver attribution.** Artifact v28's full process is valid with complete operator inventories, but the reported ~2.5x driver versus ~1.37x bench gap crosses different entry paths | Key identical query hashes across Glaurung and `axeyum-bench`; time translation/interning, word policy, lower/encode, SAT, model extraction, and replay separately |
   | **GQ2 cheap cold tier** | **WIP with three accepted rewrite tranches; batch integration deferred.** Canonical v4 reaches 5.625 s / 0.730x Z3; ADR-0156 preserves replay but is 18.8% slower than one-shot | Keep canonical v4 as the measured one-shot policy; do not recommend fresh incremental batch until its clause/entry overhead closes |
   | **GQ3 coercion/affine peepholes** | **Implementation complete for measured shapes; telemetry WIP.** ADR-0142/0153/0155 land the exact rules and stable fire counts | Add affected-query/family counts and default-minus-rule AIG/CNF/time ablations; only reopen rules that fire on the new residual |
-  | **GQ4 cold relevant bits** | **Immediate implementation priority.** ADR-0143, demand propagation, and dense ranges are scaffolding; the production lowerer still materializes full terms/symbols | Land additive partial lowering with deterministic omitted-bit lift and original replay; require a `register-slice` plus whole-corpus AIG/CNF/time win |
+  | **GQ4 cold relevant bits** | **WIP; opt-in production candidate landed.** ADR-0157 materializes only demanded bits for the initial exact structural class, uses full barriers elsewhere, zero-completes omitted symbol bits, and replays originals. Artifact v29 and dedicated recipes are green on focused/micro tests | Restore/regenerate the real `.smt2` pack; run five `register-slice`, representative, and full comparisons; accept/default only on AIG/CNF and end-to-end wins with every validity gate green |
   | **GQ5 AIG/CNF construction** | **WIP at the client boundary.** One-shot v4 is fast, but fresh incremental assertion emits 80.9% more clauses with the same AIG | Verify Glaurung sharing survives translation; profile measured gate patterns and close incremental gate fusion only after GQ4/client attribution |
   | **GQ6 cold SAT/CDCL** | **WIP foundation, attribution-gated**; subsumption/BVE, XOR/GF(2), VSIDS, phase saving, Luby, and LBD foundations exist | Exact-CNF backend attribution first; tune/default a stronger path only where SAT dominates and proof replay stays green |
   | **GQ7 warm delta entry** | **WIP; producer/consumer contract defined.** Retained CNF/search state exists, but the deduplicated cold corpus cannot measure prefix reuse and Glaurung still creates a fresh solver for every check | Obtain and validate a small producer trace under `glaurung-ordered-trace-v1.md`, then preprocess only new/affected terms, wire persistent per-worker/path push/assert/check/pop, control concretization, and publish real-driver per-check cost plus warm break-even depth |
@@ -760,8 +783,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   | **GQ9 auto cost model/docs** | **TODO**; P1.8 shape/resource probes are only the general foundation | Telemetry-visible raw/cheap/configured/warm choice that beats or matches fixed policies and documents embedder guidance |
   | **GQ10 real-lifter regression tier** | **WIP; cold regression automation landed.** The representative/full deduped tiers are valid and guarded, but cover only the current drivers and erase occurrence/prefix order | Expand drivers, fix producer validation/dedup, add a separate ordered-prefix tier, and publish per-commit family/stage/Axeyum÷Z3 trends |
 
-  **Next actions:** (1) draft the GQ4 production partial-lowering ADR and gate
-  its first exact slice on `register-slice`; (2) add affected-family rewrite
+  **Next actions:** (1) restore/regenerate the byte-complete Glaurung pack and
+  gate ADR-0157's landed exact slice on `register-slice`, representative, and
+  full tiers; (2) add affected-family rewrite
   counts plus default-minus-rule AIG/CNF/time ablation; (3) instrument the
   native Glaurung path by query hash and decide between incremental gate-fusion
   work and a purpose-built one-shot client API; (4) hand off and validate the

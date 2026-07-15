@@ -118,6 +118,20 @@ session state.
 > pinned fresh-incremental gate is 18.8% slower than one-shot and emits 80.9%
 > more clauses with the same AIG. The API remains explicit plumbing and the
 > cold recommendation is deferred.
+> ADR-0157 now lands the first additive GQ4 production candidate behind
+> `SolverConfig::demand_bit_slicing` / `--demand-bit-slicing`. Dense backward
+> demand propagates exactly through the initial structural class and treats
+> every non-local operator as a full conservative barrier; sparse symbol models
+> are deterministically zero-completed and replayed against every original
+> assertion. The focused 8-of-64 equality lowers 25/25 demanded term bits and
+> 8/8 symbol bits rather than the full path's 81/64. Artifact v29 identifies
+> observational versus applied demand, and separate whole-tier and
+> `register-slice` recipes are executable. The committed micro smoke is 2/2
+> decided/agreed with zero errors, disagreements, or replay failures, but it
+> demands all bits and is not performance evidence. The inspected Glaurung
+> capture handoff currently exposes its manifest/procedure but not the `.smt2`
+> bytes; restore or regenerate the pack before accepting ADR-0157 or changing
+> the default.
 > The ordered warm trace remains the next warm-functionality Glaurung
 > handoff; cold deduplication cannot validate scopes, prefix reuse, or model
 > choice. Its concrete producer/consumer contract is now
@@ -157,7 +171,7 @@ decisions or speedups.
 | **GQ1** | **Capture and profile real queries first** | Ingest a representative, redistributable or access-controlled sample from Glaurung's shadow-diff harness, preserve the original lifter shape, and record cold one-shot attribution for Glaurung `ExprPool`→Axeyum translation/interning, word simplification, term→AIG lowering, AIG→CNF encoding, SAT search, model extraction, and replay. Pair each native-driver query hash with the same SMT-LIB query in `axeyum-bench` so the reported ~2.5x real-driver versus ~1.37x bench discrepancy is decomposed instead of averaged away. Report formula/AIG/CNF sizes, p50/p95 and aggregate Axeyum/Z3 ratios, fixed hardware/tool versions, 100% decided, zero operational errors, `DISAGREE=0`, and zero replay failures. This profile ranks GQ2--GQ9; it is not optional. |
 | **GQ2** | **Cheap always-on cold simplification tier** | Add a bounded, denotation-preserving one-shot tier for constant folding and trivial identities whose own cost is measured. Add a size/shape and cold-vs-warm policy that selects cheap, configured, or no preprocessing. Exit only when cold end-to-end time is non-worse in aggregate and improves the target class at the GQ1 validity gates. |
 | **GQ3** | **Coercion-cancellation peepholes and causal telemetry** | Complete the partial landed foundation with exact, model-sound rewrites for nested extract, general/straddling `extract(concat(a,b))`, low/high/straddling extension slices, direct whole-side returns, and the common low-slice coercion cancellation `extract(k-1,0,zero_ext(k,x)) = x`. Stable per-rule fire counts already exist; add affected-query/family counts and deterministic default-minus-one-rule ablations so AIG/CNF/time savings are attributed causally rather than guessed from local DAG deltas. Do not prioritize another arithmetic rule when it does not fire on the target family. Exhaustive small-width evaluation, Z3 differential tests, and target-corpus AIG/CNF reductions are required. |
-| **GQ4** | **Cold demand-driven bit-slice reduction** | Land the production pass, not only its observational counters: propagate live output-bit ranges backward and materialize only demanded term/symbol bits. Start with exact extract/concat/extension/pointwise/ITE propagation and a `register-slice` gate; add low-prefix arithmetic rules only when required. Preserve SMT-LIB total semantics, deterministic defaults for omitted model bits, and replay against every untouched assertion. Exit with per-family demanded/lowered bits, AIG/CNF counts, stage time, and a measured `register-slice` plus whole-corpus win. |
+| **GQ4** | **Cold demand-driven bit-slice reduction** | **Candidate implemented; real gate pending.** ADR-0157's opt-in route propagates live output bits through exact extract/concat/extension/pointwise/ITE/rotation shapes, materializes sparse term/symbol bits, uses full conservative barriers elsewhere, deterministically completes omitted model bits, and replays every original assertion. Artifact v29 plus whole-tier and `register-slice` recipes expose demanded/lowered bits and downstream AIG/CNF/time. Exit still requires five valid real-corpus processes with a `register-slice` and whole-corpus win before acceptance/defaulting; add low-prefix arithmetic only if the measured residual demands it. |
 | **GQ5** | **Faster AIG→CNF and stronger sharing** | Profile deterministic AIG structural hashing, term-sharing survival, and the measured gate mix before changing construction. Then improve only the dominant comparator/mux/adder or concat/extract-wiring patterns. Treat one-shot and incremental encoders separately: the fresh incremental path currently builds the same AIG but emits 80.9% more representative clauses because it lacks the one-shot encoder's gate fusion. Each slice must reduce gates/clauses and end-to-end client time; size-only wins do not suffice. |
 | **GQ6** | **Cold SAT/CDCL tuning** | If GQ1 shows SAT search dominates, compare the exact emitted CNF across BatSat, the proof-producing core, and pinned CaDiCaL/Kissat references; then tune phase saving/rephasing, VSIDS/VMTF, restarts, clause tiers, propagation, subsumption/BVE/vivification, and extracted XOR/GF(2) reasoning. UNSAT proof rechecking and deterministic resource limits remain mandatory. Do not prioritize this over GQ2--GQ5 when encoding dominates. |
 | **GQ7** | **Cheaper warm entry and delta preprocessing** | Use the defined ordered warm-trace v1 contract to capture real worker/path lineage, push/assert/check/pop deltas, repeated checks, unknown/errors, and exploration-driving model reads. Then make `assert_configured` preprocess only the newly asserted/pushed term plus affected retained summaries, retain AIG/CNF/learned state across push/pop, and measure fixed per-check cost plus the sequence length at which warm solving beats cold Axeyum and Z3. |
@@ -173,8 +187,9 @@ reproduction target, not a replacement for the clean artifact-v28 v4 result at
 0.730x Z3: the two measurements have different entry points and possibly
 different revisions/policies. The immediate dependency order is therefore:
 
-1. **GQ4:** implement replay-safe demand lowering and score `register-slice`
-   independently from aggregate corpus results;
+1. **GQ4:** restore/regenerate the byte-complete capture, then score the landed
+   replay-safe demand lowerer on `register-slice` independently from the whole
+   representative and full tiers;
 2. **GQ3 telemetry:** retain the landed stable fire counts, add per-family
    impact and counterfactual AIG/CNF/time ablation, and pursue only rules that
    fire on the residual; and

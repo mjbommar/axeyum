@@ -41,6 +41,21 @@ class GlaurungBenchmarkRecipeTests(unittest.TestCase):
         self.assert_policy("bench-glaurung-qfbv-canonical", "canonical")
         self.assert_policy("bench-glaurung-qfbv-configured", "configured")
 
+    def test_demand_slicing_has_whole_tier_and_register_slice_recipes(self) -> None:
+        whole = dry_run("bench-glaurung-qfbv-demand", "corpus", "manifest")
+        register = dry_run(
+            "bench-glaurung-qfbv-demand-register-slice", "corpus", "manifest"
+        )
+        for output in (whole, register):
+            self.assertIn("--backend sat-bv", output)
+            self.assertIn("--rewrite off", output)
+            self.assertIn("--demand-bit-slicing", output)
+            self.assertNotIn("--profile-bit-demand", output)
+            self.assertIn("--require-reproducible-run", output)
+            self.assertIn("--min-decided-percent 100", output)
+        self.assertNotIn("--families", whole)
+        self.assertIn("--families register-slice", register)
+
     def test_proof_companions_preserve_the_word_policy(self) -> None:
         self.assert_policy("bench-glaurung-qfbv-raw-proof-check", "raw")
         self.assert_policy("bench-glaurung-qfbv-canonical-proof-check", "canonical")

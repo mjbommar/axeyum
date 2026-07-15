@@ -25,7 +25,7 @@ def artifact(axeyum_seconds: float, z3_seconds: float) -> dict:
         "model_replay_s": axeyum_seconds * 0.05,
     }
     return {
-        "version": 28,
+        "version": 29,
         "config": {
             "backend": "axeyum-sat-bv rustsat-batsat",
             "compare_backend": "z3 4.13.3.0",
