@@ -163,6 +163,45 @@ pub enum RangeDemandDecision {
     Applied,
 }
 
+impl RangeDemandDecision {
+    /// Stable numeric code used by backend telemetry and versioned artifacts.
+    pub const fn code(self) -> u8 {
+        match self {
+            Self::NotRequested => 0,
+            Self::NoCandidate => 1,
+            Self::InsufficientEstimate => 2,
+            Self::AnalysisBudgetExceeded => 3,
+            Self::InsufficientExactSavings => 4,
+            Self::Applied => 5,
+        }
+    }
+
+    /// Stable artifact spelling for this decision.
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::NotRequested => "not-requested",
+            Self::NoCandidate => "no-candidate",
+            Self::InsufficientEstimate => "insufficient-estimate",
+            Self::AnalysisBudgetExceeded => "analysis-budget-exceeded",
+            Self::InsufficientExactSavings => "insufficient-exact-savings",
+            Self::Applied => "applied",
+        }
+    }
+
+    /// Decodes a stable telemetry code, treating unknown future values as not
+    /// requested instead of fabricating an admission result.
+    pub const fn from_code(code: u64) -> Self {
+        match code {
+            1 => Self::NoCandidate,
+            2 => Self::InsufficientEstimate,
+            3 => Self::AnalysisBudgetExceeded,
+            4 => Self::InsufficientExactSavings,
+            5 => Self::Applied,
+            _ => Self::NotRequested,
+        }
+    }
+}
+
 /// Lowers roots with ADR-0158 admission-controlled range demand.
 ///
 /// Rejected and budget-exhausted queries take the ordinary full lowerer. An

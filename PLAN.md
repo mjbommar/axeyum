@@ -144,8 +144,14 @@ session state.
 > lowerer; six focused additions bring the BV suite to 32/32 green, including
 > dense-v1 equivalence, deterministic fallback, fragmentation promotion,
 > replay, and deadline coverage. Keep this path explicit and non-default while
-> its policy/telemetry are wired through SAT-BV artifact identity and measured
-> on the Glaurung `register-slice` plus whole tiers.
+> it is measured on the Glaurung `register-slice` plus whole tiers. That wiring
+> is now complete in artifact v30: `SolverConfig` carries a distinct optional
+> range policy, v1/v2 conflict rather than receiving implicit precedence, all
+> thresholds and the work budget enter `config_hash`, and typed/per-instance/
+> aggregate telemetry partitions every admission and fallback result. The
+> strict whole-tier and `register-slice` recipes expose explicit calibration
+> parameters. Next run the capture gate; do not infer a speedup from the green
+> micro smoke (2/2 decided/agreed, both correctly rejected as no-candidate).
 > The current-client trajectory is consequently explicit: the shipped default
 > remains on a roughly 1.42x plateau; the earlier arithmetic rewrites do not fire
 > materially on this register-slice-heavy distribution; and the demonstrated

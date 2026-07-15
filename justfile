@@ -146,7 +146,7 @@ bench-glaurung-qfbv-configured corpus_dir manifest tier="full" out="bench-result
 
 # Structural demand diagnostics are intentionally separate from client timing:
 # the observational analysis is nested in bit blast and can dominate a run.
-# Artifact v29 marks these profiles complete; production recipes above leave
+# Artifact v30 marks these profiles complete; production recipes above leave
 # the diagnostic off and publish structural demand fields as unavailable.
 bench-glaurung-qfbv-raw-demand-profile corpus_dir manifest tier="representative" out="bench-results/glaurung-qfbv-raw-demand-profile.json":
     mkdir -p "$(dirname '{{ out }}')"
@@ -166,6 +166,16 @@ bench-glaurung-qfbv-demand corpus_dir manifest tier="representative" out="bench-
 bench-glaurung-qfbv-demand-register-slice corpus_dir manifest tier="representative" out="bench-results/glaurung-qfbv-demand-register-slice.json":
     mkdir -p "$(dirname '{{ out }}')"
     cargo run --release -p axeyum-bench --features z3 -- "{{ corpus_dir }}" --corpus-manifest "{{ manifest }}" --corpus-tier "{{ tier }}" --families register-slice --backend sat-bv --rewrite off --demand-bit-slicing --compare-z3 --require-in-process-z3 --require-reproducible-run --require-deterministic-resources --timeout-ms 10000 --resource-limit 2000000 --node-budget 300000 --cnf-var-budget 3000000 --cnf-clause-budget 8000000 --jobs 1 --min-decided-percent 100 --logic QF_BV --out "{{ out }}"
+
+# ADR-0158 GQ4-v2 is a distinct, still-off-by-default experiment. All policy
+# inputs are explicit and artifact-hashed so calibration runs are comparable.
+bench-glaurung-qfbv-range-demand corpus_dir manifest tier="representative" out="bench-results/glaurung-qfbv-range-demand.json" min_available="256" min_estimated_bits="128" min_estimated_percent="50" min_exact_bits="128" min_exact_percent="50" work_budget="50000":
+    mkdir -p "$(dirname '{{ out }}')"
+    cargo run --release -p axeyum-bench --features z3 -- "{{ corpus_dir }}" --corpus-manifest "{{ manifest }}" --corpus-tier "{{ tier }}" --backend sat-bv --rewrite off --range-demand-slicing --range-demand-min-term-bits "{{ min_available }}" --range-demand-min-estimated-bits "{{ min_estimated_bits }}" --range-demand-min-estimated-percent "{{ min_estimated_percent }}" --range-demand-min-exact-bits "{{ min_exact_bits }}" --range-demand-min-exact-percent "{{ min_exact_percent }}" --range-demand-work-budget "{{ work_budget }}" --compare-z3 --require-in-process-z3 --require-reproducible-run --require-deterministic-resources --timeout-ms 10000 --resource-limit 2000000 --node-budget 300000 --cnf-var-budget 3000000 --cnf-clause-budget 8000000 --jobs 1 --min-decided-percent 100 --logic QF_BV --out "{{ out }}"
+
+bench-glaurung-qfbv-range-demand-register-slice corpus_dir manifest tier="representative" out="bench-results/glaurung-qfbv-range-demand-register-slice.json" min_available="256" min_estimated_bits="128" min_estimated_percent="50" min_exact_bits="128" min_exact_percent="50" work_budget="50000":
+    mkdir -p "$(dirname '{{ out }}')"
+    cargo run --release -p axeyum-bench --features z3 -- "{{ corpus_dir }}" --corpus-manifest "{{ manifest }}" --corpus-tier "{{ tier }}" --families register-slice --backend sat-bv --rewrite off --range-demand-slicing --range-demand-min-term-bits "{{ min_available }}" --range-demand-min-estimated-bits "{{ min_estimated_bits }}" --range-demand-min-estimated-percent "{{ min_estimated_percent }}" --range-demand-min-exact-bits "{{ min_exact_bits }}" --range-demand-min-exact-percent "{{ min_exact_percent }}" --range-demand-work-budget "{{ work_budget }}" --compare-z3 --require-in-process-z3 --require-reproducible-run --require-deterministic-resources --timeout-ms 10000 --resource-limit 2000000 --node-budget 300000 --cnf-var-budget 3000000 --cnf-clause-budget 8000000 --jobs 1 --min-decided-percent 100 --logic QF_BV --out "{{ out }}"
 
 # Publishable short-run evidence requires process-level repetitions. Each trial
 # gets a fresh process and independent artifact; the summarizer fails closed on

@@ -43,8 +43,8 @@ mod run {
     use axeyum_smtlib::{Script, ScriptCommand, SmtError, parse_script};
     use axeyum_solver::{
         BvLayerStats, Capabilities, CheckResult, IncrementalBvSolver, LazyBvBackend, Model,
-        SatBvBackend, SolveStats, SolverBackend, SolverConfig, SolverError, UnknownKind,
-        check_model_with_assignment, solve,
+        RangeDemandDecision, RangeDemandPolicy, SatBvBackend, SolveStats, SolverBackend,
+        SolverConfig, SolverError, UnknownKind, check_model_with_assignment, solve,
     };
     #[cfg(feature = "z3")]
     use axeyum_solver::{DETERMINISTIC_Z3_RANDOM_SEED, Z3Backend};
@@ -52,7 +52,7 @@ mod run {
     use serde_json::{Value as JsonValue, json};
     use sha2::{Digest, Sha256};
 
-    const ARTIFACT_VERSION: u32 = 29;
+    const ARTIFACT_VERSION: u32 = 30;
     const CORPUS_MANIFEST_VERSION: u64 = 1;
     const CONTENT_HASH_PREFIX: &str = "sha256:";
     const DETERMINISM_PROFILE: &str = "axeyum-bench-fixed-seeds-v1";
@@ -219,6 +219,8 @@ mod run {
         preprocess: bool,
         profile_bit_demand: bool,
         demand_bit_slicing: bool,
+        range_demand_slicing: bool,
+        range_demand_policy: RangeDemandPolicy,
         compare_z3: bool,
         require_in_process_z3: bool,
         require_reproducible_run: bool,
@@ -259,6 +261,8 @@ mod run {
             preprocess: false,
             profile_bit_demand: false,
             demand_bit_slicing: false,
+            range_demand_slicing: false,
+            range_demand_policy: RangeDemandPolicy::default(),
             compare_z3: false,
             require_in_process_z3: false,
             require_reproducible_run: false,
@@ -369,6 +373,37 @@ mod run {
             "--preprocess" => parsed.preprocess = true,
             "--profile-bit-demand" => parsed.profile_bit_demand = true,
             "--demand-bit-slicing" => parsed.demand_bit_slicing = true,
+            "--range-demand-slicing" => parsed.range_demand_slicing = true,
+            "--range-demand-min-term-bits" => {
+                parsed.range_demand_policy.min_term_bits_available = next_value(args, flag)?
+                    .parse()
+                    .map_err(|e| format!("{e}"))?;
+            }
+            "--range-demand-min-estimated-bits" => {
+                parsed.range_demand_policy.min_estimated_bits_avoided = next_value(args, flag)?
+                    .parse()
+                    .map_err(|e| format!("{e}"))?;
+            }
+            "--range-demand-min-estimated-percent" => {
+                parsed.range_demand_policy.min_estimated_avoided_percent = next_value(args, flag)?
+                    .parse()
+                    .map_err(|e| format!("{e}"))?;
+            }
+            "--range-demand-min-exact-bits" => {
+                parsed.range_demand_policy.min_exact_bits_avoided = next_value(args, flag)?
+                    .parse()
+                    .map_err(|e| format!("{e}"))?;
+            }
+            "--range-demand-min-exact-percent" => {
+                parsed.range_demand_policy.min_exact_avoided_percent = next_value(args, flag)?
+                    .parse()
+                    .map_err(|e| format!("{e}"))?;
+            }
+            "--range-demand-work-budget" => {
+                parsed.range_demand_policy.analysis_work_budget = next_value(args, flag)?
+                    .parse()
+                    .map_err(|e| format!("{e}"))?;
+            }
             "--compare-z3" => {
                 #[cfg(feature = "z3")]
                 {
@@ -479,6 +514,23 @@ mod run {
         }
         if args.demand_bit_slicing && !matches!(args.backend, BackendKind::SatBv) {
             return Err("`--demand-bit-slicing` requires `--backend sat-bv`".to_owned());
+        }
+        if args.range_demand_slicing && !matches!(args.backend, BackendKind::SatBv) {
+            return Err("`--range-demand-slicing` requires `--backend sat-bv`".to_owned());
+        }
+        if args.range_demand_slicing && args.demand_bit_slicing {
+            return Err(
+                "`--range-demand-slicing` and `--demand-bit-slicing` are distinct experiments and cannot be combined"
+                    .to_owned(),
+            );
+        }
+        if !args.range_demand_slicing && args.range_demand_policy != RangeDemandPolicy::default() {
+            return Err("range-demand threshold flags require `--range-demand-slicing`".to_owned());
+        }
+        if args.range_demand_policy.min_estimated_avoided_percent > 100
+            || args.range_demand_policy.min_exact_avoided_percent > 100
+        {
+            return Err("range-demand percentages must be between 0 and 100".to_owned());
         }
         if args.require_deterministic_resources {
             if !matches!(args.backend, BackendKind::SatBv) {
@@ -599,6 +651,13 @@ mod run {
         bit_demand_analysis: f64,
         bit_demand_profile_complete: bool,
         bit_demand_lowering_applied: bool,
+        range_demand_decision: RangeDemandDecision,
+        range_demand_admission: f64,
+        range_demand_estimated_bits_avoided: u64,
+        range_demand_analysis_work_budget: u64,
+        range_demand_analysis_work: u64,
+        range_demand_merges: u64,
+        range_demand_promotions: u64,
         term_bit_requests: u64,
         term_bits_available: u64,
         term_bits_demanded: u64,
@@ -1027,6 +1086,13 @@ mod run {
                 bit_demand_analysis: layers.bit_demand_analysis.as_secs_f64(),
                 bit_demand_profile_complete: layers.bit_demand_profile_complete,
                 bit_demand_lowering_applied: layers.bit_demand_lowering_applied,
+                range_demand_decision: layers.range_demand_decision,
+                range_demand_admission: layers.range_demand_admission.as_secs_f64(),
+                range_demand_estimated_bits_avoided: layers.range_demand_estimated_bits_avoided,
+                range_demand_analysis_work_budget: layers.range_demand_analysis_work_budget,
+                range_demand_analysis_work: layers.range_demand_analysis_work,
+                range_demand_merges: layers.range_demand_merges,
+                range_demand_promotions: layers.range_demand_promotions,
                 term_bit_requests: layers.term_bit_requests,
                 term_bits_available: layers.term_bits_available,
                 term_bits_demanded: layers.term_bits_demanded,
@@ -2240,6 +2306,7 @@ mod run {
         })
     }
 
+    #[allow(clippy::too_many_lines)] // Flat versioned JSON contract; keep profile modes adjacent.
     fn bit_demand_attribution_record(samples: &[LayerSample]) -> JsonValue {
         let count = |select: fn(&LayerSample) -> u64| {
             samples.iter().map(select).fold(0_u64, u64::saturating_add)
@@ -2261,6 +2328,7 @@ mod run {
             .filter(|sample| sample.bit_demand_lowering_applied)
             .count();
         let profile_complete = !samples.is_empty() && complete_samples == samples.len();
+        let range = range_demand_attribution_record(samples);
         if !profile_complete {
             let profile_mode = if complete_samples == 0 {
                 "off"
@@ -2275,6 +2343,7 @@ mod run {
                 "analysis_is_nested_in_bit_blast": true,
                 "analysis_s": samples.iter().map(|sample| sample.bit_demand_analysis).sum::<f64>(),
                 "analysis_distribution": JsonValue::Null,
+                "range": range,
                 "term": {
                     "requests": JsonValue::Null,
                     "available": JsonValue::Null,
@@ -2318,6 +2387,7 @@ mod run {
                 samples,
                 |sample| sample.bit_demand_analysis,
             ),
+            "range": range,
             "term": {
                 "requests": term_requests,
                 "available": term_available,
@@ -2343,6 +2413,52 @@ mod run {
         })
     }
 
+    fn range_demand_attribution_record(samples: &[LayerSample]) -> JsonValue {
+        let decisions = [
+            RangeDemandDecision::NotRequested,
+            RangeDemandDecision::NoCandidate,
+            RangeDemandDecision::InsufficientEstimate,
+            RangeDemandDecision::AnalysisBudgetExceeded,
+            RangeDemandDecision::InsufficientExactSavings,
+            RangeDemandDecision::Applied,
+        ];
+        let decision_counts = decisions
+            .into_iter()
+            .map(|decision| {
+                (
+                    decision.as_str().to_owned(),
+                    json!(
+                        samples
+                            .iter()
+                            .filter(|sample| sample.range_demand_decision == decision)
+                            .count()
+                    ),
+                )
+            })
+            .collect::<serde_json::Map<_, _>>();
+        let count = |select: fn(&LayerSample) -> u64| {
+            samples.iter().map(select).fold(0_u64, u64::saturating_add)
+        };
+        let work = count(|sample| sample.range_demand_analysis_work);
+        let budget = count(|sample| sample.range_demand_analysis_work_budget);
+        json!({
+            "decision_counts": decision_counts,
+            "admission_s": samples.iter().map(|sample| sample.range_demand_admission).sum::<f64>(),
+            "admission_distribution": timing_distribution_record(
+                samples,
+                |sample| sample.range_demand_admission,
+            ),
+            "estimated_bits_avoided": count(
+                |sample| sample.range_demand_estimated_bits_avoided,
+            ),
+            "analysis_work": work,
+            "analysis_work_budget": budget,
+            "analysis_work_within_budget": work <= budget,
+            "range_merges": count(|sample| sample.range_demand_merges),
+            "range_promotions": count(|sample| sample.range_demand_promotions),
+        })
+    }
+
     #[allow(clippy::cast_precision_loss)]
     fn ratio_record(numerator: u64, denominator: u64) -> JsonValue {
         if denominator == 0 {
@@ -2353,6 +2469,17 @@ mod run {
     }
 
     fn instance_bit_demand_record(sample: &LayerSample) -> JsonValue {
+        let range = json!({
+            "decision": sample.range_demand_decision.as_str(),
+            "admission_ms": sample.range_demand_admission * 1000.0,
+            "estimated_bits_avoided": sample.range_demand_estimated_bits_avoided,
+            "analysis_work": sample.range_demand_analysis_work,
+            "analysis_work_budget": sample.range_demand_analysis_work_budget,
+            "analysis_work_within_budget":
+                sample.range_demand_analysis_work <= sample.range_demand_analysis_work_budget,
+            "range_merges": sample.range_demand_merges,
+            "range_promotions": sample.range_demand_promotions,
+        });
         if !sample.bit_demand_profile_complete {
             return json!({
                 "profile_complete": false,
@@ -2360,6 +2487,7 @@ mod run {
                 "lowering_applied": false,
                 "analysis_is_nested_in_bit_blast": true,
                 "analysis_ms": sample.bit_demand_analysis * 1000.0,
+                "range": range,
                 "term": {
                     "requests": JsonValue::Null,
                     "available": JsonValue::Null,
@@ -2394,6 +2522,7 @@ mod run {
             "lowering_applied": sample.bit_demand_lowering_applied,
             "analysis_is_nested_in_bit_blast": true,
             "analysis_ms": sample.bit_demand_analysis * 1000.0,
+            "range": range,
             "term": {
                 "requests": sample.term_bit_requests,
                 "available": sample.term_bits_available,
@@ -3141,6 +3270,9 @@ mod run {
             prove_unsat: args.prove_unsat,
             profile_bit_demand: args.profile_bit_demand,
             demand_bit_slicing: args.demand_bit_slicing,
+            range_demand_slicing: args
+                .range_demand_slicing
+                .then_some(args.range_demand_policy),
             ..SolverConfig::default()
         }
     }
@@ -4700,6 +4832,15 @@ mod run {
             "preprocess": args.preprocess,
             "profile_bit_demand": args.profile_bit_demand,
             "demand_bit_slicing": args.demand_bit_slicing,
+            "range_demand_slicing": args.range_demand_slicing,
+            "range_demand_policy": args.range_demand_slicing.then(|| json!({
+                "min_term_bits_available": args.range_demand_policy.min_term_bits_available,
+                "min_estimated_bits_avoided": args.range_demand_policy.min_estimated_bits_avoided,
+                "min_estimated_avoided_percent": args.range_demand_policy.min_estimated_avoided_percent,
+                "min_exact_bits_avoided": args.range_demand_policy.min_exact_bits_avoided,
+                "min_exact_avoided_percent": args.range_demand_policy.min_exact_avoided_percent,
+                "analysis_work_budget": args.range_demand_policy.analysis_work_budget,
+            })),
             "limit": optional_limit(args.limit),
             "backend": identity.backend_name,
             "backend_kind": args.backend.as_str(),
@@ -5392,6 +5533,16 @@ mod run {
         update_hash(&mut hash, &[u8::from(args.preprocess)]);
         update_hash(&mut hash, &[u8::from(args.profile_bit_demand)]);
         update_hash(&mut hash, &[u8::from(args.demand_bit_slicing)]);
+        update_hash(&mut hash, &[u8::from(args.range_demand_slicing)]);
+        if args.range_demand_slicing {
+            let policy = args.range_demand_policy;
+            update_hash(&mut hash, &policy.min_term_bits_available.to_le_bytes());
+            update_hash(&mut hash, &policy.min_estimated_bits_avoided.to_le_bytes());
+            update_hash(&mut hash, &[policy.min_estimated_avoided_percent]);
+            update_hash(&mut hash, &policy.min_exact_bits_avoided.to_le_bytes());
+            update_hash(&mut hash, &[policy.min_exact_avoided_percent]);
+            update_hash(&mut hash, &policy.analysis_work_budget.to_le_bytes());
+        }
         update_hash(&mut hash, &[u8::from(args.compare_z3)]);
         update_hash(&mut hash, &[u8::from(args.require_in_process_z3)]);
         update_hash(&mut hash, &[u8::from(args.require_reproducible_run)]);
@@ -6493,6 +6644,40 @@ mod run {
             assert_eq!(corpus["term"]["lowered_over_demanded"], json!(1.0));
             assert_eq!(instance["profile_mode"], json!("structural-lowering"));
             assert_eq!(instance["lowering_applied"], json!(true));
+        }
+
+        #[test]
+        fn range_demand_attribution_partitions_admission_and_work() {
+            let samples = [
+                LayerSample {
+                    bit_demand_profile_complete: true,
+                    bit_demand_lowering_applied: true,
+                    range_demand_decision: RangeDemandDecision::Applied,
+                    range_demand_admission: 0.000_2,
+                    range_demand_estimated_bits_avoided: 56,
+                    range_demand_analysis_work_budget: 1_000,
+                    range_demand_analysis_work: 17,
+                    range_demand_merges: 2,
+                    ..LayerSample::default()
+                },
+                LayerSample {
+                    bit_demand_profile_complete: true,
+                    range_demand_decision: RangeDemandDecision::NoCandidate,
+                    range_demand_admission: 0.000_1,
+                    ..LayerSample::default()
+                },
+            ];
+            let corpus = bit_demand_attribution_record(&samples);
+            assert_eq!(corpus["range"]["decision_counts"]["applied"], json!(1));
+            assert_eq!(corpus["range"]["decision_counts"]["no-candidate"], json!(1));
+            assert_eq!(corpus["range"]["estimated_bits_avoided"], json!(56));
+            assert_eq!(corpus["range"]["analysis_work"], json!(17));
+            assert_eq!(corpus["range"]["analysis_work_within_budget"], json!(true));
+            assert_eq!(corpus["range"]["range_merges"], json!(2));
+
+            let instance = instance_bit_demand_record(&samples[0]);
+            assert_eq!(instance["range"]["decision"], json!("applied"));
+            assert_eq!(instance["range"]["admission_ms"], json!(0.2));
         }
 
         #[test]

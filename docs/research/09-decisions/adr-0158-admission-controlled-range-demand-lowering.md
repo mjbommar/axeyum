@@ -160,7 +160,16 @@ equivalence, fragmentation promotion, evaluator replay, and deadline handling;
 the complete BV unit suite is 32/32 green and focused strict Clippy passes under
 the repository memory cap.
 
-This checkpoint does not accept the ADR. Solver configuration, artifact policy
-identity, per-reason telemetry, and the real `register-slice`/whole-corpus timing
-gates remain outstanding. The default and ADR-0157 force-on behavior are
-unchanged.
+Artifact v30 completes the next integration checkpoint. `SolverConfig` carries
+an optional `RangeDemandPolicy`; simultaneous v1/v2 selection is an explicit
+configuration error. All six policy inputs enter the artifact configuration
+hash. Typed backend layers and aggregate/per-instance JSON expose the stable
+decision, admission time, estimated savings, work/budget, merges, and
+promotions. Separate whole-tier and `register-slice` recipes accept every
+threshold explicitly. A committed-corpus CLI smoke decides/agrees 2/2 with zero
+errors or replay failures and correctly rejects both non-slice queries as
+`no-candidate`.
+
+This checkpoint still does not accept the ADR. The real `register-slice`
+calibration and whole-corpus timing gates remain outstanding. The default and
+ADR-0157 force-on behavior are unchanged.

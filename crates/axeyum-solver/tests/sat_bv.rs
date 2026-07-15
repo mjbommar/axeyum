@@ -9,7 +9,8 @@ use std::time::Duration;
 use axeyum_ir::{Sort, TermArena, TermId, Value, eval};
 use axeyum_query::Query;
 use axeyum_solver::{
-    BvLayerStats, CheckResult, SatBvBackend, SolverBackend, SolverConfig, UnknownKind,
+    BvLayerStats, CheckResult, RangeDemandDecision, RangeDemandPolicy, SatBvBackend, SolverBackend,
+    SolverConfig, SolverError, UnknownKind,
 };
 
 fn check(arena: &TermArena, assertions: &[TermId]) -> CheckResult {
@@ -395,6 +396,13 @@ fn stats_report_phase5_layer_counts() {
         "aig_and_nodes_created",
         "bit_demand_profile_complete",
         "bit_demand_lowering_applied",
+        "range_demand_decision",
+        "range_demand_admission_ms",
+        "range_demand_estimated_bits_avoided",
+        "range_demand_analysis_work_budget",
+        "range_demand_analysis_work",
+        "range_demand_merges",
+        "range_demand_promotions",
         "bit_demand_analysis_ms",
         "term_bit_requests",
         "term_bits_available",
@@ -424,6 +432,10 @@ fn stats_report_phase5_layer_counts() {
     let layers = BvLayerStats::from_solve_stats(stats).expect("typed layer stats");
     assert!(!layers.bit_demand_profile_complete);
     assert!(!layers.bit_demand_lowering_applied);
+    assert_eq!(
+        layers.range_demand_decision,
+        RangeDemandDecision::NotRequested
+    );
     assert_eq!(layers.bit_demand_analysis, Duration::ZERO);
     assert!(layers.term_bits_lowered > 0);
 }
@@ -494,6 +506,68 @@ fn demand_driven_lowering_is_opt_in_replay_checked_and_decides_both_verdicts() {
             .check(&arena, &[equal, unequal_constraint], &config)
             .unwrap(),
         CheckResult::Unsat
+    ));
+}
+
+#[test]
+fn admission_controlled_range_demand_reports_policy_and_fallback() {
+    let mut arena = TermArena::new();
+    let x_symbol = arena.declare("x", Sort::BitVec(64)).unwrap();
+    let x = arena.var(x_symbol);
+    let low = arena.extract(7, 0, x).unwrap();
+    let value = arena.bv_const(8, 0x5a).unwrap();
+    let equal = arena.eq(low, value).unwrap();
+    let policy = RangeDemandPolicy {
+        min_term_bits_available: 64,
+        min_estimated_bits_avoided: 32,
+        min_estimated_avoided_percent: 50,
+        min_exact_bits_avoided: 32,
+        min_exact_avoided_percent: 50,
+        analysis_work_budget: 1_000,
+    };
+    let config = SolverConfig::default().with_range_demand_slicing(policy);
+    let mut backend = SatBvBackend::new();
+
+    let CheckResult::Sat(model) = backend.check(&arena, &[equal], &config).unwrap() else {
+        panic!("expected range-demanded formula to be sat");
+    };
+    assert_eq!(
+        eval(&arena, equal, &model.to_assignment()).unwrap(),
+        Value::Bool(true)
+    );
+    let layers = BvLayerStats::from_solve_stats(backend.last_stats().unwrap()).unwrap();
+    assert_eq!(layers.range_demand_decision, RangeDemandDecision::Applied);
+    assert!(layers.bit_demand_lowering_applied);
+    assert_eq!(layers.range_demand_estimated_bits_avoided, 56);
+    assert!(layers.range_demand_analysis_work <= layers.range_demand_analysis_work_budget);
+    assert_eq!(layers.term_bits_lowered, 25);
+    assert_eq!(layers.symbol_bits_lowered, 8);
+
+    let no_slice = arena.eq(x, x).unwrap();
+    assert!(matches!(
+        backend.check(&arena, &[no_slice], &config).unwrap(),
+        CheckResult::Sat(_)
+    ));
+    let fallback = BvLayerStats::from_solve_stats(backend.last_stats().unwrap()).unwrap();
+    assert_eq!(
+        fallback.range_demand_decision,
+        RangeDemandDecision::NoCandidate
+    );
+    assert!(!fallback.bit_demand_lowering_applied);
+    assert_eq!(fallback.term_bits_lowered, fallback.term_bits_available);
+}
+
+#[test]
+fn demand_lowering_modes_cannot_be_combined() {
+    let mut arena = TermArena::new();
+    let x = arena.bv_var("x", 8).unwrap();
+    let formula = arena.eq(x, x).unwrap();
+    let config = SolverConfig::default()
+        .with_demand_bit_slicing(true)
+        .with_range_demand_slicing(RangeDemandPolicy::default());
+    assert!(matches!(
+        SatBvBackend::new().check(&arena, &[formula], &config),
+        Err(SolverError::Backend(detail)) if detail.contains("cannot both be enabled")
     ));
 }
 

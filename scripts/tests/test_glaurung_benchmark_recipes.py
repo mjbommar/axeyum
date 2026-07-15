@@ -79,6 +79,25 @@ class GlaurungBenchmarkRecipeTests(unittest.TestCase):
             self.assertTrue(output.rstrip().endswith(policy), output)
             self.assertIn(f"glaurung-qfbv-{policy}-repeated", output)
 
+    def test_range_demand_recipes_pin_distinct_policy_and_thresholds(self) -> None:
+        for recipe in [
+            "bench-glaurung-qfbv-range-demand",
+            "bench-glaurung-qfbv-range-demand-register-slice",
+        ]:
+            output = dry_run(recipe, "corpus", "manifest")
+            self.assertIn("--range-demand-slicing", output)
+            self.assertNotIn("--demand-bit-slicing", output)
+            self.assertIn("--range-demand-min-term-bits", output)
+            self.assertIn("--range-demand-min-estimated-percent", output)
+            self.assertIn("--range-demand-min-exact-percent", output)
+            self.assertIn("--range-demand-work-budget", output)
+        register = dry_run(
+            "bench-glaurung-qfbv-range-demand-register-slice",
+            "corpus",
+            "manifest",
+        )
+        self.assertIn("--families register-slice", register)
+
     def test_unsuffixed_compatibility_entries_follow_raw(self) -> None:
         single = dry_run("bench-glaurung-qfbv", "corpus", "manifest")
         repeated = dry_run("bench-glaurung-qfbv-repeated", "corpus", "manifest")

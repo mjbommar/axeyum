@@ -18,6 +18,7 @@
 
 // Model values are part of the solver-facing API: consumers should not need a
 // second direct dependency merely to inspect a returned model.
+pub use axeyum_bv::{RangeDemandDecision, RangeDemandPolicy};
 pub use axeyum_ir::Value;
 
 mod backend;

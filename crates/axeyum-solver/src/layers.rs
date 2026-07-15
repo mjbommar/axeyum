@@ -8,6 +8,8 @@
 
 use std::time::Duration;
 
+use axeyum_bv::RangeDemandDecision;
+
 use crate::backend::SolveStats;
 
 /// The named stages of the `sat-bv` pipeline for one check.
@@ -48,6 +50,20 @@ pub struct BvLayerStats {
     /// Whether demand-driven lowering, rather than observational profiling,
     /// controlled which term and symbol bits were materialized.
     pub bit_demand_lowering_applied: bool,
+    /// ADR-0158 admission/fallback result.
+    pub range_demand_decision: RangeDemandDecision,
+    /// Time spent in ADR-0158's cheap admission screen.
+    pub range_demand_admission: Duration,
+    /// Bits the admission screen conservatively estimated it could avoid.
+    pub range_demand_estimated_bits_avoided: u64,
+    /// Configured deterministic exact-analysis work ceiling.
+    pub range_demand_analysis_work_budget: u64,
+    /// Deterministic exact-analysis work consumed.
+    pub range_demand_analysis_work: u64,
+    /// Overlapping or adjacent range unions.
+    pub range_demand_merges: u64,
+    /// Fragmented terms conservatively promoted to full demand.
+    pub range_demand_promotions: u64,
     /// Term-bit demand requests before unioning.
     pub term_bit_requests: u64,
     /// Bits in reachable terms before demand reduction.
@@ -131,6 +147,23 @@ impl BvLayerStats {
                 .is_some_and(|value| value >= 1.0),
             bit_demand_lowering_applied: lookup(stats, "bit_demand_lowering_applied")
                 .is_some_and(|value| value >= 1.0),
+            range_demand_decision: RangeDemandDecision::from_code(
+                lookup(stats, "range_demand_decision").map_or(0, count_to_u64),
+            ),
+            range_demand_admission: lookup(stats, "range_demand_admission_ms")
+                .map_or(Duration::ZERO, ms_to_duration),
+            range_demand_estimated_bits_avoided: lookup(
+                stats,
+                "range_demand_estimated_bits_avoided",
+            )
+            .map_or(0, count_to_u64),
+            range_demand_analysis_work_budget: lookup(stats, "range_demand_analysis_work_budget")
+                .map_or(0, count_to_u64),
+            range_demand_analysis_work: lookup(stats, "range_demand_analysis_work")
+                .map_or(0, count_to_u64),
+            range_demand_merges: lookup(stats, "range_demand_merges").map_or(0, count_to_u64),
+            range_demand_promotions: lookup(stats, "range_demand_promotions")
+                .map_or(0, count_to_u64),
             term_bit_requests: lookup(stats, "term_bit_requests").map_or(0, count_to_u64),
             term_bits_available: lookup(stats, "term_bits_available").map_or(0, count_to_u64),
             term_bits_demanded: lookup(stats, "term_bits_demanded").map_or(0, count_to_u64),

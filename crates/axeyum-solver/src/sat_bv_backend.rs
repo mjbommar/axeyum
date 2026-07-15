@@ -20,8 +20,8 @@ use web_time::Instant;
 use axeyum_bv::lower_terms;
 use axeyum_bv::{
     BitLowerError, BitLowering, first_unsupported_op, first_unsupported_sort,
-    lower_terms_demanded_with_deadline, lower_terms_with_deadline,
-    lower_terms_with_deadline_profiled,
+    lower_terms_demanded_with_deadline, lower_terms_range_demanded_with_deadline,
+    lower_terms_with_deadline, lower_terms_with_deadline_profiled,
 };
 use axeyum_cnf::{
     BveOptions, CnfAssignment, CnfEncoding, CnfError, CnfFormula, CompactMap,
@@ -75,6 +75,12 @@ impl SatBvBackend {
         config: &SolverConfig,
     ) -> Result<CheckResult, SolverError> {
         self.stats = None;
+        if config.demand_bit_slicing && config.range_demand_slicing.is_some() {
+            return Err(SolverError::Backend(
+                "demand_bit_slicing and range_demand_slicing are distinct experiments and cannot both be enabled"
+                    .to_owned(),
+            ));
+        }
         let deadline = config
             .timeout
             .and_then(|timeout| Instant::now().checked_add(timeout));
@@ -117,7 +123,9 @@ impl SatBvBackend {
         };
 
         let bit_blast_start = Instant::now();
-        let lowering_result = if config.demand_bit_slicing {
+        let lowering_result = if let Some(policy) = config.range_demand_slicing {
+            lower_terms_range_demanded_with_deadline(arena, assertions, policy, deadline)
+        } else if config.demand_bit_slicing {
             lower_terms_demanded_with_deadline(arena, assertions, deadline)
         } else if config.profile_bit_demand {
             lower_terms_with_deadline_profiled(arena, assertions, deadline)
@@ -334,6 +342,25 @@ fn record_encoding_stats(stats: &mut SolveStats, lowering: &BitLowering, encodin
         "bit_demand_lowering_applied",
         u64::from(demand.lowering_applied),
     );
+    push_count(
+        stats,
+        "range_demand_decision",
+        u64::from(demand.range_decision.code()),
+    );
+    push_duration_ms(stats, "range_demand_admission_ms", demand.admission);
+    push_count(
+        stats,
+        "range_demand_estimated_bits_avoided",
+        demand.estimated_bits_avoided,
+    );
+    push_count(
+        stats,
+        "range_demand_analysis_work_budget",
+        demand.analysis_work_budget,
+    );
+    push_count(stats, "range_demand_analysis_work", demand.analysis_work);
+    push_count(stats, "range_demand_merges", demand.range_merges);
+    push_count(stats, "range_demand_promotions", demand.range_promotions);
     push_duration_ms(stats, "bit_demand_analysis_ms", demand.analysis);
     push_count(stats, "term_bit_requests", demand.term_bit_requests);
     push_count(stats, "term_bits_available", demand.term_bits_available);

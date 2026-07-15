@@ -364,10 +364,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   is unchanged. Six focused additions bring the BV suite to 32/32 green,
   including range-vs-dense equivalence, no-candidate/full-lowerer identity,
   budget determinism, fragmentation promotion, replay, and deadline coverage;
-  strict focused Clippy is clean under the 4 GiB cap. This is not acceptance or
-  a speed claim: policy identity and telemetry still need SAT-BV/benchmark
-  integration, and thresholds come from the real `register-slice` family and
-  whole corpus. Separately, ADR-0156's
+  strict focused Clippy is clean under the 4 GiB cap. Artifact v30 now completes
+  the integration boundary: `SolverConfig::range_demand_slicing` is distinct
+  from v1, conflicting modes fail explicitly, every threshold/work budget is
+  configuration-hashed, and typed plus per-instance/aggregate telemetry records
+  admission time, decision, estimate, work, merges, and promotions. Dedicated
+  whole-tier and `register-slice` recipes take explicit calibration parameters.
+  The CLI micro smoke is 2/2 decided/agreed with zero errors, disagreements, or
+  replay failures; both queries correctly report `no-candidate`, so it is
+  plumbing evidence only. This is not acceptance or a speed claim: thresholds
+  still come from the real `register-slice` family and whole corpus. Separately,
+  ADR-0156's
   batched assertion API cannot validate the structural warm win through
   Glaurung today: Glaurung's `Solver` trait remains one-shot. GQ7/P5 must first
   expose persistent worker/path solver ownership and ordered push/assert/check/
@@ -803,7 +810,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   | **GQ1 real-query profile** | **DONE for standalone cold timing; WIP for native-driver attribution.** Artifact v28's full process is valid with complete operator inventories, but the reported ~2.5x driver versus ~1.37x bench gap crosses different entry paths | Key identical query hashes across Glaurung and `axeyum-bench`; time translation/interning, word policy, lower/encode, SAT, model extraction, and replay separately |
   | **GQ2 cheap cold tier** | **WIP with three accepted rewrite tranches; batch integration deferred.** Canonical v4 reaches 5.625 s / 0.730x Z3; ADR-0156 preserves replay but is 18.8% slower than one-shot | Keep canonical v4 as the measured one-shot policy; do not recommend fresh incremental batch until its clause/entry overhead closes |
   | **GQ3 coercion/affine peepholes** | **Implementation complete for measured shapes; telemetry WIP.** ADR-0142/0153/0155 land the exact rules and stable fire counts | Add affected-query/family counts and default-minus-rule AIG/CNF/time ablations; only reopen rules that fire on the new residual |
-  | **GQ4 cold relevant bits** | **v1 DEFERRED; v2 implementation WIP and still non-default.** v1 is correct but regresses ~1.42x→4.49x. The isolated ADR-0158 lowerer now has cheap admission, bounded inline ranges, exact fallback, and sparse range materialization with focused equivalence/replay gates | Wire v2 policy plus telemetry through SAT-BV/artifact identity; calibrate explicit thresholds on `register-slice`, then require whole-corpus no-regression before any default |
+  | **GQ4 cold relevant bits** | **v1 DEFERRED; v2 measurement-ready and still non-default.** ADR-0158 now has cheap admission, bounded inline ranges, exact fallback, sparse materialization, SAT-BV policy, artifact-v30 identity, telemetry, and executable recipes | Calibrate explicit thresholds on `register-slice`; then require whole-corpus no-regression and 100% agreement/replay before any default |
   | **GQ5 AIG/CNF construction** | **WIP at the client boundary.** One-shot v4 is fast, but fresh incremental assertion emits 80.9% more clauses with the same AIG | Verify Glaurung sharing survives translation; profile measured gate patterns and close incremental gate fusion only after GQ4/client attribution |
   | **GQ6 cold SAT/CDCL** | **WIP foundation, attribution-gated**; subsumption/BVE, XOR/GF(2), VSIDS, phase saving, Luby, and LBD foundations exist | Exact-CNF backend attribution first; tune/default a stronger path only where SAT dominates and proof replay stays green |
   | **GQ7 warm delta entry** | **WIP; blocked at the Glaurung API boundary, not Axeyum batch syntax.** ADR-0156's batch API exists, but Glaurung's `Solver` trait is one-shot; the deduplicated cold corpus cannot measure prefix reuse | Add persistent per-worker/path solver ownership and obtain an ordered trace under `glaurung-ordered-trace-v1.md`; then preprocess only new/affected terms, retain CNF/search state across scopes, control concretization, and publish per-check cost plus warm break-even depth |
@@ -811,10 +818,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   | **GQ9 auto cost model/docs** | **TODO**; P1.8 shape/resource probes are only the general foundation | Telemetry-visible raw/cheap/configured/warm choice that beats or matches fixed policies and documents embedder guidance |
   | **GQ10 real-lifter regression tier** | **WIP; cold regression automation landed.** The representative/full deduped tiers are valid and guarded, but cover only the current drivers and erase occurrence/prefix order | Expand drivers, fix producer validation/dedup, add a separate ordered-prefix tier, and publish per-commit family/stage/Axeyum÷Z3 trends |
 
-  **Next actions:** (1) finish GQ4-v2 integration by exposing its distinct
-  policy and admission/fallback telemetry through SAT-BV and artifact identity,
-  then calibrate on `register-slice` and require a whole-tier no-regression
-  result; (2) add affected-family rewrite
+  **Next actions:** (1) run artifact-v30 GQ4-v2 calibration on
+  `register-slice`, select thresholds from admission/savings/work telemetry,
+  and require a whole-tier no-regression result before any acceptance; (2) add
+  affected-family rewrite
   counts plus default-minus-rule AIG/CNF/time ablation; (3) instrument the
   native Glaurung path by query hash and decide between incremental gate-fusion
   work and a purpose-built one-shot client API; (4) hand off and validate the

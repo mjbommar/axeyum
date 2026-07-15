@@ -2,6 +2,7 @@
 
 use std::time::Duration;
 
+use axeyum_bv::RangeDemandPolicy;
 use axeyum_ir::{TermArena, TermId};
 use axeyum_query::Query;
 
@@ -197,6 +198,15 @@ pub struct SolverConfig {
     /// This experimental GQ4 lever is off by default. When enabled, its complete
     /// structural-demand telemetry supersedes [`Self::profile_bit_demand`].
     pub demand_bit_slicing: bool,
+    /// Enables ADR-0158's admission-controlled range-demand lowerer with the
+    /// supplied deterministic thresholds and work budget.
+    ///
+    /// This is a distinct experiment from [`Self::demand_bit_slicing`]. It
+    /// cheaply rejects unsuitable queries to the ordinary full lowerer, then
+    /// propagates bounded inline ranges and rechecks exact savings before sparse
+    /// materialization. `None` keeps the path disabled. Enabling both demand
+    /// modes is a configuration error rather than an implicit precedence rule.
+    pub range_demand_slicing: Option<RangeDemandPolicy>,
     /// When set, the bit-blasting BV backend may fall back to the CDCL(XOR)
     /// search core ([`axeyum_cnf::solve_with_xor_cdcl`]) after the batsat solve
     /// returns `unknown` (timeout/budget) on an XOR-structured formula
@@ -265,6 +275,7 @@ impl Default for SolverConfig {
             preprocess: true,
             profile_bit_demand: false,
             demand_bit_slicing: false,
+            range_demand_slicing: None,
             xor_cdcl_fallback: false,
             lazy_bv: false,
             lazy_bv_abstract_ite: false,
@@ -368,6 +379,14 @@ impl SolverConfig {
     #[must_use]
     pub fn with_demand_bit_slicing(mut self, enabled: bool) -> Self {
         self.demand_bit_slicing = enabled;
+        self
+    }
+
+    /// Enables admission-controlled range-demand lowering (GQ4-v2, ADR-0158).
+    /// See [`SolverConfig::range_demand_slicing`].
+    #[must_use]
+    pub fn with_range_demand_slicing(mut self, policy: RangeDemandPolicy) -> Self {
+        self.range_demand_slicing = Some(policy);
         self
     }
 

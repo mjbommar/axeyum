@@ -261,6 +261,14 @@ records the contract and the first measured baselines.
   and strict Glaurung recipes separately measure the whole tier and the
   `register-slice` family. This production route must not be conflated with
   artifact v28's observational demand profile.
+- Artifact version 30 gives ADR-0158's admission-controlled range path a
+  separate configuration identity. Every absolute/relative savings threshold
+  and the deterministic analysis-work budget enter the hash. Per-instance and
+  aggregate records partition `no-candidate`, `insufficient-estimate`,
+  `analysis-budget-exceeded`, `insufficient-exact-savings`, and `applied`, and
+  expose admission time plus exact work/merge/promotion counts. This route is
+  still an explicit experiment: compare its `register-slice` and whole-tier
+  artifacts to the unchanged default before proposing any automatic policy.
 - **Primary client QF_BV target (2026-07-13): Glaurung binary analysis.** Capture
   and minimize the real lifter-produced path conditions, preserving their
   extract/concat, mixed machine-width, and memory-derived shape. This client
