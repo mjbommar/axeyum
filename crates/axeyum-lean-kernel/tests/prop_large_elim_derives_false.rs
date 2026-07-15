@@ -1,4 +1,5 @@
-//! **P0 soundness exploit**: derive `False` through the trusted admission gate.
+//! **P0 soundness regression**: the former `False` exploit is rejected by the
+//! trusted admission gate.
 //!
 //! This is the escalation of `prop_large_elim_soundness.rs`. That test shows the
 //! two ingredients are live; this one uses them to get `add_declaration` — the
@@ -24,10 +25,9 @@
 //! subsingletons (at most one constructor, all fields proofs) precisely to
 //! block this.
 //!
-//! EXPECTED once fixed: `add_inductive` for `Two` should still succeed, but the
-//! generated `Two.rec` must be restricted to eliminate only into `Prop`, so that
-//! step (2) fails to typecheck. This test should then be inverted into a
-//! negative test asserting that rejection.
+//! `add_inductive` for `Two` still succeeds, but the generated `Two.rec` is
+//! restricted to eliminate only into `Prop`. The test retains the complete old
+//! exploit term and proves that both inference and `add_declaration` reject it.
 
 use axeyum_lean_kernel::{BinderInfo, Declaration, ExprId, Kernel, NameId};
 
@@ -90,14 +90,8 @@ fn declare_eq(k: &mut Kernel) -> (NameId, NameId, NameId) {
 }
 
 #[test]
-#[ignore = "P0 REPRODUCTION: this test FAILS because the kernel is unsound. \
-            Ignored only so it does not break other lanes' `just check` in this \
-            shared checkout — NOT because it is unimportant. See \
-            docs/prover-track/research/09-P0-kernel-unsoundness.md. Run with \
-            `cargo test -p axeyum-lean-kernel --test prop_large_elim_derives_false \
-            -- --ignored --nocapture`. Un-ignore and invert once the subsingleton \
-            restriction lands."]
-fn prop_large_elimination_derives_false() {
+#[allow(clippy::many_single_char_names)]
+fn trusted_gate_rejects_prop_large_elimination_exploit() {
     let mut k = Kernel::new();
     let anon = k.anon();
     let zero = k.level_zero();
@@ -120,10 +114,10 @@ fn prop_large_elimination_derives_false() {
     let trivial = k.const_(true_c[0], vec![]);
     let prop = k.sort_zero();
 
-    // f : Two -> Answer  :=  fun t => Two.rec.{1} (fun _ => Answer) yes no t
+    // f : Two -> Answer  :=  fun t => Two.rec (fun _ => Answer) yes no t
     // THE ILLEGAL STEP: a two-constructor Prop eliminating into Sort 1.
     let two_rec = k.name_str(two_name, "rec");
-    let two_rec_c = k.const_(two_rec, vec![one]);
+    let two_rec_c = k.const_(two_rec, vec![]);
     let f_motive = k.lam(anon, two_const, answer_const, BinderInfo::Default);
     let r = k.app(two_rec_c, f_motive);
     let r = k.app(r, yes);
@@ -131,6 +125,10 @@ fn prop_large_elimination_derives_false() {
     let b0 = k.bvar(0);
     let r_applied = k.app(r, b0);
     let f = k.lam(anon, two_const, r_applied, BinderInfo::Default);
+    assert!(
+        k.infer(f).is_err(),
+        "the exploit's separating function must be ill-typed"
+    );
 
     // D : Answer -> Prop := fun x => Answer.rec.{1} (fun _ => Prop) True False x
     // Answer is a Type, so this elimination is entirely legitimate.
@@ -185,14 +183,10 @@ fn prop_large_elimination_derives_false() {
     let t = apply(&mut k, t, b);
     let absurd = apply(&mut k, t, h_val);
 
-    match k.infer(absurd) {
-        Ok(ty) => {
-            let w = k.whnf(ty);
-            println!("inferred type of the transported term: {:?}", k.expr_node(w));
-            println!("  def_eq(.., False) = {}", k.def_eq(w, false_const));
-        }
-        Err(e) => println!("infer failed: {e:?}"),
-    }
+    assert!(
+        k.infer(absurd).is_err(),
+        "the complete former exploit must not infer"
+    );
 
     // THE GATE. If this admits, the kernel has accepted a proof of `False`.
     let bad = k.name_str(anon, "bad");
@@ -202,10 +196,8 @@ fn prop_large_elimination_derives_false() {
         ty: false_const,
         value: absurd,
     });
-    println!("add_declaration(theorem bad : False) => {res:?}");
     assert!(
-        res.is_ok(),
-        "EXPLOIT FAILED (good news!) — gate rejected: {res:?}"
+        res.is_err(),
+        "trusted gate accepted the former proof of False: {res:?}"
     );
-    panic!("UNSOUND: the trusted admission gate accepted `theorem bad : False`");
 }

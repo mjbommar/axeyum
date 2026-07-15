@@ -191,8 +191,11 @@ pub enum Declaration {
     Recursor {
         /// The recursor's name (`I.rec`).
         name: NameId,
-        /// The recursor's universe parameters: the motive's elimination level
-        /// followed by the inductive's universe parameters.
+        /// The recursor's universe parameters. Large-eliminating recursors use
+        /// the motive's elimination level followed by the inductive's universe
+        /// parameters. A potentially-`Prop`, non-subsingleton recursor omits
+        /// that fresh level and contains only the inductive's parameters because
+        /// its motive universe is fixed at zero.
         uparams: Vec<NameId>,
         /// The recursor's (closed) type.
         ty: ExprId,

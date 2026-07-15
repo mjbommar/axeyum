@@ -331,6 +331,153 @@ fn generated_recursor_type_infers() {
     assert!(matches!(k.expr_node(inferred), ExprNode::Sort(_)));
 }
 
+/// A potentially-Prop family with multiple constructors receives no fresh
+/// elimination universe, even when its result level is polymorphic. A successor
+/// result level is provably nonzero and therefore retains the fresh universe.
+#[test]
+fn sort_polymorphic_large_elimination_is_conservative() {
+    let mut k = Kernel::new();
+    let anon = k.anon();
+    let u = k.name_str(anon, "u");
+    let u_level = k.level_param(u);
+    let poly = k.name_str(anon, "Poly");
+    let poly_const = k.const_(poly, vec![u_level]);
+    let left = k.name_str(poly, "left");
+    let right = k.name_str(poly, "right");
+    let poly_sort = k.sort(u_level);
+    k.add_inductive(
+        poly,
+        &[u],
+        0,
+        poly_sort,
+        &[(left, poly_const), (right, poly_const)],
+    )
+    .expect("sort-polymorphic enum should admit with a restricted recursor");
+    let poly_rec = k.name_str(poly, "rec");
+    match k.environment().get(poly_rec).expect("Poly.rec") {
+        Declaration::Recursor { uparams, .. } => assert_eq!(uparams, &[u]),
+        _ => panic!("expected recursor"),
+    }
+
+    let data = k.name_str(anon, "AlwaysData");
+    let data_const = k.const_(data, vec![u_level]);
+    let data_left = k.name_str(data, "left");
+    let data_right = k.name_str(data, "right");
+    let result_level = k.level_succ(u_level);
+    let data_sort = k.sort(result_level);
+    k.add_inductive(
+        data,
+        &[u],
+        0,
+        data_sort,
+        &[(data_left, data_const), (data_right, data_const)],
+    )
+    .expect("provably non-Prop enum should large-eliminate");
+    let data_rec = k.name_str(data, "rec");
+    match k.environment().get(data_rec).expect("AlwaysData.rec") {
+        Declaration::Recursor { uparams, .. } => {
+            assert_eq!(uparams.len(), 2);
+            assert_eq!(uparams[1], u);
+            assert_ne!(uparams[0], u);
+        }
+        _ => panic!("expected recursor"),
+    }
+}
+
+/// Lean's one-constructor rule distinguishes a recoverable data field (the
+/// field is itself a result index) from a hidden witness and from a field that
+/// merely occurs beneath an index expression.
+#[test]
+#[allow(clippy::too_many_lines)]
+fn prop_single_constructor_requires_exact_result_argument() {
+    let mut k = Kernel::new();
+    let anon = k.anon();
+    let (nat, _nat_rec, _nat_ctors) = declare_nat(&mut k);
+    let nat_const = k.const_(nat, vec![]);
+    let prop = k.sort_zero();
+
+    // Visible : Nat -> Prop | mk (n : Nat) : Visible n
+    let visible = k.name_str(anon, "Visible");
+    let visible_const = k.const_(visible, vec![]);
+    let visible_ty = k.pi(anon, nat_const, prop, BinderInfo::Default);
+    let visible_mk = k.name_str(visible, "mk");
+    let visible_mk_ty = {
+        let n = k.bvar(0);
+        let result = k.app(visible_const, n);
+        k.pi(anon, nat_const, result, BinderInfo::Default)
+    };
+    k.add_inductive(visible, &[], 0, visible_ty, &[(visible_mk, visible_mk_ty)])
+        .expect("index-exposed field should admit");
+    let visible_rec = k.name_str(visible, "rec");
+    match k.environment().get(visible_rec).expect("Visible.rec") {
+        Declaration::Recursor { uparams, .. } => assert_eq!(uparams.len(), 1),
+        _ => panic!("expected recursor"),
+    }
+
+    // Hidden : Prop | mk (n : Nat) : Hidden
+    let hidden = k.name_str(anon, "Hidden");
+    let hidden_const = k.const_(hidden, vec![]);
+    let hidden_mk = k.name_str(hidden, "mk");
+    let hidden_mk_ty = k.pi(anon, nat_const, hidden_const, BinderInfo::Default);
+    k.add_inductive(hidden, &[], 0, prop, &[(hidden_mk, hidden_mk_ty)])
+        .expect("hidden-witness proposition should admit with restricted recursor");
+    let hidden_rec = k.name_str(hidden, "rec");
+    match k.environment().get(hidden_rec).expect("Hidden.rec") {
+        Declaration::Recursor { uparams, .. } => assert!(uparams.is_empty()),
+        _ => panic!("expected recursor"),
+    }
+
+    // Nested : Nat -> Prop | mk (n : Nat) : Nested (f n). Exact result-argument
+    // equality is required: merely appearing below `f` is not recoverability.
+    let f_name = k.name_str(anon, "f");
+    let f_ty = k.pi(anon, nat_const, nat_const, BinderInfo::Default);
+    k.add_declaration(Declaration::Axiom {
+        name: f_name,
+        uparams: vec![],
+        ty: f_ty,
+    })
+    .unwrap();
+    let f = k.const_(f_name, vec![]);
+    let nested = k.name_str(anon, "Nested");
+    let nested_const = k.const_(nested, vec![]);
+    let nested_ty = k.pi(anon, nat_const, prop, BinderInfo::Default);
+    let nested_mk = k.name_str(nested, "mk");
+    let nested_mk_ty = {
+        let n = k.bvar(0);
+        let f_n = k.app(f, n);
+        let result = k.app(nested_const, f_n);
+        k.pi(anon, nat_const, result, BinderInfo::Default)
+    };
+    k.add_inductive(nested, &[], 0, nested_ty, &[(nested_mk, nested_mk_ty)])
+        .expect("nested-index proposition should admit with restricted recursor");
+    let nested_rec = k.name_str(nested, "rec");
+    match k.environment().get(nested_rec).expect("Nested.rec") {
+        Declaration::Recursor { uparams, .. } => assert!(uparams.is_empty()),
+        _ => panic!("expected recursor"),
+    }
+}
+
+/// A sole constructor whose fields are proofs remains a syntactic
+/// subsingleton, including the direct-recursive proof-field backbone used by
+/// accessibility-style predicates.
+#[test]
+fn prop_proof_fields_retain_large_elimination() {
+    let mut k = Kernel::new();
+    let anon = k.anon();
+    let prop = k.sort_zero();
+    let acc_like = k.name_str(anon, "AccLike");
+    let acc_like_const = k.const_(acc_like, vec![]);
+    let intro = k.name_str(acc_like, "intro");
+    let intro_ty = k.pi(anon, acc_like_const, acc_like_const, BinderInfo::Default);
+    k.add_inductive(acc_like, &[], 0, prop, &[(intro, intro_ty)])
+        .expect("single-constructor recursive proof should admit");
+    let rec = k.name_str(acc_like, "rec");
+    match k.environment().get(rec).expect("AccLike.rec") {
+        Declaration::Recursor { uparams, .. } => assert_eq!(uparams.len(), 1),
+        _ => panic!("expected recursor"),
+    }
+}
+
 /// `infer(Const(I.rec / c_i / I))` resolves via the registered declarations.
 #[test]
 fn const_resolution_for_inductive_family() {
@@ -736,9 +883,13 @@ fn declare_list(
     let sort_u = k.sort(u_lvl);
     let list = k.name_str(anon, "List");
 
-    // ty := Π (α : Sort u), Sort u   (the body is closed: Sort u, no α reference).
+    // ty := Π (α : Sort u), Sort (u+1). The successor makes this family
+    // provably non-Prop for every universe assignment, so its computational
+    // recursor may eliminate into an arbitrary Sort.
     let alpha_name = k.name_str(anon, "α");
-    let ty = k.pi(alpha_name, sort_u, sort_u, BinderInfo::Default);
+    let result_level = k.level_succ(u_lvl);
+    let result_sort = k.sort(result_level);
+    let ty = k.pi(alpha_name, sort_u, result_sort, BinderInfo::Default);
 
     // List α  (the inductive const applied to the param BVar 0, used in ctor
     // telescope bodies). In the constructor types we build below, `α` is BVar 0
@@ -1014,7 +1165,7 @@ fn list_rec_computes_length() {
     );
 }
 
-/// `Option.{u} (α : Sort u) : Sort u` with `none : Option α` and
+/// `Option.{u} (α : Sort u) : Sort (u+1)` with `none : Option α` and
 /// `some : α → Option α` (1 param, non-recursive): admits, recursor self-checks,
 /// and ι passes the field through (param threaded).
 #[test]
@@ -1024,9 +1175,11 @@ fn option_admits_and_iota() {
     let u = k.name_str(anon, "u");
     let u_lvl = k.level_param(u);
     let sort_u = k.sort(u_lvl);
+    let result_level = k.level_succ(u_lvl);
+    let result_sort = k.sort(result_level);
     let opt = k.name_str(anon, "Option");
     let alpha_name = k.name_str(anon, "α");
-    let ty = k.pi(alpha_name, sort_u, sort_u, BinderInfo::Default);
+    let ty = k.pi(alpha_name, sort_u, result_sort, BinderInfo::Default);
     let opt_const = k.const_(opt, vec![u_lvl]);
 
     let none = k.name_str(anon, "none");
@@ -1083,7 +1236,7 @@ fn option_admits_and_iota() {
     assert_eq!(k.whnf(app), expected, "Option.rec … (some α x) ι→ csome x");
 }
 
-/// `Prod.{u,w} (α : Sort u) (β : Sort w) : Sort (max u w)` with
+/// `Prod.{u,w} (α : Sort u) (β : Sort w) : Sort (max u w + 1)` with
 /// `mk : α → β → Prod α β` (2 params, non-recursive): admits, recursor
 /// self-checks, and ι passes both fields (both params threaded into the result).
 #[test]
@@ -1097,15 +1250,17 @@ fn prod_two_params_admits_and_iota() {
     let sort_u = k.sort(u_lvl);
     let sort_w = k.sort(w_lvl);
     let max_uw = k.level_max(u_lvl, w_lvl);
-    let sort_max = k.sort(max_uw);
+    let result_level = k.level_succ(max_uw);
+    let sort_result = k.sort(result_level);
     let prod = k.name_str(anon, "Prod");
     let prod_const = k.const_(prod, vec![u_lvl, w_lvl]);
 
-    // ty := Π (α : Sort u) (β : Sort w), Sort (max u w).
+    // The successor keeps the family outside Prop for every assignment.
+    // ty := Π (α : Sort u) (β : Sort w), Sort (max u w + 1).
     let alpha_name = k.name_str(anon, "α");
     let beta_name = k.name_str(anon, "β");
     let ty = {
-        let inner = k.pi(beta_name, sort_w, sort_max, BinderInfo::Default);
+        let inner = k.pi(beta_name, sort_w, sort_result, BinderInfo::Default);
         k.pi(alpha_name, sort_u, inner, BinderInfo::Default)
     };
 
@@ -1185,7 +1340,7 @@ fn prod_two_params_admits_and_iota() {
     );
 }
 
-/// `Sum.{u,w} (α : Sort u) (β : Sort w) : Sort (max u w)` with
+/// `Sum.{u,w} (α : Sort u) (β : Sort w) : Sort (max u w + 1)` with
 /// `inl : α → Sum α β` and `inr : β → Sum α β` (2 params, multiple ctors): admits,
 /// recursor self-checks, and ι picks the right minor (param-threaded).
 #[test]
@@ -1200,14 +1355,15 @@ fn sum_two_params_multiple_ctors() {
     let sort_u = k.sort(u_lvl);
     let sort_w = k.sort(w_lvl);
     let max_uw = k.level_max(u_lvl, w_lvl);
-    let sort_max = k.sort(max_uw);
+    let result_level = k.level_succ(max_uw);
+    let sort_result = k.sort(result_level);
     let sum = k.name_str(anon, "Sum");
     let sum_const = k.const_(sum, vec![u_lvl, w_lvl]);
 
     let alpha_name = k.name_str(anon, "α");
     let beta_name = k.name_str(anon, "β");
     let ty = {
-        let inner = k.pi(beta_name, sort_w, sort_max, BinderInfo::Default);
+        let inner = k.pi(beta_name, sort_w, sort_result, BinderInfo::Default);
         k.pi(alpha_name, sort_u, inner, BinderInfo::Default)
     };
 

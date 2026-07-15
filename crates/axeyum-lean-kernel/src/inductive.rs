@@ -33,8 +33,15 @@
 //! [`KernelError::RecursiveIndexedNotSupported`]), **higher-order / reflexive**
 //! recursive fields (`(A → I p…)` — a field whose type is a `Pi` ending in `I`,
 //! reported as [`KernelError::ReflexiveOrNestedNotSupported`]), nested and
-//! mutual inductives, and the `Prop`-subsingleton large-elimination subtleties.
-//! The motive is always allowed to eliminate into an arbitrary `Sort v` here.
+//! mutual inductives.
+//!
+//! `Prop` elimination follows Lean's syntactic-subsingleton rule. An inductive
+//! whose result universe is provably nonzero may eliminate into an arbitrary
+//! `Sort v`. A family that may inhabit `Prop` may do so only when it is empty,
+//! or has exactly one constructor and every non-`Prop` field occurs as an exact
+//! argument of that constructor's result. Every other such family receives a
+//! recursor whose motive is restricted to `Prop` (`Sort 0`). This restriction
+//! is required for soundness in the presence of proof irrelevance.
 //!
 //! ## What is built
 //!
@@ -194,9 +201,10 @@ impl Kernel {
         }
         let num_indices = indices.len();
         // The remainder must be exactly a `Sort` after params + indices.
-        if !matches!(self.expr_node(cursor), ExprNode::Sort(_)) {
+        let ExprNode::Sort(result_level) = self.expr_node(cursor) else {
             return Err(KernelError::InductiveTypeNotASort { got: cursor });
-        }
+        };
+        let result_level = *result_level;
 
         // The inductive constant `Const(I, uparams-as-levels)`, used as the
         // applied result head and for the major premise's type.
@@ -231,13 +239,16 @@ impl Kernel {
                 cn,
                 cty,
             ) {
-                Ok((fields, recursive_fields)) => checked.push(CheckedCtor {
-                    name: cn,
-                    ty: cty,
-                    idx: u16::try_from(idx).expect("ctor count fits u16"),
-                    fields,
-                    recursive_fields,
-                }),
+                Ok((fields, recursive_fields, exposes_non_prop_fields)) => {
+                    checked.push(CheckedCtor {
+                        name: cn,
+                        ty: cty,
+                        idx: u16::try_from(idx).expect("ctor count fits u16"),
+                        fields,
+                        recursive_fields,
+                        exposes_non_prop_fields,
+                    });
+                }
                 Err(e) => {
                     // Roll back the inductive so the environment is unchanged.
                     self.env.remove_unchecked(name);
@@ -261,6 +272,12 @@ impl Kernel {
 
         // Generate and register the recursor (and its rec rules). Its type is
         // infer-checked here (the self-check); on failure, roll everything back.
+        let allows_large_elimination = self.level_is_nonzero(result_level)
+            || match checked.as_slice() {
+                [] => true,
+                [ctor] => ctor.exposes_non_prop_fields,
+                _ => false,
+            };
         match self.mk_recursor(
             rec_name,
             uparams,
@@ -269,6 +286,7 @@ impl Kernel {
             ty,
             ind_const,
             &checked,
+            allows_large_elimination,
         ) {
             Ok(rec_decl) => {
                 self.env.insert_unchecked(rec_decl);
@@ -318,7 +336,7 @@ impl Kernel {
         params: &[LocalDecl],
         ctor_name: NameId,
         ctor_ty: ExprId,
-    ) -> Result<(Vec<LocalDecl>, Vec<usize>), KernelError> {
+    ) -> Result<(Vec<LocalDecl>, Vec<usize>, bool), KernelError> {
         // Open the constructor's telescope in a context seeded with the
         // inductive's **shared** parameter locals, so that dependent parameter
         // types (e.g. `Eq`'s `a : α` referencing the earlier param `α`) and the
@@ -371,7 +389,20 @@ impl Kernel {
 
         let mut fields: Vec<LocalDecl> = Vec::new();
         let mut recursive_fields: Vec<usize> = Vec::new();
+        // Lean's large-elimination test records every non-parameter field whose
+        // type does not inhabit Prop, then requires each such field itself to
+        // occur as an exact argument of the constructor result. This is more
+        // precise than merely searching beneath an index expression: the field
+        // value must be recoverable directly from the result type.
+        let mut non_prop_field_values: Vec<ExprId> = Vec::new();
         while let ExprNode::Pi(bname, dom, body, info) = self.expr_node(cursor).clone() {
+            let dom_type = self.infer_core(dom, &mut ctx)?;
+            let dom_type = self.whnf(dom_type);
+            let ExprNode::Sort(dom_level) = self.expr_node(dom_type) else {
+                return Err(KernelError::MalformedConstructorType { ctor: ctor_name });
+            };
+            let field_is_proof = self.level_is_zero(*dom_level);
+
             // Classify the field's occurrence of `I`, if any. A direct recursive
             // field (`dom == I p_1…p_m`) is admitted and recorded **only for a
             // non-indexed family** (slice 7 defers recursive constructors on an
@@ -418,6 +449,9 @@ impl Kernel {
             ctx.push(decl);
             fields.push(decl);
             let fv = self.fvar(fvar);
+            if !field_is_proof {
+                non_prop_field_values.push(fv);
+            }
             cursor = self.instantiate(body, &[fv]);
             cursor = self.whnf(cursor);
         }
@@ -450,7 +484,10 @@ impl Kernel {
         // The trailing `num_indices` args are the constructor's own index
         // expressions; they are re-derived (freshly, in the recursor's own
         // fvars) during `mk_recursor`, so they need not be returned here.
-        Ok((fields, recursive_fields))
+        let exposes_non_prop_fields = non_prop_field_values
+            .iter()
+            .all(|field| args.contains(field));
+        Ok((fields, recursive_fields, exposes_non_prop_fields))
     }
 
     /// Classify a field type `dom` that mentions `I` but is **not** the direct
@@ -528,6 +565,11 @@ struct CheckedCtor {
     /// recursive call (in the ι-rule) is generated per entry, in this order.
     /// Empty for an indexed inductive (recursive-indexed is deferred).
     recursive_fields: Vec<usize>,
+    /// Whether every non-`Prop` field is exposed as an exact argument of this
+    /// constructor's result. For a sole constructor of a potentially-`Prop`
+    /// family, this is Lean's final syntactic-subsingleton condition for large
+    /// elimination.
+    exposes_non_prop_fields: bool,
 }
 
 // ---------------------------------------------------------------------------
@@ -585,15 +627,23 @@ impl Kernel {
         ind_ty: ExprId,
         ind_const: ExprId,
         ctors: &[CheckedCtor],
+        allows_large_elimination: bool,
     ) -> Result<Declaration, KernelError> {
-        // A fresh elimination universe parameter `v`, distinct from the
-        // inductive's uparams. The recursor's uparams are `[v] ++ uparams`.
-        let elim_param = self.fresh_elim_param(uparams);
-        let elim_level = self.level_param(elim_param);
+        // Large-eliminating recursors receive a fresh universe parameter `v`,
+        // distinct from the inductive's uparams, and expose `[v] ++ uparams`.
+        // A non-subsingleton family that may inhabit Prop instead fixes the
+        // motive universe to zero and exposes only the inductive's uparams.
+        let (elim_level, rec_uparams) = if allows_large_elimination {
+            let elim_param = self.fresh_elim_param(uparams);
+            let elim_level = self.level_param(elim_param);
+            let mut rec_uparams = Vec::with_capacity(uparams.len() + 1);
+            rec_uparams.push(elim_param);
+            rec_uparams.extend_from_slice(uparams);
+            (elim_level, rec_uparams)
+        } else {
+            (self.level_zero(), uparams.to_vec())
+        };
         let elim_sort = self.sort(elim_level);
-        let mut rec_uparams = Vec::with_capacity(uparams.len() + 1);
-        rec_uparams.push(elim_param);
-        rec_uparams.extend_from_slice(uparams);
 
         // We work in one shared local context: params, then motive, then the
         // minors. The fields for each constructor live in nested contexts during
