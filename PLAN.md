@@ -97,9 +97,13 @@ session state.
 > green. SAT and broad GQ4 remain behind fresh post-v3 attribution.
 > ADR-0154 advances the harness to artifact v28 and records every scalar
 > Bool/QF_BV operator over both original and post-word unique DAGs, including an
-> explicit `other` bucket. The 128-query semantic gate validates the schema and
-> remains fully green; run one clean full v28 process and aggregate its
-> post-word operators by family before selecting another cold optimization.
+> explicit `other` bucket. The clean full v28 process decides 13,462/13,462 at
+> 14.215 seconds versus Z3's 7.718 (1.842x). Residual excess is split between
+> `register-slice` (+3.441 s) and `slice-partial` (+3.142 s); `slice-partial`
+> construction correlates 0.988 with its 44,668 surviving additions. Proposed
+> ADR-0155 is the next bounded experiment: cancel a constant leaf from a modular
+> add-chain across equality against a constant, then require representative and
+> guarded full evidence before acceptance.
 > The ordered warm trace remains the next functionality-enabling Glaurung
 > handoff; cold deduplication cannot validate scopes, prefix reuse, or model
 > choice. Its concrete producer/consumer contract is now

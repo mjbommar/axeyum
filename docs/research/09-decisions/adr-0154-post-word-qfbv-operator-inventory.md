@@ -63,6 +63,22 @@ are 3,326 equalities, 1,788 `ite`s, 1,008 `bvadd`s, 245 `bvult`s, 222 extracts,
 and 193 zero extensions. These representative counts validate the schema; they
 do not select the full-corpus optimization.
 
+The clean full profile at revision `37ebcd47` then decides 13,462/13,462 with
+zero errors, disagreements, or replay failures. Its artifact SHA-256 is
+`2eea061282513d09dd417ba1713e60b4bffb607cf178a545d757006207343190`.
+Axeyum/Z3 totals are 14.2148/7.7184 seconds (1.8417x). The post-word corpus has
+659,445 applications and zero `other` operators: 309,160 equalities, 162,931
+`ite`s, 104,510 additions, 20,341 extracts, 16,806 zero extensions, 15,791
+subtractions, and 15,218 unsigned-less-than comparisons lead the inventory.
+
+Family aggregation changes the next decision from a single-hotspot story to a
+two-family residual. `register-slice` owns 9.330/5.889 Axeyum/Z3 seconds and
+3.441 seconds of excess; `slice-partial` owns 4.736/1.594 and 3.142 seconds of
+excess. Within `slice-partial`, add count correlates 0.988 with
+bit-blast-plus-CNF time, and the worst rows repeat a modular add-constant versus
+constant equality. This closes ADR-0154's selection gate and opens proposed
+ADR-0155; it does not itself claim that candidate will improve timing.
+
 ## Alternatives
 
 - **Use lexical SMT-LIB counts again.** Rejected: they do not describe the DAG

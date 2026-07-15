@@ -510,3 +510,23 @@ extensions. The run decides and manifest/Z3-agrees on 128/128 rows with zero
 errors, disagreements, or replay failures. This is schema/semantic evidence,
 not a full-distribution ranking. One clean 13,462-query v28 process is required
 before the next rewrite, lowering, CNF, or SAT experiment is selected.
+
+The clean full artifact at revision `37ebcd47` has SHA-256
+`2eea061282513d09dd417ba1713e60b4bffb607cf178a545d757006207343190`
+and passes every 13,462-query validity gate. Axeyum totals 14.2148 seconds versus
+Z3's 7.7184 (1.8417x); word/bit/CNF/SAT are 1.7804/4.6023/4.6829/2.9661
+seconds. Its post-word inventory contains 659,445 applications and zero
+`other`, led by 309,160 equalities, 162,931 `ite`s, 104,510 additions, 20,341
+extracts, 16,806 zero extensions, 15,791 subtractions, and 15,218 `bvult`s.
+
+| Family | Queries | Axeyum | Z3 | Ratio | Excess | Bit blast | CNF | SAT | Adds | New AIG | Clauses |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `register-slice` | 11,606 | 9.330 s | 5.889 s | 1.58x | 3.441 s | 2.857 s | 2.865 s | 1.927 s | 58,977 | 22,535,182 | 25,451,390 |
+| `slice-partial` | 1,584 | 4.736 s | 1.594 s | 2.97x | 3.142 s | 1.699 s | 1.768 s | 1.001 s | 44,668 | 13,477,498 | 14,810,143 |
+| `arithmetic` | 251 | 0.147 s | 0.205 s | 0.72x | -0.058 s | 0.046 s | 0.050 s | 0.038 s | 865 | 390,929 | 462,196 |
+
+For `slice-partial`, post-word add count correlates 0.988 with
+bit-blast-plus-CNF time. The highest-excess rows repeatedly compare a symbolic
+modular add-chain plus one constant with another constant. Proposed ADR-0155
+tests exact cancellation across equality before any broader affine, lowering,
+or SAT work.
