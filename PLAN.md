@@ -136,7 +136,16 @@ session state.
 > v1 remains opt-in and must never be auto-selected. Redesign GQ4 around a cheap
 > syntactic admission precheck, bounded/memoized range demand, and a wide
 > predicted-savings threshold with immediate fallback to the full lowerer;
-> proposed ADR-0158 defines that contract.
+> proposed ADR-0158 defines that contract. The first isolated `axeyum-bv`
+> implementation now exists: a conservative single-use/envelope admission
+> screen, fixed-capacity inline range propagation with a deterministic work
+> budget, exact post-analysis savings rejection, and range-backed sparse
+> materialization. Rejection and budget exhaustion invoke the unchanged full
+> lowerer; six focused additions bring the BV suite to 32/32 green, including
+> dense-v1 equivalence, deterministic fallback, fragmentation promotion,
+> replay, and deadline coverage. Keep this path explicit and non-default while
+> its policy/telemetry are wired through SAT-BV artifact identity and measured
+> on the Glaurung `register-slice` plus whole tiers.
 > The current-client trajectory is consequently explicit: the shipped default
 > remains on a roughly 1.42x plateau; the earlier arithmetic rewrites do not fire
 > materially on this register-slice-heavy distribution; and the demonstrated

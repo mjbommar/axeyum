@@ -139,3 +139,28 @@ and replaces per-bit planning/materialization with range-oriented state suited
 to lifter slices. It remains experimental and cannot distract from GQ7: warm
 reuse still requires a persistent Glaurung solver lifecycle that its current
 one-shot trait does not expose.
+
+## Implementation checkpoint (2026-07-14)
+
+The first isolated `axeyum-bv` implementation is complete behind the explicit
+`lower_terms_range_demanded` entry point. It adds:
+
+- a root-reachable screen whose extract-use envelope only credits avoided bits
+  when every observed use of the narrowed source is an extract;
+- four inline disjoint ranges per term, adjacency/overlap merging, conservative
+  full promotion on a fifth fragment, and a deterministic work budget;
+- a second exact savings gate after range propagation; and
+- direct sparse term-bit materialization without width-sized Boolean or
+  optional-literal vectors for partial terms.
+
+Rejected and budget-exhausted plans call the ordinary full lowerer and retain a
+stable decision reason. Six focused additions cover profitable register slices,
+unchanged full fallback, deterministic budget fallback, structural dense-v1
+equivalence, fragmentation promotion, evaluator replay, and deadline handling;
+the complete BV unit suite is 32/32 green and focused strict Clippy passes under
+the repository memory cap.
+
+This checkpoint does not accept the ADR. Solver configuration, artifact policy
+identity, per-reason telemetry, and the real `register-slice`/whole-corpus timing
+gates remain outstanding. The default and ADR-0157 force-on behavior are
+unchanged.

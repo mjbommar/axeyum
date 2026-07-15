@@ -111,6 +111,104 @@ pub fn lower_terms_demanded_with_deadline(
     LoweringBuilder::with_deadline(arena, deadline).lower_demanded_roots(roots)
 }
 
+/// Deterministic policy for ADR-0158's admission-controlled range demand path.
+///
+/// The defaults are intentionally conservative and experimental. They are not
+/// used by [`lower_terms`] or [`lower_terms_demanded`]; callers must select this
+/// policy explicitly while the Glaurung acceptance gate is being calibrated.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RangeDemandPolicy {
+    /// Minimum root-reachable term bits before range analysis may run.
+    pub min_term_bits_available: u64,
+    /// Minimum structurally estimated bits avoided before exact analysis.
+    pub min_estimated_bits_avoided: u64,
+    /// Minimum estimated avoided percentage, in the inclusive range 0--100.
+    pub min_estimated_avoided_percent: u8,
+    /// Minimum exact avoided bits before sparse materialization.
+    pub min_exact_bits_avoided: u64,
+    /// Minimum exact avoided percentage, in the inclusive range 0--100.
+    pub min_exact_avoided_percent: u8,
+    /// Maximum deterministic work units for exact range propagation.
+    pub analysis_work_budget: u64,
+}
+
+impl Default for RangeDemandPolicy {
+    fn default() -> Self {
+        Self {
+            min_term_bits_available: 256,
+            min_estimated_bits_avoided: 128,
+            min_estimated_avoided_percent: 50,
+            min_exact_bits_avoided: 128,
+            min_exact_avoided_percent: 50,
+            analysis_work_budget: 50_000,
+        }
+    }
+}
+
+/// Stable admission result for ADR-0158 range demand lowering.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum RangeDemandDecision {
+    /// No admission-controlled policy was requested.
+    #[default]
+    NotRequested,
+    /// No narrowing structural edge was reachable.
+    NoCandidate,
+    /// The cheap estimate did not meet the configured savings floor.
+    InsufficientEstimate,
+    /// Exact range analysis exceeded its deterministic work budget.
+    AnalysisBudgetExceeded,
+    /// Exact demand erased the estimated savings.
+    InsufficientExactSavings,
+    /// Exact range demand controlled sparse materialization.
+    Applied,
+}
+
+/// Lowers roots with ADR-0158 admission-controlled range demand.
+///
+/// Rejected and budget-exhausted queries take the ordinary full lowerer. An
+/// admitted query propagates a bounded inline set of half-open bit ranges and
+/// stores only demanded term-bit bindings. Omitted symbol bits retain
+/// ADR-0157's deterministic-false model completion and all solver callers must
+/// continue replaying the original assertions.
+///
+/// # Errors
+///
+/// Returns the same errors as [`lower_terms`].
+pub fn lower_terms_range_demanded(
+    arena: &TermArena,
+    roots: &[TermId],
+    policy: RangeDemandPolicy,
+) -> Result<BitLowering, BitLowerError> {
+    lower_terms_range_demanded_with_deadline(arena, roots, policy, None)
+}
+
+/// Deadline-aware counterpart of [`lower_terms_range_demanded`].
+///
+/// # Errors
+///
+/// Returns the same errors as [`lower_terms_with_deadline`].
+pub fn lower_terms_range_demanded_with_deadline(
+    arena: &TermArena,
+    roots: &[TermId],
+    policy: RangeDemandPolicy,
+    deadline: Option<Instant>,
+) -> Result<BitLowering, BitLowerError> {
+    let screen = DemandAdmissionScreen::compute(arena, roots, deadline)?;
+    if let Some(decision) = screen.rejection(policy) {
+        return LoweringBuilder::with_deadline(arena, deadline)
+            .lower_roots_with_demand_stats(roots, screen.into_stats(decision));
+    }
+
+    let plan = match RangeDemandPlan::compute(arena, roots, deadline, policy, &screen) {
+        Ok(plan) => plan,
+        Err(stats) => {
+            return LoweringBuilder::with_deadline(arena, deadline)
+                .lower_roots_with_demand_stats(roots, *stats);
+        }
+    };
+    LoweringBuilder::with_deadline(arena, deadline).lower_range_demanded_roots(roots, plan)
+}
+
 /// Lowers roots under an absolute deadline and also computes the observational
 /// structural bit-demand profile under that same deadline.
 ///
@@ -251,6 +349,20 @@ pub struct BitDemandStats {
     /// Whether demand changed production materialization rather than only
     /// observing the ordinary full lowerer.
     pub lowering_applied: bool,
+    /// ADR-0158 admission outcome, separate from ADR-0157's force-on route.
+    pub range_decision: RangeDemandDecision,
+    /// Time spent in ADR-0158's cheap structural admission screen.
+    pub admission: Duration,
+    /// Bits the admission screen conservatively predicts can be skipped.
+    pub estimated_bits_avoided: u64,
+    /// Configured deterministic work ceiling for exact range analysis.
+    pub analysis_work_budget: u64,
+    /// Work units consumed by exact range analysis.
+    pub analysis_work: u64,
+    /// Range unions that joined overlapping or adjacent intervals.
+    pub range_merges: u64,
+    /// Terms conservatively promoted to full demand after fragmentation.
+    pub range_promotions: u64,
     /// Time spent computing this structural demand profile.
     pub analysis: Duration,
     /// Term-bit requests before unioning repeated demands.
@@ -905,6 +1017,34 @@ impl<'a> LoweringBuilder<'a> {
         })
     }
 
+    fn lower_roots_with_demand_stats(
+        mut self,
+        roots: &[TermId],
+        mut demand_stats: BitDemandStats,
+    ) -> Result<BitLowering, BitLowerError> {
+        let mut lowered_roots = Vec::with_capacity(roots.len());
+        for &root in roots {
+            self.poll_deadline()?;
+            let bits = self.lower_term(root)?;
+            lowered_roots.push(LoweredTerm {
+                term: root,
+                sort: self.arena.sort_of(root),
+                bits,
+            });
+        }
+        demand_stats.term_bits_lowered = usize_to_u64_saturating(self.term_bits.len());
+        demand_stats.symbol_bits_lowered = usize_to_u64_saturating(self.symbol_inputs.len());
+        Ok(BitLowering {
+            aig: self.aig,
+            roots: lowered_roots,
+            term_bits: self.term_bits,
+            term_bit_ranges: self.term_bit_ranges,
+            symbol_inputs: self.symbol_inputs,
+            demand_stats,
+            complete_omitted_symbol_bits: false,
+        })
+    }
+
     fn lower_demanded_roots(mut self, roots: &[TermId]) -> Result<BitLowering, BitLowerError> {
         let mut demand = DenseBitDemand::compute(self.arena, roots, self.deadline)?;
         let mut materialized = vec![Vec::new(); self.arena.len()];
@@ -944,6 +1084,243 @@ impl<'a> LoweringBuilder<'a> {
             demand_stats: demand.stats,
             complete_omitted_symbol_bits: true,
         })
+    }
+
+    fn lower_range_demanded_roots(
+        mut self,
+        roots: &[TermId],
+        mut plan: RangeDemandPlan,
+    ) -> Result<BitLowering, BitLowerError> {
+        for term_index in 0..self.arena.len() {
+            self.poll_deadline()?;
+            let demand = plan.term_demands[term_index];
+            if demand.is_none() {
+                continue;
+            }
+            let term = self
+                .arena
+                .term_by_index(term_index)
+                .expect("dense term index belongs to the arena");
+            self.lower_range_demanded_term(term, demand)?;
+        }
+
+        let mut lowered_roots = Vec::with_capacity(roots.len());
+        for &root in roots {
+            lowered_roots.push(LoweredTerm {
+                term: root,
+                sort: self.arena.sort_of(root),
+                bits: self.complete_recorded_bits(root)?,
+            });
+        }
+        plan.stats.lowering_applied = true;
+        plan.stats.range_decision = RangeDemandDecision::Applied;
+        plan.stats.term_bits_lowered = usize_to_u64_saturating(self.term_bits.len());
+        plan.stats.symbol_bits_lowered = usize_to_u64_saturating(self.symbol_inputs.len());
+        Ok(BitLowering {
+            aig: self.aig,
+            roots: lowered_roots,
+            term_bits: self.term_bits,
+            term_bit_ranges: self.term_bit_ranges,
+            symbol_inputs: self.symbol_inputs,
+            demand_stats: plan.stats,
+            complete_omitted_symbol_bits: true,
+        })
+    }
+
+    fn lower_range_demanded_term(
+        &mut self,
+        term: TermId,
+        demand: InlineBitDemand,
+    ) -> Result<(), BitLowerError> {
+        let width = u32::try_from(sort_width(self.arena.sort_of(term)))
+            .expect("lowerable term width fits u32");
+        let start = self.term_bits.len();
+        match self.arena.node(term).clone() {
+            TermNode::BoolConst(value) => self.push_sparse_binding(term, 0, const_lit(value)),
+            TermNode::BvConst { value, .. } => {
+                for range in demand.ranges(width) {
+                    for bit in range.start..range.end {
+                        self.push_sparse_binding(term, bit, const_lit(((value >> bit) & 1) != 0));
+                    }
+                }
+            }
+            TermNode::WideBvConst(value) => {
+                for range in demand.ranges(width) {
+                    for bit in range.start..range.end {
+                        self.push_sparse_binding(term, bit, const_lit(value.bit(bit)));
+                    }
+                }
+            }
+            TermNode::IntConst(_) => {
+                unreachable!("integer terms are rejected before bit lowering (ADR-0014)")
+            }
+            TermNode::RealConst(_) => {
+                unreachable!("real terms are rejected before bit lowering (ADR-0015)")
+            }
+            TermNode::Symbol(symbol) => {
+                let (name, sort) = self.arena.symbol(symbol);
+                let name = name.to_owned();
+                for range in demand.ranges(width) {
+                    for bit in range.start..range.end {
+                        let literal = self.symbol_input(symbol, &name, sort, bit);
+                        self.push_sparse_binding(term, bit, literal);
+                    }
+                }
+            }
+            TermNode::App { op, args } if is_demand_local_op(op) => {
+                for range in demand.ranges(width) {
+                    for bit in range.start..range.end {
+                        let literal = self.lower_range_local_bit(term, op, &args, bit)?;
+                        self.push_sparse_binding(term, bit, literal);
+                    }
+                }
+            }
+            TermNode::App { op, args } => {
+                debug_assert!(demand.is_full());
+                let operands = args
+                    .iter()
+                    .map(|&arg| self.complete_recorded_bits(arg))
+                    .collect::<Result<Vec<_>, _>>()?;
+                let bits = self.lower_app(term, op, &operands)?;
+                for (bit, literal) in bits.into_iter().enumerate() {
+                    self.push_sparse_binding(
+                        term,
+                        u32::try_from(bit).expect("term bit fits u32"),
+                        literal,
+                    );
+                }
+            }
+        }
+        let len = self.term_bits.len() - start;
+        let range = self
+            .term_bit_ranges
+            .get_mut(term.index())
+            .expect("term range index fits the source arena");
+        debug_assert!(range.is_none(), "term is recorded at most once");
+        *range = Some(TermBitRange { start, len });
+        Ok(())
+    }
+
+    fn push_sparse_binding(&mut self, term: TermId, bit_index: u32, literal: AigLit) {
+        self.term_bits.push(TermBitBinding {
+            term,
+            bit_index,
+            literal,
+        });
+    }
+
+    fn recorded_bit(&self, term: TermId, bit_index: u32) -> Result<AigLit, BitLowerError> {
+        let range = self
+            .term_bit_ranges
+            .get(term.index())
+            .copied()
+            .flatten()
+            .ok_or(BitLowerError::MissingDemandedBit { term, bit_index })?;
+        let bindings = &self.term_bits[range.start..range.start + range.len];
+        bindings
+            .binary_search_by_key(&bit_index, |binding| binding.bit_index)
+            .ok()
+            .and_then(|index| bindings.get(index))
+            .map(|binding| binding.literal)
+            .ok_or(BitLowerError::MissingDemandedBit { term, bit_index })
+    }
+
+    fn complete_recorded_bits(&self, term: TermId) -> Result<Vec<AigLit>, BitLowerError> {
+        let width = u32::try_from(sort_width(self.arena.sort_of(term)))
+            .expect("lowerable term width fits u32");
+        (0..width).map(|bit| self.recorded_bit(term, bit)).collect()
+    }
+
+    fn lower_range_local_bit(
+        &mut self,
+        term: TermId,
+        op: Op,
+        args: &[TermId],
+        bit: u32,
+    ) -> Result<AigLit, BitLowerError> {
+        let literal = match op {
+            Op::BoolNot | Op::BvNot => self.recorded_bit(args[0], bit)?.negated(),
+            Op::BoolAnd | Op::BvAnd => {
+                let lhs = self.recorded_bit(args[0], bit)?;
+                let rhs = self.recorded_bit(args[1], bit)?;
+                self.aig.and(lhs, rhs)
+            }
+            Op::BoolOr | Op::BvOr => {
+                let lhs = self.recorded_bit(args[0], bit)?;
+                let rhs = self.recorded_bit(args[1], bit)?;
+                self.aig.or(lhs, rhs)
+            }
+            Op::BoolXor | Op::BvXor => {
+                let lhs = self.recorded_bit(args[0], bit)?;
+                let rhs = self.recorded_bit(args[1], bit)?;
+                self.aig.xor(lhs, rhs)
+            }
+            Op::BoolImplies => {
+                let lhs = self.recorded_bit(args[0], 0)?;
+                let rhs = self.recorded_bit(args[1], 0)?;
+                self.aig.or(lhs.negated(), rhs)
+            }
+            Op::BvNand => {
+                let lhs = self.recorded_bit(args[0], bit)?;
+                let rhs = self.recorded_bit(args[1], bit)?;
+                self.aig.and(lhs, rhs).negated()
+            }
+            Op::BvNor => {
+                let lhs = self.recorded_bit(args[0], bit)?;
+                let rhs = self.recorded_bit(args[1], bit)?;
+                self.aig.or(lhs, rhs).negated()
+            }
+            Op::BvXnor => {
+                let lhs = self.recorded_bit(args[0], bit)?;
+                let rhs = self.recorded_bit(args[1], bit)?;
+                self.aig.xor(lhs, rhs).negated()
+            }
+            Op::Ite => {
+                let condition = self.recorded_bit(args[0], 0)?;
+                let when_true = self.recorded_bit(args[1], bit)?;
+                let when_false = self.recorded_bit(args[2], bit)?;
+                self.aig.mux(condition, when_true, when_false)
+            }
+            Op::Extract { lo, .. } => self.recorded_bit(args[0], bit + lo)?,
+            Op::Concat => {
+                let low_width = u32::try_from(sort_width(self.arena.sort_of(args[1])))
+                    .expect("lowerable term width fits u32");
+                if bit < low_width {
+                    self.recorded_bit(args[1], bit)?
+                } else {
+                    self.recorded_bit(args[0], bit - low_width)?
+                }
+            }
+            Op::ZeroExt { .. } => {
+                let source_width = u32::try_from(sort_width(self.arena.sort_of(args[0])))
+                    .expect("lowerable term width fits u32");
+                if bit < source_width {
+                    self.recorded_bit(args[0], bit)?
+                } else {
+                    AigLit::FALSE
+                }
+            }
+            Op::SignExt { .. } => {
+                let source_width = u32::try_from(sort_width(self.arena.sort_of(args[0])))
+                    .expect("lowerable term width fits u32");
+                self.recorded_bit(args[0], bit.min(source_width - 1))?
+            }
+            Op::RotateLeft { by } => {
+                let width = u32::try_from(sort_width(self.arena.sort_of(args[0])))
+                    .expect("lowerable term width fits u32");
+                let shift = by % width;
+                self.recorded_bit(args[0], (bit + width - shift) % width)?
+            }
+            Op::RotateRight { by } => {
+                let width = u32::try_from(sort_width(self.arena.sort_of(args[0])))
+                    .expect("lowerable term width fits u32");
+                let shift = by % width;
+                self.recorded_bit(args[0], (bit + shift) % width)?
+            }
+            Op::FpFromBits { .. } => self.recorded_bit(args[0], bit)?,
+            _ => return Err(BitLowerError::UnsupportedOp { term, op }),
+        };
+        Ok(literal)
     }
 
     fn lower_demanded_term(
@@ -2324,6 +2701,565 @@ fn structural_bit_demand(
     Ok(DenseBitDemand::compute(arena, roots, deadline)?.stats)
 }
 
+const INLINE_DEMAND_RANGES: usize = 4;
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+struct BitRange {
+    start: u32,
+    end: u32,
+}
+
+impl BitRange {
+    fn new(start: u32, end: u32) -> Self {
+        debug_assert!(start < end);
+        Self { start, end }
+    }
+
+    fn len(self) -> u64 {
+        u64::from(self.end - self.start)
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+struct InlineRangeList {
+    items: [BitRange; INLINE_DEMAND_RANGES],
+    len: u8,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+enum InlineBitDemand {
+    #[default]
+    None,
+    Ranges(InlineRangeList),
+    Full,
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+struct RangeInsertResult {
+    changed: bool,
+    merges: u64,
+    promoted: bool,
+}
+
+impl InlineBitDemand {
+    fn is_none(self) -> bool {
+        matches!(self, Self::None)
+    }
+
+    fn is_full(self) -> bool {
+        matches!(self, Self::Full)
+    }
+
+    fn ranges(self, width: u32) -> impl Iterator<Item = BitRange> {
+        let list = match self {
+            Self::None => InlineRangeList::default(),
+            Self::Ranges(list) => list,
+            Self::Full => {
+                let mut list = InlineRangeList::default();
+                if width > 0 {
+                    list.items[0] = BitRange::new(0, width);
+                    list.len = 1;
+                }
+                list
+            }
+        };
+        list.items.into_iter().take(usize::from(list.len))
+    }
+
+    fn bit_count(self, width: u32) -> u64 {
+        self.ranges(width).map(BitRange::len).sum()
+    }
+
+    fn insert(&mut self, range: BitRange, width: u32) -> RangeInsertResult {
+        let range = BitRange {
+            start: range.start.min(width),
+            end: range.end.min(width),
+        };
+        if range.start >= range.end || self.is_full() {
+            return RangeInsertResult::default();
+        }
+        if range.start == 0 && range.end == width {
+            let changed = !self.is_full();
+            *self = Self::Full;
+            return RangeInsertResult {
+                changed,
+                ..RangeInsertResult::default()
+            };
+        }
+
+        let old = *self;
+        let mut candidates = [BitRange::default(); INLINE_DEMAND_RANGES + 1];
+        let mut candidate_len = 0usize;
+        if let Self::Ranges(list) = old {
+            let len = usize::from(list.len);
+            candidates[..len].copy_from_slice(&list.items[..len]);
+            candidate_len = len;
+        }
+        candidates[candidate_len] = range;
+        candidate_len += 1;
+        candidates[..candidate_len].sort_unstable_by_key(|item| (item.start, item.end));
+
+        let mut merged = [BitRange::default(); INLINE_DEMAND_RANGES];
+        let mut merged_len = 0usize;
+        let mut merge_count = 0u64;
+        for candidate in candidates.into_iter().take(candidate_len) {
+            if merged_len > 0 && candidate.start <= merged[merged_len - 1].end {
+                let previous = &mut merged[merged_len - 1];
+                previous.end = previous.end.max(candidate.end);
+                merge_count = merge_count.saturating_add(1);
+                continue;
+            }
+            if merged_len == INLINE_DEMAND_RANGES {
+                *self = Self::Full;
+                return RangeInsertResult {
+                    changed: true,
+                    merges: merge_count,
+                    promoted: true,
+                };
+            }
+            merged[merged_len] = candidate;
+            merged_len += 1;
+        }
+        *self = Self::Ranges(InlineRangeList {
+            items: merged,
+            len: u8::try_from(merged_len).expect("inline demand range count fits u8"),
+        });
+        RangeInsertResult {
+            changed: *self != old,
+            merges: merge_count,
+            promoted: false,
+        }
+    }
+}
+
+struct DemandAdmissionScreen {
+    reachable: Vec<bool>,
+    candidate: bool,
+    stats: BitDemandStats,
+}
+
+impl DemandAdmissionScreen {
+    fn compute(
+        arena: &TermArena,
+        roots: &[TermId],
+        deadline: Option<Instant>,
+    ) -> Result<Self, BitLowerError> {
+        let start = Instant::now();
+        let mut reachable = vec![false; arena.len()];
+        let mut uses = vec![0u32; arena.len()];
+        let mut stack = roots.to_vec();
+        for &root in roots {
+            uses[root.index()] = uses[root.index()].saturating_add(1);
+        }
+        while let Some(term) = stack.pop() {
+            poll_analysis_deadline(deadline)?;
+            if reachable[term.index()] {
+                continue;
+            }
+            reachable[term.index()] = true;
+            if let TermNode::App { args, .. } = arena.node(term) {
+                for &arg in args {
+                    debug_assert!(arg.index() < term.index(), "term arena must be topological");
+                    uses[arg.index()] = uses[arg.index()].saturating_add(1);
+                    stack.push(arg);
+                }
+            }
+        }
+
+        let symbol_count = arena.symbols().count();
+        let mut reachable_symbols = vec![false; symbol_count];
+        let mut stats = BitDemandStats {
+            profile_complete: true,
+            ..BitDemandStats::default()
+        };
+        let mut candidate = false;
+        let mut slice_uses = vec![0u32; arena.len()];
+        let mut slice_min = vec![u32::MAX; arena.len()];
+        let mut slice_max = vec![0u32; arena.len()];
+        for (term_index, &is_reachable) in reachable.iter().enumerate() {
+            if !is_reachable {
+                continue;
+            }
+            poll_analysis_deadline(deadline)?;
+            let term = arena
+                .term_by_index(term_index)
+                .expect("dense term index belongs to the arena");
+            stats.term_bits_available = stats
+                .term_bits_available
+                .saturating_add(usize_to_u64_saturating(sort_width(arena.sort_of(term))));
+            match arena.node(term) {
+                TermNode::Symbol(symbol) => {
+                    if !reachable_symbols[symbol.index()] {
+                        reachable_symbols[symbol.index()] = true;
+                        stats.symbol_bits_available =
+                            stats
+                                .symbol_bits_available
+                                .saturating_add(usize_to_u64_saturating(sort_width(
+                                    arena.symbol(*symbol).1,
+                                )));
+                    }
+                }
+                TermNode::App {
+                    op: Op::Extract { hi, lo },
+                    args,
+                } => {
+                    let source = args[0];
+                    let source_width = u32::try_from(sort_width(arena.sort_of(source)))
+                        .expect("lowerable term width fits u32");
+                    let result_width = hi - lo + 1;
+                    if result_width < source_width {
+                        candidate = true;
+                        slice_uses[source.index()] = slice_uses[source.index()].saturating_add(1);
+                        slice_min[source.index()] = slice_min[source.index()].min(*lo);
+                        slice_max[source.index()] =
+                            slice_max[source.index()].max(hi.saturating_add(1));
+                    }
+                }
+                TermNode::App { .. }
+                | TermNode::BoolConst(_)
+                | TermNode::BvConst { .. }
+                | TermNode::WideBvConst(_)
+                | TermNode::IntConst(_)
+                | TermNode::RealConst(_) => {}
+            }
+        }
+
+        for term_index in 0..arena.len() {
+            if slice_uses[term_index] == 0 || slice_uses[term_index] != uses[term_index] {
+                continue;
+            }
+            let term = arena
+                .term_by_index(term_index)
+                .expect("dense term index belongs to the arena");
+            let width = u32::try_from(sort_width(arena.sort_of(term)))
+                .expect("lowerable term width fits u32");
+            let live_envelope = slice_max[term_index].saturating_sub(slice_min[term_index]);
+            stats.estimated_bits_avoided = stats
+                .estimated_bits_avoided
+                .saturating_add(u64::from(width.saturating_sub(live_envelope)));
+        }
+        stats.admission = start.elapsed();
+        Ok(Self {
+            reachable,
+            candidate,
+            stats,
+        })
+    }
+
+    fn rejection(&self, policy: RangeDemandPolicy) -> Option<RangeDemandDecision> {
+        if !self.candidate {
+            return Some(RangeDemandDecision::NoCandidate);
+        }
+        let enough_size = self.stats.term_bits_available >= policy.min_term_bits_available;
+        let enough_savings = meets_savings_floor(
+            self.stats.term_bits_available,
+            self.stats.estimated_bits_avoided,
+            policy.min_estimated_bits_avoided,
+            policy.min_estimated_avoided_percent,
+        );
+        (!enough_size || !enough_savings).then_some(RangeDemandDecision::InsufficientEstimate)
+    }
+
+    fn into_stats(mut self, decision: RangeDemandDecision) -> BitDemandStats {
+        self.stats.range_decision = decision;
+        self.stats
+    }
+}
+
+struct RangeDemandPlan {
+    term_demands: Vec<InlineBitDemand>,
+    stats: BitDemandStats,
+}
+
+impl RangeDemandPlan {
+    // This is a flat, auditable per-operator transfer table. Keeping the rules
+    // together makes comparison with `propagate_bit_demand` less error-prone.
+    #[allow(clippy::too_many_lines)]
+    fn compute(
+        arena: &TermArena,
+        roots: &[TermId],
+        deadline: Option<Instant>,
+        policy: RangeDemandPolicy,
+        screen: &DemandAdmissionScreen,
+    ) -> Result<Self, Box<BitDemandStats>> {
+        let analysis_start = Instant::now();
+        let mut stats = screen.stats;
+        stats.analysis_work_budget = policy.analysis_work_budget;
+        let mut demands = vec![InlineBitDemand::None; arena.len()];
+        let mut work = 0u64;
+
+        for &root in roots {
+            let width = term_width_u32(arena, root);
+            if !add_range_demand(
+                arena,
+                root,
+                BitRange::new(0, width),
+                &mut demands,
+                &mut stats,
+                &mut work,
+                policy.analysis_work_budget,
+            ) {
+                return Err(Box::new(finish_budget_fallback(
+                    stats,
+                    analysis_start,
+                    work,
+                )));
+            }
+        }
+
+        for term_index in (0..arena.len()).rev() {
+            let demand = demands[term_index];
+            if demand.is_none() {
+                continue;
+            }
+            if !charge_work(&mut work, policy.analysis_work_budget, 1) {
+                return Err(Box::new(finish_budget_fallback(
+                    stats,
+                    analysis_start,
+                    work,
+                )));
+            }
+            poll_analysis_deadline(deadline).map_err(|_| {
+                stats.analysis = analysis_start.elapsed();
+                Box::new(stats)
+            })?;
+            let term = arena
+                .term_by_index(term_index)
+                .expect("dense term index belongs to the arena");
+            debug_assert!(screen.reachable[term_index]);
+            let TermNode::App { op, args } = arena.node(term) else {
+                continue;
+            };
+            let term_width = term_width_u32(arena, term);
+            let mut add = |arg: TermId, range: BitRange| {
+                debug_assert!(arg.index() < term.index(), "term arena must be topological");
+                add_range_demand(
+                    arena,
+                    arg,
+                    range,
+                    &mut demands,
+                    &mut stats,
+                    &mut work,
+                    policy.analysis_work_budget,
+                )
+            };
+            let mut complete = true;
+            match *op {
+                Op::Extract { lo, .. } => {
+                    for range in demand.ranges(term_width) {
+                        complete &= add(args[0], BitRange::new(range.start + lo, range.end + lo));
+                    }
+                }
+                Op::Concat => {
+                    let low_width = term_width_u32(arena, args[1]);
+                    for range in demand.ranges(term_width) {
+                        if range.start < low_width {
+                            complete &= add(
+                                args[1],
+                                BitRange::new(range.start, range.end.min(low_width)),
+                            );
+                        }
+                        if range.end > low_width {
+                            complete &= add(
+                                args[0],
+                                BitRange::new(
+                                    range.start.max(low_width) - low_width,
+                                    range.end - low_width,
+                                ),
+                            );
+                        }
+                    }
+                }
+                Op::ZeroExt { .. } => {
+                    let source_width = term_width_u32(arena, args[0]);
+                    for range in demand.ranges(term_width) {
+                        if range.start < source_width {
+                            complete &= add(
+                                args[0],
+                                BitRange::new(range.start, range.end.min(source_width)),
+                            );
+                        }
+                    }
+                }
+                Op::SignExt { .. } => {
+                    let source_width = term_width_u32(arena, args[0]);
+                    for range in demand.ranges(term_width) {
+                        if range.start < source_width {
+                            complete &= add(
+                                args[0],
+                                BitRange::new(range.start, range.end.min(source_width)),
+                            );
+                        }
+                        if range.end > source_width {
+                            complete &= add(args[0], BitRange::new(source_width - 1, source_width));
+                        }
+                    }
+                }
+                Op::BoolNot
+                | Op::BoolAnd
+                | Op::BoolOr
+                | Op::BoolXor
+                | Op::BoolImplies
+                | Op::BvNot
+                | Op::BvAnd
+                | Op::BvOr
+                | Op::BvXor
+                | Op::BvNand
+                | Op::BvNor
+                | Op::BvXnor
+                | Op::FpFromBits { .. } => {
+                    for range in demand.ranges(term_width) {
+                        for &arg in args {
+                            complete &= add(arg, range);
+                        }
+                    }
+                }
+                Op::Ite => {
+                    complete &= add(args[0], BitRange::new(0, 1));
+                    for range in demand.ranges(term_width) {
+                        complete &= add(args[1], range);
+                        complete &= add(args[2], range);
+                    }
+                }
+                Op::RotateLeft { by } => {
+                    let shift = by % term_width;
+                    for range in demand.ranges(term_width) {
+                        for mapped in shifted_ranges(range, term_width - shift, term_width) {
+                            complete &= add(args[0], mapped);
+                        }
+                    }
+                }
+                Op::RotateRight { by } => {
+                    let shift = by % term_width;
+                    for range in demand.ranges(term_width) {
+                        for mapped in shifted_ranges(range, shift, term_width) {
+                            complete &= add(args[0], mapped);
+                        }
+                    }
+                }
+                _ => {
+                    for &arg in args {
+                        complete &= add(arg, BitRange::new(0, term_width_u32(arena, arg)));
+                    }
+                }
+            }
+            if !complete {
+                return Err(Box::new(finish_budget_fallback(
+                    stats,
+                    analysis_start,
+                    work,
+                )));
+            }
+        }
+
+        for (term_index, &term_demand) in demands.iter().enumerate() {
+            if term_demand.is_none() {
+                continue;
+            }
+            let term = arena
+                .term_by_index(term_index)
+                .expect("dense term index belongs to the arena");
+            let count = term_demand.bit_count(term_width_u32(arena, term));
+            stats.term_bits_demanded = stats.term_bits_demanded.saturating_add(count);
+            if matches!(arena.node(term), TermNode::Symbol(_)) {
+                stats.symbol_bits_demanded = stats.symbol_bits_demanded.saturating_add(count);
+            }
+        }
+        stats.analysis = analysis_start.elapsed();
+        stats.analysis_work = work;
+        let exact_avoided = stats
+            .term_bits_available
+            .saturating_sub(stats.term_bits_demanded);
+        if !meets_savings_floor(
+            stats.term_bits_available,
+            exact_avoided,
+            policy.min_exact_bits_avoided,
+            policy.min_exact_avoided_percent,
+        ) {
+            stats.range_decision = RangeDemandDecision::InsufficientExactSavings;
+            return Err(Box::new(stats));
+        }
+        Ok(Self {
+            term_demands: demands,
+            stats,
+        })
+    }
+}
+
+fn add_range_demand(
+    arena: &TermArena,
+    term: TermId,
+    range: BitRange,
+    demands: &mut [InlineBitDemand],
+    stats: &mut BitDemandStats,
+    work: &mut u64,
+    budget: u64,
+) -> bool {
+    if !charge_work(work, budget, 1) {
+        return false;
+    }
+    let requested = range.len();
+    stats.term_bit_requests = stats.term_bit_requests.saturating_add(requested);
+    if matches!(arena.node(term), TermNode::Symbol(_)) {
+        stats.symbol_bit_requests = stats.symbol_bit_requests.saturating_add(requested);
+    }
+    let update = demands[term.index()].insert(range, term_width_u32(arena, term));
+    stats.range_merges = stats.range_merges.saturating_add(update.merges);
+    if update.promoted {
+        stats.range_promotions = stats.range_promotions.saturating_add(1);
+    }
+    if update.changed && !charge_work(work, budget, 1) {
+        return false;
+    }
+    true
+}
+
+fn finish_budget_fallback(mut stats: BitDemandStats, start: Instant, work: u64) -> BitDemandStats {
+    stats.analysis = start.elapsed();
+    stats.analysis_work = work;
+    stats.range_decision = RangeDemandDecision::AnalysisBudgetExceeded;
+    stats
+}
+
+fn charge_work(work: &mut u64, budget: u64, amount: u64) -> bool {
+    let next = work.saturating_add(amount);
+    if next > budget {
+        false
+    } else {
+        *work = next;
+        true
+    }
+}
+
+fn meets_savings_floor(available: u64, avoided: u64, minimum: u64, percent: u8) -> bool {
+    let percent = u64::from(percent.min(100));
+    avoided >= minimum
+        && u128::from(avoided).saturating_mul(100)
+            >= u128::from(available).saturating_mul(u128::from(percent))
+}
+
+fn term_width_u32(arena: &TermArena, term: TermId) -> u32 {
+    u32::try_from(sort_width(arena.sort_of(term))).expect("lowerable term width fits u32")
+}
+
+fn shifted_ranges(range: BitRange, shift: u32, width: u32) -> impl Iterator<Item = BitRange> {
+    let mut result = InlineRangeList::default();
+    let shifted_start = range.start + shift;
+    let shifted_end = range.end + shift;
+    if shifted_start < width {
+        result.items[0] = BitRange::new(shifted_start, shifted_end.min(width));
+        result.len = 1;
+        if shifted_end > width {
+            result.items[1] = BitRange::new(0, shifted_end - width);
+            result.len = 2;
+        }
+    } else {
+        result.items[0] = BitRange::new(shifted_start - width, shifted_end - width);
+        result.len = 1;
+    }
+    result.items.into_iter().take(usize::from(result.len))
+}
+
 struct DenseBitDemand {
     term_bits: Vec<Vec<bool>>,
     stats: BitDemandStats,
@@ -2674,8 +3610,9 @@ mod tests {
     use axeyum_ir::{Assignment, IrError, Sort, TermArena, Value, eval};
 
     use super::{
-        BitLowerError, BitLowering, IncrementalLowering, eval_lowered_once, lower_terms,
-        lower_terms_demanded, lower_terms_demanded_with_deadline, lower_terms_profiled,
+        BitLowerError, BitLowering, IncrementalLowering, RangeDemandDecision, RangeDemandPolicy,
+        eval_lowered_once, lower_terms, lower_terms_demanded, lower_terms_demanded_with_deadline,
+        lower_terms_profiled, lower_terms_range_demanded, lower_terms_range_demanded_with_deadline,
     };
 
     fn bv(width: u32, value: u128) -> Value {
@@ -3268,6 +4205,189 @@ mod tests {
         let root = arena.eq(x, x).unwrap();
         assert!(matches!(
             lower_terms_demanded_with_deadline(&arena, &[root], Some(Instant::now())),
+            Err(BitLowerError::DeadlineExceeded)
+        ));
+    }
+
+    fn permissive_range_policy() -> RangeDemandPolicy {
+        RangeDemandPolicy {
+            min_term_bits_available: 0,
+            min_estimated_bits_avoided: 0,
+            min_estimated_avoided_percent: 0,
+            min_exact_bits_avoided: 0,
+            min_exact_avoided_percent: 0,
+            analysis_work_budget: 10_000,
+        }
+    }
+
+    #[test]
+    fn range_demand_applies_to_profitable_register_slice() {
+        let mut arena = TermArena::new();
+        let x_symbol = arena.declare("x", Sort::BitVec(64)).unwrap();
+        let x = arena.var(x_symbol);
+        let low_byte = arena.extract(7, 0, x).unwrap();
+        let expected = arena.bv_const(8, 0x5a).unwrap();
+        let root = arena.eq(low_byte, expected).unwrap();
+        let policy = RangeDemandPolicy {
+            min_term_bits_available: 64,
+            min_estimated_bits_avoided: 32,
+            min_estimated_avoided_percent: 50,
+            min_exact_bits_avoided: 32,
+            min_exact_avoided_percent: 50,
+            analysis_work_budget: 1_000,
+        };
+
+        let lowering = lower_terms_range_demanded(&arena, &[root], policy).unwrap();
+        let stats = lowering.demand_stats();
+        assert_eq!(stats.range_decision, RangeDemandDecision::Applied);
+        assert!(stats.lowering_applied);
+        assert_eq!(stats.estimated_bits_avoided, 56);
+        assert_eq!(stats.term_bits_available, 81);
+        assert_eq!(stats.term_bits_demanded, 25);
+        assert_eq!(stats.term_bits_lowered, 25);
+        assert_eq!(stats.symbol_bits_available, 64);
+        assert_eq!(stats.symbol_bits_demanded, 8);
+        assert_eq!(stats.symbol_bits_lowered, 8);
+        assert!(stats.analysis_work <= stats.analysis_work_budget);
+
+        for value in [0u128, 0x5a, 0x15a, u128::from(u64::MAX)] {
+            let mut assignment = Assignment::new();
+            assignment.set(x_symbol, bv(64, value));
+            assert_eq!(
+                lowering.evaluate_root(0, &assignment).unwrap(),
+                eval(&arena, root, &assignment).unwrap()
+            );
+        }
+    }
+
+    #[test]
+    fn range_demand_rejection_uses_unchanged_full_lowerer() {
+        let mut arena = TermArena::new();
+        let x = arena.bv_var("x", 8).unwrap();
+        let seven = arena.bv_const(8, 7).unwrap();
+        let root = arena.eq(x, seven).unwrap();
+
+        let full = lower_terms(&arena, &[root]).unwrap();
+        let rejected =
+            lower_terms_range_demanded(&arena, &[root], RangeDemandPolicy::default()).unwrap();
+        assert_eq!(
+            rejected.demand_stats().range_decision,
+            RangeDemandDecision::NoCandidate
+        );
+        assert!(!rejected.demand_stats().lowering_applied);
+        assert_eq!(rejected.roots()[0].bits(), full.roots()[0].bits());
+        assert_eq!(rejected.term_bits(), full.term_bits());
+        assert_eq!(rejected.symbol_inputs(), full.symbol_inputs());
+        assert_eq!(rejected.aig().node_count(), full.aig().node_count());
+    }
+
+    #[test]
+    fn range_demand_budget_exhaustion_falls_back_deterministically() {
+        let mut arena = TermArena::new();
+        let x = arena.bv_var("x", 64).unwrap();
+        let low = arena.extract(7, 0, x).unwrap();
+        let expected = arena.bv_const(8, 0x5a).unwrap();
+        let root = arena.eq(low, expected).unwrap();
+        let mut policy = permissive_range_policy();
+        policy.analysis_work_budget = 0;
+
+        let first = lower_terms_range_demanded(&arena, &[root], policy).unwrap();
+        let second = lower_terms_range_demanded(&arena, &[root], policy).unwrap();
+        assert_eq!(
+            first.demand_stats().range_decision,
+            RangeDemandDecision::AnalysisBudgetExceeded
+        );
+        assert_eq!(first.demand_stats().analysis_work, 0);
+        assert_eq!(first.term_bits(), second.term_bits());
+        assert_eq!(first.symbol_inputs(), second.symbol_inputs());
+        assert_eq!(first.aig().node_count(), second.aig().node_count());
+        assert_eq!(first.demand_stats().term_bits_lowered, 81);
+        assert_eq!(first.demand_stats().symbol_bits_lowered, 64);
+    }
+
+    #[test]
+    fn range_demand_matches_dense_planner_on_structural_dag() {
+        let mut arena = TermArena::new();
+        let x_symbol = arena.declare("x", Sort::BitVec(8)).unwrap();
+        let p_symbol = arena.declare("p", Sort::Bool).unwrap();
+        let x = arena.var(x_symbol);
+        let p = arena.var(p_symbol);
+        let extended = arena.sign_ext(4, x).unwrap();
+        let rotated = arena.rotate_right(3, extended).unwrap();
+        let selected = arena.ite(p, extended, rotated).unwrap();
+        let low = arena.extract(2, 0, selected).unwrap();
+        let high = arena.extract(11, 9, selected).unwrap();
+        let target = arena.bv_const(3, 0b101).unwrap();
+        let roots = [
+            arena.eq(low, target).unwrap(),
+            arena.eq(high, target).unwrap(),
+        ];
+
+        let dense = lower_terms_demanded(&arena, &roots).unwrap();
+        let ranged = lower_terms_range_demanded(&arena, &roots, permissive_range_policy()).unwrap();
+        assert_eq!(
+            ranged.demand_stats().range_decision,
+            RangeDemandDecision::Applied
+        );
+        assert_eq!(
+            ranged.demand_stats().term_bits_demanded,
+            dense.demand_stats().term_bits_demanded
+        );
+        assert_eq!(
+            ranged.demand_stats().symbol_bits_demanded,
+            dense.demand_stats().symbol_bits_demanded
+        );
+        assert_eq!(ranged.term_bits().len(), dense.term_bits().len());
+        assert_eq!(ranged.symbol_inputs().len(), dense.symbol_inputs().len());
+
+        for x_value in 0..256 {
+            for p_value in [false, true] {
+                let mut assignment = Assignment::new();
+                assignment.set(x_symbol, bv(8, x_value));
+                assignment.set(p_symbol, Value::Bool(p_value));
+                assert_eq!(
+                    ranged.evaluate_roots(&assignment).unwrap(),
+                    dense.evaluate_roots(&assignment).unwrap(),
+                    "x={x_value} p={p_value}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn range_demand_fragmentation_promotes_to_full_without_heap_ranges() {
+        let mut arena = TermArena::new();
+        let x = arena.bv_var("x", 16).unwrap();
+        let mut roots = Vec::new();
+        for bit in [0, 2, 4, 6, 8] {
+            let slice = arena.extract(bit, bit, x).unwrap();
+            let one = arena.bv_const(1, 1).unwrap();
+            roots.push(arena.eq(slice, one).unwrap());
+        }
+
+        let lowering =
+            lower_terms_range_demanded(&arena, &roots, permissive_range_policy()).unwrap();
+        assert_eq!(
+            lowering.demand_stats().range_decision,
+            RangeDemandDecision::Applied
+        );
+        assert_eq!(lowering.demand_stats().range_promotions, 1);
+        assert_eq!(lowering.demand_stats().symbol_bits_demanded, 16);
+        assert_eq!(lowering.demand_stats().symbol_bits_lowered, 16);
+    }
+
+    #[test]
+    fn range_demand_honors_expired_deadline_before_admission() {
+        let mut arena = TermArena::new();
+        let x = arena.bv_var("x", 64).unwrap();
+        let root = arena.eq(x, x).unwrap();
+        assert!(matches!(
+            lower_terms_range_demanded_with_deadline(
+                &arena,
+                &[root],
+                permissive_range_policy(),
+                Some(Instant::now())
+            ),
             Err(BitLowerError::DeadlineExceeded)
         ));
     }
