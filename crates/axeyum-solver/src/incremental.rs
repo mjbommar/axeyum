@@ -649,6 +649,44 @@ impl IncrementalBvSolver {
         Ok(canonical)
     }
 
+    /// Canonicalizes and asserts a batch of terms with one shared rewrite memo.
+    ///
+    /// This is the cold-query counterpart of [`Self::assert_preprocessed`]. A
+    /// lifter commonly submits many assertions whose expression DAGs overlap;
+    /// canonicalizing the roots together visits each shared term once and
+    /// matches the `--rewrite default` benchmark boundary. Original roots are
+    /// retained in input order for model replay, while the returned terms are
+    /// the canonical roots actually lowered.
+    ///
+    /// If an encoding error occurs after earlier roots have been asserted,
+    /// those earlier assertions remain active, exactly as when calling
+    /// [`Self::assert_preprocessed`] repeatedly. Use a push scope when the
+    /// caller needs to deactivate a partially admitted batch.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError::NonBooleanAssertion`] before canonicalization if
+    /// any input is not Boolean. Otherwise returns the same errors as
+    /// [`Self::assert_preprocessed`].
+    pub fn assert_preprocessed_batch(
+        &mut self,
+        arena: &mut TermArena,
+        terms: &[TermId],
+    ) -> Result<Vec<TermId>, SolverError> {
+        for &term in terms {
+            if arena.sort_of(term) != Sort::Bool {
+                return Err(SolverError::NonBooleanAssertion(term));
+            }
+        }
+        let canonical = axeyum_rewrite::canonicalize_terms(arena, terms)
+            .map_err(|error| SolverError::Backend(error.to_string()))?
+            .terms;
+        for (&original, &encoded) in terms.iter().zip(&canonical) {
+            self.assert_encoded(arena, original, encoded)?;
+        }
+        Ok(canonical)
+    }
+
     /// Asserts through the preprocessing policy in this solver's configuration.
     ///
     /// With [`SolverConfig::preprocess`] enabled this delegates to
@@ -668,6 +706,37 @@ impl IncrementalBvSolver {
         } else {
             self.assert(arena, term)?;
             Ok(term)
+        }
+    }
+
+    /// Asserts a batch through this solver's configured preprocessing policy.
+    ///
+    /// With [`SolverConfig::preprocess`] enabled, this delegates to
+    /// [`Self::assert_preprocessed_batch`] so all roots share one rewrite memo.
+    /// With preprocessing disabled, it asserts the original roots in order.
+    /// The returned terms are the roots actually lowered.
+    ///
+    /// # Errors
+    ///
+    /// Returns the same errors as [`Self::assert_preprocessed_batch`]. As with
+    /// that method, an encoding error may leave earlier roots active.
+    pub fn assert_configured_batch(
+        &mut self,
+        arena: &mut TermArena,
+        terms: &[TermId],
+    ) -> Result<Vec<TermId>, SolverError> {
+        if self.config.preprocess {
+            self.assert_preprocessed_batch(arena, terms)
+        } else {
+            for &term in terms {
+                if arena.sort_of(term) != Sort::Bool {
+                    return Err(SolverError::NonBooleanAssertion(term));
+                }
+            }
+            for &term in terms {
+                self.assert(arena, term)?;
+            }
+            Ok(terms.to_vec())
         }
     }
 

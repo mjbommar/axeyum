@@ -540,6 +540,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `slice-partial` improve 48.8%/82.8% and both are now faster than Z3. The exact
   v3→v4 comparator passes every 3%/3%/2% gate with 1.07% Z3 drift.
 
+  Proposed ADR-0156 addresses the remaining cold integration mismatch.
+  Glaurung already translates all query roots together, but singular
+  `assert_configured` canonicalizes them independently; the accepted benchmark
+  uses one shared multi-root memo. New additive
+  `assert_preprocessed_batch`/`assert_configured_batch` methods match that
+  boundary, retain original roots for replay, prevalidate all Boolean sorts,
+  and document ordered partial admission. Four focused solver tests, 32
+  benchmark tests, and strict solver/benchmark Clippy pass. The next gate is
+  the pinned 128-query fresh-`IncrementalBvSolver` backend comparison.
+
 - **Historical Glaurung build-up through 2026-07-14 (superseded by the measured
   result above).** The ten-item Glaurung QF_BV performance roadmap is an
   explicit Track 1/4 lane (`PLAN.md` GQ1--GQ10). The ordering is
@@ -706,7 +716,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   | ID | Live status | Next acceptance boundary |
   |---|---|---|
   | **GQ1 real-query profile** | **DONE for the current cold timing and post-word operator boundaries.** Artifact v28's clean full process is 14.215/7.718 s (1.842x), 13,462/13,462 valid, with complete original/post-word operator inventories | Repeat full trials when accepting an optimization; thresholds require multiple full-tier processes |
-  | **GQ2 cheap cold tier** | **WIP with three accepted tranches.** Canonical v2 cuts corrected full total 13.3%; ADR-0153's v3 add-chain fold cuts another 9.80%; ADR-0155's v4 equality cancellation reaches 5.625 s / 0.730x Z3 | Publish/wire the cheap canonical policy for embedders and re-attribute its now-largest 1.832 s word cost before any further cold rewrite |
+  | **GQ2 cheap cold tier** | **WIP with three accepted rewrite tranches and proposed batch integration.** Canonical v4 reaches 5.625 s / 0.730x Z3; ADR-0156 matches the benchmark's shared-root memo on `IncrementalBvSolver` | Run the 128-query fresh-incremental gate, then accept/document the batch call for Glaurung only if it is non-worse and replay-clean |
   | **GQ3 coercion/affine peepholes** | **DONE for the measured Glaurung shapes.** ADR-0142 lands slice/coercion rules, ADR-0153 scalar/wide modular add-chain folding, and accepted ADR-0155 equality cancellation; v4 is faster than Z3 and sheds 75.4% of clauses | Keep broader affine normalization deferred; reopen only from a new post-v4 real-corpus residual |
   | **GQ4 cold relevant bits** | **WIP but re-ranked.** ADR-0143 separates the diagnostic; post-canonical full demand is 98.16% of term bits and 91.51% of symbol bits | Pursue partial lowering only if family-specific evidence shows a material cone and preserve original replay/model projection |
   | **GQ5 AIG/CNF construction** | **WIP, no longer the client blocker.** Direct ownership wins plus v3/v4 word reductions reach 1.396 s CNF and 1.310 s bit blast; full cold v4 is 0.730x Z3 | Re-attribute post-v4 only; do not resume construction micro-work without a new measured excess |
@@ -719,13 +729,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   **Next actions:** (1) hand the ordered worker/path/scope trace v1 and
   controlled-concretization contract to Glaurung, then validate a small
   producer sample covering root/fork lineage, repeated checks, nested push/pop,
-  a SAT model-driven choice, and an UNSAT prune; (2) publish and wire accepted
-  canonical v4 as the cheap cold integration path,
-  then re-attribute its smaller residual while keeping broad
-  GQ4, SAT, and further memo work gated pending measured opportunity; (3) fix Glaurung's explicit width
-  coercion, strict dump validation, and atomic cross-process dedup/conflict
-  handling; (4) add the Axeyum trace validator/replayer before persistent warm
-  reuse, and measure real duplicate/prefix rates before admitting caching.
+  a SAT model-driven choice, and an UNSAT prune; (2) gate proposed ADR-0156's
+  canonical batch on the pinned representative tier, publish accepted v4, and
+  re-attribute its smaller residual while keeping broad GQ4, SAT, and further
+  memo work gated pending measured opportunity; (3) fix Glaurung's explicit
+  width coercion, strict dump validation, and atomic cross-process
+  dedup/conflict handling; (4) add the Axeyum trace validator/replayer before
+  persistent warm reuse, and measure real duplicate/prefix rates before
+  admitting caching.
 
   **Validation:** a clean, serialized `just check` completed under the 4 GiB
   memory cap with formatting, strict all-feature Clippy, the full workspace and

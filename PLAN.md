@@ -108,6 +108,12 @@ session state.
 > exact v3→v4 guarded comparison passes. Axeyum is now faster than Z3 on this
 > cold real-lifter corpus. Re-attribute the smaller post-v4 residual, publish
 > the cheap-policy integration path, and prioritize the ordered warm trace.
+> Proposed ADR-0156 closes the API mismatch: Glaurung translates a whole query
+> but the singular assertion API rewrites each root separately, whereas the
+> winning benchmark shares one rewrite memo across all roots. The additive
+> `assert_preprocessed_batch`/`assert_configured_batch` candidate retains every
+> original root for replay and has focused semantic/Clippy coverage; the pinned
+> 128-query fresh-incremental gate is next.
 > The ordered warm trace remains the next functionality-enabling Glaurung
 > handoff; cold deduplication cannot validate scopes, prefix reuse, or model
 > choice. Its concrete producer/consumer contract is now

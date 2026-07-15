@@ -10,7 +10,7 @@
 //!   `[--corpus-source TEXT] [--corpus-manifest FILE] [--corpus-tier NAME]`
 //!   `[--generate-corpus-manifest CAPTURE_INDEX]`
 //!   `[--logic LOGIC] [--families CSV]`
-//!   `[--rewrite off|default] [--backend sat-bv|z3]`
+//!   `[--rewrite off|default] [--backend sat-bv|incremental-bv-batch|z3]`
 //!   `[--query-plan full|first-assertion-support|replay-refine|replay-refine-exact]`
 //!   `[--refine-rounds N] [--refine-batch N] [--refine-adaptive-batch]`
 //!   `[--refine-select first|smallest-dag|smallest-plan-dag|smallest-plan-greedy]`
@@ -42,8 +42,9 @@ mod run {
     };
     use axeyum_smtlib::{Script, ScriptCommand, SmtError, parse_script};
     use axeyum_solver::{
-        BvLayerStats, Capabilities, CheckResult, LazyBvBackend, Model, SatBvBackend, SolveStats,
-        SolverBackend, SolverConfig, SolverError, UnknownKind, check_model_with_assignment, solve,
+        BvLayerStats, Capabilities, CheckResult, IncrementalBvSolver, LazyBvBackend, Model,
+        SatBvBackend, SolveStats, SolverBackend, SolverConfig, SolverError, UnknownKind,
+        check_model_with_assignment, solve,
     };
     #[cfg(feature = "z3")]
     use axeyum_solver::{DETERMINISTIC_Z3_RANDOM_SEED, Z3Backend};
@@ -82,6 +83,9 @@ mod run {
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     enum BackendKind {
         SatBv,
+        /// A fresh [`IncrementalBvSolver`] per query with all roots admitted by
+        /// one shared-memo canonical batch, matching Glaurung's cold embedding.
+        IncrementalBvBatch,
         /// P2.1 lazy abstraction-refinement (CEGAR) bit-blasting (ADR-0019).
         LazyBv,
         /// Lazy bit-blasting that also abstracts `ite` (P2.1 lever #3).
@@ -102,6 +106,7 @@ mod run {
         fn as_str(self) -> &'static str {
             match self {
                 BackendKind::SatBv => "sat-bv",
+                BackendKind::IncrementalBvBatch => "incremental-bv-batch",
                 BackendKind::LazyBv => "lazy-bv",
                 BackendKind::LazyBvIte => "lazy-bv-ite",
                 BackendKind::Solver => "solver",
@@ -531,6 +536,7 @@ mod run {
     fn parse_backend(value: &str) -> Result<BackendKind, String> {
         match value {
             "sat-bv" => Ok(BackendKind::SatBv),
+            "incremental-bv-batch" => Ok(BackendKind::IncrementalBvBatch),
             "lazy-bv" => Ok(BackendKind::LazyBv),
             "lazy-bv-ite" => Ok(BackendKind::LazyBvIte),
             "solver" | "auto" => Ok(BackendKind::Solver),
@@ -1487,11 +1493,79 @@ mod run {
     fn make_backend(kind: BackendKind) -> Box<dyn SolverBackend> {
         match kind {
             BackendKind::SatBv => Box::new(SatBvBackend::new()),
+            BackendKind::IncrementalBvBatch => Box::new(IncrementalBvBatchBackend::new()),
             BackendKind::LazyBv => Box::new(LazyBvBackend::new()),
             BackendKind::LazyBvIte => Box::new(LazyBvBackend::new().with_abstract_ite(true)),
             BackendKind::Solver => Box::new(CheckAutoBackend::new()),
             #[cfg(feature = "z3")]
             BackendKind::Z3 => Box::new(Z3Backend::new()),
+        }
+    }
+
+    /// Cold embedding adapter matching Glaurung's current fresh-solver shape,
+    /// but admitting all translated roots through the shared-memo canonical
+    /// batch from ADR-0156. The arena clone preserves term and symbol IDs, so
+    /// both the warm solver's internal original-root replay and the harness's
+    /// independent replay evaluate the untouched caller roots.
+    struct IncrementalBvBatchBackend {
+        stats: Option<SolveStats>,
+    }
+
+    impl IncrementalBvBatchBackend {
+        fn new() -> Self {
+            Self { stats: None }
+        }
+    }
+
+    impl SolverBackend for IncrementalBvBatchBackend {
+        fn capabilities(&self) -> Capabilities {
+            Capabilities {
+                name: "axeyum-incremental-bv canonical-batch-v1".to_owned(),
+                produces_models: true,
+                complete: true,
+            }
+        }
+
+        fn check(
+            &mut self,
+            arena: &TermArena,
+            assertions: &[TermId],
+            config: &SolverConfig,
+        ) -> Result<CheckResult, SolverError> {
+            let mut owned = arena.clone();
+            let mut solver = IncrementalBvSolver::with_config(config.clone());
+            let translate_start = Instant::now();
+            let lowered = solver.assert_preprocessed_batch(&mut owned, assertions)?;
+            let translate = translate_start.elapsed();
+            let solve_start = Instant::now();
+            let result = solver.check(&owned);
+            let solve = solve_start.elapsed();
+            let terms_translated = TermStats::compute(&owned, &lowered).dag_nodes;
+            let mut stats = SolveStats::default();
+            stats.translate = translate;
+            stats.solve = solve;
+            stats.assertion_count = usize_to_u64(assertions.len());
+            stats.terms_translated = terms_translated;
+            stats.backend = vec![
+                (
+                    "incremental_aig_nodes".to_owned(),
+                    usize_to_f64(solver.lowered_aig_node_count()),
+                ),
+                (
+                    "incremental_cnf_variables".to_owned(),
+                    usize_to_f64(solver.encoded_variable_count()),
+                ),
+                (
+                    "incremental_cnf_clauses".to_owned(),
+                    usize_to_f64(solver.encoded_clause_count()),
+                ),
+            ];
+            self.stats = Some(stats);
+            result
+        }
+
+        fn last_stats(&self) -> Option<&SolveStats> {
+            self.stats.as_ref()
         }
     }
 
@@ -4999,6 +5073,11 @@ mod run {
         u64::try_from(n).unwrap_or(u64::MAX)
     }
 
+    #[allow(clippy::cast_precision_loss)]
+    fn usize_to_f64(n: usize) -> f64 {
+        usize_to_u64(n) as f64
+    }
+
     impl ExperimentIdentity {
         fn collect(backend: &str, compare_backend: Option<&str>) -> Self {
             let root = repository_root();
@@ -5904,6 +5983,35 @@ mod run {
                 entry.as_object_mut().unwrap().remove("content_hash");
             }
             value
+        }
+
+        #[test]
+        fn incremental_batch_backend_uses_the_public_cold_embedding_path() {
+            assert_eq!(
+                parse_backend("incremental-bv-batch").unwrap(),
+                BackendKind::IncrementalBvBatch
+            );
+            let mut arena = TermArena::new();
+            let x = arena.bv_var("x", 8).unwrap();
+            let one = arena.bv_const(8, 1).unwrap();
+            let five = arena.bv_const(8, 5).unwrap();
+            let six = arena.bv_const(8, 6).unwrap();
+            let sum = arena.bv_add(x, one).unwrap();
+            let assertions = [arena.eq(sum, five).unwrap(), arena.eq(x, six).unwrap()];
+            let mut backend = IncrementalBvBatchBackend::new();
+
+            assert!(matches!(
+                backend.check(&arena, &assertions, &SolverConfig::default()),
+                Ok(CheckResult::Unsat)
+            ));
+            let stats = backend.last_stats().unwrap();
+            assert_eq!(stats.assertion_count, 2);
+            assert!(
+                stats
+                    .backend
+                    .iter()
+                    .any(|(name, value)| { name == "incremental_cnf_clauses" && *value > 0.0 })
+            );
         }
 
         #[test]

@@ -86,11 +86,29 @@ retains the original term for model replay. Use `assert_preprocessed` to request
 that behavior explicitly, or `assert` when measuring the raw, un-preprocessed
 path. Narrow extracts are pushed through wide bitwise operations and
 bit-vector `ite`s, avoiding AIG construction for discarded register bits.
-Configured preprocessing is intended to amortize across a reused warm solver;
-it is not automatically a cold-path win. On Glaurung's current fresh-solver-per-
-query integration it measured about 1.3--2x slower than raw `assert`. Use raw
-`assert` for a one-shot control, then measure both policies on the actual
-workload before changing the entry point.
+
+For a cold query with several top-level assertions, use one batch call rather
+than calling the singular method in a loop:
+
+```rust
+# use axeyum_ir::TermArena;
+# use axeyum_solver::IncrementalBvSolver;
+# let mut arena = TermArena::new();
+# let p = arena.bool_var("p")?;
+# let q = arena.bool_var("q")?;
+let mut solver = IncrementalBvSolver::new();
+let lowered = solver.assert_preprocessed_batch(&mut arena, &[p, q])?;
+assert_eq!(lowered.len(), 2);
+# Ok::<(), Box<dyn std::error::Error>>(())
+```
+
+The batch shares one canonicalization memo across every root and retains the
+original roots for model replay. `assert_configured_batch` selects the same
+route when preprocessing is enabled and a raw ordered loop when it is disabled.
+Glaurung's older per-root `assert_configured` experiment measured a cold loss;
+the batch API exists to match the whole-query canonical benchmark boundary.
+Keep raw `assert` as the control and validate the batch route on the actual
+workload before changing an integration default.
 
 Use `with_config` to set a timeout. Budget exhaustion is
 `CheckResult::Unknown`, never `Unsat` and never an operational error.

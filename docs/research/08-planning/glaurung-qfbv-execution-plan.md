@@ -42,6 +42,10 @@ processes improve mean time 59.7% to 5.625 seconds and ratio 60.1% to 0.730x
 Z3, while new AIG nodes and clauses fall 76.7%/75.4%. The cold real-lifter gap
 is closed under the canonical v4 policy; wiring that policy into Glaurung and
 validating ordered warm behavior are now the functionality priorities.
+Proposed ADR-0156 adds the missing matching solver surface: one batch admission
+shares the canonicalizer memo across all roots while retaining originals for
+replay. Its representative fresh-incremental gate precedes any recommendation
+to change Glaurung's adapter.
 
 This note expands `PLAN.md` items GQ1--GQ10 into an executable sequence. It does
 not authorize changes to the Glaurung repository; producer-side and explorer
@@ -503,8 +507,10 @@ validity gates.
    SAT model-driven choice, and UNSAT prune. Validate hashes, sorts, scope
    reconstruction, lineage, and consumed model values before scaling. The cold
    deduplicated pack cannot substitute for it.
-2. Expose and document canonical v4 as the cheap cold solver policy, then wire
-   Glaurung's one-shot backend to select it explicitly and shadow-diff the
+2. Run proposed ADR-0156's fresh-`IncrementalBvSolver` batch backend over the
+   representative capture. If it is non-worse and replay-clean, accept and
+   document canonical v4 as the cheap cold solver policy, then wire Glaurung's
+   one-shot backend to select it explicitly and shadow-diff the
    end-to-end finding stream. Re-attribute the now-smaller v4 residual before
    proposing another GQ2--GQ6 change; broad GQ4 and SAT remain gated.
 3. On the Glaurung side, fix explicit width coercion plus strict dump validation
