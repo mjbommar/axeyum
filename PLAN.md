@@ -24,8 +24,13 @@ session state.
 > `False`/`True`/`And`/`Eq`/`Iff`, exact exposed indices, and an
 > accessibility-style recursive proof field; full `Acc` remains behind the
 > existing recursive-indexed deferral. Do not inflate this repaired class into
-> a complete kernel-equivalence claim. After the full workspace gate, resume
-> Glaurung GQ7 as the leading solver-performance lane while continuing broader
+> a complete kernel-equivalence claim. Commit `de249d48` aligns downstream
+> `Or.rec`/`Exists.rec` proof reconstruction with the restricted recursor
+> universe arities. The complete serialized `just check` gate then passed under
+> the 4 GiB wrapper: format, strict workspace Clippy, all workspace tests and
+> doctests, warning-free docs, the pinned Glaurung regular corpus, foundational
+> resources, generated dashboards, and link validation. Resume Glaurung GQ7 as
+> the leading solver-performance lane while continuing broader
 > parametric/indexed external-kernel hardening as a proof-assurance task.
 
 > **Current sequencing (2026-07-15).** The P1.4 e-graph → P1.5 CDCL(T)

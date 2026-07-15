@@ -342,9 +342,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   and needs iota to check; the same command passes locally against the pinned
   binary. Full `Acc` is still outside the recursive-indexed fragment, so its
   direct-recursive proof-field boundary is tested without claiming that
-  deferred capability. Immediate next action: finish the full workspace gate,
-  then return the solver lane to Glaurung GQ7 ordered/multi-driver reuse while
-  retaining broader external kernel differential work in the assurance queue.
+  deferred capability. Commit `de249d48` also updates every downstream
+  `Or.rec`/`Exists.rec` reconstruction site to the restricted universe arity.
+  The complete serialized `just check` gate passes under the 4 GiB wrapper:
+  format, strict workspace Clippy, all tests and doctests, warning-free docs,
+  QF_BV profile checks, the pinned Glaurung regular corpus, foundational and
+  rules-as-code generation/validation, and link checking. The regular 128-row
+  Glaurung gate remains 100% decided with zero disagreements or replay
+  failures; this run records raw/canonical ratios of 1.069x/0.346x against its
+  in-process Z3 bar. Immediate next action: return the solver lane to Glaurung
+  GQ7 ordered/multi-driver reuse while retaining broader external-kernel
+  differential work in the assurance queue.
 
 - **2026-07-15 — ADR-0164 accepts the first real GQ7 retained-state bridge,
   opt-in.** Glaurung commits `016935d`/`b09ec6b` adapt its complete one-shot
@@ -2794,7 +2802,7 @@ plan is built and committed on the current branch:
 ### Track 3 — Proofs & Lean
 | Phase | Title | Status |
 |---|---|---|
-| P3.6p | `Prop` large-elimination soundness incident | **DONE / contained (ADR-0165, `d26ad887`, `a10c8cde`)** — exact Lean syntactic-subsingleton test; restricted motive universe and arity for other potentially-`Prop` families; complete exploit inverted; positive/negative/exact-index/polymorphic/generated-matrix coverage; pinned mandatory real-Lean flat-inductive/iota CI gate. Full recursive-indexed `Acc` remains an honest pre-existing fragment deferral, not a soundness exception |
+| P3.6p | `Prop` large-elimination soundness incident | **DONE / contained (ADR-0165, `d26ad887`, `a10c8cde`, `de249d48`)** — exact Lean syntactic-subsingleton test; restricted motive universe and arity for other potentially-`Prop` families; complete exploit inverted; positive/negative/exact-index/polymorphic/generated-matrix coverage; pinned mandatory real-Lean flat-inductive/iota CI gate; downstream `Or.rec`/`Exists.rec` reconstruction aligned and the complete 4 GiB serialized `just check` gate green. Full recursive-indexed `Acc` remains an honest pre-existing fragment deferral, not a soundness exception |
 | P4.1d | Retained warm array relations | **DONE, literal relation slice (ADR-0089)** — projection-owned positive equality merges before function construction; exact private diff witnesses cover top-level disequality across supported structural parents. Scope/core/filter/replay, Bool/BV256, exact depth, 192 clean comparisons, 816 solver units, 77 symexec tests, and complete EVM gates pass; EVM has no whole-array relation case, so no timing claim |
 | P4.1c | Retained warm array-valued UF parents | **DONE, scalar-keyed slice (ADR-0088)** — finite-scalar applications retain private array owners and conditional read congruence; concrete-equal tuples merge observations into full-value function results before owner filtering and replay. Exact 64/65 admission, ten focused tests, 192 clean comparisons, 816 solver units, 77 symexec tests, and complete EVM gates pass; EVM has no array-result UF case, so no timing claim |
 | P4.1b | Candidate-triggered retained warm ROW | **DONE, bounded transitive-summary slice (ADR-0087)** — one exact scalar summary per observed structural read stays dormant until candidate violation, then becomes a permanent root in the same CNF/SAT instance under one shared deadline. Zero-activation replay, scope/core/reuse, exact caps, 192 clean comparisons, 816 solver units, 77 symexec tests, and complete EVM gates pass. Depth 32 improves 30.933→11.257 ms; ITE-fold remains faster at 0.405 ms, so broader warm models and the performance exit remain open |
@@ -2842,6 +2850,16 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-15 — the complete post-ADR-0165 workspace gate is green.** The
+  first aggregate run correctly exposed stale motive-universe arguments in
+  downstream `Or.rec`/`Exists.rec` reconstruction. Commit `de249d48` repairs
+  those call sites; 874 solver unit tests pass, followed by the complete
+  serialized `just check` under the 4 GiB wrapper. The gate covers format,
+  strict Clippy, all workspace tests/doctests, warning-free docs, QF_BV profile
+  checks, the pinned 128-row Glaurung regular corpus (100% decided, zero
+  disagreements/replay failures), foundational/rules resource generation and
+  validation, and link checking. Resume GQ7 ordered/multi-driver warm reuse.
 
 - **2026-07-15 — ADR-0165 contains the Lean-kernel large-elimination P0.**
   `d26ad887` implements Lean's exact syntactic-subsingleton boundary and turns
