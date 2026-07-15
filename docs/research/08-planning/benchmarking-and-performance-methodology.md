@@ -269,6 +269,14 @@ records the contract and the first measured baselines.
   expose admission time plus exact work/merge/promotion counts. This route is
   still an explicit experiment: compare its `register-slice` and whole-tier
   artifacts to the unchanged default before proposing any automatic policy.
+- Artifact version 31 makes rewrite selection causal at the query/family
+  boundary. Per-rule aggregate buckets count applications and distinct affected
+  instances/families, then report the selected policy's output DAG/AIG/CNF/time
+  totals with an explicit warning that these are not saved work. The repeatable
+  `--rewrite-disable-rule <id>` experiment builds a validated default-minus-rule
+  manifest and enters every disabled/enabled ID into configuration identity.
+  Actual rule value is the paired per-path delta between base and ablated
+  artifacts; aggregate fire count alone is never an optimization claim.
 - **Primary client QF_BV target (2026-07-13): Glaurung binary analysis.** Capture
   and minimize the real lifter-produced path conditions, preserving their
   extract/concat, mixed machine-width, and memory-derived shape. This client

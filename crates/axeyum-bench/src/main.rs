@@ -37,8 +37,8 @@ mod run {
     use axeyum_ir::{Op, TermArena, TermId, TermNode, TermStats, Value, eval};
     use axeyum_query::{Query, QueryPlan, StructuralCacheKey};
     use axeyum_rewrite::{
-        DEFAULT_SOLVE_EQS_FUEL, ModelReconstructionTrail, RewriteReport, canonicalize_terms,
-        default_manifest, propagate_values, solve_eqs_bounded,
+        Canonicalizer, DEFAULT_SOLVE_EQS_FUEL, ModelReconstructionTrail, RewriteManifest,
+        RewriteReport, canonicalize_terms, default_manifest, propagate_values, solve_eqs_bounded,
     };
     use axeyum_smtlib::{Script, ScriptCommand, SmtError, parse_script};
     use axeyum_solver::{
@@ -52,7 +52,7 @@ mod run {
     use serde_json::{Value as JsonValue, json};
     use sha2::{Digest, Sha256};
 
-    const ARTIFACT_VERSION: u32 = 30;
+    const ARTIFACT_VERSION: u32 = 31;
     const CORPUS_MANIFEST_VERSION: u64 = 1;
     const CONTENT_HASH_PREFIX: &str = "sha256:";
     const DETERMINISM_PROFILE: &str = "axeyum-bench-fixed-seeds-v1";
@@ -202,6 +202,7 @@ mod run {
         logic: Option<String>,
         families: Vec<String>,
         rewrite: RewriteMode,
+        rewrite_disabled_rules: Vec<String>,
         backend: BackendKind,
         query_plan: QueryPlanMode,
         refine_rounds: usize,
@@ -244,6 +245,7 @@ mod run {
             logic: None,
             families: Vec::new(),
             rewrite: RewriteMode::Off,
+            rewrite_disabled_rules: Vec::new(),
             backend: default_backend_kind(),
             query_plan: QueryPlanMode::Full,
             refine_rounds: DEFAULT_REFINE_ROUNDS,
@@ -318,6 +320,9 @@ mod run {
                     "default" => RewriteMode::Default,
                     other => return Err(format!("unknown rewrite mode `{other}`")),
                 };
+            }
+            "--rewrite-disable-rule" => {
+                parsed.rewrite_disabled_rules.push(next_value(args, flag)?);
             }
             "--backend" => parsed.backend = parse_backend(&next_value(args, flag)?)?,
             "--query-plan" => parsed.query_plan = parse_query_plan(&next_value(args, flag)?)?,
@@ -503,6 +508,7 @@ mod run {
                     .to_owned(),
             );
         }
+        validate_rewrite_ablation(args)?;
         if args.require_in_process_z3 && !args.compare_z3 {
             return Err("`--require-in-process-z3` requires `--compare-z3`".to_owned());
         }
@@ -560,6 +566,33 @@ mod run {
                 "`--limit` cannot be combined with `--corpus-manifest`; use a named manifest tier"
                     .to_owned(),
             );
+        }
+        Ok(())
+    }
+
+    fn validate_rewrite_ablation(args: &Args) -> Result<(), String> {
+        if args.rewrite_disabled_rules.is_empty() {
+            return Ok(());
+        }
+        if args.rewrite != RewriteMode::Default {
+            return Err("`--rewrite-disable-rule` requires `--rewrite default`".to_owned());
+        }
+        let enabled = default_manifest()
+            .enabled_rules()
+            .map(|rule| rule.id.as_str().to_owned())
+            .collect::<BTreeSet<_>>();
+        let mut seen = BTreeSet::new();
+        for rule_id in &args.rewrite_disabled_rules {
+            if !seen.insert(rule_id) {
+                return Err(format!(
+                    "rewrite ablation repeats disabled rule `{rule_id}`"
+                ));
+            }
+            if !enabled.contains(rule_id) {
+                return Err(format!(
+                    "rewrite ablation names unknown or non-default rule `{rule_id}`"
+                ));
+            }
         }
         Ok(())
     }
@@ -1758,9 +1791,10 @@ mod run {
     }
 
     /// The `rewrite` sub-block of the summary artifact.
-    fn rewrite_summary_record(s: &Summary, args: &Args) -> JsonValue {
+    fn rewrite_summary_record(s: &Summary, args: &Args, instances: &[JsonValue]) -> JsonValue {
         json!({
             "mode": args.rewrite.as_str(),
+            "disabled_rule_ids": args.rewrite_disabled_rules.iter().collect::<BTreeSet<_>>(),
             "changed_instances": s.rewrite_changed_instances,
             "applications": s.rewrite_applications,
             "input_dag_nodes": s.rewrite_input_dag_nodes,
@@ -1770,7 +1804,119 @@ mod run {
             "decision_matches": s.rewrite_decision_matches,
             "decision_changes": s.rewrite_decision_changes,
             "sat_unsat_conflicts": s.rewrite_sat_unsat_conflicts,
+            "per_rule": rewrite_rule_attribution_record(instances),
         })
+    }
+
+    #[derive(Default)]
+    struct RewriteRuleAttribution {
+        applications: u64,
+        affected_instances: u64,
+        affected_families: BTreeMap<String, u64>,
+        input_dag_nodes: u64,
+        output_dag_nodes: u64,
+        input_tree_nodes: u64,
+        output_tree_nodes: u64,
+        output_aig_nodes: u64,
+        output_cnf_variables: u64,
+        output_cnf_clauses: u64,
+        output_cold_ms: f64,
+    }
+
+    fn rewrite_rule_attribution_record(instances: &[JsonValue]) -> JsonValue {
+        let mut rules = BTreeMap::<String, RewriteRuleAttribution>::new();
+        for instance in instances {
+            let Some(rule_counts) = instance
+                .get("rewrite")
+                .and_then(|rewrite| rewrite.get("rule_counts"))
+                .and_then(JsonValue::as_object)
+            else {
+                continue;
+            };
+            let family = instance
+                .get("corpus_manifest")
+                .and_then(|manifest| manifest.get("family"))
+                .and_then(JsonValue::as_str)
+                .unwrap_or("unmanifested");
+            let rewrite = &instance["rewrite"];
+            let layers = &instance["layer_attribution"];
+            for (rule_id, count) in rule_counts {
+                let Some(count) = count.as_u64() else {
+                    continue;
+                };
+                let entry = rules.entry(rule_id.clone()).or_default();
+                entry.applications = entry.applications.saturating_add(count);
+                entry.affected_instances = entry.affected_instances.saturating_add(1);
+                *entry
+                    .affected_families
+                    .entry(family.to_owned())
+                    .or_insert(0) += 1;
+                entry.input_dag_nodes = entry
+                    .input_dag_nodes
+                    .saturating_add(json_u64(rewrite, "input_dag_nodes"));
+                entry.output_dag_nodes = entry
+                    .output_dag_nodes
+                    .saturating_add(json_u64(rewrite, "output_dag_nodes"));
+                entry.input_tree_nodes = entry
+                    .input_tree_nodes
+                    .saturating_add(json_u64(rewrite, "input_tree_nodes"));
+                entry.output_tree_nodes = entry
+                    .output_tree_nodes
+                    .saturating_add(json_u64(rewrite, "output_tree_nodes"));
+                entry.output_aig_nodes = entry
+                    .output_aig_nodes
+                    .saturating_add(json_u64(layers, "aig_nodes"));
+                entry.output_cnf_variables = entry
+                    .output_cnf_variables
+                    .saturating_add(json_u64(layers, "cnf_variables"));
+                entry.output_cnf_clauses = entry
+                    .output_cnf_clauses
+                    .saturating_add(json_u64(layers, "cnf_clauses"));
+                entry.output_cold_ms += instance
+                    .get("cold_total_ms")
+                    .and_then(JsonValue::as_f64)
+                    .unwrap_or(0.0);
+            }
+        }
+        let rules = rules
+            .into_iter()
+            .map(|(rule_id, entry)| {
+                let dag_removed = entry.input_dag_nodes.saturating_sub(entry.output_dag_nodes);
+                let tree_removed = entry
+                    .input_tree_nodes
+                    .saturating_sub(entry.output_tree_nodes);
+                (
+                    rule_id,
+                    json!({
+                        "applications": entry.applications,
+                        "affected_instances": entry.affected_instances,
+                        "affected_families": entry.affected_families,
+                        "input_dag_nodes": entry.input_dag_nodes,
+                        "output_dag_nodes": entry.output_dag_nodes,
+                        "dag_nodes_removed": dag_removed,
+                        "input_tree_nodes": entry.input_tree_nodes,
+                        "output_tree_nodes": entry.output_tree_nodes,
+                        "tree_nodes_removed": tree_removed,
+                        "selected_policy_output": {
+                            "aig_nodes": entry.output_aig_nodes,
+                            "cnf_variables": entry.output_cnf_variables,
+                            "cnf_clauses": entry.output_cnf_clauses,
+                            "cold_total_ms": entry.output_cold_ms,
+                        },
+                    }),
+                )
+            })
+            .collect::<BTreeMap<_, _>>();
+        json!({
+            "counting_unit": "one affected instance per rule; instances firing multiple rules appear in each rule bucket",
+            "selected_policy_output_is_not_saved_work": true,
+            "ablation_contract": "pair this artifact by manifest path with --rewrite default --rewrite-disable-rule <id> to measure causal AIG/CNF/time deltas",
+            "rules": rules,
+        })
+    }
+
+    fn json_u64(record: &JsonValue, field: &str) -> u64 {
+        record.get(field).and_then(JsonValue::as_u64).unwrap_or(0)
     }
 
     #[allow(clippy::cast_precision_loss)]
@@ -3089,7 +3235,7 @@ mod run {
         let input_shape = TermStats::compute(&script.arena, &script.assertions);
         let query_shape =
             QueryShapeSample::compute(&script.arena, &script.assertions, &input_shape);
-        let mut rewrite = apply_rewrite(&mut script, args.rewrite);
+        let mut rewrite = apply_rewrite(&mut script, args.rewrite, &args.rewrite_disabled_rules);
         // Word-level preprocessing (P1.2): shrink the post-rewrite assertions and
         // keep a reconstruction trail so the sat model still replays against the
         // original query. The reduced set replaces what the backend solves.
@@ -3438,7 +3584,11 @@ mod run {
         (reduced, trail)
     }
 
-    fn apply_rewrite(script: &mut Script, mode: RewriteMode) -> RewriteRun {
+    fn apply_rewrite(
+        script: &mut Script,
+        mode: RewriteMode,
+        disabled_rules: &[String],
+    ) -> RewriteRun {
         match mode {
             RewriteMode::Off => RewriteRun {
                 assertions: script.assertions.clone(),
@@ -3447,7 +3597,13 @@ mod run {
             },
             RewriteMode::Default => {
                 let start = Instant::now();
-                let outcome = canonicalize_terms(&mut script.arena, &script.assertions)
+                let canonicalizer = if disabled_rules.is_empty() {
+                    Canonicalizer::default()
+                } else {
+                    Canonicalizer::new(rewrite_ablation_manifest(disabled_rules))
+                };
+                let outcome = canonicalizer
+                    .canonicalize_terms(&mut script.arena, &script.assertions)
                     .expect("default rewrite preserves IR well-formedness");
                 RewriteRun {
                     assertions: outcome.terms,
@@ -3456,6 +3612,20 @@ mod run {
                 }
             }
         }
+    }
+
+    fn rewrite_ablation_manifest(disabled_rules: &[String]) -> RewriteManifest {
+        let disabled = disabled_rules
+            .iter()
+            .map(String::as_str)
+            .collect::<BTreeSet<_>>();
+        let mut rules = default_manifest().rules().to_vec();
+        for rule in &mut rules {
+            if disabled.contains(rule.id.as_str()) {
+                rule.enabled_by_default = false;
+            }
+        }
+        RewriteManifest::new(rules).expect("disabling checked default rules preserves the manifest")
     }
 
     struct SolveRecord {
@@ -4798,7 +4968,7 @@ mod run {
         let artifact = json!({
             "version": ARTIFACT_VERSION,
             "config": artifact_config_record(args, identity),
-            "summary": artifact_summary_record(args, s, identity.compare_backend_name),
+            "summary": artifact_summary_record(args, s, instances, identity.compare_backend_name),
             "triage": artifact_triage_record(s, instances),
             "instances": instances,
         });
@@ -4861,7 +5031,7 @@ mod run {
             "harness": format!("axeyum-bench {}", env!("CARGO_PKG_VERSION")),
             "determinism": determinism_record(),
             "resources": resource_profile_record(args),
-            "rewrite": rewrite_config(args.rewrite),
+            "rewrite": rewrite_config(args),
             "experiment": experiment_identity_record(identity.experiment),
         })
     }
@@ -4869,6 +5039,7 @@ mod run {
     fn artifact_summary_record(
         args: &Args,
         s: &Summary,
+        instances: &[JsonValue],
         compare_backend_name: Option<&str>,
     ) -> JsonValue {
         json!({
@@ -4902,7 +5073,7 @@ mod run {
             },
             "par2_mean_s": s.par2_seconds / decided_denominator(s),
             "blocker_buckets": s.blocker_buckets,
-            "rewrite": rewrite_summary_record(s, args),
+            "rewrite": rewrite_summary_record(s, args, instances),
             "query_plan": {
                 "slice_changed_instances": s.query_slice_changed_instances,
                 "slice_dropped_terms": s.query_slice_dropped_terms,
@@ -5094,22 +5265,38 @@ mod run {
         counts
     }
 
-    fn rewrite_config(mode: RewriteMode) -> JsonValue {
-        let rule_ids = if mode == RewriteMode::Default {
+    fn rewrite_config(args: &Args) -> JsonValue {
+        let disabled = args
+            .rewrite_disabled_rules
+            .iter()
+            .cloned()
+            .collect::<BTreeSet<_>>();
+        let rule_ids = if args.rewrite == RewriteMode::Default {
             default_manifest()
                 .enabled_rules()
+                .filter(|rule| !disabled.contains(rule.id.as_str()))
                 .map(|rule| rule.id.as_str().to_owned())
                 .collect::<Vec<_>>()
         } else {
             Vec::new()
         };
         json!({
-            "mode": mode.as_str(),
-            "rule_set": if mode == RewriteMode::Default {
+            "mode": args.rewrite.as_str(),
+            "base_rule_set": if args.rewrite == RewriteMode::Default {
                 JsonValue::String("axeyum-rewrite-default-v4".to_owned())
             } else {
                 JsonValue::Null
             },
+            "rule_set": if args.rewrite == RewriteMode::Default {
+                JsonValue::String(if disabled.is_empty() {
+                    "axeyum-rewrite-default-v4".to_owned()
+                } else {
+                    "axeyum-rewrite-default-v4-ablation".to_owned()
+                })
+            } else {
+                JsonValue::Null
+            },
+            "disabled_rule_ids": disabled,
             "enabled_rule_ids": rule_ids,
         })
     }
@@ -5505,6 +5692,10 @@ mod run {
         #[cfg(feature = "z3")]
         update_hash(&mut hash, &DETERMINISTIC_Z3_RANDOM_SEED.to_le_bytes());
         update_hash(&mut hash, args.rewrite.as_str().as_bytes());
+        for rule_id in args.rewrite_disabled_rules.iter().collect::<BTreeSet<_>>() {
+            update_hash(&mut hash, rule_id.as_bytes());
+            update_hash(&mut hash, &[0]);
+        }
         update_hash(&mut hash, args.backend.as_str().as_bytes());
         update_hash(&mut hash, args.query_plan.as_str().as_bytes());
         update_hash(&mut hash, &usize_to_u64(args.refine_rounds).to_le_bytes());
@@ -7031,7 +7222,7 @@ mod run {
             assert_eq!(before.extract_concat_low_side, 1);
             assert_eq!(before.extract_concat_whole_low, 1);
 
-            let rewrite = apply_rewrite(&mut script, RewriteMode::Default);
+            let rewrite = apply_rewrite(&mut script, RewriteMode::Default, &[]);
             let after_stats = TermStats::compute(&script.arena, &rewrite.assertions);
             let after = QueryShapeSample::compute(&script.arena, &rewrite.assertions, &after_stats);
             let record = query_shape_record(&before, &after);
@@ -7052,6 +7243,99 @@ mod run {
                     .as_u64()
                     .unwrap()
                     < record["formula"]["dag_nodes"].as_u64().unwrap()
+            );
+        }
+
+        #[test]
+        fn rewrite_ablation_disables_only_the_named_default_rule() {
+            let text = "\
+                (set-logic QF_BV)\n\
+                (declare-const x (_ BitVec 16))\n\
+                (assert (= ((_ extract 3 0) ((_ extract 7 0) x)) #x0))\n\
+                (check-sat)\n";
+            let mut baseline = parse_script(text).unwrap();
+            let baseline = apply_rewrite(&mut baseline, RewriteMode::Default, &[]);
+            assert!(
+                baseline
+                    .report
+                    .applications()
+                    .iter()
+                    .any(|application| { application.rule_id.as_str() == "bv.extract_nested.v1" })
+            );
+
+            let mut ablated = parse_script(text).unwrap();
+            let ablated = apply_rewrite(
+                &mut ablated,
+                RewriteMode::Default,
+                &["bv.extract_nested.v1".to_owned()],
+            );
+            assert!(
+                ablated
+                    .report
+                    .applications()
+                    .iter()
+                    .all(|application| { application.rule_id.as_str() != "bv.extract_nested.v1" })
+            );
+            let manifest = rewrite_ablation_manifest(&["bv.extract_nested.v1".to_owned()]);
+            let enabled = manifest
+                .enabled_rules()
+                .map(|rule| rule.id.as_str())
+                .collect::<BTreeSet<_>>();
+            assert!(!enabled.contains("bv.extract_nested.v1"));
+            assert!(enabled.contains("bv.extract_concat.v1"));
+        }
+
+        #[test]
+        fn rewrite_rule_attribution_counts_instances_and_families_without_claiming_savings() {
+            let instances = vec![
+                json!({
+                    "cold_total_ms": 2.5,
+                    "corpus_manifest": {"family": "register-slice"},
+                    "rewrite": {
+                        "rule_counts": {"bv.extract_nested.v1": 3},
+                        "input_dag_nodes": 100,
+                        "output_dag_nodes": 80,
+                        "input_tree_nodes": 200,
+                        "output_tree_nodes": 150,
+                    },
+                    "layer_attribution": {
+                        "aig_nodes": 40,
+                        "cnf_variables": 20,
+                        "cnf_clauses": 60,
+                    },
+                }),
+                json!({
+                    "cold_total_ms": 1.5,
+                    "corpus_manifest": {"family": "slice-partial"},
+                    "rewrite": {
+                        "rule_counts": {
+                            "bv.extract_nested.v1": 1,
+                            "bv.extract_extend.v1": 2,
+                        },
+                        "input_dag_nodes": 50,
+                        "output_dag_nodes": 45,
+                        "input_tree_nodes": 70,
+                        "output_tree_nodes": 60,
+                    },
+                    "layer_attribution": {
+                        "aig_nodes": 10,
+                        "cnf_variables": 8,
+                        "cnf_clauses": 12,
+                    },
+                }),
+            ];
+            let record = rewrite_rule_attribution_record(&instances);
+            let nested = &record["rules"]["bv.extract_nested.v1"];
+            assert_eq!(nested["applications"], json!(4));
+            assert_eq!(nested["affected_instances"], json!(2));
+            assert_eq!(nested["affected_families"]["register-slice"], json!(1));
+            assert_eq!(nested["affected_families"]["slice-partial"], json!(1));
+            assert_eq!(nested["dag_nodes_removed"], json!(25));
+            assert_eq!(nested["selected_policy_output"]["aig_nodes"], json!(50));
+            assert_eq!(nested["selected_policy_output"]["cnf_clauses"], json!(72));
+            assert_eq!(
+                record["selected_policy_output_is_not_saved_work"],
+                json!(true)
             );
         }
 

@@ -117,7 +117,7 @@ def source_artifact(
         },
     }
     return {
-        "version": 30,
+        "version": 31,
         "config": config,
         "summary": {
             "files": 2,

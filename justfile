@@ -146,7 +146,7 @@ bench-glaurung-qfbv-configured corpus_dir manifest tier="full" out="bench-result
 
 # Structural demand diagnostics are intentionally separate from client timing:
 # the observational analysis is nested in bit blast and can dominate a run.
-# Artifact v30 marks these profiles complete; production recipes above leave
+# Artifact v31 marks these profiles complete; production recipes above leave
 # the diagnostic off and publish structural demand fields as unavailable.
 bench-glaurung-qfbv-raw-demand-profile corpus_dir manifest tier="representative" out="bench-results/glaurung-qfbv-raw-demand-profile.json":
     mkdir -p "$(dirname '{{ out }}')"

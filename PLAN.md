@@ -158,6 +158,15 @@ session state.
 > target, but the mandatory `register-slice` improvement does not. ADR-0158 is
 > deferred and remains explicit/off. Stop threshold tuning; move next to GQ3's
 > affected-family/ablation telemetry and GQ1's native client-path attribution.
+> Artifact v31 now supplies the first half of that GQ3 boundary: every firing
+> rule reports distinct affected queries/families plus selected-policy DAG/AIG/
+> CNF/time totals, explicitly not mislabeled as savings. Repeatable
+> `--rewrite-disable-rule` inputs build a validated default-minus-rule manifest
+> and enter configuration identity, enabling paired causal artifacts. Focused
+> tests and all-feature Clippy are green. The dirty exploratory capture ranks
+> the structural rules by reach (`extract_extend` 45/128, `extract_bitwise`
+> 12/128, `extract_nested` 9/128, `extract_concat` 4/128); rerun clean base and
+> ablations before making any performance claim.
 > The current-client trajectory is consequently explicit: the shipped default
 > remains on a roughly 1.42x plateau; the earlier arithmetic rewrites do not fire
 > materially on this register-slice-heavy distribution; and the demonstrated

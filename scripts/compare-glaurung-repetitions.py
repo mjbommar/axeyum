@@ -28,7 +28,7 @@ from typing import Any, NoReturn, Sequence
 
 
 REPETITION_SUMMARY_VERSION = 1
-SOURCE_ARTIFACT_VERSION = 30
+SOURCE_ARTIFACT_VERSION = 31
 COMPARISON_VERSION = 1
 STAGE_KEYS = (
     "word_preprocess_s",

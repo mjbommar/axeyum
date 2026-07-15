@@ -85,7 +85,7 @@ just compare-glaurung-qfbv-repeated BASE CAND OUT # controlled cross-commit delt
 
 Each JSON records the corpus + config hash, per-instance outcome, budgets,
 backend stats, PAR-2, explicit `decided`/`decided_percent`, **disagreements**,
-and **model-replay failures**. Artifact version 30 retains version 16's exact
+and **model-replay failures**. Artifact version 31 retains version 16's exact
 floating-point millisecond values for each instance's word-level preprocessing,
 bit-blast, CNF encode/inprocess, SAT, model lift, and cold total, plus corpus
 totals and p50/p95 distributions. Its `client_comparison` block reports the
@@ -112,6 +112,14 @@ Use `--range-demand-slicing` plus the `--range-demand-*` threshold flags only
 with `--backend sat-bv`. It cannot be combined with v1
 `--demand-bit-slicing`, remains off by default, and does not imply acceptance
 until the `register-slice` and whole-corpus gates pass.
+Version 31 adds causal rewrite targeting. `summary.rewrite.per_rule` reports
+applications, affected query/family counts, DAG/tree reduction, and the selected
+policy's output AIG/CNF/time totals without mislabeling those totals as saved
+work. Repeatable `--rewrite-disable-rule <id>` flags (valid only with
+`--rewrite default`) construct a checked default-minus-rule manifest; disabled
+IDs and the resulting enabled rule list enter artifact identity. Pair the base
+and ablated artifacts by manifest path to measure actual per-rule AIG/CNF/time
+deltas before investing in a rewrite family.
 Version 19 separately times original-query SAT model replay and charges it to
 the cold total and Axeyum/Z3 comparison. `--prove-unsat` selects the
 proof-producing native core and makes every UNSAT fail closed unless its DRAT
