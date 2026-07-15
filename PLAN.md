@@ -99,6 +99,10 @@ session state.
 > handoff; cold deduplication cannot validate scopes, prefix reuse, or model
 > choice. Its concrete producer/consumer contract is now
 > [ordered warm-trace v1](docs/research/08-planning/glaurung-ordered-trace-v1.md).
+> The immediate GQ7 action is to hand that contract to Glaurung and validate a
+> small producer sample covering root/fork lineage, repeated checks, nested
+> push/pop, a SAT model-driven choice, and an UNSAT prune before scaling or
+> changing Axeyum's warm implementation.
 > The capture and
 > implementation audit has been expanded into the dependency-ordered
 > [Glaurung QF_BV execution plan](docs/research/08-planning/glaurung-qfbv-execution-plan.md):

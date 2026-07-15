@@ -684,14 +684,22 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   | **GQ9 auto cost model/docs** | **TODO**; P1.8 shape/resource probes are only the general foundation | Telemetry-visible raw/cheap/configured/warm choice that beats or matches fixed policies and documents embedder guidance |
   | **GQ10 real-lifter regression tier** | **WIP; cold regression automation landed.** `just check` runs raw + canonical over all 128 representative rows when data is available; five clean canonical full-tier trials establish 0.51% total/ratio CV and executable 3%/3%/2% Axeyum/ratio/Z3 alarms. All semantic gates pass; 2,225 malformed dumps are isolated | Use the guarded full comparison for accepted changes and fix producer validation/dedup before calling the raw capture authoritative |
 
-  **Next actions:** (1) define the ordered worker/path/scope trace v1 and
-  controlled-concretization fields from Glaurung's real capture seams; (2)
-  re-attribute the v3 residual before another cold experiment, keeping broad
-  GQ4, SAT, and further memo work gated pending measured opportunity;
-  (3) fix Glaurung's explicit width
+  **Next actions:** (1) hand the ordered worker/path/scope trace v1 and
+  controlled-concretization contract to Glaurung, then validate a small
+  producer sample covering root/fork lineage, repeated checks, nested push/pop,
+  a SAT model-driven choice, and an UNSAT prune; (2) re-attribute the v3
+  residual before another cold experiment, keeping broad GQ4, SAT, and further
+  memo work gated pending measured opportunity; (3) fix Glaurung's explicit width
   coercion, strict dump validation, and atomic cross-process dedup/conflict
-  handling; (4) define the ordered path/scope trace
-  and controlled concretization boundary before warm reuse or caching.
+  handling; (4) add the Axeyum trace validator/replayer before persistent warm
+  reuse, and measure real duplicate/prefix rates before admitting caching.
+
+  **Validation:** a clean, serialized `just check` completed under the 4 GiB
+  memory cap with formatting, strict all-feature Clippy, the full workspace and
+  doc-test suites, strict docs, the lean QF_BV profile, all Glaurung recipe/gate
+  tests, the pinned 128-query representative Glaurung gate, foundational
+  resources, generated-resource drift, and link checks green. The representative
+  gate decided 128/128 with zero disagreements, errors, or replay failures.
 
 - **2026-07-14 — ADR-0141 lands exact source-term BV Skolem witnesses.** The
   checked `forall+ exists` SAT route now accepts one source-reachable,
