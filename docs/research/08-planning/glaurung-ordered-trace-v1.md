@@ -1,7 +1,8 @@
 # Glaurung ordered warm-trace v1 handoff
 
 Status: T1/T2 accepted in ADR-0166; opt-in T3 per-lineage replay accepted in
-ADR-0167; T4--T5 open
+ADR-0167; T4 policy controls accepted in ADR-0168, publication/break-even open;
+T5 open
 Date: 2026-07-14
 
 ## Purpose
@@ -270,3 +271,39 @@ numbers select T4 work; they are not a warm-vs-cold, memory, multi-driver, or
 default-policy claim. Next run cold occurrence and ADR-0164 snapshot controls
 on identical bytes, capture every asserted term, add peak RSS/resource identity,
 and establish the actual break-even before considering GQ8/GQ9.
+
+## 2026-07-15 T4 policy-control result
+
+ADR-0168 adds independently runnable controls after the mandatory T2 checks:
+
+```sh
+cargo run --release -p axeyum-bench --bin glaurung-ordered-trace -- \
+  TRACE_DIR --timeout-ms 1000 --cold-occurrences --out cold.json
+cargo run --release -p axeyum-bench --bin glaurung-ordered-trace -- \
+  TRACE_DIR --timeout-ms 1000 --snapshot --out snapshot.json
+cargo run --release -p axeyum-bench --bin glaurung-ordered-trace -- \
+  TRACE_DIR --timeout-ms 1000 --lineage --out lineage.json
+```
+
+The cold control solves every ordered occurrence from its exact SMT-LIB bytes
+with a fresh parse/arena/solver. The snapshot control reconstructs consecutive
+complete assertion sets over one shared arena and maps their longest common
+prefix to one retained solver. The lineage control remains ADR-0167's distinct
+solver per path with validated prefix replay at forks. Run each in a separate
+process so Linux high-water RSS remains attributable.
+
+On the same bounded trace, all three policies agree on all 784 checks (473 SAT,
+311 UNSAT) with mandatory original-query replay. Cold takes 2.737 s, snapshot
+0.545 s, and naive lineage 1.371 s. Snapshot occurrence latency is 0.593/1.515
+ms p50/p95 and process high-water RSS is 38.4 MB, versus 83.9 MB for lineage.
+Snapshot adds only 671 roots while retaining 24,364 across transitions; lineage
+replays 7,378 roots into 232 fresh fork solvers. Model choices remain explicit:
+snapshot observes 241 recorded-value matches and two valid divergences;
+lineage observes 242 and one, with zero unevaluable reads.
+
+This bounded result selects consecutive snapshot reuse for repetition and
+hardening, not a default. The trace's `backend_nanos` surrounds Glaurung's
+combined shadow call and therefore includes both Z3 and Axeyum; it is not a Z3
+timer. T4 remains open pending producer-side per-backend timing, complete
+assertion bytes, repeated clean multi-driver processes, and a real
+warm-versus-Z3 break-even.
