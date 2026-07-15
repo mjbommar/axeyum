@@ -510,6 +510,14 @@ from the reviewed `GLAURUNG_DUMP_QUERIES` capture seam and keeps content-address
 query bytes while restoring occurrences, scopes, path/worker lineage,
 unknown/error events, and model choices.
 
+ADR-0166--0169 now implement and validate this boundary for one clean driver.
+Every assertion is persisted with producer-declared symbols, each check carries
+separate same-occurrence Z3/Axeyum time, and cold/snapshot/lineage policies run
+in separate processes. The bounded result selects snapshot reuse: 0.476 s
+including arena build versus recorded Z3's 0.808 s, while naive lineage is
+1.291 s. This is independent replay headroom, not native integration; repeat
+across drivers and carry snapshot state through Glaurung's translation seam.
+
 The deduplicated cold corpus cannot validate incremental reuse because it loses
 query frequency, order, path-prefix relationships, push/pop scopes, and model
 choice. Add an access-controlled ordered trace format carrying stable query or
@@ -557,14 +565,14 @@ clean artifact pins the exact Glaurung/Axeyum revisions and policy.
 |---|---|---|
 | 1 | Land GQ4 demand-driven slicing | **Deferred after both real gates failed.** V1 regresses about 3x; v2 admits little useful gate work and is also slower. Reopen only with a gate-cone estimator or a qualitatively different specialization. |
 | 2 | Make rewrite effort fire-rate driven | **Done for the current structural tranche (ADR-0159).** Clean repeated ablations show `extract_extend` saves lowering materialization/time, but the four measured rules remove zero AIG nodes and zero clauses. |
-| 3 | Close native-driver versus bench delta | **Instrumentation landed (ADR-0160); clean multi-driver pairing WIP.** The first exact ordered run separates every native/client phase and reproduces 2.906x ordinary same-stream Axeyum/Z3 wrapper time. Repeat cleanly across drivers and same-revision bench artifacts. |
+| 3 | Close native-driver versus bench delta | **One clean separated baseline landed (ADR-0169); multi-driver pairing WIP.** The exact stream records native Axeyum/Z3 at 2.095/0.808 s (2.593x), versus 2.631 s for exact-byte cold replay. Repeat across drivers and same-revision bench artifacts with `check_profiled`. |
 | 4 | Strengthen AIG sharing | **Current hypothesis closed:** exact native/manifest overlap preserves AIG size, so Glaurung `ExprId` sharing survives. Reopen only if gate-request/hash telemetry identifies a distinct residual. |
-| 5 | Reduce CNF for measured gates | **Immediate implementation priority.** Profile incremental gate families and port one clause-fusion pattern from the one-shot encoder while preserving selectors/scopes and replay. |
-| 6 | Make warm entry delta-only | Capture ordered events, retain arena/AIG/CNF/learned state per path/worker, and preprocess only new assertions plus affected summaries. |
+| 5 | Reduce CNF for measured gates | **Large residual closed (ADR-0162/0163).** Incremental clauses fall to +2.36% over one-shot; reopen only from a measured native gate pattern because a stronger index regressed. |
+| 6 | Make warm entry delta-only | **T4 control selects snapshot reuse (ADR-0169).** Repeat across drivers, add depth break-even, and integrate the retained snapshot through Glaurung's native client boundary; naive fork-prefix lineage remains too expensive. |
 | 7 | Reuse duplicates and prefixes soundly | Measure exact duplicates/prefixes first; cache exact queries with replay, but reuse retained state rather than verdicts for strict prefixes. |
 | 8 | Add the register-slice fast path | Treat this as the first specialized GQ4 policy only if the generic exact range propagation leaves measurable avoidable work. |
 | 9 | Queue SAT tuning | Re-profile after items 1--5; compare identical CNF with BatSat/CaDiCaL/Kissat and tune only if search is then dominant. |
-| 10 | Expand and trend real capture | Add drivers, retain cold deduped and ordered-prefix tiers separately, and publish per-commit family/stage/Axeyum÷Z3 trends. |
+| 10 | Expand and trend real capture | **One clean complete driver landed.** Add drivers, retain cold deduped and ordered-prefix tiers separately, and publish per-commit family/stage/Axeyum÷Z3 trends. |
 
 ## Milestones and stop/go gates
 
@@ -577,33 +585,30 @@ clean artifact pins the exact Glaurung/Axeyum revisions and policy.
 | M4 demand lowering | GQ4 | **Deferred:** both v1 and admission-controlled v2 fail the representative performance gate while preserving correctness; keep explicit/off and reopen only from a different gate-cone hypothesis |
 | M5 AIG/CNF optimization | GQ5 | **Standalone cold blocker closed; native incremental tranche open:** prior work reaches 5.625 s / 0.730x Z3. ADR-0160 confirms native AIG sharing but excess incremental clauses; profile and close one measured fusion pattern |
 | M6 SAT re-attribution | GQ6 | Start SAT work only if search becomes material/dominant |
-| M7 ordered warm trace | GQ7, GQ8 | **Consumer contract defined:** obtain and validate a producer sample, then measure incremental API shape and duplicate/prefix frequency before deciding whether a cache is worthwhile |
-| M8 Glaurung warm integration | GQ7 | Require real same-stream functionality and performance, not the synthetic result |
+| M7 ordered warm trace | GQ7, GQ8 | **Done for one clean driver (ADR-0166--0169):** complete assertions, lineage/scopes/choices, separate backend timing, cold/snapshot/lineage controls, and memory all validate; multi-driver publication remains |
+| M8 Glaurung warm integration | GQ7 | **WIP:** independent snapshot replay is 0.590x same-stream Z3 including arena build, but Glaurung's native snapshot bridge remains 1.462x in the earlier run. Integrate and remeasure the selected policy through the real client boundary |
 | M9 auto policy and regression lane | GQ8--GQ10 | **Cold regression lane done; policy publication WIP:** raw + canonical representative checks are availability-aware, canonical v4 is accepted at 0.730x Z3, and full-tier 3%/3%/2% alarms are executable. Expose the cheap policy explicitly; ordered-trace validation remains mandatory before changing broader defaults |
 
 ## Immediate next actions
 
-1. Repeat ADR-0160's exact-query native profile across the clean multi-driver
-   set and pair every overlapping hash with a same-revision raw
-   `axeyum-bench` artifact. Retain process order, duplicates, p50/p95, complete
-   revision/tool/hardware identity, 100% decisions, and zero disagreements or
-   replay failures.
-2. Profile the native incremental gate mix and port one one-shot gate-fusion
-   pattern. ADR-0156 remains deferred for cold recommendation; require fewer
-   clauses and lower end-to-end native time with identical AIG, selector/scope
-   behavior, and original-root replay before accepting the slice.
+1. Repeat ADR-0169's exact-byte cold/snapshot/lineage controls across the clean
+   multi-driver set. Add scope-depth break-even buckets and retain p50/p95,
+   high-water RSS, complete revision/tool/hardware identity, 100% decisions,
+   and zero disagreements or replay failures.
+2. Carry the selected snapshot/LCP state through Glaurung's native translation
+   boundary and compare the actual backend against same-occurrence Z3. Use
+   `check_profiled` to partition any remaining independent-replay/native-client
+   delta; do not infer it from aggregate wrapper time.
 3. Keep ADR-0157/0158 explicit and off. ADR-0159 closes the current structural
    rewrite tranche: `extract_extend` is a real lowering win, but none of the
    four ablated rules changes AIG/CNF. Reopen GQ3/GQ4 only for a specific new
    downstream gate-cone hypothesis.
-4. Hand off the defined GQ7
-   [ordered warm-trace v1 contract](glaurung-ordered-trace-v1.md) and obtain a
-   small producer sample covering a root/fork, repeated check, nested push/pop,
-   SAT model-driven choice, and UNSAT prune. Expand the cold capture across more
-   drivers separately; the deduplicated pack cannot substitute for event order.
-5. On the Glaurung side, retain explicit width coercion and fix strict dump
-   validation plus cross-process dedup/conflict handling so future cold and
-   ordered captures are authoritative before GQ7/GQ8 cache or auto-policy work.
+4. Repeat ADR-0160's native phase profile and same-revision raw bench hashes
+   across those drivers so the user-visible and pre-parsed Z3 bars stay
+   separate. The deduplicated pack cannot substitute for event order.
+5. Keep complete assertion/symbol capture and separate backend timing mandatory
+   in every new ordered artifact; merge per-process traces atomically before
+   GQ7/GQ8 cache or auto-policy work.
 6. Run every accepted cold candidate through the guarded five-process full
    comparison. A threshold violation is a regression alarm to investigate, not
    permission to ignore raw controls or semantic gates.

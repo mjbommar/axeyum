@@ -1,8 +1,8 @@
 # Glaurung ordered warm-trace v1 handoff
 
 Status: T1/T2 accepted in ADR-0166; opt-in T3 per-lineage replay accepted in
-ADR-0167; T4 policy controls accepted in ADR-0168, publication/break-even open;
-T5 open
+ADR-0167; T4 controls accepted in ADR-0168 and complete one-driver capture in
+ADR-0169, multi-driver/native-integration publication open; T5 open
 Date: 2026-07-14
 
 ## Purpose
@@ -307,3 +307,32 @@ combined shadow call and therefore includes both Z3 and Axeyum; it is not a Z3
 timer. T4 remains open pending producer-side per-backend timing, complete
 assertion bytes, repeated clean multi-driver processes, and a real
 warm-versus-Z3 break-even.
+
+## 2026-07-15 complete-capture result
+
+ADR-0169 closes the two one-driver capture gaps. Glaurung now persists every
+distinct assertion line, including never-checked terminal roots, and each
+assert event supplies sorted free-symbol declarations. Every check separately
+records same-occurrence Z3 and Axeyum time. The external validator and Axeyum
+consumer both fail closed on byte, membership, declaration, or timing drift;
+older v1 artifacts remain readable but report the absent fields honestly.
+
+The clean Glaurung `497b1c6` sample contains 3,280 events, 235 paths, 503 unique
+queries, all 180 assertions, 776 checks, and 241 model reads. The independent
+consumer decides all 776 occurrences (470 SAT, 306 UNSAT) under all three
+policies. Explicit lineage now reports zero unmaterialized assertions and zero
+unmaterialized fork-prefix roots.
+
+Recorded native Glaurung time is 0.808 seconds for Z3 and 2.095 seconds for
+Axeyum (2.593x). The exact-byte cold consumer takes 2.631 seconds. Snapshot
+replay plus its 13.5 ms shared-arena build takes 0.476 seconds (0.590x recorded
+Z3), whereas naive lineage plus build takes 1.291 seconds (1.598x Z3). Snapshot
+p50/p95 occurrence latency is 0.548/1.179 ms and high-water RSS is 38.1 MB;
+lineage replays 7,378 fork roots and reaches 88.7 MB.
+
+This establishes bounded same-stream structural headroom below Z3 and explains
+the real native client bar without claiming integration parity: the snapshot
+control is an independent replayer and does not include Glaurung translation.
+Repeat cleanly across drivers, add scope-depth break-even buckets, and carry the
+selected retained-snapshot policy through the actual client boundary before a
+default or user-visible performance claim.
