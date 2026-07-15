@@ -258,6 +258,7 @@ struct Trace {
     path_count: usize,
     queries: BTreeMap<String, QueryRecord>,
     assertions: BTreeMap<String, Vec<u8>>,
+    assertion_symbols: BTreeMap<String, Vec<(String, u64)>>,
     checks: BTreeMap<String, CheckRecord>,
     model_reads: BTreeMap<String, ModelRead>,
     model_choice_count: usize,
@@ -406,6 +407,7 @@ impl Trace {
         let mut recorded_outcomes = BTreeMap::<String, u64>::new();
         let mut backend_timing = BackendTimingStats::default();
         let mut observed_assertions = BTreeSet::new();
+        let mut assertion_symbols = BTreeMap::new();
         let mut observed_occurrences = BTreeMap::<String, Vec<(String, String, u64)>>::new();
         let mut reuse = ReuseStats::default();
         let mut expected_event_seq = 0_u64;
@@ -547,6 +549,19 @@ impl Trace {
                             || !assertions.contains_key(&constraint)
                         {
                             return Err(format!("assertion store mismatch on {path_id}"));
+                        }
+                        let symbols = parse_symbol_declarations(
+                            &event,
+                            "assertion_symbols",
+                            &format!("assertion {constraint}"),
+                        )?;
+                        if let Some(previous) =
+                            assertion_symbols.insert(constraint.clone(), symbols.clone())
+                            && previous != symbols
+                        {
+                            return Err(format!(
+                                "assertion {constraint} has inconsistent symbol declarations"
+                            ));
                         }
                     }
                     observed_assertions.insert(constraint.clone());
@@ -816,7 +831,8 @@ impl Trace {
         }
         if let Some(expected) = manifest.get("assertion_count").and_then(Value::as_u64)
             && (usize_to_u64(assertions.len()) != expected
-                || observed_assertions != assertions.keys().cloned().collect())
+                || observed_assertions != assertions.keys().cloned().collect()
+                || assertion_symbols.keys().ne(assertions.keys()))
         {
             return Err("assertion store membership/count differs from events".into());
         }
@@ -830,6 +846,7 @@ impl Trace {
             path_count,
             queries,
             assertions,
+            assertion_symbols,
             checks,
             model_reads,
             model_choice_count: choice_ids.len(),
@@ -1519,6 +1536,13 @@ fn build_warm_program(trace: &Trace) -> Result<WarmProgram, String> {
         let assertion = std::str::from_utf8(bytes)
             .map_err(|error| format!("assertion {constraint_id} is non-UTF-8: {error}"))?;
         constraint_text.insert(constraint_id.clone(), assertion.to_string());
+        let symbols = trace
+            .assertion_symbols
+            .get(constraint_id)
+            .ok_or_else(|| format!("assertion {constraint_id} has no free-symbol declarations"))?;
+        for (name, width) in symbols {
+            declarations.insert(format!("(declare-const {name} (_ BitVec {width}))\n"));
+        }
     }
     for (query_hash, query) in &trace.queries {
         let text = std::str::from_utf8(&query.bytes)
@@ -1688,18 +1712,11 @@ fn parse_model_read(event: &Value, path_id: &str) -> Result<ModelRead, String> {
     if sha256(format!("{width}\0{expression}").as_bytes()) != expression_id {
         return Err(format!("model-read expression hash mismatch for {read_id}"));
     }
-    let mut symbols = Vec::new();
-    let mut previous_id = None;
-    for symbol in array(event, "expression_symbols")? {
-        let name = string(symbol, "name")?.to_string();
-        let symbol_width = integer(symbol, "width")?;
-        let (symbol_id, encoded_width) = parse_symbol_name(&name)?;
-        if encoded_width != symbol_width || previous_id.is_some_and(|prior| prior >= symbol_id) {
-            return Err(format!("invalid/unsorted model-read symbol {name}"));
-        }
-        previous_id = Some(symbol_id);
-        symbols.push((name, symbol_width));
-    }
+    let symbols = parse_symbol_declarations(
+        event,
+        "expression_symbols",
+        &format!("model read {read_id}"),
+    )?;
     let returned_value = parse_hex(string(event, "returned_value")?)?;
     if width < 128 && returned_value >= (1_u128 << width) {
         return Err(format!("model-read value is out of range for {read_id}"));
@@ -1714,6 +1731,26 @@ fn parse_model_read(event: &Value, path_id: &str) -> Result<ModelRead, String> {
         width,
         returned_value,
     })
+}
+
+fn parse_symbol_declarations(
+    event: &Value,
+    field: &str,
+    label: &str,
+) -> Result<Vec<(String, u64)>, String> {
+    let mut symbols = Vec::new();
+    let mut previous_id = None;
+    for symbol in array(event, field)? {
+        let name = string(symbol, "name")?.to_string();
+        let symbol_width = integer(symbol, "width")?;
+        let (symbol_id, encoded_width) = parse_symbol_name(&name)?;
+        if encoded_width != symbol_width || previous_id.is_some_and(|prior| prior >= symbol_id) {
+            return Err(format!("invalid/unsorted symbol {name} for {label}"));
+        }
+        previous_id = Some(symbol_id);
+        symbols.push((name, symbol_width));
+    }
+    Ok(symbols)
 }
 
 fn validate_qf_bv_script(label: &str, bytes: &[u8]) -> Result<(), String> {
@@ -2013,6 +2050,7 @@ mod tests {
             path_count: 2,
             queries,
             assertions: BTreeMap::new(),
+            assertion_symbols: BTreeMap::new(),
             checks,
             model_reads: BTreeMap::new(),
             model_choice_count: 0,
