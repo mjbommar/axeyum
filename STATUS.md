@@ -322,6 +322,21 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-15 — P0: the trusted Lean kernel accepts a proof of `False`.**
+  Commit `2cb298e2` preserves the independent ingredient probe, a direct
+  ignored exploit, the temporary scratch evidence requested by the concurrent
+  worktree, and the full research note. Running the exploit explicitly confirms
+  proof irrelevance equates the two proofs, unrestricted `Prop` large
+  elimination separates them in `Type`, transport produces `False`, and
+  `add_declaration(theorem bad : False)` returns `Ok(())`; its final panic is
+  intentional evidence. Ordinary probes pass. This invalidates the strong
+  claim that the embedded checker currently accepts exactly Lean's theory,
+  though the fixed reconstruction vocabulary probably avoids the exploit in
+  existing solver routes. Immediate next action: restrict large elimination to
+  Lean's `Prop`-subsingleton cases, invert the exploit, add positive/negative
+  inductive-universe coverage, and make real-Lean inductive checking a gate.
+  No new kernel-backed assurance claim outranks this fix.
+
 - **2026-07-15 — ADR-0164 accepts the first real GQ7 retained-state bridge,
   opt-in.** Glaurung commits `016935d`/`b09ec6b` adapt its complete one-shot
   assertion snapshots to one thread-local Axeyum arena and incremental solver.
@@ -2770,6 +2785,7 @@ plan is built and committed on the current branch:
 ### Track 3 — Proofs & Lean
 | Phase | Title | Status |
 |---|---|---|
+| P3.6p | `Prop` large-elimination soundness incident | **P0 OPEN — commit `2cb298e2` reproduces `add_declaration(theorem bad : False) -> Ok(())`.** Unrestricted large elimination for a two-constructor `Prop` is inconsistent with the kernel's proof irrelevance/impredicative `Prop`. Before any new proof-assurance work: implement the subsingleton criterion, invert the exploit, retain valid large elimination for subsingletons, broaden adversarial universe tests, and gate real-Lean inductive generation. |
 | P4.1d | Retained warm array relations | **DONE, literal relation slice (ADR-0089)** — projection-owned positive equality merges before function construction; exact private diff witnesses cover top-level disequality across supported structural parents. Scope/core/filter/replay, Bool/BV256, exact depth, 192 clean comparisons, 816 solver units, 77 symexec tests, and complete EVM gates pass; EVM has no whole-array relation case, so no timing claim |
 | P4.1c | Retained warm array-valued UF parents | **DONE, scalar-keyed slice (ADR-0088)** — finite-scalar applications retain private array owners and conditional read congruence; concrete-equal tuples merge observations into full-value function results before owner filtering and replay. Exact 64/65 admission, ten focused tests, 192 clean comparisons, 816 solver units, 77 symexec tests, and complete EVM gates pass; EVM has no array-result UF case, so no timing claim |
 | P4.1b | Candidate-triggered retained warm ROW | **DONE, bounded transitive-summary slice (ADR-0087)** — one exact scalar summary per observed structural read stays dormant until candidate violation, then becomes a permanent root in the same CNF/SAT instance under one shared deadline. Zero-activation replay, scope/core/reuse, exact caps, 192 clean comparisons, 816 solver units, 77 symexec tests, and complete EVM gates pass. Depth 32 improves 30.933→11.257 ms; ITE-fold remains faster at 0.405 ms, so broader warm models and the performance exit remain open |
@@ -2817,6 +2833,13 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-15 — the Lean-kernel large-elimination incident is a P0 soundness
+  stop.** Concurrent commit `2cb298e2` records a direct derivation admitted as
+  `theorem bad : False`. PLAN and the P3.6 phase table now put the
+  `Prop`-subsingleton elimination fix, inverted exploit, adversarial universe
+  coverage, and non-vacuous real-Lean inductive gate ahead of new assurance
+  claims.
 
 - **2026-07-15 — ADR-0164 accepts opt-in Glaurung snapshot-incremental
   reuse.** Structural assertion-prefix scopes retain arena/AIG/CNF/SAT state

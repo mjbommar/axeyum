@@ -12,6 +12,16 @@ session state.
 > without ever losing the thread. **We do not stop and we do not hand-wave; we
 > advance the next task and record it.**
 
+> **P0 soundness stop (2026-07-15).** Commit `2cb298e2` reproduces unrestricted
+> large elimination from a two-constructor `Prop` combining with proof
+> irrelevance to make the trusted `add_declaration` gate accept
+> `theorem bad : False`. Pause every new kernel/proof-assurance claim and fix
+> `Prop` elimination first: implement Lean's subsingleton criterion, invert the
+> exploit into a negative regression, retain positive large elimination for
+> `False`/`True`/`And`/`Eq`/`Iff`/`Acc`, broaden adversarial universe tests, and
+> make the real-Lean inductive cross-check non-vacuous. Glaurung GQ7 remains the
+> leading solver-performance lane after this trusted-core P0 is contained.
+
 > **Current sequencing (2026-07-15).** The P1.4 e-graph → P1.5 CDCL(T)
 > keystone is landed, and the recovery audit has restored P2.6 through the
 > checked ADR-0141 source-term Skolem boundary with explicit resource limits.
