@@ -127,6 +127,30 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo doc --workspace --all-features --no-deps
 
+  lean-inductive-crosscheck:
+    name: real Lean inductive cross-check
+    runs-on: ubuntu-latest
+    env:
+      CARGO_PROFILE_DEV_DEBUG: 0
+      CARGO_PROFILE_TEST_DEBUG: 0
+      AXEYUM_REQUIRE_LEAN: 1
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      # `lean-toolchain` pins the official release. This action installs it but
+      # runs no Lake project steps; the Rust test below invokes Lean directly.
+      - uses: leanprover/lean-action@v1
+        with:
+          auto-config: false
+          build: false
+          test: false
+          lint: false
+          use-mathlib-cache: false
+          use-github-cache: false
+      - run: lean --version
+      - run: cargo test -p axeyum-lean-kernel --test real_lean_inductive_crosscheck -- --nocapture
+
   deny:
     name: cargo-deny
     runs-on: ubuntu-latest
