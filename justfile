@@ -55,7 +55,7 @@ qfbv-profile:
     ./scripts/check-qfbv-profile.sh
 
 benchmark-repetition-tests:
-    python3 -m unittest scripts/tests/test_glaurung_benchmark_recipes.py scripts/tests/test_glaurung_regular_gate.py scripts/tests/test_summarize_glaurung_repetitions.py scripts/tests/test_compare_glaurung_repetitions.py scripts/tests/test_compare_glaurung_rewrite_ablation.py
+    python3 -m unittest scripts/tests/test_glaurung_benchmark_recipes.py scripts/tests/test_glaurung_regular_gate.py scripts/tests/test_summarize_glaurung_repetitions.py scripts/tests/test_summarize_glaurung_native_profile.py scripts/tests/test_compare_glaurung_repetitions.py scripts/tests/test_compare_glaurung_rewrite_ablation.py
 
 # Exercise the actual Glaurung lifter distribution when its access-controlled
 # representative pack is available. The script auto-discovers the pinned NAS

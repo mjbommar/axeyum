@@ -173,8 +173,17 @@ session state.
 > its 45 affected queries; nested/concat effects are small and bitwise is
 > timing-neutral. Crucially, all four ablations change zero AIG nodes and zero
 > CNF clauses. Keep the exact rules, but close broad extract-rewrite expansion
-> on this capture: fire count is not another lowering/encoding lever. Move the
-> immediate performance focus to GQ1's native Glaurung entry-path attribution.
+> on this capture: fire count is not another lowering/encoding lever.
+> ADR-0160 now lands GQ1's native Glaurung entry attribution without taxing
+> ordinary solvers. An exact Z3-authoritative 13,126-query release stream is
+> 100% decided/agreed and attributes native time to bit blast 42.81%,
+> incremental CNF 37.58%, translation 4.53%, and SAT 7.23%. Its 7,065 unique
+> hashes plus 6,061 duplicate occurrences preserve the reuse signal erased by
+> the cold corpus. Exact manifest-overlap hashes retain the standalone AIG size
+> but inflate incremental clauses, confirming that Glaurung sharing survives
+> translation and that GQ5 gate fusion—not SAT tuning—is the next bounded cold
+> implementation target. The run is exploratory/single-driver; clean
+> multi-driver repetition remains the GQ1/GQ10 publication gate.
 > The current-client trajectory is consequently explicit: the shipped default
 > remains on a roughly 1.42x plateau; the earlier arithmetic rewrites do not fire
 > materially on this register-slice-heavy distribution; and the demonstrated
@@ -218,13 +227,13 @@ decisions or speedups.
 
 | ID | Roadmap item | Scope and exit criterion |
 |---|---|---|
-| **GQ1** | **Capture and profile real queries first** | Ingest a representative, redistributable or access-controlled sample from Glaurung's shadow-diff harness, preserve the original lifter shape, and record cold one-shot attribution for Glaurung `ExprPool`→Axeyum translation/interning, word simplification, term→AIG lowering, AIG→CNF encoding, SAT search, model extraction, and replay. Pair each native-driver query hash with the same SMT-LIB query in `axeyum-bench` so the reported ~2.5x real-driver versus ~1.37x bench discrepancy is decomposed instead of averaged away. Report formula/AIG/CNF sizes, p50/p95 and aggregate Axeyum/Z3 ratios, fixed hardware/tool versions, 100% decided, zero operational errors, `DISAGREE=0`, and zero replay failures. This profile ranks GQ2--GQ9; it is not optional. |
+| **GQ1** | **Capture and profile real queries first** | **Native instrumentation landed in ADR-0160; publication gate WIP.** Exact-query ordered profiles now separate Glaurung translation, word policy, lowering, incremental CNF, SAT, model lift/extraction, replay, and unattributed adapter time. The first 13,126-query Z3-authoritative driver run is fully decided/agreed and confirms lowering+CNF dominance plus 6,061 duplicate occurrences. Next pair a clean multi-driver process set with same-revision `axeyum-bench` hashes, fixed hardware/tool identity, p50/p95, 100% decided, zero operational errors/disagreements/replay failures, and retained occurrence order. |
 | **GQ2** | **Cheap always-on cold simplification tier** | Add a bounded, denotation-preserving one-shot tier for constant folding and trivial identities whose own cost is measured. Add a size/shape and cold-vs-warm policy that selects cheap, configured, or no preprocessing. Exit only when cold end-to-end time is non-worse in aggregate and improves the target class at the GQ1 validity gates. |
 | **GQ3** | **Coercion-cancellation peepholes and causal telemetry** | **Current measured tranche complete.** Exact nested/concat/extension/coercion rules, affected-query/family counts, and ADR-0159's deterministic repeated default-minus-one-rule comparator are landed. The clean four-rule ablation finds a material lowering-only win for `extract_extend`, small nested/concat effects, and zero AIG-node/CNF-clause changes for all four. Keep them enabled; reopen with exhaustive evaluation, Z3 differential tests, and the same causal gate only when a new residual shape has a specific downstream gate-cone hypothesis. |
 | **GQ4** | **Cold demand-driven bit-slice reduction** | **v1 deferred after a failed real gate.** ADR-0157's opt-in route is correct (100% decided, zero disagreements) but unconditional analysis regresses Axeyum/Z3 about 1.42x→4.49x and bit-blast share 47%→83%. Keep it off by default. Proposed ADR-0158 makes v2 a cheap-admission + bounded range-demand design: reject non-profitable shapes, admit only above a wide predicted-savings threshold, and fall back before full analysis cost. Re-run `register-slice` and whole-corpus gates; add low-prefix arithmetic only if the admitted residual demands it. |
-| **GQ5** | **Faster AIG→CNF and stronger sharing** | Profile deterministic AIG structural hashing, term-sharing survival, and the measured gate mix before changing construction. Then improve only the dominant comparator/mux/adder or concat/extract-wiring patterns. Treat one-shot and incremental encoders separately: the fresh incremental path currently builds the same AIG but emits 80.9% more representative clauses because it lacks the one-shot encoder's gate fusion. Each slice must reduce gates/clauses and end-to-end client time; size-only wins do not suffice. |
+| **GQ5** | **Faster AIG→CNF and stronger sharing** | ADR-0160 confirms on exact native/manifest-overlap hashes that Glaurung sharing survives into the AIG while incremental CNF remains inflated. Profile the incremental gate mix, then port one measured one-shot gate-fusion pattern without weakening retained scopes/selectors. Treat one-shot and incremental encoders separately; each slice must reduce clauses and end-to-end native client time with unchanged AIG/model replay. Size-only wins do not suffice. |
 | **GQ6** | **Cold SAT/CDCL tuning** | If GQ1 shows SAT search dominates, compare the exact emitted CNF across BatSat, the proof-producing core, and pinned CaDiCaL/Kissat references; then tune phase saving/rephasing, VSIDS/VMTF, restarts, clause tiers, propagation, subsumption/BVE/vivification, and extracted XOR/GF(2) reasoning. UNSAT proof rechecking and deterministic resource limits remain mandatory. Do not prioritize this over GQ2--GQ5 when encoding dominates. |
-| **GQ7** | **Cheaper warm entry and delta preprocessing** | Use the defined ordered warm-trace v1 contract to capture real worker/path lineage, push/assert/check/pop deltas, repeated checks, unknown/errors, and exploration-driving model reads. Then make `assert_configured` preprocess only the newly asserted/pushed term plus affected retained summaries, retain AIG/CNF/learned state across push/pop, and measure fixed per-check cost plus the sequence length at which warm solving beats cold Axeyum and Z3. |
+| **GQ7** | **Cheaper warm entry and delta preprocessing** | ADR-0160's first ordered driver stream contains 6,061/13,126 duplicate occurrences, but lacks worker/path/scope lineage. Use the defined ordered warm-trace v1 contract to capture lineage, push/assert/check/pop deltas, repeated checks, unknown/errors, and exploration-driving model reads. Then preprocess only newly asserted/pushed terms plus affected retained summaries, retain AIG/CNF/learned state across scopes, and measure fixed per-check cost plus the warm break-even depth. |
 | **GQ8** | **Verdict and CNF reuse for duplicate/prefix queries** | Add a deterministic, resource-bounded memoizing layer keyed by canonical hash, solver/config semantics, and assertion-scope identity. Exact duplicate queries may reuse replayable verdict/model/proof artifacts; extending-prefix queries may reuse only sound retained preprocessing/CNF/search state. Cache hits must still pass original-term model or proof replay, and invalidation/versioning must be explicit. |
 | **GQ9** | **Published preprocessing cost model and API guidance** | Expose an `auto` policy based on measured formula size/shape and cold/warm context, with telemetry explaining the selected tier. Document when raw, cheap, configured, and warm-incremental entry points are appropriate. Exit when the default policy is benchmarked against every fixed alternative and avoids the known one-shot preprocessing loss. |
 | **GQ10** | **First-class real-lifter regression corpus** | Adopt the minimized Glaurung SMT-LIB pack, manifest, and expected outcomes as a versioned benchmark tier. Run a small representative subset in the regular regression gate and the full tier on the scheduled performance gate; track per-commit decided/error/replay status, stage counters, family ratios, and Axeyum/Z3 trend. Expand capture across more drivers, and add a separate ordered occurrence/prefix tier for GQ7/GQ8 because the deduplicated cold pack cannot measure reuse. The item is not `DONE` until the actual lifter distribution—not a synthetic proxy—is reproducibly exercised. |
@@ -237,12 +246,13 @@ reproduction target, not a replacement for the clean artifact-v28 v4 result at
 0.730x Z3: the two measurements have different entry points and possibly
 different revisions/policies. The immediate dependency order is therefore:
 
-1. **GQ1 client boundary:** reproduce the exact fresh-arena/fresh-solver/model
-   path and partition translation, lowering, incremental CNF, SAT, and model
-   extraction. This is now immediate: both GQ4 candidates failed their real
-   gate and ADR-0159 closes the current structural rewrite tranche;
-2. **GQ5 client encoding boundary:** use that attribution to decide whether the
-   measured 80.9% fresh-incremental clause excess needs gate-fusion work or a
+1. **GQ1 client boundary:** ADR-0160 lands exact-hash phase attribution and its
+   first ordered real-driver run. Repeat it cleanly across the multi-driver set
+   and pair same-revision overlap with `axeyum-bench`; do not promote the
+   exploratory single-driver ratio to the GQ10 baseline;
+2. **GQ5 client encoding boundary:** profile the incremental gate mix and close
+   one measured fusion gap. Exact native overlap preserves AIG sharing while
+   incremental CNF remains inflated, selecting gate-fusion work ahead of a
    purpose-built one-shot client API; and
 3. **GQ7 ordered warm boundary:** obtain the producer trace that can measure
    delta preprocessing, retained CNF/search, and duplicate/prefix reuse.

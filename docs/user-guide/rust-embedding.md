@@ -113,6 +113,33 @@ workload before changing an integration default.
 Use `with_config` to set a timeout. Budget exhaustion is
 `CheckResult::Unknown`, never `Unsat` and never an operational error.
 
+### Opt-in phase attribution
+
+Use `with_config_and_profiling` only for diagnostic runs. It leaves the solving
+policy unchanged and accumulates word-rewrite, bit-blast, CNF, SAT, model-lift,
+and original-replay durations plus retained AIG/CNF sizes:
+
+```rust
+# use axeyum_ir::TermArena;
+use axeyum_solver::{IncrementalBvSolver, SolverConfig};
+# let mut arena = TermArena::new();
+# let p = arena.bool_var("p")?;
+let mut solver = IncrementalBvSolver::with_config_and_profiling(SolverConfig::default());
+let before = solver.stats();
+solver.assert(&arena, p)?;
+let _ = solver.check(&arena)?;
+let query = solver.stats().delta_since(before);
+assert_eq!(query.root_encodings, 1);
+assert_eq!(query.checks, 1);
+# Ok::<(), Box<dyn std::error::Error>>(())
+```
+
+Ordinary constructors do not read clocks or update diagnostic operation
+counters. Their `stats()` durations/counts remain zero, while AIG/CNF fields
+still report current structural gauges. The profile covers the retained scalar
+Bool/BV path; client translation, caller model conversion, and full array/UF
+dispatch need client-boundary timers.
+
 ## Model access
 
 `Value` is re-exported by `axeyum-solver`, so a solver-only consumer can inspect

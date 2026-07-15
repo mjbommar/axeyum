@@ -260,6 +260,26 @@ Axeyum-total regression, and 2% maximum absolute Z3 drift. The guarded recipe
 applies them, while retaining exact corpus/config/environment/backend identity
 and distinct clean source revisions.
 
+Native-entry checkpoint (ADR-0160, 2026-07-15): Axeyum now exposes an opt-in
+incremental phase snapshot with no clock/counter overhead in ordinary
+constructors. Glaurung records the unchanged raw fresh-arena/fresh-solver path
+as exact-query, process-ordered JSONL and separately times arena creation,
+translation/interning, solver creation, lower/encode, SAT, model lift/replay,
+and client model extraction. The fail-closed summarizer preserves duplicate
+occurrences and can reconcile overlapping hashes/outcomes/families with the
+capture manifest.
+
+The first exploratory Z3-authoritative release stream executes 13,126 identical
+queries with 100% decisions and zero disagreements/unknowns. Its 17.429 seconds
+of native phase time is 42.81% bit blast, 37.58% incremental CNF, 7.23% SAT,
+and 4.53% translation. There are 7,065 unique hashes and 6,061 duplicate
+occurrences; 52 unique hashes overlap the pinned representative manifest with
+no verdict conflict. An unprofiled same-stream shadow control measures ordinary
+Axeyum/Z3 wrapper time at 18.826/6.478 seconds (2.906x). This is a
+single-driver exploratory checkpoint, not the clean multi-driver publication
+gate. It selects incremental gate-fusion attribution ahead of SAT tuning and
+makes ordered GQ7/GQ8 capture urgent.
+
 ### G2 — add attribution needed for the first optimization
 
 Extend the artifact without changing solver behavior:
@@ -462,6 +482,17 @@ Keep ADR-0156's API as plumbing, but do not recommend it for cold Glaurung
 until this gap closes or a purpose-built one-shot client API supplies the same
 original-root replay contract.
 
+ADR-0160 closes the missing native attribution boundary. All 52 exact hashes
+shared by the ordered Glaurung stream and the current standalone raw artifact
+preserve AIG size. Weighted across 154 occurrences, both build 494,150 AIG
+nodes while incremental Glaurung emits 875,083 clauses versus one-shot's
+506,480 (+72.78%). Glaurung's hash-consed `ExprId` sharing therefore survives
+translation and lowering. Full native
+attribution places SAT at only 7.23%. The next GQ5 implementation slice is
+therefore one measured incremental gate-fusion pattern with unchanged retained
+selector/scope semantics, AIG, model replay, and end-to-end native outcome. Do
+not reopen broad sharing work or GQ6 from aggregate intuition.
+
 ### G6 — SAT work remains conditional (GQ6)
 
 Do not tune the SAT core while construction owns most wall time. Re-evaluate
@@ -526,9 +557,9 @@ clean artifact pins the exact Glaurung/Axeyum revisions and policy.
 |---|---|---|
 | 1 | Land GQ4 demand-driven slicing | **Deferred after both real gates failed.** V1 regresses about 3x; v2 admits little useful gate work and is also slower. Reopen only with a gate-cone estimator or a qualitatively different specialization. |
 | 2 | Make rewrite effort fire-rate driven | **Done for the current structural tranche (ADR-0159).** Clean repeated ablations show `extract_extend` saves lowering materialization/time, but the four measured rules remove zero AIG nodes and zero clauses. |
-| 3 | Close native-driver versus bench delta | **Immediate priority.** Add Glaurung phase timers for translation/interning, batch word policy, lower/encode, SAT, model extraction, and replay keyed by query hash; compare the same bytes in `axeyum-bench`. |
-| 4 | Strengthen AIG sharing | Verify Glaurung `ExprId` sharing survives translation and AIG memoization; measure hash requests/hits/new nodes by family before two-level rewrites. |
-| 5 | Reduce CNF for measured gates | Profile comparator/mux/adder and structural-wiring patterns; separately close the measured incremental-versus-one-shot gate-fusion gap. |
+| 3 | Close native-driver versus bench delta | **Instrumentation landed (ADR-0160); clean multi-driver pairing WIP.** The first exact ordered run separates every native/client phase and reproduces 2.906x ordinary same-stream Axeyum/Z3 wrapper time. Repeat cleanly across drivers and same-revision bench artifacts. |
+| 4 | Strengthen AIG sharing | **Current hypothesis closed:** exact native/manifest overlap preserves AIG size, so Glaurung `ExprId` sharing survives. Reopen only if gate-request/hash telemetry identifies a distinct residual. |
+| 5 | Reduce CNF for measured gates | **Immediate implementation priority.** Profile incremental gate families and port one clause-fusion pattern from the one-shot encoder while preserving selectors/scopes and replay. |
 | 6 | Make warm entry delta-only | Capture ordered events, retain arena/AIG/CNF/learned state per path/worker, and preprocess only new assertions plus affected summaries. |
 | 7 | Reuse duplicates and prefixes soundly | Measure exact duplicates/prefixes first; cache exact queries with replay, but reuse retained state rather than verdicts for strict prefixes. |
 | 8 | Add the register-slice fast path | Treat this as the first specialized GQ4 policy only if the generic exact range propagation leaves measurable avoidable work. |
@@ -541,10 +572,10 @@ clean artifact pins the exact Glaurung/Axeyum revisions and policy.
 |---|---|---|
 | M0 byte-complete capture | GQ1, GQ10 | **Axeyum side done:** representative and well-typed full manifests validate; producer still must prevent 2,225 malformed dumps and atomically deduplicate |
 | M1 raw v27 baseline | GQ1, GQ10 | **Done:** representative raw/canonical and five canonical full-tier processes pass every gate; full Axeyum/ratio/Z3 CV is 0.51%/0.51%/0.31% and guarded comparisons use provisional 3%/3%/2% alarms |
-| M2 diagnostic attribution | GQ1, GQ3--GQ5 | **Done for current boundary:** ADR-0143 removes the 29.57 s observational pass from production and marks diagnostic completeness explicitly |
+| M2 diagnostic attribution | GQ1, GQ3--GQ5 | **Native boundary landed; publication WIP:** ADR-0143 removes observational cost and ADR-0160 adds opt-in exact-query Glaurung translation/lower/encode/SAT/model/replay attribution plus fail-closed ordered summarization. Repeat cleanly across drivers and pair same-revision bench hashes before publication |
 | M3 cheap exact rewriting | GQ2, GQ3 | **Done for the measured current shapes:** canonical v2 cuts corrected full total 13.3%, ADR-0153 cuts another 9.80%, accepted ADR-0155 reaches 5.625 s / 0.730x Z3, and ADR-0159 causally closes the current extract tranche without finding another AIG/CNF lever |
 | M4 demand lowering | GQ4 | **Deferred:** both v1 and admission-controlled v2 fail the representative performance gate while preserving correctness; keep explicit/off and reopen only from a different gate-cone hypothesis |
-| M5 AIG/CNF optimization | GQ5 | **Cold client blocker closed:** ADR-0144/0145/0150/0151 direct wins plus ADR-0153/0155 upstream reductions reach 5.625 s / 0.730x Z3 and 10.03M clauses. Reopen only from a measured post-v4 excess |
+| M5 AIG/CNF optimization | GQ5 | **Standalone cold blocker closed; native incremental tranche open:** prior work reaches 5.625 s / 0.730x Z3. ADR-0160 confirms native AIG sharing but excess incremental clauses; profile and close one measured fusion pattern |
 | M6 SAT re-attribution | GQ6 | Start SAT work only if search becomes material/dominant |
 | M7 ordered warm trace | GQ7, GQ8 | **Consumer contract defined:** obtain and validate a producer sample, then measure incremental API shape and duplicate/prefix frequency before deciding whether a cache is worthwhile |
 | M8 Glaurung warm integration | GQ7 | Require real same-stream functionality and performance, not the synthetic result |
@@ -552,16 +583,15 @@ clean artifact pins the exact Glaurung/Axeyum revisions and policy.
 
 ## Immediate next actions
 
-1. Instrument the native Glaurung path by the exact captured query hash: arena
-   allocation, `ExprPool` translation/interning, batch word policy, lower/
-   encode, SAT, model lift/extraction, replay, and caller overhead. Compare the
-   same query bytes and policy in `axeyum-bench` before selecting another solver
-   optimization.
-2. Treat ADR-0156 as deferred for cold recommendation. Its paired gate is
-   replay-clean but 18.8% slower than one-shot and emits 80.9% more clauses with
-   the same AIG. From the native attribution, choose incremental gate-fusion
-   work or a purpose-built cold one-shot API; do not infer the choice from the
-   standalone benchmark.
+1. Repeat ADR-0160's exact-query native profile across the clean multi-driver
+   set and pair every overlapping hash with a same-revision raw
+   `axeyum-bench` artifact. Retain process order, duplicates, p50/p95, complete
+   revision/tool/hardware identity, 100% decisions, and zero disagreements or
+   replay failures.
+2. Profile the native incremental gate mix and port one one-shot gate-fusion
+   pattern. ADR-0156 remains deferred for cold recommendation; require fewer
+   clauses and lower end-to-end native time with identical AIG, selector/scope
+   behavior, and original-root replay before accepting the slice.
 3. Keep ADR-0157/0158 explicit and off. ADR-0159 closes the current structural
    rewrite tranche: `extract_extend` is a real lowering win, but none of the
    four ablated rules changes AIG/CNF. Reopen GQ3/GQ4 only for a specific new

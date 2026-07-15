@@ -288,6 +288,19 @@ records the contract and the first measured baselines.
   ms mean affected cold time, but none of the four rules changes an AIG node or
   CNF clause on the representative capture. Further extract work therefore
   requires a new downstream gate-cone hypothesis, not just lexical reach.
+- ADR-0160 adds a separate native-client boundary. Glaurung hashes the exact
+  capture-rendered bytes, preserves every occurrence in process-local sequence
+  order, and times client translation, incremental lower/encode/SAT/model/
+  replay phases without changing the raw assertion policy. JSONL output is one
+  file per process and outside the reported native total. The fail-closed
+  summarizer rejects schema/order/completeness/policy/count drift and can check
+  overlapping verdicts/families against manifest v1. Ordinary Axeyum solver
+  constructors do not pay diagnostic clock/counter overhead. Native profiles
+  and deduplicated cold artifacts are complementary: the former retains
+  occurrence/reuse and caller cost; the latter supplies controlled policy and
+  Z3 comparisons. A publishable conclusion needs clean same-revision hashes,
+  fixed tools/hardware, repeated processes, and the usual 100%-decided,
+  zero-error/disagreement/replay gates.
 - **Primary client QF_BV target (2026-07-13): Glaurung binary analysis.** Capture
   and minimize the real lifter-produced path conditions, preserving their
   extract/concat, mixed machine-width, and memory-derived shape. This client
