@@ -255,47 +255,53 @@ decisions or speedups.
 
 | ID | Roadmap item | Scope and exit criterion |
 |---|---|---|
-| **GQ1** | **Capture and profile real queries first** | **Native instrumentation landed in ADR-0160; publication gate WIP.** Exact-query ordered profiles now separate Glaurung translation, word policy, lowering, incremental CNF, SAT, model lift/extraction, replay, and unattributed adapter time. The first 13,126-query Z3-authoritative driver run is fully decided/agreed and confirms lowering+CNF dominance plus 6,061 duplicate occurrences. Next pair a clean multi-driver process set with same-revision `axeyum-bench` hashes, fixed hardware/tool identity, p50/p95, 100% decided, zero operational errors/disagreements/replay failures, and retained occurrence order. |
+| **GQ1** | **Capture and profile real queries first** | **Native instrumentation landed in ADR-0160; client/bench reconciliation is the active cold task.** Exact-query profiles separate translation, word policy, lowering, incremental CNF, SAT, model lift/extraction, replay, and unattributed adapter time. The reported same-stream client ratio is about 2.5x versus roughly 1.34x in the gated bench, an approximately 1.8x entry-path factor to attribute across fresh arena/solver construction, interning/translation, model extraction, and caller work. Pair clean multi-driver processes with same-revision bench hashes and report both the pre-parsed in-process Z3 oracle and Glaurung's actual Z3 AST/context path; require fixed identity, p50/p95, 100% decided, and zero operational errors/disagreements/replay failures. |
 | **GQ2** | **Cheap always-on cold simplification tier** | Add a bounded, denotation-preserving one-shot tier for constant folding and trivial identities whose own cost is measured. Add a size/shape and cold-vs-warm policy that selects cheap, configured, or no preprocessing. Exit only when cold end-to-end time is non-worse in aggregate and improves the target class at the GQ1 validity gates. |
-| **GQ3** | **Coercion-cancellation peepholes and causal telemetry** | **Current measured tranche complete.** Exact nested/concat/extension/coercion rules, affected-query/family counts, and ADR-0159's deterministic repeated default-minus-one-rule comparator are landed. The clean four-rule ablation finds a material lowering-only win for `extract_extend`, small nested/concat effects, and zero AIG-node/CNF-clause changes for all four. Keep them enabled; reopen with exhaustive evaluation, Z3 differential tests, and the same causal gate only when a new residual shape has a specific downstream gate-cone hypothesis. |
-| **GQ4** | **Cold demand-driven bit-slice reduction** | **v1 deferred after a failed real gate.** ADR-0157's opt-in route is correct (100% decided, zero disagreements) but unconditional analysis regresses Axeyum/Z3 about 1.42x→4.49x and bit-blast share 47%→83%. Keep it off by default. Proposed ADR-0158 makes v2 a cheap-admission + bounded range-demand design: reject non-profitable shapes, admit only above a wide predicted-savings threshold, and fall back before full analysis cost. Re-run `register-slice` and whole-corpus gates; add low-prefix arithmetic only if the admitted residual demands it. |
-| **GQ5** | **Faster AIG→CNF and stronger sharing** | **Large incremental residual CLOSED by ADR-0162/0163.** Direct positive-root fusion first cuts clauses 782,716→615,537 and native Axeyum time 4.52%. Exact attribution then finds no guarded roots in the fresh cold pack and assigns 64,637 clauses to prior-root duplication. Exact root/selector-context dedup skips 1,981 assertions, cuts clauses again to 558,787 (-9.22%), and improves native Axeyum time 2.10% / normalized ratio 2.51%, leaving only 12,882 clauses (+2.36%) over one-shot. A stronger per-clause index is rejected after a 2.16% native regression. Reopen GQ5 only for a newly attributed native bottleneck; do not chase the small residual from clause counts alone. |
-| **GQ6** | **Cold SAT/CDCL tuning** | If GQ1 shows SAT search dominates, compare the exact emitted CNF across BatSat, the proof-producing core, and pinned CaDiCaL/Kissat references; then tune phase saving/rephasing, VSIDS/VMTF, restarts, clause tiers, propagation, subsumption/BVE/vivification, and extracted XOR/GF(2) reasoning. UNSAT proof rechecking and deterministic resource limits remain mandatory. Do not prioritize this over GQ2--GQ5 when encoding dominates. |
-| **GQ7** | **Cheaper warm entry and delta preprocessing** | ADR-0160's first ordered driver stream contains 6,061/13,126 duplicate occurrences, but lacks worker/path/scope lineage. Use the defined ordered warm-trace v1 contract to capture lineage, push/assert/check/pop deltas, repeated checks, unknown/errors, and exploration-driving model reads. Then preprocess only newly asserted/pushed terms plus affected retained summaries, retain AIG/CNF/learned state across scopes, and measure fixed per-check cost plus the warm break-even depth. |
-| **GQ8** | **Verdict and CNF reuse for duplicate/prefix queries** | Add a deterministic, resource-bounded memoizing layer keyed by canonical hash, solver/config semantics, and assertion-scope identity. Exact duplicate queries may reuse replayable verdict/model/proof artifacts; extending-prefix queries may reuse only sound retained preprocessing/CNF/search state. Cache hits must still pass original-term model or proof replay, and invalidation/versioning must be explicit. |
-| **GQ9** | **Published preprocessing cost model and API guidance** | Expose an `auto` policy based on measured formula size/shape and cold/warm context, with telemetry explaining the selected tier. Document when raw, cheap, configured, and warm-incremental entry points are appropriate. Exit when the default policy is benchmarked against every fixed alternative and avoids the known one-shot preprocessing loss. |
-| **GQ10** | **First-class real-lifter regression corpus** | Adopt the minimized Glaurung SMT-LIB pack, manifest, and expected outcomes as a versioned benchmark tier. Run a small representative subset in the regular regression gate and the full tier on the scheduled performance gate; track per-commit decided/error/replay status, stage counters, family ratios, and Axeyum/Z3 trend. Expand capture across more drivers, and add a separate ordered occurrence/prefix tier for GQ7/GQ8 because the deduplicated cold pack cannot measure reuse. The item is not `DONE` until the actual lifter distribution—not a synthetic proxy—is reproducibly exercised. |
+| **GQ3** | **Coercion-cancellation peepholes and causal telemetry** | **Current measured tranche complete; use ablation as policy evidence.** Exact nested/concat/extension/coercion rules and ADR-0159's repeated default-minus-rule comparator are landed. `extract_extend` improves lowering, but all four measured rules change zero AIG nodes and clauses. Do not globally delete sound rewrites because one corpus does not fire them; instead, keep a Glaurung policy only for rules with measured reach/cost and reopen register-slice-specific work only when an ablation demonstrates downstream AIG/CNF or native-time reduction. |
+| **GQ4** | **Cold demand-driven bit-slice reduction** | **Out of the active queue.** ADR-0157 v1 is correct but regresses the real ratio about 1.42x→4.49x; ADR-0158's conservative admission is a safe no-op but does not improve the required family. Both remain explicit/off. Do not tune thresholds further on this corpus; only a qualitatively different constant-cost admission proof and a fresh client gate can reopen GQ4. |
+| **GQ5** | **Cheaper AIG construction and measured CNF encoding** | **Large incremental clause residual closed; per-node construction remains open.** ADR-0162/0163 cut incremental clauses 782,716→558,787 and pass native gates; only 12,882 clauses (+2.36%) remain over one-shot, while a stronger per-clause index regresses native time. Next attribute bit-blast cost as node count versus construction overhead, verify Glaurung sharing survives term→AIG, and measure bounded structural hashing/two-level rewrites/copy removal. Continue comparator/concat/extract/root CNF work only from measured gate/attempt profiles and require lower native time, not merely fewer clauses. |
+| **GQ6** | **Cold SAT/CDCL tuning** | **Relevant but ranked seventh.** The reported native share is now about 20%, so compare the exact emitted CNF across BatSat, the proof-producing core, and pinned CaDiCaL/Kissat, then measure existing subsumption/vivification/inprocessing plus phase saving, VSIDS/VMTF, and restarts. UNSAT proof rechecking and deterministic resource limits remain mandatory. Do not outrank GQ7, client-boundary attribution, or the dual baseline. |
+| **GQ7** | **Cheaper warm entry and delta preprocessing** | **Highest-leverage active item.** The cold path is near its measured floor and ADR-0160 sees 6,061/13,126 duplicate occurrences. Obtain the ordered/prefix producer capture with worker/path lineage, scopes, repeated checks, unknown/errors, and exploration-driving model reads; wire ADR-0156 batch preprocessing plus retained AIG/CNF/learned state through a real extending path; preprocess only deltas; measure break-even and require end-to-end Glaurung correctness/replay. This is the primary route below 1x because the current Z3 crate path cannot reuse across fresh calls. |
+| **GQ8** | **Verdict and CNF reuse for duplicate/prefix queries** | Build on the ordered capture with a deterministic, bounded cache keyed by canonical content, solver/config semantics, and scope/lineage identity. Exact duplicates may reuse replayable verdict/model/proof artifacts; prefixes reuse only retained preprocessing/CNF/search state. Every hit still passes original-term model or proof replay, and invalidation/versioning is explicit. Measure exact-repeat and prefix hit rates before choosing capacity. |
+| **GQ9** | **Auto production policy and API guidance** | Ship a conservative auto policy only after fixed-policy comparison on the real corpus: GQ4 remains off/no-op unless its wide savings gate clears, accepted CNF fusion/context dedup stay on, rewrite tiers follow causal reach/cost, and warm mode activates only when an ordered reuse stream is present. Export the reason for every choice. Exit requires non-regression against every fixed alternative plus documented raw/cheap/configured/warm guidance. |
+| **GQ10** | **Ordered, wider real-lifter regression corpus** | Retain the deduplicated representative/full cold tiers, add the ordered non-deduplicated stream with exact-repeat/prefix frequency and path lineage, widen beyond the current three drivers, and run the full-tier variance gate. Track per-commit decided/error/replay status, stage/family counters, and both Axeyum/Z3 baselines: pre-parsed in-process Z3 and Glaurung's actual Z3 backend. The item is not done until GQ7/GQ8 reuse and the user-visible client ratio are reproducibly exercised. |
 
-**Post-capture priority reset (2026-07-14).** New Glaurung feedback reports a
-client-side profile in which bit blast/CNF/SAT are approximately 45%/32%/20%,
-the stream is about 88% register-slice shaped, and the native driver remains
-materially slower than the standalone benchmark. These figures are a new
-reproduction target, not a replacement for the clean artifact-v28 v4 result at
-0.730x Z3: the two measurements have different entry points and possibly
-different revisions/policies. The immediate dependency order is therefore:
+**Latest Glaurung execution order (2026-07-15; supersedes the earlier cold-path
+priority reset).** The client reports an approximately 1.34x gated-bench ratio
+but roughly 2.5x on the actual `IncrementalBvSolver` same-stream path, with
+bit-blast/CNF/SAT near 45%/32%/20%. Treat those as distinct bars until the same
+revision and queries reconcile them. The ranked work is:
 
-1. **GQ1 client boundary:** ADR-0160 lands exact-hash phase attribution and its
-   first ordered real-driver run. Repeat it cleanly across the multi-driver set
-   and pair same-revision overlap with `axeyum-bench`; do not promote the
-   exploratory single-driver ratio to the GQ10 baseline;
-2. **GQ5 client encoding boundary:** ADR-0162/0163 accept direct positive-root
-   fusion plus exact root/selector-context dedup after both structural and
-   native gates. The incremental/one-shot clause gap is now 2.36%; the stronger
-   clause-level index is explicitly rejected despite better structure because
-   it regresses native time. Reopen this lane only from fresh attribution; and
-3. **GQ7 ordered warm boundary:** obtain the producer trace that can measure
-   delta preprocessing, retained CNF/search, and duplicate/prefix reuse.
+1. **GQ7 warm end to end:** ingest the ordered/prefix capture and drive retained
+   batch preprocessing, AIG, CNF, learned state, push/pop, models, and replay;
+2. **GQ1 client overhead:** use `check_profiled` to partition and remove the
+   reported approximately 1.8x real-client/bench entry factor;
+3. **AIG cost per bit:** separate node count from construction cost, preserve
+   client hash-consing, and measure structural hashing/two-level rewriting/copy
+   removal now that GQ4 cannot profitably reduce bits;
+4. **Measured CNF work:** continue the proven encoding lane, but only from
+   dominant gate-pattern attribution and a native-time gate after ADR-0163;
+5. **Causal rewrite policy:** use ablation to select Glaurung-relevant rules and
+   require downstream structural/time effects; do not globally erase useful
+   rules merely because this capture does not exercise them;
+6. **GQ8 duplicate/prefix reuse:** add exact verdict and retained-CNF reuse
+   under content/config/scope identity and mandatory replay;
+7. **GQ6 SAT tuning:** the approximately 20% share is material; compare exact
+   CNF across cores and measure inprocessing/heuristic changes;
+8. **GQ9 non-regressing auto mode:** accepted CNF defaults, conservative/off
+   GQ4, causal rewrite selection, and warm activation only on detected reuse;
+9. **GQ10 deeper capture:** ordered occurrences plus lineage, more drivers,
+   full-tier variance, and per-commit ratios; and
+10. **Dual gap baseline:** report both pre-parsed in-process Z3 and Glaurung's
+    actual Z3 AST/context backend, with the user-visible Glaurung-vs-Glaurung
+    comparison controlling product claims.
 
-ADR-0157/0158 remain explicit/off; reopen GQ4 only with a qualitatively
-different gate-cone estimator/specialization. GQ3 reopens only for a new
-causally testable residual. GQ7 delta preprocessing/state retention and GQ8
-duplicate/prefix reuse remain the route below 1x on ordered streams. GQ6 SAT
-tuning stays queued until the post-client/GQ5 profile makes search dominant.
-GQ10 must retain both the cold
-deduplicated pack and a separate ordered capture; neither can substitute for
-the other.
+The highest-leverage trio is 1, 2, and 10. GQ4 is not an active optimization;
+ADR-0157/0158 remain explicit/off. Cold rewrite or CNF work may continue only
+when causal/native profiles select it. The ordered warm capture is the enabling
+artifact for GQ7/GQ8 and must precede cache capacity or auto-policy choices.
 
-**Execution order.** The detailed task graph and functional acceptance boundary
+**Recorded cold-path sequence.** The detailed task graph and functional acceptance boundary
 live in the
 [Glaurung QF_BV execution plan](docs/research/08-planning/glaurung-qfbv-execution-plan.md).
 The byte-complete representative and well-typed full capture contracts and the
@@ -351,10 +357,9 @@ Z3. Accepted ADR-0153 combines scalar and wide constant leaves in mixed affine
 replay gates remain green. The rewrite-aware guarded comparator verifies that
 v3 is exactly v2 plus `bv.add_constant_chain.v1` before applying the 3%/3%/2%
 alarms. Re-attribute the v3 residual before another cold change.
-Broad GQ4 partial lowering follows its small post-canonical full-tier
-opportunity (1.84% term bits) unless family-specific evidence reverses the
-rank. Admit GQ6
-SAT-core work only if search becomes material. GQ7--GQ9 require the separate
+GQ4 is now closed/off for this distribution after both measured candidates
+failed to improve it. GQ6 is relevant at the reported 20% share but remains
+ranked after warm/client-boundary work. GQ7--GQ9 require the separate
 [ordered warm-trace v1](docs/research/08-planning/glaurung-ordered-trace-v1.md)
 because the deduplicated cold corpus erases prefix/frequency information. The
 schema is defined; the next gate is a small producer sample that validates
