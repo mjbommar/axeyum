@@ -1,6 +1,6 @@
 # ADR-0157: Demand-driven cold bit lowering
 
-Status: proposed
+Status: deferred
 Date: 2026-07-14
 
 ## Context
@@ -126,3 +126,28 @@ An accepted result will close GQ4 only for the exact structural class above.
 Low-prefix add/sub/multiply, symbolic shifts, comparison-specific relevance,
 and warm incremental partial-bit growth remain measured follow-ups rather than
 implicit claims.
+
+## Glaurung measurement and disposition (2026-07-14)
+
+The Glaurung acceptance measurement is semantically green but rejects this
+implementation as a default performance policy:
+
+- the unchanged default remains about **1.42x** Z3;
+- unconditional demand lowering regresses that ratio to about **4.49x**;
+- all queries are decided with zero disagreements; and
+- bit blast rises from about **47%** to **83%** of Axeyum time because the
+  backward demand analysis costs more than the circuit construction it avoids.
+
+Therefore the implementation remains explicit, off by default, and useful as
+correctness/telemetry infrastructure, but ADR-0157 is deferred rather than
+accepted. No default or automatic policy may select it.
+
+The next GQ4 design needs a separate admission contract. A cheap syntactic
+precheck must reject ordinary/full-demand queries before allocating per-term
+bitsets; the exact demand pass must be memoized and bounded; and slicing may be
+admitted only when a conservative savings estimate clears a deliberately wide
+threshold. The bound must fall back to the ordinary full lowerer before paying
+the current unbounded analysis cost. Thresholds and budgets must come from the
+`register-slice` family and whole Glaurung corpus, not the focused 8-of-64
+microcase. The required outcome remains an end-to-end win at unchanged decided,
+agreement, and replay rates.
