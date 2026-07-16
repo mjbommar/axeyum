@@ -13,7 +13,10 @@ import sys
 from typing import Any
 
 
-PROFILE_SCHEMA = "glaurung-axeyum-warm-profile-v1"
+PROFILE_SCHEMAS = (
+    "glaurung-axeyum-warm-profile-v1",
+    "glaurung-axeyum-warm-profile-v2",
+)
 SUMMARY_SCHEMA = "axeyum-glaurung-warm-profile-summary-v1"
 QUERY_HASH = re.compile(r"sha256:[0-9a-f]{64}\Z")
 OUTCOMES = ("sat", "unsat", "unknown")
@@ -46,6 +49,46 @@ COUNTS = (
     "cnf_variables",
     "cnf_clauses",
 )
+GATE_MIX_FIELDS = (
+    "and_nodes_synced",
+    "up_half_definitions",
+    "down_half_definitions",
+    "xor_half_definitions",
+    "not_ite_half_definitions",
+    "not_and_half_definitions",
+    "and_tree_half_definitions",
+    "binary_and_half_definitions",
+    "constant_clauses",
+    "definition_clauses",
+    "root_clauses",
+    "direct_positive_and_roots",
+    "direct_positive_and_nodes",
+    "direct_positive_and_leaves",
+    "direct_xor_leaves",
+    "direct_not_ite_leaves",
+    "direct_negative_and_roots",
+    "fused_positive_and_roots",
+    "fused_positive_and_nodes",
+    "fused_xor_leaves",
+    "root_assertions",
+    "guarded_root_assertions",
+    "repeated_same_context_roots",
+    "deduplicated_root_assertions",
+    "reused_cross_context_roots",
+    "guarded_root_clauses",
+    "root_clause_attempts",
+    "unit_payload_root_clauses",
+    "binary_payload_root_clauses",
+    "wide_payload_root_clauses",
+    "duplicate_definition_clauses",
+    "duplicate_root_clauses",
+    "duplicate_prior_root_clauses",
+    "root_clauses_duplicate_non_root",
+    "tautological_definition_clauses",
+    "tautological_root_clauses",
+    "fresh_negative_root_definitions",
+    "reused_negative_root_definitions",
+)
 
 
 class ProfileError(ValueError):
@@ -62,7 +105,7 @@ def nonnegative_int(row: dict[str, Any], field: str, location: str) -> int:
 def validate_record(row: Any, location: str) -> dict[str, Any]:
     if not isinstance(row, dict):
         raise ProfileError(f"{location}: record must be a JSON object")
-    if row.get("schema") != PROFILE_SCHEMA:
+    if row.get("schema") not in PROFILE_SCHEMAS:
         raise ProfileError(f"{location}: unsupported schema {row.get('schema')!r}")
     nonnegative_int(row, "process_id", location)
     nonnegative_int(row, "sequence", location)
@@ -103,6 +146,33 @@ def validate_record(row: Any, location: str) -> dict[str, Any]:
             f"{location}: phases including unattributed ({phase_total}) "
             f"do not equal total_nanos ({total})"
         )
+    if row["schema"] == PROFILE_SCHEMAS[1]:
+        gate_mix = row.get("cnf_gate_mix")
+        if not isinstance(gate_mix, dict) or set(gate_mix) != set(GATE_MIX_FIELDS):
+            raise ProfileError(f"{location}: cnf_gate_mix has an incomplete field set")
+        for field in GATE_MIX_FIELDS:
+            nonnegative_int(gate_mix, field, f"{location}:cnf_gate_mix")
+        halves = gate_mix["up_half_definitions"] + gate_mix["down_half_definitions"]
+        shapes = sum(
+            gate_mix[field]
+            for field in (
+                "xor_half_definitions",
+                "not_ite_half_definitions",
+                "not_and_half_definitions",
+                "and_tree_half_definitions",
+                "binary_and_half_definitions",
+            )
+        )
+        if halves != shapes:
+            raise ProfileError(f"{location}: CNF half-definition shape partition mismatch")
+        for fused, direct in (
+            ("fused_positive_and_roots", "direct_positive_and_roots"),
+            ("fused_positive_and_nodes", "direct_positive_and_nodes"),
+            ("fused_xor_leaves", "direct_xor_leaves"),
+            ("deduplicated_root_assertions", "repeated_same_context_roots"),
+        ):
+            if gate_mix[fused] > gate_mix[direct]:
+                raise ProfileError(f"{location}: {fused} exceeds {direct}")
     return row
 
 
@@ -180,9 +250,10 @@ def summarize(paths: list[Path]) -> dict[str, Any]:
     for row in records:
         process_rows[row["process_id"]].append(row["sequence"])
 
-    return {
+    schemas = sorted({row["schema"] for row in records})
+    summary = {
         "schema": SUMMARY_SCHEMA,
-        "profile_schema": PROFILE_SCHEMA,
+        "profile_schemas": schemas,
         "inputs": [str(path) for path in paths],
         "records": len(records),
         "unique_queries": len(query_counts),
@@ -214,6 +285,12 @@ def summarize(paths: list[Path]) -> dict[str, Any]:
             for process_id, sequences in sorted(process_rows.items())
         ],
     }
+    if schemas == [PROFILE_SCHEMAS[1]]:
+        summary["cnf_gate_mix_totals"] = {
+            field: sum(row["cnf_gate_mix"][field] for row in records)
+            for field in GATE_MIX_FIELDS
+        }
+    return summary
 
 
 def parse_args() -> argparse.Namespace:

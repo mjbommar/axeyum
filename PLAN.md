@@ -327,6 +327,15 @@ session state.
 > gate/root attribution, then AIG construction per node; SAT remains third.
 > Profiled time is diagnostic overhead and never replaces ADR-0171's unprofiled
 > 0.746x-Z3 production result.
+> ADR-0173 now closes that causal warm CNF attribution. Glaurung `21c01ce`
+> emits the exact 38-counter `IncrementalCnfStats` delta in every v2 record;
+> the same 6,986-check stream partitions 11,734,335 clauses into 71.75%
+> definitions and 28.24% guarded roots. AND-tree shapes own 53.89% of 5.70
+> million definition halves, while every positive-root opportunity is already
+> fused and all duplicate/tautology counters are zero. Reject another root
+> fusion/dedup tranche. Implement one future-reuse-safe positive internal
+> AND-tree half-flattening experiment next, and accept it only on lower repeated
+> unprofiled native time as well as fewer clauses.
 > The capture and
 > implementation audit has been expanded into the dependency-ordered
 > [Glaurung QF_BV execution plan](docs/research/08-planning/glaurung-qfbv-execution-plan.md):
@@ -355,16 +364,16 @@ decisions or speedups.
 
 | ID | Roadmap item | Scope and exit criterion |
 |---|---|---|
-| **GQ1** | **Capture and profile real queries first** | **Native lineage timing and phase partition DONE for the bounded tier (ADR-0171/0172).** Repeated unprofiled lineage is 0.746x Z3. The exact 6,986-record diagnostic attributes CNF 43.78%, bit blast 22.86%, SAT 17.45%, translation 3.74%, replay 5.79%, and model lift 3.41%, with every record decided and phase-reconciled. Next deepen causal gate/root and AIG-per-node attribution; keep profiled and unprofiled bars distinct. |
+| **GQ1** | **Capture and profile real queries first** | **Native lineage timing, phase, and CNF gate/root attribution DONE for the bounded tier (ADR-0171--0173).** Repeated unprofiled lineage is 0.746x Z3. The exact 6,986-record diagnostic attributes phases and partitions all 11.73M clauses: 71.75% definitions, 28.24% guarded roots. Next attribute AIG construction per node after the selected bounded CNF experiment; keep profiled and unprofiled bars distinct. |
 | **GQ2** | **Cheap always-on cold simplification tier** | Add a bounded, denotation-preserving one-shot tier for constant folding and trivial identities whose own cost is measured. Add a size/shape and cold-vs-warm policy that selects cheap, configured, or no preprocessing. Exit only when cold end-to-end time is non-worse in aggregate and improves the target class at the GQ1 validity gates. |
 | **GQ3** | **Coercion-cancellation peepholes and causal telemetry** | **Current measured tranche complete; use ablation as policy evidence.** Exact nested/concat/extension/coercion rules and ADR-0159's repeated default-minus-rule comparator are landed. `extract_extend` improves lowering, but all four measured rules change zero AIG nodes and clauses. Do not globally delete sound rewrites because one corpus does not fire them; instead, keep a Glaurung policy only for rules with measured reach/cost and reopen register-slice-specific work only when an ablation demonstrates downstream AIG/CNF or native-time reduction. |
 | **GQ4** | **Cold demand-driven bit-slice reduction** | **Out of the active queue.** ADR-0157 v1 is correct but regresses the real ratio about 1.42x→4.49x; ADR-0158's conservative admission is a safe no-op but does not improve the required family. Both remain explicit/off. Do not tune thresholds further on this corpus; only a qualitatively different constant-cost admission proof and a fresh client gate can reopen GQ4. |
-| **GQ5** | **Cheaper AIG construction and measured CNF encoding** | **Leading measured implementation lane (ADR-0172).** Live lineage adds 11,734,335 clauses and spends 43.78% in CNF; bit blast adds 8,758,247 AIG nodes and spends 22.86%. Extend exact warm deltas with causal gate/root-family attribution, then target the dominant encoding pattern. Attribute AIG cost per node second. Accept only lower unprofiled native time with identical decisions, replay, scopes, and resources. |
+| **GQ5** | **Cheaper AIG construction and measured CNF encoding** | **Leading measured implementation lane (ADR-0172/0173).** Live lineage adds 11,734,335 clauses and spends about 43.6% in CNF. Definitions own 71.75% of clauses and AND-tree shapes own 53.89% of halves; root fusion is saturated and duplicates/tautologies are zero. Try one future-reuse-safe positive internal AND-tree half flattening, then attribute AIG cost per node. Accept only lower unprofiled native time with identical decisions, replay, scopes, and resources. |
 | **GQ6** | **Cold SAT/CDCL tuning** | **Material but third behind measured warm CNF/AIG construction.** Native lineage spends 17.45% in SAT overall, ranging 16.29%--34.51% by driver. After lowering/encoding attribution, compare identical emitted CNF across BatSat, the proof-producing core, and pinned CaDiCaL/Kissat; preserve proof replay and deterministic limits. |
 | **GQ7** | **Cheaper warm entry and delta preprocessing** | **Native timing and phase gates accepted; memory policy WIP (ADR-0171/0172, Glaurung `49f1fe2`/`13f4bbe`).** Repeated lineage is 0.746x Z3; exact profiling shows session creation only 0.21% weighted. Atomic capacity fallback is live. Keep lineage opt-in: calibrate limits against RSS/inherited-prefix cost and widen drivers before default admission. |
 | **GQ8** | **Verdict and CNF reuse for duplicate/prefix queries** | ADR-0170 measures 957/3,769 exact duplicate occurrences (25.4%), 439 same-lineage repeats, and 2,192 prefix extensions. ADR-0171 completes bounded native ownership but does not authorize a cache. First specify deterministic capacity/eviction plus content, solver/config, scope, and lineage identity; every hit still passes original-term model or proof replay and invalidation/versioning is explicit. |
 | **GQ9** | **Auto production policy and API guidance** | **Fixed native policies are compared and explicit capacity fallback exists; automatic admission remains open.** ADR-0171 makes lineage fastest on all three live streams, but median RSS rises 6.3%--31.0%. `49f1fe2` supplies live-path/assertion ceilings and visible one-shot fallback; next choose limits from measured memory/prefix cost and beat or match one-shot/snapshot/lineage across wider drivers. GQ4 remains off; accepted CNF defaults stay on. |
-| **GQ10** | **Ordered, wider real-lifter regression corpus** | **Ordered, repeated native, and exact warm-profile three-driver tiers are accepted (ADR-0170--0172).** The diagnostic adds 6,986 exact hash/path/phase records to the repeated 0.746x-Z3 unprofiled gate. Retain cold tiers; next widen driver families and add full-tier/per-commit variance with pre-parsed Z3, actual-client Z3, unprofiled lineage, and diagnostic bars explicitly separate. |
+| **GQ10** | **Ordered, wider real-lifter regression corpus** | **Ordered, repeated native, and exact warm-profile three-driver tiers are accepted (ADR-0170--0173).** The v2 diagnostic adds exact CNF gate/root deltas to all 6,986 hash/path/phase records beside the repeated 0.746x-Z3 unprofiled gate. Retain cold tiers; next widen driver families and add full-tier/per-commit variance with pre-parsed Z3, actual-client Z3, unprofiled lineage, and diagnostic bars explicitly separate. |
 
 **Latest Glaurung execution order (2026-07-15; supersedes the earlier cold-path
 priority reset).** Earlier evidence reported an approximately 1.34x gated-bench
@@ -375,7 +384,8 @@ per-driver range. ADR-0171's repeated live path-owned policy reaches 0.746x Z3,
 while live consecutive snapshot is 2.093x. Treat the pre-parsed bench, native
 client, external replay, unprofiled lineage, and diagnostic controls as
 distinct bars. ADR-0172 attributes the live internal total to CNF/bit-blast/SAT
-at 43.78%/22.86%/17.45%.
+at 43.78%/22.86%/17.45%; ADR-0173 partitions the CNF traffic and rejects more
+root fusion/dedup work.
 The ranked work is:
 
 1. **GQ7 warm end to end:** build on ADR-0164's measured snapshot-LCP bridge,
@@ -385,9 +395,9 @@ The ranked work is:
    ownership, and ADR-0171 accepts its repeated 0.746x-Z3 live result. Next
    calibrate `49f1fe2`'s live-session/assertion fallback against memory and
    first-prefix cost while preserving push/pop, model, replay, and ownership;
-2. **GQ1/GQ5 warm CNF attribution:** extend ADR-0172's exact records with
-   causal gate/root-family deltas and select the dominant 11.73-million-clause
-   pattern under an unprofiled native-time gate;
+2. **GQ1/GQ5 measured CNF work:** ADR-0173's exact gate/root deltas select one
+   future-reuse-safe positive internal AND-tree half-flattening experiment;
+   require lower repeated unprofiled native time as well as fewer clauses;
 3. **AIG cost per bit:** separate node count from construction cost, preserve
    client hash-consing, and measure structural hashing/two-level rewriting/copy
    removal now that GQ4 cannot profitably reduce bits;

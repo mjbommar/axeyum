@@ -34,7 +34,7 @@ PHASES = (
 
 def record(sequence: int, *, path_created: bool, query: str) -> dict[str, object]:
     row: dict[str, object] = {
-        "schema": "glaurung-axeyum-warm-profile-v1",
+        "schema": "glaurung-axeyum-warm-profile-v2",
         "process_id": 17,
         "sequence": sequence,
         "query_hash": query,
@@ -66,6 +66,24 @@ def record(sequence: int, *, path_created: bool, query: str) -> dict[str, object
     row["cnf_encode_nanos"] = 20
     row["solve_nanos"] = 10
     row["unattributed_nanos"] = 20
+    row["cnf_gate_mix"] = {field: 0 for field in MODULE.GATE_MIX_FIELDS}
+    row["cnf_gate_mix"].update(
+        {
+            "up_half_definitions": 2,
+            "down_half_definitions": 1,
+            "xor_half_definitions": 1,
+            "not_and_half_definitions": 1,
+            "and_tree_half_definitions": 1,
+            "direct_positive_and_roots": 1,
+            "direct_positive_and_nodes": 2,
+            "direct_xor_leaves": 1,
+            "fused_positive_and_roots": 1,
+            "fused_positive_and_nodes": 2,
+            "fused_xor_leaves": 1,
+            "repeated_same_context_roots": 1,
+            "deduplicated_root_assertions": 1,
+        }
+    )
     return row
 
 
@@ -94,6 +112,7 @@ class WarmProfileSummaryTests(unittest.TestCase):
         self.assertEqual(summary["decided_percent"], 100.0)
         self.assertEqual(summary["phases"]["bit_blast"], {"nanos": 60, "percent": 30.0})
         self.assertEqual(summary["structure_totals"]["root_encodings"], 3)
+        self.assertEqual(summary["cnf_gate_mix_totals"]["xor_half_definitions"], 2)
 
     def test_rejects_bad_phase_sum_and_path_creation_order(self) -> None:
         query = "sha256:" + "b" * 64
@@ -111,6 +130,26 @@ class WarmProfileSummaryTests(unittest.TestCase):
             )
             with self.assertRaisesRegex(MODULE.ProfileError, "first occurrence=True"):
                 MODULE.summarize([profile])
+
+            bad_mix = record(0, path_created=True, query=query)
+            bad_mix["cnf_gate_mix"]["binary_and_half_definitions"] = 1
+            profile.write_text(json.dumps(bad_mix) + "\n", encoding="utf-8")
+            with self.assertRaisesRegex(MODULE.ProfileError, "shape partition mismatch"):
+                MODULE.summarize([profile])
+
+    def test_accepts_historical_v1_without_gate_totals(self) -> None:
+        query = "sha256:" + "c" * 64
+        historical = record(0, path_created=True, query=query)
+        historical["schema"] = "glaurung-axeyum-warm-profile-v1"
+        del historical["cnf_gate_mix"]
+        with tempfile.TemporaryDirectory() as directory:
+            profile = Path(directory) / "profile.jsonl"
+            profile.write_text(json.dumps(historical) + "\n", encoding="utf-8")
+
+            summary = MODULE.summarize([profile])
+
+        self.assertEqual(summary["profile_schemas"], [historical["schema"]])
+        self.assertNotIn("cnf_gate_mix_totals", summary)
 
 
 if __name__ == "__main__":
