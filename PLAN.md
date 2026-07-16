@@ -615,6 +615,11 @@ refresh now passes over 185,442 checks: mean Axeyum/ratio improve
 23.82%/24.99% on SurfacePen and 3.55%/4.04% on NETwtw10, with RSS and Z3 drift
 inside their alarms and exact findings/traffic. Re-profile the accepted current
 native path before selecting another GQ5/GQ6 or model-lift implementation.
+That attribution now selects proposed ADR-0196: 358 path-birth checks own
+82.2% of CNF time and 89.0% of bit-blast time because both fork children start
+fresh while the terminal parent's exact prefix solver is closed. Test an
+exclusive transfer to one child only; reject any sibling sharing, leaked
+terminal state, or candidate that fails the full adaptive client gates.
 GQ4 is not an active optimization;
 ADR-0157/0158 remain explicit/off. Cold rewrite or CNF work may continue only
 when causal/native profiles select it. ADR-0164 permits opt-in consecutive

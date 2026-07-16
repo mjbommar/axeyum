@@ -322,6 +322,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-16 — ADR-0196 proposes exclusive fork-owner transfer.** Fresh
+  post-ADR-0195 attribution shows 358 path-creation checks (14.0%) consume
+  82.2% of CNF time, 89.0% of bit-blast time, 88.0% of added clauses, and
+  89.7% of root encodings. Glaurung currently closes the terminal parent's
+  retained solver while minting fresh owners for both fork children. The
+  bounded candidate transfers that owner to exactly one deterministic child;
+  the sibling remains independent. It is proposed only: add lifecycle,
+  isolation, restart, replay, and terminal-cleanup tests before implementation,
+  then require lower path-birth construction plus the full adaptive two-driver
+  alarms before acceptance.
+
 - **2026-07-16 — ADR-0195 accepts the empty warm-theory projection bypass.**
   After constructing the same complete deterministic public model, scalar
   QF_BV checks now return it directly only when every active and one-shot array/

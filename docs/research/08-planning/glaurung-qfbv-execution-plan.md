@@ -709,6 +709,12 @@ clean artifact pins the exact Glaurung/Axeyum revisions and policy.
    fresh accepted-current native attribution next. Keep CNF as a measured GQ5
    lane only if that profile selects it; internal flattening still requires
    future-use evidence or clause replacement.
+7. Proposed ADR-0196 follows that profile's actual concentration: path-creation
+   checks own 82.2% of CNF and 89.0% of bit-blast time. Test exclusive transfer
+   of a terminal parent's retained owner to one deterministic fork child while
+   every sibling keeps a fresh solver. Require exact lifecycle/isolation/replay
+   tests, lower path-birth construction, and the full adaptive two-driver gate;
+   do not introduce cloneable or shared mutable SAT state.
 5. Keep complete assertion/symbol capture and separate backend timing mandatory
    in every new ordered artifact; merge per-process traces atomically before
    GQ7/GQ8 cache or auto-policy work.
