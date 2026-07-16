@@ -546,6 +546,15 @@ fingerprints. Re-attribute a larger CNF subphase or encoding hypothesis before
 the next GQ5 candidate, and keep first-class incremental push/pop/assume as the
 next structural API item.
 
+Proposed ADR-0201 now opens that rank-2 API item. Add an always-exported,
+object-safe `IncrementalSolver` extension trait for genuine retained
+assert/push/pop/check/check-assuming sessions, implement it first for
+`IncrementalBvSolver`, and keep one-shot `SolverBackend` plus the snapshot-
+resubmitting `Solver<B>` facade semantically distinct. The trait stays raw,
+arena-explicit, lifetime-free, and replay-preserving; configured preprocessing
+remains a concrete warm-only policy. A generic and trait-object conformance
+sequence plus full and `qfbv`-only gates are mandatory before acceptance.
+
 **Latest Glaurung execution order (2026-07-15; supersedes the earlier cold-path
 priority reset).** Earlier evidence reported an approximately 1.34x gated-bench
 ratio but roughly 2.5x on one actual `IncrementalBvSolver` stream, with

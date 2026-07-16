@@ -322,6 +322,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-16 — ADR-0201 proposes a first-class retained solver trait.** The
+  framework's `SolverBackend` is one-shot and `Solver<B>` currently resubmits
+  complete snapshots, while `IncrementalBvSolver` genuinely retains AIG, CNF,
+  SAT, learned, scope, and replay state. Add an always-exported object-safe
+  `IncrementalSolver` trait for raw assert/push/pop/check/check-assuming and
+  implement it only for real retained sessions. Keep arena handles lifetime-
+  free, require one append-only arena per session, preserve exclusive mutation
+  and original-term replay, and leave configured preprocessing/concrete stats
+  outside the general contract. Gate generic plus trait-object semantics under
+  both full and dependency-minimal `qfbv` profiles.
+
 - **2026-07-16 — ADR-0200 defers open-addressed primary CNF ownership.** The
   isolated table is semantically and structurally exact: all focused/CNF/proof
   gates pass, and every one of ten representative processes decides 162/162
