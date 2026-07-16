@@ -500,6 +500,10 @@ Out of scope:
     [ADR-0203](../09-decisions/adr-0203-defer-glaurung-direct-delta-default.md)
     and
     [ADR-0204](../09-decisions/adr-0204-source-identity-direct-sibling-prefixes.md).
+    The resulting two-driver production comparison passes, but the direct
+    default remains deferred for `tcpip`/`dxgkrnl` widening and a rejected
+    exclusive-control Z3-drift alarm; see
+    [ADR-0205](../09-decisions/adr-0205-accept-source-prefix-production-gate.md).
 - [x] What may an exact-verdict cache reuse without weakening evidence?
   - Answer: initially only an exact scalar SAT duplicate inside the same
     arena-bound `IncrementalBvSolver`, keyed by exact ordered assertion terms,

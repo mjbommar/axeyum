@@ -322,6 +322,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-16 — ADR-0205 accepts the source-prefix production win and moves
+  next to large-driver widening.** Glaurung `29031f8` commits a clean
+  92,721-check artifact with 100% Z3 agreement, unchanged findings, zero
+  unknown/replay failures, exact traffic, terminal-zero gauges, and 4 GiB
+  children. Against serial snapshot, source direct improves SurfacePen
+  time/ratio/RSS 16.11%/17.39%/0.36% and NETwtw10 6.07%/6.61%/1.72%; Z3 drift
+  is +1.55%/+0.58%, so every production alarm passes. A fresh exclusive-direct
+  control favors the candidate too, but +4.06% SurfacePen Z3 drift correctly
+  rejects that causal comparison. Direct stays opt-in. New one-process evidence
+  adds 33,501 `tcpip` and 17,572 `dxgkrnl` checks with zero disagreements and
+  2.5x/4.7x speedups; add them to the repeated RSS gate next. `win32k`/`pciidex`
+  have zero solver queries and remain Glaurung dispatch-coverage gaps, not
+  Axeyum evidence.
+
 - **2026-07-16 — ADR-0204 lands exact source ancestry for direct siblings;
   production measurement is next.** Glaurung `aee3418` gives every persistent
   append an immutable ancestry node and lets forks share only its `Arc`. The
@@ -1757,15 +1771,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   | **GQ4 cold relevant bits** | **v1 and v2 DEFERRED after failed real gates.** v1 regresses ~1.42x→4.49x. V2 rejection overhead is bounded, but defaults admit 0/128 and +0.62% total; a 33-query moderate policy removes 632 AIG nodes/zero clauses and regresses bit blast 3.14% | Keep both explicit/off. Reopen only with an AIG/CNF-cone estimator or after word rewrites materially change the residual; do not tune thresholds further |
   | **GQ5 AIG/CNF construction** | **AIG tranche accepted; direct CNF-table transfer rejected (ADR-0175/0200).** AIG open addressing improves native time 7.66%, but the structurally exact CNF primary-table candidate regresses representative mean CNF/total 8.55%/3.67% and is reverted | Re-attribute a larger CNF subphase or encoding hypothesis; do not retry table micro-work without per-probe causal evidence |
   | **GQ6 cold SAT/CDCL** | **WIP foundation; behind measured CNF.** Accepted-table native lineage SAT is 18.48% weighted versus CNF at 46.55% | Compare identical CNF across cores only after the next CNF decision, with proof replay and deterministic limits |
-  | **GQ7 warm delta entry** | **Source-identity direct sibling functionality DONE; production gate pending (ADR-0201--0204; Glaurung `aee3418`).** Exact immutable ancestry safely rewinds one serially leased direct session and passes 42 backend/12 explorer plus combined-feature regressions | Extend/calibrate the fail-closed direct+serial gate, then repeat causal and production controls before any default change |
+  | **GQ7 warm delta entry** | **Source-identity functionality and current production comparison DONE (ADR-0201--0205; Glaurung `29031f8`).** The 92,721-check serial-default comparison passes every correctness/time/ratio/RSS alarm; exclusive causal control remains rejected on Z3 drift | Keep direct opt-in; widen to tcpip/dxgkrnl, then revisit default and order-balanced causal evidence |
   | **GQ8 verdict/CNF cache** | **DONE for available families (ADR-0192).** Clean repeated evidence admits exact same-arena scalar SAT reuse only in path-owned Glaurung sessions; fixed bounds, traffic partitions, cleanup gauges, findings, and replay are enforced | Preserve explicit off and re-gate new families; Axeyum's generic cache remains opt-in and ordinary UNSAT/Unknown/prefix verdicts remain excluded |
   | **GQ9 auto cost model/docs** | **DONE for available families (ADR-0186).** Clean adaptive repeat clears every alarm over 92,721 checks; downstream explorer default has explicit off/fixed controls | Re-gate newly captured families; do not broaden this Glaurung-specific default into Axeyum's generic API |
-  | **GQ10 real-lifter regression tier** | **DONE for available families (ADR-0187/0188).** The corrected 162-query regular pin and repeated 30,628-query full composites have executable alarms | Retain separate cold/ordered/profile bars and re-gate new families |
+  | **GQ10 real-lifter regression tier** | **Current gates DONE; tcpip/dxgkrnl widening ACTIVE (ADR-0205).** Their first 51,073 checks are disagreement-free at 2.5x/4.7x speedup but lack repetitions/RSS | Add exact traffic and repeated artifacts; investigate zero-query win32k separately without counting it as solver coverage |
 
-  **Next actions:** (1) extend the Glaurung lineage gate with an explicit source-
-  identity direct+serial policy, calibrate its exact SurfacePen traffic, and use
-  v7 to prove translation/root deltas before repeating one-shot, causal,
-  production, replay/evidence/lifecycle, and RSS controls;
+  **Next actions:** (1) add `tcpip` and `dxgkrnl` to Glaurung's fail-closed
+  lineage gate with exact source bytes, query/traffic/finding identity, repeated
+  time/ratio/RSS, and 4 GiB controls; (2) inspect `win32k` dispatch recovery as
+  a frontend coverage issue, never a zero-query solver success; (3) rerun the
+  exclusive-direct causal comparison only with order-balanced Z3 drift control;
   (2) obtain fresh native canonical-stage attribution and select any new GQ5/GQ6
   work only from a larger measured residual, not another primary-table analogy;
   (3) preserve the corrected
@@ -3561,7 +3576,7 @@ plan is built and committed on the current branch:
 ### Track 4 — Use Cases & Frontend
 | Phase | Title | Status |
 |---|---|---|
-| P4.1j | Glaurung warm delta and duplicate/prefix reuse (GQ7/GQ8) | **DONE for accepted serial snapshot families; source-identity direct candidate implemented, production gate pending.** ADR-0186/0192/0193/0195/0196/0199 establish adaptive snapshot ownership and serial LCP reuse. ADR-0201/0202 add first-class deltas/v7 attribution; ADR-0203 defers the exclusive direct default; ADR-0204/Glaurung `aee3418` safely restores serial direct reuse through exact immutable ancestry. Calibrate and repeat the production time/RSS gate. |
+| P4.1j | Glaurung warm delta and duplicate/prefix reuse (GQ7/GQ8) | **DONE for current serial/source-direct families; widening active.** ADR-0186/0192/0193/0195/0196/0199 establish adaptive snapshot ownership and serial LCP reuse. ADR-0201--0204 add first-class source-identity deltas; ADR-0205 accepts the repeated two-driver production time/ratio/RSS win while keeping direct opt-in for `tcpip`/`dxgkrnl` widening and a rejected causal Z3-drift control. |
 | P4.1e | Retained warm Boolean array relation flags | **DONE (ADR-0091)** — symbolic-memory path conditions can keep nested supported array equality atoms warm through private candidate-sensitive relation flags, guarded equality/diff observations, projection filtering, and replay |
 | P4.1h | Retained warm nested array-valued UF parameters | **DONE (ADR-0094)** — nested supported array-valued memory/function parameters can stay warm as full-value UF keys through private projection keys or rewritten structural keys, with relation-flag guarded congruence, private filtering, and replay |
 | P4.1g | Retained warm structural array-valued UF parameters | **DONE (ADR-0093)** — supported store/constant/array-ITE memory/function parameters can stay warm as full-value UF keys with scalar dependency retention, structural owner realization, relation-flag guarded congruence, private filtering, and replay; ADR-0094 subsequently lands nested application keys |
@@ -3583,6 +3598,12 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-16 — ADR-0205 accepts the source-prefix production gate.** Glaurung
+  `29031f8` commits 92,721 exact checks and a passing serial-snapshot comparison:
+  SurfacePen time/ratio/RSS improve 16.11%/17.39%/0.36%; NETwtw10 improve
+  6.07%/6.61%/1.72%. The exclusive control remains rejected on +4.06% Z3 drift.
+  Direct stays opt-in while `tcpip`/`dxgkrnl` enter the repeated gate; zero-query
+  `win32k` is tracked as dispatch coverage, not solver evidence.
 - **2026-07-16 — ADR-0204 accepts source-identity direct sibling prefixes.**
   Glaurung `aee3418` uses immutable `Arc` ancestry to find the exact common
   source prefix before direct-session pop/push, without trusting depth,
