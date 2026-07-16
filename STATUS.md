@@ -322,6 +322,25 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-16 — ADR-0197 accepts unsplit adaptive warm/fallback attribution.**
+  The accepted production policy deliberately mixes retained warm checks with
+  bounded one-shot fallbacks, so the homogeneous warm summarizer correctly
+  rejected its profile. The new separate fail-closed tool validates every
+  record with the existing schema-specific validator, preserves global process/
+  sequence order, requires both current warm v6 and native v1, normalizes only
+  compatible phases, and keeps retained, created-owner, and fallback structures
+  separate. Ten focused tests and all 51 script tests pass with Ruff clean.
+
+  The real SurfacePen default has 2,535 warm plus 16 fallback records, all
+  decided across the exact 2,551-check stream. Its 509.677 ms internal residual
+  is SAT 28.01%, CNF 21.39%, translation 14.77%, bit blast 14.31%, replay
+  11.19%, unattributed 8.11%, and setup 0.16%. Fallbacks are 0.63% of checks but
+  6.02% of time. Among warm records, 207 created owners retain 78.4% of bit
+  blast, 70.7% of CNF, 87.3% of new AIG nodes, and 77.6% of new clauses;
+  retained owners own 94.7% of warm SAT, 90.2% of translation, and 94.3% of
+  replay. Next test a bounded fresh-sibling/fallback prefix or admission lever;
+  treat retained SAT as a separate identical-CNF GQ6 experiment.
+
 - **2026-07-16 — ADR-0196 accepts LIFO-aligned exclusive fork-owner transfer.**
   Fresh post-ADR-0195 attribution showed 358 path-creation checks (14.0%)
   consuming 82.2% of CNF time, 89.0% of bit-blast time, 88.0% of added clauses,

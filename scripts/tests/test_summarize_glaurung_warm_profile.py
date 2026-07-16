@@ -16,6 +16,13 @@ SPEC = importlib.util.spec_from_file_location("warm_profile_summary", SCRIPT)
 assert SPEC is not None and SPEC.loader is not None
 MODULE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(MODULE)
+ADAPTIVE_SCRIPT = ROOT / "scripts" / "summarize-glaurung-adaptive-profile.py"
+ADAPTIVE_SPEC = importlib.util.spec_from_file_location(
+    "adaptive_profile_summary", ADAPTIVE_SCRIPT
+)
+assert ADAPTIVE_SPEC is not None and ADAPTIVE_SPEC.loader is not None
+ADAPTIVE = importlib.util.module_from_spec(ADAPTIVE_SPEC)
+ADAPTIVE_SPEC.loader.exec_module(ADAPTIVE)
 
 
 PHASES = (
@@ -138,7 +145,109 @@ def record(sequence: int, *, path_created: bool, query: str) -> dict[str, object
     return row
 
 
+def native_record(sequence: int, *, query: str) -> dict[str, object]:
+    row: dict[str, object] = {
+        "schema": "glaurung-axeyum-native-profile-v1",
+        "process_id": 17,
+        "sequence": sequence,
+        "query_hash": query,
+        "word_policy": "raw",
+        "timeout_ms": 250,
+        "outcome": "sat",
+        "complete": True,
+        "assertion_count": 3,
+        "translated_exprs": 5,
+        "arena_terms": 9,
+        "symbols": 1,
+        "model_values": 1,
+        "root_encodings": 3,
+        "checks": 1,
+        "aig_nodes": 10,
+        "cnf_variables": 11,
+        "cnf_clauses": 12,
+        "total_nanos": 120,
+    }
+    for phase in ADAPTIVE.NATIVE.PHASES:
+        row[f"{phase}_nanos"] = 0
+    row["arena_create_nanos"] = 5
+    row["solver_create_nanos"] = 5
+    row["translation_nanos"] = 20
+    row["bit_blast_nanos"] = 30
+    row["cnf_encode_nanos"] = 20
+    row["solve_nanos"] = 10
+    return row
+
+
 class WarmProfileSummaryTests(unittest.TestCase):
+    def test_adaptive_summary_preserves_warm_and_native_fallbacks(self) -> None:
+        query = "sha256:" + "9" * 64
+        second_query = "sha256:" + "8" * 64
+        with tempfile.TemporaryDirectory() as raw_temp:
+            profile = Path(raw_temp) / "profile.jsonl"
+            profile.write_text(
+                "\n".join(
+                    json.dumps(row)
+                    for row in (
+                        record(0, path_created=True, query=query),
+                        native_record(1, query=second_query),
+                        record(2, path_created=False, query=query),
+                    )
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            summary = ADAPTIVE.summarize([profile])
+
+        self.assertEqual(summary["records"], 3)
+        self.assertEqual(summary["warm_records"], 2)
+        self.assertEqual(summary["native_fallback_records"], 1)
+        self.assertEqual(summary["warm"]["paths_created"], 1)
+        self.assertEqual(summary["warm"]["created"]["records"], 1)
+        self.assertEqual(summary["warm"]["retained"]["records"], 1)
+        self.assertEqual(summary["phases"]["setup"]["nanos"], 10)
+        self.assertEqual(summary["phases"]["unattributed"]["nanos"], 30)
+        self.assertEqual(summary["latency_nanos"]["total"], 320)
+
+    def test_adaptive_summary_rejects_homogeneous_and_bad_fallbacks(self) -> None:
+        query = "sha256:" + "7" * 64
+        with tempfile.TemporaryDirectory() as raw_temp:
+            profile = Path(raw_temp) / "profile.jsonl"
+            profile.write_text(
+                json.dumps(record(0, path_created=True, query=query)) + "\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ADAPTIVE.ProfileError, "must contain both"):
+                ADAPTIVE.summarize([profile])
+
+            fallback = native_record(1, query=query)
+            fallback["checks"] = 2
+            profile.write_text(
+                json.dumps(record(0, path_created=True, query=query))
+                + "\n"
+                + json.dumps(fallback)
+                + "\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ADAPTIVE.ProfileError, "exactly one check"):
+                ADAPTIVE.summarize([profile])
+
+    def test_adaptive_summary_allows_an_empty_retained_partition(self) -> None:
+        query = "sha256:" + "6" * 64
+        with tempfile.TemporaryDirectory() as raw_temp:
+            profile = Path(raw_temp) / "profile.jsonl"
+            profile.write_text(
+                json.dumps(record(0, path_created=True, query=query))
+                + "\n"
+                + json.dumps(native_record(1, query=query))
+                + "\n",
+                encoding="utf-8",
+            )
+            summary = ADAPTIVE.summarize([profile])
+
+        self.assertEqual(summary["warm"]["retained"]["records"], 0)
+        self.assertEqual(summary["warm"]["retained"]["latency_nanos"]["total"], 0)
+        self.assertIsNone(summary["warm"]["retained"]["latency_nanos"]["p50"])
+
     def test_summarizes_paths_duplicates_phases_and_structure(self) -> None:
         query = "sha256:" + "a" * 64
         with tempfile.TemporaryDirectory() as raw_temp:

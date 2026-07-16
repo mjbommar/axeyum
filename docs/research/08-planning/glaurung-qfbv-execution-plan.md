@@ -676,7 +676,7 @@ clean artifact pins the exact Glaurung/Axeyum revisions and policy.
 |---|---|---|
 | M0 byte-complete capture | GQ1, GQ10 | **Done in ADR-0187:** corrected atomic five-driver capture has 162 representative / 30,628 full scripts, 50 duplicate observations, zero conflicts, zero exclusions, and exact manifests/shard union |
 | M1 corrected cold baseline | GQ1, GQ10 | **Done in ADR-0187/0188:** repeated full composites keep all 30,628 decisions/replays green, measure raw/canonical ratio CV at 0.100%/0.937%, and enable guarded 3%/3%/5% + 2% comparisons |
-| M2 diagnostic attribution | GQ1, GQ3--GQ5 | **Done for bounded cold/native phase/gate/AIG bars:** ADR-0160 covers one-shot; ADR-0172/0173 validate phase/CNF records; ADR-0174 separates immediate from retained CNF effects; ADR-0175 validates all 6,986 v4 AIG/memo/copy records |
+| M2 diagnostic attribution | GQ1, GQ3--GQ5 | **Done for bounded cold/native/adaptive phase bars:** ADR-0160 covers one-shot; ADR-0172/0173 validate phase/CNF records; ADR-0174 separates immediate from retained CNF effects; ADR-0175 validates all 6,986 v4 AIG/memo/copy records; ADR-0197 preserves the unsplit warm/native-fallback production sequence |
 | M3 cheap exact rewriting | GQ2, GQ3 | **Done for the measured current shapes:** canonical v2 cuts corrected full total 13.3%, ADR-0153 cuts another 9.80%, accepted ADR-0155 reaches 5.625 s / 0.730x Z3, and ADR-0159 causally closes the current extract tranche without finding another AIG/CNF lever |
 | M4 demand lowering | GQ4 | **Deferred:** both v1 and admission-controlled v2 fail the representative performance gate while preserving correctness; keep explicit/off and reopen only from a different gate-cone hypothesis |
 | M5 AIG/CNF optimization | GQ5 | **First native AIG tranche accepted:** ADR-0175 replaces the ordered unique table and improves the repeated actual-client ratio 0.742x→0.680x with unchanged structure. CNF candidate remains deferred; reopen only from new causal evidence |
@@ -717,10 +717,15 @@ clean artifact pins the exact Glaurung/Axeyum revisions and policy.
    mean Axeyum time improves 14.71% on SurfacePen and 34.77% on NETwtw10 across
    185,442 exact checks. Keep transfer-off executable, revalidate traversal
    changes, and do not introduce cloneable or shared mutable SAT state.
-6. Keep complete assertion/symbol capture and separate backend timing mandatory
+6. ADR-0197 profiles the accepted adaptive policy without deleting its 16
+   one-shot fallbacks. SAT is 28.01% overall, but created warm owners still own
+   78.4% of warm bit blast and 70.7% of warm CNF, while retained owners own
+   94.7% of warm SAT. Test the smallest fresh-sibling/fallback prefix or
+   admission lever first; compare identical CNF before any GQ6 tuning claim.
+7. Keep complete assertion/symbol capture and separate backend timing mandatory
    in every new ordered artifact; merge per-process traces atomically before
    GQ7/GQ8 cache or auto-policy work.
-7. Run every accepted cold candidate through ADR-0188's guarded repeated sharded full
+8. Run every accepted cold candidate through ADR-0188's guarded repeated sharded full
    comparisons. A threshold violation is a regression alarm to investigate,
    not permission to ignore raw controls or semantic gates.
 

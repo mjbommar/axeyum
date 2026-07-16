@@ -508,7 +508,7 @@ count as decisions or speedups.
 
 | ID | Roadmap item | Scope and exit criterion |
 |---|---|---|
-| **GQ1** | **Capture and profile real queries first** | **DONE for current five-driver cold corpus (ADR-0187/0188).** Zero-exclusion 30,628-script capture, exact clean sharded profiles, whole-composite variance, and guarded comparison are executable. The old 2,225 hashes are stale/unmappable; current evidence is 7,953 wide-root scripts. Keep profiled/unprofiled/native bars distinct. |
+| **GQ1** | **Capture and profile real queries first** | **DONE for current five-driver cold corpus and adaptive mixed client stream (ADR-0187/0188/0197).** Zero-exclusion 30,628-script capture, exact clean sharded profiles, whole-composite variance, guarded comparison, and unsplit warm/native-fallback attribution are executable. The old 2,225 hashes are stale/unmappable; current evidence is 7,953 wide-root scripts. Keep profiled/unprofiled/native/adaptive bars distinct. |
 | **GQ2** | **Cheap always-on cold simplification tier** | Add a bounded, denotation-preserving one-shot tier for constant folding and trivial identities whose own cost is measured. Add a size/shape and cold-vs-warm policy that selects cheap, configured, or no preprocessing. Exit only when cold end-to-end time is non-worse in aggregate and improves the target class at the GQ1 validity gates. |
 | **GQ3** | **Coercion-cancellation peepholes and causal telemetry** | **Current measured tranche complete; use ablation as policy evidence.** Exact nested/concat/extension/coercion rules and ADR-0159's repeated default-minus-rule comparator are landed. `extract_extend` improves lowering, but all four measured rules change zero AIG nodes and clauses. Do not globally delete sound rewrites because one corpus does not fire them; instead, keep a Glaurung policy only for rules with measured reach/cost and reopen register-slice-specific work only when an ablation demonstrates downstream AIG/CNF or native-time reduction. |
 | **GQ4** | **Cold demand-driven bit-slice reduction** | **Out of the active queue.** ADR-0157 v1 is correct but regresses the real ratio about 1.42x→4.49x; ADR-0158's conservative admission is a safe no-op but does not improve the required family. Both remain explicit/off. Do not tune thresholds further on this corpus; only a qualitatively different constant-cost admission proof and a fresh client gate can reopen GQ4. |
@@ -627,6 +627,17 @@ improving mean Axeyum time/ratio 14.71%/15.04% on SurfacePen and
 34.77%/34.36% on NETwtw10. RSS and Z3 drift remain inside alarms. Transfer is
 the Glaurung default with an explicit off control; re-profile this accepted
 current state before selecting the next GQ7/GQ5 residual.
+ADR-0197 makes that accepted-current profile sound for the actual adaptive
+policy rather than only its fixed-lineage control. The new fail-closed mixed
+summarizer validates all 2,535 warm plus 16 native fallback records in their
+original 2,551-check sequence. The production residual is SAT 28.01%, CNF
+21.39%, translation 14.77%, bit blast 14.31%, and replay 11.19%. Newly created
+warm owners still own 78.4% of warm bit blast and 70.7% of warm CNF, while
+retained owners own 94.7% of warm SAT. The 16 bounded fallbacks are 0.63% of
+checks but 6.02% of internal time. Investigate the smallest sound fresh-
+sibling/fallback prefix-reuse or adaptive-admission lever first; keep SAT
+tuning as a separately gated identical-CNF experiment rather than conflating
+these populations.
 GQ4 is not an active optimization;
 ADR-0157/0158 remain explicit/off. Cold rewrite or CNF work may continue only
 when causal/native profiles select it. ADR-0164 permits opt-in consecutive
