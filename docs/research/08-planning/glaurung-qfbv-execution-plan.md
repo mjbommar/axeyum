@@ -613,6 +613,15 @@ fail-closed replay, and public counters. Focused full/minimal-QF_BV and broad
 library gates are green. The remaining work is downstream cache-off/cache-on
 ordered-stream measurement; no default is authorized.
 
+ADR-0191 accepts Glaurung `d5475f6` as that measurement control. The fixed
+64-entry / 4,096-value / 262,144-bit policy is enabled only inside a path-owned
+retained solver; snapshot and one-shot paths remain cache-free. The lineage
+footer and artifact gate enforce exact traffic partitions, zero replay
+failures, terminal cleanup, and a named off→on comparison. A 2,551-check
+SurfacePen plumbing smoke records 183 hits and zero replay failures, but its
+single repetition and 3.33% Z3 drift make it control evidence only. Run the
+clean repeated two-driver gate before admission.
+
 ### G9 — publish the policy (GQ9)
 
 After raw/canonical/configured/warm data exists, expose a telemetry-visible
@@ -637,7 +646,7 @@ clean artifact pins the exact Glaurung/Axeyum revisions and policy.
 | 4 | Strengthen AIG sharing | **First construction-cost tranche accepted (ADR-0175).** Client sharing already survived; exact v4 telemetry selected low-hit ordered unique-table probes. Deterministic open addressing preserves structure and cuts three-driver Axeyum time 7.66%. Reopen literal ownership/two-level rewriting only from a fresh causal gate. |
 | 5 | Reduce CNF for measured gates | **Current tranche closed/deferred (ADR-0172--0175).** Root fusion/dedup are exhausted; internal AND flattening grows retained Dptf clauses/time. CNF is again dominant after the AIG win, but reopen only with future-use evidence or clause replacement. |
 | 6 | Make warm entry delta-only | **Bounded admission repeated, executable, and alarmed (ADR-0171--0180).** Nine paths preserve the RSS/time tradeoff and 512 assertions cover every stream. Exact identity and alarms are enforced. Publish clean baseline before automatic selection. |
-| 7 | Reuse duplicates and prefixes soundly | **Implemented opt-in in ADR-0190.** Same-arena exact SAT models use mandatory replay and deterministic bounds; ordinary UNSAT/Unknown and predecessor verdicts for strict prefixes remain forbidden. Measure the ordered same-lineage stream before policy admission. |
+| 7 | Reuse duplicates and prefixes soundly | **Control complete in ADR-0191; admission pending.** Same-arena exact SAT models use mandatory replay and deterministic bounds only in path-owned sessions; ordinary UNSAT/Unknown and predecessor verdicts for strict prefixes remain forbidden. Repeat the clean SurfacePen + NETwtw10 off/on gate before policy admission. |
 | 8 | Add the register-slice fast path | Treat this as the first specialized GQ4 policy only if the generic exact range propagation leaves measurable avoidable work. |
 | 9 | Queue SAT tuning | **Material but behind CNF:** accepted-table lineage SAT is 18.48% versus CNF's 46.55%. Compare identical CNF only after the next measured CNF tranche. |
 | 10 | Expand and trend real capture | **Corrected widening accepted (ADR-0187).** Five drivers, 30,628 distinct scripts, 7,953 wide-root scripts, zero exclusions, and an exact clean sharded baseline are complete. Repeat the whole composite for variance; retain cold/ordered/profile tiers separately. |
@@ -659,9 +668,9 @@ clean artifact pins the exact Glaurung/Axeyum revisions and policy.
 
 ## Immediate next actions
 
-1. Wire ADR-0190's disabled-by-default cache into the Glaurung ordered
-   same-lineage control and compare cache-off/cache-on exact traffic, counters,
-   model/finding identity, latency, total time, and RSS before any admission.
+1. Run ADR-0191's clean repeated Glaurung SurfacePen + NETwtw10 off/on gate and
+   compare exact traffic, counters, model/finding identity, latency, total time,
+   and RSS under the ordinary alarms before any admission.
 2. Keep the corrected 162-query regular semantic gate and exact full shard
    union pinned; reject exclusions, dirty source, incomplete manifests, or a
    raised memory envelope as substitutes for coverage.

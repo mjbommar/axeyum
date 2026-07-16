@@ -322,6 +322,21 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-16 — ADR-0191 lands Glaurung's GQ8 measurement control.** Glaurung
+  `d5475f6` wires ADR-0190 only into independently path-owned warm solvers;
+  snapshot and one-shot fallbacks remain cache-free, and the accepted adaptive
+  production default remains cache-off. Fixed 64-entry / 4,096-value /
+  262,144-bit per-path bounds and all Axeyum cache counters enter the lineage
+  footer and fail-closed artifact validator. The named comparator permits only
+  off→on with otherwise exact policy/work/finding identity.
+
+  A dirty single-process SurfacePen plumbing smoke decides/agrees 2,551/2,551,
+  preserves findings, and records 183 hits / 2,368 misses / 2,099 insertions /
+  269 declined UNSAT / 832 evictions, with zero replay failures and zero
+  terminal gauges. This is not performance evidence: Z3 drift is 3.33% and
+  there is no repetition. Next run clean repeated SurfacePen + NETwtw10 off/on
+  artifacts under the ordinary 3%/3%/5% + 2% alarms before any default decision.
+
 - **2026-07-16 — ADR-0190 implements the opt-in GQ8 SAT cache.** Each
   arena-bound incremental solver may explicitly enable caller-supplied entry
   model-value, and payload-bit bounds. Exact original assertion order, every frame boundary,
@@ -1475,11 +1490,11 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   | **GQ5 AIG/CNF construction** | **First native AIG tranche accepted (ADR-0175).** Deterministic open addressing improves three-driver Axeyum time 7.66% and ratio 0.742x→0.680x with unchanged structure; internal flattening stays deferred | Yield to GQ7/GQ10; reopen literal ownership or CNF only from fresh causal evidence |
   | **GQ6 cold SAT/CDCL** | **WIP foundation; behind measured CNF.** Accepted-table native lineage SAT is 18.48% weighted versus CNF at 46.55% | Compare identical CNF across cores only after the next CNF decision, with proof replay and deterministic limits |
   | **GQ7 warm delta entry** | **DONE for available families (ADR-0171--0186).** Path-owned delta reuse, 9/512 hard bounds, exact alarms, and adaptive production admission are enforced | Preserve explicit one-shot/fixed controls and re-gate new families |
-  | **GQ8 verdict/CNF cache** | **WIP; Axeyum opt-in implementation complete in ADR-0190.** Exact same-arena scalar SAT models use assertion/frame/assumption identity, deterministic LRU bounds, telemetry, and mandatory original-term replay; ordinary UNSAT/Unknown and prefixes are excluded | Wire explicit Glaurung cache-off/cache-on ordered controls and gate traffic, model/finding identity, latency, total time, and RSS before admission |
+  | **GQ8 verdict/CNF cache** | **WIP; downstream control complete in ADR-0191.** Exact same-arena scalar SAT models are wired only into path-owned Glaurung sessions with fixed bounds, traffic partitions, cleanup gauges, and mandatory replay; default remains off | Run clean repeated SurfacePen + NETwtw10 off/on artifacts and apply the existing correctness/finding/time/ratio/RSS alarms before admission |
   | **GQ9 auto cost model/docs** | **DONE for available families (ADR-0186).** Clean adaptive repeat clears every alarm over 92,721 checks; downstream explorer default has explicit off/fixed controls | Re-gate newly captured families; do not broaden this Glaurung-specific default into Axeyum's generic API |
   | **GQ10 real-lifter regression tier** | **DONE for available families (ADR-0187/0188).** The corrected 162-query regular pin and repeated 30,628-query full composites have executable alarms | Retain separate cold/ordered/profile bars and re-gate new families |
 
-  **Next actions:** (1) measure ADR-0190 through explicit Glaurung ordered
+  **Next actions:** (1) run ADR-0191's clean repeated Glaurung ordered
   cache-off/cache-on controls with exact traffic/model/finding/time/RSS gates;
   (2) preserve the corrected
   representative pin, exact shard union, zero-exclusion rule, and 4 GiB
@@ -3274,7 +3289,7 @@ plan is built and committed on the current branch:
 ### Track 4 — Use Cases & Frontend
 | Phase | Title | Status |
 |---|---|---|
-| P4.1j | Glaurung warm delta and duplicate/prefix reuse (GQ7/GQ8) | **GQ7/GQ9 DONE in ADR-0186; corrected GQ1/GQ10 capture/trending DONE in ADR-0187/0188; GQ8 remains WIP.** Adaptive explorer and corrected five-driver cold gates are executable. Duplicate/verdict caching remains separately replay-gated. |
+| P4.1j | Glaurung warm delta and duplicate/prefix reuse (GQ7/GQ8) | **GQ7/GQ9 DONE in ADR-0186; corrected GQ1/GQ10 DONE in ADR-0187/0188; GQ8 control DONE in ADR-0191, admission WIP.** Adaptive explorer, corrected cold gates, and path-owned cache off/on artifacts are executable; the cache remains default-off pending clean repetition. |
 | P4.1e | Retained warm Boolean array relation flags | **DONE (ADR-0091)** — symbolic-memory path conditions can keep nested supported array equality atoms warm through private candidate-sensitive relation flags, guarded equality/diff observations, projection filtering, and replay |
 | P4.1h | Retained warm nested array-valued UF parameters | **DONE (ADR-0094)** — nested supported array-valued memory/function parameters can stay warm as full-value UF keys through private projection keys or rewritten structural keys, with relation-flag guarded congruence, private filtering, and replay |
 | P4.1g | Retained warm structural array-valued UF parameters | **DONE (ADR-0093)** — supported store/constant/array-ITE memory/function parameters can stay warm as full-value UF keys with scalar dependency retention, structural owner realization, relation-flag guarded congruence, private filtering, and replay; ADR-0094 subsequently lands nested application keys |
@@ -3296,6 +3311,12 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-16 — ADR-0191 lands the GQ8 client measurement control.** Glaurung
+  `d5475f6` adds a default-off path-owned cache policy, fixed bounds, complete
+  counters, fail-closed artifact validation, and a named off→on comparator.
+  The 2,551-check SurfacePen smoke has 183 replay-checked hits and zero replay
+  failures but is not acceptance evidence because it is dirty, single-run, and
+  breaches the Z3-drift alarm. Clean repeated two-driver gating is next.
 - **2026-07-16 — ADR-0188 accepts corrected shard variance and alarms.** Two
   complete 30,628-query raw/canonical composites establish sub-1% total/ratio
   CV except raw RSS and canonical word time, both still <1.9%. Fail-closed

@@ -458,9 +458,18 @@ session state.
 > Focused full/minimal-QF_BV plus 876/876 all-feature library tests are green;
 > the cache-disabled corrected Glaurung raw/canonical gate remains 162/162
 > decided/agreed with zero errors, unknowns, or replay failures.
-> Wire an explicit Glaurung cache-off/cache-on ordered control next; do not
-> admit a client default without exact traffic, model/finding, time, and RSS
-> gates.
+> That implementation still required an explicit Glaurung cache-off/cache-on
+> ordered control; no client default was admissible without exact traffic,
+> model/finding, time, and RSS gates.
+> ADR-0191 lands that downstream control in Glaurung `d5475f6` without changing
+> the adaptive production default. Only path-owned retained solvers may opt in;
+> snapshot and one-shot paths remain cache-free. The 64-entry / 4,096-value /
+> 262,144-bit per-path policy and every cache counter are versioned in the
+> lineage gate. A SurfacePen plumbing smoke decides/agrees 2,551/2,551 and
+> records 183 replay-checked hits, 2,368 misses, 269 declined UNSAT results,
+> zero replay failures, and zero terminal gauges. It is not a performance
+> claim: one process per policy and 3.33% Z3 drift fail the release-evidence
+> standard. Run the clean repeated SurfacePen + NETwtw10 off/on gate next.
 > The capture and
 > implementation audit has been expanded into the dependency-ordered
 > [Glaurung QF_BV execution plan](docs/research/08-planning/glaurung-qfbv-execution-plan.md):
@@ -498,7 +507,7 @@ count as decisions or speedups.
 | **GQ5** | **Cheaper AIG construction and measured CNF encoding** | **First native AIG tranche accepted (ADR-0175).** Exact v4 attribution selects the low-hit `BTreeMap`; deterministic open addressing cuts three-driver Axeyum time 7.66% and ratio 0.742x→0.680x with unchanged AIG/CNF/replay/scopes and flat RSS. CNF is again dominant at 46.55%; internal AND flattening stays deferred. Reopen literal-copy ownership or CNF only from a fresh isolated native gate. |
 | **GQ6** | **Cold SAT/CDCL tuning** | **Material but behind measured warm CNF after ADR-0175.** Accepted-table native lineage spends 18.48% in SAT versus CNF's 46.55%. Compare identical emitted CNF across BatSat, the proof-producing core, and pinned CaDiCaL/Kissat only after the next CNF decision; preserve proof replay and deterministic limits. |
 | **GQ7** | **Cheaper warm entry and delta preprocessing** | **DONE for available Glaurung families (ADR-0171--0186).** Path-owned delta reuse, 9/512 hard bounds, exact identity, alarms, and adaptive production admission are enforced. Preserve explicit one-shot/fixed controls and re-gate new families. |
-| **GQ8** | **Verdict and CNF reuse for duplicate/prefix queries** | **Opt-in Axeyum implementation complete in ADR-0190; downstream measurement next.** Exact ordered assertion/frame/assumption identity inside one arena-bound solver, deterministic bounded LRU storage, and mandatory original-model replay authorize only scalar SAT duplicates. Ordinary UNSAT/Unknown and prefix verdict reuse remain forbidden. |
+| **GQ8** | **Verdict and CNF reuse for duplicate/prefix queries** | **Measurement control landed in ADR-0191; repeated admission gate next.** ADR-0190's exact same-arena scalar SAT cache is wired only into path-owned Glaurung sessions with fixed per-path bounds and complete traffic/cleanup telemetry. The cache remains default-off; ordinary UNSAT/Unknown and prefix verdict reuse remain forbidden. |
 | **GQ9** | **Auto production policy and API guidance** | **DONE for available families (ADR-0186).** Clean adaptive repetition passes all 3%/3%/5% + 2% alarms over 92,721 checks. Glaurung defaults only explorer-owned Axeyum solves to adaptive 2→9 admission; explicit one-shot and fixed controls remain. Re-gate new families; GQ4 stays off. |
 | **GQ10** | **Ordered, wider real-lifter regression corpus** | **DONE for available families (ADR-0187/0188).** The 162-query representative is pinned; exact 30,628-query composites have measured variance and executable 3%/3%/5% + 2% guards. Retain cold/ordered/profile bars separately and re-gate added families. |
 
@@ -566,8 +575,8 @@ The ranked work is:
     actual Z3 AST/context backend, with the user-visible Glaurung-vs-Glaurung
     comparison controlling product claims.
 
-The current highest-leverage trio is GQ8's ADR-0190 ordered-stream
-cache-off/cache-on measurement, fresh causal attribution of the new canonical
+The current highest-leverage trio is GQ8's ADR-0191 clean repeated
+cache-off/cache-on admission gate, fresh causal attribution of the new canonical
 stage balance,
 and whichever bounded GQ5/GQ6 experiment that attribution selects. Corrected
 composite variance is complete in ADR-0188. GQ4 is not an active optimization;

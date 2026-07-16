@@ -490,6 +490,9 @@ Out of scope:
     [ADR-0189](../09-decisions/adr-0189-replay-checked-same-arena-sat-duplicate-cache.md)
     and its bounded implementation in
     [ADR-0190](../09-decisions/adr-0190-opt-in-bounded-replay-checked-sat-cache.md).
+    [ADR-0191](../09-decisions/adr-0191-glaurung-replay-sat-cache-measurement-control.md)
+    wires the same boundary into a default-off path-owned Glaurung control;
+    production admission still requires the clean repeated client gate.
 - [x] Should solver cancellation support memory budgets as well as time?
   - Answer: yes; `SolverConfig` carries timeout, deterministic resource,
     memory, and node budgets. Memory-budget exhaustion is an `Unknown`
