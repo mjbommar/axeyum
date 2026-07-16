@@ -55,7 +55,7 @@ qfbv-profile:
     ./scripts/check-qfbv-profile.sh
 
 benchmark-repetition-tests:
-    python3 -m unittest scripts/tests/test_glaurung_benchmark_recipes.py scripts/tests/test_glaurung_regular_gate.py scripts/tests/test_summarize_glaurung_repetitions.py scripts/tests/test_summarize_glaurung_shards.py scripts/tests/test_summarize_glaurung_shard_repetitions.py scripts/tests/test_summarize_glaurung_native_profile.py scripts/tests/test_summarize_glaurung_warm_profile.py scripts/tests/test_compare_glaurung_repetitions.py scripts/tests/test_compare_glaurung_rewrite_ablation.py
+    python3 -m unittest scripts/tests/test_glaurung_benchmark_recipes.py scripts/tests/test_glaurung_regular_gate.py scripts/tests/test_summarize_glaurung_repetitions.py scripts/tests/test_summarize_glaurung_shards.py scripts/tests/test_summarize_glaurung_shard_repetitions.py scripts/tests/test_summarize_glaurung_native_profile.py scripts/tests/test_summarize_glaurung_warm_profile.py scripts/tests/test_compare_glaurung_repetitions.py scripts/tests/test_compare_glaurung_shard_repetitions.py scripts/tests/test_compare_glaurung_rewrite_ablation.py
 
 # Exercise the actual Glaurung lifter distribution when its access-controlled
 # representative pack is available. The script auto-discovers the pinned NAS
@@ -254,6 +254,13 @@ compare-glaurung-qfbv-repeated baseline candidate out:
 compare-glaurung-qfbv-repeated-guarded baseline candidate out:
     mkdir -p "$(dirname '{{ out }}')"
     python3 scripts/compare-glaurung-repetitions.py "{{ baseline }}" "{{ candidate }}" --max-ratio-regression-percent 3 --max-axeyum-regression-percent 3 --max-z3-drift-percent 2 --out "{{ out }}"
+
+# Compare two repeated, complete corrected-corpus shard sets. Child shards are
+# process partitions, not samples; each input must already contain at least two
+# fail-closed whole-composite repetitions.
+compare-glaurung-qfbv-sharded-repeated-guarded baseline candidate out:
+    mkdir -p "$(dirname '{{ out }}')"
+    python3 scripts/compare-glaurung-shard-repetitions.py "{{ baseline }}" "{{ candidate }}" --max-ratio-regression-percent 3 --max-axeyum-regression-percent 3 --max-rss-regression-percent 5 --max-z3-drift-percent 2 --out "{{ out }}"
 
 # The same variance alarms for a deliberately changed default rewrite manifest.
 # This stays fail-closed: both manifest identities and the one additive rule
