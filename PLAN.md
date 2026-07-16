@@ -638,6 +638,13 @@ checks but 6.02% of internal time. Investigate the smallest sound fresh-
 sibling/fallback prefix-reuse or adaptive-admission lever first; keep SAT
 tuning as a separately gated identical-CNF experiment rather than conflating
 these populations.
+ADR-0198 then rejects the smallest admission-only shortcut before adding a new
+policy surface. Three order-balanced SurfacePen pairs show that the no-fallback
+three-owner ceiling improves mean Axeyum time 5.50% and ratio 6.30%, but raises
+median RSS 7.66% and fails the 5% alarm. Keep the adaptive initial cap at two;
+do not spend a NETwtw10 gate or implementation slice on an already-rejected
+policy. The next fresh-owner hypothesis must reuse immutable prefix
+construction without retaining or sharing another mutable solver.
 GQ4 is not an active optimization;
 ADR-0157/0158 remain explicit/off. Cold rewrite or CNF work may continue only
 when causal/native profiles select it. ADR-0164 permits opt-in consecutive

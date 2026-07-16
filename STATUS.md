@@ -322,6 +322,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-16 — ADR-0198 rejects a three-owner adaptive initial cap.** The
+  post-ADR-0196 SurfacePen no-fallback ceiling has the exact behavior an
+  initial-three candidate would select: 207 created/closed owners, peak three,
+  and zero fallbacks or terminal state. Three order-balanced runs preserve all
+  15,306 decisions and findings. Mean Axeyum time improves 436.733→412.733 ms
+  (-5.50%) and ratio 6.30%, with +0.86% Z3 drift, but median RSS rises
+  78,708→84,736 KiB (+7.66%) and fails the 5% alarm. Keep the initial cap at two
+  and do not implement the knob; next require immutable prefix construction
+  reuse that cannot retain or share a third mutable solver.
+
 - **2026-07-16 — ADR-0197 accepts unsplit adaptive warm/fallback attribution.**
   The accepted production policy deliberately mixes retained warm checks with
   bounded one-shot fallbacks, so the homogeneous warm summarizer correctly

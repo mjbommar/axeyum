@@ -722,10 +722,14 @@ clean artifact pins the exact Glaurung/Axeyum revisions and policy.
    78.4% of warm bit blast and 70.7% of warm CNF, while retained owners own
    94.7% of warm SAT. Test the smallest fresh-sibling/fallback prefix or
    admission lever first; compare identical CNF before any GQ6 tuning claim.
-7. Keep complete assertion/symbol capture and separate backend timing mandatory
+7. ADR-0198 rejects the obvious initial-cap increase: the behavioral
+   three-owner ceiling improves SurfacePen Axeyum time 5.50% but raises median
+   RSS 7.66%, beyond the 5% alarm. Keep the initial cap at two and require an
+   immutable prefix-reuse design that does not retain another mutable solver.
+8. Keep complete assertion/symbol capture and separate backend timing mandatory
    in every new ordered artifact; merge per-process traces atomically before
    GQ7/GQ8 cache or auto-policy work.
-8. Run every accepted cold candidate through ADR-0188's guarded repeated sharded full
+9. Run every accepted cold candidate through ADR-0188's guarded repeated sharded full
    comparisons. A threshold violation is a regression alarm to investigate,
    not permission to ignore raw controls or semantic gates.
 
