@@ -86,6 +86,9 @@ retains the original term for model replay. Use `assert_preprocessed` to request
 that behavior explicitly, or `assert` when measuring the raw, un-preprocessed
 path. Narrow extracts are pushed through wide bitwise operations and
 bit-vector `ite`s, avoiding AIG construction for discarded register bits.
+This is a warm-only recommendation: Glaurung measured configured preprocessing
+as a net loss on cold one-shot queries. Cold embedders should begin with raw
+`assert` and switch only when their end-to-end workload gate shows a win.
 
 For a cold query with several top-level assertions, use one batch call rather
 than calling the singular method in a loop:

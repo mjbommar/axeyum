@@ -679,59 +679,39 @@ clean artifact pins the exact Glaurung/Axeyum revisions and policy.
 | M2 diagnostic attribution | GQ1, GQ3--GQ5 | **Done for bounded cold/native/adaptive phase bars:** ADR-0160 covers one-shot; ADR-0172/0173 validate phase/CNF records; ADR-0174 separates immediate from retained CNF effects; ADR-0175 validates all 6,986 v4 AIG/memo/copy records; ADR-0197 preserves the unsplit warm/native-fallback production sequence |
 | M3 cheap exact rewriting | GQ2, GQ3 | **Done for the measured current shapes:** canonical v2 cuts corrected full total 13.3%, ADR-0153 cuts another 9.80%, accepted ADR-0155 reaches 5.625 s / 0.730x Z3, and ADR-0159 causally closes the current extract tranche without finding another AIG/CNF lever |
 | M4 demand lowering | GQ4 | **Deferred:** both v1 and admission-controlled v2 fail the representative performance gate while preserving correctness; keep explicit/off and reopen only from a different gate-cone hypothesis |
-| M5 AIG/CNF optimization | GQ5 | **First native AIG tranche accepted:** ADR-0175 replaces the ordered unique table and improves the repeated actual-client ratio 0.742x→0.680x with unchanged structure. CNF candidate remains deferred; reopen only from new causal evidence |
-| M6 SAT re-attribution | GQ6 | **Done for bounded accepted-table lineage:** SAT is 18.48% weighted and remains behind CNF at 46.55% |
+| M5 AIG/CNF optimization | GQ5 | **Leading cold lane:** ADR-0175 accepts open-addressed AIG hashing; current cold evidence assigns about 84% to bit blast plus CNF and about 15% to SAT. Continue measured CNF ownership/emission; retained-future-use or rollback evidence is mandatory for flattening |
+| M6 SAT re-attribution | GQ6 | **Policy-partitioned:** SAT remains secondary on cold one-shot, but ADR-0199's serial warm profile makes SAT 47.2% after construction collapses. Compare identical retained CNF before a warm SAT-core claim |
 | M7 ordered warm trace | GQ7, GQ8 | **Done for clean three-driver controls (ADR-0166--0170):** assertions, lineage/scopes/choices, backend timing, cold/snapshot/lineage controls, and memory validate |
-| M8 Glaurung warm integration | GQ7 | **Bounded admission/replay and exclusive successor ownership are accepted (ADR-0171--0180/0193/0195/0196):** 9/512 identity is accepted; bounded shared original replay and exact empty-theory model completion preserve complete replay. LIFO-aligned owner transfer then improves clean adaptive/cache-on SurfacePen/NETwtw10 mean Axeyum time 14.71%/34.77% with every alarm green; retain explicit off controls and re-gate new traversal policies or families |
-| M9 auto policy and regression lane | GQ8--GQ10 | **Done for current families in ADR-0186/0188/0192:** adaptive warm admission plus bounded path-owned exact-SAT caching are downstream defaults with explicit controls; corrected cold and ordered artifacts have executable identity, replay, finding, timing, and RSS alarms |
+| M8 Glaurung warm integration | GQ7 | **Accepted through serial siblings (ADR-0171--0180/0193/0195/0196/0199):** 9/512 identity, replay/model fast paths, LIFO transfer, and serial sibling LCP reuse preserve complete replay. ADR-0199 improves SurfacePen/NETwtw10 time 17.08%/0.72% and RSS 6.11%/13.36%; retain explicit controls and re-gate parallel or new families |
+| M9 auto policy and regression lane | GQ8--GQ10 | **Done for current serial families in ADR-0186/0188/0192/0199:** adaptive admission, exact-SAT caching, transfer, and serial continuation reuse are defaults only in the explorer context; cold and ordered artifacts retain executable identity/replay/finding/time/RSS alarms |
 
 ## Immediate next actions
 
-1. Preserve ADR-0192's explicit cache-off control and exact counters. Refresh
-   ADR-0193's clean same-current two-driver baseline/candidate pair before
-   replacing the published artifact; never waive the stale SurfacePen RSS
-   alarm merely because the causal control attributes it outside the patch.
-2. Keep the corrected 162-query regular semantic gate and exact full shard
-   union pinned; reject exclusions, dirty source, incomplete manifests, or a
-   raised memory envelope as substitutes for coverage.
-3. Keep ADR-0157/0158 explicit and off. ADR-0159 closes the current structural
-   rewrite tranche: `extract_extend` is a real lowering win, but none of the
-   four ablated rules changes AIG/CNF. Reopen GQ3/GQ4 only for a specific new
-   downstream gate-cone hypothesis.
-4. ADR-0195 accepts ADR-0194's selected scalar-QF_BV boundary: after the same
-   complete model is built, skip only empty warm-theory projection discovery.
-   Completion falls 99.34% and same-current median client time 25.45%, with
-   flat RSS, exact structure/traffic, every user symbol completed, and every
-   original root replayed. Held-out NETwtw10 improves 4.33% with RSS down
-   1.39% and every alarm green. The clean adaptive/cache-on artifact refresh
-   also passes: SurfacePen mean time/ratio improve 23.82%/24.99%, NETwtw10
-   3.55%/4.04%, and all 185,442 checks plus findings/traffic are exact. Obtain
-   fresh accepted-current native attribution next. Keep CNF as a measured GQ5
-   lane only if that profile selects it; internal flattening still requires
-   future-use evidence or clause replacement.
-5. ADR-0196 accepts the topology selected by that profile. An earlier-child
-   transfer failed because its owner idled behind the sibling subtree and
-   increased adaptive pressure. The accepted LIFO-aligned policy transfers the
-   terminal parent's solver only to the last-pushed/next-executed child, leaves
-   every sibling fresh, and passes the clean adaptive/cache-on two-driver gate:
-   mean Axeyum time improves 14.71% on SurfacePen and 34.77% on NETwtw10 across
-   185,442 exact checks. Keep transfer-off executable, revalidate traversal
-   changes, and do not introduce cloneable or shared mutable SAT state.
-6. ADR-0197 profiles the accepted adaptive policy without deleting its 16
-   one-shot fallbacks. SAT is 28.01% overall, but created warm owners still own
-   78.4% of warm bit blast and 70.7% of warm CNF, while retained owners own
-   94.7% of warm SAT. Test the smallest fresh-sibling/fallback prefix or
-   admission lever first; compare identical CNF before any GQ6 tuning claim.
-7. ADR-0198 rejects the obvious initial-cap increase: the behavioral
-   three-owner ceiling improves SurfacePen Axeyum time 5.50% but raises median
-   RSS 7.66%, beyond the 5% alarm. Keep the initial cap at two and require an
-   immutable prefix-reuse design that does not retain another mutable solver.
-8. Keep complete assertion/symbol capture and separate backend timing mandatory
-   in every new ordered artifact; merge per-process traces atomically before
-   GQ7/GQ8 cache or auto-policy work.
-9. Run every accepted cold candidate through ADR-0188's guarded repeated sharded full
-   comparisons. A threshold violation is a regression alarm to investigate,
-   not permission to ignore raw controls or semantic gates.
+1. Lead with cold CNF ownership, lookup, and clause emission. The current cold
+   workload is about 84% bit blast plus CNF and only about 15% SAT. Preserve
+   identical AIG/CNF/replay evidence and run ADR-0188's repeated full gate.
+2. Specify a first-class incremental `Solver` push/pop/assume trait over the
+   existing arena-bound implementation. Remove downstream whole-snapshot/path-
+   ID reconstruction without backend lifetimes, hidden coercion, or weaker
+   model/proof replay. Document `assert_configured` as warm-only.
+3. Preserve ADR-0199's serial-only premise, exact lease/cache/session zero
+   gauges, and every one-shot/fixed/transfer-only/serial-off control. Parallel
+   workers require independent owners and a separate deterministic/RSS gate.
+4. Widen the repeated warm production artifact beyond SurfacePen/NETwtw10 and
+   the cold pack beyond its current five drivers. Never replace repetitions
+   with pooled query timing or silently exclude zero-yield drivers.
+5. Keep ADR-0157/0158 demand slicing explicit/off. Use causal ablation on
+   harder large-BV formulas before adding preprocessing; configured one-shot
+   preprocessing remains rejected until it wins end to end.
+6. Explore stronger SAT-model subsumption only by evaluating the cached model
+   against every complete original assertion of the weaker later query.
+   Ordinary UNSAT, Unknown, and unchecked prefix verdict reuse stay forbidden.
+7. Re-profile accepted cold and serial-warm policies separately. ADR-0199 makes
+   SAT 47.2% only after warm construction collapses; do not use that share to
+   displace cold CNF work or tune against non-identical formulas.
+8. Keep the corrected 162-query semantic pin, exact 30,628-query shard union,
+   complete assertion/symbol capture, separate backend timing, atomic artifacts,
+   and all 3%/3%/5% plus 2% alarms mandatory.
 
 All heavy Rust validation and benchmark commands remain subject to the local
 4 GiB virtual-memory cap and should use serial execution where parallel test

@@ -1134,12 +1134,20 @@ impl IncrementalBvSolver {
 
     /// Canonicalizes and asserts a batch of terms with one shared rewrite memo.
     ///
-    /// This is the cold-query counterpart of [`Self::assert_preprocessed`]. A
-    /// lifter commonly submits many assertions whose expression DAGs overlap;
-    /// canonicalizing the roots together visits each shared term once and
-    /// matches the `--rewrite default` benchmark boundary. Original roots are
-    /// retained in input order for model replay, while the returned terms are
-    /// the canonical roots actually lowered.
+    /// This is the batch counterpart of [`Self::assert_preprocessed`] for a
+    /// caller that has already selected preprocessing. A lifter commonly
+    /// submits many assertions whose expression DAGs overlap; canonicalizing
+    /// the roots together visits each shared term once and matches the
+    /// `--rewrite default` benchmark boundary. Original roots are retained in
+    /// input order for model replay, while the returned terms are the canonical
+    /// roots actually lowered.
+    ///
+    /// This API is not a blanket cold-query recommendation. Real Glaurung
+    /// one-shot measurements found configured per-root preprocessing slower,
+    /// and its fresh-incremental batch control also lost to one-shot. Keep raw
+    /// [`Self::assert`] as the cold control and enable this route only from an
+    /// end-to-end workload gate. Its established payoff is retained warm use,
+    /// where lowering/CNF work is amortized across later checks.
     ///
     /// If an encoding error occurs after earlier roots have been asserted,
     /// those earlier assertions remain active, exactly as when calling
@@ -1180,6 +1188,12 @@ impl IncrementalBvSolver {
     /// With [`SolverConfig::preprocess`] enabled this delegates to
     /// [`Self::assert_preprocessed`]; otherwise it preserves the raw assertion
     /// shape used by [`Self::assert`]. The returned term is the one lowered.
+    ///
+    /// Configured preprocessing is intended for retained warm solvers that
+    /// amortize rewriting and lowering across checks. It is a measured net loss
+    /// on Glaurung's cold one-shot path. Cold callers should start with
+    /// [`Self::assert`] and select this method only after an end-to-end workload
+    /// gate demonstrates a win.
     ///
     /// # Errors
     ///

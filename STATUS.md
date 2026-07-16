@@ -322,17 +322,39 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-16 — ADR-0199 proposes a serial DFS sibling warm lease.** The
+- **2026-07-16 — ADR-0199 accepts serial DFS sibling warm leasing.** The
   immutable-prefix audit finds no cheap snapshot seam: the arena/AIG can clone,
   but incremental CNF owns opaque BatSat state, so a fork artifact would still
   copy encoder maps and reinsert clauses under a new replay/invalidation
   contract. Glaurung siblings are already serialized by one LIFO worklist, and
   the snapshot adapter already performs exact LCP/pop/push transitions.
-  Implement only an opt-in reference-counted continuation lease: never
-  concurrent access, never verdict-only reuse, complete snapshots and original
-  replay on every check, and zero reference/session/cache gauges on every exit.
-  ADR-0196 remains the default until focused isolation/cleanup tests, the
-  created-owner profile, and repeated two-driver alarms pass.
+  accepted reference-counted continuation lease permits only the popped state
+  to mutate the owner: never concurrent access, never verdict-only reuse,
+  complete snapshots and original replay on every check, and zero reference/
+  session/cache gauges on every exit. Four focused serial tests and all 36
+  backend tests pass. The diagnostic profile cuts created sessions 79.2%, AIG
+  nodes 88.0%, clauses 77.0%, bit blast 82.4%, CNF 66.8%, and internal total
+  15.2%; retained SAT rises 36.2% and becomes 47.2% of candidate time.
+
+  The clean adaptive/cache-on artifact preserves all 185,442 decisions,
+  findings, exact warm/cache/lease traffic, and original replay with zero
+  failures. SurfacePen time/ratio improve 17.08%/18.53% and RSS falls 6.11%,
+  with +1.79% Z3 drift. NETwtw10 improves 0.72%/0.35% and RSS falls 13.36%,
+  with -0.37% Z3 drift. Every alarm passes. Glaurung `f17dc08` defaults serial
+  reuse on only under adaptive warm policy; explicit off restores ADR-0196.
+  Parallel workers must retain independent owners and revalidate this premise.
+
+- **2026-07-16 — Latest Glaurung feedback resets the next engineering order.**
+  Cold one-shot remains the pure-solver gap: about 84% bit blast plus CNF and
+  only about 15% SAT, so cold CNF encoding leads. Warm amortization is already
+  decisive and ADR-0199 makes it faster and lower-RSS on current families.
+  Next: (1) cold CNF ownership/emission; (2) first-class incremental
+  push/pop/assume `Solver` API and explicit `assert_configured` warm-only docs;
+  (3) widen repeated realworld drivers; (4) stronger replay-checked SAT-model
+  subsumption; (5) independent-owner parallel exploration; and (6) causal
+  large-BV preprocessing. GQ4 slicing stays off. Strict sort checking, precise
+  `IrError`, scalar lean model lift, shared replay memo, DRAT recheck, QF_BV-only
+  features, `coerce_to`, and `Value` re-export remain accepted strengths.
 
 - **2026-07-16 — ADR-0198 rejects a three-owner adaptive initial cap.** The
   post-ADR-0196 SurfacePen no-fallback ceiling has the exact behavior an
@@ -1636,7 +1658,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   | **GQ4 cold relevant bits** | **v1 and v2 DEFERRED after failed real gates.** v1 regresses ~1.42x→4.49x. V2 rejection overhead is bounded, but defaults admit 0/128 and +0.62% total; a 33-query moderate policy removes 632 AIG nodes/zero clauses and regresses bit blast 3.14% | Keep both explicit/off. Reopen only with an AIG/CNF-cone estimator or after word rewrites materially change the residual; do not tune thresholds further |
   | **GQ5 AIG/CNF construction** | **First native AIG tranche accepted (ADR-0175).** Deterministic open addressing improves three-driver Axeyum time 7.66% and ratio 0.742x→0.680x with unchanged structure; internal flattening stays deferred | Yield to GQ7/GQ10; reopen literal ownership or CNF only from fresh causal evidence |
   | **GQ6 cold SAT/CDCL** | **WIP foundation; behind measured CNF.** Accepted-table native lineage SAT is 18.48% weighted versus CNF at 46.55% | Compare identical CNF across cores only after the next CNF decision, with proof replay and deterministic limits |
-  | **GQ7 warm delta entry** | **DONE for available families (ADR-0171--0186/0193/0195/0196).** Path-owned delta reuse, 9/512 hard bounds, exact alarms, adaptive admission, bounded replay evaluation, scalar model completion, and LIFO-aligned exclusive successor ownership are enforced | Preserve explicit one-shot/fixed/transfer-off controls and re-gate new traversal policies or families |
+  | **GQ7 warm delta entry** | **DONE for available serial families (ADR-0171--0186/0193/0195/0196/0199).** Path-owned delta reuse, 9/512 hard bounds, exact alarms, adaptive admission, replay/model fast paths, LIFO transfer, and serial sibling LCP reuse are enforced | Preserve one-shot/fixed/transfer-only/serial-off controls; design first-class push/pop/assume and re-gate new traversal policies or families |
   | **GQ8 verdict/CNF cache** | **DONE for available families (ADR-0192).** Clean repeated evidence admits exact same-arena scalar SAT reuse only in path-owned Glaurung sessions; fixed bounds, traffic partitions, cleanup gauges, findings, and replay are enforced | Preserve explicit off and re-gate new families; Axeyum's generic cache remains opt-in and ordinary UNSAT/Unknown/prefix verdicts remain excluded |
   | **GQ9 auto cost model/docs** | **DONE for available families (ADR-0186).** Clean adaptive repeat clears every alarm over 92,721 checks; downstream explorer default has explicit off/fixed controls | Re-gate newly captured families; do not broaden this Glaurung-specific default into Axeyum's generic API |
   | **GQ10 real-lifter regression tier** | **DONE for available families (ADR-0187/0188).** The corrected 162-query regular pin and repeated 30,628-query full composites have executable alarms | Retain separate cold/ordered/profile bars and re-gate new families |
@@ -3435,7 +3457,7 @@ plan is built and committed on the current branch:
 ### Track 4 — Use Cases & Frontend
 | Phase | Title | Status |
 |---|---|---|
-| P4.1j | Glaurung warm delta and duplicate/prefix reuse (GQ7/GQ8) | **DONE for available families in ADR-0186/0192/0193/0195/0196.** Adaptive explorer ownership, bounded delta reuse, replay-checked exact SAT caching, bounded original replay, scalar model completion, and LIFO-aligned exclusive successor transfer have clean repeated alarms and explicit off controls. Axeyum's generic cache remains opt-in; new traversal policies or families require revalidation. |
+| P4.1j | Glaurung warm delta and duplicate/prefix reuse (GQ7/GQ8) | **DONE for available serial families in ADR-0186/0192/0193/0195/0196/0199.** Adaptive ownership, bounded delta reuse, replay-checked exact SAT caching, replay/model fast paths, LIFO transfer, and serial sibling LCP reuse have clean repeated alarms and explicit controls. Axeyum's generic cache remains opt-in; parallel traversal or new families require revalidation. |
 | P4.1e | Retained warm Boolean array relation flags | **DONE (ADR-0091)** — symbolic-memory path conditions can keep nested supported array equality atoms warm through private candidate-sensitive relation flags, guarded equality/diff observations, projection filtering, and replay |
 | P4.1h | Retained warm nested array-valued UF parameters | **DONE (ADR-0094)** — nested supported array-valued memory/function parameters can stay warm as full-value UF keys through private projection keys or rewritten structural keys, with relation-flag guarded congruence, private filtering, and replay |
 | P4.1g | Retained warm structural array-valued UF parameters | **DONE (ADR-0093)** — supported store/constant/array-ITE memory/function parameters can stay warm as full-value UF keys with scalar dependency retention, structural owner realization, relation-flag guarded congruence, private filtering, and replay; ADR-0094 subsequently lands nested application keys |

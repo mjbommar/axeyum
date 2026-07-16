@@ -1,6 +1,6 @@
 # ADR-0199: Serial DFS sibling warm lease
 
-Status: proposed
+Status: accepted
 Date: 2026-07-16
 
 ## Context
@@ -26,9 +26,9 @@ its structural longest common prefix and adding only the divergent suffix;
 selector-guarded inactive clauses and learned state remain sound under that
 contract.
 
-## Proposed decision
+## Decision
 
-Add an explicit, off-by-default Glaurung serial-sibling policy. At a symbolic
+Add a Glaurung serial-sibling policy with an explicit off control. At a symbolic
 fork, both feasible children become continuations of the parent's warm owner,
 but only the state popped from the DFS worklist may actively use it. A
 reference-counted lease keeps the session alive while sibling continuations
@@ -45,8 +45,9 @@ the model, and replays every original root. Sibling transitions use the same
 already-tested LCP/pop/push path as snapshot mode.
 
 Add explicit telemetry for share events, tracked owner references, peak
-references, and terminal zero gauges. Retain ADR-0196's exclusive-transfer
-default and explicit off control until this candidate passes.
+references, and terminal zero gauges. Invalid environment values fail closed to
+off. The policy is the adaptive downstream default after the gates below;
+ADR-0196's exclusive-transfer policy remains the explicit control.
 
 ## Required evidence
 
@@ -79,3 +80,34 @@ growth exceeds the memory alarm, if selector/LCP transitions require weakening
 replay or cache ownership, if a cleanup route leaves a reference/session alive,
 or if bookkeeping costs erase construction savings. Do not respond to failure
 by enabling concurrent solver access or silently increasing the path cap.
+
+## Acceptance evidence
+
+Four focused serial tests and all 36 Axeyum-backend tests pass under the 4 GiB
+wrapper. They cover fail-closed policy parsing, nested reference release,
+single-owner fork identity, SAT-left/UNSAT-right/SAT-left structural LCP
+transitions, model replay, and the existing backend semantics/proof suite. An
+unset-environment release smoke selects the accepted policy and finishes with
+43 created/closed sessions, peak one live session, 165 share events, peak 11
+logical references, and zero session/cache/reference gauges.
+
+The diagnostic SurfacePen profile demonstrates the intended mechanism against
+ADR-0196's no-fallback lineage control: created sessions fall 79.2%, added AIG
+nodes 88.0%, clauses 77.0%, bit-blast time 82.4%, CNF time 66.8%, and internal
+total 15.2%. SAT rises 36.2% in the larger retained database and becomes 47.2%
+of candidate time, so future warm and cold bottleneck rankings must remain
+separate.
+
+The clean repeated adaptive/cache-on artifact executes 185,442 checks with
+identical decisions, findings, exact warm/cache/lease traffic, and zero replay
+failures. SurfacePen mean Axeyum time and normalized ratio improve
+17.08%/18.53%, median RSS falls 6.11%, and Z3 drifts +1.79%. NETwtw10 improves
+0.72%/0.35%, median RSS falls 13.36%, and Z3 drifts -0.37%. Every alarm passes.
+The accepted artifact is `lineage-adaptive-serial-sibling-v1.json`, SHA-256
+`3218a1cd6ac4119647b3b4572b909bc3fd868077282cf0802dfede4f9161a362`, at
+Glaurung commit `f17dc08`.
+
+New traversal policies, parallel execution, or driver families must revalidate
+the serial-execution premise and every lifecycle/resource alarm. Parallel path
+exploration must use independent owners; it may not reuse this serial lease
+across workers.
