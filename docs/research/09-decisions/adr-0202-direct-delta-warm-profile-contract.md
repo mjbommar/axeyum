@@ -1,6 +1,6 @@
 # ADR-0202: Direct-delta warm profile contract
 
-Status: proposed
+Status: accepted
 Date: 2026-07-16
 
 ## Context
@@ -50,18 +50,28 @@ records plus native-v1 fallbacks.
 
 ## Evidence
 
-Acceptance requires:
+Glaurung `00bd660` implements the producer without adding unprofiled solver-
+stats reads: detailed Axeyum counters are sampled only when
+`GLAURUNG_AXEYUM_PROFILE_DIR` is active. The complete 41-test Axeyum-backend
+group passes under the 4 GiB wrapper; one pre-existing 250 ms text-bridge
+timeout flaked once and passed immediately alone and in the complete hot
+rerun. The selected direct adapter also passes under combined Z3+Axeyum
+features. Clippy reports only the repository's existing warnings.
 
-1. producer tests covering snapshot, direct persistent suffix, ephemeral
-   assumptions, exact reuse, and fail-closed invalid transitions;
-2. strict summarizer fixtures that accept both v7 modes and reject invalid
-   count/root partitions while retaining every historical schema test;
-3. a real profiled direct-delta smoke whose JSONL validates and reconciles with
-   the ordered query stream; and
-4. unchanged decisions, findings, replay, lifecycle cleanup, and one-shot
-   controls.
+Fresh-process producer smokes validate through the strict current summarizer:
 
-The ADR remains proposed until those gates pass.
+- direct delta: 4/4 decided (3 SAT, 1 UNSAT), one owner, two persistent roots
+  translated/encoded, one temporary root translated/encoded, one prefix pop,
+  and one exact replay-cache hit;
+- snapshot: 6/6 decided (4 SAT, 2 UNSAT), twelve complete persistent roots
+  translated, six persistent roots encoded, and zero temporary work.
+
+The Axeyum validator suite is 53/53 green. New fixtures accept both v7 entry
+modes, reject invalid complete-query, translation, and root-encoding
+partitions, and retain explicit v1--v6 historical coverage. Ruff check and
+format validation pass, as does documentation link validation. The adaptive
+mixed summary now preserves entry-mode and entry-structure totals inside the
+unsplit warm/native occurrence stream.
 
 ## Alternatives
 

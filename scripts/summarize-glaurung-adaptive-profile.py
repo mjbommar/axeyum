@@ -49,6 +49,7 @@ PARTITION_COUNTS = (
     "aig_nodes_added",
     "cnf_variables_added",
     "cnf_clauses_added",
+    *WARM.ENTRY_COUNTS_V7,
 )
 
 
@@ -238,6 +239,13 @@ def summarize(paths: list[Path]) -> dict[str, Any]:
         },
         "warm": {
             "paths_created": sum(row["path_created"] for row in warm),
+            "entry_modes": {
+                mode: sum(row["entry_mode"] == mode for row in warm)
+                for mode in WARM.ENTRY_MODES_V7
+            },
+            "entry_structure_totals": {
+                field: sum(row[field] for row in warm) for field in WARM.ENTRY_COUNTS_V7
+            },
             "created": warm_partition([row for row in warm if row["path_created"]]),
             "retained": warm_partition(
                 [row for row in warm if not row["path_created"]]

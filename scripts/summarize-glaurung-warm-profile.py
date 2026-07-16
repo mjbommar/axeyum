@@ -20,6 +20,7 @@ PROFILE_SCHEMAS = (
     "glaurung-axeyum-warm-profile-v4",
     "glaurung-axeyum-warm-profile-v5",
     "glaurung-axeyum-warm-profile-v6",
+    "glaurung-axeyum-warm-profile-v7",
 )
 SUMMARY_SCHEMA = "axeyum-glaurung-warm-profile-summary-v1"
 QUERY_HASH = re.compile(r"sha256:[0-9a-f]{64}\Z")
@@ -52,6 +53,15 @@ COUNTS = (
     "aig_nodes",
     "cnf_variables",
     "cnf_clauses",
+)
+ENTRY_MODES_V7 = ("snapshot", "direct_delta")
+ENTRY_COUNTS_V7 = (
+    "persistent_assertion_count",
+    "temporary_assumption_count",
+    "persistent_assertions_translated",
+    "temporary_assumptions_translated",
+    "persistent_root_encodings",
+    "temporary_root_encodings",
 )
 GATE_MIX_V2_FIELDS = (
     "and_nodes_synced",
@@ -208,13 +218,79 @@ def validate_record(row: Any, location: str) -> dict[str, Any]:
         raise ProfileError(f"{location}: profile is not complete")
 
     counts = {field: nonnegative_int(row, field, location) for field in COUNTS}
-    if counts["common_prefix_assertions"] > counts["assertion_count"]:
-        raise ProfileError(f"{location}: common prefix exceeds assertion count")
-    if counts["assertions_added"] != counts["root_encodings"]:
-        raise ProfileError(
-            f"{location}: added {counts['assertions_added']} roots but encoded "
-            f"{counts['root_encodings']}"
-        )
+    if row["schema"] == PROFILE_SCHEMAS[6]:
+        entry_mode = row.get("entry_mode")
+        if entry_mode not in ENTRY_MODES_V7:
+            raise ProfileError(f"{location}: unsupported entry_mode {entry_mode!r}")
+        entry = {
+            field: nonnegative_int(row, field, location) for field in ENTRY_COUNTS_V7
+        }
+        if (
+            entry["persistent_assertion_count"] + entry["temporary_assumption_count"]
+            != counts["assertion_count"]
+        ):
+            raise ProfileError(f"{location}: complete query partition mismatch")
+        if counts["common_prefix_assertions"] > entry["persistent_assertion_count"]:
+            raise ProfileError(
+                f"{location}: common prefix exceeds persistent assertions"
+            )
+        if (
+            entry["persistent_root_encodings"] + entry["temporary_root_encodings"]
+            != counts["root_encodings"]
+        ):
+            raise ProfileError(f"{location}: root encoding partition mismatch")
+        if entry["persistent_root_encodings"] != counts["assertions_added"]:
+            raise ProfileError(
+                f"{location}: persistent root encodings differ from added assertions"
+            )
+        if entry_mode == "snapshot":
+            if entry["persistent_assertion_count"] != counts["assertion_count"]:
+                raise ProfileError(
+                    f"{location}: snapshot persistent count is incomplete"
+                )
+            if any(
+                entry[field]
+                for field in (
+                    "temporary_assumption_count",
+                    "temporary_assumptions_translated",
+                    "temporary_root_encodings",
+                )
+            ):
+                raise ProfileError(f"{location}: snapshot entry has temporary work")
+            if (
+                entry["persistent_assertions_translated"]
+                != entry["persistent_assertion_count"]
+            ):
+                raise ProfileError(
+                    f"{location}: snapshot did not translate its complete persistent set"
+                )
+        else:
+            if entry["persistent_assertions_translated"] != counts["assertions_added"]:
+                raise ProfileError(
+                    f"{location}: direct persistent translations differ from added roots"
+                )
+            if (
+                entry["temporary_assumptions_translated"]
+                != entry["temporary_assumption_count"]
+            ):
+                raise ProfileError(
+                    f"{location}: direct temporary translation partition mismatch"
+                )
+            if (
+                entry["temporary_root_encodings"]
+                > entry["temporary_assumptions_translated"]
+            ):
+                raise ProfileError(
+                    f"{location}: temporary encodings exceed translated assumptions"
+                )
+    else:
+        if counts["common_prefix_assertions"] > counts["assertion_count"]:
+            raise ProfileError(f"{location}: common prefix exceeds assertion count")
+        if counts["assertions_added"] != counts["root_encodings"]:
+            raise ProfileError(
+                f"{location}: added {counts['assertions_added']} roots but encoded "
+                f"{counts['root_encodings']}"
+            )
     for added, retained in (
         ("aig_nodes_added", "aig_nodes"),
         ("cnf_variables_added", "cnf_variables"),
@@ -366,7 +442,7 @@ def validate_record(row: Any, location: str) -> dict[str, Any]:
                     raise ProfileError(
                         f"{location}: replay cache {gauge} exceeds {bound}"
                     )
-    if row["schema"] == PROFILE_SCHEMAS[5]:
+    if row["schema"] in PROFILE_SCHEMAS[5:]:
         work = row.get("model_lift_work")
         if not isinstance(work, dict) or set(work) != set(MODEL_LIFT_WORK_FIELDS):
             raise ProfileError(
@@ -518,6 +594,12 @@ def summarize(paths: list[Path]) -> dict[str, Any]:
             field: sum(row["cnf_gate_mix"][field] for row in records)
             for field in homogeneous_gate_fields
         }
+    if schemas == [PROFILE_SCHEMAS[6]]:
+        modes = Counter(row["entry_mode"] for row in records)
+        summary["entry_modes"] = {mode: modes[mode] for mode in ENTRY_MODES_V7}
+        summary["entry_structure_totals"] = {
+            field: sum(row[field] for row in records) for field in ENTRY_COUNTS_V7
+        }
     if len(schemas) == 1 and schemas[0] in PROFILE_SCHEMAS[3:]:
         summary["aig_construction_totals"] = {
             field: sum(row["aig_construction"][field] for row in records)
@@ -527,7 +609,7 @@ def summarize(paths: list[Path]) -> dict[str, Any]:
             field: sum(row["lowering_work"][field] for row in records)
             for field in LOWERING_WORK_FIELDS
         }
-    if len(schemas) == 1 and schemas[0] == PROFILE_SCHEMAS[5]:
+    if len(schemas) == 1 and schemas[0] in PROFILE_SCHEMAS[5:]:
         summary["model_lift_work_totals"] = {
             field: sum(row["model_lift_work"][field] for row in records)
             for field in MODEL_LIFT_WORK_FIELDS

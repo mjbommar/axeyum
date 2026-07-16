@@ -41,23 +41,30 @@ PHASES = (
 
 def record(sequence: int, *, path_created: bool, query: str) -> dict[str, object]:
     row: dict[str, object] = {
-        "schema": "glaurung-axeyum-warm-profile-v6",
+        "schema": "glaurung-axeyum-warm-profile-v7",
         "process_id": 17,
         "sequence": sequence,
         "query_hash": query,
         "path_id": 9,
         "path_created": path_created,
+        "entry_mode": "snapshot",
         "outcome": "sat",
         "complete": True,
         "assertion_count": 2,
+        "persistent_assertion_count": 2,
+        "temporary_assumption_count": 0,
         "common_prefix_assertions": 0 if path_created else 1,
         "assertions_added": 2 if path_created else 1,
         "assertions_popped": 0,
+        "persistent_assertions_translated": 2,
+        "temporary_assumptions_translated": 0,
         "translated_exprs": 5,
         "arena_terms": 9,
         "symbols": 1,
         "model_values": 1,
         "root_encodings": 2 if path_created else 1,
+        "persistent_root_encodings": 2 if path_created else 1,
+        "temporary_root_encodings": 0,
         "aig_nodes_added": 4,
         "cnf_variables_added": 5,
         "cnf_clauses_added": 6,
@@ -145,6 +152,27 @@ def record(sequence: int, *, path_created: bool, query: str) -> dict[str, object
     return row
 
 
+def direct_record(
+    sequence: int, *, path_created: bool, query: str
+) -> dict[str, object]:
+    row = record(sequence, path_created=path_created, query=query)
+    row.update(
+        {
+            "entry_mode": "direct_delta",
+            "persistent_assertion_count": 1,
+            "temporary_assumption_count": 1,
+            "common_prefix_assertions": 0 if path_created else 1,
+            "assertions_added": 1 if path_created else 0,
+            "persistent_assertions_translated": 1 if path_created else 0,
+            "temporary_assumptions_translated": 1,
+            "root_encodings": 2 if path_created else 1,
+            "persistent_root_encodings": 1 if path_created else 0,
+            "temporary_root_encodings": 1,
+        }
+    )
+    return row
+
+
 def native_record(sequence: int, *, query: str) -> dict[str, object]:
     row: dict[str, object] = {
         "schema": "glaurung-axeyum-native-profile-v1",
@@ -202,6 +230,15 @@ class WarmProfileSummaryTests(unittest.TestCase):
         self.assertEqual(summary["warm_records"], 2)
         self.assertEqual(summary["native_fallback_records"], 1)
         self.assertEqual(summary["warm"]["paths_created"], 1)
+        self.assertEqual(
+            summary["warm"]["entry_modes"], {"snapshot": 2, "direct_delta": 0}
+        )
+        self.assertEqual(
+            summary["warm"]["entry_structure_totals"][
+                "persistent_assertions_translated"
+            ],
+            4,
+        )
         self.assertEqual(summary["warm"]["created"]["records"], 1)
         self.assertEqual(summary["warm"]["retained"]["records"], 1)
         self.assertEqual(summary["phases"]["setup"]["nanos"], 10)
@@ -269,6 +306,11 @@ class WarmProfileSummaryTests(unittest.TestCase):
         self.assertEqual(summary["unique_queries"], 1)
         self.assertEqual(summary["duplicate_occurrences"], 1)
         self.assertEqual(summary["paths_created"], 1)
+        self.assertEqual(summary["entry_modes"], {"snapshot": 2, "direct_delta": 0})
+        self.assertEqual(
+            summary["entry_structure_totals"]["persistent_assertions_translated"],
+            4,
+        )
         self.assertEqual(summary["decided_percent"], 100.0)
         self.assertEqual(summary["phases"]["bit_blast"], {"nanos": 60, "percent": 30.0})
         self.assertEqual(summary["structure_totals"]["root_encodings"], 3)
@@ -287,6 +329,43 @@ class WarmProfileSummaryTests(unittest.TestCase):
         self.assertEqual(summary["replay_sat_cache"]["misses"], 1)
         self.assertEqual(summary["replay_sat_cache"]["insertions"], 1)
         self.assertEqual(summary["replay_sat_cache"]["peak_entries"], 1)
+
+    def test_validates_and_summarizes_direct_delta_partitions(self) -> None:
+        query = "sha256:" + "2" * 64
+        with tempfile.TemporaryDirectory() as raw_temp:
+            profile = Path(raw_temp) / "profile.jsonl"
+            profile.write_text(
+                json.dumps(direct_record(0, path_created=True, query=query)) + "\n",
+                encoding="utf-8",
+            )
+            summary = MODULE.summarize([profile])
+
+            self.assertEqual(summary["entry_modes"], {"snapshot": 0, "direct_delta": 1})
+            self.assertEqual(
+                summary["entry_structure_totals"],
+                {
+                    "persistent_assertion_count": 1,
+                    "temporary_assumption_count": 1,
+                    "persistent_assertions_translated": 1,
+                    "temporary_assumptions_translated": 1,
+                    "persistent_root_encodings": 1,
+                    "temporary_root_encodings": 1,
+                },
+            )
+
+            bad = direct_record(0, path_created=True, query=query)
+            bad["temporary_assumptions_translated"] = 0
+            profile.write_text(json.dumps(bad) + "\n", encoding="utf-8")
+            with self.assertRaisesRegex(
+                MODULE.ProfileError, "temporary translation partition mismatch"
+            ):
+                MODULE.summarize([profile])
+
+            bad = direct_record(0, path_created=True, query=query)
+            bad["temporary_root_encodings"] = 2
+            profile.write_text(json.dumps(bad) + "\n", encoding="utf-8")
+            with self.assertRaisesRegex(MODULE.ProfileError, "root encoding partition"):
+                MODULE.summarize([profile])
 
     def test_rejects_bad_phase_sum_and_path_creation_order(self) -> None:
         query = "sha256:" + "b" * 64
@@ -431,6 +510,23 @@ class WarmProfileSummaryTests(unittest.TestCase):
         self.assertEqual(summary["profile_schemas"], [historical["schema"]])
         self.assertIn("replay_sat_cache", summary)
         self.assertNotIn("model_lift_work_totals", summary)
+
+    def test_accepts_historical_v6_without_entry_partition(self) -> None:
+        query = "sha256:" + "3" * 64
+        historical = record(0, path_created=True, query=query)
+        historical["schema"] = "glaurung-axeyum-warm-profile-v6"
+        del historical["entry_mode"]
+        for field in MODULE.ENTRY_COUNTS_V7:
+            del historical[field]
+        with tempfile.TemporaryDirectory() as directory:
+            profile = Path(directory) / "profile.jsonl"
+            profile.write_text(json.dumps(historical) + "\n", encoding="utf-8")
+
+            summary = MODULE.summarize([profile])
+
+        self.assertEqual(summary["profile_schemas"], [historical["schema"]])
+        self.assertIn("model_lift_work_totals", summary)
+        self.assertNotIn("entry_modes", summary)
 
 
 if __name__ == "__main__":
