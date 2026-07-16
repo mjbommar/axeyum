@@ -322,6 +322,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-16 — ADR-0194 lands observational model-lift attribution.** The
+  post-ADR-0193 profile makes `model_lift` the largest named residual, but that
+  aggregate combines retained-AIG forward recomputation, validation/symbol
+  reconstruction, and complete-model construction. The new opt-in
+  `IncrementalModelLiftStats` separates those three nested durations and counts
+  AIG nodes, symbol-bit inputs, reconstructed symbols, arena symbols, and
+  completed values; ordinary constructors remain all-zero. Focused all-feature
+  tests and strict solver Clippy pass. Next wire the exact map into Glaurung
+  warm-profile v6 and the fail-closed summarizer, then measure before choosing
+  any reconstruction or validation change.
+
 - **2026-07-16 — ADR-0193 accepts bounded shared-memo original replay.** The
   v5 cache-aware SurfacePen profile finds mandatory original-term replay at
   447.046 ms / 38.82% because incremental replay rebuilt an evaluator memo for

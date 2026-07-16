@@ -3,8 +3,24 @@
 use axeyum_ir::TermArena;
 use axeyum_solver::{
     AigConstructionStats, CheckResult, IncrementalBvSolver, IncrementalCnfStats,
-    IncrementalLoweringStats, SolverConfig,
+    IncrementalLoweringStats, IncrementalModelLiftStats, SolverConfig,
 };
+
+fn assert_model_lift_attribution(
+    work: IncrementalModelLiftStats,
+    total: std::time::Duration,
+    expected_aig_nodes: u64,
+) {
+    assert!(work.aig_recompute > std::time::Duration::ZERO);
+    assert!(work.assignment_reconstruct > std::time::Duration::ZERO);
+    assert!(work.model_completion > std::time::Duration::ZERO);
+    assert_eq!(work.aig_nodes_recomputed, expected_aig_nodes);
+    assert_eq!(work.symbol_bit_inputs_scanned, 64);
+    assert_eq!(work.assignment_symbols_produced, 1);
+    assert_eq!(work.arena_symbols_scanned, 1);
+    assert_eq!(work.completed_model_values, 1);
+    assert!(work.aig_recompute + work.assignment_reconstruct + work.model_completion <= total);
+}
 
 #[test]
 fn incremental_stats_snapshot_and_delta_cover_the_client_pipeline() {
@@ -79,6 +95,11 @@ fn incremental_stats_snapshot_and_delta_cover_the_client_pipeline() {
     assert_eq!(check_delta.aig_nodes, 0);
     assert_eq!(check_delta.cnf_variables, 0);
     assert_eq!(check_delta.cnf_clauses, 0);
+    assert_model_lift_attribution(
+        check_delta.model_lift_work,
+        check_delta.model_lift,
+        checked.aig_nodes,
+    );
     assert_eq!(
         checked.aig_nodes,
         u64::try_from(solver.lowered_aig_node_count()).unwrap()
@@ -102,6 +123,10 @@ fn incremental_stats_snapshot_and_delta_cover_the_client_pipeline() {
     assert_eq!(repeated.aig_construction, AigConstructionStats::default());
     assert_eq!(repeated.lowering_work, IncrementalLoweringStats::default());
     assert_eq!(repeated.cnf_gate_mix, IncrementalCnfStats::default());
+    assert_eq!(
+        repeated.model_lift_work.aig_nodes_recomputed,
+        checked.aig_nodes
+    );
 }
 
 #[test]
@@ -176,6 +201,7 @@ fn ordinary_constructor_keeps_phase_profiling_disabled() {
     assert_eq!(stats.total_time(), std::time::Duration::ZERO);
     assert_eq!(stats.cnf_gate_mix, IncrementalCnfStats::default());
     assert_eq!(stats.lowering_work, IncrementalLoweringStats::default());
+    assert_eq!(stats.model_lift_work, IncrementalModelLiftStats::default());
     assert!(stats.aig_construction.and_requests > 0);
     assert!(stats.aig_nodes > 0);
     assert!(stats.cnf_variables > 0);

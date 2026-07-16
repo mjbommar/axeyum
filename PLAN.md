@@ -600,8 +600,10 @@ two-driver baseline/candidate artifact for ADR-0193, (2) attribute model-lift
 work against the symbols actually required for complete original replay, and
 (3) continue measured CNF construction from the new v5 stage balance. No
 model-lift optimization may omit completion or weaken replay. GQ8 admission is
-complete in ADR-0192. Corrected
-composite variance is complete in ADR-0188. GQ4 is not an active optimization;
+complete in ADR-0192, and corrected composite variance is complete in
+ADR-0188. ADR-0194 now lands the opt-in Axeyum subphase/counter boundary for
+item (2); wire it into Glaurung warm-profile v6 and the strict summarizer before
+selecting an implementation change. GQ4 is not an active optimization;
 ADR-0157/0158 remain explicit/off. Cold rewrite or CNF work may continue only
 when causal/native profiles select it. ADR-0164 permits opt-in consecutive
 snapshot reuse now; ADR-0166 supplies the bounded ordered T1/T2 evidence;

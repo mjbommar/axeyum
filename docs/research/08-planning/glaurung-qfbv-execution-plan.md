@@ -702,7 +702,8 @@ clean artifact pins the exact Glaurung/Axeyum revisions and policy.
    against the symbols required for complete original replay, and keep CNF as
    the parallel measured GQ5 lane. Do not omit model completion or replay to
    manufacture a speedup; internal flattening still requires future-use
-   evidence or clause replacement.
+   evidence or clause replacement. ADR-0194 supplies the Axeyum counters; wire
+   their exact map into Glaurung v6 and its strict summarizer before measuring.
 5. Keep complete assertion/symbol capture and separate backend timing mandatory
    in every new ordered artifact; merge per-process traces atomically before
    GQ7/GQ8 cache or auto-policy work.

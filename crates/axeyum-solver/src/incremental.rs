@@ -17,7 +17,8 @@
 
 use axeyum_bv::{BitLowerError, IncrementalLowering, first_unsupported_op};
 use axeyum_cnf::{
-    CnfVar, IncrementalCnf, IncrementalCnfStats, SatError, SatResult, SatUnsatEvidence,
+    CnfAssignment, CnfVar, IncrementalCnf, IncrementalCnfStats, SatError, SatResult,
+    SatUnsatEvidence,
 };
 use axeyum_ir::{
     ArraySortKey, ArrayValue, Assignment, FuncId, FuncValue, GenericArrayValue, IrError, Op, Sort,
@@ -74,6 +75,8 @@ pub struct IncrementalBvStats {
     pub solve: Duration,
     /// Time spent reconstructing an Axeyum model from the SAT/AIG assignment.
     pub model_lift: Duration,
+    /// Opt-in subphase and operation attribution within [`Self::model_lift`].
+    pub model_lift_work: IncrementalModelLiftStats,
     /// Time spent replaying SAT candidates against original assertions.
     pub replay: Duration,
     /// Number of roots successfully encoded into the retained CNF.
@@ -92,6 +95,63 @@ pub struct IncrementalBvStats {
     pub cnf_clauses: u64,
     /// Opt-in incremental CNF gate-family and direct-root attribution.
     pub cnf_gate_mix: IncrementalCnfStats,
+}
+
+/// Opt-in attribution for incremental SAT model reconstruction.
+///
+/// Durations are nested within [`IncrementalBvStats::model_lift`]. Counters are
+/// cumulative work, not retained gauges. Ordinary non-profiling constructors
+/// leave every field at zero.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct IncrementalModelLiftStats {
+    /// Recompute every retained AIG node from SAT-assigned input bits.
+    pub aig_recompute: Duration,
+    /// Validate AIG values and reconstruct the lowered symbol assignment.
+    pub assignment_reconstruct: Duration,
+    /// Complete/project/filter the public model before original-term replay.
+    pub model_completion: Duration,
+    /// Retained AIG nodes visited by forward recomputation.
+    pub aig_nodes_recomputed: u64,
+    /// Symbol-bit input bindings scanned during assignment reconstruction.
+    pub symbol_bit_inputs_scanned: u64,
+    /// Symbols produced by lowered-assignment reconstruction.
+    pub assignment_symbols_produced: u64,
+    /// Arena symbols scanned by complete-model construction.
+    pub arena_symbols_scanned: u64,
+    /// Public model values produced after completion and internal filtering.
+    pub completed_model_values: u64,
+}
+
+impl IncrementalModelLiftStats {
+    /// Returns the saturating component-wise delta from `earlier`.
+    #[must_use]
+    pub fn delta_since(self, earlier: Self) -> Self {
+        Self {
+            aig_recompute: self.aig_recompute.saturating_sub(earlier.aig_recompute),
+            assignment_reconstruct: self
+                .assignment_reconstruct
+                .saturating_sub(earlier.assignment_reconstruct),
+            model_completion: self
+                .model_completion
+                .saturating_sub(earlier.model_completion),
+            aig_nodes_recomputed: self
+                .aig_nodes_recomputed
+                .saturating_sub(earlier.aig_nodes_recomputed),
+            symbol_bit_inputs_scanned: self
+                .symbol_bit_inputs_scanned
+                .saturating_sub(earlier.symbol_bit_inputs_scanned),
+            assignment_symbols_produced: self
+                .assignment_symbols_produced
+                .saturating_sub(earlier.assignment_symbols_produced),
+            arena_symbols_scanned: self
+                .arena_symbols_scanned
+                .saturating_sub(earlier.arena_symbols_scanned),
+            completed_model_values: self
+                .completed_model_values
+                .saturating_sub(earlier.completed_model_values),
+        }
+    }
 }
 
 /// Deterministic storage bounds for the opt-in replay-checked SAT cache.
@@ -355,6 +415,7 @@ impl IncrementalBvStats {
             cnf_encode: self.cnf_encode.saturating_sub(earlier.cnf_encode),
             solve: self.solve.saturating_sub(earlier.solve),
             model_lift: self.model_lift.saturating_sub(earlier.model_lift),
+            model_lift_work: self.model_lift_work.delta_since(earlier.model_lift_work),
             replay: self.replay.saturating_sub(earlier.replay),
             root_encodings: self.root_encodings.saturating_sub(earlier.root_encodings),
             checks: self.checks.saturating_sub(earlier.checks),
@@ -3539,6 +3600,43 @@ impl IncrementalBvSolver {
         }
     }
 
+    fn reconstruct_lowered_assignment(
+        &mut self,
+        cnf_assignment: &CnfAssignment,
+    ) -> Result<Assignment, BitLowerError> {
+        let subphase_started = self.profiling_enabled.then(Instant::now);
+        let node_values = self
+            .cnf
+            .aig_node_values(self.lowering.aig(), cnf_assignment);
+        if let Some(subphase_started) = subphase_started {
+            self.stats.model_lift_work.aig_recompute += subphase_started.elapsed();
+            self.stats.model_lift_work.aig_nodes_recomputed = self
+                .stats
+                .model_lift_work
+                .aig_nodes_recomputed
+                .saturating_add(usize_to_u64(node_values.len()));
+        }
+
+        let subphase_started = self.profiling_enabled.then(Instant::now);
+        let reconstructed = self.lowering.assignment_from_aig_values(&node_values);
+        if let Some(subphase_started) = subphase_started {
+            self.stats.model_lift_work.assignment_reconstruct += subphase_started.elapsed();
+            self.stats.model_lift_work.symbol_bit_inputs_scanned = self
+                .stats
+                .model_lift_work
+                .symbol_bit_inputs_scanned
+                .saturating_add(usize_to_u64(self.lowering.symbol_inputs().len()));
+            if let Ok(assignment) = &reconstructed {
+                self.stats.model_lift_work.assignment_symbols_produced = self
+                    .stats
+                    .model_lift_work
+                    .assignment_symbols_produced
+                    .saturating_add(usize_to_u64(assignment.len()));
+            }
+        }
+        reconstructed
+    }
+
     fn solve_with_encoded_extra(
         &mut self,
         arena: &TermArena,
@@ -3589,10 +3687,7 @@ impl IncrementalBvSolver {
             match result {
                 SatResult::Sat(cnf_assignment) => {
                     let started = self.profiling_enabled.then(Instant::now);
-                    let node_values = self
-                        .cnf
-                        .aig_node_values(self.lowering.aig(), &cnf_assignment);
-                    let reconstructed = self.lowering.assignment_from_aig_values(&node_values);
+                    let reconstructed = self.reconstruct_lowered_assignment(&cnf_assignment);
                     if let Some(started) = started {
                         self.stats.model_lift += started.elapsed();
                     }
@@ -3682,6 +3777,7 @@ impl IncrementalBvSolver {
             return Ok(WarmCandidateCheck::Refine(violated));
         }
         let started = self.profiling_enabled.then(Instant::now);
+        let completion_started = self.profiling_enabled.then(Instant::now);
         let model = self.complete_model_with_warm_theories(
             arena,
             assignment,
@@ -3689,6 +3785,21 @@ impl IncrementalBvSolver {
             assumptions,
             deadline,
         );
+        if let Some(completion_started) = completion_started {
+            self.stats.model_lift_work.model_completion += completion_started.elapsed();
+            self.stats.model_lift_work.arena_symbols_scanned = self
+                .stats
+                .model_lift_work
+                .arena_symbols_scanned
+                .saturating_add(usize_to_u64(arena.symbols().count()));
+            if let Ok(model) = &model {
+                self.stats.model_lift_work.completed_model_values = self
+                    .stats
+                    .model_lift_work
+                    .completed_model_values
+                    .saturating_add(usize_to_u64(model.len()));
+            }
+        }
         if let Some(started) = started {
             self.stats.model_lift += started.elapsed();
         }

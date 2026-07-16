@@ -197,8 +197,8 @@ pub use backend::{
     UnknownReason,
 };
 pub use incremental::{
-    AssumptionOutcome, IncrementalBvSolver, IncrementalBvStats, ReplayCheckedSatCachePolicy,
-    ReplayCheckedSatCacheStats,
+    AssumptionOutcome, IncrementalBvSolver, IncrementalBvStats, IncrementalModelLiftStats,
+    ReplayCheckedSatCachePolicy, ReplayCheckedSatCacheStats,
 };
 pub use layers::BvLayerStats;
 pub use model::Model;
