@@ -682,7 +682,7 @@ clean artifact pins the exact Glaurung/Axeyum revisions and policy.
 | M5 AIG/CNF optimization | GQ5 | **First native AIG tranche accepted:** ADR-0175 replaces the ordered unique table and improves the repeated actual-client ratio 0.742x→0.680x with unchanged structure. CNF candidate remains deferred; reopen only from new causal evidence |
 | M6 SAT re-attribution | GQ6 | **Done for bounded accepted-table lineage:** SAT is 18.48% weighted and remains behind CNF at 46.55% |
 | M7 ordered warm trace | GQ7, GQ8 | **Done for clean three-driver controls (ADR-0166--0170):** assertions, lineage/scopes/choices, backend timing, cold/snapshot/lineage controls, and memory validate |
-| M8 Glaurung warm integration | GQ7 | **Bounded admission/replay repeated and executable (ADR-0171--0180/0193):** 9/512 identity is accepted; bounded shared original replay cuts causal SurfacePen time 36.94%. Refresh a clean same-current two-driver artifact before replacing the published baseline |
+| M8 Glaurung warm integration | GQ7 | **Bounded admission/replay repeated and executable (ADR-0171--0180/0193/0195):** 9/512 identity is accepted; bounded shared original replay cuts causal SurfacePen time 36.94%, then exact empty-theory model completion cuts the same-current median another 25.45% with flat RSS. Refresh a clean same-current two-driver artifact before replacing the published baseline |
 | M9 auto policy and regression lane | GQ8--GQ10 | **Done for current families in ADR-0186/0188/0192:** adaptive warm admission plus bounded path-owned exact-SAT caching are downstream defaults with explicit controls; corrected cold and ordered artifacts have executable identity, replay, finding, timing, and RSS alarms |
 
 ## Immediate next actions
@@ -698,14 +698,13 @@ clean artifact pins the exact Glaurung/Axeyum revisions and policy.
    rewrite tranche: `extract_extend` is a real lowering win, but none of the
    four ablated rules changes AIG/CNF. Reopen GQ3/GQ4 only for a specific new
    downstream gate-cone hypothesis.
-4. ADR-0194's v6 SurfacePen profile attributes 94.37% of model lift to complete-
-   model construction, versus 4.08% assignment reconstruction and 1.39% AIG
-   recomputation, with all 2,551 checks agreed and replay-clean. Test the exact
-   scalar-QF_BV boundary selected by source inspection: skip empty warm-theory
-   projection discovery only when no active or one-shot array/UF projection
-   work exists. Continue to default-complete every user symbol and replay every
-   original root. Keep CNF as the parallel measured GQ5 lane; internal
-   flattening still requires future-use evidence or clause replacement.
+4. ADR-0195 accepts ADR-0194's selected scalar-QF_BV boundary: after the same
+   complete model is built, skip only empty warm-theory projection discovery.
+   Completion falls 99.34% and same-current median client time 25.45%, with
+   flat RSS, exact structure/traffic, every user symbol completed, and every
+   original root replayed. Refresh the two-driver artifact next. Keep CNF as
+   the parallel measured GQ5 lane; internal flattening still requires future-
+   use evidence or clause replacement.
 5. Keep complete assertion/symbol capture and separate backend timing mandatory
    in every new ordered artifact; merge per-process traces atomically before
    GQ7/GQ8 cache or auto-policy work.

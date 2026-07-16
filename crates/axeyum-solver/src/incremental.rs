@@ -3948,6 +3948,9 @@ impl IncrementalBvSolver {
         deadline: Option<Instant>,
     ) -> Result<Model, UnknownReason> {
         let mut model = complete_model_filtered(arena, assignment, &self.internal_symbols);
+        if !self.requires_warm_model_projection(one_shot) {
+            return Ok(model);
+        }
         self.project_warm_array_selects(arena, assignment, &one_shot.selects, &mut model)?;
         self.project_warm_uf_apps(arena, assignment, &one_shot.uf_apps, &mut model)?;
         let user_selects = self.active_user_select_terms(arena, assumptions);
@@ -3970,6 +3973,21 @@ impl IncrementalBvSolver {
         )?;
         self.project_warm_array_uf_apps(arena, assignment, &one_shot.array_uf_apps, &mut model)?;
         Ok(filter_internal_model(&model, &self.internal_symbols))
+    }
+
+    fn requires_warm_model_projection(&self, one_shot: &WarmOneShotTerms) -> bool {
+        !one_shot.selects.is_empty()
+            || !one_shot.uf_apps.is_empty()
+            || !one_shot.array_uf_apps.is_empty()
+            || !one_shot.array_equalities.is_empty()
+            || !one_shot.array_relation_flags.is_empty()
+            || self.frames.iter().any(|frame| {
+                !frame.warm_array_selects.is_empty()
+                    || !frame.warm_uf_apps.is_empty()
+                    || !frame.warm_array_uf_apps.is_empty()
+                    || !frame.warm_array_equalities.is_empty()
+                    || !frame.warm_array_relation_flags.is_empty()
+            })
     }
 
     fn project_warm_array_selects(
@@ -7523,6 +7541,32 @@ fn usize_to_u64(value: usize) -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn scalar_model_completion_gate_tracks_only_active_warm_theory_work() {
+        let mut arena = TermArena::new();
+        let marker = arena.bool_var("model_completion_marker").unwrap();
+        let mut solver = IncrementalBvSolver::new();
+        let mut one_shot = WarmOneShotTerms {
+            selects: Vec::new(),
+            uf_apps: Vec::new(),
+            array_uf_apps: Vec::new(),
+            array_equalities: Vec::new(),
+            array_relation_flags: Vec::new(),
+        };
+
+        assert!(!solver.requires_warm_model_projection(&one_shot));
+
+        one_shot.selects.push(marker);
+        assert!(solver.requires_warm_model_projection(&one_shot));
+        one_shot.selects.clear();
+
+        solver.frames[0].warm_uf_apps.push(marker);
+        assert!(solver.requires_warm_model_projection(&one_shot));
+        solver.frames[0].warm_uf_apps.clear();
+
+        assert!(!solver.requires_warm_model_projection(&one_shot));
+    }
 
     #[test]
     fn incremental_solver_is_send_and_owns_no_shared_global_context() {

@@ -123,6 +123,42 @@ fn check_assuming_does_not_persist() {
 }
 
 #[test]
+fn scalar_model_completion_keeps_unconstrained_defaults_and_original_replay() {
+    let mut arena = TermArena::new();
+    let used_sym = arena.declare("completion_used", Sort::BitVec(8)).unwrap();
+    let unused_sym = arena
+        .declare("completion_unused", Sort::BitVec(16))
+        .unwrap();
+    let used = arena.var(used_sym);
+    let expected = arena.bv_const(8, 0x5a).unwrap();
+    let assertion = arena.eq(used, expected).unwrap();
+    let mut solver = IncrementalBvSolver::new();
+    solver.assert(&arena, assertion).unwrap();
+
+    let CheckResult::Sat(model) = solver.check(&arena).unwrap() else {
+        panic!("expected sat");
+    };
+    assert_eq!(
+        model.get(used_sym),
+        Some(Value::Bv {
+            width: 8,
+            value: 0x5a
+        })
+    );
+    assert_eq!(
+        model.get(unused_sym),
+        Some(Value::Bv {
+            width: 16,
+            value: 0
+        })
+    );
+    assert_eq!(
+        eval(&arena, assertion, &model.to_assignment()).unwrap(),
+        Value::Bool(true)
+    );
+}
+
+#[test]
 fn symbolic_execution_style_path_exploration() {
     // Mimic exploring two branches of `if (x + 1 == y) ... else ...` down one
     // warm solver: shared prefix asserted once, branches pushed/popped.

@@ -322,6 +322,22 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-16 — ADR-0195 accepts the empty warm-theory projection bypass.**
+  After constructing the same complete deterministic public model, scalar
+  QF_BV checks now return it directly only when every active and one-shot array/
+  UF projection class is empty. Any array select, scalar or array-valued UF
+  app, array equality, or relation flag takes the unchanged full path. AIG
+  validation, default completion, cache replay, and every original-root replay
+  remain mandatory.
+
+  The exact v6 SurfacePen candidate keeps all 2,551 checks decided/agreed with
+  identical AIG/CNF, models, path/cache traffic, and zero replay failures.
+  Completion falls 165.192→1.088 ms (-99.34%), model lift
+  175.049→10.379 ms (-94.07%), and profiled internal total falls 20.52%. The
+  same-current unprofiled three-process gate improves median Axeyum
+  636.6→474.6 ms (-25.45%) and ratio about 0.147x→0.108x Z3 while median RSS
+  falls 0.06% and Z3 drift stays at +1.19%. All 15,306 combined checks agree.
+
 - **2026-07-16 — ADR-0194 measures model completion as the residual.** The
   exact Glaurung v6 SurfacePen run decides and agrees on all 2,551 checks
   (2,282 SAT / 269 UNSAT), with zero unknown splits or replay failures. Of

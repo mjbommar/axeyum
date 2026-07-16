@@ -499,6 +499,11 @@ Out of scope:
     replay, under a fixed cross-root retention bound; it never persists trusted
     values across models or checks; see
     [ADR-0193](../09-decisions/adr-0193-bounded-shared-memo-model-replay.md).
+    Empty warm-theory projection discovery may be bypassed only after the same
+    complete scalar model is built and only when every active/one-shot array
+    and UF projection class is empty; validation and original replay remain
+    unchanged; see
+    [ADR-0195](../09-decisions/adr-0195-skip-empty-warm-theory-model-projection.md).
 - [x] Should solver cancellation support memory budgets as well as time?
   - Answer: yes; `SolverConfig` carries timeout, deterministic resource,
     memory, and node budgets. Memory-budget exhaustion is an `Unknown`
