@@ -340,9 +340,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   Held-out NETwtw10 repetition also passes: median Axeyum
   17,765.2→16,996.6 ms (-4.33%), ratio about 0.342x→0.328x (-3.99%), and RSS
   falls 1.39% with -0.36% Z3 drift. All 170,136 combined checks agree, findings
-  and exact traffic repeat, and replay failures remain zero. Regenerate the
-  machine-readable two-driver lineage artifact from these accepted revisions
-  before replacing its published predecessor.
+  and exact traffic repeat, and replay failures remain zero.
+
+  The clean machine-readable adaptive/cache-on refresh now closes the
+  production-policy gate over another 185,442 checks. SurfacePen mean Axeyum
+  time/ratio improve 23.82%/24.99%; NETwtw10 improve 3.55%/4.04%. Median RSS
+  changes only +1.13%/+0.97%, absolute Z3 drift is 1.56%/0.52%, and exact
+  findings, traffic, cleanup, and all alarms pass. Baseline/candidate artifact
+  SHA-256 values are `21b95227...1f7c07` / `9ac47b7c...f015d`. The current
+  highest-leverage implementation question returns to fresh residual native
+  attribution; do not infer another model-lift or CNF change from the old v5
+  balance.
 
 - **2026-07-16 — ADR-0194 measures model completion as the residual.** The
   exact Glaurung v6 SurfacePen run decides and agrees on all 2,551 checks

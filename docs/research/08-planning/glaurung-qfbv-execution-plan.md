@@ -703,9 +703,12 @@ clean artifact pins the exact Glaurung/Axeyum revisions and policy.
    Completion falls 99.34% and same-current median client time 25.45%, with
    flat RSS, exact structure/traffic, every user symbol completed, and every
    original root replayed. Held-out NETwtw10 improves 4.33% with RSS down
-   1.39% and every alarm green. Regenerate the machine-readable two-driver
-   artifact next. Keep CNF as the parallel measured GQ5 lane; internal
-   flattening still requires future-use evidence or clause replacement.
+   1.39% and every alarm green. The clean adaptive/cache-on artifact refresh
+   also passes: SurfacePen mean time/ratio improve 23.82%/24.99%, NETwtw10
+   3.55%/4.04%, and all 185,442 checks plus findings/traffic are exact. Obtain
+   fresh accepted-current native attribution next. Keep CNF as a measured GQ5
+   lane only if that profile selects it; internal flattening still requires
+   future-use evidence or clause replacement.
 5. Keep complete assertion/symbol capture and separate backend timing mandatory
    in every new ordered artifact; merge per-process traces atomically before
    GQ7/GQ8 cache or auto-policy work.

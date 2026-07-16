@@ -68,6 +68,17 @@ exact warm/cache traffic repeat, and replay failures remain zero. This causal
 repetition does not itself replace the existing machine-readable lineage
 artifact; regenerate that artifact separately from the accepted revisions.
 
+The subsequent clean production-policy artifacts close that remaining gate.
+Glaurung's adaptive/cache-on baseline and candidate use the same runner
+revision, driver bytes, system identity, and three repetitions. All 185,442
+checks, findings, warm/cache traffic, and terminal cleanup are exact.
+SurfacePen mean Axeyum time falls 668.8 to 509.5 ms (-23.82%) and its ratio
+0.15469x to 0.11604x Z3 (-24.99%); NETwtw10 falls 17,417.4 to 16,799.3 ms
+(-3.55%) and 0.33500x to 0.32145x (-4.04%). Median RSS changes +1.13%/+0.97%,
+and absolute Z3 drift is 1.56%/0.52%; every guarded alarm passes. The committed
+artifact SHA-256 values are `21b95227...1f7c07` (baseline) and
+`9ac47b7c...f015d` (candidate).
+
 ## Alternatives
 
 Skipping model completion or returning only constrained symbols was rejected:
