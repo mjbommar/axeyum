@@ -67,6 +67,14 @@ before returning success. Unknown index fields are rejected. In particular,
 `content_hash` is forbidden in the capture index: byte identity belongs to this
 ingestion step and cannot be copied from stale exporter state.
 
+The `just` recipe defaults to eight bounded manifest-validation workers because
+large access-controlled captures contain tens of thousands of independent
+files on network storage. Pass a fourth argument to change that bound. The
+parallel map collects in capture-index order, reports the lowest-index error,
+and does not change manifest bytes. Direct benchmark invocations use
+`--manifest-jobs N`; solver workers remain independently controlled by
+`--jobs N`.
+
 The direct equivalent is:
 
 ```sh

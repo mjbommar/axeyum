@@ -18,7 +18,8 @@
 //!   `[--cnf-clause-budget N] [--require-deterministic-resources]`
 //!   `[--prove-unsat]`
 //!   `[--require-reproducible-run]`
-//!   `[--compare-z3] [--require-in-process-z3] [--min-decided-percent P] [--jobs N]`
+//!   `[--compare-z3] [--require-in-process-z3] [--min-decided-percent P]`
+//!   `[--jobs N] [--manifest-jobs N]`
 //! The default build can run the pure Rust `sat-bv` backend. Build with
 //! `--features z3` (or `z3-static`) to enable the Z3 oracle backend.
 
@@ -232,6 +233,7 @@ mod run {
         require_deterministic_resources: bool,
         min_decided_percent: Option<f64>,
         jobs: usize,
+        manifest_jobs: usize,
     }
 
     fn parse_args() -> Result<Args, String> {
@@ -275,6 +277,7 @@ mod run {
             require_deterministic_resources: false,
             min_decided_percent: None,
             jobs: 1,
+            manifest_jobs: 1,
         };
         while let Some(flag) = args.next() {
             parse_option(&mut parsed, &flag, &mut args)?;
@@ -453,6 +456,14 @@ mod run {
                     .map_err(|e| format!("{e}"))?;
                 if parsed.jobs == 0 {
                     return Err("`--jobs` must be at least 1".to_owned());
+                }
+            }
+            "--manifest-jobs" => {
+                parsed.manifest_jobs = next_value(args, flag)?
+                    .parse()
+                    .map_err(|e| format!("{e}"))?;
+                if parsed.manifest_jobs == 0 {
+                    return Err("`--manifest-jobs` must be at least 1".to_owned());
                 }
             }
             other => return Err(format!("unknown flag `{other}`")),
@@ -1359,7 +1370,7 @@ mod run {
                 .out
                 .as_deref()
                 .expect("generation mode was validated to require --out");
-            return match generate_corpus_manifest(&args.dir, index_path, out) {
+            return match generate_corpus_manifest(&args.dir, index_path, out, args.manifest_jobs) {
                 Ok(()) => ExitCode::SUCCESS,
                 Err(error) => {
                     eprintln!("{error}");
@@ -5232,6 +5243,7 @@ mod run {
             "selected_families": optional_strings(&args.families),
             "timeout_ms": args.timeout_ms,
             "jobs": usize_to_u64(args.jobs),
+            "manifest_validation_jobs": usize_to_u64(args.manifest_jobs),
             "resource_limit": optional_u64(args.resource_limit),
             "node_budget": optional_u64(args.node_budget),
             "cnf_variable_budget": optional_u64(args.cnf_variable_budget),
@@ -5907,6 +5919,7 @@ mod run {
         update_hash(&mut hash, args.dir.display().to_string().as_bytes());
         update_hash(&mut hash, &args.timeout_ms.to_le_bytes());
         update_hash(&mut hash, &usize_to_u64(args.jobs).to_le_bytes());
+        update_hash(&mut hash, &usize_to_u64(args.manifest_jobs).to_le_bytes());
         update_hash(&mut hash, &usize_to_u64(args.limit).to_le_bytes());
         let effective_source = args
             .corpus_source
@@ -6043,6 +6056,7 @@ mod run {
         root: &Path,
         index_path: &Path,
         output_path: &Path,
+        manifest_jobs: usize,
     ) -> Result<(), String> {
         if index_path == output_path {
             return Err(
@@ -6051,8 +6065,13 @@ mod run {
         }
         let index_bytes = fs::read(index_path)
             .map_err(|error| format!("read capture index {}: {error}", index_path.display()))?;
-        let manifest_bytes =
-            render_corpus_manifest_from_capture_index(root, index_path, &index_bytes, output_path)?;
+        let manifest_bytes = render_corpus_manifest_from_capture_index(
+            root,
+            index_path,
+            &index_bytes,
+            output_path,
+            manifest_jobs,
+        )?;
         fs::write(output_path, manifest_bytes).map_err(|error| {
             format!(
                 "write generated corpus manifest {}: {error}",
@@ -6066,6 +6085,7 @@ mod run {
         index_path: &Path,
         bytes: &[u8],
         generated_path: &Path,
+        manifest_jobs: usize,
     ) -> Result<Vec<u8>, String> {
         let value: JsonValue = serde_json::from_slice(bytes)
             .map_err(|error| format!("parse capture index {}: {error}", index_path.display()))?;
@@ -6097,10 +6117,21 @@ mod run {
             return Err("capture index `files` must not be empty".to_owned());
         }
 
+        let pool = rayon::ThreadPoolBuilder::new()
+            .num_threads(manifest_jobs)
+            .build()
+            .map_err(|error| format!("build manifest validation pool: {error}"))?;
+        let parsed = pool.install(|| {
+            file_values
+                .par_iter()
+                .enumerate()
+                .map(|(index, value)| parse_capture_index_entry(root, index, value))
+                .collect::<Vec<_>>()
+        });
         let mut paths = BTreeSet::new();
-        let mut entries = Vec::with_capacity(file_values.len());
-        for (index, value) in file_values.iter().enumerate() {
-            let entry = parse_capture_index_entry(root, index, value)?;
+        let mut entries = Vec::with_capacity(parsed.len());
+        for result in parsed {
+            let entry = result?;
             if !paths.insert(entry.path.clone()) {
                 return Err(format!("duplicate capture index path `{}`", entry.path));
             }
@@ -6134,7 +6165,7 @@ mod run {
 
         // Exercise the exact benchmark ingestion path before writing anything.
         // This also protects the generator and consumer from schema drift.
-        parse_corpus_manifest(root, generated_path, &rendered, None)?;
+        parse_corpus_manifest(root, generated_path, &rendered, None, manifest_jobs)?;
         Ok(rendered)
     }
 
@@ -6219,6 +6250,7 @@ mod run {
             manifest_path,
             &bytes,
             args.corpus_tier.as_deref(),
+            args.manifest_jobs,
         )?;
         if let Some(source) = &args.corpus_source
             && source != &manifest.source
@@ -6252,6 +6284,7 @@ mod run {
         manifest_path: &Path,
         bytes: &[u8],
         selected_tier: Option<&str>,
+        manifest_jobs: usize,
     ) -> Result<CorpusManifestSelection, String> {
         if let Some(tier) = selected_tier {
             validate_manifest_label(tier, "selected tier")?;
@@ -6282,7 +6315,7 @@ mod run {
             return Err("corpus manifest `files` must not be empty".to_owned());
         }
 
-        let all_entries = parse_manifest_entries(root, file_values)?;
+        let all_entries = parse_manifest_entries(root, file_values, manifest_jobs)?;
         validate_manifest_membership(root, &all_entries)?;
 
         let entries = all_entries
@@ -6314,11 +6347,23 @@ mod run {
     fn parse_manifest_entries(
         root: &Path,
         values: &[JsonValue],
+        manifest_jobs: usize,
     ) -> Result<Vec<CorpusManifestEntry>, String> {
-        let mut entries = Vec::with_capacity(values.len());
+        let pool = rayon::ThreadPoolBuilder::new()
+            .num_threads(manifest_jobs)
+            .build()
+            .map_err(|error| format!("build manifest validation pool: {error}"))?;
+        let parsed = pool.install(|| {
+            values
+                .par_iter()
+                .enumerate()
+                .map(|(index, value)| parse_manifest_entry(root, index, value))
+                .collect::<Vec<_>>()
+        });
+        let mut entries = Vec::with_capacity(parsed.len());
         let mut paths = BTreeSet::new();
-        for (index, value) in values.iter().enumerate() {
-            let entry = parse_manifest_entry(root, index, value)?;
+        for result in parsed {
+            let entry = result?;
             if !paths.insert(entry.path.clone()) {
                 return Err(format!("duplicate corpus manifest path `{}`", entry.path));
             }
@@ -6786,6 +6831,7 @@ mod run {
                 Path::new("micro-manifest.json"),
                 &bytes,
                 Some("representative"),
+                2,
             )
             .unwrap();
             assert_eq!(selection.total_entries, 3);
@@ -6804,6 +6850,7 @@ mod run {
                 Path::new("capture-index.json"),
                 &index,
                 Path::new("generated-manifest.json"),
+                1,
             )
             .unwrap();
             let second = render_corpus_manifest_from_capture_index(
@@ -6811,6 +6858,7 @@ mod run {
                 Path::new("capture-index.json"),
                 &index,
                 Path::new("generated-manifest.json"),
+                3,
             )
             .unwrap();
             assert_eq!(first, second);
@@ -6821,6 +6869,7 @@ mod run {
                 Path::new("generated-manifest.json"),
                 &first,
                 Some("representative"),
+                2,
             )
             .unwrap();
             assert_eq!(selection.total_entries, 3);
@@ -6841,6 +6890,7 @@ mod run {
                 Path::new("capture-index.json"),
                 &serde_json::to_vec(&stale_hash).unwrap(),
                 Path::new("generated-manifest.json"),
+                2,
             )
             .unwrap_err();
             assert!(error.contains("unknown field `content_hash`"), "{error}");
@@ -6852,6 +6902,7 @@ mod run {
                 Path::new("capture-index.json"),
                 &serde_json::to_vec(&incomplete).unwrap(),
                 Path::new("generated-manifest.json"),
+                2,
             )
             .unwrap_err();
             assert!(
@@ -6871,6 +6922,7 @@ mod run {
                 Path::new("micro-manifest.json"),
                 &serde_json::to_vec(&drifted).unwrap(),
                 None,
+                2,
             )
             .unwrap_err();
             assert!(error.contains("hash mismatch"), "{error}");
@@ -6882,6 +6934,7 @@ mod run {
                 Path::new("micro-manifest.json"),
                 &serde_json::to_vec(&incomplete).unwrap(),
                 None,
+                2,
             )
             .unwrap_err();
             assert!(error.contains("membership mismatch"), "{error}");
@@ -6897,6 +6950,7 @@ mod run {
                 Path::new("micro-manifest.json"),
                 &serde_json::to_vec(&unsafe_path).unwrap(),
                 None,
+                2,
             )
             .unwrap_err();
             assert!(error.contains("normalized relative"), "{error}");
@@ -6909,6 +6963,7 @@ mod run {
                 Path::new("micro-manifest.json"),
                 &serde_json::to_vec(&duplicate).unwrap(),
                 None,
+                2,
             )
             .unwrap_err();
             assert!(error.contains("duplicate corpus manifest path"), "{error}");
@@ -6918,6 +6973,7 @@ mod run {
                 Path::new("micro-manifest.json"),
                 &serde_json::to_vec(&micro_manifest_value()).unwrap(),
                 Some("nightly"),
+                2,
             )
             .unwrap_err();
             assert!(error.contains("selects no files"), "{error}");

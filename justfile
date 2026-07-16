@@ -109,9 +109,9 @@ bench-micro-z3:
 # Deterministically bind a shadow-diff capture index's trusted verdict/family/tier
 # facts to the exact `.smt2` bytes. The generator rejects missing or unlisted
 # queries and validates its output through the benchmark's normal manifest path.
-generate-glaurung-manifest corpus_dir capture_index out:
+generate-glaurung-manifest corpus_dir capture_index out manifest_jobs="8":
     mkdir -p "$(dirname '{{ out }}')"
-    cargo run --release -p axeyum-bench -- "{{ corpus_dir }}" --generate-corpus-manifest "{{ capture_index }}" --out "{{ out }}"
+    cargo run --release -p axeyum-bench -- "{{ corpus_dir }}" --generate-corpus-manifest "{{ capture_index }}" --manifest-jobs "{{ manifest_jobs }}" --out "{{ out }}"
 
 # Primary client-tier QF_BV gates. `corpus_dir` is an externally captured,
 # redistributable Glaurung SMT-LIB query directory and its v1 manifest; the
