@@ -322,6 +322,25 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-16 — ADR-0207 closes the widened concat error class and isolates
+  the remaining timeout policy.** Glaurung's strict 60-second tcpip pack
+  validates 784 distinct splits / 234,463,502 bytes; 733 are Axeyum errors with
+  the same `extract [63:8] out of range for width 57` cause. A one-bit `setcc`
+  child entered a concat declared as 56+8 bits, but the text/Z3/Axeyum consumers
+  ignored those declared halves; Z3's later coercion hid the mismatch and used
+  the wrong bit placement. Glaurung `d60ed0f` coerces both concat children at
+  every boundary while Axeyum stays strict. Renderer/Z3/Axeyum regressions and
+  all 43 backend tests pass. Exact reruns remove all adapter errors and warm
+  resets: tcpip executes 72,291 queries with 55 split occurrences / 15 Axeyum
+  nondecisions at 1.9x Z3; dxgkrnl executes 17,712 with zero Axeyum
+  nondecisions at 2.7x. Axeyum cold replay decides all nine Z3-decided tcpip
+  residual formulas (9/9 expected), while the 250 ms control decides 5/9 and
+  returns four explicit `Unknown(Timeout)`; SAT is 93.2% of their diagnostic
+  pipeline. Glaurung `0249d44`/`7b1671e` archive exact pre/post LFS packs and
+  manifests. Measure warm-state versus cold fallback, then run full-budget and
+  repeated findings/RSS/variance gates; direct stays opt-in and `win32k` stays
+  a frontend coverage gap.
+
 - **2026-07-16 — ADR-0206 turns the widened `tcpip` failure into an exact
   corpus boundary.** At the standard 600-second per-function ceiling,
   `tcpip` expands from the reported 33,501-query diagnostic tier to 70,639
@@ -3589,7 +3608,7 @@ plan is built and committed on the current branch:
 ### Track 4 — Use Cases & Frontend
 | Phase | Title | Status |
 |---|---|---|
-| P4.1j | Glaurung warm delta and duplicate/prefix reuse (GQ7/GQ8) | **DONE for current serial/source-direct families; widening attribution active.** ADR-0186/0192/0193/0195/0196/0199 establish adaptive snapshot ownership and serial LCP reuse. ADR-0201--0205 accept first-class source deltas and the two-driver production win. ADR-0206 blocks `tcpip` admission on 973 full-budget decided/nondecided splits and supplies exact corpus capture; direct remains opt-in. |
+| P4.1j | Glaurung warm delta and duplicate/prefix reuse (GQ7/GQ8) | **DONE for current serial/source-direct families; widened timeout gate active.** ADR-0186/0192/0193/0195/0196/0199 establish adaptive snapshot ownership and serial LCP reuse. ADR-0201--0205 accept first-class source deltas and the two-driver production win. ADR-0206/0207 capture the widened split corpus, close Glaurung's declared-concat error class, and isolate nine correct-but-budget-sensitive tcpip formulas. Direct remains opt-in pending full-budget and repeated findings/RSS/variance gates. |
 | P4.1e | Retained warm Boolean array relation flags | **DONE (ADR-0091)** — symbolic-memory path conditions can keep nested supported array equality atoms warm through private candidate-sensitive relation flags, guarded equality/diff observations, projection filtering, and replay |
 | P4.1h | Retained warm nested array-valued UF parameters | **DONE (ADR-0094)** — nested supported array-valued memory/function parameters can stay warm as full-value UF keys through private projection keys or rewritten structural keys, with relation-flag guarded congruence, private filtering, and replay |
 | P4.1g | Retained warm structural array-valued UF parameters | **DONE (ADR-0093)** — supported store/constant/array-ITE memory/function parameters can stay warm as full-value UF keys with scalar dependency retention, structural owner realization, relation-flag guarded congruence, private filtering, and replay; ADR-0094 subsequently lands nested application keys |
@@ -3611,6 +3630,13 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-16 — ADR-0207 accepts Glaurung's declared-concat soundness fix.**
+  Strict replay turns 733 tcpip Axeyum errors into one 57-bit concat root cause;
+  Glaurung `d60ed0f` now honors both declared halves in text/Z3/Axeyum. Post-fix
+  tcpip/dxgkrnl have zero adapter errors, resets, or SAT/UNSAT disagreements and
+  remain 1.9x/2.7x faster. All nine residual Z3-decided tcpip formulas decide
+  cold; four exceed 250 ms and are explicit timeouts. Pre/post LFS corpora plus
+  Axeyum manifests are pushed at Glaurung `0249d44`/`7b1671e`.
 - **2026-07-16 — ADR-0206 accepts exact Glaurung shadow-split capture.** A
   full-budget `tcpip` run exposes 973 decided/nondecided splits, 925 warm resets,
   and 480 assertion fallbacks across 70,639 queries, so the 33,501-query sweep
