@@ -34,7 +34,7 @@ PHASES = (
 
 def record(sequence: int, *, path_created: bool, query: str) -> dict[str, object]:
     row: dict[str, object] = {
-        "schema": "glaurung-axeyum-warm-profile-v5",
+        "schema": "glaurung-axeyum-warm-profile-v6",
         "process_id": 17,
         "sequence": sequence,
         "query_hash": query,
@@ -108,6 +108,18 @@ def record(sequence: int, *, path_created: bool, query: str) -> dict[str, object
         "term_bit_bindings": 33,
         "symbol_bit_inputs": 2,
     }
+    row["model_lift_nanos"] = 20
+    row["unattributed_nanos"] = 0
+    row["model_lift_work"] = {
+        "aig_recompute_nanos": 5,
+        "assignment_reconstruct_nanos": 7,
+        "model_completion_nanos": 8,
+        "aig_nodes_recomputed": 10,
+        "symbol_bit_inputs_scanned": 2,
+        "assignment_symbols_produced": 1,
+        "arena_symbols_scanned": 1,
+        "completed_model_values": 1,
+    }
     row["replay_sat_cache"] = {field: 0 for field in MODULE.REPLAY_SAT_CACHE_FIELDS}
     row["replay_sat_cache"].update(
         {
@@ -160,6 +172,8 @@ class WarmProfileSummaryTests(unittest.TestCase):
         )
         self.assertEqual(summary["aig_construction_totals"]["and_requests"], 10)
         self.assertEqual(summary["lowering_work_totals"]["operand_bits_copied"], 128)
+        self.assertEqual(summary["model_lift_work_totals"]["aig_recompute_nanos"], 10)
+        self.assertEqual(summary["model_lift_work_totals"]["aig_nodes_recomputed"], 20)
         self.assertEqual(summary["replay_sat_cache"]["hits"], 1)
         self.assertEqual(summary["replay_sat_cache"]["misses"], 1)
         self.assertEqual(summary["replay_sat_cache"]["insertions"], 1)
@@ -218,6 +232,12 @@ class WarmProfileSummaryTests(unittest.TestCase):
             with self.assertRaisesRegex(MODULE.ProfileError, "hit/miss partition"):
                 MODULE.summarize([profile])
 
+            bad_lift = record(0, path_created=True, query=query)
+            bad_lift["model_lift_work"]["model_completion_nanos"] = 9
+            profile.write_text(json.dumps(bad_lift) + "\n", encoding="utf-8")
+            with self.assertRaisesRegex(MODULE.ProfileError, "subphases exceed"):
+                MODULE.summarize([profile])
+
     def test_accepts_historical_v1_without_gate_totals(self) -> None:
         query = "sha256:" + "c" * 64
         historical = record(0, path_created=True, query=query)
@@ -225,6 +245,7 @@ class WarmProfileSummaryTests(unittest.TestCase):
         del historical["cnf_gate_mix"]
         del historical["aig_construction"]
         del historical["lowering_work"]
+        del historical["model_lift_work"]
         with tempfile.TemporaryDirectory() as directory:
             profile = Path(directory) / "profile.jsonl"
             profile.write_text(json.dumps(historical) + "\n", encoding="utf-8")
@@ -240,6 +261,7 @@ class WarmProfileSummaryTests(unittest.TestCase):
         historical["schema"] = "glaurung-axeyum-warm-profile-v2"
         del historical["aig_construction"]
         del historical["lowering_work"]
+        del historical["model_lift_work"]
         for field in set(MODULE.GATE_MIX_V3_FIELDS) - set(MODULE.GATE_MIX_V2_FIELDS):
             del historical["cnf_gate_mix"][field]
         with tempfile.TemporaryDirectory() as directory:
@@ -259,6 +281,7 @@ class WarmProfileSummaryTests(unittest.TestCase):
         historical["schema"] = "glaurung-axeyum-warm-profile-v3"
         del historical["aig_construction"]
         del historical["lowering_work"]
+        del historical["model_lift_work"]
         with tempfile.TemporaryDirectory() as directory:
             profile = Path(directory) / "profile.jsonl"
             profile.write_text(json.dumps(historical) + "\n", encoding="utf-8")
@@ -274,6 +297,7 @@ class WarmProfileSummaryTests(unittest.TestCase):
         historical = record(0, path_created=True, query=query)
         historical["schema"] = "glaurung-axeyum-warm-profile-v4"
         del historical["replay_sat_cache"]
+        del historical["model_lift_work"]
         with tempfile.TemporaryDirectory() as directory:
             profile = Path(directory) / "profile.jsonl"
             profile.write_text(json.dumps(historical) + "\n", encoding="utf-8")
@@ -283,6 +307,21 @@ class WarmProfileSummaryTests(unittest.TestCase):
         self.assertEqual(summary["profile_schemas"], [historical["schema"]])
         self.assertIn("aig_construction_totals", summary)
         self.assertNotIn("replay_sat_cache", summary)
+
+    def test_accepts_historical_v5_without_model_lift_work(self) -> None:
+        query = "sha256:" + "1" * 64
+        historical = record(0, path_created=True, query=query)
+        historical["schema"] = "glaurung-axeyum-warm-profile-v5"
+        del historical["model_lift_work"]
+        with tempfile.TemporaryDirectory() as directory:
+            profile = Path(directory) / "profile.jsonl"
+            profile.write_text(json.dumps(historical) + "\n", encoding="utf-8")
+
+            summary = MODULE.summarize([profile])
+
+        self.assertEqual(summary["profile_schemas"], [historical["schema"]])
+        self.assertIn("replay_sat_cache", summary)
+        self.assertNotIn("model_lift_work_totals", summary)
 
 
 if __name__ == "__main__":

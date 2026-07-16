@@ -19,6 +19,7 @@ PROFILE_SCHEMAS = (
     "glaurung-axeyum-warm-profile-v3",
     "glaurung-axeyum-warm-profile-v4",
     "glaurung-axeyum-warm-profile-v5",
+    "glaurung-axeyum-warm-profile-v6",
 )
 SUMMARY_SCHEMA = "axeyum-glaurung-warm-profile-summary-v1"
 QUERY_HASH = re.compile(r"sha256:[0-9a-f]{64}\Z")
@@ -120,6 +121,16 @@ LOWERING_WORK_FIELDS = (
     "memoized_terms",
     "term_bit_bindings",
     "symbol_bit_inputs",
+)
+MODEL_LIFT_WORK_FIELDS = (
+    "aig_recompute_nanos",
+    "assignment_reconstruct_nanos",
+    "model_completion_nanos",
+    "aig_nodes_recomputed",
+    "symbol_bit_inputs_scanned",
+    "assignment_symbols_produced",
+    "arena_symbols_scanned",
+    "completed_model_values",
 )
 REPLAY_SAT_CACHE_FIELDS = (
     "enabled",
@@ -308,7 +319,7 @@ def validate_record(row: Any, location: str) -> dict[str, Any]:
             != counts["aig_nodes_added"]
         ):
             raise ProfileError(f"{location}: AIG node allocation partition mismatch")
-    if row["schema"] == PROFILE_SCHEMAS[4]:
+    if row["schema"] in PROFILE_SCHEMAS[4:]:
         cache = row.get("replay_sat_cache")
         if not isinstance(cache, dict) or set(cache) != set(REPLAY_SAT_CACHE_FIELDS):
             raise ProfileError(
@@ -355,6 +366,38 @@ def validate_record(row: Any, location: str) -> dict[str, Any]:
                     raise ProfileError(
                         f"{location}: replay cache {gauge} exceeds {bound}"
                     )
+    if row["schema"] == PROFILE_SCHEMAS[5]:
+        work = row.get("model_lift_work")
+        if not isinstance(work, dict) or set(work) != set(MODEL_LIFT_WORK_FIELDS):
+            raise ProfileError(
+                f"{location}: model_lift_work has an incomplete field set"
+            )
+        for field in MODEL_LIFT_WORK_FIELDS:
+            nonnegative_int(work, field, f"{location}:model_lift_work")
+        nested_nanos = sum(
+            work[field]
+            for field in (
+                "aig_recompute_nanos",
+                "assignment_reconstruct_nanos",
+                "model_completion_nanos",
+            )
+        )
+        if nested_nanos > row["model_lift_nanos"]:
+            raise ProfileError(
+                f"{location}: model-lift subphases exceed model_lift_nanos"
+            )
+        if work["symbol_bit_inputs_scanned"] > work["aig_nodes_recomputed"]:
+            raise ProfileError(
+                f"{location}: model-lift symbol bits exceed recomputed AIG nodes"
+            )
+        if work["assignment_symbols_produced"] > work["arena_symbols_scanned"]:
+            raise ProfileError(
+                f"{location}: reconstructed symbols exceed scanned arena symbols"
+            )
+        if work["completed_model_values"] > work["arena_symbols_scanned"]:
+            raise ProfileError(
+                f"{location}: completed values exceed scanned arena symbols"
+            )
     return row
 
 
@@ -484,7 +527,12 @@ def summarize(paths: list[Path]) -> dict[str, Any]:
             field: sum(row["lowering_work"][field] for row in records)
             for field in LOWERING_WORK_FIELDS
         }
-    if len(schemas) == 1 and schemas[0] == PROFILE_SCHEMAS[4]:
+    if len(schemas) == 1 and schemas[0] == PROFILE_SCHEMAS[5]:
+        summary["model_lift_work_totals"] = {
+            field: sum(row["model_lift_work"][field] for row in records)
+            for field in MODEL_LIFT_WORK_FIELDS
+        }
+    if len(schemas) == 1 and schemas[0] in PROFILE_SCHEMAS[4:]:
         policies = {
             (
                 row["replay_sat_cache"]["enabled"],
