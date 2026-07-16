@@ -504,6 +504,13 @@ Out of scope:
     default remains deferred for `tcpip`/`dxgkrnl` widening and a rejected
     exclusive-control Z3-drift alarm; see
     [ADR-0205](../09-decisions/adr-0205-accept-source-prefix-production-gate.md).
+- [x] How should a real-client shadow run preserve decided/nondecided splits?
+  - Answer: only under an explicit combined-shadow diagnostic, atomically write
+    the exact content-addressed SMT-LIB bytes and stable backend result classes
+    whenever exactly one backend decides SAT/UNSAT. Do not count both-unknown
+    rows, store unstable error text, or treat zero SAT/UNSAT disagreements as
+    parity when unknown splits exist; see
+    [ADR-0206](../09-decisions/adr-0206-glaurung-shadow-unknown-split-corpus.md).
 - [x] What may an exact-verdict cache reuse without weakening evidence?
   - Answer: initially only an exact scalar SAT duplicate inside the same
     arena-bound `IncrementalBvSolver`, keyed by exact ordered assertion terms,

@@ -322,6 +322,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-16 — ADR-0206 turns the widened `tcpip` failure into an exact
+  corpus boundary.** At the standard 600-second per-function ceiling,
+  `tcpip` expands from the reported 33,501-query diagnostic tier to 70,639
+  queries. SAT/UNSAT disagreements stay zero, but Z3 has 43 non-decisions,
+  Axeyum 936, and 973 occurrences are decided by exactly one backend; 925 warm
+  resets and 480 assertion-cap fallbacks also occur. Axeyum remains 1.7x faster
+  at 440,384 KiB RSS, but the row fails parity. Glaurung `a6a5cc0` adds
+  `GLAURUNG_DUMP_SHADOW_SPLITS`: exact atomic SMT-LIB bytes plus stable backend
+  classes only for decided/nondecided splits. Four combined-feature tests pass.
+  Capture the 60-second `tcpip`/`dxgkrnl` split corpora and attribute timeout,
+  error, reset, and fallback before adding either to GQ10.
+
 - **2026-07-16 — ADR-0205 accepts the source-prefix production win and moves
   next to large-driver widening.** Glaurung `29031f8` commits a clean
   92,721-check artifact with 100% Z3 agreement, unchanged findings, zero
@@ -1774,12 +1786,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   | **GQ7 warm delta entry** | **Source-identity functionality and current production comparison DONE (ADR-0201--0205; Glaurung `29031f8`).** The 92,721-check serial-default comparison passes every correctness/time/ratio/RSS alarm; exclusive causal control remains rejected on Z3 drift | Keep direct opt-in; widen to tcpip/dxgkrnl, then revisit default and order-balanced causal evidence |
   | **GQ8 verdict/CNF cache** | **DONE for available families (ADR-0192).** Clean repeated evidence admits exact same-arena scalar SAT reuse only in path-owned Glaurung sessions; fixed bounds, traffic partitions, cleanup gauges, findings, and replay are enforced | Preserve explicit off and re-gate new families; Axeyum's generic cache remains opt-in and ordinary UNSAT/Unknown/prefix verdicts remain excluded |
   | **GQ9 auto cost model/docs** | **DONE for available families (ADR-0186).** Clean adaptive repeat clears every alarm over 92,721 checks; downstream explorer default has explicit off/fixed controls | Re-gate newly captured families; do not broaden this Glaurung-specific default into Axeyum's generic API |
-  | **GQ10 real-lifter regression tier** | **Current gates DONE; tcpip/dxgkrnl widening ACTIVE (ADR-0205).** Their first 51,073 checks are disagreement-free at 2.5x/4.7x speedup but lack repetitions/RSS | Add exact traffic and repeated artifacts; investigate zero-query win32k separately without counting it as solver coverage |
+  | **GQ10 real-lifter regression tier** | **Widening blocked on exact split attribution (ADR-0205/0206).** Full-budget tcpip reaches 70,639 queries with 973 decided/nondecided splits despite zero SAT/UNSAT disagreements | Capture 60-second tcpip/dxgkrnl split SMT-LIB corpora, attribute causes, then define repeated tiers; zero-query win32k remains separate |
 
-  **Next actions:** (1) add `tcpip` and `dxgkrnl` to Glaurung's fail-closed
-  lineage gate with exact source bytes, query/traffic/finding identity, repeated
-  time/ratio/RSS, and 4 GiB controls; (2) inspect `win32k` dispatch recovery as
-  a frontend coverage issue, never a zero-query solver success; (3) rerun the
+  **Next actions:** (1) rebuild Glaurung `a6a5cc0` and capture exact 60-second
+  `tcpip`/`dxgkrnl` decided/nondecided SMT-LIB corpora; (2) classify timeout,
+  translation/error, warm reset, and assertion fallback before selecting
+  Axeyum/client work or a repeated tier; (3) inspect `win32k` dispatch recovery
+  as a frontend coverage issue, never a zero-query solver success; (4) rerun the
   exclusive-direct causal comparison only with order-balanced Z3 drift control;
   (2) obtain fresh native canonical-stage attribution and select any new GQ5/GQ6
   work only from a larger measured residual, not another primary-table analogy;
@@ -3576,7 +3589,7 @@ plan is built and committed on the current branch:
 ### Track 4 — Use Cases & Frontend
 | Phase | Title | Status |
 |---|---|---|
-| P4.1j | Glaurung warm delta and duplicate/prefix reuse (GQ7/GQ8) | **DONE for current serial/source-direct families; widening active.** ADR-0186/0192/0193/0195/0196/0199 establish adaptive snapshot ownership and serial LCP reuse. ADR-0201--0204 add first-class source-identity deltas; ADR-0205 accepts the repeated two-driver production time/ratio/RSS win while keeping direct opt-in for `tcpip`/`dxgkrnl` widening and a rejected causal Z3-drift control. |
+| P4.1j | Glaurung warm delta and duplicate/prefix reuse (GQ7/GQ8) | **DONE for current serial/source-direct families; widening attribution active.** ADR-0186/0192/0193/0195/0196/0199 establish adaptive snapshot ownership and serial LCP reuse. ADR-0201--0205 accept first-class source deltas and the two-driver production win. ADR-0206 blocks `tcpip` admission on 973 full-budget decided/nondecided splits and supplies exact corpus capture; direct remains opt-in. |
 | P4.1e | Retained warm Boolean array relation flags | **DONE (ADR-0091)** — symbolic-memory path conditions can keep nested supported array equality atoms warm through private candidate-sensitive relation flags, guarded equality/diff observations, projection filtering, and replay |
 | P4.1h | Retained warm nested array-valued UF parameters | **DONE (ADR-0094)** — nested supported array-valued memory/function parameters can stay warm as full-value UF keys through private projection keys or rewritten structural keys, with relation-flag guarded congruence, private filtering, and replay |
 | P4.1g | Retained warm structural array-valued UF parameters | **DONE (ADR-0093)** — supported store/constant/array-ITE memory/function parameters can stay warm as full-value UF keys with scalar dependency retention, structural owner realization, relation-flag guarded congruence, private filtering, and replay; ADR-0094 subsequently lands nested application keys |
@@ -3598,6 +3611,12 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-16 — ADR-0206 accepts exact Glaurung shadow-split capture.** A
+  full-budget `tcpip` run exposes 973 decided/nondecided splits, 925 warm resets,
+  and 480 assertion fallbacks across 70,639 queries, so the 33,501-query sweep
+  is explicitly truncated rather than admitted. Glaurung `a6a5cc0` atomically
+  captures exact split SMT-LIB bytes and stable result classes; four combined-
+  feature tests pass. Build the 60-second tcpip/dxgkrnl corpora next.
 - **2026-07-16 — ADR-0205 accepts the source-prefix production gate.** Glaurung
   `29031f8` commits 92,721 exact checks and a passing serial-snapshot comparison:
   SurfacePen time/ratio/RSS improve 16.11%/17.39%/0.36%; NETwtw10 improve
