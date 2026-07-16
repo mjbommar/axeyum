@@ -322,10 +322,24 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-16 — ADR-0190 implements the opt-in GQ8 SAT cache.** Each
+  arena-bound incremental solver may explicitly enable caller-supplied entry
+  model-value, and payload-bit bounds. Exact original assertion order, every frame boundary,
+  and assumption order are compared directly; deterministic LRU eviction is
+  total and bounded. Hits return only after original-term replay. Ordinary
+  UNSAT/Unknown/oversized results are counted but never inserted, and replay
+  corruption is evicted and fails closed. Full/minimal focused tests,
+  all-feature Clippy, links/format, and 876/876 all-feature library tests pass.
+  The cache-disabled corrected Glaurung raw/canonical gate remains 162/162
+  decided/agreed with zero errors, unknowns, or replay failures. Next wire an
+  explicit cache-off/cache-on Glaurung ordered control and gate
+  exact traffic, models/findings, latency, total time, and RSS before any
+  default.
+
 - **2026-07-16 — ADR-0189 accepts the GQ8 replay boundary.** The first
   verdict cache is explicit/off, per arena-bound `IncrementalBvSolver`, and
-  scalar-SAT-only. Exact ordered active assertions and one-shot assumptions
-  are collision-checked identity; every hit runs the existing original-term
+  scalar-SAT-only. Exact ordered active assertions, scope boundaries, and
+  one-shot assumptions are collision-checked identity; every hit runs the existing original-term
   model replay. Ordinary UNSAT, `Unknown`, errors, assumption cores, and strict
   prefixes are not cache entries. UNSAT waits for source-bound proof recheck;
   prefixes remain GQ7 retained-state reuse. Next implement deterministic
@@ -1461,12 +1475,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   | **GQ5 AIG/CNF construction** | **First native AIG tranche accepted (ADR-0175).** Deterministic open addressing improves three-driver Axeyum time 7.66% and ratio 0.742x→0.680x with unchanged structure; internal flattening stays deferred | Yield to GQ7/GQ10; reopen literal ownership or CNF only from fresh causal evidence |
   | **GQ6 cold SAT/CDCL** | **WIP foundation; behind measured CNF.** Accepted-table native lineage SAT is 18.48% weighted versus CNF at 46.55% | Compare identical CNF across cores only after the next CNF decision, with proof replay and deterministic limits |
   | **GQ7 warm delta entry** | **DONE for available families (ADR-0171--0186).** Path-owned delta reuse, 9/512 hard bounds, exact alarms, and adaptive production admission are enforced | Preserve explicit one-shot/fixed controls and re-gate new families |
-  | **GQ8 verdict/CNF cache** | **WIP; soundness contract accepted in ADR-0189.** The first implementation may cache only exact same-arena scalar SAT models with mandatory original-term replay; ordinary UNSAT/Unknown and prefixes are excluded | Implement opt-in deterministic capacity/model-value bounds, eviction/invalidation, telemetry, and focused semantic tests; then gate the ordered same-lineage stream |
+  | **GQ8 verdict/CNF cache** | **WIP; Axeyum opt-in implementation complete in ADR-0190.** Exact same-arena scalar SAT models use assertion/frame/assumption identity, deterministic LRU bounds, telemetry, and mandatory original-term replay; ordinary UNSAT/Unknown and prefixes are excluded | Wire explicit Glaurung cache-off/cache-on ordered controls and gate traffic, model/finding identity, latency, total time, and RSS before admission |
   | **GQ9 auto cost model/docs** | **DONE for available families (ADR-0186).** Clean adaptive repeat clears every alarm over 92,721 checks; downstream explorer default has explicit off/fixed controls | Re-gate newly captured families; do not broaden this Glaurung-specific default into Axeyum's generic API |
   | **GQ10 real-lifter regression tier** | **DONE for available families (ADR-0187/0188).** The corrected 162-query regular pin and repeated 30,628-query full composites have executable alarms | Retain separate cold/ordered/profile bars and re-gate new families |
 
-  **Next actions:** (1) implement ADR-0189's opt-in replay-checked same-arena
-  SAT cache with deterministic entry/model-value bounds and telemetry; (2) preserve the corrected
+  **Next actions:** (1) measure ADR-0190 through explicit Glaurung ordered
+  cache-off/cache-on controls with exact traffic/model/finding/time/RSS gates;
+  (2) preserve the corrected
   representative pin, exact shard union, zero-exclusion rule, and 4 GiB
   process envelope; (3) use
   the new canonical stage balance to select any next GQ5/GQ6 slice through a

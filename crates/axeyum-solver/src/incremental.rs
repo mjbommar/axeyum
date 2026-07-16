@@ -89,6 +89,254 @@ pub struct IncrementalBvStats {
     pub cnf_gate_mix: IncrementalCnfStats,
 }
 
+/// Deterministic storage bounds for the opt-in replay-checked SAT cache.
+///
+/// The cache is disabled unless passed to
+/// [`IncrementalBvSolver::enable_replay_checked_sat_cache`]. `max_model_values`
+/// counts scalar `(SymbolId, Value)` entries across all retained models;
+/// `max_model_bits` independently bounds their Bool/BV payload widths.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ReplayCheckedSatCachePolicy {
+    /// Maximum number of exact query/model entries retained.
+    pub max_entries: usize,
+    /// Maximum total number of scalar model values retained.
+    pub max_model_values: usize,
+    /// Maximum total Bool/BV payload bits retained.
+    pub max_model_bits: usize,
+}
+
+impl ReplayCheckedSatCachePolicy {
+    /// Creates explicit cache bounds.
+    #[must_use]
+    pub const fn new(max_entries: usize, max_model_values: usize, max_model_bits: usize) -> Self {
+        Self {
+            max_entries,
+            max_model_values,
+            max_model_bits,
+        }
+    }
+}
+
+/// Monotone telemetry plus current gauges for the replay-checked SAT cache.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct ReplayCheckedSatCacheStats {
+    /// Exact query identities that returned a model after successful replay.
+    pub hits: u64,
+    /// Queries for which no exact cache entry existed.
+    pub misses: u64,
+    /// Fresh replay-checked SAT models inserted.
+    pub insertions: u64,
+    /// Entries removed by deterministic least-recently-used eviction.
+    pub evictions: u64,
+    /// Exact entries rejected because original-term replay did not verify.
+    pub replay_failures: u64,
+    /// Fresh UNSAT results deliberately not cached without a source-bound proof.
+    pub declined_unsat: u64,
+    /// Fresh `Unknown` results deliberately not cached.
+    pub declined_unknown: u64,
+    /// SAT models larger than the configured total-value bound.
+    pub declined_oversized_models: u64,
+    /// SAT models containing values outside scalar `Bool`/`QF_BV`.
+    pub declined_non_scalar_models: u64,
+    /// Current retained entry count.
+    pub entries: u64,
+    /// Current total scalar model-value count.
+    pub model_values: u64,
+    /// Current total Bool/BV payload-bit count.
+    pub model_bits: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct ReplayCheckedSatCacheEntry {
+    assertions: Vec<TermId>,
+    scope_ends: Vec<usize>,
+    assumptions: Vec<TermId>,
+    model: Model,
+    model_values: usize,
+    model_bits: usize,
+    last_used: u64,
+}
+
+#[derive(Debug, Default)]
+struct ReplayCheckedSatCache {
+    policy: Option<ReplayCheckedSatCachePolicy>,
+    entries: Vec<ReplayCheckedSatCacheEntry>,
+    total_model_values: usize,
+    total_model_bits: usize,
+    clock: u64,
+    stats: ReplayCheckedSatCacheStats,
+}
+
+impl ReplayCheckedSatCache {
+    fn enable(&mut self, policy: ReplayCheckedSatCachePolicy) -> Result<(), SolverError> {
+        if policy.max_entries == 0 || policy.max_model_values == 0 || policy.max_model_bits == 0 {
+            return Err(SolverError::Backend(
+                "replay-checked SAT cache bounds must all be nonzero".to_owned(),
+            ));
+        }
+        *self = Self {
+            policy: Some(policy),
+            ..Self::default()
+        };
+        Ok(())
+    }
+
+    fn disable(&mut self) {
+        *self = Self::default();
+    }
+
+    fn is_enabled(&self) -> bool {
+        self.policy.is_some()
+    }
+
+    fn stats(&self) -> ReplayCheckedSatCacheStats {
+        ReplayCheckedSatCacheStats {
+            entries: usize_to_u64(self.entries.len()),
+            model_values: usize_to_u64(self.total_model_values),
+            model_bits: usize_to_u64(self.total_model_bits),
+            ..self.stats
+        }
+    }
+
+    fn probe(
+        &mut self,
+        assertions: &[TermId],
+        scope_ends: &[usize],
+        assumptions: &[TermId],
+    ) -> Option<Model> {
+        let index = self.entries.iter().position(|entry| {
+            entry.assertions == assertions
+                && entry.scope_ends == scope_ends
+                && entry.assumptions == assumptions
+        });
+        let Some(index) = index else {
+            self.stats.misses = self.stats.misses.saturating_add(1);
+            return None;
+        };
+        let stamp = self.next_stamp();
+        self.entries[index].last_used = stamp;
+        Some(self.entries[index].model.clone())
+    }
+
+    fn record_hit(&mut self) {
+        self.stats.hits = self.stats.hits.saturating_add(1);
+    }
+
+    fn reject_hit(&mut self, assertions: &[TermId], scope_ends: &[usize], assumptions: &[TermId]) {
+        self.stats.replay_failures = self.stats.replay_failures.saturating_add(1);
+        if let Some(index) = self.entries.iter().position(|entry| {
+            entry.assertions == assertions
+                && entry.scope_ends == scope_ends
+                && entry.assumptions == assumptions
+        }) {
+            let removed = self.entries.remove(index);
+            self.total_model_values = self.total_model_values.saturating_sub(removed.model_values);
+            self.total_model_bits = self.total_model_bits.saturating_sub(removed.model_bits);
+        }
+    }
+
+    fn observe_fresh(
+        &mut self,
+        assertions: &[TermId],
+        scope_ends: &[usize],
+        assumptions: &[TermId],
+        result: &CheckResult,
+    ) {
+        let Some(policy) = self.policy else {
+            return;
+        };
+        let CheckResult::Sat(model) = result else {
+            match result {
+                CheckResult::Unsat => {
+                    self.stats.declined_unsat = self.stats.declined_unsat.saturating_add(1);
+                }
+                CheckResult::Unknown(_) => {
+                    self.stats.declined_unknown = self.stats.declined_unknown.saturating_add(1);
+                }
+                CheckResult::Sat(_) => unreachable!(),
+            }
+            return;
+        };
+        let Some((model_values, model_bits)) = scalar_model_cost(model) else {
+            self.stats.declined_non_scalar_models =
+                self.stats.declined_non_scalar_models.saturating_add(1);
+            return;
+        };
+        if model_values > policy.max_model_values || model_bits > policy.max_model_bits {
+            self.stats.declined_oversized_models =
+                self.stats.declined_oversized_models.saturating_add(1);
+            return;
+        }
+        while self.entries.len() >= policy.max_entries
+            || self.total_model_values.saturating_add(model_values) > policy.max_model_values
+            || self.total_model_bits.saturating_add(model_bits) > policy.max_model_bits
+        {
+            self.evict_lru();
+        }
+        let last_used = self.next_stamp();
+        self.entries.push(ReplayCheckedSatCacheEntry {
+            assertions: assertions.to_vec(),
+            scope_ends: scope_ends.to_vec(),
+            assumptions: assumptions.to_vec(),
+            model: model.clone(),
+            model_values,
+            model_bits,
+            last_used,
+        });
+        self.total_model_values = self.total_model_values.saturating_add(model_values);
+        self.total_model_bits = self.total_model_bits.saturating_add(model_bits);
+        self.stats.insertions = self.stats.insertions.saturating_add(1);
+    }
+
+    fn evict_lru(&mut self) {
+        let Some((index, _)) = self
+            .entries
+            .iter()
+            .enumerate()
+            .min_by_key(|(index, entry)| (entry.last_used, *index))
+        else {
+            return;
+        };
+        let removed = self.entries.remove(index);
+        self.total_model_values = self.total_model_values.saturating_sub(removed.model_values);
+        self.total_model_bits = self.total_model_bits.saturating_sub(removed.model_bits);
+        self.stats.evictions = self.stats.evictions.saturating_add(1);
+    }
+
+    fn next_stamp(&mut self) -> u64 {
+        if self.clock == u64::MAX {
+            let mut order = (0..self.entries.len()).collect::<Vec<_>>();
+            order.sort_by_key(|&index| (self.entries[index].last_used, index));
+            for (rank, index) in order.into_iter().enumerate() {
+                self.entries[index].last_used = usize_to_u64(rank).saturating_add(1);
+            }
+            self.clock = usize_to_u64(self.entries.len());
+        }
+        self.clock += 1;
+        self.clock
+    }
+}
+
+fn scalar_model_cost(model: &Model) -> Option<(usize, usize)> {
+    if model.functions().next().is_some() || model.real_div_zeros().next().is_some() {
+        return None;
+    }
+    let mut values = 0usize;
+    let mut bits = 0usize;
+    for (_, value) in model.iter() {
+        let width = match value {
+            Value::Bool(_) => 1,
+            Value::Bv { width, .. } => usize::try_from(width).ok()?,
+            Value::WideBv(value) => usize::try_from(value.width()).ok()?,
+            _ => return None,
+        };
+        values = values.checked_add(1)?;
+        bits = bits.checked_add(width)?;
+    }
+    Some((values, bits))
+}
+
 impl IncrementalBvStats {
     /// Returns the saturating component-wise delta from `earlier` to `self`.
     ///
@@ -433,6 +681,7 @@ pub struct IncrementalBvSolver {
     internal_symbols: HashSet<SymbolId>,
     profiling_enabled: bool,
     stats: IncrementalBvStats,
+    replay_checked_sat_cache: ReplayCheckedSatCache,
 }
 
 impl Default for IncrementalBvSolver {
@@ -485,6 +734,7 @@ impl IncrementalBvSolver {
             internal_symbols: HashSet::new(),
             profiling_enabled: false,
             stats: IncrementalBvStats::default(),
+            replay_checked_sat_cache: ReplayCheckedSatCache::default(),
         }
     }
 
@@ -562,6 +812,36 @@ impl IncrementalBvSolver {
             cnf_gate_mix: self.cnf.stats(),
             ..self.stats
         }
+    }
+
+    /// Enables ADR-0189's bounded exact-query SAT-model cache.
+    ///
+    /// Enabling or reconfiguring clears all entries and resets cache telemetry.
+    /// The cache belongs to this arena-bound solver and cannot be transferred.
+    /// Only exact ordered assertion/assumption duplicates with identical scope
+    /// boundaries are eligible, and a cached model is returned only after the
+    /// normal original-term replay. Ordinary UNSAT and `Unknown` results are
+    /// never cached.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError::Backend`] if any bound is zero.
+    pub fn enable_replay_checked_sat_cache(
+        &mut self,
+        policy: ReplayCheckedSatCachePolicy,
+    ) -> Result<(), SolverError> {
+        self.replay_checked_sat_cache.enable(policy)
+    }
+
+    /// Disables the replay-checked SAT cache and drops its entries/telemetry.
+    pub fn disable_replay_checked_sat_cache(&mut self) {
+        self.replay_checked_sat_cache.disable();
+    }
+
+    /// Returns replay-cache counters and current retained-storage gauges.
+    #[must_use]
+    pub fn replay_checked_sat_cache_stats(&self) -> ReplayCheckedSatCacheStats {
+        self.replay_checked_sat_cache.stats()
     }
 
     /// Number of unique observed array reads represented by retained warm
@@ -1372,7 +1652,7 @@ impl IncrementalBvSolver {
     ///
     /// Returns [`SolverError::Backend`] for an adapter or lift failure.
     pub fn check(&mut self, arena: &TermArena) -> Result<CheckResult, SolverError> {
-        Ok(self.solve_with_extra(arena, &[])?.result)
+        self.check_with_replay_cache(arena, &[])
     }
 
     /// Checks active warm assertions and returns the SAT solver's failed-frame
@@ -1461,7 +1741,7 @@ impl IncrementalBvSolver {
         arena: &TermArena,
         assumptions: &[TermId],
     ) -> Result<CheckResult, SolverError> {
-        Ok(self.solve_with_extra(arena, assumptions)?.result)
+        self.check_with_replay_cache(arena, assumptions)
     }
 
     /// Checks one-shot assumptions after applying the same narrow warm-safe
@@ -3130,6 +3410,55 @@ impl IncrementalBvSolver {
         self.solve_with_encoded_extra(arena, &assumptions)
     }
 
+    fn check_with_replay_cache(
+        &mut self,
+        arena: &TermArena,
+        assumptions: &[TermId],
+    ) -> Result<CheckResult, SolverError> {
+        if !self.replay_checked_sat_cache.is_enabled() {
+            return Ok(self.solve_with_extra(arena, assumptions)?.result);
+        }
+        if self.has_deferred_theory_assertions() {
+            return Ok(self.solve_with_extra(arena, assumptions)?.result);
+        }
+        let (assertions, scope_ends) = self.active_scalar_cache_identity();
+        if let Some(model) =
+            self.replay_checked_sat_cache
+                .probe(&assertions, &scope_ends, assumptions)
+        {
+            self.record_profiled_check();
+            let started = self.profiling_enabled.then(Instant::now);
+            let replay = self.replay(arena, assumptions, &model);
+            if let Some(started) = started {
+                self.stats.replay += started.elapsed();
+            }
+            match replay {
+                Ok(None) => {
+                    self.replay_checked_sat_cache.record_hit();
+                    return Ok(CheckResult::Sat(model));
+                }
+                Ok(Some(reason)) => {
+                    self.replay_checked_sat_cache
+                        .reject_hit(&assertions, &scope_ends, assumptions);
+                    return Ok(CheckResult::Unknown(reason));
+                }
+                Err(error) => {
+                    self.replay_checked_sat_cache
+                        .reject_hit(&assertions, &scope_ends, assumptions);
+                    return Err(error);
+                }
+            }
+        }
+        let outcome = self.solve_with_extra(arena, assumptions)?;
+        self.replay_checked_sat_cache.observe_fresh(
+            &assertions,
+            &scope_ends,
+            assumptions,
+            &outcome.result,
+        );
+        Ok(outcome.result)
+    }
+
     fn encode_one_shot_assumptions(
         &mut self,
         arena: &TermArena,
@@ -4335,6 +4664,16 @@ impl IncrementalBvSolver {
             }
         }
         Ok(None)
+    }
+
+    fn active_scalar_cache_identity(&self) -> (Vec<TermId>, Vec<usize>) {
+        let mut assertions = Vec::new();
+        let mut scope_ends = Vec::with_capacity(self.frames.len());
+        for frame in &self.frames {
+            assertions.extend(frame.assertions.iter().copied());
+            scope_ends.push(assertions.len());
+        }
+        (assertions, scope_ends)
     }
 
     #[cfg(feature = "full")]
@@ -7069,6 +7408,60 @@ mod tests {
         let handle = std::thread::spawn(IncrementalBvSolver::new);
         let solver = handle.join().expect("fresh per-thread solver constructs");
         assert_eq!(solver.scope_depth(), 0);
+    }
+
+    #[test]
+    fn corrupted_cache_model_fails_closed_and_is_evicted() {
+        let mut arena = TermArena::new();
+        let symbol = arena
+            .declare("cache_corruption_x", Sort::BitVec(8))
+            .unwrap();
+        let variable = arena.var(symbol);
+        let expected = arena.bv_const(8, 1).unwrap();
+        let assertion = arena.eq(variable, expected).unwrap();
+        let mut solver = IncrementalBvSolver::new();
+        solver
+            .enable_replay_checked_sat_cache(ReplayCheckedSatCachePolicy::new(2, 8, 64))
+            .unwrap();
+        solver.assert(&arena, assertion).unwrap();
+
+        let mut corrupted = Model::new();
+        corrupted.set(symbol, Value::Bv { width: 8, value: 2 });
+        solver.replay_checked_sat_cache.observe_fresh(
+            &[assertion],
+            &[1],
+            &[],
+            &CheckResult::Sat(corrupted),
+        );
+
+        let error = solver
+            .check(&arena)
+            .expect_err("a false cached model must never become SAT");
+        assert!(error.to_string().contains("model replay failed"));
+        let stats = solver.replay_checked_sat_cache_stats();
+        assert_eq!(stats.hits, 0);
+        assert_eq!(stats.replay_failures, 1);
+        assert_eq!(stats.entries, 0);
+    }
+
+    #[test]
+    fn non_scalar_model_payload_is_never_cached() {
+        let mut cache = ReplayCheckedSatCache::default();
+        cache
+            .enable(ReplayCheckedSatCachePolicy::new(2, 8, 64))
+            .unwrap();
+        let mut arena = TermArena::new();
+        let symbol = arena.declare("cache_non_scalar_x", Sort::Int).unwrap();
+        let mut model = Model::new();
+        model.set(symbol, Value::Int(7));
+        cache.observe_fresh(&[], &[0], &[], &CheckResult::Sat(model));
+
+        let stats = cache.stats();
+        assert_eq!(stats.declined_non_scalar_models, 1);
+        assert_eq!(stats.insertions, 0);
+        assert_eq!(stats.entries, 0);
+        assert_eq!(stats.model_values, 0);
+        assert_eq!(stats.model_bits, 0);
     }
 
     fn structural_observation_root(arena: &mut TermArena, count: u128) -> TermId {

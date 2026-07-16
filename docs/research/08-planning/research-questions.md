@@ -481,13 +481,15 @@ Out of scope:
     [ADR-0009](../09-decisions/adr-0009-incremental-sat-and-solving.md).
 - [x] What may an exact-verdict cache reuse without weakening evidence?
   - Answer: initially only an exact scalar SAT duplicate inside the same
-    arena-bound `IncrementalBvSolver`, keyed by exact ordered assertion and
-    one-shot-assumption term sequences and accepted only after original-term
-    model replay. Ordinary UNSAT, `Unknown`, errors, and strict prefixes are
+    arena-bound `IncrementalBvSolver`, keyed by exact ordered assertion terms,
+    scope boundaries, and one-shot-assumption terms and accepted only after
+    original-term model replay. Ordinary UNSAT, `Unknown`, errors, and strict prefixes are
     not verdict-cache entries; UNSAT requires a source-bound rechecked proof,
     while prefixes reuse retained solver state. Storage and eviction are
     deterministic, bounded, observable, and disabled by default; see
-    [ADR-0189](../09-decisions/adr-0189-replay-checked-same-arena-sat-duplicate-cache.md).
+    [ADR-0189](../09-decisions/adr-0189-replay-checked-same-arena-sat-duplicate-cache.md)
+    and its bounded implementation in
+    [ADR-0190](../09-decisions/adr-0190-opt-in-bounded-replay-checked-sat-cache.md).
 - [x] Should solver cancellation support memory budgets as well as time?
   - Answer: yes; `SolverConfig` carries timeout, deterministic resource,
     memory, and node budgets. Memory-budget exhaustion is an `Unknown`

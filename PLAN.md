@@ -446,12 +446,21 @@ session state.
 > canonical causal attribution, or advance GQ8's replay-safe cache contract.
 > ADR-0189 now fixes that GQ8 contract. The first cache is explicit/off,
 > per-`IncrementalBvSolver`, same-arena, and scalar-SAT-only. Identity is exact
-> ordered active assertions plus one-shot assumptions; hashes never substitute
-> for equality, and every hit must replay the model against current original
-> terms. Ordinary UNSAT/Unknown/errors and strict prefixes are excluded: UNSAT
+> ordered active assertions, scope boundaries, and one-shot assumptions;
+> hashes never substitute for equality, and every hit must replay the model
+> against current original terms. Ordinary UNSAT/Unknown/errors and strict prefixes are excluded: UNSAT
 > waits for a source-bound checked proof, while prefixes use GQ7 retained
 > AIG/CNF/SAT state. Implement deterministic bounded storage and telemetry,
 > then measure the ordered same-lineage stream before any Glaurung default.
+> ADR-0190 completes that Axeyum implementation: caller-supplied entry/value/
+> payload-bit bounds, exact assertion/frame/assumption identity, deterministic LRU,
+> fail-closed replay, and public counters are additive and off by default.
+> Focused full/minimal-QF_BV plus 876/876 all-feature library tests are green;
+> the cache-disabled corrected Glaurung raw/canonical gate remains 162/162
+> decided/agreed with zero errors, unknowns, or replay failures.
+> Wire an explicit Glaurung cache-off/cache-on ordered control next; do not
+> admit a client default without exact traffic, model/finding, time, and RSS
+> gates.
 > The capture and
 > implementation audit has been expanded into the dependency-ordered
 > [Glaurung QF_BV execution plan](docs/research/08-planning/glaurung-qfbv-execution-plan.md):
@@ -489,7 +498,7 @@ count as decisions or speedups.
 | **GQ5** | **Cheaper AIG construction and measured CNF encoding** | **First native AIG tranche accepted (ADR-0175).** Exact v4 attribution selects the low-hit `BTreeMap`; deterministic open addressing cuts three-driver Axeyum time 7.66% and ratio 0.742x→0.680x with unchanged AIG/CNF/replay/scopes and flat RSS. CNF is again dominant at 46.55%; internal AND flattening stays deferred. Reopen literal-copy ownership or CNF only from a fresh isolated native gate. |
 | **GQ6** | **Cold SAT/CDCL tuning** | **Material but behind measured warm CNF after ADR-0175.** Accepted-table native lineage spends 18.48% in SAT versus CNF's 46.55%. Compare identical emitted CNF across BatSat, the proof-producing core, and pinned CaDiCaL/Kissat only after the next CNF decision; preserve proof replay and deterministic limits. |
 | **GQ7** | **Cheaper warm entry and delta preprocessing** | **DONE for available Glaurung families (ADR-0171--0186).** Path-owned delta reuse, 9/512 hard bounds, exact identity, alarms, and adaptive production admission are enforced. Preserve explicit one-shot/fixed controls and re-gate new families. |
-| **GQ8** | **Verdict and CNF reuse for duplicate/prefix queries** | **Contract accepted in ADR-0189; implementation next.** Exact ordered assertion/assumption identity inside one arena-bound solver, deterministic bounded storage, and mandatory original-model replay authorize only opt-in scalar SAT duplicates. Ordinary UNSAT/Unknown and prefix verdict reuse remain forbidden. |
+| **GQ8** | **Verdict and CNF reuse for duplicate/prefix queries** | **Opt-in Axeyum implementation complete in ADR-0190; downstream measurement next.** Exact ordered assertion/frame/assumption identity inside one arena-bound solver, deterministic bounded LRU storage, and mandatory original-model replay authorize only scalar SAT duplicates. Ordinary UNSAT/Unknown and prefix verdict reuse remain forbidden. |
 | **GQ9** | **Auto production policy and API guidance** | **DONE for available families (ADR-0186).** Clean adaptive repetition passes all 3%/3%/5% + 2% alarms over 92,721 checks. Glaurung defaults only explorer-owned Axeyum solves to adaptive 2→9 admission; explicit one-shot and fixed controls remain. Re-gate new families; GQ4 stays off. |
 | **GQ10** | **Ordered, wider real-lifter regression corpus** | **DONE for available families (ADR-0187/0188).** The 162-query representative is pinned; exact 30,628-query composites have measured variance and executable 3%/3%/5% + 2% guards. Retain cold/ordered/profile bars separately and re-gate added families. |
 
@@ -557,8 +566,9 @@ The ranked work is:
     actual Z3 AST/context backend, with the user-visible Glaurung-vs-Glaurung
     comparison controlling product claims.
 
-The current highest-leverage trio is GQ8's ADR-0189 replay-safe bounded cache
-implementation and ordered-stream measurement, fresh causal attribution of the new canonical stage balance,
+The current highest-leverage trio is GQ8's ADR-0190 ordered-stream
+cache-off/cache-on measurement, fresh causal attribution of the new canonical
+stage balance,
 and whichever bounded GQ5/GQ6 experiment that attribution selects. Corrected
 composite variance is complete in ADR-0188. GQ4 is not an active optimization;
 ADR-0157/0158 remain explicit/off. Cold rewrite or CNF work may continue only

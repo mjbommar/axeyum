@@ -196,7 +196,10 @@ pub use backend::{
     Capabilities, CheckResult, SolveStats, SolverBackend, SolverConfig, SolverError, UnknownKind,
     UnknownReason,
 };
-pub use incremental::{AssumptionOutcome, IncrementalBvSolver, IncrementalBvStats};
+pub use incremental::{
+    AssumptionOutcome, IncrementalBvSolver, IncrementalBvStats, ReplayCheckedSatCachePolicy,
+    ReplayCheckedSatCacheStats,
+};
 pub use layers::BvLayerStats;
 pub use model::Model;
 pub use proof::{
