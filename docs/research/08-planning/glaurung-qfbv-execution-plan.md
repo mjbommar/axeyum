@@ -1,13 +1,14 @@
 # Glaurung QF_BV execution plan
 
 Status: active measured execution plan
-Last updated: 2026-07-14
+Last updated: 2026-07-16
 
 ## Outcome
 
 The shortest evidence-backed path to useful Glaurung functionality is:
 
-1. repair and ingest the real capture through Axeyum's artifact-v28 contract;
+1. retain ADR-0187's corrected, zero-exclusion five-driver artifact-v31
+   capture and exact sharded full gate;
 2. reproduce the current **raw one-shot** integration before comparing any
    preprocessing policy (complete for the representative and well-typed full
    tiers);
@@ -21,7 +22,7 @@ The shortest evidence-backed path to useful Glaurung functionality is:
 7. derive caching and an automatic preprocessing policy from the cold corpus
    and warm trace rather than from synthetic formulas.
 
-The byte-complete 2026-07-14 capture and artifact-v27 results now supersede the
+The byte-complete 2026-07-14 capture and artifact-v27 results superseded the
 producer's artifact-v17 estimate and the profiler-confounded v26 timing. Five
 representative production trials put raw at 1.65x Z3 and canonical v2 at 1.37x;
 both earlier proof companions recheck all 64 UNSAT rows. The well-typed
@@ -48,6 +49,13 @@ shares the canonicalizer memo across all roots while retaining originals for
 replay. Its representative fresh-incremental gate is replay-clean but 18.8%
 slower than one-shot and emits 80.9% more clauses with the same AIG, so the API
 remains explicit plumbing and its cold Glaurung recommendation is deferred.
+ADR-0187 now supersedes that old corpus identity. Glaurung `1b32cb9` plus the
+strict builder `3b64aaf` produce a zero-exclusion five-driver tier with 30,628
+distinct scripts, including 7,953 scripts with wide roots. Eight clean
+Axeyum `f7f174c5` shard processes decide and agree on every script: raw is
+30.803 seconds / 0.446x Z3 and canonical v4 is 18.471 seconds / 0.269x Z3.
+The four shards are one exact full-corpus process envelope, not repetitions;
+repeat the complete composite before setting new variance alarms.
 
 This note expands `PLAN.md` items GQ1--GQ10 into an executable sequence. It does
 not authorize changes to the Glaurung repository; producer-side and explorer
@@ -57,37 +65,37 @@ tasks below identify the required cross-project handoff.
 
 ### Producer capture
 
-The captured Glaurung source is commit `286f7445142347f6beb46ca18f2ebbd48b9c21d1`
-on `sec/axeyum-backend`. Its committed capture directory contains the procedure,
-builder, exclusion list, and a 128-entry representative manifest, but no SMT-LIB
-payload. The representative distribution is:
+The accepted corrected source is Glaurung producer `1b32cb9` plus strict
+builder `3b64aaf` on `sec/axeyum-backend`. Its access-controlled five-driver
+pack contains 30,678 observations, 30,628 unique hash-named scripts, 50 exact
+duplicate observations, zero verdict conflicts, and zero exclusions. The
+representative distribution is:
 
 | Family | Queries |
 |---|---:|
-| `register-slice` | 42 |
-| `slice-partial` | 48 |
-| `arithmetic` | 23 |
+| `register-slice` | 52 |
+| `slice-partial` | 54 |
+| `arithmetic` | 36 |
 | `comparison` | 12 |
-| `mixed` | 2 |
+| `mixed` | 7 |
 | `trivial` | 1 |
-| **Total** | **128 (64 SAT / 64 UNSAT)** |
+| **Total** | **162 (88 SAT / 74 UNSAT)** |
 
-The capture audit resolves the four original handoff questions:
+The corrected capture audit resolves the original handoff questions:
 
-- 15,710 index rows correspond to 15,687 unique hash-named files: exactly 23
-  cross-process duplicate rows, with zero conflicting verdicts.
-- `excluded-hashes.txt` has 17 rows and 11 unique hashes, but strict ingestion
-  finds 2,225 ill-sorted dumps in total (1,429 120-vs-64, 795 96-vs-64, and
-  one 160-vs-128). Z3's CLI also diagnoses these scripts as ill-sorted.
-- separate self-contained 128-query representative and 13,462-query well-typed
-  full roots now pass exact membership and Axeyum-generated SHA-256 manifests;
-  the malformed 2,225 remain a Glaurung producer bug, not an Axeyum corpus tier.
-- both roots use strict hash-free `capture-index-v1.json` input and Axeyum owns
-  byte hashing and ordinary manifest re-ingestion.
+- the original three-driver corrected recapture has 5,102 distinct scripts and
+  all 218,434 current roots are width one, so the 2,225 stale malformed hashes
+  cannot be mapped to corrected current byte identities;
+- widening to SurfacePen and NETwtw10 adds 25,526 scripts, including 7,953
+  scripts with wide roots and 13,015 width-64 assertions;
+- separate self-contained 162-query representative and 30,628-query full roots
+  pass strict exact membership and ordinary Axeyum manifest ingestion; and
+- the full tier is a byte-pinned exact union of four deterministic physical
+  process shards because the monolithic process exceeds 4 GiB cumulatively.
 
-The producer still needs to make cross-process deduplication/conflict detection
-atomic and validate every dumped script with a strict SMT-LIB parser before
-indexing it. An exclusion list must not hide width-coercion defects.
+Glaurung now publishes query bytes atomically, detects cross-process verdict
+conflicts, and validates exact file inventory/content before emitting either
+tier. An exclusion list is not part of the accepted corrected contract.
 
 ### Current integration mode
 
@@ -189,27 +197,27 @@ this variable.
 Owner split: Glaurung produces bytes and semantic index facts; Axeyum validates,
 hashes, and benchmarks them.
 
-1. Recover or regenerate the 128 representative `.smt2` files and retain the
-   full raw directory in an access-controlled stable location.
-2. Produce strict `capture-index-v1.json` with ordered relative path, trusted
+1. Retain the corrected representative/full `.smt2` roots in their
+   access-controlled stable location.
+2. Preserve strict `capture-index-v1.json` with ordered relative path, trusted
    expected verdict, family, and tier membership only. The producer must not
    supply content hashes.
-3. Make cross-process capture deduplication explicit. Reject duplicate hashes
+3. Keep cross-process capture deduplication explicit. Reject duplicate hashes
    with conflicting verdicts; report index rows, unique hashes, SAT, UNSAT,
    undecided omissions, and exclusions separately.
-4. Deduplicate the exclusions and explain or fix all 11 unique rejected
-   formulas rather than allowing the list to hide a parser/producer regression.
-5. Make representative and full roots self-contained, or give them separate
-   roots and manifests. Exact directory membership must pass.
+4. Require zero exclusions; an ill-sorted or missing indexed script fails the
+   corpus build rather than entering a side list.
+5. Keep representative, full, and physical shard roots self-contained with
+   exact directory membership and a byte-pinned shard union.
 6. Run `--generate-corpus-manifest`, then ordinary manifest ingestion, before
    timing. Record source driver hashes, Glaurung revision, toolchain, capture
    command, and an archive digest for an access-controlled pack.
 
-Checkpoint: the 128-query tier and a 13,462-query well-typed full tier have
-byte-complete validated manifests; row/unique arithmetic and verdict conflicts
-are audited; no query shape is normalized during handoff. G0 remains open on
-the producer side until capture deduplication is atomic and all 2,225 malformed
-dumps are prevented by explicit width coercion plus strict pre-index validation.
+Checkpoint: **complete in ADR-0187.** The 162-query representative and
+30,628-query full tier have byte-complete manifests, exact row/unique/conflict
+arithmetic, zero exclusions, and no query normalization during handoff. The
+old 2,225 hashes remain historical producer-invalid identities rather than a
+recovery denominator.
 
 ### G1 — establish the cold truth (GQ1 + GQ10)
 
@@ -219,14 +227,20 @@ unsuffixed current-integration control; policy-specific output defaults and
 dry-run regression tests prevent accidental series mixing.
 
 1. Use the landed policy recipes without editing their flags.
-2. Run raw first for five fresh-process repetitions on the representative tier,
-   plus its separate proof-check companion.
-3. Run the same repetition matrix for canonical-only and configured policies.
+2. Run raw first in a fresh process on every deterministic full shard, plus its
+   separate proof-check companion when UNSAT proof assurance is under test.
+3. Run the same complete shard set for canonical-only and configured policies;
+   repeat complete sets rather than treating child shards as repetitions.
 4. Report aggregate and per-family ratios, p50/p95, run-to-run CV, formula/AIG/
    CNF sizes, stage shares, and raw Z3 control drift.
-5. Schedule the full tier using the access-controlled payload. Put the 128
-   representative tier in the regular regression lane only after its runtime
-   and licensing/data boundary are acceptable.
+5. Keep the access-controlled full tier scheduled through the exact shard
+   aggregator and the 162-query representative in the regular semantic lane.
+
+ADR-0187 closes the corrected single-composite checkpoint: clean raw and
+canonical v4 shard sets cover 30,628/30,628 with zero semantic/replay failures
+at 0.446x and 0.269x Z3. The corrected 162-query tier is now the pinned regular
+semantic gate. A second complete clean shard set is still required before
+reporting run-to-run variance or installing cross-commit timing alarms.
 
 Every row requires 100% decided, zero errors, zero SAT/UNSAT disagreement, and
 zero replay/proof failures. Regression thresholds are set only after stable
@@ -606,14 +620,14 @@ clean artifact pins the exact Glaurung/Axeyum revisions and policy.
 | 7 | Reuse duplicates and prefixes soundly | Measure exact duplicates/prefixes first; cache exact queries with replay, but reuse retained state rather than verdicts for strict prefixes. |
 | 8 | Add the register-slice fast path | Treat this as the first specialized GQ4 policy only if the generic exact range propagation leaves measurable avoidable work. |
 | 9 | Queue SAT tuning | **Material but behind CNF:** accepted-table lineage SAT is 18.48% versus CNF's 46.55%. Compare identical CNF only after the next measured CNF tranche. |
-| 10 | Expand and trend real capture | **All streams are repeated; fail-closed runner and 3%/3%/5% + 2% Z3 alarms landed (ADR-0178--0180).** Publish a clean baseline, add new families, retain cold/ordered/profile tiers separately, and trend per-commit ratios/RSS/fallback. |
+| 10 | Expand and trend real capture | **Corrected widening accepted (ADR-0187).** Five drivers, 30,628 distinct scripts, 7,953 wide-root scripts, zero exclusions, and an exact clean sharded baseline are complete. Repeat the whole composite for variance; retain cold/ordered/profile tiers separately. |
 
 ## Milestones and stop/go gates
 
 | Milestone | Roadmap coverage | Stop/go decision |
 |---|---|---|
-| M0 byte-complete capture | GQ1, GQ10 | **Axeyum side done:** representative and well-typed full manifests validate; producer still must prevent 2,225 malformed dumps and atomically deduplicate |
-| M1 raw v27 baseline | GQ1, GQ10 | **Done:** representative raw/canonical and five canonical full-tier processes pass every gate; full Axeyum/ratio/Z3 CV is 0.51%/0.51%/0.31% and guarded comparisons use provisional 3%/3%/2% alarms |
+| M0 byte-complete capture | GQ1, GQ10 | **Done in ADR-0187:** corrected atomic five-driver capture has 162 representative / 30,628 full scripts, 50 duplicate observations, zero conflicts, zero exclusions, and exact manifests/shard union |
+| M1 corrected cold baseline | GQ1, GQ10 | **Single clean composite done:** raw 0.446x and canonical v4 0.269x Z3 with all 30,628 decisions/replays green and <1.42 GiB child RSS. Repeat the four-shard composite before new variance alarms |
 | M2 diagnostic attribution | GQ1, GQ3--GQ5 | **Done for bounded cold/native phase/gate/AIG bars:** ADR-0160 covers one-shot; ADR-0172/0173 validate phase/CNF records; ADR-0174 separates immediate from retained CNF effects; ADR-0175 validates all 6,986 v4 AIG/memo/copy records |
 | M3 cheap exact rewriting | GQ2, GQ3 | **Done for the measured current shapes:** canonical v2 cuts corrected full total 13.3%, ADR-0153 cuts another 9.80%, accepted ADR-0155 reaches 5.625 s / 0.730x Z3, and ADR-0159 causally closes the current extract tranche without finding another AIG/CNF lever |
 | M4 demand lowering | GQ4 | **Deferred:** both v1 and admission-controlled v2 fail the representative performance gate while preserving correctness; keep explicit/off and reopen only from a different gate-cone hypothesis |
@@ -621,15 +635,15 @@ clean artifact pins the exact Glaurung/Axeyum revisions and policy.
 | M6 SAT re-attribution | GQ6 | **Done for bounded accepted-table lineage:** SAT is 18.48% weighted and remains behind CNF at 46.55% |
 | M7 ordered warm trace | GQ7, GQ8 | **Done for clean three-driver controls (ADR-0166--0170):** assertions, lineage/scopes/choices, backend timing, cold/snapshot/lineage controls, and memory validate |
 | M8 Glaurung warm integration | GQ7 | **Bounded admission repeated/executable/alarmed (ADR-0171--0180):** original lineage is 0.680x Z3; held-out 9/512 identity and alarms are accepted. Publish clean baseline before auto policy |
-| M9 auto policy and regression lane | GQ8--GQ10 | **Cold regression lane done; policy publication WIP:** raw + canonical representative checks are availability-aware, canonical v4 is accepted at 0.730x Z3, and full-tier 3%/3%/2% alarms are executable. Expose the cheap policy explicitly; ordered-trace validation remains mandatory before changing broader defaults |
+| M9 auto policy and regression lane | GQ8--GQ10 | **GQ9 done and corrected cold lane refreshed:** adaptive warm admission is the downstream default for available families; the regular cold gate now pins the corrected 162-query pack. Full corrected timing alarms wait for repeated complete composites |
 
 ## Immediate next actions
 
-1. Publish a clean full ADR-0180 artifact under the accepted alarms. Retain
-   visible one-shot fallback and identical replay/scope/resource counters.
-2. Add deterministic
-   full-tier/per-commit variance for actual-client Z3, unprofiled lineage, and
-   diagnostic v4 as explicitly separate bars.
+1. Repeat ADR-0187's complete clean four-shard raw/canonical composite and fit
+   variance before installing corrected-corpus per-commit alarms.
+2. Keep the corrected 162-query regular semantic gate and exact full shard
+   union pinned; reject exclusions, dirty source, incomplete manifests, or a
+   raised memory envelope as substitutes for coverage.
 3. Keep ADR-0157/0158 explicit and off. ADR-0159 closes the current structural
    rewrite tranche: `extract_extend` is a real lowering win, but none of the
    four ablated rules changes AIG/CNF. Reopen GQ3/GQ4 only for a specific new
@@ -640,9 +654,9 @@ clean artifact pins the exact Glaurung/Axeyum revisions and policy.
 5. Keep complete assertion/symbol capture and separate backend timing mandatory
    in every new ordered artifact; merge per-process traces atomically before
    GQ7/GQ8 cache or auto-policy work.
-6. Run every accepted cold candidate through the guarded five-process full
-   comparison. A threshold violation is a regression alarm to investigate, not
-   permission to ignore raw controls or semantic gates.
+6. Run every accepted cold candidate through repeated complete sharded full
+   comparisons. A threshold violation is a regression alarm to investigate,
+   not permission to ignore raw controls or semantic gates.
 
 All heavy Rust validation and benchmark commands remain subject to the local
 4 GiB virtual-memory cap and should use serial execution where parallel test

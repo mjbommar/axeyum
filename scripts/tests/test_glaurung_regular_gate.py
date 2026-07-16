@@ -136,6 +136,7 @@ class GlaurungRegularGateTests(unittest.TestCase):
         self.assertIn("--rewrite off", combined)
         self.assertIn("--rewrite default", combined)
         self.assertEqual(combined.count("--corpus-tier representative"), 2)
+        self.assertEqual(combined.count("--manifest-jobs 8"), 2)
         self.assertEqual(combined.count("--compare-z3"), 2)
         self.assertEqual(combined.count("--require-in-process-z3"), 2)
         self.assertEqual(combined.count("--require-deterministic-resources"), 2)

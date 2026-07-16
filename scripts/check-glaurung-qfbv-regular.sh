@@ -6,7 +6,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PINNED_DEFAULT="/nas4/data/workspace-infosec/glaurung-captures/2026-07-14-axeyum-v2/representative-producer"
+PINNED_DEFAULT="/nas4/data/workspace-infosec/glaurung-captures/2026-07-16-corrected-wide-v3/representative"
 EXPLICIT_CORPUS="${AXEYUM_GLAURUNG_QFBV_REPRESENTATIVE_DIR:-}"
 EXPLICIT_MANIFEST="${AXEYUM_GLAURUNG_QFBV_REPRESENTATIVE_MANIFEST:-}"
 AUTO_DISCOVER="${AXEYUM_GLAURUNG_QFBV_AUTO_DISCOVER:-1}"
@@ -29,7 +29,7 @@ if [[ -n "$EXPLICIT_CORPUS" ]]; then
     SOURCE="explicit AXEYUM_GLAURUNG_QFBV_REPRESENTATIVE_DIR"
 elif [[ "$AUTO_DISCOVER" == 1 && -d "$PINNED_DEFAULT" ]]; then
     CORPUS_DIR="$PINNED_DEFAULT"
-    SOURCE="pinned 2026-07-14 NAS capture"
+    SOURCE="pinned 2026-07-16 corrected five-driver NAS capture"
 else
     echo "glaurung-qfbv-regular: SKIP access-controlled representative corpus unavailable"
     echo "glaurung-qfbv-regular: set AXEYUM_GLAURUNG_QFBV_REPRESENTATIVE_DIR to enable the real-lifter gate"
@@ -67,6 +67,7 @@ for POLICY in raw canonical; do
         "$CORPUS_DIR" \
         --corpus-manifest "$MANIFEST" \
         --corpus-tier representative \
+        --manifest-jobs 8 \
         --backend sat-bv \
         "${POLICY_ARGS[@]}" \
         --compare-z3 \

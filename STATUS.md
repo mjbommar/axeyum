@@ -322,6 +322,25 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-16 — ADR-0187 accepts the corrected wide Glaurung cold corpus.**
+  Glaurung producer `1b32cb9` plus strict builder `3b64aaf` capture 30,678
+  observations / 30,628 distinct scripts across five drivers with 50 duplicate
+  observations, zero verdict conflicts, and zero exclusions. The current
+  corpus contains 7,953 scripts with wide roots and 13,015 width-64 assertion
+  roots; the 2,225 old malformed hashes are stale and cannot be mapped to
+  current corrected bytes.
+
+  Four deterministic physical shards form one exact full tier. Eight clean
+  Axeyum `f7f174c5` processes decide/replay 30,628/30,628 under both policies
+  with zero errors, unknowns, disagreements, oracle gaps, replay failures, or
+  rewrite decision changes. Raw is 30.803 seconds versus Z3's 69.127 (0.446x);
+  canonical v4 is 18.471 versus 68.556 (0.269x), cuts AIG nodes
+  68.16M→32.35M and clauses 72.70M→32.12M, and stays below 1.42 GiB child RSS.
+  The corrected 162-query representative is now pinned in the regular gate.
+  Repeat the complete shard composite before setting variance alarms, then use
+  fresh canonical-stage attribution to choose GQ5/GQ6 or specify GQ8's
+  replay-safe cache; keep GQ4 off.
+
 - **2026-07-16 — ADR-0186 accepts pressure-adaptive admission as Glaurung's
   Axeyum explorer default.** The clean Glaurung `f99f72b` / Axeyum `f91fb232`
   artifact repeats all 92,721 agreements and exact adaptive counters. Against
@@ -1410,7 +1429,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
   | ID | Live status | Next acceptance boundary |
   |---|---|---|
-  | **GQ1 real-query profile** | **Warm native attribution/identity done; corrected cold recapture WIP (ADR-0184).** Repeated 9/512 remains semantic evidence, but old SMT-LIB hashes and 2,225 exclusions are stale | Regenerate corrected raw/full/representative tiers before another cold claim |
+  | **GQ1 real-query profile** | **Corrected cold truth accepted (ADR-0187).** Five drivers, 30,628 scripts, 7,953 wide-root scripts, zero exclusions, exact clean sharded raw/canonical profile | Repeat complete four-shard composites for variance; keep native/profile/cold bars distinct |
   | **GQ2 cheap cold tier** | **WIP with three accepted rewrite tranches; batch integration deferred.** Canonical v4 reaches 5.625 s / 0.730x Z3; ADR-0156 preserves replay but is 18.8% slower than one-shot | Keep canonical v4 as the measured one-shot policy; do not recommend fresh incremental batch until its clause/entry overhead closes |
   | **GQ3 coercion/affine peepholes** | **DONE for current measured shapes (ADR-0159).** Clean repeated path-paired ablations are fail-closed; `extract_extend` is a material lowering-only win, while all four measured structural rules change zero AIG nodes/clauses | Keep rules enabled. Reopen only for a new residual shape with a specific downstream hypothesis and the same causal ablation gate |
   | **GQ4 cold relevant bits** | **v1 and v2 DEFERRED after failed real gates.** v1 regresses ~1.42x→4.49x. V2 rejection overhead is bounded, but defaults admit 0/128 and +0.62% total; a 33-query moderate policy removes 632 AIG nodes/zero clauses and regresses bit blast 3.14% | Keep both explicit/off. Reopen only with an AIG/CNF-cone estimator or after word rewrites materially change the residual; do not tune thresholds further |
@@ -1419,17 +1438,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   | **GQ7 warm delta entry** | **DONE for available families (ADR-0171--0186).** Path-owned delta reuse, 9/512 hard bounds, exact alarms, and adaptive production admission are enforced | Preserve explicit one-shot/fixed controls and re-gate new families |
   | **GQ8 verdict/CNF cache** | **TODO; native ownership complete but cache contract still gated.** The ordered tier has 957 exact duplicate occurrences, 439 same-lineage repeats, and 2,192 prefix extensions | Specify bounded versioned content/config/scope identity, capacity/eviction, and mandatory model/proof replay before implementation |
   | **GQ9 auto cost model/docs** | **DONE for available families (ADR-0186).** Clean adaptive repeat clears every alarm over 92,721 checks; downstream explorer default has explicit off/fixed controls | Re-gate newly captured families; do not broaden this Glaurung-specific default into Axeyum's generic API |
-  | **GQ10 real-lifter regression tier** | **Warm available-family baseline clean; cold identity stale after ADR-0184.** SurfacePen/NETwtw10 controls and alarms remain committed | Regenerate corrected SMT-LIB corpus, then add new families |
+  | **GQ10 real-lifter regression tier** | **Corrected five-driver widening accepted (ADR-0187).** The 162-query regular tier and exact 30,628-query sharded full baseline are pinned | Repeat the whole composite for per-commit variance; never count shards as repetitions |
 
-  **Next actions:** (1) regenerate the corrected GQ1/GQ10 SMT-LIB capture and
-  reclassify the 2,225 formerly excluded wide assertions; (2) rebuild strict
-  representative/full manifests and re-baseline cold Axeyum/Z3 performance;
-  (3) add newly available families; (4) reopen
-  literal-copy ownership or CNF only from a
-  fresh causal gate; (5) keep GQ4 off and SAT behind measured CNF; (6) only then
-  specify GQ8's
-  replay-safe bounded cache and GQ9's non-regressing auto policy. Preserve
-  strict coercion, dump validation, and atomic dedup/conflict handling.
+  **Next actions:** (1) repeat ADR-0187's complete clean raw/canonical shard
+  composites and fit variance; (2) preserve the corrected representative pin,
+  exact shard union, zero-exclusion rule, and 4 GiB process envelope; (3) use
+  the new canonical stage balance to select any next GQ5/GQ6 slice through a
+  fresh causal gate; (4) specify GQ8's bounded content/config/scope identity,
+  deterministic eviction, and mandatory model/proof replay before caching;
+  (5) keep GQ4 explicit/off. Preserve strict coercion, dump validation, and
+  atomic dedup/conflict handling.
 
   **Validation (2026-07-15):** a clean, serialized `just check` at `623cae4c`
   completed under the 4 GiB memory cap with formatting, strict
@@ -3216,7 +3234,7 @@ plan is built and committed on the current branch:
 ### Track 4 — Use Cases & Frontend
 | Phase | Title | Status |
 |---|---|---|
-| P4.1j | Glaurung warm delta and duplicate/prefix reuse (GQ7/GQ8) | **GQ7/GQ9 DONE for available families in ADR-0186; GQ8 remains WIP.** Adaptive explorer default passes 92,721-check alarms with explicit off/fixed controls. Duplicate/verdict caching remains separately replay-gated. |
+| P4.1j | Glaurung warm delta and duplicate/prefix reuse (GQ7/GQ8) | **GQ7/GQ9 DONE for available families in ADR-0186; corrected GQ1/GQ10 cold capture DONE in ADR-0187; GQ8 remains WIP.** Adaptive explorer default passes 92,721-check alarms; corrected five-driver cold bytes pass exact sharded replay. Duplicate/verdict caching remains separately replay-gated. |
 | P4.1e | Retained warm Boolean array relation flags | **DONE (ADR-0091)** — symbolic-memory path conditions can keep nested supported array equality atoms warm through private candidate-sensitive relation flags, guarded equality/diff observations, projection filtering, and replay |
 | P4.1h | Retained warm nested array-valued UF parameters | **DONE (ADR-0094)** — nested supported array-valued memory/function parameters can stay warm as full-value UF keys through private projection keys or rewritten structural keys, with relation-flag guarded congruence, private filtering, and replay |
 | P4.1g | Retained warm structural array-valued UF parameters | **DONE (ADR-0093)** — supported store/constant/array-ITE memory/function parameters can stay warm as full-value UF keys with scalar dependency retention, structural owner realization, relation-flag guarded congruence, private filtering, and replay; ADR-0094 subsequently lands nested application keys |
@@ -3238,6 +3256,11 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-16 — ADR-0187 accepts the corrected wide cold corpus.** Five
+  drivers produce 30,628 zero-exclusion scripts, including 7,953 with wide
+  roots. Exact clean raw/canonical shard sets are 0.446x/0.269x Z3 with all
+  decisions and SAT model replays green; the corrected 162-query tier is now
+  the regular semantic pin.
 - **2026-07-16 — ADR-0186 accepts the pressure-adaptive Glaurung default.**
   Clean 92,721-check repetition clears every alarm; Glaurung `ca12028` defaults
   only path-owned Axeyum explorer solves and preserves an explicit off override.

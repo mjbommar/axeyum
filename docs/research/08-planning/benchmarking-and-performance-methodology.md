@@ -343,6 +343,17 @@ records the contract and the first measured baselines.
   ignored `target/` state because a regular dirty-worktree semantic check is
   not a publishable timing trial. Clean revision identity, independent-process
   repetitions, and full-tier thresholds remain the scheduled performance lane.
+- ADR-0187's corrected five-driver full tier is larger than the established
+  monolithic 4 GiB process envelope. It is partitioned only by the deterministic
+  first-64-SHA-bits modulo shard count rule. `summarize-glaurung-shards.py`
+  accepts a composite result only after the child capture indexes form an exact
+  disjoint union of the byte-pinned parent, each artifact covers its complete
+  manifest with trusted/Z3 agreement and original-model replay, normalized
+  clean source/configuration identity is common, and every process records a
+  successful 4 GiB time envelope. Stage and client seconds are additive across
+  shards; RSS is reported as the maximum child peak. Shards are parts of one
+  corpus trial, never repetitions. Variance and cross-commit alarms require
+  multiple complete composite runs.
 - Five clean canonical full-tier processes at revision `0cfd6cdc` establish the
   first scheduled variance boundary: Axeyum total, Z3 total, and their ratio
   have 0.514%, 0.310%, and 0.510% CV respectively; every attributed stage is
