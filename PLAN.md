@@ -514,7 +514,7 @@ count as decisions or speedups.
 | **GQ4** | **Cold demand-driven bit-slice reduction** | **Out of the active queue.** ADR-0157 v1 is correct but regresses the real ratio about 1.42x→4.49x; ADR-0158's conservative admission is a safe no-op but does not improve the required family. Both remain explicit/off. Do not tune thresholds further on this corpus; only a qualitatively different constant-cost admission proof and a fresh client gate can reopen GQ4. |
 | **GQ5** | **Cheaper AIG construction and measured CNF encoding** | **Leading remaining pure-solver lane.** ADR-0175 accepts deterministic open-addressed AIG hashing. Current cold evidence still assigns about 84% to bit blast plus CNF and only about 15% to SAT; CNF is about 46% on the accepted cold bar. Continue measured CNF lookup/ownership and clause-emission work, with the rejected growing-AIG half-flattening candidate as a warning that immediate clause savings need retained-future-use or rollback evidence. |
 | **GQ6** | **Cold SAT/CDCL tuning** | **Partition by policy before acting.** SAT is only about 15% on the cold one-shot workload, so it remains behind GQ5 there. ADR-0199 collapses warm construction enough that SAT becomes 47.2% of its diagnostic candidate profile; compare identical retained CNF across BatSat/proof core/oracles before a warm SAT claim. Preserve proof replay and deterministic limits. |
-| **GQ7** | **Cheaper warm entry and delta preprocessing** | **DONE for the Axeyum API and available serial Glaurung families through ADR-0201.** Path-owned delta reuse, 9/512 hard bounds, shared replay evaluation, scalar model completion, exclusive LIFO transfer, serial sibling LCP reuse, and an object-safe retained `IncrementalSolver` trait are enforced. ADR-0199 improves SurfacePen time/ratio 17.08%/18.53% and NETwtw10 0.72%/0.35% while reducing RSS 6.11%/13.36%. Preserve controls; next migrate Glaurung's consumer trait from whole snapshots to direct deltas and re-gate. |
+| **GQ7** | **Cheaper warm entry and delta preprocessing** | **Axeyum API and opt-in Glaurung direct-delta wiring are DONE; real-stream acceptance is pending.** Path-owned delta reuse, 9/512 hard bounds, shared replay evaluation, scalar model completion, exclusive LIFO transfer, serial sibling LCP reuse, and an object-safe retained `IncrementalSolver` trait are enforced. Glaurung `f5a3b7a` now drives explicit `(retain, persistent, temporary)` partitions without snapshot prefix reconstruction, but keeps the route strictly opt-in. Add direct-session profiling and pass repeated ordered decision/finding/time/RSS gates before any default change. |
 | **GQ8** | **Verdict and CNF reuse for duplicate/prefix queries** | **Exact replay-checked SAT reuse is done for available families (ADR-0192); stronger subsumption remains open.** Exact hits replay under fixed bounds; ordinary UNSAT/Unknown and prefix verdict reuse remain forbidden. Investigate only replay-checked stronger-model reuse where a cached model is proven to satisfy the complete weaker later query. |
 | **GQ9** | **Auto production policy and API guidance** | **DONE for available serial families (ADR-0186/0199).** Adaptive 2→9 ownership plus serial sibling continuation reuse is the downstream default; ADR-0199 clears every time/ratio/RSS/environment alarm and improves RSS on both accepted drivers. Explicit one-shot, fixed, transfer-only, and serial-off controls remain. Re-gate wider families and never apply serial leases across parallel workers. |
 | **GQ10** | **Ordered, wider real-lifter regression corpus** | **DONE for current five-driver corpus; widening is the next evidence task (ADR-0187/0188/0199).** The 162-query representative and exact 30,628-query composites have executable alarms, while the warm production gate covers two held-out families. Add more realworld drivers and repeated full-process variance before generalizing the 0.24--0.36x historical warm range or the ADR-0199 default. |
@@ -526,7 +526,7 @@ stage rankings where the accepted evidence has changed.
 | Rank | Client requirement | Current action / gate |
 |---:|---|---|
 | 1 | Cold CNF/bit-blast micro-optimization | Lead the pure-solver lane with cold CNF lookup/ownership and clause emission. Cold lowering is about 84% versus about 15% SAT; accept only repeated real-corpus end-to-end gains with identical decisions/replay. |
-| 2 | First-class incremental `Solver` trait | **Framework contracts done in Axeyum ADR-0201 and Glaurung ADR-011 (`8d8cd6f`).** Both sides now expose object-safe retained assert/push/pop/check/assume sessions; Glaurung's Axeyum implementation translates only delta roots and keeps model mappings scope-local. Next wire explorer path events into that session behind an opt-in control and re-gate; `assert_configured` remains warm-only. |
+| 2 | First-class incremental `Solver` trait | **Contracts and opt-in explorer wiring done in Axeyum ADR-0201 and Glaurung ADR-011/`f5a3b7a`.** Both sides expose object-safe retained assert/push/pop/check/assume sessions; Glaurung now translates only confirmed persistent suffix roots, keeps probes temporary, and advances ownership markers only after backend acknowledgement. Next export direct-session profiles and run the ordered correctness/time/RSS gate; `assert_configured` remains warm-only. |
 | 3 | Safe automatic warm policy | **Done for current families in ADR-0186/0199.** Adaptive ownership, exact cache, owner transfer, and serial sibling leases default on only in the explicit explorer context; preserve all off/fixed controls and re-gate wider families. |
 | 4 | Lineage RSS Pareto knee | ADR-0198 rejects a third retained owner (+7.66% RSS); ADR-0199 instead reduces accepted SurfacePen/NETwtw10 RSS 6.11%/13.36%. Continue only topology/lifetime changes that clear the 5% alarm. |
 | 5 | Sibling-prefix structural sharing | **Done for the serial DFS context in ADR-0199.** Exact LCP/pop/push continuation leasing avoids cloning and concurrent mutation. Copy-on-write or parallel variants require a new proof/lifecycle contract. |
@@ -552,12 +552,14 @@ assert/push/pop/check/check-assuming sessions and is implemented first by
 `IncrementalBvSolver`; one-shot `SolverBackend` and snapshot-resubmitting
 `Solver<B>` remain semantically distinct. Generic and trait-object conformance,
 the existing warm suite, strict Clippy, and warning-denied rustdoc pass under
-full and `qfbv`-only profiles. The remaining rank-2 work is downstream:
-Glaurung ADR-011/`8d8cd6f` now adds its matching object-safe session and a
-direct-delta Axeyum implementation with 37/37 backend tests green. The remaining
-rank-2 work is explorer wiring: replace complete-snapshot calls with explicit
-path events behind an opt-in control and re-run the real stream gates before
-claiming snapshot reconstruction is gone.
+full and `qfbv`-only profiles. The downstream rank-2 contract and wiring are now
+concrete. Glaurung ADR-011/`f5a3b7a` adds the matching object-safe session and
+drives it from explorer-owned absolute prefix deltas. Its 41/41 backend group
+and both focused explorer ownership tests are green; the selected adapter also
+passes with combined Z3+Axeyum features. The route remains behind
+`GLAURUNG_AXEYUM_DIRECT_DELTA=1`. The remaining rank-2 work is evidence: export
+direct-session per-check profiles and run repeated ordered real-driver gates
+before claiming a production win or changing the default.
 
 **Latest Glaurung execution order (2026-07-15; supersedes the earlier cold-path
 priority reset).** Earlier evidence reported an approximately 1.34x gated-bench
@@ -601,9 +603,11 @@ The ranked work is:
    bounded memory policy, ADR-0177 widens assertion admission to the held-out
    512-root envelope, ADR-0178 accepts repeated fixed-work variance, and
    ADR-0193 removes bounded repeated evaluator work while retaining every
-   original replay root.
-   Preserve push/pop, model, replay, ownership, and
-   visible one-shot fallback while widening the driver tier;
+   original replay root. Glaurung `f5a3b7a` now removes snapshot-prefix
+   reconstruction from an opt-in direct-delta route while preserving the full
+   query for Z3/capture/fallback. Add direct per-check profiling, then compare
+   it against the accepted snapshot control on repeated ordered drivers for
+   decisions, findings, time, root traffic, and RSS before any default change;
 2. **GQ1/GQ5 measured construction:** ADR-0174 defers internal AND flattening;
    ADR-0175 accepts deterministic open-addressed AIG sharing at a 0.680x
    actual-client ratio. Reopen CNF only with future-use/replacement evidence and

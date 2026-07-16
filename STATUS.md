@@ -322,6 +322,21 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-16 — Glaurung wires the first-class session into the explorer,
+  strictly opt-in.** Glaurung ADR-011/`f5a3b7a` gives every explorer state an
+  absolute confirmed persistent depth and sends `(retain, persistent,
+  temporary)` boundaries through the Axeyum session. Existing owners translate
+  only suffix roots; temporary probes use assumptions; missing owners fully
+  materialize; invalid partitions and operational errors drop state; forks
+  inherit only the confirmed depth under a distinct owner; restarts reset both
+  owner and depth. The marker advances only after backend acknowledgement, and
+  the full query remains available to Z3, ordered capture, and one-shot
+  fallback. The complete backend group is 41/41 green, both focused explorer
+  ownership tests pass, and the selected adapter passes with both Axeyum-only
+  and Z3+Axeyum feature sets. The route remains behind
+  `GLAURUNG_AXEYUM_DIRECT_DELTA=1`; direct-session profile export plus repeated
+  ordered decision/finding/time/RSS gates are next.
+
 - **2026-07-16 — ADR-0201 accepts a first-class retained solver trait.** The
   framework's `SolverBackend` is one-shot and `Solver<B>` currently resubmits
   complete snapshots, while `IncrementalBvSolver` genuinely retains AIG, CNF,
@@ -336,8 +351,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   safe IR-level session plus a direct-delta Axeyum implementation: each assert
   translates only the new root, and scope-local symbol maps prevent popped or
   temporary values leaking into later models. All 37 backend tests pass. The
-  explorer still calls the accepted snapshot adapter; opt-in path-event wiring
-  and real-stream measurement are next.
+  explorer wiring is now downstream in `f5a3b7a`; real-stream measurement and
+  admission remain next.
 
 - **2026-07-16 — ADR-0200 defers open-addressed primary CNF ownership.** The
   isolated table is semantically and structurally exact: all focused/CNF/proof
@@ -1685,14 +1700,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   | **GQ4 cold relevant bits** | **v1 and v2 DEFERRED after failed real gates.** v1 regresses ~1.42x→4.49x. V2 rejection overhead is bounded, but defaults admit 0/128 and +0.62% total; a 33-query moderate policy removes 632 AIG nodes/zero clauses and regresses bit blast 3.14% | Keep both explicit/off. Reopen only with an AIG/CNF-cone estimator or after word rewrites materially change the residual; do not tune thresholds further |
   | **GQ5 AIG/CNF construction** | **AIG tranche accepted; direct CNF-table transfer rejected (ADR-0175/0200).** AIG open addressing improves native time 7.66%, but the structurally exact CNF primary-table candidate regresses representative mean CNF/total 8.55%/3.67% and is reverted | Re-attribute a larger CNF subphase or encoding hypothesis; do not retry table micro-work without per-probe causal evidence |
   | **GQ6 cold SAT/CDCL** | **WIP foundation; behind measured CNF.** Accepted-table native lineage SAT is 18.48% weighted versus CNF at 46.55% | Compare identical CNF across cores only after the next CNF decision, with proof replay and deterministic limits |
-  | **GQ7 warm delta entry** | **Axeyum API and current serial families DONE (ADR-0171--0186/0193/0195/0196/0199/0201).** Path-owned reuse, bounds, alarms, adaptive admission, replay/model fast paths, LIFO transfer, serial sibling LCP reuse, and an object-safe retained solver trait are enforced | Preserve controls; migrate Glaurung's consumer boundary from whole snapshots to direct deltas and re-gate new traversal policies/families |
+  | **GQ7 warm delta entry** | **Axeyum API, serial controls, and opt-in Glaurung direct-delta wiring DONE (ADR-0171--0186/0193/0195/0196/0199/0201; Glaurung `f5a3b7a`).** Path-owned reuse, bounds, alarms, adaptive admission, replay/model fast paths, LIFO transfer, serial sibling LCP reuse, retained trait, and explicit suffix/assumption partitions are enforced | Add direct-session per-check profiling; then run repeated ordered decision/finding/time/RSS gates before default admission or new traversal families |
   | **GQ8 verdict/CNF cache** | **DONE for available families (ADR-0192).** Clean repeated evidence admits exact same-arena scalar SAT reuse only in path-owned Glaurung sessions; fixed bounds, traffic partitions, cleanup gauges, findings, and replay are enforced | Preserve explicit off and re-gate new families; Axeyum's generic cache remains opt-in and ordinary UNSAT/Unknown/prefix verdicts remain excluded |
   | **GQ9 auto cost model/docs** | **DONE for available families (ADR-0186).** Clean adaptive repeat clears every alarm over 92,721 checks; downstream explorer default has explicit off/fixed controls | Re-gate newly captured families; do not broaden this Glaurung-specific default into Axeyum's generic API |
   | **GQ10 real-lifter regression tier** | **DONE for available families (ADR-0187/0188).** The corrected 162-query regular pin and repeated 30,628-query full composites have executable alarms | Retain separate cold/ordered/profile bars and re-gate new families |
 
-  **Next actions:** (1) migrate Glaurung's consumer solver boundary to the
-  accepted first-class incremental contract and drive direct path deltas,
-  preserving one-shot controls and all replay/evidence/lifecycle alarms;
+  **Next actions:** (1) add direct-session per-check profile export to
+  Glaurung `f5a3b7a`, then run the accepted snapshot control versus opt-in
+  direct deltas on repeated ordered drivers while preserving one-shot controls
+  and all replay/evidence/lifecycle/RSS alarms;
   (2) obtain fresh native canonical-stage attribution and select any new GQ5/GQ6
   work only from a larger measured residual, not another primary-table analogy;
   (3) preserve the corrected
@@ -3488,7 +3504,7 @@ plan is built and committed on the current branch:
 ### Track 4 — Use Cases & Frontend
 | Phase | Title | Status |
 |---|---|---|
-| P4.1j | Glaurung warm delta and duplicate/prefix reuse (GQ7/GQ8) | **DONE for available serial families in ADR-0186/0192/0193/0195/0196/0199.** Adaptive ownership, bounded delta reuse, replay-checked exact SAT caching, replay/model fast paths, LIFO transfer, and serial sibling LCP reuse have clean repeated alarms and explicit controls. Axeyum's generic cache remains opt-in; parallel traversal or new families require revalidation. |
+| P4.1j | Glaurung warm delta and duplicate/prefix reuse (GQ7/GQ8) | **DONE for accepted serial snapshot families; direct-session gate WIP.** ADR-0186/0192/0193/0195/0196/0199 establish adaptive ownership, bounded delta reuse, replay-checked exact SAT caching, replay/model fast paths, LIFO transfer, and serial sibling LCP reuse. Axeyum ADR-0201 plus Glaurung `f5a3b7a` add first-class direct deltas behind an opt-in; profile and repeated ordered time/RSS acceptance remain. Axeyum's generic cache stays opt-in; parallel traversal or new families require revalidation. |
 | P4.1e | Retained warm Boolean array relation flags | **DONE (ADR-0091)** — symbolic-memory path conditions can keep nested supported array equality atoms warm through private candidate-sensitive relation flags, guarded equality/diff observations, projection filtering, and replay |
 | P4.1h | Retained warm nested array-valued UF parameters | **DONE (ADR-0094)** — nested supported array-valued memory/function parameters can stay warm as full-value UF keys through private projection keys or rewritten structural keys, with relation-flag guarded congruence, private filtering, and replay |
 | P4.1g | Retained warm structural array-valued UF parameters | **DONE (ADR-0093)** — supported store/constant/array-ITE memory/function parameters can stay warm as full-value UF keys with scalar dependency retention, structural owner realization, relation-flag guarded congruence, private filtering, and replay; ADR-0094 subsequently lands nested application keys |
@@ -3510,6 +3526,15 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-16 — Glaurung wires opt-in first-class explorer deltas.** Commit
+  `f5a3b7a` replaces prefix rediscovery on the candidate route with explicit
+  confirmed retain depth, persistent suffixes, and temporary assumptions.
+  Missing/invalid/error lifecycle paths fail closed, cache/session gauges are
+  released exactly, and stale acknowledgements cannot advance explorer state.
+  Backend 41/41, explorer ownership 2/2, Axeyum-only direct tests 4/4, and the
+  selected combined Z3+Axeyum adapter test pass under the 4 GiB wrapper. The
+  change is pushed; per-check direct profiling and repeated ordered gates are
+  still required before default enablement.
 - **2026-07-16 — ADR-0201 accepts the first-class incremental solver trait.**
   `1058cf84` exports an object-safe retained assert/push/pop/check/assume
   contract and implements it for `IncrementalBvSolver`, while keeping one-shot
@@ -3520,7 +3545,8 @@ plan is built and committed on the current branch:
   Glaurung ADR-011/`8d8cd6f` adds object-safe IR-level incremental operations
   and an Axeyum session that translates only newly asserted roots while keeping
   symbol/model maps aligned with scopes and assumptions. Its complete 37-test
-  backend group passes; explorer event wiring remains opt-in follow-up work.
+  backend group passes; explorer event wiring subsequently lands in
+  `f5a3b7a` under the same strict opt-in.
 - **2026-07-16 — ADR-0200 rejects the direct CNF open-addressing transfer.**
   Five clean 162-query processes per revision preserve all decisions, replay,
   and AIG/clause counters, but candidate mean CNF/total time regress
