@@ -322,6 +322,29 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-15 — ADR-0176 accepts bounded admission inside opt-in Glaurung
+  lineage reuse.** The accepted v4 profile shows assertion maxima of 123/78/51
+  and live-path peaks of 11/5/11 on vwififlt, Dptf, and IntcSST. A coarse
+  sweep rejects cap 4, shows cap 12 is an unbounded-equivalent no-op, and
+  selects 9 as the live-session knee; 128 assertions covers every established
+  occurrence without fallback.
+
+  Three order-balanced cap-9/cap-12 rounds decide and agree 20,958/20,958
+  checks per policy with zero assertion fallbacks, resets, unknown splits, or
+  finding changes. Weighted mean Axeyum time is 5.088 versus 5.091 seconds.
+  Median RSS falls 125,812 versus 136,804 KiB (-8.0%) on vwififlt and 120,076
+  versus 128,164 KiB (-6.3%) on IntcSST; Dptf is flat. Cap 9 falls back 45,
+  zero, and four checks per run respectively. The largest observed RSS falls
+  137,968→126,860 KiB.
+
+  Glaurung `1f24d5d` makes 9 live paths/128 assertions the visible defaults
+  only after `GLAURUNG_AXEYUM_WARM_REUSE=lineage` is explicitly selected.
+  Over-limit work remains one-shot; invalid overrides fail closed; the footer
+  reports both limits and fallback reasons. A fresh unset-limit vwififlt smoke
+  is 4,753/4,753 agreed with 45/0 fallbacks and Axeyum 4.477 seconds versus Z3
+  4.555. This closes the first memory gate, not GQ9 automatic selection or GQ8
+  caching. Widen GQ10 next and revalidate topology, fallback, RSS, and time.
+
 - **2026-07-15 — ADR-0175 accepts deterministic open-addressed AIG structural
   hashing and moves the native lineage ratio to 0.680x Z3.** Glaurung `d79010a`
   and Axeyum `17f7747f` advance the opt-in warm profile to v4: every primitive
@@ -1235,20 +1258,21 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
   | ID | Live status | Next acceptance boundary |
   |---|---|---|
-  | **GQ1 real-query profile** | **Native lineage phase/CNF/AIG attribution DONE for the bounded tier (ADR-0171--0175).** V4 validates all 6,986 request/memo/copy records; accepted unprofiled lineage is 0.680x Z3 | Widen drivers; never substitute diagnostic timing for the unprofiled bar |
+  | **GQ1 real-query profile** | **Native lineage phase/CNF/AIG/admission attribution DONE for the bounded tier (ADR-0171--0176).** V4 validates all 6,986 request/memo/copy records; accepted unprofiled lineage is 0.680x Z3 and 9/128 admission preserves Axeyum time while lowering RSS | Widen drivers; never substitute diagnostic timing for the unprofiled bar |
   | **GQ2 cheap cold tier** | **WIP with three accepted rewrite tranches; batch integration deferred.** Canonical v4 reaches 5.625 s / 0.730x Z3; ADR-0156 preserves replay but is 18.8% slower than one-shot | Keep canonical v4 as the measured one-shot policy; do not recommend fresh incremental batch until its clause/entry overhead closes |
   | **GQ3 coercion/affine peepholes** | **DONE for current measured shapes (ADR-0159).** Clean repeated path-paired ablations are fail-closed; `extract_extend` is a material lowering-only win, while all four measured structural rules change zero AIG nodes/clauses | Keep rules enabled. Reopen only for a new residual shape with a specific downstream hypothesis and the same causal ablation gate |
   | **GQ4 cold relevant bits** | **v1 and v2 DEFERRED after failed real gates.** v1 regresses ~1.42x→4.49x. V2 rejection overhead is bounded, but defaults admit 0/128 and +0.62% total; a 33-query moderate policy removes 632 AIG nodes/zero clauses and regresses bit blast 3.14% | Keep both explicit/off. Reopen only with an AIG/CNF-cone estimator or after word rewrites materially change the residual; do not tune thresholds further |
   | **GQ5 AIG/CNF construction** | **First native AIG tranche accepted (ADR-0175).** Deterministic open addressing improves three-driver Axeyum time 7.66% and ratio 0.742x→0.680x with unchanged structure; internal flattening stays deferred | Yield to GQ7/GQ10; reopen literal ownership or CNF only from fresh causal evidence |
   | **GQ6 cold SAT/CDCL** | **WIP foundation; behind measured CNF.** Accepted-table native lineage SAT is 18.48% weighted versus CNF at 46.55% | Compare identical CNF across cores only after the next CNF decision, with proof replay and deterministic limits |
-  | **GQ7 warm delta entry** | **Native timing/phase/AIG gates accepted; memory policy WIP (ADR-0171--0175, `49f1fe2`/`13f4bbe`).** Lineage is 0.680x Z3; atomic fallback is live | Calibrate caps against RSS/inherited-prefix cost and widen drivers before default admission |
+  | **GQ7 warm delta entry** | **First bounded memory policy accepted (ADR-0171--0176, Glaurung `1f24d5d`).** Lineage is 0.680x Z3 before admission; 9 live paths/128 assertions preserve Axeyum time, reduce RSS, and retain visible one-shot fallback | Validate the envelope on wider held-out drivers before automatic warm selection |
   | **GQ8 verdict/CNF cache** | **TODO; native ownership complete but cache contract still gated.** The ordered tier has 957 exact duplicate occurrences, 439 same-lineage repeats, and 2,192 prefix extensions | Specify bounded versioned content/config/scope identity, capacity/eviction, and mandatory model/proof replay before implementation |
-  | **GQ9 auto cost model/docs** | **TODO; fixed policies compared and explicit capacity fallback landed.** Lineage wins all three live streams but raises median RSS 6.3%--31.0% | Select measured session/assertion/memory limits and a telemetry-visible policy that beats or matches one-shot/snapshot/lineage on wider drivers |
-  | **GQ10 real-lifter regression tier** | **WIP; ordered, repeated native, and exact warm-profile v2--v4 tiers landed.** V4 causally accepts the AIG table on all established drivers | Widen families, add full-tier/per-commit variance, and keep pre-parsed, actual-client, unprofiled lineage, and diagnostic bars separate |
+  | **GQ9 auto cost model/docs** | **TODO; bounded opt-in admission landed.** ADR-0176 selects 9 live paths/128 assertions with exact fallback identity, but does not infer when warm reuse should activate | Fit and validate a topology/cost policy on wider drivers before setting warm reuse implicitly |
+  | **GQ10 real-lifter regression tier** | **WIP; ordered, repeated native, exact warm-profile v2--v4, and bounded-admission tiers landed.** V4 accepts the AIG table and ADR-0176 accepts 9/128 on established drivers | Widen families, add full-tier/per-commit variance, and keep pre-parsed, actual-client, unprofiled lineage, RSS/fallback, and diagnostic bars separate |
 
-  **Next actions:** (1) calibrate lineage caps against RSS/inherited-prefix cost
-  on ADR-0175's accepted AIG baseline; (2) widen ordered/native driver families
-  and per-commit variance; (3) reopen literal-copy ownership or CNF only from a
+  **Next actions:** (1) widen ordered/native driver families and validate
+  ADR-0176's 9/128 envelope with path/assertion distributions, fallback rate,
+  RSS, and actual-client time; (2) add per-commit variance; (3) reopen
+  literal-copy ownership or CNF only from a
   fresh causal gate; (4) keep GQ4 off and SAT behind measured CNF; (5) only then
   specify GQ8's
   replay-safe bounded cache and GQ9's non-regressing auto policy. Preserve
@@ -3039,7 +3063,7 @@ plan is built and committed on the current branch:
 ### Track 4 — Use Cases & Frontend
 | Phase | Title | Status |
 |---|---|---|
-| P4.1j | Glaurung warm delta and duplicate/prefix reuse (GQ7/GQ8) | **WIP — ADR-0171--0175 accept native timing/attribution plus the first AIG construction win.** Repeated lineage is 0.680x Z3; v4 validates exact request/memo/copy identity and the open-addressed table. Capacity fallback is live. Calibrate memory and widen before GQ8/GQ9. |
+| P4.1j | Glaurung warm delta and duplicate/prefix reuse (GQ7/GQ8) | **WIP — ADR-0171--0176 accept native timing/attribution, the first AIG construction win, and bounded opt-in admission.** Repeated lineage is 0.680x Z3 before admission; 9 live paths/128 assertions preserve Axeyum time and reduce RSS with exact fallback. Widen drivers before GQ8/GQ9. |
 | P4.1e | Retained warm Boolean array relation flags | **DONE (ADR-0091)** — symbolic-memory path conditions can keep nested supported array equality atoms warm through private candidate-sensitive relation flags, guarded equality/diff observations, projection filtering, and replay |
 | P4.1h | Retained warm nested array-valued UF parameters | **DONE (ADR-0094)** — nested supported array-valued memory/function parameters can stay warm as full-value UF keys through private projection keys or rewritten structural keys, with relation-flag guarded congruence, private filtering, and replay |
 | P4.1g | Retained warm structural array-valued UF parameters | **DONE (ADR-0093)** — supported store/constant/array-ITE memory/function parameters can stay warm as full-value UF keys with scalar dependency retention, structural owner realization, relation-flag guarded congruence, private filtering, and replay; ADR-0094 subsequently lands nested application keys |
@@ -3060,6 +3084,13 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-15 — ADR-0176 accepts bounded opt-in lineage admission.** Three
+  order-balanced cap-9/cap-12 rounds preserve all 20,958 decisions per policy
+  and weighted Axeyum time (5.088/5.091 s), while cap 9 lowers median RSS 8.0%
+  on vwififlt and 6.3% on IntcSST. Glaurung `1f24d5d` defaults explicit lineage
+  mode to 9 live paths/128 assertions with visible one-shot fallback and limit
+  identity. Automatic warm selection and caching remain open; widen GQ10 next.
 
 - **2026-07-15 — ADR-0174 defers bounded internal positive-AND flattening.**
   The exact/off-by-default candidate passes all semantic gates, but Dptf later
