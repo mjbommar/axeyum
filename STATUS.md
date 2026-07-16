@@ -322,15 +322,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-16 — ADR-0200 proposes open-addressed primary CNF ownership.** Cold
-  CNF is the leading pure-solver lane after ADR-0175. The accepted collision-
-  safe dedup path still performs primary `std::HashMap` lookup across 53.75
-  million clause attempts even though keys are already mixed fingerprints,
-  entries never delete, and iteration is unobservable. Replace only the common
-  fingerprint→formula-index map with deterministic linear probing; preserve
-  canonical clauses, exact collision comparison, rare side buckets, formula
-  order, SAT/proof/model/replay, and every counter. Accept only on identical
-  structure plus representative and full cold end-to-end wins.
+- **2026-07-16 — ADR-0200 defers open-addressed primary CNF ownership.** The
+  isolated table is semantically and structurally exact: all focused/CNF/proof
+  gates pass, and every one of ten representative processes decides 162/162
+  with 88 SAT, 74 UNSAT, zero errors/disagreements/replay failures, and
+  identical AIG/clause counters. Performance rejects it. Candidate mean/p50
+  CNF time regress 8.55%/7.52%, and mean/p50 total time regress 3.67%/3.87%.
+  The full tier is unnecessary; `90e298f2` restores `std::HashMap`. Do not
+  transfer ADR-0175's AIG-table result by analogy. Re-attribute a larger cold
+  CNF subphase or encoding hypothesis before another GQ5 implementation.
 
 - **2026-07-16 — ADR-0199 accepts serial DFS sibling warm leasing.** The
   immutable-prefix audit finds no cheap snapshot seam: the arena/AIG can clone,
@@ -1666,20 +1666,24 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   | **GQ2 cheap cold tier** | **WIP with three accepted rewrite tranches; batch integration deferred.** Canonical v4 reaches 5.625 s / 0.730x Z3; ADR-0156 preserves replay but is 18.8% slower than one-shot | Keep canonical v4 as the measured one-shot policy; do not recommend fresh incremental batch until its clause/entry overhead closes |
   | **GQ3 coercion/affine peepholes** | **DONE for current measured shapes (ADR-0159).** Clean repeated path-paired ablations are fail-closed; `extract_extend` is a material lowering-only win, while all four measured structural rules change zero AIG nodes/clauses | Keep rules enabled. Reopen only for a new residual shape with a specific downstream hypothesis and the same causal ablation gate |
   | **GQ4 cold relevant bits** | **v1 and v2 DEFERRED after failed real gates.** v1 regresses ~1.42x→4.49x. V2 rejection overhead is bounded, but defaults admit 0/128 and +0.62% total; a 33-query moderate policy removes 632 AIG nodes/zero clauses and regresses bit blast 3.14% | Keep both explicit/off. Reopen only with an AIG/CNF-cone estimator or after word rewrites materially change the residual; do not tune thresholds further |
-  | **GQ5 AIG/CNF construction** | **First native AIG tranche accepted (ADR-0175).** Deterministic open addressing improves three-driver Axeyum time 7.66% and ratio 0.742x→0.680x with unchanged structure; internal flattening stays deferred | Yield to GQ7/GQ10; reopen literal ownership or CNF only from fresh causal evidence |
+  | **GQ5 AIG/CNF construction** | **AIG tranche accepted; direct CNF-table transfer rejected (ADR-0175/0200).** AIG open addressing improves native time 7.66%, but the structurally exact CNF primary-table candidate regresses representative mean CNF/total 8.55%/3.67% and is reverted | Re-attribute a larger CNF subphase or encoding hypothesis; do not retry table micro-work without per-probe causal evidence |
   | **GQ6 cold SAT/CDCL** | **WIP foundation; behind measured CNF.** Accepted-table native lineage SAT is 18.48% weighted versus CNF at 46.55% | Compare identical CNF across cores only after the next CNF decision, with proof replay and deterministic limits |
   | **GQ7 warm delta entry** | **DONE for available serial families (ADR-0171--0186/0193/0195/0196/0199).** Path-owned delta reuse, 9/512 hard bounds, exact alarms, adaptive admission, replay/model fast paths, LIFO transfer, and serial sibling LCP reuse are enforced | Preserve one-shot/fixed/transfer-only/serial-off controls; design first-class push/pop/assume and re-gate new traversal policies or families |
   | **GQ8 verdict/CNF cache** | **DONE for available families (ADR-0192).** Clean repeated evidence admits exact same-arena scalar SAT reuse only in path-owned Glaurung sessions; fixed bounds, traffic partitions, cleanup gauges, findings, and replay are enforced | Preserve explicit off and re-gate new families; Axeyum's generic cache remains opt-in and ordinary UNSAT/Unknown/prefix verdicts remain excluded |
   | **GQ9 auto cost model/docs** | **DONE for available families (ADR-0186).** Clean adaptive repeat clears every alarm over 92,721 checks; downstream explorer default has explicit off/fixed controls | Re-gate newly captured families; do not broaden this Glaurung-specific default into Axeyum's generic API |
   | **GQ10 real-lifter regression tier** | **DONE for available families (ADR-0187/0188).** The corrected 162-query regular pin and repeated 30,628-query full composites have executable alarms | Retain separate cold/ordered/profile bars and re-gate new families |
 
-  **Next actions:** (1) obtain fresh native canonical-stage attribution and
-  select any GQ5/GQ6 work only from the measured residual; (2) preserve the corrected
+  **Next actions:** (1) design the first-class incremental `Solver`
+  push/pop/assume contract over the arena-bound warm solver while preserving
+  replay, evidence, deterministic limits, and lifetime-free term handles;
+  (2) obtain fresh native canonical-stage attribution and select any new GQ5/GQ6
+  work only from a larger measured residual, not another primary-table analogy;
+  (3) preserve the corrected
   representative pin, exact shard union, zero-exclusion rule, and 4 GiB
-  process envelope; (3) use
+  process envelope; (4) use
   the new canonical stage balance to select any next GQ5/GQ6 slice through a
-  fresh causal gate; (4) run every candidate through ADR-0188's guarded whole-
-  composite comparison; (5) keep GQ4 explicit/off. Preserve strict coercion,
+  fresh causal gate; (5) run every candidate through ADR-0188's guarded whole-
+  composite comparison; (6) keep GQ4 explicit/off. Preserve strict coercion,
   dump validation, and atomic dedup/conflict handling.
 
   **Validation (2026-07-15):** a clean, serialized `just check` at `623cae4c`
@@ -3489,6 +3493,12 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-16 — ADR-0200 rejects the direct CNF open-addressing transfer.**
+  Five clean 162-query processes per revision preserve all decisions, replay,
+  and AIG/clause counters, but candidate mean CNF/total time regress
+  8.55%/3.67%. The full tier is skipped by contract and `90e298f2` restores the
+  accepted primary map. First-class incremental push/pop/assume returns to the
+  front of the structural API queue while GQ5 awaits a larger attributed slice.
 - **2026-07-16 — ADR-0192 accepts the bounded Glaurung cache default.** Clean
   repeated SurfacePen/NETwtw10 off/on artifacts preserve 185,442 combined
   decisions and findings while cache-on improves both drivers' Axeyum time,
