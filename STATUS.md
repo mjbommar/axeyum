@@ -322,6 +322,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-16 — ADR-0200 proposes open-addressed primary CNF ownership.** Cold
+  CNF is the leading pure-solver lane after ADR-0175. The accepted collision-
+  safe dedup path still performs primary `std::HashMap` lookup across 53.75
+  million clause attempts even though keys are already mixed fingerprints,
+  entries never delete, and iteration is unobservable. Replace only the common
+  fingerprint→formula-index map with deterministic linear probing; preserve
+  canonical clauses, exact collision comparison, rare side buckets, formula
+  order, SAT/proof/model/replay, and every counter. Accept only on identical
+  structure plus representative and full cold end-to-end wins.
+
 - **2026-07-16 — ADR-0199 accepts serial DFS sibling warm leasing.** The
   immutable-prefix audit finds no cheap snapshot seam: the arena/AIG can clone,
   but incremental CNF owns opaque BatSat state, so a fork artifact would still

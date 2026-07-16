@@ -536,6 +536,13 @@ stage rankings where the accepted evidence has changed.
 | 9 | Parallel path exploration | Confirm `Send`/per-worker ownership and benchmark independent path solvers. ADR-0199 leases are serial-only and must never cross workers; determinism, memory caps, and replay remain mandatory. |
 | 10 | Harder/large-BV preprocessing parity | Use causal ablation on DptfDevGen-class formulas to select exact large-BV rewrites. Keep GQ4 slicing off and never reintroduce configured one-shot preprocessing without a cold end-to-end win. |
 
+Proposed ADR-0200 is the first bounded implementation of rank 1. The cold CNF
+primary dedup owner still sends already-mixed 64-bit fingerprints through
+`std::HashMap` across 53.75 million clause attempts. Replace only that primary
+map with deterministic no-delete open addressing, retaining exact full-clause
+checks and the collision-only side table. Require byte-identical CNF and both
+representative and full-tier end-to-end wins; otherwise revert it in isolation.
+
 **Latest Glaurung execution order (2026-07-15; supersedes the earlier cold-path
 priority reset).** Earlier evidence reported an approximately 1.34x gated-bench
 ratio but roughly 2.5x on one actual `IncrementalBvSolver` stream, with
