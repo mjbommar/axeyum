@@ -322,6 +322,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-15 — ADR-0180 lands held-out lineage regression alarms.** Glaurung
+  `a0e5f9f` fails homogeneous comparisons above 3% Axeyum mean, 3% normalized
+  ratio, 5% median RSS, or 2% absolute Z3 drift. Time/ratio/RSS are one-sided;
+  Z3 drift is absolute. All thresholds are explicit options applied only after
+  exact identity, work, finding, correctness, and lifecycle validation.
+
+  ADR-0178's Axeyum CV is 0.34%/0.44%; the thresholds sit well beyond measured
+  noise while keeping RSS first-class. Four focused tests, Ruff/compilation,
+  and real-artifact self-compare pass. Next publish a clean full baseline, then
+  begin GQ9 topology/cost fitting. The dirty one-run smoke is not release data.
+
 - **2026-07-15 — ADR-0179 lands the fail-closed held-out lineage artifact.**
   Glaurung `89aea59` adds `glaurung-axeyum-lineage-gate-v1`: it records both
   revisions/dirty paths, binary and driver hashes, platform/Rust identity,
@@ -1323,19 +1334,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
   | ID | Live status | Next acceptance boundary |
   |---|---|---|
-  | **GQ1 real-query profile** | **Native attribution and held-out artifact identity DONE for every available stream (ADR-0171--0179).** Original v4 validates 6,986 records; repeated held-out tiers validate 9/512, and the runner versions source/environment/work/findings/resources | Publish clean baseline/alarms; never substitute diagnostic timing for the unprofiled bar |
+  | **GQ1 real-query profile** | **Native attribution, held-out identity, and alarms DONE for every stream (ADR-0171--0180).** Repeated tiers validate 9/512; runner versions identity and enforces 3%/3%/5% + 2% Z3 alarms | Publish clean baseline; never substitute diagnostic timing for unprofiled bars |
   | **GQ2 cheap cold tier** | **WIP with three accepted rewrite tranches; batch integration deferred.** Canonical v4 reaches 5.625 s / 0.730x Z3; ADR-0156 preserves replay but is 18.8% slower than one-shot | Keep canonical v4 as the measured one-shot policy; do not recommend fresh incremental batch until its clause/entry overhead closes |
   | **GQ3 coercion/affine peepholes** | **DONE for current measured shapes (ADR-0159).** Clean repeated path-paired ablations are fail-closed; `extract_extend` is a material lowering-only win, while all four measured structural rules change zero AIG nodes/clauses | Keep rules enabled. Reopen only for a new residual shape with a specific downstream hypothesis and the same causal ablation gate |
   | **GQ4 cold relevant bits** | **v1 and v2 DEFERRED after failed real gates.** v1 regresses ~1.42x→4.49x. V2 rejection overhead is bounded, but defaults admit 0/128 and +0.62% total; a 33-query moderate policy removes 632 AIG nodes/zero clauses and regresses bit blast 3.14% | Keep both explicit/off. Reopen only with an AIG/CNF-cone estimator or after word rewrites materially change the residual; do not tune thresholds further |
   | **GQ5 AIG/CNF construction** | **First native AIG tranche accepted (ADR-0175).** Deterministic open addressing improves three-driver Axeyum time 7.66% and ratio 0.742x→0.680x with unchanged structure; internal flattening stays deferred | Yield to GQ7/GQ10; reopen literal ownership or CNF only from fresh causal evidence |
   | **GQ6 cold SAT/CDCL** | **WIP foundation; behind measured CNF.** Accepted-table native lineage SAT is 18.48% weighted versus CNF at 46.55% | Compare identical CNF across cores only after the next CNF decision, with proof replay and deterministic limits |
-  | **GQ7 warm delta entry** | **Bounded opt-in policy repeated and executable (ADR-0171--0179, Glaurung `89aea59`).** Nine live paths retain the RSS/time tradeoff; 512 assertions cover every stream; exact held-out counters and artifact identity are enforced | Publish clean baseline/alarms before automatic warm selection |
+  | **GQ7 warm delta entry** | **Bounded opt-in policy repeated, executable, and alarmed (ADR-0171--0180, Glaurung `a0e5f9f`).** Nine paths retain the RSS/time tradeoff; 512 assertions cover every stream; exact identity and alarms are enforced | Publish clean baseline before automatic warm selection |
   | **GQ8 verdict/CNF cache** | **TODO; native ownership complete but cache contract still gated.** The ordered tier has 957 exact duplicate occurrences, 439 same-lineage repeats, and 2,192 prefix extensions | Specify bounded versioned content/config/scope identity, capacity/eviction, and mandatory model/proof replay before implementation |
-  | **GQ9 auto cost model/docs** | **TODO; bounded opt-in admission repeated and executable.** ADR-0176--0179 validate 9/512 and artifact identity but do not infer when warm reuse should activate | Publish baseline/alarms, then fit/validate topology-cost before setting warm reuse implicitly |
-  | **GQ10 real-lifter regression tier** | **WIP; all available query streams repeated and fail-closed runner landed.** SurfacePen is 0.243x; fixed-budget NETwtw10 is 0.360x; artifact versions source/environment/work/findings/resources | Publish clean baseline/thresholds, add new families, and keep pre-parsed, actual-client, unprofiled lineage, RSS/fallback, and diagnostic bars separate |
+  | **GQ9 auto cost model/docs** | **TODO; bounded opt-in admission repeated, executable, and alarmed.** ADR-0176--0180 validate 9/512 but do not infer when warm reuse should activate | Publish baseline, then fit/validate topology-cost before setting warm reuse implicitly |
+  | **GQ10 real-lifter regression tier** | **WIP; all streams repeated; fail-closed runner/alarms landed.** SurfacePen is 0.243x; NETwtw10 is 0.360x; identity plus 3%/3%/5% + 2% Z3 alarms are executable | Publish clean baseline, add new families, and keep diagnostic bars separate |
 
-  **Next actions:** (1) publish a clean ADR-0179 baseline and add Axeyum/ratio/
-  RSS alarms; (2) add newly available families; (3) reopen
+  **Next actions:** (1) publish a clean ADR-0180 baseline; (2) add newly
+  available families; (3) reopen
   literal-copy ownership or CNF only from a
   fresh causal gate; (4) keep GQ4 off and SAT behind measured CNF; (5) only then
   specify GQ8's
@@ -3127,7 +3138,7 @@ plan is built and committed on the current branch:
 ### Track 4 — Use Cases & Frontend
 | Phase | Title | Status |
 |---|---|---|
-| P4.1j | Glaurung warm delta and duplicate/prefix reuse (GQ7/GQ8) | **WIP — ADR-0171--0179 accept native attribution, the AIG win, repeated bounded admission, and fail-closed artifacts.** Original lineage is 0.680x Z3; held-out 9/512 is 0.243x/0.360x with exact identity. Publish baseline/alarms before GQ8/GQ9. |
+| P4.1j | Glaurung warm delta and duplicate/prefix reuse (GQ7/GQ8) | **WIP — ADR-0171--0180 accept native attribution, AIG win, bounded admission, artifacts, and alarms.** Original lineage is 0.680x Z3; held-out 9/512 is 0.243x/0.360x with exact identity. Publish clean baseline before GQ8/GQ9. |
 | P4.1e | Retained warm Boolean array relation flags | **DONE (ADR-0091)** — symbolic-memory path conditions can keep nested supported array equality atoms warm through private candidate-sensitive relation flags, guarded equality/diff observations, projection filtering, and replay |
 | P4.1h | Retained warm nested array-valued UF parameters | **DONE (ADR-0094)** — nested supported array-valued memory/function parameters can stay warm as full-value UF keys through private projection keys or rewritten structural keys, with relation-flag guarded congruence, private filtering, and replay |
 | P4.1g | Retained warm structural array-valued UF parameters | **DONE (ADR-0093)** — supported store/constant/array-ITE memory/function parameters can stay warm as full-value UF keys with scalar dependency retention, structural owner realization, relation-flag guarded congruence, private filtering, and replay; ADR-0094 subsequently lands nested application keys |
@@ -3148,6 +3159,11 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-15 — ADR-0180 lands lineage regression alarms.** Glaurung
+  `a0e5f9f` adds post-identity 3% Axeyum, 3% ratio, 5% median-RSS, and 2%
+  absolute-Z3-drift failures. Four tests and self-compare pass. Publish a clean
+  baseline next; correctness/work gates remain non-configurable.
 
 - **2026-07-15 — ADR-0179 lands fail-closed held-out lineage automation.**
   Glaurung `89aea59` versions source/environment/driver/policy/work/findings/
