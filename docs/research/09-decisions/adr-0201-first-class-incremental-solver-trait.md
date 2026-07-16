@@ -1,6 +1,6 @@
 # ADR-0201: First-class incremental solver trait
 
-Status: proposed
+Status: accepted
 Date: 2026-07-16
 
 ## Context
@@ -29,7 +29,7 @@ path streams, while one-shot configured assertion is a measured loss. The
 framework needs to distinguish genuine retained incrementality from an
 interface-only assertion stack.
 
-## Proposed decision
+## Decision
 
 Add an always-exported, object-safe `IncrementalSolver` extension trait with the
 minimum assumptions-first lifecycle already accepted by ADR-0005/0009:
@@ -88,6 +88,26 @@ really preserve state and satisfy the replay/evidence contract. A future
 factory or capability-discovery layer may construct trait objects, but it is
 not required for this first tranche and must not blur one-shot and retained
 cost models.
+
+## Implementation and evidence
+
+Commit `1058cf84` adds the always-exported trait and delegates its implementation
+to the existing `IncrementalBvSolver` methods without changing their code paths.
+The dependency-minimal profile runs 19 library tests plus three new trait
+conformance tests. The latter execute the complete lifecycle through both a
+generic type parameter and `Box<dyn IncrementalSolver>`, and separately verify
+non-Boolean assertion/assumption failures.
+
+The full profile runs the existing 11-test incremental-BV suite plus all three
+new tests. Strict Clippy and warning-denied rustdoc pass under both the full and
+minimal `qfbv` profiles, formatting and repository link checks pass, and the
+embedding guide documents generic delta-driven use. The minimal-profile gate
+also exposed and repaired two stale full-only XOR test annotations and six
+full-profile-only rustdoc links; no solver behavior changed in those repairs.
+
+This accepts only the Axeyum framework contract. Glaurung still needs a
+downstream trait/session migration and real stream gate before claiming that
+snapshot reconstruction overhead has been removed.
 
 ## Alternatives
 
