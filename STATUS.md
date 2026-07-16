@@ -322,6 +322,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-16 — ADR-0208 rejects whole-snapshot cold timeout retry on RSS.**
+  Glaurung `35b25ab` adds an explicit/off direct-warm `Unknown` retry through
+  one fresh Axeyum solver under the same 250 ms cap, preserving the original
+  `Unknown` on another timeout/error and exporting a complete counter
+  partition. Tcpip performs 15 retries = 4 recoveries + 11 repeated unknowns +
+  0 errors with zero SAT/UNSAT disagreements or resets. Axeyum time rises only
+  2.38%, but RSS rises 10.46% (447,888→494,728 KiB), failing the 5% alarm; query
+  count also drifts. Dxgkrnl performs zero retries and preserves the exact
+  17,712-query traffic. Keep the diagnostic off. Next measure a bounded second
+  check on the synchronized retained solver or a strict recoverability
+  predictor; do not pay whole-snapshot reconstruction again without a memory
+  proof.
+
 - **2026-07-16 — ADR-0207 closes the widened concat error class and isolates
   the remaining timeout policy.** Glaurung's strict 60-second tcpip pack
   validates 784 distinct splits / 234,463,502 bytes; 733 are Axeyum errors with
@@ -3608,7 +3621,7 @@ plan is built and committed on the current branch:
 ### Track 4 — Use Cases & Frontend
 | Phase | Title | Status |
 |---|---|---|
-| P4.1j | Glaurung warm delta and duplicate/prefix reuse (GQ7/GQ8) | **DONE for current serial/source-direct families; widened timeout gate active.** ADR-0186/0192/0193/0195/0196/0199 establish adaptive snapshot ownership and serial LCP reuse. ADR-0201--0205 accept first-class source deltas and the two-driver production win. ADR-0206/0207 capture the widened split corpus, close Glaurung's declared-concat error class, and isolate nine correct-but-budget-sensitive tcpip formulas. Direct remains opt-in pending full-budget and repeated findings/RSS/variance gates. |
+| P4.1j | Glaurung warm delta and duplicate/prefix reuse (GQ7/GQ8) | **DONE for current serial/source-direct families; widened timeout gate active.** ADR-0186/0192/0193/0195/0196/0199 establish adaptive snapshot ownership and serial LCP reuse. ADR-0201--0205 accept first-class source deltas and the two-driver production win. ADR-0206/0207 close Glaurung's declared-concat error class and isolate nine budget-sensitive tcpip formulas; ADR-0208 rejects fresh cold retry on +10.46% RSS. Direct remains opt-in pending a memory-safe timeout policy plus full-budget and repeated findings/RSS/variance gates. |
 | P4.1e | Retained warm Boolean array relation flags | **DONE (ADR-0091)** — symbolic-memory path conditions can keep nested supported array equality atoms warm through private candidate-sensitive relation flags, guarded equality/diff observations, projection filtering, and replay |
 | P4.1h | Retained warm nested array-valued UF parameters | **DONE (ADR-0094)** — nested supported array-valued memory/function parameters can stay warm as full-value UF keys through private projection keys or rewritten structural keys, with relation-flag guarded congruence, private filtering, and replay |
 | P4.1g | Retained warm structural array-valued UF parameters | **DONE (ADR-0093)** — supported store/constant/array-ITE memory/function parameters can stay warm as full-value UF keys with scalar dependency retention, structural owner realization, relation-flag guarded congruence, private filtering, and replay; ADR-0094 subsequently lands nested application keys |
@@ -3630,6 +3643,10 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-16 — ADR-0208 defers fresh cold retry after warm timeout.**
+  Glaurung `35b25ab` recovers 4/15 tcpip occurrences with exact counters and no
+  errors/disagreements, but leaves 11 unknowns and raises RSS 10.46%; the
+  dxgkrnl zero-timeout control is inert. The diagnostic stays explicit/off.
 - **2026-07-16 — ADR-0207 accepts Glaurung's declared-concat soundness fix.**
   Strict replay turns 733 tcpip Axeyum errors into one 57-bit concat root cause;
   Glaurung `d60ed0f` now honors both declared halves in text/Z3/Axeyum. Post-fix
