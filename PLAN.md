@@ -526,7 +526,7 @@ stage rankings where the accepted evidence has changed.
 | Rank | Client requirement | Current action / gate |
 |---:|---|---|
 | 1 | Cold CNF/bit-blast micro-optimization | Lead the pure-solver lane with cold CNF lookup/ownership and clause emission. Cold lowering is about 84% versus about 15% SAT; accept only repeated real-corpus end-to-end gains with identical decisions/replay. |
-| 2 | First-class incremental `Solver` trait | **Axeyum side done in ADR-0201.** The object-safe raw retained trait is always exported and implemented by `IncrementalBvSolver` under full and `qfbv`-only profiles, without backend lifetimes or weakened replay. Next migrate Glaurung's consumer boundary to direct deltas; `assert_configured` remains documented warm-only. |
+| 2 | First-class incremental `Solver` trait | **Framework contracts done in Axeyum ADR-0201 and Glaurung ADR-011 (`8d8cd6f`).** Both sides now expose object-safe retained assert/push/pop/check/assume sessions; Glaurung's Axeyum implementation translates only delta roots and keeps model mappings scope-local. Next wire explorer path events into that session behind an opt-in control and re-gate; `assert_configured` remains warm-only. |
 | 3 | Safe automatic warm policy | **Done for current families in ADR-0186/0199.** Adaptive ownership, exact cache, owner transfer, and serial sibling leases default on only in the explicit explorer context; preserve all off/fixed controls and re-gate wider families. |
 | 4 | Lineage RSS Pareto knee | ADR-0198 rejects a third retained owner (+7.66% RSS); ADR-0199 instead reduces accepted SurfacePen/NETwtw10 RSS 6.11%/13.36%. Continue only topology/lifetime changes that clear the 5% alarm. |
 | 5 | Sibling-prefix structural sharing | **Done for the serial DFS context in ADR-0199.** Exact LCP/pop/push continuation leasing avoids cloning and concurrent mutation. Copy-on-write or parallel variants require a new proof/lifecycle contract. |
@@ -553,8 +553,11 @@ assert/push/pop/check/check-assuming sessions and is implemented first by
 `Solver<B>` remain semantically distinct. Generic and trait-object conformance,
 the existing warm suite, strict Clippy, and warning-denied rustdoc pass under
 full and `qfbv`-only profiles. The remaining rank-2 work is downstream:
-Glaurung must drive direct deltas through this contract and re-run the real
-stream gates before claiming snapshot reconstruction is gone.
+Glaurung ADR-011/`8d8cd6f` now adds its matching object-safe session and a
+direct-delta Axeyum implementation with 37/37 backend tests green. The remaining
+rank-2 work is explorer wiring: replace complete-snapshot calls with explicit
+path events behind an opt-in control and re-run the real stream gates before
+claiming snapshot reconstruction is gone.
 
 **Latest Glaurung execution order (2026-07-15; supersedes the earlier cold-path
 priority reset).** Earlier evidence reported an approximately 1.34x gated-bench

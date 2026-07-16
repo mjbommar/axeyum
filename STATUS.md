@@ -332,7 +332,12 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   warning-denied rustdoc pass under full and dependency-minimal `qfbv` profiles.
   Arena handles stay lifetime-free, exclusive mutation and original replay are
   preserved, and configured preprocessing/concrete stats stay outside the
-  general contract. Next wire direct deltas through Glaurung's consumer trait.
+  general contract. Glaurung ADR-011/`8d8cd6f` now lands the matching object-
+  safe IR-level session plus a direct-delta Axeyum implementation: each assert
+  translates only the new root, and scope-local symbol maps prevent popped or
+  temporary values leaking into later models. All 37 backend tests pass. The
+  explorer still calls the accepted snapshot adapter; opt-in path-event wiring
+  and real-stream measurement are next.
 
 - **2026-07-16 — ADR-0200 defers open-addressed primary CNF ownership.** The
   isolated table is semantically and structurally exact: all focused/CNF/proof
@@ -3511,6 +3516,11 @@ plan is built and committed on the current branch:
   snapshot facades distinct. Generic and trait-object tests, the 11-test warm
   suite, strict Clippy, and rustdoc pass under full and minimal `qfbv` profiles.
   Downstream direct-delta wiring and real-stream measurement remain explicit.
+- **2026-07-16 — Glaurung lands the matching P5 direct-delta session contract.**
+  Glaurung ADR-011/`8d8cd6f` adds object-safe IR-level incremental operations
+  and an Axeyum session that translates only newly asserted roots while keeping
+  symbol/model maps aligned with scopes and assumptions. Its complete 37-test
+  backend group passes; explorer event wiring remains opt-in follow-up work.
 - **2026-07-16 — ADR-0200 rejects the direct CNF open-addressing transfer.**
   Five clean 162-query processes per revision preserve all decisions, replay,
   and AIG/clause counters, but candidate mean CNF/total time regress
