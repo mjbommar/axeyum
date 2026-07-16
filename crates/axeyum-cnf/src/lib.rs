@@ -2920,14 +2920,14 @@ impl<'a> TseitinEncoder<'a> {
     ) -> Result<(), CnfError> {
         let primary = &mut self.clause_index.primary;
         let collisions = &mut self.clause_index.collisions;
-        match primary.lookup_for_insert(fingerprint) {
-            PrimaryFingerprintLookup::Vacant(slot) => {
+        match primary.entry(fingerprint) {
+            std::collections::hash_map::Entry::Vacant(entry) => {
                 let index = self.formula.clauses().len();
                 self.formula.add_clause(CnfClause::new(clause))?;
-                primary.insert_vacant(slot, fingerprint, index);
+                entry.insert(index);
             }
-            PrimaryFingerprintLookup::Occupied(primary_index) => {
-                let duplicate = self.formula.clauses()[primary_index].lits() == clause.as_slice()
+            std::collections::hash_map::Entry::Occupied(entry) => {
+                let duplicate = self.formula.clauses()[*entry.get()].lits() == clause.as_slice()
                     || collisions.get(&fingerprint).is_some_and(|indices| {
                         clause_indices_contain(&self.formula, indices, &clause)
                     });
@@ -2950,104 +2950,8 @@ type FingerprintMap<T> = HashMap<u64, T, BuildHasherDefault<FingerprintHasher>>;
 
 #[derive(Default)]
 struct ClauseIndex {
-    primary: PrimaryFingerprintTable,
+    primary: FingerprintMap<usize>,
     collisions: FingerprintMap<Vec<usize>>,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct PrimaryFingerprintEntry {
-    fingerprint: u64,
-    clause_index: usize,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum PrimaryFingerprintLookup {
-    Vacant(usize),
-    Occupied(usize),
-}
-
-/// Deterministic, no-delete primary owner for already-mixed fingerprints.
-#[derive(Debug, Default, PartialEq, Eq)]
-struct PrimaryFingerprintTable {
-    slots: Vec<Option<PrimaryFingerprintEntry>>,
-    len: usize,
-}
-
-impl PrimaryFingerprintTable {
-    const MIN_CAPACITY: usize = 8;
-
-    #[cfg(test)]
-    fn len(&self) -> usize {
-        self.len
-    }
-
-    fn lookup_for_insert(&mut self, fingerprint: u64) -> PrimaryFingerprintLookup {
-        if self.slots.is_empty() {
-            self.grow(Self::MIN_CAPACITY);
-        } else if let occupied @ PrimaryFingerprintLookup::Occupied(_) =
-            self.lookup_without_growth(fingerprint)
-        {
-            return occupied;
-        }
-
-        if self.len.saturating_add(1).saturating_mul(10) > self.slots.len().saturating_mul(7) {
-            let capacity = self
-                .slots
-                .len()
-                .checked_mul(2)
-                .expect("CNF fingerprint table capacity fits usize");
-            self.grow(capacity);
-        }
-        self.lookup_without_growth(fingerprint)
-    }
-
-    fn lookup_without_growth(&self, fingerprint: u64) -> PrimaryFingerprintLookup {
-        let mask = self.slots.len() - 1;
-        let mut slot = fingerprint_table_hash(fingerprint) & mask;
-        loop {
-            match self.slots[slot] {
-                Some(entry) if entry.fingerprint == fingerprint => {
-                    return PrimaryFingerprintLookup::Occupied(entry.clause_index);
-                }
-                Some(_) => slot = (slot + 1) & mask,
-                None => return PrimaryFingerprintLookup::Vacant(slot),
-            }
-        }
-    }
-
-    fn insert_vacant(&mut self, slot: usize, fingerprint: u64, clause_index: usize) {
-        debug_assert!(self.slots[slot].is_none());
-        self.slots[slot] = Some(PrimaryFingerprintEntry {
-            fingerprint,
-            clause_index,
-        });
-        self.len += 1;
-    }
-
-    fn grow(&mut self, capacity: usize) {
-        debug_assert!(capacity.is_power_of_two());
-        let old_slots = core::mem::replace(&mut self.slots, vec![None; capacity]);
-        self.len = 0;
-        for entry in old_slots.into_iter().flatten() {
-            let PrimaryFingerprintLookup::Vacant(slot) =
-                self.lookup_without_growth(entry.fingerprint)
-            else {
-                unreachable!("one primary entry exists per fingerprint")
-            };
-            self.insert_vacant(slot, entry.fingerprint, entry.clause_index);
-        }
-    }
-}
-
-fn fingerprint_table_hash(fingerprint: u64) -> usize {
-    #[cfg(target_pointer_width = "64")]
-    {
-        usize::try_from(fingerprint).expect("64-bit fingerprint fits usize")
-    }
-    #[cfg(target_pointer_width = "32")]
-    {
-        usize::try_from(fingerprint ^ (fingerprint >> 32)).expect("folded fingerprint fits usize")
-    }
 }
 
 /// The clause key is already a mixed 64-bit fingerprint. Preserve it as the
@@ -3822,40 +3726,6 @@ mod tests {
             encoder.clause_index.collisions[&forced_fingerprint],
             vec![1]
         );
-    }
-
-    #[test]
-    fn primary_fingerprint_table_probes_grows_and_is_deterministic() {
-        fn insert(
-            table: &mut super::PrimaryFingerprintTable,
-            fingerprint: u64,
-            clause_index: usize,
-        ) {
-            let super::PrimaryFingerprintLookup::Vacant(slot) =
-                table.lookup_for_insert(fingerprint)
-            else {
-                panic!("test inserts each fingerprint once")
-            };
-            table.insert_vacant(slot, fingerprint, clause_index);
-        }
-
-        let fingerprints = [1, 9, 17, 25, 33, 41, 49, 57, 65, 73, 81, 89];
-        let mut first = super::PrimaryFingerprintTable::default();
-        let mut second = super::PrimaryFingerprintTable::default();
-        for (clause_index, fingerprint) in fingerprints.into_iter().enumerate() {
-            insert(&mut first, fingerprint, clause_index);
-            insert(&mut second, fingerprint, clause_index);
-        }
-
-        assert_eq!(first, second, "same insertion order has identical slots");
-        assert_eq!(first.len(), fingerprints.len());
-        assert!(first.slots.len() > super::PrimaryFingerprintTable::MIN_CAPACITY);
-        for (clause_index, fingerprint) in fingerprints.into_iter().enumerate() {
-            assert_eq!(
-                first.lookup_for_insert(fingerprint),
-                super::PrimaryFingerprintLookup::Occupied(clause_index)
-            );
-        }
     }
 
     #[test]
