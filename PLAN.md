@@ -470,6 +470,14 @@ session state.
 > zero replay failures, and zero terminal gauges. It is not a performance
 > claim: one process per policy and 3.33% Z3 drift fail the release-evidence
 > standard. Run the clean repeated SurfacePen + NETwtw10 off/on gate next.
+> ADR-0192 completes that gate. Each policy executes 92,721 clean checks with
+> exact work and findings; all 185,442 combined checks agree with Z3 and have
+> zero unknown splits or cache replay failures. Cache-on improves Axeyum time
+> 1.16%/2.38%, normalized ratio 0.67%/2.08%, and median RSS 6.88%/1.52% on
+> SurfacePen/NETwtw10 while absolute Z3 drift stays below 0.50%. Glaurung
+> `e177142` therefore defaults only its bounded path-owned warm sessions to the
+> fixed cache and retains an explicit off override. Axeyum's generic solver
+> constructors remain cache-off.
 > The capture and
 > implementation audit has been expanded into the dependency-ordered
 > [Glaurung QF_BV execution plan](docs/research/08-planning/glaurung-qfbv-execution-plan.md):
@@ -507,7 +515,7 @@ count as decisions or speedups.
 | **GQ5** | **Cheaper AIG construction and measured CNF encoding** | **First native AIG tranche accepted (ADR-0175).** Exact v4 attribution selects the low-hit `BTreeMap`; deterministic open addressing cuts three-driver Axeyum time 7.66% and ratio 0.742x→0.680x with unchanged AIG/CNF/replay/scopes and flat RSS. CNF is again dominant at 46.55%; internal AND flattening stays deferred. Reopen literal-copy ownership or CNF only from a fresh isolated native gate. |
 | **GQ6** | **Cold SAT/CDCL tuning** | **Material but behind measured warm CNF after ADR-0175.** Accepted-table native lineage spends 18.48% in SAT versus CNF's 46.55%. Compare identical emitted CNF across BatSat, the proof-producing core, and pinned CaDiCaL/Kissat only after the next CNF decision; preserve proof replay and deterministic limits. |
 | **GQ7** | **Cheaper warm entry and delta preprocessing** | **DONE for available Glaurung families (ADR-0171--0186).** Path-owned delta reuse, 9/512 hard bounds, exact identity, alarms, and adaptive production admission are enforced. Preserve explicit one-shot/fixed controls and re-gate new families. |
-| **GQ8** | **Verdict and CNF reuse for duplicate/prefix queries** | **Measurement control landed in ADR-0191; repeated admission gate next.** ADR-0190's exact same-arena scalar SAT cache is wired only into path-owned Glaurung sessions with fixed per-path bounds and complete traffic/cleanup telemetry. The cache remains default-off; ordinary UNSAT/Unknown and prefix verdict reuse remain forbidden. |
+| **GQ8** | **Verdict and CNF reuse for duplicate/prefix queries** | **DONE for available Glaurung families (ADR-0192).** Clean repeated off/on evidence admits fixed bounded same-arena scalar SAT reuse only in path-owned warm sessions; every hit replays and all traffic/cleanup is gated. Glaurung defaults it on with an explicit off control; Axeyum's generic cache stays opt-in. Ordinary UNSAT/Unknown and prefix verdict reuse remain forbidden. |
 | **GQ9** | **Auto production policy and API guidance** | **DONE for available families (ADR-0186).** Clean adaptive repetition passes all 3%/3%/5% + 2% alarms over 92,721 checks. Glaurung defaults only explorer-owned Axeyum solves to adaptive 2→9 admission; explicit one-shot and fixed controls remain. Re-gate new families; GQ4 stays off. |
 | **GQ10** | **Ordered, wider real-lifter regression corpus** | **DONE for available families (ADR-0187/0188).** The 162-query representative is pinned; exact 30,628-query composites have measured variance and executable 3%/3%/5% + 2% guards. Retain cold/ordered/profile bars separately and re-gate added families. |
 
@@ -559,8 +567,10 @@ The ranked work is:
 5. **Causal rewrite policy:** use ablation to select Glaurung-relevant rules and
    require downstream structural/time effects; do not globally erase useful
    rules merely because this capture does not exercise them;
-6. **GQ8 duplicate/prefix reuse:** add exact verdict and retained-CNF reuse
-   under content/config/scope identity and mandatory replay;
+6. **GQ8 duplicate/prefix reuse:** **DONE for available Glaurung families in
+   ADR-0192.** Exact same-arena scalar SAT duplicates use mandatory replay and
+   fixed bounds in path-owned sessions; prefixes reuse retained state only,
+   ordinary UNSAT/Unknown remain uncached, and explicit off is preserved;
 7. **GQ6 SAT tuning:** the measured 17.45% weighted share is material; compare exact
    CNF across cores and measure inprocessing/heuristic changes;
 8. **GQ9 non-regressing auto mode:** **DONE in ADR-0186/Glaurung `ca12028`.**
@@ -575,10 +585,10 @@ The ranked work is:
     actual Z3 AST/context backend, with the user-visible Glaurung-vs-Glaurung
     comparison controlling product claims.
 
-The current highest-leverage trio is GQ8's ADR-0191 clean repeated
-cache-off/cache-on admission gate, fresh causal attribution of the new canonical
-stage balance,
-and whichever bounded GQ5/GQ6 experiment that attribution selects. Corrected
+The current highest-leverage trio is fresh causal attribution of the new
+canonical/native stage balance, whichever bounded GQ5/GQ6 experiment that
+attribution selects, and wider-family revalidation of the accepted GQ7--GQ10
+policies. GQ8 admission is complete in ADR-0192. Corrected
 composite variance is complete in ADR-0188. GQ4 is not an active optimization;
 ADR-0157/0158 remain explicit/off. Cold rewrite or CNF work may continue only
 when causal/native profiles select it. ADR-0164 permits opt-in consecutive

@@ -322,6 +322,21 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-16 — ADR-0192 accepts Glaurung's bounded path-owned cache default.**
+  Clean adaptive cache-off/cache-on artifacts execute 92,721 checks per policy
+  across three SurfacePen and three NETwtw10 processes. All 185,442 combined
+  checks agree with Z3, unknown splits and replay failures are zero, exact warm
+  and cache traffic repeats, and findings are identical. Cache-on improves
+  Axeyum time 1.16%/2.38%, ratio 0.67%/2.08%, and median RSS 6.88%/1.52%, with
+  absolute Z3 drift below 0.50%; every ordinary alarm passes.
+
+  Glaurung `e177142` maps unset to the measured 64-entry / 4,096-value /
+  262,144-bit policy only for path-owned warm sessions and retains explicit
+  off, one-shot fallback, terminal cleanup, and complete counters. Axeyum's
+  generic incremental cache remains disabled by default. GQ8 is done for
+  available Glaurung families; next obtain fresh native attribution before a
+  bounded GQ5/GQ6 experiment and re-gate any new family.
+
 - **2026-07-16 — ADR-0191 lands Glaurung's GQ8 measurement control.** Glaurung
   `d5475f6` wires ADR-0190 only into independently path-owned warm solvers;
   snapshot and one-shot fallbacks remain cache-free, and the accepted adaptive
@@ -1490,13 +1505,12 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   | **GQ5 AIG/CNF construction** | **First native AIG tranche accepted (ADR-0175).** Deterministic open addressing improves three-driver Axeyum time 7.66% and ratio 0.742x→0.680x with unchanged structure; internal flattening stays deferred | Yield to GQ7/GQ10; reopen literal ownership or CNF only from fresh causal evidence |
   | **GQ6 cold SAT/CDCL** | **WIP foundation; behind measured CNF.** Accepted-table native lineage SAT is 18.48% weighted versus CNF at 46.55% | Compare identical CNF across cores only after the next CNF decision, with proof replay and deterministic limits |
   | **GQ7 warm delta entry** | **DONE for available families (ADR-0171--0186).** Path-owned delta reuse, 9/512 hard bounds, exact alarms, and adaptive production admission are enforced | Preserve explicit one-shot/fixed controls and re-gate new families |
-  | **GQ8 verdict/CNF cache** | **WIP; downstream control complete in ADR-0191.** Exact same-arena scalar SAT models are wired only into path-owned Glaurung sessions with fixed bounds, traffic partitions, cleanup gauges, and mandatory replay; default remains off | Run clean repeated SurfacePen + NETwtw10 off/on artifacts and apply the existing correctness/finding/time/ratio/RSS alarms before admission |
+  | **GQ8 verdict/CNF cache** | **DONE for available families (ADR-0192).** Clean repeated evidence admits exact same-arena scalar SAT reuse only in path-owned Glaurung sessions; fixed bounds, traffic partitions, cleanup gauges, findings, and replay are enforced | Preserve explicit off and re-gate new families; Axeyum's generic cache remains opt-in and ordinary UNSAT/Unknown/prefix verdicts remain excluded |
   | **GQ9 auto cost model/docs** | **DONE for available families (ADR-0186).** Clean adaptive repeat clears every alarm over 92,721 checks; downstream explorer default has explicit off/fixed controls | Re-gate newly captured families; do not broaden this Glaurung-specific default into Axeyum's generic API |
   | **GQ10 real-lifter regression tier** | **DONE for available families (ADR-0187/0188).** The corrected 162-query regular pin and repeated 30,628-query full composites have executable alarms | Retain separate cold/ordered/profile bars and re-gate new families |
 
-  **Next actions:** (1) run ADR-0191's clean repeated Glaurung ordered
-  cache-off/cache-on controls with exact traffic/model/finding/time/RSS gates;
-  (2) preserve the corrected
+  **Next actions:** (1) obtain fresh native canonical-stage attribution and
+  select any GQ5/GQ6 work only from the measured residual; (2) preserve the corrected
   representative pin, exact shard union, zero-exclusion rule, and 4 GiB
   process envelope; (3) use
   the new canonical stage balance to select any next GQ5/GQ6 slice through a
@@ -3289,7 +3303,7 @@ plan is built and committed on the current branch:
 ### Track 4 — Use Cases & Frontend
 | Phase | Title | Status |
 |---|---|---|
-| P4.1j | Glaurung warm delta and duplicate/prefix reuse (GQ7/GQ8) | **GQ7/GQ9 DONE in ADR-0186; corrected GQ1/GQ10 DONE in ADR-0187/0188; GQ8 control DONE in ADR-0191, admission WIP.** Adaptive explorer, corrected cold gates, and path-owned cache off/on artifacts are executable; the cache remains default-off pending clean repetition. |
+| P4.1j | Glaurung warm delta and duplicate/prefix reuse (GQ7/GQ8) | **DONE for available families in ADR-0186/0192.** Adaptive explorer ownership, bounded delta reuse, and replay-checked exact SAT caching have clean repeated alarms and explicit off controls. Axeyum's generic cache remains opt-in; new families require revalidation. |
 | P4.1e | Retained warm Boolean array relation flags | **DONE (ADR-0091)** — symbolic-memory path conditions can keep nested supported array equality atoms warm through private candidate-sensitive relation flags, guarded equality/diff observations, projection filtering, and replay |
 | P4.1h | Retained warm nested array-valued UF parameters | **DONE (ADR-0094)** — nested supported array-valued memory/function parameters can stay warm as full-value UF keys through private projection keys or rewritten structural keys, with relation-flag guarded congruence, private filtering, and replay |
 | P4.1g | Retained warm structural array-valued UF parameters | **DONE (ADR-0093)** — supported store/constant/array-ITE memory/function parameters can stay warm as full-value UF keys with scalar dependency retention, structural owner realization, relation-flag guarded congruence, private filtering, and replay; ADR-0094 subsequently lands nested application keys |
@@ -3311,6 +3325,12 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-16 — ADR-0192 accepts the bounded Glaurung cache default.** Clean
+  repeated SurfacePen/NETwtw10 off/on artifacts preserve 185,442 combined
+  decisions and findings while cache-on improves both drivers' Axeyum time,
+  ratio, and median RSS within stable Z3 controls. Glaurung `e177142` defaults
+  path-owned warm sessions on and preserves explicit off; generic Axeyum stays
+  opt-in.
 - **2026-07-16 — ADR-0191 lands the GQ8 client measurement control.** Glaurung
   `d5475f6` adds a default-off path-owned cache policy, fixed bounds, complete
   counters, fail-closed artifact validation, and a named off→on comparator.

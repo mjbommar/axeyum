@@ -492,7 +492,9 @@ Out of scope:
     [ADR-0190](../09-decisions/adr-0190-opt-in-bounded-replay-checked-sat-cache.md).
     [ADR-0191](../09-decisions/adr-0191-glaurung-replay-sat-cache-measurement-control.md)
     wires the same boundary into a default-off path-owned Glaurung control;
-    production admission still requires the clean repeated client gate.
+    [ADR-0192](../09-decisions/adr-0192-accept-glaurung-path-owned-replay-cache-default.md)
+    accepts that downstream default after the clean repeated client gate while
+    leaving Axeyum's generic cache opt-in.
 - [x] Should solver cancellation support memory budgets as well as time?
   - Answer: yes; `SolverConfig` carries timeout, deterministic resource,
     memory, and node budgets. Memory-budget exhaustion is an `Unknown`

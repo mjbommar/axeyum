@@ -622,6 +622,14 @@ SurfacePen plumbing smoke records 183 hits and zero replay failures, but its
 single repetition and 3.33% Z3 drift make it control evidence only. Run the
 clean repeated two-driver gate before admission.
 
+ADR-0192 accepts that repeated gate. Cache off and on each execute 92,721
+clean adaptive-policy checks with identical work and findings. Cache on
+improves Axeyum time 1.16%/2.38%, ratio 0.67%/2.08%, and median RSS
+6.88%/1.52% on SurfacePen/NETwtw10; Z3 drift stays below 0.50%, every check
+agrees, and replay failures are zero. Glaurung `e177142` therefore defaults
+only path-owned warm sessions to the fixed cache with an explicit off override.
+Axeyum's generic cache remains opt-in.
+
 ### G9 — publish the policy (GQ9)
 
 After raw/canonical/configured/warm data exists, expose a telemetry-visible
@@ -646,7 +654,7 @@ clean artifact pins the exact Glaurung/Axeyum revisions and policy.
 | 4 | Strengthen AIG sharing | **First construction-cost tranche accepted (ADR-0175).** Client sharing already survived; exact v4 telemetry selected low-hit ordered unique-table probes. Deterministic open addressing preserves structure and cuts three-driver Axeyum time 7.66%. Reopen literal ownership/two-level rewriting only from a fresh causal gate. |
 | 5 | Reduce CNF for measured gates | **Current tranche closed/deferred (ADR-0172--0175).** Root fusion/dedup are exhausted; internal AND flattening grows retained Dptf clauses/time. CNF is again dominant after the AIG win, but reopen only with future-use evidence or clause replacement. |
 | 6 | Make warm entry delta-only | **Bounded admission repeated, executable, and alarmed (ADR-0171--0180).** Nine paths preserve the RSS/time tradeoff and 512 assertions cover every stream. Exact identity and alarms are enforced. Publish clean baseline before automatic selection. |
-| 7 | Reuse duplicates and prefixes soundly | **Control complete in ADR-0191; admission pending.** Same-arena exact SAT models use mandatory replay and deterministic bounds only in path-owned sessions; ordinary UNSAT/Unknown and predecessor verdicts for strict prefixes remain forbidden. Repeat the clean SurfacePen + NETwtw10 off/on gate before policy admission. |
+| 7 | Reuse duplicates and prefixes soundly | **DONE for available Glaurung families (ADR-0192).** Clean repeated evidence admits bounded same-arena exact SAT models with mandatory replay only in path-owned sessions. Glaurung defaults this downstream policy on with explicit off; generic Axeyum stays opt-in, and ordinary UNSAT/Unknown/prefix verdicts remain forbidden. |
 | 8 | Add the register-slice fast path | Treat this as the first specialized GQ4 policy only if the generic exact range propagation leaves measurable avoidable work. |
 | 9 | Queue SAT tuning | **Material but behind CNF:** accepted-table lineage SAT is 18.48% versus CNF's 46.55%. Compare identical CNF only after the next measured CNF tranche. |
 | 10 | Expand and trend real capture | **Corrected widening accepted (ADR-0187).** Five drivers, 30,628 distinct scripts, 7,953 wide-root scripts, zero exclusions, and an exact clean sharded baseline are complete. Repeat the whole composite for variance; retain cold/ordered/profile tiers separately. |
@@ -664,13 +672,12 @@ clean artifact pins the exact Glaurung/Axeyum revisions and policy.
 | M6 SAT re-attribution | GQ6 | **Done for bounded accepted-table lineage:** SAT is 18.48% weighted and remains behind CNF at 46.55% |
 | M7 ordered warm trace | GQ7, GQ8 | **Done for clean three-driver controls (ADR-0166--0170):** assertions, lineage/scopes/choices, backend timing, cold/snapshot/lineage controls, and memory validate |
 | M8 Glaurung warm integration | GQ7 | **Bounded admission repeated/executable/alarmed (ADR-0171--0180):** original lineage is 0.680x Z3; held-out 9/512 identity and alarms are accepted. Publish clean baseline before auto policy |
-| M9 auto policy and regression lane | GQ8--GQ10 | **GQ9/GQ10 done for current families:** adaptive warm admission is the downstream default; the corrected regular pin plus repeated full composites have executable identity and timing alarms. GQ8 cache semantics remain separate |
+| M9 auto policy and regression lane | GQ8--GQ10 | **Done for current families in ADR-0186/0188/0192:** adaptive warm admission plus bounded path-owned exact-SAT caching are downstream defaults with explicit controls; corrected cold and ordered artifacts have executable identity, replay, finding, timing, and RSS alarms |
 
 ## Immediate next actions
 
-1. Run ADR-0191's clean repeated Glaurung SurfacePen + NETwtw10 off/on gate and
-   compare exact traffic, counters, model/finding identity, latency, total time,
-   and RSS under the ordinary alarms before any admission.
+1. Preserve ADR-0192's explicit cache-off control and exact counters; re-run the
+   clean repeated client gate for new driver families or topology changes.
 2. Keep the corrected 162-query regular semantic gate and exact full shard
    union pinned; reject exclusions, dirty source, incomplete manifests, or a
    raised memory envelope as substitutes for coverage.
@@ -678,9 +685,9 @@ clean artifact pins the exact Glaurung/Axeyum revisions and policy.
    rewrite tranche: `extract_extend` is a real lowering win, but none of the
    four ablated rules changes AIG/CNF. Reopen GQ3/GQ4 only for a specific new
    downstream gate-cone hypothesis.
-4. Reopen GQ5 literal-copy ownership only with a fresh isolated design and
-   native gate. CNF is again dominant; internal flattening still requires
-   future-use evidence or clause replacement.
+4. Obtain fresh native attribution before reopening GQ5 literal-copy ownership
+   or GQ6. CNF was dominant at the last accepted profile; internal flattening
+   still requires future-use evidence or clause replacement.
 5. Keep complete assertion/symbol capture and separate backend timing mandatory
    in every new ordered artifact; merge per-process traces atomically before
    GQ7/GQ8 cache or auto-policy work.
