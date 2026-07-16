@@ -30,6 +30,29 @@ fn incremental_stats_snapshot_and_delta_cover_the_client_pipeline() {
     assert_eq!(assertion_delta.root_encodings, 1);
     assert_eq!(assertion_delta.checks, 0);
     assert!(assertion_delta.aig_nodes > 0);
+    assert_eq!(
+        assertion_delta.aig_construction.and_requests,
+        assertion_delta
+            .aig_construction
+            .and_trivial_simplifications
+            .saturating_add(
+                assertion_delta
+                    .aig_construction
+                    .and_absorption_simplifications
+            )
+            .saturating_add(assertion_delta.aig_construction.and_structural_hash_hits)
+            .saturating_add(assertion_delta.aig_construction.and_nodes_created)
+    );
+    assert!(assertion_delta.aig_construction.and_nodes_created > 0);
+    assert_eq!(
+        assertion_delta.lowering_work.memoized_terms,
+        assertion_delta.lowering_work.terms_lowered
+    );
+    assert_eq!(
+        assertion_delta.lowering_work.term_bit_bindings,
+        assertion_delta.lowering_work.term_bit_bindings_written
+    );
+    assert!(assertion_delta.lowering_work.operand_bits_copied > 0);
     assert!(assertion_delta.cnf_variables > 0);
     assert!(assertion_delta.cnf_clauses > 0);
     assert!(assertion_delta.cnf_gate_mix.and_nodes_synced > 0);
@@ -73,6 +96,8 @@ fn incremental_stats_snapshot_and_delta_cover_the_client_pipeline() {
     assert_eq!(repeated.aig_nodes, 0);
     assert_eq!(repeated.cnf_variables, 0);
     assert_eq!(repeated.cnf_clauses, 0);
+    assert_eq!(repeated.aig_construction, Default::default());
+    assert_eq!(repeated.lowering_work, Default::default());
     assert_eq!(repeated.cnf_gate_mix, IncrementalCnfStats::default());
 }
 
@@ -147,6 +172,8 @@ fn ordinary_constructor_keeps_phase_profiling_disabled() {
     assert_eq!(stats.checks, 0);
     assert_eq!(stats.total_time(), std::time::Duration::ZERO);
     assert_eq!(stats.cnf_gate_mix, IncrementalCnfStats::default());
+    assert_eq!(stats.lowering_work, Default::default());
+    assert!(stats.aig_construction.and_requests > 0);
     assert!(stats.aig_nodes > 0);
     assert!(stats.cnf_variables > 0);
     assert!(stats.cnf_clauses > 0);

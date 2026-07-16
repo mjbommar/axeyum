@@ -17,6 +17,7 @@ PROFILE_SCHEMAS = (
     "glaurung-axeyum-warm-profile-v1",
     "glaurung-axeyum-warm-profile-v2",
     "glaurung-axeyum-warm-profile-v3",
+    "glaurung-axeyum-warm-profile-v4",
 )
 SUMMARY_SCHEMA = "axeyum-glaurung-warm-profile-summary-v1"
 QUERY_HASH = re.compile(r"sha256:[0-9a-f]{64}\Z")
@@ -99,12 +100,32 @@ GATE_MIX_V3_FIELDS = GATE_MIX_V2_FIELDS + (
 # The current producer schema. Kept as a public module constant for the
 # focused fixture generator.
 GATE_MIX_FIELDS = GATE_MIX_V3_FIELDS
+AIG_CONSTRUCTION_FIELDS = (
+    "and_requests",
+    "and_trivial_simplifications",
+    "and_absorption_simplifications",
+    "and_structural_hash_hits",
+    "and_nodes_created",
+)
+LOWERING_WORK_FIELDS = (
+    "lower_calls",
+    "term_memo_lookups",
+    "term_memo_hits",
+    "terms_lowered",
+    "operand_vectors_copied",
+    "operand_bits_copied",
+    "root_bits_copied",
+    "term_bit_bindings_written",
+    "memoized_terms",
+    "term_bit_bindings",
+    "symbol_bit_inputs",
+)
 
 
 def gate_mix_fields(schema: str) -> tuple[str, ...] | None:
     if schema == PROFILE_SCHEMAS[1]:
         return GATE_MIX_V2_FIELDS
-    if schema == PROFILE_SCHEMAS[2]:
+    if schema in PROFILE_SCHEMAS[2:]:
         return GATE_MIX_V3_FIELDS
     return None
 
@@ -192,7 +213,7 @@ def validate_record(row: Any, location: str) -> dict[str, Any]:
         ):
             if gate_mix[fused] > gate_mix[direct]:
                 raise ProfileError(f"{location}: {fused} exceeds {direct}")
-        if row["schema"] == PROFILE_SCHEMAS[2]:
+        if row["schema"] in PROFILE_SCHEMAS[2:]:
             opportunities = gate_mix["internal_positive_and_opportunities"]
             opportunity_nodes = gate_mix["internal_positive_and_opportunity_nodes"]
             flattened = gate_mix["internal_positive_and_flattened"]
@@ -211,6 +232,37 @@ def validate_record(row: Any, location: str) -> dict[str, Any]:
                 raise ProfileError(
                     f"{location}: internal AND immediate clause avoidance does not match applications"
                 )
+    if row["schema"] == PROFILE_SCHEMAS[3]:
+        aig = row.get("aig_construction")
+        if not isinstance(aig, dict) or set(aig) != set(AIG_CONSTRUCTION_FIELDS):
+            raise ProfileError(f"{location}: aig_construction has an incomplete field set")
+        for field in AIG_CONSTRUCTION_FIELDS:
+            nonnegative_int(aig, field, f"{location}:aig_construction")
+        classified = sum(
+            aig[field]
+            for field in (
+                "and_trivial_simplifications",
+                "and_absorption_simplifications",
+                "and_structural_hash_hits",
+                "and_nodes_created",
+            )
+        )
+        if aig["and_requests"] != classified:
+            raise ProfileError(f"{location}: AIG AND request partition mismatch")
+
+        work = row.get("lowering_work")
+        if not isinstance(work, dict) or set(work) != set(LOWERING_WORK_FIELDS):
+            raise ProfileError(f"{location}: lowering_work has an incomplete field set")
+        for field in LOWERING_WORK_FIELDS:
+            nonnegative_int(work, field, f"{location}:lowering_work")
+        if work["term_memo_hits"] > work["term_memo_lookups"]:
+            raise ProfileError(f"{location}: term memo hits exceed lookups")
+        if work["terms_lowered"] != work["memoized_terms"]:
+            raise ProfileError(f"{location}: newly lowered and retained term counts differ")
+        if work["term_bit_bindings_written"] != work["term_bit_bindings"]:
+            raise ProfileError(f"{location}: term-bit write and retained deltas differ")
+        if aig["and_nodes_created"] + work["symbol_bit_inputs"] != counts["aig_nodes_added"]:
+            raise ProfileError(f"{location}: AIG node allocation partition mismatch")
     return row
 
 
@@ -330,6 +382,15 @@ def summarize(paths: list[Path]) -> dict[str, Any]:
         summary["cnf_gate_mix_totals"] = {
             field: sum(row["cnf_gate_mix"][field] for row in records)
             for field in homogeneous_gate_fields
+        }
+    if len(schemas) == 1 and schemas[0] == PROFILE_SCHEMAS[3]:
+        summary["aig_construction_totals"] = {
+            field: sum(row["aig_construction"][field] for row in records)
+            for field in AIG_CONSTRUCTION_FIELDS
+        }
+        summary["lowering_work_totals"] = {
+            field: sum(row["lowering_work"][field] for row in records)
+            for field in LOWERING_WORK_FIELDS
         }
     return summary
 

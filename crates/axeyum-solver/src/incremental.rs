@@ -34,6 +34,7 @@ use web_time::Instant;
 
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
 use crate::model::Model;
+use crate::{AigConstructionStats, IncrementalLoweringStats};
 
 const MAX_WARM_STRUCTURAL_ARRAY_NODES: usize = 512;
 const MAX_WARM_STRUCTURAL_ARRAY_DEPTH: usize = 256;
@@ -76,6 +77,10 @@ pub struct IncrementalBvStats {
     pub checks: u64,
     /// Current retained AIG node count.
     pub aig_nodes: u64,
+    /// Primitive AIG unique-table work accumulated by the retained graph.
+    pub aig_construction: AigConstructionStats,
+    /// Opt-in term-memo and literal-copy work accumulated by the lowerer.
+    pub lowering_work: IncrementalLoweringStats,
     /// Current retained CNF variable count, including selectors.
     pub cnf_variables: u64,
     /// Current retained CNF clause count.
@@ -101,6 +106,8 @@ impl IncrementalBvStats {
             root_encodings: self.root_encodings.saturating_sub(earlier.root_encodings),
             checks: self.checks.saturating_sub(earlier.checks),
             aig_nodes: self.aig_nodes.saturating_sub(earlier.aig_nodes),
+            aig_construction: self.aig_construction.delta_since(earlier.aig_construction),
+            lowering_work: self.lowering_work.delta_since(earlier.lowering_work),
             cnf_variables: self.cnf_variables.saturating_sub(earlier.cnf_variables),
             cnf_clauses: self.cnf_clauses.saturating_sub(earlier.cnf_clauses),
             cnf_gate_mix: self.cnf_gate_mix.delta_since(earlier.cnf_gate_mix),
@@ -490,6 +497,7 @@ impl IncrementalBvSolver {
     pub fn with_config_and_profiling(config: SolverConfig) -> Self {
         let mut solver = Self::with_config(config);
         solver.profiling_enabled = true;
+        solver.lowering = IncrementalLowering::with_profiling();
         solver.cnf = if solver.config.incremental_positive_and_flattening {
             IncrementalCnf::with_profiling_and_internal_positive_and_flattening()
         } else {
@@ -547,6 +555,8 @@ impl IncrementalBvSolver {
     pub fn stats(&self) -> IncrementalBvStats {
         IncrementalBvStats {
             aig_nodes: usize_to_u64(self.lowering.node_count()),
+            aig_construction: self.lowering.aig().construction_stats(),
+            lowering_work: self.lowering.stats(),
             cnf_variables: usize_to_u64(self.cnf.variable_count()),
             cnf_clauses: usize_to_u64(self.cnf.clause_count()),
             cnf_gate_mix: self.cnf.stats(),

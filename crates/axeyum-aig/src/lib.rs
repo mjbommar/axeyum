@@ -118,6 +118,28 @@ pub struct AigConstructionStats {
     pub and_nodes_created: u64,
 }
 
+impl AigConstructionStats {
+    /// Returns the saturating component-wise delta from `earlier` to `self`.
+    #[must_use]
+    pub fn delta_since(self, earlier: Self) -> Self {
+        Self {
+            and_requests: self.and_requests.saturating_sub(earlier.and_requests),
+            and_trivial_simplifications: self
+                .and_trivial_simplifications
+                .saturating_sub(earlier.and_trivial_simplifications),
+            and_absorption_simplifications: self
+                .and_absorption_simplifications
+                .saturating_sub(earlier.and_absorption_simplifications),
+            and_structural_hash_hits: self
+                .and_structural_hash_hits
+                .saturating_sub(earlier.and_structural_hash_hits),
+            and_nodes_created: self
+                .and_nodes_created
+                .saturating_sub(earlier.and_nodes_created),
+        }
+    }
+}
+
 /// A deterministic structurally hashed AIG.
 #[derive(Debug, Clone)]
 pub struct Aig {

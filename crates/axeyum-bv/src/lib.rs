@@ -697,6 +697,73 @@ fn assignment_from_aig_node_values(
     Ok(assignment)
 }
 
+/// Opt-in cumulative bookkeeping counters for persistent term-to-AIG lowering.
+///
+/// These counters complement [`axeyum_aig::AigConstructionStats`]: the AIG
+/// counters classify primitive unique-table requests, while this structure
+/// accounts for term memo traffic and the literal-vector copies required by
+/// the current lowering representation. Ordinary [`IncrementalLowering`]
+/// instances leave every field at zero.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct IncrementalLoweringStats {
+    /// Calls to [`IncrementalLowering::lower`] or its deadline-aware variant.
+    pub lower_calls: u64,
+    /// Term-memo lookups made while traversing lowering worklists.
+    pub term_memo_lookups: u64,
+    /// Term-memo lookups that reused an already lowered term.
+    pub term_memo_hits: u64,
+    /// New terms recorded in the persistent lowering memo.
+    pub terms_lowered: u64,
+    /// Operand literal vectors cloned before lowering a parent application.
+    pub operand_vectors_copied: u64,
+    /// Operand literals copied by those vector clones.
+    pub operand_bits_copied: u64,
+    /// Root literals copied when returning a lowered root to the caller.
+    pub root_bits_copied: u64,
+    /// Term-bit lift-map bindings written for newly lowered terms.
+    pub term_bit_bindings_written: u64,
+    /// Current number of terms retained in the lowering memo.
+    pub memoized_terms: u64,
+    /// Current number of retained term-bit lift-map bindings.
+    pub term_bit_bindings: u64,
+    /// Current number of retained symbol-bit input bindings.
+    pub symbol_bit_inputs: u64,
+}
+
+impl IncrementalLoweringStats {
+    /// Returns the saturating component-wise delta from `earlier` to `self`.
+    #[must_use]
+    pub fn delta_since(self, earlier: Self) -> Self {
+        Self {
+            lower_calls: self.lower_calls.saturating_sub(earlier.lower_calls),
+            term_memo_lookups: self
+                .term_memo_lookups
+                .saturating_sub(earlier.term_memo_lookups),
+            term_memo_hits: self.term_memo_hits.saturating_sub(earlier.term_memo_hits),
+            terms_lowered: self.terms_lowered.saturating_sub(earlier.terms_lowered),
+            operand_vectors_copied: self
+                .operand_vectors_copied
+                .saturating_sub(earlier.operand_vectors_copied),
+            operand_bits_copied: self
+                .operand_bits_copied
+                .saturating_sub(earlier.operand_bits_copied),
+            root_bits_copied: self
+                .root_bits_copied
+                .saturating_sub(earlier.root_bits_copied),
+            term_bit_bindings_written: self
+                .term_bit_bindings_written
+                .saturating_sub(earlier.term_bit_bindings_written),
+            memoized_terms: self.memoized_terms.saturating_sub(earlier.memoized_terms),
+            term_bit_bindings: self
+                .term_bit_bindings
+                .saturating_sub(earlier.term_bit_bindings),
+            symbol_bit_inputs: self
+                .symbol_bit_inputs
+                .saturating_sub(earlier.symbol_bit_inputs),
+        }
+    }
+}
+
 /// Persistent, incremental term-to-AIG lowering (ADR-0009 stage 2).
 ///
 /// Unlike [`lower_terms`], which lowers a fixed batch into a fresh AIG, this
@@ -714,12 +781,26 @@ pub struct IncrementalLowering {
     term_bits: Vec<TermBitBinding>,
     term_bit_ranges: Vec<Option<TermBitRange>>,
     symbol_inputs: Vec<SymbolBitInput>,
+    profiling_enabled: bool,
+    stats: IncrementalLoweringStats,
 }
 
 impl IncrementalLowering {
     /// Creates an empty incremental lowering context.
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Creates an incremental lowering context with diagnostic bookkeeping.
+    ///
+    /// This does not change lowering semantics or AIG construction order, but
+    /// it increments counters on memo and literal-copy operations. Production
+    /// callers should use [`Self::new`] unless attribution is required.
+    pub fn with_profiling() -> Self {
+        Self {
+            profiling_enabled: true,
+            ..Self::default()
+        }
     }
 
     /// The persistent AIG built so far.
@@ -738,6 +819,20 @@ impl IncrementalLowering {
     /// Symbol-bit to AIG-input map entries in AIG input order.
     pub fn symbol_inputs(&self) -> &[SymbolBitInput] {
         &self.symbol_inputs
+    }
+
+    /// Returns cumulative opt-in lowering work and current retained gauges.
+    #[must_use]
+    pub fn stats(&self) -> IncrementalLoweringStats {
+        if !self.profiling_enabled {
+            return IncrementalLoweringStats::default();
+        }
+        IncrementalLoweringStats {
+            memoized_terms: usize_to_u64_saturating(self.memo.len()),
+            term_bit_bindings: usize_to_u64_saturating(self.term_bits.len()),
+            symbol_bit_inputs: usize_to_u64_saturating(self.symbol_inputs.len()),
+            ..self.stats
+        }
     }
 
     /// Lowers `root` into the persistent AIG, reusing already-lowered shared
@@ -784,6 +879,8 @@ impl IncrementalLowering {
             term_bits: core::mem::take(&mut self.term_bits),
             term_bit_ranges: core::mem::take(&mut self.term_bit_ranges),
             symbol_inputs: core::mem::take(&mut self.symbol_inputs),
+            profiling_enabled: self.profiling_enabled,
+            incremental_stats: core::mem::take(&mut self.stats),
         };
         let result = builder.lower_term(root);
         self.aig = builder.aig;
@@ -791,6 +888,7 @@ impl IncrementalLowering {
         self.term_bits = builder.term_bits;
         self.term_bit_ranges = builder.term_bit_ranges;
         self.symbol_inputs = builder.symbol_inputs;
+        self.stats = builder.incremental_stats;
         let bits = result?;
         Ok(LoweredTerm {
             term: root,
@@ -976,6 +1074,8 @@ struct LoweringBuilder<'a> {
     term_bits: Vec<TermBitBinding>,
     term_bit_ranges: Vec<Option<TermBitRange>>,
     symbol_inputs: Vec<SymbolBitInput>,
+    profiling_enabled: bool,
+    incremental_stats: IncrementalLoweringStats,
 }
 
 struct SymbolModelBits {
@@ -1009,6 +1109,8 @@ impl<'a> LoweringBuilder<'a> {
             term_bits: Vec::new(),
             term_bit_ranges: vec![None; arena.len()],
             symbol_inputs: Vec::new(),
+            profiling_enabled: false,
+            incremental_stats: IncrementalLoweringStats::default(),
         }
     }
 
@@ -1560,10 +1662,22 @@ impl<'a> LoweringBuilder<'a> {
     }
 
     fn lower_term(&mut self, root: TermId) -> Result<Vec<AigLit>, BitLowerError> {
+        if self.profiling_enabled {
+            self.incremental_stats.lower_calls =
+                self.incremental_stats.lower_calls.saturating_add(1);
+        }
         let mut stack = vec![(root, false)];
         while let Some((term, children_ready)) = stack.pop() {
             self.poll_deadline()?;
+            if self.profiling_enabled {
+                self.incremental_stats.term_memo_lookups =
+                    self.incremental_stats.term_memo_lookups.saturating_add(1);
+            }
             if self.memo.contains_key(&term) {
+                if self.profiling_enabled {
+                    self.incremental_stats.term_memo_hits =
+                        self.incremental_stats.term_memo_hits.saturating_add(1);
+                }
                 continue;
             }
             match self.arena.node(term) {
@@ -1602,6 +1716,23 @@ impl<'a> LoweringBuilder<'a> {
                     self.record(term, bits)?;
                 }
                 TermNode::App { op, args } if children_ready => {
+                    if self.profiling_enabled {
+                        self.incremental_stats.operand_vectors_copied = self
+                            .incremental_stats
+                            .operand_vectors_copied
+                            .saturating_add(usize_to_u64_saturating(args.len()));
+                        let copied = args.iter().fold(0_u64, |total, arg| {
+                            total.saturating_add(
+                                self.memo
+                                    .get(arg)
+                                    .map_or(0, |bits| usize_to_u64_saturating(bits.len())),
+                            )
+                        });
+                        self.incremental_stats.operand_bits_copied = self
+                            .incremental_stats
+                            .operand_bits_copied
+                            .saturating_add(copied);
+                    }
                     let operand_bits = args
                         .iter()
                         .map(|arg| {
@@ -1622,11 +1753,14 @@ impl<'a> LoweringBuilder<'a> {
                 }
             }
         }
-        Ok(self
-            .memo
-            .get(&root)
-            .cloned()
-            .expect("root has been lowered"))
+        let root_bits = self.memo.get(&root).expect("root has been lowered");
+        if self.profiling_enabled {
+            self.incremental_stats.root_bits_copied = self
+                .incremental_stats
+                .root_bits_copied
+                .saturating_add(usize_to_u64_saturating(root_bits.len()));
+        }
+        Ok(root_bits.clone())
     }
 
     fn lower_symbol(&mut self, symbol: SymbolId) -> Vec<AigLit> {
@@ -2602,6 +2736,14 @@ impl<'a> LoweringBuilder<'a> {
 
     fn record(&mut self, term: TermId, bits: Vec<AigLit>) -> Result<(), BitLowerError> {
         self.check_width(term, &bits)?;
+        if self.profiling_enabled {
+            self.incremental_stats.terms_lowered =
+                self.incremental_stats.terms_lowered.saturating_add(1);
+            self.incremental_stats.term_bit_bindings_written = self
+                .incremental_stats
+                .term_bit_bindings_written
+                .saturating_add(usize_to_u64_saturating(bits.len()));
+        }
         let start = self.term_bits.len();
         for (index, &literal) in bits.iter().enumerate() {
             let bit_index = u32::try_from(index).expect("bit index fits u32");
@@ -4488,6 +4630,44 @@ mod tests {
             before,
             "shared subterms must not be re-lowered"
         );
+    }
+
+    #[test]
+    fn profiled_incremental_lowering_accounts_for_memo_and_literal_copy_work() {
+        let mut arena = TermArena::new();
+        let x = arena.bv_var("x", 8).unwrap();
+        let one = arena.bv_const(8, 1).unwrap();
+        let sum = arena.bv_add(x, one).unwrap();
+        let expected = arena.bv_const(8, 7).unwrap();
+        let root = arena.eq(sum, expected).unwrap();
+        let mut lowering = IncrementalLowering::with_profiling();
+
+        let empty = lowering.stats();
+        lowering.lower(&arena, root).unwrap();
+        let first = lowering.stats().delta_since(empty);
+        assert_eq!(first.lower_calls, 1);
+        assert!(first.term_memo_lookups > first.terms_lowered);
+        assert_eq!(first.term_memo_hits, 0);
+        assert_eq!(first.memoized_terms, first.terms_lowered);
+        assert_eq!(first.term_bit_bindings, first.term_bit_bindings_written);
+        assert!(first.operand_vectors_copied > 0);
+        assert!(first.operand_bits_copied > 0);
+        assert_eq!(first.root_bits_copied, 1);
+        assert_eq!(first.symbol_bit_inputs, 8);
+
+        let before_reuse = lowering.stats();
+        lowering.lower(&arena, root).unwrap();
+        let reused = lowering.stats().delta_since(before_reuse);
+        assert_eq!(reused.lower_calls, 1);
+        assert_eq!(reused.term_memo_lookups, 1);
+        assert_eq!(reused.term_memo_hits, 1);
+        assert_eq!(reused.terms_lowered, 0);
+        assert_eq!(reused.operand_vectors_copied, 0);
+        assert_eq!(reused.operand_bits_copied, 0);
+        assert_eq!(reused.root_bits_copied, 1);
+        assert_eq!(reused.memoized_terms, 0);
+        assert_eq!(reused.term_bit_bindings, 0);
+        assert_eq!(reused.symbol_bit_inputs, 0);
     }
 
     #[test]

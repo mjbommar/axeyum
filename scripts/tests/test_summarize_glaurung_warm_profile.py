@@ -34,7 +34,7 @@ PHASES = (
 
 def record(sequence: int, *, path_created: bool, query: str) -> dict[str, object]:
     row: dict[str, object] = {
-        "schema": "glaurung-axeyum-warm-profile-v3",
+        "schema": "glaurung-axeyum-warm-profile-v4",
         "process_id": 17,
         "sequence": sequence,
         "query_hash": query,
@@ -88,6 +88,26 @@ def record(sequence: int, *, path_created: bool, query: str) -> dict[str, object
             "internal_positive_and_immediate_clauses_avoided": 2,
         }
     )
+    row["aig_construction"] = {
+        "and_requests": 5,
+        "and_trivial_simplifications": 1,
+        "and_absorption_simplifications": 1,
+        "and_structural_hash_hits": 1,
+        "and_nodes_created": 2,
+    }
+    row["lowering_work"] = {
+        "lower_calls": 2,
+        "term_memo_lookups": 9,
+        "term_memo_hits": 2,
+        "terms_lowered": 4,
+        "operand_vectors_copied": 6,
+        "operand_bits_copied": 64,
+        "root_bits_copied": 2,
+        "term_bit_bindings_written": 33,
+        "memoized_terms": 4,
+        "term_bit_bindings": 33,
+        "symbol_bit_inputs": 2,
+    }
     return row
 
 
@@ -123,6 +143,8 @@ class WarmProfileSummaryTests(unittest.TestCase):
             ],
             4,
         )
+        self.assertEqual(summary["aig_construction_totals"]["and_requests"], 10)
+        self.assertEqual(summary["lowering_work_totals"]["operand_bits_copied"], 128)
 
     def test_rejects_bad_phase_sum_and_path_creation_order(self) -> None:
         query = "sha256:" + "b" * 64
@@ -153,11 +175,25 @@ class WarmProfileSummaryTests(unittest.TestCase):
             with self.assertRaisesRegex(MODULE.ProfileError, "applications exceed"):
                 MODULE.summarize([profile])
 
+            bad_aig = record(0, path_created=True, query=query)
+            bad_aig["aig_construction"]["and_nodes_created"] = 3
+            profile.write_text(json.dumps(bad_aig) + "\n", encoding="utf-8")
+            with self.assertRaisesRegex(MODULE.ProfileError, "request partition mismatch"):
+                MODULE.summarize([profile])
+
+            bad_work = record(0, path_created=True, query=query)
+            bad_work["lowering_work"]["term_memo_hits"] = 10
+            profile.write_text(json.dumps(bad_work) + "\n", encoding="utf-8")
+            with self.assertRaisesRegex(MODULE.ProfileError, "hits exceed lookups"):
+                MODULE.summarize([profile])
+
     def test_accepts_historical_v1_without_gate_totals(self) -> None:
         query = "sha256:" + "c" * 64
         historical = record(0, path_created=True, query=query)
         historical["schema"] = "glaurung-axeyum-warm-profile-v1"
         del historical["cnf_gate_mix"]
+        del historical["aig_construction"]
+        del historical["lowering_work"]
         with tempfile.TemporaryDirectory() as directory:
             profile = Path(directory) / "profile.jsonl"
             profile.write_text(json.dumps(historical) + "\n", encoding="utf-8")
@@ -171,6 +207,8 @@ class WarmProfileSummaryTests(unittest.TestCase):
         query = "sha256:" + "d" * 64
         historical = record(0, path_created=True, query=query)
         historical["schema"] = "glaurung-axeyum-warm-profile-v2"
+        del historical["aig_construction"]
+        del historical["lowering_work"]
         for field in set(MODULE.GATE_MIX_V3_FIELDS) - set(MODULE.GATE_MIX_V2_FIELDS):
             del historical["cnf_gate_mix"][field]
         with tempfile.TemporaryDirectory() as directory:
@@ -183,6 +221,22 @@ class WarmProfileSummaryTests(unittest.TestCase):
         self.assertEqual(
             set(summary["cnf_gate_mix_totals"]), set(MODULE.GATE_MIX_V2_FIELDS)
         )
+
+    def test_accepts_historical_v3_without_aig_work(self) -> None:
+        query = "sha256:" + "e" * 64
+        historical = record(0, path_created=True, query=query)
+        historical["schema"] = "glaurung-axeyum-warm-profile-v3"
+        del historical["aig_construction"]
+        del historical["lowering_work"]
+        with tempfile.TemporaryDirectory() as directory:
+            profile = Path(directory) / "profile.jsonl"
+            profile.write_text(json.dumps(historical) + "\n", encoding="utf-8")
+
+            summary = MODULE.summarize([profile])
+
+        self.assertEqual(summary["profile_schemas"], [historical["schema"]])
+        self.assertIn("cnf_gate_mix_totals", summary)
+        self.assertNotIn("aig_construction_totals", summary)
 
 
 if __name__ == "__main__":
