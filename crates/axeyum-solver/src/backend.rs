@@ -207,6 +207,15 @@ pub struct SolverConfig {
     /// materialization. `None` keeps the path disabled. Enabling both demand
     /// modes is a configuration error rather than an implicit precedence rule.
     pub range_demand_slicing: Option<RangeDemandPolicy>,
+    /// Enables bounded positive internal AND-tree half flattening in the warm
+    /// incremental CNF encoder (ADR-0173's selected GQ5 experiment).
+    ///
+    /// Admission requires fresh bypassed halves, bounded traversal, and an
+    /// exact immediate clause reduction. Bypassed helpers remain available for
+    /// later ordinary definition emission, and model lifting still reconstructs
+    /// AIG nodes from inputs before original-term replay. Off by default until
+    /// the repeated native-client gate accepts it.
+    pub incremental_positive_and_flattening: bool,
     /// When set, the bit-blasting BV backend may fall back to the CDCL(XOR)
     /// search core ([`axeyum_cnf::solve_with_xor_cdcl`]) after the batsat solve
     /// returns `unknown` (timeout/budget) on an XOR-structured formula
@@ -276,6 +285,7 @@ impl Default for SolverConfig {
             profile_bit_demand: false,
             demand_bit_slicing: false,
             range_demand_slicing: None,
+            incremental_positive_and_flattening: false,
             xor_cdcl_fallback: false,
             lazy_bv: false,
             lazy_bv_abstract_ite: false,
@@ -387,6 +397,14 @@ impl SolverConfig {
     #[must_use]
     pub fn with_range_demand_slicing(mut self, policy: RangeDemandPolicy) -> Self {
         self.range_demand_slicing = Some(policy);
+        self
+    }
+
+    /// Enables bounded positive internal AND-tree half flattening in the warm
+    /// incremental CNF encoder.
+    #[must_use]
+    pub fn with_incremental_positive_and_flattening(mut self, enabled: bool) -> Self {
+        self.incremental_positive_and_flattening = enabled;
         self
     }
 

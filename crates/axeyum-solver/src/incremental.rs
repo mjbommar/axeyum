@@ -446,9 +446,14 @@ impl IncrementalBvSolver {
     /// consulted by [`Self::assert_configured`]; admission budgets remain a
     /// one-shot-backend concern.
     pub fn with_config(config: SolverConfig) -> Self {
+        let cnf = if config.incremental_positive_and_flattening {
+            IncrementalCnf::with_internal_positive_and_flattening()
+        } else {
+            IncrementalCnf::new()
+        };
         Self {
             lowering: IncrementalLowering::new(),
-            cnf: IncrementalCnf::new(),
+            cnf,
             config,
             frames: vec![Frame {
                 selector: None,
@@ -485,7 +490,11 @@ impl IncrementalBvSolver {
     pub fn with_config_and_profiling(config: SolverConfig) -> Self {
         let mut solver = Self::with_config(config);
         solver.profiling_enabled = true;
-        solver.cnf = IncrementalCnf::with_profiling();
+        solver.cnf = if solver.config.incremental_positive_and_flattening {
+            IncrementalCnf::with_profiling_and_internal_positive_and_flattening()
+        } else {
+            IncrementalCnf::with_profiling()
+        };
         solver
     }
 

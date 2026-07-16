@@ -34,7 +34,7 @@ PHASES = (
 
 def record(sequence: int, *, path_created: bool, query: str) -> dict[str, object]:
     row: dict[str, object] = {
-        "schema": "glaurung-axeyum-warm-profile-v2",
+        "schema": "glaurung-axeyum-warm-profile-v3",
         "process_id": 17,
         "sequence": sequence,
         "query_hash": query,
@@ -82,6 +82,10 @@ def record(sequence: int, *, path_created: bool, query: str) -> dict[str, object
             "fused_xor_leaves": 1,
             "repeated_same_context_roots": 1,
             "deduplicated_root_assertions": 1,
+            "internal_positive_and_opportunities": 1,
+            "internal_positive_and_opportunity_nodes": 3,
+            "internal_positive_and_flattened": 1,
+            "internal_positive_and_immediate_clauses_avoided": 2,
         }
     )
     return row
@@ -113,6 +117,12 @@ class WarmProfileSummaryTests(unittest.TestCase):
         self.assertEqual(summary["phases"]["bit_blast"], {"nanos": 60, "percent": 30.0})
         self.assertEqual(summary["structure_totals"]["root_encodings"], 3)
         self.assertEqual(summary["cnf_gate_mix_totals"]["xor_half_definitions"], 2)
+        self.assertEqual(
+            summary["cnf_gate_mix_totals"][
+                "internal_positive_and_immediate_clauses_avoided"
+            ],
+            4,
+        )
 
     def test_rejects_bad_phase_sum_and_path_creation_order(self) -> None:
         query = "sha256:" + "b" * 64
@@ -137,6 +147,12 @@ class WarmProfileSummaryTests(unittest.TestCase):
             with self.assertRaisesRegex(MODULE.ProfileError, "shape partition mismatch"):
                 MODULE.summarize([profile])
 
+            bad_application = record(0, path_created=True, query=query)
+            bad_application["cnf_gate_mix"]["internal_positive_and_flattened"] = 2
+            profile.write_text(json.dumps(bad_application) + "\n", encoding="utf-8")
+            with self.assertRaisesRegex(MODULE.ProfileError, "applications exceed"):
+                MODULE.summarize([profile])
+
     def test_accepts_historical_v1_without_gate_totals(self) -> None:
         query = "sha256:" + "c" * 64
         historical = record(0, path_created=True, query=query)
@@ -150,6 +166,23 @@ class WarmProfileSummaryTests(unittest.TestCase):
 
         self.assertEqual(summary["profile_schemas"], [historical["schema"]])
         self.assertNotIn("cnf_gate_mix_totals", summary)
+
+    def test_accepts_historical_v2_gate_mix(self) -> None:
+        query = "sha256:" + "d" * 64
+        historical = record(0, path_created=True, query=query)
+        historical["schema"] = "glaurung-axeyum-warm-profile-v2"
+        for field in set(MODULE.GATE_MIX_V3_FIELDS) - set(MODULE.GATE_MIX_V2_FIELDS):
+            del historical["cnf_gate_mix"][field]
+        with tempfile.TemporaryDirectory() as directory:
+            profile = Path(directory) / "profile.jsonl"
+            profile.write_text(json.dumps(historical) + "\n", encoding="utf-8")
+
+            summary = MODULE.summarize([profile])
+
+        self.assertEqual(summary["profile_schemas"], [historical["schema"]])
+        self.assertEqual(
+            set(summary["cnf_gate_mix_totals"]), set(MODULE.GATE_MIX_V2_FIELDS)
+        )
 
 
 if __name__ == "__main__":

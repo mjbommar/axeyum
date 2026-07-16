@@ -105,6 +105,33 @@ fn configured_batch_attributes_word_rewrite_once_and_preserves_replay() {
 }
 
 #[test]
+fn solver_config_routes_internal_positive_and_flattening() {
+    let mut arena = TermArena::new();
+    let input_a = arena.bool_var("a").unwrap();
+    let input_b = arena.bool_var("b").unwrap();
+    let input_c = arena.bool_var("c").unwrap();
+    let input_d = arena.bool_var("d").unwrap();
+    let input_e = arena.bool_var("e").unwrap();
+    let pair_ab = arena.and(input_a, input_b).unwrap();
+    let pair_cd = arena.and(input_c, input_d).unwrap();
+    let tree = arena.and(pair_ab, pair_cd).unwrap();
+    let not_e = arena.not(input_e).unwrap();
+    let assertion = arena.or(tree, not_e).unwrap();
+    let config = SolverConfig::default()
+        .with_preprocess(false)
+        .with_incremental_positive_and_flattening(true);
+    let mut solver = IncrementalBvSolver::with_config_and_profiling(config);
+
+    solver.assert(&arena, assertion).unwrap();
+    assert!(matches!(solver.check(&arena).unwrap(), CheckResult::Sat(_)));
+    let gate_mix = solver.stats().cnf_gate_mix;
+
+    assert!(gate_mix.internal_positive_and_opportunities > 0);
+    assert!(gate_mix.internal_positive_and_flattened > 0);
+    assert!(gate_mix.internal_positive_and_immediate_clauses_avoided > 0);
+}
+
+#[test]
 fn ordinary_constructor_keeps_phase_profiling_disabled() {
     let mut arena = TermArena::new();
     let x = arena.bv_var("x", 8).unwrap();

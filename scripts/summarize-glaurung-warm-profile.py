@@ -16,6 +16,7 @@ from typing import Any
 PROFILE_SCHEMAS = (
     "glaurung-axeyum-warm-profile-v1",
     "glaurung-axeyum-warm-profile-v2",
+    "glaurung-axeyum-warm-profile-v3",
 )
 SUMMARY_SCHEMA = "axeyum-glaurung-warm-profile-summary-v1"
 QUERY_HASH = re.compile(r"sha256:[0-9a-f]{64}\Z")
@@ -49,7 +50,7 @@ COUNTS = (
     "cnf_variables",
     "cnf_clauses",
 )
-GATE_MIX_FIELDS = (
+GATE_MIX_V2_FIELDS = (
     "and_nodes_synced",
     "up_half_definitions",
     "down_half_definitions",
@@ -89,6 +90,23 @@ GATE_MIX_FIELDS = (
     "fresh_negative_root_definitions",
     "reused_negative_root_definitions",
 )
+GATE_MIX_V3_FIELDS = GATE_MIX_V2_FIELDS + (
+    "internal_positive_and_opportunities",
+    "internal_positive_and_opportunity_nodes",
+    "internal_positive_and_flattened",
+    "internal_positive_and_immediate_clauses_avoided",
+)
+# The current producer schema. Kept as a public module constant for the
+# focused fixture generator.
+GATE_MIX_FIELDS = GATE_MIX_V3_FIELDS
+
+
+def gate_mix_fields(schema: str) -> tuple[str, ...] | None:
+    if schema == PROFILE_SCHEMAS[1]:
+        return GATE_MIX_V2_FIELDS
+    if schema == PROFILE_SCHEMAS[2]:
+        return GATE_MIX_V3_FIELDS
+    return None
 
 
 class ProfileError(ValueError):
@@ -146,11 +164,12 @@ def validate_record(row: Any, location: str) -> dict[str, Any]:
             f"{location}: phases including unattributed ({phase_total}) "
             f"do not equal total_nanos ({total})"
         )
-    if row["schema"] == PROFILE_SCHEMAS[1]:
+    expected_gate_fields = gate_mix_fields(row["schema"])
+    if expected_gate_fields is not None:
         gate_mix = row.get("cnf_gate_mix")
-        if not isinstance(gate_mix, dict) or set(gate_mix) != set(GATE_MIX_FIELDS):
+        if not isinstance(gate_mix, dict) or set(gate_mix) != set(expected_gate_fields):
             raise ProfileError(f"{location}: cnf_gate_mix has an incomplete field set")
-        for field in GATE_MIX_FIELDS:
+        for field in expected_gate_fields:
             nonnegative_int(gate_mix, field, f"{location}:cnf_gate_mix")
         halves = gate_mix["up_half_definitions"] + gate_mix["down_half_definitions"]
         shapes = sum(
@@ -173,6 +192,25 @@ def validate_record(row: Any, location: str) -> dict[str, Any]:
         ):
             if gate_mix[fused] > gate_mix[direct]:
                 raise ProfileError(f"{location}: {fused} exceeds {direct}")
+        if row["schema"] == PROFILE_SCHEMAS[2]:
+            opportunities = gate_mix["internal_positive_and_opportunities"]
+            opportunity_nodes = gate_mix["internal_positive_and_opportunity_nodes"]
+            flattened = gate_mix["internal_positive_and_flattened"]
+            clauses_avoided = gate_mix[
+                "internal_positive_and_immediate_clauses_avoided"
+            ]
+            if opportunity_nodes < 2 * opportunities:
+                raise ProfileError(
+                    f"{location}: internal AND opportunity nodes are incomplete"
+                )
+            if flattened > opportunities:
+                raise ProfileError(
+                    f"{location}: internal AND applications exceed opportunities"
+                )
+            if clauses_avoided < flattened or (flattened == 0 and clauses_avoided != 0):
+                raise ProfileError(
+                    f"{location}: internal AND immediate clause avoidance does not match applications"
+                )
     return row
 
 
@@ -285,10 +323,13 @@ def summarize(paths: list[Path]) -> dict[str, Any]:
             for process_id, sequences in sorted(process_rows.items())
         ],
     }
-    if schemas == [PROFILE_SCHEMAS[1]]:
+    homogeneous_gate_fields = (
+        gate_mix_fields(schemas[0]) if len(schemas) == 1 else None
+    )
+    if homogeneous_gate_fields is not None:
         summary["cnf_gate_mix_totals"] = {
             field: sum(row["cnf_gate_mix"][field] for row in records)
-            for field in GATE_MIX_FIELDS
+            for field in homogeneous_gate_fields
         }
     return summary
 

@@ -865,6 +865,16 @@ pub struct IncrementalCnfStats {
     pub and_tree_half_definitions: u64,
     /// Remaining primitive binary-AND half-definitions.
     pub binary_and_half_definitions: u64,
+    /// Fresh positive internal AND-tree halves whose bounded flattening would
+    /// emit fewer clauses than their primitive implication expansion.
+    pub internal_positive_and_opportunities: u64,
+    /// Opportunity nodes that would be bypassed by bounded flattening.
+    pub internal_positive_and_opportunity_nodes: u64,
+    /// Positive internal AND-tree halves actually flattened.
+    pub internal_positive_and_flattened: u64,
+    /// Primitive definition clauses avoided at the moment flattening applies.
+    /// Later helper reuse can still emit those ordinary definitions.
+    pub internal_positive_and_immediate_clauses_avoided: u64,
     /// Constant-node clauses emitted while synchronizing the AIG.
     pub constant_clauses: u64,
     /// Primitive AND implication clauses emitted by `require`.
@@ -957,6 +967,18 @@ impl IncrementalCnfStats {
             binary_and_half_definitions: self
                 .binary_and_half_definitions
                 .saturating_sub(earlier.binary_and_half_definitions),
+            internal_positive_and_opportunities: self
+                .internal_positive_and_opportunities
+                .saturating_sub(earlier.internal_positive_and_opportunities),
+            internal_positive_and_opportunity_nodes: self
+                .internal_positive_and_opportunity_nodes
+                .saturating_sub(earlier.internal_positive_and_opportunity_nodes),
+            internal_positive_and_flattened: self
+                .internal_positive_and_flattened
+                .saturating_sub(earlier.internal_positive_and_flattened),
+            internal_positive_and_immediate_clauses_avoided: self
+                .internal_positive_and_immediate_clauses_avoided
+                .saturating_sub(earlier.internal_positive_and_immediate_clauses_avoided),
             constant_clauses: self
                 .constant_clauses
                 .saturating_sub(earlier.constant_clauses),
@@ -1106,6 +1128,14 @@ pub struct IncrementalCnf {
     emitted_up: Vec<bool>,
     /// Whether the `(lhs & rhs) -> v` half has been emitted, parallel to `node_var`.
     emitted_down: Vec<bool>,
+    /// Enables bounded positive internal AND-tree implication flattening.
+    internal_positive_and_flattening: bool,
+    /// Reused bounded traversal stack for internal AND-tree admission.
+    internal_and_stack: Vec<AigLit>,
+    /// Reused unique AND nodes bypassed by an admitted flattening.
+    internal_and_nodes: Vec<AigNodeId>,
+    /// Reused conjunction leaves emitted by an admitted flattening.
+    internal_and_leaves: Vec<AigLit>,
     profiling_enabled: bool,
     stats: IncrementalCnfStats,
     /// Canonical clauses seen by the opt-in diagnostic path only.
@@ -1127,10 +1157,27 @@ enum IncrementalClauseKind {
     Root,
 }
 
+const INTERNAL_AND_FLATTEN_NODE_LIMIT: usize = 64;
+
 impl IncrementalCnf {
     /// Creates an empty incremental encoder.
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Creates an encoder with experimental bounded positive internal AND-tree
+    /// implication flattening.
+    ///
+    /// The policy is off by default. It applies only when every bypassed
+    /// positive half is still fresh, the traversal stays within a fixed work
+    /// bound, and direct leaf clauses are fewer than primitive implication
+    /// clauses. Bypassed helper definitions remain unmarked and can be emitted
+    /// normally if later assertions reuse them.
+    pub fn with_internal_positive_and_flattening() -> Self {
+        Self {
+            internal_positive_and_flattening: true,
+            ..Self::default()
+        }
     }
 
     /// Creates an empty incremental encoder with structural attribution.
@@ -1140,6 +1187,16 @@ impl IncrementalCnf {
     /// direct-root fusion opportunities.
     pub fn with_profiling() -> Self {
         Self {
+            profiling_enabled: true,
+            ..Self::default()
+        }
+    }
+
+    /// Creates an encoder with both structural attribution and experimental
+    /// positive internal AND-tree flattening enabled.
+    pub fn with_profiling_and_internal_positive_and_flattening() -> Self {
+        Self {
+            internal_positive_and_flattening: true,
             profiling_enabled: true,
             ..Self::default()
         }
@@ -1303,6 +1360,128 @@ impl IncrementalCnf {
         Ok(())
     }
 
+    /// Collects one fresh positive AND tree whose direct implication clauses
+    /// are cheaper than recursively emitting primitive positive halves.
+    ///
+    /// XOR/XNOR and not-ITE shapes remain opaque leaves so the experiment does
+    /// not silently subsume the separately attributed gate families. A fixed
+    /// node bound makes rejected admission deterministic and prevents a DAG
+    /// with heavy reconvergence from turning the scan into its own blow-up.
+    fn collect_internal_positive_and_tree(
+        &mut self,
+        aig: &Aig,
+        start: AigNodeId,
+    ) -> Option<(usize, usize)> {
+        self.internal_and_stack.clear();
+        self.internal_and_nodes.clear();
+        self.internal_and_leaves.clear();
+
+        let Some(node @ AigNode::And(lhs, rhs)) = aig.node(start) else {
+            return None;
+        };
+        if detect_xor_gate(aig, node).is_some() || detect_not_ite_gate(aig, node).is_some() {
+            return None;
+        }
+        self.internal_and_nodes.push(start);
+        self.internal_and_stack.push(lhs);
+        self.internal_and_stack.push(rhs);
+
+        while let Some(lit) = self.internal_and_stack.pop() {
+            let child = lit.node();
+            let nested = if lit.is_inverted() {
+                false
+            } else if let Some(node @ AigNode::And(_, _)) = aig.node(child) {
+                detect_xor_gate(aig, node).is_none() && detect_not_ite_gate(aig, node).is_none()
+            } else {
+                false
+            };
+            if !nested {
+                self.internal_and_leaves.push(lit);
+                continue;
+            }
+
+            let child_index = child.index();
+            if self.emitted_up[child_index] {
+                return None;
+            }
+            if self.internal_and_nodes.contains(&child) {
+                continue;
+            }
+            if self.internal_and_nodes.len() >= INTERNAL_AND_FLATTEN_NODE_LIMIT {
+                return None;
+            }
+            self.internal_and_nodes.push(child);
+            let Some(AigNode::And(lhs, rhs)) = aig.node(child) else {
+                unreachable!("a nested AND was checked above");
+            };
+            self.internal_and_stack.push(lhs);
+            self.internal_and_stack.push(rhs);
+        }
+
+        if self.internal_and_nodes.len() < 2 {
+            return None;
+        }
+        self.internal_and_leaves.sort_unstable();
+        self.internal_and_leaves.dedup();
+        let primitive_clauses = self.internal_and_nodes.len().checked_mul(2)?;
+        let immediate_clauses_avoided =
+            primitive_clauses.checked_sub(self.internal_and_leaves.len())?;
+        (immediate_clauses_avoided > 0)
+            .then_some((self.internal_and_nodes.len(), immediate_clauses_avoided))
+    }
+
+    fn try_flatten_internal_positive_and(
+        &mut self,
+        aig: &Aig,
+        start: AigNodeId,
+        var: CnfLit,
+        require_stack: &mut Vec<(AigNodeId, bool)>,
+    ) -> Result<bool, SatError> {
+        if !self.internal_positive_and_flattening && !self.profiling_enabled {
+            return Ok(false);
+        }
+        let Some((nodes, immediate_clauses_avoided)) =
+            self.collect_internal_positive_and_tree(aig, start)
+        else {
+            return Ok(false);
+        };
+        if self.profiling_enabled {
+            self.stats.internal_positive_and_opportunities = self
+                .stats
+                .internal_positive_and_opportunities
+                .saturating_add(1);
+            self.stats.internal_positive_and_opportunity_nodes = self
+                .stats
+                .internal_positive_and_opportunity_nodes
+                .saturating_add(usize_to_u64_saturating(nodes));
+        }
+        if !self.internal_positive_and_flattening {
+            return Ok(false);
+        }
+
+        self.emitted_up[start.index()] = true;
+        for index in 0..self.internal_and_leaves.len() {
+            let leaf = self.internal_and_leaves[index];
+            self.add_incremental_clause(
+                CnfClause::new(vec![var.negated(), self.lit(leaf)]),
+                IncrementalClauseKind::Definition,
+            )?;
+        }
+        for index in 0..self.internal_and_leaves.len() {
+            let leaf = self.internal_and_leaves[index];
+            require_stack.push((leaf.node(), !leaf.is_inverted()));
+        }
+        if self.profiling_enabled {
+            self.stats.internal_positive_and_flattened =
+                self.stats.internal_positive_and_flattened.saturating_add(1);
+            self.stats.internal_positive_and_immediate_clauses_avoided = self
+                .stats
+                .internal_positive_and_immediate_clauses_avoided
+                .saturating_add(usize_to_u64_saturating(immediate_clauses_avoided));
+        }
+        Ok(true)
+    }
+
     /// Lazily emits the Plaisted–Greenbaum half-definitions needed so that an
     /// occurrence of AIG node `start` in polarity `want_up` is sound.
     ///
@@ -1326,6 +1505,9 @@ impl IncrementalCnf {
             let rhs_lit = self.lit(rhs);
             if up {
                 if self.emitted_up[idx] {
+                    continue;
+                }
+                if self.try_flatten_internal_positive_and(aig, node_id, var, &mut stack)? {
                     continue;
                 }
                 self.emitted_up[idx] = true;
@@ -4607,6 +4789,107 @@ p cnf 1 2
         // primitive incremental encoding used seven non-constant clauses here.
         assert_eq!(cnf.clause_count(), 5);
         assert!(matches!(cnf.solve(&[], None).unwrap(), SatResult::Sat(_)));
+    }
+
+    fn internal_positive_and_case() -> (Aig, AigLit, AigLit, Vec<AigLit>) {
+        let mut aig = Aig::new();
+        let input_a = aig.input("a");
+        let input_b = aig.input("b");
+        let input_c = aig.input("c");
+        let input_d = aig.input("d");
+        let input_e = aig.input("e");
+        let pair_ab = aig.and(input_a, input_b);
+        let pair_cd = aig.and(input_c, input_d);
+        let tree = aig.and(pair_ab, pair_cd);
+        // `tree | !e`: the negated AND root requires `tree` positively, but
+        // does not enter the direct-positive-root assertion path.
+        let root = aig.and(tree.negated(), input_e).negated();
+        (
+            aig,
+            root,
+            tree,
+            vec![input_a, input_b, input_c, input_d, input_e],
+        )
+    }
+
+    #[test]
+    fn incremental_internal_positive_and_flattening_reduces_clauses() {
+        let (aig, root, _, _) = internal_positive_and_case();
+        let mut baseline = IncrementalCnf::new();
+        baseline.assert_root(&aig, root, None).unwrap();
+        let mut candidate = IncrementalCnf::with_internal_positive_and_flattening();
+        candidate.assert_root(&aig, root, None).unwrap();
+
+        assert_eq!(baseline.clause_count(), 9);
+        assert_eq!(candidate.clause_count(), 7);
+        assert!(matches!(
+            candidate.solve(&[], None).unwrap(),
+            SatResult::Sat(_)
+        ));
+    }
+
+    #[test]
+    fn incremental_internal_positive_and_profile_is_causal() {
+        let (aig, root, _, _) = internal_positive_and_case();
+        let mut baseline = IncrementalCnf::with_profiling();
+        baseline.assert_root(&aig, root, None).unwrap();
+        let baseline_stats = baseline.stats();
+        assert_eq!(baseline_stats.internal_positive_and_opportunities, 1);
+        assert_eq!(baseline_stats.internal_positive_and_opportunity_nodes, 3);
+        assert_eq!(baseline_stats.internal_positive_and_flattened, 0);
+        assert_eq!(
+            baseline_stats.internal_positive_and_immediate_clauses_avoided,
+            0
+        );
+
+        let mut candidate = IncrementalCnf::with_profiling_and_internal_positive_and_flattening();
+        candidate.assert_root(&aig, root, None).unwrap();
+        let stats = candidate.stats();
+        assert_eq!(stats.internal_positive_and_opportunities, 1);
+        assert_eq!(stats.internal_positive_and_opportunity_nodes, 3);
+        assert_eq!(stats.internal_positive_and_flattened, 1);
+        assert_eq!(stats.internal_positive_and_immediate_clauses_avoided, 2);
+        assert_eq!(stats.up_half_definitions, 0);
+        assert_eq!(stats.down_half_definitions, 1);
+        assert_eq!(stats.definition_clauses, 5);
+    }
+
+    #[test]
+    fn incremental_internal_positive_and_flattening_matches_every_input() {
+        let (aig, root, _, inputs) = internal_positive_and_case();
+        for mask in 0u32..(1 << inputs.len()) {
+            let values = (0..inputs.len())
+                .map(|bit| (mask >> bit) & 1 == 1)
+                .collect::<Vec<_>>();
+            let expected = aig.eval(root, &values).unwrap();
+            let mut cnf = IncrementalCnf::with_internal_positive_and_flattening();
+            cnf.assert_root(&aig, root, None).unwrap();
+            for (bit, input) in inputs.iter().copied().enumerate() {
+                let literal = if values[bit] { input } else { input.negated() };
+                cnf.assert_root(&aig, literal, None).unwrap();
+            }
+            let actual = matches!(cnf.solve(&[], None).unwrap(), SatResult::Sat(_));
+            assert_eq!(actual, expected, "input mask {mask:#07b}");
+        }
+    }
+
+    #[test]
+    fn incremental_internal_positive_and_remains_sound_under_later_reuse() {
+        let (aig, root, tree, inputs) = internal_positive_and_case();
+        let e = inputs[4];
+        let mut cnf = IncrementalCnf::with_internal_positive_and_flattening();
+        cnf.assert_root(&aig, root, None).unwrap();
+        // Reusing the bypassed tree negatively must emit its ordinary down
+        // half rather than trusting an underconstrained helper variable.
+        cnf.assert_root(&aig, tree.negated(), None).unwrap();
+        let selector = cnf.fresh_selector().unwrap();
+        cnf.assert_root(&aig, e, Some(selector)).unwrap();
+
+        assert!(matches!(cnf.solve(&[], None).unwrap(), SatResult::Sat(_)));
+        assert!(matches!(
+            cnf.solve(&[selector], None).unwrap(),
+            SatResult::Unsat(_)
+        ));
     }
 
     #[test]

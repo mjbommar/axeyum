@@ -117,3 +117,8 @@ defer it even when clauses fall. AIG construction per node remains next after
 this bounded CNF slice; SAT remains third at 17.50% on the diagnostic rerun.
 GQ4 stays explicit and off. GQ7 memory admission, GQ10 driver widening, and the
 separate trust-ledger/proof work remain open.
+
+Subsequent ADR-0174 implements and rejects the selected internal AND-tree
+candidate: its local implication encoding is sound, but later helper reuse
+grows retained Dptf CNF and regresses unprofiled native time. AIG per-node
+attribution therefore becomes the next GQ5 action.
