@@ -322,16 +322,22 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-16 — ADR-0194 lands observational model-lift attribution.** The
-  post-ADR-0193 profile makes `model_lift` the largest named residual, but that
-  aggregate combines retained-AIG forward recomputation, validation/symbol
-  reconstruction, and complete-model construction. The new opt-in
-  `IncrementalModelLiftStats` separates those three nested durations and counts
-  AIG nodes, symbol-bit inputs, reconstructed symbols, arena symbols, and
-  completed values; ordinary constructors remain all-zero. Focused all-feature
-  tests and strict solver Clippy pass. Next wire the exact map into Glaurung
-  warm-profile v6 and the fail-closed summarizer, then measure before choosing
-  any reconstruction or validation change.
+- **2026-07-16 — ADR-0194 measures model completion as the residual.** The
+  exact Glaurung v6 SurfacePen run decides and agrees on all 2,551 checks
+  (2,282 SAT / 269 UNSAT), with zero unknown splits or replay failures. Of
+  175.049 ms in `model_lift`, complete-model construction consumes 165.192 ms
+  (94.37%), assignment reconstruction/validation 7.146 ms (4.08%), and
+  retained-AIG recomputation 2.427 ms (1.39%). Exactly 5,066 reconstructed
+  symbols become 5,066 completed public values. This rejects duplicate AIG
+  traversal as the next lever.
+
+  Source inspection finds that warm completion unconditionally traverses every
+  active original assertion to discover user array selects even when all
+  active and one-shot array/UF projection sets are empty. Next specify, test,
+  and causally gate an exact scalar-QF_BV fast path that skips only this empty
+  warm-theory projection pipeline. It must still default-complete every user
+  symbol and replay every original root; validation and complete-model output
+  remain mandatory.
 
 - **2026-07-16 — ADR-0193 accepts bounded shared-memo original replay.** The
   v5 cache-aware SurfacePen profile finds mandatory original-term replay at

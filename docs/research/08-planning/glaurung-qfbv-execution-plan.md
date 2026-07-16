@@ -698,12 +698,14 @@ clean artifact pins the exact Glaurung/Axeyum revisions and policy.
    rewrite tranche: `extract_extend` is a real lowering win, but none of the
    four ablated rules changes AIG/CNF. Reopen GQ3/GQ4 only for a specific new
    downstream gate-cone hypothesis.
-4. Use ADR-0193's post-change v5 profile next: attribute model-lift operations
-   against the symbols required for complete original replay, and keep CNF as
-   the parallel measured GQ5 lane. Do not omit model completion or replay to
-   manufacture a speedup; internal flattening still requires future-use
-   evidence or clause replacement. ADR-0194 supplies the Axeyum counters; wire
-   their exact map into Glaurung v6 and its strict summarizer before measuring.
+4. ADR-0194's v6 SurfacePen profile attributes 94.37% of model lift to complete-
+   model construction, versus 4.08% assignment reconstruction and 1.39% AIG
+   recomputation, with all 2,551 checks agreed and replay-clean. Test the exact
+   scalar-QF_BV boundary selected by source inspection: skip empty warm-theory
+   projection discovery only when no active or one-shot array/UF projection
+   work exists. Continue to default-complete every user symbol and replay every
+   original root. Keep CNF as the parallel measured GQ5 lane; internal
+   flattening still requires future-use evidence or clause replacement.
 5. Keep complete assertion/symbol capture and separate backend timing mandatory
    in every new ordered artifact; merge per-process traces atomically before
    GQ7/GQ8 cache or auto-policy work.

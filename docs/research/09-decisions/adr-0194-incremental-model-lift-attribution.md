@@ -40,6 +40,22 @@ The ordinary-constructor test proves the complete attribution struct remains
 zero when profiling is disabled. The focused all-feature test and strict
 all-target/all-feature `axeyum-solver` Clippy pass under the 4 GiB wrapper.
 
+Glaurung `e031f03` and Axeyum `21aa983a` carry the exact map as warm-profile
+schema v6 and validate it fail-closed. The first real SurfacePen lineage run
+decides and agrees on all 2,551 checks (2,282 SAT / 269 UNSAT), with zero
+unknown splits or replay failures. Of 175.049 ms in `model_lift`, complete
+model construction consumes 165.192 ms (94.37%), assignment reconstruction
+and validation 7.146 ms (4.08%), and retained-AIG recomputation 2.427 ms
+(1.39%). The run recomputes 1,414,029 AIG nodes, scans 290,336 symbol-bit
+inputs, and produces exactly 5,066 reconstructed and completed symbol values.
+
+This rejects the suspected duplicate AIG traversal as the next lever. Source
+inspection identifies an exact scalar boundary to test next: the warm-theory
+completion pipeline collects user array-select terms by walking every active
+original assertion even when the active and one-shot array/UF projection sets
+are all empty. A follow-up change must causally gate only that no-theory work;
+it must still complete every user symbol and retain mandatory original replay.
+
 ## Alternatives
 
 Optimizing the apparent duplicate AIG validation immediately was rejected
@@ -52,9 +68,7 @@ ordinary solvers.
 
 ## Consequences
 
-Glaurung must carry this exact map in the next warm-profile schema and its
-strict summarizer before a model-lift optimization is selected. The first real
-v6 profile should compare time per AIG node, symbol bit, arena symbol, and
-completed value. Removing validation or narrowing reconstruction remains
-unauthorized until that profile identifies the responsible work and a replay-
-preserving API boundary is separately decided.
+Glaurung carries the exact map in warm-profile schema v6 and its strict
+summarizer. Removing validation or narrowing reconstruction remains
+unauthorized. The profile instead selects an exact scalar-only bypass of empty
+warm-theory projection work for a separately tested and measured decision.

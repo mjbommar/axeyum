@@ -602,8 +602,13 @@ work against the symbols actually required for complete original replay, and
 model-lift optimization may omit completion or weaken replay. GQ8 admission is
 complete in ADR-0192, and corrected composite variance is complete in
 ADR-0188. ADR-0194 now lands the opt-in Axeyum subphase/counter boundary for
-item (2); wire it into Glaurung warm-profile v6 and the strict summarizer before
-selecting an implementation change. GQ4 is not an active optimization;
+item (2), and Glaurung v6 measures the result: complete-model construction is
+165.192/175.049 ms (94.37%) of model lift, versus 7.146 ms for assignment
+reconstruction and 2.427 ms for AIG recomputation, across 2,551/2,551 decided
+and agreed checks with zero replay failures. This rejects duplicate-AIG-pass
+work as the next lever. Test an exact scalar-QF_BV completion fast path that
+skips only empty array/UF projection discovery while still completing every
+user symbol and replaying every original root. GQ4 is not an active optimization;
 ADR-0157/0158 remain explicit/off. Cold rewrite or CNF work may continue only
 when causal/native profiles select it. ADR-0164 permits opt-in consecutive
 snapshot reuse now; ADR-0166 supplies the bounded ordered T1/T2 evidence;
