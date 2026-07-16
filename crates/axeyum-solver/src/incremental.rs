@@ -21,7 +21,8 @@ use axeyum_cnf::{
 };
 use axeyum_ir::{
     ArraySortKey, ArrayValue, Assignment, FuncId, FuncValue, GenericArrayValue, IrError, Op, Sort,
-    SymbolId, TermArena, TermId, TermNode, Value, WideUint, eval, well_founded_default,
+    SymbolId, TermArena, TermId, TermNode, Value, WideUint, eval, eval_with_memo,
+    well_founded_default,
 };
 
 use std::collections::{BTreeMap, HashMap, HashSet};
@@ -40,6 +41,10 @@ const MAX_WARM_STRUCTURAL_ARRAY_NODES: usize = 512;
 const MAX_WARM_STRUCTURAL_ARRAY_DEPTH: usize = 256;
 const MAX_WARM_STRUCTURAL_REFINEMENT_ROUNDS: usize = MAX_WARM_STRUCTURAL_ARRAY_NODES;
 const MAX_WARM_ARRAY_UF_APPS_PER_ROOT: usize = 64;
+// Bound only values retained *between* replay roots. Evaluating one root may
+// require more entries, exactly as the former per-root `eval` call did; the
+// next root starts fresh once this threshold is reached.
+const MAX_REPLAY_SHARED_MEMO_ENTRIES: usize = 4_096;
 
 /// Monotone phase attribution for one incremental bit-vector solver.
 ///
@@ -4632,12 +4637,20 @@ impl IncrementalBvSolver {
         model: &Model,
     ) -> Result<Option<UnknownReason>, SolverError> {
         let assignment = model.to_assignment();
+        // The assignment is fixed for this entire replay. Share the evaluator
+        // memo across roots so common assertion/assumption subterms are checked
+        // once, but never retain it across models or checks: `eval_with_memo`
+        // trusts every existing entry for the caller-owned assignment.
+        let mut memo = HashMap::new();
         let active = self
             .frames
             .iter()
             .flat_map(|frame| frame.assertions.iter().copied());
         for term in active.chain(assumptions.iter().copied()) {
-            match eval(arena, term, &assignment) {
+            if memo.len() >= MAX_REPLAY_SHARED_MEMO_ENTRIES {
+                memo.clear();
+            }
+            match eval_with_memo(arena, term, &assignment, &mut memo) {
                 Ok(Value::Bool(true)) => {}
                 Ok(Value::Bool(false)) => {
                     return Err(SolverError::Backend(format!(
