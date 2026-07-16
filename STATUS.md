@@ -322,6 +322,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-16 — ADR-0186 accepts pressure-adaptive admission as Glaurung's
+  Axeyum explorer default.** The clean Glaurung `f99f72b` / Axeyum `f91fb232`
+  artifact repeats all 92,721 agreements and exact adaptive counters. Against
+  fixed lineage, SurfacePen changes +2.07% Axeyum / +2.28% ratio / -3.65% RSS;
+  NETwtw10 changes -1.03% / -0.89% / -0.88%; Z3 drift is below 0.21%. Every
+  3%/3%/5% plus 2% alarm passes.
+
+  Glaurung `ca12028` makes adaptive the default only for Axeyum explorer calls
+  with path ownership. `off`/`false`/`0` restores one-shot; generic Axeyum APIs
+  and proof/model semantics are unchanged. Real unset/off SurfacePen runs both
+  agree 2,551/2,551; backend 28/28 and runner 9/9 pass. GQ9 is complete for
+  available families. Next regenerate ADR-0184's corrected cold corpus.
+
 - **2026-07-16 — ADR-0185 lands pressure-adaptive warm admission as an opt-in
   repeat candidate.** Glaurung `95c43cb` starts lineage at two live sessions
   and expands once to the configured cap nine after 128 failed low-cap
@@ -1403,15 +1416,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   | **GQ4 cold relevant bits** | **v1 and v2 DEFERRED after failed real gates.** v1 regresses ~1.42x→4.49x. V2 rejection overhead is bounded, but defaults admit 0/128 and +0.62% total; a 33-query moderate policy removes 632 AIG nodes/zero clauses and regresses bit blast 3.14% | Keep both explicit/off. Reopen only with an AIG/CNF-cone estimator or after word rewrites materially change the residual; do not tune thresholds further |
   | **GQ5 AIG/CNF construction** | **First native AIG tranche accepted (ADR-0175).** Deterministic open addressing improves three-driver Axeyum time 7.66% and ratio 0.742x→0.680x with unchanged structure; internal flattening stays deferred | Yield to GQ7/GQ10; reopen literal ownership or CNF only from fresh causal evidence |
   | **GQ6 cold SAT/CDCL** | **WIP foundation; behind measured CNF.** Accepted-table native lineage SAT is 18.48% weighted versus CNF at 46.55% | Compare identical CNF across cores only after the next CNF decision, with proof replay and deterministic limits |
-  | **GQ7 warm delta entry** | **Bounded opt-in policy and clean executable gate accepted (ADR-0171--0181, Glaurung `51666a9`).** Nine paths retain the RSS/time tradeoff; 512 assertions cover every stream; exact identity, alarms, and the baseline are enforced | Fixed lineage remains the faster opt-in after ADR-0183 |
+  | **GQ7 warm delta entry** | **DONE for available families (ADR-0171--0186).** Path-owned delta reuse, 9/512 hard bounds, exact alarms, and adaptive production admission are enforced | Preserve explicit one-shot/fixed controls and re-gate new families |
   | **GQ8 verdict/CNF cache** | **TODO; native ownership complete but cache contract still gated.** The ordered tier has 957 exact duplicate occurrences, 439 same-lineage repeats, and 2,192 prefix extensions | Specify bounded versioned content/config/scope identity, capacity/eviction, and mandatory model/proof replay before implementation |
-  | **GQ9 auto cost model/docs** | **WIP; adaptive 2→9 pressure candidate landed opt-in (ADR-0185).** Single calibrations clear alarms; second-check/purpose/fixed-small-cap defaults are rejected | Run clean three-by-two adaptive gate; compare against fixed lineage before any default |
+  | **GQ9 auto cost model/docs** | **DONE for available families (ADR-0186).** Clean adaptive repeat clears every alarm over 92,721 checks; downstream explorer default has explicit off/fixed controls | Re-gate newly captured families; do not broaden this Glaurung-specific default into Axeyum's generic API |
   | **GQ10 real-lifter regression tier** | **Warm available-family baseline clean; cold identity stale after ADR-0184.** SurfacePen/NETwtw10 controls and alarms remain committed | Regenerate corrected SMT-LIB corpus, then add new families |
 
-  **Next actions:** (1) run and publish the clean three-process-per-family
-  pressure-adaptive GQ9 artifact, then accept/defer against every alarm; (2)
-  regenerate the corrected GQ1/GQ10 SMT-LIB capture and reclassify the 2,225
-  formerly excluded wide assertions; (3) add newly available families; (4) reopen
+  **Next actions:** (1) regenerate the corrected GQ1/GQ10 SMT-LIB capture and
+  reclassify the 2,225 formerly excluded wide assertions; (2) rebuild strict
+  representative/full manifests and re-baseline cold Axeyum/Z3 performance;
+  (3) add newly available families; (4) reopen
   literal-copy ownership or CNF only from a
   fresh causal gate; (5) keep GQ4 off and SAT behind measured CNF; (6) only then
   specify GQ8's
@@ -3203,7 +3216,7 @@ plan is built and committed on the current branch:
 ### Track 4 — Use Cases & Frontend
 | Phase | Title | Status |
 |---|---|---|
-| P4.1j | Glaurung warm delta and duplicate/prefix reuse (GQ7/GQ8) | **WIP — ADR-0171--0185 accept native attribution, bounded lineage, alarms, and an opt-in pressure-adaptive repeat candidate.** Original lineage is 0.680x Z3; held-out 9/512 is 0.242x/0.360x. Repeat adaptive before defaults; GQ8 remains separately gated. |
+| P4.1j | Glaurung warm delta and duplicate/prefix reuse (GQ7/GQ8) | **GQ7/GQ9 DONE for available families in ADR-0186; GQ8 remains WIP.** Adaptive explorer default passes 92,721-check alarms with explicit off/fixed controls. Duplicate/verdict caching remains separately replay-gated. |
 | P4.1e | Retained warm Boolean array relation flags | **DONE (ADR-0091)** — symbolic-memory path conditions can keep nested supported array equality atoms warm through private candidate-sensitive relation flags, guarded equality/diff observations, projection filtering, and replay |
 | P4.1h | Retained warm nested array-valued UF parameters | **DONE (ADR-0094)** — nested supported array-valued memory/function parameters can stay warm as full-value UF keys through private projection keys or rewritten structural keys, with relation-flag guarded congruence, private filtering, and replay |
 | P4.1g | Retained warm structural array-valued UF parameters | **DONE (ADR-0093)** — supported store/constant/array-ITE memory/function parameters can stay warm as full-value UF keys with scalar dependency retention, structural owner realization, relation-flag guarded congruence, private filtering, and replay; ADR-0094 subsequently lands nested application keys |
@@ -3225,6 +3238,9 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-16 — ADR-0186 accepts the pressure-adaptive Glaurung default.**
+  Clean 92,721-check repetition clears every alarm; Glaurung `ca12028` defaults
+  only path-owned Axeyum explorer solves and preserves an explicit off override.
 - **2026-07-16 — ADR-0185 lands pressure-adaptive admission opt-in.** Glaurung
   `95c43cb` rejects purpose/fixed-small-cap alternatives, starts at two live
   sessions, and expands at 128 pressure events. Single SurfacePen/NETwtw10

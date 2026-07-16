@@ -418,6 +418,13 @@ session state.
 > after 128 failed reservations. Single clean calibrations clear the time/RSS
 > alarms on SurfacePen and NETwtw10, and the fail-closed runner validates exact
 > adaptive traffic. Repeat three processes per family before any default claim.
+> ADR-0186 closes that repeat and default decision. Glaurung `f99f72b` commits
+> the clean 92,721-check artifact; SurfacePen changes +2.07% time/-3.65% RSS and
+> NETwtw10 -1.03%/-0.88%, with ratio and Z3 drift also inside every alarm.
+> Glaurung `ca12028` makes adaptive the default only for explorer-owned Axeyum
+> solves; `off`/`false`/`0` is the explicit one-shot override. GQ9 is complete
+> for available families. Return the leading client lane to ADR-0184's corrected
+> GQ1/GQ10 cold-corpus regeneration.
 > The capture and
 > implementation audit has been expanded into the dependency-ordered
 > [Glaurung QF_BV execution plan](docs/research/08-planning/glaurung-qfbv-execution-plan.md):
@@ -453,9 +460,9 @@ malformed scripts never count as decisions or speedups.
 | **GQ4** | **Cold demand-driven bit-slice reduction** | **Out of the active queue.** ADR-0157 v1 is correct but regresses the real ratio about 1.42x→4.49x; ADR-0158's conservative admission is a safe no-op but does not improve the required family. Both remain explicit/off. Do not tune thresholds further on this corpus; only a qualitatively different constant-cost admission proof and a fresh client gate can reopen GQ4. |
 | **GQ5** | **Cheaper AIG construction and measured CNF encoding** | **First native AIG tranche accepted (ADR-0175).** Exact v4 attribution selects the low-hit `BTreeMap`; deterministic open addressing cuts three-driver Axeyum time 7.66% and ratio 0.742x→0.680x with unchanged AIG/CNF/replay/scopes and flat RSS. CNF is again dominant at 46.55%; internal AND flattening stays deferred. Reopen literal-copy ownership or CNF only from a fresh isolated native gate. |
 | **GQ6** | **Cold SAT/CDCL tuning** | **Material but behind measured warm CNF after ADR-0175.** Accepted-table native lineage spends 18.48% in SAT versus CNF's 46.55%. Compare identical emitted CNF across BatSat, the proof-producing core, and pinned CaDiCaL/Kissat only after the next CNF decision; preserve proof replay and deterministic limits. |
-| **GQ7** | **Cheaper warm entry and delta preprocessing** | **Bounded opt-in policy and clean executable gate accepted (ADR-0171--0181, Glaurung `51666a9`).** Nine sessions preserve the RSS/time tradeoff; 512 assertions cover held-out depth. Exact-work identity, alarms, and the clean reference artifact are enforced. Keep lineage opt-in while GQ9 fits automatic selection. |
+| **GQ7** | **Cheaper warm entry and delta preprocessing** | **DONE for available Glaurung families (ADR-0171--0186).** Path-owned delta reuse, 9/512 hard bounds, exact identity, alarms, and adaptive production admission are enforced. Preserve explicit one-shot/fixed controls and re-gate new families. |
 | **GQ8** | **Verdict and CNF reuse for duplicate/prefix queries** | ADR-0170 measures 957/3,769 exact duplicate occurrences (25.4%), 439 same-lineage repeats, and 2,192 prefix extensions. ADR-0171 completes bounded native ownership but does not authorize a cache. First specify deterministic capacity/eviction plus content, solver/config, scope, and lineage identity; every hit still passes original-term model or proof replay and invalidation/versioning is explicit. |
-| **GQ9** | **Auto production policy and API guidance** | **WIP: pressure-adaptive candidate awaiting repetition (ADR-0185).** Second-check auto remains explicit low-memory after failing time. Purpose/fixed-small-cap candidates are rejected. Adaptive 2→9 expansion at 128 pressure events clears both single-driver calibrations; run the clean three-by-two gate before defaults. GQ4 remains off. |
+| **GQ9** | **Auto production policy and API guidance** | **DONE for available families (ADR-0186).** Clean adaptive repetition passes all 3%/3%/5% + 2% alarms over 92,721 checks. Glaurung defaults only explorer-owned Axeyum solves to adaptive 2→9 admission; explicit one-shot and fixed controls remain. Re-gate new families; GQ4 stays off. |
 | **GQ10** | **Ordered, wider real-lifter regression corpus** | **Warm held-out baseline remains clean; cold corpus identity must regenerate (ADR-0184).** SurfacePen/NETwtw10 warm controls remain 0.242x/0.360x Z3 with alarms. Rebuild corrected SMT-LIB tiers, recover/reclassify excluded wide assertions, ingest new families, and keep diagnostic bars separate. |
 
 **Latest Glaurung execution order (2026-07-15; supersedes the earlier cold-path
@@ -509,10 +516,10 @@ The ranked work is:
    under content/config/scope identity and mandatory replay;
 7. **GQ6 SAT tuning:** the measured 17.45% weighted share is material; compare exact
    CNF across cores and measure inprocessing/heuristic changes;
-8. **GQ9 non-regressing auto mode:** ADR-0183 rejects second-check auto;
-   ADR-0185 rejects purpose and fixed-small-cap policies, then lands adaptive
-   2→9 pressure expansion as an opt-in candidate. Repeat its exact three-by-two
-   gate before any default decision;
+8. **GQ9 non-regressing auto mode:** **DONE in ADR-0186/Glaurung `ca12028`.**
+   Second-check, purpose, and fixed-small-cap policies are rejected; adaptive
+   2→9 pressure admission passes the clean repeated gate and is the downstream
+   explorer default with an explicit one-shot override;
 9. **GQ10 deeper capture/trending:** widen the now-repeated three-driver tier, add
    deterministic full-tier variance, and publish
    per-commit ratios with resource/memory identity; and
