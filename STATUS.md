@@ -322,6 +322,31 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-16 — ADR-0185 lands pressure-adaptive warm admission as an opt-in
+  repeat candidate.** Glaurung `95c43cb` starts lineage at two live sessions
+  and expands once to the configured cap nine after 128 failed low-cap
+  reservations. Purpose admission (1.140 s / 72,868 KiB), fixed cap 1, fixed
+  cap 2 on NETwtw10 (+18.2% time), and cap 3 (no RSS gain) are rejected.
+
+  Adaptive single-process calibrations clear the existing alarms: SurfacePen
+  is +1.55% Axeyum / -2.41% RSS versus same-binary cap 9 and does not expand;
+  NETwtw10 is -1.05% Axeyum / +1.11% RSS and expands exactly once. All 30,907
+  checks agree with zero unknown splits/resets. The fail-closed runner now
+  versions exact adaptive pressure/traffic; 27 backend and eight runner tests
+  pass. Default remains off pending a clean three-process-per-family repeat.
+
+- **2026-07-16 — ADR-0184 corrects Glaurung assertion export identity.**
+  Glaurung `fcc2de5` makes text, ordered trace, native Z3, and native Axeyum
+  agree on arbitrary-width truthiness (`true => term != 0@width`, false =>
+  zero). The corrected real SurfacePen trace validates 12,574 events and all
+  2,551 checks instead of failing at the first 64-bit root.
+
+  Axeyum's strict sort checker was correct; the producer was not. The 2,225
+  formerly excluded scripts are likely recoverable, and all expected-true query
+  hashes change, so the old 128/13,462 cold tiers are historical until
+  regenerated. Warm native verdict/work gates remain separate but must be
+  rerun, not assumed.
+
 - **2026-07-16 — ADR-0183 defers detected-reuse as the default.** The clean
   three-by-two auto artifact repeats all 92,721 agreements and exact topology
   counters. SurfacePen/NETwtw10 save 20.66%/15.93% median RSS but regress
@@ -979,9 +1004,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   cold client integration remains a distinct boundary.**
   Sequential capture at Glaurung
   `286f744` produced 15,710 rows / 15,687 unique hashes / 23 duplicate rows /
-  zero verdict conflicts. Strict validation rejects 2,225 genuinely ill-sorted
-  dumps and binds separate 128-query representative and 13,462-query well-typed
-  full manifests. Five artifact-v26 representative trials are valid under every
+  zero verdict conflicts. Strict validation rejected 2,225 ill-sorted producer
+  dumps and bound separate 128-query representative and 13,462-query well-typed
+  full manifests. ADR-0184 later attributes those failures to the producer and
+  makes these hashes historical. Five artifact-v26 representative trials are valid under every
   gate: median raw/canonical/configured ratios are 6.53x/3.42x/3.54x, canonical
   cuts Axeyum total 48.5%, and raw/canonical proof companions recheck all 64
   UNSAT rows. Same-revision full raw/canonical trials decide 13,462/13,462 with
@@ -1371,7 +1397,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
   | ID | Live status | Next acceptance boundary |
   |---|---|---|
-  | **GQ1 real-query profile** | **Native attribution, held-out identity, and alarms DONE for every stream (ADR-0171--0180).** Repeated tiers validate 9/512; runner versions identity and enforces 3%/3%/5% + 2% Z3 alarms | Publish clean baseline; never substitute diagnostic timing for unprofiled bars |
+  | **GQ1 real-query profile** | **Warm native attribution/identity done; corrected cold recapture WIP (ADR-0184).** Repeated 9/512 remains semantic evidence, but old SMT-LIB hashes and 2,225 exclusions are stale | Regenerate corrected raw/full/representative tiers before another cold claim |
   | **GQ2 cheap cold tier** | **WIP with three accepted rewrite tranches; batch integration deferred.** Canonical v4 reaches 5.625 s / 0.730x Z3; ADR-0156 preserves replay but is 18.8% slower than one-shot | Keep canonical v4 as the measured one-shot policy; do not recommend fresh incremental batch until its clause/entry overhead closes |
   | **GQ3 coercion/affine peepholes** | **DONE for current measured shapes (ADR-0159).** Clean repeated path-paired ablations are fail-closed; `extract_extend` is a material lowering-only win, while all four measured structural rules change zero AIG nodes/clauses | Keep rules enabled. Reopen only for a new residual shape with a specific downstream hypothesis and the same causal ablation gate |
   | **GQ4 cold relevant bits** | **v1 and v2 DEFERRED after failed real gates.** v1 regresses ~1.42x→4.49x. V2 rejection overhead is bounded, but defaults admit 0/128 and +0.62% total; a 33-query moderate policy removes 632 AIG nodes/zero clauses and regresses bit blast 3.14% | Keep both explicit/off. Reopen only with an AIG/CNF-cone estimator or after word rewrites materially change the residual; do not tune thresholds further |
@@ -1379,14 +1405,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   | **GQ6 cold SAT/CDCL** | **WIP foundation; behind measured CNF.** Accepted-table native lineage SAT is 18.48% weighted versus CNF at 46.55% | Compare identical CNF across cores only after the next CNF decision, with proof replay and deterministic limits |
   | **GQ7 warm delta entry** | **Bounded opt-in policy and clean executable gate accepted (ADR-0171--0181, Glaurung `51666a9`).** Nine paths retain the RSS/time tradeoff; 512 assertions cover every stream; exact identity, alarms, and the baseline are enforced | Fixed lineage remains the faster opt-in after ADR-0183 |
   | **GQ8 verdict/CNF cache** | **TODO; native ownership complete but cache contract still gated.** The ordered tier has 957 exact duplicate occurrences, 439 same-lineage repeats, and 2,192 prefix extensions | Specify bounded versioned content/config/scope identity, capacity/eviction, and mandatory model/proof replay before implementation |
-  | **GQ9 auto cost model/docs** | **WIP; second-check default deferred (ADR-0183).** Repeated auto saves 16--21% RSS but regresses time 4.28--7.37%, beyond alarm | Keep explicit low-memory; design a no-cold-rebuild topology selector before defaults |
-  | **GQ10 real-lifter regression tier** | **Clean available-family baseline DONE; widening WIP.** SurfacePen is 0.242x; NETwtw10 is 0.360x; identity plus 3%/3%/5% + 2% Z3 alarms are committed | Add new families and keep diagnostic bars separate |
+  | **GQ9 auto cost model/docs** | **WIP; adaptive 2→9 pressure candidate landed opt-in (ADR-0185).** Single calibrations clear alarms; second-check/purpose/fixed-small-cap defaults are rejected | Run clean three-by-two adaptive gate; compare against fixed lineage before any default |
+  | **GQ10 real-lifter regression tier** | **Warm available-family baseline clean; cold identity stale after ADR-0184.** SurfacePen/NETwtw10 controls and alarms remain committed | Regenerate corrected SMT-LIB corpus, then add new families |
 
-  **Next actions:** (1) design a no-cold-rebuild GQ9 topology signal that can
-  avoid singleton retention without failing the 3% time alarm; (2) add newly
-  available families; (3) reopen
+  **Next actions:** (1) run and publish the clean three-process-per-family
+  pressure-adaptive GQ9 artifact, then accept/defer against every alarm; (2)
+  regenerate the corrected GQ1/GQ10 SMT-LIB capture and reclassify the 2,225
+  formerly excluded wide assertions; (3) add newly available families; (4) reopen
   literal-copy ownership or CNF only from a
-  fresh causal gate; (4) keep GQ4 off and SAT behind measured CNF; (5) only then
+  fresh causal gate; (5) keep GQ4 off and SAT behind measured CNF; (6) only then
   specify GQ8's
   replay-safe bounded cache and GQ9's non-regressing auto policy. Preserve
   strict coercion, dump validation, and atomic dedup/conflict handling.
@@ -3176,7 +3203,7 @@ plan is built and committed on the current branch:
 ### Track 4 — Use Cases & Frontend
 | Phase | Title | Status |
 |---|---|---|
-| P4.1j | Glaurung warm delta and duplicate/prefix reuse (GQ7/GQ8) | **WIP — ADR-0171--0181 accept native attribution, AIG win, bounded admission, alarms, and a clean baseline.** Original lineage is 0.680x Z3; held-out 9/512 is 0.242x/0.360x with exact identity. Fit GQ9 admission before defaults; GQ8 remains separately gated. |
+| P4.1j | Glaurung warm delta and duplicate/prefix reuse (GQ7/GQ8) | **WIP — ADR-0171--0185 accept native attribution, bounded lineage, alarms, and an opt-in pressure-adaptive repeat candidate.** Original lineage is 0.680x Z3; held-out 9/512 is 0.242x/0.360x. Repeat adaptive before defaults; GQ8 remains separately gated. |
 | P4.1e | Retained warm Boolean array relation flags | **DONE (ADR-0091)** — symbolic-memory path conditions can keep nested supported array equality atoms warm through private candidate-sensitive relation flags, guarded equality/diff observations, projection filtering, and replay |
 | P4.1h | Retained warm nested array-valued UF parameters | **DONE (ADR-0094)** — nested supported array-valued memory/function parameters can stay warm as full-value UF keys through private projection keys or rewritten structural keys, with relation-flag guarded congruence, private filtering, and replay |
 | P4.1g | Retained warm structural array-valued UF parameters | **DONE (ADR-0093)** — supported store/constant/array-ITE memory/function parameters can stay warm as full-value UF keys with scalar dependency retention, structural owner realization, relation-flag guarded congruence, private filtering, and replay; ADR-0094 subsequently lands nested application keys |
@@ -3198,6 +3225,14 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-16 — ADR-0185 lands pressure-adaptive admission opt-in.** Glaurung
+  `95c43cb` rejects purpose/fixed-small-cap alternatives, starts at two live
+  sessions, and expands at 128 pressure events. Single SurfacePen/NETwtw10
+  calibrations clear alarms with 30,907/30,907 agreement; repeat remains open.
+- **2026-07-16 — ADR-0184 corrects wide assertion exports.** Glaurung
+  `fcc2de5` preserves arbitrary-width native truthiness in text/trace output.
+  The corrected SurfacePen trace validates; regenerate stale cold corpus hashes
+  and reclassify 2,225 producer-malformed dumps.
 - **2026-07-16 — ADR-0183 defers detected-reuse as default.** Repeated exact
   auto evidence saves 16--21% RSS but breaches the 3% time alarm on both
   families. Glaurung `ab3b27b` commits the artifact; auto stays explicit.
@@ -3554,14 +3589,17 @@ plan is built and committed on the current branch:
 - **2026-07-14 — real Glaurung capture, artifact v26, and corrected roadmap.**
   Regenerated the three-driver Z3 capture sequentially, reconciled 15,710 rows
   to 15,687 unique hashes plus 23 non-conflicting duplicates, isolated 2,225
-  ill-sorted producer dumps, and generated strict byte-complete representative
+  then-ill-sorted producer dumps, and generated strict byte-complete representative
   and 13,462-query well-typed full manifests. Five-process representative raw/
   canonical/configured runs and raw/canonical proof companions pass every
   validity gate; same-revision full raw/canonical runs decide 13,462/13,462.
   Artifact v26 now charges canonical rewrite elapsed, repetition tooling accepts
   v26, and canonical v2 is a measured 48.5%/57.1% representative/full Axeyum
   time win. The full attribution finds the always-on observational demand pass
-  consuming 29.57/50.75 s; the next task is to make it opt-in, rerun production
+  consuming 29.57/50.75 s. ADR-0184 later invalidates this capture's byte
+  identity by fixing the producer renderer; the historical performance result
+  remains documented, but the corpus must be regenerated. The next task at the
+  time was to make it opt-in, rerun production
   timing, and only then choose affine word or CNF work. Evidence and digests are
   committed in `bench-results/glaurung-qfbv-2026-07-14.md`.
 

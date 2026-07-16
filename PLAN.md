@@ -406,6 +406,18 @@ session state.
 > 20.66%/15.93% RSS. It therefore fails the 3% time alarm and remains an
 > explicit low-memory option. Fixed lineage remains the faster opt-in policy;
 > the default remains off.
+> ADR-0184/Glaurung `fcc2de5` then corrects a more fundamental capture defect:
+> native Z3/Axeyum assertions use arbitrary-width truthiness, but the shared
+> text/trace producer compared every root with a BV1 literal. A corrected real
+> SurfacePen trace validates all 2,551 checks. Keep strict sorting; regenerate
+> the GQ1/GQ10 cold corpus because every expected-true byte identity changes and
+> the 2,225 previously excluded wide scripts are likely recoverable.
+> ADR-0185/Glaurung `95c43cb` is the next explicit GQ9 candidate. Purpose-based
+> admission and fixed caps 1/2/3 are measured and rejected. Pressure-adaptive
+> lineage starts at two live paths and expands once to the configured cap nine
+> after 128 failed reservations. Single clean calibrations clear the time/RSS
+> alarms on SurfacePen and NETwtw10, and the fail-closed runner validates exact
+> adaptive traffic. Repeat three processes per family before any default claim.
 > The capture and
 > implementation audit has been expanded into the dependency-ordered
 > [Glaurung QF_BV execution plan](docs/research/08-planning/glaurung-qfbv-execution-plan.md):
@@ -424,17 +436,18 @@ This is the first-class client performance lane created from ADR-0136 and the
 reported **1.7--3.2x Axeyum/Z3 gap** on real binary-analysis formulas. The
 target distribution is the lifter's width-mixed, extract/concat-heavy,
 memory-derived path conditions, not a synthetic uniformly typed substitute.
-The access-controlled SMT-LIB query pack is now present and strictly ingested.
-The 15,710 producer index rows reconcile to 15,687 unique hashes plus 23
-duplicate rows and zero verdict conflicts. Strict validation identifies 2,225
-genuinely ill-sorted producer dumps, leaving a 128-query representative tier
-and a 13,462-query well-typed full tier. Both have Axeyum-generated manifests;
-synthetic timing remains insufficient, and malformed scripts never count as
-decisions or speedups.
+The access-controlled SMT-LIB query pack was present and strictly ingested.
+Its 15,710 producer index rows reconciled to 15,687 unique hashes plus 23
+duplicate rows and zero verdict conflicts. That byte identity is now stale:
+ADR-0184 proves the producer, not Axeyum's strict checker, caused the 2,225
+wide assertion sort failures. The former 128-query representative and 13,462-
+query full tiers remain historical evidence only until regenerated from
+Glaurung `fcc2de5` or later. Synthetic timing remains insufficient, and
+malformed scripts never count as decisions or speedups.
 
 | ID | Roadmap item | Scope and exit criterion |
 |---|---|---|
-| **GQ1** | **Capture and profile real queries first** | **Native attribution and a clean held-out baseline are DONE for all available streams (ADR-0171--0181).** Exact v4 classifies solver work; repeated tiers validate 9/512, and the committed runner artifact versions identity with 3%/3%/5% + 2% Z3 alarms. Keep profiled/unprofiled bars distinct. |
+| **GQ1** | **Capture and profile real queries first** | **Native attribution/held-out warm baseline are done; cold capture regeneration is WIP after ADR-0184.** Exact v4 and 9/512 remain historical/semantic evidence, but corrected wide truthiness changes query bytes and should recover the 2,225 excluded dumps. Regenerate before another cold-corpus claim; keep profiled/unprofiled bars distinct. |
 | **GQ2** | **Cheap always-on cold simplification tier** | Add a bounded, denotation-preserving one-shot tier for constant folding and trivial identities whose own cost is measured. Add a size/shape and cold-vs-warm policy that selects cheap, configured, or no preprocessing. Exit only when cold end-to-end time is non-worse in aggregate and improves the target class at the GQ1 validity gates. |
 | **GQ3** | **Coercion-cancellation peepholes and causal telemetry** | **Current measured tranche complete; use ablation as policy evidence.** Exact nested/concat/extension/coercion rules and ADR-0159's repeated default-minus-rule comparator are landed. `extract_extend` improves lowering, but all four measured rules change zero AIG nodes and clauses. Do not globally delete sound rewrites because one corpus does not fire them; instead, keep a Glaurung policy only for rules with measured reach/cost and reopen register-slice-specific work only when an ablation demonstrates downstream AIG/CNF or native-time reduction. |
 | **GQ4** | **Cold demand-driven bit-slice reduction** | **Out of the active queue.** ADR-0157 v1 is correct but regresses the real ratio about 1.42x→4.49x; ADR-0158's conservative admission is a safe no-op but does not improve the required family. Both remain explicit/off. Do not tune thresholds further on this corpus; only a qualitatively different constant-cost admission proof and a fresh client gate can reopen GQ4. |
@@ -442,8 +455,8 @@ decisions or speedups.
 | **GQ6** | **Cold SAT/CDCL tuning** | **Material but behind measured warm CNF after ADR-0175.** Accepted-table native lineage spends 18.48% in SAT versus CNF's 46.55%. Compare identical emitted CNF across BatSat, the proof-producing core, and pinned CaDiCaL/Kissat only after the next CNF decision; preserve proof replay and deterministic limits. |
 | **GQ7** | **Cheaper warm entry and delta preprocessing** | **Bounded opt-in policy and clean executable gate accepted (ADR-0171--0181, Glaurung `51666a9`).** Nine sessions preserve the RSS/time tradeoff; 512 assertions cover held-out depth. Exact-work identity, alarms, and the clean reference artifact are enforced. Keep lineage opt-in while GQ9 fits automatic selection. |
 | **GQ8** | **Verdict and CNF reuse for duplicate/prefix queries** | ADR-0170 measures 957/3,769 exact duplicate occurrences (25.4%), 439 same-lineage repeats, and 2,192 prefix extensions. ADR-0171 completes bounded native ownership but does not authorize a cache. First specify deterministic capacity/eviction plus content, solver/config, scope, and lineage identity; every hit still passes original-term model or proof replay and invalidation/versioning is explicit. |
-| **GQ9** | **Auto production policy and API guidance** | **WIP: second-check auto default deferred (ADR-0183).** Repeated exact evidence saves 16--21% RSS but regresses time 4.28--7.37%, breaching the 3% alarm. Retain auto as explicit low-memory and lineage as faster opt-in; seek a no-cold-rebuild selector before defaults. GQ4 remains off. |
-| **GQ10** | **Ordered, wider real-lifter regression corpus** | **Clean per-commit baseline DONE for available held-out families (ADR-0170--0181).** SurfacePen is 0.242x Z3; fixed-budget NETwtw10 is 0.360x. Glaurung commits exact identity and enforces 3%/3%/5% plus 2% Z3 alarms. Ingest new families and keep diagnostic bars separate. |
+| **GQ9** | **Auto production policy and API guidance** | **WIP: pressure-adaptive candidate awaiting repetition (ADR-0185).** Second-check auto remains explicit low-memory after failing time. Purpose/fixed-small-cap candidates are rejected. Adaptive 2→9 expansion at 128 pressure events clears both single-driver calibrations; run the clean three-by-two gate before defaults. GQ4 remains off. |
+| **GQ10** | **Ordered, wider real-lifter regression corpus** | **Warm held-out baseline remains clean; cold corpus identity must regenerate (ADR-0184).** SurfacePen/NETwtw10 warm controls remain 0.242x/0.360x Z3 with alarms. Rebuild corrected SMT-LIB tiers, recover/reclassify excluded wide assertions, ingest new families, and keep diagnostic bars separate. |
 
 **Latest Glaurung execution order (2026-07-15; supersedes the earlier cold-path
 priority reset).** Earlier evidence reported an approximately 1.34x gated-bench
@@ -496,9 +509,10 @@ The ranked work is:
    under content/config/scope identity and mandatory replay;
 7. **GQ6 SAT tuning:** the measured 17.45% weighted share is material; compare exact
    CNF across cores and measure inprocessing/heuristic changes;
-8. **GQ9 non-regressing auto mode:** ADR-0183 rejects second-check auto as the
-   default after repetition; retain it for low memory and seek a no-cold-rebuild
-   topology signal before another default candidate;
+8. **GQ9 non-regressing auto mode:** ADR-0183 rejects second-check auto;
+   ADR-0185 rejects purpose and fixed-small-cap policies, then lands adaptive
+   2→9 pressure expansion as an opt-in candidate. Repeat its exact three-by-two
+   gate before any default decision;
 9. **GQ10 deeper capture/trending:** widen the now-repeated three-driver tier, add
    deterministic full-tier variance, and publish
    per-commit ratios with resource/memory identity; and
@@ -727,13 +741,15 @@ performance or regression claim.
 **Real capture ingested and measured (2026-07-14).** Glaurung commit `286f744`
 was captured sequentially on the three pinned Windows drivers. The raw audit is
 15,710 index rows, 15,687 unique hashes, 23 duplicate rows, and zero verdict
-conflicts. Strict parsing found 2,225 genuinely ill-sorted producer dumps
+conflicts. Strict parsing found 2,225 ill-sorted producer dumps
 (1,429 120-vs-64, 795 96-vs-64, one 160-vs-128); Z3's CLI independently emits
 sort errors for them, so their internal capture verdicts do not describe the
 dumped scripts. They are excluded from performance without weakening Axeyum's
 sort checker. Axeyum-generated hash-free-index manifests bind a 128-query
 representative tier (64 SAT / 64 UNSAT) and a 13,462-query well-typed full tier
-(1,774 SAT / 11,688 UNSAT). Both are byte-complete and access-controlled.
+(1,774 SAT / 11,688 UNSAT). Both were byte-complete and access-controlled.
+ADR-0184 later identifies the shared Glaurung renderer as the cause; these
+counts/manifests are historical and must be regenerated.
 
 Artifact v26 charges canonical rewrite cost. Five representative trials give
 median raw/canonical/configured ratios of 6.53x/3.42x/3.54x; canonical cuts
