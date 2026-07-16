@@ -482,6 +482,13 @@ Out of scope:
     (`IncrementalCnf`), driven by `IncrementalBvSolver`. Both implemented
     2026-06-13; see
     [ADR-0009](../09-decisions/adr-0009-incremental-sat-and-solving.md).
+- [x] How must whole-snapshot and first-class direct-delta client profiles
+      distinguish work?
+  - Answer: a versioned warm record must name its entry mode and partition the
+    complete query, translated roots, and root encodings into persistent versus
+    temporary work. Historical snapshot schemas remain readable but cannot be
+    silently reinterpreted; see
+    [ADR-0202](../09-decisions/adr-0202-direct-delta-warm-profile-contract.md).
 - [x] What may an exact-verdict cache reuse without weakening evidence?
   - Answer: initially only an exact scalar SAT duplicate inside the same
     arena-bound `IncrementalBvSolver`, keyed by exact ordered assertion terms,
