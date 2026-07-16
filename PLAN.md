@@ -311,6 +311,13 @@ session state.
 > and inherited-prefix materialization, expose deterministic fallback reasons,
 > and profile native lineage phases before GQ9 or GQ8. Glaurung remains only an
 > external solver workload and integration client.
+> Glaurung `49f1fe2` now lands the first deterministic lifecycle boundary:
+> process-wide live-session and per-snapshot assertion caps reserve atomically,
+> close an over-limit retained owner, and fall back to ordinary one-shot solving
+> with explicit counters. Cap-zero and cap-one live smokes remain fully agreed
+> with Z3 and finish with no retained paths. This closes explicit capacity
+> plumbing, not memory admission: calibrate non-regressing limits, attribute the
+> native lineage phases, and add a measured memory/fallback policy next.
 > The capture and
 > implementation audit has been expanded into the dependency-ordered
 > [Glaurung QF_BV execution plan](docs/research/08-planning/glaurung-qfbv-execution-plan.md):
@@ -345,9 +352,9 @@ decisions or speedups.
 | **GQ4** | **Cold demand-driven bit-slice reduction** | **Out of the active queue.** ADR-0157 v1 is correct but regresses the real ratio about 1.42x→4.49x; ADR-0158's conservative admission is a safe no-op but does not improve the required family. Both remain explicit/off. Do not tune thresholds further on this corpus; only a qualitatively different constant-cost admission proof and a fresh client gate can reopen GQ4. |
 | **GQ5** | **Cheaper AIG construction and measured CNF encoding** | **Large incremental clause residual closed; per-node construction remains open.** ADR-0162/0163 cut incremental clauses 782,716→558,787 and pass native gates; only 12,882 clauses (+2.36%) remain over one-shot, while a stronger per-clause index regresses native time. Next attribute bit-blast cost as node count versus construction overhead, verify Glaurung sharing survives term→AIG, and measure bounded structural hashing/two-level rewrites/copy removal. Continue comparator/concat/extract/root CNF work only from measured gate/attempt profiles and require lower native time, not merely fewer clauses. |
 | **GQ6** | **Cold SAT/CDCL tuning** | **Relevant but ranked seventh.** The reported native share is now about 20%, so compare the exact emitted CNF across BatSat, the proof-producing core, and pinned CaDiCaL/Kissat, then measure existing subsumption/vivification/inprocessing plus phase saving, VSIDS/VMTF, and restarts. UNSAT proof rechecking and deterministic resource limits remain mandatory. Do not outrank GQ7, client-boundary attribution, or the dual baseline. |
-| **GQ7** | **Cheaper warm entry and delta preprocessing** | **Native bounded tier accepted, lifecycle policy WIP (ADR-0171).** Explicit path-owned solvers preserve sibling isolation and close every session. Three repeated native rounds keep 20,958 checks/policy fully decided/agreed: weighted lineage is 0.746x Z3 versus snapshot's 2.093x and wins every driver. Lineage cuts Axeyum time 65.5%, but per-driver median RSS rises 6.3%--31.0% and peaks at 141,124 KiB. Keep it opt-in; bound sessions, memory, inherited-prefix construction, and fallback before default admission. |
+| **GQ7** | **Cheaper warm entry and delta preprocessing** | **Native bounded tier accepted; resource policy WIP (ADR-0171, Glaurung `49f1fe2`).** Explicit path-owned solvers preserve sibling isolation and repeated lineage is 0.746x Z3 versus snapshot 2.093x. Live-session and assertion caps now atomically fall back one-shot and expose counters; cap smokes remain agreed and leak no sessions. Keep lineage opt-in: calibrate limits, bound memory/inherited-prefix cost, and phase-profile before default admission. |
 | **GQ8** | **Verdict and CNF reuse for duplicate/prefix queries** | ADR-0170 measures 957/3,769 exact duplicate occurrences (25.4%), 439 same-lineage repeats, and 2,192 prefix extensions. ADR-0171 completes bounded native ownership but does not authorize a cache. First specify deterministic capacity/eviction plus content, solver/config, scope, and lineage identity; every hit still passes original-term model or proof replay and invalidation/versioning is explicit. |
-| **GQ9** | **Auto production policy and API guidance** | **Fixed native policies are now compared; resource-safe admission remains open.** ADR-0171 makes lineage the measured fast fixed policy on all three live streams, but its median RSS rises 6.3%--31.0%. Auto mode must bound live sessions and memory, expose first-prefix/fallback reasons, retain one-shot escape, and beat or match one-shot/snapshot/lineage across wider drivers. GQ4 remains off; accepted CNF defaults stay on; rewrite tiers follow causal evidence. |
+| **GQ9** | **Auto production policy and API guidance** | **Fixed native policies are compared and explicit capacity fallback exists; automatic admission remains open.** ADR-0171 makes lineage fastest on all three live streams, but median RSS rises 6.3%--31.0%. `49f1fe2` supplies live-path/assertion ceilings and visible one-shot fallback; next choose limits from measured memory/prefix cost and beat or match one-shot/snapshot/lineage across wider drivers. GQ4 remains off; accepted CNF defaults stay on. |
 | **GQ10** | **Ordered, wider real-lifter regression corpus** | **Three-driver ordered and repeated native development tiers are accepted (ADR-0170/0171).** The native tier repeats 6,986 checks/policy for three alternating rounds with 100% decision/agreement and stable findings; weighted lineage is 0.746x Z3. Retain the deduplicated cold tiers; next widen driver families, capture exact native hashes/phase profiles, and add full-tier/per-commit variance with both the pre-parsed Z3 and actual Glaurung Z3 bars. |
 
 **Latest Glaurung execution order (2026-07-15; supersedes the earlier cold-path
@@ -366,9 +373,9 @@ The ranked work is:
    ADR-0168's identical-occurrence controls; ADR-0169 completes assertions and
    per-backend timing. ADR-0170's control selects native per-lineage/delta
    ownership, and ADR-0171 accepts its repeated 0.746x-Z3 live result. Next
-   bound live sessions, memory, and first-prefix construction, add deterministic
-   fallback/eviction telemetry, and preserve push/pop, model, original-query
-   replay, and ownership semantics;
+   calibrate `49f1fe2`'s live-session/assertion fallback against memory and
+   first-prefix cost, add native phase attribution, and preserve push/pop,
+   model, original-query replay, and ownership semantics;
 2. **GQ1 client overhead:** use `check_profiled` to partition and remove the
    reported approximately 1.8x real-client/bench entry factor;
 3. **AIG cost per bit:** separate node count from construction cost, preserve

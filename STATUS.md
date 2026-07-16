@@ -342,6 +342,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   tier. GQ8 caching and GQ9 auto selection remain gated. Glaurung is downstream
   workload evidence, not Axeyum's formal-verification product architecture.
 
+  Glaurung `49f1fe2` now adds the first explicit resource boundary required by
+  that decision. Process-wide live-path and per-snapshot assertion caps reserve
+  atomically, close over-limit retained owners, and route checks one-shot with
+  visible fallback counters. Dptf cap-zero/cap-one smokes remain 561/561 agreed;
+  cap one holds peak live paths at one and all runs finish at zero live paths.
+  Capacity plumbing is complete, but limit calibration and a memory-based auto
+  policy remain open.
+
 - **2026-07-15 — ADR-0170 accepts the clean multi-driver ordered control and
   rejects a universal warm policy.** Clean Glaurung `dbdc6bf` traces preserve
   17,035 events, 1,225 paths, 1,081 assertions, 3,769 checks, 2,812 unique
@@ -1136,9 +1144,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   | **GQ4 cold relevant bits** | **v1 and v2 DEFERRED after failed real gates.** v1 regresses ~1.42x→4.49x. V2 rejection overhead is bounded, but defaults admit 0/128 and +0.62% total; a 33-query moderate policy removes 632 AIG nodes/zero clauses and regresses bit blast 3.14% | Keep both explicit/off. Reopen only with an AIG/CNF-cone estimator or after word rewrites materially change the residual; do not tune thresholds further |
   | **GQ5 AIG/CNF construction** | **WIP; current large clause residual CLOSED (ADR-0162/0163).** Direct roots plus exact root-context dedup cut incremental clauses 782,716→558,787; only +2.36% remains over one-shot and both changes pass native gates | Attribute AIG construction cost per node; continue CNF only from causal native evidence, since the stronger clause index regressed |
   | **GQ6 cold SAT/CDCL** | **WIP foundation, attribution-gated**; subsumption/BVE, XOR/GF(2), VSIDS, phase saving, Luby, and LBD foundations exist | Exact-CNF backend attribution first; tune/default a stronger path only where SAT dominates and proof replay stays green |
-  | **GQ7 warm delta entry** | **Native bounded tier accepted; lifecycle WIP (ADR-0171).** Per-path ownership is isolated and repeated lineage is 0.746x Z3 versus snapshot 2.093x, with 20,958 checks/policy green | Bound live sessions, memory, inherited-prefix construction, and fallback/eviction reasons; widen drivers before default admission |
+  | **GQ7 warm delta entry** | **Native bounded tier accepted; resource policy WIP (ADR-0171, `49f1fe2`).** Per-path ownership is isolated; lineage is 0.746x Z3. Atomic live-path/assertion caps now fall back one-shot with visible counters and no leaked sessions | Calibrate limits against memory/inherited-prefix cost, add native phase attribution, and widen drivers before default admission |
   | **GQ8 verdict/CNF cache** | **TODO; native ownership complete but cache contract still gated.** The ordered tier has 957 exact duplicate occurrences, 439 same-lineage repeats, and 2,192 prefix extensions | Specify bounded versioned content/config/scope identity, capacity/eviction, and mandatory model/proof replay before implementation |
-  | **GQ9 auto cost model/docs** | **TODO; fixed native policies compared.** Lineage wins all three live streams but raises median RSS 6.3%--31.0% | Telemetry-visible session/memory/fallback policy that beats or matches one-shot/snapshot/lineage on wider drivers and documents embedder guidance |
+  | **GQ9 auto cost model/docs** | **TODO; fixed policies compared and explicit capacity fallback landed.** Lineage wins all three live streams but raises median RSS 6.3%--31.0% | Select measured session/assertion/memory limits and a telemetry-visible policy that beats or matches one-shot/snapshot/lineage on wider drivers |
   | **GQ10 real-lifter regression tier** | **WIP; ordered plus repeated native three-driver tiers landed.** Native repetition validates 6,986 checks/policy/round for three rounds with stable findings and 100% agreement | Capture exact native hashes/phases, widen families, add full-tier/per-commit variance, and track pre-parsed plus actual-client Z3 bars separately |
 
   **Next actions:** (1) bound native lineage live sessions, inherited-prefix
@@ -2935,7 +2943,7 @@ plan is built and committed on the current branch:
 ### Track 4 — Use Cases & Frontend
 | Phase | Title | Status |
 |---|---|---|
-| P4.1j | Glaurung warm delta and duplicate/prefix reuse (GQ7/GQ8) | **WIP — ADR-0171 accepts bounded native path-owned GQ7.** Three repeated rounds keep 20,958 checks/policy green; live lineage is 0.746x Z3 versus snapshot 2.093x and wins every driver, but raises median RSS 6.3%--31.0%. Add bounded lifecycle/fallback plus phase attribution and wider-driver gates before GQ8/GQ9. |
+| P4.1j | Glaurung warm delta and duplicate/prefix reuse (GQ7/GQ8) | **WIP — ADR-0171 accepts native path-owned GQ7; `49f1fe2` lands explicit capacity fallback.** Three repeated rounds keep 20,958 checks/policy green; lineage is 0.746x Z3. Live-path/assertion caps fall back one-shot without leaks. Calibrate memory limits and add phase/wider-driver gates before GQ8/GQ9. |
 | P4.1e | Retained warm Boolean array relation flags | **DONE (ADR-0091)** — symbolic-memory path conditions can keep nested supported array equality atoms warm through private candidate-sensitive relation flags, guarded equality/diff observations, projection filtering, and replay |
 | P4.1h | Retained warm nested array-valued UF parameters | **DONE (ADR-0094)** — nested supported array-valued memory/function parameters can stay warm as full-value UF keys through private projection keys or rewritten structural keys, with relation-flag guarded congruence, private filtering, and replay |
 | P4.1g | Retained warm structural array-valued UF parameters | **DONE (ADR-0093)** — supported store/constant/array-ITE memory/function parameters can stay warm as full-value UF keys with scalar dependency retention, structural owner realization, relation-flag guarded congruence, private filtering, and replay; ADR-0094 subsequently lands nested application keys |
@@ -2956,6 +2964,13 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-15 — native lineage receives deterministic capacity fallback.**
+  Glaurung `49f1fe2` adds atomic process-wide live-path and per-snapshot
+  assertion caps. Over-limit checks run one-shot, counters expose every reason,
+  and over-limit retained owners close first. Dptf cap-zero/cap-one smokes stay
+  561/561 agreed and finish with zero live paths. Calibrate memory-safe limits
+  and phase-profile before GQ9 admission; this remains downstream plumbing.
 
 - **2026-07-15 — ADR-0171 accepts native path-owned warm reuse, still opt-in.**
   Glaurung `b9febbd`/`950cca4` isolates one retained solver per explorer path.
