@@ -322,6 +322,28 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-16 — ADR-0193 accepts bounded shared-memo original replay.** The
+  v5 cache-aware SurfacePen profile finds mandatory original-term replay at
+  447.046 ms / 38.82% because incremental replay rebuilt an evaluator memo for
+  every root. Axeyum `d3d95299` now uses the same trusted `eval_with_memo`
+  under one immutable assignment, clears accumulated cross-root values at a
+  fixed 4,096-entry threshold, and never retains trusted values across a
+  model, check, solver, arena, or thread.
+
+  The identical 2,551-check profile remains fully decided/agreed with zero
+  replay failures while replay falls 87.78% to 54.643 ms and attributed total
+  falls 33.51%. A same-current-client three-process causal gate improves
+  SurfacePen Axeyum 1,070.267→674.933 ms (-36.94%), ratio 0.243795→0.154875,
+  and median RSS 78,888→77,976 KiB (-1.16%) with -0.73% Z3 drift; every alarm
+  passes. A clean-Axeyum six-process candidate keeps all 92,721 checks green,
+  measures SurfacePen at 674.700 ms / 0.155x Z3 and NETwtw10 at 17.328 s /
+  0.333x Z3, and improves NETwtw10 against the committed artifact. The older
+  SurfacePen artifact fails its RSS alarm (+6.52%) despite the causal pair
+  proving the patch lowers RSS, so do not relabel it: refresh a clean
+  same-current two-driver baseline/candidate before publishing a replacement.
+  Then attribute model-lift operations versus replay-required symbols; CNF is
+  the parallel measured lane.
+
 - **2026-07-16 — ADR-0192 accepts Glaurung's bounded path-owned cache default.**
   Clean adaptive cache-off/cache-on artifacts execute 92,721 checks per policy
   across three SurfacePen and three NETwtw10 processes. All 185,442 combined

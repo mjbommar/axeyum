@@ -567,6 +567,17 @@ ADR-0180 adds explicit post-identity alarms in Glaurung `a0e5f9f`: 3% Axeyum,
 3% normalized ratio, 5% median RSS, and 2% absolute Z3 drift. Four focused tests
 and artifact self-comparison pass; a clean full baseline remains to publish.
 
+ADR-0193 follows the newer cache-aware v5 profile. Mandatory original replay
+was 38.82% of profiled SurfacePen internal time because each root recreated the
+ground-evaluator memo. Sharing only same-assignment values within one replay,
+with a fixed 4,096-entry cross-root retention threshold, reduces replay 87.78%
+and causal unprofiled SurfacePen time 36.94% while preserving every original
+root, error/Unknown behavior, traffic, finding, and memory gate. A clean-Axeyum
+two-driver candidate keeps all 92,721 checks green and improves NETwtw10 3.77%.
+The older cross-revision SurfacePen RSS artifact fails by 6.52%, while the
+same-current causal pair reduces RSS 1.16%; refresh the same-current baseline
+rather than waiving or misattributing that alarm.
+
 The deduplicated cold corpus cannot validate incremental reuse because it loses
 query frequency, order, path-prefix relationships, push/pop scopes, and model
 choice. Add an access-controlled ordered trace format carrying stable query or
@@ -650,10 +661,10 @@ clean artifact pins the exact Glaurung/Axeyum revisions and policy.
 |---|---|---|
 | 1 | Land GQ4 demand-driven slicing | **Deferred after both real gates failed.** V1 regresses about 3x; v2 admits little useful gate work and is also slower. Reopen only with a gate-cone estimator or a qualitatively different specialization. |
 | 2 | Make rewrite effort fire-rate driven | **Done for the current structural tranche (ADR-0159).** Clean repeated ablations show `extract_extend` saves lowering materialization/time, but the four measured rules remove zero AIG nodes and zero clauses. |
-| 3 | Close native-driver versus bench delta | **Done for bounded native lineage timing/phase/gate/AIG/admission identity (ADR-0171--0179).** Original lineage is 0.680x Z3; held-out 9/512 is 0.243x/0.360x with exact work identity and a fail-closed runner. Profiled/unprofiled/cold bars remain separately named. |
+| 3 | Close native-driver versus bench delta | **Done for bounded native lineage timing/phase/gate/AIG/admission identity; residual replay overhead accepted in ADR-0193.** Original lineage is 0.680x Z3; held-out 9/512 was 0.243x/0.360x. Bounded shared replay then cuts causal SurfacePen Axeyum 36.94% without weakening verification. Profiled/unprofiled/cold bars remain separately named. |
 | 4 | Strengthen AIG sharing | **First construction-cost tranche accepted (ADR-0175).** Client sharing already survived; exact v4 telemetry selected low-hit ordered unique-table probes. Deterministic open addressing preserves structure and cuts three-driver Axeyum time 7.66%. Reopen literal ownership/two-level rewriting only from a fresh causal gate. |
 | 5 | Reduce CNF for measured gates | **Current tranche closed/deferred (ADR-0172--0175).** Root fusion/dedup are exhausted; internal AND flattening grows retained Dptf clauses/time. CNF is again dominant after the AIG win, but reopen only with future-use evidence or clause replacement. |
-| 6 | Make warm entry delta-only | **Bounded admission repeated, executable, and alarmed (ADR-0171--0180).** Nine paths preserve the RSS/time tradeoff and 512 assertions cover every stream. Exact identity and alarms are enforced. Publish clean baseline before automatic selection. |
+| 6 | Make warm entry delta-only | **Bounded admission and replay evaluation are measured (ADR-0171--0180/0193).** Nine paths preserve the RSS/time tradeoff, 512 assertions cover every stream, and same-assignment replay sharing is bounded at 4,096 retained values between roots. Exact identity and alarms are enforced. |
 | 7 | Reuse duplicates and prefixes soundly | **DONE for available Glaurung families (ADR-0192).** Clean repeated evidence admits bounded same-arena exact SAT models with mandatory replay only in path-owned sessions. Glaurung defaults this downstream policy on with explicit off; generic Axeyum stays opt-in, and ordinary UNSAT/Unknown/prefix verdicts remain forbidden. |
 | 8 | Add the register-slice fast path | Treat this as the first specialized GQ4 policy only if the generic exact range propagation leaves measurable avoidable work. |
 | 9 | Queue SAT tuning | **Material but behind CNF:** accepted-table lineage SAT is 18.48% versus CNF's 46.55%. Compare identical CNF only after the next measured CNF tranche. |
@@ -671,13 +682,15 @@ clean artifact pins the exact Glaurung/Axeyum revisions and policy.
 | M5 AIG/CNF optimization | GQ5 | **First native AIG tranche accepted:** ADR-0175 replaces the ordered unique table and improves the repeated actual-client ratio 0.742x→0.680x with unchanged structure. CNF candidate remains deferred; reopen only from new causal evidence |
 | M6 SAT re-attribution | GQ6 | **Done for bounded accepted-table lineage:** SAT is 18.48% weighted and remains behind CNF at 46.55% |
 | M7 ordered warm trace | GQ7, GQ8 | **Done for clean three-driver controls (ADR-0166--0170):** assertions, lineage/scopes/choices, backend timing, cold/snapshot/lineage controls, and memory validate |
-| M8 Glaurung warm integration | GQ7 | **Bounded admission repeated/executable/alarmed (ADR-0171--0180):** original lineage is 0.680x Z3; held-out 9/512 identity and alarms are accepted. Publish clean baseline before auto policy |
+| M8 Glaurung warm integration | GQ7 | **Bounded admission/replay repeated and executable (ADR-0171--0180/0193):** 9/512 identity is accepted; bounded shared original replay cuts causal SurfacePen time 36.94%. Refresh a clean same-current two-driver artifact before replacing the published baseline |
 | M9 auto policy and regression lane | GQ8--GQ10 | **Done for current families in ADR-0186/0188/0192:** adaptive warm admission plus bounded path-owned exact-SAT caching are downstream defaults with explicit controls; corrected cold and ordered artifacts have executable identity, replay, finding, timing, and RSS alarms |
 
 ## Immediate next actions
 
-1. Preserve ADR-0192's explicit cache-off control and exact counters; re-run the
-   clean repeated client gate for new driver families or topology changes.
+1. Preserve ADR-0192's explicit cache-off control and exact counters. Refresh
+   ADR-0193's clean same-current two-driver baseline/candidate pair before
+   replacing the published artifact; never waive the stale SurfacePen RSS
+   alarm merely because the causal control attributes it outside the patch.
 2. Keep the corrected 162-query regular semantic gate and exact full shard
    union pinned; reject exclusions, dirty source, incomplete manifests, or a
    raised memory envelope as substitutes for coverage.
@@ -685,9 +698,11 @@ clean artifact pins the exact Glaurung/Axeyum revisions and policy.
    rewrite tranche: `extract_extend` is a real lowering win, but none of the
    four ablated rules changes AIG/CNF. Reopen GQ3/GQ4 only for a specific new
    downstream gate-cone hypothesis.
-4. Obtain fresh native attribution before reopening GQ5 literal-copy ownership
-   or GQ6. CNF was dominant at the last accepted profile; internal flattening
-   still requires future-use evidence or clause replacement.
+4. Use ADR-0193's post-change v5 profile next: attribute model-lift operations
+   against the symbols required for complete original replay, and keep CNF as
+   the parallel measured GQ5 lane. Do not omit model completion or replay to
+   manufacture a speedup; internal flattening still requires future-use
+   evidence or clause replacement.
 5. Keep complete assertion/symbol capture and separate backend timing mandatory
    in every new ordered artifact; merge per-process traces atomically before
    GQ7/GQ8 cache or auto-policy work.

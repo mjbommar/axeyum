@@ -514,7 +514,7 @@ count as decisions or speedups.
 | **GQ4** | **Cold demand-driven bit-slice reduction** | **Out of the active queue.** ADR-0157 v1 is correct but regresses the real ratio about 1.42x→4.49x; ADR-0158's conservative admission is a safe no-op but does not improve the required family. Both remain explicit/off. Do not tune thresholds further on this corpus; only a qualitatively different constant-cost admission proof and a fresh client gate can reopen GQ4. |
 | **GQ5** | **Cheaper AIG construction and measured CNF encoding** | **First native AIG tranche accepted (ADR-0175).** Exact v4 attribution selects the low-hit `BTreeMap`; deterministic open addressing cuts three-driver Axeyum time 7.66% and ratio 0.742x→0.680x with unchanged AIG/CNF/replay/scopes and flat RSS. CNF is again dominant at 46.55%; internal AND flattening stays deferred. Reopen literal-copy ownership or CNF only from a fresh isolated native gate. |
 | **GQ6** | **Cold SAT/CDCL tuning** | **Material but behind measured warm CNF after ADR-0175.** Accepted-table native lineage spends 18.48% in SAT versus CNF's 46.55%. Compare identical emitted CNF across BatSat, the proof-producing core, and pinned CaDiCaL/Kissat only after the next CNF decision; preserve proof replay and deterministic limits. |
-| **GQ7** | **Cheaper warm entry and delta preprocessing** | **DONE for available Glaurung families (ADR-0171--0186).** Path-owned delta reuse, 9/512 hard bounds, exact identity, alarms, and adaptive production admission are enforced. Preserve explicit one-shot/fixed controls and re-gate new families. |
+| **GQ7** | **Cheaper warm entry and delta preprocessing** | **DONE for available Glaurung families; residual client cost remains profile-driven (ADR-0171--0186/0193).** Path-owned delta reuse, 9/512 hard bounds, exact identity, alarms, and adaptive production admission are enforced. ADR-0193 removes repeated cross-root evaluator work without weakening original-term replay: a fixed 4,096-entry same-assignment retention bound cuts causal SurfacePen Axeyum time 36.94% and replay 87.78%. Preserve explicit one-shot/fixed controls, refresh the same-current two-driver baseline, and re-gate new families. |
 | **GQ8** | **Verdict and CNF reuse for duplicate/prefix queries** | **DONE for available Glaurung families (ADR-0192).** Clean repeated off/on evidence admits fixed bounded same-arena scalar SAT reuse only in path-owned warm sessions; every hit replays and all traffic/cleanup is gated. Glaurung defaults it on with an explicit off control; Axeyum's generic cache stays opt-in. Ordinary UNSAT/Unknown and prefix verdict reuse remain forbidden. |
 | **GQ9** | **Auto production policy and API guidance** | **DONE for available families (ADR-0186).** Clean adaptive repetition passes all 3%/3%/5% + 2% alarms over 92,721 checks. Glaurung defaults only explorer-owned Axeyum solves to adaptive 2→9 admission; explicit one-shot and fixed controls remain. Re-gate new families; GQ4 stays off. |
 | **GQ10** | **Ordered, wider real-lifter regression corpus** | **DONE for available families (ADR-0187/0188).** The 162-query representative is pinned; exact 30,628-query composites have measured variance and executable 3%/3%/5% + 2% guards. Retain cold/ordered/profile bars separately and re-gate added families. |
@@ -542,6 +542,14 @@ avoidable Axeyum cost at 128; the nine-session conclusion survives the large
 Wi-Fi stress stream. ADR-0178 accepts repeated exact-work held-out variance:
 SurfacePen and NETwtw10 are stable at 0.243x/0.360x Z3 with 0.34%/0.44% Axeyum
 CV and identical structural counters.
+ADR-0193 consumes the subsequent v5 profile rather than relying on that older
+stage balance: per-root evaluator memo recreation made mandatory original-term
+replay 38.82% of profiled SurfacePen internal time. A same-assignment memo with
+a fixed 4,096-entry cross-root retention bound reduces replay 87.78% and a
+same-current-client causal gate reduces SurfacePen Axeyum time 36.94% with
+lower RSS. The clean two-driver candidate also improves NETwtw10 3.77%, but
+the older SurfacePen artifact's RSS control is stale and fails by 6.52%; refresh
+the clean same-current baseline before replacing the committed artifact.
 The ranked work is:
 
 1. **GQ7 warm end to end:** build on ADR-0164's measured snapshot-LCP bridge,
@@ -551,7 +559,9 @@ The ranked work is:
    ownership, ADR-0171 accepts its repeated 0.746x-Z3 live result, ADR-0175
    improves the same actual-client bar to 0.680x, ADR-0176 accepts the first
    bounded memory policy, ADR-0177 widens assertion admission to the held-out
-   512-root envelope, and ADR-0178 accepts repeated fixed-work variance.
+   512-root envelope, ADR-0178 accepts repeated fixed-work variance, and
+   ADR-0193 removes bounded repeated evaluator work while retaining every
+   original replay root.
    Preserve push/pop, model, replay, ownership, and
    visible one-shot fallback while widening the driver tier;
 2. **GQ1/GQ5 measured construction:** ADR-0174 defers internal AND flattening;
@@ -585,10 +595,12 @@ The ranked work is:
     actual Z3 AST/context backend, with the user-visible Glaurung-vs-Glaurung
     comparison controlling product claims.
 
-The current highest-leverage trio is fresh causal attribution of the new
-canonical/native stage balance, whichever bounded GQ5/GQ6 experiment that
-attribution selects, and wider-family revalidation of the accepted GQ7--GQ10
-policies. GQ8 admission is complete in ADR-0192. Corrected
+The current highest-leverage trio is (1) refresh the clean same-current
+two-driver baseline/candidate artifact for ADR-0193, (2) attribute model-lift
+work against the symbols actually required for complete original replay, and
+(3) continue measured CNF construction from the new v5 stage balance. No
+model-lift optimization may omit completion or weaken replay. GQ8 admission is
+complete in ADR-0192. Corrected
 composite variance is complete in ADR-0188. GQ4 is not an active optimization;
 ADR-0157/0158 remain explicit/off. Cold rewrite or CNF work may continue only
 when causal/native profiles select it. ADR-0164 permits opt-in consecutive

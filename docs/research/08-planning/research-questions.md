@@ -494,7 +494,11 @@ Out of scope:
     wires the same boundary into a default-off path-owned Glaurung control;
     [ADR-0192](../09-decisions/adr-0192-accept-glaurung-path-owned-replay-cache-default.md)
     accepts that downstream default after the clean repeated client gate while
-    leaving Axeyum's generic cache opt-in.
+    leaving Axeyum's generic cache opt-in. Model verification on both fresh and
+    cached SAT results shares only same-assignment evaluator values within one
+    replay, under a fixed cross-root retention bound; it never persists trusted
+    values across models or checks; see
+    [ADR-0193](../09-decisions/adr-0193-bounded-shared-memo-model-replay.md).
 - [x] Should solver cancellation support memory budgets as well as time?
   - Answer: yes; `SolverConfig` carries timeout, deterministic resource,
     memory, and node budgets. Memory-budget exhaustion is an `Unknown`
