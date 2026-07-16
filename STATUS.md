@@ -322,6 +322,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-16 — ADR-0199 proposes a serial DFS sibling warm lease.** The
+  immutable-prefix audit finds no cheap snapshot seam: the arena/AIG can clone,
+  but incremental CNF owns opaque BatSat state, so a fork artifact would still
+  copy encoder maps and reinsert clauses under a new replay/invalidation
+  contract. Glaurung siblings are already serialized by one LIFO worklist, and
+  the snapshot adapter already performs exact LCP/pop/push transitions.
+  Implement only an opt-in reference-counted continuation lease: never
+  concurrent access, never verdict-only reuse, complete snapshots and original
+  replay on every check, and zero reference/session/cache gauges on every exit.
+  ADR-0196 remains the default until focused isolation/cleanup tests, the
+  created-owner profile, and repeated two-driver alarms pass.
+
 - **2026-07-16 — ADR-0198 rejects a three-owner adaptive initial cap.** The
   post-ADR-0196 SurfacePen no-fallback ceiling has the exact behavior an
   initial-three candidate would select: 207 created/closed owners, peak three,

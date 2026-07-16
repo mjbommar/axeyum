@@ -645,6 +645,14 @@ median RSS 7.66% and fails the 5% alarm. Keep the adaptive initial cap at two;
 do not spend a NETwtw10 gate or implementation slice on an already-rejected
 policy. The next fresh-owner hypothesis must reuse immutable prefix
 construction without retaining or sharing another mutable solver.
+Proposed ADR-0199 refines that requirement after auditing the actual boundary.
+Cloning an immutable prefix is not cheap today because `IncrementalCnf` owns an
+opaque BatSat instance and would need clause reinsertion plus a new lift-map
+contract. Instead, test an explicit serial DFS sibling lease: queued siblings
+hold references to one logical owner, only the popped state may mutate it, and
+the existing snapshot LCP path restores divergent scopes. Require exact
+reference/session/cache cleanup and the full production alarms; ADR-0196's
+exclusive next-child transfer remains the default until acceptance.
 GQ4 is not an active optimization;
 ADR-0157/0158 remain explicit/off. Cold rewrite or CNF work may continue only
 when causal/native profiles select it. ADR-0164 permits opt-in consecutive
