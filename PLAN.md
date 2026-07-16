@@ -396,6 +396,11 @@ session state.
 > the atomic runner output and passes validation/comparison. Begin GQ9
 > detected-reuse topology/cost fitting; thresholds remain investigation alarms,
 > not substitutes for causal review.
+> ADR-0182/Glaurung `4ae5469` lands the first such opt-in candidate: solve a
+> path's first check cold while retaining only its ID, then promote on the
+> second live-path check. Single-process SurfacePen/NETwtw10 calibration remains
+> 100% agreed and trades 4.5--8.7% time versus eager lineage for 16--21% lower
+> RSS. Extend the versioned runner and repeat exact work before any default.
 > The capture and
 > implementation audit has been expanded into the dependency-ordered
 > [Glaurung QF_BV execution plan](docs/research/08-planning/glaurung-qfbv-execution-plan.md):
@@ -432,7 +437,7 @@ decisions or speedups.
 | **GQ6** | **Cold SAT/CDCL tuning** | **Material but behind measured warm CNF after ADR-0175.** Accepted-table native lineage spends 18.48% in SAT versus CNF's 46.55%. Compare identical emitted CNF across BatSat, the proof-producing core, and pinned CaDiCaL/Kissat only after the next CNF decision; preserve proof replay and deterministic limits. |
 | **GQ7** | **Cheaper warm entry and delta preprocessing** | **Bounded opt-in policy and clean executable gate accepted (ADR-0171--0181, Glaurung `51666a9`).** Nine sessions preserve the RSS/time tradeoff; 512 assertions cover held-out depth. Exact-work identity, alarms, and the clean reference artifact are enforced. Keep lineage opt-in while GQ9 fits automatic selection. |
 | **GQ8** | **Verdict and CNF reuse for duplicate/prefix queries** | ADR-0170 measures 957/3,769 exact duplicate occurrences (25.4%), 439 same-lineage repeats, and 2,192 prefix extensions. ADR-0171 completes bounded native ownership but does not authorize a cache. First specify deterministic capacity/eviction plus content, solver/config, scope, and lineage identity; every hit still passes original-term model or proof replay and invalidation/versioning is explicit. |
-| **GQ9** | **Auto production policy and API guidance** | **WIP: the clean prerequisite is complete; topology/cost fitting is next.** ADR-0176--0181 validate 9/512, exact identity, and the committed baseline. Fit detected-reuse activation against fixed off/lineage policies before setting warm reuse implicitly. GQ4 remains off. |
+| **GQ9** | **Auto production policy and API guidance** | **WIP: detected-reuse candidate landed opt-in (ADR-0182).** The second-check selector retains only a path ID before promotion; initial calibration trades 4.5--8.7% time for 16--21% lower RSS than lineage. Add runner identity and repeat against fixed off/lineage before any default. GQ4 remains off. |
 | **GQ10** | **Ordered, wider real-lifter regression corpus** | **Clean per-commit baseline DONE for available held-out families (ADR-0170--0181).** SurfacePen is 0.242x Z3; fixed-budget NETwtw10 is 0.360x. Glaurung commits exact identity and enforces 3%/3%/5% plus 2% Z3 alarms. Ingest new families and keep diagnostic bars separate. |
 
 **Latest Glaurung execution order (2026-07-15; supersedes the earlier cold-path
@@ -486,8 +491,8 @@ The ranked work is:
    under content/config/scope identity and mandatory replay;
 7. **GQ6 SAT tuning:** the measured 17.45% weighted share is material; compare exact
    CNF across cores and measure inprocessing/heuristic changes;
-8. **GQ9 non-regressing auto mode:** accepted CNF defaults, conservative/off
-   GQ4, causal rewrite selection, and warm activation only on detected reuse;
+8. **GQ9 non-regressing auto mode:** ADR-0182 lands detected-reuse activation
+   opt-in; automate and repeat its exact time/RSS comparison before a default;
 9. **GQ10 deeper capture/trending:** widen the now-repeated three-driver tier, add
    deterministic full-tier variance, and publish
    per-commit ratios with resource/memory identity; and

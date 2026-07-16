@@ -322,6 +322,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-16 — ADR-0182 lands GQ9's detected-reuse candidate opt-in.**
+  Glaurung `4ae5469` keeps the first path check one-shot with only an ID probe
+  and promotes on the second same-live-path solve into the existing bounded
+  lineage adapter. SurfacePen and fixed-budget NETwtw10 stay 100% agreed with
+  exact finding/work partitions. Auto trades 4.5--8.7% Axeyum time for 16--21%
+  lower RSS than lineage while preserving much of the cold-to-warm gain.
+
+  All 24 backend tests, release build, and default Clippy pass (the repository's
+  pre-existing strict-warning debt remains). Next extend the clean runner with
+  auto policy/probe identity and repeat both families. Default remains off;
+  GQ4/GQ8 and formal replay/proof boundaries are unchanged.
+
 - **2026-07-16 — ADR-0181 publishes the clean lineage baseline.** Glaurung
   `51666a9` commits the exact atomic six-process artifact produced from clean
   detached Glaurung `a0e5f9f` and Axeyum `486b7e28` sources. Both dirty-path
@@ -1354,13 +1366,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   | **GQ4 cold relevant bits** | **v1 and v2 DEFERRED after failed real gates.** v1 regresses ~1.42x→4.49x. V2 rejection overhead is bounded, but defaults admit 0/128 and +0.62% total; a 33-query moderate policy removes 632 AIG nodes/zero clauses and regresses bit blast 3.14% | Keep both explicit/off. Reopen only with an AIG/CNF-cone estimator or after word rewrites materially change the residual; do not tune thresholds further |
   | **GQ5 AIG/CNF construction** | **First native AIG tranche accepted (ADR-0175).** Deterministic open addressing improves three-driver Axeyum time 7.66% and ratio 0.742x→0.680x with unchanged structure; internal flattening stays deferred | Yield to GQ7/GQ10; reopen literal ownership or CNF only from fresh causal evidence |
   | **GQ6 cold SAT/CDCL** | **WIP foundation; behind measured CNF.** Accepted-table native lineage SAT is 18.48% weighted versus CNF at 46.55% | Compare identical CNF across cores only after the next CNF decision, with proof replay and deterministic limits |
-  | **GQ7 warm delta entry** | **Bounded opt-in policy and clean executable gate accepted (ADR-0171--0181, Glaurung `51666a9`).** Nine paths retain the RSS/time tradeoff; 512 assertions cover every stream; exact identity, alarms, and the baseline are enforced | Keep opt-in while GQ9 fits detected-reuse admission |
+  | **GQ7 warm delta entry** | **Bounded opt-in policy and clean executable gate accepted (ADR-0171--0181, Glaurung `51666a9`).** Nine paths retain the RSS/time tradeoff; 512 assertions cover every stream; exact identity, alarms, and the baseline are enforced | Keep opt-in while GQ9 repeats detected-reuse admission |
   | **GQ8 verdict/CNF cache** | **TODO; native ownership complete but cache contract still gated.** The ordered tier has 957 exact duplicate occurrences, 439 same-lineage repeats, and 2,192 prefix extensions | Specify bounded versioned content/config/scope identity, capacity/eviction, and mandatory model/proof replay before implementation |
-  | **GQ9 auto cost model/docs** | **WIP; clean prerequisite complete.** ADR-0176--0181 validate 9/512 and a versioned baseline but do not infer when warm reuse should activate | Fit detected-reuse topology/cost against fixed off/lineage before implicit activation |
+  | **GQ9 auto cost model/docs** | **WIP; detected-reuse candidate opt-in (ADR-0182).** Promote after the second same-path check; initial real calibration saves 16--21% RSS for 4.5--8.7% time versus lineage | Add runner identity and repeat fixed-work off/auto/lineage before implicit activation |
   | **GQ10 real-lifter regression tier** | **Clean available-family baseline DONE; widening WIP.** SurfacePen is 0.242x; NETwtw10 is 0.360x; identity plus 3%/3%/5% + 2% Z3 alarms are committed | Add new families and keep diagnostic bars separate |
 
-  **Next actions:** (1) fit GQ9's detected-reuse topology/cost selector against
-  fixed off and lineage controls; (2) add newly available families; (3) reopen
+  **Next actions:** (1) extend the clean runner with auto-policy probe/work
+  identity and repeat against fixed off and lineage controls; (2) add newly
+  available families; (3) reopen
   literal-copy ownership or CNF only from a
   fresh causal gate; (4) keep GQ4 off and SAT behind measured CNF; (5) only then
   specify GQ8's
@@ -3173,6 +3186,11 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-16 — ADR-0182 lands detected-reuse warm admission opt-in.**
+  Glaurung `4ae5469` promotes only repeated live paths. SurfacePen/NETwtw10
+  remain fully agreed; auto reduces lineage RSS 16--21% at a 4.5--8.7% time
+  cost. Repeat through the versioned gate before a default.
 
 - **2026-07-16 — ADR-0181 publishes the clean lineage baseline.** Glaurung
   `51666a9` commits the clean six-process artifact: 92,721/92,721 checks agree,

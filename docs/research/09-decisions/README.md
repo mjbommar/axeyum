@@ -237,3 +237,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0179](adr-0179-fail-closed-glaurung-lineage-gate.md) | Fail-closed Glaurung lineage gate: version source/environment/work/findings/resources, enforce hard memory and exact traffic, and compare homogeneous held-out artifacts | accepted |
 | [0180](adr-0180-glaurung-lineage-regression-alarms.md) | Glaurung lineage regression alarms: fail above 3% Axeyum, 3% normalized ratio, 5% median RSS, or 2% absolute Z3 drift after exact identity gates | accepted |
 | [0181](adr-0181-clean-glaurung-lineage-baseline.md) | Clean Glaurung lineage baseline: commit the exact six-process artifact as the same-environment reference before GQ9 automatic admission | accepted |
+| [0182](adr-0182-detected-reuse-glaurung-warm-admission.md) | Detected-reuse Glaurung warm admission: promote a path only after its second solve; retain the measured time/RSS tradeoff as opt-in pending repetition | accepted |
