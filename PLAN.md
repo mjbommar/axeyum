@@ -517,7 +517,7 @@ count as decisions or speedups.
 | **GQ7** | **Cheaper warm entry and delta preprocessing** | **Source-identity functionality and the current two-driver production gate are DONE (ADR-0201--0205).** Glaurung `29031f8` commits 92,721 exact checks: source direct beats serial snapshot time/ratio/RSS 16.11%/17.39%/0.36% on SurfacePen and 6.07%/6.61%/1.72% on NETwtw10. Keep direct opt-in until GQ10 widens to `tcpip`/`dxgkrnl`; the exclusive-control SurfacePen Z3 drift remains rejected. |
 | **GQ8** | **Verdict and CNF reuse for duplicate/prefix queries** | **Exact replay-checked SAT reuse is done for available families (ADR-0192); stronger subsumption remains open.** Exact hits replay under fixed bounds; ordinary UNSAT/Unknown and prefix verdict reuse remain forbidden. Investigate only replay-checked stronger-model reuse where a cached model is proven to satisfy the complete weaker later query. |
 | **GQ9** | **Auto production policy and API guidance** | **DONE for available serial families (ADR-0186/0199).** Adaptive 2→9 ownership plus serial sibling continuation reuse is the downstream default; ADR-0199 clears every time/ratio/RSS/environment alarm and improves RSS on both accepted drivers. Explicit one-shot, fixed, transfer-only, and serial-off controls remain. Re-gate wider families and never apply serial leases across parallel workers. |
-| **GQ10** | **Ordered, wider real-lifter regression corpus** | **Large-driver error attribution is complete; timeout and repeated admission remain (ADR-0205--0208).** Strict split replay found a Glaurung declared-concat soundness defect, and `d60ed0f` removes every Axeyum adapter error/reset. Post-fix 60-second `tcpip`/`dxgkrnl` execute 72,291/17,712 queries with zero SAT/UNSAT disagreements and 1.9x/2.7x speedups. ADR-0208 rejects whole-snapshot cold retry: only 4/15 occurrences recover while RSS rises 10.46%. Measure a memory-safe same-session continuation or strict predictor, then repeat findings/RSS/variance and the full-budget tier before DriverSpec admission. Zero-query `win32k` remains a frontend gap. |
+| **GQ10** | **Ordered, wider real-lifter regression corpus** | **Large-driver error attribution is complete; fixed-work/repeated admission remains (ADR-0205--0209).** Strict split replay found a Glaurung declared-concat soundness defect, and `d60ed0f` removes every Axeyum adapter error/reset. Post-fix 60-second `tcpip`/`dxgkrnl` execute 72,291/17,712 queries with zero SAT/UNSAT disagreements and 1.9x/2.7x speedups. ADR-0208 rejects whole-snapshot cold retry on +10.46% RSS. ADR-0209's same-session candidate stays within time/RSS alarms and recovers 5/14 full-budget occurrences, but 19-query/two-finding deadline drift fails exact-output causality. Keep it explicit/off; run a fixed-work or repeated DriverSpec gate before admission. Zero-query `win32k` remains a frontend gap. |
 
 **Post-ADR-0199 Glaurung next-ten mapping (2026-07-16).** This is the current
 priority interpretation of the latest client feedback; it supersedes older
@@ -530,7 +530,7 @@ stage rankings where the accepted evidence has changed.
 | 3 | Safe automatic warm policy | **Done for current families in ADR-0186/0199.** Adaptive ownership, exact cache, owner transfer, and serial sibling leases default on only in the explicit explorer context; preserve all off/fixed controls and re-gate wider families. |
 | 4 | Lineage RSS Pareto knee | ADR-0198 rejects a third retained owner (+7.66% RSS); ADR-0199 instead reduces accepted SurfacePen/NETwtw10 RSS 6.11%/13.36%. Continue only topology/lifetime changes that clear the 5% alarm. |
 | 5 | Sibling-prefix structural sharing | **Functionality and production comparison done in ADR-0204/0205.** Exact `Arc` ancestry preserves one mutable session; the two-driver production gate passes. The exclusive-control comparison still rejects +4.06% SurfacePen Z3 drift; rerun only under a same-environment/order-balanced control. |
-| 6 | Wider driver corpus and repetitions | **ACTIVE, memory-safe timeout policy and repeated gate next (ADR-0206--0208).** Exact pre/post split packs close the 733-formula concat error class and reduce warm resets to zero. Whole-snapshot cold retry recovers 4/15 timeout occurrences but raises RSS 10.46%, so it stays explicit/off. Test a bounded continuation on the synchronized retained solver or a strict recoverability predictor, then run full-budget and repeated findings/RSS/variance tiers. Investigate zero-query `win32k` separately. |
+| 6 | Wider driver corpus and repetitions | **ACTIVE, fixed-work/repeated gate next (ADR-0206--0209).** Exact pre/post split packs close the 733-formula concat error class and reduce warm resets to zero. Whole-snapshot cold retry fails RSS. Same-session continuation recovers 5/14 full-budget occurrences at +1.98% Axeyum time/+0.034% RSS with no disagreements, errors, or resets, but the deadline-limited pair differs by 19 queries and two findings. Keep both policies explicit/off; hold work and findings constant before DriverSpec admission. Investigate zero-query `win32k` separately. |
 | 7 | Warm CNF dominant-cost attack | Historical pre-ADR-0199 warm CNF was 43.8%; serial sharing cuts CNF 66.8% and makes SAT 47.2% of that candidate profile. Re-profile each accepted policy and require retained-future-use or rollback evidence before retrying AND-half flattening. |
 | 8 | Stronger-than-exact replay cache | Test only SAT model subsumption: a retained model may answer a weaker later query only after evaluating every complete original assertion. Keep UNSAT/Unknown and unchecked prefix verdict reuse forbidden. |
 | 9 | Parallel path exploration | Confirm `Send`/per-worker ownership and benchmark independent path solvers. ADR-0199 leases are serial-only and must never cross workers; determinism, memory caps, and replay remain mandatory. |
@@ -606,6 +606,17 @@ tcpip run recovers only 4/15 occurrences, leaves 11 nondecisions, and raises RSS
 dxgkrnl no-timeout control is exactly inert. Keep the diagnostic off; next test
 a bounded same-session continuation or a strict recoverability predictor that
 avoids whole-snapshot reconstruction, then repeat the full DriverSpec gates.
+
+ADR-0209 completes that bounded same-session experiment without overstating the
+result. Glaurung `6e5b255` reuses the synchronized solver and translated
+assumptions for exactly one fresh 250 ms check. The full-budget tcpip pair
+recovers 5/14 occurrences, reduces nondecisions 14→9, and stays inside the
+time/RSS alarms (+1.98%/+0.034%) with zero disagreements, errors, or resets.
+Both processes nevertheless hit the analysis deadline: the candidate executes
+19 additional queries and retains all 780 control findings plus two later null
+dereferences. This is useful functionality evidence, not exact-work causality.
+Keep the switch explicit/off and make fixed-work or repeated query/finding
+identity the next GQ10 acceptance boundary.
 
 **Latest Glaurung execution order (2026-07-15; supersedes the earlier cold-path
 priority reset).** Earlier evidence reported an approximately 1.34x gated-bench

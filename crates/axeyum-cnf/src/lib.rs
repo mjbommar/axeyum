@@ -4624,6 +4624,24 @@ p cnf 1 2
     }
 
     #[test]
+    fn incremental_timeout_can_continue_with_a_fresh_bounded_deadline() {
+        let mut sat = IncrementalSat::new();
+        sat.add_clause(CnfClause::new(vec![pos(0), pos(1)]))
+            .unwrap();
+        assert!(matches!(
+            sat.solve(Some(std::time::Duration::ZERO)).unwrap(),
+            SatResult::Unknown(_)
+        ));
+        assert!(
+            matches!(
+                sat.solve(Some(std::time::Duration::from_secs(1))).unwrap(),
+                SatResult::Sat(_)
+            ),
+            "a fresh bounded solve must clear the preceding deadline and reuse the instance"
+        );
+    }
+
+    #[test]
     fn incremental_selector_literals_emulate_push_pop() {
         let mut sat = IncrementalSat::new();
         // Base assertion: x0 is true (unit clause).
