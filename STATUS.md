@@ -322,6 +322,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-16 — ADR-0189 accepts the GQ8 replay boundary.** The first
+  verdict cache is explicit/off, per arena-bound `IncrementalBvSolver`, and
+  scalar-SAT-only. Exact ordered active assertions and one-shot assumptions
+  are collision-checked identity; every hit runs the existing original-term
+  model replay. Ordinary UNSAT, `Unknown`, errors, assumption cores, and strict
+  prefixes are not cache entries. UNSAT waits for source-bound proof recheck;
+  prefixes remain GQ7 retained-state reuse. Next implement deterministic
+  entry/model-value bounds, eviction, invalidation, and telemetry, then test
+  and measure the ordered same-lineage duplicate population before any client
+  default.
+
 - **2026-07-16 — ADR-0188 accepts corrected full-shard variance and alarms.**
   A second identical clean `f7f174c5` raw/canonical composite repeats all
   30,628 queries and deterministic construction. Across two complete sets,
@@ -1450,12 +1461,12 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   | **GQ5 AIG/CNF construction** | **First native AIG tranche accepted (ADR-0175).** Deterministic open addressing improves three-driver Axeyum time 7.66% and ratio 0.742x→0.680x with unchanged structure; internal flattening stays deferred | Yield to GQ7/GQ10; reopen literal ownership or CNF only from fresh causal evidence |
   | **GQ6 cold SAT/CDCL** | **WIP foundation; behind measured CNF.** Accepted-table native lineage SAT is 18.48% weighted versus CNF at 46.55% | Compare identical CNF across cores only after the next CNF decision, with proof replay and deterministic limits |
   | **GQ7 warm delta entry** | **DONE for available families (ADR-0171--0186).** Path-owned delta reuse, 9/512 hard bounds, exact alarms, and adaptive production admission are enforced | Preserve explicit one-shot/fixed controls and re-gate new families |
-  | **GQ8 verdict/CNF cache** | **TODO; native ownership complete but cache contract still gated.** The ordered tier has 957 exact duplicate occurrences, 439 same-lineage repeats, and 2,192 prefix extensions | Specify bounded versioned content/config/scope identity, capacity/eviction, and mandatory model/proof replay before implementation |
+  | **GQ8 verdict/CNF cache** | **WIP; soundness contract accepted in ADR-0189.** The first implementation may cache only exact same-arena scalar SAT models with mandatory original-term replay; ordinary UNSAT/Unknown and prefixes are excluded | Implement opt-in deterministic capacity/model-value bounds, eviction/invalidation, telemetry, and focused semantic tests; then gate the ordered same-lineage stream |
   | **GQ9 auto cost model/docs** | **DONE for available families (ADR-0186).** Clean adaptive repeat clears every alarm over 92,721 checks; downstream explorer default has explicit off/fixed controls | Re-gate newly captured families; do not broaden this Glaurung-specific default into Axeyum's generic API |
   | **GQ10 real-lifter regression tier** | **DONE for available families (ADR-0187/0188).** The corrected 162-query regular pin and repeated 30,628-query full composites have executable alarms | Retain separate cold/ordered/profile bars and re-gate new families |
 
-  **Next actions:** (1) specify GQ8's replay-safe bounded content/config/scope
-  identity, eviction, and invalidation contract; (2) preserve the corrected
+  **Next actions:** (1) implement ADR-0189's opt-in replay-checked same-arena
+  SAT cache with deterministic entry/model-value bounds and telemetry; (2) preserve the corrected
   representative pin, exact shard union, zero-exclusion rule, and 4 GiB
   process envelope; (3) use
   the new canonical stage balance to select any next GQ5/GQ6 slice through a

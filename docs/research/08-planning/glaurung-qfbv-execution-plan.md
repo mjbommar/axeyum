@@ -597,6 +597,15 @@ Cached SAT and UNSAT artifacts must still replay; cache bounds and invalidation
 are deterministic and explicit. A prefix is never treated as an identical
 query.
 
+ADR-0189 now fixes the first implementation boundary: an explicit per-solver,
+same-arena scalar SAT cache uses exact ordered assertion/assumption sequences,
+never hash equality alone, and replays every hit against the current original
+terms. Ordinary UNSAT/Unknown/error results and strict prefixes are excluded;
+UNSAT reuse waits for a source-bound rechecked proof, while prefixes continue
+through GQ7 retained state. Implement bounded deterministic storage and
+telemetry next, then measure it opt-in on the ordered same-lineage duplicate
+population before any Glaurung policy change.
+
 ### G9 — publish the policy (GQ9)
 
 After raw/canonical/configured/warm data exists, expose a telemetry-visible
@@ -621,7 +630,7 @@ clean artifact pins the exact Glaurung/Axeyum revisions and policy.
 | 4 | Strengthen AIG sharing | **First construction-cost tranche accepted (ADR-0175).** Client sharing already survived; exact v4 telemetry selected low-hit ordered unique-table probes. Deterministic open addressing preserves structure and cuts three-driver Axeyum time 7.66%. Reopen literal ownership/two-level rewriting only from a fresh causal gate. |
 | 5 | Reduce CNF for measured gates | **Current tranche closed/deferred (ADR-0172--0175).** Root fusion/dedup are exhausted; internal AND flattening grows retained Dptf clauses/time. CNF is again dominant after the AIG win, but reopen only with future-use evidence or clause replacement. |
 | 6 | Make warm entry delta-only | **Bounded admission repeated, executable, and alarmed (ADR-0171--0180).** Nine paths preserve the RSS/time tradeoff and 512 assertions cover every stream. Exact identity and alarms are enforced. Publish clean baseline before automatic selection. |
-| 7 | Reuse duplicates and prefixes soundly | Measure exact duplicates/prefixes first; cache exact queries with replay, but reuse retained state rather than verdicts for strict prefixes. |
+| 7 | Reuse duplicates and prefixes soundly | **Contract accepted in ADR-0189.** Implement opt-in same-arena exact SAT-model reuse with mandatory replay and deterministic bounds; never cache ordinary UNSAT/Unknown or use predecessor verdicts for strict prefixes. |
 | 8 | Add the register-slice fast path | Treat this as the first specialized GQ4 policy only if the generic exact range propagation leaves measurable avoidable work. |
 | 9 | Queue SAT tuning | **Material but behind CNF:** accepted-table lineage SAT is 18.48% versus CNF's 46.55%. Compare identical CNF only after the next measured CNF tranche. |
 | 10 | Expand and trend real capture | **Corrected widening accepted (ADR-0187).** Five drivers, 30,628 distinct scripts, 7,953 wide-root scripts, zero exclusions, and an exact clean sharded baseline are complete. Repeat the whole composite for variance; retain cold/ordered/profile tiers separately. |
@@ -643,9 +652,10 @@ clean artifact pins the exact Glaurung/Axeyum revisions and policy.
 
 ## Immediate next actions
 
-1. Specify GQ8's deterministic bounded content/config/scope/lineage identity,
-   eviction, invalidation, and mandatory model/proof replay contract before
-   implementing verdict reuse.
+1. Implement ADR-0189's disabled-by-default, deterministic bounded same-arena
+   SAT duplicate cache and telemetry; test exact identity, scopes,
+   assumptions, eviction, replay failure, and explicit rejection of
+   UNSAT/Unknown/prefix reuse before measuring the ordered Glaurung stream.
 2. Keep the corrected 162-query regular semantic gate and exact full shard
    union pinned; reject exclusions, dirty source, incomplete manifests, or a
    raised memory envelope as substitutes for coverage.
