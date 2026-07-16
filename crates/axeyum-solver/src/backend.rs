@@ -18,7 +18,8 @@ pub enum CheckResult {
     /// The assertions are satisfiable. Ground symbols map to values (backend
     /// model completion fills unconstrained symbols); restricted
     /// infinite-domain quantified results additionally carry checked Skolem
-    /// certificates. Use [`crate::check_model`] for canonical replay.
+    /// certificates. Use `check_model` for canonical replay when the `full`
+    /// feature is enabled.
     Sat(Model),
     /// The assertions are unsatisfiable.
     Unsat,
@@ -172,7 +173,7 @@ pub struct SolverConfig {
     /// equisatisfiability meta-argument). Full `DRAT` composition is a separate,
     /// larger task.
     pub cnf_vivify: bool,
-    /// When set, [`crate::check_auto`]/[`crate::solve`] run the
+    /// When set, the full-profile `check_auto`/`solve` entry points run the
     /// denotation-preserving canonicalizer over the assertions before dispatch
     /// (Track 1, P1.2 word-level preprocessing). It is symbol-preserving — no
     /// variables are eliminated — so the returned `sat` model is unchanged and
@@ -223,7 +224,7 @@ pub struct SolverConfig {
     ///
     /// A fallback `unsat` is a **trusted** result (search-only Gaussian
     /// reasoning carries no DRAT proof — it is not RUP) and is recorded as the
-    /// [`crate::TrustId::XorGaussian`] ledger hole. A fallback `sat` carries no
+    /// full-profile `TrustId::XorGaussian` ledger hole. A fallback `sat` carries no
     /// trust cost: its model is replayed against the original terms exactly like
     /// the batsat path, and a replay failure falls through to `unknown` (never a
     /// wrong `sat`). Off by default so recorded baselines and existing behavior

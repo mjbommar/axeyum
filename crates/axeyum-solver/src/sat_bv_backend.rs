@@ -1548,6 +1548,7 @@ mod tests {
     /// `v0 ^ v_{n-1} = 1` over 1-bit vectors. Each `bvxor(a,b) == 0` bit-blasts to
     /// a width-2 XOR gate `extract_xors` recognizes, and the chain telescopes to
     /// the pure-Gaussian inconsistency `0 = 1` (no branching). UNSAT.
+    #[cfg(feature = "full")]
     fn bv_parity_chain_query(n: usize) -> (TermArena, Vec<TermId>) {
         let mut arena = TermArena::new();
         let xs: Vec<TermId> = (0..n)
@@ -1565,6 +1566,7 @@ mod tests {
         (arena, eqs)
     }
 
+    #[cfg(feature = "full")]
     #[test]
     fn query_certificate_for_bv_parity_chain_rechecks() {
         // A real BV query whose bit-blasted CNF carries a pure-Gauss-UNSAT XOR
@@ -1577,6 +1579,7 @@ mod tests {
         assert!(cert.recheck().expect("recheck parses"));
     }
 
+    #[cfg(feature = "full")]
     #[test]
     fn query_certificate_declines_for_satisfiable_query() {
         // A satisfiable BV query never yields a pure-Gauss XOR refutation: the

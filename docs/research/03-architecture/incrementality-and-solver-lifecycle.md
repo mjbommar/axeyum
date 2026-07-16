@@ -52,6 +52,10 @@ this model end to end (both stages, 2026-06-13):
   (`axeyum-solver`) is the assumptions-first `assert`/`push`/`pop`/`check`/
   `check_assuming` front end, with push/pop compiled to selector literals and
   every `sat` model replayed against the original terms.
+- ADR-0201 adds the object-safe `IncrementalSolver` framework contract for
+  genuinely retained sessions and implements it for `IncrementalBvSolver`.
+  One-shot `SolverBackend` and snapshot-resubmitting facades remain distinct;
+  they do not acquire a warm-state claim merely by matching verdict semantics.
 
 Remaining work is performance parity (port the sparse-CNF optimizations to the
 incremental encoder) and an activation-literal GC/rebuild policy, not the core

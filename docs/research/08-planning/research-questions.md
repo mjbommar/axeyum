@@ -134,13 +134,16 @@ Out of scope:
     restarts/heuristics and becoming the default solver remain gated by the
     benchmarking methodology on SAT time dominating.
 - [x] What is the minimum incremental-solving API?
-  - Answer (stage 1): a warm SAT layer with monotone clause addition plus
+  - Answer: a warm SAT layer with monotone clause addition plus
     one-shot assumption literals, and a high-level `Solver` façade exposing
     `assert`/`push`/`pop`/`check`/`check_assuming` over it; `push`/`pop` map to
     selector (assumption) literals. Implemented as `IncrementalSat`
-    (`axeyum-cnf`) and the `Solver` façade (`axeyum-solver`); see
-    [ADR-0009](../09-decisions/adr-0009-incremental-sat-and-solving.md). Stage 2
-    (incremental bit-blasting through the same warm layer) is planned there.
+    (`axeyum-cnf`), persistent `IncrementalLowering`/`IncrementalCnf`, and
+    `IncrementalBvSolver`; see
+    [ADR-0009](../09-decisions/adr-0009-incremental-sat-and-solving.md).
+    [ADR-0201](../09-decisions/adr-0201-first-class-incremental-solver-trait.md)
+    adds an object-safe `IncrementalSolver` trait only for genuinely retained
+    sessions; one-shot snapshot resubmission does not satisfy that cost model.
 - [x] Should Phase 2 include a second native SMT backend?
   - Answer: defer it until a concrete Phase 5 differential-testing or
     trait-design need appears; see

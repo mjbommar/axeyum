@@ -723,6 +723,69 @@ struct WarmArrayUfProjectionGroup {
     result_sort: Sort,
 }
 
+/// A genuinely retained incremental solver session.
+///
+/// Unlike [`crate::SolverBackend`], which receives a complete assertion slice
+/// for each one-shot check, an implementation of this trait retains assertions
+/// and backend work across calls. Scopes and one-shot assumptions have SMT-LIB
+/// semantics: [`Self::pop`] deactivates the latest frame, and terms passed to
+/// [`Self::check_assuming`] are active for that check only.
+///
+/// A session is bound to one append-only [`TermArena`] for its lifetime. Term
+/// handles remain lifetime-free, so the arena is passed explicitly and may keep
+/// growing, but callers must not mix handles from another arena into the same
+/// session. Implementations must preserve the normal result contract:
+/// [`CheckResult::Unknown`] is not an error, and every returned SAT model must
+/// replay against the original active assertions and assumptions.
+///
+/// This minimum trait intentionally excludes preprocessing, profiling, caches,
+/// proof production, and assumption cores. Those are extension capabilities;
+/// raw assertion and retained lifecycle semantics are the portable boundary.
+pub trait IncrementalSolver {
+    /// Adds one Boolean assertion to the current scope.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError::NonBooleanAssertion`] for a non-Boolean term,
+    /// [`SolverError::Unsupported`] for an unsupported construct, or
+    /// [`SolverError::Backend`] for an internal failure.
+    fn assert(&mut self, arena: &TermArena, term: TermId) -> Result<(), SolverError>;
+
+    /// Opens a new assertion scope.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError::Backend`] if the implementation cannot allocate
+    /// the retained scope state.
+    fn push(&mut self) -> Result<(), SolverError>;
+
+    /// Closes the latest scope, returning `false` without mutation at the base
+    /// frame.
+    fn pop(&mut self) -> bool;
+
+    /// Returns the number of open scopes above the base frame.
+    fn scope_depth(&self) -> usize;
+
+    /// Checks all currently active assertions.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError`] for operational failures. An undecided query is
+    /// `Ok(CheckResult::Unknown(_))`.
+    fn check(&mut self, arena: &TermArena) -> Result<CheckResult, SolverError>;
+
+    /// Checks active assertions with non-persistent one-shot assumptions.
+    ///
+    /// # Errors
+    ///
+    /// Returns the same errors as [`Self::assert`] and [`Self::check`].
+    fn check_assuming(
+        &mut self,
+        arena: &TermArena,
+        assumptions: &[TermId],
+    ) -> Result<CheckResult, SolverError>;
+}
+
 /// A warm, incremental pure-Rust bit-vector solver.
 ///
 /// Bound to a single [`TermArena`] over its lifetime (term IDs are arena-stable
@@ -4861,6 +4924,36 @@ impl IncrementalBvSolver {
             active.push(assumption);
         }
         Ok(active)
+    }
+}
+
+impl IncrementalSolver for IncrementalBvSolver {
+    fn assert(&mut self, arena: &TermArena, term: TermId) -> Result<(), SolverError> {
+        Self::assert(self, arena, term)
+    }
+
+    fn push(&mut self) -> Result<(), SolverError> {
+        Self::push(self)
+    }
+
+    fn pop(&mut self) -> bool {
+        Self::pop(self)
+    }
+
+    fn scope_depth(&self) -> usize {
+        Self::scope_depth(self)
+    }
+
+    fn check(&mut self, arena: &TermArena) -> Result<CheckResult, SolverError> {
+        Self::check(self, arena)
+    }
+
+    fn check_assuming(
+        &mut self,
+        arena: &TermArena,
+        assumptions: &[TermId],
+    ) -> Result<CheckResult, SolverError> {
+        Self::check_assuming(self, arena, assumptions)
     }
 }
 

@@ -51,7 +51,7 @@ impl UnsatProof {
     /// the empty clause (RUP+RAT), exactly as an external `drat-trim` run would.
     ///
     /// This is the consumer-side "trusted small checking" entry point — the DRAT
-    /// analogue of [`FarkasCertificate::verify`](crate::FarkasCertificate::verify):
+    /// analogue of the full-profile `FarkasCertificate::verify` method:
     /// a saved certificate can be re-validated later with no access to the solver
     /// that produced it. (The exporters already self-check on the way out; this
     /// lets a *consumer* re-check independently.)

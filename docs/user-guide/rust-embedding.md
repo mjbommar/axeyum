@@ -81,6 +81,36 @@ assert!(solver.pop());
 # Ok::<(), Box<dyn std::error::Error>>(())
 ```
 
+Code that selects retained backends can depend on the first-class
+`IncrementalSolver` contract instead of the concrete BV type:
+
+```rust
+use axeyum_ir::{TermArena, TermId};
+use axeyum_solver::{CheckResult, IncrementalSolver, SolverError};
+
+fn check_branch<S: IncrementalSolver + ?Sized>(
+    solver: &mut S,
+    arena: &TermArena,
+    branch: TermId,
+) -> Result<CheckResult, SolverError> {
+    solver.push()?;
+    if let Err(error) = solver.assert(arena, branch) {
+        let _ = solver.pop();
+        return Err(error);
+    }
+    let result = solver.check(arena);
+    let popped = solver.pop();
+    debug_assert!(popped);
+    result
+}
+```
+
+Implementing this trait means the session genuinely retains backend state
+across calls. The one-shot `SolverBackend` trait and the assertion-stack
+`Solver<B>` facade do not claim that cost model. The portable trait stays raw;
+preprocessing, profiling, cache controls, cores, and memory/UF extensions remain
+explicit concrete capabilities.
+
 `assert_configured` honors `SolverConfig::preprocess` (enabled by default) and
 retains the original term for model replay. Use `assert_preprocessed` to request
 that behavior explicitly, or `assert` when measuring the raw, un-preprocessed

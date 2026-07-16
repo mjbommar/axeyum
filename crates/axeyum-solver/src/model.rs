@@ -24,8 +24,8 @@ struct QuantifiedSatCertificates {
 /// Uninterpreted-function interpretations (ADR-0013), when present, are kept in
 /// a separate list sorted by [`FuncId`]. Restricted quantified results may
 /// additionally carry checked Skolem certificates (ADR-0096/0121) or checked
-/// free-Boolean universal models (ADR-0107); use [`crate::check_model`] rather
-/// than evaluator-only replay when quantifiers are possible.
+/// free-Boolean universal models (ADR-0107); use the full-profile `check_model`
+/// entry point rather than evaluator-only replay when quantifiers are possible.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Model {
     entries: Vec<(SymbolId, Value)>,
