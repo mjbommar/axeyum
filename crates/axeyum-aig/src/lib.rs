@@ -4,7 +4,7 @@
 //! of term bit-lowering and CNF: it owns deterministic AIG node construction,
 //! structural hashing, circuit evaluation, and ASCII AIGER debug export.
 
-use std::{collections::BTreeMap, fmt::Write as _};
+use std::fmt::Write as _;
 
 /// Stable ID for an AIG node in one [`Aig`] graph.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -98,6 +98,106 @@ pub enum AigNode {
     And(AigLit, AigLit),
 }
 
+#[derive(Debug, Clone, Copy)]
+struct AndTableEntry {
+    lhs: AigLit,
+    rhs: AigLit,
+    node: AigNodeId,
+}
+
+/// Deterministic open-addressed unique table for canonical AND pairs.
+///
+/// The table is lookup-only from the AIG's public perspective: slot order is
+/// never observed or iterated by an exporter, so stable construction and node
+/// order remain driven exclusively by the caller's request order.
+#[derive(Debug, Clone, Default)]
+struct AndUniqueTable {
+    slots: Vec<Option<AndTableEntry>>,
+    len: usize,
+}
+
+impl AndUniqueTable {
+    const MIN_CAPACITY: usize = 8;
+
+    fn get(&self, lhs: AigLit, rhs: AigLit) -> Option<AigNodeId> {
+        if self.slots.is_empty() {
+            return None;
+        }
+        let mask = self.slots.len() - 1;
+        let mut index = and_key_hash(lhs, rhs) & mask;
+        loop {
+            match self.slots[index] {
+                Some(entry) if entry.lhs == lhs && entry.rhs == rhs => {
+                    return Some(entry.node);
+                }
+                Some(_) => index = (index + 1) & mask,
+                None => return None,
+            }
+        }
+    }
+
+    fn insert(&mut self, lhs: AigLit, rhs: AigLit, node: AigNodeId) {
+        if self.len.saturating_add(1).saturating_mul(10) > self.slots.len().saturating_mul(7) {
+            let capacity = if self.slots.is_empty() {
+                Self::MIN_CAPACITY
+            } else {
+                self.slots
+                    .len()
+                    .checked_mul(2)
+                    .expect("AIG unique-table capacity fits usize")
+            };
+            self.grow(capacity);
+        }
+        self.insert_without_growth(AndTableEntry { lhs, rhs, node });
+    }
+
+    fn grow(&mut self, capacity: usize) {
+        debug_assert!(capacity.is_power_of_two());
+        let old_slots = core::mem::replace(&mut self.slots, vec![None; capacity]);
+        self.len = 0;
+        for entry in old_slots.into_iter().flatten() {
+            self.insert_without_growth(entry);
+        }
+    }
+
+    fn insert_without_growth(&mut self, entry: AndTableEntry) {
+        let mask = self.slots.len() - 1;
+        let mut index = and_key_hash(entry.lhs, entry.rhs) & mask;
+        loop {
+            if let Some(existing) = self.slots[index] {
+                debug_assert!(
+                    existing.lhs != entry.lhs || existing.rhs != entry.rhs,
+                    "canonical AND pair is inserted at most once"
+                );
+                index = (index + 1) & mask;
+            } else {
+                self.slots[index] = Some(entry);
+                self.len += 1;
+                return;
+            }
+        }
+    }
+}
+
+fn and_key_hash(lhs: AigLit, rhs: AigLit) -> usize {
+    let lhs = (u64::from(lhs.node.0) << 1) | u64::from(lhs.inverted);
+    let rhs = (u64::from(rhs.node.0) << 1) | u64::from(rhs.inverted);
+    let mut hash = lhs.wrapping_mul(0x9e37_79b9_7f4a_7c15) ^ rhs.rotate_left(29);
+    hash ^= hash >> 30;
+    hash = hash.wrapping_mul(0xbf58_476d_1ce4_e5b9);
+    hash ^= hash >> 27;
+    hash = hash.wrapping_mul(0x94d0_49bb_1331_11eb);
+    let hash = hash ^ (hash >> 31);
+    #[cfg(target_pointer_width = "64")]
+    {
+        usize::try_from(hash).expect("64-bit hash fits 64-bit usize")
+    }
+    #[cfg(target_pointer_width = "32")]
+    {
+        usize::try_from(hash ^ (hash >> 32)).expect("folded hash fits 32-bit usize")
+    }
+}
+
 /// Deterministic construction counters for the primitive AND unique table.
 ///
 /// Every call to [`Aig::and`] is classified exactly once as a trivial Boolean
@@ -145,7 +245,7 @@ impl AigConstructionStats {
 pub struct Aig {
     nodes: Vec<AigNode>,
     inputs: Vec<AigInput>,
-    and_table: BTreeMap<(AigLit, AigLit), AigNodeId>,
+    and_table: AndUniqueTable,
     construction_stats: AigConstructionStats,
 }
 
@@ -155,7 +255,7 @@ impl Aig {
         Self {
             nodes: vec![AigNode::ConstFalse],
             inputs: Vec::new(),
-            and_table: BTreeMap::new(),
+            and_table: AndUniqueTable::default(),
             construction_stats: AigConstructionStats::default(),
         }
     }
@@ -239,16 +339,15 @@ impl Aig {
                         .saturating_add(1);
                     return lit;
                 }
-                let key = (a, b);
-                if let Some(node) = self.and_table.get(&key) {
+                if let Some(node) = self.and_table.get(a, b) {
                     self.construction_stats.and_structural_hash_hits = self
                         .construction_stats
                         .and_structural_hash_hits
                         .saturating_add(1);
-                    return AigLit::positive(*node);
+                    return AigLit::positive(node);
                 }
                 let node = self.push_node(AigNode::And(a, b));
-                self.and_table.insert(key, node);
+                self.and_table.insert(a, b, node);
                 self.construction_stats.and_nodes_created =
                     self.construction_stats.and_nodes_created.saturating_add(1);
                 AigLit::positive(node)
@@ -722,6 +821,35 @@ mod tests {
                 + stats.and_nodes_created,
             "every primitive AND request has exactly one outcome"
         );
+    }
+
+    #[test]
+    fn and_unique_table_grows_without_changing_canonical_node_order() {
+        let mut first = Aig::new();
+        let inputs = (0..64)
+            .map(|index| first.input(format!("x{index}")))
+            .collect::<Vec<_>>();
+        let nodes = inputs
+            .windows(2)
+            .map(|pair| first.and(pair[0], pair[1]))
+            .collect::<Vec<_>>();
+
+        for (pair, &node) in inputs.windows(2).zip(&nodes) {
+            assert_eq!(first.and(pair[1], pair[0]), node);
+        }
+
+        let mut second = Aig::new();
+        let second_inputs = (0..64)
+            .map(|index| second.input(format!("x{index}")))
+            .collect::<Vec<_>>();
+        for pair in second_inputs.windows(2) {
+            second.and(pair[0], pair[1]);
+        }
+        assert_eq!(
+            first.nodes().take(second.node_count()).collect::<Vec<_>>(),
+            second.nodes().collect::<Vec<_>>()
+        );
+        assert_eq!(first.construction_stats().and_structural_hash_hits, 63);
     }
 
     #[test]

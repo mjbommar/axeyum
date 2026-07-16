@@ -1,7 +1,10 @@
 //! Public incremental phase-attribution contract.
 
 use axeyum_ir::TermArena;
-use axeyum_solver::{CheckResult, IncrementalBvSolver, IncrementalCnfStats, SolverConfig};
+use axeyum_solver::{
+    AigConstructionStats, CheckResult, IncrementalBvSolver, IncrementalCnfStats,
+    IncrementalLoweringStats, SolverConfig,
+};
 
 #[test]
 fn incremental_stats_snapshot_and_delta_cover_the_client_pipeline() {
@@ -96,8 +99,8 @@ fn incremental_stats_snapshot_and_delta_cover_the_client_pipeline() {
     assert_eq!(repeated.aig_nodes, 0);
     assert_eq!(repeated.cnf_variables, 0);
     assert_eq!(repeated.cnf_clauses, 0);
-    assert_eq!(repeated.aig_construction, Default::default());
-    assert_eq!(repeated.lowering_work, Default::default());
+    assert_eq!(repeated.aig_construction, AigConstructionStats::default());
+    assert_eq!(repeated.lowering_work, IncrementalLoweringStats::default());
     assert_eq!(repeated.cnf_gate_mix, IncrementalCnfStats::default());
 }
 
@@ -172,7 +175,7 @@ fn ordinary_constructor_keeps_phase_profiling_disabled() {
     assert_eq!(stats.checks, 0);
     assert_eq!(stats.total_time(), std::time::Duration::ZERO);
     assert_eq!(stats.cnf_gate_mix, IncrementalCnfStats::default());
-    assert_eq!(stats.lowering_work, Default::default());
+    assert_eq!(stats.lowering_work, IncrementalLoweringStats::default());
     assert!(stats.aig_construction.and_requests > 0);
     assert!(stats.aig_nodes > 0);
     assert!(stats.cnf_variables > 0);
