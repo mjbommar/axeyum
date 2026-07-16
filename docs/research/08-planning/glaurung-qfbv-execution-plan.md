@@ -682,7 +682,7 @@ clean artifact pins the exact Glaurung/Axeyum revisions and policy.
 | M5 AIG/CNF optimization | GQ5 | **First native AIG tranche accepted:** ADR-0175 replaces the ordered unique table and improves the repeated actual-client ratio 0.742x→0.680x with unchanged structure. CNF candidate remains deferred; reopen only from new causal evidence |
 | M6 SAT re-attribution | GQ6 | **Done for bounded accepted-table lineage:** SAT is 18.48% weighted and remains behind CNF at 46.55% |
 | M7 ordered warm trace | GQ7, GQ8 | **Done for clean three-driver controls (ADR-0166--0170):** assertions, lineage/scopes/choices, backend timing, cold/snapshot/lineage controls, and memory validate |
-| M8 Glaurung warm integration | GQ7 | **Bounded admission/replay repeated and executable (ADR-0171--0180/0193/0195):** 9/512 identity is accepted; bounded shared original replay cuts causal SurfacePen time 36.94%, then exact empty-theory model completion cuts the same-current median another 25.45% with flat RSS. Refresh a clean same-current two-driver artifact before replacing the published baseline |
+| M8 Glaurung warm integration | GQ7 | **Bounded admission/replay and exclusive successor ownership are accepted (ADR-0171--0180/0193/0195/0196):** 9/512 identity is accepted; bounded shared original replay and exact empty-theory model completion preserve complete replay. LIFO-aligned owner transfer then improves clean adaptive/cache-on SurfacePen/NETwtw10 mean Axeyum time 14.71%/34.77% with every alarm green; retain explicit off controls and re-gate new traversal policies or families |
 | M9 auto policy and regression lane | GQ8--GQ10 | **Done for current families in ADR-0186/0188/0192:** adaptive warm admission plus bounded path-owned exact-SAT caching are downstream defaults with explicit controls; corrected cold and ordered artifacts have executable identity, replay, finding, timing, and RSS alarms |
 
 ## Immediate next actions
@@ -709,16 +709,18 @@ clean artifact pins the exact Glaurung/Axeyum revisions and policy.
    fresh accepted-current native attribution next. Keep CNF as a measured GQ5
    lane only if that profile selects it; internal flattening still requires
    future-use evidence or clause replacement.
-7. Proposed ADR-0196 follows that profile's actual concentration: path-creation
-   checks own 82.2% of CNF and 89.0% of bit-blast time. Test exclusive transfer
-   of a terminal parent's retained owner to one deterministic fork child while
-   every sibling keeps a fresh solver. Require exact lifecycle/isolation/replay
-   tests, lower path-birth construction, and the full adaptive two-driver gate;
-   do not introduce cloneable or shared mutable SAT state.
-5. Keep complete assertion/symbol capture and separate backend timing mandatory
+5. ADR-0196 accepts the topology selected by that profile. An earlier-child
+   transfer failed because its owner idled behind the sibling subtree and
+   increased adaptive pressure. The accepted LIFO-aligned policy transfers the
+   terminal parent's solver only to the last-pushed/next-executed child, leaves
+   every sibling fresh, and passes the clean adaptive/cache-on two-driver gate:
+   mean Axeyum time improves 14.71% on SurfacePen and 34.77% on NETwtw10 across
+   185,442 exact checks. Keep transfer-off executable, revalidate traversal
+   changes, and do not introduce cloneable or shared mutable SAT state.
+6. Keep complete assertion/symbol capture and separate backend timing mandatory
    in every new ordered artifact; merge per-process traces atomically before
    GQ7/GQ8 cache or auto-policy work.
-6. Run every accepted cold candidate through ADR-0188's guarded repeated sharded full
+7. Run every accepted cold candidate through ADR-0188's guarded repeated sharded full
    comparisons. A threshold violation is a regression alarm to investigate,
    not permission to ignore raw controls or semantic gates.
 

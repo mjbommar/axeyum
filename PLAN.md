@@ -514,7 +514,7 @@ count as decisions or speedups.
 | **GQ4** | **Cold demand-driven bit-slice reduction** | **Out of the active queue.** ADR-0157 v1 is correct but regresses the real ratio about 1.42x→4.49x; ADR-0158's conservative admission is a safe no-op but does not improve the required family. Both remain explicit/off. Do not tune thresholds further on this corpus; only a qualitatively different constant-cost admission proof and a fresh client gate can reopen GQ4. |
 | **GQ5** | **Cheaper AIG construction and measured CNF encoding** | **First native AIG tranche accepted (ADR-0175).** Exact v4 attribution selects the low-hit `BTreeMap`; deterministic open addressing cuts three-driver Axeyum time 7.66% and ratio 0.742x→0.680x with unchanged AIG/CNF/replay/scopes and flat RSS. CNF is again dominant at 46.55%; internal AND flattening stays deferred. Reopen literal-copy ownership or CNF only from a fresh isolated native gate. |
 | **GQ6** | **Cold SAT/CDCL tuning** | **Material but behind measured warm CNF after ADR-0175.** Accepted-table native lineage spends 18.48% in SAT versus CNF's 46.55%. Compare identical emitted CNF across BatSat, the proof-producing core, and pinned CaDiCaL/Kissat only after the next CNF decision; preserve proof replay and deterministic limits. |
-| **GQ7** | **Cheaper warm entry and delta preprocessing** | **DONE for available Glaurung families; residual client cost remains profile-driven (ADR-0171--0186/0193/0195).** Path-owned delta reuse, 9/512 hard bounds, exact identity, alarms, and adaptive production admission are enforced. ADR-0193 cuts causal SurfacePen Axeyum time 36.94% by sharing bounded same-assignment replay evaluation. ADR-0195 preserves complete models and original replay while bypassing empty warm-theory projection discovery; the clean adaptive/cache-on refresh improves mean SurfacePen/NETwtw10 time 23.82%/3.55% with every alarm green. Preserve explicit one-shot/fixed controls, re-profile the accepted current residual, and re-gate new families. |
+| **GQ7** | **Cheaper warm entry and delta preprocessing** | **DONE for available Glaurung families; residual client cost remains profile-driven (ADR-0171--0186/0193/0195/0196).** Path-owned delta reuse, 9/512 hard bounds, exact identity, alarms, and adaptive production admission are enforced. ADR-0193 shares bounded same-assignment replay evaluation; ADR-0195 bypasses empty warm-theory projection discovery without weakening complete models or replay. ADR-0196 transfers a terminal parent's solver exclusively to the last-pushed/next-executed child and leaves siblings fresh; the clean adaptive/cache-on gate improves mean SurfacePen/NETwtw10 Axeyum time 14.71%/34.77% with every alarm green. Preserve explicit one-shot/fixed/transfer-off controls, re-profile the accepted current residual, and re-gate new traversal policies or families. |
 | **GQ8** | **Verdict and CNF reuse for duplicate/prefix queries** | **DONE for available Glaurung families (ADR-0192).** Clean repeated off/on evidence admits fixed bounded same-arena scalar SAT reuse only in path-owned warm sessions; every hit replays and all traffic/cleanup is gated. Glaurung defaults it on with an explicit off control; Axeyum's generic cache stays opt-in. Ordinary UNSAT/Unknown and prefix verdict reuse remain forbidden. |
 | **GQ9** | **Auto production policy and API guidance** | **DONE for available families (ADR-0186).** Clean adaptive repetition passes all 3%/3%/5% + 2% alarms over 92,721 checks. Glaurung defaults only explorer-owned Axeyum solves to adaptive 2→9 admission; explicit one-shot and fixed controls remain. Re-gate new families; GQ4 stays off. |
 | **GQ10** | **Ordered, wider real-lifter regression corpus** | **DONE for available families (ADR-0187/0188).** The 162-query representative is pinned; exact 30,628-query composites have measured variance and executable 3%/3%/5% + 2% guards. Retain cold/ordered/profile bars separately and re-gate added families. |
@@ -615,11 +615,18 @@ refresh now passes over 185,442 checks: mean Axeyum/ratio improve
 23.82%/24.99% on SurfacePen and 3.55%/4.04% on NETwtw10, with RSS and Z3 drift
 inside their alarms and exact findings/traffic. Re-profile the accepted current
 native path before selecting another GQ5/GQ6 or model-lift implementation.
-That attribution now selects proposed ADR-0196: 358 path-birth checks own
-82.2% of CNF time and 89.0% of bit-blast time because both fork children start
-fresh while the terminal parent's exact prefix solver is closed. Test an
-exclusive transfer to one child only; reject any sibling sharing, leaked
-terminal state, or candidate that fails the full adaptive client gates.
+ADR-0196 now accepts the selected topology fix. The first candidate transferred
+the terminal parent's exact-prefix solver to the earlier fork child and failed:
+that owner idled behind the sibling subtree, increasing adaptive pressure,
+SurfacePen RSS, and NETwtw10 time. The accepted LIFO-aligned policy transfers
+exclusive ownership only to the last-pushed/next-executed child; every sibling
+remains fresh, and an unused fresh ID lets ordinary parent cleanup preserve the
+transferred solver. The clean adaptive/cache-on gate preserves all 185,442
+decisions, findings, traffic partitions, cleanup invariants, and replays while
+improving mean Axeyum time/ratio 14.71%/15.04% on SurfacePen and
+34.77%/34.36% on NETwtw10. RSS and Z3 drift remain inside alarms. Transfer is
+the Glaurung default with an explicit off control; re-profile this accepted
+current state before selecting the next GQ7/GQ5 residual.
 GQ4 is not an active optimization;
 ADR-0157/0158 remain explicit/off. Cold rewrite or CNF work may continue only
 when causal/native profiles select it. ADR-0164 permits opt-in consecutive
