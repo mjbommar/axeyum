@@ -702,9 +702,10 @@ clean artifact pins the exact Glaurung/Axeyum revisions and policy.
    complete model is built, skip only empty warm-theory projection discovery.
    Completion falls 99.34% and same-current median client time 25.45%, with
    flat RSS, exact structure/traffic, every user symbol completed, and every
-   original root replayed. Refresh the two-driver artifact next. Keep CNF as
-   the parallel measured GQ5 lane; internal flattening still requires future-
-   use evidence or clause replacement.
+   original root replayed. Held-out NETwtw10 improves 4.33% with RSS down
+   1.39% and every alarm green. Regenerate the machine-readable two-driver
+   artifact next. Keep CNF as the parallel measured GQ5 lane; internal
+   flattening still requires future-use evidence or clause replacement.
 5. Keep complete assertion/symbol capture and separate backend timing mandatory
    in every new ordered artifact; merge per-process traces atomically before
    GQ7/GQ8 cache or auto-policy work.

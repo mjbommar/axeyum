@@ -609,8 +609,10 @@ and agreed checks with zero replay failures. This rejects duplicate-AIG-pass
 work as the next lever. ADR-0195 accepts the exact scalar-QF_BV completion fast
 path: it skips only empty array/UF projection discovery after completing every
 user symbol, retains every original replay root, cuts causal median client time
-25.45%, and leaves RSS flat. Refresh the full same-current two-driver artifact
-before replacing its published predecessor. GQ4 is not an active optimization;
+25.45% on SurfacePen and 4.33% on held-out NETwtw10, with non-increasing RSS
+and every semantic/traffic gate green. Regenerate the machine-readable full
+same-current two-driver artifact before replacing its published predecessor.
+GQ4 is not an active optimization;
 ADR-0157/0158 remain explicit/off. Cold rewrite or CNF work may continue only
 when causal/native profiles select it. ADR-0164 permits opt-in consecutive
 snapshot reuse now; ADR-0166 supplies the bounded ordered T1/T2 evidence;

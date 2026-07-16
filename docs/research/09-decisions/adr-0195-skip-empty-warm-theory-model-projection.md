@@ -59,6 +59,15 @@ to 0.108x Z3, and median RSS 83,480 to 83,428 KiB (-0.06%). Absolute Z3 drift
 is +1.19%, below the 2% alarm. All 15,306 combined checks agree and exact warm
 and cache traffic repeats.
 
+The held-out NETwtw10 repetition confirms a smaller but material gain on the
+large fallback-bearing stream. Across three same-current processes per side,
+median Axeyum time falls 17,765.2 to 16,996.6 ms (-4.33%), normalized ratio
+about 0.342x to 0.328x Z3 (-3.99%), and median RSS 261,428 to 257,796 KiB
+(-1.39%); Z3 drift is -0.36%. All 170,136 combined checks agree, findings and
+exact warm/cache traffic repeat, and replay failures remain zero. This causal
+repetition does not itself replace the existing machine-readable lineage
+artifact; regenerate that artifact separately from the accepted revisions.
+
 ## Alternatives
 
 Skipping model completion or returning only constrained symbols was rejected:
