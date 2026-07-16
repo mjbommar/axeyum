@@ -322,6 +322,28 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-15 — ADR-0178 accepts repeated exact-work held-out lineage
+  variance.** Three SurfacePen default-policy processes execute identical
+  2,551-check streams and lifecycle/root counters with zero fallbacks/resets;
+  all 7,653 occurrences agree. Mean Axeyum/Z3 is 1.069/4.409 seconds (0.243x),
+  Axeyum population CV is 0.34%, and median RSS is 83,140 KiB.
+
+  A wall-deadline NETwtw10 repeat produces a different query count, so it is
+  explicitly diagnostic rather than variance evidence. The accepted tier uses
+  `IOCTLANCE_SOLVE_BUDGET=20000`, a 400-second analysis deadline, 600-second
+  solver budget, and hard 4 GiB cap. Three processes each execute exactly
+  28,356 checks with identical 20,031 retained checks, 1,285 exact snapshots,
+  529,071 prefix roots, 247,311 added roots, 2,228 pops, 5,961 created/closed
+  sessions, peak nine, 8,325 path fallbacks, zero assertion fallbacks/resets,
+  and all 85,068 occurrences agreed. Mean Axeyum/Z3 is 18.771/52.086 seconds
+  (0.360x), Axeyum population CV is 0.44%, and median RSS is 257,736 KiB.
+
+  Glaurung `eb938ae` records the exact-work recipe and bars. Every available
+  realworld query stream now has repeated evidence for explicit 9/512 lineage;
+  pciidex issues no solver checks. Next automate fail-closed per-commit source,
+  environment, work, fallback, RSS, and timing comparison. Automatic GQ9
+  selection and GQ8 caching remain separate, unauthorized decisions.
+
 - **2026-07-15 — ADR-0177 widens the opt-in assertion envelope after GQ10
   held-out evidence.** SurfacePen's exact 2,551-record v4 profile has assertion
   min/p50/p90/p95/p99/max 0/52/352/416/467/479. ADR-0176's 128 ceiling sends
@@ -1280,20 +1302,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
   | ID | Live status | Next acceptance boundary |
   |---|---|---|
-  | **GQ1 real-query profile** | **Native lineage phase/CNF/AIG/admission attribution DONE for the bounded tier (ADR-0171--0177).** V4 validates all 6,986 original records; held-out SurfacePen/NETwtw10 add assertion/live-cap evidence and 9/512 is current | Repeat held-out variance; never substitute diagnostic timing for the unprofiled bar |
+  | **GQ1 real-query profile** | **Native lineage phase/CNF/AIG/admission attribution DONE for every available query stream (ADR-0171--0178).** Original v4 validates 6,986 records; repeated held-out SurfacePen/NETwtw10 validate 9/512 work/fallback/RSS/time | Automate per-commit identity; never substitute diagnostic timing for the unprofiled bar |
   | **GQ2 cheap cold tier** | **WIP with three accepted rewrite tranches; batch integration deferred.** Canonical v4 reaches 5.625 s / 0.730x Z3; ADR-0156 preserves replay but is 18.8% slower than one-shot | Keep canonical v4 as the measured one-shot policy; do not recommend fresh incremental batch until its clause/entry overhead closes |
   | **GQ3 coercion/affine peepholes** | **DONE for current measured shapes (ADR-0159).** Clean repeated path-paired ablations are fail-closed; `extract_extend` is a material lowering-only win, while all four measured structural rules change zero AIG nodes/clauses | Keep rules enabled. Reopen only for a new residual shape with a specific downstream hypothesis and the same causal ablation gate |
   | **GQ4 cold relevant bits** | **v1 and v2 DEFERRED after failed real gates.** v1 regresses ~1.42x→4.49x. V2 rejection overhead is bounded, but defaults admit 0/128 and +0.62% total; a 33-query moderate policy removes 632 AIG nodes/zero clauses and regresses bit blast 3.14% | Keep both explicit/off. Reopen only with an AIG/CNF-cone estimator or after word rewrites materially change the residual; do not tune thresholds further |
   | **GQ5 AIG/CNF construction** | **First native AIG tranche accepted (ADR-0175).** Deterministic open addressing improves three-driver Axeyum time 7.66% and ratio 0.742x→0.680x with unchanged structure; internal flattening stays deferred | Yield to GQ7/GQ10; reopen literal ownership or CNF only from fresh causal evidence |
   | **GQ6 cold SAT/CDCL** | **WIP foundation; behind measured CNF.** Accepted-table native lineage SAT is 18.48% weighted versus CNF at 46.55% | Compare identical CNF across cores only after the next CNF decision, with proof replay and deterministic limits |
-  | **GQ7 warm delta entry** | **Bounded opt-in policy widened (ADR-0171--0177, Glaurung `90df708`).** Nine live paths retain the RSS/time tradeoff; 512 assertions eliminate held-out avoidable fallback. Limits and reasons remain visible | Repeat held-out variance before automatic warm selection |
+  | **GQ7 warm delta entry** | **Bounded opt-in policy repeated (ADR-0171--0178, Glaurung `eb938ae`).** Nine live paths retain the RSS/time tradeoff; 512 assertions cover every available stream; exact held-out counters and variance are stable | Automate the artifact before automatic warm selection |
   | **GQ8 verdict/CNF cache** | **TODO; native ownership complete but cache contract still gated.** The ordered tier has 957 exact duplicate occurrences, 439 same-lineage repeats, and 2,192 prefix extensions | Specify bounded versioned content/config/scope identity, capacity/eviction, and mandatory model/proof replay before implementation |
-  | **GQ9 auto cost model/docs** | **TODO; bounded opt-in admission landed.** ADR-0176/0177 select 9 live paths/512 assertions with exact fallback identity, but do not infer when warm reuse should activate | Fit and validate a topology/cost policy after repeated held-out evidence before setting warm reuse implicitly |
-  | **GQ10 real-lifter regression tier** | **WIP; all six available realworld samples exercised, original three repeated.** SurfacePen adds exact 479-root depth; bounded NETwtw10 adds 23,797 checks and live-cap RSS/time evidence; pciidex issues no checks | Repeat held-out variance, add newly available families, and keep pre-parsed, actual-client, unprofiled lineage, RSS/fallback, and diagnostic bars separate |
+  | **GQ9 auto cost model/docs** | **TODO; bounded opt-in admission repeated.** ADR-0176--0178 select and validate 9 live paths/512 assertions with exact fallback identity, but do not infer when warm reuse should activate | Automate fixed-policy evidence, then fit/validate topology-cost before setting warm reuse implicitly |
+  | **GQ10 real-lifter regression tier** | **WIP; all six available samples exercised with repeated evidence for every query-producing stream.** SurfacePen repeats 2,551 checks at 0.243x; fixed-budget NETwtw10 repeats 28,356 at 0.360x; pciidex issues no checks | Automate fail-closed per-commit comparison, add new families, and keep pre-parsed, actual-client, unprofiled lineage, RSS/fallback, and diagnostic bars separate |
 
-  **Next actions:** (1) repeat SurfacePen and the bounded NETwtw10 tier under
-  ADR-0177's 9/512 envelope with fallback, RSS, and actual-client time;
-  (2) add per-commit variance; (3) reopen
+  **Next actions:** (1) automate ADR-0178's exact-work source/environment,
+  fallback, RSS, structural, and timing comparison; (2) add newly available
+  families; (3) reopen
   literal-copy ownership or CNF only from a
   fresh causal gate; (4) keep GQ4 off and SAT behind measured CNF; (5) only then
   specify GQ8's
@@ -3085,7 +3107,7 @@ plan is built and committed on the current branch:
 ### Track 4 — Use Cases & Frontend
 | Phase | Title | Status |
 |---|---|---|
-| P4.1j | Glaurung warm delta and duplicate/prefix reuse (GQ7/GQ8) | **WIP — ADR-0171--0177 accept native timing/attribution, the first AIG construction win, and widened bounded opt-in admission.** Repeated lineage is 0.680x Z3 before admission; 9/512 preserves the live-cap tradeoff and covers held-out assertion depth with exact fallback. Repeat held-out variance before GQ8/GQ9. |
+| P4.1j | Glaurung warm delta and duplicate/prefix reuse (GQ7/GQ8) | **WIP — ADR-0171--0178 accept native timing/attribution, the first AIG construction win, and repeated bounded opt-in admission.** Original lineage is 0.680x Z3; held-out 9/512 tiers are 0.243x/0.360x with exact fallback/work identity. Automate before GQ8/GQ9. |
 | P4.1e | Retained warm Boolean array relation flags | **DONE (ADR-0091)** — symbolic-memory path conditions can keep nested supported array equality atoms warm through private candidate-sensitive relation flags, guarded equality/diff observations, projection filtering, and replay |
 | P4.1h | Retained warm nested array-valued UF parameters | **DONE (ADR-0094)** — nested supported array-valued memory/function parameters can stay warm as full-value UF keys through private projection keys or rewritten structural keys, with relation-flag guarded congruence, private filtering, and replay |
 | P4.1g | Retained warm structural array-valued UF parameters | **DONE (ADR-0093)** — supported store/constant/array-ITE memory/function parameters can stay warm as full-value UF keys with scalar dependency retention, structural owner realization, relation-flag guarded congruence, private filtering, and replay; ADR-0094 subsequently lands nested application keys |
@@ -3106,6 +3128,13 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-15 — ADR-0178 accepts repeated held-out 9/512 variance.** Three
+  exact SurfacePen streams run at 0.243x Z3 / 0.34% Axeyum CV; three fixed-work
+  NETwtw10 streams run at 0.360x / 0.44%, with identical 28,356 checks, 8,325
+  path fallbacks, zero assertion fallbacks/resets, and 257,736 KiB median RSS.
+  Glaurung `eb938ae` records the gate. Automate per-commit identity next; GQ8/
+  GQ9 remain separate decisions.
 
 - **2026-07-15 — ADR-0177 widens assertion admission to held-out depth.** Exact
   SurfacePen profiles reach 479 roots; 512 eliminates 965 avoidable fallbacks

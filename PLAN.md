@@ -372,6 +372,13 @@ session state.
 > Axeyum still 2.8x faster than Z3. Glaurung `90df708` therefore uses 9/512
 > inside explicit lineage. Repeat held-out variance and widen newly available
 > families before GQ9; 9/512 is a resource envelope, not an automatic policy.
+> ADR-0178 closes that immediate repetition gate. Three SurfacePen processes
+> execute identical 2,551-check streams at 0.243x Z3 and 0.34% Axeyum CV. Three
+> hard-4-GiB fixed-budget NETwtw10 processes execute identical 28,356-check
+> streams at 0.360x Z3 and 0.44% Axeyum CV, with exactly 8,325 path fallbacks,
+> zero assertion fallbacks/resets, and 257,736 KiB median RSS. Wall-deadline
+> runs with differing query counts are diagnostic only. Automate this exact-work
+> per-commit artifact next; GQ9/GQ8 remain separate policy/trust decisions.
 > The capture and
 > implementation audit has been expanded into the dependency-ordered
 > [Glaurung QF_BV execution plan](docs/research/08-planning/glaurung-qfbv-execution-plan.md):
@@ -400,16 +407,16 @@ decisions or speedups.
 
 | ID | Roadmap item | Scope and exit criterion |
 |---|---|---|
-| **GQ1** | **Capture and profile real queries first** | **Native lineage phase/CNF/AIG/capacity attribution DONE for the bounded tier (ADR-0171--0177).** Exact v4 records classify request/reuse/allocation/copy work without hot-path clocks. The accepted open-addressed AIG table preserves all 6,986 structural records and moves the repeated actual-client ratio to 0.680x Z3; ADR-0176/0177 add measured RSS/fallback and held-out assertion evidence. Keep profiled and unprofiled bars distinct. |
+| **GQ1** | **Capture and profile real queries first** | **Native lineage phase/CNF/AIG/capacity attribution DONE for all available realworld streams (ADR-0171--0178).** Exact v4 records classify request/reuse/allocation/copy work without hot-path clocks. The original repeated tier reaches 0.680x Z3; held-out fixed-budget tiers validate exact traffic, RSS, and 9/512 admission. Keep profiled and unprofiled bars distinct. |
 | **GQ2** | **Cheap always-on cold simplification tier** | Add a bounded, denotation-preserving one-shot tier for constant folding and trivial identities whose own cost is measured. Add a size/shape and cold-vs-warm policy that selects cheap, configured, or no preprocessing. Exit only when cold end-to-end time is non-worse in aggregate and improves the target class at the GQ1 validity gates. |
 | **GQ3** | **Coercion-cancellation peepholes and causal telemetry** | **Current measured tranche complete; use ablation as policy evidence.** Exact nested/concat/extension/coercion rules and ADR-0159's repeated default-minus-rule comparator are landed. `extract_extend` improves lowering, but all four measured rules change zero AIG nodes and clauses. Do not globally delete sound rewrites because one corpus does not fire them; instead, keep a Glaurung policy only for rules with measured reach/cost and reopen register-slice-specific work only when an ablation demonstrates downstream AIG/CNF or native-time reduction. |
 | **GQ4** | **Cold demand-driven bit-slice reduction** | **Out of the active queue.** ADR-0157 v1 is correct but regresses the real ratio about 1.42x→4.49x; ADR-0158's conservative admission is a safe no-op but does not improve the required family. Both remain explicit/off. Do not tune thresholds further on this corpus; only a qualitatively different constant-cost admission proof and a fresh client gate can reopen GQ4. |
 | **GQ5** | **Cheaper AIG construction and measured CNF encoding** | **First native AIG tranche accepted (ADR-0175).** Exact v4 attribution selects the low-hit `BTreeMap`; deterministic open addressing cuts three-driver Axeyum time 7.66% and ratio 0.742x→0.680x with unchanged AIG/CNF/replay/scopes and flat RSS. CNF is again dominant at 46.55%; internal AND flattening stays deferred. Reopen literal-copy ownership or CNF only from a fresh isolated native gate. |
 | **GQ6** | **Cold SAT/CDCL tuning** | **Material but behind measured warm CNF after ADR-0175.** Accepted-table native lineage spends 18.48% in SAT versus CNF's 46.55%. Compare identical emitted CNF across BatSat, the proof-producing core, and pinned CaDiCaL/Kissat only after the next CNF decision; preserve proof replay and deterministic limits. |
-| **GQ7** | **Cheaper warm entry and delta preprocessing** | **Bounded opt-in policy widened (ADR-0171--0177, Glaurung `90df708`).** Nine live sessions preserve the measured RSS/time tradeoff; held-out 479-root paths raise the orthogonal assertion ceiling to 512, eliminating avoidable cold fallback. Fallback is deterministic and visible. Keep lineage opt-in and repeat held-out variance before automatic selection. |
+| **GQ7** | **Cheaper warm entry and delta preprocessing** | **Bounded opt-in policy accepted across every available query stream (ADR-0171--0178, Glaurung `eb938ae`).** Nine live sessions preserve the measured RSS/time tradeoff; 512 assertions eliminate avoidable held-out cold fallback. Repeated exact-work tiers are stable and visible. Keep lineage opt-in; automate the artifact before automatic selection. |
 | **GQ8** | **Verdict and CNF reuse for duplicate/prefix queries** | ADR-0170 measures 957/3,769 exact duplicate occurrences (25.4%), 439 same-lineage repeats, and 2,192 prefix extensions. ADR-0171 completes bounded native ownership but does not authorize a cache. First specify deterministic capacity/eviction plus content, solver/config, scope, and lineage identity; every hit still passes original-term model or proof replay and invalidation/versioning is explicit. |
-| **GQ9** | **Auto production policy and API guidance** | **Bounded opt-in admission exists; automatic warm selection remains open.** ADR-0176/0177 select 9 live paths/512 assertions within explicit lineage mode and expose every fallback and limit. The held-out Wi-Fi stream demonstrates the deliberate RSS/time fallback tradeoff. Repeat held-out variance before inferring topology/cost or setting warm reuse implicitly. GQ4 remains off; accepted CNF defaults stay on. |
-| **GQ10** | **Ordered, wider real-lifter regression corpus** | **All six available realworld samples are now exercised; original three remain the repeated tier (ADR-0170--0177).** SurfacePen supplies exact 479-root assertion evidence; bounded NETwtw10 supplies 23,797 agreed checks and the live-cap tradeoff; pciidex issues no checks. Retain cold tiers; next repeat held-out variance, ingest new families when available, and keep pre-parsed Z3, actual-client Z3, unprofiled lineage, RSS/fallback, and diagnostic bars separate. |
+| **GQ9** | **Auto production policy and API guidance** | **Bounded opt-in admission exists; automatic warm selection remains open.** ADR-0176--0178 select and repeat 9 live paths/512 assertions with exact fallback identity. The held-out Wi-Fi stream demonstrates the deliberate RSS/time tradeoff. Automate the fixed-policy artifact before inferring topology/cost or setting warm reuse implicitly. GQ4 remains off; accepted CNF defaults stay on. |
+| **GQ10** | **Ordered, wider real-lifter regression corpus** | **All six available realworld samples are exercised with repeated evidence for every query-producing stream (ADR-0170--0178).** SurfacePen repeats 2,551 checks at 0.243x Z3; fixed-budget NETwtw10 repeats 28,356 at 0.360x; pciidex issues no checks. Retain cold tiers; next automate fail-closed per-commit comparison, ingest new families when available, and keep pre-parsed Z3, actual-client Z3, unprofiled lineage, RSS/fallback, and diagnostic bars separate. |
 
 **Latest Glaurung execution order (2026-07-15; supersedes the earlier cold-path
 priority reset).** Earlier evidence reported an approximately 1.34x gated-bench
@@ -431,7 +438,9 @@ Axeyum time stays 5.088 versus 5.091 seconds at cap 12, while median RSS falls
 8.0%/6.3% on the two drivers whose unbounded peak is 11. ADR-0177 then raises
 only the assertion ceiling to 512 after held-out 479-root paths expose a 35%
 avoidable Axeyum cost at 128; the nine-session conclusion survives the large
-Wi-Fi stress stream.
+Wi-Fi stress stream. ADR-0178 accepts repeated exact-work held-out variance:
+SurfacePen and NETwtw10 are stable at 0.243x/0.360x Z3 with 0.34%/0.44% Axeyum
+CV and identical structural counters.
 The ranked work is:
 
 1. **GQ7 warm end to end:** build on ADR-0164's measured snapshot-LCP bridge,
@@ -440,17 +449,18 @@ The ranked work is:
    per-backend timing. ADR-0170's control selects native per-lineage/delta
    ownership, ADR-0171 accepts its repeated 0.746x-Z3 live result, ADR-0175
    improves the same actual-client bar to 0.680x, ADR-0176 accepts the first
-   bounded memory policy, and ADR-0177 widens assertion admission to the
-   held-out 512-root envelope. Preserve push/pop, model, replay, ownership, and
+   bounded memory policy, ADR-0177 widens assertion admission to the held-out
+   512-root envelope, and ADR-0178 accepts repeated fixed-work variance.
+   Preserve push/pop, model, replay, ownership, and
    visible one-shot fallback while widening the driver tier;
 2. **GQ1/GQ5 measured construction:** ADR-0174 defers internal AND flattening;
    ADR-0175 accepts deterministic open-addressed AIG sharing at a 0.680x
    actual-client ratio. Reopen CNF only with future-use/replacement evidence and
    AIG ownership only with a fresh isolated copy/locality hypothesis;
-3. **GQ10 widening after bounded admission:** repeat SurfacePen and the bounded
-   NETwtw10 tier under ADR-0177's 9/512 policy, then ingest newly available
-   families with path/assertion distributions, fallback rates, RSS, and
-   actual-client timing before any automatic warm policy;
+3. **GQ10 per-commit automation after bounded admission:** encode ADR-0178's
+   exact SurfacePen/NETwtw10 work and structural identities into a fail-closed
+   artifact/comparator, then ingest newly available families with fallback,
+   RSS, and actual-client timing before any automatic warm policy;
 4. **Measured CNF work:** continue the proven encoding lane, but only from
    dominant gate-pattern attribution and a native-time gate after ADR-0163;
 5. **Causal rewrite policy:** use ablation to select Glaurung-relevant rules and
@@ -479,7 +489,8 @@ policy reversal. ADR-0171 completes native per-lineage/delta integration and
 repetition: lineage wins all three live streams but costs more memory. ADR-0176
 supplies the first bounded lifecycle/fallback envelope, and ADR-0177 corrects
 its assertion ceiling on held-out drivers without weakening the live-session
-guard. Repeated held-out validation still precedes cache capacity or
+guard. ADR-0178 completes repeated held-out validation; automated per-commit
+identity and a topology/cost rule still precede cache capacity or
 automatic-policy choices.
 
 **Recorded cold-path sequence.** The detailed task graph and functional acceptance boundary
