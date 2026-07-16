@@ -18,6 +18,7 @@ PROFILE_SCHEMAS = (
     "glaurung-axeyum-warm-profile-v2",
     "glaurung-axeyum-warm-profile-v3",
     "glaurung-axeyum-warm-profile-v4",
+    "glaurung-axeyum-warm-profile-v5",
 )
 SUMMARY_SCHEMA = "axeyum-glaurung-warm-profile-summary-v1"
 QUERY_HASH = re.compile(r"sha256:[0-9a-f]{64}\Z")
@@ -120,6 +121,35 @@ LOWERING_WORK_FIELDS = (
     "term_bit_bindings",
     "symbol_bit_inputs",
 )
+REPLAY_SAT_CACHE_FIELDS = (
+    "enabled",
+    "max_entries",
+    "max_model_values",
+    "max_model_bits",
+    "hits",
+    "misses",
+    "insertions",
+    "evictions",
+    "replay_failures",
+    "declined_unsat",
+    "declined_unknown",
+    "declined_oversized_models",
+    "declined_non_scalar_models",
+    "entries",
+    "model_values",
+    "model_bits",
+)
+REPLAY_SAT_CACHE_COUNTER_FIELDS = (
+    "hits",
+    "misses",
+    "insertions",
+    "evictions",
+    "replay_failures",
+    "declined_unsat",
+    "declined_unknown",
+    "declined_oversized_models",
+    "declined_non_scalar_models",
+)
 
 
 def gate_mix_fields(schema: str) -> tuple[str, ...] | None:
@@ -150,10 +180,14 @@ def validate_record(row: Any, location: str) -> dict[str, Any]:
     nonnegative_int(row, "sequence", location)
     query_hash = row.get("query_hash")
     if not isinstance(query_hash, str) or QUERY_HASH.fullmatch(query_hash) is None:
-        raise ProfileError(f"{location}: query_hash must be sha256:<64 lowercase hex digits>")
+        raise ProfileError(
+            f"{location}: query_hash must be sha256:<64 lowercase hex digits>"
+        )
     path_id = row.get("path_id")
     if path_id is not None and (type(path_id) is not int or path_id < 0):
-        raise ProfileError(f"{location}: path_id must be null or a non-negative integer")
+        raise ProfileError(
+            f"{location}: path_id must be null or a non-negative integer"
+        )
     if type(row.get("path_created")) is not bool:
         raise ProfileError(f"{location}: path_created must be Boolean")
     outcome = row.get("outcome")
@@ -179,7 +213,9 @@ def validate_record(row: Any, location: str) -> dict[str, Any]:
             raise ProfileError(f"{location}: {added} exceeds current {retained}")
 
     total = nonnegative_int(row, "total_nanos", location)
-    phase_total = sum(nonnegative_int(row, f"{phase}_nanos", location) for phase in PHASES)
+    phase_total = sum(
+        nonnegative_int(row, f"{phase}_nanos", location) for phase in PHASES
+    )
     if phase_total != total:
         raise ProfileError(
             f"{location}: phases including unattributed ({phase_total}) "
@@ -204,7 +240,9 @@ def validate_record(row: Any, location: str) -> dict[str, Any]:
             )
         )
         if halves != shapes:
-            raise ProfileError(f"{location}: CNF half-definition shape partition mismatch")
+            raise ProfileError(
+                f"{location}: CNF half-definition shape partition mismatch"
+            )
         for fused, direct in (
             ("fused_positive_and_roots", "direct_positive_and_roots"),
             ("fused_positive_and_nodes", "direct_positive_and_nodes"),
@@ -232,10 +270,12 @@ def validate_record(row: Any, location: str) -> dict[str, Any]:
                 raise ProfileError(
                     f"{location}: internal AND immediate clause avoidance does not match applications"
                 )
-    if row["schema"] == PROFILE_SCHEMAS[3]:
+    if row["schema"] in PROFILE_SCHEMAS[3:]:
         aig = row.get("aig_construction")
         if not isinstance(aig, dict) or set(aig) != set(AIG_CONSTRUCTION_FIELDS):
-            raise ProfileError(f"{location}: aig_construction has an incomplete field set")
+            raise ProfileError(
+                f"{location}: aig_construction has an incomplete field set"
+            )
         for field in AIG_CONSTRUCTION_FIELDS:
             nonnegative_int(aig, field, f"{location}:aig_construction")
         classified = sum(
@@ -258,11 +298,63 @@ def validate_record(row: Any, location: str) -> dict[str, Any]:
         if work["term_memo_hits"] > work["term_memo_lookups"]:
             raise ProfileError(f"{location}: term memo hits exceed lookups")
         if work["terms_lowered"] != work["memoized_terms"]:
-            raise ProfileError(f"{location}: newly lowered and retained term counts differ")
+            raise ProfileError(
+                f"{location}: newly lowered and retained term counts differ"
+            )
         if work["term_bit_bindings_written"] != work["term_bit_bindings"]:
             raise ProfileError(f"{location}: term-bit write and retained deltas differ")
-        if aig["and_nodes_created"] + work["symbol_bit_inputs"] != counts["aig_nodes_added"]:
+        if (
+            aig["and_nodes_created"] + work["symbol_bit_inputs"]
+            != counts["aig_nodes_added"]
+        ):
             raise ProfileError(f"{location}: AIG node allocation partition mismatch")
+    if row["schema"] == PROFILE_SCHEMAS[4]:
+        cache = row.get("replay_sat_cache")
+        if not isinstance(cache, dict) or set(cache) != set(REPLAY_SAT_CACHE_FIELDS):
+            raise ProfileError(
+                f"{location}: replay_sat_cache has an incomplete field set"
+            )
+        for field in REPLAY_SAT_CACHE_FIELDS:
+            nonnegative_int(cache, field, f"{location}:replay_sat_cache")
+        if cache["enabled"] not in (0, 1):
+            raise ProfileError(f"{location}: replay cache enabled must be zero or one")
+        policy_fields = ("max_entries", "max_model_values", "max_model_bits")
+        gauges = ("entries", "model_values", "model_bits")
+        if cache["enabled"] == 0:
+            if any(
+                cache[field] for field in REPLAY_SAT_CACHE_FIELDS if field != "enabled"
+            ):
+                raise ProfileError(
+                    f"{location}: disabled replay cache has nonzero state"
+                )
+        else:
+            if any(cache[field] == 0 for field in policy_fields):
+                raise ProfileError(f"{location}: enabled replay cache has a zero bound")
+            attempts = cache["hits"] + cache["misses"] + cache["replay_failures"]
+            if attempts != 1:
+                raise ProfileError(
+                    f"{location}: replay cache hit/miss partition is not one check"
+                )
+            if cache["hits"] and outcome != "sat":
+                raise ProfileError(f"{location}: replay cache hit is not SAT")
+            declined = sum(
+                cache[field]
+                for field in (
+                    "declined_unsat",
+                    "declined_unknown",
+                    "declined_oversized_models",
+                    "declined_non_scalar_models",
+                )
+            )
+            if cache["misses"] != cache["insertions"] + declined:
+                raise ProfileError(
+                    f"{location}: replay cache fresh-result partition mismatch"
+                )
+            for gauge, bound in zip(gauges, policy_fields, strict=True):
+                if cache[gauge] > cache[bound]:
+                    raise ProfileError(
+                        f"{location}: replay cache {gauge} exceeds {bound}"
+                    )
     return row
 
 
@@ -350,7 +442,9 @@ def summarize(paths: list[Path]) -> dict[str, Any]:
         "duplicate_occurrences": len(records) - len(query_counts),
         "paths_created": sum(1 for row in records if row["path_created"]),
         "outcomes": {outcome: outcomes[outcome] for outcome in OUTCOMES},
-        "decided_percent": percentage(outcomes["sat"] + outcomes["unsat"], len(records)),
+        "decided_percent": percentage(
+            outcomes["sat"] + outcomes["unsat"], len(records)
+        ),
         "latency_nanos": {
             "total": total_nanos,
             "mean": round(total_nanos / len(records), 6),
@@ -375,15 +469,13 @@ def summarize(paths: list[Path]) -> dict[str, Any]:
             for process_id, sequences in sorted(process_rows.items())
         ],
     }
-    homogeneous_gate_fields = (
-        gate_mix_fields(schemas[0]) if len(schemas) == 1 else None
-    )
+    homogeneous_gate_fields = gate_mix_fields(schemas[0]) if len(schemas) == 1 else None
     if homogeneous_gate_fields is not None:
         summary["cnf_gate_mix_totals"] = {
             field: sum(row["cnf_gate_mix"][field] for row in records)
             for field in homogeneous_gate_fields
         }
-    if len(schemas) == 1 and schemas[0] == PROFILE_SCHEMAS[3]:
+    if len(schemas) == 1 and schemas[0] in PROFILE_SCHEMAS[3:]:
         summary["aig_construction_totals"] = {
             field: sum(row["aig_construction"][field] for row in records)
             for field in AIG_CONSTRUCTION_FIELDS
@@ -392,14 +484,51 @@ def summarize(paths: list[Path]) -> dict[str, Any]:
             field: sum(row["lowering_work"][field] for row in records)
             for field in LOWERING_WORK_FIELDS
         }
+    if len(schemas) == 1 and schemas[0] == PROFILE_SCHEMAS[4]:
+        policies = {
+            (
+                row["replay_sat_cache"]["enabled"],
+                row["replay_sat_cache"]["max_entries"],
+                row["replay_sat_cache"]["max_model_values"],
+                row["replay_sat_cache"]["max_model_bits"],
+            )
+            for row in records
+        }
+        if len(policies) != 1:
+            raise ProfileError("replay cache policy drift across profile records")
+        enabled, max_entries, max_model_values, max_model_bits = policies.pop()
+        cache_summary = {
+            "enabled": bool(enabled),
+            "max_entries": max_entries,
+            "max_model_values": max_model_values,
+            "max_model_bits": max_model_bits,
+            **{
+                field: sum(row["replay_sat_cache"][field] for row in records)
+                for field in REPLAY_SAT_CACHE_COUNTER_FIELDS
+            },
+            "peak_entries": max(row["replay_sat_cache"]["entries"] for row in records),
+            "peak_model_values": max(
+                row["replay_sat_cache"]["model_values"] for row in records
+            ),
+            "peak_model_bits": max(
+                row["replay_sat_cache"]["model_bits"] for row in records
+            ),
+        }
+        summary["replay_sat_cache"] = cache_summary
     return summary
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("profiles", nargs="+", type=Path, help="process-isolated JSONL files")
-    parser.add_argument("--out", type=Path, help="write the JSON summary here instead of stdout")
-    parser.add_argument("--require-records", type=int, help="fail unless this many records exist")
+    parser.add_argument(
+        "profiles", nargs="+", type=Path, help="process-isolated JSONL files"
+    )
+    parser.add_argument(
+        "--out", type=Path, help="write the JSON summary here instead of stdout"
+    )
+    parser.add_argument(
+        "--require-records", type=int, help="fail unless this many records exist"
+    )
     parser.add_argument(
         "--require-100-percent-decided",
         action="store_true",
@@ -412,7 +541,10 @@ def main() -> int:
     args = parse_args()
     try:
         summary = summarize(args.profiles)
-        if args.require_records is not None and summary["records"] != args.require_records:
+        if (
+            args.require_records is not None
+            and summary["records"] != args.require_records
+        ):
             raise ProfileError(
                 f"record count is {summary['records']}, expected {args.require_records}"
             )

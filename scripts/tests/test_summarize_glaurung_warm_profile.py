@@ -34,7 +34,7 @@ PHASES = (
 
 def record(sequence: int, *, path_created: bool, query: str) -> dict[str, object]:
     row: dict[str, object] = {
-        "schema": "glaurung-axeyum-warm-profile-v4",
+        "schema": "glaurung-axeyum-warm-profile-v5",
         "process_id": 17,
         "sequence": sequence,
         "query_hash": query,
@@ -108,6 +108,21 @@ def record(sequence: int, *, path_created: bool, query: str) -> dict[str, object
         "term_bit_bindings": 33,
         "symbol_bit_inputs": 2,
     }
+    row["replay_sat_cache"] = {field: 0 for field in MODULE.REPLAY_SAT_CACHE_FIELDS}
+    row["replay_sat_cache"].update(
+        {
+            "enabled": 1,
+            "max_entries": 64,
+            "max_model_values": 4_096,
+            "max_model_bits": 262_144,
+            "hits": 0 if path_created else 1,
+            "misses": 1 if path_created else 0,
+            "insertions": 1 if path_created else 0,
+            "entries": 1,
+            "model_values": 1,
+            "model_bits": 8,
+        }
+    )
     return row
 
 
@@ -145,6 +160,10 @@ class WarmProfileSummaryTests(unittest.TestCase):
         )
         self.assertEqual(summary["aig_construction_totals"]["and_requests"], 10)
         self.assertEqual(summary["lowering_work_totals"]["operand_bits_copied"], 128)
+        self.assertEqual(summary["replay_sat_cache"]["hits"], 1)
+        self.assertEqual(summary["replay_sat_cache"]["misses"], 1)
+        self.assertEqual(summary["replay_sat_cache"]["insertions"], 1)
+        self.assertEqual(summary["replay_sat_cache"]["peak_entries"], 1)
 
     def test_rejects_bad_phase_sum_and_path_creation_order(self) -> None:
         query = "sha256:" + "b" * 64
@@ -153,7 +172,9 @@ class WarmProfileSummaryTests(unittest.TestCase):
             bad_sum = record(0, path_created=True, query=query)
             bad_sum["unattributed_nanos"] = 19
             profile.write_text(json.dumps(bad_sum) + "\n", encoding="utf-8")
-            with self.assertRaisesRegex(MODULE.ProfileError, "do not equal total_nanos"):
+            with self.assertRaisesRegex(
+                MODULE.ProfileError, "do not equal total_nanos"
+            ):
                 MODULE.summarize([profile])
 
             profile.write_text(
@@ -166,7 +187,9 @@ class WarmProfileSummaryTests(unittest.TestCase):
             bad_mix = record(0, path_created=True, query=query)
             bad_mix["cnf_gate_mix"]["binary_and_half_definitions"] = 1
             profile.write_text(json.dumps(bad_mix) + "\n", encoding="utf-8")
-            with self.assertRaisesRegex(MODULE.ProfileError, "shape partition mismatch"):
+            with self.assertRaisesRegex(
+                MODULE.ProfileError, "shape partition mismatch"
+            ):
                 MODULE.summarize([profile])
 
             bad_application = record(0, path_created=True, query=query)
@@ -178,13 +201,21 @@ class WarmProfileSummaryTests(unittest.TestCase):
             bad_aig = record(0, path_created=True, query=query)
             bad_aig["aig_construction"]["and_nodes_created"] = 3
             profile.write_text(json.dumps(bad_aig) + "\n", encoding="utf-8")
-            with self.assertRaisesRegex(MODULE.ProfileError, "request partition mismatch"):
+            with self.assertRaisesRegex(
+                MODULE.ProfileError, "request partition mismatch"
+            ):
                 MODULE.summarize([profile])
 
             bad_work = record(0, path_created=True, query=query)
             bad_work["lowering_work"]["term_memo_hits"] = 10
             profile.write_text(json.dumps(bad_work) + "\n", encoding="utf-8")
             with self.assertRaisesRegex(MODULE.ProfileError, "hits exceed lookups"):
+                MODULE.summarize([profile])
+
+            bad_cache = record(0, path_created=True, query=query)
+            bad_cache["replay_sat_cache"]["hits"] = 1
+            profile.write_text(json.dumps(bad_cache) + "\n", encoding="utf-8")
+            with self.assertRaisesRegex(MODULE.ProfileError, "hit/miss partition"):
                 MODULE.summarize([profile])
 
     def test_accepts_historical_v1_without_gate_totals(self) -> None:
@@ -237,6 +268,21 @@ class WarmProfileSummaryTests(unittest.TestCase):
         self.assertEqual(summary["profile_schemas"], [historical["schema"]])
         self.assertIn("cnf_gate_mix_totals", summary)
         self.assertNotIn("aig_construction_totals", summary)
+
+    def test_accepts_historical_v4_without_cache_work(self) -> None:
+        query = "sha256:" + "f" * 64
+        historical = record(0, path_created=True, query=query)
+        historical["schema"] = "glaurung-axeyum-warm-profile-v4"
+        del historical["replay_sat_cache"]
+        with tempfile.TemporaryDirectory() as directory:
+            profile = Path(directory) / "profile.jsonl"
+            profile.write_text(json.dumps(historical) + "\n", encoding="utf-8")
+
+            summary = MODULE.summarize([profile])
+
+        self.assertEqual(summary["profile_schemas"], [historical["schema"]])
+        self.assertIn("aig_construction_totals", summary)
+        self.assertNotIn("replay_sat_cache", summary)
 
 
 if __name__ == "__main__":
