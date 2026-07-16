@@ -322,6 +322,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-16 — ADR-0181 publishes the clean lineage baseline.** Glaurung
+  `51666a9` commits the exact atomic six-process artifact produced from clean
+  detached Glaurung `a0e5f9f` and Axeyum `486b7e28` sources. Both dirty-path
+  arrays are empty. All 92,721 checks agree with Z3 with zero unknown splits;
+  SurfacePen is 1.063/4.395 seconds (0.242x, 82,432 KiB median RSS), and
+  fixed-budget NETwtw10 is 18.751/52.149 seconds (0.360x, 257,632 KiB).
+
+  The committed 7,986-byte JSON is byte-identical to the runner output and
+  passes standalone validation and comparison. Four focused tests, Python
+  compilation, Ruff lint/format, and whitespace validation pass. The clean
+  prerequisite is closed; begin GQ9 detected-reuse topology/cost fitting
+  against fixed off and lineage controls. Warm remains opt-in, GQ4 stays off,
+  and GQ8 cache/replay authorization is unchanged.
+
 - **2026-07-15 — ADR-0180 lands held-out lineage regression alarms.** Glaurung
   `a0e5f9f` fails homogeneous comparisons above 3% Axeyum mean, 3% normalized
   ratio, 5% median RSS, or 2% absolute Z3 drift. Time/ratio/RSS are one-sided;
@@ -1340,13 +1354,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   | **GQ4 cold relevant bits** | **v1 and v2 DEFERRED after failed real gates.** v1 regresses ~1.42x→4.49x. V2 rejection overhead is bounded, but defaults admit 0/128 and +0.62% total; a 33-query moderate policy removes 632 AIG nodes/zero clauses and regresses bit blast 3.14% | Keep both explicit/off. Reopen only with an AIG/CNF-cone estimator or after word rewrites materially change the residual; do not tune thresholds further |
   | **GQ5 AIG/CNF construction** | **First native AIG tranche accepted (ADR-0175).** Deterministic open addressing improves three-driver Axeyum time 7.66% and ratio 0.742x→0.680x with unchanged structure; internal flattening stays deferred | Yield to GQ7/GQ10; reopen literal ownership or CNF only from fresh causal evidence |
   | **GQ6 cold SAT/CDCL** | **WIP foundation; behind measured CNF.** Accepted-table native lineage SAT is 18.48% weighted versus CNF at 46.55% | Compare identical CNF across cores only after the next CNF decision, with proof replay and deterministic limits |
-  | **GQ7 warm delta entry** | **Bounded opt-in policy repeated, executable, and alarmed (ADR-0171--0180, Glaurung `a0e5f9f`).** Nine paths retain the RSS/time tradeoff; 512 assertions cover every stream; exact identity and alarms are enforced | Publish clean baseline before automatic warm selection |
+  | **GQ7 warm delta entry** | **Bounded opt-in policy and clean executable gate accepted (ADR-0171--0181, Glaurung `51666a9`).** Nine paths retain the RSS/time tradeoff; 512 assertions cover every stream; exact identity, alarms, and the baseline are enforced | Keep opt-in while GQ9 fits detected-reuse admission |
   | **GQ8 verdict/CNF cache** | **TODO; native ownership complete but cache contract still gated.** The ordered tier has 957 exact duplicate occurrences, 439 same-lineage repeats, and 2,192 prefix extensions | Specify bounded versioned content/config/scope identity, capacity/eviction, and mandatory model/proof replay before implementation |
-  | **GQ9 auto cost model/docs** | **TODO; bounded opt-in admission repeated, executable, and alarmed.** ADR-0176--0180 validate 9/512 but do not infer when warm reuse should activate | Publish baseline, then fit/validate topology-cost before setting warm reuse implicitly |
-  | **GQ10 real-lifter regression tier** | **WIP; all streams repeated; fail-closed runner/alarms landed.** SurfacePen is 0.243x; NETwtw10 is 0.360x; identity plus 3%/3%/5% + 2% Z3 alarms are executable | Publish clean baseline, add new families, and keep diagnostic bars separate |
+  | **GQ9 auto cost model/docs** | **WIP; clean prerequisite complete.** ADR-0176--0181 validate 9/512 and a versioned baseline but do not infer when warm reuse should activate | Fit detected-reuse topology/cost against fixed off/lineage before implicit activation |
+  | **GQ10 real-lifter regression tier** | **Clean available-family baseline DONE; widening WIP.** SurfacePen is 0.242x; NETwtw10 is 0.360x; identity plus 3%/3%/5% + 2% Z3 alarms are committed | Add new families and keep diagnostic bars separate |
 
-  **Next actions:** (1) publish a clean ADR-0180 baseline; (2) add newly
-  available families; (3) reopen
+  **Next actions:** (1) fit GQ9's detected-reuse topology/cost selector against
+  fixed off and lineage controls; (2) add newly available families; (3) reopen
   literal-copy ownership or CNF only from a
   fresh causal gate; (4) keep GQ4 off and SAT behind measured CNF; (5) only then
   specify GQ8's
@@ -3138,7 +3152,7 @@ plan is built and committed on the current branch:
 ### Track 4 — Use Cases & Frontend
 | Phase | Title | Status |
 |---|---|---|
-| P4.1j | Glaurung warm delta and duplicate/prefix reuse (GQ7/GQ8) | **WIP — ADR-0171--0180 accept native attribution, AIG win, bounded admission, artifacts, and alarms.** Original lineage is 0.680x Z3; held-out 9/512 is 0.243x/0.360x with exact identity. Publish clean baseline before GQ8/GQ9. |
+| P4.1j | Glaurung warm delta and duplicate/prefix reuse (GQ7/GQ8) | **WIP — ADR-0171--0181 accept native attribution, AIG win, bounded admission, alarms, and a clean baseline.** Original lineage is 0.680x Z3; held-out 9/512 is 0.242x/0.360x with exact identity. Fit GQ9 admission before defaults; GQ8 remains separately gated. |
 | P4.1e | Retained warm Boolean array relation flags | **DONE (ADR-0091)** — symbolic-memory path conditions can keep nested supported array equality atoms warm through private candidate-sensitive relation flags, guarded equality/diff observations, projection filtering, and replay |
 | P4.1h | Retained warm nested array-valued UF parameters | **DONE (ADR-0094)** — nested supported array-valued memory/function parameters can stay warm as full-value UF keys through private projection keys or rewritten structural keys, with relation-flag guarded congruence, private filtering, and replay |
 | P4.1g | Retained warm structural array-valued UF parameters | **DONE (ADR-0093)** — supported store/constant/array-ITE memory/function parameters can stay warm as full-value UF keys with scalar dependency retention, structural owner realization, relation-flag guarded congruence, private filtering, and replay; ADR-0094 subsequently lands nested application keys |
@@ -3159,6 +3173,12 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-16 — ADR-0181 publishes the clean lineage baseline.** Glaurung
+  `51666a9` commits the clean six-process artifact: 92,721/92,721 checks agree,
+  SurfacePen/NETwtw10 run at 0.242x/0.360x Z3, and median RSS is
+  82,432/257,632 KiB. Validation, comparison, four tests, Ruff, and whitespace
+  checks pass. Begin GQ9 topology/cost fitting; warm remains opt-in.
 
 - **2026-07-15 — ADR-0180 lands lineage regression alarms.** Glaurung
   `a0e5f9f` adds post-identity 3% Axeyum, 3% ratio, 5% median-RSS, and 2%

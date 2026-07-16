@@ -389,8 +389,13 @@ session state.
 > ADR-0180 adds the alarms in Glaurung `a0e5f9f`: 3% Axeyum mean, 3%
 > normalized ratio, 5% median RSS, and 2% absolute Z3 drift, applied only after
 > every exact identity/correctness gate. Four tests and artifact self-compare
-> pass. Publish the clean full baseline next; thresholds are investigation
-> alarms, not substitutes for causal review.
+> pass. ADR-0181/Glaurung `51666a9` now publish the clean full baseline: six
+> hard-4-GiB processes execute all 92,721 exact checks with zero disagreements
+> or unknown splits; SurfacePen and NETwtw10 measure 0.242x/0.360x Z3 at
+> 82,432/257,632 KiB median RSS. The committed artifact is byte-identical to
+> the atomic runner output and passes validation/comparison. Begin GQ9
+> detected-reuse topology/cost fitting; thresholds remain investigation alarms,
+> not substitutes for causal review.
 > The capture and
 > implementation audit has been expanded into the dependency-ordered
 > [Glaurung QF_BV execution plan](docs/research/08-planning/glaurung-qfbv-execution-plan.md):
@@ -419,16 +424,16 @@ decisions or speedups.
 
 | ID | Roadmap item | Scope and exit criterion |
 |---|---|---|
-| **GQ1** | **Capture and profile real queries first** | **Native attribution, held-out identity, and alarms DONE for all available streams (ADR-0171--0180).** Exact v4 classifies solver work; repeated tiers validate 9/512, and the runner versions identity with 3%/3%/5% + 2% Z3 alarms. Publish a clean baseline; keep profiled/unprofiled bars distinct. |
+| **GQ1** | **Capture and profile real queries first** | **Native attribution and a clean held-out baseline are DONE for all available streams (ADR-0171--0181).** Exact v4 classifies solver work; repeated tiers validate 9/512, and the committed runner artifact versions identity with 3%/3%/5% + 2% Z3 alarms. Keep profiled/unprofiled bars distinct. |
 | **GQ2** | **Cheap always-on cold simplification tier** | Add a bounded, denotation-preserving one-shot tier for constant folding and trivial identities whose own cost is measured. Add a size/shape and cold-vs-warm policy that selects cheap, configured, or no preprocessing. Exit only when cold end-to-end time is non-worse in aggregate and improves the target class at the GQ1 validity gates. |
 | **GQ3** | **Coercion-cancellation peepholes and causal telemetry** | **Current measured tranche complete; use ablation as policy evidence.** Exact nested/concat/extension/coercion rules and ADR-0159's repeated default-minus-rule comparator are landed. `extract_extend` improves lowering, but all four measured rules change zero AIG nodes and clauses. Do not globally delete sound rewrites because one corpus does not fire them; instead, keep a Glaurung policy only for rules with measured reach/cost and reopen register-slice-specific work only when an ablation demonstrates downstream AIG/CNF or native-time reduction. |
 | **GQ4** | **Cold demand-driven bit-slice reduction** | **Out of the active queue.** ADR-0157 v1 is correct but regresses the real ratio about 1.42x→4.49x; ADR-0158's conservative admission is a safe no-op but does not improve the required family. Both remain explicit/off. Do not tune thresholds further on this corpus; only a qualitatively different constant-cost admission proof and a fresh client gate can reopen GQ4. |
 | **GQ5** | **Cheaper AIG construction and measured CNF encoding** | **First native AIG tranche accepted (ADR-0175).** Exact v4 attribution selects the low-hit `BTreeMap`; deterministic open addressing cuts three-driver Axeyum time 7.66% and ratio 0.742x→0.680x with unchanged AIG/CNF/replay/scopes and flat RSS. CNF is again dominant at 46.55%; internal AND flattening stays deferred. Reopen literal-copy ownership or CNF only from a fresh isolated native gate. |
 | **GQ6** | **Cold SAT/CDCL tuning** | **Material but behind measured warm CNF after ADR-0175.** Accepted-table native lineage spends 18.48% in SAT versus CNF's 46.55%. Compare identical emitted CNF across BatSat, the proof-producing core, and pinned CaDiCaL/Kissat only after the next CNF decision; preserve proof replay and deterministic limits. |
-| **GQ7** | **Cheaper warm entry and delta preprocessing** | **Bounded opt-in policy, executable gate, and alarms accepted (ADR-0171--0180, Glaurung `a0e5f9f`).** Nine sessions preserve the RSS/time tradeoff; 512 assertions cover held-out depth. Exact-work identity and alarms are enforced. Keep lineage opt-in; publish a clean baseline before automatic selection. |
+| **GQ7** | **Cheaper warm entry and delta preprocessing** | **Bounded opt-in policy and clean executable gate accepted (ADR-0171--0181, Glaurung `51666a9`).** Nine sessions preserve the RSS/time tradeoff; 512 assertions cover held-out depth. Exact-work identity, alarms, and the clean reference artifact are enforced. Keep lineage opt-in while GQ9 fits automatic selection. |
 | **GQ8** | **Verdict and CNF reuse for duplicate/prefix queries** | ADR-0170 measures 957/3,769 exact duplicate occurrences (25.4%), 439 same-lineage repeats, and 2,192 prefix extensions. ADR-0171 completes bounded native ownership but does not authorize a cache. First specify deterministic capacity/eviction plus content, solver/config, scope, and lineage identity; every hit still passes original-term model or proof replay and invalidation/versioning is explicit. |
-| **GQ9** | **Auto production policy and API guidance** | **Bounded opt-in admission is repeated, executable, and alarmed; automatic selection remains open.** ADR-0176--0180 validate 9/512 and exact identity. Publish a clean baseline, then fit topology/cost before setting warm reuse implicitly. GQ4 remains off. |
-| **GQ10** | **Ordered, wider real-lifter regression corpus** | **Repeated evidence, fail-closed runner, and alarms landed (ADR-0170--0180).** SurfacePen is 0.243x Z3; fixed-budget NETwtw10 is 0.360x. Glaurung versions exact identity and fails 3%/3%/5% plus 2% Z3 drift. Publish a clean baseline, ingest new families, and keep diagnostic bars separate. |
+| **GQ9** | **Auto production policy and API guidance** | **WIP: the clean prerequisite is complete; topology/cost fitting is next.** ADR-0176--0181 validate 9/512, exact identity, and the committed baseline. Fit detected-reuse activation against fixed off/lineage policies before setting warm reuse implicitly. GQ4 remains off. |
+| **GQ10** | **Ordered, wider real-lifter regression corpus** | **Clean per-commit baseline DONE for available held-out families (ADR-0170--0181).** SurfacePen is 0.242x Z3; fixed-budget NETwtw10 is 0.360x. Glaurung commits exact identity and enforces 3%/3%/5% plus 2% Z3 alarms. Ingest new families and keep diagnostic bars separate. |
 
 **Latest Glaurung execution order (2026-07-15; supersedes the earlier cold-path
 priority reset).** Earlier evidence reported an approximately 1.34x gated-bench
@@ -469,9 +474,9 @@ The ranked work is:
    ADR-0175 accepts deterministic open-addressed AIG sharing at a 0.680x
    actual-client ratio. Reopen CNF only with future-use/replacement evidence and
    AIG ownership only with a fresh isolated copy/locality hypothesis;
-3. **GQ10 clean baseline after automation:** publish a clean ADR-0180 artifact
-   under the accepted alarms, then ingest newly available families before any
-   automatic warm policy;
+3. **GQ10 clean baseline after automation:** **DONE in ADR-0181/Glaurung
+   `51666a9`.** Use the committed clean artifact for per-commit comparison and
+   ingest newly available families without mixing diagnostic bars;
 4. **Measured CNF work:** continue the proven encoding lane, but only from
    dominant gate-pattern attribution and a native-time gate after ADR-0163;
 5. **Causal rewrite policy:** use ablation to select Glaurung-relevant rules and
