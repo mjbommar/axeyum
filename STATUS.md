@@ -322,6 +322,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-16 — ADR-0203 closes the direct-delta gate and defers production
+  admission.** Six clean processes per artifact execute 92,721 exact checks
+  with complete Z3 agreement, unchanged findings, zero unknown/replay failures,
+  exact traffic, terminal-zero gauges, and the 4 GiB child limit. Direct entry
+  beats exclusive-transfer snapshot on SurfacePen/NETwtw10 Axeyum time by
+  10.98%/5.08%, so removing snapshot reconstruction is a real causal win. It
+  fails the actual serial-snapshot replacement gate: SurfacePen time/ratio rise
+  7.83%/9.54%, and NETwtw10 RSS rises 16.73%. Glaurung `12925e9` commits all
+  three artifacts and ADR-012. Direct stays opt-in; the next GQ7 implementation
+  target is source-identity/COW sibling-prefix sharing with exclusive mutable
+  ownership and both controls repeated.
+
 - **2026-07-16 — the real gate catches a direct-delta sibling soundness bug
   before default admission.** Combining depth-only direct retain markers with
   ADR-0199's complete-snapshot serial sibling lease produces 497/2,551
@@ -331,12 +343,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `f4da0eb` makes the incompatible lease ineffective in direct mode and uses
   exclusive LIFO transfer plus distinct sibling sessions. All 11 explorer tests
   pass, including the pure policy guard; the identical release stream then
-  agrees 2,551/2,551 with zero unknowns/replay failures. One-shot measurements
-  Single-process smokes show the honest tradeoff: direct improves the topology-equivalent transfer-
+  agrees 2,551/2,551 with zero unknowns/replay failures. Single-process smokes
+  show the honest tradeoff: direct improves the topology-equivalent transfer-
   only snapshot control (399.8 versus 434.6 ms Axeyum, RSS 79,464 versus 78,952
   KiB) but loses to serial snapshot (357.7 ms, 73,936 KiB). Repeat both controls;
   direct cannot default until it beats production or gains sound source-
-  identity/COW sibling sharing.
+  identity/COW sibling sharing. ADR-0203's repeated gate now supersedes these
+  smokes and confirms that decision.
 
 - **2026-07-16 — ADR-0202 accepts causal direct-delta warm profiling.**
   Glaurung `00bd660` advances the warm producer to v7 with an explicit
@@ -350,8 +363,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   and adaptive mixed summaries; Ruff and links pass. The full Glaurung backend
   group is 41/41 green after an immediate rerun of one known text-bridge timeout
   flake, and combined Z3+Axeyum adapter coverage passes. Profiling is no longer
-  the blocker: run repeated ordered direct-versus-snapshot decision, finding,
-  time, root-traffic, and RSS gates next.
+  the blocker; ADR-0203 records the completed repeated gate and defers default
+  admission.
 
 - **2026-07-16 — Glaurung wires the first-class session into the explorer,
   strictly opt-in.** Glaurung ADR-011/`f5a3b7a` gives every explorer state an
@@ -1731,15 +1744,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   | **GQ4 cold relevant bits** | **v1 and v2 DEFERRED after failed real gates.** v1 regresses ~1.42x→4.49x. V2 rejection overhead is bounded, but defaults admit 0/128 and +0.62% total; a 33-query moderate policy removes 632 AIG nodes/zero clauses and regresses bit blast 3.14% | Keep both explicit/off. Reopen only with an AIG/CNF-cone estimator or after word rewrites materially change the residual; do not tune thresholds further |
   | **GQ5 AIG/CNF construction** | **AIG tranche accepted; direct CNF-table transfer rejected (ADR-0175/0200).** AIG open addressing improves native time 7.66%, but the structurally exact CNF primary-table candidate regresses representative mean CNF/total 8.55%/3.67% and is reverted | Re-attribute a larger CNF subphase or encoding hypothesis; do not retry table micro-work without per-probe causal evidence |
   | **GQ6 cold SAT/CDCL** | **WIP foundation; behind measured CNF.** Accepted-table native lineage SAT is 18.48% weighted versus CNF at 46.55% | Compare identical CNF across cores only after the next CNF decision, with proof replay and deterministic limits |
-  | **GQ7 warm delta entry** | **Axeyum API, opt-in direct wiring, and v7 profiling DONE; direct sibling topology WIP (ADR-0201/0202; Glaurung `f4da0eb`).** Depth-only direct markers are proven incompatible with snapshot serial leases and now fail closed to exclusive transfer/distinct siblings | Repeat topology-equivalent snapshot/direct and production serial-snapshot gates; add source-identity/COW prefix sharing only under a new lifecycle proof |
+  | **GQ7 warm delta entry** | **API, opt-in wiring, v7 profiling, and dual-control gate DONE; production direct deferred (ADR-0201/0202/0203; Glaurung `12925e9`).** Exclusive direct ownership is sound and causally faster than equivalent snapshot entry, but loses serial-default time/RSS alarms | Implement source-identity/COW prefix sharing under an exclusive-ownership lifecycle proof, then repeat both causal and production controls |
   | **GQ8 verdict/CNF cache** | **DONE for available families (ADR-0192).** Clean repeated evidence admits exact same-arena scalar SAT reuse only in path-owned Glaurung sessions; fixed bounds, traffic partitions, cleanup gauges, findings, and replay are enforced | Preserve explicit off and re-gate new families; Axeyum's generic cache remains opt-in and ordinary UNSAT/Unknown/prefix verdicts remain excluded |
   | **GQ9 auto cost model/docs** | **DONE for available families (ADR-0186).** Clean adaptive repeat clears every alarm over 92,721 checks; downstream explorer default has explicit off/fixed controls | Re-gate newly captured families; do not broaden this Glaurung-specific default into Axeyum's generic API |
   | **GQ10 real-lifter regression tier** | **DONE for available families (ADR-0187/0188).** The corrected 162-query regular pin and repeated 30,628-query full composites have executable alarms | Retain separate cold/ordered/profile bars and re-gate new families |
 
-  **Next actions:** (1) run the accepted snapshot control versus Glaurung
-  `00bd660` opt-in direct deltas on repeated ordered drivers, using v7 to prove
-  translation/root deltas while preserving one-shot controls and all
-  replay/evidence/lifecycle/RSS alarms;
+  **Next actions:** (1) design source-identity/COW sibling-prefix sharing for
+  Glaurung's opt-in direct deltas, preserving exclusive mutable ownership and
+  using v7 to prove translation/root deltas while repeating one-shot, causal,
+  production, replay/evidence/lifecycle, and RSS controls;
   (2) obtain fresh native canonical-stage attribution and select any new GQ5/GQ6
   work only from a larger measured residual, not another primary-table analogy;
   (3) preserve the corrected
@@ -3535,7 +3548,7 @@ plan is built and committed on the current branch:
 ### Track 4 — Use Cases & Frontend
 | Phase | Title | Status |
 |---|---|---|
-| P4.1j | Glaurung warm delta and duplicate/prefix reuse (GQ7/GQ8) | **DONE for accepted serial snapshot families; direct-session topology/gate WIP.** ADR-0186/0192/0193/0195/0196/0199 establish adaptive snapshot ownership and serial LCP reuse. ADR-0201/0202 add first-class deltas/v7 attribution; Glaurung `f4da0eb` closes the measured equal-depth sibling error by forcing direct mode to exclusive transfer/distinct siblings. Repeat time/RSS gates; direct serial sharing needs source identity or COW under a new contract. |
+| P4.1j | Glaurung warm delta and duplicate/prefix reuse (GQ7/GQ8) | **DONE for accepted serial snapshot families; direct default deferred.** ADR-0186/0192/0193/0195/0196/0199 establish adaptive snapshot ownership and serial LCP reuse. ADR-0201/0202 add first-class deltas/v7 attribution; ADR-0203 accepts the causal direct-entry win but rejects production admission after the repeated serial time/RSS gate. Direct sibling sharing now requires source identity or COW under a new exclusive-ownership contract. |
 | P4.1e | Retained warm Boolean array relation flags | **DONE (ADR-0091)** — symbolic-memory path conditions can keep nested supported array equality atoms warm through private candidate-sensitive relation flags, guarded equality/diff observations, projection filtering, and replay |
 | P4.1h | Retained warm nested array-valued UF parameters | **DONE (ADR-0094)** — nested supported array-valued memory/function parameters can stay warm as full-value UF keys through private projection keys or rewritten structural keys, with relation-flag guarded congruence, private filtering, and replay |
 | P4.1g | Retained warm structural array-valued UF parameters | **DONE (ADR-0093)** — supported store/constant/array-ITE memory/function parameters can stay warm as full-value UF keys with scalar dependency retention, structural owner realization, relation-flag guarded congruence, private filtering, and replay; ADR-0094 subsequently lands nested application keys |
@@ -3557,6 +3570,13 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-16 — ADR-0203 defers the Glaurung direct-delta default.** The
+  repeated 92,721-check candidate passes every correctness/identity gate and
+  improves Axeyum time 10.98%/5.08% against equivalent transfer-only snapshot.
+  It fails replacement of serial snapshot on SurfacePen time/ratio and
+  NETwtw10 RSS (+16.73%). Glaurung `12925e9` commits all three clean artifacts
+  and downstream ADR-012. Direct remains opt-in; source-identity/COW sibling-
+  prefix sharing is the next GQ7 implementation target.
 - **2026-07-16 — real direct-delta gate catches and contains sibling aliasing.**
   The first SurfacePen run reports 497/2,551 verdict disagreements when a
   depth-only direct marker shares ADR-0199's serial snapshot owner across

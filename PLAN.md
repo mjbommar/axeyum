@@ -514,7 +514,7 @@ count as decisions or speedups.
 | **GQ4** | **Cold demand-driven bit-slice reduction** | **Out of the active queue.** ADR-0157 v1 is correct but regresses the real ratio about 1.42x→4.49x; ADR-0158's conservative admission is a safe no-op but does not improve the required family. Both remain explicit/off. Do not tune thresholds further on this corpus; only a qualitatively different constant-cost admission proof and a fresh client gate can reopen GQ4. |
 | **GQ5** | **Cheaper AIG construction and measured CNF encoding** | **Leading remaining pure-solver lane.** ADR-0175 accepts deterministic open-addressed AIG hashing. Current cold evidence still assigns about 84% to bit blast plus CNF and only about 15% to SAT; CNF is about 46% on the accepted cold bar. Continue measured CNF lookup/ownership and clause-emission work, with the rejected growing-AIG half-flattening candidate as a warning that immediate clause savings need retained-future-use or rollback evidence. |
 | **GQ6** | **Cold SAT/CDCL tuning** | **Partition by policy before acting.** SAT is only about 15% on the cold one-shot workload, so it remains behind GQ5 there. ADR-0199 collapses warm construction enough that SAT becomes 47.2% of its diagnostic candidate profile; compare identical retained CNF across BatSat/proof core/oracles before a warm SAT claim. Preserve proof replay and deterministic limits. |
-| **GQ7** | **Cheaper warm entry and delta preprocessing** | **Axeyum API, opt-in Glaurung direct-delta wiring, and causal profile contract are DONE; real-stream acceptance is pending.** The first real run correctly rejects depth-only direct deltas combined with snapshot-era serial sibling leasing (497/2,551 disagreements). Glaurung `f4da0eb` now forces direct mode onto sound exclusive LIFO owner transfer/distinct siblings; the same stream is 2,551/2,551 agreed. Compare this topology against its snapshot control and the faster serial-snapshot production policy before any default change. |
+| **GQ7** | **Cheaper warm entry and delta preprocessing** | **API, opt-in direct wiring, v7 profiling, and the repeated dual-control gate are DONE; production direct entry is deferred by ADR-0203.** Exclusive direct ownership fixes the 497/2,551 equal-depth sibling error and beats topology-equivalent snapshot on both held-out drivers, but regresses SurfacePen time/ratio and NETwtw10 RSS against the serial-snapshot default. Keep direct opt-in; next design source-identity/COW sibling-prefix sharing and repeat both controls. |
 | **GQ8** | **Verdict and CNF reuse for duplicate/prefix queries** | **Exact replay-checked SAT reuse is done for available families (ADR-0192); stronger subsumption remains open.** Exact hits replay under fixed bounds; ordinary UNSAT/Unknown and prefix verdict reuse remain forbidden. Investigate only replay-checked stronger-model reuse where a cached model is proven to satisfy the complete weaker later query. |
 | **GQ9** | **Auto production policy and API guidance** | **DONE for available serial families (ADR-0186/0199).** Adaptive 2→9 ownership plus serial sibling continuation reuse is the downstream default; ADR-0199 clears every time/ratio/RSS/environment alarm and improves RSS on both accepted drivers. Explicit one-shot, fixed, transfer-only, and serial-off controls remain. Re-gate wider families and never apply serial leases across parallel workers. |
 | **GQ10** | **Ordered, wider real-lifter regression corpus** | **DONE for current five-driver corpus; widening is the next evidence task (ADR-0187/0188/0199).** The 162-query representative and exact 30,628-query composites have executable alarms, while the warm production gate covers two held-out families. Add more realworld drivers and repeated full-process variance before generalizing the 0.24--0.36x historical warm range or the ADR-0199 default. |
@@ -526,10 +526,10 @@ stage rankings where the accepted evidence has changed.
 | Rank | Client requirement | Current action / gate |
 |---:|---|---|
 | 1 | Cold CNF/bit-blast micro-optimization | Lead the pure-solver lane with cold CNF lookup/ownership and clause emission. Cold lowering is about 84% versus about 15% SAT; accept only repeated real-corpus end-to-end gains with identical decisions/replay. |
-| 2 | First-class incremental `Solver` trait | **Contracts, opt-in explorer wiring, and profiling done in Axeyum ADR-0201/0202 and Glaurung ADR-011/`00bd660`.** Both sides expose object-safe retained sessions; Glaurung translates only confirmed persistent suffix roots, keeps probes temporary, advances markers only after acknowledgement, and emits fail-closed v7 entry partitions. Run the ordered correctness/time/RSS gate next; `assert_configured` remains warm-only. |
+| 2 | First-class incremental `Solver` trait | **Contract, opt-in explorer wiring, profiling, and dual-control gate done in ADR-0201/0202/0203 and Glaurung ADR-011/012.** Direct entry is correct under exclusive ownership and causally faster than equivalent snapshot entry, but fails production serial-snapshot alarms. Keep it opt-in; `assert_configured` remains warm-only. |
 | 3 | Safe automatic warm policy | **Done for current families in ADR-0186/0199.** Adaptive ownership, exact cache, owner transfer, and serial sibling leases default on only in the explicit explorer context; preserve all off/fixed controls and re-gate wider families. |
 | 4 | Lineage RSS Pareto knee | ADR-0198 rejects a third retained owner (+7.66% RSS); ADR-0199 instead reduces accepted SurfacePen/NETwtw10 RSS 6.11%/13.36%. Continue only topology/lifetime changes that clear the 5% alarm. |
-| 5 | Sibling-prefix structural sharing | **Done for complete-snapshot serial DFS, open for first-class direct deltas.** ADR-0199's exact LCP/pop/push lease depends on translating complete snapshots. A depth-only direct marker cannot distinguish equal-depth opposite siblings; `f4da0eb` therefore disables that lease after a 497-disagreement real failure. Direct COW/source-identity prefix sharing requires a new proof/lifecycle contract. |
+| 5 | Sibling-prefix structural sharing | **Next GQ7 implementation target.** Complete-snapshot serial DFS is accepted, while ADR-0203 proves exclusive direct entry cannot replace it yet. A depth marker cannot distinguish equal-depth opposite siblings. Design source-identity/COW prefix sharing with exclusive mutable solver ownership, bounded lifecycle/RSS, replay, and both causal plus production controls. |
 | 6 | Wider driver corpus and repetitions | Extend the two-driver production warm gate and five-driver cold pack across more `realworld` drivers with repeated processes and exact family/variance identity. |
 | 7 | Warm CNF dominant-cost attack | Historical pre-ADR-0199 warm CNF was 43.8%; serial sharing cuts CNF 66.8% and makes SAT 47.2% of that candidate profile. Re-profile each accepted policy and require retained-future-use or rollback evidence before retrying AND-half flattening. |
 | 8 | Stronger-than-exact replay cache | Test only SAT model subsumption: a retained model may answer a weaker later query only after evaluating every complete original assertion. Keep UNSAT/Unknown and unchecked prefix verdict reuse forbidden. |
@@ -559,8 +559,11 @@ and both focused explorer ownership tests are green; the selected adapter also
 passes with combined Z3+Axeyum features. The route remains behind
 `GLAURUNG_AXEYUM_DIRECT_DELTA=1`. Glaurung `00bd660` and accepted ADR-0202 now
 export and strictly validate per-check direct versus snapshot translation/root
-partitions. The remaining rank-2 work is the repeated ordered real-driver gate
-before claiming a production win or changing the default.
+partitions. ADR-0203 closes the rank-2 gate without a default change. Direct
+entry improves time 10.98%/5.08% against topology-equivalent snapshot on
+SurfacePen/NETwtw10, but loses the actual serial-snapshot production gate on
+SurfacePen time/ratio and NETwtw10 RSS. Keep it opt-in and move GQ7 to sound
+source-identity/COW sibling-prefix sharing.
 
 **Latest Glaurung execution order (2026-07-15; supersedes the earlier cold-path
 priority reset).** Earlier evidence reported an approximately 1.34x gated-bench
@@ -608,10 +611,10 @@ The ranked work is:
    reconstruction from an opt-in direct-delta route while preserving the full
    query for Z3/capture/fallback. Glaurung `00bd660`/ADR-0202 add exact v7
    direct-entry profiling. The first real run catches and `f4da0eb` closes the
-   depth-only/serial-sibling correctness conflict. Compare sound exclusive-
-   transfer direct entry against both its topology-equivalent snapshot control
-   and the current serial-snapshot production policy for decisions, findings,
-   time, root traffic, and RSS before any default change;
+   depth-only/serial-sibling correctness conflict. ADR-0203's repeated gate
+   accepts the causal direct-entry win but rejects production replacement on
+   time/RSS. Keep direct opt-in and implement source-identity/COW sibling-prefix
+   sharing before repeating both controls;
 2. **GQ1/GQ5 measured construction:** ADR-0174 defers internal AND flattening;
    ADR-0175 accepts deterministic open-addressed AIG sharing at a 0.680x
    actual-client ratio. Reopen CNF only with future-use/replacement evidence and

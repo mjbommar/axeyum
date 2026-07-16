@@ -489,6 +489,15 @@ Out of scope:
     temporary work. Historical snapshot schemas remain readable but cannot be
     silently reinterpreted; see
     [ADR-0202](../09-decisions/adr-0202-direct-delta-warm-profile-contract.md).
+- [x] May depth-only direct-delta ownership replace serial snapshot sibling
+      reuse by default?
+  - Answer: no. Equal-depth siblings are not source-identical, and sharing a
+    direct session by depth produced real wrong verdicts. Exclusive direct
+    ownership restores soundness and beats equivalent snapshot entry, but
+    fails the current serial-snapshot production time/RSS gate. Default
+    admission waits for source-identity/COW prefix sharing and both controls;
+    see
+    [ADR-0203](../09-decisions/adr-0203-defer-glaurung-direct-delta-default.md).
 - [x] What may an exact-verdict cache reuse without weakening evidence?
   - Answer: initially only an exact scalar SAT duplicate inside the same
     arena-bound `IncrementalBvSolver`, keyed by exact ordered assertion terms,
