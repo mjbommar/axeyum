@@ -54,8 +54,8 @@ strict builder `3b64aaf` produce a zero-exclusion five-driver tier with 30,628
 distinct scripts, including 7,953 scripts with wide roots. Eight clean
 Axeyum `f7f174c5` shard processes decide and agree on every script: raw is
 30.803 seconds / 0.446x Z3 and canonical v4 is 18.471 seconds / 0.269x Z3.
-The four shards are one exact full-corpus process envelope, not repetitions;
-repeat the complete composite before setting new variance alarms.
+The four shards are one exact full-corpus process envelope, not repetitions.
+ADR-0188 repeats the complete composite and installs guarded variance alarms.
 
 This note expands `PLAN.md` items GQ1--GQ10 into an executable sequence. It does
 not authorize changes to the Glaurung repository; producer-side and explorer
@@ -239,8 +239,12 @@ dry-run regression tests prevent accidental series mixing.
 ADR-0187 closes the corrected single-composite checkpoint: clean raw and
 canonical v4 shard sets cover 30,628/30,628 with zero semantic/replay failures
 at 0.446x and 0.269x Z3. The corrected 162-query tier is now the pinned regular
-semantic gate. A second complete clean shard set is still required before
-reporting run-to-run variance or installing cross-commit timing alarms.
+semantic gate. ADR-0187 left a second complete clean shard set as the required
+boundary before run-to-run variance or cross-commit timing alarms.
+ADR-0188 supplies that second set. Raw Axeyum/Z3/ratio CV is
+0.458%/0.558%/0.100%; canonical is 0.787%/0.150%/0.937%. Corrected-corpus
+cross-commit comparison now applies explicit 3% Axeyum, 3% ratio, 5% RSS, and
+2% Z3-drift alarms after exact identity validation.
 
 Every row requires 100% decided, zero errors, zero SAT/UNSAT disagreement, and
 zero replay/proof failures. Regression thresholds are set only after stable
@@ -627,7 +631,7 @@ clean artifact pins the exact Glaurung/Axeyum revisions and policy.
 | Milestone | Roadmap coverage | Stop/go decision |
 |---|---|---|
 | M0 byte-complete capture | GQ1, GQ10 | **Done in ADR-0187:** corrected atomic five-driver capture has 162 representative / 30,628 full scripts, 50 duplicate observations, zero conflicts, zero exclusions, and exact manifests/shard union |
-| M1 corrected cold baseline | GQ1, GQ10 | **Single clean composite done:** raw 0.446x and canonical v4 0.269x Z3 with all 30,628 decisions/replays green and <1.42 GiB child RSS. Repeat the four-shard composite before new variance alarms |
+| M1 corrected cold baseline | GQ1, GQ10 | **Done in ADR-0187/0188:** repeated full composites keep all 30,628 decisions/replays green, measure raw/canonical ratio CV at 0.100%/0.937%, and enable guarded 3%/3%/5% + 2% comparisons |
 | M2 diagnostic attribution | GQ1, GQ3--GQ5 | **Done for bounded cold/native phase/gate/AIG bars:** ADR-0160 covers one-shot; ADR-0172/0173 validate phase/CNF records; ADR-0174 separates immediate from retained CNF effects; ADR-0175 validates all 6,986 v4 AIG/memo/copy records |
 | M3 cheap exact rewriting | GQ2, GQ3 | **Done for the measured current shapes:** canonical v2 cuts corrected full total 13.3%, ADR-0153 cuts another 9.80%, accepted ADR-0155 reaches 5.625 s / 0.730x Z3, and ADR-0159 causally closes the current extract tranche without finding another AIG/CNF lever |
 | M4 demand lowering | GQ4 | **Deferred:** both v1 and admission-controlled v2 fail the representative performance gate while preserving correctness; keep explicit/off and reopen only from a different gate-cone hypothesis |
@@ -635,12 +639,13 @@ clean artifact pins the exact Glaurung/Axeyum revisions and policy.
 | M6 SAT re-attribution | GQ6 | **Done for bounded accepted-table lineage:** SAT is 18.48% weighted and remains behind CNF at 46.55% |
 | M7 ordered warm trace | GQ7, GQ8 | **Done for clean three-driver controls (ADR-0166--0170):** assertions, lineage/scopes/choices, backend timing, cold/snapshot/lineage controls, and memory validate |
 | M8 Glaurung warm integration | GQ7 | **Bounded admission repeated/executable/alarmed (ADR-0171--0180):** original lineage is 0.680x Z3; held-out 9/512 identity and alarms are accepted. Publish clean baseline before auto policy |
-| M9 auto policy and regression lane | GQ8--GQ10 | **GQ9 done and corrected cold lane refreshed:** adaptive warm admission is the downstream default for available families; the regular cold gate now pins the corrected 162-query pack. Full corrected timing alarms wait for repeated complete composites |
+| M9 auto policy and regression lane | GQ8--GQ10 | **GQ9/GQ10 done for current families:** adaptive warm admission is the downstream default; the corrected regular pin plus repeated full composites have executable identity and timing alarms. GQ8 cache semantics remain separate |
 
 ## Immediate next actions
 
-1. Repeat ADR-0187's complete clean four-shard raw/canonical composite and fit
-   variance before installing corrected-corpus per-commit alarms.
+1. Specify GQ8's deterministic bounded content/config/scope/lineage identity,
+   eviction, invalidation, and mandatory model/proof replay contract before
+   implementing verdict reuse.
 2. Keep the corrected 162-query regular semantic gate and exact full shard
    union pinned; reject exclusions, dirty source, incomplete manifests, or a
    raised memory envelope as substitutes for coverage.
@@ -654,7 +659,7 @@ clean artifact pins the exact Glaurung/Axeyum revisions and policy.
 5. Keep complete assertion/symbol capture and separate backend timing mandatory
    in every new ordered artifact; merge per-process traces atomically before
    GQ7/GQ8 cache or auto-policy work.
-6. Run every accepted cold candidate through repeated complete sharded full
+6. Run every accepted cold candidate through ADR-0188's guarded repeated sharded full
    comparisons. A threshold violation is a regression alarm to investigate,
    not permission to ignore raw controls or semantic gates.
 

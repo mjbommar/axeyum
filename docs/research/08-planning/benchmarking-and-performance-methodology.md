@@ -354,6 +354,16 @@ records the contract and the first measured baselines.
   shards; RSS is reported as the maximum child peak. Shards are parts of one
   corpus trial, never repetitions. Variance and cross-commit alarms require
   multiple complete composite runs.
+- ADR-0188 makes that repetition boundary executable. The shard-repetition
+  summarizer recomputes each complete composite and requires exact capture,
+  clean source/configuration, deterministic work, outcome, and shard identity.
+  The guarded cross-commit comparator permits only a different clean source
+  revision and code-induced construction counts; capture, environment,
+  toolchain, policy, and resources remain exact. Initial corrected-corpus
+  same-environment alarms are 3% Axeyum mean, 3% normalized ratio, 5% maximum
+  child RSS, and 2% absolute Z3 drift. Two full composites measure raw
+  Axeyum/Z3/ratio CV at 0.458%/0.558%/0.100% and canonical at
+  0.787%/0.150%/0.937%. These are regression alarms, not significance claims.
 - Five clean canonical full-tier processes at revision `0cfd6cdc` establish the
   first scheduled variance boundary: Axeyum total, Z3 total, and their ratio
   have 0.514%, 0.310%, and 0.510% CV respectively; every attributed stage is
