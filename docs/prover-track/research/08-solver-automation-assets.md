@@ -665,3 +665,45 @@ typeclass-free CIC fragment (closed `Nat`/`BitVec` goals, no binders over
 functions), build ingestion **and** model-lifting for exactly that, wire both
 gates, measure it — then widen one obstacle at a time. Do not let the translator's
 coverage grow ahead of its two gates.
+
+
+---
+
+## CORRECTION (2026-07-15): the carrier-bounding claim in this note is FALSE
+
+This note states that QF_UF's 54–67% decide rate "is achieved *by bounding the
+carrier*", citing `SCOREBOARD.md:51-53` and the `-bounded` / `-overbound` slice
+names. **That is a misreading, and it propagated into the thesis, the synthesis,
+ADR-0167, and the prompt for note 12 — where it generated a false wrong-`unsat`
+alarm.**
+
+Traced to the code and the harness:
+
+| Term | What it actually means |
+|---|---|
+| **`overbound`** | Over the **eager Ackermannization size budget** → take the lazy route. `euf.rs:250`: *"Only engage when the EAGER bound would have refused."* A **performance** decision. |
+| **`-uninterp-sorts`** | *"remeasure after first-class uninterpreted sorts"* (`scripts/gen-dominance-scoreboard.py:189`) — a **feature landing**, not a bound. |
+| **`bounded` vs `bounded-uninterp-sorts`** | **The identical row** — 82 files, 44 decided, 54%, PAR-2 4.845. The same slice under two labels. |
+
+And there is **no uninterpreted-carrier cardinality bounding anywhere** — not in
+`crates/axeyum-solver/src/`, not in the harness. The only `domain_size` is
+`finite_bv_domain_size` (`array_finite.rs:216`), which bounds **BV index domains**
+at 2^width — genuinely finite, and unrelated.
+
+**Consequences:**
+
+1. **There is no wrong `unsat`.** Note 12's GAP-3 audit ("trace whether any `unsat`
+   was claimed under a hard bound outside EPR") was raised from this false premise
+   and dissolves with it. QF_UF is decided by congruence closure, which is complete
+   for the fragment — no bound is involved.
+2. **What the 54% actually reflects is now unexplained and owed.** 82 files → 44
+   decided, 13 unknown, 24 unsupported. That story has not been written.
+3. **Note 12's EPR analysis stands on its own merits** — it is correct model theory
+   about *when bounding would be sound*. It simply describes a technique we do not
+   use.
+
+**The lesson, and it sharpens the session's rule.** My heuristic was *"trust what
+came from reading or running code."* This note **is** a code audit, and its main
+findings hold. But *this* claim came from reading a **scoreboard slice name**, not
+code — and I trusted it by association with the note's provenance rather than by
+its own. **Provenance attaches to claims, not to documents.**

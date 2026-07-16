@@ -542,3 +542,149 @@ downstream on the prover track depends on it.
 - Dafny 2025 workshop, proof stability: https://popl25.sigplan.org/details/dafny-2025-papers/5/Towards-Proof-Stability-in-SMT-based-Program-Verification
 - SMT instability conjecture (EPFL): https://dslab.epfl.ch/pubs/smt-instability-conjecture.pdf
 - Slow & brittle proofs: https://kirancodes.me/posts/log-proof-localisation.html
+
+---
+
+## Addendum — primary-source verification (2026-07-15, late)
+
+Every number below was extracted from a fetched primary source. Supersedes any
+looser figure above.
+
+### The headline pair: 99% irrelevant context causes 78% of instability
+
+**Shake** (FMCAD 2024, [PDF](https://www.cs.cmu.edu/~mheule/publications/shake.pdf)):
+
+- **96.23–99.94% of the context sent to the solver is irrelevant** (measured
+  against solver-produced unsat cores). Median relevance: `DICE*F` **0.06%**.
+- **Irrelevant assertions account for 78.3% of observed instability.**
+- Replace a query with its unsat core: **90.3% of unstable queries become stable.**
+- Shake itself achieves **29% (Z3) / 41% (cvc5)** reduction — far short of 78%.
+
+**This is the empirical case for our architecture stated by someone else:**
+untrusted fast search over the slice you actually need. Verus prunes natively; F*
+**adopted pruning from Verus and it is now on by default**, reported as matching
+unsat-core replay for stability.
+
+### Instability is a property of the undecidable fragment — now with the A/B
+
+**Mariposa** (FMCAD 2023, [extended PDF](https://www.jaybosamiya.com/publications/2023/fmcad/mariposa-extended.pdf)),
+17,043 queries / 6 projects: **2.6% unstable at latest Z3, up to 5.0% per project.**
+
+The decisive comparison — **same system, two encodings**:
+
+| | Unstable |
+|---|---|
+| `KomodoD` (Dafny, undecidable) | **5.01%** |
+| `KomodoS` (Serval, **decidable fragment**) | **0.52%** |
+
+~10×, and only 5.01% → 4.27% after controlling for query mix. **Linear types did
+not help.** Corroborating: Cazamariposas measures **timeout** failures at a median
+**270,396** quantifier instantiations vs **4,587** for quick-unknowns — **~59×**.
+And AWS's Zelkova does [a billion decidable SMT queries a day](https://link.springer.com/chapter/10.1007/978-3-031-13185-1_1)
+without instability being the story.
+
+**A finite-domain, bit-blast-to-SAT core is structurally on the good side of this
+line.** That is now a defensible measured claim, not a hope.
+
+### Verus is measurably better, and it is a design recipe
+
+**~1% unstable** (70/7,584 across 10 projects) vs Dafny/F*'s 2.6–5%. Cause, per
+[Verus SOSP'24](https://www.andrew.cmu.edu/user/bparno/papers/verus-sys.pdf):
+**(a) aggressive context pruning, (b) deliberately conservative triggers, (c)
+separating bit-vector from integer reasoning.** The IronFleet→Verus port: **95%
+smaller queries, 10× faster.** (a) and (c) map onto our architecture directly.
+
+Note the explicit trade Verus chose: cautious triggers mean "**more initial effort
+for users writing small projects, but better scalability to large systems
+projects**." Automation *traded away* for stability, on purpose.
+
+### The counter-thesis, co-signed by Z3's author — take it seriously
+
+[*A Conjecture Regarding SMT Instability*](https://dslab.epfl.ch/pubs/smt-instability-conjecture.pdf)
+(Cebeci, **Bjørner**, Candea, Pit-Claudel):
+
+> "We conjecture that the instability experienced by verifiers today is **often
+> caused by fixable engineering problems, and is thus not fundamental**."
+
+**11 case studies, all root-caused**: 6 solver bugs, 2 misconfigurations, 3
+misaligned trigger expectations. "In all 11, the heart of the problem was
+**neither a bad encoding nor bad luck**."
+
+Corroborating from Mariposa's own bisect: **285 queries** regressed between Z3
+4.8.5 and 4.8.8; **67% blamed on two commits** (~10 lines each, both about
+**flattened-disjunction ordering**), and **Z3 merged a fix**.
+
+**So "SMT is inherently brittle" is not established** — and a plan that leans on
+it is leaning on a contested claim. Ours should lean on the *decidable-fragment*
+evidence instead, which is measured and uncontested.
+
+Also a **negative result**: input normalization
+([arXiv 2410.22419](https://arxiv.org/pdf/2410.22419)) "reduc[ed] instability on
+one benchmark by 20%, while increasing it on another by 76%. **Cumulatively,
+their approach increased instability by 4%.**"
+
+### SMT at scale demonstrably worked
+
+[Project Everest retrospective](https://project-everest.github.io/assets/everest-perspectives-2025.pdf)
+(TOPLAS 2025/26): **>600,000 proof obligations** in ~80,000 Z3 queries;
+proof-to-code **2:1**; verdict — "Our experience with SMT solving was, **on the
+whole, positive**." HACL* ships in Firefox, the Linux kernel, mbedTLS, WireGuard.
+
+**Do not sell "SMT is broken."** It isn't. What is true is narrower and better:
+the pain concentrates in undecidable, quantifier-heavy encodings, and **0.74% of
+queries consume 50.51% of SMT time** — "a few hard proofs end up taking most of
+the time, and are **usually the ones that break most often**."
+
+### Everest names our thesis as the unattempted direction
+
+Three facts from the same paper, and together they are the strongest external
+argument for certificates:
+
+1. F* was **pinned to a 2019 Z3** for years "**a major reason why**" being that
+   upgrades broke proofs.
+2. The solver "**behaves differently on Windows versus macOS**"
+   ([Z3 #7859](https://github.com/Z3Prover/z3/issues/7859)).
+3. They name **full SMT proof reconstruction (Sledgehammer-style) as "an
+   interesting but challenging direction"** — i.e. *wanted and unattempted at
+   scale*.
+
+**Unsat-core record/replay is the field's best-in-class mitigation, and it is a
+weaker version of what proof artifacts do natively.**
+
+Practitioner priority, independently: instability ranked **#2 of 100+ catalogued
+SMT stakeholder issues** — behind only "**better diagnostic output when the solver
+is unable to solve a problem**." Both are things we claim to be good at.
+
+### For the instability ratchet (T6.3.6): concrete design
+
+- **Seeds are the weakest detector.** Mariposa RQ4: of unstable queries in
+  `KomodoD`, **36.9% found only by assertion shuffling**, 6.8% only by renaming,
+  **3.9% only by reseeding**. Shuffle + rename matter more than seeds.
+- **Longer timeouts don't fix it** — at 2.5× the limit, "the unstable proportion
+  stays remarkably consistent."
+- **Dafny's shipped threshold**: coefficient of variation **< 20%** on resource
+  count, `--max-resource-count 200000`. `dafny-reportgenerator` treats **5% CoV**
+  as robust.
+- **Use resource counts, not wall-clock** — machine-independent and deterministic,
+  which is already our determinism promise.
+
+### Cedar Dafny→Lean: do not overclaim it
+
+[Shah, POPL'24 SRC](https://bhaktishh.github.io/papers/popl-24-src-abs.pdf): the
+stated reason is **not** brittleness — it is that "**meta-theoretic properties…
+have proved less suitable for Dafny's automation. To ensure robust performance and
+minimal maintenance, highly detailed proofs are better.**" AWS's public framing
+mentions Lean's runtime, libraries, and small TCB, and **does not mention Dafny or
+brittleness at all**. Honest read: **automation ran out at the meta-theory.**
+
+### Claims that do not exist — do not cite
+
+- **"Aleo"** — no such Verus tool. Likely a conflation of Shake / Verus's built-in
+  pruning / `broadcast`.
+- **"Mariposa 2"** — does not exist. Lineage: Mariposa → Shake → Cazamariposas →
+  the SMT-COMP Instability Track proposal.
+- **"X% of developer time fighting the solver"** — **no credible published figure
+  exists.** The closest is a telemetry study of 8 experts (55–65% of time on
+  spec/proof). Do not cite a number here.
+- **"Amazon: one of two top priorities"** — traces to "Private communication,
+  2024." No public source.

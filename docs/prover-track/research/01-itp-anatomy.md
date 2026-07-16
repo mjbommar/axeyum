@@ -1,19 +1,142 @@
-# The Anatomy of an ITP Above Its Kernel
+# The Anatomy and Design Space of Proof Construction Above a Kernel
 
 Research note. Status: survey + orientation for the axeyum prover track.
-Date: 2026-07-15.
+Date: 2026-07-15. Last reframed: 2026-07-15.
 
 Context: axeyum has `crates/axeyum-lean-kernel` (~15.5k LoC Rust: CIC, universes,
 dependent Pi, inductives + recursors, WHNF, defeq, trusted admission gate) and
-**nothing above it**. This note maps what "above it" actually contains, what it
-costs, and what the load-bearing engineering decisions are.
+**nothing above it**. This note maps the *design space* of what "above it" can
+contain, what each choice costs, and what it buys.
 
-**The single most urgent finding is in §2.4 — the in-tree kernel appears to have
-the Prop large-elimination unsoundness *right now*. Read that section first.**
+**Framing — this note is not a gap list.** We are not trying to reproduce Lean.
+Lean *compatibility* (consuming and emitting artifacts a Lean kernel accepts) is
+an asset worth keeping; Lean *imitation* (reproducing MetaM, the elaborator
+surface, Mathlib's tactic culture) is a trap that costs person-decades and buys
+little that a certificate-first culture doesn't already reach another way. Lean
+appears below as **one well-documented point in the space**, cited heavily
+because it is the best-instrumented — not because it is the target. Read every
+"Lean does X" as "X is one option, and here is its price."
+
+Section map: **§0** the design space (three architectures, including one nobody
+takes); **§1** Lean as a worked example of the proof-term point; **§2** the
+de Bruijn criterion and the empirical soundness-bug record; **§3** LCF vs.
+proof-term in the abstract; **§4** other points in the space; **§5** what is
+genuinely hard; **§6** sizing.
 
 ---
 
-## 1. Lean 4: what is in the kernel, what is outside
+## 0. The design space
+
+Three architectures for "how does a claim become trusted." They are usually
+presented as two. The third is the interesting one for us.
+
+### 0.1 LCF discipline (Isabelle/HOL, HOL Light, HOL4)
+
+The rules of the calculus are sealed in an abstract data type `thm` in a
+strongly-typed host language. The *only* values of `thm` are axiom instances and
+the results of inference-rule operations — there is no other constructor. Tactics
+are **ordinary host-language functions**; they need no privilege because the type
+system is the guard. Proofs are *performed but not recorded*: the system
+remembers results, not steps
+([Paulson, "The de Bruijn criterion vs the LCF architecture"](https://lawrencecpaulson.github.io/2022/01/05/LCF.html)).
+
+- **Buys:** a tiny trusted base (HOL Light: a few hundred lines of OCaml).
+  Zero proof-object memory cost. Tactic authors cannot be unsound *no matter what
+  they write* — worst case they fail. Extensibility is free.
+- **Costs:** proofs are ephemeral. Nothing to hand a third party; no independent
+  re-checking; reproducing a result means re-running the prover. You trust *this*
+  implementation of the ADT — and the host language's abstraction guarantee (an
+  `Obj.magic`, a broken module seal, a host bug, and it is over).
+
+### 0.2 de Bruijn / proof terms (Automath, Rocq, Lean, Agda)
+
+Generation and checking are **independent programs**: the prover emits a term, a
+small kernel checks it (§2.1).
+
+- **Buys:** the artifact is real and portable. Anyone with a checker verifies it —
+  including one they wrote themselves, in another language. The search engine may
+  be arbitrarily untrusted: buggy, heuristic, ML-driven, adversarial. This is
+  precisely axeyum's stated identity: **untrusted fast search, trusted small
+  checking.**
+- **Costs:** proof objects fill memory — the chief drawback already visible in
+  Stanford LCF, and the reason Rocq users deploy so many tricks to reduce the
+  burden (Paulson, ibid.). The kernel is larger than a `thm` ADT because it must
+  implement defeq, universes, and recursor reduction. And a bigger kernel has
+  bugs (§2.3).
+
+### 0.3 The third option: certificate-first construction
+
+Nobody in the ITP world takes this as the *primary* idiom, and axeyum is
+unusually positioned for it — because it is already how the SMT side works.
+
+A "tactic" is neither a function returning `thm` (LCF) nor a function building a
+proof term (Lean). It is a **procedure that emits a certificate in a format with
+an independent checker**. The certificate is the interface; a kernel term, if
+wanted at all, is a derived artifact.
+
+The precedents exist in pieces, unassembled: DRAT/LRAT (axeyum has both a
+producer and `check_drat`), SMT proof formats (Alethe, LFSC, veriT), Rocq's
+reflective tactics (`ring`, `micromega`/`lia` — literally "emit a certificate,
+check it by computation"), and Lean's `bv_decide` (§1.5). Isabelle's Sledgehammer
+is the same shape socially: untrusted external ATPs search, reconstruction
+produces the `thm` (§4).
+
+- **Buys:** each tactic's trust story is **local and testable in isolation**. A
+  per-class checker is small enough to fuzz to death — which is exactly the muscle
+  this repo already has (differential fuzzing, soundness-negative tests, corpus
+  sweeps, degenerate-argument seed classes). It is also the natural interface for
+  **agent drivers**: an agent emits a candidate certificate, a checker accepts or
+  rejects, and no agent ever needs privileged access to a `Thm` constructor.
+  Rejection is *data*, not a crash. And a checked certificate is immune to the
+  brittleness that kills tactic scripts (§5.8): it does not care about goal order
+  or hypothesis names.
+- **Costs:** a format per tactic class, and N classes means N formats and N
+  checkers absent a common substrate. Certificate→term reconstruction can be
+  slower than direct construction — this is the known bottleneck in SMT-to-ITP
+  integration.
+- **The substrate question is CLOSED — see [`11-dedukti-and-substrates.md`](11-dedukti-and-substrates.md).**
+  This note called λΠ-modulo "a serious candidate"; it was researched afterwards
+  and **rejected**. Dedukti *grows* the TCB (small kernel **+** your rewrite theory
+  **+** external confluence (CSI^HO) **+** termination (SizeChangeTool) **+** an
+  adequacy proof). Logipedia's multi-system export is not free — it weakens content
+  to *constructive simple type theory* first — and no Dedukti bit-vector theory
+  carrying real BV proofs exists (that literature is LFSC/CVC4). CoqInE has chased
+  CIC universe polymorphism since ~2012 and was still chasing it in 2024. **And
+  three of the translated libraries this note cites below — Holide, Focalide,
+  Universo — have since fallen off Deducteam's own software page.** Read the
+  original claim as of its date, not as current.
+- The original claim, for the record: λΠ-calculus modulo rewriting is a
+  serious candidate: Dedukti implements LF + rewriting, and libraries from HOL
+  Light, Matita, Zenon modulo, iProverModulo and FoCaLiZe have been translated in
+  and checked
+  ([Dedukti](https://www.semanticscholar.org/paper/Dedukti-:-a-Logical-Framework-based-on-the-%CE%BB-Modulo-Assaf-Burel/b83480c7d1578d8e6eb57fa1fda46d051a715ace);
+  [Translating HOL to Dedukti](https://arxiv.org/pdf/1507.08720);
+  [Logipedia](https://arxiv.org/pdf/2305.00064)). A Dedukti-family checker
+  (Kontroli) was built specifically to be safe, fast and *concurrent*
+  ([CPP'22](https://arxiv.org/pdf/2102.08766)) — evidence the small-checker story
+  survives real libraries and real performance needs.
+
+### 0.4 Summary — and the point that they are not exclusive
+
+| | trusted base | artifact | can a tactic be unsound? | independent re-check |
+|---|---|---|---|---|
+| LCF | tiny ADT + host language | none (ephemeral) | no (type-sealed) | no |
+| de Bruijn | kernel (defeq, universes, inductives) | proof term | no (kernel rejects) | yes |
+| Certificate-first | per-class checker (small, fuzzable) | certificate (+ derived term) | no (checker rejects) | yes, per class |
+
+The live option for axeyum is **all three at once**: a de Bruijn kernel (built),
+a sealed Rust `Theorem` newtype over it (LCF's cheap win — §3.3), and
+certificate-emitting procedures as the primary tactic idiom (our existing
+culture). No system has assembled this combination, and the reason looks
+historical rather than principled: LCF systems could not afford proof objects in
+1979, and CIC systems inherited a human-first surface.
+
+---
+
+## 1. Lean 4 as a worked example of the proof-term point
+
+Lean is the best-instrumented system in the space, so it is the most useful
+specimen. Everything here is *one set of answers*, priced — not a specification.
 
 ### 1.1 The split
 
@@ -79,6 +202,48 @@ asset.** Every line is trusted.
   (metavariables) that get solved later; the elaborator is fundamentally a
   constraint solver, not a translator.
 
+#### 1.3.1 Essential vs. Lean-specific accident
+
+The list above is *Lean's* answer. Decomposed by what it buys and whether it is
+forced:
+
+| Feature | What it buys | Essential? |
+|---|---|---|
+| Implicit args + unification | `f a b` not `@f α β inst a b` — makes dependent types *writable* | **Essential if humans write terms.** Not if terms are machine-generated. |
+| Typeclass resolution | ad-hoc polymorphism, algebraic hierarchy, `Decidable` inference | Essential *for a Mathlib-scale library*. A proof-search problem in disguise; Lean needed a whole tabled-resolution procedure for performance ([Lean 4 paper](https://link.springer.com/chapter/10.1007/978-3-030-79876-5_37)). |
+| Coercions | `(n : ℕ) + (r : ℝ)` works | Convenience. Price: coercion diamonds. |
+| Hygienic macros / notation | user-extensible syntax without capture bugs | Lean's distinctive bet ([Beyond Notations](https://arxiv.org/abs/2001.10490)). Good work; genuinely optional. |
+| Overloading, `do`-notation, deriving | ergonomics; programming-language ambitions | Lean-specific. **Lean is a programming language as well as a prover**, and much of the elaborator serves that second identity — which axeyum does not have. |
+
+**The observation that matters:** most of elaboration exists to close the gap
+between *what a human wants to type* and *what the kernel demands*. The size of
+that gap is a function of **who writes the terms.**
+
+If the writers are agents and certificate-emitting procedures, the gap differs in
+kind: machines do not mind `@f α β inst a b` and do not need coercions — but they
+*do* need unification (to be goal-directed at all) and *do* benefit from something
+typeclass-shaped (to find the right lemma). So "agents don't need elaboration" is
+**too glib**: an agent writing explicit terms needs a type checker with
+*machine-parseable* errors, and an agent searching needs metavariables. What
+agents plausibly don't need is the **surface-syntax half** — notation, macros,
+coercion insertion, overloading — which is also the larger and more
+accident-laden half, and the half that poisons error messages (§5.6).
+
+**What logical frameworks show about the floor.** Dedukti's answer is that a very
+small core (λΠ + rewriting) can host *many* logics, including CoC-strength ones,
+by **encoding rather than by growing the kernel**
+([Embedding Pure Type Systems in λΠ-modulo](https://www.researchgate.net/publication/220727323_Embedding_Pure_Type_Systems_in_the_Lambda-Pi-Calculus_Modulo)).
+The trade is explicit and instructive: **it has essentially no elaboration at
+all.** It is not for humans to write in — it is for machines to emit into and
+checkers to read. Logipedia demonstrates this past toy scale. That is a real,
+working point in the space, and much closer to axeyum's culture than Lean's is.
+
+**The cost of skipping elaboration, stated plainly:** a system with no elaborator
+is one **humans will not author proofs in**, hence one that will not grow a
+library, hence one whose lemma stock must come from *import* or *generation*.
+That is a strategic commitment, not a free lunch — and it makes someone else's
+library your dependency and their refactors your problem (§6).
+
 ### 1.4 The tactic framework
 
 The monad stack is the architecture
@@ -108,6 +273,44 @@ Consequences worth internalizing:
   metaprogramming book flags failing to do so as a standard bug class.
 - Tactic *soundness* is not a concern (kernel re-checks). Tactic *usability* is
   the entire product.
+
+#### 1.4.1 Is a metavariable/goal representation genuinely unavoidable?
+
+**Essentially yes, for goal-directed proof.** "Goal-directed" *means* working
+backwards from an unknown to be filled, and "an unknown to be filled" is a
+metavariable under some name. The only choice is how explicit and principled the
+representation is:
+
+- a **hole in a term** (Lean's `MVarId`);
+- a **subgoal in a sequent** (classic LCF tactics: a goal list + a validation
+  function — same content, less general, *no dependency between goals*);
+- a **hypothesis in a certificate to be discharged** (the §0.3 idiom).
+
+What *is* avoidable is the expensive version: **dependent** metavariables, where
+solving one goal changes the *type* of another, plus delayed assignment,
+postponed unification constraints, and universe metavariables. That machinery is
+most of why `MetaM` is big. A system whose goals are non-dependent — or whose
+dependencies are resolved before search begins — gets a dramatically smaller
+engine. This is roughly why HOL's tactic layer is so much smaller than Lean's,
+and it is a **fragment choice, not a cleverness gap** — exactly the kind of
+choice this repo makes well (cf. ADR-0014's first arithmetic fragment,
+ADR-0025's bounded strings).
+
+**The minimal machinery, honestly:** a goal type, a context, a way to say "this
+goal is discharged by *this* evidence," a composition combinator (sequencing +
+alternation), and a final check. Everything else — backtracking disciplines,
+focusing, monadic state, hygiene — is scale management, and should be bought only
+when scale demands it.
+
+**The ceiling on typed tactic languages.** Ltac2 is the deliberate do-over for
+Ltac1, consciously ML-lineage — noting that *historical ML was itself designed as
+the tactic language for the LCF prover*
+([Ltac2 docs](https://rocq-prover.org/doc/V8.19.0/refman/proof-engine/ltac2.html)).
+The instructive admission is that even Ltac2 **cannot statically guarantee the
+resulting term is well-typed**; well-typedness is deferred to dynamic checks, a
+conscious concession (ibid.). You can type the *meta* level; the object level
+stays dynamic unless you go fully dependent. So a typed tactic DSL buys
+maintainability, not soundness — soundness already came from the kernel.
 
 ### 1.5 The automation tier — and the one that matters most for axeyum
 
@@ -265,7 +468,7 @@ ordinary defeq checks, not just exotic proof terms. Lean4Lean handles this with 
 dependent-type kernel needs a fuel/depth budget as a first-class parameter, and
 that is normal, not a hack.*
 
-### 2.4 ⚠ The Prop large-elimination hole — axeyum appears to have it
+### 2.4 The Prop large-elimination hole — found and fixed in-tree (resolved)
 
 **The rule.** Most inductive *propositions* may eliminate only into `Prop`.
 Allowing a general `Prop` inductive to eliminate into `Type` is **inconsistent
@@ -318,24 +521,75 @@ Lean's exact syntactic-subsingleton criterion, and the same complete exploit is
 an active negative regression. The pinned real-Lean gate in `a10c8cde` checks a
 regenerated restricted `Prop` recursor and its iota behavior.
 
-**Resolution:** [ADR-0165](../../research/09-decisions/adr-0165-lean-compatible-prop-large-elimination.md)
-records the rule, adversarial universe/field matrix, former-exploit inversion,
-and mandatory external compatibility gate. This closes the immediate P0; it
-does not by itself prove complete equivalence with Lean's kernel.
-2. Implement the two-clause syntactic criterion in recursor generation: compute
-   an `elim_level` for the inductive — if the inductive's sort is `Prop` and it
-   fails the criterion, the motive must be constrained to `Prop`.
-3. Note the criterion needs care under **universe polymorphism** (`Sort u` that
-   *might* be `Prop`) — this is exactly the recurring universe-bug category from
-   §2.3, so the conservative answer (constrain unless provably not `Prop`) is the
-   right one.
-4. Add a fuzz seed-class generating `Prop` inductives with 0/1/2+ constructors and
-   with data fields present/absent from the output type — mirroring the hard rule
-   about degenerate-argument fuzz classes for partial operators.
+**Resolution.** [ADR-0165](../../research/09-decisions/adr-0165-lean-compatible-prop-large-elimination.md)
+records the rule, the adversarial universe/field matrix, the former-exploit
+inversion, and a mandatory external compatibility gate. Commit `d26ad887`
+applies the two-clause syntactic criterion in recursor generation: compute an
+`elim_level` for the inductive; if its sort is `Prop` and it fails the criterion,
+the motive is constrained to `Prop`. The complete former exploit is now an active
+negative regression, and the pinned real-Lean gate in `a10c8cde` checks a
+regenerated restricted `Prop` recursor and its iota behaviour. This closes the
+P0; it does **not** by itself prove complete equivalence with Lean's kernel.
 
-Until then, the kernel's "trusted admission gate" is not trustworthy, and any
-evidence artifact it underwrites is worth nothing. Everything else in this note
-is subordinate to fixing this.
+Residual work the record says to expect:
+
+- The criterion needs care under **universe polymorphism** (`Sort u` that *might*
+  be `Prop`) — exactly the recurring universe-bug category of §2.3, so the
+  conservative answer (constrain unless provably not `Prop`) is the right one.
+- A fuzz seed-class generating `Prop` inductives with 0/1/2+ constructors and with
+  data fields present/absent from the output type — mirroring CLAUDE.md's hard
+  rule about degenerate-argument fuzz classes for partial operators.
+
+**Why this episode is the most useful evidence in the note.** It is a live,
+in-tree instance of the exact bug family §2.3 catalogues (impredicativity ×
+proof irrelevance × elimination), it was found by *reading the kernel against the
+metatheory* rather than by testing, and it sat behind an admission gate that was
+otherwise passing. §2.5 draws the posture lesson.
+
+### 2.5 How these bugs are actually found — and what test posture catches them
+
+Read across §2.3 and §2.4, the mechanisms that have *historically* found kernel
+soundness bugs are a short and unflattering list:
+
+1. **Attempting verification.** Lean4Lean found a real bug — the 20-bit
+   `looseBVarRange` overflow — "entirely theoretically," before any proof was
+   finished. Trying to prove the kernel correct localizes the lie.
+2. **Independent re-implementation.** Lean4Lean, nanoda, trepplein, `coqchk`.
+   Writing a second checker surfaces where the reference disagrees with its own
+   paper.
+3. **Adversarial paradox construction by experts.** Hurkens/Girard encodings,
+   Coquand–Abel. People deliberately trying to derive `False`.
+4. **Reading the code against the metatheory** — how axeyum's own §2.4 bug was
+   found.
+
+**Example-based testing appears nowhere on that list.** Every bug in §2.3 lived
+at a *feature seam*, not inside a feature: template polymorphism × universe
+constraints; primitive projections × the guard condition; module subtyping ×
+primitives; impredicativity × proof irrelevance × subsingleton elimination.
+Nobody finds these by testing one feature at a time, and latency is measured in
+*years* even in the most-scrutinised kernel in the field.
+
+Posture this repo can actually adopt, in value order:
+
+- **A `derives_false` corpus where every entry asserts *rejection*.** Hurkens,
+  Girard, the §2.4 `Prop` large-elimination exploit (already in place), negative-
+  occurrence inductives, universe-constraint escapes. Cheap, and the highest value
+  per hour available at this altitude.
+- **CLAUDE.md's degenerate-argument rule, lifted to kernel altitude:** *every
+  kernel restriction gets a fuzz generator that deliberately violates it.* A
+  positivity checker with no fuzz emitting negative occurrences is not tested. The
+  `a946f925` lesson — the fuzz "passed" only because it structurally could not
+  emit `(div x 0)` — is precisely how a positivity hole would hide.
+- **Fuzz the seams, not the features.** Generate *combinations*: impredicative
+  `Prop` × proof irrelevance × eliminator; universe metavariable × `max`/`imax` ×
+  cumulativity; nested inductive × primitive projection.
+- **A slow reference checker as a differential control.** Our Z3-oracle and
+  DRAT-recheck idiom at kernel altitude. Lean's bugs came from kernel
+  *optimizations*; a deliberately naive, obviously-correct checker is the control
+  that catches those. Caveat from §2.3: Coq's module-strengthening bug lived in
+  **both** the kernel and `coqchk` — diversity only helps if the implementations
+  are genuinely independent, which argues for borrowing someone else's checker
+  over writing a second one ourselves.
 
 ---
 
@@ -575,19 +829,60 @@ group and not volunteers.
 
 ## What this implies for axeyum
 
-**1. Fix the Prop large-elimination hole before anything else (P0).**
-`inductive.rs:37` grants arbitrary `Sort v` elimination to every inductive
-including `Prop`-valued ones, while `tc.rs:916` implements definitional proof
-irrelevance. That combination is the classical inconsistency (§2.4). Per
-CLAUDE.md — "soundness is a method, not an excuse" — the response is a
-soundness-negative test that *must* fail to admit `B : Prop | t | f` eliminating
-to `Bool`, then the two-clause syntactic criterion in recursor generation, then a
-fuzz seed-class over `Prop` inductives with 0/1/2+ constructors and data fields
-in/out of the output type. **No prover-layer work should land above a kernel whose
-admission gate is unsound**; the whole architecture's value is that the kernel is
-the one thing you trust.
+Design-space choices **open to us** — not a gap list. We are not behind; we are
+unusually positioned, because we arrive with a kernel, a certificate culture, and
+no library obligations. The systems in §6 are not ahead of us on a shared track;
+they are at different points in a space, having paid different prices.
 
-**2. Watch kernel LoC as a liability.** 15.5k Rust vs. Lean's ~6k C++. Every
+**1. The three architectures are not exclusive, and the combination is ours to
+take.** De Bruijn kernel (built) + a sealed Rust `Theorem` newtype (§3.3 —
+LCF's cheap win, near-zero cost, and `#![deny(unsafe_code)]` makes our seal
+*stronger* than OCaml's) + certificate-emitting procedures as the primary tactic
+idiom (§0.3 — our existing culture). No prover has assembled all three, and the
+reason looks like historical accident rather than principle. Isabelle's
+LCF-ADT-plus-optional-proof-terms is the existence proof that two of the three
+compose.
+
+**2. Certificate-first (§0.3) is the genuinely differentiated bet.** We already
+ship DRAT + `check_drat` + replay-checked models. "Tactics emit checkable
+evidence rather than terms" is not exotic *here*; it is the SMT stack's existing
+idiom lifted an altitude, and it is the natural interface for agent drivers — an
+agent proposes a certificate, a checker accepts or rejects, and no agent needs a
+privileged constructor. The open questions deserve ADRs before commitment:
+(a) **one** certificate substrate (λΠ-modulo? our own?) or N per-class formats;
+(b) what certificate→term reconstruction costs, given reconstruction is the known
+SMT-to-ITP bottleneck; (c) do agents emit certificates directly, or terms from
+which we derive certificates?
+
+**3. Elaboration is a dial, not a switch — decide *who writes terms* before
+turning it.** The evidence (§1.3.1) says the surface-syntax half (notation,
+macros, coercions, overloading) is the large, accident-laden,
+error-message-poisoning half, and Metamath/Dedukti prove a system can deliver
+real mathematics with *none* of it. The unification-and-implicits half is harder
+to skip, because goal-directed search needs it. Provisional read: **skip the
+surface half, keep a minimal unifier**, and accept the consequence honestly —
+humans will not author here, so our lemma stock must come from import or
+generation. That is a strategic commitment deserving an ADR, not a default. A
+corollary that costs nothing if decided now and a lot if decided late: **the
+error contract must be machine-parseable**, because our consumers are agents.
+
+**4. Metavariables are unavoidable; *dependent* metavariables are a choice.**
+(§1.4.1) Pattern unification + non-dependent goals is a dramatically smaller
+engine than `MetaM`. Start in the small fragment, widen on evidence and an ADR —
+the same discipline as ADR-0014 and ADR-0025.
+
+**5. Our kernel bug (§2.4) is evidence our instincts are right — now make it
+infrastructure.** The historical record (§2.5) says these bugs are found by
+attempted verification, independent re-implementation, adversarial paradox
+construction, and reading code against the metatheory — *not* by example tests,
+and latency is measured in years. Concretely available now: a **`derives_false`
+corpus** asserting *rejection* (Hurkens, Girard, our exploit, negative-occurrence
+inductives, universe escapes); **CLAUDE.md's degenerate-argument rule lifted to
+the kernel** — every restriction gets a generator that deliberately violates it;
+**seam fuzzing** over feature *combinations*, since every historical bug lived at
+an interaction; and **a slow reference checker as differential control**.
+
+**6. Watch kernel LoC as a liability.** 15.5k Rust vs. Lean's ~6k C++. Every
 deferred feature (nested inductives, mutual inductives, reflexive constructors,
 indexed recursion) will *add* trusted lines. Budget for this and resist
 accelerations: §2.3 shows that **every Poincaré-principle optimization — bignum
@@ -595,7 +890,7 @@ accelerations: §2.3 shows that **every Poincaré-principle optimization — big
 site in Coq or Lean.** If axeyum adds a fast-path `Nat`, it needs its own
 soundness-negative suite.
 
-**3. Rust-specific hazards from the record.** Lean's kernel bug was a **20-bit
+**7. Rust-specific hazards from the record.** Lean's kernel bug was a **20-bit
 cached de Bruijn field that overflowed and defaulted to 0** because `panic!`
 continued execution. Audit every `Expr` metadata cache in
 `axeyum-lean-kernel/src/expr.rs` for saturating/wrapping arithmetic and
@@ -604,7 +899,7 @@ too-large value is conservative; 0 is catastrophic. Also: defeq **does not
 terminate** (Coquand–Abel), so a fuel/depth parameter is mandatory, not optional;
 Lean4Lean's 1000 sufficed for all of Mathlib.
 
-**4. `bv_decide` is the map — and axeyum can beat it on trust.** Lean's
+**8. `bv_decide` is the map — and axeyum can beat it on trust.** Lean's
 bit-blast→SAT→LRAT→checker pipeline is architecturally identical to
 `axeyum-bv`→`axeyum-cnf`→`check_drat`, but Lean's checker runs by reflection via
 `ofReduceBool`, dragging the **entire Lean compiler into the TCB**. Axeyum's
@@ -614,14 +909,14 @@ strictly smaller TCB than Lean's. Do *not* give it away by reifying LRAT steps a
 CIC proof terms — that is the path that exhausted Lean's memory and forced the
 reflection compromise.
 
-**5. Adopt the Isabelle/Sledgehammer shape, not the Coq shape.** The lesson from
+**9. Adopt the Isabelle/Sledgehammer shape, not the Coq shape.** The lesson from
 §4 is that the winning integration of a fast untrusted solver with a trusted
 kernel is *not* proof-term import. It is: solver finds it → certificate is
 checked by a small independent checker → the kernel-level artifact is a `Theorem`.
 Axeyum already has the solver and the checker. The missing piece is the
 `Theorem`-producing bridge, and it is much smaller than a proof-term translation.
 
-**6. LCF-disciplined API over a de Bruijn kernel.** Rust's privacy rules enforce
+**10. LCF-disciplined API over a de Bruijn kernel.** Rust's privacy rules enforce
 an abstract `Theorem` type *better than OCaml does* (no `Obj.magic`), and
 `unsafe_code` is already denied workspace-wide. Take the LCF ergonomics *and*
 keep the `Expr` proof term for export and third-party re-checking. Isabelle's
@@ -630,7 +925,7 @@ this argues for a `axeyum-lean-thm`-style boundary crate whose only constructors
 route through the kernel's admission gate — and per ADR-0001, only once a
 consumer proves the boundary.
 
-**7. Build the export format early; kernel diversity is the payoff.** The reason
+**11. Build the export format early; kernel diversity is the payoff.** The reason
 independent Lean checkers exist is a stable export format. Axeyum's kernel should
 emit one (Lean's `.olean`-adjacent export text format is the obvious target —
 it would let `lean4checker`/`nanoda`/Lean4Lean re-check axeyum's output, which is
@@ -639,7 +934,7 @@ from §2.3: Coq's module-strengthening bug lived in **both** the kernel and
 `coqchk` — diversity only helps if implementations are truly independent, which
 argues *for* borrowing someone else's checker rather than writing a second one.
 
-**8. Be realistic about scope, and pick the narrow win.** Coq and Isabelle are
+**12. Be realistic about scope, and pick the narrow win.** Coq and Isabelle are
 ~40-year projects; Lean took ~13 years and now needs a funded FRO; Mathlib is
 2.1M lines and 772 contributors. Axeyum will not have a Mathlib. **That is fine
 and it should be the strategy**: axeyum's north star is *reasoning with
@@ -680,3 +975,231 @@ axeyum should be most reluctant to build, and should build *last*, if ever.
 - [Zulip: soundness bug: native_decide leakage](https://leanprover-community.github.io/archive/stream/270676-lean4/topic/soundness.20bug.3A.20native_decide.20leakage.html)
 - [lean4lean repository](https://github.com/digama0/lean4lean)
 - [Small Scale Reflection for the Working Lean User, arXiv:2403.12733](https://arxiv.org/pdf/2403.12733)
+
+---
+
+## Addendum — kernel soundness, measured (2026-07-15, late)
+
+Numbers marked **[measured]** were counted from source clones on 2026-07-15, not
+taken from secondary claims. Several widely-repeated figures turned out stale.
+
+### The one clean empirical win for kernel diversity
+
+> **`lean4checker` rejected Carneiro's `native_decide` proof of `False` that
+> Lean's own kernel accepted** — because it does not implement `reduceBool`.
+
+That is the entire empirical case for independent checkers, and it is **one data
+point**. It is also worth more than the abstract argument, and it is the best
+justification for `axeyum-lean-kernel`'s existence that this track has found.
+
+The exploit ([Zulip, Carneiro 2023-10-10](https://leanprover-community.github.io/archive/stream/270676-lean4/topic/soundness.20bug.3A.20native_decide.20leakage.html))
+proved `False` with **no axiom dependency showing**, probabilistically (~1/4),
+because `reduceBool` executed compiled code twice with different results. Fixed by
+[lean4#2654](https://github.com/leanprover/lean4/pull/2654), introducing
+`trustCompiler` so `#print axioms` sees it.
+
+### Genuine independence is rarer than assumed — three corrections
+
+- **`coqchk` is NOT an independent checker.** Its `checker/dune` **links
+  `rocq-runtime.kernel`** — the same 43,709-line kernel, same conversion machine.
+  It is ~3,931 lines of *additional* logic layered on the shared kernel. **A kernel
+  conversion bug is not caught by coqchk by construction.** Coq ships *no*
+  independent kernel implementation.
+- **`lean4lean` is explicitly not independent.** Its own README: "It is derived
+  directly from the C++ kernel implementation, and as such **likely shares some
+  implementation bugs with it (it's not really an independent implementation)**."
+  Its value is *metatheory* and bug-discovery — it found
+  [lean4#10475](https://github.com/leanprover/lean4/issues/10475) — not diversity.
+- **`nanoda_lib` is Lean 4 and current** (last commit 2026-06-02, **9,203 lines**
+  [measured]), not a Lean-3-era artifact.
+
+**So a genuinely independent, from-scratch kernel is rare.** Ours (~15.5k lines)
+is one — which is a stronger claim than anything in the thesis's differentiator
+list, and it was sitting there unstated.
+
+### TCB sizes [measured]
+
+| System | Component | Lines |
+|---|---|---:|
+| HOL Light | `fusion.ml` (whole kernel) | **548 non-blank** (676 total) |
+| Lean 4 | `src/kernel/` (C++, 37 files) | **7,888** |
+| Coq/Rocq | `kernel/` | **43,709** |
+| nanoda_lib | Rust | **9,203** |
+| **axeyum-lean-kernel** | Rust | **~15,500** |
+| mmverify.py | Python | **708** (653 non-blank) |
+
+**Stale figures to stop repeating:** HOL Light's "~400 lines" (Wiedijk's, now
+**548**); mmverify.py's "350 lines" (a 2002 number, now **708**).
+
+HOL Light's real virtue is not LoC but surface: **exactly 10 primitive inference
+rules** [measured].
+
+### The finding that explains our P0
+
+> **"Small trusted kernels get verified; the bugs live in the parts that aren't
+> small."**
+
+Coq's [`dev/doc/critical-bugs.md`](https://github.com/rocq-prover/rocq/blob/master/dev/doc/critical-bugs.md)
+documents **78 critical bugs** [measured], **5 still unfixed**:
+
+| Area | Bugs |
+|---|---:|
+| Conversion machines | 20 |
+| **Typing constructions (incl. guard checker)** | **15** |
+| Universes | 13 |
+| Module system | 10 |
+| Axiom conflicts in library | 7 |
+
+*Coq Coq Correct!* ([DOI](https://doi.org/10.1145/3371076)), verbatim: "**on
+average, one critical bug has been found every year in Coq.**"
+
+**And the coverage is anti-correlated with the risk.** MetaCoq verifies PCUIC
+"**without the module system, template polymorphism and η-conversion**" — i.e. it
+excludes precisely the areas responsible for **23 of the 78**. The guard checker —
+verified by nobody, 15 entries — produced a relative inconsistency that survived
+from **V6.1 (1997) to 9.0.1 (2025)**, ~28 years
+([#21053](https://github.com/rocq-prover/rocq/issues/21053)), and still has an
+**open** issue ([#22024](https://github.com/rocq-prover/rocq/issues/22024), 2026).
+
+**Read this against our own incident.** Our P0 lived in `inductive.rs` — at 1,081
+lines, the largest trusted blob in the kernel, and the one P3.6's own task table
+calls "the biggest trusted blob." The pattern is not ours; it is the field's.
+
+### Lean's `native_decide` hole is being closed — a differentiator evaporating
+
+`trustCompiler`, `reduceBool`, `ofReduceBool`, `ofReduceNat` now all carry
+[measured]:
+
+```
+@[deprecated "in-kernel native reduction is deprecated; assert native evaluations
+with axioms instead" (since := "2026-02-01")]
+```
+
+Per [Lean 4.29.0](https://lean-lang.org/doc/reference/latest/releases/v4.29.0/)
+(2026-03-27), native computation (`native_decide`, **`bv_decide`**) is now **one
+axiom per computation** asserting the specific equality obtained.
+
+**Note 03 cites `bv_decide`'s `ofReduceBool` trust cost as an opening for us.
+That opening is closing.** Do not build a plan on it.
+
+Lean's remaining kernel trust surface [measured, `ee0963c`]: **14
+kernel-accelerated `Nat` operations** computing on GMP (`type_checker.cpp:611-637`)
+— each trusted C++ that must agree with the Lean-level definition; definitional
+proof irrelevance (`:838-845`); function **and structural** eta; quotients as
+primitives (`quot.cpp`, 117 lines, 4 constants); three axioms — `propext`,
+`Quot.sound`, `Classical.choice`.
+
+### Lean's kernel is sound only relative to a **trusted prelude** — and so is ours
+
+`lean4lean/divergences.md` is unusually candid, and the parallel to our situation
+is exact:
+
+> "`checkPrimitiveDef`, `checkPrimitiveInductive`: **Lean does not check that
+> primitives are declared with the correct types and definitional behavior**,
+> except in the case of `Eq`… **This is required for soundness**, but Lean is able
+> to get away with it because **Lean ships its prelude and using an alternative
+> prelude is not supported**."
+>
+> "literal case: The original code was **not checking that the literal type
+> actually exists**. Again, this is okay **provided that the prelude is trusted**."
+
+**That assumption is invisible in the LoC count.** Lean's kernel is 7,888 lines
+*plus a prelude nobody checks*. Ours is ~15,500 lines *plus 64 axioms nobody has
+proved* (T6.0.6). Same shape, and ours is worse: Lean's prelude is at least
+*definitional*, while our arithmetic carrier is an opaque `Declaration::Axiom`.
+
+So when we state a TCB, "the kernel" is not the boundary — **the kernel plus its
+prelude** is. Any comparison of kernel sizes that omits the prelude flatters
+everyone, us included.
+
+### Pollack-consistency — a class we have not considered
+
+Wiedijk, [*Pollack-inconsistency*](https://www.cs.ru.nl/~freek/pubs/rap.pdf)
+(ENTCS 285, 2012). The point is that **the de Bruijn criterion is necessary but
+not sufficient**:
+
+> "it also should not be possible to think that a theorem that actually is false
+> has been proved... **not only the proof checking kernel has to be taken into
+> account when considering the reliability of a system, but also the interface
+> code.**"
+
+| System | Verdict |
+|---|---|
+| HOL Light | **strongly Pollack-inconsistent**, weakly super-inconsistent |
+| Isabelle | **strongly Pollack-inconsistent** — `notation True ("False")` then `lemma False` *prints as proved* |
+| Coq | weakly Pollack-super-inconsistent (coercions: `Check 1` prints `0`) |
+| **Metamath** | ✅ **Pollack-consistent** — parsing/printing are the identity |
+
+**This bears directly on `lean_pp.rs`** (1,598 lines): it prints terms for a human
+or for real Lean to re-check. If `parse(print(t)) ≠ t`, the cross-check validates
+something other than what we proved. Wiedijk's fix is cheap — print, re-parse,
+compare, fall back to a failsafe printer on mismatch — and **nobody has checked
+whether our printer is well-behaved**. A candidate task for P6.0.
+
+His community diagnosis is worth keeping: "*If no problem is felt, then in some
+sense there is no problem.*" That is exactly the attitude that let our P0 sit.
+
+### The de Bruijn criterion, canonically
+
+Barendregt & Geuvers, *Handbook of Automated Reasoning* (2001), p. 1151:
+
+> "**A proof assistant satisfies the de Bruijn criterion if it generates
+> 'proof-objects' (of some form) that can be checked by an 'easy' algorithm.**"
+
+And the tension we should name rather than paper over — the **Poincaré principle**
+(computations need no proof) *trades against* it:
+
+> "**This puts somewhat of a strain on the de Bruijn criterion** requiring that the
+> verifying program be simple." … "If the Poincaré principle is adopted for
+> βδι-conversion, the verifying program is more complex than the one for just
+> βδ-conversion."
+
+Every kernel accelerator — Lean's 14 GMP `Nat` ops, our `Lit` reduction plans —
+buys speed by spending de Bruijn simplicity. That is the axis T6.0.4 and T6.0.7
+are trading on, and it should be stated as a trade.
+
+**And the bill is measured.** The largest single category of Coq's 78 critical
+bugs is **conversion machines: 20 of 78** — the VM, the native compiler, the lazy
+machine. That is the Poincaré principle's cost, empirically, exactly where
+Barendregt & Geuvers predicted it in 2001. Lean's own docs on `native_decide`:
+"**the Lean compiler and interpreter become part of your trusted code base. This
+is extra 30k lines of code.**" And the field is self-correcting — Lean deprecated
+in-kernel native reduction on **2026-02-01** in favour of per-computation axioms,
+a move *back toward* de Bruijn.
+
+**This is strong empirical support for a split axeyum already made.** The
+DRAT/`check_drat` architecture — compute fast in untrusted code, emit an artifact,
+check it with a small independent checker — is precisely the alternative to
+putting the accelerator *inside* the kernel. Every shortcut inside the checker is
+a shortcut no evidence artifact covers, and 20/78 is what that costs at scale.
+
+**The direct consequence for T6.0.4 (`Lit` typing + bignum):** we are about to add
+literal arithmetic to a trusted kernel. That is the same bargain Coq lost 20 times.
+Either the literal ops must be *checked* rather than trusted, or the trade must be
+made deliberately and written down — not inherited because Lean did it.
+
+### Coverage boundary of this addendum — stated, per our own rule
+
+*Verification Theatre*'s finding is that the undocumented **boundary** is what
+bites, not bad work. So: what this addendum did **not** research, and must not be
+read as covering.
+
+| Area | Status |
+|---|---|
+| **Isabelle** | **Not covered.** Kunčar & Popescu's overloading inconsistency, Isabelle's TCB size, and Isabelle kernel bugs are all unresearched. Isabelle has no public equivalent of Coq's `critical-bugs.md` — itself a citable asymmetry. |
+| **Metamath Zero** (Carneiro) | **Not covered.** A real omission: it is the central artifact for minimal-TCB arguments, and we are making a minimal-TCB argument. |
+| Metamath quantitative claims | The "5 verifiers" rule, Metamath 100 count, set.mm size — **search-derived only**, unconfirmed against `us.metamath.org`. Only `mmverify.py`'s 708 lines is measured. |
+| Dedukti / Logipedia | **Search-only.** No kernel LoC, no coverage percentages, no liveness check. |
+| HOL Light bugs | Arthan's RJ2 is sourced. A "2006 `new_specification` bug" and a "`SUBST` bug" were looked for and **not substantiated** — probably misattributed. Candle not covered. |
+| Girard 1972 / Coquand 1986 | Cited from secondary sources; primary documents **not verified**. |
+| Lean bug coverage | **Illustrative, not a systematic label sweep.** |
+
+Two premises that were checked and found **false** — recorded so nobody re-derives
+them:
+
+- **Coq #7825 is not a kernel/soundness bug.** It is a tactics/unification PR
+  (verified via the GitHub API). Use #20413 / #21053 / #22024 as the modern
+  guard-condition exemplars instead.
+- **`nanoda_lib` is a current Lean 4 checker** (last commit 2026-06-02), not a
+  Lean-3-era artifact. That matters: it is one of the very few *genuinely*
+  independent implementations, and our kernel is ported from it.

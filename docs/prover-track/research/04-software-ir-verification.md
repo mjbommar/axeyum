@@ -243,12 +243,35 @@ enough to be hand-written and therefore bug-prone.
   <https://cryspen.com/post/ml-kem-verification/>,
   <https://cryspen.com/post/ml-kem-implementation/>
 
-Skeptical counterweight: **"False Assurance in Formally Verified Cryptographic
-Libraries", IACR ePrint 2026/192** (<https://eprint.iacr.org/2026/192.pdf>) —
-argues verified crypto libraries carry meaningful gaps between the claim and the
-delivered guarantee. Cite this every time someone says "it's verified." (Note:
-direct fetch 403'd during this survey; claims here are from the search index —
-**flag as unconfirmed, re-verify before relying on it.**)
+Skeptical counterweight — **now confirmed, and it is sharper than expected**:
+**"Verification Theatre: False Assurance in Formally Verified Cryptographic
+Libraries"**, Nadim Kobeissi (Symbolic Software), IACR ePrint 2026/192, received
+2026-02-05 (<https://eprint.iacr.org/2026/192>).
+
+Its thesis: the vulnerability is not in the proofs, it is in the **verification
+boundary** — the undocumented interface between machine-checked code and the
+trusted-but-unverified code around it. Users cannot tell where the guarantee
+stops, so they assume it doesn't.
+
+The receipts: **13 vulnerabilities that escaped formal verification** in
+**libcrux** and **hpke-rs** (Cryspen), with AWS's libcrypto as comparison:
+- **9 in unverified code adjacent to verified code** — an endianness bug causing
+  **real Signal decryption failures**, missing X25519 validation, nonce reuse via
+  integer overflow, FIPS 204 spec violations.
+- **4 inside the verified code itself** — wrong decompression constants, a
+  missing inverse operation, a **false serialization proof**, and a
+  multiplication *specification* error that undermined the AVX2 proofs.
+
+Read that last group carefully. Four bugs *in verified code* means the proofs
+were checked and still wrong, because **the specs were wrong** — the same
+"verification finds spec defects" pattern as §1.3 and §2.1, but here it runs in
+the other direction: the spec defect *survived* the proof and shipped.
+
+Kobeissi's remedies are, notably, artifact-engineering remedies, not proof-theory
+ones: systematic boundary documentation, **proofs executed in CI/CD**, explicit
+scope communication. That is an evidence-artifact agenda, and it is the same one
+SymCrypt's README implements (§3.2) and the same one §7.3 recommends for us.
+Cite this paper every time someone says "it's verified" — including us.
 
 ### 3.2 microsoft/SymCrypt `feature/verifiedcrypto` — the headline event
 
@@ -304,21 +327,50 @@ multi-architecture intrinsics.
 
 ### 3.3 Why Lean and not F\*, given HACL\* history?
 
-This is the question worth the most. **Caveat up front: neither Microsoft blog
-post contains an explicit "we rejected F\* because X" statement.** I looked; the
-comparison is conspicuously absent. So what follows is inference from stated
-rationale + structural facts. Treat it as argued, not sourced.
+This is the question worth the most. **Caveat up front, now verified by direct
+fetch of both posts (2025-06 and 2026-07): neither Microsoft blog contains an
+explicit "we rejected F\* because X" statement. The 2025-06 post does not mention
+F\* or HACL\* at all.** For a Microsoft/INRIA effort whose personnel and problem
+domain *are* the HACL\* lineage, that silence is itself information: this is
+being presented as a new pipeline, not as a migration away from something. So
+what follows is inference from stated rationale + structural facts. Treat it as
+argued, not sourced.
 
-The stated reason (MSR blog, 2025-06):
+The stated reason (MSR blog, 2025-06 — full quote, direct fetch):
+> "We chose Aeneas because it helps provide a clean separation between code and
+> proofs. Developed by Microsoft Azure Research in partnership with Inria … Aeneas
+> connects to proof assistants like Lean, allowing us to draw on a large body of
+> mathematical proofs—especially valuable given the mathematical nature of
+> cryptographic algorithms—and benefit from Lean's active user community."
+
+Note the grammar of that sentence: **the choice being defended is _Aeneas_, and
+Lean arrives as its consequence.** That is the whole answer, and it is easy to
+miss. Condensed:
 > "Aeneas connects to proof assistants like Lean, allowing us to draw on a large
 > body of mathematical proofs—especially valuable given the mathematical nature
 > of cryptographic algorithms"
 
-Plus: "clean separation between code and proofs," and Lean's active community.
 The 2026 post adds Lean's "small trusted kernel" and "extensibility" for custom
-automation.
+automation, plus two limitations worth recording: intrinsics need "small,
+carefully reviewed Lean specifications" rather than automated verification, and
+multi-target compilation requires translating the code once per architecture.
 
 The real drivers, as best I can reconstruct:
+
+0. **The question is slightly wrong: they didn't choose Lean over F\*, they chose
+   Aeneas — and Lean came with it.** Aeneas ships backends for F\*, Rocq, HOL4,
+   and Lean, but **Lean is the main backend**; Lean and HOL4 are the only mature
+   ones, because they carry what Aeneas's output actually needs: support for
+   partial functions, extrinsic proofs of termination, and tactics specialized
+   for monadic programs (<https://aeneasverif.github.io/projects/>,
+   <https://github.com/AeneasVerif/aeneas>). So once you have decided the source
+   of truth is **Rust** rather than F\* (driver 4 below), and therefore that you
+   need a Rust→model translator, and therefore Aeneas — **Lean is the default,
+   not a comparison you run.** F\* was never a live option at the point the
+   decision was actually made; it was excluded one step upstream. This reframing
+   matters for us: the leverage in this pipeline is in *which translator wins*,
+   not which prover wins, and drivers 1–3 explain why the translator that won
+   points at Lean.
 
 1. **Mathlib is the moat, and PQC is the forcing function.** HACL*/F* was built
    for an era where crypto meant curves and hashes — bounded machine-integer
@@ -738,11 +790,19 @@ Two independent findings — the Rust std campaign (**zero new memory-safety bug
 after 16 months and 16,748 harnesses; what it found was bad SAFETY comments and
 doc errors) and Alive2 (**8 patches to the LLVM LangRef**) — say verification's
 realized value is *specification defects*, not code defects. Neither community
-leads with this. ePrint 2026/192 "False Assurance in Formally Verified
-Cryptographic Libraries" (<https://eprint.iacr.org/2026/192.pdf> — **unconfirmed,
-403'd on fetch, re-verify before citing**) attacks the gap between claim and
-guarantee. SymCrypt's README is the counter-model: enumerate the TCB, say what
-you don't cover. Axeyum's existing hard rules (`unknown` is first-class; every
+leads with this. And Kobeissi's "Verification Theatre" (ePrint 2026/192,
+**confirmed**, <https://eprint.iacr.org/2026/192>) supplies the third: **13
+vulnerabilities escaped verification in libcrux/hpke-rs, four of them _inside_
+verified code**, because the specs were wrong. His diagnosis is precisely the
+**verification boundary** — users can't see where the guarantee stops.
+
+Take this personally rather than as gossip about a competitor. Axeyum will make
+claims of exactly this shape, and the failure mode is not "our proofs are wrong,"
+it's "nobody could tell what our proofs covered." SymCrypt's README is the
+counter-model: enumerate the TCB, say what you don't cover (they state plainly
+that leakage resistance is out of scope). Kobeissi's remedies — documented
+boundaries, **proofs run in CI**, explicit scope — are things we can just do, and
+(1)/(3) above are how. Axeyum's existing hard rules (`unknown` is first-class; every
 `sat` checkable by replay; never ship a wrong sat/unsat) are **already** this
 posture. Keep it, and make it explicit in the prover-track's public claims —
 in a field this full of overclaiming, a precisely-scoped claim is a feature.
@@ -751,11 +811,27 @@ in a field this full of overclaiming, a precisely-scoped claim is a feature.
 
 ## Open questions / follow-ups
 
-- **Confirm ePrint 2026/192** (403'd during this survey). Its argument, if it
-  holds, is directly relevant to how we scope evidence claims.
-- **No sourced "why Lean not F\*" statement exists.** §3.3 is inference. If a
-  Microsoft/Cryspen talk or paper states it directly, it would firm up the most
-  strategically important reading in this note.
+- ~~Confirm ePrint 2026/192~~ **CLOSED (2026-07-15).** Confirmed: Kobeissi,
+  "Verification Theatre," ePrint 2026/192, 2026-02-05. 13 escaped
+  vulnerabilities in libcrux/hpke-rs, **4 of them inside verified code** (bad
+  specs, incl. a false serialization proof). See §3.1. Directly relevant to how
+  we scope evidence claims — and its remedy (documented verification boundary +
+  proofs in CI) is an artifact-engineering agenda we can execute.
+- ~~No sourced "why Lean not F\*" statement~~ **CLOSED as far as it can be
+  (2026-07-15).** Direct fetch of both MSR posts confirms no explicit comparison
+  exists; the 2025-06 post never mentions F\*/HACL\*. But the framing was wrong:
+  the quoted rationale defends **Aeneas**, and Lean is Aeneas's main (and, with
+  HOL4, only mature) backend. F\* was excluded one step upstream, by choosing
+  Rust-as-source-of-truth. See §3.3 driver 0. **Residual question, now the more
+  useful one: is the Aeneas-vs-hax translator choice the real contested seam?**
+  Cryspen's hax still leads with F\* and its Lean backend is catching up — so
+  the same "Rust-first" premise yields *different* provers depending on which
+  translator you pick. That, not Lean-vs-F\*, is where the decision lives.
+- **Unfetched, worth one retry**: Fromherz, "Verification of Rust Cryptographic
+  Primitives with Aeneas" (2026-01, Creach Labs,
+  <https://www.creachlabs.fr/sites/default/files/public/media/document/2026-02/2026_01_fromherz.pdf>)
+  — PDF fetch returned raw binary. Most likely public source for SymCrypt
+  person-effort numbers, which no blog post discloses.
 - **`bv_decide` performance vs. axeyum on BV goals** — is there measurable
   headroom, or is this already good enough that nobody's shopping? This is a
   measurable question and it gates recommendation (1) and (4). Answer it before

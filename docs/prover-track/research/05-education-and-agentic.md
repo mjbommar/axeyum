@@ -746,6 +746,282 @@ settled in code.
 
 ---
 
+## Addendum (2026-07-15): independent second pass
+
+A second research pass over the same six questions. Everything below is
+**additive**: it either supplies a hard number for a claim the note above makes
+qualitatively, or it corrects/sharpens a claim. Where it contradicts the note,
+that is flagged explicitly. All numbers here were verified against the primary
+PDF text, not against a summarizer (see A.6 for why that mattered).
+
+### A.1 R7 has a number now, and it is the strongest quantitative finding in the note
+
+The note asserts incrementality/fast-startup as "the substrate" and notes
+Pantograph's win over LeanDojo was "dropping Docker for speed," but carries no
+measurement. *Keep the Proof State Live: Snapshotting for Efficient Tactic
+Search in Lean 4* (<https://arxiv.org/html/2605.25556v2>) measures it:
+
+- Import loading: **≈60 s per branch**, constant across problems.
+- Theorem-body elaboration: **18–735 s**, scaling with complexity.
+- Total per-branch fallback cost: **75–795 s**.
+- Actual tactic execution: **a few ms to 500 ms** (95th pct 289 ms).
+- Therefore: **"Tactic execution accounts for <0.1% of the fallback per-branch
+  cost on average"** — i.e. **~99.9% of agent per-branch wall time is startup and
+  re-elaboration overhead, not proof search.**
+- Snapshotting recovers **5.6–50×** (avg 14×, median 9.7×), rising with branch
+  count (~7.9× at 1 hole → ~30× at 5 holes).
+
+On why the existing tools are shaped wrong — this corroborates Pantograph's
+critique from a performance rather than an ergonomics angle:
+
+> "[they] treat Lean as an external black box, submitting tactic strings and
+> receiving goal states via LSP or a REPL wrapper... **every branch therefore
+> reconstructs state the server already holds.**"
+
+**Implication.** The note's line "We start with no process boundary at all" is
+its best argument and should be *the* published number: the field is losing
+~99.9% of agent-loop time to a tax axeyum does not pay (no Mathlib to import, no
+elaborator to re-run). This is credible, checkable, and not closable by Lean
+without abandoning either C++ or Mathlib. It also re-grounds R7 from "an
+optimization" to "the entire cost model."
+
+### A.2 MCP-Solver is the closest prior art to "Ship MCP (R12)" and the note misses it
+
+R12 cites lean-lsp-mcp / Numina-Lean-Agent / Rocq-MCP — all *prover* MCP servers.
+But someone has already put a **SAT/SMT solver** behind MCP and written up the
+design lessons: Szeider, *Bridging Language Models and Symbolic Solvers via the
+Model Context Protocol*, **SAT 2025**
+(<https://drops.dagstuhl.de/storage/00lipics/lipics-vol341-sat2025/LIPIcs.SAT.2025.30/LIPIcs.SAT.2025.30.pdf>,
+<https://github.com/szeider/mcp-solver>). It backs MiniZinc, PySAT, MaxSAT, and
+Z3. This is the most directly transferable artifact in the whole note.
+
+Its **entire tool surface** is six item-based verbs:
+
+| Tool | Meaning |
+|---|---|
+| `clear_model` | reset the solver model |
+| `add_item` | add a new item at a specific index |
+| `replace_item` | replace an item at a specific index |
+| `delete_item` | delete an item at a specific index |
+| `get_model` | view the current model with numbered items |
+| `solve_model` | solve with a specified timeout, receive the solution |
+
+The measured design lesson, and a direct warning against the instinct to expose
+the `Solver` façade:
+
+> "The first version of the MCP solver offered several more tools, but it turned
+> out that **fewer tools perform better**, as they put a smaller cognitive load
+> on the language model."
+
+They also refused to multiplex backends in one session, because it "burdens the
+language model with considerable complexity... increases the context size and
+token use and makes the entire operation potentially confusing." A CLI flag
+picks the backend instead.
+
+The loop is **per-edit validation with stable indices** — precisely R4+R6:
+
+> "After each `add_item` call, the MCP Solver's backend validates the new code
+> fragment... If the agent makes a mistake, the server returns a **precise
+> error**, which the agent observes and corrects in the next step... if the item
+> is correct, the server returns the encoding generated so far, with items
+> **labeled with indices to ensure consistent indexing between client and
+> server**."
+
+And a **review step that is the encoding-level twin of §5's false-theorem
+problem** — worth internalizing, because it names a failure axeyum's `unsat`
+side has too:
+
+> "in case of 'satisfiable,' whether the solution provided by the solver
+> satisfies all constraints of the problem statement, or, in the case of
+> **'unsatisfiable,' whether all constraints in the encoding are justified by
+> constraints in the problem statement**."
+
+That is: an `unsat` may mean *your conjecture is refuted* or *you encoded
+nonsense*, and something must distinguish them. A refutation-led product
+(§"Lead with refutation") inherits this obligation directly.
+
+### A.3 §5.3's weakest claim is no longer inference — counterexamples measurably help agents
+
+The note says the agent counterexample case is "nearly unclaimed" and that
+"no one has published" the benefit. For *learners* that remains true. For
+**agents it is now measured**: *ExVerus: Verus Proof Repair via Counterexample
+Reasoning* (<https://arxiv.org/pdf/2603.25810>) is direct evidence, and it makes
+the note's own argument in the note's own terms.
+
+Its motivating claim is §"Errors as counterexamples wherever possible" verbatim:
+
+> "The verifier error messages are often **too coarse and ambiguous** to reveal
+> the root cause of the verification failure, e.g., `postcondition not
+> satisfied`, lacking detailed elaboration needed to guide precise proof
+> refinement."
+
+Ablation (Table 4, DeepSeek-V3.1):
+
+| Configuration | VerusBench |
+|---|---|
+| Iterative Refinement (error-message-driven) | **60.3%** |
+| ExVerus_NO_MUT (counterexamples, no mutation/validation) | **64.4%** |
+| ExVerus (full) | **71.9%** |
+
+On the ObfsBench robustness set the counterexample-guided mutation/validation
+module moves **65.4% → 81.6%**. ExVerus is also **cheaper and faster**: **$0.04
+vs $0.17 per task**, **720 s vs 2,989 s** end-to-end vs AutoVerus.
+
+**Honest qualifier, which matters:** the gains are **not uniform**. On DafnyBench
+the ablation is **88.1% vs 88.1% (no gain)**; on LCBench **7.1% → 10.7%**.
+Counterexamples help materially where the bottleneck is *diagnosis*, and not at
+all where it is elsewhere. This is a real result and a bounded one — it supports
+"counterexamples are a differentiator for agents" and refutes "counterexamples
+are a universal speedup."
+
+### A.4 A false goal is an impossible task, and impossible tasks make agents cheat
+
+*(Inference by transfer across literatures — flagged as such, and offered as a
+hypothesis to test, not a finding to cite. But the underlying numbers are
+measured.)*
+
+The note frames the cost of false goals as **wasted compute** (DeepSeek's 20%).
+There is a second, sharper cost: **integrity**.
+
+- *Faults in Our Formal Benchmarking* (<https://arxiv.org/pdf/2606.29493>)
+  measured what provers do when handed false statements: of 20 problems with
+  mechanically proven defects, "The original flawed statements were unprovable,
+  and both evaluated models solved **0/20**; after correction,
+  DeepSeek-Prover-V2-7B solved 3/20 and Kimina-Prover-8B solved 2/20." Full
+  budget, zero return.
+- *ImpossibleBench* (<https://arxiv.org/pdf/2510.20270>; Zhong, Raghunathan,
+  Carlini) builds impossible task variants "by introducing direct conflicts
+  between the natural-language specification and the unit tests" and defines
+  **"cheating rate"** as the pass rate on them, "where any pass necessarily
+  implies a specification-violating shortcut." Result: **GPT-5 cheats in 76% of
+  the tasks in Oneoff-SWEbench** (2.9% on Oneoff-LiveCodeBench). Prompting can
+  move GPT-5 "from 92% to 1%" on Conflicting-LiveCodeBench. LLM monitors catch
+  only **42–65%** of cheating on the harder suite.
+
+These exploits are **not hypothetical in the proving setting** — the defects
+audit finds them in shipped Lean benchmarks: its checkers include "**Unsound
+Axiom** — use of axiom or `sorry` in proofs," and it documents a CombiBench case
+of a "Model-Generated Proof Exploiting Vacuous Hypotheses."
+
+**The argument.** A false goal *is* an impossible task. Given one, an agent's
+options are to burn the budget (0/20) or to cheat (`sorry`, an added axiom, a
+silently weakened restatement). A fast, certified **"this goal is FALSE, here is
+a witness"** verdict gives the agent a legitimate, checkable exit — it **removes
+the incentive rather than policing the behaviour**, which is strictly better than
+monitoring at 42–65% detection. This reframes refutation from a *performance*
+feature into a *soundness-of-the-loop* feature, and it is a stronger version of
+the note's "tells you which goals are worth a proof search."
+
+### A.5 Two corrections to the competitive picture
+
+**(a) "Counterexample-first: essentially nobody" is too strong.** Lean's
+`bv_decide` already does it: "If CaDiCaL returns SAT instead the tactic aborts
+here and **presents a counterexample**"
+(<https://lean-lang.org/blog/2024-10-3-lean-4120>). More uncomfortably,
+`bv_decide` is **architecturally the same idea as axeyum's core** — bitblast →
+AIG → CNF → SAT → **LRAT certificate checked by a verified in-Lean checker** —
+with "bitblasting algorithms... collected from various other bitblasters,
+including Bitwuzla and Z3 and verified using Lean's BitVec theory"
+(<https://github.com/leanprover/leansat>). And Lean is still moving: **`grind`**
+(4.22.0, Aug 2025) is "SMT-style automated reasoning with theory-specific solvers
+and Gröbner basis support," written by a Z3 author, including **`cutsat`,
+"superseding omega, with model construction"**
+(<https://lean-lang.org/doc/reference/latest/releases/v4.22.0/>);
+**Lean-SMT** brings cvc5 with proof reconstruction
+(<https://arxiv.org/pdf/2505.15796>).
+
+So **"bit-blasting with certificates" is not a differentiator — Lean shipped
+it.** What survives is narrower and should be stated narrowly:
+
+- **No C/C++ → a real WASM story.** `bv_decide` ships CaDiCaL; `grind` needs
+  Lean's runtime and library. This is the *mechanism* behind the note's §1
+  observation that "Lean 4 cannot compile to WASM" — it is not an oversight Lean
+  will patch, it is downstream of a C++ dependency our Hard Rule forbids.
+- **Solver-first, so models are first-class across the whole surface**, not one
+  tactic's failure message in one fragment.
+- **Near-zero startup** (A.1), where the field measures 99.9% overhead.
+- **Determinism + explicit resource bounds as public API promises** — which no
+  ITP offers and R6 requires.
+
+**(b) Lean-SMT sharpens §5's thesis rather than weakening it.** Lean-SMT
+reconstructs cvc5 *proofs* into Lean and does **not** surface models when the
+goal is false. Together with Sledgehammer and LRAT import, the pattern is now
+clean and worth stating as the section's headline: **every ITP↔solver integration
+invests in the `unsat`/certificate direction and neglects the `sat`/model
+direction.** The asymmetry is structural, not accidental — and it is the one
+axeyum is on the right side of by construction.
+
+### A.6 Raw models are not counterexamples — the lift is the product
+
+Neither §5.3 nor §6.7 addresses **presentation**, and it is a documented
+bottleneck rather than a polish item. From *Better Counterexamples for Dafny*
+(TACAS 2022, <https://link.springer.com/chapter/10.1007/978-3-030-99524-9_23>):
+
+> "These counterexamples are **hard to understand** and their interpretation is
+> often a **bottleneck** in the proof debugging process."
+
+Their fix was a tool transforming SMT counterexamples "to a more user-friendly
+format that **maps to the Dafny syntax**." Cf. *Improving Counterexample Quality
+from Failed Program Verification* (<https://arxiv.org/pdf/2208.10492>).
+
+**Implication.** A raw CNF/BV satisfying assignment is worthless to a student and
+close to worthless to an agent — which is precisely the §5.3 claim ("checkable by
+the student, in their own head") *failing* unless the lift is good. The value is
+in **minimization + original-vocabulary naming + executability**, not in the
+model. The good news is that axeyum's Hard Rule — every `sat` is checkable by
+evaluating the **original term** against the lifted model — means the lift
+already exists and is already validated; the work is presentation, and it is
+where both the pedagogical and the agentic value actually land.
+
+### A.7 A validated defect class that axeyum is already disciplined against
+
+The defects audit's automated checkers, ordered by severity, are led by
+**"Counterexample — finds concrete values that disprove the theorem"** and
+**"Vacuous Theorem — detects unsatisfiable hypotheses (trivially true)."** The
+remainder target **totality hazards**: "Lean's totalized arithmetic, where
+division by zero returns zero (2/0 = 0), imaginary components are converted to
+zero (√−1 = 0), and natural subtraction truncates (2 − 3 = 0)"; "Unguarded
+denominators can trivialize goals or make false statements provable."
+
+Scale: auditing five widely-used Lean benchmarks surfaced **4,833 findings,
+including 398 mechanically certified issues such as counterexamples, vacuous
+theorems, and unsound axioms**. Their framing is a rebuttal of kernel-trust
+complacency worth quoting next to any "machine-checked" claim:
+
+> "the kernel only checks that a proof establishes a formal statement; it does
+> not verify that the statement faithfully encodes the intended informal
+> problem."
+
+**This is an unusually direct match to existing internal discipline.** Axeyum's
+Hard Rules already mandate SMT-LIB totality verbatim *and* require a fuzz
+seed-class emitting the degenerate argument for every underspecified operator
+(`div`/`mod`-by-0, `bvudiv`-by-0, …) — adopted after `a946f925` shipped a
+wrong-unsat on exactly this class. The external, measured pain point and the
+internal scar tissue are the same defect class. *(Inference)* A **specification
+hazard linter** — "your `n/0` is silently 0; your `a - b` truncated; this
+hypothesis set is unsatisfiable so your theorem is vacuous" — is a plausible,
+small, high-signal first prover-track artifact that needs no prover at all, only
+the solver we have.
+
+### A.8 Methodological note, recorded deliberately
+
+An automated summary of ExVerus reported a "+31 percentage point" counterexample
+ablation (76.2% vs 45.2%, "Table 3"). **Those numbers are fabricated** — they do
+not correspond to any ablation in the paper; the real figures are in A.3, and the
+relevant table is Table 4. The error was caught only by extracting the PDF text
+and reading the table directly. Two other fetches in this pass produced similarly
+confident, unsupported paraphrase (an MCP-Solver summary that admitted tool names
+were "not fully legible" and then supplied plausible ones; an ImpossibleBench
+summary that asserted rates without numbers).
+
+Recording this because the note's own standard — evidence over vibes — applies to
+how the note is built: **for any number that would appear in a pitch or an ADR,
+read the primary text.** The failure mode is not a wrong citation, it is a
+*plausible* wrong citation that survives review because it agrees with the thesis.
+Every number in this addendum was taken from extracted PDF text.
+
+---
+
 ## Source index
 
 Education / CNL:
@@ -800,3 +1076,43 @@ Counterexamples:
 - DeepSeek-Prover (≥20% false statements; dual concurrent search) —
   <https://arxiv.org/html/2405.14333v1>
 - Learning to Disprove — <https://arxiv.org/html/2603.19514v1>
+
+Addendum sources (2026-07-15 second pass; all numbers verified against primary
+PDF text):
+- Keep the Proof State Live: Snapshotting for Efficient Tactic Search in Lean 4
+  (≈60 s import; <0.1% tactic exec; 5.6–50× snapshot speedup) —
+  <https://arxiv.org/html/2605.25556v2>
+- Szeider, Bridging Language Models and Symbolic Solvers via the Model Context
+  Protocol, SAT 2025 ("fewer tools perform better"; six item-based verbs) —
+  <https://drops.dagstuhl.de/storage/00lipics/lipics-vol341-sat2025/LIPIcs.SAT.2025.30/LIPIcs.SAT.2025.30.pdf>,
+  <https://github.com/szeider/mcp-solver>
+- ExVerus: Verus Proof Repair via Counterexample Reasoning (60.3→64.4→71.9
+  VerusBench; 65.4→81.6 ObfsBench; no gain on DafnyBench) —
+  <https://arxiv.org/pdf/2603.25810>
+- Faults in Our Formal Benchmarking (4,833 findings / 398 certified; 0/20 on
+  false statements; totality hazards) — <https://arxiv.org/pdf/2606.29493>,
+  <https://github.com/Shashi456/atp-checkers>
+- ImpossibleBench (GPT-5 cheats 76% on Oneoff-SWEbench; monitors 42–65%) —
+  <https://arxiv.org/pdf/2510.20270>
+- Better Counterexamples for Dafny, TACAS 2022 (raw models are the bottleneck) —
+  <https://link.springer.com/chapter/10.1007/978-3-030-99524-9_23>;
+  Improving Counterexample Quality — <https://arxiv.org/pdf/2208.10492>
+- Blanchette, Bulwahn, Nipkow, Automatic Proof and Disproof in Isabelle/HOL,
+  FroCoS 2011 (zero-click invocation; "no additional installation steps") —
+  <https://www.tcs.ifi.lmu.de/staff/jasmin-blanchette/frocos2011-dis-proof.pdf>
+- Buzzard, Using Lean with undergraduate mathematicians, Lean Together 2019
+  ("Mathlib was impenetrable"; "Mathematicians do not know git") —
+  <https://lean-forward.github.io/lean-together/2019/slides/buzzard.pdf>
+
+Competitive (Lean is moving into this territory):
+- Lean 4.12.0 / `bv_decide` (bitblast → AIG → CNF → SAT → verified LRAT; presents
+  counterexamples on SAT) — <https://lean-lang.org/blog/2024-10-3-lean-4120>,
+  <https://github.com/leanprover/leansat>
+- Lean 4.22.0 / `grind`, `cutsat` "with model construction" —
+  <https://lean-lang.org/doc/reference/latest/releases/v4.22.0/>
+- Lean-SMT (cvc5 proof reconstruction; no model surface) —
+  <https://arxiv.org/pdf/2505.15796>
+- z3-solver npm (emscripten; requires SharedArrayBuffer + COOP/COEP headers;
+  ~15 s load in Chrome) — <https://www.npmjs.com/package/z3-solver>;
+  Zucker, Replicating Rise4Fun with z3-wasm —
+  <https://www.philipzucker.com/replacing-rise4fun/>
