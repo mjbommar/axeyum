@@ -301,6 +301,16 @@ session state.
 > snapshot as a fixed comparator, and require online topology/cost plus repeated
 > variance before GQ9. This remains downstream workload evidence for Axeyum's
 > solver interfaces, not product architecture.
+> ADR-0171 now accepts that native path-owned integration as the leading opt-in
+> GQ7 path. Three alternating three-driver rounds preserve all 41,916 combined
+> shadow checks with zero disagreements, unknown splits, warm resets, or finding
+> changes. Weighted native snapshot remains 2.093x Z3, while explicit lineage is
+> 0.746x with 0.36% ratio CV and cuts Axeyum time 65.5%. Lineage wins every
+> driver at the live boundary, but median RSS rises 6.3%--31.0% by driver and
+> peaks at 141,124 KiB. Do not default-enable it yet. Bound live-session memory
+> and inherited-prefix materialization, expose deterministic fallback reasons,
+> and profile native lineage phases before GQ9 or GQ8. Glaurung remains only an
+> external solver workload and integration client.
 > The capture and
 > implementation audit has been expanded into the dependency-ordered
 > [Glaurung QF_BV execution plan](docs/research/08-planning/glaurung-qfbv-execution-plan.md):
@@ -329,35 +339,36 @@ decisions or speedups.
 
 | ID | Roadmap item | Scope and exit criterion |
 |---|---|---|
-| **GQ1** | **Capture and profile real queries first** | **ADR-0170 lands one clean fixed-revision three-driver dual baseline; client-boundary partitioning remains active.** Across 3,769 exact occurrences, weighted native Glaurung Axeyum/Z3 is 1.255x and independent exact-byte cold is 1.591x, but per-driver native ratios range from 0.426x to 2.679x. This confirms both the real client bar and its distribution dependence; it does not yet partition translation, arena/solver construction, model extraction, and caller work. Pair repeated processes with same-revision bench hashes and `check_profiled`; require fixed identity, p50/p95, 100% decided, and zero operational errors/disagreements/replay failures. |
+| **GQ1** | **Capture and profile real queries first** | **ADR-0171 closes repeated native policy timing; phase partitioning remains active.** Across three alternating rounds, native lineage executes 20,958 checks at a weighted 0.746x Z3 with 0.36% ratio CV, while snapshot is 2.093x. This confirms both the real client bar and its policy dependence; it does not yet partition translation, first-prefix materialization, delta assertion, model extraction, and caller work. Pair exact hashes with `check_profiled` and the pre-parsed bench; require fixed identity, p50/p95, 100% decided, and zero operational errors/disagreements/replay failures. |
 | **GQ2** | **Cheap always-on cold simplification tier** | Add a bounded, denotation-preserving one-shot tier for constant folding and trivial identities whose own cost is measured. Add a size/shape and cold-vs-warm policy that selects cheap, configured, or no preprocessing. Exit only when cold end-to-end time is non-worse in aggregate and improves the target class at the GQ1 validity gates. |
 | **GQ3** | **Coercion-cancellation peepholes and causal telemetry** | **Current measured tranche complete; use ablation as policy evidence.** Exact nested/concat/extension/coercion rules and ADR-0159's repeated default-minus-rule comparator are landed. `extract_extend` improves lowering, but all four measured rules change zero AIG nodes and clauses. Do not globally delete sound rewrites because one corpus does not fire them; instead, keep a Glaurung policy only for rules with measured reach/cost and reopen register-slice-specific work only when an ablation demonstrates downstream AIG/CNF or native-time reduction. |
 | **GQ4** | **Cold demand-driven bit-slice reduction** | **Out of the active queue.** ADR-0157 v1 is correct but regresses the real ratio about 1.42x→4.49x; ADR-0158's conservative admission is a safe no-op but does not improve the required family. Both remain explicit/off. Do not tune thresholds further on this corpus; only a qualitatively different constant-cost admission proof and a fresh client gate can reopen GQ4. |
 | **GQ5** | **Cheaper AIG construction and measured CNF encoding** | **Large incremental clause residual closed; per-node construction remains open.** ADR-0162/0163 cut incremental clauses 782,716→558,787 and pass native gates; only 12,882 clauses (+2.36%) remain over one-shot, while a stronger per-clause index regresses native time. Next attribute bit-blast cost as node count versus construction overhead, verify Glaurung sharing survives term→AIG, and measure bounded structural hashing/two-level rewrites/copy removal. Continue comparator/concat/extract/root CNF work only from measured gate/attempt profiles and require lower native time, not merely fewer clauses. |
 | **GQ6** | **Cold SAT/CDCL tuning** | **Relevant but ranked seventh.** The reported native share is now about 20%, so compare the exact emitted CNF across BatSat, the proof-producing core, and pinned CaDiCaL/Kissat, then measure existing subsumption/vivification/inprocessing plus phase saving, VSIDS/VMTF, and restarts. UNSAT proof rechecking and deterministic resource limits remain mandatory. Do not outrank GQ7, client-boundary attribution, or the dual baseline. |
-| **GQ7** | **Cheaper warm entry and delta preprocessing** | **Highest-leverage active item; ADR-0170 accepts multi-driver controls and rejects a universal winner.** All 3,769 checks and 1,081 assertions replay. Weighted snapshot plus build is 1.049x Z3 and lineage is 0.698x, but snapshot wins only `vwififlt` while lineage wins Dptf/IntcSST; lineage replays 26,930 fork roots and peaks at 106.5 MB. Carry retained per-lineage/delta state through Glaurung's native worker/path boundary next, keep snapshot as the fixed comparator, and measure repeated variance plus online topology/cost. GQ7 is not complete and warm stays opt-in. |
-| **GQ8** | **Verdict and CNF reuse for duplicate/prefix queries** | ADR-0170 measures 957/3,769 exact duplicate occurrences (25.4%), 439 same-lineage repeats, and 2,192 prefix extensions adding 3,070 roots, but does not authorize a cache. Complete native GQ7 retained per-lineage state first. Then evaluate a deterministic, bounded cache keyed by canonical content, solver/config semantics, and scope/lineage identity; every hit still passes original-term model or proof replay and invalidation/versioning is explicit. |
-| **GQ9** | **Auto production policy and API guidance** | Ship a conservative auto policy only after native fixed-policy comparison on the real corpus. ADR-0170 proves neither snapshot nor lineage is universally safe and rejects a depth-only rule: admission must use measured reuse topology, fork-root reconstruction cost, formula cost, latency, and memory. GQ4 remains off/no-op unless its wide savings gate clears; accepted CNF fusion/context dedup stay on; rewrite tiers follow causal reach/cost. Export every choice reason. Exit requires non-regression against every fixed alternative plus documented raw/cheap/configured/warm guidance. |
-| **GQ10** | **Ordered, wider real-lifter regression corpus** | **ADR-0170 lands the clean fixed-revision three-driver ordered development tier.** It preserves 3,769 occurrences, 957 exact repeats, every assertion, path lineage, per-backend time, and peak memory with 100% decisions/agreement/replay. Retain the deduplicated representative/full cold tiers; next run repeated-process/full-tier variance and widen driver families. Track per-commit decided/error/replay status, stage/family counters, and both Axeyum/Z3 baselines: pre-parsed in-process Z3 and Glaurung's actual Z3 backend. The item is not done until native GQ7/GQ8 reuse and the user-visible client ratio are reproducibly exercised. |
+| **GQ7** | **Cheaper warm entry and delta preprocessing** | **Native bounded tier accepted, lifecycle policy WIP (ADR-0171).** Explicit path-owned solvers preserve sibling isolation and close every session. Three repeated native rounds keep 20,958 checks/policy fully decided/agreed: weighted lineage is 0.746x Z3 versus snapshot's 2.093x and wins every driver. Lineage cuts Axeyum time 65.5%, but per-driver median RSS rises 6.3%--31.0% and peaks at 141,124 KiB. Keep it opt-in; bound sessions, memory, inherited-prefix construction, and fallback before default admission. |
+| **GQ8** | **Verdict and CNF reuse for duplicate/prefix queries** | ADR-0170 measures 957/3,769 exact duplicate occurrences (25.4%), 439 same-lineage repeats, and 2,192 prefix extensions. ADR-0171 completes bounded native ownership but does not authorize a cache. First specify deterministic capacity/eviction plus content, solver/config, scope, and lineage identity; every hit still passes original-term model or proof replay and invalidation/versioning is explicit. |
+| **GQ9** | **Auto production policy and API guidance** | **Fixed native policies are now compared; resource-safe admission remains open.** ADR-0171 makes lineage the measured fast fixed policy on all three live streams, but its median RSS rises 6.3%--31.0%. Auto mode must bound live sessions and memory, expose first-prefix/fallback reasons, retain one-shot escape, and beat or match one-shot/snapshot/lineage across wider drivers. GQ4 remains off; accepted CNF defaults stay on; rewrite tiers follow causal evidence. |
+| **GQ10** | **Ordered, wider real-lifter regression corpus** | **Three-driver ordered and repeated native development tiers are accepted (ADR-0170/0171).** The native tier repeats 6,986 checks/policy for three alternating rounds with 100% decision/agreement and stable findings; weighted lineage is 0.746x Z3. Retain the deduplicated cold tiers; next widen driver families, capture exact native hashes/phase profiles, and add full-tier/per-commit variance with both the pre-parsed Z3 and actual Glaurung Z3 bars. |
 
 **Latest Glaurung execution order (2026-07-15; supersedes the earlier cold-path
 priority reset).** Earlier evidence reported an approximately 1.34x gated-bench
 ratio but roughly 2.5x on one actual `IncrementalBvSolver` stream, with
 bit-blast/CNF/SAT near 45%/32%/20%. ADR-0170's fixed-revision driver set now
 measures a 1.255x weighted native ratio with a much wider 0.426x--2.679x
-per-driver range. Treat the pre-parsed bench, native client, and warm controls
-as distinct bars until phase attribution and repeated variance reconcile them.
+per-driver range. ADR-0171's repeated live path-owned policy reaches 0.746x Z3,
+while live consecutive snapshot is 2.093x. Treat the pre-parsed bench, native
+client, and external replay controls as distinct bars until phase attribution
+reconciles them.
 The ranked work is:
 
 1. **GQ7 warm end to end:** build on ADR-0164's measured snapshot-LCP bridge,
    ADR-0166's ordered T1/T2 boundary, ADR-0167's per-lineage T3 path, and
    ADR-0168's identical-occurrence controls; ADR-0169 completes assertions and
-   per-backend timing. ADR-0170's three-driver control rejects a universal
-   snapshot winner and selects native per-lineage/delta ownership as the next
-   implementation, with snapshot retained as the fixed comparator. Establish
-   repeated native break-even and an online topology/cost admission boundary
-   without weakening push/pop,
-   model, original-query replay, or ownership semantics;
+   per-backend timing. ADR-0170's control selects native per-lineage/delta
+   ownership, and ADR-0171 accepts its repeated 0.746x-Z3 live result. Next
+   bound live sessions, memory, and first-prefix construction, add deterministic
+   fallback/eviction telemetry, and preserve push/pop, model, original-query
+   replay, and ownership semantics;
 2. **GQ1 client overhead:** use `check_profiled` to partition and remove the
    reported approximately 1.8x real-client/bench entry factor;
 3. **AIG cost per bit:** separate node count from construction cost, preserve
@@ -386,10 +397,10 @@ ADR-0157/0158 remain explicit/off. Cold rewrite or CNF work may continue only
 when causal/native profiles select it. ADR-0164 permits opt-in consecutive
 snapshot reuse now; ADR-0166 supplies the bounded ordered T1/T2 evidence;
 ADR-0167 supplies opt-in per-lineage T3 replay. ADR-0169 supplies complete
-assertions and per-backend timing; ADR-0170's T4 multi-driver controls show that
-snapshot and lineage each regress one part of the distribution. Native
-per-lineage/delta integration with snapshot comparison, followed by repeated
-variance, must precede cache capacity or auto-policy choices.
+assertions and per-backend timing; ADR-0170's T4 controls show an external
+policy reversal. ADR-0171 completes native per-lineage/delta integration and
+repetition: lineage wins all three live streams but costs more memory. A bounded
+lifecycle/fallback contract must precede cache capacity or auto-policy choices.
 
 **Recorded cold-path sequence.** The detailed task graph and functional acceptance boundary
 live in the
