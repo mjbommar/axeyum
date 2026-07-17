@@ -494,6 +494,26 @@ records the contract and the first measured baselines.
   problem excludes opaque learned clauses, so a fresh-core reversal cannot by
   itself explain a warm retained-engine reversal; follow it with an ordered
   persistent clause-stream/learned-state control.
+  ADR-0221 implements that follow-up. Capture every actual retained SAT-core
+  call, including SAT and UNSAT, but exclude replay-cache hits that never enter
+  the core. Join the capture to the warm profile and fail on identity,
+  cardinality, hash, shape, selector, verdict, or append-only-prefix drift:
+
+  ```sh
+  cargo run --release -p axeyum-bench \
+    --example cnf_stream_bench --features z3 -- \
+    /path/to/axeyum-profile.jsonl /path/to/cnf-dir report.json 5 250
+  ```
+
+  Keep one solver per captured path and let each core learn independently from
+  the same clause/assumption/call sequence. Report clause ingestion separately
+  from solving. This controls Boolean input topology and ordered retained use;
+  it does not make learned clauses identical or reproduce word-level SMT
+  integration. On Dptf, all 431 core calls agree over N=5 and retained BatSat
+  beats retained Z3 Boolean by a 3.5527x per-call solve geomean. Therefore the
+  fair native-Z3 win is not evidence for a generally faster Z3 Boolean core on
+  Axeyum CNF. Move the next causal control to neutral end-to-end SMT and
+  representation/integration, not a custom SAT-core rewrite.
 - Timeout regressions must pin the exact pathological public or minimized query
   and exercise both admission outcomes: deterministic oversized refusal before
   allocation and cooperative expiry inside admitted superlinear work. Every

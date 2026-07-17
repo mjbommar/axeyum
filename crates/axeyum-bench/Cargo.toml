@@ -37,3 +37,7 @@ workspace = true
 # For the `dump_dimacs` diagnostic example only (bit-blast a query to DIMACS so a
 # reference SAT solver can probe whether the Timeout instances are SAT-search-bound).
 axeyum-bv = { path = "../axeyum-bv" }
+
+[[example]]
+name = "cnf_stream_bench"
+required-features = ["z3"]

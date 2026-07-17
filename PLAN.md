@@ -88,6 +88,15 @@ session state.
 > by geometric ratio. Fresh Z3 is much slower on the same CNF, so the warm Z3
 > reversal is not a simple intrinsic-core result. Next replay the ordered clause
 > stream through matched persistent cores; neutral end-to-end SMT remains open.
+> ADR-0221 completes that ordered control without the invalid UNSAT-only
+> shortcut. The 561 decisions contain 130 replay-cache hits and 431 actual core
+> calls; five complete per-path replays preserve every SAT/UNSAT verdict.
+> Retained BatSat beats retained Z3 Boolean by a 3.5527x per-call solve
+> geomean on Axeyum's CNF, so Dptf's native warm-Z3 win is not evidence for a
+> faster Z3 Boolean core or for prioritizing a custom SAT rewrite. The causal
+> boundary is now word-level representation/integration. Add a neutral
+> end-to-end SMT cell next, then the timeout-sensitive and finding-authoritative
+> gates; multi-oracle fuzzing remains the parallel correctness blocker.
 
 > **P0 soundness stop contained (2026-07-15, ADR-0165).** Historical commit
 > `2cb298e2` reproduced unrestricted large elimination from a two-constructor
@@ -585,13 +594,13 @@ count as decisions or speedups.
 
 | ID | Roadmap item | Scope and exit criterion |
 |---|---|---|
-| **GQ1** | **Capture and profile real queries first** | **Four-driver map, query/internal attribution, and fresh exact-CNF control DONE; retained-state causal control WIP (ADR-0187/0188/0197/0213--0220).** All 244 Dptf UNSAT snapshots agree across four cores, but fresh Z3 loses while warm Z3 wins. Replay the ordered clause stream through matched persistent cores, then add neutral end-to-end, timeout-sensitive, and authoritative-finding cells. |
+| **GQ1** | **Capture and profile real queries first** | **Four-driver map, query/internal attribution, and fresh/retained exact-CNF controls DONE (ADR-0187/0188/0197/0213--0221).** All 431 ordered Dptf core calls agree; retained BatSat beats Z3 Boolean on Axeyum CNF despite native warm Z3 winning end-to-end. Add neutral end-to-end SMT, then timeout-sensitive and authoritative-finding cells. |
 | **GQ2** | **Cheap always-on cold simplification tier** | Add a bounded, denotation-preserving one-shot tier for constant folding and trivial identities whose own cost is measured. Add a size/shape and cold-vs-warm policy that selects cheap, configured, or no preprocessing. Exit only when cold end-to-end time is non-worse in aggregate and improves the target class at the GQ1 validity gates. |
 | **GQ3** | **Coercion-cancellation peepholes and causal telemetry** | **Current measured tranche complete; use ablation as policy evidence.** Exact nested/concat/extension/coercion rules and ADR-0159's repeated default-minus-rule comparator are landed. `extract_extend` improves lowering, but all four measured rules change zero AIG nodes and clauses. Do not globally delete sound rewrites because one corpus does not fire them; instead, keep a Glaurung policy only for rules with measured reach/cost and reopen register-slice-specific work only when an ablation demonstrates downstream AIG/CNF or native-time reduction. |
 | **GQ4** | **Cold demand-driven bit-slice reduction** | **Out of the active queue.** ADR-0157 v1 is correct but regresses the real ratio about 1.42x→4.49x; ADR-0158's conservative admission is a safe no-op but does not improve the required family. Both remain explicit/off. Do not tune thresholds further on this corpus; only a qualitatively different constant-cost admission proof and a fresh client gate can reopen GQ4. |
-| **GQ5** | **Cheaper AIG construction and measured CNF encoding** | **Cold engineering lane active; broad warm construction lane closed by ADR-0219.** Cold still assigns most Axeyum time to bit blast+CNF, but retained four-driver profiles remove 98--99% of per-check structure and leave only 11--20% whole-driver warm CNF. Continue cold work only from causal gates. ADR-0220 now fixes Dptf UNSAT structure as a measured covariate for the persistent-core control; do not infer warm benefit from cold shares. |
-| **GQ6** | **Cold SAT/CDCL tuning** | **Fresh exact-CNF control DONE; retained-core control now leading (ADR-0220).** The proof core is 2.627x faster than BatSat before checking on 244 Dptf UNSAT snapshots, but fresh Z3 is much slower despite winning warm end-to-end. Do not swap cores from this fresh slice. Replay the ordered persistent clause stream with deterministic limits and proof replay. |
-| **GQ7** | **Cheaper warm entry and delta preprocessing** | **Source identity, fair map, query/internal attribution, and fresh exact-CNF parity DONE; retained-state/neutral/finding evidence WIP (ADR-0201--0205/0213--0220).** The fresh/warm Z3 reversal moves the mechanism to learned state/topology/integration. Keep direct opt-in and run a matched persistent clause-stream control before neutral end-to-end, timeout-sensitive, and authoritative-finding gates. |
+| **GQ5** | **Cheaper AIG construction and measured CNF encoding** | **Cold engineering lane active; broad warm construction lane closed by ADR-0219.** Cold still assigns most Axeyum time to bit blast+CNF, but retained four-driver profiles remove 98--99% of per-check structure and leave only 11--20% whole-driver warm CNF. ADR-0221 now moves the Dptf reversal to word-level representation/integration; continue cold work only from causal gates and do not infer warm benefit from cold shares. |
+| **GQ6** | **Cold SAT/CDCL tuning** | **Fresh and retained exact-CNF controls DONE (ADR-0220/0221).** The proof core beats fresh BatSat before checking, while retained BatSat beats retained Z3 Boolean by 3.5527x on the ordered Axeyum CNF stream. Do not select a custom-core rewrite from Dptf; reopen only on a SAT-dominant family with a neutral core gap and deterministic limits. |
+| **GQ7** | **Cheaper warm entry and delta preprocessing** | **Source identity, fair map, query/internal attribution, and fresh/retained exact-CNF controls DONE; neutral/finding evidence WIP (ADR-0201--0205/0213--0221).** The remaining reversal boundary is word-level representation/integration. Keep direct opt-in and run neutral end-to-end SMT before timeout-sensitive and authoritative-finding gates. |
 | **GQ8** | **Verdict and CNF reuse for duplicate/prefix queries** | **Exact replay-checked SAT reuse is done for available families (ADR-0192); stronger subsumption remains open.** Exact hits replay under fixed bounds; ordinary UNSAT/Unknown and prefix verdict reuse remain forbidden. Investigate only replay-checked stronger-model reuse where a cached model is proven to satisfy the complete weaker later query. |
 | **GQ9** | **Auto production policy and API guidance** | **DONE for available serial families (ADR-0186/0199).** Adaptive 2→9 ownership plus serial sibling continuation reuse is the downstream default; ADR-0199 clears every time/ratio/RSS/environment alarm and improves RSS on both accepted drivers. Explicit one-shot, fixed, transfer-only, and serial-off controls remain. Re-gate wider families and never apply serial leases across parallel workers. |
 | **GQ10** | **Ordered, wider real-lifter regression corpus** | **Native timeout-continuation admission is DONE; wider direct-delta admission is deferred (ADR-0205--0212).** The accepted tcpip gate still defaults one bounded continuation only inside selected direct-delta sessions. A complete 85,449-event / 17,400-check `dxgkrnl` trace and independent 13,577-query / 8,816-model-read replay prove exact production-topology no-op functionality with zero correctness or lifecycle alarms. The repeated ordinary-core comparison nevertheless fails the declared timing-CV gate (14.430% control, 8.306% candidate); slower-core calibration changes actual outcomes at the 250 ms boundary. Keep direct delta opt-in. `win32k` is now classified as a system-service/callout frontend target, not zero-query IOCTL solver evidence. |
@@ -621,7 +630,7 @@ artifact evidence below governs.
 | # | Feedback integrated into the roadmap | Required action / invariant |
 |---:|---|---|
 | 1 | Strict sorts are a consumer differentiator and have exposed three real Glaurung soundness defects (empty-model steering, extension width, declared concat width). | Never add implicit coercion to IR builders or soften sort errors. Keep `coerce_to` explicit and caller-selected. Preserve strict replay as a correctness-oracle/paper result, including ADR-0207's evidence that Z3's silent coercion changed bit placement rather than merely accepting malformed syntax. |
-| 2 | Warm/incremental reuse is the performance thesis: retained rewrite/CNF/learned state turns the cold loss into measured sub-Z3 real-driver performance when amortized. | Keep GQ7 first-class, preserve exact delta/source ownership and replay, and widen through captured ordered streams plus fixed-work multi-driver gates before broadening the automatic default. Cold and warm numbers must never be blended. |
+| 2 | Warm/incremental reuse is workload-dependent: retained rewrite/CNF/learned state yields two fair wins, one tie, and one loss across the measured drivers. | Keep GQ7 first-class, preserve exact delta/source ownership and replay, and widen through captured ordered streams plus fixed-work multi-driver gates before broadening the automatic default. Cold and warm numbers must never be blended, and no blanket speed claim is allowed. |
 | 3 | Cold one-shot remains the pure-solver optimization target: historical real-driver attribution is roughly 42% bit blast + 42% CNF versus about 15% SAT, while the deduplicated gate has plateaued around 1.34x. | Lead cold work with term→AIG→CNF construction (GQ5), not SAT tuning. Require fresh stage attribution and repeated end-to-end corpus wins; the exact ratio is revision/corpus-specific, not a timeless constant. |
 | 4 | `assert_configured` loses one-shot and wins only when amortized. | Document and test it as a warm-only optimization. Do not auto-select configured preprocessing for fresh one-shot queries; retain raw/canonical one-shot controls and a measured cost model. |
 | 5 | Precise `IrError` diagnostics are load-bearing integration tooling. | Keep operation, widths/sorts, and exact invalid ranges in errors; add regression assertions for each consumer-discovered class. An error must remain actionable and must never be reclassified as UNSAT. |
@@ -631,7 +640,7 @@ artifact evidence below governs.
 | 9 | Self-rechecked DRAT UNSAT evidence is a deployability/correctness advantage over the current Z3 crate path. | Keep `UnsatProof::recheck()` prominent in examples, capability tables, and performance reporting. No optimization may bypass proof generation/recheck where proof-bearing UNSAT is promised. |
 | 10 | Pure Rust/no-C and the `qfbv`-only profile reduce deployment cost; benchmark methodology must reject fast failure. | Preserve the no-native default and lean feature profile; gate WASM claims on an actual target build rather than aspiration. Every comparison must report per-backend SAT, UNSAT, Unknown, Error, decided rate, replay, and exact work/finding identity. A faster number with reduced work or increased nondecisions is invalid until attributed—the pre-fix tcpip/dxgkrnl ratios are explicitly withdrawn. |
 
-**Publication execution order (2026-07-17, ADR-0213--0220 plus ranked review;
+**Publication execution order (2026-07-17, ADR-0213--0221 plus ranked review;
 supersedes performance-claim ordering below).** Product admission and paper
 evidence are now distinct:
 
@@ -645,10 +654,10 @@ evidence are now distinct:
    nondecisions. ADR-0218 shows that SAT/UNSAT outcome, consumer purpose, and
    exact-query reuse composition are material while lexical formula size is
    insufficient. ADR-0219 shows retention removes nearly all repeated
-   construction and leaves SAT dominant. Compare identical retained Dptf UNSAT
-   CNF across fresh cores. ADR-0220 closes 244/244 verdicts and rejects a simple
-   intrinsic-Z3-core explanation: fresh Z3 loses while warm Z3 wins. Replay the
-   ordered clause stream through matched persistent cores, then add a harder
+   construction and leaves SAT dominant. ADR-0220 closes fresh exact-CNF
+   parity, and ADR-0221 closes all 431 ordered retained core calls: BatSat beats
+   Z3 Boolean on Axeyum CNF, so the native-Z3 win moves to word-level
+   representation/integration. Add a neutral end-to-end SMT cell, then a harder
    driver whose buckets cross a timeout boundary. The publication claim is the measured map and
    only a causally supported boundary, never a preselected speedup.
 2. **Correctness as the lead contribution:** publish the TCB and proof-coverage
@@ -656,10 +665,11 @@ evidence are now distinct:
    adapter truncation into named corpus seeds; add a standing well-typed
    Axeyum/Z3/cvc5-or-Bitwuzla differential fuzzer with exact disagreement
    artifacts and original-term replay.
-3. **Neutral baselines and oracles:** add cvc5 and/or Bitwuzla to the identical
-   stream as a cold subprocess point and a differential oracle. Keep in-process,
-   FFI, and subprocess boundary costs separately named; do not use Z3 as both
-   sole oracle and sole comparator.
+3. **Neutral baselines and oracles:** add cvc5 and/or Bitwuzla first as a
+   neutral end-to-end SMT cell and differential oracle; an identical-CNF cold
+   subprocess point is secondary after ADR-0221's retained Boolean result. Keep
+   in-process, FFI, and subprocess boundary costs separately named; do not use
+   Z3 as both sole oracle and sole comparator.
 4. **Authoritative finding parity:** run each backend as the sole explorer
    authority, diff stable findings/sinks, and introduce a checked canonical
    model policy if concretization changes exploration. Report before/after
