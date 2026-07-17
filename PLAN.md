@@ -124,6 +124,14 @@ session state.
 > the old coarse skip bucket hid. Continue with additional fixed-seed/coverage
 > rounds and proof-coverage measurement; do not claim well-typed fuzz alone
 > tests Glaurung's invalid post-UNSAT exploration state.
+> ADR-0225 completes the exhaustive-neutral continuation for this seed round:
+> all 4,000 formulas decide and agree in Axeyum, direct Z3, and cvc5, with zero
+> oracle/process/parser skip. The generator now fails unless it covers all five
+> declared random widths and all 35 required operator classes. Routine CI keeps
+> the 250-row cvc5 sample; the publication command explicitly sets stride one.
+> Next correctness work must add independent seeds/edge-case frequencies, a
+> proof-coverage denominator, or another neutral implementation—not rerun the
+> same bounded formulas and call that new coverage.
 
 > **P0 soundness stop contained (2026-07-15, ADR-0165).** Historical commit
 > `2cb298e2` reproduced unrestricted large elimination from a two-constructor
@@ -667,7 +675,7 @@ artifact evidence below governs.
 | 9 | Self-rechecked DRAT UNSAT evidence is a deployability/correctness advantage over the current Z3 crate path. | Keep `UnsatProof::recheck()` prominent in examples, capability tables, and performance reporting. No optimization may bypass proof generation/recheck where proof-bearing UNSAT is promised. |
 | 10 | Pure Rust/no-C and the `qfbv`-only profile reduce deployment cost; benchmark methodology must reject fast failure. | Preserve the no-native default and lean feature profile; gate WASM claims on an actual target build rather than aspiration. Every comparison must report per-backend SAT, UNSAT, Unknown, Error, decided rate, replay, and exact work/finding identity. A faster number with reduced work or increased nondecisions is invalid until attributed—the pre-fix tcpip/dxgkrnl ratios are explicitly withdrawn. |
 
-**Publication execution order (2026-07-17, ADR-0213--0224 plus ranked review;
+**Publication execution order (2026-07-17, ADR-0213--0225 plus ranked review;
 supersedes performance-claim ordering below).** Product admission and paper
 evidence are now distinct:
 
@@ -689,13 +697,14 @@ evidence are now distinct:
    all 9,526 four-driver checks. Add a neutral warm/in-process cell, then a harder
    driver whose buckets cross a timeout boundary. The publication claim is the measured map and
    only a causally supported boundary, never a preselected speedup.
-2. **Correctness as the lead contribution — first standing multi-oracle tranche
-   DONE (ADR-0224), coverage/proof denominator WIP:** 4,000 deterministic
-   Axeyum/Z3 rows agree, 1,487 SAT models replay on original IR, and all 250
-   preselected cvc5 rows decide and agree. Named controls preserve strict
+2. **Correctness as the lead contribution — standing and exhaustive-neutral
+   seed round DONE (ADR-0224/0225), independent rounds/proof denominator WIP:**
+   all 4,000 deterministic rows agree in Axeyum, direct Z3, and cvc5; 1,487 SAT
+   models replay on original IR; and executable coverage requires all five
+   random widths plus 35 operator classes. Named controls preserve strict
    concat/extension/constant rejection, legitimate empty-SAT versus model-less
-   UNSAT, normalized widths, and linked-adapter W128 behavior. Add more
-   fixed-seed/coverage rounds and publish the TCB plus proof-coverage
+   UNSAT, normalized widths, and linked-adapter W128 behavior. Add independent
+   fixed-seed/edge-case rounds and publish the TCB plus proof-coverage
    denominator; keep invalid consumer states separate from valid-formula fuzz.
 3. **Neutral baselines and oracles — four-driver cold-reset breadth DONE
    (ADR-0222/0223), warm API WIP:** cvc5 1.3.4 agrees on all 9,526 accepted

@@ -1,0 +1,96 @@
+{
+  "schema": "axeyum-qfbv-multi-oracle-fuzz-v2",
+  "date": "2026-07-17",
+  "source": {
+    "revision": "cf37d2693ee87c384c3c923f2356d45603d59a9c",
+    "test": "crates/axeyum-solver/tests/bv_differential_fuzz.rs"
+  },
+  "command": "PATH=<official-cvc5-1.3.4>:$PATH AXEYUM_REQUIRE_CVC5=1 AXEYUM_REQUIRE_CVC5_ALL_DECIDED=1 AXEYUM_CVC5_SAMPLE_STRIDE=1 cargo test -p axeyum-solver --all-features --test bv_differential_fuzz bv_differential_fuzz_disagree_zero -- --nocapture",
+  "generator": {
+    "deterministic": true,
+    "seed_first": 0,
+    "seed_last": 3999,
+    "instances": 4000,
+    "covered_widths": [1, 4, 8, 16, 32],
+    "covered_operators": [
+      "=",
+      "and",
+      "bvadd",
+      "bvand",
+      "bvashr",
+      "bvlshr",
+      "bvmul",
+      "bvneg",
+      "bvnot",
+      "bvor",
+      "bvsdiv",
+      "bvsge",
+      "bvsgt",
+      "bvshl",
+      "bvsle",
+      "bvslt",
+      "bvsmod",
+      "bvsrem",
+      "bvsub",
+      "bvudiv",
+      "bvuge",
+      "bvugt",
+      "bvule",
+      "bvult",
+      "bvurem",
+      "bvxor",
+      "concat",
+      "const",
+      "distinct",
+      "extract",
+      "not",
+      "or",
+      "sign_extend",
+      "var",
+      "zero_extend"
+    ],
+    "max_variables": 4,
+    "max_assertions": 4,
+    "max_term_depth": 3,
+    "cvc5_sample_stride": 1,
+    "axeyum_timeout_ms": 5000,
+    "z3_timeout_ms": 2000,
+    "cvc5_timeout_ms": 2000
+  },
+  "oracles": {
+    "z3": {
+      "crate_version": "0.20.0",
+      "library_version": "4.13.3.0",
+      "library_path": "/usr/lib/x86_64-linux-gnu/libz3.so.4",
+      "library_sha256": "eff8f0f91482d0809aae7aa0ed54cb52ff5ee9b5fe1ed1d2bfa9153c4a2fcfaf"
+    },
+    "cvc5": {
+      "version": "1.3.4",
+      "revision": "f3b21c4",
+      "binary": "official Linux x86_64 libc++ static release",
+      "binary_sha256": "4a93548398445cf1a774655583f5465b156c26f63f2cdfb94f4728fdf7adde46"
+    }
+  },
+  "results": {
+    "axeyum_z3_jointly_decided": 4000,
+    "axeyum_z3_agreements": 4000,
+    "cvc5_submitted": 4000,
+    "cvc5_decided": 4000,
+    "three_way_agreements": 4000,
+    "axeyum_unknown": 0,
+    "axeyum_timeout": 0,
+    "axeyum_crashed": 0,
+    "z3_unknown": 0,
+    "cvc5_unknown": 0,
+    "cvc5_process_or_parser_failure": 0,
+    "sat_models_replayed": 1487,
+    "sat_replay_indeterminate": 0,
+    "disagreements": 0,
+    "elapsed_seconds": 92.39
+  },
+  "named_control_followup": {
+    "passed": 2,
+    "failed": 0,
+    "elapsed_seconds": 0.09
+  }
+}

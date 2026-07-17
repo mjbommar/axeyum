@@ -549,6 +549,12 @@ records the contract and the first measured baselines.
   Malformed consumer width metadata and use of a model after non-SAT remain
   separate strict contract regressions; do not pretend well-typed formula fuzz
   alone tests those invalid consumer states.
+  ADR-0225 promotes the publication lane, not routine CI, to a cvc5 stride of
+  one: all 4,000 generated formulas must receive a neutral decision and agree
+  three ways. It also makes the five random widths and 35 required generator
+  classes an executable coverage gate. Report the bounded inventory and exact
+  seeds; “all operators covered” is not permission to claim all shapes,
+  constants, widths, or interactions are exhausted.
 - Timeout regressions must pin the exact pathological public or minimized query
   and exercise both admission outcomes: deterministic oversized refusal before
   allocation and cooperative expiry inside admitted superlinear work. Every
