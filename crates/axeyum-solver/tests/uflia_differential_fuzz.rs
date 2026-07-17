@@ -45,7 +45,7 @@
 //! `Model::to_assignment` carries the function interpretations and the evaluator's
 //! `Op::Apply` arm looks them up (`apply_value` is total), so a `QF_UFLIA` `Sat`
 //! is expected to replay `AllTrue`; `Indeterminate` is retained only defensively.
-
+#![cfg(feature = "full")]
 #![cfg(feature = "z3")]
 
 use std::sync::mpsc;

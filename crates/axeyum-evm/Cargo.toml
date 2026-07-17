@@ -13,7 +13,7 @@ publish = false
 
 [dependencies]
 axeyum-ir.workspace = true
-axeyum-solver = { path = "../axeyum-solver" }
+axeyum-solver = { path = "../axeyum-solver", default-features = false, features = ["full"] }
 axeyum-property = { path = "../axeyum-property" }
 
 [lints]

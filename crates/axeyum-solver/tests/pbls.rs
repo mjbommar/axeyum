@@ -4,6 +4,7 @@
 //! evaluator confirms, never `Unsat` (it cannot refute), and `Unknown` when it
 //! gives up or the query is out of scope. The differential check confirms it
 //! never contradicts the complete eager backend.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

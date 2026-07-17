@@ -6,6 +6,7 @@
 //! to decline (`None`); it is **never** allowed to return an interpolant that
 //! fails a condition. Deterministic (a fixed LCG, no wall-clock / `rand`), per the
 //! project's determinism rule.
+#![cfg(feature = "full")]
 
 use std::collections::BTreeSet;
 

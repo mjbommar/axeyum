@@ -1,5 +1,6 @@
 //! Term-level `unsat`/`sat` certification by exhaustive evaluation — the trust
 //! dual of model replay, using only the ground evaluator.
+#![cfg(feature = "full")]
 
 use axeyum_ir::{TermArena, Value};
 use axeyum_solver::{CertifyOutcome, certify_qf_bv_by_enumeration};

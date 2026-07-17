@@ -30,6 +30,7 @@
 //! tiny set of code points (letters plus `\u{…}` escapes and boundary/`>0xFF` code
 //! points) so first-character clashes — hence certified unsats — are frequent. The
 //! test passes iff disagreements == 0 over the jointly decided scripts.
+#![cfg(feature = "full")]
 
 use std::fmt::Write as _;
 use std::time::Duration;

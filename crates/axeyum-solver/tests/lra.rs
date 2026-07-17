@@ -4,6 +4,7 @@
 //! constraints is decided over exact rationals, and any `sat` model is replayed
 //! against the original query with the ground evaluator — the trust anchor for
 //! the first non-`QF_BV` procedure.
+#![cfg(feature = "full")]
 
 use axeyum_ir::{Rational, Sort, TermArena, Value, eval};
 use axeyum_solver::{

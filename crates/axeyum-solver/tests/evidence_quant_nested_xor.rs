@@ -1,4 +1,5 @@
 //! ADR-0099: checked evidence for the exact nested-XOR quantifier refutation.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

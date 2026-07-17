@@ -19,7 +19,7 @@
 //! The test passes iff disagreements == 0. axeyum `Sat` is additionally
 //! replay-checked inside `solve_smtlib`'s entry point, so a fabricated model can
 //! never be reported as `Sat` regardless of the oracle.
-
+#![cfg(feature = "full")]
 #![cfg(feature = "z3")]
 
 use std::fmt::Write as _;

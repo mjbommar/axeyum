@@ -1,4 +1,5 @@
 //! ADR-0126 evaluator-replayed witnesses for negated existentials.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

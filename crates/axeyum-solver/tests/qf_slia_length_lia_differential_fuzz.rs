@@ -24,6 +24,7 @@
 //! and `sat` is exercised. Literals — including `\u{…}` escapes and the `>0x7F`
 //! byte-model boundary — are still drawn so the literal grammar is covered (the
 //! `ba0d9149` wrong-verdict-class rule). Fixed-seed LCG ⇒ fully reproducible.
+#![cfg(feature = "full")]
 
 use std::fmt::Write as _;
 use std::time::Duration;

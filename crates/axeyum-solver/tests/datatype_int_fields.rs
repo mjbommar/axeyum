@@ -5,6 +5,7 @@
 //! sort and the datatype-free residual is re-dispatched through `solve`, which
 //! routes the arithmetic to the complete LIA/LRA deciders and bit-blasts the
 //! tags. Every `sat` is projected back to a `Value::Datatype` and replayed.
+#![cfg(feature = "full")]
 
 use axeyum_ir::{Sort, TermArena, Value};
 use axeyum_solver::{CheckResult, SolverConfig, solve};

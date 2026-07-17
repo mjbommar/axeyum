@@ -6,6 +6,7 @@
 //! failure. We also assert the trace is non-empty, well-formed (its terminal
 //! entry matches the overall result, with the decisive route last), and
 //! deterministic (run twice, identical trace).
+#![cfg(feature = "full")]
 
 use axeyum_ir::{Sort, TermArena, TermId, Value, eval};
 use axeyum_solver::{

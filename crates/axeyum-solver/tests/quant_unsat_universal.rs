@@ -8,6 +8,7 @@
 //! it makes the whole query `unsat`. These tests pin the newly decided `unsat`
 //! cases *and* the soundness negatives: the disequality, vacuous-`c=0`,
 //! valid-disjunction, and guarded shapes that must **never** be wrongly `unsat`.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

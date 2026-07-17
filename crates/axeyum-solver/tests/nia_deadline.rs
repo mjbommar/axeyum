@@ -2,6 +2,7 @@
 //! many seconds past it (task #84 — a hang/OOM risk on large lazy-SMT cubes).
 //! The deadline poll is soundness-neutral (only slow → Unknown), so this asserts
 //! a *timely* Unknown, never a specific verdict.
+#![cfg(feature = "full")]
 use std::time::{Duration, Instant};
 
 use axeyum_solver::{CheckResult, SolverConfig, solve_smtlib};

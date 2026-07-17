@@ -18,6 +18,7 @@
 //! `LazyBvBackend` (the new path under test), and — when the `z3` feature is on
 //! — the `Z3Backend` oracle. Deterministic (fixed seeds, no clock/RNG service);
 //! a small batch is always-on, a larger batch is `#[ignore]`.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

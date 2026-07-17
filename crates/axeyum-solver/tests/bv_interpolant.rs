@@ -5,6 +5,7 @@
 //! `I`, and *independently* re-checks the three defining conditions
 //! (`A ⇒ I`, `I ∧ B ⇒ ⊥`, shared vocabulary) with the `QF_BV` decider — so the
 //! assurance never leans on the function's own internal verification.
+#![cfg(feature = "full")]
 
 use std::collections::BTreeSet;
 

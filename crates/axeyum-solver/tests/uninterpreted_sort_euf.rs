@@ -2,6 +2,7 @@
 //!
 //! These are pure EUF problems over a declared sort, not the older bounded-BV
 //! modeling path. Every `sat` result is replayed through the ground evaluator.
+#![cfg(feature = "full")]
 
 use axeyum_ir::{Value, eval};
 use axeyum_smtlib::parse_script;

@@ -7,6 +7,7 @@
 //! through `check_auto`); every `Reachable` has its trace re-decided via an inline
 //! LIA unrolling; the resource-cap and non-`LIA` cases assert a graceful `Unknown`
 //! (never a hang, never a wrong verdict).
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

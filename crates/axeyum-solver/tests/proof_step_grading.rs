@@ -4,6 +4,7 @@
 //! final derivation correctly is accepted; an incomplete attempt is not. This is
 //! "trusted small checking" used pedagogically: the grader is the independent
 //! checker, never the search.
+#![cfg(feature = "full")]
 
 use axeyum_cnf::check_alethe;
 use axeyum_ir::{Sort, TermArena};

@@ -13,6 +13,7 @@
 //! `Unsat` by the exact bounded box (re-checkable per ADR bounded-int-blast
 //! certificate). The slice is strictly additive — it turns former `unknown`s into
 //! decisions and never flips a decided verdict.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

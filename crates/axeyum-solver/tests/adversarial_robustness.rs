@@ -7,6 +7,7 @@
 //! historically; this corpus drives the public entry points on queries that drove
 //! arithmetic out of `i128` range and asserts a sound outcome (`Ok(_)`, never a
 //! panic, never a wrong verdict). Overflow → `Unknown`, full stop.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

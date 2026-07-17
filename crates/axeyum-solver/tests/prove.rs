@@ -1,5 +1,6 @@
 //! The proving front door [`prove`]: prove a goal from hypotheses by refuting
 //! its negation, with a re-checked certificate behind every `Proved`.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

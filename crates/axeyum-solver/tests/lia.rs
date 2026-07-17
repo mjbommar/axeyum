@@ -7,6 +7,7 @@
 //! query** with the ground evaluator. The soundness contract is checked too:
 //! `sat` is only returned when the exact-integer replay succeeds, and bounded
 //! `unsat` is reported as `unknown`, never `unsat`.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

@@ -6,6 +6,7 @@
 //! Running the catalog through [`check_with_int_blasting`] checks the whole LIA
 //! pipeline — bit-blasting, BV solving, integer model read-back, and
 //! exact-integer replay — against oracle-free ground truth.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

@@ -2,6 +2,7 @@
 //! `sat`/`unsat`/`unknown` out, cross-checked against the script's declared
 //! `(set-info :status ...)`. This locks the real-world end-to-end use case —
 //! "hand it an SMT-LIB file and get a checked answer."
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

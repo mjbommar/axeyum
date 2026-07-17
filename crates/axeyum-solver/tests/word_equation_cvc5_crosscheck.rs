@@ -26,6 +26,7 @@
 //! - axeyum `Unsat` ∧ cvc5 `sat` → **PANIC** (wrong unsat — the worst bug).
 //! - axeyum `Unknown` / decline → SKIP (incomplete is sound).
 //! - cvc5 `unknown` / timeout / parse-error → SKIP (cvc5 cannot adjudicate).
+#![cfg(feature = "full")]
 
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};

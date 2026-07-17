@@ -14,6 +14,7 @@
 //! - a `sat` query the `'a'`-fill cannot witness (content-distinct equal-length
 //!   strings) degrades to `unknown` — **never** a wrong `unsat` and never a wrong
 //!   `sat`.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

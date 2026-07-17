@@ -1,6 +1,7 @@
 //! Golden test for the reduction trust ledger (P3.0): the committed
 //! trust-ledger document must equal what the ledger renders, so the trusted-base
 //! inventory cannot drift out of sync with the `TrustId` enum.
+#![cfg(feature = "full")]
 
 use axeyum_solver::trust::{ALL_TRUST_IDS, trust_ledger_markdown};
 

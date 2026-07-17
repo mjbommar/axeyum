@@ -7,6 +7,7 @@
 //! model is projected back to function interpretations and **replayed against
 //! the original query** with the ground evaluator — soundness checked without a
 //! native oracle.
+#![cfg(feature = "full")]
 
 use axeyum_ir::{Sort, TermArena, Value, eval};
 use axeyum_solver::{CheckResult, SatBvBackend, SolverConfig, check_with_function_elimination};

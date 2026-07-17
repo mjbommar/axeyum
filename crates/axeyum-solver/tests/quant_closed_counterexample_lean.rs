@@ -1,4 +1,5 @@
 //! ADR-0102: genuine Lean reconstruction of ADR-0100 counterexamples.
+#![cfg(feature = "full")]
 
 use axeyum_ir::{Op, TermNode, Value};
 use axeyum_smtlib::parse_script;

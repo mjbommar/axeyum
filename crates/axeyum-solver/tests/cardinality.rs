@@ -1,4 +1,5 @@
 //! Cardinality constraints (at-most / at-least / exactly) over Booleans.
+#![cfg(feature = "full")]
 
 use axeyum_ir::{Sort, TermArena, TermId, Value, eval};
 use axeyum_solver::{CheckResult, SolverConfig, at_least, at_most, exactly, solve};

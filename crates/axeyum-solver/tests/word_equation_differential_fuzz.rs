@@ -43,7 +43,7 @@
 //! - Z3 `unknown` / timeout / error → SKIP (Z3 cannot adjudicate).
 //!
 //! The test passes iff disagreements == 0 over the jointly-decided scripts.
-
+#![cfg(feature = "full")]
 #![cfg(feature = "z3")]
 
 use std::fmt::Write as _;

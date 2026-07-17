@@ -50,7 +50,7 @@
 //! per IEEE, so the NaN-multiplicity modeling difference cannot change
 //! sat/unsat. Core `=`/`distinct` on FP terms (which *would* expose the raw-bit
 //! NaN payloads) is deliberately never generated.
-
+#![cfg(feature = "full")]
 #![cfg(feature = "z3")]
 
 use std::fmt::Write as _;

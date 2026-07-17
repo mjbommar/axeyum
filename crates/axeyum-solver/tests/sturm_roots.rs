@@ -12,6 +12,7 @@
 //! polynomials with known distinct-root counts (including a non-squarefree one),
 //! and a large-coefficient shape that must decline without panicking. The
 //! cardinal rule holds throughout: never a wrong sat/unsat.
+#![cfg(feature = "full")]
 
 use std::time::{Duration, Instant};
 

@@ -7,6 +7,7 @@
 //! encoder declines at parse and the word-first fallback is the sole decider. The
 //! `sat` witnesses are replay-checked (the arrangement replay over the fresh-variable
 //! word problem plus the exact `f(int) == word` inversion of every obligation).
+#![cfg(feature = "full")]
 
 use axeyum_ir::Value;
 use axeyum_solver::{CheckResult, SolverConfig, solve_smtlib};

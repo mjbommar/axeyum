@@ -2,6 +2,7 @@
 //! [`axeyum_solver::prove_qf_abv_unsat_alethe`] (P3.5). Each emitted proof is
 //! re-checked by the in-tree [`axeyum_cnf::check_alethe`] — the array proof is
 //! validated end to end, not merely shaped.
+#![cfg(feature = "full")]
 
 use axeyum_cnf::{AletheCommand, check_alethe, write_alethe};
 use axeyum_ir::{Sort, TermArena, TermId};

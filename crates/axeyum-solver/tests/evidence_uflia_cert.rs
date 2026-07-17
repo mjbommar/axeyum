@@ -14,6 +14,7 @@
 //! tampering breaks the check, a 2-ary UF works, and the existing routes are
 //! unregressed (`QF_UFBV` still BV zero-trust, `QF_LIA` still gap-E certified, a
 //! `QF_UFLRA` *sat* still solves with no false unsat).
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

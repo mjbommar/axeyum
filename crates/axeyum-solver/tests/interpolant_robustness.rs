@@ -6,6 +6,7 @@
 //! hard rule). A latent panic here (one was found + fixed in `qf_bv_interpolant`,
 //! which `unreachable!`d on real-sorted input) is a robustness bug. Every check
 //! below simply *completes without panicking* and returns a `Result`/`Option`.
+#![cfg(feature = "full")]
 
 use axeyum_ir::{Sort, TermArena, TermId};
 use axeyum_solver::{

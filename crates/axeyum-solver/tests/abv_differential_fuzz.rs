@@ -53,7 +53,7 @@
 //!   extensionality — the classic array-soundness stressor). At least one atom
 //!   per instance is forced to touch `select`/`store`/array-equality so the
 //!   array theory is genuinely tested.
-
+#![cfg(feature = "full")]
 #![cfg(feature = "z3")]
 
 use std::sync::mpsc;

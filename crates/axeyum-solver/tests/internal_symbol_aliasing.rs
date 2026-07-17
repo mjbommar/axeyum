@@ -8,6 +8,7 @@
 //! otherwise-free value — forging a wrong verdict (the same class as the
 //! `fp.min`/`fp.max` ±0 wrong-`unsat`). These tests declare the helper name as a
 //! user symbol and assert the reduction's verdict is unchanged.
+#![cfg(feature = "full")]
 
 use axeyum_ir::{Sort, TermArena, TermId};
 use axeyum_solver::{CheckResult, SolverConfig, solve};

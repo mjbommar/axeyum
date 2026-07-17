@@ -6,6 +6,7 @@
 //! re-executed** to confirm it really reaches the target (unicorn-style,
 //! oracle-free). This is the memory analogue of the scalar symbolic-execution
 //! client, now that arrays are supported.
+#![cfg(feature = "full")]
 
 use axeyum_ir::{TermArena, Value};
 use axeyum_solver::{CheckResult, SatBvBackend, SolverConfig, check_with_array_elimination};

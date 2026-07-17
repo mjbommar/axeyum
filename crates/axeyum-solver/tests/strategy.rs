@@ -2,6 +2,7 @@
 //! unified `solve_with_strategy` entry point, and — when the `z3` feature is on
 //! — cross-validation that the high-memory eager pure-Rust strategy and the
 //! low-memory Z3 oracle strategy agree on every verdict.
+#![cfg(feature = "full")]
 
 use axeyum_ir::{TermArena, TermId};
 use axeyum_solver::{

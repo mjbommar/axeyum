@@ -4,6 +4,7 @@
 //! [`check_with_all_theories`] composes the three eager reductions, solves with
 //! [`SatBvBackend`], projects the model back through all three, and replays it
 //! against the original mixed query — soundness checked without a native oracle.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

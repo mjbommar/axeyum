@@ -1,4 +1,5 @@
 //! ADR-0128 checked counterexamples below vacuous existential prefixes.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

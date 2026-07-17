@@ -1,5 +1,6 @@
 //! The unified dispatcher [`check_auto`]: one front door routing each query to
 //! the right engine (bit-blasting composition vs lazy-SMT for reals).
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

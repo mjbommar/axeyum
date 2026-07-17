@@ -322,6 +322,24 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-17 — ADR-0216 makes the minimal QF_BV solver profile real in
+  consumers and the browser target.** `axeyum-solver` now defaults exactly to
+  `qfbv`; bench/EVM/property/verify explicitly select `full`; and a manifest +
+  dependency-tree firewall rejects drift. Full-facade integration targets are
+  explicitly gated, so the package-default test build is green without
+  weakening the all-feature suite. Glaurung's production
+  `solver-axeyum` selects only QF_BV, while the legacy SMT-LIB reference bridge
+  is quarantined behind `solver-axeyum-text` + `full`; both profiles compile.
+  `axeyum-wasm` is now a workspace member and preserves its JSON API through a
+  narrow parse-to-`SatBvBackend` route with real SAT/UNSAT tests and fail-closed
+  non-QF_BV rejection. The first actual wasm32 build found a stale
+  `std::time::Instant`/`web_time::Instant` proof-export boundary; the repaired
+  target build passes and CI now owns it. This establishes a minimal solver
+  surface, not a minimum bundle-size claim: the shared parser still pulls its
+  pure-Rust FP/string parsing dependencies. Next: measure generated WASM size
+  and latency/parser footprint while the higher-priority small-driver fair map
+  proceeds.
+
 - **2026-07-17 — The consolidated code/publication review changes the success
   criterion and immediate order.** The paper is no longer organized around a
   general speed claim; its spine is strict correctness, measured deployability,
@@ -1998,17 +2016,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   | **GQ10 real-lifter regression tier** | **Native continuation admission DONE; wider direct-delta default DEFERRED (ADR-0205--0212).** The accepted tcpip trace admits bounded continuation. The new complete 85,449-event / 17,400-check `dxgkrnl` trace and independent replay preserve exact no-op behavior and every correctness/lifecycle gauge, but ordinary-core time CV is 14.430%/8.306% and slower-core outcomes drift | Keep direct delta opt-in. Repeat under a quieter predeclared environment or add another no-timeout IOCTL driver; route `win32k` to a system-service/callout frontend |
 
   **Next actions:** (1) run N>=5 fair four-cell captures on
-  `vwififlt`/`IntcSST`/`SurfacePen` and publish the regime boundary; (2) enforce
-  the minimal `qfbv` dependency profile in Glaurung/`axeyum-wasm`, with an ADR
-  for any solver-default flip; (3) add the named consumer failures to a
-  multi-oracle typed differential-fuzz lane; (4) add a neutral solver cell with
-  its subprocess/FFI boundary named; (5) run authoritative finding parity and
-  specify checked canonical model selection if needed; (6) regenerate a
-  timeout-sensitive driver and keep each timeout cell separate; (7) advance
-  GQ5 through fresh causal CNF attribution while preserving explicit controls,
-  exact counter partitions, and honest residual `Unknown`s; (8) stage solver
-  namespace/module, duplicate-removal, and typed-config refactors only as
-  bounded behavior-preserving tranches; (9) keep GQ4 explicit/off.
+  `vwififlt`/`IntcSST`/`SurfacePen` and publish the regime boundary; (2) measure
+  the now-enforced QF_BV browser artifact's generated size, latency, and parser
+  footprint, then the warm time/RSS and DRAT deployment points; (3) add the
+  named consumer failures to a multi-oracle typed differential-fuzz lane; (4)
+  add a neutral solver cell with its subprocess/FFI boundary named; (5) run
+  authoritative finding parity and specify checked canonical model selection
+  if needed; (6) regenerate a timeout-sensitive driver and keep each timeout
+  cell separate; (7) advance GQ5 through fresh causal CNF attribution while
+  preserving explicit controls, exact counter partitions, and honest residual
+  `Unknown`s; (8) stage solver namespace/module, duplicate-removal, and
+  typed-config refactors only as bounded behavior-preserving tranches; (9) keep
+  GQ4 explicit/off.
 
   **Validation (2026-07-17):** the first parallel all-feature workspace test
   exceeded the shared 4 GiB envelope while several heavyweight test processes

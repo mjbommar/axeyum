@@ -1,4 +1,5 @@
 //! ADR-0097: checked evidence for positive-slope affine-growth universals.
+#![cfg(feature = "full")]
 
 use axeyum_smtlib::parse_script;
 use axeyum_solver::{

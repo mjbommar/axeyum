@@ -5,6 +5,7 @@
 //! decided multi-atom real universals *and* the soundness negatives: non-linear
 //! and integer universals must decline, and no real universal may be
 //! mis-decided (a valid one never `unsat`, a false one never `sat`).
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

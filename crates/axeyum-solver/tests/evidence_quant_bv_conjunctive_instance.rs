@@ -1,4 +1,5 @@
 //! ADR-0127 source-bound conjunctive BV universal instances.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

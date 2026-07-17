@@ -10,6 +10,7 @@
 //! The `lean` binary is optional: each test **skips** (prints a note, passes)
 //! when it is absent. Install it with `elan` (a `leanprover/lean4` toolchain on
 //! `PATH`), or point `AXEYUM_LEAN_BIN` at a `lean` executable.
+#![cfg(feature = "full")]
 #![allow(clippy::many_single_char_names)]
 #![allow(clippy::similar_names)]
 

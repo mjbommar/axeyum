@@ -16,6 +16,7 @@
 //! Every reference value below was confirmed against cvc5:
 //! `(str.update "" 0 "XY") = ""`, `(str.update "AAAAAA" 5 "XY") = "AAAAAX"`
 //! (clip), `(str.update "A" 0 "XYZ") = "X"`, out-of-range `idx` → `s` unchanged.
+#![cfg(feature = "full")]
 #![allow(clippy::many_single_char_names, clippy::similar_names)]
 //!
 //! Method: for each seed we draw a ground `s`, an `idx` spanning

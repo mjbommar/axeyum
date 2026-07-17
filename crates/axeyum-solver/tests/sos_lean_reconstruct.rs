@@ -11,6 +11,7 @@
 //! term to `False`. A buggy reconstruction would fail the `infer`/`def_eq` gate and
 //! be rejected, never accepted as an unsound proof — so a passing test is a genuine
 //! machine-checked refutation.
+#![cfg(feature = "full")]
 
 use axeyum_ir::{Rational, TermArena};
 use axeyum_solver::{

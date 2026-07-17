@@ -7,6 +7,7 @@
 //! defining conditions (`A ⇒ I`, `I ∧ B ⇒ ⊥`, shared vocabulary) over ℤ with
 //! the disjunctive integer decider [`check_with_lia_dpll`] — so the assurance
 //! never leans on the function's own internal verification.
+#![cfg(feature = "full")]
 #![allow(clippy::similar_names, clippy::many_single_char_names)]
 
 use std::collections::BTreeSet;

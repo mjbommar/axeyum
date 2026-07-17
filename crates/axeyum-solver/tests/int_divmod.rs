@@ -1,6 +1,7 @@
 //! Euclidean div/mod/abs decided completely (sat AND unsat) via the LIA
 //! simplex/DPLL path, after elimination to linear constraints. The bounded
 //! bit-blaster alone reports in-range unsat as unknown; these must be unsat.
+#![cfg(feature = "full")]
 
 use axeyum_ir::{Sort, TermArena};
 use axeyum_solver::{CheckResult, SolverConfig, solve};

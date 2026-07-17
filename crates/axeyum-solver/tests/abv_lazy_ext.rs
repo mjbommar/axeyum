@@ -6,7 +6,7 @@
 //! ROW/congruence CEGAR loop. These cases were previously declined (`Unknown`) by
 //! the lazy-ROW path; here they are decided, while every verdict the eager / ROW
 //! paths already reach is preserved (the differential vs the eager oracle).
-
+#![cfg(feature = "full")]
 // Conventional single-letter array/index/element names, as in the `abv.rs` and
 // `abv_lazy_row.rs` test modules.
 #![allow(clippy::many_single_char_names, clippy::similar_names)]

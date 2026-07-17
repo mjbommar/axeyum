@@ -1,6 +1,7 @@
 //! Verifies the P2.1 lazy bit-blasting dispatch wiring: `SolverConfig::lazy_bv`
 //! routes `solve()` to the abstraction-refinement strategy (opt-in), and is a
 //! no-op when off. (Non-ignored: fast — the cases decide in milliseconds.)
+#![cfg(feature = "full")]
 
 use axeyum_ir::{Sort, TermArena};
 use axeyum_solver::{

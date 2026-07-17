@@ -1,5 +1,6 @@
 //! Census-driven NRA levers (P2.5): the bounded sat-witness probe and the
 //! threshold-1 monotonicity pre-check past the cross-product cap.
+#![cfg(feature = "full")]
 #![allow(clippy::doc_markdown)]
 //!
 //! These are the `cvc5-regress-clean` QF_NRA movers this pass targets:

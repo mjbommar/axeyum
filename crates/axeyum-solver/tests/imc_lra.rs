@@ -5,6 +5,7 @@
 //! through `check_auto`); every `Reachable` has its trace re-decided; the
 //! resource-cap and non-`LRA` cases assert a graceful `Unknown` (never a hang or a
 //! wrong verdict).
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

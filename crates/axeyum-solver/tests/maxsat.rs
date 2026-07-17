@@ -1,4 +1,5 @@
 //! `MaxSAT` and weighted-`MaxSAT` over Boolean soft constraints.
+#![cfg(feature = "full")]
 
 use axeyum_ir::{Sort, TermArena, TermId};
 use axeyum_solver::{OptOutcome, max_satisfiable, max_satisfiable_weighted};

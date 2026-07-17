@@ -1,6 +1,7 @@
 //! Differential faithfulness checking of the `QF_BV` bit-blasting reduction:
 //! the lowered AIG must evaluate to the same value as the original term on
 //! random assignments (track a — scalable assurance for term→AIG).
+#![cfg(feature = "full")]
 
 use axeyum_ir::TermArena;
 use axeyum_solver::{FaithfulnessOutcome, check_qf_bv_faithfulness};

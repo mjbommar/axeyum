@@ -3,6 +3,7 @@
 //! These tests keep human-cited rule packs tied to Axeyum's checked-evidence
 //! path. The rule formalization and search are not trusted; accepted evidence
 //! must independently re-check against the parsed SMT-LIB obligation.
+#![cfg(feature = "full")]
 
 use axeyum_smtlib::parse_script;
 use axeyum_solver::{

@@ -15,6 +15,7 @@
 //! The suite also pins the SOUNDNESS NEGATIVES the closed path must NOT mis-
 //! decide: an *open* integer universal (symbolic free variable) and a non-linear
 //! universal must DECLINE the closed path, never reaching a bogus verdict.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

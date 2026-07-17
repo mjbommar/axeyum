@@ -4,6 +4,7 @@
 //! SOS/CAD path that is the open NRA frontier (#16). Its **linear** facts
 //! (midpoints, betweenness) are pure LRA and provable today with re-checked
 //! Farkas certificates — that linear slice is what this exercises.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

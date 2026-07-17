@@ -11,6 +11,7 @@
 //! `unsat` conflict core is itself `check_with_lia_simplex`-`unsat`. A
 //! disagreement is a hard failure (a wrong sat/unsat is unacceptable; a graceful
 //! `Unknown` is fine and never counts as a disagreement).
+#![cfg(feature = "full")]
 
 use axeyum_ir::{Assignment, Sort, TermArena, TermId, Value, eval};
 use axeyum_solver::{

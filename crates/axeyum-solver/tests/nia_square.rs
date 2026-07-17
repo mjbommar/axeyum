@@ -8,6 +8,7 @@
 //! perfect-square / sign analysis, and every shape outside the exact single-square
 //! pattern must be **declined** (left to the existing NIA dispatch) — never
 //! mis-decided.
+#![cfg(feature = "full")]
 
 use axeyum_ir::{Sort, TermArena, Value};
 use axeyum_solver::{CheckResult, SolverConfig, solve};

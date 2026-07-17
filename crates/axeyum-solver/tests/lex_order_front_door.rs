@@ -12,6 +12,7 @@
 //!
 //! The route only ever *adds* a re-checked `unsat` to an `unknown`; satisfiable lex
 //! scripts are decided by the bounded encoder and pass through untouched.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

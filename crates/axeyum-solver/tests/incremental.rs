@@ -4,6 +4,7 @@
 //! `push`/`pop` scopes, and one-shot `check_assuming` assumptions, all over the
 //! pure-Rust backend. The scenario catalog is also driven through the façade to
 //! confirm it is a drop-in front end for the conformance corpus.
+#![cfg(feature = "full")]
 
 use axeyum_ir::{Sort, TermArena, Value, eval};
 use axeyum_scenarios::{Expectation, catalog};

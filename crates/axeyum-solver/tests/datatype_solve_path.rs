@@ -1,6 +1,7 @@
 //! Regression: datatype queries must route through datatype handling on the
 //! generic `solve`/`produce_evidence` path (preprocess-default-on), not escape
 //! to the bit-blasting backend where a raw `DtSelect` is `Unsupported`.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

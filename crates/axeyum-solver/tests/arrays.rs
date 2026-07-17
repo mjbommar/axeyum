@@ -7,6 +7,7 @@
 //! and its model is projected back to array values and **replayed against the
 //! original array query** with the ground evaluator — soundness checked without
 //! a native oracle.
+#![cfg(feature = "full")]
 
 use axeyum_ir::TermArena;
 use axeyum_solver::{CheckResult, SatBvBackend, SolverConfig, check_with_array_elimination};

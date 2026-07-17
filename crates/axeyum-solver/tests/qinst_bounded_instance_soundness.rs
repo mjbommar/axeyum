@@ -35,7 +35,7 @@
 //!
 //! No clock, no OS entropy, no external oracle: the sweep is reproducible from the
 //! fixed seed and needs no solver feature flag.
-
+#![cfg(feature = "full")]
 #![allow(clippy::similar_names, clippy::many_single_char_names)]
 
 use std::collections::BTreeSet;

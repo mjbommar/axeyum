@@ -3,6 +3,7 @@
 //! [`check_with_quantifiers`] expands each finite-domain quantifier to its
 //! instances, dispatches the quantifier-free result, and replays the original
 //! quantified formula through the enumerating evaluator.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

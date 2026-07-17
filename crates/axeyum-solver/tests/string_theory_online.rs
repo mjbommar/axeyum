@@ -18,7 +18,7 @@
 //! replay-checked model. The theory-driven `unsat` is certified inside the entry
 //! point (`StringTheory::assert_conflicts_certified`), so a passing `unsat` here is
 //! a *checked-derivation* `unsat`.
-
+#![cfg(feature = "full")]
 #![allow(clippy::many_single_char_names, clippy::similar_names)]
 
 use axeyum_ir::{ArraySortKey, Sort, TermArena, TermId};

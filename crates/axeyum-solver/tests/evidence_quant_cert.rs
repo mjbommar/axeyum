@@ -6,6 +6,7 @@
 //! `produce_evidence` when it applies. These tests cover both routes, reject a
 //! tampered Alethe proof, and keep quantifier-free `unsat` certificates and a
 //! satisfiable guarded-`Int` universal unaffected.
+#![cfg(feature = "full")]
 
 use axeyum_cnf::{AletheCommand, AletheLit, AletheTerm};
 use axeyum_ir::{Sort, TermArena};

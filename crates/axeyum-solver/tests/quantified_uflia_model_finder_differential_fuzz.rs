@@ -26,7 +26,7 @@
 //! uninterpreted on both sides; only Int arithmetic, the six comparators, and
 //! `and`/`or` appear — no partial operators), so a jointly-decided disagreement
 //! is a real bug, never a false alarm.
-
+#![cfg(feature = "full")]
 #![cfg(feature = "z3")]
 // The generated-term algebra uses conventional single-letter coefficient/operand
 // names (`a`, `b`, `c`, `f`, `g`, `l`, `r`, `x`) that read naturally as the small

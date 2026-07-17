@@ -14,6 +14,7 @@
 //! - **A (resource-limit promise):** a caller-set `config.timeout` is honored —
 //!   a large Pareto front returns within the budget rather than running for
 //!   minutes.
+#![cfg(feature = "full")]
 
 use std::time::{Duration, Instant};
 

@@ -11,7 +11,8 @@ code. See the rationale in [internals/documentation.md](../internals/documentati
 
 ## Two pages
 
-- **[`index.html`](index.html)** — the free-form solver: paste any SMT-LIB query.
+- **[`index.html`](index.html)** — the free-form QF_BV solver: paste an SMT-LIB
+  bit-vector query.
 - **[`exercises.html`](exercises.html)** — the **self-checking exercise widget**
   for the [K-12 curriculum](../curriculum/k12/README.md): pose → student answers →
   the real solver grades by *replay* ("find x") or *assert-the-negation*
@@ -37,9 +38,9 @@ Expected: **`sat`** (`x = #xff`). Toggle to the contradictory variant for
 The playground UI ([`index.html`](index.html)) is complete and ships with a
 graceful fallback: until the WASM bundle is built, it explains how to enable
 live solving and still lets you read/edit examples. The binding crate
-([`crates/axeyum-wasm`](../../crates/axeyum-wasm)) is written and ready; it is
-**not yet in the workspace** (so it can't entangle the main build), and the
-bundle build is gated on the `wasm32` toolchain plus a green workspace.
+([`crates/axeyum-wasm`](../../crates/axeyum-wasm)) is a workspace member. Host
+tests exercise real SAT/UNSAT queries and CI compiles the minimal solver
+profile for `wasm32-unknown-unknown`.
 
 ## Build the bundle (activation)
 
@@ -48,7 +49,6 @@ bundle build is gated on the `wasm32` toolchain plus a green workspace.
 rustup target add wasm32-unknown-unknown
 cargo install wasm-pack
 
-# add "crates/axeyum-wasm" to [workspace].members in the root Cargo.toml, then:
 wasm-pack build crates/axeyum-wasm --target web --out-dir ../../docs/playground/pkg
 
 # serve the docs (the page needs to be over http for ES-module imports)
@@ -72,8 +72,11 @@ flowchart LR
     class wasm w;
 ```
 
-The same `solve_smtlib` you'd call from Rust runs in the browser, including model
-replay — a `sat` is still verified against the original query before it's shown.
+The binding parses SMT-LIB but deliberately admits only the scalar QF_BV
+profile, then calls the same replay-checked `SatBvBackend` used by native
+consumers. A `sat` is still verified against the original query before it is
+shown. Broader logics fail closed instead of pulling the full solver surface
+into the browser artifact.
 
 ## Why this is the right interactivity for Axeyum
 
@@ -81,5 +84,7 @@ replay — a `sat` is still verified against the original query before it's show
   the native fit, and it runs entirely client-side (great for static docs / CI).
 - **Real engine over canned output** — examples execute the committed solver, so
   they stay correct by construction (the Verso spirit, solver-flavored).
-- **Pure Rust** — the default solver build is already wasm-compatible (ADR-0017),
-  so this adds no C/C++ dependency.
+- **Pure Rust** — the default `qfbv` solver build is wasm-compatible (ADR-0017),
+  so this adds no C/C++ dependency. The text parser retains its own pure-Rust
+  FP/string parsing dependencies; bundle size and latency remain measured
+  deployment questions rather than inferred claims.

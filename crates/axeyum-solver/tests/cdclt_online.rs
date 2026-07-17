@@ -16,6 +16,7 @@
 //!
 //! The Z3-gated `QF_UF` differential (`qf_uf_differential_fuzz.rs`) is run unchanged
 //! as a separate gate; it exercises the dispatched pure-Rust stack against Z3.
+#![cfg(feature = "full")]
 
 use axeyum_ir::{FuncId, Sort, TermArena, TermId};
 use axeyum_solver::{CheckResult, SolverConfig, check_qf_uf, check_qf_uf_online_cdclt};

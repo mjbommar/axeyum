@@ -4,6 +4,7 @@
 //! for an interpolant `I`, and *independently* re-checks `A ⇒ I`, `I ∧ B ⇒ ⊥`,
 //! and the shared-vocabulary condition with `check_qf_uf` — so the assurance does
 //! not lean on the generator's own internal verification.
+#![cfg(feature = "full")]
 
 use std::collections::BTreeSet;
 

@@ -4,6 +4,7 @@
 //! `Err Unsupported("QF_LRA: non-linear or non-real subterm ...")`; the dispatch now
 //! falls through to `check_with_uf_arithmetic` (mirroring the integer EUF+LIA path),
 //! so these decide — and crucially never return an `Err`.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

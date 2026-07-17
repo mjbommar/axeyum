@@ -23,6 +23,7 @@
 //!   problem (e.g. it mixes in `str.indexof`) reproduces the **original** bounded
 //!   parse error, so a previously-`unsupported` script never silently becomes a
 //!   bare `unknown`/`sat`.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

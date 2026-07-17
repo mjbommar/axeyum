@@ -3,6 +3,7 @@
 //! These tests keep the educational resources tied to Axeyum's checked evidence
 //! path: the pack-level replay remains useful, but an upgraded `unsat` row must
 //! also produce independently rechecked Farkas evidence.
+#![cfg(feature = "full")]
 
 use axeyum_ir::{Rational, TermArena, TermId};
 use axeyum_smtlib::parse_script;

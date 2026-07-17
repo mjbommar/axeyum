@@ -6,6 +6,7 @@
 //! each original clause and the resulting validity obligation is discharged with
 //! [`check_auto`], so a wrong `Sat` cannot slip past. `Unsat`/`Unknown` outcomes
 //! are asserted directly; the solver must never panic on malformed input.
+#![cfg(feature = "full")]
 
 use axeyum_ir::{Op, Sort, TermArena, TermId, TermNode};
 use axeyum_solver::{

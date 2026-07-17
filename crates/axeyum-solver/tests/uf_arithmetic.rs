@@ -4,6 +4,7 @@
 //! congruence closure exchange equalities through the shared abstraction: arithmetic
 //! forces argument equalities; a functional-consistency lemma then forces the
 //! results equal.
+#![cfg(feature = "full")]
 #![allow(clippy::many_single_char_names)]
 
 use axeyum_ir::{Sort, TermArena};

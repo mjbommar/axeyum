@@ -4,6 +4,7 @@
 //! zero-trust Alethe route: the solver may search with EUF, but the accepted
 //! evidence must re-derive the congruence conflict without a trusted reduction
 //! step.
+#![cfg(feature = "full")]
 
 use axeyum_smtlib::parse_script;
 use axeyum_solver::{CheckResult, Evidence, SolverConfig, check_auto, prove_qf_uf_unsat_alethe};

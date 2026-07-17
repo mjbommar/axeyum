@@ -4,6 +4,7 @@
 //! (integer-infeasible systems whose *real* relaxation is feasible), and reasons
 //! about unbounded integer magnitudes. Every `sat` is replayed via the
 //! evaluator.
+#![cfg(feature = "full")]
 
 use axeyum_ir::{Sort, TermArena, TermId, Value, eval};
 use axeyum_solver::{CheckResult, SolverConfig, check_with_lia_simplex, solve};

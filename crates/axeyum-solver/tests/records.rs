@@ -1,4 +1,5 @@
 //! Finite product datatypes (records) lowered to bit-vectors.
+#![cfg(feature = "full")]
 
 use axeyum_ir::{Assignment, TermArena, Value, eval};
 use axeyum_solver::{CheckResult, RecordSort, SolverConfig, solve};

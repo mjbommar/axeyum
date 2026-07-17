@@ -5,6 +5,7 @@
 //! identities (UNSAT) — never by a native oracle. Running the catalog through
 //! [`SatBvBackend`] checks the whole lower-to-AIG-to-CNF-to-SAT path against a
 //! trust signal that is independent in kind of the search path (ADR-0008).
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

@@ -3,6 +3,7 @@
 //! These tests keep integer-obstruction educational resources tied to Axeyum's
 //! small checked evidence: the solver may search over the integer system, but
 //! accepted evidence must independently re-check against the original terms.
+#![cfg(feature = "full")]
 
 use axeyum_smtlib::parse_script;
 use axeyum_solver::{

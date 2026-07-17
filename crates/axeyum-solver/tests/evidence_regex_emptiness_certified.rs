@@ -19,6 +19,7 @@
 //! - the yet-uncertified string `unsat` classes (word clash) stay a correct
 //!   `Evidence::Unsat(None)` — no false certification;
 //! - non-string scripts still route through `produce_evidence` unchanged.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

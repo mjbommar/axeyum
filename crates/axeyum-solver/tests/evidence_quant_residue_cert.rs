@@ -1,4 +1,5 @@
 //! Checked evidence for the Euclidean quotient/remainder quantified-LIA slice.
+#![cfg(feature = "full")]
 
 use axeyum_smtlib::parse_script;
 use axeyum_solver::{Evidence, SolverConfig, produce_evidence};

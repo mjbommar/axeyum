@@ -116,6 +116,17 @@ jobs:
       # per ADR-0002. Optional native-oracle features track stable Rust.
       - run: cargo check --workspace
 
+  wasm-qfbv:
+    name: build (wasm32 QF_BV profile)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build -p axeyum-wasm --target wasm32-unknown-unknown
+
   docs:
     name: rustdoc
     runs-on: ubuntu-latest

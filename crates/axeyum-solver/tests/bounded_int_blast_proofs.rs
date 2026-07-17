@@ -28,6 +28,7 @@
 //!
 //! Soundness-negative anchors confirm the certificate is never fabricated: a
 //! genuinely SAT box and an UNBOUNDED nonlinear query both yield `None`.
+#![cfg(feature = "full")]
 
 use axeyum_ir::{Sort, TermArena, TermId};
 use axeyum_solver::{

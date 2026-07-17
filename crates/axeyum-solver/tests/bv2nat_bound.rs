@@ -1,6 +1,7 @@
 //! `bv2nat` finite-range refutation (G2): `bv2nat(b)` of a `W`-bit vector lies in
 //! `[0, 2^W - 1]`, so a constraint exceeding that range is `unsat` — and the
 //! in-range satisfiable direction must keep deciding `sat`.
+#![cfg(feature = "full")]
 
 use axeyum_ir::TermArena;
 use axeyum_solver::{CheckResult, SolverConfig, solve};

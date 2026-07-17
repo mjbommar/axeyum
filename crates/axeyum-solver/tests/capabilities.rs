@@ -1,6 +1,7 @@
 //! Golden test for the capability ledger: the committed capability-matrix
 //! document must equal what the ledger renders, so trust metadata cannot drift
 //! out of sync with the code (architecture review recommendations #3/#4/#9).
+#![cfg(feature = "full")]
 
 use axeyum_solver::capabilities::{CAPABILITIES, capability_matrix_markdown};
 

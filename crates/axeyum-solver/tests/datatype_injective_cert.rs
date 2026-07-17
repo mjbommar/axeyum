@@ -31,6 +31,7 @@
 //! **Lean reconstruction is deferred** for the injectivity collapse (it composes
 //! the deferred `select`-fold reconstruction tail through `cong`); the Carcara
 //! route below fully certifies the COLLAPSE reasoning.
+#![cfg(feature = "full")]
 
 use std::path::{Path, PathBuf};
 use std::process::Command;

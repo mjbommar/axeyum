@@ -11,7 +11,7 @@
 //! concatenation *and* the membership both hold under the model). That replay is the
 //! sole gate on `sat`, so no wrong `sat` is possible even if the shape heuristic is
 //! imprecise; an undecided shape stays first-class `unknown`.
-
+#![cfg(feature = "full")]
 #![allow(clippy::similar_names)]
 
 use std::time::Duration;

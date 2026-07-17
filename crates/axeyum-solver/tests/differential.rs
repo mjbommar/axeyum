@@ -5,7 +5,7 @@
 //! so Z3 reports `Sat` iff its semantics agree with the evaluator on every
 //! input. Any divergence (including SMT-LIB edge cases such as division by
 //! zero and over-shift) makes the conjunction false and the test fail.
-
+#![cfg(feature = "full")]
 #![cfg(feature = "z3")]
 
 use axeyum_ir::{Assignment, TermArena, TermId, Value, eval};

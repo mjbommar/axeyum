@@ -1,4 +1,5 @@
 //! Tests for the typed pipeline-stage view [`BvLayerStats`].
+#![cfg(feature = "full")]
 
 use axeyum_ir::{Sort, TermArena};
 use axeyum_solver::{

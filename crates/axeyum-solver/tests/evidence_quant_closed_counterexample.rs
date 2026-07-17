@@ -1,4 +1,5 @@
 //! ADR-0100: evaluator-replayed closed-universal counterexample evidence.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

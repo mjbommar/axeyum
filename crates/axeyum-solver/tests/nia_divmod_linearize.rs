@@ -5,6 +5,7 @@
 //! convention (`0 ≤ r < |n|`), the replay-gated `sat` guard (a relaxation-`sat`
 //! that must NOT become a wrong verdict), and both directions of the Euclidean
 //! identity.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

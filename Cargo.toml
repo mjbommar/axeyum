@@ -20,6 +20,7 @@ members = [
     "crates/axeyum-strings",
     "crates/axeyum-verify",
     "crates/axeyum-verify-macros",
+    "crates/axeyum-wasm",
 ]
 
 [workspace.package]

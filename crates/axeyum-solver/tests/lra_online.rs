@@ -13,6 +13,7 @@
 //!
 //! All randomness is a deterministic LCG (no `rand`, no clock), so a failure is
 //! reproducible from the seed.
+#![cfg(feature = "full")]
 
 use axeyum_ir::{Assignment, Rational, Sort, SymbolId, TermArena, TermId, Value, eval};
 use axeyum_solver::{

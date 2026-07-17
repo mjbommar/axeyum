@@ -1,5 +1,6 @@
 //! ADR-0104: Euclidean-residue universals reconstructed from the general
 //! integer-prelude decomposition theorem.
+#![cfg(feature = "full")]
 
 use axeyum_smtlib::parse_script;
 use axeyum_solver::{

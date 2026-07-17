@@ -60,7 +60,7 @@
 //! - axeyum `Unknown`/decline    → SKIP (sound-incomplete is allowed; the bounded
 //!   model legitimately declines / downgrades many shapes).
 //! - Z3 `unknown`/timeout/error  → SKIP (cannot adjudicate).
-
+#![cfg(feature = "full")]
 #![cfg(feature = "z3")]
 
 use std::fmt::Write as _;

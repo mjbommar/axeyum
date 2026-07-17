@@ -21,6 +21,7 @@
 //! The global [`TrustId::Fpa2Bv::is_certified`] stays `false` (not every FP query
 //! qualifies); this is the per-run [`TrustStep::certified`] flag, exactly like the
 //! `XorGaussian` pure-Gauss and `IntBlast` proven-box sub-cases.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

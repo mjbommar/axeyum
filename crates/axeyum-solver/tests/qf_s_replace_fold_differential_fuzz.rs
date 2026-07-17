@@ -22,6 +22,7 @@
 //! - axeyum `Unsat` ∧ oracle `sat` → **PANIC** (a wrong unsat — the worst bug).
 //!
 //! A fixed-seed LCG drives every choice, so the whole sweep is reproducible.
+#![cfg(feature = "full")]
 
 use std::fmt::Write as _;
 use std::time::Duration;

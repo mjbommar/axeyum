@@ -19,6 +19,7 @@
 //!   The genuine `unsat` comes from the other passes and must NOT become `sat`.
 //! - `∀x:Int. x > 0` — already `unsat` via the single-atom unsat-∀ pass; the
 //!   integer relaxation must not interfere / must not make it `sat`.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

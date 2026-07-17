@@ -24,6 +24,7 @@
 //! Joint gate (both fronts): axeyum `Sat` ∧ oracle `unsat` → PANIC (wrong sat);
 //! axeyum `Unsat` ∧ oracle `sat` → PANIC (wrong unsat); any `Unknown` / decline /
 //! timeout on either side → SKIP. DISAGREE must be 0.
+#![cfg(feature = "full")]
 
 use std::fmt::Write as _;
 use std::time::Duration;

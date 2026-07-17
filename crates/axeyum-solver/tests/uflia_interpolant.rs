@@ -6,6 +6,7 @@
 //! under test). A satisfiable pair, a congruence-needed pair, and a cuts-needed
 //! integer pair confirm the sound decline path, and a deterministic LCG fuzz
 //! confirms no wrong interpolant is ever returned.
+#![cfg(feature = "full")]
 
 use axeyum_ir::{Sort, TermArena, TermId};
 use axeyum_solver::{CheckResult, SolverConfig, check_with_uf_arithmetic, uflia_interpolant};

@@ -10,6 +10,7 @@
 //! bails within roughly one round of the budget. Bailing to `unknown` is sound
 //! (`unknown` is first-class); the budget never converts a `sat`/`unsat` into a
 //! wrong verdict, and fast queries still decide unchanged.
+#![cfg(feature = "full")]
 #![allow(clippy::many_single_char_names)]
 
 use std::time::{Duration, Instant};

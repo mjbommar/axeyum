@@ -5,6 +5,7 @@
 //! [`check_with_array_elimination`] checks the whole array pipeline — eager
 //! elimination, BV solving, model projection, and original-query replay —
 //! against oracle-free ground truth.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

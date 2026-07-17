@@ -1,4 +1,5 @@
 //! Nonlinear real arithmetic via linear abstraction + replay (sound, incomplete).
+#![cfg(feature = "full")]
 #![allow(clippy::many_single_char_names)]
 
 use axeyum_ir::{Rational, Sort, TermArena, Value, eval};

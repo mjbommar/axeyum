@@ -15,6 +15,7 @@
 //! symlink) so the gate is self-contained and committable. Bailing to
 //! `unknown` is sound (`unknown` is first-class); the budget never converts a
 //! `sat`/`unsat` into a wrong verdict, and fast queries still decide unchanged.
+#![cfg(feature = "full")]
 
 use std::time::{Duration, Instant};
 

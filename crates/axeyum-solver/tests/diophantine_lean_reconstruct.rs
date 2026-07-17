@@ -2,6 +2,7 @@
 //! (ADR-0042): the canonical `x + y = 0 ∧ x − y = 1 ⇒ 2x = 1` integer-infeasible
 //! system reconstructs to a kernel-checked Lean `False`, while an
 //! integer-FEASIBLE system is declined (never fabricated).
+#![cfg(feature = "full")]
 
 use std::path::PathBuf;
 use std::process::Command;

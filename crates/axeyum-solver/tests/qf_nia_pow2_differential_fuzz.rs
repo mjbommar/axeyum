@@ -25,7 +25,7 @@
 //! The test passes iff disagreements == 0. axeyum `Sat` is additionally
 //! replay-checked in `solve_smtlib` (against the ORIGINAL `pow2` term under the
 //! ground evaluator), so a fabricated model can never be reported `Sat`.
-
+#![cfg(feature = "full")]
 #![cfg(feature = "z3")]
 
 use std::fmt::Write as _;

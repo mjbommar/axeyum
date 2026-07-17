@@ -9,6 +9,7 @@
 //! Soundness focus: a body whose inner `∃y` is *unsatisfiable for each `x`* makes
 //! the whole guarded universal false; the engine must then decide `Unsat`
 //! (or a sound `Unknown`) — never a wrong `Sat`.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

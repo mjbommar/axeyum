@@ -4,6 +4,7 @@
 //! clausal proof route: the pack-level finite replay explains the source
 //! mathematical counterexample, and the upgraded `unsat` row must emit a
 //! DIMACS/DRAT certificate that rechecks independently of solver search.
+#![cfg(feature = "full")]
 
 use axeyum_smtlib::parse_script;
 use axeyum_solver::{

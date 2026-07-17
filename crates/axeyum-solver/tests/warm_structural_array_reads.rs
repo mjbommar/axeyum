@@ -1,4 +1,5 @@
 //! Candidate-triggered retained structural-array read gates for ADR-0087.
+#![cfg(feature = "full")]
 
 use axeyum_ir::{Sort, TermArena, TermId, Value, eval};
 use axeyum_solver::{

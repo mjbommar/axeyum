@@ -7,6 +7,7 @@
 //! `lia_interpolant`-declines, resource-cap, and non-`LIA` cases assert a graceful
 //! `Unknown` (never a hang, never a wrong verdict). A soundness-negative case
 //! requires an actually-unsafe system to never be reported `Safe`.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

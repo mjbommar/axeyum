@@ -16,6 +16,7 @@
 //! documented trust steps (`IntBlast` trusted, `Farkas` certified); a second width;
 //! tampering breaks the check; and the existing `QF_LIA` / `QF_BV` evidence routes
 //! are unchanged, while a satisfiable `bv2nat` query is never reported `unsat`.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

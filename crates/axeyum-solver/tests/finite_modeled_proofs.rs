@@ -32,6 +32,7 @@
 //! divisions the **DRAT + `check_drat`** route — not Alethe/Carcara — is the certifying
 //! path today; [`alethe_route_is_out_of_fragment_for_now`] documents that boundary so a
 //! future Alethe-coverage increment has a regression anchor.
+#![cfg(feature = "full")]
 
 use axeyum_solver::{
     EndToEndUnsatOutcome, UnsatProofOutcome, certify_qf_bv_unsat_end_to_end,

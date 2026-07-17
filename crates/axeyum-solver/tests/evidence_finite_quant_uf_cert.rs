@@ -11,6 +11,7 @@
 //! assert it certifies and re-checks, that a tampered proof is rejected, and that
 //! the pure-LIA finite-`∀` cert, the `QF_UFLIA` ground cert, and a satisfiable
 //! UF-bodied universal are all unaffected.
+#![cfg(feature = "full")]
 
 use axeyum_cnf::{AletheCommand, AletheLit, AletheTerm};
 use axeyum_ir::{Sort, TermArena, TermId};

@@ -1,4 +1,5 @@
 //! Deterministic differential gate for canonical online EUF+BV combination.
+#![cfg(feature = "full")]
 
 use axeyum_ir::{Sort, TermArena, TermId};
 #[cfg(feature = "z3")]

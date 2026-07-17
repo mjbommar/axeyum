@@ -1,4 +1,5 @@
 //! ADR-0122: checked outer-BV witnesses for vacuous guarded alternation.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

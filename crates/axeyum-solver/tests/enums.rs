@@ -1,4 +1,5 @@
 //! Finite enumeration datatypes lowered to bit-vectors, solved end-to-end.
+#![cfg(feature = "full")]
 
 use axeyum_ir::TermArena;
 use axeyum_solver::{CheckResult, EnumSort, SolverConfig, solve};

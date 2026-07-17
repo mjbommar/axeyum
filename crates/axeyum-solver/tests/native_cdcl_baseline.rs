@@ -16,6 +16,7 @@
 //! cargo test -p axeyum-solver --release --test native_cdcl_baseline \
 //!     -- --ignored --nocapture
 //! ```
+#![cfg(feature = "full")]
 
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};

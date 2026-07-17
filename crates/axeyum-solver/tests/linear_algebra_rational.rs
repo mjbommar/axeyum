@@ -3,6 +3,7 @@
 //! *decidable* matrix core). These are linear over the rationals, so they go
 //! through axeyum's exact-rational engine (LRA). Coefficients are built by
 //! repeated addition to stay strictly linear.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

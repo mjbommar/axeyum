@@ -16,6 +16,7 @@
 //! ```sh
 //! cargo test -p axeyum-solver --test xor_cdcl_curated_measure -- --ignored --nocapture
 //! ```
+#![cfg(feature = "full")]
 
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};

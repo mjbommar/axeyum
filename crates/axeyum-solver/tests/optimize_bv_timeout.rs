@@ -10,6 +10,7 @@
 //! - The same query through the `Solver` façade with a configured timeout returns.
 //! - A normal small BV optimize still returns the exact optimum (unchanged when no
 //!   timeout fires).
+#![cfg(feature = "full")]
 
 use std::time::{Duration, Instant};
 

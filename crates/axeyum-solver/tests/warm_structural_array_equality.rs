@@ -1,4 +1,5 @@
 //! Retained warm structural array equality gates for ADR-0090.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

@@ -12,7 +12,7 @@
 //! Deterministic (seeded LCG, no clock/entropy); each axeyum solve runs on a worker
 //! thread under a hard wall-clock cap so a pathological shape is treated as
 //! `unknown`, never allowed to wedge the sweep.
-
+#![cfg(feature = "full")]
 #![cfg(feature = "z3")]
 
 use std::sync::mpsc;

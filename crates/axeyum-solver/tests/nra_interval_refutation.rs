@@ -3,6 +3,7 @@
 //! satisfy its own comparison is unsat. Sound (interval over-approximation),
 //! incomplete. These lock the decided cases AND the soundness corners (a
 //! satisfiable query must NEVER be wrongly refuted).
+#![cfg(feature = "full")]
 use std::time::Duration;
 
 use axeyum_solver::{CheckResult, SolverConfig, solve_smtlib};

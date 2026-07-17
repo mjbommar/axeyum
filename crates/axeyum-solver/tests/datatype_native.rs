@@ -1,5 +1,6 @@
 //! Native datatype solving for free variables: eager tag/field expansion with
 //! model projection (ADR-0022 step B).
+#![cfg(feature = "full")]
 
 use axeyum_ir::{Sort, TermArena, Value};
 use axeyum_solver::{CheckResult, SolverConfig, check_with_datatype_native};

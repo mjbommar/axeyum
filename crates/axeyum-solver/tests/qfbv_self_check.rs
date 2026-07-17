@@ -8,6 +8,7 @@
 //! proofs. Each test below builds a genuinely-`unsat` instance (the same shapes the
 //! Carcara cross-check exercises), emits the proof, and asserts our own checker
 //! returns `Ok(true)` — UNSAT established by a verified empty-clause derivation.
+#![cfg(feature = "full")]
 
 use axeyum_cnf::check_alethe;
 use axeyum_ir::{Sort, TermArena, TermId};

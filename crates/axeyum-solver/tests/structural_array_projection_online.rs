@@ -1,4 +1,5 @@
 //! Differential and replay gates for ADR-0085 structural array-class equations.
+#![cfg(feature = "full")]
 
 use axeyum_ir::{ArraySortKey, Sort, TermArena, TermId, Value, eval};
 use axeyum_smtlib::parse_script;

@@ -16,7 +16,7 @@
 //! - either side `unknown`/timeout/error → SKIP (sound).
 //!
 //! Fixed-seed LCG (no clock, no OS entropy): the whole sweep is reproducible.
-
+#![cfg(feature = "full")]
 #![cfg(feature = "z3")]
 
 use std::fmt::Write as _;

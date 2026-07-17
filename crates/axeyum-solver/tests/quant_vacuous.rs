@@ -9,6 +9,7 @@
 //! *valid*-universal pass reaches. These tests pin the newly decided `sat` cases
 //! *and* the strictly-additive guarantee: a genuinely `x`-dependent universal is
 //! never wrongly decided.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

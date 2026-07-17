@@ -14,6 +14,7 @@
 //! graceful `Unknown` instead of hanging.
 //!
 //! Each test running to completion under the suite *is* the termination proof.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

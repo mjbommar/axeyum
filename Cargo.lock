@@ -212,6 +212,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "axeyum-wasm"
+version = "0.1.0"
+dependencies = [
+ "axeyum-smtlib",
+ "axeyum-solver",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "base64"
 version = "0.22.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

@@ -1,5 +1,6 @@
 //! Exportable `unsat` certificates: a `QF_BV` refutation is emitted as DIMACS +
 //! DRAT and independently re-checked (ADR-0011/0012 follow-on).
+#![cfg(feature = "full")]
 
 use axeyum_cnf::{check_drat, parse_dimacs, parse_drat};
 use axeyum_ir::TermArena;

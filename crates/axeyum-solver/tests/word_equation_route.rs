@@ -25,6 +25,7 @@
 //!   cannot decide.** Scripts whose only witness exceeds the bounded encoder's
 //!   `max_len` (a variable forced past 8 bytes by literal concatenation) return
 //!   `unknown` from the bounded gate today; the word route now decides them `sat`.
+#![cfg(feature = "full")]
 
 use axeyum_solver::{CheckResult, SolverConfig, solve_smtlib};
 

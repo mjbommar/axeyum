@@ -50,7 +50,13 @@ session state.
 > restructuring, table-driven reconstruction cleanup, and typed policy/config
 > consolidation remain important artifact work, but must be staged behind these
 > publication blockers so broad refactors do not invalidate the active evidence
-> baseline.
+> baseline. ADR-0216 completes the first artifact correction: `qfbv` is now the
+> solver default, every full in-tree consumer opts in explicitly, Glaurung's
+> production backend is QF_BV-only with its reference text bridge quarantined,
+> and `axeyum-wasm` is a tested workspace member with a real wasm32 CI build.
+> The browser binding keeps its SMT-LIB JSON API through a narrow QF_BV route;
+> its parser dependencies mean bundle size and latency still require
+> measurement rather than a blanket minimum-footprint claim.
 
 > **P0 soundness stop contained (2026-07-15, ADR-0165).** Historical commit
 > `2cb298e2` reproduced unrestricted large elimination from a two-constructor
@@ -619,10 +625,11 @@ evidence are now distinct:
    authority, diff stable findings/sinks, and introduce a checked canonical
    model policy if concretization changes exploration. Report before/after
    parity.
-5. **Deployability and artifact readiness:** enforce
-   `default-features = false, features = ["qfbv"]` in Glaurung and
-   `axeyum-wasm`, decide the solver-default flip with an ADR and explicit full
-   consumers, then measure WASM latency/size, warm time/RSS Pareto, cold gap,
+5. **Deployability and artifact readiness — profile enforcement DONE
+   (ADR-0216), measurement WIP:** `qfbv` is the exact solver default; Glaurung
+   and `axeyum-wasm` select it explicitly; full in-tree consumers opt in; and
+   host tests plus a real wasm32 build gate the browser binding. Next measure
+   WASM latency/size and parser footprint, warm time/RSS Pareto, cold gap,
    warm-hit rate, and one concrete self-rechecked DRAT use case.
 6. **Supporting artifact work:** contribution ablations, neutral SMT-COMP QF_BV
    and a second workload axis, then measured module/API decomposition,

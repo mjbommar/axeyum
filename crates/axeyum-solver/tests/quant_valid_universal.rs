@@ -7,6 +7,7 @@
 //! `¬body[x := c]` UNSAT for a fresh constant `c`. These tests pin the newly
 //! decided `sat` cases *and* confirm the strictly-additive guarantee: the
 //! non-valid and UNSAT-by-instantiation cases are unaffected.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

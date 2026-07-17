@@ -8,6 +8,7 @@
 //! model is projected back through both passes and **replayed against the
 //! original query** with the ground evaluator — soundness checked without a
 //! native oracle.
+#![cfg(feature = "full")]
 
 use axeyum_ir::{Sort, TermArena, Value, eval};
 use axeyum_solver::{

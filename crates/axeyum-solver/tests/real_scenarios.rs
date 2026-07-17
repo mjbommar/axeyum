@@ -5,6 +5,7 @@
 //! checks the whole LRA pipeline — linear-atom extraction, Fourier–Motzkin
 //! elimination, rational model reconstruction, and exact replay — against
 //! oracle-free ground truth.
+#![cfg(feature = "full")]
 
 use axeyum_scenarios::real_catalog;
 use axeyum_solver::{CheckResult, check_with_lra};

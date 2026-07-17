@@ -1,6 +1,7 @@
 //! IEEE 754 floating-point predicates/comparisons as bit-vector formulas.
 //! Concrete bit patterns are checked through the ground evaluator (the semantic
 //! reference); a symbolic irreflexivity query goes through the solver.
+#![cfg(feature = "full")]
 
 use axeyum_ir::{Assignment, TermArena, Value, eval};
 use axeyum_solver::fp::{self, FloatFormat};

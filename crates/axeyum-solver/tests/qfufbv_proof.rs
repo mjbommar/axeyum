@@ -9,6 +9,7 @@
 //! abstraction's defining equations) rather than assumed — there is no trusted
 //! reduction step. Carcara cross-validation of the same proofs lives in
 //! `carcara_crosscheck.rs`.
+#![cfg(feature = "full")]
 
 use axeyum_cnf::{AletheCommand, check_alethe};
 use axeyum_ir::{Sort, TermArena, TermId};

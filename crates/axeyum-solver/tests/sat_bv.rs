@@ -3,6 +3,7 @@
 //! These tests exercise the Phase 5 composition path: query terms lower to
 //! AIG/CNF, solve through the pure Rust `BatSat` adapter, lift a model, and
 //! replay the original formula before returning `sat`.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

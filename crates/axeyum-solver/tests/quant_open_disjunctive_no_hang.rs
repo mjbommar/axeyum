@@ -7,6 +7,7 @@
 //! grinds toward its node budget (~minutes, ignoring the timeout). With strict-
 //! inequality tightening it is immediately LP-infeasible ⇒ instant UNSAT, so the
 //! universal decides **Sat** — fast and correct, never a hang.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

@@ -1,4 +1,5 @@
 //! ADR-0134 query-scoped positive-universal Bool/BV instance sets.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

@@ -10,6 +10,7 @@
 //! witness through the ground evaluator), every `Unsat` is exact by root
 //! isolation, and every shape outside the single-variable single-assertion pattern
 //! is **declined** (left to the NRA layer) — never mis-decided.
+#![cfg(feature = "full")]
 
 use axeyum_ir::{Rational, Sign, Sort, SymbolId, TermArena, TermId, Value, eval};
 use axeyum_solver::{CheckResult, SolverConfig, solve};

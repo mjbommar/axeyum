@@ -22,6 +22,7 @@
 //! reconstructor (it would fall through to the `QF_UFBV` reconstructor, which
 //! rejects them). The Carcara route below fully certifies the COLLAPSE reasoning;
 //! the kernel-checked Lean twin is follow-up work.
+#![cfg(feature = "full")]
 
 use std::path::{Path, PathBuf};
 use std::process::Command;

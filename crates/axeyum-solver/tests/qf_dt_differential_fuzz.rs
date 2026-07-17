@@ -15,7 +15,7 @@
 //! - axeyum `Sat`  ∧ Z3 `Unsat` → **PANIC** (wrong sat).
 //! - axeyum `Unsat` ∧ Z3 `Sat`  → **PANIC** (wrong unsat — the worst bug).
 //! - axeyum `Unknown` → fine; Z3 `Unknown`/timeout → skip.
-
+#![cfg(feature = "full")]
 #![cfg(feature = "z3")]
 
 use std::sync::mpsc;

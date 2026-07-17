@@ -1,5 +1,6 @@
 //! ADR-0130/0131/0132 checked free-BV models with affine-LSB, witness replay,
 //! signed-interval containment, and zero-product annihilation.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

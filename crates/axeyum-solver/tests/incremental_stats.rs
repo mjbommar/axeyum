@@ -1,4 +1,5 @@
 //! Public incremental phase-attribution contract.
+#![cfg(feature = "full")]
 
 use axeyum_ir::TermArena;
 use axeyum_solver::{

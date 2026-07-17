@@ -31,6 +31,7 @@
 //! **Lean reconstruction is deferred** for the distinctness collapse (it composes
 //! the deferred is-tester reconstruction); the Carcara route below fully certifies
 //! the COLLAPSE reasoning.
+#![cfg(feature = "full")]
 
 use std::path::{Path, PathBuf};
 use std::process::Command;

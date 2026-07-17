@@ -3,7 +3,7 @@
 //! Every `sat` result is replayed through the trusted evaluator against the
 //! original assertions — the level-1 evidence check is part of the test
 //! harness itself, not an afterthought.
-
+#![cfg(feature = "full")]
 #![cfg(feature = "z3")]
 
 use axeyum_ir::{Sort, TermArena, TermId, Value, eval};

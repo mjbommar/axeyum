@@ -4,6 +4,7 @@
 //! **re-checked** certificate — "trusted small checking" on a famous theorem.
 //! The satisfiable counterpart (`permutation_exists`) is decided `sat` with a
 //! replay-checked model, exhibiting the SAT/UNSAT boundary.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

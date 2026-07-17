@@ -8,7 +8,7 @@
 //! must each yield a certificate that self-checks; model-consistent systems must
 //! never produce one (a certificate is only ever emitted behind the independent
 //! T-B.7 re-check, and `word_conflict_alethe` verifies before recording).
-
+#![cfg(feature = "full")]
 #![allow(clippy::many_single_char_names, clippy::similar_names)]
 
 use std::collections::BTreeSet;

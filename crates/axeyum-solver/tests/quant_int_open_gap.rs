@@ -24,6 +24,7 @@
 //! width ⇒ must DECLINE (never a bogus verdict); a width-1 multiple-coefficient
 //! gap `(2y, 2y + 1)` is valid (2y is an integer) ⇒ must be `sat`, never `unsat`;
 //! a non-linear universal must DECLINE.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

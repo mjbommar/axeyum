@@ -10,6 +10,7 @@
 //!    `F' ∧ ¬(∃var. F)` is UNSAT via `check_with_lra`.
 //!
 //! A `None` (decline) is always sound; an unsound `Some` is a hard failure.
+#![cfg(feature = "full")]
 #![allow(clippy::many_single_char_names, clippy::useless_vec)]
 
 use std::collections::BTreeMap;

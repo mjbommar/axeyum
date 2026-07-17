@@ -1,5 +1,6 @@
 //! Bounded-length string theory (BV-lowered): literals, length, equality,
 //! char-at, and symbolic string solving.
+#![cfg(feature = "full")]
 #![allow(clippy::similar_names, clippy::many_single_char_names)]
 
 use axeyum_ir::{Assignment, TermArena, Value, eval};

@@ -7,6 +7,7 @@
 //! and asserts the detector REJECTS every one (`is_bounded_complete == false`).
 //! A positive-control loop confirms it still ACCEPTS genuinely bounded-complete
 //! queries (so it is not vacuously always-false).
+#![cfg(feature = "full")]
 #![allow(
     clippy::many_single_char_names,
     clippy::similar_names,

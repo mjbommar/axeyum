@@ -3,6 +3,7 @@
 //! The IR/front-end can represent `(Array Int Int)` directly, and the solver
 //! now routes the Bool/linear-Int scalar slice through lazy ROW/extensionality
 //! with generic array model projection.
+#![cfg(feature = "full")]
 
 use axeyum_ir::{Value, eval};
 use axeyum_smtlib::parse_script;

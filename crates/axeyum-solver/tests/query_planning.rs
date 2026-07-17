@@ -2,7 +2,7 @@
 //!
 //! Sliced plans are allowed to submit fewer terms, but a `sat` model is
 //! accepted only after replay against the original query.
-
+#![cfg(feature = "full")]
 #![cfg(feature = "z3")]
 
 use axeyum_ir::{Sort, TermArena};

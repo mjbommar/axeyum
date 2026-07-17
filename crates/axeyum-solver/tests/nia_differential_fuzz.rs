@@ -34,7 +34,7 @@
 //! nonzero divisor the two conventions are identical, so these atoms are a fair
 //! differential test (the divide-by-zero corner — where the two pick different
 //! by-convention values — is never generated).
-
+#![cfg(feature = "full")]
 #![cfg(feature = "z3")]
 
 use std::sync::mpsc;

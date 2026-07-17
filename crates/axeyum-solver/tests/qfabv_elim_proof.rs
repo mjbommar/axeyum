@@ -12,7 +12,7 @@
 //! reduction step. Carcara cross-validation of the same proofs lives in
 //! `carcara_crosscheck.rs`; reconstruction to a kernel-checked `False` lives in
 //! the `reconstruct` unit tests.
-
+#![cfg(feature = "full")]
 #![allow(clippy::many_single_char_names)] // a, i, j, c, e: array, indices, const, expr
 
 use axeyum_cnf::{AletheCommand, check_alethe};

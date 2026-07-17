@@ -72,6 +72,7 @@
 //!   quadratic **non-residue** mod `m` and `0 <= x < b·m` — no integer square is
 //!   `≡ r (mod m)`. The measured frontier is `0` (axeyum returns `unknown` on
 //!   all): an UNSAT blind spot, captured as a tracking row.
+#![cfg(feature = "full")]
 
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};

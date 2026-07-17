@@ -9,6 +9,7 @@
 //! These tests assert (a) the certificate is produced and (b) it INDEPENDENTLY
 //! re-validates, and (c) an indefinite/satisfiable query yields no SOS evidence
 //! (never a wrong `unsat`). All arithmetic is exact — no floating point.
+#![cfg(feature = "full")]
 
 use axeyum_ir::{Rational, Sort, TermArena, TermId};
 use axeyum_solver::{Evidence, SolverConfig, produce_evidence, produce_nra_sos_evidence};

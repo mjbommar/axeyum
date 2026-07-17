@@ -12,6 +12,7 @@
 //! through the evaluator (the trust anchor); every `unsat` rests on cuts valid
 //! for every integer point. A case the slice cannot decide is `unknown`, never a
 //! guess.
+#![cfg(feature = "full")]
 
 use axeyum_ir::{Sort, TermArena, TermId, Value, eval};
 use axeyum_solver::{CheckResult, check_with_lia_simplex};

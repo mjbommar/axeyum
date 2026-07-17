@@ -1,4 +1,5 @@
 //! Weighted pseudo-Boolean constraints over Booleans.
+#![cfg(feature = "full")]
 
 use axeyum_ir::{Sort, TermArena, TermId};
 use axeyum_solver::{CheckResult, SolverConfig, pb_eq, pb_ge, pb_le, solve};

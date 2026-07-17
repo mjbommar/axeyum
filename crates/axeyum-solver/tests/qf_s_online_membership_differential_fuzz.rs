@@ -39,6 +39,7 @@
 //! empty intersections (hence certified unsats) frequent, stressing the
 //! wrong-unsat gate. The test passes iff disagreements == 0 over the jointly
 //! decided scripts.
+#![cfg(feature = "full")]
 
 use std::fmt::Write as _;
 use std::time::Duration;

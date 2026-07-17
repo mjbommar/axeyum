@@ -11,6 +11,7 @@
 //!
 //! Headline case (previously declined): the 3-variable AM-GM refutation
 //! `a²+b²+c²−ab−bc−ca < 0` is now decided **Unsat**.
+#![cfg(feature = "full")]
 
 use axeyum_ir::{Rational, Sort, TermArena, TermId};
 use axeyum_solver::{CheckResult, Evidence, SolverConfig, produce_nra_sos_evidence, solve};

@@ -17,6 +17,7 @@
 //! These are the exact 7 instances the audit flagged (5 wrong-sat, 1 wrong-unsat,
 //! 1 more wrong-sat), plus a negative test (an unsat-truth string query must not
 //! yield a `checked = true` sat) and a non-string no-regression check.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

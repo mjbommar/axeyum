@@ -23,7 +23,7 @@
 //! Every construct — `bvnot, bvand, bvor, bvxor, bvadd` and `{=, and, or, not}` —
 //! is total and convention-free, so the two engines' semantics coincide exactly;
 //! the universal closure is built with `forall_const` on the same bound constants.
-
+#![cfg(feature = "full")]
 #![cfg(feature = "z3")]
 #![allow(
     clippy::trivially_copy_pass_by_ref,

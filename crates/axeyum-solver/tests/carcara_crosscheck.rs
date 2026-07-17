@@ -11,6 +11,7 @@
 //! so each test **skips** (prints a note, passes) when the binary is absent.
 //! Build it with `cargo build --release -p carcara-cli` inside
 //! `references/carcara`, or point `AXEYUM_CARCARA_BIN` at a `carcara` binary.
+#![cfg(feature = "full")]
 
 use std::path::{Path, PathBuf};
 use std::process::Command;

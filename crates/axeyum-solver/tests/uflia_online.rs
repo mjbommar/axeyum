@@ -8,6 +8,7 @@
 //! and every `sat` model must replay against the original assertions with **integer**
 //! values. A graceful `Unknown` on a hard case is fine; a wrong sat / unsat is
 //! unacceptable.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

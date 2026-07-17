@@ -6,6 +6,7 @@
 //! the shared-vocabulary condition with [`check_with_lia_simplex`] — so the
 //! assurance does not lean on the generator's own internal verification. The
 //! cuts-needed and satisfiable cases assert the function declines (`None`).
+#![cfg(feature = "full")]
 
 use std::collections::BTreeSet;
 

@@ -27,7 +27,7 @@
 //! only after replay against it — a fixed choice that Z3 can always also pick, so
 //! a replayed `Sat` is a genuine Z3 model. Either way the joint verdict must
 //! agree; the divisor is deliberately allowed to be zero so this corner is stressed.
-
+#![cfg(feature = "full")]
 #![cfg(feature = "z3")]
 
 use std::sync::mpsc;

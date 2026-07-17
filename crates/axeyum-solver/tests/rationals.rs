@@ -2,6 +2,7 @@
 //! Farkas certificates (the ordered-field shadow of Spivak Ch.1, over the
 //! rationals). Density and antisymmetry of `<`, stated without division so they
 //! stay strictly linear (LRA).
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

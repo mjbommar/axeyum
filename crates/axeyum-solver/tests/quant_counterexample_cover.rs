@@ -1,4 +1,5 @@
 //! ADR-0108: checked source-bound counterexample covers for quantified UNSAT.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

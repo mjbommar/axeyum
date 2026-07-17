@@ -9,6 +9,7 @@
 //! replays exactly. Soundness is unchanged: every `Sat` below is independently
 //! re-checked against the *original* integer assertions, and a bounded
 //! non-refutation must stay `Unknown` (never `Unsat`).
+#![cfg(feature = "full")]
 
 use axeyum_ir::{TermArena, TermId, Value, eval};
 use axeyum_solver::{CheckResult, SolverConfig, solve};

@@ -8,6 +8,7 @@
 //! `False` the in-tree kernel has already `infer`-checked and `def_eq False`-compared
 //! (the successful `Some(_)` *is* the kernel gate — a wrong reconstruction declines to
 //! `None`, never a wrong `False`). Mirrors `diophantine_lean_reconstruct.rs`.
+#![cfg(feature = "full")]
 
 use std::path::PathBuf;
 use std::process::Command;

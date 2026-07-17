@@ -13,6 +13,7 @@
 //!
 //! These tests use the SMT-LIB front door (the fix lives in the parser lowering)
 //! and need no oracle: each asserted formula's correct verdict is a theorem.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

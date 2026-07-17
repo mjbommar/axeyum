@@ -30,7 +30,7 @@
 //! genuinely SAT instance and a function-free query both yield `None`, and a
 //! tampered certificate (corrupt congruence accounting / corrupt DRAT) fails
 //! `recheck`.
-
+#![cfg(feature = "full")]
 #![allow(clippy::similar_names)]
 
 use axeyum_ir::{Sort, TermArena, TermId};

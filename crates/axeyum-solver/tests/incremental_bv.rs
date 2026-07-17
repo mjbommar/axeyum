@@ -4,6 +4,7 @@
 //! truth, and its push/pop scopes and one-shot assumptions must behave like
 //! SMT-LIB incremental solving — all with model replay against the original
 //! terms.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

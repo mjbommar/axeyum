@@ -1,4 +1,5 @@
 //! Public counterexample/model minimization API tests.
+#![cfg(feature = "full")]
 
 use axeyum_ir::{Sort, TermArena, Value, eval};
 use axeyum_solver::{

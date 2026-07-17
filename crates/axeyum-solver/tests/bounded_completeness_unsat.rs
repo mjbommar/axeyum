@@ -4,6 +4,7 @@
 //! (see docs/research/01-foundations/bounded-string-completeness-unsat.md).
 //! Every upgraded verdict was cross-checked against cvc5 (`DISAGREE=0` on the
 //! whole `QF_S`/`QF_SLIA` corpus) before landing.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

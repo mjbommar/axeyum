@@ -1,4 +1,5 @@
 //! ADR-0107/0123/0133 checked free-Boolean quantified SAT models.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

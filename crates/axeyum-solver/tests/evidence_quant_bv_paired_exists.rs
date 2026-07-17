@@ -1,4 +1,5 @@
 //! ADR-0129 source-bound paired-existential witness transfer.
+#![cfg(feature = "full")]
 
 use std::io::{Read as _, Write as _};
 use std::path::PathBuf;

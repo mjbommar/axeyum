@@ -1,4 +1,5 @@
 //! Retained warm Boolean array-relation flag gates for ADR-0091.
+#![cfg(feature = "full")]
 
 use axeyum_ir::{ArraySortKey, Sort, TermArena, TermId, Value, eval};
 use axeyum_solver::{AssumptionOutcome, CheckResult, IncrementalBvSolver};

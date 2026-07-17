@@ -5,6 +5,7 @@
 //! valid-universal pass — decides `∀x:Int. x*x >= 0` as `sat`. Strictly
 //! additive: it only sharpens `unknown` to `unsat` for the real-refutable cases,
 //! never overturning a decided `sat`/`unsat`.
+#![cfg(feature = "full")]
 #![allow(clippy::many_single_char_names)]
 
 use axeyum_ir::{Sort, TermArena};

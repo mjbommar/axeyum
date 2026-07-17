@@ -22,7 +22,7 @@
 //! - Z3 `Unknown`/timeout → the instance is skipped (cannot adjudicate).
 //!
 //! The test passes iff disagreements == 0 AND every axeyum `Sat` replayed.
-
+#![cfg(feature = "full")]
 #![cfg(feature = "z3")]
 
 use std::sync::mpsc;

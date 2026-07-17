@@ -3,7 +3,7 @@
 //! These tests keep the rewrite crate free of a normal Z3 dependency while
 //! still requiring enabled default rules to preserve solver behavior and model
 //! replay through the existing oracle path.
-
+#![cfg(feature = "full")]
 #![cfg(feature = "z3")]
 
 use axeyum_ir::{TermArena, TermId, Value, eval};

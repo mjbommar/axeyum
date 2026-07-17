@@ -1,4 +1,5 @@
 //! Genuine Lean reconstruction for the checked ADR-0099 nested-XOR theorem.
+#![cfg(feature = "full")]
 
 use axeyum_smtlib::parse_script;
 use axeyum_solver::{

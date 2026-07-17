@@ -1,4 +1,5 @@
 //! Retained warm array-valued UF parent gates for ADR-0088.
+#![cfg(feature = "full")]
 
 use axeyum_ir::{ArraySortKey, Sort, TermArena, TermId, Value, eval};
 use axeyum_solver::{

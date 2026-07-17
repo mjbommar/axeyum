@@ -13,6 +13,7 @@
 //!
 //! Each solve runs on a worker thread under a wall-clock cap so a pathological
 //! instance degrades to a skip instead of hanging the suite.
+#![cfg(feature = "full")]
 
 use std::path::{Path, PathBuf};
 use std::sync::mpsc;

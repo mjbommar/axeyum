@@ -8,6 +8,7 @@
 //! each `pow2(x)` to a fresh integer with theory-valid axioms; every `sat` is
 //! additionally replay-checked against the ORIGINAL `pow2` term under the ground
 //! evaluator, so a mis-abstraction can never produce a wrong `sat`.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

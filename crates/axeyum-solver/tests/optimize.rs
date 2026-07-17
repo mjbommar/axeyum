@@ -1,4 +1,5 @@
 //! Linear integer optimization (optimization modulo theories, integer slice).
+#![cfg(feature = "full")]
 
 use axeyum_ir::{Sort, TermArena, TermId};
 use axeyum_solver::{

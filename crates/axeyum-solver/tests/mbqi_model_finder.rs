@@ -19,6 +19,7 @@
 //!   ones whose violation lives at a UF *table entry* rather than the default —
 //!   must NOT be reported `sat` (it must stay `unsat`), and an out-of-fragment
 //!   universal must not be fabricated `sat`.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

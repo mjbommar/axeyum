@@ -1,4 +1,5 @@
 //! Differential and front-door gates for ADR-0084 array-valued UF results.
+#![cfg(feature = "full")]
 
 use axeyum_ir::{ArraySortKey, Sort, TermArena, TermId, Value, eval};
 use axeyum_smtlib::parse_script;

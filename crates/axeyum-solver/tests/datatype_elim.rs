@@ -1,4 +1,5 @@
 //! End-to-end datatype solving via read-over-construct elimination (ADR-0022).
+#![cfg(feature = "full")]
 
 use axeyum_ir::{Sort, TermArena, TermId};
 use axeyum_solver::{CheckResult, SolverConfig, check_with_datatype_elimination};

@@ -1,4 +1,5 @@
 //! Warm word-level preprocessing for lifter-shaped `QF_BV` formulas.
+#![cfg(feature = "full")]
 
 use axeyum_ir::TermArena;
 use axeyum_rewrite::canonicalize_terms;

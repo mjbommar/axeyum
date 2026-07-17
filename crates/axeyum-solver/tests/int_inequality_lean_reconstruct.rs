@@ -4,6 +4,7 @@
 //! `[1, 2]`, equivalently `0 < x < 1`, refuted by `no_int_between` — reconstructs to
 //! a kernel-checked Lean `False`, while an integer-FEASIBLE inequality system is
 //! declined (never fabricated).
+#![cfg(feature = "full")]
 
 use std::path::PathBuf;
 use std::process::Command;

@@ -15,7 +15,7 @@
 //! The online route only ever *adds* a verdict: `sat` is replay-checked against the
 //! original assertions inside the entry point, and `unsat` is a certified theory
 //! conflict. It can never override a decided verdict or fabricate a wrong one.
-
+#![cfg(feature = "full")]
 #![allow(clippy::similar_names)]
 
 use std::time::Duration;

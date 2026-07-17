@@ -1,5 +1,6 @@
 //! ADR-0106: genuine Bool/Int quantifier reconstruction for single-pivot
 //! equality partitions.
+#![cfg(feature = "full")]
 
 use axeyum_smtlib::{Script, parse_script};
 use axeyum_solver::{

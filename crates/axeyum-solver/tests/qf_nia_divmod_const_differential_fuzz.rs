@@ -31,7 +31,7 @@
 //! 3`. That replay "violation" is a convention artifact, NOT a wrong sat (Z3
 //! confirms sat). So replay is tracked for diagnostics only; the wrong-sat gate is
 //! the verdict differential (`axeyum Sat ∧ Z3 Unsat`).
-
+#![cfg(feature = "full")]
 #![cfg(feature = "z3")]
 
 use std::sync::mpsc;

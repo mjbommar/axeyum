@@ -21,6 +21,7 @@
 //! only ever add coverage, never a wrong `sat`/`unsat`. The suite therefore also
 //! pins the soundness negatives (a genuinely valid universal must NOT become a
 //! bogus `unsat`; a satisfiable quantified query must stay non-`unsat`).
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

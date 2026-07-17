@@ -5,6 +5,7 @@
 //! valid (`sat`) and the refuted (`unsat`) directions. A range over the
 //! deterministic size cap is left as a sound `unknown` (never a wrong answer,
 //! never an OOM).
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

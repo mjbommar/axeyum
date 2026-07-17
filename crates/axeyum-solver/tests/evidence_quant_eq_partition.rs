@@ -1,4 +1,5 @@
 //! ADR-0101: checked finite equality partitions for nested Bool/Int quantifiers.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

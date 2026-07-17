@@ -51,7 +51,7 @@
 //! sign_extend`, and the relations `{=, !=, bvult, bvule, bvugt, bvuge, bvslt,
 //! bvsle, bvsgt, bvsge}` with occasional Boolean (`and`/`or`/`not`) combinations.
 //! Nothing is omitted: every scalar op's totality convention is shared with Z3.
-
+#![cfg(feature = "full")]
 #![cfg(feature = "z3")]
 
 use std::sync::mpsc;

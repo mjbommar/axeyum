@@ -2,6 +2,7 @@
 //! pure-Rust sat-bv backend: `check_with_preprocessing` must eliminate variables
 //! before solving and return a model over the *original* symbols that satisfies
 //! the *original* assertions.
+#![cfg(feature = "full")]
 
 use axeyum_ir::{Sort, TermArena, TermId, Value, eval};
 use axeyum_solver::{

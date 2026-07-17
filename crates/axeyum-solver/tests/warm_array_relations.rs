@@ -1,4 +1,5 @@
 //! Retained warm array equality/extensionality gates for ADR-0089.
+#![cfg(feature = "full")]
 
 use axeyum_ir::{ArraySortKey, Sort, TermArena, TermId, Value, eval};
 use axeyum_solver::{

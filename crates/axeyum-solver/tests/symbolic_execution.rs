@@ -8,7 +8,7 @@
 //! the program — an independent (unicorn-style) ground truth, not another
 //! solver. It demonstrates, with checked evidence, that the incremental engine
 //! supports realistic path exploration.
-
+#![cfg(feature = "full")]
 #![allow(clippy::too_many_lines)] // scenario-style integration tests stay readable as full flows
 
 use axeyum_ir::{

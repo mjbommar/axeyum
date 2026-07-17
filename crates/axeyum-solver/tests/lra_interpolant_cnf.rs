@@ -7,6 +7,7 @@
 //! (`A ⇒ I`, `I ∧ B ⇒ ⊥`, shared vocabulary) with the disjunctive decider
 //! [`check_auto`] — so the assurance never leans on the function's own internal
 //! verification.
+#![cfg(feature = "full")]
 #![allow(clippy::similar_names, clippy::many_single_char_names)]
 
 use std::collections::BTreeSet;

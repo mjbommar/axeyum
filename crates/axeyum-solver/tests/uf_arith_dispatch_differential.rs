@@ -19,6 +19,7 @@
 //! The corpus is a deterministic LCG over BOTH Int and Real mixed UF+linear-arith
 //! formulas (`and`/`or`/`not`/`ite`/conjunctions over UF applications, arithmetic
 //! vars, equalities, and order atoms). No `rand`, no clock — fully reproducible.
+#![cfg(feature = "full")]
 
 use axeyum_ir::{Assignment, Rational, Sort, TermArena, TermId, Value, eval};
 use axeyum_solver::{

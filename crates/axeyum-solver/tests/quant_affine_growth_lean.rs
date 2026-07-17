@@ -1,5 +1,6 @@
 //! ADR-0105: checked affine-growth universals reconstructed through Euclidean
 //! decomposition and guarded exact `ite` semantics.
+#![cfg(feature = "full")]
 
 use axeyum_smtlib::parse_script;
 use axeyum_solver::{

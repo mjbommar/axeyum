@@ -1,4 +1,5 @@
 //! ADR-0096/0098/0121: replayable certificates for quantified SAT.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

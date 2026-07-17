@@ -6,6 +6,7 @@
 //! degrade to a graceful `PdrOutcome::Unknown` — never panic (the "graceful
 //! unknown, never crash" hard rule). The test passes simply by *returning* an
 //! `Ok(_)` without panicking.
+#![cfg(feature = "full")]
 
 use axeyum_ir::{Sort, SymbolId, TermArena, TermId};
 use axeyum_solver::{

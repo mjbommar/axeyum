@@ -6,6 +6,7 @@
 //!
 //! The measurement is on *encoded clause count* (deterministic), not wall-clock
 //! (flaky in CI). Both engines must also agree on every per-branch verdict.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

@@ -11,6 +11,7 @@
 //! never a model, so it can never produce a wrong `sat`; and every UNSAT it
 //! emits must match the benchmark `:status`. The wrong-sat-negative cases below
 //! pin that a genuinely SATISFIABLE integer query is NOT falsely refuted.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

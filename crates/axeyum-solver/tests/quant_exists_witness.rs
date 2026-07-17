@@ -5,6 +5,7 @@
 //! declines (never `unsat`, never a wrong `sat`) otherwise. These tests pin the
 //! decided-`Sat` cases and the soundness negatives (which must NOT come back `Sat`
 //! and must NOT come back `Unsat` from this pass).
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

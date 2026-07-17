@@ -1,5 +1,6 @@
 //! The unified `solve` front door: one call decides anything supported —
 //! quantifier-free or quantified, any theory combination.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

@@ -6,6 +6,7 @@
 //! [`check_with_function_elimination`] checks the whole EUF pipeline — Ackermann
 //! elimination, BV solving, model projection, and original-query replay —
 //! against oracle-free ground truth.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

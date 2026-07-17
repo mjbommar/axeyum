@@ -14,6 +14,7 @@
 //!
 //! Each case runs on a worker thread under a generous-but-finite wall cap so a
 //! regression cannot hang CI: it fails loudly instead.
+#![cfg(feature = "full")]
 
 use std::sync::mpsc;
 use std::thread;

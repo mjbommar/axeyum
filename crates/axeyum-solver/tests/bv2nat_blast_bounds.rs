@@ -7,6 +7,7 @@
 //! over the *lowered* query must therefore never surface a bound-induced
 //! contradiction as `unsat` — `(= (str.len s) 9)` with `STRING_MAX_LEN = 8` is
 //! `sat` in the real theory (Z3 agrees) and must stay `sat`/`unknown` here.
+#![cfg(feature = "full")]
 
 use axeyum_solver::{CheckResult, SmtLibOutcome, SolverConfig, solve_smtlib};
 

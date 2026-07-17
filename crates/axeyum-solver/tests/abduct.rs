@@ -7,6 +7,7 @@
 //! `None`, no shared atom ⇒ `None`) and a deterministic LCG fuzz confirm the
 //! sound decline path: a returned abduct is always genuine, and an over-eager
 //! `None` is acceptable.
+#![cfg(feature = "full")]
 
 use std::collections::BTreeSet;
 

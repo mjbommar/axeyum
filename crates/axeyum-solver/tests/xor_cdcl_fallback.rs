@@ -7,6 +7,7 @@
 //! surfaces the `XorGaussian` trust step in produced evidence; a fallback `sat`
 //! is replay-checked). The unit-level fallback mechanics (verdict upgrade,
 //! gating, stats) are covered inline in `sat_bv_backend.rs`.
+#![cfg(feature = "full")]
 
 use axeyum_ir::{TermArena, TermId};
 use axeyum_solver::{

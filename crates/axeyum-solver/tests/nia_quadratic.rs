@@ -5,6 +5,7 @@
 //! discriminant / convexity analysis, and every shape outside the exact
 //! single-variable degree-2 polynomial pattern must be **declined** (left to the
 //! existing NIA dispatch) — never mis-decided.
+#![cfg(feature = "full")]
 
 use axeyum_ir::{Sort, TermArena, TermId, Value};
 use axeyum_solver::{CheckResult, SolverConfig, solve};

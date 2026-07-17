@@ -18,7 +18,7 @@
 //!
 //! Deterministic (seeded LCG, no clock/entropy); each axeyum solve runs under a
 //! wall-clock cap on a worker thread so a slow instance is skipped, not hung.
-
+#![cfg(feature = "full")]
 #![cfg(feature = "z3")]
 
 use std::sync::mpsc;

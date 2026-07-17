@@ -6,6 +6,7 @@
 //! through the public SMT-LIB front door (`solve_smtlib`) so the claimed statuses
 //! are exercised against the real engine — in particular the first-class
 //! "unsat decided; sat→unknown" status and the proof-supports cells.
+#![cfg(feature = "full")]
 
 use axeyum_solver::support_matrix::{
     ProofStatus, SUPPORT_MATRIX, SolverStatus, support_matrix_markdown,

@@ -14,6 +14,7 @@
 //! replay-checked (the solver only returns `Sat` after evaluating the model against
 //! the original assertions), and a goal with no integer root (`x*x = 2`) still
 //! degrades soundly to `Unknown` — never a wrong `unsat`.
+#![cfg(feature = "full")]
 
 use axeyum_ir::{Sort, TermArena, Value};
 use axeyum_solver::{CheckResult, SolverConfig, solve};

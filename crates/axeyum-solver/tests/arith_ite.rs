@@ -1,4 +1,5 @@
 //! Arithmetic (Int/Real) if-then-else via exact ite-lifting in `check_auto`.
+#![cfg(feature = "full")]
 
 use axeyum_ir::TermArena;
 use axeyum_solver::{CheckResult, SolverConfig, solve};

@@ -1,6 +1,7 @@
 //! Certified bit-blasting by an independent-reference miter (track a, path B):
 //! a DRAT-checked proof that the production bit-blasting agrees with a separately
 //! coded reference on all inputs.
+#![cfg(feature = "full")]
 
 use axeyum_ir::{Sort, TermArena};
 use axeyum_solver::{BitblastMiterOutcome, certify_bitblast_by_miter};

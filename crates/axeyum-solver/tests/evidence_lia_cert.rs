@@ -8,6 +8,7 @@
 //! not trusted. These tests pin: the new certificate is emitted and re-checks,
 //! tampering breaks the check, and the existing `QF_BV` / `QF_UFBV` evidence routes
 //! are unchanged (no shadowing of the zero-trust cert).
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

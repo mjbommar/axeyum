@@ -1,6 +1,7 @@
 //! Boolean-structured `QF_LIA` (disjunctions/implications of integer atoms) via
 //! the lazy-SMT loop over the integer simplex, combined `QF_LIRA` (integers and
 //! reals together), and through the dispatcher.
+#![cfg(feature = "full")]
 
 use axeyum_ir::{Rational, Sort, TermArena, TermId, Value, eval};
 use axeyum_solver::{

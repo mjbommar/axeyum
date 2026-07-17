@@ -1,4 +1,5 @@
 //! The distinct (all-different) constraint.
+#![cfg(feature = "full")]
 
 use axeyum_ir::{TermArena, TermId};
 use axeyum_solver::{CheckResult, SolverConfig, distinct, solve};

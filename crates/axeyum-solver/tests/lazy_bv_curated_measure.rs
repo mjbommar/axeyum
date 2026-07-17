@@ -13,6 +13,7 @@
 //!   and our default eager path chokes on.
 //!
 //! `#[ignore]` by default; run with `--ignored --nocapture`.
+#![cfg(feature = "full")]
 
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};

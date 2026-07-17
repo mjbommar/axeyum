@@ -1,5 +1,6 @@
 //! Bit-vector / integer coercions (`bv2nat` / `int2bv`) through the auto
 //! dispatcher's combined bit-blasting path (arrays/funcs/integers to `QF_BV`).
+#![cfg(feature = "full")]
 
 use axeyum_ir::{Sort, TermArena};
 use axeyum_solver::{CheckResult, SolverConfig, solve};

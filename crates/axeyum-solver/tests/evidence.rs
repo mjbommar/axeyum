@@ -1,5 +1,6 @@
 //! Self-checking evidence envelopes: produce a result with its justification
 //! and re-validate it independently (ADR-0005 follow-through).
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

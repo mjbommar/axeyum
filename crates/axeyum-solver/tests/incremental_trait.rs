@@ -1,4 +1,5 @@
 //! Conformance tests for the first-class retained incremental trait (ADR-0201).
+#![cfg(feature = "full")]
 
 use axeyum_ir::{Sort, TermArena, TermId};
 use axeyum_solver::{CheckResult, IncrementalBvSolver, IncrementalSolver, SolverError};

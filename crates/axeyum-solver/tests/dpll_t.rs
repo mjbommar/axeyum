@@ -5,6 +5,7 @@
 //! conjunction-only limit of `check_with_lra` by case-splitting `or`/`not`/`ite`
 //! via the SAT backend and consulting the exact-rational theory solver. Every
 //! `sat` model is replayed against the original query.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

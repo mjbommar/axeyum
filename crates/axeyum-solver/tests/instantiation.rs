@@ -1,6 +1,7 @@
 //! Quantifier refutation by enumerative ground instantiation — handles
 //! infinite-domain (`Int`/`Real`) universals that finite-domain expansion
 //! cannot (ADR-0016 / E-matching family).
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

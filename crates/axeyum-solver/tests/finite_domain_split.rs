@@ -11,6 +11,7 @@
 //! exists (a genuinely satisfiable query must NOT be refuted), and the UNSAT cases
 //! pin the refutation is real (a genuinely satisfiable query must NOT be called
 //! `unsat`).
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

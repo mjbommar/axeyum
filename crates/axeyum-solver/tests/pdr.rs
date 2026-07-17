@@ -6,6 +6,7 @@
 //! safety) with [`check_auto`], and the `Reachable` test cross-checks against
 //! [`bounded_model_check`]. A wrong `Safe`/`Reachable` would fail these
 //! independent checks; an over-eager `Unknown` is acceptable.
+#![cfg(feature = "full")]
 
 use axeyum_ir::{Sort, SymbolId, TermArena, TermId};
 use axeyum_solver::{

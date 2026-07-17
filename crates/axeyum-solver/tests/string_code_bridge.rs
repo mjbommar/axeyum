@@ -12,6 +12,7 @@
 //! abstraction never refutes a satisfiable instance (≥1000 model-consistent
 //! scripts stay non-`unsat`), and (3) an adversarial brute-force cross-check over
 //! a small byte-model universe agrees with the solver's `unsat` verdict.
+#![cfg(feature = "full")]
 #![allow(
     clippy::needless_raw_string_hashes,
     clippy::cast_possible_wrap,

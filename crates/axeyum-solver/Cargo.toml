@@ -33,12 +33,12 @@ web-time.workspace = true
 [features]
 # Native backends are feature-gated leaf dependencies; the default build has
 # no C or C++ build requirement (ADR-0002).
-default = ["full"]
-# Minimal pure-Rust scalar QF_BV surface. Use with `default-features = false,
-# features = ["qfbv"]`; the named feature makes consumer intent explicit even
-# though it adds no dependencies by itself.
+default = ["qfbv"]
+# Minimal pure-Rust scalar QF_BV surface. This is the default deployment profile;
+# full multi-theory consumers opt into `full` explicitly. The named feature
+# makes consumer intent visible even though it adds no dependencies by itself.
 qfbv = []
-# Full multi-theory/product surface retained by default for compatibility.
+# Full multi-theory/product surface.
 full = [
     "dep:axeyum-egraph",
     "dep:axeyum-fp",
@@ -57,3 +57,7 @@ workspace = true
 
 [dev-dependencies]
 axeyum-scenarios = { path = "../axeyum-scenarios" }
+
+[[example]]
+name = "geometry_portfolio"
+required-features = ["full"]

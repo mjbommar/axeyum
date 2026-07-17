@@ -1,4 +1,5 @@
 //! ADR-0124/0125 source-bound counterexamples for alternating Bool/BV formulas.
+#![cfg(feature = "full")]
 
 use std::io::{Read as _, Write as _};
 use std::path::PathBuf;

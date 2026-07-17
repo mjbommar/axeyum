@@ -12,6 +12,7 @@
 //! (b) the carried Lean module is the kernel-checked refutation, and (c) an
 //! integer-FEASIBLE system yields no Diophantine evidence (never a wrong `unsat`).
 //! All arithmetic is exact — no floating point.
+#![cfg(feature = "full")]
 
 use axeyum_ir::TermArena;
 use axeyum_solver::{Evidence, SolverConfig, produce_diophantine_evidence, produce_evidence};

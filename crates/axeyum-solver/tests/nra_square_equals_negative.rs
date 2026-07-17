@@ -2,6 +2,7 @@
 //! equality (`a² = −k`, parsed as `(= (* a a) (to_real (- k)))`) reaches the
 //! exact NRA decider via the `to_real(<const>)` fold + even-power-equality arm,
 //! and is decided **unsat** — while the satisfiable `a² = k` (k > 0) stays sat.
+#![cfg(feature = "full")]
 
 use axeyum_smtlib::parse_script;
 use axeyum_solver::{CheckResult, SolverConfig, check_auto, check_with_nra};

@@ -18,6 +18,7 @@
 //!    Identical verdicts required; a `Sat`/`Unsat` split is a soundness bug and
 //!    panics. One route deciding where the other is `Unknown` is allowed (counted).
 //! 3. **Deadline** — a zero-duration budget must degrade to `Unknown`.
+#![cfg(feature = "full")]
 
 use axeyum_ir::{Assignment, Rational, Sort, TermArena, TermId, Value, eval};
 use axeyum_solver::{

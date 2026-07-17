@@ -1,4 +1,5 @@
 //! Deterministic differential gate for canonical online array+EUF+BV combination.
+#![cfg(feature = "full")]
 
 use axeyum_ir::{Sort, TermArena, TermId, Value, eval};
 use axeyum_solver::{

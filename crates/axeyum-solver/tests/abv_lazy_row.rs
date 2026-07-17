@@ -7,7 +7,7 @@
 //! demand (CEGAR), deciding those cases without enumeration — and never changing
 //! a verdict the eager path already decides (it delegates whenever eager
 //! accepts).
-
+#![cfg(feature = "full")]
 // Array tests name arrays/indices/elements with the conventional single letters
 // (`a`, `b`, `i`, `j`, `k`, `v`, `w`); mirror the existing `abv.rs` test module's
 // lint configuration for the same reason.

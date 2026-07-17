@@ -20,6 +20,7 @@
 //! Findings pinned down: `prove` routes real goals to `QF_LRA` and *rejects*
 //! nonlinear multiplication (no LRA→NRA dispatch); and axeyum's NRA proves
 //! monotonicity-shaped facts but not the degree-2 SOS inequalities.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

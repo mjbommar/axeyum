@@ -6,6 +6,7 @@
 //! replay-checked, the route is honored end-to-end under a deadline (past deadline →
 //! `Unknown`, never a hang or a wrong verdict), and the linear `QF_UFLRA` path is not
 //! hijacked.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 

@@ -5,6 +5,7 @@
 //! Ackermann path must agree it is `unsat`; and on satisfiable instances the
 //! prover must not claim UNSAT while Ackermann reports `sat`. This is the
 //! "verified against the eager path" check the plan calls for (P1.5 / T1.5.4).
+#![cfg(feature = "full")]
 
 use axeyum_ir::{Sort, TermArena, TermId};
 use axeyum_solver::{

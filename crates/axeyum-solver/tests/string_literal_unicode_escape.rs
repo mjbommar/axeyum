@@ -16,6 +16,7 @@
 //!
 //! These checks are deterministic (no external oracle): they assert the direction
 //! that matters (a genuinely-unsat shape is never reported `sat`, and vice-versa).
+#![cfg(feature = "full")]
 
 use axeyum_solver::{CheckResult, SolverConfig, solve_smtlib};
 use std::time::Duration;

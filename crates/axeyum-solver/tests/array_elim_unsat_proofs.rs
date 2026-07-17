@@ -37,7 +37,7 @@
 //! genuinely SAT instance and an array-free query both yield `None`, and a
 //! tampered certificate (corrupt DRAT / a query with a different eliminated CNF)
 //! fails `recheck`.
-
+#![cfg(feature = "full")]
 #![allow(clippy::similar_names)]
 
 use axeyum_ir::{TermArena, TermId};

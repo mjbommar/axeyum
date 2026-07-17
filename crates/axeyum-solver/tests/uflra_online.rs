@@ -7,6 +7,7 @@
 //! with the offline decider on every jointly-decided instance — zero disagreements —
 //! and every `sat` model must replay against the original assertions. A graceful
 //! `Unknown` on a hard case is fine; a wrong sat / unsat is unacceptable.
+#![cfg(feature = "full")]
 
 use std::time::Duration;
 
