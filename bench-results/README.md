@@ -5,6 +5,13 @@ under `bench-results/local/`, which is gitignored.
 
 ## Current authoritative record (2026-06-25)
 
+- [`glaurung-paired-dptf-20260717/`](glaurung-paired-dptf-20260717/README.md)
+  is ADR-0214's first clean real-driver paired-trace mechanism exercise: three
+  independently analyzed five-process timeout cells, stable 561/561
+  both-decided populations, deterministic bootstrap intervals, and committed
+  JSON/CSV/PNG evidence. It is explicitly a one-driver cold-Z3-versus-warm-
+  Axeyum control, not yet a fair paper baseline.
+
 - [`SCOREBOARD.md`](SCOREBOARD.md) is the regenerated division-level
   decide-rate scoreboard across all committed `*solver-vs-z3*` baselines.
   Regenerate with `python3 scripts/gen-scoreboard.py`.

@@ -22,7 +22,14 @@ session state.
 > canonical model selection where required. Existing exact-work/replay/RSS/CV
 > gates remain mandatory engineering admission controls; they are not
 > confidence intervals. GQ5 remains the leading pure-solver optimization lane,
-> but its next candidate follows the paired measurement harness.
+> but its next candidate follows the paired measurement harness. ADR-0214 now
+> lands that mechanism: Glaurung emits both outcome classes and a named Axeyum
+> execution population per check, while Axeyum performs fail-closed N>=5
+> both-decided geomean/bootstrap/quantile/CDF analysis. A clean three-cell
+> DptfDevGen sweep now exercises it end to end, so GQ5 may resume. That easy
+> driver's invariant 561/561 decided population is a no-timeout control, not the
+> missing timeout-sensitivity result. Warm Z3/neutral baselines, a harder marked
+> sweep, finding parity, and the remaining publication gates are open.
 
 > **P0 soundness stop contained (2026-07-15, ADR-0165).** Historical commit
 > `2cb298e2` reproduced unrestricted large elimination from a two-constructor
@@ -520,11 +527,11 @@ count as decisions or speedups.
 
 | ID | Roadmap item | Scope and exit criterion |
 |---|---|---|
-| **GQ1** | **Capture and profile real queries first** | **Engineering capture is DONE; publication schema is WIP (ADR-0187/0188/0197/0213).** Zero-exclusion 30,628-script capture, exact clean sharded profiles, whole-composite variance, guarded comparison, and unsplit warm/native-fallback attribution are executable. Add both backend result classes and explicit per-check warm/fallback classification before publication analysis. The old 2,225 hashes are stale/unmappable; current evidence is 7,953 wide-root scripts. Keep profiled/unprofiled/native/adaptive bars distinct. |
+| **GQ1** | **Capture and profile real queries first** | **Engineering capture, publication schema/analyzer, and first clean marked exercise DONE; timeout-sensitive/multi-driver evidence WIP (ADR-0187/0188/0197/0213/0214).** Zero-exclusion 30,628-script capture, exact clean sharded profiles, whole-composite variance, and guarded comparison are executable. The clean DptfDevGen `{1,5,60}`-second cells each preserve 561/561 both-decided checks across N=5 and no fallback, proving the marked producer/analyzer path. Regenerate a harder driver whose decided buckets actually move with timeout; historical traces lack the new fields. The old 2,225 hashes are stale/unmappable; current evidence is 7,953 wide-root scripts. Keep profiled/unprofiled/native/adaptive bars distinct. |
 | **GQ2** | **Cheap always-on cold simplification tier** | Add a bounded, denotation-preserving one-shot tier for constant folding and trivial identities whose own cost is measured. Add a size/shape and cold-vs-warm policy that selects cheap, configured, or no preprocessing. Exit only when cold end-to-end time is non-worse in aggregate and improves the target class at the GQ1 validity gates. |
 | **GQ3** | **Coercion-cancellation peepholes and causal telemetry** | **Current measured tranche complete; use ablation as policy evidence.** Exact nested/concat/extension/coercion rules and ADR-0159's repeated default-minus-rule comparator are landed. `extract_extend` improves lowering, but all four measured rules change zero AIG nodes and clauses. Do not globally delete sound rewrites because one corpus does not fire them; instead, keep a Glaurung policy only for rules with measured reach/cost and reopen register-slice-specific work only when an ablation demonstrates downstream AIG/CNF or native-time reduction. |
 | **GQ4** | **Cold demand-driven bit-slice reduction** | **Out of the active queue.** ADR-0157 v1 is correct but regresses the real ratio about 1.42x→4.49x; ADR-0158's conservative admission is a safe no-op but does not improve the required family. Both remain explicit/off. Do not tune thresholds further on this corpus; only a qualitatively different constant-cost admission proof and a fresh client gate can reopen GQ4. |
-| **GQ5** | **Cheaper AIG construction and measured CNF encoding** | **Leading remaining pure-solver engineering lane, sequenced after the ADR-0213 paired harness.** ADR-0175 accepts deterministic open-addressed AIG hashing. Current cold evidence still assigns about 84% to bit blast plus CNF and only about 15% to SAT; CNF is about 46% on the accepted cold bar. Continue measured CNF lookup/ownership and clause-emission work, with the rejected growing-AIG half-flattening candidate as a warning that immediate clause savings need retained-future-use or rollback evidence. Aggregate screening may admit a product optimization but is not a paper speedup. |
+| **GQ5** | **Cheaper AIG construction and measured CNF encoding** | **ACTIVE leading pure-solver engineering lane; ADR-0214's real-trace prerequisite is satisfied.** ADR-0175 accepts deterministic open-addressed AIG hashing. Current cold evidence still assigns about 84% to bit blast plus CNF and only about 15% to SAT; CNF is about 46% on the accepted cold bar. Continue measured CNF lookup/ownership and clause-emission work, with the rejected growing-AIG half-flattening candidate as a warning that immediate clause savings need retained-future-use or rollback evidence. Screen changes through the paired mechanism where applicable; aggregate screening may admit a product optimization but is not a paper speedup. The publication-critical parallel lane starts warm Z3 next. |
 | **GQ6** | **Cold SAT/CDCL tuning** | **Partition by policy before acting.** SAT is only about 15% on the cold one-shot workload, so it remains behind GQ5 there. ADR-0199 collapses warm construction enough that SAT becomes 47.2% of its diagnostic candidate profile; compare identical retained CNF across BatSat/proof core/oracles before a warm SAT claim. Preserve proof replay and deterministic limits. |
 | **GQ7** | **Cheaper warm entry and delta preprocessing** | **Source-identity functionality and the current two-driver product gate are DONE; publication performance remains WIP (ADR-0201--0205/0213).** Glaurung `29031f8` commits 92,721 exact checks: its engineering gate reports source direct ahead of serial snapshot on time/ratio/RSS for SurfacePen and NETwtw10. Do not promote those aggregate ratios until warm Z3, paired both-decided, timeout, and fallback controls pass. ADR-0212 adds exact `dxgkrnl` no-op functionality but defers the wider default because timing variance fails; keep direct opt-in. |
 | **GQ8** | **Verdict and CNF reuse for duplicate/prefix queries** | **Exact replay-checked SAT reuse is done for available families (ADR-0192); stronger subsumption remains open.** Exact hits replay under fixed bounds; ordinary UNSAT/Unknown and prefix verdict reuse remain forbidden. Investigate only replay-checked stronger-model reuse where a cached model is proven to satisfy the complete weaker later query. |
@@ -569,11 +576,16 @@ artifact evidence below governs.
 **Publication execution order (2026-07-17, ADR-0213; supersedes performance-
 claim ordering below).** Product admission and paper evidence are now distinct:
 
-1. **Paired fixed-work harness:** emit both backend outcomes/timings and an
-   explicit retained/new-warm/fallback reason per ordered check; analyze at
-   least five identical-work runs with both-decided geomean ratios, deterministic
-   bootstrap 95% confidence intervals, p50/p90/p95/p99, CDFs, process CV, the
-   four decided/nondecided buckets, and a timeout sweep.
+1. **Paired fixed-work harness — mechanism and first clean exercise DONE;
+   timeout-sensitive/multi-driver evidence WIP (ADR-0214/Glaurung ADR-022):** marked traces emit both backend
+   outcomes/timings and an explicit retained/new-warm/fallback class per ordered
+   check. The fail-closed analyzer requires at least five identical-work runs
+   and reports stable-both-decided geomean ratios, deterministic bootstrap 95%
+   confidence intervals, p50/p90/p95/p99, CDFs, process CV, and all four
+   decided/nondecided buckets. Clean DptfDevGen `{1,5,60}`-second cells pass
+   with invariant 561/561 both-decided work; treat them as a mechanism/no-timeout
+   control. Regenerate a harder marked driver whose buckets cross a timeout
+   boundary before making timeout-sensitivity or generality claims.
 2. **Fair baselines:** run `{Z3, Axeyum} x {cold, warm}` on the identical stream
    and add at least one neutral solver. Keep in-process, FFI, and subprocess
    boundary costs separately named.

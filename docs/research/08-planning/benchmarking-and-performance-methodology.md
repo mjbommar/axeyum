@@ -411,6 +411,29 @@ records the contract and the first measured baselines.
   iteration. A bounded optimization may still use the stricter exact-work
   engineering gate, but its aggregate ratio must remain labeled local
   screening evidence until the publication boundary is exercised.
+  ADR-0214 implements the first mechanism in Glaurung `eb624c0` and
+  `scripts/analyze-glaurung-paired-traces.py`. A typical single-configuration
+  analysis is:
+
+  ```sh
+  python3 scripts/analyze-glaurung-paired-traces.py \
+    --output target/glaurung-paired/report.json \
+    --cdf-dir target/glaurung-paired/cdf \
+    /path/to/repetition-{1,2,3,4,5}
+  ```
+
+  The command deliberately rejects historical unmarked traces, fewer than five
+  repetitions, event/query-index/query-content integrity failures,
+  configuration/work/execution-class drift, nonpositive timings, operational
+  results, and decided disagreements. Invoke it separately
+  for each timeout/configuration cell; never combine a timeout sweep into one
+  fixed-configuration report. The first clean DptfDevGen `{1, 5, 60}`-second
+  mechanism exercise and its exact reports/CDFs are committed under
+  [`bench-results/glaurung-paired-dptf-20260717/`](../../../bench-results/glaurung-paired-dptf-20260717/README.md).
+  It proves the evidence path, but it is only a no-timeout control: all cells
+  decide the same 561/561 occurrences, and cold Z3 versus warm Axeyum remains
+  topology-confounded. Use a timeout-sensitive driver for the actual
+  sensitivity claim.
 - Timeout regressions must pin the exact pathological public or minimized query
   and exercise both admission outcomes: deterministic oversized refusal before
   allocation and cooperative expiry inside admitted superlinear work. Every

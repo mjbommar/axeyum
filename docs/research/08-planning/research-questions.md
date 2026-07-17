@@ -537,6 +537,11 @@ Out of scope:
     support. Strict typing is the lead contribution; aggregate ratios remain
     descriptive until that boundary passes. See
     [ADR-0213](../09-decisions/adr-0213-publication-grade-glaurung-evidence-gate.md).
+    The paired trace schema and analyzer mechanism are accepted in
+    [ADR-0214](../09-decisions/adr-0214-paired-glaurung-trace-analysis.md). Its
+    first clean DptfDevGen N=5 by three-timeout exercise passes, but it is an
+    easy-driver no-timeout control; a timeout-sensitive workload and the
+    remaining fair-baseline/finding-parity gates are still open.
 - [x] How should a real-client shadow run preserve decided/nondecided splits?
   - Answer: only under an explicit combined-shadow diagnostic, atomically write
     the exact content-addressed SMT-LIB bytes and stable backend result classes
