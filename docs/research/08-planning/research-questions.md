@@ -504,6 +504,18 @@ Out of scope:
     default remains deferred for `tcpip`/`dxgkrnl` widening and a rejected
     exclusive-control Z3-drift alarm; see
     [ADR-0205](../09-decisions/adr-0205-accept-source-prefix-production-gate.md).
+- [x] May a synchronized direct-delta `Unknown` receive one same-session check
+      under a fresh deadline by default?
+  - Answer: yes, but only after the caller separately selects direct delta.
+    The exact public replay accepts the mechanism and the repeated native
+    production-topology gate binds findings, source-owner/serial-lease work,
+    independent model replay, implementation revisions, time, RSS, and
+    variance. One continuation defaults on with an explicit fail-closed off
+    control; repeated nondecisions remain `Unknown`. Direct delta itself stays
+    opt-in; see
+    [ADR-0210](../09-decisions/adr-0210-exact-ordered-timeout-continuation-replay.md)
+    and
+    [ADR-0211](../09-decisions/adr-0211-accept-native-timeout-continuation-default.md).
 - [x] How should a real-client shadow run preserve decided/nondecided splits?
   - Answer: only under an explicit combined-shadow diagnostic, atomically write
     the exact content-addressed SMT-LIB bytes and stable backend result classes

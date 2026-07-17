@@ -322,6 +322,27 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-17 — ADR-0211 accepts native same-session continuation inside
+  direct delta; wider direct-delta admission remains separate.** Clean
+  Glaurung `33191ac` completes the fixed 156/338-function tcpip run under
+  4 GiB and publishes 326,364 ordered events / 71,136 checks / 50,687 unique
+  queries / 10,515 native packs / 27,940 model reads plus 794 stable finding
+  rows. Producer validation and independent Axeyum `ddb368b7` replay both
+  pass; the latter validates every unique query and model read and is bound by
+  report SHA-256 `3a9a6b45...b72b3387`. Three interleaved native
+  control/candidate pairs preserve exact work, source-owner/serial-lease
+  topology, findings, implementation revisions, and zero correctness/cleanup
+  alarms. Candidates perform 29 continuations = 18 recoveries + 11 honest
+  `Unknown`s + 0 errors. Candidate p50 Axeyum time/RSS changes
+  +2.027%/+1.021%, time CV is 0.365%, and comparison SHA-256 is
+  `0f27afce...d1adbc3`; every 3%/5%/3% alarm passes. Glaurung `9ace064`
+  therefore defaults the single retry on only after direct delta is selected,
+  with explicit/unrecognized values failing closed to off. Direct delta itself
+  remains opt-in. Next use another wider/no-timeout driver to decide that
+  separate route and investigate the zero-query `win32k` frontend gap; keep
+  the pure-solver lane focused on measured cold AIG/CNF construction before SAT
+  tuning.
+
 - **2026-07-16 — ADR-0210 accepts exact ordered same-session timeout
   continuation; native admission remains explicit/off.** Glaurung `3c3c77e`
   replaces recursive trace rendering with deterministic postorder-ordinal
@@ -1861,20 +1882,35 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   | **GQ7 warm delta entry** | **Source-identity functionality and current production comparison DONE (ADR-0201--0205; Glaurung `29031f8`).** The 92,721-check serial-default comparison passes every correctness/time/ratio/RSS alarm; tcpip/dxgkrnl functionality is clean, but exact repeated admission remains open | Keep direct opt-in; hold large-driver work/findings constant, then revisit default and order-balanced causal evidence |
   | **GQ8 verdict/CNF cache** | **DONE for available families (ADR-0192).** Clean repeated evidence admits exact same-arena scalar SAT reuse only in path-owned Glaurung sessions; fixed bounds, traffic partitions, cleanup gauges, findings, and replay are enforced | Preserve explicit off and re-gate new families; Axeyum's generic cache remains opt-in and ordinary UNSAT/Unknown/prefix verdicts remain excluded |
   | **GQ9 auto cost model/docs** | **DONE for available families (ADR-0186).** Clean adaptive repeat clears every alarm over 92,721 checks; downstream explorer default has explicit off/fixed controls | Re-gate newly captured families; do not broaden this Glaurung-specific default into Axeyum's generic API |
-  | **GQ10 real-lifter regression tier** | **Exact ordered mechanism gate accepted; native production repeat active (ADR-0205--0210).** Strict replay closed the concat error class. Glaurung `3c3c77e` publishes one validated 70,823-check stream; continuation recovers 7/14 exact-stream initial timeouts at +1.97% warm time/+0.034% RSS with zero errors, decided disagreements, or replay gaps | Keep native continuation explicit/off; repeat exact traffic/findings in the production source-owner/serial-lease topology with all resource/variance gates. Zero-query win32k remains separate |
+  | **GQ10 real-lifter regression tier** | **Native continuation admission DONE; wider direct-delta admission active (ADR-0205--0211).** The complete 326,364-event / 71,136-check native trace preserves findings, native packs, source-owner/serial-lease topology, independent replay, and implementation identity. Three interleaved pairs recover 18/29 continuations at +2.027% p50 time / +1.021% RSS with all correctness, cleanup, and variance alarms green | Glaurung `9ace064` defaults continuation on only inside separately selected direct delta. Keep direct delta opt-in; add another wider/no-timeout driver control and investigate zero-query win32k separately |
 
-  **Next actions:** (1) capture one ordered Z3-authoritative tcpip occurrence
-  stream and replay control/continuation over those exact queries before scoring
-  same-session continuation; (2) keep both
-  timeout policies explicit/off and preserve their exact counter partitions;
-  (3) inspect `win32k` dispatch recovery as a frontend coverage issue, never a
-  zero-query solver success; (4) rerun the exclusive-direct causal comparison
+  **Next actions:** (1) add another wider/no-timeout driver to the native
+  production-topology gate before deciding direct-delta admission; (2) preserve
+  explicit continuation on/off controls, exact counter partitions, and honest
+  residual `Unknown`s; (3) inspect `win32k` dispatch recovery as a frontend
+  coverage issue, never a zero-query solver success; (4) rerun the
+  exclusive-direct causal comparison
   only with order-balanced Z3 drift control; (5) obtain fresh native canonical-
   stage attribution and select new GQ5/GQ6 work only from a larger measured
   residual, not another primary-table analogy; (6) preserve the corrected
   representative pin, exact shard union, zero-exclusion rule, 4 GiB process
   envelope, strict coercion, dump validation, and atomic dedup/conflict
   handling; (7) keep GQ4 explicit/off.
+
+  **Validation (2026-07-17):** the first parallel all-feature workspace test
+  exceeded the shared 4 GiB envelope while several heavyweight test processes
+  overlapped; the required serialized rerun (`CARGO_BUILD_JOBS=1`, one test
+  thread) completes under the same cap with zero failures, including all
+  doctests. Stable formatting, strict all-target/all-feature Clippy,
+  warning-denied workspace docs, the QF_BV profile, the pinned 162-query
+  Glaurung regular gate, foundational resources, generated-resource drift,
+  all 23 rules-as-code generation/validation/query checks, and documentation
+  links pass. Both regular-gate policies decide 162/162 with zero disagreements,
+  errors, or replay failures (raw 0.646x Z3; canonical 0.306x). All 47
+  benchmark summarizer/comparator/gate tests pass. The nine recipe-rendering
+  tests and the aggregate `just check` wrapper remain unavailable because this
+  host has no `just` executable; their underlying non-rendering gates above
+  were run directly.
 
   **Validation (2026-07-15):** a clean, serialized `just check` at `623cae4c`
   completed under the 4 GiB memory cap with formatting, strict
@@ -3661,7 +3697,7 @@ plan is built and committed on the current branch:
 ### Track 4 — Use Cases & Frontend
 | Phase | Title | Status |
 |---|---|---|
-| P4.1j | Glaurung warm delta and duplicate/prefix reuse (GQ7/GQ8) | **DONE for current serial/source-direct families; widened native-production gate active.** ADR-0186/0192/0193/0195/0196/0199 establish adaptive snapshot ownership and serial LCP reuse. ADR-0201--0205 accept first-class source deltas and the two-driver production win. ADR-0206/0207 close Glaurung's declared-concat error class; ADR-0208 rejects fresh cold retry on RSS. ADR-0209/0210 now establish and causally accept low-memory same-session continuation over one exact 70,823-check stream, but direct remains opt-in pending a real source-owner/serial-lease repeat with exact findings/traffic plus RSS/time/variance gates. |
+| P4.1j | Glaurung warm delta and duplicate/prefix reuse (GQ7/GQ8) | **DONE for current serial/source-direct families and native continuation admission; wider direct-delta admission active.** ADR-0186/0192/0193/0195/0196/0199 establish adaptive snapshot ownership and serial LCP reuse. ADR-0201--0205 accept first-class source deltas and the two-driver production win. ADR-0206/0207 close Glaurung's declared-concat error class; ADR-0208 rejects fresh cold retry on RSS. ADR-0209--0211 establish, causally validate, and admit low-memory same-session continuation through a repeated exact 71,136-check native source-owner/serial-lease gate. Glaurung `9ace064` defaults it on only inside separately selected direct-delta sessions. Direct delta remains opt-in pending another wider/no-timeout driver and the zero-query `win32k` frontend investigation. |
 | P4.1e | Retained warm Boolean array relation flags | **DONE (ADR-0091)** — symbolic-memory path conditions can keep nested supported array equality atoms warm through private candidate-sensitive relation flags, guarded equality/diff observations, projection filtering, and replay |
 | P4.1h | Retained warm nested array-valued UF parameters | **DONE (ADR-0094)** — nested supported array-valued memory/function parameters can stay warm as full-value UF keys through private projection keys or rewritten structural keys, with relation-flag guarded congruence, private filtering, and replay |
 | P4.1g | Retained warm structural array-valued UF parameters | **DONE (ADR-0093)** — supported store/constant/array-ITE memory/function parameters can stay warm as full-value UF keys with scalar dependency retention, structural owner realization, relation-flag guarded congruence, private filtering, and replay; ADR-0094 subsequently lands nested application keys |
@@ -3682,6 +3718,15 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-17 — ADR-0211 accepts the native timeout-continuation default
+  inside direct delta.** The 326,364-event / 71,136-check tcpip artifact passes
+  producer validation and complete independent query/model replay. Three
+  interleaved native pairs reproduce exact topology, findings, and
+  implementation identity with zero correctness or lifecycle alarms.
+  Continuation recovers 18/29 bounded nondecisions; p50 Axeyum time/RSS changes
+  +2.027%/+1.021% with sub-0.4% timing CV. Glaurung `9ace064` makes missing=on
+  with a fail-closed off override only within its still-opt-in direct route.
 
 - **2026-07-16 — ADR-0210 accepts exact-stream timeout continuation.** The
   shared-DAG Glaurung `3c3c77e` producer and independent validator publish one

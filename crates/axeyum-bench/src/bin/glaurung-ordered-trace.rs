@@ -633,12 +633,11 @@ impl Trace {
         let query_validation_worker_peak_rss_bytes = validated.worker_peak_rss_bytes;
         let assertions = load_assertions(root, &manifest)?;
         let native_replay = manifest.get("native_replay");
-        if let Some(native) = native_replay {
-            if string(native, "schema")? != "glaurung-native-ordered-replay-v1"
-                || string(native, "topology")? != "source-owner-serial-lease-v1"
-            {
-                return Err("unsupported native ordered-replay extension".into());
-            }
+        if let Some(native) = native_replay
+            && (string(native, "schema")? != "glaurung-native-ordered-replay-v1"
+                || string(native, "topology")? != "source-owner-serial-lease-v1")
+        {
+            return Err("unsupported native ordered-replay extension".into());
         }
 
         let mut paths = BTreeMap::from([("analysis".to_string(), PathState::default())]);
@@ -1053,14 +1052,13 @@ impl Trace {
             }
         }
 
-        if let Some(native) = native_replay {
-            if integer(native, "warm_check_count")? != native_warm_checks
+        if let Some(native) = native_replay
+            && (integer(native, "warm_check_count")? != native_warm_checks
                 || integer(native, "warm_owner_share_count")? != warm_owner_shares
                 || integer(native, "warm_owner_release_count")? != warm_owner_releases
-                || !warm_owner_references.is_empty()
-            {
-                return Err("native warm replay manifest/lifecycle mismatch".into());
-            }
+                || !warm_owner_references.is_empty())
+        {
+            return Err("native warm replay manifest/lifecycle mismatch".into());
         }
 
         if event_kinds.first().map(String::as_str) != Some("analysis_start")
