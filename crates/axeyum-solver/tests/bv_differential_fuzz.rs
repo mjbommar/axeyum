@@ -69,7 +69,10 @@ use std::sync::mpsc;
 use std::time::Duration;
 
 use axeyum_ir::{Sort, SymbolId, TermArena, TermId, Value, eval};
-use axeyum_solver::{CheckResult, SolverBackend, SolverConfig, Z3Backend, solve};
+use axeyum_solver::{
+    CheckResult, EndToEndUnsatOutcome, SolverBackend, SolverConfig, UnsatProofOutcome, Z3Backend,
+    certify_qf_bv_unsat_end_to_end, export_qf_bv_unsat_proof, solve,
+};
 use z3::ast::{BV, Bool};
 use z3::{Params, SatResult, Solver};
 
@@ -94,6 +97,21 @@ fn cvc5_sample_stride() -> u64 {
             .unwrap_or_else(|| panic!("AXEYUM_CVC5_SAMPLE_STRIDE must be a positive integer")),
         Err(_) => CVC5_SAMPLE_STRIDE,
     }
+}
+
+fn proof_sample_stride() -> Option<u64> {
+    let Ok(value) = std::env::var("AXEYUM_QFBV_PROOF_SAMPLE_STRIDE") else {
+        return None;
+    };
+    Some(
+        value
+            .parse::<u64>()
+            .ok()
+            .filter(|stride| *stride > 0)
+            .unwrap_or_else(|| {
+                panic!("AXEYUM_QFBV_PROOF_SAMPLE_STRIDE must be a positive integer")
+            }),
+    )
 }
 
 /// Per-instance Z3 wall-clock budget. Small `QF_BV` formulas ⇒ Z3 decides far
@@ -1105,16 +1123,68 @@ struct Tally {
     cvc5_decided: u64,
     cvc5_unknown_skipped: u64,
     three_way_agreements: u64,
+    proof_selected_unsat: u64,
+    cnf_drat_proved: u64,
+    cnf_drat_inconclusive: u64,
+    end_to_end_certified: u64,
+    end_to_end_not_certified: u64,
     sat_replayed: u64,
     sat_replay_indeterminate: u64,
     /// The first crashing instance, kept for the report.
     first_crash: Option<(u64, String)>,
 }
 
+fn record_unsat_proof_coverage(inst: &Instance, tally: &mut Tally) {
+    tally.proof_selected_unsat += 1;
+    let (arena, _symbols, assertions) = inst.build();
+
+    match export_qf_bv_unsat_proof(&arena, &assertions) {
+        Ok(UnsatProofOutcome::Proved(proof)) => {
+            assert_eq!(
+                proof.recheck(),
+                Ok(true),
+                "CNF DRAT recheck failed:\n{}",
+                inst.to_smt2()
+            );
+            tally.cnf_drat_proved += 1;
+        }
+        Ok(UnsatProofOutcome::Inconclusive) => tally.cnf_drat_inconclusive += 1,
+        Ok(UnsatProofOutcome::Satisfiable) => panic!(
+            "proof route returned satisfiable for a jointly-UNSAT formula:\n{}",
+            inst.to_smt2()
+        ),
+        Err(error) => panic!(
+            "CNF proof route failed for a valid jointly-UNSAT formula: {error}\n{}",
+            inst.to_smt2()
+        ),
+    }
+
+    match certify_qf_bv_unsat_end_to_end(&arena, &assertions) {
+        Ok(outcome @ EndToEndUnsatOutcome::Certified { .. }) => {
+            assert_eq!(
+                outcome.recheck(),
+                Ok(true),
+                "end-to-end certificate recheck failed:\n{}",
+                inst.to_smt2()
+            );
+            tally.end_to_end_certified += 1;
+        }
+        Ok(EndToEndUnsatOutcome::NotCertified) => tally.end_to_end_not_certified += 1,
+        Ok(EndToEndUnsatOutcome::Satisfiable) => panic!(
+            "end-to-end route returned satisfiable for a jointly-UNSAT formula:\n{}",
+            inst.to_smt2()
+        ),
+        Err(error) => panic!(
+            "end-to-end route failed for a valid jointly-UNSAT formula: {error}\n{}",
+            inst.to_smt2()
+        ),
+    }
+}
+
 /// Decide one instance with both engines and fold the result into `t`. Panics
 /// only on a genuine soundness violation (a non-replaying Sat, or a jointly-
 /// decided Sat/Unsat disagreement) — the whole point of the gate.
-fn run_instance(seed: u64, inst: &Instance, t: &mut Tally, cvc5: Option<&str>) {
+fn run_instance(seed: u64, inst: &Instance, t: &mut Tally, cvc5: Option<&str>, sample_proof: bool) {
     // --- axeyum: the default pure-Rust front door, hard-capped. ----------
     let outcome = match solve_axeyum_bounded(inst.clone()) {
         Bounded::Decided(o) => o,
@@ -1188,6 +1258,10 @@ fn run_instance(seed: u64, inst: &Instance, t: &mut Tally, cvc5: Option<&str>) {
             inst.dump(),
             inst.to_smt2()
         );
+    }
+
+    if sample_proof && ax_label == Verdict::Unsat {
+        record_unsat_proof_coverage(inst, t);
     }
 
     let Some(cvc5) = cvc5 else {
@@ -1360,6 +1434,7 @@ fn glaurung_named_qfbv_controls_agree_and_replay() {
             instance,
             &mut tally,
             cvc5.as_deref(),
+            false,
         );
     }
     assert_eq!(tally.jointly_decided, 4);
@@ -1461,6 +1536,57 @@ fn assert_cvc5_coverage(
     }
 }
 
+fn assert_proof_coverage(tally: &Tally, proof_stride: Option<u64>) {
+    if proof_stride.is_none() {
+        return;
+    }
+    assert!(tally.proof_selected_unsat > 0, "proof sample is vacuous");
+    assert_eq!(
+        tally.cnf_drat_proved + tally.cnf_drat_inconclusive,
+        tally.proof_selected_unsat
+    );
+    assert_eq!(
+        tally.end_to_end_certified + tally.end_to_end_not_certified,
+        tally.proof_selected_unsat
+    );
+}
+
+fn print_tally(
+    tally: &Tally,
+    cvc5_stride: u64,
+    proof_stride: Option<u64>,
+    covered_widths: &BTreeSet<u32>,
+    covered_operators: &BTreeSet<&'static str>,
+) {
+    println!("=== QF_BV differential fuzz tally ===");
+    println!("total instances:      {}", tally.total);
+    println!("jointly decided:      {}", tally.jointly_decided);
+    println!("agreements:           {}", tally.agreements);
+    println!("axeyum Unknown:       {}", tally.axeyum_unknown);
+    println!("axeyum timeout:       {}", tally.axeyum_timeout);
+    println!("axeyum CRASHED:       {}", tally.axeyum_crashed);
+    println!("Z3 Unknown (skipped): {}", tally.z3_unknown_skipped);
+    println!("cvc5 sample stride:   {cvc5_stride}");
+    println!("cvc5 sampled:         {}", tally.cvc5_sampled);
+    println!("cvc5 decided:         {}", tally.cvc5_decided);
+    println!("cvc5 Unknown/skipped: {}", tally.cvc5_unknown_skipped);
+    println!("three-way agreements: {}", tally.three_way_agreements);
+    println!("proof sample stride:  {proof_stride:?} (width <= 8)");
+    println!("proof-selected UNSAT: {}", tally.proof_selected_unsat);
+    println!("CNF DRAT proved:       {}", tally.cnf_drat_proved);
+    println!("CNF DRAT inconclusive: {}", tally.cnf_drat_inconclusive);
+    println!("end-to-end certified: {}", tally.end_to_end_certified);
+    println!("end-to-end uncovered: {}", tally.end_to_end_not_certified);
+    println!("Sat replays verified: {}", tally.sat_replayed);
+    println!("Sat replay declined:  {}", tally.sat_replay_indeterminate);
+    println!("covered widths:       {covered_widths:?}");
+    println!("covered operators:    {covered_operators:?}");
+    println!("DISAGREEMENTS:        0");
+    if let Some((seed, dump)) = &tally.first_crash {
+        println!("--- first crashing instance (seed {seed}) ---\n{dump}");
+    }
+}
+
 #[test]
 fn bv_differential_fuzz_disagree_zero() {
     // Worker `solve` panics are *caught* (a crash is adjudication-neutral, not a
@@ -1480,6 +1606,7 @@ fn bv_differential_fuzz_disagree_zero() {
 
     let cvc5 = cvc5_bin();
     let cvc5_stride = cvc5_sample_stride();
+    let proof_stride = proof_sample_stride();
     if std::env::var("AXEYUM_REQUIRE_CVC5").as_deref() == Ok("1") {
         assert!(
             cvc5.is_some(),
@@ -1509,74 +1636,38 @@ fn bv_differential_fuzz_disagree_zero() {
         let sampled_cvc5 = (seed % cvc5_stride == 0)
             .then_some(cvc5.as_deref())
             .flatten();
-        run_instance(seed, &inst, &mut t, sampled_cvc5);
+        let sample_proof = proof_stride.is_some_and(|stride| seed % stride == 0 && inst.width <= 8);
+        run_instance(seed, &inst, &mut t, sampled_cvc5, sample_proof);
     }
 
-    let Tally {
-        total,
-        jointly_decided,
-        agreements,
-        axeyum_unknown,
-        axeyum_timeout,
-        axeyum_crashed,
-        z3_unknown_skipped,
-        cvc5_sampled,
-        cvc5_decided,
-        cvc5_unknown_skipped,
-        three_way_agreements,
-        sat_replayed,
-        sat_replay_indeterminate,
-        first_crash,
-    } = t;
-
-    println!("=== QF_BV differential fuzz tally ===");
-    println!("total instances:      {total}");
-    println!("jointly decided:      {jointly_decided}");
-    println!("agreements:           {agreements}");
-    println!("axeyum Unknown:       {axeyum_unknown}");
-    println!(
-        "axeyum timeout:       {axeyum_timeout} (slow bit-blast shape; capped, adjudication-neutral)"
+    print_tally(
+        &t,
+        cvc5_stride,
+        proof_stride,
+        &covered_widths,
+        &covered_operators,
     );
-    println!(
-        "axeyum CRASHED:       {axeyum_crashed} (solver panic on a valid QF_BV query — a defect, \
-         but never a mis-verdict)"
-    );
-    println!("Z3 Unknown (skipped): {z3_unknown_skipped}");
-    println!("cvc5 sample stride:   {cvc5_stride}");
-    println!("cvc5 sampled:         {cvc5_sampled}");
-    println!("cvc5 decided:         {cvc5_decided}");
-    println!("cvc5 Unknown/skipped: {cvc5_unknown_skipped}");
-    println!("three-way agreements: {three_way_agreements}");
-    println!("Sat replays verified: {sat_replayed}");
-    println!("Sat replay declined:  {sat_replay_indeterminate} (eval gap; Z3-adjudicated)");
-    println!("covered widths:       {covered_widths:?}");
-    println!("covered operators:    {covered_operators:?}");
-    println!("DISAGREEMENTS:        0");
-    if let Some((seed, dump)) = &first_crash {
-        println!(
-            "--- first crashing instance (seed {seed}) — solver panic, reported \
-             for a deliberate fix ---\n{dump}"
-        );
-    }
 
     // Reaching here means no disagreement panicked: DISAGREE=0 over the sweep.
     // Sanity: the sweep must actually exercise the joint decider (guards against
     // a silently-broken Z3 plumbing that always times out, which would make
     // DISAGREE=0 vacuous).
     assert!(
-        jointly_decided > 100,
-        "too few jointly-decided instances ({jointly_decided}); the differential \
-         gate is not meaningfully exercised"
+        t.jointly_decided > 100,
+        "too few jointly-decided instances ({}); the differential \
+         gate is not meaningfully exercised",
+        t.jointly_decided
     );
     assert_generator_coverage(&covered_widths, &covered_operators);
     assert_cvc5_coverage(
         cvc5.is_some(),
         cvc5_stride,
-        cvc5_sampled,
-        cvc5_decided,
-        cvc5_unknown_skipped,
-        three_way_agreements,
+        t.cvc5_sampled,
+        t.cvc5_decided,
+        t.cvc5_unknown_skipped,
+        t.three_way_agreements,
     );
+    assert_proof_coverage(&t, proof_stride);
 }
 
 /// Pretty-print an axeyum model's variable bindings.
