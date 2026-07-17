@@ -194,8 +194,16 @@ fn and_key_hash(lhs: AigLit, rhs: AigLit) -> usize {
     }
     #[cfg(target_pointer_width = "32")]
     {
-        usize::try_from(hash ^ (hash >> 32)).expect("folded hash fits 32-bit usize")
+        usize::try_from(fold_hash_to_u32(hash)).expect("u32 hash fits 32-bit usize")
     }
+}
+
+#[cfg(any(target_pointer_width = "32", test))]
+fn fold_hash_to_u32(hash: u64) -> u32 {
+    let bytes = hash.to_le_bytes();
+    let low = u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
+    let high = u32::from_le_bytes([bytes[4], bytes[5], bytes[6], bytes[7]]);
+    low ^ high
 }
 
 /// Deterministic construction counters for the primitive AND unique table.
@@ -742,7 +750,7 @@ fn aiger_literal(lit: AigLit) -> usize {
 
 #[cfg(test)]
 mod tests {
-    use super::{Aig, AigError, AigLit, AigNode};
+    use super::{Aig, AigError, AigLit, AigNode, fold_hash_to_u32};
 
     #[test]
     fn constants_and_inputs_evaluate() {
@@ -850,6 +858,12 @@ mod tests {
             second.nodes().collect::<Vec<_>>()
         );
         assert_eq!(first.construction_stats().and_structural_hash_hits, 63);
+    }
+
+    #[test]
+    fn thirty_two_bit_hash_fold_never_retains_high_bits() {
+        assert_eq!(fold_hash_to_u32(0x0123_4567_89ab_cdef), 0x8888_8888);
+        assert_eq!(u64::from(fold_hash_to_u32(u64::MAX)), 0);
     }
 
     #[test]
