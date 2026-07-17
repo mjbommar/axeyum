@@ -1,0 +1,166 @@
+{
+  "schema": "axeyum.glaurung-authoritative-finding-parity.v1",
+  "date": "2026-07-17",
+  "source": {
+    "axeyum_revision": "d495cc7ce18b00531b3bef5a8bc62b89eff954bb",
+    "axeyum_tracked_dirty": false,
+    "glaurung_revision": "4fce79fccd167c898fa5acad24f4b8b947ba7daa",
+    "glaurung_tracked_dirty": false
+  },
+  "binaries": {
+    "z3": {
+      "features": ["solver-z3"],
+      "sha256": "f88bb52754c73a271c7db85ef95a1fa8247cf12a7dc497eec35b21bcc33561a0"
+    },
+    "axeyum": {
+      "features": ["solver-axeyum"],
+      "sha256": "613c3fd83ad9ec2b08490486030864ceb58fda69a5bff680ad3b4af95568f40d"
+    }
+  },
+  "build": {
+    "common": "cargo build --release --example ioctlance --no-default-features",
+    "z3_features": "solver-z3",
+    "axeyum_features": "solver-axeyum"
+  },
+  "environment": {
+    "IOCTLANCE_ALL": "1",
+    "IOCTLANCE_DEADLINE_SECS": "300",
+    "IOCTLANCE_MAX_ANALYZED_FUNCTIONS": "100000",
+    "IOCTLANCE_SOLVE_BUDGET": "20000",
+    "IOCTLANCE_SOLVE_SECS": "60"
+  },
+  "axeyum_authority_policy": {
+    "GLAURUNG_AXEYUM_WARM_REUSE": "adaptive",
+    "GLAURUNG_AXEYUM_DIRECT_DELTA": "1",
+    "GLAURUNG_AXEYUM_WARM_SERIAL_SIBLING_REUSE": "1",
+    "GLAURUNG_AXEYUM_WARM_OWNER_TRANSFER": "0",
+    "GLAURUNG_AXEYUM_WARM_TIMEOUT_COLD_RETRY": "0",
+    "GLAURUNG_AXEYUM_WARM_TIMEOUT_CONTINUE": "0",
+    "GLAURUNG_AXEYUM_REPLAY_SAT_CACHE": "1",
+    "GLAURUNG_AXEYUM_WARM_MAX_LIVE_PATHS": "9",
+    "GLAURUNG_AXEYUM_WARM_MAX_ASSERTIONS_PER_PATH": "512"
+  },
+  "repetitions_per_backend_driver": 3,
+  "order": "odd repetitions Z3 then Axeyum; even repetitions Axeyum then Z3",
+  "processes": 24,
+  "canonical_raw_findings": 302,
+  "stable_emitted_finding_rows": 1812,
+  "all_drivers_exact_finding_parity": true,
+  "drivers": {
+    "dptf": {
+      "input": "sqfs-intel-DptfDevGen.sys",
+      "input_sha256": "074be1b90deb21897538a6b093af9826e62610ffd878c92289af31c5ca3f724b",
+      "canonical_findings_file": "dptf.findings.txt",
+      "canonical_findings_sha256": "4f23929cadbb7ec47c6cc64706cc6e20ff6025a721ac13375a4649f9112e6f5c",
+      "finding_count": 17,
+      "intersection_count": 17,
+      "z3_only": [],
+      "axeyum_only": [],
+      "analyzed": 6,
+      "analysis_roots": 8,
+      "z3": {
+        "solves": [561, 561, 561],
+        "solver_time_ms": [475.1, 498.0, 480.0],
+        "solver_time_median_ms": 480.0,
+        "elapsed_seconds": [0.52, 0.53, 0.52],
+        "max_rss_kib": [58392, 59100, 66612]
+      },
+      "axeyum": {
+        "solves": [561, 561, 561],
+        "solver_time_ms": [123.5, 124.8, 132.2],
+        "solver_time_median_ms": 124.8,
+        "elapsed_seconds": [0.15, 0.16, 0.18],
+        "max_rss_kib": [29084, 29268, 29104]
+      }
+    },
+    "vwififlt": {
+      "input": "win10-vwififlt.sys",
+      "input_sha256": "13c3b69a5d0179ed3cc2c999ff97edbaedd63da55ddb74427251c360706a3820",
+      "canonical_findings_file": "vwififlt.findings.txt",
+      "canonical_findings_sha256": "32be08d3f36b95f473f30337592012033ea8f138df98b634f70dad43ddcac204",
+      "finding_count": 104,
+      "intersection_count": 104,
+      "z3_only": [],
+      "axeyum_only": [],
+      "analyzed": 13,
+      "analysis_roots": 14,
+      "z3": {
+        "solves": [4742, 4742, 4742],
+        "solver_time_ms": [4923.7, 4825.0, 4810.0],
+        "solver_time_median_ms": 4825.0,
+        "elapsed_seconds": [5.00, 4.89, 4.88],
+        "max_rss_kib": [58072, 66240, 61928]
+      },
+      "axeyum": {
+        "solves": [4734, 4734, 4734],
+        "solver_time_ms": [1237.1, 1235.1, 1233.4],
+        "solver_time_median_ms": 1235.1,
+        "elapsed_seconds": [1.30, 1.30, 1.29],
+        "max_rss_kib": [32452, 32436, 32528]
+      }
+    },
+    "intcsst": {
+      "input": "windows-update-intel-audio-IntcSST.sys",
+      "input_sha256": "f7c8e4f106baa5b2a1a18e60731ad42a6f734aee1d049576eaf6d123d5629750",
+      "canonical_findings_file": "intcsst.findings.txt",
+      "canonical_findings_sha256": "2c30994aaf26a10f408c187724d94ec9cc85aa9a102af56019f17f5931cb2fbc",
+      "finding_count": 116,
+      "intersection_count": 116,
+      "z3_only": [],
+      "axeyum_only": [],
+      "analyzed": 18,
+      "analysis_roots": 34,
+      "z3": {
+        "solves": [1672, 1672, 1672],
+        "solver_time_ms": [2508.5, 2552.9, 2557.4],
+        "solver_time_median_ms": 2552.9,
+        "elapsed_seconds": [2.93, 2.96, 2.96],
+        "max_rss_kib": [92128, 90464, 90620]
+      },
+      "axeyum": {
+        "solves": [1668, 1668, 1668],
+        "solver_time_ms": [203.7, 202.0, 206.2],
+        "solver_time_median_ms": 203.7,
+        "elapsed_seconds": [0.60, 0.60, 0.60],
+        "max_rss_kib": [51104, 51240, 50796]
+      }
+    },
+    "surfacepen": {
+      "input": "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys",
+      "input_sha256": "3c062dc57832caab776bec99656798474af7ffb59ef751c9a004a95c0ae74405",
+      "canonical_findings_file": "surfacepen.findings.txt",
+      "canonical_findings_sha256": "876b5c20a34154795179fc475dc0d2c7c98c7d73844972f174adf1ee6216d0cb",
+      "finding_count": 65,
+      "intersection_count": 65,
+      "z3_only": [],
+      "axeyum_only": [],
+      "analyzed": 31,
+      "analysis_roots": 35,
+      "z3": {
+        "solves": [2551, 2551, 2551],
+        "solver_time_ms": [4220.0, 4232.5, 4264.4],
+        "solver_time_median_ms": 4232.5,
+        "elapsed_seconds": [4.36, 4.36, 4.40],
+        "max_rss_kib": [63616, 64512, 64180]
+      },
+      "axeyum": {
+        "solves": [2551, 2551, 2551],
+        "solver_time_ms": [206.2, 206.5, 206.3],
+        "solver_time_median_ms": 206.3,
+        "elapsed_seconds": [0.34, 0.33, 0.33],
+        "max_rss_kib": [24460, 24936, 24496]
+      }
+    }
+  },
+  "axeyum_warm_telemetry_available": false,
+  "axeyum_warm_telemetry_note": "Glaurung prints warm lifecycle rows only when both solver features are compiled; the Axeyum-only authority binary does not expose them.",
+  "claim_boundary": {
+    "accepted": "Exact byte-for-byte raw finding parity for the four current bounded drivers under sole-backend authority, stable across three order-balanced repetitions.",
+    "not_claimed": [
+      "identical query or solve-call streams",
+      "parity on timeout-sensitive or unmeasured drivers",
+      "warm lifecycle or fallback behavior from this artifact",
+      "a fair four-cell solver performance comparison"
+    ]
+  }
+}
