@@ -462,6 +462,21 @@ records the contract and the first measured baselines.
   as a causal counterfactual. It selects the next measurement—per-check
   rewrite/AIG/CNF/SAT work and timing—rather than replacing it. Neutral-solver,
   timeout-sensitive, and authoritative finding-parity gates remain open.
+  ADR-0219 consumes Glaurung's existing opt-in Axeyum profile JSONL for that
+  internal measurement:
+
+  ```sh
+  python3 scripts/analyze-glaurung-profiled-trace.py \
+    /path/to/glaurung-ordered-trace-PID-ID \
+    /path/to/axeyum-profile-PID.jsonl \
+    --output target/glaurung-profile/report.json \
+    --rows-csv target/glaurung-profile/occurrences.csv
+  ```
+
+  Profile output is diagnostic only. Query identity rendering and synchronous
+  JSONL writes occur inside the outer fair cell, so never use that run for a
+  solver ratio. Use it to select a mechanism, then measure that mechanism in a
+  fresh unprofiled repeated control.
 - Timeout regressions must pin the exact pathological public or minimized query
   and exercise both admission outcomes: deterministic oversized refusal before
   allocation and cooperative expiry inside admitted superlinear work. Every

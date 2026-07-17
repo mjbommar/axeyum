@@ -322,6 +322,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-17 — ADR-0219 moves the warm mechanism boundary from construction
+  to SAT and Dptf UNSAT.** A fail-closed ordered join pairs one cold and one
+  retained profile with all 9,526 checks across four diagnostic runs.
+  Retention removes 98--99% of cold AIG/CNF additions; SAT becomes 65% Dptf,
+  70% vwififlt, 58% IntcSST, and 48% SurfacePen of Axeyum adapter time. Dptf's
+  losing UNSAT stratum adds 148 AIG nodes/258 clauses per check and spends
+  36.6%/51.9% in CNF/SAT. Profile emission dominates outer timing, so no new
+  speed ratio is claimed. Next repeat identical retained Dptf UNSAT CNF across
+  Axeyum, Z3, and a neutral solver without profile output.
+
 - **2026-07-17 — ADR-0218 narrows the fair regime to outcome, purpose, and
   reuse composition; internal mechanism attribution is next.** A new
   fail-closed joiner revalidates all 20 raw traces and 9,526 hash-addressed
@@ -331,8 +341,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   favors Axeyum everywhere; value witness favors Z3 on three drivers; repeated
   query frequency correlates +0.32 to +0.63 with Axeyum's warm advantage.
   Formula size alone does not order the win/tie/loss map. Marginal
-  standardization is explicitly descriptive. Next add per-check
-  rewrite/AIG/CNF/SAT work and timing and compare matched strata.
+  standardization is explicitly descriptive. ADR-0219 now completes the
+  internal work join and selects a matched Dptf UNSAT cross-core control.
 
 - **2026-07-17 — ADR-0217 establishes a fair Axeyum-winning regime but keeps
   its cause open.** Five fresh-process four-cell repetitions preserve fixed
@@ -343,9 +353,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   [0.9731, 1.0350]. With Dptf's 0.7875x Z3 win, the map is two wins, one tie,
   and one loss—not a blanket speed result. Cold cells split too, so “small
   formula/FFI-bound” remains a hypothesis. ADR-0218 now completes the
-  trace-available shape/outcome/purpose/reuse join; next add internal
-  AIG/CNF/SAT work attribution, then a neutral solver and timeout-sensitive
-  marked workload.
+  trace-available shape/outcome/purpose/reuse join; ADR-0219 adds internal
+  AIG/CNF/SAT work attribution and selects a neutral cross-core control before
+  the timeout-sensitive marked workload.
 
 - **2026-07-17 — ADR-0216 makes the minimal QF_BV solver profile real in
   consumers and the browser target.** `axeyum-solver` now defaults exactly to
@@ -362,15 +372,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   target build passes and CI now owns it. This establishes a minimal solver
   surface, not a minimum bundle-size claim: the shared parser still pulls its
   pure-Rust FP/string parsing dependencies. Next: measure generated WASM size
-  and latency/parser footprint while higher-priority internal work attribution
-  of the completed fair map proceeds.
+  and latency/parser footprint while the higher-priority Dptf UNSAT cross-core
+  control proceeds.
 
 - **2026-07-17 — The consolidated code/publication review changes the success
   criterion and immediate order.** The paper is no longer organized around a
   general speed claim; its spine is strict correctness, measured deployability,
   and an honestly delimited performance regime. Publication blockers are now:
-  (1) per-check rewrite/AIG/CNF/SAT work attribution after ADR-0218's
-  descriptive feature join, reporting only a causally supported boundary; (2)
+  (1) identical retained Dptf UNSAT CNF across Axeyum/Z3/neutral cores after
+  ADR-0219's internal work join, reporting only a supported boundary; (2)
   a standing well-typed
   multi-oracle fuzzer seeded by empty-model, extension-width, concat-width, and
   W128 truncation failures; (3) cvc5/Bitwuzla correctness plus cold subprocess
@@ -2029,19 +2039,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
   | ID | Live status | Next acceptance boundary |
   |---|---|---|
-  | **GQ1 real-query profile** | **Four-driver fair map and trace-available feature attribution DONE; internal causal attribution WIP (ADR-0187/0188/0213--0215/0217/0218).** 9,526 joined occurrences select outcome/purpose/reuse composition over size-only explanations | Add per-check rewrite/AIG/CNF/SAT work/timing, compare matched strata, then add neutral and timeout-sensitive cells |
+  | **GQ1 real-query profile** | **Four-driver fair map plus query/internal attribution DONE; cross-core causal control WIP (ADR-0187/0188/0213--0215/0217--0219).** Retention removes 98--99% of repeated structure and leaves SAT dominant | Compare identical retained Dptf UNSAT CNF across Axeyum/Z3/neutral, then add timeout-sensitive and finding-authoritative cells |
   | **GQ2 cheap cold tier** | **WIP with three accepted rewrite tranches; batch integration deferred.** Canonical v4 reaches 5.625 s / 0.730x Z3; ADR-0156 preserves replay but is 18.8% slower than one-shot | Keep canonical v4 as the measured one-shot policy; do not recommend fresh incremental batch until its clause/entry overhead closes |
   | **GQ3 coercion/affine peepholes** | **DONE for current measured shapes (ADR-0159).** Clean repeated path-paired ablations are fail-closed; `extract_extend` is a material lowering-only win, while all four measured structural rules change zero AIG nodes/clauses | Keep rules enabled. Reopen only for a new residual shape with a specific downstream hypothesis and the same causal ablation gate |
   | **GQ4 cold relevant bits** | **v1 and v2 DEFERRED after failed real gates.** v1 regresses ~1.42x→4.49x. V2 rejection overhead is bounded, but defaults admit 0/128 and +0.62% total; a 33-query moderate policy removes 632 AIG nodes/zero clauses and regresses bit blast 3.14% | Keep both explicit/off. Reopen only with an AIG/CNF-cone estimator or after word rewrites materially change the residual; do not tune thresholds further |
-  | **GQ5 AIG/CNF construction** | **ACTIVE after ADR-0215's fair-control exercise; AIG tranche accepted and direct CNF-table transfer rejected (ADR-0175/0200/0214/0215).** AIG open addressing improves native time 7.66%, but the structurally exact CNF primary-table candidate regresses representative mean CNF/total 8.55%/3.67% and is reverted | Re-attribute a larger CNF subphase or encoding hypothesis; use the four-cell paired mechanism where applicable and do not retry table micro-work without per-probe causal evidence |
-  | **GQ6 cold SAT/CDCL** | **WIP foundation; behind measured CNF.** Accepted-table native lineage SAT is 18.48% weighted versus CNF at 46.55% | Compare identical CNF across cores only after the next CNF decision, with proof replay and deterministic limits |
-  | **GQ7 warm delta entry** | **Source-identity/product comparison, four-driver map, and outcome/purpose/reuse attribution DONE; wider default DEFERRED (ADR-0201--0218).** Retained wins survive on IntcSST/SurfacePen; dxgkrnl still fails product timing variance | Keep direct opt-in; measure internal work by matched stratum, then widen through neutral/harder/finding-parity gates |
+  | **GQ5 AIG/CNF construction** | **Cold lane active; broad warm lane closed by ADR-0219.** Retention removes 98--99% of cold structure and leaves 11--20% warm CNF | Continue cold only from causal gates; report Dptf UNSAT CNF additions as a cross-core covariate |
+  | **GQ6 cold SAT/CDCL** | **Warm cross-core control now leading; cold still behind construction.** SAT is 48--70% of retained time across mapped drivers | Compare identical retained Dptf UNSAT CNF across proof core/Z3/neutral with replay and deterministic limits |
+  | **GQ7 warm delta entry** | **Source identity, fair map, and query/internal attribution DONE; wider default DEFERRED (ADR-0201--0219).** Retention removes repeated construction; dxgkrnl still fails product variance | Keep direct opt-in; run matched Dptf UNSAT cross-core control, then neutral/harder/finding gates |
   | **GQ8 verdict/CNF cache** | **DONE for available families (ADR-0192).** Clean repeated evidence admits exact same-arena scalar SAT reuse only in path-owned Glaurung sessions; fixed bounds, traffic partitions, cleanup gauges, findings, and replay are enforced | Preserve explicit off and re-gate new families; Axeyum's generic cache remains opt-in and ordinary UNSAT/Unknown/prefix verdicts remain excluded |
   | **GQ9 auto cost model/docs** | **DONE for available families (ADR-0186).** Clean adaptive repeat clears every alarm over 92,721 checks; downstream explorer default has explicit off/fixed controls | Re-gate newly captured families; do not broaden this Glaurung-specific default into Axeyum's generic API |
   | **GQ10 real-lifter regression tier** | **Native continuation admission DONE; wider direct-delta default DEFERRED (ADR-0205--0212).** The accepted tcpip trace admits bounded continuation. The new complete 85,449-event / 17,400-check `dxgkrnl` trace and independent replay preserve exact no-op behavior and every correctness/lifecycle gauge, but ordinary-core time CV is 14.430%/8.306% and slower-core outcomes drift | Keep direct delta opt-in. Repeat under a quieter predeclared environment or add another no-timeout IOCTL driver; route `win32k` to a system-service/callout frontend |
 
-  **Next actions:** (1) add per-check rewrite/AIG/CNF/SAT work and timing to the
-  fair producer, then compare matched outcome/purpose/reuse strata;
+  **Next actions:** (1) repeat identical retained Dptf UNSAT CNF across Axeyum,
+  Z3, and a neutral solver without synchronous profile output;
   (2) measure
   the now-enforced QF_BV browser artifact's generated size, latency, and parser
   footprint, then the warm time/RSS and DRAT deployment points; (3) add the
@@ -3867,7 +3877,7 @@ plan is built and committed on the current branch:
 | P4.2 | Symbolic-execution CFG frontend (angr/unicorn-class) | WIP — first frontend-facing primitives landed: `SymbolicMemory` wraps an SMT array memory state, builds `select`/`store`, routes load-equality branch/assume queries through `SymbolicExecutor`'s automatic warm/memory feasibility APIs, and now exposes conservative write-log normalization / compact read-specific read-over-write `ite` construction for frontend memory logs that skips literal-distinct writes, elides exact-hit guards, preserves later symbolic aliases, and uses the auto route; `SymbolicExecutor::assume_auto` and `SymbolicExecutor::branch` keep same-index store/read-back constraints, literal-distinct concrete-address store-chain misses, zero-initialized constant-array reads, simple array-ITE state-merge reads including same-readback merge-guard and tautology pruning, reducible conditional read/write-index paths with scalar equality-over-`ite` cleanup, symbolic Bool readback equality/connective/xor/implication cleanup, BV bitwise/arithmetic/comparison/slice-extension/shift/div-rem readback cleanup, reducible symbolic-address ROW over store chains with same-index shadowed-store pruning, plain symbolic-base Bool/BV array loads via retained select-congruence abstraction including wide/BV256 index or element projection, direct equal-array symbol assumptions/assertions via retained cross-array select congruence and equal-array model projection, scalar Bool/BV UF applications via retained congruence abstraction including wide/BV256 argument or result projection, helper-level load/write-log queries, and default `explore_cfg` branch/assume/status/model queries on the warm BV path when they reduce or abstract, with original-term replay, while remaining general memory/UF still auto-promotes to the memory/theory-aware route; `SymbolicExecutor::explore_cfg` provides a reusable DFS harness over frontend-supplied CFG states, with solver-scope management, infeasible pruning, unknown-safe traversal, and model-witnessed targets; `explore_cfg_checked` adds frontend-supplied concrete witness extraction + replay callbacks and buckets targets into verified/missing-witness/mismatch cases; `TinyBvProgram` is the first reusable small-target frontend, with a validated BV register/memory IR, label-aware line-oriented assembly import with retained label/source metadata, deterministic PC-to-label lookup, typed static CFG edges and basic blocks, deterministic Graphviz DOT export for the basic-block CFG plus trace-highlighted, block-coverage-highlighted, and edge-coverage-highlighted DOT overlays, block-level trace paths, taken-edge trace reports, source-aware trace rows, consolidated witness trace reports, replay-checked test-case generation reports, block-coverage and edge-coverage test-suite reports, register-register equality branches, symbolic instruction lifting, zero-initialized SMT array memory for `Load`/`Store`, model-witness extraction, independent concrete replay, concrete execution traces, and bounded PC/label reachability/safety reports. Remaining: byte-level/binary broader target work, unbounded/certified safety wrappers over richer CFGs, and eventually general warm memory reuse from P4.1 |
 | P4.3 | Optimization: OMT lexicographic/Pareto + MILP hardening | WIP — single-objective `maximize/minimize_lia` + `_bv`/`_bv_signed` already shipped (exponential+binary bound search, Boolean-structured oracle). **Lexicographic multi-objective landed** (`optimize_lia_lexicographic`, 2026-06-18): optimize objectives in order, pinning each at its optimum (`obj≥v`/`obj≤v`) before the next so later ones range over the optimal face — z3's default lex combination. Sound + terminating (bounded composition of the checked single-objective optimizer); `LexOutcome::Stopped` at the first unbounded/infeasible/unknown objective. **BV lexicographic also landed** (`optimize_bv_lexicographic`, signed/unsigned, `bv_uge/ule/sge/sle` pinning) — lexicographic OMT now covers both LIA and BV. **Box** (`optimize_lia_box` / `optimize_bv_box`, independent) **and Pareto** (`optimize_lia_pareto` / `optimize_bv_pareto`, guided-improvement front enumeration, deterministic point/push caps, each point verified Pareto-optimal) modes also landed — **axeyum now has all 3 of z3's OMT modes (box, lexicographic, pareto) across LIA+BV**. BV Pareto covers unsigned and signed objective values, max/min directions, and graceful `Unknown` for out-of-fragment objective values. MaxSAT returns the witnessing model (`max_satisfiable_model`). `minimize_model` / `Solver::minimize_model` provide replay-checked lexicographic counterexample minimization over selected Bool, unsigned-BV<=127, and Int symbols, and the metadata-aware `minimize_model_objectives` / `Solver::minimize_model_objectives` route adds signed two's-complement BV objective order for signed SDK inputs. `produce_evidence_minimized` / `prove_minimized` preserve the default surface, while `_with_objectives` variants expose signed-objective metadata to frontends. `axeyum-property` v0 is now the first typed SDK consumer of that surface: Bool/BV/Int handles, assumptions, proof calls, minimized countermodel lifting, checked `EvidenceReport` exposure plus best-effort standalone Lean modules and stable evidence/trust/Lean summaries through `ProofCertificate`, typed BV overflow predicates, `.equals()` equality aliases, property-owned Bool/BV/Int builder aliases, `Property::all` / `Property::any` Boolean folds, deterministic native-scalar counterexample-to-`#[test]` rendering with caller-owned prelude/setup snippets, helper-rendered Boolean / `Result<(), E>` / `Result<bool, E>` replay adapters, deterministic `#[cfg(test)]` module assembly, deterministic multi-case fixture file assembly, direct named/tuple aggregate initializer snippets, and explicit nested aggregate field composition, scalar/tuple/derived-struct `Symbolic` declarations/lifting including signed-order two's-complement fixed-width Rust integers, named-field `symbolic_struct` bundles, and the generated SDK corpus/scoreboard gate with 16 graduated workflows, deterministic executable baseline comparisons for scalar counterexamples, an actual fixed-seed proptest shrunk counterexample, struct and replay counterexamples, proved assertions, assumption-backed proved assertions, and a Kani-style assume/assert counterexample baseline, machine-readable `corpus.json`, DISAGREE=0, and 1/1 Lean-required coverage. Remaining: MILP hardening; broader objective support for minimized counterexamples beyond Bool/BV/Int native scalars; property SDK ergonomics (operator traits, richer replay bodies); richer proptest families and real Kani CLI-backed property corpus comparison; differential validation vs Z3 `opt` |
 | P4.4 | SMT-LIB command-surface completeness (declare-sort, reset, get-proof, …) | WIP — broad command surface already parsed (declare-const/fun/datatype(s), define-fun/sort, push/pop, reset(-assertions), check-sat(-assuming), get-proof/model/value/unsat-core/assignment/assertions, set-option/info, get-option, echo/exit); term forms let/forall/exists/`!`/`as` handled. `reset-assertions` is represented and honored by scoped incremental solving; full `(reset)` is explicitly rejected in the shared-arena parse/solve model. The single-result front-door helpers (`solve_smtlib`, OMT, `get-value`, `get-unsat-core`, `get-proof`, `get-assignment`) now replay the command stream for zero-or-one-query scripts, honoring `push`/`pop`, `check-sat-assuming`, and `reset-assertions` instead of flattening scoped scripts; multi-query scripts are rejected there and routed to `solve_smtlib_incremental`. `solve_smtlib_get_model` returns user-declared constants/functions for sat `(get-model)` scripts as Rust IR values, `solve_smtlib_get_assignment` returns active top-level named assertion assignments for sat scripts while filtering popped/reset assertions, and `solve_smtlib_get_assertions` returns exact command-point assertion-stack snapshots rendered from IR while excluding one-shot `check-sat-assuming` literals. The parser records `set-info`, `set-option`, requested `get-info`, and requested `get-option` commands; `solve_smtlib_get_info` returns recorded metadata, axeyum defaults for `:name`/`:version`, computed `:reason-unknown`, and explicit unsupported markers, while `solve_smtlib_get_option` returns recorded/default option values and explicit unsupported markers. **`match` datatype pattern-matching added** (commit d404794, P4.4): parse-time desugaring to nested `ite`/`DtTest`/`DtSelect`, exhaustiveness + arity checked, 11 tests. Remaining: parametric `declare-sort`/`define-sort`, `define-fun-rec`, full `match` for parametric datatypes, full option-driven solver semantics, and textual interactive command output |
-| P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | **WIP: four-driver fair map and descriptive query-feature attribution DONE; internal causal and correctness-led evidence open (ADR-0213--0215/0217/0218).** Five fixed-work repetitions establish two warm Axeyum wins, parity, and a Z3 win; 9,526 joined rows select outcome/purpose/reuse composition and reject size alone. Remaining: per-check rewrite/AIG/CNF/SAT attribution; seeded multi-oracle fuzzing; neutral solver; finding parity/canonical model selection; timeout-sensitive driver; measured qfbv/WASM/RSS/DRAT deployment. |
+| P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | **WIP: four-driver fair map plus query/internal attribution DONE; cross-core and correctness-led evidence open (ADR-0213--0215/0217--0219).** Five fixed-work repetitions establish two wins, parity, and a Z3 win; 9,526 joined query rows reject size alone, and diagnostic phase joins show retention removes 98--99% of repeated structure before SAT dominates. Remaining: matched Dptf UNSAT Axeyum/Z3/neutral control; multi-oracle fuzzing; finding parity; timeout-sensitive driver; measured qfbv/WASM/RSS/DRAT deployment. |
 
 ### Track 5 — Verified Systems (IR reflection) — ADR-0056, adopted 2026-07-06
 | Phase | Title | Status |
@@ -3880,13 +3890,21 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-17 — ADR-0219 lands the four-driver internal profile join.** One
+  diagnostic run per driver pairs cold/warm phase records with all 9,526
+  checks. Retention removes 98--99% of repeated AIG/CNF work and makes SAT the
+  largest Axeyum warm phase everywhere. Dptf UNSAT has the highest retained
+  structural additions and a CNF/SAT-dominated loss. Profile output overhead
+  forbids a new speed ratio; the artifact selects an unprofiled identical-CNF
+  neutral-core control next.
+
 - **2026-07-17 — ADR-0218 lands fail-closed query-feature attribution.** The
   analyzer revalidates 20 raw traces and emits a 9,526-row join. SAT favors
   Axeyum on all four drivers; UNSAT behavior, consumer purpose, and exact-query
   reuse materially shape aggregate results. Retained-only wins remain on
   IntcSST/SurfacePen, while size alone fails to order the drivers. Exact JSON
-  and CSV are committed; marginal reweighting is labeled descriptive, and the
-  next gate is per-check rewrite/AIG/CNF/SAT attribution.
+  and CSV are committed; marginal reweighting is labeled descriptive.
+  ADR-0219 subsequently completes the internal attribution gate.
 
 - **2026-07-17 — ADR-0217 accepts the small-driver fair regime map.** Five
   fixed-work four-cell runs each preserve every decision and zero fallback on

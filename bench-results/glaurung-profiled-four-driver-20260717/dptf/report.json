@@ -1,0 +1,804 @@
+{
+  "by_outcome": {
+    "sat": {
+      "cold": {
+        "adapter_total_nanos": 1233508022,
+        "attributed_nanos": 1211779784,
+        "occurrences": 317,
+        "phase_nanos": {
+          "arena_create": 107329,
+          "bit_blast": 191081133,
+          "cnf_encode": 814320105,
+          "model_extract": 284555,
+          "model_lift": 6075101,
+          "replay": 12743867,
+          "solve": 159512430,
+          "solver_create": 2726424,
+          "translation": 24928840,
+          "word_rewrite": 0
+        },
+        "phase_share_of_adapter_total": {
+          "arena_create": 8.701118929569474e-05,
+          "bit_blast": 0.154908707192826,
+          "cnf_encode": 0.6601660390336723,
+          "model_extract": 0.0002306875958038966,
+          "model_lift": 0.004925059984733525,
+          "replay": 0.010331401800968587,
+          "solve": 0.12931608644211962,
+          "solver_create": 0.0022103009882168405,
+          "translation": 0.020209710480504683,
+          "word_rewrite": 0.0
+        },
+        "unattributed_nanos": 21728238,
+        "unattributed_share_of_adapter_total": 0.01761499529185875
+      },
+      "occurrences": 317,
+      "structure": {
+        "cold_aig_nodes_sum": 1468764,
+        "cold_cnf_clauses_sum": 1915242,
+        "cold_cnf_variables_sum": 1468758,
+        "warm_aig_nodes_added": 3262,
+        "warm_cnf_clauses_added": 7891,
+        "warm_cnf_variables_added": 3465
+      },
+      "warm": {
+        "adapter_total_nanos": 255269117,
+        "attributed_nanos": 243395060,
+        "occurrences": 317,
+        "phase_nanos": {
+          "bit_blast": 2767438,
+          "cnf_encode": 15109336,
+          "model_extract": 410222,
+          "model_lift": 10091132,
+          "replay": 15840897,
+          "session_create": 82874,
+          "solve": 196510771,
+          "translation": 2582390,
+          "word_rewrite": 0
+        },
+        "phase_share_of_adapter_total": {
+          "bit_blast": 0.0108412566021451,
+          "cnf_encode": 0.05918983141231299,
+          "model_extract": 0.001607017741985608,
+          "model_lift": 0.03953134683346752,
+          "replay": 0.062055673581540224,
+          "session_create": 0.00032465345190973494,
+          "solve": 0.7698180387406597,
+          "translation": 0.010116343215932385,
+          "word_rewrite": 0.0
+        },
+        "unattributed_nanos": 11874057,
+        "unattributed_share_of_adapter_total": 0.046515838420046716
+      }
+    },
+    "unsat": {
+      "cold": {
+        "adapter_total_nanos": 1370283081,
+        "attributed_nanos": 1350667000,
+        "occurrences": 244,
+        "phase_nanos": {
+          "arena_create": 89796,
+          "bit_blast": 224909181,
+          "cnf_encode": 1092594089,
+          "model_extract": 24548,
+          "model_lift": 0,
+          "replay": 0,
+          "solve": 6813153,
+          "solver_create": 2199245,
+          "translation": 24036988,
+          "word_rewrite": 0
+        },
+        "phase_share_of_adapter_total": {
+          "arena_create": 6.553098498046769e-05,
+          "bit_blast": 0.16413337077464799,
+          "cnf_encode": 0.7973491785380951,
+          "model_extract": 1.791454651989533e-05,
+          "model_lift": 0.0,
+          "replay": 0.0,
+          "solve": 0.004972077006911537,
+          "solver_create": 0.0016049566914268863,
+          "translation": 0.017541622116839083,
+          "word_rewrite": 0.0
+        },
+        "unattributed_nanos": 19616081,
+        "unattributed_share_of_adapter_total": 0.014315349340579065
+      },
+      "occurrences": 244,
+      "structure": {
+        "cold_aig_nodes_sum": 1624284,
+        "cold_cnf_clauses_sum": 2151977,
+        "cold_cnf_variables_sum": 1624284,
+        "warm_aig_nodes_added": 36119,
+        "warm_cnf_clauses_added": 62974,
+        "warm_cnf_variables_added": 36415
+      },
+      "warm": {
+        "adapter_total_nanos": 228856008,
+        "attributed_nanos": 217775070,
+        "occurrences": 244,
+        "phase_nanos": {
+          "bit_blast": 11511803,
+          "cnf_encode": 83642436,
+          "model_extract": 34812,
+          "model_lift": 0,
+          "replay": 0,
+          "session_create": 16826,
+          "solve": 118653816,
+          "translation": 3915377,
+          "word_rewrite": 0
+        },
+        "phase_share_of_adapter_total": {
+          "bit_blast": 0.05030151098327294,
+          "cnf_encode": 0.3654806213346167,
+          "model_extract": 0.00015211311384929864,
+          "model_lift": 0.0,
+          "replay": 0.0,
+          "session_create": 7.352221227244338e-05,
+          "solve": 0.5184649380059098,
+          "translation": 0.017108473726414036,
+          "word_rewrite": 0.0
+        },
+        "unattributed_nanos": 11080938,
+        "unattributed_share_of_adapter_total": 0.048418820623664816
+      }
+    }
+  },
+  "by_purpose": {
+    "address-concretization": {
+      "cold": {
+        "adapter_total_nanos": 579680760,
+        "attributed_nanos": 568452219,
+        "occurrences": 158,
+        "phase_nanos": {
+          "arena_create": 55121,
+          "bit_blast": 92507330,
+          "cnf_encode": 377488905,
+          "model_extract": 132459,
+          "model_lift": 2798306,
+          "replay": 6837854,
+          "solve": 74089622,
+          "solver_create": 1402777,
+          "translation": 13139845,
+          "word_rewrite": 0
+        },
+        "phase_share_of_adapter_total": {
+          "arena_create": 9.508854494325463e-05,
+          "bit_blast": 0.15958323336451602,
+          "cnf_encode": 0.6512013698712374,
+          "model_extract": 0.00022850335760669373,
+          "model_lift": 0.004827322542152339,
+          "replay": 0.011795896072176003,
+          "solve": 0.12781107656566004,
+          "solver_create": 0.0024199129879694473,
+          "translation": 0.022667381611906526,
+          "word_rewrite": 0.0
+        },
+        "unattributed_nanos": 11228541,
+        "unattributed_share_of_adapter_total": 0.019370215081832284
+      },
+      "occurrences": 158,
+      "structure": {
+        "cold_aig_nodes_sum": 671985,
+        "cold_cnf_clauses_sum": 870906,
+        "cold_cnf_variables_sum": 671979,
+        "warm_aig_nodes_added": 0,
+        "warm_cnf_clauses_added": 59,
+        "warm_cnf_variables_added": 59
+      },
+      "warm": {
+        "adapter_total_nanos": 18448099,
+        "attributed_nanos": 12822780,
+        "occurrences": 158,
+        "phase_nanos": {
+          "bit_blast": 1257447,
+          "cnf_encode": 428440,
+          "model_extract": 188863,
+          "model_lift": 243545,
+          "replay": 8652505,
+          "session_create": 82874,
+          "solve": 1049599,
+          "translation": 919507,
+          "word_rewrite": 0
+        },
+        "phase_share_of_adapter_total": {
+          "bit_blast": 0.06816133196162921,
+          "cnf_encode": 0.02322407311452524,
+          "model_extract": 0.010237531791215995,
+          "model_lift": 0.013201631235825436,
+          "replay": 0.4690187861632789,
+          "session_create": 0.004492278581115594,
+          "solve": 0.05689469684654229,
+          "translation": 0.04984291335383662,
+          "word_rewrite": 0.0
+        },
+        "unattributed_nanos": 5625319,
+        "unattributed_share_of_adapter_total": 0.30492675695203064
+      }
+    },
+    "branch-feasibility": {
+      "cold": {
+        "adapter_total_nanos": 261787548,
+        "attributed_nanos": 253615485,
+        "occurrences": 124,
+        "phase_nanos": {
+          "arena_create": 45802,
+          "bit_blast": 49013830,
+          "cnf_encode": 172309033,
+          "model_extract": 72856,
+          "model_lift": 786596,
+          "replay": 2836012,
+          "solve": 16966827,
+          "solver_create": 1283728,
+          "translation": 10300801,
+          "word_rewrite": 0
+        },
+        "phase_share_of_adapter_total": {
+          "arena_create": 0.00017495866533728336,
+          "bit_blast": 0.18722750709288893,
+          "cnf_encode": 0.658201791171519,
+          "model_extract": 0.000278302006938848,
+          "model_lift": 0.00300471128596231,
+          "replay": 0.010833257814080599,
+          "solve": 0.06481143633309862,
+          "solver_create": 0.004903701531289028,
+          "translation": 0.03934794102582755,
+          "word_rewrite": 0.0
+        },
+        "unattributed_nanos": 8172063,
+        "unattributed_share_of_adapter_total": 0.031216393073057853
+      },
+      "occurrences": 124,
+      "structure": {
+        "cold_aig_nodes_sum": 241634,
+        "cold_cnf_clauses_sum": 342337,
+        "cold_cnf_variables_sum": 241634,
+        "warm_aig_nodes_added": 1022,
+        "warm_cnf_clauses_added": 4772,
+        "warm_cnf_variables_added": 1185
+      },
+      "warm": {
+        "adapter_total_nanos": 190189106,
+        "attributed_nanos": 183768561,
+        "occurrences": 124,
+        "phase_nanos": {
+          "bit_blast": 1077429,
+          "cnf_encode": 14089276,
+          "model_extract": 93476,
+          "model_lift": 5945755,
+          "replay": 3081163,
+          "session_create": 0,
+          "solve": 157650151,
+          "translation": 1831311,
+          "word_rewrite": 0
+        },
+        "phase_share_of_adapter_total": {
+          "bit_blast": 0.005665040562312754,
+          "cnf_encode": 0.07408035242565365,
+          "model_extract": 0.0004914897701869422,
+          "model_lift": 0.03126233213378689,
+          "replay": 0.016200523073072334,
+          "session_create": 0.0,
+          "solve": 0.8289126244696686,
+          "translation": 0.009628895358496507,
+          "word_rewrite": 0.0
+        },
+        "unattributed_nanos": 6420545,
+        "unattributed_share_of_adapter_total": 0.0337587422068223
+      }
+    },
+    "concrete-evaluation": {
+      "cold": {
+        "adapter_total_nanos": 3620567,
+        "attributed_nanos": 3102729,
+        "occurrences": 8,
+        "phase_nanos": {
+          "arena_create": 2686,
+          "bit_blast": 1462305,
+          "cnf_encode": 491594,
+          "model_extract": 4800,
+          "model_lift": 30829,
+          "replay": 359745,
+          "solve": 118269,
+          "solver_create": 78553,
+          "translation": 553948,
+          "word_rewrite": 0
+        },
+        "phase_share_of_adapter_total": {
+          "arena_create": 0.0007418727508702366,
+          "bit_blast": 0.40388839648596475,
+          "cnf_encode": 0.13577818059988947,
+          "model_extract": 0.0013257591973853818,
+          "model_lift": 0.008514964645040405,
+          "replay": 0.09936150884654255,
+          "solve": 0.032665878024077444,
+          "solver_create": 0.021696325465044564,
+          "translation": 0.15300034497359116,
+          "word_rewrite": 0.0
+        },
+        "unattributed_nanos": 517838,
+        "unattributed_share_of_adapter_total": 0.14302676901159403
+      },
+      "occurrences": 8,
+      "structure": {
+        "cold_aig_nodes_sum": 439,
+        "cold_cnf_clauses_sum": 325,
+        "cold_cnf_variables_sum": 439,
+        "warm_aig_nodes_added": 0,
+        "warm_cnf_clauses_added": 74,
+        "warm_cnf_variables_added": 9
+      },
+      "warm": {
+        "adapter_total_nanos": 1604349,
+        "attributed_nanos": 1183167,
+        "occurrences": 8,
+        "phase_nanos": {
+          "bit_blast": 188544,
+          "cnf_encode": 324178,
+          "model_extract": 6500,
+          "model_lift": 31086,
+          "replay": 377228,
+          "session_create": 0,
+          "solve": 135551,
+          "translation": 120080,
+          "word_rewrite": 0
+        },
+        "phase_share_of_adapter_total": {
+          "bit_blast": 0.11752056441584717,
+          "cnf_encode": 0.20206202017142155,
+          "model_extract": 0.004051487550402064,
+          "model_lift": 0.019376083383353622,
+          "replay": 0.23512839164047225,
+          "session_create": 0.0,
+          "solve": 0.08448972137608463,
+          "translation": 0.07484655770035073,
+          "word_rewrite": 0.0
+        },
+        "unattributed_nanos": 421182,
+        "unattributed_share_of_adapter_total": 0.26252517376206796
+      }
+    },
+    "finding-reachability": {
+      "cold": {
+        "adapter_total_nanos": 518019722,
+        "attributed_nanos": 512135866,
+        "occurrences": 83,
+        "phase_nanos": {
+          "arena_create": 25531,
+          "bit_blast": 72828833,
+          "cnf_encode": 355253212,
+          "model_extract": 78965,
+          "model_lift": 2424330,
+          "replay": 2656259,
+          "solve": 72108327,
+          "solver_create": 547215,
+          "translation": 6213194,
+          "word_rewrite": 0
+        },
+        "phase_share_of_adapter_total": {
+          "arena_create": 4.9285768312890604e-05,
+          "bit_blast": 0.14059084993679064,
+          "cnf_encode": 0.6857909012197801,
+          "model_extract": 0.00015243628118081573,
+          "model_lift": 0.004679995562022251,
+          "replay": 0.005127717897968371,
+          "solve": 0.13919996466852666,
+          "solver_create": 0.0010563593947490672,
+          "translation": 0.011994126354903531,
+          "word_rewrite": 0.0
+        },
+        "unattributed_nanos": 5883856,
+        "unattributed_share_of_adapter_total": 0.011358362915765589
+      },
+      "occurrences": 83,
+      "structure": {
+        "cold_aig_nodes_sum": 671910,
+        "cold_cnf_clauses_sum": 870768,
+        "cold_cnf_variables_sum": 671910,
+        "warm_aig_nodes_added": 2694,
+        "warm_cnf_clauses_added": 6050,
+        "warm_cnf_variables_added": 2744
+      },
+      "warm": {
+        "adapter_total_nanos": 85390375,
+        "attributed_nanos": 82947275,
+        "occurrences": 83,
+        "phase_nanos": {
+          "bit_blast": 767858,
+          "cnf_encode": 8497524,
+          "model_extract": 127984,
+          "model_lift": 3763335,
+          "replay": 3687662,
+          "session_create": 0,
+          "solve": 65505396,
+          "translation": 597516,
+          "word_rewrite": 0
+        },
+        "phase_share_of_adapter_total": {
+          "bit_blast": 0.008992324954656775,
+          "cnf_encode": 0.09951383864984784,
+          "model_extract": 0.0014988106095095613,
+          "model_lift": 0.04407212171160977,
+          "replay": 0.04318592112986973,
+          "session_create": 0.0,
+          "solve": 0.7671285668905893,
+          "translation": 0.00699746312157547,
+          "word_rewrite": 0.0
+        },
+        "unattributed_nanos": 2443100,
+        "unattributed_share_of_adapter_total": 0.028610952932341612
+      }
+    },
+    "integer-overflow": {
+      "cold": {
+        "adapter_total_nanos": 149164448,
+        "attributed_nanos": 147360972,
+        "occurrences": 29,
+        "phase_nanos": {
+          "arena_create": 13742,
+          "bit_blast": 21075860,
+          "cnf_encode": 121691366,
+          "model_extract": 3610,
+          "model_lift": 5599,
+          "replay": 6524,
+          "solve": 1891843,
+          "solver_create": 324495,
+          "translation": 2347933,
+          "word_rewrite": 0
+        },
+        "phase_share_of_adapter_total": {
+          "arena_create": 9.212650993083822e-05,
+          "bit_blast": 0.14129278311679203,
+          "cnf_encode": 0.8158201745230874,
+          "model_extract": 2.4201477284989516e-05,
+          "model_lift": 3.7535753827882636e-05,
+          "replay": 4.3736963381515685e-05,
+          "solve": 0.012682935011431142,
+          "solver_create": 0.0021754178314661145,
+          "translation": 0.01574056708204357,
+          "word_rewrite": 0.0
+        },
+        "unattributed_nanos": 1803476,
+        "unattributed_share_of_adapter_total": 0.012090521730754502
+      },
+      "occurrences": 29,
+      "structure": {
+        "cold_aig_nodes_sum": 121607,
+        "cold_cnf_clauses_sum": 194959,
+        "cold_cnf_variables_sum": 121607,
+        "warm_aig_nodes_added": 17211,
+        "warm_cnf_clauses_added": 38240,
+        "warm_cnf_variables_added": 17270
+      },
+      "warm": {
+        "adapter_total_nanos": 73656393,
+        "attributed_nanos": 72021324,
+        "occurrences": 29,
+        "phase_nanos": {
+          "bit_blast": 5229130,
+          "cnf_encode": 42001190,
+          "model_extract": 5468,
+          "model_lift": 75752,
+          "replay": 6588,
+          "session_create": 16826,
+          "solve": 23909754,
+          "translation": 776616,
+          "word_rewrite": 0
+        },
+        "phase_share_of_adapter_total": {
+          "bit_blast": 0.0709935660303105,
+          "cnf_encode": 0.5702314258044104,
+          "model_extract": 7.423659749398807e-05,
+          "model_lift": 0.0010284511216833547,
+          "replay": 8.944233801945745e-05,
+          "session_create": 0.0002284390982870964,
+          "solve": 0.3246120672783963,
+          "translation": 0.010543769092792801,
+          "word_rewrite": 0.0
+        },
+        "unattributed_nanos": 1635069,
+        "unattributed_share_of_adapter_total": 0.022198602638605992
+      }
+    },
+    "value-witness": {
+      "cold": {
+        "adapter_total_nanos": 1091518058,
+        "attributed_nanos": 1077779513,
+        "occurrences": 159,
+        "phase_nanos": {
+          "arena_create": 54243,
+          "bit_blast": 179102156,
+          "cnf_encode": 879680084,
+          "model_extract": 16413,
+          "model_lift": 29441,
+          "replay": 47473,
+          "solve": 1150695,
+          "solver_create": 1288901,
+          "translation": 16410107,
+          "word_rewrite": 0
+        },
+        "phase_share_of_adapter_total": {
+          "arena_create": 4.969500926021327e-05,
+          "bit_blast": 0.16408538061951147,
+          "cnf_encode": 0.8059235278359453,
+          "model_extract": 1.5036856128677992e-05,
+          "model_lift": 2.6972526733955327e-05,
+          "replay": 4.349263821341195e-05,
+          "solve": 0.0010542152661298435,
+          "solver_create": 0.0011808334186991527,
+          "translation": 0.015034205691537903,
+          "word_rewrite": 0.0
+        },
+        "unattributed_nanos": 13738545,
+        "unattributed_share_of_adapter_total": 0.012586640137840029
+      },
+      "occurrences": 159,
+      "structure": {
+        "cold_aig_nodes_sum": 1385473,
+        "cold_cnf_clauses_sum": 1787924,
+        "cold_cnf_variables_sum": 1385473,
+        "warm_aig_nodes_added": 18454,
+        "warm_cnf_clauses_added": 21670,
+        "warm_cnf_variables_added": 18613
+      },
+      "warm": {
+        "adapter_total_nanos": 114836803,
+        "attributed_nanos": 108427023,
+        "occurrences": 159,
+        "phase_nanos": {
+          "bit_blast": 5758833,
+          "cnf_encode": 33411164,
+          "model_extract": 22743,
+          "model_lift": 31659,
+          "replay": 35751,
+          "session_create": 0,
+          "solve": 66914136,
+          "translation": 2252737,
+          "word_rewrite": 0
+        },
+        "phase_share_of_adapter_total": {
+          "bit_blast": 0.050147973903453234,
+          "cnf_encode": 0.2909447418176558,
+          "model_extract": 0.00019804626570804135,
+          "model_lift": 0.00027568688062484635,
+          "replay": 0.0003113200565153316,
+          "session_create": 0.0,
+          "solve": 0.5826889485942934,
+          "translation": 0.019616855756599216,
+          "word_rewrite": 0.0
+        },
+        "unattributed_nanos": 6409780,
+        "unattributed_share_of_adapter_total": 0.05581642672515012
+      }
+    }
+  },
+  "by_warm_execution": {
+    "warm-created": {
+      "cold": {
+        "adapter_total_nanos": 519404,
+        "attributed_nanos": 445819,
+        "occurrences": 7,
+        "phase_nanos": {
+          "arena_create": 5361,
+          "bit_blast": 223892,
+          "cnf_encode": 39318,
+          "model_extract": 2472,
+          "model_lift": 16230,
+          "replay": 3384,
+          "solve": 45497,
+          "solver_create": 89082,
+          "translation": 20583,
+          "word_rewrite": 0
+        },
+        "phase_share_of_adapter_total": {
+          "arena_create": 0.010321445348899894,
+          "bit_blast": 0.4310555944890682,
+          "cnf_encode": 0.07569830035964298,
+          "model_extract": 0.004759301045043935,
+          "model_lift": 0.031247352735057875,
+          "replay": 0.006515159683021309,
+          "solve": 0.08759462768865854,
+          "solver_create": 0.17150811314506628,
+          "translation": 0.03962811222093014,
+          "word_rewrite": 0.0
+        },
+        "unattributed_nanos": 73585,
+        "unattributed_share_of_adapter_total": 0.14167199328461083
+      },
+      "occurrences": 7,
+      "structure": {
+        "cold_aig_nodes_sum": 195,
+        "cold_cnf_clauses_sum": 63,
+        "cold_cnf_variables_sum": 189,
+        "warm_aig_nodes_added": 188,
+        "warm_cnf_clauses_added": 63,
+        "warm_cnf_variables_added": 191
+      },
+      "warm": {
+        "adapter_total_nanos": 727665,
+        "attributed_nanos": 505367,
+        "occurrences": 7,
+        "phase_nanos": {
+          "bit_blast": 284522,
+          "cnf_encode": 36487,
+          "model_extract": 2974,
+          "model_lift": 17511,
+          "replay": 3350,
+          "session_create": 99700,
+          "solve": 50023,
+          "translation": 10800,
+          "word_rewrite": 0
+        },
+        "phase_share_of_adapter_total": {
+          "bit_blast": 0.39100685067991453,
+          "cnf_encode": 0.050142579346265106,
+          "model_extract": 0.004087045549806573,
+          "model_lift": 0.02406464513203191,
+          "replay": 0.004603766843258917,
+          "session_create": 0.13701359829042212,
+          "solve": 0.0687445459105495,
+          "translation": 0.014841994599163076,
+          "word_rewrite": 0.0
+        },
+        "unattributed_nanos": 222298,
+        "unattributed_share_of_adapter_total": 0.3054949736485883
+      }
+    },
+    "warm-retained": {
+      "cold": {
+        "adapter_total_nanos": 2603271699,
+        "attributed_nanos": 2562000965,
+        "occurrences": 554,
+        "phase_nanos": {
+          "arena_create": 191764,
+          "bit_blast": 415766422,
+          "cnf_encode": 1906874876,
+          "model_extract": 306631,
+          "model_lift": 6058871,
+          "replay": 12740483,
+          "solve": 166280086,
+          "solver_create": 4836587,
+          "translation": 48945245,
+          "word_rewrite": 0
+        },
+        "phase_share_of_adapter_total": {
+          "arena_create": 7.36626914792116e-05,
+          "bit_blast": 0.15970919292047356,
+          "cnf_encode": 0.7324916860320387,
+          "model_extract": 0.00011778678349931234,
+          "model_lift": 0.00232740631810633,
+          "replay": 0.004894027390569346,
+          "solve": 0.06387350427689645,
+          "solver_create": 0.001857887903847258,
+          "translation": 0.018801435523922237,
+          "word_rewrite": 0.0
+        },
+        "unattributed_nanos": 41270734,
+        "unattributed_share_of_adapter_total": 0.015853410159167563
+      },
+      "occurrences": 554,
+      "structure": {
+        "cold_aig_nodes_sum": 3092853,
+        "cold_cnf_clauses_sum": 4067156,
+        "cold_cnf_variables_sum": 3092853,
+        "warm_aig_nodes_added": 39193,
+        "warm_cnf_clauses_added": 70802,
+        "warm_cnf_variables_added": 39689
+      },
+      "warm": {
+        "adapter_total_nanos": 483397460,
+        "attributed_nanos": 460664763,
+        "occurrences": 554,
+        "phase_nanos": {
+          "bit_blast": 13994719,
+          "cnf_encode": 98715285,
+          "model_extract": 442060,
+          "model_lift": 10073621,
+          "replay": 15837547,
+          "session_create": 0,
+          "solve": 315114564,
+          "translation": 6486967,
+          "word_rewrite": 0
+        },
+        "phase_share_of_adapter_total": {
+          "bit_blast": 0.028950749968773108,
+          "cnf_encode": 0.20421142676256512,
+          "model_extract": 0.0009144855663908536,
+          "model_lift": 0.0208392096226571,
+          "replay": 0.032762991762513606,
+          "session_create": 0.0,
+          "solve": 0.6518746788615728,
+          "translation": 0.013419530586693608,
+          "word_rewrite": 0.0
+        },
+        "unattributed_nanos": 22732697,
+        "unattributed_share_of_adapter_total": 0.04702692686883377
+      }
+    }
+  },
+  "methodology": {
+    "join": "exact check order plus query hash, one cold and one warm profile",
+    "timing_identity": "named nonoverlapping phases plus unattributed equals adapter total",
+    "timing_use": "diagnostic phase attribution only; profiling overhead invalidates headline ratios",
+    "unit": "one ordered four-cell check occurrence"
+  },
+  "overall": {
+    "cold": {
+      "adapter_total_nanos": 2603791103,
+      "attributed_nanos": 2562446784,
+      "occurrences": 561,
+      "phase_nanos": {
+        "arena_create": 197125,
+        "bit_blast": 415990314,
+        "cnf_encode": 1906914194,
+        "model_extract": 309103,
+        "model_lift": 6075101,
+        "replay": 12743867,
+        "solve": 166325583,
+        "solver_create": 4925669,
+        "translation": 48965828,
+        "word_rewrite": 0
+      },
+      "phase_share_of_adapter_total": {
+        "arena_create": 7.570691818282935e-05,
+        "bit_blast": 0.15976332107468608,
+        "cnf_encode": 0.7323606689503309,
+        "model_extract": 0.00011871267231993457,
+        "model_lift": 0.00233317526624946,
+        "replay": 0.004894350773883876,
+        "solve": 0.06387823616432413,
+        "solver_create": 0.001891729714540007,
+        "translation": 0.018805590027396294,
+        "word_rewrite": 0.0
+      },
+      "unattributed_nanos": 41344319,
+      "unattributed_share_of_adapter_total": 0.01587850843808648
+    },
+    "occurrences": 561,
+    "structure": {
+      "cold_aig_nodes_sum": 3093048,
+      "cold_cnf_clauses_sum": 4067219,
+      "cold_cnf_variables_sum": 3093042,
+      "warm_aig_nodes_added": 39381,
+      "warm_cnf_clauses_added": 70865,
+      "warm_cnf_variables_added": 39880
+    },
+    "warm": {
+      "adapter_total_nanos": 484125125,
+      "attributed_nanos": 461170130,
+      "occurrences": 561,
+      "phase_nanos": {
+        "bit_blast": 14279241,
+        "cnf_encode": 98751772,
+        "model_extract": 445034,
+        "model_lift": 10091132,
+        "replay": 15840897,
+        "session_create": 99700,
+        "solve": 315164587,
+        "translation": 6497767,
+        "word_rewrite": 0
+      },
+      "phase_share_of_adapter_total": {
+        "bit_blast": 0.029494938937531905,
+        "cnf_encode": 0.20397985334886307,
+        "model_extract": 0.0009192540874634424,
+        "model_lift": 0.020844057618368803,
+        "replay": 0.032720666996987606,
+        "session_create": 0.0002059384957556169,
+        "solve": 0.6509982042349073,
+        "translation": 0.013421668623375,
+        "word_rewrite": 0.0
+      },
+      "unattributed_nanos": 22954995,
+      "unattributed_share_of_adapter_total": 0.04741541765674731
+    }
+  },
+  "profile": {
+    "path": "/nas4/data/workspace-infosec/.axeyum-fair-profile-dptf-20260717.hGaiaF/profiles/axeyum-profile-968296.jsonl",
+    "sha256": "fac100777eaa0b890b41926a17ac6d2607ccd0d33581e69e5850143a3611108d"
+  },
+  "schema": "axeyum-glaurung-profiled-trace-analysis-v1",
+  "trace": {
+    "driver": "sqfs-intel-DptfDevGen.sys",
+    "path": "/nas4/data/workspace-infosec/.axeyum-fair-profile-dptf-20260717.hGaiaF/glaurung-ordered-trace-968296-cdd99835fd8448129ea1fc8998f750b7"
+  }
+}
