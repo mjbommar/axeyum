@@ -334,7 +334,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   plus two later null dereferences. Keep the switch off. Next hold work/query/
   finding identity constant in a fixed-work or repeated DriverSpec comparison;
   do not interpret deadline-dependent extra coverage as a solver disagreement
-  or speed claim.
+  or speed claim. The subsequent fixed-156-function pair also fails exact
+  identity: Z3 nondecisions differ 47→46, steering 70,592 versus 70,768 queries
+  and 782 versus 783 findings (781 shared). Continuation recovers 3/11 at
+  +1.47% Axeyum time/+0.18% RSS with zero disagreements/errors/resets/replay
+  failures, but those deltas are descriptive only. Next capture one ordered
+  authoritative stream and replay both policies exactly; another live pair is
+  not the acceptance gate.
 
 - **2026-07-16 — ADR-0208 rejects whole-snapshot cold timeout retry on RSS.**
   Glaurung `35b25ab` adds an explicit/off direct-warm `Unknown` retry through
@@ -1832,11 +1838,11 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   | **GQ7 warm delta entry** | **Source-identity functionality and current production comparison DONE (ADR-0201--0205; Glaurung `29031f8`).** The 92,721-check serial-default comparison passes every correctness/time/ratio/RSS alarm; tcpip/dxgkrnl functionality is clean, but exact repeated admission remains open | Keep direct opt-in; hold large-driver work/findings constant, then revisit default and order-balanced causal evidence |
   | **GQ8 verdict/CNF cache** | **DONE for available families (ADR-0192).** Clean repeated evidence admits exact same-arena scalar SAT reuse only in path-owned Glaurung sessions; fixed bounds, traffic partitions, cleanup gauges, findings, and replay are enforced | Preserve explicit off and re-gate new families; Axeyum's generic cache remains opt-in and ordinary UNSAT/Unknown/prefix verdicts remain excluded |
   | **GQ9 auto cost model/docs** | **DONE for available families (ADR-0186).** Clean adaptive repeat clears every alarm over 92,721 checks; downstream explorer default has explicit off/fixed controls | Re-gate newly captured families; do not broaden this Glaurung-specific default into Axeyum's generic API |
-  | **GQ10 real-lifter regression tier** | **Error attribution complete; fixed-work/repeated admission active (ADR-0205--0209).** Strict replay closed the concat error class. Same-session continuation recovers 5/14 full-budget tcpip timeouts inside time/RSS alarms, but deadline-limited traffic differs by 19 queries and two findings | Keep continuation explicit/off; run fixed-work or repeated exact-output tcpip/dxgkrnl tiers. Zero-query win32k remains separate |
+  | **GQ10 real-lifter regression tier** | **Error attribution complete; exact ordered replay active (ADR-0205--0209).** Strict replay closed the concat error class. Same-session continuation is resource-safe, but even the same 156-function prefix differs by 176 live queries and three set-difference findings because Z3 bounded nondecisions steer exploration | Keep continuation explicit/off; capture one authoritative occurrence stream and replay both policies exactly. Zero-query win32k remains separate |
 
-  **Next actions:** (1) build a fixed-work ordered replay or repeated
-  DriverSpec comparison for `tcpip`/`dxgkrnl` that requires exact query and
-  finding identity before scoring same-session continuation; (2) keep both
+  **Next actions:** (1) capture one ordered Z3-authoritative tcpip occurrence
+  stream and replay control/continuation over those exact queries before scoring
+  same-session continuation; (2) keep both
   timeout policies explicit/off and preserve their exact counter partitions;
   (3) inspect `win32k` dispatch recovery as a frontend coverage issue, never a
   zero-query solver success; (4) rerun the exclusive-direct causal comparison
@@ -3632,7 +3638,7 @@ plan is built and committed on the current branch:
 ### Track 4 — Use Cases & Frontend
 | Phase | Title | Status |
 |---|---|---|
-| P4.1j | Glaurung warm delta and duplicate/prefix reuse (GQ7/GQ8) | **DONE for current serial/source-direct families; widened fixed-work gate active.** ADR-0186/0192/0193/0195/0196/0199 establish adaptive snapshot ownership and serial LCP reuse. ADR-0201--0205 accept first-class source deltas and the two-driver production win. ADR-0206/0207 close Glaurung's declared-concat error class and isolate nine budget-sensitive tcpip formulas; ADR-0208 rejects fresh cold retry on RSS, while ADR-0209 keeps low-memory same-session continuation explicit/off because deadline-limited query/finding drift blocks causality. Direct remains opt-in pending fixed-work and repeated findings/RSS/variance gates. |
+| P4.1j | Glaurung warm delta and duplicate/prefix reuse (GQ7/GQ8) | **DONE for current serial/source-direct families; widened ordered-replay gate active.** ADR-0186/0192/0193/0195/0196/0199 establish adaptive snapshot ownership and serial LCP reuse. ADR-0201--0205 accept first-class source deltas and the two-driver production win. ADR-0206/0207 close Glaurung's declared-concat error class; ADR-0208 rejects fresh cold retry on RSS, while ADR-0209 keeps low-memory same-session continuation explicit/off because both wall-time and fixed-function live pairs fail query/finding identity. Direct remains opt-in pending exact occurrence replay and repeated findings/RSS/variance gates. |
 | P4.1e | Retained warm Boolean array relation flags | **DONE (ADR-0091)** — symbolic-memory path conditions can keep nested supported array equality atoms warm through private candidate-sensitive relation flags, guarded equality/diff observations, projection filtering, and replay |
 | P4.1h | Retained warm nested array-valued UF parameters | **DONE (ADR-0094)** — nested supported array-valued memory/function parameters can stay warm as full-value UF keys through private projection keys or rewritten structural keys, with relation-flag guarded congruence, private filtering, and replay |
 | P4.1g | Retained warm structural array-valued UF parameters | **DONE (ADR-0093)** — supported store/constant/array-ITE memory/function parameters can stay warm as full-value UF keys with scalar dependency retention, structural owner realization, relation-flag guarded congruence, private filtering, and replay; ADR-0094 subsequently lands nested application keys |
@@ -3654,14 +3660,25 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-16 — PLAN integrates the latest ten-item Glaurung consumer
+  feedback as standing invariants.** Strict/no-implicit coercion, warm/cold
+  separation, lowering-before-SAT priority, warm-only `assert_configured`,
+  actionable `IrError`, lean scalar model lift, bounded shared replay memo,
+  honest cause-partitioned `Unknown`, self-rechecked DRAT, and pure-Rust/
+  fast-failure-resistant measurement are now explicit. The reported “all
+  decided within 250 ms” and generic WASM claims remain gated by actual
+  counters/target builds rather than copied past contradictory evidence.
 - **2026-07-16 — ADR-0209 keeps same-session timeout continuation opt-in.**
   Glaurung `6e5b255` reuses retained SAT state and recovers 5/14 full-budget
   tcpip timeouts at +1.98% Axeyum time/+0.034% RSS, with zero disagreements,
   errors, or resets. The candidate executes 19 additional queries and retains
   all 780 control findings plus two later null dereferences before the common
   analysis deadline, so fixed-work/repeated exact-output evidence is required
-  before default admission. Axeyum's same-instance fresh-deadline regression
-  and all 298 CNF tests pass.
+  before default admission. A later fixed-156-function pair still differs by
+  176 queries because Z3 bounded nondecisions steer the live worklist;
+  continuation recovers 3/11 at +1.47% time/+0.18% RSS, but exact ordered replay
+  is now mandatory. Axeyum's same-instance fresh-deadline regression and all
+  298 CNF tests pass.
 - **2026-07-16 — ADR-0208 defers fresh cold retry after warm timeout.**
   Glaurung `35b25ab` recovers 4/15 tcpip occurrences with exact counters and no
   errors/disagreements, but leaves 11 unknowns and raises RSS 10.46%; the

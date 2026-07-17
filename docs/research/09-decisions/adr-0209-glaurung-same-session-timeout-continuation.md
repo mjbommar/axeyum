@@ -23,8 +23,9 @@ solver preserves the original `Unknown`. Counters partition continuations into
 recoveries, repeated unknowns, and errors.
 
 Do not admit it as an automatic policy from the current wall-time evidence.
-Require a fixed-work or repeated comparison whose workload and finding set are
-exact before default consideration.
+Require an ordered occurrence replay whose workload and finding set are exact
+before default consideration. A live fixed-function-prefix comparison was
+subsequently attempted and failed that stronger identity gate.
 
 ## Evidence
 
@@ -50,6 +51,24 @@ additional null dereferences in `sub_1c00738a0`. This is not an exact-work
 causal comparison, so neither the recoveries nor added coverage justify a
 default.
 
+Glaurung `399c770` then adds a deterministic
+`IOCTLANCE_MAX_ANALYZED_FUNCTIONS` boundary. Both tcpip processes complete the
+same 156/338-function prefix and hit `WORK-LIMIT-HIT`, never the 3,600-second
+safety deadline. Live exploration nevertheless remains non-identical. Control
+executes 70,592 queries with 47 Z3 / 11 Axeyum nondecisions and 782 findings;
+continuation executes 70,768 queries with 46 Z3 / 8 Axeyum nondecisions and 783
+findings. Their sets contain 781 shared findings, one control-only double fetch,
+and two candidate-only read/null-deref rows. One changed bounded Z3 nondecision
+is enough to steer a different authoritative worklist inside the same function
+prefix.
+
+The candidate's fixed-prefix counters are 11 continuations = 3 recoveries + 8
+repeated unknowns + 0 errors. Axeyum time changes
+133,279.7→135,233.6 ms (+1.47%) and RSS 440,280→441,088 KiB (+0.18%), inside
+the alarms, with zero SAT/UNSAT disagreements, resets, or replay failures.
+These resource deltas are descriptive only because query/finding identity
+fails. Glaurung `61b008f` records the rejection.
+
 ## Alternatives
 
 - Rebuild a fresh solver: rejected by ADR-0208's memory result.
@@ -65,6 +84,7 @@ default.
 Same-session continuation is a viable low-memory diagnostic and establishes
 that bounded incremental SAT solving can resume under a fresh deadline. It is
 not yet a production policy. GQ10 widening now needs a fixed-work ordered replay
-or repeated DriverSpec gate that holds query/finding identity constant, followed
-by the existing time, ratio, RSS, disagreement, reset, replay, and variance
-alarms. Zero-query win32k remains a separate frontend coverage gap.
+of one captured Z3-authoritative occurrence stream; another live exploration
+pair cannot guarantee query identity even with a fixed function prefix. Follow
+that replay with the existing time, ratio, RSS, disagreement, reset, replay, and
+variance alarms. Zero-query win32k remains a separate frontend coverage gap.
