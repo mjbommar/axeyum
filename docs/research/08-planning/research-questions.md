@@ -527,6 +527,16 @@ Out of scope:
     zero-query success. Repeat in a quieter environment or add another valid
     no-timeout IOCTL driver; see
     [ADR-0212](../09-decisions/adr-0212-defer-dxgkrnl-direct-delta-admission.md).
+- [x] What evidence boundary governs Axeyum/Glaurung paper performance claims?
+  - Answer: product admission and optimization screening retain their exact
+    work, replay, finding, resource, RSS, and regression-variance gates, but a
+    headline paper claim additionally requires per-query paired both-decided
+    statistics over at least five fixed-work repetitions, a topology-equivalent
+    warm Z3 baseline plus a neutral backend, authoritative finding parity with
+    canonical model selection where needed, and multi-oracle correctness
+    support. Strict typing is the lead contribution; aggregate ratios remain
+    descriptive until that boundary passes. See
+    [ADR-0213](../09-decisions/adr-0213-publication-grade-glaurung-evidence-gate.md).
 - [x] How should a real-client shadow run preserve decided/nondecided splits?
   - Answer: only under an explicit combined-shadow diagnostic, atomically write
     the exact content-addressed SMT-LIB bytes and stable backend result classes

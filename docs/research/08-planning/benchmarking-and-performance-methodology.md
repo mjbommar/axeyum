@@ -1,7 +1,7 @@
 # Benchmarking And Performance Methodology
 
 Status: draft
-Last updated: 2026-07-10
+Last updated: 2026-07-17
 
 ## Purpose
 
@@ -373,6 +373,44 @@ records the contract and the first measured baselines.
   deliberately conservative regression alarms, not hardware-independent
   guarantees or significance claims, and may be revised only with another
   recorded full-tier variance tranche.
+- ADR-0213 adds a distinct publication-grade client boundary. Engineering
+  admission still requires every exact-work and replay gate above, but a paper
+  speed claim additionally requires all of the following:
+  - Each ordered check has a stable occurrence/query identity, both backend
+    result classes, both positive timings, and an explicit execution class:
+    retained warm, newly created warm, or named one-shot fallback reason.
+    Aggregate footer counters cannot reconstruct this population after the
+    fact.
+  - Every configuration has at least five fresh-process fixed-work repetitions.
+    Query identities, bytes, order, backend configuration, and execution-class
+    membership must either be identical or the drift must fail closed. Report
+    process-level mean, sample deviation, and CV; shards remain parts of a run,
+    never repetitions.
+  - Classify occurrences as both-decided, Z3-only, Axeyum-only, or neither.
+    Operational errors and replay failures are separate fatal buckets. Latency
+    comparisons use only the paired both-decided population; decided-rate and
+    the other three buckets are reported beside, not hidden inside, the timing
+    result.
+  - The primary scalar is the geometric mean of the declared per-query ratio
+    direction with a deterministic-bootstrap 95% confidence interval. Also
+    report per-backend p50/p90/p95/p99 and latency CDFs. A ratio of sums,
+    "median-sum" ratio, or single process is descriptive only.
+  - Sweep the wall timeout over a predeclared set while keeping fixed work.
+    Never mix retained warm checks with assertion-cap, path-cap, unsupported,
+    or other cold fallbacks in one warm latency population.
+  - Compare `{Z3, Axeyum} x {cold, warm}` on the same ordered stream with
+    topology-equivalent persistence. Add at least one neutral solver point;
+    identify whether it is in-process or subprocess-bridged and report boundary
+    overhead separately.
+  - Shadow verdict agreement is not authoritative analysis parity. Run each
+    backend as the sole Glaurung authority, compare stable finding/sink sets,
+    and report model-choice divergence. If exploration depends on model choice,
+    a checked canonical selection policy and before/after parity table precede
+    an end-to-end claim.
+  These requirements govern publication claims, not ordinary microbenchmark
+  iteration. A bounded optimization may still use the stricter exact-work
+  engineering gate, but its aggregate ratio must remain labeled local
+  screening evidence until the publication boundary is exercised.
 - Timeout regressions must pin the exact pathological public or minimized query
   and exercise both admission outcomes: deterministic oversized refusal before
   allocation and cooperative expiry inside admitted superlinear work. Every

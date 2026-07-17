@@ -12,6 +12,18 @@ session state.
 > without ever losing the thread. **We do not stop and we do not hand-wave; we
 > advance the next task and record it.**
 
+> **Glaurung publication-evidence reset (2026-07-17, ADR-0213).** The reviewer
+> checklist confirms that the integration evidence is correctness-strong but
+> not yet sufficient for headline performance claims. Strict typed translation
+> and the three consumer soundness defects it exposed are the lead result.
+> Before another paper speedup, add per-query paired fixed-work statistics with
+> decided-population and warm/fallback partitions, a topology-equivalent warm
+> Z3 control plus a neutral solver, and authoritative finding parity with
+> canonical model selection where required. Existing exact-work/replay/RSS/CV
+> gates remain mandatory engineering admission controls; they are not
+> confidence intervals. GQ5 remains the leading pure-solver optimization lane,
+> but its next candidate follows the paired measurement harness.
+
 > **P0 soundness stop contained (2026-07-15, ADR-0165).** Historical commit
 > `2cb298e2` reproduced unrestricted large elimination from a two-constructor
 > `Prop` combining with proof irrelevance to make the trusted
@@ -508,13 +520,13 @@ count as decisions or speedups.
 
 | ID | Roadmap item | Scope and exit criterion |
 |---|---|---|
-| **GQ1** | **Capture and profile real queries first** | **DONE for current five-driver cold corpus and adaptive mixed client stream (ADR-0187/0188/0197).** Zero-exclusion 30,628-script capture, exact clean sharded profiles, whole-composite variance, guarded comparison, and unsplit warm/native-fallback attribution are executable. The old 2,225 hashes are stale/unmappable; current evidence is 7,953 wide-root scripts. Keep profiled/unprofiled/native/adaptive bars distinct. |
+| **GQ1** | **Capture and profile real queries first** | **Engineering capture is DONE; publication schema is WIP (ADR-0187/0188/0197/0213).** Zero-exclusion 30,628-script capture, exact clean sharded profiles, whole-composite variance, guarded comparison, and unsplit warm/native-fallback attribution are executable. Add both backend result classes and explicit per-check warm/fallback classification before publication analysis. The old 2,225 hashes are stale/unmappable; current evidence is 7,953 wide-root scripts. Keep profiled/unprofiled/native/adaptive bars distinct. |
 | **GQ2** | **Cheap always-on cold simplification tier** | Add a bounded, denotation-preserving one-shot tier for constant folding and trivial identities whose own cost is measured. Add a size/shape and cold-vs-warm policy that selects cheap, configured, or no preprocessing. Exit only when cold end-to-end time is non-worse in aggregate and improves the target class at the GQ1 validity gates. |
 | **GQ3** | **Coercion-cancellation peepholes and causal telemetry** | **Current measured tranche complete; use ablation as policy evidence.** Exact nested/concat/extension/coercion rules and ADR-0159's repeated default-minus-rule comparator are landed. `extract_extend` improves lowering, but all four measured rules change zero AIG nodes and clauses. Do not globally delete sound rewrites because one corpus does not fire them; instead, keep a Glaurung policy only for rules with measured reach/cost and reopen register-slice-specific work only when an ablation demonstrates downstream AIG/CNF or native-time reduction. |
 | **GQ4** | **Cold demand-driven bit-slice reduction** | **Out of the active queue.** ADR-0157 v1 is correct but regresses the real ratio about 1.42x→4.49x; ADR-0158's conservative admission is a safe no-op but does not improve the required family. Both remain explicit/off. Do not tune thresholds further on this corpus; only a qualitatively different constant-cost admission proof and a fresh client gate can reopen GQ4. |
-| **GQ5** | **Cheaper AIG construction and measured CNF encoding** | **Leading remaining pure-solver lane.** ADR-0175 accepts deterministic open-addressed AIG hashing. Current cold evidence still assigns about 84% to bit blast plus CNF and only about 15% to SAT; CNF is about 46% on the accepted cold bar. Continue measured CNF lookup/ownership and clause-emission work, with the rejected growing-AIG half-flattening candidate as a warning that immediate clause savings need retained-future-use or rollback evidence. |
+| **GQ5** | **Cheaper AIG construction and measured CNF encoding** | **Leading remaining pure-solver engineering lane, sequenced after the ADR-0213 paired harness.** ADR-0175 accepts deterministic open-addressed AIG hashing. Current cold evidence still assigns about 84% to bit blast plus CNF and only about 15% to SAT; CNF is about 46% on the accepted cold bar. Continue measured CNF lookup/ownership and clause-emission work, with the rejected growing-AIG half-flattening candidate as a warning that immediate clause savings need retained-future-use or rollback evidence. Aggregate screening may admit a product optimization but is not a paper speedup. |
 | **GQ6** | **Cold SAT/CDCL tuning** | **Partition by policy before acting.** SAT is only about 15% on the cold one-shot workload, so it remains behind GQ5 there. ADR-0199 collapses warm construction enough that SAT becomes 47.2% of its diagnostic candidate profile; compare identical retained CNF across BatSat/proof core/oracles before a warm SAT claim. Preserve proof replay and deterministic limits. |
-| **GQ7** | **Cheaper warm entry and delta preprocessing** | **Source-identity functionality and the current two-driver production gate are DONE (ADR-0201--0205).** Glaurung `29031f8` commits 92,721 exact checks: source direct beats serial snapshot time/ratio/RSS 16.11%/17.39%/0.36% on SurfacePen and 6.07%/6.61%/1.72% on NETwtw10. ADR-0212 adds exact `dxgkrnl` no-op functionality but defers the wider default because timing variance fails; keep direct opt-in. |
+| **GQ7** | **Cheaper warm entry and delta preprocessing** | **Source-identity functionality and the current two-driver product gate are DONE; publication performance remains WIP (ADR-0201--0205/0213).** Glaurung `29031f8` commits 92,721 exact checks: its engineering gate reports source direct ahead of serial snapshot on time/ratio/RSS for SurfacePen and NETwtw10. Do not promote those aggregate ratios until warm Z3, paired both-decided, timeout, and fallback controls pass. ADR-0212 adds exact `dxgkrnl` no-op functionality but defers the wider default because timing variance fails; keep direct opt-in. |
 | **GQ8** | **Verdict and CNF reuse for duplicate/prefix queries** | **Exact replay-checked SAT reuse is done for available families (ADR-0192); stronger subsumption remains open.** Exact hits replay under fixed bounds; ordinary UNSAT/Unknown and prefix verdict reuse remain forbidden. Investigate only replay-checked stronger-model reuse where a cached model is proven to satisfy the complete weaker later query. |
 | **GQ9** | **Auto production policy and API guidance** | **DONE for available serial families (ADR-0186/0199).** Adaptive 2→9 ownership plus serial sibling continuation reuse is the downstream default; ADR-0199 clears every time/ratio/RSS/environment alarm and improves RSS on both accepted drivers. Explicit one-shot, fixed, transfer-only, and serial-off controls remain. Re-gate wider families and never apply serial leases across parallel workers. |
 | **GQ10** | **Ordered, wider real-lifter regression corpus** | **Native timeout-continuation admission is DONE; wider direct-delta admission is deferred (ADR-0205--0212).** The accepted tcpip gate still defaults one bounded continuation only inside selected direct-delta sessions. A complete 85,449-event / 17,400-check `dxgkrnl` trace and independent 13,577-query / 8,816-model-read replay prove exact production-topology no-op functionality with zero correctness or lifecycle alarms. The repeated ordinary-core comparison nevertheless fails the declared timing-CV gate (14.430% control, 8.306% candidate); slower-core calibration changes actual outcomes at the 250 ms boundary. Keep direct delta opt-in. `win32k` is now classified as a system-service/callout frontend target, not zero-query IOCTL solver evidence. |
@@ -553,6 +565,33 @@ artifact evidence below governs.
 | 8 | Robustness holds at large real-driver scale, but decided-rate must be stated exactly. | Maintain zero crashes, hangs, wrong SAT/UNSAT verdicts, and replay failures; keep `Unknown` first-class and cause-partitioned. Do **not** repeat the stronger “every query decided within 250 ms” claim: post-fix tcpip still contains measured bounded timeouts, which are sound nondecisions rather than failures or UNSAT. |
 | 9 | Self-rechecked DRAT UNSAT evidence is a deployability/correctness advantage over the current Z3 crate path. | Keep `UnsatProof::recheck()` prominent in examples, capability tables, and performance reporting. No optimization may bypass proof generation/recheck where proof-bearing UNSAT is promised. |
 | 10 | Pure Rust/no-C and the `qfbv`-only profile reduce deployment cost; benchmark methodology must reject fast failure. | Preserve the no-native default and lean feature profile; gate WASM claims on an actual target build rather than aspiration. Every comparison must report per-backend SAT, UNSAT, Unknown, Error, decided rate, replay, and exact work/finding identity. A faster number with reduced work or increased nondecisions is invalid until attributed—the pre-fix tcpip/dxgkrnl ratios are explicitly withdrawn. |
+
+**Publication execution order (2026-07-17, ADR-0213; supersedes performance-
+claim ordering below).** Product admission and paper evidence are now distinct:
+
+1. **Paired fixed-work harness:** emit both backend outcomes/timings and an
+   explicit retained/new-warm/fallback reason per ordered check; analyze at
+   least five identical-work runs with both-decided geomean ratios, deterministic
+   bootstrap 95% confidence intervals, p50/p90/p95/p99, CDFs, process CV, the
+   four decided/nondecided buckets, and a timeout sweep.
+2. **Fair baselines:** run `{Z3, Axeyum} x {cold, warm}` on the identical stream
+   and add at least one neutral solver. Keep in-process, FFI, and subprocess
+   boundary costs separately named.
+3. **Authoritative finding parity:** run each backend as the sole explorer
+   authority, diff stable findings/sinks, and introduce a checked canonical
+   model policy if concretization changes exploration. Report before/after
+   parity.
+4. **Correctness assurance:** publish the TCB and proof-coverage denominator;
+   add a standing well-typed Axeyum/Z3/cvc5-or-Bitwuzla fuzzer and retain the
+   three consumer sort/emission defects as named regression cases.
+5. **Supporting evidence:** contribution ablation, neutral QF_BV and a second
+   real workload axis, cold-gap/warm-hit-rate reporting, and measured
+   WASM/RSS/proof deployment claims.
+
+No ratio of sums, single-run ratio, timeout-mixed population, or warm aggregate
+containing unnamed one-shot fallbacks is a paper speedup. The accepted GQ5
+engineering sequence resumes through item 1's harness; it does not wait for all
+five publication items.
 
 ADR-0200 tests and rejects the first bounded implementation of rank 1. Replacing
 only the cold CNF primary fingerprint map with deterministic no-delete open
@@ -697,8 +736,9 @@ gates were run directly. Current-nightly Clippy required only mechanical,
 semantics-preserving test-literal, redundant-pattern, `strip_prefix`, and `?`
 cleanups.
 
-**Latest Glaurung execution order (2026-07-17; supersedes the earlier cold-path
-priority reset).** Earlier evidence reported an approximately 1.34x gated-bench
+**Glaurung engineering evidence history through ADR-0212.** The ADR-0213
+publication order above supersedes this section for paper claims. Earlier
+evidence reported an approximately 1.34x gated-bench
 ratio but roughly 2.5x on one actual `IncrementalBvSolver` stream, with
 bit-blast/CNF/SAT near 45%/32%/20%. ADR-0170's fixed-revision driver set now
 measures a 1.255x weighted native ratio with a much wider 0.426x--2.679x
@@ -788,7 +828,7 @@ The ranked work is:
     actual Z3 AST/context backend, with the user-visible Glaurung-vs-Glaurung
     comparison controlling product claims.
 
-The current highest-leverage trio is (1) refresh the clean same-current
+The pre-ADR-0213 highest-leverage engineering trio was (1) refresh the clean same-current
 two-driver baseline/candidate artifact for ADR-0193, (2) attribute model-lift
 work against the symbols actually required for complete original replay, and
 (3) continue measured CNF construction from the new v5 stage balance. No
