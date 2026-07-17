@@ -1,0 +1,96 @@
+{
+  "schema": "axeyum-qfbv-multi-oracle-fuzz-v1",
+  "date": "2026-07-17",
+  "source": {
+    "revision": "8fae61adb04ce9ff735943e93c4c5128ea7e80a6",
+    "test": "crates/axeyum-solver/tests/bv_differential_fuzz.rs"
+  },
+  "command": "PATH=<official-cvc5-1.3.4>:$PATH AXEYUM_REQUIRE_CVC5=1 cargo test -p axeyum-solver --all-features --test bv_differential_fuzz -- --nocapture",
+  "generator": {
+    "deterministic": true,
+    "seed_first": 0,
+    "seed_last": 3999,
+    "instances": 4000,
+    "variable_widths": [1, 4, 8, 16, 32],
+    "max_variables": 4,
+    "max_assertions": 4,
+    "max_term_depth": 3,
+    "cvc5_sample_stride": 16,
+    "axeyum_timeout_ms": 5000,
+    "z3_timeout_ms": 2000,
+    "cvc5_timeout_ms": 2000
+  },
+  "oracles": {
+    "z3": {
+      "crate_version": "0.20.0",
+      "library_version": "4.13.3.0",
+      "library_path": "/usr/lib/x86_64-linux-gnu/libz3.so.4",
+      "library_sha256": "eff8f0f91482d0809aae7aa0ed54cb52ff5ee9b5fe1ed1d2bfa9153c4a2fcfaf"
+    },
+    "cvc5": {
+      "version": "1.3.4",
+      "revision": "f3b21c4",
+      "binary": "official Linux x86_64 libc++ static release",
+      "binary_sha256": "4a93548398445cf1a774655583f5465b156c26f63f2cdfb94f4728fdf7adde46"
+    }
+  },
+  "random_sweep": {
+    "axeyum_z3_jointly_decided": 4000,
+    "axeyum_z3_agreements": 4000,
+    "axeyum_unknown": 0,
+    "axeyum_timeout": 0,
+    "axeyum_crashed": 0,
+    "z3_unknown": 0,
+    "cvc5_sampled": 250,
+    "cvc5_decided": 250,
+    "cvc5_unknown_or_skipped": 0,
+    "three_way_agreements": 250,
+    "sat_models_replayed": 1487,
+    "sat_replay_indeterminate": 0,
+    "disagreements": 0
+  },
+  "named_controls": [
+    {
+      "name": "concat-declared-halves",
+      "expected": "sat",
+      "three_way_agreement": true,
+      "original_model_replay": true
+    },
+    {
+      "name": "extension-declared-source",
+      "expected": "sat",
+      "three_way_agreement": true,
+      "original_model_replay": true
+    },
+    {
+      "name": "empty-model-after-unsat",
+      "expected": "unsat",
+      "three_way_agreement": true,
+      "model_payload_absent": true
+    },
+    {
+      "name": "w128-adapter-constant",
+      "expected": "sat",
+      "three_way_agreement": true,
+      "linked_z3_adapter_model_replay": true
+    }
+  ],
+  "strict_negative_controls": {
+    "malformed_concat_rejected": true,
+    "malformed_extension_rejected": true,
+    "overwide_constant_rejected": true
+  },
+  "pre_gate_defect": {
+    "seed": 352,
+    "kind": "nonstandard SMT-LIB disequality token in fuzz reproducer",
+    "old_token": "!=",
+    "fixed_token": "distinct",
+    "effect_on_solver_verdicts": "none; cvc5 had previously been counted as skipped",
+    "fail_closed_after_fix": true
+  },
+  "test_result": {
+    "passed": 3,
+    "failed": 0,
+    "elapsed_seconds": 48.98
+  }
+}

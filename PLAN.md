@@ -113,6 +113,17 @@ session state.
 > further rejecting a universal formula-size or FFI explanation. Neutral
 > cold-reset breadth is done; a topology-equivalent neutral cell remains open,
 > while correctness priority returns to the standing typed multi-oracle fuzzer.
+> ADR-0224 completes the first standing fuzz tranche without conflating
+> consumer-state bugs with valid-formula semantics. All 4,000 deterministic
+> QF_BV rows agree between Axeyum and direct Z3; all 1,487 Axeyum SAT models
+> replay on the original IR; and a fixed 250-row cvc5 sample decides and agrees
+> three ways with zero skips. Named strict-negative concat/extension/constant
+> controls, legitimate empty-SAT versus model-less-UNSAT behavior, normalized
+> width controls, and the linked-adapter W128 case are permanent. Fail-closed
+> oracle accounting also found and fixed a nonstandard `!=` fuzz renderer that
+> the old coarse skip bucket hid. Continue with additional fixed-seed/coverage
+> rounds and proof-coverage measurement; do not claim well-typed fuzz alone
+> tests Glaurung's invalid post-UNSAT exploration state.
 
 > **P0 soundness stop contained (2026-07-15, ADR-0165).** Historical commit
 > `2cb298e2` reproduced unrestricted large elimination from a two-constructor
@@ -656,7 +667,7 @@ artifact evidence below governs.
 | 9 | Self-rechecked DRAT UNSAT evidence is a deployability/correctness advantage over the current Z3 crate path. | Keep `UnsatProof::recheck()` prominent in examples, capability tables, and performance reporting. No optimization may bypass proof generation/recheck where proof-bearing UNSAT is promised. |
 | 10 | Pure Rust/no-C and the `qfbv`-only profile reduce deployment cost; benchmark methodology must reject fast failure. | Preserve the no-native default and lean feature profile; gate WASM claims on an actual target build rather than aspiration. Every comparison must report per-backend SAT, UNSAT, Unknown, Error, decided rate, replay, and exact work/finding identity. A faster number with reduced work or increased nondecisions is invalid until attributed—the pre-fix tcpip/dxgkrnl ratios are explicitly withdrawn. |
 
-**Publication execution order (2026-07-17, ADR-0213--0223 plus ranked review;
+**Publication execution order (2026-07-17, ADR-0213--0224 plus ranked review;
 supersedes performance-claim ordering below).** Product admission and paper
 evidence are now distinct:
 
@@ -678,11 +689,14 @@ evidence are now distinct:
    all 9,526 four-driver checks. Add a neutral warm/in-process cell, then a harder
    driver whose buckets cross a timeout boundary. The publication claim is the measured map and
    only a causally supported boundary, never a preselected speedup.
-2. **Correctness as the lead contribution:** publish the TCB and proof-coverage
-   denominator; turn empty-model, extension-width, concat-width, and W128
-   adapter truncation into named corpus seeds; add a standing well-typed
-   Axeyum/Z3/cvc5-or-Bitwuzla differential fuzzer with exact disagreement
-   artifacts and original-term replay.
+2. **Correctness as the lead contribution — first standing multi-oracle tranche
+   DONE (ADR-0224), coverage/proof denominator WIP:** 4,000 deterministic
+   Axeyum/Z3 rows agree, 1,487 SAT models replay on original IR, and all 250
+   preselected cvc5 rows decide and agree. Named controls preserve strict
+   concat/extension/constant rejection, legitimate empty-SAT versus model-less
+   UNSAT, normalized widths, and linked-adapter W128 behavior. Add more
+   fixed-seed/coverage rounds and publish the TCB plus proof-coverage
+   denominator; keep invalid consumer states separate from valid-formula fuzz.
 3. **Neutral baselines and oracles — four-driver cold-reset breadth DONE
    (ADR-0222/0223), warm API WIP:** cvc5 1.3.4 agrees on all 9,526 accepted
    checks with exact model-output accounting and stable N=5 throughput. Add a

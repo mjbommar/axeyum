@@ -539,6 +539,16 @@ records the contract and the first measured baselines.
   throughput separate. The fact that cvc5's per-check difficulty ordering does
   not mirror the Axeyum/Z3 warm ordering is regime evidence, not license to
   normalize unlike integration boundaries into a headline ratio.
+- Generated correctness gates must distinguish a solver nondecision from an
+  invalid oracle invocation. ADR-0224 keeps 4,000 deterministic well-typed
+  QF_BV rows on Axeyum/direct-Z3 with original-model replay and sends a fixed
+  250-row sample to cvc5. An explicit cvc5 `unknown` is a counted nondecision;
+  parser, process, status, and output-protocol failures fail closed with the
+  standalone SMT-LIB reproducer. The accepted run has 4,000 two-way and 250
+  three-way agreements, 1,487 replayed SAT models, and zero skips or failures.
+  Malformed consumer width metadata and use of a model after non-SAT remain
+  separate strict contract regressions; do not pretend well-typed formula fuzz
+  alone tests those invalid consumer states.
 - Timeout regressions must pin the exact pathological public or minimized query
   and exercise both admission outcomes: deterministic oversized refusal before
   allocation and cooperative expiry inside admitted superlinear work. Every
