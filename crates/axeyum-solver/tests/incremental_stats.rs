@@ -207,4 +207,32 @@ fn ordinary_constructor_keeps_phase_profiling_disabled() {
     assert!(stats.aig_nodes > 0);
     assert!(stats.cnf_variables > 0);
     assert!(stats.cnf_clauses > 0);
+    assert!(solver.profiled_last_cnf_snapshot().unwrap().is_none());
+}
+
+#[test]
+fn profiled_snapshot_materializes_active_scope_selectors() {
+    let mut arena = TermArena::new();
+    let value = arena.bool_var("value").unwrap();
+    let not_value = arena.not(value).unwrap();
+    let mut solver = IncrementalBvSolver::with_config_and_profiling(SolverConfig::default());
+
+    solver.assert(&arena, value).unwrap();
+    solver.push().unwrap();
+    solver.assert(&arena, not_value).unwrap();
+    assert!(matches!(solver.check(&arena).unwrap(), CheckResult::Unsat));
+
+    let snapshot = solver
+        .profiled_last_cnf_snapshot()
+        .unwrap()
+        .expect("profiled check exposes its active input CNF");
+    assert_eq!(snapshot.variable_count(), solver.encoded_variable_count());
+    assert_eq!(
+        snapshot.clauses().len(),
+        solver.encoded_clause_count() + solver.scope_depth()
+    );
+    assert!(matches!(
+        axeyum_cnf::solve_with_rustsat_batsat(&snapshot).unwrap(),
+        axeyum_cnf::SatResult::Unsat(_)
+    ));
 }

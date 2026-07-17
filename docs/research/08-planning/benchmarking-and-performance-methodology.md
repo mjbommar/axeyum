@@ -477,6 +477,23 @@ records the contract and the first measured baselines.
   JSONL writes occur inside the outer fair cell, so never use that run for a
   solver ratio. Use it to select a mechanism, then measure that mechanism in a
   fresh unprofiled repeated control.
+  ADR-0220's next control exports the retained input-clause database plus active
+  selectors as a standalone DIMACS instance, then sends the exact bytes through
+  fresh cores:
+
+  ```sh
+  cargo run --release -p axeyum-bench \
+    --example cnf_core_bench --features z3 -- \
+    /path/to/retained-cnf-dir report.json 5 /path/to/kissat
+  ```
+
+  This control must distinguish four costs: BatSat fresh import/solve, proof
+  generation, proof generation plus independent DRAT recheck, and oracle
+  import/solve. An external CLI cell includes process startup and is verdict
+  evidence unless solver-internal timing is separately captured. The exported
+  problem excludes opaque learned clauses, so a fresh-core reversal cannot by
+  itself explain a warm retained-engine reversal; follow it with an ordered
+  persistent clause-stream/learned-state control.
 - Timeout regressions must pin the exact pathological public or minimized query
   and exercise both admission outcomes: deterministic oversized refusal before
   allocation and cooperative expiry inside admitted superlinear work. Every

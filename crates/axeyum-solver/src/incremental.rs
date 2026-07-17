@@ -17,8 +17,8 @@
 
 use axeyum_bv::{BitLowerError, IncrementalLowering, first_unsupported_op};
 use axeyum_cnf::{
-    CnfAssignment, CnfVar, IncrementalCnf, IncrementalCnfStats, SatError, SatResult,
-    SatUnsatEvidence,
+    CnfAssignment, CnfError, CnfFormula, CnfVar, IncrementalCnf, IncrementalCnfStats, SatError,
+    SatResult, SatUnsatEvidence,
 };
 use axeyum_ir::{
     ArraySortKey, ArrayValue, Assignment, FuncId, FuncValue, GenericArrayValue, IrError, Op, Sort,
@@ -809,6 +809,7 @@ pub struct IncrementalBvSolver {
     warm_array_relation_flag_symbols: HashMap<TermId, SymbolId>,
     internal_symbols: HashSet<SymbolId>,
     profiling_enabled: bool,
+    last_profiled_cnf_assumptions: Option<Vec<CnfVar>>,
     stats: IncrementalBvStats,
     replay_checked_sat_cache: ReplayCheckedSatCache,
 }
@@ -862,6 +863,7 @@ impl IncrementalBvSolver {
             warm_array_relation_flag_symbols: HashMap::new(),
             internal_symbols: HashSet::new(),
             profiling_enabled: false,
+            last_profiled_cnf_assumptions: None,
             stats: IncrementalBvStats::default(),
             replay_checked_sat_cache: ReplayCheckedSatCache::default(),
         }
@@ -941,6 +943,29 @@ impl IncrementalBvSolver {
             cnf_gate_mix: self.cnf.stats(),
             ..self.stats
         }
+    }
+
+    /// Returns the exact input CNF used by the last profiled SAT call.
+    ///
+    /// Persistent clauses are copied and the active frame/one-shot selectors
+    /// from that call are materialized as positive unit clauses. Learned clauses
+    /// are deliberately excluded, so independent fresh cores receive the same
+    /// stable problem. Returns `Ok(None)` for ordinary non-profiling solvers or
+    /// before the first SAT call.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`CnfError::InvalidVariable`] if the recorded selector set does
+    /// not belong to the retained CNF. This indicates an internal invariant
+    /// failure and is never converted into a missing snapshot.
+    pub fn profiled_last_cnf_snapshot(&self) -> Result<Option<CnfFormula>, CnfError> {
+        if !self.profiling_enabled {
+            return Ok(None);
+        }
+        let Some(assumptions) = self.last_profiled_cnf_assumptions.as_deref() else {
+            return Ok(None);
+        };
+        self.cnf.formula_snapshot_assuming(assumptions).map(Some)
     }
 
     /// Enables ADR-0189's bounded exact-query SAT-model cache.
@@ -3663,6 +3688,9 @@ impl IncrementalBvSolver {
         active: &[CnfVar],
         timeout: Option<Duration>,
     ) -> Result<SatResult, SolverError> {
+        if self.profiling_enabled {
+            self.last_profiled_cnf_assumptions = Some(active.to_vec());
+        }
         let started = self.profiling_enabled.then(Instant::now);
         let result = self.cnf.solve(active, timeout);
         if let Some(started) = started {
@@ -3673,6 +3701,7 @@ impl IncrementalBvSolver {
 
     fn record_profiled_check(&mut self) {
         if self.profiling_enabled {
+            self.last_profiled_cnf_assumptions = None;
             self.stats.checks = self.stats.checks.saturating_add(1);
         }
     }

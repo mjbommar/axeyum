@@ -694,6 +694,19 @@ impl IncrementalSat {
         self.clauses.len()
     }
 
+    /// Copies the persistent input-clause database into a standalone formula.
+    ///
+    /// Learned clauses are intentionally absent: this is the stable problem
+    /// presented to the incremental core, not a serialization of opaque solver
+    /// internals. The snapshot is suitable for exact cross-core diagnostics.
+    #[must_use]
+    pub fn formula_snapshot(&self) -> CnfFormula {
+        CnfFormula {
+            variable_count: self.variable_count,
+            clauses: self.clauses.clone(),
+        }
+    }
+
     /// Reserves variable space up to `variable_count` variables.
     ///
     /// # Errors
@@ -1216,6 +1229,28 @@ impl IncrementalCnf {
     /// Number of clauses in the persistent database.
     pub fn clause_count(&self) -> usize {
         self.sat.clause_count()
+    }
+
+    /// Copies the persistent clause database and activates `assumptions` as
+    /// positive unit clauses.
+    ///
+    /// Incremental BV scopes use positive selector assumptions. Materializing
+    /// them as units yields a standalone CNF with the same active input problem
+    /// for a fresh SAT core. Learned clauses are not exported.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`CnfError::InvalidVariable`] if an assumption is outside the
+    /// retained variable namespace.
+    pub fn formula_snapshot_assuming(
+        &self,
+        assumptions: &[CnfVar],
+    ) -> Result<CnfFormula, CnfError> {
+        let mut formula = self.sat.formula_snapshot();
+        for &var in assumptions {
+            formula.add_clause(CnfClause::new(vec![CnfLit::positive(var)]))?;
+        }
+        Ok(formula)
     }
 
     fn alloc_var(&mut self) -> Result<CnfVar, SatError> {
@@ -4603,6 +4638,30 @@ p cnf 1 2
         ));
         // Without the assumptions the formula is satisfiable again.
         assert!(matches!(sat.solve(None).unwrap(), SatResult::Sat(_)));
+    }
+
+    #[test]
+    fn incremental_formula_snapshot_materializes_the_same_active_problem() {
+        let mut cnf = IncrementalCnf::new();
+        let selector = cnf.fresh_selector().unwrap();
+        let input = cnf.fresh_selector().unwrap();
+        cnf.sat
+            .add_clause(CnfClause::new(vec![
+                CnfLit::positive(selector).negated(),
+                CnfLit::positive(input),
+            ]))
+            .unwrap();
+        cnf.sat
+            .add_clause(CnfClause::new(vec![CnfLit::positive(input).negated()]))
+            .unwrap();
+
+        let snapshot = cnf.formula_snapshot_assuming(&[selector]).unwrap();
+        assert_eq!(snapshot.variable_count(), 2);
+        assert_eq!(snapshot.clauses().len(), 3);
+        assert!(matches!(
+            solve_with_rustsat_batsat(&snapshot).unwrap(),
+            SatResult::Unsat(_)
+        ));
     }
 
     #[test]
