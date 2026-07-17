@@ -1,0 +1,100 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>running</title>
+<pre id="result">running</pre>
+<script type="module">
+const parameters = new URLSearchParams(location.search);
+const moduleArgument = parameters.get("module");
+if (!moduleArgument) {
+  throw new Error("the module query parameter must name generated web-target glue");
+}
+
+const moduleUrl = new URL(moduleArgument, location.href);
+if (moduleUrl.origin !== location.origin) {
+  throw new Error("the generated module must have the measurement page's origin");
+}
+
+const loadStarted = performance.now();
+const axeyum = await import(moduleUrl);
+await axeyum.default();
+const loadElapsedMs = performance.now() - loadStarted;
+
+const cases = [
+  {
+    name: "sat-bv8-add",
+    expected: "sat",
+    smt2: `(set-logic QF_BV)
+(declare-const x (_ BitVec 8))
+(assert (= (bvadd x #x01) #x2a))
+(check-sat)`,
+  },
+  {
+    name: "unsat-bv8-equalities",
+    expected: "unsat",
+    smt2: `(set-logic QF_BV)
+(declare-const x (_ BitVec 8))
+(assert (= x #x2a))
+(assert (= x #x2b))
+(check-sat)`,
+  },
+  {
+    name: "sat-bv32-structure",
+    expected: "sat",
+    smt2: `(set-logic QF_BV)
+(declare-const x (_ BitVec 16))
+(declare-const y (_ BitVec 16))
+(assert (= (concat x y) #x12345678))
+(assert (= ((_ extract 15 8) y) #x56))
+(assert (= (bvadd x y) #x68ac))
+(check-sat)`,
+  },
+];
+
+function solveAndCheck(testCase) {
+  const result = JSON.parse(axeyum.solve_smtlib_json(testCase.smt2, 1000));
+  if (result.status !== testCase.expected) {
+    throw new Error(
+      `${testCase.name}: expected ${testCase.expected}, got ${result.status}`,
+    );
+  }
+}
+
+function measure(testCase) {
+  for (let index = 0; index < 100; index += 1) {
+    solveAndCheck(testCase);
+  }
+
+  const repetitions = [];
+  for (let repetition = 1; repetition <= 5; repetition += 1) {
+    const started = performance.now();
+    for (let index = 0; index < 5000; index += 1) {
+      solveAndCheck(testCase);
+    }
+    const totalMs = performance.now() - started;
+    repetitions.push({
+      repetition,
+      total_ms: totalMs,
+      mean_us: totalMs * 1000 / 5000,
+    });
+  }
+  return { name: testCase.name, expected_status: testCase.expected, repetitions };
+}
+
+const report = {
+  schema: "axeyum.browser-wasm-qfbv-latency.v1",
+  runtime: navigator.userAgent,
+  cross_origin_isolated: crossOriginIsolated,
+  axeyum_version: axeyum.version(),
+  source_revision: parameters.get("source_revision"),
+  generated_module: moduleUrl.pathname,
+  module_fetch_load_and_instantiation_ms: loadElapsedMs,
+  build_profile: "release",
+  wasm_opt_applied: false,
+  measurement_clock: "performance.now",
+  warmup_iterations: 100,
+  iterations_per_repetition: 5000,
+  cases: cases.map(measure),
+};
+document.querySelector("#result").textContent = JSON.stringify(report, null, 2);
+document.title = "done";
+</script>

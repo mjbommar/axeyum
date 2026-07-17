@@ -20,6 +20,14 @@ if (!Number.isSafeInteger(iterations) || iterations < 1) {
   usage();
 }
 
+const repetition = Number.parseInt(
+  process.env.AXEYUM_MEASUREMENT_REPETITION ?? "1",
+  10,
+);
+if (!Number.isSafeInteger(repetition) || repetition < 1) {
+  throw new Error("AXEYUM_MEASUREMENT_REPETITION must be a positive integer");
+}
+
 const modulePath = path.resolve(moduleArgument);
 const loadStarted = process.hrtime.bigint();
 const axeyum = require(modulePath);
@@ -117,6 +125,7 @@ console.log(
       generated_module: modulePath,
       axeyum_version: axeyum.version(),
       source_revision: process.env.AXEYUM_SOURCE_REVISION ?? null,
+      repetition,
       module_load_and_instantiation_ns: Number(loadElapsed),
       measurement_clock: "process.hrtime.bigint",
       build_profile: process.env.AXEYUM_WASM_BUILD_PROFILE ?? "unspecified",
