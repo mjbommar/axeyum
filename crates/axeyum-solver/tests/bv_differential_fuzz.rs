@@ -30,6 +30,16 @@
 //! The test passes iff disagreements == 0 AND no axeyum `Sat` definitely
 //! refutes under replay.
 //!
+//! A deterministic 1-in-16 sample is also sent to cvc5 when that binary is
+//! available, creating a standing three-way verdict gate without making the
+//! default pure-Rust build depend on an external executable. Set
+//! `AXEYUM_REQUIRE_CVC5=1` in the publication lane to fail rather than skip
+//! when cvc5 is unavailable. Every disagreement prints the complete standalone
+//! SMT-LIB reproducer. Four named controls preserve the Glaurung bug history:
+//! strict rejection of malformed concat/extension contracts, legitimate empty
+//! SAT models versus model-less UNSAT, normalized concat/extension semantics,
+//! and a full-width 128-bit constant with bit 100 set.
+//!
 //! ## Semantic-safety note
 //!
 //! Every construct generated has *identical* SMT-LIB semantics on both sides.
@@ -58,14 +68,21 @@ use std::sync::mpsc;
 use std::time::Duration;
 
 use axeyum_ir::{Sort, SymbolId, TermArena, TermId, Value, eval};
-use axeyum_solver::{CheckResult, SolverConfig, solve};
+use axeyum_solver::{CheckResult, SolverBackend, SolverConfig, Z3Backend, solve};
 use z3::ast::{BV, Bool};
 use z3::{Params, SatResult, Solver};
+
+mod common_cvc5;
+use common_cvc5::{Verdict as Cvc5Verdict, cvc5_bin, cvc5_decide};
 
 /// Number of instances generated and adjudicated. Each is tiny (≤ 4 vars, ≤ 4
 /// atoms, depth ≤ 3, width ≤ 32) so Z3 decides well within its timeout and the
 /// bit-blast stays cheap.
 const INSTANCES: u64 = 4000;
+
+/// Send this deterministic subset of generated instances to the independent
+/// cvc5 parser/solver. The existing Axeyum/Z3 gate still covers every row.
+const CVC5_SAMPLE_STRIDE: u64 = 16;
 
 /// Per-instance Z3 wall-clock budget. Small `QF_BV` formulas ⇒ Z3 decides far
 /// faster; this only bounds the rare pathological shape so the test never hangs.
@@ -341,7 +358,7 @@ enum Term {
     /// A bit-vector variable of the instance width, by index into the vars.
     Var(usize),
     /// A small bit-vector constant of the given width (masked at build time).
-    Const { width: u32, value: u64 },
+    Const { width: u32, value: u128 },
     /// `op(a, b)` for a width-preserving binary op (operands share `a`'s width).
     Bin(BvBin, Box<Term>, Box<Term>),
     /// `op(a)` for a width-preserving unary op.
@@ -389,7 +406,7 @@ impl Term {
             } else {
                 Term::Const {
                     width,
-                    value: rng.next_u64(),
+                    value: u128::from(rng.next_u64()),
                 }
             };
         }
@@ -400,7 +417,7 @@ impl Term {
             // `0` when `!var_ok` (sub-width) falls through here to a constant.
             0 | 1 => Term::Const {
                 width,
-                value: rng.next_u64(),
+                value: u128::from(rng.next_u64()),
             },
             2 | 3 => Term::Bin(
                 BvBin::pick(rng),
@@ -416,7 +433,7 @@ impl Term {
                 if width < 2 {
                     Term::Const {
                         width,
-                        value: rng.next_u64(),
+                        value: u128::from(rng.next_u64()),
                     }
                 } else {
                     let lo_w = rng.below_u32(width - 1) + 1; // 1..=width-1
@@ -449,7 +466,7 @@ impl Term {
                 if width < 2 {
                     Term::Const {
                         width,
-                        value: rng.next_u64(),
+                        value: u128::from(rng.next_u64()),
                     }
                 } else {
                     let by = rng.below_u32(width - 1); // 0..=width-2
@@ -465,7 +482,7 @@ impl Term {
                 if width < 2 {
                     Term::Const {
                         width,
-                        value: rng.next_u64(),
+                        value: u128::from(rng.next_u64()),
                     }
                 } else {
                     let by = rng.below_u32(width - 1); // 0..=width-2
@@ -483,7 +500,7 @@ impl Term {
         match self {
             Term::Var(i) => vars[*i],
             Term::Const { width, value } => {
-                let masked = mask_u128(u128::from(*value), *width);
+                let masked = mask_u128(*value, *width);
                 a.bv_const(*width, masked).unwrap()
             }
             Term::Bin(op, x, y) => {
@@ -522,9 +539,13 @@ impl Term {
         match self {
             Term::Var(i) => vars[*i].clone(),
             Term::Const { width: w, value } => {
-                let masked = mask_u128(u128::from(*value), *w);
-                // `*w` ≤ 32 here, so the masked constant fits a u64.
-                BV::from_u64(u64::try_from(masked).expect("masked const fits u64"), *w)
+                let masked = mask_u128(*value, *w);
+                if let Ok(value) = u64::try_from(masked) {
+                    BV::from_u64(value, *w)
+                } else {
+                    BV::from_str(*w, &masked.to_string())
+                        .expect("well-typed u128 numeral is accepted by Z3")
+                }
             }
             Term::Bin(op, x, y) => {
                 let xt = x.build_z3(vars);
@@ -559,7 +580,7 @@ impl Term {
         match self {
             Term::Var(i) => names[*i].to_string(),
             Term::Const { width, value } => {
-                let masked = mask_u128(u128::from(*value), *width);
+                let masked = mask_u128(*value, *width);
                 format!("(_ bv{masked} {width})")
             }
             Term::Bin(op, x, y) => {
@@ -787,6 +808,23 @@ impl Instance {
         }
         lines.join("\n")
     }
+
+    /// Complete standalone SMT-LIB reproducer consumed by cvc5 and printed on
+    /// any disagreement. The same typed tree drives Axeyum, direct Z3, and this
+    /// rendering, so the three engines share one semantic source of truth.
+    fn to_smt2(&self) -> String {
+        let mut lines = vec!["(set-logic QF_BV)".to_string()];
+        for name in &VAR_NAMES[..self.num_vars] {
+            lines.push(format!("(declare-const {name} (_ BitVec {}))", self.width));
+        }
+        let names = &VAR_NAMES[..self.num_vars];
+        for atom in &self.atoms {
+            lines.push(format!("(assert {})", atom.dump(names)));
+        }
+        lines.push("(check-sat)".to_string());
+        lines.push("(exit)".to_string());
+        lines.join("\n") + "\n"
+    }
 }
 
 /// A coarse verdict label, abstracting away the model/reason payloads.
@@ -948,6 +986,10 @@ struct Tally {
     axeyum_timeout: u64,
     axeyum_crashed: u64,
     z3_unknown_skipped: u64,
+    cvc5_sampled: u64,
+    cvc5_decided: u64,
+    cvc5_unknown_skipped: u64,
+    three_way_agreements: u64,
     sat_replayed: u64,
     sat_replay_indeterminate: u64,
     /// The first crashing instance, kept for the report.
@@ -957,7 +999,7 @@ struct Tally {
 /// Decide one instance with both engines and fold the result into `t`. Panics
 /// only on a genuine soundness violation (a non-replaying Sat, or a jointly-
 /// decided Sat/Unsat disagreement) — the whole point of the gate.
-fn run_instance(seed: u64, inst: &Instance, t: &mut Tally) {
+fn run_instance(seed: u64, inst: &Instance, t: &mut Tally, cvc5: Option<&str>) {
     // --- axeyum: the default pure-Rust front door, hard-capped. ----------
     let outcome = match solve_axeyum_bounded(inst.clone()) {
         Bounded::Decided(o) => o,
@@ -981,8 +1023,10 @@ fn run_instance(seed: u64, inst: &Instance, t: &mut Tally) {
         panic!(
             "WRONG SAT (seed {seed}): axeyum returned Sat but its model makes \
              atom[{atom}] FALSE under the independent ground evaluator — a \
-             soundness bug.\nmodel: {model}\ninstance:\n{}",
-            inst.dump()
+             soundness bug.\nmodel: {model}\ninstance:\n{}\n\
+             Complete SMT-LIB reproducer:\n{}",
+            inst.dump(),
+            inst.to_smt2()
         );
     }
     match outcome.replay {
@@ -1019,13 +1063,236 @@ fn run_instance(seed: u64, inst: &Instance, t: &mut Tally) {
             "DISAGREEMENT (seed {seed}): axeyum = {ax_label:?}, Z3 = {z3_label:?}.\n\
              This is a {} soundness bug.\n\
              axeyum model: {model_dump}\n\
-             instance:\n{}",
+             instance:\n{}\n\
+             Complete SMT-LIB reproducer:\n{}",
             match (ax_label, z3_label) {
                 (Verdict::Sat, Verdict::Unsat) => "WRONG-SAT",
                 (Verdict::Unsat, Verdict::Sat) => "WRONG-UNSAT (worst case)",
                 _ => "verdict",
             },
-            inst.dump()
+            inst.dump(),
+            inst.to_smt2()
+        );
+    }
+
+    let Some(cvc5) = cvc5 else {
+        return;
+    };
+    t.cvc5_sampled += 1;
+    let cvc5_label = match cvc5_decide(cvc5, &inst.to_smt2(), Z3_TIMEOUT) {
+        Cvc5Verdict::Sat => Verdict::Sat,
+        Cvc5Verdict::Unsat => Verdict::Unsat,
+        Cvc5Verdict::Skip => {
+            t.cvc5_unknown_skipped += 1;
+            return;
+        }
+    };
+    t.cvc5_decided += 1;
+    assert!(
+        cvc5_label == ax_label && cvc5_label == z3_label,
+        "THREE-WAY DISAGREEMENT (seed {seed}): axeyum={ax_label:?}, \
+         Z3={z3_label:?}, cvc5={cvc5_label:?}.\n\
+         Complete reproducer:\n{}",
+        inst.to_smt2()
+    );
+    t.three_way_agreements += 1;
+}
+
+fn eq_atom(lhs: Term, rhs: Term) -> Atom {
+    Atom::Cmp {
+        lhs,
+        rhs,
+        cmp: BvCmp::Eq,
+    }
+}
+
+fn glaurung_named_instances() -> Vec<(&'static str, Verdict, Instance)> {
+    let concat = Instance {
+        width: 64,
+        num_vars: 0,
+        atoms: vec![eq_atom(
+            Term::Concat(
+                Box::new(Term::Const {
+                    width: 56,
+                    value: 0x12,
+                }),
+                Box::new(Term::ZeroExt {
+                    by: 7,
+                    a: Box::new(Term::Const { width: 1, value: 1 }),
+                }),
+            ),
+            Term::Const {
+                width: 64,
+                value: 0x1201,
+            },
+        )],
+    };
+
+    let extension_source = 0xdead_beef_0000_1234_u128;
+    let extension = Instance {
+        width: 64,
+        num_vars: 1,
+        atoms: vec![
+            eq_atom(
+                Term::Var(0),
+                Term::Const {
+                    width: 64,
+                    value: extension_source,
+                },
+            ),
+            eq_atom(
+                Term::ZeroExt {
+                    by: 32,
+                    a: Box::new(Term::Extract {
+                        hi: 31,
+                        lo: 0,
+                        a: Box::new(Term::Var(0)),
+                    }),
+                },
+                Term::Const {
+                    width: 64,
+                    value: 0x1234,
+                },
+            ),
+        ],
+    };
+
+    let empty_after_unsat = Instance {
+        width: 8,
+        num_vars: 1,
+        atoms: vec![
+            eq_atom(Term::Var(0), Term::Const { width: 8, value: 1 }),
+            eq_atom(Term::Var(0), Term::Const { width: 8, value: 2 }),
+        ],
+    };
+
+    let wide_value = (1_u128 << 100) | 0x1234_5678_9abc_def0_u128;
+    let wide = Instance {
+        width: 128,
+        num_vars: 1,
+        atoms: vec![eq_atom(
+            Term::Var(0),
+            Term::Const {
+                width: 128,
+                value: wide_value,
+            },
+        )],
+    };
+
+    vec![
+        ("concat-declared-halves", Verdict::Sat, concat),
+        ("extension-declared-source", Verdict::Sat, extension),
+        ("empty-model-after-unsat", Verdict::Unsat, empty_after_unsat),
+        ("w128-adapter-constant", Verdict::Sat, wide),
+    ]
+}
+
+#[test]
+fn glaurung_width_contract_regressions_are_strict() {
+    let mut arena = TermArena::new();
+    let high = arena.bv_const(56, 0x12).unwrap();
+    let low = arena.bv_const(1, 1).unwrap();
+    let malformed_concat = arena.concat(high, low).unwrap();
+    let concat_error = arena.extract(63, 8, malformed_concat).unwrap_err();
+    assert!(
+        concat_error.to_string().contains("out of range"),
+        "unexpected concat-contract error: {concat_error}"
+    );
+
+    let child = arena.bv_var("child", 64).unwrap();
+    let malformed_extension = arena.zero_ext(32, child).unwrap();
+    let expected_64 = arena.bv_const(64, 0).unwrap();
+    let extension_error = arena.eq(malformed_extension, expected_64).unwrap_err();
+    assert!(
+        extension_error.to_string().contains("sort"),
+        "unexpected extension-contract error: {extension_error}"
+    );
+
+    let constant_error = arena.bv_const(8, 0x1000).unwrap_err();
+    assert!(
+        constant_error.to_string().contains("fit"),
+        "unexpected constant-contract error: {constant_error}"
+    );
+}
+
+#[test]
+fn glaurung_named_qfbv_controls_agree_and_replay() {
+    let cvc5 = cvc5_bin();
+    if std::env::var("AXEYUM_REQUIRE_CVC5").as_deref() == Ok("1") {
+        assert!(
+            cvc5.is_some(),
+            "AXEYUM_REQUIRE_CVC5=1 but no working cvc5 binary was found"
+        );
+    }
+
+    let named = glaurung_named_instances();
+    let mut tally = Tally::default();
+    for (index, (name, expected, instance)) in named.iter().enumerate() {
+        eprintln!("[bv-fuzz named] {name}");
+        assert_eq!(
+            z3_decide(instance),
+            *expected,
+            "named control has the wrong expected verdict:\n{}",
+            instance.to_smt2()
+        );
+        run_instance(
+            0x474c_4155_5255_4e47_u64 + u64::try_from(index).unwrap(),
+            instance,
+            &mut tally,
+            cvc5.as_deref(),
+        );
+    }
+    assert_eq!(tally.jointly_decided, 4);
+    assert_eq!(tally.agreements, 4);
+    if cvc5.is_some() {
+        assert_eq!(tally.three_way_agreements, 4);
+    }
+
+    // The consumer bug was not that an empty model is intrinsically invalid:
+    // a closed true formula legitimately has one. The contract is that only a
+    // Sat result exposes it, while the contradictory control is structurally
+    // Unsat and therefore carries no model payload at all.
+    let (_, _, closed_sat) = &named[0];
+    let (mut arena, _symbols, assertions) = closed_sat.build();
+    let CheckResult::Sat(model) = solve(&mut arena, &assertions, &SolverConfig::default()).unwrap()
+    else {
+        panic!("closed concat control must be sat");
+    };
+    assert!(
+        model.is_empty(),
+        "closed SAT control should have an empty model"
+    );
+
+    let (_, _, contradictory) = &named[2];
+    let (mut arena, _symbols, assertions) = contradictory.build();
+    assert!(matches!(
+        solve(&mut arena, &assertions, &SolverConfig::default()).unwrap(),
+        CheckResult::Unsat
+    ));
+
+    // Exercise Axeyum's actual linked Z3 adapter, not only the independently
+    // constructed direct-Z3 AST above. This is the exact boundary that once
+    // narrowed Glaurung's 128-bit constant through u64.
+    let (_, _, wide) = &named[3];
+    let (arena, _symbols, assertions) = wide.build();
+    let result = Z3Backend::new()
+        .check(
+            &arena,
+            &assertions,
+            &SolverConfig::default().with_timeout(Z3_TIMEOUT),
+        )
+        .expect("linked Z3 adapter accepts the full-width control");
+    let CheckResult::Sat(model) = result else {
+        panic!(
+            "linked Z3 adapter failed the full-width control:\n{}",
+            wide.to_smt2()
+        );
+    };
+    for &assertion in &assertions {
+        assert_eq!(
+            eval(&arena, assertion, &model.to_assignment()).unwrap(),
+            Value::Bool(true),
+            "linked Z3 adapter model must replay on the 128-bit original"
         );
     }
 }
@@ -1047,6 +1314,13 @@ fn bv_differential_fuzz_disagree_zero() {
         }
     }));
 
+    let cvc5 = cvc5_bin();
+    if std::env::var("AXEYUM_REQUIRE_CVC5").as_deref() == Ok("1") {
+        assert!(
+            cvc5.is_some(),
+            "AXEYUM_REQUIRE_CVC5=1 but no working cvc5 binary was found"
+        );
+    }
     let mut t = Tally::default();
 
     for seed in 0..INSTANCES {
@@ -1064,7 +1338,10 @@ fn bv_differential_fuzz_disagree_zero() {
         }
         let mut rng = Lcg::new(seed);
         let inst = Instance::generate(&mut rng);
-        run_instance(seed, &inst, &mut t);
+        let sampled_cvc5 = (seed % CVC5_SAMPLE_STRIDE == 0)
+            .then_some(cvc5.as_deref())
+            .flatten();
+        run_instance(seed, &inst, &mut t, sampled_cvc5);
     }
 
     let Tally {
@@ -1075,6 +1352,10 @@ fn bv_differential_fuzz_disagree_zero() {
         axeyum_timeout,
         axeyum_crashed,
         z3_unknown_skipped,
+        cvc5_sampled,
+        cvc5_decided,
+        cvc5_unknown_skipped,
+        three_way_agreements,
         sat_replayed,
         sat_replay_indeterminate,
         first_crash,
@@ -1093,6 +1374,10 @@ fn bv_differential_fuzz_disagree_zero() {
          but never a mis-verdict)"
     );
     println!("Z3 Unknown (skipped): {z3_unknown_skipped}");
+    println!("cvc5 sampled:         {cvc5_sampled}");
+    println!("cvc5 decided:         {cvc5_decided}");
+    println!("cvc5 Unknown/skipped: {cvc5_unknown_skipped}");
+    println!("three-way agreements: {three_way_agreements}");
     println!("Sat replays verified: {sat_replayed}");
     println!("Sat replay declined:  {sat_replay_indeterminate} (eval gap; Z3-adjudicated)");
     println!("DISAGREEMENTS:        0");
@@ -1112,6 +1397,12 @@ fn bv_differential_fuzz_disagree_zero() {
         "too few jointly-decided instances ({jointly_decided}); the differential \
          gate is not meaningfully exercised"
     );
+    if cvc5.is_some() {
+        assert!(
+            three_way_agreements >= 200,
+            "too few three-way agreements ({three_way_agreements}); the cvc5 lane is vacuous"
+        );
+    }
 }
 
 /// Pretty-print an axeyum model's variable bindings.
