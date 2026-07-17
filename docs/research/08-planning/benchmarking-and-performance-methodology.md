@@ -555,6 +555,16 @@ records the contract and the first measured baselines.
   classes an executable coverage gate. Report the bounded inventory and exact
   seeds; “all operators covered” is not permission to claim all shapes,
   constants, widths, or interactions are exhausted.
+  Proof coverage needs two denominators: the full decided-UNSAT population and
+  the predeclared attempted subset. ADR-0226's 4,000-row generator has 2,513
+  UNSAT results; its width-at-most-8/seed-divisible-by-4 subset contains 169
+  rows (6.725030%). All 169 have rechecked CNF DRAT and rechecked end-to-end
+  faithfulness-plus-DRAT certificates, so selected-subset coverage is 100% and
+  whole-population measured coverage is 6.725030%. Do not classify the 2,344
+  unattempted rows as either certified or not-certified. Seed 83 proves the
+  widening harness also needs a cooperative deadline or killable process:
+  CNF DRAT finishes, but end-to-end certification exceeds the bounded
+  diagnostic and remains unmeasured.
 - Timeout regressions must pin the exact pathological public or minimized query
   and exercise both admission outcomes: deterministic oversized refusal before
   allocation and cooperative expiry inside admitted superlinear work. Every

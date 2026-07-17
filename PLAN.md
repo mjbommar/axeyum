@@ -132,6 +132,14 @@ session state.
 > Next correctness work must add independent seeds/edge-case frequencies, a
 > proof-coverage denominator, or another neutral implementation—not rerun the
 > same bounded formulas and call that new coverage.
+> ADR-0226 adds the first explicit proof denominator. Of 2,513 generated UNSAT
+> rows, a predeclared width<=8/seed-divisible-by-4 subset selects 169 (6.725030%):
+> all 169 carry independently rechecked CNF DRAT and end-to-end
+> faithfulness-plus-DRAT certificates. The other 2,344 are unmeasured, not
+> failures. A complete width<=8 diagnostic isolates seed 83: CNF DRAT rechecks,
+> but end-to-end certification has no cooperative deadline and exceeds a
+> 15-second process bound. Add deadline/process isolation before widening this
+> denominator, then measure proof coverage on real Glaurung UNSAT rows.
 
 > **P0 soundness stop contained (2026-07-15, ADR-0165).** Historical commit
 > `2cb298e2` reproduced unrestricted large elimination from a two-constructor
@@ -675,7 +683,7 @@ artifact evidence below governs.
 | 9 | Self-rechecked DRAT UNSAT evidence is a deployability/correctness advantage over the current Z3 crate path. | Keep `UnsatProof::recheck()` prominent in examples, capability tables, and performance reporting. No optimization may bypass proof generation/recheck where proof-bearing UNSAT is promised. |
 | 10 | Pure Rust/no-C and the `qfbv`-only profile reduce deployment cost; benchmark methodology must reject fast failure. | Preserve the no-native default and lean feature profile; gate WASM claims on an actual target build rather than aspiration. Every comparison must report per-backend SAT, UNSAT, Unknown, Error, decided rate, replay, and exact work/finding identity. A faster number with reduced work or increased nondecisions is invalid until attributed—the pre-fix tcpip/dxgkrnl ratios are explicitly withdrawn. |
 
-**Publication execution order (2026-07-17, ADR-0213--0225 plus ranked review;
+**Publication execution order (2026-07-17, ADR-0213--0226 plus ranked review;
 supersedes performance-claim ordering below).** Product admission and paper
 evidence are now distinct:
 
@@ -697,15 +705,18 @@ evidence are now distinct:
    all 9,526 four-driver checks. Add a neutral warm/in-process cell, then a harder
    driver whose buckets cross a timeout boundary. The publication claim is the measured map and
    only a causally supported boundary, never a preselected speedup.
-2. **Correctness as the lead contribution — standing and exhaustive-neutral
-   seed round DONE (ADR-0224/0225), independent rounds/proof denominator WIP:**
+2. **Correctness as the lead contribution — standing/exhaustive-neutral seed
+   round and first proof denominator DONE (ADR-0224--0226), independent/real
+   coverage WIP:**
    all 4,000 deterministic rows agree in Axeyum, direct Z3, and cvc5; 1,487 SAT
    models replay on original IR; and executable coverage requires all five
    random widths plus 35 operator classes. Named controls preserve strict
    concat/extension/constant rejection, legitimate empty-SAT versus model-less
    UNSAT, normalized widths, and linked-adapter W128 behavior. Add independent
-   fixed-seed/edge-case rounds and publish the TCB plus proof-coverage
-   denominator; keep invalid consumer states separate from valid-formula fuzz.
+   fixed-seed/edge-case rounds and publish the TCB. The first proof subset is
+   169/169 rechecked end to end but only 6.725030% of generated UNSAT; add a
+   deadline-aware widening harness and a real-query denominator. Keep invalid
+   consumer states separate from valid-formula fuzz.
 3. **Neutral baselines and oracles — four-driver cold-reset breadth DONE
    (ADR-0222/0223), warm API WIP:** cvc5 1.3.4 agrees on all 9,526 accepted
    checks with exact model-output accounting and stable N=5 throughput. Add a

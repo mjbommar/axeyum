@@ -1,0 +1,50 @@
+{
+  "schema": "axeyum-qfbv-proof-coverage-v1",
+  "date": "2026-07-17",
+  "source": {
+    "revision": "7866b92138f547462f5461b023ced9f89395cb60",
+    "test": "crates/axeyum-solver/tests/bv_differential_fuzz.rs"
+  },
+  "accepted_command": "AXEYUM_QFBV_PROOF_SAMPLE_STRIDE=4 cargo test -p axeyum-solver --all-features --test bv_differential_fuzz bv_differential_fuzz_disagree_zero -- --nocapture",
+  "population": {
+    "generated_instances": 4000,
+    "jointly_decided": 4000,
+    "sat": 1487,
+    "unsat": 2513,
+    "selection": "jointly UNSAT and instance width <= 8 and seed mod 4 = 0",
+    "selected_unsat": 169,
+    "selected_fraction_of_all_unsat_percent": 6.725030
+  },
+  "cnf_drat": {
+    "attempted": 169,
+    "proved": 169,
+    "recheck_passed": 169,
+    "inconclusive": 0,
+    "coverage_of_selected_percent": 100.0
+  },
+  "end_to_end_faithfulness_plus_drat": {
+    "attempted": 169,
+    "certified": 169,
+    "recheck_passed": 169,
+    "not_certified": 0,
+    "coverage_of_selected_percent": 100.0
+  },
+  "unmeasured_unsat": 2344,
+  "test_result": {
+    "passed": 1,
+    "failed": 0,
+    "elapsed_seconds": 44.98
+  },
+  "widening_boundary": {
+    "complete_width_le_8_attempted": true,
+    "complete_run_accepted": false,
+    "blocking_seed": 83,
+    "width": 8,
+    "cnf_drat_proved_and_rechecked": true,
+    "end_to_end_completed_within_process_timeout": false,
+    "focused_timeout_seconds": 15,
+    "focused_exit_code": 124,
+    "reproducer": "seed-83.smt2",
+    "interpretation": "the end-to-end faithfulness route has no cooperative per-instance deadline; this is an unmeasured coverage row, not a proof failure"
+  }
+}
