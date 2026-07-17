@@ -140,6 +140,17 @@ session state.
 > but end-to-end certification has no cooperative deadline and exceeds a
 > 15-second process bound. Add deadline/process isolation before widening this
 > denominator, then measure proof coverage on real Glaurung UNSAT rows.
+> ADR-0227 closes the first WebAssembly deployability measurement and fixes a
+> build-only blind spot discovered by executing it. The pre-fix wasm32 artifact
+> compiled but trapped on its first solve because the AIG hash fold retained a
+> 64-bit value before converting to 32-bit `usize`; the repaired CI now
+> instantiates generated glue and executes SAT/UNSAT. Stable release evidence
+> reports a 1,801,662-byte browser runtime (541,248-byte sum under `gzip -9`)
+> and real Node/Chromium small-query latency in the 13--71 microsecond range.
+> This establishes an executable pure-Rust QF_BV browser artifact, not native
+> parity or minimum total footprint: the shared parser still pulls FP/string
+> crates. Next deployability work is the warm time/RSS Pareto and real-query
+> proof denominator; a narrower parser surface is a measured size candidate.
 
 > **P0 soundness stop contained (2026-07-15, ADR-0165).** Historical commit
 > `2cb298e2` reproduced unrestricted large elimination from a two-constructor
@@ -727,12 +738,15 @@ evidence are now distinct:
    authority, diff stable findings/sinks, and introduce a checked canonical
    model policy if concretization changes exploration. Report before/after
    parity.
-5. **Deployability and artifact readiness — profile enforcement DONE
-   (ADR-0216), measurement WIP:** `qfbv` is the exact solver default; Glaurung
+5. **Deployability and artifact readiness — profile and WebAssembly
+   measurement DONE (ADR-0216/0227), broader measurement WIP:** `qfbv` is the
+   exact solver default; Glaurung
    and `axeyum-wasm` select it explicitly; full in-tree consumers opt in; and
-   host tests plus a real wasm32 build gate the browser binding. Next measure
-   WASM latency/size and parser footprint, warm time/RSS Pareto, cold gap,
-   warm-hit rate, and one concrete self-rechecked DRAT use case.
+   host tests plus an executed wasm32 SAT/UNSAT gate protect the browser
+   binding. Stable release size, dependency footprint, and Node/Chromium
+   latency are now recorded. Next measure the warm time/RSS Pareto, cold gap,
+   warm-hit rate, and a real-query self-rechecked DRAT denominator; consider a
+   narrow QF_BV parser only against the committed bundle baseline.
 6. **Supporting artifact work:** contribution ablations, neutral SMT-COMP QF_BV
    and a second workload axis, then measured module/API decomposition,
    table-driven duplicate removal, and typed configuration policies. Preserve

@@ -1,0 +1,154 @@
+{
+  "schema": "axeyum-wasm-qfbv-deployability-v1",
+  "date": "2026-07-17",
+  "source": {
+    "revision": "49b36f829604eb67e523d0b7dd6b4c915e46090b",
+    "runtime_fix_revision": "323b789157d81f79c1bdbbce13b204d77ca9c09a",
+    "pre_fix_revision": "0910481217be1eadf9c49f37f2ec9f248617369c"
+  },
+  "toolchain": {
+    "rustc": "1.95.0 (59807616e 2026-04-14)",
+    "wasm_bindgen_cli": "0.2.123",
+    "node": "v24.14.1",
+    "browser": "Chromium 150.0.7871.114 snap",
+    "host": "Linux 7.0.0-27-generic x86_64 GNU/Linux",
+    "build_profile": "release",
+    "wasm_opt_applied": false
+  },
+  "build": {
+    "command": "cargo +stable build -p axeyum-wasm --target wasm32-unknown-unknown --release",
+    "node_bindgen_command": "wasm-bindgen --target nodejs --out-dir target/wasm-measure-node target/wasm32-unknown-unknown/release/axeyum_wasm.wasm",
+    "web_bindgen_command": "wasm-bindgen --target web --out-dir target/wasm-measure-web target/wasm32-unknown-unknown/release/axeyum_wasm.wasm"
+  },
+  "runtime_gate": {
+    "pre_fix_result": "first solve trapped with RuntimeError unreachable in AndUniqueTable::insert_without_growth",
+    "root_cause": "the 32-bit AIG hash path XOR-folded a u64 but fallibly converted the still-64-bit result to usize",
+    "repair": "fold to u32 before the infallible target-width conversion",
+    "ci_after_repair": "wasm32 build plus wasm-bindgen Node instantiation and SAT/UNSAT execution",
+    "accepted_cases": 3,
+    "accepted_node_measured_solves": 75000,
+    "accepted_browser_measured_solves": 75000,
+    "status_mismatches": 0,
+    "runtime_traps_after_repair": 0
+  },
+  "bundle": {
+    "raw_cargo_wasm": {
+      "bytes": 2338333,
+      "gzip_9_bytes": 644811,
+      "sha256": "2e714e654c6a53a22787325e521dc07c9c080e316b8f457d1ccd7a6dc62cdd8a"
+    },
+    "bindgen_wasm": {
+      "bytes": 1792615,
+      "gzip_9_bytes": 538618,
+      "sha256": "fd342e949004ac5eb1023fdeeff9eb1c4dc68fb66c3b53599c1214d7cfbea3e0"
+    },
+    "node_glue": {
+      "bytes": 5933,
+      "gzip_9_bytes": 1851,
+      "sha256": "d92c6817a52dba5d78b050b89de22c7c1455d1c205b09b534563781cde62d954",
+      "runtime_bundle_bytes": 1798548,
+      "runtime_bundle_gzip_9_sum_bytes": 540469
+    },
+    "web_glue": {
+      "bytes": 9047,
+      "gzip_9_bytes": 2630,
+      "sha256": "7c239d8927eb3eb14c76ea4d32d897d3f4c60b33ae7ad0e686b8e132eebff185",
+      "runtime_bundle_bytes": 1801662,
+      "runtime_bundle_gzip_9_sum_bytes": 541248
+    },
+    "typescript_declarations_excluded_from_runtime_totals": true
+  },
+  "dependency_surface": {
+    "command": "cargo +stable tree -p axeyum-wasm --target wasm32-unknown-unknown --edges normal --prefix none",
+    "unique_normal_packages": 47,
+    "workspace_crates": 11,
+    "parser_pulls_axeyum_fp": true,
+    "parser_pulls_axeyum_strings": true,
+    "interpretation": "the solver selects qfbv explicitly, but the shared SMT-LIB parser prevents a minimum-total-footprint claim"
+  },
+  "node_latency": {
+    "runtime": "Node.js v24.14.1 WebAssembly",
+    "measurement_clock": "process.hrtime.bigint",
+    "fresh_process_repetitions": 5,
+    "warmup_iterations_per_case_per_process": 100,
+    "measured_iterations_per_case_per_process": 5000,
+    "module_load_and_instantiation_ms": [
+      7.302791,
+      4.743335,
+      3.324116,
+      4.269876,
+      7.874727
+    ],
+    "module_load_median_ms": 4.743335,
+    "module_load_sample_cv_percent": 36.012637,
+    "cases": [
+      {
+        "name": "sat-bv8-add",
+        "expected_status": "sat",
+        "process_mean_us": [30.183984, 29.6331958, 27.5718088, 27.641984, 28.0928582],
+        "process_p50_us": [24.402, 24.071, 23.645, 23.71, 23.873],
+        "median_process_mean_us": 28.0928582,
+        "process_mean_sample_cv_percent": 4.208734
+      },
+      {
+        "name": "unsat-bv8-equalities",
+        "expected_status": "unsat",
+        "process_mean_us": [13.3408542, 12.8738476, 13.1579058, 12.7878434, 13.104542],
+        "process_p50_us": [13.215, 12.707, 13.004, 12.586, 12.906],
+        "median_process_mean_us": 13.104542,
+        "process_mean_sample_cv_percent": 1.708460
+      },
+      {
+        "name": "sat-bv32-structure",
+        "expected_status": "sat",
+        "process_mean_us": [69.015902, 69.0411786, 68.383736, 68.0216194, 68.8234804],
+        "process_p50_us": [68.162, 68.823, 68.083, 67.712, 68.6],
+        "median_process_mean_us": 68.8234804,
+        "process_mean_sample_cv_percent": 0.644209
+      }
+    ]
+  },
+  "browser_latency": {
+    "runtime": "HeadlessChrome/150.0.0.0",
+    "measurement_clock": "performance.now",
+    "fresh_browser_processes": 1,
+    "within_process_repetitions": 5,
+    "warmup_iterations_per_case": 100,
+    "measured_iterations_per_case_per_repetition": 5000,
+    "module_fetch_load_and_instantiation_ms": 20.80000001192093,
+    "cross_origin_isolated": false,
+    "cases": [
+      {
+        "name": "sat-bv8-add",
+        "expected_status": "sat",
+        "repetition_mean_us": [30.339999997615813, 25.17999999523163, 25.8, 24.62000000476837, 23.0],
+        "median_repetition_mean_us": 25.17999999523163,
+        "sample_cv_percent": 10.659940
+      },
+      {
+        "name": "unsat-bv8-equalities",
+        "expected_status": "unsat",
+        "repetition_mean_us": [13.020000004768372, 13.1, 12.939999997615814, 13.079999995231628, 13.080000007152558],
+        "median_repetition_mean_us": 13.079999995231628,
+        "sample_cv_percent": 0.501546
+      },
+      {
+        "name": "sat-bv32-structure",
+        "expected_status": "sat",
+        "repetition_mean_us": [70.36000000238418, 70.93999999761581, 70.53999999761581, 70.78000000715255, 70.66000000238418],
+        "median_repetition_mean_us": 70.66000000238418,
+        "sample_cv_percent": 0.314186
+      }
+    ]
+  },
+  "claim_boundary": {
+    "established": "the release QF_BV WebAssembly artifact instantiates and solves representative small SAT/UNSAT formulas in Node and Chromium with measured bundle size and latency",
+    "not_established": [
+      "a comparison against native Axeyum or another solver",
+      "latency on real Glaurung queries",
+      "cross-device or cross-browser performance",
+      "a wasm-opt-minimized bundle",
+      "a minimum-total-footprint parser surface"
+    ]
+  }
+}
