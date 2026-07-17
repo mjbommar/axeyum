@@ -339,3 +339,71 @@ all observed depths from 13 onward are faster. Treat that threshold as
 descriptive, not causal. Repeat cleanly across drivers and carry the selected
 retained-snapshot policy through the actual client boundary before a default or
 user-visible performance claim.
+
+## 2026-07-16 exact timeout-continuation replay contract
+
+ADR-0210 extends the independent consumer for ADR-0209's fixed-occurrence gate.
+Validation and measurement use separate budgets: `--timeout-ms` remains the
+mandatory strict unique-query and model-choice validation budget, while
+`--policy-timeout-ms` applies only to the requested retained replay. Run the
+control and candidate in separate processes over the same published trace:
+
+```sh
+cargo run --release -p axeyum-bench --bin glaurung-ordered-trace -- \
+  TRACE_DIR --timeout-ms 5000 --lineage --policy-timeout-ms 250 \
+  --out lineage-timeout-control.json
+cargo run --release -p axeyum-bench --bin glaurung-ordered-trace -- \
+  TRACE_DIR --timeout-ms 5000 --lineage --policy-timeout-ms 250 \
+  --continue-on-unknown --out lineage-timeout-candidate.json
+```
+
+An explicit policy budget permits classified policy nondecisions to be
+reported rather than aborting the independent validation. It never permits an
+opposite SAT/UNSAT verdict, and a recorded or initial replay error remains
+fatal. The candidate performs exactly one additional `check`
+on the same retained solver after the first returns `Unknown`; a repeated
+`Unknown` or continuation error preserves the first result. The JSON partitions
+attempts into SAT/UNSAT recoveries, repeated unknowns, and errors and records
+initial/continuation time separately. Both summaries bind the trace-manifest
+hash, event hash, replay-executable hash, validation budget, policy budget,
+policy outcome counts, original-model replay, retained structure, and process
+high-water RSS.
+
+Full tcpip traces make query-payload ownership part of the correctness and
+resource contract. Sequential fixed-size worker batches validate each content
+hash, parse, and strictly solve that exact byte buffer once; worker exit returns
+one-shot solver allocations to the OS. The parent retains only the file path,
+fixed-size assertion-sequence identity, outcomes, and fixed-size ordered
+occurrence identity. Snapshot and lineage replay reconstruct active scopes from
+the already validated push/assert/pop stream; they do not retain a duplicate
+constraint vector for every check, fork, and path end. Query/model-choice reads
+revalidate their content hash on demand. This keeps the independent validator
+inside the 4 GiB process envelope without sampling or weakening exact-order,
+field, count, scope, or verdict checks.
+
+The producer must preserve expression-DAG sharing in those payloads. Glaurung
+renders each non-leaf once through deterministic nested SMT-LIB `let` bindings;
+binding names are postorder ordinals, not pool-local expression IDs. Therefore
+alpha-equivalent DAGs built in pools with shifted internal IDs retain identical
+bytes and content hashes. A recursive tree renderer can expand one shared DAG
+to gigabytes, while raw expression-ID binders keep formulas small but destroy
+cross-pool content identity; both forms are rejected by producer regressions.
+
+The authoritative Glaurung `3c3c77e` tcpip trace now closes this independent
+mechanism gate. Under 4 GiB it records 301,852 events, 15,501 paths, 70,823
+exact checks, 50,429 unique queries, 9,860 assertions, and 27,731 model reads;
+the producer validator and both Axeyum replays accept the complete stream. The
+no-continuation lineage control observes 13 policy `Unknown`s. The candidate
+observes 14 initial `Unknown`s, then one same-instance retry recovers 7 (one SAT
+and six UNSAT), repeats 7, and errors 0. It has zero decided disagreements,
+zero unevaluable model reads, zero unmaterialized assertions/fork roots, and
+identical event/query/model/retained-structure identity. Warm replay changes
+188.646 to 192.356 seconds (+1.97%) and external maximum RSS changes 1,262,596
+to 1,263,024 KiB (+0.034%), inside the existing alarms. ADR-0210 therefore
+accepts the bounded mechanism while leaving native Glaurung admission open.
+
+This is a causal fixed-stream mechanism experiment. Snapshot and naive-lineage
+replay do not reproduce Glaurung's current adaptive source-owner/serial-lease
+topology, so a replay win alone cannot change the downstream default. Native
+admission still requires the production topology and the established exact
+traffic/finding, time, ratio, RSS, reset, replay, and repeated-variance gates.

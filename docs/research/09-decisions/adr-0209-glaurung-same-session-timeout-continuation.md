@@ -22,10 +22,11 @@ SAT/UNSAT continuation result is returned; another `Unknown`, error, or missing
 solver preserves the original `Unknown`. Counters partition continuations into
 recoveries, repeated unknowns, and errors.
 
-Do not admit it as an automatic policy from the current wall-time evidence.
-Require an ordered occurrence replay whose workload and finding set are exact
-before default consideration. A live fixed-function-prefix comparison was
-subsequently attempted and failed that stronger identity gate.
+Do not admit it as an automatic policy from the current wall-time evidence. A
+live fixed-function-prefix comparison subsequently failed exact identity;
+ADR-0210's ordered occurrence replay now passes the independent mechanism gate.
+Default consideration still requires a native production-topology repeat whose
+workload and finding set are exact.
 
 ## Evidence
 
@@ -69,6 +70,14 @@ the alarms, with zero SAT/UNSAT disagreements, resets, or replay failures.
 These resource deltas are descriptive only because query/finding identity
 fails. Glaurung `61b008f` records the rejection.
 
+ADR-0210 supplies the missing fixed-work mechanism gate. Glaurung `3c3c77e`
+publishes one validated 70,823-check tcpip stream with shared-DAG SMT-LIB
+payloads. The independent candidate performs 14 continuations = 7 recoveries +
+7 repeated unknowns + 0 errors, with exact work/structure/model identity, zero
+decided disagreements, +1.97% warm replay time, and +0.034% RSS. This accepts
+the bounded same-instance mechanism; it does not reproduce Glaurung's native
+source-owner/serial-lease topology.
+
 ## Alternatives
 
 - Rebuild a fresh solver: rejected by ADR-0208's memory result.
@@ -81,10 +90,9 @@ fails. Glaurung `61b008f` records the rejection.
 
 ## Consequences
 
-Same-session continuation is a viable low-memory diagnostic and establishes
-that bounded incremental SAT solving can resume under a fresh deadline. It is
-not yet a production policy. GQ10 widening now needs a fixed-work ordered replay
-of one captured Z3-authoritative occurrence stream; another live exploration
-pair cannot guarantee query identity even with a fixed function prefix. Follow
-that replay with the existing time, ratio, RSS, disagreement, reset, replay, and
+Same-session continuation is a causally validated low-memory mechanism and
+establishes that bounded incremental SAT solving can resume under a fresh
+deadline. It is not yet a production policy. GQ10 widening now needs a native
+repeat in the real source-owner/serial-lease topology with exact traffic and
+findings plus the existing time, ratio, RSS, disagreement, reset, replay, and
 variance alarms. Zero-query win32k remains a separate frontend coverage gap.

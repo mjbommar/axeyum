@@ -322,6 +322,29 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-16 — ADR-0210 accepts exact ordered same-session timeout
+  continuation; native admission remains explicit/off.** Glaurung `3c3c77e`
+  replaces recursive trace rendering with deterministic postorder-ordinal
+  SMT-LIB `let` bindings, preserving DAG sharing and cross-pool byte identity.
+  The clean 4 GiB tcpip run publishes a validated 3.8 GiB stream with 301,852
+  events, 15,501 paths, 70,823 exact checks, 50,429 unique queries, and 27,731
+  model reads. The independent control/candidate bind the same manifest,
+  event hash, executable, 5 s validation budget, and 250 ms policy budget;
+  every work/structure/model/materialization field matches. The candidate
+  performs 14 continuations = 1 SAT + 6 UNSAT recoveries + 7 repeated unknowns
+  + 0 errors, leaves 7 `Unknown`s, and has zero decided disagreements. Warm
+  replay changes 188.646→192.356 s (+1.97%) and RSS
+  1,262,596→1,263,024 KiB (+0.034%), inside the alarms. This is a passing
+  mechanism gate for ADR-0209, not a topology/default claim. Next repeat the
+  native policy in Glaurung's production source-owner/serial-lease topology
+  with exact traffic/findings and the full time, ratio, RSS, reset, replay, and
+  variance gates; keep the switch off until then. The complete stable-toolchain
+  verification is green: format, strict all-target/all-feature Clippy,
+  serialized all-feature workspace tests and doctests under 4 GiB, warning-free
+  rustdoc, QF_BV profile, 53 benchmark-recipe tests, the 162-query pinned
+  Glaurung regular gate, foundational resources, generated rules-as-code, and
+  documentation links.
+
 - **2026-07-16 — ADR-0209 retains same-session timeout continuation as an
   explicit candidate.** Glaurung `6e5b255` grants one synchronized retained
   `Unknown` a second 250 ms check on the same solver, reusing translated
@@ -1838,7 +1861,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   | **GQ7 warm delta entry** | **Source-identity functionality and current production comparison DONE (ADR-0201--0205; Glaurung `29031f8`).** The 92,721-check serial-default comparison passes every correctness/time/ratio/RSS alarm; tcpip/dxgkrnl functionality is clean, but exact repeated admission remains open | Keep direct opt-in; hold large-driver work/findings constant, then revisit default and order-balanced causal evidence |
   | **GQ8 verdict/CNF cache** | **DONE for available families (ADR-0192).** Clean repeated evidence admits exact same-arena scalar SAT reuse only in path-owned Glaurung sessions; fixed bounds, traffic partitions, cleanup gauges, findings, and replay are enforced | Preserve explicit off and re-gate new families; Axeyum's generic cache remains opt-in and ordinary UNSAT/Unknown/prefix verdicts remain excluded |
   | **GQ9 auto cost model/docs** | **DONE for available families (ADR-0186).** Clean adaptive repeat clears every alarm over 92,721 checks; downstream explorer default has explicit off/fixed controls | Re-gate newly captured families; do not broaden this Glaurung-specific default into Axeyum's generic API |
-  | **GQ10 real-lifter regression tier** | **Error attribution complete; exact ordered replay active (ADR-0205--0209).** Strict replay closed the concat error class. Same-session continuation is resource-safe, but even the same 156-function prefix differs by 176 live queries and three set-difference findings because Z3 bounded nondecisions steer exploration | Keep continuation explicit/off; capture one authoritative occurrence stream and replay both policies exactly. Zero-query win32k remains separate |
+  | **GQ10 real-lifter regression tier** | **Exact ordered mechanism gate accepted; native production repeat active (ADR-0205--0210).** Strict replay closed the concat error class. Glaurung `3c3c77e` publishes one validated 70,823-check stream; continuation recovers 7/14 exact-stream initial timeouts at +1.97% warm time/+0.034% RSS with zero errors, decided disagreements, or replay gaps | Keep native continuation explicit/off; repeat exact traffic/findings in the production source-owner/serial-lease topology with all resource/variance gates. Zero-query win32k remains separate |
 
   **Next actions:** (1) capture one ordered Z3-authoritative tcpip occurrence
   stream and replay control/continuation over those exact queries before scoring
@@ -3638,7 +3661,7 @@ plan is built and committed on the current branch:
 ### Track 4 — Use Cases & Frontend
 | Phase | Title | Status |
 |---|---|---|
-| P4.1j | Glaurung warm delta and duplicate/prefix reuse (GQ7/GQ8) | **DONE for current serial/source-direct families; widened ordered-replay gate active.** ADR-0186/0192/0193/0195/0196/0199 establish adaptive snapshot ownership and serial LCP reuse. ADR-0201--0205 accept first-class source deltas and the two-driver production win. ADR-0206/0207 close Glaurung's declared-concat error class; ADR-0208 rejects fresh cold retry on RSS, while ADR-0209 keeps low-memory same-session continuation explicit/off because both wall-time and fixed-function live pairs fail query/finding identity. Direct remains opt-in pending exact occurrence replay and repeated findings/RSS/variance gates. |
+| P4.1j | Glaurung warm delta and duplicate/prefix reuse (GQ7/GQ8) | **DONE for current serial/source-direct families; widened native-production gate active.** ADR-0186/0192/0193/0195/0196/0199 establish adaptive snapshot ownership and serial LCP reuse. ADR-0201--0205 accept first-class source deltas and the two-driver production win. ADR-0206/0207 close Glaurung's declared-concat error class; ADR-0208 rejects fresh cold retry on RSS. ADR-0209/0210 now establish and causally accept low-memory same-session continuation over one exact 70,823-check stream, but direct remains opt-in pending a real source-owner/serial-lease repeat with exact findings/traffic plus RSS/time/variance gates. |
 | P4.1e | Retained warm Boolean array relation flags | **DONE (ADR-0091)** — symbolic-memory path conditions can keep nested supported array equality atoms warm through private candidate-sensitive relation flags, guarded equality/diff observations, projection filtering, and replay |
 | P4.1h | Retained warm nested array-valued UF parameters | **DONE (ADR-0094)** — nested supported array-valued memory/function parameters can stay warm as full-value UF keys through private projection keys or rewritten structural keys, with relation-flag guarded congruence, private filtering, and replay |
 | P4.1g | Retained warm structural array-valued UF parameters | **DONE (ADR-0093)** — supported store/constant/array-ITE memory/function parameters can stay warm as full-value UF keys with scalar dependency retention, structural owner realization, relation-flag guarded congruence, private filtering, and replay; ADR-0094 subsequently lands nested application keys |
@@ -3659,6 +3682,15 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-16 — ADR-0210 accepts exact-stream timeout continuation.** The
+  shared-DAG Glaurung `3c3c77e` producer and independent validator publish one
+  301,852-event / 70,823-check tcpip stream under 4 GiB. Matched control and
+  candidate replays preserve exact work, retained structure, complete model
+  evaluation, and zero decided disagreements. One same-instance retry recovers
+  7/14 initial timeouts, repeats 7, and errors 0; warm time/RSS change
+  +1.97%/+0.034%. The mechanism passes while the native default remains gated
+  on a production-topology exact-traffic/finding repeat.
 
 - **2026-07-16 — PLAN integrates the latest ten-item Glaurung consumer
   feedback as standing invariants.** Strict/no-implicit coercion, warm/cold
