@@ -64,8 +64,16 @@ session state.
 > Together with Dptf's Z3 win, this proves a workload-dependent Axeyum-winning
 > regime but rejects a blanket speed claim. Because the cold cells split too,
 > the data do not yet justify calling the cause merely small-formula FFI cost.
-> Join paired latency to formula/operator/AIG/CNF/SAT/reuse features next, then
-> add the neutral and timeout-sensitive controls.
+> This selects a feature join before the neutral and timeout-sensitive
+> controls rather than a preselected size-based explanation.
+> ADR-0218 completes the trace-available half of that join over 9,526 stable
+> occurrences. Formula size alone does not explain the reversal. All four
+> drivers favor Axeyum on SAT checks; UNSAT ranges from 0.3324x on Dptf to
+> 2.0382x on SurfacePen. Purpose and query-reuse composition are material, and
+> IntcSST/SurfacePen retain 1.4763x/1.4883x Axeyum wins after excluding session
+> creation. Marginal reweighting is descriptive, not causal. Add per-check
+> rewrite/AIG/CNF/SAT work and timing next, then compare matched
+> outcome/purpose/reuse strata.
 
 > **P0 soundness stop contained (2026-07-15, ADR-0165).** Historical commit
 > `2cb298e2` reproduced unrestricted large elimination from a two-constructor
@@ -563,13 +571,13 @@ count as decisions or speedups.
 
 | ID | Roadmap item | Scope and exit criterion |
 |---|---|---|
-| **GQ1** | **Capture and profile real queries first** | **Engineering capture, paired analyzer, and four-driver topology-equivalent regime map DONE; causal attribution WIP (ADR-0187/0188/0197/0213--0215/0217).** Five fixed-work runs per driver establish warm IntcSST 1.5315x and SurfacePen 1.5584x Axeyum wins, vwififlt parity, and a Dptf Z3 win, with no nondecision or fallback. This is a real workload-dependent regime, not a universal speedup or yet a proven size/FFI boundary. Join query features to the paired rows next, then add a neutral cell and timeout-sensitive marked driver. The old 2,225 hashes are stale/unmappable; current wide evidence is 7,953 scripts. |
+| **GQ1** | **Capture and profile real queries first** | **Four-driver fair map and trace-available feature attribution DONE; internal causal attribution WIP (ADR-0187/0188/0197/0213--0215/0217/0218).** Five fixed-work runs per driver establish two warm Axeyum wins, one tie, and one Z3 win without nondecision/fallback. Across 9,526 occurrences, SAT favors Axeyum on every driver; UNSAT, purpose, and exact-query reuse explain material composition, while formula size alone does not. Add per-check rewrite/AIG/CNF/SAT work/timing, then compare matched strata and add neutral/timeout-sensitive cells. |
 | **GQ2** | **Cheap always-on cold simplification tier** | Add a bounded, denotation-preserving one-shot tier for constant folding and trivial identities whose own cost is measured. Add a size/shape and cold-vs-warm policy that selects cheap, configured, or no preprocessing. Exit only when cold end-to-end time is non-worse in aggregate and improves the target class at the GQ1 validity gates. |
 | **GQ3** | **Coercion-cancellation peepholes and causal telemetry** | **Current measured tranche complete; use ablation as policy evidence.** Exact nested/concat/extension/coercion rules and ADR-0159's repeated default-minus-rule comparator are landed. `extract_extend` improves lowering, but all four measured rules change zero AIG nodes and clauses. Do not globally delete sound rewrites because one corpus does not fire them; instead, keep a Glaurung policy only for rules with measured reach/cost and reopen register-slice-specific work only when an ablation demonstrates downstream AIG/CNF or native-time reduction. |
 | **GQ4** | **Cold demand-driven bit-slice reduction** | **Out of the active queue.** ADR-0157 v1 is correct but regresses the real ratio about 1.42x→4.49x; ADR-0158's conservative admission is a safe no-op but does not improve the required family. Both remain explicit/off. Do not tune thresholds further on this corpus; only a qualitatively different constant-cost admission proof and a fresh client gate can reopen GQ4. |
 | **GQ5** | **Cheaper AIG construction and measured CNF encoding** | **ACTIVE leading pure-solver engineering lane; ADR-0217's fair map is complete.** ADR-0175 accepts deterministic open-addressed AIG hashing. Current cold evidence still assigns about 84% to bit blast plus CNF and only about 15% to SAT; CNF is about 46% on the accepted cold bar. Continue measured CNF lookup/ownership and clause-emission work, with the rejected growing-AIG half-flattening candidate as a warning that immediate clause savings need retained-future-use or rollback evidence. Screen changes through the paired mechanism where applicable; aggregate screening may admit a product optimization but is not a paper speedup. The publication-critical parallel lane now explains the completed workload split and adds multi-oracle correctness and neutral baselines. |
 | **GQ6** | **Cold SAT/CDCL tuning** | **Partition by policy before acting.** SAT is only about 15% on the cold one-shot workload, so it remains behind GQ5 there. ADR-0199 collapses warm construction enough that SAT becomes 47.2% of its diagnostic candidate profile; compare identical retained CNF across BatSat/proof core/oracles before a warm SAT claim. Preserve proof replay and deterministic limits. |
-| **GQ7** | **Cheaper warm entry and delta preprocessing** | **Source-identity functionality, product gate, and four-driver fair regime map DONE; causal/neutral/finding evidence WIP (ADR-0201--0205/0213--0215/0217).** The clean fair controls show warm Axeyum wins on IntcSST/SurfacePen, ties on vwififlt, and loses on Dptf. Do not repeat the old cold-Z3/warm-Axeyum headline or infer a size boundary before feature attribution. ADR-0212 still defers the wider product default because dxgkrnl timing variance fails; keep direct opt-in and widen only through neutral, timeout-sensitive, and authoritative-finding gates. |
+| **GQ7** | **Cheaper warm entry and delta preprocessing** | **Source-identity/product gate, four-driver fair map, and outcome/purpose/reuse attribution DONE; internal mechanism/neutral/finding evidence WIP (ADR-0201--0205/0213--0215/0217/0218).** Retained-only Axeyum wins IntcSST/SurfacePen, ties vwififlt, and loses Dptf; exact-query frequency correlates positively with Axeyum's warm advantage on every driver. Do not infer causality before per-check internal work attribution. Keep direct opt-in and widen only through neutral, timeout-sensitive, and authoritative-finding gates. |
 | **GQ8** | **Verdict and CNF reuse for duplicate/prefix queries** | **Exact replay-checked SAT reuse is done for available families (ADR-0192); stronger subsumption remains open.** Exact hits replay under fixed bounds; ordinary UNSAT/Unknown and prefix verdict reuse remain forbidden. Investigate only replay-checked stronger-model reuse where a cached model is proven to satisfy the complete weaker later query. |
 | **GQ9** | **Auto production policy and API guidance** | **DONE for available serial families (ADR-0186/0199).** Adaptive 2→9 ownership plus serial sibling continuation reuse is the downstream default; ADR-0199 clears every time/ratio/RSS/environment alarm and improves RSS on both accepted drivers. Explicit one-shot, fixed, transfer-only, and serial-off controls remain. Re-gate wider families and never apply serial leases across parallel workers. |
 | **GQ10** | **Ordered, wider real-lifter regression corpus** | **Native timeout-continuation admission is DONE; wider direct-delta admission is deferred (ADR-0205--0212).** The accepted tcpip gate still defaults one bounded continuation only inside selected direct-delta sessions. A complete 85,449-event / 17,400-check `dxgkrnl` trace and independent 13,577-query / 8,816-model-read replay prove exact production-topology no-op functionality with zero correctness or lifecycle alarms. The repeated ordinary-core comparison nevertheless fails the declared timing-CV gate (14.430% control, 8.306% candidate); slower-core calibration changes actual outcomes at the 250 ms boundary. Keep direct delta opt-in. `win32k` is now classified as a system-service/callout frontend target, not zero-query IOCTL solver evidence. |
@@ -613,15 +621,18 @@ artifact evidence below governs.
 supersedes performance-claim ordering below).** Product admission and paper
 evidence are now distinct:
 
-1. **Map the honest performance regime — mechanism and four-driver fair map
-   DONE; causal and timeout-sensitive evidence WIP:** the v2 marked path and
+1. **Map the honest performance regime — mechanism, four-driver fair map, and
+   trace-available feature join DONE; internal causal and timeout-sensitive
+   evidence WIP:** the v2 marked path and
    fail-closed analyzer already provide N>=5 fixed-work four-cell outcomes,
    geomean paired ratios, deterministic bootstrap 95% confidence intervals,
    p50/p90/p95/p99, CDFs, process CV, and exact warm/fallback partitions.
    ADR-0217 establishes two Axeyum wins, one tie, and one Z3 win with no
-   nondecisions. Join query-level formula/operator/AIG/CNF/SAT/reuse features
-   to explain that split, then add a harder driver whose decided buckets cross
-   a timeout boundary. The publication claim is the measured map and only a
+   nondecisions. ADR-0218 shows that SAT/UNSAT outcome, consumer purpose, and
+   exact-query reuse composition are material while lexical formula size is
+   insufficient. Add per-check rewrite/AIG/CNF/SAT work and timing, compare
+   matched strata, then add a harder driver whose decided buckets cross a
+   timeout boundary. The publication claim is the measured map and only a
    causally supported boundary, never a preselected speedup.
 2. **Correctness as the lead contribution:** publish the TCB and proof-coverage
    denominator; turn empty-model, extension-width, concat-width, and W128

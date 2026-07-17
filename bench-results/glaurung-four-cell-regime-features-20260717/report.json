@@ -1,0 +1,2378 @@
+{
+  "composition_controls": {
+    "outcome": {
+      "drivers": {
+        "sqfs-intel-DptfDevGen.sys": {
+          "available": true,
+          "observed": {
+            "cold_z3_over_axeyum_geomean": 0.9661207033480924,
+            "occurrences": 561,
+            "warm_z3_over_axeyum_geomean": 0.7874873147798102
+          },
+          "standardized_to_pooled_category_weights": {
+            "cold_z3_over_axeyum_geomean": 1.1716955500454096,
+            "warm_z3_over_axeyum_geomean": 0.9884420606495125
+          }
+        },
+        "win10-vwififlt.sys": {
+          "available": true,
+          "observed": {
+            "cold_z3_over_axeyum_geomean": 0.618502111202418,
+            "occurrences": 4742,
+            "warm_z3_over_axeyum_geomean": 1.0029831955623325
+          },
+          "standardized_to_pooled_category_weights": {
+            "cold_z3_over_axeyum_geomean": 0.6568272210867867,
+            "warm_z3_over_axeyum_geomean": 1.0409651558878747
+          }
+        },
+        "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": {
+          "available": true,
+          "observed": {
+            "cold_z3_over_axeyum_geomean": 2.490059970947007,
+            "occurrences": 2551,
+            "warm_z3_over_axeyum_geomean": 1.5583645624152458
+          },
+          "standardized_to_pooled_category_weights": {
+            "cold_z3_over_axeyum_geomean": 2.374962073856875,
+            "warm_z3_over_axeyum_geomean": 1.645148024236787
+          }
+        },
+        "windows-update-intel-audio-IntcSST.sys": {
+          "available": true,
+          "observed": {
+            "cold_z3_over_axeyum_geomean": 2.37025599936166,
+            "occurrences": 1672,
+            "warm_z3_over_axeyum_geomean": 1.5314734519573727
+          },
+          "standardized_to_pooled_category_weights": {
+            "cold_z3_over_axeyum_geomean": 2.2463761363745633,
+            "warm_z3_over_axeyum_geomean": 1.490095593565274
+          }
+        }
+      },
+      "pooled_weights": {
+        "sat": 0.713940793617468,
+        "unsat": 0.286059206382532
+      }
+    },
+    "purpose": {
+      "drivers": {
+        "sqfs-intel-DptfDevGen.sys": {
+          "available": true,
+          "observed": {
+            "cold_z3_over_axeyum_geomean": 0.9661207033480924,
+            "occurrences": 561,
+            "warm_z3_over_axeyum_geomean": 0.7874873147798102
+          },
+          "standardized_to_pooled_category_weights": {
+            "cold_z3_over_axeyum_geomean": 1.2301230423187517,
+            "warm_z3_over_axeyum_geomean": 1.1528652776513166
+          }
+        },
+        "win10-vwififlt.sys": {
+          "available": true,
+          "observed": {
+            "cold_z3_over_axeyum_geomean": 0.618502111202418,
+            "occurrences": 4742,
+            "warm_z3_over_axeyum_geomean": 1.0029831955623325
+          },
+          "standardized_to_pooled_category_weights": {
+            "cold_z3_over_axeyum_geomean": 0.6751841293960349,
+            "warm_z3_over_axeyum_geomean": 1.218336597140943
+          }
+        },
+        "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": {
+          "available": true,
+          "observed": {
+            "cold_z3_over_axeyum_geomean": 2.490059970947007,
+            "occurrences": 2551,
+            "warm_z3_over_axeyum_geomean": 1.5583645624152458
+          },
+          "standardized_to_pooled_category_weights": {
+            "cold_z3_over_axeyum_geomean": 2.431443847506267,
+            "warm_z3_over_axeyum_geomean": 1.74844437358856
+          }
+        },
+        "windows-update-intel-audio-IntcSST.sys": {
+          "available": true,
+          "observed": {
+            "cold_z3_over_axeyum_geomean": 2.37025599936166,
+            "occurrences": 1672,
+            "warm_z3_over_axeyum_geomean": 1.5314734519573727
+          },
+          "standardized_to_pooled_category_weights": {
+            "cold_z3_over_axeyum_geomean": 2.3107973332001435,
+            "warm_z3_over_axeyum_geomean": 1.4897621573150304
+          }
+        }
+      },
+      "pooled_weights": {
+        "address-concretization": 0.42914129750157465,
+        "branch-feasibility": 0.22401847575057737,
+        "concrete-evaluation": 0.03653159773252152,
+        "finding-reachability": 0.09216880117572958,
+        "integer-overflow": 0.04671425572118413,
+        "value-witness": 0.17142557211841278
+      }
+    }
+  },
+  "drivers": {
+    "sqfs-intel-DptfDevGen.sys": {
+      "by_outcome": {
+        "sat": {
+          "cold_z3_over_axeyum_geomean": 1.697456192008313,
+          "occurrences": 317,
+          "warm_z3_over_axeyum_geomean": 1.5297163480461866
+        },
+        "unsat": {
+          "cold_z3_over_axeyum_geomean": 0.46455236562806956,
+          "occurrences": 244,
+          "warm_z3_over_axeyum_geomean": 0.3323551323245906
+        }
+      },
+      "by_purpose": {
+        "address-concretization": {
+          "cold_z3_over_axeyum_geomean": 1.7767757687509578,
+          "occurrences": 158,
+          "warm_z3_over_axeyum_geomean": 3.7558180374181203
+        },
+        "branch-feasibility": {
+          "cold_z3_over_axeyum_geomean": 1.7859131466941338,
+          "occurrences": 124,
+          "warm_z3_over_axeyum_geomean": 0.5290432913456803
+        },
+        "concrete-evaluation": {
+          "cold_z3_over_axeyum_geomean": 3.550007483060743,
+          "occurrences": 8,
+          "warm_z3_over_axeyum_geomean": 2.947978462543944
+        },
+        "finding-reachability": {
+          "cold_z3_over_axeyum_geomean": 1.0026309833195295,
+          "occurrences": 83,
+          "warm_z3_over_axeyum_geomean": 0.664565450198678
+        },
+        "integer-overflow": {
+          "cold_z3_over_axeyum_geomean": 0.5752901056521498,
+          "occurrences": 29,
+          "warm_z3_over_axeyum_geomean": 0.17108066190256843
+        },
+        "value-witness": {
+          "cold_z3_over_axeyum_geomean": 0.32977541528726667,
+          "occurrences": 159,
+          "warm_z3_over_axeyum_geomean": 0.3071412152954943
+        }
+      },
+      "by_warm_execution": {
+        "warm-created": {
+          "cold_z3_over_axeyum_geomean": 26.56455474199008,
+          "occurrences": 7,
+          "warm_z3_over_axeyum_geomean": 21.680527356568724
+        },
+        "warm-retained": {
+          "cold_z3_over_axeyum_geomean": 0.9265004877433936,
+          "occurrences": 554,
+          "warm_z3_over_axeyum_geomean": 0.7551805846645503
+        }
+      },
+      "cold_z3_over_axeyum_geomean": 0.9661207033480924,
+      "features": {
+        "active_constraint_count": {
+          "distribution": {
+            "maximum": 78.0,
+            "mean": 27.86096256684492,
+            "minimum": 0.0,
+            "p50": 21.0,
+            "p90": 63.0
+          },
+          "spearman_vs_log_cold_ratio": -0.7967034433427915,
+          "spearman_vs_log_warm_ratio": -0.2815712703870406
+        },
+        "assertion_count": {
+          "distribution": {
+            "maximum": 78.0,
+            "mean": 27.86096256684492,
+            "minimum": 0.0,
+            "p50": 21.0,
+            "p90": 63.0
+          },
+          "spearman_vs_log_cold_ratio": -0.7967034433427915,
+          "spearman_vs_log_warm_ratio": -0.2815712703870406
+        },
+        "atom_count": {
+          "distribution": {
+            "maximum": 6351.0,
+            "mean": 1812.0695187165775,
+            "minimum": 3.0,
+            "p50": 1120.0,
+            "p90": 4779.0
+          },
+          "spearman_vs_log_cold_ratio": -0.7774888815626129,
+          "spearman_vs_log_warm_ratio": -0.23852220802868343
+        },
+        "bit_width_mention_count": {
+          "distribution": {
+            "maximum": 725.0,
+            "mean": 223.3939393939394,
+            "minimum": 0.0,
+            "p50": 155.0,
+            "p90": 539.0
+          },
+          "spearman_vs_log_cold_ratio": -0.7301015908403349,
+          "spearman_vs_log_warm_ratio": -0.22986895757118914
+        },
+        "boolean_operator_count": {
+          "distribution": {
+            "maximum": 153.0,
+            "mean": 53.775401069518715,
+            "minimum": 0.0,
+            "p50": 39.0,
+            "p90": 123.0
+          },
+          "spearman_vs_log_cold_ratio": -0.7844923197821639,
+          "spearman_vs_log_warm_ratio": -0.2737570416356928
+        },
+        "bv_arithmetic_count": {
+          "distribution": {
+            "maximum": 475.0,
+            "mean": 113.14973262032086,
+            "minimum": 0.0,
+            "p50": 56.0,
+            "p90": 336.0
+          },
+          "spearman_vs_log_cold_ratio": -0.7929352572481398,
+          "spearman_vs_log_warm_ratio": -0.24764459996479601
+        },
+        "bv_bitwise_count": {
+          "distribution": {
+            "maximum": 73.0,
+            "mean": 19.336898395721924,
+            "minimum": 0.0,
+            "p50": 6.0,
+            "p90": 58.0
+          },
+          "spearman_vs_log_cold_ratio": -0.802039302961018,
+          "spearman_vs_log_warm_ratio": -0.2834410107682144
+        },
+        "bv_compare_count": {
+          "distribution": {
+            "maximum": 4.0,
+            "mean": 1.946524064171123,
+            "minimum": 0.0,
+            "p50": 3.0,
+            "p90": 3.0
+          },
+          "spearman_vs_log_cold_ratio": -0.730598359185078,
+          "spearman_vs_log_warm_ratio": -0.32463342686966845
+        },
+        "bv_shift_count": {
+          "distribution": {
+            "maximum": 9.0,
+            "mean": 2.27807486631016,
+            "minimum": 0.0,
+            "p50": 1.0,
+            "p90": 7.0
+          },
+          "spearman_vs_log_cold_ratio": -0.7919351083738838,
+          "spearman_vs_log_warm_ratio": -0.24582977103458264
+        },
+        "bv_slice_extend_count": {
+          "distribution": {
+            "maximum": 219.0,
+            "mean": 65.79322638146168,
+            "minimum": 0.0,
+            "p50": 45.0,
+            "p90": 174.0
+          },
+          "spearman_vs_log_cold_ratio": -0.6839075945019535,
+          "spearman_vs_log_warm_ratio": -0.14236264849972377
+        },
+        "declaration_count": {
+          "distribution": {
+            "maximum": 2.0,
+            "mean": 1.4616755793226381,
+            "minimum": 0.0,
+            "p50": 2.0,
+            "p90": 2.0
+          },
+          "spearman_vs_log_cold_ratio": -0.6356949975393255,
+          "spearman_vs_log_warm_ratio": -0.45028879661161075
+        },
+        "ite_count": {
+          "distribution": {
+            "maximum": 78.0,
+            "mean": 27.86096256684492,
+            "minimum": 0.0,
+            "p50": 21.0,
+            "p90": 63.0
+          },
+          "spearman_vs_log_cold_ratio": -0.7967034433427915,
+          "spearman_vs_log_warm_ratio": -0.2815712703870406
+        },
+        "list_count": {
+          "distribution": {
+            "maximum": 4381.0,
+            "mean": 1224.680926916221,
+            "minimum": 2.0,
+            "p50": 743.0,
+            "p90": 3286.0
+          },
+          "spearman_vs_log_cold_ratio": -0.7792340496799833,
+          "spearman_vs_log_warm_ratio": -0.23611878100256145
+        },
+        "max_bv_width": {
+          "distribution": {
+            "maximum": 64.0,
+            "mean": 63.31550802139037,
+            "minimum": 0.0,
+            "p50": 64.0,
+            "p90": 64.0
+          },
+          "spearman_vs_log_cold_ratio": -0.1770941980510695,
+          "spearman_vs_log_warm_ratio": -0.17762922583974342
+        },
+        "max_sexpr_depth": {
+          "distribution": {
+            "maximum": 22.0,
+            "mean": 15.623885918003564,
+            "minimum": 1.0,
+            "p50": 16.0,
+            "p90": 20.0
+          },
+          "spearman_vs_log_cold_ratio": -0.7649854165590252,
+          "spearman_vs_log_warm_ratio": -0.23438942427106807
+        },
+        "operator_count": {
+          "distribution": {
+            "maximum": 1010.0,
+            "mean": 284.14081996434936,
+            "minimum": 0.0,
+            "p50": 166.0,
+            "p90": 764.0
+          },
+          "spearman_vs_log_cold_ratio": -0.7883475346553277,
+          "spearman_vs_log_warm_ratio": -0.24179191023615182
+        },
+        "query_bytes": {
+          "distribution": {
+            "maximum": 35553.0,
+            "mean": 10034.74688057041,
+            "minimum": 30.0,
+            "p50": 6138.0,
+            "p90": 26699.0
+          },
+          "spearman_vs_log_cold_ratio": -0.7786696773360481,
+          "spearman_vs_log_warm_ratio": -0.23650269667898816
+        },
+        "query_occurrences_per_run": {
+          "distribution": {
+            "maximum": 6.0,
+            "mean": 1.8663101604278074,
+            "minimum": 1.0,
+            "p50": 2.0,
+            "p90": 3.0
+          },
+          "spearman_vs_log_cold_ratio": 0.5591065011839652,
+          "spearman_vs_log_warm_ratio": 0.5264014266464353
+        }
+      },
+      "occurrences": 561,
+      "warm_z3_over_axeyum_geomean": 0.7874873147798102
+    },
+    "win10-vwififlt.sys": {
+      "by_outcome": {
+        "sat": {
+          "cold_z3_over_axeyum_geomean": 0.7862289868249245,
+          "occurrences": 2932,
+          "warm_z3_over_axeyum_geomean": 1.1633767753963582
+        },
+        "unsat": {
+          "cold_z3_over_axeyum_geomean": 0.4193107143141795,
+          "occurrences": 1810,
+          "warm_z3_over_axeyum_geomean": 0.7887320129575666
+        }
+      },
+      "by_purpose": {
+        "address-concretization": {
+          "cold_z3_over_axeyum_geomean": 0.8576758334612516,
+          "occurrences": 1166,
+          "warm_z3_over_axeyum_geomean": 2.193456895213195
+        },
+        "branch-feasibility": {
+          "cold_z3_over_axeyum_geomean": 0.6148547008793089,
+          "occurrences": 1340,
+          "warm_z3_over_axeyum_geomean": 0.5873605614604884
+        },
+        "concrete-evaluation": {
+          "cold_z3_over_axeyum_geomean": 0.6363363847179214,
+          "occurrences": 183,
+          "warm_z3_over_axeyum_geomean": 1.7526367455605938
+        },
+        "finding-reachability": {
+          "cold_z3_over_axeyum_geomean": 0.802060053048544,
+          "occurrences": 576,
+          "warm_z3_over_axeyum_geomean": 1.4233228455423064
+        },
+        "integer-overflow": {
+          "cold_z3_over_axeyum_geomean": 0.3165967418099051,
+          "occurrences": 345,
+          "warm_z3_over_axeyum_geomean": 0.763402750394783
+        },
+        "value-witness": {
+          "cold_z3_over_axeyum_geomean": 0.4757157202871539,
+          "occurrences": 1132,
+          "warm_z3_over_axeyum_geomean": 0.7013485128768057
+        }
+      },
+      "by_warm_execution": {
+        "warm-created": {
+          "cold_z3_over_axeyum_geomean": 29.455338721772502,
+          "occurrences": 14,
+          "warm_z3_over_axeyum_geomean": 23.174629204248994
+        },
+        "warm-retained": {
+          "cold_z3_over_axeyum_geomean": 0.6114669860871179,
+          "occurrences": 4728,
+          "warm_z3_over_axeyum_geomean": 0.993700644005773
+        }
+      },
+      "cold_z3_over_axeyum_geomean": 0.618502111202418,
+      "features": {
+        "active_constraint_count": {
+          "distribution": {
+            "maximum": 123.0,
+            "mean": 52.169126950653734,
+            "minimum": 0.0,
+            "p50": 48.0,
+            "p90": 87.0
+          },
+          "spearman_vs_log_cold_ratio": -0.3468765755924565,
+          "spearman_vs_log_warm_ratio": -0.16305654833782288
+        },
+        "assertion_count": {
+          "distribution": {
+            "maximum": 123.0,
+            "mean": 52.169126950653734,
+            "minimum": 0.0,
+            "p50": 48.0,
+            "p90": 87.0
+          },
+          "spearman_vs_log_cold_ratio": -0.3468765755924565,
+          "spearman_vs_log_warm_ratio": -0.16305654833782288
+        },
+        "atom_count": {
+          "distribution": {
+            "maximum": 17263.0,
+            "mean": 5979.661324335723,
+            "minimum": 3.0,
+            "p50": 4963.0,
+            "p90": 12260.0
+          },
+          "spearman_vs_log_cold_ratio": -0.4029205777567742,
+          "spearman_vs_log_warm_ratio": -0.1455092021559508
+        },
+        "bit_width_mention_count": {
+          "distribution": {
+            "maximum": 1097.0,
+            "mean": 451.7539013074652,
+            "minimum": 0.0,
+            "p50": 413.0,
+            "p90": 827.0
+          },
+          "spearman_vs_log_cold_ratio": -0.2995094048458869,
+          "spearman_vs_log_warm_ratio": -0.1537736593927058
+        },
+        "boolean_operator_count": {
+          "distribution": {
+            "maximum": 239.0,
+            "mean": 99.48334036271615,
+            "minimum": 0.0,
+            "p50": 94.0,
+            "p90": 166.0
+          },
+          "spearman_vs_log_cold_ratio": -0.3162672561410851,
+          "spearman_vs_log_warm_ratio": -0.1547764119813954
+        },
+        "bv_arithmetic_count": {
+          "distribution": {
+            "maximum": 286.0,
+            "mean": 114.48291859974694,
+            "minimum": 0.0,
+            "p50": 117.0,
+            "p90": 182.0
+          },
+          "spearman_vs_log_cold_ratio": -0.5350805822199508,
+          "spearman_vs_log_warm_ratio": -0.30852247794040477
+        },
+        "bv_bitwise_count": {
+          "distribution": {
+            "maximum": 86.0,
+            "mean": 33.251792492619145,
+            "minimum": 0.0,
+            "p50": 30.0,
+            "p90": 60.0
+          },
+          "spearman_vs_log_cold_ratio": -0.42535208789484225,
+          "spearman_vs_log_warm_ratio": -0.1878772837833003
+        },
+        "bv_compare_count": {
+          "distribution": {
+            "maximum": 9.0,
+            "mean": 4.854913538591312,
+            "minimum": 0.0,
+            "p50": 6.0,
+            "p90": 8.0
+          },
+          "spearman_vs_log_cold_ratio": -0.6078799770781208,
+          "spearman_vs_log_warm_ratio": -0.23267091950713575
+        },
+        "bv_shift_count": {
+          "distribution": {
+            "maximum": 18.0,
+            "mean": 9.25896246309574,
+            "minimum": 0.0,
+            "p50": 11.0,
+            "p90": 16.0
+          },
+          "spearman_vs_log_cold_ratio": -0.6168873522018212,
+          "spearman_vs_log_warm_ratio": -0.2808205959119732
+        },
+        "bv_slice_extend_count": {
+          "distribution": {
+            "maximum": 2359.0,
+            "mean": 669.9677351328553,
+            "minimum": 0.0,
+            "p50": 534.0,
+            "p90": 1574.0
+          },
+          "spearman_vs_log_cold_ratio": -0.3768722085183183,
+          "spearman_vs_log_warm_ratio": -0.1111044436967711
+        },
+        "declaration_count": {
+          "distribution": {
+            "maximum": 30.0,
+            "mean": 13.037747785744411,
+            "minimum": 0.0,
+            "p50": 14.0,
+            "p90": 20.0
+          },
+          "spearman_vs_log_cold_ratio": -0.6229051565659306,
+          "spearman_vs_log_warm_ratio": -0.26526490919996565
+        },
+        "ite_count": {
+          "distribution": {
+            "maximum": 123.0,
+            "mean": 52.169126950653734,
+            "minimum": 0.0,
+            "p50": 48.0,
+            "p90": 87.0
+          },
+          "spearman_vs_log_cold_ratio": -0.3468765755924565,
+          "spearman_vs_log_warm_ratio": -0.16305654833782288
+        },
+        "list_count": {
+          "distribution": {
+            "maximum": 11569.0,
+            "mean": 3993.63369886124,
+            "minimum": 2.0,
+            "p50": 3323.0,
+            "p90": 8190.0
+          },
+          "spearman_vs_log_cold_ratio": -0.40571823119335215,
+          "spearman_vs_log_warm_ratio": -0.14662459219177598
+        },
+        "max_bv_width": {
+          "distribution": {
+            "maximum": 64.0,
+            "mean": 63.83804301982286,
+            "minimum": 0.0,
+            "p50": 64.0,
+            "p90": 64.0
+          },
+          "spearman_vs_log_cold_ratio": -0.08700797579896269,
+          "spearman_vs_log_warm_ratio": -0.08692825323867324
+        },
+        "max_sexpr_depth": {
+          "distribution": {
+            "maximum": 71.0,
+            "mean": 41.21889498102067,
+            "minimum": 1.0,
+            "p50": 40.0,
+            "p90": 65.0
+          },
+          "spearman_vs_log_cold_ratio": -0.36974349529202,
+          "spearman_vs_log_warm_ratio": -0.10678360971365049
+        },
+        "operator_count": {
+          "distribution": {
+            "maximum": 2951.0,
+            "mean": 983.4687895402784,
+            "minimum": 0.0,
+            "p50": 815.0,
+            "p90": 2071.0
+          },
+          "spearman_vs_log_cold_ratio": -0.4027378282004503,
+          "spearman_vs_log_warm_ratio": -0.14078792556388836
+        },
+        "query_bytes": {
+          "distribution": {
+            "maximum": 95765.0,
+            "mean": 32892.187895402785,
+            "minimum": 30.0,
+            "p50": 27534.0,
+            "p90": 67575.0
+          },
+          "spearman_vs_log_cold_ratio": -0.40750392443869243,
+          "spearman_vs_log_warm_ratio": -0.14536363470725855
+        },
+        "query_occurrences_per_run": {
+          "distribution": {
+            "maximum": 12.0,
+            "mean": 1.7368199072121469,
+            "minimum": 1.0,
+            "p50": 1.0,
+            "p90": 3.0
+          },
+          "spearman_vs_log_cold_ratio": 0.3658071149165934,
+          "spearman_vs_log_warm_ratio": 0.32290423095726156
+        }
+      },
+      "occurrences": 4742,
+      "warm_z3_over_axeyum_geomean": 1.0029831955623325
+    },
+    "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": {
+      "by_outcome": {
+        "sat": {
+          "cold_z3_over_axeyum_geomean": 2.559821555945388,
+          "occurrences": 2282,
+          "warm_z3_over_axeyum_geomean": 1.5098287334660925
+        },
+        "unsat": {
+          "cold_z3_over_axeyum_geomean": 1.9697518879969302,
+          "occurrences": 269,
+          "warm_z3_over_axeyum_geomean": 2.038172316163765
+        }
+      },
+      "by_purpose": {
+        "address-concretization": {
+          "cold_z3_over_axeyum_geomean": 2.51142246642893,
+          "occurrences": 2023,
+          "warm_z3_over_axeyum_geomean": 1.4683239179744874
+        },
+        "branch-feasibility": {
+          "cold_z3_over_axeyum_geomean": 1.9834931933034972,
+          "occurrences": 264,
+          "warm_z3_over_axeyum_geomean": 1.821514486337874
+        },
+        "concrete-evaluation": {
+          "cold_z3_over_axeyum_geomean": 3.3614502508506727,
+          "occurrences": 57,
+          "warm_z3_over_axeyum_geomean": 1.517369308553225
+        },
+        "finding-reachability": {
+          "cold_z3_over_axeyum_geomean": 3.4334878912386224,
+          "occurrences": 60,
+          "warm_z3_over_axeyum_geomean": 2.4488051844003293
+        },
+        "integer-overflow": {
+          "cold_z3_over_axeyum_geomean": 7.813415899143732,
+          "occurrences": 43,
+          "warm_z3_over_axeyum_geomean": 4.099525211875278
+        },
+        "value-witness": {
+          "cold_z3_over_axeyum_geomean": 1.6501885364373656,
+          "occurrences": 104,
+          "warm_z3_over_axeyum_geomean": 1.7492624259053202
+        }
+      },
+      "by_warm_execution": {
+        "warm-created": {
+          "cold_z3_over_axeyum_geomean": 31.913064119101104,
+          "occurrences": 43,
+          "warm_z3_over_axeyum_geomean": 22.832630044573776
+        },
+        "warm-retained": {
+          "cold_z3_over_axeyum_geomean": 2.38351085304813,
+          "occurrences": 2508,
+          "warm_z3_over_axeyum_geomean": 1.488263309545895
+        }
+      },
+      "cold_z3_over_axeyum_geomean": 2.490059970947007,
+      "features": {
+        "active_constraint_count": {
+          "distribution": {
+            "maximum": 479.0,
+            "mean": 121.57467659741278,
+            "minimum": 0.0,
+            "p50": 52.0,
+            "p90": 352.0
+          },
+          "spearman_vs_log_cold_ratio": -0.7966880979995206,
+          "spearman_vs_log_warm_ratio": -0.7453729990751705
+        },
+        "assertion_count": {
+          "distribution": {
+            "maximum": 479.0,
+            "mean": 121.57467659741278,
+            "minimum": 0.0,
+            "p50": 52.0,
+            "p90": 352.0
+          },
+          "spearman_vs_log_cold_ratio": -0.7966880979995206,
+          "spearman_vs_log_warm_ratio": -0.7453729990751705
+        },
+        "atom_count": {
+          "distribution": {
+            "maximum": 29955.0,
+            "mean": 8230.26421011368,
+            "minimum": 3.0,
+            "p50": 3531.0,
+            "p90": 22446.0
+          },
+          "spearman_vs_log_cold_ratio": -0.7900025190627756,
+          "spearman_vs_log_warm_ratio": -0.7272568712515227
+        },
+        "bit_width_mention_count": {
+          "distribution": {
+            "maximum": 5102.0,
+            "mean": 1306.7804782438259,
+            "minimum": 0.0,
+            "p50": 577.0,
+            "p90": 3721.0
+          },
+          "spearman_vs_log_cold_ratio": -0.7953326993399076,
+          "spearman_vs_log_warm_ratio": -0.7422393472796618
+        },
+        "boolean_operator_count": {
+          "distribution": {
+            "maximum": 958.0,
+            "mean": 241.32222657781261,
+            "minimum": 0.0,
+            "p50": 103.0,
+            "p90": 704.0
+          },
+          "spearman_vs_log_cold_ratio": -0.7982045418784456,
+          "spearman_vs_log_warm_ratio": -0.7450628048119491
+        },
+        "bv_arithmetic_count": {
+          "distribution": {
+            "maximum": 2792.0,
+            "mean": 709.9337514700118,
+            "minimum": 0.0,
+            "p50": 312.0,
+            "p90": 2023.0
+          },
+          "spearman_vs_log_cold_ratio": -0.7851705541795866,
+          "spearman_vs_log_warm_ratio": -0.745786054760487
+        },
+        "bv_bitwise_count": {
+          "distribution": {
+            "maximum": 35.0,
+            "mean": 3.874950999607997,
+            "minimum": 0.0,
+            "p50": 0.0,
+            "p90": 15.0
+          },
+          "spearman_vs_log_cold_ratio": 0.11236838826240853,
+          "spearman_vs_log_warm_ratio": 0.1942344264519416
+        },
+        "bv_compare_count": {
+          "distribution": {
+            "maximum": 14.0,
+            "mean": 1.7059976479811838,
+            "minimum": 0.0,
+            "p50": 0.0,
+            "p90": 8.0
+          },
+          "spearman_vs_log_cold_ratio": -0.05637033775878539,
+          "spearman_vs_log_warm_ratio": 0.04375123157208693
+        },
+        "bv_shift_count": {
+          "distribution": {
+            "maximum": 5.0,
+            "mean": 0.5068600548804391,
+            "minimum": 0.0,
+            "p50": 0.0,
+            "p90": 3.0
+          },
+          "spearman_vs_log_cold_ratio": 0.5273627730568434,
+          "spearman_vs_log_warm_ratio": 0.13610646172243798
+        },
+        "bv_slice_extend_count": {
+          "distribution": {
+            "maximum": 1259.0,
+            "mean": 104.6985495883967,
+            "minimum": 0.0,
+            "p50": 7.0,
+            "p90": 329.0
+          },
+          "spearman_vs_log_cold_ratio": -0.036764161842610076,
+          "spearman_vs_log_warm_ratio": 0.06781521373618364
+        },
+        "declaration_count": {
+          "distribution": {
+            "maximum": 9.0,
+            "mean": 2.6981575852606823,
+            "minimum": 0.0,
+            "p50": 1.0,
+            "p90": 9.0
+          },
+          "spearman_vs_log_cold_ratio": -0.13209087556572782,
+          "spearman_vs_log_warm_ratio": -0.1121099158113627
+        },
+        "ite_count": {
+          "distribution": {
+            "maximum": 479.0,
+            "mean": 121.45354762838103,
+            "minimum": 0.0,
+            "p50": 52.0,
+            "p90": 352.0
+          },
+          "spearman_vs_log_cold_ratio": -0.8001307925651873,
+          "spearman_vs_log_warm_ratio": -0.7438664665535497
+        },
+        "list_count": {
+          "distribution": {
+            "maximum": 19656.0,
+            "mean": 5429.821246569973,
+            "minimum": 2.0,
+            "p50": 2326.0,
+            "p90": 14906.0
+          },
+          "spearman_vs_log_cold_ratio": -0.7889442767851095,
+          "spearman_vs_log_warm_ratio": -0.7251958964721797
+        },
+        "max_bv_width": {
+          "distribution": {
+            "maximum": 64.0,
+            "mean": 62.971383771070165,
+            "minimum": 0.0,
+            "p50": 64.0,
+            "p90": 64.0
+          },
+          "spearman_vs_log_cold_ratio": -0.2177597935273654,
+          "spearman_vs_log_warm_ratio": -0.21372148232807478
+        },
+        "max_sexpr_depth": {
+          "distribution": {
+            "maximum": 67.0,
+            "mean": 23.27753822030576,
+            "minimum": 1.0,
+            "p50": 16.0,
+            "p90": 47.0
+          },
+          "spearman_vs_log_cold_ratio": -0.0670240341343661,
+          "spearman_vs_log_warm_ratio": -0.04634911689683121
+        },
+        "operator_count": {
+          "distribution": {
+            "maximum": 4236.0,
+            "mean": 1183.4958839670717,
+            "minimum": 0.0,
+            "p50": 500.0,
+            "p90": 3268.0
+          },
+          "spearman_vs_log_cold_ratio": -0.7879292958821911,
+          "spearman_vs_log_warm_ratio": -0.7215774541660392
+        },
+        "query_bytes": {
+          "distribution": {
+            "maximum": 159686.0,
+            "mean": 44297.59349274794,
+            "minimum": 30.0,
+            "p50": 18924.0,
+            "p90": 121202.0
+          },
+          "spearman_vs_log_cold_ratio": -0.7884483107446586,
+          "spearman_vs_log_warm_ratio": -0.7255568783638561
+        },
+        "query_occurrences_per_run": {
+          "distribution": {
+            "maximum": 41.0,
+            "mean": 3.1372010976087807,
+            "minimum": 1.0,
+            "p50": 1.0,
+            "p90": 4.0
+          },
+          "spearman_vs_log_cold_ratio": 0.4633297672423178,
+          "spearman_vs_log_warm_ratio": 0.6270590184903344
+        }
+      },
+      "occurrences": 2551,
+      "warm_z3_over_axeyum_geomean": 1.5583645624152458
+    },
+    "windows-update-intel-audio-IntcSST.sys": {
+      "by_outcome": {
+        "sat": {
+          "cold_z3_over_axeyum_geomean": 3.1451200979707163,
+          "occurrences": 1270,
+          "warm_z3_over_axeyum_geomean": 1.7692515289508588
+        },
+        "unsat": {
+          "cold_z3_over_axeyum_geomean": 0.9698674506693994,
+          "occurrences": 402,
+          "warm_z3_over_axeyum_geomean": 0.9707116227834708
+        }
+      },
+      "by_purpose": {
+        "address-concretization": {
+          "cold_z3_over_axeyum_geomean": 3.013431563511618,
+          "occurrences": 741,
+          "warm_z3_over_axeyum_geomean": 2.030725933397406
+        },
+        "branch-feasibility": {
+          "cold_z3_over_axeyum_geomean": 2.2029238309763945,
+          "occurrences": 406,
+          "warm_z3_over_axeyum_geomean": 1.33266772350735
+        },
+        "concrete-evaluation": {
+          "cold_z3_over_axeyum_geomean": 3.2194577369957753,
+          "occurrences": 100,
+          "warm_z3_over_axeyum_geomean": 1.7392767253420214
+        },
+        "finding-reachability": {
+          "cold_z3_over_axeyum_geomean": 3.1890729115018304,
+          "occurrences": 159,
+          "warm_z3_over_axeyum_geomean": 1.7964431201325413
+        },
+        "integer-overflow": {
+          "cold_z3_over_axeyum_geomean": 3.7526527906967115,
+          "occurrences": 28,
+          "warm_z3_over_axeyum_geomean": 1.5586363726737598
+        },
+        "value-witness": {
+          "cold_z3_over_axeyum_geomean": 0.8688850526036912,
+          "occurrences": 238,
+          "warm_z3_over_axeyum_geomean": 0.6857725683339075
+        }
+      },
+      "by_warm_execution": {
+        "warm-created": {
+          "cold_z3_over_axeyum_geomean": 20.788541376733058,
+          "occurrences": 24,
+          "warm_z3_over_axeyum_geomean": 19.064380772678344
+        },
+        "warm-retained": {
+          "cold_z3_over_axeyum_geomean": 2.296475549691168,
+          "occurrences": 1648,
+          "warm_z3_over_axeyum_geomean": 1.4762544569266893
+        }
+      },
+      "cold_z3_over_axeyum_geomean": 2.37025599936166,
+      "features": {
+        "active_constraint_count": {
+          "distribution": {
+            "maximum": 51.0,
+            "mean": 19.01854066985646,
+            "minimum": 0.0,
+            "p50": 17.0,
+            "p90": 37.0
+          },
+          "spearman_vs_log_cold_ratio": -0.21324950962852546,
+          "spearman_vs_log_warm_ratio": -0.4292265760892155
+        },
+        "assertion_count": {
+          "distribution": {
+            "maximum": 51.0,
+            "mean": 19.01854066985646,
+            "minimum": 0.0,
+            "p50": 17.0,
+            "p90": 37.0
+          },
+          "spearman_vs_log_cold_ratio": -0.21324950962852546,
+          "spearman_vs_log_warm_ratio": -0.4292265760892155
+        },
+        "atom_count": {
+          "distribution": {
+            "maximum": 3378.0,
+            "mean": 1115.8708133971293,
+            "minimum": 3.0,
+            "p50": 910.0,
+            "p90": 2404.0
+          },
+          "spearman_vs_log_cold_ratio": -0.12480337431995527,
+          "spearman_vs_log_warm_ratio": -0.4075681024247949
+        },
+        "bit_width_mention_count": {
+          "distribution": {
+            "maximum": 505.0,
+            "mean": 162.13995215311004,
+            "minimum": 0.0,
+            "p50": 119.0,
+            "p90": 362.0
+          },
+          "spearman_vs_log_cold_ratio": -0.16263845935208304,
+          "spearman_vs_log_warm_ratio": -0.42101730003036875
+        },
+        "boolean_operator_count": {
+          "distribution": {
+            "maximum": 97.0,
+            "mean": 36.57775119617225,
+            "minimum": 0.0,
+            "p50": 33.0,
+            "p90": 70.0
+          },
+          "spearman_vs_log_cold_ratio": -0.21326655891148794,
+          "spearman_vs_log_warm_ratio": -0.43358794936345546
+        },
+        "bv_arithmetic_count": {
+          "distribution": {
+            "maximum": 244.0,
+            "mean": 49.57236842105263,
+            "minimum": 0.0,
+            "p50": 16.0,
+            "p90": 158.0
+          },
+          "spearman_vs_log_cold_ratio": -0.17120675827100085,
+          "spearman_vs_log_warm_ratio": -0.44593184765778465
+        },
+        "bv_bitwise_count": {
+          "distribution": {
+            "maximum": 17.0,
+            "mean": 2.9814593301435406,
+            "minimum": 0.0,
+            "p50": 2.0,
+            "p90": 7.0
+          },
+          "spearman_vs_log_cold_ratio": -0.4758309372821829,
+          "spearman_vs_log_warm_ratio": -0.28458475132534783
+        },
+        "bv_compare_count": {
+          "distribution": {
+            "maximum": 9.0,
+            "mean": 1.4593301435406698,
+            "minimum": 0.0,
+            "p50": 1.0,
+            "p90": 4.0
+          },
+          "spearman_vs_log_cold_ratio": -0.04089903871478161,
+          "spearman_vs_log_warm_ratio": -0.22648702130641563
+        },
+        "bv_shift_count": {
+          "distribution": {
+            "maximum": 3.0,
+            "mean": 0.26674641148325356,
+            "minimum": 0.0,
+            "p50": 0.0,
+            "p90": 2.0
+          },
+          "spearman_vs_log_cold_ratio": 0.014888819367471166,
+          "spearman_vs_log_warm_ratio": -0.08641336528168433
+        },
+        "bv_slice_extend_count": {
+          "distribution": {
+            "maximum": 163.0,
+            "mean": 53.25239234449761,
+            "minimum": 0.0,
+            "p50": 54.0,
+            "p90": 102.0
+          },
+          "spearman_vs_log_cold_ratio": -0.0022983375611212117,
+          "spearman_vs_log_warm_ratio": -0.24921917054101297
+        },
+        "declaration_count": {
+          "distribution": {
+            "maximum": 12.0,
+            "mean": 4.226076555023924,
+            "minimum": 0.0,
+            "p50": 4.0,
+            "p90": 8.0
+          },
+          "spearman_vs_log_cold_ratio": -0.27034293105389773,
+          "spearman_vs_log_warm_ratio": -0.353453137868325
+        },
+        "ite_count": {
+          "distribution": {
+            "maximum": 51.0,
+            "mean": 19.01854066985646,
+            "minimum": 0.0,
+            "p50": 17.0,
+            "p90": 37.0
+          },
+          "spearman_vs_log_cold_ratio": -0.21324950962852546,
+          "spearman_vs_log_warm_ratio": -0.4292265760892155
+        },
+        "list_count": {
+          "distribution": {
+            "maximum": 2204.0,
+            "mean": 717.7906698564593,
+            "minimum": 2.0,
+            "p50": 582.0,
+            "p90": 1568.0
+          },
+          "spearman_vs_log_cold_ratio": -0.1169758269330764,
+          "spearman_vs_log_warm_ratio": -0.4047511197764807
+        },
+        "max_bv_width": {
+          "distribution": {
+            "maximum": 64.0,
+            "mean": 63.311004784689,
+            "minimum": 0.0,
+            "p50": 64.0,
+            "p90": 64.0
+          },
+          "spearman_vs_log_cold_ratio": -0.17859866142765926,
+          "spearman_vs_log_warm_ratio": -0.17662944128014438
+        },
+        "max_sexpr_depth": {
+          "distribution": {
+            "maximum": 36.0,
+            "mean": 18.560406698564595,
+            "minimum": 1.0,
+            "p50": 18.0,
+            "p90": 29.0
+          },
+          "spearman_vs_log_cold_ratio": -0.05704943115726312,
+          "spearman_vs_log_warm_ratio": -0.33674503602688743
+        },
+        "operator_count": {
+          "distribution": {
+            "maximum": 491.0,
+            "mean": 163.12858851674642,
+            "minimum": 0.0,
+            "p50": 136.0,
+            "p90": 347.0
+          },
+          "spearman_vs_log_cold_ratio": -0.1191825013452053,
+          "spearman_vs_log_warm_ratio": -0.40484306214184496
+        },
+        "query_bytes": {
+          "distribution": {
+            "maximum": 18166.0,
+            "mean": 5976.459928229665,
+            "minimum": 30.0,
+            "p50": 4833.0,
+            "p90": 12936.0
+          },
+          "spearman_vs_log_cold_ratio": -0.127265957579232,
+          "spearman_vs_log_warm_ratio": -0.41091053157546714
+        },
+        "query_occurrences_per_run": {
+          "distribution": {
+            "maximum": 18.0,
+            "mean": 1.777511961722488,
+            "minimum": 1.0,
+            "p50": 1.0,
+            "p90": 3.0
+          },
+          "spearman_vs_log_cold_ratio": 0.37587708665716874,
+          "spearman_vs_log_warm_ratio": 0.4648205391782736
+        }
+      },
+      "occurrences": 1672,
+      "warm_z3_over_axeyum_geomean": 1.5314734519573727
+    }
+  },
+  "input_reports": [
+    {
+      "driver": {
+        "label": "sqfs-intel-DptfDevGen.sys",
+        "sha256": "074be1b90deb21897538a6b093af9826e62610ffd878c92289af31c5ca3f724b"
+      },
+      "occurrences": 561,
+      "path": "bench-results/glaurung-four-cell-dptf-20260717/report.json",
+      "repetitions": 5,
+      "sha256": "dd91696a4bff32adce105739cbc94abdb84c767491de2a18531500e19e527544"
+    },
+    {
+      "driver": {
+        "label": "win10-vwififlt.sys",
+        "sha256": "13c3b69a5d0179ed3cc2c999ff97edbaedd63da55ddb74427251c360706a3820"
+      },
+      "occurrences": 4742,
+      "path": "bench-results/glaurung-four-cell-small-drivers-20260717/vwififlt/report.json",
+      "repetitions": 5,
+      "sha256": "9ffa0d04cecfa2c4967a0034fff6c914e23e55846e1a45aa5e68a2d6e272dead"
+    },
+    {
+      "driver": {
+        "label": "windows-update-intel-audio-IntcSST.sys",
+        "sha256": "f7c8e4f106baa5b2a1a18e60731ad42a6f734aee1d049576eaf6d123d5629750"
+      },
+      "occurrences": 1672,
+      "path": "bench-results/glaurung-four-cell-small-drivers-20260717/intcsst/report.json",
+      "repetitions": 5,
+      "sha256": "18b507dce33e3423e970f5e9951d4b2750487ca7a0c35f79b4f1814f29491657"
+    },
+    {
+      "driver": {
+        "label": "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys",
+        "sha256": "3c062dc57832caab776bec99656798474af7ffb59ef751c9a004a95c0ae74405"
+      },
+      "occurrences": 2551,
+      "path": "bench-results/glaurung-four-cell-small-drivers-20260717/surfacepen/report.json",
+      "repetitions": 5,
+      "sha256": "731f9c527c35469aff7af6c9e8356c18bb7a081c062ff2a6beb95c1e4084582a"
+    }
+  ],
+  "methodology": {
+    "correlation": "Spearman rank correlation against log paired ratio",
+    "interpretation": "descriptive attribution only; driver and query features are observational",
+    "query_features": "lexical features of hash-verified canonical SMT-LIB",
+    "ratio": "paired per-occurrence geometric mean across repetitions",
+    "ratio_direction": "z3_nanos/axeyum_nanos; greater than 1 favors Axeyum",
+    "unit": "stable ordered check occurrence"
+  },
+  "occurrences": 9526,
+  "pooled_descriptive_features": {
+    "active_constraint_count": {
+      "distribution": {
+        "maximum": 479.0,
+        "mean": 63.50535376863321,
+        "minimum": 0.0,
+        "p50": 39.0,
+        "p90": 132.0
+      },
+      "spearman_vs_log_cold_ratio": -0.5006029007160788,
+      "spearman_vs_log_warm_ratio": -0.3220529974584114
+    },
+    "assertion_count": {
+      "distribution": {
+        "maximum": 479.0,
+        "mean": 63.50535376863321,
+        "minimum": 0.0,
+        "p50": 39.0,
+        "p90": 132.0
+      },
+      "spearman_vs_log_cold_ratio": -0.5006029007160788,
+      "spearman_vs_log_warm_ratio": -0.3220529974584114
+    },
+    "atom_count": {
+      "distribution": {
+        "maximum": 29955.0,
+        "mean": 5483.231681713206,
+        "minimum": 3.0,
+        "p50": 3300.0,
+        "p90": 14014.0
+      },
+      "spearman_vs_log_cold_ratio": -0.5448811823132494,
+      "spearman_vs_log_warm_ratio": -0.3180788670652401
+    },
+    "bit_width_mention_count": {
+      "distribution": {
+        "maximum": 5102.0,
+        "mean": 616.4429981104346,
+        "minimum": 0.0,
+        "p50": 322.0,
+        "p90": 1450.0
+      },
+      "spearman_vs_log_cold_ratio": -0.43343406497311304,
+      "spearman_vs_log_warm_ratio": -0.3029263999245701
+    },
+    "boolean_operator_count": {
+      "distribution": {
+        "maximum": 958.0,
+        "mean": 123.73388620617258,
+        "minimum": 0.0,
+        "p50": 73.0,
+        "p90": 260.0
+      },
+      "spearman_vs_log_cold_ratio": -0.4893892997337191,
+      "spearman_vs_log_warm_ratio": -0.3179960693077988
+    },
+    "bv_arithmetic_count": {
+      "distribution": {
+        "maximum": 2792.0,
+        "mean": 262.46913709846734,
+        "minimum": 0.0,
+        "p50": 107.0,
+        "p90": 805.0
+      },
+      "spearman_vs_log_cold_ratio": -0.39621227635762213,
+      "spearman_vs_log_warm_ratio": -0.34116380812869207
+    },
+    "bv_bitwise_count": {
+      "distribution": {
+        "maximum": 86.0,
+        "mean": 19.252361956749947,
+        "minimum": 0.0,
+        "p50": 9.0,
+        "p90": 56.0
+      },
+      "spearman_vs_log_cold_ratio": -0.7147820766032688,
+      "spearman_vs_log_warm_ratio": -0.2747179700200581
+    },
+    "bv_compare_count": {
+      "distribution": {
+        "maximum": 14.0,
+        "mean": 3.2443837917279024,
+        "minimum": 0.0,
+        "p50": 2.0,
+        "p90": 8.0
+      },
+      "spearman_vs_log_cold_ratio": -0.613865648061859,
+      "spearman_vs_log_warm_ratio": -0.25052114616210736
+    },
+    "bv_shift_count": {
+      "distribution": {
+        "maximum": 18.0,
+        "mean": 4.925782070123872,
+        "minimum": 0.0,
+        "p50": 2.0,
+        "p90": 15.0
+      },
+      "spearman_vs_log_cold_ratio": -0.7085702743702711,
+      "spearman_vs_log_warm_ratio": -0.298360723151699
+    },
+    "bv_slice_extend_count": {
+      "distribution": {
+        "maximum": 2359.0,
+        "mean": 374.76600881797185,
+        "minimum": 0.0,
+        "p50": 124.0,
+        "p90": 1157.0
+      },
+      "spearman_vs_log_cold_ratio": -0.655892827840061,
+      "spearman_vs_log_warm_ratio": -0.23207955030739308
+    },
+    "declaration_count": {
+      "distribution": {
+        "maximum": 30.0,
+        "mean": 8.040520680243544,
+        "minimum": 0.0,
+        "p50": 6.0,
+        "p90": 19.0
+      },
+      "spearman_vs_log_cold_ratio": -0.6962893727891504,
+      "spearman_vs_log_warm_ratio": -0.30249104071178595
+    },
+    "ite_count": {
+      "distribution": {
+        "maximum": 479.0,
+        "mean": 63.47291622926727,
+        "minimum": 0.0,
+        "p50": 39.0,
+        "p90": 132.0
+      },
+      "spearman_vs_log_cold_ratio": -0.5017830527695584,
+      "spearman_vs_log_warm_ratio": -0.3221804904805689
+    },
+    "list_count": {
+      "distribution": {
+        "maximum": 19656.0,
+        "mean": 3640.1928406466513,
+        "minimum": 2.0,
+        "p50": 2198.0,
+        "p90": 9332.0
+      },
+      "spearman_vs_log_cold_ratio": -0.5463006432161872,
+      "spearman_vs_log_warm_ratio": -0.31834835872882483
+    },
+    "max_bv_width": {
+      "distribution": {
+        "maximum": 64.0,
+        "mean": 63.482678983833715,
+        "minimum": 0.0,
+        "p50": 64.0,
+        "p90": 64.0
+      },
+      "spearman_vs_log_cold_ratio": -0.15497353030681194,
+      "spearman_vs_log_warm_ratio": -0.15386380387768525
+    },
+    "max_sexpr_depth": {
+      "distribution": {
+        "maximum": 71.0,
+        "mean": 30.929981104346002,
+        "minimum": 1.0,
+        "p50": 25.0,
+        "p90": 62.0
+      },
+      "spearman_vs_log_cold_ratio": -0.5915332941119243,
+      "spearman_vs_log_warm_ratio": -0.22209399716146572
+    },
+    "operator_count": {
+      "distribution": {
+        "maximum": 4236.0,
+        "mean": 851.8644761704808,
+        "minimum": 0.0,
+        "p50": 510.0,
+        "p90": 2237.0
+      },
+      "spearman_vs_log_cold_ratio": -0.5598268131912786,
+      "spearman_vs_log_warm_ratio": -0.3203175131885372
+    },
+    "query_bytes": {
+      "distribution": {
+        "maximum": 159686.0,
+        "mean": 29876.133739239976,
+        "minimum": 30.0,
+        "p50": 18050.0,
+        "p90": 76891.0
+      },
+      "spearman_vs_log_cold_ratio": -0.5480241308397745,
+      "spearman_vs_log_warm_ratio": -0.3188132500483856
+    },
+    "query_occurrences_per_run": {
+      "distribution": {
+        "maximum": 41.0,
+        "mean": 2.1266008817971866,
+        "minimum": 1.0,
+        "p50": 1.0,
+        "p90": 3.0
+      },
+      "spearman_vs_log_cold_ratio": 0.20210126821630447,
+      "spearman_vs_log_warm_ratio": 0.4101706419256882
+    }
+  },
+  "pooled_feature_quartiles": {
+    "active_constraint_count": [
+      {
+        "cold_z3_over_axeyum_geomean": 3.310775058251131,
+        "driver_counts": {
+          "sqfs-intel-DptfDevGen.sys": 271,
+          "win10-vwififlt.sys": 371,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 867,
+          "windows-update-intel-audio-IntcSST.sys": 993
+        },
+        "feature_maximum": 19,
+        "feature_minimum": 0,
+        "occurrences": 2502,
+        "quantile_bin": 1,
+        "warm_z3_over_axeyum_geomean": 2.2331301058352535
+      },
+      {
+        "cold_z3_over_axeyum_geomean": 1.042365243751876,
+        "driver_counts": {
+          "sqfs-intel-DptfDevGen.sys": 138,
+          "win10-vwififlt.sys": 1327,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 335,
+          "windows-update-intel-audio-IntcSST.sys": 574
+        },
+        "feature_maximum": 39,
+        "feature_minimum": 20,
+        "occurrences": 2374,
+        "quantile_bin": 2,
+        "warm_z3_over_axeyum_geomean": 1.1077826547187524
+      },
+      {
+        "cold_z3_over_axeyum_geomean": 0.5943114347012087,
+        "driver_counts": {
+          "sqfs-intel-DptfDevGen.sys": 115,
+          "win10-vwififlt.sys": 1924,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 147,
+          "windows-update-intel-audio-IntcSST.sys": 105
+        },
+        "feature_maximum": 68,
+        "feature_minimum": 40,
+        "occurrences": 2291,
+        "quantile_bin": 3,
+        "warm_z3_over_axeyum_geomean": 0.8534914712563633
+      },
+      {
+        "cold_z3_over_axeyum_geomean": 0.8336671761501903,
+        "driver_counts": {
+          "sqfs-intel-DptfDevGen.sys": 37,
+          "win10-vwififlt.sys": 1120,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 1202
+        },
+        "feature_maximum": 479,
+        "feature_minimum": 69,
+        "occurrences": 2359,
+        "quantile_bin": 4,
+        "warm_z3_over_axeyum_geomean": 0.9321651159217518
+      }
+    ],
+    "assertion_count": [
+      {
+        "cold_z3_over_axeyum_geomean": 3.310775058251131,
+        "driver_counts": {
+          "sqfs-intel-DptfDevGen.sys": 271,
+          "win10-vwififlt.sys": 371,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 867,
+          "windows-update-intel-audio-IntcSST.sys": 993
+        },
+        "feature_maximum": 19,
+        "feature_minimum": 0,
+        "occurrences": 2502,
+        "quantile_bin": 1,
+        "warm_z3_over_axeyum_geomean": 2.2331301058352535
+      },
+      {
+        "cold_z3_over_axeyum_geomean": 1.042365243751876,
+        "driver_counts": {
+          "sqfs-intel-DptfDevGen.sys": 138,
+          "win10-vwififlt.sys": 1327,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 335,
+          "windows-update-intel-audio-IntcSST.sys": 574
+        },
+        "feature_maximum": 39,
+        "feature_minimum": 20,
+        "occurrences": 2374,
+        "quantile_bin": 2,
+        "warm_z3_over_axeyum_geomean": 1.1077826547187524
+      },
+      {
+        "cold_z3_over_axeyum_geomean": 0.5943114347012087,
+        "driver_counts": {
+          "sqfs-intel-DptfDevGen.sys": 115,
+          "win10-vwififlt.sys": 1924,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 147,
+          "windows-update-intel-audio-IntcSST.sys": 105
+        },
+        "feature_maximum": 68,
+        "feature_minimum": 40,
+        "occurrences": 2291,
+        "quantile_bin": 3,
+        "warm_z3_over_axeyum_geomean": 0.8534914712563633
+      },
+      {
+        "cold_z3_over_axeyum_geomean": 0.8336671761501903,
+        "driver_counts": {
+          "sqfs-intel-DptfDevGen.sys": 37,
+          "win10-vwififlt.sys": 1120,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 1202
+        },
+        "feature_maximum": 479,
+        "feature_minimum": 69,
+        "occurrences": 2359,
+        "quantile_bin": 4,
+        "warm_z3_over_axeyum_geomean": 0.9321651159217518
+      }
+    ],
+    "atom_count": [
+      {
+        "cold_z3_over_axeyum_geomean": 3.2443915586126186,
+        "driver_counts": {
+          "sqfs-intel-DptfDevGen.sys": 283,
+          "win10-vwififlt.sys": 297,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 792,
+          "windows-update-intel-audio-IntcSST.sys": 1010
+        },
+        "feature_maximum": 1130,
+        "feature_minimum": 3,
+        "occurrences": 2382,
+        "quantile_bin": 1,
+        "warm_z3_over_axeyum_geomean": 2.2636864776119796
+      },
+      {
+        "cold_z3_over_axeyum_geomean": 1.3835265339308886,
+        "driver_counts": {
+          "sqfs-intel-DptfDevGen.sys": 161,
+          "win10-vwififlt.sys": 1099,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 462,
+          "windows-update-intel-audio-IntcSST.sys": 660
+        },
+        "feature_maximum": 3300,
+        "feature_minimum": 1131,
+        "occurrences": 2382,
+        "quantile_bin": 2,
+        "warm_z3_over_axeyum_geomean": 1.1023144890329915
+      },
+      {
+        "cold_z3_over_axeyum_geomean": 0.5328396294538619,
+        "driver_counts": {
+          "sqfs-intel-DptfDevGen.sys": 117,
+          "win10-vwififlt.sys": 2014,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 249,
+          "windows-update-intel-audio-IntcSST.sys": 2
+        },
+        "feature_maximum": 7526,
+        "feature_minimum": 3303,
+        "occurrences": 2382,
+        "quantile_bin": 3,
+        "warm_z3_over_axeyum_geomean": 0.881337967262927
+      },
+      {
+        "cold_z3_over_axeyum_geomean": 0.7756667022298194,
+        "driver_counts": {
+          "win10-vwififlt.sys": 1332,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 1048
+        },
+        "feature_maximum": 29955,
+        "feature_minimum": 7533,
+        "occurrences": 2380,
+        "quantile_bin": 4,
+        "warm_z3_over_axeyum_geomean": 0.9378300695549862
+      }
+    ],
+    "bit_width_mention_count": [
+      {
+        "cold_z3_over_axeyum_geomean": 3.1270466936689063,
+        "driver_counts": {
+          "sqfs-intel-DptfDevGen.sys": 278,
+          "win10-vwififlt.sys": 351,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 745,
+          "windows-update-intel-audio-IntcSST.sys": 1012
+        },
+        "feature_maximum": 154,
+        "feature_minimum": 0,
+        "occurrences": 2386,
+        "quantile_bin": 1,
+        "warm_z3_over_axeyum_geomean": 2.209990760745366
+      },
+      {
+        "cold_z3_over_axeyum_geomean": 0.9771862158776761,
+        "driver_counts": {
+          "sqfs-intel-DptfDevGen.sys": 127,
+          "win10-vwififlt.sys": 1491,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 347,
+          "windows-update-intel-audio-IntcSST.sys": 418
+        },
+        "feature_maximum": 322,
+        "feature_minimum": 155,
+        "occurrences": 2383,
+        "quantile_bin": 2,
+        "warm_z3_over_axeyum_geomean": 1.1688593513181496
+      },
+      {
+        "cold_z3_over_axeyum_geomean": 0.7085708049305846,
+        "driver_counts": {
+          "sqfs-intel-DptfDevGen.sys": 123,
+          "win10-vwififlt.sys": 1814,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 199,
+          "windows-update-intel-audio-IntcSST.sys": 242
+        },
+        "feature_maximum": 615,
+        "feature_minimum": 323,
+        "occurrences": 2378,
+        "quantile_bin": 3,
+        "warm_z3_over_axeyum_geomean": 0.8268672276994394
+      },
+      {
+        "cold_z3_over_axeyum_geomean": 0.8547236901066717,
+        "driver_counts": {
+          "sqfs-intel-DptfDevGen.sys": 33,
+          "win10-vwififlt.sys": 1086,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 1260
+        },
+        "feature_maximum": 5102,
+        "feature_minimum": 616,
+        "occurrences": 2379,
+        "quantile_bin": 4,
+        "warm_z3_over_axeyum_geomean": 0.963957403935981
+      }
+    ],
+    "boolean_operator_count": [
+      {
+        "cold_z3_over_axeyum_geomean": 3.368323763467544,
+        "driver_counts": {
+          "sqfs-intel-DptfDevGen.sys": 265,
+          "win10-vwififlt.sys": 345,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 852,
+          "windows-update-intel-audio-IntcSST.sys": 947
+        },
+        "feature_maximum": 36,
+        "feature_minimum": 0,
+        "occurrences": 2409,
+        "quantile_bin": 1,
+        "warm_z3_over_axeyum_geomean": 2.266350661403342
+      },
+      {
+        "cold_z3_over_axeyum_geomean": 1.029928865831191,
+        "driver_counts": {
+          "sqfs-intel-DptfDevGen.sys": 134,
+          "win10-vwififlt.sys": 1290,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 330,
+          "windows-update-intel-audio-IntcSST.sys": 601
+        },
+        "feature_maximum": 73,
+        "feature_minimum": 37,
+        "occurrences": 2355,
+        "quantile_bin": 2,
+        "warm_z3_over_axeyum_geomean": 1.1026034126584348
+      },
+      {
+        "cold_z3_over_axeyum_geomean": 0.6322301415328805,
+        "driver_counts": {
+          "sqfs-intel-DptfDevGen.sys": 119,
+          "win10-vwififlt.sys": 1992,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 160,
+          "windows-update-intel-audio-IntcSST.sys": 124
+        },
+        "feature_maximum": 130,
+        "feature_minimum": 74,
+        "occurrences": 2395,
+        "quantile_bin": 3,
+        "warm_z3_over_axeyum_geomean": 0.8746752723155513
+      },
+      {
+        "cold_z3_over_axeyum_geomean": 0.8358959921749615,
+        "driver_counts": {
+          "sqfs-intel-DptfDevGen.sys": 43,
+          "win10-vwififlt.sys": 1115,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 1209
+        },
+        "feature_maximum": 958,
+        "feature_minimum": 131,
+        "occurrences": 2367,
+        "quantile_bin": 4,
+        "warm_z3_over_axeyum_geomean": 0.9362871475915395
+      }
+    ],
+    "bv_arithmetic_count": [
+      {
+        "cold_z3_over_axeyum_geomean": 2.806930149926211,
+        "driver_counts": {
+          "sqfs-intel-DptfDevGen.sys": 212,
+          "win10-vwififlt.sys": 545,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 561,
+          "windows-update-intel-audio-IntcSST.sys": 1073
+        },
+        "feature_maximum": 34,
+        "feature_minimum": 0,
+        "occurrences": 2391,
+        "quantile_bin": 1,
+        "warm_z3_over_axeyum_geomean": 2.2031265024308775
+      },
+      {
+        "cold_z3_over_axeyum_geomean": 1.1561677313248806,
+        "driver_counts": {
+          "sqfs-intel-DptfDevGen.sys": 164,
+          "win10-vwififlt.sys": 1558,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 406,
+          "windows-update-intel-audio-IntcSST.sys": 246
+        },
+        "feature_maximum": 107,
+        "feature_minimum": 35,
+        "occurrences": 2374,
+        "quantile_bin": 2,
+        "warm_z3_over_axeyum_geomean": 1.2474969369837041
+      },
+      {
+        "cold_z3_over_axeyum_geomean": 0.5887100023483043,
+        "driver_counts": {
+          "sqfs-intel-DptfDevGen.sys": 41,
+          "win10-vwififlt.sys": 1978,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 149,
+          "windows-update-intel-audio-IntcSST.sys": 232
+        },
+        "feature_maximum": 172,
+        "feature_minimum": 108,
+        "occurrences": 2400,
+        "quantile_bin": 3,
+        "warm_z3_over_axeyum_geomean": 0.8609580794835425
+      },
+      {
+        "cold_z3_over_axeyum_geomean": 0.971577967866402,
+        "driver_counts": {
+          "sqfs-intel-DptfDevGen.sys": 144,
+          "win10-vwififlt.sys": 661,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 1435,
+          "windows-update-intel-audio-IntcSST.sys": 121
+        },
+        "feature_maximum": 2792,
+        "feature_minimum": 173,
+        "occurrences": 2361,
+        "quantile_bin": 4,
+        "warm_z3_over_axeyum_geomean": 0.8696285984591586
+      }
+    ],
+    "bv_bitwise_count": [
+      {
+        "cold_z3_over_axeyum_geomean": 2.603456765181884,
+        "driver_counts": {
+          "sqfs-intel-DptfDevGen.sys": 149,
+          "win10-vwififlt.sys": 148,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 1573,
+          "windows-update-intel-audio-IntcSST.sys": 557
+        },
+        "feature_maximum": 1,
+        "feature_minimum": 0,
+        "occurrences": 2427,
+        "quantile_bin": 1,
+        "warm_z3_over_axeyum_geomean": 1.7344944133802527
+      },
+      {
+        "cold_z3_over_axeyum_geomean": 2.0719426385972493,
+        "driver_counts": {
+          "sqfs-intel-DptfDevGen.sys": 165,
+          "win10-vwififlt.sys": 696,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 644,
+          "windows-update-intel-audio-IntcSST.sys": 1022
+        },
+        "feature_maximum": 9,
+        "feature_minimum": 2,
+        "occurrences": 2527,
+        "quantile_bin": 2,
+        "warm_z3_over_axeyum_geomean": 1.3418605845883322
+      },
+      {
+        "cold_z3_over_axeyum_geomean": 0.671484926268432,
+        "driver_counts": {
+          "sqfs-intel-DptfDevGen.sys": 103,
+          "win10-vwififlt.sys": 1673,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 334,
+          "windows-update-intel-audio-IntcSST.sys": 93
+        },
+        "feature_maximum": 35,
+        "feature_minimum": 10,
+        "occurrences": 2203,
+        "quantile_bin": 3,
+        "warm_z3_over_axeyum_geomean": 1.0769908775496164
+      },
+      {
+        "cold_z3_over_axeyum_geomean": 0.4651569429264863,
+        "driver_counts": {
+          "sqfs-intel-DptfDevGen.sys": 144,
+          "win10-vwififlt.sys": 2225
+        },
+        "feature_maximum": 86,
+        "feature_minimum": 36,
+        "occurrences": 2369,
+        "quantile_bin": 4,
+        "warm_z3_over_axeyum_geomean": 0.8033946586391482
+      }
+    ],
+    "bv_compare_count": [
+      {
+        "cold_z3_over_axeyum_geomean": 2.122159131857347,
+        "driver_counts": {
+          "sqfs-intel-DptfDevGen.sys": 140,
+          "win10-vwififlt.sys": 832,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 1679,
+          "windows-update-intel-audio-IntcSST.sys": 445
+        },
+        "feature_maximum": 0,
+        "feature_minimum": 0,
+        "occurrences": 3096,
+        "quantile_bin": 1,
+        "warm_z3_over_axeyum_geomean": 1.6505606887759372
+      },
+      {
+        "cold_z3_over_axeyum_geomean": 2.172759894593238,
+        "driver_counts": {
+          "sqfs-intel-DptfDevGen.sys": 128,
+          "win10-vwififlt.sys": 544,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 422,
+          "windows-update-intel-audio-IntcSST.sys": 893
+        },
+        "feature_maximum": 2,
+        "feature_minimum": 1,
+        "occurrences": 1987,
+        "quantile_bin": 2,
+        "warm_z3_over_axeyum_geomean": 1.3220009091149691
+      },
+      {
+        "cold_z3_over_axeyum_geomean": 0.621531164503127,
+        "driver_counts": {
+          "sqfs-intel-DptfDevGen.sys": 293,
+          "win10-vwififlt.sys": 1970,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 161,
+          "windows-update-intel-audio-IntcSST.sys": 317
+        },
+        "feature_maximum": 7,
+        "feature_minimum": 3,
+        "occurrences": 2741,
+        "quantile_bin": 3,
+        "warm_z3_over_axeyum_geomean": 0.923591354154939
+      },
+      {
+        "cold_z3_over_axeyum_geomean": 0.5254203452970233,
+        "driver_counts": {
+          "win10-vwififlt.sys": 1396,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 289,
+          "windows-update-intel-audio-IntcSST.sys": 17
+        },
+        "feature_maximum": 14,
+        "feature_minimum": 8,
+        "occurrences": 1702,
+        "quantile_bin": 4,
+        "warm_z3_over_axeyum_geomean": 0.9082604142246948
+      }
+    ],
+    "bv_shift_count": [
+      {
+        "cold_z3_over_axeyum_geomean": 2.103908043127674,
+        "driver_counts": {
+          "sqfs-intel-DptfDevGen.sys": 279,
+          "win10-vwififlt.sys": 546,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 2209,
+          "windows-update-intel-audio-IntcSST.sys": 1465
+        },
+        "feature_maximum": 0,
+        "feature_minimum": 0,
+        "occurrences": 4499,
+        "quantile_bin": 1,
+        "warm_z3_over_axeyum_geomean": 1.5308041685063831
+      },
+      {
+        "cold_z3_over_axeyum_geomean": 1.3512326048332417,
+        "driver_counts": {
+          "sqfs-intel-DptfDevGen.sys": 70,
+          "win10-vwififlt.sys": 307,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 33,
+          "windows-update-intel-audio-IntcSST.sys": 167
+        },
+        "feature_maximum": 2,
+        "feature_minimum": 1,
+        "occurrences": 577,
+        "quantile_bin": 2,
+        "warm_z3_over_axeyum_geomean": 1.357929115474941
+      },
+      {
+        "cold_z3_over_axeyum_geomean": 0.9437224910906596,
+        "driver_counts": {
+          "sqfs-intel-DptfDevGen.sys": 212,
+          "win10-vwififlt.sys": 1682,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 309,
+          "windows-update-intel-audio-IntcSST.sys": 40
+        },
+        "feature_maximum": 11,
+        "feature_minimum": 3,
+        "occurrences": 2243,
+        "quantile_bin": 3,
+        "warm_z3_over_axeyum_geomean": 1.039805699941961
+      },
+      {
+        "cold_z3_over_axeyum_geomean": 0.4194376503481995,
+        "driver_counts": {
+          "win10-vwififlt.sys": 2207
+        },
+        "feature_maximum": 18,
+        "feature_minimum": 12,
+        "occurrences": 2207,
+        "quantile_bin": 4,
+        "warm_z3_over_axeyum_geomean": 0.8136040200219171
+      }
+    ],
+    "bv_slice_extend_count": [
+      {
+        "cold_z3_over_axeyum_geomean": 2.3391941051114613,
+        "driver_counts": {
+          "sqfs-intel-DptfDevGen.sys": 234,
+          "win10-vwififlt.sys": 198,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 1531,
+          "windows-update-intel-audio-IntcSST.sys": 501
+        },
+        "feature_maximum": 28,
+        "feature_minimum": 0,
+        "occurrences": 2464,
+        "quantile_bin": 1,
+        "warm_z3_over_axeyum_geomean": 1.6238471587905967
+      },
+      {
+        "cold_z3_over_axeyum_geomean": 2.3773879214048645,
+        "driver_counts": {
+          "sqfs-intel-DptfDevGen.sys": 206,
+          "win10-vwififlt.sys": 315,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 677,
+          "windows-update-intel-audio-IntcSST.sys": 1127
+        },
+        "feature_maximum": 124,
+        "feature_minimum": 29,
+        "occurrences": 2325,
+        "quantile_bin": 2,
+        "warm_z3_over_axeyum_geomean": 1.3954418377889628
+      },
+      {
+        "cold_z3_over_axeyum_geomean": 0.6309956637548213,
+        "driver_counts": {
+          "sqfs-intel-DptfDevGen.sys": 121,
+          "win10-vwififlt.sys": 2013,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 180,
+          "windows-update-intel-audio-IntcSST.sys": 44
+        },
+        "feature_maximum": 595,
+        "feature_minimum": 126,
+        "occurrences": 2358,
+        "quantile_bin": 3,
+        "warm_z3_over_axeyum_geomean": 0.9759840955305489
+      },
+      {
+        "cold_z3_over_axeyum_geomean": 0.521454225651022,
+        "driver_counts": {
+          "win10-vwififlt.sys": 2216,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 163
+        },
+        "feature_maximum": 2359,
+        "feature_minimum": 600,
+        "occurrences": 2379,
+        "quantile_bin": 4,
+        "warm_z3_over_axeyum_geomean": 0.9242248016250976
+      }
+    ],
+    "declaration_count": [
+      {
+        "cold_z3_over_axeyum_geomean": 2.2496118665007727,
+        "driver_counts": {
+          "sqfs-intel-DptfDevGen.sys": 561,
+          "win10-vwififlt.sys": 233,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 1722,
+          "windows-update-intel-audio-IntcSST.sys": 497
+        },
+        "feature_maximum": 2,
+        "feature_minimum": 0,
+        "occurrences": 3013,
+        "quantile_bin": 1,
+        "warm_z3_over_axeyum_geomean": 1.5883004046269114
+      },
+      {
+        "cold_z3_over_axeyum_geomean": 2.0594876251411334,
+        "driver_counts": {
+          "win10-vwififlt.sys": 591,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 392,
+          "windows-update-intel-audio-IntcSST.sys": 819
+        },
+        "feature_maximum": 6,
+        "feature_minimum": 3,
+        "occurrences": 1802,
+        "quantile_bin": 2,
+        "warm_z3_over_axeyum_geomean": 1.2443269006709803
+      },
+      {
+        "cold_z3_over_axeyum_geomean": 0.8974666052668906,
+        "driver_counts": {
+          "win10-vwififlt.sys": 1614,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 437,
+          "windows-update-intel-audio-IntcSST.sys": 356
+        },
+        "feature_maximum": 14,
+        "feature_minimum": 7,
+        "occurrences": 2407,
+        "quantile_bin": 3,
+        "warm_z3_over_axeyum_geomean": 1.1726112115092302
+      },
+      {
+        "cold_z3_over_axeyum_geomean": 0.41763754214358356,
+        "driver_counts": {
+          "win10-vwififlt.sys": 2304
+        },
+        "feature_maximum": 30,
+        "feature_minimum": 15,
+        "occurrences": 2304,
+        "quantile_bin": 4,
+        "warm_z3_over_axeyum_geomean": 0.8237504288569383
+      }
+    ],
+    "ite_count": [
+      {
+        "cold_z3_over_axeyum_geomean": 3.4169652925793517,
+        "driver_counts": {
+          "sqfs-intel-DptfDevGen.sys": 255,
+          "win10-vwififlt.sys": 340,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 853,
+          "windows-update-intel-audio-IntcSST.sys": 944
+        },
+        "feature_maximum": 18,
+        "feature_minimum": 0,
+        "occurrences": 2392,
+        "quantile_bin": 1,
+        "warm_z3_over_axeyum_geomean": 2.2883729633482446
+      },
+      {
+        "cold_z3_over_axeyum_geomean": 1.0642486731175924,
+        "driver_counts": {
+          "sqfs-intel-DptfDevGen.sys": 154,
+          "win10-vwififlt.sys": 1358,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 349,
+          "windows-update-intel-audio-IntcSST.sys": 623
+        },
+        "feature_maximum": 39,
+        "feature_minimum": 19,
+        "occurrences": 2484,
+        "quantile_bin": 2,
+        "warm_z3_over_axeyum_geomean": 1.1161366005397317
+      },
+      {
+        "cold_z3_over_axeyum_geomean": 0.5943114347012087,
+        "driver_counts": {
+          "sqfs-intel-DptfDevGen.sys": 115,
+          "win10-vwififlt.sys": 1924,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 147,
+          "windows-update-intel-audio-IntcSST.sys": 105
+        },
+        "feature_maximum": 68,
+        "feature_minimum": 40,
+        "occurrences": 2291,
+        "quantile_bin": 3,
+        "warm_z3_over_axeyum_geomean": 0.8534914712563633
+      },
+      {
+        "cold_z3_over_axeyum_geomean": 0.8336671761501903,
+        "driver_counts": {
+          "sqfs-intel-DptfDevGen.sys": 37,
+          "win10-vwififlt.sys": 1120,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 1202
+        },
+        "feature_maximum": 479,
+        "feature_minimum": 69,
+        "occurrences": 2359,
+        "quantile_bin": 4,
+        "warm_z3_over_axeyum_geomean": 0.9321651159217518
+      }
+    ],
+    "list_count": [
+      {
+        "cold_z3_over_axeyum_geomean": 3.2238194705505396,
+        "driver_counts": {
+          "sqfs-intel-DptfDevGen.sys": 279,
+          "win10-vwififlt.sys": 299,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 783,
+          "windows-update-intel-audio-IntcSST.sys": 1024
+        },
+        "feature_maximum": 739,
+        "feature_minimum": 2,
+        "occurrences": 2385,
+        "quantile_bin": 1,
+        "warm_z3_over_axeyum_geomean": 2.259677577590255
+      },
+      {
+        "cold_z3_over_axeyum_geomean": 1.3995957716733167,
+        "driver_counts": {
+          "sqfs-intel-DptfDevGen.sys": 161,
+          "win10-vwififlt.sys": 1099,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 473,
+          "windows-update-intel-audio-IntcSST.sys": 646
+        },
+        "feature_maximum": 2198,
+        "feature_minimum": 740,
+        "occurrences": 2379,
+        "quantile_bin": 2,
+        "warm_z3_over_axeyum_geomean": 1.1055882668465158
+      },
+      {
+        "cold_z3_over_axeyum_geomean": 0.5315612871150458,
+        "driver_counts": {
+          "sqfs-intel-DptfDevGen.sys": 121,
+          "win10-vwififlt.sys": 2007,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 251,
+          "windows-update-intel-audio-IntcSST.sys": 2
+        },
+        "feature_maximum": 5029,
+        "feature_minimum": 2199,
+        "occurrences": 2381,
+        "quantile_bin": 3,
+        "warm_z3_over_axeyum_geomean": 0.8820023721084245
+      },
+      {
+        "cold_z3_over_axeyum_geomean": 0.7725733608027215,
+        "driver_counts": {
+          "win10-vwififlt.sys": 1337,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 1044
+        },
+        "feature_maximum": 19656,
+        "feature_minimum": 5032,
+        "occurrences": 2381,
+        "quantile_bin": 4,
+        "warm_z3_over_axeyum_geomean": 0.93513876876341
+      }
+    ],
+    "max_bv_width": [
+      {
+        "cold_z3_over_axeyum_geomean": 1.167173330798313,
+        "driver_counts": {
+          "sqfs-intel-DptfDevGen.sys": 561,
+          "win10-vwififlt.sys": 4742,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 2551,
+          "windows-update-intel-audio-IntcSST.sys": 1672
+        },
+        "feature_maximum": 64,
+        "feature_minimum": 0,
+        "occurrences": 9526,
+        "quantile_bin": 1,
+        "warm_z3_over_axeyum_geomean": 1.198448732766926
+      }
+    ],
+    "max_sexpr_depth": [
+      {
+        "cold_z3_over_axeyum_geomean": 2.331896064675993,
+        "driver_counts": {
+          "sqfs-intel-DptfDevGen.sys": 361,
+          "win10-vwififlt.sys": 169,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 1487,
+          "windows-update-intel-audio-IntcSST.sys": 636
+        },
+        "feature_maximum": 16,
+        "feature_minimum": 1,
+        "occurrences": 2653,
+        "quantile_bin": 1,
+        "warm_z3_over_axeyum_geomean": 1.669994762357194
+      },
+      {
+        "cold_z3_over_axeyum_geomean": 1.4090649666366557,
+        "driver_counts": {
+          "sqfs-intel-DptfDevGen.sys": 200,
+          "win10-vwififlt.sys": 852,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 290,
+          "windows-update-intel-audio-IntcSST.sys": 830
+        },
+        "feature_maximum": 25,
+        "feature_minimum": 17,
+        "occurrences": 2172,
+        "quantile_bin": 2,
+        "warm_z3_over_axeyum_geomean": 1.1153610491117965
+      },
+      {
+        "cold_z3_over_axeyum_geomean": 0.8393702901244984,
+        "driver_counts": {
+          "win10-vwififlt.sys": 2000,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 464,
+          "windows-update-intel-audio-IntcSST.sys": 206
+        },
+        "feature_maximum": 41,
+        "feature_minimum": 26,
+        "occurrences": 2670,
+        "quantile_bin": 3,
+        "warm_z3_over_axeyum_geomean": 1.0515642201295043
+      },
+      {
+        "cold_z3_over_axeyum_geomean": 0.5960266915977748,
+        "driver_counts": {
+          "win10-vwififlt.sys": 1721,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 310
+        },
+        "feature_maximum": 71,
+        "feature_minimum": 43,
+        "occurrences": 2031,
+        "quantile_bin": 4,
+        "warm_z3_over_axeyum_geomean": 0.996353591609374
+      }
+    ],
+    "operator_count": [
+      {
+        "cold_z3_over_axeyum_geomean": 3.243693985962982,
+        "driver_counts": {
+          "sqfs-intel-DptfDevGen.sys": 281,
+          "win10-vwififlt.sys": 295,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 806,
+          "windows-update-intel-audio-IntcSST.sys": 1001
+        },
+        "feature_maximum": 167,
+        "feature_minimum": 0,
+        "occurrences": 2383,
+        "quantile_bin": 1,
+        "warm_z3_over_axeyum_geomean": 2.2598917367946743
+      },
+      {
+        "cold_z3_over_axeyum_geomean": 1.4150029529843684,
+        "driver_counts": {
+          "sqfs-intel-DptfDevGen.sys": 155,
+          "win10-vwififlt.sys": 1082,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 475,
+          "windows-update-intel-audio-IntcSST.sys": 671
+        },
+        "feature_maximum": 510,
+        "feature_minimum": 168,
+        "occurrences": 2383,
+        "quantile_bin": 2,
+        "warm_z3_over_axeyum_geomean": 1.1063587798159424
+      },
+      {
+        "cold_z3_over_axeyum_geomean": 0.5321208593787194,
+        "driver_counts": {
+          "sqfs-intel-DptfDevGen.sys": 125,
+          "win10-vwififlt.sys": 1989,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 269
+        },
+        "feature_maximum": 1221,
+        "feature_minimum": 511,
+        "occurrences": 2383,
+        "quantile_bin": 3,
+        "warm_z3_over_axeyum_geomean": 0.8826966598658339
+      },
+      {
+        "cold_z3_over_axeyum_geomean": 0.7590378000180353,
+        "driver_counts": {
+          "win10-vwififlt.sys": 1376,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 1001
+        },
+        "feature_maximum": 4236,
+        "feature_minimum": 1223,
+        "occurrences": 2377,
+        "quantile_bin": 4,
+        "warm_z3_over_axeyum_geomean": 0.9341363782283226
+      }
+    ],
+    "query_bytes": [
+      {
+        "cold_z3_over_axeyum_geomean": 3.2267215735357824,
+        "driver_counts": {
+          "sqfs-intel-DptfDevGen.sys": 278,
+          "win10-vwififlt.sys": 302,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 778,
+          "windows-update-intel-audio-IntcSST.sys": 1024
+        },
+        "feature_maximum": 6122,
+        "feature_minimum": 30,
+        "occurrences": 2382,
+        "quantile_bin": 1,
+        "warm_z3_over_axeyum_geomean": 2.260082721129891
+      },
+      {
+        "cold_z3_over_axeyum_geomean": 1.413559602787299,
+        "driver_counts": {
+          "sqfs-intel-DptfDevGen.sys": 162,
+          "win10-vwififlt.sys": 1092,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 481,
+          "windows-update-intel-audio-IntcSST.sys": 646
+        },
+        "feature_maximum": 18050,
+        "feature_minimum": 6123,
+        "occurrences": 2381,
+        "quantile_bin": 2,
+        "warm_z3_over_axeyum_geomean": 1.1071085596080494
+      },
+      {
+        "cold_z3_over_axeyum_geomean": 0.5270097061625061,
+        "driver_counts": {
+          "sqfs-intel-DptfDevGen.sys": 121,
+          "win10-vwififlt.sys": 2011,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 250,
+          "windows-update-intel-audio-IntcSST.sys": 2
+        },
+        "feature_maximum": 41270,
+        "feature_minimum": 18057,
+        "occurrences": 2384,
+        "quantile_bin": 3,
+        "warm_z3_over_axeyum_geomean": 0.8801189805521432
+      },
+      {
+        "cold_z3_over_axeyum_geomean": 0.7722290194216694,
+        "driver_counts": {
+          "win10-vwififlt.sys": 1337,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 1042
+        },
+        "feature_maximum": 159686,
+        "feature_minimum": 41321,
+        "occurrences": 2379,
+        "quantile_bin": 4,
+        "warm_z3_over_axeyum_geomean": 0.9366670216924544
+      }
+    ],
+    "query_occurrences_per_run": [
+      {
+        "cold_z3_over_axeyum_geomean": 0.9851147310298565,
+        "driver_counts": {
+          "sqfs-intel-DptfDevGen.sys": 239,
+          "win10-vwififlt.sys": 2603,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 1856,
+          "windows-update-intel-audio-IntcSST.sys": 977
+        },
+        "feature_maximum": 1,
+        "feature_minimum": 1,
+        "occurrences": 5675,
+        "quantile_bin": 1,
+        "warm_z3_over_axeyum_geomean": 0.8091536308406827
+      },
+      {
+        "cold_z3_over_axeyum_geomean": 1.4020372722819572,
+        "driver_counts": {
+          "sqfs-intel-DptfDevGen.sys": 204,
+          "win10-vwififlt.sys": 942,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 344,
+          "windows-update-intel-audio-IntcSST.sys": 434
+        },
+        "feature_maximum": 2,
+        "feature_minimum": 2,
+        "occurrences": 1924,
+        "quantile_bin": 3,
+        "warm_z3_over_axeyum_geomean": 1.8307466273586632
+      },
+      {
+        "cold_z3_over_axeyum_geomean": 1.601509416381331,
+        "driver_counts": {
+          "sqfs-intel-DptfDevGen.sys": 118,
+          "win10-vwififlt.sys": 1197,
+          "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys": 351,
+          "windows-update-intel-audio-IntcSST.sys": 261
+        },
+        "feature_maximum": 41,
+        "feature_minimum": 3,
+        "occurrences": 1927,
+        "quantile_bin": 4,
+        "warm_z3_over_axeyum_geomean": 2.4961970955609285
+      }
+    ]
+  },
+  "schema": "axeyum-glaurung-regime-features-v1"
+}

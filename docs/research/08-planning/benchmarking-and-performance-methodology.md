@@ -444,8 +444,24 @@ records the contract and the first measured baselines.
   used as a solver headline. Exact JSON and four-cell CDF evidence is committed
   under
   [`bench-results/glaurung-four-cell-dptf-20260717/`](../../../bench-results/glaurung-four-cell-dptf-20260717/README.md).
-  Neutral-solver, timeout-sensitive, and authoritative finding-parity gates
-  remain open.
+  ADR-0217 repeats that control on vwififlt, IntcSST, and SurfacePen. ADR-0218
+  then joins the four accepted reports to hash-verified query features without
+  changing the producer:
+
+  ```sh
+  python3 scripts/analyze-glaurung-regime-features.py \
+    --output target/glaurung-regime/report.json \
+    --rows-csv target/glaurung-regime/occurrences.csv \
+    bench-results/glaurung-four-cell-dptf-20260717/report.json \
+    bench-results/glaurung-four-cell-small-drivers-20260717/*/report.json
+  ```
+
+  The feature report is descriptive: preserve per-driver strata, label pooled
+  ranks as composition-confounded, do not split equal feature values across
+  quantile bins, and never describe marginal outcome/purpose standardization
+  as a causal counterfactual. It selects the next measurement—per-check
+  rewrite/AIG/CNF/SAT work and timing—rather than replacing it. Neutral-solver,
+  timeout-sensitive, and authoritative finding-parity gates remain open.
 - Timeout regressions must pin the exact pathological public or minimized query
   and exercise both admission outcomes: deterministic oversized refusal before
   allocation and cooperative expiry inside admitted superlinear work. Every

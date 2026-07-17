@@ -58,6 +58,8 @@ class Check:
     identity: tuple[Any, ...]
     check_id: str
     query_sha256: str
+    purpose: str
+    active_constraint_count: int
     z3_outcome: str
     axeyum_outcome: str
     z3_nanos: int
@@ -306,14 +308,22 @@ def load_trace(root: pathlib.Path) -> Trace:
             for alias, explicit, label in aliases:
                 if alias != explicit:
                     fail(f"{label} alias mismatch for {check_id} in {root}")
+        purpose = require_string(event.get("purpose"), "check purpose")
+        active_constraint_count = event.get("active_constraint_count")
+        if (
+            isinstance(active_constraint_count, bool)
+            or not isinstance(active_constraint_count, int)
+            or active_constraint_count < 0
+        ):
+            fail(f"invalid active constraint count for {check_id} in {root}")
         identity = (
             event.get("event_seq"),
             check_id,
             event.get("path_id"),
             query_sha256,
-            event.get("purpose"),
+            purpose,
             event.get("scope_digest"),
-            event.get("active_constraint_count"),
+            active_constraint_count,
             execution,
             fair_values.get("z3_warm_execution"),
             fair_values.get("axeyum_warm_execution"),
@@ -323,6 +333,8 @@ def load_trace(root: pathlib.Path) -> Trace:
                 identity=identity,
                 check_id=check_id,
                 query_sha256=query_sha256,
+                purpose=purpose,
+                active_constraint_count=active_constraint_count,
                 z3_outcome=z3_outcome,
                 axeyum_outcome=axeyum_outcome,
                 z3_nanos=z3_nanos,
