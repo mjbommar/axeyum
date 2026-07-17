@@ -15,11 +15,13 @@ MODULE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(MODULE)
 
 
-def report(candidate: bool, nanos: int = 100_000_000) -> dict:
+def report(
+    candidate: bool, nanos: int = 100_000_000, *, noop: bool = False
+) -> dict:
     continuation = {
-        "continuations": 2 if candidate else 0,
-        "recoveries": 1 if candidate else 0,
-        "unknowns": 1 if candidate else 0,
+        "continuations": 2 if candidate and not noop else 0,
+        "recoveries": 1 if candidate and not noop else 0,
+        "unknowns": 1 if candidate and not noop else 0,
         "errors": 0,
         "cold_retries": 0,
     }
@@ -39,6 +41,11 @@ def report(candidate: bool, nanos: int = 100_000_000) -> dict:
             "recorded_unsat": 4,
             "recorded_unknown": 1,
             "recorded_error": 0,
+            "actual_sat": 6 if candidate and not noop else 5,
+            "actual_unsat": 4,
+            "actual_unknown": 0 if candidate and not noop else 1,
+            "recovered_decisions": 1 if candidate and not noop else 0,
+            "lost_decisions": 0,
             "opposite_decisions": 0,
         },
         "exact_work": {
@@ -51,7 +58,16 @@ def report(candidate: bool, nanos: int = 100_000_000) -> dict:
             "serial_tracked_owners": 0,
             "serial_references": 0,
         },
-        "replay_sat_cache": {"replay_failures": 0},
+        "replay_sat_cache": {
+            "hits": 3,
+            "misses": 7,
+            "insertions": 4,
+            "evictions": 0,
+            "replay_failures": 0,
+            "entries": 0,
+            "model_values": 0,
+            "model_bits": 0,
+        },
         "timeout_continuation": continuation,
         "timing": {"actual_axeyum_nanos": nanos},
     }
@@ -76,7 +92,9 @@ class NativeReplayComparisonTests(unittest.TestCase):
         )
         return report_path, time_path
 
-    def arguments(self, controls, candidates) -> argparse.Namespace:
+    def arguments(
+        self, controls, candidates, *, candidate_expectation: str = "recovery"
+    ) -> argparse.Namespace:
         return argparse.Namespace(
             control_report=[item[0] for item in controls],
             control_time=[item[1] for item in controls],
@@ -86,6 +104,7 @@ class NativeReplayComparisonTests(unittest.TestCase):
             max_time_regression_percent=3.0,
             max_rss_regression_percent=5.0,
             max_cv_percent=3.0,
+            candidate_expectation=candidate_expectation,
         )
 
     def test_accepts_repeated_exact_identity_with_bounded_cost(self) -> None:
@@ -119,6 +138,43 @@ class NativeReplayComparisonTests(unittest.TestCase):
         ]
         with self.assertRaisesRegex(MODULE.GateError, "recover a decision"):
             MODULE.compare(self.arguments(controls, candidates))
+
+    def test_accepts_exact_noop_candidate(self) -> None:
+        controls = [self.write_run(f"control-{i}", report(False)) for i in range(3)]
+        candidates = [
+            self.write_run(f"candidate-{i}", report(True, noop=True))
+            for i in range(3)
+        ]
+        summary = MODULE.compare(
+            self.arguments(controls, candidates, candidate_expectation="noop")
+        )
+        self.assertEqual(summary["gate"], "pass")
+        self.assertEqual(summary["candidate_expectation"], "noop")
+        self.assertEqual(summary["candidate"]["continuations"], 0)
+
+    def test_rejects_noop_candidate_behavior_drift(self) -> None:
+        controls = [self.write_run(f"control-{i}", report(False)) for i in range(3)]
+        candidates = [
+            self.write_run(f"candidate-{i}", report(True, noop=True))
+            for i in range(3)
+        ]
+        changed = json.loads(candidates[-1][0].read_text())
+        changed["outcomes"]["actual_sat"] = 4
+        candidates[-1][0].write_text(json.dumps(changed))
+        with self.assertRaisesRegex(MODULE.GateError, "no-op behavior drift"):
+            MODULE.compare(
+                self.arguments(controls, candidates, candidate_expectation="noop")
+            )
+
+    def test_rejects_noop_candidate_that_continues(self) -> None:
+        controls = [self.write_run(f"control-{i}", report(False)) for i in range(3)]
+        candidates = [
+            self.write_run(f"candidate-{i}", report(True)) for i in range(3)
+        ]
+        with self.assertRaisesRegex(MODULE.GateError, "zero continuations"):
+            MODULE.compare(
+                self.arguments(controls, candidates, candidate_expectation="noop")
+            )
 
 
 if __name__ == "__main__":

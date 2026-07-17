@@ -322,6 +322,25 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-17 — ADR-0212 proves wider dxgkrnl functionality but defers the
+  direct-delta default.** Clean Glaurung `9ace064` analyzes every available
+  `dxgkrnl.sys` function under 139 dispatch roots and publishes 85,449 ordered
+  events / 17,400 checks / 13,577 unique queries / 3,005 assertions / 8,816
+  model reads plus 312 stable findings. Producer validation and independent
+  Axeyum `1cc19181` replay both pass with zero verdict/model failures. Three
+  ordinary-core native control/candidate pairs preserve exact work, actual
+  outcomes, replay-cache behavior, source-owner/serial-lease topology, and
+  zero continuation traffic. The standard gate nevertheless rejects control/
+  candidate Axeyum-time CV of 14.430%/8.306% above 3%; a relaxed comparison is
+  diagnostic only. Slower-core calibration stabilizes time but changes actual
+  outcomes at the 250 ms first-check boundary and is rejected by the new exact
+  no-op comparator mode. Keep direct delta opt-in; repeat in a quieter
+  predeclared environment or use another valid no-timeout IOCTL driver. Real
+  `win32k.sys` imports service-table/callout registration but exposes no WDM or
+  KMDF dispatch roots, so route it to a future system-service/callout frontend
+  rather than counting zero queries as solver evidence. The leading available
+  pure-solver work remains measured cold AIG/CNF construction before SAT.
+
 - **2026-07-17 — ADR-0211 accepts native same-session continuation inside
   direct delta; wider direct-delta admission remains separate.** Clean
   Glaurung `33191ac` completes the fixed 156/338-function tcpip run under
@@ -1879,16 +1898,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   | **GQ4 cold relevant bits** | **v1 and v2 DEFERRED after failed real gates.** v1 regresses ~1.42x→4.49x. V2 rejection overhead is bounded, but defaults admit 0/128 and +0.62% total; a 33-query moderate policy removes 632 AIG nodes/zero clauses and regresses bit blast 3.14% | Keep both explicit/off. Reopen only with an AIG/CNF-cone estimator or after word rewrites materially change the residual; do not tune thresholds further |
   | **GQ5 AIG/CNF construction** | **AIG tranche accepted; direct CNF-table transfer rejected (ADR-0175/0200).** AIG open addressing improves native time 7.66%, but the structurally exact CNF primary-table candidate regresses representative mean CNF/total 8.55%/3.67% and is reverted | Re-attribute a larger CNF subphase or encoding hypothesis; do not retry table micro-work without per-probe causal evidence |
   | **GQ6 cold SAT/CDCL** | **WIP foundation; behind measured CNF.** Accepted-table native lineage SAT is 18.48% weighted versus CNF at 46.55% | Compare identical CNF across cores only after the next CNF decision, with proof replay and deterministic limits |
-  | **GQ7 warm delta entry** | **Source-identity functionality and current production comparison DONE (ADR-0201--0205; Glaurung `29031f8`).** The 92,721-check serial-default comparison passes every correctness/time/ratio/RSS alarm; tcpip/dxgkrnl functionality is clean, but exact repeated admission remains open | Keep direct opt-in; hold large-driver work/findings constant, then revisit default and order-balanced causal evidence |
+  | **GQ7 warm delta entry** | **Source-identity functionality and current production comparison DONE; wider default DEFERRED (ADR-0201--0212).** The 92,721-check serial-default comparison passes every alarm. The exact 17,400-check `dxgkrnl` no-op control is functionally green but fails the standard timing-variance gate | Keep direct opt-in; rerun the identical no-op gate only in a quieter predeclared environment or on another valid no-timeout IOCTL driver |
   | **GQ8 verdict/CNF cache** | **DONE for available families (ADR-0192).** Clean repeated evidence admits exact same-arena scalar SAT reuse only in path-owned Glaurung sessions; fixed bounds, traffic partitions, cleanup gauges, findings, and replay are enforced | Preserve explicit off and re-gate new families; Axeyum's generic cache remains opt-in and ordinary UNSAT/Unknown/prefix verdicts remain excluded |
   | **GQ9 auto cost model/docs** | **DONE for available families (ADR-0186).** Clean adaptive repeat clears every alarm over 92,721 checks; downstream explorer default has explicit off/fixed controls | Re-gate newly captured families; do not broaden this Glaurung-specific default into Axeyum's generic API |
-  | **GQ10 real-lifter regression tier** | **Native continuation admission DONE; wider direct-delta admission active (ADR-0205--0211).** The complete 326,364-event / 71,136-check native trace preserves findings, native packs, source-owner/serial-lease topology, independent replay, and implementation identity. Three interleaved pairs recover 18/29 continuations at +2.027% p50 time / +1.021% RSS with all correctness, cleanup, and variance alarms green | Glaurung `9ace064` defaults continuation on only inside separately selected direct delta. Keep direct delta opt-in; add another wider/no-timeout driver control and investigate zero-query win32k separately |
+  | **GQ10 real-lifter regression tier** | **Native continuation admission DONE; wider direct-delta default DEFERRED (ADR-0205--0212).** The accepted tcpip trace admits bounded continuation. The new complete 85,449-event / 17,400-check `dxgkrnl` trace and independent replay preserve exact no-op behavior and every correctness/lifecycle gauge, but ordinary-core time CV is 14.430%/8.306% and slower-core outcomes drift | Keep direct delta opt-in. Repeat under a quieter predeclared environment or add another no-timeout IOCTL driver; route `win32k` to a system-service/callout frontend |
 
-  **Next actions:** (1) add another wider/no-timeout driver to the native
-  production-topology gate before deciding direct-delta admission; (2) preserve
+  **Next actions:** (1) rerun the exact `dxgkrnl` no-op comparison in a quieter,
+  predeclared environment or add another valid no-timeout IOCTL driver before
+  deciding direct-delta admission; (2) preserve
   explicit continuation on/off controls, exact counter partitions, and honest
-  residual `Unknown`s; (3) inspect `win32k` dispatch recovery as a frontend
-  coverage issue, never a zero-query solver success; (4) rerun the
+  residual `Unknown`s; (3) route `win32k` through a future system-service/
+  callout frontend, never a fabricated IRP root or zero-query solver success;
+  (4) rerun the
   exclusive-direct causal comparison
   only with order-balanced Z3 drift control; (5) obtain fresh native canonical-
   stage attribution and select new GQ5/GQ6 work only from a larger measured
@@ -1906,11 +1927,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   Glaurung regular gate, foundational resources, generated-resource drift,
   all 23 rules-as-code generation/validation/query checks, and documentation
   links pass. Both regular-gate policies decide 162/162 with zero disagreements,
-  errors, or replay failures (raw 0.646x Z3; canonical 0.306x). All 47
-  benchmark summarizer/comparator/gate tests pass. The nine recipe-rendering
+  errors, or replay failures (raw 0.710x Z3; canonical 0.320x). All 50
+  available benchmark summarizer/comparator/gate tests pass. The nine recipe-rendering
   tests and the aggregate `just check` wrapper remain unavailable because this
   host has no `just` executable; their underlying non-rendering gates above
-  were run directly.
+  were run directly. Strict current-nightly Clippy also exposed seven
+  mechanical cleanup sites (byte-array literals, one redundant pattern, one
+  suffix parse, and two needless match wrappers); those semantics-preserving
+  edits are included in this checkpoint.
 
   **Validation (2026-07-15):** a clean, serialized `just check` at `623cae4c`
   completed under the 4 GiB memory cap with formatting, strict
@@ -3697,7 +3721,7 @@ plan is built and committed on the current branch:
 ### Track 4 — Use Cases & Frontend
 | Phase | Title | Status |
 |---|---|---|
-| P4.1j | Glaurung warm delta and duplicate/prefix reuse (GQ7/GQ8) | **DONE for current serial/source-direct families and native continuation admission; wider direct-delta admission active.** ADR-0186/0192/0193/0195/0196/0199 establish adaptive snapshot ownership and serial LCP reuse. ADR-0201--0205 accept first-class source deltas and the two-driver production win. ADR-0206/0207 close Glaurung's declared-concat error class; ADR-0208 rejects fresh cold retry on RSS. ADR-0209--0211 establish, causally validate, and admit low-memory same-session continuation through a repeated exact 71,136-check native source-owner/serial-lease gate. Glaurung `9ace064` defaults it on only inside separately selected direct-delta sessions. Direct delta remains opt-in pending another wider/no-timeout driver and the zero-query `win32k` frontend investigation. |
+| P4.1j | Glaurung warm delta and duplicate/prefix reuse (GQ7/GQ8) | **DONE for current serial/source-direct families and native continuation admission; wider direct-delta admission deferred.** ADR-0186/0192/0193/0195/0196/0199 establish adaptive snapshot ownership and serial LCP reuse. ADR-0201--0205 accept first-class source deltas and the two-driver production win. ADR-0206--0211 close the concat error class, reject cold retry, and admit low-memory continuation through the exact tcpip gate. ADR-0212 adds complete `dxgkrnl` no-op functionality but rejects default admission because ordinary-core variance exceeds 3% and slower-core outcomes drift. Glaurung `9ace064` still defaults continuation only inside separately selected direct delta. Keep direct delta opt-in; rerun the exact wider gate in a quieter environment or on another valid IOCTL driver. `win32k` belongs to a future system-service/callout frontend. |
 | P4.1e | Retained warm Boolean array relation flags | **DONE (ADR-0091)** — symbolic-memory path conditions can keep nested supported array equality atoms warm through private candidate-sensitive relation flags, guarded equality/diff observations, projection filtering, and replay |
 | P4.1h | Retained warm nested array-valued UF parameters | **DONE (ADR-0094)** — nested supported array-valued memory/function parameters can stay warm as full-value UF keys through private projection keys or rewritten structural keys, with relation-flag guarded congruence, private filtering, and replay |
 | P4.1g | Retained warm structural array-valued UF parameters | **DONE (ADR-0093)** — supported store/constant/array-ITE memory/function parameters can stay warm as full-value UF keys with scalar dependency retention, structural owner realization, relation-flag guarded congruence, private filtering, and replay; ADR-0094 subsequently lands nested application keys |
@@ -3718,6 +3742,19 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-17 — ADR-0212 defers wider direct-delta admission after the exact
+  dxgkrnl no-op control fails stability.** The complete 85,449-event /
+  17,400-check trace and independent 13,577-query / 8,816-model-read replay
+  pass. All six ordinary-core reports have exact work, outcomes, cache
+  behavior, zero continuation traffic, and zero correctness/lifecycle alarms,
+  but time CV is 14.430%/8.306% versus the declared 3% limit. Slower-core
+  calibration changes bounded outcomes and is rejected too. A new comparator
+  `noop` expectation enforces that boundary. Direct delta stays opt-in;
+  `win32k` moves from IOCTL evidence to a future service/callout frontend.
+  The complete direct verification surface is green; the only unavailable
+  wrapper-level coverage is nine recipe-rendering tests because this host does
+  not provide `just`.
 
 - **2026-07-17 — ADR-0211 accepts the native timeout-continuation default
   inside direct delta.** The 326,364-event / 71,136-check tcpip artifact passes

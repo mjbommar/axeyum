@@ -165,12 +165,32 @@ def validate_policy(report: dict[str, Any], path: Path, candidate: bool) -> None
         fail(f"{path}: cold retry must remain disabled")
 
 
+def noop_behavior(report: dict[str, Any]) -> dict[str, Any]:
+    """Return every result/cache field that must be inert in a no-op control."""
+    outcomes = mapping(report.get("outcomes"), "outcomes")
+    return {
+        "actual_outcomes": {
+            key: integer(outcomes.get(key), f"outcomes.{key}")
+            for key in (
+                "actual_sat",
+                "actual_unsat",
+                "actual_unknown",
+                "recovered_decisions",
+                "lost_decisions",
+                "opposite_decisions",
+            )
+        },
+        "replay_sat_cache": mapping(report.get("replay_sat_cache"), "replay_sat_cache"),
+    }
+
+
 def summarize(
     reports: Sequence[Path],
     times: Sequence[Path],
     *,
     candidate: bool,
-) -> tuple[dict[str, Any], dict[str, Any]]:
+    enforce_noop_behavior: bool,
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
     if len(reports) != len(times):
         fail("each report requires one matching GNU time artifact")
     loaded: list[dict[str, Any]] = []
@@ -179,6 +199,7 @@ def summarize(
     elapsed: list[float] = []
     native: list[float] = []
     expected_identity: dict[str, Any] | None = None
+    expected_noop_behavior: dict[str, Any] | None = None
     recoveries = 0
     continuations = 0
     for report_path, time_path in zip(reports, times, strict=True):
@@ -189,6 +210,11 @@ def summarize(
             expected_identity = current_identity
         elif current_identity != expected_identity:
             fail(f"{report_path}: exact trace/work identity drift within policy")
+        current_noop_behavior = noop_behavior(report)
+        if expected_noop_behavior is None:
+            expected_noop_behavior = current_noop_behavior
+        elif enforce_noop_behavior and current_noop_behavior != expected_noop_behavior:
+            fail(f"{report_path}: no-op behavior drift within policy")
         timing = mapping(report.get("timing"), f"{report_path}: timing")
         native.append(
             integer(timing.get("actual_axeyum_nanos"), "actual_axeyum_nanos")
@@ -203,6 +229,7 @@ def summarize(
         hashes.append(digest)
         loaded.append(report)
     assert expected_identity is not None
+    assert expected_noop_behavior is not None
     return (
         {
             "runs": len(loaded),
@@ -214,6 +241,7 @@ def summarize(
             "recoveries": recoveries,
         },
         expected_identity,
+        expected_noop_behavior,
     )
 
 
@@ -222,16 +250,31 @@ def compare(args: argparse.Namespace) -> dict[str, Any]:
         args.candidate_report
     ) < args.min_repetitions:
         fail(f"each policy requires at least {args.min_repetitions} repetitions")
-    control, control_identity = summarize(
-        args.control_report, args.control_time, candidate=False
+    expect_noop = args.candidate_expectation == "noop"
+    control, control_identity, control_noop_behavior = summarize(
+        args.control_report,
+        args.control_time,
+        candidate=False,
+        enforce_noop_behavior=expect_noop,
     )
-    candidate, candidate_identity = summarize(
-        args.candidate_report, args.candidate_time, candidate=True
+    candidate, candidate_identity, candidate_noop_behavior = summarize(
+        args.candidate_report,
+        args.candidate_time,
+        candidate=True,
+        enforce_noop_behavior=expect_noop,
     )
     if control_identity != candidate_identity:
         fail("control/candidate trace, finding, or exact-work identity differs")
-    if candidate["continuations"] == 0 or candidate["recoveries"] == 0:
-        fail("candidate must exercise continuation and recover a decision")
+    if args.candidate_expectation == "recovery":
+        if candidate["continuations"] == 0 or candidate["recoveries"] == 0:
+            fail("candidate must exercise continuation and recover a decision")
+    elif args.candidate_expectation == "noop":
+        if candidate["continuations"] != 0 or candidate["recoveries"] != 0:
+            fail("no-op candidate must execute zero continuations and recoveries")
+        if control_noop_behavior != candidate_noop_behavior:
+            fail("control/candidate no-op behavior drift")
+    else:
+        fail(f"unsupported candidate expectation: {args.candidate_expectation!r}")
 
     control_time = control["axeyum_seconds"]["p50"]
     candidate_time = candidate["axeyum_seconds"]["p50"]
@@ -255,6 +298,8 @@ def compare(args: argparse.Namespace) -> dict[str, Any]:
         )
     return {
         "schema": SUMMARY_SCHEMA,
+        "candidate_expectation": args.candidate_expectation,
+        "noop_behavior": control_noop_behavior if expect_noop else None,
         "identity": control_identity,
         "alarms": {
             "max_time_regression_percent": args.max_time_regression_percent,
@@ -278,6 +323,12 @@ def parser() -> argparse.ArgumentParser:
     result.add_argument("--candidate-report", type=Path, action="append", required=True)
     result.add_argument("--candidate-time", type=Path, action="append", required=True)
     result.add_argument("--min-repetitions", type=int, default=3)
+    result.add_argument(
+        "--candidate-expectation",
+        choices=("recovery", "noop"),
+        default="recovery",
+        help="require recovered decisions or prove the enabled policy is an exact no-op",
+    )
     result.add_argument("--max-time-regression-percent", type=float, default=3.0)
     result.add_argument("--max-rss-regression-percent", type=float, default=5.0)
     result.add_argument("--max-cv-percent", type=float, default=3.0)

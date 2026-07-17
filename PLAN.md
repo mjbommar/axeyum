@@ -514,10 +514,10 @@ count as decisions or speedups.
 | **GQ4** | **Cold demand-driven bit-slice reduction** | **Out of the active queue.** ADR-0157 v1 is correct but regresses the real ratio about 1.42x→4.49x; ADR-0158's conservative admission is a safe no-op but does not improve the required family. Both remain explicit/off. Do not tune thresholds further on this corpus; only a qualitatively different constant-cost admission proof and a fresh client gate can reopen GQ4. |
 | **GQ5** | **Cheaper AIG construction and measured CNF encoding** | **Leading remaining pure-solver lane.** ADR-0175 accepts deterministic open-addressed AIG hashing. Current cold evidence still assigns about 84% to bit blast plus CNF and only about 15% to SAT; CNF is about 46% on the accepted cold bar. Continue measured CNF lookup/ownership and clause-emission work, with the rejected growing-AIG half-flattening candidate as a warning that immediate clause savings need retained-future-use or rollback evidence. |
 | **GQ6** | **Cold SAT/CDCL tuning** | **Partition by policy before acting.** SAT is only about 15% on the cold one-shot workload, so it remains behind GQ5 there. ADR-0199 collapses warm construction enough that SAT becomes 47.2% of its diagnostic candidate profile; compare identical retained CNF across BatSat/proof core/oracles before a warm SAT claim. Preserve proof replay and deterministic limits. |
-| **GQ7** | **Cheaper warm entry and delta preprocessing** | **Source-identity functionality and the current two-driver production gate are DONE (ADR-0201--0205).** Glaurung `29031f8` commits 92,721 exact checks: source direct beats serial snapshot time/ratio/RSS 16.11%/17.39%/0.36% on SurfacePen and 6.07%/6.61%/1.72% on NETwtw10. Keep direct opt-in until GQ10 widens to `tcpip`/`dxgkrnl`; the exclusive-control SurfacePen Z3 drift remains rejected. |
+| **GQ7** | **Cheaper warm entry and delta preprocessing** | **Source-identity functionality and the current two-driver production gate are DONE (ADR-0201--0205).** Glaurung `29031f8` commits 92,721 exact checks: source direct beats serial snapshot time/ratio/RSS 16.11%/17.39%/0.36% on SurfacePen and 6.07%/6.61%/1.72% on NETwtw10. ADR-0212 adds exact `dxgkrnl` no-op functionality but defers the wider default because timing variance fails; keep direct opt-in. |
 | **GQ8** | **Verdict and CNF reuse for duplicate/prefix queries** | **Exact replay-checked SAT reuse is done for available families (ADR-0192); stronger subsumption remains open.** Exact hits replay under fixed bounds; ordinary UNSAT/Unknown and prefix verdict reuse remain forbidden. Investigate only replay-checked stronger-model reuse where a cached model is proven to satisfy the complete weaker later query. |
 | **GQ9** | **Auto production policy and API guidance** | **DONE for available serial families (ADR-0186/0199).** Adaptive 2→9 ownership plus serial sibling continuation reuse is the downstream default; ADR-0199 clears every time/ratio/RSS/environment alarm and improves RSS on both accepted drivers. Explicit one-shot, fixed, transfer-only, and serial-off controls remain. Re-gate wider families and never apply serial leases across parallel workers. |
-| **GQ10** | **Ordered, wider real-lifter regression corpus** | **Native timeout-continuation admission is DONE (ADR-0205--0211); broader widening remains active.** Strict split replay found and `d60ed0f` closes Glaurung's declared-concat defect. The first complete native trace publishes 326,364 events / 71,136 checks with exact source-owner/serial-lease topology, 794 finding rows, 10,515 native packs, and 27,940 independently replayed model reads. Three interleaved fresh-process pairs recover 18/29 continuations with zero errors, opposite decisions, resets, replay failures, topology drift, or terminal gauges; p50 Axeyum time/RSS changes +2.027%/+1.021% and timing CV stays below 0.4%. Glaurung `9ace064` defaults continuation on only inside separately selected direct-delta sessions with a fail-closed off control. Direct delta itself remains opt-in pending wider-driver admission; zero-query `win32k` remains a frontend gap. |
+| **GQ10** | **Ordered, wider real-lifter regression corpus** | **Native timeout-continuation admission is DONE; wider direct-delta admission is deferred (ADR-0205--0212).** The accepted tcpip gate still defaults one bounded continuation only inside selected direct-delta sessions. A complete 85,449-event / 17,400-check `dxgkrnl` trace and independent 13,577-query / 8,816-model-read replay prove exact production-topology no-op functionality with zero correctness or lifecycle alarms. The repeated ordinary-core comparison nevertheless fails the declared timing-CV gate (14.430% control, 8.306% candidate); slower-core calibration changes actual outcomes at the 250 ms boundary. Keep direct delta opt-in. `win32k` is now classified as a system-service/callout frontend target, not zero-query IOCTL solver evidence. |
 
 **Post-ADR-0199 Glaurung next-ten mapping (2026-07-16).** This is the current
 priority interpretation of the latest client feedback; it supersedes older
@@ -530,7 +530,7 @@ stage rankings where the accepted evidence has changed.
 | 3 | Safe automatic warm policy | **Done for current families in ADR-0186/0199.** Adaptive ownership, exact cache, owner transfer, and serial sibling leases default on only in the explicit explorer context; preserve all off/fixed controls and re-gate wider families. |
 | 4 | Lineage RSS Pareto knee | ADR-0198 rejects a third retained owner (+7.66% RSS); ADR-0199 instead reduces accepted SurfacePen/NETwtw10 RSS 6.11%/13.36%. Continue only topology/lifetime changes that clear the 5% alarm. |
 | 5 | Sibling-prefix structural sharing | **Functionality and production comparison done in ADR-0204/0205.** Exact `Arc` ancestry preserves one mutable session; the two-driver production gate passes. The exclusive-control comparison still rejects +4.06% SurfacePen Z3 drift; rerun only under a same-environment/order-balanced control. |
-| 6 | Wider driver corpus and repetitions | **ACTIVE; native continuation admission done, wider direct-delta admission remains (ADR-0206--0211).** Exact split packs close the 733-formula concat error class. The repeated 71,136-check production-topology gate binds exact traffic, findings, native packs, owner lifecycle, independent replay, and implementation revisions; it recovers 18/29 continuations inside the 3% time / 5% RSS / 3% CV alarms with every correctness and cleanup gauge green. Continuation now defaults on only after direct delta is selected. Keep direct delta itself opt-in until another driver/no-timeout control closes its separate widening gate. Investigate zero-query `win32k` independently. |
+| 6 | Wider driver corpus and repetitions | **DEFERRED at the wider-default gate; native continuation admission remains done (ADR-0206--0212).** The 71,136-check tcpip gate admits bounded continuation. The complete 17,400-check `dxgkrnl` no-op control preserves exact outcomes, cache behavior, work, findings, and topology, but its ordinary-core Axeyum-time CV is 14.430%/8.306%, above 3%; slower-core repetitions change bounded outcomes and are rejected too. Keep direct delta opt-in and rerun only in a quieter/exclusive environment or on another valid no-timeout IOCTL driver. Route `win32k` to a future system-service/callout frontend. |
 | 7 | Warm CNF dominant-cost attack | Historical pre-ADR-0199 warm CNF was 43.8%; serial sharing cuts CNF 66.8% and makes SAT 47.2% of that candidate profile. Re-profile each accepted policy and require retained-future-use or rollback evidence before retrying AND-half flattening. |
 | 8 | Stronger-than-exact replay cache | Test only SAT model subsumption: a retained model may answer a weaker later query only after evaluating every complete original assertion. Keep UNSAT/Unknown and unchecked prefix verdict reuse forbidden. |
 | 9 | Parallel path exploration | Confirm `Send`/per-worker ownership and benchmark independent path solvers. ADR-0199 leases are serial-only and must never cross workers; determinism, memory caps, and replay remain mandatory. |
@@ -673,6 +673,30 @@ Candidate p50 Axeyum time/RSS changes +2.027%/+1.021%, and time CV remains below
 separately selected direct-delta sessions, with missing=on and explicit or
 unrecognized values failing closed to off. Direct delta itself remains opt-in.
 
+ADR-0212 completes the next wider functionality control but defers admission.
+Clean `dxgkrnl.sys` publishes 85,449 events / 17,400 exact checks / 312 finding
+rows and the complete source-owner/serial-lease lifecycle; independent Axeyum
+replay validates all 13,577 unique queries and 8,816 model reads. Three
+ordinary-core control/candidate pairs preserve exact work, outcomes, cache
+behavior, and zero continuation traffic, but Axeyum-time CV is 14.430%/8.306%
+and fails the declared 3% alarm. A relaxed 20% comparison is diagnostic only;
+slower-core calibration changes actual outcomes at the 250 ms deadline and is
+also rejected. Keep direct delta opt-in and repeat only under a quieter,
+predeclared environment or with another valid no-timeout IOCTL driver.
+`win32k.sys` is not such a driver: its service-table/callout shape yields no
+WDM/KMDF dispatch roots, so it moves to a future system-service/callout
+frontend rather than counting as zero-query solver evidence.
+
+The 2026-07-17 verification checkpoint is green for formatting, strict
+all-target/all-feature Clippy, the full workspace test and doctest suite,
+warning-denied documentation, the QF_BV profile, the pinned 162-query
+Glaurung regular gate, foundational resources, rules-as-code generation and
+validation, and documentation links. The host lacks `just`, so the aggregate
+wrapper and its nine recipe-rendering tests remain unavailable; the underlying
+gates were run directly. Current-nightly Clippy required only mechanical,
+semantics-preserving test-literal, redundant-pattern, `strip_prefix`, and `?`
+cleanups.
+
 **Latest Glaurung execution order (2026-07-17; supersedes the earlier cold-path
 priority reset).** Earlier evidence reported an approximately 1.34x gated-bench
 ratio but roughly 2.5x on one actual `IncrementalBvSolver` stream, with
@@ -728,8 +752,11 @@ The ranked work is:
    continuation, ADR-0210 accepts its exact-stream mechanism gate, and ADR-0211
    accepts the repeated native production-topology gate. Glaurung `9ace064`
    defaults one continuation on only inside a separately selected direct-delta
-   session. Keep direct delta itself opt-in; lead next with another wider/no-
-   timeout driver control and the zero-query `win32k` frontend gap;
+   session. ADR-0212 proves exact `dxgkrnl` no-op functionality but defers the
+   wider default after the standard variance gate fails; slower-core runs also
+   fail exact behavior. Keep direct delta opt-in and rerun only in a quieter
+   predeclared environment or with another valid no-timeout IOCTL driver.
+   Route `win32k` to a system-service/callout frontend;
 2. **GQ1/GQ5 measured construction:** ADR-0174 defers internal AND flattening;
    ADR-0175 accepts deterministic open-addressed AIG sharing at a 0.680x
    actual-client ratio. Reopen CNF only with future-use/replacement evidence and

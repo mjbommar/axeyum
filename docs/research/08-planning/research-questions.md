@@ -516,6 +516,17 @@ Out of scope:
     [ADR-0210](../09-decisions/adr-0210-exact-ordered-timeout-continuation-replay.md)
     and
     [ADR-0211](../09-decisions/adr-0211-accept-native-timeout-continuation-default.md).
+- [ ] May source-identity direct delta become the downstream default across
+      wider drivers?
+  - Current boundary: not yet. A complete `dxgkrnl.sys` native replay proves
+    exact no-op functionality when continuation is enabled, but the ordinary-
+    core repetitions fail the predeclared 3% timing-CV alarm. Slower-core
+    calibration crosses the 250 ms first-check boundary and changes actual
+    outcomes, so it is not an exact no-op control. `win32k.sys` is a system-
+    service/callout module rather than an IOCTL workload and cannot count as a
+    zero-query success. Repeat in a quieter environment or add another valid
+    no-timeout IOCTL driver; see
+    [ADR-0212](../09-decisions/adr-0212-defer-dxgkrnl-direct-delta-admission.md).
 - [x] How should a real-client shadow run preserve decided/nondecided splits?
   - Answer: only under an explicit combined-shadow diagnostic, atomically write
     the exact content-addressed SMT-LIB bytes and stable backend result classes
