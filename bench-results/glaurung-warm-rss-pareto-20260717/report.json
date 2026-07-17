@@ -1,0 +1,173 @@
+{
+  "schema": "axeyum-glaurung-warm-rss-pareto-v1",
+  "date": "2026-07-17",
+  "source": {
+    "axeyum_revision": "629c16338a9aa0f4ac9f4f249e1b21300996ca15",
+    "glaurung_revision": "4fce79fccd167c898fa5acad24f4b8b947ba7daa",
+    "both_tracked_clean": true,
+    "ioctlance_sha256": "cc0ff549334a534457df5f6b3a5da72e6d3519cbc54e1775ea89940e363fee5d"
+  },
+  "method": {
+    "harness": "scripts/measure-glaurung-warm-rss.py",
+    "repetitions_per_policy_per_driver": 5,
+    "order": "odd repetitions one-shot/adaptive; even repetitions adaptive/one-shot",
+    "one_shot_policy": "GLAURUNG_AXEYUM_WARM_REUSE=off",
+    "warm_policy": "adaptive, direct delta, serial sibling reuse, replay SAT cache, 9 live owners, 512 assertions per owner",
+    "authoritative_explorer": "Z3",
+    "memory_metric": "/usr/bin/time maximum resident set size",
+    "time_metric": "Glaurung same-stream cumulative Axeyum shadow time",
+    "timeout_continuation": false
+  },
+  "environment": {
+    "GLAURUNG_SHADOW_DIFF": "1",
+    "GLAURUNG_AXEYUM_DIRECT_DELTA": "1",
+    "GLAURUNG_AXEYUM_WARM_SERIAL_SIBLING_REUSE": "1",
+    "GLAURUNG_AXEYUM_WARM_OWNER_TRANSFER": "0",
+    "GLAURUNG_AXEYUM_WARM_TIMEOUT_COLD_RETRY": "0",
+    "GLAURUNG_AXEYUM_WARM_TIMEOUT_CONTINUE": "0",
+    "GLAURUNG_AXEYUM_REPLAY_SAT_CACHE": "1",
+    "GLAURUNG_AXEYUM_WARM_MAX_LIVE_PATHS": "9",
+    "GLAURUNG_AXEYUM_WARM_MAX_ASSERTIONS_PER_PATH": "512",
+    "IOCTLANCE_DEADLINE_SECS": "300",
+    "IOCTLANCE_MAX_ANALYZED_FUNCTIONS": "100000",
+    "IOCTLANCE_SOLVE_BUDGET": "20000",
+    "IOCTLANCE_SOLVE_SECS": "60"
+  },
+  "drivers": [
+    {
+      "name": "sqfs-intel-DptfDevGen.sys",
+      "sha256": "074be1b90deb21897538a6b093af9826e62610ffd878c92289af31c5ca3f724b",
+      "fixed_work": {
+        "queries_per_run": 561,
+        "agree_per_run": 561,
+        "disagree_per_run": 0,
+        "unknown_split_per_run": 0,
+        "both_sat_per_run": 317,
+        "finding_counts": {
+          "raw": 17,
+          "high_confidence": 0,
+          "suppressed": 17,
+          "analyzed": 6,
+          "analysis_roots": 8
+        }
+      },
+      "one_shot": {
+        "axeyum_ms": [998.9, 990.7, 999.2, 995.9, 1015.9],
+        "axeyum_median_ms": 998.9,
+        "axeyum_sample_cv_percent": 0.945783,
+        "z3_ms": [540.8, 523.8, 521.9, 501.0, 520.5],
+        "z3_median_ms": 521.9,
+        "max_rss_kib": [65052, 72536, 59404, 59080, 59600],
+        "max_rss_median_kib": 59600,
+        "max_rss_sample_cv_percent": 9.198803,
+        "elapsed_seconds": [1.57, 1.55, 1.55, 1.53, 1.57],
+        "elapsed_median_seconds": 1.55,
+        "different_model_per_run": 191
+      },
+      "adaptive": {
+        "axeyum_ms": [145.3, 148.7, 144.9, 146.6, 146.8],
+        "axeyum_median_ms": 146.6,
+        "axeyum_sample_cv_percent": 1.020294,
+        "z3_ms": [506.3, 518.6, 518.0, 522.9, 516.4],
+        "z3_median_ms": 518.0,
+        "max_rss_kib": [75040, 74436, 75140, 79912, 74848],
+        "max_rss_median_kib": 75040,
+        "max_rss_sample_cv_percent": 2.995285,
+        "elapsed_seconds": [0.70, 0.70, 0.70, 0.70, 0.70],
+        "elapsed_median_seconds": 0.70,
+        "different_model_per_run": 185,
+        "owner_created_checks": 7,
+        "owner_retained_checks": 554,
+        "owner_retained_percent": 98.752228,
+        "replay_cache_hits": 130,
+        "solver_core_calls": 431,
+        "fallbacks": 0,
+        "resets": 0,
+        "replay_failures": 0,
+        "terminal_lifecycle_gauges": 0
+      },
+      "paired_policy_tradeoff": {
+        "one_shot_over_adaptive_total_axeyum": [6.874741913282862, 6.662407531943511, 6.895790200138026, 6.7933151432469305, 6.920299727520435],
+        "total_axeyum_geomean_ratio": 6.828662678221769,
+        "adaptive_over_one_shot_rss": [1.153538707495542, 1.0261938899305172, 1.2648979866675645, 1.3526066350710901, 1.2558389261744967],
+        "rss_ratio_median": 1.2558389261744967,
+        "rss_delta_percent_median": 25.583893,
+        "cold_rss_variance_warning": "one-shot RSS sample CV is 9.20%; the direction repeats but the magnitude is noisy"
+      }
+    },
+    {
+      "name": "windows-update-SurfacePenBleLcAddrAdaptationDriver.sys",
+      "sha256": "3c062dc57832caab776bec99656798474af7ffb59ef751c9a004a95c0ae74405",
+      "fixed_work": {
+        "queries_per_run": 2551,
+        "agree_per_run": 2551,
+        "disagree_per_run": 0,
+        "unknown_split_per_run": 0,
+        "both_sat_per_run": 2282,
+        "finding_counts": {
+          "raw": 65,
+          "high_confidence": 0,
+          "suppressed": 65,
+          "analyzed": 31,
+          "analysis_roots": 35
+        }
+      },
+      "one_shot": {
+        "axeyum_ms": [1396.5, 1397.8, 1397.1, 1407.8, 1406.9],
+        "axeyum_median_ms": 1397.8,
+        "axeyum_sample_cv_percent": 0.401349,
+        "z3_ms": [4340.1, 4348.0, 4344.2, 4357.9, 4575.8],
+        "z3_median_ms": 4348.0,
+        "max_rss_kib": [65300, 64968, 64720, 65388, 67596],
+        "max_rss_median_kib": 65300,
+        "max_rss_sample_cv_percent": 1.753634,
+        "elapsed_seconds": [5.87, 5.88, 5.87, 5.91, 6.11],
+        "elapsed_median_seconds": 5.88,
+        "different_model_per_run": 815
+      },
+      "adaptive": {
+        "axeyum_ms": [256.3, 255.7, 254.5, 254.6, 261.0],
+        "axeyum_median_ms": 255.7,
+        "axeyum_sample_cv_percent": 1.041122,
+        "z3_ms": [4415.6, 4421.7, 4448.3, 4436.2, 4427.4],
+        "z3_median_ms": 4427.4,
+        "max_rss_kib": [74188, 74640, 74608, 75044, 74624],
+        "max_rss_median_kib": 74624,
+        "max_rss_sample_cv_percent": 0.405899,
+        "elapsed_seconds": [4.81, 4.81, 4.84, 4.84, 4.82],
+        "elapsed_median_seconds": 4.82,
+        "different_model_per_run": 815,
+        "owner_created_checks": 43,
+        "owner_retained_checks": 2508,
+        "owner_retained_percent": 98.314387,
+        "replay_cache_hits": 178,
+        "solver_core_calls": 2373,
+        "fallbacks": 0,
+        "resets": 0,
+        "replay_failures": 0,
+        "terminal_lifecycle_gauges": 0
+      },
+      "paired_policy_tradeoff": {
+        "one_shot_over_adaptive_total_axeyum": [5.448692937963324, 5.4665623777864685, 5.489587426326129, 5.5294579732914375, 5.390421455938697],
+        "total_axeyum_geomean_ratio": 5.464750347446939,
+        "adaptive_over_one_shot_rss": [1.1361102603369067, 1.1488732914665682, 1.1527812113720644, 1.147672355783936, 1.1039706491508374],
+        "rss_ratio_median": 1.147672355783936,
+        "rss_delta_percent_median": 14.767236
+      }
+    }
+  ],
+  "claim_boundary": {
+    "established": [
+      "bounded adaptive reuse has a material, measured process-RSS cost relative to one-shot solving",
+      "the same fixed Z3-authoritative streams and finding counts are preserved across policies",
+      "retained-owner hit rates exceed 98% with zero capacity fallback on both controls"
+    ],
+    "not_established": [
+      "a per-query solver speedup; the time ratio uses cumulative same-stream Axeyum work",
+      "an authoritative-Axeyum finding-parity result",
+      "a four-driver matched RSS distribution",
+      "a universal memory overhead; Dptf one-shot RSS is noisy"
+    ],
+    "relation_to_four_cell_evidence": "ADR-0215/0217 remain authoritative for paired per-occurrence Z3/Axeyum claims; this artifact measures whole-policy time/RSS and reuse accounting"
+  }
+}

@@ -151,6 +151,16 @@ session state.
 > parity or minimum total footprint: the shared parser still pulls FP/string
 > crates. Next deployability work is the warm time/RSS Pareto and real-query
 > proof denominator; a narrower parser surface is a measured size candidate.
+> ADR-0228 closes cold-path/warm-hit/RSS honesty on two current, matched
+> deployment controls without corrupting the four-cell claim shape. Dptf and
+> SurfacePen preserve every Z3-authoritative verdict and finding count across
+> five order-balanced one-shot/adaptive processes. Adaptive cumulative Axeyum
+> work falls by 6.829x/5.465x while paired median RSS rises 25.58%/14.77%; the
+> latter is the clean SurfacePen result, while Dptf one-shot RSS has 9.20% CV.
+> Retained-owner hits are 98.75%/98.31% and fallback is zero, so the paper must
+> name this as a high-reuse policy Pareto, not a per-query solver speedup or an
+> owner-churn result. Real-query proof coverage and authoritative finding
+> parity remain ahead of optional four-driver RSS widening.
 
 > **P0 soundness stop contained (2026-07-15, ADR-0165).** Historical commit
 > `2cb298e2` reproduced unrestricted large elimination from a two-constructor
@@ -738,15 +748,17 @@ evidence are now distinct:
    authority, diff stable findings/sinks, and introduce a checked canonical
    model policy if concretization changes exploration. Report before/after
    parity.
-5. **Deployability and artifact readiness — profile and WebAssembly
-   measurement DONE (ADR-0216/0227), broader measurement WIP:** `qfbv` is the
+5. **Deployability and artifact readiness — profile, WebAssembly, and bounded
+   warm Pareto DONE (ADR-0216/0227/0228), proof deployment WIP:** `qfbv` is the
    exact solver default; Glaurung
    and `axeyum-wasm` select it explicitly; full in-tree consumers opt in; and
    host tests plus an executed wasm32 SAT/UNSAT gate protect the browser
    binding. Stable release size, dependency footprint, and Node/Chromium
-   latency are now recorded. Next measure the warm time/RSS Pareto, cold gap,
-   warm-hit rate, and a real-query self-rechecked DRAT denominator; consider a
-   narrow QF_BV parser only against the committed bundle baseline.
+   latency are now recorded. Two current same-stream controls report one-shot
+   cost, warm time/RSS, retained-owner/cache/core partitions, and zero fallback.
+   Next measure a real-query self-rechecked DRAT denominator; consider a narrow
+   QF_BV parser only against the committed bundle baseline, and widen matched
+   RSS only if it outranks the remaining publication blockers.
 6. **Supporting artifact work:** contribution ablations, neutral SMT-COMP QF_BV
    and a second workload axis, then measured module/API decomposition,
    table-driven duplicate removal, and typed configuration policies. Preserve
