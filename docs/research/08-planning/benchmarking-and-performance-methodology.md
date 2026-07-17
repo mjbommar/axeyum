@@ -514,6 +514,24 @@ records the contract and the first measured baselines.
   fair native-Z3 win is not evidence for a generally faster Z3 Boolean core on
   Axeyum CNF. Move the next causal control to neutral end-to-end SMT and
   representation/integration, not a custom SAT-core rewrite.
+  ADR-0222 adds the first neutral word-level point from an accepted ordered
+  trace:
+
+  ```sh
+  taskset -c 3 cargo run --release -p axeyum-bench \
+    --example cvc5_smt_stream_bench -- \
+    /path/to/glaurung-ordered-trace /path/to/cvc5 report.json 5 250
+  ```
+
+  Validate the clean trace, event/index/query hashes, exact occurrence order,
+  source verdicts, neutral verdicts, and SAT model-output cardinality. Use one
+  external solver process per repetition but issue a full `(reset)` after each
+  query: process startup is amortized while solver state remains cold. Report
+  this as a **cold-reset external SMT integration** point that includes textual
+  parsing and model output. It is not paired per occurrence with the in-process
+  four-cell data and must not be divided into those geomeans. The Dptf cvc5
+  point preserves all 561 verdicts over N=5 at 0.4222% timing CV; neutral warm
+  topology and broader multi-driver evidence remain open.
 - Timeout regressions must pin the exact pathological public or minimized query
   and exercise both admission outcomes: deterministic oversized refusal before
   allocation and cooperative expiry inside admitted superlinear work. Every

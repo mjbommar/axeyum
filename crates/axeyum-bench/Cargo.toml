@@ -41,3 +41,6 @@ axeyum-bv = { path = "../axeyum-bv" }
 [[example]]
 name = "cnf_stream_bench"
 required-features = ["z3"]
+
+[[example]]
+name = "cvc5_smt_stream_bench"
