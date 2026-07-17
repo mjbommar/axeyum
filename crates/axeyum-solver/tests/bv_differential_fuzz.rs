@@ -114,6 +114,10 @@ fn proof_sample_stride() -> Option<u64> {
     )
 }
 
+fn proof_verbose() -> bool {
+    std::env::var("AXEYUM_QFBV_PROOF_VERBOSE").as_deref() == Ok("1")
+}
+
 /// Per-instance Z3 wall-clock budget. Small `QF_BV` formulas ⇒ Z3 decides far
 /// faster; this only bounds the rare pathological shape so the test never hangs.
 const Z3_TIMEOUT: Duration = Duration::from_secs(2);
@@ -1134,10 +1138,13 @@ struct Tally {
     first_crash: Option<(u64, String)>,
 }
 
-fn record_unsat_proof_coverage(inst: &Instance, tally: &mut Tally) {
+fn record_unsat_proof_coverage(seed: u64, inst: &Instance, tally: &mut Tally) {
     tally.proof_selected_unsat += 1;
     let (arena, _symbols, assertions) = inst.build();
 
+    if proof_verbose() {
+        eprintln!("[bv-proof] seed={seed} CNF DRAT start");
+    }
     match export_qf_bv_unsat_proof(&arena, &assertions) {
         Ok(UnsatProofOutcome::Proved(proof)) => {
             assert_eq!(
@@ -1159,6 +1166,9 @@ fn record_unsat_proof_coverage(inst: &Instance, tally: &mut Tally) {
         ),
     }
 
+    if proof_verbose() {
+        eprintln!("[bv-proof] seed={seed} end-to-end start");
+    }
     match certify_qf_bv_unsat_end_to_end(&arena, &assertions) {
         Ok(outcome @ EndToEndUnsatOutcome::Certified { .. }) => {
             assert_eq!(
@@ -1178,6 +1188,9 @@ fn record_unsat_proof_coverage(inst: &Instance, tally: &mut Tally) {
             "end-to-end route failed for a valid jointly-UNSAT formula: {error}\n{}",
             inst.to_smt2()
         ),
+    }
+    if proof_verbose() {
+        eprintln!("[bv-proof] seed={seed} complete");
     }
 }
 
@@ -1261,7 +1274,7 @@ fn run_instance(seed: u64, inst: &Instance, t: &mut Tally, cvc5: Option<&str>, s
     }
 
     if sample_proof && ax_label == Verdict::Unsat {
-        record_unsat_proof_coverage(inst, t);
+        record_unsat_proof_coverage(seed, inst, t);
     }
 
     let Some(cvc5) = cvc5 else {
