@@ -1,0 +1,100 @@
+{
+  "batch": {
+    "bytes": 10006024,
+    "policy": "exact ordered standalone scripts; full reset after every check; one process per repetition",
+    "sha256": "f29e76089818e1068730dcb1bf2d1de2092c5935ebdf8e8e6f23d99159aa021a"
+  },
+  "cvc5": {
+    "arguments": [
+      "--lang=smt2",
+      "--incremental",
+      "--produce-models",
+      "--tlimit-per=250"
+    ],
+    "binary_sha256": "4a93548398445cf1a774655583f5465b156c26f63f2cdfb94f4728fdf7adde46",
+    "path": "/tmp/axeyum-cvc5-1.3.4.ddwGxL/extracted/cvc5-Linux-x86_64-libcxx-static/bin/cvc5",
+    "version": "cvc5 1.3.4 [git f3b21c4 on branch HEAD]"
+  },
+  "measured_repetitions": 5,
+  "median_total_nanos": 6217002699,
+  "rows": [
+    {
+      "expected_unsat_model_errors": 370,
+      "model_lines": 1141,
+      "repetition": 0,
+      "sat": 1270,
+      "stdout_bytes": 391699,
+      "stdout_sha256": "b86f5e8f2c7ab2bbbe9ba7cfd9f6dac288e72181cea2005b7da6555572935097",
+      "total_nanos": 6222305728,
+      "unknown": 0,
+      "unsat": 402
+    },
+    {
+      "expected_unsat_model_errors": 370,
+      "model_lines": 1141,
+      "repetition": 1,
+      "sat": 1270,
+      "stdout_bytes": 391699,
+      "stdout_sha256": "b86f5e8f2c7ab2bbbe9ba7cfd9f6dac288e72181cea2005b7da6555572935097",
+      "total_nanos": 6217293031,
+      "unknown": 0,
+      "unsat": 402
+    },
+    {
+      "expected_unsat_model_errors": 370,
+      "model_lines": 1141,
+      "repetition": 2,
+      "sat": 1270,
+      "stdout_bytes": 391699,
+      "stdout_sha256": "b86f5e8f2c7ab2bbbe9ba7cfd9f6dac288e72181cea2005b7da6555572935097",
+      "total_nanos": 6198082496,
+      "unknown": 0,
+      "unsat": 402
+    },
+    {
+      "expected_unsat_model_errors": 370,
+      "model_lines": 1141,
+      "repetition": 3,
+      "sat": 1270,
+      "stdout_bytes": 391699,
+      "stdout_sha256": "b86f5e8f2c7ab2bbbe9ba7cfd9f6dac288e72181cea2005b7da6555572935097",
+      "total_nanos": 6217002699,
+      "unknown": 0,
+      "unsat": 402
+    },
+    {
+      "expected_unsat_model_errors": 370,
+      "model_lines": 1141,
+      "repetition": 4,
+      "sat": 1270,
+      "stdout_bytes": 391699,
+      "stdout_sha256": "b86f5e8f2c7ab2bbbe9ba7cfd9f6dac288e72181cea2005b7da6555572935097",
+      "total_nanos": 6204137199,
+      "unknown": 0,
+      "unsat": 402
+    }
+  ],
+  "schema": "axeyum-ordered-smt-stream-cvc5-benchmark-v1",
+  "trace": {
+    "checks": 1672,
+    "driver_path": "samples/binaries/platforms/windows/vendor/realworld/windows-update-intel-audio-IntcSST.sys",
+    "driver_sha256": "f7c8e4f106baa5b2a1a18e60731ad42a6f734aee1d049576eaf6d123d5629750",
+    "events_sha256": "f6ab60be6b480e33ab37752150018fb2af8c40c2588ad07fbaa8edc3cac0b752",
+    "expected_sat_models": 1141,
+    "expected_unsat_model_errors": 370,
+    "query_index_sha256": "c5c65e0aefc7be7c15cad145091880918f925f18d82c4bd419b2cf679ed70be3",
+    "sat": 1270,
+    "schema": "glaurung-ordered-trace-v1",
+    "source_cell_sums": {
+      "axeyum_cold_nanos": 1741143919,
+      "axeyum_warm_nanos": 499364133,
+      "z3_cold_nanos": 4440095933,
+      "z3_warm_nanos": 574681094
+    },
+    "source_revision": "403a5c5c1f6c5152fef6cefd0d78c3eb90d3888f",
+    "unique_queries": 1272,
+    "unsat": 402
+  },
+  "trace_directory": "/nas4/data/workspace-infosec/.axeyum-fair-small-20260717.8SkLHB/glaurung-ordered-trace-887773-9a222325e85a4a1685c82b4f6ff867af",
+  "warmup_repetitions": 1
+}

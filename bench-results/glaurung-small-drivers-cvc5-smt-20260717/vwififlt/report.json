@@ -1,0 +1,100 @@
+{
+  "batch": {
+    "bytes": 156012698,
+    "policy": "exact ordered standalone scripts; full reset after every check; one process per repetition",
+    "sha256": "526e46cd09b5c74bf8087b5246b0c9d4140d44872c8ed63d07f4e34387d357ab"
+  },
+  "cvc5": {
+    "arguments": [
+      "--lang=smt2",
+      "--incremental",
+      "--produce-models",
+      "--tlimit-per=250"
+    ],
+    "binary_sha256": "4a93548398445cf1a774655583f5465b156c26f63f2cdfb94f4728fdf7adde46",
+    "path": "/tmp/axeyum-cvc5-1.3.4.ddwGxL/extracted/cvc5-Linux-x86_64-libcxx-static/bin/cvc5",
+    "version": "cvc5 1.3.4 [git f3b21c4 on branch HEAD]"
+  },
+  "measured_repetitions": 5,
+  "median_total_nanos": 64637115403,
+  "rows": [
+    {
+      "expected_unsat_model_errors": 1794,
+      "model_lines": 2854,
+      "repetition": 0,
+      "sat": 2932,
+      "stdout_bytes": 2157366,
+      "stdout_sha256": "a58b9aace6f51a3fae04881243214731a010468d221b7da77c84a98bd5e19c04",
+      "total_nanos": 64545226514,
+      "unknown": 0,
+      "unsat": 1810
+    },
+    {
+      "expected_unsat_model_errors": 1794,
+      "model_lines": 2854,
+      "repetition": 1,
+      "sat": 2932,
+      "stdout_bytes": 2157366,
+      "stdout_sha256": "a58b9aace6f51a3fae04881243214731a010468d221b7da77c84a98bd5e19c04",
+      "total_nanos": 64371399619,
+      "unknown": 0,
+      "unsat": 1810
+    },
+    {
+      "expected_unsat_model_errors": 1794,
+      "model_lines": 2854,
+      "repetition": 2,
+      "sat": 2932,
+      "stdout_bytes": 2157366,
+      "stdout_sha256": "a58b9aace6f51a3fae04881243214731a010468d221b7da77c84a98bd5e19c04",
+      "total_nanos": 64680413886,
+      "unknown": 0,
+      "unsat": 1810
+    },
+    {
+      "expected_unsat_model_errors": 1794,
+      "model_lines": 2854,
+      "repetition": 3,
+      "sat": 2932,
+      "stdout_bytes": 2157366,
+      "stdout_sha256": "a58b9aace6f51a3fae04881243214731a010468d221b7da77c84a98bd5e19c04",
+      "total_nanos": 64723552166,
+      "unknown": 0,
+      "unsat": 1810
+    },
+    {
+      "expected_unsat_model_errors": 1794,
+      "model_lines": 2854,
+      "repetition": 4,
+      "sat": 2932,
+      "stdout_bytes": 2157366,
+      "stdout_sha256": "a58b9aace6f51a3fae04881243214731a010468d221b7da77c84a98bd5e19c04",
+      "total_nanos": 64637115403,
+      "unknown": 0,
+      "unsat": 1810
+    }
+  ],
+  "schema": "axeyum-ordered-smt-stream-cvc5-benchmark-v1",
+  "trace": {
+    "checks": 4742,
+    "driver_path": "samples/binaries/platforms/windows/vendor/realworld/win10-vwififlt.sys",
+    "driver_sha256": "13c3b69a5d0179ed3cc2c999ff97edbaedd63da55ddb74427251c360706a3820",
+    "events_sha256": "204ab867791777fb12aacf11f063b172a8f212384312557c1eef161eceede3bb",
+    "expected_sat_models": 2854,
+    "expected_unsat_model_errors": 1794,
+    "query_index_sha256": "c87363b653ed34580e1e58cfc427917bec64496e772cf510d6414e8cb6e4a435",
+    "sat": 2932,
+    "schema": "glaurung-ordered-trace-v1",
+    "source_cell_sums": {
+      "axeyum_cold_nanos": 11924011835,
+      "axeyum_warm_nanos": 2147103917,
+      "z3_cold_nanos": 7212634962,
+      "z3_warm_nanos": 1356869599
+    },
+    "source_revision": "403a5c5c1f6c5152fef6cefd0d78c3eb90d3888f",
+    "unique_queries": 3467,
+    "unsat": 1810
+  },
+  "trace_directory": "/nas4/data/workspace-infosec/.axeyum-fair-small-20260717.8SkLHB/glaurung-ordered-trace-872908-ed0a0114fee94ec1845793ed2e580ed3",
+  "warmup_repetitions": 1
+}

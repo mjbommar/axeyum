@@ -532,6 +532,13 @@ records the contract and the first measured baselines.
   four-cell data and must not be divided into those geomeans. The Dptf cvc5
   point preserves all 561 verdicts over N=5 at 0.4222% timing CV; neutral warm
   topology and broader multi-driver evidence remain open.
+  ADR-0223 applies the identical contract to the other three accepted traces.
+  All 9,526 checks agree with cvc5 (6,801 SAT / 2,725 UNSAT / 0 Unknown), every
+  model-output count matches, stdout is byte-stable per driver, and timing CV
+  ranges from 0.1639% to 0.4222%. Keep each driver's aggregate external-SMT
+  throughput separate. The fact that cvc5's per-check difficulty ordering does
+  not mirror the Axeyum/Z3 warm ordering is regime evidence, not license to
+  normalize unlike integration boundaries into a headline ratio.
 - Timeout regressions must pin the exact pathological public or minimized query
   and exercise both admission outcomes: deterministic oversized refusal before
   allocation and cooperative expiry inside admitted superlinear work. Every
