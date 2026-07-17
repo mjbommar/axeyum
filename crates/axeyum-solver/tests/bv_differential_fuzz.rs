@@ -64,6 +64,7 @@
 #![cfg(feature = "full")]
 #![cfg(feature = "z3")]
 
+use std::collections::BTreeSet;
 use std::sync::mpsc;
 use std::time::Duration;
 
@@ -83,6 +84,17 @@ const INSTANCES: u64 = 4000;
 /// Send this deterministic subset of generated instances to the independent
 /// cvc5 parser/solver. The existing Axeyum/Z3 gate still covers every row.
 const CVC5_SAMPLE_STRIDE: u64 = 16;
+
+fn cvc5_sample_stride() -> u64 {
+    match std::env::var("AXEYUM_CVC5_SAMPLE_STRIDE") {
+        Ok(value) => value
+            .parse::<u64>()
+            .ok()
+            .filter(|stride| *stride > 0)
+            .unwrap_or_else(|| panic!("AXEYUM_CVC5_SAMPLE_STRIDE must be a positive integer")),
+        Err(_) => CVC5_SAMPLE_STRIDE,
+    }
+}
 
 /// Per-instance Z3 wall-clock budget. Small `QF_BV` formulas ⇒ Z3 decides far
 /// faster; this only bounds the rare pathological shape so the test never hangs.
@@ -378,6 +390,44 @@ enum Term {
 /// bit-blast stays affordable at depth ≤ 3.
 const WIDTHS: [u32; 5] = [1, 4, 8, 16, 32];
 
+const REQUIRED_OPERATORS: &[&str] = &[
+    "=",
+    "and",
+    "bvadd",
+    "bvand",
+    "bvashr",
+    "bvlshr",
+    "bvmul",
+    "bvneg",
+    "bvnot",
+    "bvor",
+    "bvsdiv",
+    "bvsge",
+    "bvsgt",
+    "bvshl",
+    "bvsle",
+    "bvslt",
+    "bvsmod",
+    "bvsrem",
+    "bvsub",
+    "bvudiv",
+    "bvuge",
+    "bvugt",
+    "bvule",
+    "bvult",
+    "bvurem",
+    "bvxor",
+    "concat",
+    "const",
+    "distinct",
+    "extract",
+    "not",
+    "or",
+    "sign_extend",
+    "var",
+    "zero_extend",
+];
+
 /// Term-tree depth ceiling — shallow so Z3 decides fast and the width-32
 /// `bvmul`/`bvudiv` bit-blast stays small.
 const MAX_DEPTH: usize = 3;
@@ -595,6 +645,43 @@ impl Term {
             Term::SignExt { by, a } => format!("((_ sign_extend {by}) {})", a.dump(names)),
         }
     }
+
+    fn record_coverage(&self, operators: &mut BTreeSet<&'static str>) {
+        match self {
+            Term::Var(_) => {
+                operators.insert("var");
+            }
+            Term::Const { .. } => {
+                operators.insert("const");
+            }
+            Term::Bin(op, x, y) => {
+                operators.insert(op.symbol());
+                x.record_coverage(operators);
+                y.record_coverage(operators);
+            }
+            Term::Un(op, x) => {
+                operators.insert(op.symbol());
+                x.record_coverage(operators);
+            }
+            Term::Concat(high, low) => {
+                operators.insert("concat");
+                high.record_coverage(operators);
+                low.record_coverage(operators);
+            }
+            Term::Extract { a, .. } => {
+                operators.insert("extract");
+                a.record_coverage(operators);
+            }
+            Term::ZeroExt { a, .. } => {
+                operators.insert("zero_extend");
+                a.record_coverage(operators);
+            }
+            Term::SignExt { a, .. } => {
+                operators.insert("sign_extend");
+                a.record_coverage(operators);
+            }
+        }
+    }
 }
 
 /// Cap on how much wider than the requested width an `extract` source may be —
@@ -729,6 +816,27 @@ impl Atom {
             },
         }
     }
+
+    fn record_coverage(&self, operators: &mut BTreeSet<&'static str>) {
+        match self {
+            Atom::Cmp { lhs, rhs, cmp } => {
+                operators.insert(cmp.symbol());
+                lhs.record_coverage(operators);
+                rhs.record_coverage(operators);
+            }
+            Atom::BoolCombo(op, first, second) => {
+                operators.insert(match op {
+                    BoolOp::And => "and",
+                    BoolOp::Or => "or",
+                    BoolOp::Not => "not",
+                });
+                first.record_coverage(operators);
+                if !matches!(op, BoolOp::Not) {
+                    second.record_coverage(operators);
+                }
+            }
+        }
+    }
 }
 
 /// A full generated instance. Owns only plain data (no IR/Z3 handles), so it is
@@ -824,6 +932,13 @@ impl Instance {
         lines.push("(check-sat)".to_string());
         lines.push("(exit)".to_string());
         lines.join("\n") + "\n"
+    }
+
+    fn record_coverage(&self, widths: &mut BTreeSet<u32>, operators: &mut BTreeSet<&'static str>) {
+        widths.insert(self.width);
+        for atom in &self.atoms {
+            atom.record_coverage(operators);
+        }
     }
 }
 
@@ -1302,6 +1417,50 @@ fn glaurung_named_qfbv_controls_agree_and_replay() {
     }
 }
 
+fn assert_generator_coverage(
+    covered_widths: &BTreeSet<u32>,
+    covered_operators: &BTreeSet<&'static str>,
+) {
+    assert_eq!(
+        covered_widths,
+        &WIDTHS.into_iter().collect(),
+        "the deterministic generator missed a declared width"
+    );
+    let missing_operators: Vec<_> = REQUIRED_OPERATORS
+        .iter()
+        .copied()
+        .filter(|operator| !covered_operators.contains(operator))
+        .collect();
+    assert!(
+        missing_operators.is_empty(),
+        "the deterministic generator missed operators: {missing_operators:?}"
+    );
+}
+
+fn assert_cvc5_coverage(
+    cvc5_present: bool,
+    stride: u64,
+    sampled: u64,
+    decided: u64,
+    unknown: u64,
+    agreements: u64,
+) {
+    if !cvc5_present {
+        return;
+    }
+    let expected_samples = INSTANCES.div_ceil(stride);
+    assert!(
+        agreements >= expected_samples.min(200),
+        "too few three-way agreements ({agreements}); the cvc5 lane is vacuous"
+    );
+    if std::env::var("AXEYUM_REQUIRE_CVC5_ALL_DECIDED").as_deref() == Ok("1") {
+        assert_eq!(sampled, expected_samples);
+        assert_eq!(decided, expected_samples);
+        assert_eq!(unknown, 0);
+        assert_eq!(agreements, expected_samples);
+    }
+}
+
 #[test]
 fn bv_differential_fuzz_disagree_zero() {
     // Worker `solve` panics are *caught* (a crash is adjudication-neutral, not a
@@ -1320,6 +1479,7 @@ fn bv_differential_fuzz_disagree_zero() {
     }));
 
     let cvc5 = cvc5_bin();
+    let cvc5_stride = cvc5_sample_stride();
     if std::env::var("AXEYUM_REQUIRE_CVC5").as_deref() == Ok("1") {
         assert!(
             cvc5.is_some(),
@@ -1327,6 +1487,8 @@ fn bv_differential_fuzz_disagree_zero() {
         );
     }
     let mut t = Tally::default();
+    let mut covered_widths = BTreeSet::new();
+    let mut covered_operators = BTreeSet::new();
 
     for seed in 0..INSTANCES {
         t.total += 1;
@@ -1343,7 +1505,8 @@ fn bv_differential_fuzz_disagree_zero() {
         }
         let mut rng = Lcg::new(seed);
         let inst = Instance::generate(&mut rng);
-        let sampled_cvc5 = (seed % CVC5_SAMPLE_STRIDE == 0)
+        inst.record_coverage(&mut covered_widths, &mut covered_operators);
+        let sampled_cvc5 = (seed % cvc5_stride == 0)
             .then_some(cvc5.as_deref())
             .flatten();
         run_instance(seed, &inst, &mut t, sampled_cvc5);
@@ -1379,12 +1542,15 @@ fn bv_differential_fuzz_disagree_zero() {
          but never a mis-verdict)"
     );
     println!("Z3 Unknown (skipped): {z3_unknown_skipped}");
+    println!("cvc5 sample stride:   {cvc5_stride}");
     println!("cvc5 sampled:         {cvc5_sampled}");
     println!("cvc5 decided:         {cvc5_decided}");
     println!("cvc5 Unknown/skipped: {cvc5_unknown_skipped}");
     println!("three-way agreements: {three_way_agreements}");
     println!("Sat replays verified: {sat_replayed}");
     println!("Sat replay declined:  {sat_replay_indeterminate} (eval gap; Z3-adjudicated)");
+    println!("covered widths:       {covered_widths:?}");
+    println!("covered operators:    {covered_operators:?}");
     println!("DISAGREEMENTS:        0");
     if let Some((seed, dump)) = &first_crash {
         println!(
@@ -1402,12 +1568,15 @@ fn bv_differential_fuzz_disagree_zero() {
         "too few jointly-decided instances ({jointly_decided}); the differential \
          gate is not meaningfully exercised"
     );
-    if cvc5.is_some() {
-        assert!(
-            three_way_agreements >= 200,
-            "too few three-way agreements ({three_way_agreements}); the cvc5 lane is vacuous"
-        );
-    }
+    assert_generator_coverage(&covered_widths, &covered_operators);
+    assert_cvc5_coverage(
+        cvc5.is_some(),
+        cvc5_stride,
+        cvc5_sampled,
+        cvc5_decided,
+        cvc5_unknown_skipped,
+        three_way_agreements,
+    );
 }
 
 /// Pretty-print an axeyum model's variable bindings.
