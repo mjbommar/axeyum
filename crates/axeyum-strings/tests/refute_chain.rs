@@ -293,7 +293,7 @@ fn brute_force_unsat(arena: &TermArena, eqs: &[(TermId, TermId)]) -> bool {
     }
     let vars: Vec<SymbolId> = vars.into_iter().collect();
 
-    let alphabet = [b'a', b'b'];
+    let alphabet = *b"ab";
     let mut values: Vec<Value> = Vec::new();
     for len in 0..=2usize {
         enumerate_strings(&alphabet, len, &mut Vec::new(), &mut values);

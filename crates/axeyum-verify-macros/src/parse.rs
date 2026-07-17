@@ -1930,10 +1930,8 @@ fn parse_suffix_ty(suffix: &str) -> Option<Ty> {
     }
     let (signed, rest) = if let Some(r) = suffix.strip_prefix('u') {
         (false, r)
-    } else if let Some(r) = suffix.strip_prefix('i') {
-        (true, r)
     } else {
-        return None;
+        (true, suffix.strip_prefix('i')?)
     };
     let width: u32 = rest.parse().ok()?;
     if (1..=128).contains(&width) {

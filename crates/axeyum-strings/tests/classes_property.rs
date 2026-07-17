@@ -62,7 +62,7 @@ impl Pool {
             })
             .collect();
         // A couple of constant single-char sequences to exercise fusion.
-        let chars: Vec<TermId> = [b'a', b'b']
+        let chars: Vec<TermId> = b"ab"
             .iter()
             .map(|&c| {
                 let ce = arena.bv_const(8, u128::from(c)).expect("char const");

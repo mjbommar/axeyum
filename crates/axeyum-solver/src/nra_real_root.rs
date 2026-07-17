@@ -2965,12 +2965,9 @@ fn strict_cad_along(
         // `keep`: its zeros are where deg_{elim}(p) drops (a delineability boundary).
         let pc = poly_in_elim_over_keep(p, elim, keep)?;
         let lead = pc.last()?; // Vec<Rational> in `keep`
-        if let Some(ip) = rat_coeffs_to_integer(lead) {
-            if ip.len() > 1 {
-                proj.push(ip);
-            }
-        } else {
-            return None; // overflow ⇒ decline (cannot guarantee sign-invariance)
+        let ip = rat_coeffs_to_integer(lead)?;
+        if ip.len() > 1 {
+            proj.push(ip);
         }
         // Discriminant of `p` in `elim` = Res_{elim}(p, ∂p/∂elim).
         let dp = derivative_in(p, elim)?;
@@ -3272,12 +3269,9 @@ fn nonstrict_cad_along(
         }
         let pc = poly_in_elim_over_keep(p, elim, keep)?;
         let lead = pc.last()?;
-        if let Some(ip) = rat_coeffs_to_integer(lead) {
-            if ip.len() > 1 {
-                proj.push(ip);
-            }
-        } else {
-            return None; // overflow ⇒ decline (cannot guarantee sign-invariance)
+        let ip = rat_coeffs_to_integer(lead)?;
+        if ip.len() > 1 {
+            proj.push(ip);
         }
         let dp = derivative_in(p, elim)?;
         if degree_in(&dp, elim) == 0 {

@@ -396,11 +396,7 @@ impl Kernel {
             self.render_lean(ty)
         );
         for &cn in &ctor_names {
-            let Some(Declaration::Constructor {
-                ty: ctor_ty,
-                num_fields: _,
-                ..
-            }) = self.environment().get(cn)
+            let Some(Declaration::Constructor { ty: ctor_ty, .. }) = self.environment().get(cn)
             else {
                 return None;
             };

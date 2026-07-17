@@ -61,7 +61,7 @@ impl Pool {
                 arena.var(s)
             })
             .collect();
-        let chars: Vec<TermId> = [b'a', b'b']
+        let chars: Vec<TermId> = b"ab"
             .iter()
             .map(|&c| {
                 let ce = arena.bv_const(8, u128::from(c)).expect("char const");
@@ -232,7 +232,7 @@ fn brute_force_unsat(arena: &TermArena, eqs: &[(TermId, TermId)]) -> bool {
     }
     let vars: Vec<SymbolId> = vars.into_iter().collect();
 
-    let alphabet = [b'a', b'b'];
+    let alphabet = *b"ab";
     let mut values: Vec<Value> = Vec::new();
     for len in 0..=2usize {
         enumerate_strings(&alphabet, len, &mut Vec::new(), &mut values);
