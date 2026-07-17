@@ -54,6 +54,9 @@ events-v1.ndjson
 queries/
   <sha256>.smt2
 query-index-v1.json
+# Optional production-topology extension:
+native-assertions/
+  <pack-sha256>.json
 ```
 
 `queries/` is a deduplicated byte store. `events-v1.ndjson` is never
@@ -117,6 +120,10 @@ policy and finalizer merge order are recorded in the manifest.
 - `path_transfer`: optional explicit fork/migration/merge record. A merge must
   name every parent and its assertion-state digest; absence means v1 does not
   claim merge support.
+- `warm_owner_share` / `warm_owner_release`: optional production-topology
+  events on the analysis path. They record one source owner and the exact
+  serial sibling reference expansion/release order; they never imply parallel
+  mutable solver sharing.
 
 `constraint_id` identifies semantic assertion bytes and may repeat. The event
 identity remains `(analysis_id, event_seq)`. `scope_digest` is a versioned hash
@@ -407,3 +414,36 @@ replay do not reproduce Glaurung's current adaptive source-owner/serial-lease
 topology, so a replay win alone cannot change the downstream default. Native
 admission still requires the production topology and the established exact
 traffic/finding, time, ratio, RSS, reset, replay, and repeated-variance gates.
+
+## 2026-07-17 native production-topology extension
+
+The additive `glaurung-native-ordered-replay-v1` manifest block supplies the
+facts intentionally absent from the public text replay. Every assert event may
+reference a deterministic, topologically ordered native expression-DAG pack by
+its own content hash. The independently rendered SMT assertion hash remains
+the cross-tool identity: a native consumer must re-render the imported pack
+and reject it unless the bytes hash to that exact constraint ID. Multiple
+native shapes may therefore bind the same public assertion without collapsing
+client translation work.
+
+Every check in this extension has a `warm_replay` object containing the source
+owner ID, requested retain depth, persistent/temporary partition, source-prefix
+digest, and live synchronization result. Owner-share/release events reconstruct
+the serial DFS lease. The producer validator requires exact native-store
+membership, topological child references, valid partitions/digests, balanced
+leases, and manifest totals. Axeyum's independent public consumer deliberately
+does not trust or import the native packs, but it accepts the additive events
+only after independently validating their scope/lease structure; its strict
+SMT parse, verdict, original-model, and model-choice checks remain unchanged.
+
+Glaurung's separate `ordered_native_replay` executable is the T5 client-boundary
+consumer. Built without Z3, it reconstructs the native typed pool, shared
+source-prefix identity, adaptive direct-delta sessions, serial leases, bounded
+fallbacks, and replay-checked SAT cache, then drives every occurrence through
+the same `solve_for_path_delta` entry as live exploration. Fresh control and
+one-continuation processes bind the identical trace/event hashes, canonical
+finding hash, and independent Axeyum replay hash. Opposite decided verdicts,
+solver errors, synchronization drift, resets, cache replay failures, or
+nonzero terminal gauges are fatal; honest `Unknown` results remain explicit.
+The fixed 156-function repeated time/RSS gate is pending and therefore no
+native default changes in this note.

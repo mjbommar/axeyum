@@ -495,6 +495,45 @@ struct ScopeState {
     constraint_id: Option<String>,
 }
 
+fn validate_native_warm_metadata(
+    warm: &serde_json::Map<String, Value>,
+    scopes: &[ScopeState],
+    check_id: &str,
+) -> Result<(), String> {
+    let owner = warm
+        .get("owner_id")
+        .and_then(Value::as_u64)
+        .ok_or_else(|| format!("check {check_id} has invalid warm owner"))?;
+    let requested = warm
+        .get("requested_retain_assertions")
+        .and_then(Value::as_u64)
+        .and_then(|value| usize::try_from(value).ok())
+        .ok_or_else(|| format!("check {check_id} has invalid requested retain depth"))?;
+    let persistent = warm
+        .get("persistent_assertions")
+        .and_then(Value::as_u64)
+        .and_then(|value| usize::try_from(value).ok())
+        .ok_or_else(|| format!("check {check_id} has invalid persistent depth"))?;
+    let temporary = warm
+        .get("temporary_assertions")
+        .and_then(Value::as_u64)
+        .and_then(|value| usize::try_from(value).ok())
+        .ok_or_else(|| format!("check {check_id} has invalid temporary depth"))?;
+    if owner == 0
+        || requested > persistent
+        || persistent > scopes.len()
+        || temporary != scopes.len() - persistent
+        || !warm.get("synchronized").is_some_and(Value::is_boolean)
+        || warm.get("source_prefix_digest").and_then(Value::as_str)
+            != Some(&scope_digest(&scopes[..persistent])?)
+    {
+        return Err(format!(
+            "check {check_id} has inconsistent native warm replay metadata"
+        ));
+    }
+    Ok(())
+}
+
 #[derive(Clone)]
 enum WarmEvent {
     PathStart {
@@ -593,6 +632,14 @@ impl Trace {
         let query_validation_worker_batches = validated.worker_batches;
         let query_validation_worker_peak_rss_bytes = validated.worker_peak_rss_bytes;
         let assertions = load_assertions(root, &manifest)?;
+        let native_replay = manifest.get("native_replay");
+        if let Some(native) = native_replay {
+            if string(native, "schema")? != "glaurung-native-ordered-replay-v1"
+                || string(native, "topology")? != "source-owner-serial-lease-v1"
+            {
+                return Err("unsupported native ordered-replay extension".into());
+            }
+        }
 
         let mut paths = BTreeMap::from([("analysis".to_string(), PathState::default())]);
         let mut checks = BTreeMap::new();
@@ -611,6 +658,10 @@ impl Trace {
         let mut choice_ids = BTreeSet::new();
         let mut choice_reads = BTreeSet::new();
         let mut warm_events = Vec::new();
+        let mut native_warm_checks = 0_u64;
+        let mut warm_owner_shares = 0_u64;
+        let mut warm_owner_releases = 0_u64;
+        let mut warm_owner_references = BTreeMap::<u64, u64>::new();
 
         for (line_index, line) in events_bytes.split(|byte| *byte == b'\n').enumerate() {
             if line.is_empty() {
@@ -865,6 +916,16 @@ impl Trace {
                     state.last_checked_constraints = constraints;
                     state.pending_sat_check =
                         (checks[&check_id].outcome == "sat").then_some(check_id.clone());
+                    if native_replay.is_some() {
+                        let warm = event
+                            .get("warm_replay")
+                            .and_then(Value::as_object)
+                            .ok_or_else(|| {
+                                format!("check {check_id} omits native warm replay metadata")
+                            })?;
+                        validate_native_warm_metadata(warm, &state.scopes, &check_id)?;
+                        native_warm_checks = native_warm_checks.saturating_add(1);
+                    }
                     warm_events.push(WarmEvent::Check {
                         path_id: path_id.clone(),
                         check_id,
@@ -964,8 +1025,41 @@ impl Trace {
                     });
                     state.ended = true;
                 }
+                "warm_owner_share" => {
+                    let owner = integer(&event, "owner_id")?;
+                    let children = integer(&event, "children")?;
+                    if path_id != "analysis" || owner == 0 || children == 0 {
+                        return Err("invalid native warm-owner share event".into());
+                    }
+                    let references = warm_owner_references.entry(owner).or_insert(1);
+                    *references = references.saturating_add(children);
+                    warm_owner_shares = warm_owner_shares.saturating_add(1);
+                }
+                "warm_owner_release" => {
+                    let owner = integer(&event, "owner_id")?;
+                    if path_id != "analysis" || owner == 0 {
+                        return Err("invalid native warm-owner release event".into());
+                    }
+                    if let Some(references) = warm_owner_references.get_mut(&owner) {
+                        *references = references.saturating_sub(1);
+                        if *references == 0 {
+                            warm_owner_references.remove(&owner);
+                        }
+                    }
+                    warm_owner_releases = warm_owner_releases.saturating_add(1);
+                }
                 "analysis_start" | "analysis_end" | "path_start" => {}
                 other => return Err(format!("unsupported trace event: {other}")),
+            }
+        }
+
+        if let Some(native) = native_replay {
+            if integer(native, "warm_check_count")? != native_warm_checks
+                || integer(native, "warm_owner_share_count")? != warm_owner_shares
+                || integer(native, "warm_owner_release_count")? != warm_owner_releases
+                || !warm_owner_references.is_empty()
+            {
+                return Err("native warm replay manifest/lifecycle mismatch".into());
             }
         }
 
@@ -2940,6 +3034,42 @@ mod tests {
             constraint_id: Some("constraint-1".into()),
         }];
         assert_ne!(digest, scope_digest(&changed).unwrap());
+    }
+
+    #[test]
+    fn native_warm_metadata_binds_partition_prefix_and_sync_result() {
+        let scopes = vec![
+            ScopeState {
+                scope_id: "scope-0".into(),
+                constraint_id: Some("constraint-0".into()),
+            },
+            ScopeState {
+                scope_id: "scope-1".into(),
+                constraint_id: Some("constraint-1".into()),
+            },
+        ];
+        let mut warm = json!({
+            "owner_id": 7,
+            "requested_retain_assertions": 1,
+            "persistent_assertions": 1,
+            "temporary_assertions": 1,
+            "synchronized": true,
+            "source_prefix_digest": scope_digest(&scopes[..1]).unwrap(),
+        })
+        .as_object()
+        .cloned()
+        .unwrap();
+        validate_native_warm_metadata(&warm, &scopes, "check-0").unwrap();
+
+        warm.insert("synchronized".into(), Value::Null);
+        assert!(
+            validate_native_warm_metadata(&warm, &scopes, "check-0")
+                .unwrap_err()
+                .contains("inconsistent native warm replay metadata")
+        );
+        warm.insert("synchronized".into(), Value::Bool(true));
+        warm.insert("source_prefix_digest".into(), Value::String("bad".into()));
+        assert!(validate_native_warm_metadata(&warm, &scopes, "check-0").is_err());
     }
 
     #[test]
