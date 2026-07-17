@@ -322,8 +322,52 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-17 — The consolidated code/publication review changes the success
+  criterion and immediate order.** The paper is no longer organized around a
+  general speed claim; its spine is strict correctness, measured deployability,
+  and an honestly delimited performance regime. Publication blockers are now:
+  (1) N>=5 fair four-cell runs on the small-formula
+  `vwififlt`/`IntcSST`/`SurfacePen` drivers, reporting whether fixed boundary
+  cost actually creates an Axeyum-winning regime; (2) a standing well-typed
+  multi-oracle fuzzer seeded by empty-model, extension-width, concat-width, and
+  W128 truncation failures; (3) cvc5/Bitwuzla correctness plus cold subprocess
+  baselines; and (4) authoritative finding parity with checked canonical model
+  selection if needed. Enforcing the existing `qfbv` profile in Glaurung and
+  `axeyum-wasm`, then measuring WASM/RSS/DRAT deployment, is the first artifact
+  tranche. Solver namespace/module breakup, table-driven duplicate removal, and
+  typed policy/config work follow as bounded behavior-preserving refactors; they
+  must not churn the active evidence baseline. The latest 162-query semantic
+  gate remains 162/162 decided and agreed under raw/canonical policies (0.627x/
+  0.310x one-shot Z3 ratios), but those setup-sensitive smoke numbers are not a
+  fair warm headline.
+
+- **2026-07-17 — ADR-0215 closes the topology-equivalent four-cell mechanism
+  and first clean control; the honest fair result favors warm Z3.** Glaurung
+  `4ae96cf` adds a real persistent Z3 `IncrementalSolver`, exact source-prefix
+  sibling rewind, shared owner/serial-lease lifecycle, rotating
+  `{Z3, Axeyum} x {cold, warm}` timing, the additive ordered-check measurement
+  v2 schema, strict validator aliases/classes, and a full-width u128 native-Z3
+  repair. The W128 regression fails on the former low-64-bit model and passes
+  with exact decimal numeral construction/model lifting. Axeyum's analyzer now
+  accepts v1/v2, reports four separately filtered paired contrasts, and writes
+  explicit four-cell CDFs; ten synthetic fail-closed tests pass, including
+  cross-repetition decided-outcome drift rejection. Five clean
+  fresh-process DptfDevGen runs preserve the same 561 checks, all four cells
+  decide every occurrence, and both warm populations stay 7 created + 554
+  retained with no fallback/error/disagreement/replay failure. Geomeans are
+  cold Z3/Axeyum 0.9661x [0.8709, 1.0706], warm Z3/Axeyum 0.7875x
+  [0.6893, 0.8977], Z3 cold/warm 8.9752x [8.5511, 9.4112], and Axeyum
+  cold/warm 7.3157x [6.4477, 8.2741]; every per-run CV is below 1.67%.
+  Therefore Axeyum is about 1.27x slower than topology-equivalent warm Z3 on
+  this easy driver, and the legacy 7.0678x cold-Z3/warm-Axeyum alias is not a
+  solver headline. Exact artifacts live in
+  `bench-results/glaurung-four-cell-dptf-20260717/`; raw traces remain
+  access-controlled. Next: map the small-formula fair regime, enforce real
+  minimal-profile consumers, add multi-oracle/neutral evidence, and run
+  authoritative finding parity while GQ5 resumes causal cold CNF work.
+
 - **2026-07-17 — ADR-0214's paired mechanism and first clean real-driver
-  exercise are complete; fair publication baselines remain open.** Glaurung
+  exercise are complete; ADR-0215 supersedes its baseline blocker.** Glaurung
   `eb624c0` additively marks new
   ordered traces with both timed backend result classes and a closed Axeyum
   execution population: cold, snapshot warm, newly created warm, retained warm,
@@ -348,10 +392,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   1.8037%, 0.7836%, and 1.5977%. Exact JSON/CSV/PNG artifacts are committed in
   `bench-results/glaurung-paired-dptf-20260717/`; the retained 133 MiB raw set
   reanalyzes byte-for-byte. This is a one-driver no-timeout mechanism control,
-  not a headline: cold one-shot Z3 remains confounded with warm Axeyum. Next:
-  topology-equivalent warm Z3, then a neutral solver and a timeout-sensitive
-  marked workload. Old tcpip/dxgkrnl artifacts cannot supply missing per-check
-  outcomes retroactively.
+  not a headline: cold one-shot Z3 remains confounded with warm Axeyum.
+  ADR-0215 now supplies the formerly missing topology-equivalent control;
+  neutral-solver and timeout-sensitive marked workloads remain next. Old
+  tcpip/dxgkrnl artifacts cannot supply missing per-check outcomes retroactively.
 
 - **2026-07-17 — ADR-0213 resets the Glaurung paper-evidence boundary without
   discarding the engineering gates.** Review of Glaurung's pre-submission
@@ -365,8 +409,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   ratios, deterministic-bootstrap 95% CIs, p50/p90/p95/p99, CDFs, process CV,
   decided/nondecided buckets, and a timeout sweep; then add topology-equivalent
   warm Z3 plus a neutral solver and authoritative finding parity/canonical model
-  selection. GQ5 cold AIG/CNF work remains the leading pure-solver engineering
-  lane, but its next candidate follows that paired harness. The current
+  selection. ADR-0214/0215 now complete the paired and topology-equivalent
+  mechanisms; neutral/finding/timeout gates remain. GQ5 cold AIG/CNF work
+  remains the leading pure-solver engineering lane. The current
   Glaurung benchmark README is therefore draft evidence, not an accepted
   headline-performance artifact.
 
@@ -1941,42 +1986,44 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
   | ID | Live status | Next acceptance boundary |
   |---|---|---|
-  | **GQ1 real-query profile** | **Engineering capture, publication schema/analyzer, and first clean marked exercise DONE; harder/multi-driver evidence WIP (ADR-0187/0188/0213/0214).** Five drivers, 30,628 scripts, 7,953 wide-root scripts, zero exclusions, exact clean sharded profiles; DptfDevGen N=5 x `{1,5,60}` seconds preserves 561/561 both-decided checks and no fallback | Regenerate a timeout-sensitive marked driver; keep native/profile/cold bars distinct and do not promote the easy-driver control |
+  | **GQ1 real-query profile** | **Engineering capture, paired analyzer, four-cell fair control, and first clean marked exercises DONE; regime mapping WIP (ADR-0187/0188/0213--0215).** Five drivers, 30,628 scripts, 7,953 wide-root scripts, zero exclusions, exact clean sharded profiles; DptfDevGen v2 N=5 preserves 561/561 four-cell decisions and no fallback, with fair warm Z3/Axeyum 0.7875x | Run N>=5 fair captures on `vwififlt`, `IntcSST`, and `SurfacePen`, then add a neutral cell and timeout-sensitive marked driver; keep native/profile/cold bars distinct and report the observed regime |
   | **GQ2 cheap cold tier** | **WIP with three accepted rewrite tranches; batch integration deferred.** Canonical v4 reaches 5.625 s / 0.730x Z3; ADR-0156 preserves replay but is 18.8% slower than one-shot | Keep canonical v4 as the measured one-shot policy; do not recommend fresh incremental batch until its clause/entry overhead closes |
   | **GQ3 coercion/affine peepholes** | **DONE for current measured shapes (ADR-0159).** Clean repeated path-paired ablations are fail-closed; `extract_extend` is a material lowering-only win, while all four measured structural rules change zero AIG nodes/clauses | Keep rules enabled. Reopen only for a new residual shape with a specific downstream hypothesis and the same causal ablation gate |
   | **GQ4 cold relevant bits** | **v1 and v2 DEFERRED after failed real gates.** v1 regresses ~1.42x→4.49x. V2 rejection overhead is bounded, but defaults admit 0/128 and +0.62% total; a 33-query moderate policy removes 632 AIG nodes/zero clauses and regresses bit blast 3.14% | Keep both explicit/off. Reopen only with an AIG/CNF-cone estimator or after word rewrites materially change the residual; do not tune thresholds further |
-  | **GQ5 AIG/CNF construction** | **ACTIVE after ADR-0214 real-trace exercise; AIG tranche accepted and direct CNF-table transfer rejected (ADR-0175/0200/0214).** AIG open addressing improves native time 7.66%, but the structurally exact CNF primary-table candidate regresses representative mean CNF/total 8.55%/3.67% and is reverted | Re-attribute a larger CNF subphase or encoding hypothesis; use the paired mechanism where applicable and do not retry table micro-work without per-probe causal evidence |
+  | **GQ5 AIG/CNF construction** | **ACTIVE after ADR-0215's fair-control exercise; AIG tranche accepted and direct CNF-table transfer rejected (ADR-0175/0200/0214/0215).** AIG open addressing improves native time 7.66%, but the structurally exact CNF primary-table candidate regresses representative mean CNF/total 8.55%/3.67% and is reverted | Re-attribute a larger CNF subphase or encoding hypothesis; use the four-cell paired mechanism where applicable and do not retry table micro-work without per-probe causal evidence |
   | **GQ6 cold SAT/CDCL** | **WIP foundation; behind measured CNF.** Accepted-table native lineage SAT is 18.48% weighted versus CNF at 46.55% | Compare identical CNF across cores only after the next CNF decision, with proof replay and deterministic limits |
-  | **GQ7 warm delta entry** | **Source-identity functionality and current production comparison DONE; wider default DEFERRED (ADR-0201--0212).** The 92,721-check serial-default comparison passes every alarm. The exact 17,400-check `dxgkrnl` no-op control is functionally green but fails the standard timing-variance gate | Keep direct opt-in; rerun the identical no-op gate only in a quieter predeclared environment or on another valid no-timeout IOCTL driver |
+  | **GQ7 warm delta entry** | **Source-identity/product comparison and first fair four-cell control DONE; wider default DEFERRED (ADR-0201--0215).** The 92,721-check serial-default comparison passes engineering alarms. Dptf's topology-equivalent warm control honestly favors Z3 0.7875x; dxgkrnl remains functionally green but fails the product timing-variance gate | Keep direct opt-in; map small-formula fair behavior first, then widen through neutral/harder/finding-parity gates and rerun product admission only in a quieter predeclared environment or another valid no-timeout driver |
   | **GQ8 verdict/CNF cache** | **DONE for available families (ADR-0192).** Clean repeated evidence admits exact same-arena scalar SAT reuse only in path-owned Glaurung sessions; fixed bounds, traffic partitions, cleanup gauges, findings, and replay are enforced | Preserve explicit off and re-gate new families; Axeyum's generic cache remains opt-in and ordinary UNSAT/Unknown/prefix verdicts remain excluded |
   | **GQ9 auto cost model/docs** | **DONE for available families (ADR-0186).** Clean adaptive repeat clears every alarm over 92,721 checks; downstream explorer default has explicit off/fixed controls | Re-gate newly captured families; do not broaden this Glaurung-specific default into Axeyum's generic API |
   | **GQ10 real-lifter regression tier** | **Native continuation admission DONE; wider direct-delta default DEFERRED (ADR-0205--0212).** The accepted tcpip trace admits bounded continuation. The new complete 85,449-event / 17,400-check `dxgkrnl` trace and independent replay preserve exact no-op behavior and every correctness/lifecycle gauge, but ordinary-core time CV is 14.430%/8.306% and slower-core outcomes drift | Keep direct delta opt-in. Repeat under a quieter predeclared environment or add another no-timeout IOCTL driver; route `win32k` to a system-service/callout frontend |
 
-  **Next actions:** (1) implement topology-equivalent warm Z3 and emit the four
-  `{Z3, Axeyum} x {cold, warm}` cells on the identical ordered stream; (2) add a
-  neutral solver cell with its process/FFI boundary named; (3) regenerate a
-  timeout-sensitive driver through ADR-0214 and keep each timeout cell separate;
-  (4) run authoritative finding parity and specify checked canonical model
-  selection if needed; (5) preserve explicit continuation on/off controls,
-  exact counter partitions, and honest residual `Unknown`s; (6) advance GQ5
-  through fresh causal CNF attribution while the publication lane proceeds;
-  (7) route `win32k` through a future system-service/callout frontend; (8) keep
-  GQ4 explicit/off.
+  **Next actions:** (1) run N>=5 fair four-cell captures on
+  `vwififlt`/`IntcSST`/`SurfacePen` and publish the regime boundary; (2) enforce
+  the minimal `qfbv` dependency profile in Glaurung/`axeyum-wasm`, with an ADR
+  for any solver-default flip; (3) add the named consumer failures to a
+  multi-oracle typed differential-fuzz lane; (4) add a neutral solver cell with
+  its subprocess/FFI boundary named; (5) run authoritative finding parity and
+  specify checked canonical model selection if needed; (6) regenerate a
+  timeout-sensitive driver and keep each timeout cell separate; (7) advance
+  GQ5 through fresh causal CNF attribution while preserving explicit controls,
+  exact counter partitions, and honest residual `Unknown`s; (8) stage solver
+  namespace/module, duplicate-removal, and typed-config refactors only as
+  bounded behavior-preserving tranches; (9) keep GQ4 explicit/off.
 
   **Validation (2026-07-17):** the first parallel all-feature workspace test
   exceeded the shared 4 GiB envelope while several heavyweight test processes
   overlapped; the required serialized rerun (`CARGO_BUILD_JOBS=1`, one test
-  thread) completes under the same cap with zero failures, including all
-  doctests. Stable formatting, strict all-target/all-feature Clippy,
+  thread) completes with zero failures, including all doctests. Stable
+  formatting, strict all-target/all-feature Clippy,
   warning-denied workspace docs, the QF_BV profile, the pinned 162-query
   Glaurung regular gate, foundational resources, generated-resource drift,
   all 23 rules-as-code generation/validation/query checks, and documentation
   links pass. Both regular-gate policies decide 162/162 with zero disagreements,
-  errors, or replay failures (raw 0.710x Z3; canonical 0.320x). All 57
-  available benchmark summarizer/comparator/gate/analyzer tests pass. The nine recipe-rendering
-  tests and the aggregate `just check` wrapper remain unavailable because this
-  host has no `just` executable; their underlying non-rendering gates above
-  were run directly. Strict current-nightly Clippy also exposed seven
+  errors, or replay failures (latest raw 0.627x Z3; canonical 0.310x; these
+  one-shot regular-gate ratios are semantic smoke, not fair warm headlines).
+  All 69 benchmark recipe/summarizer/comparator/gate/analyzer tests pass after
+  provisioning `just` v1.56.0 in an isolated temporary tool root. Strict
+  current-nightly Clippy also exposed seven
   mechanical cleanup sites (byte-array literals, one redundant pattern, one
   suffix parse, and two needless match wrappers); those semantics-preserving
   edits are included in this checkpoint.
@@ -3775,7 +3822,7 @@ plan is built and committed on the current branch:
 | P4.2 | Symbolic-execution CFG frontend (angr/unicorn-class) | WIP — first frontend-facing primitives landed: `SymbolicMemory` wraps an SMT array memory state, builds `select`/`store`, routes load-equality branch/assume queries through `SymbolicExecutor`'s automatic warm/memory feasibility APIs, and now exposes conservative write-log normalization / compact read-specific read-over-write `ite` construction for frontend memory logs that skips literal-distinct writes, elides exact-hit guards, preserves later symbolic aliases, and uses the auto route; `SymbolicExecutor::assume_auto` and `SymbolicExecutor::branch` keep same-index store/read-back constraints, literal-distinct concrete-address store-chain misses, zero-initialized constant-array reads, simple array-ITE state-merge reads including same-readback merge-guard and tautology pruning, reducible conditional read/write-index paths with scalar equality-over-`ite` cleanup, symbolic Bool readback equality/connective/xor/implication cleanup, BV bitwise/arithmetic/comparison/slice-extension/shift/div-rem readback cleanup, reducible symbolic-address ROW over store chains with same-index shadowed-store pruning, plain symbolic-base Bool/BV array loads via retained select-congruence abstraction including wide/BV256 index or element projection, direct equal-array symbol assumptions/assertions via retained cross-array select congruence and equal-array model projection, scalar Bool/BV UF applications via retained congruence abstraction including wide/BV256 argument or result projection, helper-level load/write-log queries, and default `explore_cfg` branch/assume/status/model queries on the warm BV path when they reduce or abstract, with original-term replay, while remaining general memory/UF still auto-promotes to the memory/theory-aware route; `SymbolicExecutor::explore_cfg` provides a reusable DFS harness over frontend-supplied CFG states, with solver-scope management, infeasible pruning, unknown-safe traversal, and model-witnessed targets; `explore_cfg_checked` adds frontend-supplied concrete witness extraction + replay callbacks and buckets targets into verified/missing-witness/mismatch cases; `TinyBvProgram` is the first reusable small-target frontend, with a validated BV register/memory IR, label-aware line-oriented assembly import with retained label/source metadata, deterministic PC-to-label lookup, typed static CFG edges and basic blocks, deterministic Graphviz DOT export for the basic-block CFG plus trace-highlighted, block-coverage-highlighted, and edge-coverage-highlighted DOT overlays, block-level trace paths, taken-edge trace reports, source-aware trace rows, consolidated witness trace reports, replay-checked test-case generation reports, block-coverage and edge-coverage test-suite reports, register-register equality branches, symbolic instruction lifting, zero-initialized SMT array memory for `Load`/`Store`, model-witness extraction, independent concrete replay, concrete execution traces, and bounded PC/label reachability/safety reports. Remaining: byte-level/binary broader target work, unbounded/certified safety wrappers over richer CFGs, and eventually general warm memory reuse from P4.1 |
 | P4.3 | Optimization: OMT lexicographic/Pareto + MILP hardening | WIP — single-objective `maximize/minimize_lia` + `_bv`/`_bv_signed` already shipped (exponential+binary bound search, Boolean-structured oracle). **Lexicographic multi-objective landed** (`optimize_lia_lexicographic`, 2026-06-18): optimize objectives in order, pinning each at its optimum (`obj≥v`/`obj≤v`) before the next so later ones range over the optimal face — z3's default lex combination. Sound + terminating (bounded composition of the checked single-objective optimizer); `LexOutcome::Stopped` at the first unbounded/infeasible/unknown objective. **BV lexicographic also landed** (`optimize_bv_lexicographic`, signed/unsigned, `bv_uge/ule/sge/sle` pinning) — lexicographic OMT now covers both LIA and BV. **Box** (`optimize_lia_box` / `optimize_bv_box`, independent) **and Pareto** (`optimize_lia_pareto` / `optimize_bv_pareto`, guided-improvement front enumeration, deterministic point/push caps, each point verified Pareto-optimal) modes also landed — **axeyum now has all 3 of z3's OMT modes (box, lexicographic, pareto) across LIA+BV**. BV Pareto covers unsigned and signed objective values, max/min directions, and graceful `Unknown` for out-of-fragment objective values. MaxSAT returns the witnessing model (`max_satisfiable_model`). `minimize_model` / `Solver::minimize_model` provide replay-checked lexicographic counterexample minimization over selected Bool, unsigned-BV<=127, and Int symbols, and the metadata-aware `minimize_model_objectives` / `Solver::minimize_model_objectives` route adds signed two's-complement BV objective order for signed SDK inputs. `produce_evidence_minimized` / `prove_minimized` preserve the default surface, while `_with_objectives` variants expose signed-objective metadata to frontends. `axeyum-property` v0 is now the first typed SDK consumer of that surface: Bool/BV/Int handles, assumptions, proof calls, minimized countermodel lifting, checked `EvidenceReport` exposure plus best-effort standalone Lean modules and stable evidence/trust/Lean summaries through `ProofCertificate`, typed BV overflow predicates, `.equals()` equality aliases, property-owned Bool/BV/Int builder aliases, `Property::all` / `Property::any` Boolean folds, deterministic native-scalar counterexample-to-`#[test]` rendering with caller-owned prelude/setup snippets, helper-rendered Boolean / `Result<(), E>` / `Result<bool, E>` replay adapters, deterministic `#[cfg(test)]` module assembly, deterministic multi-case fixture file assembly, direct named/tuple aggregate initializer snippets, and explicit nested aggregate field composition, scalar/tuple/derived-struct `Symbolic` declarations/lifting including signed-order two's-complement fixed-width Rust integers, named-field `symbolic_struct` bundles, and the generated SDK corpus/scoreboard gate with 16 graduated workflows, deterministic executable baseline comparisons for scalar counterexamples, an actual fixed-seed proptest shrunk counterexample, struct and replay counterexamples, proved assertions, assumption-backed proved assertions, and a Kani-style assume/assert counterexample baseline, machine-readable `corpus.json`, DISAGREE=0, and 1/1 Lean-required coverage. Remaining: MILP hardening; broader objective support for minimized counterexamples beyond Bool/BV/Int native scalars; property SDK ergonomics (operator traits, richer replay bodies); richer proptest families and real Kani CLI-backed property corpus comparison; differential validation vs Z3 `opt` |
 | P4.4 | SMT-LIB command-surface completeness (declare-sort, reset, get-proof, …) | WIP — broad command surface already parsed (declare-const/fun/datatype(s), define-fun/sort, push/pop, reset(-assertions), check-sat(-assuming), get-proof/model/value/unsat-core/assignment/assertions, set-option/info, get-option, echo/exit); term forms let/forall/exists/`!`/`as` handled. `reset-assertions` is represented and honored by scoped incremental solving; full `(reset)` is explicitly rejected in the shared-arena parse/solve model. The single-result front-door helpers (`solve_smtlib`, OMT, `get-value`, `get-unsat-core`, `get-proof`, `get-assignment`) now replay the command stream for zero-or-one-query scripts, honoring `push`/`pop`, `check-sat-assuming`, and `reset-assertions` instead of flattening scoped scripts; multi-query scripts are rejected there and routed to `solve_smtlib_incremental`. `solve_smtlib_get_model` returns user-declared constants/functions for sat `(get-model)` scripts as Rust IR values, `solve_smtlib_get_assignment` returns active top-level named assertion assignments for sat scripts while filtering popped/reset assertions, and `solve_smtlib_get_assertions` returns exact command-point assertion-stack snapshots rendered from IR while excluding one-shot `check-sat-assuming` literals. The parser records `set-info`, `set-option`, requested `get-info`, and requested `get-option` commands; `solve_smtlib_get_info` returns recorded metadata, axeyum defaults for `:name`/`:version`, computed `:reason-unknown`, and explicit unsupported markers, while `solve_smtlib_get_option` returns recorded/default option values and explicit unsupported markers. **`match` datatype pattern-matching added** (commit d404794, P4.4): parse-time desugaring to nested `ite`/`DtTest`/`DtSelect`, exhaustiveness + arity checked, 11 tests. Remaining: parametric `declare-sort`/`define-sort`, `define-fun-rec`, full `match` for parametric datatypes, full option-driven solver semantics, and textual interactive command output |
-| P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | **WIP: paired-analysis mechanism and first clean real-driver exercise DONE; fair publication evidence open (ADR-0213/0214).** Glaurung `eb624c0` emits both outcomes plus named execution classes, Axeyum performs fail-closed N>=5 stable-both-decided geomean/bootstrap CI/quantile/CDF analysis, and clean DptfDevGen `{1,5,60}`-second cells preserve 561/561 both-decided checks. This easy-driver cold-Z3/warm-Axeyum control is not a paper speedup. Remaining: topology-equivalent warm Z3 plus a neutral solver; a timeout-sensitive marked driver; authoritative finding parity/canonical model selection; multi-oracle correctness support. |
+| P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | **WIP: paired analysis and first clean topology-equivalent four-cell control DONE; regime mapping and correctness-led publication evidence open (ADR-0213--0215).** Glaurung `4ae96cf` emits v2 cold/warm Z3/Axeyum cells with named warm populations, Axeyum performs fail-closed N>=5 paired contrasts/CIs/quantiles/CDFs, and clean Dptf preserves 561/561 four-cell decisions. Fair warm Z3/Axeyum is 0.7875x, so the old 7.0678x cold-Z3/warm-Axeyum alias is not a solver speedup. Remaining: N>=5 small-driver fair map; seeded multi-oracle typed fuzzing; neutral solver; authoritative finding parity/canonical model selection; timeout-sensitive marked driver; measured qfbv/WASM/RSS/DRAT deployment. |
 
 ### Track 5 — Verified Systems (IR reflection) — ADR-0056, adopted 2026-07-06
 | Phase | Title | Status |

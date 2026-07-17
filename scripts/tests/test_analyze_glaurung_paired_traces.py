@@ -29,6 +29,7 @@ def write_trace(
     axeyum_outcomes: tuple[str, ...] = ("sat", "unsat", "sat"),
     z3_scale: int = 2,
     axeyum_scale: int = 1,
+    four_cell: bool = False,
 ) -> pathlib.Path:
     trace = root / f"trace-{repetition}"
     trace.mkdir()
@@ -43,8 +44,7 @@ def write_trace(
         query_sha256 = hashlib.sha256(query_bytes).hexdigest()
         query_path = f"queries/{query_sha256}.smt2"
         (trace / query_path).write_bytes(query_bytes)
-        events.append(
-            {
+        event = {
                 "event_seq": index,
                 "event": "check",
                 "check_id": f"check-{index}",
@@ -60,7 +60,22 @@ def write_trace(
                 "axeyum_outcome": axeyum_outcome,
                 "axeyum_execution": execution,
             }
-        )
+        if four_cell:
+            event.update(
+                {
+                    "z3_cold_nanos": z3_scale * (index + 1) * 100,
+                    "z3_warm_nanos": (index + 1) * 100,
+                    "axeyum_cold_nanos": 3 * (index + 1) * 100,
+                    "axeyum_warm_nanos": axeyum_scale * (index + 1) * 100,
+                    "z3_cold_outcome": z3_outcome,
+                    "z3_warm_outcome": z3_outcome,
+                    "axeyum_cold_outcome": axeyum_outcome,
+                    "axeyum_warm_outcome": axeyum_outcome,
+                    "z3_warm_execution": "warm-retained",
+                    "axeyum_warm_execution": execution,
+                }
+            )
+        events.append(event)
         query_entries.append(
             {
                 "content_hash": query_sha256,
@@ -86,7 +101,11 @@ def write_trace(
     manifest = {
         "schema": "glaurung-ordered-trace-v1",
         "version": 1,
-        "check_measurement_schema": "glaurung-ordered-check-measurement-v1",
+        "check_measurement_schema": (
+            "glaurung-ordered-check-measurement-v2"
+            if four_cell
+            else "glaurung-ordered-check-measurement-v1"
+        ),
         "source": {"revision": "a" * 40, "dirty": False},
         "driver": {"path": "fixture.sys", "sha256": "d" * 64},
         "analysis_command": ["ioctlance", "fixture.sys"],
@@ -109,6 +128,51 @@ def write_trace(
 
 
 class PairedTraceAnalysisTests(unittest.TestCase):
+    def test_rejects_decided_outcome_drift_across_repetitions(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            traces = [
+                write_trace(root, repetition, four_cell=True)
+                for repetition in range(4)
+            ]
+            traces.append(
+                write_trace(
+                    root,
+                    4,
+                    z3_outcomes=("unsat", "unsat", "sat"),
+                    axeyum_outcomes=("unsat", "unsat", "sat"),
+                    four_cell=True,
+                )
+            )
+            with self.assertRaisesRegex(paired.AnalysisError, "decided outcome drift"):
+                paired.analyze(traces, bootstrap_samples=100, seed=7)
+
+    def test_reports_four_cell_cold_warm_contrasts(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            traces = [
+                write_trace(root, repetition, four_cell=True)
+                for repetition in range(5)
+            ]
+            report = paired.analyze(traces, bootstrap_samples=100, seed=7)
+        comparisons = report["four_cell_comparisons"]
+        self.assertAlmostEqual(
+            comparisons["cold_z3_over_axeyum"]["per_occurrence_geomean_speedup"],
+            2.0 / 3.0,
+        )
+        self.assertAlmostEqual(
+            comparisons["warm_z3_over_axeyum"]["per_occurrence_geomean_speedup"],
+            1.0,
+        )
+        self.assertAlmostEqual(
+            comparisons["z3_cold_over_warm"]["per_occurrence_geomean_speedup"],
+            2.0,
+        )
+        self.assertAlmostEqual(
+            comparisons["axeyum_cold_over_warm"]["per_occurrence_geomean_speedup"],
+            3.0,
+        )
+
     def test_reports_geomean_ci_buckets_and_warm_partition(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = pathlib.Path(directory)
@@ -202,6 +266,26 @@ class PairedTraceAnalysisTests(unittest.TestCase):
             self.assertGreater(len(csv_bytes), 0)
             self.assertNotIn(b"\r\n", csv_bytes)
             self.assertGreater((output / "fixture.sys-latency-cdf.png").stat().st_size, 0)
+
+    @unittest.skipUnless(
+        importlib.util.find_spec("matplotlib") is not None,
+        "matplotlib is optional",
+    )
+    def test_writes_four_cell_csv_and_png_cdf(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            traces = [
+                write_trace(root, repetition, four_cell=True)
+                for repetition in range(5)
+            ]
+            report = paired.analyze(traces, bootstrap_samples=10, seed=7)
+            output = root / "cdf"
+            paired.write_cdf(report, output)
+            csv_path = output / "fixture.sys-four-cell-latency-cdf.csv"
+            png_path = output / "fixture.sys-four-cell-latency-cdf.png"
+            self.assertIn(b"z3_cold", csv_path.read_bytes())
+            self.assertIn(b"axeyum_warm", csv_path.read_bytes())
+            self.assertGreater(png_path.stat().st_size, 0)
 
 
 if __name__ == "__main__":

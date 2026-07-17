@@ -23,7 +23,9 @@ from typing import Any, Sequence
 
 
 TRACE_SCHEMA = "glaurung-ordered-trace-v1"
-MEASUREMENT_SCHEMA = "glaurung-ordered-check-measurement-v1"
+MEASUREMENT_SCHEMA_V1 = "glaurung-ordered-check-measurement-v1"
+MEASUREMENT_SCHEMA_V2 = "glaurung-ordered-check-measurement-v2"
+MEASUREMENT_SCHEMAS = {MEASUREMENT_SCHEMA_V1, MEASUREMENT_SCHEMA_V2}
 DECIDED = {"sat", "unsat"}
 OUTCOMES = DECIDED | {"unknown", "error", "no-solver"}
 EXECUTION_CLASSES = {
@@ -61,6 +63,16 @@ class Check:
     z3_nanos: int
     axeyum_nanos: int
     axeyum_execution: str
+    z3_cold_outcome: str | None = None
+    z3_warm_outcome: str | None = None
+    axeyum_cold_outcome: str | None = None
+    axeyum_warm_outcome: str | None = None
+    z3_cold_nanos: int | None = None
+    z3_warm_nanos: int | None = None
+    axeyum_cold_nanos: int | None = None
+    axeyum_warm_nanos: int | None = None
+    z3_warm_execution: str | None = None
+    axeyum_warm_execution: str | None = None
 
 
 @dataclass(frozen=True)
@@ -69,6 +81,7 @@ class Trace:
     driver_label: str
     driver_sha256: str
     configuration_identity: str
+    measurement_schema: str
     checks: tuple[Check, ...]
 
 
@@ -186,8 +199,9 @@ def load_trace(root: pathlib.Path) -> Trace:
         fail(f"{manifest_path} is not an object")
     if manifest.get("schema") != TRACE_SCHEMA or manifest.get("version") != 1:
         fail(f"{root} is not an ordered trace v1")
-    if manifest.get("check_measurement_schema") != MEASUREMENT_SCHEMA:
-        fail(f"{root} lacks {MEASUREMENT_SCHEMA}")
+    measurement_schema = manifest.get("check_measurement_schema")
+    if measurement_schema not in MEASUREMENT_SCHEMAS:
+        fail(f"{root} lacks a supported ordered-check measurement schema")
     driver = manifest.get("driver")
     if not isinstance(driver, dict):
         fail(f"{root} has no driver identity")
@@ -242,6 +256,56 @@ def load_trace(root: pathlib.Path) -> Trace:
             fail(f"invalid Axeyum execution class for {check_id} in {root}")
         z3_nanos = require_positive_int(event.get("z3_nanos"), "Z3 timing")
         axeyum_nanos = require_positive_int(event.get("axeyum_nanos"), "Axeyum timing")
+        fair_values: dict[str, Any] = {}
+        if measurement_schema == MEASUREMENT_SCHEMA_V2:
+            for cell in ("z3_cold", "z3_warm", "axeyum_cold", "axeyum_warm"):
+                cell_outcome = require_string(
+                    event.get(f"{cell}_outcome"), f"{cell} outcome"
+                )
+                if cell_outcome not in OUTCOMES:
+                    fail(f"invalid {cell} outcome for {check_id} in {root}")
+                if cell_outcome in {"error", "no-solver"}:
+                    fail(f"operational {cell} result for {check_id} in {root}")
+                fair_values[f"{cell}_outcome"] = cell_outcome
+                fair_values[f"{cell}_nanos"] = require_positive_int(
+                    event.get(f"{cell}_nanos"), f"{cell} timing"
+                )
+            decided = {
+                fair_values[f"{cell}_outcome"]
+                for cell in ("z3_cold", "z3_warm", "axeyum_cold", "axeyum_warm")
+                if fair_values[f"{cell}_outcome"] in DECIDED
+            }
+            if len(decided) > 1:
+                fail(f"decided four-cell disagreement for {check_id} in {root}")
+            fair_values["z3_warm_execution"] = require_string(
+                event.get("z3_warm_execution"), "warm Z3 execution"
+            )
+            if fair_values["z3_warm_execution"] not in {
+                "warm-created",
+                "warm-retained",
+                "fallback-missing-delta",
+                "invalid-direct-delta",
+            }:
+                fail(f"invalid warm Z3 execution for {check_id} in {root}")
+            fair_values["axeyum_warm_execution"] = require_string(
+                event.get("axeyum_warm_execution"), "warm Axeyum execution"
+            )
+            if fair_values["axeyum_warm_execution"] not in EXECUTION_CLASSES:
+                fail(f"invalid warm Axeyum execution for {check_id} in {root}")
+            aliases = (
+                (z3_nanos, fair_values["z3_cold_nanos"], "Z3 timing"),
+                (axeyum_nanos, fair_values["axeyum_warm_nanos"], "Axeyum timing"),
+                (z3_outcome, fair_values["z3_cold_outcome"], "Z3 outcome"),
+                (axeyum_outcome, fair_values["axeyum_warm_outcome"], "Axeyum outcome"),
+                (
+                    execution,
+                    fair_values["axeyum_warm_execution"],
+                    "Axeyum execution",
+                ),
+            )
+            for alias, explicit, label in aliases:
+                if alias != explicit:
+                    fail(f"{label} alias mismatch for {check_id} in {root}")
         identity = (
             event.get("event_seq"),
             check_id,
@@ -251,6 +315,8 @@ def load_trace(root: pathlib.Path) -> Trace:
             event.get("scope_digest"),
             event.get("active_constraint_count"),
             execution,
+            fair_values.get("z3_warm_execution"),
+            fair_values.get("axeyum_warm_execution"),
         )
         checks.append(
             Check(
@@ -262,6 +328,7 @@ def load_trace(root: pathlib.Path) -> Trace:
                 z3_nanos=z3_nanos,
                 axeyum_nanos=axeyum_nanos,
                 axeyum_execution=execution,
+                **fair_values,
             )
         )
 
@@ -277,6 +344,7 @@ def load_trace(root: pathlib.Path) -> Trace:
         driver_label=pathlib.Path(driver_path).name,
         driver_sha256=driver_sha256,
         configuration_identity=configuration_identity(manifest),
+        measurement_schema=measurement_schema,
         checks=tuple(checks),
     )
 
@@ -394,6 +462,86 @@ def population_summary(
     }
 
 
+def four_cell_population_summary(
+    traces: Sequence[Trace],
+    indices: Sequence[int],
+    numerator: str,
+    denominator: str,
+    bootstrap_samples: int,
+    seed: int,
+) -> dict[str, Any]:
+    if not indices:
+        return {"occurrences": 0}
+    numerator_field = f"{numerator}_nanos"
+    denominator_field = f"{denominator}_nanos"
+    per_occurrence_ratios: list[float] = []
+    numerator_latency: list[float] = []
+    denominator_latency: list[float] = []
+    for index in indices:
+        numerator_values = [
+            getattr(trace.checks[index], numerator_field) for trace in traces
+        ]
+        denominator_values = [
+            getattr(trace.checks[index], denominator_field) for trace in traces
+        ]
+        if any(value is None for value in numerator_values + denominator_values):
+            fail("four-cell timing is absent from a v2 comparison")
+        numerator_ints = [int(value) for value in numerator_values]
+        denominator_ints = [int(value) for value in denominator_values]
+        per_occurrence_ratios.append(
+            geometric_mean(
+                [
+                    left / right
+                    for left, right in zip(numerator_ints, denominator_ints)
+                ]
+            )
+        )
+        numerator_latency.append(statistics.median(numerator_ints))
+        denominator_latency.append(statistics.median(denominator_ints))
+    geomean = geometric_mean(per_occurrence_ratios)
+    ci_low, ci_high = bootstrap_geomean_ci(
+        per_occurrence_ratios, bootstrap_samples, seed
+    )
+    per_run_geomeans = [
+        geometric_mean(
+            [
+                int(getattr(trace.checks[index], numerator_field))
+                / int(getattr(trace.checks[index], denominator_field))
+                for index in indices
+            ]
+        )
+        for trace in traces
+    ]
+    return {
+        "occurrences": len(indices),
+        "ratio_direction": f"{numerator_field}/{denominator_field}",
+        "per_occurrence_geomean_speedup": geomean,
+        "bootstrap_95_percent_ci": [ci_low, ci_high],
+        "bootstrap_samples": bootstrap_samples,
+        "numerator_median_per_occurrence_latency_nanos": latency_summary(
+            numerator_latency
+        ),
+        "denominator_median_per_occurrence_latency_nanos": latency_summary(
+            denominator_latency
+        ),
+        "per_run_geomean_speedup": sample_summary(per_run_geomeans),
+    }
+
+
+def stable_four_cell_indices(
+    traces: Sequence[Trace], numerator: str, denominator: str
+) -> list[int]:
+    return [
+        index
+        for index in range(len(traces[0].checks))
+        if all(
+            getattr(trace.checks[index], f"{numerator}_outcome") in DECIDED
+            and getattr(trace.checks[index], f"{denominator}_outcome") in DECIDED
+            for trace in traces
+        )
+    ]
+
+
 def analyze(
     roots: Sequence[pathlib.Path],
     minimum_repetitions: int = 5,
@@ -417,6 +565,29 @@ def analyze(
         identities = tuple(check.identity for check in trace.checks)
         if identities != baseline_identities:
             fail(f"fixed-work check identity drift in {trace.path}")
+
+    outcome_fields = ["z3_outcome", "axeyum_outcome"]
+    if baseline.measurement_schema == MEASUREMENT_SCHEMA_V2:
+        outcome_fields.extend(
+            [
+                "z3_cold_outcome",
+                "z3_warm_outcome",
+                "axeyum_cold_outcome",
+                "axeyum_warm_outcome",
+            ]
+        )
+    for index, baseline_check in enumerate(baseline.checks):
+        for field in outcome_fields:
+            decided_outcomes = {
+                getattr(trace.checks[index], field)
+                for trace in traces
+                if getattr(trace.checks[index], field) in DECIDED
+            }
+            if len(decided_outcomes) > 1:
+                fail(
+                    f"decided outcome drift for {baseline_check.check_id} "
+                    f"field {field} across repetitions"
+                )
 
     per_run_buckets: list[dict[str, int]] = []
     for trace in traces:
@@ -457,11 +628,56 @@ def analyze(
     primary = population_summary(
         traces, stable_both_decided, bootstrap_samples, seed
     )
+    four_cell_comparisons: dict[str, Any] | None = None
+    four_cell_cdf: dict[str, list[float]] | None = None
+    if baseline.measurement_schema == MEASUREMENT_SCHEMA_V2:
+        comparison_specs = (
+            ("cold_z3_over_axeyum", "z3_cold", "axeyum_cold"),
+            ("warm_z3_over_axeyum", "z3_warm", "axeyum_warm"),
+            ("z3_cold_over_warm", "z3_cold", "z3_warm"),
+            ("axeyum_cold_over_warm", "axeyum_cold", "axeyum_warm"),
+        )
+        four_cell_comparisons = {}
+        for offset, (name, numerator, denominator) in enumerate(comparison_specs):
+            indices = stable_four_cell_indices(traces, numerator, denominator)
+            four_cell_comparisons[name] = four_cell_population_summary(
+                traces,
+                indices,
+                numerator,
+                denominator,
+                bootstrap_samples,
+                seed + 100 + offset,
+            )
+        all_four_indices = [
+            index
+            for index in range(len(baseline.checks))
+            if all(
+                all(
+                    getattr(trace.checks[index], f"{cell}_outcome") in DECIDED
+                    for cell in (
+                        "z3_cold",
+                        "z3_warm",
+                        "axeyum_cold",
+                        "axeyum_warm",
+                    )
+                )
+                for trace in traces
+            )
+        ]
+        four_cell_cdf = {
+            cell: [
+                statistics.median(
+                    [int(getattr(trace.checks[index], f"{cell}_nanos")) for trace in traces]
+                )
+                for index in all_four_indices
+            ]
+            for cell in ("z3_cold", "z3_warm", "axeyum_cold", "axeyum_warm")
+        }
     warm_count = sum(class_counts.get(name, 0) for name in PURE_WARM_CLASSES)
     retained_warm_count = class_counts.get("warm-retained", 0)
     report = {
         "schema": "axeyum-glaurung-paired-analysis-v1",
-        "input_measurement_schema": MEASUREMENT_SCHEMA,
+        "input_measurement_schema": baseline.measurement_schema,
         "driver": {
             "label": baseline.driver_label,
             "sha256": baseline.driver_sha256,
@@ -492,6 +708,9 @@ def analyze(
             "operational_errors_allowed": False,
         },
     }
+    if four_cell_comparisons is not None:
+        report["four_cell_comparisons"] = four_cell_comparisons
+        report["_four_cell_cdf"] = four_cell_cdf
     return report
 
 
@@ -531,6 +750,30 @@ def write_cdf(report: dict[str, Any], output_dir: pathlib.Path) -> None:
     plt.savefig(output_dir / f"{stem}-latency-cdf.png", dpi=180)
     plt.close()
 
+    four_cell_values = report.pop("_four_cell_cdf", None)
+    if four_cell_values is not None:
+        four_csv_path = output_dir / f"{stem}-four-cell-latency-cdf.csv"
+        with four_csv_path.open("w", encoding="utf-8", newline="") as output:
+            writer = csv.writer(output, lineterminator="\n")
+            writer.writerow(["cell", "latency_nanos", "cumulative_fraction"])
+            for cell, values in four_cell_values.items():
+                ordered = sorted(values)
+                for rank, value in enumerate(ordered, 1):
+                    writer.writerow([cell, value, rank / len(ordered)])
+        for cell, values in four_cell_values.items():
+            ordered = sorted(value / 1_000.0 for value in values)
+            cumulative = [rank / len(ordered) for rank in range(1, len(ordered) + 1)]
+            plt.step(ordered, cumulative, where="post", label=cell)
+        plt.xscale("log")
+        plt.xlabel("latency (microseconds, log scale)")
+        plt.ylabel("cumulative fraction")
+        plt.title(f"Four-cell paired latency: {report['driver']['label']}")
+        plt.grid(True, which="both", alpha=0.25)
+        plt.legend()
+        plt.tight_layout()
+        plt.savefig(output_dir / f"{stem}-four-cell-latency-cdf.png", dpi=180)
+        plt.close()
+
 
 def strip_private_cdf_values(report: dict[str, Any]) -> None:
     report["primary_both_decided"].pop("_cdf_z3_nanos", None)
@@ -538,6 +781,7 @@ def strip_private_cdf_values(report: dict[str, Any]) -> None:
     for population in report["by_axeyum_execution"].values():
         population.pop("_cdf_z3_nanos", None)
         population.pop("_cdf_axeyum_nanos", None)
+    report.pop("_four_cell_cdf", None)
 
 
 def parse_args(argv: Sequence[str]) -> argparse.Namespace:

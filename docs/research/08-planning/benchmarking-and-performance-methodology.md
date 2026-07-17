@@ -434,6 +434,18 @@ records the contract and the first measured baselines.
   decide the same 561/561 occurrences, and cold Z3 versus warm Axeyum remains
   topology-confounded. Use a timeout-sensitive driver for the actual
   sensitivity claim.
+  ADR-0215 then implements the topology-equivalent control in Glaurung
+  `4ae96cf` under `glaurung-ordered-check-measurement-v2`. A clean five-process
+  Dptf run preserves 561/561 four-cell decisions, identical created/retained
+  populations, and no fallback. Report cold Z3/Axeyum, warm Z3/Axeyum, Z3
+  cold/warm, and Axeyum cold/warm as four separate paired populations. The fair
+  warm geomean is 0.7875x [0.6893, 0.8977] Z3/Axeyum, while the deliberately
+  retained legacy cold-Z3/warm-Axeyum alias is 7.0678x. The latter must not be
+  used as a solver headline. Exact JSON and four-cell CDF evidence is committed
+  under
+  [`bench-results/glaurung-four-cell-dptf-20260717/`](../../../bench-results/glaurung-four-cell-dptf-20260717/README.md).
+  Neutral-solver, timeout-sensitive, and authoritative finding-parity gates
+  remain open.
 - Timeout regressions must pin the exact pathological public or minimized query
   and exercise both admission outcomes: deterministic oversized refusal before
   allocation and cooperative expiry inside admitted superlinear work. Every

@@ -116,12 +116,13 @@ generality.
 
 The mechanism half of ADR-0213 item 1 and its first clean real-driver exercise
 are complete. A timeout-sensitive driver and additional claimed workloads must
-still be regenerated through the marked schema. Warm Z3, a neutral solver,
-authoritative finding parity/canonical model selection, and multi-oracle
-assurance remain later gates.
+still be regenerated through the marked schema. ADR-0215 now supplies the warm
+Z3 control; a neutral solver, authoritative finding parity/canonical model
+selection, and multi-oracle assurance remain later gates.
 
 The prerequisite for resuming GQ5 is satisfied: at least one real marked trace
 set exercised the analyzer and failed none of its population gates. Existing
 engineering-local ratios retain their original product-decision role but remain
-non-publication evidence. The next publication-critical implementation is the
-topology-equivalent warm Z3 cell, not promotion of the Dptf scalar.
+non-publication evidence. The next publication-critical implementation was the
+topology-equivalent warm Z3 cell, not promotion of the Dptf scalar; ADR-0215
+completes that control and confirms why the old scalar could not be promoted.
