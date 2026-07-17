@@ -34,6 +34,18 @@ pub enum Verdict {
     Skip,
 }
 
+/// Detailed cvc5 outcome for gates where a valid generated script must not
+/// hide a parser/process failure inside an adjudication-neutral timeout.
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub enum DetailedVerdict {
+    Sat,
+    Unsat,
+    /// cvc5 explicitly returned `unknown` (normally its resource limit).
+    Unknown,
+    /// Spawn, I/O, exit-status, or output-protocol failure.
+    Failure(String),
+}
+
 /// Resolve the cvc5 binary path, or `None` if cvc5 is unavailable.
 ///
 /// Tries `cvc5` on `PATH` first, then the conventional user install location
@@ -70,34 +82,54 @@ pub fn cvc5_bin() -> Option<String> {
 /// backstops cvc5's internal `--tlimit` in case the process wedges before
 /// solving.
 pub fn cvc5_decide(bin: &str, text: &str, timeout: Duration) -> Verdict {
+    match cvc5_decide_detailed(bin, text, timeout) {
+        DetailedVerdict::Sat => Verdict::Sat,
+        DetailedVerdict::Unsat => Verdict::Unsat,
+        DetailedVerdict::Unknown | DetailedVerdict::Failure(_) => Verdict::Skip,
+    }
+}
+
+/// Decide a script while preserving explicit `unknown` versus process/parser
+/// failure. Existing string fuzzers use [`cvc5_decide`]'s conservative coarse
+/// contract; publication-grade generated-input gates use this function and
+/// fail closed on [`DetailedVerdict::Failure`].
+pub fn cvc5_decide_detailed(bin: &str, text: &str, timeout: Duration) -> DetailedVerdict {
     let tlimit_ms = timeout.as_millis().max(1);
-    let Ok(mut child) = Command::new(bin)
+    let mut child = match Command::new(bin)
         .arg("--lang")
         .arg("smt2")
         .arg("--strings-exp")
         .arg(format!("--tlimit={tlimit_ms}"))
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
-        .stderr(Stdio::null())
+        .stderr(Stdio::piped())
         .spawn()
-    else {
-        return Verdict::Skip;
+    {
+        Ok(child) => child,
+        Err(error) => return DetailedVerdict::Failure(format!("spawn failed: {error}")),
     };
-    if let Some(stdin) = child.stdin.as_mut() {
-        let _ = stdin.write_all(text.as_bytes());
+    if let Some(stdin) = child.stdin.as_mut()
+        && let Err(error) = stdin.write_all(text.as_bytes())
+    {
+        return DetailedVerdict::Failure(format!("stdin write failed: {error}"));
     }
     drop(child.stdin.take());
-    let Ok(output) = child.wait_with_output() else {
-        return Verdict::Skip;
+    let output = match child.wait_with_output() {
+        Ok(output) => output,
+        Err(error) => return DetailedVerdict::Failure(format!("wait failed: {error}")),
     };
     let stdout = String::from_utf8_lossy(&output.stdout);
     for line in stdout.lines() {
         match line.trim() {
-            "sat" => return Verdict::Sat,
-            "unsat" => return Verdict::Unsat,
-            "unknown" => return Verdict::Skip,
+            "sat" => return DetailedVerdict::Sat,
+            "unsat" => return DetailedVerdict::Unsat,
+            "unknown" => return DetailedVerdict::Unknown,
             _ => {}
         }
     }
-    Verdict::Skip
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    DetailedVerdict::Failure(format!(
+        "exit={} stdout={stdout:?} stderr={stderr:?}",
+        output.status
+    ))
 }

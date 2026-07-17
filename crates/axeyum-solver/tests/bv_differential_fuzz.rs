@@ -73,7 +73,7 @@ use z3::ast::{BV, Bool};
 use z3::{Params, SatResult, Solver};
 
 mod common_cvc5;
-use common_cvc5::{Verdict as Cvc5Verdict, cvc5_bin, cvc5_decide};
+use common_cvc5::{DetailedVerdict as Cvc5Verdict, cvc5_bin, cvc5_decide_detailed};
 
 /// Number of instances generated and adjudicated. Each is tiny (≤ 4 vars, ≤ 4
 /// atoms, depth ≤ 3, width ≤ 32) so Z3 decides well within its timeout and the
@@ -163,7 +163,7 @@ impl BvCmp {
     fn symbol(self) -> &'static str {
         match self {
             BvCmp::Eq => "=",
-            BvCmp::Ne => "!=",
+            BvCmp::Ne => "distinct",
             BvCmp::Ult => "bvult",
             BvCmp::Ule => "bvule",
             BvCmp::Ugt => "bvugt",
@@ -1079,13 +1079,18 @@ fn run_instance(seed: u64, inst: &Instance, t: &mut Tally, cvc5: Option<&str>) {
         return;
     };
     t.cvc5_sampled += 1;
-    let cvc5_label = match cvc5_decide(cvc5, &inst.to_smt2(), Z3_TIMEOUT) {
+    let cvc5_label = match cvc5_decide_detailed(cvc5, &inst.to_smt2(), Z3_TIMEOUT) {
         Cvc5Verdict::Sat => Verdict::Sat,
         Cvc5Verdict::Unsat => Verdict::Unsat,
-        Cvc5Verdict::Skip => {
+        Cvc5Verdict::Unknown => {
             t.cvc5_unknown_skipped += 1;
             return;
         }
+        Cvc5Verdict::Failure(detail) => panic!(
+            "cvc5 failed on valid generated QF_BV (seed {seed}): {detail}\n\
+             Complete reproducer:\n{}",
+            inst.to_smt2()
+        ),
     };
     t.cvc5_decided += 1;
     assert!(
