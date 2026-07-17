@@ -171,9 +171,8 @@ def run_one(
             ("[axeyum-serial-owner]", "serial_owner"),
         ):
             line = next((row for row in result.stderr.splitlines() if row.startswith(prefix)), None)
-            if line is None:
-                raise RuntimeError(f"missing {prefix} row")
-            run[key] = parse_key_values(line)
+            if line is not None:
+                run[key] = parse_key_values(line)
     return run
 
 
@@ -193,21 +192,29 @@ def summarize_driver(runs: list[dict[str, Any]]) -> dict[str, Any]:
         if len(structural) != 1 or any(run["time_exit"] for run in population):
             raise RuntimeError(f"{backend} work population drift")
 
-    for run in populations["axeyum"]:
-        warm = run["warm"]
-        cache = run["sat_cache"]
-        serial = run["serial_owner"]
-        if (
-            warm.get("resets") != 0
-            or warm.get("paths-live") != 0
-            or warm.get("path-cap-fallbacks") != 0
-            or warm.get("assertion-cap-fallbacks") != 0
-            or cache.get("replay-failures") != 0
-            or cache.get("entries") != 0
-            or serial.get("tracked-owners") != 0
-            or serial.get("references") != 0
-        ):
-            raise RuntimeError("Axeyum lifecycle, fallback, or replay gate failed")
+    telemetry_presence = {
+        all(key in run for key in ("warm", "sat_cache", "serial_owner"))
+        for run in populations["axeyum"]
+    }
+    if len(telemetry_presence) != 1:
+        raise RuntimeError("Axeyum warm telemetry availability drift")
+    telemetry_available = telemetry_presence.pop()
+    if telemetry_available:
+        for run in populations["axeyum"]:
+            warm = run["warm"]
+            cache = run["sat_cache"]
+            serial = run["serial_owner"]
+            if (
+                warm.get("resets") != 0
+                or warm.get("paths-live") != 0
+                or warm.get("path-cap-fallbacks") != 0
+                or warm.get("assertion-cap-fallbacks") != 0
+                or cache.get("replay-failures") != 0
+                or cache.get("entries") != 0
+                or serial.get("tracked-owners") != 0
+                or serial.get("references") != 0
+            ):
+                raise RuntimeError("Axeyum lifecycle, fallback, or replay gate failed")
 
     z3_findings = populations["z3"][0]["findings"]
     axeyum_findings = populations["axeyum"][0]["findings"]
@@ -234,17 +241,25 @@ def summarize_driver(runs: list[dict[str, Any]]) -> dict[str, Any]:
             "analyzed": population[0]["analyzed"],
             "analysis_roots": population[0]["analysis_roots"],
         }
-    representative = populations["axeyum"][0]
-    checks = int(representative["warm"]["checks"])
-    created = int(representative["warm"]["paths-created"])
-    result["axeyum_warm_execution"] = {
-        "checks": checks,
-        "owner_created_checks": created,
-        "owner_retained_checks": checks - created,
-        "owner_retained_percent": (checks - created) * 100 / checks,
-        "replay_cache_hits": int(representative["sat_cache"]["hits"]),
-        "fallbacks": 0,
-    }
+    result["axeyum_warm_telemetry_available"] = telemetry_available
+    if telemetry_available:
+        representative = populations["axeyum"][0]
+        checks = int(representative["warm"]["checks"])
+        created = int(representative["warm"]["paths-created"])
+        result["axeyum_warm_execution"] = {
+            "checks": checks,
+            "owner_created_checks": created,
+            "owner_retained_checks": checks - created,
+            "owner_retained_percent": (checks - created) * 100 / checks,
+            "replay_cache_hits": int(representative["sat_cache"]["hits"]),
+            "fallbacks": 0,
+        }
+    else:
+        result["axeyum_warm_execution"] = None
+        result["axeyum_warm_telemetry_note"] = (
+            "the Glaurung example prints warm lifecycle rows only when both solver "
+            "features are compiled; the Axeyum-only authority binary does not expose them"
+        )
     return result
 
 
