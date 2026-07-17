@@ -119,6 +119,13 @@ pub fn cvc5_decide_detailed(bin: &str, text: &str, timeout: Duration) -> Detaile
         Err(error) => return DetailedVerdict::Failure(format!("wait failed: {error}")),
     };
     let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    if !output.status.success() {
+        return DetailedVerdict::Failure(format!(
+            "exit={} stdout={stdout:?} stderr={stderr:?}",
+            output.status
+        ));
+    }
     for line in stdout.lines() {
         match line.trim() {
             "sat" => return DetailedVerdict::Sat,
@@ -127,7 +134,6 @@ pub fn cvc5_decide_detailed(bin: &str, text: &str, timeout: Duration) -> Detaile
             _ => {}
         }
     }
-    let stderr = String::from_utf8_lossy(&output.stderr);
     DetailedVerdict::Failure(format!(
         "exit={} stdout={stdout:?} stderr={stderr:?}",
         output.status
