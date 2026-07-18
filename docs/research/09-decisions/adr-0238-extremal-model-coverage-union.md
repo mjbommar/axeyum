@@ -1,6 +1,6 @@
 # ADR-0238: Extremal-model coverage-union authority control
 
-Status: proposed
+Status: accepted
 Date: 2026-07-18
 
 ## Context
@@ -75,13 +75,39 @@ Before the campaign, focused Glaurung minimum/maximum/parser tests pass under
 both `solver-z3` and `solver-axeyum`; all 20 runner/analyzer unit tests and
 shell validation pass. These engineering checks are not campaign evidence.
 
+## Evidence
+
+The exact committed runner completes and the fail-closed analyzer accepts the
+campaign. The arbitrary-model control reproduces 128 stable Z3-authority rows,
+126 stable Axeyum-authority rows, and the exact two Z3-only rows. The
+least-unsigned control reproduces its 110-row ordered hash, 80,563 solves,
+1,206 attempts, 1,204 completed choices, two infeasible paths, 79,466 probes,
+and zero inconclusive choices under each authority and repetition.
+
+The new greatest-unsigned policy produces 84 byte-identical ordered findings
+under both authorities in all six processes. Each repetition has 34,659
+solves; canonical telemetry is identical at 513 attempts, 513 completions,
+33,858 probes, and zero infeasible, inconclusive, unsupported, unknown, or
+error choices.
+
+The accepted deterministic extremal union has 125 findings: 69 common to both
+policies, 41 least-only, and 15 greatest-only. It is byte-identical under both
+authorities. Against the arbitrary-model combined union of 128, the sets have
+95 shared, 33 arbitrary-only, and 30 extremal-only rows. Thus the experiment
+accepts authority parity but directly rejects any claim that these two extrema
+preserve or subsume arbitrary-model findings.
+
+The full artifact and hashes are recorded in
+[`README.md`](../../../bench-results/glaurung-tcpip-extremal-coverage-union-20260718/README.md).
+
 ## Consequences
 
-If accepted, the paper may report backend-independent finding parity for a
-bounded deterministic two-extremum union and may compare that union honestly
-with the rejected arbitrary-model population. It may not call two extrema
-exhaustive multi-model coverage, prove that neither solver misses a true
-positive, or treat policy-dependent process times as solver performance.
+The paper may report backend-independent finding parity for this bounded
+deterministic two-extremum union and the exact overlap with the rejected
+arbitrary-model population. It must report the 33 arbitrary-only rows and may
+not call two extrema exhaustive multi-model coverage, finding preservation, or
+proof that neither solver misses a true positive. Policy-dependent process
+times are not solver performance.
 
 The default Glaurung behavior remains arbitrary model choice. Both extremal
 policies remain experimental and opt in.
