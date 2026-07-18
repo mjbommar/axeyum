@@ -44,3 +44,6 @@ required-features = ["z3"]
 
 [[example]]
 name = "cvc5_smt_stream_bench"
+
+[[example]]
+name = "cvc5_qfbv_timeout_sweep"

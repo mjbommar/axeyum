@@ -539,6 +539,32 @@ records the contract and the first measured baselines.
   throughput separate. The fact that cvc5's per-check difficulty ordering does
   not mirror the Axeyum/Z3 warm ordering is regime evidence, not license to
   normalize unlike integration boundaries into a headline ratio.
+  The timeout-sensitive one-shot frontier uses artifact v32 so an Axeyum
+  `unknown` no longer prevents the in-process Z3 control from running. Produce
+  at least five fresh-process Axeyum/Z3 artifacts at each predeclared timeout,
+  run the same hash-bound files through the neutral subprocess control, and
+  then analyze all cells together:
+
+  ```sh
+  cargo run --release -p axeyum-bench \
+    --example cvc5_qfbv_timeout_sweep -- \
+    /path/to/corpus /path/to/manifest-v1.json /path/to/cvc5 \
+    cvc5-sweep.json 5 50,100,250,1000
+
+  python3 scripts/analyze-qfbv-timeout-sweep.py \
+    --cvc5 cvc5-sweep.json --out analysis.json \
+    axeyum-z3-*.json
+  ```
+
+  The analyzer requires a clean source, one worker, identical manifest/config
+  identity apart from timeout, complete four-bucket accounting, and no error,
+  replay failure, decided disagreement, or cross-solver SAT/UNSAT
+  contradiction. Outcome drift around a timeout is reported, not discarded.
+  Paired latency uses only the queries both solvers decide in every repetition
+  of that timeout cell. The cvc5 wall time includes a fresh process, parsing,
+  and model output and is never divided into the in-process ratio. This
+  deduplicated one-shot boundary is timeout sensitivity evidence; it is not a
+  retained-warm or end-to-end authoritative finding-parity experiment.
 - Generated correctness gates must distinguish a solver nondecision from an
   invalid oracle invocation. ADR-0224 keeps 4,000 deterministic well-typed
   QF_BV rows on Axeyum/direct-Z3 with original-model replay and sends a fixed

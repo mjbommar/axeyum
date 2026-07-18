@@ -78,7 +78,7 @@ class GlaurungRegularGateTests(unittest.TestCase):
                     out = args[args.index("--out") + 1]
                     files = 128
                     artifact = {
-                        "version": 31,
+                        "version": 32,
                         "summary": {
                             "files": files,
                             "decided": files,

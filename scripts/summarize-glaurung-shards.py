@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import Any, NoReturn, Sequence
 
 
-SOURCE_ARTIFACT_VERSION = 31
+SOURCE_ARTIFACT_VERSION = 32
 SUMMARY_SCHEMA = "axeyum-glaurung-qfbv-sharded-summary-v1"
 SHARD_SET_SCHEMA = "glaurung-qfbv-shard-set-v1"
 PARTITION = "u64::from_be_bytes(sha256[0:8]) modulo shard_count"
@@ -530,7 +530,7 @@ def summarize(
     if len(resolved_artifacts) != len(shards) or len(set(resolved_artifacts)) != len(resolved_artifacts):
         fail("exactly one unique artifact is required for every shard")
     # Match by the deterministic shard filename before parsing so only one
-    # large v31 artifact is resident at a time. The selected tier inside each
+    # large v32 artifact is resident at a time. The selected tier inside each
     # artifact is still validated below; the filename is not trusted as
     # evidence identity.
     artifact_by_name: dict[str, Path] = {}

@@ -80,7 +80,7 @@ def artifact(*, disabled: bool, cold_ms: float, drift: bool = False) -> dict:
             }
         )
     return {
-        "version": 31,
+        "version": 32,
         "config": config,
         "instances": instances,
         "summary": {

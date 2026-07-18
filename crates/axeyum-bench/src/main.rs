@@ -53,7 +53,7 @@ mod run {
     use serde_json::{Value as JsonValue, json};
     use sha2::{Digest, Sha256};
 
-    const ARTIFACT_VERSION: u32 = 31;
+    const ARTIFACT_VERSION: u32 = 32;
     const CORPUS_MANIFEST_VERSION: u64 = 1;
     const CONTENT_HASH_PREFIX: &str = "sha256:";
     const DETERMINISM_PROFILE: &str = "axeyum-bench-fixed-seeds-v1";
@@ -1272,6 +1272,9 @@ mod run {
         oracle_agree: u64,
         oracle_disagree: u64,
         oracle_skipped: u64,
+        oracle_axeyum_only_decided: u64,
+        oracle_z3_only_decided: u64,
+        oracle_neither_decided: u64,
         par2_seconds: f64,
         // Corpus layer attribution over decided pure-Rust (`sat-bv`) instances
         // only, so gate (a) — "does SAT solve time dominate?" — is falsifiable
@@ -3410,11 +3413,17 @@ mod run {
                         }
                     } else {
                         summary.oracle_skipped += 1;
+                        summary.oracle_axeyum_only_decided += 1;
                     }
                     json!({
                         "enabled": true,
                         "backend_kind": "z3-binary",
                         "outcome": result.verdict,
+                        "decision_population": if compared {
+                            "both-decided"
+                        } else {
+                            "axeyum-only-decided"
+                        },
                         "decision_compared": compared,
                         "decision_agrees": if compared {
                             JsonValue::Bool(agrees)
@@ -3429,7 +3438,12 @@ mod run {
                     })
                 } else {
                     summary.oracle_skipped += 1;
-                    json!({ "enabled": true, "skipped": "z3-binary-unavailable" })
+                    summary.oracle_axeyum_only_decided += 1;
+                    json!({
+                        "enabled": true,
+                        "decision_population": "axeyum-only-decided",
+                        "skipped": "z3-binary-unavailable",
+                    })
                 }
             } else {
                 JsonValue::Null
@@ -4885,6 +4899,9 @@ mod run {
         total.oracle_agree += next.oracle_agree;
         total.oracle_disagree += next.oracle_disagree;
         total.oracle_skipped += next.oracle_skipped;
+        total.oracle_axeyum_only_decided += next.oracle_axeyum_only_decided;
+        total.oracle_z3_only_decided += next.oracle_z3_only_decided;
+        total.oracle_neither_decided += next.oracle_neither_decided;
         total.par2_seconds += next.par2_seconds;
         total.layer_files += next.layer_files;
         total.layer_word_preprocess_s += next.layer_word_preprocess_s;
@@ -4917,6 +4934,28 @@ mod run {
         total.manifest_disagree += next.manifest_disagree;
     }
 
+    fn record_oracle_population(
+        summary: &mut Summary,
+        primary_decided: bool,
+        oracle_decided: bool,
+    ) -> &'static str {
+        match (primary_decided, oracle_decided) {
+            (true, true) => "both-decided",
+            (true, false) => {
+                summary.oracle_axeyum_only_decided += 1;
+                "axeyum-only-decided"
+            }
+            (false, true) => {
+                summary.oracle_z3_only_decided += 1;
+                "z3-only-decided"
+            }
+            (false, false) => {
+                summary.oracle_neither_decided += 1;
+                "neither-decided"
+            }
+        }
+    }
+
     #[allow(clippy::too_many_arguments)]
     fn compare_with_oracle(
         oracle: &mut dyn SolverBackend,
@@ -4927,15 +4966,6 @@ mod run {
         summary: &mut Summary,
         word_preprocess: Duration,
     ) -> JsonValue {
-        if !matches!(primary.outcome, "sat" | "unsat") {
-            summary.oracle_skipped += 1;
-            return json!({
-                "enabled": true,
-                "backend_kind": "z3",
-                "skipped": format!("primary-outcome-{}", primary.outcome),
-            });
-        }
-
         let oracle_config = SolverConfig {
             timeout: config.timeout,
             resource_limit: config.resource_limit,
@@ -4951,7 +4981,8 @@ mod run {
             ReplayFailurePolicy::SoundnessAlarm,
             None,
         );
-        let mut compared = matches!(oracle_solve.outcome, "sat" | "unsat");
+        let primary_decided = matches!(primary.outcome, "sat" | "unsat");
+        let mut oracle_decided = matches!(oracle_solve.outcome, "sat" | "unsat");
         // The in-repo `Z3Backend` oracle only supports `QF_BV` (it returns
         // `unsupported` for UF/arithmetic/datatypes/quantifiers/FP). So for the
         // non-BV divisions this keystone exists to measure, it cannot give a
@@ -4962,14 +4993,18 @@ mod run {
         // / disagreement gate needs.
         let mut z3_binary: Option<Z3BinaryResult> = None;
         let mut oracle_outcome = oracle_solve.outcome;
-        if !compared && let Some(result) = run_z3_binary(file, config.timeout) {
+        if oracle_solve.outcome == "unsupported"
+            && let Some(result) = run_z3_binary(file, config.timeout)
+        {
             if let Some(verdict) = result.verdict {
                 oracle_outcome = verdict;
-                compared = true;
+                oracle_decided = true;
             }
             z3_binary = Some(result);
         }
 
+        let compared = primary_decided && oracle_decided;
+        let population = record_oracle_population(summary, primary_decided, oracle_decided);
         let agrees = compared && oracle_outcome == primary.outcome;
         if compared {
             summary.oracle_compared += 1;
@@ -5009,6 +5044,7 @@ mod run {
             "backend_kind": if z3_binary.is_some() { "z3-binary" } else { "z3" },
             "query_boundary": "original parsed assertions",
             "outcome": oracle_outcome,
+            "decision_population": population,
             "decision_compared": compared,
             "decision_agrees": if compared { JsonValue::Bool(agrees) } else { JsonValue::Null },
             "translate_ms": duration_ms(oracle_solve.stats.translate),
@@ -5342,6 +5378,16 @@ mod run {
                 "agree": s.oracle_agree,
                 "disagree": s.oracle_disagree,
                 "skipped": s.oracle_skipped,
+                "decision_population": {
+                    "both_decided": s.oracle_compared,
+                    "axeyum_only_decided": s.oracle_axeyum_only_decided,
+                    "z3_only_decided": s.oracle_z3_only_decided,
+                    "neither_decided": s.oracle_neither_decided,
+                    "accounted": s.oracle_compared
+                        + s.oracle_axeyum_only_decided
+                        + s.oracle_z3_only_decided
+                        + s.oracle_neither_decided,
+                },
             },
             "layer_attribution": layer_attribution_record(s),
             "query_shape": query_shape_summary_record(s),
@@ -6649,6 +6695,30 @@ mod run {
                 entry.as_object_mut().unwrap().remove("content_hash");
             }
             value
+        }
+
+        #[test]
+        fn oracle_population_records_every_decided_bucket() {
+            let mut summary = Summary::default();
+            assert_eq!(
+                record_oracle_population(&mut summary, true, true),
+                "both-decided"
+            );
+            assert_eq!(
+                record_oracle_population(&mut summary, true, false),
+                "axeyum-only-decided"
+            );
+            assert_eq!(
+                record_oracle_population(&mut summary, false, true),
+                "z3-only-decided"
+            );
+            assert_eq!(
+                record_oracle_population(&mut summary, false, false),
+                "neither-decided"
+            );
+            assert_eq!(summary.oracle_axeyum_only_decided, 1);
+            assert_eq!(summary.oracle_z3_only_decided, 1);
+            assert_eq!(summary.oracle_neither_decided, 1);
         }
 
         #[test]

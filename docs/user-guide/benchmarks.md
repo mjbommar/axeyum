@@ -85,7 +85,7 @@ just compare-glaurung-qfbv-repeated BASE CAND OUT # controlled cross-commit delt
 
 Each JSON records the corpus + config hash, per-instance outcome, budgets,
 backend stats, PAR-2, explicit `decided`/`decided_percent`, **disagreements**,
-and **model-replay failures**. Artifact version 31 retains version 16's exact
+and **model-replay failures**. Artifact version 32 retains version 16's exact
 floating-point millisecond values for each instance's word-level preprocessing,
 bit-blast, CNF encode/inprocess, SAT, model lift, and cold total, plus corpus
 totals and p50/p95 distributions. Its `client_comparison` block reports the
@@ -120,6 +120,14 @@ work. Repeatable `--rewrite-disable-rule <id>` flags (valid only with
 IDs and the resulting enabled rule list enter artifact identity. Pair the base
 and ablated artifacts by manifest path to measure actual per-rule AIG/CNF/time
 deltas before investing in a rewrite family.
+Version 32 makes timeout-sensitive oracle coverage explicit. The in-process Z3
+oracle now runs even when Axeyum returns `unknown`; each instance and the
+summary partition the complete query set into `both-decided`,
+`axeyum-only-decided`, `z3-only-decided`, and `neither-decided`. Z3 binary
+fallback is limited to an in-process `unsupported` result and cannot replace a
+real in-process timeout. Latency comparisons remain restricted to
+`both-decided`; nondecisions are reported separately rather than rewarded as
+fast solves.
 ADR-0159 makes that pairing executable and fail-closed. The repeated ablation
 recipe alternates an unchanged default run with the exact default-minus-rule
 run in fresh processes. `compare-glaurung-rewrite-ablation.py` rejects any
@@ -329,7 +337,7 @@ just bench-glaurung-qfbv-rewrite-ablation-repeated \
   5
 ```
 
-The output directory contains paired `base-*`/`ablation-*` artifact-v31 files
+The output directory contains paired `base-*`/`ablation-*` artifact-v32 files
 and `comparison.json`. Positive deltas mean the enabled base rule avoided that
 work or time. Fire counts and selected-policy output sizes remain targeting
 telemetry, not causal savings.
