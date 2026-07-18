@@ -1,6 +1,6 @@
 # ADR-0239: Site-hash mixed-extremum authority union
 
-Status: proposed
+Status: accepted
 Date: 2026-07-18
 
 ## Context
@@ -91,15 +91,40 @@ the main worktree during measurement. The runner stopped before maximum or
 either site-hash policy was observed. Preserve this attempt as inadmissible
 provenance; do not count it as campaign evidence.
 
-Rerun the same committed runner from a detached Axeyum worktree at the exact
-preregistration commit `57ee6720`. The isolated worktree prevents unrelated
+The same committed runner was rerun from a detached Axeyum worktree at the exact
+preregistration commit `57ee6720`. The isolated worktree prevented unrelated
 workspace writes from changing measured source identity. No experiment source,
 input, policy, seed, execution order, fixed-work boundary, acceptance gate, or
-resource bound changes.
+resource bound changed.
+
+## Result
+
+The isolated exact rerun passes every gate. The arbitrary-model control remains
+rejected with 126 stable shared rows and two Z3-only rows. Minimum reproduces
+110 findings and 80,563 solves; maximum reproduces 84 findings and 34,659
+solves. Site-hash-zero produces 95 findings, 28,258 solves, 419 completed
+choices, and 27,654 probes. Site-hash-one produces 98 findings, 79,950 solves,
+1,195 completed choices, and 78,872 probes. Each canonical count, ordered-list
+hash, work count, and telemetry partition is identical in all three repetitions
+under both authorities, with zero inconclusive choice.
+
+The two site schedules have a 122-row union. They add three rows beyond the
+125-row minimum/maximum union, yielding an authority-identical 128-row
+four-schedule union. Membership is 69 rows in all four policies, two in three,
+48 in two, and nine in one. Policy-unique counts are maximum 6, minimum 0,
+site-hash-zero 3, and site-hash-one 0.
+
+Against the arbitrary-model combined union, 95 rows are shared, 33 remain
+arbitrary-only, and 33 are four-schedule-only. Thus the genuinely broader
+deterministic pair grows the extremal union but recovers none of the prior 33
+arbitrary-only rows. The accepted claim is exactly bounded deterministic
+four-schedule mixed-extremum authority parity. Detailed partitions and artifact
+hashes are in
+[`RESULTS.md`](../../../bench-results/glaurung-tcpip-site-schedule-union-20260718/RESULTS.md).
 
 ## Consequences
 
-If accepted, the paper may report authority parity for this bounded
+The paper may report authority parity for this bounded
 four-schedule deterministic ensemble and its exact incremental coverage over
 two global extrema. It may not call four schedules exhaustive, claim finding
 preservation unless the measured set relation actually supports it, prove that

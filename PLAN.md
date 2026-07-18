@@ -177,20 +177,31 @@ session state.
 > bounded deterministic ensemble with authority parity, while directly
 > rejecting an exhaustive-coverage or finding-preservation claim. Next widen
 > fixed work or add genuinely broader deterministic model exploration.
-> ADR-0239 preregisters the latter before observing its full result. Two
+> ADR-0239 accepts the latter after preregistration. Two
 > complementary site-hash policies select min/max from only the fixed choice
 > purpose and instruction address, excluding solver models, expression IDs,
 > mutable counters, and process order. Combined with global minimum/maximum,
 > they form a four-schedule ensemble on ADR-0238's exact source/input/work
 > boundary. Acceptance requires exact reproduction of all three prior controls,
 > per-policy output/work/telemetry parity, and an identical four-policy union;
-> union growth and recovery of the 33 arbitrary-only rows are explicitly not
+> union growth and recovery of the 33 arbitrary-only rows were explicitly not
 > preselected. The first exact attempt reproduced the rejected arbitrary-model
 > and all six minimum controls, then failed closed when a concurrent tracked
 > planning-document edit changed Axeyum source identity; maximum and both site
-> schedules were never observed. Preserve that inadmissible attempt and rerun
-> the unchanged committed campaign from detached preregistration commit
-> `57ee6720`, then preserve its result whether positive or negative.
+> schedules were never observed. That inadmissible attempt is preserved; the
+> unchanged committed campaign was rerun from detached preregistration commit
+> `57ee6720`. Every gate passes: site-hash-zero and site-hash-one produce 95 and
+> 98 identical findings; their addition grows the two-extremum union from 125
+> to 128, but recovers none of the 33 arbitrary-only rows. Preserve the bounded
+> parity result without claiming preservation.
+> The cross-repository Pareto strategy now makes the next boundary explicit:
+> concretization value selection is one pluggable policy knob, not a sequence of
+> new algorithms. Land Glaurung's `ConcretizationPolicy` A0 refactor first, with
+> `AnyModel` byte-for-byte default reproduction and stable self-identifying trace
+> tags. Treat least/greatest/site-hash/boundary/diverse choices and deterministic
+> work bounds as configurations to sweep under one harness. Only begin deferred
+> symbolic memory if that cheap sweep leaves measured coverage headroom; symbolic
+> memory changes the memory model and is the sole architectural item in Pillar A.
 > ADR-0226 adds the first explicit proof denominator. Of 2,513 generated UNSAT
 > rows, a predeclared width<=8/seed-divisible-by-4 subset selects 169 (6.725030%):
 > all 169 carry independently rechecked CNF DRAT and end-to-end
@@ -305,6 +316,31 @@ session state.
 > retains 33 arbitrary-model-only rows, so wider authority and genuinely
 > broader model exploration remain publication work; the standalone canonical
 > timers are not performance evidence.
+
+> **Concretization coverage gap is open and correctness-relevant (2026-07-18).**
+> The authority-parity work (ADR-0229/0236/0238) proved exact finding parity
+> across backends is *reachable*, but NOT that it *preserves coverage*:
+> `glaurung-min-unsigned-v1` collapses tcpip's 126 shared any-model sinks to 110,
+> and the least/greatest union still retains 33 arbitrary-model-only rows. The
+> rows canonicalization drops include attacker-tainted double-fetches, so this is
+> a recall/correctness concern for a security tool -- the analysis may silently
+> miss real bugs -- not merely a reproducibility measurement. The open gap is
+> therefore **reproducibility AND coverage together**: neither unrestricted
+> any-model (non-reproducible, backend-dependent) nor canonical least-unsigned
+> (reproducible but lossy) is acceptable, and finding parity alone must not be
+> treated as "solved." Required next steps: (1) classify the dropped
+> double-fetches / 33 arbitrary-only rows as true positives vs model artifacts --
+> this decides whether the gap loses real bugs or prunes noise; (2) make Glaurung
+> concretization a first-class configurable `ConcretizationPolicy` (the call site
+> is already versioned as `glaurung-any-address-v1`), then sweep {any, least,
+> greatest, boundary-set, diverse-enumeration} for a policy that is deterministic
+> AND >= any-model coverage. The 33 arbitrary-only rows show boundary extremes
+> alone are insufficient, so genuine diverse enumeration (disjoint projected
+> enumeration) is the leading candidate rather than another single canonical
+> point. The companion cross-repository Pareto strategy owns the full
+> downstream use-case / SOTA analysis and sequencing: Phase 0 is the
+> configurable-policy refactor, while symbolic memory is the one architectural
+> item.
 
 > **P0 soundness stop contained (2026-07-15, ADR-0165).** Historical commit
 > `2cb298e2` reproduced unrestricted large elimination from a two-constructor
@@ -802,13 +838,13 @@ count as decisions or speedups.
 
 | ID | Roadmap item | Scope and exit criterion |
 |---|---|---|
-| **GQ1** | **Capture and profile real queries first** | **Four-driver map, query/internal attribution, fresh/retained exact-CNF controls, neutral cold-reset plus source-owner-retained SMT breadth, independent four-oracle fuzz, bounded/canonical/extremal-union authority cells, process-isolated corrected-representative end-to-end faithfulness, and deadline-aware generated proof widening DONE (ADR-0187/0188/0197/0213--0238); mixed-site ensemble PREREGISTERED (ADR-0239).** The independent/edge campaign reaches 12,000/12,000 four-way agreements and 4,471/4,471 SAT replays with all 14 edge families nonvacuous; cvc5 agrees on all 9,526 real checks in both external protocols; 302 raw sinks match under unrestricted sole authority on four drivers; tcpip prefix 15 exposes two stable Z3-only any-model sinks, reaches exact 110-sink parity under unsigned-minimum, and reaches exact 125-sink least/greatest union parity while retaining 33 arbitrary-only rows; all 74 UNSAT rows in the corrected five-driver representative recheck both CNF DRAT and stronger end-to-end certificates in two clean process-isolated runs, and a 1 ms kill control retains all 74 rows; all 1,505 generated CNF proofs recheck, with 1,487/1,505 stronger generated certificates under policy. Retained BatSat beats Z3 Boolean on Axeyum CNF despite native warm Z3 winning end-to-end. Run ADR-0239 exactly, then add wider authority and real proof cells. |
+| **GQ1** | **Capture and profile real queries first** | **Four-driver map, query/internal attribution, fresh/retained exact-CNF controls, neutral cold-reset plus source-owner-retained SMT breadth, independent four-oracle fuzz, bounded/canonical/four-schedule authority cells, process-isolated corrected-representative end-to-end faithfulness, and deadline-aware generated proof widening DONE (ADR-0187/0188/0197/0213--0239).** The independent/edge campaign reaches 12,000/12,000 four-way agreements and 4,471/4,471 SAT replays with all 14 edge families nonvacuous; cvc5 agrees on all 9,526 real checks in both external protocols; 302 raw sinks match under unrestricted sole authority on four drivers; tcpip prefix 15 exposes two stable Z3-only any-model sinks and reaches exact 128-row four-schedule parity, adding three rows beyond the extrema while retaining 33 arbitrary-only rows; all 74 UNSAT rows in the corrected five-driver representative recheck both CNF DRAT and stronger end-to-end certificates in two clean process-isolated runs, and a 1 ms kill control retains all 74 rows; all 1,505 generated CNF proofs recheck, with 1,487/1,505 stronger generated certificates under policy. Retained BatSat beats Z3 Boolean on Axeyum CNF despite native warm Z3 winning end-to-end. Land behavior-preserving Glaurung A0, then sweep policies over wider fixed work and add wider real proof cells. |
 | **GQ2** | **Cheap always-on cold simplification tier** | Add a bounded, denotation-preserving one-shot tier for constant folding and trivial identities whose own cost is measured. Add a size/shape and cold-vs-warm policy that selects cheap, configured, or no preprocessing. Exit only when cold end-to-end time is non-worse in aggregate and improves the target class at the GQ1 validity gates. |
 | **GQ3** | **Coercion-cancellation peepholes and causal telemetry** | **Current measured tranche complete; use ablation as policy evidence.** Exact nested/concat/extension/coercion rules and ADR-0159's repeated default-minus-rule comparator are landed. `extract_extend` improves lowering, but all four measured rules change zero AIG nodes and clauses. Do not globally delete sound rewrites because one corpus does not fire them; instead, keep a Glaurung policy only for rules with measured reach/cost and reopen register-slice-specific work only when an ablation demonstrates downstream AIG/CNF or native-time reduction. |
 | **GQ4** | **Cold demand-driven bit-slice reduction** | **Out of the active queue.** ADR-0157 v1 is correct but regresses the real ratio about 1.42x→4.49x; ADR-0158's conservative admission is a safe no-op but does not improve the required family. Both remain explicit/off. Do not tune thresholds further on this corpus; only a qualitatively different constant-cost admission proof and a fresh client gate can reopen GQ4. |
 | **GQ5** | **Cheaper AIG construction and measured CNF encoding** | **Cold engineering lane active; broad warm construction lane closed by ADR-0219.** Cold still assigns most Axeyum time to bit blast+CNF, but retained four-driver profiles remove 98--99% of per-check structure and leave only 11--20% whole-driver warm CNF. ADR-0221 now moves the Dptf reversal to word-level representation/integration; continue cold work only from causal gates and do not infer warm benefit from cold shares. |
 | **GQ6** | **Cold SAT/CDCL tuning** | **Fresh and retained exact-CNF controls DONE (ADR-0220/0221).** The proof core beats fresh BatSat before checking, while retained BatSat beats retained Z3 Boolean by 3.5527x on the ordered Axeyum CNF stream. Do not select a custom-core rewrite from Dptf; reopen only on a SAT-dominant family with a neutral core gap and deterministic limits. |
-| **GQ7** | **Cheaper warm entry and delta preprocessing** | **Source identity, fair map, query/internal attribution, fresh/retained exact-CNF controls, four-driver neutral cold-reset and source-owner-retained SMT, bounded finding parity, canonical tcpip authority, and extremal union DONE; mixed-site ensemble PREREGISTERED; wider authority evidence WIP (ADR-0201--0205/0213--0239).** ADR-0232 shows 16.4x--57.0x within-cvc5 retained/full-reset reductions while preserving the external textual boundary; ADR-0238's opt-in two-extremum union closes backend parity on one prefix but leaves 33 arbitrary-only rows. Keep all canonical policies opt-in; run ADR-0239 before widening fixed work. |
+| **GQ7** | **Cheaper warm entry and delta preprocessing** | **Source identity, fair map, query/internal attribution, fresh/retained exact-CNF controls, four-driver neutral cold-reset and source-owner-retained SMT, bounded finding parity, canonical tcpip authority, and four-schedule union DONE; configurable-policy sweep WIP (ADR-0201--0205/0213--0239).** ADR-0232 shows 16.4x--57.0x within-cvc5 retained/full-reset reductions while preserving the external textual boundary; ADR-0239's opt-in four-schedule union closes backend parity on one prefix at 128 rows but leaves 33 arbitrary-only rows. Extract one behavior-preserving Glaurung `ConcretizationPolicy` seam, keep `AnyModel` the byte-identical default, and treat deterministic least/greatest/site/boundary/diverse selection as sweep configuration. Gate symbolic memory on residual coverage headroom. **This is correctness-relevant, not just reproducibility:** the rows canonicalization drops (2 tcpip double-fetches; 33 arbitrary-only rows under least/greatest union) are attacker-tainted, so the sweep target is reproducibility AND >= any-model coverage -- parity alone is not "solved." Next-step gate: classify the dropped rows as true-positives vs model artifacts before choosing a default policy. The companion cross-repository Pareto strategy owns the downstream/SOTA analysis and sequencing. |
 | **GQ8** | **Verdict and CNF reuse for duplicate/prefix queries** | **Exact replay-checked SAT reuse is done for available families (ADR-0192); stronger subsumption remains open.** Exact hits replay under fixed bounds; ordinary UNSAT/Unknown and prefix verdict reuse remain forbidden. Investigate only replay-checked stronger-model reuse where a cached model is proven to satisfy the complete weaker later query. |
 | **GQ9** | **Auto production policy and API guidance** | **DONE for available serial families (ADR-0186/0199).** Adaptive 2→9 ownership plus serial sibling continuation reuse is the downstream default; ADR-0199 clears every time/ratio/RSS/environment alarm and improves RSS on both accepted drivers. Explicit one-shot, fixed, transfer-only, and serial-off controls remain. Re-gate wider families and never apply serial leases across parallel workers. |
 | **GQ10** | **Ordered, wider real-lifter regression corpus** | **Native timeout-continuation admission is DONE; wider direct-delta admission is deferred (ADR-0205--0212).** The accepted tcpip gate still defaults one bounded continuation only inside selected direct-delta sessions. A complete 85,449-event / 17,400-check `dxgkrnl` trace and independent 13,577-query / 8,816-model-read replay prove exact production-topology no-op functionality with zero correctness or lifecycle alarms. The repeated ordinary-core comparison nevertheless fails the declared timing-CV gate (14.430% control, 8.306% candidate); slower-core calibration changes actual outcomes at the 250 ms boundary. Keep direct delta opt-in. `win32k` is now classified as a system-service/callout frontend target, not zero-query IOCTL solver evidence. |
@@ -907,8 +943,8 @@ evidence are now distinct:
    SMT boundary costs separately named; do not use Z3 as both sole oracle and
    sole comparator.
 4. **Authoritative finding parity — bounded four-driver, first canonical
-   tcpip, and extremal coverage-union tiers DONE; wider tiers WIP
-   (ADR-0229/0236/0238):** sole-authority Z3 and Axeyum
+   tcpip, extremal, and mixed-site coverage-union tiers DONE; wider tiers WIP
+   (ADR-0229/0236/0238/0239):** sole-authority Z3 and Axeyum
    binaries emit byte-identical ordered raw sink lists on Dptf, vwififlt,
    IntcSST, and SurfacePen across N=3 order-balanced repetitions: 302 canonical
    sinks and 1,812 stable emitted rows. Differing vwififlt/IntcSST solve counts
@@ -921,10 +957,17 @@ evidence are now distinct:
    least/greatest control passes authority parity with a 125-row union (69
    common, 41 least-only, 15 greatest-only), but comparison with the
    arbitrary-model union leaves 33 arbitrary-only and 30 extremal-only rows.
-   Preserve that negative overlap result. ADR-0239 preregisters two
-   complementary stable-site mixed-extremum schedules on the same exact
-   boundary without preselecting union growth. Run it before wider fixed work,
-   and require genuinely broader evidence before any finding-preservation claim.
+   Preserve that negative overlap result. ADR-0239's two complementary
+   stable-site mixed-extremum schedules pass exact authority parity at 95 and
+   98 rows. They add three rows beyond the extrema for a 128-row four-schedule
+   union, yet recover none of the 33 arbitrary-only rows. This confirms that
+   value selection is a cheap policy knob, not a separate research program.
+   Next extract a first-class Glaurung `ConcretizationPolicy`, prove `AnyModel`
+   reproduces byte-for-byte, then sweep least/greatest/site/boundary/diverse
+   settings over wider fixed work. Deterministic work bounds are configuration;
+   deferred symbolic memory is the only architectural follow-on and starts only
+   if the sweep leaves coverage headroom. Require genuinely broader evidence
+   before any finding-preservation claim.
 5. **Deployability and artifact readiness — profile, WebAssembly, bounded warm
    Pareto, and representative real-query end-to-end proof deployment DONE
    (ADR-0216/0227/0228/0230/0234/0235), wider proof deployment WIP:** `qfbv` is the

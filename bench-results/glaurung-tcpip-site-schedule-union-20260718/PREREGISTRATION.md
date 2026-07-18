@@ -40,3 +40,7 @@ Rerun the exact unchanged protocol from a detached Axeyum worktree at
 preregistration commit `57ee6720`. This is measurement-environment isolation,
 not a change to source, input, policies, seeds, order, fixed work, acceptance
 criteria, or resource bounds.
+
+The isolated rerun subsequently passed every gate. Its accepted result is
+summarized in [`RESULTS.md`](RESULTS.md); the preregistered claim limits remain
+unchanged.
