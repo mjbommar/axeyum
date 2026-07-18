@@ -550,7 +550,12 @@ Out of scope:
     with exact output and exploration-counter parity. Because canonicalization
     changes the shared finding population, wider/coverage-union authority work
     remains open, and none of the formula or authority controls replace fair
-    retained-warm performance evidence.
+    retained-warm performance evidence. ADR-0237 separately closes the
+    independent correctness-oracle gate: 12,000/12,000 QF_BV formulas agree in
+    Axeyum, direct Z3, cvc5, and Bitwuzla; 4,471 SAT models replay and all 14
+    declared edge families are nonvacuous under a correctness-only resource
+    bound. This does not change the remaining wider real-manifest and
+    finding-authority requirements.
 - [x] How should a real-client shadow run preserve decided/nondecided splits?
   - Answer: only under an explicit combined-shadow diagnostic, atomically write
     the exact content-addressed SMT-LIB bytes and stable backend result classes

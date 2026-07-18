@@ -616,6 +616,12 @@ records the contract and the first measured baselines.
   (41.67 seconds), and Bitwuzla (12.62 seconds). Use a final uniform 600,000 ms
   correctness bound, which also lets Axeyum decide; never reuse those loaded,
   single-formula diagnostics as comparative performance measurements.
+  The final same-commit run passes all three exact rounds: 12,000/12,000
+  four-way decisions and agreements, 4,471/4,471 Axeyum SAT replays, all five
+  widths, all 35 operator/generator classes, and all 14 declared edge families.
+  Unknown, timeout, crash, process/parser failure, replay-indeterminate, and
+  disagreement counts are zero. This accepts ADR-0237 as bounded correctness
+  evidence, not a QF_BV completeness theorem or performance comparison.
   Proof coverage needs two denominators: the full decided-UNSAT population and
   the predeclared attempted subset. ADR-0226's 4,000-row generator has 2,513
   UNSAT results; its width-at-most-8/seed-divisible-by-4 subset contains 169

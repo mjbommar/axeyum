@@ -1,6 +1,6 @@
 # ADR-0237: Independent and edge-directed QF_BV four-oracle fuzzing
 
-Status: proposed
+Status: accepted
 Date: 2026-07-18
 
 ## Context
@@ -47,10 +47,22 @@ report and raw log per round, and refuses a nonempty output directory.
 
 ## Evidence
 
-Pending the preregistered run. The excluded engineering pilot decided and
-agreed on all 256 rows in all four engines, replayed all 97 SAT models, and
-observed all 14 required edge categories. Its purpose was to validate the
-runner and telemetry, not to support the final claim.
+The final same-commit campaign decides and agrees on all 12,000 preregistered
+rows in Axeyum, direct Z3, cvc5 1.3.4, and Bitwuzla 0.9.1. All 4,471 Axeyum SAT
+models replay on the original IR. Unknown, timeout, crash, parser/process
+failure, replay-indeterminate, and disagreement counts are all zero. Each round
+covers all five declared widths and all 35 operator/generator classes.
+
+The 4,000-row `edge-c` round observes all 14 required semantic-corner families
+with per-instance frequencies from 250 signed-division-overflow rows through
+3,128 literal-zero rows. The exact reports, aggregate, raw logs, oracle hashes,
+and claim limits are committed under
+[`bench-results/qfbv-four-oracle-independent-20260718-600s/`](../../../bench-results/qfbv-four-oracle-independent-20260718-600s/README.md).
+
+The excluded engineering pilot decided and agreed on all 256 rows in all four
+engines, replayed all 97 SAT models, and observed all 14 required edge
+categories. Its purpose was to validate the runner and telemetry, not to
+support the final claim.
 
 The first full attempt inherited the routine 5,000 ms Axeyum worker cap because
 the proposed protocol failed to state it explicitly. `uniform-a` reached 3,999
@@ -98,7 +110,7 @@ performance cell, and no formula or seed changes.
 
 ## Consequences
 
-If accepted, this campaign can support a bounded claim of four-engine verdict
+This campaign supports a bounded claim of four-engine verdict
 agreement and measured semantic-corner coverage over 12,000 new formulas. It
 will not prove QF_BV completeness, cover arbitrary term depth/width, or replace
 consumer-state regressions, real Glaurung proof manifests, and authoritative

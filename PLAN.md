@@ -156,6 +156,13 @@ session state.
 > Bitwuzla 12.62 s; Axeyum between 120 and 600 s). The final committed rerun
 > uses the same 600-second correctness cap for all engines. Do not reuse this
 > hard-seed diagnostic as comparative timing evidence.
+> The final same-commit run is accepted: all 12,000 formulas decide and agree
+> four ways, all 4,471 Axeyum SAT models replay, and the edge round observes all
+> 14 declared semantic-corner families. Unknown, timeout, crash, external
+> failure, replay-indeterminate, and disagreement counts are all zero. This
+> closes independent seeds, edge-frequency accounting, and the second neutral
+> implementation; it remains a bounded correctness result, not completeness or
+> performance evidence.
 > ADR-0226 adds the first explicit proof denominator. Of 2,513 generated UNSAT
 > rows, a predeclared width<=8/seed-divisible-by-4 subset selects 169 (6.725030%):
 > all 169 carry independently rechecked CNF DRAT and end-to-end
@@ -766,7 +773,7 @@ count as decisions or speedups.
 
 | ID | Roadmap item | Scope and exit criterion |
 |---|---|---|
-| **GQ1** | **Capture and profile real queries first** | **Four-driver map, query/internal attribution, fresh/retained exact-CNF controls, neutral cold-reset plus source-owner-retained SMT breadth, bounded/canonical authority cells, process-isolated corrected-representative end-to-end faithfulness, and deadline-aware generated proof widening DONE (ADR-0187/0188/0197/0213--0236).** cvc5 agrees on all 9,526 checks in both external protocols; 302 raw sinks match under unrestricted sole authority on four drivers; tcpip prefix 15 exposes two stable Z3-only any-model sinks, then reaches exact 110-sink and exploration-counter parity under the opt-in unsigned-minimum policy; all 74 UNSAT rows in the corrected five-driver representative recheck both CNF DRAT and stronger end-to-end certificates in two clean process-isolated runs, and a 1 ms kill control retains all 74 rows; all 1,505 generated CNF proofs recheck, with 1,487/1,505 stronger generated certificates under policy. Retained BatSat beats Z3 Boolean on Axeyum CNF despite native warm Z3 winning end-to-end. Add wider authority/coverage-union and wider real proof cells. |
+| **GQ1** | **Capture and profile real queries first** | **Four-driver map, query/internal attribution, fresh/retained exact-CNF controls, neutral cold-reset plus source-owner-retained SMT breadth, independent four-oracle fuzz, bounded/canonical authority cells, process-isolated corrected-representative end-to-end faithfulness, and deadline-aware generated proof widening DONE (ADR-0187/0188/0197/0213--0237).** The independent/edge campaign reaches 12,000/12,000 four-way agreements and 4,471/4,471 SAT replays with all 14 edge families nonvacuous; cvc5 agrees on all 9,526 real checks in both external protocols; 302 raw sinks match under unrestricted sole authority on four drivers; tcpip prefix 15 exposes two stable Z3-only any-model sinks, then reaches exact 110-sink and exploration-counter parity under the opt-in unsigned-minimum policy; all 74 UNSAT rows in the corrected five-driver representative recheck both CNF DRAT and stronger end-to-end certificates in two clean process-isolated runs, and a 1 ms kill control retains all 74 rows; all 1,505 generated CNF proofs recheck, with 1,487/1,505 stronger generated certificates under policy. Retained BatSat beats Z3 Boolean on Axeyum CNF despite native warm Z3 winning end-to-end. Add wider authority/coverage-union and wider real proof cells. |
 | **GQ2** | **Cheap always-on cold simplification tier** | Add a bounded, denotation-preserving one-shot tier for constant folding and trivial identities whose own cost is measured. Add a size/shape and cold-vs-warm policy that selects cheap, configured, or no preprocessing. Exit only when cold end-to-end time is non-worse in aggregate and improves the target class at the GQ1 validity gates. |
 | **GQ3** | **Coercion-cancellation peepholes and causal telemetry** | **Current measured tranche complete; use ablation as policy evidence.** Exact nested/concat/extension/coercion rules and ADR-0159's repeated default-minus-rule comparator are landed. `extract_extend` improves lowering, but all four measured rules change zero AIG nodes and clauses. Do not globally delete sound rewrites because one corpus does not fire them; instead, keep a Glaurung policy only for rules with measured reach/cost and reopen register-slice-specific work only when an ablation demonstrates downstream AIG/CNF or native-time reduction. |
 | **GQ4** | **Cold demand-driven bit-slice reduction** | **Out of the active queue.** ADR-0157 v1 is correct but regresses the real ratio about 1.42x→4.49x; ADR-0158's conservative admission is a safe no-op but does not improve the required family. Both remain explicit/off. Do not tune thresholds further on this corpus; only a qualitatively different constant-cost admission proof and a fresh client gate can reopen GQ4. |
@@ -812,7 +819,7 @@ artifact evidence below governs.
 | 9 | Self-rechecked DRAT UNSAT evidence is a deployability/correctness advantage over the current Z3 crate path. | Keep `UnsatProof::recheck()` prominent in examples, capability tables, and performance reporting. No optimization may bypass proof generation/recheck where proof-bearing UNSAT is promised. |
 | 10 | Pure Rust/no-C and the `qfbv`-only profile reduce deployment cost; benchmark methodology must reject fast failure. | Preserve the no-native default and lean feature profile; gate WASM claims on an actual target build rather than aspiration. Every comparison must report per-backend SAT, UNSAT, Unknown, Error, decided rate, replay, and exact work/finding identity. A faster number with reduced work or increased nondecisions is invalid until attributed—the pre-fix tcpip/dxgkrnl ratios are explicitly withdrawn. |
 
-**Publication execution order (2026-07-18, ADR-0213--0236 plus ranked review;
+**Publication execution order (2026-07-18, ADR-0213--0237 plus ranked review;
 supersedes performance-claim ordering below).** Product admission and paper
 evidence are now distinct:
 
@@ -843,8 +850,11 @@ evidence are now distinct:
    models replay on original IR; and executable coverage requires all five
    random widths plus 35 operator classes. Named controls preserve strict
    concat/extension/constant rejection, legitimate empty-SAT versus model-less
-   UNSAT, normalized widths, and linked-adapter W128 behavior. Add independent
-   fixed-seed/edge-case rounds and publish the TCB. The first proof subset is
+   UNSAT, normalized widths, and linked-adapter W128 behavior. ADR-0237 closes
+   the independent/edge continuation: 12,000/12,000 formulas agree across
+   Axeyum, direct Z3, cvc5, and Bitwuzla; all 4,471 SAT models replay; all 14
+   semantic-corner families are nonvacuous. Publish the bounded TCB and retain
+   the hard-seed/resource history. The first proof subset is
    169/169 rechecked end to end but only 6.725030% of generated UNSAT; add a
    deadline-aware widening harness. ADR-0230 adds a separate real-query CNF
    DRAT denominator: 64/64 representative UNSAT rows recheck, alongside 64/64

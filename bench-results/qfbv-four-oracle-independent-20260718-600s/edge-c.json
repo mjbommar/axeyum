@@ -1,0 +1,16 @@
+{
+  "schema": "axeyum.qfbv-multi-oracle-fuzz.v3",
+  "generator_profile": "edge-v1",
+  "seed_start": 3000000,
+  "seed_end_exclusive": 3004000,
+  "instances": 4000,
+  "axeyum_timeout_ms": 600000,
+  "oracle_timeout_ms": 600000,
+  "elapsed_ms": 500279,
+  "axeyum_z3": {"jointly_decided":4000,"agreements":4000,"axeyum_unknown":0,"axeyum_timeout":0,"axeyum_crashed":0,"z3_unknown":0,"sat_replayed":1538,"sat_replay_indeterminate":0,"axeyum_unknown_seeds":[],"axeyum_timeout_seeds":[],"axeyum_crashed_seeds":[],"z3_unknown_seeds":[]},
+  "cvc5": {"present":true,"stride":1,"sampled":4000,"decided":4000,"unknown":0,"agreements":4000},
+  "bitwuzla": {"present":true,"stride":1,"sampled":4000,"decided":4000,"unknown":0,"agreements":4000},
+  "four_way_agreements": 4000,
+  "coverage": {"widths":[1,4,8,16,32],"operators":["=","and","bvadd","bvand","bvashr","bvlshr","bvmul","bvneg","bvnot","bvor","bvsdiv","bvsge","bvsgt","bvshl","bvsle","bvslt","bvsmod","bvsrem","bvsub","bvudiv","bvuge","bvugt","bvule","bvult","bvurem","bvxor","concat","const","distinct","extract","not","or","sign_extend","var","zero_extend"],"edge_case_instances":{"concat_one_bit_high":1218,"concat_one_bit_low":1277,"constant_all_ones":2940,"constant_sign_bit":2778,"constant_zero":3128,"division_or_remainder_by_zero":1265,"extract_full_width":1375,"extract_high_boundary":2430,"extract_low_boundary":2451,"shift_above_width":900,"shift_at_width":735,"sign_extend_by_zero":1351,"signed_division_overflow":250,"zero_extend_by_zero":1294}},
+  "disagreements": 0
+}

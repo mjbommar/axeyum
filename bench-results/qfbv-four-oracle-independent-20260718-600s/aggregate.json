@@ -1,0 +1,40 @@
+{
+  "schema": "axeyum.qfbv-four-oracle-independent.aggregate.v1",
+  "axeyum_commit": "dde00eab546bd0689be1f4c799dd23f52d0df58a",
+  "resource_limit_ms_per_engine_per_row": 600000,
+  "rounds": [
+    {"name":"uniform-a","profile":"uniform-v1","seed_start":1000000,"seed_end_exclusive":1004000,"instances":4000,"four_way_agreements":4000,"sat_replayed":1432,"elapsed_ms":146887},
+    {"name":"uniform-b","profile":"uniform-v1","seed_start":2000000,"seed_end_exclusive":2004000,"instances":4000,"four_way_agreements":4000,"sat_replayed":1501,"elapsed_ms":152015},
+    {"name":"edge-c","profile":"edge-v1","seed_start":3000000,"seed_end_exclusive":3004000,"instances":4000,"four_way_agreements":4000,"sat_replayed":1538,"elapsed_ms":500279}
+  ],
+  "totals": {
+    "instances": 12000,
+    "jointly_decided": 12000,
+    "four_way_agreements": 12000,
+    "sat_replayed": 4471,
+    "sat_replay_indeterminate": 0,
+    "axeyum_unknown": 0,
+    "axeyum_timeout": 0,
+    "axeyum_crashed": 0,
+    "z3_unknown": 0,
+    "cvc5_unknown": 0,
+    "bitwuzla_unknown": 0,
+    "disagreements": 0
+  },
+  "edge_c_instance_frequencies": {
+    "concat_one_bit_high": 1218,
+    "concat_one_bit_low": 1277,
+    "constant_all_ones": 2940,
+    "constant_sign_bit": 2778,
+    "constant_zero": 3128,
+    "division_or_remainder_by_zero": 1265,
+    "extract_full_width": 1375,
+    "extract_high_boundary": 2430,
+    "extract_low_boundary": 2451,
+    "shift_above_width": 900,
+    "shift_at_width": 735,
+    "sign_extend_by_zero": 1351,
+    "signed_division_overflow": 250,
+    "zero_extend_by_zero": 1294
+  }
+}
