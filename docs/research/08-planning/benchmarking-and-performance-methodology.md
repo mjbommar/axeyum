@@ -565,6 +565,17 @@ records the contract and the first measured baselines.
   and model output and is never divided into the in-process ratio. This
   deduplicated one-shot boundary is timeout sensitivity evidence; it is not a
   retained-warm or end-to-end authoritative finding-parity experiment.
+  ADR-0233 exercises that contract on the exact 52-formula post-concat-fix
+  tcpip frontier. Five runs at each of 50/100/250/1000 ms have zero error,
+  replay failure, decided disagreement, or three-solver SAT/UNSAT
+  contradiction. Axeyum/Z3 decision counts rise 28/13, 30/25, 41/33--34, and
+  52/52; cvc5 rises 46, 51, 52, 52. The fixed both-decided Axeyum/Z3 geomeans
+  are 0.14165, 0.14548, 0.14112, and 0.21095 (ratio below one favors Axeyum),
+  with all bootstrap intervals below one. The all-decided 1000 ms tier removes
+  solved-subset selection and establishes a cold one-shot Axeyum win on this
+  exact corpus. Keep the FFI/context/representation/search cause unresolved
+  and do not substitute this deduplicated formula control for retained-warm or
+  finding-authoritative evidence.
 - Generated correctness gates must distinguish a solver nondecision from an
   invalid oracle invocation. ADR-0224 keeps 4,000 deterministic well-typed
   QF_BV rows on Axeyum/direct-Z3 with original-model replay and sends a fixed

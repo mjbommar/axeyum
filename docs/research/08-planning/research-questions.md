@@ -540,8 +540,13 @@ Out of scope:
     The paired trace schema and analyzer mechanism are accepted in
     [ADR-0214](../09-decisions/adr-0214-paired-glaurung-trace-analysis.md). Its
     first clean DptfDevGen N=5 by three-timeout exercise passes, but it is an
-    easy-driver no-timeout control; a timeout-sensitive workload and the
-    remaining fair-baseline/finding-parity gates are still open.
+    easy-driver no-timeout control. ADR-0215/0217 subsequently close the fair
+    four-cell map; ADR-0222/0223/0232 add neutral cold-reset and retained
+    topology controls; and ADR-0229 closes bounded four-driver sole-authority
+    finding parity. ADR-0233 closes the timeout-sensitive neutral formula
+    control with complete four-population accounting at 50/100/250/1000 ms and
+    an all-decided 1000 ms tier. Wider/timeout-sensitive authoritative findings
+    remain open and none of the formula controls replace retained-warm evidence.
 - [x] How should a real-client shadow run preserve decided/nondecided splits?
   - Answer: only under an explicit combined-shadow diagnostic, atomically write
     the exact content-addressed SMT-LIB bytes and stable backend result classes

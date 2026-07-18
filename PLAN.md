@@ -199,6 +199,18 @@ session state.
 > timeout-sensitive neutral/authority tiers, real-query faithfulness,
 > independent fuzz seeds and another neutral implementation, and
 > whole-certificate process isolation.
+> ADR-0233 closes the timeout-sensitive neutral **formula** control. Artifact
+> v32 now runs in-process Z3 even after an Axeyum `unknown` and accounts for
+> both-decided, Axeyum-only, Z3-only, and neither on every query. Five clean
+> repetitions over the exact 52-formula tcpip frontier at 50/100/250/1000 ms
+> have zero error, replay failure, decided disagreement, or three-solver
+> SAT/UNSAT contradiction. Decision coverage converges from Axeyum/Z3/cvc5
+> 28/13/46 to 52/52/52; the all-decided 1000 ms paired Axeyum/Z3 geomean is
+> 0.21095 [0.14904, 0.29644], establishing a cold one-shot Axeyum-winning
+> formula regime without reviving a retained-warm headline. Wider/timeout-
+> sensitive sole-authority findings remain open, as do real-query
+> faithfulness, independent fuzz seeds plus another neutral implementation,
+> and whole-certificate process isolation.
 
 > **P0 soundness stop contained (2026-07-15, ADR-0165).** Historical commit
 > `2cb298e2` reproduced unrestricted large elimination from a two-constructor
