@@ -77,6 +77,33 @@ def parse_key_values(line: str) -> dict[str, int | str]:
     return values
 
 
+def validate_coverage_boundary(
+    *,
+    tail: str,
+    analyzed: int,
+    reachable: int,
+    max_analyzed_functions: int | None,
+) -> str:
+    deadline_hit = "DEADLINE-HIT" in tail
+    work_limit_hit = "WORK-LIMIT-HIT" in tail
+    if deadline_hit:
+        raise RuntimeError("analysis hit the wall-clock safety deadline")
+    if work_limit_hit:
+        if max_analyzed_functions is None:
+            raise RuntimeError("analysis hit an undeclared fixed-work boundary")
+        if analyzed != max_analyzed_functions:
+            raise RuntimeError(
+                "fixed-work boundary count mismatch: "
+                f"expected {max_analyzed_functions}, observed {analyzed}"
+            )
+        return "fixed-work-limit"
+    if max_analyzed_functions is not None and analyzed >= max_analyzed_functions:
+        raise RuntimeError("analysis reached the fixed-work count without reporting it")
+    if analyzed > reachable:
+        raise RuntimeError("analyzed count exceeds reachable-function count")
+    return "complete"
+
+
 def run_one(
     repository: Path,
     binary: Path,
@@ -85,6 +112,8 @@ def run_one(
     repetition: int,
     position: int,
     common_environment: dict[str, str],
+    process_timeout_seconds: int,
+    max_analyzed_functions: int | None,
 ) -> dict[str, Any]:
     environment = os.environ.copy()
     for inherited in (
@@ -125,7 +154,7 @@ def run_one(
         env=environment,
         capture_output=True,
         text=True,
-        timeout=600,
+        timeout=process_timeout_seconds,
         check=False,
     )
     if result.returncode != 0:
@@ -139,8 +168,14 @@ def run_one(
     timing = require_match(TIME_RE, result.stderr, "time")
     if solver.group(1) != backend:
         raise RuntimeError(f"expected {backend} binary, observed {solver.group(1)}")
-    if "DEADLINE-HIT" in symbolic.group(6) or "WORK-LIMIT-HIT" in symbolic.group(6):
-        raise RuntimeError(f"{backend} repetition {repetition} hit a coverage bound")
+    analyzed = int(symbolic.group(4))
+    reachable = int(symbolic.group(5))
+    coverage_boundary = validate_coverage_boundary(
+        tail=symbolic.group(6),
+        analyzed=analyzed,
+        reachable=reachable,
+        max_analyzed_functions=max_analyzed_functions,
+    )
 
     findings = [line for line in result.stdout.splitlines() if line]
     if len(findings) != int(symbolic.group(1)):
@@ -155,8 +190,9 @@ def run_one(
         "reported_raw": int(symbolic.group(1)),
         "reported_lines": int(symbolic.group(2)),
         "reported_suppressed": int(symbolic.group(3)),
-        "analyzed": int(symbolic.group(4)),
-        "analysis_roots": int(symbolic.group(5)),
+        "analyzed": analyzed,
+        "analysis_roots": reachable,
+        "coverage_boundary": coverage_boundary,
         "solves": int(solver.group(2)),
         "solver_time_ms": float(solver.group(3)),
         "average_us_per_solve": float(solver.group(4)),
@@ -186,11 +222,27 @@ def summarize_driver(runs: list[dict[str, Any]]) -> dict[str, Any]:
         if len(population) * 2 != len(runs) or len(hashes) != 1:
             raise RuntimeError(f"{backend} finding population is unbalanced or unstable")
         structural = {
-            (run["finding_count"], run["analyzed"], run["analysis_roots"])
+            (
+                run["finding_count"],
+                run["analyzed"],
+                run["analysis_roots"],
+                run["coverage_boundary"],
+            )
             for run in population
         }
         if len(structural) != 1 or any(run["time_exit"] for run in population):
             raise RuntimeError(f"{backend} work population drift")
+
+    authority_coverage = {
+        (
+            population[0]["analyzed"],
+            population[0]["analysis_roots"],
+            population[0]["coverage_boundary"],
+        )
+        for population in populations.values()
+    }
+    if len(authority_coverage) != 1:
+        raise RuntimeError("authority coverage populations differ")
 
     telemetry_presence = {
         all(key in run for key in ("warm", "sat_cache", "serial_owner"))
@@ -225,6 +277,11 @@ def summarize_driver(runs: list[dict[str, Any]]) -> dict[str, Any]:
         "intersection_count": len(z3_set & axeyum_set),
         "z3_only": sorted(z3_set - axeyum_set),
         "axeyum_only": sorted(axeyum_set - z3_set),
+        "coverage": {
+            "analyzed": populations["z3"][0]["analyzed"],
+            "reachable": populations["z3"][0]["analysis_roots"],
+            "boundary": populations["z3"][0]["coverage_boundary"],
+        },
         "backends": {},
     }
     for backend, population in populations.items():
@@ -270,9 +327,24 @@ def main() -> None:
     parser.add_argument("--axeyum-binary", type=Path, required=True)
     parser.add_argument("--driver", type=Path, action="append", required=True)
     parser.add_argument("--repetitions", type=int, default=3)
+    parser.add_argument("--deadline-secs", type=int, default=300)
+    parser.add_argument("--max-analyzed-functions", type=int)
+    parser.add_argument("--solve-budget", type=int, default=20000)
+    parser.add_argument("--solve-secs", type=int, default=60)
+    parser.add_argument("--process-timeout-secs", type=int, default=600)
     args = parser.parse_args()
     if args.repetitions < 2:
         parser.error("--repetitions must be at least 2")
+    for name in (
+        "deadline_secs",
+        "solve_budget",
+        "solve_secs",
+        "process_timeout_secs",
+    ):
+        if getattr(args, name) < 1:
+            parser.error(f"--{name.replace('_', '-')} must be positive")
+    if args.max_analyzed_functions is not None and args.max_analyzed_functions < 1:
+        parser.error("--max-analyzed-functions must be positive")
 
     repository = args.glaurung_repo.resolve()
     axeyum_repository = Path(__file__).resolve().parents[1]
@@ -289,11 +361,14 @@ def main() -> None:
 
     common_environment = {
         "IOCTLANCE_ALL": "1",
-        "IOCTLANCE_DEADLINE_SECS": "300",
-        "IOCTLANCE_MAX_ANALYZED_FUNCTIONS": "100000",
-        "IOCTLANCE_SOLVE_BUDGET": "20000",
-        "IOCTLANCE_SOLVE_SECS": "60",
+        "IOCTLANCE_DEADLINE_SECS": str(args.deadline_secs),
+        "IOCTLANCE_SOLVE_BUDGET": str(args.solve_budget),
+        "IOCTLANCE_SOLVE_SECS": str(args.solve_secs),
     }
+    if args.max_analyzed_functions is not None:
+        common_environment["IOCTLANCE_MAX_ANALYZED_FUNCTIONS"] = str(
+            args.max_analyzed_functions
+        )
     driver_reports = []
     for driver in drivers:
         runs = []
@@ -309,6 +384,8 @@ def main() -> None:
                         repetition,
                         position,
                         common_environment,
+                        args.process_timeout_secs,
+                        args.max_analyzed_functions,
                     )
                 )
         driver_reports.append(
@@ -320,7 +397,7 @@ def main() -> None:
         )
 
     report = {
-        "schema": "axeyum.glaurung-authoritative-finding-parity.v1",
+        "schema": "axeyum.glaurung-authoritative-finding-parity.v2",
         "glaurung": git_identity(repository),
         "axeyum": git_identity(axeyum_repository),
         "binaries": {
@@ -328,6 +405,7 @@ def main() -> None:
             "axeyum": {"path": str(axeyum_binary), "sha256": file_sha256(axeyum_binary)},
         },
         "environment": common_environment,
+        "process_timeout_seconds": args.process_timeout_secs,
         "repetitions": args.repetitions,
         "order": "odd repetitions Z3/Axeyum; even repetitions Axeyum/Z3",
         "drivers": driver_reports,
