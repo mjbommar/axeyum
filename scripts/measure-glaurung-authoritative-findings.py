@@ -25,7 +25,8 @@ SOLVER_RE = re.compile(
 )
 CANONICAL_MODEL_CHOICE_RE = re.compile(
     r"\[canonical-model-choice\] policy=(\S+) attempts=(\d+) completed=(\d+) "
-    r"probes=(\d+) inconclusive=(\d+)"
+    r"infeasible=(\d+) probes=(\d+) inconclusive=(\d+) unsupported_width=(\d+) "
+    r"unknown=(\d+) no_solver=(\d+) error=(\d+) final_unsat=(\d+)"
 )
 CHECK_TIMEOUT_RE = re.compile(r"\[solver\][^\n]* check_timeout_ms=(\d+)")
 TIME_RE = re.compile(
@@ -94,8 +95,14 @@ def parse_canonical_model_choice(
         "policy": match.group(1),
         "attempts": int(match.group(2)),
         "completed": int(match.group(3)),
-        "probes": int(match.group(4)),
-        "inconclusive": int(match.group(5)),
+        "infeasible": int(match.group(4)),
+        "probes": int(match.group(5)),
+        "inconclusive": int(match.group(6)),
+        "unsupported_width": int(match.group(7)),
+        "unknown": int(match.group(8)),
+        "no_solver": int(match.group(9)),
+        "error": int(match.group(10)),
+        "final_unsat": int(match.group(11)),
     }
     if not required:
         return telemetry
@@ -105,15 +112,28 @@ def parse_canonical_model_choice(
         )
     attempts = int(telemetry["attempts"])
     completed = int(telemetry["completed"])
+    infeasible = int(telemetry["infeasible"])
     probes = int(telemetry["probes"])
     inconclusive = int(telemetry["inconclusive"])
-    if attempts == 0:
+    reasons = sum(
+        int(telemetry[key])
+        for key in (
+            "unsupported_width",
+            "unknown",
+            "no_solver",
+            "error",
+            "final_unsat",
+        )
+    )
+    if attempts == 0 or completed == 0:
         raise RuntimeError("canonical model policy was not exercised")
-    if completed + inconclusive != attempts:
+    if completed + infeasible + inconclusive != attempts:
         raise RuntimeError("canonical model attempt accounting is inconsistent")
-    if completed != attempts or inconclusive != 0:
+    if reasons != inconclusive:
+        raise RuntimeError("canonical model failure accounting is inconsistent")
+    if inconclusive != 0:
         raise RuntimeError("canonical model policy did not complete every attempt")
-    if probes < completed:
+    if probes < completed + infeasible:
         raise RuntimeError("canonical model probe accounting is inconsistent")
     return telemetry
 
@@ -333,8 +353,14 @@ def summarize_driver(runs: list[dict[str, Any]]) -> dict[str, Any]:
             "policy",
             "attempts",
             "completed",
+            "infeasible",
             "probes",
             "inconclusive",
+            "unsupported_width",
+            "unknown",
+            "no_solver",
+            "error",
+            "final_unsat",
         )
         policies = {
             str(run["canonical_model_choice"]["policy"]) for run in runs

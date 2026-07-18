@@ -51,7 +51,8 @@ class AuthoritativeFindingRunnerTests(unittest.TestCase):
     def test_accepts_complete_canonical_model_choice_footer(self) -> None:
         telemetry = MODULE.parse_canonical_model_choice(
             "[canonical-model-choice] policy=glaurung-min-unsigned-v1 "
-            "attempts=7 completed=7 probes=455 inconclusive=0\n",
+            "attempts=7 completed=5 infeasible=2 probes=332 inconclusive=0 "
+            "unsupported_width=0 unknown=0 no_solver=0 error=0 final_unsat=0\n",
             required=True,
         )
         self.assertEqual(
@@ -59,9 +60,15 @@ class AuthoritativeFindingRunnerTests(unittest.TestCase):
             {
                 "policy": "glaurung-min-unsigned-v1",
                 "attempts": 7,
-                "completed": 7,
-                "probes": 455,
+                "completed": 5,
+                "infeasible": 2,
+                "probes": 332,
                 "inconclusive": 0,
+                "unsupported_width": 0,
+                "unknown": 0,
+                "no_solver": 0,
+                "error": 0,
+                "final_unsat": 0,
             },
         )
 
@@ -71,7 +78,8 @@ class AuthoritativeFindingRunnerTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "was not exercised"):
             MODULE.parse_canonical_model_choice(
                 "[canonical-model-choice] policy=glaurung-min-unsigned-v1 "
-                "attempts=0 completed=0 probes=0 inconclusive=0\n",
+                "attempts=0 completed=0 infeasible=0 probes=0 inconclusive=0 "
+                "unsupported_width=0 unknown=0 no_solver=0 error=0 final_unsat=0\n",
                 required=True,
             )
 
@@ -79,13 +87,15 @@ class AuthoritativeFindingRunnerTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "unexpected canonical model policy"):
             MODULE.parse_canonical_model_choice(
                 "[canonical-model-choice] policy=glaurung-any-model-v1 "
-                "attempts=1 completed=1 probes=1 inconclusive=0\n",
+                "attempts=1 completed=1 infeasible=0 probes=2 inconclusive=0 "
+                "unsupported_width=0 unknown=0 no_solver=0 error=0 final_unsat=0\n",
                 required=True,
             )
         with self.assertRaisesRegex(RuntimeError, "did not complete every attempt"):
             MODULE.parse_canonical_model_choice(
                 "[canonical-model-choice] policy=glaurung-min-unsigned-v1 "
-                "attempts=2 completed=1 probes=65 inconclusive=1\n",
+                "attempts=2 completed=1 infeasible=0 probes=65 inconclusive=1 "
+                "unsupported_width=0 unknown=1 no_solver=0 error=0 final_unsat=0\n",
                 required=True,
             )
 
@@ -149,8 +159,14 @@ class AuthoritativeFindingRunnerTests(unittest.TestCase):
                 "policy": "glaurung-min-unsigned-v1",
                 "attempts": 2 if candidate["backend"] == "z3" else 3,
                 "completed": 2 if candidate["backend"] == "z3" else 3,
+                "infeasible": 0,
                 "probes": 130 if candidate["backend"] == "z3" else 195,
                 "inconclusive": 0,
+                "unsupported_width": 0,
+                "unknown": 0,
+                "no_solver": 0,
+                "error": 0,
+                "final_unsat": 0,
             }
         summary = MODULE.summarize_driver(runs)
         self.assertEqual(
@@ -168,8 +184,14 @@ class AuthoritativeFindingRunnerTests(unittest.TestCase):
                 "policy": "glaurung-min-unsigned-v1",
                 "attempts": 2,
                 "completed": 2,
+                "infeasible": 0,
                 "probes": 130,
                 "inconclusive": 0,
+                "unsupported_width": 0,
+                "unknown": 0,
+                "no_solver": 0,
+                "error": 0,
+                "final_unsat": 0,
             }
         runs[1]["canonical_model_choice"]["probes"] = 129
         with self.assertRaisesRegex(RuntimeError, "canonical model telemetry drift"):
