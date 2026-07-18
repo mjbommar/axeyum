@@ -196,18 +196,25 @@ session state.
 > parity result without claiming preservation.
 > The cross-repository Pareto strategy now makes the next boundary explicit:
 > concretization value selection is one pluggable policy knob, not a sequence of
-> new algorithms. Glaurung A0 is now implemented and accepted on isolated branch
+> new algorithms. Glaurung A0 is implemented and accepted on isolated branch
 > `axeyum-concretization-policy-a0` at `07ea0c1`: one public
 > `ConcretizationPolicy` covers `concretize_addr` and `eval_concrete`, and its
 > `AnyModel` default exactly reproduces all three accepted pre-A0 Axeyum controls
-> (126 findings, 2,991 solves, and ordered hash
+> (126 raw diagnostics, 2,991 solves, and ordered hash
 > `a67d7bca28602ab20bbc46d9a5d42705463bd340067dc8e6ec660b35d58ba265`).
-> Integrate that clean branch after coordination with the active Glaurung owner;
-> do not reimplement A0. Treat least/greatest/site-hash/boundary/diverse choices
-> and deterministic work bounds as configurations to sweep under one harness.
-> Only begin deferred symbolic memory if that cheap sweep leaves measured
-> coverage headroom; symbolic memory changes the memory model and is the sole
-> architectural item in Pillar A.
+> ADR-0240 then corrects the finding baseline at Glaurung `845239f`: exact trace
+> inspection shows the two Z3-only tcpip rows are generic-`Arg0` internal-tree
+> diagnostics laundered to `*attacker` by uninitialized-load propagation. After
+> preserving exact provenance they become `**Arg0`; both authorities have zero
+> high-confidence findings on the first-15-function slice. The isolated branch
+> head is `ad8fae1` after its decision record. Integrate that clean branch after
+> coordination with the active Glaurung owner; do not reimplement
+> A0. Treat least/greatest/site-hash/boundary/diverse choices and deterministic
+> work bounds as configurations to sweep under one harness, but select a nonzero
+> labeled-positive corpus and report raw/confidence/validated partitions before
+> setting recall gates. Only begin deferred symbolic memory if that cheap,
+> corrected sweep leaves validated coverage headroom; symbolic memory changes
+> the memory model and is the sole architectural item in Pillar A.
 > ADR-0226 adds the first explicit proof denominator. Of 2,513 generated UNSAT
 > rows, a predeclared width<=8/seed-divisible-by-4 subset selects 169 (6.725030%):
 > all 169 carry independently rechecked CNF DRAT and end-to-end
@@ -312,41 +319,37 @@ session state.
 > ADR-0236 closes the first measured canonical-authority cell after tcpip
 > activates ADR-0229's reopen condition. On the same current source, binaries,
 > first 15 functions, 250 ms check wall, and N=3 order-balanced repetitions,
-> unrestricted model choice is stable but differs by two Z3-only sinks. The
+> unrestricted model choice is stable but differs by two Z3-only raw sinks. The
 > opt-in `glaurung-min-unsigned-v1` policy instead gives 110 byte-identical
 > sinks, 80,563 solves, and identical complete model-choice telemetry under
 > both authorities, with zero inconclusive choice. Canonicalization changes the
-> common finding population from 126 to 110, so it remains a reproducible
+> common raw population from 126 to 110, so it remains a reproducible
 > experiment policy rather than a production default or a finding-preservation
 > claim. ADR-0238 subsequently accepts exact least/greatest union parity but
 > retains 33 arbitrary-model-only rows, so wider authority and genuinely
 > broader model exploration remain publication work; the standalone canonical
 > timers are not performance evidence.
 
-> **Concretization coverage gap is open and correctness-relevant (2026-07-18).**
-> The authority-parity work (ADR-0229/0236/0238) proved exact finding parity
-> across backends is *reachable*, but NOT that it *preserves coverage*:
-> `glaurung-min-unsigned-v1` collapses tcpip's 126 shared any-model sinks to 110,
-> and the least/greatest union still retains 33 arbitrary-model-only rows. The
-> rows canonicalization drops include attacker-tainted double-fetches, so this is
-> a recall/correctness concern for a security tool -- the analysis may silently
-> miss real bugs -- not merely a reproducibility measurement. The open gap is
-> therefore **reproducibility AND coverage together**: neither unrestricted
-> any-model (non-reproducible, backend-dependent) nor canonical least-unsigned
-> (reproducible but lossy) is acceptable, and finding parity alone must not be
-> treated as "solved." Required next steps: (1) classify the dropped
-> double-fetches / 33 arbitrary-only rows as true positives vs model artifacts --
-> this decides whether the gap loses real bugs or prunes noise; (2) coordinate
-> and integrate the accepted isolated Glaurung A0 `ConcretizationPolicy` branch,
-> then sweep {any, least,
-> greatest, boundary-set, diverse-enumeration} for a policy that is deterministic
-> AND >= any-model coverage. The 33 arbitrary-only rows show boundary extremes
-> alone are insufficient, so genuine diverse enumeration (disjoint projected
-> enumeration) is the leading candidate rather than another single canonical
-> point. The companion cross-repository Pareto strategy owns the full
-> downstream use-case / SOTA analysis and sequencing: Phase 0 is the
-> configurable-policy refactor, while symbolic memory is the one architectural
-> item.
+> **Concretization finding baseline corrected (2026-07-18, ADR-0240).** The
+> authority-parity work (ADR-0229/0236/0238/0239) remains valid raw determinism
+> evidence, but raw sink count is not finding ground truth. Exact PDB,
+> disassembly, and ordered-trace inspection classifies tcpip's two Z3-only rows
+> at `0x1c000830d`/`0x1c000832e` as internal
+> `TcpSendTrackerMarkTransmits` traversal diagnostics derived from generic
+> `Arg0`. Glaurung had discarded that provenance on uninitialized loads and
+> replaced it with `*attacker`, bypassing its own confidence filter. The TDD fix
+> on isolated branch `axeyum-concretization-policy-a0` at `845239f` preserves
+> every source label. AnyModel still yields 128 Z3 versus 126 Axeyum raw rows,
+> now labeled `**Arg0`; least unsigned still yields exact 110/110 raw parity;
+> both policies have zero high-confidence findings on this 15-function slice.
+> Therefore do not require BoundarySet/DiverseEnum to recover or exceed the
+> arbitrary-model raw union. First rebaseline all policies, classify the 33
+> remaining arbitrary-only raw rows, and select a fixed-work corpus with nonzero
+> labeled positives. Preregister recall/precision only on that population while
+> publishing raw, confidence-gated, validated, work, and cost partitions. Phase
+> 0/A0 remains the completed enabling refactor; Phase 2 remains a cheap policy
+> sweep; symbolic memory remains the sole architectural item and begins only if
+> corrected validated evidence leaves headroom.
 
 > **P0 soundness stop contained (2026-07-15, ADR-0165).** Historical commit
 > `2cb298e2` reproduced unrestricted large elimination from a two-constructor
@@ -844,13 +847,13 @@ count as decisions or speedups.
 
 | ID | Roadmap item | Scope and exit criterion |
 |---|---|---|
-| **GQ1** | **Capture and profile real queries first** | **Four-driver map, query/internal attribution, fresh/retained exact-CNF controls, neutral cold-reset plus source-owner-retained SMT breadth, independent four-oracle fuzz, bounded/canonical/four-schedule authority cells, process-isolated corrected-representative end-to-end faithfulness, deadline-aware generated proof widening, and isolated behavior-preserving Glaurung A0 DONE (ADR-0187/0188/0197/0213--0239 plus Glaurung `07ea0c1`).** The independent/edge campaign reaches 12,000/12,000 four-way agreements and 4,471/4,471 SAT replays with all 14 edge families nonvacuous; cvc5 agrees on all 9,526 real checks in both external protocols; 302 raw sinks match under unrestricted sole authority on four drivers; tcpip prefix 15 exposes two stable Z3-only any-model sinks and reaches exact 128-row four-schedule parity, adding three rows beyond the extrema while retaining 33 arbitrary-only rows; all 74 UNSAT rows in the corrected five-driver representative recheck both CNF DRAT and stronger end-to-end certificates in two clean process-isolated runs, and a 1 ms kill control retains all 74 rows; all 1,505 generated CNF proofs recheck, with 1,487/1,505 stronger generated certificates under policy. Retained BatSat beats Z3 Boolean on Axeyum CNF despite native warm Z3 winning end-to-end. Coordinate and integrate the clean A0 branch, then preregister the wider fixed-work policy sweep and add wider real proof cells. |
+| **GQ1** | **Capture and profile real queries first** | **Four-driver map, query/internal attribution, fresh/retained exact-CNF controls, neutral cold-reset plus source-owner-retained SMT breadth, independent four-oracle fuzz, bounded/canonical/four-schedule raw authority cells, process-isolated corrected-representative end-to-end faithfulness, deadline-aware generated proof widening, isolated behavior-preserving Glaurung A0, and corrected taint baseline DONE (ADR-0187/0188/0197/0213--0240 plus Glaurung `845239f`).** The independent/edge campaign reaches 12,000/12,000 four-way agreements and 4,471/4,471 SAT replays with all 14 edge families nonvacuous; cvc5 agrees on all 9,526 real checks in both external protocols; 302 raw sinks match under unrestricted sole authority on four drivers; tcpip prefix 15 exposes two stable Z3-only AnyModel raw diagnostics and reaches exact 128-row four-schedule raw parity, but corrected provenance classifies the two rows as generic-`Arg0` artifacts and leaves zero high-confidence findings in that slice; 33 arbitrary-only raw rows remain unclassified. All 74 UNSAT rows in the corrected five-driver representative recheck both CNF DRAT and stronger end-to-end certificates in two clean process-isolated runs, and a 1 ms kill control retains all 74 rows; all 1,505 generated CNF proofs recheck, with 1,487/1,505 stronger generated certificates under policy. Retained BatSat beats Z3 Boolean on Axeyum CNF despite native warm Z3 winning end-to-end. Coordinate and integrate the corrected A0 branch, select and label a nonzero finding corpus, then preregister the wider fixed-work policy sweep and add wider real proof cells. |
 | **GQ2** | **Cheap always-on cold simplification tier** | Add a bounded, denotation-preserving one-shot tier for constant folding and trivial identities whose own cost is measured. Add a size/shape and cold-vs-warm policy that selects cheap, configured, or no preprocessing. Exit only when cold end-to-end time is non-worse in aggregate and improves the target class at the GQ1 validity gates. |
 | **GQ3** | **Coercion-cancellation peepholes and causal telemetry** | **Current measured tranche complete; use ablation as policy evidence.** Exact nested/concat/extension/coercion rules and ADR-0159's repeated default-minus-rule comparator are landed. `extract_extend` improves lowering, but all four measured rules change zero AIG nodes and clauses. Do not globally delete sound rewrites because one corpus does not fire them; instead, keep a Glaurung policy only for rules with measured reach/cost and reopen register-slice-specific work only when an ablation demonstrates downstream AIG/CNF or native-time reduction. |
 | **GQ4** | **Cold demand-driven bit-slice reduction** | **Out of the active queue.** ADR-0157 v1 is correct but regresses the real ratio about 1.42x→4.49x; ADR-0158's conservative admission is a safe no-op but does not improve the required family. Both remain explicit/off. Do not tune thresholds further on this corpus; only a qualitatively different constant-cost admission proof and a fresh client gate can reopen GQ4. |
 | **GQ5** | **Cheaper AIG construction and measured CNF encoding** | **Cold engineering lane active; broad warm construction lane closed by ADR-0219.** Cold still assigns most Axeyum time to bit blast+CNF, but retained four-driver profiles remove 98--99% of per-check structure and leave only 11--20% whole-driver warm CNF. ADR-0221 now moves the Dptf reversal to word-level representation/integration; continue cold work only from causal gates and do not infer warm benefit from cold shares. |
 | **GQ6** | **Cold SAT/CDCL tuning** | **Fresh and retained exact-CNF controls DONE (ADR-0220/0221).** The proof core beats fresh BatSat before checking, while retained BatSat beats retained Z3 Boolean by 3.5527x on the ordered Axeyum CNF stream. Do not select a custom-core rewrite from Dptf; reopen only on a SAT-dominant family with a neutral core gap and deterministic limits. |
-| **GQ7** | **Cheaper warm entry and delta preprocessing** | **Source identity, fair map, query/internal attribution, fresh/retained exact-CNF controls, four-driver neutral cold-reset and source-owner-retained SMT, bounded finding parity, canonical tcpip authority, four-schedule union, and isolated configurable-policy A0 DONE; policy sweep WIP (ADR-0201--0205/0213--0239 plus Glaurung `07ea0c1`).** ADR-0232 shows 16.4x--57.0x within-cvc5 retained/full-reset reductions while preserving the external textual boundary; ADR-0239's opt-in four-schedule union closes backend parity on one prefix at 128 rows but leaves 33 arbitrary-only rows. A0's public `ConcretizationPolicy` covers both concretization seams and its `AnyModel` default exactly reproduces the accepted pre-A0 output/work identity. Coordinate and integrate that clean branch; then treat deterministic least/greatest/site/boundary/diverse selection as sweep configuration, not separate projects. Gate symbolic memory on residual coverage headroom. **This is correctness-relevant, not just reproducibility:** the rows canonicalization drops (2 tcpip double-fetches; 33 arbitrary-only rows under least/greatest union) are attacker-tainted, so the sweep target is reproducibility AND >= any-model coverage -- parity alone is not "solved." Next-step gate: classify the dropped rows as true-positives vs model artifacts before choosing a default policy. The companion cross-repository Pareto strategy owns the downstream/SOTA analysis and sequencing. |
+| **GQ7** | **Cheaper warm entry and delta preprocessing** | **Source identity, fair map, query/internal attribution, fresh/retained exact-CNF controls, four-driver neutral cold-reset and source-owner-retained SMT, bounded raw finding parity, canonical tcpip authority, four-schedule union, isolated configurable-policy A0, and corrected taint baseline DONE; labeled policy sweep WIP (ADR-0201--0205/0213--0240 plus Glaurung `845239f`).** ADR-0232 shows 16.4x--57.0x within-cvc5 retained/full-reset reductions while preserving the external textual boundary; ADR-0239's opt-in four-schedule union closes raw backend parity on one prefix at 128 rows but leaves 33 unclassified arbitrary-only diagnostics. A0's public `ConcretizationPolicy` covers both concretization seams and preserves default value selection. ADR-0240 shows the two Z3-only rows are generic-`Arg0` artifacts and that the current prefix has zero high-confidence findings. Coordinate and integrate the corrected branch; rebaseline and label before treating deterministic least/greatest/site/boundary/diverse selection as sweep configuration, not separate projects. Publish raw, confidence-gated, validated, work, and cost partitions; never use raw `>= AnyModel` as a recall target. Gate symbolic memory on residual validated coverage headroom. The companion cross-repository Pareto strategy owns the downstream/SOTA analysis and sequencing. |
 | **GQ8** | **Verdict and CNF reuse for duplicate/prefix queries** | **Exact replay-checked SAT reuse is done for available families (ADR-0192); stronger subsumption remains open.** Exact hits replay under fixed bounds; ordinary UNSAT/Unknown and prefix verdict reuse remain forbidden. Investigate only replay-checked stronger-model reuse where a cached model is proven to satisfy the complete weaker later query. |
 | **GQ9** | **Auto production policy and API guidance** | **DONE for available serial families (ADR-0186/0199).** Adaptive 2→9 ownership plus serial sibling continuation reuse is the downstream default; ADR-0199 clears every time/ratio/RSS/environment alarm and improves RSS on both accepted drivers. Explicit one-shot, fixed, transfer-only, and serial-off controls remain. Re-gate wider families and never apply serial leases across parallel workers. |
 | **GQ10** | **Ordered, wider real-lifter regression corpus** | **Native timeout-continuation admission is DONE; wider direct-delta admission is deferred (ADR-0205--0212).** The accepted tcpip gate still defaults one bounded continuation only inside selected direct-delta sessions. A complete 85,449-event / 17,400-check `dxgkrnl` trace and independent 13,577-query / 8,816-model-read replay prove exact production-topology no-op functionality with zero correctness or lifecycle alarms. The repeated ordinary-core comparison nevertheless fails the declared timing-CV gate (14.430% control, 8.306% candidate); slower-core calibration changes actual outcomes at the 250 ms boundary. Keep direct delta opt-in. `win32k` is now classified as a system-service/callout frontend target, not zero-query IOCTL solver evidence. |
@@ -949,14 +952,14 @@ evidence are now distinct:
    SMT boundary costs separately named; do not use Z3 as both sole oracle and
    sole comparator.
 4. **Authoritative finding parity — bounded four-driver, first canonical
-   tcpip, extremal, and mixed-site coverage-union tiers DONE; wider tiers WIP
-   (ADR-0229/0236/0238/0239):** sole-authority Z3 and Axeyum
+   tcpip, extremal, mixed-site raw-union, and taint-baseline tiers DONE; labeled
+   wider tiers WIP (ADR-0229/0236/0238/0239/0240):** sole-authority Z3 and Axeyum
    binaries emit byte-identical ordered raw sink lists on Dptf, vwififlt,
    IntcSST, and SurfacePen across N=3 order-balanced repetitions: 302 canonical
    sinks and 1,812 stable emitted rows. Differing vwififlt/IntcSST solve counts
    prohibit an identical-exploration claim but do not change output. Tcpip
-   prefix 15 supplies the measured divergence: its any-model cells have 126
-   stable shared sinks plus two Z3-only rows. The opt-in unsigned-minimum policy
+   prefix 15 supplies the measured raw divergence: its AnyModel cells have 126
+   stable shared diagnostics plus two Z3-only rows. The opt-in unsigned-minimum policy
    gives both authorities the same 110 sinks, 80,563 solves, and complete
    model-choice telemetry with zero inconclusive choice. Because the policy
    changes the shared population, keep it opt-in. ADR-0238's exact
@@ -970,12 +973,17 @@ evidence are now distinct:
    value selection is a cheap policy knob, not a separate research program.
    Glaurung A0 now extracts a first-class `ConcretizationPolicy` on isolated
    branch `axeyum-concretization-policy-a0` and proves `AnyModel` reproduces the
-   accepted Axeyum-authoritative controls exactly. Coordinate and integrate that
-   branch, then preregister and sweep least/greatest/site/boundary/diverse
-   settings over wider fixed work. Deterministic work bounds are configuration;
-   deferred symbolic memory is the only architectural follow-on and starts only
-   if the sweep leaves coverage headroom. Require genuinely broader evidence
-   before any finding-preservation claim.
+   accepted pre-A0 value-selection behavior. ADR-0240's follow-up at `845239f`
+   preserves exact taint sources and classifies the two Z3-only rows as
+   generic-`Arg0` artifacts; both authorities have zero high-confidence findings
+   on this prefix. Coordinate and integrate that corrected branch, rebaseline
+   every policy, classify the 33 remaining arbitrary-only raw rows, and select a
+   nonzero labeled-positive corpus before preregistering the
+   least/greatest/site/boundary/diverse sweep. Deterministic work bounds are
+   configuration; deferred symbolic memory is the only architectural follow-on
+   and starts only if the corrected sweep leaves validated coverage headroom.
+   Require genuinely broader labeled evidence before any finding-preservation
+   claim.
 5. **Deployability and artifact readiness — profile, WebAssembly, bounded warm
    Pareto, and representative real-query end-to-end proof deployment DONE
    (ADR-0216/0227/0228/0230/0234/0235), wider proof deployment WIP:** `qfbv` is the

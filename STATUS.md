@@ -322,6 +322,27 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-18 — ADR-0240 corrects the concretization finding baseline before
+  the policy sweep.** Exact PDB, disassembly, and valid ordered-trace evidence
+  place tcpip's two stable Z3-only AnyModel rows inside internal
+  `TcpSendTrackerMarkTransmits` traversal and trace their addresses to generic
+  `Arg0` ancestry. Glaurung had relabeled fresh values loaded through any
+  tainted address as `*attacker`, laundering that ancestry past its own
+  high-confidence filter. TDD on isolated branch
+  `axeyum-concretization-policy-a0` at `845239f` now preserves every exact
+  source (`*Arg0`, `*SystemBuffer`, nested dereferences); all 18 explorer tests
+  pass. Two clean repetitions per authority keep AnyModel's raw 128/126 split,
+  now as two Z3-only `**Arg0` diagnostics, while normal output is 0/0
+  high-confidence. Least unsigned remains exact at 110/110 raw rows and also
+  has no non-`ArgN` source. Therefore the two rows are classified model-sensitive
+  false-positive diagnostics, the 33 older arbitrary-only rows remain
+  unclassified, and raw `>= AnyModel` is removed as a policy acceptance gate.
+  The isolated branch head is `ad8fae1` after the decision record. Next
+  coordinate integration, rebaseline all policies, label a fixed-work
+  corpus with nonzero positives, then preregister one configuration sweep with
+  raw/confidence/validated/work/cost partitions. Symbolic memory remains
+  conditional on residual validated headroom.
+
 - **2026-07-18 — behavior-preserving Glaurung A0 concretization policy accepted
   on an isolated branch.** Branch `axeyum-concretization-policy-a0` at `07ea0c1`
   exposes one public `ConcretizationPolicy` across `concretize_addr` and
@@ -332,15 +353,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   repetitions: 126 findings, 2,991 solves, zero canonical-choice work, and
   ordered hash
   `a67d7bca28602ab20bbc46d9a5d42705463bd340067dc8e6ec660b35d58ba265`.
-  The two known Z3-only rows remain, so this is behavior preservation rather
-  than authority parity. Focused 6-policy and 17-explorer tests pass; release
+  The two known Z3-only raw rows remain, so this is behavior preservation rather
+  than authority parity. ADR-0240 subsequently classifies them as
+  provenance-laundered `Arg0` artifacts and advances the integration head to
+  `845239f`; the pre-correction hash remains A0 seam compatibility evidence,
+  not a finding baseline. Focused 6-policy and 17-explorer tests pass; release
   build and dual-backend all-target check pass. Full testing has only two
   inherited WinAPI failures reproduced on untouched base `e98c090`; historical
   repository-wide format/clippy debt remains outside the changed files. The
   live dirty Glaurung checkout is untouched. Next coordinate and integrate the
-  clean branch, preregister the policy sweep, and treat BoundarySet/DiverseEnum
-  as settings of this mechanism. Symbolic memory remains conditional on sweep
-  headroom.
+  corrected clean branch, rebaseline and label, then treat BoundarySet/DiverseEnum
+  as settings of this mechanism. Symbolic memory remains conditional on
+  validated sweep headroom.
 
 - **2026-07-18 — ADR-0239 accepts bounded mixed-extremum four-schedule authority
   parity.** FNV-1a over the fixed
@@ -2348,37 +2372,42 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
   | ID | Live status | Next acceptance boundary |
   |---|---|---|
-  | **GQ1 real-query profile** | **Map, query/internal attribution, fresh/retained exact-CNF controls, four-driver neutral cold-reset and source-owner-retained SMT breadth, bounded/canonical/four-schedule authority cells, process-isolated corrected-representative end-to-end faithfulness, deadline-aware generated proof widening, and isolated behavior-preserving Glaurung A0 DONE (ADR-0187/0188/0213--0239 plus Glaurung `07ea0c1`).** cvc5 agrees on all 9,526 checks in both external protocols; 302 raw sinks match under unrestricted sole authority on four drivers; tcpip prefix 15 exposes two stable Z3-only any-model sinks and reaches exact 128-row four-schedule parity, adding three rows beyond the extrema while retaining 33 arbitrary-only rows; all 74 UNSAT rows in the corrected five-driver representative recheck both CNF DRAT and stronger end-to-end certificates in two clean process-isolated runs, and a 1 ms kill control retains all 74 rows; all 1,505 generated CNF proofs recheck, with 1,487/1,505 stronger generated certificates under policy; BatSat beats Z3 Boolean on retained Axeyum CNF despite native warm Z3 winning end-to-end | Coordinate and integrate the clean A0 branch, then preregister the wider fixed-work policy sweep and add wider real proof cells |
+  | **GQ1 real-query profile** | **Map, query/internal attribution, fresh/retained exact-CNF controls, four-driver neutral cold-reset and source-owner-retained SMT breadth, bounded/canonical/four-schedule raw authority cells, process-isolated corrected-representative end-to-end faithfulness, deadline-aware generated proof widening, isolated behavior-preserving Glaurung A0, and taint-baseline correction DONE (ADR-0187/0188/0213--0240 plus Glaurung `845239f`).** cvc5 agrees on all 9,526 checks in both external protocols; 302 raw sinks match under unrestricted sole authority on four drivers; tcpip prefix 15 exposes two stable Z3-only AnyModel raw diagnostics and reaches exact 128-row four-schedule raw parity, but corrected provenance classifies the two rows as `Arg0`-derived artifacts and leaves zero high-confidence findings in this slice; 33 arbitrary-only raw rows remain unclassified; all 74 UNSAT rows in the corrected five-driver representative recheck both CNF DRAT and stronger end-to-end certificates in two clean process-isolated runs, and a 1 ms kill control retains all 74 rows; all 1,505 generated CNF proofs recheck, with 1,487/1,505 stronger generated certificates under policy; BatSat beats Z3 Boolean on retained Axeyum CNF despite native warm Z3 winning end-to-end | Coordinate and integrate the corrected A0 branch; label a nonzero finding corpus, then preregister the wider fixed-work policy sweep and add wider real proof cells |
   | **GQ2 cheap cold tier** | **WIP with three accepted rewrite tranches; batch integration deferred.** Canonical v4 reaches 5.625 s / 0.730x Z3; ADR-0156 preserves replay but is 18.8% slower than one-shot | Keep canonical v4 as the measured one-shot policy; do not recommend fresh incremental batch until its clause/entry overhead closes |
   | **GQ3 coercion/affine peepholes** | **DONE for current measured shapes (ADR-0159).** Clean repeated path-paired ablations are fail-closed; `extract_extend` is a material lowering-only win, while all four measured structural rules change zero AIG nodes/clauses | Keep rules enabled. Reopen only for a new residual shape with a specific downstream hypothesis and the same causal ablation gate |
   | **GQ4 cold relevant bits** | **v1 and v2 DEFERRED after failed real gates.** v1 regresses ~1.42x→4.49x. V2 rejection overhead is bounded, but defaults admit 0/128 and +0.62% total; a 33-query moderate policy removes 632 AIG nodes/zero clauses and regresses bit blast 3.14% | Keep both explicit/off. Reopen only with an AIG/CNF-cone estimator or after word rewrites materially change the residual; do not tune thresholds further |
   | **GQ5 AIG/CNF construction** | **Cold lane active; broad warm lane closed by ADR-0219.** Retention removes 98--99% of cold structure and leaves 11--20% warm CNF | Continue cold only from causal gates; report Dptf UNSAT CNF additions as a cross-core covariate |
   | **GQ6 cold SAT/CDCL** | **Fresh and retained exact-CNF controls DONE (ADR-0220/0221).** Proof core beats fresh BatSat before checking; retained BatSat beats retained Z3 Boolean | Do not select a core rewrite from Dptf; reopen only on a SAT-dominant family with a neutral core gap and deterministic limits |
-  | **GQ7 warm delta entry** | **Source identity, fair map, query/internal attribution, fresh/retained CNF controls, four-driver neutral cold-reset plus source-owner-retained SMT, bounded finding parity, canonical tcpip authority, four-schedule union, and isolated configurable-policy A0 DONE; policy sweep WIP; wider default DEFERRED (ADR-0201--0239 plus Glaurung `07ea0c1`).** Neutral same-protocol retention is 16.4x--57.0x below full reset; canonical policies change the finding population and the 128-row union leaves 33 arbitrary-only rows; A0 exactly preserves the any-model output/work identity | Coordinate and integrate the clean A0 branch; preregister and sweep deterministic policy configs; gate symbolic memory on residual headroom |
+  | **GQ7 warm delta entry** | **Source identity, fair map, query/internal attribution, fresh/retained CNF controls, four-driver neutral cold-reset plus source-owner-retained SMT, bounded raw finding parity, canonical tcpip authority, four-schedule union, isolated configurable-policy A0, and taint-baseline correction DONE; labeled policy sweep WIP; wider default DEFERRED (ADR-0201--0240 plus Glaurung `845239f`).** Neutral same-protocol retention is 16.4x--57.0x below full reset; canonical policies change the raw population and the 128-row union leaves 33 unclassified arbitrary-only rows; A0 preserves default value selection, while corrected provenance leaves zero accepted findings on the current tcpip prefix | Coordinate and integrate the corrected A0 branch; rebaseline and label before sweeping deterministic policy configs; gate symbolic memory on residual validated headroom |
   | **GQ8 verdict/CNF cache** | **DONE for available families (ADR-0192).** Clean repeated evidence admits exact same-arena scalar SAT reuse only in path-owned Glaurung sessions; fixed bounds, traffic partitions, cleanup gauges, findings, and replay are enforced | Preserve explicit off and re-gate new families; Axeyum's generic cache remains opt-in and ordinary UNSAT/Unknown/prefix verdicts remain excluded |
   | **GQ9 auto cost model/docs** | **DONE for available families (ADR-0186).** Clean adaptive repeat clears every alarm over 92,721 checks; downstream explorer default has explicit off/fixed controls | Re-gate newly captured families; do not broaden this Glaurung-specific default into Axeyum's generic API |
   | **GQ10 real-lifter regression tier** | **Native continuation admission DONE; wider direct-delta default DEFERRED (ADR-0205--0212).** The accepted tcpip trace admits bounded continuation. The new complete 85,449-event / 17,400-check `dxgkrnl` trace and independent replay preserve exact no-op behavior and every correctness/lifecycle gauge, but ordinary-core time CV is 14.430%/8.306% and slower-core outcomes drift | Keep direct delta opt-in. Repeat under a quieter predeclared environment or add another no-timeout IOCTL driver; route `win32k` to a system-service/callout frontend |
 
   **Next actions:** (1) coordinate with the active Glaurung explorer owner and
-  integrate isolated branch `axeyum-concretization-policy-a0` at `07ea0c1`;
-  A0's two-seam `ConcretizationPolicy`, exact `AnyModel` compatibility gate, and
-  selector aliases are complete, so do not reimplement them or edit the live
-  dirty checkout; (2) preregister the resulting fixed-work policy sweep across AnyModel,
+  integrate isolated branch `axeyum-concretization-policy-a0` at `ad8fae1`
+  (provenance implementation `845239f`);
+  A0's two-seam `ConcretizationPolicy`, exact `AnyModel` compatibility gate,
+  selector aliases, and exact-source taint correction are complete, so do not
+  reimplement them or edit the live dirty checkout; (2) rebaseline every policy
+  after the provenance correction, classify the remaining 33 arbitrary-only raw
+  rows, and select a fixed-work corpus with nonzero validated positives; (3)
+  preregister the resulting policy sweep across AnyModel,
   least/greatest/site-hash, BoundarySet, and eventually DiverseEnum, keeping
-  deterministic work bounds as configuration and complete finding/work/cost
-  partitions; begin symbolic memory only if this sweep leaves measured coverage
-  headroom; (3) after
+  deterministic work bounds as configuration and separate raw,
+  confidence-gated, validated, work, and cost partitions; do not use raw
+  `>= AnyModel` as a recall gate, and begin symbolic memory only if this sweep
+  leaves validated coverage headroom; (4) after
   ADR-0235's completed process-isolated representative real-query denominator,
-  add wider corrected real manifests; (4) widen
+  add wider corrected real manifests; (5) widen
   ADR-0237's accepted four-oracle/edge-frequency gate as a standing bounded
-  correctness control; (5) keep each subprocess/FFI boundary named; (6)
+  correctness control; (6) keep each subprocess/FFI boundary named; (7)
   preserve ADR-0236's rejected any-model
   divergence beside every canonical result and never treat canonical output as
-  the union of reachable findings; (7) regenerate a wider timeout-sensitive driver and keep each timeout
-  cell separate; (8) advance GQ5 through fresh causal CNF attribution while
+  the union of reachable findings; (8) regenerate a wider timeout-sensitive driver and keep each timeout
+  cell separate; (9) advance GQ5 through fresh causal CNF attribution while
   preserving explicit controls, exact counter partitions, and honest residual
-  `Unknown`s; (9) stage solver namespace/module, duplicate-removal, and
-  typed-config refactors only as bounded behavior-preserving tranches; (10) keep
+  `Unknown`s; (10) stage solver namespace/module, duplicate-removal, and
+  typed-config refactors only as bounded behavior-preserving tranches; (11) keep
   GQ4 explicit/off.
 
   **Validation (2026-07-18, ADR-0238):** all 20 changed-path runner/analyzer
