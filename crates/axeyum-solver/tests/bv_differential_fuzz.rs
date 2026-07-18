@@ -40,6 +40,12 @@
 //! SAT models versus model-less UNSAT, normalized concat/extension semantics,
 //! and a full-width 128-bit constant with bit 100 set.
 //!
+//! Set `AXEYUM_QFBV_PROOF_SAMPLE_STRIDE=N` to select jointly-UNSAT width-at-most-8
+//! rows for both CNF DRAT and end-to-end faithfulness-plus-DRAT checking. An
+//! optional `AXEYUM_QFBV_PROOF_DEADLINE_MS` gives each route its own bounded
+//! proof-search deadline; expiry is counted with the exact seed as inconclusive
+//! or not certified, never as a satisfiability verdict.
+//!
 //! ## Semantic-safety note
 //!
 //! Every construct generated has *identical* SMT-LIB semantics on both sides.
@@ -66,12 +72,12 @@
 
 use std::collections::BTreeSet;
 use std::sync::mpsc;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use axeyum_ir::{Sort, SymbolId, TermArena, TermId, Value, eval};
 use axeyum_solver::{
     CheckResult, EndToEndUnsatOutcome, SolverBackend, SolverConfig, UnsatProofOutcome, Z3Backend,
-    certify_qf_bv_unsat_end_to_end, export_qf_bv_unsat_proof, solve,
+    certify_qf_bv_unsat_end_to_end_within, export_qf_bv_unsat_proof_within, solve,
 };
 use z3::ast::{BV, Bool};
 use z3::{Params, SatResult, Solver};
@@ -112,6 +118,18 @@ fn proof_sample_stride() -> Option<u64> {
                 panic!("AXEYUM_QFBV_PROOF_SAMPLE_STRIDE must be a positive integer")
             }),
     )
+}
+
+fn proof_deadline() -> Option<Duration> {
+    let value = std::env::var("AXEYUM_QFBV_PROOF_DEADLINE_MS").ok()?;
+    let milliseconds = value
+        .parse::<u64>()
+        .expect("AXEYUM_QFBV_PROOF_DEADLINE_MS must be a positive integer");
+    assert!(
+        (1..=600_000).contains(&milliseconds),
+        "AXEYUM_QFBV_PROOF_DEADLINE_MS must be in 1..=600000"
+    );
+    Some(Duration::from_millis(milliseconds))
 }
 
 fn proof_verbose() -> bool {
@@ -1130,22 +1148,30 @@ struct Tally {
     proof_selected_unsat: u64,
     cnf_drat_proved: u64,
     cnf_drat_inconclusive: u64,
+    cnf_drat_inconclusive_seeds: Vec<u64>,
     end_to_end_certified: u64,
     end_to_end_not_certified: u64,
+    end_to_end_not_certified_seeds: Vec<u64>,
     sat_replayed: u64,
     sat_replay_indeterminate: u64,
     /// The first crashing instance, kept for the report.
     first_crash: Option<(u64, String)>,
 }
 
-fn record_unsat_proof_coverage(seed: u64, inst: &Instance, tally: &mut Tally) {
+fn record_unsat_proof_coverage(
+    seed: u64,
+    inst: &Instance,
+    tally: &mut Tally,
+    proof_deadline: Option<Duration>,
+) {
     tally.proof_selected_unsat += 1;
     let (arena, _symbols, assertions) = inst.build();
 
     if proof_verbose() {
         eprintln!("[bv-proof] seed={seed} CNF DRAT start");
     }
-    match export_qf_bv_unsat_proof(&arena, &assertions) {
+    let cnf_deadline = proof_deadline.map(|duration| Instant::now() + duration);
+    match export_qf_bv_unsat_proof_within(&arena, &assertions, cnf_deadline) {
         Ok(UnsatProofOutcome::Proved(proof)) => {
             assert_eq!(
                 proof.recheck(),
@@ -1155,7 +1181,10 @@ fn record_unsat_proof_coverage(seed: u64, inst: &Instance, tally: &mut Tally) {
             );
             tally.cnf_drat_proved += 1;
         }
-        Ok(UnsatProofOutcome::Inconclusive) => tally.cnf_drat_inconclusive += 1,
+        Ok(UnsatProofOutcome::Inconclusive) => {
+            tally.cnf_drat_inconclusive += 1;
+            tally.cnf_drat_inconclusive_seeds.push(seed);
+        }
         Ok(UnsatProofOutcome::Satisfiable) => panic!(
             "proof route returned satisfiable for a jointly-UNSAT formula:\n{}",
             inst.to_smt2()
@@ -1169,7 +1198,8 @@ fn record_unsat_proof_coverage(seed: u64, inst: &Instance, tally: &mut Tally) {
     if proof_verbose() {
         eprintln!("[bv-proof] seed={seed} end-to-end start");
     }
-    match certify_qf_bv_unsat_end_to_end(&arena, &assertions) {
+    let end_to_end_deadline = proof_deadline.map(|duration| Instant::now() + duration);
+    match certify_qf_bv_unsat_end_to_end_within(&arena, &assertions, end_to_end_deadline) {
         Ok(outcome @ EndToEndUnsatOutcome::Certified { .. }) => {
             assert_eq!(
                 outcome.recheck(),
@@ -1179,7 +1209,10 @@ fn record_unsat_proof_coverage(seed: u64, inst: &Instance, tally: &mut Tally) {
             );
             tally.end_to_end_certified += 1;
         }
-        Ok(EndToEndUnsatOutcome::NotCertified) => tally.end_to_end_not_certified += 1,
+        Ok(EndToEndUnsatOutcome::NotCertified) => {
+            tally.end_to_end_not_certified += 1;
+            tally.end_to_end_not_certified_seeds.push(seed);
+        }
         Ok(EndToEndUnsatOutcome::Satisfiable) => panic!(
             "end-to-end route returned satisfiable for a jointly-UNSAT formula:\n{}",
             inst.to_smt2()
@@ -1197,7 +1230,14 @@ fn record_unsat_proof_coverage(seed: u64, inst: &Instance, tally: &mut Tally) {
 /// Decide one instance with both engines and fold the result into `t`. Panics
 /// only on a genuine soundness violation (a non-replaying Sat, or a jointly-
 /// decided Sat/Unsat disagreement) — the whole point of the gate.
-fn run_instance(seed: u64, inst: &Instance, t: &mut Tally, cvc5: Option<&str>, sample_proof: bool) {
+fn run_instance(
+    seed: u64,
+    inst: &Instance,
+    t: &mut Tally,
+    cvc5: Option<&str>,
+    sample_proof: bool,
+    proof_deadline: Option<Duration>,
+) {
     // --- axeyum: the default pure-Rust front door, hard-capped. ----------
     let outcome = match solve_axeyum_bounded(inst.clone()) {
         Bounded::Decided(o) => o,
@@ -1274,7 +1314,7 @@ fn run_instance(seed: u64, inst: &Instance, t: &mut Tally, cvc5: Option<&str>, s
     }
 
     if sample_proof && ax_label == Verdict::Unsat {
-        record_unsat_proof_coverage(seed, inst, t);
+        record_unsat_proof_coverage(seed, inst, t, proof_deadline);
     }
 
     let Some(cvc5) = cvc5 else {
@@ -1448,6 +1488,7 @@ fn glaurung_named_qfbv_controls_agree_and_replay() {
             &mut tally,
             cvc5.as_deref(),
             false,
+            None,
         );
     }
     assert_eq!(tally.jointly_decided, 4);
@@ -1568,6 +1609,7 @@ fn print_tally(
     tally: &Tally,
     cvc5_stride: u64,
     proof_stride: Option<u64>,
+    proof_deadline: Option<Duration>,
     covered_widths: &BTreeSet<u32>,
     covered_operators: &BTreeSet<&'static str>,
 ) {
@@ -1585,11 +1627,20 @@ fn print_tally(
     println!("cvc5 Unknown/skipped: {}", tally.cvc5_unknown_skipped);
     println!("three-way agreements: {}", tally.three_way_agreements);
     println!("proof sample stride:  {proof_stride:?} (width <= 8)");
+    println!("proof deadline:       {proof_deadline:?} per route");
     println!("proof-selected UNSAT: {}", tally.proof_selected_unsat);
     println!("CNF DRAT proved:       {}", tally.cnf_drat_proved);
     println!("CNF DRAT inconclusive: {}", tally.cnf_drat_inconclusive);
+    println!(
+        "CNF inconclusive seeds: {:?}",
+        tally.cnf_drat_inconclusive_seeds
+    );
     println!("end-to-end certified: {}", tally.end_to_end_certified);
     println!("end-to-end uncovered: {}", tally.end_to_end_not_certified);
+    println!(
+        "end-to-end uncovered seeds: {:?}",
+        tally.end_to_end_not_certified_seeds
+    );
     println!("Sat replays verified: {}", tally.sat_replayed);
     println!("Sat replay declined:  {}", tally.sat_replay_indeterminate);
     println!("covered widths:       {covered_widths:?}");
@@ -1620,6 +1671,7 @@ fn bv_differential_fuzz_disagree_zero() {
     let cvc5 = cvc5_bin();
     let cvc5_stride = cvc5_sample_stride();
     let proof_stride = proof_sample_stride();
+    let proof_deadline = proof_deadline();
     if std::env::var("AXEYUM_REQUIRE_CVC5").as_deref() == Ok("1") {
         assert!(
             cvc5.is_some(),
@@ -1650,13 +1702,21 @@ fn bv_differential_fuzz_disagree_zero() {
             .then_some(cvc5.as_deref())
             .flatten();
         let sample_proof = proof_stride.is_some_and(|stride| seed % stride == 0 && inst.width <= 8);
-        run_instance(seed, &inst, &mut t, sampled_cvc5, sample_proof);
+        run_instance(
+            seed,
+            &inst,
+            &mut t,
+            sampled_cvc5,
+            sample_proof,
+            proof_deadline,
+        );
     }
 
     print_tally(
         &t,
         cvc5_stride,
         proof_stride,
+        proof_deadline,
         &covered_widths,
         &covered_operators,
     );

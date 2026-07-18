@@ -256,7 +256,8 @@ macro_rules! full_exports {
         pub use bitblast_alethe::bitblast_step;
         pub use bitblast_miter::{
             BitblastMiterOutcome, EndToEndUnsatOutcome, certify_bitblast_by_miter,
-            certify_qf_bv_unsat_end_to_end,
+            certify_bitblast_by_miter_within, certify_qf_bv_unsat_end_to_end,
+            certify_qf_bv_unsat_end_to_end_within,
         };
         pub use bmc::{
             BmcOutcome, CertifiedSafetyOutcome, SafetyCertificate, SafetyOutcome, TransitionSystem,

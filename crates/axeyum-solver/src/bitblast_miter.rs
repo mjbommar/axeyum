@@ -24,15 +24,20 @@
 
 use std::collections::HashMap;
 
+#[cfg(not(target_arch = "wasm32"))]
+use std::time::Instant;
+#[cfg(target_arch = "wasm32")]
+use web_time::Instant;
+
 use axeyum_aig::{Aig, AigInputId, AigLit, AigNode};
 use axeyum_bv::{first_unsupported_op, first_unsupported_sort, lower_terms};
 use axeyum_cnf::{
-    ProofSolveOutcome, check_drat, solve_with_drat_proof, tseitin_encode, write_drat,
+    ProofSolveOutcome, check_drat, solve_with_drat_proof_within, tseitin_encode, write_drat,
 };
 use axeyum_ir::{Op, Sort, SymbolId, TermArena, TermId, TermNode};
 
 use crate::backend::SolverError;
-use crate::proof::{UnsatProof, UnsatProofOutcome, export_qf_bv_unsat_proof};
+use crate::proof::{UnsatProof, UnsatProofOutcome, export_qf_bv_unsat_proof_within};
 
 /// The outcome of [`certify_bitblast_by_miter`].
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -66,6 +71,25 @@ pub enum BitblastMiterOutcome {
 pub fn certify_bitblast_by_miter(
     arena: &TermArena,
     roots: &[TermId],
+) -> Result<BitblastMiterOutcome, SolverError> {
+    certify_bitblast_by_miter_within(arena, roots, None)
+}
+
+/// Like [`certify_bitblast_by_miter`], but the proof-producing SAT search
+/// returns [`BitblastMiterOutcome::Inconclusive`] when `deadline` expires.
+///
+/// The absolute deadline is shared only with the proof search. Deterministic
+/// term lowering, miter construction, CNF encoding, and completed-proof
+/// checking still run to completion; expiry never becomes a divergence or a
+/// certified result.
+///
+/// # Errors
+///
+/// Returns the same errors as [`certify_bitblast_by_miter`].
+pub fn certify_bitblast_by_miter_within(
+    arena: &TermArena,
+    roots: &[TermId],
+    deadline: Option<Instant>,
 ) -> Result<BitblastMiterOutcome, SolverError> {
     // Anything the production bit-blaster cannot lower is out of scope.
     if first_unsupported_sort(arena, roots).is_some()
@@ -120,7 +144,7 @@ pub fn certify_bitblast_by_miter(
     let encoding = tseitin_encode(&aig, &[miter])
         .map_err(|error| SolverError::Backend(format!("miter CNF encoding failed: {error}")))?;
     let formula = encoding.formula();
-    match solve_with_drat_proof(formula) {
+    match solve_with_drat_proof_within(formula, deadline) {
         ProofSolveOutcome::Sat(_) => Ok(BitblastMiterOutcome::Diverged),
         ProofSolveOutcome::ResourceOut | ProofSolveOutcome::Interrupted => {
             Ok(BitblastMiterOutcome::Inconclusive)
@@ -222,9 +246,28 @@ pub fn certify_qf_bv_unsat_end_to_end(
     arena: &TermArena,
     assertions: &[TermId],
 ) -> Result<EndToEndUnsatOutcome, SolverError> {
+    certify_qf_bv_unsat_end_to_end_within(arena, assertions, None)
+}
+
+/// Like [`certify_qf_bv_unsat_end_to_end`], but both proof-producing SAT
+/// searches share one absolute `deadline`.
+///
+/// Expiry in either the faithfulness miter or final UNSAT refutation yields
+/// [`EndToEndUnsatOutcome::NotCertified`]. It never supplies a satisfiability
+/// verdict. Construction and checking of any proof completed before the
+/// deadline remain deterministic and run to completion.
+///
+/// # Errors
+///
+/// Returns the same errors as [`certify_qf_bv_unsat_end_to_end`].
+pub fn certify_qf_bv_unsat_end_to_end_within(
+    arena: &TermArena,
+    assertions: &[TermId],
+    deadline: Option<Instant>,
+) -> Result<EndToEndUnsatOutcome, SolverError> {
     // 1. The bit-blasting of the assertions must be certified faithful.
     let (faithfulness_dimacs, faithfulness_drat) =
-        match certify_bitblast_by_miter(arena, assertions)? {
+        match certify_bitblast_by_miter_within(arena, assertions, deadline)? {
             BitblastMiterOutcome::Certified { dimacs, drat } => (dimacs, drat),
             BitblastMiterOutcome::Diverged => {
                 return Err(SolverError::Backend(
@@ -238,7 +281,7 @@ pub fn certify_qf_bv_unsat_end_to_end(
         };
 
     // 2. The resulting CNF must be unsatisfiable with a DRAT-checked proof.
-    match export_qf_bv_unsat_proof(arena, assertions)? {
+    match export_qf_bv_unsat_proof_within(arena, assertions, deadline)? {
         UnsatProofOutcome::Proved(unsat) => Ok(EndToEndUnsatOutcome::Certified {
             faithfulness_dimacs,
             faithfulness_drat,
@@ -740,8 +783,12 @@ fn zip_map(
 
 #[cfg(test)]
 mod end_to_end_recheck {
-    use super::{EndToEndUnsatOutcome, certify_qf_bv_unsat_end_to_end};
+    use super::{
+        EndToEndUnsatOutcome, certify_qf_bv_unsat_end_to_end,
+        certify_qf_bv_unsat_end_to_end_within,
+    };
     use axeyum_ir::TermArena;
+    use std::time::{Duration, Instant};
 
     #[test]
     fn certified_end_to_end_unsat_rechecks_independently() {
@@ -776,6 +823,52 @@ mod end_to_end_recheck {
         let outcome = certify_qf_bv_unsat_end_to_end(&arena, &[a]).unwrap();
         assert!(matches!(outcome, EndToEndUnsatOutcome::Satisfiable));
         assert!(!outcome.recheck().unwrap(), "sat is not a certified unsat");
+    }
+
+    #[test]
+    fn bounded_end_to_end_unsat_reuses_one_future_deadline() {
+        let mut arena = TermArena::new();
+        let x = arena.bv_var("x", 4).unwrap();
+        let zero = arena.bv_const(4, 0).unwrap();
+        let one = arena.bv_const(4, 1).unwrap();
+        let a = arena.eq(x, zero).unwrap();
+        let b = arena.eq(x, one).unwrap();
+        let deadline = Instant::now() + Duration::from_secs(10);
+
+        let outcome =
+            certify_qf_bv_unsat_end_to_end_within(&arena, &[a, b], Some(deadline)).unwrap();
+        assert!(matches!(outcome, EndToEndUnsatOutcome::Certified { .. }));
+        assert!(outcome.recheck().unwrap());
+    }
+
+    #[test]
+    fn expired_end_to_end_deadline_never_fabricates_a_result() {
+        // The proof core checks deadlines on a deterministic conflict cadence,
+        // so this small instance may still finish before its first check. Both
+        // sound outcomes are accepted: a checked certificate or no certificate.
+        let mut arena = TermArena::new();
+        let x = arena.bv_var("x", 8).unwrap();
+        let y = arena.bv_var("y", 8).unwrap();
+        let product = arena.bv_mul(x, y).unwrap();
+        let zero = arena.bv_const(8, 0).unwrap();
+        let one = arena.bv_const(8, 1).unwrap();
+        let a = arena.eq(product, zero).unwrap();
+        let b = arena.eq(product, one).unwrap();
+        let deadline = Instant::now()
+            .checked_sub(Duration::from_secs(1))
+            .expect("clock far enough from epoch");
+
+        let outcome =
+            certify_qf_bv_unsat_end_to_end_within(&arena, &[a, b], Some(deadline)).unwrap();
+        match &outcome {
+            EndToEndUnsatOutcome::Certified { .. } => {
+                assert!(outcome.recheck().unwrap());
+            }
+            EndToEndUnsatOutcome::NotCertified => {}
+            EndToEndUnsatOutcome::Satisfiable => {
+                panic!("deadline expiry must not turn an UNSAT query into SAT")
+            }
+        }
     }
 }
 
