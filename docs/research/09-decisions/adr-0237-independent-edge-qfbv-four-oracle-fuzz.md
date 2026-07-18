@@ -30,6 +30,10 @@ Run exactly three disjoint 4,000-row rounds through Axeyum, direct Z3, cvc5
 Require every row to decide and agree in all four engines, require every
 Axeyum SAT model to replay on the original IR, fail closed on external process
 or parser failures, and retain zero-result classes separately from failures.
+Use an explicit 30,000 ms Axeyum worker cap and the existing 2,000 ms Z3/cvc5/
+Bitwuzla per-check limits. The Axeyum cap is an operational bound, not a solver
+timeout passed into the pure-Rust search; the all-decided assertion remains the
+admission rule.
 The two uniform rounds preserve ADR-0225's generator byte-for-byte for a given
 seed. The edge round adds one rotating true control after the random formula;
 it must observe nonzero instance frequencies for all declared constant,
@@ -48,6 +52,17 @@ Pending the preregistered run. The excluded engineering pilot decided and
 agreed on all 256 rows in all four engines, replayed all 97 SAT models, and
 observed all 14 required edge categories. Its purpose was to validate the
 runner and telemetry, not to support the final claim.
+
+The first full attempt inherited the routine 5,000 ms Axeyum worker cap because
+the proposed protocol failed to state it explicitly. `uniform-a` reached 3,999
+four-way agreements, then failed closed on reproducible seed 1,002,261; rounds
+B and C did not run and no success JSON was written. The raw log and environment
+are retained under
+`bench-results/qfbv-four-oracle-independent-20260718/`. A focused unchanged-seed
+diagnostic decides the same formula under 30,000 ms. Before rerunning any full
+range, this amendment fixes that cap, adds exact nondecision seed/reproducer
+telemetry, and adds a direct all-decided assertion. The formulas and ranges are
+unchanged.
 
 ## Alternatives
 
@@ -69,4 +84,3 @@ agreement and measured semantic-corner coverage over 12,000 new formulas. It
 will not prove QF_BV completeness, cover arbitrary term depth/width, or replace
 consumer-state regressions, real Glaurung proof manifests, and authoritative
 finding tests.
-

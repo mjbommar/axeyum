@@ -1,0 +1,73 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.04s
+     Running tests/bv_differential_fuzz.rs (target/debug/deps/bv_differential_fuzz-0c7ee2cf21e46954)
+
+running 1 test
+[bv-fuzz] seed 1000000/1004000 (joint=0, agree=0, ax_unknown=0, ax_timeout=0, ax_crash=0)
+[bv-fuzz] seed 1000250/1004000 (joint=250, agree=250, ax_unknown=0, ax_timeout=0, ax_crash=0)
+[bv-fuzz] seed 1000500/1004000 (joint=500, agree=500, ax_unknown=0, ax_timeout=0, ax_crash=0)
+[bv-fuzz] seed 1000750/1004000 (joint=750, agree=750, ax_unknown=0, ax_timeout=0, ax_crash=0)
+[bv-fuzz] seed 1001000/1004000 (joint=1000, agree=1000, ax_unknown=0, ax_timeout=0, ax_crash=0)
+[bv-fuzz] seed 1001250/1004000 (joint=1250, agree=1250, ax_unknown=0, ax_timeout=0, ax_crash=0)
+[bv-fuzz] seed 1001500/1004000 (joint=1500, agree=1500, ax_unknown=0, ax_timeout=0, ax_crash=0)
+[bv-fuzz] seed 1001750/1004000 (joint=1750, agree=1750, ax_unknown=0, ax_timeout=0, ax_crash=0)
+test bv_differential_fuzz_disagree_zero has been running for over 60 seconds
+[bv-fuzz] seed 1002000/1004000 (joint=2000, agree=2000, ax_unknown=0, ax_timeout=0, ax_crash=0)
+[bv-fuzz] seed 1002250/1004000 (joint=2250, agree=2250, ax_unknown=0, ax_timeout=0, ax_crash=0)
+[bv-fuzz] seed 1002500/1004000 (joint=2499, agree=2499, ax_unknown=0, ax_timeout=1, ax_crash=0)
+[bv-fuzz] seed 1002750/1004000 (joint=2749, agree=2749, ax_unknown=0, ax_timeout=1, ax_crash=0)
+[bv-fuzz] seed 1003000/1004000 (joint=2999, agree=2999, ax_unknown=0, ax_timeout=1, ax_crash=0)
+[bv-fuzz] seed 1003250/1004000 (joint=3249, agree=3249, ax_unknown=0, ax_timeout=1, ax_crash=0)
+[bv-fuzz] seed 1003500/1004000 (joint=3499, agree=3499, ax_unknown=0, ax_timeout=1, ax_crash=0)
+[bv-fuzz] seed 1003750/1004000 (joint=3749, agree=3749, ax_unknown=0, ax_timeout=1, ax_crash=0)
+=== QF_BV differential fuzz tally ===
+generator profile:    uniform-v1
+seed range:           1000000..1004000
+total instances:      4000
+jointly decided:      3999
+agreements:           3999
+axeyum Unknown:       0
+axeyum timeout:       1
+axeyum CRASHED:       0
+Z3 Unknown (skipped): 0
+cvc5 sample stride:   1
+cvc5 sampled:         3999
+cvc5 decided:         3999
+cvc5 Unknown/skipped: 0
+three-way agreements: 3999
+Bitwuzla stride:      1
+Bitwuzla sampled:     3999
+Bitwuzla decided:     3999
+Bitwuzla Unknown:     0
+Bitwuzla agreements:  3999
+four-way agreements:  3999
+proof sample stride:  None (width <= 8)
+proof deadline:       None per route
+proof-selected UNSAT: 0
+CNF DRAT proved:       0
+CNF DRAT inconclusive: 0
+CNF inconclusive seeds: []
+end-to-end certified: 0
+end-to-end uncovered: 0
+end-to-end uncovered seeds: []
+Sat replays verified: 1432
+Sat replay declined:  0
+covered widths:       {1, 4, 8, 16, 32}
+covered operators:    {"=", "and", "bvadd", "bvand", "bvashr", "bvlshr", "bvmul", "bvneg", "bvnot", "bvor", "bvsdiv", "bvsge", "bvsgt", "bvshl", "bvsle", "bvslt", "bvsmod", "bvsrem", "bvsub", "bvudiv", "bvuge", "bvugt", "bvule", "bvult", "bvurem", "bvxor", "concat", "const", "distinct", "extract", "not", "or", "sign_extend", "var", "zero_extend"}
+edge-case instances:  {"concat_one_bit_high": 1051, "concat_one_bit_low": 1136, "constant_all_ones": 2501, "constant_sign_bit": 2553, "constant_zero": 2539, "division_or_remainder_by_zero": 299, "extract_full_width": 1280, "extract_high_boundary": 2238, "extract_low_boundary": 2189, "shift_above_width": 755, "shift_at_width": 283, "sign_extend_by_zero": 1172, "zero_extend_by_zero": 1151}
+DISAGREEMENTS:        0
+
+thread 'bv_differential_fuzz_disagree_zero' (3058871) panicked at crates/axeyum-solver/tests/bv_differential_fuzz.rs:2039:9:
+assertion `left == right` failed
+  left: 3999
+ right: 4000
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test bv_differential_fuzz_disagree_zero ... FAILED
+
+failures:
+
+failures:
+    bv_differential_fuzz_disagree_zero
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2 filtered out; finished in 140.72s
+
+error: test failed, to rerun pass `-p axeyum-solver --test bv_differential_fuzz`

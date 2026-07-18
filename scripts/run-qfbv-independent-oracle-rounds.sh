@@ -50,6 +50,8 @@ for round in "${rounds[@]}"; do
   AXEYUM_REQUIRE_BITWUZLA=1 \
   AXEYUM_REQUIRE_BITWUZLA_ALL_DECIDED=1 \
   AXEYUM_BITWUZLA_SAMPLE_STRIDE=1 \
+  AXEYUM_QFBV_AXEYUM_TIMEOUT_MS=30000 \
+  AXEYUM_REQUIRE_QFBV_ALL_DECIDED=1 \
   AXEYUM_QFBV_SEED_START="$seed_start" \
   AXEYUM_QFBV_INSTANCES=4000 \
   AXEYUM_QFBV_GENERATOR_PROFILE="$profile" \
@@ -60,4 +62,3 @@ for round in "${rounds[@]}"; do
 done
 
 echo "completed preregistered QF_BV rounds in $output_dir"
-

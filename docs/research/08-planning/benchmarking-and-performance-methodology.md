@@ -599,7 +599,12 @@ records the contract and the first measured baselines.
   every Axeyum SAT must replay. The edge round reports per-instance frequencies
   for 14 declared semantic-corner families rather than inferring edge coverage
   from operator presence. Use `scripts/run-qfbv-independent-oracle-rounds.sh`;
-  its 256-row seeds 4,000..4,256 engineering pilot is explicitly excluded.
+  its 256-row seeds 4,000..4,256 engineering pilot is explicitly excluded. The
+  first full attempt exposed seed 1,002,261 exceeding the inherited 5,000 ms
+  Axeyum worker cap after 3,999 four-way agreements, so it failed closed before
+  later rounds. Preserve that log; the amended runner names a 30,000 ms cap,
+  records exact nondecision seeds and the first timeout reproducer, and asserts
+  all-decided directly without changing any preregistered seed.
   Proof coverage needs two denominators: the full decided-UNSAT population and
   the predeclared attempted subset. ADR-0226's 4,000-row generator has 2,513
   UNSAT results; its width-at-most-8/seed-divisible-by-4 subset contains 169

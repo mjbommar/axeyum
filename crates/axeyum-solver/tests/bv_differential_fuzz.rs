@@ -130,6 +130,7 @@ struct SweepConfig {
     seed_end: u64,
     instances: u64,
     profile: GeneratorProfile,
+    axeyum_timeout: Duration,
 }
 
 impl SweepConfig {
@@ -148,6 +149,10 @@ impl SweepConfig {
             seed_end,
             instances,
             profile: GeneratorProfile::configured(),
+            axeyum_timeout: configured_duration_ms(
+                "AXEYUM_QFBV_AXEYUM_TIMEOUT_MS",
+                DEFAULT_AXEYUM_TIMEOUT,
+            ),
         }
     }
 }
@@ -159,6 +164,20 @@ fn configured_u64(name: &str, default: u64) -> u64 {
             .unwrap_or_else(|_| panic!("{name} must be an unsigned integer")),
         Err(_) => default,
     }
+}
+
+fn configured_duration_ms(name: &str, default: Duration) -> Duration {
+    let milliseconds = match std::env::var(name) {
+        Ok(value) => value
+            .parse::<u64>()
+            .unwrap_or_else(|_| panic!("{name} must be a positive integer")),
+        Err(_) => u64::try_from(default.as_millis()).expect("default duration fits u64"),
+    };
+    assert!(
+        (1..=600_000).contains(&milliseconds),
+        "{name} must be in 1..=600000"
+    );
+    Duration::from_millis(milliseconds)
 }
 
 /// Send this deterministic subset of generated instances to the independent
@@ -228,7 +247,13 @@ const Z3_TIMEOUT: Duration = Duration::from_secs(2);
 /// this cap; a solve that overruns is recorded as a timeout (adjudication-
 /// neutral, exactly like `Unknown`) and the sweep moves on. This is sound — a
 /// timeout is never a sat/unsat verdict — and bounds total runtime.
-const AXEYUM_TIMEOUT: Duration = Duration::from_secs(5);
+const DEFAULT_AXEYUM_TIMEOUT: Duration = Duration::from_secs(5);
+
+#[derive(Clone, Copy)]
+struct RunPolicy {
+    axeyum_timeout: Duration,
+    proof_deadline: Option<Duration>,
+}
 
 /// A deterministic linear-congruential PRNG (the MMIX multiplier/increment).
 /// No clock, no OS entropy: the whole sweep is reproducible from the seed.
@@ -1351,15 +1376,14 @@ enum Bounded {
     Crashed,
 }
 
-/// Decide an instance with axeyum on a worker thread, joining under
-/// [`AXEYUM_TIMEOUT`].
+/// Decide an instance with axeyum on a worker thread under an explicit cap.
 ///
 /// The arena, the model, and the replay all live on the worker thread; only the
 /// `Send` summary crosses back. The whole `solve`+replay runs inside
 /// `catch_unwind` so a solver panic does not abort the sweep — it is reported as
 /// [`Bounded::Crashed`] (adjudication-neutral), letting the differential gate run
 /// across every instance instead of wedging on one crashing shape.
-fn solve_axeyum_bounded(inst: Instance) -> Bounded {
+fn solve_axeyum_bounded(inst: Instance, timeout: Duration) -> Bounded {
     let (tx, rx) = mpsc::channel::<AxeyumOutcome>();
     std::thread::spawn(move || {
         let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(move || {
@@ -1415,7 +1439,7 @@ fn solve_axeyum_bounded(inst: Instance) -> Bounded {
         // observes `Disconnected`, mapped to a crash below.
     });
 
-    match rx.recv_timeout(AXEYUM_TIMEOUT) {
+    match rx.recv_timeout(timeout) {
         Ok(outcome) => Bounded::Decided(outcome),
         Err(mpsc::RecvTimeoutError::Timeout) => Bounded::Timeout,
         // The worker dropped its sender without sending: it panicked or `solve`
@@ -1452,9 +1476,13 @@ struct Tally {
     jointly_decided: u64,
     agreements: u64,
     axeyum_unknown: u64,
+    axeyum_unknown_seeds: Vec<u64>,
     axeyum_timeout: u64,
+    axeyum_timeout_seeds: Vec<u64>,
     axeyum_crashed: u64,
+    axeyum_crashed_seeds: Vec<u64>,
     z3_unknown_skipped: u64,
+    z3_unknown_seeds: Vec<u64>,
     cvc5_sampled: u64,
     cvc5_decided: u64,
     cvc5_unknown_skipped: u64,
@@ -1475,6 +1503,8 @@ struct Tally {
     sat_replay_indeterminate: u64,
     /// The first crashing instance, kept for the report.
     first_crash: Option<(u64, String)>,
+    /// The first timed-out instance, kept as a standalone SMT-LIB reproducer.
+    first_timeout: Option<(u64, String)>,
 }
 
 #[derive(Default)]
@@ -1666,17 +1696,22 @@ fn run_instance(
     cvc5: Option<&str>,
     bitwuzla: Option<&str>,
     sample_proof: bool,
-    proof_deadline: Option<Duration>,
+    policy: RunPolicy,
 ) {
     // --- axeyum: the default pure-Rust front door, hard-capped. ----------
-    let outcome = match solve_axeyum_bounded(inst.clone()) {
+    let outcome = match solve_axeyum_bounded(inst.clone(), policy.axeyum_timeout) {
         Bounded::Decided(o) => o,
         Bounded::Timeout => {
             t.axeyum_timeout += 1;
+            t.axeyum_timeout_seeds.push(seed);
+            if t.first_timeout.is_none() {
+                t.first_timeout = Some((seed, inst.to_smt2()));
+            }
             return;
         }
         Bounded::Crashed => {
             t.axeyum_crashed += 1;
+            t.axeyum_crashed_seeds.push(seed);
             if t.first_crash.is_none() {
                 t.first_crash = Some((seed, inst.dump()));
             }
@@ -1705,12 +1740,14 @@ fn run_instance(
 
     if ax_label == Verdict::Unknown {
         t.axeyum_unknown += 1;
+        t.axeyum_unknown_seeds.push(seed);
     }
 
     // --- Z3 oracle: a direct QF_BV query, tiny timeout. ------------------
     let z3_label = z3_decide(inst);
     if z3_label == Verdict::Unknown {
         t.z3_unknown_skipped += 1;
+        t.z3_unknown_seeds.push(seed);
         return;
     }
     // Both sides committed to Sat/Unsat (axeyum may still be Unknown).
@@ -1744,7 +1781,7 @@ fn run_instance(
     }
 
     if sample_proof && ax_label == Verdict::Unsat {
-        record_unsat_proof_coverage(seed, inst, t, proof_deadline);
+        record_unsat_proof_coverage(seed, inst, t, policy.proof_deadline);
     }
 
     let smt2 = inst.to_smt2();
@@ -1906,7 +1943,10 @@ fn glaurung_named_qfbv_controls_agree_and_replay() {
             cvc5.as_deref(),
             bitwuzla.as_deref(),
             false,
-            None,
+            RunPolicy {
+                axeyum_timeout: DEFAULT_AXEYUM_TIMEOUT,
+                proof_deadline: None,
+            },
         );
     }
     assert_eq!(tally.jointly_decided, 4);
@@ -2072,13 +2112,18 @@ fn print_tally(
         "seed range:           {}..{}",
         config.seed_start, config.seed_end
     );
+    println!("Axeyum timeout:       {:?}", config.axeyum_timeout);
     println!("total instances:      {}", tally.total);
     println!("jointly decided:      {}", tally.jointly_decided);
     println!("agreements:           {}", tally.agreements);
     println!("axeyum Unknown:       {}", tally.axeyum_unknown);
+    println!("axeyum Unknown seeds: {:?}", tally.axeyum_unknown_seeds);
     println!("axeyum timeout:       {}", tally.axeyum_timeout);
+    println!("axeyum timeout seeds: {:?}", tally.axeyum_timeout_seeds);
     println!("axeyum CRASHED:       {}", tally.axeyum_crashed);
+    println!("axeyum crashed seeds: {:?}", tally.axeyum_crashed_seeds);
     println!("Z3 Unknown (skipped): {}", tally.z3_unknown_skipped);
+    println!("Z3 Unknown seeds:     {:?}", tally.z3_unknown_seeds);
     println!("cvc5 sample stride:   {}", oracles.cvc5_stride);
     println!("cvc5 sampled:         {}", tally.cvc5_sampled);
     println!("cvc5 decided:         {}", tally.cvc5_decided);
@@ -2114,6 +2159,9 @@ fn print_tally(
     if let Some((seed, dump)) = &tally.first_crash {
         println!("--- first crashing instance (seed {seed}) ---\n{dump}");
     }
+    if let Some((seed, smt2)) = &tally.first_timeout {
+        println!("--- first timeout SMT-LIB (seed {seed}) ---\n{smt2}");
+    }
 }
 
 fn json_string_array<'a>(values: impl IntoIterator<Item = &'a str>) -> String {
@@ -2130,6 +2178,15 @@ fn json_u64_map(values: &BTreeMap<&'static str, u64>) -> String {
         .map(|(name, count)| format!("\"{name}\":{count}"))
         .collect();
     format!("{{{}}}", values.join(","))
+}
+
+fn json_u64_array(values: &[u64]) -> String {
+    let values = values
+        .iter()
+        .map(u64::to_string)
+        .collect::<Vec<_>>()
+        .join(",");
+    format!("[{values}]")
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -2163,10 +2220,13 @@ fn write_report(
             "  \"seed_start\": {},\n",
             "  \"seed_end_exclusive\": {},\n",
             "  \"instances\": {},\n",
+            "  \"axeyum_timeout_ms\": {},\n",
             "  \"elapsed_ms\": {},\n",
             "  \"axeyum_z3\": {{\"jointly_decided\":{},\"agreements\":{},",
             "\"axeyum_unknown\":{},\"axeyum_timeout\":{},\"axeyum_crashed\":{},",
-            "\"z3_unknown\":{},\"sat_replayed\":{},\"sat_replay_indeterminate\":{}}},\n",
+            "\"z3_unknown\":{},\"sat_replayed\":{},\"sat_replay_indeterminate\":{},",
+            "\"axeyum_unknown_seeds\":{},\"axeyum_timeout_seeds\":{},",
+            "\"axeyum_crashed_seeds\":{},\"z3_unknown_seeds\":{}}},\n",
             "  \"cvc5\": {{\"present\":{},\"stride\":{},\"sampled\":{},",
             "\"decided\":{},\"unknown\":{},\"agreements\":{}}},\n",
             "  \"bitwuzla\": {{\"present\":{},\"stride\":{},\"sampled\":{},",
@@ -2180,6 +2240,7 @@ fn write_report(
         config.seed_start,
         config.seed_end,
         config.instances,
+        config.axeyum_timeout.as_millis(),
         elapsed.as_millis(),
         tally.jointly_decided,
         tally.agreements,
@@ -2189,6 +2250,10 @@ fn write_report(
         tally.z3_unknown_skipped,
         tally.sat_replayed,
         tally.sat_replay_indeterminate,
+        json_u64_array(&tally.axeyum_unknown_seeds),
+        json_u64_array(&tally.axeyum_timeout_seeds),
+        json_u64_array(&tally.axeyum_crashed_seeds),
+        json_u64_array(&tally.z3_unknown_seeds),
         oracles.cvc5.is_some(),
         oracles.cvc5_stride,
         tally.cvc5_sampled,
@@ -2263,7 +2328,10 @@ fn run_sweep(
             cvc5,
             bitwuzla,
             sample_proof,
-            proof_deadline,
+            RunPolicy {
+                axeyum_timeout: config.axeyum_timeout,
+                proof_deadline,
+            },
         );
     }
     (tally, coverage)
@@ -2282,6 +2350,14 @@ fn assert_sweep(
         tally.jointly_decided
     );
     assert_generator_coverage(config.profile, coverage);
+    if std::env::var("AXEYUM_REQUIRE_QFBV_ALL_DECIDED").as_deref() == Ok("1") {
+        assert_eq!(tally.jointly_decided, config.instances);
+        assert_eq!(tally.agreements, config.instances);
+        assert_eq!(tally.axeyum_unknown, 0);
+        assert_eq!(tally.axeyum_timeout, 0);
+        assert_eq!(tally.axeyum_crashed, 0);
+        assert_eq!(tally.z3_unknown_skipped, 0);
+    }
     assert_neutral_coverage(
         "cvc5",
         oracles.cvc5.is_some(),

@@ -1,0 +1,6 @@
+cvc5_sha256=7562a8b0b835e3eaad5f1a7b4616cd762350cf567b6be03d7e8ee24fa5ced5ee
+bitwuzla_sha256=d98164badcd34c12ccbbd9e5aab9373854bb187e79f99ccda4ec2aa9951c0eab
+cvc5_version=cvc5 1.3.4 [git f3b21c4 on branch HEAD]
+bitwuzla_version=0.9.1
+rustc 1.97.0-nightly (f53b654a8 2026-04-30)
+cargo 1.97.0-nightly (eb9b60f1f 2026-04-24)

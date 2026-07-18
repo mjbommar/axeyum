@@ -454,7 +454,12 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   cvc5 1.3.4, and Bitwuzla 0.9.1. The harness now accepts checked seed ranges,
   preserves the old generator by name, reports 14 semantic-corner frequencies,
   writes fail-closed JSON, and has a reproducible runner. A 256-row pilot passed
-  but is excluded from evidence. Next: execute the fixed 12,000-row campaign.
+  but is excluded from evidence. The first full attempt then preserved 3,999
+  four-way agreements and failed closed on reproducible seed 1,002,261 at the
+  inherited 5-second Axeyum worker cap, before rounds B/C and without a success
+  JSON. The amended protocol keeps all seeds fixed, names a 30-second cap that
+  decides the seed, adds exact nondecision/reproducer telemetry, and asserts
+  all-decided directly. Next: rerun the unchanged 12,000-row campaign.
 
 - **2026-07-17 — ADR-0226 establishes the first generated proof-coverage
   denominator and its widening boundary.** The 4,000-row population contains

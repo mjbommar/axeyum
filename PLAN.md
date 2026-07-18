@@ -139,7 +139,12 @@ session state.
 > direct Z3, cvc5 1.3.4, and Bitwuzla 0.9.1; every Axeyum SAT must replay, and
 > the edge round must report nonzero frequencies for all 14 declared semantic
 > corners. The 256-row engineering pilot is excluded. Run and retain this exact
-> campaign next; do not change seeds in response to its outcomes.
+> campaign next; do not change seeds in response to its outcomes. The first
+> full attempt did fail closed after 3,999 `uniform-a` agreements when seed
+> 1,002,261 exceeded an unstated inherited 5-second Axeyum worker cap. Preserve
+> that attempt. The amended committed protocol leaves every seed unchanged,
+> names a 30-second cap under which the seed decides, records exact nondecision
+> seeds/reproducers, and asserts all-decided directly before the full rerun.
 > ADR-0226 adds the first explicit proof denominator. Of 2,513 generated UNSAT
 > rows, a predeclared width<=8/seed-divisible-by-4 subset selects 169 (6.725030%):
 > all 169 carry independently rechecked CNF DRAT and end-to-end
