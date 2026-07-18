@@ -70,7 +70,9 @@
 #![cfg(feature = "full")]
 #![cfg(feature = "z3")]
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
+use std::fs;
+use std::path::Path;
 use std::sync::mpsc;
 use std::time::{Duration, Instant};
 
@@ -84,15 +86,85 @@ use z3::{Params, SatResult, Solver};
 
 mod common_cvc5;
 use common_cvc5::{DetailedVerdict as Cvc5Verdict, cvc5_bin, cvc5_decide_detailed};
+mod common_bitwuzla;
+use common_bitwuzla::{DetailedVerdict as BitwuzlaVerdict, bitwuzla_bin, bitwuzla_decide_detailed};
 
 /// Number of instances generated and adjudicated. Each is tiny (≤ 4 vars, ≤ 4
 /// atoms, depth ≤ 3, width ≤ 32) so Z3 decides well within its timeout and the
 /// bit-blast stays cheap.
-const INSTANCES: u64 = 4000;
+const DEFAULT_INSTANCES: u64 = 4000;
+const MAX_CONFIGURED_INSTANCES: u64 = 100_000;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum GeneratorProfile {
+    /// The generator used by ADR-0224/0225. Seed 0 still names the exact same
+    /// formula as it did in those committed campaigns.
+    UniformV1,
+    /// Preserve the random formula, then add one deterministic, true edge-case
+    /// control. The directed controls rotate over semantic corner families.
+    EdgeV1,
+}
+
+impl GeneratorProfile {
+    fn configured() -> Self {
+        match std::env::var("AXEYUM_QFBV_GENERATOR_PROFILE").as_deref() {
+            Ok("uniform-v1") | Err(_) => Self::UniformV1,
+            Ok("edge-v1") => Self::EdgeV1,
+            Ok(value) => {
+                panic!("AXEYUM_QFBV_GENERATOR_PROFILE must be uniform-v1 or edge-v1, got {value:?}")
+            }
+        }
+    }
+
+    fn name(self) -> &'static str {
+        match self {
+            Self::UniformV1 => "uniform-v1",
+            Self::EdgeV1 => "edge-v1",
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+struct SweepConfig {
+    seed_start: u64,
+    seed_end: u64,
+    instances: u64,
+    profile: GeneratorProfile,
+}
+
+impl SweepConfig {
+    fn configured() -> Self {
+        let seed_start = configured_u64("AXEYUM_QFBV_SEED_START", 0);
+        let instances = configured_u64("AXEYUM_QFBV_INSTANCES", DEFAULT_INSTANCES);
+        assert!(
+            (1..=MAX_CONFIGURED_INSTANCES).contains(&instances),
+            "AXEYUM_QFBV_INSTANCES must be in 1..={MAX_CONFIGURED_INSTANCES}"
+        );
+        let seed_end = seed_start.checked_add(instances).unwrap_or_else(|| {
+            panic!("AXEYUM_QFBV_SEED_START + AXEYUM_QFBV_INSTANCES overflowed u64")
+        });
+        Self {
+            seed_start,
+            seed_end,
+            instances,
+            profile: GeneratorProfile::configured(),
+        }
+    }
+}
+
+fn configured_u64(name: &str, default: u64) -> u64 {
+    match std::env::var(name) {
+        Ok(value) => value
+            .parse::<u64>()
+            .unwrap_or_else(|_| panic!("{name} must be an unsigned integer")),
+        Err(_) => default,
+    }
+}
 
 /// Send this deterministic subset of generated instances to the independent
 /// cvc5 parser/solver. The existing Axeyum/Z3 gate still covers every row.
 const CVC5_SAMPLE_STRIDE: u64 = 16;
+const BITWUZLA_SAMPLE_STRIDE: u64 = 16;
 
 fn cvc5_sample_stride() -> u64 {
     match std::env::var("AXEYUM_CVC5_SAMPLE_STRIDE") {
@@ -102,6 +174,17 @@ fn cvc5_sample_stride() -> u64 {
             .filter(|stride| *stride > 0)
             .unwrap_or_else(|| panic!("AXEYUM_CVC5_SAMPLE_STRIDE must be a positive integer")),
         Err(_) => CVC5_SAMPLE_STRIDE,
+    }
+}
+
+fn bitwuzla_sample_stride() -> u64 {
+    match std::env::var("AXEYUM_BITWUZLA_SAMPLE_STRIDE") {
+        Ok(value) => value
+            .parse::<u64>()
+            .ok()
+            .filter(|stride| *stride > 0)
+            .unwrap_or_else(|| panic!("AXEYUM_BITWUZLA_SAMPLE_STRIDE must be a positive integer")),
+        Err(_) => BITWUZLA_SAMPLE_STRIDE,
     }
 }
 
@@ -266,7 +349,7 @@ impl BvCmp {
 /// A binary bit-vector operation that preserves width. The full scalar
 /// width-preserving set; all are total with verbatim-identical axeyum/Z3
 /// semantics (including the SMT-LIB division/remainder/shift totality corners).
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 enum BvBin {
     Add,
     Sub,
@@ -468,11 +551,39 @@ const REQUIRED_OPERATORS: &[&str] = &[
     "zero_extend",
 ];
 
+const REQUIRED_EDGE_CASES: &[&str] = &[
+    "concat_one_bit_high",
+    "concat_one_bit_low",
+    "constant_all_ones",
+    "constant_sign_bit",
+    "constant_zero",
+    "division_or_remainder_by_zero",
+    "extract_full_width",
+    "extract_high_boundary",
+    "extract_low_boundary",
+    "shift_at_width",
+    "shift_above_width",
+    "signed_division_overflow",
+    "sign_extend_by_zero",
+    "zero_extend_by_zero",
+];
+
 /// Term-tree depth ceiling — shallow so Z3 decides fast and the width-32
 /// `bvmul`/`bvudiv` bit-blast stays small.
 const MAX_DEPTH: usize = 3;
 
 impl Term {
+    fn width(&self, instance_width: u32) -> u32 {
+        match self {
+            Term::Var(_) => instance_width,
+            Term::Const { width, .. } => *width,
+            Term::Bin(_, lhs, _) | Term::Un(_, lhs) => lhs.width(instance_width),
+            Term::Concat(high, low) => high.width(instance_width) + low.width(instance_width),
+            Term::Extract { hi, lo, .. } => hi - lo + 1,
+            Term::ZeroExt { by, a } | Term::SignExt { by, a } => a.width(instance_width) + by,
+        }
+    }
+
     /// Generate a random term of exactly `width` bits with remaining `depth`.
     ///
     /// Width is threaded top-down: the generator only ever emits a subtree whose
@@ -722,6 +833,101 @@ impl Term {
             }
         }
     }
+
+    fn record_edge_coverage(&self, instance_width: u32, edges: &mut BTreeSet<&'static str>) {
+        match self {
+            Term::Var(_) => {}
+            Term::Const { width, value } => {
+                let value = mask_u128(*value, *width);
+                if value == 0 {
+                    edges.insert("constant_zero");
+                }
+                if value == mask_u128(u128::MAX, *width) {
+                    edges.insert("constant_all_ones");
+                }
+                if *width > 0 && value == (1_u128 << (*width - 1)) {
+                    edges.insert("constant_sign_bit");
+                }
+            }
+            Term::Bin(op, lhs, rhs) => {
+                let width = lhs.width(instance_width);
+                if matches!(
+                    op,
+                    BvBin::Udiv | BvBin::Urem | BvBin::Sdiv | BvBin::Srem | BvBin::Smod
+                ) && matches!(
+                    rhs.as_ref(),
+                    Term::Const { width, value } if mask_u128(*value, *width) == 0
+                ) {
+                    edges.insert("division_or_remainder_by_zero");
+                }
+                if *op == BvBin::Sdiv
+                    && matches!(
+                        lhs.as_ref(),
+                        Term::Const { width, value }
+                            if mask_u128(*value, *width) == (1_u128 << (*width - 1))
+                    )
+                    && matches!(
+                        rhs.as_ref(),
+                        Term::Const { width, value }
+                            if mask_u128(*value, *width) == mask_u128(u128::MAX, *width)
+                    )
+                {
+                    edges.insert("signed_division_overflow");
+                }
+                if matches!(op, BvBin::Shl | BvBin::Lshr | BvBin::Ashr)
+                    && let Term::Const {
+                        width: rhs_width,
+                        value,
+                    } = rhs.as_ref()
+                {
+                    let shift = mask_u128(*value, *rhs_width);
+                    if shift == u128::from(width) {
+                        edges.insert("shift_at_width");
+                    } else if shift > u128::from(width) {
+                        edges.insert("shift_above_width");
+                    }
+                }
+                lhs.record_edge_coverage(instance_width, edges);
+                rhs.record_edge_coverage(instance_width, edges);
+            }
+            Term::Un(_, inner) => inner.record_edge_coverage(instance_width, edges),
+            Term::Concat(high, low) => {
+                if high.width(instance_width) == 1 {
+                    edges.insert("concat_one_bit_high");
+                }
+                if low.width(instance_width) == 1 {
+                    edges.insert("concat_one_bit_low");
+                }
+                high.record_edge_coverage(instance_width, edges);
+                low.record_edge_coverage(instance_width, edges);
+            }
+            Term::Extract { hi, lo, a } => {
+                let source_width = a.width(instance_width);
+                if *lo == 0 {
+                    edges.insert("extract_low_boundary");
+                }
+                if *hi + 1 == source_width {
+                    edges.insert("extract_high_boundary");
+                }
+                if *lo == 0 && *hi + 1 == source_width {
+                    edges.insert("extract_full_width");
+                }
+                a.record_edge_coverage(instance_width, edges);
+            }
+            Term::ZeroExt { by, a } => {
+                if *by == 0 {
+                    edges.insert("zero_extend_by_zero");
+                }
+                a.record_edge_coverage(instance_width, edges);
+            }
+            Term::SignExt { by, a } => {
+                if *by == 0 {
+                    edges.insert("sign_extend_by_zero");
+                }
+                a.record_edge_coverage(instance_width, edges);
+            }
+        }
+    }
 }
 
 /// Cap on how much wider than the requested width an `extract` source may be —
@@ -877,6 +1083,21 @@ impl Atom {
             }
         }
     }
+
+    fn record_edge_coverage(&self, instance_width: u32, edges: &mut BTreeSet<&'static str>) {
+        match self {
+            Atom::Cmp { lhs, rhs, .. } => {
+                lhs.record_edge_coverage(instance_width, edges);
+                rhs.record_edge_coverage(instance_width, edges);
+            }
+            Atom::BoolCombo(op, first, second) => {
+                first.record_edge_coverage(instance_width, edges);
+                if !matches!(op, BoolOp::Not) {
+                    second.record_edge_coverage(instance_width, edges);
+                }
+            }
+        }
+    }
 }
 
 /// A full generated instance. Owns only plain data (no IR/Z3 handles), so it is
@@ -903,14 +1124,17 @@ impl Instance {
     /// - 1..=4 atoms, each either a comparison `t1 ⋈ t2` (`⋈` uniform over the
     ///   ten relations) over depth-≤3 terms drawn from the full scalar op set, or
     ///   (~1/4) a Boolean `and`/`or`/`not` combination of two comparisons.
-    fn generate(rng: &mut Lcg) -> Instance {
+    fn generate(rng: &mut Lcg, profile: GeneratorProfile, seed: u64) -> Instance {
         let width = WIDTHS[rng.below(WIDTHS.len() as u64)];
         let num_vars = rng.below(3) + 2; // 2..=4
         let num_atoms = rng.below(4) + 1; // 1..=4
 
-        let atoms = (0..num_atoms)
+        let mut atoms: Vec<_> = (0..num_atoms)
             .map(|_| Atom::generate(rng, width, num_vars))
             .collect();
+        if profile == GeneratorProfile::EdgeV1 {
+            atoms.push(edge_control(seed));
+        }
 
         Instance {
             width,
@@ -974,11 +1198,101 @@ impl Instance {
         lines.join("\n") + "\n"
     }
 
-    fn record_coverage(&self, widths: &mut BTreeSet<u32>, operators: &mut BTreeSet<&'static str>) {
+    fn record_coverage(
+        &self,
+        widths: &mut BTreeSet<u32>,
+        operators: &mut BTreeSet<&'static str>,
+        edge_instances: &mut BTreeMap<&'static str, u64>,
+    ) {
         widths.insert(self.width);
+        let mut edges = BTreeSet::new();
         for atom in &self.atoms {
             atom.record_coverage(operators);
+            atom.record_edge_coverage(self.width, &mut edges);
         }
+        for edge in edges {
+            *edge_instances.entry(edge).or_default() += 1;
+        }
+    }
+}
+
+fn edge_control(seed: u64) -> Atom {
+    let c = |value| Term::Const { width: 8, value };
+    let bin = |op, lhs, rhs| Term::Bin(op, Box::new(lhs), Box::new(rhs));
+    match seed % 16 {
+        0 => eq_atom(bin(BvBin::Udiv, c(0xa5), c(0)), c(0xff)),
+        1 => eq_atom(bin(BvBin::Urem, c(0xa5), c(0)), c(0xa5)),
+        2 => eq_atom(bin(BvBin::Sdiv, c(0x80), c(0xff)), c(0x80)),
+        3 => eq_atom(bin(BvBin::Srem, c(0xa5), c(0)), c(0xa5)),
+        4 => eq_atom(bin(BvBin::Smod, c(0xa5), c(0)), c(0xa5)),
+        5 => eq_atom(bin(BvBin::Shl, c(0xa5), c(8)), c(0)),
+        6 => eq_atom(bin(BvBin::Lshr, c(0xa5), c(9)), c(0)),
+        7 => eq_atom(bin(BvBin::Ashr, c(0x80), c(8)), c(0xff)),
+        8 => eq_atom(
+            Term::Extract {
+                hi: 3,
+                lo: 0,
+                a: Box::new(c(0xab)),
+            },
+            Term::Const {
+                width: 4,
+                value: 0xb,
+            },
+        ),
+        9 => eq_atom(
+            Term::Extract {
+                hi: 7,
+                lo: 4,
+                a: Box::new(c(0xab)),
+            },
+            Term::Const {
+                width: 4,
+                value: 0xa,
+            },
+        ),
+        10 => eq_atom(
+            Term::Extract {
+                hi: 7,
+                lo: 0,
+                a: Box::new(c(0xab)),
+            },
+            c(0xab),
+        ),
+        11 => eq_atom(
+            Term::ZeroExt {
+                by: 0,
+                a: Box::new(c(0xab)),
+            },
+            c(0xab),
+        ),
+        12 => eq_atom(
+            Term::SignExt {
+                by: 0,
+                a: Box::new(c(0xab)),
+            },
+            c(0xab),
+        ),
+        13 => eq_atom(
+            Term::Concat(
+                Box::new(Term::Const {
+                    width: 7,
+                    value: 0x55,
+                }),
+                Box::new(Term::Const { width: 1, value: 1 }),
+            ),
+            c(0xab),
+        ),
+        14 => eq_atom(
+            Term::Concat(
+                Box::new(Term::Const { width: 1, value: 1 }),
+                Box::new(Term::Const {
+                    width: 7,
+                    value: 0x2b,
+                }),
+            ),
+            c(0xab),
+        ),
+        _ => eq_atom(c(0x80), c(0x80)),
     }
 }
 
@@ -1145,6 +1459,11 @@ struct Tally {
     cvc5_decided: u64,
     cvc5_unknown_skipped: u64,
     three_way_agreements: u64,
+    bitwuzla_sampled: u64,
+    bitwuzla_decided: u64,
+    bitwuzla_unknown_skipped: u64,
+    bitwuzla_agreements: u64,
+    four_way_agreements: u64,
     proof_selected_unsat: u64,
     cnf_drat_proved: u64,
     cnf_drat_inconclusive: u64,
@@ -1156,6 +1475,54 @@ struct Tally {
     sat_replay_indeterminate: u64,
     /// The first crashing instance, kept for the report.
     first_crash: Option<(u64, String)>,
+}
+
+#[derive(Default)]
+struct Coverage {
+    widths: BTreeSet<u32>,
+    operators: BTreeSet<&'static str>,
+    edge_instances: BTreeMap<&'static str, u64>,
+}
+
+impl Coverage {
+    fn observe(&mut self, instance: &Instance) {
+        instance.record_coverage(
+            &mut self.widths,
+            &mut self.operators,
+            &mut self.edge_instances,
+        );
+    }
+}
+
+struct NeutralOracles {
+    cvc5: Option<String>,
+    cvc5_stride: u64,
+    bitwuzla: Option<String>,
+    bitwuzla_stride: u64,
+}
+
+impl NeutralOracles {
+    fn configured() -> Self {
+        let result = Self {
+            cvc5: cvc5_bin(),
+            cvc5_stride: cvc5_sample_stride(),
+            bitwuzla: bitwuzla_bin(),
+            bitwuzla_stride: bitwuzla_sample_stride(),
+        };
+        if std::env::var("AXEYUM_REQUIRE_CVC5").as_deref() == Ok("1") {
+            assert!(
+                result.cvc5.is_some(),
+                "AXEYUM_REQUIRE_CVC5=1 but no working cvc5 binary was found"
+            );
+        }
+        if std::env::var("AXEYUM_REQUIRE_BITWUZLA").as_deref() == Ok("1") {
+            assert!(
+                result.bitwuzla.is_some(),
+                "AXEYUM_REQUIRE_BITWUZLA=1 but no working Bitwuzla binary was found"
+            );
+        }
+        result
+    }
 }
 
 fn record_unsat_proof_coverage(
@@ -1227,6 +1594,68 @@ fn record_unsat_proof_coverage(
     }
 }
 
+fn run_cvc5_oracle(
+    seed: u64,
+    smt2: &str,
+    binary: Option<&str>,
+    expected: Verdict,
+    tally: &mut Tally,
+) -> Option<Verdict> {
+    let binary = binary?;
+    tally.cvc5_sampled += 1;
+    let verdict = match cvc5_decide_detailed(binary, smt2, Z3_TIMEOUT) {
+        Cvc5Verdict::Sat => Verdict::Sat,
+        Cvc5Verdict::Unsat => Verdict::Unsat,
+        Cvc5Verdict::Unknown => {
+            tally.cvc5_unknown_skipped += 1;
+            return None;
+        }
+        Cvc5Verdict::Failure(detail) => panic!(
+            "cvc5 failed on valid generated QF_BV (seed {seed}): {detail}\n\
+             Complete reproducer:\n{smt2}"
+        ),
+    };
+    tally.cvc5_decided += 1;
+    assert_eq!(
+        verdict, expected,
+        "cvc5 disagreement (seed {seed}): expected={expected:?}, cvc5={verdict:?}\n\
+         Complete reproducer:\n{smt2}"
+    );
+    tally.three_way_agreements += 1;
+    Some(verdict)
+}
+
+fn run_bitwuzla_oracle(
+    seed: u64,
+    smt2: &str,
+    binary: Option<&str>,
+    expected: Verdict,
+    tally: &mut Tally,
+) -> Option<Verdict> {
+    let binary = binary?;
+    tally.bitwuzla_sampled += 1;
+    let verdict = match bitwuzla_decide_detailed(binary, smt2, Z3_TIMEOUT) {
+        BitwuzlaVerdict::Sat => Verdict::Sat,
+        BitwuzlaVerdict::Unsat => Verdict::Unsat,
+        BitwuzlaVerdict::Unknown => {
+            tally.bitwuzla_unknown_skipped += 1;
+            return None;
+        }
+        BitwuzlaVerdict::Failure(detail) => panic!(
+            "Bitwuzla failed on valid generated QF_BV (seed {seed}): {detail}\n\
+             Complete reproducer:\n{smt2}"
+        ),
+    };
+    tally.bitwuzla_decided += 1;
+    assert_eq!(
+        verdict, expected,
+        "Bitwuzla disagreement (seed {seed}): expected={expected:?}, Bitwuzla={verdict:?}\n\
+         Complete reproducer:\n{smt2}"
+    );
+    tally.bitwuzla_agreements += 1;
+    Some(verdict)
+}
+
 /// Decide one instance with both engines and fold the result into `t`. Panics
 /// only on a genuine soundness violation (a non-replaying Sat, or a jointly-
 /// decided Sat/Unsat disagreement) — the whole point of the gate.
@@ -1235,6 +1664,7 @@ fn run_instance(
     inst: &Instance,
     t: &mut Tally,
     cvc5: Option<&str>,
+    bitwuzla: Option<&str>,
     sample_proof: bool,
     proof_deadline: Option<Duration>,
 ) {
@@ -1317,32 +1747,12 @@ fn run_instance(
         record_unsat_proof_coverage(seed, inst, t, proof_deadline);
     }
 
-    let Some(cvc5) = cvc5 else {
-        return;
-    };
-    t.cvc5_sampled += 1;
-    let cvc5_label = match cvc5_decide_detailed(cvc5, &inst.to_smt2(), Z3_TIMEOUT) {
-        Cvc5Verdict::Sat => Verdict::Sat,
-        Cvc5Verdict::Unsat => Verdict::Unsat,
-        Cvc5Verdict::Unknown => {
-            t.cvc5_unknown_skipped += 1;
-            return;
-        }
-        Cvc5Verdict::Failure(detail) => panic!(
-            "cvc5 failed on valid generated QF_BV (seed {seed}): {detail}\n\
-             Complete reproducer:\n{}",
-            inst.to_smt2()
-        ),
-    };
-    t.cvc5_decided += 1;
-    assert!(
-        cvc5_label == ax_label && cvc5_label == z3_label,
-        "THREE-WAY DISAGREEMENT (seed {seed}): axeyum={ax_label:?}, \
-         Z3={z3_label:?}, cvc5={cvc5_label:?}.\n\
-         Complete reproducer:\n{}",
-        inst.to_smt2()
-    );
-    t.three_way_agreements += 1;
+    let smt2 = inst.to_smt2();
+    let cvc5_label = run_cvc5_oracle(seed, &smt2, cvc5, ax_label, t);
+    let bitwuzla_label = run_bitwuzla_oracle(seed, &smt2, bitwuzla, ax_label, t);
+    if cvc5_label.is_some() && bitwuzla_label.is_some() {
+        t.four_way_agreements += 1;
+    }
 }
 
 fn eq_atom(lhs: Term, rhs: Term) -> Atom {
@@ -1465,10 +1875,17 @@ fn glaurung_width_contract_regressions_are_strict() {
 #[test]
 fn glaurung_named_qfbv_controls_agree_and_replay() {
     let cvc5 = cvc5_bin();
+    let bitwuzla = bitwuzla_bin();
     if std::env::var("AXEYUM_REQUIRE_CVC5").as_deref() == Ok("1") {
         assert!(
             cvc5.is_some(),
             "AXEYUM_REQUIRE_CVC5=1 but no working cvc5 binary was found"
+        );
+    }
+    if std::env::var("AXEYUM_REQUIRE_BITWUZLA").as_deref() == Ok("1") {
+        assert!(
+            bitwuzla.is_some(),
+            "AXEYUM_REQUIRE_BITWUZLA=1 but no working Bitwuzla binary was found"
         );
     }
 
@@ -1487,6 +1904,7 @@ fn glaurung_named_qfbv_controls_agree_and_replay() {
             instance,
             &mut tally,
             cvc5.as_deref(),
+            bitwuzla.as_deref(),
             false,
             None,
         );
@@ -1495,6 +1913,12 @@ fn glaurung_named_qfbv_controls_agree_and_replay() {
     assert_eq!(tally.agreements, 4);
     if cvc5.is_some() {
         assert_eq!(tally.three_way_agreements, 4);
+    }
+    if bitwuzla.is_some() {
+        assert_eq!(tally.bitwuzla_agreements, 4);
+    }
+    if cvc5.is_some() && bitwuzla.is_some() {
+        assert_eq!(tally.four_way_agreements, 4);
     }
 
     // The consumer bug was not that an empty model is intrinsically invalid:
@@ -1546,43 +1970,72 @@ fn glaurung_named_qfbv_controls_agree_and_replay() {
     }
 }
 
-fn assert_generator_coverage(
-    covered_widths: &BTreeSet<u32>,
-    covered_operators: &BTreeSet<&'static str>,
-) {
+fn assert_generator_coverage(profile: GeneratorProfile, coverage: &Coverage) {
     assert_eq!(
-        covered_widths,
+        &coverage.widths,
         &WIDTHS.into_iter().collect(),
         "the deterministic generator missed a declared width"
     );
     let missing_operators: Vec<_> = REQUIRED_OPERATORS
         .iter()
         .copied()
-        .filter(|operator| !covered_operators.contains(operator))
+        .filter(|operator| !coverage.operators.contains(operator))
         .collect();
     assert!(
         missing_operators.is_empty(),
         "the deterministic generator missed operators: {missing_operators:?}"
     );
+    if profile == GeneratorProfile::EdgeV1 {
+        let missing_edges: Vec<_> = REQUIRED_EDGE_CASES
+            .iter()
+            .copied()
+            .filter(|edge| coverage.edge_instances.get(edge).copied().unwrap_or(0) == 0)
+            .collect();
+        assert!(
+            missing_edges.is_empty(),
+            "edge-v1 missed required semantic corners: {missing_edges:?}"
+        );
+    }
 }
 
-fn assert_cvc5_coverage(
-    cvc5_present: bool,
+fn sampled_seed_count(seed_start: u64, seed_end: u64, stride: u64) -> u64 {
+    let remainder = seed_start % stride;
+    let first = if remainder == 0 {
+        seed_start
+    } else {
+        seed_start
+            .checked_add(stride - remainder)
+            .expect("sample start overflow")
+    };
+    if first >= seed_end {
+        0
+    } else {
+        1 + (seed_end - 1 - first) / stride
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn assert_neutral_coverage(
+    name: &str,
+    present: bool,
+    seed_start: u64,
+    seed_end: u64,
     stride: u64,
     sampled: u64,
     decided: u64,
     unknown: u64,
     agreements: u64,
+    require_all_decided_env: &str,
 ) {
-    if !cvc5_present {
+    if !present {
         return;
     }
-    let expected_samples = INSTANCES.div_ceil(stride);
+    let expected_samples = sampled_seed_count(seed_start, seed_end, stride);
     assert!(
         agreements >= expected_samples.min(200),
-        "too few three-way agreements ({agreements}); the cvc5 lane is vacuous"
+        "too few {name} agreements ({agreements}); the lane is vacuous"
     );
-    if std::env::var("AXEYUM_REQUIRE_CVC5_ALL_DECIDED").as_deref() == Ok("1") {
+    if std::env::var(require_all_decided_env).as_deref() == Ok("1") {
         assert_eq!(sampled, expected_samples);
         assert_eq!(decided, expected_samples);
         assert_eq!(unknown, 0);
@@ -1606,14 +2059,19 @@ fn assert_proof_coverage(tally: &Tally, proof_stride: Option<u64>) {
 }
 
 fn print_tally(
+    config: SweepConfig,
     tally: &Tally,
-    cvc5_stride: u64,
+    oracles: &NeutralOracles,
     proof_stride: Option<u64>,
     proof_deadline: Option<Duration>,
-    covered_widths: &BTreeSet<u32>,
-    covered_operators: &BTreeSet<&'static str>,
+    coverage: &Coverage,
 ) {
     println!("=== QF_BV differential fuzz tally ===");
+    println!("generator profile:    {}", config.profile.name());
+    println!(
+        "seed range:           {}..{}",
+        config.seed_start, config.seed_end
+    );
     println!("total instances:      {}", tally.total);
     println!("jointly decided:      {}", tally.jointly_decided);
     println!("agreements:           {}", tally.agreements);
@@ -1621,11 +2079,17 @@ fn print_tally(
     println!("axeyum timeout:       {}", tally.axeyum_timeout);
     println!("axeyum CRASHED:       {}", tally.axeyum_crashed);
     println!("Z3 Unknown (skipped): {}", tally.z3_unknown_skipped);
-    println!("cvc5 sample stride:   {cvc5_stride}");
+    println!("cvc5 sample stride:   {}", oracles.cvc5_stride);
     println!("cvc5 sampled:         {}", tally.cvc5_sampled);
     println!("cvc5 decided:         {}", tally.cvc5_decided);
     println!("cvc5 Unknown/skipped: {}", tally.cvc5_unknown_skipped);
     println!("three-way agreements: {}", tally.three_way_agreements);
+    println!("Bitwuzla stride:      {}", oracles.bitwuzla_stride);
+    println!("Bitwuzla sampled:     {}", tally.bitwuzla_sampled);
+    println!("Bitwuzla decided:     {}", tally.bitwuzla_decided);
+    println!("Bitwuzla Unknown:     {}", tally.bitwuzla_unknown_skipped);
+    println!("Bitwuzla agreements:  {}", tally.bitwuzla_agreements);
+    println!("four-way agreements:  {}", tally.four_way_agreements);
     println!("proof sample stride:  {proof_stride:?} (width <= 8)");
     println!("proof deadline:       {proof_deadline:?} per route");
     println!("proof-selected UNSAT: {}", tally.proof_selected_unsat);
@@ -1643,16 +2107,211 @@ fn print_tally(
     );
     println!("Sat replays verified: {}", tally.sat_replayed);
     println!("Sat replay declined:  {}", tally.sat_replay_indeterminate);
-    println!("covered widths:       {covered_widths:?}");
-    println!("covered operators:    {covered_operators:?}");
+    println!("covered widths:       {:?}", coverage.widths);
+    println!("covered operators:    {:?}", coverage.operators);
+    println!("edge-case instances:  {:?}", coverage.edge_instances);
     println!("DISAGREEMENTS:        0");
     if let Some((seed, dump)) = &tally.first_crash {
         println!("--- first crashing instance (seed {seed}) ---\n{dump}");
     }
 }
 
+fn json_string_array<'a>(values: impl IntoIterator<Item = &'a str>) -> String {
+    let values: Vec<_> = values
+        .into_iter()
+        .map(|value| format!("\"{value}\""))
+        .collect();
+    format!("[{}]", values.join(","))
+}
+
+fn json_u64_map(values: &BTreeMap<&'static str, u64>) -> String {
+    let values: Vec<_> = values
+        .iter()
+        .map(|(name, count)| format!("\"{name}\":{count}"))
+        .collect();
+    format!("{{{}}}", values.join(","))
+}
+
+#[allow(clippy::too_many_arguments)]
+fn write_report(
+    config: SweepConfig,
+    tally: &Tally,
+    oracles: &NeutralOracles,
+    coverage: &Coverage,
+    elapsed: Duration,
+) {
+    let Ok(path) = std::env::var("AXEYUM_QFBV_REPORT_PATH") else {
+        return;
+    };
+    assert!(
+        !path.is_empty(),
+        "AXEYUM_QFBV_REPORT_PATH must not be empty"
+    );
+    let widths = coverage
+        .widths
+        .iter()
+        .map(u32::to_string)
+        .collect::<Vec<_>>()
+        .join(",");
+    let operators = json_string_array(coverage.operators.iter().copied());
+    let edge_cases = json_u64_map(&coverage.edge_instances);
+    let report = format!(
+        concat!(
+            "{{\n",
+            "  \"schema\": \"axeyum.qfbv-multi-oracle-fuzz.v3\",\n",
+            "  \"generator_profile\": \"{}\",\n",
+            "  \"seed_start\": {},\n",
+            "  \"seed_end_exclusive\": {},\n",
+            "  \"instances\": {},\n",
+            "  \"elapsed_ms\": {},\n",
+            "  \"axeyum_z3\": {{\"jointly_decided\":{},\"agreements\":{},",
+            "\"axeyum_unknown\":{},\"axeyum_timeout\":{},\"axeyum_crashed\":{},",
+            "\"z3_unknown\":{},\"sat_replayed\":{},\"sat_replay_indeterminate\":{}}},\n",
+            "  \"cvc5\": {{\"present\":{},\"stride\":{},\"sampled\":{},",
+            "\"decided\":{},\"unknown\":{},\"agreements\":{}}},\n",
+            "  \"bitwuzla\": {{\"present\":{},\"stride\":{},\"sampled\":{},",
+            "\"decided\":{},\"unknown\":{},\"agreements\":{}}},\n",
+            "  \"four_way_agreements\": {},\n",
+            "  \"coverage\": {{\"widths\":[{}],\"operators\":{},\"edge_case_instances\":{}}},\n",
+            "  \"disagreements\": 0\n",
+            "}}\n"
+        ),
+        config.profile.name(),
+        config.seed_start,
+        config.seed_end,
+        config.instances,
+        elapsed.as_millis(),
+        tally.jointly_decided,
+        tally.agreements,
+        tally.axeyum_unknown,
+        tally.axeyum_timeout,
+        tally.axeyum_crashed,
+        tally.z3_unknown_skipped,
+        tally.sat_replayed,
+        tally.sat_replay_indeterminate,
+        oracles.cvc5.is_some(),
+        oracles.cvc5_stride,
+        tally.cvc5_sampled,
+        tally.cvc5_decided,
+        tally.cvc5_unknown_skipped,
+        tally.three_way_agreements,
+        oracles.bitwuzla.is_some(),
+        oracles.bitwuzla_stride,
+        tally.bitwuzla_sampled,
+        tally.bitwuzla_decided,
+        tally.bitwuzla_unknown_skipped,
+        tally.bitwuzla_agreements,
+        tally.four_way_agreements,
+        widths,
+        operators,
+        edge_cases,
+    );
+    let path = Path::new(&path);
+    if let Some(parent) = path.parent()
+        && !parent.as_os_str().is_empty()
+    {
+        fs::create_dir_all(parent).unwrap_or_else(|error| {
+            panic!(
+                "failed to create report directory {}: {error}",
+                parent.display()
+            )
+        });
+    }
+    fs::write(path, report)
+        .unwrap_or_else(|error| panic!("failed to write report {}: {error}", path.display()));
+}
+
+fn run_sweep(
+    config: SweepConfig,
+    oracles: &NeutralOracles,
+    proof_stride: Option<u64>,
+    proof_deadline: Option<Duration>,
+) -> (Tally, Coverage) {
+    let mut tally = Tally::default();
+    let mut coverage = Coverage::default();
+    for seed in config.seed_start..config.seed_end {
+        tally.total += 1;
+        if (seed - config.seed_start).is_multiple_of(250) {
+            eprintln!(
+                "[bv-fuzz] seed {seed}/{} (joint={}, agree={}, \
+                 ax_unknown={}, ax_timeout={}, ax_crash={})",
+                config.seed_end,
+                tally.jointly_decided,
+                tally.agreements,
+                tally.axeyum_unknown,
+                tally.axeyum_timeout,
+                tally.axeyum_crashed
+            );
+        }
+        let mut rng = Lcg::new(seed);
+        let instance = Instance::generate(&mut rng, config.profile, seed);
+        coverage.observe(&instance);
+        let cvc5 = seed
+            .is_multiple_of(oracles.cvc5_stride)
+            .then_some(oracles.cvc5.as_deref())
+            .flatten();
+        let bitwuzla = seed
+            .is_multiple_of(oracles.bitwuzla_stride)
+            .then_some(oracles.bitwuzla.as_deref())
+            .flatten();
+        let sample_proof =
+            proof_stride.is_some_and(|stride| seed.is_multiple_of(stride) && instance.width <= 8);
+        run_instance(
+            seed,
+            &instance,
+            &mut tally,
+            cvc5,
+            bitwuzla,
+            sample_proof,
+            proof_deadline,
+        );
+    }
+    (tally, coverage)
+}
+
+fn assert_sweep(
+    config: SweepConfig,
+    tally: &Tally,
+    oracles: &NeutralOracles,
+    coverage: &Coverage,
+    proof_stride: Option<u64>,
+) {
+    assert!(
+        tally.jointly_decided > 100,
+        "too few jointly-decided instances ({}); the differential gate is vacuous",
+        tally.jointly_decided
+    );
+    assert_generator_coverage(config.profile, coverage);
+    assert_neutral_coverage(
+        "cvc5",
+        oracles.cvc5.is_some(),
+        config.seed_start,
+        config.seed_end,
+        oracles.cvc5_stride,
+        tally.cvc5_sampled,
+        tally.cvc5_decided,
+        tally.cvc5_unknown_skipped,
+        tally.three_way_agreements,
+        "AXEYUM_REQUIRE_CVC5_ALL_DECIDED",
+    );
+    assert_neutral_coverage(
+        "Bitwuzla",
+        oracles.bitwuzla.is_some(),
+        config.seed_start,
+        config.seed_end,
+        oracles.bitwuzla_stride,
+        tally.bitwuzla_sampled,
+        tally.bitwuzla_decided,
+        tally.bitwuzla_unknown_skipped,
+        tally.bitwuzla_agreements,
+        "AXEYUM_REQUIRE_BITWUZLA_ALL_DECIDED",
+    );
+    assert_proof_coverage(tally, proof_stride);
+}
+
 #[test]
 fn bv_differential_fuzz_disagree_zero() {
+    let started = Instant::now();
     // Worker `solve` panics are *caught* (a crash is adjudication-neutral, not a
     // verdict). Install a panic hook that stays silent for panics originating in
     // solver/crate source (so thousands of caught crashes don't flood stderr) but
@@ -1668,79 +2327,21 @@ fn bv_differential_fuzz_disagree_zero() {
         }
     }));
 
-    let cvc5 = cvc5_bin();
-    let cvc5_stride = cvc5_sample_stride();
+    let config = SweepConfig::configured();
+    let oracles = NeutralOracles::configured();
     let proof_stride = proof_sample_stride();
     let proof_deadline = proof_deadline();
-    if std::env::var("AXEYUM_REQUIRE_CVC5").as_deref() == Ok("1") {
-        assert!(
-            cvc5.is_some(),
-            "AXEYUM_REQUIRE_CVC5=1 but no working cvc5 binary was found"
-        );
-    }
-    let mut t = Tally::default();
-    let mut covered_widths = BTreeSet::new();
-    let mut covered_operators = BTreeSet::new();
-
-    for seed in 0..INSTANCES {
-        t.total += 1;
-        if seed % 250 == 0 {
-            eprintln!(
-                "[bv-fuzz] seed {seed}/{INSTANCES} (joint={}, agree={}, \
-                 ax_unknown={}, ax_timeout={}, ax_crash={})",
-                t.jointly_decided,
-                t.agreements,
-                t.axeyum_unknown,
-                t.axeyum_timeout,
-                t.axeyum_crashed
-            );
-        }
-        let mut rng = Lcg::new(seed);
-        let inst = Instance::generate(&mut rng);
-        inst.record_coverage(&mut covered_widths, &mut covered_operators);
-        let sampled_cvc5 = (seed % cvc5_stride == 0)
-            .then_some(cvc5.as_deref())
-            .flatten();
-        let sample_proof = proof_stride.is_some_and(|stride| seed % stride == 0 && inst.width <= 8);
-        run_instance(
-            seed,
-            &inst,
-            &mut t,
-            sampled_cvc5,
-            sample_proof,
-            proof_deadline,
-        );
-    }
-
+    let (tally, coverage) = run_sweep(config, &oracles, proof_stride, proof_deadline);
     print_tally(
-        &t,
-        cvc5_stride,
+        config,
+        &tally,
+        &oracles,
         proof_stride,
         proof_deadline,
-        &covered_widths,
-        &covered_operators,
+        &coverage,
     );
-
-    // Reaching here means no disagreement panicked: DISAGREE=0 over the sweep.
-    // Sanity: the sweep must actually exercise the joint decider (guards against
-    // a silently-broken Z3 plumbing that always times out, which would make
-    // DISAGREE=0 vacuous).
-    assert!(
-        t.jointly_decided > 100,
-        "too few jointly-decided instances ({}); the differential \
-         gate is not meaningfully exercised",
-        t.jointly_decided
-    );
-    assert_generator_coverage(&covered_widths, &covered_operators);
-    assert_cvc5_coverage(
-        cvc5.is_some(),
-        cvc5_stride,
-        t.cvc5_sampled,
-        t.cvc5_decided,
-        t.cvc5_unknown_skipped,
-        t.three_way_agreements,
-    );
-    assert_proof_coverage(&t, proof_stride);
+    assert_sweep(config, &tally, &oracles, &coverage, proof_stride);
+    write_report(config, &tally, &oracles, &coverage, started.elapsed());
 }
 
 /// Pretty-print an axeyum model's variable bindings.

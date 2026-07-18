@@ -132,6 +132,14 @@ session state.
 > Next correctness work must add independent seeds/edge-case frequencies, a
 > proof-coverage denominator, or another neutral implementation—not rerun the
 > same bounded formulas and call that new coverage.
+> ADR-0237 now preregisters that independent continuation before full results:
+> untouched `uniform-v1` ranges at 1,000,000..1,004,000 and
+> 2,000,000..2,004,000 plus an `edge-v1` range at
+> 3,000,000..3,004,000. All 12,000 rows must decide and agree across Axeyum,
+> direct Z3, cvc5 1.3.4, and Bitwuzla 0.9.1; every Axeyum SAT must replay, and
+> the edge round must report nonzero frequencies for all 14 declared semantic
+> corners. The 256-row engineering pilot is excluded. Run and retain this exact
+> campaign next; do not change seeds in response to its outcomes.
 > ADR-0226 adds the first explicit proof denominator. Of 2,513 generated UNSAT
 > rows, a predeclared width<=8/seed-divisible-by-4 subset selects 169 (6.725030%):
 > all 169 carry independently rechecked CNF DRAT and end-to-end

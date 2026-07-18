@@ -592,6 +592,14 @@ records the contract and the first measured baselines.
   classes an executable coverage gate. Report the bounded inventory and exact
   seeds; “all operators covered” is not permission to claim all shapes,
   constants, widths, or interactions are exhausted.
+  ADR-0237 preregisters the independent continuation before its full results:
+  `uniform-v1` seeds 1,000,000..1,004,000 and 2,000,000..2,004,000 plus
+  `edge-v1` seeds 3,000,000..3,004,000. Every row must decide in Axeyum,
+  direct Z3, cvc5 1.3.4, and Bitwuzla 0.9.1; external failures fail closed and
+  every Axeyum SAT must replay. The edge round reports per-instance frequencies
+  for 14 declared semantic-corner families rather than inferring edge coverage
+  from operator presence. Use `scripts/run-qfbv-independent-oracle-rounds.sh`;
+  its 256-row seeds 4,000..4,256 engineering pilot is explicitly excluded.
   Proof coverage needs two denominators: the full decided-UNSAT population and
   the predeclared attempted subset. ADR-0226's 4,000-row generator has 2,513
   UNSAT results; its width-at-most-8/seed-divisible-by-4 subset contains 169

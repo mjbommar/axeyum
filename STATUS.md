@@ -447,6 +447,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `axeyum-fp` and `axeyum-strings`. Next measure warm time/RSS and real-query
   proof coverage; preserve the bundle as the parser-slimming baseline.
 
+- **2026-07-18 — ADR-0237 preregisters the independent four-oracle correctness
+  continuation before full results.** Two untouched `uniform-v1` ranges
+  (1,000,000..1,004,000 and 2,000,000..2,004,000) plus one `edge-v1` range
+  (3,000,000..3,004,000) must each decide all 4,000 rows in Axeyum, direct Z3,
+  cvc5 1.3.4, and Bitwuzla 0.9.1. The harness now accepts checked seed ranges,
+  preserves the old generator by name, reports 14 semantic-corner frequencies,
+  writes fail-closed JSON, and has a reproducible runner. A 256-row pilot passed
+  but is excluded from evidence. Next: execute the fixed 12,000-row campaign.
+
 - **2026-07-17 — ADR-0226 establishes the first generated proof-coverage
   denominator and its widening boundary.** The 4,000-row population contains
   2,513 UNSAT results; a predeclared width<=8/seed-divisible-by-4 subset selects

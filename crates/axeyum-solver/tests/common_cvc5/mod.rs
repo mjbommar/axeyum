@@ -48,9 +48,9 @@ pub enum DetailedVerdict {
 
 /// Resolve the cvc5 binary path, or `None` if cvc5 is unavailable.
 ///
-/// Tries `cvc5` on `PATH` first, then the conventional user install location
-/// `~/.local/bin/cvc5`. A binary is accepted only if `--version` exits cleanly,
-/// so a broken drop-in is treated as absent (→ every decision SKIPs).
+/// Tries `AXEYUM_CVC5_BIN`, `cvc5` on `PATH`, then the conventional user
+/// install location `~/.local/bin/cvc5`. A binary is accepted only if
+/// `--version` exits cleanly, so a broken drop-in is treated as absent.
 pub fn cvc5_bin() -> Option<String> {
     let responds = |bin: &str| -> bool {
         Command::new(bin)
@@ -61,6 +61,9 @@ pub fn cvc5_bin() -> Option<String> {
             .is_ok_and(|s| s.success())
     };
 
+    if let Ok(bin) = std::env::var("AXEYUM_CVC5_BIN") {
+        return responds(&bin).then_some(bin);
+    }
     if responds("cvc5") {
         return Some("cvc5".to_string());
     }
