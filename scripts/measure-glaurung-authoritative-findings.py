@@ -302,6 +302,13 @@ def run_one(
 
 
 def summarize_driver(runs: list[dict[str, Any]]) -> dict[str, Any]:
+    process_failures = [run for run in runs if "run_error" in run]
+    if process_failures:
+        labels = ", ".join(
+            f"{run['backend']} repetition {run['repetition']} position {run['position']}"
+            for run in process_failures
+        )
+        raise RuntimeError(f"process failures: {labels}")
     populations = {
         backend: [run for run in runs if run["backend"] == backend]
         for backend in ("z3", "axeyum")
@@ -606,8 +613,8 @@ def main() -> None:
         for repetition in range(1, args.repetitions + 1):
             order = ("z3", "axeyum") if repetition % 2 else ("axeyum", "z3")
             for position, backend in enumerate(order, start=1):
-                runs.append(
-                    run_one(
+                try:
+                    run = run_one(
                         repository,
                         z3_binary if backend == "z3" else axeyum_binary,
                         driver,
@@ -620,7 +627,14 @@ def main() -> None:
                         args.canonical_model_choice,
                         args.check_timeout_ms,
                     )
-                )
+                except (RuntimeError, subprocess.TimeoutExpired) as error:
+                    run = {
+                        "backend": backend,
+                        "repetition": repetition,
+                        "position": position,
+                        "run_error": str(error),
+                    }
+                runs.append(run)
         try:
             summary = summarize_driver(runs)
             summary_error = None

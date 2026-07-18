@@ -152,6 +152,17 @@ class AuthoritativeFindingRunnerTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "authority coverage populations differ"):
             MODULE.summarize_driver(runs)
 
+    def test_preserves_and_rejects_a_failed_process_record(self) -> None:
+        runs = [run("z3"), run("axeyum")]
+        runs[0] = {
+            "backend": "z3",
+            "repetition": 1,
+            "position": 1,
+            "run_error": "canonical model policy did not complete every attempt",
+        }
+        with self.assertRaisesRegex(RuntimeError, "process failures: z3 repetition 1"):
+            MODULE.summarize_driver(runs)
+
     def test_summarizes_stable_canonical_model_choice_populations(self) -> None:
         runs = [run("z3"), run("z3"), run("axeyum"), run("axeyum")]
         for candidate in runs:
