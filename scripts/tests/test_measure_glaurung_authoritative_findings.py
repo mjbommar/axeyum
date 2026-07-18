@@ -96,6 +96,19 @@ class AuthoritativeFindingRunnerTests(unittest.TestCase):
             summary["coverage"],
             {"analyzed": 10, "reachable": 100, "boundary": "fixed-work-limit"},
         )
+        self.assertEqual(MODULE.finding_acceptance_failures(Path("driver"), summary), [])
+
+    def test_rejects_stable_backend_divergence(self) -> None:
+        runs = [run("z3"), run("z3"), run("axeyum"), run("axeyum")]
+        for candidate in runs:
+            if candidate["backend"] == "axeyum":
+                candidate["findings"] = ["sink-b"]
+                candidate["findings_sha256"] = "axeyum-hash"
+        summary = MODULE.summarize_driver(runs)
+        failures = MODULE.finding_acceptance_failures(Path("tcpip.sys"), summary)
+        self.assertFalse(summary["exact_finding_parity"])
+        self.assertEqual(len(failures), 1)
+        self.assertIn("z3-only=1, axeyum-only=1", failures[0])
 
 
 if __name__ == "__main__":

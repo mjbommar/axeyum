@@ -320,6 +320,16 @@ def summarize_driver(runs: list[dict[str, Any]]) -> dict[str, Any]:
     return result
 
 
+def finding_acceptance_failures(driver: Path, summary: dict[str, Any]) -> list[str]:
+    if summary["exact_finding_parity"]:
+        return []
+    return [
+        f"{driver}: exact finding parity failed "
+        f"(z3-only={len(summary['z3_only'])}, "
+        f"axeyum-only={len(summary['axeyum_only'])})"
+    ]
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--glaurung-repo", type=Path, required=True)
@@ -398,6 +408,7 @@ def main() -> None:
         try:
             summary = summarize_driver(runs)
             summary_error = None
+            failures.extend(finding_acceptance_failures(driver, summary))
         except RuntimeError as error:
             summary = None
             summary_error = str(error)
