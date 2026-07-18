@@ -332,6 +332,7 @@ def main() -> None:
     parser.add_argument("--solve-budget", type=int, default=20000)
     parser.add_argument("--solve-secs", type=int, default=60)
     parser.add_argument("--process-timeout-secs", type=int, default=600)
+    parser.add_argument("--out", type=Path)
     args = parser.parse_args()
     if args.repetitions < 2:
         parser.error("--repetitions must be at least 2")
@@ -359,6 +360,11 @@ def main() -> None:
         if not path.exists():
             parser.error(f"path does not exist: {path}")
 
+    glaurung_identity = git_identity(repository)
+    axeyum_identity = git_identity(axeyum_repository)
+    if glaurung_identity["tracked_dirty"] or axeyum_identity["tracked_dirty"]:
+        raise RuntimeError("tracked source changes make the measurement inadmissible")
+
     common_environment = {
         "IOCTLANCE_ALL": "1",
         "IOCTLANCE_DEADLINE_SECS": str(args.deadline_secs),
@@ -370,6 +376,7 @@ def main() -> None:
             args.max_analyzed_functions
         )
     driver_reports = []
+    failures: list[str] = []
     for driver in drivers:
         runs = []
         for repetition in range(1, args.repetitions + 1):
@@ -388,18 +395,42 @@ def main() -> None:
                         args.max_analyzed_functions,
                     )
                 )
+        try:
+            summary = summarize_driver(runs)
+            summary_error = None
+        except RuntimeError as error:
+            summary = None
+            summary_error = str(error)
+            failures.append(f"{driver}: {error}")
         driver_reports.append(
             {
                 "driver": {"path": str(driver), "sha256": file_sha256(driver)},
                 "runs": runs,
-                "summary": summarize_driver(runs),
+                "summary": summary,
+                "summary_error": summary_error,
             }
         )
 
+    post_run_glaurung_identity = git_identity(repository)
+    post_run_axeyum_identity = git_identity(axeyum_repository)
+    source_identity_stable = (
+        glaurung_identity == post_run_glaurung_identity
+        and axeyum_identity == post_run_axeyum_identity
+    )
+    if not source_identity_stable:
+        failures.append("source identity changed during measurement")
+
     report = {
         "schema": "axeyum.glaurung-authoritative-finding-parity.v2",
-        "glaurung": git_identity(repository),
-        "axeyum": git_identity(axeyum_repository),
+        "accepted": not failures,
+        "failures": failures,
+        "glaurung": glaurung_identity,
+        "axeyum": axeyum_identity,
+        "post_run_source_identity": {
+            "glaurung": post_run_glaurung_identity,
+            "axeyum": post_run_axeyum_identity,
+            "stable": source_identity_stable,
+        },
         "binaries": {
             "z3": {"path": str(z3_binary), "sha256": file_sha256(z3_binary)},
             "axeyum": {"path": str(axeyum_binary), "sha256": file_sha256(axeyum_binary)},
@@ -410,12 +441,18 @@ def main() -> None:
         "order": "odd repetitions Z3/Axeyum; even repetitions Axeyum/Z3",
         "drivers": driver_reports,
         "all_drivers_exact_finding_parity": all(
-            driver["summary"]["exact_finding_parity"] for driver in driver_reports
+            driver["summary"] is not None
+            and driver["summary"]["exact_finding_parity"]
+            for driver in driver_reports
         ),
     }
-    if report["glaurung"]["tracked_dirty"] or report["axeyum"]["tracked_dirty"]:
-        raise RuntimeError("tracked source changes make the measurement inadmissible")
-    print(json.dumps(report, indent=2, sort_keys=True))
+    rendered = json.dumps(report, indent=2, sort_keys=True) + "\n"
+    if args.out is None:
+        print(rendered, end="")
+    else:
+        args.out.write_text(rendered, encoding="utf-8")
+    if failures:
+        raise SystemExit("; ".join(failures))
 
 
 if __name__ == "__main__":

@@ -88,6 +88,15 @@ class AuthoritativeFindingRunnerTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "authority coverage populations differ"):
             MODULE.summarize_driver(runs)
 
+    def test_accepts_stable_exact_authority_population(self) -> None:
+        runs = [run("z3"), run("z3"), run("axeyum"), run("axeyum")]
+        summary = MODULE.summarize_driver(runs)
+        self.assertTrue(summary["exact_finding_parity"])
+        self.assertEqual(
+            summary["coverage"],
+            {"analyzed": 10, "reachable": 100, "boundary": "fixed-work-limit"},
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
