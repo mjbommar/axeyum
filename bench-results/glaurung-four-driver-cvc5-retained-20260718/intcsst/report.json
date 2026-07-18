@@ -1,0 +1,123 @@
+{
+  "batch": {
+    "bytes": 618748,
+    "policy": "retained-lcp",
+    "process_boundary": "one cvc5 process per repetition",
+    "sha256": "b3e698102a2fe1c09610b3ab0cf461c907edf093d7fb9c2c109008b37989d486",
+    "state_boundary": "one solver session/declaration prelude per contiguous source owner; persistent-prefix LCP push/pop transitions; temporary suffix via check-sat-assuming",
+    "transition_stats": {
+      "assertion_occurrences": 31799,
+      "assertions_retained_above_requested": 254,
+      "assertions_rewound_below_requested": 84,
+      "checks_retained_above_requested": 197,
+      "checks_rewound_below_requested": 84,
+      "checks_with_retained_prefix": 1628,
+      "declaration_count": 26,
+      "declaration_emissions": 624,
+      "max_actual_minus_requested": 4,
+      "max_requested_minus_actual": 1,
+      "owner_resets": 23,
+      "owner_sessions": 24,
+      "peak_assertion_depth": 51,
+      "popped_assertions": 1100,
+      "pushed_assertions": 1354,
+      "requested_retained_assertion_occurrences": 30009,
+      "retained_assertion_occurrences": 30179,
+      "temporary_assumption_occurrences": 266,
+      "unchanged_snapshots": 291
+    }
+  },
+  "cvc5": {
+    "arguments": [
+      "--lang=smt2",
+      "--incremental",
+      "--produce-models",
+      "--tlimit-per=250"
+    ],
+    "binary_sha256": "4a93548398445cf1a774655583f5465b156c26f63f2cdfb94f4728fdf7adde46",
+    "path": "/tmp/axeyum-cvc5-1.3.4.ddwGxL/extracted/cvc5-Linux-x86_64-libcxx-static/bin/cvc5",
+    "version": "cvc5 1.3.4 [git f3b21c4 on branch HEAD]"
+  },
+  "measured_repetitions": 5,
+  "median_total_nanos": 295295958,
+  "rows": [
+    {
+      "expected_unsat_model_errors": 370,
+      "model_lines": 1141,
+      "repetition": 0,
+      "sat": 1270,
+      "stdout_bytes": 391699,
+      "stdout_sha256": "ac4aaef036f1434865e09d40ab1abbf4f157277a2fdc563c8934a99aae3c938a",
+      "total_nanos": 295487088,
+      "unknown": 0,
+      "unsat": 402
+    },
+    {
+      "expected_unsat_model_errors": 370,
+      "model_lines": 1141,
+      "repetition": 1,
+      "sat": 1270,
+      "stdout_bytes": 391699,
+      "stdout_sha256": "ac4aaef036f1434865e09d40ab1abbf4f157277a2fdc563c8934a99aae3c938a",
+      "total_nanos": 296665814,
+      "unknown": 0,
+      "unsat": 402
+    },
+    {
+      "expected_unsat_model_errors": 370,
+      "model_lines": 1141,
+      "repetition": 2,
+      "sat": 1270,
+      "stdout_bytes": 391699,
+      "stdout_sha256": "ac4aaef036f1434865e09d40ab1abbf4f157277a2fdc563c8934a99aae3c938a",
+      "total_nanos": 293586889,
+      "unknown": 0,
+      "unsat": 402
+    },
+    {
+      "expected_unsat_model_errors": 370,
+      "model_lines": 1141,
+      "repetition": 3,
+      "sat": 1270,
+      "stdout_bytes": 391699,
+      "stdout_sha256": "ac4aaef036f1434865e09d40ab1abbf4f157277a2fdc563c8934a99aae3c938a",
+      "total_nanos": 295295958,
+      "unknown": 0,
+      "unsat": 402
+    },
+    {
+      "expected_unsat_model_errors": 370,
+      "model_lines": 1141,
+      "repetition": 4,
+      "sat": 1270,
+      "stdout_bytes": 391699,
+      "stdout_sha256": "ac4aaef036f1434865e09d40ab1abbf4f157277a2fdc563c8934a99aae3c938a",
+      "total_nanos": 295018620,
+      "unknown": 0,
+      "unsat": 402
+    }
+  ],
+  "schema": "axeyum-ordered-smt-stream-cvc5-benchmark-v2",
+  "trace": {
+    "checks": 1672,
+    "driver_path": "samples/binaries/platforms/windows/vendor/realworld/windows-update-intel-audio-IntcSST.sys",
+    "driver_sha256": "f7c8e4f106baa5b2a1a18e60731ad42a6f734aee1d049576eaf6d123d5629750",
+    "events_sha256": "f6ab60be6b480e33ab37752150018fb2af8c40c2588ad07fbaa8edc3cac0b752",
+    "expected_sat_models": 1141,
+    "expected_unsat_model_errors": 370,
+    "query_index_sha256": "c5c65e0aefc7be7c15cad145091880918f925f18d82c4bd419b2cf679ed70be3",
+    "sat": 1270,
+    "schema": "glaurung-ordered-trace-v1",
+    "source_cell_sums": {
+      "axeyum_cold_nanos": 1741143919,
+      "axeyum_warm_nanos": 499364133,
+      "z3_cold_nanos": 4440095933,
+      "z3_warm_nanos": 574681094
+    },
+    "source_revision": "403a5c5c1f6c5152fef6cefd0d78c3eb90d3888f",
+    "unique_queries": 1272,
+    "unsat": 402
+  },
+  "trace_directory": "/nas4/data/workspace-infosec/.axeyum-fair-small-20260717.8SkLHB/glaurung-ordered-trace-887773-9a222325e85a4a1685c82b4f6ff867af",
+  "warmup_repetitions": 1
+}

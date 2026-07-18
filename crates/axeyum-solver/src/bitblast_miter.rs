@@ -229,7 +229,8 @@ impl EndToEndUnsatOutcome {
 
 /// Produces an end-to-end `QF_BV` `unsat` certificate by composing the
 /// bit-blast-faithfulness miter ([`certify_bitblast_by_miter`]) with the
-/// CNF-`unsat` DRAT proof ([`export_qf_bv_unsat_proof`]).
+/// CNF-`unsat` DRAT proof
+/// ([`export_qf_bv_unsat_proof`](crate::export_qf_bv_unsat_proof)).
 ///
 /// Together these establish *term-level* `unsat`: the term equals its AIG (miter,
 /// modulo the independent reference), the AIG equals the CNF (Tseitin, by

@@ -322,6 +322,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-18 — ADR-0232 closes the accepted neutral retained-topology
+  control.** The cvc5 runner now preserves the exact source-owner session,
+  identity-derived persistent-prefix LCP, and temporary-assumption partition
+  while remaining explicitly external/textual. Five repetitions decide all
+  9,526 checks as 6,801 SAT / 2,725 UNSAT / 0 Unknown with byte-stable output
+  and 0.28--1.61% CV. Same-protocol retained medians are 16.4x--57.0x below
+  the accepted full-reset totals. This establishes session/representation
+  retention as a first-order neutral mechanism, not an in-process cvc5 versus
+  Z3/Axeyum ranking. Next: timeout-sensitive neutral/authority widening and
+  deadline-aware real-query faithfulness.
+
 - **2026-07-17 — ADR-0231 widens generated proof coverage without deleting
   slow rows.** The public bounded miter/end-to-end APIs share an absolute
   proof-search deadline and map expiry only to `Inconclusive`/`NotCertified`.
@@ -2182,20 +2193,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
   | ID | Live status | Next acceptance boundary |
   |---|---|---|
-  | **GQ1 real-query profile** | **Map, query/internal attribution, fresh/retained exact-CNF controls, four-driver neutral cold-reset SMT breadth, bounded authoritative finding parity, representative real-query DRAT, and deadline-aware generated proof widening DONE (ADR-0187/0188/0213--0231).** cvc5 agrees on all 9,526 checks; 302 raw sinks match under sole Z3/Axeyum authority; all 64 real UNSAT DRAT and 1,505 generated CNF proofs recheck, with 1,487/1,505 stronger generated certificates under policy; BatSat beats Z3 Boolean on retained Axeyum CNF despite native warm Z3 winning end-to-end | Add topology-equivalent neutral and timeout-sensitive/wider authority plus real faithfulness cells |
+  | **GQ1 real-query profile** | **Map, query/internal attribution, fresh/retained exact-CNF controls, four-driver neutral cold-reset and source-owner-retained SMT breadth, bounded authoritative finding parity, representative real-query DRAT, and deadline-aware generated proof widening DONE (ADR-0187/0188/0213--0232).** cvc5 agrees on all 9,526 checks in both external protocols; 302 raw sinks match under sole Z3/Axeyum authority; all 64 real UNSAT DRAT and 1,505 generated CNF proofs recheck, with 1,487/1,505 stronger generated certificates under policy; BatSat beats Z3 Boolean on retained Axeyum CNF despite native warm Z3 winning end-to-end | Add timeout-sensitive neutral/wider authority and real faithfulness cells |
   | **GQ2 cheap cold tier** | **WIP with three accepted rewrite tranches; batch integration deferred.** Canonical v4 reaches 5.625 s / 0.730x Z3; ADR-0156 preserves replay but is 18.8% slower than one-shot | Keep canonical v4 as the measured one-shot policy; do not recommend fresh incremental batch until its clause/entry overhead closes |
   | **GQ3 coercion/affine peepholes** | **DONE for current measured shapes (ADR-0159).** Clean repeated path-paired ablations are fail-closed; `extract_extend` is a material lowering-only win, while all four measured structural rules change zero AIG nodes/clauses | Keep rules enabled. Reopen only for a new residual shape with a specific downstream hypothesis and the same causal ablation gate |
   | **GQ4 cold relevant bits** | **v1 and v2 DEFERRED after failed real gates.** v1 regresses ~1.42x→4.49x. V2 rejection overhead is bounded, but defaults admit 0/128 and +0.62% total; a 33-query moderate policy removes 632 AIG nodes/zero clauses and regresses bit blast 3.14% | Keep both explicit/off. Reopen only with an AIG/CNF-cone estimator or after word rewrites materially change the residual; do not tune thresholds further |
   | **GQ5 AIG/CNF construction** | **Cold lane active; broad warm lane closed by ADR-0219.** Retention removes 98--99% of cold structure and leaves 11--20% warm CNF | Continue cold only from causal gates; report Dptf UNSAT CNF additions as a cross-core covariate |
   | **GQ6 cold SAT/CDCL** | **Fresh and retained exact-CNF controls DONE (ADR-0220/0221).** Proof core beats fresh BatSat before checking; retained BatSat beats retained Z3 Boolean | Do not select a core rewrite from Dptf; reopen only on a SAT-dominant family with a neutral core gap and deterministic limits |
-  | **GQ7 warm delta entry** | **Source identity, fair map, query/internal attribution, fresh/retained CNF controls, four-driver neutral cold-reset SMT, and bounded finding parity DONE; wider default DEFERRED (ADR-0201--0229).** The remaining reversal boundary is warm word-level representation/integration | Keep direct opt-in; add a topology-equivalent neutral cell before timeout-sensitive widening |
+  | **GQ7 warm delta entry** | **Source identity, fair map, query/internal attribution, fresh/retained CNF controls, four-driver neutral cold-reset plus source-owner-retained SMT, and bounded finding parity DONE; wider default DEFERRED (ADR-0201--0232).** Neutral same-protocol retention is 16.4x--57.0x below full reset but remains an external textual boundary | Keep direct opt-in; proceed to timeout-sensitive neutral and authority widening |
   | **GQ8 verdict/CNF cache** | **DONE for available families (ADR-0192).** Clean repeated evidence admits exact same-arena scalar SAT reuse only in path-owned Glaurung sessions; fixed bounds, traffic partitions, cleanup gauges, findings, and replay are enforced | Preserve explicit off and re-gate new families; Axeyum's generic cache remains opt-in and ordinary UNSAT/Unknown/prefix verdicts remain excluded |
   | **GQ9 auto cost model/docs** | **DONE for available families (ADR-0186).** Clean adaptive repeat clears every alarm over 92,721 checks; downstream explorer default has explicit off/fixed controls | Re-gate newly captured families; do not broaden this Glaurung-specific default into Axeyum's generic API |
   | **GQ10 real-lifter regression tier** | **Native continuation admission DONE; wider direct-delta default DEFERRED (ADR-0205--0212).** The accepted tcpip trace admits bounded continuation. The new complete 85,449-event / 17,400-check `dxgkrnl` trace and independent replay preserve exact no-op behavior and every correctness/lifecycle gauge, but ordinary-core time CV is 14.430%/8.306% and slower-core outcomes drift | Keep direct delta opt-in. Repeat under a quieter predeclared environment or add another no-timeout IOCTL driver; route `win32k` to a system-service/callout frontend |
 
-  **Next actions:** (1) add a neutral in-process or topology-equivalent warm
-  cell for the representation/integration boundary after ADR-0223's completed
-  cold-reset breadth; (2) after ADR-0227's executable browser baseline and
+  **Next actions:** (1) after ADR-0232's completed neutral retained-topology
+  breadth, add a timeout-sensitive neutral and authority tier; (2) after
+  ADR-0227's executable browser baseline and
   ADR-0228's two-driver cold/warm RSS and hit-rate control and ADR-0230's
   representative real-query DRAT denominator, add deadline-aware real-query
   term-to-CNF faithfulness; (3) widen
@@ -2210,6 +2221,22 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `Unknown`s; (8) stage solver namespace/module, duplicate-removal, and
   typed-config refactors only as bounded behavior-preserving tranches; (9) keep
   GQ4 explicit/off.
+
+  **Validation (2026-07-18):** the ADR-0232 checkpoint passes the full
+  serialized all-feature workspace and doc-test suite with zero failures,
+  stable formatting, strict all-target/all-feature Clippy, warning-denied
+  workspace docs, the lean QF_BV profile, all 76 Glaurung benchmark recipe/
+  summarizer/comparator/gate/analyzer tests, the pinned 162-query Glaurung
+  regular gate, foundational resources and generated dashboards, all
+  rules-as-code generation/validation/query checks with zero generated drift,
+  and documentation links. The regular gate decides 162/162 under both raw
+  and canonical policies with zero disagreements, errors, or replay failures
+  (latest raw 0.680x Z3; canonical 0.325x; these one-shot semantic-smoke ratios
+  are not fair warm headlines). The host does not expose `just` globally, so
+  the gate used the repository commands directly and the existing isolated
+  pinned `just` 1.56.0 tool root for recipe dry-runs. Warning-denied docs also
+  exposed and this checkpoint corrects one pre-existing unresolved
+  `export_qf_bv_unsat_proof` intra-doc link.
 
   **Validation (2026-07-17):** the first parallel all-feature workspace test
   exceeded the shared 4 GiB envelope while several heavyweight test processes
@@ -4035,6 +4062,13 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-18 — ADR-0232 records source-owner-retained cvc5 breadth.** A new
+  fail-closed mode emits one solver session per contiguous source owner,
+  persistent push/pop deltas from exact assertion-byte LCP, and temporary
+  `check-sat-assuming` suffixes. All four accepted drivers preserve every
+  verdict and model-output count over N=5; the compatible cold-reset mode still
+  reproduces ADR-0222's exact Dptf batch hash.
 
 - **2026-07-17 — ADR-0231 makes generated proof widening deadline-aware.** A
   shared absolute proof-search deadline removes seed 83's indefinite block
