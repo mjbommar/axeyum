@@ -15,6 +15,8 @@ UNION_SCHEMA = "axeyum.glaurung-authority-coverage-union.v1"
 POLICIES = {
     "min-unsigned": "glaurung-min-unsigned-v1",
     "max-unsigned": "glaurung-max-unsigned-v1",
+    "site-hash-0": "glaurung-site-hash-0-v1",
+    "site-hash-1": "glaurung-site-hash-1-v1",
 }
 
 
@@ -147,19 +149,12 @@ def environment_without_policy(report: dict[str, Any]) -> dict[str, str]:
     return environment
 
 
-def analyze_reports(
-    any_model_report: dict[str, Any],
-    minimum_report: dict[str, Any],
-    maximum_report: dict[str, Any],
-) -> dict[str, Any]:
+def validate_cells(
+    specs: dict[str, tuple[dict[str, Any], str | None]],
+) -> dict[str, dict[str, Any]]:
     cells = {
-        "any-model": validate_report(any_model_report, label="any-model", policy=None),
-        "min-unsigned": validate_report(
-            minimum_report, label="min-unsigned", policy="min-unsigned"
-        ),
-        "max-unsigned": validate_report(
-            maximum_report, label="max-unsigned", policy="max-unsigned"
-        ),
+        label: validate_report(report, label=label, policy=policy)
+        for label, (report, policy) in specs.items()
     }
     require_same_control(cells, "glaurung", message="glaurung identity drift")
     require_same_control(cells, "axeyum", message="axeyum identity drift")
@@ -173,7 +168,43 @@ def analyze_reports(
     coverage_rows = [cell["summary"]["coverage"] for cell in cells.values()]
     require(all(row == coverage_rows[0] for row in coverage_rows[1:]), "coverage population drift")
     environments = [environment_without_policy(cell["report"]) for cell in cells.values()]
-    require(all(row == environments[0] for row in environments[1:]), "environment drift outside model policy")
+    require(
+        all(row == environments[0] for row in environments[1:]),
+        "environment drift outside model policy",
+    )
+    return cells
+
+
+def policy_summary(cell: dict[str, Any]) -> dict[str, Any]:
+    findings = cell["findings"]["z3"]
+    canonical = cell["summary"]["canonical_model_choice"]
+    return {
+        "policy": canonical["policy"],
+        "finding_count": len(findings),
+        "findings_sha256": text_sha256(findings),
+        "ordered_findings": findings,
+        "canonical_model_choice": canonical,
+        "backend_solves": {
+            backend: cell["summary"]["backends"][backend]["solves"]
+            for backend in ("z3", "axeyum")
+        },
+    }
+
+
+def analyze_reports(
+    any_model_report: dict[str, Any],
+    minimum_report: dict[str, Any],
+    maximum_report: dict[str, Any],
+) -> dict[str, Any]:
+    cells = validate_cells(
+        {
+            "any-model": (any_model_report, None),
+            "min-unsigned": (minimum_report, "min-unsigned"),
+            "max-unsigned": (maximum_report, "max-unsigned"),
+        }
+    )
+    driver_rows = [cell["driver"] for cell in cells.values()]
+    coverage_rows = [cell["summary"]["coverage"] for cell in cells.values()]
 
     minimum = cells["min-unsigned"]["findings"]
     maximum = cells["max-unsigned"]["findings"]
@@ -191,21 +222,6 @@ def analyze_reports(
     any_axeyum = set(any_findings["axeyum"])
     any_union = any_z3 | any_axeyum
     canonical_union = set(union_findings)
-
-    def policy_summary(cell: dict[str, Any]) -> dict[str, Any]:
-        findings = cell["findings"]["z3"]
-        canonical = cell["summary"]["canonical_model_choice"]
-        return {
-            "policy": canonical["policy"],
-            "finding_count": len(findings),
-            "findings_sha256": text_sha256(findings),
-            "ordered_findings": findings,
-            "canonical_model_choice": canonical,
-            "backend_solves": {
-                backend: cell["summary"]["backends"][backend]["solves"]
-                for backend in ("z3", "axeyum")
-            },
-        }
 
     return {
         "schema": UNION_SCHEMA,

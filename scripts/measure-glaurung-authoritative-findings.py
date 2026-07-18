@@ -18,6 +18,8 @@ TIME_PREFIX = "__AXEYUM_AUTH_TIME__"
 CANONICAL_MODEL_POLICIES = {
     "min-unsigned": "glaurung-min-unsigned-v1",
     "max-unsigned": "glaurung-max-unsigned-v1",
+    "site-hash-0": "glaurung-site-hash-0-v1",
+    "site-hash-1": "glaurung-site-hash-1-v1",
 }
 SYMBOLIC_RE = re.compile(
     r"\[symbolic\] \S+\s+raw=(\d+) high-confidence=(\d+) suppressed=(\d+).*"
@@ -555,9 +557,9 @@ def main() -> None:
         const="min-unsigned",
         choices=tuple(CANONICAL_MODEL_POLICIES),
         help=(
-            "enable and require a named backend-independent unsigned-extremum "
-            "model-selection policy (omitting the value preserves the historical "
-            "min-unsigned behavior)"
+            "enable and require a named backend-independent unsigned-extremum or "
+            "stable-site mixed-extremum model-selection policy (omitting the value "
+            "preserves the historical min-unsigned behavior)"
         ),
     )
     parser.add_argument(

@@ -81,6 +81,16 @@ class AuthoritativeFindingRunnerTests(unittest.TestCase):
         )
         self.assertEqual(telemetry["policy"], "glaurung-max-unsigned-v1")
 
+    def test_exposes_complementary_site_hash_canonical_model_policies(self) -> None:
+        self.assertEqual(
+            MODULE.CANONICAL_MODEL_POLICIES["site-hash-0"],
+            "glaurung-site-hash-0-v1",
+        )
+        self.assertEqual(
+            MODULE.CANONICAL_MODEL_POLICIES["site-hash-1"],
+            "glaurung-site-hash-1-v1",
+        )
+
     def test_rejects_missing_or_unexercised_canonical_model_choice(self) -> None:
         with self.assertRaisesRegex(RuntimeError, "missing canonical-model-choice"):
             MODULE.parse_canonical_model_choice(
