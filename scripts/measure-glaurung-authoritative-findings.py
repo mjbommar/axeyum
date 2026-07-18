@@ -15,6 +15,10 @@ from typing import Any
 
 
 TIME_PREFIX = "__AXEYUM_AUTH_TIME__"
+CANONICAL_MODEL_POLICIES = {
+    "min-unsigned": "glaurung-min-unsigned-v1",
+    "max-unsigned": "glaurung-max-unsigned-v1",
+}
 SYMBOLIC_RE = re.compile(
     r"\[symbolic\] \S+\s+raw=(\d+) high-confidence=(\d+) suppressed=(\d+).*"
     r"analyzed=(\d+)/(\d+)(.*)"
@@ -84,11 +88,11 @@ def parse_key_values(line: str) -> dict[str, int | str]:
 
 
 def parse_canonical_model_choice(
-    stderr: str, *, required: bool
+    stderr: str, *, required_policy: str | None
 ) -> dict[str, int | str] | None:
     match = CANONICAL_MODEL_CHOICE_RE.search(stderr)
     if match is None:
-        if required:
+        if required_policy is not None:
             raise RuntimeError("missing canonical-model-choice row")
         return None
     telemetry: dict[str, int | str] = {
@@ -104,11 +108,12 @@ def parse_canonical_model_choice(
         "error": int(match.group(10)),
         "final_unsat": int(match.group(11)),
     }
-    if not required:
+    if required_policy is None:
         return telemetry
-    if telemetry["policy"] != "glaurung-min-unsigned-v1":
+    if telemetry["policy"] != required_policy:
         raise RuntimeError(
-            f"unexpected canonical model policy: {telemetry['policy']}"
+            "unexpected canonical model policy: "
+            f"expected {required_policy}, observed {telemetry['policy']}"
         )
     attempts = int(telemetry["attempts"])
     completed = int(telemetry["completed"])
@@ -189,7 +194,7 @@ def run_one(
     common_environment: dict[str, str],
     process_timeout_seconds: int,
     max_analyzed_functions: int | None,
-    canonical_model_choice_required: bool,
+    required_canonical_model_policy: str | None,
     expected_check_timeout_ms: int | None,
 ) -> dict[str, Any]:
     environment = os.environ.copy()
@@ -246,7 +251,7 @@ def run_one(
     solver = require_match(SOLVER_RE, result.stderr, "solver")
     timing = require_match(TIME_RE, result.stderr, "time")
     canonical_model_choice = parse_canonical_model_choice(
-        result.stderr, required=canonical_model_choice_required
+        result.stderr, required_policy=required_canonical_model_policy
     )
     check_timeout_ms = parse_check_timeout_ms(
         result.stderr, expected=expected_check_timeout_ms
@@ -546,10 +551,13 @@ def main() -> None:
     parser.add_argument("--process-timeout-secs", type=int, default=600)
     parser.add_argument(
         "--canonical-model-choice",
-        action="store_true",
+        nargs="?",
+        const="min-unsigned",
+        choices=tuple(CANONICAL_MODEL_POLICIES),
         help=(
-            "enable and require Glaurung's backend-independent unsigned-minimum "
-            "model-selection policy"
+            "enable and require a named backend-independent unsigned-extremum "
+            "model-selection policy (omitting the value preserves the historical "
+            "min-unsigned behavior)"
         ),
     )
     parser.add_argument(
@@ -598,8 +606,15 @@ def main() -> None:
         "IOCTLANCE_SOLVE_BUDGET": str(args.solve_budget),
         "IOCTLANCE_SOLVE_SECS": str(args.solve_secs),
     }
-    if args.canonical_model_choice:
-        common_environment["GLAURUNG_CANONICAL_MODEL_CHOICE"] = "1"
+    required_canonical_model_policy = (
+        CANONICAL_MODEL_POLICIES[args.canonical_model_choice]
+        if args.canonical_model_choice is not None
+        else None
+    )
+    if args.canonical_model_choice is not None:
+        common_environment["GLAURUNG_CANONICAL_MODEL_CHOICE"] = (
+            args.canonical_model_choice
+        )
     if args.check_timeout_ms is not None:
         common_environment["GLAURUNG_CHECK_TIMEOUT_MS"] = str(args.check_timeout_ms)
     if args.max_analyzed_functions is not None:
@@ -624,7 +639,7 @@ def main() -> None:
                         common_environment,
                         args.process_timeout_secs,
                         args.max_analyzed_functions,
-                        args.canonical_model_choice,
+                        required_canonical_model_policy,
                         args.check_timeout_ms,
                     )
                 except (RuntimeError, subprocess.TimeoutExpired) as error:
@@ -662,7 +677,7 @@ def main() -> None:
         failures.append("source identity changed during measurement")
 
     report = {
-        "schema": "axeyum.glaurung-authoritative-finding-parity.v3",
+        "schema": "axeyum.glaurung-authoritative-finding-parity.v4",
         "accepted": not failures,
         "failures": failures,
         "glaurung": glaurung_identity,
@@ -678,7 +693,8 @@ def main() -> None:
         },
         "environment": common_environment,
         "process_timeout_seconds": args.process_timeout_secs,
-        "canonical_model_choice_required": args.canonical_model_choice,
+        "canonical_model_choice_required": required_canonical_model_policy is not None,
+        "canonical_model_choice_policy": required_canonical_model_policy,
         "check_timeout_ms_required": args.check_timeout_ms,
         "repetitions": args.repetitions,
         "order": "odd repetitions Z3/Axeyum; even repetitions Axeyum/Z3",

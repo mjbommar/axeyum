@@ -163,6 +163,17 @@ session state.
 > closes independent seeds, edge-frequency accounting, and the second neutral
 > implementation; it remains a bounded correctness result, not completeness or
 > performance evidence.
+> ADR-0238 now preregisters the next authority control before its result is
+> observed. On ADR-0236's exact tcpip prefix, source/input identities, work
+> bounds, and N=3 order-balanced protocol, it adds a greatest-unsigned model
+> policy beside the accepted least-unsigned policy and measures their finding
+> set union under sole Z3 and sole Axeyum authority. Acceptance requires exact
+> reproduction of the rejected arbitrary-model and accepted least-model
+> controls, per-policy ordered-output/counter/telemetry parity, and identical
+> extremal unions. The maximum population, union size, and relationship to the
+> arbitrary-model union are deliberately not preselected. Run this exact
+> campaign next; two extrema remain a bounded deterministic ensemble, not
+> exhaustive model coverage or a finding-preservation guarantee.
 > ADR-0226 adds the first explicit proof denominator. Of 2,513 generated UNSAT
 > rows, a predeclared width<=8/seed-divisible-by-4 subset selects 169 (6.725030%):
 > all 169 carry independently rechecked CNF DRAT and end-to-end
@@ -878,8 +889,8 @@ evidence are now distinct:
    SMT boundary costs separately named; do not use Z3 as both sole oracle and
    sole comparator.
 4. **Authoritative finding parity — bounded four-driver tier and first
-   canonical tcpip cell DONE; wider/coverage-union tiers WIP
-   (ADR-0229/0236):** sole-authority Z3 and Axeyum
+   canonical tcpip cell DONE; extremal coverage-union tier PREREGISTERED;
+   wider tiers WIP (ADR-0229/0236/0238):** sole-authority Z3 and Axeyum
    binaries emit byte-identical ordered raw sink lists on Dptf, vwififlt,
    IntcSST, and SurfacePen across N=3 order-balanced repetitions: 302 canonical
    sinks and 1,812 stable emitted rows. Differing vwififlt/IntcSST solve counts
@@ -888,9 +899,12 @@ evidence are now distinct:
    stable shared sinks plus two Z3-only rows. The opt-in unsigned-minimum policy
    gives both authorities the same 110 sinks, 80,563 solves, and complete
    model-choice telemetry with zero inconclusive choice. Because the policy
-   changes the shared population, keep it opt-in and add wider fixed-work or
-   deterministic multi-model/coverage-union evidence before a general finding-
-   preservation claim.
+   changes the shared population, keep it opt-in. ADR-0238 fixes the exact
+   source, input, work, controls, and acceptance contract for a least/greatest
+   unsigned coverage-union experiment without preselecting its population.
+   Run that campaign before changing the model policies or prefix; regardless
+   of outcome, require wider fixed-work or genuinely broader model exploration
+   before a general finding-preservation claim.
 5. **Deployability and artifact readiness — profile, WebAssembly, bounded warm
    Pareto, and representative real-query end-to-end proof deployment DONE
    (ADR-0216/0227/0228/0230/0234/0235), wider proof deployment WIP:** `qfbv` is the

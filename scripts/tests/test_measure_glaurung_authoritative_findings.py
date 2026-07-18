@@ -53,7 +53,7 @@ class AuthoritativeFindingRunnerTests(unittest.TestCase):
             "[canonical-model-choice] policy=glaurung-min-unsigned-v1 "
             "attempts=7 completed=5 infeasible=2 probes=332 inconclusive=0 "
             "unsupported_width=0 unknown=0 no_solver=0 error=0 final_unsat=0\n",
-            required=True,
+            required_policy="glaurung-min-unsigned-v1",
         )
         self.assertEqual(
             telemetry,
@@ -72,15 +72,26 @@ class AuthoritativeFindingRunnerTests(unittest.TestCase):
             },
         )
 
+    def test_accepts_explicit_maximum_canonical_model_policy(self) -> None:
+        telemetry = MODULE.parse_canonical_model_choice(
+            "[canonical-model-choice] policy=glaurung-max-unsigned-v1 "
+            "attempts=4 completed=4 infeasible=0 probes=264 inconclusive=0 "
+            "unsupported_width=0 unknown=0 no_solver=0 error=0 final_unsat=0\n",
+            required_policy="glaurung-max-unsigned-v1",
+        )
+        self.assertEqual(telemetry["policy"], "glaurung-max-unsigned-v1")
+
     def test_rejects_missing_or_unexercised_canonical_model_choice(self) -> None:
         with self.assertRaisesRegex(RuntimeError, "missing canonical-model-choice"):
-            MODULE.parse_canonical_model_choice("", required=True)
+            MODULE.parse_canonical_model_choice(
+                "", required_policy="glaurung-min-unsigned-v1"
+            )
         with self.assertRaisesRegex(RuntimeError, "was not exercised"):
             MODULE.parse_canonical_model_choice(
                 "[canonical-model-choice] policy=glaurung-min-unsigned-v1 "
                 "attempts=0 completed=0 infeasible=0 probes=0 inconclusive=0 "
                 "unsupported_width=0 unknown=0 no_solver=0 error=0 final_unsat=0\n",
-                required=True,
+                required_policy="glaurung-min-unsigned-v1",
             )
 
     def test_rejects_wrong_or_inconclusive_canonical_model_choice(self) -> None:
@@ -89,14 +100,14 @@ class AuthoritativeFindingRunnerTests(unittest.TestCase):
                 "[canonical-model-choice] policy=glaurung-any-model-v1 "
                 "attempts=1 completed=1 infeasible=0 probes=2 inconclusive=0 "
                 "unsupported_width=0 unknown=0 no_solver=0 error=0 final_unsat=0\n",
-                required=True,
+                required_policy="glaurung-min-unsigned-v1",
             )
         with self.assertRaisesRegex(RuntimeError, "did not complete every attempt"):
             MODULE.parse_canonical_model_choice(
                 "[canonical-model-choice] policy=glaurung-min-unsigned-v1 "
                 "attempts=2 completed=1 infeasible=0 probes=65 inconclusive=1 "
                 "unsupported_width=0 unknown=1 no_solver=0 error=0 final_unsat=0\n",
-                required=True,
+                required_policy="glaurung-min-unsigned-v1",
             )
 
     def test_accepts_exact_declared_fixed_work_boundary(self) -> None:

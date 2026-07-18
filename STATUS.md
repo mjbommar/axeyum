@@ -322,6 +322,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-18 — ADR-0238 preregisters an extremal-model coverage-union
+  authority control before its result is observed.** The exact ADR-0236 tcpip
+  prefix, pinned source/input identities, 250 ms check wall, 300,000-solve and
+  1,800-second process bounds, and N=3 order-balanced protocol remain fixed.
+  A greatest-unsigned model policy is added beside the accepted least-unsigned
+  policy. Acceptance requires exact reproduction of the rejected any-model
+  and accepted minimum controls, byte-identical ordered findings and complete
+  canonical telemetry per policy and authority, and an identical least/greatest
+  finding union. The maximum population, union size, and relationship to the
+  arbitrary-model union are outcomes rather than gates. Run the committed
+  protocol next; two extrema are not exhaustive model coverage.
+
 - **2026-07-18 — ADR-0236 closes the first measured canonical-authority
   cell without hiding the any-model divergence.** On the same current
   Glaurung/Axeyum revisions, sole-authority binaries, tcpip input, first 15
@@ -2285,20 +2297,21 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
   | ID | Live status | Next acceptance boundary |
   |---|---|---|
-  | **GQ1 real-query profile** | **Map, query/internal attribution, fresh/retained exact-CNF controls, four-driver neutral cold-reset and source-owner-retained SMT breadth, bounded/canonical authority cells, process-isolated corrected-representative end-to-end faithfulness, and deadline-aware generated proof widening DONE (ADR-0187/0188/0213--0236).** cvc5 agrees on all 9,526 checks in both external protocols; 302 raw sinks match under unrestricted sole authority on four drivers; tcpip prefix 15 exposes two stable Z3-only any-model sinks, then reaches exact 110-sink and exploration-counter parity under the opt-in unsigned-minimum policy; all 74 UNSAT rows in the corrected five-driver representative recheck both CNF DRAT and stronger end-to-end certificates in two clean process-isolated runs, and a 1 ms kill control retains all 74 rows; all 1,505 generated CNF proofs recheck, with 1,487/1,505 stronger generated certificates under policy; BatSat beats Z3 Boolean on retained Axeyum CNF despite native warm Z3 winning end-to-end | Add wider authority/coverage-union and wider real proof cells |
+  | **GQ1 real-query profile** | **Map, query/internal attribution, fresh/retained exact-CNF controls, four-driver neutral cold-reset and source-owner-retained SMT breadth, bounded/canonical authority cells, process-isolated corrected-representative end-to-end faithfulness, and deadline-aware generated proof widening DONE (ADR-0187/0188/0213--0236); extremal union PREREGISTERED (ADR-0238).** cvc5 agrees on all 9,526 checks in both external protocols; 302 raw sinks match under unrestricted sole authority on four drivers; tcpip prefix 15 exposes two stable Z3-only any-model sinks, then reaches exact 110-sink and exploration-counter parity under the opt-in unsigned-minimum policy; all 74 UNSAT rows in the corrected five-driver representative recheck both CNF DRAT and stronger end-to-end certificates in two clean process-isolated runs, and a 1 ms kill control retains all 74 rows; all 1,505 generated CNF proofs recheck, with 1,487/1,505 stronger generated certificates under policy; BatSat beats Z3 Boolean on retained Axeyum CNF despite native warm Z3 winning end-to-end | Run ADR-0238 exactly, then add wider authority and real proof cells |
   | **GQ2 cheap cold tier** | **WIP with three accepted rewrite tranches; batch integration deferred.** Canonical v4 reaches 5.625 s / 0.730x Z3; ADR-0156 preserves replay but is 18.8% slower than one-shot | Keep canonical v4 as the measured one-shot policy; do not recommend fresh incremental batch until its clause/entry overhead closes |
   | **GQ3 coercion/affine peepholes** | **DONE for current measured shapes (ADR-0159).** Clean repeated path-paired ablations are fail-closed; `extract_extend` is a material lowering-only win, while all four measured structural rules change zero AIG nodes/clauses | Keep rules enabled. Reopen only for a new residual shape with a specific downstream hypothesis and the same causal ablation gate |
   | **GQ4 cold relevant bits** | **v1 and v2 DEFERRED after failed real gates.** v1 regresses ~1.42x→4.49x. V2 rejection overhead is bounded, but defaults admit 0/128 and +0.62% total; a 33-query moderate policy removes 632 AIG nodes/zero clauses and regresses bit blast 3.14% | Keep both explicit/off. Reopen only with an AIG/CNF-cone estimator or after word rewrites materially change the residual; do not tune thresholds further |
   | **GQ5 AIG/CNF construction** | **Cold lane active; broad warm lane closed by ADR-0219.** Retention removes 98--99% of cold structure and leaves 11--20% warm CNF | Continue cold only from causal gates; report Dptf UNSAT CNF additions as a cross-core covariate |
   | **GQ6 cold SAT/CDCL** | **Fresh and retained exact-CNF controls DONE (ADR-0220/0221).** Proof core beats fresh BatSat before checking; retained BatSat beats retained Z3 Boolean | Do not select a core rewrite from Dptf; reopen only on a SAT-dominant family with a neutral core gap and deterministic limits |
-  | **GQ7 warm delta entry** | **Source identity, fair map, query/internal attribution, fresh/retained CNF controls, four-driver neutral cold-reset plus source-owner-retained SMT, bounded finding parity, and one canonical tcpip authority cell DONE; wider default DEFERRED (ADR-0201--0236).** Neutral same-protocol retention is 16.4x--57.0x below full reset but remains an external textual boundary; canonical tcpip parity changes the shared finding population | Keep direct and canonical policies opt-in; proceed to wider authority/coverage-union evidence |
+  | **GQ7 warm delta entry** | **Source identity, fair map, query/internal attribution, fresh/retained CNF controls, four-driver neutral cold-reset plus source-owner-retained SMT, bounded finding parity, and one canonical tcpip authority cell DONE; extremal union PREREGISTERED; wider default DEFERRED (ADR-0201--0238).** Neutral same-protocol retention is 16.4x--57.0x below full reset but remains an external textual boundary; canonical tcpip parity changes the shared finding population | Keep direct and canonical policies opt-in; run the exact ADR-0238 union control before widening |
   | **GQ8 verdict/CNF cache** | **DONE for available families (ADR-0192).** Clean repeated evidence admits exact same-arena scalar SAT reuse only in path-owned Glaurung sessions; fixed bounds, traffic partitions, cleanup gauges, findings, and replay are enforced | Preserve explicit off and re-gate new families; Axeyum's generic cache remains opt-in and ordinary UNSAT/Unknown/prefix verdicts remain excluded |
   | **GQ9 auto cost model/docs** | **DONE for available families (ADR-0186).** Clean adaptive repeat clears every alarm over 92,721 checks; downstream explorer default has explicit off/fixed controls | Re-gate newly captured families; do not broaden this Glaurung-specific default into Axeyum's generic API |
   | **GQ10 real-lifter regression tier** | **Native continuation admission DONE; wider direct-delta default DEFERRED (ADR-0205--0212).** The accepted tcpip trace admits bounded continuation. The new complete 85,449-event / 17,400-check `dxgkrnl` trace and independent replay preserve exact no-op behavior and every correctness/lifecycle gauge, but ordinary-core time CV is 14.430%/8.306% and slower-core outcomes drift | Keep direct delta opt-in. Repeat under a quieter predeclared environment or add another no-timeout IOCTL driver; route `win32k` to a system-service/callout frontend |
 
-  **Next actions:** (1) after ADR-0236's completed first canonical tcpip cell,
-  add a wider fixed-work or deterministic multi-model/coverage-union authority
-  tier while keeping the policy opt-in; (2) after
+  **Next actions:** (1) run ADR-0238's exact preregistered least/greatest
+  tcpip coverage-union authority tier, preserve its rejected any-model and
+  accepted minimum controls, and keep both extremal policies opt-in; then widen
+  fixed work or model exploration without calling two extrema exhaustive; (2) after
   ADR-0235's completed process-isolated representative real-query denominator,
   add wider corrected real manifests; (3) widen
   ADR-0237's accepted four-oracle/edge-frequency gate as a standing bounded
