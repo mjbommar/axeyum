@@ -35,6 +35,19 @@ def run(backend: str, *, analyzed: int = 10, boundary: str = "fixed-work-limit")
 
 
 class AuthoritativeFindingRunnerTests(unittest.TestCase):
+    def test_accepts_and_verifies_reported_check_timeout(self) -> None:
+        stderr = (
+            "[solver] backend=z3 solves=10 solver_time=2.0ms "
+            "avg=200.0us/solve check_timeout_ms=1000\n"
+        )
+        self.assertEqual(
+            MODULE.parse_check_timeout_ms(stderr, expected=1000), 1000
+        )
+        with self.assertRaisesRegex(RuntimeError, "check-timeout mismatch"):
+            MODULE.parse_check_timeout_ms(stderr, expected=2000)
+        with self.assertRaisesRegex(RuntimeError, "missing solver check-timeout"):
+            MODULE.parse_check_timeout_ms("", expected=1000)
+
     def test_accepts_complete_canonical_model_choice_footer(self) -> None:
         telemetry = MODULE.parse_canonical_model_choice(
             "[canonical-model-choice] policy=glaurung-min-unsigned-v1 "

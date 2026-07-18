@@ -27,6 +27,7 @@ CANONICAL_MODEL_CHOICE_RE = re.compile(
     r"\[canonical-model-choice\] policy=(\S+) attempts=(\d+) completed=(\d+) "
     r"probes=(\d+) inconclusive=(\d+)"
 )
+CHECK_TIMEOUT_RE = re.compile(r"\[solver\][^\n]* check_timeout_ms=(\d+)")
 TIME_RE = re.compile(
     rf"{TIME_PREFIX} elapsed_seconds=([0-9.]+) max_rss_kib=(\d+) exit=(\d+)"
 )
@@ -117,6 +118,20 @@ def parse_canonical_model_choice(
     return telemetry
 
 
+def parse_check_timeout_ms(stderr: str, *, expected: int | None) -> int | None:
+    match = CHECK_TIMEOUT_RE.search(stderr)
+    if match is None:
+        if expected is not None:
+            raise RuntimeError("missing solver check-timeout telemetry")
+        return None
+    observed = int(match.group(1))
+    if expected is not None and observed != expected:
+        raise RuntimeError(
+            f"solver check-timeout mismatch: expected {expected}, observed {observed}"
+        )
+    return observed
+
+
 def validate_coverage_boundary(
     *,
     tail: str,
@@ -155,6 +170,7 @@ def run_one(
     process_timeout_seconds: int,
     max_analyzed_functions: int | None,
     canonical_model_choice_required: bool,
+    expected_check_timeout_ms: int | None,
 ) -> dict[str, Any]:
     environment = os.environ.copy()
     for inherited in (
@@ -163,6 +179,7 @@ def run_one(
         "GLAURUNG_AXEYUM_PROFILE_DIR",
         "GLAURUNG_ORDERED_TRACE_DIR",
         "GLAURUNG_CANONICAL_MODEL_CHOICE",
+        "GLAURUNG_CHECK_TIMEOUT_MS",
     ):
         environment.pop(inherited, None)
     environment.update(common_environment)
@@ -211,6 +228,9 @@ def run_one(
     canonical_model_choice = parse_canonical_model_choice(
         result.stderr, required=canonical_model_choice_required
     )
+    check_timeout_ms = parse_check_timeout_ms(
+        result.stderr, expected=expected_check_timeout_ms
+    )
     if solver.group(1) != backend:
         raise RuntimeError(f"expected {backend} binary, observed {solver.group(1)}")
     analyzed = int(symbolic.group(4))
@@ -247,6 +267,8 @@ def run_one(
     }
     if canonical_model_choice is not None:
         run["canonical_model_choice"] = canonical_model_choice
+    if check_timeout_ms is not None:
+        run["check_timeout_ms"] = check_timeout_ms
     if backend == "axeyum":
         for prefix, key in (
             ("[axeyum-warm]", "warm"),
@@ -288,6 +310,16 @@ def summarize_driver(runs: list[dict[str, Any]]) -> dict[str, Any]:
     }
     if len(authority_coverage) != 1:
         raise RuntimeError("authority coverage populations differ")
+
+    check_timeout_presence = {"check_timeout_ms" in run for run in runs}
+    if len(check_timeout_presence) != 1:
+        raise RuntimeError("solver check-timeout telemetry availability drift")
+    check_timeout_ms: int | None = None
+    if check_timeout_presence.pop():
+        check_timeouts = {int(run["check_timeout_ms"]) for run in runs}
+        if len(check_timeouts) != 1:
+            raise RuntimeError("solver check-timeout population drift")
+        check_timeout_ms = check_timeouts.pop()
 
     canonical_presence = {
         "canonical_model_choice" in run for run in runs
@@ -390,6 +422,7 @@ def summarize_driver(runs: list[dict[str, Any]]) -> dict[str, Any]:
         },
         "backends": {},
         "canonical_model_choice": canonical_summary,
+        "check_timeout_ms": check_timeout_ms,
     }
     for backend, population in populations.items():
         backend_stability = stability[backend]
@@ -486,6 +519,11 @@ def main() -> None:
             "model-selection policy"
         ),
     )
+    parser.add_argument(
+        "--check-timeout-ms",
+        type=int,
+        help="explicit shared per-check timeout for both native solver backends",
+    )
     parser.add_argument("--out", type=Path)
     args = parser.parse_args()
     if args.repetitions < 2:
@@ -500,6 +538,8 @@ def main() -> None:
             parser.error(f"--{name.replace('_', '-')} must be positive")
     if args.max_analyzed_functions is not None and args.max_analyzed_functions < 1:
         parser.error("--max-analyzed-functions must be positive")
+    if args.check_timeout_ms is not None and not 1 <= args.check_timeout_ms <= 60_000:
+        parser.error("--check-timeout-ms must be from 1 to 60000")
 
     repository = args.glaurung_repo.resolve()
     axeyum_repository = Path(__file__).resolve().parents[1]
@@ -527,6 +567,8 @@ def main() -> None:
     }
     if args.canonical_model_choice:
         common_environment["GLAURUNG_CANONICAL_MODEL_CHOICE"] = "1"
+    if args.check_timeout_ms is not None:
+        common_environment["GLAURUNG_CHECK_TIMEOUT_MS"] = str(args.check_timeout_ms)
     if args.max_analyzed_functions is not None:
         common_environment["IOCTLANCE_MAX_ANALYZED_FUNCTIONS"] = str(
             args.max_analyzed_functions
@@ -550,6 +592,7 @@ def main() -> None:
                         args.process_timeout_secs,
                         args.max_analyzed_functions,
                         args.canonical_model_choice,
+                        args.check_timeout_ms,
                     )
                 )
         try:
@@ -596,6 +639,7 @@ def main() -> None:
         "environment": common_environment,
         "process_timeout_seconds": args.process_timeout_secs,
         "canonical_model_choice_required": args.canonical_model_choice,
+        "check_timeout_ms_required": args.check_timeout_ms,
         "repetitions": args.repetitions,
         "order": "odd repetitions Z3/Axeyum; even repetitions Axeyum/Z3",
         "drivers": driver_reports,
