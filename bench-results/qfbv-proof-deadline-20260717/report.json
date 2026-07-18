@@ -1,0 +1,80 @@
+{
+  "schema": "axeyum.qfbv-proof-deadline-coverage.v1",
+  "date": "2026-07-17",
+  "source": {
+    "revision": "86791f90b259797ae6d53a3f33adc873b9c9cb8e",
+    "tracked_dirty": false,
+    "test": "crates/axeyum-solver/tests/bv_differential_fuzz.rs"
+  },
+  "toolchain": {
+    "rustc": "rustc 1.97.0-nightly (f53b654a8 2026-04-30)",
+    "cargo": "cargo 1.97.0-nightly (eb9b60f1f 2026-04-24)",
+    "profile": "test"
+  },
+  "command": "AXEYUM_QFBV_PROOF_SAMPLE_STRIDE=1 AXEYUM_QFBV_PROOF_DEADLINE_MS=100 cargo test -p axeyum-solver --all-features --test bv_differential_fuzz bv_differential_fuzz_disagree_zero -- --nocapture",
+  "policy": {
+    "selection": "jointly UNSAT and instance width <= 8 and seed mod 1 = 0",
+    "proof_search_deadline_ms_per_route": 100,
+    "deadline_scope": "proof-producing SAT search only; deterministic lowering, miter/CNF construction, and completed-proof checking run to completion",
+    "expiry_outcome": "Inconclusive for CNF DRAT or NotCertified for end-to-end; never SAT or UNSAT"
+  },
+  "base_population": {
+    "generated_instances": 4000,
+    "jointly_decided": 4000,
+    "agreements": 4000,
+    "sat": 1487,
+    "unsat": 2513,
+    "axeyum_unknown": 0,
+    "axeyum_timeout": 0,
+    "axeyum_crashed": 0,
+    "z3_unknown": 0,
+    "sat_model_replay_passed": 1487,
+    "sat_model_replay_declined": 0
+  },
+  "selected_denominator": {
+    "unsat": 1505,
+    "fraction_of_all_generated_unsat_percent": 59.888579
+  },
+  "cnf_drat": {
+    "attempted": 1505,
+    "proved_and_rechecked": 1505,
+    "inconclusive": 0,
+    "coverage_of_selected_percent": 100.0,
+    "inconclusive_seeds": []
+  },
+  "end_to_end_faithfulness_plus_drat": {
+    "attempted": 1505,
+    "certified_and_rechecked": 1487,
+    "not_certified": 18,
+    "coverage_of_selected_percent": 98.803987,
+    "not_certified_percent": 1.196013,
+    "not_certified_seeds": [
+      83,
+      359,
+      741,
+      1063,
+      1094,
+      1275,
+      1437,
+      1495,
+      1873,
+      1906,
+      2635,
+      2793,
+      2826,
+      2907,
+      2986,
+      3127,
+      3447,
+      3638
+    ]
+  },
+  "operator_width_gate": {
+    "covered_widths": [1, 4, 8, 16, 32],
+    "covered_operator_classes": 35,
+    "disagreements": 0
+  },
+  "neutral_oracle_note": "cvc5 was unavailable in this proof-specific run; ADR-0225 separately records exhaustive cvc5 agreement on the same 4,000 generated formulas",
+  "elapsed_seconds": 554.96,
+  "result": "passed"
+}

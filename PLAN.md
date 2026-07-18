@@ -179,6 +179,15 @@ session state.
 > end-to-end denominator. Next proof work is deadline-aware faithfulness on real
 > rows and wider captured manifests, not relabeling proof-core timings as fair
 > solver performance.
+> ADR-0231 removes the generated denominator's indefinite proof-search block.
+> A public bounded miter/composed API maps expiry only to
+> `Inconclusive`/`NotCertified`, and the standing harness records exact seeds.
+> The complete width<=8 cohort selects 1,505/2,513 generated UNSAT
+> (59.888579%): CNF DRAT rechecks for all 1,505, while 1,487 stronger
+> faithfulness-plus-DRAT certificates recheck (98.803987%) and 18 remain
+> uncovered under 100 ms. Keep those 18 in the denominator. The remaining
+> deadline work is whole-certificate process isolation and real-query
+> faithfulness, not excluding slow rows or claiming a hard 100 ms API wall.
 
 > **P0 soundness stop contained (2026-07-15, ADR-0165).** Historical commit
 > `2cb298e2` reproduced unrestricted large elimination from a two-constructor
@@ -676,7 +685,7 @@ count as decisions or speedups.
 
 | ID | Roadmap item | Scope and exit criterion |
 |---|---|---|
-| **GQ1** | **Capture and profile real queries first** | **Four-driver map, query/internal attribution, fresh/retained exact-CNF controls, neutral cold-reset SMT breadth, bounded authoritative finding parity, and representative real-query DRAT coverage DONE (ADR-0187/0188/0197/0213--0230).** cvc5 agrees on all 9,526 checks; 302 raw sinks match under sole Z3/Axeyum authority; all 64 UNSAT rows in the 128-query proof manifest recheck; retained BatSat beats Z3 Boolean on Axeyum CNF despite native warm Z3 winning end-to-end. Add a topology-equivalent neutral and timeout-sensitive/wider authority and proof cells. |
+| **GQ1** | **Capture and profile real queries first** | **Four-driver map, query/internal attribution, fresh/retained exact-CNF controls, neutral cold-reset SMT breadth, bounded authoritative finding parity, representative real-query DRAT, and deadline-aware generated proof widening DONE (ADR-0187/0188/0197/0213--0231).** cvc5 agrees on all 9,526 checks; 302 raw sinks match under sole Z3/Axeyum authority; all 64 real UNSAT DRAT proofs and 1,505 generated CNF proofs recheck, with 1,487/1,505 stronger generated certificates under policy; retained BatSat beats Z3 Boolean on Axeyum CNF despite native warm Z3 winning end-to-end. Add a topology-equivalent neutral and timeout-sensitive/wider authority plus real faithfulness cells. |
 | **GQ2** | **Cheap always-on cold simplification tier** | Add a bounded, denotation-preserving one-shot tier for constant folding and trivial identities whose own cost is measured. Add a size/shape and cold-vs-warm policy that selects cheap, configured, or no preprocessing. Exit only when cold end-to-end time is non-worse in aggregate and improves the target class at the GQ1 validity gates. |
 | **GQ3** | **Coercion-cancellation peepholes and causal telemetry** | **Current measured tranche complete; use ablation as policy evidence.** Exact nested/concat/extension/coercion rules and ADR-0159's repeated default-minus-rule comparator are landed. `extract_extend` improves lowering, but all four measured rules change zero AIG nodes and clauses. Do not globally delete sound rewrites because one corpus does not fire them; instead, keep a Glaurung policy only for rules with measured reach/cost and reopen register-slice-specific work only when an ablation demonstrates downstream AIG/CNF or native-time reduction. |
 | **GQ4** | **Cold demand-driven bit-slice reduction** | **Out of the active queue.** ADR-0157 v1 is correct but regresses the real ratio about 1.42x→4.49x; ADR-0158's conservative admission is a safe no-op but does not improve the required family. Both remain explicit/off. Do not tune thresholds further on this corpus; only a qualitatively different constant-cost admission proof and a fresh client gate can reopen GQ4. |
@@ -722,7 +731,7 @@ artifact evidence below governs.
 | 9 | Self-rechecked DRAT UNSAT evidence is a deployability/correctness advantage over the current Z3 crate path. | Keep `UnsatProof::recheck()` prominent in examples, capability tables, and performance reporting. No optimization may bypass proof generation/recheck where proof-bearing UNSAT is promised. |
 | 10 | Pure Rust/no-C and the `qfbv`-only profile reduce deployment cost; benchmark methodology must reject fast failure. | Preserve the no-native default and lean feature profile; gate WASM claims on an actual target build rather than aspiration. Every comparison must report per-backend SAT, UNSAT, Unknown, Error, decided rate, replay, and exact work/finding identity. A faster number with reduced work or increased nondecisions is invalid until attributed—the pre-fix tcpip/dxgkrnl ratios are explicitly withdrawn. |
 
-**Publication execution order (2026-07-17, ADR-0213--0230 plus ranked review;
+**Publication execution order (2026-07-17, ADR-0213--0231 plus ranked review;
 supersedes performance-claim ordering below).** Product admission and paper
 evidence are now distinct:
 
@@ -756,8 +765,12 @@ evidence are now distinct:
    169/169 rechecked end to end but only 6.725030% of generated UNSAT; add a
    deadline-aware widening harness. ADR-0230 adds a separate real-query CNF
    DRAT denominator: 64/64 representative UNSAT rows recheck, alongside 64/64
-   SAT model replays and complete Z3/manifest agreement. Add deadline-aware
-   term-to-CNF faithfulness on real rows; never merge the two assurance levels.
+   SAT model replays and complete Z3/manifest agreement. ADR-0231 then widens
+   generated proof selection to all 1,505 width<=8 UNSAT rows under a declared
+   search deadline: CNF DRAT is 1,505/1,505 and stronger certification is
+   1,487/1,505 with 18 exact uncovered seeds retained. Add whole-certificate
+   isolation and term-to-CNF faithfulness on real rows; never merge the two
+   assurance levels.
    Keep invalid consumer states separate from valid-formula fuzz.
 3. **Neutral baselines and oracles — four-driver cold-reset breadth DONE
    (ADR-0222/0223), warm API WIP:** cvc5 1.3.4 agrees on all 9,526 accepted
