@@ -331,7 +331,12 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   arbitrary-model control, and accepted minimum/maximum hashes remain fixed.
   Acceptance requires exact site-policy output/work/telemetry parity and an
   identical four-policy union. Growth and recovery of the 33 arbitrary-only
-  rows are outcomes, not gates. Run the committed protocol next.
+  rows are outcomes, not gates. The first exact attempt reproduced the rejected
+  arbitrary-model control and all six exact minimum outputs, then failed closed
+  on post-run source identity after a concurrent tracked planning-document edit;
+  maximum and both site schedules were unobserved. Preserve that inadmissible
+  attempt and rerun the unchanged protocol from detached preregistration commit
+  `57ee6720`.
 
 - **2026-07-18 — ADR-0238 accepts bounded extremal-model coverage-union
   authority parity and rejects a finding-preservation claim.** The exact
@@ -2324,10 +2329,11 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   | **GQ9 auto cost model/docs** | **DONE for available families (ADR-0186).** Clean adaptive repeat clears every alarm over 92,721 checks; downstream explorer default has explicit off/fixed controls | Re-gate newly captured families; do not broaden this Glaurung-specific default into Axeyum's generic API |
   | **GQ10 real-lifter regression tier** | **Native continuation admission DONE; wider direct-delta default DEFERRED (ADR-0205--0212).** The accepted tcpip trace admits bounded continuation. The new complete 85,449-event / 17,400-check `dxgkrnl` trace and independent replay preserve exact no-op behavior and every correctness/lifecycle gauge, but ordinary-core time CV is 14.430%/8.306% and slower-core outcomes drift | Keep direct delta opt-in. Repeat under a quieter predeclared environment or add another no-timeout IOCTL driver; route `win32k` to a system-service/callout frontend |
 
-  **Next actions:** (1) run ADR-0239's exact preregistered four-schedule tcpip
+  **Next actions:** (1) rerun ADR-0239's exact preregistered four-schedule tcpip
   authority ensemble, preserving the rejected any-model and accepted
-  minimum/maximum controls; keep every canonical policy opt-in and never call
-  four schedules exhaustive; then widen fixed work; (2) after
+  minimum/maximum controls, from detached Axeyum commit `57ee6720` so unrelated
+  workspace edits cannot perturb source identity; keep every canonical policy
+  opt-in and never call four schedules exhaustive; then widen fixed work; (2) after
   ADR-0235's completed process-isolated representative real-query denominator,
   add wider corrected real manifests; (3) widen
   ADR-0237's accepted four-oracle/edge-frequency gate as a standing bounded

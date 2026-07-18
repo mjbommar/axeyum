@@ -185,7 +185,12 @@ session state.
 > boundary. Acceptance requires exact reproduction of all three prior controls,
 > per-policy output/work/telemetry parity, and an identical four-policy union;
 > union growth and recovery of the 33 arbitrary-only rows are explicitly not
-> preselected. Run this committed campaign next and preserve a negative result.
+> preselected. The first exact attempt reproduced the rejected arbitrary-model
+> and all six minimum controls, then failed closed when a concurrent tracked
+> planning-document edit changed Axeyum source identity; maximum and both site
+> schedules were never observed. Preserve that inadmissible attempt and rerun
+> the unchanged committed campaign from detached preregistration commit
+> `57ee6720`, then preserve its result whether positive or negative.
 > ADR-0226 adds the first explicit proof denominator. Of 2,513 generated UNSAT
 > rows, a predeclared width<=8/seed-divisible-by-4 subset selects 169 (6.725030%):
 > all 169 carry independently rechecked CNF DRAT and end-to-end

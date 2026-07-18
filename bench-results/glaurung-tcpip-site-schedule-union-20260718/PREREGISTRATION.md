@@ -25,3 +25,18 @@ explicit.
 No favorable site-policy population, union growth, recovery of prior
 arbitrary-only rows, or preservation result is preselected. No full site-hash
 campaign has been run at preregistration time.
+
+## Fail-closed attempt amendment
+
+The first exact attempt stopped after the arbitrary-model and minimum controls
+when a concurrent tracked planning-document edit changed the main Axeyum
+worktree identity during measurement. The arbitrary-model rejection and all
+six exact minimum outputs reproduced, but the post-run source gate correctly
+made the attempt inadmissible. Maximum and both site-hash schedules were not
+observed. The retained files and hashes are recorded in
+[`attempt-1-source-drift/README.md`](attempt-1-source-drift/README.md).
+
+Rerun the exact unchanged protocol from a detached Axeyum worktree at
+preregistration commit `57ee6720`. This is measurement-environment isolation,
+not a change to source, input, policies, seeds, order, fixed work, acceptance
+criteria, or resource bounds.

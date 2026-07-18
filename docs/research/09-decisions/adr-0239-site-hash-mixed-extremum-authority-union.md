@@ -81,6 +81,22 @@ both directions and proves the schedules complementary. All 25 affected
 runner/analyzer tests, Python syntax checks, legacy artifact replay, and shell
 validation pass. These engineering checks are not campaign evidence.
 
+### Fail-closed attempt history
+
+The first exact attempt reproduced the rejected arbitrary-model control and all
+six minimum-policy outputs, including the exact 110-finding ordered-list hash,
+solve counts, and canonical telemetry. It then failed the post-run Axeyum source
+identity gate because a concurrent tracked planning-document edit appeared in
+the main worktree during measurement. The runner stopped before maximum or
+either site-hash policy was observed. Preserve this attempt as inadmissible
+provenance; do not count it as campaign evidence.
+
+Rerun the same committed runner from a detached Axeyum worktree at the exact
+preregistration commit `57ee6720`. The isolated worktree prevents unrelated
+workspace writes from changing measured source identity. No experiment source,
+input, policy, seed, execution order, fixed-work boundary, acceptance gate, or
+resource bound changes.
+
 ## Consequences
 
 If accepted, the paper may report authority parity for this bounded
