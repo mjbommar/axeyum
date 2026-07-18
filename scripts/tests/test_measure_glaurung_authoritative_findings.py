@@ -35,6 +35,47 @@ def run(backend: str, *, analyzed: int = 10, boundary: str = "fixed-work-limit")
 
 
 class AuthoritativeFindingRunnerTests(unittest.TestCase):
+    def test_accepts_complete_canonical_model_choice_footer(self) -> None:
+        telemetry = MODULE.parse_canonical_model_choice(
+            "[canonical-model-choice] policy=glaurung-min-unsigned-v1 "
+            "attempts=7 completed=7 probes=455 inconclusive=0\n",
+            required=True,
+        )
+        self.assertEqual(
+            telemetry,
+            {
+                "policy": "glaurung-min-unsigned-v1",
+                "attempts": 7,
+                "completed": 7,
+                "probes": 455,
+                "inconclusive": 0,
+            },
+        )
+
+    def test_rejects_missing_or_unexercised_canonical_model_choice(self) -> None:
+        with self.assertRaisesRegex(RuntimeError, "missing canonical-model-choice"):
+            MODULE.parse_canonical_model_choice("", required=True)
+        with self.assertRaisesRegex(RuntimeError, "was not exercised"):
+            MODULE.parse_canonical_model_choice(
+                "[canonical-model-choice] policy=glaurung-min-unsigned-v1 "
+                "attempts=0 completed=0 probes=0 inconclusive=0\n",
+                required=True,
+            )
+
+    def test_rejects_wrong_or_inconclusive_canonical_model_choice(self) -> None:
+        with self.assertRaisesRegex(RuntimeError, "unexpected canonical model policy"):
+            MODULE.parse_canonical_model_choice(
+                "[canonical-model-choice] policy=glaurung-any-model-v1 "
+                "attempts=1 completed=1 probes=1 inconclusive=0\n",
+                required=True,
+            )
+        with self.assertRaisesRegex(RuntimeError, "did not complete every attempt"):
+            MODULE.parse_canonical_model_choice(
+                "[canonical-model-choice] policy=glaurung-min-unsigned-v1 "
+                "attempts=2 completed=1 probes=65 inconclusive=1\n",
+                required=True,
+            )
+
     def test_accepts_exact_declared_fixed_work_boundary(self) -> None:
         boundary = MODULE.validate_coverage_boundary(
             tail=" WORK-LIMIT-HIT (fixed reachable-function prefix complete)",
@@ -86,6 +127,39 @@ class AuthoritativeFindingRunnerTests(unittest.TestCase):
             run("axeyum", analyzed=9),
         ]
         with self.assertRaisesRegex(RuntimeError, "authority coverage populations differ"):
+            MODULE.summarize_driver(runs)
+
+    def test_summarizes_stable_canonical_model_choice_populations(self) -> None:
+        runs = [run("z3"), run("z3"), run("axeyum"), run("axeyum")]
+        for candidate in runs:
+            candidate["canonical_model_choice"] = {
+                "policy": "glaurung-min-unsigned-v1",
+                "attempts": 2 if candidate["backend"] == "z3" else 3,
+                "completed": 2 if candidate["backend"] == "z3" else 3,
+                "probes": 130 if candidate["backend"] == "z3" else 195,
+                "inconclusive": 0,
+            }
+        summary = MODULE.summarize_driver(runs)
+        self.assertEqual(
+            summary["canonical_model_choice"]["backends"]["z3"]["attempts"], 2
+        )
+        self.assertEqual(
+            summary["canonical_model_choice"]["backends"]["axeyum"]["attempts"],
+            3,
+        )
+
+    def test_rejects_canonical_model_choice_telemetry_drift(self) -> None:
+        runs = [run("z3"), run("z3"), run("axeyum"), run("axeyum")]
+        for candidate in runs:
+            candidate["canonical_model_choice"] = {
+                "policy": "glaurung-min-unsigned-v1",
+                "attempts": 2,
+                "completed": 2,
+                "probes": 130,
+                "inconclusive": 0,
+            }
+        runs[1]["canonical_model_choice"]["probes"] = 129
+        with self.assertRaisesRegex(RuntimeError, "canonical model telemetry drift"):
             MODULE.summarize_driver(runs)
 
     def test_accepts_stable_exact_authority_population(self) -> None:

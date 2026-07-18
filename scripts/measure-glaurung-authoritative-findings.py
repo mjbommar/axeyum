@@ -23,6 +23,10 @@ SOLVER_RE = re.compile(
     r"\[solver\] backend=(\S+) solves=(\d+) solver_time=([0-9.]+)ms "
     r"avg=([0-9.]+)us/solve"
 )
+CANONICAL_MODEL_CHOICE_RE = re.compile(
+    r"\[canonical-model-choice\] policy=(\S+) attempts=(\d+) completed=(\d+) "
+    r"probes=(\d+) inconclusive=(\d+)"
+)
 TIME_RE = re.compile(
     rf"{TIME_PREFIX} elapsed_seconds=([0-9.]+) max_rss_kib=(\d+) exit=(\d+)"
 )
@@ -77,6 +81,42 @@ def parse_key_values(line: str) -> dict[str, int | str]:
     return values
 
 
+def parse_canonical_model_choice(
+    stderr: str, *, required: bool
+) -> dict[str, int | str] | None:
+    match = CANONICAL_MODEL_CHOICE_RE.search(stderr)
+    if match is None:
+        if required:
+            raise RuntimeError("missing canonical-model-choice row")
+        return None
+    telemetry: dict[str, int | str] = {
+        "policy": match.group(1),
+        "attempts": int(match.group(2)),
+        "completed": int(match.group(3)),
+        "probes": int(match.group(4)),
+        "inconclusive": int(match.group(5)),
+    }
+    if not required:
+        return telemetry
+    if telemetry["policy"] != "glaurung-min-unsigned-v1":
+        raise RuntimeError(
+            f"unexpected canonical model policy: {telemetry['policy']}"
+        )
+    attempts = int(telemetry["attempts"])
+    completed = int(telemetry["completed"])
+    probes = int(telemetry["probes"])
+    inconclusive = int(telemetry["inconclusive"])
+    if attempts == 0:
+        raise RuntimeError("canonical model policy was not exercised")
+    if completed + inconclusive != attempts:
+        raise RuntimeError("canonical model attempt accounting is inconsistent")
+    if completed != attempts or inconclusive != 0:
+        raise RuntimeError("canonical model policy did not complete every attempt")
+    if probes < completed:
+        raise RuntimeError("canonical model probe accounting is inconsistent")
+    return telemetry
+
+
 def validate_coverage_boundary(
     *,
     tail: str,
@@ -114,6 +154,7 @@ def run_one(
     common_environment: dict[str, str],
     process_timeout_seconds: int,
     max_analyzed_functions: int | None,
+    canonical_model_choice_required: bool,
 ) -> dict[str, Any]:
     environment = os.environ.copy()
     for inherited in (
@@ -121,6 +162,7 @@ def run_one(
         "GLAURUNG_FAIR_SHADOW",
         "GLAURUNG_AXEYUM_PROFILE_DIR",
         "GLAURUNG_ORDERED_TRACE_DIR",
+        "GLAURUNG_CANONICAL_MODEL_CHOICE",
     ):
         environment.pop(inherited, None)
     environment.update(common_environment)
@@ -166,6 +208,9 @@ def run_one(
     symbolic = require_match(SYMBOLIC_RE, result.stderr, "symbolic")
     solver = require_match(SOLVER_RE, result.stderr, "solver")
     timing = require_match(TIME_RE, result.stderr, "time")
+    canonical_model_choice = parse_canonical_model_choice(
+        result.stderr, required=canonical_model_choice_required
+    )
     if solver.group(1) != backend:
         raise RuntimeError(f"expected {backend} binary, observed {solver.group(1)}")
     analyzed = int(symbolic.group(4))
@@ -200,6 +245,8 @@ def run_one(
         "max_rss_kib": int(timing.group(2)),
         "time_exit": int(timing.group(3)),
     }
+    if canonical_model_choice is not None:
+        run["canonical_model_choice"] = canonical_model_choice
     if backend == "axeyum":
         for prefix, key in (
             ("[axeyum-warm]", "warm"),
@@ -241,6 +288,39 @@ def summarize_driver(runs: list[dict[str, Any]]) -> dict[str, Any]:
     }
     if len(authority_coverage) != 1:
         raise RuntimeError("authority coverage populations differ")
+
+    canonical_presence = {
+        "canonical_model_choice" in run for run in runs
+    }
+    if len(canonical_presence) != 1:
+        raise RuntimeError("canonical model telemetry availability drift")
+    canonical_available = canonical_presence.pop()
+    canonical_summary: dict[str, Any] | None = None
+    if canonical_available:
+        canonical_keys = (
+            "policy",
+            "attempts",
+            "completed",
+            "probes",
+            "inconclusive",
+        )
+        policies = {
+            str(run["canonical_model_choice"]["policy"]) for run in runs
+        }
+        if len(policies) != 1:
+            raise RuntimeError("canonical model policy drift")
+        canonical_summary = {"policy": policies.pop(), "backends": {}}
+        for backend, population in populations.items():
+            telemetry_rows = {
+                tuple(run["canonical_model_choice"][key] for key in canonical_keys)
+                for run in population
+            }
+            if len(telemetry_rows) != 1:
+                raise RuntimeError(f"{backend} canonical model telemetry drift")
+            values = telemetry_rows.pop()
+            canonical_summary["backends"][backend] = dict(
+                zip(canonical_keys, values)
+            )
 
     telemetry_presence = {
         all(key in run for key in ("warm", "sat_cache", "serial_owner"))
@@ -309,6 +389,7 @@ def summarize_driver(runs: list[dict[str, Any]]) -> dict[str, Any]:
             "boundary": populations["z3"][0]["coverage_boundary"],
         },
         "backends": {},
+        "canonical_model_choice": canonical_summary,
     }
     for backend, population in populations.items():
         backend_stability = stability[backend]
@@ -397,6 +478,14 @@ def main() -> None:
     parser.add_argument("--solve-budget", type=int, default=20000)
     parser.add_argument("--solve-secs", type=int, default=60)
     parser.add_argument("--process-timeout-secs", type=int, default=600)
+    parser.add_argument(
+        "--canonical-model-choice",
+        action="store_true",
+        help=(
+            "enable and require Glaurung's backend-independent unsigned-minimum "
+            "model-selection policy"
+        ),
+    )
     parser.add_argument("--out", type=Path)
     args = parser.parse_args()
     if args.repetitions < 2:
@@ -436,6 +525,8 @@ def main() -> None:
         "IOCTLANCE_SOLVE_BUDGET": str(args.solve_budget),
         "IOCTLANCE_SOLVE_SECS": str(args.solve_secs),
     }
+    if args.canonical_model_choice:
+        common_environment["GLAURUNG_CANONICAL_MODEL_CHOICE"] = "1"
     if args.max_analyzed_functions is not None:
         common_environment["IOCTLANCE_MAX_ANALYZED_FUNCTIONS"] = str(
             args.max_analyzed_functions
@@ -458,6 +549,7 @@ def main() -> None:
                         common_environment,
                         args.process_timeout_secs,
                         args.max_analyzed_functions,
+                        args.canonical_model_choice,
                     )
                 )
         try:
@@ -487,7 +579,7 @@ def main() -> None:
         failures.append("source identity changed during measurement")
 
     report = {
-        "schema": "axeyum.glaurung-authoritative-finding-parity.v2",
+        "schema": "axeyum.glaurung-authoritative-finding-parity.v3",
         "accepted": not failures,
         "failures": failures,
         "glaurung": glaurung_identity,
@@ -503,6 +595,7 @@ def main() -> None:
         },
         "environment": common_environment,
         "process_timeout_seconds": args.process_timeout_secs,
+        "canonical_model_choice_required": args.canonical_model_choice,
         "repetitions": args.repetitions,
         "order": "odd repetitions Z3/Axeyum; even repetitions Axeyum/Z3",
         "drivers": driver_reports,
