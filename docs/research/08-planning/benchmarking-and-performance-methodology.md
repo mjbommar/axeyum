@@ -623,6 +623,16 @@ records the contract and the first measured baselines.
   slice-partial, 18 arithmetic, 5 comparison, and 1 mixed. Max certificate
   work is about 154 ms, so retain the cooperative-deadline and separate-timing
   caveats without claiming that this real-query run exercised expiry.
+  ADR-0235 closes that whole-call caveat at the artifact boundary. Artifact v34
+  can launch the same pinned executable as a source-hashed one-query worker;
+  the parent wall covers worker parse, construction, both proof searches, and
+  both completed-proof self-rechecks, then kills/reaps an overdue worker. Two
+  clean corrected-representative runs certify 74/74 under a 1500 ms process
+  wall with zero hard timeout or alarm. A same-population 1 ms control retains
+  all 74 UNSAT rows as `not-certified` plus `hard_timeout`, with zero missing
+  partition or false verdict. Process scheduling, one-millisecond polling,
+  kill, and reap add bounded observed return overhead (1.456 ms maximum in the
+  control); keep all worker time outside solver performance.
 - Timeout regressions must pin the exact pathological public or minimized query
   and exercise both admission outcomes: deterministic oversized refusal before
   allocation and cooperative expiry inside admitted superlinear work. Every
