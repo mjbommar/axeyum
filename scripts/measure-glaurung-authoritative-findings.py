@@ -218,12 +218,10 @@ def summarize_driver(runs: list[dict[str, Any]]) -> dict[str, Any]:
         for backend in ("z3", "axeyum")
     }
     for backend, population in populations.items():
-        hashes = {run["findings_sha256"] for run in population}
-        if len(population) * 2 != len(runs) or len(hashes) != 1:
-            raise RuntimeError(f"{backend} finding population is unbalanced or unstable")
+        if len(population) * 2 != len(runs):
+            raise RuntimeError(f"{backend} finding population is unbalanced")
         structural = {
             (
-                run["finding_count"],
                 run["analyzed"],
                 run["analysis_roots"],
                 run["coverage_boundary"],
@@ -270,13 +268,41 @@ def summarize_driver(runs: list[dict[str, Any]]) -> dict[str, Any]:
 
     z3_findings = populations["z3"][0]["findings"]
     axeyum_findings = populations["axeyum"][0]["findings"]
-    z3_set = set(z3_findings)
-    axeyum_set = set(axeyum_findings)
+    stability: dict[str, dict[str, Any]] = {}
+    for backend, population in populations.items():
+        finding_sets = [set(run["findings"]) for run in population]
+        if any(
+            len(candidate) != len(run["findings"])
+            for candidate, run in zip(finding_sets, population)
+        ):
+            raise RuntimeError(f"{backend} emitted duplicate finding rows")
+        stable_findings = set.intersection(*finding_sets)
+        union_findings = set.union(*finding_sets)
+        hashes = sorted({run["findings_sha256"] for run in population})
+        stability[backend] = {
+            "output_stable": len(hashes) == 1,
+            "distinct_hashes": hashes,
+            "stable_finding_count": len(stable_findings),
+            "union_finding_count": len(union_findings),
+            "unstable_findings": sorted(union_findings - stable_findings),
+            "stable_findings": stable_findings,
+            "union_findings": union_findings,
+        }
+    z3_stable = stability["z3"]["stable_findings"]
+    z3_union = stability["z3"]["union_findings"]
+    axeyum_stable = stability["axeyum"]["stable_findings"]
+    axeyum_union = stability["axeyum"]["union_findings"]
+    both_stable = (
+        stability["z3"]["output_stable"]
+        and stability["axeyum"]["output_stable"]
+    )
     result: dict[str, Any] = {
-        "exact_finding_parity": z3_findings == axeyum_findings,
-        "intersection_count": len(z3_set & axeyum_set),
-        "z3_only": sorted(z3_set - axeyum_set),
-        "axeyum_only": sorted(axeyum_set - z3_set),
+        "exact_finding_parity": both_stable and z3_findings == axeyum_findings,
+        "within_backend_stable": both_stable,
+        "stable_intersection_count": len(z3_stable & axeyum_stable),
+        "z3_only": sorted(z3_stable - axeyum_union),
+        "axeyum_only": sorted(axeyum_stable - z3_union),
+        "stability": {},
         "coverage": {
             "analyzed": populations["z3"][0]["analyzed"],
             "reachable": populations["z3"][0]["analysis_roots"],
@@ -285,9 +311,27 @@ def summarize_driver(runs: list[dict[str, Any]]) -> dict[str, Any]:
         "backends": {},
     }
     for backend, population in populations.items():
+        backend_stability = stability[backend]
+        result["stability"][backend] = {
+            key: value
+            for key, value in backend_stability.items()
+            if key not in ("stable_findings", "union_findings")
+        }
         result["backends"][backend] = {
-            "finding_count": population[0]["finding_count"],
-            "findings_sha256": population[0]["findings_sha256"],
+            "finding_count": (
+                population[0]["finding_count"]
+                if backend_stability["output_stable"]
+                else None
+            ),
+            "finding_counts": [run["finding_count"] for run in population],
+            "findings_sha256": (
+                population[0]["findings_sha256"]
+                if backend_stability["output_stable"]
+                else None
+            ),
+            "findings_sha256_per_run": [
+                run["findings_sha256"] for run in population
+            ],
             "solves": [run["solves"] for run in population],
             "solver_time_ms": [run["solver_time_ms"] for run in population],
             "solver_time_median_ms": statistics.median(
@@ -323,11 +367,22 @@ def summarize_driver(runs: list[dict[str, Any]]) -> dict[str, Any]:
 def finding_acceptance_failures(driver: Path, summary: dict[str, Any]) -> list[str]:
     if summary["exact_finding_parity"]:
         return []
-    return [
+    failures = []
+    for backend in ("z3", "axeyum"):
+        stability = summary["stability"][backend]
+        if not stability["output_stable"]:
+            failures.append(
+                f"{driver}: {backend} finding output unstable "
+                f"(distinct-hashes={len(stability['distinct_hashes'])}, "
+                f"stable={stability['stable_finding_count']}, "
+                f"union={stability['union_finding_count']})"
+            )
+    failures.append(
         f"{driver}: exact finding parity failed "
         f"(z3-only={len(summary['z3_only'])}, "
         f"axeyum-only={len(summary['axeyum_only'])})"
-    ]
+    )
+    return failures
 
 
 def main() -> None:

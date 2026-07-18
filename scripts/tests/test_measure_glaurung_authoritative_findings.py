@@ -110,6 +110,23 @@ class AuthoritativeFindingRunnerTests(unittest.TestCase):
         self.assertEqual(len(failures), 1)
         self.assertIn("z3-only=1, axeyum-only=1", failures[0])
 
+    def test_preserves_summary_for_unstable_backend_output(self) -> None:
+        runs = [run("z3"), run("z3"), run("axeyum"), run("axeyum")]
+        runs[1]["findings"] = ["sink-a", "unstable-z3-sink"]
+        runs[1]["findings_sha256"] = "z3-drift"
+        runs[1]["finding_count"] = 2
+        summary = MODULE.summarize_driver(runs)
+        failures = MODULE.finding_acceptance_failures(Path("tcpip.sys"), summary)
+        self.assertFalse(summary["within_backend_stable"])
+        self.assertEqual(summary["stability"]["z3"]["stable_finding_count"], 1)
+        self.assertEqual(summary["stability"]["z3"]["union_finding_count"], 2)
+        self.assertEqual(
+            summary["stability"]["z3"]["unstable_findings"], ["unstable-z3-sink"]
+        )
+        self.assertTrue(
+            any("z3 finding output unstable" in failure for failure in failures)
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
