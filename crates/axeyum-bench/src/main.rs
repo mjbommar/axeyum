@@ -18,13 +18,19 @@
 //!   `[--cnf-clause-budget N] [--require-deterministic-resources]`
 //!   `[--prove-unsat]`
 //!   `[--certify-end-to-end-unsat --end-to-end-deadline-ms N]`
+//!   `[--end-to-end-process-timeout-ms N]`
 //!   `[--require-reproducible-run]`
 //!   `[--compare-z3] [--require-in-process-z3] [--min-decided-percent P]`
 //!   `[--jobs N] [--manifest-jobs N]`
 //! The default build can run the pure Rust `sat-bv` backend. Build with
 //! `--features z3` (or `z3-static`) to enable the Z3 oracle backend.
 
+mod certificate_process;
+
 fn main() -> std::process::ExitCode {
+    if let Some(exit) = certificate_process::maybe_worker_main() {
+        return exit;
+    }
     run::main()
 }
 
@@ -55,7 +61,9 @@ mod run {
     use serde_json::{Value as JsonValue, json};
     use sha2::{Digest, Sha256};
 
-    const ARTIFACT_VERSION: u32 = 33;
+    use crate::certificate_process::{IsolatedStatus, certify_file_isolated};
+
+    const ARTIFACT_VERSION: u32 = 34;
     const CORPUS_MANIFEST_VERSION: u64 = 1;
     const CONTENT_HASH_PREFIX: &str = "sha256:";
     const DETERMINISM_PROFILE: &str = "axeyum-bench-fixed-seeds-v1";
@@ -226,6 +234,7 @@ mod run {
         prove_unsat: bool,
         certify_end_to_end_unsat: bool,
         end_to_end_deadline_ms: Option<u64>,
+        end_to_end_process_timeout_ms: Option<u64>,
         preprocess: bool,
         profile_bit_demand: bool,
         demand_bit_slicing: bool,
@@ -272,6 +281,7 @@ mod run {
             prove_unsat: false,
             certify_end_to_end_unsat: false,
             end_to_end_deadline_ms: None,
+            end_to_end_process_timeout_ms: None,
             preprocess: false,
             profile_bit_demand: false,
             demand_bit_slicing: false,
@@ -391,6 +401,13 @@ mod run {
             "--certify-end-to-end-unsat" => parsed.certify_end_to_end_unsat = true,
             "--end-to-end-deadline-ms" => {
                 parsed.end_to_end_deadline_ms = Some(
+                    next_value(args, flag)?
+                        .parse()
+                        .map_err(|e| format!("{e}"))?,
+                );
+            }
+            "--end-to-end-process-timeout-ms" => {
+                parsed.end_to_end_process_timeout_ms = Some(
                     next_value(args, flag)?
                         .parse()
                         .map_err(|e| format!("{e}"))?,
@@ -602,10 +619,11 @@ mod run {
 
     fn validate_end_to_end_certification(args: &Args) -> Result<(), String> {
         if !args.certify_end_to_end_unsat {
-            if args.end_to_end_deadline_ms.is_some() {
-                return Err(
-                    "`--end-to-end-deadline-ms` requires `--certify-end-to-end-unsat`".to_owned(),
-                );
+            if args.end_to_end_deadline_ms.is_some() || args.end_to_end_process_timeout_ms.is_some()
+            {
+                return Err("end-to-end deadline/isolation flags require \
+                     `--certify-end-to-end-unsat`"
+                    .to_owned());
             }
             return Ok(());
         }
@@ -614,6 +632,11 @@ mod run {
             .ok_or("`--certify-end-to-end-unsat` requires `--end-to-end-deadline-ms`")?;
         if !(1..=600_000).contains(&deadline_ms) {
             return Err("`--end-to-end-deadline-ms` must be in 1..=600000".to_owned());
+        }
+        if let Some(process_timeout_ms) = args.end_to_end_process_timeout_ms
+            && !(1..=600_000).contains(&process_timeout_ms)
+        {
+            return Err("`--end-to-end-process-timeout-ms` must be in 1..=600000".to_owned());
         }
         if !matches!(args.backend, BackendKind::SatBv) {
             return Err("`--certify-end-to-end-unsat` requires `--backend sat-bv`".to_owned());
@@ -1317,6 +1340,7 @@ mod run {
         status: EndToEndStatus,
         elapsed: Option<Duration>,
         detail: Option<String>,
+        hard_timeout: bool,
     }
 
     #[derive(Default)]
@@ -1341,10 +1365,12 @@ mod run {
         end_to_end_satisfiable_contradictions: u64,
         end_to_end_recheck_failures: u64,
         end_to_end_errors: u64,
+        end_to_end_hard_timeouts: u64,
         end_to_end_s: f64,
         end_to_end_sample: Option<f64>,
         end_to_end_samples: Vec<f64>,
         end_to_end_not_certified_paths: BTreeSet<String>,
+        end_to_end_hard_timeout_paths: BTreeSet<String>,
         end_to_end_alarm_paths: BTreeSet<String>,
         /// Root-cause "leaderboard of blockers": for every non-decided instance
         /// (`unknown`/`unsupported`/error), a count keyed by the precise reason —
@@ -3625,10 +3651,12 @@ mod run {
         summary: &mut Summary,
     ) -> JsonValue {
         let name = file.display().to_string();
-        let mut script = match read_script(file, &name, timeout, summary) {
-            Ok(script) => script,
+        let parsed = match read_script(file, &name, timeout, summary) {
+            Ok(parsed) => parsed,
             Err(record) => return record,
         };
+        let mut script = parsed.script;
+        let source_hash = parsed.source_hash;
         // T-B.4d harness parity with the `solve_smtlib` front door: a word-only
         // fallback script has an EMPTY flat assertion view (the bounded encoder
         // declined at parse) — handing it to the backend would answer a vacuous
@@ -3752,6 +3780,8 @@ mod run {
         });
         let end_to_end = certify_end_to_end_record(
             args,
+            file,
+            &source_hash,
             &script.arena,
             &script.assertions,
             primary_solve.solve.outcome,
@@ -3838,12 +3868,17 @@ mod run {
         }
     }
 
+    struct ParsedBenchmark {
+        script: Script,
+        source_hash: String,
+    }
+
     fn read_script(
         file: &Path,
         name: &str,
         timeout: Duration,
         summary: &mut Summary,
-    ) -> Result<Script, JsonValue> {
+    ) -> Result<ParsedBenchmark, JsonValue> {
         let text = match fs::read_to_string(file) {
             Ok(t) => t,
             Err(e) => {
@@ -3873,7 +3908,10 @@ mod run {
                         "detail": reason,
                     }));
                 }
-                Ok(s)
+                Ok(ParsedBenchmark {
+                    script: s,
+                    source_hash: content_hash(text.as_bytes()),
+                })
             }
             Err(SmtError::Unsupported(what)) => {
                 summary.unsupported += 1;
@@ -4888,6 +4926,8 @@ mod run {
 
     fn certify_end_to_end_record(
         args: &Args,
+        file: &Path,
+        source_hash: &str,
         arena: &TermArena,
         assertions: &[TermId],
         outcome: &str,
@@ -4897,6 +4937,7 @@ mod run {
                 status: EndToEndStatus::NotRequested,
                 elapsed: None,
                 detail: None,
+                hard_timeout: false,
             };
         }
         if outcome != "unsat" {
@@ -4904,6 +4945,7 @@ mod run {
                 status: EndToEndStatus::NotApplicable,
                 elapsed: None,
                 detail: None,
+                hard_timeout: false,
             };
         }
 
@@ -4911,6 +4953,29 @@ mod run {
             .end_to_end_deadline_ms
             .expect("validated end-to-end certification has a deadline");
         let started = Instant::now();
+        if let Some(process_timeout_ms) = args.end_to_end_process_timeout_ms {
+            let isolated = certify_file_isolated(
+                file,
+                source_hash,
+                Duration::from_millis(deadline_ms),
+                Duration::from_millis(process_timeout_ms),
+            );
+            let status = match isolated.status {
+                IsolatedStatus::Certified => EndToEndStatus::Certified,
+                IsolatedStatus::NotCertified => EndToEndStatus::NotCertified,
+                IsolatedStatus::SatisfiableContradiction => {
+                    EndToEndStatus::SatisfiableContradiction
+                }
+                IsolatedStatus::RecheckFailed => EndToEndStatus::RecheckFailed,
+                IsolatedStatus::Error => EndToEndStatus::Error,
+            };
+            return EndToEndRecord {
+                status,
+                elapsed: Some(started.elapsed()),
+                detail: isolated.detail,
+                hard_timeout: isolated.hard_timeout,
+            };
+        }
         let deadline = started + Duration::from_millis(deadline_ms);
         let result = certify_qf_bv_unsat_end_to_end_within(arena, assertions, Some(deadline));
         let (status, detail) = match result {
@@ -4939,6 +5004,7 @@ mod run {
             status,
             elapsed: Some(started.elapsed()),
             detail,
+            hard_timeout: false,
         }
     }
 
@@ -4958,6 +5024,12 @@ mod run {
                 summary
                     .end_to_end_not_certified_paths
                     .insert(path.to_owned());
+                if record.hard_timeout {
+                    summary.end_to_end_hard_timeouts += 1;
+                    summary
+                        .end_to_end_hard_timeout_paths
+                        .insert(path.to_owned());
+                }
             }
             EndToEndStatus::SatisfiableContradiction => {
                 summary.end_to_end_satisfiable_contradictions += 1;
@@ -4980,6 +5052,13 @@ mod run {
             "requested": args.certify_end_to_end_unsat,
             "status": record.status.as_str(),
             "deadline_ms": args.end_to_end_deadline_ms,
+            "process_timeout_ms": args.end_to_end_process_timeout_ms,
+            "isolation": if args.end_to_end_process_timeout_ms.is_some() {
+                "subprocess-hard-timeout"
+            } else {
+                "in-process-cooperative"
+            },
+            "hard_timeout": record.hard_timeout,
             "elapsed_ms": record.elapsed.map(duration_ms_f64),
             "detail": record.detail,
             "timing_accounting": "separate assurance work; excluded from cold solver totals",
@@ -5133,6 +5212,7 @@ mod run {
         total.end_to_end_satisfiable_contradictions += next.end_to_end_satisfiable_contradictions;
         total.end_to_end_recheck_failures += next.end_to_end_recheck_failures;
         total.end_to_end_errors += next.end_to_end_errors;
+        total.end_to_end_hard_timeouts += next.end_to_end_hard_timeouts;
         total.end_to_end_s += next.end_to_end_s;
         if let Some(sample) = next.end_to_end_sample {
             total.end_to_end_samples.push(sample);
@@ -5140,6 +5220,9 @@ mod run {
         total
             .end_to_end_not_certified_paths
             .extend(next.end_to_end_not_certified_paths.iter().cloned());
+        total
+            .end_to_end_hard_timeout_paths
+            .extend(next.end_to_end_hard_timeout_paths.iter().cloned());
         total
             .end_to_end_alarm_paths
             .extend(next.end_to_end_alarm_paths.iter().cloned());
@@ -5539,7 +5622,7 @@ mod run {
 
     fn artifact_config_record(args: &Args, identity: &ArtifactIdentity<'_>) -> JsonValue {
         let manifest = identity.corpus_manifest;
-        json!({
+        let mut record = json!({
             "corpus": args.dir.display().to_string(),
             "corpus_source": args.corpus_source.as_deref().or_else(|| {
                 manifest.map(|value| value.source.as_str())
@@ -5598,7 +5681,14 @@ mod run {
             "resources": resource_profile_record(args),
             "rewrite": rewrite_config(args),
             "experiment": experiment_identity_record(identity.experiment),
-        })
+        });
+        if let JsonValue::Object(fields) = &mut record {
+            fields.insert(
+                "end_to_end_process_timeout_ms".to_owned(),
+                json!(args.end_to_end_process_timeout_ms),
+            );
+        }
+        record
     }
 
     fn artifact_summary_record(
@@ -5633,12 +5723,19 @@ mod run {
             "end_to_end_unsat": {
                 "requested": args.certify_end_to_end_unsat,
                 "deadline_ms": args.end_to_end_deadline_ms,
+                "process_timeout_ms": args.end_to_end_process_timeout_ms,
+                "isolation": if args.end_to_end_process_timeout_ms.is_some() {
+                    "subprocess-hard-timeout"
+                } else {
+                    "in-process-cooperative"
+                },
                 "attempted": s.end_to_end_attempted,
                 "certified": s.end_to_end_certified,
                 "not_certified": s.end_to_end_not_certified,
                 "satisfiable_contradictions": s.end_to_end_satisfiable_contradictions,
                 "recheck_failures": s.end_to_end_recheck_failures,
                 "errors": s.end_to_end_errors,
+                "hard_timeouts": s.end_to_end_hard_timeouts,
                 "attempted_partitioned": s.end_to_end_attempted
                     == s.end_to_end_certified
                         + s.end_to_end_not_certified
@@ -5652,8 +5749,13 @@ mod run {
                     |seconds| *seconds,
                 ),
                 "not_certified_paths": s.end_to_end_not_certified_paths,
+                "hard_timeout_paths": s.end_to_end_hard_timeout_paths,
                 "alarm_paths": s.end_to_end_alarm_paths,
-                "timing_accounting": "separate assurance work; excluded from cold solver totals; cooperative deadline covers proof searches, not construction or completed-proof checking",
+                "timing_accounting": if args.end_to_end_process_timeout_ms.is_some() {
+                    "separate assurance work; excluded from cold solver totals; parent hard timeout covers worker parse, construction, proof searches, and completed-proof self-recheck"
+                } else {
+                    "separate assurance work; excluded from cold solver totals; cooperative deadline covers proof searches, not construction or completed-proof checking"
+                },
             },
             "manifest": {
                 "expected": s.manifest_expected,
@@ -6367,6 +6469,13 @@ mod run {
             hash,
             &args
                 .end_to_end_deadline_ms
+                .unwrap_or(u64::MAX)
+                .to_le_bytes(),
+        );
+        update_hash(
+            hash,
+            &args
+                .end_to_end_process_timeout_ms
                 .unwrap_or(u64::MAX)
                 .to_le_bytes(),
         );
@@ -7666,11 +7775,13 @@ mod run {
                 status: EndToEndStatus::Certified,
                 elapsed: Some(Duration::from_millis(2)),
                 detail: None,
+                hard_timeout: false,
             };
             let uncovered = EndToEndRecord {
                 status: EndToEndStatus::NotCertified,
                 elapsed: Some(Duration::from_millis(5)),
-                detail: None,
+                detail: Some("worker killed and reaped".to_owned()),
+                hard_timeout: true,
             };
             let mut summary = Summary {
                 unsat: 2,
@@ -7681,7 +7792,9 @@ mod run {
             assert_eq!(summary.end_to_end_attempted, 2);
             assert_eq!(summary.end_to_end_certified, 1);
             assert_eq!(summary.end_to_end_not_certified, 1);
+            assert_eq!(summary.end_to_end_hard_timeouts, 1);
             assert!(summary.end_to_end_not_certified_paths.contains("b.smt2"));
+            assert!(summary.end_to_end_hard_timeout_paths.contains("b.smt2"));
             assert!((end_to_end_coverage_percent(&summary) - 50.0).abs() < f64::EPSILON);
             assert_eq!(
                 report_summary(&summary, None, false, true),
@@ -7692,6 +7805,7 @@ mod run {
                 status: EndToEndStatus::SatisfiableContradiction,
                 elapsed: Some(Duration::from_millis(1)),
                 detail: Some("contradiction".to_owned()),
+                hard_timeout: false,
             };
             summary.unsat += 1;
             accumulate_end_to_end(&alarm, "c.smt2", &mut summary);

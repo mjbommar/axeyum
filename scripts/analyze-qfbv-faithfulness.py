@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any, NoReturn, Sequence
 
 
-ARTIFACT_VERSION = 33
+SUPPORTED_ARTIFACT_VERSIONS = (33, 34)
 SCHEMA = "axeyum-qfbv-real-faithfulness-analysis-v1"
 MIN_REPETITIONS = 2
 
@@ -79,7 +79,9 @@ def require_zero(record: dict[str, Any], keys: Sequence[str], label: str) -> Non
             fail(f"{label}.{key} must be zero")
 
 
-def validate_config(config: dict[str, Any], path: Path) -> dict[str, Any]:
+def validate_config(
+    config: dict[str, Any], path: Path, artifact_version: int
+) -> dict[str, Any]:
     expected = {
         "backend_kind": "sat-bv",
         "logic": "QF_BV",
@@ -121,7 +123,7 @@ def validate_config(config: dict[str, Any], path: Path) -> dict[str, Any]:
     selected = integer(manifest.get("selected_entries"), f"{path}: selected_entries")
     if selected <= 0:
         fail(f"{path}: manifest must select a nonempty exact population")
-    return {
+    identity = {
         "config_hash": string(config.get("config_hash"), f"{path}: config_hash"),
         "environment_hash": string(
             mapping(config.get("experiment"), f"{path}: experiment").get(
@@ -138,15 +140,26 @@ def validate_config(config: dict[str, Any], path: Path) -> dict[str, Any]:
         ),
         "deadline_ms": deadline,
     }
+    if artifact_version >= 34:
+        process_timeout = integer(
+            config.get("end_to_end_process_timeout_ms"),
+            f"{path}: config.end_to_end_process_timeout_ms",
+        )
+        if not 1 <= process_timeout <= 600_000:
+            fail(f"{path}: whole-certificate process timeout is out of range")
+        identity["process_timeout_ms"] = process_timeout
+        identity["isolation"] = "subprocess-hard-timeout"
+    return identity
 
 
 def validate_artifact(
     artifact: dict[str, Any], path: Path
-) -> tuple[dict[str, Any], dict[str, tuple[str, str, str]], dict[str, Any]]:
-    if integer(artifact.get("version"), f"{path}: version") != ARTIFACT_VERSION:
-        fail(f"{path}: expected artifact version {ARTIFACT_VERSION}")
+) -> tuple[int, dict[str, Any], dict[str, tuple[str, ...]], dict[str, Any]]:
+    artifact_version = integer(artifact.get("version"), f"{path}: version")
+    if artifact_version not in SUPPORTED_ARTIFACT_VERSIONS:
+        fail(f"{path}: expected artifact version in {SUPPORTED_ARTIFACT_VERSIONS}")
     config = mapping(artifact.get("config"), f"{path}: config")
-    identity = validate_config(config, path)
+    identity = validate_config(config, path, artifact_version)
     summary = mapping(artifact.get("summary"), f"{path}: summary")
     files = integer(summary.get("files"), f"{path}: summary.files")
     sat = integer(summary.get("sat"), f"{path}: summary.sat")
@@ -189,6 +202,20 @@ def validate_artifact(
     )
     if certified + not_certified != unsat or end.get("attempted_partitioned") is not True:
         fail(f"{path}: end-to-end outcome partition is incomplete")
+    hard_timeouts = 0
+    if artifact_version >= 34:
+        if end.get("process_timeout_ms") != identity["process_timeout_ms"]:
+            fail(f"{path}: whole-certificate process timeout mismatch")
+        if end.get("isolation") != "subprocess-hard-timeout":
+            fail(f"{path}: artifact-v34 faithfulness requires subprocess isolation")
+        hard_timeouts = integer(end.get("hard_timeouts"), f"{path}: hard_timeouts")
+        if not 0 <= hard_timeouts <= not_certified:
+            fail(f"{path}: hard timeouts must be a subset of not-certified rows")
+        hard_timeout_paths = sequence(
+            end.get("hard_timeout_paths"), f"{path}: hard_timeout_paths"
+        )
+        if len(hard_timeout_paths) != hard_timeouts:
+            fail(f"{path}: hard-timeout path count mismatch")
     elapsed = mapping(end.get("elapsed"), f"{path}: end_to_end.elapsed")
     elapsed_values = {
         key: number(elapsed.get(key), f"{path}: end_to_end.elapsed.{key}")
@@ -212,7 +239,7 @@ def validate_artifact(
     rows = sequence(artifact.get("instances"), f"{path}: instances")
     if len(rows) != files:
         fail(f"{path}: instance cardinality mismatch")
-    identities: dict[str, tuple[str, str, str]] = {}
+    identities: dict[str, tuple[str, ...]] = {}
     family_counts: Counter[str] = Counter()
     status_counts: Counter[str] = Counter()
     for index, raw in enumerate(rows):
@@ -231,10 +258,22 @@ def validate_artifact(
         if row_oracle.get("outcome") != outcome or row_oracle.get("decision_agrees") is not True:
             fail(f"{path}: row disagrees with oracle: {member_path}")
         proof_status = string(row.get("unsat_proof_replay"), f"{path}: proof status")
+        row_end = mapping(row.get("end_to_end_unsat"), f"{path}: row end-to-end")
         end_status = string(
-            mapping(row.get("end_to_end_unsat"), f"{path}: row end-to-end").get("status"),
+            row_end.get("status"),
             f"{path}: end-to-end status",
         )
+        hard_timeout = False
+        if artifact_version >= 34:
+            if row_end.get("isolation") != "subprocess-hard-timeout":
+                fail(f"{path}: row lacks subprocess isolation: {member_path}")
+            if row_end.get("process_timeout_ms") != identity["process_timeout_ms"]:
+                fail(f"{path}: row process-timeout policy mismatch: {member_path}")
+            hard_timeout = boolean(
+                row_end.get("hard_timeout"), f"{path}: row hard_timeout"
+            )
+            if hard_timeout and end_status != "not-certified":
+                fail(f"{path}: only not-certified rows may hard-timeout: {member_path}")
         if outcome == "unsat":
             if proof_status != "checked" or end_status not in ("certified", "not-certified"):
                 fail(f"{path}: invalid UNSAT assurance status: {member_path}")
@@ -243,16 +282,28 @@ def validate_artifact(
             fail(f"{path}: SAT row received UNSAT assurance credit: {member_path}")
         if member_path in identities:
             fail(f"{path}: duplicate manifest member {member_path}")
-        identities[member_path] = (content_hash, outcome, end_status)
+        identities[member_path] = (
+            content_hash,
+            outcome,
+            end_status,
+            *(('hard-timeout',) if hard_timeout else ()),
+        )
         status_counts[end_status] += 1
     if status_counts["certified"] != certified or status_counts["not-certified"] != not_certified:
         fail(f"{path}: per-row and summary end-to-end counts differ")
-    return identity, identities, {
+    if artifact_version >= 34:
+        row_hard_timeouts = sum(
+            1 for value in identities.values() if value[-1] == "hard-timeout"
+        )
+        if row_hard_timeouts != hard_timeouts:
+            fail(f"{path}: per-row and summary hard-timeout counts differ")
+    return artifact_version, identity, identities, {
         "files": files,
         "sat": sat,
         "unsat": unsat,
         "certified": certified,
         "not_certified": not_certified,
+        "hard_timeouts": hard_timeouts,
         "family_counts": dict(sorted(family_counts.items())),
         "elapsed": elapsed,
     }
@@ -263,30 +314,42 @@ def analyze(paths: Sequence[Path]) -> dict[str, Any]:
         fail(f"need at least {MIN_REPETITIONS} independent artifacts")
     reference_identity = None
     reference_rows = None
+    reference_version = None
     records = []
     summaries = []
     for path in paths:
         artifact, digest = load(path)
-        identity, rows, summary = validate_artifact(artifact, path)
+        artifact_version, identity, rows, summary = validate_artifact(artifact, path)
         if reference_identity is None:
+            reference_version = artifact_version
             reference_identity = identity
             reference_rows = rows
+        elif artifact_version != reference_version:
+            fail(f"{path}: artifact version drift")
         elif identity != reference_identity:
             fail(f"{path}: configuration, environment, source, or manifest identity drift")
         elif rows != reference_rows:
             fail(f"{path}: per-query outcome or certification drift")
         records.append({"path": path.name, "sha256": digest})
         summaries.append(summary)
-    assert reference_identity is not None and reference_rows is not None
-    return {
+    assert (
+        reference_version is not None
+        and reference_identity is not None
+        and reference_rows is not None
+    )
+    result = {
         "schema": SCHEMA,
-        "source_artifact_version": ARTIFACT_VERSION,
+        "source_artifact_version": reference_version,
         "contract": {
             "repetitions": len(paths),
             "population": "every member of one exact content-hashed manifest",
             "unsat_denominator": "every primary UNSAT; not-certified rows are retained",
             "fatal": "manifest/oracle disagreement, CNF proof missing, satisfiable contradiction, certificate recheck failure, operational error, or identity drift",
-            "timing": "descriptive assurance work only; cooperative deadline excludes construction and completed-proof checking",
+            "timing": (
+                "descriptive assurance work only; hard subprocess timeout covers parse, construction, proof searches, and completed-proof checking"
+                if reference_version >= 34
+                else "descriptive assurance work only; cooperative deadline excludes construction and completed-proof checking"
+            ),
         },
         "identity": reference_identity,
         "population": {
@@ -305,6 +368,11 @@ def analyze(paths: Sequence[Path]) -> dict[str, Any]:
         "assurance_elapsed_distributions": [value["elapsed"] for value in summaries],
         "artifacts": records,
     }
+    if reference_version >= 34:
+        result["coverage"]["hard_timeouts_per_run"] = [
+            value["hard_timeouts"] for value in summaries
+        ]
+    return result
 
 
 def main() -> None:

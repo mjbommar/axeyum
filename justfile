@@ -282,12 +282,13 @@ bench-glaurung-qfbv-raw-proof-check corpus_dir manifest tier="representative" ou
     cargo run --release -p axeyum-bench --features z3 -- "{{ corpus_dir }}" --corpus-manifest "{{ manifest }}" --corpus-tier "{{ tier }}" --backend sat-bv --rewrite off --prove-unsat --compare-z3 --require-in-process-z3 --require-reproducible-run --require-deterministic-resources --timeout-ms 30000 --resource-limit 2000000 --node-budget 300000 --cnf-var-budget 3000000 --cnf-clause-budget 8000000 --jobs 1 --min-decided-percent 100 --logic QF_BV --out "{{ out }}"
 
 # Stronger real-query assurance companion. Every primary UNSAT remains in the
-# denominator; a cooperative proof-search expiry is recorded as not-certified,
-# while a satisfiable contradiction, checker failure, or operational error is
-# fatal. Certificate construction/checking is separate from solver timing.
-bench-glaurung-qfbv-real-faithfulness corpus_dir manifest tier="representative" deadline_ms="1000" out="bench-results/glaurung-qfbv-real-faithfulness.json":
+# denominator; a cooperative proof-search expiry or hard whole-worker timeout
+# is recorded as not-certified, while a satisfiable contradiction, checker
+# failure, malformed worker result, or operational error is fatal. Certificate
+# construction/checking is separate from solver timing.
+bench-glaurung-qfbv-real-faithfulness corpus_dir manifest tier="representative" deadline_ms="1000" process_timeout_ms="1500" out="bench-results/glaurung-qfbv-real-faithfulness.json":
     mkdir -p "$(dirname '{{ out }}')"
-    cargo run --release -p axeyum-bench --features z3 -- "{{ corpus_dir }}" --corpus-manifest "{{ manifest }}" --corpus-tier "{{ tier }}" --backend sat-bv --rewrite off --prove-unsat --certify-end-to-end-unsat --end-to-end-deadline-ms "{{ deadline_ms }}" --compare-z3 --require-in-process-z3 --require-reproducible-run --require-deterministic-resources --timeout-ms 30000 --resource-limit 2000000 --node-budget 300000 --cnf-var-budget 3000000 --cnf-clause-budget 8000000 --jobs 1 --manifest-jobs 1 --min-decided-percent 100 --logic QF_BV --out "{{ out }}"
+    cargo run --release -p axeyum-bench --features z3 -- "{{ corpus_dir }}" --corpus-manifest "{{ manifest }}" --corpus-tier "{{ tier }}" --backend sat-bv --rewrite off --prove-unsat --certify-end-to-end-unsat --end-to-end-deadline-ms "{{ deadline_ms }}" --end-to-end-process-timeout-ms "{{ process_timeout_ms }}" --compare-z3 --require-in-process-z3 --require-reproducible-run --require-deterministic-resources --timeout-ms 30000 --resource-limit 2000000 --node-budget 300000 --cnf-var-budget 3000000 --cnf-clause-budget 8000000 --jobs 1 --manifest-jobs 1 --min-decided-percent 100 --logic QF_BV --out "{{ out }}"
 
 bench-glaurung-qfbv-canonical-proof-check corpus_dir manifest tier="representative" out="bench-results/glaurung-qfbv-canonical-proof-check.json":
     mkdir -p "$(dirname '{{ out }}')"

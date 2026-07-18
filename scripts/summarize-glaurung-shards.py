@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import Any, NoReturn, Sequence
 
 
-SOURCE_ARTIFACT_VERSION = 33
+SOURCE_ARTIFACT_VERSION = 34
 SUMMARY_SCHEMA = "axeyum-glaurung-qfbv-sharded-summary-v1"
 SHARD_SET_SCHEMA = "glaurung-qfbv-shard-set-v1"
 PARTITION = "u64::from_be_bytes(sha256[0:8]) modulo shard_count"

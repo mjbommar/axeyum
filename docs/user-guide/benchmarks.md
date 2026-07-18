@@ -85,7 +85,7 @@ just compare-glaurung-qfbv-repeated BASE CAND OUT # controlled cross-commit delt
 
 Each JSON records the corpus + config hash, per-instance outcome, budgets,
 backend stats, PAR-2, explicit `decided`/`decided_percent`, **disagreements**,
-and **model-replay failures**. Artifact version 33 retains version 16's exact
+and **model-replay failures**. Artifact version 34 retains version 16's exact
 floating-point millisecond values for each instance's word-level preprocessing,
 bit-blast, CNF encode/inprocess, SAT, model lift, and cold total, plus corpus
 totals and p50/p95 distributions. Its `client_comparison` block reports the
@@ -140,6 +140,17 @@ totals. The deadline is cooperative proof-search policy, not a whole-call wall
 clock: construction and completed-proof checking still run to completion.
 Version 33 also adds the already-reported `cnf_vivify` switch to `config_hash`;
 earlier artifacts recorded that switch in `config` but did not fingerprint it.
+Version 34 adds optional killable whole-certificate isolation. Supplying
+`--end-to-end-process-timeout-ms N` launches the same pinned benchmark
+executable as a private one-query worker after each primary UNSAT. The worker
+re-reads the exact source hash, constructs both certificates, and self-rechecks
+both stored proof texts; the parent kills and reaps it when the hard wall
+expires. A hard timeout is an explicitly counted subset of `not-certified`,
+never SAT, UNSAT, or an omitted row. Worker crashes, malformed protocol output,
+source drift, satisfiable contradictions, and recheck failures remain fatal.
+The per-instance and summary records distinguish `subprocess-hard-timeout`
+from the historical `in-process-cooperative` route, and both cooperative and
+process budgets enter `config_hash`.
 ADR-0159 makes that pairing executable and fail-closed. The repeated ablation
 recipe alternates an unchanged default run with the exact default-minus-rule
 run in fresh processes. `compare-glaurung-rewrite-ablation.py` rejects any
@@ -349,7 +360,7 @@ just bench-glaurung-qfbv-rewrite-ablation-repeated \
   5
 ```
 
-The output directory contains paired `base-*`/`ablation-*` artifact-v33 files
+The output directory contains paired `base-*`/`ablation-*` artifact-v34 files
 and `comparison.json`. Positive deltas mean the enabled base rule avoided that
 work or time. Fire counts and selected-policy output sizes remain targeting
 telemetry, not causal savings.
@@ -443,10 +454,13 @@ just bench-glaurung-qfbv-real-faithfulness \
   /path/to/glaurung-smt2-capture \
   /path/to/glaurung-manifest-v1.json \
   representative \
-  1000
+  1000 \
+  1500
 ```
 
 The summary reports certified and not-certified rows over the complete primary
-UNSAT population, including exact uncovered paths. Do not add its certificate
-time to the cold solver total or describe its cooperative deadline as process
-isolation.
+UNSAT population, including exact uncovered and hard-timeout paths. The first
+budget is the cooperative proof-search deadline; the second is the hard
+whole-worker wall covering parse, construction, proof search, and completed-
+proof self-recheck. Do not add certificate-process time to the cold solver
+total.

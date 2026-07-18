@@ -80,6 +80,7 @@ class GlaurungBenchmarkRecipeTests(unittest.TestCase):
         self.assertIn("--prove-unsat", output)
         self.assertIn("--certify-end-to-end-unsat", output)
         self.assertIn("--end-to-end-deadline-ms \"1000\"", output)
+        self.assertIn("--end-to-end-process-timeout-ms \"1500\"", output)
         self.assertIn("--require-reproducible-run", output)
         self.assertIn("--require-deterministic-resources", output)
         self.assertIn("--manifest-jobs 1", output)

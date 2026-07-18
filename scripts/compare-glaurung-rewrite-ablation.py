@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Any, NoReturn, Sequence
 
 
-SOURCE_ARTIFACT_VERSION = 33
+SOURCE_ARTIFACT_VERSION = 34
 COMPARISON_VERSION = 1
 STRUCTURAL_METRICS = (
     "term_bits_lowered",

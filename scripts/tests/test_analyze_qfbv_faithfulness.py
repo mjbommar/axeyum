@@ -110,6 +110,23 @@ def artifact() -> dict:
     }
 
 
+def isolated_artifact() -> dict:
+    value = artifact()
+    value["version"] = 34
+    value["config"]["end_to_end_process_timeout_ms"] = 1500
+    end = value["summary"]["end_to_end_unsat"]
+    end["process_timeout_ms"] = 1500
+    end["isolation"] = "subprocess-hard-timeout"
+    end["hard_timeouts"] = 0
+    end["hard_timeout_paths"] = []
+    for instance in value["instances"]:
+        row_end = instance["end_to_end_unsat"]
+        row_end["process_timeout_ms"] = 1500
+        row_end["isolation"] = "subprocess-hard-timeout"
+        row_end["hard_timeout"] = False
+    return value
+
+
 class FaithfulnessAnalysisTests(unittest.TestCase):
     def write(self, root: Path, name: str, value: dict) -> Path:
         path = root / name
@@ -184,6 +201,36 @@ class FaithfulnessAnalysisTests(unittest.TestCase):
                 self.write(root, "run-2.json", bad),
             ]
             with self.assertRaisesRegex(MODULE.AnalysisError, "not ordered"):
+                MODULE.analyze(paths)
+
+    def test_accepts_process_isolated_artifact_v34(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            paths = [
+                self.write(root, "run-1.json", isolated_artifact()),
+                self.write(root, "run-2.json", isolated_artifact()),
+            ]
+            result = MODULE.analyze(paths)
+            self.assertEqual(result["source_artifact_version"], 34)
+            self.assertEqual(result["identity"]["process_timeout_ms"], 1500)
+            self.assertEqual(result["coverage"]["hard_timeouts_per_run"], [0, 0])
+
+    def test_rejects_process_timeout_without_per_row_accounting(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            bad = isolated_artifact()
+            bad["summary"]["end_to_end_unsat"]["certified"] = 0
+            bad["summary"]["end_to_end_unsat"]["not_certified"] = 1
+            bad["summary"]["end_to_end_unsat"]["hard_timeouts"] = 1
+            bad["summary"]["end_to_end_unsat"]["hard_timeout_paths"] = [
+                "queries/a.smt2"
+            ]
+            bad["instances"][0]["end_to_end_unsat"]["status"] = "not-certified"
+            paths = [
+                self.write(root, "run-1.json", isolated_artifact()),
+                self.write(root, "run-2.json", bad),
+            ]
+            with self.assertRaisesRegex(MODULE.AnalysisError, "per-row"):
                 MODULE.analyze(paths)
 
 

@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any, NoReturn, Sequence
 
 
-SUPPORTED_SOURCE_ARTIFACT_VERSIONS = (32, 33)
+SUPPORTED_SOURCE_ARTIFACT_VERSIONS = (32, 33, 34)
 ANALYSIS_SCHEMA = "axeyum-qfbv-timeout-sweep-analysis-v1"
 CVC5_SCHEMA = "axeyum-qfbv-cvc5-timeout-sweep-v1"
 DEFAULT_TIMEOUTS = (50, 100, 250, 1_000)
