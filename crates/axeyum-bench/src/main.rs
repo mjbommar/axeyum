@@ -17,6 +17,7 @@
 //!   `[--resource-limit N] [--node-budget N] [--cnf-var-budget N]`
 //!   `[--cnf-clause-budget N] [--require-deterministic-resources]`
 //!   `[--prove-unsat]`
+//!   `[--certify-end-to-end-unsat --end-to-end-deadline-ms N]`
 //!   `[--require-reproducible-run]`
 //!   `[--compare-z3] [--require-in-process-z3] [--min-decided-percent P]`
 //!   `[--jobs N] [--manifest-jobs N]`
@@ -43,9 +44,10 @@ mod run {
     };
     use axeyum_smtlib::{Script, ScriptCommand, SmtError, parse_script};
     use axeyum_solver::{
-        BvLayerStats, Capabilities, CheckResult, IncrementalBvSolver, IncrementalBvStats,
-        LazyBvBackend, Model, RangeDemandDecision, RangeDemandPolicy, SatBvBackend, SolveStats,
-        SolverBackend, SolverConfig, SolverError, UnknownKind, check_model_with_assignment, solve,
+        BvLayerStats, Capabilities, CheckResult, EndToEndUnsatOutcome, IncrementalBvSolver,
+        IncrementalBvStats, LazyBvBackend, Model, RangeDemandDecision, RangeDemandPolicy,
+        SatBvBackend, SolveStats, SolverBackend, SolverConfig, SolverError, UnknownKind,
+        certify_qf_bv_unsat_end_to_end_within, check_model_with_assignment, solve,
     };
     #[cfg(feature = "z3")]
     use axeyum_solver::{DETERMINISTIC_Z3_RANDOM_SEED, Z3Backend};
@@ -53,7 +55,7 @@ mod run {
     use serde_json::{Value as JsonValue, json};
     use sha2::{Digest, Sha256};
 
-    const ARTIFACT_VERSION: u32 = 32;
+    const ARTIFACT_VERSION: u32 = 33;
     const CORPUS_MANIFEST_VERSION: u64 = 1;
     const CONTENT_HASH_PREFIX: &str = "sha256:";
     const DETERMINISM_PROFILE: &str = "axeyum-bench-fixed-seeds-v1";
@@ -222,6 +224,8 @@ mod run {
         cnf_vivify: bool,
         native_cdcl: bool,
         prove_unsat: bool,
+        certify_end_to_end_unsat: bool,
+        end_to_end_deadline_ms: Option<u64>,
         preprocess: bool,
         profile_bit_demand: bool,
         demand_bit_slicing: bool,
@@ -266,6 +270,8 @@ mod run {
             cnf_vivify: false,
             native_cdcl: false,
             prove_unsat: false,
+            certify_end_to_end_unsat: false,
+            end_to_end_deadline_ms: None,
             preprocess: false,
             profile_bit_demand: false,
             demand_bit_slicing: false,
@@ -382,6 +388,14 @@ mod run {
             "--vivify" => parsed.cnf_vivify = true,
             "--native-cdcl" => parsed.native_cdcl = true,
             "--prove-unsat" => parsed.prove_unsat = true,
+            "--certify-end-to-end-unsat" => parsed.certify_end_to_end_unsat = true,
+            "--end-to-end-deadline-ms" => {
+                parsed.end_to_end_deadline_ms = Some(
+                    next_value(args, flag)?
+                        .parse()
+                        .map_err(|e| format!("{e}"))?,
+                );
+            }
             "--preprocess" => parsed.preprocess = true,
             "--profile-bit-demand" => parsed.profile_bit_demand = true,
             "--demand-bit-slicing" => parsed.demand_bit_slicing = true,
@@ -530,6 +544,7 @@ mod run {
         if args.prove_unsat && !matches!(args.backend, BackendKind::SatBv) {
             return Err("`--prove-unsat` requires `--backend sat-bv`".to_owned());
         }
+        validate_end_to_end_certification(args)?;
         if args.profile_bit_demand && !matches!(args.backend, BackendKind::SatBv) {
             return Err("`--profile-bit-demand` requires `--backend sat-bv`".to_owned());
         }
@@ -579,6 +594,46 @@ mod run {
         if args.corpus_manifest.is_some() && args.limit != usize::MAX {
             return Err(
                 "`--limit` cannot be combined with `--corpus-manifest`; use a named manifest tier"
+                    .to_owned(),
+            );
+        }
+        Ok(())
+    }
+
+    fn validate_end_to_end_certification(args: &Args) -> Result<(), String> {
+        if !args.certify_end_to_end_unsat {
+            if args.end_to_end_deadline_ms.is_some() {
+                return Err(
+                    "`--end-to-end-deadline-ms` requires `--certify-end-to-end-unsat`".to_owned(),
+                );
+            }
+            return Ok(());
+        }
+        let deadline_ms = args
+            .end_to_end_deadline_ms
+            .ok_or("`--certify-end-to-end-unsat` requires `--end-to-end-deadline-ms`")?;
+        if !(1..=600_000).contains(&deadline_ms) {
+            return Err("`--end-to-end-deadline-ms` must be in 1..=600000".to_owned());
+        }
+        if !matches!(args.backend, BackendKind::SatBv) {
+            return Err("`--certify-end-to-end-unsat` requires `--backend sat-bv`".to_owned());
+        }
+        if !args.prove_unsat {
+            return Err("`--certify-end-to-end-unsat` requires `--prove-unsat`".to_owned());
+        }
+        if args.rewrite != RewriteMode::Off
+            || args.query_plan != QueryPlanMode::Full
+            || args.preprocess
+            || args.demand_bit_slicing
+            || args.range_demand_slicing
+            || args.cnf_inprocessing
+            || args.cnf_vivify
+            || args.native_cdcl
+        {
+            return Err(
+                "`--certify-end-to-end-unsat` requires the raw full-query path: \
+                 `--rewrite off`, `--query-plan full`, and no preprocessing, demand slicing, \
+                 CNF inprocessing/vivification, or native-CDCL override"
                     .to_owned(),
             );
         }
@@ -1229,6 +1284,41 @@ mod run {
         manifest: Option<CorpusManifestSelection>,
     }
 
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    enum EndToEndStatus {
+        NotRequested,
+        NotApplicable,
+        Certified,
+        NotCertified,
+        SatisfiableContradiction,
+        RecheckFailed,
+        Error,
+    }
+
+    impl EndToEndStatus {
+        fn as_str(self) -> &'static str {
+            match self {
+                Self::NotRequested => "not-requested",
+                Self::NotApplicable => "not-applicable",
+                Self::Certified => "certified",
+                Self::NotCertified => "not-certified",
+                Self::SatisfiableContradiction => "satisfiable-contradiction",
+                Self::RecheckFailed => "recheck-failed",
+                Self::Error => "error",
+            }
+        }
+
+        fn attempted(self) -> bool {
+            !matches!(self, Self::NotRequested | Self::NotApplicable)
+        }
+    }
+
+    struct EndToEndRecord {
+        status: EndToEndStatus,
+        elapsed: Option<Duration>,
+        detail: Option<String>,
+    }
+
     #[derive(Default)]
     struct Summary {
         files: u64,
@@ -1245,6 +1335,17 @@ mod run {
         unsat_proof_replay_s: f64,
         unsat_proof_replay_sample: Option<f64>,
         unsat_proof_replay_samples: Vec<f64>,
+        end_to_end_attempted: u64,
+        end_to_end_certified: u64,
+        end_to_end_not_certified: u64,
+        end_to_end_satisfiable_contradictions: u64,
+        end_to_end_recheck_failures: u64,
+        end_to_end_errors: u64,
+        end_to_end_s: f64,
+        end_to_end_sample: Option<f64>,
+        end_to_end_samples: Vec<f64>,
+        end_to_end_not_certified_paths: BTreeSet<String>,
+        end_to_end_alarm_paths: BTreeSet<String>,
         /// Root-cause "leaderboard of blockers": for every non-decided instance
         /// (`unknown`/`unsupported`/error), a count keyed by the precise reason —
         /// `unknown:Timeout`, `unknown:EncodingBudget`, `unknown:NodeBudget`,
@@ -1457,6 +1558,7 @@ mod run {
             &summary,
             args.min_decided_percent,
             args.require_in_process_z3,
+            args.certify_end_to_end_unsat,
         )
     }
 
@@ -1468,11 +1570,13 @@ mod run {
         summary: &Summary,
         min_decided_percent: Option<f64>,
         require_in_process_z3: bool,
+        certify_end_to_end_unsat: bool,
     ) -> ExitCode {
         eprintln!(
             "files={} sat={} unsat={} unknown={} unsupported={} errors={} \
              agree={} DISAGREE={} model_replay_failures={} \
              proof_replay_checked={} proof_replay_missing={} \
+             end_to_end_certified={} end_to_end_not_certified={} \
              manifest_agree={} MANIFEST_DISAGREE={} \
              rewrite_changed={} rewrite_apps={} rewrite_decision_changes={} \
              rewrite_sat_unsat_conflicts={} query_sliced={} query_dropped={} \
@@ -1488,6 +1592,8 @@ mod run {
             summary.model_replay_failures,
             summary.unsat_proof_replay_checked,
             summary.unsat_proof_replay_missing,
+            summary.end_to_end_certified,
+            summary.end_to_end_not_certified,
             summary.manifest_agree,
             summary.manifest_disagree,
             summary.rewrite_changed_instances,
@@ -1515,6 +1621,9 @@ mod run {
         }
         if summary.unsat_proof_replay_missing > 0 {
             eprintln!("SOUNDNESS ALARM: requested unsat proof replay was not checked");
+            return ExitCode::FAILURE;
+        }
+        if end_to_end_summary_failed(summary, certify_end_to_end_unsat) {
             return ExitCode::FAILURE;
         }
         if summary.rewrite_sat_unsat_conflicts > 0 {
@@ -1560,6 +1669,38 @@ mod run {
             return ExitCode::FAILURE;
         }
         ExitCode::SUCCESS
+    }
+
+    fn end_to_end_summary_failed(summary: &Summary, requested: bool) -> bool {
+        if requested && summary.end_to_end_attempted != summary.unsat {
+            eprintln!(
+                "BENCHMARK INTEGRITY ALARM: end-to-end certification attempted {}/{} primary UNSAT rows",
+                summary.end_to_end_attempted, summary.unsat
+            );
+            return true;
+        }
+        if summary.end_to_end_satisfiable_contradictions > 0 {
+            eprintln!(
+                "SOUNDNESS ALARM: end-to-end route returned satisfiable for {} primary UNSAT rows",
+                summary.end_to_end_satisfiable_contradictions
+            );
+            return true;
+        }
+        if summary.end_to_end_recheck_failures > 0 {
+            eprintln!(
+                "SOUNDNESS ALARM: {} end-to-end certificates failed independent recheck",
+                summary.end_to_end_recheck_failures
+            );
+            return true;
+        }
+        if summary.end_to_end_errors > 0 {
+            eprintln!(
+                "BENCHMARK INTEGRITY ALARM: {} end-to-end certification errors",
+                summary.end_to_end_errors
+            );
+            return true;
+        }
+        false
     }
 
     /// Per-worker stack size. SMT-LIB terms can nest thousands deep, and the
@@ -3609,6 +3750,13 @@ mod run {
                 word_preprocess,
             )
         });
+        let end_to_end = certify_end_to_end_record(
+            args,
+            &script.arena,
+            &script.assertions,
+            primary_solve.solve.outcome,
+        );
+        accumulate_end_to_end(&end_to_end, &name, summary);
         accumulate_query_plan(summary, &primary_solve.plan);
         accumulate_primary(&primary_solve.solve, summary);
         accumulate_proof_replay(&primary_solve.solve, args.prove_unsat, summary);
@@ -3634,6 +3782,7 @@ mod run {
             "unsat_proof_replay": proof_replay_status(&primary_solve.solve, args.prove_unsat),
             "unsat_proof_replay_ms": proof_replay_duration(&primary_solve.solve)
                 .map(duration_ms_f64),
+            "end_to_end_unsat": end_to_end_record(&end_to_end, args),
             "backend_stats": backend_stats_record(stats),
             "layer_attribution": instance_layer_record(&primary_solve.solve, word_preprocess),
             "dag_nodes": input_shape.dag_nodes,
@@ -4737,6 +4886,115 @@ mod run {
         }
     }
 
+    fn certify_end_to_end_record(
+        args: &Args,
+        arena: &TermArena,
+        assertions: &[TermId],
+        outcome: &str,
+    ) -> EndToEndRecord {
+        if !args.certify_end_to_end_unsat {
+            return EndToEndRecord {
+                status: EndToEndStatus::NotRequested,
+                elapsed: None,
+                detail: None,
+            };
+        }
+        if outcome != "unsat" {
+            return EndToEndRecord {
+                status: EndToEndStatus::NotApplicable,
+                elapsed: None,
+                detail: None,
+            };
+        }
+
+        let deadline_ms = args
+            .end_to_end_deadline_ms
+            .expect("validated end-to-end certification has a deadline");
+        let started = Instant::now();
+        let deadline = started + Duration::from_millis(deadline_ms);
+        let result = certify_qf_bv_unsat_end_to_end_within(arena, assertions, Some(deadline));
+        let (status, detail) = match result {
+            Ok(outcome @ EndToEndUnsatOutcome::Certified { .. }) => match outcome.recheck() {
+                Ok(true) => (EndToEndStatus::Certified, None),
+                Ok(false) => (
+                    EndToEndStatus::RecheckFailed,
+                    Some(
+                        "certificate text did not independently re-derive both refutations"
+                            .to_owned(),
+                    ),
+                ),
+                Err(error) => (
+                    EndToEndStatus::RecheckFailed,
+                    Some(format!("certificate recheck error: {error}")),
+                ),
+            },
+            Ok(EndToEndUnsatOutcome::NotCertified) => (EndToEndStatus::NotCertified, None),
+            Ok(EndToEndUnsatOutcome::Satisfiable) => (
+                EndToEndStatus::SatisfiableContradiction,
+                Some("end-to-end route returned satisfiable after primary UNSAT".to_owned()),
+            ),
+            Err(error) => (EndToEndStatus::Error, Some(error.to_string())),
+        };
+        EndToEndRecord {
+            status,
+            elapsed: Some(started.elapsed()),
+            detail,
+        }
+    }
+
+    fn accumulate_end_to_end(record: &EndToEndRecord, path: &str, summary: &mut Summary) {
+        if record.status.attempted() {
+            summary.end_to_end_attempted += 1;
+            let elapsed = record
+                .elapsed
+                .expect("attempted end-to-end certification carries elapsed time");
+            summary.end_to_end_s += elapsed.as_secs_f64();
+            summary.end_to_end_sample = Some(elapsed.as_secs_f64());
+        }
+        match record.status {
+            EndToEndStatus::Certified => summary.end_to_end_certified += 1,
+            EndToEndStatus::NotCertified => {
+                summary.end_to_end_not_certified += 1;
+                summary
+                    .end_to_end_not_certified_paths
+                    .insert(path.to_owned());
+            }
+            EndToEndStatus::SatisfiableContradiction => {
+                summary.end_to_end_satisfiable_contradictions += 1;
+                summary.end_to_end_alarm_paths.insert(path.to_owned());
+            }
+            EndToEndStatus::RecheckFailed => {
+                summary.end_to_end_recheck_failures += 1;
+                summary.end_to_end_alarm_paths.insert(path.to_owned());
+            }
+            EndToEndStatus::Error => {
+                summary.end_to_end_errors += 1;
+                summary.end_to_end_alarm_paths.insert(path.to_owned());
+            }
+            EndToEndStatus::NotRequested | EndToEndStatus::NotApplicable => {}
+        }
+    }
+
+    fn end_to_end_record(record: &EndToEndRecord, args: &Args) -> JsonValue {
+        json!({
+            "requested": args.certify_end_to_end_unsat,
+            "status": record.status.as_str(),
+            "deadline_ms": args.end_to_end_deadline_ms,
+            "elapsed_ms": record.elapsed.map(duration_ms_f64),
+            "detail": record.detail,
+            "timing_accounting": "separate assurance work; excluded from cold solver totals",
+        })
+    }
+
+    #[allow(clippy::cast_precision_loss)]
+    fn end_to_end_coverage_percent(summary: &Summary) -> f64 {
+        if summary.end_to_end_attempted == 0 {
+            0.0
+        } else {
+            100.0 * summary.end_to_end_certified as f64 / summary.end_to_end_attempted as f64
+        }
+    }
+
     /// Formats the blocker buckets most-frequent-first (ties broken by key) into a
     /// compact `key=count …` leaderboard line.
     fn blocker_leaderboard(buckets: &BTreeMap<String, u64>) -> String {
@@ -4869,6 +5127,22 @@ mod run {
         if let Some(sample) = next.unsat_proof_replay_sample {
             total.unsat_proof_replay_samples.push(sample);
         }
+        total.end_to_end_attempted += next.end_to_end_attempted;
+        total.end_to_end_certified += next.end_to_end_certified;
+        total.end_to_end_not_certified += next.end_to_end_not_certified;
+        total.end_to_end_satisfiable_contradictions += next.end_to_end_satisfiable_contradictions;
+        total.end_to_end_recheck_failures += next.end_to_end_recheck_failures;
+        total.end_to_end_errors += next.end_to_end_errors;
+        total.end_to_end_s += next.end_to_end_s;
+        if let Some(sample) = next.end_to_end_sample {
+            total.end_to_end_samples.push(sample);
+        }
+        total
+            .end_to_end_not_certified_paths
+            .extend(next.end_to_end_not_certified_paths.iter().cloned());
+        total
+            .end_to_end_alarm_paths
+            .extend(next.end_to_end_alarm_paths.iter().cloned());
         for (key, count) in &next.blocker_buckets {
             *total.blocker_buckets.entry(key.clone()).or_insert(0) += count;
         }
@@ -5288,6 +5562,8 @@ mod run {
             "cnf_vivify": args.cnf_vivify,
             "native_cdcl": args.native_cdcl,
             "prove_unsat": args.prove_unsat,
+            "certify_end_to_end_unsat": args.certify_end_to_end_unsat,
+            "end_to_end_deadline_ms": args.end_to_end_deadline_ms,
             "preprocess": args.preprocess,
             "profile_bit_demand": args.profile_bit_demand,
             "demand_bit_slicing": args.demand_bit_slicing,
@@ -5354,6 +5630,31 @@ mod run {
                 ),
                 "timing_accounting": "nested within SAT solve time; not added again to cold total",
             },
+            "end_to_end_unsat": {
+                "requested": args.certify_end_to_end_unsat,
+                "deadline_ms": args.end_to_end_deadline_ms,
+                "attempted": s.end_to_end_attempted,
+                "certified": s.end_to_end_certified,
+                "not_certified": s.end_to_end_not_certified,
+                "satisfiable_contradictions": s.end_to_end_satisfiable_contradictions,
+                "recheck_failures": s.end_to_end_recheck_failures,
+                "errors": s.end_to_end_errors,
+                "attempted_partitioned": s.end_to_end_attempted
+                    == s.end_to_end_certified
+                        + s.end_to_end_not_certified
+                        + s.end_to_end_satisfiable_contradictions
+                        + s.end_to_end_recheck_failures
+                        + s.end_to_end_errors,
+                "coverage_percent": end_to_end_coverage_percent(s),
+                "elapsed_s": s.end_to_end_s,
+                "elapsed": timing_distribution_record(
+                    &s.end_to_end_samples,
+                    |seconds| *seconds,
+                ),
+                "not_certified_paths": s.end_to_end_not_certified_paths,
+                "alarm_paths": s.end_to_end_alarm_paths,
+                "timing_accounting": "separate assurance work; excluded from cold solver totals; cooperative deadline covers proof searches, not construction or completed-proof checking",
+            },
             "manifest": {
                 "expected": s.manifest_expected,
                 "compared": s.manifest_compared,
@@ -5407,6 +5708,9 @@ mod run {
                 "status_disagreements": s.disagree,
                 "model_replay_failures": s.model_replay_failures,
                 "unsat_proof_replay_missing": s.unsat_proof_replay_missing,
+                "end_to_end_satisfiable_contradictions": s.end_to_end_satisfiable_contradictions,
+                "end_to_end_recheck_failures": s.end_to_end_recheck_failures,
+                "end_to_end_errors": s.end_to_end_errors,
                 "rewrite_sat_unsat_conflicts": s.rewrite_sat_unsat_conflicts,
                 "oracle_disagreements": s.oracle_disagree,
                 "manifest_disagreements": s.manifest_disagree,
@@ -6024,8 +6328,10 @@ mod run {
             &args.cnf_clause_budget.unwrap_or(u64::MAX).to_le_bytes(),
         );
         update_hash(&mut hash, &[u8::from(args.cnf_inprocessing)]);
+        update_hash(&mut hash, &[u8::from(args.cnf_vivify)]);
         update_hash(&mut hash, &[u8::from(args.native_cdcl)]);
         update_hash(&mut hash, &[u8::from(args.prove_unsat)]);
+        fingerprint_end_to_end_config(&mut hash, args);
         update_hash(&mut hash, &[u8::from(args.preprocess)]);
         update_hash(&mut hash, &[u8::from(args.profile_bit_demand)]);
         update_hash(&mut hash, &[u8::from(args.demand_bit_slicing)]);
@@ -6053,6 +6359,17 @@ mod run {
         update_hash(&mut hash, backend_name.as_bytes());
         update_hash(&mut hash, corpus_hash.as_bytes());
         hex_u64(hash)
+    }
+
+    fn fingerprint_end_to_end_config(hash: &mut u64, args: &Args) {
+        update_hash(hash, &[u8::from(args.certify_end_to_end_unsat)]);
+        update_hash(
+            hash,
+            &args
+                .end_to_end_deadline_ms
+                .unwrap_or(u64::MAX)
+                .to_le_bytes(),
+        );
     }
 
     fn fingerprint_corpus(files: &[PathBuf], root: &Path) -> String {
@@ -6836,7 +7153,7 @@ mod run {
             };
             assert!((decided_percent(&mostly_failed) - 2.0).abs() < f64::EPSILON);
             assert_eq!(
-                report_summary(&mostly_failed, None, false),
+                report_summary(&mostly_failed, None, false, false),
                 ExitCode::FAILURE,
                 "fast operational failure must never pass as a benchmark result"
             );
@@ -6849,11 +7166,11 @@ mod run {
                 ..Summary::default()
             };
             assert_eq!(
-                report_summary(&incomplete, Some(80.0), false),
+                report_summary(&incomplete, Some(80.0), false, false),
                 ExitCode::SUCCESS
             );
             assert_eq!(
-                report_summary(&incomplete, Some(80.1), false),
+                report_summary(&incomplete, Some(80.1), false, false),
                 ExitCode::FAILURE
             );
         }
@@ -6868,7 +7185,7 @@ mod run {
                 ..Summary::default()
             };
             assert_eq!(
-                report_summary(&complete, Some(100.0), true),
+                report_summary(&complete, Some(100.0), true, false),
                 ExitCode::SUCCESS
             );
 
@@ -6877,7 +7194,7 @@ mod run {
                 ..complete
             };
             assert_eq!(
-                report_summary(&partial, Some(100.0), true),
+                report_summary(&partial, Some(100.0), true, false),
                 ExitCode::FAILURE
             );
         }
@@ -7075,7 +7392,7 @@ mod run {
                 JsonValue::Bool(false)
             );
             assert_eq!(
-                report_summary(&summary, Some(100.0), false),
+                report_summary(&summary, Some(100.0), false, false),
                 ExitCode::FAILURE
             );
         }
@@ -7322,7 +7639,10 @@ mod run {
             let mut missing = Summary::default();
             accumulate_proof_replay(&record, true, &mut missing);
             assert_eq!(missing.unsat_proof_replay_missing, 1);
-            assert_eq!(report_summary(&missing, None, false), ExitCode::FAILURE);
+            assert_eq!(
+                report_summary(&missing, None, false, false),
+                ExitCode::FAILURE
+            );
 
             record
                 .stats
@@ -7338,6 +7658,47 @@ mod run {
             assert_eq!(checked.unsat_proof_replay_checked, 1);
             assert_eq!(checked.unsat_proof_replay_missing, 0);
             assert_eq!(checked.unsat_proof_replay_sample, Some(0.00025));
+        }
+
+        #[test]
+        fn end_to_end_accounting_keeps_uncovered_rows_and_fails_on_alarms() {
+            let certified = EndToEndRecord {
+                status: EndToEndStatus::Certified,
+                elapsed: Some(Duration::from_millis(2)),
+                detail: None,
+            };
+            let uncovered = EndToEndRecord {
+                status: EndToEndStatus::NotCertified,
+                elapsed: Some(Duration::from_millis(5)),
+                detail: None,
+            };
+            let mut summary = Summary {
+                unsat: 2,
+                ..Summary::default()
+            };
+            accumulate_end_to_end(&certified, "a.smt2", &mut summary);
+            accumulate_end_to_end(&uncovered, "b.smt2", &mut summary);
+            assert_eq!(summary.end_to_end_attempted, 2);
+            assert_eq!(summary.end_to_end_certified, 1);
+            assert_eq!(summary.end_to_end_not_certified, 1);
+            assert!(summary.end_to_end_not_certified_paths.contains("b.smt2"));
+            assert!((end_to_end_coverage_percent(&summary) - 50.0).abs() < f64::EPSILON);
+            assert_eq!(
+                report_summary(&summary, None, false, true),
+                ExitCode::SUCCESS
+            );
+
+            let alarm = EndToEndRecord {
+                status: EndToEndStatus::SatisfiableContradiction,
+                elapsed: Some(Duration::from_millis(1)),
+                detail: Some("contradiction".to_owned()),
+            };
+            summary.unsat += 1;
+            accumulate_end_to_end(&alarm, "c.smt2", &mut summary);
+            assert_eq!(
+                report_summary(&summary, None, false, true),
+                ExitCode::FAILURE
+            );
         }
 
         #[test]

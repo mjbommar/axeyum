@@ -154,6 +154,17 @@ class TimeoutSweepTests(unittest.TestCase):
                 1,
             )
 
+    def test_accepts_current_artifact_v33(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            artifacts, neutral = self.inputs(Path(directory))
+            for path in artifacts:
+                value = json.loads(path.read_text(encoding="utf-8"))
+                value["version"] = 33
+                path.write_text(json.dumps(value), encoding="utf-8")
+            result = MODULE.analyze(artifacts, neutral)
+            self.assertEqual(result["source_artifact_version"], 33)
+            self.assertEqual(result["source_artifact_versions"], [33])
+
     def test_rejects_cross_solver_contradiction(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             artifacts, neutral = self.inputs(Path(directory))

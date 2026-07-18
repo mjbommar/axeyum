@@ -67,6 +67,24 @@ class GlaurungBenchmarkRecipeTests(unittest.TestCase):
         ]:
             self.assertIn("--prove-unsat", dry_run(recipe, "corpus", "manifest"))
 
+    def test_real_faithfulness_recipe_is_raw_deadline_aware_and_fail_closed(self) -> None:
+        output = dry_run(
+            "bench-glaurung-qfbv-real-faithfulness",
+            "corpus",
+            "manifest",
+            "representative",
+            "1000",
+        )
+        self.assertIn("--backend sat-bv", output)
+        self.assertIn("--rewrite off", output)
+        self.assertIn("--prove-unsat", output)
+        self.assertIn("--certify-end-to-end-unsat", output)
+        self.assertIn("--end-to-end-deadline-ms \"1000\"", output)
+        self.assertIn("--require-reproducible-run", output)
+        self.assertIn("--require-deterministic-resources", output)
+        self.assertIn("--manifest-jobs 1", output)
+        self.assertNotIn("--preprocess", output)
+
     def test_repeated_wrappers_select_separate_policy_series(self) -> None:
         expected = {
             "bench-glaurung-qfbv-raw-repeated": "raw",

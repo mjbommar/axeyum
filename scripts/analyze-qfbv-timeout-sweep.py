@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any, NoReturn, Sequence
 
 
-SOURCE_ARTIFACT_VERSION = 32
+SUPPORTED_SOURCE_ARTIFACT_VERSIONS = (32, 33)
 ANALYSIS_SCHEMA = "axeyum-qfbv-timeout-sweep-analysis-v1"
 CVC5_SCHEMA = "axeyum-qfbv-cvc5-timeout-sweep-v1"
 DEFAULT_TIMEOUTS = (50, 100, 250, 1_000)
@@ -180,8 +180,12 @@ def population(primary: str, oracle: str) -> str:
 def validate_axeyum_artifact(
     artifact: dict[str, Any], path: Path
 ) -> tuple[int, dict[str, dict[str, Any]], dict[str, Any]]:
-    if integer(artifact.get("version"), f"{path}: version") != SOURCE_ARTIFACT_VERSION:
-        fail(f"{path}: expected artifact version {SOURCE_ARTIFACT_VERSION}")
+    version = integer(artifact.get("version"), f"{path}: version")
+    if version not in SUPPORTED_SOURCE_ARTIFACT_VERSIONS:
+        fail(
+            f"{path}: expected artifact version in "
+            f"{SUPPORTED_SOURCE_ARTIFACT_VERSIONS}"
+        )
     config = mapping(artifact.get("config"), f"{path}: config")
     timeout = validate_config(config, path)
     summary = mapping(artifact.get("summary"), f"{path}: summary")
@@ -517,11 +521,13 @@ def analyze(
 ) -> dict[str, Any]:
     grouped: dict[int, list[dict[str, dict[str, Any]]]] = defaultdict(list)
     artifact_records = []
+    source_versions: set[int] = set()
     reference_identity = None
     file_identity = None
     all_verdicts: dict[str, set[str]] = defaultdict(set)
     for path in axeyum_paths:
         artifact, digest = load_json(path)
+        source_versions.add(integer(artifact.get("version"), f"{path}: version"))
         timeout, instances, identity = validate_axeyum_artifact(artifact, path)
         if timeout not in required_timeouts:
             fail(f"{path}: undeclared timeout {timeout}")
@@ -538,7 +544,12 @@ def analyze(
             fail(f"{path}: instance identity drift")
         grouped[timeout].append(instances)
         artifact_records.append(
-            {"path": path.name, "sha256": digest, "timeout_ms": timeout}
+            {
+                "path": path.name,
+                "sha256": digest,
+                "timeout_ms": timeout,
+                "artifact_version": integer(artifact.get("version"), f"{path}: version"),
+            }
         )
         for name, row in instances.items():
             all_verdicts[name].update((row["axeyum"], row["z3"]))
@@ -572,7 +583,10 @@ def analyze(
 
     return {
         "schema": ANALYSIS_SCHEMA,
-        "source_artifact_version": SOURCE_ARTIFACT_VERSION,
+        "source_artifact_version": (
+            next(iter(source_versions)) if len(source_versions) == 1 else None
+        ),
+        "source_artifact_versions": sorted(source_versions),
         "contract": {
             "timeouts_ms": list(required_timeouts),
             "repetitions": repetition_count,

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Validate and summarize repeated Glaurung QF_BV benchmark artifacts.
 
-Each input must be an independently launched artifact-v32 run from the strict
+Each input must be an independently launched artifact-v33 run from the strict
 single-worker Glaurung recipe. The script fails closed on identity drift or any
 acceptance-gate failure, then reports whole-corpus variance. It intentionally
 does not merge per-query records: keeping repetitions as separate processes and
@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Any, NoReturn, Sequence
 
 
-SOURCE_ARTIFACT_VERSION = 32
+SOURCE_ARTIFACT_VERSION = 33
 REPETITION_SUMMARY_VERSION = 1
 STAGE_KEYS = (
     "word_preprocess_s",

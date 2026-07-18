@@ -602,6 +602,18 @@ records the contract and the first measured baselines.
   widening harness also needs a cooperative deadline or killable process:
   CNF DRAT finishes, but end-to-end certification exceeds the bounded
   diagnostic and remains unmeasured.
+  Artifact v33 exposes the same deadline-aware end-to-end route on exact
+  manifest-bound real corpora. It is valid only on the raw, full-query QF_BV
+  proof path: every primary UNSAT must be attempted and classified as
+  certified, not-certified, a satisfiable contradiction, a recheck failure, or
+  an operational error. Keep not-certified rows in the denominator; fail the
+  other three alarm classes. The certificate timer is separate assurance work,
+  not part of the cold solver ratio. Its absolute deadline covers the two
+  proof-producing searches, while construction and completed-proof checking
+  remain cooperative work until a later whole-process isolation gate. Version
+  33 also fingerprints the already-recorded CNF-vivification switch so two
+  artifacts cannot compare under one configuration hash when that policy
+  differs.
 - Timeout regressions must pin the exact pathological public or minimized query
   and exercise both admission outcomes: deterministic oversized refusal before
   allocation and cooperative expiry inside admitted superlinear work. Every

@@ -106,7 +106,7 @@ def artifact(
     axeyum = sum(stages.values())
     z3 = 0.5
     return {
-        "version": 32,
+        "version": 33,
         "config": config(root, tier, manifest_digest, dirty=dirty),
         "instances": [
             {

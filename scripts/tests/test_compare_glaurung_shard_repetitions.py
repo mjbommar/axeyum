@@ -60,7 +60,7 @@ def composite(revision: str, axeyum: float, z3: float, rss: int) -> dict:
     }
     return {
         "schema": "axeyum-glaurung-qfbv-sharded-summary-v1",
-        "source_artifact_version": 32,
+        "source_artifact_version": 33,
         "policy": "canonical",
         "contract": {"coverage": "exact"},
         "capture": {"files": 2, "path_set_sha256": "paths", "shards": 1},

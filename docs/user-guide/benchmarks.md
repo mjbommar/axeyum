@@ -85,7 +85,7 @@ just compare-glaurung-qfbv-repeated BASE CAND OUT # controlled cross-commit delt
 
 Each JSON records the corpus + config hash, per-instance outcome, budgets,
 backend stats, PAR-2, explicit `decided`/`decided_percent`, **disagreements**,
-and **model-replay failures**. Artifact version 32 retains version 16's exact
+and **model-replay failures**. Artifact version 33 retains version 16's exact
 floating-point millisecond values for each instance's word-level preprocessing,
 bit-blast, CNF encode/inprocess, SAT, model lift, and cold total, plus corpus
 totals and p50/p95 distributions. Its `client_comparison` block reports the
@@ -128,6 +128,18 @@ fallback is limited to an in-process `unsupported` result and cannot replace a
 real in-process timeout. Latency comparisons remain restricted to
 `both-decided`; nondecisions are reported separately rather than rewarded as
 fast solves.
+Version 33 adds deadline-aware real-query end-to-end UNSAT certification.
+`--certify-end-to-end-unsat --end-to-end-deadline-ms N` composes the
+independent-reference bit-blast miter with the final CNF DRAT refutation and
+then rechecks both certificates from text. Every primary UNSAT is classified as
+`certified`, `not-certified`, a satisfiable contradiction, a recheck failure,
+or an operational error. Only `not-certified` is an accepted coverage miss;
+the other three alarms fail the run. This mode requires the raw full-query
+`sat-bv` proof path and keeps its assurance time outside solver-performance
+totals. The deadline is cooperative proof-search policy, not a whole-call wall
+clock: construction and completed-proof checking still run to completion.
+Version 33 also adds the already-reported `cnf_vivify` switch to `config_hash`;
+earlier artifacts recorded that switch in `config` but did not fingerprint it.
 ADR-0159 makes that pairing executable and fail-closed. The repeated ablation
 recipe alternates an unchanged default run with the exact default-minus-rule
 run in fresh processes. `compare-glaurung-rewrite-ablation.py` rejects any
@@ -337,7 +349,7 @@ just bench-glaurung-qfbv-rewrite-ablation-repeated \
   5
 ```
 
-The output directory contains paired `base-*`/`ablation-*` artifact-v32 files
+The output directory contains paired `base-*`/`ablation-*` artifact-v33 files
 and `comparison.json`. Positive deltas mean the enabled base rule avoided that
 work or time. Fire counts and selected-policy output sizes remain targeting
 telemetry, not causal savings.
@@ -422,3 +434,19 @@ not a replacement for the default client performance ratio. The unsuffixed
 proof recipe is a raw alias; canonical and configured proof companions are
 available under the corresponding suffixed recipe names. Pair a performance
 artifact only with the proof companion using the same word policy.
+
+Run the stronger term-to-CNF faithfulness denominator separately on the raw
+manifest-bound path:
+
+```sh
+just bench-glaurung-qfbv-real-faithfulness \
+  /path/to/glaurung-smt2-capture \
+  /path/to/glaurung-manifest-v1.json \
+  representative \
+  1000
+```
+
+The summary reports certified and not-certified rows over the complete primary
+UNSAT population, including exact uncovered paths. Do not add its certificate
+time to the cold solver total or describe its cooperative deadline as process
+isolation.
