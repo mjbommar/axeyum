@@ -545,8 +545,12 @@ Out of scope:
     topology controls; and ADR-0229 closes bounded four-driver sole-authority
     finding parity. ADR-0233 closes the timeout-sensitive neutral formula
     control with complete four-population accounting at 50/100/250/1000 ms and
-    an all-decided 1000 ms tier. Wider/timeout-sensitive authoritative findings
-    remain open and none of the formula controls replace retained-warm evidence.
+    an all-decided 1000 ms tier. ADR-0236 then records the first stable tcpip
+    any-model finding divergence and closes one opt-in canonical-authority cell
+    with exact output and exploration-counter parity. Because canonicalization
+    changes the shared finding population, wider/coverage-union authority work
+    remains open, and none of the formula or authority controls replace fair
+    retained-warm performance evidence.
 - [x] How should a real-client shadow run preserve decided/nondecided splits?
   - Answer: only under an explicit combined-shadow diagnostic, atomically write
     the exact content-addressed SMT-LIB bytes and stable backend result classes

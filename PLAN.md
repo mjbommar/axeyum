@@ -233,6 +233,18 @@ session state.
 > manifests, not more isolation plumbing; independent fuzz/another neutral
 > implementation and timeout-sensitive or wider sole-authority findings remain
 > publication work.
+> ADR-0236 closes the first measured canonical-authority cell after tcpip
+> activates ADR-0229's reopen condition. On the same current source, binaries,
+> first 15 functions, 250 ms check wall, and N=3 order-balanced repetitions,
+> unrestricted model choice is stable but differs by two Z3-only sinks. The
+> opt-in `glaurung-min-unsigned-v1` policy instead gives 110 byte-identical
+> sinks, 80,563 solves, and identical complete model-choice telemetry under
+> both authorities, with zero inconclusive choice. Canonicalization changes the
+> common finding population from 126 to 110, so it remains a reproducible
+> experiment policy rather than a production default or a finding-preservation
+> claim. Wider authority, coverage-union/multi-model exploration, independent
+> fuzz seeds, and another neutral implementation remain publication work; the
+> standalone canonical timers are not performance evidence.
 
 > **P0 soundness stop contained (2026-07-15, ADR-0165).** Historical commit
 > `2cb298e2` reproduced unrestricted large elimination from a two-constructor
@@ -730,13 +742,13 @@ count as decisions or speedups.
 
 | ID | Roadmap item | Scope and exit criterion |
 |---|---|---|
-| **GQ1** | **Capture and profile real queries first** | **Four-driver map, query/internal attribution, fresh/retained exact-CNF controls, neutral cold-reset plus source-owner-retained SMT breadth, bounded authoritative finding parity, process-isolated corrected-representative end-to-end faithfulness, and deadline-aware generated proof widening DONE (ADR-0187/0188/0197/0213--0235).** cvc5 agrees on all 9,526 checks in both external protocols; 302 raw sinks match under sole Z3/Axeyum authority; all 74 UNSAT rows in the corrected five-driver representative recheck both CNF DRAT and stronger end-to-end certificates in two clean process-isolated runs, and a 1 ms kill control retains all 74 rows; all 1,505 generated CNF proofs recheck, with 1,487/1,505 stronger generated certificates under policy. Retained BatSat beats Z3 Boolean on Axeyum CNF despite native warm Z3 winning end-to-end. Add timeout-sensitive neutral/wider authority and wider real proof cells. |
+| **GQ1** | **Capture and profile real queries first** | **Four-driver map, query/internal attribution, fresh/retained exact-CNF controls, neutral cold-reset plus source-owner-retained SMT breadth, bounded/canonical authority cells, process-isolated corrected-representative end-to-end faithfulness, and deadline-aware generated proof widening DONE (ADR-0187/0188/0197/0213--0236).** cvc5 agrees on all 9,526 checks in both external protocols; 302 raw sinks match under unrestricted sole authority on four drivers; tcpip prefix 15 exposes two stable Z3-only any-model sinks, then reaches exact 110-sink and exploration-counter parity under the opt-in unsigned-minimum policy; all 74 UNSAT rows in the corrected five-driver representative recheck both CNF DRAT and stronger end-to-end certificates in two clean process-isolated runs, and a 1 ms kill control retains all 74 rows; all 1,505 generated CNF proofs recheck, with 1,487/1,505 stronger generated certificates under policy. Retained BatSat beats Z3 Boolean on Axeyum CNF despite native warm Z3 winning end-to-end. Add wider authority/coverage-union and wider real proof cells. |
 | **GQ2** | **Cheap always-on cold simplification tier** | Add a bounded, denotation-preserving one-shot tier for constant folding and trivial identities whose own cost is measured. Add a size/shape and cold-vs-warm policy that selects cheap, configured, or no preprocessing. Exit only when cold end-to-end time is non-worse in aggregate and improves the target class at the GQ1 validity gates. |
 | **GQ3** | **Coercion-cancellation peepholes and causal telemetry** | **Current measured tranche complete; use ablation as policy evidence.** Exact nested/concat/extension/coercion rules and ADR-0159's repeated default-minus-rule comparator are landed. `extract_extend` improves lowering, but all four measured rules change zero AIG nodes and clauses. Do not globally delete sound rewrites because one corpus does not fire them; instead, keep a Glaurung policy only for rules with measured reach/cost and reopen register-slice-specific work only when an ablation demonstrates downstream AIG/CNF or native-time reduction. |
 | **GQ4** | **Cold demand-driven bit-slice reduction** | **Out of the active queue.** ADR-0157 v1 is correct but regresses the real ratio about 1.42x→4.49x; ADR-0158's conservative admission is a safe no-op but does not improve the required family. Both remain explicit/off. Do not tune thresholds further on this corpus; only a qualitatively different constant-cost admission proof and a fresh client gate can reopen GQ4. |
 | **GQ5** | **Cheaper AIG construction and measured CNF encoding** | **Cold engineering lane active; broad warm construction lane closed by ADR-0219.** Cold still assigns most Axeyum time to bit blast+CNF, but retained four-driver profiles remove 98--99% of per-check structure and leave only 11--20% whole-driver warm CNF. ADR-0221 now moves the Dptf reversal to word-level representation/integration; continue cold work only from causal gates and do not infer warm benefit from cold shares. |
 | **GQ6** | **Cold SAT/CDCL tuning** | **Fresh and retained exact-CNF controls DONE (ADR-0220/0221).** The proof core beats fresh BatSat before checking, while retained BatSat beats retained Z3 Boolean by 3.5527x on the ordered Axeyum CNF stream. Do not select a custom-core rewrite from Dptf; reopen only on a SAT-dominant family with a neutral core gap and deterministic limits. |
-| **GQ7** | **Cheaper warm entry and delta preprocessing** | **Source identity, fair map, query/internal attribution, fresh/retained exact-CNF controls, four-driver neutral cold-reset and source-owner-retained SMT, and bounded finding parity DONE; wider authority evidence WIP (ADR-0201--0205/0213--0232).** ADR-0232 shows 16.4x--57.0x within-cvc5 retained/full-reset reductions while preserving the external textual boundary. Keep direct opt-in; proceed to timeout-sensitive neutral and authority widening. |
+| **GQ7** | **Cheaper warm entry and delta preprocessing** | **Source identity, fair map, query/internal attribution, fresh/retained exact-CNF controls, four-driver neutral cold-reset and source-owner-retained SMT, bounded finding parity, and one canonical tcpip authority cell DONE; wider authority evidence WIP (ADR-0201--0205/0213--0236).** ADR-0232 shows 16.4x--57.0x within-cvc5 retained/full-reset reductions while preserving the external textual boundary; ADR-0236's opt-in canonical policy closes one divergent prefix but changes its finding population. Keep direct and canonical policies opt-in; proceed to wider authority/coverage-union evidence. |
 | **GQ8** | **Verdict and CNF reuse for duplicate/prefix queries** | **Exact replay-checked SAT reuse is done for available families (ADR-0192); stronger subsumption remains open.** Exact hits replay under fixed bounds; ordinary UNSAT/Unknown and prefix verdict reuse remain forbidden. Investigate only replay-checked stronger-model reuse where a cached model is proven to satisfy the complete weaker later query. |
 | **GQ9** | **Auto production policy and API guidance** | **DONE for available serial families (ADR-0186/0199).** Adaptive 2→9 ownership plus serial sibling continuation reuse is the downstream default; ADR-0199 clears every time/ratio/RSS/environment alarm and improves RSS on both accepted drivers. Explicit one-shot, fixed, transfer-only, and serial-off controls remain. Re-gate wider families and never apply serial leases across parallel workers. |
 | **GQ10** | **Ordered, wider real-lifter regression corpus** | **Native timeout-continuation admission is DONE; wider direct-delta admission is deferred (ADR-0205--0212).** The accepted tcpip gate still defaults one bounded continuation only inside selected direct-delta sessions. A complete 85,449-event / 17,400-check `dxgkrnl` trace and independent 13,577-query / 8,816-model-read replay prove exact production-topology no-op functionality with zero correctness or lifecycle alarms. The repeated ordinary-core comparison nevertheless fails the declared timing-CV gate (14.430% control, 8.306% candidate); slower-core calibration changes actual outcomes at the 250 ms boundary. Keep direct delta opt-in. `win32k` is now classified as a system-service/callout frontend target, not zero-query IOCTL solver evidence. |
@@ -776,7 +788,7 @@ artifact evidence below governs.
 | 9 | Self-rechecked DRAT UNSAT evidence is a deployability/correctness advantage over the current Z3 crate path. | Keep `UnsatProof::recheck()` prominent in examples, capability tables, and performance reporting. No optimization may bypass proof generation/recheck where proof-bearing UNSAT is promised. |
 | 10 | Pure Rust/no-C and the `qfbv`-only profile reduce deployment cost; benchmark methodology must reject fast failure. | Preserve the no-native default and lean feature profile; gate WASM claims on an actual target build rather than aspiration. Every comparison must report per-backend SAT, UNSAT, Unknown, Error, decided rate, replay, and exact work/finding identity. A faster number with reduced work or increased nondecisions is invalid until attributed—the pre-fix tcpip/dxgkrnl ratios are explicitly withdrawn. |
 
-**Publication execution order (2026-07-18, ADR-0213--0232 plus ranked review;
+**Publication execution order (2026-07-18, ADR-0213--0236 plus ranked review;
 supersedes performance-claim ordering below).** Product admission and paper
 evidence are now distinct:
 
@@ -831,14 +843,20 @@ evidence are now distinct:
    remaining explicitly external/textual. Keep in-process, FFI, and external
    SMT boundary costs separately named; do not use Z3 as both sole oracle and
    sole comparator.
-4. **Authoritative finding parity — bounded four-driver tier DONE, wider and
-   timeout-sensitive tiers WIP (ADR-0229):** sole-authority Z3 and Axeyum
+4. **Authoritative finding parity — bounded four-driver tier and first
+   canonical tcpip cell DONE; wider/coverage-union tiers WIP
+   (ADR-0229/0236):** sole-authority Z3 and Axeyum
    binaries emit byte-identical ordered raw sink lists on Dptf, vwififlt,
    IntcSST, and SurfacePen across N=3 order-balanced repetitions: 302 canonical
    sinks and 1,812 stable emitted rows. Differing vwififlt/IntcSST solve counts
-   prohibit an identical-exploration claim but do not change output. Do not add
-   canonical model policy without measured divergence; repeat on the future
-   timeout-sensitive and wider authority tiers.
+   prohibit an identical-exploration claim but do not change output. Tcpip
+   prefix 15 supplies the measured divergence: its any-model cells have 126
+   stable shared sinks plus two Z3-only rows. The opt-in unsigned-minimum policy
+   gives both authorities the same 110 sinks, 80,563 solves, and complete
+   model-choice telemetry with zero inconclusive choice. Because the policy
+   changes the shared population, keep it opt-in and add wider fixed-work or
+   deterministic multi-model/coverage-union evidence before a general finding-
+   preservation claim.
 5. **Deployability and artifact readiness — profile, WebAssembly, bounded warm
    Pareto, and representative real-query end-to-end proof deployment DONE
    (ADR-0216/0227/0228/0230/0234/0235), wider proof deployment WIP:** `qfbv` is the
