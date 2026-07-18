@@ -211,6 +211,17 @@ session state.
 > sensitive sole-authority findings remain open, as do real-query
 > faithfulness, independent fuzz seeds plus another neutral implementation,
 > and whole-certificate process isolation.
+> ADR-0234 closes representative real-query term-to-CNF faithfulness. Artifact
+> v33 attempts every primary UNSAT in ADR-0187's corrected 162-query manifest
+> and independently rechecks both stored certificate texts. Two clean,
+> identity-matched repetitions decide 88 SAT / 74 UNSAT, replay every SAT
+> model, recheck all 74 CNF DRAT proofs, and certify all 74 UNSAT end to end
+> under a declared 1000 ms cooperative proof-search deadline, with zero
+> non-certification or alarm row. This is a 74-row representative denominator,
+> not the full corpus or a hard one-second API guarantee. Next proof work is
+> killable whole-certificate process isolation and wider real manifests;
+> independent fuzz seeds/another neutral implementation and timeout-sensitive
+> or wider sole-authority findings remain publication work.
 
 > **P0 soundness stop contained (2026-07-15, ADR-0165).** Historical commit
 > `2cb298e2` reproduced unrestricted large elimination from a two-constructor
@@ -708,7 +719,7 @@ count as decisions or speedups.
 
 | ID | Roadmap item | Scope and exit criterion |
 |---|---|---|
-| **GQ1** | **Capture and profile real queries first** | **Four-driver map, query/internal attribution, fresh/retained exact-CNF controls, neutral cold-reset plus source-owner-retained SMT breadth, bounded authoritative finding parity, representative real-query DRAT, and deadline-aware generated proof widening DONE (ADR-0187/0188/0197/0213--0232).** cvc5 agrees on all 9,526 checks in both external protocols; 302 raw sinks match under sole Z3/Axeyum authority; all 64 real UNSAT DRAT proofs and 1,505 generated CNF proofs recheck, with 1,487/1,505 stronger generated certificates under policy; retained BatSat beats Z3 Boolean on Axeyum CNF despite native warm Z3 winning end-to-end. Add timeout-sensitive neutral/wider authority and real faithfulness cells. |
+| **GQ1** | **Capture and profile real queries first** | **Four-driver map, query/internal attribution, fresh/retained exact-CNF controls, neutral cold-reset plus source-owner-retained SMT breadth, bounded authoritative finding parity, corrected representative real-query end-to-end faithfulness, and deadline-aware generated proof widening DONE (ADR-0187/0188/0197/0213--0234).** cvc5 agrees on all 9,526 checks in both external protocols; 302 raw sinks match under sole Z3/Axeyum authority; all 74 UNSAT rows in the corrected five-driver representative recheck both CNF DRAT and stronger end-to-end certificates in two clean runs; all 1,505 generated CNF proofs recheck, with 1,487/1,505 stronger generated certificates under policy. Retained BatSat beats Z3 Boolean on Axeyum CNF despite native warm Z3 winning end-to-end. Add timeout-sensitive neutral/wider authority, whole-certificate isolation, and wider real proof cells. |
 | **GQ2** | **Cheap always-on cold simplification tier** | Add a bounded, denotation-preserving one-shot tier for constant folding and trivial identities whose own cost is measured. Add a size/shape and cold-vs-warm policy that selects cheap, configured, or no preprocessing. Exit only when cold end-to-end time is non-worse in aggregate and improves the target class at the GQ1 validity gates. |
 | **GQ3** | **Coercion-cancellation peepholes and causal telemetry** | **Current measured tranche complete; use ablation as policy evidence.** Exact nested/concat/extension/coercion rules and ADR-0159's repeated default-minus-rule comparator are landed. `extract_extend` improves lowering, but all four measured rules change zero AIG nodes and clauses. Do not globally delete sound rewrites because one corpus does not fire them; instead, keep a Glaurung policy only for rules with measured reach/cost and reopen register-slice-specific work only when an ablation demonstrates downstream AIG/CNF or native-time reduction. |
 | **GQ4** | **Cold demand-driven bit-slice reduction** | **Out of the active queue.** ADR-0157 v1 is correct but regresses the real ratio about 1.42x→4.49x; ADR-0158's conservative admission is a safe no-op but does not improve the required family. Both remain explicit/off. Do not tune thresholds further on this corpus; only a qualitatively different constant-cost admission proof and a fresh client gate can reopen GQ4. |
@@ -793,9 +804,12 @@ evidence are now distinct:
    SAT model replays and complete Z3/manifest agreement. ADR-0231 then widens
    generated proof selection to all 1,505 width<=8 UNSAT rows under a declared
    search deadline: CNF DRAT is 1,505/1,505 and stronger certification is
-   1,487/1,505 with 18 exact uncovered seeds retained. Add whole-certificate
-   isolation and term-to-CNF faithfulness on real rows; never merge the two
-   assurance levels.
+   1,487/1,505 with 18 exact uncovered seeds retained. ADR-0234 separately
+   certifies all 74 UNSAT rows in ADR-0187's corrected representative end to
+   end in two clean
+   runs under a 1000 ms cooperative deadline. Add whole-certificate process
+   isolation and wider real manifests; never merge the generated and real
+   assurance denominators.
    Keep invalid consumer states separate from valid-formula fuzz.
 3. **Neutral baselines and oracles — four-driver cold-reset and source-owner-
    retained breadth DONE (ADR-0222/0223/0232), timeout-sensitive breadth
@@ -814,17 +828,19 @@ evidence are now distinct:
    canonical model policy without measured divergence; repeat on the future
    timeout-sensitive and wider authority tiers.
 5. **Deployability and artifact readiness — profile, WebAssembly, bounded warm
-   Pareto, and representative real-query CNF DRAT DONE
-   (ADR-0216/0227/0228/0230), stronger proof deployment WIP:** `qfbv` is the
+   Pareto, and representative real-query end-to-end proof deployment DONE
+   (ADR-0216/0227/0228/0230/0234), wider proof deployment WIP:** `qfbv` is the
    exact solver default; Glaurung
    and `axeyum-wasm` select it explicitly; full in-tree consumers opt in; and
    host tests plus an executed wasm32 SAT/UNSAT gate protect the browser
    binding. Stable release size, dependency footprint, and Node/Chromium
    latency are now recorded. Two current same-stream controls report one-shot
    cost, warm time/RSS, retained-owner/cache/core partitions, and zero fallback.
-   The 128-row representative proof corpus adds 64/64 independently rechecked
-   real-query UNSAT DRAT proofs with complete SAT replay and Z3 agreement. Next
-   measure deadline-aware term-to-CNF faithfulness on real rows; consider a
+   The corrected 162-row representative proof corpus adds 74/74 independently
+   rechecked real-query UNSAT CNF DRAT proofs and 74/74 stronger end-to-end
+   certificates, with all 88 SAT models replaying and complete Z3 agreement in
+   two clean runs. Next add
+   killable whole-certificate isolation and wider real manifests; consider a
    narrow QF_BV parser only against the committed bundle baseline, and widen
    matched RSS only if it outranks the remaining publication blockers.
 6. **Supporting artifact work:** contribution ablations, neutral SMT-COMP QF_BV

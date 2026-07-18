@@ -1,0 +1,72 @@
+{
+  "artifacts": [
+    {
+      "path": "artifact-v33.json",
+      "sha256": "864e4a486c2518d924d3eda2588865bfa91374c0a48ef23689f55b5c14707e6a"
+    },
+    {
+      "path": "artifact-v33-run2.json",
+      "sha256": "c518cbb947d9e8aad80ae1479e7a771542dcbdfa89e4bca9b008fb04c30f6398"
+    }
+  ],
+  "assurance_elapsed_distributions": [
+    {
+      "max_ms": 152.718308,
+      "mean_ms": 9.181516486486485,
+      "min_ms": 0.025498,
+      "p50_ms": 0.9302330000000001,
+      "p95_ms": 55.100719
+    },
+    {
+      "max_ms": 154.162748,
+      "mean_ms": 9.350802837837838,
+      "min_ms": 0.024618,
+      "p50_ms": 1.1672900000000002,
+      "p95_ms": 55.444567
+    }
+  ],
+  "contract": {
+    "fatal": "manifest/oracle disagreement, CNF proof missing, satisfiable contradiction, certificate recheck failure, operational error, or identity drift",
+    "population": "every member of one exact content-hashed manifest",
+    "repetitions": 2,
+    "timing": "descriptive assurance work only; cooperative deadline excludes construction and completed-proof checking",
+    "unsat_denominator": "every primary UNSAT; not-certified rows are retained"
+  },
+  "coverage": {
+    "attempted_per_run": 74,
+    "certified_per_run": [
+      74,
+      74
+    ],
+    "coverage_percent": 100.0,
+    "not_certified_per_run": [
+      0,
+      0
+    ],
+    "stable_per_query": true
+  },
+  "identity": {
+    "config_hash": "309ebc2927b12f14",
+    "deadline_ms": 1000,
+    "environment_hash": "sha256:c9c631dec727c0ba76d099459769e2c10c8b12310f657788855eca65e8c0882b",
+    "manifest_hash": "sha256:7818686bc26c56646775eb2f557e1e4edb36e4e8254a8c410fe0333da1ba2064",
+    "manifest_name": "glaurung-qfbv-2026-07-16-corrected-wide-v3",
+    "selected_entries": 162,
+    "selected_tier": "representative",
+    "source_revision": "21738d4291735bd1986c9cce40ade4f0816dbc50"
+  },
+  "population": {
+    "files": 162,
+    "sat": 88,
+    "unsat": 74,
+    "unsat_family_counts": {
+      "arithmetic": 18,
+      "comparison": 5,
+      "mixed": 1,
+      "register-slice": 26,
+      "slice-partial": 24
+    }
+  },
+  "schema": "axeyum-qfbv-real-faithfulness-analysis-v1",
+  "source_artifact_version": 33
+}

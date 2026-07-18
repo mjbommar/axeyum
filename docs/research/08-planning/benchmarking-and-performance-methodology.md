@@ -614,6 +614,15 @@ records the contract and the first measured baselines.
   33 also fingerprints the already-recorded CNF-vivification switch so two
   artifacts cannot compare under one configuration hash when that policy
   differs.
+  ADR-0234 applies this gate twice to ADR-0187's exact corrected 162-query
+  representative Glaurung manifest at a predeclared 1000 ms per-UNSAT
+  proof-search policy. Both runs attempt and independently recheck 74/74
+  end-to-end certificates with zero not-certified or alarm row, while
+  preserving all 88 SAT model replays, 74 CNF DRAT rechecks, Z3 decisions, and
+  manifest decisions. The certified family split is 26 register-slice, 24
+  slice-partial, 18 arithmetic, 5 comparison, and 1 mixed. Max certificate
+  work is about 154 ms, so retain the cooperative-deadline and separate-timing
+  caveats without claiming that this real-query run exercised expiry.
 - Timeout regressions must pin the exact pathological public or minimized query
   and exercise both admission outcomes: deterministic oversized refusal before
   allocation and cooperative expiry inside admitted superlinear work. Every

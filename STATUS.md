@@ -322,6 +322,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-18 — ADR-0234 closes representative real-query term-to-CNF
+  faithfulness.** Artifact v33 attempts every primary UNSAT on the raw/full
+  proof path and independently rechecks both the independent-reference
+  bit-blast miter proof and final CNF DRAT. Two clean CPU-pinned repetitions of
+  ADR-0187's exact corrected 162-query representative manifest decide 88 SAT /
+  74 UNSAT, replay every SAT model, and certify all 74 UNSAT end to end with zero
+  non-certification or alarm row under a declared 1000 ms cooperative
+  proof-search deadline. The observed maxima are about 154 ms, so this run does
+  not exercise expiry, and construction/checking are not hard wall-clock
+  bounded. Next: killable
+  whole-certificate isolation, wider real manifests, independent fuzz/oracle
+  breadth, and timeout-sensitive/wider authoritative findings.
+
 - **2026-07-18 — ADR-0233 closes the timeout-sensitive neutral formula
   control.** Artifact v32 fixes the hidden-oracle population bug: in-process Z3
   now runs after an Axeyum `unknown`, binary fallback cannot replace a real
@@ -332,8 +345,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   rises from 28/13/46 to 52/52/52. At the all-decided 1000 ms tier the
   Axeyum/Z3 per-query geomean is 0.21095 [0.14904, 0.29644], a cold one-shot
   Axeyum win on this exact corpus, not a retained-warm or authoritative result.
-  Next: wider/timeout-sensitive sole-authority findings and deadline-aware
-  real-query faithfulness.
+  Next: wider/timeout-sensitive sole-authority findings. ADR-0234 subsequently
+  closes the representative real-query faithfulness cell.
 
 - **2026-07-18 — ADR-0232 closes the accepted neutral retained-topology
   control.** The cvc5 runner now preserves the exact source-owner session,
@@ -343,8 +356,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   and 0.28--1.61% CV. Same-protocol retained medians are 16.4x--57.0x below
   the accepted full-reset totals. This establishes session/representation
   retention as a first-order neutral mechanism, not an in-process cvc5 versus
-  Z3/Axeyum ranking. Next: timeout-sensitive neutral/authority widening and
-  deadline-aware real-query faithfulness.
+  Z3/Axeyum ranking. Next: timeout-sensitive neutral/authority widening;
+  ADR-0234 subsequently closes representative real-query faithfulness.
 
 - **2026-07-17 — ADR-0231 widens generated proof coverage without deleting
   slow rows.** The public bounded miter/end-to-end APIs share an absolute
@@ -355,7 +368,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   seeds retained as uncovered at 100 ms. Two content-equivalent repetitions
   produce identical counts and seed lists. This closes seed 83's indefinite
   search block, not whole-call timing: construction/checking remain outside the
-  cooperative deadline, and real-query faithfulness remains open.
+  cooperative deadline. ADR-0234 subsequently exercises the same bounded API
+  on the representative real-query denominator.
 
 - **2026-07-17 — ADR-0230 closes representative real-query CNF DRAT
   deployment.** The complete content-hashed 128-query Glaurung QF_BV manifest
@@ -365,7 +379,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   register-slice, slice-partial, arithmetic, and comparison families. This is
   the requested concrete client proof use case, not term-to-CNF faithfulness or
   a performance result. ADR-0226's stronger generated denominator remains
-  separate; add deadline-aware faithfulness on real rows and wider manifests.
+  separate; ADR-0234 subsequently closes the corrected five-driver
+  representative faithfulness cell while wider manifests remain open.
 
 - **2026-07-17 — ADR-0229 closes bounded four-driver authoritative finding
   parity.** Separate Z3-only and Axeyum-only Glaurung binaries each control
@@ -543,16 +558,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   ADR-0226 adds the first explicit generated proof denominator; and ADR-0227
   executes and measures the stable browser artifact after fixing a wasm32-only
   runtime trap.
-  Publication blockers are now: (1) a topology-equivalent warm representation/integration
-  control; (2) independent multi-oracle rounds plus deadline-aware and
-  real-query end-to-end faithfulness coverage; and (3) another neutral implementation/API boundary.
+  Publication blockers are now: (1) timeout-sensitive/wider neutral and
+  authoritative evidence; (2) independent multi-oracle rounds plus another
+  neutral implementation/API boundary; and (3) whole-certificate process
+  isolation plus wider real-query proof populations.
   ADR-0229 closes exact raw finding parity for the current four-driver bounded
   tier without needing canonical model selection; timeout-sensitive/wider
   authority coverage remains a widening task. Enforcing the existing `qfbv` profile in Glaurung and
   `axeyum-wasm`, plus executable WASM size/latency evidence, is complete;
   ADR-0228 now closes two current one-shot/warm RSS and hit-rate controls;
-  ADR-0230 closes representative real-query CNF DRAT deployment; stronger
-  faithfulness and wider proof populations remain. Solver
+  ADR-0230 closes CNF-only proof deployment on the historical three-driver
+  representative, while ADR-0234 closes end-to-end faithfulness on ADR-0187's
+  corrected five-driver representative; whole-process isolation and wider
+  proof populations remain. Solver
   namespace/module breakup, table-driven duplicate removal, and
   typed policy/config work follow as bounded behavior-preserving refactors; they
   must not churn the active evidence baseline. The latest 162-query semantic
@@ -2206,7 +2224,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
   | ID | Live status | Next acceptance boundary |
   |---|---|---|
-  | **GQ1 real-query profile** | **Map, query/internal attribution, fresh/retained exact-CNF controls, four-driver neutral cold-reset and source-owner-retained SMT breadth, bounded authoritative finding parity, representative real-query DRAT, and deadline-aware generated proof widening DONE (ADR-0187/0188/0213--0232).** cvc5 agrees on all 9,526 checks in both external protocols; 302 raw sinks match under sole Z3/Axeyum authority; all 64 real UNSAT DRAT and 1,505 generated CNF proofs recheck, with 1,487/1,505 stronger generated certificates under policy; BatSat beats Z3 Boolean on retained Axeyum CNF despite native warm Z3 winning end-to-end | Add timeout-sensitive neutral/wider authority and real faithfulness cells |
+  | **GQ1 real-query profile** | **Map, query/internal attribution, fresh/retained exact-CNF controls, four-driver neutral cold-reset and source-owner-retained SMT breadth, bounded authoritative finding parity, corrected representative real-query end-to-end faithfulness, and deadline-aware generated proof widening DONE (ADR-0187/0188/0213--0234).** cvc5 agrees on all 9,526 checks in both external protocols; 302 raw sinks match under sole Z3/Axeyum authority; all 74 UNSAT rows in the corrected five-driver representative recheck both CNF DRAT and stronger end-to-end certificates in two clean runs; all 1,505 generated CNF proofs recheck, with 1,487/1,505 stronger generated certificates under policy; BatSat beats Z3 Boolean on retained Axeyum CNF despite native warm Z3 winning end-to-end | Add timeout-sensitive neutral/wider authority, whole-certificate isolation, and wider real proof cells |
   | **GQ2 cheap cold tier** | **WIP with three accepted rewrite tranches; batch integration deferred.** Canonical v4 reaches 5.625 s / 0.730x Z3; ADR-0156 preserves replay but is 18.8% slower than one-shot | Keep canonical v4 as the measured one-shot policy; do not recommend fresh incremental batch until its clause/entry overhead closes |
   | **GQ3 coercion/affine peepholes** | **DONE for current measured shapes (ADR-0159).** Clean repeated path-paired ablations are fail-closed; `extract_extend` is a material lowering-only win, while all four measured structural rules change zero AIG nodes/clauses | Keep rules enabled. Reopen only for a new residual shape with a specific downstream hypothesis and the same causal ablation gate |
   | **GQ4 cold relevant bits** | **v1 and v2 DEFERRED after failed real gates.** v1 regresses ~1.42x→4.49x. V2 rejection overhead is bounded, but defaults admit 0/128 and +0.62% total; a 33-query moderate policy removes 632 AIG nodes/zero clauses and regresses bit blast 3.14% | Keep both explicit/off. Reopen only with an AIG/CNF-cone estimator or after word rewrites materially change the residual; do not tune thresholds further |
@@ -2219,13 +2237,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
   **Next actions:** (1) after ADR-0232's completed neutral retained-topology
   breadth, add a timeout-sensitive neutral and authority tier; (2) after
-  ADR-0227's executable browser baseline and
-  ADR-0228's two-driver cold/warm RSS and hit-rate control and ADR-0230's
-  representative real-query DRAT denominator, add deadline-aware real-query
-  term-to-CNF faithfulness; (3) widen
+  ADR-0234's completed representative real-query end-to-end denominator, add
+  killable whole-certificate isolation and wider real manifests; (3) widen
   ADR-0225's multi-oracle evidence with independent seeds/edge-case frequencies
-  and another neutral implementation, then extend ADR-0231 with whole-process
-  isolation and real-query faithfulness; (4) keep each
+  and another neutral implementation; (4) keep each
   subprocess/FFI boundary named; (5) widen ADR-0229's exact authoritative
   output comparison to a timeout-sensitive driver and add canonical model
   selection only if a stable backend-only sink appears; (6) regenerate a timeout-sensitive driver and keep each timeout
@@ -2235,7 +2250,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   typed-config refactors only as bounded behavior-preserving tranches; (9) keep
   GQ4 explicit/off.
 
-  **Validation (2026-07-18):** the ADR-0232 checkpoint passes the full
+  **Validation (2026-07-18, ADR-0234):** stable formatting, strict
+  all-target/all-feature `axeyum-bench` Clippy, all 51 all-feature benchmark
+  tests, all 86 Python benchmark/gate/analyzer tests, the lean QF_BV profile,
+  and documentation links pass. The bundled fail-closed analysis reproduces
+  byte for byte from both raw v33 artifacts. The pinned 162-query Glaurung
+  regular gate again decides 162/162 under raw and canonical policies with
+  zero disagreement, error, or replay failure (latest raw 0.616x Z3;
+  canonical 0.322x; these one-shot semantic-smoke ratios are not fair warm
+  headlines).
+
+  **Validation (2026-07-18, ADR-0232):** the ADR-0232 checkpoint passes the full
   serialized all-feature workspace and doc-test suite with zero failures,
   stable formatting, strict all-target/all-feature Clippy, warning-denied
   workspace docs, the lean QF_BV profile, all 76 Glaurung benchmark recipe/
@@ -4063,7 +4088,7 @@ plan is built and committed on the current branch:
 | P4.2 | Symbolic-execution CFG frontend (angr/unicorn-class) | WIP — first frontend-facing primitives landed: `SymbolicMemory` wraps an SMT array memory state, builds `select`/`store`, routes load-equality branch/assume queries through `SymbolicExecutor`'s automatic warm/memory feasibility APIs, and now exposes conservative write-log normalization / compact read-specific read-over-write `ite` construction for frontend memory logs that skips literal-distinct writes, elides exact-hit guards, preserves later symbolic aliases, and uses the auto route; `SymbolicExecutor::assume_auto` and `SymbolicExecutor::branch` keep same-index store/read-back constraints, literal-distinct concrete-address store-chain misses, zero-initialized constant-array reads, simple array-ITE state-merge reads including same-readback merge-guard and tautology pruning, reducible conditional read/write-index paths with scalar equality-over-`ite` cleanup, symbolic Bool readback equality/connective/xor/implication cleanup, BV bitwise/arithmetic/comparison/slice-extension/shift/div-rem readback cleanup, reducible symbolic-address ROW over store chains with same-index shadowed-store pruning, plain symbolic-base Bool/BV array loads via retained select-congruence abstraction including wide/BV256 index or element projection, direct equal-array symbol assumptions/assertions via retained cross-array select congruence and equal-array model projection, scalar Bool/BV UF applications via retained congruence abstraction including wide/BV256 argument or result projection, helper-level load/write-log queries, and default `explore_cfg` branch/assume/status/model queries on the warm BV path when they reduce or abstract, with original-term replay, while remaining general memory/UF still auto-promotes to the memory/theory-aware route; `SymbolicExecutor::explore_cfg` provides a reusable DFS harness over frontend-supplied CFG states, with solver-scope management, infeasible pruning, unknown-safe traversal, and model-witnessed targets; `explore_cfg_checked` adds frontend-supplied concrete witness extraction + replay callbacks and buckets targets into verified/missing-witness/mismatch cases; `TinyBvProgram` is the first reusable small-target frontend, with a validated BV register/memory IR, label-aware line-oriented assembly import with retained label/source metadata, deterministic PC-to-label lookup, typed static CFG edges and basic blocks, deterministic Graphviz DOT export for the basic-block CFG plus trace-highlighted, block-coverage-highlighted, and edge-coverage-highlighted DOT overlays, block-level trace paths, taken-edge trace reports, source-aware trace rows, consolidated witness trace reports, replay-checked test-case generation reports, block-coverage and edge-coverage test-suite reports, register-register equality branches, symbolic instruction lifting, zero-initialized SMT array memory for `Load`/`Store`, model-witness extraction, independent concrete replay, concrete execution traces, and bounded PC/label reachability/safety reports. Remaining: byte-level/binary broader target work, unbounded/certified safety wrappers over richer CFGs, and eventually general warm memory reuse from P4.1 |
 | P4.3 | Optimization: OMT lexicographic/Pareto + MILP hardening | WIP — single-objective `maximize/minimize_lia` + `_bv`/`_bv_signed` already shipped (exponential+binary bound search, Boolean-structured oracle). **Lexicographic multi-objective landed** (`optimize_lia_lexicographic`, 2026-06-18): optimize objectives in order, pinning each at its optimum (`obj≥v`/`obj≤v`) before the next so later ones range over the optimal face — z3's default lex combination. Sound + terminating (bounded composition of the checked single-objective optimizer); `LexOutcome::Stopped` at the first unbounded/infeasible/unknown objective. **BV lexicographic also landed** (`optimize_bv_lexicographic`, signed/unsigned, `bv_uge/ule/sge/sle` pinning) — lexicographic OMT now covers both LIA and BV. **Box** (`optimize_lia_box` / `optimize_bv_box`, independent) **and Pareto** (`optimize_lia_pareto` / `optimize_bv_pareto`, guided-improvement front enumeration, deterministic point/push caps, each point verified Pareto-optimal) modes also landed — **axeyum now has all 3 of z3's OMT modes (box, lexicographic, pareto) across LIA+BV**. BV Pareto covers unsigned and signed objective values, max/min directions, and graceful `Unknown` for out-of-fragment objective values. MaxSAT returns the witnessing model (`max_satisfiable_model`). `minimize_model` / `Solver::minimize_model` provide replay-checked lexicographic counterexample minimization over selected Bool, unsigned-BV<=127, and Int symbols, and the metadata-aware `minimize_model_objectives` / `Solver::minimize_model_objectives` route adds signed two's-complement BV objective order for signed SDK inputs. `produce_evidence_minimized` / `prove_minimized` preserve the default surface, while `_with_objectives` variants expose signed-objective metadata to frontends. `axeyum-property` v0 is now the first typed SDK consumer of that surface: Bool/BV/Int handles, assumptions, proof calls, minimized countermodel lifting, checked `EvidenceReport` exposure plus best-effort standalone Lean modules and stable evidence/trust/Lean summaries through `ProofCertificate`, typed BV overflow predicates, `.equals()` equality aliases, property-owned Bool/BV/Int builder aliases, `Property::all` / `Property::any` Boolean folds, deterministic native-scalar counterexample-to-`#[test]` rendering with caller-owned prelude/setup snippets, helper-rendered Boolean / `Result<(), E>` / `Result<bool, E>` replay adapters, deterministic `#[cfg(test)]` module assembly, deterministic multi-case fixture file assembly, direct named/tuple aggregate initializer snippets, and explicit nested aggregate field composition, scalar/tuple/derived-struct `Symbolic` declarations/lifting including signed-order two's-complement fixed-width Rust integers, named-field `symbolic_struct` bundles, and the generated SDK corpus/scoreboard gate with 16 graduated workflows, deterministic executable baseline comparisons for scalar counterexamples, an actual fixed-seed proptest shrunk counterexample, struct and replay counterexamples, proved assertions, assumption-backed proved assertions, and a Kani-style assume/assert counterexample baseline, machine-readable `corpus.json`, DISAGREE=0, and 1/1 Lean-required coverage. Remaining: MILP hardening; broader objective support for minimized counterexamples beyond Bool/BV/Int native scalars; property SDK ergonomics (operator traits, richer replay bodies); richer proptest families and real Kani CLI-backed property corpus comparison; differential validation vs Z3 `opt` |
 | P4.4 | SMT-LIB command-surface completeness (declare-sort, reset, get-proof, …) | WIP — broad command surface already parsed (declare-const/fun/datatype(s), define-fun/sort, push/pop, reset(-assertions), check-sat(-assuming), get-proof/model/value/unsat-core/assignment/assertions, set-option/info, get-option, echo/exit); term forms let/forall/exists/`!`/`as` handled. `reset-assertions` is represented and honored by scoped incremental solving; full `(reset)` is explicitly rejected in the shared-arena parse/solve model. The single-result front-door helpers (`solve_smtlib`, OMT, `get-value`, `get-unsat-core`, `get-proof`, `get-assignment`) now replay the command stream for zero-or-one-query scripts, honoring `push`/`pop`, `check-sat-assuming`, and `reset-assertions` instead of flattening scoped scripts; multi-query scripts are rejected there and routed to `solve_smtlib_incremental`. `solve_smtlib_get_model` returns user-declared constants/functions for sat `(get-model)` scripts as Rust IR values, `solve_smtlib_get_assignment` returns active top-level named assertion assignments for sat scripts while filtering popped/reset assertions, and `solve_smtlib_get_assertions` returns exact command-point assertion-stack snapshots rendered from IR while excluding one-shot `check-sat-assuming` literals. The parser records `set-info`, `set-option`, requested `get-info`, and requested `get-option` commands; `solve_smtlib_get_info` returns recorded metadata, axeyum defaults for `:name`/`:version`, computed `:reason-unknown`, and explicit unsupported markers, while `solve_smtlib_get_option` returns recorded/default option values and explicit unsupported markers. **`match` datatype pattern-matching added** (commit d404794, P4.4): parse-time desugaring to nested `ite`/`DtTest`/`DtSelect`, exhaustiveness + arity checked, 11 tests. Remaining: parametric `declare-sort`/`define-sort`, `define-fun-rec`, full `match` for parametric datatypes, full option-driven solver semantics, and textual interactive command output |
-| P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | **WIP: four-driver fair map, internal/fresh/retained controls, neutral cold/retained SMT, complete three-solver timeout frontier, full-cvc5 fuzz, proof denominators, executable WebAssembly, warm time/RSS/hit-rate deployment, and bounded authoritative finding parity DONE; correctness-led evidence open (ADR-0213--0233).** The 52-formula 50--1000 ms sweep has complete four-population accounting, zero three-solver contradiction, and an all-decided cold Axeyum/Z3 geomean of 0.21095 at 1000 ms; it remains separate from the workload-dependent retained-warm map. All 1,505 width<=8 generated UNSAT rows recheck CNF DRAT and 1,487 recheck end to end; all 64 real representative UNSAT rows carry rechecked CNF DRAT; 302 raw sinks match under sole backend authority; browser and high-reuse memory costs are measured. Remaining: independent fuzz/another neutral implementation; whole-certificate isolation and real-query faithfulness; timeout-sensitive/wider authority findings. |
+| P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | **WIP: four-driver fair map, internal/fresh/retained controls, neutral cold/retained SMT, complete three-solver timeout frontier, full-cvc5 fuzz, proof denominators, executable WebAssembly, warm time/RSS/hit-rate deployment, and bounded authoritative finding parity DONE; correctness-led evidence open (ADR-0213--0234).** The 52-formula 50--1000 ms sweep has complete four-population accounting, zero three-solver contradiction, and an all-decided cold Axeyum/Z3 geomean of 0.21095 at 1000 ms; it remains separate from the workload-dependent retained-warm map. All 1,505 width<=8 generated UNSAT rows recheck CNF DRAT and 1,487 recheck end to end; all 74 UNSAT rows in the corrected 162-query real representative recheck both CNF DRAT and stronger end-to-end certificates in two clean runs; 302 raw sinks match under sole backend authority; browser and high-reuse memory costs are measured. Remaining: independent fuzz/another neutral implementation; whole-certificate isolation and wider real manifests; timeout-sensitive/wider authority findings. |
 
 ### Track 5 — Verified Systems (IR reflection) — ADR-0056, adopted 2026-07-06
 | Phase | Title | Status |
@@ -4075,6 +4100,14 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-18 — ADR-0234 records representative real-query end-to-end
+  faithfulness.** Artifact v33 attempts every primary UNSAT and fail-closed
+  repetition analysis joins two clean, identity-matched runs. Both decide the
+  exact corrected 162-query manifest as 88 SAT / 74 UNSAT, replay every SAT
+  model, and independently recheck both CNF DRAT and stronger end-to-end
+  certificates for all 74 UNSAT rows under the named cooperative deadline.
+  Whole-call process isolation and wider real manifests remain open.
 
 - **2026-07-18 — ADR-0233 records the repeated three-solver timeout
   frontier.** Artifact v32 runs Z3 after primary nondecision and reports all
