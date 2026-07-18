@@ -144,7 +144,12 @@ session state.
 > 1,002,261 exceeded an unstated inherited 5-second Axeyum worker cap. Preserve
 > that attempt. The amended committed protocol leaves every seed unchanged,
 > names a 30-second cap under which the seed decides, records exact nondecision
-> seeds/reproducers, and asserts all-decided directly before the full rerun.
+> seeds/reproducers, and asserts all-decided directly before the full rerun. The
+> second attempt completed `uniform-a` 4,000/4,000, then failed closed at
+> `uniform-b` seed 2,003,009 because cvc5 exhausted the inherited 2-second
+> external limit. Its exact script decides `sat` in cvc5/Bitwuzla under 30
+> seconds. Preserve that attempt too; the next committed rerun applies and
+> records 30 seconds for every engine, with every formula and seed unchanged.
 > ADR-0226 adds the first explicit proof denominator. Of 2,513 generated UNSAT
 > rows, a predeclared width<=8/seed-divisible-by-4 subset selects 169 (6.725030%):
 > all 169 carry independently rechecked CNF DRAT and end-to-end

@@ -459,7 +459,12 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   inherited 5-second Axeyum worker cap, before rounds B/C and without a success
   JSON. The amended protocol keeps all seeds fixed, names a 30-second cap that
   decides the seed, adds exact nondecision/reproducer telemetry, and asserts
-  all-decided directly. Next: rerun the unchanged 12,000-row campaign.
+  all-decided directly. The second attempt completed `uniform-a` 4,000/4,000,
+  then failed closed at `uniform-b` seed 2,003,009 when cvc5 exhausted the
+  inherited 2-second limit; the exact script decides `sat` in cvc5 and Bitwuzla
+  under 30 seconds. The next committed protocol applies and records a 30-second
+  cap for all engines without changing seeds. Next: rerun the unchanged
+  12,000-row campaign.
 
 - **2026-07-17 — ADR-0226 establishes the first generated proof-coverage
   denominator and its widening boundary.** The 4,000-row population contains

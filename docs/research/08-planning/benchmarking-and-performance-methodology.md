@@ -604,7 +604,12 @@ records the contract and the first measured baselines.
   Axeyum worker cap after 3,999 four-way agreements, so it failed closed before
   later rounds. Preserve that log; the amended runner names a 30,000 ms cap,
   records exact nondecision seeds and the first timeout reproducer, and asserts
-  all-decided directly without changing any preregistered seed.
+  all-decided directly without changing any preregistered seed. That second
+  attempt completed `uniform-a` 4,000/4,000, then cvc5 1.3.4 reproducibly
+  exhausted the inherited 2,000 ms limit at `uniform-b` seed 2,003,009. Preserve
+  that attempt too. The final amended protocol uses and reports 30,000 ms for
+  Axeyum and every external oracle; the exact script decides `sat` in cvc5 and
+  Bitwuzla under that cap. Seeds remain unchanged.
   Proof coverage needs two denominators: the full decided-UNSAT population and
   the predeclared attempted subset. ADR-0226's 4,000-row generator has 2,513
   UNSAT results; its width-at-most-8/seed-divisible-by-4 subset contains 169

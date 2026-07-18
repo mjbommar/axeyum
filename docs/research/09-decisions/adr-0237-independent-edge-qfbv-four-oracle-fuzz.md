@@ -30,10 +30,9 @@ Run exactly three disjoint 4,000-row rounds through Axeyum, direct Z3, cvc5
 Require every row to decide and agree in all four engines, require every
 Axeyum SAT model to replay on the original IR, fail closed on external process
 or parser failures, and retain zero-result classes separately from failures.
-Use an explicit 30,000 ms Axeyum worker cap and the existing 2,000 ms Z3/cvc5/
-Bitwuzla per-check limits. The Axeyum cap is an operational bound, not a solver
-timeout passed into the pure-Rust search; the all-decided assertion remains the
-admission rule.
+Use an explicit 30,000 ms per-row cap for Axeyum and each external oracle. The
+Axeyum cap is an operational worker bound rather than a timeout passed into the
+pure-Rust search; the all-decided assertion remains the admission rule.
 The two uniform rounds preserve ADR-0225's generator byte-for-byte for a given
 seed. The edge round adds one rotating true control after the random formula;
 it must observe nonzero instance frequencies for all declared constant,
@@ -63,6 +62,16 @@ diagnostic decides the same formula under 30,000 ms. Before rerunning any full
 range, this amendment fixes that cap, adds exact nondecision seed/reproducer
 telemetry, and adds a direct all-decided assertion. The formulas and ranges are
 unchanged.
+
+The second full attempt accepted that amendment and completed `uniform-a` at
+4,000/4,000 four-way agreement, including seed 1,002,261, but inherited the
+existing 2,000 ms external-oracle limit. It failed closed at `uniform-b` seed
+2,003,009 when cvc5 1.3.4 exhausted that limit and aborted; `edge-c` did not
+run. The exact SMT-LIB script reproduces the 2,000 ms abort and returns `sat`
+under 30,000 ms; Bitwuzla returns `sat`. This second pre-rerun amendment applies
+the same explicit 30,000 ms cap to all engines and records both caps in JSON.
+It also canonicalizes the report directory before Cargo changes the test
+working directory. Again, no formula or seed changes.
 
 ## Alternatives
 

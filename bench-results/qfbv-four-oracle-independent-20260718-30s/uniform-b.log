@@ -1,0 +1,41 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.06s
+     Running tests/bv_differential_fuzz.rs (target/debug/deps/bv_differential_fuzz-0c7ee2cf21e46954)
+
+running 1 test
+[bv-fuzz] seed 2000000/2004000 (joint=0, agree=0, ax_unknown=0, ax_timeout=0, ax_crash=0)
+[bv-fuzz] seed 2000250/2004000 (joint=250, agree=250, ax_unknown=0, ax_timeout=0, ax_crash=0)
+[bv-fuzz] seed 2000500/2004000 (joint=500, agree=500, ax_unknown=0, ax_timeout=0, ax_crash=0)
+[bv-fuzz] seed 2000750/2004000 (joint=750, agree=750, ax_unknown=0, ax_timeout=0, ax_crash=0)
+[bv-fuzz] seed 2001000/2004000 (joint=1000, agree=1000, ax_unknown=0, ax_timeout=0, ax_crash=0)
+test bv_differential_fuzz_disagree_zero has been running for over 60 seconds
+[bv-fuzz] seed 2001250/2004000 (joint=1250, agree=1250, ax_unknown=0, ax_timeout=0, ax_crash=0)
+[bv-fuzz] seed 2001500/2004000 (joint=1500, agree=1500, ax_unknown=0, ax_timeout=0, ax_crash=0)
+[bv-fuzz] seed 2001750/2004000 (joint=1750, agree=1750, ax_unknown=0, ax_timeout=0, ax_crash=0)
+[bv-fuzz] seed 2002000/2004000 (joint=2000, agree=2000, ax_unknown=0, ax_timeout=0, ax_crash=0)
+[bv-fuzz] seed 2002250/2004000 (joint=2250, agree=2250, ax_unknown=0, ax_timeout=0, ax_crash=0)
+[bv-fuzz] seed 2002500/2004000 (joint=2500, agree=2500, ax_unknown=0, ax_timeout=0, ax_crash=0)
+[bv-fuzz] seed 2002750/2004000 (joint=2750, agree=2750, ax_unknown=0, ax_timeout=0, ax_crash=0)
+[bv-fuzz] seed 2003000/2004000 (joint=3000, agree=3000, ax_unknown=0, ax_timeout=0, ax_crash=0)
+
+thread 'bv_differential_fuzz_disagree_zero' (3105856) panicked at crates/axeyum-solver/tests/bv_differential_fuzz.rs:1643:41:
+cvc5 failed on valid generated QF_BV (seed 2003009): exit=signal: 6 (SIGABRT) (core dumped) stdout="" stderr="cvc5 interrupted by timeout.\n"
+Complete reproducer:
+(set-logic QF_BV)
+(declare-const x (_ BitVec 32))
+(declare-const y (_ BitVec 32))
+(assert (or (= ((_ extract 35 4) ((_ sign_extend 14) (bvshl (_ bv4073162 22) (_ bv2394321 22)))) ((_ extract 31 0) (_ bv1303039381 32))) (distinct ((_ extract 31 0) (_ bv20980091270 35)) (bvadd (bvsdiv (concat (_ bv50356091 27) (_ bv14 5)) (bvsmod (_ bv3706944386 32) x)) (bvmul (concat (_ bv339615847 29) (_ bv2 3)) (bvlshr x x))))))
+(assert (bvult y ((_ zero_extend 17) (_ bv22135 15))))
+(check-sat)
+(exit)
+
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test bv_differential_fuzz_disagree_zero ... FAILED
+
+failures:
+
+failures:
+    bv_differential_fuzz_disagree_zero
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2 filtered out; finished in 122.58s
+
+error: test failed, to rerun pass `-p axeyum-solver --test bv_differential_fuzz`

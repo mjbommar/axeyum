@@ -131,6 +131,7 @@ struct SweepConfig {
     instances: u64,
     profile: GeneratorProfile,
     axeyum_timeout: Duration,
+    oracle_timeout: Duration,
 }
 
 impl SweepConfig {
@@ -152,6 +153,10 @@ impl SweepConfig {
             axeyum_timeout: configured_duration_ms(
                 "AXEYUM_QFBV_AXEYUM_TIMEOUT_MS",
                 DEFAULT_AXEYUM_TIMEOUT,
+            ),
+            oracle_timeout: configured_duration_ms(
+                "AXEYUM_QFBV_ORACLE_TIMEOUT_MS",
+                DEFAULT_ORACLE_TIMEOUT,
             ),
         }
     }
@@ -240,7 +245,7 @@ fn proof_verbose() -> bool {
 
 /// Per-instance Z3 wall-clock budget. Small `QF_BV` formulas ⇒ Z3 decides far
 /// faster; this only bounds the rare pathological shape so the test never hangs.
-const Z3_TIMEOUT: Duration = Duration::from_secs(2);
+const DEFAULT_ORACLE_TIMEOUT: Duration = Duration::from_secs(2);
 
 /// Per-instance hard wall-clock cap on the axeyum `solve`. A slow shape (e.g.
 /// nested width-32 `bvmul`/`bvudiv`) is run on a worker thread and joined with
@@ -252,6 +257,7 @@ const DEFAULT_AXEYUM_TIMEOUT: Duration = Duration::from_secs(5);
 #[derive(Clone, Copy)]
 struct RunPolicy {
     axeyum_timeout: Duration,
+    oracle_timeout: Duration,
     proof_deadline: Option<Duration>,
 }
 
@@ -1451,12 +1457,12 @@ fn solve_axeyum_bounded(inst: Instance, timeout: Duration) -> Bounded {
 /// Decide an instance with Z3 over the `QF_BV` theory, with a tiny wall-clock
 /// timeout. Returns `Unknown` on timeout/incompleteness (the instance is then
 /// skipped — Z3 cannot adjudicate it).
-fn z3_decide(inst: &Instance) -> Verdict {
+fn z3_decide(inst: &Instance, timeout: Duration) -> Verdict {
     let solver = Solver::new();
     let mut params = Params::new();
     params.set_u32(
         "timeout",
-        u32::try_from(Z3_TIMEOUT.as_millis()).unwrap_or(u32::MAX),
+        u32::try_from(timeout.as_millis()).unwrap_or(u32::MAX),
     );
     solver.set_params(&params);
     for atom in inst.to_z3() {
@@ -1629,11 +1635,12 @@ fn run_cvc5_oracle(
     smt2: &str,
     binary: Option<&str>,
     expected: Verdict,
+    timeout: Duration,
     tally: &mut Tally,
 ) -> Option<Verdict> {
     let binary = binary?;
     tally.cvc5_sampled += 1;
-    let verdict = match cvc5_decide_detailed(binary, smt2, Z3_TIMEOUT) {
+    let verdict = match cvc5_decide_detailed(binary, smt2, timeout) {
         Cvc5Verdict::Sat => Verdict::Sat,
         Cvc5Verdict::Unsat => Verdict::Unsat,
         Cvc5Verdict::Unknown => {
@@ -1660,11 +1667,12 @@ fn run_bitwuzla_oracle(
     smt2: &str,
     binary: Option<&str>,
     expected: Verdict,
+    timeout: Duration,
     tally: &mut Tally,
 ) -> Option<Verdict> {
     let binary = binary?;
     tally.bitwuzla_sampled += 1;
-    let verdict = match bitwuzla_decide_detailed(binary, smt2, Z3_TIMEOUT) {
+    let verdict = match bitwuzla_decide_detailed(binary, smt2, timeout) {
         BitwuzlaVerdict::Sat => Verdict::Sat,
         BitwuzlaVerdict::Unsat => Verdict::Unsat,
         BitwuzlaVerdict::Unknown => {
@@ -1744,7 +1752,7 @@ fn run_instance(
     }
 
     // --- Z3 oracle: a direct QF_BV query, tiny timeout. ------------------
-    let z3_label = z3_decide(inst);
+    let z3_label = z3_decide(inst, policy.oracle_timeout);
     if z3_label == Verdict::Unknown {
         t.z3_unknown_skipped += 1;
         t.z3_unknown_seeds.push(seed);
@@ -1785,8 +1793,9 @@ fn run_instance(
     }
 
     let smt2 = inst.to_smt2();
-    let cvc5_label = run_cvc5_oracle(seed, &smt2, cvc5, ax_label, t);
-    let bitwuzla_label = run_bitwuzla_oracle(seed, &smt2, bitwuzla, ax_label, t);
+    let cvc5_label = run_cvc5_oracle(seed, &smt2, cvc5, ax_label, policy.oracle_timeout, t);
+    let bitwuzla_label =
+        run_bitwuzla_oracle(seed, &smt2, bitwuzla, ax_label, policy.oracle_timeout, t);
     if cvc5_label.is_some() && bitwuzla_label.is_some() {
         t.four_way_agreements += 1;
     }
@@ -1931,7 +1940,7 @@ fn glaurung_named_qfbv_controls_agree_and_replay() {
     for (index, (name, expected, instance)) in named.iter().enumerate() {
         eprintln!("[bv-fuzz named] {name}");
         assert_eq!(
-            z3_decide(instance),
+            z3_decide(instance, DEFAULT_ORACLE_TIMEOUT),
             *expected,
             "named control has the wrong expected verdict:\n{}",
             instance.to_smt2()
@@ -1945,6 +1954,7 @@ fn glaurung_named_qfbv_controls_agree_and_replay() {
             false,
             RunPolicy {
                 axeyum_timeout: DEFAULT_AXEYUM_TIMEOUT,
+                oracle_timeout: DEFAULT_ORACLE_TIMEOUT,
                 proof_deadline: None,
             },
         );
@@ -1992,7 +2002,7 @@ fn glaurung_named_qfbv_controls_agree_and_replay() {
         .check(
             &arena,
             &assertions,
-            &SolverConfig::default().with_timeout(Z3_TIMEOUT),
+            &SolverConfig::default().with_timeout(DEFAULT_ORACLE_TIMEOUT),
         )
         .expect("linked Z3 adapter accepts the full-width control");
     let CheckResult::Sat(model) = result else {
@@ -2113,6 +2123,7 @@ fn print_tally(
         config.seed_start, config.seed_end
     );
     println!("Axeyum timeout:       {:?}", config.axeyum_timeout);
+    println!("oracle timeout:       {:?}", config.oracle_timeout);
     println!("total instances:      {}", tally.total);
     println!("jointly decided:      {}", tally.jointly_decided);
     println!("agreements:           {}", tally.agreements);
@@ -2221,6 +2232,7 @@ fn write_report(
             "  \"seed_end_exclusive\": {},\n",
             "  \"instances\": {},\n",
             "  \"axeyum_timeout_ms\": {},\n",
+            "  \"oracle_timeout_ms\": {},\n",
             "  \"elapsed_ms\": {},\n",
             "  \"axeyum_z3\": {{\"jointly_decided\":{},\"agreements\":{},",
             "\"axeyum_unknown\":{},\"axeyum_timeout\":{},\"axeyum_crashed\":{},",
@@ -2241,6 +2253,7 @@ fn write_report(
         config.seed_end,
         config.instances,
         config.axeyum_timeout.as_millis(),
+        config.oracle_timeout.as_millis(),
         elapsed.as_millis(),
         tally.jointly_decided,
         tally.agreements,
@@ -2330,6 +2343,7 @@ fn run_sweep(
             sample_proof,
             RunPolicy {
                 axeyum_timeout: config.axeyum_timeout,
+                oracle_timeout: config.oracle_timeout,
                 proof_deadline,
             },
         );

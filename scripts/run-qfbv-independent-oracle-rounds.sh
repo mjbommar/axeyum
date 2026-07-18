@@ -19,6 +19,7 @@ for binary in "$cvc5_bin" "$bitwuzla_bin"; do
 done
 
 mkdir -p "$output_dir"
+output_dir=$(realpath "$output_dir")
 if find "$output_dir" -mindepth 1 -maxdepth 1 -print -quit | grep -q .; then
   echo "output directory must be empty: $output_dir" >&2
   exit 2
@@ -51,6 +52,7 @@ for round in "${rounds[@]}"; do
   AXEYUM_REQUIRE_BITWUZLA_ALL_DECIDED=1 \
   AXEYUM_BITWUZLA_SAMPLE_STRIDE=1 \
   AXEYUM_QFBV_AXEYUM_TIMEOUT_MS=30000 \
+  AXEYUM_QFBV_ORACLE_TIMEOUT_MS=30000 \
   AXEYUM_REQUIRE_QFBV_ALL_DECIDED=1 \
   AXEYUM_QFBV_SEED_START="$seed_start" \
   AXEYUM_QFBV_INSTANCES=4000 \
