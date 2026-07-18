@@ -2434,6 +2434,28 @@ fn bv_differential_fuzz_disagree_zero() {
     write_report(config, &tally, &oracles, &coverage, started.elapsed());
 }
 
+/// Operator-only diagnostic for a retained hard seed. Ignored so it cannot
+/// weaken or lengthen the standing campaign; explicit environment is required.
+#[test]
+#[ignore = "run explicitly with AXEYUM_QFBV_DIAGNOSTIC_SEED"]
+fn diagnose_qfbv_z3_seed() {
+    let seed = configured_u64("AXEYUM_QFBV_DIAGNOSTIC_SEED", u64::MAX);
+    assert_ne!(seed, u64::MAX, "AXEYUM_QFBV_DIAGNOSTIC_SEED must be set");
+    let profile = GeneratorProfile::configured();
+    let timeout = configured_duration_ms("AXEYUM_QFBV_ORACLE_TIMEOUT_MS", DEFAULT_ORACLE_TIMEOUT);
+    let mut rng = Lcg::new(seed);
+    let instance = Instance::generate(&mut rng, profile, seed);
+    let started = Instant::now();
+    let verdict = z3_decide(&instance, timeout);
+    println!(
+        "seed={seed} profile={} timeout={timeout:?} elapsed={:?} z3={verdict:?}\n{}",
+        profile.name(),
+        started.elapsed(),
+        instance.to_smt2()
+    );
+    assert_ne!(verdict, Verdict::Unknown, "Z3 did not decide retained seed");
+}
+
 /// Pretty-print an axeyum model's variable bindings.
 fn dump_model(syms: &[SymbolId], model: &axeyum_solver::Model) -> String {
     let mut parts = Vec::new();

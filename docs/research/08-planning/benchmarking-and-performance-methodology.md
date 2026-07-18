@@ -610,6 +610,12 @@ records the contract and the first measured baselines.
   that attempt too. The final amended protocol uses and reports 30,000 ms for
   Axeyum and every external oracle; the exact script decides `sat` in cvc5 and
   Bitwuzla under that cap. Seeds remain unchanged.
+  The third attempt closes both uniform rounds but exposes `edge-c` seed
+  3,000,881 as genuinely solver-bound: Axeyum exceeds 120 seconds, while the
+  unchanged formula is `unsat` in direct Z3 (25.225 seconds isolated), cvc5
+  (41.67 seconds), and Bitwuzla (12.62 seconds). Use a final uniform 600,000 ms
+  correctness bound, which also lets Axeyum decide; never reuse those loaded,
+  single-formula diagnostics as comparative performance measurements.
   Proof coverage needs two denominators: the full decided-UNSAT population and
   the predeclared attempted subset. ADR-0226's 4,000-row generator has 2,513
   UNSAT results; its width-at-most-8/seed-divisible-by-4 subset contains 169

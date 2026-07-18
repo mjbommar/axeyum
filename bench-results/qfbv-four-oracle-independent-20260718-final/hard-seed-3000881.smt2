@@ -1,0 +1,10 @@
+(set-logic QF_BV)
+(declare-const x (_ BitVec 32))
+(declare-const y (_ BitVec 32))
+(declare-const z (_ BitVec 32))
+(assert (not (= y (bvudiv (bvsmod ((_ zero_extend 21) (_ bv1729 11)) (bvurem (_ bv1785602693 32) y)) y))))
+(assert (bvuge (bvsmod (bvnot ((_ extract 34 3) (_ bv15712868670 35))) (bvudiv (_ bv779979474 32) (bvnot z))) (bvnot (_ bv1411077562 32))))
+(assert (= (bvurem (_ bv165 8) (_ bv0 8)) (_ bv165 8)))
+(check-sat)
+(exit)
+

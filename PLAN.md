@@ -150,6 +150,12 @@ session state.
 > external limit. Its exact script decides `sat` in cvc5/Bitwuzla under 30
 > seconds. Preserve that attempt too; the next committed rerun applies and
 > records 30 seconds for every engine, with every formula and seed unchanged.
+> That third attempt closes both uniform rounds, then retains `edge-c` seed
+> 3,000,881 after Axeyum exceeds 120 seconds. The unchanged formula is UNSAT in
+> all four engines under 600 seconds (isolated Z3 25.225 s, cvc5 41.67 s,
+> Bitwuzla 12.62 s; Axeyum between 120 and 600 s). The final committed rerun
+> uses the same 600-second correctness cap for all engines. Do not reuse this
+> hard-seed diagnostic as comparative timing evidence.
 > ADR-0226 adds the first explicit proof denominator. Of 2,513 generated UNSAT
 > rows, a predeclared width<=8/seed-divisible-by-4 subset selects 169 (6.725030%):
 > all 169 carry independently rechecked CNF DRAT and end-to-end

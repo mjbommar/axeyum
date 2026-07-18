@@ -1,0 +1,67 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.05s
+     Running tests/bv_differential_fuzz.rs (target/debug/deps/bv_differential_fuzz-0c7ee2cf21e46954)
+
+running 1 test
+[bv-fuzz] seed 2000000/2004000 (joint=0, agree=0, ax_unknown=0, ax_timeout=0, ax_crash=0)
+[bv-fuzz] seed 2000250/2004000 (joint=250, agree=250, ax_unknown=0, ax_timeout=0, ax_crash=0)
+[bv-fuzz] seed 2000500/2004000 (joint=500, agree=500, ax_unknown=0, ax_timeout=0, ax_crash=0)
+[bv-fuzz] seed 2000750/2004000 (joint=750, agree=750, ax_unknown=0, ax_timeout=0, ax_crash=0)
+[bv-fuzz] seed 2001000/2004000 (joint=1000, agree=1000, ax_unknown=0, ax_timeout=0, ax_crash=0)
+test bv_differential_fuzz_disagree_zero has been running for over 60 seconds
+[bv-fuzz] seed 2001250/2004000 (joint=1250, agree=1250, ax_unknown=0, ax_timeout=0, ax_crash=0)
+[bv-fuzz] seed 2001500/2004000 (joint=1500, agree=1500, ax_unknown=0, ax_timeout=0, ax_crash=0)
+[bv-fuzz] seed 2001750/2004000 (joint=1750, agree=1750, ax_unknown=0, ax_timeout=0, ax_crash=0)
+[bv-fuzz] seed 2002000/2004000 (joint=2000, agree=2000, ax_unknown=0, ax_timeout=0, ax_crash=0)
+[bv-fuzz] seed 2002250/2004000 (joint=2250, agree=2250, ax_unknown=0, ax_timeout=0, ax_crash=0)
+[bv-fuzz] seed 2002500/2004000 (joint=2500, agree=2500, ax_unknown=0, ax_timeout=0, ax_crash=0)
+[bv-fuzz] seed 2002750/2004000 (joint=2750, agree=2750, ax_unknown=0, ax_timeout=0, ax_crash=0)
+[bv-fuzz] seed 2003000/2004000 (joint=3000, agree=3000, ax_unknown=0, ax_timeout=0, ax_crash=0)
+[bv-fuzz] seed 2003250/2004000 (joint=3250, agree=3250, ax_unknown=0, ax_timeout=0, ax_crash=0)
+[bv-fuzz] seed 2003500/2004000 (joint=3500, agree=3500, ax_unknown=0, ax_timeout=0, ax_crash=0)
+[bv-fuzz] seed 2003750/2004000 (joint=3750, agree=3750, ax_unknown=0, ax_timeout=0, ax_crash=0)
+=== QF_BV differential fuzz tally ===
+generator profile:    uniform-v1
+seed range:           2000000..2004000
+Axeyum timeout:       30s
+oracle timeout:       30s
+total instances:      4000
+jointly decided:      4000
+agreements:           4000
+axeyum Unknown:       0
+axeyum Unknown seeds: []
+axeyum timeout:       0
+axeyum timeout seeds: []
+axeyum CRASHED:       0
+axeyum crashed seeds: []
+Z3 Unknown (skipped): 0
+Z3 Unknown seeds:     []
+cvc5 sample stride:   1
+cvc5 sampled:         4000
+cvc5 decided:         4000
+cvc5 Unknown/skipped: 0
+three-way agreements: 4000
+Bitwuzla stride:      1
+Bitwuzla sampled:     4000
+Bitwuzla decided:     4000
+Bitwuzla Unknown:     0
+Bitwuzla agreements:  4000
+four-way agreements:  4000
+proof sample stride:  None (width <= 8)
+proof deadline:       None per route
+proof-selected UNSAT: 0
+CNF DRAT proved:       0
+CNF DRAT inconclusive: 0
+CNF inconclusive seeds: []
+end-to-end certified: 0
+end-to-end uncovered: 0
+end-to-end uncovered seeds: []
+Sat replays verified: 1501
+Sat replay declined:  0
+covered widths:       {1, 4, 8, 16, 32}
+covered operators:    {"=", "and", "bvadd", "bvand", "bvashr", "bvlshr", "bvmul", "bvneg", "bvnot", "bvor", "bvsdiv", "bvsge", "bvsgt", "bvshl", "bvsle", "bvslt", "bvsmod", "bvsrem", "bvsub", "bvudiv", "bvuge", "bvugt", "bvule", "bvult", "bvurem", "bvxor", "concat", "const", "distinct", "extract", "not", "or", "sign_extend", "var", "zero_extend"}
+edge-case instances:  {"concat_one_bit_high": 1081, "concat_one_bit_low": 1109, "constant_all_ones": 2496, "constant_sign_bit": 2430, "constant_zero": 2529, "division_or_remainder_by_zero": 317, "extract_full_width": 1224, "extract_high_boundary": 2220, "extract_low_boundary": 2166, "shift_above_width": 716, "shift_at_width": 276, "sign_extend_by_zero": 1148, "zero_extend_by_zero": 1128}
+DISAGREEMENTS:        0
+test bv_differential_fuzz_disagree_zero ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 152.12s
+

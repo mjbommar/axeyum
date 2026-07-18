@@ -463,8 +463,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   then failed closed at `uniform-b` seed 2,003,009 when cvc5 exhausted the
   inherited 2-second limit; the exact script decides `sat` in cvc5 and Bitwuzla
   under 30 seconds. The next committed protocol applies and records a 30-second
-  cap for all engines without changing seeds. Next: rerun the unchanged
-  12,000-row campaign.
+  cap for all engines without changing seeds. The third attempt closed both
+  uniform rounds, then retained `edge-c` seed 3,000,881 after Axeyum exceeded
+  120 seconds. All four engines decide that exact formula UNSAT under 600
+  seconds (Z3 25.225 s, cvc5 41.67 s, Bitwuzla 12.62 s isolated; Axeyum between
+  120 and 600 s). The final committed protocol applies the same 600-second
+  correctness bound to all engines; these diagnostics are not performance
+  evidence. Next: rerun the unchanged 12,000-row campaign.
 
 - **2026-07-17 — ADR-0226 establishes the first generated proof-coverage
   denominator and its widening boundary.** The 4,000-row population contains

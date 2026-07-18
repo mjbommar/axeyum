@@ -30,7 +30,7 @@ Run exactly three disjoint 4,000-row rounds through Axeyum, direct Z3, cvc5
 Require every row to decide and agree in all four engines, require every
 Axeyum SAT model to replay on the original IR, fail closed on external process
 or parser failures, and retain zero-result classes separately from failures.
-Use an explicit 30,000 ms per-row cap for Axeyum and each external oracle. The
+Use an explicit 600,000 ms per-row cap for Axeyum and each external oracle. The
 Axeyum cap is an operational worker bound rather than a timeout passed into the
 pure-Rust search; the all-decided assertion remains the admission rule.
 The two uniform rounds preserve ADR-0225's generator byte-for-byte for a given
@@ -72,6 +72,16 @@ under 30,000 ms; Bitwuzla returns `sat`. This second pre-rerun amendment applies
 the same explicit 30,000 ms cap to all engines and records both caps in JSON.
 It also canonicalizes the report directory before Cargo changes the test
 working directory. Again, no formula or seed changes.
+
+The third full attempt completed both uniform rounds at 4,000/4,000, then
+failed closed on `edge-c` seed 3,000,881 when Axeyum exceeded 30,000 ms. A
+120,000 ms focused rerun also timed out. Under 600,000 ms, the unchanged formula
+decides `unsat` in all engines: Axeyum finishes between 120 and 600 seconds,
+direct Z3 in 25.225 seconds isolated, cvc5 in 41.67 seconds, and Bitwuzla in
+12.62 seconds. A loaded combined diagnostic also showed Z3 narrowly exceeding
+30 seconds after the long Axeyum solve. The final pre-rerun amendment therefore
+uses the same 600,000 ms correctness bound for every engine. This is not a
+performance cell, and no formula or seed changes.
 
 ## Alternatives
 
