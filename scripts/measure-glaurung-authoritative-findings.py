@@ -38,6 +38,11 @@ CHECK_TIMEOUT_RE = re.compile(r"\[solver\][^\n]* check_timeout_ms=(\d+)")
 TIME_RE = re.compile(
     rf"{TIME_PREFIX} elapsed_seconds=([0-9.]+) max_rss_kib=(\d+) exit=(\d+)"
 )
+FINDING_CONFIDENCE_RE = re.compile(
+    r"\[finding-confidence\] schema=(\S+) high=(\d+) diagnostic=(\d+)"
+)
+FINDING_CONFIDENCE_SUFFIX_RE = re.compile(r"\tconfidence=([^\t]+)$")
+FINDING_CONFIDENCE_SCHEMA = "glaurung-ioctlance-confidence-v1"
 
 
 def file_sha256(path: Path) -> str:
@@ -50,6 +55,67 @@ def file_sha256(path: Path) -> str:
 
 def text_sha256(lines: list[str]) -> str:
     return hashlib.sha256(("\n".join(lines) + "\n").encode()).hexdigest()
+
+
+def parse_annotated_findings(
+    stdout: str, *, annotation_active: bool | None = None
+) -> dict[str, Any]:
+    findings: list[str] = []
+    high_confidence: list[str] = []
+    diagnostic: list[str] = []
+    annotated = 0
+    legacy = 0
+    for row in (line for line in stdout.splitlines() if line):
+        match = FINDING_CONFIDENCE_SUFFIX_RE.search(row)
+        if match is None:
+            legacy += 1
+            findings.append(row)
+            continue
+        confidence = match.group(1)
+        finding = row[: match.start()]
+        if confidence == "high":
+            high_confidence.append(finding)
+        elif confidence == "diagnostic":
+            diagnostic.append(finding)
+        else:
+            raise RuntimeError(f"unknown finding confidence annotation: {confidence}")
+        annotated += 1
+        findings.append(finding)
+    if annotated and legacy:
+        raise RuntimeError("mixed annotated and legacy finding rows")
+    inferred_active = annotated > 0
+    if annotation_active is None:
+        annotation_active = inferred_active
+    elif annotation_active and legacy:
+        raise RuntimeError("confidence footer present with legacy finding rows")
+    elif not annotation_active and annotated:
+        raise RuntimeError("annotated finding rows missing confidence footer")
+    result: dict[str, Any] = {
+        "findings": findings,
+        "confidence_partition_available": annotation_active,
+    }
+    if annotation_active:
+        result.update(
+            {
+                "high_confidence_findings": high_confidence,
+                "diagnostic_findings": diagnostic,
+            }
+        )
+    return result
+
+
+def parse_finding_confidence_footer(stderr: str) -> dict[str, int | str] | None:
+    match = FINDING_CONFIDENCE_RE.search(stderr)
+    if match is None:
+        return None
+    schema = match.group(1)
+    if schema != FINDING_CONFIDENCE_SCHEMA:
+        raise RuntimeError(f"unsupported finding confidence schema: {schema}")
+    return {
+        "schema": schema,
+        "high": int(match.group(2)),
+        "diagnostic": int(match.group(3)),
+    }
 
 
 def git_identity(repository: Path) -> dict[str, Any]:
@@ -269,7 +335,11 @@ def run_one(
         max_analyzed_functions=max_analyzed_functions,
     )
 
-    findings = [line for line in result.stdout.splitlines() if line]
+    confidence_footer = parse_finding_confidence_footer(result.stderr)
+    parsed_findings = parse_annotated_findings(
+        result.stdout, annotation_active=confidence_footer is not None
+    )
+    findings = parsed_findings["findings"]
     if len(findings) != int(symbolic.group(1)):
         raise RuntimeError("IOCTLANCE_ALL output does not match raw finding count")
     run: dict[str, Any] = {
@@ -280,8 +350,11 @@ def run_one(
         "findings_sha256": text_sha256(findings),
         "findings": findings,
         "reported_raw": int(symbolic.group(1)),
-        "reported_lines": int(symbolic.group(2)),
+        "reported_lines": len(findings),
         "reported_suppressed": int(symbolic.group(3)),
+        "confidence_partition_available": parsed_findings[
+            "confidence_partition_available"
+        ],
         "analyzed": analyzed,
         "analysis_roots": reachable,
         "coverage_boundary": coverage_boundary,
@@ -292,6 +365,34 @@ def run_one(
         "max_rss_kib": int(timing.group(2)),
         "time_exit": int(timing.group(3)),
     }
+    if confidence_footer is not None:
+        high_confidence_findings = parsed_findings["high_confidence_findings"]
+        diagnostic_findings = parsed_findings["diagnostic_findings"]
+        reported_high_confidence = int(symbolic.group(2))
+        if reported_high_confidence != int(confidence_footer["high"]):
+            raise RuntimeError("high-confidence footer count mismatch")
+        if int(symbolic.group(3)) != int(confidence_footer["diagnostic"]):
+            raise RuntimeError("diagnostic footer count mismatch")
+        if len(high_confidence_findings) != reported_high_confidence:
+            raise RuntimeError("annotated high-confidence finding count mismatch")
+        if len(diagnostic_findings) != int(symbolic.group(3)):
+            raise RuntimeError("annotated diagnostic finding count mismatch")
+        if len(findings) != len(high_confidence_findings) + len(diagnostic_findings):
+            raise RuntimeError("finding confidence partition is not exhaustive")
+        run.update(
+            {
+                "finding_confidence_schema": confidence_footer["schema"],
+                "reported_high_confidence": reported_high_confidence,
+                "high_confidence_finding_count": len(high_confidence_findings),
+                "high_confidence_findings_sha256": text_sha256(
+                    high_confidence_findings
+                ),
+                "high_confidence_findings": high_confidence_findings,
+                "diagnostic_finding_count": len(diagnostic_findings),
+                "diagnostic_findings_sha256": text_sha256(diagnostic_findings),
+                "diagnostic_findings": diagnostic_findings,
+            }
+        )
     if canonical_model_choice is not None:
         run["canonical_model_choice"] = canonical_model_choice
     if check_timeout_ms is not None:
@@ -302,10 +403,63 @@ def run_one(
             ("[axeyum-sat-cache]", "sat_cache"),
             ("[axeyum-serial-owner]", "serial_owner"),
         ):
-            line = next((row for row in result.stderr.splitlines() if row.startswith(prefix)), None)
+            line = next(
+                (row for row in result.stderr.splitlines() if row.startswith(prefix)),
+                None,
+            )
             if line is not None:
                 run[key] = parse_key_values(line)
     return run
+
+
+def summarize_finding_population(
+    populations: dict[str, list[dict[str, Any]]],
+    *,
+    findings_key: str,
+    hash_key: str,
+) -> dict[str, Any]:
+    stability: dict[str, dict[str, Any]] = {}
+    for backend, population in populations.items():
+        finding_sets = [set(run[findings_key]) for run in population]
+        if any(
+            len(candidate) != len(run[findings_key])
+            for candidate, run in zip(finding_sets, population)
+        ):
+            raise RuntimeError(f"{backend} emitted duplicate {findings_key} rows")
+        stable_findings = set.intersection(*finding_sets)
+        union_findings = set.union(*finding_sets)
+        hashes = sorted({run[hash_key] for run in population})
+        stability[backend] = {
+            "output_stable": len(hashes) == 1,
+            "distinct_hashes": hashes,
+            "stable_finding_count": len(stable_findings),
+            "union_finding_count": len(union_findings),
+            "unstable_findings": sorted(union_findings - stable_findings),
+            "stable_findings": stable_findings,
+            "union_findings": union_findings,
+        }
+    z3_findings = populations["z3"][0][findings_key]
+    axeyum_findings = populations["axeyum"][0][findings_key]
+    z3_stable = stability["z3"]["stable_findings"]
+    z3_union = stability["z3"]["union_findings"]
+    axeyum_stable = stability["axeyum"]["stable_findings"]
+    axeyum_union = stability["axeyum"]["union_findings"]
+    both_stable = all(row["output_stable"] for row in stability.values())
+    return {
+        "exact_finding_parity": both_stable and z3_findings == axeyum_findings,
+        "within_backend_stable": both_stable,
+        "stable_intersection_count": len(z3_stable & axeyum_stable),
+        "z3_only": sorted(z3_stable - axeyum_union),
+        "axeyum_only": sorted(axeyum_stable - z3_union),
+        "stability": {
+            backend: {
+                key: value
+                for key, value in row.items()
+                if key not in ("stable_findings", "union_findings")
+            }
+            for backend, row in stability.items()
+        },
+    }
 
 
 def summarize_driver(runs: list[dict[str, Any]]) -> dict[str, Any]:
@@ -355,9 +509,7 @@ def summarize_driver(runs: list[dict[str, Any]]) -> dict[str, Any]:
             raise RuntimeError("solver check-timeout population drift")
         check_timeout_ms = check_timeouts.pop()
 
-    canonical_presence = {
-        "canonical_model_choice" in run for run in runs
-    }
+    canonical_presence = {"canonical_model_choice" in run for run in runs}
     if len(canonical_presence) != 1:
         raise RuntimeError("canonical model telemetry availability drift")
     canonical_available = canonical_presence.pop()
@@ -376,9 +528,7 @@ def summarize_driver(runs: list[dict[str, Any]]) -> dict[str, Any]:
             "error",
             "final_unsat",
         )
-        policies = {
-            str(run["canonical_model_choice"]["policy"]) for run in runs
-        }
+        policies = {str(run["canonical_model_choice"]["policy"]) for run in runs}
         if len(policies) != 1:
             raise RuntimeError("canonical model policy drift")
         canonical_summary = {"policy": policies.pop(), "backends": {}}
@@ -390,9 +540,7 @@ def summarize_driver(runs: list[dict[str, Any]]) -> dict[str, Any]:
             if len(telemetry_rows) != 1:
                 raise RuntimeError(f"{backend} canonical model telemetry drift")
             values = telemetry_rows.pop()
-            canonical_summary["backends"][backend] = dict(
-                zip(canonical_keys, values)
-            )
+            canonical_summary["backends"][backend] = dict(zip(canonical_keys, values))
 
     telemetry_presence = {
         all(key in run for key in ("warm", "sat_cache", "serial_owner"))
@@ -418,43 +566,57 @@ def summarize_driver(runs: list[dict[str, Any]]) -> dict[str, Any]:
             ):
                 raise RuntimeError("Axeyum lifecycle, fallback, or replay gate failed")
 
-    z3_findings = populations["z3"][0]["findings"]
-    axeyum_findings = populations["axeyum"][0]["findings"]
-    stability: dict[str, dict[str, Any]] = {}
-    for backend, population in populations.items():
-        finding_sets = [set(run["findings"]) for run in population]
-        if any(
-            len(candidate) != len(run["findings"])
-            for candidate, run in zip(finding_sets, population)
-        ):
-            raise RuntimeError(f"{backend} emitted duplicate finding rows")
-        stable_findings = set.intersection(*finding_sets)
-        union_findings = set.union(*finding_sets)
-        hashes = sorted({run["findings_sha256"] for run in population})
-        stability[backend] = {
-            "output_stable": len(hashes) == 1,
-            "distinct_hashes": hashes,
-            "stable_finding_count": len(stable_findings),
-            "union_finding_count": len(union_findings),
-            "unstable_findings": sorted(union_findings - stable_findings),
-            "stable_findings": stable_findings,
-            "union_findings": union_findings,
-        }
-    z3_stable = stability["z3"]["stable_findings"]
-    z3_union = stability["z3"]["union_findings"]
-    axeyum_stable = stability["axeyum"]["stable_findings"]
-    axeyum_union = stability["axeyum"]["union_findings"]
-    both_stable = (
-        stability["z3"]["output_stable"]
-        and stability["axeyum"]["output_stable"]
+    raw_summary = summarize_finding_population(
+        populations, findings_key="findings", hash_key="findings_sha256"
     )
+    confidence_presence = {
+        bool(run.get("confidence_partition_available")) for run in runs
+    }
+    if len(confidence_presence) != 1:
+        raise RuntimeError("finding confidence partition availability drift")
+    confidence_available = confidence_presence.pop()
+    high_confidence_summary: dict[str, Any] | None = None
+    diagnostic_summary: dict[str, Any] | None = None
+    if confidence_available:
+        schemas = {str(run["finding_confidence_schema"]) for run in runs}
+        if schemas != {FINDING_CONFIDENCE_SCHEMA}:
+            raise RuntimeError("finding confidence schema drift")
+        for run in runs:
+            if run["reported_raw"] != (
+                run["high_confidence_finding_count"] + run["diagnostic_finding_count"]
+            ):
+                raise RuntimeError("finding confidence count partition drift")
+            if run["reported_high_confidence"] != run["high_confidence_finding_count"]:
+                raise RuntimeError("reported high-confidence count drift")
+            if run["reported_suppressed"] != run["diagnostic_finding_count"]:
+                raise RuntimeError("reported diagnostic count drift")
+        high_confidence_summary = summarize_finding_population(
+            populations,
+            findings_key="high_confidence_findings",
+            hash_key="high_confidence_findings_sha256",
+        )
+        diagnostic_summary = summarize_finding_population(
+            populations,
+            findings_key="diagnostic_findings",
+            hash_key="diagnostic_findings_sha256",
+        )
     result: dict[str, Any] = {
-        "exact_finding_parity": both_stable and z3_findings == axeyum_findings,
-        "within_backend_stable": both_stable,
-        "stable_intersection_count": len(z3_stable & axeyum_stable),
-        "z3_only": sorted(z3_stable - axeyum_union),
-        "axeyum_only": sorted(axeyum_stable - z3_union),
-        "stability": {},
+        "exact_finding_parity": raw_summary["exact_finding_parity"],
+        "exact_raw_finding_parity": raw_summary["exact_finding_parity"],
+        "exact_high_confidence_finding_parity": (
+            high_confidence_summary["exact_finding_parity"]
+            if high_confidence_summary is not None
+            else None
+        ),
+        "within_backend_stable": raw_summary["within_backend_stable"],
+        "stable_intersection_count": raw_summary["stable_intersection_count"],
+        "z3_only": raw_summary["z3_only"],
+        "axeyum_only": raw_summary["axeyum_only"],
+        "stability": raw_summary["stability"],
+        "raw": raw_summary,
+        "high_confidence": high_confidence_summary,
+        "diagnostic": diagnostic_summary,
+        "confidence_partition_available": confidence_available,
         "coverage": {
             "analyzed": populations["z3"][0]["analyzed"],
             "reachable": populations["z3"][0]["analysis_roots"],
@@ -465,12 +627,7 @@ def summarize_driver(runs: list[dict[str, Any]]) -> dict[str, Any]:
         "check_timeout_ms": check_timeout_ms,
     }
     for backend, population in populations.items():
-        backend_stability = stability[backend]
-        result["stability"][backend] = {
-            key: value
-            for key, value in backend_stability.items()
-            if key not in ("stable_findings", "union_findings")
-        }
+        backend_stability = raw_summary["stability"][backend]
         result["backends"][backend] = {
             "finding_count": (
                 population[0]["finding_count"]
@@ -483,9 +640,7 @@ def summarize_driver(runs: list[dict[str, Any]]) -> dict[str, Any]:
                 if backend_stability["output_stable"]
                 else None
             ),
-            "findings_sha256_per_run": [
-                run["findings_sha256"] for run in population
-            ],
+            "findings_sha256_per_run": [run["findings_sha256"] for run in population],
             "solves": [run["solves"] for run in population],
             "solver_time_ms": [run["solver_time_ms"] for run in population],
             "solver_time_median_ms": statistics.median(
@@ -496,6 +651,39 @@ def summarize_driver(runs: list[dict[str, Any]]) -> dict[str, Any]:
             "analyzed": population[0]["analyzed"],
             "analysis_roots": population[0]["analysis_roots"],
         }
+        if confidence_available:
+            high_stability = high_confidence_summary["stability"][backend]
+            diagnostic_stability = diagnostic_summary["stability"][backend]
+            result["backends"][backend].update(
+                {
+                    "high_confidence_finding_count": (
+                        population[0]["high_confidence_finding_count"]
+                        if high_stability["output_stable"]
+                        else None
+                    ),
+                    "high_confidence_finding_counts": [
+                        run["high_confidence_finding_count"] for run in population
+                    ],
+                    "high_confidence_findings_sha256": (
+                        population[0]["high_confidence_findings_sha256"]
+                        if high_stability["output_stable"]
+                        else None
+                    ),
+                    "diagnostic_finding_count": (
+                        population[0]["diagnostic_finding_count"]
+                        if diagnostic_stability["output_stable"]
+                        else None
+                    ),
+                    "diagnostic_finding_counts": [
+                        run["diagnostic_finding_count"] for run in population
+                    ],
+                    "diagnostic_findings_sha256": (
+                        population[0]["diagnostic_findings_sha256"]
+                        if diagnostic_stability["output_stable"]
+                        else None
+                    ),
+                }
+            )
     result["axeyum_warm_telemetry_available"] = telemetry_available
     if telemetry_available:
         representative = populations["axeyum"][0]
@@ -518,23 +706,36 @@ def summarize_driver(runs: list[dict[str, Any]]) -> dict[str, Any]:
     return result
 
 
-def finding_acceptance_failures(driver: Path, summary: dict[str, Any]) -> list[str]:
-    if summary["exact_finding_parity"]:
+def finding_acceptance_failures(
+    driver: Path, summary: dict[str, Any], population: str = "raw"
+) -> list[str]:
+    if population not in ("raw", "high-confidence"):
+        raise ValueError(f"unknown finding acceptance population: {population}")
+    selected = summary["raw"] if population == "raw" else summary["high_confidence"]
+    if selected is None:
+        return [f"{driver}: {population} finding partition unavailable"]
+    if selected["exact_finding_parity"]:
         return []
     failures = []
+    population_label = "" if population == "raw" else f"{population} "
     for backend in ("z3", "axeyum"):
-        stability = summary["stability"][backend]
+        stability = selected["stability"][backend]
         if not stability["output_stable"]:
             failures.append(
-                f"{driver}: {backend} finding output unstable "
+                f"{driver}: {backend} {population_label}finding output unstable "
                 f"(distinct-hashes={len(stability['distinct_hashes'])}, "
                 f"stable={stability['stable_finding_count']}, "
                 f"union={stability['union_finding_count']})"
             )
+    label = (
+        "exact finding parity"
+        if population == "raw"
+        else "exact high-confidence finding parity"
+    )
     failures.append(
-        f"{driver}: exact finding parity failed "
-        f"(z3-only={len(summary['z3_only'])}, "
-        f"axeyum-only={len(summary['axeyum_only'])})"
+        f"{driver}: {label} failed "
+        f"(z3-only={len(selected['z3_only'])}, "
+        f"axeyum-only={len(selected['axeyum_only'])})"
     )
     return failures
 
@@ -566,6 +767,15 @@ def main() -> None:
         "--check-timeout-ms",
         type=int,
         help="explicit shared per-check timeout for both native solver backends",
+    )
+    parser.add_argument(
+        "--acceptance-population",
+        choices=("raw", "high-confidence"),
+        default="raw",
+        help=(
+            "finding population whose exact authority parity controls process "
+            "acceptance; both populations remain recorded"
+        ),
     )
     parser.add_argument("--out", type=Path)
     args = parser.parse_args()
@@ -604,6 +814,7 @@ def main() -> None:
 
     common_environment = {
         "IOCTLANCE_ALL": "1",
+        "IOCTLANCE_ANNOTATE_CONFIDENCE": "1",
         "IOCTLANCE_DEADLINE_SECS": str(args.deadline_secs),
         "IOCTLANCE_SOLVE_BUDGET": str(args.solve_budget),
         "IOCTLANCE_SOLVE_SECS": str(args.solve_secs),
@@ -655,7 +866,9 @@ def main() -> None:
         try:
             summary = summarize_driver(runs)
             summary_error = None
-            failures.extend(finding_acceptance_failures(driver, summary))
+            failures.extend(
+                finding_acceptance_failures(driver, summary, args.acceptance_population)
+            )
         except RuntimeError as error:
             summary = None
             summary_error = str(error)
@@ -679,7 +892,7 @@ def main() -> None:
         failures.append("source identity changed during measurement")
 
     report = {
-        "schema": "axeyum.glaurung-authoritative-finding-parity.v4",
+        "schema": "axeyum.glaurung-authoritative-finding-parity.v5",
         "accepted": not failures,
         "failures": failures,
         "glaurung": glaurung_identity,
@@ -691,19 +904,32 @@ def main() -> None:
         },
         "binaries": {
             "z3": {"path": str(z3_binary), "sha256": file_sha256(z3_binary)},
-            "axeyum": {"path": str(axeyum_binary), "sha256": file_sha256(axeyum_binary)},
+            "axeyum": {
+                "path": str(axeyum_binary),
+                "sha256": file_sha256(axeyum_binary),
+            },
         },
         "environment": common_environment,
         "process_timeout_seconds": args.process_timeout_secs,
         "canonical_model_choice_required": required_canonical_model_policy is not None,
         "canonical_model_choice_policy": required_canonical_model_policy,
         "check_timeout_ms_required": args.check_timeout_ms,
+        "acceptance_population": args.acceptance_population,
         "repetitions": args.repetitions,
         "order": "odd repetitions Z3/Axeyum; even repetitions Axeyum/Z3",
         "drivers": driver_reports,
         "all_drivers_exact_finding_parity": all(
+            driver["summary"] is not None and driver["summary"]["exact_finding_parity"]
+            for driver in driver_reports
+        ),
+        "all_drivers_exact_raw_finding_parity": all(
             driver["summary"] is not None
-            and driver["summary"]["exact_finding_parity"]
+            and driver["summary"]["exact_raw_finding_parity"]
+            for driver in driver_reports
+        ),
+        "all_drivers_exact_high_confidence_finding_parity": all(
+            driver["summary"] is not None
+            and driver["summary"]["exact_high_confidence_finding_parity"] is True
             for driver in driver_reports
         ),
     }

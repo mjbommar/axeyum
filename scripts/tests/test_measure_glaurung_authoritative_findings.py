@@ -12,7 +12,9 @@ MODULE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(MODULE)
 
 
-def run(backend: str, *, analyzed: int = 10, boundary: str = "fixed-work-limit") -> dict:
+def run(
+    backend: str, *, analyzed: int = 10, boundary: str = "fixed-work-limit"
+) -> dict:
     findings = ["sink-a"]
     return {
         "backend": backend,
@@ -21,7 +23,16 @@ def run(backend: str, *, analyzed: int = 10, boundary: str = "fixed-work-limit")
         "findings": findings,
         "reported_raw": 1,
         "reported_lines": 1,
+        "reported_high_confidence": 1,
         "reported_suppressed": 0,
+        "confidence_partition_available": True,
+        "finding_confidence_schema": MODULE.FINDING_CONFIDENCE_SCHEMA,
+        "high_confidence_finding_count": 1,
+        "high_confidence_findings_sha256": "hash",
+        "high_confidence_findings": findings,
+        "diagnostic_finding_count": 0,
+        "diagnostic_findings_sha256": MODULE.text_sha256([]),
+        "diagnostic_findings": [],
         "analyzed": analyzed,
         "analysis_roots": 100,
         "coverage_boundary": boundary,
@@ -35,14 +46,38 @@ def run(backend: str, *, analyzed: int = 10, boundary: str = "fixed-work-limit")
 
 
 class AuthoritativeFindingRunnerTests(unittest.TestCase):
+    def test_parses_machine_readable_confidence_partition_without_changing_rows(
+        self,
+    ) -> None:
+        parsed = MODULE.parse_annotated_findings(
+            "sink-a\tconfidence=high\nsink-b\tconfidence=diagnostic\n"
+        )
+        self.assertEqual(parsed["findings"], ["sink-a", "sink-b"])
+        self.assertEqual(parsed["high_confidence_findings"], ["sink-a"])
+        self.assertEqual(parsed["diagnostic_findings"], ["sink-b"])
+        self.assertTrue(parsed["confidence_partition_available"])
+
+    def test_preserves_legacy_raw_output_but_rejects_mixed_or_unknown_annotations(
+        self,
+    ) -> None:
+        empty = MODULE.parse_annotated_findings("", annotation_active=True)
+        self.assertTrue(empty["confidence_partition_available"])
+        self.assertEqual(empty["high_confidence_findings"], [])
+        self.assertEqual(empty["diagnostic_findings"], [])
+        parsed = MODULE.parse_annotated_findings("sink-a\nsink-b\n")
+        self.assertEqual(parsed["findings"], ["sink-a", "sink-b"])
+        self.assertFalse(parsed["confidence_partition_available"])
+        with self.assertRaisesRegex(RuntimeError, "mixed annotated and legacy"):
+            MODULE.parse_annotated_findings("sink-a\tconfidence=high\nsink-b\n")
+        with self.assertRaisesRegex(RuntimeError, "unknown finding confidence"):
+            MODULE.parse_annotated_findings("sink-a\tconfidence=review-me\n")
+
     def test_accepts_and_verifies_reported_check_timeout(self) -> None:
         stderr = (
             "[solver] backend=z3 solves=10 solver_time=2.0ms "
             "avg=200.0us/solve check_timeout_ms=1000\n"
         )
-        self.assertEqual(
-            MODULE.parse_check_timeout_ms(stderr, expected=1000), 1000
-        )
+        self.assertEqual(MODULE.parse_check_timeout_ms(stderr, expected=1000), 1000)
         with self.assertRaisesRegex(RuntimeError, "check-timeout mismatch"):
             MODULE.parse_check_timeout_ms(stderr, expected=2000)
         with self.assertRaisesRegex(RuntimeError, "missing solver check-timeout"):
@@ -170,7 +205,9 @@ class AuthoritativeFindingRunnerTests(unittest.TestCase):
             run("axeyum", analyzed=9),
             run("axeyum", analyzed=9),
         ]
-        with self.assertRaisesRegex(RuntimeError, "authority coverage populations differ"):
+        with self.assertRaisesRegex(
+            RuntimeError, "authority coverage populations differ"
+        ):
             MODULE.summarize_driver(runs)
 
     def test_preserves_and_rejects_a_failed_process_record(self) -> None:
@@ -237,7 +274,9 @@ class AuthoritativeFindingRunnerTests(unittest.TestCase):
             summary["coverage"],
             {"analyzed": 10, "reachable": 100, "boundary": "fixed-work-limit"},
         )
-        self.assertEqual(MODULE.finding_acceptance_failures(Path("driver"), summary), [])
+        self.assertEqual(
+            MODULE.finding_acceptance_failures(Path("driver"), summary), []
+        )
 
     def test_rejects_stable_backend_divergence(self) -> None:
         runs = [run("z3"), run("z3"), run("axeyum"), run("axeyum")]
@@ -250,6 +289,62 @@ class AuthoritativeFindingRunnerTests(unittest.TestCase):
         self.assertFalse(summary["exact_finding_parity"])
         self.assertEqual(len(failures), 1)
         self.assertIn("z3-only=1, axeyum-only=1", failures[0])
+
+    def test_can_accept_high_confidence_parity_while_retaining_raw_divergence(
+        self,
+    ) -> None:
+        runs = [run("z3"), run("z3"), run("axeyum"), run("axeyum")]
+        for candidate in runs:
+            candidate["high_confidence_findings"] = []
+            candidate["high_confidence_finding_count"] = 0
+            candidate["high_confidence_findings_sha256"] = MODULE.text_sha256([])
+            candidate["reported_high_confidence"] = 0
+            candidate["diagnostic_findings"] = candidate["findings"]
+            candidate["diagnostic_finding_count"] = len(candidate["findings"])
+            candidate["diagnostic_findings_sha256"] = candidate["findings_sha256"]
+            candidate["reported_suppressed"] = len(candidate["findings"])
+            if candidate["backend"] == "axeyum":
+                candidate["findings"] = ["sink-b"]
+                candidate["findings_sha256"] = "axeyum-hash"
+                candidate["diagnostic_findings"] = ["sink-b"]
+                candidate["diagnostic_findings_sha256"] = "axeyum-hash"
+        summary = MODULE.summarize_driver(runs)
+        self.assertFalse(summary["exact_raw_finding_parity"])
+        self.assertTrue(summary["exact_high_confidence_finding_parity"])
+        self.assertNotEqual(summary["raw"]["z3_only"], [])
+        self.assertEqual(summary["high_confidence"]["z3_only"], [])
+        self.assertEqual(
+            MODULE.finding_acceptance_failures(
+                Path("tcpip.sys"), summary, "high-confidence"
+            ),
+            [],
+        )
+        self.assertNotEqual(
+            MODULE.finding_acceptance_failures(Path("tcpip.sys"), summary, "raw"),
+            [],
+        )
+
+    def test_high_confidence_acceptance_fails_closed_without_partition(self) -> None:
+        runs = [run("z3"), run("z3"), run("axeyum"), run("axeyum")]
+        for candidate in runs:
+            candidate["confidence_partition_available"] = False
+            for key in (
+                "reported_high_confidence",
+                "high_confidence_finding_count",
+                "high_confidence_findings_sha256",
+                "high_confidence_findings",
+                "diagnostic_finding_count",
+                "diagnostic_findings_sha256",
+                "diagnostic_findings",
+            ):
+                candidate.pop(key, None)
+        summary = MODULE.summarize_driver(runs)
+        self.assertIsNone(summary["exact_high_confidence_finding_parity"])
+        failures = MODULE.finding_acceptance_failures(
+            Path("legacy.sys"), summary, "high-confidence"
+        )
+        self.assertEqual(len(failures), 1)
+        self.assertIn("finding partition unavailable", failures[0])
 
     def test_preserves_summary_for_unstable_backend_output(self) -> None:
         runs = [run("z3"), run("z3"), run("axeyum"), run("axeyum")]
