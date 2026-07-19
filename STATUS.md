@@ -322,6 +322,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-19 — ADR-0259 preregisters the next cold GQ5 attribution before
+  implementation or real-corpus observation.** Existing CNF phase timing
+  cannot separate literal canonicalization from fingerprint-index work, and
+  ADR-0200's analogous open-addressed replacement regressed. Add an opt-in,
+  monomorphized production-zero-overhead profile with exact work partitions;
+  TDD-gate ordinary/profiled identity and counter invariants, then run one
+  clean raw process over the fixed 162-query corrected-wide-v3 representative.
+  Profiled timing is diagnostic only and no optimization is selected yet.
+
 - **2026-07-19 — ADR-0258 retains the capped nontrivial-DRAT no-selection and
   closes further holdout mining.** Clean detached `10ee9795` exports and self-
   rechecks all 32 fixed hash-ordered rows, but every DRAT is the same two-byte,
@@ -2601,7 +2610,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   | **GQ2 cheap cold tier** | **WIP with three accepted rewrite tranches; batch integration deferred.** Canonical v4 reaches 5.625 s / 0.730x Z3; ADR-0156 preserves replay but is 18.8% slower than one-shot | Keep canonical v4 as the measured one-shot policy; do not recommend fresh incremental batch until its clause/entry overhead closes |
   | **GQ3 coercion/affine peepholes** | **DONE for current measured shapes (ADR-0159).** Clean repeated path-paired ablations are fail-closed; `extract_extend` is a material lowering-only win, while all four measured structural rules change zero AIG nodes/clauses | Keep rules enabled. Reopen only for a new residual shape with a specific downstream hypothesis and the same causal ablation gate |
   | **GQ4 cold relevant bits** | **v1 and v2 DEFERRED after failed real gates.** v1 regresses ~1.42x→4.49x. V2 rejection overhead is bounded, but defaults admit 0/128 and +0.62% total; a 33-query moderate policy removes 632 AIG nodes/zero clauses and regresses bit blast 3.14% | Keep both explicit/off. Reopen only with an AIG/CNF-cone estimator or after word rewrites materially change the residual; do not tune thresholds further |
-  | **GQ5 AIG/CNF construction** | **Cold lane active; broad warm lane closed by ADR-0219.** Retention removes 98--99% of cold structure and leaves 11--20% warm CNF | Continue cold only from causal gates; report Dptf UNSAT CNF additions as a cross-core covariate |
+  | **GQ5 AIG/CNF construction** | **Cold lane active; broad warm lane closed by ADR-0219; detailed clause-construction profile PREREGISTERED in ADR-0259.** Retention removes 98--99% of cold structure and leaves 11--20% warm CNF; ADR-0200 rejected an unattributed map replacement | Implement the production-zero-overhead profile, execute the fixed 162-query raw representative, and select no change before exact canonicalization/index ownership is known |
   | **GQ6 cold SAT/CDCL** | **Fresh and retained exact-CNF controls DONE (ADR-0220/0221).** Proof core beats fresh BatSat before checking; retained BatSat beats retained Z3 Boolean | Do not select a core rewrite from Dptf; reopen only on a SAT-dominant family with a neutral core gap and deterministic limits |
   | **GQ7 warm delta entry** | **Source identity, fair map, query/internal attribution, fresh/retained CNF controls, four-driver neutral cold-reset plus source-owner-retained SMT, bounded raw finding parity, canonical tcpip authority, four-schedule union, isolated configurable-policy A0, taint/SystemBuffer baseline corrections, confidence partition, 14-row source-backed positive control, v1 resource rejection, v2 precision rejection, detector correction, v3 scalar sweep, exhaustive difference adjudication, rejected usbprint frontier, and v6 worklist-stop gate DONE (ADR-0201--0250 plus Glaurung `7f682e5`; stop-class candidate `ff3c0a7`).** Every scalar policy preserves 14/14; ADR-0248 finds zero independent primitives among all 54 varying source-backed rows. ADR-0249's common prefix 10 is descriptive only because prefix 15 concealed a deadline-terminated inner worklist; ADR-0250 prevents future fixed-work acceptance on that state. Tcpip remains diagnostic, and policy cost varies up to 79,950 solves / about 235 MiB | Keep symbolic memory gated; coordinate the footer, require a broader labeled residual gap, and use v6 for any future fixed-work acceptance |
   | **GQ8 verdict/CNF cache** | **DONE for available families (ADR-0192).** Clean repeated evidence admits exact same-arena scalar SAT reuse only in path-owned Glaurung sessions; fixed bounds, traffic partitions, cleanup gauges, findings, and replay are enforced | Preserve explicit off and re-gate new families; Axeyum's generic cache remains opt-in and ordinary UNSAT/Unknown/prefix verdicts remain excluded |
@@ -2650,10 +2659,11 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   preserve ADR-0236's rejected any-model
   divergence beside every canonical result and never treat canonical output as
   the union of reachable findings; (9) regenerate a wider timeout-sensitive
-  driver and keep each timeout cell separate; (10) advance GQ5 through fresh causal CNF attribution while
-  preserving explicit controls, exact counter partitions, and honest residual
-  `Unknown`s; (11) stage solver namespace/module, duplicate-removal, and
-  typed-config refactors only as bounded behavior-preserving tranches; (12) keep
+  driver and keep each timeout cell separate; (10) execute ADR-0259's fixed
+  fresh causal CNF attribution while preserving explicit controls, exact
+  counter partitions, and honest residual `Unknown`s; (11) stage solver
+  namespace/module, duplicate-removal, and typed-config refactors only as
+  bounded behavior-preserving tranches; (12) keep
   GQ4 explicit/off.
 
   **Validation (2026-07-19, ADR-0251 preregistration):** four selector tests
@@ -4645,6 +4655,11 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-19 — ADR-0259 preregisters cold CNF construction attribution.**
+  The opt-in profile will distinguish literal canonicalization and fingerprint-
+  index work without taxing production, then run against the fixed 162-query
+  representative before any new GQ5 optimization is selected.
 
 - **2026-07-19 — ADR-0258 retains the capped external-DRAT no-selection.** All
   32 fixed hash-order exports succeed but produce only the same two-byte empty-
