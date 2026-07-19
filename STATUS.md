@@ -346,11 +346,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   residual typed resource-limit. The full campaign/analysis hashes are
   `118e90a4...2ec2ec` / `46e8e29f...d5e0c`. No 338-function row is authorized.
   Moreover the cold-Z3 authority ladder changes the explored stream, so limits
-  from different tiers cannot be combined. Next either preregister an explicitly
-  observation-aware extension that fixes Z3 at 100,000 and calibrates shadows on
-  one common stream, or close the harder-driver tier as a negative result. A1
-  remains configuration/measurement, A0 remains complete, and symbolic memory
-  remains closed.
+  from different tiers cannot be combined. ADR-0274 now preregisters the
+  observation-aware correction with zero extension rows: fix Z3 at 100,000,
+  require the exact invariant 4,846-check authority stream, and sweep ten
+  Axeyum/Bitwuzla shadow-limit pairs at N=3. Implement and freeze its dedicated
+  fail-closed runner/analyzer next, then execute all 30 rows without adaptation.
+  A1 remains configuration/measurement, A0 remains complete, and symbolic
+  memory remains closed.
 
 - **2026-07-19 — ADR-0272 accepts the six-cell neutral warm map and closes the
   performance-leadership framing.** The exact 20-process campaign preserves
