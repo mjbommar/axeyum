@@ -40,6 +40,18 @@ The mechanism is complete before this registration:
 
 No real-driver v4 row was executed while defining this protocol.
 
+Before executable registration, while the real-driver v4 row count remained
+zero, the protocol was made executable by
+`scripts/run-glaurung-six-cell-calibration.py` and
+`scripts/analyze-glaurung-six-cell-calibration.py`. This exposed one omitted
+environment spelling in the prose: `IOCTLANCE_ALL=1` is required to retain the
+complete raw/high-confidence/diagnostic finding partition already named by the
+acceptance gates below. This zero-row correction freezes that switch explicitly;
+it does not change the population, ladder, selection rule, or interpretation.
+The tooling also fails closed on the measured Axeyum tree identities, executable
+and resolved-library hashes, driver bytes, fixed environment, run order, retained
+log hashes, producer validation, and trace confinement.
+
 ## Decision
 
 ### Frozen source and input
@@ -111,6 +123,7 @@ GLAURUNG_BITWUZLA_TERMINATION_POLL_LIMIT=<tier value>
 GLAURUNG_AXEYUM_REPLAY_SAT_CACHE=1
 GLAURUNG_AXEYUM_WARM_MAX_LIVE_PATHS=9
 GLAURUNG_AXEYUM_WARM_MAX_ASSERTIONS_PER_PATH=512
+IOCTLANCE_ALL=1
 IOCTLANCE_MAX_ANALYZED_FUNCTIONS=20
 IOCTLANCE_SOLVE_BUDGET=400000
 IOCTLANCE_SOLVE_SECS=900
@@ -199,7 +212,8 @@ speed or equal-work claim.
 ## Consequences
 
 A1 is now implementation-complete and moves from “wire resource limits” to
-“execute the preregistered calibration.” It remains configuration and
-measurement, not a solver research project. A0 remains completed reproducibility
-infrastructure, A2 symbolic memory remains closed, and the paper trajectory
-continues to be correctness + deployability + rigorously bounded performance.
+“register the exact release/linkage, then execute the preregistered calibration.”
+It remains configuration and measurement, not a solver research project. A0
+remains completed reproducibility infrastructure, A2 symbolic memory remains
+closed, and the paper trajectory continues to be correctness + deployability +
+rigorously bounded performance.

@@ -332,11 +332,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   unit/limit identity, outcome/stop-reason drift rejection, and separate
   resource/wall/other accounting; 20 focused analyzer tests pass. ADR-0273
   freezes all 14 first-20 tcpip calibration tiers, N=3, and the independent
-  smallest-limit-at-95%-decided selection rule. There are zero real-driver v4
-  rows. Run all 42 calibration processes next; a second preregistration must
-  commit the selected triplet before the 338-function confirmation. A1 remains
-  configuration/measurement, A0 remains complete, and symbolic memory remains
-  closed.
+  smallest-limit-at-95%-decided selection rule. The dedicated runner and
+  selector now encode all 42 processes, sanitize the environment, require the
+  all-findings confidence partition, hash every resolved dynamic library and
+  retained log, and reject escaped/unvalidated traces; 7 focused calibration
+  tests plus the 20 paired-trace tests pass. There are zero real-driver v4 rows.
+  Register the exact release executable and linkage, then run all 42 calibration
+  processes; a second preregistration must commit the selected triplet before
+  the 338-function confirmation. A1 remains configuration/measurement, A0
+  remains complete, and symbolic memory remains closed.
 
 - **2026-07-19 — ADR-0272 accepts the six-cell neutral warm map and closes the
   performance-leadership framing.** The exact 20-process campaign preserves
