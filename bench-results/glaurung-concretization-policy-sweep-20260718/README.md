@@ -141,3 +141,41 @@ binaries with the hashes above, and the unchanged positive/tcpip v2 work
 boundaries. All five policies will be rerun from one clean detached Axeyum
 commit. No v3 cell was observed before committing the registration. Complete
 usbprint remains a separate resource-frontier result.
+
+The exact clean-detached Axeyum `f2af8b40` run is preserved under
+[`attempt-3-accepted/`](attempt-3-accepted/). The aggregate analyzer accepts the
+full matrix.
+
+| Policy | Positive raw | Positive validated | Positive solves | Tcpip raw Z3/Axeyum | Tcpip solves Z3/Axeyum |
+|---|---:|---:|---:|---:|---:|
+| AnyModel | 122 | 14/14 exact | 2,312 | 128/126 | 3,079/2,991 |
+| minimum | 81 | 14/14 exact | 59,800 | 110/110 | 80,563/80,563 |
+| maximum | 68 | 14/14 exact | 60,456 | 84/84 | 34,659/34,659 |
+| site-hash-zero | 77 | 14/14 exact | 59,791 | 95/95 | 28,258/28,258 |
+| site-hash-one | 72 | 14/14 exact | 60,465 | 98/98 | 79,950/79,950 |
+
+Every positive cell has precision and recall 1.0, zero false negatives, zero
+unexpected high rows, stable repetitions, and exact authority parity. Every
+tcpip cell has zero high-confidence rows. Tcpip policy variation is therefore
+retained as unlabeled diagnostic output, not a recall result.
+
+The integration-cost frontier is also explicit. Site-hash-one tcpip is the
+largest cell: roughly 68 seconds / 147 MiB under Z3 and 264 seconds / 235 MiB
+under Axeyum. Minimum is roughly 68 seconds / 150 MiB and 160 seconds / 186 MiB;
+site-hash-zero is roughly 21 seconds / 139 MiB and 19 seconds / 140 MiB. These
+numbers describe policy execution in Glaurung and are not solver-speed claims.
+
+Exact attempt identities:
+
+- preregistration SHA-256:
+  `6cf0f41c8fd0f0024c8189ae59812943f8c119738bd8f8b26a087d2abec56300`
+- execution manifest SHA-256:
+  `8a2caae84e0cdf8fe0703e9fc7eea8b9220756e165ee74b48faed5c74e71e3e0`
+- accepted analysis SHA-256:
+  `6de0c7592f00d90711f4a4b7dbb5a381bfe663c914094aa55c069c355dfdcb99`
+
+V3 closes the five executable scalar-policy matrix. It does not open symbolic
+memory: the labeled control is policy-invariant, and the policy-varying real
+rows have not been independently validated. The next coverage step is a bounded
+source-backed adjudication of policy-varying real-driver output, while usbprint
+remains a separate resource frontier.

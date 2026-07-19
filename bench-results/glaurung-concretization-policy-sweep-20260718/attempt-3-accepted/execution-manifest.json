@@ -1,0 +1,86 @@
+{
+  "authority_binaries": {
+    "axeyum": {
+      "path": "/tmp/glaurung-policy-sweep-v3-axeyum-ioctlance",
+      "sha256": "ee7ef0f84000080700129fe12d49f34396f6be8aeae4d36b35bdb2a4912ae6cd"
+    },
+    "z3": {
+      "path": "/tmp/glaurung-policy-sweep-v3-z3-ioctlance",
+      "sha256": "027dad8802083021a278216ad471fc85f73c2a2aeeb228b08d6ebe6e9ea8031e"
+    }
+  },
+  "axeyum": {
+    "revision": "f2af8b40e6d3c350eb3cbbe735e3c649b8d85fcb",
+    "tracked_dirty": false,
+    "tracked_status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "drivers": {
+    "positive-control": [
+      {
+        "path": "/nas4/data/workspace-infosec/ioctlance/test_drivers/test_file_operations.sys",
+        "sha256": "61bdccd8ca47cfebfc46a222a05733e23a60b5f1e016c7ee91ded4c4a64824e3"
+      },
+      {
+        "path": "/nas4/data/workspace-infosec/ioctlance/test_drivers/test_integer_overflow.sys",
+        "sha256": "090974c12d4482a6da46dcead100308e35da37108a7e4b16f9c73e0c947828c0"
+      },
+      {
+        "path": "/nas4/data/workspace-infosec/ioctlance/test_drivers/test_physical_memory.sys",
+        "sha256": "d730176b7726f219413b9c77482f1d7b8ae5619f5dfe3dbd76048acada1676be"
+      },
+      {
+        "path": "/nas4/data/workspace-infosec/ioctlance/test_drivers/test_port_io.sys",
+        "sha256": "0a42451df1cda23a5c55da4e8defcf7ec7bfa817e4a8f13f46aec70cf535e3d8"
+      },
+      {
+        "path": "/nas4/data/workspace-infosec/ioctlance/test_drivers/test_wrmsr.sys",
+        "sha256": "be7125bb3d9add9bcd6c3902f815b2cbe563044d128def9920f0f8519e723725"
+      },
+      {
+        "path": "/nas4/data/workspace-infosec/ioctlance/test_drivers/test_rdmsr.sys",
+        "sha256": "01d065a4ae7a40462c58c6e33ca2662ae67f3d54a8dad8c981ebb4d8990e4fec"
+      },
+      {
+        "path": "/nas4/data/workspace-infosec/ioctlance/test_drivers/test_shellcode.sys",
+        "sha256": "0e9b893c287c8e3e92f9ba4a176a33ccfe612314708673c015df322901fce32b"
+      },
+      {
+        "path": "/nas4/data/workspace-infosec/ioctlance/test_drivers/test_stack_overflow.sys",
+        "sha256": "9475e33f125b85c6cee60cafe07ed81214fc5386c25db4f322e20dbaf46f26c8"
+      },
+      {
+        "path": "/nas4/data/workspace-infosec/ioctlance/test_drivers/test_process_termination.sys",
+        "sha256": "6f67605dad3ba73c15439071dd534eb6954e376c32d364409b3478e4ddf9a316"
+      }
+    ],
+    "tcpip-discovery": [
+      {
+        "path": "/nas4/data/workspace-infosec/glaurung/tests/fixtures/msvc-pdb/tcpip.sys",
+        "sha256": "ff965206a37f2c258b7199bc87b49ee12c834e5fc50f58dae2f3de66a57022ea"
+      }
+    ]
+  },
+  "glaurung": {
+    "revision": "7f682e5c82efef6a5c4b7ffc52a61dcfe8a87833",
+    "tracked_dirty": false,
+    "tracked_status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "policy_order": [
+    "any-model",
+    "min-unsigned",
+    "max-unsigned",
+    "site-hash-0",
+    "site-hash-1"
+  ],
+  "registration_sha256": "6cf0f41c8fd0f0024c8189ae59812943f8c119738bd8f8b26a087d2abec56300",
+  "schema": "axeyum.glaurung-concretization-sweep-execution.v1",
+  "source_repository": {
+    "revision": "905629a773f191108273a55924accd9f31145a8d",
+    "tracked_dirty": true,
+    "tracked_status_sha256": "165e676ce428ab16080f65b7dc9efcde2d746591a0acf896651d8de144384acb"
+  },
+  "stratum_order": [
+    "positive-control",
+    "tcpip-discovery"
+  ]
+}

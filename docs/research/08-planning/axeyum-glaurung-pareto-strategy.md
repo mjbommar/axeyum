@@ -208,9 +208,11 @@ source-rejected `stack-overflow` classification at an arbitrary-pointer
 concrete `dst` and `rsp` values within a +/-64 KiB window. Thus the knob is cheap,
 but detectors that derive semantic region facts from its arbitrary witnesses are
 not policy-robust. ADR-0246 closes that prerequisite with structural expression-
-DAG ancestry and restores the exact 14-row maximum-policy control. ADR-0247 now
-preregisters a clean corrected sweep; the rejected v2 prefix remains evidence of
-the bug, not a source of cells for the new matrix.
+DAG ancestry and restores the exact 14-row maximum-policy control. ADR-0247's
+clean corrected sweep is now accepted: every scalar policy preserves the exact
+14-row control, while tcpip policy variation remains entirely diagnostic and
+unlabeled. The rejected v2 prefix remains evidence of the bug, not a source of
+cells for the accepted matrix.
 
 ## 5. The Pareto-dominant program
 
@@ -394,27 +396,29 @@ support anyway.
   positive fixtures under both authorities. Use that population as a mandatory
   no-regression stratum, not as evidence that value selection changes recall.
 
-**Phase 2 -- Recover coverage reproducibly (a sweep, then conditional memory-model work).**
-- **Initial sweep prefixes measured; corrected full gate preregistered.** ADR-0244 fails closed
+**Phase 2 -- Recover coverage reproducibly (scalar sweep accepted; real-output labeling next).**
+- **Scalar sweep complete.** ADR-0244 fails closed
   when minimum cannot complete usbprint under the fixed deadline. ADR-0245 then
   clears AnyModel/minimum but rejects maximum at the positive-control precision
   gate: 14/14 expected rows plus one model-dependent false `stack-overflow`.
-  ADR-0246 repairs and accepts A0.5; ADR-0247 preregisters v3 before observing
-  any corrected campaign cell. Site-hash cells remain unobserved until v3 runs.
-- Run the corrected A0 policy sweep across the driver corpus using the same five
-  executable policy identities at corrected Glaurung `7f682e5`:
+  ADR-0246 repairs and accepts A0.5. ADR-0247's exact v3 run then accepts all
+  five policies at 14/14 with zero unexpected high rows. Deterministic tcpip
+  raw diagnostics vary from 84 to 110 with exact authority parity; AnyModel
+  remains 128 Z3 / 126 Axeyum. Every tcpip row is producer-diagnostic and lacks
+  independent ground truth. Site-hash-one is also the largest cost point
+  (roughly 264 seconds / 235 MiB under Axeyum on the fixed tcpip prefix).
+- Treat the accepted sweep as the completed cheap A0 mechanism result, using the
+  same five executable policy identities at corrected Glaurung `7f682e5`:
   {AnyModel, LeastUnsigned, GreatestUnsigned,
-  SiteHashZero, SiteHashOne} x backends, measuring coverage /
-  reproducibility / solve-cost with ADR-0243's 14/14 source-backed population as
-  a hard regression stratum. Report policy-dependent real-driver rows as a
-  separate unlabeled discovery population until independently validated.
-  Report raw, confidence-gated, and validated populations independently; never
-  use raw `>= AnyModel` as an acceptance gate. C1 WASM number. **Gate:** an exact,
-  reproducible configuration sweep with explicit validated recall, work, time,
-  and memory tradeoffs. Extend it with BoundarySet/DiverseEnum only after bounded
-  multi-successor execution exists; do not approximate either policy by choosing
-  one value. Advance to memory-model work only if the cheap policy sweep leaves
-  a measured, validated coverage gap.
+  SiteHashZero, SiteHashOne}. Preserve raw, confidence-gated, and validated
+  populations independently; never use raw `>= AnyModel` as an acceptance gate.
+  Next independently adjudicate a preregistered bounded sample of policy-varying
+  real-driver rows, or add a real source-backed population capable of exposing
+  misses. **Gate for any memory-model work:** a measured validated residual gap,
+  not raw tcpip variation or usbprint's resource failure. Extend with
+  BoundarySet/DiverseEnum only after bounded multi-successor execution exists
+  and the labeled evidence justifies the extra work; do not approximate either
+  policy by choosing one value.
 
 **Phase 3 -- The structural lever, only if A2' leaves headroom (month+).**
 - A2 fully symbolic memory (memsight-style); B2 abstraction-refinement for

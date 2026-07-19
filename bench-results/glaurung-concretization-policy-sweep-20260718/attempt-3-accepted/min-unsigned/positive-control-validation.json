@@ -1,0 +1,426 @@
+{
+  "accepted": true,
+  "axeyum_revision": "f2af8b40e6d3c350eb3cbbe735e3c649b8d85fcb",
+  "drivers": [
+    {
+      "expected_findings": [
+        "    file-operation  va=0x36def1138  [dispatch] fn=IoctlHandler @ 0x36def1000  sev=Constrained  taint=[\"*SystemBuffer\"]",
+        "    file-operation  va=0x36def12f7  [dispatch] fn=IoctlHandler @ 0x36def1000  sev=Constrained  taint=[\"*SystemBuffer\"]"
+      ],
+      "false_negatives": [],
+      "name": "test_file_operations.sys",
+      "observed_high_confidence_findings": [
+        "    file-operation  va=0x36def1138  [dispatch] fn=IoctlHandler @ 0x36def1000  sev=Constrained  taint=[\"*SystemBuffer\"]",
+        "    file-operation  va=0x36def12f7  [dispatch] fn=IoctlHandler @ 0x36def1000  sev=Constrained  taint=[\"*SystemBuffer\"]"
+      ],
+      "sha256": "61bdccd8ca47cfebfc46a222a05733e23a60b5f1e016c7ee91ded4c4a64824e3",
+      "source": {
+        "path": "test_drivers/test_file_operations.c",
+        "repository_revision": "905629a773f191108273a55924accd9f31145a8d",
+        "sha256": "fbe2d7ae5340c095e43c69fb6ecaa9c12a6c9c734c3ed3f7a06a46435968c5e1"
+      },
+      "true_positives": [
+        "    file-operation  va=0x36def1138  [dispatch] fn=IoctlHandler @ 0x36def1000  sev=Constrained  taint=[\"*SystemBuffer\"]",
+        "    file-operation  va=0x36def12f7  [dispatch] fn=IoctlHandler @ 0x36def1000  sev=Constrained  taint=[\"*SystemBuffer\"]"
+      ],
+      "unexpected_high_confidence": [],
+      "validation_basis": [
+        {
+          "finding": "    file-operation  va=0x36def1138  [dispatch] fn=IoctlHandler @ 0x36def1000  sev=Constrained  taint=[\"*SystemBuffer\"]",
+          "machine_evidence": "IOCTL 0x00222000 reaches ZwCreateFile at 0x36def1138 after the path, DesiredAccess, and CreateDisposition are loaded from the METHOD_BUFFERED SystemBuffer.",
+          "source_lines": "14-20, 25, 32-51"
+        },
+        {
+          "finding": "    file-operation  va=0x36def12f7  [dispatch] fn=IoctlHandler @ 0x36def1000  sev=Constrained  taint=[\"*SystemBuffer\"]",
+          "machine_evidence": "IOCTL 0x00222008 reaches ZwWriteFile at 0x36def12f7 after the write buffer and size are loaded from SystemBuffer offsets 0x208 and 0x210 at 0x36def129f..0x36def12ad.",
+          "source_lines": "14-20, 25, 77-108"
+        }
+      ]
+    },
+    {
+      "expected_findings": [
+        "  integer-overflow  va=0x2253a105a  [dispatch] fn=IoctlHandler @ 0x2253a1000  sev=Arbitrary  taint=[\"*SystemBuffer\"]",
+        "  integer-overflow  va=0x2253a1092  [dispatch] fn=IoctlHandler @ 0x2253a1000  sev=Arbitrary  taint=[\"*SystemBuffer\"]"
+      ],
+      "false_negatives": [],
+      "name": "test_integer_overflow.sys",
+      "observed_high_confidence_findings": [
+        "  integer-overflow  va=0x2253a105a  [dispatch] fn=IoctlHandler @ 0x2253a1000  sev=Arbitrary  taint=[\"*SystemBuffer\"]",
+        "  integer-overflow  va=0x2253a1092  [dispatch] fn=IoctlHandler @ 0x2253a1000  sev=Arbitrary  taint=[\"*SystemBuffer\"]"
+      ],
+      "sha256": "090974c12d4482a6da46dcead100308e35da37108a7e4b16f9c73e0c947828c0",
+      "source": {
+        "path": "test_drivers/test_integer_overflow.c",
+        "repository_revision": "905629a773f191108273a55924accd9f31145a8d",
+        "sha256": "5756b5e57fdc51b26f135fcfb4669b4ad2ad2576f657f2983955c7cf421aa4fb"
+      },
+      "true_positives": [
+        "  integer-overflow  va=0x2253a105a  [dispatch] fn=IoctlHandler @ 0x2253a1000  sev=Arbitrary  taint=[\"*SystemBuffer\"]",
+        "  integer-overflow  va=0x2253a1092  [dispatch] fn=IoctlHandler @ 0x2253a1000  sev=Arbitrary  taint=[\"*SystemBuffer\"]"
+      ],
+      "unexpected_high_confidence": [],
+      "validation_basis": [
+        {
+          "finding": "  integer-overflow  va=0x2253a105a  [dispatch] fn=IoctlHandler @ 0x2253a1000  sev=Arbitrary  taint=[\"*SystemBuffer\"]",
+          "machine_evidence": "IOCTL 0x002220c0 reaches unchecked 32-bit imul at 0x2253a105a with both operands loaded from the METHOD_BUFFERED SystemBuffer; the wrapped result is the allocation size.",
+          "source_lines": "12-15, 20, 24-27"
+        },
+        {
+          "finding": "  integer-overflow  va=0x2253a1092  [dispatch] fn=IoctlHandler @ 0x2253a1000  sev=Arbitrary  taint=[\"*SystemBuffer\"]",
+          "machine_evidence": "The same IOCTL recomputes the unchecked SystemBuffer-derived product at 0x2253a1092 and passes it to memcpy at 0x2253a10a5 without an overflow guard.",
+          "source_lines": "12-15, 20, 24-30"
+        }
+      ]
+    },
+    {
+      "expected_findings": [
+        "        null-deref  va=0x2a09211bc  [dispatch] fn=IoctlHandler @ 0x2a0921000  sev=Arbitrary  taint=[\"*SystemBuffer\"]",
+        "    arbitrary-read  va=0x2a09211bc  [dispatch] fn=IoctlHandler @ 0x2a0921000  sev=Arbitrary  taint=[\"*SystemBuffer\"]",
+        "   arbitrary-write  va=0x2a09211bc  [dispatch] fn=IoctlHandler @ 0x2a0921000  sev=Arbitrary  taint=[\"*SystemBuffer\"]",
+        "   physical-memory  va=0x2a092109f  [dispatch] fn=IoctlHandler @ 0x2a0921000  sev=Arbitrary  taint=[\"*SystemBuffer\"]"
+      ],
+      "false_negatives": [],
+      "name": "test_physical_memory.sys",
+      "observed_high_confidence_findings": [
+        "        null-deref  va=0x2a09211bc  [dispatch] fn=IoctlHandler @ 0x2a0921000  sev=Arbitrary  taint=[\"*SystemBuffer\"]",
+        "    arbitrary-read  va=0x2a09211bc  [dispatch] fn=IoctlHandler @ 0x2a0921000  sev=Arbitrary  taint=[\"*SystemBuffer\"]",
+        "   arbitrary-write  va=0x2a09211bc  [dispatch] fn=IoctlHandler @ 0x2a0921000  sev=Arbitrary  taint=[\"*SystemBuffer\"]",
+        "   physical-memory  va=0x2a092109f  [dispatch] fn=IoctlHandler @ 0x2a0921000  sev=Arbitrary  taint=[\"*SystemBuffer\"]"
+      ],
+      "sha256": "d730176b7726f219413b9c77482f1d7b8ae5619f5dfe3dbd76048acada1676be",
+      "source": {
+        "path": "test_drivers/test_physical_memory.c",
+        "repository_revision": "905629a773f191108273a55924accd9f31145a8d",
+        "sha256": "d37f49cea73cc1569478e40649f834effa88ed0952683d8c6eb161018ef5eac2"
+      },
+      "true_positives": [
+        "        null-deref  va=0x2a09211bc  [dispatch] fn=IoctlHandler @ 0x2a0921000  sev=Arbitrary  taint=[\"*SystemBuffer\"]",
+        "    arbitrary-read  va=0x2a09211bc  [dispatch] fn=IoctlHandler @ 0x2a0921000  sev=Arbitrary  taint=[\"*SystemBuffer\"]",
+        "   arbitrary-write  va=0x2a09211bc  [dispatch] fn=IoctlHandler @ 0x2a0921000  sev=Arbitrary  taint=[\"*SystemBuffer\"]",
+        "   physical-memory  va=0x2a092109f  [dispatch] fn=IoctlHandler @ 0x2a0921000  sev=Arbitrary  taint=[\"*SystemBuffer\"]"
+      ],
+      "unexpected_high_confidence": [],
+      "validation_basis": [
+        {
+          "finding": "   physical-memory  va=0x2a092109f  [dispatch] fn=IoctlHandler @ 0x2a0921000  sev=Arbitrary  taint=[\"*SystemBuffer\"]",
+          "machine_evidence": "IOCTL 0x00222400 reaches MmMapIoSpace at 0x2a092109f with physical address and size loaded from the METHOD_BUFFERED SystemBuffer at 0x2a0921080..0x2a092108c.",
+          "source_lines": "13-17, 31, 34-44"
+        },
+        {
+          "finding": "   arbitrary-write  va=0x2a09211bc  [dispatch] fn=IoctlHandler @ 0x2a0921000  sev=Arbitrary  taint=[\"*SystemBuffer\"]",
+          "machine_evidence": "IOCTL 0x00222408 reaches memcpy at 0x2a09211bc with target, source, and size all loaded from the METHOD_BUFFERED SystemBuffer at 0x2a0921197..0x2a09211b9.",
+          "source_lines": "19-23, 31, 86-96"
+        },
+        {
+          "finding": "        null-deref  va=0x2a09211bc  [dispatch] fn=IoctlHandler @ 0x2a0921000  sev=Arbitrary  taint=[\"*SystemBuffer\"]",
+          "machine_evidence": "The unguarded SystemBuffer-derived target/source pointers at the memcpy call 0x2a09211bc admit null as well as arbitrary addresses.",
+          "source_lines": "19-23, 31, 86-96"
+        },
+        {
+          "finding": "    arbitrary-read  va=0x2a09211bc  [dispatch] fn=IoctlHandler @ 0x2a0921000  sev=Arbitrary  taint=[\"*SystemBuffer\"]",
+          "machine_evidence": "The memcpy source at 0x2a09211bc is loaded directly from SystemBuffer offset 8 and used without address validation.",
+          "source_lines": "19-23, 31, 86-96"
+        }
+      ]
+    },
+    {
+      "expected_findings": [
+        "  arbitrary-portio  va=0x2c8d21046  [dispatch] fn=IoctlHandler @ 0x2c8d21000  sev=Constrained  taint=[\"*SystemBuffer\"]"
+      ],
+      "false_negatives": [],
+      "name": "test_port_io.sys",
+      "observed_high_confidence_findings": [
+        "  arbitrary-portio  va=0x2c8d21046  [dispatch] fn=IoctlHandler @ 0x2c8d21000  sev=Constrained  taint=[\"*SystemBuffer\"]"
+      ],
+      "sha256": "0a42451df1cda23a5c55da4e8defcf7ec7bfa817e4a8f13f46aec70cf535e3d8",
+      "source": {
+        "path": "test_drivers/test_port_io.c",
+        "repository_revision": "905629a773f191108273a55924accd9f31145a8d",
+        "sha256": "b188dbca36bd34821971a9b3ba903755d2c9a7ac83e43c18ae8eecc68078b7d5"
+      },
+      "true_positives": [
+        "  arbitrary-portio  va=0x2c8d21046  [dispatch] fn=IoctlHandler @ 0x2c8d21000  sev=Constrained  taint=[\"*SystemBuffer\"]"
+      ],
+      "unexpected_high_confidence": [],
+      "validation_basis": [
+        {
+          "finding": "  arbitrary-portio  va=0x2c8d21046  [dispatch] fn=IoctlHandler @ 0x2c8d21000  sev=Constrained  taint=[\"*SystemBuffer\"]",
+          "machine_evidence": "IOCTL 0x00222148 reaches out dx,al at 0x2c8d21046 after DX and AL are loaded from the METHOD_BUFFERED SystemBuffer at 0x2c8d2103f and 0x2c8d21043.",
+          "source_lines": "14-20, 26, 28-30"
+        }
+      ]
+    },
+    {
+      "expected_findings": [
+        "   arbitrary-wrmsr  va=0x26e71104b  [dispatch] fn=IoctlHandler @ 0x26e711000  sev=Constrained  taint=[\"*SystemBuffer\"]"
+      ],
+      "false_negatives": [],
+      "name": "test_wrmsr.sys",
+      "observed_high_confidence_findings": [
+        "   arbitrary-wrmsr  va=0x26e71104b  [dispatch] fn=IoctlHandler @ 0x26e711000  sev=Constrained  taint=[\"*SystemBuffer\"]"
+      ],
+      "sha256": "be7125bb3d9add9bcd6c3902f815b2cbe563044d128def9920f0f8519e723725",
+      "source": {
+        "path": "test_drivers/test_wrmsr.c",
+        "repository_revision": "905629a773f191108273a55924accd9f31145a8d",
+        "sha256": "33caf7a7d765a3ff1f94d4a497365571e51fa020410940a97f123cd75620035f"
+      },
+      "true_positives": [
+        "   arbitrary-wrmsr  va=0x26e71104b  [dispatch] fn=IoctlHandler @ 0x26e711000  sev=Constrained  taint=[\"*SystemBuffer\"]"
+      ],
+      "unexpected_high_confidence": [],
+      "validation_basis": [
+        {
+          "finding": "   arbitrary-wrmsr  va=0x26e71104b  [dispatch] fn=IoctlHandler @ 0x26e711000  sev=Constrained  taint=[\"*SystemBuffer\"]",
+          "machine_evidence": "IOCTL 0x00222140 reaches 0x26e71104b: wrmsr after ECX/EAX/EDX are loaded from the METHOD_BUFFERED SystemBuffer at 0x26e711043..0x26e711048.",
+          "source_lines": "19-20, 26, 28-30"
+        }
+      ]
+    },
+    {
+      "expected_findings": [
+        "   arbitrary-rdmsr  va=0x32bd6103e  [dispatch] fn=IoctlHandler @ 0x32bd61000  sev=Constrained  taint=[\"*SystemBuffer\"]"
+      ],
+      "false_negatives": [],
+      "name": "test_rdmsr.sys",
+      "observed_high_confidence_findings": [
+        "   arbitrary-rdmsr  va=0x32bd6103e  [dispatch] fn=IoctlHandler @ 0x32bd61000  sev=Constrained  taint=[\"*SystemBuffer\"]"
+      ],
+      "sha256": "01d065a4ae7a40462c58c6e33ca2662ae67f3d54a8dad8c981ebb4d8990e4fec",
+      "source": {
+        "path": "test_drivers/test_rdmsr.c",
+        "repository_revision": "905629a773f191108273a55924accd9f31145a8d",
+        "sha256": "53d5c7986c1c97e402f2fddece6371df164b88c6648dd94bc82a4325044e32fb"
+      },
+      "true_positives": [
+        "   arbitrary-rdmsr  va=0x32bd6103e  [dispatch] fn=IoctlHandler @ 0x32bd61000  sev=Constrained  taint=[\"*SystemBuffer\"]"
+      ],
+      "unexpected_high_confidence": [],
+      "validation_basis": [
+        {
+          "finding": "   arbitrary-rdmsr  va=0x32bd6103e  [dispatch] fn=IoctlHandler @ 0x32bd61000  sev=Constrained  taint=[\"*SystemBuffer\"]",
+          "machine_evidence": "IOCTL 0x00222144 reaches 0x32bd6103e: rdmsr after ECX is loaded from the METHOD_BUFFERED SystemBuffer; EAX/EDX are written back at 0x32bd61040 and 0x32bd61044.",
+          "source_lines": "19-20, 26, 28-31"
+        }
+      ]
+    },
+    {
+      "expected_findings": [
+        "         shellcode  va=0x20ec71054  [dispatch] fn=IoctlHandler @ 0x20ec71000  sev=Arbitrary  taint=[\"*SystemBuffer\"]"
+      ],
+      "false_negatives": [],
+      "name": "test_shellcode.sys",
+      "observed_high_confidence_findings": [
+        "         shellcode  va=0x20ec71054  [dispatch] fn=IoctlHandler @ 0x20ec71000  sev=Arbitrary  taint=[\"*SystemBuffer\"]"
+      ],
+      "sha256": "0e9b893c287c8e3e92f9ba4a176a33ccfe612314708673c015df322901fce32b",
+      "source": {
+        "path": "test_drivers/test_shellcode.c",
+        "repository_revision": "905629a773f191108273a55924accd9f31145a8d",
+        "sha256": "445c0e338faf23814dce299e6d017be6491b028d97bcf098f9759e8186038790"
+      },
+      "true_positives": [
+        "         shellcode  va=0x20ec71054  [dispatch] fn=IoctlHandler @ 0x20ec71000  sev=Arbitrary  taint=[\"*SystemBuffer\"]"
+      ],
+      "unexpected_high_confidence": [],
+      "validation_basis": [
+        {
+          "finding": "         shellcode  va=0x20ec71054  [dispatch] fn=IoctlHandler @ 0x20ec71000  sev=Arbitrary  taint=[\"*SystemBuffer\"]",
+          "machine_evidence": "IOCTL 0x00222100 reaches 0x20ec71054: call rax after RAX is loaded through the METHOD_BUFFERED SystemBuffer at 0x20ec7104d..0x20ec71051.",
+          "source_lines": "14-16, 21, 24-26"
+        }
+      ]
+    },
+    {
+      "expected_findings": [
+        "    stack-overflow  va=0x397ba106b  [dispatch] fn=IoctlHandler @ 0x397ba1000  sev=Constrained  taint=[\"InputBufferLength\"]"
+      ],
+      "false_negatives": [],
+      "name": "test_stack_overflow.sys",
+      "observed_high_confidence_findings": [
+        "    stack-overflow  va=0x397ba106b  [dispatch] fn=IoctlHandler @ 0x397ba1000  sev=Constrained  taint=[\"InputBufferLength\"]"
+      ],
+      "sha256": "9475e33f125b85c6cee60cafe07ed81214fc5386c25db4f322e20dbaf46f26c8",
+      "source": {
+        "path": "test_drivers/test_stack_overflow.c",
+        "repository_revision": "905629a773f191108273a55924accd9f31145a8d",
+        "sha256": "99b76db781ec7022579bb00d33aaf228793d4fbe970d432d7911715738055b27"
+      },
+      "true_positives": [
+        "    stack-overflow  va=0x397ba106b  [dispatch] fn=IoctlHandler @ 0x397ba1000  sev=Constrained  taint=[\"InputBufferLength\"]"
+      ],
+      "unexpected_high_confidence": [],
+      "validation_basis": [
+        {
+          "finding": "    stack-overflow  va=0x397ba106b  [dispatch] fn=IoctlHandler @ 0x397ba1000  sev=Constrained  taint=[\"InputBufferLength\"]",
+          "machine_evidence": "IOCTL 0x00222080 reaches memcpy at 0x397ba106b with destination [RBP-0x70], source SystemBuffer, and R8 loaded from attacker-controlled InputBufferLength without a 64-byte bound.",
+          "source_lines": "16-18, 21-24"
+        }
+      ]
+    },
+    {
+      "expected_findings": [
+        "  process-termination  va=0x1cbe110b2  [dispatch] fn=IoctlHandler @ 0x1cbe11000  sev=Arbitrary  taint=[\"*SystemBuffer\"]"
+      ],
+      "false_negatives": [],
+      "name": "test_process_termination.sys",
+      "observed_high_confidence_findings": [
+        "  process-termination  va=0x1cbe110b2  [dispatch] fn=IoctlHandler @ 0x1cbe11000  sev=Arbitrary  taint=[\"*SystemBuffer\"]"
+      ],
+      "sha256": "6f67605dad3ba73c15439071dd534eb6954e376c32d364409b3478e4ddf9a316",
+      "source": {
+        "path": "test_drivers/test_process_termination.c",
+        "repository_revision": "905629a773f191108273a55924accd9f31145a8d",
+        "sha256": "4edb3a040b1e31b839338a9df795605089691d2bbc857c4e7bde7b000ea430b6"
+      },
+      "true_positives": [
+        "  process-termination  va=0x1cbe110b2  [dispatch] fn=IoctlHandler @ 0x1cbe11000  sev=Arbitrary  taint=[\"*SystemBuffer\"]"
+      ],
+      "unexpected_high_confidence": [],
+      "validation_basis": [
+        {
+          "finding": "  process-termination  va=0x1cbe110b2  [dispatch] fn=IoctlHandler @ 0x1cbe11000  sev=Arbitrary  taint=[\"*SystemBuffer\"]",
+          "machine_evidence": "IOCTL 0x00222800 reaches ZwTerminateProcess at 0x1cbe110b2 with RCX and EDX loaded from the METHOD_BUFFERED SystemBuffer at 0x1cbe1109a..0x1cbe110a8.",
+          "source_lines": "14-20, 30, 34-40"
+        }
+      ]
+    }
+  ],
+  "failures": [],
+  "false_negative_count": 0,
+  "glaurung_revision": "7f682e5c82efef6a5c4b7ffc52a61dcfe8a87833",
+  "inputs": {
+    "authority_report": {
+      "sha256": "d830efea77d45f2a3b34fa24900f9f16ee24ce2a9524e40852dcd7824f905784"
+    },
+    "manifest": {
+      "sha256": "8f78305beadacfe7cda92dca047ae99fe0f0544dadb10af6f47c32ecf2898f7f"
+    }
+  },
+  "manifest_name": "ioctlance-source-backed-positive-v1",
+  "observed_high_confidence_count": 14,
+  "precision": 1.0,
+  "recall": 1.0,
+  "schema": "axeyum.glaurung-validated-finding-population.v1",
+  "source_verification": {
+    "accepted": true,
+    "expected_revision": "905629a773f191108273a55924accd9f31145a8d",
+    "failures": [],
+    "files": [
+      {
+        "expected_sha256": "fbe2d7ae5340c095e43c69fb6ecaa9c12a6c9c734c3ed3f7a06a46435968c5e1",
+        "observed_sha256": "fbe2d7ae5340c095e43c69fb6ecaa9c12a6c9c734c3ed3f7a06a46435968c5e1",
+        "path": "test_drivers/test_file_operations.c",
+        "tracked": true
+      },
+      {
+        "expected_sha256": "61bdccd8ca47cfebfc46a222a05733e23a60b5f1e016c7ee91ded4c4a64824e3",
+        "observed_sha256": "61bdccd8ca47cfebfc46a222a05733e23a60b5f1e016c7ee91ded4c4a64824e3",
+        "path": "test_drivers/test_file_operations.sys",
+        "tracked": true
+      },
+      {
+        "expected_sha256": "5756b5e57fdc51b26f135fcfb4669b4ad2ad2576f657f2983955c7cf421aa4fb",
+        "observed_sha256": "5756b5e57fdc51b26f135fcfb4669b4ad2ad2576f657f2983955c7cf421aa4fb",
+        "path": "test_drivers/test_integer_overflow.c",
+        "tracked": true
+      },
+      {
+        "expected_sha256": "090974c12d4482a6da46dcead100308e35da37108a7e4b16f9c73e0c947828c0",
+        "observed_sha256": "090974c12d4482a6da46dcead100308e35da37108a7e4b16f9c73e0c947828c0",
+        "path": "test_drivers/test_integer_overflow.sys",
+        "tracked": true
+      },
+      {
+        "expected_sha256": "d37f49cea73cc1569478e40649f834effa88ed0952683d8c6eb161018ef5eac2",
+        "observed_sha256": "d37f49cea73cc1569478e40649f834effa88ed0952683d8c6eb161018ef5eac2",
+        "path": "test_drivers/test_physical_memory.c",
+        "tracked": true
+      },
+      {
+        "expected_sha256": "d730176b7726f219413b9c77482f1d7b8ae5619f5dfe3dbd76048acada1676be",
+        "observed_sha256": "d730176b7726f219413b9c77482f1d7b8ae5619f5dfe3dbd76048acada1676be",
+        "path": "test_drivers/test_physical_memory.sys",
+        "tracked": true
+      },
+      {
+        "expected_sha256": "b188dbca36bd34821971a9b3ba903755d2c9a7ac83e43c18ae8eecc68078b7d5",
+        "observed_sha256": "b188dbca36bd34821971a9b3ba903755d2c9a7ac83e43c18ae8eecc68078b7d5",
+        "path": "test_drivers/test_port_io.c",
+        "tracked": true
+      },
+      {
+        "expected_sha256": "0a42451df1cda23a5c55da4e8defcf7ec7bfa817e4a8f13f46aec70cf535e3d8",
+        "observed_sha256": "0a42451df1cda23a5c55da4e8defcf7ec7bfa817e4a8f13f46aec70cf535e3d8",
+        "path": "test_drivers/test_port_io.sys",
+        "tracked": true
+      },
+      {
+        "expected_sha256": "4edb3a040b1e31b839338a9df795605089691d2bbc857c4e7bde7b000ea430b6",
+        "observed_sha256": "4edb3a040b1e31b839338a9df795605089691d2bbc857c4e7bde7b000ea430b6",
+        "path": "test_drivers/test_process_termination.c",
+        "tracked": true
+      },
+      {
+        "expected_sha256": "6f67605dad3ba73c15439071dd534eb6954e376c32d364409b3478e4ddf9a316",
+        "observed_sha256": "6f67605dad3ba73c15439071dd534eb6954e376c32d364409b3478e4ddf9a316",
+        "path": "test_drivers/test_process_termination.sys",
+        "tracked": true
+      },
+      {
+        "expected_sha256": "53d5c7986c1c97e402f2fddece6371df164b88c6648dd94bc82a4325044e32fb",
+        "observed_sha256": "53d5c7986c1c97e402f2fddece6371df164b88c6648dd94bc82a4325044e32fb",
+        "path": "test_drivers/test_rdmsr.c",
+        "tracked": true
+      },
+      {
+        "expected_sha256": "01d065a4ae7a40462c58c6e33ca2662ae67f3d54a8dad8c981ebb4d8990e4fec",
+        "observed_sha256": "01d065a4ae7a40462c58c6e33ca2662ae67f3d54a8dad8c981ebb4d8990e4fec",
+        "path": "test_drivers/test_rdmsr.sys",
+        "tracked": true
+      },
+      {
+        "expected_sha256": "445c0e338faf23814dce299e6d017be6491b028d97bcf098f9759e8186038790",
+        "observed_sha256": "445c0e338faf23814dce299e6d017be6491b028d97bcf098f9759e8186038790",
+        "path": "test_drivers/test_shellcode.c",
+        "tracked": true
+      },
+      {
+        "expected_sha256": "0e9b893c287c8e3e92f9ba4a176a33ccfe612314708673c015df322901fce32b",
+        "observed_sha256": "0e9b893c287c8e3e92f9ba4a176a33ccfe612314708673c015df322901fce32b",
+        "path": "test_drivers/test_shellcode.sys",
+        "tracked": true
+      },
+      {
+        "expected_sha256": "99b76db781ec7022579bb00d33aaf228793d4fbe970d432d7911715738055b27",
+        "observed_sha256": "99b76db781ec7022579bb00d33aaf228793d4fbe970d432d7911715738055b27",
+        "path": "test_drivers/test_stack_overflow.c",
+        "tracked": true
+      },
+      {
+        "expected_sha256": "9475e33f125b85c6cee60cafe07ed81214fc5386c25db4f322e20dbaf46f26c8",
+        "observed_sha256": "9475e33f125b85c6cee60cafe07ed81214fc5386c25db4f322e20dbaf46f26c8",
+        "path": "test_drivers/test_stack_overflow.sys",
+        "tracked": true
+      },
+      {
+        "expected_sha256": "33caf7a7d765a3ff1f94d4a497365571e51fa020410940a97f123cd75620035f",
+        "observed_sha256": "33caf7a7d765a3ff1f94d4a497365571e51fa020410940a97f123cd75620035f",
+        "path": "test_drivers/test_wrmsr.c",
+        "tracked": true
+      },
+      {
+        "expected_sha256": "be7125bb3d9add9bcd6c3902f815b2cbe563044d128def9920f0f8519e723725",
+        "observed_sha256": "be7125bb3d9add9bcd6c3902f815b2cbe563044d128def9920f0f8519e723725",
+        "path": "test_drivers/test_wrmsr.sys",
+        "tracked": true
+      }
+    ],
+    "observed_revision": "905629a773f191108273a55924accd9f31145a8d",
+    "verified_file_count": 18
+  },
+  "true_positive_count": 14,
+  "unexpected_high_confidence_count": 0,
+  "validated_finding_count": 14,
+  "validation_policy": "exact-high-confidence-set"
+}
