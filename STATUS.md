@@ -329,8 +329,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   only the handler plus recursively defined direct callees, strips debug-only
   inflation, and leaves frontend/detector status `not-run`. A discarded
   vulnerable-only pilot confirms material inline-assembly and memory surface;
-  do not use its partial counts. Commit and hash-bind the analyzer before the
-  exact four-side observation.
+  do not use its partial counts. The committed registration now binds the
+  analyzer, ADR-0267 report, four-side denominator, LLVM-18 tools, and
+  recursive-extract/strip/no-execution pipeline. Run the exact surface next.
 
 - **2026-07-19 — ADR-0267 retains complete symbolic-CVE artifact attrition and
   admits exactly two pairs to the frontend gate.** All twelve immutable sides
