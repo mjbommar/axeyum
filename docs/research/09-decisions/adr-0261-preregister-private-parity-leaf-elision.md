@@ -3,8 +3,8 @@
 Status: accepted
 Date: 2026-07-19
 
-Result state: candidate and comparison protocol selected; implementation not
-yet started
+Result state: candidate implementation and local validation complete; fixed
+real-query observation not yet started
 
 ## Context
 
@@ -60,6 +60,25 @@ clause count, and reduce exactly:
 
 No other origin cell may change. A different structural delta rejects the
 candidate or requires a new ADR; it is not explained after observation.
+
+## Implementation boundary
+
+Private positive-root AND-tree collection now performs one deterministic
+post-collection pass. For every parity leaf it folds complemented inputs into
+the expected bit, replaces them with positive node literals, sorts those
+literals, and retains only the first identical `(literals, expected)` key in a
+`BTreeSet`. Literal multiplicity is unchanged. The pass is called only when the
+owner is a positive direct root; ordinary literal and not-AND leaves are not
+keys. `helper_nodes` is never filtered, so every elided occurrence's private
+implementation nodes remain in the skip plan.
+
+The focused test began red because the helper did not exist. It now covers
+input order, inversion normalization, distinct expected bits, retained
+multiplicity, non-parity leaves, and unchanged helper bookkeeping. All 305 CNF
+library tests, 880 all-feature solver library tests, 43 all-feature benchmark
+binary tests, and strict all-target/all-feature Clippy for all three affected
+crates pass. No corrected-wide-v3 query has been observed on this candidate.
+Commit this boundary before running the fixed structural verification.
 
 ## Unprofiled performance protocol
 
