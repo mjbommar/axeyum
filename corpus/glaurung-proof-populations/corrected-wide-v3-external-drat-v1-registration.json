@@ -1,0 +1,62 @@
+{
+  "schema": "axeyum.qfbv-external-drat-registration.v1",
+  "status": "preregistered-before-real-proof-export",
+  "name": "corrected-wide-v3-external-drat-v1",
+  "selection": {
+    "source_manifest": "corpus/glaurung-proof-populations/corrected-wide-v3-proof-holdout-v1.json",
+    "source_manifest_sha256": "67c7f14f5f2f8db1eaa1bb17649cf3623e268e3f7ea678cbe53326bfa8cd899b",
+    "algorithm": "select the lexicographically lowest content hash among all expected-unsat rows",
+    "eligible_unsat_rows": 509,
+    "path": "queries/0015f5bd8a50e7d1859888c308e0621fede3e8fb322ffaf1222c4e6aad28000e.smt2",
+    "content_hash": "sha256:0015f5bd8a50e7d1859888c308e0621fede3e8fb322ffaf1222c4e6aad28000e",
+    "family": "register-slice",
+    "expected": "unsat",
+    "independent_of": [
+      "exported CNF size",
+      "exported DRAT size",
+      "LRAT availability",
+      "external checker outcome",
+      "external checker time"
+    ]
+  },
+  "exporter": {
+    "binary_target": "qfbv-proof-export",
+    "source": "crates/axeyum-bench/src/bin/qfbv-proof-export.rs",
+    "source_sha256": "8736e8f2a46185aee002b5578ba4a38e54b6a3711d1dc7aaa77234b37942cc87",
+    "source_policy": "build and run from a clean detached commit containing this registration",
+    "output": [
+      "problem.cnf",
+      "proof.drat",
+      "optional proof.lrat",
+      "manifest.json"
+    ],
+    "required_self_recheck": true
+  },
+  "external_checker": {
+    "project": "drat-trim",
+    "repository": "https://github.com/marijnheule/drat-trim",
+    "revision": "2e3b2dc0ecf938addbd779d42877b6ed69d9a985",
+    "source_file": "drat-trim.c",
+    "source_sha256": "d834b649f437e091597f5347f259b9f681087f89ca0844d0cee250a1a1a0c2ee",
+    "compile_command": "gcc -D_GNU_SOURCE drat-trim.c -std=c99 -O2 -o drat-trim",
+    "binary_sha256": "c0b9bd6a2369918f171a42d024aa2993d5eff4f597e019850c073d0aa08bd9db",
+    "makefile_note": "the pinned upstream Makefile command omits the feature macro needed to declare getc_unlocked under GCC 15.2.0; the source is unchanged",
+    "positive_command": "drat-trim problem.cnf proof.drat",
+    "positive_gate": "exit zero and stdout contains s VERIFIED",
+    "negative_control": "remove only the final textual DRAT line, rerun the same checker, and require that stdout does not contain s VERIFIED"
+  },
+  "preservation": {
+    "access_control": "do not commit the source query, DIMACS, DRAT, or LRAT bytes",
+    "retain": [
+      "source, exporter, checker, DIMACS, DRAT, optional LRAT, and manifest SHA-256 values",
+      "byte counts",
+      "exact positive and negative checker stdout/stderr and exit codes"
+    ]
+  },
+  "claim_limits": [
+    "This cell tests standard external consumption of one preregistered real clausal proof; it is not a proof-coverage estimate.",
+    "DRAT verification establishes CNF unsatisfiability, not source-to-CNF faithfulness by itself.",
+    "Checker timing is diagnostic and not solver-performance evidence.",
+    "The result cannot change concretization policy, finding recall, or the symbolic-memory gate."
+  ]
+}

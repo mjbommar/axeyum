@@ -20,7 +20,7 @@ flowchart LR
 | [First SMT-LIB query](first-smtlib-query.md) | run a query from SMT-LIB text |
 | [Rust embedding](rust-embedding.md) | typed builders, explicit width coercion, warm solving, models, and threads |
 | models-and-replay.md *(planned)* | read a model; what replay guarantees |
-| unsat-evidence.md *(planned)* | DRAT/LRAT/Alethe and `recheck` |
+| [UNSAT evidence](unsat-evidence.md) | export DIMACS/DRAT/LRAT, recheck independently, and understand the clausal boundary |
 | [Limitations](limitations.md) | what's experimental/incomplete — read before trusting support |
 | [Benchmarks](benchmarks.md) | the measured Z3 head-to-head + how to reproduce |
 | [Versioned corpus manifests](corpus-manifests.md) | pin exact query bytes, expected verdicts, families, and representative/full tiers |
