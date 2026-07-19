@@ -695,6 +695,24 @@ This file is itself the current open-question register. When individual items ar
 resolved, keep the resolved question in place long enough to preserve context and
 link to the decision note or implementation PR that closed it.
 
+### Pareto strategy (axeyum + glaurung, added 2026-07-18)
+
+Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strategy.md).
+
+- [ ] Does bounded symbolic memory + warm reuse Pareto-dominate eager any-model
+  concretization on coverage AND reproducibility for driver bug-finding?
+- [ ] Is disjoint projected enumeration cheaper than per-expression optimization
+  (least-unsigned probing cost measured at 27x solves) for deterministic diverse
+  concretization?
+- [ ] Which QF_BV regime does an in-process pure-Rust solver win against a *warm*
+  z3 once the FFI floor is isolated, and how large is that regime on real corpora?
+- [ ] Can incremental abstraction-refinement (mul/div/rem) close the cold
+  bit_blast/cnf gap (currently ~84% of cold cost) without regressing the warm path?
+- [ ] Are proof-carrying "infeasible path" certificates useful enough downstream
+  (agent verdicts, CI determinism) to justify their cost?
+
 ## Source Pointers
 
 - Axeyum research index: ../README.md
+- Pareto strategy + downstream/SOTA analysis:
+  ./axeyum-glaurung-pareto-strategy.md
