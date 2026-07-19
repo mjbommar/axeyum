@@ -3,7 +3,7 @@
 Status: accepted
 Date: 2026-07-19
 
-Result state: Phase A accepted; zero Phase B census processes
+Result state: Phase A accepted; Phase B executed and rejected
 
 ## Context
 
@@ -77,6 +77,24 @@ claims.
 
 ## Interpretation
 
+### Observed Phase B result
+
+All 3/3 processes and producer validations complete, but Phase B is rejected.
+Every repetition identically records 210/338 analyzed functions, 3,266 findings
+(16 high-confidence, 3,250 diagnostic), 243 exploration runs (216 complete, 27
+state-budget), 97,112/97,112 shadow verdict agreements, and 102 assertion-cap
+fallbacks. The committed analyzer fails closed at `coverage is not 338/338`.
+Campaign/analyzer-stderr hashes are
+`00928a7a2dc975d82a539836e548a50182f56a6fa7bf3c370559520b7ece06d2`
+and `4522bd0e29c3991d7f5f10cf51f8f80d43f7b97507ccf7e8d2a2e7cf769fc303`;
+the compact result is [retained here](../../../bench-results/glaurung-joint-triplet-census-20260719/README.md).
+
+The deterministic findings and agreement counts cannot rescue the result:
+coverage is incomplete and the topology contains fallback. ADR-0275 therefore
+authorizes no census claim and closes this exact harder-driver protocol
+negative. Any wider-work successor requires a new zero-row decision; it must not
+reuse these rows as confirmation evidence.
+
 Acceptance would establish a deterministic, bounded, cold-Z3-authoritative
 six-cell census with shadow verdict agreement. It is not labeled recall,
 precision, cross-authority finding parity, exhaustive exploration, or a solver
@@ -85,7 +103,7 @@ output; tcpip remains unlabeled.
 
 ## Consequences
 
-ADR-0275 is the only path from the accepted calibration to a census row. A1
-remains configuration and measurement; A0 remains reproducibility
-infrastructure; symbolic memory stays closed. Failure closes this harder-driver
-attempt unless another explicit zero-row decision is justified.
+ADR-0275 closes the exact harder-driver attempt negative. A1 remains
+configuration and measurement; A0 remains reproducibility infrastructure;
+symbolic memory stays closed. The next planned work returns to Axeyum's measured
+cold-path reduction-depth lane rather than adapting this census after results.

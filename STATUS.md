@@ -366,9 +366,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   coverage. Phase A now passes 3/3: all six cells decide 4,846/4,846, direct
   warm execution holds, and authority/finding identities reproduce exactly;
   campaign/report hashes are `ec1e15f3...ed05b` / `f1d0d74c...4af4a`.
-  No Phase B row exists at this checkpoint. The unchanged 338/338 N=3 census is
-  now authorized. A1 remains configuration/measurement, A0 remains complete,
-  and symbolic memory remains closed.
+  Phase B then completes 3/3 validator-clean processes but is rejected: every
+  row analyzes only 210/338 functions and records 102 assertion-cap fallbacks,
+  despite byte-identical 3,266 findings and 97,112/97,112 verdict agreement.
+  Campaign/analyzer hashes are `00928a7a...06d2` / `4522bd0e...fc303`.
+  No full-census, recall, or performance claim is authorized. Close this exact
+  harder-driver protocol negative and return to PLAN item 4's cold-path
+  reduction-depth lane; A1 remains configuration/measurement, A0 remains
+  complete, and symbolic memory remains closed.
 
 - **2026-07-19 — ADR-0272 accepts the six-cell neutral warm map and closes the
   performance-leadership framing.** The exact 20-process campaign preserves
