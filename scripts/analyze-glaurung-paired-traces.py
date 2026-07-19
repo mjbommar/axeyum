@@ -5,7 +5,8 @@ The publication scalar is the geometric mean of per-occurrence Z3/Axeyum
 latency ratios. An occurrence enters that population only when both backends
 decide it in every fixed-work repetition. V3 additionally reports the nine
 registered Z3/Axeyum/Bitwuzla cold/warm contrasts and an all-six acceptance
-gate. Ratio-of-sums is never reported.
+gate. V4 preserves those contrasts while validating backend-specific
+deterministic limits and typed stop reasons. Ratio-of-sums is never reported.
 """
 
 from __future__ import annotations
@@ -28,13 +29,30 @@ TRACE_SCHEMA = "glaurung-ordered-trace-v1"
 MEASUREMENT_SCHEMA_V1 = "glaurung-ordered-check-measurement-v1"
 MEASUREMENT_SCHEMA_V2 = "glaurung-ordered-check-measurement-v2"
 MEASUREMENT_SCHEMA_V3 = "glaurung-ordered-check-measurement-v3"
+MEASUREMENT_SCHEMA_V4 = "glaurung-ordered-check-measurement-v4"
 MEASUREMENT_SCHEMAS = {
     MEASUREMENT_SCHEMA_V1,
     MEASUREMENT_SCHEMA_V2,
     MEASUREMENT_SCHEMA_V3,
+    MEASUREMENT_SCHEMA_V4,
 }
 FAIR_CELLS_V2 = ("z3_cold", "z3_warm", "axeyum_cold", "axeyum_warm")
 FAIR_CELLS_V3 = FAIR_CELLS_V2 + ("bitwuzla_cold", "bitwuzla_warm")
+FAIR_MEASUREMENT_SCHEMAS = {
+    MEASUREMENT_SCHEMA_V2,
+    MEASUREMENT_SCHEMA_V3,
+    MEASUREMENT_SCHEMA_V4,
+}
+NEUTRAL_MEASUREMENT_SCHEMAS = {MEASUREMENT_SCHEMA_V3, MEASUREMENT_SCHEMA_V4}
+RESOURCE_SPECS = {
+    "z3_cold": ("z3", "z3-rlimit"),
+    "z3_warm": ("z3", "z3-rlimit"),
+    "axeyum_cold": ("axeyum", "axeyum-progress-checks"),
+    "axeyum_warm": ("axeyum", "axeyum-progress-checks"),
+    "bitwuzla_cold": ("bitwuzla", "bitwuzla-termination-polls"),
+    "bitwuzla_warm": ("bitwuzla", "bitwuzla-termination-polls"),
+}
+STOP_REASONS = {None, "resource-limit", "wall-timeout", "other"}
 DECIDED = {"sat", "unsat"}
 OUTCOMES = DECIDED | {"unknown", "error", "no-solver"}
 EXECUTION_CLASSES = {
@@ -94,6 +112,7 @@ class Check:
     bitwuzla_cold_nanos: int | None = None
     bitwuzla_warm_nanos: int | None = None
     bitwuzla_warm_execution: str | None = None
+    resource_counters: dict[str, dict[str, Any]] | None = None
 
 
 @dataclass(frozen=True)
@@ -162,10 +181,12 @@ def configuration_identity(manifest: dict[str, Any]) -> str:
         "host_identity": manifest.get("host_identity"),
         "worker_count": manifest.get("worker_count"),
     }
-    if manifest.get("check_measurement_schema") == MEASUREMENT_SCHEMA_V3:
+    if manifest.get("check_measurement_schema") in NEUTRAL_MEASUREMENT_SCHEMAS:
         identity["neutral_measurement_backend"] = manifest.get(
             "neutral_measurement_backend"
         )
+    if manifest.get("check_measurement_schema") == MEASUREMENT_SCHEMA_V4:
+        identity["solver_work_budgets"] = manifest.get("solver_work_budgets")
     return stable_json(identity)
 
 
@@ -178,6 +199,59 @@ def validate_neutral_backend_identity(manifest: dict[str, Any]) -> None:
         "role": "benchmark-only-neutral",
     }:
         fail("invalid v3 neutral measurement backend identity")
+
+
+def validate_work_budget_manifest(manifest: dict[str, Any]) -> dict[str, Any]:
+    budgets = manifest.get("solver_work_budgets")
+    if not isinstance(budgets, dict):
+        fail("v4 manifest lacks solver_work_budgets")
+    if budgets.get("cross_backend_unit_equivalence") is not False:
+        fail("v4 work-budget units must not claim cross-backend equivalence")
+    require_positive_int(budgets.get("wall_safety_cap_ms"), "wall safety cap")
+    for backend, unit in (
+        ("z3", "z3-rlimit"),
+        ("axeyum", "axeyum-progress-checks"),
+        ("bitwuzla", "bitwuzla-termination-polls"),
+    ):
+        entry = budgets.get(backend)
+        if not isinstance(entry, dict) or entry.get("unit") != unit:
+            fail(f"invalid v4 {backend} work-budget unit")
+        require_positive_int(entry.get("limit"), f"{backend} work-budget limit")
+    return budgets
+
+
+def validate_resource_counters(
+    event: dict[str, Any],
+    fair_values: dict[str, Any],
+    budgets: dict[str, Any],
+    check_id: str,
+    root: pathlib.Path,
+) -> dict[str, dict[str, Any]]:
+    counters = event.get("resource_counters")
+    if not isinstance(counters, dict) or set(counters) != set(RESOURCE_SPECS):
+        fail(f"invalid v4 resource counters for {check_id} in {root}")
+    normalized: dict[str, dict[str, Any]] = {}
+    for cell, (backend, unit) in RESOURCE_SPECS.items():
+        entry = counters.get(cell)
+        expected_limit = budgets[backend]["limit"]
+        if (
+            not isinstance(entry, dict)
+            or entry.get("unit") != unit
+            or entry.get("limit") != expected_limit
+        ):
+            fail(f"invalid v4 {cell} resource identity for {check_id} in {root}")
+        reason = entry.get("stop_reason")
+        if reason not in STOP_REASONS:
+            fail(f"invalid v4 {cell} stop reason for {check_id} in {root}")
+        outcome = fair_values[f"{cell}_outcome"]
+        if (outcome == "unknown") != (reason is not None):
+            fail(f"v4 {cell} outcome/stop-reason mismatch for {check_id} in {root}")
+        normalized[cell] = {
+            "unit": unit,
+            "limit": expected_limit,
+            "stop_reason": reason,
+        }
+    return normalized
 
 
 def verify_query_artifacts(
@@ -238,8 +312,13 @@ def load_trace(root: pathlib.Path) -> Trace:
     measurement_schema = manifest.get("check_measurement_schema")
     if measurement_schema not in MEASUREMENT_SCHEMAS:
         fail(f"{root} lacks a supported ordered-check measurement schema")
-    if measurement_schema == MEASUREMENT_SCHEMA_V3:
+    if measurement_schema in NEUTRAL_MEASUREMENT_SCHEMAS:
         validate_neutral_backend_identity(manifest)
+    work_budgets = (
+        validate_work_budget_manifest(manifest)
+        if measurement_schema == MEASUREMENT_SCHEMA_V4
+        else None
+    )
     driver = manifest.get("driver")
     if not isinstance(driver, dict):
         fail(f"{root} has no driver identity")
@@ -295,10 +374,10 @@ def load_trace(root: pathlib.Path) -> Trace:
         z3_nanos = require_positive_int(event.get("z3_nanos"), "Z3 timing")
         axeyum_nanos = require_positive_int(event.get("axeyum_nanos"), "Axeyum timing")
         fair_values: dict[str, Any] = {}
-        if measurement_schema in {MEASUREMENT_SCHEMA_V2, MEASUREMENT_SCHEMA_V3}:
+        if measurement_schema in FAIR_MEASUREMENT_SCHEMAS:
             fair_cells = (
                 FAIR_CELLS_V3
-                if measurement_schema == MEASUREMENT_SCHEMA_V3
+                if measurement_schema in NEUTRAL_MEASUREMENT_SCHEMAS
                 else FAIR_CELLS_V2
             )
             for cell in fair_cells:
@@ -335,7 +414,7 @@ def load_trace(root: pathlib.Path) -> Trace:
             )
             if fair_values["axeyum_warm_execution"] not in EXECUTION_CLASSES:
                 fail(f"invalid warm Axeyum execution for {check_id} in {root}")
-            if measurement_schema == MEASUREMENT_SCHEMA_V3:
+            if measurement_schema in NEUTRAL_MEASUREMENT_SCHEMAS:
                 fair_values["bitwuzla_warm_execution"] = require_string(
                     event.get("bitwuzla_warm_execution"), "warm Bitwuzla execution"
                 )
@@ -358,6 +437,11 @@ def load_trace(root: pathlib.Path) -> Trace:
             for alias, explicit, label in aliases:
                 if alias != explicit:
                     fail(f"{label} alias mismatch for {check_id} in {root}")
+            if measurement_schema == MEASUREMENT_SCHEMA_V4:
+                assert work_budgets is not None
+                fair_values["resource_counters"] = validate_resource_counters(
+                    event, fair_values, work_budgets, check_id, root
+                )
         purpose = require_string(event.get("purpose"), "check purpose")
         active_constraint_count = event.get("active_constraint_count")
         if (
@@ -630,19 +714,25 @@ def analyze(
             fail(f"fixed-work check identity drift in {trace.path}")
 
     outcome_fields = ["z3_outcome", "axeyum_outcome"]
-    if baseline.measurement_schema in {MEASUREMENT_SCHEMA_V2, MEASUREMENT_SCHEMA_V3}:
+    if baseline.measurement_schema in FAIR_MEASUREMENT_SCHEMAS:
         fair_cells = (
             FAIR_CELLS_V3
-            if baseline.measurement_schema == MEASUREMENT_SCHEMA_V3
+            if baseline.measurement_schema in NEUTRAL_MEASUREMENT_SCHEMAS
             else FAIR_CELLS_V2
         )
         outcome_fields.extend(f"{cell}_outcome" for cell in fair_cells)
     for index, baseline_check in enumerate(baseline.checks):
         for field in outcome_fields:
+            all_outcomes = {
+                getattr(trace.checks[index], field) for trace in traces
+            }
+            if baseline.measurement_schema == MEASUREMENT_SCHEMA_V4 and len(all_outcomes) > 1:
+                fail(
+                    f"deterministic work-bound outcome drift for {baseline_check.check_id} "
+                    f"field {field} across repetitions"
+                )
             decided_outcomes = {
-                getattr(trace.checks[index], field)
-                for trace in traces
-                if getattr(trace.checks[index], field) in DECIDED
+                outcome for outcome in all_outcomes if outcome in DECIDED
             }
             if len(decided_outcomes) > 1:
                 fail(
@@ -735,7 +825,9 @@ def analyze(
     six_cell_outcome_counts: list[dict[str, int]] | None = None
     warm_execution_counts: list[dict[str, dict[str, int]]] | None = None
     neutral_gate: dict[str, Any] | None = None
-    if baseline.measurement_schema == MEASUREMENT_SCHEMA_V3:
+    work_bound_stop_reason_counts: list[dict[str, dict[str, int]]] | None = None
+    deterministic_work_gate: dict[str, Any] | None = None
+    if baseline.measurement_schema in NEUTRAL_MEASUREMENT_SCHEMAS:
         comparison_specs = (
             ("cold_z3_over_axeyum", "z3_cold", "axeyum_cold"),
             ("cold_z3_over_bitwuzla", "z3_cold", "bitwuzla_cold"),
@@ -829,6 +921,44 @@ def analyze(
             elif per_run["coefficient_of_variation"] > 0.03:
                 gate_reasons.append(f"warm_process_cv_above_0.03:{name}")
         neutral_gate = {"accepted": not gate_reasons, "reasons": gate_reasons}
+        if baseline.measurement_schema == MEASUREMENT_SCHEMA_V4:
+            work_bound_stop_reason_counts = []
+            deterministic_gate_reasons: list[str] = []
+            for trace in traces:
+                per_cell: dict[str, dict[str, int]] = {}
+                for cell in FAIR_CELLS_V3:
+                    counts = {
+                        "decided": 0,
+                        "resource-limit": 0,
+                        "wall-timeout": 0,
+                        "other": 0,
+                    }
+                    for check in trace.checks:
+                        assert check.resource_counters is not None
+                        reason = check.resource_counters[cell]["stop_reason"]
+                        counts["decided" if reason is None else reason] += 1
+                    per_cell[cell] = counts
+                    if counts["wall-timeout"]:
+                        deterministic_gate_reasons.append(f"wall-timeout:{cell}")
+                    if counts["other"]:
+                        deterministic_gate_reasons.append(f"other-unknown:{cell}")
+                work_bound_stop_reason_counts.append(per_cell)
+            for index, baseline_check in enumerate(baseline.checks):
+                for cell in FAIR_CELLS_V3:
+                    reasons = {
+                        trace.checks[index].resource_counters[cell]["stop_reason"]
+                        for trace in traces
+                        if trace.checks[index].resource_counters is not None
+                    }
+                    if len(reasons) > 1:
+                        fail(
+                            f"deterministic work-bound stop-reason drift for "
+                            f"{baseline_check.check_id} cell {cell}"
+                        )
+            deterministic_work_gate = {
+                "accepted": not deterministic_gate_reasons,
+                "reasons": sorted(set(deterministic_gate_reasons)),
+            }
     warm_count = sum(class_counts.get(name, 0) for name in PURE_WARM_CLASSES)
     retained_warm_count = class_counts.get("warm-retained", 0)
     report = {
@@ -874,6 +1004,11 @@ def analyze(
         report["warm_execution_counts_per_repetition"] = warm_execution_counts
         report["neutral_regime_gate"] = neutral_gate
         report["_six_cell_cdf"] = six_cell_cdf
+    if work_bound_stop_reason_counts is not None:
+        report["work_bound_stop_reason_counts_per_repetition"] = (
+            work_bound_stop_reason_counts
+        )
+        report["deterministic_work_gate"] = deterministic_work_gate
     return report
 
 

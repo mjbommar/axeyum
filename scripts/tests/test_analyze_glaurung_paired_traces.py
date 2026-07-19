@@ -31,11 +31,14 @@ def write_trace(
     axeyum_scale: int = 1,
     four_cell: bool = False,
     six_cell: bool = False,
+    work_bounded: bool = False,
     bitwuzla_outcomes: tuple[str, ...] | None = None,
     bitwuzla_execution: str = "warm-retained",
 ) -> pathlib.Path:
     if four_cell and six_cell:
         raise ValueError("fixture cannot be both four-cell and six-cell")
+    if work_bounded and not six_cell:
+        raise ValueError("work-bounded fixture must be six-cell")
     if bitwuzla_outcomes is None:
         bitwuzla_outcomes = z3_outcomes
     trace = root / f"trace-{repetition}"
@@ -93,6 +96,26 @@ def write_trace(
                     "bitwuzla_warm_execution": bitwuzla_execution,
                 }
             )
+        if work_bounded:
+            event["resource_counters"] = {
+                cell: {
+                    "unit": unit,
+                    "limit": limit,
+                    "stop_reason": (
+                        "resource-limit"
+                        if event[f"{cell}_outcome"] == "unknown"
+                        else None
+                    ),
+                }
+                for cell, unit, limit in (
+                    ("z3_cold", "z3-rlimit", 2),
+                    ("z3_warm", "z3-rlimit", 2),
+                    ("axeyum_cold", "axeyum-progress-checks", 3),
+                    ("axeyum_warm", "axeyum-progress-checks", 3),
+                    ("bitwuzla_cold", "bitwuzla-termination-polls", 5),
+                    ("bitwuzla_warm", "bitwuzla-termination-polls", 5),
+                )
+            }
         events.append(event)
         query_entries.append(
             {
@@ -120,12 +143,16 @@ def write_trace(
         "schema": "glaurung-ordered-trace-v1",
         "version": 1,
         "check_measurement_schema": (
-            "glaurung-ordered-check-measurement-v3"
-            if six_cell
+            "glaurung-ordered-check-measurement-v4"
+            if work_bounded
             else (
-                "glaurung-ordered-check-measurement-v2"
-                if four_cell
-                else "glaurung-ordered-check-measurement-v1"
+                "glaurung-ordered-check-measurement-v3"
+                if six_cell
+                else (
+                    "glaurung-ordered-check-measurement-v2"
+                    if four_cell
+                    else "glaurung-ordered-check-measurement-v1"
+                )
             )
         ),
         "source": {"revision": "a" * 40, "dirty": False},
@@ -159,11 +186,71 @@ def write_trace(
         "query_count": len(query_entries),
         "query_index_sha256": hashlib.sha256(query_index_bytes).hexdigest(),
     }
+    if work_bounded:
+        manifest["solver_work_budgets"] = {
+            "z3": {"unit": "z3-rlimit", "limit": 2},
+            "axeyum": {"unit": "axeyum-progress-checks", "limit": 3},
+            "bitwuzla": {"unit": "bitwuzla-termination-polls", "limit": 5},
+            "cross_backend_unit_equivalence": False,
+            "wall_safety_cap_ms": 60_000,
+        }
     (trace / "trace-manifest-v1.json").write_text(json.dumps(manifest))
     return trace
 
 
 class PairedTraceAnalysisTests(unittest.TestCase):
+    def test_accepts_work_bounded_v4_with_named_units_and_stop_reasons(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            traces = [
+                write_trace(root, repetition, six_cell=True, work_bounded=True)
+                for repetition in range(5)
+            ]
+            report = paired.analyze(traces, bootstrap_samples=100, seed=7)
+
+        self.assertEqual(
+            report["configuration_identity"]["solver_work_budgets"]["z3"],
+            {"unit": "z3-rlimit", "limit": 2},
+        )
+        self.assertEqual(report["stable_all_six_decided_occurrences"], 2)
+
+    def test_rejects_v4_cross_backend_unit_equivalence_claim(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            traces = [
+                write_trace(root, repetition, six_cell=True, work_bounded=True)
+                for repetition in range(5)
+            ]
+            manifest_path = traces[-1] / "trace-manifest-v1.json"
+            manifest = json.loads(manifest_path.read_text())
+            manifest["solver_work_budgets"]["cross_backend_unit_equivalence"] = True
+            manifest_path.write_text(json.dumps(manifest))
+
+            with self.assertRaisesRegex(paired.AnalysisError, "unit.*equivalence"):
+                paired.analyze(traces, bootstrap_samples=100, seed=7)
+
+    def test_rejects_v4_unknown_without_a_typed_stop_reason(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            traces = [
+                write_trace(root, repetition, six_cell=True, work_bounded=True)
+                for repetition in range(5)
+            ]
+            events_path = traces[-1] / "events-v1.ndjson"
+            events = [json.loads(line) for line in events_path.read_text().splitlines()]
+            events[-1]["resource_counters"]["z3_cold"]["stop_reason"] = None
+            events_bytes = b"".join(
+                (json.dumps(event, sort_keys=True) + "\n").encode() for event in events
+            )
+            events_path.write_bytes(events_bytes)
+            manifest_path = traces[-1] / "trace-manifest-v1.json"
+            manifest = json.loads(manifest_path.read_text())
+            manifest["events_sha256"] = hashlib.sha256(events_bytes).hexdigest()
+            manifest_path.write_text(json.dumps(manifest))
+
+            with self.assertRaisesRegex(paired.AnalysisError, "outcome/stop-reason"):
+                paired.analyze(traces, bootstrap_samples=100, seed=7)
+
     def test_reports_six_cell_neutral_contrasts_and_acceptance_gate(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = pathlib.Path(directory)
