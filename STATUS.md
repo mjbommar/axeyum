@@ -322,6 +322,21 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-19 — ADR-0276 accepts one within-leaf overlap cell; ADR-0277
+  preregisters the only permitted production experiment.** The clean detached
+  artifact-v37 observation at `6ff05905` passes all 162 decision, manifest/Z3,
+  88 SAT replay, family, legacy-baseline, and overlap-invariant gates. All
+  107,000 parity duplicates are binary clauses in one `within_leaf`
+  `a2-f0-t0-d2-r0-x0` cell across 29 queries; the largest query owns 9.9738%.
+  Cross-leaf and cross-owner parity overlap are zero. This does not revive
+  ADR-0261's duplicate-leaf hypothesis. ADR-0277 now freezes an encoder-local
+  memo only for repeated visits to the same positive direct-root parity leaf.
+  It must reduce exactly 107,000 attempts/duplicates, 321,000 declared/visited
+  literals, and 214,000 canonical literals while preserving emitted CNF and
+  every correctness gate before any unprofiled timing. Implement and commit
+  that bounded candidate next; no other leaf/root kind or optimization is
+  authorized.
+
 - **2026-07-19 — ADR-0276's GQ5 diagnostic is implemented and frozen before
   corpus observation.** ADR-0260's 107,000 same-owner forward-parity duplicates
   did not imply repeated normalized leaves: ADR-0261's candidate changed every

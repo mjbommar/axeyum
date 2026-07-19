@@ -3,7 +3,8 @@
 Status: accepted
 Date: 2026-07-19
 
-Result state: zero-row diagnostic preregistration; no fixed-population result
+Result state: fixed artifact-v37 observation accepted; exactly one within-leaf
+shape cell passes the preregistered rule
 
 ## Context
 
@@ -135,6 +136,42 @@ subset remains exactly 107,000 binary duplicates and that the complete legacy
 construction and origin aggregates reproduce ADR-0260. Profiled timing is
 diagnostic and excluded.
 
+## Observed result
+
+The clean detached artifact-v37 run at
+`6ff05905131b58a8cfa1c15e91ea97c9304f5ead` passes all fixed gates: 162/162
+decisions (88 SAT / 74 UNSAT), 162 manifest agreements, 162 in-process Z3
+agreements, all 88 original-model replays, the exact six family counts, and
+every construction/origin/overlap invariant. Its complete legacy construction,
+family, and origin aggregates equal ADR-0260's retained analysis.
+
+All 107,000 parity/parity duplicates and 214,000 canonical literals occupy one
+cell:
+
+| Relation | First/later shape | Duplicates | Queries | Largest-query share |
+|---|---|---:|---:|---:|
+| `within_leaf` | `a2-f0-t0-d2-r0-x0` / same | 107,000 | 29 | 9.9738% |
+
+Every duplicate is binary. The shape is an ordinary two-input parity leaf with
+two distinct nonconstant AIG nodes and no constants, repeated literals, or
+complementary pair. There are zero cross-leaf/same-owner and zero cross-owner
+parity duplicates. The cell partitions into 83,172 slice-partial SAT, 14,894
+register-slice SAT, and 8,934 register-slice UNSAT duplicates.
+
+The retained
+[`artifact.json`](../../../bench-results/glaurung-parity-leaf-overlap-profile-20260719/artifact.json)
+has SHA-256 `e61f6a61...6421a`; the independently re-summed
+[`analysis.json`](../../../bench-results/glaurung-parity-leaf-overlap-profile-20260719/analysis.json)
+has SHA-256 `4dc29c7c...608c`. The artifact records config hash
+`b6809235b93d6f96`, corpus hash `23932b876da74bd1`, and environment hash
+`83bf3161...4543`.
+
+An initial command pointed at the checkout's unrelated 128-query untracked
+manifest (SHA-256 `0556f77b...e68d`). Its output is retained and named
+`rejected-wrong-manifest-artifact.json` (SHA-256 `ba713d77...a4e`), but was
+rejected by the frozen 162-query/hash gate and its overlap cells were never
+inspected or used for selection.
+
 ## Follow-on selection rule
 
 This ADR selects no optimization. After the fixed observation, at most one
@@ -155,8 +192,9 @@ close this leaf-overlap lane.
 
 ## Consequences
 
-ADR-0261 remains rejected and removed. ADR-0276 does not reinterpret equal
-origin labels as equal leaves, does not reopen demand slicing or SAT tuning,
-and does not weaken strict sort errors or model replay. The next permissible
-step is the one fixed detached v37 observation, not a production optimization
-or an unregistered corpus/timing experiment.
+ADR-0261 remains rejected and removed: there are not repeated normalized leaves
+under one owner. ADR-0276 instead localizes the redundancy to repeated clause
+generation by the same logical leaf. It selects only ADR-0277's separately
+preregistered same-leaf emission memo experiment. It does not authorize timing
+before the exact structural gate, broaden the change to other leaf/root kinds,
+reopen demand slicing or SAT tuning, or weaken strict sort errors and replay.
