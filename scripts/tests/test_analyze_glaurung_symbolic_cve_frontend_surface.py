@@ -53,6 +53,16 @@ entry:
 
 
 class FrontendSurfaceAnalysisTests(unittest.TestCase):
+    def test_normalizes_only_ephemeral_module_id(self) -> None:
+        first = b"; ModuleID = '/tmp/one/recursive.ll'\nsource_filename = \"fixed.c\"\n"
+        second = b"; ModuleID = '/tmp/two/recursive.ll'\nsource_filename = \"fixed.c\"\n"
+        self.assertEqual(
+            MODULE.normalize_stripped_ir(first), MODULE.normalize_stripped_ir(second)
+        )
+        self.assertIn(
+            b"source_filename = \"fixed.c\"", MODULE.normalize_stripped_ir(first)
+        )
+
     def test_parses_defined_reachable_functions_and_instruction_counts(self) -> None:
         surface = MODULE.parse_ir_surface(MODULE_IR)
         self.assertEqual(surface["target_triple"], "aarch64-unknown-linux-gnu")
@@ -120,6 +130,9 @@ class FrontendSurfaceAnalysisTests(unittest.TestCase):
                 ValueError, message
             ):
                 MODULE.parse_ir_surface(text)
+
+        with self.assertRaisesRegex(ValueError, "ModuleID"):
+            MODULE.normalize_stripped_ir(b"source_filename = \"missing.c\"\n")
 
     def test_rejects_duplicate_function_definition(self) -> None:
         duplicate = MODULE_IR + "\ndefine i32 @entry() { ret i32 0 }\n"

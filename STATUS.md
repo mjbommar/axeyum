@@ -322,16 +322,21 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-19 — ADR-0268 implements but does not yet run the exact four-side
-  frontend-surface measurement.** Eight tests cover recursive-module function,
+- **2026-07-19 — ADR-0268 corrects a pre-acceptance frontend-surface identity
+  failure and preregisters v2.** The first exact run and immediate rerun had
+  identical counts but four drifting stripped-module hashes because LLVM
+  embedded each random scratch path in `ModuleID`; v1 output is deleted and
+  supplies no claim. The analyzer now normalizes only that provenance line and
+  fails if it is absent or duplicated. Nine tests cover that invariant plus recursive-module function,
   instruction, memory, control, call, global, pointer, malformed-input, and
   current-reflector-blocker accounting. The planned LLVM-18 pipeline extracts
   only the handler plus recursively defined direct callees, strips debug-only
   inflation, and leaves frontend/detector status `not-run`. A discarded
   vulnerable-only pilot confirms material inline-assembly and memory surface;
   do not use its partial counts. The committed registration now binds the
-  analyzer, ADR-0267 report, four-side denominator, LLVM-18 tools, and
-  recursive-extract/strip/no-execution pipeline. Run the exact surface next.
+  corrected analyzer, ADR-0267 report, four-side denominator, LLVM-18 tools,
+  and recursive-extract/strip/no-execution pipeline. Run v2 twice before
+  acceptance.
 
 - **2026-07-19 — ADR-0267 retains complete symbolic-CVE artifact attrition and
   admits exactly two pairs to the frontend gate.** All twelve immutable sides
@@ -4763,12 +4768,14 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
-- **2026-07-19 — ADR-0268 proposes exact admitted-LLVM surface measurement.**
+- **2026-07-19 — ADR-0268 proposes corrected admitted-LLVM surface measurement.**
   The tested analyzer narrows each module to the registered handler and
   recursively defined direct callees, strips debug-only inflation, and reports
   complete operation/call/global/memory blockers without executing a frontend,
   detector, or solver. Exact four-side execution waits for a committed
-  analyzer/tool registration.
+  analyzer/tool registration. A first exact v1 output was deleted before
+  acceptance when rerun exposed scratch-path-dependent `ModuleID` hashes; v2
+  normalizes only that line and waits for two byte-identical exact runs.
 
 - **2026-07-19 — ADR-0267 retains 4/12 paired artifact admission.** The exact
   campaign attempts all twelve sides and restores the worktree. PCI endpoint
