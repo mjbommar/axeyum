@@ -297,6 +297,14 @@ session state.
 > demonstrating validated coverage headroom. Keep symbolic memory deferred;
 > next preregister independent source adjudication of policy-varying real-driver
 > output or add a real labeled population capable of measuring misses.
+> ADR-0248 takes the strongest immediately available version of that next step:
+> the source-backed positive population's complete five-policy difference is
+> only 54 rows at 43 sites across seven drivers, so it freezes all of them with
+> no sampling. Every row currently remains explicitly pending and carries exact
+> v3 report, source, binary, policy-membership, and accepted-analysis identity.
+> Exhaustively add source-line and machine-instruction classifications next;
+> keep symbolic memory and broader policy mechanics blocked until all 54 labels
+> close and reveal a validated residual gap.
 > ADR-0226 adds the first explicit proof denominator. Of 2,513 generated UNSAT
 > rows, a predeclared width<=8/seed-divisible-by-4 subset selects 169 (6.725030%):
 > all 169 carry independently rechecked CNF DRAT and end-to-end

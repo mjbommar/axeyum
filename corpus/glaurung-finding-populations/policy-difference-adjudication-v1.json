@@ -1,0 +1,1073 @@
+{
+  "adjudication_policy": "exhaustive exact-row source-and-machine review; no sampling",
+  "authority_report_sha256": {
+    "any-model": "ecfc1b57db7fcc36747f4c25ed620b7e9b48fdca096a705ceed07dd7a791537c",
+    "max-unsigned": "a0e7bc1b34865310d873c8b4c222654282221923475938718175eb9bcfe5fd44",
+    "min-unsigned": "d830efea77d45f2a3b34fa24900f9f16ee24ce2a9524e40852dcd7824f905784",
+    "site-hash-0": "b88e7b87d47b69ac14c3ed6855f17cea5150ee04c5e91cc9f0ab535456e70f2c",
+    "site-hash-1": "ce32998a7aab0628553efe6dcd818ab7524a1be4e050d10e497786d23fab2b9d"
+  },
+  "driver_count": 7,
+  "drivers": [
+    {
+      "binary_path": "test_drivers/test_file_operations.sys",
+      "name": "test_file_operations.sys",
+      "rows": [
+        {
+          "adjudication": {
+            "classification": null,
+            "machine_evidence": null,
+            "source_lines": null,
+            "status": "pending"
+          },
+          "finding": "        null-deref  va=0x36def102e  [dispatch] fn=IoctlHandler @ 0x36def1000  sev=Arbitrary  taint=[\"*Arg1\"]",
+          "kind": "null-deref",
+          "present_policies": [
+            "any-model",
+            "min-unsigned",
+            "site-hash-0"
+          ],
+          "taint": [
+            "*Arg1"
+          ],
+          "va": "0x36def102e"
+        },
+        {
+          "adjudication": {
+            "classification": null,
+            "machine_evidence": null,
+            "source_lines": null,
+            "status": "pending"
+          },
+          "finding": "    arbitrary-read  va=0x36def102e  [dispatch] fn=IoctlHandler @ 0x36def1000  sev=Arbitrary  taint=[\"*Arg1\"]",
+          "kind": "arbitrary-read",
+          "present_policies": [
+            "any-model",
+            "min-unsigned",
+            "site-hash-0"
+          ],
+          "taint": [
+            "*Arg1"
+          ],
+          "va": "0x36def102e"
+        },
+        {
+          "adjudication": {
+            "classification": null,
+            "machine_evidence": null,
+            "source_lines": null,
+            "status": "pending"
+          },
+          "finding": "    arbitrary-read  va=0x36def10dc  [dispatch] fn=IoctlHandler @ 0x36def1000  sev=Constrained  taint=[\"**Arg1\"]",
+          "kind": "arbitrary-read",
+          "present_policies": [
+            "any-model"
+          ],
+          "taint": [
+            "**Arg1"
+          ],
+          "va": "0x36def10dc"
+        },
+        {
+          "adjudication": {
+            "classification": null,
+            "machine_evidence": null,
+            "source_lines": null,
+            "status": "pending"
+          },
+          "finding": "    arbitrary-read  va=0x36def10e6  [dispatch] fn=IoctlHandler @ 0x36def1000  sev=Constrained  taint=[\"**Arg1\"]",
+          "kind": "arbitrary-read",
+          "present_policies": [
+            "any-model"
+          ],
+          "taint": [
+            "**Arg1"
+          ],
+          "va": "0x36def10e6"
+        },
+        {
+          "adjudication": {
+            "classification": null,
+            "machine_evidence": null,
+            "source_lines": null,
+            "status": "pending"
+          },
+          "finding": "    arbitrary-read  va=0x36def12a3  [dispatch] fn=IoctlHandler @ 0x36def1000  sev=Constrained  taint=[\"**Arg1\"]",
+          "kind": "arbitrary-read",
+          "present_policies": [
+            "any-model"
+          ],
+          "taint": [
+            "**Arg1"
+          ],
+          "va": "0x36def12a3"
+        },
+        {
+          "adjudication": {
+            "classification": null,
+            "machine_evidence": null,
+            "source_lines": null,
+            "status": "pending"
+          },
+          "finding": "    arbitrary-read  va=0x36def12ad  [dispatch] fn=IoctlHandler @ 0x36def1000  sev=Constrained  taint=[\"**Arg1\"]",
+          "kind": "arbitrary-read",
+          "present_policies": [
+            "any-model"
+          ],
+          "taint": [
+            "**Arg1"
+          ],
+          "va": "0x36def12ad"
+        }
+      ],
+      "sha256": "61bdccd8ca47cfebfc46a222a05733e23a60b5f1e016c7ee91ded4c4a64824e3",
+      "source": {
+        "path": "test_drivers/test_file_operations.c",
+        "repository_revision": "905629a773f191108273a55924accd9f31145a8d",
+        "sha256": "fbe2d7ae5340c095e43c69fb6ecaa9c12a6c9c734c3ed3f7a06a46435968c5e1"
+      },
+      "varying_finding_count": 6
+    },
+    {
+      "binary_path": "test_drivers/test_integer_overflow.sys",
+      "name": "test_integer_overflow.sys",
+      "rows": [
+        {
+          "adjudication": {
+            "classification": null,
+            "machine_evidence": null,
+            "source_lines": null,
+            "status": "pending"
+          },
+          "finding": "        null-deref  va=0x2253a102b  [dispatch] fn=IoctlHandler @ 0x2253a1000  sev=Arbitrary  taint=[\"*Arg1\"]",
+          "kind": "null-deref",
+          "present_policies": [
+            "any-model",
+            "min-unsigned",
+            "site-hash-1"
+          ],
+          "taint": [
+            "*Arg1"
+          ],
+          "va": "0x2253a102b"
+        },
+        {
+          "adjudication": {
+            "classification": null,
+            "machine_evidence": null,
+            "source_lines": null,
+            "status": "pending"
+          },
+          "finding": "      double-fetch  va=0x2253a1089  [dispatch] fn=IoctlHandler @ 0x2253a1000  sev=Constrained  taint=[\"**Arg1\"]",
+          "kind": "double-fetch",
+          "present_policies": [
+            "any-model"
+          ],
+          "taint": [
+            "**Arg1"
+          ],
+          "va": "0x2253a1089"
+        },
+        {
+          "adjudication": {
+            "classification": null,
+            "machine_evidence": null,
+            "source_lines": null,
+            "status": "pending"
+          },
+          "finding": "      double-fetch  va=0x2253a108f  [dispatch] fn=IoctlHandler @ 0x2253a1000  sev=Constrained  taint=[\"**Arg1\"]",
+          "kind": "double-fetch",
+          "present_policies": [
+            "any-model"
+          ],
+          "taint": [
+            "**Arg1"
+          ],
+          "va": "0x2253a108f"
+        },
+        {
+          "adjudication": {
+            "classification": null,
+            "machine_evidence": null,
+            "source_lines": null,
+            "status": "pending"
+          },
+          "finding": "    arbitrary-read  va=0x2253a102b  [dispatch] fn=IoctlHandler @ 0x2253a1000  sev=Arbitrary  taint=[\"*Arg1\"]",
+          "kind": "arbitrary-read",
+          "present_policies": [
+            "any-model",
+            "min-unsigned",
+            "site-hash-1"
+          ],
+          "taint": [
+            "*Arg1"
+          ],
+          "va": "0x2253a102b"
+        },
+        {
+          "adjudication": {
+            "classification": null,
+            "machine_evidence": null,
+            "source_lines": null,
+            "status": "pending"
+          },
+          "finding": "    arbitrary-read  va=0x2253a1051  [dispatch] fn=IoctlHandler @ 0x2253a1000  sev=Constrained  taint=[\"**Arg1\"]",
+          "kind": "arbitrary-read",
+          "present_policies": [
+            "any-model"
+          ],
+          "taint": [
+            "**Arg1"
+          ],
+          "va": "0x2253a1051"
+        },
+        {
+          "adjudication": {
+            "classification": null,
+            "machine_evidence": null,
+            "source_lines": null,
+            "status": "pending"
+          },
+          "finding": "    arbitrary-read  va=0x2253a1057  [dispatch] fn=IoctlHandler @ 0x2253a1000  sev=Constrained  taint=[\"**Arg1\"]",
+          "kind": "arbitrary-read",
+          "present_policies": [
+            "any-model"
+          ],
+          "taint": [
+            "**Arg1"
+          ],
+          "va": "0x2253a1057"
+        },
+        {
+          "adjudication": {
+            "classification": null,
+            "machine_evidence": null,
+            "source_lines": null,
+            "status": "pending"
+          },
+          "finding": "    arbitrary-read  va=0x2253a1089  [dispatch] fn=IoctlHandler @ 0x2253a1000  sev=Constrained  taint=[\"**Arg1\"]",
+          "kind": "arbitrary-read",
+          "present_policies": [
+            "any-model"
+          ],
+          "taint": [
+            "**Arg1"
+          ],
+          "va": "0x2253a1089"
+        },
+        {
+          "adjudication": {
+            "classification": null,
+            "machine_evidence": null,
+            "source_lines": null,
+            "status": "pending"
+          },
+          "finding": "    arbitrary-read  va=0x2253a108f  [dispatch] fn=IoctlHandler @ 0x2253a1000  sev=Constrained  taint=[\"**Arg1\"]",
+          "kind": "arbitrary-read",
+          "present_policies": [
+            "any-model"
+          ],
+          "taint": [
+            "**Arg1"
+          ],
+          "va": "0x2253a108f"
+        },
+        {
+          "adjudication": {
+            "classification": null,
+            "machine_evidence": null,
+            "source_lines": null,
+            "status": "pending"
+          },
+          "finding": "    arbitrary-read  va=0x2253a10a5  [dispatch] fn=IoctlHandler @ 0x2253a1000  sev=Constrained  taint=[\"**Arg1\"]",
+          "kind": "arbitrary-read",
+          "present_policies": [
+            "any-model"
+          ],
+          "taint": [
+            "**Arg1"
+          ],
+          "va": "0x2253a10a5"
+        }
+      ],
+      "sha256": "090974c12d4482a6da46dcead100308e35da37108a7e4b16f9c73e0c947828c0",
+      "source": {
+        "path": "test_drivers/test_integer_overflow.c",
+        "repository_revision": "905629a773f191108273a55924accd9f31145a8d",
+        "sha256": "5756b5e57fdc51b26f135fcfb4669b4ad2ad2576f657f2983955c7cf421aa4fb"
+      },
+      "varying_finding_count": 9
+    },
+    {
+      "binary_path": "test_drivers/test_physical_memory.sys",
+      "name": "test_physical_memory.sys",
+      "rows": [
+        {
+          "adjudication": {
+            "classification": null,
+            "machine_evidence": null,
+            "source_lines": null,
+            "status": "pending"
+          },
+          "finding": "        null-deref  va=0x2a092102e  [dispatch] fn=IoctlHandler @ 0x2a0921000  sev=Arbitrary  taint=[\"*Arg1\"]",
+          "kind": "null-deref",
+          "present_policies": [
+            "any-model",
+            "min-unsigned",
+            "site-hash-0"
+          ],
+          "taint": [
+            "*Arg1"
+          ],
+          "va": "0x2a092102e"
+        },
+        {
+          "adjudication": {
+            "classification": null,
+            "machine_evidence": null,
+            "source_lines": null,
+            "status": "pending"
+          },
+          "finding": "      double-fetch  va=0x2a09210c7  [dispatch] fn=IoctlHandler @ 0x2a0921000  sev=Constrained  taint=[\"**Arg1\"]",
+          "kind": "double-fetch",
+          "present_policies": [
+            "any-model"
+          ],
+          "taint": [
+            "**Arg1"
+          ],
+          "va": "0x2a09210c7"
+        },
+        {
+          "adjudication": {
+            "classification": null,
+            "machine_evidence": null,
+            "source_lines": null,
+            "status": "pending"
+          },
+          "finding": "    arbitrary-read  va=0x2a092102e  [dispatch] fn=IoctlHandler @ 0x2a0921000  sev=Arbitrary  taint=[\"*Arg1\"]",
+          "kind": "arbitrary-read",
+          "present_policies": [
+            "any-model",
+            "min-unsigned",
+            "site-hash-0"
+          ],
+          "taint": [
+            "*Arg1"
+          ],
+          "va": "0x2a092102e"
+        },
+        {
+          "adjudication": {
+            "classification": null,
+            "machine_evidence": null,
+            "source_lines": null,
+            "status": "pending"
+          },
+          "finding": "    arbitrary-read  va=0x2a0921084  [dispatch] fn=IoctlHandler @ 0x2a0921000  sev=Constrained  taint=[\"**Arg1\"]",
+          "kind": "arbitrary-read",
+          "present_policies": [
+            "any-model"
+          ],
+          "taint": [
+            "**Arg1"
+          ],
+          "va": "0x2a0921084"
+        },
+        {
+          "adjudication": {
+            "classification": null,
+            "machine_evidence": null,
+            "source_lines": null,
+            "status": "pending"
+          },
+          "finding": "    arbitrary-read  va=0x2a092108c  [dispatch] fn=IoctlHandler @ 0x2a0921000  sev=Constrained  taint=[\"**Arg1\"]",
+          "kind": "arbitrary-read",
+          "present_policies": [
+            "any-model"
+          ],
+          "taint": [
+            "**Arg1"
+          ],
+          "va": "0x2a092108c"
+        },
+        {
+          "adjudication": {
+            "classification": null,
+            "machine_evidence": null,
+            "source_lines": null,
+            "status": "pending"
+          },
+          "finding": "    arbitrary-read  va=0x2a09210c7  [dispatch] fn=IoctlHandler @ 0x2a0921000  sev=Constrained  taint=[\"**Arg1\"]",
+          "kind": "arbitrary-read",
+          "present_policies": [
+            "any-model"
+          ],
+          "taint": [
+            "**Arg1"
+          ],
+          "va": "0x2a09210c7"
+        },
+        {
+          "adjudication": {
+            "classification": null,
+            "machine_evidence": null,
+            "source_lines": null,
+            "status": "pending"
+          },
+          "finding": "    arbitrary-read  va=0x2a09210f4  [dispatch] fn=IoctlHandler @ 0x2a0921000  sev=Constrained  taint=[\"**Arg1\"]",
+          "kind": "arbitrary-read",
+          "present_policies": [
+            "any-model"
+          ],
+          "taint": [
+            "**Arg1"
+          ],
+          "va": "0x2a09210f4"
+        },
+        {
+          "adjudication": {
+            "classification": null,
+            "machine_evidence": null,
+            "source_lines": null,
+            "status": "pending"
+          },
+          "finding": "    arbitrary-read  va=0x2a0921100  [dispatch] fn=IoctlHandler @ 0x2a0921000  sev=Constrained  taint=[\"**Arg1\"]",
+          "kind": "arbitrary-read",
+          "present_policies": [
+            "any-model"
+          ],
+          "taint": [
+            "**Arg1"
+          ],
+          "va": "0x2a0921100"
+        },
+        {
+          "adjudication": {
+            "classification": null,
+            "machine_evidence": null,
+            "source_lines": null,
+            "status": "pending"
+          },
+          "finding": "    arbitrary-read  va=0x2a09211a3  [dispatch] fn=IoctlHandler @ 0x2a0921000  sev=Constrained  taint=[\"**Arg1\"]",
+          "kind": "arbitrary-read",
+          "present_policies": [
+            "any-model"
+          ],
+          "taint": [
+            "**Arg1"
+          ],
+          "va": "0x2a09211a3"
+        },
+        {
+          "adjudication": {
+            "classification": null,
+            "machine_evidence": null,
+            "source_lines": null,
+            "status": "pending"
+          },
+          "finding": "    arbitrary-read  va=0x2a09211ab  [dispatch] fn=IoctlHandler @ 0x2a0921000  sev=Constrained  taint=[\"**Arg1\"]",
+          "kind": "arbitrary-read",
+          "present_policies": [
+            "any-model"
+          ],
+          "taint": [
+            "**Arg1"
+          ],
+          "va": "0x2a09211ab"
+        },
+        {
+          "adjudication": {
+            "classification": null,
+            "machine_evidence": null,
+            "source_lines": null,
+            "status": "pending"
+          },
+          "finding": "    arbitrary-read  va=0x2a09211b3  [dispatch] fn=IoctlHandler @ 0x2a0921000  sev=Constrained  taint=[\"**Arg1\"]",
+          "kind": "arbitrary-read",
+          "present_policies": [
+            "any-model"
+          ],
+          "taint": [
+            "**Arg1"
+          ],
+          "va": "0x2a09211b3"
+        },
+        {
+          "adjudication": {
+            "classification": null,
+            "machine_evidence": null,
+            "source_lines": null,
+            "status": "pending"
+          },
+          "finding": "    arbitrary-read  va=0x2a09211df  [dispatch] fn=IoctlHandler @ 0x2a0921000  sev=Constrained  taint=[\"*Arg1\"]",
+          "kind": "arbitrary-read",
+          "present_policies": [
+            "any-model"
+          ],
+          "taint": [
+            "*Arg1"
+          ],
+          "va": "0x2a09211df"
+        },
+        {
+          "adjudication": {
+            "classification": null,
+            "machine_evidence": null,
+            "source_lines": null,
+            "status": "pending"
+          },
+          "finding": "   arbitrary-write  va=0x2a09210b8  [dispatch] fn=IoctlHandler @ 0x2a0921000  sev=Constrained  taint=[\"**Arg1\"]",
+          "kind": "arbitrary-write",
+          "present_policies": [
+            "any-model"
+          ],
+          "taint": [
+            "**Arg1"
+          ],
+          "va": "0x2a09210b8"
+        }
+      ],
+      "sha256": "d730176b7726f219413b9c77482f1d7b8ae5619f5dfe3dbd76048acada1676be",
+      "source": {
+        "path": "test_drivers/test_physical_memory.c",
+        "repository_revision": "905629a773f191108273a55924accd9f31145a8d",
+        "sha256": "d37f49cea73cc1569478e40649f834effa88ed0952683d8c6eb161018ef5eac2"
+      },
+      "varying_finding_count": 13
+    },
+    {
+      "binary_path": "test_drivers/test_process_termination.sys",
+      "name": "test_process_termination.sys",
+      "rows": [
+        {
+          "adjudication": {
+            "classification": null,
+            "machine_evidence": null,
+            "source_lines": null,
+            "status": "pending"
+          },
+          "finding": "        null-deref  va=0x1cbe1102e  [dispatch] fn=IoctlHandler @ 0x1cbe11000  sev=Arbitrary  taint=[\"*Arg1\"]",
+          "kind": "null-deref",
+          "present_policies": [
+            "any-model",
+            "min-unsigned",
+            "site-hash-0"
+          ],
+          "taint": [
+            "*Arg1"
+          ],
+          "va": "0x1cbe1102e"
+        },
+        {
+          "adjudication": {
+            "classification": null,
+            "machine_evidence": null,
+            "source_lines": null,
+            "status": "pending"
+          },
+          "finding": "      double-fetch  va=0x1cbe1110e  [dispatch] fn=IoctlHandler @ 0x1cbe11000  sev=Constrained  taint=[\"**Arg1\"]",
+          "kind": "double-fetch",
+          "present_policies": [
+            "any-model"
+          ],
+          "taint": [
+            "**Arg1"
+          ],
+          "va": "0x1cbe1110e"
+        },
+        {
+          "adjudication": {
+            "classification": null,
+            "machine_evidence": null,
+            "source_lines": null,
+            "status": "pending"
+          },
+          "finding": "      double-fetch  va=0x1cbe1118b  [dispatch] fn=IoctlHandler @ 0x1cbe11000  sev=Constrained  taint=[\"**Arg1\"]",
+          "kind": "double-fetch",
+          "present_policies": [
+            "any-model"
+          ],
+          "taint": [
+            "**Arg1"
+          ],
+          "va": "0x1cbe1118b"
+        },
+        {
+          "adjudication": {
+            "classification": null,
+            "machine_evidence": null,
+            "source_lines": null,
+            "status": "pending"
+          },
+          "finding": "    arbitrary-read  va=0x1cbe1102e  [dispatch] fn=IoctlHandler @ 0x1cbe11000  sev=Arbitrary  taint=[\"*Arg1\"]",
+          "kind": "arbitrary-read",
+          "present_policies": [
+            "any-model",
+            "min-unsigned",
+            "site-hash-0"
+          ],
+          "taint": [
+            "*Arg1"
+          ],
+          "va": "0x1cbe1102e"
+        },
+        {
+          "adjudication": {
+            "classification": null,
+            "machine_evidence": null,
+            "source_lines": null,
+            "status": "pending"
+          },
+          "finding": "    arbitrary-read  va=0x1cbe1109e  [dispatch] fn=IoctlHandler @ 0x1cbe11000  sev=Constrained  taint=[\"**Arg1\"]",
+          "kind": "arbitrary-read",
+          "present_policies": [
+            "any-model"
+          ],
+          "taint": [
+            "**Arg1"
+          ],
+          "va": "0x1cbe1109e"
+        },
+        {
+          "adjudication": {
+            "classification": null,
+            "machine_evidence": null,
+            "source_lines": null,
+            "status": "pending"
+          },
+          "finding": "    arbitrary-read  va=0x1cbe110a5  [dispatch] fn=IoctlHandler @ 0x1cbe11000  sev=Constrained  taint=[\"**Arg1\"]",
+          "kind": "arbitrary-read",
+          "present_policies": [
+            "any-model"
+          ],
+          "taint": [
+            "**Arg1"
+          ],
+          "va": "0x1cbe110a5"
+        },
+        {
+          "adjudication": {
+            "classification": null,
+            "machine_evidence": null,
+            "source_lines": null,
+            "status": "pending"
+          },
+          "finding": "    arbitrary-read  va=0x1cbe110c0  [dispatch] fn=IoctlHandler @ 0x1cbe11000  sev=Constrained  taint=[\"**Arg1\"]",
+          "kind": "arbitrary-read",
+          "present_policies": [
+            "any-model"
+          ],
+          "taint": [
+            "**Arg1"
+          ],
+          "va": "0x1cbe110c0"
+        },
+        {
+          "adjudication": {
+            "classification": null,
+            "machine_evidence": null,
+            "source_lines": null,
+            "status": "pending"
+          },
+          "finding": "    arbitrary-read  va=0x1cbe11103  [dispatch] fn=IoctlHandler @ 0x1cbe11000  sev=Constrained  taint=[\"**Arg1\"]",
+          "kind": "arbitrary-read",
+          "present_policies": [
+            "any-model"
+          ],
+          "taint": [
+            "**Arg1"
+          ],
+          "va": "0x1cbe11103"
+        },
+        {
+          "adjudication": {
+            "classification": null,
+            "machine_evidence": null,
+            "source_lines": null,
+            "status": "pending"
+          },
+          "finding": "    arbitrary-read  va=0x1cbe1110e  [dispatch] fn=IoctlHandler @ 0x1cbe11000  sev=Constrained  taint=[\"**Arg1\"]",
+          "kind": "arbitrary-read",
+          "present_policies": [
+            "any-model"
+          ],
+          "taint": [
+            "**Arg1"
+          ],
+          "va": "0x1cbe1110e"
+        },
+        {
+          "adjudication": {
+            "classification": null,
+            "machine_evidence": null,
+            "source_lines": null,
+            "status": "pending"
+          },
+          "finding": "    arbitrary-read  va=0x1cbe1114f  [dispatch] fn=IoctlHandler @ 0x1cbe11000  sev=Constrained  taint=[\"**Arg1\"]",
+          "kind": "arbitrary-read",
+          "present_policies": [
+            "any-model"
+          ],
+          "taint": [
+            "**Arg1"
+          ],
+          "va": "0x1cbe1114f"
+        },
+        {
+          "adjudication": {
+            "classification": null,
+            "machine_evidence": null,
+            "source_lines": null,
+            "status": "pending"
+          },
+          "finding": "    arbitrary-read  va=0x1cbe1117e  [dispatch] fn=IoctlHandler @ 0x1cbe11000  sev=Constrained  taint=[\"**Arg1\"]",
+          "kind": "arbitrary-read",
+          "present_policies": [
+            "any-model"
+          ],
+          "taint": [
+            "**Arg1"
+          ],
+          "va": "0x1cbe1117e"
+        },
+        {
+          "adjudication": {
+            "classification": null,
+            "machine_evidence": null,
+            "source_lines": null,
+            "status": "pending"
+          },
+          "finding": "    arbitrary-read  va=0x1cbe1118b  [dispatch] fn=IoctlHandler @ 0x1cbe11000  sev=Constrained  taint=[\"**Arg1\"]",
+          "kind": "arbitrary-read",
+          "present_policies": [
+            "any-model"
+          ],
+          "taint": [
+            "**Arg1"
+          ],
+          "va": "0x1cbe1118b"
+        },
+        {
+          "adjudication": {
+            "classification": null,
+            "machine_evidence": null,
+            "source_lines": null,
+            "status": "pending"
+          },
+          "finding": "   arbitrary-write  va=0x1cbe11146  [dispatch] fn=IoctlHandler @ 0x1cbe11000  sev=Constrained  taint=[\"**Arg1\"]",
+          "kind": "arbitrary-write",
+          "present_policies": [
+            "any-model"
+          ],
+          "taint": [
+            "**Arg1"
+          ],
+          "va": "0x1cbe11146"
+        },
+        {
+          "adjudication": {
+            "classification": null,
+            "machine_evidence": null,
+            "source_lines": null,
+            "status": "pending"
+          },
+          "finding": "   arbitrary-write  va=0x1cbe11174  [dispatch] fn=IoctlHandler @ 0x1cbe11000  sev=Constrained  taint=[\"**Arg1\"]",
+          "kind": "arbitrary-write",
+          "present_policies": [
+            "any-model"
+          ],
+          "taint": [
+            "**Arg1"
+          ],
+          "va": "0x1cbe11174"
+        }
+      ],
+      "sha256": "6f67605dad3ba73c15439071dd534eb6954e376c32d364409b3478e4ddf9a316",
+      "source": {
+        "path": "test_drivers/test_process_termination.c",
+        "repository_revision": "905629a773f191108273a55924accd9f31145a8d",
+        "sha256": "4edb3a040b1e31b839338a9df795605089691d2bbc857c4e7bde7b000ea430b6"
+      },
+      "varying_finding_count": 14
+    },
+    {
+      "binary_path": "test_drivers/test_rdmsr.sys",
+      "name": "test_rdmsr.sys",
+      "rows": [
+        {
+          "adjudication": {
+            "classification": null,
+            "machine_evidence": null,
+            "source_lines": null,
+            "status": "pending"
+          },
+          "finding": "    arbitrary-read  va=0x32bd61037  [dispatch] fn=IoctlHandler @ 0x32bd61000  sev=Constrained  taint=[\"Arg1\"]",
+          "kind": "arbitrary-read",
+          "present_policies": [
+            "any-model"
+          ],
+          "taint": [
+            "Arg1"
+          ],
+          "va": "0x32bd61037"
+        },
+        {
+          "adjudication": {
+            "classification": null,
+            "machine_evidence": null,
+            "source_lines": null,
+            "status": "pending"
+          },
+          "finding": "    arbitrary-read  va=0x32bd6103b  [dispatch] fn=IoctlHandler @ 0x32bd61000  sev=Constrained  taint=[\"**Arg1\"]",
+          "kind": "arbitrary-read",
+          "present_policies": [
+            "any-model"
+          ],
+          "taint": [
+            "**Arg1"
+          ],
+          "va": "0x32bd6103b"
+        },
+        {
+          "adjudication": {
+            "classification": null,
+            "machine_evidence": null,
+            "source_lines": null,
+            "status": "pending"
+          },
+          "finding": "   arbitrary-write  va=0x32bd61040  [dispatch] fn=IoctlHandler @ 0x32bd61000  sev=Constrained  taint=[\"**Arg1\"]",
+          "kind": "arbitrary-write",
+          "present_policies": [
+            "any-model"
+          ],
+          "taint": [
+            "**Arg1"
+          ],
+          "va": "0x32bd61040"
+        },
+        {
+          "adjudication": {
+            "classification": null,
+            "machine_evidence": null,
+            "source_lines": null,
+            "status": "pending"
+          },
+          "finding": "   arbitrary-write  va=0x32bd61044  [dispatch] fn=IoctlHandler @ 0x32bd61000  sev=Constrained  taint=[\"**Arg1\"]",
+          "kind": "arbitrary-write",
+          "present_policies": [
+            "any-model"
+          ],
+          "taint": [
+            "**Arg1"
+          ],
+          "va": "0x32bd61044"
+        },
+        {
+          "adjudication": {
+            "classification": null,
+            "machine_evidence": null,
+            "source_lines": null,
+            "status": "pending"
+          },
+          "finding": "   arbitrary-write  va=0x32bd61048  [dispatch] fn=IoctlHandler @ 0x32bd61000  sev=Constrained  taint=[\"Arg1\"]",
+          "kind": "arbitrary-write",
+          "present_policies": [
+            "any-model"
+          ],
+          "taint": [
+            "Arg1"
+          ],
+          "va": "0x32bd61048"
+        }
+      ],
+      "sha256": "01d065a4ae7a40462c58c6e33ca2662ae67f3d54a8dad8c981ebb4d8990e4fec",
+      "source": {
+        "path": "test_drivers/test_rdmsr.c",
+        "repository_revision": "905629a773f191108273a55924accd9f31145a8d",
+        "sha256": "53d5c7986c1c97e402f2fddece6371df164b88c6648dd94bc82a4325044e32fb"
+      },
+      "varying_finding_count": 5
+    },
+    {
+      "binary_path": "test_drivers/test_shellcode.sys",
+      "name": "test_shellcode.sys",
+      "rows": [
+        {
+          "adjudication": {
+            "classification": null,
+            "machine_evidence": null,
+            "source_lines": null,
+            "status": "pending"
+          },
+          "finding": "        null-deref  va=0x20ec7102b  [dispatch] fn=IoctlHandler @ 0x20ec71000  sev=Arbitrary  taint=[\"*Arg1\"]",
+          "kind": "null-deref",
+          "present_policies": [
+            "any-model",
+            "min-unsigned",
+            "site-hash-1"
+          ],
+          "taint": [
+            "*Arg1"
+          ],
+          "va": "0x20ec7102b"
+        },
+        {
+          "adjudication": {
+            "classification": null,
+            "machine_evidence": null,
+            "source_lines": null,
+            "status": "pending"
+          },
+          "finding": "    arbitrary-read  va=0x20ec7102b  [dispatch] fn=IoctlHandler @ 0x20ec71000  sev=Arbitrary  taint=[\"*Arg1\"]",
+          "kind": "arbitrary-read",
+          "present_policies": [
+            "any-model",
+            "min-unsigned",
+            "site-hash-1"
+          ],
+          "taint": [
+            "*Arg1"
+          ],
+          "va": "0x20ec7102b"
+        },
+        {
+          "adjudication": {
+            "classification": null,
+            "machine_evidence": null,
+            "source_lines": null,
+            "status": "pending"
+          },
+          "finding": "    arbitrary-read  va=0x20ec71051  [dispatch] fn=IoctlHandler @ 0x20ec71000  sev=Constrained  taint=[\"**Arg1\"]",
+          "kind": "arbitrary-read",
+          "present_policies": [
+            "any-model"
+          ],
+          "taint": [
+            "**Arg1"
+          ],
+          "va": "0x20ec71051"
+        }
+      ],
+      "sha256": "0e9b893c287c8e3e92f9ba4a176a33ccfe612314708673c015df322901fce32b",
+      "source": {
+        "path": "test_drivers/test_shellcode.c",
+        "repository_revision": "905629a773f191108273a55924accd9f31145a8d",
+        "sha256": "445c0e338faf23814dce299e6d017be6491b028d97bcf098f9759e8186038790"
+      },
+      "varying_finding_count": 3
+    },
+    {
+      "binary_path": "test_drivers/test_stack_overflow.sys",
+      "name": "test_stack_overflow.sys",
+      "rows": [
+        {
+          "adjudication": {
+            "classification": null,
+            "machine_evidence": null,
+            "source_lines": null,
+            "status": "pending"
+          },
+          "finding": "        null-deref  va=0x397ba102e  [dispatch] fn=IoctlHandler @ 0x397ba1000  sev=Arbitrary  taint=[\"*Arg1\"]",
+          "kind": "null-deref",
+          "present_policies": [
+            "any-model",
+            "min-unsigned",
+            "site-hash-0"
+          ],
+          "taint": [
+            "*Arg1"
+          ],
+          "va": "0x397ba102e"
+        },
+        {
+          "adjudication": {
+            "classification": null,
+            "machine_evidence": null,
+            "source_lines": null,
+            "status": "pending"
+          },
+          "finding": "    arbitrary-read  va=0x397ba102e  [dispatch] fn=IoctlHandler @ 0x397ba1000  sev=Arbitrary  taint=[\"*Arg1\"]",
+          "kind": "arbitrary-read",
+          "present_policies": [
+            "any-model",
+            "min-unsigned",
+            "site-hash-0"
+          ],
+          "taint": [
+            "*Arg1"
+          ],
+          "va": "0x397ba102e"
+        },
+        {
+          "adjudication": {
+            "classification": null,
+            "machine_evidence": null,
+            "source_lines": null,
+            "status": "pending"
+          },
+          "finding": "    arbitrary-read  va=0x397ba1044  [dispatch] fn=IoctlHandler @ 0x397ba1000  sev=Constrained  taint=[\"*Arg1\"]",
+          "kind": "arbitrary-read",
+          "present_policies": [
+            "any-model",
+            "min-unsigned",
+            "site-hash-0"
+          ],
+          "taint": [
+            "*Arg1"
+          ],
+          "va": "0x397ba1044"
+        },
+        {
+          "adjudication": {
+            "classification": null,
+            "machine_evidence": null,
+            "source_lines": null,
+            "status": "pending"
+          },
+          "finding": "    arbitrary-read  va=0x397ba106b  [dispatch] fn=IoctlHandler @ 0x397ba1000  sev=Constrained  taint=[\"**Arg1\"]",
+          "kind": "arbitrary-read",
+          "present_policies": [
+            "any-model"
+          ],
+          "taint": [
+            "**Arg1"
+          ],
+          "va": "0x397ba106b"
+        }
+      ],
+      "sha256": "9475e33f125b85c6cee60cafe07ed81214fc5386c25db4f322e20dbaf46f26c8",
+      "source": {
+        "path": "test_drivers/test_stack_overflow.c",
+        "repository_revision": "905629a773f191108273a55924accd9f31145a8d",
+        "sha256": "99b76db781ec7022579bb00d33aaf228793d4fbe970d432d7911715738055b27"
+      },
+      "varying_finding_count": 4
+    }
+  ],
+  "finding_count": 54,
+  "kind_counts": {
+    "arbitrary-read": 37,
+    "arbitrary-write": 6,
+    "double-fetch": 5,
+    "null-deref": 6
+  },
+  "name": "glaurung-a0-source-backed-policy-differences-v1",
+  "policy_order": [
+    "any-model",
+    "min-unsigned",
+    "max-unsigned",
+    "site-hash-0",
+    "site-hash-1"
+  ],
+  "population_definition": "union minus intersection of stable raw findings across all five corrected v3 policies",
+  "schema": "axeyum.glaurung-policy-difference-population.v1",
+  "site_count": 43,
+  "source_analysis_sha256": "6de0c7592f00d90711f4a4b7dbb5a381bfe663c914094aa55c069c355dfdcb99",
+  "source_manifest_sha256": "8f78305beadacfe7cda92dca047ae99fe0f0544dadb10af6f47c32ecf2898f7f",
+  "taint_counts": {
+    "[\"**Arg1\"]": 38,
+    "[\"*Arg1\"]": 14,
+    "[\"Arg1\"]": 2
+  }
+}

@@ -414,7 +414,10 @@ support anyway.
   populations independently; never use raw `>= AnyModel` as an acceptance gate.
   Next independently adjudicate a preregistered bounded sample of policy-varying
   real-driver rows, or add a real source-backed population capable of exposing
-  misses. **Gate for any memory-model work:** a measured validated residual gap,
+  misses. ADR-0248 now freezes the stronger immediately available control: all
+  54 policy-varying rows at 43 sites in the tracked source-backed population,
+  with no sampling and every source/machine label pending. **Gate for any
+  memory-model work:** a measured validated residual gap,
   not raw tcpip variation or usbprint's resource failure. Extend with
   BoundarySet/DiverseEnum only after bounded multi-successor execution exists
   and the labeled evidence justifies the extra work; do not approximate either

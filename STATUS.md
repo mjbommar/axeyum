@@ -322,6 +322,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-18 — ADR-0248 freezes the complete source-backed policy-difference
+  population before labeling.** A fail-closed freezer verifies stable exact raw
+  authority parity in every v3 policy and computes union minus intersection.
+  The result is 54 rows at 43 sites across seven tracked source/binary pairs:
+  37 reads, six writes, six null dereferences, and five double fetches. All are
+  generic `Arg1` ancestry and all 54 adjudications remain explicitly pending.
+  The next action is exhaustive source-line plus instruction-level labeling—no
+  sampling. Symbolic memory, BoundarySet, and DiverseEnum remain deferred.
+
 - **2026-07-18 — ADR-0246 accepts model-independent stack-region semantics;
   ADR-0247 accepts the corrected five-policy v3 sweep.** V2 remains preserved and
   rejected at maximum's 14/15 precision gate. Two isolated Glaurung candidates
@@ -4420,6 +4429,11 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-18 — ADR-0248 preregisters exhaustive policy-difference review.**
+  The accepted v3 source-backed raw union/intersection yields a bounded 54-row,
+  43-site difference. A tested freezer binds every row to exact reports and
+  source/binary identities and leaves every label pending before review.
 
 - **2026-07-18 — ADR-0246 repairs stack-region semantics and ADR-0247 accepts
   the corrected v3 sweep.** Three preserved maximum-policy controls distinguish
