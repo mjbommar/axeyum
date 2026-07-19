@@ -4,6 +4,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 SCRIPT = (
@@ -354,6 +355,33 @@ class SymbolicCveArtifactMaterializationTests(unittest.TestCase):
             absent = root / "absent"
             MODULE.prepare_output_root(absent)
             self.assertTrue(absent.is_dir())
+
+    def test_validation_report_preserves_zero_build_boundary(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            preflight_raw = (json.dumps(preflight(), sort_keys=True) + "\n").encode()
+            campaign_value = campaign(preflight_raw, SCRIPT.read_bytes())
+            campaign_path = root / "campaign.json"
+            preflight_path = root / "preflight.json"
+            campaign_path.write_text(json.dumps(campaign_value) + "\n")
+            preflight_path.write_bytes(preflight_raw)
+            actual_tools = {
+                name: {**identity, "resolved_path": f"/tools/{name}"}
+                for name, identity in campaign_value["tool_identities"].items()
+            }
+            with (
+                mock.patch.object(MODULE, "_require_clean_repo", return_value="a" * 40),
+                mock.patch.object(MODULE, "_preflight_git_identities"),
+                mock.patch.object(MODULE, "_resolve_tools", return_value=actual_tools),
+            ):
+                report = MODULE.validate_campaign_environment(
+                    campaign_path=campaign_path,
+                    preflight_path=preflight_path,
+                    linux_repo=root,
+                )
+            self.assertTrue(report["valid"])
+            self.assertEqual(report["registered_sides"], 2)
+            self.assertEqual(report["builds_executed"], 0)
 
 
 if __name__ == "__main__":
