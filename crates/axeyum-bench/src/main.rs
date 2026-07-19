@@ -16,6 +16,7 @@
 //!   `[--refine-select first|smallest-dag|smallest-plan-dag|smallest-plan-greedy]`
 //!   `[--resource-limit N] [--node-budget N] [--cnf-var-budget N]`
 //!   `[--cnf-clause-budget N] [--require-deterministic-resources]`
+//!   `[--profile-bit-demand] [--profile-cnf-construction]`
 //!   `[--prove-unsat]`
 //!   `[--certify-end-to-end-unsat --end-to-end-deadline-ms N]`
 //!   `[--end-to-end-process-timeout-ms N]`
@@ -63,7 +64,7 @@ mod run {
 
     use crate::certificate_process::{IsolatedStatus, certify_file_isolated};
 
-    const ARTIFACT_VERSION: u32 = 34;
+    const ARTIFACT_VERSION: u32 = 35;
     const CORPUS_MANIFEST_VERSION: u64 = 1;
     const CONTENT_HASH_PREFIX: &str = "sha256:";
     const DETERMINISM_PROFILE: &str = "axeyum-bench-fixed-seeds-v1";
@@ -237,6 +238,7 @@ mod run {
         end_to_end_process_timeout_ms: Option<u64>,
         preprocess: bool,
         profile_bit_demand: bool,
+        profile_cnf_construction: bool,
         demand_bit_slicing: bool,
         range_demand_slicing: bool,
         range_demand_policy: RangeDemandPolicy,
@@ -284,6 +286,7 @@ mod run {
             end_to_end_process_timeout_ms: None,
             preprocess: false,
             profile_bit_demand: false,
+            profile_cnf_construction: false,
             demand_bit_slicing: false,
             range_demand_slicing: false,
             range_demand_policy: RangeDemandPolicy::default(),
@@ -415,6 +418,7 @@ mod run {
             }
             "--preprocess" => parsed.preprocess = true,
             "--profile-bit-demand" => parsed.profile_bit_demand = true,
+            "--profile-cnf-construction" => parsed.profile_cnf_construction = true,
             "--demand-bit-slicing" => parsed.demand_bit_slicing = true,
             "--range-demand-slicing" => parsed.range_demand_slicing = true,
             "--range-demand-min-term-bits" => {
@@ -514,6 +518,7 @@ mod run {
         args.next().ok_or(format!("missing value for {flag}"))
     }
 
+    #[allow(clippy::too_many_lines)] // Keep fail-closed option interactions in one audit table.
     fn validate_args(args: &Args) -> Result<(), String> {
         if args.generate_corpus_manifest.is_some() {
             if args.out.is_none() {
@@ -564,6 +569,9 @@ mod run {
         validate_end_to_end_certification(args)?;
         if args.profile_bit_demand && !matches!(args.backend, BackendKind::SatBv) {
             return Err("`--profile-bit-demand` requires `--backend sat-bv`".to_owned());
+        }
+        if args.profile_cnf_construction && !matches!(args.backend, BackendKind::SatBv) {
+            return Err("`--profile-cnf-construction` requires `--backend sat-bv`".to_owned());
         }
         if args.demand_bit_slicing && !matches!(args.backend, BackendKind::SatBv) {
             return Err("`--demand-bit-slicing` requires `--backend sat-bv`".to_owned());
@@ -810,6 +818,25 @@ mod run {
         cnf_clause_attempts: u64,
         cnf_tautological_clauses_skipped: u64,
         cnf_duplicate_clauses_skipped: u64,
+        cnf_construction_profile_complete: bool,
+        cnf_declared_clause_literals: u64,
+        cnf_visited_clause_literals: u64,
+        cnf_false_constants_dropped: u64,
+        cnf_repeated_literals_dropped: u64,
+        cnf_true_constant_tautologies: u64,
+        cnf_complementary_literal_tautologies: u64,
+        cnf_canonical_literals: u64,
+        cnf_canonical_empty_clauses: u64,
+        cnf_canonical_unit_clauses: u64,
+        cnf_canonical_binary_clauses: u64,
+        cnf_canonical_ternary_clauses: u64,
+        cnf_canonical_larger_clauses: u64,
+        cnf_primary_vacant_probes: u64,
+        cnf_primary_occupied_probes: u64,
+        cnf_primary_exact_duplicates: u64,
+        cnf_collision_bucket_comparisons: u64,
+        cnf_collision_exact_duplicates: u64,
+        cnf_collision_inserts: u64,
     }
 
     /// Original-query structural profile used to verify that an external `QF_BV`
@@ -1245,6 +1272,25 @@ mod run {
                 cnf_clause_attempts: layers.cnf_clause_attempts,
                 cnf_tautological_clauses_skipped: layers.cnf_tautological_clauses_skipped,
                 cnf_duplicate_clauses_skipped: layers.cnf_duplicate_clauses_skipped,
+                cnf_construction_profile_complete: layers.cnf_construction_profile_complete,
+                cnf_declared_clause_literals: layers.cnf_declared_clause_literals,
+                cnf_visited_clause_literals: layers.cnf_visited_clause_literals,
+                cnf_false_constants_dropped: layers.cnf_false_constants_dropped,
+                cnf_repeated_literals_dropped: layers.cnf_repeated_literals_dropped,
+                cnf_true_constant_tautologies: layers.cnf_true_constant_tautologies,
+                cnf_complementary_literal_tautologies: layers.cnf_complementary_literal_tautologies,
+                cnf_canonical_literals: layers.cnf_canonical_literals,
+                cnf_canonical_empty_clauses: layers.cnf_canonical_empty_clauses,
+                cnf_canonical_unit_clauses: layers.cnf_canonical_unit_clauses,
+                cnf_canonical_binary_clauses: layers.cnf_canonical_binary_clauses,
+                cnf_canonical_ternary_clauses: layers.cnf_canonical_ternary_clauses,
+                cnf_canonical_larger_clauses: layers.cnf_canonical_larger_clauses,
+                cnf_primary_vacant_probes: layers.cnf_primary_vacant_probes,
+                cnf_primary_occupied_probes: layers.cnf_primary_occupied_probes,
+                cnf_primary_exact_duplicates: layers.cnf_primary_exact_duplicates,
+                cnf_collision_bucket_comparisons: layers.cnf_collision_bucket_comparisons,
+                cnf_collision_exact_duplicates: layers.cnf_collision_exact_duplicates,
+                cnf_collision_inserts: layers.cnf_collision_inserts,
             }
         }
 
@@ -2798,6 +2844,7 @@ mod run {
         record
     }
 
+    #[allow(clippy::too_many_lines)] // Flat versioned artifact contract; keep partitions adjacent.
     fn construction_attribution_record(samples: &[LayerSample]) -> JsonValue {
         let count = |select: fn(&LayerSample) -> u64| {
             samples.iter().map(select).fold(0_u64, u64::saturating_add)
@@ -2808,6 +2855,23 @@ mod run {
         let aig_outcomes = count(LayerSample::aig_outcomes);
         let cnf_attempts = count(|sample| sample.cnf_clause_attempts);
         let cnf_clause_outcomes = count(LayerSample::cnf_clause_outcomes);
+        let profiled_instances = samples
+            .iter()
+            .filter(|sample| sample.cnf_construction_profile_complete)
+            .count();
+        let profile_complete = !samples.is_empty() && profiled_instances == samples.len();
+        let canonical_attempts = count(|sample| sample.cnf_canonical_empty_clauses)
+            .saturating_add(count(|sample| sample.cnf_canonical_unit_clauses))
+            .saturating_add(count(|sample| sample.cnf_canonical_binary_clauses))
+            .saturating_add(count(|sample| sample.cnf_canonical_ternary_clauses))
+            .saturating_add(count(|sample| sample.cnf_canonical_larger_clauses));
+        let non_tautological_attempts =
+            cnf_attempts.saturating_sub(count(|sample| sample.cnf_tautological_clauses_skipped));
+        let primary_vacant = count(|sample| sample.cnf_primary_vacant_probes);
+        let primary_occupied = count(|sample| sample.cnf_primary_occupied_probes);
+        let primary_duplicates = count(|sample| sample.cnf_primary_exact_duplicates);
+        let collision_duplicates = count(|sample| sample.cnf_collision_exact_duplicates);
+        let collision_inserts = count(|sample| sample.cnf_collision_inserts);
         json!({
             "cnf_subphases_are_nested_in_cnf_encode": true,
             "aig": {
@@ -2870,6 +2934,69 @@ mod run {
                 ),
                 "clauses_emitted": count(|sample| sample.cnf_clauses),
                 "clause_outcomes_partition_attempts": cnf_clause_outcomes == cnf_attempts,
+                "detailed_profile": {
+                    "profile_complete": profile_complete,
+                    "profiled_instances": profiled_instances,
+                    "instances": samples.len(),
+                    "declared_clause_literals": count(
+                        |sample| sample.cnf_declared_clause_literals,
+                    ),
+                    "visited_clause_literals": count(
+                        |sample| sample.cnf_visited_clause_literals,
+                    ),
+                    "false_constants_dropped": count(
+                        |sample| sample.cnf_false_constants_dropped,
+                    ),
+                    "repeated_literals_dropped": count(
+                        |sample| sample.cnf_repeated_literals_dropped,
+                    ),
+                    "tautologies": {
+                        "true_constant": count(
+                            |sample| sample.cnf_true_constant_tautologies,
+                        ),
+                        "complementary_literal": count(
+                            |sample| sample.cnf_complementary_literal_tautologies,
+                        ),
+                    },
+                    "canonical_literals": count(|sample| sample.cnf_canonical_literals),
+                    "canonical_clause_lengths": {
+                        "empty": count(|sample| sample.cnf_canonical_empty_clauses),
+                        "unit": count(|sample| sample.cnf_canonical_unit_clauses),
+                        "binary": count(|sample| sample.cnf_canonical_binary_clauses),
+                        "ternary": count(|sample| sample.cnf_canonical_ternary_clauses),
+                        "larger": count(|sample| sample.cnf_canonical_larger_clauses),
+                    },
+                    "primary_vacant_probes": primary_vacant,
+                    "primary_occupied_probes": primary_occupied,
+                    "primary_exact_duplicates": primary_duplicates,
+                    "collision_bucket_comparisons": count(
+                        |sample| sample.cnf_collision_bucket_comparisons,
+                    ),
+                    "collision_exact_duplicates": collision_duplicates,
+                    "collision_inserts": collision_inserts,
+                    "invariants": {
+                        "non_tautological_attempts_equal_length_buckets":
+                            non_tautological_attempts == canonical_attempts,
+                        "non_tautological_attempts_equal_primary_probes":
+                            non_tautological_attempts
+                                == primary_vacant.saturating_add(primary_occupied),
+                        "occupied_probes_partition": primary_occupied
+                            == primary_duplicates
+                                .saturating_add(collision_duplicates)
+                                .saturating_add(collision_inserts),
+                        "duplicates_partition": count(
+                            |sample| sample.cnf_duplicate_clauses_skipped,
+                        ) == primary_duplicates.saturating_add(collision_duplicates),
+                        "emitted_partition": count(|sample| sample.cnf_clauses)
+                            == primary_vacant.saturating_add(collision_inserts),
+                        "tautologies_partition": count(
+                            |sample| sample.cnf_tautological_clauses_skipped,
+                        ) == count(|sample| sample.cnf_true_constant_tautologies)
+                            .saturating_add(count(
+                                |sample| sample.cnf_complementary_literal_tautologies,
+                            )),
+                    },
+                },
             },
         })
     }
@@ -3261,6 +3388,66 @@ mod run {
         })
     }
 
+    fn instance_cnf_construction_profile_record(sample: &LayerSample) -> JsonValue {
+        let non_tautological = sample
+            .cnf_clause_attempts
+            .saturating_sub(sample.cnf_tautological_clauses_skipped);
+        let canonical_attempts = sample
+            .cnf_canonical_empty_clauses
+            .saturating_add(sample.cnf_canonical_unit_clauses)
+            .saturating_add(sample.cnf_canonical_binary_clauses)
+            .saturating_add(sample.cnf_canonical_ternary_clauses)
+            .saturating_add(sample.cnf_canonical_larger_clauses);
+        let duplicate_outcomes = sample
+            .cnf_primary_exact_duplicates
+            .saturating_add(sample.cnf_collision_exact_duplicates);
+        json!({
+            "profile_complete": sample.cnf_construction_profile_complete,
+            "declared_clause_literals": sample.cnf_declared_clause_literals,
+            "visited_clause_literals": sample.cnf_visited_clause_literals,
+            "false_constants_dropped": sample.cnf_false_constants_dropped,
+            "repeated_literals_dropped": sample.cnf_repeated_literals_dropped,
+            "tautologies": {
+                "true_constant": sample.cnf_true_constant_tautologies,
+                "complementary_literal": sample.cnf_complementary_literal_tautologies,
+            },
+            "canonical_literals": sample.cnf_canonical_literals,
+            "canonical_clause_lengths": {
+                "empty": sample.cnf_canonical_empty_clauses,
+                "unit": sample.cnf_canonical_unit_clauses,
+                "binary": sample.cnf_canonical_binary_clauses,
+                "ternary": sample.cnf_canonical_ternary_clauses,
+                "larger": sample.cnf_canonical_larger_clauses,
+            },
+            "primary_vacant_probes": sample.cnf_primary_vacant_probes,
+            "primary_occupied_probes": sample.cnf_primary_occupied_probes,
+            "primary_exact_duplicates": sample.cnf_primary_exact_duplicates,
+            "collision_bucket_comparisons": sample.cnf_collision_bucket_comparisons,
+            "collision_exact_duplicates": sample.cnf_collision_exact_duplicates,
+            "collision_inserts": sample.cnf_collision_inserts,
+            "invariants": {
+                "non_tautological_attempts_equal_length_buckets":
+                    non_tautological == canonical_attempts,
+                "non_tautological_attempts_equal_primary_probes": non_tautological
+                    == sample
+                        .cnf_primary_vacant_probes
+                        .saturating_add(sample.cnf_primary_occupied_probes),
+                "occupied_probes_partition": sample.cnf_primary_occupied_probes
+                    == duplicate_outcomes.saturating_add(sample.cnf_collision_inserts),
+                "duplicates_partition": sample.cnf_duplicate_clauses_skipped
+                    == duplicate_outcomes,
+                "emitted_partition": sample.cnf_clauses
+                    == sample
+                        .cnf_primary_vacant_probes
+                        .saturating_add(sample.cnf_collision_inserts),
+                "tautologies_partition": sample.cnf_tautological_clauses_skipped
+                    == sample
+                        .cnf_true_constant_tautologies
+                        .saturating_add(sample.cnf_complementary_literal_tautologies),
+            },
+        })
+    }
+
     fn instance_layer_record(record: &SolveRecord, word_preprocess: Duration) -> JsonValue {
         let Some(layers) = BvLayerStats::from_solve_stats(&record.stats) else {
             return JsonValue::Null;
@@ -3314,6 +3501,7 @@ mod run {
                     "clauses_emitted": layers.cnf_clauses,
                     "clause_outcomes_partition_attempts":
                         sample.cnf_clause_outcomes() == sample.cnf_clause_attempts,
+                    "detailed_profile": instance_cnf_construction_profile_record(&sample),
                 },
             },
             "bit_demand": instance_bit_demand_record(&sample),
@@ -3860,6 +4048,7 @@ mod run {
             native_cdcl: args.native_cdcl,
             prove_unsat: args.prove_unsat,
             profile_bit_demand: args.profile_bit_demand,
+            profile_cnf_construction: args.profile_cnf_construction,
             demand_bit_slicing: args.demand_bit_slicing,
             range_demand_slicing: args
                 .range_demand_slicing
@@ -5687,6 +5876,10 @@ mod run {
                 "end_to_end_process_timeout_ms".to_owned(),
                 json!(args.end_to_end_process_timeout_ms),
             );
+            fields.insert(
+                "profile_cnf_construction".to_owned(),
+                json!(args.profile_cnf_construction),
+            );
         }
         record
     }
@@ -6436,6 +6629,7 @@ mod run {
         fingerprint_end_to_end_config(&mut hash, args);
         update_hash(&mut hash, &[u8::from(args.preprocess)]);
         update_hash(&mut hash, &[u8::from(args.profile_bit_demand)]);
+        update_hash(&mut hash, &[u8::from(args.profile_cnf_construction)]);
         update_hash(&mut hash, &[u8::from(args.demand_bit_slicing)]);
         update_hash(&mut hash, &[u8::from(args.range_demand_slicing)]);
         if args.range_demand_slicing {
@@ -7622,6 +7816,60 @@ mod run {
             assert_eq!(
                 record["cnf"]["clause_outcomes_partition_attempts"],
                 json!(true)
+            );
+            assert_eq!(
+                record["cnf"]["detailed_profile"]["profile_complete"],
+                json!(false)
+            );
+        }
+
+        #[test]
+        fn detailed_cnf_construction_profile_preserves_exact_invariants() {
+            let sample = LayerSample {
+                cnf_clauses: 3,
+                cnf_clause_attempts: 7,
+                cnf_tautological_clauses_skipped: 2,
+                cnf_duplicate_clauses_skipped: 2,
+                cnf_construction_profile_complete: true,
+                cnf_declared_clause_literals: 21,
+                cnf_visited_clause_literals: 18,
+                cnf_false_constants_dropped: 2,
+                cnf_repeated_literals_dropped: 1,
+                cnf_true_constant_tautologies: 1,
+                cnf_complementary_literal_tautologies: 1,
+                cnf_canonical_literals: 9,
+                cnf_canonical_unit_clauses: 2,
+                cnf_canonical_binary_clauses: 2,
+                cnf_canonical_ternary_clauses: 1,
+                cnf_primary_vacant_probes: 2,
+                cnf_primary_occupied_probes: 3,
+                cnf_primary_exact_duplicates: 1,
+                cnf_collision_bucket_comparisons: 2,
+                cnf_collision_exact_duplicates: 1,
+                cnf_collision_inserts: 1,
+                ..LayerSample::default()
+            };
+            let aggregate = construction_attribution_record(&[sample]);
+            let profile = &aggregate["cnf"]["detailed_profile"];
+            assert_eq!(profile["profile_complete"], json!(true));
+            assert_eq!(profile["declared_clause_literals"], json!(21));
+            assert_eq!(profile["canonical_literals"], json!(9));
+            assert!(
+                profile["invariants"]
+                    .as_object()
+                    .unwrap()
+                    .values()
+                    .all(|value| value == &json!(true))
+            );
+
+            let instance = instance_cnf_construction_profile_record(&sample);
+            assert_eq!(instance["profile_complete"], json!(true));
+            assert!(
+                instance["invariants"]
+                    .as_object()
+                    .unwrap()
+                    .values()
+                    .all(|value| value == &json!(true))
             );
         }
 

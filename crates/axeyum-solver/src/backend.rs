@@ -189,6 +189,13 @@ pub struct SolverConfig {
     /// formulas. It never changes the circuit or verdict and is off by default;
     /// enable it only for relevant-bit diagnostics (ADR-0143).
     pub profile_bit_demand: bool,
+    /// Collects detailed AIG-to-CNF literal-canonicalization and clause-index
+    /// attribution on the cold SAT-BV path.
+    ///
+    /// This selects a separately monomorphized encoder; the ordinary encoder
+    /// has no profiling storage or counter updates. It never changes the CNF or
+    /// verdict and is off by default (ADR-0259).
+    pub profile_cnf_construction: bool,
     /// Enables demand-driven cold-path bit lowering for the structurally local
     /// operator subset defined by ADR-0157.
     ///
@@ -284,6 +291,7 @@ impl Default for SolverConfig {
             cnf_vivify: false,
             preprocess: true,
             profile_bit_demand: false,
+            profile_cnf_construction: false,
             demand_bit_slicing: false,
             range_demand_slicing: None,
             incremental_positive_and_flattening: false,
@@ -382,6 +390,14 @@ impl SolverConfig {
     #[must_use]
     pub fn with_bit_demand_profile(mut self, profile: bool) -> Self {
         self.profile_bit_demand = profile;
+        self
+    }
+
+    /// Enables detailed cold CNF construction attribution.
+    /// See [`SolverConfig::profile_cnf_construction`].
+    #[must_use]
+    pub fn with_cnf_construction_profile(mut self, profile: bool) -> Self {
+        self.profile_cnf_construction = profile;
         self
     }
 

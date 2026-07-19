@@ -56,6 +56,33 @@ class GlaurungBenchmarkRecipeTests(unittest.TestCase):
         self.assertNotIn("--families", whole)
         self.assertIn("--families register-slice", register)
 
+    def test_cnf_construction_profile_is_raw_and_diagnostic_only(self) -> None:
+        output = dry_run(
+            "bench-glaurung-qfbv-raw-cnf-construction-profile",
+            "corpus",
+            "manifest",
+        )
+        self.assertIn("--backend sat-bv", output)
+        self.assertIn("--rewrite off", output)
+        self.assertIn("--profile-cnf-construction", output)
+        self.assertIn("--require-in-process-z3", output)
+        self.assertIn("--require-reproducible-run", output)
+        self.assertIn("--require-deterministic-resources", output)
+        self.assertIn("--min-decided-percent 100", output)
+        self.assertNotIn("--preprocess", output)
+        self.assertNotIn("--profile-bit-demand", output)
+
+        analysis = dry_run(
+            "analyze-glaurung-qfbv-raw-cnf-construction-profile",
+            "artifact.json",
+        )
+        self.assertIn("analyze-cnf-construction-profile.py", analysis)
+        self.assertIn("--expected-files 162", analysis)
+        self.assertIn("--expected-sat 88", analysis)
+        self.assertIn("--expected-unsat 74", analysis)
+        self.assertIn("--expected-family arithmetic=36", analysis)
+        self.assertIn("--expected-family slice-partial=54", analysis)
+
     def test_proof_companions_preserve_the_word_policy(self) -> None:
         self.assert_policy("bench-glaurung-qfbv-raw-proof-check", "raw")
         self.assert_policy("bench-glaurung-qfbv-canonical-proof-check", "canonical")

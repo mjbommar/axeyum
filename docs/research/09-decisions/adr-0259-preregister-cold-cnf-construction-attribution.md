@@ -3,8 +3,8 @@
 Status: accepted
 Date: 2026-07-19
 
-Result state: measurement protocol preregistered; telemetry not implemented or
-observed on the real corpus
+Result state: measurement protocol and artifact-v35 telemetry implemented;
+not yet observed on the real corpus
 
 ## Context
 
@@ -73,6 +73,34 @@ Timing from the profiled process is diagnostic only. Preserve exact aggregate
 and per-family counters and every invariant. Select no optimization in this ADR;
 use the result to preregister one isolated follow-on or to close the lane if no
 material category is exposed.
+
+## Implementation boundary
+
+The implementation preserves two distinct monomorphs. The ordinary encoder
+uses a zero-sized `DisabledConstructionProfile`; its forced-inline no-op methods
+and counter storage disappear at the hot call sites. The opt-in encoder carries
+`CnfConstructionProfile` and is selected only by
+`tseitin_encode_profiled`/`SolverConfig::profile_cnf_construction`.
+
+Artifact v35 binds `--profile-cnf-construction` into configuration identity and
+publishes every counter and invariant both per instance and in the corpus
+aggregate. `scripts/analyze-cnf-construction-profile.py` independently re-sums
+the instance rows, rejects any failed invariant or incomplete verdict/oracle/
+replay population, and emits exact per-family partitions. The paired Just
+recipes pin the 162-query population and all six expected family counts.
+
+Pre-observation gates pass:
+
+- all 302 `axeyum-cnf` library tests;
+- all 880 `axeyum-solver` library tests;
+- all 42 `axeyum-bench` binary tests;
+- strict all-target/all-feature Clippy for those three crates; and
+- all four analyzer positive/fail-closed tests.
+
+No corrected-wide-v3 profile was read or run while implementing this boundary.
+The next action is one clean detached release process from the implementation
+commit, followed by the fixed analyzer. Timing remains diagnostic and this ADR
+still selects no optimization.
 
 ## Consequences
 

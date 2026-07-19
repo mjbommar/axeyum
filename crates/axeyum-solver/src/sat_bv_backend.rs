@@ -24,13 +24,13 @@ use axeyum_bv::{
     lower_terms_with_deadline, lower_terms_with_deadline_profiled,
 };
 use axeyum_cnf::{
-    BveOptions, CnfAssignment, CnfEncoding, CnfError, CnfFormula, CompactMap,
-    DEFAULT_PROOF_SAT_CONFLICT_LIMIT, ProofSolveOutcome, Reconstruction, SatError, SatProofStatus,
-    SatResult, SatUnknownReason, SatUnsatEvidence, VivifyOptions, XorCdclResult, XorPropagation,
-    check_drat, compact, eliminate_variables_within, extract_xors, simplify_within,
+    BveOptions, CnfAssignment, CnfConstructionProfile, CnfEncoding, CnfError, CnfFormula,
+    CompactMap, DEFAULT_PROOF_SAT_CONFLICT_LIMIT, ProofSolveOutcome, Reconstruction, SatError,
+    SatProofStatus, SatResult, SatUnknownReason, SatUnsatEvidence, VivifyOptions, XorCdclResult,
+    XorPropagation, check_drat, compact, eliminate_variables_within, extract_xors, simplify_within,
     solve_with_drat_proof, solve_with_drat_proof_with_limits, solve_with_rustsat_batsat_limits,
-    solve_with_xor_cdcl, tseitin_encode, vivify_within, write_drat, xor_gauss_drat_refutation,
-    xor_propagate,
+    solve_with_xor_cdcl, tseitin_encode, tseitin_encode_profiled, vivify_within, write_drat,
+    xor_gauss_drat_refutation, xor_propagate,
 };
 use axeyum_ir::{
     Assignment, IrError, Sort, SortId, TermArena, TermId, TermStats, Value, eval,
@@ -156,8 +156,19 @@ impl SatBvBackend {
             .map(|root| root.bits()[0])
             .collect::<Vec<_>>();
         let cnf_start = Instant::now();
-        let encoding =
-            tseitin_encode(lowering.aig(), &roots).map_err(|error| map_cnf_error(&error))?;
+        let encoding = if config.profile_cnf_construction {
+            tseitin_encode_profiled(lowering.aig(), &roots)
+        } else {
+            tseitin_encode(lowering.aig(), &roots)
+        }
+        .map_err(|error| map_cnf_error(&error))?;
+        if config.profile_cnf_construction
+            && !encoding.stats().construction_profile_invariants_hold()
+        {
+            return Err(SolverError::Backend(
+                "cold CNF construction profile violated an accounting invariant".to_owned(),
+            ));
+        }
         let cnf_encode = cnf_start.elapsed();
         stats.translate = bit_blast + cnf_encode;
         push_duration_ms(&mut stats, "bit_blast_ms", bit_blast);
@@ -396,6 +407,97 @@ fn record_encoding_stats(stats: &mut SolveStats, lowering: &BitLowering, encodin
         cnf.duplicate_clauses_skipped,
     );
     push_count(stats, "cnf_clauses_emitted", cnf.clauses_emitted);
+    record_cnf_construction_profile(stats, cnf.construction_profile);
+}
+
+fn record_cnf_construction_profile(stats: &mut SolveStats, profile: CnfConstructionProfile) {
+    push_count(
+        stats,
+        "cnf_construction_profile_complete",
+        u64::from(profile.profile_complete),
+    );
+    push_count(
+        stats,
+        "cnf_declared_clause_literals",
+        profile.declared_clause_literals,
+    );
+    push_count(
+        stats,
+        "cnf_visited_clause_literals",
+        profile.visited_clause_literals,
+    );
+    push_count(
+        stats,
+        "cnf_false_constants_dropped",
+        profile.false_constants_dropped,
+    );
+    push_count(
+        stats,
+        "cnf_repeated_literals_dropped",
+        profile.repeated_literals_dropped,
+    );
+    push_count(
+        stats,
+        "cnf_true_constant_tautologies",
+        profile.true_constant_tautologies,
+    );
+    push_count(
+        stats,
+        "cnf_complementary_literal_tautologies",
+        profile.complementary_literal_tautologies,
+    );
+    push_count(stats, "cnf_canonical_literals", profile.canonical_literals);
+    push_count(
+        stats,
+        "cnf_canonical_empty_clauses",
+        profile.canonical_empty_clauses,
+    );
+    push_count(
+        stats,
+        "cnf_canonical_unit_clauses",
+        profile.canonical_unit_clauses,
+    );
+    push_count(
+        stats,
+        "cnf_canonical_binary_clauses",
+        profile.canonical_binary_clauses,
+    );
+    push_count(
+        stats,
+        "cnf_canonical_ternary_clauses",
+        profile.canonical_ternary_clauses,
+    );
+    push_count(
+        stats,
+        "cnf_canonical_larger_clauses",
+        profile.canonical_larger_clauses,
+    );
+    push_count(
+        stats,
+        "cnf_primary_vacant_probes",
+        profile.primary_vacant_probes,
+    );
+    push_count(
+        stats,
+        "cnf_primary_occupied_probes",
+        profile.primary_occupied_probes,
+    );
+    push_count(
+        stats,
+        "cnf_primary_exact_duplicates",
+        profile.primary_exact_duplicates,
+    );
+    push_count(
+        stats,
+        "cnf_collision_bucket_comparisons",
+        profile.collision_bucket_comparisons,
+    );
+    push_count(
+        stats,
+        "cnf_collision_exact_duplicates",
+        profile.collision_exact_duplicates,
+    );
+    push_count(stats, "cnf_collision_inserts", profile.collision_inserts);
 }
 
 /// A Tseitin formula after CNF inprocessing, plus the maps that lift a model of
@@ -1504,6 +1606,52 @@ mod tests {
             .iter()
             .find(|(n, _)| n == name)
             .map(|(_, v)| *v)
+    }
+
+    #[test]
+    fn cold_cnf_construction_profile_is_opt_in_and_partitioned() {
+        let mut arena = TermArena::new();
+        let p = arena.bool_var("p").unwrap();
+
+        let mut ordinary_backend = SatBvBackend::new();
+        let ordinary = ordinary_backend
+            .check(&arena, &[p], &SolverConfig::default())
+            .unwrap();
+        assert!(matches!(ordinary, CheckResult::Sat(_)));
+        let ordinary_layers =
+            crate::layers::BvLayerStats::from_solve_stats(ordinary_backend.last_stats().unwrap())
+                .unwrap();
+        assert!(!ordinary_layers.cnf_construction_profile_complete);
+        assert_eq!(ordinary_layers.cnf_declared_clause_literals, 0);
+        assert_eq!(ordinary_layers.cnf_primary_vacant_probes, 0);
+
+        let mut profiled_backend = SatBvBackend::new();
+        let profiled = profiled_backend
+            .check(
+                &arena,
+                &[p],
+                &SolverConfig::default().with_cnf_construction_profile(true),
+            )
+            .unwrap();
+        assert!(matches!(profiled, CheckResult::Sat(_)));
+        let layers =
+            crate::layers::BvLayerStats::from_solve_stats(profiled_backend.last_stats().unwrap())
+                .unwrap();
+        assert!(layers.cnf_construction_profile_complete);
+        assert_eq!(layers.cnf_declared_clause_literals, 1);
+        assert_eq!(layers.cnf_visited_clause_literals, 1);
+        assert_eq!(
+            layers.cnf_clause_attempts - layers.cnf_tautological_clauses_skipped,
+            layers.cnf_canonical_empty_clauses
+                + layers.cnf_canonical_unit_clauses
+                + layers.cnf_canonical_binary_clauses
+                + layers.cnf_canonical_ternary_clauses
+                + layers.cnf_canonical_larger_clauses
+        );
+        assert_eq!(
+            layers.cnf_clauses,
+            layers.cnf_primary_vacant_probes + layers.cnf_collision_inserts
+        );
     }
 
     #[test]

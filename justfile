@@ -156,6 +156,16 @@ bench-glaurung-qfbv-canonical-demand-profile corpus_dir manifest tier="represent
     mkdir -p "$(dirname '{{ out }}')"
     cargo run --release -p axeyum-bench --features z3 -- "{{ corpus_dir }}" --corpus-manifest "{{ manifest }}" --corpus-tier "{{ tier }}" --backend sat-bv --rewrite default --profile-bit-demand --compare-z3 --require-in-process-z3 --require-reproducible-run --require-deterministic-resources --timeout-ms 10000 --resource-limit 2000000 --node-budget 300000 --cnf-var-budget 3000000 --cnf-clause-budget 8000000 --jobs 1 --min-decided-percent 100 --logic QF_BV --out "{{ out }}"
 
+# ADR-0259's diagnostic-only cold CNF construction profile. This is a separate
+# monomorphized encoder and must not be used as a client timing baseline.
+bench-glaurung-qfbv-raw-cnf-construction-profile corpus_dir manifest tier="representative" out="bench-results/glaurung-qfbv-raw-cnf-construction-profile.json":
+    mkdir -p "$(dirname '{{ out }}')"
+    cargo run --release -p axeyum-bench --features z3 -- "{{ corpus_dir }}" --corpus-manifest "{{ manifest }}" --corpus-tier "{{ tier }}" --backend sat-bv --rewrite off --profile-cnf-construction --compare-z3 --require-in-process-z3 --require-reproducible-run --require-deterministic-resources --timeout-ms 10000 --resource-limit 2000000 --node-budget 300000 --cnf-var-budget 3000000 --cnf-clause-budget 8000000 --jobs 1 --min-decided-percent 100 --logic QF_BV --out "{{ out }}"
+
+analyze-glaurung-qfbv-raw-cnf-construction-profile artifact out="bench-results/glaurung-qfbv-raw-cnf-construction-profile-analysis.json":
+    mkdir -p "$(dirname '{{ out }}')"
+    python3 scripts/analyze-cnf-construction-profile.py "{{ artifact }}" --expected-files 162 --expected-sat 88 --expected-unsat 74 --expected-manifest-sha256 7818686bc26c56646775eb2f557e1e4edb36e4e8254a8c410fe0333da1ba2064 --expected-family arithmetic=36 --expected-family comparison=12 --expected-family mixed=7 --expected-family register-slice=52 --expected-family slice-partial=54 --expected-family trivial=1 --out "{{ out }}"
+
 # GQ4's production experiment is a distinct policy from observational demand
 # profiling. The first recipe measures the whole selected tier; the second
 # isolates the capture's dominant register-slice family.

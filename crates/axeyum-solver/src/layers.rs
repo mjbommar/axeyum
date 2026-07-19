@@ -114,6 +114,44 @@ pub struct BvLayerStats {
     pub cnf_tautological_clauses_skipped: u64,
     /// Duplicate canonical clauses skipped.
     pub cnf_duplicate_clauses_skipped: u64,
+    /// Whether detailed CNF construction attribution is complete.
+    pub cnf_construction_profile_complete: bool,
+    /// Literals declared by clause-emission attempts.
+    pub cnf_declared_clause_literals: u64,
+    /// Literals visited before canonicalization returned or completed.
+    pub cnf_visited_clause_literals: u64,
+    /// Constant-false literals discarded.
+    pub cnf_false_constants_dropped: u64,
+    /// Repeated concrete literals discarded.
+    pub cnf_repeated_literals_dropped: u64,
+    /// Tautologies caused by constant-true literals.
+    pub cnf_true_constant_tautologies: u64,
+    /// Tautologies caused by complementary literals.
+    pub cnf_complementary_literal_tautologies: u64,
+    /// Literals across canonical non-tautological attempts.
+    pub cnf_canonical_literals: u64,
+    /// Canonical empty-clause attempts.
+    pub cnf_canonical_empty_clauses: u64,
+    /// Canonical unit-clause attempts.
+    pub cnf_canonical_unit_clauses: u64,
+    /// Canonical binary-clause attempts.
+    pub cnf_canonical_binary_clauses: u64,
+    /// Canonical ternary-clause attempts.
+    pub cnf_canonical_ternary_clauses: u64,
+    /// Canonical attempts containing four or more literals.
+    pub cnf_canonical_larger_clauses: u64,
+    /// Vacant primary fingerprint probes.
+    pub cnf_primary_vacant_probes: u64,
+    /// Occupied primary fingerprint probes.
+    pub cnf_primary_occupied_probes: u64,
+    /// Exact duplicates found in primary slots.
+    pub cnf_primary_exact_duplicates: u64,
+    /// Exact comparisons against collision-bucket entries.
+    pub cnf_collision_bucket_comparisons: u64,
+    /// Exact duplicates found in collision buckets.
+    pub cnf_collision_exact_duplicates: u64,
+    /// Distinct equal-fingerprint clauses inserted into collision buckets.
+    pub cnf_collision_inserts: u64,
 }
 
 impl BvLayerStats {
@@ -122,6 +160,7 @@ impl BvLayerStats {
     /// Returns `None` when `stats` was not produced by the `sat-bv` backend
     /// (its identifying counters, `aig_nodes` and `cnf_variables`, are absent),
     /// so this never silently fabricates numbers for another backend.
+    #[allow(clippy::too_many_lines)] // Flat typed telemetry contract; keep keys adjacent.
     pub fn from_solve_stats(stats: &SolveStats) -> Option<Self> {
         let aig_nodes = lookup(stats, "aig_nodes")?;
         let cnf_variables = lookup(stats, "cnf_variables")?;
@@ -195,6 +234,45 @@ impl BvLayerStats {
                 .map_or(0, count_to_u64),
             cnf_duplicate_clauses_skipped: lookup(stats, "cnf_duplicate_clauses_skipped")
                 .map_or(0, count_to_u64),
+            cnf_construction_profile_complete: lookup(stats, "cnf_construction_profile_complete")
+                .is_some_and(|value| value >= 1.0),
+            cnf_declared_clause_literals: lookup(stats, "cnf_declared_clause_literals")
+                .map_or(0, count_to_u64),
+            cnf_visited_clause_literals: lookup(stats, "cnf_visited_clause_literals")
+                .map_or(0, count_to_u64),
+            cnf_false_constants_dropped: lookup(stats, "cnf_false_constants_dropped")
+                .map_or(0, count_to_u64),
+            cnf_repeated_literals_dropped: lookup(stats, "cnf_repeated_literals_dropped")
+                .map_or(0, count_to_u64),
+            cnf_true_constant_tautologies: lookup(stats, "cnf_true_constant_tautologies")
+                .map_or(0, count_to_u64),
+            cnf_complementary_literal_tautologies: lookup(
+                stats,
+                "cnf_complementary_literal_tautologies",
+            )
+            .map_or(0, count_to_u64),
+            cnf_canonical_literals: lookup(stats, "cnf_canonical_literals").map_or(0, count_to_u64),
+            cnf_canonical_empty_clauses: lookup(stats, "cnf_canonical_empty_clauses")
+                .map_or(0, count_to_u64),
+            cnf_canonical_unit_clauses: lookup(stats, "cnf_canonical_unit_clauses")
+                .map_or(0, count_to_u64),
+            cnf_canonical_binary_clauses: lookup(stats, "cnf_canonical_binary_clauses")
+                .map_or(0, count_to_u64),
+            cnf_canonical_ternary_clauses: lookup(stats, "cnf_canonical_ternary_clauses")
+                .map_or(0, count_to_u64),
+            cnf_canonical_larger_clauses: lookup(stats, "cnf_canonical_larger_clauses")
+                .map_or(0, count_to_u64),
+            cnf_primary_vacant_probes: lookup(stats, "cnf_primary_vacant_probes")
+                .map_or(0, count_to_u64),
+            cnf_primary_occupied_probes: lookup(stats, "cnf_primary_occupied_probes")
+                .map_or(0, count_to_u64),
+            cnf_primary_exact_duplicates: lookup(stats, "cnf_primary_exact_duplicates")
+                .map_or(0, count_to_u64),
+            cnf_collision_bucket_comparisons: lookup(stats, "cnf_collision_bucket_comparisons")
+                .map_or(0, count_to_u64),
+            cnf_collision_exact_duplicates: lookup(stats, "cnf_collision_exact_duplicates")
+                .map_or(0, count_to_u64),
+            cnf_collision_inserts: lookup(stats, "cnf_collision_inserts").map_or(0, count_to_u64),
         })
     }
 

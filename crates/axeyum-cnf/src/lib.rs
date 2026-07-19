@@ -1972,6 +1972,54 @@ impl EncodedLit {
     }
 }
 
+/// Opt-in attribution for literal canonicalization and clause-index work.
+///
+/// The ordinary [`tseitin_encode`] route returns the all-zero, incomplete
+/// value. [`tseitin_encode_profiled`] selects a separate monomorphized encoder
+/// whose profiling storage and counter updates do not exist on the ordinary
+/// route.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct CnfConstructionProfile {
+    /// Whether every detailed construction counter was collected.
+    pub profile_complete: bool,
+    /// Literals declared by all clause-emission attempts.
+    pub declared_clause_literals: u64,
+    /// Literals visited before canonicalization returned or completed.
+    pub visited_clause_literals: u64,
+    /// Constant-false literals discarded from clauses.
+    pub false_constants_dropped: u64,
+    /// Repeated literals discarded from clauses.
+    pub repeated_literals_dropped: u64,
+    /// Tautologies detected from a constant-true literal.
+    pub true_constant_tautologies: u64,
+    /// Tautologies detected from complementary concrete literals.
+    pub complementary_literal_tautologies: u64,
+    /// Total literals in canonical non-tautological clause attempts.
+    pub canonical_literals: u64,
+    /// Canonical empty-clause attempts.
+    pub canonical_empty_clauses: u64,
+    /// Canonical unit-clause attempts.
+    pub canonical_unit_clauses: u64,
+    /// Canonical binary-clause attempts.
+    pub canonical_binary_clauses: u64,
+    /// Canonical ternary-clause attempts.
+    pub canonical_ternary_clauses: u64,
+    /// Canonical attempts containing four or more literals.
+    pub canonical_larger_clauses: u64,
+    /// Fingerprint lookups whose primary slot was vacant.
+    pub primary_vacant_probes: u64,
+    /// Fingerprint lookups whose primary slot was occupied.
+    pub primary_occupied_probes: u64,
+    /// Duplicates equal to the primary clause for their fingerprint.
+    pub primary_exact_duplicates: u64,
+    /// Exact clause comparisons against collision-bucket entries.
+    pub collision_bucket_comparisons: u64,
+    /// Duplicates found in a collision bucket.
+    pub collision_exact_duplicates: u64,
+    /// Distinct clauses inserted behind an occupied equal-fingerprint slot.
+    pub collision_inserts: u64,
+}
+
 /// Diagnostics for one AIG-to-CNF encoding.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct CnfEncodingStats {
@@ -2008,6 +2056,51 @@ pub struct CnfEncodingStats {
     pub duplicate_clauses_skipped: u64,
     /// Clauses retained in the final formula.
     pub clauses_emitted: u64,
+    /// Opt-in literal-canonicalization and clause-index attribution.
+    pub construction_profile: CnfConstructionProfile,
+}
+
+impl CnfEncodingStats {
+    /// Checks every ADR-0259 construction-profile partition.
+    ///
+    /// Returns `false` when detailed profiling was not selected.
+    pub fn construction_profile_invariants_hold(&self) -> bool {
+        let profile = self.construction_profile;
+        if !profile.profile_complete {
+            return false;
+        }
+        let non_tautological = self
+            .clause_attempts
+            .saturating_sub(self.tautological_clauses_skipped);
+        let canonical_attempts = profile
+            .canonical_empty_clauses
+            .saturating_add(profile.canonical_unit_clauses)
+            .saturating_add(profile.canonical_binary_clauses)
+            .saturating_add(profile.canonical_ternary_clauses)
+            .saturating_add(profile.canonical_larger_clauses);
+        let index_attempts = profile
+            .primary_vacant_probes
+            .saturating_add(profile.primary_occupied_probes);
+        let occupied_outcomes = profile
+            .primary_exact_duplicates
+            .saturating_add(profile.collision_exact_duplicates)
+            .saturating_add(profile.collision_inserts);
+        let duplicate_outcomes = profile
+            .primary_exact_duplicates
+            .saturating_add(profile.collision_exact_duplicates);
+        let emitted_outcomes = profile
+            .primary_vacant_probes
+            .saturating_add(profile.collision_inserts);
+        let tautology_outcomes = profile
+            .true_constant_tautologies
+            .saturating_add(profile.complementary_literal_tautologies);
+        non_tautological == canonical_attempts
+            && non_tautological == index_attempts
+            && profile.primary_occupied_probes == occupied_outcomes
+            && self.duplicate_clauses_skipped == duplicate_outcomes
+            && self.clauses_emitted == emitted_outcomes
+            && self.tautological_clauses_skipped == tautology_outcomes
+    }
 }
 
 /// Result of Tseitin encoding AIG roots.
@@ -2120,6 +2213,20 @@ impl CnfEncoding {
 /// Returns [`CnfError`] if the AIG graph is internally inconsistent.
 pub fn tseitin_encode(aig: &Aig, roots: &[AigLit]) -> Result<CnfEncoding, CnfError> {
     let encoder = TseitinEncoder::new(aig);
+    encoder.encode(roots)
+}
+
+/// Encodes AIG roots into CNF while collecting detailed construction work.
+///
+/// This selects a separately monomorphized encoder. The generated formula,
+/// roots, and lift map have the same semantics and deterministic order as
+/// [`tseitin_encode`].
+///
+/// # Errors
+///
+/// Returns [`CnfError`] if the AIG graph is internally inconsistent.
+pub fn tseitin_encode_profiled(aig: &Aig, roots: &[AigLit]) -> Result<CnfEncoding, CnfError> {
+    let encoder = TseitinEncoder::<EnabledConstructionProfile>::new_profiled(aig);
     encoder.encode(roots)
 }
 
@@ -2305,7 +2412,160 @@ impl core::fmt::Display for CnfError {
 
 impl core::error::Error for CnfError {}
 
-struct TseitinEncoder<'a> {
+// The disabled implementation is a zero-sized production type. Forced
+// inlining makes its no-op calls disappear at the monomorphized hot sites.
+#[allow(clippy::inline_always)]
+trait ConstructionProfiler: Default {
+    #[inline(always)]
+    fn snapshot(&self) -> CnfConstructionProfile {
+        CnfConstructionProfile::default()
+    }
+
+    #[inline(always)]
+    fn record_declared_literals(&mut self, _count: usize) {}
+
+    #[inline(always)]
+    fn record_visited_literal(&mut self) {}
+
+    #[inline(always)]
+    fn record_false_constant(&mut self) {}
+
+    #[inline(always)]
+    fn record_repeated_literal(&mut self) {}
+
+    #[inline(always)]
+    fn record_true_tautology(&mut self) {}
+
+    #[inline(always)]
+    fn record_complementary_tautology(&mut self) {}
+
+    #[inline(always)]
+    fn record_canonical_clause(&mut self, _len: usize) {}
+
+    #[inline(always)]
+    fn record_primary_vacant(&mut self) {}
+
+    #[inline(always)]
+    fn record_primary_occupied(&mut self) {}
+
+    #[inline(always)]
+    fn record_primary_duplicate(&mut self) {}
+
+    #[inline(always)]
+    fn record_collision_comparison(&mut self) {}
+
+    #[inline(always)]
+    fn record_collision_duplicate(&mut self) {}
+
+    #[inline(always)]
+    fn record_collision_insert(&mut self) {}
+}
+
+#[derive(Default)]
+struct DisabledConstructionProfile;
+
+impl ConstructionProfiler for DisabledConstructionProfile {}
+
+struct EnabledConstructionProfile(CnfConstructionProfile);
+
+impl Default for EnabledConstructionProfile {
+    fn default() -> Self {
+        Self(CnfConstructionProfile {
+            profile_complete: true,
+            ..CnfConstructionProfile::default()
+        })
+    }
+}
+
+#[allow(clippy::inline_always)]
+impl ConstructionProfiler for EnabledConstructionProfile {
+    #[inline(always)]
+    fn snapshot(&self) -> CnfConstructionProfile {
+        self.0
+    }
+
+    #[inline(always)]
+    fn record_declared_literals(&mut self, count: usize) {
+        self.0.declared_clause_literals = self
+            .0
+            .declared_clause_literals
+            .saturating_add(usize_to_u64_saturating(count));
+    }
+
+    #[inline(always)]
+    fn record_visited_literal(&mut self) {
+        self.0.visited_clause_literals = self.0.visited_clause_literals.saturating_add(1);
+    }
+
+    #[inline(always)]
+    fn record_false_constant(&mut self) {
+        self.0.false_constants_dropped = self.0.false_constants_dropped.saturating_add(1);
+    }
+
+    #[inline(always)]
+    fn record_repeated_literal(&mut self) {
+        self.0.repeated_literals_dropped = self.0.repeated_literals_dropped.saturating_add(1);
+    }
+
+    #[inline(always)]
+    fn record_true_tautology(&mut self) {
+        self.0.true_constant_tautologies = self.0.true_constant_tautologies.saturating_add(1);
+    }
+
+    #[inline(always)]
+    fn record_complementary_tautology(&mut self) {
+        self.0.complementary_literal_tautologies =
+            self.0.complementary_literal_tautologies.saturating_add(1);
+    }
+
+    #[inline(always)]
+    fn record_canonical_clause(&mut self, len: usize) {
+        self.0.canonical_literals = self
+            .0
+            .canonical_literals
+            .saturating_add(usize_to_u64_saturating(len));
+        let bucket = match len {
+            0 => &mut self.0.canonical_empty_clauses,
+            1 => &mut self.0.canonical_unit_clauses,
+            2 => &mut self.0.canonical_binary_clauses,
+            3 => &mut self.0.canonical_ternary_clauses,
+            _ => &mut self.0.canonical_larger_clauses,
+        };
+        *bucket = bucket.saturating_add(1);
+    }
+
+    #[inline(always)]
+    fn record_primary_vacant(&mut self) {
+        self.0.primary_vacant_probes = self.0.primary_vacant_probes.saturating_add(1);
+    }
+
+    #[inline(always)]
+    fn record_primary_occupied(&mut self) {
+        self.0.primary_occupied_probes = self.0.primary_occupied_probes.saturating_add(1);
+    }
+
+    #[inline(always)]
+    fn record_primary_duplicate(&mut self) {
+        self.0.primary_exact_duplicates = self.0.primary_exact_duplicates.saturating_add(1);
+    }
+
+    #[inline(always)]
+    fn record_collision_comparison(&mut self) {
+        self.0.collision_bucket_comparisons = self.0.collision_bucket_comparisons.saturating_add(1);
+    }
+
+    #[inline(always)]
+    fn record_collision_duplicate(&mut self) {
+        self.0.collision_exact_duplicates = self.0.collision_exact_duplicates.saturating_add(1);
+    }
+
+    #[inline(always)]
+    fn record_collision_insert(&mut self) {
+        self.0.collision_inserts = self.0.collision_inserts.saturating_add(1);
+    }
+}
+
+struct TseitinEncoder<'a, P = DisabledConstructionProfile> {
     aig: &'a Aig,
     formula: CnfFormula,
     node_vars: Vec<Option<CnfVar>>,
@@ -2322,10 +2582,23 @@ struct TseitinEncoder<'a> {
     clause_attempts: u64,
     tautological_clauses_skipped: u64,
     duplicate_clauses_skipped: u64,
+    construction_profile: P,
 }
 
-impl<'a> TseitinEncoder<'a> {
+impl<'a> TseitinEncoder<'a, DisabledConstructionProfile> {
     fn new(aig: &'a Aig) -> Self {
+        Self::new_with_profile(aig)
+    }
+}
+
+impl<'a> TseitinEncoder<'a, EnabledConstructionProfile> {
+    fn new_profiled(aig: &'a Aig) -> Self {
+        Self::new_with_profile(aig)
+    }
+}
+
+impl<'a, P: ConstructionProfiler> TseitinEncoder<'a, P> {
+    fn new_with_profile(aig: &'a Aig) -> Self {
         Self {
             aig,
             formula: CnfFormula::new(0),
@@ -2343,7 +2616,13 @@ impl<'a> TseitinEncoder<'a> {
             clause_attempts: 0,
             tautological_clauses_skipped: 0,
             duplicate_clauses_skipped: 0,
+            construction_profile: P::default(),
         }
+    }
+
+    #[cfg(test)]
+    fn construction_profile(&self) -> CnfConstructionProfile {
+        self.construction_profile.snapshot()
     }
 
     fn encode(mut self, roots: &[AigLit]) -> Result<CnfEncoding, CnfError> {
@@ -2419,6 +2698,7 @@ impl<'a> TseitinEncoder<'a> {
             tautological_clauses_skipped: self.tautological_clauses_skipped,
             duplicate_clauses_skipped: self.duplicate_clauses_skipped,
             clauses_emitted: usize_to_u64_saturating(self.formula.clauses().len()),
+            construction_profile: self.construction_profile.snapshot(),
         }
     }
 
@@ -2922,28 +3202,39 @@ impl<'a> TseitinEncoder<'a> {
 
     fn add_encoded_clause(&mut self, lits: &[EncodedLit]) -> Result<(), CnfError> {
         self.clause_attempts = self.clause_attempts.saturating_add(1);
+        self.construction_profile
+            .record_declared_literals(lits.len());
         let mut clause = Vec::new();
         for lit in lits {
+            self.construction_profile.record_visited_literal();
             match lit {
                 EncodedLit::Const(true) => {
+                    self.construction_profile.record_true_tautology();
                     self.tautological_clauses_skipped =
                         self.tautological_clauses_skipped.saturating_add(1);
                     return Ok(());
                 }
-                EncodedLit::Const(false) => {}
+                EncodedLit::Const(false) => {
+                    self.construction_profile.record_false_constant();
+                }
                 EncodedLit::Lit(cnf_lit) => {
                     if clause.iter().any(|lit| *lit == cnf_lit.negated()) {
+                        self.construction_profile.record_complementary_tautology();
                         self.tautological_clauses_skipped =
                             self.tautological_clauses_skipped.saturating_add(1);
                         return Ok(());
                     }
-                    if !clause.contains(cnf_lit) {
+                    if clause.contains(cnf_lit) {
+                        self.construction_profile.record_repeated_literal();
+                    } else {
                         clause.push(*cnf_lit);
                     }
                 }
             }
         }
         clause.sort_unstable();
+        self.construction_profile
+            .record_canonical_clause(clause.len());
         let fingerprint = clause_fingerprint(&clause);
         self.insert_canonical_clause(clause, fingerprint)
     }
@@ -2957,21 +3248,32 @@ impl<'a> TseitinEncoder<'a> {
         let collisions = &mut self.clause_index.collisions;
         match primary.entry(fingerprint) {
             std::collections::hash_map::Entry::Vacant(entry) => {
+                self.construction_profile.record_primary_vacant();
                 let index = self.formula.clauses().len();
                 self.formula.add_clause(CnfClause::new(clause))?;
                 entry.insert(index);
             }
             std::collections::hash_map::Entry::Occupied(entry) => {
-                let duplicate = self.formula.clauses()[*entry.get()].lits() == clause.as_slice()
-                    || collisions.get(&fingerprint).is_some_and(|indices| {
-                        clause_indices_contain(&self.formula, indices, &clause)
-                    });
-                if duplicate {
+                self.construction_profile.record_primary_occupied();
+                if self.formula.clauses()[*entry.get()].lits() == clause.as_slice() {
+                    self.construction_profile.record_primary_duplicate();
                     self.duplicate_clauses_skipped =
                         self.duplicate_clauses_skipped.saturating_add(1);
                     return Ok(());
                 }
+                if let Some(indices) = collisions.get(&fingerprint) {
+                    for &index in indices {
+                        self.construction_profile.record_collision_comparison();
+                        if self.formula.clauses()[index].lits() == clause.as_slice() {
+                            self.construction_profile.record_collision_duplicate();
+                            self.duplicate_clauses_skipped =
+                                self.duplicate_clauses_skipped.saturating_add(1);
+                            return Ok(());
+                        }
+                    }
+                }
 
+                self.construction_profile.record_collision_insert();
                 let index = self.formula.clauses().len();
                 self.formula.add_clause(CnfClause::new(clause))?;
                 collisions.entry(fingerprint).or_default().push(index);
@@ -3015,12 +3317,6 @@ impl Hasher for FingerprintHasher {
     fn write_u64(&mut self, value: u64) {
         self.0 = value;
     }
-}
-
-fn clause_indices_contain(formula: &CnfFormula, indices: &[usize], clause: &[CnfLit]) -> bool {
-    indices
-        .iter()
-        .any(|&index| formula.clauses()[index].lits() == clause)
 }
 
 fn clause_fingerprint(clause: &[CnfLit]) -> u64 {
@@ -3724,7 +4020,7 @@ mod tests {
         CnfClause, CnfError, CnfLit, CnfVar, EncodedLit, IncrementalCnf, IncrementalCnfStats,
         IncrementalSat, RustSatBatsatSolver, SatProofStatus, SatResult, SatSolver, aig_lit_value,
         parse_dimacs, rustsat_batsat_determinism, solve_with_rustsat_batsat,
-        solve_with_rustsat_batsat_limits, tseitin_encode,
+        solve_with_rustsat_batsat_limits, tseitin_encode, tseitin_encode_profiled,
     };
 
     #[test]
@@ -3764,6 +4060,109 @@ mod tests {
     }
 
     #[test]
+    fn profiled_clause_construction_counts_forced_collision_paths() {
+        assert_eq!(
+            std::mem::size_of::<super::DisabledConstructionProfile>(),
+            0,
+            "ordinary encoder profiling storage must remain zero-sized"
+        );
+        assert!(
+            std::mem::size_of::<super::TseitinEncoder<'_, super::EnabledConstructionProfile>>()
+                > std::mem::size_of::<super::TseitinEncoder<'_>>(),
+            "only the profiled monomorph may carry detailed counters"
+        );
+        let p = CnfLit::positive(CnfVar::new(0).unwrap());
+        let q = CnfLit::positive(CnfVar::new(1).unwrap());
+        let aig = Aig::new();
+        let mut encoder =
+            super::TseitinEncoder::<super::EnabledConstructionProfile>::new_profiled(&aig);
+        encoder.formula = super::CnfFormula::new(2);
+
+        let forced_fingerprint = 7;
+        encoder
+            .insert_canonical_clause(vec![p], forced_fingerprint)
+            .unwrap();
+        encoder
+            .insert_canonical_clause(vec![q], forced_fingerprint)
+            .unwrap();
+        encoder
+            .insert_canonical_clause(vec![p], forced_fingerprint)
+            .unwrap();
+        encoder
+            .insert_canonical_clause(vec![q], forced_fingerprint)
+            .unwrap();
+
+        let profile = encoder.construction_profile();
+        assert!(profile.profile_complete);
+        assert_eq!(profile.primary_vacant_probes, 1);
+        assert_eq!(profile.primary_occupied_probes, 3);
+        assert_eq!(profile.primary_exact_duplicates, 1);
+        assert_eq!(profile.collision_bucket_comparisons, 1);
+        assert_eq!(profile.collision_exact_duplicates, 1);
+        assert_eq!(profile.collision_inserts, 1);
+    }
+
+    #[test]
+    fn profiled_clause_construction_counts_canonicalization_paths() {
+        let p = CnfLit::positive(CnfVar::new(0).unwrap());
+        let q = CnfLit::positive(CnfVar::new(1).unwrap());
+        let aig = Aig::new();
+        let mut encoder =
+            super::TseitinEncoder::<super::EnabledConstructionProfile>::new_profiled(&aig);
+        encoder.formula = super::CnfFormula::new(2);
+
+        encoder
+            .add_encoded_clause(&[
+                EncodedLit::Const(false),
+                EncodedLit::Lit(p),
+                EncodedLit::Lit(p),
+            ])
+            .unwrap();
+        encoder
+            .add_encoded_clause(&[
+                EncodedLit::Const(false),
+                EncodedLit::Lit(p),
+                EncodedLit::Lit(p),
+            ])
+            .unwrap();
+        encoder
+            .add_encoded_clause(&[
+                EncodedLit::Lit(p),
+                EncodedLit::Lit(p.negated()),
+                EncodedLit::Lit(q),
+            ])
+            .unwrap();
+        encoder
+            .add_encoded_clause(&[EncodedLit::Const(true), EncodedLit::Lit(q)])
+            .unwrap();
+
+        let profile = encoder.construction_profile();
+        assert!(profile.profile_complete);
+        assert_eq!(profile.declared_clause_literals, 11);
+        assert_eq!(profile.visited_clause_literals, 9);
+        assert_eq!(profile.false_constants_dropped, 2);
+        assert_eq!(profile.repeated_literals_dropped, 2);
+        assert_eq!(profile.true_constant_tautologies, 1);
+        assert_eq!(profile.complementary_literal_tautologies, 1);
+        assert_eq!(profile.canonical_literals, 2);
+        assert_eq!(profile.canonical_empty_clauses, 0);
+        assert_eq!(profile.canonical_unit_clauses, 2);
+        assert_eq!(profile.canonical_binary_clauses, 0);
+        assert_eq!(profile.canonical_ternary_clauses, 0);
+        assert_eq!(profile.canonical_larger_clauses, 0);
+        assert_eq!(profile.primary_vacant_probes, 1);
+        assert_eq!(profile.primary_occupied_probes, 1);
+        assert_eq!(profile.primary_exact_duplicates, 1);
+        assert_eq!(profile.collision_bucket_comparisons, 0);
+        assert_eq!(profile.collision_exact_duplicates, 0);
+        assert_eq!(profile.collision_inserts, 0);
+        assert_eq!(encoder.clause_attempts, 4);
+        assert_eq!(encoder.tautological_clauses_skipped, 2);
+        assert_eq!(encoder.duplicate_clauses_skipped, 1);
+        assert_eq!(encoder.formula.clauses(), &[CnfClause::new(vec![p])]);
+    }
+
+    #[test]
     fn tseitin_formula_tracks_aig_root_truth() {
         let mut aig = Aig::new();
         let p = aig.input("p");
@@ -3781,6 +4180,10 @@ mod tests {
             "sparse encoding should be smaller than one variable per AIG node"
         );
         let stats = encoding.stats();
+        assert_eq!(
+            stats.construction_profile,
+            super::CnfConstructionProfile::default()
+        );
         assert_eq!(stats.xor_gates, 1);
         assert_eq!(stats.skipped_helper_nodes, 2);
         assert_eq!(stats.direct_root_nodes, 1);
@@ -3821,6 +4224,79 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn profiled_tseitin_is_structurally_identical_and_satisfies_partitions() {
+        let mut aig = Aig::new();
+        let p = aig.input("p");
+        let q = aig.input("q");
+        let xor = aig.xor(p, q);
+        let root = aig.and(xor, p);
+        let ordinary = tseitin_encode(&aig, &[root]).unwrap();
+        let profiled = tseitin_encode_profiled(&aig, &[root]).unwrap();
+
+        assert_eq!(profiled.formula(), ordinary.formula());
+        assert_eq!(
+            profiled.formula().to_dimacs(),
+            ordinary.formula().to_dimacs()
+        );
+        assert_eq!(profiled.roots(), ordinary.roots());
+        assert_eq!(profiled.variable_bindings(), ordinary.variable_bindings());
+        let ordinary_stats = ordinary.stats();
+        let profiled_stats = profiled.stats();
+        assert_eq!(
+            profiled_stats.clause_attempts,
+            ordinary_stats.clause_attempts
+        );
+        assert_eq!(
+            profiled_stats.tautological_clauses_skipped,
+            ordinary_stats.tautological_clauses_skipped
+        );
+        assert_eq!(
+            profiled_stats.duplicate_clauses_skipped,
+            ordinary_stats.duplicate_clauses_skipped
+        );
+        assert_eq!(
+            profiled_stats.clauses_emitted,
+            ordinary_stats.clauses_emitted
+        );
+
+        let profile = profiled_stats.construction_profile;
+        assert!(profile.profile_complete);
+        let non_tautological = profiled_stats
+            .clause_attempts
+            .saturating_sub(profiled_stats.tautological_clauses_skipped);
+        assert_eq!(
+            non_tautological,
+            profile.canonical_empty_clauses
+                + profile.canonical_unit_clauses
+                + profile.canonical_binary_clauses
+                + profile.canonical_ternary_clauses
+                + profile.canonical_larger_clauses
+        );
+        assert_eq!(
+            non_tautological,
+            profile.primary_vacant_probes + profile.primary_occupied_probes
+        );
+        assert_eq!(
+            profile.primary_occupied_probes,
+            profile.primary_exact_duplicates
+                + profile.collision_exact_duplicates
+                + profile.collision_inserts
+        );
+        assert_eq!(
+            profiled_stats.duplicate_clauses_skipped,
+            profile.primary_exact_duplicates + profile.collision_exact_duplicates
+        );
+        assert_eq!(
+            profiled_stats.clauses_emitted,
+            profile.primary_vacant_probes + profile.collision_inserts
+        );
+        assert_eq!(
+            profiled_stats.tautological_clauses_skipped,
+            profile.true_constant_tautologies + profile.complementary_literal_tautologies
+        );
     }
 
     #[test]
