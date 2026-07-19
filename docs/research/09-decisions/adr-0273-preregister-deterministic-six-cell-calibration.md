@@ -3,7 +3,7 @@
 Status: accepted
 Date: 2026-07-19
 
-Result state: preregistered; zero real-driver v4 rows
+Result state: executed; calibration rejected; no census authorized
 
 ## Context
 
@@ -198,6 +198,35 @@ cross-authority control.
 
 ## Validity and interpretation
 
+### Observed result
+
+The exact campaign completed all 42 processes and retained 42/42
+producer-validator-clean v4 traces. Every tier reproduced its complete ordered
+outcome, stop-reason, finding, and outer-work vectors across N=3; all processes
+stayed on the 20/338 function boundary with zero wall-timeout or deadline stops.
+The retained campaign and full analyzer output hash to
+`118e90a4d3577f9e4636d45e37391024851ecf4f169276c63aef7814912ec2ec` and
+`46e8e29fee0d3293531c4e5743e861d9f8eb22163e056dbd74f82e86bb8d5e0c`.
+The compact result is retained under
+[`bench-results/glaurung-six-cell-calibration-20260719/`](../../../bench-results/glaurung-six-cell-calibration-20260719/README.md).
+
+The mechanical selector finds Z3's first qualifying value at tier 9
+(`z3-rlimit=100000`) and Bitwuzla's at tier 2
+(`bitwuzla-termination-polls=4`). It finds no qualifying Axeyum value. At the
+largest registered Axeyum limit, 8192 progress checks, cold decides 4233/4846
+(87.35%) and warm decides 3280/4846 (67.68%); the remaining 613 and 1566
+outcomes are all typed `resource-limit`, with zero wall/other failures. The
+calibration is therefore rejected and the 338-function census is not
+authorized.
+
+The result also exposes a constraint on any new protocol: cold Z3 is the
+exploration authority, and the ordered stream grows from 67 checks at tier 0 to
+4846 at tier 9. Backend-specific limits selected at different original tiers
+were not evaluated on one common stream and must not be naively combined. A new
+zero-row ADR may fix the qualifying Z3 authority limit and calibrate shadow
+limits against that common stream; it must identify itself as an
+observation-aware extension rather than reinterpret this rejected result.
+
 This calibration is accepted only if all 42 processes have exact source/input/
 binary/configuration identity, publish validator-clean v4 traces, analyze the
 same 20/338 function prefix, and reproduce each tier's full ordered outcome and
@@ -230,9 +259,11 @@ speed or equal-work claim.
 
 ## Consequences
 
-A1 is now implementation-complete and moves from “wire resource limits” to
-“register the exact release/linkage, then execute the preregistered calibration.”
-It remains configuration and measurement, not a solver research project. A0
-remains completed reproducibility infrastructure, A2 symbolic memory remains
-closed, and the paper trajectory continues to be correctness + deployability +
-rigorously bounded performance.
+A1's mechanism remains implementation-complete, but the registered ladder does
+not admit a census triplet. The next permissible integration step is a new
+zero-row, fixed-authority extension or an explicit decision to retain this
+negative result and close the harder-driver tier; silently extending ADR-0273 is
+not permissible. This remains configuration and measurement, not a solver
+research project. A0 remains completed reproducibility infrastructure, A2
+symbolic memory remains closed, and the paper trajectory continues to be
+correctness + deployability + rigorously bounded performance.

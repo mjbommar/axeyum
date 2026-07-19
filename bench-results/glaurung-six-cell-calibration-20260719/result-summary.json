@@ -1,0 +1,65 @@
+{
+  "schema": "axeyum-glaurung-six-cell-calibration-result-summary-v1",
+  "registration": "ADR-0273",
+  "accepted": false,
+  "failures": [
+    "no qualifying limit for axeyum"
+  ],
+  "campaign": {
+    "path": "/nas4/data/workspace-infosec/.axeyum-six-cell-calibration-20260719.IYMKcA",
+    "sha256": "118e90a4d3577f9e4636d45e37391024851ecf4f169276c63aef7814912ec2ec",
+    "analysis_sha256": "46e8e29fee0d3293531c4e5743e861d9f8eb22163e056dbd74f82e86bb8d5e0c",
+    "processes": 42,
+    "validator_clean_processes": 42
+  },
+  "executable_sha256": "d96520a04d5dd4825957dc3e07e1fd11a24bad220c55baae539ec9f8a10db5f7",
+  "driver_sha256": "ff965206a37f2c258b7199bc87b49ee12c834e5fc50f58dae2f3de66a57022ea",
+  "cross_backend_unit_equivalence": false,
+  "selected": {
+    "z3": {
+      "tier": 9,
+      "unit": "z3-rlimit",
+      "limit": 100000
+    },
+    "bitwuzla": {
+      "tier": 2,
+      "unit": "bitwuzla-termination-polls",
+      "limit": 4
+    }
+  },
+  "missing_selection": "axeyum",
+  "tiers": [
+    {"tier": 0, "limits": [3, 1, 1], "checks": 67, "decided": [18, 18, 53, 18, 19, 18], "eligible": [false, false, false]},
+    {"tier": 1, "limits": [10, 2, 2], "checks": 69, "decided": [20, 18, 55, 53, 59, 45], "eligible": [false, false, false]},
+    {"tier": 2, "limits": [30, 4, 4], "checks": 143, "decided": [80, 103, 113, 111, 143, 143], "eligible": [false, false, true]},
+    {"tier": 3, "limits": [100, 8, 8], "checks": 296, "decided": [226, 242, 207, 194, 295, 285], "eligible": [false, false, true]},
+    {"tier": 4, "limits": [300, 16, 16], "checks": 640, "decided": [543, 546, 323, 293, 639, 602], "eligible": [false, false, false]},
+    {"tier": 5, "limits": [1000, 32, 32], "checks": 1554, "decided": [1379, 1328, 580, 490, 1553, 1552], "eligible": [false, false, true]},
+    {"tier": 6, "limits": [3000, 64, 64], "checks": 4056, "decided": [3914, 3012, 1258, 846, 4053, 3750], "eligible": [false, false, false]},
+    {"tier": 7, "limits": [10000, 128, 128], "checks": 4652, "decided": [4638, 4644, 1452, 1228, 4652, 4407], "eligible": [false, false, false]},
+    {"tier": 8, "limits": [30000, 256, 256], "checks": 4846, "decided": [4844, 4843, 1533, 1491, 4846, 4520], "eligible": [false, false, false]},
+    {"tier": 9, "limits": [100000, 512, 512], "checks": 4846, "decided": [4846, 4846, 1705, 1583, 4846, 4846], "eligible": [true, false, true]},
+    {"tier": 10, "limits": [300000, 1024, 1024], "checks": 4846, "decided": [4846, 4846, 2025, 1724, 4846, 4846], "eligible": [true, false, true]},
+    {"tier": 11, "limits": [1000000, 2048, 2048], "checks": 4846, "decided": [4846, 4846, 3058, 2081, 4846, 4846], "eligible": [true, false, true]},
+    {"tier": 12, "limits": [3000000, 4096, 4096], "checks": 4846, "decided": [4846, 4846, 3318, 2815, 4846, 4846], "eligible": [true, false, true]},
+    {"tier": 13, "limits": [10000000, 8192, 8192], "checks": 4846, "decided": [4846, 4846, 4233, 3280, 4846, 4846], "eligible": [true, false, true]}
+  ],
+  "tier_vector_order": [
+    "z3_cold",
+    "z3_warm",
+    "axeyum_cold",
+    "axeyum_warm",
+    "bitwuzla_cold",
+    "bitwuzla_warm"
+  ],
+  "tier_limit_order": [
+    "z3_rlimit",
+    "axeyum_progress_checks",
+    "bitwuzla_termination_polls"
+  ],
+  "tier_eligibility_order": [
+    "z3",
+    "axeyum",
+    "bitwuzla"
+  ]
+}
