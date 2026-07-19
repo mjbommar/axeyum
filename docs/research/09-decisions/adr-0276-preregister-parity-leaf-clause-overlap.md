@@ -107,7 +107,7 @@ This ADR selects no optimization. After the fixed observation, at most one
 relation-plus-shape cell may motivate a separately preregistered generator
 experiment, and only if it:
 
-- owns at least 50% of the fixed 107,000-duplicate subset;
+- owns at least 50% of the complete parity/parity duplicate population;
 - occurs in at least 10 queries; and
 - is not made to pass by one query contributing more than 50% of that cell.
 
