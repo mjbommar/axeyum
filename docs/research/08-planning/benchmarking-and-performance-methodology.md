@@ -1,7 +1,7 @@
 # Benchmarking And Performance Methodology
 
 Status: draft
-Last updated: 2026-07-17
+Last updated: 2026-07-19
 
 ## Purpose
 
@@ -663,6 +663,20 @@ records the contract and the first measured baselines.
   partition or false verdict. Process scheduling, one-millisecond polling,
   kill, and reap add bounded observed return overhead (1.456 ms maximum in the
   control); keep all worker time outside solver performance.
+  Artifact v35 adds an explicitly selected, profile-only CNF construction
+  census. It independently accounts for literal canonicalization, tautology
+  causes, exact duplicates, clause lengths, and fingerprint-index work without
+  adding counters or hot-loop branches to the ordinary encoder. Artifact v36
+  extends only that opt-in route with stable first-producer and duplicate-
+  producer origins, same-owner/cross-owner partitions, and exact length-aware
+  duplicate totals. Artifact v37 adds bounded parity-leaf identity and shape to
+  parity/parity duplicates, partitioned as within-leaf, cross-leaf/same-owner,
+  or cross-owner. Every version must re-sum per-instance rows into the corpus
+  aggregate and preserve complete decisions, oracle agreement, and original-
+  model replay. The analyzer retains v36 compatibility, but v37 artifacts fail
+  closed if the parity-overlap block is absent or inconsistent. All timing from
+  these profiled paths is diagnostic; a production change requires a separate
+  preregistration and repeated unprofiled timing gate.
 - Timeout regressions must pin the exact pathological public or minimized query
   and exercise both admission outcomes: deterministic oversized refusal before
   allocation and cooperative expiry inside admitted superlinear work. Every

@@ -59,6 +59,22 @@ def profile() -> dict:
                     },
                 }
             ],
+            "parity_overlap": {
+                "profile_complete": True,
+                "duplicate_clauses": 0,
+                "duplicate_canonical_literals": 0,
+                "lengths": {
+                    "empty": {"clauses": 0, "literals": 0},
+                    "unit": {"clauses": 0, "literals": 0},
+                    "binary": {"clauses": 0, "literals": 0},
+                    "ternary": {"clauses": 0, "literals": 0},
+                    "larger": {"clauses": 0, "literals": 0},
+                },
+                "rows": [],
+                "invariants": {
+                    name: True for name in MODULE.PARITY_INVARIANTS
+                },
+            },
             "invariants": {
                 name: True for name in MODULE.ORIGIN_INVARIANTS
             },
@@ -114,7 +130,7 @@ def artifact() -> dict:
     aggregate_origins["profiled_instances"] = 2
     aggregate_origins["instances"] = 2
     return {
-        "version": 36,
+        "version": 37,
         "config": {
             "backend_kind": "sat-bv",
             "profile_cnf_construction": True,
@@ -144,6 +160,83 @@ def artifact() -> dict:
     }
 
 
+def legacy_artifact(value: dict | None = None) -> dict:
+    value = artifact() if value is None else value
+    value["version"] = 36
+    profiles = [
+        instance["layer_attribution"]["construction"]["cnf"]["detailed_profile"]
+        for instance in value["instances"]
+    ]
+    profiles.append(
+        value["summary"]["layer_attribution"]["construction"]["cnf"][
+            "detailed_profile"
+        ]
+    )
+    for current in profiles:
+        del current["duplicate_origins"]["parity_overlap"]
+    return value
+
+
+def parity_artifact() -> dict:
+    value = artifact()
+    profiles = [
+        instance["layer_attribution"]["construction"]["cnf"]["detailed_profile"]
+        for instance in value["instances"]
+    ]
+    profiles.append(
+        value["summary"]["layer_attribution"]["construction"]["cnf"][
+            "detailed_profile"
+        ]
+    )
+    for index, current in enumerate(profiles):
+        multiplier = 2 if index == 2 else 1
+        origin = current["duplicate_origins"]
+        origin["rows"][0]["first_origin"] = "root/and_tree/forward/parity"
+        origin["rows"][0]["duplicate_origin"] = "root/and_tree/forward/parity"
+        origin["duplicate_canonical_literals"] = multiplier * 2
+        origin["lengths"]["unit"] = {"clauses": 0, "literals": 0}
+        origin["lengths"]["binary"] = {
+            "clauses": multiplier,
+            "literals": multiplier * 2,
+        }
+        origin["rows"][0]["duplicate_canonical_literals"] = multiplier * 2
+        origin["rows"][0]["lengths"]["unit"] = {
+            "clauses": 0,
+            "literals": 0,
+        }
+        origin["rows"][0]["lengths"]["binary"] = {
+            "clauses": multiplier,
+            "literals": multiplier * 2,
+        }
+        overlap = origin["parity_overlap"]
+        overlap["duplicate_clauses"] = multiplier
+        overlap["duplicate_canonical_literals"] = multiplier * 2
+        overlap["lengths"]["binary"] = {
+            "clauses": multiplier,
+            "literals": multiplier * 2,
+        }
+        overlap["rows"] = [
+            {
+                "relation": "within_leaf",
+                "first_shape": "a2-f0-t0-d1-r1-x0",
+                "duplicate_shape": "a2-f0-t0-d1-r1-x0",
+                "duplicate_clauses": multiplier,
+                "duplicate_canonical_literals": multiplier * 2,
+                "lengths": {
+                    "empty": {"clauses": 0, "literals": 0},
+                    "unit": {"clauses": 0, "literals": 0},
+                    "binary": {
+                        "clauses": multiplier,
+                        "literals": multiplier * 2,
+                    },
+                    "ternary": {"clauses": 0, "literals": 0},
+                    "larger": {"clauses": 0, "literals": 0},
+                },
+            }
+        ]
+    return value
+
+
 class CnfConstructionProfileAnalysisTests(unittest.TestCase):
     def test_accepts_exact_population_and_family_partitions(self) -> None:
         report = MODULE.analyze_artifact(
@@ -169,12 +262,44 @@ class CnfConstructionProfileAnalysisTests(unittest.TestCase):
             origins["rows"][0]["families"]["slice-partial"]["unsat"], 1
         )
 
+    def test_accepts_legacy_v36_without_parity_overlap(self) -> None:
+        report = MODULE.analyze_artifact(legacy_artifact())
+
+        self.assertEqual(report["artifact"]["version"], 36)
+        self.assertFalse(report["duplicate_origins"]["parity_overlap"]["available"])
+
+    def test_accepts_exact_legacy_baseline_and_rejects_drift(self) -> None:
+        value = parity_artifact()
+        baseline = MODULE.analyze_artifact(legacy_artifact(parity_artifact()))
+        baseline["schema"] = "axeyum.cnf-construction-profile-analysis.v2"
+
+        report = MODULE.analyze_artifact(
+            value,
+            expected_same_owner_parity_duplicates=2,
+            expected_baseline_analysis=baseline,
+        )
+        self.assertTrue(report["accepted"])
+
+        baseline["aggregate"]["clause_attempts"] += 1
+        with self.assertRaisesRegex(RuntimeError, "construction aggregate drift"):
+            MODULE.analyze_artifact(
+                parity_artifact(), expected_baseline_analysis=baseline
+            )
+
     def test_rejects_failed_instance_invariant(self) -> None:
         value = artifact()
         value["instances"][0]["layer_attribution"]["construction"]["cnf"][
             "detailed_profile"
         ]["invariants"]["duplicates_partition"] = False
         with self.assertRaisesRegex(RuntimeError, "failed invariant"):
+            MODULE.analyze_artifact(value)
+
+    def test_rejects_v37_without_parity_overlap(self) -> None:
+        value = artifact()
+        del value["instances"][0]["layer_attribution"]["construction"]["cnf"][
+            "detailed_profile"
+        ]["duplicate_origins"]["parity_overlap"]
+        with self.assertRaisesRegex(RuntimeError, "parity-overlap"):
             MODULE.analyze_artifact(value)
 
     def test_rejects_aggregate_that_does_not_resum_instances(self) -> None:
@@ -231,6 +356,44 @@ class CnfConstructionProfileAnalysisTests(unittest.TestCase):
                 artifact(),
                 expected_families={"arithmetic": 2},
             )
+
+    def test_accepts_and_decodes_parity_overlap_shapes(self) -> None:
+        report = MODULE.analyze_artifact(
+            parity_artifact(), expected_same_owner_parity_duplicates=2
+        )
+        overlap = report["duplicate_origins"]["parity_overlap"]
+        self.assertEqual(overlap["duplicate_clauses"], 2)
+        self.assertEqual(overlap["rows"][0]["relation"], "within_leaf")
+        self.assertEqual(overlap["rows"][0]["first_shape"]["raw_arity"], 2)
+        self.assertEqual(
+            overlap["rows"][0]["first_shape"]["repeated_literal_pairs"], 1
+        )
+
+    def test_rejects_parity_relation_shape_and_summary_drift(self) -> None:
+        bad_relation = parity_artifact()
+        bad_relation["instances"][0]["layer_attribution"]["construction"]["cnf"][
+            "detailed_profile"
+        ]["duplicate_origins"]["parity_overlap"]["rows"][0]["relation"] = "same"
+        with self.assertRaisesRegex(RuntimeError, "relation"):
+            MODULE.analyze_artifact(bad_relation)
+
+        bad_shape = parity_artifact()
+        bad_shape["instances"][0]["layer_attribution"]["construction"]["cnf"][
+            "detailed_profile"
+        ]["duplicate_origins"]["parity_overlap"]["rows"][0][
+            "first_shape"
+        ] = "a3-f2-t2-d0-r0-x0"
+        with self.assertRaisesRegex(RuntimeError, "constants exceed arity"):
+            MODULE.analyze_artifact(bad_shape)
+
+        summary_drift = parity_artifact()
+        summary_drift["summary"]["layer_attribution"]["construction"]["cnf"][
+            "detailed_profile"
+        ]["duplicate_origins"]["parity_overlap"]["rows"][0][
+            "duplicate_clauses"
+        ] = 1
+        with self.assertRaisesRegex(RuntimeError, "parity-overlap"):
+            MODULE.analyze_artifact(summary_drift)
 
 
 if __name__ == "__main__":

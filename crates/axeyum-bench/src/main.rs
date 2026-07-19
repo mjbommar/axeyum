@@ -64,7 +64,7 @@ mod run {
 
     use crate::certificate_process::{IsolatedStatus, certify_file_isolated};
 
-    const ARTIFACT_VERSION: u32 = 36;
+    const ARTIFACT_VERSION: u32 = 37;
     const CORPUS_MANIFEST_VERSION: u64 = 1;
     const CONTENT_HASH_PREFIX: &str = "sha256:";
     const DETERMINISM_PROFILE: &str = "axeyum-bench-fixed-seeds-v1";
@@ -910,6 +910,10 @@ mod run {
         duplicate_clauses: u64,
         duplicate_canonical_literals: u64,
         rows: BTreeMap<(String, String, String), DuplicateOriginMetrics>,
+        parity_profile_complete: bool,
+        parity_duplicate_clauses: u64,
+        parity_duplicate_canonical_literals: u64,
+        parity_rows: BTreeMap<(String, String, String), DuplicateOriginMetrics>,
     }
 
     /// Original-query structural profile used to verify that an external `QF_BV`
@@ -3104,6 +3108,7 @@ mod run {
 
     fn duplicate_origin_sample(stats: &SolveStats) -> Option<DuplicateOriginSample> {
         const PREFIX: &str = "cnf_duplicate_origin|";
+        const PARITY_PREFIX: &str = "cnf_parity_overlap|";
         let profile_complete =
             backend_stat_count(stats, "cnf_duplicate_origin_profile_complete")? == 1;
         let duplicate_clauses = backend_stat_count(stats, "cnf_duplicate_origin_clauses")?;
@@ -3144,11 +3149,60 @@ mod run {
                 _ => {}
             }
         }
+        let parity_profile_complete =
+            backend_stat_count(stats, "cnf_parity_overlap_profile_complete")? == 1;
+        let parity_duplicate_clauses = backend_stat_count(stats, "cnf_parity_overlap_clauses")?;
+        let parity_duplicate_canonical_literals =
+            backend_stat_count(stats, "cnf_parity_overlap_canonical_literals")?;
+        let mut parity_rows = BTreeMap::new();
+        for (name, _) in &stats.backend {
+            let Some(encoded) = name.strip_prefix(PARITY_PREFIX) else {
+                continue;
+            };
+            let parts = encoded.split('|').collect::<Vec<_>>();
+            if parts.len() != 4
+                || !matches!(
+                    parts[0],
+                    "within_leaf" | "cross_leaf_same_owner" | "cross_owner"
+                )
+            {
+                continue;
+            }
+            let Some(value) = backend_stat_count(stats, name) else {
+                continue;
+            };
+            let metrics = parity_rows
+                .entry((
+                    parts[0].to_owned(),
+                    parts[1].to_owned(),
+                    parts[2].to_owned(),
+                ))
+                .or_insert_with(DuplicateOriginMetrics::default);
+            match parts[3] {
+                "clauses" => metrics.clauses = value,
+                "canonical_literals" => metrics.canonical_literals = value,
+                "empty_clauses" => metrics.empty_clauses = value,
+                "empty_literals" => metrics.empty_literals = value,
+                "unit_clauses" => metrics.unit_clauses = value,
+                "unit_literals" => metrics.unit_literals = value,
+                "binary_clauses" => metrics.binary_clauses = value,
+                "binary_literals" => metrics.binary_literals = value,
+                "ternary_clauses" => metrics.ternary_clauses = value,
+                "ternary_literals" => metrics.ternary_literals = value,
+                "larger_clauses" => metrics.larger_clauses = value,
+                "larger_literals" => metrics.larger_literals = value,
+                _ => {}
+            }
+        }
         Some(DuplicateOriginSample {
             profile_complete,
             duplicate_clauses,
             duplicate_canonical_literals,
             rows,
+            parity_profile_complete,
+            parity_duplicate_clauses,
+            parity_duplicate_canonical_literals,
+            parity_rows,
         })
     }
 
@@ -3174,6 +3228,16 @@ mod run {
                 record
             })
             .collect::<Vec<_>>();
+        let mut parity_origin_totals = DuplicateOriginMetrics::default();
+        for ((first, duplicate, _), metrics) in &sample.rows {
+            if first.ends_with("/and_tree/forward/parity")
+                && duplicate.ends_with("/and_tree/forward/parity")
+            {
+                parity_origin_totals.add_assign(metrics);
+            }
+        }
+        let parity_overlap =
+            parity_overlap_record(sample, &parity_origin_totals, profiled_instances, instances);
         json!({
             "profile_complete": sample.profile_complete,
             "profiled_instances": profiled_instances,
@@ -3182,6 +3246,7 @@ mod run {
             "duplicate_canonical_literals": sample.duplicate_canonical_literals,
             "lengths": totals.record()["lengths"].clone(),
             "rows": rows,
+            "parity_overlap": parity_overlap,
             "invariants": {
                 "duplicate_clauses_equal_rows": sample.duplicate_clauses == totals.clauses,
                 "duplicate_literals_equal_rows":
@@ -3201,6 +3266,61 @@ mod run {
         })
     }
 
+    fn parity_overlap_record(
+        sample: &DuplicateOriginSample,
+        expected: &DuplicateOriginMetrics,
+        profiled_instances: usize,
+        instances: usize,
+    ) -> JsonValue {
+        let mut totals = DuplicateOriginMetrics::default();
+        let rows = sample
+            .parity_rows
+            .iter()
+            .map(|((relation, first_shape, duplicate_shape), metrics)| {
+                totals.add_assign(metrics);
+                let mut record = metrics.record();
+                let object = record
+                    .as_object_mut()
+                    .expect("parity-overlap metric record is an object");
+                object.insert("relation".to_owned(), json!(relation));
+                object.insert("first_shape".to_owned(), json!(first_shape));
+                object.insert("duplicate_shape".to_owned(), json!(duplicate_shape));
+                record
+            })
+            .collect::<Vec<_>>();
+        json!({
+            "profile_complete": sample.parity_profile_complete,
+            "profiled_instances": profiled_instances,
+            "instances": instances,
+            "duplicate_clauses": sample.parity_duplicate_clauses,
+            "duplicate_canonical_literals": sample.parity_duplicate_canonical_literals,
+            "lengths": totals.record()["lengths"].clone(),
+            "rows": rows,
+            "invariants": {
+                "duplicate_clauses_equal_rows":
+                    sample.parity_duplicate_clauses == totals.clauses,
+                "duplicate_literals_equal_rows":
+                    sample.parity_duplicate_canonical_literals == totals.canonical_literals,
+                "row_clauses_equal_length_buckets": sample.parity_rows.values().all(
+                    |metrics| metrics.clauses == metrics.length_clauses(),
+                ),
+                "row_literals_equal_length_buckets": sample.parity_rows.values().all(
+                    |metrics| metrics.canonical_literals == metrics.length_literals(),
+                ),
+                "origin_subset_equal_overlap": sample.parity_duplicate_clauses
+                    == expected.clauses
+                    && sample.parity_duplicate_canonical_literals
+                        == expected.canonical_literals,
+                "relations_closed": sample.parity_rows.keys().all(
+                    |(relation, _, _)| matches!(
+                        relation.as_str(),
+                        "within_leaf" | "cross_leaf_same_owner" | "cross_owner"
+                    ),
+                ),
+            },
+        })
+    }
+
     fn duplicate_origin_aggregate_record(
         samples: &[DuplicateOriginSample],
         expected_duplicate_clauses: u64,
@@ -3210,6 +3330,9 @@ mod run {
             profile_complete: !samples.is_empty()
                 && samples.len() == instances
                 && samples.iter().all(|sample| sample.profile_complete),
+            parity_profile_complete: !samples.is_empty()
+                && samples.len() == instances
+                && samples.iter().all(|sample| sample.parity_profile_complete),
             ..DuplicateOriginSample::default()
         };
         for sample in samples {
@@ -3219,9 +3342,22 @@ mod run {
             aggregate.duplicate_canonical_literals = aggregate
                 .duplicate_canonical_literals
                 .saturating_add(sample.duplicate_canonical_literals);
+            aggregate.parity_duplicate_clauses = aggregate
+                .parity_duplicate_clauses
+                .saturating_add(sample.parity_duplicate_clauses);
+            aggregate.parity_duplicate_canonical_literals = aggregate
+                .parity_duplicate_canonical_literals
+                .saturating_add(sample.parity_duplicate_canonical_literals);
             for (key, metrics) in &sample.rows {
                 aggregate
                     .rows
+                    .entry(key.clone())
+                    .or_default()
+                    .add_assign(metrics);
+            }
+            for (key, metrics) in &sample.parity_rows {
+                aggregate
+                    .parity_rows
                     .entry(key.clone())
                     .or_default()
                     .add_assign(metrics);
@@ -8135,6 +8271,9 @@ mod run {
                 ("cnf_duplicate_origin_profile_complete".to_owned(), 1.0),
                 ("cnf_duplicate_origin_clauses".to_owned(), 1.0),
                 ("cnf_duplicate_origin_canonical_literals".to_owned(), 2.0),
+                ("cnf_parity_overlap_profile_complete".to_owned(), 1.0),
+                ("cnf_parity_overlap_clauses".to_owned(), 0.0),
+                ("cnf_parity_overlap_canonical_literals".to_owned(), 0.0),
                 (format!("{prefix}clauses"), 1.0),
                 (format!("{prefix}canonical_literals"), 2.0),
                 (format!("{prefix}empty_clauses"), 0.0),
@@ -8161,6 +8300,58 @@ mod run {
             assert_eq!(record["rows"][0]["owner_relation"], json!("same"));
             assert!(
                 record["invariants"]
+                    .as_object()
+                    .unwrap()
+                    .values()
+                    .all(|value| value == &json!(true))
+            );
+        }
+
+        #[test]
+        fn parity_overlap_backend_stats_round_trip_with_shape_partition() {
+            let origin = "root/and_tree/forward/parity";
+            let origin_prefix = format!("cnf_duplicate_origin|{origin}|{origin}|same|");
+            let shape = "a2-f0-t0-d1-r1-x0";
+            let overlap_prefix = format!("cnf_parity_overlap|within_leaf|{shape}|{shape}|");
+            let mut stats = SolveStats::default();
+            for (name, value) in [
+                ("cnf_duplicate_origin_profile_complete".to_owned(), 1.0),
+                ("cnf_duplicate_origin_clauses".to_owned(), 1.0),
+                ("cnf_duplicate_origin_canonical_literals".to_owned(), 2.0),
+                ("cnf_parity_overlap_profile_complete".to_owned(), 1.0),
+                ("cnf_parity_overlap_clauses".to_owned(), 1.0),
+                ("cnf_parity_overlap_canonical_literals".to_owned(), 2.0),
+            ] {
+                stats.backend.push((name, value));
+            }
+            for prefix in [&origin_prefix, &overlap_prefix] {
+                for (metric, value) in [
+                    ("clauses", 1.0),
+                    ("canonical_literals", 2.0),
+                    ("empty_clauses", 0.0),
+                    ("empty_literals", 0.0),
+                    ("unit_clauses", 0.0),
+                    ("unit_literals", 0.0),
+                    ("binary_clauses", 1.0),
+                    ("binary_literals", 2.0),
+                    ("ternary_clauses", 0.0),
+                    ("ternary_literals", 0.0),
+                    ("larger_clauses", 0.0),
+                    ("larger_literals", 0.0),
+                ] {
+                    stats.backend.push((format!("{prefix}{metric}"), value));
+                }
+            }
+
+            let sample = duplicate_origin_sample(&stats).unwrap();
+            let record = duplicate_origin_record(&sample, 1, 1, 1);
+            let overlap = &record["parity_overlap"];
+            assert_eq!(overlap["duplicate_clauses"], json!(1));
+            assert_eq!(overlap["rows"][0]["relation"], json!("within_leaf"));
+            assert_eq!(overlap["rows"][0]["first_shape"], json!(shape));
+            assert_eq!(overlap["rows"][0]["duplicate_shape"], json!(shape));
+            assert!(
+                overlap["invariants"]
                     .as_object()
                     .unwrap()
                     .values()

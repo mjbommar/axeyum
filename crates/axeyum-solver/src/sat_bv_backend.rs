@@ -552,6 +552,46 @@ fn record_duplicate_origin_profile(stats: &mut SolveStats, profile: &CnfDuplicat
             push_count(stats, &format!("{prefix}{metric}"), value);
         }
     }
+    let overlap = &profile.parity_overlap;
+    push_count(
+        stats,
+        "cnf_parity_overlap_profile_complete",
+        u64::from(overlap.profile_complete),
+    );
+    push_count(
+        stats,
+        "cnf_parity_overlap_clauses",
+        overlap.duplicate_clauses,
+    );
+    push_count(
+        stats,
+        "cnf_parity_overlap_canonical_literals",
+        overlap.duplicate_canonical_literals,
+    );
+    for row in &overlap.rows {
+        let prefix = format!(
+            "cnf_parity_overlap|{}|{}|{}|",
+            row.relation.as_str(),
+            row.first_shape.stable_key(),
+            row.duplicate_shape.stable_key(),
+        );
+        for (metric, value) in [
+            ("clauses", row.duplicate_clauses),
+            ("canonical_literals", row.duplicate_canonical_literals),
+            ("empty_clauses", row.empty_clauses),
+            ("empty_literals", row.empty_literals),
+            ("unit_clauses", row.unit_clauses),
+            ("unit_literals", row.unit_literals),
+            ("binary_clauses", row.binary_clauses),
+            ("binary_literals", row.binary_literals),
+            ("ternary_clauses", row.ternary_clauses),
+            ("ternary_literals", row.ternary_literals),
+            ("larger_clauses", row.larger_clauses),
+            ("larger_literals", row.larger_literals),
+        ] {
+            push_count(stats, &format!("{prefix}{metric}"), value);
+        }
+    }
 }
 
 /// A Tseitin formula after CNF inprocessing, plus the maps that lift a model of
@@ -1685,6 +1725,13 @@ mod tests {
             ),
             None
         );
+        assert_eq!(
+            stat(
+                ordinary_backend.last_stats().unwrap(),
+                "cnf_parity_overlap_profile_complete"
+            ),
+            None
+        );
 
         let mut profiled_backend = SatBvBackend::new();
         let profiled = profiled_backend
@@ -1709,6 +1756,14 @@ mod tests {
         assert_eq!(
             stat(profiled_stats, "cnf_duplicate_origin_clauses"),
             Some(1.0)
+        );
+        assert_eq!(
+            stat(profiled_stats, "cnf_parity_overlap_profile_complete"),
+            Some(1.0)
+        );
+        assert_eq!(
+            stat(profiled_stats, "cnf_parity_overlap_clauses"),
+            Some(0.0)
         );
         assert_eq!(
             stat(

@@ -80,6 +80,12 @@ class GlaurungBenchmarkRecipeTests(unittest.TestCase):
         self.assertIn("--expected-files 162", analysis)
         self.assertIn("--expected-sat 88", analysis)
         self.assertIn("--expected-unsat 74", analysis)
+        self.assertIn("--expected-same-owner-parity-duplicates 107000", analysis)
+        self.assertIn(
+            "--expected-baseline-analysis "
+            "bench-results/glaurung-cnf-duplicate-origin-profile-20260719/analysis.json",
+            analysis,
+        )
         self.assertIn("--expected-family arithmetic=36", analysis)
         self.assertIn("--expected-family slice-partial=54", analysis)
 

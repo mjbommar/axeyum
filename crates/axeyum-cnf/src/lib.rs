@@ -2326,6 +2326,207 @@ impl CnfDuplicateOriginRow {
     }
 }
 
+/// Bounded structural shape of one direct parity leaf.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct CnfParityLeafShape {
+    /// Raw input occurrences before clause canonicalization.
+    pub raw_arity: u8,
+    /// Non-inverted constant-false input occurrences.
+    pub false_constants: u8,
+    /// Inverted constant-true input occurrences.
+    pub true_constants: u8,
+    /// Distinct nonconstant AIG nodes referenced by the inputs.
+    pub distinct_nonconstant_nodes: u8,
+    /// Equal-literal pairs among the raw input occurrences.
+    pub repeated_literal_pairs: u8,
+    /// Same-node/opposite-polarity pairs among the raw input occurrences.
+    pub complementary_literal_pairs: u8,
+}
+
+impl CnfParityLeafShape {
+    /// Stable compact artifact spelling.
+    pub fn stable_key(self) -> String {
+        format!(
+            "a{}-f{}-t{}-d{}-r{}-x{}",
+            self.raw_arity,
+            self.false_constants,
+            self.true_constants,
+            self.distinct_nonconstant_nodes,
+            self.repeated_literal_pairs,
+            self.complementary_literal_pairs,
+        )
+    }
+
+    /// Checks the fixed one-to-three-input shape bounds.
+    pub fn invariants_hold(self) -> bool {
+        let constants = self.false_constants.saturating_add(self.true_constants);
+        let nonconstants = self.raw_arity.saturating_sub(constants);
+        let pair_count = self
+            .raw_arity
+            .saturating_mul(self.raw_arity.saturating_sub(1))
+            / 2;
+        (1..=3).contains(&self.raw_arity)
+            && constants <= self.raw_arity
+            && self.distinct_nonconstant_nodes <= nonconstants
+            && (nonconstants == 0 || self.distinct_nonconstant_nodes > 0)
+            && self.repeated_literal_pairs <= pair_count
+            && self.complementary_literal_pairs <= pair_count
+            && self
+                .repeated_literal_pairs
+                .saturating_add(self.complementary_literal_pairs)
+                <= pair_count
+    }
+}
+
+/// Relationship between two equal parity clauses' enclosing leaves.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum CnfParityOverlapRelation {
+    /// Both clauses were attempted by the same leaf of the same owner.
+    WithinLeaf,
+    /// Clauses came from different leaves under the same owner.
+    CrossLeafSameOwner,
+    /// Clauses came from different owners.
+    CrossOwner,
+}
+
+impl CnfParityOverlapRelation {
+    /// Stable artifact spelling.
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::WithinLeaf => "within_leaf",
+            Self::CrossLeafSameOwner => "cross_leaf_same_owner",
+            Self::CrossOwner => "cross_owner",
+        }
+    }
+}
+
+/// One nonzero parity-clause overlap relation/shape cell.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CnfParityOverlapRow {
+    /// Within-leaf, cross-leaf/same-owner, or cross-owner relation.
+    pub relation: CnfParityOverlapRelation,
+    /// Shape of the first leaf that emitted the equal clause.
+    pub first_shape: CnfParityLeafShape,
+    /// Shape of the later leaf whose clause was rejected as a duplicate.
+    pub duplicate_shape: CnfParityLeafShape,
+    /// Exact duplicate clauses in this cell.
+    pub duplicate_clauses: u64,
+    /// Canonical literals in those duplicate clauses.
+    pub duplicate_canonical_literals: u64,
+    /// Empty duplicate clauses.
+    pub empty_clauses: u64,
+    /// Canonical literals in empty duplicate clauses.
+    pub empty_literals: u64,
+    /// Unit duplicate clauses.
+    pub unit_clauses: u64,
+    /// Canonical literals in unit duplicate clauses.
+    pub unit_literals: u64,
+    /// Binary duplicate clauses.
+    pub binary_clauses: u64,
+    /// Canonical literals in binary duplicate clauses.
+    pub binary_literals: u64,
+    /// Ternary duplicate clauses.
+    pub ternary_clauses: u64,
+    /// Canonical literals in ternary duplicate clauses.
+    pub ternary_literals: u64,
+    /// Duplicate clauses containing four or more literals.
+    pub larger_clauses: u64,
+    /// Canonical literals in duplicate clauses containing four or more literals.
+    pub larger_literals: u64,
+}
+
+impl CnfParityOverlapRow {
+    fn new(
+        relation: CnfParityOverlapRelation,
+        first_shape: CnfParityLeafShape,
+        duplicate_shape: CnfParityLeafShape,
+    ) -> Self {
+        Self {
+            relation,
+            first_shape,
+            duplicate_shape,
+            duplicate_clauses: 0,
+            duplicate_canonical_literals: 0,
+            empty_clauses: 0,
+            empty_literals: 0,
+            unit_clauses: 0,
+            unit_literals: 0,
+            binary_clauses: 0,
+            binary_literals: 0,
+            ternary_clauses: 0,
+            ternary_literals: 0,
+            larger_clauses: 0,
+            larger_literals: 0,
+        }
+    }
+
+    fn record(&mut self, len: usize) {
+        let literals = usize_to_u64_saturating(len);
+        self.duplicate_clauses = self.duplicate_clauses.saturating_add(1);
+        self.duplicate_canonical_literals =
+            self.duplicate_canonical_literals.saturating_add(literals);
+        let (clauses, bucket_literals) = match len {
+            0 => (&mut self.empty_clauses, &mut self.empty_literals),
+            1 => (&mut self.unit_clauses, &mut self.unit_literals),
+            2 => (&mut self.binary_clauses, &mut self.binary_literals),
+            3 => (&mut self.ternary_clauses, &mut self.ternary_literals),
+            _ => (&mut self.larger_clauses, &mut self.larger_literals),
+        };
+        *clauses = clauses.saturating_add(1);
+        *bucket_literals = bucket_literals.saturating_add(literals);
+    }
+
+    fn length_clauses(&self) -> u64 {
+        self.empty_clauses
+            .saturating_add(self.unit_clauses)
+            .saturating_add(self.binary_clauses)
+            .saturating_add(self.ternary_clauses)
+            .saturating_add(self.larger_clauses)
+    }
+
+    fn length_literals(&self) -> u64 {
+        self.empty_literals
+            .saturating_add(self.unit_literals)
+            .saturating_add(self.binary_literals)
+            .saturating_add(self.ternary_literals)
+            .saturating_add(self.larger_literals)
+    }
+}
+
+/// Opt-in exact parity-leaf clause-overlap profile.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct CnfParityOverlapProfile {
+    /// Whether every parity/parity duplicate carried leaf metadata.
+    pub profile_complete: bool,
+    /// Exact parity/parity duplicate clauses represented by `rows`.
+    pub duplicate_clauses: u64,
+    /// Canonical literals represented by those duplicate attempts.
+    pub duplicate_canonical_literals: u64,
+    /// Deterministically sorted nonzero relation/shape cells.
+    pub rows: Vec<CnfParityOverlapRow>,
+}
+
+impl CnfParityOverlapProfile {
+    /// Checks shape, relation, clause-length, and literal partitions.
+    pub fn invariants_hold(&self) -> bool {
+        self.profile_complete
+            && self.duplicate_clauses
+                == self.rows.iter().fold(0u64, |total, row| {
+                    total.saturating_add(row.duplicate_clauses)
+                })
+            && self.duplicate_canonical_literals
+                == self.rows.iter().fold(0u64, |total, row| {
+                    total.saturating_add(row.duplicate_canonical_literals)
+                })
+            && self.rows.iter().all(|row| {
+                row.first_shape.invariants_hold()
+                    && row.duplicate_shape.invariants_hold()
+                    && row.duplicate_clauses == row.length_clauses()
+                    && row.duplicate_canonical_literals == row.length_literals()
+            })
+    }
+}
+
 /// Opt-in exact duplicate-clause origin matrix.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CnfDuplicateOriginProfile {
@@ -2337,6 +2538,8 @@ pub struct CnfDuplicateOriginProfile {
     pub duplicate_canonical_literals: u64,
     /// Deterministically sorted nonzero origin cells.
     pub rows: Vec<CnfDuplicateOriginRow>,
+    /// Exact parity/parity duplicate partition by enclosing leaf relation/shape.
+    pub parity_overlap: CnfParityOverlapProfile,
 }
 
 impl CnfDuplicateOriginProfile {
@@ -2345,6 +2548,28 @@ impl CnfDuplicateOriginProfile {
         if !self.profile_complete {
             return false;
         }
+        let parity_clauses = self
+            .rows
+            .iter()
+            .filter(|row| {
+                row.first_origin.template == CnfClauseOriginTemplate::AndTreeForwardParity
+                    && row.duplicate_origin.template
+                        == CnfClauseOriginTemplate::AndTreeForwardParity
+            })
+            .fold(0u64, |total, row| {
+                total.saturating_add(row.duplicate_clauses)
+            });
+        let parity_literals = self
+            .rows
+            .iter()
+            .filter(|row| {
+                row.first_origin.template == CnfClauseOriginTemplate::AndTreeForwardParity
+                    && row.duplicate_origin.template
+                        == CnfClauseOriginTemplate::AndTreeForwardParity
+            })
+            .fold(0u64, |total, row| {
+                total.saturating_add(row.duplicate_canonical_literals)
+            });
         self.duplicate_clauses
             == self
                 .rows
@@ -2362,6 +2587,9 @@ impl CnfDuplicateOriginProfile {
                 .rows
                 .iter()
                 .all(|row| row.duplicate_canonical_literals == row.length_literals())
+            && self.parity_overlap.invariants_hold()
+            && self.parity_overlap.duplicate_clauses == parity_clauses
+            && self.parity_overlap.duplicate_canonical_literals == parity_literals
     }
 }
 
@@ -2862,6 +3090,13 @@ impl ConstructionProfiler for DisabledConstructionProfile {}
 struct CnfClauseOrigin {
     site: CnfClauseOriginSite,
     owner: AigNodeId,
+    parity_leaf: Option<CnfParityLeafOrigin>,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct CnfParityLeafOrigin {
+    leaf_index: usize,
+    shape: CnfParityLeafShape,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -2875,6 +3110,18 @@ impl EmissionContext {
         CnfClauseOrigin {
             site: CnfClauseOriginSite::new(self.phase, template),
             owner: self.owner,
+            parity_leaf: None,
+        }
+    }
+
+    const fn parity_origin(self, leaf_index: usize, shape: CnfParityLeafShape) -> CnfClauseOrigin {
+        CnfClauseOrigin {
+            site: CnfClauseOriginSite::new(
+                self.phase,
+                CnfClauseOriginTemplate::AndTreeForwardParity,
+            ),
+            owner: self.owner,
+            parity_leaf: Some(CnfParityLeafOrigin { leaf_index, shape }),
         }
     }
 }
@@ -2883,8 +3130,18 @@ impl EmissionContext {
 struct EnabledDuplicateOriginStore {
     emitted_origins: Vec<CnfClauseOrigin>,
     rows: BTreeMap<(CnfClauseOriginSite, CnfClauseOriginSite, bool), CnfDuplicateOriginRow>,
+    parity_rows: BTreeMap<
+        (
+            CnfParityOverlapRelation,
+            CnfParityLeafShape,
+            CnfParityLeafShape,
+        ),
+        CnfParityOverlapRow,
+    >,
     duplicate_clauses: u64,
     duplicate_canonical_literals: u64,
+    parity_duplicate_clauses: u64,
+    parity_duplicate_canonical_literals: u64,
 }
 
 impl EnabledDuplicateOriginStore {
@@ -2913,6 +3170,32 @@ impl EnabledDuplicateOriginStore {
         self.duplicate_canonical_literals = self
             .duplicate_canonical_literals
             .saturating_add(usize_to_u64_saturating(canonical_len));
+        if first.site.template == CnfClauseOriginTemplate::AndTreeForwardParity
+            && origin.site.template == CnfClauseOriginTemplate::AndTreeForwardParity
+        {
+            let first_leaf = first
+                .parity_leaf
+                .expect("profiled parity origin carries first-leaf metadata");
+            let duplicate_leaf = origin
+                .parity_leaf
+                .expect("profiled parity origin carries duplicate-leaf metadata");
+            let relation = if first.owner != origin.owner {
+                CnfParityOverlapRelation::CrossOwner
+            } else if first_leaf.leaf_index == duplicate_leaf.leaf_index {
+                CnfParityOverlapRelation::WithinLeaf
+            } else {
+                CnfParityOverlapRelation::CrossLeafSameOwner
+            };
+            let key = (relation, first_leaf.shape, duplicate_leaf.shape);
+            self.parity_rows
+                .entry(key)
+                .or_insert_with(|| CnfParityOverlapRow::new(key.0, key.1, key.2))
+                .record(canonical_len);
+            self.parity_duplicate_clauses = self.parity_duplicate_clauses.saturating_add(1);
+            self.parity_duplicate_canonical_literals = self
+                .parity_duplicate_canonical_literals
+                .saturating_add(usize_to_u64_saturating(canonical_len));
+        }
     }
 
     fn snapshot(&self) -> CnfDuplicateOriginProfile {
@@ -2921,6 +3204,12 @@ impl EnabledDuplicateOriginStore {
             duplicate_clauses: self.duplicate_clauses,
             duplicate_canonical_literals: self.duplicate_canonical_literals,
             rows: self.rows.values().cloned().collect(),
+            parity_overlap: CnfParityOverlapProfile {
+                profile_complete: true,
+                duplicate_clauses: self.parity_duplicate_clauses,
+                duplicate_canonical_literals: self.parity_duplicate_canonical_literals,
+                rows: self.parity_rows.values().cloned().collect(),
+            },
         }
     }
 }
@@ -3625,7 +3914,7 @@ impl<'a, P: ConstructionProfiler> TseitinEncoder<'a, P> {
         encode_reverse: bool,
     ) -> Result<(), CnfError> {
         if encode_forward {
-            for leaf in &gate.leaves {
+            for (leaf_index, leaf) in gate.leaves.iter().enumerate() {
                 match leaf {
                     AndTreeLeaf::Lit(lit) => {
                         let lit = self.encode_lit(*lit);
@@ -3643,7 +3932,14 @@ impl<'a, P: ConstructionProfiler> TseitinEncoder<'a, P> {
                         )?;
                     }
                     AndTreeLeaf::Parity { lits, expected } => {
-                        self.encode_parity_implication(context, out, lits, *expected)?;
+                        self.encode_parity_implication(
+                            context,
+                            out,
+                            leaf_index,
+                            parity_leaf_shape(lits),
+                            lits,
+                            *expected,
+                        )?;
                     }
                 }
             }
@@ -3682,6 +3978,8 @@ impl<'a, P: ConstructionProfiler> TseitinEncoder<'a, P> {
         &mut self,
         context: EmissionContext,
         out: EncodedLit,
+        leaf_index: usize,
+        leaf_shape: CnfParityLeafShape,
         lits: &[AigLit],
         expected: bool,
     ) -> Result<(), CnfError> {
@@ -3705,10 +4003,7 @@ impl<'a, P: ConstructionProfiler> TseitinEncoder<'a, P> {
                 let value = ((mask >> index) & 1) == 1;
                 clause.push(if value { lit.negated() } else { lit });
             }
-            self.add_encoded_clause(
-                context.origin(CnfClauseOriginTemplate::AndTreeForwardParity),
-                &clause,
-            )?;
+            self.add_encoded_clause(context.parity_origin(leaf_index, leaf_shape), &clause)?;
         }
         Ok(())
     }
@@ -4448,6 +4743,46 @@ struct ParityLeaf {
     helper_nodes: Vec<AigNodeId>,
 }
 
+fn parity_leaf_shape(lits: &[AigLit]) -> CnfParityLeafShape {
+    debug_assert!((1..=3).contains(&lits.len()));
+    let mut false_constants = 0u8;
+    let mut true_constants = 0u8;
+    let mut nonconstant_nodes = BTreeSet::new();
+    for lit in lits {
+        if lit.node().index() == 0 {
+            if lit.is_inverted() {
+                true_constants = true_constants.saturating_add(1);
+            } else {
+                false_constants = false_constants.saturating_add(1);
+            }
+        } else {
+            nonconstant_nodes.insert(lit.node());
+        }
+    }
+    let mut repeated_literal_pairs = 0u8;
+    let mut complementary_literal_pairs = 0u8;
+    for lhs in 0..lits.len() {
+        for rhs in (lhs + 1)..lits.len() {
+            if lits[lhs] == lits[rhs] {
+                repeated_literal_pairs = repeated_literal_pairs.saturating_add(1);
+            } else if lits[lhs].node() == lits[rhs].node()
+                && lits[lhs].is_inverted() != lits[rhs].is_inverted()
+            {
+                complementary_literal_pairs = complementary_literal_pairs.saturating_add(1);
+            }
+        }
+    }
+    CnfParityLeafShape {
+        raw_arity: u8::try_from(lits.len()).expect("parity leaf arity is capped at three"),
+        false_constants,
+        true_constants,
+        distinct_nonconstant_nodes: u8::try_from(nonconstant_nodes.len())
+            .expect("parity leaf has at most three distinct nodes"),
+        repeated_literal_pairs,
+        complementary_literal_pairs,
+    }
+}
+
 fn collect_private_xor_parity(context: &SparsePlanContext<'_>, lit: AigLit) -> Option<ParityLeaf> {
     let mut lits = Vec::new();
     let mut inverted = false;
@@ -4716,6 +5051,89 @@ mod tests {
             0,
             "ordinary encoding must retain no origin metadata"
         );
+    }
+
+    #[test]
+    fn parity_leaf_shape_counts_constants_repetition_and_complements() {
+        let mut aig = Aig::new();
+        let p = aig.input("p");
+        let q = aig.input("q");
+
+        let repeated = super::parity_leaf_shape(&[p, p, q]);
+        assert_eq!(repeated.raw_arity, 3);
+        assert_eq!(repeated.false_constants, 0);
+        assert_eq!(repeated.true_constants, 0);
+        assert_eq!(repeated.distinct_nonconstant_nodes, 2);
+        assert_eq!(repeated.repeated_literal_pairs, 1);
+        assert_eq!(repeated.complementary_literal_pairs, 0);
+        assert!(repeated.invariants_hold());
+
+        let constants_and_complement =
+            super::parity_leaf_shape(&[AigLit::FALSE, AigLit::TRUE, p.negated()]);
+        assert_eq!(constants_and_complement.false_constants, 1);
+        assert_eq!(constants_and_complement.true_constants, 1);
+        assert_eq!(constants_and_complement.distinct_nonconstant_nodes, 1);
+        assert!(constants_and_complement.invariants_hold());
+
+        let complement = super::parity_leaf_shape(&[p, p.negated(), q]);
+        assert_eq!(complement.repeated_literal_pairs, 0);
+        assert_eq!(complement.complementary_literal_pairs, 1);
+        assert!(complement.invariants_hold());
+        assert_eq!(complement.stable_key(), "a3-f0-t0-d2-r0-x1");
+    }
+
+    #[test]
+    fn parity_duplicate_profile_partitions_within_cross_leaf_and_owner() {
+        let p = CnfLit::positive(CnfVar::new(0).unwrap());
+        let mut aig = Aig::new();
+        let owner_p = aig.input("owner-p").node();
+        let owner_q = aig.input("owner-q").node();
+        let leaf_input = aig.input("leaf");
+        let shape = super::parity_leaf_shape(&[leaf_input, leaf_input]);
+        let mut encoder =
+            super::TseitinEncoder::<super::EnabledConstructionProfile>::new_profiled(&aig);
+        encoder.formula = super::CnfFormula::new(1);
+        let context_p = super::EmissionContext {
+            phase: CnfClauseOriginPhase::Root,
+            owner: owner_p,
+        };
+        let context_q = super::EmissionContext {
+            phase: CnfClauseOriginPhase::Root,
+            owner: owner_q,
+        };
+        let origins = [
+            context_p.parity_origin(0, shape),
+            context_p.parity_origin(0, shape),
+            context_p.parity_origin(1, shape),
+            context_q.parity_origin(0, shape),
+        ];
+        for origin in origins {
+            encoder.insert_canonical_clause(vec![p], 7, origin).unwrap();
+        }
+
+        let profile = encoder.construction_profile.origins.snapshot();
+        assert!(profile.invariants_hold());
+        assert_eq!(profile.duplicate_clauses, 3);
+        assert_eq!(profile.parity_overlap.duplicate_clauses, 3);
+        assert_eq!(profile.parity_overlap.duplicate_canonical_literals, 3);
+        assert_eq!(profile.parity_overlap.rows.len(), 3);
+        for relation in [
+            super::CnfParityOverlapRelation::WithinLeaf,
+            super::CnfParityOverlapRelation::CrossLeafSameOwner,
+            super::CnfParityOverlapRelation::CrossOwner,
+        ] {
+            let row = profile
+                .parity_overlap
+                .rows
+                .iter()
+                .find(|row| row.relation == relation)
+                .expect("every preregistered relation is represented");
+            assert_eq!(row.first_shape, shape);
+            assert_eq!(row.duplicate_shape, shape);
+            assert_eq!(row.duplicate_clauses, 1);
+            assert_eq!(row.unit_clauses, 1);
+            assert_eq!(row.unit_literals, 1);
+        }
     }
 
     #[test]

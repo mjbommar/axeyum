@@ -5,13 +5,15 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
 
-ARTIFACT_VERSION = 36
-REPORT_SCHEMA = "axeyum.cnf-construction-profile-analysis.v2"
+SUPPORTED_ARTIFACT_VERSIONS = {36, 37}
+PARITY_OVERLAP_ARTIFACT_VERSION = 37
+REPORT_SCHEMA = "axeyum.cnf-construction-profile-analysis.v3"
 INVARIANTS = {
     "non_tautological_attempts_equal_length_buckets",
     "non_tautological_attempts_equal_primary_probes",
@@ -28,6 +30,16 @@ ORIGIN_INVARIANTS = {
     "construction_duplicates_equal_origin_duplicates",
     "owner_relations_closed",
 }
+PARITY_INVARIANTS = {
+    "duplicate_clauses_equal_rows",
+    "duplicate_literals_equal_rows",
+    "row_clauses_equal_length_buckets",
+    "row_literals_equal_length_buckets",
+    "origin_subset_equal_overlap",
+    "relations_closed",
+}
+PARITY_RELATIONS = {"within_leaf", "cross_leaf_same_owner", "cross_owner"}
+PARITY_SHAPE = re.compile(r"a([1-3])-f([0-3])-t([0-3])-d([0-3])-r([0-3])-x([0-3])")
 LENGTH_BUCKETS = ("empty", "unit", "binary", "ternary", "larger")
 COUNTER_PATHS = {
     "clause_attempts": ("clause_attempts",),
@@ -149,12 +161,101 @@ def empty_origin_metrics() -> dict[str, Any]:
     }
 
 
+def parity_shape(value: Any, *, label: str) -> dict[str, int]:
+    require(isinstance(value, str), f"{label} parity shape is not a string")
+    match = PARITY_SHAPE.fullmatch(value)
+    require(match is not None, f"{label} parity shape is malformed")
+    arity, false, true, distinct, repeated, complementary = map(int, match.groups())
+    constants = false + true
+    nonconstants = arity - constants
+    pairs = arity * (arity - 1) // 2
+    require(constants <= arity, f"{label} parity constants exceed arity")
+    require(distinct <= nonconstants, f"{label} distinct-node count exceeds inputs")
+    require(nonconstants == 0 or distinct > 0, f"{label} loses nonconstant inputs")
+    require(repeated + complementary <= pairs, f"{label} parity pair count exceeds arity")
+    return {
+        "raw_arity": arity,
+        "false_constants": false,
+        "true_constants": true,
+        "distinct_nonconstant_nodes": distinct,
+        "repeated_literal_pairs": repeated,
+        "complementary_literal_pairs": complementary,
+    }
+
+
+def parity_overlap_profile(
+    value: Any,
+    *,
+    expected: dict[str, Any],
+    label: str,
+) -> tuple[dict[str, Any], dict[tuple[str, str, str], dict[str, Any]]]:
+    require(isinstance(value, dict), f"{label} lacks parity-overlap profile")
+    require(value.get("profile_complete") is True, f"{label} parity-overlap profile is incomplete")
+    invariants = value.get("invariants")
+    require(isinstance(invariants, dict), f"{label} parity-overlap profile lacks invariants")
+    require(set(invariants) == PARITY_INVARIANTS, f"{label} parity-overlap invariant set mismatch")
+    require(all(entry is True for entry in invariants.values()), f"{label} parity-overlap failed invariant")
+    totals = {
+        "duplicate_clauses": count(value.get("duplicate_clauses"), label=f"{label}.duplicate_clauses"),
+        "duplicate_canonical_literals": count(
+            value.get("duplicate_canonical_literals"),
+            label=f"{label}.duplicate_canonical_literals",
+        ),
+        "lengths": origin_lengths(value.get("lengths"), label=label),
+    }
+    require(totals == expected, f"{label} parity-overlap total differs from origin subset")
+    rows = value.get("rows")
+    require(isinstance(rows, list), f"{label} parity-overlap rows are malformed")
+    rendered: dict[tuple[str, str, str], dict[str, Any]] = {}
+    summed = empty_origin_metrics()
+    for index, row in enumerate(rows):
+        row_label = f"{label}.parity_overlap.rows[{index}]"
+        require(isinstance(row, dict), f"{row_label} is not an object")
+        relation = row.get("relation")
+        first_shape = row.get("first_shape")
+        duplicate_shape = row.get("duplicate_shape")
+        require(relation in PARITY_RELATIONS, f"{row_label} relation is invalid")
+        parsed_first = parity_shape(first_shape, label=f"{row_label}.first_shape")
+        parsed_duplicate = parity_shape(duplicate_shape, label=f"{row_label}.duplicate_shape")
+        key = (relation, first_shape, duplicate_shape)
+        require(key not in rendered, f"{row_label} repeats a parity-overlap cell")
+        metrics = {
+            "duplicate_clauses": count(row.get("duplicate_clauses"), label=f"{row_label}.duplicate_clauses"),
+            "duplicate_canonical_literals": count(
+                row.get("duplicate_canonical_literals"),
+                label=f"{row_label}.duplicate_canonical_literals",
+            ),
+            "lengths": origin_lengths(row.get("lengths"), label=row_label),
+        }
+        require(metrics["duplicate_clauses"] > 0, f"{row_label} is a zero cell")
+        require(
+            metrics["duplicate_clauses"]
+            == sum(metrics["lengths"][bucket]["clauses"] for bucket in LENGTH_BUCKETS),
+            f"{row_label} parity-overlap clause partition drift",
+        )
+        require(
+            metrics["duplicate_canonical_literals"]
+            == sum(metrics["lengths"][bucket]["literals"] for bucket in LENGTH_BUCKETS),
+            f"{row_label} parity-overlap literal partition drift",
+        )
+        rendered[key] = metrics
+        add_origin_metrics(summed, metrics)
+    require(summed == totals, f"{label} parity-overlap rows do not equal totals")
+    return totals, rendered
+
+
 def origin_profile(
     profile: dict[str, Any],
     *,
     expected_duplicate_clauses: int,
+    require_parity_overlap: bool,
     label: str,
-) -> tuple[dict[str, Any], dict[tuple[str, str, str], dict[str, Any]]]:
+) -> tuple[
+    dict[str, Any],
+    dict[tuple[str, str, str], dict[str, Any]],
+    dict[str, Any],
+    dict[tuple[str, str, str], dict[str, Any]],
+]:
     value = profile.get("duplicate_origins")
     require(isinstance(value, dict), f"{label} lacks duplicate-origin profile")
     require(value.get("profile_complete") is True, f"{label} duplicate-origin profile is incomplete")
@@ -211,7 +312,26 @@ def origin_profile(
         rendered[key] = metrics
         add_origin_metrics(summed, metrics)
     require(summed == totals, f"{label} duplicate-origin rows do not equal totals")
-    return totals, rendered
+    expected_parity = empty_origin_metrics()
+    for (first, duplicate, _), metrics in rendered.items():
+        if first.endswith("/and_tree/forward/parity") and duplicate.endswith(
+            "/and_tree/forward/parity"
+        ):
+            add_origin_metrics(expected_parity, metrics)
+    if require_parity_overlap:
+        parity_totals, parity_rows = parity_overlap_profile(
+            value.get("parity_overlap"),
+            expected=expected_parity,
+            label=label,
+        )
+    else:
+        require(
+            "parity_overlap" not in value,
+            f"{label} legacy artifact unexpectedly carries parity-overlap data",
+        )
+        parity_totals = empty_origin_metrics()
+        parity_rows = {}
+    return totals, rendered, parity_totals, parity_rows
 
 
 def counters(cnf: dict[str, Any], *, label: str) -> dict[str, int]:
@@ -238,8 +358,15 @@ def analyze_artifact(
     expected_unsat: int | None = None,
     expected_manifest_sha256: str | None = None,
     expected_families: dict[str, int] | None = None,
+    expected_same_owner_parity_duplicates: int | None = None,
+    expected_baseline_analysis: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    require(artifact.get("version") == ARTIFACT_VERSION, "artifact version mismatch")
+    artifact_version = artifact.get("version")
+    require(
+        artifact_version in SUPPORTED_ARTIFACT_VERSIONS,
+        "artifact version mismatch",
+    )
+    require_parity_overlap = artifact_version >= PARITY_OVERLAP_ARTIFACT_VERSION
     config = artifact.get("config")
     summary = artifact.get("summary")
     instances = artifact.get("instances")
@@ -286,9 +413,16 @@ def analyze_artifact(
     families: dict[str, dict[str, Any]] = {}
     aggregate_origin_totals = empty_origin_metrics()
     aggregate_origin_rows: dict[tuple[str, str, str], dict[str, Any]] = {}
+    aggregate_parity_totals = empty_origin_metrics()
+    aggregate_parity_rows: dict[tuple[str, str, str], dict[str, Any]] = {}
     origin_participation: dict[tuple[str, str, str], set[int]] = defaultdict(set)
     origin_largest_instance: dict[tuple[str, str, str], int] = defaultdict(int)
     origin_families: dict[tuple[str, str, str], dict[str, dict[str, int]]] = defaultdict(
+        lambda: defaultdict(lambda: {"sat": 0, "unsat": 0})
+    )
+    parity_participation: dict[tuple[str, str, str], set[int]] = defaultdict(set)
+    parity_largest_instance: dict[tuple[str, str, str], int] = defaultdict(int)
+    parity_families: dict[tuple[str, str, str], dict[str, dict[str, int]]] = defaultdict(
         lambda: defaultdict(lambda: {"sat": 0, "unsat": 0})
     )
     for index, instance in enumerate(instances):
@@ -309,12 +443,14 @@ def analyze_artifact(
         require(profile.get("profile_complete") is True, f"{label} profile is incomplete")
         require_invariants(profile, label=label)
         row_counts = counters(cnf, label=label)
-        origin_totals, origin_rows = origin_profile(
+        origin_totals, origin_rows, parity_totals, parity_rows = origin_profile(
             profile,
             expected_duplicate_clauses=row_counts["duplicate_clauses_skipped"],
+            require_parity_overlap=require_parity_overlap,
             label=label,
         )
         add_origin_metrics(aggregate_origin_totals, origin_totals)
+        add_origin_metrics(aggregate_parity_totals, parity_totals)
         for key, metrics in origin_rows.items():
             aggregate_row = aggregate_origin_rows.setdefault(key, empty_origin_metrics())
             add_origin_metrics(aggregate_row, metrics)
@@ -323,6 +459,16 @@ def analyze_artifact(
                 origin_largest_instance[key], metrics["duplicate_clauses"]
             )
             origin_families[key][family][instance["outcome"]] += metrics[
+                "duplicate_clauses"
+            ]
+        for key, metrics in parity_rows.items():
+            aggregate_row = aggregate_parity_rows.setdefault(key, empty_origin_metrics())
+            add_origin_metrics(aggregate_row, metrics)
+            parity_participation[key].add(index)
+            parity_largest_instance[key] = max(
+                parity_largest_instance[key], metrics["duplicate_clauses"]
+            )
+            parity_families[key][family][instance["outcome"]] += metrics[
                 "duplicate_clauses"
             ]
         add_counts(aggregate, row_counts)
@@ -336,9 +482,15 @@ def analyze_artifact(
 
     expected_aggregate = counters(summary_cnf, label="summary")
     require(dict(aggregate) == expected_aggregate, "summary counters do not equal per-instance sums")
-    summary_origin_totals, summary_origin_rows = origin_profile(
+    (
+        summary_origin_totals,
+        summary_origin_rows,
+        summary_parity_totals,
+        summary_parity_rows,
+    ) = origin_profile(
         summary_profile,
         expected_duplicate_clauses=expected_aggregate["duplicate_clauses_skipped"],
+        require_parity_overlap=require_parity_overlap,
         label="summary",
     )
     require(
@@ -348,6 +500,14 @@ def analyze_artifact(
     require(
         aggregate_origin_rows == summary_origin_rows,
         "summary duplicate-origin rows do not equal per-instance sums",
+    )
+    require(
+        aggregate_parity_totals == summary_parity_totals,
+        "summary parity-overlap totals do not equal per-instance sums",
+    )
+    require(
+        aggregate_parity_rows == summary_parity_rows,
+        "summary parity-overlap rows do not equal per-instance sums",
     )
 
     if expected_files is not None:
@@ -368,6 +528,48 @@ def analyze_artifact(
     observed_family_counts = {name: row["instances"] for name, row in families.items()}
     if expected_families is not None:
         require(observed_family_counts == expected_families, "family-count gate failed")
+    same_owner_parity_duplicates = sum(
+        metrics["duplicate_clauses"]
+        for (first, duplicate, relation), metrics in aggregate_origin_rows.items()
+        if relation == "same"
+        and first.endswith("/and_tree/forward/parity")
+        and duplicate.endswith("/and_tree/forward/parity")
+    )
+    same_owner_parity_lengths = {
+        bucket: {
+            metric: sum(
+                row_metrics["lengths"][bucket][metric]
+                for (
+                    first,
+                    duplicate,
+                    relation,
+                ), row_metrics in aggregate_origin_rows.items()
+                if relation == "same"
+                and first.endswith("/and_tree/forward/parity")
+                and duplicate.endswith("/and_tree/forward/parity")
+            )
+            for metric in ("clauses", "literals")
+        }
+        for bucket in LENGTH_BUCKETS
+    }
+    if expected_same_owner_parity_duplicates is not None:
+        require(
+            same_owner_parity_duplicates == expected_same_owner_parity_duplicates,
+            "same-owner parity duplicate gate failed",
+        )
+        require(
+            same_owner_parity_lengths["binary"]["clauses"]
+            == expected_same_owner_parity_duplicates
+            and same_owner_parity_lengths["binary"]["literals"]
+            == expected_same_owner_parity_duplicates * 2
+            and all(
+                same_owner_parity_lengths[bucket]["clauses"] == 0
+                and same_owner_parity_lengths[bucket]["literals"] == 0
+                for bucket in LENGTH_BUCKETS
+                if bucket != "binary"
+            ),
+            "same-owner parity binary partition gate failed",
+        )
 
     rendered_families = {
         name: {
@@ -424,11 +626,56 @@ def analyze_artifact(
                 },
             }
         )
-    return {
+    rendered_parity_rows = []
+    eligible_parity_cells = []
+    all_parity_duplicates = aggregate_parity_totals["duplicate_clauses"]
+    for key, metrics in sorted(aggregate_parity_rows.items()):
+        clauses = metrics["duplicate_clauses"]
+        participating_instances = len(parity_participation[key])
+        largest_instance = parity_largest_instance[key]
+        selection_eligible = (
+            clauses * 2 >= all_parity_duplicates
+            and participating_instances >= 10
+            and largest_instance * 2 <= clauses
+        )
+        if selection_eligible:
+            eligible_parity_cells.append(
+                {
+                    "relation": key[0],
+                    "first_shape": key[1],
+                    "duplicate_shape": key[2],
+                }
+            )
+        rendered_parity_rows.append(
+            {
+                "relation": key[0],
+                "first_shape_key": key[1],
+                "duplicate_shape_key": key[2],
+                "first_shape": parity_shape(key[1], label="aggregate first shape"),
+                "duplicate_shape": parity_shape(
+                    key[2], label="aggregate duplicate shape"
+                ),
+                **metrics,
+                "participating_instances": participating_instances,
+                "largest_single_instance_clauses": largest_instance,
+                "largest_instance_share": (
+                    largest_instance / clauses if clauses else None
+                ),
+                "share_of_all_parity_duplicates": (
+                    clauses / all_parity_duplicates if all_parity_duplicates else None
+                ),
+                "selection_eligible": selection_eligible,
+                "families": {
+                    family: dict(outcomes)
+                    for family, outcomes in sorted(parity_families[key].items())
+                },
+            }
+        )
+    report = {
         "schema": REPORT_SCHEMA,
         "accepted": True,
         "artifact": {
-            "version": ARTIFACT_VERSION,
+            "version": artifact_version,
             "corpus_hash": config.get("corpus_hash"),
             "manifest_sha256": manifest_hash,
             "config_hash": config.get("config_hash"),
@@ -448,6 +695,19 @@ def analyze_artifact(
                 "minimum_participating_instances": 10,
                 "maximum_largest_instance_share": 0.5,
             },
+            "same_owner_parity_duplicates": same_owner_parity_duplicates,
+            "same_owner_parity_lengths": same_owner_parity_lengths,
+            "parity_overlap": {
+                "available": require_parity_overlap,
+                **aggregate_parity_totals,
+                "rows": rendered_parity_rows,
+                "eligible_cells": eligible_parity_cells,
+                "selection_rule": {
+                    "minimum_share_of_all_parity_duplicates": 0.5,
+                    "minimum_participating_instances": 10,
+                    "maximum_largest_instance_share": 0.5,
+                },
+            },
         },
         "families": rendered_families,
         "all_profile_invariants_hold": True,
@@ -457,6 +717,36 @@ def analyze_artifact(
             "The report selects no optimization.",
         ],
     }
+    if expected_baseline_analysis is not None:
+        require(
+            expected_baseline_analysis.get("schema")
+            == "axeyum.cnf-construction-profile-analysis.v2",
+            "legacy baseline analysis schema mismatch",
+        )
+        require(
+            report["aggregate"] == expected_baseline_analysis.get("aggregate"),
+            "legacy construction aggregate drift",
+        )
+        require(
+            report["families"] == expected_baseline_analysis.get("families"),
+            "legacy family aggregate drift",
+        )
+        baseline_origins = expected_baseline_analysis.get("duplicate_origins")
+        require(isinstance(baseline_origins, dict), "legacy baseline lacks duplicate origins")
+        for key in (
+            "duplicate_clauses",
+            "duplicate_canonical_literals",
+            "lengths",
+            "rows",
+            "by_duplicate_origin",
+            "eligible_cells",
+            "selection_rule",
+        ):
+            require(
+                report["duplicate_origins"][key] == baseline_origins.get(key),
+                f"legacy duplicate-origin {key} drift",
+            )
+    return report
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -487,6 +777,8 @@ def main() -> None:
     parser.add_argument("--expected-sat", type=int)
     parser.add_argument("--expected-unsat", type=int)
     parser.add_argument("--expected-manifest-sha256")
+    parser.add_argument("--expected-same-owner-parity-duplicates", type=int)
+    parser.add_argument("--expected-baseline-analysis", type=Path)
     parser.add_argument("--expected-family", action="append", type=family_count, default=[])
     parser.add_argument("--out", type=Path)
     args = parser.parse_args()
@@ -502,6 +794,12 @@ def main() -> None:
         expected_unsat=args.expected_unsat,
         expected_manifest_sha256=args.expected_manifest_sha256,
         expected_families=expected_families,
+        expected_same_owner_parity_duplicates=args.expected_same_owner_parity_duplicates,
+        expected_baseline_analysis=(
+            load_json(args.expected_baseline_analysis)
+            if args.expected_baseline_analysis is not None
+            else None
+        ),
     )
     rendered = json.dumps(report, indent=2, sort_keys=True) + "\n"
     if args.out is None:
