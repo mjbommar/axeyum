@@ -145,7 +145,8 @@ optimizes for what the consumers actually need.
   the two tcpip rows, which exact provenance analysis classified as generic
   `Arg0` diagnostics. **Therefore a diverse
   *concretization* policy (A3) is NOT guaranteed to recover them** -- the
-  principled fix is a **symcrete / consistent-symbolic address** (A2-flavored),
+  principled fix is a **symcrete / consistent-symbolic address** (the bounded
+  first stage of A2),
   which keeps read1 and read2 provably aliased while retaining a reproducible
   concrete witness. This makes symcrete/symbolic memory a conditional
   architecture lever only after the cheap policy sweep leaves validated
@@ -269,34 +270,33 @@ genuinely architectural; the rest are knobs or bounded explorer mechanics.
   *aliasing* property (two reads of the *same* address) and concretizing that
   address to any single value can break the aliasing. A3 is the right tool for
   value-dependent bugs, the wrong tool for aliasing bugs.
-- **A2'. Symcrete addressing (the near-term Pareto lever -- but memory-model
-  work, NOT a config knob).** COLOSSUS/KLEEF's mechanism: instead of pinning
+- **A2. Symbolic-address memory (the one architectural item, staged only if
+  labeled evidence admits it).** The bounded first stage is COLOSSUS/KLEEF-style
+  symcrete addressing: instead of pinning
   `addr == v` and discarding the constraint, keep `addr` symbolic in the path
   condition but attach a consistent concrete witness. This gives reproducibility
   (the witness) AND coverage/aliasing (the constraint survives, so read1 and read2
   stay provably the same location) -- the principled fix for the double-fetch use
-  case. **Iteration-3 correction: this is NOT the cheap `Defer` knob I implied
-  earlier.** glaurung concretizes *precisely because* its memory model has no
+  case. This is not the cheap `Defer` knob: Glaurung concretizes precisely
+  because its memory model has no
   symbolic addresses ("symbolic memory is concretized, never SMT arrays",
-  01-current-state.md). So A2' requires the memory subsystem to tolerate a
-  symbolic address at least at the aliasing sites -- bounded memory-model work,
-  lighter than full symbolic memory but firmly on the architecture side of the
-  line, not a policy `choose()`. Still the right lever for aliasing bugs; just
-  not free.
-- **A2. Fully symbolic memory (the heaviest architectural item, if A2' is not
-  enough).** Unbounded symbolic memory / read-over-write at every access
-  (memsight). Biggest coverage win in the literature but the heaviest. This is
+  01-current-state.md). A2 therefore starts, if admitted, by tolerating a
+  symbolic address only at bounded aliasing sites. Full read-over-write symbolic
+  memory (memsight) is a later stage of the same architectural project, not a
+  second pillar item, and proceeds only if the bounded stage leaves measured
+  headroom. This is
   where **axeyum's warm path *might* pay for itself** (the constraint set grows;
   warm reuse may keep it affordable) -- but per 3.6 the SE reuse prior art is
   Green-style *constraint caching*, so whether solver-internal warm state is
   additive here is an open, must-measure question, not an assumption. Sequence
-  after A0 + A2' show how much headroom remains.
+  it only after A0 and independent labels show a residual gap.
 
 **The crisp config-vs-architecture boundary (what the user's "isn't it just
 configurable?" gets exactly right, and where it stops):** choosing *which
 concrete value* to pin is pure configuration -- A0's `AnyModel`/`Least`/`Greatest`/
 `BoundarySet`/`DiverseEnum` are all knob settings that still concretize. Keeping
-an address *symbolic* (A2' symcrete, A2 symbolic memory) is a memory-model change,
+an address *symbolic* (A2, beginning with bounded symcrete addressing) is a
+memory-model change,
 not a knob. Value-dependent bugs are fixed by config; aliasing bugs
 (double-fetch) are fixed by architecture. Both are worth doing; only the first is
 cheap.
@@ -352,9 +352,9 @@ Retire "a faster solver." The defensible, novel thesis:
   validated coverage, work, or cost without hiding losses. The
   *value-selection* half is a configurable-policy sweep (A0) -- convincing and
   reproducible because it is measured across policies, not hand-tuned. The
-  *coverage* half for aliasing bugs may need A2' symcrete addressing
-  (memory-model work), but no such project starts until a labeled policy sweep
-  demonstrates residual headroom. The current tcpip slice has zero accepted
+  *coverage* half for aliasing bugs may need A2 symbolic-address memory,
+  beginning with a bounded symcrete stage, but no such project starts until a
+  labeled policy sweep demonstrates residual headroom. The current tcpip slice has zero accepted
   rows, so it is a determinism/cost control rather than publication coverage
   evidence.
 - **Systems contribution:** the deployability + determinism story (C1/C3) -- a
@@ -396,7 +396,7 @@ support anyway.
   positive fixtures under both authorities. Use that population as a mandatory
   no-regression stratum, not as evidence that value selection changes recall.
 
-**Phase 2 -- Recover coverage reproducibly (scalar sweep accepted; real-output labeling next).**
+**Phase 2 -- Recover coverage reproducibly (scalar sweep and exhaustive source-backed labeling complete).**
 - **Scalar sweep complete.** ADR-0244 fails closed
   when minimum cannot complete usbprint under the fixed deadline. ADR-0245 then
   clears AnyModel/minimum but rejects maximum at the positive-control precision
@@ -412,23 +412,26 @@ support anyway.
   {AnyModel, LeastUnsigned, GreatestUnsigned,
   SiteHashZero, SiteHashOne}. Preserve raw, confidence-gated, and validated
   populations independently; never use raw `>= AnyModel` as an acceptance gate.
-  Next independently adjudicate a preregistered bounded sample of policy-varying
-  real-driver rows, or add a real source-backed population capable of exposing
-  misses. ADR-0248 now freezes the stronger immediately available control: all
-  54 policy-varying rows at 43 sites in the tracked source-backed population,
-  with no sampling and every source/machine label pending. **Gate for any
-  memory-model work:** a measured validated residual gap,
+  ADR-0248 takes the stronger immediately available control: all 54
+  policy-varying rows at 43 sites in the tracked source-backed population, with
+  no sampling. Its complete source/instruction review classifies 30 as ordinary
+  request plumbing and 24 as duplicate presentations of validated sinks, with
+  zero independent primitives and zero indeterminate rows. No scalar policy has
+  a validated finding difference. **Gate for any memory-model work:** a new,
+  measured validated residual gap on a genuinely broader labeled population,
   not raw tcpip variation or usbprint's resource failure. Extend with
   BoundarySet/DiverseEnum only after bounded multi-successor execution exists
   and the labeled evidence justifies the extra work; do not approximate either
   policy by choosing one value.
 
-**Phase 3 -- The structural lever, only if A2' leaves headroom (month+).**
-- A2 fully symbolic memory (memsight-style); B2 abstraction-refinement for
+**Phase 3 -- The structural lever, only if new labeled evidence opens A2 (month+).**
+- A2 symbolic-address memory, starting with bounded symcrete aliasing and
+  widening to full memsight-style read-over-write only if needed; B2
+  abstraction-refinement for
   mul/div/rem. **Gate:** measured coverage/divergence improvement vs the best
-  A0/A2' point (target the COLOSSUS ballpark); cold-corpus ratio moved by B2. If
-  A2' symcrete already closes the coverage gap, full symbolic memory becomes
-  optional polish rather than a required project.
+  A0/A2 point (target the COLOSSUS ballpark); cold-corpus ratio moved by B2. If
+  the bounded symcrete stage closes the admitted gap, full symbolic memory does
+  not proceed.
 
 **Phase 4 -- Differentiators + write-up.**
 - C2 proof-carrying detection; C3 CI determinism gating; B3 parallel exploration.

@@ -174,8 +174,23 @@ Exact attempt identities:
 - accepted analysis SHA-256:
   `6de0c7592f00d90711f4a4b7dbb5a381bfe663c914094aa55c069c355dfdcb99`
 
-V3 closes the five executable scalar-policy matrix. It does not open symbolic
-memory: the labeled control is policy-invariant, and the policy-varying real
-rows have not been independently validated. The next coverage step is a bounded
-source-backed adjudication of policy-varying real-driver output, while usbprint
-remains a separate resource frontier.
+V3 closes the five executable scalar-policy matrix. It does not itself open
+symbolic memory: the labeled control is policy-invariant. ADR-0248's subsequent
+exhaustive source-backed adjudication closes the varying planted-fixture rows
+without finding a validated residual gap. Usbprint remains a separate resource
+frontier.
+
+## Exhaustive source-backed difference adjudication
+
+ADR-0248 follows the accepted v3 sweep with a stronger no-sampling control. It
+freezes and reviews the complete 54-row union-minus-intersection from the
+tracked positive population. The accepted result is preserved under
+[`policy-difference-adjudication-v1/`](policy-difference-adjudication-v1/).
+
+All 43 sites revalidate against exact source ranges and instructions at pinned
+IOCTLance revision `905629a`; all 14 source/binary files are tracked, clean, and
+hash-exact. Thirty rows are ordinary fixed IRP/request-buffer plumbing and 24
+are duplicate presentations of already validated sinks. There are zero
+independent primitives and zero indeterminate rows. Consequently the five
+scalar policies have no validated finding difference on this exhaustive
+source-backed population, and no residual gap admits symbolic-memory work.

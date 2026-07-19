@@ -1,0 +1,1063 @@
+{
+  "accepted": true,
+  "adjudicated_finding_count": 54,
+  "adjudicated_site_count": 43,
+  "classification_counts": {
+    "duplicate-presentation-of-validated-sink": 24,
+    "ordinary-irp-request-plumbing": 30
+  },
+  "failures": [],
+  "frozen_population_sha256": "3671540494b85b2a93af3bddbeb1cbad410b34961c65761f9f9799f43d49e999",
+  "indeterminate_count": 0,
+  "real_primitive_counts_by_policy": {
+    "any-model": 0,
+    "max-unsigned": 0,
+    "min-unsigned": 0,
+    "site-hash-0": 0,
+    "site-hash-1": 0
+  },
+  "rows": [
+    {
+      "classification": "ordinary-irp-request-plumbing",
+      "driver": "test_process_termination.sys",
+      "finding": "        null-deref  va=0x1cbe1102e  [dispatch] fn=IoctlHandler @ 0x1cbe11000  sev=Arbitrary  taint=[\"*Arg1\"]",
+      "instruction": "mov\teax, dword ptr [rax + 0x18]",
+      "kind": "null-deref",
+      "machine_evidence": "Loads IoControlCode from the current IO_STACK_LOCATION at fixed offset 0x18.",
+      "present_policies": [
+        "any-model",
+        "min-unsigned",
+        "site-hash-0"
+      ],
+      "source_excerpt": "27:NTSTATUS IoctlHandler(PDEVICE_OBJECT DeviceObject, PIRP Irp) {\n28:    PIO_STACK_LOCATION stack = IoGetCurrentIrpStackLocation(Irp);\n29:    ULONG ioctl = stack->Parameters.DeviceIoControl.IoControlCode;\n30:    PPROCESS_REQUEST request = (PPROCESS_REQUEST)Irp->AssociatedIrp.SystemBuffer;",
+      "source_lines": "27-30",
+      "taint": [
+        "*Arg1"
+      ],
+      "va": "0x1cbe1102e"
+    },
+    {
+      "classification": "ordinary-irp-request-plumbing",
+      "driver": "test_shellcode.sys",
+      "finding": "        null-deref  va=0x20ec7102b  [dispatch] fn=IoctlHandler @ 0x20ec71000  sev=Arbitrary  taint=[\"*Arg1\"]",
+      "instruction": "mov\teax, dword ptr [rax + 0x18]",
+      "kind": "null-deref",
+      "machine_evidence": "Loads IoControlCode from the current IO_STACK_LOCATION at fixed offset 0x18.",
+      "present_policies": [
+        "any-model",
+        "min-unsigned",
+        "site-hash-1"
+      ],
+      "source_excerpt": "18:NTSTATUS IoctlHandler(PDEVICE_OBJECT DeviceObject, PIRP Irp) {\n19:    PIO_STACK_LOCATION stack = IoGetCurrentIrpStackLocation(Irp);\n20:    ULONG ioctl = stack->Parameters.DeviceIoControl.IoControlCode;\n21:    PCB_REQ req = (PCB_REQ)Irp->AssociatedIrp.SystemBuffer;",
+      "source_lines": "18-21",
+      "taint": [
+        "*Arg1"
+      ],
+      "va": "0x20ec7102b"
+    },
+    {
+      "classification": "ordinary-irp-request-plumbing",
+      "driver": "test_integer_overflow.sys",
+      "finding": "        null-deref  va=0x2253a102b  [dispatch] fn=IoctlHandler @ 0x2253a1000  sev=Arbitrary  taint=[\"*Arg1\"]",
+      "instruction": "mov\teax, dword ptr [rax + 0x18]",
+      "kind": "null-deref",
+      "machine_evidence": "Loads IoControlCode from the current IO_STACK_LOCATION at fixed offset 0x18.",
+      "present_policies": [
+        "any-model",
+        "min-unsigned",
+        "site-hash-1"
+      ],
+      "source_excerpt": "17:NTSTATUS IoctlHandler(PDEVICE_OBJECT DeviceObject, PIRP Irp) {\n18:    PIO_STACK_LOCATION stack = IoGetCurrentIrpStackLocation(Irp);\n19:    ULONG ioctl = stack->Parameters.DeviceIoControl.IoControlCode;\n20:    PALLOC_REQ req = (PALLOC_REQ)Irp->AssociatedIrp.SystemBuffer;",
+      "source_lines": "17-20",
+      "taint": [
+        "*Arg1"
+      ],
+      "va": "0x2253a102b"
+    },
+    {
+      "classification": "ordinary-irp-request-plumbing",
+      "driver": "test_physical_memory.sys",
+      "finding": "        null-deref  va=0x2a092102e  [dispatch] fn=IoctlHandler @ 0x2a0921000  sev=Arbitrary  taint=[\"*Arg1\"]",
+      "instruction": "mov\teax, dword ptr [rax + 0x18]",
+      "kind": "null-deref",
+      "machine_evidence": "Loads IoControlCode from the current IO_STACK_LOCATION at fixed offset 0x18.",
+      "present_policies": [
+        "any-model",
+        "min-unsigned",
+        "site-hash-0"
+      ],
+      "source_excerpt": "28:NTSTATUS IoctlHandler(PDEVICE_OBJECT DeviceObject, PIRP Irp) {\n29:    PIO_STACK_LOCATION stack = IoGetCurrentIrpStackLocation(Irp);\n30:    ULONG ioctl = stack->Parameters.DeviceIoControl.IoControlCode;\n31:    PVOID buffer = Irp->AssociatedIrp.SystemBuffer;",
+      "source_lines": "28-31",
+      "taint": [
+        "*Arg1"
+      ],
+      "va": "0x2a092102e"
+    },
+    {
+      "classification": "ordinary-irp-request-plumbing",
+      "driver": "test_file_operations.sys",
+      "finding": "        null-deref  va=0x36def102e  [dispatch] fn=IoctlHandler @ 0x36def1000  sev=Arbitrary  taint=[\"*Arg1\"]",
+      "instruction": "mov\teax, dword ptr [rax + 0x18]",
+      "kind": "null-deref",
+      "machine_evidence": "Loads IoControlCode from the current IO_STACK_LOCATION at fixed offset 0x18; it does not dereference an attacker-selected address.",
+      "present_policies": [
+        "any-model",
+        "min-unsigned",
+        "site-hash-0"
+      ],
+      "source_excerpt": "22:NTSTATUS IoctlHandler(PDEVICE_OBJECT DeviceObject, PIRP Irp) {\n23:    PIO_STACK_LOCATION stack = IoGetCurrentIrpStackLocation(Irp);\n24:    ULONG ioctl = stack->Parameters.DeviceIoControl.IoControlCode;\n25:    PFILE_OP_REQUEST request = (PFILE_OP_REQUEST)Irp->AssociatedIrp.SystemBuffer;",
+      "source_lines": "22-25",
+      "taint": [
+        "*Arg1"
+      ],
+      "va": "0x36def102e"
+    },
+    {
+      "classification": "ordinary-irp-request-plumbing",
+      "driver": "test_stack_overflow.sys",
+      "finding": "        null-deref  va=0x397ba102e  [dispatch] fn=IoctlHandler @ 0x397ba1000  sev=Arbitrary  taint=[\"*Arg1\"]",
+      "instruction": "mov\teax, dword ptr [rax + 0x18]",
+      "kind": "null-deref",
+      "machine_evidence": "Loads IoControlCode from the current IO_STACK_LOCATION at fixed offset 0x18.",
+      "present_policies": [
+        "any-model",
+        "min-unsigned",
+        "site-hash-0"
+      ],
+      "source_excerpt": "13:NTSTATUS IoctlHandler(PDEVICE_OBJECT DeviceObject, PIRP Irp) {\n14:    PIO_STACK_LOCATION stack = IoGetCurrentIrpStackLocation(Irp);\n15:    ULONG ioctl = stack->Parameters.DeviceIoControl.IoControlCode;\n16:    PVOID userBuf = Irp->AssociatedIrp.SystemBuffer;\n17:    ULONG userLen = stack->Parameters.DeviceIoControl.InputBufferLength;",
+      "source_lines": "13-17",
+      "taint": [
+        "*Arg1"
+      ],
+      "va": "0x397ba102e"
+    },
+    {
+      "classification": "ordinary-irp-request-plumbing",
+      "driver": "test_process_termination.sys",
+      "finding": "      double-fetch  va=0x1cbe1110e  [dispatch] fn=IoctlHandler @ 0x1cbe11000  sev=Constrained  taint=[\"**Arg1\"]",
+      "instruction": "mov\teax, dword ptr [rax + 0xc]",
+      "kind": "double-fetch",
+      "machine_evidence": "Reloads DesiredAccess from the kernel-owned METHOD_BUFFERED copy after the zero test; it is not a user-racy double fetch.",
+      "present_policies": [
+        "any-model"
+      ],
+      "source_excerpt": "43:        case IOCTL_OPEN_PROCESS: {\n44:            CLIENT_ID clientId;\n45:            OBJECT_ATTRIBUTES objAttr;\n46:            HANDLE processHandle;\n47:            \n48:            clientId.UniqueProcess = (HANDLE)(ULONG_PTR)request->ProcessId;  // User-controlled PID\n49:            clientId.UniqueThread = NULL;\n50:            \n51:            InitializeObjectAttributes(&objAttr, NULL, OBJ_KERNEL_HANDLE, NULL, NULL);\n52:            \n53:            // VULNERABILITY: Open process with user-controlled PID and dangerous access rights\n54:            status = ZwOpenProcess(\n55:                &processHandle,\n56:                request->DesiredAccess ? request->DesiredAccess : PROCESS_ALL_ACCESS,  // Dangerous access\n57:                &objAttr,\n58:                &clientId  // User-controlled PID\n59:            );",
+      "source_lines": "43-59",
+      "taint": [
+        "**Arg1"
+      ],
+      "va": "0x1cbe1110e"
+    },
+    {
+      "classification": "ordinary-irp-request-plumbing",
+      "driver": "test_process_termination.sys",
+      "finding": "      double-fetch  va=0x1cbe1118b  [dispatch] fn=IoctlHandler @ 0x1cbe11000  sev=Constrained  taint=[\"**Arg1\"]",
+      "instruction": "mov\trax, qword ptr [rax + 0x10]",
+      "kind": "double-fetch",
+      "machine_evidence": "Reloads ProcessObject from the kernel-owned METHOD_BUFFERED copy for ObDereferenceObject. It is neither a user-racy double fetch nor an arbitrary read at this VA.",
+      "present_policies": [
+        "any-model"
+      ],
+      "source_excerpt": "94:        case IOCTL_DEREF_OBJECT:\n95:            // VULNERABILITY: Dereference user-controlled object pointer\n96:            if (request->ProcessObject) {\n97:                ObDereferenceObject(request->ProcessObject);  // User-controlled pointer\n98:                status = STATUS_SUCCESS;",
+      "source_lines": "94-98",
+      "taint": [
+        "**Arg1"
+      ],
+      "va": "0x1cbe1118b"
+    },
+    {
+      "classification": "duplicate-presentation-of-validated-sink",
+      "driver": "test_integer_overflow.sys",
+      "finding": "      double-fetch  va=0x2253a1089  [dispatch] fn=IoctlHandler @ 0x2253a1000  sev=Constrained  taint=[\"**Arg1\"]",
+      "instruction": "mov\tedx, dword ptr [rax]",
+      "kind": "double-fetch",
+      "machine_evidence": "Reloads Count from the kernel-owned METHOD_BUFFERED copy for the already validated unchecked multiply at 0x2253a1092; this is not a user-racy double fetch.",
+      "present_policies": [
+        "any-model"
+      ],
+      "source_excerpt": "24:    if (ioctl == IOCTL_ALLOC) {\n25:        /* VULNERABILITY: attacker count * elem size can wrap to a small value. */\n26:        ULONG size = req->Count * req->ElemSize;\n27:        buf = ExAllocatePoolWithTag(NonPagedPool, size, 'tset');\n28:        if (buf) {\n29:            /* copy using the un-wrapped logical length -> heap overflow */\n30:            RtlCopyMemory(buf, req, req->Count * req->ElemSize);",
+      "source_lines": "24-30",
+      "taint": [
+        "**Arg1"
+      ],
+      "va": "0x2253a1089"
+    },
+    {
+      "classification": "duplicate-presentation-of-validated-sink",
+      "driver": "test_integer_overflow.sys",
+      "finding": "      double-fetch  va=0x2253a108f  [dispatch] fn=IoctlHandler @ 0x2253a1000  sev=Constrained  taint=[\"**Arg1\"]",
+      "instruction": "mov\teax, dword ptr [rax + 0x4]",
+      "kind": "double-fetch",
+      "machine_evidence": "Reloads ElemSize from the kernel-owned METHOD_BUFFERED copy for the already validated unchecked multiply at 0x2253a1092; this is not a user-racy double fetch.",
+      "present_policies": [
+        "any-model"
+      ],
+      "source_excerpt": "24:    if (ioctl == IOCTL_ALLOC) {\n25:        /* VULNERABILITY: attacker count * elem size can wrap to a small value. */\n26:        ULONG size = req->Count * req->ElemSize;\n27:        buf = ExAllocatePoolWithTag(NonPagedPool, size, 'tset');\n28:        if (buf) {\n29:            /* copy using the un-wrapped logical length -> heap overflow */\n30:            RtlCopyMemory(buf, req, req->Count * req->ElemSize);",
+      "source_lines": "24-30",
+      "taint": [
+        "**Arg1"
+      ],
+      "va": "0x2253a108f"
+    },
+    {
+      "classification": "ordinary-irp-request-plumbing",
+      "driver": "test_physical_memory.sys",
+      "finding": "      double-fetch  va=0x2a09210c7  [dispatch] fn=IoctlHandler @ 0x2a0921000  sev=Constrained  taint=[\"**Arg1\"]",
+      "instruction": "mov\trdx, qword ptr [rax + 0x8]",
+      "kind": "double-fetch",
+      "machine_evidence": "Reloads Size from the kernel-owned METHOD_BUFFERED request for MmUnmapIoSpace cleanup; it is not a user-racy double fetch or arbitrary-address read.",
+      "present_policies": [
+        "any-model"
+      ],
+      "source_excerpt": "46:            if (mappedAddress) {\n47:                // Return mapped virtual address to user\n48:                request->VirtualAddress = mappedAddress;\n49:                status = STATUS_SUCCESS;\n50:                \n51:                // In real exploit, attacker would read/write here\n52:                // For testing, just unmap\n53:                MmUnmapIoSpace(mappedAddress, request->Size);",
+      "source_lines": "46-53",
+      "taint": [
+        "**Arg1"
+      ],
+      "va": "0x2a09210c7"
+    },
+    {
+      "classification": "ordinary-irp-request-plumbing",
+      "driver": "test_process_termination.sys",
+      "finding": "    arbitrary-read  va=0x1cbe1102e  [dispatch] fn=IoctlHandler @ 0x1cbe11000  sev=Arbitrary  taint=[\"*Arg1\"]",
+      "instruction": "mov\teax, dword ptr [rax + 0x18]",
+      "kind": "arbitrary-read",
+      "machine_evidence": "Loads IoControlCode from the current IO_STACK_LOCATION at fixed offset 0x18.",
+      "present_policies": [
+        "any-model",
+        "min-unsigned",
+        "site-hash-0"
+      ],
+      "source_excerpt": "27:NTSTATUS IoctlHandler(PDEVICE_OBJECT DeviceObject, PIRP Irp) {\n28:    PIO_STACK_LOCATION stack = IoGetCurrentIrpStackLocation(Irp);\n29:    ULONG ioctl = stack->Parameters.DeviceIoControl.IoControlCode;\n30:    PPROCESS_REQUEST request = (PPROCESS_REQUEST)Irp->AssociatedIrp.SystemBuffer;",
+      "source_lines": "27-30",
+      "taint": [
+        "*Arg1"
+      ],
+      "va": "0x1cbe1102e"
+    },
+    {
+      "classification": "duplicate-presentation-of-validated-sink",
+      "driver": "test_process_termination.sys",
+      "finding": "    arbitrary-read  va=0x1cbe1109e  [dispatch] fn=IoctlHandler @ 0x1cbe11000  sev=Constrained  taint=[\"**Arg1\"]",
+      "instruction": "mov\tedx, dword ptr [rax + 0x18]",
+      "kind": "arbitrary-read",
+      "machine_evidence": "Loads ExitStatus from fixed SystemBuffer offset 0x18 for the already validated ZwTerminateProcess call at 0x1cbe110b2.",
+      "present_policies": [
+        "any-model"
+      ],
+      "source_excerpt": "35:        case IOCTL_TERMINATE_PROCESS:\n36:            // VULNERABILITY: User-controlled process handle\n37:            status = ZwTerminateProcess(\n38:                request->ProcessHandle,  // User-controlled handle\n39:                request->ExitStatus      // User-controlled exit status\n40:            );",
+      "source_lines": "35-40",
+      "taint": [
+        "**Arg1"
+      ],
+      "va": "0x1cbe1109e"
+    },
+    {
+      "classification": "duplicate-presentation-of-validated-sink",
+      "driver": "test_process_termination.sys",
+      "finding": "    arbitrary-read  va=0x1cbe110a5  [dispatch] fn=IoctlHandler @ 0x1cbe11000  sev=Constrained  taint=[\"**Arg1\"]",
+      "instruction": "mov\trax, qword ptr [rax]",
+      "kind": "arbitrary-read",
+      "machine_evidence": "Loads ProcessHandle from fixed SystemBuffer offset 0 for the already validated ZwTerminateProcess call at 0x1cbe110b2.",
+      "present_policies": [
+        "any-model"
+      ],
+      "source_excerpt": "35:        case IOCTL_TERMINATE_PROCESS:\n36:            // VULNERABILITY: User-controlled process handle\n37:            status = ZwTerminateProcess(\n38:                request->ProcessHandle,  // User-controlled handle\n39:                request->ExitStatus      // User-controlled exit status\n40:            );",
+      "source_lines": "35-40",
+      "taint": [
+        "**Arg1"
+      ],
+      "va": "0x1cbe110a5"
+    },
+    {
+      "classification": "ordinary-irp-request-plumbing",
+      "driver": "test_process_termination.sys",
+      "finding": "    arbitrary-read  va=0x1cbe110c0  [dispatch] fn=IoctlHandler @ 0x1cbe11000  sev=Constrained  taint=[\"**Arg1\"]",
+      "instruction": "mov\teax, dword ptr [rax + 0x8]",
+      "kind": "arbitrary-read",
+      "machine_evidence": "Loads ProcessId from fixed SystemBuffer offset 8 into a local CLIENT_ID; the recorded instruction does not dereference an attacker-selected address.",
+      "present_policies": [
+        "any-model"
+      ],
+      "source_excerpt": "43:        case IOCTL_OPEN_PROCESS: {\n44:            CLIENT_ID clientId;\n45:            OBJECT_ATTRIBUTES objAttr;\n46:            HANDLE processHandle;\n47:            \n48:            clientId.UniqueProcess = (HANDLE)(ULONG_PTR)request->ProcessId;  // User-controlled PID\n49:            clientId.UniqueThread = NULL;\n50:            \n51:            InitializeObjectAttributes(&objAttr, NULL, OBJ_KERNEL_HANDLE, NULL, NULL);\n52:            \n53:            // VULNERABILITY: Open process with user-controlled PID and dangerous access rights\n54:            status = ZwOpenProcess(\n55:                &processHandle,\n56:                request->DesiredAccess ? request->DesiredAccess : PROCESS_ALL_ACCESS,  // Dangerous access\n57:                &objAttr,\n58:                &clientId  // User-controlled PID\n59:            );",
+      "source_lines": "43-59",
+      "taint": [
+        "**Arg1"
+      ],
+      "va": "0x1cbe110c0"
+    },
+    {
+      "classification": "ordinary-irp-request-plumbing",
+      "driver": "test_process_termination.sys",
+      "finding": "    arbitrary-read  va=0x1cbe11103  [dispatch] fn=IoctlHandler @ 0x1cbe11000  sev=Constrained  taint=[\"**Arg1\"]",
+      "instruction": "mov\teax, dword ptr [rax + 0xc]",
+      "kind": "arbitrary-read",
+      "machine_evidence": "Loads DesiredAccess from fixed SystemBuffer offset 0xc for a zero/default test while constructing ZwOpenProcess arguments.",
+      "present_policies": [
+        "any-model"
+      ],
+      "source_excerpt": "43:        case IOCTL_OPEN_PROCESS: {\n44:            CLIENT_ID clientId;\n45:            OBJECT_ATTRIBUTES objAttr;\n46:            HANDLE processHandle;\n47:            \n48:            clientId.UniqueProcess = (HANDLE)(ULONG_PTR)request->ProcessId;  // User-controlled PID\n49:            clientId.UniqueThread = NULL;\n50:            \n51:            InitializeObjectAttributes(&objAttr, NULL, OBJ_KERNEL_HANDLE, NULL, NULL);\n52:            \n53:            // VULNERABILITY: Open process with user-controlled PID and dangerous access rights\n54:            status = ZwOpenProcess(\n55:                &processHandle,\n56:                request->DesiredAccess ? request->DesiredAccess : PROCESS_ALL_ACCESS,  // Dangerous access\n57:                &objAttr,\n58:                &clientId  // User-controlled PID\n59:            );",
+      "source_lines": "43-59",
+      "taint": [
+        "**Arg1"
+      ],
+      "va": "0x1cbe11103"
+    },
+    {
+      "classification": "ordinary-irp-request-plumbing",
+      "driver": "test_process_termination.sys",
+      "finding": "    arbitrary-read  va=0x1cbe1110e  [dispatch] fn=IoctlHandler @ 0x1cbe11000  sev=Constrained  taint=[\"**Arg1\"]",
+      "instruction": "mov\teax, dword ptr [rax + 0xc]",
+      "kind": "arbitrary-read",
+      "machine_evidence": "Reloads DesiredAccess from the kernel-owned METHOD_BUFFERED copy after the zero test; it is not a user-racy double fetch.",
+      "present_policies": [
+        "any-model"
+      ],
+      "source_excerpt": "43:        case IOCTL_OPEN_PROCESS: {\n44:            CLIENT_ID clientId;\n45:            OBJECT_ATTRIBUTES objAttr;\n46:            HANDLE processHandle;\n47:            \n48:            clientId.UniqueProcess = (HANDLE)(ULONG_PTR)request->ProcessId;  // User-controlled PID\n49:            clientId.UniqueThread = NULL;\n50:            \n51:            InitializeObjectAttributes(&objAttr, NULL, OBJ_KERNEL_HANDLE, NULL, NULL);\n52:            \n53:            // VULNERABILITY: Open process with user-controlled PID and dangerous access rights\n54:            status = ZwOpenProcess(\n55:                &processHandle,\n56:                request->DesiredAccess ? request->DesiredAccess : PROCESS_ALL_ACCESS,  // Dangerous access\n57:                &objAttr,\n58:                &clientId  // User-controlled PID\n59:            );",
+      "source_lines": "43-59",
+      "taint": [
+        "**Arg1"
+      ],
+      "va": "0x1cbe1110e"
+    },
+    {
+      "classification": "ordinary-irp-request-plumbing",
+      "driver": "test_process_termination.sys",
+      "finding": "    arbitrary-read  va=0x1cbe1114f  [dispatch] fn=IoctlHandler @ 0x1cbe11000  sev=Constrained  taint=[\"**Arg1\"]",
+      "instruction": "mov\teax, dword ptr [rax + 0x8]",
+      "kind": "arbitrary-read",
+      "machine_evidence": "Loads ProcessId from fixed SystemBuffer offset 8 for PsLookupProcessByProcessId; the recorded instruction is a request-field access.",
+      "present_policies": [
+        "any-model"
+      ],
+      "source_excerpt": "73:        case IOCTL_LOOKUP_PROCESS:\n74:            // VULNERABILITY: Lookup process by user-controlled PID\n75:            status = PsLookupProcessByProcessId(\n76:                (HANDLE)(ULONG_PTR)request->ProcessId,  // User-controlled PID\n77:                &process\n78:            );",
+      "source_lines": "73-78",
+      "taint": [
+        "**Arg1"
+      ],
+      "va": "0x1cbe1114f"
+    },
+    {
+      "classification": "ordinary-irp-request-plumbing",
+      "driver": "test_process_termination.sys",
+      "finding": "    arbitrary-read  va=0x1cbe1117e  [dispatch] fn=IoctlHandler @ 0x1cbe11000  sev=Constrained  taint=[\"**Arg1\"]",
+      "instruction": "mov\trax, qword ptr [rax + 0x10]",
+      "kind": "arbitrary-read",
+      "machine_evidence": "Loads ProcessObject from fixed SystemBuffer offset 0x10 for a null test. The later ObDereferenceObject use is security-sensitive, but this recorded instruction is not itself an arbitrary-address read.",
+      "present_policies": [
+        "any-model"
+      ],
+      "source_excerpt": "94:        case IOCTL_DEREF_OBJECT:\n95:            // VULNERABILITY: Dereference user-controlled object pointer\n96:            if (request->ProcessObject) {\n97:                ObDereferenceObject(request->ProcessObject);  // User-controlled pointer\n98:                status = STATUS_SUCCESS;",
+      "source_lines": "94-98",
+      "taint": [
+        "**Arg1"
+      ],
+      "va": "0x1cbe1117e"
+    },
+    {
+      "classification": "ordinary-irp-request-plumbing",
+      "driver": "test_process_termination.sys",
+      "finding": "    arbitrary-read  va=0x1cbe1118b  [dispatch] fn=IoctlHandler @ 0x1cbe11000  sev=Constrained  taint=[\"**Arg1\"]",
+      "instruction": "mov\trax, qword ptr [rax + 0x10]",
+      "kind": "arbitrary-read",
+      "machine_evidence": "Reloads ProcessObject from the kernel-owned METHOD_BUFFERED copy for ObDereferenceObject. It is neither a user-racy double fetch nor an arbitrary read at this VA.",
+      "present_policies": [
+        "any-model"
+      ],
+      "source_excerpt": "94:        case IOCTL_DEREF_OBJECT:\n95:            // VULNERABILITY: Dereference user-controlled object pointer\n96:            if (request->ProcessObject) {\n97:                ObDereferenceObject(request->ProcessObject);  // User-controlled pointer\n98:                status = STATUS_SUCCESS;",
+      "source_lines": "94-98",
+      "taint": [
+        "**Arg1"
+      ],
+      "va": "0x1cbe1118b"
+    },
+    {
+      "classification": "ordinary-irp-request-plumbing",
+      "driver": "test_shellcode.sys",
+      "finding": "    arbitrary-read  va=0x20ec7102b  [dispatch] fn=IoctlHandler @ 0x20ec71000  sev=Arbitrary  taint=[\"*Arg1\"]",
+      "instruction": "mov\teax, dword ptr [rax + 0x18]",
+      "kind": "arbitrary-read",
+      "machine_evidence": "Loads IoControlCode from the current IO_STACK_LOCATION at fixed offset 0x18.",
+      "present_policies": [
+        "any-model",
+        "min-unsigned",
+        "site-hash-1"
+      ],
+      "source_excerpt": "18:NTSTATUS IoctlHandler(PDEVICE_OBJECT DeviceObject, PIRP Irp) {\n19:    PIO_STACK_LOCATION stack = IoGetCurrentIrpStackLocation(Irp);\n20:    ULONG ioctl = stack->Parameters.DeviceIoControl.IoControlCode;\n21:    PCB_REQ req = (PCB_REQ)Irp->AssociatedIrp.SystemBuffer;",
+      "source_lines": "18-21",
+      "taint": [
+        "*Arg1"
+      ],
+      "va": "0x20ec7102b"
+    },
+    {
+      "classification": "duplicate-presentation-of-validated-sink",
+      "driver": "test_shellcode.sys",
+      "finding": "    arbitrary-read  va=0x20ec71051  [dispatch] fn=IoctlHandler @ 0x20ec71000  sev=Constrained  taint=[\"**Arg1\"]",
+      "instruction": "mov\trax, qword ptr [rax]",
+      "kind": "arbitrary-read",
+      "machine_evidence": "Loads Callback from fixed SystemBuffer offset 0 immediately before the already validated attacker-controlled indirect call at 0x20ec71054.",
+      "present_policies": [
+        "any-model"
+      ],
+      "source_excerpt": "21:    PCB_REQ req = (PCB_REQ)Irp->AssociatedIrp.SystemBuffer;\n22:    NTSTATUS status = STATUS_SUCCESS;\n23:\n24:    if (ioctl == IOCTL_CALLBACK) {\n25:        /* VULNERABILITY: call a function pointer taken from the user buffer. */\n26:        req->Callback();",
+      "source_lines": "21-26",
+      "taint": [
+        "**Arg1"
+      ],
+      "va": "0x20ec71051"
+    },
+    {
+      "classification": "ordinary-irp-request-plumbing",
+      "driver": "test_integer_overflow.sys",
+      "finding": "    arbitrary-read  va=0x2253a102b  [dispatch] fn=IoctlHandler @ 0x2253a1000  sev=Arbitrary  taint=[\"*Arg1\"]",
+      "instruction": "mov\teax, dword ptr [rax + 0x18]",
+      "kind": "arbitrary-read",
+      "machine_evidence": "Loads IoControlCode from the current IO_STACK_LOCATION at fixed offset 0x18.",
+      "present_policies": [
+        "any-model",
+        "min-unsigned",
+        "site-hash-1"
+      ],
+      "source_excerpt": "17:NTSTATUS IoctlHandler(PDEVICE_OBJECT DeviceObject, PIRP Irp) {\n18:    PIO_STACK_LOCATION stack = IoGetCurrentIrpStackLocation(Irp);\n19:    ULONG ioctl = stack->Parameters.DeviceIoControl.IoControlCode;\n20:    PALLOC_REQ req = (PALLOC_REQ)Irp->AssociatedIrp.SystemBuffer;",
+      "source_lines": "17-20",
+      "taint": [
+        "*Arg1"
+      ],
+      "va": "0x2253a102b"
+    },
+    {
+      "classification": "duplicate-presentation-of-validated-sink",
+      "driver": "test_integer_overflow.sys",
+      "finding": "    arbitrary-read  va=0x2253a1051  [dispatch] fn=IoctlHandler @ 0x2253a1000  sev=Constrained  taint=[\"**Arg1\"]",
+      "instruction": "mov\tedx, dword ptr [rax]",
+      "kind": "arbitrary-read",
+      "machine_evidence": "Loads Count from fixed SystemBuffer offset 0 for the already validated unchecked multiply at 0x2253a105a.",
+      "present_policies": [
+        "any-model"
+      ],
+      "source_excerpt": "24:    if (ioctl == IOCTL_ALLOC) {\n25:        /* VULNERABILITY: attacker count * elem size can wrap to a small value. */\n26:        ULONG size = req->Count * req->ElemSize;\n27:        buf = ExAllocatePoolWithTag(NonPagedPool, size, 'tset');",
+      "source_lines": "24-27",
+      "taint": [
+        "**Arg1"
+      ],
+      "va": "0x2253a1051"
+    },
+    {
+      "classification": "duplicate-presentation-of-validated-sink",
+      "driver": "test_integer_overflow.sys",
+      "finding": "    arbitrary-read  va=0x2253a1057  [dispatch] fn=IoctlHandler @ 0x2253a1000  sev=Constrained  taint=[\"**Arg1\"]",
+      "instruction": "mov\teax, dword ptr [rax + 0x4]",
+      "kind": "arbitrary-read",
+      "machine_evidence": "Loads ElemSize from fixed SystemBuffer offset 4 for the already validated unchecked multiply at 0x2253a105a.",
+      "present_policies": [
+        "any-model"
+      ],
+      "source_excerpt": "24:    if (ioctl == IOCTL_ALLOC) {\n25:        /* VULNERABILITY: attacker count * elem size can wrap to a small value. */\n26:        ULONG size = req->Count * req->ElemSize;\n27:        buf = ExAllocatePoolWithTag(NonPagedPool, size, 'tset');",
+      "source_lines": "24-27",
+      "taint": [
+        "**Arg1"
+      ],
+      "va": "0x2253a1057"
+    },
+    {
+      "classification": "duplicate-presentation-of-validated-sink",
+      "driver": "test_integer_overflow.sys",
+      "finding": "    arbitrary-read  va=0x2253a1089  [dispatch] fn=IoctlHandler @ 0x2253a1000  sev=Constrained  taint=[\"**Arg1\"]",
+      "instruction": "mov\tedx, dword ptr [rax]",
+      "kind": "arbitrary-read",
+      "machine_evidence": "Reloads Count from the kernel-owned METHOD_BUFFERED copy for the already validated unchecked multiply at 0x2253a1092; this is not a user-racy double fetch.",
+      "present_policies": [
+        "any-model"
+      ],
+      "source_excerpt": "24:    if (ioctl == IOCTL_ALLOC) {\n25:        /* VULNERABILITY: attacker count * elem size can wrap to a small value. */\n26:        ULONG size = req->Count * req->ElemSize;\n27:        buf = ExAllocatePoolWithTag(NonPagedPool, size, 'tset');\n28:        if (buf) {\n29:            /* copy using the un-wrapped logical length -> heap overflow */\n30:            RtlCopyMemory(buf, req, req->Count * req->ElemSize);",
+      "source_lines": "24-30",
+      "taint": [
+        "**Arg1"
+      ],
+      "va": "0x2253a1089"
+    },
+    {
+      "classification": "duplicate-presentation-of-validated-sink",
+      "driver": "test_integer_overflow.sys",
+      "finding": "    arbitrary-read  va=0x2253a108f  [dispatch] fn=IoctlHandler @ 0x2253a1000  sev=Constrained  taint=[\"**Arg1\"]",
+      "instruction": "mov\teax, dword ptr [rax + 0x4]",
+      "kind": "arbitrary-read",
+      "machine_evidence": "Reloads ElemSize from the kernel-owned METHOD_BUFFERED copy for the already validated unchecked multiply at 0x2253a1092; this is not a user-racy double fetch.",
+      "present_policies": [
+        "any-model"
+      ],
+      "source_excerpt": "24:    if (ioctl == IOCTL_ALLOC) {\n25:        /* VULNERABILITY: attacker count * elem size can wrap to a small value. */\n26:        ULONG size = req->Count * req->ElemSize;\n27:        buf = ExAllocatePoolWithTag(NonPagedPool, size, 'tset');\n28:        if (buf) {\n29:            /* copy using the un-wrapped logical length -> heap overflow */\n30:            RtlCopyMemory(buf, req, req->Count * req->ElemSize);",
+      "source_lines": "24-30",
+      "taint": [
+        "**Arg1"
+      ],
+      "va": "0x2253a108f"
+    },
+    {
+      "classification": "duplicate-presentation-of-validated-sink",
+      "driver": "test_integer_overflow.sys",
+      "finding": "    arbitrary-read  va=0x2253a10a5  [dispatch] fn=IoctlHandler @ 0x2253a1000  sev=Constrained  taint=[\"**Arg1\"]",
+      "instruction": "call\t0x2253a1180 <memcpy>",
+      "kind": "arbitrary-read",
+      "machine_evidence": "Calls memcpy with the unchecked recomputed length already represented by the validated integer-overflow row at 0x2253a1092; the source is the fixed SystemBuffer pointer.",
+      "present_policies": [
+        "any-model"
+      ],
+      "source_excerpt": "24:    if (ioctl == IOCTL_ALLOC) {\n25:        /* VULNERABILITY: attacker count * elem size can wrap to a small value. */\n26:        ULONG size = req->Count * req->ElemSize;\n27:        buf = ExAllocatePoolWithTag(NonPagedPool, size, 'tset');\n28:        if (buf) {\n29:            /* copy using the un-wrapped logical length -> heap overflow */\n30:            RtlCopyMemory(buf, req, req->Count * req->ElemSize);\n31:            ExFreePoolWithTag(buf, 'tset');",
+      "source_lines": "24-31",
+      "taint": [
+        "**Arg1"
+      ],
+      "va": "0x2253a10a5"
+    },
+    {
+      "classification": "ordinary-irp-request-plumbing",
+      "driver": "test_physical_memory.sys",
+      "finding": "    arbitrary-read  va=0x2a092102e  [dispatch] fn=IoctlHandler @ 0x2a0921000  sev=Arbitrary  taint=[\"*Arg1\"]",
+      "instruction": "mov\teax, dword ptr [rax + 0x18]",
+      "kind": "arbitrary-read",
+      "machine_evidence": "Loads IoControlCode from the current IO_STACK_LOCATION at fixed offset 0x18.",
+      "present_policies": [
+        "any-model",
+        "min-unsigned",
+        "site-hash-0"
+      ],
+      "source_excerpt": "28:NTSTATUS IoctlHandler(PDEVICE_OBJECT DeviceObject, PIRP Irp) {\n29:    PIO_STACK_LOCATION stack = IoGetCurrentIrpStackLocation(Irp);\n30:    ULONG ioctl = stack->Parameters.DeviceIoControl.IoControlCode;\n31:    PVOID buffer = Irp->AssociatedIrp.SystemBuffer;",
+      "source_lines": "28-31",
+      "taint": [
+        "*Arg1"
+      ],
+      "va": "0x2a092102e"
+    },
+    {
+      "classification": "duplicate-presentation-of-validated-sink",
+      "driver": "test_physical_memory.sys",
+      "finding": "    arbitrary-read  va=0x2a0921084  [dispatch] fn=IoctlHandler @ 0x2a0921000  sev=Constrained  taint=[\"**Arg1\"]",
+      "instruction": "mov\trdx, qword ptr [rax + 0x8]",
+      "kind": "arbitrary-read",
+      "machine_evidence": "Loads Size from fixed SystemBuffer offset 8 for the already validated MmMapIoSpace call at 0x2a092109f.",
+      "present_policies": [
+        "any-model"
+      ],
+      "source_excerpt": "35:        case IOCTL_MAP_PHYSICAL: {\n36:            PPHYS_MEM_REQUEST request = (PPHYS_MEM_REQUEST)buffer;\n37:            PVOID mappedAddress;\n38:            \n39:            // VULNERABILITY: User controls physical address and size\n40:            mappedAddress = MmMapIoSpace(\n41:                request->PhysicalAddress,  // User-controlled physical address\n42:                request->Size,              // User-controlled size\n43:                MmNonCached\n44:            );",
+      "source_lines": "35-44",
+      "taint": [
+        "**Arg1"
+      ],
+      "va": "0x2a0921084"
+    },
+    {
+      "classification": "duplicate-presentation-of-validated-sink",
+      "driver": "test_physical_memory.sys",
+      "finding": "    arbitrary-read  va=0x2a092108c  [dispatch] fn=IoctlHandler @ 0x2a0921000  sev=Constrained  taint=[\"**Arg1\"]",
+      "instruction": "mov\trax, qword ptr [rax]",
+      "kind": "arbitrary-read",
+      "machine_evidence": "Loads PhysicalAddress from fixed SystemBuffer offset 0 for the already validated MmMapIoSpace call at 0x2a092109f.",
+      "present_policies": [
+        "any-model"
+      ],
+      "source_excerpt": "35:        case IOCTL_MAP_PHYSICAL: {\n36:            PPHYS_MEM_REQUEST request = (PPHYS_MEM_REQUEST)buffer;\n37:            PVOID mappedAddress;\n38:            \n39:            // VULNERABILITY: User controls physical address and size\n40:            mappedAddress = MmMapIoSpace(\n41:                request->PhysicalAddress,  // User-controlled physical address\n42:                request->Size,              // User-controlled size\n43:                MmNonCached\n44:            );",
+      "source_lines": "35-44",
+      "taint": [
+        "**Arg1"
+      ],
+      "va": "0x2a092108c"
+    },
+    {
+      "classification": "ordinary-irp-request-plumbing",
+      "driver": "test_physical_memory.sys",
+      "finding": "    arbitrary-read  va=0x2a09210c7  [dispatch] fn=IoctlHandler @ 0x2a0921000  sev=Constrained  taint=[\"**Arg1\"]",
+      "instruction": "mov\trdx, qword ptr [rax + 0x8]",
+      "kind": "arbitrary-read",
+      "machine_evidence": "Reloads Size from the kernel-owned METHOD_BUFFERED request for MmUnmapIoSpace cleanup; it is not a user-racy double fetch or arbitrary-address read.",
+      "present_policies": [
+        "any-model"
+      ],
+      "source_excerpt": "46:            if (mappedAddress) {\n47:                // Return mapped virtual address to user\n48:                request->VirtualAddress = mappedAddress;\n49:                status = STATUS_SUCCESS;\n50:                \n51:                // In real exploit, attacker would read/write here\n52:                // For testing, just unmap\n53:                MmUnmapIoSpace(mappedAddress, request->Size);",
+      "source_lines": "46-53",
+      "taint": [
+        "**Arg1"
+      ],
+      "va": "0x2a09210c7"
+    },
+    {
+      "classification": "ordinary-irp-request-plumbing",
+      "driver": "test_physical_memory.sys",
+      "finding": "    arbitrary-read  va=0x2a09210f4  [dispatch] fn=IoctlHandler @ 0x2a0921000  sev=Constrained  taint=[\"**Arg1\"]",
+      "instruction": "mov\trax, qword ptr [rax + 0x8]",
+      "kind": "arbitrary-read",
+      "machine_evidence": "Loads Size from fixed SystemBuffer offset 8 while constructing ZwMapViewOfSection arguments; the recorded instruction is a bounded request-field access.",
+      "present_policies": [
+        "any-model"
+      ],
+      "source_excerpt": "58:        case IOCTL_MAP_SECTION: {\n59:            HANDLE sectionHandle = NULL;\n60:            PVOID baseAddress = NULL;\n61:            SIZE_T viewSize = ((PPHYS_MEM_REQUEST)buffer)->Size;\n62:            LARGE_INTEGER sectionOffset;\n63:            OBJECT_ATTRIBUTES objAttr;\n64:            \n65:            sectionOffset.QuadPart = ((PPHYS_MEM_REQUEST)buffer)->PhysicalAddress.QuadPart;\n66:            \n67:            // Create section from user input\n68:            InitializeObjectAttributes(&objAttr, NULL, OBJ_KERNEL_HANDLE, NULL, NULL);\n69:            \n70:            // VULNERABILITY: User controls section parameters\n71:            status = ZwMapViewOfSection(\n72:                sectionHandle,           // Potentially tainted handle\n73:                NtCurrentProcess(),\n74:                &baseAddress,            // User-influenced\n75:                0,\n76:                0,\n77:                &sectionOffset,          // User-controlled offset\n78:                &viewSize,               // User-controlled size\n79:                ViewShare,\n80:                0,\n81:                PAGE_READWRITE\n82:            );",
+      "source_lines": "58-82",
+      "taint": [
+        "**Arg1"
+      ],
+      "va": "0x2a09210f4"
+    },
+    {
+      "classification": "ordinary-irp-request-plumbing",
+      "driver": "test_physical_memory.sys",
+      "finding": "    arbitrary-read  va=0x2a0921100  [dispatch] fn=IoctlHandler @ 0x2a0921000  sev=Constrained  taint=[\"**Arg1\"]",
+      "instruction": "mov\trax, qword ptr [rax]",
+      "kind": "arbitrary-read",
+      "machine_evidence": "Loads PhysicalAddress from fixed SystemBuffer offset 0 while constructing ZwMapViewOfSection arguments; the recorded instruction is not an arbitrary-address read.",
+      "present_policies": [
+        "any-model"
+      ],
+      "source_excerpt": "58:        case IOCTL_MAP_SECTION: {\n59:            HANDLE sectionHandle = NULL;\n60:            PVOID baseAddress = NULL;\n61:            SIZE_T viewSize = ((PPHYS_MEM_REQUEST)buffer)->Size;\n62:            LARGE_INTEGER sectionOffset;\n63:            OBJECT_ATTRIBUTES objAttr;\n64:            \n65:            sectionOffset.QuadPart = ((PPHYS_MEM_REQUEST)buffer)->PhysicalAddress.QuadPart;\n66:            \n67:            // Create section from user input\n68:            InitializeObjectAttributes(&objAttr, NULL, OBJ_KERNEL_HANDLE, NULL, NULL);\n69:            \n70:            // VULNERABILITY: User controls section parameters\n71:            status = ZwMapViewOfSection(\n72:                sectionHandle,           // Potentially tainted handle\n73:                NtCurrentProcess(),\n74:                &baseAddress,            // User-influenced\n75:                0,\n76:                0,\n77:                &sectionOffset,          // User-controlled offset\n78:                &viewSize,               // User-controlled size\n79:                ViewShare,\n80:                0,\n81:                PAGE_READWRITE\n82:            );",
+      "source_lines": "58-82",
+      "taint": [
+        "**Arg1"
+      ],
+      "va": "0x2a0921100"
+    },
+    {
+      "classification": "duplicate-presentation-of-validated-sink",
+      "driver": "test_physical_memory.sys",
+      "finding": "    arbitrary-read  va=0x2a09211a3  [dispatch] fn=IoctlHandler @ 0x2a0921000  sev=Constrained  taint=[\"**Arg1\"]",
+      "instruction": "mov\trcx, qword ptr [rax + 0x10]",
+      "kind": "arbitrary-read",
+      "machine_evidence": "Loads Size from fixed SystemBuffer offset 0x10 for the already validated arbitrary-copy memcpy at 0x2a09211bc.",
+      "present_policies": [
+        "any-model"
+      ],
+      "source_excerpt": "86:        case IOCTL_COPY_MEMORY: {\n87:            PCOPY_MEM_REQUEST request = (PCOPY_MEM_REQUEST)buffer;\n88:            \n89:            // VULNERABILITY: User controls source and target addresses\n90:            // Simplified version using RtlCopyMemory (memcpy)\n91:            // WARNING: This is vulnerable and will crash if addresses are invalid!\n92:            RtlCopyMemory(\n93:                request->TargetAddress,  // User-controlled target\n94:                request->SourceAddress,  // User-controlled source\n95:                request->Size            // User-controlled size\n96:            );",
+      "source_lines": "86-96",
+      "taint": [
+        "**Arg1"
+      ],
+      "va": "0x2a09211a3"
+    },
+    {
+      "classification": "duplicate-presentation-of-validated-sink",
+      "driver": "test_physical_memory.sys",
+      "finding": "    arbitrary-read  va=0x2a09211ab  [dispatch] fn=IoctlHandler @ 0x2a0921000  sev=Constrained  taint=[\"**Arg1\"]",
+      "instruction": "mov\trdx, qword ptr [rax + 0x8]",
+      "kind": "arbitrary-read",
+      "machine_evidence": "Loads SourceAddress from fixed SystemBuffer offset 8 for the already validated arbitrary-copy memcpy at 0x2a09211bc.",
+      "present_policies": [
+        "any-model"
+      ],
+      "source_excerpt": "86:        case IOCTL_COPY_MEMORY: {\n87:            PCOPY_MEM_REQUEST request = (PCOPY_MEM_REQUEST)buffer;\n88:            \n89:            // VULNERABILITY: User controls source and target addresses\n90:            // Simplified version using RtlCopyMemory (memcpy)\n91:            // WARNING: This is vulnerable and will crash if addresses are invalid!\n92:            RtlCopyMemory(\n93:                request->TargetAddress,  // User-controlled target\n94:                request->SourceAddress,  // User-controlled source\n95:                request->Size            // User-controlled size\n96:            );",
+      "source_lines": "86-96",
+      "taint": [
+        "**Arg1"
+      ],
+      "va": "0x2a09211ab"
+    },
+    {
+      "classification": "duplicate-presentation-of-validated-sink",
+      "driver": "test_physical_memory.sys",
+      "finding": "    arbitrary-read  va=0x2a09211b3  [dispatch] fn=IoctlHandler @ 0x2a0921000  sev=Constrained  taint=[\"**Arg1\"]",
+      "instruction": "mov\trax, qword ptr [rax]",
+      "kind": "arbitrary-read",
+      "machine_evidence": "Loads TargetAddress from fixed SystemBuffer offset 0 for the already validated arbitrary-copy memcpy at 0x2a09211bc.",
+      "present_policies": [
+        "any-model"
+      ],
+      "source_excerpt": "86:        case IOCTL_COPY_MEMORY: {\n87:            PCOPY_MEM_REQUEST request = (PCOPY_MEM_REQUEST)buffer;\n88:            \n89:            // VULNERABILITY: User controls source and target addresses\n90:            // Simplified version using RtlCopyMemory (memcpy)\n91:            // WARNING: This is vulnerable and will crash if addresses are invalid!\n92:            RtlCopyMemory(\n93:                request->TargetAddress,  // User-controlled target\n94:                request->SourceAddress,  // User-controlled source\n95:                request->Size            // User-controlled size\n96:            );",
+      "source_lines": "86-96",
+      "taint": [
+        "**Arg1"
+      ],
+      "va": "0x2a09211b3"
+    },
+    {
+      "classification": "ordinary-irp-request-plumbing",
+      "driver": "test_physical_memory.sys",
+      "finding": "    arbitrary-read  va=0x2a09211df  [dispatch] fn=IoctlHandler @ 0x2a0921000  sev=Constrained  taint=[\"*Arg1\"]",
+      "instruction": "mov\teax, dword ptr [rax + 0x8]",
+      "kind": "arbitrary-read",
+      "machine_evidence": "Loads OutputBufferLength from the fixed IO_STACK_LOCATION to populate IoStatus.Information.",
+      "present_policies": [
+        "any-model"
+      ],
+      "source_excerpt": "102:    Irp->IoStatus.Status = status;\n103:    Irp->IoStatus.Information = (status == STATUS_SUCCESS) ? stack->Parameters.DeviceIoControl.OutputBufferLength : 0;\n104:    IoCompleteRequest(Irp, IO_NO_INCREMENT);",
+      "source_lines": "102-104",
+      "taint": [
+        "*Arg1"
+      ],
+      "va": "0x2a09211df"
+    },
+    {
+      "classification": "ordinary-irp-request-plumbing",
+      "driver": "test_rdmsr.sys",
+      "finding": "    arbitrary-read  va=0x32bd61037  [dispatch] fn=IoctlHandler @ 0x32bd61000  sev=Constrained  taint=[\"Arg1\"]",
+      "instruction": "mov\tr9, qword ptr [rdx + 0x18]",
+      "kind": "arbitrary-read",
+      "machine_evidence": "Loads the fixed SystemBuffer pointer from IRP offset 0x18; the request-buffer address is I/O-manager owned.",
+      "present_policies": [
+        "any-model"
+      ],
+      "source_excerpt": "23:NTSTATUS IoctlHandler(PDEVICE_OBJECT DeviceObject, PIRP Irp) {\n24:    PIO_STACK_LOCATION stack = IoGetCurrentIrpStackLocation(Irp);\n25:    ULONG ioctl = stack->Parameters.DeviceIoControl.IoControlCode;\n26:    PMSR_REQ req = (PMSR_REQ)Irp->AssociatedIrp.SystemBuffer;\n27:\n28:    if (ioctl == IOCTL_RDMSR) {\n29:        /* VULNERABILITY: attacker controls which MSR is read and gets the value. */\n30:        do_rdmsr(req->Index, &req->ResultLo, &req->ResultHi);",
+      "source_lines": "23-30",
+      "taint": [
+        "Arg1"
+      ],
+      "va": "0x32bd61037"
+    },
+    {
+      "classification": "duplicate-presentation-of-validated-sink",
+      "driver": "test_rdmsr.sys",
+      "finding": "    arbitrary-read  va=0x32bd6103b  [dispatch] fn=IoctlHandler @ 0x32bd61000  sev=Constrained  taint=[\"**Arg1\"]",
+      "instruction": "mov\tecx, dword ptr [r9]",
+      "kind": "arbitrary-read",
+      "machine_evidence": "Loads the MSR Index from fixed SystemBuffer offset 0 immediately before the already validated rdmsr instruction at 0x32bd6103e.",
+      "present_policies": [
+        "any-model"
+      ],
+      "source_excerpt": "19:static __attribute__((always_inline)) inline void do_rdmsr(ULONG idx, ULONG *lo, ULONG *hi) {\n20:    __asm__ volatile(\"rdmsr\" : \"=a\"(*lo), \"=d\"(*hi) : \"c\"(idx));\n26:    PMSR_REQ req = (PMSR_REQ)Irp->AssociatedIrp.SystemBuffer;\n27:\n28:    if (ioctl == IOCTL_RDMSR) {\n29:        /* VULNERABILITY: attacker controls which MSR is read and gets the value. */\n30:        do_rdmsr(req->Index, &req->ResultLo, &req->ResultHi);",
+      "source_lines": "19-20,26-30",
+      "taint": [
+        "**Arg1"
+      ],
+      "va": "0x32bd6103b"
+    },
+    {
+      "classification": "ordinary-irp-request-plumbing",
+      "driver": "test_file_operations.sys",
+      "finding": "    arbitrary-read  va=0x36def102e  [dispatch] fn=IoctlHandler @ 0x36def1000  sev=Arbitrary  taint=[\"*Arg1\"]",
+      "instruction": "mov\teax, dword ptr [rax + 0x18]",
+      "kind": "arbitrary-read",
+      "machine_evidence": "Loads IoControlCode from the current IO_STACK_LOCATION at fixed offset 0x18; it does not dereference an attacker-selected address.",
+      "present_policies": [
+        "any-model",
+        "min-unsigned",
+        "site-hash-0"
+      ],
+      "source_excerpt": "22:NTSTATUS IoctlHandler(PDEVICE_OBJECT DeviceObject, PIRP Irp) {\n23:    PIO_STACK_LOCATION stack = IoGetCurrentIrpStackLocation(Irp);\n24:    ULONG ioctl = stack->Parameters.DeviceIoControl.IoControlCode;\n25:    PFILE_OP_REQUEST request = (PFILE_OP_REQUEST)Irp->AssociatedIrp.SystemBuffer;",
+      "source_lines": "22-25",
+      "taint": [
+        "*Arg1"
+      ],
+      "va": "0x36def102e"
+    },
+    {
+      "classification": "duplicate-presentation-of-validated-sink",
+      "driver": "test_file_operations.sys",
+      "finding": "    arbitrary-read  va=0x36def10dc  [dispatch] fn=IoctlHandler @ 0x36def1000  sev=Constrained  taint=[\"**Arg1\"]",
+      "instruction": "mov\tecx, dword ptr [rax + 0x204]",
+      "kind": "arbitrary-read",
+      "machine_evidence": "Loads CreateDisposition from fixed SystemBuffer offset 0x204 for the already validated ZwCreateFile operation at 0x36def1138.",
+      "present_policies": [
+        "any-model"
+      ],
+      "source_excerpt": "33:        case IOCTL_CREATE_FILE:\n34:            // VULNERABILITY: User-controlled path and access rights\n35:            RtlInitUnicodeString(&fileName, request->Path);\n36:            InitializeObjectAttributes(&objAttr, &fileName, OBJ_CASE_INSENSITIVE | OBJ_KERNEL_HANDLE, NULL, NULL);\n37:            \n38:            // Create file with user-controlled parameters\n39:            status = ZwCreateFile(\n40:                &fileHandle,\n41:                request->DesiredAccess,  // User-controlled access\n42:                &objAttr,                 // User-controlled path\n43:                &ioStatus,\n44:                NULL,\n45:                FILE_ATTRIBUTE_NORMAL,\n46:                0,\n47:                request->CreateDisposition, // User-controlled disposition\n48:                FILE_SYNCHRONOUS_IO_NONALERT,\n49:                NULL,\n50:                0\n51:            );",
+      "source_lines": "33-51",
+      "taint": [
+        "**Arg1"
+      ],
+      "va": "0x36def10dc"
+    },
+    {
+      "classification": "duplicate-presentation-of-validated-sink",
+      "driver": "test_file_operations.sys",
+      "finding": "    arbitrary-read  va=0x36def10e6  [dispatch] fn=IoctlHandler @ 0x36def1000  sev=Constrained  taint=[\"**Arg1\"]",
+      "instruction": "mov\tedx, dword ptr [rax + 0x200]",
+      "kind": "arbitrary-read",
+      "machine_evidence": "Loads DesiredAccess from fixed SystemBuffer offset 0x200 for the already validated ZwCreateFile operation at 0x36def1138.",
+      "present_policies": [
+        "any-model"
+      ],
+      "source_excerpt": "33:        case IOCTL_CREATE_FILE:\n34:            // VULNERABILITY: User-controlled path and access rights\n35:            RtlInitUnicodeString(&fileName, request->Path);\n36:            InitializeObjectAttributes(&objAttr, &fileName, OBJ_CASE_INSENSITIVE | OBJ_KERNEL_HANDLE, NULL, NULL);\n37:            \n38:            // Create file with user-controlled parameters\n39:            status = ZwCreateFile(\n40:                &fileHandle,\n41:                request->DesiredAccess,  // User-controlled access\n42:                &objAttr,                 // User-controlled path\n43:                &ioStatus,\n44:                NULL,\n45:                FILE_ATTRIBUTE_NORMAL,\n46:                0,\n47:                request->CreateDisposition, // User-controlled disposition\n48:                FILE_SYNCHRONOUS_IO_NONALERT,\n49:                NULL,\n50:                0\n51:            );",
+      "source_lines": "33-51",
+      "taint": [
+        "**Arg1"
+      ],
+      "va": "0x36def10e6"
+    },
+    {
+      "classification": "duplicate-presentation-of-validated-sink",
+      "driver": "test_file_operations.sys",
+      "finding": "    arbitrary-read  va=0x36def12a3  [dispatch] fn=IoctlHandler @ 0x36def1000  sev=Constrained  taint=[\"**Arg1\"]",
+      "instruction": "mov\tecx, dword ptr [rax + 0x210]",
+      "kind": "arbitrary-read",
+      "machine_evidence": "Loads BufferSize from fixed SystemBuffer offset 0x210 for the already validated ZwWriteFile operation at 0x36def12f7.",
+      "present_policies": [
+        "any-model"
+      ],
+      "source_excerpt": "77:        case IOCTL_WRITE_FILE:\n78:            // VULNERABILITY: Write user data to user-controlled file\n79:            RtlInitUnicodeString(&fileName, request->Path);\n80:            InitializeObjectAttributes(&objAttr, &fileName, OBJ_CASE_INSENSITIVE | OBJ_KERNEL_HANDLE, NULL, NULL);\n81:            \n82:            status = ZwCreateFile(\n83:                &fileHandle,\n84:                GENERIC_WRITE,\n85:                &objAttr,\n86:                &ioStatus,\n87:                NULL,\n88:                FILE_ATTRIBUTE_NORMAL,\n89:                0,\n90:                FILE_OVERWRITE_IF,\n91:                FILE_SYNCHRONOUS_IO_NONALERT,\n92:                NULL,\n93:                0\n94:            );\n95:            \n96:            if (NT_SUCCESS(status)) {\n97:                // Write user-controlled data\n98:                status = ZwWriteFile(\n99:                    fileHandle,\n100:                    NULL,\n101:                    NULL,\n102:                    NULL,\n103:                    &ioStatus,\n104:                    request->Buffer,      // User-controlled buffer\n105:                    request->BufferSize,  // User-controlled size\n106:                    NULL,\n107:                    NULL\n108:                );",
+      "source_lines": "77-108",
+      "taint": [
+        "**Arg1"
+      ],
+      "va": "0x36def12a3"
+    },
+    {
+      "classification": "duplicate-presentation-of-validated-sink",
+      "driver": "test_file_operations.sys",
+      "finding": "    arbitrary-read  va=0x36def12ad  [dispatch] fn=IoctlHandler @ 0x36def1000  sev=Constrained  taint=[\"**Arg1\"]",
+      "instruction": "mov\trdx, qword ptr [rax + 0x208]",
+      "kind": "arbitrary-read",
+      "machine_evidence": "Loads Buffer from fixed SystemBuffer offset 0x208 for the already validated ZwWriteFile operation at 0x36def12f7; this load itself is not an arbitrary-address read.",
+      "present_policies": [
+        "any-model"
+      ],
+      "source_excerpt": "77:        case IOCTL_WRITE_FILE:\n78:            // VULNERABILITY: Write user data to user-controlled file\n79:            RtlInitUnicodeString(&fileName, request->Path);\n80:            InitializeObjectAttributes(&objAttr, &fileName, OBJ_CASE_INSENSITIVE | OBJ_KERNEL_HANDLE, NULL, NULL);\n81:            \n82:            status = ZwCreateFile(\n83:                &fileHandle,\n84:                GENERIC_WRITE,\n85:                &objAttr,\n86:                &ioStatus,\n87:                NULL,\n88:                FILE_ATTRIBUTE_NORMAL,\n89:                0,\n90:                FILE_OVERWRITE_IF,\n91:                FILE_SYNCHRONOUS_IO_NONALERT,\n92:                NULL,\n93:                0\n94:            );\n95:            \n96:            if (NT_SUCCESS(status)) {\n97:                // Write user-controlled data\n98:                status = ZwWriteFile(\n99:                    fileHandle,\n100:                    NULL,\n101:                    NULL,\n102:                    NULL,\n103:                    &ioStatus,\n104:                    request->Buffer,      // User-controlled buffer\n105:                    request->BufferSize,  // User-controlled size\n106:                    NULL,\n107:                    NULL\n108:                );",
+      "source_lines": "77-108",
+      "taint": [
+        "**Arg1"
+      ],
+      "va": "0x36def12ad"
+    },
+    {
+      "classification": "ordinary-irp-request-plumbing",
+      "driver": "test_stack_overflow.sys",
+      "finding": "    arbitrary-read  va=0x397ba102e  [dispatch] fn=IoctlHandler @ 0x397ba1000  sev=Arbitrary  taint=[\"*Arg1\"]",
+      "instruction": "mov\teax, dword ptr [rax + 0x18]",
+      "kind": "arbitrary-read",
+      "machine_evidence": "Loads IoControlCode from the current IO_STACK_LOCATION at fixed offset 0x18.",
+      "present_policies": [
+        "any-model",
+        "min-unsigned",
+        "site-hash-0"
+      ],
+      "source_excerpt": "13:NTSTATUS IoctlHandler(PDEVICE_OBJECT DeviceObject, PIRP Irp) {\n14:    PIO_STACK_LOCATION stack = IoGetCurrentIrpStackLocation(Irp);\n15:    ULONG ioctl = stack->Parameters.DeviceIoControl.IoControlCode;\n16:    PVOID userBuf = Irp->AssociatedIrp.SystemBuffer;\n17:    ULONG userLen = stack->Parameters.DeviceIoControl.InputBufferLength;",
+      "source_lines": "13-17",
+      "taint": [
+        "*Arg1"
+      ],
+      "va": "0x397ba102e"
+    },
+    {
+      "classification": "duplicate-presentation-of-validated-sink",
+      "driver": "test_stack_overflow.sys",
+      "finding": "    arbitrary-read  va=0x397ba1044  [dispatch] fn=IoctlHandler @ 0x397ba1000  sev=Constrained  taint=[\"*Arg1\"]",
+      "instruction": "mov\teax, dword ptr [rax + 0x10]",
+      "kind": "arbitrary-read",
+      "machine_evidence": "Loads InputBufferLength from fixed IO_STACK_LOCATION offset 0x10 for the already validated unbounded stack copy at 0x397ba106b.",
+      "present_policies": [
+        "any-model",
+        "min-unsigned",
+        "site-hash-0"
+      ],
+      "source_excerpt": "16:    PVOID userBuf = Irp->AssociatedIrp.SystemBuffer;\n17:    ULONG userLen = stack->Parameters.DeviceIoControl.InputBufferLength;\n18:    char local[64];\n19:    NTSTATUS status = STATUS_SUCCESS;\n20:\n21:    if (ioctl == IOCTL_STACK_COPY) {\n22:        /* VULNERABILITY: attacker-controlled length into a fixed 64-byte stack\n23:         * buffer -- overruns the frame / return address. */\n24:        RtlCopyMemory(local, userBuf, userLen);",
+      "source_lines": "16-24",
+      "taint": [
+        "*Arg1"
+      ],
+      "va": "0x397ba1044"
+    },
+    {
+      "classification": "duplicate-presentation-of-validated-sink",
+      "driver": "test_stack_overflow.sys",
+      "finding": "    arbitrary-read  va=0x397ba106b  [dispatch] fn=IoctlHandler @ 0x397ba1000  sev=Constrained  taint=[\"**Arg1\"]",
+      "instruction": "call\t0x397ba1130 <memcpy>",
+      "kind": "arbitrary-read",
+      "machine_evidence": "Calls memcpy at the exact already validated stack-overflow sink; this varying arbitrary-read label is a duplicate presentation, not a distinct vulnerability.",
+      "present_policies": [
+        "any-model"
+      ],
+      "source_excerpt": "16:    PVOID userBuf = Irp->AssociatedIrp.SystemBuffer;\n17:    ULONG userLen = stack->Parameters.DeviceIoControl.InputBufferLength;\n18:    char local[64];\n19:    NTSTATUS status = STATUS_SUCCESS;\n20:\n21:    if (ioctl == IOCTL_STACK_COPY) {\n22:        /* VULNERABILITY: attacker-controlled length into a fixed 64-byte stack\n23:         * buffer -- overruns the frame / return address. */\n24:        RtlCopyMemory(local, userBuf, userLen);",
+      "source_lines": "16-24",
+      "taint": [
+        "**Arg1"
+      ],
+      "va": "0x397ba106b"
+    },
+    {
+      "classification": "ordinary-irp-request-plumbing",
+      "driver": "test_process_termination.sys",
+      "finding": "   arbitrary-write  va=0x1cbe11146  [dispatch] fn=IoctlHandler @ 0x1cbe11000  sev=Constrained  taint=[\"**Arg1\"]",
+      "instruction": "mov\tqword ptr [rax], rdx",
+      "kind": "arbitrary-write",
+      "machine_evidence": "Writes the returned process handle to fixed SystemBuffer offset 0; the destination is the I/O-manager-owned buffer.",
+      "present_policies": [
+        "any-model"
+      ],
+      "source_excerpt": "61:            if (NT_SUCCESS(status)) {\n62:                request->ProcessHandle = processHandle;\n63:                ",
+      "source_lines": "61-63",
+      "taint": [
+        "**Arg1"
+      ],
+      "va": "0x1cbe11146"
+    },
+    {
+      "classification": "ordinary-irp-request-plumbing",
+      "driver": "test_process_termination.sys",
+      "finding": "   arbitrary-write  va=0x1cbe11174  [dispatch] fn=IoctlHandler @ 0x1cbe11000  sev=Constrained  taint=[\"**Arg1\"]",
+      "instruction": "mov\tqword ptr [rax + 0x10], rdx",
+      "kind": "arbitrary-write",
+      "machine_evidence": "Writes the returned process pointer to fixed SystemBuffer offset 0x10; the destination address is not attacker selected.",
+      "present_policies": [
+        "any-model"
+      ],
+      "source_excerpt": "80:            if (NT_SUCCESS(status)) {\n81:                // Return process object pointer (dangerous!)\n82:                request->ProcessObject = process;\n83:                ",
+      "source_lines": "80-83",
+      "taint": [
+        "**Arg1"
+      ],
+      "va": "0x1cbe11174"
+    },
+    {
+      "classification": "ordinary-irp-request-plumbing",
+      "driver": "test_physical_memory.sys",
+      "finding": "   arbitrary-write  va=0x2a09210b8  [dispatch] fn=IoctlHandler @ 0x2a0921000  sev=Constrained  taint=[\"**Arg1\"]",
+      "instruction": "mov\tqword ptr [rax + 0x10], rdx",
+      "kind": "arbitrary-write",
+      "machine_evidence": "Writes the mapped-address result to fixed SystemBuffer offset 0x10; the destination address is the I/O-manager-owned buffer, not attacker-selected memory.",
+      "present_policies": [
+        "any-model"
+      ],
+      "source_excerpt": "46:            if (mappedAddress) {\n47:                // Return mapped virtual address to user\n48:                request->VirtualAddress = mappedAddress;\n49:                status = STATUS_SUCCESS;",
+      "source_lines": "46-49",
+      "taint": [
+        "**Arg1"
+      ],
+      "va": "0x2a09210b8"
+    },
+    {
+      "classification": "duplicate-presentation-of-validated-sink",
+      "driver": "test_rdmsr.sys",
+      "finding": "   arbitrary-write  va=0x32bd61040  [dispatch] fn=IoctlHandler @ 0x32bd61000  sev=Constrained  taint=[\"**Arg1\"]",
+      "instruction": "mov\tdword ptr [r9 + 0x4], eax",
+      "kind": "arbitrary-write",
+      "machine_evidence": "Writes the low rdmsr result to fixed SystemBuffer offset 4; this is part of the already validated RDMSR information-return path, not an arbitrary-address write.",
+      "present_policies": [
+        "any-model"
+      ],
+      "source_excerpt": "19:static __attribute__((always_inline)) inline void do_rdmsr(ULONG idx, ULONG *lo, ULONG *hi) {\n20:    __asm__ volatile(\"rdmsr\" : \"=a\"(*lo), \"=d\"(*hi) : \"c\"(idx));\n28:    if (ioctl == IOCTL_RDMSR) {\n29:        /* VULNERABILITY: attacker controls which MSR is read and gets the value. */\n30:        do_rdmsr(req->Index, &req->ResultLo, &req->ResultHi);\n31:        Irp->IoStatus.Information = sizeof(MSR_REQ);",
+      "source_lines": "19-20,28-31",
+      "taint": [
+        "**Arg1"
+      ],
+      "va": "0x32bd61040"
+    },
+    {
+      "classification": "duplicate-presentation-of-validated-sink",
+      "driver": "test_rdmsr.sys",
+      "finding": "   arbitrary-write  va=0x32bd61044  [dispatch] fn=IoctlHandler @ 0x32bd61000  sev=Constrained  taint=[\"**Arg1\"]",
+      "instruction": "mov\tdword ptr [r9 + 0x8], edx",
+      "kind": "arbitrary-write",
+      "machine_evidence": "Writes the high rdmsr result to fixed SystemBuffer offset 8; this is part of the already validated RDMSR information-return path, not an arbitrary-address write.",
+      "present_policies": [
+        "any-model"
+      ],
+      "source_excerpt": "19:static __attribute__((always_inline)) inline void do_rdmsr(ULONG idx, ULONG *lo, ULONG *hi) {\n20:    __asm__ volatile(\"rdmsr\" : \"=a\"(*lo), \"=d\"(*hi) : \"c\"(idx));\n28:    if (ioctl == IOCTL_RDMSR) {\n29:        /* VULNERABILITY: attacker controls which MSR is read and gets the value. */\n30:        do_rdmsr(req->Index, &req->ResultLo, &req->ResultHi);\n31:        Irp->IoStatus.Information = sizeof(MSR_REQ);",
+      "source_lines": "19-20,28-31",
+      "taint": [
+        "**Arg1"
+      ],
+      "va": "0x32bd61044"
+    },
+    {
+      "classification": "ordinary-irp-request-plumbing",
+      "driver": "test_rdmsr.sys",
+      "finding": "   arbitrary-write  va=0x32bd61048  [dispatch] fn=IoctlHandler @ 0x32bd61000  sev=Constrained  taint=[\"Arg1\"]",
+      "instruction": "mov\tqword ptr [r8 + 0x38], 0xc",
+      "kind": "arbitrary-write",
+      "machine_evidence": "Writes the constant response length 12 to Irp IoStatus.Information at fixed offset 0x38.",
+      "present_policies": [
+        "any-model"
+      ],
+      "source_excerpt": "31:        Irp->IoStatus.Information = sizeof(MSR_REQ);\n32:    }\n33:\n34:    Irp->IoStatus.Status = STATUS_SUCCESS;\n35:    IoCompleteRequest(Irp, IO_NO_INCREMENT);",
+      "source_lines": "31-35",
+      "taint": [
+        "Arg1"
+      ],
+      "va": "0x32bd61048"
+    }
+  ],
+  "schema": "axeyum.glaurung-policy-difference-adjudication-result.v1",
+  "source_repository_revision": "905629a773f191108273a55924accd9f31145a8d",
+  "source_repository_verification": {
+    "accepted": true,
+    "expected_revision": "905629a773f191108273a55924accd9f31145a8d",
+    "failures": [],
+    "files": [
+      {
+        "expected_sha256": "fbe2d7ae5340c095e43c69fb6ecaa9c12a6c9c734c3ed3f7a06a46435968c5e1",
+        "observed_sha256": "fbe2d7ae5340c095e43c69fb6ecaa9c12a6c9c734c3ed3f7a06a46435968c5e1",
+        "path": "test_drivers/test_file_operations.c",
+        "tracked": true
+      },
+      {
+        "expected_sha256": "61bdccd8ca47cfebfc46a222a05733e23a60b5f1e016c7ee91ded4c4a64824e3",
+        "observed_sha256": "61bdccd8ca47cfebfc46a222a05733e23a60b5f1e016c7ee91ded4c4a64824e3",
+        "path": "test_drivers/test_file_operations.sys",
+        "tracked": true
+      },
+      {
+        "expected_sha256": "5756b5e57fdc51b26f135fcfb4669b4ad2ad2576f657f2983955c7cf421aa4fb",
+        "observed_sha256": "5756b5e57fdc51b26f135fcfb4669b4ad2ad2576f657f2983955c7cf421aa4fb",
+        "path": "test_drivers/test_integer_overflow.c",
+        "tracked": true
+      },
+      {
+        "expected_sha256": "090974c12d4482a6da46dcead100308e35da37108a7e4b16f9c73e0c947828c0",
+        "observed_sha256": "090974c12d4482a6da46dcead100308e35da37108a7e4b16f9c73e0c947828c0",
+        "path": "test_drivers/test_integer_overflow.sys",
+        "tracked": true
+      },
+      {
+        "expected_sha256": "d37f49cea73cc1569478e40649f834effa88ed0952683d8c6eb161018ef5eac2",
+        "observed_sha256": "d37f49cea73cc1569478e40649f834effa88ed0952683d8c6eb161018ef5eac2",
+        "path": "test_drivers/test_physical_memory.c",
+        "tracked": true
+      },
+      {
+        "expected_sha256": "d730176b7726f219413b9c77482f1d7b8ae5619f5dfe3dbd76048acada1676be",
+        "observed_sha256": "d730176b7726f219413b9c77482f1d7b8ae5619f5dfe3dbd76048acada1676be",
+        "path": "test_drivers/test_physical_memory.sys",
+        "tracked": true
+      },
+      {
+        "expected_sha256": "4edb3a040b1e31b839338a9df795605089691d2bbc857c4e7bde7b000ea430b6",
+        "observed_sha256": "4edb3a040b1e31b839338a9df795605089691d2bbc857c4e7bde7b000ea430b6",
+        "path": "test_drivers/test_process_termination.c",
+        "tracked": true
+      },
+      {
+        "expected_sha256": "6f67605dad3ba73c15439071dd534eb6954e376c32d364409b3478e4ddf9a316",
+        "observed_sha256": "6f67605dad3ba73c15439071dd534eb6954e376c32d364409b3478e4ddf9a316",
+        "path": "test_drivers/test_process_termination.sys",
+        "tracked": true
+      },
+      {
+        "expected_sha256": "53d5c7986c1c97e402f2fddece6371df164b88c6648dd94bc82a4325044e32fb",
+        "observed_sha256": "53d5c7986c1c97e402f2fddece6371df164b88c6648dd94bc82a4325044e32fb",
+        "path": "test_drivers/test_rdmsr.c",
+        "tracked": true
+      },
+      {
+        "expected_sha256": "01d065a4ae7a40462c58c6e33ca2662ae67f3d54a8dad8c981ebb4d8990e4fec",
+        "observed_sha256": "01d065a4ae7a40462c58c6e33ca2662ae67f3d54a8dad8c981ebb4d8990e4fec",
+        "path": "test_drivers/test_rdmsr.sys",
+        "tracked": true
+      },
+      {
+        "expected_sha256": "445c0e338faf23814dce299e6d017be6491b028d97bcf098f9759e8186038790",
+        "observed_sha256": "445c0e338faf23814dce299e6d017be6491b028d97bcf098f9759e8186038790",
+        "path": "test_drivers/test_shellcode.c",
+        "tracked": true
+      },
+      {
+        "expected_sha256": "0e9b893c287c8e3e92f9ba4a176a33ccfe612314708673c015df322901fce32b",
+        "observed_sha256": "0e9b893c287c8e3e92f9ba4a176a33ccfe612314708673c015df322901fce32b",
+        "path": "test_drivers/test_shellcode.sys",
+        "tracked": true
+      },
+      {
+        "expected_sha256": "99b76db781ec7022579bb00d33aaf228793d4fbe970d432d7911715738055b27",
+        "observed_sha256": "99b76db781ec7022579bb00d33aaf228793d4fbe970d432d7911715738055b27",
+        "path": "test_drivers/test_stack_overflow.c",
+        "tracked": true
+      },
+      {
+        "expected_sha256": "9475e33f125b85c6cee60cafe07ed81214fc5386c25db4f322e20dbaf46f26c8",
+        "observed_sha256": "9475e33f125b85c6cee60cafe07ed81214fc5386c25db4f322e20dbaf46f26c8",
+        "path": "test_drivers/test_stack_overflow.sys",
+        "tracked": true
+      }
+    ],
+    "observed_revision": "905629a773f191108273a55924accd9f31145a8d",
+    "verified_file_count": 14
+  },
+  "symbolic_memory_gate": "closed",
+  "validated_policy_difference": false,
+  "validated_residual_gap": false
+}
