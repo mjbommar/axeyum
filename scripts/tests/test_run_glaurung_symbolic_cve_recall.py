@@ -1,6 +1,9 @@
+import hashlib
 import importlib.util
 import pathlib
+import tempfile
 import unittest
+from unittest import mock
 
 
 SCRIPT = (
@@ -45,6 +48,41 @@ def report(*, kind: str, taint: list[str], witness: dict[str, str]) -> dict:
 
 
 class SymbolicCveRecallTests(unittest.TestCase):
+    def test_repository_allows_registered_ancestor_with_exact_inputs(self) -> None:
+        revision = "1" * 40
+        tree = "2" * 40
+        with tempfile.TemporaryDirectory() as temporary:
+            repo = pathlib.Path(temporary)
+            registered = repo / "registered.txt"
+            registered.write_bytes(b"frozen input\n")
+            identity = {
+                "revision": revision,
+                "tree": tree,
+                "revision_policy": "registered-ancestor",
+                "clean_paths": ["registered.txt"],
+                "files": {
+                    "registered.txt": hashlib.sha256(registered.read_bytes()).hexdigest()
+                },
+            }
+
+            def fake_git(_repo: pathlib.Path, *args: str) -> str:
+                expected = {
+                    ("rev-parse", f"{revision}^{{tree}}"): tree,
+                    ("merge-base", "--is-ancestor", revision, "HEAD"): "",
+                    (
+                        "status",
+                        "--porcelain",
+                        "--untracked-files=all",
+                        "--",
+                        "registered.txt",
+                    ): "",
+                }
+                return expected[args]
+
+            with mock.patch.object(MODULE, "git", side_effect=fake_git):
+                observed = MODULE.validate_repository(repo, identity, label="test")
+            self.assertEqual(observed, identity["files"])
+
     def test_accepts_pci_signed_out_of_range_witness(self) -> None:
         sink = report(
             kind="OutOfBoundsIndex", taint=["IoctlArg"], witness={"1": "0xffffffff"}
