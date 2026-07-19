@@ -322,6 +322,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-19 — ADR-0249 preregisters usbprint's separate deterministic
+  policy-resource frontier.** The new point-major protocol fixes all five scalar
+  policies at 5, 10, and 15 analyzed-function prefixes, final corrected
+  Glaurung `7f682e5`, exact v3 authority binaries, N=2 order balance, and
+  generous fixed per-function ceilings before observing any new cell. It stops
+  at the first non-complete cell. Only four exact in-process deadline outcomes
+  with stable source identity form a resource bracket; every other failure is a
+  protocol rejection. At least one complete prefix across all five policies is
+  mandatory. This measures policy integration cost, not solver speed or recall,
+  and cannot reopen symbolic memory. Next run the committed protocol from a
+  clean detached Axeyum worktree against the clean isolated Glaurung branch.
+
 - **2026-07-19 — ADR-0248 accepts the exhaustive source-backed policy-difference
   adjudication and closes the A0 evidence lane.** The fail-closed validator
   re-reads all 43 source ranges and instructions from 14 tracked, clean,
@@ -334,7 +346,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   BoundarySet/DiverseEnum remain settings of A0 requiring bounded successor
   mechanics and new labeled evidence, not follow-on research programs. Next
   publication work should use a genuinely broader labeled population, the
-  separately bounded usbprint resource frontier, or wider real proof manifests;
+  preregistered usbprint resource frontier, or wider real proof manifests;
   the live dirty Glaurung checkout remains untouched pending owner coordination.
 
 - **2026-07-18 — ADR-0246 accepts model-independent stack-region semantics;
@@ -2509,7 +2521,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   unlabeled discovery output until separately validated, and begin symbolic
   memory only if a genuinely broader labeled population establishes residual
   coverage headroom; (4)
-  separately preregister a bounded-function/work usbprint frontier; (5) after
+  run and preserve ADR-0249's preregistered bounded-function/work usbprint
+  frontier; (5) after
   ADR-0235's completed process-isolated representative real-query denominator,
   add wider corrected real manifests; (6) widen
   ADR-0237's accepted four-oracle/edge-frequency gate as a standing bounded
@@ -4436,6 +4449,11 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-19 — ADR-0249 preregisters the usbprint resource frontier.** Exact
+  point-major 5/10/15-function cells, five policies, final Glaurung/binary
+  identities, work bounds, stopping rules, resource classification, and claim
+  limits are committed before new observation.
 
 - **2026-07-19 — ADR-0248 accepts exhaustive policy-difference review.** The
   fail-closed validator re-reads all 43 source/instruction sites from 14 clean,

@@ -1,0 +1,125 @@
+{
+  "schema": "axeyum.glaurung-usbprint-frontier-preregistration.v1",
+  "name": "glaurung-a0-usbprint-policy-resource-frontier-v1",
+  "preregistered_on": "2026-07-19",
+  "purpose": "Measure a common deterministic reachable-function prefix across all five accepted scalar concretization policies after complete usbprint failed the v1 policy-resource boundary.",
+  "execution_order": "point-major: all policies at prefix 5, then all policies at prefix 10, then all policies at prefix 15",
+  "stopping_rule": "Stop at the first cell that is not a complete accepted high-confidence authority report. A four-run exact in-process deadline outcome is a resource-bound frontier observation; every other non-complete cell is a protocol failure.",
+  "axeyum_source_policy": "Run from one clean detached commit containing this unchanged preregistration, runner, analyzer, measurement harness, and prior evidence.",
+  "glaurung_revision": "7f682e5c82efef6a5c4b7ffc52a61dcfe8a87833",
+  "authority_binary_sha256": {
+    "z3": "027dad8802083021a278216ad471fc85f73c2a2aeeb228b08d6ebe6e9ea8031e",
+    "axeyum": "ee7ef0f84000080700129fe12d49f34396f6be8aeae4d36b35bdb2a4912ae6cd"
+  },
+  "driver": {
+    "name": "usbprint.sys",
+    "sha256": "3eb6b8172849290bac6ff548b53fbf78c37c6f68a22bdc604b12418d1b22a968",
+    "role": "unlabeled zero-high discovery and policy-resource population"
+  },
+  "known_anchors": {
+    "v1_registration_sha256": "9f205f3807700eada3f96f084bdcb78b0d10a51b0413862c69c8e675959df564",
+    "any_model_complete_18_report_sha256": "854a2d131ac86357d10cbdcddb2a6ec50a796abbafe26421056ef2ab0fb46635",
+    "any_model_complete_18": {
+      "glaurung_revision": "b79f26959378f9b8ea51eee6f1b3809a4a234c84",
+      "coverage": "18 analyzed of 21 reachable, complete",
+      "solves_per_authority_repetition": 16537,
+      "high_confidence_finding_count": 0
+    },
+    "min_unsigned_deadline_18_report_sha256": "9b4b6daf5e2350e6472b68c34278f706db7747ff9b198c2596c81a3819f5ffbd",
+    "min_unsigned_deadline_18": {
+      "glaurung_revision": "b79f26959378f9b8ea51eee6f1b3809a4a234c84",
+      "deadline_secs": 300,
+      "outcome": "all four order-balanced authority processes hit the in-process wall-clock safety deadline"
+    },
+    "use": "Historical anchors only. They are not rerun cells, do not change the new point boundaries, and do not establish behavior for maximum or either site-hash policy at 18."
+  },
+  "policies": [
+    {
+      "label": "any-model",
+      "policy_id": "glaurung-any-model-v1",
+      "harness_choice": null,
+      "role": "behavior-preserving default control"
+    },
+    {
+      "label": "min-unsigned",
+      "policy_id": "glaurung-min-unsigned-v1",
+      "harness_choice": "min-unsigned",
+      "role": "deterministic global lower extremum"
+    },
+    {
+      "label": "max-unsigned",
+      "policy_id": "glaurung-max-unsigned-v1",
+      "harness_choice": "max-unsigned",
+      "role": "deterministic global upper extremum"
+    },
+    {
+      "label": "site-hash-0",
+      "policy_id": "glaurung-site-hash-0-v1",
+      "harness_choice": "site-hash-0",
+      "role": "deterministic site-stable mixed extremum schedule"
+    },
+    {
+      "label": "site-hash-1",
+      "policy_id": "glaurung-site-hash-1-v1",
+      "harness_choice": "site-hash-1",
+      "role": "complementary deterministic site-stable mixed extremum schedule"
+    }
+  ],
+  "points": [
+    {
+      "label": "prefix-5",
+      "max_analyzed_functions": 5,
+      "selection_basis": "one-third of the largest new prefix, fixed before observation",
+      "work": {
+        "repetitions": 2,
+        "deadline_secs": 1800,
+        "solve_budget": 300000,
+        "solve_secs": 300,
+        "process_timeout_secs": 1920,
+        "check_timeout_ms": 250
+      }
+    },
+    {
+      "label": "prefix-10",
+      "max_analyzed_functions": 10,
+      "selection_basis": "two-thirds of the largest new prefix, fixed before observation",
+      "work": {
+        "repetitions": 2,
+        "deadline_secs": 1800,
+        "solve_budget": 300000,
+        "solve_secs": 300,
+        "process_timeout_secs": 1920,
+        "check_timeout_ms": 250
+      }
+    },
+    {
+      "label": "prefix-15",
+      "max_analyzed_functions": 15,
+      "selection_basis": "the existing tcpip fixed-function boundary and five-sixths of prior AnyModel-complete usbprint, fixed before observation",
+      "work": {
+        "repetitions": 2,
+        "deadline_secs": 1800,
+        "solve_budget": 300000,
+        "solve_secs": 300,
+        "process_timeout_secs": 1920,
+        "check_timeout_ms": 250
+      }
+    }
+  ],
+  "acceptance": {
+    "population": "high-confidence",
+    "identity": "Axeyum and Glaurung must remain tracked-clean and revision-stable; authority binaries, driver, registration, and every report hash must match exactly.",
+    "complete_cell": "Both authorities must complete two order-balanced repetitions at the exact analyzed-function limit with fixed-work-limit coverage, stable high-confidence output, exact high-confidence parity, policy telemetry, zero high-confidence usbprint rows, and complete work/cost telemetry.",
+    "resource_cell": "Only four exact 'analysis hit the wall-clock safety deadline' run errors with stable source identity count as a resource-bound observation.",
+    "common_prefix": "At least one complete point across all five policies is required. A pure resource stop after a complete lower point accepts a bounded frontier bracket; a complete 15-cell matrix accepts a common prefix of 15.",
+    "raw_output": "Raw and diagnostic populations are retained descriptively and are not recall or acceptance gates."
+  },
+  "claim_limits": [
+    "usbprint has zero independently validated positives and cannot establish recall, precision, or finding preservation.",
+    "Function-prefix completion measures Glaurung policy integration cost, not solver speed; no cross-backend timing ratio is a solver headline.",
+    "The 5/10/15 prefixes are deterministic nested work boundaries, not complete-driver coverage.",
+    "A resource-bound cell brackets the common policy frontier but does not count as zero findings or a solver disagreement.",
+    "The prior AnyModel-complete and minimum-deadline results at 18 remain historical anchors at an older corrected Glaurung revision and are not merged into the new matrix.",
+    "No result from this frontier admits symbolic memory, BoundarySet, DiverseEnum, or a new scalar default."
+  ]
+}

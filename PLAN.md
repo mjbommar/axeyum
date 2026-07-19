@@ -309,6 +309,14 @@ session state.
 > symbolic-address memory gated off; only genuinely broader labeled evidence
 > can reopen that one architectural project. BoundarySet/DiverseEnum remain
 > settings of the same A0 surface, not follow-on research programs.
+> ADR-0249 now preregisters usbprint's separately tracked resource frontier
+> without changing the failed complete-driver cell. The exact point-major
+> sequence runs all five policies at 5, then 10, then 15 analyzed functions
+> under deterministic work limits and final corrected Glaurung `7f682e5`.
+> Acceptance requires a complete common policy prefix; a four-run exact
+> in-process deadline may bound the next point but is never counted as zero
+> output or a solver disagreement. Commit and run this protocol from clean
+> detached Axeyum source before observing any new cell.
 > ADR-0226 adds the first explicit proof denominator. Of 2,513 generated UNSAT
 > rows, a predeclared width<=8/seed-divisible-by-4 subset selects 169 (6.725030%):
 > all 169 carry independently rechecked CNF DRAT and end-to-end
