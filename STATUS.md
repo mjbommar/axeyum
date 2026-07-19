@@ -322,7 +322,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-19 — ADR-0276 preregisters the new GQ5 diagnostic before code or
+- **2026-07-19 — ADR-0276's GQ5 diagnostic is implemented and frozen before
   corpus observation.** ADR-0260's 107,000 same-owner forward-parity duplicates
   did not imply repeated normalized leaves: ADR-0261's candidate changed every
   selected construction counter by zero. The missing causal partition is
@@ -333,8 +333,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `cross_leaf_same_owner`, and `cross_owner`, independently re-sums every row,
   and permits at most one separately preregistered follow-on under the fixed
   50% / 10-query / 50% rule. It authorizes no timing or production change.
-  Implement the disabled-zero-sized/profile-only boundary and analyzer next;
-  preserve strict IR errors, complete decisions, Z3/manifest agreement, and
+  Commit `b02b6ab4` preserves the disabled zero-sized path, adds artifact-v37
+  overlap rows only to the opt-in profile, retains artifact-v36 analysis, and
+  binds the exact 107,000-binary and complete ADR-0260 baseline gates. All 307
+  CNF, 21 solver, 44 benchmark, and 10 analyzer tests pass, as do strict Clippy,
+  rustdoc, links, and no-default checks. A real retained v36 analysis and a v37
+  two-query round trip pass; no corrected-wide-v3 query has been observed with
+  v37. Run exactly the one preregistered clean detached fixed observation next,
+  preserving strict IR errors, complete decisions, Z3/manifest agreement, and
   original-term replay.
 
 - **2026-07-19 — ADR-0273's deterministic six-cell calibration is rejected;

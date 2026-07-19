@@ -77,6 +77,40 @@ Focused tests must begin red and then cover:
 - independent analyzer rejection of relation, shape, row-total, length-bucket,
   instance/summary, verdict, oracle, and replay drift.
 
+## Implementation boundary
+
+Commit `b02b6ab4` implements only the opt-in diagnostic. The disabled
+construction-profiler monomorph retains no parity-leaf metadata. The enabled
+route records stable leaf order and bounded shape at parity emission sites,
+classifies exact parity/parity duplicates into the three frozen relations, and
+fails closed when the overlap rows differ from the legacy origin subset.
+
+Artifact v37 publishes the new rows per instance and in the exact corpus sum.
+The independent analyzer requires the overlap block for v37, retains read-only
+compatibility with artifact v36, checks that the fixed 107,000 same-owner
+duplicates are all binary, and compares the complete construction, family, and
+origin aggregates byte-for-structure with ADR-0260's retained v2 analysis.
+
+Pre-observation gates pass:
+
+- all 307 `axeyum-cnf` library tests;
+- all 21 focused `axeyum-solver` library tests;
+- all 44 `axeyum-bench` binary tests;
+- all 10 independent analyzer tests, including v36 compatibility and v37
+  fail-closed absence/drift cases;
+- strict all-target/all-feature Clippy and warnings-as-errors rustdoc for the
+  three affected crates;
+- `axeyum-solver`'s no-default `qfbv` check and `axeyum-bench`'s no-default
+  check; and
+- real retained artifact-v36 reanalysis plus an artifact-v37 two-query
+  manifest/Z3/replay-complete micro round trip.
+
+The recipe test cannot execute in this checkout because `just` is unavailable;
+manual inspection confirms the recipe pins raw rewriting, the complete
+decision/oracle/resource gates, the exact fixed population, the 107,000-binary
+gate, and the retained ADR-0260 analysis path. No corrected-wide-v3 query has
+been observed through v37.
+
 ## Fixed real-query measurement
 
 Commit the implementation, artifact schema, analyzer, and tests before reading
@@ -124,5 +158,5 @@ close this leaf-overlap lane.
 ADR-0261 remains rejected and removed. ADR-0276 does not reinterpret equal
 origin labels as equal leaves, does not reopen demand slicing or SAT tuning,
 and does not weaken strict sort errors or model replay. The next permissible
-step is implementation of this opt-in diagnostic, not a production
-optimization or another real-corpus observation.
+step is the one fixed detached v37 observation, not a production optimization
+or an unregistered corpus/timing experiment.
