@@ -207,8 +207,9 @@ session state.
 > diagnostics laundered to `*attacker` by uninitialized-load propagation. After
 > preserving exact provenance they become `**Arg0`; both authorities have zero
 > high-confidence findings on the first-15-function slice. The isolated branch
-> head is `9692f3c` after the confidence-protocol decision record. Integrate that clean branch after
-> coordination with the active Glaurung owner; do not reimplement
+> head is `b79f269` after the confidence protocol and WDM SystemBuffer-model
+> corrections. Integrate that clean branch after coordination with the active
+> Glaurung owner; do not reimplement
 > A0. Treat least/greatest/site-hash/boundary/diverse choices and deterministic
 > work bounds as configurations to sweep under one harness, but select a nonzero
 > labeled-positive corpus and report raw/confidence/validated partitions before
@@ -222,11 +223,15 @@ session state.
 > when high-confidence acceptance lacks the producer partition. Rebaselining all
 > five existing tcpip settings leaves 0/0 high-confidence rows in every cell and
 > classifies the former 33 AnyModel-only remainder as diagnostic `Arg0`/`Arg1`
-> ancestry. A complete x64 `usbprint.sys` control supplies the next nonzero
-> target: five Z3 versus four Axeyum high-confidence rows, with one stable
-> Z3-only `SystemBuffer` null dereference. Label and root-cause those rows before
-> preregistering the configuration sweep; do not treat producer confidence as
-> ground truth.
+> ancestry. ADR-0242 independently rejects the apparent complete x64
+> `usbprint.sys` target: all five producer-high-confidence rows came from
+> treating the I/O-manager-owned `METHOD_BUFFERED` SystemBuffer pointer as a
+> free attacker address. Glaurung `b79f269` separates fixed pointer ownership
+> from tainted buffer contents; the same complete N=2 control is now accepted at
+> 0/0 high-confidence rows and 16,537 solves per process. Usbprint is retired as
+> a recall denominator. Select and independently validate a new nonzero target
+> before preregistering the configuration sweep; producer confidence remains a
+> partition, not ground truth.
 > ADR-0226 adds the first explicit proof denominator. Of 2,513 generated UNSAT
 > rows, a predeclared width<=8/seed-divisible-by-4 subset selects 169 (6.725030%):
 > all 169 carry independently rechecked CNF DRAT and end-to-end
@@ -357,10 +362,12 @@ session state.
 > Therefore do not require BoundarySet/DiverseEnum to recover or exceed the
 > arbitrary-model raw union. ADR-0241 rebaselines all existing settings and
 > classifies the 33 arbitrary-only rows as producer diagnostics. The corrected
-> four-driver tier and a NETwtw10 prefix also have zero accepted rows; complete
-> x64 `usbprint.sys` is selected as the nonzero candidate with five Z3 versus
-> four Axeyum high-confidence rows and one Z3-only `SystemBuffer` null dereference.
-> Independently label and root-cause that population. Preregister recall/precision only on validated rows while
+> four-driver tier and a NETwtw10 prefix also have zero accepted rows. ADR-0242
+> rejects usbprint's apparent five-versus-four population as a WDM
+> environment-model defect: corrected Glaurung `b79f269` fixes the
+> I/O-manager-owned SystemBuffer address while preserving content taint, and the
+> complete N=2 rerun has 0/0 accepted rows with equal solve counts. Select a new
+> independently validated nonzero population. Preregister recall/precision only on validated rows while
 > publishing raw, confidence-gated, validated, work, and cost partitions. Phase
 > 0/A0 remains the completed enabling refactor; Phase 2 remains a cheap policy
 > sweep; symbolic memory remains the sole architectural item and begins only if
@@ -862,13 +869,13 @@ count as decisions or speedups.
 
 | ID | Roadmap item | Scope and exit criterion |
 |---|---|---|
-| **GQ1** | **Capture and profile real queries first** | **Four-driver map, query/internal attribution, fresh/retained exact-CNF controls, neutral cold-reset plus source-owner-retained SMT breadth, independent four-oracle fuzz, bounded/canonical/four-schedule raw authority cells, process-isolated corrected-representative end-to-end faithfulness, deadline-aware generated proof widening, isolated behavior-preserving Glaurung A0, corrected taint baseline, and versioned confidence partition DONE (ADR-0187/0188/0197/0213--0241 plus Glaurung `9692f3c`).** The independent/edge campaign reaches 12,000/12,000 four-way agreements and 4,471/4,471 SAT replays with all 14 edge families nonvacuous; cvc5 agrees on all 9,526 real checks in both external protocols; 302 raw sinks match under unrestricted sole authority on four drivers. Tcpip prefix 15 reaches an exact 128-row deterministic-setting raw union, but all five existing settings have zero high-confidence rows and the former 33 AnyModel-only remainder is diagnostic `Arg0`/`Arg1` ancestry. Complete x64 `usbprint.sys` supplies a nonzero labeling target at five Z3 versus four Axeyum high-confidence rows, including one Z3-only `SystemBuffer` null dereference. All 74 UNSAT rows in the corrected five-driver representative recheck both CNF DRAT and stronger end-to-end certificates in two clean process-isolated runs, and a 1 ms kill control retains all 74 rows; all 1,505 generated CNF proofs recheck, with 1,487/1,505 stronger generated certificates under policy. Retained BatSat beats Z3 Boolean on Axeyum CNF despite native warm Z3 winning end-to-end. Coordinate and integrate the corrected A0 branch, label and root-cause usbprint, then preregister the wider fixed-work policy sweep and add wider real proof cells. |
+| **GQ1** | **Capture and profile real queries first** | **Four-driver map, query/internal attribution, fresh/retained exact-CNF controls, neutral cold-reset plus source-owner-retained SMT breadth, independent four-oracle fuzz, bounded/canonical/four-schedule raw authority cells, process-isolated corrected-representative end-to-end faithfulness, deadline-aware generated proof widening, isolated behavior-preserving Glaurung A0, corrected taint/SystemBuffer baselines, and versioned confidence partition DONE (ADR-0187/0188/0197/0213--0242 plus Glaurung `b79f269`).** The independent/edge campaign reaches 12,000/12,000 four-way agreements and 4,471/4,471 SAT replays with all 14 edge families nonvacuous; cvc5 agrees on all 9,526 real checks in both external protocols; 302 raw sinks match under unrestricted sole authority on four drivers. Tcpip prefix 15 reaches an exact 128-row deterministic-setting raw union, but all five existing settings have zero high-confidence rows and the former 33 AnyModel-only remainder is diagnostic `Arg0`/`Arg1` ancestry. Usbprint's apparent five-versus-four population is also invalid: the producer made a `METHOD_BUFFERED` kernel pointer attacker-controlled; after Glaurung `b79f269`, both complete N=2 authority cells have 0 high-confidence rows, 214 diagnostics, and 16,537 solves. No independently validated nonzero policy-sweep target is established by these slices. All 74 UNSAT rows in the corrected five-driver representative recheck both CNF DRAT and stronger end-to-end certificates in two clean process-isolated runs, and a 1 ms kill control retains all 74 rows; all 1,505 generated CNF proofs recheck, with 1,487/1,505 stronger generated certificates under policy. Retained BatSat beats Z3 Boolean on Axeyum CNF despite native warm Z3 winning end-to-end. Coordinate and integrate the corrected A0 branch, select and independently label a new nonzero target, then preregister the fixed-work configuration sweep and add wider real proof cells. |
 | **GQ2** | **Cheap always-on cold simplification tier** | Add a bounded, denotation-preserving one-shot tier for constant folding and trivial identities whose own cost is measured. Add a size/shape and cold-vs-warm policy that selects cheap, configured, or no preprocessing. Exit only when cold end-to-end time is non-worse in aggregate and improves the target class at the GQ1 validity gates. |
 | **GQ3** | **Coercion-cancellation peepholes and causal telemetry** | **Current measured tranche complete; use ablation as policy evidence.** Exact nested/concat/extension/coercion rules and ADR-0159's repeated default-minus-rule comparator are landed. `extract_extend` improves lowering, but all four measured rules change zero AIG nodes and clauses. Do not globally delete sound rewrites because one corpus does not fire them; instead, keep a Glaurung policy only for rules with measured reach/cost and reopen register-slice-specific work only when an ablation demonstrates downstream AIG/CNF or native-time reduction. |
 | **GQ4** | **Cold demand-driven bit-slice reduction** | **Out of the active queue.** ADR-0157 v1 is correct but regresses the real ratio about 1.42x→4.49x; ADR-0158's conservative admission is a safe no-op but does not improve the required family. Both remain explicit/off. Do not tune thresholds further on this corpus; only a qualitatively different constant-cost admission proof and a fresh client gate can reopen GQ4. |
 | **GQ5** | **Cheaper AIG construction and measured CNF encoding** | **Cold engineering lane active; broad warm construction lane closed by ADR-0219.** Cold still assigns most Axeyum time to bit blast+CNF, but retained four-driver profiles remove 98--99% of per-check structure and leave only 11--20% whole-driver warm CNF. ADR-0221 now moves the Dptf reversal to word-level representation/integration; continue cold work only from causal gates and do not infer warm benefit from cold shares. |
 | **GQ6** | **Cold SAT/CDCL tuning** | **Fresh and retained exact-CNF controls DONE (ADR-0220/0221).** The proof core beats fresh BatSat before checking, while retained BatSat beats retained Z3 Boolean by 3.5527x on the ordered Axeyum CNF stream. Do not select a custom-core rewrite from Dptf; reopen only on a SAT-dominant family with a neutral core gap and deterministic limits. |
-| **GQ7** | **Cheaper warm entry and delta preprocessing** | **Source identity, fair map, query/internal attribution, fresh/retained exact-CNF controls, four-driver neutral cold-reset and source-owner-retained SMT, bounded raw finding parity, canonical tcpip authority, four-schedule union, isolated configurable-policy A0, corrected taint baseline, and versioned confidence partition DONE; labeled policy sweep WIP (ADR-0201--0205/0213--0241 plus Glaurung `9692f3c`).** ADR-0232 shows 16.4x--57.0x within-cvc5 retained/full-reset reductions while preserving the external textual boundary. A0's public `ConcretizationPolicy` covers both concretization seams and preserves default value selection. ADR-0241 rebaselines every existing tcpip setting at zero high-confidence findings and classifies the old 33-row AnyModel-only remainder as producer diagnostics. Complete x64 `usbprint.sys` is the selected nonzero candidate at five Z3 versus four Axeyum high-confidence rows; label and root-cause its one stable authority-only row before sweeping deterministic least/greatest/site/boundary/diverse configurations. Publish raw, confidence-gated, validated, work, and cost partitions; never use raw `>= AnyModel` as a recall target. Gate symbolic memory on residual validated coverage headroom. The companion cross-repository Pareto strategy owns the downstream/SOTA analysis and sequencing. |
+| **GQ7** | **Cheaper warm entry and delta preprocessing** | **Source identity, fair map, query/internal attribution, fresh/retained exact-CNF controls, four-driver neutral cold-reset and source-owner-retained SMT, bounded raw finding parity, canonical tcpip authority, four-schedule union, isolated configurable-policy A0, corrected taint/SystemBuffer baselines, and versioned confidence partition DONE; validated-target selection WIP and labeled policy sweep gated (ADR-0201--0205/0213--0242 plus Glaurung `b79f269`).** ADR-0232 shows 16.4x--57.0x within-cvc5 retained/full-reset reductions while preserving the external textual boundary. A0's public `ConcretizationPolicy` covers both concretization seams and preserves default value selection. ADR-0241 rebaselines every existing tcpip setting at zero high-confidence findings and classifies the old 33-row AnyModel-only remainder as producer diagnostics. ADR-0242 likewise retires usbprint's five apparent rows as consequences of a symbolic I/O-manager-owned pointer; the corrected complete control is 0/0 high-confidence with equal work. Select a new independently validated nonzero target before sweeping deterministic least/greatest/site/boundary/diverse configurations. Publish raw, confidence-gated, validated, work, and cost partitions; never use raw `>= AnyModel` or producer confidence alone as a recall target. Gate symbolic memory on residual validated coverage headroom. The companion cross-repository Pareto strategy owns the downstream/SOTA analysis and sequencing. |
 | **GQ8** | **Verdict and CNF reuse for duplicate/prefix queries** | **Exact replay-checked SAT reuse is done for available families (ADR-0192); stronger subsumption remains open.** Exact hits replay under fixed bounds; ordinary UNSAT/Unknown and prefix verdict reuse remain forbidden. Investigate only replay-checked stronger-model reuse where a cached model is proven to satisfy the complete weaker later query. |
 | **GQ9** | **Auto production policy and API guidance** | **DONE for available serial families (ADR-0186/0199).** Adaptive 2→9 ownership plus serial sibling continuation reuse is the downstream default; ADR-0199 clears every time/ratio/RSS/environment alarm and improves RSS on both accepted drivers. Explicit one-shot, fixed, transfer-only, and serial-off controls remain. Re-gate wider families and never apply serial leases across parallel workers. |
 | **GQ10** | **Ordered, wider real-lifter regression corpus** | **Native timeout-continuation admission is DONE; wider direct-delta admission is deferred (ADR-0205--0212).** The accepted tcpip gate still defaults one bounded continuation only inside selected direct-delta sessions. A complete 85,449-event / 17,400-check `dxgkrnl` trace and independent 13,577-query / 8,816-model-read replay prove exact production-topology no-op functionality with zero correctness or lifecycle alarms. The repeated ordinary-core comparison nevertheless fails the declared timing-CV gate (14.430% control, 8.306% candidate); slower-core calibration changes actual outcomes at the 250 ms boundary. Keep direct delta opt-in. `win32k` is now classified as a system-service/callout frontend target, not zero-query IOCTL solver evidence. |
@@ -967,8 +974,9 @@ evidence are now distinct:
    SMT boundary costs separately named; do not use Z3 as both sole oracle and
    sole comparator.
 4. **Authoritative finding parity — bounded four-driver, first canonical
-   tcpip, extremal, mixed-site raw-union, taint-baseline, and confidence-schema
-   tiers DONE; labeled wider tiers WIP (ADR-0229/0236/0238/0239/0240/0241):** sole-authority Z3 and Axeyum
+   tcpip, extremal, mixed-site raw-union, taint/SystemBuffer baselines, and
+   confidence-schema tiers DONE; validated-target selection WIP and policy
+   sweep gated (ADR-0229/0236/0238/0239/0240/0241/0242):** sole-authority Z3 and Axeyum
    binaries emit byte-identical ordered raw sink lists on Dptf, vwififlt,
    IntcSST, and SurfacePen across N=3 order-balanced repetitions: 302 canonical
    sinks and 1,812 stable emitted rows. Differing vwififlt/IntcSST solve counts
@@ -995,11 +1003,13 @@ evidence are now distinct:
    proves every tcpip row is diagnostic under the producer policy, and closes
    the former 33-row AnyModel-only remainder as `Arg0`/`Arg1` ancestry. The
    corrected four-driver tier and a NETwtw10 prefix likewise contain zero
-   accepted rows. Complete x64 `usbprint.sys` is the selected nonzero candidate:
-   five Z3 versus four Axeyum high-confidence rows, with one stable Z3-only
-   `SystemBuffer` null dereference. Integrate Glaurung branch `9692f3c`, then
-   independently label and root-cause usbprint before preregistering the
-   least/greatest/site/boundary/diverse sweep. Deterministic work bounds are
+   accepted rows. ADR-0242 then rejects usbprint's five apparent rows: its old
+   seed made the I/O-manager-owned `METHOD_BUFFERED` pointer attacker-selected.
+   Glaurung branch `b79f269` preserves attacker-controlled contents at a fixed
+   kernel address, and the complete corrected N=2 control has 0/0 accepted rows,
+   214 diagnostics, and 16,537 solves per authority. Integrate that branch,
+   select and independently validate a genuinely nonzero target, then
+   preregister the least/greatest/site/boundary/diverse sweep. Deterministic work bounds are
    configuration; deferred symbolic memory is the only architectural follow-on
    and starts only if the corrected sweep leaves validated coverage headroom.
    Require genuinely broader labeled evidence before any finding-preservation

@@ -1,0 +1,144 @@
+{
+  "schema": "axeyum.glaurung-usbprint-system-buffer-validation.v1",
+  "accepted": true,
+  "acceptance_population": "high-confidence",
+  "conclusion": "all five former high-confidence rows are producer-model false positives",
+  "source": {
+    "axeyum_harness_revision": "f330ac57fde8a2be7ffac86e6821720b3503229b",
+    "glaurung_corrected_revision": "b79f26959378f9b8ea51eee6f1b3809a4a234c84",
+    "glaurung_trace_revision": "9692f3ce84f62e6bca2bd8f1bf76074981e7f7a8",
+    "source_identity_stable": true
+  },
+  "input": {
+    "name": "usbprint.sys",
+    "sha256": "3eb6b8172849290bac6ff548b53fbf78c37c6f68a22bdc604b12418d1b22a968",
+    "architecture": "x86_64",
+    "coverage_boundary": "complete",
+    "analysis_roots": 21,
+    "analyzed": 18
+  },
+  "symbols": {
+    "pe_pdb_guid": "2cc0e16a-fabe-5f53-b727-4b87a0866448",
+    "pe_pdb_age": 1,
+    "public_pdb_guid": "2cc0e16a-fabe-5f53-b727-4b87a0866448",
+    "public_pdb_age": 3,
+    "public_pdb_sha256": "fd28f90823256a7417de23d8f4bf5bc5c8cd5330fd4d0b8485182f26042325ff"
+  },
+  "ioctl": {
+    "code": "0x0022003c",
+    "method": "METHOD_BUFFERED",
+    "access": "FILE_ANY_ACCESS",
+    "dispatch_call_va": "0x1400052cf",
+    "handler_name": "HPUsbIOCTLVendorGetCommand",
+    "handler_va": "0x1400026e0",
+    "guard_nonnull_va": "0x140002712",
+    "guard_min_output_length": 3,
+    "read_vas": ["0x140002762", "0x140002770", "0x140002775"]
+  },
+  "binaries": {
+    "z3_sha256": "7221037f57bd9a650ad9e8fc9da0b7a2fbfb07024d97c17ce16c11c72b2017aa",
+    "axeyum_sha256": "1436e483d67d80e523cae920e16d7958486fb30ca7523c40a340de157b6bf240"
+  },
+  "protocol": {
+    "harness_schema": "axeyum.glaurung-authoritative-finding-parity.v5",
+    "full_report_sha256": "f9301cb39f4d4b67bfa4c871f6ed1d337c61206971a4501b4b903a0a118cdf9a",
+    "repetitions": 2,
+    "order": "odd Z3/Axeyum; even Axeyum/Z3",
+    "check_timeout_ms": 250,
+    "deadline_seconds": 300,
+    "solve_budget": 50000,
+    "solve_seconds": 120,
+    "process_timeout_seconds": 360
+  },
+  "runs": [
+    {
+      "backend": "z3",
+      "repetition": 1,
+      "position": 1,
+      "raw": 214,
+      "high_confidence": 0,
+      "diagnostic": 214,
+      "solves": 16537,
+      "solver_time_ms": 15344.9,
+      "elapsed_seconds": 15.50,
+      "max_rss_kib": 73868,
+      "findings_sha256": "c29eaa91a8a970a3becd0ff5ad1e464fc8a24bb549ca1adbe461a4a597ae9d4d"
+    },
+    {
+      "backend": "axeyum",
+      "repetition": 1,
+      "position": 2,
+      "raw": 214,
+      "high_confidence": 0,
+      "diagnostic": 214,
+      "solves": 16537,
+      "solver_time_ms": 2709.6,
+      "elapsed_seconds": 2.82,
+      "max_rss_kib": 32740,
+      "findings_sha256": "d4df3cbd082646482349aa03cc906387cc985534acca8e87e8f5472ca8dfd020"
+    },
+    {
+      "backend": "axeyum",
+      "repetition": 2,
+      "position": 1,
+      "raw": 214,
+      "high_confidence": 0,
+      "diagnostic": 214,
+      "solves": 16537,
+      "solver_time_ms": 2691.9,
+      "elapsed_seconds": 2.80,
+      "max_rss_kib": 32092,
+      "findings_sha256": "d4df3cbd082646482349aa03cc906387cc985534acca8e87e8f5472ca8dfd020"
+    },
+    {
+      "backend": "z3",
+      "repetition": 2,
+      "position": 2,
+      "raw": 214,
+      "high_confidence": 0,
+      "diagnostic": 214,
+      "solves": 16537,
+      "solver_time_ms": 15481.7,
+      "elapsed_seconds": 15.63,
+      "max_rss_kib": 67208,
+      "findings_sha256": "c29eaa91a8a970a3becd0ff5ad1e464fc8a24bb549ca1adbe461a4a597ae9d4d"
+    }
+  ],
+  "parity": {
+    "high_confidence": true,
+    "raw": false,
+    "stable_raw_intersection": 213,
+    "z3_only_diagnostic": "null-deref 0x140009793 Arg0",
+    "axeyum_only_diagnostic": "null-deref 0x14000969a Arg0+Arg2"
+  },
+  "pre_correction_trace": {
+    "shared_address_query_sha256": "386bb1083ffa1016be8b20bc34fd4a84af0adb33fb1bb183579921ef35455238",
+    "location": "0x140002762",
+    "expression": "SystemBuffer + 2",
+    "z3_returned_value": "0x1",
+    "axeyum_returned_value": "0x3",
+    "z3": {
+      "events": 72458,
+      "paths": 3079,
+      "queries": 7009,
+      "assertions": 2175,
+      "checks": 16553,
+      "events_sha256": "d13a26656b2116c8c2e58b6cb37fc345094c65d088c4c20db168217340bbf995",
+      "query_index_sha256": "148ad889b6e6ca3e75f5b6f544472836bb92274d712df6652cdd69fbe7d7491a"
+    },
+    "axeyum": {
+      "events": 73972,
+      "paths": 3079,
+      "queries": 6993,
+      "assertions": 2177,
+      "checks": 16553,
+      "events_sha256": "e4bd314b78dc27c2019ded17f018c3986a5829a1fb441afe344fa1f141b29684",
+      "query_index_sha256": "2155633f903aa679ab1f6174af2d243f65068d9da6b7240857e6e1767270745f"
+    }
+  },
+  "remaining_debt": [
+    "select a new independently validated nonzero policy-sweep population",
+    "model SystemBuffer access bounds against request lengths",
+    "separate KMDF retrieve-buffer address ownership from content taint"
+  ]
+}
