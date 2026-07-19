@@ -828,8 +828,9 @@ impl IncrementalBvSolver {
 
     /// Creates an empty incremental solver with an explicit configuration.
     ///
-    /// The `timeout` field governs checks. [`SolverConfig::preprocess`] is
-    /// consulted by [`Self::assert_configured`]; admission budgets remain a
+    /// The `timeout` and deterministic `resource_limit` fields govern each
+    /// retained SAT check. [`SolverConfig::preprocess`] is consulted by
+    /// [`Self::assert_configured`]; structural admission budgets remain a
     /// one-shot-backend concern.
     pub fn with_config(config: SolverConfig) -> Self {
         let cnf = if config.incremental_positive_and_flattening {
@@ -1876,7 +1877,7 @@ impl IncrementalBvSolver {
         active.extend_from_slice(&ephemeral);
         match self
             .cnf
-            .solve(&active, self.config.timeout)
+            .solve_with_limits(&active, self.config.timeout, self.config.resource_limit)
             .map_err(|error| map_sat_error(&error))?
         {
             SatResult::Sat(_) => Ok(WarmRefutationProbe::Satisfiable),
@@ -1884,11 +1885,7 @@ impl IncrementalBvSolver {
                 active_core: self.active_assertion_core(&evidence.failed_assumptions),
             }),
             SatResult::Unknown(reason) => {
-                let kind = if reason.detail.contains("timeout") {
-                    UnknownKind::Timeout
-                } else {
-                    UnknownKind::Other
-                };
+                let kind = classify_sat_unknown(&reason.detail);
                 Ok(WarmRefutationProbe::Unknown(UnknownReason {
                     kind,
                     detail: reason.detail,
@@ -3692,7 +3689,9 @@ impl IncrementalBvSolver {
             self.last_profiled_cnf_assumptions = Some(active.to_vec());
         }
         let started = self.profiling_enabled.then(Instant::now);
-        let result = self.cnf.solve(active, timeout);
+        let result = self
+            .cnf
+            .solve_with_limits(active, timeout, self.config.resource_limit);
         if let Some(started) = started {
             self.stats.solve += started.elapsed();
         }
@@ -3840,11 +3839,7 @@ impl IncrementalBvSolver {
                     ));
                 }
                 SatResult::Unknown(reason) => {
-                    let kind = if reason.detail.contains("timeout") {
-                        UnknownKind::Timeout
-                    } else {
-                        UnknownKind::Other
-                    };
+                    let kind = classify_sat_unknown(&reason.detail);
                     return Ok(IncrementalSolveOutcome::unknown(UnknownReason {
                         kind,
                         detail: reason.detail,
@@ -7670,6 +7665,16 @@ fn map_sat_error(error: &SatError) -> SolverError {
     SolverError::Backend(error.to_string())
 }
 
+fn classify_sat_unknown(detail: &str) -> UnknownKind {
+    if detail.contains("deterministic progress-check budget") {
+        UnknownKind::ResourceLimit
+    } else if detail.contains("timeout") {
+        UnknownKind::Timeout
+    } else {
+        UnknownKind::Other
+    }
+}
+
 fn usize_to_u64(value: usize) -> u64 {
     u64::try_from(value).unwrap_or(u64::MAX)
 }
@@ -7677,6 +7682,25 @@ fn usize_to_u64(value: usize) -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn retained_solver_applies_resource_limit_to_each_sat_check() {
+        let mut arena = TermArena::new();
+        let assertion = arena.bool_var("warm_resource_limit_x").unwrap();
+        let config = SolverConfig::new().with_resource_limit(0);
+        let mut solver = IncrementalBvSolver::with_config(config);
+        solver.assert(&arena, assertion).unwrap();
+
+        for _ in 0..2 {
+            assert!(matches!(
+                solver.check(&arena).unwrap(),
+                CheckResult::Unknown(UnknownReason {
+                    kind: UnknownKind::ResourceLimit,
+                    ..
+                })
+            ));
+        }
+    }
 
     #[test]
     fn scalar_model_completion_gate_tracks_only_active_warm_theory_work() {

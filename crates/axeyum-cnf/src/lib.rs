@@ -634,12 +634,34 @@ pub fn solve_with_rustsat_batsat_limits(
 #[derive(Default)]
 struct DeadlineCallbacks {
     deadline: Option<Instant>,
+    progress_check_limit: Option<u64>,
+    progress_checks: Cell<u64>,
+    stop_reason: Cell<Option<BatSatStopReason>>,
 }
 
 impl batsat::Callbacks for DeadlineCallbacks {
+    fn on_start(&mut self) {
+        self.progress_checks.set(0);
+        self.stop_reason.set(None);
+    }
+
     fn stop(&self) -> bool {
-        self.deadline
+        if let Some(limit) = self.progress_check_limit {
+            let checks = self.progress_checks.get();
+            if checks >= limit {
+                self.stop_reason.set(Some(BatSatStopReason::ResourceLimit));
+                return true;
+            }
+            self.progress_checks.set(checks.saturating_add(1));
+        }
+        if self
+            .deadline
             .is_some_and(|deadline| Instant::now() >= deadline)
+        {
+            self.stop_reason.set(Some(BatSatStopReason::Timeout));
+            return true;
+        }
+        false
     }
 }
 
@@ -750,7 +772,25 @@ impl IncrementalSat {
     ///
     /// Returns [`SatError`] for adapter failures or invalid models.
     pub fn solve(&mut self, timeout: Option<Duration>) -> Result<SatResult, SatError> {
-        self.solve_inner(&[], timeout)
+        self.solve_with_limits(timeout, None)
+    }
+
+    /// Solves the accumulated clauses with optional wall-clock and deterministic
+    /// progress-check limits.
+    ///
+    /// The deterministic unit matches [`solve_with_rustsat_batsat_limits`]: one
+    /// successful `BatSat` `within_budget` callback poll. The counter is reset
+    /// for every solve, including checks on a retained solver instance.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SatError`] for adapter failures or invalid models.
+    pub fn solve_with_limits(
+        &mut self,
+        timeout: Option<Duration>,
+        progress_check_limit: Option<u64>,
+    ) -> Result<SatResult, SatError> {
+        self.solve_inner(&[], timeout, progress_check_limit)
     }
 
     /// Solves the accumulated clauses under one-shot `assumptions`, which hold
@@ -764,19 +804,39 @@ impl IncrementalSat {
         assumptions: &[CnfLit],
         timeout: Option<Duration>,
     ) -> Result<SatResult, SatError> {
-        self.solve_inner(assumptions, timeout)
+        self.solve_assuming_with_limits(assumptions, timeout, None)
+    }
+
+    /// Solves under one-shot assumptions with optional wall-clock and
+    /// deterministic progress-check limits.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SatError`] for adapter failures or invalid models.
+    pub fn solve_assuming_with_limits(
+        &mut self,
+        assumptions: &[CnfLit],
+        timeout: Option<Duration>,
+        progress_check_limit: Option<u64>,
+    ) -> Result<SatResult, SatError> {
+        self.solve_inner(assumptions, timeout, progress_check_limit)
     }
 
     fn solve_inner(
         &mut self,
         assumptions: &[CnfLit],
         timeout: Option<Duration>,
+        progress_check_limit: Option<u64>,
     ) -> Result<SatResult, SatError> {
         let timeout_deadline = timeout.and_then(|duration| Instant::now().checked_add(duration));
         // Store the deadline as data instead of BatSat's `Box<dyn Fn()>`. The
         // latter is not `Send`; an `Instant` is, so a warm solver can move to a
         // worker thread without unsafe code or a shared global context.
-        self.solver.batsat_mut().cb_mut().deadline = timeout_deadline;
+        {
+            let callbacks = self.solver.batsat_mut().cb_mut();
+            callbacks.deadline = timeout_deadline;
+            callbacks.progress_check_limit = progress_check_limit;
+        }
 
         let result = if assumptions.is_empty() {
             self.solver.solve()
@@ -829,10 +889,13 @@ impl IncrementalSat {
                 }))
             }
             RustSatSolverResult::Interrupted => {
-                let detail = if timeout_deadline.is_some() {
-                    "rustsat-batsat timeout".to_owned()
-                } else {
-                    "rustsat-batsat interrupted".to_owned()
+                let detail = match self.solver.batsat_ref().cb().stop_reason.get() {
+                    Some(BatSatStopReason::ResourceLimit) => format!(
+                        "rustsat-batsat deterministic progress-check budget {} exhausted",
+                        progress_check_limit.unwrap_or(0)
+                    ),
+                    Some(BatSatStopReason::Timeout) => "rustsat-batsat timeout".to_owned(),
+                    None => "rustsat-batsat interrupted".to_owned(),
                 };
                 Ok(SatResult::Unknown(SatUnknownReason { detail }))
             }
@@ -1889,14 +1952,30 @@ impl IncrementalCnf {
         active_selectors: &[CnfVar],
         timeout: Option<Duration>,
     ) -> Result<SatResult, SatError> {
+        self.solve_with_limits(active_selectors, timeout, None)
+    }
+
+    /// Solves with the given scope selectors and optional wall-clock and
+    /// deterministic SAT progress-check limits.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SatError`] for adapter failures or invalid models.
+    pub fn solve_with_limits(
+        &mut self,
+        active_selectors: &[CnfVar],
+        timeout: Option<Duration>,
+        progress_check_limit: Option<u64>,
+    ) -> Result<SatResult, SatError> {
         if active_selectors.is_empty() {
-            self.sat.solve(timeout)
+            self.sat.solve_with_limits(timeout, progress_check_limit)
         } else {
             let assumptions = active_selectors
                 .iter()
                 .map(|&var| CnfLit::positive(var))
                 .collect::<Vec<_>>();
-            self.sat.solve_assuming(&assumptions, timeout)
+            self.sat
+                .solve_assuming_with_limits(&assumptions, timeout, progress_check_limit)
         }
     }
 
@@ -5871,6 +5950,29 @@ p cnf 1 2
                 SatResult::Sat(_)
             ),
             "a fresh bounded solve must clear the preceding deadline and reuse the instance"
+        );
+    }
+
+    #[test]
+    fn incremental_resource_limit_is_deterministic_and_reset_per_solve() {
+        let mut sat = IncrementalSat::new();
+        sat.add_clause(CnfClause::new(vec![pos(0), pos(1)]))
+            .unwrap();
+
+        for _ in 0..2 {
+            assert!(matches!(
+                sat.solve_with_limits(None, Some(0)).unwrap(),
+                SatResult::Unknown(reason)
+                    if reason.detail
+                        == "rustsat-batsat deterministic progress-check budget 0 exhausted"
+            ));
+        }
+        assert!(
+            matches!(
+                sat.solve_with_limits(None, Some(100)).unwrap(),
+                SatResult::Sat(_)
+            ),
+            "a fresh larger work budget must clear the preceding exhausted limit"
         );
     }
 
