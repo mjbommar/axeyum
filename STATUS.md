@@ -357,8 +357,11 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   stream. ADR-0274 accepts Z3 100,000, Axeyum 32,768, and Bitwuzla 512;
   campaign/analysis hashes are `0526f925...3ceb7` / `7b20e363...8cf6`. No
   census row exists. Preregister and jointly reproduce the triplet before
-  freezing the 338-function census. A1 remains configuration/measurement, A0
-  remains complete, and symbolic memory remains closed.
+  freezing the 338-function census. ADR-0275 now freezes that zero-row boundary:
+  N=3 exact first-20 joint reproduction, followed only on success by an N=3
+  338/338 census under the unchanged triplet and work/deadline gates. Implement
+  its two-phase fail-closed tooling next. A1 remains configuration/measurement,
+  A0 remains complete, and symbolic memory remains closed.
 
 - **2026-07-19 — ADR-0272 accepts the six-cell neutral warm map and closes the
   performance-leadership framing.** The exact 20-process campaign preserves

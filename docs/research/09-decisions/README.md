@@ -330,3 +330,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0272](adr-0272-preregister-six-cell-neutral-warm-regime.md) | Accept the topology-equivalent six-cell neutral map: Axeyum beats warm Z3 on three drivers but warm Bitwuzla wins all four, closing any performance-leadership framing | accepted |
 | [0273](adr-0273-preregister-deterministic-six-cell-calibration.md) | Preregister a zero-row 14-tier calibration of distinct Z3 rlimit, Axeyum progress-check, and Bitwuzla termination-poll bounds before freezing the full tcpip census | accepted |
 | [0274](adr-0274-preregister-fixed-authority-shadow-calibration.md) | Preregister an observation-aware fixed-Z3-authority calibration of Axeyum and Bitwuzla shadow limits on one invariant tcpip stream | accepted |
+| [0275](adr-0275-preregister-joint-triplet-and-census.md) | Preregister exact joint-triplet reproduction before a conditional 338-function cold-Z3-authoritative six-cell census | accepted |
